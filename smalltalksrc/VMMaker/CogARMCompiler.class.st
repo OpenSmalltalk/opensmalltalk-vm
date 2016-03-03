@@ -2247,10 +2247,17 @@ CogARMCompiler >> genRemoveNArgsFromStack: n [
 ]
 
 { #category : #abi }
-CogARMCompiler >> genRestoreRegs [
-	"Restore the general purpose registers for a trampoline call."
-	"Restore none, because the ARM ABI only defines callee saved registers, no caller-saved regs."
-	"cogit gen: LDMFD operand: 16r7F"
+CogARMCompiler >> genRestoreRegs: regMask [
+	"Restore the registers in regMask as saved by genSaveRegs:.
+	 Restore none, because the ARM ABI only defines callee saved registers, no caller-saved regs.
+	 But for the future..."
+	self assert: regMask = 0.
+	self deny: (regMask anyMask: (cogit registerMaskFor: SP and: FPReg and: LR and: PC)).
+	R0 to: R12 do:
+		[:reg|
+		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
+			[cogit PopR: reg]].
+	^0
 ]
 
 { #category : #abi }
@@ -2268,11 +2275,17 @@ CogARMCompiler >> genSaveRegForCCall [
 ]
 
 { #category : #abi }
-CogARMCompiler >> genSaveRegsForCCall [
-	"Save the general purpose registers for a trampoline call."
-	"Save none, because the ARM ABI only defines callee saved registers, no caller-saved regs."
-	"cogit gen: STMFD operand: 16r7F"
-	self flag: 'this will change with Sista when we hope to be able to allocate arbitrary registers'
+CogARMCompiler >> genSaveRegs: regMask [
+	"Save the registers in regMask for a call into the C run-time from a trampoline.
+	 Save none, because the ARM ABI only defines callee saved registers, no caller-saved regs.
+	 But for the future..."
+	self assert: regMask = 0.
+	self deny: (regMask anyMask: (cogit registerMaskFor: SP and: FPReg and: LR and: PC)).
+	R12 to: R0 by: -1 do:
+		[:reg|
+		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
+			[cogit PushR: reg]].
+	^0
 ]
 
 { #category : #'smalltalk calling convention' }

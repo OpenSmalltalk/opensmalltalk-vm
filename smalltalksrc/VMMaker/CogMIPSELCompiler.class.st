@@ -1794,11 +1794,17 @@ CogMIPSELCompiler >> genRemoveNArgsFromStack: n [
 ]
 
 { #category : #abi }
-CogMIPSELCompiler >> genRestoreRegs [
-	"This method is poorly named. Is this for a Smalltalk -> C call or C -> Smalltalk call?
-	 If the former we don't need to do anything because all of the abstract registers are
-	 allocated to C preserved registers."
-	self flag: #bogus.
+CogMIPSELCompiler >> genRestoreRegs: regMask [
+	"Restore the registers in regMask as saved by genSaveRegs:.
+	 We don't need to do anything because all of the abstract registers are
+	 allocated to C preserved registers.  But for the future..."
+	self assert: regMask = 0.
+	self deny: (regMask anyMask: (cogit registerMaskFor: SP and: FP and: RA)).
+	R0 to: R28 do:
+		[:reg|
+		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
+			[cogit PopR: reg]].
+	^0
 ]
 
 { #category : #abi }
@@ -1808,11 +1814,17 @@ CogMIPSELCompiler >> genRestoreRegsExcept: abstractReg [
 ]
 
 { #category : #abi }
-CogMIPSELCompiler >> genSaveRegsForCCall [
-	"Save the general purpose registers for a call into the C run-time from a trampoline.
+CogMIPSELCompiler >> genSaveRegs: regMask [
+	"Save the registers in regMask for a call into the C run-time from a trampoline.
 	 We don't need to do anything because all of the abstract registers are
-	 allocated to C preserved registers."
-	self flag: 'this will change with Sista when we hope to be able to allocate arbitrary registers'
+	 allocated to C preserved registers.  But for the future..."
+	self assert: regMask = 0.
+	self deny: (regMask anyMask: (cogit registerMaskFor: SP and: FP and: RA)).
+	R28 to: R0 by: -1 do:
+		[:reg|
+		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
+			[cogit PushR: reg]].
+	^0
 ]
 
 { #category : #'smalltalk calling convention' }
@@ -2260,15 +2272,6 @@ CogMIPSELCompiler >> machineCodeWords [
 	"Answer the maximum number of words of machine code generated for any abstract instruction.
 	 e.g. AddCheckOverflowCqR"
 	^7
-]
-
-{ #category : #accessing }
-CogMIPSELCompiler >> maxAbstractGeneralPurposeReg [
-	"Answer the largest index of an abstract general-purpose register used by this compiler.
-	 N.B.  Abstract registers are negative numbers."
-	<inline: true>
-	self flag: #bogus. "The caller should ask for a register mask, not a range."
-	^TempReg
 ]
 
 { #category : #'encoding - arithmetic' }

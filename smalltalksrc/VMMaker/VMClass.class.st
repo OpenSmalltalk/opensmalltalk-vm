@@ -168,7 +168,7 @@ VMClass class >> initialize [
 	(Utilities classPool at: #CommonRequestStrings ifAbsent: []) ifNotNil:
 		[:commonRequestStringHolder|
 		(commonRequestStringHolder contents asString includesSubString: 'VMClass open') ifFalse:
-			[Utilities appendToCommonRequests: '-\VMMaker generateConfiguration\VMMaker generateAllConfigurationsUnderVersionControl\VMMaker generateAllSpurConfigurations\VMClass openCogMultiWindowBrowser\VMClass openObjectMemoriesInterpretersBrowser\VMClass openSpurMultiWindowBrowser' withCRs]].
+			[Utilities appendToCommonRequests: '-\VMMaker generateConfiguration\VMMaker generateAllConfigurationsUnderVersionControl\VMMaker generateAllSpurConfigurations\VMClass openCogMultiWindowBrowser\VMClass openObjectMemoriesInterpretersBrowser\VMClass openSpurMultiWindowBrowser\VMClass openCogSpurMultiWindowBrowser' withCRs]].
 	ExpensiveAsserts := false
 ]
 
@@ -362,6 +362,26 @@ VMClass class >> openCogMultiWindowBrowser [
 	#(	ObjectMemory NewObjectMemory NewCoObjectMemory
 		InterpreterPrimitives StackInterpreter StackInterpreterPrimitives CoInterpreter CoInterpreterPrimitives CoInterpreterMT
 		Cogit SimpleStackBasedCogit StackToRegisterMappingCogit
+		VMStructType VMMaker CCodeGenerator TMethod)
+		do: [:className|
+			(Smalltalk classNamed: className) ifNotNil:
+				[:class| b selectCategoryForClass: class; selectClass: class]]
+		separatedBy:
+			[b multiWindowState addNewWindow].
+	b multiWindowState selectWindowIndex: 1
+]
+
+{ #category : #utilities }
+VMClass class >> openCogSpurMultiWindowBrowser [
+	"Answer a new multi-window browser on the ObjectMemory classes, the Cog Interpreter classes, and the main JIT classes"
+	| b |
+	b := Browser open.
+	#(	SpurMemoryManager Spur32BitMemoryManager Spur32BitCoMemoryManager
+		 Spur64BitMemoryManager Spur64BitCoMemoryManager SpurGenerationScavenger
+		InterpreterPrimitives StackInterpreter StackInterpreterPrimitives CoInterpreter CoInterpreterPrimitives CoInterpreterMT
+		Cogit SimpleStackBasedCogit StackToRegisterMappingCogit
+		CogObjectRepresentation CogObjectRepresentationForSpur
+		CogObjectRepresentationFor32BitSpur CogObjectRepresentationFor64BitSpur
 		VMStructType VMMaker CCodeGenerator TMethod)
 		do: [:className|
 			(Smalltalk classNamed: className) ifNotNil:

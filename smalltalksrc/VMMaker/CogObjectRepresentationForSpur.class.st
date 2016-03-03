@@ -767,21 +767,6 @@ CogObjectRepresentationForSpur >> genJumpImmediate: aRegister [
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genJumpImmediateInScratchReg: aRegister [
-	<returnTypeC: #'AbstractInstruction *'>
-	cogit AndCq: objectMemory tagMask R: aRegister.
-	^cogit JumpNonZero: 0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genJumpImmutable: sourceReg scratchReg: scratchReg [
-	<returnTypeC: #'AbstractInstruction *'>
-	<option: #IMMUTABILITY>
-	cogit MoveMw: 0 r: sourceReg R: scratchReg. 
-	^ self genJumpBaseHeaderImmutable: scratchReg
-]
-
-{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genJumpMutable: sourceReg scratchReg: scratchReg [
 	<returnTypeC: #'AbstractInstruction *'>
 	<option: #IMMUTABILITY>
@@ -800,13 +785,6 @@ CogObjectRepresentationForSpur >> genJumpNotCharacterInScratchReg: reg [
 CogObjectRepresentationForSpur >> genJumpNotImmediate: aRegister [
 	<returnTypeC: #'AbstractInstruction *'>
 	cogit TstCq: objectMemory tagMask R: aRegister.
-	^cogit JumpZero: 0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genJumpNotImmediateInScratchReg: aRegister [
-	<returnTypeC: #'AbstractInstruction *'>
-	cogit AndCq: objectMemory tagMask R: aRegister.
 	^cogit JumpZero: 0
 ]
 
@@ -1038,10 +1016,8 @@ CogObjectRepresentationForSpur >> genStoreCheckReceiverReg: destReg valueReg: va
 	<var: #jmpDestYoung type: #'AbstractInstruction *'>
 	<var: #jmpSourceOld type: #'AbstractInstruction *'>
 	<var: #jmpAlreadyRemembered type: #'AbstractInstruction *'>
-	"Is value stored an integer?  If so we're done"
-	cogit MoveR: valueReg R: scratchReg.
-	cogit AndCq: objectMemory tagMask R: scratchReg.
-	jmpImmediate := cogit JumpNonZero: 0.
+	"Is value stored an immediate?  If so we're done"
+	jmpImmediate := self genJumpImmediate: valueReg.
 	"Get the old/new boundary in scratchReg"
 	cogit MoveCw: objectMemory storeCheckBoundary R: scratchReg.
 	"Is target young?  If so we're done"
@@ -1062,14 +1038,9 @@ CogObjectRepresentationForSpur >> genStoreCheckReceiverReg: destReg valueReg: va
 	cogit AndCq: mask R: scratchReg.
 	jmpAlreadyRemembered := cogit JumpNonZero: 0.
 	"Remembered bit is not set.  Call store check to insert dest into remembered table."
-	self assert: destReg == ReceiverResultReg.
+	self assert: destReg = ReceiverResultReg.
 	cogit 
-		evaluateTrampolineCallBlock:
-			[cogit
-				CallRT: ceStoreCheckTrampoline
-				registersToBeSavedMask: (((cogit registerMaskFor: valueReg)
-												bitOr: cogit callerSavedRegMask)
-												bitClear: (cogit registerMaskFor: ReceiverResultReg and: scratchReg))]
+		evaluateTrampolineCallBlock: [cogit CallRT: ceStoreCheckTrampoline]
 		protectLinkRegIfNot: inFrame.
 	jmpImmediate jmpTarget:
 	(jmpDestYoung jmpTarget:
@@ -1132,11 +1103,13 @@ CogObjectRepresentationForSpur >> generateObjectRepresentationTrampolines [
 									genTrampolineFor: #remember:
 									called: 'ceStoreCheckTrampoline'
 									arg: ReceiverResultReg
+									regsToSave: (cogit callerSavedRegMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
 									result: cogit returnRegForStoreCheck.
 	ceStoreCheckContextReceiverTrampoline := self genStoreCheckContextReceiverTrampoline.
 	ceScheduleScavengeTrampoline := cogit
-											genSafeTrampolineFor: #ceScheduleScavenge
-											called: 'ceScheduleScavengeTrampoline'.
+											genTrampolineFor: #ceScheduleScavenge
+											called: 'ceScheduleScavengeTrampoline'
+											regsToSave: cogit callerSavedRegMask.
 	ceSmallActiveContextInMethodTrampoline := self genActiveContextTrampolineLarge: false inBlock: false called: 'ceSmallMethodContext'.
 	ceSmallActiveContextInBlockTrampoline := self genActiveContextTrampolineLarge: false inBlock: true called: 'ceSmallBlockContext'.
 	ceLargeActiveContextInMethodTrampoline := self genActiveContextTrampolineLarge: true inBlock: false called: 'ceLargeMethodContext'.
@@ -1288,7 +1261,7 @@ CogObjectRepresentationForSpur >> maybeCompileRetry: retryInst onPrimitiveFail: 
 		arg: nil
 		arg: nil
 		resultReg: TempReg
-		saveRegs: false.
+		regsToSave: cogit emptyRegisterMask.
 	cogit CmpCq: 0 R: TempReg.
 	cogit JumpNonZero: retryInst.
 	jmp jmpTarget: cogit Label.
