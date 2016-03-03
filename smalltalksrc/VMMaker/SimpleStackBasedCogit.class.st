@@ -1282,7 +1282,7 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 		arg: nil
 		arg: nil
 		resultReg: NoReg
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 	"Note that this call does not return."
 ]
 
@@ -2089,7 +2089,7 @@ SimpleStackBasedCogit >> genMustBeBooleanTrampolineFor: boolean called: trampoli
 		arg: nil
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: true
 		resultReg: NoReg
 		appendOpcodes: true
@@ -2217,7 +2217,7 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 		arg: nil
 		arg: nil
 		resultReg: NoReg
-		saveRegs: false.
+		regsToSave: self emptyRegisterMask.
 
 	"On Spur ceActivateFailingPrimitiveMethod: may retry the primitive and return if successful.
 	 So continue by returning to the caller.
@@ -3035,10 +3035,11 @@ SimpleStackBasedCogit >> genStoreRemoteTempLongBytecode [
 
 { #category : #initialization }
 SimpleStackBasedCogit >> genTraceStoreTrampoline [
-	ceTraceStoreTrampoline := self genSafeTrampolineFor: #ceTraceStoreOf:into:
+	ceTraceStoreTrampoline := self genTrampolineFor: #ceTraceStoreOf:into:
 										called: 'ceTraceStoreTrampoline'
 										arg: ClassReg
 										arg: ReceiverResultReg
+										regsToSave: callerSavedRegMask
 ]
 
 { #category : #'bytecode generators' }
@@ -3088,17 +3089,20 @@ SimpleStackBasedCogit >> generateTracingTrampolines [
 	 and avoid noise instructions in the lastNInstructions log by short-cutting these
 	 trampolines, but we need them in the real vm."
 	ceTraceLinkedSendTrampoline :=
-		self genSafeTrampolineFor: #ceTraceLinkedSend:
+		self genTrampolineFor: #ceTraceLinkedSend:
 			called: 'ceTraceLinkedSendTrampoline'
-			arg: ReceiverResultReg.
+			arg: ReceiverResultReg
+			regsToSave: callerSavedRegMask.
 	ceTraceBlockActivationTrampoline :=
 		self genTrampolineFor: #ceTraceBlockActivation
-			called: 'ceTraceBlockActivationTrampoline'.
+			called: 'ceTraceBlockActivationTrampoline'
+			regsToSave: callerSavedRegMask..
 	ceTraceStoreTrampoline :=
-		self genSafeTrampolineFor: #ceTraceStoreOf:into:
+		self genTrampolineFor: #ceTraceStoreOf:into:
 			called: 'ceTraceStoreTrampoline'
 			arg: ClassReg
-			arg: ReceiverResultReg.
+			arg: ReceiverResultReg
+			regsToSave: callerSavedRegMask..
 	self cCode: [] inSmalltalk:
 		[ceTraceLinkedSendTrampoline := self simulatedTrampolineFor: #ceShortCutTraceLinkedSend:.
 		 ceTraceBlockActivationTrampoline := self simulatedTrampolineFor: #ceShortCutTraceBlockActivation:.

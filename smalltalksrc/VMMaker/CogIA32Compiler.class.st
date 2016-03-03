@@ -2498,10 +2498,12 @@ CogIA32Compiler >> genRemoveNArgsFromStack: n [
 ]
 
 { #category : #abi }
-CogIA32Compiler >> genRestoreRegs [
+CogIA32Compiler >> genRestoreRegs: regMask [
+	"Restore the registers in regMask as saved by genSaveRegs:."
+	self deny: (regMask anyMask: (cogit registerMaskFor: ESP and: EBP)).
 	EAX to: EDI do:
 		[:reg|
-		 (reg between: ESP and: EBP) ifFalse:
+		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
 			[cogit PopR: reg]].
 	^0
 ]
@@ -2519,13 +2521,14 @@ CogIA32Compiler >> genRestoreRegsExcept: preservedReg [
 ]
 
 { #category : #abi }
-CogIA32Compiler >> genSaveRegsForCCall [
-	"Save the general purpose registers for a call into the C run-time from a trampoline."
+CogIA32Compiler >> genSaveRegs: regMask [
+	"Save the registers in regMask for a call into the C run-time from a trampoline."
 
 	self assert: (EDI > EAX and: [EDI - EAX + 1 = 8]).
+	self deny: (regMask anyMask: (cogit registerMaskFor: ESP and: EBP)).
 	EDI to: EAX by: -1 do:
 		[:reg|
-		 (reg between: ESP and: EBP) ifFalse:
+		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
 			[cogit PushR: reg]].
 	^0
 ]

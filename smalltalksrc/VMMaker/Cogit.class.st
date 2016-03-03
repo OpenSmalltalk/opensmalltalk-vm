@@ -1531,31 +1531,6 @@ Cogit >> CallRT: callTarget [
 	^self annotateCall: (self Call: callTarget)
 ]
 
-{ #category : #'compile abstract instructions' }
-Cogit >> CallRT: callTarget registersToBeSavedMask: registersToBeSaved [
-	<returnTypeC: #'AbstractInstruction *'>
-	| callerSavedRegsToBeSaved lastInst reg registersToBePushed |
-	<var: 'lastInst' type: #'AbstractInstruction *'>
-	callerSavedRegsToBeSaved := callerSavedRegMask bitAnd: registersToBeSaved.
-
-	registersToBePushed := callerSavedRegsToBeSaved.
-	reg := 0.
-	[registersToBePushed ~= 0] whileTrue:
-		[(registersToBePushed anyMask: 1) ifTrue:
-			[self PushR: reg].
-		 reg := reg + 1.
-		 registersToBePushed := registersToBePushed >>> 1].
-	
-	lastInst := self CallRT: callTarget.
-
-	[reg >= 0] whileTrue:
-		[(callerSavedRegsToBeSaved anyMask: 1 << reg) ifTrue:
-			[lastInst := self PopR: reg].
-		 reg := reg - 1].
-
-	^lastInst
-]
-
 { #category : #'abstract instructions' }
 Cogit >> CmpC32: wordConstant R: reg [
 	"Generate a CmpC32R instruction to compare a 32-bit constant with a
@@ -4298,31 +4273,32 @@ Cogit >> compileCPICEntry [
 ]
 
 { #category : #initialization }
-Cogit >> compileCallFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 resultReg: resultRegOrNone saveRegs: saveRegs [
+Cogit >> compileCallFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 resultReg: resultRegOrNone regsToSave: regMask [
 	"Generate a call to aRoutine with up to 4 arguments.  If resultRegOrNone is not
 	 NoReg assign the C result to resultRegOrNone.  If saveRegs, save all registers.
 	 Hack: a negative arg value indicates an abstract register, a non-negative value
 	 indicates a constant."
 	<var: #aRoutine type: #'void *'>
 	<inline: false>
+	| regsToSave |
+	regsToSave := resultRegOrNone = NoReg
+						ifTrue: [regMask]
+						ifFalse: [regMask bitClear: (self registerMaskFor: resultRegOrNone)].
 	cStackAlignment > objectMemory wordSize ifTrue:
 		[backEnd
-			genAlignCStackSavingRegisters: saveRegs
+			genAlignCStackSavingRegisters: regsToSave
 			numArgs: numArgs
 			wordAlignment: cStackAlignment / objectMemory wordSize].
-	saveRegs ifTrue:
-		[backEnd genSaveRegsForCCall].
-	backEnd genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3.
+	backEnd
+		genSaveRegs: regsToSave;
+		genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3.
 	self CallFullRT: (self cCode: [aRoutine asUnsignedInteger]
-					   inSmalltalk: [self simulatedTrampolineFor: aRoutine]).
+						inSmalltalk: [self simulatedTrampolineFor: aRoutine]).
 	resultRegOrNone ~= NoReg ifTrue:
 		[backEnd genWriteCResultIntoReg: resultRegOrNone].
-	 saveRegs ifTrue:
-		[numArgs > 0 ifTrue:
-			[backEnd genRemoveNArgsFromStack: numArgs].
-		resultRegOrNone ~= NoReg
-			ifTrue: [backEnd genRestoreRegsExcept: resultRegOrNone]
-			ifFalse: [backEnd genRestoreRegs]]
+	 numArgs > 0 ifTrue:
+		[backEnd genRemoveNArgsFromStack: numArgs].
+	backEnd genRestoreRegs: regsToSave
 ]
 
 { #category : #'in-line cacheing' }
@@ -4532,7 +4508,7 @@ Cogit >> compileSendTrace [
 ]
 
 { #category : #initialization }
-Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 saveRegs: saveRegs pushLinkReg: pushLinkReg resultReg: resultRegOrNone [
+Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 regsToSave: regMask pushLinkReg: pushLinkReg resultReg: resultRegOrNone [
 	"Generate a trampoline with up to four arguments.  Generate either a call or a jump to aRoutine
 	 as requested by callJumpBar.  If generating a call and resultRegOrNone is not NoReg pass the C
 	 result back in resultRegOrNone.
@@ -4548,7 +4524,7 @@ Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: r
 		arg: regOrConst2
 		arg: regOrConst3
 		resultReg: resultRegOrNone
-		saveRegs: saveRegs.
+		regsToSave: regMask.
 	backEnd genLoadStackPointers.
 	(pushLinkReg and: [backEnd hasLinkRegister])
 		ifTrue:
@@ -4906,6 +4882,12 @@ Cogit >> doesNotUnderstand: aMessage [
 		(objectMemory respondsTo: aMessage selector) ifTrue:
 			[^aMessage lookupClass: nil; sentTo: objectMemory]].
 	^super doesNotUnderstand: aMessage
+]
+
+{ #category : #'register management' }
+Cogit >> emptyRegisterMask [
+	<inline: true>
+	^0
 ]
 
 { #category : #'compiled methods' }
@@ -5634,7 +5616,7 @@ Cogit >> genCheckForInterruptsTrampoline [
 		arg: nil
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: false
 		resultReg: NoReg
 		appendOpcodes: true
@@ -5794,7 +5776,7 @@ Cogit >> genInnerPICAbortTrampoline: name [
 		arg: ReceiverResultReg
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: false
 		resultReg: NoReg.
 	jumpMNUCase jmpTarget: self Label.
@@ -5805,7 +5787,7 @@ Cogit >> genInnerPICAbortTrampoline: name [
 		arg: ReceiverResultReg
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: false
 		resultReg: NoReg
 		appendOpcodes: true
@@ -5887,7 +5869,7 @@ Cogit >> genMethodAbortTrampoline [
 		arg: nil
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: false "The LinkReg has already been set above."
 		resultReg: NoReg.
 	jumpSICMiss jmpTarget: self Label.
@@ -5898,7 +5880,7 @@ Cogit >> genMethodAbortTrampoline [
 		arg: nil
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: true "Push the LinkReg for the ceMethodAbort call."
 		resultReg: NoReg
 		appendOpcodes: true
@@ -5960,7 +5942,7 @@ Cogit >> genNSSendTrampolineFor: aRoutine numArgs: numArgs enclosingObjectCheck:
 		arg: ReceiverResultReg
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: true
 		resultReg: NoReg
 		appendOpcodes: true
@@ -5985,7 +5967,7 @@ Cogit >> genNonLocalReturnTrampoline [
 		arg: nil
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: false
 		resultReg: NoReg
 		appendOpcodes: true
@@ -6018,68 +6000,8 @@ Cogit >> genReturnTrampolineFor: aRoutine  called: aString arg: regOrConst0 [
 		arg: nil
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: false "Since the routine is reached by a return instruction it should /not/ push the link register."
-		resultReg: NoReg
-		appendOpcodes: false
-]
-
-{ #category : #initialization }
-Cogit >> genSafeTrampolineFor: aRoutine called: aString [
-	"Generate a trampoline with no arguments that will
-	 save and restore all registers around the call"
-	<var: #aRoutine type: #'void *'>
-	<var: #aString type: #'char *'>
-	^self
-		genTrampolineFor: aRoutine
-		called: aString
-		numArgs: 0
-		arg: nil
-		arg: nil
-		arg: nil
-		arg: nil
-		saveRegs: true
-		pushLinkReg: true
-		resultReg: NoReg
-		appendOpcodes: false
-]
-
-{ #category : #initialization }
-Cogit >> genSafeTrampolineFor: aRoutine called: aString arg: regOrConst0 [
-	"Generate a trampoline with one argument that will
-	 save and restore all registers around the call"
-	<var: #aRoutine type: #'void *'>
-	<var: #aString type: #'char *'>
-	^self
-		genTrampolineFor: aRoutine
-		called: aString
-		numArgs: 1
-		arg: regOrConst0
-		arg: nil
-		arg: nil
-		arg: nil
-		saveRegs: true
-		pushLinkReg: true
-		resultReg: NoReg
-		appendOpcodes: false
-]
-
-{ #category : #initialization }
-Cogit >> genSafeTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: regOrConst1 [
-	"Generate a trampoline with two arguments that
-	 will save and restore all registers around the call"
-	<var: #aRoutine type: #'void *'>
-	<var: #aString type: #'char *'>
-	^self
-		genTrampolineFor: aRoutine
-		called: aString
-		numArgs: 2
-		arg: regOrConst0
-		arg: regOrConst1
-		arg: nil
-		arg: nil
-		saveRegs: true
-		pushLinkReg: true
 		resultReg: NoReg
 		appendOpcodes: false
 ]
@@ -6110,7 +6032,7 @@ Cogit >> genTrampolineFor: aRoutine called: aString [
 		arg: nil
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: true
 		resultReg: NoReg
 		appendOpcodes: false
@@ -6130,7 +6052,7 @@ Cogit >> genTrampolineFor: aRoutine  called: aString arg: regOrConst0 [
 		arg: nil
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: true
 		resultReg: NoReg
 		appendOpcodes: false
@@ -6150,7 +6072,7 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: regOrC
 		arg: regOrConst1
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: true
 		resultReg: NoReg
 		appendOpcodes: false
@@ -6170,7 +6092,7 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: regOrC
 		arg: regOrConst1
 		arg: regOrConst2
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: true
 		resultReg: NoReg
 		appendOpcodes: false
@@ -6190,7 +6112,7 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: regOrC
 		arg: regOrConst1
 		arg: regOrConst2
 		arg: regOrConst3
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: true
 		resultReg: NoReg
 		appendOpcodes: false
@@ -6210,9 +6132,29 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: regOrC
 		arg: regOrConst1
 		arg: regOrConst2
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: true
 		resultReg: resultReg
+		appendOpcodes: false
+]
+
+{ #category : #initialization }
+Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: regOrConst1 regsToSave: regMask [
+	"Generate a trampoline with two arguments.
+	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<var: #aString type: #'char *'>
+	^self
+		genTrampolineFor: aRoutine
+		called: aString
+		numArgs: 2
+		arg: regOrConst0
+		arg: regOrConst1
+		arg: nil
+		arg: nil
+		regsToSave: regMask
+		pushLinkReg: true
+		resultReg: NoReg
 		appendOpcodes: false
 ]
 
@@ -6230,7 +6172,47 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: regOrC
 		arg: regOrConst1
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
+		pushLinkReg: true
+		resultReg: resultReg
+		appendOpcodes: false
+]
+
+{ #category : #initialization }
+Cogit >> genTrampolineFor: aRoutine  called: aString arg: regOrConst0 regsToSave: regMask [
+	"Generate a trampoline with one argument.
+	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<var: #aString type: #'char *'>
+	^self
+		genTrampolineFor: aRoutine
+		called: aString
+		numArgs: 1
+		arg: regOrConst0
+		arg: nil
+		arg: nil
+		arg: nil
+		regsToSave: regMask
+		pushLinkReg: true
+		resultReg: NoReg
+		appendOpcodes: false
+]
+
+{ #category : #initialization }
+Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 regsToSave: regMask result: resultReg [
+	"Generate a trampoline with one argument that answers a result.
+	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<var: #aString type: #'char *'>
+	^self
+		genTrampolineFor: aRoutine
+		called: aString
+		numArgs: 1
+		arg: regOrConst0
+		arg: nil
+		arg: nil
+		arg: nil
+		regsToSave: regMask
 		pushLinkReg: true
 		resultReg: resultReg
 		appendOpcodes: false
@@ -6250,14 +6232,14 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 result: res
 		arg: nil
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: self emptyRegisterMask
 		pushLinkReg: true
 		resultReg: resultReg
 		appendOpcodes: false
 ]
 
 { #category : #initialization }
-Cogit >> genTrampolineFor: aRoutine called: trampolineName numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 saveRegs: saveRegs pushLinkReg: pushLinkReg resultReg: resultRegOrNone appendOpcodes: appendBoolean [
+Cogit >> genTrampolineFor: aRoutine called: trampolineName numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 regsToSave: regMask pushLinkReg: pushLinkReg resultReg: resultRegOrNone appendOpcodes: appendBoolean [
 	"Generate a trampoline with up to four arguments.  Generate either a call or a jump to aRoutineOrNil
 	 as requested by callJumpBar.  If generating a call and resultRegOrNone is not NoReg pass the C result
 	 back in resultRegOrNone.
@@ -6275,13 +6257,32 @@ Cogit >> genTrampolineFor: aRoutine called: trampolineName numArgs: numArgs arg:
 		arg: regOrConst1
 		arg: regOrConst2
 		arg: regOrConst3
-		saveRegs: saveRegs
+		regsToSave: regMask
 		pushLinkReg: pushLinkReg
 		resultReg: resultRegOrNone.
 	self outputInstructionsForGeneratedRuntimeAt: startAddress.
 	self recordGeneratedRunTime: trampolineName address: startAddress.
 	self recordRunTimeObjectReferences.
 	^startAddress
+]
+
+{ #category : #initialization }
+Cogit >> genTrampolineFor: aRoutine called: aString regsToSave: regMask [
+	"Generate a trampoline with no arguments"
+	<var: #aRoutine type: #'void *'>
+	<var: #aString type: #'char *'>
+	^self
+		genTrampolineFor: aRoutine
+		called: aString
+		numArgs: 0
+		arg: nil
+		arg: nil
+		arg: nil
+		arg: nil
+		regsToSave: regMask
+		pushLinkReg: true
+		resultReg: NoReg
+		appendOpcodes: false
 ]
 
 { #category : #initialization }
@@ -9396,51 +9397,61 @@ Cogit >> recordSendTrace [
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg [
+	<inline: true>
 	^1 << reg
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 [
+	<inline: true>
 	^1 << reg1 bitOr: 1 << reg2
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 [
+	<inline: true>
 	^(1 << reg1 bitOr: 1 << reg2) bitOr: 1 << reg3
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 [
+	<inline: true>
 	^((1 << reg1 bitOr: 1 << reg2) bitOr: 1 << reg3) bitOr: 1 << reg4
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 [
+	<inline: true>
 	^(((1 << reg1 bitOr: 1 << reg2) bitOr: 1 << reg3) bitOr: 1 << reg4) bitOr: 1 << reg5
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 [
+	<inline: true>
 	^((((1 << reg1 bitOr: 1 << reg2) bitOr: 1 << reg3) bitOr: 1 << reg4) bitOr: 1 << reg5) bitOr: 1 << reg6
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 [
+	<inline: true>
 	^(((((1 << reg1 bitOr: 1 << reg2) bitOr: 1 << reg3) bitOr: 1 << reg4) bitOr: 1 << reg5) bitOr: 1 << reg6) bitOr: 1 << reg7
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 [
+	<inline: true>
 	^((((((1 << reg1 bitOr: 1 << reg2) bitOr: 1 << reg3) bitOr: 1 << reg4) bitOr: 1 << reg5) bitOr: 1 << reg6) bitOr: 1 << reg7) bitOr: 1 << reg8
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 and: reg9 [
+	<inline: true>
 	^(((((((1 << reg1 bitOr: 1 << reg2) bitOr: 1 << reg3) bitOr: 1 << reg4) bitOr: 1 << reg5) bitOr: 1 << reg6) bitOr: 1 << reg7) bitOr: 1 << reg8) bitOr: 1 << reg9
 ]
 
 { #category : #'register management' }
 Cogit >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 and: reg9 and: reg10 [
+	<inline: true>
 	^((((((((1 << reg1 bitOr: 1 << reg2) bitOr: 1 << reg3) bitOr: 1 << reg4) bitOr: 1 << reg5) bitOr: 1 << reg6) bitOr: 1 << reg7) bitOr: 1 << reg8) bitOr: 1 << reg9) bitOr: 1 << reg10
 ]
 
