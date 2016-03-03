@@ -74,6 +74,11 @@ InterpreterProxy >> byteAt: accessor put: value [
 	^accessor byteAt: 0 put: value
 ]
 
+{ #category : #private }
+InterpreterProxy >> byteAtPointer: accessor [
+	^ self byteAt: accessor
+]
+
 { #category : #'object access' }
 InterpreterProxy >> byteSizeOf: oop [
 	"Return the size of the receiver in bytes"
@@ -905,6 +910,7 @@ InterpreterProxy >> setInterruptCheckChain: aFunction [
 { #category : #other }
 InterpreterProxy >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
 	aForm == Display ifTrue:[
+		Display class isDeferringUpdates ifTrue: [^ nil].
 		Display forceToScreen: (Rectangle left: l right: r top: t bottom: b)].
 ]
 
