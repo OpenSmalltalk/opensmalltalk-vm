@@ -194,8 +194,6 @@
 	<integer>20</integer>
 	<key>SqueakUIFlushSecondaryCleanupDelayMilliseconds</key>
 	<integer>25</integer>
-	<key>SqueakUIFlushUseHighPercisionClock</key>
-	<true/>
 	<key>SqueakUnTrustedDirectory</key>
 	<string>~/Library/Preferences/Newspeak/Internet/Untrusted/</string>
 	<key>SqueakVMPathAnswersResources</key>

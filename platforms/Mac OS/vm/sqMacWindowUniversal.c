@@ -574,15 +574,13 @@ ioShowDisplayOnWindow(
 		return 1;
 
 	{
-			extern Boolean gSqueakUIFlushUseHighPercisionClock;
 			extern	long	gSqueakUIFlushPrimaryDeferNMilliseconds;
-
-			int now = (gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs()) - targetWindowBlock->rememberTicker;
+			long now = ioMSecs() - targetWindowBlock->rememberTicker;
 
 		if (((now >= gSqueakUIFlushPrimaryDeferNMilliseconds) || (now < 0))) {
 			CGContextFlush(targetWindowBlock->context);
 			targetWindowBlock->dirty = 0;
-			targetWindowBlock->rememberTicker = gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
+			targetWindowBlock->rememberTicker = ioMSecs();
 		} else {
 			if (targetWindowBlock->sync)
 				CGContextSynchronize(targetWindowBlock->context);

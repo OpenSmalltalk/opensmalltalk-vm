@@ -1373,12 +1373,12 @@ checkBrowserForHeartBeat(void)
 static void
 doPendingFlush(void)
 {
-	extern  Boolean gSqueakUIFlushUseHighPercisionClock,gSqueakBrowserSubProcess;
+	extern  Boolean gSqueakBrowserSubProcess;
 	extern	long	gSqueakUIFlushSecondaryCleanupDelayMilliseconds,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds;
-	static int lastTick = 0;
-	static int nextPollTick = 0;
-	int now = gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
-	int delta = now - lastTick;
+	static long lastTick = 0;
+	static long nextPollTick = 0;
+	long now = ioMSecs();
+	long delta = now - lastTick;
 
 	if (browserActiveAndDrawingContextOkAndInFullScreenMode() || (!gSqueakHeadless && !gSqueakBrowserSubProcess)) {
 			if ((delta >= gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds) || (delta < 0))  {
@@ -1392,7 +1392,7 @@ doPendingFlush(void)
 					if ((delta >= gSqueakUIFlushSecondaryCleanupDelayMilliseconds) || (delta < 0))  {
 						CGContextFlush(windowBlock->context);
 						windowBlock-> dirty = 0;
-						windowBlock->rememberTicker = now =  gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
+						windowBlock->rememberTicker = now = ioMSecs();
 					}
 				}
 			}
@@ -1400,7 +1400,7 @@ doPendingFlush(void)
 		}
 	}
 
-	if (ioLowResMSecs() != nextPollTick) {
+	if (ioMSecs() != nextPollTick) {
 		EventRef event;
 		static EventTargetRef target = NULL;
 
@@ -1419,7 +1419,7 @@ doPendingFlush(void)
 			SetCursorBackToSomething();
 		}
 
-		nextPollTick = ioLowResMSecs();
+		nextPollTick = ioMSecs();
 	}
 
 }

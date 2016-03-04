@@ -24,9 +24,9 @@ typedef struct windowDescriptorBlock {
 	/* extra fields to support your platform needs */
 	CGContextRef context;
 	HIViewTrackingAreaRef windowTrackingRef;
-	int	width;
-	int	height;
-	char rememberTicker;
+	long width;
+	long height;
+	long rememberTicker;
 	char dirty;
 	char sync;
 	char locked;

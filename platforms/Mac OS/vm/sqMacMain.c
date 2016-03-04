@@ -118,7 +118,6 @@ OSErr			gSqueakFileLastError;
 Boolean			gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,
 				gSqueakHasQuitWithoutSaving = true,
 				gSqueakFloatingWindowGetsFocus=false,
-				gSqueakUIFlushUseHighPercisionClock=false,
 				gSqueakPluginsBuiltInOrLocalOnly=false,
 				gSqueakHeadless=false,
 				gSqueakQuitOnQuitAppleEvent=false,
@@ -820,7 +819,6 @@ fetchPreferences() {
 				SqueakDebug;
     CFBooleanRef SqueakWindowHasTitleType,
 				SqueakFloatingWindowGetsFocusType,
-				SqueakUIFlushUseHighPercisionClock,
 				SqueakPluginsBuiltInOrLocalOnly,
 				SqueakQuitOnQuitAppleEvent,
 				SqueakExplicitWindowOpenNeeded,
@@ -853,7 +851,6 @@ fetchPreferences() {
 	SqueakPluginsBuiltInOrLocalOnly = CFDictionaryGetValue(myDictionary, CFSTR("SqueakPluginsBuiltInOrLocalOnly"));
 	SqueakExplicitWindowOpenNeeded = CFDictionaryGetValue(myDictionary, CFSTR("SqueakExplicitWindowOpenNeeded"));
     gSqueakImageNameStringRef = CFDictionaryGetValue(myDictionary, CFSTR("SqueakImageName"));
-    SqueakUIFlushUseHighPercisionClock = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushUseHighPercisionClock"));
     SqueakUIFlushPrimaryDeferNMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushPrimaryDeferNMilliseconds"));
     SqueakUIFlushSecondaryCleanupDelayMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushSecondaryCleanupDelayMilliseconds"));
     SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds"));
@@ -984,9 +981,6 @@ fetchPreferences() {
 				}
     if (SqueakMaxHeapSizeType)
         CFNumberGetValue(SqueakMaxHeapSizeType,kCFNumberLongLongType,(sqInt *) &gMaxHeapSize);
-
-	if (SqueakUIFlushUseHighPercisionClock)
-        gSqueakUIFlushUseHighPercisionClock = CFBooleanGetValue(SqueakUIFlushUseHighPercisionClock);
 
 	if (SqueakUIFlushPrimaryDeferNMilliseconds)
         CFNumberGetValue(SqueakUIFlushPrimaryDeferNMilliseconds,kCFNumberLongType,(long *) &gSqueakUIFlushPrimaryDeferNMilliseconds);

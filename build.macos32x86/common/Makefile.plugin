@@ -177,6 +177,9 @@ $(PLUGINPLIST): $(PLATDIR)/iOS/plugins/Info.plist getversion
 	sed "s/\$$(VERSION)/`getversion VERSION_TAG`/" $< | \
 	sed "s/\$(LIBNAME)/$(LIBNAME)/" > $(PLUGINPLIST)
 
+getversion:
+	make -f ../common/Makefile.vm getversion
+
 else # ifeq ($(realpath $(PREREQUISITES)),$(PREREQUISITES))
 # If any prerequisites are missing simply create a .ignore file
 

@@ -90,11 +90,9 @@ extern usqInt sqAllocateMemoryMac(usqInt desiredHeapSize, usqInt minHeapSize);
 #define reserveExtraCHeapBytes(origHeapSize, bytesToReserve) (origHeapSize - bytesToReserve)
 
 /* undefine clock macros that are implemented as functions */
-#undef ioLowResMSecs
 #undef ioMicroMSecs
 #undef ioMSecs
 #if STACKVM /* In the Cog VMs time management is in sqUnixHeartbeat.c */
-#define ioLowResMSecs ioMSecs /* i.e. use ioMSecs in sqUnixHeartbeat.c */
 #else
 #define ioMSecs ioMicroMSecs
 #endif

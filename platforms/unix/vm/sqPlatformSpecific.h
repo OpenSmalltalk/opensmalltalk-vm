@@ -28,12 +28,6 @@
  * 
  */
 
-/* undefine clock macros (these are implemented as functions) */
-
-#undef ioMSecs
-#undef ioMicroMSecs
-#undef ioLowResMSecs
-
 #undef sqAllocateMemory
 #undef sqGrowMemoryBy
 #undef sqShrinkMemoryBy

@@ -32,19 +32,6 @@ static struct timeval	 startUpTime;
  * In the Cog VMs time management is in platforms/unix/vm/sqUnixHeartbeat.c.
  */
 #if STACKVM
-/*
- * Compute the time via the old method for sanity checking purposes.
- */
-int ioOldMSecs() {
-  struct timeval now;
-  gettimeofday(&now, 0);
-  if ((now.tv_usec-= startUpTime.tv_usec) < 0) {
-    now.tv_usec+= 1000000;
-    now.tv_sec-= 1;
-  }
-  now.tv_sec-= startUpTime.tv_sec;
-  return (now.tv_usec / 1000 + now.tv_sec * 1000);
-}
 void SetUpTimers(void)
 {
 extern void ioInitTime(void);
@@ -56,7 +43,6 @@ extern void ioInitTime(void);
 }
 #else /* STACKVM */
 static TMTask    gTMTask;
-static unsigned int	lowResMSecs= 0;
 
 #define LOW_RES_TICK_MSECS 16
 #define HIGH_RES_TICK_MSECS 2
@@ -65,7 +51,6 @@ static unsigned int	lowResMSecs= 0;
 static pascal void
 MyTimerProc(QElemPtr time)
 {
-    lowResMSecs = ioMicroMSecs();
     PrimeTime((QElemPtr)time, LOW_RES_TICK_MSECS);
     return;
 }
@@ -84,14 +69,6 @@ SetUpTimers(void)
     InsXTime((QElemPtr)(&gTMTask.qLink));
     PrimeTime((QElemPtr)&gTMTask.qLink,LOW_RES_TICK_MSECS);
 }
-
-#if 1
-int
-ioLowResMSecs(void) { return lowResMSecs; }
-#else
-int
-ioLowResMSecs(void) { return ioMicroMSecs(); }
-#endif
 
 int
 ioMicroMSecs(void)
@@ -142,9 +119,7 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
 #undef ioMSecs
 //Issue with unix aio.c sept 2003
 
-sqInt ioMSecs() {
-    return ioMicroMSecs();
-}
+long ioMSecs() { return ioMicroMSecs(); }
 
 #define SecondsFrom1901To1970      2177452800ULL
 #define MicrosecondsFrom1901To1970 2177452800000000ULL

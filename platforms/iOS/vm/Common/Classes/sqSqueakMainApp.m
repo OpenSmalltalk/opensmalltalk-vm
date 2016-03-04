@@ -345,7 +345,7 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 
 void
 attachToSignals() {
-#if COGVM
+#if STACKVM
 	struct sigaction sigusr1_handler_action, sigsegv_handler_action;
 
 	if (gNoSignalHandlers) return;

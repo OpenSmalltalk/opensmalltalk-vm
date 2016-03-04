@@ -79,20 +79,13 @@ if(1) {int sqfni;\
 	dst[num] = 0;\
 }
 
-/* undefine clock macros that are implemented as functions */
-/* basic millisecond timer value */
-#undef ioMSecs
-
 /* less important timer, return mSec values but can be lower actual resolution */
-#undef ioLowResMSecs
 /* a high-res timer for debugging */
 unsigned int microsecondsvalue(void);
 
 
 usqInt millisecondTimerValue(void);
 #define ioMSecs()  (sqInt)(millisecondTimerValue())
-#define ioLowResMSecs() (sqInt)(millisecondTimerValue())
-
 
 
 /* extended fileplugin support */

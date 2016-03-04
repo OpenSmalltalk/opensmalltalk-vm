@@ -53,11 +53,6 @@ size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
 # define fabsf(x)    ((float)fabs((double)(x)))
 #endif
 
-/* undefine clock macros that are implemented as functions */
-#undef ioMSecs
-#undef ioLowResMSecs
-#undef ioMicroMSecs
-
 #else 
 error "Not Win32!"
 #endif /* WIN32 */

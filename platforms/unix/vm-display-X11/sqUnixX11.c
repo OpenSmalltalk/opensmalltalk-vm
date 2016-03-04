@@ -89,7 +89,7 @@
 # undef	DEBUG_SELECTIONS
 # undef	DEBUG_BROWSER
 # undef	DEBUG_WINDOW
-# undef  DEBUG_VISUAL
+# undef DEBUG_VISUAL
 #endif
 
 #define	USE_XICFONT_OPTION

@@ -137,10 +137,6 @@ extern sqInt interpret(void);  //This is a VM Callback
 	eventQueue = [[Queue alloc] init];
 }
 
-- (void) attachToSignals {
-//  Override in subclasses
-}
-
 - (void) setupBrowserLogic {
 }
 
@@ -168,7 +164,7 @@ extern sqInt interpret(void);  //This is a VM Callback
 	}
 	
 	[self parseUnixArgs];
-	[self attachToSignals];
+	attachToSignals();
     
 	//JMM here we parse the unixArgs
 	//JMM now we wait for the open document apple events (normally)

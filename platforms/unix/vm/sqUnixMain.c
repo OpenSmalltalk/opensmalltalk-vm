@@ -42,10 +42,6 @@
 #include "sqUnixMain.h"
 #include "debug.h"
 
-#ifdef ioMSecs
-# undef ioMSecs
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -201,14 +197,8 @@ ioInitTime(void)
     }
 }
 
-sqInt ioLowResMSecs(void)
-{
-  return (useItimer)
-    ? lowResMSecs
-    : ioMSecs();
-}
 
-sqInt ioMSecs(void)
+long ioMSecs(void)
 {
   struct timeval now;
   gettimeofday(&now, 0);
@@ -221,7 +211,7 @@ sqInt ioMSecs(void)
   return lowResMSecs= (now.tv_usec / 1000 + now.tv_sec * 1000);
 }
 
-sqInt ioMicroMSecs(void)
+long ioMicroMSecs(void)
 {
   /* return the highest available resolution of the millisecond clock */
   return ioMSecs();	/* this already to the nearest millisecond */

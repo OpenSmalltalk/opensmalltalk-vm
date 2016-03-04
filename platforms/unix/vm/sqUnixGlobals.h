@@ -4,9 +4,6 @@
 #include "sqMemoryAccess.h"
 
 extern sqInt forceInterruptCheck(void);
-#if STACKVM
-extern sqInt forceInterruptCheckFromHeartbeat(void);
-#endif
 
 #if 1 /* use global structure */
 

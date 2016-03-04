@@ -210,10 +210,7 @@ plugin-makefile = $(firstword $(realpath $(OSXPLUGINSDIR)/$(1)/Makefile ../commo
 # Internal plugin.  Build as lib then link in lib
 # Check for Makefile in iOS plugins directory otherwise use default Makefile
 # N.B.  PLATDIR *must* be a relative path for this to work
-$(OBJDIR)/%.lib: getversion $(call plugin-makefile,$(*F)) $(wildcard $(*F).ignore) \
-					$(wildcard $(PLUGINSRCDIR)/$(*F)/*.c) \
-					$(wildcard $(PLATDIR)/Cross/plugins/$(*F)/*.*) \
-					$(wildcard $(OSXPLUGINSDIR)/$(*F)/*.*)
+$(OBJDIR)/%.lib: FORCE
 	@-mkdir -p $(BLDDIR)/$(*F)
 	test $@ -ot $(call plugin-makefile,$(*F)) && rm -rf $(BUILD)/vm/$(*F).* || true
 	rm -f $(BUILD)/vm/$(*F).ignore
@@ -237,10 +234,7 @@ prereqs/%.lib:
 
 # External plugin.  Build as bundle and copy to vm dir ($(OBJDIR)).
 # Check for Makefile in iOS plugins directory otherwise use default Makefile
-$(OBJDIR)/%.bundle:	getversion $(call plugin-makefile,$(*F)) $(wildcard $(*F).ignore) \
-					$(wildcard $(PLUGINSRCDIR)/$(*F)/*.c) \
-					$(wildcard $(PLATDIR)/Cross/plugins/$(*F)/*.*) \
-					$(wildcard $(OSXPLUGINSDIR)/$(*F)/*.*)
+$(OBJDIR)/%.bundle:	FORCE
 	@-mkdir -p $(BLDDIR)/$(*F)
 	test $@ -ot $(call plugin-makefile,$(*F)) && rm -rf $(BUILD)/vm/$(*F).* || true
 	rm -f $(BUILD)/vm/$(*F).ignore
@@ -255,6 +249,8 @@ $(OBJDIR)/%.bundle:	getversion $(call plugin-makefile,$(*F)) $(wildcard $(*F).ig
 # It would be nice to have this abbreviation but it creates havoc eem 2/2016
 #%.bundle: $(OBJDIR)/%.bundle
 #	make $(MAKEFLAGS) $<
+
+FORCE:
 
 .PRECIOUS: $(OBJDIR)/%.lib $(OBJDIR)/%.bundle
 

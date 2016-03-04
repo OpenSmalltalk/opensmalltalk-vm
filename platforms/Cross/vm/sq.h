@@ -131,15 +131,11 @@ extern void sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz);
    There was a third form that used to be used for quickly timing primitives in
    order to try to keep millisecond delays up to date. That is no longer used.
 
-   By default, the basic ioMSec() clock function is defined
-   here as a macro based on the standard C library function clock().
-   Any of this can be overridden in sqPlatformSpecific.h.
-
    The wall clock is answered by ioSeconds, which answers the number of seconds
    since the start of the 20th century (12pm Dec 31, 1900).
 
    The Cog VMs depend on a heartbeat to cause the VM to check for interrupts at
-   regular intervals (of the order of ever milisecond).  The heartbeat on these
+   regular intervals (of the order of ever millisecond).  The heartbeat on these
    VMs is responsible for updating a 64-bit microsecond clock with the number
    of microseconds since the start of the 20th century (12pm Dec 31, 1900)
    available via ioUTCMicroseconds and ioLocalMicroseconds.  When exact time is
@@ -147,10 +143,8 @@ extern void sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz);
    the clock to return the time right now, rather than of the last heartbeat.
 */
 
-sqInt ioMSecs(void);
-/* deprecated out of existence sqInt ioLowResMSecs(void); */
-sqInt ioMicroMSecs(void);
-sqInt ioOldMSecs(void);
+long ioMSecs(void);
+long ioMicroMSecs(void);
 
 /* duplicate the generated definition in the interpreter.  If they differ the
  * compiler will complain and catch it for us.  We use 0x1FFFFFFF instead of
@@ -161,6 +155,7 @@ sqInt ioOldMSecs(void);
 #define MillisecondClockMask 0x1FFFFFFF
 
 #if STACKVM
+extern void forceInterruptCheckFromHeartbeat(void);
 unsigned volatile long long  ioUTCMicrosecondsNow();
 unsigned volatile long long  ioUTCMicroseconds();
 unsigned volatile long long  ioLocalMicrosecondsNow();

@@ -66,7 +66,6 @@ WindowPtr getSTWindow(void) {
 extern struct VirtualMachine *interpreterProxy;
 int ioSetFullScreenActual(int fullScreen);
 void SetupSurface(int whichWindowIndex);
-extern int ioLowResMSecs(void);
 
 int ioSetFullScreen(int fullScreen) {
         void *  giLocker;
@@ -627,15 +626,14 @@ int ioShowDisplayOnWindow(
 	CGContextDrawImage(targetWindowBlock->context, clip, image);
 	
 	{ 
-			extern Boolean gSqueakUIFlushUseHighPercisionClock;
 			extern	long	gSqueakUIFlushPrimaryDeferNMilliseconds;
-			
-			int now = (gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs()) - targetWindowBlock->rememberTicker;
+
+			long now = ioMSecs() - targetWindowBlock->rememberTicker;
  
 		if (((now >= gSqueakUIFlushPrimaryDeferNMilliseconds) || (now < 0))) {
 			CGContextFlush(targetWindowBlock->context);
 			targetWindowBlock->dirty = 0;
-			targetWindowBlock->rememberTicker = gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
+			targetWindowBlock->rememberTicker = ioMSecs();
 		} else {
 			if (targetWindowBlock->sync)
 				CGContextSynchronize(targetWindowBlock->context);
@@ -1596,10 +1594,9 @@ int osxUnlockSurface(int index, int x, int y, int w, int h) {
 int osxShowSurface(int index, int x, int y, int w, int h) {
 	static RgnHandle dirtyRgn = NULL;
 	static RgnHandle maskRect;
-	extern Boolean gSqueakUIFlushUseHighPercisionClock;
 	extern	long	gSqueakUIFlushPrimaryDeferNMilliseconds;
 	windowDescriptorBlock *targetWindowBlock = windowBlockFromIndex(index);
-	int now = (gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs()) - targetWindowBlock->rememberTicker;
+	long now = ioMSecs() - targetWindowBlock->rememberTicker;
 
 	if (dirtyRgn == NULL) {
 		dirtyRgn = NewRgn();
@@ -1619,7 +1616,7 @@ int osxShowSurface(int index, int x, int y, int w, int h) {
 //		fprintf(stderr,"<F %i> ",ioMSecs());
 		SetEmptyRgn(dirtyRgn);
 		targetWindowBlock->dirty = 0;
-		targetWindowBlock->rememberTicker = gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
+		targetWindowBlock->rememberTicker = ioMSecs();
 	} else {
 		targetWindowBlock->dirty = 1;
 //		fprintf(stderr,"<W %i> ",ioMSecs());

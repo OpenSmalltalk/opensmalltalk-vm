@@ -582,7 +582,7 @@ static void noteMouseEvent(void)
   int state= makeButtonState();
   sqMouseEvent evt;
   evt.type= EventTypeMouse;
-  evt.timeStamp= ioMSecs();
+  evt.timeStamp= ioMSecs() & MillisecondClockMask;
   evt.x= mousePosition.x;
   evt.y= mousePosition.y;
   evt.buttons= (state & 0x7);
@@ -603,7 +603,7 @@ static void noteKeyboardEvent(int keyCode, int pressCode, int modifiers)
 {
   sqKeyboardEvent evt;
   evt.type= EventTypeKeyboard;
-  evt.timeStamp= ioMSecs();
+  evt.timeStamp= ioMSecs() & MillisecondClockMask;
   evt.charCode= keyCode;
   evt.pressCode= pressCode;
   evt.modifiers= modifiers;
@@ -625,7 +625,7 @@ static void noteDragEvent(int dragType, int numFiles)
   int state= makeButtonState();
   sqDragDropFilesEvent evt;
   evt.type= EventTypeDragDropFiles;
-  evt.timeStamp= ioMSecs();
+  evt.timeStamp= ioMSecs() & MillisecondClockMask;
   evt.dragType= dragType;
   evt.x= mousePosition.x;
   evt.y= mousePosition.y;

@@ -80,7 +80,6 @@ notes: IsUserCancelEventRef
 	static int findRepeatInKeyMap(int keyCode);
 	static void setRepeatInKeyMap(int keyCode);
 	void doPendingFlush(void);
-	int ioLowResMSecs(void);
 #endif
 
 /*** Variables -- Event Recording ***/
@@ -186,14 +185,14 @@ ioProcessEvents(void) {
 	if (inIOProcessEvents) return;
 	inIOProcessEvents += 1;
 
-    clockTime = ioLowResMSecs();
+    clockTime = ioMSecs();
 	if (abs(nextPollTick - clockTime) >= 16) {
 		/* time to process events! */
 		while (HandleEvents()) {
 			/* process all pending events */
 		}
 
-        clockTime = ioLowResMSecs();        
+        clockTime = ioMSecs();        
 		nextPollTick = clockTime;
 		
         if (gDisablePowerManager && gTapPowerManager) {
@@ -2135,11 +2134,10 @@ PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* userData) {
 
 void
 doPendingFlush(void) {
-	extern  Boolean gSqueakUIFlushUseHighPercisionClock;
 	extern	long	gSqueakUIFlushSecondaryCleanupDelayMilliseconds,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds;
-	static int lastTick = 0;
-	int now = gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
-	int delta = now - lastTick;
+	static long lastTick = 0;
+	long now = ioMSecs();
+	long delta = now - lastTick;
 		
 	if ((delta >= gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds) || (delta < 0))  {
 		windowDescriptorBlock *windowBlock;
@@ -2152,7 +2150,7 @@ doPendingFlush(void) {
 				if ((delta >= gSqueakUIFlushSecondaryCleanupDelayMilliseconds) || (delta < 0))  {
 					CGContextFlush(windowBlock->context);
 					windowBlock-> dirty = 0;
-					windowBlock->rememberTicker = now =  gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
+					windowBlock->rememberTicker = now = ioMSecs();
 				}
 			}
 		}

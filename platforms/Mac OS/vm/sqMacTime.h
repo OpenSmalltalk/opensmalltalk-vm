@@ -16,5 +16,4 @@
 
 void SetUpTimers(void);
 time_t convertToSqueakTime(time_t unixTime);
-sqInt ioLowResMSecs(void);
 time_t convertToSqueakTime(time_t unixTime);

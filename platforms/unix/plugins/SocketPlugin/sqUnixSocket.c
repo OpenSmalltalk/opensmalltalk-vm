@@ -46,9 +46,6 @@
 #include "SocketPlugin.h"
 #include "sqaio.h"
 
-#undef	AIO_DEBUG
-#undef	DEBUG
-
 #ifdef ACORN
 # include <time.h>
 # define __time_t
@@ -217,8 +214,6 @@ static void dataHandler(int, void *, int);
 static void closeHandler(int, void *, int);
 
 
-
-/* this MUST be turned on if DEBUG is turned on in aio.c  */
 
 #ifdef AIO_DEBUG
 char *socketHandlerName(aioHandler h)
@@ -617,7 +612,7 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
   if (-1 == newSocket)
     {
       /* socket() failed, or incorrect protocol type */
-      fprintf(stderr, "primSocketCreateRAW: socket() failed; protocol = %ld, errno = %d\n", protocol, errno);
+      fprintf(stderr, "primSocketCreateRAW: socket() failed; protocol = %d, errno = %d\n", protocol, errno);
       interpreterProxy->success(false);
       return;
     }
@@ -1133,10 +1128,11 @@ sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
       FPRINTF((stderr, "UDP sendData(%d, %d)\n", SOCKET(s), bufSize));
       if ((nsent= sendto(SOCKET(s), buf, bufSize, 0, (struct sockaddr *)&SOCKETPEER(s), sizeof(SOCKETPEER(s)))) <= 0)
 	{
-	  if (errno == EWOULDBLOCK)	/* asynchronous write in progress */
+      int err = errno;
+	  if (err == EWOULDBLOCK)	/* asynchronous write in progress */
 	    return 0;
-	  FPRINTF((stderr, "UDP send failed\n"));
-	  SOCKETERROR(s)= errno;
+	  FPRINTF((stderr, "UDP send failed %d %s\n", err, strerror(err)));
+	  SOCKETERROR(s)= err;
 	  return 0;
 	}
     }
@@ -1157,7 +1153,7 @@ sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 	      /* error: most likely "connection closed by peer" */
 	      SOCKETSTATE(s)= OtherEndClosed;
 	      SOCKETERROR(s)= errno;
-	      FPRINTF((stderr, "TCP write failed -> %d", errno));
+	      FPRINTF((stderr, "TCP write failed -> %d", SOCKETERROR(s)));
 	      return 0;
 	    }
 	}

@@ -891,7 +891,7 @@ sqInputEvent *EventBufAppendEvent(int  type) {
 		iebAdvance(eventBufGet);
 	}
 	evt->type= type;
-	evt->timeStamp= ioMSecs();
+	evt->timeStamp= ioMSecs() & MillisecondClockMask;
 	return evt;
 }
 

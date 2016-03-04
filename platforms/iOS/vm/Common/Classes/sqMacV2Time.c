@@ -51,27 +51,12 @@ such third-party acknowledgments.
 #include <sys/time.h>
 
 static struct timeval	 startUpTime;
-#define MillisecondClockMask 536870911
 
 #if STACKVM
 /* all three methods have their roots in the original unix port from the late 90's */
 /*
  * In the Cog VMs time management is in platforms/unix/vm/sqUnixHeartbeat.c.
  */
-/*
- * Compute the time via the old method for sanity checking purposes.
- */
-sqInt ioOldMSecs()
-{
-	struct timeval now;
-	gettimeofday(&now, 0);
-	if ((now.tv_usec-= startUpTime.tv_usec) < 0) {
-		now.tv_usec+= 1000000;
-		now.tv_sec-= 1;
-	}
-	now.tv_sec-= startUpTime.tv_sec;
-	return (now.tv_usec / 1000 + now.tv_sec * 1000);
-}
 void SetUpTimers(void)
 {
 	extern void ioInitTime(void);

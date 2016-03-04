@@ -53,9 +53,9 @@ int ioMSecs()
 {
   /* Make sure the value fits into Squeak SmallIntegers */
 #ifndef _WIN32_WCE
-  return timeGetTime() & 0x3FFFFFFF;
+  return timeGetTime() & MillisecondClockMask;
 #else
-  return GetTickCount() &0x3FFFFFFF;
+  return GetTickCount() & MillisecondClockMask;
 #endif
 }
 
@@ -63,7 +63,7 @@ int ioMSecs()
 int ioMicroMSecs(void)
 {
   /* Make sure the value fits into Squeak SmallIntegers */
-  return timeGetTime() &0x3FFFFFFF;
+  return timeGetTime() & MillisecondClockMask;
 }
 
 /* Compute the current VM time basis, the number of microseconds from 1901.

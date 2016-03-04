@@ -478,9 +478,8 @@ int sqNetworkInit(int resolverSemaIndex) {
 	/* Success! Create a session ID that is unlikely to be
 	   repeated. Zero is never used for a valid session number.
 	*/
-	gthisNetSession = ioLowResMSecs() + time(NULL);
-	if (gthisNetSession == 0) gthisNetSession = 1;  /* don't use 0 */
-	
+	gthisNetSession = interpreterProxy->getThisSessionID();
+
 	return 0;
 }
 

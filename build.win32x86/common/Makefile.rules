@@ -16,7 +16,7 @@ LDCXX := clang++ # For linking c++ bundles
 
 DEPFLAGS = -MT $@ -MMD -MP -MF deps/$(*F).Td
 ALLFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
-POSTCOMPILE = sed '/^$$/d' <deps/$(*F).Td | sed '/^.*:$$/d' > deps/$(*F).d; rm deps/$(*F).Td; touch -r $< deps/$(*F).d
+POSTCOMPILE = sed '/^$$/d' <deps/$(*F).Td | sed '/^.*:$$/d' | sed 's/^build[^/]*/$$(BUILD)/' > deps/$(*F).d; rm deps/$(*F).Td; touch -r $< deps/$(*F).d
 
 $(OBJDIR)/%.o: %.c deps/%.d
 	$(CC) -x c $(ALLFLAGS) $(INCLUDES) -c $< -o $@

@@ -66,7 +66,6 @@
 - (void) doHeadlessSetup;
 - (void) doMemorySetup;
 - (void) parseUnixArgs;
-- (void) attachToSignals;
 - (void) setupMenus;
 - (void) setupTimers;
 - (void) setupAIO;

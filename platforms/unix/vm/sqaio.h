@@ -97,9 +97,8 @@ extern long aioSleepForUsecs(long microSeconds);
 extern unsigned volatile long long ioUTCMicroseconds(void);
 extern unsigned volatile long long ioUTCMicrosecondsNow(void);
 
-/* debugging stuff. can probably be deleted */
-
-#ifdef DEBUG
+/* debugging stuff. */
+#ifdef AIO_DEBUG
 # ifdef ACORN
 #   define FPRINTF(s) \
     do { \
@@ -110,11 +109,13 @@ extern unsigned volatile long long ioUTCMicrosecondsNow(void);
       platReportError((os_error *)&privateErr); \
     } while (0)
 # else /* !ACORN */
-    extern sqInt aioLastTick, aioThisTick;
+    extern long aioLastTick, aioThisTick, ioMSecs(void);
+	extern const char *__shortFileName(const char *);
 #   define FPRINTF(X) do { \
-	aioThisTick= ioMSecs(); \
-	fprintf(stderr, "%8d %8d ", aioThisTick, aioThisTick - aioLastTick); \
-	aioLastTick= aioThisTick; \
+	aioThisTick = ioMSecs(); \
+	fprintf(stderr, "%8ld %4ld %s:%d ", aioThisTick, aioThisTick - aioLastTick,\
+			__shortFileName(__FILE__),__LINE__); \
+	aioLastTick = aioThisTick; \
 	fprintf X; } while (0)
 # endif /* ACORN */
 #else /* !DEBUG */

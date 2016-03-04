@@ -251,7 +251,6 @@ extern int gSqueakUseFileMappedMMAP;
  @"SqueakWindowHasTitle" NO
  @"SqueakFloatingWindowGetsFocus" NO
  @"SqueakEncodingType" NO
- SqueakUIFlushUseHighPercisionClock
  SqueakUIFlushPrimaryDeferNMilliseconds
  SqueakUIFlushSecondaryCleanupDelayMilliseconds
  SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds

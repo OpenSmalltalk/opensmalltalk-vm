@@ -11,8 +11,6 @@ int rename(const char*, const char*);
 
 #define MAXPATHLEN FILENAME_MAX
 
-#undef ioMSecs
-
 #define exit(n) do { \
 					if (n == 0) threadexitsall(NULL); \
 					else { \

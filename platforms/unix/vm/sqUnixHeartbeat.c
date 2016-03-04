@@ -182,71 +182,6 @@ ioHighResClock(void)
   return value;
 }
 
-#if !macintoshSqueak
-static unsigned int   lowResMSecs= 0;
-static struct timeval startUpTime;
-
-/*
- * Answer the millisecond clock as computed on Unix prior to the 64-bit
- * microsecond clock.  This is to help verify that the new clock is correct.
- */
-sqInt
-ioOldMSecs(void)
-{
-  struct timeval now;
-  unsigned int nowMSecs;
-
-#if 1 /* HAVE_HIGHRES_COUNTER */
-
-  /* if we have a cheap, high-res counter use that to limit
-     the frequency of calls to gettimeofday to something reasonable. */
-  static unsigned int baseMSecs = 0;      /* msecs when we took base tick */
-  static sqLong baseTicks = 0;/* base tick for adjustment */
-  static sqLong tickDelta = 0;/* ticks / msec */
-  static sqLong nextTick = 0; /* next tick to check gettimeofday */
-
-  sqLong thisTick = ioHighResClock();
-
-  if(thisTick < nextTick) return lowResMSecs;
-
-#endif
-
-  gettimeofday(&now, 0);
-  if ((now.tv_usec-= startUpTime.tv_usec) < 0)
-    {
-      now.tv_usec+= 1000000;
-      now.tv_sec-= 1;
-    }
-  now.tv_sec-= startUpTime.tv_sec;
-  nowMSecs = (now.tv_usec / 1000 + now.tv_sec * 1000);
-
-#if 1 /* HAVE_HIGHRES_COUNTER */
-  {
-    unsigned int msecsDelta;
-    /* Adjust our rdtsc rate every 10...100 msecs as needed.
-       This also covers msecs clock-wraparound. */
-    msecsDelta = nowMSecs - baseMSecs;
-    if(msecsDelta < 0 || msecsDelta > 100) {
-      /* Either we've hit a clock-wraparound or we are being
-	 sampled in intervals larger than 100msecs.
-	 Don't try any fancy adjustments */
-      baseMSecs = nowMSecs;
-      baseTicks = thisTick;
-      nextTick = 0;
-      tickDelta = 0;
-    } else if(msecsDelta >= 10) {
-      /* limit the rate of adjustments to 10msecs */
-      baseMSecs = nowMSecs;
-      tickDelta = (thisTick - baseTicks) / msecsDelta;
-      nextTick = baseTicks = thisTick;
-    }
-    nextTick += tickDelta;
-  }
-#endif
-  return lowResMSecs= nowMSecs;
-}
-#endif /* !macintoshSqueak */
-
 unsigned volatile long long
 ioUTCMicroseconds() { return get64(utcMicrosecondClock); }
 
@@ -268,12 +203,12 @@ ioUTCStartMicroseconds() { return utcStartMicroseconds; }
 unsigned volatile long long
 ioLocalMicrosecondsNow() { return currentUTCMicroseconds() + vmGMTOffset; };
 
-sqInt
+/* ioMSecs answers the millisecondClock as of the last tick. */
+long
 ioMSecs() { return millisecondClock; }
 
-/* Note: ioMicroMSecs returns *milli*seconds */
-sqInt
-ioMicroMSecs(void) { return microToMilliseconds(currentUTCMicroseconds()); }
+/* ioMicroMSecs answers the millisecondClock right now */
+long ioMicroMSecs(void) { return microToMilliseconds(currentUTCMicroseconds());}
 
 /* returns the local wall clock time */
 sqInt
@@ -327,10 +262,6 @@ ioInitTime(void)
 	ioUpdateVMTimezone(); /* does updateMicrosecondClock as a side-effect */
 	updateMicrosecondClock(); /* this can now compute localUTCMicroseconds */
 	utcStartMicroseconds = utcMicrosecondClock;
-#if !macintoshSqueak
-	/* This is only needed for ioOldMSecs */
-	gettimeofday(&startUpTime, 0);
-#endif
 }
 
 static void
