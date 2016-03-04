@@ -31,6 +31,13 @@ VMClass class >> apiExportHeaderName [
 	^nil
 ]
 
+{ #category : #'adding/removing methods' }
+VMClass class >> basicRemoveSelector: aSelector [
+	"Override to update the timeStamp"
+	^(super basicRemoveSelector: aSelector) ifNotNil:
+		[:oldMethod| self touch. oldMethod]
+]
+
 { #category : #translation }
 VMClass class >> cogMethodClass: options [
 	^(options at: #NewspeakVM ifAbsent: [false])
