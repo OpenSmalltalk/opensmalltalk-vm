@@ -27,7 +27,7 @@ MacMenubarPlugin >> primitiveAppendMenu: menuHandleOop data: str255 [
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'constStr255' type: 'ConstStr255Param'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	constStr255 := self cCoerce: str255 to: 'ConstStr255Param'.	
 	self cCode: 'AppendMenu(menuHandle,constStr255)' inSmalltalk:[menuHandle].
@@ -41,7 +41,7 @@ MacMenubarPlugin >> primitiveAppendMenuItemText: menuHandleOop data: str255 [
 		parameters: #(Oop ByteArray).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'constStr255' type: 'ConstStr255Param'.
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	constStr255 := self cCoerce: str255 to: 'ConstStr255Param'.	
 	self cCode: 'AppendMenuItemText(menuHandle,constStr255)' inSmalltalk:[menuHandle].
@@ -55,7 +55,7 @@ MacMenubarPlugin >> primitiveCheckMenuItem: menuHandleOop item: anInteger checke
 		parameters: #(Oop SmallInteger Boolean).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'CheckMenuItem(menuHandle,anInteger,aBoolean)' inSmalltalk:[menuHandle].
 	^nil
@@ -79,7 +79,7 @@ MacMenubarPlugin >> primitiveCountMenuItems: menuHandleOop [
 		parameters: #(Oop).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	returnValue := self cCode: 'CountMenuItems(menuHandle)' inSmalltalk:[0].
 	^returnValue asSmallIntegerObj
@@ -98,7 +98,7 @@ MacMenubarPlugin >> primitiveCreateStandardWindowMenu: inOptions [
 '.
 	result := self cCode: 'CreateStandardWindowMenu(inOptions,&menuHandle);
 #endif' inSmalltalk:[0].
-	^interpreterProxy positive32BitIntegerFor: (self cCoerce: menuHandle to: 'long')
+	^interpreterProxy positiveMachineIntegerFor: (self cCoerce: menuHandle to: 'long')
 ]
 
 { #category : #'system primitives' }
@@ -118,7 +118,7 @@ MacMenubarPlugin >> primitiveDeleteMenuItem: menuHandleOop item: anInteger [
 		parameters: #(Oop SmallInteger).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'DeleteMenuItem(menuHandle,anInteger)' inSmalltalk:[menuHandle].
 	^nil
@@ -133,7 +133,7 @@ MacMenubarPlugin >> primitiveDisableMenuCommand: menuHandleOop item: anInteger [
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'commandID' type: 'MenuCommand'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	commandID := self cCoerce: (interpreterProxy positive32BitValueOf: anInteger) to: 'MenuCommand'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: '#if TARGET_API_MAC_CARBON
@@ -150,7 +150,7 @@ MacMenubarPlugin >> primitiveDisableMenuItem: menuHandleOop item: anInteger [
 		parameters: #(Oop SmallInteger).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'DisableMenuItem(menuHandle,anInteger)' inSmalltalk:[menuHandle].
 	^nil
@@ -164,7 +164,7 @@ MacMenubarPlugin >> primitiveDisableMenuItemIcon: menuHandleOop item: anInteger 
 		parameters: #(Oop SmallInteger).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'DisableMenuItemIcon(menuHandle,anInteger)' inSmalltalk:[menuHandle].
 	^nil
@@ -178,7 +178,7 @@ MacMenubarPlugin >> primitiveDisposeMenu: menuHandleOop [
 		parameters: #(Oop).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'DisposeMenu(menuHandle)' inSmalltalk:[menuHandle].
 	^nil
@@ -221,7 +221,7 @@ MacMenubarPlugin >> primitiveEnableMenuCommand: menuHandleOop item: anInteger [
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'commandID' type: 'MenuCommand'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	commandID := self cCoerce: (interpreterProxy positive32BitValueOf: anInteger) to: 'MenuCommand'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: '#if TARGET_API_MAC_CARBON
@@ -237,7 +237,7 @@ MacMenubarPlugin >> primitiveEnableMenuItem: menuHandleOop item: anInteger [
 		parameters: #(Oop SmallInteger).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'EnableMenuItem(menuHandle,anInteger)' inSmalltalk:[menuHandle].
 	^nil
@@ -251,7 +251,7 @@ MacMenubarPlugin >> primitiveEnableMenuItemIcon: menuHandleOop item: anInteger [
 		parameters: #(Oop SmallInteger).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'EnableMenuItemIcon(menuHandle,anInteger)' inSmalltalk:[menuHandle].
 	^nil
@@ -268,7 +268,7 @@ MacMenubarPlugin >> primitiveGetIndMenuItemWithCommandID: menuHandleOop commandI
 	self var: 'applicationMenu' type: 'MenuHandle'.
 	self var: 'outIndex' type: 'MenuItemIndex'.
 
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	commandID := self cCoerce: (interpreterProxy positive32BitValueOf: aCommandID) to: 'MenuCommand'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: '#if TARGET_API_MAC_CARBON
@@ -281,7 +281,7 @@ GetIndMenuItemWithCommandID(menuHandle, kHICommandHide, 1,
 
 { #category : #'system primitives' }
 MacMenubarPlugin >> primitiveGetIndMenuWithCommandID: menuHandleOop commandID: aCommandID [
-	| menuHandle MenuItemIndex commandID applicationMenu outIndex |
+	| menuHandle commandID applicationMenu outIndex |
 	self primitive: 'primitiveGetIndMenuWithCommandID'
 		parameters: #(Oop Oop).
 	self var: 'menuHandle' type: 'MenuHandle'.
@@ -289,14 +289,15 @@ MacMenubarPlugin >> primitiveGetIndMenuWithCommandID: menuHandleOop commandID: a
 	self var: 'applicationMenu' type: 'MenuHandle'.
 	self var: 'outIndex' type: 'MenuItemIndex'.
 
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	commandID := self cCoerce: (interpreterProxy positive32BitValueOf: aCommandID) to: 'MenuCommand'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: '#if TARGET_API_MAC_CARBON
 GetIndMenuItemWithCommandID(menuHandle, kHICommandHide, 1,
                    &applicationMenu, &outIndex);
 #endif ' inSmalltalk:[menuHandle].
-	^interpreterProxy positive32BitIntegerFor: (self cCoerce: applicationMenu to: 'long')
+	outIndex asSmallIntegerObj. "to avoid elimination of the variable..."
+	^interpreterProxy positiveMachineIntegerFor: (self cCoerce: applicationMenu to: 'long')
 
 
 ]
@@ -309,7 +310,7 @@ MacMenubarPlugin >> primitiveGetItemCmd: menuHandleOop item: anInteger [
 	self primitive: 'primitiveGetItemCmd'
 		parameters: #(Oop SmallInteger).
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	aCharacter := 0.
 	self cCode: 'GetItemCmd(menuHandle,anInteger,&aCharacter)' inSmalltalk:[menuHandle].
@@ -326,7 +327,7 @@ MacMenubarPlugin >> primitiveGetItemIcon: menuHandleOop item: anInteger [
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'iconIndex' type: 'short'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	iconIndex := 0.
 	self cCode: 'GetItemIcon(menuHandle,anInteger,&iconIndex)' inSmalltalk:[menuHandle].
@@ -342,7 +343,7 @@ MacMenubarPlugin >> primitiveGetItemMark: menuHandleOop item: anInteger [
 	self primitive: 'primitiveGetItemMark'
 		parameters: #(Oop SmallInteger).
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	aCharacter := 0.
 	self cCode: 'GetItemMark(menuHandle,anInteger,&aCharacter)' inSmalltalk:[menuHandle].
@@ -359,7 +360,7 @@ MacMenubarPlugin >> primitiveGetItemStyle: menuHandleOop item: anInteger [
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'chStyle' type: 'Style'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	chStyle := 0.
 	self cCode: 'GetItemStyle(menuHandle,anInteger,&chStyle)' inSmalltalk:[menuHandle].
@@ -375,7 +376,7 @@ MacMenubarPlugin >> primitiveGetMenuBar [
 		parameters: #().
 	self var: 'menuHandle' type: 'Handle'.
 	menuHandle := self cCode: 'GetMenuBar()' inSmalltalk:[0].
-	^interpreterProxy positive32BitIntegerFor: (self cCoerce: menuHandle to: 'long')
+	^interpreterProxy positiveMachineIntegerFor: (self cCoerce: menuHandle to: 'long')
 ]
 
 { #category : #'system primitives' }
@@ -386,7 +387,7 @@ MacMenubarPlugin >> primitiveGetMenuHandle: menuID [
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'menuID' type: 'MenuID'.
 	menuHandle := self cCode: 'GetMenuHandle(menuID)' inSmalltalk:[0].
-	^interpreterProxy positive32BitIntegerFor: (self cCoerce: menuHandle to: 'long')
+	^interpreterProxy positiveMachineIntegerFor: (self cCoerce: menuHandle to: 'long')
 ]
 
 { #category : #'system primitives' }
@@ -397,7 +398,7 @@ MacMenubarPlugin >> primitiveGetMenuID: menuHandleOop [
 		parameters: #(Oop ).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'menuID' type: 'MenuID'.
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'menuID = GetMenuID(menuHandle)' inSmalltalk:[menuHandle].
 	^menuID asSmallIntegerObj
@@ -412,7 +413,7 @@ MacMenubarPlugin >> primitiveGetMenuItemCommandID: menuHandleOop item: anInteger
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'outCommandID' type: 'MenuCommand'.
 	outCommandID := 0.
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'GetMenuItemCommandID(menuHandle,anInteger,&outCommandID)' inSmalltalk:[menuHandle].
 	^interpreterProxy positive32BitIntegerFor: outCommandID
@@ -427,7 +428,7 @@ MacMenubarPlugin >> primitiveGetMenuItemFontID: menuHandleOop item: anInteger [
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'outFontID' type: 'SInt16'.
 	outFontID := 0.
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'GetMenuItemFontID(menuHandle,anInteger,&outFontID)' inSmalltalk:[menuHandle].
 	^outFontID asSmallIntegerObj
@@ -442,7 +443,7 @@ MacMenubarPlugin >> primitiveGetMenuItemHierarchicalID: menuHandleOop item: anIn
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'outHierID' type: 'MenuID'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	outHierID := 0.
 	self cCode: 'GetMenuItemHierarchicalID(menuHandle,anInteger,&outHierID)' inSmalltalk:[menuHandle].
@@ -459,7 +460,7 @@ MacMenubarPlugin >> primitiveGetMenuItemKeyGlyph: menuHandleOop item: anInteger 
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'outGlyph' type: 'SInt16'.
 	outGlyph := 0.
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'GetMenuItemKeyGlyph(menuHandle,anInteger,&outGlyph)' inSmalltalk:[menuHandle].
 	^interpreterProxy positive32BitIntegerFor: outGlyph
@@ -474,7 +475,7 @@ MacMenubarPlugin >> primitiveGetMenuItemModifiers: menuHandleOop item: anInteger
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'outModifers' type: 'Style'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	outModifers := 0.
 	self cCode: 'GetMenuItemModifiers(menuHandle,anInteger,&outModifers)' inSmalltalk:[menuHandle].
@@ -493,7 +494,7 @@ MacMenubarPlugin >> primitiveGetMenuItemText: menuHandleOop item: anInteger [
 	self primitive: 'primitiveGetMenuItemText'
 		parameters: #(Oop SmallInteger).
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	aString at: 0 put: 0.
 	self cCode: 'GetMenuItemText(menuHandle,anInteger,aString)' inSmalltalk:[menuHandle].
@@ -515,7 +516,7 @@ MacMenubarPlugin >> primitiveGetMenuItemTextEncoding: menuHandleOop item: anInte
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'outScriptID' type: 'TextEncoding'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'GetMenuItemTextEncoding(menuHandle,anInteger,&outScriptID)' inSmalltalk:[menuHandle].
 	^interpreterProxy positive32BitIntegerFor: outScriptID
@@ -530,7 +531,7 @@ MacMenubarPlugin >> primitiveGetMenuTitle: menuHandleOop [
 	self primitive: 'primitiveGetMenuTitle'
 		parameters: #(Oop).
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	aString at: 0 put: 0.
 	self cCode: 'GetMenuTitle(menuHandle,aString)' inSmalltalk:[menuHandle].
@@ -569,7 +570,7 @@ MacMenubarPlugin >> primitiveInsertFontResMenu: menuHandleOop afterItem: afterIt
 		parameters: #(Oop SmallInteger SmallInteger).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'InsertFontResMenu(menuHandle,afterItemInteger,scriptFilterInteger)' inSmalltalk:[menuHandle].
 	^nil
@@ -584,7 +585,7 @@ MacMenubarPlugin >> primitiveInsertIntlResMenu: menuHandleOop theType: aResType 
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'resType' type: 'ResType'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	resType := self cCoerce: (interpreterProxy positive32BitValueOf: aResType) to: 'ResType'.
 	self cCode: 'InsertIntlResMenu(menuHandle,resType,afterItemInteger,scriptFilterInteger)' inSmalltalk:[menuHandle].
@@ -600,7 +601,7 @@ MacMenubarPlugin >> primitiveInsertMenu: menuHandleOop beforeID: anInteger [
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'anInteger' type: 'MenuID'.
 
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'InsertMenu(menuHandle,anInteger)' inSmalltalk:[menuHandle].
 	^nil
@@ -614,7 +615,7 @@ MacMenubarPlugin >> primitiveInsertMenuItem: menuHandleOop itemString: str255 af
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'constStr255' type: 'ConstStr255Param'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	constStr255 := self cCoerce: str255 to: 'ConstStr255Param'.	
 	self cCode: 'InsertMenuItem(menuHandle,constStr255,anInteger)' inSmalltalk:[menuHandle].
@@ -647,7 +648,7 @@ MacMenubarPlugin >> primitiveIsMenuItemEnabled: menuHandleOop item: anInteger [
 	self primitive: 'primitiveIsMenuItemEnabled'
 		parameters: #(Oop SmallInteger).
 	self var: 'menuHandle' type: 'MenuHandle'.
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	result := self cCode: 'IsMenuItemEnabled(menuHandle,anInteger)' inSmalltalk:[0].
 	^result asOop: Boolean
@@ -660,7 +661,7 @@ MacMenubarPlugin >> primitiveIsMenuItemIconEnabled: menuHandleOop item: anIntege
 	self primitive: 'primitiveIsMenuItemIconEnabled'
 		parameters: #(Oop SmallInteger).
 	self var: 'menuHandle' type: 'MenuHandle'.
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	result := self cCode: 'IsMenuItemIconEnabled(menuHandle,anInteger)' inSmalltalk:[0].
 	^result asOop: Boolean
@@ -678,7 +679,7 @@ MacMenubarPlugin >> primitiveNewMenu: menuID menuTitle: menuTitle [
 	
 	constStr255 := self cCoerce: menuTitle to: 'ConstStr255Param'.	
 	menuHandle := self cCode: 'NewMenu(menuID,constStr255)' inSmalltalk:[0].
-	^interpreterProxy positive32BitIntegerFor: (self cCoerce: menuHandle to: 'long')
+	^interpreterProxy positiveMachineIntegerFor: (self cCoerce: menuHandle to: 'long')
 ]
 
 { #category : #'system primitives' }
@@ -689,7 +690,7 @@ MacMenubarPlugin >> primitiveSetItemCmd: menuHandleOop item: anInteger cmdChar: 
 	self primitive: 'primitiveSetItemCmd'
 		parameters: #(Oop SmallInteger SmallInteger).
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	aCharacter := anIntegerCmdChar.
 	self cCode: 'SetItemCmd(menuHandle,anInteger,aCharacter)' inSmalltalk:[menuHandle].
@@ -705,7 +706,7 @@ MacMenubarPlugin >> primitiveSetItemIcon: menuHandleOop item: anInteger iconInde
 		parameters: #(Oop SmallInteger SmallInteger).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'SetItemIcon(menuHandle,anInteger,aIconIndexInteger)' inSmalltalk:[menuHandle].
 	^nil
@@ -721,7 +722,7 @@ MacMenubarPlugin >> primitiveSetItemMark: menuHandleOop item: anInteger markChar
 	self primitive: 'primitiveSetItemMark'
 		parameters: #(Oop SmallInteger SmallInteger).
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	aCharacter := aMarkChar.
 	self cCode: 'SetItemMark(menuHandle,anInteger,aCharacter)' inSmalltalk:[menuHandle].
@@ -737,7 +738,7 @@ MacMenubarPlugin >> primitiveSetItemStyle: menuHandleOop item: anInteger stylePa
 		parameters: #(Oop SmallInteger SmallInteger).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'SetItemStyle(menuHandle,anInteger,chStyleInteger)' inSmalltalk:[menuHandle].
 	^nil
@@ -752,7 +753,7 @@ MacMenubarPlugin >> primitiveSetMenuBar: menuHandleOop [
 	self primitive: 'primitiveSetMenuBar'
 		parameters: #(Oop).
 	self var: 'menuBarHandle' type: 'MenuBarHandle'.
-	menuBarHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuBarHandle'.
+	menuBarHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuBarHandle'.
 	self cCode: 'SetMenuBar(menuBarHandle)' inSmalltalk:[menuBarHandle].
 	^nil
 ]
@@ -765,7 +766,7 @@ MacMenubarPlugin >> primitiveSetMenuItemCommandID: menuHandleOop item: anInteger
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'commandID' type: 'MenuCommand'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	commandID := self cCoerce: (interpreterProxy positive32BitValueOf: inCommandID) to: 'MenuCommand'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'SetMenuItemCommandID(menuHandle,anInteger,commandID)' inSmalltalk:[menuHandle].
@@ -780,7 +781,7 @@ MacMenubarPlugin >> primitiveSetMenuItemFontID: menuHandleOop item: anInteger fo
 		parameters: #(Oop SmallInteger SmallInteger).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'SetMenuItemFontID(menuHandle,anInteger,aFontIDInteger)' inSmalltalk:[menuHandle].
 	^nil
@@ -795,7 +796,7 @@ MacMenubarPlugin >> primitiveSetMenuItemHierarchicalID: menuHandleOop item: anIn
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'menuID' type: 'MenuID'.
 
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'SetMenuItemHierarchicalID(menuHandle,anInteger,aMenuID)' inSmalltalk:[menuHandle].
 	^nil
@@ -808,7 +809,7 @@ MacMenubarPlugin >> primitiveSetMenuItemKeyGlyph: menuHandleOop item: anInteger 
 		parameters: #(Oop SmallInteger SmallInteger).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'SetMenuItemKeyGlyph(menuHandle,anInteger,inGlyphInteger)' inSmalltalk:[menuHandle].
 	^nil
@@ -822,7 +823,7 @@ MacMenubarPlugin >> primitiveSetMenuItemModifiers: menuHandleOop item: anInteger
 		parameters: #(Oop SmallInteger SmallInteger).
 	self var: 'menuHandle' type: 'MenuHandle'.
 
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	self cCode: 'SetMenuItemModifiers(menuHandle,anInteger,aUInt8)' inSmalltalk:[menuHandle].
 	^nil
@@ -835,7 +836,7 @@ MacMenubarPlugin >> primitiveSetMenuItemText: menuHandleOop item: anInteger item
 		parameters: #(Oop SmallInteger ByteArray).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'constStr255' type: 'ConstStr255Param'.
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	constStr255 := self cCoerce: str255 to: 'ConstStr255Param'.	
 	self cCode: 'SetMenuItemText(menuHandle,anInteger,constStr255)' inSmalltalk:[menuHandle].
@@ -851,7 +852,7 @@ MacMenubarPlugin >> primitiveSetMenuItemTextEncoding: menuHandleOop item: anInte
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'inScriptID' type: 'TextEncoding'.
 	
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	inScriptID := self cCoerce: (interpreterProxy positive32BitValueOf: aTextEncodingOop) to: 'TextEncoding'.
 	self cCode: 'SetMenuItemTextEncoding(menuHandle,anInteger,inScriptID)' inSmalltalk:[menuHandle].
@@ -865,7 +866,7 @@ MacMenubarPlugin >> primitiveSetMenuTitle: menuHandleOop  title: str255 [
 		parameters: #(Oop ByteArray).
 	self var: 'menuHandle' type: 'MenuHandle'.
 	self var: 'constStr255' type: 'ConstStr255Param'.
-	menuHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: 'MenuHandle'.
+	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
 	constStr255 := self cCoerce: str255 to: 'ConstStr255Param'.	
 	self cCode: 'SetMenuTitle(menuHandle,constStr255)' inSmalltalk:[menuHandle].
