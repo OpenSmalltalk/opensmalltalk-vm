@@ -356,7 +356,7 @@ IA32ABIPlugin >> primDoubleAt [
 		<primitive: 'primDoubleAt' error: errorCode module: 'IA32ABI'>"
 	| byteOffset rcvr startAddr addr floatValue |
 	<export: true>
-	<var: #floatValue type:'double '>
+	<var: #floatValue type: #double>
 
 	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
@@ -367,8 +367,7 @@ IA32ABIPlugin >> primDoubleAt [
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
-	self cCode:'((long *)(&floatValue))[0] = ((long *)addr)[0]; ((long *)(&floatValue))[1] = ((long *)addr)[1]'
-		inSmalltalk: [floatValue := rcvr doubleAt: byteOffset].
+	self mem: (self addressOf: floatValue) cp: addr y: (self sizeof: floatValue).
 	interpreterProxy pop: 2.
 	^interpreterProxy pushFloat: floatValue
 ]
@@ -397,8 +396,7 @@ IA32ABIPlugin >> primDoubleAtPut [
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
-	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
-	self cCode:'((int*)addr)[1] = ((int*)(&floatValue))[1]'.
+	self mem: addr cp: (self addressOf: floatValue) y: (self sizeof: floatValue).
 	interpreterProxy methodReturnValue: valueOop
 ]
 
@@ -416,7 +414,7 @@ IA32ABIPlugin >> primFloatAt [
 		<primitive: 'primFloatAt' error: errorCode module: 'IA32ABI'>"
 	| byteOffset rcvr startAddr addr floatValue |
 	<export: true>
-	<var: #floatValue type: 'float '>
+	<var: #floatValue type: #float>
 
 	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
@@ -427,8 +425,7 @@ IA32ABIPlugin >> primFloatAt [
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
-	self cCode:'((long *)(&floatValue))[0] = ((long *)addr)[0]'
-		inSmalltalk: [floatValue := rcvr floatAt: byteOffset].
+	self mem: (self addressOf: floatValue) cp: addr y: (self sizeof: floatValue).
 	interpreterProxy pop: 2.
 	^interpreterProxy pushFloat: floatValue
 ]
@@ -457,7 +454,7 @@ IA32ABIPlugin >> primFloatAtPut [
 	(startAddr := self startOfData: rcvr) = 0 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	addr := startAddr + byteOffset.
-	self cCode:'((long *)addr)[0] = ((long *)(&floatValue))[0]'.
+	self mem: addr cp: (self addressOf: floatValue) y: (self sizeof: floatValue).
 	interpreterProxy methodReturnValue: valueOop
 ]
 
