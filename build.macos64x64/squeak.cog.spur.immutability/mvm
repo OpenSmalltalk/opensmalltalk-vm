@@ -1,0 +1,24 @@
+#!/bin/bash
+A=;D=;F=
+if [ $# = 0 ]; then
+	A=1;D=1;F=1
+else
+	while getopts 'Aadf?' opt "$@"; do
+		case $opt in
+		A)	A=1;D=1;F=1;;
+		a)	A=1;;
+		d)	D=1;;
+		f)	F=1;;
+		*)	echo usage $0 [-A] [-a\ [-d] [-f]; exit 0;;
+		esac
+	done
+fi
+if [ -n "$D" ]; then
+	make debug 2>&1 | tee LOGD
+fi
+if [ -n "$A" ]; then
+	make assert 2>&1 | tee LOGA
+fi
+if [ -n "$F" ]; then
+	make 2>&1 | tee LOGF
+fi
