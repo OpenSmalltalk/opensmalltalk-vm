@@ -4582,8 +4582,9 @@ InterpreterPrimitives >> primitiveVMProfileInfoInto [
 	<var: #easBins type: #long>
 	self success: argumentCount = 1.
 	self successful ifTrue:
-		[info := self stackObjectValue: 0.
-		 info ~= objectMemory nilObject ifTrue:
+		[info := self stackObjectValue: 0].
+	self successful ifTrue:
+		[info ~= objectMemory nilObject ifTrue:
 			[self assertClassOf: info is: (objectMemory splObj: ClassArray).
 			 self success: (objectMemory numSlotsOf: info) >= 4]].
 	self successful ifFalse:
@@ -4622,8 +4623,9 @@ InterpreterPrimitives >> primitiveVMProfileSamplesInto [
 		[^self pop: 1 thenPushBool: running].
 	self success: argumentCount = 1.
 	self successful ifTrue:
-		[sampleBuffer := self stackObjectValue: 0.
-		 self assertClassOf: sampleBuffer is: (objectMemory splObj: ClassBitmap).
+		[sampleBuffer := self stackObjectValue: 0].
+	self successful ifTrue:
+		[self assertClassOf: sampleBuffer is: (objectMemory splObj: ClassBitmap).
 		 self success: (objectMemory numSlotsOf: sampleBuffer) >= bufferSize].
 	self successful ifFalse:
 		[^nil].

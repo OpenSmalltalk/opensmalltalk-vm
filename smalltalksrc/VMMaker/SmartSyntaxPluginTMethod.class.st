@@ -134,6 +134,7 @@ SmartSyntaxPluginTMethod >> fixUpReturnOneStmt: stmt on: sStream [
 		 sStream nextPut: self nullReturnExpr.
 		 ^nil].
 	"^ expr with guardchecking"
+	self generateFailureGuardOn: sStream.
 	sStream nextPut: (self assign: (self oopVariable: '_return_value') expression: stmt expression).
 	self generateFailureGuardOn: sStream.
 	sStream nextPut: (self pop: fullArgs size + 1 thenReturnExpr: (self oopVariable: '_return_value')).
