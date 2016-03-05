@@ -81,10 +81,10 @@ TMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 			[^expr args
 				inject: false
 				into: [:asYetUntyped :block|
-					asYetUntyped := asYetUntyped | (self addTypesFor: block to: typeSet in: aCodeGen)]].
-		 (#(= ~= == ~~ < > <= >= anyMask: noMask:) includes: expr selector) ifTrue:
+					asYetUntyped | (self addTypesFor: block to: typeSet in: aCodeGen)]].
+		 (#(= ~= == ~~ < > <= >= anyMask: allMask: noMask:) includes: expr selector) ifTrue:
 			[typeSet add: #sqInt. ^false].
-		 (#(+ - * / // \\ mod: quo: bitAnd: bitClear: bitOr: bitXor: bitShift:) includes: expr selector) ifTrue:
+		 (#(+ - * / // \\ rem: quo: bitAnd: bitClear: bitOr: bitXor: bitShift:) includes: expr selector) ifTrue:
 			[| types |
 			 types := Set new.
 			 self addTypesFor: expr receiver to: types in: aCodeGen.
