@@ -1674,7 +1674,7 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAt [
 				ifFalse: [value := self cCoerceSimple: (interpreterProxy shortAt: addr) to: #'unsigned short']]
 		ifFalse:
 			[byteSize = 4
-				ifTrue: [value := self cCoerceSimple: (interpreterProxy long32At: addr) to: #'unsigned int']
+				ifTrue: [value := interpreterProxy long32At: addr]
 				ifFalse: [value := interpreterProxy long64At: addr]].
 	byteSize < BytesPerWord
 		ifTrue:
