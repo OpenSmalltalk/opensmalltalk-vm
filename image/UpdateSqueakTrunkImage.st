@@ -1,1 +1,1 @@
-[MCMcmUpdater	defaultUpdateURL: 'http://source.squeak.org/trunk';	updateFromServer] valueSupplyingAnswer: true.Smalltalk snapshot: true andQuit: true
+[[MCMcmUpdater		defaultUpdateURL: 'http://source.squeak.org/trunk';		updateFromServer] valueSupplyingAnswer: true]	on: Deprecation	do: [:ex| ex resume: nil].Smalltalk snapshot: true andQuit: true
