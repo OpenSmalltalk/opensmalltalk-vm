@@ -1,7 +1,7 @@
 Class {
 	#name : #CommandLineLauncher,
 	#superclass : #AbstractLauncher,
-	#category : #'Cog-Scripting'
+	#category : 'Cog-Scripting'
 }
 
 { #category : #activation }

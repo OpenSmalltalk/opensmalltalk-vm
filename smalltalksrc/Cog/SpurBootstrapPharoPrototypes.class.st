@@ -1,7 +1,7 @@
 Class {
 	#name : #SpurBootstrapPharoPrototypes,
 	#superclass : #SpurBootstrapPrototypes,
-	#category : #'Cog-Bootstrapping'
+	#category : 'Cog-Bootstrapping'
 }
 
 { #category : #accessing }

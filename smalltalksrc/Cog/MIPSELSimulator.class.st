@@ -4,7 +4,7 @@ Simulator for little-endian 32-bit MIPS.
 Class {
 	#name : #MIPSELSimulator,
 	#superclass : #MIPSSimulator,
-	#category : #'Cog-Processors'
+	#category : 'Cog-Processors'
 }
 
 { #category : #accessing }

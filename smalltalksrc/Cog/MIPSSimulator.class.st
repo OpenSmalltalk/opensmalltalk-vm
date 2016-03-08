@@ -26,7 +26,7 @@ Class {
 	#pools : [
 		'MIPSConstants'
 	],
-	#category : #'Cog-Processors'
+	#category : 'Cog-Processors'
 }
 
 { #category : #'as yet unclassified' }
