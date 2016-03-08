@@ -9720,14 +9720,16 @@ SpurMemoryManager >> printSortedFreeList [
 
 { #category : #'class table' }
 SpurMemoryManager >> purgeDuplicateClassTableEntriesFor: aClass [
-	"Given that either marking or allnstances has ensured that
-	 all instances of aClass  have the class's hash as their class
-	 index, ensure aClass is in the table only at its hash."
+	"Given that either marking or allInstances has ensured that
+	 all instances of aClass have the class's hash as their class
+	 index, ensure aClass is in the table only at its hash (or a pun)."
 	| expectedIndex |
 	expectedIndex := self rawHashBitsOf: aClass.
 	self classTableEntriesDo:
 		[:entry :index|
-		 (entry = aClass and: [index ~= expectedIndex]) ifTrue:
+		 (entry = aClass
+		  and: [index ~= expectedIndex
+		  and: [index > self lastClassIndexPun]]) ifTrue:
 			[self classAtIndex: index put: nilObj.
 			 index < classTableIndex ifTrue:
 				[classTableIndex := index]]].
