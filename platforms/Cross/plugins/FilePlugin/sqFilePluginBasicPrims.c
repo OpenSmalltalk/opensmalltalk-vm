@@ -211,12 +211,7 @@ sqFileInit(void) {
 	   Zero is never used for a valid session number.
 	   Should be called once at startup time.
 	*/
-#if VM_PROXY_MINOR > 6
 	thisSession = interpreterProxy->getThisSessionID();
-#else
-	thisSession = ioLowResMSecs() + time(NULL);
-	if (thisSession == 0) thisSession = 1;	/* don't use 0 */
-#endif
 	return 1;
 }
 
