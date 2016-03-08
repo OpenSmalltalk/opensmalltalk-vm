@@ -21,7 +21,7 @@ Class {
 
 { #category : #'bootstrap image' }
 Spur32to64BitBootstrap >> alterSystem [
-	self installSmallFloatInClassTable.
+	self ensureSmallFloatInClassTable.
 	self nilWordSize
 ]
 
@@ -137,6 +137,22 @@ Spur32to64BitBootstrap >> cloneObjects [
 			ifFalse:
 				[(self shouldClone: obj32) ifTrue:
 					[self clone: obj32]]]
+]
+
+{ #category : #'bootstrap image' }
+Spur32to64BitBootstrap >> ensureSmallFloatInClassTable [
+	| firstClassTablePage smallFloatClass |
+	firstClassTablePage := heap64 fetchPointer: 0 ofObject: heap64 classTableRootObj.
+	smallFloatClass := self smallFloatClass.
+	(heap64 hashBitsOf: smallFloatClass) = heap64 smallFloatTag
+		ifTrue:
+			[self assert: (heap64 fetchPointer: heap64 smallFloatTag ofObject: firstClassTablePage)
+						= smallFloatClass]
+		ifFalse:
+			[self assert: (heap64 hashBitsOf: smallFloatClass) = 0.
+			 heap64
+				storePointer: heap64 smallFloatTag ofObject: firstClassTablePage withValue: smallFloatClass;
+				setHashBitsOf: smallFloatClass to: heap64 smallFloatTag]
 ]
 
 { #category : #'bootstrap image' }
@@ -298,20 +314,6 @@ Spur32to64BitBootstrap >> initMaps [
 	map := Dictionary new: heap32 memory size // 32.
 	reverseMap := Dictionary new: heap32 memory size // 32.
 	literalMap := IdentityDictionary new
-]
-
-{ #category : #'bootstrap image' }
-Spur32to64BitBootstrap >> installSmallFloatInClassTable [
-	| firstPage smallFloatClass |
-	firstPage := heap64 fetchPointer: 0 ofObject: heap64 classTableRootObj.
-	smallFloatClass := self smallFloatClass.
-	self assert: (heap64 hashBitsOf: smallFloatClass) = 0.
-	heap64
-		storePointer: heap64 smallFloatTag
-		ofObject: firstPage
-		withValue: smallFloatClass.
-	heap64
-		setHashBitsOf: smallFloatClass to: heap64 smallFloatTag
 ]
 
 { #category : #'bootstrap image' }
