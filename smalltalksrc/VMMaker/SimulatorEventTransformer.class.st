@@ -20,7 +20,7 @@ Class {
 	#pools : [
 		'EventSensorConstants'
 	],
-	#category : #'VMMaker-InterpreterSimulation-Morphic'
+	#category : 'VMMaker-InterpreterSimulation-Morphic'
 }
 
 { #category : #'initialize-release' }

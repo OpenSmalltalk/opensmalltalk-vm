@@ -5,7 +5,7 @@ Class {
 		'parent',
 		'bootstrapping'
 	],
-	#category : #'VMMaker-SpurMemoryManagerSimulation'
+	#category : 'VMMaker-SpurMemoryManagerSimulation'
 }
 
 { #category : #accessing }

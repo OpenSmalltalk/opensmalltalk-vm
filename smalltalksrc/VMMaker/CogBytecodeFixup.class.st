@@ -8,7 +8,7 @@ Class {
 		'targetInstruction',
 		'instructionIndex'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'simulation only' }

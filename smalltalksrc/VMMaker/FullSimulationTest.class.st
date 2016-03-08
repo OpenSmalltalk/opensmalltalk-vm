@@ -1,7 +1,7 @@
 Class {
 	#name : #FullSimulationTest,
 	#superclass : #TestCase,
-	#category : #'VMMaker-Tests'
+	#category : 'VMMaker-Tests'
 }
 
 { #category : #'as yet unclassified' }

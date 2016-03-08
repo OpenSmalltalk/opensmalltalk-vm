@@ -5,7 +5,7 @@ Low level interface to the Lego WeDo.
 Class {
 	#name : #WeDoPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }

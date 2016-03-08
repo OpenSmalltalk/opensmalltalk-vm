@@ -108,5 +108,5 @@ Class {
 		'XIndex',
 		'YIndex'
 	],
-	#category : #'VMMaker-Interpreter'
+	#category : 'VMMaker-Interpreter'
 }
