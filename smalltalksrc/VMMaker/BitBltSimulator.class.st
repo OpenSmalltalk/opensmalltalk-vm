@@ -125,6 +125,24 @@ BitBltSimulator >> halftoneAt: idx [
 		inSmalltalk: [super halftoneAt: idx]
 ]
 
+{ #category : #'memory access' }
+BitBltSimulator >> incDestIndex: offset [
+	"if offset is a CObject, this avoids a copy, making the simulation massively faster"
+	^ offset isCObjectAccessor
+		ifTrue: [destIndex += offset]
+		ifFalse: [super incDestIndex: offset]
+
+]
+
+{ #category : #'memory access' }
+BitBltSimulator >> incSrcIndex: offset [
+	"if offset is a CObject, this avoids a copy, making the simulation massively faster"
+	^ offset isCObjectAccessor
+		ifTrue: [sourceIndex += offset]
+		ifFalse: [super incSrcIndex: offset]
+
+]
+
 { #category : #simulation }
 BitBltSimulator >> initBBOpTable [
 	opTable := OpTable.

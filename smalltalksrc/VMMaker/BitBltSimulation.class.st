@@ -1328,7 +1328,7 @@ BitBltSimulation >> copyLoop [
 		preload ifTrue:
 			["load the 64-bit shifter"
 			prevWord := self srcLongAt: sourceIndex.
-			sourceIndex := sourceIndex + hInc]
+			self incSrcIndex: hInc]
 			ifFalse:
 			[prevWord := 0].
 
@@ -1337,7 +1337,7 @@ BitBltSimulation >> copyLoop [
 			"This first section requires masking of the destination store..."
 			destMask := mask1.
 			thisWord := self srcLongAt: sourceIndex.  "pick up next word"
-			sourceIndex := sourceIndex + hInc.
+			self incSrcIndex: hInc.
 			skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
 							bitOr:  "32-bit rotate"
 						((thisWord bitAnd: skewMask) bitShift: skew).
@@ -1347,7 +1347,7 @@ BitBltSimulation >> copyLoop [
 			destWord := (destMask bitAnd: mergeWord) bitOr:
 							(destWord bitAnd: destMask bitInvert32).
 			self dstLongAt: destIndex put: destWord.
-			destIndex := destIndex + hInc.
+			self incDestIndex: hInc.
 
 		"This central horizontal loop requires no store masking"
 		destMask := AllOnes.
@@ -1360,31 +1360,31 @@ ifTrue: [(skew = 0) & (halftoneWord = AllOnes)
 				2 to: nWords-1 do: 
 					[ :word |
 					thisWord := self srcLongAt: sourceIndex.
-					sourceIndex := sourceIndex + hInc.
+					self incSrcIndex: hInc.
 					self dstLongAt: destIndex put: thisWord.
-					destIndex := destIndex + hInc]]
+					self incDestIndex: hInc]]
 		ifFalse: [2 to: nWords-1 do: 
 					[ :word |  "Note loop starts with prevWord loaded (due to preload)"
 					self dstLongAt: destIndex put: prevWord.
-					destIndex := destIndex + hInc.
+					self incDestIndex: hInc.
 					prevWord := self srcLongAt: sourceIndex.
-					sourceIndex := sourceIndex + hInc]]]
+					self incSrcIndex: hInc]]]
 		ifFalse:
 		["Special inner loop for STORE mode -- no need to call merge"
 		2 to: nWords-1 do: 
 			[ :word |
 			thisWord := self srcLongAt: sourceIndex.
-			sourceIndex := sourceIndex + hInc.
+			self incSrcIndex: hInc.
 			skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
 							bitOr:  "32-bit rotate"
 						((thisWord bitAnd: skewMask) bitShift: skew).
 			prevWord := thisWord.
 			self dstLongAt: destIndex put: (skewWord bitAnd: halftoneWord).
-			destIndex := destIndex + hInc]]
+			self incDestIndex: hInc]]
 ] ifFalse: [2 to: nWords-1 do: "Normal inner loop does merge:"
 			[ :word |
 			thisWord := self srcLongAt: sourceIndex.  "pick up next word"
-			sourceIndex := sourceIndex + hInc.
+			self incSrcIndex: hInc.
 			skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
 							bitOr:  "32-bit rotate"
 						((thisWord bitAnd: skewMask) bitShift: skew).
@@ -1392,14 +1392,14 @@ ifTrue: [(skew = 0) & (halftoneWord = AllOnes)
 			mergeWord := self mergeFn: (skewWord bitAnd: halftoneWord)
 							with: (self dstLongAt: destIndex).
 			self dstLongAt: destIndex put: mergeWord.
-			destIndex := destIndex + hInc]
+			self incDestIndex: hInc]
 ].
 
 		"This last section, if used, requires masking of the destination store..."
 		nWords > 1 ifTrue:
 			[destMask := mask2.
 			thisWord := self srcLongAt: sourceIndex.  "pick up next word"
-			sourceIndex := sourceIndex + hInc.
+			self incSrcIndex: hInc.
 			skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
 							bitOr:  "32-bit rotate"
 						((thisWord bitAnd: skewMask) bitShift: skew).
@@ -1408,10 +1408,10 @@ ifTrue: [(skew = 0) & (halftoneWord = AllOnes)
 			destWord := (destMask bitAnd: mergeWord) bitOr:
 							(destWord bitAnd: destMask bitInvert32).
 			self dstLongAt: destIndex put: destWord.
-			destIndex := destIndex + hInc].
+			self incDestIndex: hInc].
 
-	sourceIndex := sourceIndex + sourceDelta.
-	destIndex := destIndex + destDelta]
+	self incSrcIndex: sourceDelta.
+	self incDestIndex: destDelta]
 ]
 
 { #category : #'inner loop' }
@@ -1440,7 +1440,7 @@ BitBltSimulation >> copyLoopNoSource [
 			destWord := (destMask bitAnd: mergeWord) bitOr: 
 							(destWord bitAnd: destMask bitInvert32).
 			self dstLongAt: destIndex put: destWord.
-			destIndex := destIndex + 4.
+			self incDestIndex: 4.
 
 		"This central horizontal loop requires no store masking"
 			destMask := AllOnes.
@@ -1448,13 +1448,13 @@ BitBltSimulation >> copyLoopNoSource [
 				destWord := halftoneWord.
 				2 to: nWords-1 do:[ :word |
 					self dstLongAt: destIndex put: destWord.
-					destIndex := destIndex + 4].
+					self incDestIndex: 4].
 			] ifFalse:[ "Normal inner loop does merge"
 				2 to: nWords-1 do:[ :word | "Normal inner loop does merge"
 					destWord := self dstLongAt: destIndex.
 					mergeWord := self mergeFn: halftoneWord with: destWord.
 					self dstLongAt: destIndex put: mergeWord.
-					destIndex := destIndex + 4].
+					self incDestIndex: 4].
 			].
 
 		"This last section, if used, requires masking of the destination store..."
@@ -1465,9 +1465,9 @@ BitBltSimulation >> copyLoopNoSource [
 			destWord := (destMask bitAnd: mergeWord) bitOr:
 							(destWord bitAnd: destMask bitInvert32).
 			self dstLongAt: destIndex put: destWord.
-			destIndex := destIndex + 4].
+			self incDestIndex: 4].
 
-	destIndex := destIndex + destDelta]
+	self incDestIndex: destDelta]
 ]
 
 { #category : #'inner loop' }
@@ -1554,7 +1554,7 @@ BitBltSimulation >> copyLoopPixMap [
 								(destWord bitAnd: destMask bitInvert32).
 				self dstLongAt: destIndex put: destWord.
 			].
-			destIndex := destIndex + 4.
+			self incDestIndex: 4.
 			words = 2 "e.g., is the next word the last word?"
 				ifTrue:["set mask for last word in this row"
 						destMask := mask2.
@@ -1564,8 +1564,8 @@ BitBltSimulation >> copyLoopPixMap [
 						nPix := destPPW].
 			(words := words - 1) = 0] whileFalse.
 		"--- end of inner loop ---"
-		sourceIndex := sourceIndex + sourceDelta.
-		destIndex := destIndex + destDelta]
+		self incSrcIndex: sourceDelta.
+		self incDestIndex: destDelta]
 
 ]
 
@@ -1872,6 +1872,20 @@ BitBltSimulation >> ignoreSourceOrHalftone: formPointer [
 	combinationRule = 10 ifTrue: [ ^true ].
 	combinationRule = 15 ifTrue: [ ^true ].
 	^false
+]
+
+{ #category : #'memory access' }
+BitBltSimulation >> incDestIndex: offset [
+	<inline: true>
+	^ destIndex := destIndex + offset
+
+]
+
+{ #category : #'memory access' }
+BitBltSimulation >> incSrcIndex: offset [
+	<inline: true>
+	^ sourceIndex := sourceIndex + offset
+
 ]
 
 { #category : #'initialize-release' }
@@ -2542,7 +2556,7 @@ BitBltSimulation >> pickSourcePixels: nPixels flags: mapperFlags srcMask: srcMas
 			"adjust source pix index"
 			((srcShift := srcShift + srcShiftInc) bitAnd: 16rFFFFFFE0) = 0 ifFalse:[
 				sourceMSB ifTrue:[srcShift := srcShift + 32] ifFalse:[srcShift := srcShift - 32].
-				sourceWord := self srcLongAt: (sourceIndex := sourceIndex + 4)].
+				sourceWord := self srcLongAt: (self incSrcIndex: 4)].
 		(nPix := nPix - 1) = 0] whileFalse.
 	] ifFalse:[
 		[	"grab, colormap and mix in pixel"
@@ -2554,7 +2568,7 @@ BitBltSimulation >> pickSourcePixels: nPixels flags: mapperFlags srcMask: srcMas
 			"adjust source pix index"
 			((srcShift := srcShift + srcShiftInc) bitAnd: 16rFFFFFFE0) = 0 ifFalse:[
 				sourceMSB ifTrue:[srcShift := srcShift + 32] ifFalse:[srcShift := srcShift - 32].
-				sourceWord := self srcLongAt: (sourceIndex := sourceIndex + 4)].
+				sourceWord := self srcLongAt: (self incSrcIndex: 4)].
 		(nPix := nPix - 1) = 0] whileFalse.
 	].
 	srcBitShift := srcShift. "Store back"
@@ -3865,7 +3879,7 @@ BitBltSimulation >> warpLoop [
 								(destWord bitAnd: destMask bitInvert32).
 				self dstLongAt: destIndex put: destWord.
 			].
-			destIndex := destIndex + 4.
+			self incDestIndex: 4.
 			words = 2 "e.g., is the next word the last word?"
 				ifTrue:["set mask for last word in this row"
 						destMask := mask2.
@@ -3879,7 +3893,7 @@ BitBltSimulation >> warpLoop [
 		pAy := pAy + deltaP12y.
 		pBx := pBx + deltaP43x.
 		pBy := pBy + deltaP43y.
-		destIndex := destIndex + destDelta]
+		self incDestIndex: destDelta]
 ]
 
 { #category : #'pixel mapping' }
