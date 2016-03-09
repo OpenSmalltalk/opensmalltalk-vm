@@ -1674,7 +1674,7 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAt [
 				ifFalse: [value := self cCoerceSimple: (interpreterProxy shortAt: addr) to: #'unsigned short']]
 		ifFalse:
 			[byteSize = 4
-				ifTrue: [value := interpreterProxy long32At: addr]
+				ifTrue: [value := self cCoerceSimple: (interpreterProxy long32At: addr) to: #'unsigned int']
 				ifFalse: [value := interpreterProxy long64At: addr]].
 	byteSize < BytesPerWord
 		ifTrue:
@@ -1685,8 +1685,8 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAt [
 			 valueOop := interpreterProxy integerObjectOf: value]
 		ifFalse: "general 64 bit integer; note these never fail"
 			[valueOop := isSigned
-							ifTrue:[interpreterProxy signed64BitIntegerFor: value]
-							ifFalse:[interpreterProxy positive64BitIntegerFor: value]].
+							ifTrue:[interpreterProxy signedMachineIntegerFor: value]
+							ifFalse:[interpreterProxy positiveMachineIntegerFor: value]].
 	^interpreterProxy pop: 4 thenPush: valueOop
 ]
 
