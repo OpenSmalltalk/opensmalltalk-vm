@@ -128,7 +128,7 @@ BitBltSimulator >> halftoneAt: idx [
 { #category : #'memory access' }
 BitBltSimulator >> incDestIndex: offset [
 	"if offset is a CObject, this avoids a copy, making the simulation massively faster"
-	^ offset isCObjectAccessor
+	^ destIndex isCObjectAccessor
 		ifTrue: [destIndex += offset]
 		ifFalse: [super incDestIndex: offset]
 
@@ -137,7 +137,7 @@ BitBltSimulator >> incDestIndex: offset [
 { #category : #'memory access' }
 BitBltSimulator >> incSrcIndex: offset [
 	"if offset is a CObject, this avoids a copy, making the simulation massively faster"
-	^ offset isCObjectAccessor
+	^ sourceIndex isCObjectAccessor
 		ifTrue: [sourceIndex += offset]
 		ifFalse: [super incSrcIndex: offset]
 
