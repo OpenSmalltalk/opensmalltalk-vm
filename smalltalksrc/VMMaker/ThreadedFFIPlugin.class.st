@@ -1684,9 +1684,13 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAt [
 			 "note: byte/short (&long if BytesPerWord=8) never exceed SmallInteger range"
 			 valueOop := interpreterProxy integerObjectOf: value]
 		ifFalse: "general 64 bit integer; note these never fail"
-			[valueOop := isSigned
-							ifTrue:[interpreterProxy signedMachineIntegerFor: value]
-							ifFalse:[interpreterProxy positiveMachineIntegerFor: value]].
+			[isSigned
+				ifTrue:
+					[byteSize < 8 ifTrue: "sign extend value"
+						[mask := 1 << (byteSize * 8 - 1).
+						value := (value bitAnd: mask-1) - (value bitAnd: mask)].
+					 valueOop := interpreterProxy signed64BitIntegerFor: value]
+				ifFalse:[valueOop := interpreterProxy positive64BitIntegerFor: value]].
 	^interpreterProxy pop: 4 thenPush: valueOop
 ]
 
