@@ -1784,32 +1784,6 @@ TMethod >> locals [
 ]
 
 { #category : #transformations }
-TMethod >> mapReturnsToGotos [
-	"For super expansions inner returns must be mapped to gotos to prevent premature exit.
-	 But this only works if no value is being returned.
-	 Anything meaningful in the returned expression must be retained."
-
-	| map label |
-	map := Dictionary new.
-	parseTree nodesDo:
-		[:node|
-		node isReturn ifTrue:
-			[(node expression isVariable and: [#('self' 'nil') includes: node expression name])
-				ifTrue:
-					[map at: node put: (TGoToNode new
-											setLabel: (label ifNil: [label := self unusedLabelForInlining: self]);
-											yourself)]
-				ifFalse: [self error: 'Cannot expand super node with inner return that answers a value!']]].
-	label ifNotNil:
-		[parseTree := parseTree replaceNodesIn: map.
-		 parseTree setStatements: (parseTree statements asOrderedCollection
-										addLast: (TLabeledCommentNode new
-														setLabel: label;
-														yourself);
-										yourself)]
-]
-
-{ #category : #transformations }
 TMethod >> mapSendsFromSelfToInterpreterProxy: selectors [
 	| interpreterProxyNode |
 	interpreterProxyNode := TVariableNode new setName: 'interpreterProxy'.
@@ -2596,7 +2570,7 @@ TMethod >> static: aBoolean [
 ]
 
 { #category : #inlining }
-TMethod >> superExpansionNodeFor: aSelector args: argumentNodes isResult: superExpansionIsResult [
+TMethod >> superExpansionNodeFor: aSelector args: argumentNodes [
 	"Answer the expansion of a super send.  Merge the super expansion's
 	 locals, properties and comment into this method's properties."
 	(definingClass superclass lookupSelector: aSelector)
@@ -2630,9 +2604,6 @@ TMethod >> superExpansionNodeFor: aSelector args: argumentNodes isResult: superE
 				[:scvn|
 				extraVariableNumber := extraVariableNumber ifNil: [scvn] ifNotNil: [:cvn| cvn + scvn]].
 			superTMethod elideAnyFinalReturn.
-			superExpansionIsResult ifFalse:
-				[superTMethod mapReturnsToGotos.
-				 labels addAll: superTMethod labels].
 			^superTMethod parseTree]
 ]
 
