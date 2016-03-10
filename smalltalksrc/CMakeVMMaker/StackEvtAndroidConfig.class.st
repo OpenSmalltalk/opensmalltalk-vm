@@ -4,7 +4,7 @@ A class to configure the Event-driven Stack Cog for Android. This configuration 
 Class {
 	#name : #StackEvtAndroidConfig,
 	#superclass : #CPlatformConfig,
-	#category : 'CMakeVMMaker-Android'
+	#category : #'CMakeVMMaker-Android'
 }
 
 { #category : #'source generation' }

@@ -13,7 +13,7 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #CogUnixConfig,
 	#superclass : #CogFamilyUnixConfig,
-	#category : 'CMakeVMMaker-Unix'
+	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #'source generation' }

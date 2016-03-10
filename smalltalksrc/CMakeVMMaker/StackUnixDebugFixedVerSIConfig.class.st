@@ -8,7 +8,7 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #StackUnixDebugFixedVerSIConfig,
 	#superclass : #StackUnixDebugConfig,
-	#category : 'CMakeVMMaker-Unix'
+	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #'as yet unclassified' }

@@ -25,7 +25,7 @@ to freetype configure, because MSYS GCC on windows don't understands the -arch o
 Class {
 	#name : #CMWin32Freetype2,
 	#superclass : #CMFreetype2,
-	#category : 'CMakeVMMaker-Libs'
+	#category : #'CMakeVMMaker-Libs'
 }
 
 { #category : #'as yet unclassified' }

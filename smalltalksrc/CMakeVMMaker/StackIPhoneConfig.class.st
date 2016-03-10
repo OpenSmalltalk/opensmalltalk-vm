@@ -1,7 +1,7 @@
 Class {
 	#name : #StackIPhoneConfig,
 	#superclass : #StackCocoaIOSConfig,
-	#category : 'CMakeVMMaker-IOS'
+	#category : #'CMakeVMMaker-IOS'
 }
 
 { #category : #accessing }

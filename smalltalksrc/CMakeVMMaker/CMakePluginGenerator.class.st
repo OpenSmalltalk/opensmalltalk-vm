@@ -14,7 +14,7 @@ Class {
 		'doNotGenerate',
 		'externalDependencies'
 	],
-	#category : 'CMakeVMMaker'
+	#category : #CMakeVMMaker
 }
 
 { #category : #accessing }

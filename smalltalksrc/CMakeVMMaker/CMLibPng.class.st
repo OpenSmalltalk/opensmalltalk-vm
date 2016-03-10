@@ -1,7 +1,7 @@
 Class {
 	#name : #CMLibPng,
 	#superclass : #CMCairoBundle,
-	#category : 'CMakeVMMaker-Libs'
+	#category : #'CMakeVMMaker-Libs'
 }
 
 { #category : #'as yet unclassified' }

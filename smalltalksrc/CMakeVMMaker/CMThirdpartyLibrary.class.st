@@ -17,7 +17,7 @@ Class {
 		'vmGen',
 		'configurationFlags'
 	],
-	#category : 'CMakeVMMaker-Libs'
+	#category : #'CMakeVMMaker-Libs'
 }
 
 { #category : #accessing }

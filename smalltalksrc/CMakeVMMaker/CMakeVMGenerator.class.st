@@ -35,7 +35,7 @@ Class {
 		'externalPlugins',
 		'config'
 	],
-	#category : 'CMakeVMMaker'
+	#category : #CMakeVMMaker
 }
 
 { #category : #'code generation' }

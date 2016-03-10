@@ -1,7 +1,7 @@
 Class {
 	#name : #CogMTBuilder,
 	#superclass : #Object,
-	#category : 'CMakeVMMaker-Builder'
+	#category : #'CMakeVMMaker-Builder'
 }
 
 { #category : #building }

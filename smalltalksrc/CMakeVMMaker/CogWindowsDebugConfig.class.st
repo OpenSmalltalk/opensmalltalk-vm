@@ -1,7 +1,7 @@
 Class {
 	#name : #CogWindowsDebugConfig,
 	#superclass : #CogWindowsConfig,
-	#category : 'CMakeVMMaker-Windows'
+	#category : #'CMakeVMMaker-Windows'
 }
 
 { #category : #'as yet unclassified' }

@@ -12,7 +12,7 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #StackCrossRaspbianFastBltConfig,
 	#superclass : #StackCrossRaspbianConfig,
-	#category : 'CMakeVMMaker-Unix'
+	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #'as yet unclassified' }

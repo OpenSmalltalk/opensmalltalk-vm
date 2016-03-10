@@ -7,7 +7,7 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #CogMTFreeBSDConfig,
 	#superclass : #CogFreeBSDConfig,
-	#category : 'CMakeVMMaker-FreeBSD'
+	#category : #'CMakeVMMaker-FreeBSD'
 }
 
 { #category : #'compiler flags' }

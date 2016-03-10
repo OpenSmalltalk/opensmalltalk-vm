@@ -7,7 +7,7 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #CogMTUnixConfig,
 	#superclass : #CogUnixConfig,
-	#category : 'CMakeVMMaker-Unix'
+	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #'compiler flags' }
