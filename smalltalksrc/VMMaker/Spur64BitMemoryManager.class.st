@@ -443,6 +443,17 @@ Spur64BitMemoryManager >> hasSixtyFourBitImmediates [
 	^true
 ]
 
+{ #category : #immediates }
+Spur64BitMemoryManager >> imageFormatVersion [
+	"Return a magic constant that changes when the image format changes.
+	 Since the image reading code uses this to detect byte ordering, one
+	 must avoid version numbers that are invariant under byte reversal.
+	 N.B. Bit 4 (=16) is the isSpur bit"
+
+	"^68019" "The first 64-bit Spur format, which unfortunately chose SmallFloat64's tag to be 3."
+	^68021
+]
+
 { #category : #'free space' }
 Spur64BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	<var: #numBytes type: #usqLong>
@@ -614,15 +625,21 @@ Spur64BitMemoryManager >> isFloatInstance: oop [
 		ifFalse: [(self classIndexOf: oop) = ClassFloatCompactIndex]
 ]
 
-{ #category : #'interpreter access' }
+{ #category : #'object testing' }
+Spur64BitMemoryManager >> isImmediateCharacter: oop [
+	<inline: true>
+	^oop anyMask: self characterTag
+]
+
+{ #category : #'object testing' }
 Spur64BitMemoryManager >> isImmediateFloat: oop [
 	<inline: true>
-	^(oop bitAnd: self tagMask) = self smallFloatTag
+	^oop anyMask: self smallFloatTag
 ]
 
 { #category : #'object testing' }
 Spur64BitMemoryManager >> isIntegerObject: oop [
-	^(oop bitAnd: self tagMask) = 1
+	^oop anyMask: self smallIntegerTag
 ]
 
 { #category : #'interpreter access' }
@@ -653,7 +670,7 @@ Spur64BitMemoryManager >> isNegativeSmallFloat: aSmallFloat [
 
 { #category : #'object testing' }
 Spur64BitMemoryManager >> isNonIntegerObject: oop [
-	^(oop bitAnd: self tagMask) ~= 1
+	^oop noMask: self smallIntegerTag
 ]
 
 { #category : #'interpreter access' }
@@ -900,6 +917,11 @@ Spur64BitMemoryManager >> oldRawNumSlotsOf: objOop [
 	^(self longAt: objOop) asUnsignedLong >> self numSlotsFullShift
 ]
 
+{ #category : #'cog jit support' }
+Spur64BitMemoryManager >> oldSmallFloatTag [
+	^3
+]
+
 { #category : #'interpreter access' }
 Spur64BitMemoryManager >> positiveSmallFloatZero [
 	<inline: true>
@@ -1016,6 +1038,16 @@ Spur64BitMemoryManager >> setFormatOf: objOop to: format [
 	self longAt: objOop
 		put: ((self longAt: objOop) bitAnd: (self formatMask << self formatShift) bitInvert64)
 			+ (format << self formatShift)
+]
+
+{ #category : #'class table' }
+Spur64BitMemoryManager >> setHiddenRootsObj: anOop [
+	"Override to check for and abort old format 64-bit Spur images in which the smallFloatTag is 3."
+	super setHiddenRootsObj: anOop.
+	(self bootstrapping not
+	 and: [self smallFloatTag ~= (self rawHashBitsOf: (self fetchPointer: self smallFloatTag
+															ofObject: classTableFirstPage))]) ifTrue:
+		[self error: 'This is an old-format 64-bit Spur image with smallFloatTag = 3.  Aborting.']
 ]
 
 { #category : #'header access' }
@@ -1144,7 +1176,7 @@ Spur64BitMemoryManager >> smallFloatSignBit [
 Spur64BitMemoryManager >> smallFloatTag [
 	<api>
 	<cmacro>
-	^3
+	^4
 ]
 
 { #category : #'interpreter access' }
@@ -1165,6 +1197,12 @@ Spur64BitMemoryManager >> smallFloatValueOf: oop [
 				at: 1 put: bits >> 32;
 				at: 2 put: (bits bitAnd: 16rFFFFFFFF);
 				* 1.0 "reduce to SmallFloat64 if possible"]
+]
+
+{ #category : #'cog jit support' }
+Spur64BitMemoryManager >> smallIntegerTag [
+	<cmacro>
+	^1
 ]
 
 { #category : #allocation }

@@ -455,6 +455,7 @@ NewCoObjectMemorySimulator >> pushInteger: integerValue [
 { #category : #'debug support' }
 NewCoObjectMemorySimulator >> setUpForUseByFacade: aCurrentImageCoInterpreterFacade [
 	"This is a noop"
+	<doNotGenerate>
 ]
 
 { #category : #'memory access' }

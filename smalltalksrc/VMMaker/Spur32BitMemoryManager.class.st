@@ -395,6 +395,15 @@ Spur32BitMemoryManager >> hasSixtyFourBitImmediates [
 	^false
 ]
 
+{ #category : #immediates }
+Spur32BitMemoryManager >> imageFormatVersion [
+	"Return a magic constant that changes when the image format changes.
+	 Since the image reading code uses this to detect byte ordering, one
+	 must avoid version numbers that are invariant under byte reversal.
+	 N.B. Bit 4 (=16) is the isSpur bit"
+	^6521
+]
+
 { #category : #'free space' }
 Spur32BitMemoryManager >> initFreeChunkWithBytes: numBytes at: address [
 	<var: #numBytes type: #usqLong>
@@ -568,6 +577,12 @@ Spur32BitMemoryManager >> isFloatInstance: oop [
 	  and: [(self classIndexOf: oop) = ClassFloatCompactIndex]
 ]
 
+{ #category : #'object testing' }
+Spur32BitMemoryManager >> isImmediateCharacter: oop [
+	<inline: true>
+	^(oop bitAnd: self tagMask) = self characterTag
+]
+
 { #category : #'interpreter access' }
 Spur32BitMemoryManager >> isImmediateFloat: oop [
 	^false
@@ -575,7 +590,7 @@ Spur32BitMemoryManager >> isImmediateFloat: oop [
 
 { #category : #'object testing' }
 Spur32BitMemoryManager >> isIntegerObject: oop [
-	^(oop bitAnd: 1) ~= 0
+	^(oop bitAnd: self smallIntegerTag) ~= 0
 ]
 
 { #category : #'interpreter access' }
@@ -906,6 +921,13 @@ Spur32BitMemoryManager >> shiftForWord [
 	<api>
 	<cmacro>
 	^2
+]
+
+{ #category : #'cog jit support' }
+Spur32BitMemoryManager >> smallIntegerTag [
+	"Beware, SmallInteger tags are 1 or 3.  But SmallInteger's identityHash is 1."
+	<cmacro>
+	^1
 ]
 
 { #category : #allocation }
