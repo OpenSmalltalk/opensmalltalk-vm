@@ -1784,6 +1784,32 @@ TMethod >> locals [
 ]
 
 { #category : #transformations }
+TMethod >> mapReturnsToGotos [
+	"For super expansions inner returns must be mapped to gotos to prevent premature exit.
+	 But this only works if no value is being returned.
+	 Anything meaningful in the returned expression must be retained."
+
+	| map label |
+	map := Dictionary new.
+	parseTree nodesDo:
+		[:node|
+		node isReturn ifTrue:
+			[(node expression isVariable and: [#('self' 'nil') includes: node expression name])
+				ifTrue:
+					[map at: node put: (TGoToNode new
+											setLabel: (label ifNil: [label := self unusedLabelForInlining: self]);
+											yourself)]
+				ifFalse: [self error: 'Cannot expand super node with inner return that answers a value!']]].
+	label ifNotNil:
+		[parseTree := parseTree replaceNodesIn: map.
+		 parseTree setStatements: (parseTree statements asOrderedCollection
+										addLast: (TLabeledCommentNode new
+														setLabel: label;
+														yourself);
+										yourself)]
+]
+
+{ #category : #transformations }
 TMethod >> mapSendsFromSelfToInterpreterProxy: selectors [
 	| interpreterProxyNode |
 	interpreterProxyNode := TVariableNode new setName: 'interpreterProxy'.
@@ -2439,9 +2465,9 @@ TMethod >> setSelector: sel definingClass: class args: argList locals: localList
 	primitive := aNumber.
 	properties := methodProperties.
 	comment := aComment.
+	labels := Set new.
 	parseTree := aBlockNode. "hack; allows nodes to find their parent, etc"
 	parseTree := aBlockNode asTranslatorNodeIn: self.
-	labels := Set new.
 	complete := false.  "set to true when all possible inlining has been done"
 	export := self extractExportDirective.
 	static := self extractStaticDirective.
@@ -2570,7 +2596,7 @@ TMethod >> static: aBoolean [
 ]
 
 { #category : #inlining }
-TMethod >> superExpansionNodeFor: aSelector args: argumentNodes [
+TMethod >> superExpansionNodeFor: aSelector args: argumentNodes isResult: superExpansionIsResult [
 	"Answer the expansion of a super send.  Merge the super expansion's
 	 locals, properties and comment into this method's properties."
 	(definingClass superclass lookupSelector: aSelector)
@@ -2604,6 +2630,9 @@ TMethod >> superExpansionNodeFor: aSelector args: argumentNodes [
 				[:scvn|
 				extraVariableNumber := extraVariableNumber ifNil: [scvn] ifNotNil: [:cvn| cvn + scvn]].
 			superTMethod elideAnyFinalReturn.
+			superExpansionIsResult ifFalse:
+				[superTMethod mapReturnsToGotos.
+				 labels addAll: superTMethod labels].
 			^superTMethod parseTree]
 ]
 
@@ -2791,26 +2820,24 @@ TMethod >> unusedLabelForInlining: sourceMethod [
 
 { #category : #inlining }
 TMethod >> unusedLabelForInliningInto: targetMethod [
-
-	| usedLabels |
-	usedLabels := labels copy.
-	usedLabels addAll: targetMethod labels.
-	^self unusedNamePrefixedBy: 'l' avoiding: usedLabels
+	^self unusedNamePrefixedBy: 'l' avoiding: (targetMethod == self
+												ifTrue: [labels]
+												ifFalse: [labels copy
+															addAll: targetMethod labels;
+															yourself])
 ]
 
 { #category : #'inlining support' }
 TMethod >> unusedNamePrefixedBy: aString avoiding: usedNames [
-	"Choose a unique variable or label name with the given string as a prefix, avoiding the names in the given collection. The selected name is added to usedNames."
+	"Choose a unique variable or label name with the given string as a prefix, avoiding
+	 the names in the given collection. The selected name is added to usedNames."
 
 	| n newVarName |
 	n := 1.
-	newVarName := aString, n printString.
-	[usedNames includes: newVarName] whileTrue: [
-		n := n + 1.
-		newVarName := aString, n printString.
-	].
-	usedNames add: newVarName.
-	^ newVarName
+	[newVarName := aString, n printString.
+	 usedNames includes: newVarName] whileTrue:
+		[n := n + 1].
+	^usedNames add: newVarName
 ]
 
 { #category : #inlining }

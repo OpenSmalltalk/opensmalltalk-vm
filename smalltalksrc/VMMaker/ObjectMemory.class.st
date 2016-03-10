@@ -1888,7 +1888,14 @@ ObjectMemory >> fetchLong32: fieldIndex ofObject: oop [
 { #category : #'object access' }
 ObjectMemory >> fetchLong64: longIndex ofObject: oop [
 	<returnTypeC: #sqLong>
-	^self long64At: oop + self baseHeaderSize + (longIndex << 3)
+	^self cppIf: BytesPerWord = 8
+		ifTrue: [self long64At: oop + self baseHeaderSize + (longIndex << 3)]
+		ifFalse:
+			[self cppIf: VMBIGENDIAN
+				ifTrue: [((self long32At: oop + self baseHeaderSize + (longIndex << 3)) asUnsignedLongLong << 32)
+					+ (self long32At: oop + self baseHeaderSize + (longIndex << 3 + 4))]
+				ifFalse: [(self long32At: oop + self baseHeaderSize + (longIndex << 3))
+					+ ((self long32At: oop + self baseHeaderSize + (longIndex << 3 + 4)) asUnsignedLongLong << 32)]]
 ]
 
 { #category : #'object access' }
@@ -2470,6 +2477,14 @@ ObjectMemory >> headerWhileForwardingOf: oop [
 		 self assert: (self fwdBlockValid: fwdBlock).
 		 header := self longAt: fwdBlock + self wordSize].
 	^header
+]
+
+{ #category : #'image save/restore' }
+ObjectMemory >> imageFormatVersion [
+	"Return a magic constant that changes when the image format changes.
+	 Since the image reading code uses this to detect byte ordering, one
+	 must avoid version numbers that are invariant under byte reversal."
+	^self wordSize = 4 ifTrue: [6505] ifFalse: [68003]
 ]
 
 { #category : #'image segment in/out' }
