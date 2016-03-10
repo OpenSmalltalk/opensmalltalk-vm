@@ -4,7 +4,7 @@ This is Cairo library config for building on MacOSX
 Class {
 	#name : #CMCairo,
 	#superclass : #CMCairoBundle,
-	#category : 'CMakeVMMaker-Libs'
+	#category : #'CMakeVMMaker-Libs'
 }
 
 { #category : #'as yet unclassified' }

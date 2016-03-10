@@ -8,7 +8,7 @@ Class {
 	#instVars : [
 		'output'
 	],
-	#category : 'CMakeVMMaker'
+	#category : #CMakeVMMaker
 }
 
 { #category : #'cmake commands' }

@@ -11,7 +11,7 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #StackRaspbianConfig,
 	#superclass : #StackUnixConfig,
-	#category : 'CMakeVMMaker-Unix'
+	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #'as yet unclassified' }

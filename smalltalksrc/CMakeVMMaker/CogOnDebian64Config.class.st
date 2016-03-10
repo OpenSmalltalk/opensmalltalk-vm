@@ -17,7 +17,7 @@ Then you can go on CogOnDebian64Config generateWithSources.
 Class {
 	#name : #CogOnDebian64Config,
 	#superclass : #CogUnixConfig,
-	#category : 'CMakeVMMaker-Unix'
+	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #accessing }

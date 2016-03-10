@@ -1,7 +1,7 @@
 Class {
 	#name : #StackEvtUnixDebugConfig,
 	#superclass : #StackEvtUnixConfig,
-	#category : 'CMakeVMMaker-Unix'
+	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #'compiler flags' }

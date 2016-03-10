@@ -1,7 +1,7 @@
 Class {
 	#name : #CMIOSFreetype2,
 	#superclass : #CMOSXFreetype2,
-	#category : 'CMakeVMMaker-Libs'
+	#category : #'CMakeVMMaker-Libs'
 }
 
 { #category : #testing }

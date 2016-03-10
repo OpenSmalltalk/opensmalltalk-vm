@@ -4,7 +4,7 @@ http://www.cmake.org/Wiki/CMake/Assembler
 Class {
 	#name : #StackRaspbianFastBltConfig,
 	#superclass : #StackRaspbianConfig,
-	#category : 'CMakeVMMaker-Unix'
+	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #'as yet unclassified' }

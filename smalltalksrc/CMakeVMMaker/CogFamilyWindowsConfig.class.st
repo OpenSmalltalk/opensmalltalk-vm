@@ -47,7 +47,7 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #CogFamilyWindowsConfig,
 	#superclass : #CPlatformConfig,
-	#category : 'CMakeVMMaker-Windows'
+	#category : #'CMakeVMMaker-Windows'
 }
 
 { #category : #'build script' }

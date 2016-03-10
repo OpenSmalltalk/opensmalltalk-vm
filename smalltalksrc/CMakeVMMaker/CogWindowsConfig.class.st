@@ -11,7 +11,7 @@ Fore more information, check the class comments of all the superclasses.
 Class {
 	#name : #CogWindowsConfig,
 	#superclass : #CogFamilyWindowsConfig,
-	#category : 'CMakeVMMaker-Windows'
+	#category : #'CMakeVMMaker-Windows'
 }
 
 { #category : #'source generation' }

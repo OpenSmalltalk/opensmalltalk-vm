@@ -13,7 +13,7 @@ Class {
 	#instVars : [
 		'resourcesDir'
 	],
-	#category : 'CMakeVMMaker-MacOS'
+	#category : #'CMakeVMMaker-MacOS'
 }
 
 { #category : #'build script' }
