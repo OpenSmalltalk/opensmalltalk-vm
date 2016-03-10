@@ -1,8 +1,10 @@
 "
 Base class, defining some common properties and behavior for all kinds of VM build configurations. These classes are used to generate the VM sources and the CMMake files. 
 
-Notice that this configuration classes expect that you have download the ""platofroms code"" which is in Gitorious: https://gitorious.org/cogvm
-You can load it executing: git clone git://gitorious.org/cogvm/blessed.git
+Notice that this configuration classes expect that you have download the ""platofroms code"" which is hosted here:
+ https://github.com/pharo-project/pharo-vm.
+
+You can clone it using this command:  git clone https://github.com/pharo-project/pharo-vm
 
 Once that is done it should have created a directory /blessed. In order to get all the directories by default, place this image under /blessed/image 
 
