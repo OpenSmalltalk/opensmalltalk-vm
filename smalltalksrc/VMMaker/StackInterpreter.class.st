@@ -7346,10 +7346,9 @@ StackInterpreter >> imageFormatVersion [
 	"Return a magic constant that changes when the image format changes.
 	 Since the image reading code uses this to detect byte ordering, one
 	 must avoid version numbers that are invariant under byte reversal."
-	| isSpurFlag |
-	isSpurFlag := objectMemory hasSpurMemoryManagerAPI ifTrue: [2r10000] ifFalse: [0].
-	^(objectMemory wordSize = 4 ifTrue: [6505] ifFalse: [68003])
-	  + isSpurFlag
+	<doNotGenerate>
+	self assert: (objectMemory imageFormatVersion anyMask: 16) = objectMemory hasSpurMemoryManagerAPI.
+	^objectMemory imageFormatVersion
 ]
 
 { #category : #'plugin primitive support' }
