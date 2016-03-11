@@ -245,7 +245,7 @@ THEEND
 	svn log ../platforms/Cross/vm/sqSCCSVersion.h >>../history/README.$REV
 	vi ../history/README.$REV
   fi
-  ../scripts/compileChangeHistory
+  ../scripts/compileChangeHistory $REV
 fi
 if [ -z "$ARCHIVES" ]; then
 	echo 'No archives have been specified.  Use -all?' 1>&2

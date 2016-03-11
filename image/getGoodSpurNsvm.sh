@@ -1,26 +1,26 @@
 #!/bin/sh
-# Sets the VM env var to the r3632 Newspeak Spur VM for the current platform.
+# Sets the VM env var to the r3643 Newspeak Spur VM for the current platform.
 # will download and install the VM in this directory if necessary.
 
-TAG=16.08.3632
-REV=3632
-LSBINDIR=5.0-3632
+TAG=16.10.3643
+REV=3643
+LSBINDIR=5.0-3643
 URL=http://www.mirandabanda.org/files/Cog/VM/VM.r$REV/
 
 . ./envvars.sh
 
 case "$OS" in
 Darwin) get_vm_from_tar \
-            "Newspeak Spur Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine" aaf0792cc1494e43e01349565c52772e \
-            "Newspeak Spur Virtual Machine.app-$TAG.tgz" 7405599f94a2c4eb9000e5bbcbb11713
+            "Newspeak Spur Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine" a50b3f51714f1c012ce73a24a3c4fd1c \
+            "Newspeak Spur Virtual Machine.app-$TAG.tgz" a8c926d31ca71fac7d7f202529b7aab8
         VM="Newspeak Spur Virtual Machine.app/Contents/MacOS/Newspeak Virtual Machine";;
 Linux) get_vm_from_tar \
         nsvmspurlinuxht/lib/nsvm/$LSBINDIR/nsvm  \
-        nsvmspurlinuxht-$TAG.tgz 2ad8a1d108801697e4d35ea48be0a459
+        nsvmspurlinuxht-$TAG.tgz 7a8810d1f87d044ad3a85866a6509e64
     VM=nsvmspurlinuxht/nsvm;;
 CYGWIN*) get_vm_from_zip \
-            nsvmspurwin/nsvmConsole.exe c1fa61e4a5fb1991d33d630e46d5fa69 \
-            nsvmspurwin-$TAG.zip b3c03d6c310ec32226352b4a56cac940
+            nsvmspurwin/nsvmConsole.exe d9bb69463c8f9ec8b1436b294593f11e \
+            nsvmspurwin-$TAG.zip ec9e07efe9eea8ff6cc4805fbde6de2a
     VM=nsvmspurwin/nsvmConsole.exe;;
 *)  echo "don't know how to run nsvm on your system.  bailing out." 1>&2; exit 2
 esac
