@@ -48,5 +48,6 @@ StdioListener >> run [
 			on: Error
 			do: [:ex| self logError: ex description inContext: ex signalerContext to: stderr]].
 	quitOnEof ifTrue:
-		[Smalltalk snapshot: false andQuit: true]
+		[SourceFiles at: 2 put: nil.
+		 Smalltalk snapshot: false andQuit: true]
 ]
