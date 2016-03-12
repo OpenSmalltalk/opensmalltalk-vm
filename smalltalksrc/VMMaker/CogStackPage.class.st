@@ -21,7 +21,7 @@ Class {
 		'VMBasicConstants',
 		'VMBytecodeConstants'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #translation }

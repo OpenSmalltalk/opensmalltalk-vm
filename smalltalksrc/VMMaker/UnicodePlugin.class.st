@@ -5,7 +5,7 @@ This plugin measures and renders Unicode (UTF8) strings.
 Class {
 	#name : #UnicodePlugin,
 	#superclass : #InterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }

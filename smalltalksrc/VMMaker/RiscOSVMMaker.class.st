@@ -4,7 +4,7 @@ Special VMMaker class for Acorn RiscOS - add generation of a configuration file 
 Class {
 	#name : #RiscOSVMMaker,
 	#superclass : #VMMaker,
-	#category : 'VMMaker-Building'
+	#category : #'VMMaker-Building'
 }
 
 { #category : #initialisation }

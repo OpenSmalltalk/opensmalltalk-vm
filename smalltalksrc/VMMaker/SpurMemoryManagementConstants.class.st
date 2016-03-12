@@ -9,5 +9,5 @@ Class {
 		'TenureByClass',
 		'TenureToShrinkRT'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }

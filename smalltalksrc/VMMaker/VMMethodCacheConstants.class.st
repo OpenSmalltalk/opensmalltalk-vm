@@ -35,5 +35,5 @@ Class {
 		'NSMethodCacheSize',
 		'NSMethodCacheTargetMethod'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }

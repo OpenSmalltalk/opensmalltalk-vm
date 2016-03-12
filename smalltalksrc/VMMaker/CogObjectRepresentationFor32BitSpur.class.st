@@ -1,7 +1,7 @@
 Class {
 	#name : #CogObjectRepresentationFor32BitSpur,
 	#superclass : #CogObjectRepresentationForSpur,
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #'accessing class hierarchy' }

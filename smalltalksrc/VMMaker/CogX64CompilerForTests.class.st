@@ -1,7 +1,7 @@
 Class {
 	#name : #CogX64CompilerForTests,
 	#superclass : #CogInLineLiteralsX64Compiler,
-	#category : 'VMMaker-Tests'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #'test support' }

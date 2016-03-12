@@ -1,7 +1,7 @@
 Class {
 	#name : #ResumableVMError,
 	#superclass : #Error,
-	#category : 'VMMaker-Support'
+	#category : #'VMMaker-Support'
 }
 
 { #category : #exceptionDescription }

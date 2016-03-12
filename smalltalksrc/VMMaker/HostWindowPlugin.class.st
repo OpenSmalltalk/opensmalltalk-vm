@@ -4,7 +4,7 @@ This plugin provides access to creating, destroying and manipulating host OS win
 Class {
 	#name : #HostWindowPlugin,
 	#superclass : #SmartSyntaxInterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }
