@@ -1,7 +1,7 @@
 Class {
 	#name : #CogIA32CompilerForTests,
 	#superclass : #CogIA32Compiler,
-	#category : 'VMMaker-Tests'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #'test support' }

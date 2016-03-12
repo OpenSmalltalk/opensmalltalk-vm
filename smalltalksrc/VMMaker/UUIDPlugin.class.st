@@ -8,7 +8,7 @@ If a plugin does not exist then we generate a UUID version 4 type GUUID in Small
 Class {
 	#name : #UUIDPlugin,
 	#superclass : #SmartSyntaxInterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }
