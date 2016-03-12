@@ -15,7 +15,8 @@ Class {
 		'wordSize',
 		'requiresClosureSupport',
 		'requiresNativeFloatWordOrder',
-		'requiresSpurSupport'
+		'requiresSpurSupport',
+		'requiresNewSpur64TagAssignment'
 	],
 	#classVars : [
 		'BaseVersionMask',
@@ -308,7 +309,7 @@ ImageFormat class >> initialize [
 	BaseVersionMask := self baseVersionMask.
 	CapabilitiesBitsMask := self capabilitiesBitsMask.
 	ReservedBitsMask := self availableBits.
-	KnownVersionNumbers := self knownVersionNumbers
+	KnownVersionNumbers := self knownVersionNumbers.
 
 ]
 
@@ -323,7 +324,8 @@ ImageFormat class >> knownVersionNumbers [
 			6505 .	"Cog and StackVM"
 			68003 .	"Cog and StackVM running 64-bit image"
 			6521 .	"Spur 32 bit object memory"
-			68019 .	"Spur 64 bit object memory"
+			68019 .	"Spur 64 bit object memory (early)"
+			68021 .	"Spur 64 bit object memory"
 				" ... add others here as bits are allocated to represent requirements of other image formats"
 		}
 
@@ -417,10 +419,20 @@ ImageFormat class >> wordSize: bytesPerWord cog: cogRequired [
 ImageFormat class >> wordSize: bytesPerWord spur: spurRequired [
 	"Answer a Spur image format, or default to Cog if Spur is not specified"
 
+	| update64 |
+	update64 := bytesPerWord == 8. "The 64 bit Spur image has an updated version"
+	^self wordSize: bytesPerWord spur: spurRequired requiresNewSpur64TagAssignment: update64
+]
+
+{ #category : #'instance creation' }
+ImageFormat class >> wordSize: bytesPerWord spur: spurRequired requiresNewSpur64TagAssignment: newSpur64 [
+	"Answer a Spur image format, or default to Cog if Spur is not specified"
+
 	^(self wordSize: bytesPerWord)
 		setClosureSupportRequirement: true;
 		setCogSupportRequirement: true;
-		setSpurSupportRequirement: spurRequired
+		setSpurSupportRequirement: spurRequired;
+		setRequiresNewSpur64TagAssignmentRequirement: newSpur64
 
 ]
 
@@ -437,6 +449,7 @@ ImageFormat >> asInteger [
 	self requiresClosureSupport ifTrue: [val := val + 2].
 	self requiresNativeFloatWordOrder ifTrue: [val := val + 1].
 	self requiresSpurSupport ifTrue: [val := val + 2r10000].
+	self requiresNewSpur64TagAssignment ifTrue: [val := val + 2].
 	^val
 
 ]
@@ -474,12 +487,14 @@ ImageFormat >> fromInteger: anInteger [
 	(anInteger bitAnd: ReservedBitsMask) ~= 0
 		ifTrue: [self error: 'invalid format number ', anInteger printString].
 	baseVersion := self  baseVersionBitsOf: anInteger.
-	(baseVersion = 6504 or: [baseVersion = 68002])
+	((baseVersion = 6504 or: [baseVersion = 68002]) or: [baseVersion = 68004])
 		ifTrue: [requiresClosureSupport := true].
 	(baseVersion = 6502 or: [baseVersion = 6504])
 		ifTrue: [wordSize := 4]
-		ifFalse: [(baseVersion = 68000 or: [baseVersion = 68002])
-			ifTrue: [wordSize := 8]
+		ifFalse: [((baseVersion = 68000 or: [baseVersion = 68002]) or: [baseVersion = 68004])
+			ifTrue: [wordSize := 8.
+					baseVersion = 68004
+						ifTrue: [self setRequiresNewSpur64TagAssignmentRequirement: true]]
 			ifFalse: [self error: 'invalid format number ', anInteger printString]].
 	capabilitiesBits := anInteger bitAnd: CapabilitiesBitsMask.
 	(capabilitiesBits bitAt: PlatformByteOrderBit) = 1
@@ -505,7 +520,8 @@ ImageFormat >> fromInteger: anInteger [
 ImageFormat >> initialize [
 	requiresClosureSupport := false.
 	requiresNativeFloatWordOrder := false.
-	requiresSpurSupport := false
+	requiresSpurSupport := false.
+	requiresNewSpur64TagAssignment := false.
 ]
 
 { #category : #testing }
@@ -542,7 +558,9 @@ ImageFormat >> printDescriptionOn: stream [
 			ifTrue: [stream nextPutAll: 'float words stored in native platform order']
 			ifFalse: [stream nextPutAll: 'no native platform float word order requirement'].
 		self requiresSpurSupport
-			ifTrue: [stream nextPutAll: ' using Spur object format'].
+			ifTrue: [stream nextPutAll: ' using Spur object format'.
+				(self is64Bit and: [self requiresNewSpur64TagAssignment not])
+					ifTrue: [stream nextPutAll: ' (obsolete)']].
 		stream nextPutAll: ' (';
 			nextPutAll: self asInteger asString;
 			nextPut: $).
@@ -568,6 +586,13 @@ ImageFormat >> requiresClosureSupport [
 ImageFormat >> requiresNativeFloatWordOrder [
 	"True if this image requires a Cog VM (stack VM possibly including a Cog jitter)"
 	^requiresNativeFloatWordOrder
+]
+
+{ #category : #testing }
+ImageFormat >> requiresNewSpur64TagAssignment [
+	"True if this is a 64 bit Spur image with immediate tag assigments redefined as of
+	VMMaker.oscog-eem.1722"
+	^requiresNewSpur64TagAssignment
 ]
 
 { #category : #testing }
@@ -608,6 +633,16 @@ ImageFormat >> setNativeFloatWordOrderRequirement: aBoolean [
 	The StackInterpreter and Cog make use of this for performance reasons."
 
 	requiresNativeFloatWordOrder := aBoolean
+
+]
+
+{ #category : #'initialize-release' }
+ImageFormat >> setRequiresNewSpur64TagAssignmentRequirement: aBoolean [
+	"Applicable only to 64-bit Spur images. If true, the updated tag assignment
+	definitions are required. Earlier Spur 64 bit images use tag assignment for
+	immediates that conflict with the Spur 32 bit image definition. "
+
+	requiresNewSpur64TagAssignment := aBoolean
 
 ]
 
