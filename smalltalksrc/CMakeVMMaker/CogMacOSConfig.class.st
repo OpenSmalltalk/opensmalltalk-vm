@@ -254,7 +254,7 @@ CogMacOSConfig >> defaultInternalPlugins [
 		Matrix2x3Plugin
 		MIDIPlugin
 		MiscPrimitivePlugin
-		QVMProfileMacSupportPlugin
+		VMProfileMacSupportPlugin
 		RePlugin
 		SecurityPlugin
 		SerialPlugin
