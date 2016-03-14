@@ -1,7 +1,7 @@
 Class {
 	#name : #StackInterpreterTests,
 	#superclass : #TestCase,
-	#category : 'VMMaker-Tests'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #tests }

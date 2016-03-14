@@ -16,7 +16,7 @@ Class {
 		'span',
 		'hasInstVarRef'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }

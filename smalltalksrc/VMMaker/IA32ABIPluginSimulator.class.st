@@ -1,7 +1,7 @@
 Class {
 	#name : #IA32ABIPluginSimulator,
 	#superclass : #IA32ABIPlugin,
-	#category : 'VMMaker-Plugins-FFI'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }

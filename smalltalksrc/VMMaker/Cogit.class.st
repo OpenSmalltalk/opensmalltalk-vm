@@ -311,7 +311,7 @@ Class {
 		'generatorTable',
 		'primitiveTable'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -9089,6 +9089,7 @@ Cogit >> printOnTrace [
 Cogit >> printPCMapPairsFor: cogMethod [
 	<api>
 	<var: 'cogMethod' type: #'CogMethod *'>
+	<var: 'mapByte' type: #'unsigned char'>
 	| mcpc map mapByte annotation value |
 	mcpc := cogMethod asInteger + cmNoCheckEntryOffset.
 	map := self mapStartFor: cogMethod.
@@ -10615,6 +10616,7 @@ Cogit >> trampolineName: routinePrefix numArgs: numArgs limit: argsLimit [
 	<inline: true>
 	<returnTypeC: #'char *'>
 	<var: #routinePrefix type: #'char *'>
+	<var: #numArgs type: #int>
 	| theString |
 	<var: #theString type: #'char *'>
 	self cCode: '' inSmalltalk:

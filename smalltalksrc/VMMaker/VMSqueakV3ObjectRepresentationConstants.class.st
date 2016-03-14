@@ -24,5 +24,5 @@ Class {
 		'SizeMask',
 		'TypeMask'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
