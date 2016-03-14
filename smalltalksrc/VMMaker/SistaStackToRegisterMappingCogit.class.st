@@ -444,8 +444,9 @@ SistaStackToRegisterMappingCogit >> genMustBeBooleanTrampolineFor: boolean calle
 		[self PopR: LinkReg].
 	"To keep ResultReceiverReg live if optStatus thought it was, simply reload it
 	 from the frame pointer.  This avoids having to reload it in the common case
-	 (counter does not trip) if it was live."
-	self putSelfInReceiverResultReg.
+	 (counter does not trip) if it was live.  Note we can't use putSelfInReceiverResultReg
+	 when generating trampolines because simSelf has not yet been initialized."
+	self MoveMw: FoxMFReceiver r: FPReg R: ReceiverResultReg.
 	self RetN: 0.
 	"If the objectRepresentation does want true & false to be mobile then we need to record these addresses."
 	self assert: (objectRepresentation shouldAnnotateObjectReference: boolean) not.
@@ -1002,9 +1003,7 @@ SistaStackToRegisterMappingCogit >> populate: tuple withPICInfoFor: cPIC firstCa
 		pc := self addressOfEndOfCase: i inCPIC: cPIC.
 		cacheTag := i = 1
 						ifTrue: [firstCacheTag]
-						ifFalse: [backEnd literalBeforeFollowingAddress: pc
-																		- backEnd jumpLongConditionalByteSize
-																		- backEnd loadLiteralByteSize].
+						ifFalse: [backEnd literalBeforeFollowingAddress: pc - backEnd jumpLongConditionalByteSize].
 		classOop := objectRepresentation classForInlineCacheTag: cacheTag.
 		objectMemory storePointer: i * 2 - 1 ofObject: tuple withValue: classOop.
 		entryPoint := i = 1
