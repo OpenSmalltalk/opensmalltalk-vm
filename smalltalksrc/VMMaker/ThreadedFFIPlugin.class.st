@@ -1787,7 +1787,9 @@ ThreadedFFIPlugin >> primitiveLoadSymbolFromModule [
 	module := interpreterProxy stackValue: 0.
 	symbol := interpreterProxy stackValue: 1.
 
-	moduleHandle := self ffiLoadCalloutModule: module.
+	module ~= interpreterProxy nilObject 
+		ifTrue: [ moduleHandle := self ffiLoadCalloutModule: module ]
+		ifFalse: [ moduleHandle := nil ].
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNotFound].
 	address := interpreterProxy
