@@ -11,7 +11,7 @@ Class {
 	#pools : [
 		'VMBasicConstants'
 	],
-	#category : 'VMMaker-JITSimulation'
+	#category : #'VMMaker-JITSimulation'
 }
 
 { #category : #'instance creation' }

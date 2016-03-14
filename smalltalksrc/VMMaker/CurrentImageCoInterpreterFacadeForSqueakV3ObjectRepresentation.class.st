@@ -1,7 +1,7 @@
 Class {
 	#name : #CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation,
 	#superclass : #CurrentImageCoInterpreterFacade,
-	#category : 'VMMaker-Support'
+	#category : #'VMMaker-Support'
 }
 
 { #category : #'accessing class hierarchy' }
