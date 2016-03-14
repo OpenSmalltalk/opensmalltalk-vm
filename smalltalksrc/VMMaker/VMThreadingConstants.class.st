@@ -17,5 +17,5 @@ Class {
 		'ThreadIdIndex',
 		'ThreadIdMask'
 	],
-	#category : #'VMMaker-Multithreading'
+	#category : 'VMMaker-Multithreading'
 }

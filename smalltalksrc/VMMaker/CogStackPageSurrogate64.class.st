@@ -20,7 +20,7 @@ Here's a doit to generate most of my code:
 Class {
 	#name : #CogStackPageSurrogate64,
 	#superclass : #CogStackPageSurrogate,
-	#category : #'VMMaker-JITSimulation'
+	#category : 'VMMaker-JITSimulation'
 }
 
 { #category : #accessing }

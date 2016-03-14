@@ -7,5 +7,5 @@ Class {
 		'BecamePointerObjectFlag',
 		'OldBecameNewFlag'
 	],
-	#category : #'VMMaker-Interpreter'
+	#category : 'VMMaker-Interpreter'
 }
