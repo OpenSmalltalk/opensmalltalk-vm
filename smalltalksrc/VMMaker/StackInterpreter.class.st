@@ -8709,10 +8709,10 @@ StackInterpreter >> longPrintOop: oop [
 			 startIP to: lastIndex do:
 				[:index| | byte |
 				column = 1 ifTrue:
-					[self cCode: 'printf("0x%08x: ", oop+BaseHeaderSize+index-1)'
+					[self cCode: 'printf("0x%08lx: ", oop+BaseHeaderSize+index-1)'
 						inSmalltalk: [self print: (oop+objectMemory baseHeaderSize+index-1) hex; print: ': ']].
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
-				self cCode: 'printf(" %02x/%-3d", byte,byte)'
+				self cCode: 'printf(" %02x/%-3d", (int)byte,(int)byte)'
 					inSmalltalk: [self space; print: (byte radix: 16); printChar: $/; printNum: byte].
 				column := column + 1.
 				column > bytecodesPerLine ifTrue:
@@ -11492,10 +11492,10 @@ StackInterpreter >> printOop: oop [
 			 startIP to: lastIndex do:
 				[:index| | byte |
 				column = 1 ifTrue:
-					[self cCode: 'printf("0x%08x: ", oop+BaseHeaderSize+index-1)'
+					[self cCode: 'printf("0x%08lx: ", oop+BaseHeaderSize+index-1)'
 						inSmalltalk: [self print: (oop+objectMemory baseHeaderSize+index-1) hex; print: ': ']].
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
-				self cCode: 'printf(" %02x/%-3d", byte,byte)'
+				self cCode: 'printf(" %02x/%-3d", (int)byte,(int)byte)'
 					inSmalltalk: [self space; print: (byte radix: 16); printChar: $/; printNum: byte].
 				column := column + 1.
 				column > bytecodesPerLine ifTrue:
