@@ -8,7 +8,7 @@ Note that the image must have been saved at least once on the local architecture
 Class {
 	#name : #CogVMSimulatorLSB,
 	#superclass : #CogVMSimulator,
-	#category : #'VMMaker-JITSimulation'
+	#category : 'VMMaker-JITSimulation'
 }
 
 { #category : #'memory access' }
