@@ -41,11 +41,11 @@ StackInterpreterTests >> testPointerTaggingDetagging [
 
 	{ StackInterpreterSimulatorLSB new. "StackInterpreterSimulatorMSB new" } do: "Need to add MSB soon"
 		[:sis|
-		({ SmallInteger minVal. SmallInteger minVal / 2. -1024. -4.
-		    SmallInteger maxVal - 1. SmallInteger maxVal // 2. 4 } collect:
-			[:n| n bitAnd: -4]) do:
+		({ sis objectMemory minSmallInteger. sis objectMemory minSmallInteger / 2. -1024. -4. -8.
+		    sis objectMemory maxSmallInteger - 1. sis objectMemory maxSmallInteger // 2. 4. 8} collect:
+			[:n| n bitClear: sis objectMemory tagMask]) do:
 				[:n| | tagged untagged |
-				self assert: n \\ 4 = 0.
+				self assert: (n bitAnd: sis objectMemory tagMask) = 0.
 				self assert: (sis objectMemory isNonIntegerObject: n).
 				tagged := sis withSmallIntegerTags: n.
 				untagged := sis withoutSmallIntegerTags: tagged.
