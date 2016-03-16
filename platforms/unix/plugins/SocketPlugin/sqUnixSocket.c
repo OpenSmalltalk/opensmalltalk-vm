@@ -612,7 +612,7 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
   if (-1 == newSocket)
     {
       /* socket() failed, or incorrect protocol type */
-      fprintf(stderr, "primSocketCreateRAW: socket() failed; protocol = %d, errno = %d\n", protocol, errno);
+      fprintf(stderr, "primSocketCreateRAW: socket() failed; protocol = %ld, errno = %d\n", protocol, errno);
       interpreterProxy->success(false);
       return;
     }
