@@ -10887,6 +10887,7 @@ SpurMemoryManager >> stObject: objOop at: indexOop put: valueOop [
 { #category : #'object access' }
 SpurMemoryManager >> stSizeOf: oop [
 	"Return the number of indexable fields in the receiver"
+	<doNotGenerate>
 	^oop basicSize
 ]
 
