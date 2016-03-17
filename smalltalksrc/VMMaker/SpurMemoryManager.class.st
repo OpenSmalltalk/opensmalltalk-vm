@@ -10884,6 +10884,12 @@ SpurMemoryManager >> stObject: objOop at: indexOop put: valueOop [
 	^coInterpreter stObject: objOop at: indexOop put: valueOop
 ]
 
+{ #category : #'object access' }
+SpurMemoryManager >> stSizeOf: oop [
+	"Return the number of indexable fields in the receiver"
+	^oop basicSize
+]
+
 { #category : #'simulation only' }
 SpurMemoryManager >> stackFloatValue: offset [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"

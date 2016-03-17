@@ -286,7 +286,7 @@ FilePlugin >> primitiveDirectoryDelete [
 	"If the security plugin can be loaded, use it to check for permission.
 	If not, assume it's ok"
 	sCDPfn ~= 0
-		ifTrue: [okToDelete := self cCode: ' ((sqInt (*)(char *, sqInt))sCDPfn)(dirNameIndex, dirNameSize)'.
+		ifTrue: [okToDelete := self cCode: ' ((sqInt (*)(char *, sqInt))sCDPfn)(dirNameIndex, dirNameSize)' inSmalltalk: [false].
 			okToDelete
 				ifFalse: [^interpreterProxy primitiveFail]].
 	(self
