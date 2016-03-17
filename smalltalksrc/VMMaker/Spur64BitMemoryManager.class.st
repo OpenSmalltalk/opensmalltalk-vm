@@ -593,7 +593,7 @@ Spur64BitMemoryManager >> integerObjectOf: value [
 	 In Smalltalk we have to work harder because the simulator works with strictly positive bit patterns."
 	<returnTypeC: #sqInt>
 	^self
-		cCode: [value << self numTagBits + 1]
+		cCode: [value asUnsignedInteger << self numTagBits + 1]
 		inSmalltalk: [value << self numTagBits
 					+ (value >= 0
 						ifTrue: [1]
@@ -652,7 +652,7 @@ Spur64BitMemoryManager >> isIntegerValue: intValue [
 	<api>
 	^self
 		cCode: [(intValue >> 60 + 1 bitAnd: 16rF) <= 1] "N.B. (16rFFFFFFFFFFFFFFFF >> 60) + 1 = 16"
-		inSmalltalk: [intValue >= -16r1000000000000000 and: [intValue <= 16rFFFFFFFFFFFFFFF]]
+		inSmalltalk: [intValue >= self minSmallInteger and: [intValue <= self maxSmallInteger]]
 ]
 
 { #category : #'header access' }
@@ -969,7 +969,7 @@ Spur64BitMemoryManager >> rotatedFloatBitsOf: oop [
 	self assert: (self isImmediateFloat: oop).
 	^oop asUnsignedInteger >> (self numTagBits + 1)
 	 + ((oop anyMask: self smallFloatSignBit)
-		ifTrue: [-1 << (64 - self numTagBits - 1)]
+		ifTrue: [-1 asUnsignedInteger << (64 - self numTagBits - 1)]
 		ifFalse: [0])
 ]
 
