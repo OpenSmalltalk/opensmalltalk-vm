@@ -12753,7 +12753,7 @@ StackInterpreter >> reverseDisplayFrom: startIndex to: endIndex [
 	displayBits := displayBits + objectMemory baseHeaderSize.
 	displayBits + wordStartIndex to: displayBits + wordEndIndex by: 4 do:
 		[:ptr | | reversed  |
-		reversed := (objectMemory long32At: ptr) bitXor: 4294967295.
+		reversed := (objectMemory long32At: ptr) bitXor: 16rFFFFFFFF.
 		objectMemory long32At: ptr put: reversed].
 	primFailCodeValue := primFailCode.
 	self initPrimCall.
