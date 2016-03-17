@@ -3,5 +3,5 @@
 # See platforms/win32/plugins/SqueakSSL/Makefile
 EXTERNAL_PLUGINS = \
 SqueakFFIPrims \
+UUIDPlugin \
 Win32OSProcessPlugin
-

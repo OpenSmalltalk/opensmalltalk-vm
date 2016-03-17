@@ -34,5 +34,4 @@ SoundCodecPrims \
 SoundGenerationPlugin \
 SoundPlugin \
 StarSqueakPlugin \
-SurfacePlugin \
-UUIDPlugin
+SurfacePlugin

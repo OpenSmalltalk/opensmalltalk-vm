@@ -9,4 +9,5 @@ FloatMathPlugin \
 Mpeg3Plugin \
 SqueakFFIPrims \
 SqueakSSL \
+UUIDPlugin \
 UnixOSProcessPlugin

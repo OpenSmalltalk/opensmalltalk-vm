@@ -29,6 +29,5 @@ SoundGenerationPlugin \
 SoundPlugin \
 StarSqueakPlugin \
 SurfacePlugin \
-UUIDPlugin \
 VMProfileMacSupportPlugin \
 # JoystickTabletPlugin

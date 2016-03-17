@@ -31,7 +31,6 @@ SoundGenerationPlugin \
 SoundPlugin \
 StarSqueakPlugin \
 SurfacePlugin \
-UUIDPlugin \
 VMProfileMacSupportPlugin \
 # B3DAcceleratorPlugin \
 # InternetConfigPlugin \

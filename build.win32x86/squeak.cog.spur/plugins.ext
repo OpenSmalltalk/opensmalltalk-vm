@@ -5,5 +5,5 @@ EXTERNAL_PLUGINS = \
 BochsIA32Plugin \
 BochsX64Plugin \
 SqueakFFIPrims \
+UUIDPlugin \
 Win32OSProcessPlugin
-
