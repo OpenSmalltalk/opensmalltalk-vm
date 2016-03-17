@@ -366,12 +366,9 @@ InterpreterPrimitives >> magnitude64BitIntegerFor: magnitude neg: isNegative [
 				storeByte: 1 ofObject: newLargeInteger withValue: (magnitude >>   8 bitAnd: 16rFF);
 				storeByte: 0 ofObject: newLargeInteger withValue: (magnitude ">> 0" bitAnd: 16rFF)]
 		ifFalse:
-			[sz > 4 ifTrue:
-				[objectMemory storeLong32: 1 ofObject: newLargeInteger withValue: magnitude >> 32].
-			objectMemory
-				storeLong32: 0
-				ofObject: newLargeInteger
-				withValue: (self cCode: [magnitude] inSmalltalk: [magnitude bitAnd: 16rFFFFFFFF])].
+			[sz > 4
+				ifTrue: [objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: magnitude]
+				ifFalse: [objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (self cCode: [magnitude] inSmalltalk: [magnitude bitAnd: 16rFFFFFFFF])]].
 
 	^newLargeInteger
 ]
@@ -409,9 +406,15 @@ InterpreterPrimitives >> magnitude64BitValueOf: oop [
 		[self primitiveFail.
 		 ^0].
 
-	value := objectMemory fetchByte: sz - 1 ofObject: oop.
-	sz - 2 to: 0 by: -1 do:
-		[:i | value := value << 8 + (objectMemory fetchByte: i ofObject: oop)].
+	self cppIf: VMBIGENDIAN
+		ifTrue:
+			[value := objectMemory fetchByte: sz - 1 ofObject: oop.
+			sz - 2 to: 0 by: -1 do:
+				[:i | value := value << 8 + (objectMemory fetchByte: i ofObject: oop)]]
+		ifFalse:
+			[sz > 4
+				ifTrue: [value := self cCoerceSimple: (objectMemory fetchLong64: 0 ofObject: oop) to: #usqLong]
+				ifFalse: [value := self cCoerceSimple: (objectMemory fetchLong32: 0 ofObject: oop) to: #'unsigned int'].].
 	^value
 ]
 
@@ -486,9 +489,15 @@ InterpreterPrimitives >> positive64BitValueOf: oop [
 		[self primitiveFail.
 		 ^0].
 
-	value := 0.
-	0 to: sz - 1 do: [:i |
-		value := value + ((self cCoerce: (objectMemory fetchByte: i ofObject: oop) to: #usqLong) <<  (i*8))].
+	self cppIf: VMBIGENDIAN
+		ifTrue:
+			[value := 0.
+			0 to: sz - 1 do: [:i |
+				value := value + ((self cCoerce: (objectMemory fetchByte: i ofObject: oop) to: #usqLong) <<  (i*8))]]
+		ifFalse:
+			[sz > 4
+				ifTrue: [value := self cCoerceSimple: (objectMemory fetchLong64: 0 ofObject: oop) to: #usqLong]
+				ifFalse: [value := self cCoerceSimple: (objectMemory fetchLong32: 0 ofObject: oop) to: #'unsigned int'].].
 	^value
 ]
 
@@ -869,6 +878,8 @@ InterpreterPrimitives >> primitiveBehaviorHash [
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveBitAnd [
 	<inline: false>
+	<var: 'integerArgument' type: #usqInt>
+	<var: 'intergerReceiver' type: #usqInt>
 	| integerReceiver integerArgument |
 	integerArgument := self stackTop.
 	integerReceiver := self stackValue: 1.
@@ -877,17 +888,13 @@ InterpreterPrimitives >> primitiveBitAnd [
 	 and: [objectMemory isIntegerObject: integerReceiver])
 		ifTrue: [self pop: 2 thenPush: (integerArgument bitAnd: integerReceiver)]
 		ifFalse:
-			["objectMemory wordSize = 8
-				ifTrue:
-					[integerArgument := self positive64BitValueOf: integerArgument.
-					 integerReceiver := self positive64BitValueOf: integerReceiver.
-					 self successful ifTrue:
-						[self pop: 2 thenPush: (self positive64BitIntegerFor: (integerArgument bitAnd: integerReceiver))]]
+			["
+			integerArgument := self positiveMachineIntegerValueOf: integerArgument.
+			integerReceiver := self positiveMachineIntegerValueOf: integerReceiver.
+			self successful ifTrue:
+					[self pop: 2 thenPush: (self positiveMachineIntegerFor: (integerArgument bitAnd: integerReceiver))]
 				ifFalse:
-					[integerArgument := self positive32BitValueOf: integerArgument.
-					 integerReceiver := self positive32BitValueOf: integerReceiver.
-					 self successful ifTrue:
-						[self pop: 2 thenPush: (self positive32BitIntegerFor: (integerArgument bitAnd: integerReceiver))]]"]"
+					[]"]"
 ]
 
 { #category : #'arithmetic largeint primitives' }
@@ -895,8 +902,8 @@ InterpreterPrimitives >> primitiveBitAndLargeIntegers [
 	"Primitive logical operations for large integers in 64 bit range"
 	| integerRcvr integerArg oopResult |
 	<export: true>
-	<var: 'integerRcvr' type: 'sqLong'>
-	<var: 'integerArg' type: 'sqLong'>
+	<var: 'integerRcvr' type: 'usqLong'>
+	<var: 'integerArg' type: 'usqLong'>
 
 	integerArg := self positive64BitValueOf: (self stackValue: 0).
 	integerRcvr := self positive64BitValueOf: (self stackValue: 1).
@@ -909,6 +916,8 @@ InterpreterPrimitives >> primitiveBitAndLargeIntegers [
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveBitOr [
 	<inline: false>
+	<var: 'integerArgument' type: #usqInt>
+	<var: 'intergerReceiver' type: #usqInt>
 	| integerReceiver integerArgument |
 	integerArgument := self stackTop.
 	integerReceiver := self stackValue: 1.
@@ -917,17 +926,13 @@ InterpreterPrimitives >> primitiveBitOr [
 	 and: [objectMemory isIntegerObject: integerReceiver])
 		ifTrue: [self pop: 2 thenPush: (integerArgument bitOr: integerReceiver)]
 		ifFalse:
-			["objectMemory wordSize = 8
-				ifTrue:
-					[integerArgument := self positive64BitValueOf: integerArgument.
-					 integerReceiver := self positive64BitValueOf: integerReceiver.
-					 self successful ifTrue:
-						[self pop: 2 thenPush: (self positive64BitIntegerFor: (integerArgument bitOr: integerReceiver))]]
+			["
+			integerArgument := self positiveMachineIntegerValueOf: integerArgument.
+			integerReceiver := self positiveMachineIntegerValueOf: integerReceiver.
+			self successful ifTrue:
+					[self pop: 2 thenPush: (self positiveMachineIntegerFor: (integerArgument bitOr: integerReceiver))]
 				ifFalse:
-					[integerArgument := self positive32BitValueOf: integerArgument.
-					 integerReceiver := self positive32BitValueOf: integerReceiver.
-					 self successful ifTrue:
-						[self pop: 2 thenPush: (self positive32BitIntegerFor: (integerArgument bitOr: integerReceiver))]]"]"
+					[]"]"
 ]
 
 { #category : #'arithmetic largeint primitives' }
@@ -935,8 +940,8 @@ InterpreterPrimitives >> primitiveBitOrLargeIntegers [
 	"Primitive logical operations for large integers in 64 bit range"
 	| integerRcvr integerArg oopResult |
 	<export: true>
-	<var: 'integerRcvr' type: 'sqLong'>
-	<var: 'integerArg' type: 'sqLong'>
+	<var: 'integerRcvr' type: 'usqLong'>
+	<var: 'integerArg' type: 'usqLong'>
 
 	integerArg := self positive64BitValueOf: (self stackValue: 0).
 	integerRcvr := self positive64BitValueOf: (self stackValue: 1).
@@ -1030,17 +1035,10 @@ InterpreterPrimitives >> primitiveBitXor [
 		ifTrue: "xoring will leave the tag bits zero, whether the tag is 1 or zero, so add it back in."
 			[self pop: 2 thenPush: (integerArgument bitXor: integerReceiver) + objectMemory smallIntegerTag]
 		ifFalse:
-			[objectMemory wordSize = 8
-				ifTrue:
-					[integerArgument := self positive64BitValueOf: integerArgument.
-					 integerReceiver := self positive64BitValueOf: integerReceiver.
-					 self successful ifTrue:
-						[self pop: 2 thenPush: (self positive64BitIntegerFor: (integerArgument bitXor: integerReceiver))]]
-				ifFalse:
-					[integerArgument := self positive32BitValueOf: integerArgument.
-					 integerReceiver := self positive32BitValueOf: integerReceiver.
-					 self successful ifTrue:
-						[self pop: 2 thenPush: (self positive32BitIntegerFor: (integerArgument bitXor: integerReceiver))]]]
+			[integerArgument := self positiveMachineIntegerValueOf: integerArgument.
+			 integerReceiver := self positiveMachineIntegerValueOf: integerReceiver.
+			 self successful ifTrue:
+				[self pop: 2 thenPush: (self positiveMachineIntegerFor: (integerArgument bitXor: integerReceiver))]]
 ]
 
 { #category : #'arithmetic largeint primitives' }
@@ -1048,8 +1046,8 @@ InterpreterPrimitives >> primitiveBitXorLargeIntegers [
 	"Primitive logical operations for large integers in 64 bit range"
 	| integerRcvr integerArg oopResult |
 	<export: true>
-	<var: 'integerRcvr' type: 'sqLong'>
-	<var: 'integerArg' type: 'sqLong'>
+	<var: 'integerRcvr' type: 'usqLong'>
+	<var: 'integerArg' type: 'usqLong'>
 
 	integerArg := self positive64BitValueOf: (self stackValue: 0).
 	integerRcvr := self positive64BitValueOf: (self stackValue: 1).
@@ -4725,10 +4723,11 @@ InterpreterPrimitives >> signalNoResume: aSemaphore [
 InterpreterPrimitives >> signed32BitValueOf: oop [
 	"Convert the given object into an integer value.
 	The object may be either a positive SmallInteger or a four-byte LargeInteger."
-	| value negative ok |
+	| value negative ok magnitude |
 	<inline: false>
 	<returnTypeC: #int>
 	<var: #value type: #int>
+	<var: #magnitude type: #'unsigned int'>
 	<var: #value64 type: #long>
 	(objectMemory isIntegerObject: oop) ifTrue:
 		[objectMemory wordSize = 4
@@ -4763,46 +4762,36 @@ InterpreterPrimitives >> signed32BitValueOf: oop [
 	(objectMemory numBytesOfBytes: oop) > 4 ifTrue:
 		[^self primitiveFail].
 
-	value := self cppIf: VMBIGENDIAN
+	magnitude := self cppIf: VMBIGENDIAN
 				ifTrue:
 					[ (objectMemory fetchByte: 0 ofObject: oop) +
 					 ((objectMemory fetchByte: 1 ofObject: oop) <<  8) +
 					 ((objectMemory fetchByte: 2 ofObject: oop) << 16) +
 					 ((objectMemory fetchByte: 3 ofObject: oop) << 24)]
 				ifFalse:
-					[objectMemory fetchLong32: 0 ofObject: oop].
-	self cCode: []
-		inSmalltalk:
-			[(value anyMask: 16r80000000) ifTrue:
-				[value := value - 16r100000000]].
-	"Filter out values out of range for the signed interpretation such as
-	 16rFFFFFFFF (positive w/ bit 32 set) and -16rFFFFFFFF (negative w/ bit
-	 32 set). Since the sign is implicit in the class we require that the high
-	 bit of the magnitude is not set which is a simple test here.  Note that
-	 we have to handle the most negative 32-bit value -2147483648 specially."
-	value < 0 ifTrue:
-		[self assert: (self sizeof: value) == 4.
-		 "Don't fail for -16r80000000/-2147483648
-		  Alas the simple (negative and: [value - 1 > 0]) isn't adequate since in C the result of signed integer
-		  overflow is undefined and hence under optimization this may fail.  The shift, however, is well-defined."
-		 (negative and: [0 = (self cCode: [value << 1]
-									inSmalltalk: [value << 1 bitAnd: (1 << 32) - 1])]) ifTrue: 
-			[^value].
-		 self primitiveFail.
-		 ^0].
-	^negative
-		ifTrue: [0 - value]
-		ifFalse: [value]
+					[(objectMemory fetchLong32: 0 ofObject: oop) asUnsignedInteger].
+
+	(negative
+		ifTrue: [magnitude > 16r80000000]
+		ifFalse: [magnitude >= 16r80000000])
+			ifTrue:
+				[self primitiveFail.
+				^0].
+	negative
+		ifTrue: [value := 0 - magnitude]
+		ifFalse: [value := magnitude].
+	^value
 ]
 
 { #category : #'primitive support' }
 InterpreterPrimitives >> signed64BitValueOf: oop [
 	"Convert the given object into an integer value.
 	 The object may be either a positive SmallInteger or a eight-byte LargeInteger."
-	| sz value negative ok |
+	| sz value negative ok magnitude |
 	<inline: false>
 	<returnTypeC: #sqLong>
 	<var: #value type: #sqLong>
+	<var: #magnitude type: #usqLong>
 	(objectMemory isIntegerObject: oop) ifTrue:
 		[^self cCoerce: (objectMemory integerValueOf: oop) to: #sqLong].
 
@@ -4830,37 +4819,23 @@ InterpreterPrimitives >> signed64BitValueOf: oop [
 
 	self cppIf: VMBIGENDIAN
 		ifTrue:
-			[value := objectMemory fetchByte: sz - 1 ofObject: oop.
+			[magnitude := objectMemory fetchByte: sz - 1 ofObject: oop.
 			 sz - 2 to: 0 by: -1 do: [:i |
-				value := value << 8 + (objectMemory fetchByte: i ofObject: oop)]]
+				magnitude := magnitude << 8 + (objectMemory fetchByte: i ofObject: oop)]]
 		ifFalse:
-			[value := sz > 4
+			[magnitude := sz > 4
 						ifTrue: [objectMemory fetchLong64: 0 ofObject: oop]
 						ifFalse: [(objectMemory fetchLong32: 0 ofObject: oop) asUnsignedInteger]].
-	"Filter out values out of range for the signed interpretation such as
-	16rFFFFFFFF... (positive w/ bit 64 set) and -16rFFFFFFFF... (negative w/ bit
-	64 set). Since the sign is implicit in the class we require that the high bit of
-	the magnitude is not set which is a simple test here.  Note that we have to
-	handle the most negative 64-bit value -9223372036854775808 specially."
-	self cCode: []
-		inSmalltalk:
-			[(value anyMask: 16r8000000000000000) ifTrue:
-				[value := value - 16r10000000000000000]].
-	value < 0 ifTrue:
-		[self cCode:
-			[self assert: (self sizeof: value) == 8.
-			 self assert: (self sizeof: value << 1) == 8].
-		"Don't fail for -9223372036854775808/-16r8000000000000000.
-		 Alas the simple (negative and: [value - 1 > 0]) isn't adequate since in C the result of signed integer
-		 overflow is undefined and hence under optimization this may fail.  The shift, however, is well-defined."
-		 (negative and: [0 = (self cCode: [value << 1]
-									inSmalltalk: [value << 1 bitAnd: (1 << 64) - 1])]) ifTrue: 
-			[^value].
-		 self primitiveFail.
-		 ^0].
-	^negative
-		ifTrue:[0 - value]
-		ifFalse:[value]
+
+	(negative
+		ifTrue: [magnitude > 16r8000000000000000]
+		ifFalse: [magnitude >= 16r8000000000000000])
+			ifTrue: [self primitiveFail.
+				^0].
+	negative
+		ifTrue: [value := 0 - magnitude]
+		ifFalse: [value := magnitude].
+	^value
 ]
 
 { #category : #'primitive support' }
@@ -4868,8 +4843,10 @@ InterpreterPrimitives >> signedMachineIntegerValueOf: oop [
 	"Answer a signed value of an integer up to the size of a machine word.
 	The object may be either a positive SmallInteger or a LargeInteger of size <= word size."
 	<returnTypeC: #'long'>
-	| negative ok bs value bits |
+	| negative ok bs value limit magnitude |
 	<var: #value type: #long>
+	<var: #magnitude type: #usqInt>
+	<var: #limit type: #usqInt>
 	(objectMemory isIntegerObject: oop) ifTrue:
 		[^objectMemory integerValueOf: oop].
 
@@ -4893,7 +4870,7 @@ InterpreterPrimitives >> signedMachineIntegerValueOf: oop [
 
 	((self sizeof: #'unsigned long') = 8
 	and: [bs > 4]) ifTrue:
-		[value := self cppIf: VMBIGENDIAN
+		[magnitude := self cppIf: VMBIGENDIAN
 					ifTrue:
 						[    (objectMemory fetchByte: 0 ofObject: oop)
 						 + ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
@@ -4906,7 +4883,7 @@ InterpreterPrimitives >> signedMachineIntegerValueOf: oop [
 					ifFalse:
 						[objectMemory fetchLong64: 0 ofObject: oop]]
 		ifFalse:
-			[value := self cppIf: VMBIGENDIAN
+			[magnitude := self cppIf: VMBIGENDIAN
 						ifTrue:
 							[    (objectMemory fetchByte: 0 ofObject: oop)
 							 + ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
@@ -4914,23 +4891,17 @@ InterpreterPrimitives >> signedMachineIntegerValueOf: oop [
 							 + ((objectMemory fetchByte: 3 ofObject: oop) << 24)]
 						ifFalse:
 							[(objectMemory fetchLong32: 0 ofObject: oop) asUnsignedInteger]].
-	
-	self cCode: []
-		inSmalltalk:
-			[bits := (self sizeof: #long) * 8.
-			 (value bitShift: 1 - bits) > 0 ifTrue:
-				[value := value - (1 bitShift: bits)]].
-	value < 0 ifTrue:
-		["Don't fail for -16r80000000[00000000].
-		  Alas the simple (negative and: [value - 1 > 0]) isn't adequate since in C the result of signed integer
-		  overflow is undefined and hence under optimization this may fail.  The shift, however, is well-defined."
-		 (negative and: [0 = (self cCode: [value << 1]
-									inSmalltalk: [value << 1 bitAnd: (1 << bits) - 1])]) ifTrue: 
-			[^value].
-		 ^self primitiveFail].
-	^negative
-		ifTrue: [0 - value]
-		ifFalse: [value]
+
+	limit := 1 asUnsignedInteger << ((self sizeof: #usqInt) * 8 - 1).
+	(negative
+		ifTrue: [magnitude > limit]
+		ifFalse: [magnitude >= limit])
+			ifTrue: [self primitiveFail.
+				^0].
+	negative
+		ifTrue: [value := 0 - magnitude]
+		ifFalse: [value := magnitude].
+	^value
 ]
 
 { #category : #'primitive support' }
