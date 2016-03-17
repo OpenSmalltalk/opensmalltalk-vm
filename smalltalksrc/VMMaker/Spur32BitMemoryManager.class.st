@@ -601,8 +601,8 @@ Spur32BitMemoryManager >> isIntegerValue: intValue [
 	 exactly those integers in the range that can be represented in 31-bits or 63-bits."
 	<api>
 	^self
-		cCode: [(intValue bitXor: (intValue << 1)) asInteger >= 0]
-		inSmalltalk: [intValue >= 16r-40000000 and: [intValue <= 16r3FFFFFFF]]
+		cCode: [(intValue asUnsignedInteger bitXor: (intValue asUnsignedInteger << 1)) asInteger >= 0]
+		inSmalltalk: [intValue >= self minSmallInteger and: [intValue <= self maxSmallInteger]]
 ]
 
 { #category : #'header access' }
