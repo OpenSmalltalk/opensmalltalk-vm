@@ -9761,7 +9761,8 @@ StackInterpreter >> maybeInlinePositive32BitIntegerFor: integerValue [
 	<var: 'integerValue' type: #'unsigned int'>
 	| newLargeInteger |
 	self deny: objectMemory hasSixtyFourBitImmediates.
-	integerValue <= objectMemory maxSmallInteger
+       "force coercion because slang inliner sometimes incorrectly pass a signed int without converting to unsigned"
+       (self cCoerceSimple: integerValue to: #'unsigned int') <= objectMemory maxSmallInteger
 		ifTrue: [^ objectMemory integerObjectOf: integerValue].
 	newLargeInteger := objectMemory
 							eeInstantiateSmallClassIndex: ClassLargePositiveIntegerCompactIndex
