@@ -551,7 +551,7 @@ InterpreterPrimitives >> positiveMachineIntegerValueOf: oop [
 					 + ((objectMemory fetchByte: 2 ofObject: oop) << 16)
 					 + ((objectMemory fetchByte: 3 ofObject: oop) << 24)]
 				ifFalse:
-					[objectMemory fetchLong32: 0 ofObject: oop]]
+					[self cCoerceSimple: (objectMemory fetchLong32: 0 ofObject: oop) to: #'unsigned int']]
 ]
 
 { #category : #'arithmetic integer primitives' }
@@ -878,9 +878,9 @@ InterpreterPrimitives >> primitiveBehaviorHash [
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveBitAnd [
 	<inline: false>
-	<var: 'integerArgument' type: #usqInt>
-	<var: 'intergerReceiver' type: #usqInt>
-	| integerReceiver integerArgument |
+	<var: 'integerArgumentValue' type: #usqInt>
+	<var: 'intergerReceiverValue' type: #usqInt>
+	| integerReceiver integerArgument integerArgumentValue integerReceiverValue |
 	integerArgument := self stackTop.
 	integerReceiver := self stackValue: 1.
 	"Comment out the short-cut.  Either the inline interpreter bytecode or the JIT primitive will handle this case.
@@ -889,10 +889,10 @@ InterpreterPrimitives >> primitiveBitAnd [
 		ifTrue: [self pop: 2 thenPush: (integerArgument bitAnd: integerReceiver)]
 		ifFalse:
 			["
-			integerArgument := self positiveMachineIntegerValueOf: integerArgument.
-			integerReceiver := self positiveMachineIntegerValueOf: integerReceiver.
+			integerArgumentValue := self positiveMachineIntegerValueOf: integerArgument.
+			integerReceiverValue := self positiveMachineIntegerValueOf: integerReceiver.
 			self successful ifTrue:
-					[self pop: 2 thenPush: (self positiveMachineIntegerFor: (integerArgument bitAnd: integerReceiver))]
+					[self pop: 2 thenPush: (self positiveMachineIntegerFor: (integerArgumentValue bitAnd: integerReceiverValue))]
 				ifFalse:
 					[]"]"
 ]
@@ -916,9 +916,9 @@ InterpreterPrimitives >> primitiveBitAndLargeIntegers [
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveBitOr [
 	<inline: false>
-	<var: 'integerArgument' type: #usqInt>
-	<var: 'intergerReceiver' type: #usqInt>
-	| integerReceiver integerArgument |
+	<var: 'integerArgumentValue' type: #usqInt>
+	<var: 'intergerReceiverValue' type: #usqInt>
+	| integerReceiver integerArgument integerArgumentValue integerReceiverValue |
 	integerArgument := self stackTop.
 	integerReceiver := self stackValue: 1.
 	"Comment out the short-cut.  Either the inline interpreter bytecode or the JIT primitive will handle this case.
@@ -927,10 +927,10 @@ InterpreterPrimitives >> primitiveBitOr [
 		ifTrue: [self pop: 2 thenPush: (integerArgument bitOr: integerReceiver)]
 		ifFalse:
 			["
-			integerArgument := self positiveMachineIntegerValueOf: integerArgument.
-			integerReceiver := self positiveMachineIntegerValueOf: integerReceiver.
+			integerArgumentValue := self positiveMachineIntegerValueOf: integerArgument.
+			integerReceiverValue := self positiveMachineIntegerValueOf: integerReceiver.
 			self successful ifTrue:
-					[self pop: 2 thenPush: (self positiveMachineIntegerFor: (integerArgument bitOr: integerReceiver))]
+					[self pop: 2 thenPush: (self positiveMachineIntegerFor: (integerArgumentValue bitOr: integerReceiverValue))]
 				ifFalse:
 					[]"]"
 ]
@@ -1027,7 +1027,9 @@ InterpreterPrimitives >> primitiveBitShiftLargeIntegers [
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveBitXor [
 	<inline: false>
-	| integerReceiver integerArgument |
+	<var: 'integerArgumentValue' type: #usqInt>
+	<var: 'intergerReceiverValue' type: #usqInt>
+	| integerReceiver integerArgument integerArgumentValue integerReceiverValue |
 	integerArgument := self stackTop.
 	integerReceiver := self stackValue: 1.
 	((objectMemory isIntegerObject: integerArgument)
@@ -1035,10 +1037,10 @@ InterpreterPrimitives >> primitiveBitXor [
 		ifTrue: "xoring will leave the tag bits zero, whether the tag is 1 or zero, so add it back in."
 			[self pop: 2 thenPush: (integerArgument bitXor: integerReceiver) + objectMemory smallIntegerTag]
 		ifFalse:
-			[integerArgument := self positiveMachineIntegerValueOf: integerArgument.
-			 integerReceiver := self positiveMachineIntegerValueOf: integerReceiver.
+			[integerArgumentValue := self positiveMachineIntegerValueOf: integerArgument.
+			integerReceiverValue := self positiveMachineIntegerValueOf: integerReceiver.
 			 self successful ifTrue:
-				[self pop: 2 thenPush: (self positiveMachineIntegerFor: (integerArgument bitXor: integerReceiver))]]
+				[self pop: 2 thenPush: (self positiveMachineIntegerFor: (integerArgumentValue bitXor: integerReceiverValue))]]
 ]
 
 { #category : #'arithmetic largeint primitives' }
@@ -4825,7 +4827,7 @@ InterpreterPrimitives >> signed64BitValueOf: oop [
 		ifFalse:
 			[magnitude := sz > 4
 						ifTrue: [objectMemory fetchLong64: 0 ofObject: oop]
-						ifFalse: [(objectMemory fetchLong32: 0 ofObject: oop) asUnsignedInteger]].
+						ifFalse: [self cCoerceSimple: (objectMemory fetchLong32: 0 ofObject: oop) to: #'unsigned int']].
 
 	(negative
 		ifTrue: [magnitude > 16r8000000000000000]
