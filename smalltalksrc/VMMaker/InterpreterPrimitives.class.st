@@ -4541,27 +4541,28 @@ InterpreterPrimitives >> primitiveUtcWithOffset [
 	as a parameter.
 	This is a named (not numbered) primitive in the null module (ie the VM)"
 	| epochDelta offset resultArray utcMicroseconds |
-
 	<export: true>
-	<var: #epochDelta declareC: 'static usqLong epochDelta= 2177452800000000ULL'>
+	<var: #epochDelta declareC: 'static usqLong epochDelta = 2177452800000000ULL'>
 	<var: #utcMicroseconds type: #usqLong>
 	<var: #offset type: #sqLong>
-	argumentCount > 1 ifTrue: [^self primitiveFailFor: PrimErrBadNumArgs].
 	self cCode: '' inSmalltalk: [epochDelta := 2177452800000000].
 	utcMicroseconds := self ioUTCMicroseconds.
 	offset := self ioLocalMicroseconds - utcMicroseconds.
 	offset := offset / 1000000.
-	objectMemory pushRemappableOop: (self positive64BitIntegerFor: utcMicroseconds - epochDelta).
-	argumentCount > 0
-		ifTrue: [resultArray := self popStack.
-			((objectMemory isPointers: resultArray)
-				and: [(objectMemory lengthOf: resultArray) >= 2])
-					ifFalse: [^self primitiveFailFor: PrimErrBadArgument]]
+	argumentCount >= 0
+		ifTrue:
+			[argumentCount > 1 ifTrue: [^self primitiveFailFor: PrimErrBadNumArgs].
+			 resultArray := self stackTop.
+			 ((objectMemory isPointers: resultArray)
+			  and: [(objectMemory lengthOf: resultArray) >= 2]) ifFalse:
+				[^self primitiveFailFor: PrimErrBadArgument]]
 		ifFalse: [resultArray := objectMemory instantiateClass: objectMemory classArray indexableSize: 2].
-	objectMemory storePointer: 0 ofObject: resultArray withValue: objectMemory popRemappableOop.
-	objectMemory storePointerUnchecked: 1 ofObject: resultArray withValue: (objectMemory integerObjectOf: offset).
-	self pop: 1 thenPush: resultArray
-
+	"N.B. No pushRemappableOop:/popRemappableOop in Cog because positive64BitIntegerFor: et al use
+	 eeInstantiate... allocators which are guaranteed not to do a GC."
+	objectMemory
+		storePointer: 0 ofObject: resultArray withValue: (self positive64BitIntegerFor: utcMicroseconds - epochDelta);
+		storePointerUnchecked: 1 ofObject: resultArray withValue: (objectMemory integerObjectOf: offset).
+	self pop: argumentCount thenPush: resultArray
 ]
 
 { #category : #'process primitives' }
