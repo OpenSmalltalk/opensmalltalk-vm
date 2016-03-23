@@ -1,7 +1,7 @@
 Class {
 	#name : #Spur32BitMemoryManager,
 	#superclass : #SpurMemoryManager,
-	#category : #'VMMaker-SpurMemoryManager'
+	#category : 'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'class initialization' }
