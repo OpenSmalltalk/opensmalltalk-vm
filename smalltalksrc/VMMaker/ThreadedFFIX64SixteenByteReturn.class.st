@@ -5,7 +5,7 @@ Class {
 		'a',
 		'b'
 	],
-	#category : #'VMMaker-Plugins-FFI'
+	#category : 'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }

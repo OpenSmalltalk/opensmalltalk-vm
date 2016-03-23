@@ -24,7 +24,7 @@ If somehow possible, the support code should track the location of the drag-and-
 Class {
 	#name : #DropPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }

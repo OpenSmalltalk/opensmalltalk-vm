@@ -24,7 +24,7 @@ Class {
 		'address',
 		'elementByteSize'
 	],
-	#category : #'VMMaker-JITSimulation'
+	#category : 'VMMaker-JITSimulation'
 }
 
 { #category : #accessing }
