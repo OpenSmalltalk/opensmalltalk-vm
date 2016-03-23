@@ -9762,8 +9762,9 @@ StackInterpreter >> maybeInlinePositive32BitIntegerFor: integerValue [
 	| newLargeInteger |
 	self deny: objectMemory hasSixtyFourBitImmediates.
        "force coercion because slang inliner sometimes incorrectly pass a signed int without converting to unsigned"
-       (self cCoerceSimple: integerValue to: #'unsigned int') <= objectMemory maxSmallInteger
-		ifTrue: [^ objectMemory integerObjectOf: integerValue].
+       (self cCode: [self cCoerceSimple: integerValue to: #'unsigned int']
+			inSmalltalk: [integerValue bitAnd: 1 << 32 - 1]) <= objectMemory maxSmallInteger ifTrue:
+		[^objectMemory integerObjectOf: integerValue].
 	newLargeInteger := objectMemory
 							eeInstantiateSmallClassIndex: ClassLargePositiveIntegerCompactIndex
 							format: (objectMemory byteFormatForNumBytes: 4)
@@ -10410,7 +10411,7 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 	| newLargeInteger highWord sz |
 	objectMemory hasSixtyFourBitImmediates
 		ifTrue:
-			[integerValue <= objectMemory maxSmallInteger ifTrue:
+			[(self cCode: [integerValue] inSmalltalk: [integerValue bitAnd: 1 << 64 - 1]) <= objectMemory maxSmallInteger ifTrue:
 				[^objectMemory integerObjectOf: integerValue].
 			 sz := 8]
 		ifFalse:

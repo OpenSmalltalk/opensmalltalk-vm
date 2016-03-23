@@ -883,18 +883,11 @@ InterpreterPrimitives >> primitiveBitAnd [
 	| integerReceiver integerArgument integerArgumentValue integerReceiverValue |
 	integerArgument := self stackTop.
 	integerReceiver := self stackValue: 1.
-	"Comment out the short-cut.  Either the inline interpreter bytecode or the JIT primitive will handle this case.
-	 ((objectMemory isIntegerObject: integerArgument)
-	 and: [objectMemory isIntegerObject: integerReceiver])
-		ifTrue: [self pop: 2 thenPush: (integerArgument bitAnd: integerReceiver)]
-		ifFalse:
-			["
-			integerArgumentValue := self positiveMachineIntegerValueOf: integerArgument.
-			integerReceiverValue := self positiveMachineIntegerValueOf: integerReceiver.
-			self successful ifTrue:
-					[self pop: 2 thenPush: (self positiveMachineIntegerFor: (integerArgumentValue bitAnd: integerReceiverValue))]
-				ifFalse:
-					[]"]"
+	"Note no short-cut for SmallIntegers.  Either the inline interpreter bytecode or the JIT primitive will handle this case."
+	integerArgumentValue := self positiveMachineIntegerValueOf: integerArgument.
+	integerReceiverValue := self positiveMachineIntegerValueOf: integerReceiver.
+	self successful ifTrue:
+		[self pop: 2 thenPush: (self positiveMachineIntegerFor: (integerArgumentValue bitAnd: integerReceiverValue))]
 ]
 
 { #category : #'arithmetic largeint primitives' }
@@ -921,18 +914,11 @@ InterpreterPrimitives >> primitiveBitOr [
 	| integerReceiver integerArgument integerArgumentValue integerReceiverValue |
 	integerArgument := self stackTop.
 	integerReceiver := self stackValue: 1.
-	"Comment out the short-cut.  Either the inline interpreter bytecode or the JIT primitive will handle this case.
-	 ((objectMemory isIntegerObject: integerArgument)
-	 and: [objectMemory isIntegerObject: integerReceiver])
-		ifTrue: [self pop: 2 thenPush: (integerArgument bitOr: integerReceiver)]
-		ifFalse:
-			["
-			integerArgumentValue := self positiveMachineIntegerValueOf: integerArgument.
-			integerReceiverValue := self positiveMachineIntegerValueOf: integerReceiver.
-			self successful ifTrue:
-					[self pop: 2 thenPush: (self positiveMachineIntegerFor: (integerArgumentValue bitOr: integerReceiverValue))]
-				ifFalse:
-					[]"]"
+	"Note no short-cut for SmallIntegers.  Either the inline interpreter bytecode or the JIT primitive will handle this case."
+	integerArgumentValue := self positiveMachineIntegerValueOf: integerArgument.
+	integerReceiverValue := self positiveMachineIntegerValueOf: integerReceiver.
+	self successful ifTrue:
+		[self pop: 2 thenPush: (self positiveMachineIntegerFor: (integerArgumentValue bitOr: integerReceiverValue))]
 ]
 
 { #category : #'arithmetic largeint primitives' }
