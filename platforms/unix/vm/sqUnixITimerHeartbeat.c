@@ -179,8 +179,8 @@ ioUTCMicroseconds() { return get64(utcMicrosecondClock); }
 unsigned volatile long long
 ioLocalMicroseconds() { return get64(localMicrosecondClock); }
 
-usqInt
-ioLocalSecondsOffset() { return (usqInt)(vmGMTOffset / MicrosecondsPerSecond); }
+sqInt
+ioLocalSecondsOffset() { return vmGMTOffset / MicrosecondsPerSecond; }
 
 /* This is an expensive interface for use by Smalltalk or vm profiling code that
  * wants the time now rather than as of the last heartbeat.

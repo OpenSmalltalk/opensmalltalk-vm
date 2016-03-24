@@ -161,7 +161,7 @@ unsigned volatile long long  ioUTCMicroseconds();
 unsigned volatile long long  ioLocalMicrosecondsNow();
 unsigned volatile long long  ioLocalMicroseconds();
 unsigned          long long  ioUTCStartMicroseconds();
-usqInt	ioLocalSecondsOffset();
+sqInt	ioLocalSecondsOffset();
 void	ioUpdateVMTimezone();
 void	ioSynchronousCheckForEvents();
 void	checkHighPriorityTickees(usqLong);
