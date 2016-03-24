@@ -884,22 +884,26 @@ CogObjectRepresentationForSpur >> genPrimitiveAsCharacter [
 
 { #category : #'primitive generators' }
 CogObjectRepresentationForSpur >> genPrimitiveIdenticalOrNotIf: orNot [
-	| jumpImmediate jumpCmp |
+	| jumpCmp comp |
 	<var: #jumpCmp type: #'AbstractInstruction *'>
-	<var: #jumpImmediate type: #'AbstractInstruction *'>
+	<var: #comp type: #'AbstractInstruction *'>
 	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
-	jumpImmediate := self genJumpImmediate: Arg0Reg.
-	self genEnsureObjInRegNotForwarded: Arg0Reg scratchReg: TempReg.
-	jumpImmediate jmpTarget:
-		(cogit CmpR: Arg0Reg R: ReceiverResultReg).
-	jumpCmp := orNot
-					ifTrue: [cogit JumpZero: 0]
-					ifFalse: [cogit JumpNonZero: 0].
+	comp := cogit CmpR: Arg0Reg R: ReceiverResultReg.
+	orNot
+		ifTrue: 
+			[ jumpCmp := cogit JumpZero: 0.
+			self genEnsureOopInRegNotForwarded: Arg0Reg scratchReg: TempReg jumpBackTo: comp ]
+		ifFalse: 
+			[ jumpCmp := cogit JumpNonZero: 0 ].
 	cogit genMoveTrueR: ReceiverResultReg.
 	cogit genPrimReturn.
-	jumpCmp jmpTarget: (cogit genMoveFalseR: ReceiverResultReg).
+	jumpCmp jmpTarget: cogit Label.
+	orNot ifFalse: 
+		[ self genEnsureOopInRegNotForwarded: Arg0Reg scratchReg: TempReg jumpBackTo: comp ].
+	cogit genMoveFalseR: ReceiverResultReg.
 	cogit genPrimReturn.
 	^UnfailingPrimitive
+
 ]
 
 { #category : #'primitive generators' }
