@@ -23,13 +23,13 @@
 #include <sys/types.h>
 #include <sys/time.h>
 
-#define SecondsFrom1901To1970      2177452800ULL
-#define MicrosecondsFrom1901To1970 2177452800000000ULL
+#define SecondsFrom1901To1970      2177452800LL
+#define MicrosecondsFrom1901To1970 2177452800000000LL
 
-#define MicrosecondsPerSecond 1000000ULL
-#define MillisecondsPerSecond 1000ULL
+#define MicrosecondsPerSecond 1000000LL
+#define MillisecondsPerSecond 1000LL
 
-#define MicrosecondsPerMillisecond 1000ULL
+#define MicrosecondsPerMillisecond 1000LL
 
 static unsigned volatile long long utcMicrosecondClock;
 static unsigned volatile long long localMicrosecondClock;
