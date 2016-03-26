@@ -6,7 +6,7 @@ Note that the System V x86-64 ABI decomposes structs of 2 eightbytes or smaller 
 Class {
 	#name : #ThreadedX64SysVFFIPlugin,
 	#superclass : #ThreadedX64FFIPlugin,
-	#category : 'VMMaker-Plugins-FFI'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }

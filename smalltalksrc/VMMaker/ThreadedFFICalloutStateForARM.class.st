@@ -8,7 +8,7 @@ Class {
 		'backfillFloatRegisterIndex',
 		'floatRegisters'
 	],
-	#category : 'VMMaker-Plugins-FFI'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }

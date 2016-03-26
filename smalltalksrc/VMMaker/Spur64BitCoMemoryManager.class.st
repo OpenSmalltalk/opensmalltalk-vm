@@ -33,7 +33,7 @@ Class {
 	#pools : [
 		'CogMethodConstants'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #simulation }

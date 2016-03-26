@@ -1,7 +1,7 @@
 Class {
 	#name : #StackInterpreterPrimitives,
 	#superclass : #StackInterpreter,
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #'primitive support' }

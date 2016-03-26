@@ -5,7 +5,7 @@ Unit tests for JPEGReadWriter2Plugin. Initially this is a single test that docum
 Class {
 	#name : #JPEGReadWriter2PluginTest,
 	#superclass : #TestCase,
-	#category : 'VMMaker-Tests'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #private }
