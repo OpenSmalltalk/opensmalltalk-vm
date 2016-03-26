@@ -41,26 +41,32 @@
 #if defined(SQ_IMAGE32)
   typedef int		sqInt;
   typedef unsigned int	usqInt;
+# define SQABS abs
 #elif defined(SQ_HOST64)
   typedef long		sqInt;
   typedef unsigned long	usqInt;
+# define SQABS labs
 #elif (SIZEOF_LONG_LONG != 8)
 #   error long long integers are not 64-bits wide?
 #else
   typedef long long		sqInt;
   typedef unsigned long long	usqInt;
+# define SQABS llabs
 #endif
 
 #if !defined(sqLong)
 #  if SIZEOF_VOID_P == 8
 #     define sqLong long
 #     define usqLong unsigned long
+#     define SQLABS labs
 #  elif _MSC_VER
 #     define sqLong __int64
 #     define usqLong unsigned __int64
+#     define SQLABS llabs
 #  else
 #     define sqLong long long
 #     define usqLong unsigned long long
+#     define SQLABS llabs
 #  endif
 #endif /* !defined(sqLong) */
 
