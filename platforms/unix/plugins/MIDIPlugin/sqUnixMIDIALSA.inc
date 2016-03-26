@@ -219,7 +219,7 @@ int sqMIDIGetPortDirectionality(int portNum)
    address.  Copy at most length characters, and return the number of
    characters copied.  Fail if there is no port of the given number.
 */
-int sqMIDIGetPortName(int portNum, int namePtr, int length)
+int sqMIDIGetPortName(int portNum, char * namePtr, int length)
 {
   static char *userName[] = { "out", "in" };
 
@@ -404,7 +404,7 @@ int sqMIDIParameter(int whichParameter, int modify, int newValue)
    than five bytes, since there must be enough room for the timestamp
    plus at least one data byte.
 */
-int sqMIDIPortReadInto(int portNum, int count, int bufferPtr)
+int sqMIDIPortReadInto(int portNum, int count, char * bufferPtr)
 {
   debugf(("sqMIDIPortRead\n"));
   success(false);
@@ -418,7 +418,7 @@ int sqMIDIPortReadInto(int portNum, int count, int bufferPtr)
    timestamped output queue, such as this one, always send the data
    immediately; see sqMIDIHasBuffer.
 */
-int sqMIDIPortWriteFromAt(int portNum, int count, int bufferPtr, int time)
+int sqMIDIPortWriteFromAt(int portNum, int count, char * bufferPtr, int time)
 {
   if (portNum == 0)
     {
