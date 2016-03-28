@@ -6,7 +6,6 @@
 *			 Atomic 32-bit increment (e.g. for signalSemaphoreWithIndex:).
 *				sqAtomicAddConst(var,n)
 *				sqCompareAndSwap(var,old,new)
-*				sqCompareAndSwapRes(var,old,new,res)
 *   FILE:    sqAtomicOps.h
 *
 *   AUTHOR:  Eliot Miranda
