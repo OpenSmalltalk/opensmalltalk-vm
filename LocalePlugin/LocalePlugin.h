@@ -87,7 +87,7 @@ void	sqLocGetShortDateFormatInto(char * str);
 /* return the size in chars of the time format string */
 sqInt	sqLocTimeFormatSize(void);
 /* write the string describing the time formatting into string ptr.
-/* Format is made up of
+ * Format is made up of
  * 		h hour (h 12, H 24), m minute, s seconds, x (am/pm String)
  * 		double symbol is null padded, single not padded (h=6, hh=06)  */
 void	sqLocGetTimeFormatInto(char * str);
