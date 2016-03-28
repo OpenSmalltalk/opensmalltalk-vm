@@ -202,7 +202,7 @@ dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   *isDirectory      = false;
   *sizeIfFile       = 0;
 
-  if ((pathStringLength == 0))
+  if (pathStringLength == 0)
     strcpy(unixPath, ".");
   else  {
 	if (!ioFilenamefromStringofLengthresolveAliasesRetry(unixPath, pathString,pathStringLength, true, true))
@@ -308,7 +308,7 @@ dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString, sqIn
   *isDirectory      = false;
   *sizeIfFile       = 0;
 
-  if ((pathStringLength == 0))
+  if (pathStringLength == 0)
     strcpy(unixPath, ".");
   else  {
 	if (!ioFilenamefromStringofLengthresolveAliasesRetry(unixPath, pathString,pathStringLength, true, true))
