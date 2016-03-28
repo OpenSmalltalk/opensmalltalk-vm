@@ -12,13 +12,19 @@ else
 		*)	echo usage $0 [-A] [-a\ [-d] [-f]; exit 0;;
 		esac
 	done
+	if [ "$1" = -- ]; then
+		if [ "$A$D$F" = "" ]; then
+			A=1;D=1;F=1
+		fi
+	fi
+	shift `expr $OPTIND - 1`
 fi
 if [ -n "$D" ]; then
-	make debug 2>&1 | tee LOGD
+	make $@ debug 2>&1 | tee LOGD
 fi
 if [ -n "$A" ]; then
-	make assert 2>&1 | tee LOGA
+	make $@ assert 2>&1 | tee LOGA
 fi
 if [ -n "$F" ]; then
-	make 2>&1 | tee LOGF
+	make $@ 2>&1 | tee LOGF
 fi

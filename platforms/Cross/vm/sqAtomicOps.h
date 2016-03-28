@@ -157,7 +157,6 @@ AtomicGet(uint64_t *target)
 # error shurly shome mishtake; too drunk to shpot the programming muddle. hic.
 #endif
 
-
 #if defined(__GNUC__)
 # define GCC_HAS_BUILTIN_SYNC \
 			(__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 1))
@@ -176,11 +175,15 @@ AtomicGet(uint64_t *target)
 # define sqAtomicAddConst(var,n) (assert(sizeof(var) == 4), OSAtomicAdd32(n,&(var))
 
 #elif defined(__GNUC__) || defined(__clang__)
-# if GCC_HAS_BUILTIN_SYNC || defined(__clang__)
-#	define sqAtomicAddConst(var,n) __sync_fetch_and_add((sqInt *)&(var), n)
-
-# elif defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_)
-	/* support for gcc 3.x; 8-, 16- & 32-bit only */
+/* N.B. I know you want to use the intrinsics; they're pretty; they're official;
+ * they're portable.  But they only apply to int, long and long long sizes.
+ * Since we want to use 16-bit variables for signal requests and responses in
+ * sqExternalSemaphores.c we use the assembler constructs.  Please /don't/
+ * change this unless you understand the use of ATOMICADD16 and you test that
+ * the replacement works.
+ */
+# if defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_)
+#	define ATOMICADD16 1
 #	define sqAtomicAddConst(var,n) do {\
 	if (sizeof(var) == sizeof(char)) \
 		asm volatile ("lock addb %1, %0" : "=m" (var) : "i" (n), "m" (var)); \
@@ -189,19 +192,28 @@ AtomicGet(uint64_t *target)
 	else \
 		asm volatile ("lock addl %1, %0" : "=m" (var) : "i" (n), "m" (var)); \
 	} while (0)
-# endif
-
-/* On x86/x86_64 the intrinsics apply to any integral size */
-# if defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_) \
-  || defined(x86_64) || defined(__x86_64) || defined(__x86_64__)
+# elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__)
 #	define ATOMICADD16 1
+#	define sqAtomicAddConst(var,n) do {\
+	if (sizeof(var) == sizeof(char)) \
+		asm volatile ("lock addb %1, %0" : "=m" (var) : "i" (n), "m" (var)); \
+	else if (sizeof(var) == sizeof(short)) \
+		asm volatile ("lock addw %1, %0" : "=m" (var) : "i" (n), "m" (var)); \
+	else if (sizeof(var) == sizeof(int)) \
+		asm volatile ("lock addl %1, %0" : "=m" (var) : "i" (n), "m" (var)); \
+	else \
+		asm volatile ("lock addq %1, %0" : "=m" (var) : "i" (n), "m" (var)); \
+	} while (0)
+# elif GCC_HAS_BUILTIN_SYNC || defined(__clang__)
+#	define sqAtomicAddConst(var,n) __sync_fetch_and_add((sqInt *)&(var), n)
 # endif
+#endif
 
-#else
+#if !defined(sqAtomicAddConst)
 /* Dear implementor, you have choices.  Google atomic increment and you will
  * find a number of alternative implementations.
  */
-#	error atomic increment of variables not yet defined for this platfom
+#	error atomic increment of variables not yet defined for this platform
 #endif
 
 /* Atomic compare and swap of sqInt variables allows a lock-free implementation

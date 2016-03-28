@@ -79,7 +79,6 @@ static volatile sqInt checkSignalRequests;
  * VM needs to scan.  With potentially thousands of indices to scan this can
  * save significant lengths of time.
  */
-static volatile int tideLock = 0;
 static volatile int useTideA = 1;
 static volatile sqInt lowTideA = (usqInt)-1 >> 1, highTideA = -1;
 static volatile sqInt lowTideB = (usqInt)-1 >> 1, highTideB = -1;
@@ -132,6 +131,7 @@ signalSemaphoreWithIndex(sqInt index)
 {
 	int i = index - 1;
 	int v;
+	SignalRequest b4;
 
 	/* An index of zero should be and is silently ignored. */
 	assert(index >= 0 && index <= numSignalRequests);
@@ -141,7 +141,14 @@ signalSemaphoreWithIndex(sqInt index)
 		return 0;
 
 	sqLowLevelMFence();
+	b4 = signalRequests[i];
 	sqAtomicAddConst(signalRequests[i].requests,1);
+	/* There's a possibility that the second arm will fail in normal operation,
+	 * but that chance is small; much better to deal with the false positive
+	 * than not notice that the atomic add intrinsic is overwriting responses.
+	 */
+	assert(b4.requests != signalRequests[i].requests
+		&& b4.responses ==  signalRequests[i].responses);
 	if (useTideA) {
 		/* atomic if (lowTideA > i) lowTideA = i; */
 		while ((v = lowTideA) > i) {
@@ -153,6 +160,7 @@ signalSemaphoreWithIndex(sqInt index)
 			sqLowLevelMFence();
 			sqCompareAndSwap(highTideA, v, i);
 		}
+		assert(i >= lowTideA && i <= highTideA);
 	}
 	else {
 		/* atomic if (lowTideB > i) lowTideB = i; */
@@ -165,6 +173,7 @@ signalSemaphoreWithIndex(sqInt index)
 			sqLowLevelMFence();
 			sqCompareAndSwap(highTideB, v, i);
 		}
+		assert(i >= lowTideB && i <= highTideB);
 	}
 
 	checkSignalRequests = 1;
@@ -184,7 +193,8 @@ signalSemaphoreWithIndex(sqInt index)
 sqInt
 doSignalExternalSemaphores(sqInt externalSemaphoreTableSize)
 {
-	int i, switched;
+	long i, lowTide, highTide;
+	char switched, signalled = 0;
 
 	sqLowLevelMFence();
 	if (!checkSignalRequests)
@@ -192,39 +202,43 @@ doSignalExternalSemaphores(sqInt externalSemaphoreTableSize)
 
 	switched = 0;
 	checkSignalRequests = 0;
-	sqLowLevelMFence();
 
-	LogEventChain((dbgEvtChF,"dSES(%d).",externalSemaphoreTableSize));
+	sqLowLevelMFence();
 	if (useTideA) {
+		lowTideB = (unsigned long)-1 >> 1;
+		highTideB = -1;
 		useTideA = 0;
 		sqLowLevelMFence();
-		/* doing this here saves a bounds check in doSignalSemaphoreWithIndex */
-		if (highTideA >= externalSemaphoreTableSize)
-			highTideA = externalSemaphoreTableSize - 1;
-		for (i = lowTideA; i <= highTideA; i++)
-			while (signalRequests[i].responses != signalRequests[i].requests) {
-				if (doSignalSemaphoreWithIndex(i+1))
-					switched = 1;
-				LogEventChain((dbgEvtChF,"dSSI(%d):%c.",i+1,switched?'!':'_'));
-				++signalRequests[i].responses;
-			}
-		lowTideA = (unsigned long)-1 >> 1, highTideA = -1;
+		lowTide = lowTideA;
+		highTide = highTideA;
 	}
 	else {
+		lowTideA = (unsigned long)-1 >> 1;
+		highTideA = -1;
 		useTideA = 1;
 		sqLowLevelMFence();
-		/* doing this here saves a bounds check in doSignalSemaphoreWithIndex */
-		if (highTideB >= externalSemaphoreTableSize)
-			highTideB = externalSemaphoreTableSize - 1;
-		for (i = lowTideB; i <= highTideB; i++)
-			while (signalRequests[i].responses != signalRequests[i].requests) {
-				if (doSignalSemaphoreWithIndex(i+1))
-					switched = 1;
-				LogEventChain((dbgEvtChF,"dSSI(%d):%c.",i+1,switched?'!':'_'));
-				++signalRequests[i].responses;
-			}
-		lowTideB = (unsigned long)-1 >> 1, highTideB = -1;
+		lowTide = lowTideB;
+		highTide = highTideB;
 	}
+	sqLowLevelMFence();
+
+	LogEventChain((dbgEvtChF,"dSES(%d,%d,%ld,%ld).",
+					externalSemaphoreTableSize, useTideA ? 0 : 1, lowTide, highTide));
+
+	/* doing this here saves a bounds check in doSignalSemaphoreWithIndex */
+	if (highTide >= externalSemaphoreTableSize)
+		highTide = externalSemaphoreTableSize - 1;
+	for (i = lowTide; i <= highTide; i++)
+		while (signalRequests[i].responses != signalRequests[i].requests) {
+			if (doSignalSemaphoreWithIndex(i+1))
+				switched = 1;
+			LogEventChain((dbgEvtChF,"dSSI(%ld,%d):%c.",i+1,(int)signalRequests[i].responses,switched?'!':'_'));
+			++signalRequests[i].responses;
+			signalled = 1;
+		}
+
+	if (signalled)
+		LogEventChain((dbgEvtChF,"\n"));
 
 	/* If a signal came in while processing, check for signals again soon.
 	 */

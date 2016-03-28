@@ -171,8 +171,8 @@ typedef struct privateSocketStruct
 
 #define PING(S,EVT)						\
 {								\
-  interpreterProxy->signalSemaphoreWithIndex((S)->EVT##Sema);	\
   FPRINTF((stderr, "notify %d %s\n", (S)->s, #EVT));		\
+  interpreterProxy->signalSemaphoreWithIndex((S)->EVT##Sema);	\
 }
 
 #define notify(SOCK,MASK)						\
