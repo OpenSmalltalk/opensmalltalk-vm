@@ -33,7 +33,7 @@
 #warning "This system does not support OpenGL 1.1"
 #endif
 
-static float blackLight[4] = { 0.0, 0.0, 0.0, 0.0 };
+static float blackLight[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 /*****************************************************************************/
 /*****************************************************************************/
@@ -357,10 +357,10 @@ int glClearViewport(int handle, unsigned int rgba, unsigned int pv) /* return tr
 	if(!renderer || !glMakeCurrentRenderer(renderer)) return 0;
 	DPRINTF3D(5, (fp, "### Clearing viewport buffer\n"));
 	glClearColor(
-				((rgba >> 16) & 255) / 255.0, 
-				((rgba >>  8) & 255) / 255.0, 
-				(rgba & 255) / 255.0, 
-				(rgba >> 24) / 255.0);
+				((rgba >> 16) & 255) / 255.0f, 
+				((rgba >>  8) & 255) / 255.0f, 
+				(rgba & 255) / 255.0f, 
+				(rgba >> 24) / 255.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 	ERROR_CHECK;
 	return 1;
@@ -561,7 +561,7 @@ int glLoadLight(int handle, int idx, B3DPrimitiveLight *light)
 		pos[0] = light->position[0];
 		pos[1] = light->position[1];
 		pos[2] = light->position[2];
-		pos[3] = 1.0;
+		pos[3] = 1.0f;
 		/* @@@ FIXME: Squeak pre-transforms the light @@@ */
 		glPushMatrix();
 		glLoadIdentity();
@@ -573,7 +573,7 @@ int glLoadLight(int handle, int idx, B3DPrimitiveLight *light)
 			pos[0] = light->direction[0];
 			pos[1] = light->direction[1];
 			pos[2] = light->direction[2];
-			pos[3] = 0.0;
+			pos[3] = 0.0f;
 			/* @@@ FIXME: Squeak pre-transforms the light @@@ */
 			glPushMatrix();
 			glLoadIdentity();
@@ -593,11 +593,11 @@ int glLoadLight(int handle, int idx, B3DPrimitiveLight *light)
 		ERROR_CHECK;
 	} else {
 		DPRINTF3D(5, (fp, "\tattenuation: OFF (1, 0, 0)\n"));
-		glLightf(index, GL_CONSTANT_ATTENUATION,  1.0);
+		glLightf(index, GL_CONSTANT_ATTENUATION,  1.0f);
 		ERROR_CHECK;
-		glLightf(index, GL_LINEAR_ATTENUATION,    0.0);
+		glLightf(index, GL_LINEAR_ATTENUATION,    0.0f);
 		ERROR_CHECK;
-		glLightf(index, GL_QUADRATIC_ATTENUATION, 0.0);
+		glLightf(index, GL_QUADRATIC_ATTENUATION, 0.0f);
 		ERROR_CHECK;
 	}
 
@@ -612,9 +612,9 @@ int glLoadLight(int handle, int idx, B3DPrimitiveLight *light)
 		glLightfv(index, GL_SPOT_DIRECTION, light->direction);
 		ERROR_CHECK;
 	} else {
-		glLightf(index, GL_SPOT_EXPONENT, 0.0);
+		glLightf(index, GL_SPOT_EXPONENT, 0.0f);
 		ERROR_CHECK;
-		glLightf(index, GL_SPOT_CUTOFF, 180.0);
+		glLightf(index, GL_SPOT_CUTOFF, 180.0f);
 		ERROR_CHECK;
 	}
 	return 1;
@@ -639,10 +639,10 @@ int glSetFog(int handle, int fogType, double density,
   glFogf(GL_FOG_DENSITY, (GLfloat)density);
   glFogf(GL_FOG_START, (GLfloat)fogRangeStart);
   glFogf(GL_FOG_END, (GLfloat)fogRangeEnd);
-  fogColor[0] = ((rgba >> 16) & 255) / 255.0;
-  fogColor[1] = ((rgba >>  8) & 255) / 255.0;
-  fogColor[2] = (rgba & 255) / 255.0;
-  fogColor[3] = (rgba >> 24) / 255.0;
+  fogColor[0] = ((rgba >> 16) & 255) / 255.0f;
+  fogColor[1] = ((rgba >>  8) & 255) / 255.0f;
+  fogColor[2] = (rgba & 255) / 255.0f;
+  fogColor[3] = (rgba >> 24) / 255.0f;
   glFogfv(GL_FOG_COLOR, fogColor);
   /* enable pixel fog */
   glHint(GL_FOG_HINT, GL_NICEST);
