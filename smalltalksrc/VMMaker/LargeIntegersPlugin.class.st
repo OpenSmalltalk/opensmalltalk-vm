@@ -281,13 +281,16 @@ LargeIntegersPlugin >> cDigitDiv: pDiv len: divLen rem: pRem len: remLen quo: pQ
 					ifTrue: 
 						["i.e. (t,r3) < (hi,lo)"
 						q := q - 1.
-						lo < dnh
-							ifTrue: 
-								[hi := hi - 1.
-								lo := lo + 16r100 - dnh]
+						hi = 0 "since hi is unsigned we must have this guard"
+							ifTrue: [cond := false]
 							ifFalse:
-								[lo := lo - dnh].
-						cond := hi >= dh]
+								[lo < dnh
+									ifTrue: 
+										[hi := hi - 1.
+										lo := lo + 16r100 - dnh]
+									ifFalse:
+										[lo := lo - dnh].
+								cond := hi >= dh]]
 					ifFalse: [cond := false].
 				cond]
 					whileTrue: [hi := hi - dh]].
