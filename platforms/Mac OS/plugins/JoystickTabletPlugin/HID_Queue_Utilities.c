@@ -373,7 +373,7 @@ unsigned long  HIDDequeueDevice (pRecDevice pDevice)
 			CFRelease(pDevice->queueRunLoopSource);
 			pDevice->queueRunLoopSource = NULL;
 		}
-#endif USE_ASYNC_EVENTS
+#endif //USE_ASYNC_EVENTS
 	}
 	else
 	{
@@ -576,7 +576,7 @@ long HIDSetQueueCallback (pRecDevice pDevice, IOHIDCallbackFunction callback)
 		result = (*(IOHIDQueueInterface**) pDevice->queue)->setEventCallout(pDevice->queue, callback, pDevice, pDevice);
 		if (kIOReturnSuccess != result)
 			HIDREPORTERRORNUM ("HIDSetQueueCallback - Could not set HID queue callback via setEventCallout.", result);
-#endif USE_ASYNC_EVENTS
+#endif //USE_ASYNC_EVENTS
 	}
 	else
 		HIDREPORTERROR ("HIDSetQueueCallback - invalid device and/or element.");

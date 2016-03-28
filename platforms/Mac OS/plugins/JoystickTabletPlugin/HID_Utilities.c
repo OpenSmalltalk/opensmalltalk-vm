@@ -646,7 +646,7 @@ static void hid_RemovalCallbackFunction(void * target, IOReturn result, void * r
 	hid_DisposeDevice ((pRecDevice) target);
 }
 
-#endif USE_NOTIFICATIONS
+#endif //USE_NOTIFICATIONS
 
 //================================================================================================
 //
@@ -775,7 +775,7 @@ static pRecDevice hid_DisposeDevice (pRecDevice pDevice)
 #if 0
 		if (kIOReturnSuccess != result)
 			HIDReportErrorNum ("hid_DisposeDevice: HIDDequeueDevice error: 0x%8.8X.", result);
-#endif 1
+#endif //1
 
         hid_DisposeDeviceElements (pDevice->pListElements);
 		pDevice->pListElements = NULL;
@@ -1105,7 +1105,7 @@ Boolean HIDBuildDeviceList (UInt32 usagePage, UInt32 usage)
 				return true;
 			}
 		}
-#endif USE_NOTIFICATIONS
+#endif //USE_NOTIFICATIONS
 		// IOServiceGetMatchingServices consumes a reference to the dictionary, so we don't need to release the dictionary ref.
 		hidMatchDictionary = NULL;
     }

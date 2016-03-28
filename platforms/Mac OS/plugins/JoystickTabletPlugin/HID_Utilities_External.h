@@ -53,7 +53,7 @@
 	typedef void (*IOHIDCallbackFunction)(void * target, unsigned long result, void* refcon, void * sender);
 #else
 	#include <IOKit/hid/IOHIDLib.h>
-#endif TARGET_RT_MAC_CFM
+#endif //TARGET_RT_MAC_CFM
 
 #include <stdio.h>
 

@@ -304,7 +304,7 @@ Boolean HIDGetElementNameFromVendorProductCookie (const long pVendorID, const lo
 							sprintf(pName, "#{V:Macsense, P:FunPad F-107, C:%ld}#", pCookie);
 #else
 							result = false;
-#endif FAKE_IT
+#endif //FAKE_IT
 							break;
 					}
 				default:
@@ -312,7 +312,7 @@ Boolean HIDGetElementNameFromVendorProductCookie (const long pVendorID, const lo
 					sprintf(pName, "#{V:Macsense, P:%ld, C:%ld}#", pProductID, pCookie);
 #else
 					result = false;
-#endif FAKE_IT
+#endif //FAKE_IT
 					break;
 			}
 			break;
@@ -321,7 +321,7 @@ Boolean HIDGetElementNameFromVendorProductCookie (const long pVendorID, const lo
 			sprintf(pName, "#{V:%ld, P:%ld, C:%ld}#", pVendorID, pProductID, pCookie);
 #else
 			result = false;
-#endif FAKE_IT
+#endif //FAKE_IT
 			break;
 	}
 	return result;
