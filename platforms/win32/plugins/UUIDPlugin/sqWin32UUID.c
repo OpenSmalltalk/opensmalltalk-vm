@@ -12,17 +12,24 @@
 #include <ole2.h>
 #include "sq.h"
 
-int sqUUIDInit(void) {
-  return 1;
-}
+int
+sqUUIDInit(void) { return 1; }
 
-int sqUUIDShutdown(void) {
-  return 1;
-}
+int
+sqUUIDShutdown(void) { return 1; }
 
-int MakeUUID(char *location) {
-  if(CoCreateGuid((GUID*)location) == S_OK) return 1;
-  primitiveFail();
-  return 0;
+#if defined(SQUEAK_BUILTIN_PLUGIN)
+# define FAIL() primitiveFail()
+#else
+extern struct VirtualMachine *interpreterProxy;
+# define FAIL() interpreterProxy->primitiveFail()
+#endif
+
+int
+MakeUUID(char *location) {
+	if (CoCreateGuid((GUID*)location) == S_OK)
+		return 1;
+	FAIL();
+	return 0;
 }
 
