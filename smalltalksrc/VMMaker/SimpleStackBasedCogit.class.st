@@ -2874,8 +2874,7 @@ SimpleStackBasedCogit >> genStoreAndPopTemporaryVariableBytecode [
 { #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genStorePop: popBoolean LiteralVariable: litVarIndex [
 	<inline: false>
-	| association immutabilityFailure |
-	<var: #immutabilityFailure type: #'AbstractInstruction *'>
+	| association |
 	"The only reason we assert needsFrame here is that in a frameless method
 	 ReceiverResultReg must and does contain only self, but the ceStoreCheck
 	 trampoline expects the target of the store to be in ReceiverResultReg.  So
@@ -2892,33 +2891,19 @@ SimpleStackBasedCogit >> genStorePop: popBoolean LiteralVariable: litVarIndex [
 	popBoolean
 		ifTrue: [self PopR: ClassReg]
 		ifFalse: [self MoveMw: 0 r: SPReg R: ClassReg].
-	traceStores > 0 ifTrue:
-		[self CallRT: ceTraceStoreTrampoline].
-	self cppIf: IMMUTABILITY ifTrue: 
-		[immutabilityFailure := objectRepresentation
-									genImmutableCheck: ReceiverResultReg
-									slotIndex: ValueIndex
-									sourceReg: ClassReg
-									scratchReg: TempReg
-									needRestoreRcvr: true].
-	objectRepresentation
-		genStoreSourceReg: ClassReg
-		slotIndex: ValueIndex
-		destReg: ReceiverResultReg
-		scratchReg: TempReg
+	self
+		genStoreSourceReg: ClassReg 
+		slotIndex: ValueIndex 
+		destReg: ReceiverResultReg 
+		scratchReg: TempReg 
 		inFrame: needsFrame.
-
-	self cppIf: IMMUTABILITY ifTrue:
-		[immutabilityFailure jmpTarget: self Label].
-
 	^0
 ]
 
 { #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genStorePop: popBoolean MaybeContextReceiverVariable: slotIndex [
 	<inline: false>
-	| jmpSingle jmpDone immutabilityFailure |
-	<var: #immutabilityFailure type: #'AbstractInstruction *'>
+	| jmpSingle jmpDone |
 	<var: #jmpSingle type: #'AbstractInstruction *'>
 	<var: #jmpDone type: #'AbstractInstruction *'>
 	"The reason we need a frame here is that assigning to an inst var of a context may
@@ -2936,58 +2921,32 @@ SimpleStackBasedCogit >> genStorePop: popBoolean MaybeContextReceiverVariable: s
 	self CallRT: ceStoreContextInstVarTrampoline.
 	jmpDone := self Jump: 0.
 	jmpSingle jmpTarget: self Label.
-	traceStores > 0 ifTrue:
-		[self CallRT: ceTraceStoreTrampoline].
-	self cppIf: IMMUTABILITY ifTrue: 
-		[immutabilityFailure := objectRepresentation
-									genImmutableCheck: ReceiverResultReg
-									slotIndex: slotIndex
-									sourceReg: ClassReg
-									scratchReg: TempReg
-									needRestoreRcvr: true].
-	objectRepresentation
-		genStoreSourceReg: ClassReg
-		slotIndex: slotIndex
-		destReg: ReceiverResultReg
-		scratchReg: TempReg
-		inFrame: true.
-	jmpDone jmpTarget: self Label.
 	popBoolean ifTrue:
 		[self AddCq: objectMemory wordSize R: SPReg].
-	self cppIf: IMMUTABILITY ifTrue:
-		[immutabilityFailure jmpTarget: self Label].
+	self
+		genStoreSourceReg: ClassReg 
+		slotIndex: slotIndex 
+		destReg: ReceiverResultReg 
+		scratchReg: TempReg 
+		inFrame: needsFrame.
+	jmpDone jmpTarget: self Label.
 	^0
 ]
 
 { #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
 	<inline: false>
-	| immutabilityFailure |
-	<var: #immutabilityFailure type: #'AbstractInstruction *'>
 	needsFrame ifTrue:
 		[self putSelfInReceiverResultReg].
 	popBoolean
 		ifTrue: [self PopR: ClassReg]
 		ifFalse: [self MoveMw: 0 r: SPReg R: ClassReg].
-	traceStores > 0 ifTrue:
-		[self CallRT: ceTraceStoreTrampoline].
-	self cppIf: IMMUTABILITY ifTrue: 
-		[immutabilityFailure := objectRepresentation
-									genImmutableCheck: ReceiverResultReg
-									slotIndex: slotIndex
-									sourceReg: ClassReg
-									scratchReg: TempReg
-									needRestoreRcvr: true].
-	objectRepresentation
-		genStoreSourceReg: ClassReg
-		slotIndex: slotIndex
-		destReg: ReceiverResultReg
-		scratchReg: TempReg
+	self
+		genStoreSourceReg: ClassReg 
+		slotIndex: slotIndex 
+		destReg: ReceiverResultReg 
+		scratchReg: TempReg 
 		inFrame: needsFrame.
-
-	self cppIf: IMMUTABILITY ifTrue:
-		[immutabilityFailure jmpTarget: self Label].
-
 	^0
 ]
 
@@ -3006,8 +2965,6 @@ SimpleStackBasedCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remot
 		ifTrue: [self PopR: ClassReg]
 		ifFalse: [self MoveMw: 0 r: SPReg R: ClassReg].
 	self MoveMw: (self frameOffsetOfTemporary: remoteTempIndex) r: FPReg R: ReceiverResultReg.
-	traceStores > 0 ifTrue:
-		[self CallRT: ceTraceStoreTrampoline].
 	^objectRepresentation
 		genStoreSourceReg: ClassReg
 		slotIndex: slotIndex
@@ -3040,6 +2997,12 @@ SimpleStackBasedCogit >> genTraceStoreTrampoline [
 										arg: ClassReg
 										arg: ReceiverResultReg
 										regsToSave: callerSavedRegMask
+]
+
+{ #category : #'bytecode generator support' }
+SimpleStackBasedCogit >> genTraceStores [
+	<inline: true>
+	traceStores > 0 ifTrue: [ self CallRT: ceTraceStoreTrampoline ].
 ]
 
 { #category : #'bytecode generators' }
