@@ -1074,6 +1074,7 @@ CogObjectRepresentationForSpur >> genStoreTrampolineCalled: trampolineName [
 	TempReg holds index + 1 in this case as the value 0 is reserved for store checks.
 	In addition the 0 value is convenient to save one instruction for store checks."
 	| jumpSC |
+	<option: #IMMUTABILITY>
 	<var: #trampolineName type: #'char *'>
 	<var: #jumpSC type: #'AbstractInstruction *'>
 	<inline: false>
