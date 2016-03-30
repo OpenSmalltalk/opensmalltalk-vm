@@ -5,7 +5,7 @@ Class {
 		'stackHeightComputer',
 		'encoderClass'
 	],
-	#category : 'VMMaker-Support'
+	#category : #'VMMaker-Support'
 }
 
 { #category : #'instance creation' }

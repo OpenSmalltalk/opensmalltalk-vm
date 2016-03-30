@@ -4,7 +4,7 @@ A generic VMMaker that creates a single source tree, leaving it up to external f
 Class {
 	#name : #CrossPlatformVMMaker,
 	#superclass : #VMMaker,
-	#category : 'VMMaker-Building'
+	#category : #'VMMaker-Building'
 }
 
 { #category : #initialize }

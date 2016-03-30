@@ -7,7 +7,7 @@ Class {
 		'baseHeaderSize',
 		'cogit'
 	],
-	#category : 'VMMaker-JITSimulation'
+	#category : #'VMMaker-JITSimulation'
 }
 
 { #category : #accessing }

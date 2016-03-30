@@ -9,7 +9,7 @@ Class {
 		'savedBBObj',
 		'workBufferArray'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #simulation }

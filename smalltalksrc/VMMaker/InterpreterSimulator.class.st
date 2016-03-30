@@ -25,7 +25,7 @@ Class {
 		'displayView',
 		'printSends'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'instance creation' }
