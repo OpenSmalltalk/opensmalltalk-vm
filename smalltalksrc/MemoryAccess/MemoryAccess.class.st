@@ -119,7 +119,7 @@ MemoryAccess >> byteAt: oop [
 
 	"sqInt byteAt(sqInt oop) { return byteAtPointer(pointerForOop(oop)); }"
 
-	self inline: true.
+	<inline: true>
 	^ self byteAtPointer: (self pointerForOop: oop)
 ]
 
@@ -130,8 +130,8 @@ MemoryAccess >> byteAt: oop put: val [
 
 	"sqInt byteAtput(sqInt oop, int val) { return byteAtPointerput(pointerForOop(oop), val); }"
 
-	self inline: true.
-	self var: #val type: 'int'.
+	<inline: true>
+	<var: #val type: 'int'>
 	^ self byteAtPointer: (self pointerForOop: oop) put: val
 ]
 
@@ -142,8 +142,8 @@ MemoryAccess >> byteAtPointer: ptr [
 
 	"sqInt byteAtPointer(char *ptr) { return (sqInt)(*((unsigned char *)ptr)) }"
 
-	self inline: true.
-	self var: #ptr type: 'char *'.
+	<inline: true>
+	<var: #ptr type: 'char *'>
 	^ self cCoerce:
 			((self cCoerce: ptr to: 'unsigned char *') at: 0)
 		to: 'sqInt'
@@ -156,9 +156,9 @@ MemoryAccess >> byteAtPointer: ptr put: val [
 
 	"sqInt byteAtPointerput(char *ptr, int val) { return (sqInt)(*((unsigned char *)ptr)= (unsigned char)val) }"
 
-	self inline: true.
-	self var: #ptr type: 'char *'.
-	self var: #val type: 'int'.
+	<inline: true>
+	<var: #ptr type: 'char *'>
+	<var: #val type: 'int'>
 	^ self cCoerce: ((self cCoerce: ptr to: 'unsigned char *')
 				at: 0
 				put: val)
@@ -174,7 +174,7 @@ MemoryAccess >> intAt: oop [
 
 	"sqInt intAt(sqInt oop) { return intAtPointer(pointerForOop(oop)); }"
 
-	self inline: true.
+	<inline: true>
 	^ self intAtPointer: (self pointerForOop: oop)
 ]
 
@@ -186,8 +186,8 @@ MemoryAccess >> intAt: oop put: val [
 
 	"sqInt intAtput(sqInt oop, int val) { return intAtPointerput(pointerForOop(oop), val); }"
 
-	self inline: true.
-	self var: #val type: 'int'.
+	<inline: true>
+	<var: #val type: 'int'>
 	^ self intAtPointer: (self pointerForOop: oop) put: val
 ]
 
@@ -200,8 +200,8 @@ MemoryAccess >> intAtPointer: ptr [
 
 	"sqInt intAtPointer(char *ptr) { return (sqInt)(*((unsigned int *)ptr)) }"
 
-	self inline: true.
-	self var: #ptr type: 'char *'.
+	<inline: true>
+	<var: #ptr type: 'char *'>
 	^ self cCoerce:
 			((self cCoerce: ptr to: 'unsigned int *') at: 0)
 		to: 'sqInt'
@@ -215,9 +215,9 @@ MemoryAccess >> intAtPointer: ptr put: val [
 
 	"sqInt intAtPointerput(char *ptr, int val) { return (sqInt)(*((unsigned int *)ptr)= (int)val) }"
 
-	self inline: true.
-	self var: #ptr type: 'char *'.
-	self var: #val type: 'unsigned int'.
+	<inline: true>
+	<var: #ptr type: 'char *'>
+	<var: #val type: 'unsigned int'>
 	^ self cCoerce:
 			((self cCoerce: ptr to: 'unsigned int *')
 				at: 0
@@ -229,7 +229,7 @@ MemoryAccess >> intAtPointer: ptr put: val [
 MemoryAccess >> long32At: ptr [
 	"#define long32At intAt"
 
-	self inline: true.
+	<inline: true>
 	^ self intAt: ptr
 
 ]
@@ -238,8 +238,8 @@ MemoryAccess >> long32At: ptr [
 MemoryAccess >> long32At: ptr put: val [
 	"#define long32Atput intAtput"
 
-	self inline: true.
-	self var: #val type: 'int'.
+	<inline: true>
+	<var: #val type: 'int'>
 	^ self intAt: ptr put: val
 
 ]
@@ -253,7 +253,7 @@ MemoryAccess >> longAt: oop [
 
 	"sqInt longAt(sqInt oop) { return longAtPointer(pointerForOop(oop)); }"
 
-	self inline: true.
+	<inline: true>
 	^ self longAtPointer: (self pointerForOop: oop)
 
 ]
@@ -267,7 +267,7 @@ MemoryAccess >> longAt: oop put: val [
 
 	"sqInt longAtput(sqInt oop, sqInt val) { return longAtPointerput(pointerForOop(oop), val); }"
 
-	self inline: true.
+	<inline: true>
 	^ self longAtPointer: (self pointerForOop: oop) put: val
 
 ]
@@ -281,8 +281,8 @@ MemoryAccess >> longAtPointer: ptr [
 
 	"sqInt longAtPointer(char *ptr) { return (sqInt)(*((sqInt *)ptr)) }"
 
-	self inline: true.
-	self var: #ptr type: 'char *'.
+	<inline: true>
+	<var: #ptr type: 'char *'>
 	^ self cCoerce:
 			((self cCoerce: ptr to: 'sqInt *') at: 0)
 		to: 'sqInt'
@@ -298,8 +298,8 @@ MemoryAccess >> longAtPointer: ptr put: val [
 
 	"sqInt longAtPointerput(char *ptr, sqInt val) { return (sqInt)(*((sqInt *)ptr)= (sqInt)val) }"
 
-	self inline: true.
-	self var: #ptr type: 'char *'.
+	<inline: true>
+	<var: #ptr type: 'char *'>
 	^ self cCoerce: ((self cCoerce: ptr to: 'sqInt *')
 				at: 0
 				put: val)
@@ -312,7 +312,7 @@ MemoryAccess >> oopAt: oop [
 
 	"oopAt(sqInt oop) { return oopAtPointer(pointerForOop(oop)); }"
 
-	self inline: true.
+	<inline: true>
 	^ self oopAtPointer: (self pointerForOop: oop)
 ]
 
@@ -322,7 +322,7 @@ MemoryAccess >> oopAt: oop put: val [
 
 	"sqInt oopAtput(sqInt oop, sqInt val) { return oopAtPointerput(pointerForOop(oop), val); }"
 
-	self inline: true.
+	<inline: true>
 	^ self oopAtPointer: (self pointerForOop: oop) put: val
 ]
 
@@ -332,8 +332,8 @@ MemoryAccess >> oopAtPointer: ptr [
 
 	"sqInt oopAtPointer(char *ptr) { return (sqInt)(*((sqInt *)ptr)) }"
 
-	self inline: true.
-	self var: #ptr type: 'char *'.
+	<inline: true>
+	<var: #ptr type: 'char *'>
 	^ (self cCoerce: ptr to: 'sqInt *') at: 0
 ]
 
@@ -343,8 +343,8 @@ MemoryAccess >> oopAtPointer: ptr put: val [
 
 	"sqInt oopAtPointerput(char *ptr, sqInt val) { return (sqInt)(*((sqInt *)ptr)= (sqInt)val) }"
 
-	self inline: true.
-	self var: #ptr type: 'char *'.
+	<inline: true>
+	<var: #ptr type: 'char *'>
 	^ (self cCoerce: ptr to: 'sqInt *') at: 0 put: val
 ]
 
@@ -355,9 +355,9 @@ MemoryAccess >> oopForPointer: ptr [
 
 	sqInt oopForPointer(char *ptr) { return (sqInt)(ptr - sqMemoryBase); }"
 
-	self inline: true.
-	self returnTypeC: 'usqInt'.
-	self var: #ptr type: 'char *'.
+	<inline: true>
+	<returnTypeC: 'usqInt'>
+	<var: #ptr type: 'char *'>
 	^ self cCoerce: ptr - self sqMemoryBaseAddress to: 'usqInt'
 ]
 
@@ -368,9 +368,9 @@ MemoryAccess >> pointerForOop: oop [
 
 	char *pointerForOop(usqInt oop) { return sqMemoryBase + oop; }"
 
-	self inline: true.
-	self returnTypeC: 'char *'.
-	self var: #oop type: 'usqInt'.
+	<inline: true>
+	<returnTypeC: 'char *'>
+	<var: #oop type: 'usqInt'>
 	^ self sqMemoryBaseAddress + oop
 ]
 
@@ -383,7 +383,7 @@ MemoryAccess >> shortAt: oop [
 
 	"sqInt shortAt(sqInt oop) { return shortAtPointer(pointerForOop(oop)); }"
 
-	self inline: true.
+	<inline: true>
 	^ self shortAtPointer: (self pointerForOop: oop)
 ]
 
@@ -395,8 +395,8 @@ MemoryAccess >> shortAt: oop put: val [
 
 	"sqInt shortAtput(sqInt oop, int val){ return shortAtPointerput(pointerForOop(oop), val); }"
 
-	self inline: true.
-	self var: #val type: 'int'.
+	<inline: true>
+	<var: #val type: 'int'>
 	^ self shortAtPointer: (self pointerForOop: oop) put: val
 ]
 
@@ -409,8 +409,8 @@ MemoryAccess >> shortAtPointer: ptr [
 
 	"sqInt shortAtPointer(char *ptr) { return (sqInt)(*((short *)ptr)) }"
 
-	self inline: true.
-	self var: #ptr type: 'char *'.
+	<inline: true>
+	<var: #ptr type: 'char *'>
 	^ self cCoerce: ((self cCoerce: ptr to: 'short *') at: 0)
 		to: 'sqInt'
 ]
@@ -423,9 +423,9 @@ MemoryAccess >> shortAtPointer: ptr put: val [
 
 	"sqInt shortAtPointerput(char *ptr, int val) { return (sqInt)(*((short *)ptr)= (short)val) }"
 
-	self inline: true.
-	self var: #ptr type: 'char *'.
-	self var: # val type: 'int'.
+	<inline: true>
+	<var: #ptr type: 'char *'>
+	<var: #val type: 'int'>
 	^ self cCoerce:
 			((self cCoerce: ptr to: 'short *')
 				at: 0
@@ -441,8 +441,8 @@ MemoryAccess >> shortUnsignedAtPointer: ptr [
 
 	"sqInt shortUnsignedAtPointer(char *ptr) { return (sqInt)(*((unsigned short *)ptr)) }"
 
-	self inline: true.
-	self var: #ptr type: 'char *'.
+	<inline: true>
+	<var: #ptr type: 'char *'>
 	^ self cCoerce: ((self cCoerce: ptr to: 'unsigned short *') at: 0)
 		to: 'sqInt'
 ]
@@ -451,8 +451,8 @@ MemoryAccess >> shortUnsignedAtPointer: ptr [
 MemoryAccess >> sqMemoryBaseAddress [
 	"Answer the machine address of the start of object memory."
 
-	self inline: true.
-	self returnTypeC: 'char *'.
+	<inline: true>
+	<returnTypeC: 'char *'>
 	^ self cCode: 'sqMemoryBase'
 
 ]
