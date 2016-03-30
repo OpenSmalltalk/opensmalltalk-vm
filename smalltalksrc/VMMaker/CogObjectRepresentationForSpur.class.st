@@ -1172,7 +1172,7 @@ CogObjectRepresentationForSpur >> genStoreWithImmutabilityAndStoreCheckSourceReg
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genStoreWithImmutabilityButNoStoreCheckSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg needRestoreRcvr: needRestoreRcvr [
 
-	<var: #immutableJump type: #'AbstractInstruction *'>
+	<var: #mutableJump type: #'AbstractInstruction *'>
 	<var: #immutabilityFailure type: #'AbstractInstruction *'>
 	| immutabilityFailure mutableJump |
 	
