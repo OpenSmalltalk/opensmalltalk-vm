@@ -8,7 +8,7 @@ Class {
 		'ceLargeActiveContextInMethodTrampoline',
 		'ceLargeActiveContextInBlockTrampoline',
 		'ceStoreCheckContextReceiverTrampoline',
-		'ceStoreTrampoline'
+		'ceStoreTrampolines'
 	],
 	#pools : [
 		'VMBytecodeConstants',
@@ -20,7 +20,7 @@ Class {
 { #category : #accessing }
 CogObjectRepresentationForSpur class >> numTrampolines [
 	(initializationOptions at: #IMMUTABILITY ifAbsent: [false])
-		ifTrue: [ ^ super numTrampolines + 7 ]
+		ifTrue: [ ^ super numTrampolines + self new numStoreTrampolines + 7 ]
 		ifFalse: [ ^ super numTrampolines + 6 ]
 ]
 
@@ -1066,22 +1066,38 @@ CogObjectRepresentationForSpur >> genStoreSourceReg: sourceReg slotIndex: index 
 	^0
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genStoreTrampolineCall: instVarIndex [
+	<inline: true>
+	instVarIndex < self numStoreTrampolines
+		ifFalse: 
+			[ cogit MoveCq: instVarIndex R: TempReg.
+			  cogit CallRT: (ceStoreTrampolines at: self numStoreTrampolines) ]
+		ifTrue: 
+			[ cogit CallRT: (ceStoreTrampolines at: instVarIndex) ].
+	 cogit annotateBytecode: cogit Label
+]
+
 { #category : #initialization }
-CogObjectRepresentationForSpur >> genStoreTrampolineCalled: trampolineName [
-	"This can be entered in one of two states, depending on TempReg. 
-	TempReg = 0 => store check
-	TempReg > 0 => immutability failure
-	TempReg holds index + 1 in this case as the value 0 is reserved for store checks.
-	In addition the 0 value is convenient to save one instruction for store checks."
+CogObjectRepresentationForSpur >> genStoreTrampolineCalled: trampolineName instVarIndex: instVarIndex [
+	"Convention:
+	- RcvrResultReg holds the object mutated.
+	If immutability failure:
+	- TempReg holds the instance variable index mutated 
+		if instVarIndex > numDedicatedStoreTrampoline
+	- ClassReg holds the value to store
+	Registers are not lived across this trampoline as the 
+	immutability failure may need new stack frames."
+	
 	| jumpSC |
 	<option: #IMMUTABILITY>
 	<var: #trampolineName type: #'char *'>
 	<var: #jumpSC type: #'AbstractInstruction *'>
 	<inline: false>
 	cogit zeroOpcodeIndex.
-	cogit PushR: SendNumArgsReg.
-	jumpSC := self genJumpMutable: ReceiverResultReg scratchReg: SendNumArgsReg.
-	cogit PopR: SendNumArgsReg.
+	jumpSC := self genJumpMutable: ReceiverResultReg scratchReg: SendNumArgsReg. "SendNumArgsReg is mutated but we don't care as register are not live across the trampoline"
+	instVarIndex = self numStoreTrampolines
+		ifFalse: [ cogit MoveCq: instVarIndex R: TempReg ]. 
 	cogit
 		compileTrampolineFor: #ceCannotAssignTo:withIndex:valueToAssign:
 		numArgs: 3
@@ -1094,7 +1110,7 @@ CogObjectRepresentationForSpur >> genStoreTrampolineCalled: trampolineName [
 		resultReg: NoReg.
 		
 	"Store check"
-	jumpSC jmpTarget: (cogit PopR: SendNumArgsReg).
+	jumpSC jmpTarget: cogit Label.
 	^ cogit genTrampolineFor: #remember:
 		called: trampolineName
 		numArgs: 1
@@ -1150,9 +1166,8 @@ CogObjectRepresentationForSpur >> genStoreWithImmutabilityAndStoreCheckSourceReg
 	jmpAlreadyRemembered := cogit JumpNonZero: 0.
 	"Set the inst var index for the benefit of the immutability check. The trampoline will
 	 repeat the check to choose between the immutbality violation and the store check."
-	immutableJump jmpTarget: (cogit MoveCq: index R: scratchReg).
-	cogit CallRT: ceStoreTrampoline.
-	cogit annotateBytecode: cogit Label.
+	immutableJump jmpTarget: cogit Label.
+	self genStoreTrampolineCall: index.
 	needRestoreRcvr ifTrue: [ cogit putSelfInReceiverResultReg ].
 
 	jmpImmediate jmpTarget:
@@ -1173,9 +1188,7 @@ CogObjectRepresentationForSpur >> genStoreWithImmutabilityButNoStoreCheckSourceR
 	
 	"imm check has its own trampoline"
 	mutableJump := self genJumpMutable: destReg scratchReg: scratchReg.
-	cogit MoveCq: index R: TempReg.
-	cogit CallRT: ceStoreTrampoline.
-	cogit annotateBytecode: cogit Label.
+	self genStoreTrampolineCall: index.
 	needRestoreRcvr ifTrue: [ cogit putSelfInReceiverResultReg ].
 	immutabilityFailure := cogit Jump: 0.
 	mutableJump jmpTarget: cogit Label.
@@ -1229,7 +1242,17 @@ CogObjectRepresentationForSpur >> generateObjectRepresentationTrampolines [
 	 remembered set and setting its isRemembered bit."
 	self 
 		cppIf: IMMUTABILITY
-		ifTrue: [ceStoreTrampoline := self genStoreTrampolineCalled: 'ceStoreTrampoline'].
+		ifTrue: 
+			[ 0 to: self numStoreTrampolines do:
+				[ :instVarIndex |
+					ceStoreTrampolines
+						at: instVarIndex
+						put: (self 
+							genStoreTrampolineCalled: (cogit 
+								trampolineName: 'ceStoreTrampoline' 
+								numArgs: instVarIndex 
+								limit: self numStoreTrampolines - 1) 
+							instVarIndex: instVarIndex ) ] ].
 	ceStoreCheckTrampoline := cogit
 									genTrampolineFor: #remember:
 									called: 'ceStoreCheckTrampoline'
@@ -1508,6 +1531,15 @@ CogObjectRepresentationForSpur >> numRegArgs [
 	^2
 ]
 
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> numStoreTrampolines [
+	"Number of trampolines for instance variable store. Trampolines from 0 to 
+	numStoreTrampoline - 1 are dedicated to an inst var index, the last one is generic.
+	
+	WARNING: Check the C declaration of ceStoreTrampolines if this number is increased."
+	^ 3
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentationForSpur >> remapObject: objOop [
 	self assert: (objectMemory addressCouldBeObj: objOop).
@@ -1529,6 +1561,13 @@ CogObjectRepresentationForSpur >> resetCountersIn: cogMethod [
 	<api>
 	<option: #SistaStackToRegisterMappingCogit>
 	cogit fillInCounters: (self numCountersFor: cogMethod counters) atStartAddress: cogMethod counters
+]
+
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationForSpur >> setCogit: aCogit methodZone: aMethodZone [
+	<doNotGenerate>
+	super setCogit: aCogit methodZone: aMethodZone.
+	ceStoreTrampolines := CArrayAccessor on: (Array new: self numStoreTrampolines + 1).
 ]
 
 { #category : #'garbage collection' }
