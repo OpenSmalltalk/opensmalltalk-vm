@@ -493,6 +493,9 @@ BitBltSimulation >> OLDtallyIntoMap: sourceWord with: destinationWord [
 
 { #category : #'combination rules' }
 BitBltSimulation >> addWord: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord + destinationWord
 ]
 
@@ -530,7 +533,7 @@ BitBltSimulation >> alphaBlend: sourceWord with: destinationWord [
 	component.  The high byte of the result will be 0."
 	| alpha unAlpha result blendRB blendAG |
 	<inline: false>
-	<return: 'unsigned int'>
+	<returnTypeC: 'unsigned int'>
 	<var: #sourceWord type: 'unsigned int'>
 	<var: #destinationWord type: 'unsigned int'>
 	<var: #blendRB type: 'unsigned int'>
@@ -560,6 +563,9 @@ BitBltSimulation >> alphaBlend: sourceWord with: destinationWord [
 
 { #category : #'combination rules' }
 BitBltSimulation >> alphaBlendConst: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 
 	^ self alphaBlendConst: sourceWord with: destinationWord paintMode: false
 ]
@@ -582,7 +588,7 @@ BitBltSimulation >> alphaBlendConst: sourceWord with: destinationWord paintMode:
 
 	| pixMask destShifted sourceShifted destPixVal rgbMask sourcePixVal unAlpha result pixBlend shift blend maskShifted bitsPerColor blendAG blendRB |
 	<inline: false>
-	<return: 'unsigned int'>
+	<returnTypeC: 'unsigned int'>
 	<var: #sourceWord type: 'unsigned int'>
 	<var: #destinationWord type: 'unsigned int'>
 	<var: #blendRB type: 'unsigned int'>
@@ -590,6 +596,13 @@ BitBltSimulation >> alphaBlendConst: sourceWord with: destinationWord paintMode:
 	<var: #result type: 'unsigned int'>
 	<var: #sourceAlpha type: 'unsigned int'>
 	<var: #unAlpha type: 'unsigned int'>
+	<var: #sourceShifted type: 'unsigned int'>
+	<var: #destShifted type: 'unsigned int'>
+	<var: #maskShifted type: 'unsigned int'>
+	<var: #pixMask type: 'unsigned int'>
+	<var: #rgbMask type: 'unsigned int'>
+	<var: #pixBlend type: 'unsigned int'>
+	<var: #blend type: 'unsigned int'>
 	destDepth < 16 ifTrue: [^ destinationWord "no-op"].
 	unAlpha := 255 - sourceAlpha.
 	result := destinationWord.
@@ -647,6 +660,7 @@ BitBltSimulation >> alphaBlendScaled: sourceWord with: destinationWord [
 	e.g., it is assumed that the source color is already scaled."
 	| unAlpha rb ag |
 	<inline: false>	"Do NOT inline this into optimized loops"
+	<returnTypeC: 'unsigned int'>
 	<var: #sourceWord type: 'unsigned int'>
 	<var: #destinationWord type: 'unsigned int'>
 	<var: #rb type: 'unsigned int'>
@@ -662,6 +676,9 @@ BitBltSimulation >> alphaBlendScaled: sourceWord with: destinationWord [
 
 { #category : #'combination rules' }
 BitBltSimulation >> alphaPaintConst: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 
 	sourceWord = 0 ifTrue: [^ destinationWord  "opt for all-transparent source"].
 	^ self alphaBlendConst: sourceWord with: destinationWord paintMode: true
@@ -678,6 +695,9 @@ BitBltSimulation >> alphaSourceBlendBits16 [
 	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY 
 	srcY dstY dstMask srcShift ditherBase ditherIndex ditherThreshold |
 	<inline: false> "This particular method should be optimized in itself"
+	<var: #sourceWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
+	<var: #dstMask type: #'unsigned int'>
 	deltaY := bbH + 1. "So we can pre-decrement"
 	srcY := sy.
 	dstY := dy.
@@ -752,6 +772,8 @@ BitBltSimulation >> alphaSourceBlendBits32 [
 	"
 	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY srcY dstY |
 	<inline: false> "This particular method should be optimized in itself"
+	<var: #sourceWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
 
 	"Give the compile a couple of hints"
 
@@ -830,6 +852,9 @@ BitBltSimulation >> alphaSourceBlendBits8 [
 	srcY dstY dstMask srcShift adjust mappingTable mapperFlags |
 	<inline: false>
 	<var: #mappingTable type:'unsigned int *'>
+	<var: #sourceWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
+	<var: #dstMask type: #'unsigned int'>
 	mappingTable := self default8To32Table.
 	mapperFlags := cmFlags bitAnd: ColorMapNewStyle bitInvert32.
 	deltaY := bbH + 1. "So we can pre-decrement"
@@ -894,61 +919,97 @@ BitBltSimulation >> alphaSourceBlendBits8 [
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitAnd: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitAnd: destinationWord
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitAndInvert: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitAnd: destinationWord bitInvert32
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitInvertAnd: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitInvert32 bitAnd: destinationWord
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitInvertAndInvert: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitInvert32 bitAnd: destinationWord bitInvert32
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitInvertDestination: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^destinationWord bitInvert32
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitInvertOr: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitInvert32 bitOr: destinationWord
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitInvertOrInvert: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitInvert32 bitOr: destinationWord bitInvert32
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitInvertSource: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitInvert32
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitInvertXor: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitInvert32 bitXor: destinationWord
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitOr: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitOr: destinationWord
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitOrInvert: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitOr: destinationWord bitInvert32
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitXor: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitXor: destinationWord
 ]
 
@@ -982,7 +1043,10 @@ BitBltSimulation >> checkSourceOverlap [
 ]
 
 { #category : #'combination rules' }
-BitBltSimulation >> clearWord: source with: destination [
+BitBltSimulation >> clearWord: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^ 0
 ]
 
@@ -1294,8 +1358,16 @@ BitBltSimulation >> copyLoop [
 	| prevWord thisWord skewWord halftoneWord mergeWord hInc y unskew skewMask notSkewMask mergeFnwith destWord |
 	"This version of the inner loop assumes noSource = false."
 	<inline: false>
-	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
-	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
+	<var: #mergeFnwith declareC: 'unsigned int (*mergeFnwith)(unsigned int, unsigned int)'>
+	<var: #prevWord type: #'unsigned int'>
+	<var: #thisWord type: #'unsigned int'>
+	<var: #skewWord type: #'unsigned int'>
+	<var: #halftoneWord type: #'unsigned int'>
+	<var: #mergeWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
+	<var: #skewMask type: #'unsigned int'>
+	<var: #notSkewMask type: #'unsigned int'>
+	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'unsigned int (*)(unsigned int, unsigned int)'.
 	mergeFnwith.  "null ref for compiler"
 
 	hInc := hDir*4.  "Byte delta"
@@ -1420,8 +1492,11 @@ BitBltSimulation >> copyLoopNoSource [
 	positive, and perload and skew are unused"
 	| halftoneWord mergeWord mergeFnwith destWord |
 	<inline: false>
-	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
-	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
+	<var: #mergeFnwith declareC: 'unsigned int (*mergeFnwith)(unsigned int, unsigned int)'>
+	<var: #halftoneWord type: #'unsigned int'>
+	<var: #mergeWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
+	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'unsigned int (*)(unsigned int, unsigned int)'.
 	mergeFnwith.  "null ref for compiler"
 
 	1 to: bbH do: "here is the vertical loop"
@@ -1485,8 +1560,14 @@ BitBltSimulation >> copyLoopPixMap [
 	to inline pickSourcePixels we could optimize the loop instead."
 	| skewWord halftoneWord mergeWord scrStartBits nSourceIncs startBits endBits sourcePixMask destPixMask mergeFnwith nPix srcShift dstShift destWord words srcShiftInc dstShiftInc dstShiftLeft mapperFlags |
 	<inline: false>
-	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
-	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
+	<var: #mergeFnwith declareC: 'unsigned int (*mergeFnwith)(unsigned int, unsigned int)'>
+	<var: #skewWord type: #'unsigned int'>
+	<var: #halftoneWord type: #'unsigned int'>
+	<var: #mergeWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
+	<var: #sourcePixMask type: #'unsigned int'>
+	<var: #destPixMask type: #'unsigned int'>
+	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'unsigned int (*)(unsigned int, unsigned int)'.
 	mergeFnwith.  "null ref for compiler"
 
 	"Additional inits peculiar to unequal source and dest pix size..."
@@ -1667,6 +1748,9 @@ BitBltSimulation >> destMaskAndPointerInit [
 
 { #category : #'combination rules' }
 BitBltSimulation >> destinationWord: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^destinationWord
 ]
 
@@ -1675,6 +1759,8 @@ BitBltSimulation >> dither32To16: srcWord threshold: ditherValue [
 	"Dither the given 32bit word to 16 bit. Ignore alpha."
 	| addThreshold  |
 	<inline: true> "You bet"
+	<returnTypeC: 'unsigned int'>
+	<var: #srcWord type: 'unsigned int'>
 	addThreshold := ditherValue bitShift: 8.
 	^((dither8Lookup at: (addThreshold+((srcWord bitShift: -16) bitAnd: 255))) bitShift: 10) + 
 		((dither8Lookup at: (addThreshold+((srcWord bitShift: -8) bitAnd: 255))) bitShift: 5) + 
@@ -1796,6 +1882,8 @@ BitBltSimulation >> expensiveDither32To16: srcWord threshold: ditherValue [
 	"Dither the given 32bit word to 16 bit. Ignore alpha."
 	| pv threshold value out |
 	<inline: true> "You bet"
+	<returnTypeC: 'unsigned int'>
+	<var: #srcWord type: 'unsigned int'>
 	pv := srcWord bitAnd: 255.
 	threshold := ditherThresholds16 at: (pv bitAnd: 7).
 	value := ditherValues16 at: (pv bitShift: -3).
@@ -1849,6 +1937,9 @@ BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer ifNil: d
 { #category : #'combination rules' }
 BitBltSimulation >> fixAlpha: sourceWord with: destinationWord [
 	"For any non-zero pixel value in destinationWord with zero alpha channel take the alpha from sourceWord and fill it in. Intended for fixing alpha channels left at zero during 16->32 bpp conversions."
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	destDepth = 32 ifFalse:[^destinationWord]. "no-op for non 32bpp"
 	destinationWord = 0 ifTrue:[^0].
 	(destinationWord bitAnd: 16rFF000000) = 0 ifFalse:[^destinationWord].
@@ -2317,8 +2408,11 @@ BitBltSimulation >> mapPixel: sourcePixel flags: mapperFlags [
 BitBltSimulation >> merge: sourceWord with: destinationWord [
 	| mergeFnwith |
 	"Sender warpLoop is too big to include this in-line"
-	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
-	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
+	<var: #mergeFnwith declareC: 'unsigned int (*mergeFnwith)(unsigned int, unsigned int)'>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
+	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'unsigned int (*)(unsigned int, unsigned int)'.
 	mergeFnwith.  "null ref for compiler"
 
 	^ self mergeFn: sourceWord with: destinationWord
@@ -2342,6 +2436,10 @@ BitBltSimulation >> partitionedAND: word1 to: word2 nBits: nBits nPartitions: nP
 	Any field of word1 not all-ones is treated as all-zeroes.
 	Used for erasing, eg, brush shapes prior to ORing in a color"
 	| mask result |
+	<returnTypeC: 'unsigned int'>
+	<var: #word1 type: 'unsigned int'>
+	<var: #word2 type: 'unsigned int'>
+	<var: #result type: 'unsigned int'>
 	mask := maskTable at: nBits.  "partition mask starts at the right"
 	result := 0.
 	1 to: nParts do:
@@ -2359,6 +2457,7 @@ BitBltSimulation >> partitionedAdd: word1 to: word2 nBits: nBits componentMask: 
 	This is useful for packed pixels, or packed colors"
 	| carryOverflow sum w1 w2 |
 	"Use unsigned int everywhere because it has a well known arithmetic model without undefined behavior w.r.t. overflow and shifts"
+	<returnTypeC: 'unsigned int'>
 	 <var: #word1 type: 'unsigned int'>
 	<var: #word2 type: 'unsigned int'>
 	 <var: #w1 type: 'unsigned int'>
@@ -2382,6 +2481,7 @@ BitBltSimulation >> partitionedMax: word1 with: word2 nBits: nBits nPartitions: 
 	"In C, most arithmetic operations answer the same bit pattern regardless of the operands being signed or unsigned ints
 	(this is due to the way 2's complement numbers work). However, comparisions might fail. Add the proper declaration of
 	words as unsigned int in those cases where comparisions are done (jmv)"
+	<returnTypeC: 'unsigned int'>
 	<var: #word1 type: 'unsigned int'>
 	<var: #word2 type: 'unsigned int'>
 	<var: #mask type: 'unsigned int'>
@@ -2403,6 +2503,7 @@ BitBltSimulation >> partitionedMin: word1 with: word2 nBits: nBits nPartitions: 
 	"In C, most arithmetic operations answer the same bit pattern regardless of the operands being signed or unsigned ints
 	(this is due to the way 2's complement numbers work). However, comparisions might fail. Add the proper declaration of
 	words as unsigned int in those cases where comparisions are done (jmv)"
+	<returnTypeC: 'unsigned int'>
 	<var: #word1 type: 'unsigned int'>
 	<var: #word2 type: 'unsigned int'>
 	<var: #mask type: 'unsigned int'>
@@ -2427,6 +2528,13 @@ BitBltSimulation >> partitionedMul: word1 with: word2 nBits: nBits nPartitions: 
 	"In C, integer multiplication might answer a wrong value if the unsigned values are declared as signed.
 	This problem does not affect this method, because the most significant bit (i.e. the sign bit) will
 	always be zero (jmv)"
+	<returnTypeC: 'unsigned int'>
+	<var: #word1 type: 'unsigned int'>
+	<var: #word2 type: 'unsigned int'>
+	<var: #sMask type: 'unsigned int'>
+	<var: #dMask type: 'unsigned int'>
+	<var: #result type: 'unsigned int'>
+	<var: #product type: 'unsigned int'>
 	sMask := maskTable at: nBits.  "partition mask starts at the right"
 	dMask :=  sMask << nBits.
 	result := (((word1 bitAnd: sMask)+1) * ((word2 bitAnd: sMask)+1) - 1 
@@ -2459,6 +2567,13 @@ BitBltSimulation >> partitionedMul: word1 with: word2 nBits: nBits nPartitions: 
 { #category : #'combination rules' }
 BitBltSimulation >> partitionedRgbComponentAlpha: sourceWord dest: destWord nBits: nBits nPartitions: nParts [
 	| mask result p1 p2 v |
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destWord type: 'unsigned int'>
+	<var: #p1 type: 'unsigned int'>
+	<var: #p2 type: 'unsigned int'>
+	<var: #mask type: 'unsigned int'>
+	<var: #result type: 'unsigned int'>
 	mask := maskTable at: nBits.  "partition mask starts at the right"
 	result := 0.
 	1 to: nParts do:
@@ -2492,6 +2607,7 @@ BitBltSimulation >> partitionedSub: word1 from: word2 nBits: nBits nPartitions: 
 	"In C, most arithmetic operations answer the same bit pattern regardless of the operands being signed or unsigned ints
 	(this is due to the way 2's complement numbers work). However, comparisions might fail. Add the proper declaration of
 	words as unsigned int in those cases where comparisions are done (jmv)"
+	<returnTypeC: 'unsigned int'>
 	<var: #word1 type: 'unsigned int'>
 	<var: #word2 type: 'unsigned int'>
 	<var: #p1 type: 'unsigned int'>
@@ -2540,6 +2656,9 @@ BitBltSimulation >> pickSourcePixels: nPixels flags: mapperFlags srcMask: srcMas
 	color map, and justify them according to dstBitIndex in the resulting destWord."
 	| sourceWord destWord sourcePix destPix srcShift dstShift nPix |
 	<inline: true> "oh please"
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
 	sourceWord := self srcLongAt: sourceIndex.
 	destWord := 0.
 	srcShift := srcBitShift. "Hint: Keep in register"
@@ -2583,6 +2702,8 @@ BitBltSimulation >> pickWarpPixelAtX: xx y: yy [
 	and still relatively important when smoothing is used."
 	| x y srcIndex sourceWord sourcePix |
 	<inline: true> "*please*"
+	<returnTypeC: #'unsigned int'>
+	<var: #sourceWord type: #'unsigned int'>
 
 	"note: it would be much faster if we could just
 	avoid these stupid tests for being inside sourceForm."
@@ -2608,6 +2729,12 @@ BitBltSimulation >> pixClear: sourceWord with: destinationWord [
 	"Clear all pixels in destinationWord for which the pixels of sourceWord have the same values. Used to clear areas of some constant color to zero."
 	| mask result nBits pv |
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
+	<var: #mask type: 'unsigned int'>
+	<var: #pv type: 'unsigned int'>
+	<var: #result type: 'unsigned int'>
 	destDepth = 32 ifTrue:[
 		sourceWord = destinationWord ifTrue:[^0] ifFalse:[^destinationWord].
 	].
@@ -2625,6 +2752,9 @@ BitBltSimulation >> pixClear: sourceWord with: destinationWord [
 { #category : #'combination rules' }
 BitBltSimulation >> pixMask: sourceWord with: destinationWord [
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^ self partitionedAND: sourceWord bitInvert32 to: destinationWord
 					nBits: destDepth nPartitions: destPPW
 ]
@@ -2632,6 +2762,9 @@ BitBltSimulation >> pixMask: sourceWord with: destinationWord [
 { #category : #'combination rules' }
 BitBltSimulation >> pixPaint: sourceWord with: destinationWord [
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	sourceWord = 0 ifTrue: [^ destinationWord].
 	^ sourceWord bitOr:
 		(self partitionedAND: sourceWord bitInvert32 to: destinationWord
@@ -2643,6 +2776,12 @@ BitBltSimulation >> pixSwap: sourceWord with: destWord [
 	"Swap the pixels in destWord"
 	| result shift lowMask highMask |
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destWord type: 'unsigned int'>
+	<var: #lowMask type: 'unsigned int'>
+	<var: #highMask type: 'unsigned int'>
+	<var: #result type: 'unsigned int'>
 	destPPW = 1 ifTrue:[^destWord]. "a single pixel per word"
 	result := 0.
 	lowMask := (1 << destDepth) - 1. "mask low pixel"
@@ -2899,6 +3038,7 @@ BitBltSimulation >> querySourceSurface: handle [
 { #category : #'combination rules' }
 BitBltSimulation >> rgbAdd: sourceWord with: destinationWord [
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
 	<var: #sourceWord type: 'unsigned int'>
 	<var: #destinationWord type: 'unsigned int'>
 	<var: #carryOverflowMask type: 'unsigned int'>
@@ -2933,6 +3073,9 @@ BitBltSimulation >> rgbComponentAlpha16 [
 		sourceForm ~= destForm.
 	"
 	<inline: false>  "This particular method should be optimized in itself"
+	<var: #sourceWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
+	<var: #dstMask type: #'unsigned int'>
 	
 	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY 
 	srcY dstY dstMask srcShift ditherBase ditherIndex ditherThreshold |
@@ -3005,8 +3148,9 @@ BitBltSimulation >> rgbComponentAlpha32 [
 	<inline: false> "This particular method should be optimized in itself"
 
 	"Give the compile a couple of hints"
-	<var: #sourceWord type: 'register long'>
 	<var: #deltaX type: 'register long'>
+	<var: #sourceWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
 
 	"The following should be declared as pointers so the compiler will
 	notice that they're used for accessing memory locations 
@@ -3156,6 +3300,9 @@ BitBltSimulation >> rgbComponentAlpha8 [
 	
 	<inline: false>  "This particular method should be optimized in itself"
 	<var: #mappingTable declareC:'unsigned int *mappingTable'>
+	<var: #sourceWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
+	<var: #dstMask type: #'unsigned int'>
 	
 	mappingTable := self default8To32Table.
 	mapperFlags := cmFlags bitAnd: ColorMapNewStyle bitInvert32.
@@ -3254,6 +3401,14 @@ BitBltSimulation >> rgbDiff: sourceWord with: destinationWord [
 	For non-rgb, return the number of differing pixels."
 	| pixMask destShifted sourceShifted destPixVal bitsPerColor rgbMask sourcePixVal diff maskShifted |
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
+	<var: #sourceShifted type: 'unsigned int'>
+	<var: #destShifted type: 'unsigned int'>
+	<var: #maskShifted type: 'unsigned int'>
+	<var: #pixMask type: 'unsigned int'>
+	<var: #rgbMask type: 'unsigned int'>
 	pixMask := maskTable at: destDepth.
 	destDepth = 16
 		ifTrue: [bitsPerColor := 5.  rgbMask := 16r1F]
@@ -3356,6 +3511,9 @@ BitBltSimulation >> rgbMapPixel: sourcePixel flags: mapperFlags [
 { #category : #'combination rules' }
 BitBltSimulation >> rgbMax: sourceWord with: destinationWord [
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	destDepth < 16 ifTrue:
 		["Max each pixel separately"
 		^ self partitionedMax: sourceWord with: destinationWord
@@ -3375,6 +3533,9 @@ BitBltSimulation >> rgbMax: sourceWord with: destinationWord [
 { #category : #'combination rules' }
 BitBltSimulation >> rgbMin: sourceWord with: destinationWord [
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	destDepth < 16 ifTrue:
 		["Min each pixel separately"
 		^ self partitionedMin: sourceWord with: destinationWord
@@ -3395,6 +3556,10 @@ BitBltSimulation >> rgbMin: sourceWord with: destinationWord [
 BitBltSimulation >> rgbMinInvert: wordToInvert with: destinationWord [
 	| sourceWord |
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #wordToInvert type: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	sourceWord := wordToInvert bitInvert32.
 	destDepth < 16 ifTrue:
 		["Min each pixel separately"
@@ -3415,6 +3580,9 @@ BitBltSimulation >> rgbMinInvert: wordToInvert with: destinationWord [
 { #category : #'combination rules' }
 BitBltSimulation >> rgbMul: sourceWord with: destinationWord [
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	destDepth < 16 ifTrue:
 		["Mul each pixel separately"
 		^ self partitionedMul: sourceWord with: destinationWord
@@ -3439,6 +3607,9 @@ BitBltSimulation >> rgbMul: sourceWord with: destinationWord [
 { #category : #'combination rules' }
 BitBltSimulation >> rgbSub: sourceWord with: destinationWord [
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	destDepth < 16 ifTrue:
 		["Sub each pixel separately"
 		^ self partitionedSub: sourceWord from: destinationWord
@@ -3561,6 +3732,9 @@ BitBltSimulation >> sourceSkewAndPointerInit [
 
 { #category : #'combination rules' }
 BitBltSimulation >> sourceWord: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord
 ]
 
@@ -3572,6 +3746,9 @@ BitBltSimulation >> srcLongAt: idx [
 
 { #category : #'combination rules' }
 BitBltSimulation >> subWord: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord - destinationWord
 ]
 
@@ -3583,6 +3760,12 @@ BitBltSimulation >> tallyIntoMap: sourceWord with: destinationWord [
 	to be performed at setup."
 	| mapIndex pixMask destShifted maskShifted pixVal |
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
+	<var: #pixMask type: 'unsigned int'>
+	<var: #destShifted type: 'unsigned int'>
+	<var: #maskShifted type: 'unsigned int'>
 	(cmFlags bitAnd: (ColorMapPresent bitOr: ColorMapIndexedPart)) = 
 		(ColorMapPresent bitOr: ColorMapIndexedPart)
 			ifFalse: [^ destinationWord "no op"].
@@ -3754,9 +3937,13 @@ BitBltSimulation >> warpLoop [
 	  deltaP12x deltaP12y deltaP43x deltaP43y pAx pAy pBx pBy
 	  xDelta yDelta smoothingCount sourceMapOop
 	  nSteps nPix words destWord endBits mergeFnwith dstShiftInc dstShiftLeft mapperFlags |
-	<inline: false>
-	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
-	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
+	<inline: false>	
+	<var: #mergeFnwith declareC: 'unsigned int (*mergeFnwith)(unsigned int, unsigned int)'>
+	<var: #skewWord type: #'unsigned int'>
+	<var: #halftoneWord type: #'unsigned int'>
+	<var: #mergeWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
+	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'unsigned int (*)(unsigned int, unsigned int)'.
 	mergeFnwith.  "null ref for compiler"
 
 	(interpreterProxy slotSizeOf: bitBltOop) >= (BBWarpBase+12)
@@ -3939,6 +4126,7 @@ BitBltSimulation >> warpPickSmoothPixels: nPixels
 	This version is only called from WarpBlt with smoothingCount > 1"
 	| rgb x y a r g b xx yy xdh ydh xdv ydv dstMask destWord i j k nPix |
 	<inline: false> "nope - too much stuff in here"
+	<var: #rgb type: #'unsigned int'>
 	dstMask := maskTable at: destDepth.
 	destWord := 0.
 	n = 2 "Try avoiding divides for most common n (divide by 2 is generated as shift)"
