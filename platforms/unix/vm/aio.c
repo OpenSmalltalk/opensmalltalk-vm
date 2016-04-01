@@ -25,7 +25,7 @@
  *   DEALINGS IN THE SOFTWARE.
  */
 
-/* Author: Ian.Piumarta@squeakland.org
+/* Authors: Ian.Piumarta@squeakland.org, eliot.miranda@gmail.com
  * 
  * Last edited: Tue Mar 29 13:06:00 PDT 2016
  */
@@ -57,7 +57,11 @@
 #   include <time.h>
 # endif
 
-# ifdef HAS_SYS_SELECT_H
+# if HAVE_KQUEUE
+#   include <sys/event.h>
+# elif HAVE_EPOLL
+#   include <sys/epoll.h>
+# elif HAVE_SELECT
 #   include <sys/select.h>
 # endif
 

@@ -3,6 +3,11 @@ trap 'exit 2' HUP INT PIPE TERM
 PRODUCTDIRS="newspeak.cog.spur pharo.cog.spur squeak.cog.spur squeak.cog.v3 squeak.cog.spur.immutability"
 for d in $PRODUCTDIRS; do
 	if test -d "$d"; then
+		(cd ./$d;echo $d;make cleanall)
+	fi
+done
+for d in $PRODUCTDIRS; do
+	if test -d "$d"; then
 		(cd ./$d;./mvm -A)
 	else
 		echo no $d directory found
