@@ -382,6 +382,7 @@ cmake --help-variable   CMAKE_PREFIX_PATH
 SqueakUnixConfig >> cmakeWriteDirectoriesDotCmake: aMaker [
 	|temp o|
 	"We could put these inline, but other components include the directories.cmake file. So, we continue that convention"
+	self flag: 'tty, aMaker never used'.
 	o := String new writeStream.
 	temp := OrderedCollection new.
 	temp

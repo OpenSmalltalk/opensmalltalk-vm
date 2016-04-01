@@ -62,6 +62,7 @@ CMakeVMGeneratorForSqueak >> generateByTemplate [
 	self flag: 'tty'. "refactor so that the cascade reflects CMake terminilogy"
 	output := String new writeStream.
 	config templates: OrderedCollection new. 
+	self break.
 	config 
 		setGlobalOptions: self;    
 		cmakePrefixPath;
@@ -76,7 +77,6 @@ CMakeVMGeneratorForSqueak >> generateByTemplate [
 		standardIncludes;                       "<---"
 		setGlobalOptionsAfterDetermineSystem: self;    
 		extraVMSettings: self;                "<--catch-all method. os/platform specific"
-break;
 		setCoreSources: self;
 		setPlatformSources: self;
 		setCrossSources: self;
