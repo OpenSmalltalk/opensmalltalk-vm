@@ -34,6 +34,15 @@ you get the idea.
 '
 ]
 
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> addVMPlugins [
+	^HelpTopic
+		title:'addVMPlugins'
+		contents:
+'
+'
+]
+
 { #category : #accessing }
 CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> bookName [ 
 	^'Example Workflow: New Configuration'
@@ -109,6 +118,475 @@ This is temporary as I have decided to de-couple CMakeVMMakerSqueak from CMakeVM
 
 
 ToolSet browseMessageCategory:''cmake'' inClass: CPlatformConfigForSqueak!' readStream nextChunkText
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeAddDefinitions [
+	^HelpTopic
+		title:'cmakeAddDefinitions'
+		contents:
+'SystemNavigation browseAllImplementorsOf: #cmakeAddDefinitions
+
+We see that the CPlatformConfigForSqueak routes the method based on the buildType #build via the Method Redirect pattern to cmakeAddDefinitionsBuild
+
+SystemNavigation browseAllImplementorsOf: #cmakeAddDefinitionsBuild
+
+We see that our Linux64x86w32BitSqueakCogSpurConfig already implements it due to our copying of an existing configuration.
+
+We need to modify this for our Configuration. The current method (minus commented out elements) reads as:
+
+	definitions:=#(
+	 ''-DNDEBUG''          
+ 	 ''-DDEBUGVM=0''
+	 '' -DLSB_FIRST=1''
+	 ''-D_GNU_SOURCE''
+ 	 ''-D_FILE_OFFSET_BITS=64''
+ 	 ''-DCOGMTVM=0'') . 
+
+Like the cmakeCFlags method, we look at the mvm file 
+
+cat ~/.../Cog/build.linux32x86/squeak.cog.spur/build/mvm
+
+And see the 
+3.4.*)  OPT=''-g -O1 -fwrapv -DNDEBUG -DDEBUGVM=o'';;
+*)              OPT=''-g -O2 -DNDEBUG -DDEBUGVM=0'';;
+
+lines and the 
+
+CFLAGS=''$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0'' \
+
+Based on these mvm file details, I modify the method to read as such:
+
+	definitions:=#(
+	 ''-DNDEBUG''          
+ 	 ''-DDEBUGVM=0''
+	 ''-D_GNU_SOURCE''
+ 	 ''-D_FILE_OFFSET_BITS=64''
+ 	 ''-DCOGMTVM=0'') .
+
+To match the directives specified in the mvm file
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeAddExecutableNameOptionSource [
+	^HelpTopic
+		title:'cmakeAddExecutableNameOptionSource:'
+		contents:
+'SystemNavigation browseAllImplementorsOf: #cmakeAddExecutableNameOptionSource:
+
+We see this is a top-level method implemented only by CPlatformConfigForSqueak
+
+The method creates a new CMakeAddExecutableNameOptionSource template 
+
+CMakeAddExecutableNameOptionSource browse
+
+and the class comment says it "Add an executable to the project using the specified source files."
+
+To get a sense of the CMake output print the following:
+
+((CMakeAddExecutableNameOptionSource new)
+			executableName: ''cog''
+			optionalproperty: ''''
+			sources: (OrderedCollection with: ''${coreSources} ${crossVMSources} ${platformVMSources} ${extraSources}'')) content
+
+In looking at this, the exectuableName worries me.  I am not sure that ''cog'' is what we want.
+
+Looking at it...
+SystemNavigation browseAllImplementorsOf: #executableName
+
+it is something we can customize or code if we need.
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeCFlags [
+	^HelpTopic
+		title:'cmakeCFlags'
+		contents:
+'SystemNavigation browseAllImplementorsOf: #cmakeCFlags
+
+We see that  CPlatformConfigForSqueak implements it
+
+The method comment reads in part:
+
+''self deprecated: this catchall method has been split into dedicated methods: cmakePrefixPath cmakeIncludePath 	cmakeLibraryPath	cmakeIncludeModules;    cmakeCFlags;      ...''
+
+
+And that this method will be refactored out of existence ''soon''.
+
+Looking at it, we see that the method  implements the Method Redirect pattern 
+
+Since we have configured for buildType: #build, the Method Redirect Pattern will invoke the  cmakeCFlagsBuild method.
+
+So we look at the implementors of it..
+
+SystemNavigation browseAllImplementorsOf: #cmakeCFlagsBuild
+
+Here we see that our new Linux64x86w32BitSqueakCogSpurConfig configuration implements it (since we copied an existing Configuration that implemented it)
+
+We now have something to customize.
+
+We look at the line: cflags:= String streamContents: [:stream | (self compilerFlags) asStringOn: stream delimiter: '' '' ]. 
+
+and see that our ''self compilerFlags'' method is used.
+
+SystemNavigation browseAllImplementorsOf: #compilerFlags
+
+These are flags to pass to the compiler. Take a look at the mwm file in the GNU config
+
+cat ~/.../Cog/build.linux32x86/squeak.cog.spur/build/mvm
+
+We see an OPT variable being populated...
+
+
+	OPT=''-g -O1 -fwrapv -DNDEBUG -DDEBUGVM=0'';;
+	OPT=''-g -O2 -DNDEBUG -DDEBUGVM=0'';;
+esac
+
+And later in the file we see the CFLAGS variable being populated with the $OPT variable and some other flags.
+
+	CC=''gcc -m32'' \
+	CXX=''g++ -m32'' \
+	CFLAGS=''$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0'' \
+	LIBS=''-lpthread -luuid'' \
+	LDFLAGS=-Wl,-z,now
+
+That CFLAGS variable is what we are mimicing here. with some caveats...
+
+The pharo code just dumped all that stuff into one method, whereas I split them up.
+
+We are ommitting the Compiler defines like -D_GNU_SOURCE  as we will be setting those in cmakeAddDefinitions.
+
+My current compilerFlags (minus commented out elements) method reads like this:
+
+compilerFlags
+	^#(	''-w''
+		''-m32''
+		''-msse2''
+		''-O1'') 
+
+
+checking my compiler version 
+bash-4.2$ gcc --version
+gcc (GCC) 4.8.2
+Copyright (C) 2013 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+I see I need some options from the    OPT=''-g -O1 -fwrapv -DNDEBUG -DDEBUGVM=0'' line
+ line 
+
+
+Mimicing the mvm file, I modify it to read as such:
+
+compilerFlags
+	^#(''-g''
+	     ''-O1''
+	     ''-fwrapv''
+	     ''-m32''
+	     ''-msse2''
+	) 
+
+In doing this, I am congizant that I may have to return to this method as I fiddle around getting this configuration correct.
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeIncludeDirectories [
+	^HelpTopic
+		title:'cmakeIncludeDirectories'
+		contents:
+'SystemNavigation browseAllImplementorsOf: #cmakeIncludeDirectories:
+
+We see that the sole implementor of the method is the top level configuration CPlatformConfigForSqueak
+
+The method creates an instance of the CMakeTemplate CMakeIncludeDirectories
+
+CMakeIncludeDirectories browse
+
+where the class comment tells us that it tells CMake to add extra ''include'' directories to the build.
+
+Currently a variable placeholder is hard-coded in CMakeVMGeneratorForSqueak>>includeDirs
+You can print the following to see them:
+(CMakeVMGeneratorForSqueak new) includeDirs
+
+And the generated CMake by printing the following:
+
+((CMakeIncludeDirectories new) dirs: (OrderedCollection with: (CMakeVMGeneratorForSqueak new) includeDirs)) content 
+
+What you see when you print it are variable placeholders that CMake will populate with the value of CMake variables  ${crossDir}
+, ${srcVMDir} and ${targetPlatform} that we will be defining or have already been defined in our configuration.
+
+This is truly a global method and would only change if Eliot changed the layout of the underlying build structure.
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeIncludeModules [
+	^HelpTopic
+		title:'cmakeIncludeModules'
+		contents:
+'CMake allows the user to include custom CMake library files (modules).  
+This construct allows the developer to include those modules.
+
+cmakeIncludeModules implements the Method Redirect pattern.
+
+ToolSet browse: CPlatformConfigForSqueak selector: #cmakeIncludeModules
+
+Since the configuration is configured for buildType: #build the method redirect pattern will redirect to
+
+SystemNavigation browseAllImplementorsOf: #cmakeIncludeModulesBuild.
+
+We see in CPlatformConfigForSqueak that a sublcass must implement it via ''self subclassResponsibility''.
+
+We see that (as of this writing) the SqueakUnixConfig handles the method by including some custom modules
+Utils.cmake
+Plugins.cmake
+TestBigEndian
+CheckIncludeFile
+CheckLibraryExists
+CheckTypeSize
+CheckFunctionExists
+CheckVariableExists
+CheckStructHasMember
+FindPkgConfig
+
+These Module wrap CMake constructs and can be thought of as CMake ''include files''. and they are implemented high in the Configuration platform hierarchy.
+
+Our new Configuration need not override anything here.
+
+Let''s move on...'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeIncludePath [
+	^HelpTopic
+		title:'cmakeIncludePath'
+		contents:
+'cmakeIncludePath implements the Method Redirect pattern.
+
+ToolSet browse: CPlatformConfigForSqueak selector: #cmakeIncludePath
+
+Since the configuration is configured for buildType: #build the method redirect pattern will redirect to
+
+SystemNavigation browseAllImplementorsOf: #cmakeIncludePathBuild
+
+We see in CPlatformConfigForSqueak that a sublcass must implement it via ''self subclassResponsibility''.
+
+We see that (as of this writing) the SqueakUnixConfig handles the method, but only for debug messages.
+
+There is a possibility a  sub-platform will have include files in a non-standard directories and a specific Configuration
+will have to implement this to generate appropriate CMake output. 
+
+At this moment, we conclude we don''t need to. 
+
+Since I am writing this help in tandem with generating a new Configuration, there is the possibility I am wrong and that I will need this.
+
+Since I don''t know for a fact that it is, I leave it alone for now.'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeLibraryPath [
+	^HelpTopic
+		title:'cmakeLibraryPath'
+		contents:
+'cmakeLibraryPath implements the Method Redirect pattern.
+
+ToolSet browse: CPlatformConfigForSqueak selector: #cmakeLibraryPath
+
+Since the configuration is configured for buildType: #build the method redirect pattern will redirect to
+
+SystemNavigation browseAllImplementorsOf: #cmakeLibraryPathBuild.
+
+We see in CPlatformConfigForSqueak that a sublcass must implement it via ''self subclassResponsibility''.
+
+We see that (as of this writing) the SqueakUnixConfig handles the method, but only for debug messages.
+
+There is a possibility a  sub-platform will have libraries in a non-standard directories and a specific Configuration
+will have to implement this to generate appropriate CMake output. 
+
+At this moment, we conclude we don''t need to. 
+
+Since I am writing this help in tandem with generating a new Configuration, there is the possibility I am wrong and that I will need this.
+
+Since I don''t know for a fact that it is, I leave it alone for now.
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeListAppend:LINKLIBSelements [
+	^HelpTopic
+		title:'cmakeListAppend:LINKLIBSelements'
+		contents:
+'
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeListAppendLINKLIBSelements [
+	^HelpTopic
+		title:'cmakeListAppendLINKLIBSelements'
+		contents:
+'SystemNavigation browseAllImplementorsOf: #cmakeListAppend:elements:
+
+We see this is a top-level method.
+
+The method creates a new CMakeListAppend which according to the class comment ''I handle the APPEND functionality for the cmake list commmand.''.
+
+Here we are appending libraries to link to the list LINKLIBS.
+
+You can get a sense of the CMake output by evaluating.
+
+((CMakeListAppend new) list:''LINKLIBS'' elements:#((''-L/usr/lib'' ''-L/usr/lib/X11'' ''uuid'' ''ssl'' ''crypto'' ''m'' ''dl'' ''pthread'' ''SM'' ''ICE'' ''GL'' ''X11'' ''nsl''))) content
+
+The list of libraries is available via the configurations ''externalLibs'' method. 
+
+SystemNavigation browseAllImplementorsOf: #externalLibs
+
+Which we see implements the Method Redirect pattern.
+
+Since this is a #build buildType we look in 
+
+SystemNavigation browseAllImplementorsOf: #externalLibsBuild 
+
+And we see the CPlatformConfigForSqueak subclasses responsibility and that our new Linux64x86w32BitSqueakCogSpurConfig implements it as
+
+externalLibsBuild
+	^self externalLibraries asOrderedCollection.
+
+which is contained in its parent as
+
+externalLibraries
+	^#(
+		     ''-L/usr/lib''
+		     ''-L/usr/lib/X11''
+		......
+		etc...
+	)
+		
+		
+So, we see the ability to specify what libraries we want to link against in our configuration.
+
+Where to do this in the Configuration heirarchy is a matter of judgement.
+
+We will leave this one alone, bearing in mind that if we have a library linking problem, we have an idea where to look for it.		
+	
+
+
+
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakePrefixPath [
+	^HelpTopic
+		title:'cmakePrefixPath'
+		contents:
+'ToolSet browse: CPlatformConfigForSqueak selector: #cmakePrefixPath
+
+cmakePrefixPath implements the Method Redirect pattern.
+
+Since the configuration is configured for buildType: #build the method redirect pattern will redirect to
+
+SystemNavigation browseAllImplementorsOf: #cmakePrefixPathBuild
+
+We see in CPlatformConfigForSqueak that a sublcass must implement it via ''self subclassResponsibility''.
+
+We see that (as of this writing) the SqueakUnixConfig handles the method.
+
+We reason that this method generates  platform specific CMake output and our lower-level Configuration need not override it.
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeSetSourceFilesProperties [
+	^HelpTopic
+		title:'cmakeSetSourceFilesProperties'
+		contents:
+'SystemNavigation browseAllImplementorsOf: #cmakeSetSourceFilesProperties
+
+SystemNavigation browseAllImplementorsOf: #cmakeSetSourceFilesPropertiesBuild
+
+We see that the CPlatformConfigForSqueak subclasses responsibility (scroll down past the method comment)
+
+We also see that our new Linux64x86w32BitSqueakCogSpurConfig Configuration implements it.
+
+I suspect this method will be refactored upwards. It appears to be passing distinct compiler flags to the cogit.c and sqUnixHeartbeat.c.
+
+
+Let''s leave this one alone.
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeWriteDirectoriesDotCmake [
+	^HelpTopic
+		title:'cmakeWriteDirectoriesDotCmake'
+		contents:
+'SystemNavigation browseAllImplementorsOf: #cmakeWriteDirectoriesDotCmake:
+
+Here we see that the CPlatformConfigForSqueak forces subclasses to implement this .
+
+This method sets some CMake variables to platform specific values and writes them to a file named ''directories.cmake''
+
+Here is the directories.cmake file contents on my platform
+
+bash-4.2$ cat directories.cmake 
+  set(topDir "/home/tty/usr/src/smalltalk/CMake.oscog/cogspurVMMaker/oscogvm")
+  set(buildDir "/home/tty/usr/src/smalltalk/CMake.oscog/cogspurVMMaker/oscogvm/cmake.build.linux64x86w32BitCompatibility/squeak.cog.v3/build")
+  set(thirdpartyDir "${buildDir}/thirdParty")
+  set(platformsDir "/home/tty/usr/src/smalltalk/CMake.oscog/cogspurVMMaker/oscogvm/platforms")
+  set(srcDir "/home/tty/usr/src/smalltalk/CMake.oscog/cogspurVMMaker/oscogvm/src")
+  set(srcPluginsDir "${srcDir}/plugins")
+  set(srcVMDir "${srcDir}/vm")
+  set(platformName "unix")
+  set(targetPlatform "${platformsDir}/${platformName}")
+  set(crossDir "${platformsDir}/Cross")
+  set(platformVMDir "${targetPlatform}/vm}")
+  set(outputDir "/home/tty/usr/src/smalltalk/CMake.oscog/cogspurVMMaker/oscogvm/cmake.products/squeak.cog.v3")
+  set(externalModulesDir "${outputDir}")
+
+EOF
+
+The file contains CMake ''set'' commands that bind a variable to a value. 
+
+In this application, CMake commands are encapsulated as objects and the CMake Set command is no exception:
+
+CMakeSet browse
+
+Taking the set(platformName,"unix") command as an example, we see the rationale for sublcassing this construct to the platform specific subclasses.
+
+
+There is nothing for us to do here, HOWEVER, we will be customizing some variables that compose this. For example:
+set(srcDir "some path to a source directory") can take any of the below directory names:
+
+nsspur64src
+nsspursrc
+nsspurstack64src
+nsspurstacksrc
+nssrc
+spur64src
+spursistasrc
+spursrc
+spurstack64src
+spurstacksrc
+src
+stacksrc
+
+
+
+
+
+
+
+
+
+'
 ]
 
 { #category : #pages }
@@ -307,6 +785,37 @@ This functionality is included with an eye towards easing automated builds for a
 ]
 
 { #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> extraVMSettings [
+	^HelpTopic
+		title:'extraVMSettings'
+		contents:
+'SystemNavigation browseAllImplementorsOf: #extraVMSettings:
+
+
+In the CPlatformConfigForSqueak>>extraVMSettings: aMaker, we see the Method Redirect Pattern employed. Since this is for buildType #build, the method will re-route to self extraVMSettingsBuild:
+
+SystemNavigation browseAllImplementorsOf: #extraVMSettingsBuild:
+
+We see the CPLatformConfigForSqueak forces a subclass to implement it and the SqueakUnixConfig implements it.
+
+In SqueakUnixConfig a CMakeAddCustomCommandOutput is created and initialized. 
+
+CMakeAddCustomCommandOutput browse
+
+The class comment says that: ''Add a custom build rule to the generated build system.''
+
+
+If you  look in the file  Cog/platforms/unix/config/verstamp you see that this is (looks like) the definition/implemenation of the command CMake 
+will invoke.
+
+
+Currently this is a platform level method. Honestly, I have no idea why it is there. (:
+
+For our purposes, there is nothing we need to do.
+'
+]
+
+{ #category : #pages }
 CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> firstCMakeGeneration [
 	"This method was automatically generated. Edit it using:"
 	"a HelpBrowser edit: #firstCMakeGeneration"
@@ -423,6 +932,22 @@ We see that the configuration has output a CMake build tree and we have done a s
 Next we take stock of what we have accomplished and preview the remaining tasks.
 
 !' readStream nextChunkText
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> forTheImpatient [
+	^HelpTopic
+		title:'For the impatient'
+		contents:
+'Here is the TL;DR synopsis of the methods I implemented or overrode in creating the Linux64x86w32BitSqueakCogSpurConfig.
+For a step-by-step exposition please continue to the next page.
+
+TODO: Fill this in as you go
+cmakeCFlags  
+cmakeAddDefinitions
+
+
+'
 ]
 
 { #category : #pages }
@@ -610,7 +1135,7 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> overview [
 		contents:
 'This Help Topic presents the workflow the author used in creating the  Squeak, Cog, Spur CMake configuration for a 64 bit Slackware 14.1 system.with 32 bit compatability libs in /usr/lib
 
-The steps involved should be the same for any platform.'
+Although some details will be different, the steps involved should be the same for any platform.'
 ]
 
 { #category : #accessing }
@@ -629,6 +1154,30 @@ cPlatformConfigForSqueak
 methodRedirectPattern
 theVMGenerator
 tackingStockTwo
+forTheImpatient
+setGlobalOptions
+cmakePrefixPath
+cmakeIncludePath
+cmakeLibraryPath
+cmakeIncludeModules
+cmakeCFlags
+cmakeAddDefinitions
+cmakeWriteDirectoriesDotCmake
+cmakeIncludeDirectories
+preferredIncludes
+standardIncludes
+setGlobalOptionsAfterDetermineSystem
+extraVMSettings
+setCoreSources
+setPlatformSources
+setCrossSources
+setExtraSources
+cmakeSetSourceFilesProperties
+cmakeListAppendLINKLIBSelements
+cmakeAddExecutableNameOptionSource
+setExecutableOutputPath
+addVMPlugins
+
 setConfigurationDirectory
 setOutputDirectory
 settingPlugins
@@ -656,6 +1205,39 @@ customizeVMDrivers
 customizePlugins
 aNoteOnFoo
 )"
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> preferredIncludes [
+	^HelpTopic
+		title:'preferredIncludes'
+		contents:
+'SystemNavigation browseAllImplementorsOf: #preferredIncludes
+
+CPlatformConfig browseHierarchy
+
+As of CMakeVMMakerSqueak-tty.114 the method is a legacy method from the pharo CPlatformConfig. It is expect it (and this help page!) will go away on a refactoring pass when the dependency on the pharo package is removed.
+
+
+In the CPlatformConfigForSqueak>>preferredIncludes, we see the Method Redirect Pattern employed. Since this is for buildType #build, the method will re-route to self preferredIncludesBuild.
+
+SystemNavigation browseAllImplementorsOf: #preferredIncludesBuild
+
+We see that #preferredIncludesBuild  is subclassed and implemented below the the platform level and down at the architecture/library location, one level above our new configuration.
+
+Linux64x86w32BitConfigUsrLib browseHierarchy
+
+The method itself creates a CMakeIncludeDirectories CMake template 
+
+CMakeIncludeDirectories browse
+
+The class comment tells us that we can add custom include directories for CMake to use.
+
+The CMake template class initializes itself with some default data, which you can print out here:
+
+(CMakeIncludeDirectories new) content
+
+Since this is handled for us one level above our new configuration, we will leave this one untouched.  If it turns out that we need to include some other directories, we can override the method.'
 ]
 
 { #category : #pages }
@@ -729,6 +1311,120 @@ Need the squeak.cog.spur directory here.
 ]
 
 { #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setCoreSources [
+	^HelpTopic
+		title:'setCoreSources'
+		contents:
+'SystemNavigation browseAllImplementorsOf: #setCoreSources:
+
+We see that this is a top-level Configuration method that writes a CMake Set(foo, bar) construct.
+
+There is nothing for us to do here.'
+
+
+
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setCrossSources [
+	^HelpTopic
+		title:'setCrossSources'
+		contents:
+'SystemNavigation browseAllImplementorsOf: #setCrossSources:
+
+We see that this is a top-level Configuration method that writes a CMake Set(foo, bar) construct.
+
+There is nothing for us to do here.'
+
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setExecutableOutputPath [
+	^HelpTopic
+		title:'setExecutableOutputPath'
+		contents:
+'SystemNavigation browseAllImplementorsOf: #setExecutableOutputPath
+
+ We see that this is implemtented in CPlatformConfigForSqueak.
+
+It creates a CMakeSet object and sets the ''EXECUTABLE_OUTPUT_PATH'' variable to self outputDir
+
+SystemNavigation browseAllImplementorsOf: #outputDir
+
+This look customizable too, but I doubt we need it.
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setExtraSources [
+	^HelpTopic
+		title:'setExtraSources'
+		contents:
+'SystemNavigation browseAllImplementorsOf: #setExtraSources
+
+We see that this is a top-level Configuration method that writes a CMake Set(foo, bar) construct.
+
+There is nothing for us to do here.
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setGlobalOptions [
+	^HelpTopic
+		title:'setGlobalOptions: self'
+		contents:
+'For this method there is nothing to do. Here is why.
+
+Let''s start by seeing what classes implement the method
+
+SystemNavigation browseAllImplementorsOf: #setGlobalOptions:
+
+We see that  CPlatformConfigForSqueak implements it (The other classes are from the pharo package. These will go way after the dependency on the pharo code is factored out).
+
+Looking at it, we see that the method  implements the Method Redirect pattern 
+
+Since we have configured for buildType: #build, the Method Redirect Pattern will invoke the  setGlobalOptionsBuild: aMaker method.
+
+So we look at the implementors of it..
+
+SystemNavigation browseAllImplementorsOf: #setGlobalOptionsBuild:
+
+We see only CPlatformConfigForSqueak implements the method. Reading the method comments, we see that it generates CMakeLists.txt commands that span all platforms. 
+
+No subclasses of CPlatformConfigForSqueak override it.
+
+There is nothing for us to override here. Let''s move on.
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setGlobalOptionsAfterDetermineSystem [
+	^HelpTopic
+		title:'setGlobalOptionsAfterDetermineSystem'
+		contents:
+'SystemNavigation browseAllImplementorsOf: #setGlobalOptionsAfterDetermineSystem:
+
+
+In the CPlatformConfigForSqueak>>setGlobalOptionsAfterDetermineSystem: aMaker, we see the Method Redirect Pattern employed. Since this is for buildType #build, the method will re-route to self setGlobalOptionsAfterDetermineSystemBuild
+
+SystemNavigation browseAllImplementorsOf: #setGlobalOptionsAfterDetermineSystemBuild:
+
+We see the CPLatformConfigForSqueak forces a subclass to implement it and the SqueakUnixConfig implements it.
+
+In SqueakUnixConfig a CMakeSet is created and initialized. You can see the resultant output by printing the below expression:
+
+((CMakeSet new) variable:''CMAKE_C_COMPILER'' value:''gcc'') content
+
+Currently this is a platform level method, however, we can envision it being set lower when ''gcc'' is not the default compiler.
+
+For our purposes, there is nothing we need to do.
+
+'
+]
+
+{ #category : #pages }
 CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setOutputDirectory [
 	^HelpTopic
 		title:'Set Output Directory'
@@ -762,11 +1458,45 @@ For my configuration you can see that I return the "^self squeakCogV3" which ret
 ]
 
 { #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setPlatformSources [
+	^HelpTopic
+		title:'setPlatformSources'
+		contents:'
+SystemNavigation browseAllImplementorsOf: #setPlatformSources:
+
+We see that this is a top-level Configuration method that writes a CMake Set(foo, bar) construct.
+
+There is nothing for us to do here.'
+
+]
+
+{ #category : #pages }
 CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> settingPlugins [
 	^HelpTopic
 		title:'Setting Plugins'
 		contents:
 'Write Me.'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> standardIncludes [
+	^HelpTopic
+		title:'standardIncludes'
+		contents:
+'As of CMakeVMMakerSqueak-tty.114 the method is a legacy method from the pharo CPlatformConfig. It is expect it (and this help page!) will go away on a refactoring pass when the dependency on the pharo package is removed.
+
+
+SystemNavigation browseAllImplementorsOf: #standardIncludes
+
+CPlatformConfig browseHierarchy
+
+In the CPlatformConfigForSqueak>>standardIncludes, we see the Method Redirect Pattern employed. Since this is for buildType #build, the method will re-route to self standardIncludesBuild.
+
+SystemNavigation browseAllImplementorsOf: #standardIncludesBuild
+
+The SqueakUnixConfig just writes some debug messages. 
+
+There is nothing for us to do here.'
 ]
 
 { #category : #pages }
@@ -819,6 +1549,9 @@ The CMakeVMGeneratorForSqueak takes our Configuration as input via the Visitor p
 
 
 The remainder of this Example Workflow will be the customization of the Linux64x86w32BitSqueakCogSpurConfig and generating a working build.
+
+To do this by taking each statement in the CMakeVMGeneratorForSqueak>>generateByTemplate cascade in turn.
+
 
 '
 ]
