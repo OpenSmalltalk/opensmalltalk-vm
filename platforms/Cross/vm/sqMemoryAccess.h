@@ -195,6 +195,44 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _aligner;
 #define storeSingleFloatAtfrom(i, floatVar)	storeSingleFloatAtPointerfrom(pointerForOop(i), floatVar)
 #define fetchSingleFloatAtinto(i, floatVar)	fetchSingleFloatAtPointerinto(pointerForOop(i), floatVar)
 
+/* These accessors are for accelerating byte swapping
+   whenever intrinsics or other fast functions are available */
+/* Compatibility with non-clang compilers */
+#ifndef __has_builtin
+#  define __has_builtin(x) 0
+#endif
+
+/*  GCC and Clang recent versions provide intrinsic byte swaps via builtins */
+#if (defined(__clang__) && __has_builtin(__builtin_bswap32) && __has_builtin(__builtin_bswap64)) \
+  || (defined(__GNUC__ ) && \
+  (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 3)))
+#  define SQ_SWAP_4_BYTES(x) __builtin_bswap32(x)
+#  define SQ_SWAP_8_BYTES(x) __builtin_bswap64(x)
+#elif defined(__linux__)
+#  include <byteswap.h>
+#  define SQ_SWAP_4_BYTES(x) bswap_32(x)
+#  define SQ_SWAP_8_BYTES(x) bswap_64(x)
+#elif defined(_MSC_VER)
+#  include <stdlib.h>
+#  define SQ_SWAP_4_BYTES(x) _byteswap_ulong(x)
+#  define SQ_SWAP_8_BYTES(x) _byteswap_uint64(x)
+#else
+#  define SQ_SWAP_4_BYTES(x) \
+	(((unsigned int)(x) << 24) | \\
+	(((unsigned int)(x) <<  8) & 0xff0000U) | \\
+	(((unsigned int)(x) >>  8) & 0xff00U) | \\
+	( (unsigned int)(x) >> 24))
+#  define SQ_SWAP_8_BYTES(x) \
+	(((unsigned long long)(x) << 56) | \\
+	(((unsigned long long)(x) << 40) & 0xff000000000000ULL) | \\
+	(((unsigned long long)(x) << 24) & 0xff0000000000ULL) | \\
+	(((unsigned long long)(x) << 8)  & 0xff00000000ULL) | \\
+	(((unsigned long long)(x) >> 8)  & 0xff000000ULL) | \\
+	(((unsigned long long)(x) >> 24) & 0xff0000ULL) | \\
+	(((unsigned long long)(x) >> 40) & 0xff00ULL) | \\
+	( (unsigned long long)(x) >> 56))
+#endif
+
 
 /* This doesn't belong here, but neither do 'self flag: ...'s belong in the
    image. We use a macro, not an inline function; we need no trace of flag.
