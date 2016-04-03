@@ -1,7 +1,7 @@
 Class {
 	#name : #NewCoObjectMemorySimulatorMSB,
 	#superclass : #NewCoObjectMemorySimulator,
-	#category : 'VMMaker-JITSimulation'
+	#category : #'VMMaker-JITSimulation'
 }
 
 { #category : #'memory access' }

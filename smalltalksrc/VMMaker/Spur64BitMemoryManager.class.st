@@ -1,7 +1,7 @@
 Class {
 	#name : #Spur64BitMemoryManager,
 	#superclass : #SpurMemoryManager,
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'class initialization' }
@@ -161,27 +161,11 @@ Spur64BitMemoryManager >> areIntegers: oop1 and: oop2 [
 ]
 
 { #category : #snapshot }
-Spur64BitMemoryManager >> byteSwapped32Bits: w [
-	"Answer the given 32-bit integer with its bytes in the reverse order."
-	^  ((w bitShift: Byte3ShiftNegated) bitAnd: Byte0Mask)
-	 + ((w bitShift: Byte1ShiftNegated) bitAnd: Byte1Mask)
-	 + ((w bitShift: Byte1Shift             ) bitAnd: Byte2Mask)
-	 + ((w bitShift: Byte3Shift             ) bitAnd: Byte3Mask)
-]
-
-{ #category : #snapshot }
 Spur64BitMemoryManager >> byteSwapped: w [
 	"Answer the given integer with its bytes in the reverse order."
 	<api>
 	<returnTypeC: #sqInt>
-	^  ((w bitShift: Byte7ShiftNegated) bitAnd: Byte0Mask)
-	 + ((w bitShift: Byte5ShiftNegated) bitAnd: Byte1Mask)
-	 + ((w bitShift: Byte3ShiftNegated) bitAnd: Byte2Mask)
-	 + ((w bitShift: Byte1ShiftNegated) bitAnd: Byte3Mask)
-	 + ((w bitShift: Byte1Shift             ) bitAnd: Byte4Mask)
-	 + ((w bitShift: Byte3Shift             ) bitAnd: Byte5Mask)
-	 + ((w bitShift: Byte5Shift             ) bitAnd: Byte6Mask)
-	 + ((w bitShift: Byte7Shift             ) bitAnd: Byte7Mask)
+	^w byteSwap64
 ]
 
 { #category : #'object enumeration' }

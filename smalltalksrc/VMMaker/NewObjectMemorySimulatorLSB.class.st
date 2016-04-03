@@ -1,7 +1,7 @@
 Class {
 	#name : #NewObjectMemorySimulatorLSB,
 	#superclass : #NewObjectMemorySimulator,
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'memory access' }

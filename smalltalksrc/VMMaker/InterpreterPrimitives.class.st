@@ -73,7 +73,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMStackFrameOffsets'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #'class initialization' }
@@ -354,17 +354,9 @@ InterpreterPrimitives >> magnitude64BitIntegerFor: magnitude neg: isNegative [
 	newLargeInteger := objectMemory instantiateClass: largeClass indexableSize:  sz.
 	self cppIf: VMBIGENDIAN
 		ifTrue:
-			[sz > 4 ifTrue:
-				[objectMemory
-					storeByte: 7 ofObject: newLargeInteger withValue: (magnitude >> 56 bitAnd: 16rFF);
-					storeByte: 6 ofObject: newLargeInteger withValue: (magnitude >> 48 bitAnd: 16rFF);
-					storeByte: 5 ofObject: newLargeInteger withValue: (magnitude >> 40 bitAnd: 16rFF);
-					storeByte: 4 ofObject: newLargeInteger withValue: (magnitude >> 32 bitAnd: 16rFF)].
-			objectMemory
-				storeByte: 3 ofObject: newLargeInteger withValue: (magnitude >> 24 bitAnd: 16rFF);
-				storeByte: 2 ofObject: newLargeInteger withValue: (magnitude >> 16 bitAnd: 16rFF);
-				storeByte: 1 ofObject: newLargeInteger withValue: (magnitude >>   8 bitAnd: 16rFF);
-				storeByte: 0 ofObject: newLargeInteger withValue: (magnitude ">> 0" bitAnd: 16rFF)]
+			[sz > 4
+				ifTrue: [objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: magnitude byteSwap64]
+				ifFalse: [objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (magnitude byteSwap32)]]
 		ifFalse:
 			[sz > 4
 				ifTrue: [objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: magnitude]
@@ -408,9 +400,9 @@ InterpreterPrimitives >> magnitude64BitValueOf: oop [
 
 	self cppIf: VMBIGENDIAN
 		ifTrue:
-			[value := objectMemory fetchByte: sz - 1 ofObject: oop.
-			sz - 2 to: 0 by: -1 do:
-				[:i | value := value << 8 + (objectMemory fetchByte: i ofObject: oop)]]
+			[sz > 4
+				ifTrue: [value := (self cCoerceSimple: (objectMemory fetchLong64: 0 ofObject: oop) to: #usqLong) byteSwap64]
+				ifFalse: [value := (self cCoerceSimple: (objectMemory fetchLong32: 0 ofObject: oop) to: #'unsigned int') byteSwap32].]
 		ifFalse:
 			[sz > 4
 				ifTrue: [value := self cCoerceSimple: (objectMemory fetchLong64: 0 ofObject: oop) to: #usqLong]
@@ -452,10 +444,7 @@ InterpreterPrimitives >> positive32BitValueOf: oop [
 				 ^0].
 			^self cppIf: VMBIGENDIAN
 				ifTrue:
-					[   (objectMemory fetchByte: 0 ofObject: oop)
-					+ ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
-					+ ((objectMemory fetchByte: 2 ofObject: oop) << 16)
-					+ ((objectMemory fetchByte: 3 ofObject: oop) << 24)]
+					[(objectMemory fetchLong32: 0 ofObject: oop) byteSwap32]
 				ifFalse:
 					[objectMemory fetchLong32: 0 ofObject: oop]]
 ]
@@ -491,9 +480,9 @@ InterpreterPrimitives >> positive64BitValueOf: oop [
 
 	self cppIf: VMBIGENDIAN
 		ifTrue:
-			[value := 0.
-			0 to: sz - 1 do: [:i |
-				value := value + ((self cCoerce: (objectMemory fetchByte: i ofObject: oop) to: #usqLong) <<  (i*8))]]
+			[sz > 4
+				ifTrue: [value := (self cCoerceSimple: (objectMemory fetchLong64: 0 ofObject: oop) to: #usqLong) byteSwap64]
+				ifFalse: [value := (self cCoerceSimple: (objectMemory fetchLong32: 0 ofObject: oop) to: #'unsigned int') byteSwap32].]
 		ifFalse:
 			[sz > 4
 				ifTrue: [value := self cCoerceSimple: (objectMemory fetchLong64: 0 ofObject: oop) to: #usqLong]
@@ -533,23 +522,13 @@ InterpreterPrimitives >> positiveMachineIntegerValueOf: oop [
 	and: [bs > 4]) ifTrue:
 		[^self cppIf: VMBIGENDIAN
 			ifTrue:
-				[    (objectMemory fetchByte: 0 ofObject: oop)
-				 + ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
-				 + ((objectMemory fetchByte: 2 ofObject: oop) << 16)
-				 + ((objectMemory fetchByte: 3 ofObject: oop) << 24)
-				 + ((objectMemory fetchByte: 4 ofObject: oop) << 32)
-				 + ((objectMemory fetchByte: 5 ofObject: oop) << 40)
-				 + ((objectMemory fetchByte: 6 ofObject: oop) << 48)
-				 + ((objectMemory fetchByte: 7 ofObject: oop) << 56)]
+				[(objectMemory fetchLong64: 0 ofObject: oop) byteSwap64]
 			ifFalse:
 				[objectMemory fetchLong64: 0 ofObject: oop]]
 		ifFalse:
 			[^self cppIf: VMBIGENDIAN
 				ifTrue:
-					[    (objectMemory fetchByte: 0 ofObject: oop)
-					 + ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
-					 + ((objectMemory fetchByte: 2 ofObject: oop) << 16)
-					 + ((objectMemory fetchByte: 3 ofObject: oop) << 24)]
+					[(self cCoerceSimple: (objectMemory fetchLong32: 0 ofObject: oop) to: #'unsigned int') byteSwap32]
 				ifFalse:
 					[self cCoerceSimple: (objectMemory fetchLong32: 0 ofObject: oop) to: #'unsigned int']]
 ]
@@ -4766,10 +4745,7 @@ InterpreterPrimitives >> signed32BitValueOf: oop [
 
 	magnitude := self cppIf: VMBIGENDIAN
 				ifTrue:
-					[ (objectMemory fetchByte: 0 ofObject: oop) +
-					 ((objectMemory fetchByte: 1 ofObject: oop) <<  8) +
-					 ((objectMemory fetchByte: 2 ofObject: oop) << 16) +
-					 ((objectMemory fetchByte: 3 ofObject: oop) << 24)]
+					[(objectMemory fetchLong32: 0 ofObject: oop) asUnsignedInteger byteSwap32]
 				ifFalse:
 					[(objectMemory fetchLong32: 0 ofObject: oop) asUnsignedInteger].
 
@@ -4821,9 +4797,9 @@ InterpreterPrimitives >> signed64BitValueOf: oop [
 
 	self cppIf: VMBIGENDIAN
 		ifTrue:
-			[magnitude := objectMemory fetchByte: sz - 1 ofObject: oop.
-			 sz - 2 to: 0 by: -1 do: [:i |
-				magnitude := magnitude << 8 + (objectMemory fetchByte: i ofObject: oop)]]
+			[magnitude := sz > 4
+						ifTrue: [(objectMemory fetchLong64: 0 ofObject: oop) byteSwap64]
+						ifFalse: [(self cCoerceSimple: (objectMemory fetchLong32: 0 ofObject: oop) to: #'unsigned int') byteSwap32]]
 		ifFalse:
 			[magnitude := sz > 4
 						ifTrue: [objectMemory fetchLong64: 0 ofObject: oop]
@@ -4874,23 +4850,13 @@ InterpreterPrimitives >> signedMachineIntegerValueOf: oop [
 	and: [bs > 4]) ifTrue:
 		[magnitude := self cppIf: VMBIGENDIAN
 					ifTrue:
-						[    (objectMemory fetchByte: 0 ofObject: oop)
-						 + ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
-						 + ((objectMemory fetchByte: 2 ofObject: oop) << 16)
-						 + ((objectMemory fetchByte: 3 ofObject: oop) << 24)
-						 + ((objectMemory fetchByte: 4 ofObject: oop) << 32)
-						 + ((objectMemory fetchByte: 5 ofObject: oop) << 40)
-						 + ((objectMemory fetchByte: 6 ofObject: oop) << 48)
-						 + ((objectMemory fetchByte: 7 ofObject: oop) << 56)]
+						[(objectMemory fetchLong64: 0 ofObject: oop) byteSwap64]
 					ifFalse:
 						[objectMemory fetchLong64: 0 ofObject: oop]]
 		ifFalse:
 			[magnitude := self cppIf: VMBIGENDIAN
 						ifTrue:
-							[    (objectMemory fetchByte: 0 ofObject: oop)
-							 + ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
-							 + ((objectMemory fetchByte: 2 ofObject: oop) << 16)
-							 + ((objectMemory fetchByte: 3 ofObject: oop) << 24)]
+							[(objectMemory fetchLong32: 0 ofObject: oop) asUnsignedInteger byteSwap32]
 						ifFalse:
 							[(objectMemory fetchLong32: 0 ofObject: oop) asUnsignedInteger]].
 

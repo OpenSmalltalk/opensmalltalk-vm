@@ -13,7 +13,7 @@ Class {
 		'numModules',
 		'primErr'
 	],
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }

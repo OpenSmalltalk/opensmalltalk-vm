@@ -1,7 +1,7 @@
 Class {
 	#name : #Spur32BitMemoryManager,
 	#superclass : #SpurMemoryManager,
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'class initialization' }
@@ -152,19 +152,11 @@ Spur32BitMemoryManager >> areIntegers: oop1 and: oop2 [
 ]
 
 { #category : #snapshot }
-Spur32BitMemoryManager >> byteSwapped32Bits: w [
-	^self byteSwapped: w
-]
-
-{ #category : #snapshot }
 Spur32BitMemoryManager >> byteSwapped: w [
 	"Answer the given integer with its bytes in the reverse order."
 	<api>
 	<returnTypeC: #sqInt>
-	^  ((w bitShift: Byte3ShiftNegated) bitAnd: Byte0Mask)
-	 + ((w bitShift: Byte1ShiftNegated) bitAnd: Byte1Mask)
-	 + ((w bitShift: Byte1Shift             ) bitAnd: Byte2Mask)
-	 + ((w bitShift: Byte3Shift             ) bitAnd: Byte3Mask)
+	^w byteSwap32
 ]
 
 { #category : #'object enumeration' }
