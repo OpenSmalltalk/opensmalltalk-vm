@@ -45,7 +45,7 @@ Class {
 	#pools : [
 		'VMBasicConstants'
 	],
-	#category : 'VMMaker-Translation to C'
+	#category : #'VMMaker-Translation to C'
 }
 
 { #category : #'class initialization' }
@@ -1767,6 +1767,26 @@ CCodeGenerator >> generateBitXor: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateByteSwap32: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream nextPutAll: #'SQ_SWAP_4_BYTES'.
+	aStream nextPut: $(.
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPut: $)
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateByteSwap64: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream nextPutAll: #'SQ_SWAP_8_BYTES'.
+	aStream nextPut: $(.
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPut: $)
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateBytesPerOop: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream.
 	 Would prefer to use OopSize than BytesPerOop (shorter)."
@@ -3263,6 +3283,9 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#truncateTo:		#generateTruncateTo:on:indent:
 	#rounded			#generateRounded:on:indent:
 
+	#byteSwap32		#generateByteSwap32:on:indent:
+	#byteSwap64		#generateByteSwap64:on:indent:
+	
 	#<				#generateLessThan:on:indent:
 	#<=			#generateLessThanOrEqual:on:indent:
 	#=				#generateEqual:on:indent:

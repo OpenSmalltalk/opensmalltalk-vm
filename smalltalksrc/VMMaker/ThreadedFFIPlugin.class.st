@@ -23,7 +23,7 @@ Class {
 	#pools : [
 		'FFIConstants'
 	],
-	#category : 'VMMaker-Plugins-FFI'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }
@@ -785,7 +785,7 @@ ThreadedFFIPlugin >> ffiCreateIntegralResultOop: retVal ofAtomicType: atomicType
 				ifTrue:[interpreterProxy signed64BitIntegerFor: retVal] "signed return"
 				ifFalse:[interpreterProxy positive64BitIntegerFor: retVal]]
 		ifFalse:
-			[interpreterProxy characterObjectOf: (retVal bitAnd: Byte0Mask)]
+			[interpreterProxy characterObjectOf: (retVal bitAnd: 16rFF)]
 ]
 
 { #category : #'callout support' }

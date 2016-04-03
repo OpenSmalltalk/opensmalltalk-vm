@@ -150,7 +150,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMStackFrameOffsets'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #translation }
@@ -7012,16 +7012,16 @@ StackInterpreter >> getShortFromFile: aFile swap: swapFlag [
 
 	<var: #aFile type: #sqImageFile>
 	| w |
-	<var: #w type: #short>
+	<var: #w type: #'unsigned short'>
 	w := 0.
 	self cCode: [self
 					sq: (self addressOf: w)
-					Image: (self sizeof: #short)
+					Image: (self sizeof: #'unsigned short')
 					File: 1
 					Read: aFile]
 		inSmalltalk: [w := objectMemory nextShortFrom: aFile].
 	^swapFlag
-		ifTrue: [objectMemory byteSwapped: w]
+		ifTrue: [((w >> 8) bitAnd: 16rFF) bitOr: ((w bitAnd: 16rFF) << 8)]
 		ifFalse: [w]
 ]
 
@@ -7055,7 +7055,7 @@ StackInterpreter >> getWord32FromFile: aFile swap: swapFlag [
 					Read: aFile]
 		inSmalltalk: [w := objectMemory nextWord32From: aFile].
 	^swapFlag
-		ifTrue: [objectMemory byteSwapped: w]
+		ifTrue: [w byteSwap32]
 		ifFalse: [w]
 ]
 
@@ -9774,11 +9774,7 @@ StackInterpreter >> maybeInlinePositive32BitIntegerFor: integerValue [
 							numSlots: 1.
 	self cppIf: VMBIGENDIAN
 		ifTrue:
-			[objectMemory
-				storeByte: 3 ofObject: newLargeInteger withValue: (integerValue >> 24 bitAnd: 16rFF);
-				storeByte: 2 ofObject: newLargeInteger withValue: (integerValue >> 16 bitAnd: 16rFF);
-				storeByte: 1 ofObject: newLargeInteger withValue: (integerValue >>   8 bitAnd: 16rFF);
-				storeByte: 0 ofObject: newLargeInteger withValue: (integerValue ">> 0" bitAnd: 16rFF)]
+			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: integerValue byteSwap32]
 		ifFalse:
 			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: integerValue].
 	^newLargeInteger
@@ -10100,11 +10096,7 @@ StackInterpreter >> noInlineSigned32BitIntegerFor: integerValue [
 							numSlots: 1.
 	self cppIf: VMBIGENDIAN
 		ifTrue:
-			[objectMemory
-				storeByte: 3 ofObject: newLargeInteger withValue: ((value >> 24) bitAnd: 16rFF);
-				storeByte: 2 ofObject: newLargeInteger withValue: ((value >> 16) bitAnd: 16rFF);
-				storeByte: 1 ofObject: newLargeInteger withValue: ((value >> 8) bitAnd: 16rFF);
-				storeByte: 0 ofObject: newLargeInteger withValue: (value bitAnd: 16rFF)]
+			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: value byteSwap32]
 		ifFalse:
 			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: value].
 	^newLargeInteger
@@ -10432,15 +10424,7 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 							numSlots: 8 / objectMemory bytesPerOop.
 	self cppIf: VMBIGENDIAN
 		ifTrue:
-			[objectMemory
-				storeByte: 7 ofObject: newLargeInteger withValue: (integerValue >> 56 bitAnd: 16rFF);
-				storeByte: 6 ofObject: newLargeInteger withValue: (integerValue >> 48 bitAnd: 16rFF);
-				storeByte: 5 ofObject: newLargeInteger withValue: (integerValue >> 40 bitAnd: 16rFF);
-				storeByte: 4 ofObject: newLargeInteger withValue: (integerValue >> 32 bitAnd: 16rFF);
-				storeByte: 3 ofObject: newLargeInteger withValue: (integerValue >> 24 bitAnd: 16rFF);
-				storeByte: 2 ofObject: newLargeInteger withValue: (integerValue >> 16 bitAnd: 16rFF);
-				storeByte: 1 ofObject: newLargeInteger withValue: (integerValue >>   8 bitAnd: 16rFF);
-				storeByte: 0 ofObject: newLargeInteger withValue: (integerValue ">> 0" bitAnd: 16rFF)]
+			[objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: integerValue byteSwap64]
 		ifFalse:
 			[objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: integerValue].
 	^newLargeInteger
@@ -13597,17 +13581,9 @@ StackInterpreter >> signed64BitIntegerFor: integerValue [
 							numSlots: sz + 3 // objectMemory bytesPerOop.
 	self cppIf: VMBIGENDIAN
 		ifTrue:
-			[sz > 4 ifTrue:
-				[objectMemory
-					storeByte: 7 ofObject: newLargeInteger withValue: (magnitude >> 56 bitAnd: 16rFF);
-					storeByte: 6 ofObject: newLargeInteger withValue: (magnitude >> 48 bitAnd: 16rFF);
-					storeByte: 5 ofObject: newLargeInteger withValue: (magnitude >> 40 bitAnd: 16rFF);
-					storeByte: 4 ofObject: newLargeInteger withValue: (magnitude >> 32 bitAnd: 16rFF)].
-			objectMemory
-				storeByte: 3 ofObject: newLargeInteger withValue: (magnitude >> 24 bitAnd: 16rFF);
-				storeByte: 2 ofObject: newLargeInteger withValue: (magnitude >> 16 bitAnd: 16rFF);
-				storeByte: 1 ofObject: newLargeInteger withValue: (magnitude >>   8 bitAnd: 16rFF);
-				storeByte: 0 ofObject: newLargeInteger withValue: (magnitude ">> 0" bitAnd: 16rFF)]
+			[sz > 4
+				ifTrue: [objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: magnitude byteSwap64]
+				ifFalse: [objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: magnitude byteSwap32]]
 		ifFalse:
 			[sz > 4
 				ifTrue: [objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: magnitude]
@@ -14859,8 +14835,8 @@ StackInterpreter >> wordSwapped: w [
 	"Return the given 64-bit integer with its halves in the reverse order."
 
 	objectMemory wordSize = 8 ifFalse: [self error: 'This cannot happen.'].
-	^   ((w bitShift: Byte4ShiftNegated) bitAnd: Bytes3to0Mask)
-	  + ((w bitShift: Byte4Shift         ) bitAnd: Bytes7to4Mask)
+	^   ((w >> 32) bitAnd: 16r00000000FFFFFFFF) bitOr:
+	     ((w << 32) bitAnd: 16rFFFFFFFF00000000)
 
 ]
 

@@ -12,29 +12,6 @@ Class {
 	#superclass : #SharedPool,
 	#classVars : [
 		'BaseHeaderSize',
-		'Byte0Mask',
-		'Byte0Shift',
-		'Byte1Mask',
-		'Byte1Shift',
-		'Byte1ShiftNegated',
-		'Byte2Mask',
-		'Byte2Shift',
-		'Byte3Mask',
-		'Byte3Shift',
-		'Byte3ShiftNegated',
-		'Byte4Mask',
-		'Byte4Shift',
-		'Byte4ShiftNegated',
-		'Byte5Mask',
-		'Byte5Shift',
-		'Byte5ShiftNegated',
-		'Byte6Mask',
-		'Byte6Shift',
-		'Byte7Mask',
-		'Byte7Shift',
-		'Byte7ShiftNegated',
-		'Bytes3to0Mask',
-		'Bytes7to4Mask',
 		'BytesPerOop',
 		'BytesPerWord',
 		'COGMTVM',
@@ -75,7 +52,7 @@ Class {
 		'SistaVM',
 		'VMBIGENDIAN'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #'C translation' }

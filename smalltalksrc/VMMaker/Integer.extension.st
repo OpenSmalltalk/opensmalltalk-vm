@@ -61,6 +61,30 @@ Integer >> bitInvert64 [
 	^self bitXor: 16rFFFFFFFFFFFFFFFF
 ]
 
+{ #category : #'*VMMaker-bit manipulation' }
+Integer >> byteSwap32 [
+	"swap the bytes of a 32 bit unsigned integer"
+	
+	^((self << 24) bitAnd: 16rFF000000) bitOr:
+	  (((self << 8) bitAnd: 16rFF0000) bitOr:
+	  (((self >> 8) bitAnd: 16rFF00) bitOr:
+	  (((self >> 24) bitAnd: 16rFF))))
+]
+
+{ #category : #'*VMMaker-bit manipulation' }
+Integer >> byteSwap64 [
+	"swap the bytes of a 64 bit unsigned integer"
+	
+	^(((self << 56) bitAnd: 16rFF00000000000000) bitOr:
+	  (((self << 40) bitAnd: 16rFF000000000000) bitOr:
+	  (((self << 24) bitAnd: 16rFF0000000000) bitOr:
+	  (((self << 8) bitAnd: 16rFF00000000) bitOr:
+	  (((self >> 8) bitAnd: 16rFF000000) bitOr:
+	  (((self >> 24) bitAnd: 16rFF0000) bitOr:
+	  (((self >> 40) bitAnd: 16rFF00) bitOr:
+	  ((self >> 56) bitAnd: 16rFF))))))))
+]
+
 { #category : #'*VMMaker-interpreter simulator' }
 Integer >> coerceTo: cTypeString sim: interpreter [
 
