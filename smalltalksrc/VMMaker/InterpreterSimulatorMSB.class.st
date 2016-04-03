@@ -29,6 +29,18 @@ InterpreterSimulatorMSB >> byteAt: byteAddress put: byte [
 	^byte
 ]
 
+{ #category : #'memory access' }
+InterpreterSimulatorMSB >> byteSwapped32IfBigEndian: w [
+	"Accelerate, we now we are big endian"
+	^w byteSwap32
+]
+
+{ #category : #'memory access' }
+InterpreterSimulatorMSB >> byteSwapped64IfBigEndian: w [
+	"Accelerate, we now we are big endian"
+	^w byteSwap64
+]
+
 { #category : #'debug support' }
 InterpreterSimulatorMSB >> charsOfLong: long [
 	^ (self wordSize to: 1 by: -1) collect:
