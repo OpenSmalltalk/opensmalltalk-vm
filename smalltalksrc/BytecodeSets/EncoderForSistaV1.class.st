@@ -72,13 +72,13 @@ Instance Variables (inherited)
 										ifFalse: [Send To Superclass of Stacked Class Literal Selector #iiiii (+ Extend A * 32) with jjj (+ (Extend B bitAnd: 63) * 8) Arguments]
 *	236		11101100	iiiiiiii		UNASSIGNED
 *	237		11101101	iiiiiiii		Jump #iiiiiiii (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)
-*	238		11101110	iiiiiiii		Pop and Jump 0n True #iiiiiiii (+ Extend B * 256, where Extend B >= 0)
-*	239		11101111	iiiiiiii		Pop and Jump 0n False #iiiiiiii (+ Extend B * 256, where Extend B >= 0)
-*	240		11110000	iiiiiiii		Pop and Store Receiver Variable #iiiiiii (+ Extend A * 256)
-*	241		11110001	iiiiiiii		Pop and Store Literal Variable #iiiiiiii (+ Extend A * 256)
+**	238		11101110	iiiiiiii		Pop and Jump 0n True #iiiiiiii (+ Extend B * 256, where Extend B >= 0) (4)
+**	239		11101111	iiiiiiii		Pop and Jump 0n False #iiiiiiii (+ Extend B * 256, where Extend B >= 0) (4)
+**	240	(3)	11110000	iiiiiiii		Pop and Store Receiver Variable #iiiiiii (+ Extend A * 256) 
+**	241	(3)	11110001	iiiiiiii		Pop and Store Literal Variable #iiiiiiii (+ Extend A * 256) 
 	242		11110010	iiiiiiii		Pop and Store Temporary Variable #iiiiiiii
-*	243		11110011	iiiiiiii		Store Receiver Variable #iiiiiii (+ Extend A * 256)
-*	244		11110100	iiiiiiii		Store Literal Variable #iiiiiiii (+ Extend A * 256)
+**	243	(3)	11110011	iiiiiiii		Store Receiver Variable #iiiiiii (+ Extend A * 256) 
+**	244	(3)	11110100	iiiiiiii		Store Literal Variable #iiiiiiii (+ Extend A * 256) 
 	245		11110110	iiiiiiii		Store Temporary Variable #iiiiiiii
 	246-247	1111011 i	xxxxxxxx	UNASSIGNED
 
@@ -86,15 +86,19 @@ Instance Variables (inherited)
 	248	(2)	11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
 	249		11111001 	xxxxxxxx	syyyyyyy	Reserved for Push Float
 **	250		11111010 	eeiiikkk		jjjjjjjj		Push Closure Num Copied iii (+ExtA//16*8) Num Args kkk (+ ExtA\\16*8) BlockSize jjjjjjjj (+ExtB*256). ee = num extensions
-	251		11111011 	kkkkkkkk	jjjjjjjj		Push Temp At kkkkkkkk In Temp Vector At: jjjjjjjj
-	252		11111100 	kkkkkkkk	jjjjjjjj		Store Temp At kkkkkkkk In Temp Vector At: jjjjjjjj
-	253		11111101 	kkkkkkkk	jjjjjjjj		Pop and Store Temp At kkkkkkkk In Temp Vector At: jjjjjjjj
+	251		11111011 	kkkkkkkk	sjjjjjjj		Push Temp At kkkkkkkk In Temp Vector At: jjjjjjj, s = 1 implies remote inst var access instead of remote temp vector access 
+*	252	(3)	11111100 	kkkkkkkk	sjjjjjjj		Store Temp At kkkkkkkk In Temp Vector At: jjjjjjj s = 1 implies remote inst var access instead of remote temp vector access 
+*	253	(3)	11111101 	kkkkkkkk	sjjjjjjj		Pop and Store Temp At kkkkkkkk In Temp Vector At: jjjjjjj s = 1 implies remote inst var access instead of remote temp vector access
 **	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)
-	255		11111111	xxxxxxxx	yyyyyyyy	UNASSIGNED
+*	255		11111111	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 needsOuterContext: i = 1 
 
 (1) Bytecode 235 is a super send bytecode that starts the lookup in the superclass of some class.  It has two forms, ""norma;"" and ""directed"". In the normal form, the class is the value of the method's methodClassAssociation which must be the last literal.  In the directed form the class is the class on top of stack.
 
 (2) The Call Primitive Bytecode specifies either a primitive in the primitive table (m=0) or an inlined primitive (m=1). Non-inlined primtiives from the primitive table have index (jjjjjjj * 256) + iiiiiiii and return from the method if they succeed.  This bytecode is only valid as the first bytecode of a method.  Inline primitives have index (jjjjjjj * 256) + iiiiiiii, cannot fail, and do not return when they succeed, yielding a result (typically on top of stack after popping their arguments, but possibly in a byte data stack, for example for unboxed floating-point primitives).
+
+(3) ExtB = 1 implies no store check is needed, other bits in the extension are unused.
+
+(4) ExtA = 1 implies no mustBeBoolean trampoline is needed, other bits in the extension are unused
 
 We sort the inline primitive operations by arity.  Nullary primitives occupy the 0-999 range.  Unary primitives occupy the 1-1999 range, etc.
 
@@ -143,7 +147,7 @@ We define the following inlined primitives:
 Class {
 	#name : #EncoderForSistaV1,
 	#superclass : #BytecodeEncoder,
-	#category : #'BytecodeSets-SistaV1'
+	#category : 'BytecodeSets-SistaV1'
 }
 
 { #category : #'bytecode decoding' }
@@ -692,7 +696,7 @@ EncoderForSistaV1 class >> unusedBytecode [
 	^223
 ]
 
-{ #category : #'bytecode generation' }
+{ #category : #'extended bytecode generation' }
 EncoderForSistaV1 >> genBranchIfNotInstanceOf: literalIndex distance: distance [
 	"254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
 							
@@ -739,6 +743,12 @@ EncoderForSistaV1 >> genBranchPopFalseLong: distance [
 		nextPut: distanceMod256
 ]
 
+{ #category : #'extended bytecode generation' }
+EncoderForSistaV1 >> genBranchPopFalseNoMustBeBoolean: distance [
+	self genNoMustBeBooleanFlag.
+	self genBranchPopFalseLong: distance
+]
+
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genBranchPopTrue: distance [
 	(distance > 0 and: [distance < 9]) ifTrue:
@@ -768,7 +778,13 @@ EncoderForSistaV1 >> genBranchPopTrueLong: distance [
 		nextPut: distanceMod256
 ]
 
-{ #category : #'bytecode generation' }
+{ #category : #'extended bytecode generation' }
+EncoderForSistaV1 >> genBranchPopTrueNoMustBeBoolean: distance [
+	self genNoMustBeBooleanFlag.
+	self genBranchPopTrueLong: distance
+]
+
+{ #category : #'extended bytecode generation' }
 EncoderForSistaV1 >> genCallInlinePrimitive: primitiveIndex [
 	"248		11111000	i i i i i i i i	1jjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256)"
 	"N.B. We could have made CallPrimitive a 2-byte code taking an extension, but that would
@@ -824,7 +840,17 @@ EncoderForSistaV1 >> genJumpLong: distance [
 		nextPut: (distance bitAnd: 255)
 ]
 
-{ #category : #'bytecode generation' }
+{ #category : #'extended bytecode generation' }
+EncoderForSistaV1 >> genNoMustBeBooleanFlag [
+	self genUnsignedSingleExtendA: 1
+]
+
+{ #category : #'extended bytecode generation' }
+EncoderForSistaV1 >> genNoStoreCheckFlag [
+	self genUnsignedSingleExtendB: 1
+]
+
+{ #category : #'extended bytecode generation' }
 EncoderForSistaV1 >> genNop [
 	"95			01011111			Nop"
 	stream nextPut: 95
@@ -896,6 +922,23 @@ EncoderForSistaV1 >> genPushConsArray: size [
 		nextPut: size + 128
 ]
 
+{ #category : #'extended bytecode generation' }
+EncoderForSistaV1 >> genPushFullClosure: compiledBlockLiteralIndex numCopied: numCopied receiverOnStack: receiverOnStack outerContextNeeded: outerContextNeeded [
+	"*	255		11111111	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 needsOuterContext: i = 1"
+	| extendedIndex |
+	(numCopied < 1 or: [numCopied > 64]) ifTrue:
+		[self outOfRangeError: 'num copied' index: numCopied range: 1 to: 64].
+	(compiledBlockLiteralIndex < 0 or: [compiledBlockLiteralIndex > 32768]) ifTrue:
+		[^self outOfRangeError: 'index' index: compiledBlockLiteralIndex range: 0 to: 32768].
+	(extendedIndex := compiledBlockLiteralIndex) > 255 ifTrue:
+		[self genUnsignedSingleExtendA: extendedIndex // 256.
+		 extendedIndex := extendedIndex \\ 256].
+	stream
+		nextPut: 255;
+		nextPut: extendedIndex;
+		nextPut: receiverOnStack asBit << 7 + (outerContextNeeded asBit << 6) + numCopied
+]
+
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genPushInstVar: instVarIndex [
 	(instVarIndex between: 0 and: 15) ifTrue:
@@ -946,8 +989,8 @@ EncoderForSistaV1 >> genPushInteger: anInteger [
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genPushLiteral: literalIndex [
 	| extendedIndex |
-	(literalIndex < 0 or: [literalIndex > 65535]) ifTrue:
-		[^self outOfRangeError: 'index' index: literalIndex range: 0 to: 65536].
+	(literalIndex < 0 or: [literalIndex > 32768]) ifTrue:
+		[^self outOfRangeError: 'index' index: literalIndex range: 0 to: 32768].
 	literalIndex < 32 ifTrue: 
 		["32-63 	001iiiii 	Push Literal #iiiii"
 		 stream nextPut: 32 + literalIndex.
@@ -964,8 +1007,8 @@ EncoderForSistaV1 >> genPushLiteral: literalIndex [
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genPushLiteralVar: literalIndex [
 	| extendedIndex |
-	(literalIndex < 0 or: [literalIndex > 65535]) ifTrue:
-		[^self outOfRangeError: 'index' index: literalIndex range: 0 to: 65535].
+	(literalIndex < 0 or: [literalIndex > 32768]) ifTrue:
+		[^self outOfRangeError: 'index' index: literalIndex range: 0 to: 32768].
 	literalIndex < 16 ifTrue: 
 		["16-31		0001 i i i i		Push Literal Variable #iiii"
 		 stream nextPut: 16 + literalIndex.
@@ -1005,13 +1048,29 @@ EncoderForSistaV1 >> genPushReceiver [
 	stream nextPut: 76
 ]
 
+{ #category : #'extended bytecode generation' }
+EncoderForSistaV1 >> genPushRemoteInstanceVariable: instanceVariableIndex inObjectAt: tempIndex [
+	"251		11111011 	kkkkkkkk	sjjjjjjj		Push Temp At kkkkkkkk In Temp Vector At: jjjjjjj, s = 1 implies remote inst var access instead of remote temp vector access"
+
+	(instanceVariableIndex < 0 or: [instanceVariableIndex > 65535]) ifTrue:
+		[^self outOfRangeError: 'instanceVariableIndex' index: instanceVariableIndex range: 0 to: 65535].
+	(tempIndex < 0 or: [tempIndex >= 128]) ifTrue:
+		[^self outOfRangeError: 'tempVectorIndex' index: tempIndex range: 0 to: 127].
+	instanceVariableIndex > 255 ifTrue:
+		[self genUnsignedSingleExtendA: instanceVariableIndex // 256].
+	stream
+		nextPut: 251;
+		nextPut: instanceVariableIndex \\ 256;
+		nextPut: 1 << 7 + tempIndex
+]
+
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genPushRemoteTemp: tempIndex inVectorAt: tempVectorIndex [
-	"251		11111011 kkkkkkkk	jjjjjjjj		Push Temp At kkkkkkkk In Temp Vector At: jjjjjjjj"
+	"251		11111011 	kkkkkkkk	sjjjjjjj		Push Temp At kkkkkkkk In Temp Vector At: jjjjjjj, s = 1 implies remote inst var access instead of remote temp vector access"
 	(tempIndex < 0 or: [tempIndex >= 256]) ifTrue:
 		[^self outOfRangeError: 'remoteTempIndex' index: tempIndex range: 0 to: 255].
-	(tempVectorIndex < 0 or: [tempVectorIndex >= 256]) ifTrue:
-		[^self outOfRangeError: 'tempVectorIndex' index: tempVectorIndex range: 0 to: 255].
+	(tempVectorIndex < 0 or: [tempVectorIndex >= 128]) ifTrue:
+		[^self outOfRangeError: 'tempVectorIndex' index: tempVectorIndex range: 0 to: 127].
 	stream
 		nextPut: 251;
 		nextPut: tempIndex;
@@ -1187,8 +1246,8 @@ EncoderForSistaV1 >> genStoreInstVarLong: instVarIndex [
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genStoreLiteralVar: literalIndex [
 	"244		11110100	iiiiiiii		Store Literal Variable #iiiiiiii (+ Extend A * 256)"
-	(literalIndex < 0 or: [literalIndex > 65535]) ifTrue:
-		[^self outOfRangeError: 'index' index: literalIndex range: 0 to: 65535].
+	(literalIndex < 0 or: [literalIndex > 32768]) ifTrue:
+		[^self outOfRangeError: 'index' index: literalIndex range: 0 to: 32768].
 	literalIndex > 255 ifTrue: 
 		[self genUnsignedSingleExtendA: literalIndex // 256].
 	stream
@@ -1220,8 +1279,8 @@ EncoderForSistaV1 >> genStorePopInstVarLong: instVarIndex [
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genStorePopLiteralVar: literalIndex [
 	"241		11110001	iiiiiiii		Pop and Store Literal Variable #iiiiiiii (+ Extend A * 256)"
-	(literalIndex < 0 or: [literalIndex > 65535]) ifTrue:
-		[^self outOfRangeError: 'index' index: literalIndex range: 0 to: 65535].
+	(literalIndex < 0 or: [literalIndex > 32768]) ifTrue:
+		[^self outOfRangeError: 'index' index: literalIndex range: 0 to: 32768].
 	literalIndex > 255 ifTrue: 
 		[self genUnsignedSingleExtendA: literalIndex // 256].
 	stream
@@ -1229,13 +1288,29 @@ EncoderForSistaV1 >> genStorePopLiteralVar: literalIndex [
 		nextPut: literalIndex \\ 256
 ]
 
+{ #category : #'extended bytecode generation' }
+EncoderForSistaV1 >> genStorePopRemoteInstanceVariable: instanceVariableIndex inObjectAt: tempIndex [
+	"*253	(3)	11111101 	kkkkkkkk	sjjjjjjj		Pop and Store Temp At kkkkkkkk In Temp Vector At: jjjjjjj s = 1 implies remote inst var access instead of remote temp vector access"
+
+	(instanceVariableIndex < 0 or: [instanceVariableIndex > 65535]) ifTrue:
+		[^self outOfRangeError: 'instanceVariableIndex' index: instanceVariableIndex range: 0 to: 65535].
+	(tempIndex < 0 or: [tempIndex >= 128]) ifTrue:
+		[^self outOfRangeError: 'tempVectorIndex' index: tempIndex range: 0 to: 127].
+	instanceVariableIndex > 255 ifTrue:
+		[self genUnsignedSingleExtendA: instanceVariableIndex // 256].
+	stream
+		nextPut: 253;
+		nextPut: instanceVariableIndex \\ 256;
+		nextPut: 1 << 7 + tempIndex
+]
+
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genStorePopRemoteTemp: tempIndex inVectorAt: tempVectorIndex [
-	"253		11111101 	kkkkkkkk	jjjjjjjj		Pop and Store Temp At kkkkkkkk In Temp Vector At: jjjjjjjj"
+	"*	253	(3)	11111101 	kkkkkkkk	sjjjjjjj		Pop and Store Temp At kkkkkkkk In Temp Vector At: jjjjjjj s = 1 implies remote inst var access instead of remote temp vector access"
 	(tempIndex < 0 or: [tempIndex >= 256]) ifTrue:
 		[^self outOfRangeError: 'remoteTempIndex' index: tempIndex range: 0 to: 255].
-	(tempVectorIndex < 0 or: [tempVectorIndex >= 256]) ifTrue:
-		[^self outOfRangeError: 'tempVectorIndex' index: tempVectorIndex range: 0 to: 255].
+	(tempVectorIndex < 0 or: [tempVectorIndex >= 128]) ifTrue:
+		[^self outOfRangeError: 'tempVectorIndex' index: tempVectorIndex range: 0 to: 127].
 	stream
 		nextPut: 253;
 		nextPut: tempIndex;
@@ -1256,13 +1331,29 @@ EncoderForSistaV1 >> genStorePopTemp: tempIndex [
 		nextPut: tempIndex
 ]
 
+{ #category : #'extended bytecode generation' }
+EncoderForSistaV1 >> genStoreRemoteInstanceVariable: instanceVariableIndex inObjectAt: tempIndex [
+	"*252	(3)	11111100 	kkkkkkkk	sjjjjjjj		Store Temp At kkkkkkkk In Temp Vector At: jjjjjjj s = 1 implies remote inst var access instead of remote temp vector access"
+
+	(instanceVariableIndex < 0 or: [instanceVariableIndex > 65535]) ifTrue:
+		[^self outOfRangeError: 'instanceVariableIndex' index: instanceVariableIndex range: 0 to: 65535].
+	(tempIndex < 0 or: [tempIndex >= 128]) ifTrue:
+		[^self outOfRangeError: 'tempVectorIndex' index: tempIndex range: 0 to: 127].
+	instanceVariableIndex > 255 ifTrue:
+		[self genUnsignedSingleExtendA: instanceVariableIndex // 256].
+	stream
+		nextPut: 252;
+		nextPut: instanceVariableIndex \\ 256;
+		nextPut: 1 << 7 + tempIndex
+]
+
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genStoreRemoteTemp: tempIndex inVectorAt: tempVectorIndex [
-	"252		11111100 	kkkkkkkk	jjjjjjjj		Store Temp At kkkkkkkk In Temp Vector At: jjjjjjjj"
+	"*252	(3)	11111100 	kkkkkkkk	sjjjjjjj		Store Temp At kkkkkkkk In Temp Vector At: jjjjjjj s = 1 implies remote inst var access instead of remote temp vector access"
 	(tempIndex < 0 or: [tempIndex >= 256]) ifTrue:
 		[^self outOfRangeError: 'remoteTempIndex' index: tempIndex range: 0 to: 255].
-	(tempVectorIndex < 0 or: [tempVectorIndex >= 256]) ifTrue:
-		[^self outOfRangeError: 'tempVectorIndex' index: tempVectorIndex range: 0 to: 255].
+	(tempVectorIndex < 0 or: [tempVectorIndex >= 128]) ifTrue:
+		[^self outOfRangeError: 'tempVectorIndex' index: tempVectorIndex range: 0 to: 127].
 	stream
 		nextPut: 252;
 		nextPut: tempIndex;
@@ -1279,7 +1370,7 @@ EncoderForSistaV1 >> genStoreTemp: tempIndex [
 		nextPut: tempIndex
 ]
 
-{ #category : #'bytecode generation' }
+{ #category : #'extended bytecode generation' }
 EncoderForSistaV1 >> genTrap [
 	"217		11011001			Unconditionnal trap"
 	stream nextPut: 217

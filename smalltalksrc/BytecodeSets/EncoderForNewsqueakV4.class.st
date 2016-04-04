@@ -73,7 +73,7 @@ N.B.  Extension bytecodes can only come before extensible bytecodes, and only if
 Class {
 	#name : #EncoderForNewsqueakV4,
 	#superclass : #BytecodeEncoder,
-	#category : #'BytecodeSets-NewsqueakV4'
+	#category : 'BytecodeSets-NewsqueakV4'
 }
 
 { #category : #'compiled method support' }
