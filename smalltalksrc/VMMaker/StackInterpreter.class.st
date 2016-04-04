@@ -150,7 +150,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMStackFrameOffsets'
 	],
-	#category : #'VMMaker-Interpreter'
+	#category : 'VMMaker-Interpreter'
 }
 
 { #category : #translation }
@@ -9772,13 +9772,11 @@ StackInterpreter >> maybeInlinePositive32BitIntegerFor: integerValue [
 							eeInstantiateSmallClassIndex: ClassLargePositiveIntegerCompactIndex
 							format: (objectMemory byteFormatForNumBytes: 4)
 							numSlots: 1.
-	self cppIf: SPURVM
+	self cppIf: VMBIGENDIAN
 		ifTrue:
-			["Memory is 8 byte aligned in Spur, make sure that oversized bytes are set to zero"
-			objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped32IfBigEndian: integerValue).
-			objectMemory storeLong32: 1 ofObject: newLargeInteger withValue: 0]
-		ifFalse: 
-			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped32IfBigEndian: integerValue)].
+			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: integerValue byteSwap32]
+		ifFalse:
+			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: integerValue].
 	^newLargeInteger
 ]
 
@@ -10096,13 +10094,11 @@ StackInterpreter >> noInlineSigned32BitIntegerFor: integerValue [
 							eeInstantiateSmallClassIndex: largeClass
 							format: (objectMemory byteFormatForNumBytes: 4)
 							numSlots: 1.
-	self cppIf: SPURVM
+	self cppIf: VMBIGENDIAN
 		ifTrue:
-			["Memory is 8 byte aligned in Spur, make sure that oversized bytes are set to zero"
-			objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped32IfBigEndian: integerValue).
-			objectMemory storeLong32: 1 ofObject: newLargeInteger withValue: 0]
-		ifFalse: 
-			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped32IfBigEndian: value)].
+			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: value byteSwap32]
+		ifFalse:
+			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: value].
 	^newLargeInteger
 ]
 
@@ -10426,7 +10422,11 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 							eeInstantiateSmallClassIndex: ClassLargePositiveIntegerCompactIndex
 							format: (objectMemory byteFormatForNumBytes: sz)
 							numSlots: 8 / objectMemory bytesPerOop.
-	objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped64IfBigEndian: integerValue).
+	self cppIf: VMBIGENDIAN
+		ifTrue:
+			[objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: integerValue byteSwap64]
+		ifFalse:
+			[objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: integerValue].
 	^newLargeInteger
 
 ]
@@ -13579,14 +13579,15 @@ StackInterpreter >> signed64BitIntegerFor: integerValue [
 							eeInstantiateSmallClassIndex: largeClass
 							format: (objectMemory byteFormatForNumBytes: sz)
 							numSlots: sz + 3 // objectMemory bytesPerOop.
-	self cppIf: SPURVM
+	self cppIf: VMBIGENDIAN
 		ifTrue:
-			["Memory is eight byte aligned in SPUR, so we are sure to have room for 64bits word whatever allocated sz"
-			objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped64IfBigEndian: magnitude)]
+			[sz > 4
+				ifTrue: [objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: magnitude byteSwap64]
+				ifFalse: [objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: magnitude byteSwap32]]
 		ifFalse:
 			[sz > 4
-				ifTrue: [objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped64IfBigEndian: magnitude)]
-				ifFalse: [objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped32IfBigEndian: magnitude)]].
+				ifTrue: [objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: magnitude]
+				ifFalse: [objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (self cCode: [magnitude] inSmalltalk: [magnitude bitAnd: 16rFFFFFFFF])]].
 	^newLargeInteger
 ]
 

@@ -16,7 +16,7 @@ Class {
 		'VMMethodCacheConstants',
 		'VMObjectIndices'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -269,9 +269,9 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		(3 248 248 genCallPrimitiveBytecode)
 		(3 249 249 unknownBytecode) "reserved for Push Float"
 		(3 250 250 genExtPushClosureBytecode block v4:Block:Code:Size:)
-		(3 251 251 genPushRemoteTempLongBytecode)
-		(3 252 252 genStoreRemoteTempLongBytecode)
-		(3 253 253 genStoreAndPopRemoteTempLongBytecode)
+		(3 251 251 genPushRemoteTempOrRemoteInstVarLongBytecode)
+		(3 252 252 genStoreRemoteTempOrRemoteInstVarLongBytecode)
+		(3 253 253 genStoreAndPopRemoteTempOrRemoteInstVarLongBytecode)
 
 		(3 254 254	genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode)
 			
@@ -2564,6 +2564,20 @@ SimpleStackBasedCogit >> genPushReceiverVariableBytecode [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genPushRemoteInstVarLongBytecode [
+	self MoveMw: (self frameOffsetOfTemporary: byte2 - (1 << 7)) r: FPReg R: ClassReg.
+	objectRepresentation 
+		genEnsureOopInRegNotForwarded: ClassReg 
+		scratchReg: TempReg.
+	objectRepresentation
+		genLoadSlot: byte1
+		sourceReg: ClassReg
+		destReg: TempReg.
+	self PushR: TempReg.
+	^0
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushRemoteTempLongBytecode [
 	self MoveMw: (self frameOffsetOfTemporary: byte2) r: FPReg R: ClassReg.
 	objectRepresentation
@@ -2572,6 +2586,13 @@ SimpleStackBasedCogit >> genPushRemoteTempLongBytecode [
 		destReg: TempReg.
 	self PushR: TempReg.
 	^0
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genPushRemoteTempOrRemoteInstVarLongBytecode [
+	^ (byte2 noMask: 1 << 7)
+		ifTrue: [ self genPushRemoteTempLongBytecode ]
+		ifFalse: [ self genPushRemoteInstVarLongBytecode ]
 ]
 
 { #category : #'bytecode generator support' }
@@ -2867,6 +2888,13 @@ SimpleStackBasedCogit >> genStoreAndPopRemoteTempLongBytecode [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genStoreAndPopRemoteTempOrRemoteInstVarLongBytecode [
+	^ (byte2 noMask: 1 << 7)
+		ifTrue: [ self genStorePop: true RemoteTemp: byte1 At: byte2 ]
+		ifFalse: [ self genStorePop: true RemoteInstVar: byte1 At: byte2 - (1 << 7) ]
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genStoreAndPopTemporaryVariableBytecode [
 	^self genStorePop: true TemporaryVariable: (byte0 bitAnd: 7)
 ]
@@ -2951,6 +2979,32 @@ SimpleStackBasedCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
 ]
 
 { #category : #'bytecode generator support' }
+SimpleStackBasedCogit >> genStorePop: popBoolean RemoteInstVar: slotIndex At: objectIndex [ 
+	<inline: false>
+	"The only reason we assert needsFrame here is that in a frameless method
+	 ReceiverResultReg must and does contain only self, but the ceStoreCheck
+	 trampoline expects the target of the store to be in ReceiverResultReg.  So
+	 in a frameless method we would have a conflict between the receiver and
+	 the temote temp store, unless we we smart enough to realise that
+	 ReceiverResultReg was unused after the literal variable store, unlikely given
+	 that methods return self by default."
+	self assert: needsFrame.
+	popBoolean
+		ifTrue: [self PopR: ClassReg]
+		ifFalse: [self MoveMw: 0 r: SPReg R: ClassReg].
+	self MoveMw: (self frameOffsetOfTemporary: objectIndex) r: FPReg R: ReceiverResultReg.
+	objectRepresentation 
+		genEnsureOopInRegNotForwarded: ReceiverResultReg 
+		scratchReg: TempReg.
+	^objectRepresentation
+		genStoreSourceReg: ClassReg
+		slotIndex: slotIndex
+		destReg: ReceiverResultReg
+		scratchReg: TempReg
+		inFrame: needsFrame
+]
+
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remoteTempIndex [
 	<inline: false>
 	"The only reason we assert needsFrame here is that in a frameless method
@@ -2988,6 +3042,13 @@ SimpleStackBasedCogit >> genStorePop: popBoolean TemporaryVariable: tempIndex [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genStoreRemoteTempLongBytecode [
 	^self genStorePop: false RemoteTemp: byte1 At: byte2
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genStoreRemoteTempOrRemoteInstVarLongBytecode [
+	^ (byte2 noMask: 1 << 7)
+		ifTrue: [ self genStorePop: false RemoteTemp: byte1 At: byte2 ]
+		ifFalse: [ self genStorePop: false RemoteInstVar: byte1 At: byte2 - (1 << 7) ]
 ]
 
 { #category : #initialization }

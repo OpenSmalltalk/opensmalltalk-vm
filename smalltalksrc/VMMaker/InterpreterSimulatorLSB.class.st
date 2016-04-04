@@ -8,7 +8,7 @@ Note that the image must have been saved at least once on the local architecture
 Class {
 	#name : #InterpreterSimulatorLSB,
 	#superclass : #InterpreterSimulator,
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : 'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'memory access' }
@@ -40,18 +40,6 @@ InterpreterSimulatorLSB >> byteAt: byteAddress put: byte [
 
 	self longAt: longAddress put: long.
 	^byte
-]
-
-{ #category : #'memory access' }
-InterpreterSimulatorLSB >> byteSwapped32IfBigEndian: w [
-	"Accelerate, we now we are not big endian"
-	^w bitAnd: 16rFFFFFFFF
-]
-
-{ #category : #'memory access' }
-InterpreterSimulatorLSB >> byteSwapped64IfBigEndian: w [
-	"Accelerate, we now we are not big endian"
-	^w bitAnd: 16rFFFFFFFFFFFFFFFF
 ]
 
 { #category : #'debug support' }
