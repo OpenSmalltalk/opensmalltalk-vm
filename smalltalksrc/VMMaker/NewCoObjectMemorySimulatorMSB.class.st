@@ -1,7 +1,7 @@
 Class {
 	#name : #NewCoObjectMemorySimulatorMSB,
 	#superclass : #NewCoObjectMemorySimulator,
-	#category : #'VMMaker-JITSimulation'
+	#category : 'VMMaker-JITSimulation'
 }
 
 { #category : #'memory access' }
@@ -28,18 +28,6 @@ NewCoObjectMemorySimulatorMSB >> byteAt: byteAddress put: byte [
 	self assert: longAddress < freeStart.
 	self longAt: longAddress put: longWord.
 	^byte
-]
-
-{ #category : #'memory access' }
-NewCoObjectMemorySimulatorMSB >> byteSwapped32IfBigEndian: w [
-	"Accelerate, we now we are big endian"
-	^w byteSwap32
-]
-
-{ #category : #'memory access' }
-NewCoObjectMemorySimulatorMSB >> byteSwapped64IfBigEndian: w [
-	"Accelerate, we now we are big endian"
-	^w byteSwap64
 ]
 
 { #category : #'float primitives' }

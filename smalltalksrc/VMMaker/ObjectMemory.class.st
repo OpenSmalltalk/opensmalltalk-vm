@@ -126,7 +126,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMSqueakV3ObjectRepresentationConstants'
 	],
-	#category : #'VMMaker-Interpreter'
+	#category : 'VMMaker-Interpreter'
 }
 
 { #category : #translation }
@@ -1028,28 +1028,6 @@ ObjectMemory >> byteSwapByteObjectsFrom: startOop to: stopAddr flipFloatsIf: fli
 							wordAddr := oop + self baseHeaderSize.
 							self reverseWordsFrom: wordAddr to: oop + (self sizeBitsOf: oop)]]]].
 			oop := self objectAfter: oop]
-]
-
-{ #category : #'memory access' }
-ObjectMemory >> byteSwapped32IfBigEndian: w [
-	"If the VM is big endian, then swap the bytes of w"
-	<api>
-	<var: 'w' type: #'unsigned int'>
-	<returnTypeC: #'unsigned int'>
-	self cppIf: VMBIGENDIAN
-		ifTrue: [^w byteSwap32]
-		ifFalse: [^w bitAnd: 16rFFFFFFFF]
-]
-
-{ #category : #'memory access' }
-ObjectMemory >> byteSwapped64IfBigEndian: w [
-	"If the VM is big endian, then swap the bytes of w"
-	<api>
-	<var: 'w' type: #'unsigned long long'>
-	<returnTypeC: #'unsigned long long'>
-	self cppIf: VMBIGENDIAN
-		ifTrue: [^w byteSwap64]
-		ifFalse: [^w bitAnd: 16rFFFFFFFFFFFFFFFF]
 ]
 
 { #category : #'image save/restore' }

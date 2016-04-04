@@ -1,7 +1,7 @@
 Class {
 	#name : #NewObjectMemorySimulatorLSB,
 	#superclass : #NewObjectMemorySimulator,
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : 'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'memory access' }
@@ -33,18 +33,6 @@ NewObjectMemorySimulatorLSB >> byteAt: byteAddress put: byte [
 	self assert: longAddress < freeStart.
 	self longAt: longAddress put: long.
 	^byte
-]
-
-{ #category : #'memory access' }
-NewObjectMemorySimulatorLSB >> byteSwapped32IfBigEndian: w [
-	"Accelerate, we now we are not big endian"
-	^w bitAnd: 16rFFFFFFFF
-]
-
-{ #category : #'memory access' }
-NewObjectMemorySimulatorLSB >> byteSwapped64IfBigEndian: w [
-	"Accelerate, we now we are not big endian"
-	^w bitAnd: 16rFFFFFFFFFFFFFFFF
 ]
 
 { #category : #'memory access' }

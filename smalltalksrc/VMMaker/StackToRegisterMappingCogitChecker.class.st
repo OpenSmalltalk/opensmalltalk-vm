@@ -1,7 +1,7 @@
 Class {
 	#name : #StackToRegisterMappingCogitChecker,
 	#superclass : #StackToRegisterMappingCogit,
-	#category : #'VMMaker-Tests'
+	#category : 'VMMaker-Tests'
 }
 
 { #category : #'compile abstract instructions' }

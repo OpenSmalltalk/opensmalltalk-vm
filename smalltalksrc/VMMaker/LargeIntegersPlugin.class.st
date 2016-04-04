@@ -73,7 +73,7 @@ Class {
 		'orOpIndex',
 		'xorOpIndex'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }
@@ -1198,6 +1198,54 @@ LargeIntegersPlugin >> primAnyBitFrom: from to: to [
 		asOop: Boolean
 ]
 
+{ #category : #'control & support primitives' }
+LargeIntegersPlugin >> primAsLargeInteger: anInteger [
+	"Converts a SmallInteger into a - non normalized! - LargeInteger;          
+	 aLargeInteger will be returned unchanged."
+	"Do not check for forced fail, because we need this conversion to test the 
+	plugin in ST during forced fail, too."
+	self debugCode: [self msg: 'primAsLargeInteger: anInteger'].
+	self
+		primitive: 'primAsLargeInteger'
+		parameters: #(Integer )
+		receiver: #Oop.
+	(interpreterProxy isIntegerObject: anInteger)
+		ifTrue: [^ self createLargeFromSmallInteger: anInteger]
+		ifFalse: [^ anInteger]
+]
+
+{ #category : #obsolete }
+LargeIntegersPlugin >> primCheckIfCModuleExists [
+	"If calling this primitive fails, then C module does not exist. Do not check for forced fail, because we want to know if module exists during forced fail, too."
+	self
+		primitive: 'primCheckIfCModuleExists'
+		parameters: #()
+		receiver: #Oop.
+	^ true asOop: Boolean
+]
+
+{ #category : #'development primitives' }
+LargeIntegersPlugin >> primDigit: anInteger bitShift: shiftCount [ 
+	| rShift aLarge |
+	self debugCode: [self msg: 'primDigit: anInteger bitShift: shiftCount'].
+	self
+		primitive: '_primDigitBitShift'
+		parameters: #(Integer SmallInteger )
+		receiver: #Oop.
+	(interpreterProxy isIntegerObject: anInteger)
+		ifTrue: ["convert it to a not normalized LargeInteger"
+			aLarge := self createLargeFromSmallInteger: anInteger]
+		ifFalse: [aLarge := anInteger].
+	shiftCount >= 0
+		ifTrue: [^ self digit: aLarge Lshift: shiftCount]
+		ifFalse: 
+			[rShift := 0 - shiftCount.
+			^ self normalize: (self
+					digit: aLarge
+					Rshift: rShift
+					lookfirst: (self digitSizeOfLargeInt: aLarge))]
+]
+
 { #category : #'Integer primitives' }
 LargeIntegersPlugin >> primDigitAdd: secondInteger [
 	| firstLarge secondLarge firstInteger |
@@ -1206,6 +1254,25 @@ LargeIntegersPlugin >> primDigitAdd: secondInteger [
 				primitive: 'primDigitAdd'
 				parameters: #(Integer )
 				receiver: #Integer.
+	(interpreterProxy isIntegerObject: firstInteger)
+		ifTrue: ["convert it to a not normalized LargeInteger"
+			self remapOop: secondInteger in: [firstLarge := self createLargeFromSmallInteger: firstInteger]]
+		ifFalse: [firstLarge := firstInteger].
+	(interpreterProxy isIntegerObject: secondInteger)
+		ifTrue: ["convert it to a not normalized LargeInteger"
+			self remapOop: firstLarge in: [secondLarge := self createLargeFromSmallInteger: secondInteger]]
+		ifFalse: [secondLarge := secondInteger].
+	^ self digitAddLarge: firstLarge with: secondLarge
+]
+
+{ #category : #'development primitives' }
+LargeIntegersPlugin >> primDigitAdd: firstInteger with: secondInteger [ 
+	| firstLarge secondLarge |
+	self debugCode: [self msg: 'primDigitAdd: firstInteger with: secondInteger'].
+	self
+		primitive: 'primDigitAddWith'
+		parameters: #(Integer Integer )
+		receiver: #Oop.
 	(interpreterProxy isIntegerObject: firstInteger)
 		ifTrue: ["convert it to a not normalized LargeInteger"
 			self remapOop: secondInteger in: [firstLarge := self createLargeFromSmallInteger: firstInteger]]
@@ -1233,6 +1300,20 @@ LargeIntegersPlugin >> primDigitBitAnd: secondInteger [
 		opIndex: andOpIndex
 ]
 
+{ #category : #'development primitives' }
+LargeIntegersPlugin >> primDigitBitLogic: firstInteger with: secondInteger op: opIndex [ 
+	"Bit logic here is only implemented for positive integers or Zero; if any arg is negative, it fails."
+	self debugCode: [self msg: 'primDigitBitLogic: firstInteger with: secondInteger op: opIndex'].
+	self
+		primitive: 'primDigitBitLogicWithOp'
+		parameters: #(Integer Integer SmallInteger )
+		receiver: #Oop.
+	^ self
+		digitBitLogic: firstInteger
+		with: secondInteger
+		opIndex: opIndex
+]
+
 { #category : #'Integer primitives' }
 LargeIntegersPlugin >> primDigitBitOr: secondInteger [ 
 	"Bit logic here is only implemented for positive integers or Zero; if rec 
@@ -1247,6 +1328,28 @@ LargeIntegersPlugin >> primDigitBitOr: secondInteger [
 		digitBitLogic: firstInteger
 		with: secondInteger
 		opIndex: orOpIndex
+]
+
+{ #category : #obsolete }
+LargeIntegersPlugin >> primDigitBitShift: shiftCount [ 
+	| rShift aLarge anInteger |
+	self debugCode: [self msg: 'primDigitBitShift: shiftCount'].
+	anInteger := self
+				primitive: 'primDigitBitShift'
+				parameters: #(SmallInteger )
+				receiver: #Integer.
+	(interpreterProxy isIntegerObject: anInteger)
+		ifTrue: ["convert it to a not normalized LargeInteger"
+			aLarge := self createLargeFromSmallInteger: anInteger]
+		ifFalse: [aLarge := anInteger].
+	shiftCount >= 0
+		ifTrue: [^ self digit: aLarge Lshift: shiftCount]
+		ifFalse: 
+			[rShift := 0 - shiftCount.
+			^ self normalize: (self
+					digit: aLarge
+					Rshift: rShift
+					lookfirst: (self digitSizeOfLargeInt: aLarge))]
 ]
 
 { #category : #'Integer primitives' }
@@ -1315,6 +1418,32 @@ LargeIntegersPlugin >> primDigitCompare: secondInteger [
 					^ self digitCompareLarge: firstInteger with: secondInteger]]
 ]
 
+{ #category : #'development primitives' }
+LargeIntegersPlugin >> primDigitCompare: firstInteger with: secondInteger [ 
+	| firstVal secondVal |
+	self debugCode: [self msg: 'primDigitCompare: firstInteger with: secondInteger'].
+	self
+		primitive: 'primDigitCompareWith'
+		parameters: #(Integer Integer )
+		receiver: #Oop.
+	"shortcut: aSmallInteger has to be smaller in Magnitude as aLargeInteger"
+	(interpreterProxy isIntegerObject: firstInteger)
+		ifTrue: ["first"
+			(interpreterProxy isIntegerObject: secondInteger)
+				ifTrue: ["second"
+					(firstVal := interpreterProxy integerValueOf: firstInteger) > (secondVal := interpreterProxy integerValueOf: secondInteger)
+						ifTrue: [^ 1 asOop: SmallInteger"first > second"]
+						ifFalse: [firstVal < secondVal
+								ifTrue: [^ -1 asOop: SmallInteger"first < second"]
+								ifFalse: [^ 0 asOop: SmallInteger"first = second"]]]
+				ifFalse: ["SECOND" ^ -1 asOop: SmallInteger"first < SECOND"]]
+		ifFalse: ["FIRST"
+			(interpreterProxy isIntegerObject: secondInteger)
+				ifTrue: ["second" ^ 1 asOop: SmallInteger"FIRST > second"]
+				ifFalse: ["SECOND"
+					^ self digitCompareLarge: firstInteger with: secondInteger]]
+]
+
 { #category : #'Integer primitives' }
 LargeIntegersPlugin >> primDigitDiv: secondInteger negative: neg [ 
 	"Answer the result of dividing firstInteger by secondInteger. 
@@ -1360,6 +1489,35 @@ LargeIntegersPlugin >> primDigitDiv: secondInteger negative: neg [
 		negative: neg
 ]
 
+{ #category : #'development primitives' }
+LargeIntegersPlugin >> primDigitDiv: firstInteger with: secondInteger negative: neg [ 
+	"Answer the result of dividing firstInteger by secondInteger.
+	Fail if parameters are not integers or secondInteger is zero."
+	| firstAsLargeInteger secondAsLargeInteger |
+	self debugCode: [self msg: 'primDigitDiv: firstInteger with: secondInteger negative: neg'].
+	self
+		primitive: 'primDigitDivWithNegative'
+		parameters: #(Integer Integer Boolean )
+		receiver: #Oop.
+	"Coerce SmallIntegers to corresponding (not normalized) large integers    
+	 and check for zerodivide."
+	(interpreterProxy isIntegerObject: firstInteger)
+		ifTrue: ["convert to LargeInteger"
+			self remapOop: secondInteger in: [firstAsLargeInteger := self createLargeFromSmallInteger: firstInteger]]
+		ifFalse: [firstAsLargeInteger := firstInteger].
+	(interpreterProxy isIntegerObject: secondInteger)
+		ifTrue: 
+			["check for zerodivide and convert to LargeInteger"
+			(interpreterProxy integerValueOf: secondInteger)
+				= 0 ifTrue: [^ interpreterProxy primitiveFail].
+			self remapOop: firstAsLargeInteger in: [secondAsLargeInteger := self createLargeFromSmallInteger: secondInteger]]
+		ifFalse: [secondAsLargeInteger := secondInteger].
+	^ self
+		digitDivLarge: firstAsLargeInteger
+		with: secondAsLargeInteger
+		negative: neg
+]
+
 { #category : #'Integer primitives' }
 LargeIntegersPlugin >> primDigitMultiply: secondInteger negative: neg [ 
 	| firstLarge secondLarge firstInteger |
@@ -1386,6 +1544,28 @@ LargeIntegersPlugin >> primDigitMultiply: secondInteger negative: neg [
 		negative: neg
 ]
 
+{ #category : #'development primitives' }
+LargeIntegersPlugin >> primDigitMultiply: firstInteger with: secondInteger negative: neg [
+	| firstLarge secondLarge |
+	self debugCode: [self msg: 'primDigitMultiply: firstInteger with: secondInteger negative: neg'].
+	self
+		primitive: 'primDigitMultiplyWithNegative'
+		parameters: #(Integer Integer Boolean )
+		receiver: #Oop.
+	(interpreterProxy isIntegerObject: firstInteger)
+		ifTrue: ["convert it to a not normalized LargeInteger"
+			self remapOop: secondInteger in: [firstLarge := self createLargeFromSmallInteger: firstInteger]]
+		ifFalse: [firstLarge := firstInteger].
+	(interpreterProxy isIntegerObject: secondInteger)
+		ifTrue: ["convert it to a not normalized LargeInteger"
+			self remapOop: firstLarge in: [secondLarge := self createLargeFromSmallInteger: secondInteger]]
+		ifFalse: [secondLarge := secondInteger].
+	^ self
+		digitMultiplyLarge: firstLarge
+		with: secondLarge
+		negative: neg
+]
+
 { #category : #'Integer primitives' }
 LargeIntegersPlugin >> primDigitSubtract: secondInteger [ 
 	| firstLarge secondLarge firstInteger |
@@ -1405,6 +1585,25 @@ LargeIntegersPlugin >> primDigitSubtract: secondInteger [
 			self
 				remapOop: firstLarge
 				in: [secondLarge := self createLargeFromSmallInteger: secondInteger]]
+		ifFalse: [secondLarge := secondInteger].
+	^ self digitSubLarge: firstLarge with: secondLarge
+]
+
+{ #category : #'development primitives' }
+LargeIntegersPlugin >> primDigitSubtract: firstInteger with: secondInteger [
+	| firstLarge secondLarge |
+	self debugCode: [self msg: 'primDigitSubtract: firstInteger with: secondInteger'].
+	self
+		primitive: 'primDigitSubtractWith'
+		parameters: #(Integer Integer )
+		receiver: #Oop.
+	(interpreterProxy isIntegerObject: firstInteger)
+		ifTrue: ["convert it to a not normalized LargeInteger"
+			self remapOop: secondInteger in: [firstLarge := self createLargeFromSmallInteger: firstInteger]]
+		ifFalse: [firstLarge := firstInteger].
+	(interpreterProxy isIntegerObject: secondInteger)
+		ifTrue: ["convert it to a not normalized LargeInteger"
+			self remapOop: firstLarge in: [secondLarge := self createLargeFromSmallInteger: secondInteger]]
 		ifFalse: [secondLarge := secondInteger].
 	^ self digitSubLarge: firstLarge with: secondLarge
 ]
@@ -1457,6 +1656,19 @@ LargeIntegersPlugin >> primMontgomeryTimes: secondOperandInteger modulo: thirdMo
 			self remapOop: #(firstLarge secondLarge) in: [thirdLarge := self createLargeFromSmallInteger: thirdModuloInteger]]
 		ifFalse: [thirdLarge := thirdModuloInteger].
 	^ self digitMontgomery: firstLarge times: secondLarge modulo: thirdLarge mInvModB: smallInverseInteger
+]
+
+{ #category : #'development primitives' }
+LargeIntegersPlugin >> primNormalize: anInteger [ 
+"Parameter specification #(Integer) doesn't convert!"
+	self debugCode: [self msg: 'primNormalize: anInteger'].
+	self
+		primitive: 'primNormalize'
+		parameters: #(Integer )
+		receiver: #Oop.
+	(interpreterProxy isIntegerObject: anInteger)
+		ifTrue: [^ anInteger].
+	^ self normalize: anInteger
 ]
 
 { #category : #'Integer primitives' }

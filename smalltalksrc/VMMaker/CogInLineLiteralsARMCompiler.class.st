@@ -1,7 +1,7 @@
 Class {
 	#name : #CogInLineLiteralsARMCompiler,
 	#superclass : #CogARMCompiler,
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'inline cacheing' }
