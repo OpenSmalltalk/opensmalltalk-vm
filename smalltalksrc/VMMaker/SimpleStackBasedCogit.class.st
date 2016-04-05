@@ -16,7 +16,7 @@ Class {
 		'VMMethodCacheConstants',
 		'VMObjectIndices'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -256,11 +256,11 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		(2 239 239 genExtJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
 
 		"stores"
-		(2 240 240 genExtStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
-		(2 241 241 genExtStoreAndPopLiteralVariableBytecode isMappedIfImmutability)
+		(2 240 240 genSistaExtStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
+		(2 241 241 genSistaExtStoreAndPopLiteralVariableBytecode isMappedIfImmutability)
 		(2 242 242 genLongStoreAndPopTemporaryVariableBytecode)
-		(2 243 243 genExtStoreReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
-		(2 244 244 genExtStoreLiteralVariableBytecode isMappedIfImmutability)
+		(2 243 243 genSistaExtStoreReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
+		(2 244 244 genSistaExtStoreLiteralVariableBytecode isMappedIfImmutability)
 		(2 245 245 genLongStoreTemporaryVariableBytecode)
 
 		(2 246 247	unknownBytecode)
@@ -269,9 +269,9 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		(3 248 248 genCallPrimitiveBytecode)
 		(3 249 249 unknownBytecode) "reserved for Push Float"
 		(3 250 250 genExtPushClosureBytecode block v4:Block:Code:Size:)
-		(3 251 251 genPushRemoteTempLongBytecode)
-		(3 252 252 genStoreRemoteTempLongBytecode)
-		(3 253 253 genStoreAndPopRemoteTempLongBytecode)
+		(3 251 251 genExtPushRemoteTempOrInstVarLongBytecode)
+		(3 252 252 genExtStoreRemoteTempOrInstVarLongBytecode isMappedIfImmutability)
+		(3 253 253 genExtStoreAndPopRemoteTempOrInstVarLongBytecode isMappedIfImmutability)
 
 		(3 254 254	genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode)
 			
@@ -1701,6 +1701,20 @@ SimpleStackBasedCogit >> genExtPushReceiverVariableBytecode [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtPushRemoteTempOrInstVarLongBytecode [
+	| index |
+	^ (byte2 noMask: 1 << 7)
+		ifTrue: [ self genPushRemoteTempLongBytecode ]
+		ifFalse: 
+			[ index := byte1 + (extA << 8).
+			extA := 0.
+			extB := 0.
+			(coInterpreter isReadMediatedContextInstVarIndex: index)
+				ifTrue: [ self genPushMaybeContextRemoteInstVar: index inObjectAt: byte2 - (1 << 7) ]
+				ifFalse: [ self genPushRemoteInstVar: index inObjectAt: byte2 - (1 << 7) ] ]
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtReturnTopFromBlock [
 	"218		11011010		Return Stack Top From Block [* return from enclosing block N, N = Extend A]
 	 If extA is zero, return to the caller of the current block activation.
@@ -1814,6 +1828,34 @@ SimpleStackBasedCogit >> genExtStoreLiteralVariableBytecode [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtStorePopRemoteTempOrInstVarLongBytecode [
+	^ self genExtStorePopRemoteTempOrInstVarLongBytecode: true
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtStorePopRemoteTempOrInstVarLongBytecode: boolean [
+	| index |
+	extB := 0. "simple cogit don't use the extra flag"
+	(byte2 noMask: 1 << 7)
+		ifTrue: 
+			[ self genStorePop: boolean RemoteTemp: byte1 At: byte2.
+			self cppIf: IMMUTABILITY ifTrue: [ self annotateBytecode: self Label ] ]
+		ifFalse: 
+			[ index := byte1 + (extA << 8).
+			extA := 0.
+			(coInterpreter isWriteMediatedContextInstVarIndex: index)
+				ifTrue: [ self 
+						genStorePop: boolean 
+						MaybeContextRemoteInstVar: index 
+						ofObjectAt: byte2 - (1 << 7) ]
+				ifFalse: [ self 
+						genStorePop: boolean 
+						RemoteInstVar: index 
+						ofObjectAt: byte2 - (1 << 7)  ] ].
+	^ 0
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtStoreReceiverVariableBytecode [
 	"232		11101000	i i i i i i i i	Store Receiver Variable #iiiiiii (+ Extend A * 256)"
 	| index |
@@ -1822,6 +1864,11 @@ SimpleStackBasedCogit >> genExtStoreReceiverVariableBytecode [
 	^(coInterpreter isWriteMediatedContextInstVarIndex: index)
 		ifTrue: [self genStorePop: false MaybeContextReceiverVariable: index]
 		ifFalse: [self genStorePop: false ReceiverVariable: index]
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtStoreRemoteTempOrInstVarLongBytecode [
+	^ self genExtStorePopRemoteTempOrInstVarLongBytecode: false
 ]
 
 { #category : #'bytecode generators' }
@@ -2811,6 +2858,46 @@ SimpleStackBasedCogit >> genShortUnconditionalJump [
 					Distance: methodObj.
 	target := distance + 1 + bytecodePC.
 	^self genJumpTo: target
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genSistaExtStoreAndPopLiteralVariableBytecode [
+	^ self genSistaExtStoreLiteralVariableBytecode: true
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genSistaExtStoreAndPopReceiverVariableBytecode [
+	^ self genSistaExtStoreAndPopReceiverVariableBytecode: true
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genSistaExtStoreAndPopReceiverVariableBytecode: boolean [
+	| index |
+	extB := 0. "Simple cogit don't use the extra flags"
+	index := byte1 + (extA << 8).
+	extA := 0.
+	^(coInterpreter isWriteMediatedContextInstVarIndex: index)
+		ifTrue: [self genStorePop: boolean MaybeContextReceiverVariable: index ]
+		ifFalse: [self genStorePop: boolean ReceiverVariable: index ]
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genSistaExtStoreLiteralVariableBytecode [
+	^ self genSistaExtStoreLiteralVariableBytecode: false
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genSistaExtStoreLiteralVariableBytecode: boolean [
+	| index |
+	extB := 0. "SimpleCogit don't use the extra flags"
+	index := byte1 + (extA << 8).
+	extA := 0.
+	^ self genStorePop: boolean LiteralVariable: index
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genSistaExtStoreReceiverVariableBytecode [
+	^ self genSistaExtStoreAndPopReceiverVariableBytecode: false
 ]
 
 { #category : #'bytecode generators' }

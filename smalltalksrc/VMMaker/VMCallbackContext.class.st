@@ -12,7 +12,7 @@ Class {
 		'trampoline',
 		'savedReenterInterpreter'
 	],
-	#category : #'VMMaker-Support'
+	#category : 'VMMaker-Support'
 }
 
 { #category : #translation }

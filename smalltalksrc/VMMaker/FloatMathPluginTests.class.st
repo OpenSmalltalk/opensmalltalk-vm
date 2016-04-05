@@ -7,7 +7,7 @@ Class {
 	#instVars : [
 		'random'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #math }

@@ -73,7 +73,7 @@ Class {
 		'orOpIndex',
 		'xorOpIndex'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }
