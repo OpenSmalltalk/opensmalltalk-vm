@@ -269,9 +269,9 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		(3 248 248 genCallPrimitiveBytecode)
 		(3 249 249 unknownBytecode) "reserved for Push Float"
 		(3 250 250 genExtPushClosureBytecode block v4:Block:Code:Size:)
-		(3 251 251 genPushRemoteTempOrRemoteInstVarLongBytecode)
-		(3 252 252 genStoreRemoteTempOrRemoteInstVarLongBytecode)
-		(3 253 253 genStoreAndPopRemoteTempOrRemoteInstVarLongBytecode)
+		(3 251 251 genExtPushRemoteTempOrRemoteInstVarLongBytecode)
+		(3 252 252 genExtStoreRemoteTempOrRemoteInstVarLongBytecode)
+		(3 253 253 genExtStoreAndPopRemoteTempOrRemoteInstVarLongBytecode)
 
 		(3 254 254	genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode)
 			
@@ -1701,6 +1701,13 @@ SimpleStackBasedCogit >> genExtPushReceiverVariableBytecode [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtPushRemoteTempOrRemoteInstVarLongBytecode [
+	^ (byte2 noMask: 1 << 7)
+		ifTrue: [ self genPushRemoteTempLongBytecode ]
+		ifFalse: [ self genExtPushRemoteInstVarLongBytecode ]
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtReturnTopFromBlock [
 	"218		11011010		Return Stack Top From Block [* return from enclosing block N, N = Extend A]
 	 If extA is zero, return to the caller of the current block activation.
@@ -1805,6 +1812,16 @@ SimpleStackBasedCogit >> genExtStoreAndPopReceiverVariableBytecode [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtStoreAndPopRemoteTempOrRemoteInstVarLongBytecode [
+	| index |
+	index := byte1 + (extA << 8).
+	extA := 0.
+	^ (byte2 noMask: 1 << 7)
+		ifTrue: [ self genStorePop: true RemoteTemp: byte1 At: byte2 ]
+		ifFalse: [ self genStorePop: true RemoteInstVar: index At: byte2 - (1 << 7) ]
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtStoreLiteralVariableBytecode [
 	"233		11101001	i i i i i i i i	Store Literal Variable #iiiiiiii (+ Extend A * 256)"
 	| index |
@@ -1822,6 +1839,16 @@ SimpleStackBasedCogit >> genExtStoreReceiverVariableBytecode [
 	^(coInterpreter isWriteMediatedContextInstVarIndex: index)
 		ifTrue: [self genStorePop: false MaybeContextReceiverVariable: index]
 		ifFalse: [self genStorePop: false ReceiverVariable: index]
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtStoreRemoteTempOrRemoteInstVarLongBytecode [
+	| index |
+	index := byte1 + (extA << 8).
+	extA := 0.
+	^ (byte2 noMask: 1 << 7)
+		ifTrue: [ self genStorePop: false RemoteTemp: byte1 At: byte2 ]
+		ifFalse: [ self genStorePop: false RemoteInstVar: index At: byte2 - (1 << 7) ]
 ]
 
 { #category : #'bytecode generators' }
@@ -2566,12 +2593,15 @@ SimpleStackBasedCogit >> genPushReceiverVariableBytecode [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushRemoteInstVarLongBytecode [
+	| index |
+	index := byte1 + (extA << 8).
+	extA := 0.
 	self MoveMw: (self frameOffsetOfTemporary: byte2 - (1 << 7)) r: FPReg R: ClassReg.
 	objectRepresentation 
 		genEnsureOopInRegNotForwarded: ClassReg 
 		scratchReg: TempReg.
 	objectRepresentation
-		genLoadSlot: byte1
+		genLoadSlot: index
 		sourceReg: ClassReg
 		destReg: TempReg.
 	self PushR: TempReg.
@@ -2580,6 +2610,7 @@ SimpleStackBasedCogit >> genPushRemoteInstVarLongBytecode [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushRemoteTempLongBytecode [
+	extA := 0.
 	self MoveMw: (self frameOffsetOfTemporary: byte2) r: FPReg R: ClassReg.
 	objectRepresentation
 		genLoadSlot: byte1
@@ -2889,13 +2920,6 @@ SimpleStackBasedCogit >> genStoreAndPopRemoteTempLongBytecode [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genStoreAndPopRemoteTempOrRemoteInstVarLongBytecode [
-	^ (byte2 noMask: 1 << 7)
-		ifTrue: [ self genStorePop: true RemoteTemp: byte1 At: byte2 ]
-		ifFalse: [ self genStorePop: true RemoteInstVar: byte1 At: byte2 - (1 << 7) ]
-]
-
-{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genStoreAndPopTemporaryVariableBytecode [
 	^self genStorePop: true TemporaryVariable: (byte0 bitAnd: 7)
 ]
@@ -3048,13 +3072,6 @@ SimpleStackBasedCogit >> genStorePop: popBoolean TemporaryVariable: tempIndex [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genStoreRemoteTempLongBytecode [
 	^self genStorePop: false RemoteTemp: byte1 At: byte2
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genStoreRemoteTempOrRemoteInstVarLongBytecode [
-	^ (byte2 noMask: 1 << 7)
-		ifTrue: [ self genStorePop: false RemoteTemp: byte1 At: byte2 ]
-		ifFalse: [ self genStorePop: false RemoteInstVar: byte1 At: byte2 - (1 << 7) ]
 ]
 
 { #category : #initialization }
