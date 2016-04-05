@@ -90,13 +90,13 @@ Instance Variables (inherited)
 *	252	(3)	11111100 	kkkkkkkk	sjjjjjjj		Store Temp At kkkkkkkk In Temp Vector At: jjjjjjj s = 1 implies remote inst var access instead of remote temp vector access 
 *	253	(3)	11111101 	kkkkkkkk	sjjjjjjj		Pop and Store Temp At kkkkkkkk In Temp Vector At: jjjjjjj s = 1 implies remote inst var access instead of remote temp vector access
 **	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)
-*	255		11111111	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 needsOuterContext: i = 1 
+*	255		11111111	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 (i reserved for needsOuterContext: i = 1)
 
 (1) Bytecode 235 is a super send bytecode that starts the lookup in the superclass of some class.  It has two forms, ""norma;"" and ""directed"". In the normal form, the class is the value of the method's methodClassAssociation which must be the last literal.  In the directed form the class is the class on top of stack.
 
 (2) The Call Primitive Bytecode specifies either a primitive in the primitive table (m=0) or an inlined primitive (m=1). Non-inlined primtiives from the primitive table have index (jjjjjjj * 256) + iiiiiiii and return from the method if they succeed.  This bytecode is only valid as the first bytecode of a method.  Inline primitives have index (jjjjjjj * 256) + iiiiiiii, cannot fail, and do not return when they succeed, yielding a result (typically on top of stack after popping their arguments, but possibly in a byte data stack, for example for unboxed floating-point primitives).
 
-(3) ExtB = 1 implies no store check is needed, other bits in the extension are unused.
+(3) ExtB lowest bit implies no store check is needed, ExtB next bit implies the object may be a context, other bits in the extension are unused.
 
 (4) ExtA = 1 implies no mustBeBoolean trampoline is needed, other bits in the extension are unused
 
@@ -1221,10 +1221,10 @@ EncoderForSistaV1 >> genSignedSingleExtendB: extendedIndex [
 ]
 
 { #category : #'extended bytecode generation' }
-EncoderForSistaV1 >> genStackFlagExtensionIgnoreStoreCheck: ignoreStoreCheck notAContext: notAContext [
+EncoderForSistaV1 >> genStoreFlagExtensionIgnoreStoreCheck: ignoreStoreCheck maybeContext: maybeContext [
 	"Can be applied to the long form of store and store pop of literal variable, remote inst var, remote temp, receiver inst var.
 	The notAContext bit can be used only with instance variable stores."
-	self genUnsignedSingleExtendB: ignoreStoreCheck asBit + (notAContext asBit << 1)
+	self genUnsignedSingleExtendB: ignoreStoreCheck asBit + (maybeContext asBit << 1)
 ]
 
 { #category : #'bytecode generation' }
