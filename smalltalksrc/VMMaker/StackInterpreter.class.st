@@ -555,12 +555,12 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 		(238		extJumpIfTrue)
 		(239		extJumpIfFalse)
 
-		(240		extStoreAndPopReceiverVariableBytecode)
-		(241		extStoreAndPopLiteralVariableBytecode)
+		(240		extSistaStoreAndPopReceiverVariableBytecode)
+		(241		extSistaStoreAndPopLiteralVariableBytecode)
 		(242		longStoreAndPopTemporaryVariableBytecode)
 
-		(243		extStoreReceiverVariableBytecode)
-		(244		extStoreLiteralVariableBytecode)
+		(243		extSistaStoreReceiverVariableBytecode)
+		(244		extSistaStoreLiteralVariableBytecode)
 		(245		longStoreTemporaryVariableBytecode)
 
 		(246 247	unknownBytecode)
@@ -570,9 +570,9 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 		(249		unknownBytecode) "reserved for Push Float"
 
 		(250		extPushClosureBytecode)
-		(251		pushRemoteTempLongBytecode)
-		(252		storeRemoteTempLongBytecode)
-		(253		storeAndPopRemoteTempLongBytecode)
+		(251		extPushRemoteTempOrInstVarLongBytecode)
+		(252		extStoreRemoteTempOrInstVarLongBytecode)
+		(253		extStoreAndPopRemoteTempOrInstVarLongBytecode)
 				
 		(254		extJumpIfNotInstanceOfBehaviorsOrPopBytecode)
 
@@ -5355,6 +5355,21 @@ StackInterpreter >> extPushReceiverVariableBytecode [
 	self pushMaybeContextReceiverVariable: index
 ]
 
+{ #category : #'stack bytecodes' }
+StackInterpreter >> extPushRemoteTempOrInstVarLongBytecode [
+	| slotIndex tempIndex object |
+	slotIndex := self fetchByte.
+	tempIndex := self fetchByte.
+	self fetchNextBytecode.
+	(tempIndex noMask: self remoteIsInstVarAccess)
+		ifTrue: [self pushRemoteTemp: slotIndex inVectorAt: tempIndex]
+		ifFalse: 
+			[ slotIndex := slotIndex + (extA << 8).
+			extA := extB := 0.
+			object := self temporary: tempIndex in: localFP.
+			self pushMaybeContext: object receiverVariable: slotIndex ]
+]
+
 { #category : #'return bytecodes' }
 StackInterpreter >> extReturnTopFromBlock [
 	"218		11011010		Return Stack Top From Block [* return from enclosing block N, N = Extend A]
@@ -5451,6 +5466,54 @@ StackInterpreter >> extSendSuperBytecode [
 ]
 
 { #category : #'stack bytecodes' }
+StackInterpreter >> extSistaStoreAndPopLiteralVariableBytecode [
+	"236		11101100	i i i i i i i i	Pop and Store Literal Variable #iiiiiiii (+ Extend A * 256)
+	(3) ExtB lowest bit implies no store check is needed, ExtB next bit implies the object may be a context, other bits in the extension are unused."
+	| variableIndex value |
+	variableIndex := self fetchByte + (extA << 8).
+	value := self internalStackTop.
+	self internalPop: 1.
+	extA := extB := 0..
+	self storeLiteralVariable: variableIndex withValue: value.
+	self fetchNextBytecode.
+]
+
+{ #category : #'stack bytecodes' }
+StackInterpreter >> extSistaStoreAndPopReceiverVariableBytecode [
+	"235		11101011	i i i i i i i i	Pop and Store Receiver Variable #iiiiiii (+ Extend A * 256)
+	(3) ExtB lowest bit implies no store check is needed, ExtB next bit implies the object may be a context, other bits in the extension are unused."
+	| variableIndex value |
+	variableIndex := self fetchByte + (extA << 8).
+	extA := extB := 0.
+	value := self internalStackTop.
+	self internalPop: 1.
+	self storeMaybeContextReceiverVariable: variableIndex withValue: value.
+	self fetchNextBytecode.
+]
+
+{ #category : #'stack bytecodes' }
+StackInterpreter >> extSistaStoreLiteralVariableBytecode [
+	"233		11101001	i i i i i i i i	Store Literal Variable #iiiiiiii (+ Extend A * 256)
+	(3) ExtB lowest bit implies no store check is needed, ExtB next bit implies the object may be a context, other bits in the extension are unused."
+	| variableIndex |
+	variableIndex := self fetchByte + (extA << 8).
+	extA := extB := 0.
+	self storeLiteralVariable: variableIndex withValue: self internalStackTop.
+	self fetchNextBytecode.
+]
+
+{ #category : #'stack bytecodes' }
+StackInterpreter >> extSistaStoreReceiverVariableBytecode [
+	"232		11101000	i i i i i i i i	Store Receiver Variable #iiiiiii (+ Extend A * 256)
+	(3) ExtB lowest bit implies no store check is needed, ExtB next bit implies the object may be a context, other bits in the extension are unused."
+	| variableIndex |
+	variableIndex := self fetchByte + (extA << 8).
+	extA := extB := 0.
+	self storeMaybeContextReceiverVariable: variableIndex withValue: self internalStackTop.
+	self fetchNextBytecode.
+]
+
+{ #category : #'stack bytecodes' }
 StackInterpreter >> extStoreAndPopLiteralVariableBytecode [
 	"236		11101100	i i i i i i i i	Pop and Store Literal Variable #iiiiiiii (+ Extend A * 256)"
 	| variableIndex value |
@@ -5475,6 +5538,12 @@ StackInterpreter >> extStoreAndPopReceiverVariableBytecode [
 ]
 
 { #category : #'stack bytecodes' }
+StackInterpreter >> extStoreAndPopRemoteTempOrInstVarLongBytecode [
+	self extStoreRemoteTempOrInstVarLongBytecode.
+	self internalPop: 1
+]
+
+{ #category : #'stack bytecodes' }
 StackInterpreter >> extStoreLiteralVariableBytecode [
 	"233		11101001	i i i i i i i i	Store Literal Variable #iiiiiiii (+ Extend A * 256)"
 	| variableIndex |
@@ -5492,6 +5561,21 @@ StackInterpreter >> extStoreReceiverVariableBytecode [
 	extA := 0.
 	self storeMaybeContextReceiverVariable: variableIndex withValue: self internalStackTop.
 	self fetchNextBytecode.
+]
+
+{ #category : #'stack bytecodes' }
+StackInterpreter >> extStoreRemoteTempOrInstVarLongBytecode [
+	| slotIndex tempIndex object |
+	slotIndex := self fetchByte.
+	tempIndex := self fetchByte.
+	self fetchNextBytecode.
+	(tempIndex noMask: self remoteIsInstVarAccess)
+		ifTrue: [self storeRemoteTemp: slotIndex inVectorAt: tempIndex]
+		ifFalse: 
+			[ slotIndex := slotIndex + (extA << 8).
+			extA := extB := 0.
+			object := self temporary: tempIndex in: localFP.
+			self storeMaybeContext: object receiverVariable: slotIndex withValue: self internalStackTop ]
 ]
 
 { #category : #'sista bytecodes' }
@@ -12040,6 +12124,24 @@ StackInterpreter >> pushLiteralVariableBytecode [
 ]
 
 { #category : #'stack bytecodes' }
+StackInterpreter >> pushMaybeContext: obj receiverVariable: fieldIndex [
+	"Must trap accesses to married and widowed contexts.
+	 But don't want to check on all inst var accesses.  This
+	 method is only used by the long-form bytecodes, evading
+	 the cost. Note that the method, closure and receiver fields
+	 of married contexts are correctly initialized so they don't
+	 need special treatment on read.  Only sender, instruction
+	 pointer and stack pointer need to be intercepted on reads."
+	<inline: true>
+	((self isReadMediatedContextInstVarIndex: fieldIndex)
+	and: [objectMemory isContextNonImm: obj])
+		ifTrue:
+			[self internalPush: (self instVar: fieldIndex ofContext: obj)]
+		ifFalse:
+			[self internalPush: (objectMemory fetchPointer: fieldIndex ofObject: obj)]
+]
+
+{ #category : #'stack bytecodes' }
 StackInterpreter >> pushMaybeContextReceiverVariable: fieldIndex [
 	"Must trap accesses to married and widowed contexts.
 	 But don't want to check on all inst var accesses.  This
@@ -12048,15 +12150,8 @@ StackInterpreter >> pushMaybeContextReceiverVariable: fieldIndex [
 	 of married contexts are correctly initialized so they don't
 	 need special treatment on read.  Only sender, instruction
 	 pointer and stack pointer need to be intercepted on reads."
-	| rcvr |
 	<inline: true>
-	rcvr := self receiver.
-	((self isReadMediatedContextInstVarIndex: fieldIndex)
-	and: [objectMemory isContextNonImm: rcvr])
-		ifTrue:
-			[self internalPush: (self instVar: fieldIndex ofContext: rcvr)]
-		ifFalse:
-			[self internalPush: (objectMemory fetchPointer: fieldIndex ofObject: rcvr)]
+	self pushMaybeContext: self receiver receiverVariable: fieldIndex
 ]
 
 { #category : #'stack bytecodes' }
@@ -12471,6 +12566,15 @@ StackInterpreter >> remapCallbackState [
 		oop := suspendedMethods at: i.
 		(objectMemory shouldRemapObj: oop) ifTrue:
 			[suspendedMethods at: i put: (objectMemory remapObj: oop)]]
+]
+
+{ #category : #'stack bytecodes' }
+StackInterpreter >> remoteIsInstVarAccess [
+	"If this byte is set in the second byte (zero-based) of the instruction, 
+	the remote temp instruction is in fact a remote inst var access"
+	<api>
+	<cmacro>
+	^ 128 "1 << 7"
 ]
 
 { #category : #'process primitive support' }
@@ -14125,19 +14229,27 @@ StackInterpreter >> storeLiteralVariable: literalIndex withValue: anObject [
 ]
 
 { #category : #'stack bytecodes' }
+StackInterpreter >> storeMaybeContext: obj receiverVariable: fieldIndex withValue: anObject [
+	"Must trap accesses to married and widowed contexts.
+	 But don't want to check on all inst var accesses.  This
+	 method is only used by the long-form bytecodes, evading the cost."
+	<inline: true>
+	((self isWriteMediatedContextInstVarIndex: fieldIndex)
+	and: [(objectMemory isContextNonImm: obj)
+	and: [self isMarriedOrWidowedContext: obj]])
+		ifTrue:
+			[self instVar: fieldIndex ofContext: obj put: anObject]
+		ifFalse:
+			[objectMemory storePointerImmutabilityCheck: fieldIndex ofObject: obj withValue: anObject]
+
+]
+
+{ #category : #'stack bytecodes' }
 StackInterpreter >> storeMaybeContextReceiverVariable: fieldIndex withValue: anObject [
 	"Must trap accesses to married and widowed contexts.
 	 But don't want to check on all inst var accesses.  This
 	 method is only used by the long-form bytecodes, evading the cost."
-	| rcvr |
-	rcvr := self receiver.
-	((self isWriteMediatedContextInstVarIndex: fieldIndex)
-	and: [(objectMemory isContextNonImm: rcvr)
-	and: [self isMarriedOrWidowedContext: rcvr]])
-		ifTrue:
-			[self instVar: fieldIndex ofContext: rcvr put: anObject]
-		ifFalse:
-			[objectMemory storePointerImmutabilityCheck: fieldIndex ofObject: rcvr withValue: anObject]
+	self storeMaybeContext: self receiver receiverVariable: fieldIndex withValue: anObject
 
 ]
 
