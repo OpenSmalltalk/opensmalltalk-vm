@@ -1754,7 +1754,7 @@ StackToRegisterMappingCogit >> genExtPushClosureBytecode [
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genExtPushRemoteTempOrInstVarLongBytecode [
 	| index maybeContext |
-	^ (byte2 noMask: 1 << 7)
+	^ (byte2 noMask: coInterpreter remoteIsInstVarAccess)
 		ifTrue: [ self genPushRemoteTempLongBytecode ]
 		ifFalse: 
 			[ maybeContext := self extBSpecifiesMaybeContext.
@@ -1762,8 +1762,8 @@ StackToRegisterMappingCogit >> genExtPushRemoteTempOrInstVarLongBytecode [
 			extA := 0.
 			extB := 0.
 			((coInterpreter isReadMediatedContextInstVarIndex: index) and: [ maybeContext ])
-				ifTrue: [ self genPushMaybeContextRemoteInstVar: index inObjectAt: byte2 - (1 << 7) ]
-				ifFalse: [ self genPushRemoteInstVar: index inObjectAt: byte2 - (1 << 7) ] ]
+				ifTrue: [ self genPushMaybeContextRemoteInstVar: index inObjectAt: byte2 - coInterpreter remoteIsInstVarAccess ]
+				ifFalse: [ self genPushRemoteInstVar: index inObjectAt: byte2 - coInterpreter remoteIsInstVarAccess ] ]
 ]
 
 { #category : #'bytecode generators' }
@@ -1772,7 +1772,7 @@ StackToRegisterMappingCogit >> genExtStorePopRemoteTempOrInstVarLongBytecode: bo
 	needsStoreCheck := self sistaNeedsStoreCheck.
 	maybeContext := self extBSpecifiesMaybeContext.
 	extB := 0.
-	(byte2 noMask: 1 << 7)
+	(byte2 noMask: coInterpreter remoteIsInstVarAccess)
 		ifTrue: 
 			[ self genStorePop: boolean RemoteTemp: byte1 At: byte2 needsStoreCheck: needsStoreCheck.
 			self cppIf: IMMUTABILITY ifTrue: [ self annotateBytecode: self Label ] ]
@@ -1783,12 +1783,12 @@ StackToRegisterMappingCogit >> genExtStorePopRemoteTempOrInstVarLongBytecode: bo
 				ifTrue: [ self 
 						genStorePop: boolean 
 						MaybeContextRemoteInstVar: index 
-						ofObjectAt: byte2 - (1 << 7) 
+						ofObjectAt: byte2 - coInterpreter remoteIsInstVarAccess 
 						needsStoreCheck: needsStoreCheck ]
 				ifFalse: [ self 
 						genStorePop: boolean 
 						RemoteInstVar: index 
-						ofObjectAt: byte2 - (1 << 7) 
+						ofObjectAt: byte2 - coInterpreter remoteIsInstVarAccess 
 						needsStoreCheck: needsStoreCheck ] ].
 	^ 0
 ]
