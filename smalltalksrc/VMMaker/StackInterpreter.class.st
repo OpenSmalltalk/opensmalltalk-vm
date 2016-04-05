@@ -5198,7 +5198,7 @@ StackInterpreter >> extJumpIfFalse [
 	| byte offset |
 	byte := self fetchByte.
 	offset := byte + (extB << 8).
-	extB := 0.
+	extB := extA := 0.
 	self jumplfFalseBy: offset
 ]
 
@@ -5234,7 +5234,7 @@ StackInterpreter >> extJumpIfTrue [
 	| byte offset |
 	byte := self fetchByte.
 	offset := byte + (extB << 8).
-	extB := 0.
+	extB := extA := 0.
 	self jumplfTrueBy: offset
 ]
 
