@@ -233,6 +233,15 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _aligner;
 	( (unsigned long long)(x) >> 56))
 #endif
 
+/* Since Large Integers are Bytes Oops allways stored as little endian,
+   the following macros are handy to retrieve 4 or 8 byte limbs */
+#if VMBIGENDIAN
+#  define SQ_SWAP_4_BYTES_IF_BIGENDIAN(x) SQ_SWAP_4_BYTES(x)
+#  define SQ_SWAP_8_BYTES_IF_BIGENDIAN(x) SQ_SWAP_8_BYTES(x)
+#else
+#  define SQ_SWAP_4_BYTES_IF_BIGENDIAN(x) (x)
+#  define SQ_SWAP_8_BYTES_IF_BIGENDIAN(x) (x)
+
 
 /* This doesn't belong here, but neither do 'self flag: ...'s belong in the
    image. We use a macro, not an inline function; we need no trace of flag.
