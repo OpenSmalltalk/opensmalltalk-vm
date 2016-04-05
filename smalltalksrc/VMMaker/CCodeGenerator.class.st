@@ -1777,12 +1777,32 @@ CCodeGenerator >> generateByteSwap32: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateByteSwap32IfBigEndian: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream nextPutAll: #'SQ_SWAP_4_BYTES_IF_BIGENDIAN'.
+	aStream nextPut: $(.
+	self emitCExpression: msgNode args first on: aStream.
+	aStream nextPut: $)
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateByteSwap64: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll: #'SQ_SWAP_8_BYTES'.
 	aStream nextPut: $(.
 	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPut: $)
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateByteSwap64IfBigEndian: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream nextPutAll: #'SQ_SWAP_8_BYTES_IF_BIGENDIAN'.
+	aStream nextPut: $(.
+	self emitCExpression: msgNode args first on: aStream.
 	aStream nextPut: $)
 ]
 
@@ -3285,6 +3305,8 @@ CCodeGenerator >> initializeCTranslationDictionary [
 
 	#byteSwap32		#generateByteSwap32:on:indent:
 	#byteSwap64		#generateByteSwap64:on:indent:
+	#byteSwapped32IfBigEndian:	generateByteSwap32IfBigEndian:on:indent:
+	#byteSwapped64IfBigEndian:	generateByteSwap64IfBigEndian:on:indent:
 	
 	#<				#generateLessThan:on:indent:
 	#<=			#generateLessThanOrEqual:on:indent:

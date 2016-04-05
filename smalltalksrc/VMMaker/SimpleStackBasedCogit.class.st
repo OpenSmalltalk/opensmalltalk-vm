@@ -269,9 +269,9 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		(3 248 248 genCallPrimitiveBytecode)
 		(3 249 249 unknownBytecode) "reserved for Push Float"
 		(3 250 250 genExtPushClosureBytecode block v4:Block:Code:Size:)
-		(3 251 251 genExtPushRemoteTempOrRemoteInstVarLongBytecode)
-		(3 252 252 genExtStoreRemoteTempOrRemoteInstVarLongBytecode)
-		(3 253 253 genExtStoreAndPopRemoteTempOrRemoteInstVarLongBytecode)
+		(3 251 251 genPushRemoteTempLongBytecode)
+		(3 252 252 genStoreRemoteTempLongBytecode)
+		(3 253 253 genStoreAndPopRemoteTempLongBytecode)
 
 		(3 254 254	genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode)
 			
@@ -1701,13 +1701,6 @@ SimpleStackBasedCogit >> genExtPushReceiverVariableBytecode [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genExtPushRemoteTempOrRemoteInstVarLongBytecode [
-	^ (byte2 noMask: 1 << 7)
-		ifTrue: [ self genPushRemoteTempLongBytecode ]
-		ifFalse: [ self genExtPushRemoteInstVarLongBytecode ]
-]
-
-{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtReturnTopFromBlock [
 	"218		11011010		Return Stack Top From Block [* return from enclosing block N, N = Extend A]
 	 If extA is zero, return to the caller of the current block activation.
@@ -1812,16 +1805,6 @@ SimpleStackBasedCogit >> genExtStoreAndPopReceiverVariableBytecode [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genExtStoreAndPopRemoteTempOrRemoteInstVarLongBytecode [
-	| index |
-	index := byte1 + (extA << 8).
-	extA := 0.
-	^ (byte2 noMask: 1 << 7)
-		ifTrue: [ self genStorePop: true RemoteTemp: byte1 At: byte2 ]
-		ifFalse: [ self genStorePop: true RemoteInstVar: index At: byte2 - (1 << 7) ]
-]
-
-{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtStoreLiteralVariableBytecode [
 	"233		11101001	i i i i i i i i	Store Literal Variable #iiiiiiii (+ Extend A * 256)"
 	| index |
@@ -1839,16 +1822,6 @@ SimpleStackBasedCogit >> genExtStoreReceiverVariableBytecode [
 	^(coInterpreter isWriteMediatedContextInstVarIndex: index)
 		ifTrue: [self genStorePop: false MaybeContextReceiverVariable: index]
 		ifFalse: [self genStorePop: false ReceiverVariable: index]
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genExtStoreRemoteTempOrRemoteInstVarLongBytecode [
-	| index |
-	index := byte1 + (extA << 8).
-	extA := 0.
-	^ (byte2 noMask: 1 << 7)
-		ifTrue: [ self genStorePop: false RemoteTemp: byte1 At: byte2 ]
-		ifFalse: [ self genStorePop: false RemoteInstVar: index At: byte2 - (1 << 7) ]
 ]
 
 { #category : #'bytecode generators' }
@@ -1946,7 +1919,6 @@ SimpleStackBasedCogit >> genJumpIf: boolean to: targetBytecodePC [
 					ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
 					ifFalse: [ceSendMustBeBooleanAddTrueTrampoline]).
 	ok jmpTarget: (self annotateBytecode: self Label).
-	extA := 0. "ignores the flag"
 	^0
 ]
 
@@ -2592,25 +2564,7 @@ SimpleStackBasedCogit >> genPushReceiverVariableBytecode [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genPushRemoteInstVarLongBytecode [
-	| index |
-	index := byte1 + (extA << 8).
-	extA := 0.
-	self MoveMw: (self frameOffsetOfTemporary: byte2 - (1 << 7)) r: FPReg R: ClassReg.
-	objectRepresentation 
-		genEnsureOopInRegNotForwarded: ClassReg 
-		scratchReg: TempReg.
-	objectRepresentation
-		genLoadSlot: index
-		sourceReg: ClassReg
-		destReg: TempReg.
-	self PushR: TempReg.
-	^0
-]
-
-{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushRemoteTempLongBytecode [
-	extA := 0.
 	self MoveMw: (self frameOffsetOfTemporary: byte2) r: FPReg R: ClassReg.
 	objectRepresentation
 		genLoadSlot: byte1
@@ -2618,13 +2572,6 @@ SimpleStackBasedCogit >> genPushRemoteTempLongBytecode [
 		destReg: TempReg.
 	self PushR: TempReg.
 	^0
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genPushRemoteTempOrRemoteInstVarLongBytecode [
-	^ (byte2 noMask: 1 << 7)
-		ifTrue: [ self genPushRemoteTempLongBytecode ]
-		ifFalse: [ self genPushRemoteInstVarLongBytecode ]
 ]
 
 { #category : #'bytecode generator support' }
@@ -2935,7 +2882,6 @@ SimpleStackBasedCogit >> genStorePop: popBoolean LiteralVariable: litVarIndex [
 	 the literal store, unless we we smart enough to realise that ReceiverResultReg
 	 was unused after the literal variable store, unlikely given that methods
 	 return self by default."
-	extB := 0. "do the store check anyway"
 	self assert: needsFrame.
 	association := self getLiteral: litVarIndex.
 	self genMoveConstant: association R: ReceiverResultReg.
@@ -2963,7 +2909,6 @@ SimpleStackBasedCogit >> genStorePop: popBoolean MaybeContextReceiverVariable: s
 	"The reason we need a frame here is that assigning to an inst var of a context may
 	 involve wholesale reorganization of stack pages, and the only way to preserve the
 	 execution state of an activation in that case is if it has a frame."
-	extB := 0. "do the store check anyway"
 	self assert: needsFrame.
 	self putSelfInReceiverResultReg.
 	objectRepresentation
@@ -2991,7 +2936,6 @@ SimpleStackBasedCogit >> genStorePop: popBoolean MaybeContextReceiverVariable: s
 { #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
 	<inline: false>
-	extB := 0. "do the store check anyway"
 	needsFrame ifTrue:
 		[self putSelfInReceiverResultReg].
 	popBoolean
@@ -3007,33 +2951,6 @@ SimpleStackBasedCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
 ]
 
 { #category : #'bytecode generator support' }
-SimpleStackBasedCogit >> genStorePop: popBoolean RemoteInstVar: slotIndex At: objectIndex [ 
-	<inline: false>
-	"The only reason we assert needsFrame here is that in a frameless method
-	 ReceiverResultReg must and does contain only self, but the ceStoreCheck
-	 trampoline expects the target of the store to be in ReceiverResultReg.  So
-	 in a frameless method we would have a conflict between the receiver and
-	 the temote temp store, unless we we smart enough to realise that
-	 ReceiverResultReg was unused after the literal variable store, unlikely given
-	 that methods return self by default."
-	extB := 0. "do the store check anyway"
-	self assert: needsFrame.
-	popBoolean
-		ifTrue: [self PopR: ClassReg]
-		ifFalse: [self MoveMw: 0 r: SPReg R: ClassReg].
-	self MoveMw: (self frameOffsetOfTemporary: objectIndex) r: FPReg R: ReceiverResultReg.
-	objectRepresentation 
-		genEnsureOopInRegNotForwarded: ReceiverResultReg 
-		scratchReg: TempReg.
-	^objectRepresentation
-		genStoreSourceReg: ClassReg
-		slotIndex: slotIndex
-		destReg: ReceiverResultReg
-		scratchReg: TempReg
-		inFrame: needsFrame
-]
-
-{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remoteTempIndex [
 	<inline: false>
 	"The only reason we assert needsFrame here is that in a frameless method
@@ -3043,7 +2960,6 @@ SimpleStackBasedCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remot
 	 the temote temp store, unless we we smart enough to realise that
 	 ReceiverResultReg was unused after the literal variable store, unlikely given
 	 that methods return self by default."
-	extB := 0. "do the store check anyway"
 	self assert: needsFrame.
 	popBoolean
 		ifTrue: [self PopR: ClassReg]

@@ -30,6 +30,18 @@ NewCoObjectMemorySimulatorMSB >> byteAt: byteAddress put: byte [
 	^byte
 ]
 
+{ #category : #'memory access' }
+NewCoObjectMemorySimulatorMSB >> byteSwapped32IfBigEndian: w [
+	"Accelerate, we now we are big endian"
+	^w byteSwap32
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulatorMSB >> byteSwapped64IfBigEndian: w [
+	"Accelerate, we now we are big endian"
+	^w byteSwap64
+]
+
 { #category : #'float primitives' }
 NewCoObjectMemorySimulatorMSB >> fetchFloatAt: floatBitsAddress into: aFloat [
 	aFloat at: 1 put: (self long32At: floatBitsAddress).
