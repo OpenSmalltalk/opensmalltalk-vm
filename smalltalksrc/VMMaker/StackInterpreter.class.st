@@ -570,9 +570,9 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 		(249		unknownBytecode) "reserved for Push Float"
 
 		(250		extPushClosureBytecode)
-		(251		extPushRemoteTempOrRemoteInstVarLongBytecode)
-		(252		extStoreRemoteTempOrRemoteInstVarLongBytecode)
-		(253		extStoreAndPopRemoteTempOrRemoteInstVarLongBytecode)
+		(251		pushRemoteTempLongBytecode)
+		(252		storeRemoteTempLongBytecode)
+		(253		storeAndPopRemoteTempLongBytecode)
 				
 		(254		extJumpIfNotInstanceOfBehaviorsOrPopBytecode)
 
@@ -5355,31 +5355,6 @@ StackInterpreter >> extPushReceiverVariableBytecode [
 	self pushMaybeContextReceiverVariable: index
 ]
 
-{ #category : #'stack bytecodes' }
-StackInterpreter >> extPushRemoteInstVar: byte1 inObjectAt: objectIndex [
-	| instVarIndex object |
-	instVarIndex := byte1 + (extA << 8).
-	extA := 0.
-	object := self temporary: objectIndex in: localFP.
-	(objectMemory isForwarded: object) ifTrue:
-		[object := objectMemory followForwarded: object].
-	self internalPush: (objectMemory fetchPointer: instVarIndex ofObject: object).
-]
-
-{ #category : #'stack bytecodes' }
-StackInterpreter >> extPushRemoteTempOrRemoteInstVarLongBytecode [
-	| byte1 byte2 |
-	byte1 := self fetchByte.
-	byte2 := self fetchByte.
-	self fetchNextBytecode.
-	(byte2 noMask: 1 << 7)
-		ifTrue: 
-			[ self pushRemoteTemp: byte1 inVectorAt: byte2 ]
-		ifFalse: 
-			[ self extPushRemoteInstVar: byte1 inObjectAt: byte2 - (1 << 7) ]
-	
-]
-
 { #category : #'return bytecodes' }
 StackInterpreter >> extReturnTopFromBlock [
 	"218		11011010		Return Stack Top From Block [* return from enclosing block N, N = Extend A]
@@ -5500,22 +5475,6 @@ StackInterpreter >> extStoreAndPopReceiverVariableBytecode [
 ]
 
 { #category : #'stack bytecodes' }
-StackInterpreter >> extStoreAndPopRemoteTempOrRemoteInstVarLongBytecode [
-	| byte1 byte2 |
-	byte1 := self fetchByte.
-	byte2 := self fetchByte.
-	self fetchNextBytecode.
-	(byte2 noMask: 1 << 7)
-		ifTrue: 
-			[ self storeRemoteTemp: byte1 inVectorAt: byte2.
-			  self internalPop: 1 ]
-		ifFalse: 
-			[ self extStoreRemoteInstVar: byte1 inObjectAt: byte2 - (1 << 7).
-			  self internalPop: 1 ]
-	
-]
-
-{ #category : #'stack bytecodes' }
 StackInterpreter >> extStoreLiteralVariableBytecode [
 	"233		11101001	i i i i i i i i	Store Literal Variable #iiiiiiii (+ Extend A * 256)"
 	| variableIndex |
@@ -5533,31 +5492,6 @@ StackInterpreter >> extStoreReceiverVariableBytecode [
 	extA := 0.
 	self storeMaybeContextReceiverVariable: variableIndex withValue: self internalStackTop.
 	self fetchNextBytecode.
-]
-
-{ #category : #'stack bytecodes' }
-StackInterpreter >> extStoreRemoteInstVar: byte1 inObjectAt: objectIndex [
-	| instVarIndex object |
-	instVarIndex := byte1 + (extA << 8).
-	extA := 0.
-	object := self temporary: objectIndex in: localFP.
-	(objectMemory isForwarded: object) ifTrue:
-		[object := objectMemory followForwarded: object].
-	objectMemory storePointerImmutabilityCheck: instVarIndex ofObject: object withValue: self internalStackTop
-]
-
-{ #category : #'stack bytecodes' }
-StackInterpreter >> extStoreRemoteTempOrRemoteInstVarLongBytecode [
-	| byte1 byte2 |
-	byte1 := self fetchByte.
-	byte2 := self fetchByte.
-	self fetchNextBytecode.
-	(byte2 noMask: 1 << 7)
-		ifTrue: 
-			[ self storeRemoteTemp: byte1 inVectorAt: byte2 ]
-		ifFalse: 
-			[ self extStoreRemoteInstVar: byte1 inObjectAt: byte2 - (1 << 7) ]
-	
 ]
 
 { #category : #'sista bytecodes' }
@@ -9838,11 +9772,13 @@ StackInterpreter >> maybeInlinePositive32BitIntegerFor: integerValue [
 							eeInstantiateSmallClassIndex: ClassLargePositiveIntegerCompactIndex
 							format: (objectMemory byteFormatForNumBytes: 4)
 							numSlots: 1.
-	self cppIf: VMBIGENDIAN
+	self cppIf: SPURVM
 		ifTrue:
-			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: integerValue byteSwap32]
-		ifFalse:
-			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: integerValue].
+			["Memory is 8 byte aligned in Spur, make sure that oversized bytes are set to zero"
+			objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped32IfBigEndian: integerValue).
+			objectMemory storeLong32: 1 ofObject: newLargeInteger withValue: 0]
+		ifFalse: 
+			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped32IfBigEndian: integerValue)].
 	^newLargeInteger
 ]
 
@@ -10160,11 +10096,13 @@ StackInterpreter >> noInlineSigned32BitIntegerFor: integerValue [
 							eeInstantiateSmallClassIndex: largeClass
 							format: (objectMemory byteFormatForNumBytes: 4)
 							numSlots: 1.
-	self cppIf: VMBIGENDIAN
+	self cppIf: SPURVM
 		ifTrue:
-			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: value byteSwap32]
-		ifFalse:
-			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: value].
+			["Memory is 8 byte aligned in Spur, make sure that oversized bytes are set to zero"
+			objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped32IfBigEndian: integerValue).
+			objectMemory storeLong32: 1 ofObject: newLargeInteger withValue: 0]
+		ifFalse: 
+			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped32IfBigEndian: value)].
 	^newLargeInteger
 ]
 
@@ -10488,11 +10426,7 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 							eeInstantiateSmallClassIndex: ClassLargePositiveIntegerCompactIndex
 							format: (objectMemory byteFormatForNumBytes: sz)
 							numSlots: 8 / objectMemory bytesPerOop.
-	self cppIf: VMBIGENDIAN
-		ifTrue:
-			[objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: integerValue byteSwap64]
-		ifFalse:
-			[objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: integerValue].
+	objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped64IfBigEndian: integerValue).
 	^newLargeInteger
 
 ]
@@ -13645,15 +13579,14 @@ StackInterpreter >> signed64BitIntegerFor: integerValue [
 							eeInstantiateSmallClassIndex: largeClass
 							format: (objectMemory byteFormatForNumBytes: sz)
 							numSlots: sz + 3 // objectMemory bytesPerOop.
-	self cppIf: VMBIGENDIAN
+	self cppIf: SPURVM
 		ifTrue:
-			[sz > 4
-				ifTrue: [objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: magnitude byteSwap64]
-				ifFalse: [objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: magnitude byteSwap32]]
+			["Memory is eight byte aligned in SPUR, so we are sure to have room for 64bits word whatever allocated sz"
+			objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped64IfBigEndian: magnitude)]
 		ifFalse:
 			[sz > 4
-				ifTrue: [objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: magnitude]
-				ifFalse: [objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (self cCode: [magnitude] inSmalltalk: [magnitude bitAnd: 16rFFFFFFFF])]].
+				ifTrue: [objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped64IfBigEndian: magnitude)]
+				ifFalse: [objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped32IfBigEndian: magnitude)]].
 	^newLargeInteger
 ]
 
