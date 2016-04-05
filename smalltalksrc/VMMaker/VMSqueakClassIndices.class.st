@@ -9,6 +9,7 @@ Class {
 		'ClassByteArrayCompactIndex',
 		'ClassByteStringCompactIndex',
 		'ClassFloatCompactIndex',
+		'ClassFullBlockClosureCompactIndex',
 		'ClassLargeNegativeIntegerCompactIndex',
 		'ClassLargePositiveIntegerCompactIndex',
 		'ClassMessageCompactIndex',

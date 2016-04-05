@@ -791,6 +791,7 @@ SpurMemoryManager class >> initializeCompactClassIndices [
 	ClassMethodContextCompactIndex := 36.
 	ClassBlockContextCompactIndex := 0.
 	ClassBlockClosureCompactIndex := 37.
+	ClassFullBlockClosureCompactIndex := 38.
 
 	ClassByteArrayCompactIndex := 50.
 	ClassArrayCompactIndex := 51.
