@@ -241,7 +241,7 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _aligner;
 #else
 #  define SQ_SWAP_4_BYTES_IF_BIGENDIAN(x) (x)
 #  define SQ_SWAP_8_BYTES_IF_BIGENDIAN(x) (x)
-
+#endif
 
 /* This doesn't belong here, but neither do 'self flag: ...'s belong in the
    image. We use a macro, not an inline function; we need no trace of flag.
