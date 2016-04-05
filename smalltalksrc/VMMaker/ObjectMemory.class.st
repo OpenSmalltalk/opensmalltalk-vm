@@ -317,7 +317,7 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 	SelectorCannotInterpret := 34.
 	"Was MethodContextProto := 35."
 	ClassBlockClosure := 36.
-	"Was BlockContextProto := 37."
+	ClassFullBlockClosure := 37. "Was BlockContextProto := 37."
 	ExternalObjectsArray := 38.
 	ClassMutex := 39.
 	"Was: ClassTranslatedMethod := 40."
