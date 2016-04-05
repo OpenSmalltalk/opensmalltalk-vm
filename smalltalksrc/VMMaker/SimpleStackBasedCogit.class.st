@@ -1919,6 +1919,7 @@ SimpleStackBasedCogit >> genJumpIf: boolean to: targetBytecodePC [
 					ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
 					ifFalse: [ceSendMustBeBooleanAddTrueTrampoline]).
 	ok jmpTarget: (self annotateBytecode: self Label).
+	extA := 0. "ignores the flag"
 	^0
 ]
 
@@ -2910,6 +2911,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean LiteralVariable: litVarIndex [
 	 the literal store, unless we we smart enough to realise that ReceiverResultReg
 	 was unused after the literal variable store, unlikely given that methods
 	 return self by default."
+	extB := 0. "do the store check anyway"
 	self assert: needsFrame.
 	association := self getLiteral: litVarIndex.
 	self genMoveConstant: association R: ReceiverResultReg.
@@ -2937,6 +2939,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean MaybeContextReceiverVariable: s
 	"The reason we need a frame here is that assigning to an inst var of a context may
 	 involve wholesale reorganization of stack pages, and the only way to preserve the
 	 execution state of an activation in that case is if it has a frame."
+	extB := 0. "do the store check anyway"
 	self assert: needsFrame.
 	self putSelfInReceiverResultReg.
 	objectRepresentation
@@ -2964,6 +2967,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean MaybeContextReceiverVariable: s
 { #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
 	<inline: false>
+	extB := 0. "do the store check anyway"
 	needsFrame ifTrue:
 		[self putSelfInReceiverResultReg].
 	popBoolean
@@ -2988,6 +2992,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean RemoteInstVar: slotIndex At: ob
 	 the temote temp store, unless we we smart enough to realise that
 	 ReceiverResultReg was unused after the literal variable store, unlikely given
 	 that methods return self by default."
+	extB := 0. "do the store check anyway"
 	self assert: needsFrame.
 	popBoolean
 		ifTrue: [self PopR: ClassReg]
@@ -3014,6 +3019,7 @@ SimpleStackBasedCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remot
 	 the temote temp store, unless we we smart enough to realise that
 	 ReceiverResultReg was unused after the literal variable store, unlikely given
 	 that methods return self by default."
+	extB := 0. "do the store check anyway"
 	self assert: needsFrame.
 	popBoolean
 		ifTrue: [self PopR: ClassReg]
