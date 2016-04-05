@@ -172,7 +172,7 @@ Class {
 		'OpTableSize',
 		'RedIndex'
 	],
-	#category : #'VMMaker-Interpreter'
+	#category : 'VMMaker-Interpreter'
 }
 
 { #category : #'system simulation' }

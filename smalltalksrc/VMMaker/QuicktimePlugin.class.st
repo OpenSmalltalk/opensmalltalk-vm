@@ -1,7 +1,7 @@
 Class {
 	#name : #QuicktimePlugin,
 	#superclass : #SmartSyntaxInterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }

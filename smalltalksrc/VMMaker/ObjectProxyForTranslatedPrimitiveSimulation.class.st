@@ -24,7 +24,7 @@ Class {
 		'oop',
 		'unitSize'
 	],
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : 'VMMaker-InterpreterSimulation'
 }
 
 { #category : #accessing }

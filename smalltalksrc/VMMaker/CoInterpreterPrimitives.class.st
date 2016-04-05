@@ -1,7 +1,7 @@
 Class {
 	#name : #CoInterpreterPrimitives,
 	#superclass : #CoInterpreter,
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'object access primitives' }
