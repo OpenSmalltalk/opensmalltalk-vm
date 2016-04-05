@@ -244,8 +244,6 @@ SistaStackToRegisterMappingCogit >> genCounterTripOnlyJumpIf: boolean to: target
 
 	| ok mustBeBooleanTrampoline |
 
-	extA := 0. "reset it, we don't care if MBB not needed as we need the trampoline anyway"
-
 	self ssFlushTo: simStackPtr - 1.
 	
 	self ssTop popToReg: TempReg.
@@ -350,7 +348,7 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 decrements the lower half.  N.B. We *do not* eliminate dead branches (true ifTrue:/true ifFalse:)
 	 so that scanning for send and branch data is simplified and that branch data is correct."
 	<inline: false>
-	| ok counterAddress countTripped retry nextDescriptor nextPC |
+	| ok counterAddress countTripped retry nextPC nextDescriptor |
 	<var: #ok type: #'AbstractInstruction *'>
 	<var: #retry type: #'AbstractInstruction *'>
 	<var: #countTripped type: #'AbstractInstruction *'>
@@ -370,8 +368,7 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 		nextDescriptor := self generatorAt: (objectMemory fetchByte: targetBytecodePC ofObject: methodObj) + bytecodeSetOffset.
 		nextDescriptor generator ==  #genPushConstantFalseBytecode ifTrue: [ ^ super genJumpIf: boolean to: targetBytecodePC ].  ].
 
-	extA := 0. "reset it, we don't care if MBB not needed as we need the trampoline anyway"
-	
+
 	self ssFlushTo: simStackPtr - 1.
 	self ssTop popToReg: TempReg.
 	self ssPop: 1.

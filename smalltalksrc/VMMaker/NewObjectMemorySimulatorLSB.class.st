@@ -36,6 +36,18 @@ NewObjectMemorySimulatorLSB >> byteAt: byteAddress put: byte [
 ]
 
 { #category : #'memory access' }
+NewObjectMemorySimulatorLSB >> byteSwapped32IfBigEndian: w [
+	"Accelerate, we now we are not big endian"
+	^w bitAnd: 16rFFFFFFFF
+]
+
+{ #category : #'memory access' }
+NewObjectMemorySimulatorLSB >> byteSwapped64IfBigEndian: w [
+	"Accelerate, we now we are not big endian"
+	^w bitAnd: 16rFFFFFFFFFFFFFFFF
+]
+
+{ #category : #'memory access' }
 NewObjectMemorySimulatorLSB >> endianness [
 	^#little
 ]
