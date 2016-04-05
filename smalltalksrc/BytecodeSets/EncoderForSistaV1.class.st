@@ -846,11 +846,6 @@ EncoderForSistaV1 >> genNoMustBeBooleanFlag [
 ]
 
 { #category : #'extended bytecode generation' }
-EncoderForSistaV1 >> genNoStoreCheckFlag [
-	self genUnsignedSingleExtendB: 1
-]
-
-{ #category : #'extended bytecode generation' }
 EncoderForSistaV1 >> genNop [
 	"95			01011111			Nop"
 	stream nextPut: 95
@@ -1223,6 +1218,13 @@ EncoderForSistaV1 >> genSignedSingleExtendB: extendedIndex [
 	stream
 		nextPut: 225;
 		nextPut: (extendedIndex >= 0 ifTrue: [extendedIndex] ifFalse: [extendedIndex + 256]) 
+]
+
+{ #category : #'extended bytecode generation' }
+EncoderForSistaV1 >> genStackFlagExtensionIgnoreStoreCheck: ignoreStoreCheck notAContext: notAContext [
+	"Can be applied to the long form of store and store pop of literal variable, remote inst var, remote temp, receiver inst var.
+	The notAContext bit can be used only with instance variable stores."
+	self genUnsignedSingleExtendB: ignoreStoreCheck asBit + (notAContext asBit << 1)
 ]
 
 { #category : #'bytecode generation' }
