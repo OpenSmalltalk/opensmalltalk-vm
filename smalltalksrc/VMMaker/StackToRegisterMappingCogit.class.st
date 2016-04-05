@@ -454,9 +454,9 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		(3 248 248 genCallPrimitiveBytecode)
 		(3 249 249 unknownBytecode) "reserved for Push Float"
 		(3 250 250 genExtPushClosureBytecode block v4:Block:Code:Size:)
-		(3 251 251 genPushRemoteTempOrRemoteInstVarLongBytecode)
-		(3 252 252 genStoreRemoteTempOrRemoteInstVarLongBytecode)
-		(3 253 253 genStoreAndPopRemoteTempOrRemoteInstVarLongBytecode)
+		(3 251 251 genExtPushRemoteTempOrRemoteInstVarLongBytecode)
+		(3 252 252 genExtStoreRemoteTempOrRemoteInstVarLongBytecode)
+		(3 253 253 genExtStoreAndPopRemoteTempOrRemoteInstVarLongBytecode)
 
 		(3 254 254	genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode branch v4:Long:BranchIfNotInstanceOf:Distance:)
 		
@@ -1935,8 +1935,8 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	self annotate: (self SubCw: boolean R: TempReg) objRef: boolean.
 	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
 	
-	extA = 1 ifTrue: [ extA := 0. ^ 0 ].
-	extA := 0.
+	(extA anyMask: 1) ifTrue: [ extA := 0. ^ 0 ].
+	self assert: extA = 0.
 	
 	self CmpCq: (boolean == objectMemory falseObject
 					ifTrue: [objectMemory trueObject - objectMemory falseObject]
