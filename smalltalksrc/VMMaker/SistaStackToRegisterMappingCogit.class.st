@@ -244,6 +244,8 @@ SistaStackToRegisterMappingCogit >> genCounterTripOnlyJumpIf: boolean to: target
 
 	| ok mustBeBooleanTrampoline |
 
+	extA := 0. "reset it, we don't care if MBB not needed as we need the trampoline anyway"
+
 	self ssFlushTo: simStackPtr - 1.
 	
 	self ssTop popToReg: TempReg.
