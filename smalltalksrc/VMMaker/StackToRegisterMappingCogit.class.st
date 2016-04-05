@@ -117,7 +117,7 @@ Class {
 		'numPushNilsFunction',
 		'pushNilSizeFunction'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -454,9 +454,9 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		(3 248 248 genCallPrimitiveBytecode)
 		(3 249 249 unknownBytecode) "reserved for Push Float"
 		(3 250 250 genExtPushClosureBytecode block v4:Block:Code:Size:)
-		(3 251 251 genPushRemoteTempLongBytecode)
-		(3 252 252 genStoreRemoteTempLongBytecode)
-		(3 253 253 genStoreAndPopRemoteTempLongBytecode)
+		(3 251 251 genExtPushRemoteTempOrRemoteInstVarLongBytecode)
+		(3 252 252 genExtStoreRemoteTempOrRemoteInstVarLongBytecode)
+		(3 253 253 genExtStoreAndPopRemoteTempOrRemoteInstVarLongBytecode)
 
 		(3 254 254	genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode branch v4:Long:BranchIfNotInstanceOf:Distance:)
 		
@@ -1754,7 +1754,7 @@ StackToRegisterMappingCogit >> genImmutabilityCheckStorePop: popBoolean LiteralV
 	self assert: needsFrame.
 	"N.B.  No need to check the stack for references because we generate code for
 	 literal variable loads that stores the result in a register, deferring only the register push."
-	needStoreCheck := (objectRepresentation isUnannotatableConstant: self ssTop) not.
+	needStoreCheck := self ssTopNeedsStoreCheck.
 	association := self getLiteral: litVarIndex.
 	optStatus isReceiverResultRegLive: false.
 	self ssAllocateRequiredReg: ReceiverResultReg. "for store trampoline call in genStoreSourceReg: has to be ReceiverResultReg"
@@ -1783,7 +1783,7 @@ StackToRegisterMappingCogit >> genImmutabilityCheckStorePop: popBoolean MaybeCon
 	 involve wholesale reorganization of stack pages, and the only way to preserve the
 	 execution state of an activation in that case is if it has a frame."
 	self assert: needsFrame.
-	needStoreCheck := (objectRepresentation isUnannotatableConstant: self ssTop) not.
+	needStoreCheck := self ssTopNeedsStoreCheck.
 	"Note that ReceiverResultReg remains live after both
 	 ceStoreContextInstVarTrampoline and ceStoreCheckTrampoline."
 	self ensureReceiverResultRegContainsSelf.
@@ -1821,7 +1821,7 @@ StackToRegisterMappingCogit >> genImmutabilityCheckStorePop: popBoolean Receiver
 	<inline: true>
 	| needStoreCheck |
 	self assert: needsFrame. 
-	needStoreCheck := (objectRepresentation isUnannotatableConstant: self ssTop) not.
+	needStoreCheck := self ssTopNeedsStoreCheck.
 	"Note that ReceiverResultReg remains live after the trampoline."
 	self ensureReceiverResultRegContainsSelf.
 	self ssAllocateRequiredReg: ClassReg.
@@ -1835,6 +1835,35 @@ StackToRegisterMappingCogit >> genImmutabilityCheckStorePop: popBoolean Receiver
 		needsStoreCheck: needStoreCheck 
 		needRestoreRcvr: true.
 		
+	^ 0
+]
+
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> genImmutabilityCheckStorePop: popBoolean RemoteInstVar: slotIndex At: objectIndex [ 
+	<inline: true>
+	| needStoreCheck |
+	self assert: needsFrame. 
+	needStoreCheck := self ssTopNeedsStoreCheck.
+	
+	self ssAllocateRequiredReg: ReceiverResultReg. 
+	optStatus isReceiverResultRegLive: false.
+	self MoveMw: (self frameOffsetOfTemporary: objectIndex) r: FPReg R: ReceiverResultReg.
+	
+	self ssAllocateRequiredReg: ClassReg.
+	self ssStoreAndReplacePop: popBoolean toReg: ClassReg.
+	self ssFlushTo: simStackPtr.
+	
+	objectRepresentation 
+		genEnsureOopInRegNotForwarded: ReceiverResultReg 
+		scratchReg: TempReg.
+	
+	objectRepresentation 
+		genStoreWithImmutabilityCheckSourceReg: ClassReg 
+		slotIndex: slotIndex 
+		destReg: ReceiverResultReg 
+		scratchReg: TempReg 
+		needsStoreCheck: needStoreCheck 
+		needRestoreRcvr: false.
 	^ 0
 ]
 
@@ -1898,12 +1927,17 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 												ifFalse: [self Label]]).
 		 ^0].
 	desc popToReg: TempReg.
+	
 	"Cunning trick by LPD.  If true and false are contiguous subtract the smaller.
 	 Correct result is either 0 or the distance between them.  If result is not 0 or
 	 their distance send mustBeBoolean."
 	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
 	self annotate: (self SubCw: boolean R: TempReg) objRef: boolean.
 	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
+	
+	(extA anyMask: 1) ifTrue: [ extA := 0. ^ 0 ].
+	self assert: extA = 0.
+	
 	self CmpCq: (boolean == objectMemory falseObject
 					ifTrue: [objectMemory trueObject - objectMemory falseObject]
 					ifFalse: [objectMemory falseObject - objectMemory trueObject])
@@ -2318,6 +2352,23 @@ StackToRegisterMappingCogit >> genPushRegisterArgs [
 	 or: [methodOrBlockNumArgs > self numRegArgs]) ifFalse:
 		[backEnd genPushRegisterArgsForNumArgs: methodOrBlockNumArgs scratchReg: SendNumArgsReg.
 		regArgsHaveBeenPushed := true]
+]
+
+{ #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> genPushRemoteInstVarLongBytecode [
+	| tempVectReg remoteTempReg |	
+	tempVectReg := self allocateRegNotConflictingWith: 0.
+	self MoveMw: (self frameOffsetOfTemporary: byte2 - (1 << 7)) r: FPReg R: tempVectReg.
+	objectRepresentation 
+		genEnsureOopInRegNotForwarded: tempVectReg 
+		scratchReg: TempReg.
+	remoteTempReg := self availableRegOrNoneNotConflictingWith: (self registerMaskFor: tempVectReg). 
+	remoteTempReg = NoReg ifTrue: [remoteTempReg := tempVectReg].
+	objectRepresentation
+		genLoadSlot: byte1
+		sourceReg: tempVectReg
+		destReg: remoteTempReg.
+	^self ssPushRegister: remoteTempReg
 ]
 
 { #category : #'bytecode generators' }
@@ -2753,6 +2804,16 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 ]
 
 { #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteInstVar: slotIndex At: objectIndex [ 
+	<inline: false>
+	self 
+		cppIf: IMMUTABILITY
+		ifTrue: [ ^ self genImmutabilityCheckStorePop: popBoolean RemoteInstVar: slotIndex At: objectIndex  ]
+		ifFalse: [ ^ self genVanillaStorePop: popBoolean RemoteInstVar: slotIndex At: objectIndex  ]
+		
+]
+
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remoteTempIndex [
 	<inline: false>
 	| topReg needStoreCheck |
@@ -2975,7 +3036,7 @@ StackToRegisterMappingCogit >> genVanillaStorePop: popBoolean LiteralVariable: l
 	self assert: needsFrame.
 	"N.B.  No need to check the stack for references because we generate code for
 	 literal variable loads that stores the result in a register, deferring only the register push."
-	needStoreCheck := (objectRepresentation isUnannotatableConstant: self ssTop) not.
+	needStoreCheck := self ssTopNeedsStoreCheck.
 	association := self getLiteral: litVarIndex.
 	optStatus isReceiverResultRegLive: false.
 	self ssAllocateRequiredReg: ReceiverResultReg. "for ceStoreCheck call in genStoreSourceReg: has to be ReceiverResultReg"
@@ -3004,7 +3065,7 @@ StackToRegisterMappingCogit >> genVanillaStorePop: popBoolean MaybeContextReceiv
 	 execution state of an activation in that case is if it has a frame."
 	self assert: needsFrame.
 	self ssFlushUpThroughReceiverVariable: slotIndex.
-	needStoreCheck := (objectRepresentation isUnannotatableConstant: self ssTop) not.
+	needStoreCheck := self ssTopNeedsStoreCheck.
 	"Note that ReceiverResultReg remains live after both
 	 ceStoreContextInstVarTrampoline and ceStoreCheckTrampoline."
 	self ensureReceiverResultRegContainsSelf.
@@ -3038,7 +3099,7 @@ StackToRegisterMappingCogit >> genVanillaStorePop: popBoolean ReceiverVariable: 
 	<inline: true>
 	| topReg needStoreCheck |
 	self ssFlushUpThroughReceiverVariable: slotIndex.
-	needStoreCheck := (objectRepresentation isUnannotatableConstant: self ssTop) not.
+	needStoreCheck := self ssTopNeedsStoreCheck.
 	"Note that ReceiverResultReg remains live after ceStoreCheckTrampoline."
 	self ensureReceiverResultRegContainsSelf.
 	topReg := self allocateRegForStackEntryAt: 0 notConflictingWith: (self registerMaskFor: ReceiverResultReg). 
@@ -3051,6 +3112,38 @@ StackToRegisterMappingCogit >> genVanillaStorePop: popBoolean ReceiverVariable: 
 		inFrame: needsFrame
 		needsStoreCheck: needStoreCheck.
 	^ 0
+]
+
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> genVanillaStorePop: popBoolean RemoteInstVar: slotIndex At: objectIndex [
+	<inline: false>
+	| topReg needStoreCheck |
+	"The only reason we assert needsFrame here is that in a frameless method
+	 ReceiverResultReg must and does contain only self, but the ceStoreCheck
+	 trampoline expects the target of the store to be in ReceiverResultReg.  So
+	 in a frameless method we would have a conflict between the receiver and
+	 the temote temp store, unless we we smart enough to realise that
+	 ReceiverResultReg was unused after the literal variable store, unlikely given
+	 that methods return self by default."
+	self assert: needsFrame.
+	"N.B.  No need to check the stack for references because we generate code for
+	 remote temp loads that stores the result in a register, deferring only the register push."
+	needStoreCheck := (objectRepresentation isUnannotatableConstant: self ssTop) not.
+	topReg := self allocateRegForStackEntryAt: 0 notConflictingWith: (self registerMaskFor: ReceiverResultReg).
+	self ssAllocateRequiredReg: ReceiverResultReg. 
+	optStatus isReceiverResultRegLive: false.
+	self ssStorePop: popBoolean toReg: topReg.
+	self MoveMw: (self frameOffsetOfTemporary: objectIndex) r: FPReg R: ReceiverResultReg.
+	objectRepresentation 
+		genEnsureOopInRegNotForwarded: ReceiverResultReg 
+		scratchReg: TempReg.
+	^objectRepresentation
+		genStoreSourceReg: topReg
+		slotIndex: slotIndex
+		destReg: ReceiverResultReg
+		scratchReg: TempReg
+		inFrame: needsFrame
+		needsStoreCheck: needStoreCheck
 ]
 
 { #category : #initialization }
@@ -4084,6 +4177,15 @@ StackToRegisterMappingCogit >> ssTop [
 StackToRegisterMappingCogit >> ssTopDescriptor [
 	<returnTypeC: #CogSimStackEntry>
 	^simStack at: simStackPtr
+]
+
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> ssTopNeedsStoreCheck [
+	<inline: true>
+	| needsStoreCheck |
+	needsStoreCheck := (extB noMask: 1) and: [ (objectRepresentation isUnannotatableConstant: self ssTop) not ].
+	extB := 0.
+	^ needsStoreCheck
 ]
 
 { #category : #'simulation stack' }
