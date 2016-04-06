@@ -16,7 +16,7 @@ Class {
 		'VMMethodCacheConstants',
 		'VMObjectIndices'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }

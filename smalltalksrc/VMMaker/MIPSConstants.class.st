@@ -120,7 +120,7 @@ Class {
 		'XORI',
 		'ZR'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #'as yet unclassified' }

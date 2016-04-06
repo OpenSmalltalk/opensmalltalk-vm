@@ -14,7 +14,7 @@ Class {
 		'bb',
 		'thisSessionID'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #translation }
@@ -85,6 +85,24 @@ InterpreterProxy >> byteSizeOf: oop [
 	^oop class isBytes
 		ifTrue:[(self slotSizeOf: oop)]
 		ifFalse:[(self slotSizeOf: oop) * 4]
+]
+
+{ #category : #other }
+InterpreterProxy >> byteSwapped32IfBigEndian: anInteger [
+	"Note: for simulation only.
+	This message is not generated in C but replaced with a macro"
+	<doNotGenerate>
+	self vmEndianness = 1 ifTrue: [^anInteger byteSwap32].
+	^anInteger
+]
+
+{ #category : #other }
+InterpreterProxy >> byteSwapped64IfBigEndian: anInteger [
+	"Note: for simulation only.
+	This message is not generated in C but replaced with a macro"
+	<doNotGenerate>
+	self vmEndianness = 1 ifTrue: [^anInteger byteSwap64].
+	^anInteger
 ]
 
 { #category : #'callback support' }
