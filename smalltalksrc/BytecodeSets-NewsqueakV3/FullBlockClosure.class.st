@@ -28,6 +28,12 @@ FullBlockClosure >> compiledBlock [
 ]
 
 { #category : #accessing }
+FullBlockClosure >> compiledBlock: aCompiledMethod [
+	"To be able to inherit from BlockClosure"
+	startpc := aCompiledMethod
+]
+
+{ #category : #accessing }
 FullBlockClosure >> home [
 	^ outerContext ifNotNil: [ outerContext home ]
 ]
@@ -45,6 +51,11 @@ FullBlockClosure >> numTemps [
 { #category : #accessing }
 FullBlockClosure >> receiver [
 	^ receiver
+]
+
+{ #category : #accessing }
+FullBlockClosure >> receiver: anObject [
+	receiver := anObject
 ]
 
 { #category : #accessing }
