@@ -570,9 +570,9 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 		(249		unknownBytecode) "reserved for Push Float"
 
 		(250		extPushClosureBytecode)
-		(251		extPushRemoteTempOrRemoteInstVarLongBytecode)
-		(252		extStoreRemoteTempOrRemoteInstVarLongBytecode)
-		(253		extStoreAndPopRemoteTempOrRemoteInstVarLongBytecode)
+		(251		pushRemoteTempLongBytecode)
+		(252		storeRemoteTempLongBytecode)
+		(253		storeAndPopRemoteTempLongBytecode)
 				
 		(254		extJumpIfNotInstanceOfBehaviorsOrPopBytecode)
 
@@ -5355,31 +5355,6 @@ StackInterpreter >> extPushReceiverVariableBytecode [
 	self pushMaybeContextReceiverVariable: index
 ]
 
-{ #category : #'stack bytecodes' }
-StackInterpreter >> extPushRemoteInstVar: byte1 inObjectAt: objectIndex [
-	| instVarIndex object |
-	instVarIndex := byte1 + (extA << 8).
-	extA := 0.
-	object := self temporary: objectIndex in: localFP.
-	(objectMemory isForwarded: object) ifTrue:
-		[object := objectMemory followForwarded: object].
-	self internalPush: (objectMemory fetchPointer: instVarIndex ofObject: object).
-]
-
-{ #category : #'stack bytecodes' }
-StackInterpreter >> extPushRemoteTempOrRemoteInstVarLongBytecode [
-	| byte1 byte2 |
-	byte1 := self fetchByte.
-	byte2 := self fetchByte.
-	self fetchNextBytecode.
-	(byte2 noMask: 1 << 7)
-		ifTrue: 
-			[ self pushRemoteTemp: byte1 inVectorAt: byte2 ]
-		ifFalse: 
-			[ self extPushRemoteInstVar: byte1 inObjectAt: byte2 - (1 << 7) ]
-	
-]
-
 { #category : #'return bytecodes' }
 StackInterpreter >> extReturnTopFromBlock [
 	"218		11011010		Return Stack Top From Block [* return from enclosing block N, N = Extend A]
@@ -5500,22 +5475,6 @@ StackInterpreter >> extStoreAndPopReceiverVariableBytecode [
 ]
 
 { #category : #'stack bytecodes' }
-StackInterpreter >> extStoreAndPopRemoteTempOrRemoteInstVarLongBytecode [
-	| byte1 byte2 |
-	byte1 := self fetchByte.
-	byte2 := self fetchByte.
-	self fetchNextBytecode.
-	(byte2 noMask: 1 << 7)
-		ifTrue: 
-			[ self storeRemoteTemp: byte1 inVectorAt: byte2.
-			  self internalPop: 1 ]
-		ifFalse: 
-			[ self extStoreRemoteInstVar: byte1 inObjectAt: byte2 - (1 << 7).
-			  self internalPop: 1 ]
-	
-]
-
-{ #category : #'stack bytecodes' }
 StackInterpreter >> extStoreLiteralVariableBytecode [
 	"233		11101001	i i i i i i i i	Store Literal Variable #iiiiiiii (+ Extend A * 256)"
 	| variableIndex |
@@ -5533,31 +5492,6 @@ StackInterpreter >> extStoreReceiverVariableBytecode [
 	extA := 0.
 	self storeMaybeContextReceiverVariable: variableIndex withValue: self internalStackTop.
 	self fetchNextBytecode.
-]
-
-{ #category : #'stack bytecodes' }
-StackInterpreter >> extStoreRemoteInstVar: byte1 inObjectAt: objectIndex [
-	| instVarIndex object |
-	instVarIndex := byte1 + (extA << 8).
-	extA := 0.
-	object := self temporary: objectIndex in: localFP.
-	(objectMemory isForwarded: object) ifTrue:
-		[object := objectMemory followForwarded: object].
-	objectMemory storePointerImmutabilityCheck: instVarIndex ofObject: object withValue: self internalStackTop
-]
-
-{ #category : #'stack bytecodes' }
-StackInterpreter >> extStoreRemoteTempOrRemoteInstVarLongBytecode [
-	| byte1 byte2 |
-	byte1 := self fetchByte.
-	byte2 := self fetchByte.
-	self fetchNextBytecode.
-	(byte2 noMask: 1 << 7)
-		ifTrue: 
-			[ self storeRemoteTemp: byte1 inVectorAt: byte2 ]
-		ifFalse: 
-			[ self extStoreRemoteInstVar: byte1 inObjectAt: byte2 - (1 << 7) ]
-	
 ]
 
 { #category : #'sista bytecodes' }
