@@ -544,7 +544,11 @@ StackInterpreterSimulator >> endPCOf: aMethod [
 				 [#jump:if:]					->	[farthestContinuation := farthestContinuation max: pc + inst arguments first].
 				 [#methodReturnConstant:]	->	[pc >= farthestContinuation ifTrue: [end := pc]].
 				 [#methodReturnReceiver]	->	[pc >= farthestContinuation ifTrue: [end := pc]].
-				 [#methodReturnTop]		->	[pc >= farthestContinuation ifTrue: [end := pc]] }
+				 [#methodReturnTop]		->	[pc >= farthestContinuation ifTrue: [end := pc]].
+				"This is for CompiledBlock/FullBlockClosure.  Since the response to pushClosure... above
+				 skips over all block bytecoes, we will only see a blockReturnTop if it is at the top level,
+				 and so it must be a blockReturnTop in a CompiledBlock for a FullBlockClosure."
+				 [#blockReturnTop]			->	[pc >= farthestContinuation ifTrue: [end := pc]] }
 			otherwise: [].
 		 pc := is pc - 1].
 	^end
