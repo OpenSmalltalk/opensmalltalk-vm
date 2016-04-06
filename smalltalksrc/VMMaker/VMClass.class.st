@@ -713,6 +713,16 @@ VMClass >> cCode: codeStringOrBlock inSmalltalk: aBlock [
 	^aBlock value
 ]
 
+{ #category : #'memory access' }
+VMClass >> cCoerce: value to: cTypeString [
+	"Type coercion. For translation a cast will be emmitted. When running in Smalltalk
+	  answer a suitable wrapper for correct indexing."
+	<doNotGenerate>
+	^value
+		ifNil: [value]
+		ifNotNil: [value coerceTo: cTypeString sim: self]
+]
+
 { #category : #'translation support' }
 VMClass >> cPreprocessorDirective: codeString [
 	"For translation only; noop when running in Smalltalk."

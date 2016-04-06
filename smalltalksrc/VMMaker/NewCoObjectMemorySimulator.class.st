@@ -76,15 +76,6 @@ NewCoObjectMemorySimulator >> bytesPerOop [
 	^4
 ]
 
-{ #category : #'memory access' }
-NewCoObjectMemorySimulator >> cCoerce: value to: cTypeString [
-	"Type coercion for translation only; just return the value when running in Smalltalk."
-
-	^value == nil
-		ifTrue: [value]
-		ifFalse: [value coerceTo: cTypeString sim: self]
-]
-
 { #category : #'simulation only' }
 NewCoObjectMemorySimulator >> capturePendingFinalizationSignals [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
