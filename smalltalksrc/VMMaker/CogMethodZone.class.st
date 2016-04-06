@@ -328,6 +328,17 @@ CogMethodZone >> findPreviouslyCompiledVersionOf: aMethodObj with: aSelectorOop 
 	^nil
 ]
 
+{ #category : #'jit - api' }
+CogMethodZone >> followForwardedLiteralsInOpenPICList [
+	<option: #SpurObjectMemory>
+	| openPIC |
+	<var: #openPIC type: #'CogMethod *'>
+	openPIC := openPICList.
+	[openPIC notNil] whileTrue:
+		[cogit followForwardedLiteralsIn: openPIC.
+		 openPIC := self cCoerceSimple: openPIC nextOpenPIC to: #'CogMethod *'.]
+]
+
 { #category : #compaction }
 CogMethodZone >> freeMethod: cogMethod [
 	<api>
