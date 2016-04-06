@@ -337,6 +337,8 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV4 [
 	"StackInterpreter initializeBytecodeTableForNewspeakV4"
 	"Note: This table will be used to generate a C switch statement."
 
+	initializationOptions at: #NewsqueakV4BytecodeSet put: true.
+
 	BytecodeTable := Array new: 256.
 	BytecodeEncoderClassName := #EncoderForNewsqueakV4.
 	LongStoreBytecode := 234.
@@ -455,10 +457,11 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 	"StackInterpreter initializeBytecodeTableForSistaV1"
 	"Note: This table will be used to generate a C switch statement."
 
+	initializationOptions at: #SistaV1BytecodeSet put: true.
+
 	BytecodeTable := Array new: 256.
 	BytecodeEncoderClassName := #EncoderForSistaV1.
 	BytecodeSetHasDirectedSuperSend := true.
-
 	self table: BytecodeTable from:
 	#(	"1 byte bytecodes"
 		(   0  15 pushReceiverVariableBytecode)
@@ -584,6 +587,8 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosures [
 	"StackInterpreter initializeBytecodeTableForSqueakV3PlusClosures"
 	"Note: This table will be used to generate a C switch statement."
+
+	initializationOptions at: #SqueakV3PlusClosuresBytecodeSet put: true.
 
 	BytecodeTable := Array new: 256.
 	BytecodeEncoderClassName := #EncoderForV3PlusClosures.
@@ -1270,7 +1275,17 @@ StackInterpreter class >> initializePrimitiveTable [
 
 		(520 primitiveFail)
 		(521 529 primitiveFail) "Reserved for Spur primitives"
-		(530 539 primitiveFail)
+		"new closure primitives (were Networking primitives)"
+		(530 primitiveFail)
+		(531 primitiveFullClosureValue) "value"
+		(532 primitiveFullClosureValue) "value:"
+		(533 primitiveFullClosureValue) "value:value:"
+		(534 primitiveFullClosureValue) "value:value:value:"
+		(535 primitiveFullClosureValue) "value:value:value:value:"
+		(536 primitiveFullClosureValueWithArgs) "valueWithArguments:"
+		(537 primitiveFullClosureValueNoContextSwitch) "valueNoContextSwitch"
+		(538 primitiveFullClosureValueNoContextSwitch) "valueNoContextSwitch:"
+		(539 primitiveFail)
 
 		(540 primitiveFail)
 		(541 primitiveSmallFloatAdd)
@@ -1809,16 +1824,19 @@ StackInterpreter >> activateNewClosureMethod: blockClosure numArgs: numArgs mayC
 	"Similar to activateNewMethod but for Closure and newMethod."
 	| numCopied outerContext theMethod closureIP |
 	<inline: true>
-	outerContext := objectMemory followField: ClosureOuterContextIndex ofObject: blockClosure.
+	outerContext := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
+	self assert: (objectMemory isContext: outerContext).
 	numCopied := self copiedValueCountOfClosure: blockClosure.
 
-	theMethod := objectMemory followField: MethodIndex ofObject: outerContext.
+	theMethod := objectMemory fetchPointer: MethodIndex ofObject: outerContext.
+	self assert: (objectMemory isOopCompiledMethod: theMethod).
 	self push: instructionPointer.
 	self push: framePointer.
 	framePointer := stackPointer.
 	self push: theMethod.
 	self push: (self encodeFrameFieldHasContext: false isBlock: true numArgs: numArgs).
 	self push: objectMemory nilObject. "FxThisContext field"
+	"Because inst var access is not checked, we must follow the receiver in Spur to ensure it is valid."
 	self push: (objectMemory followField: ReceiverIndex ofObject: outerContext).
 
 	"Copy the copied values..."
@@ -1853,14 +1871,15 @@ StackInterpreter >> activateNewFullClosureMethod: blockClosure numArgs: numArgs 
 	<inline: true>
 	outerContext := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
 	numCopied := self copiedValueCountOfFullClosure: blockClosure.
-
-	theMethod := objectMemory followField: FullClosureCompiledBlockIndex ofObject: blockClosure.
+	theMethod := objectMemory fetchPointer: FullClosureCompiledBlockIndex ofObject: blockClosure.
+	self assert: (objectMemory isOopCompiledMethod: theMethod).
 	self push: instructionPointer.
 	self push: framePointer.
 	framePointer := stackPointer.
 	self push: theMethod.
 	self push: (self encodeFrameFieldHasContext: false isBlock: true numArgs: numArgs).
 	self push: objectMemory nilObject. "FxThisContext field"
+	"Because inst var access is not checked, we must follow the receiver in Spur to ensure it is valid."
 	self push: (objectMemory followField: FullClosureReceiverIndex ofObject: blockClosure).
 
 	"Copy the copied values..."
@@ -1873,12 +1892,12 @@ StackInterpreter >> activateNewFullClosureMethod: blockClosure numArgs: numArgs 
 	self assert: (self frameIsBlockActivation: framePointer).
 	self assert: (self frameHasContext: framePointer) not.
 
-	methodHeader := objectMemory methodHeaderOf: newMethod.
+	methodHeader := objectMemory methodHeaderOf: theMethod.
 	numTemps := self temporaryCountOfMethodHeader: methodHeader.
-	
+
 	numArgs + numCopied + 1 to: numTemps do: [ :i | self push: objectMemory nilObject].
 
-	instructionPointer := (self initialPCForHeader: methodHeader method: newMethod) - 1.
+	instructionPointer := (self initialPCForHeader: methodHeader method: theMethod) - 1.
 	
 	self setMethod: theMethod.
 

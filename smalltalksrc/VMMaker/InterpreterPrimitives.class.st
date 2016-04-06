@@ -1171,28 +1171,18 @@ InterpreterPrimitives >> primitiveClosureValue [
 	argumentCount = numArgs ifFalse:
 		[^self primitiveFail].
 
-	(self is: blockClosure instanceOf: (objectMemory splObj: ClassBlockClosure) compactClassIndex: ClassBlockClosureCompactIndex)
-		ifTrue: 
-			[ "Somewhat paranoiac checks we need while debugging that we may be able to discard
-			 in a robust system."
-			outerContext := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
-			(objectMemory isContext: outerContext) ifFalse:
-				[^self primitiveFail].
-			closureMethod := objectMemory fetchPointer: MethodIndex ofObject: outerContext.
-			"Check if the closure's method is actually a CompiledMethod."
-			(objectMemory isOopCompiledMethod: closureMethod) ifFalse:
-				[^self primitiveFail].
+	"Somewhat paranoiac checks we need while debugging that we may be able to discard
+	 in a robust system."
+	outerContext := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
+	(objectMemory isContext: outerContext) ifFalse:
+		[^self primitiveFail].
 
-			"Note we use activateNewMethod, not executeNewMethod, to avoid
-			 quickCheckForInterrupts.  Don't check until we have a full activation."
-			self activateNewClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: true ]
-		ifFalse: 
-			[ closureMethod := objectMemory fetchPointer: FullClosureCompiledBlockIndex ofObject: blockClosure.
-			(objectMemory isOopCompiledMethod: closureMethod)
-				ifFalse: [ ^ self primitiveFail ].
-			"Note we use activateNewMethod, not executeNewMethod, to avoid
-			 quickCheckForInterrupts.  Don't check until we have a full activation."
-			self activateNewFullClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: true ]
+	closureMethod := objectMemory fetchPointer: MethodIndex ofObject: outerContext.
+	"Check if the closure's method is actually a CompiledMethod."
+	(objectMemory isOopCompiledMethod: closureMethod) ifFalse:
+		[^self primitiveFail].
+
+	self activateNewClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: true
 ]
 
 { #category : #'control primitives' }
@@ -1212,13 +1202,12 @@ InterpreterPrimitives >> primitiveClosureValueNoContextSwitch [
 	outerContext := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
 	(objectMemory isContext: outerContext) ifFalse:
 		[^self primitiveFail].
+
 	closureMethod := objectMemory fetchPointer: MethodIndex ofObject: outerContext.
 	"Check if the closure's method is actually a CompiledMethod."
 	(objectMemory isOopCompiledMethod: closureMethod) ifFalse:
 		[^self primitiveFail].
 
-	"Note we use activateNewMethod, not executeNewMethod, to avoid
-	 quickCheckForInterrupts.  Don't check until we have a full activation."
 	self activateNewClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: false
 ]
 
@@ -1253,13 +1242,10 @@ InterpreterPrimitives >> primitiveClosureValueWithArgs [
 
 	"Copy the arguments to the stack, and activate"
 	index := 1.
-	[index <= numArgs]
-		whileTrue:
+	[index <= numArgs] whileTrue:
 		[self push: (objectMemory fetchPointer: index - 1 ofObject: argumentArray).
 		index := index + 1].
 
-	"Note we use activateNewMethod, not executeNewMethod, to avoid
-	 quickCheckForInterrupts.  Don't check until we have a full activation."
 	self activateNewClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: true
 ]
 
@@ -1871,6 +1857,76 @@ InterpreterPrimitives >> primitiveFractionalPart [
 							inSmalltalk: [rcvr fractionPart].
 				self pushFloat: frac]
 		ifFalse: [self unPop: 1]
+]
+
+{ #category : #'control primitives' }
+InterpreterPrimitives >> primitiveFullClosureValue [
+	<option: #SistaV1BytecodeSet>
+	| blockClosure numArgs closureMethod |
+	blockClosure := self stackValue: argumentCount.
+	numArgs := self argumentCountOfClosure: blockClosure.
+	argumentCount = numArgs ifFalse:
+		[^self primitiveFail].
+
+	closureMethod := objectMemory fetchPointer: FullClosureCompiledBlockIndex ofObject: blockClosure.
+	(objectMemory isOopCompiledMethod: closureMethod) ifFalse:
+		[^self primitiveFail].
+
+	self activateNewFullClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: true
+]
+
+{ #category : #'control primitives' }
+InterpreterPrimitives >> primitiveFullClosureValueNoContextSwitch [
+	"An exact clone of primitiveFullClosureValue except that this version will not
+	 check for interrupts on stack overflow.  It may invoke the garbage collector
+	 but will not switch processes.  See checkForInterruptsMayContextSwitch:"
+	<api>
+	<option: #SistaV1BytecodeSet>
+	| blockClosure numArgs closureMethod |
+	blockClosure := self stackValue: argumentCount.
+	numArgs := self argumentCountOfClosure: blockClosure.
+	argumentCount = numArgs ifFalse:
+		[^self primitiveFail].
+
+	closureMethod := objectMemory fetchPointer: FullClosureCompiledBlockIndex ofObject: blockClosure.
+	(objectMemory isOopCompiledMethod: closureMethod) ifFalse:
+		[^self primitiveFail].
+
+	self activateNewFullClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: false
+]
+
+{ #category : #'control primitives' }
+InterpreterPrimitives >> primitiveFullClosureValueWithArgs [
+	<option: #SistaV1BytecodeSet>
+	| argumentArray arraySize blockClosure numArgs closureMethod index |
+	argumentArray := self stackTop.
+	(objectMemory isArray: argumentArray) ifFalse:
+		[^self primitiveFail].
+
+	"Check for enough space in thisContext to push all args"
+	arraySize := objectMemory numSlotsOf: argumentArray.
+	(self roomToPushNArgs: arraySize) ifFalse:
+		[^self primitiveFail].
+
+	blockClosure := self stackValue: argumentCount.
+	numArgs := self argumentCountOfClosure: blockClosure.
+	arraySize = numArgs ifFalse:
+		[^self primitiveFail].
+
+
+	closureMethod := objectMemory fetchPointer: FullClosureCompiledBlockIndex ofObject: blockClosure.
+	(objectMemory isOopCompiledMethod: closureMethod) ifFalse:
+		[^self primitiveFail].
+
+	self popStack.
+
+	"Copy the arguments to the stack, and activate"
+	index := 1.
+	[index <= numArgs] whileTrue:
+		[self push: (objectMemory fetchPointer: index - 1 ofObject: argumentArray).
+		index := index + 1].
+
+	self activateNewFullClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: true
 ]
 
 { #category : #'memory space primitives' }
