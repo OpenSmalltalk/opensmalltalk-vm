@@ -1539,6 +1539,15 @@ SimpleStackBasedCogit >> genCallPrimitiveBytecode [
 	^0
 ]
 
+{ #category : #'bytecode generator support' }
+SimpleStackBasedCogit >> genCompConstant: constant R: register [
+	<inline: true>
+	^ (objectRepresentation shouldAnnotateObjectReference: constant)
+		ifTrue: [ self annotate: (self CmpCw: constant R: register) objRef: constant ]
+		ifFalse: [ self CmpCq: constant R: register ]
+	
+]
+
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genDoubleFailIfZeroArgRcvr: rcvrReg arg: argReg [
 	<option: #DPFPReg0>
