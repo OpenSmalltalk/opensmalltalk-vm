@@ -10,7 +10,7 @@ Class {
 		'entrySize',
 		'functionPointerIndex'
 	],
-	#category : #'VMMaker-JITSimulation'
+	#category : 'VMMaker-JITSimulation'
 }
 
 { #category : #accessing }
