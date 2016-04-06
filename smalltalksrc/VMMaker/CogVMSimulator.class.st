@@ -255,15 +255,6 @@ CogVMSimulator >> byteCountText [
 	^(String streamContents: [:s| s print: byteCount; nextPut: $/; print: sendCount]) asText
 ]
 
-{ #category : #'memory access' }
-CogVMSimulator >> cCoerce: value to: cTypeString [
-	"Type coercion for translation only; just return the value when running in Smalltalk."
-
-	^value == nil
-		ifTrue: [value]
-		ifFalse: [value coerceTo: cTypeString sim: self]
-]
-
 { #category : #'translation support' }
 CogVMSimulator >> cCoerceSimple: value to: cTypeString [
 	"Type coercion for translation and simulation.
