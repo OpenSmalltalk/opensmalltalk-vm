@@ -1685,15 +1685,6 @@ StackToRegisterMappingCogit >> genCallPrimitiveBytecode [
 ]
 
 { #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genCompConstant: constant R: register [
-	<inline: true>
-	^ (objectRepresentation shouldAnnotateObjectReference: constant)
-		ifTrue: [ self annotate: (self CmpCw: constant R: register) objRef: constant ]
-		ifFalse: [ self CmpCq: constant R: register ]
-	
-]
-
-{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genEqualsEqualsComparisonArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg [
 	"Generates the Cmp instruction for #==. The instruction is different if one of the operands is a constant.
 	In the case of the v3 memory manager, the constant could be annotable." 
