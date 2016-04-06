@@ -4,7 +4,7 @@ This is a kludgy interface to the translated primitive code in ADPCMCodec. The t
 Class {
 	#name : #ADPCMCodecPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }
