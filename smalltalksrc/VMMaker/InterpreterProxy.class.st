@@ -87,6 +87,24 @@ InterpreterProxy >> byteSizeOf: oop [
 		ifFalse:[(self slotSizeOf: oop) * 4]
 ]
 
+{ #category : #other }
+InterpreterProxy >> byteSwapped32IfBigEndian: anInteger [
+	"Note: for simulation only.
+	This message is not generated in C but replaced with a macro"
+	<doNotGenerate>
+	self vmEndianness = 1 ifTrue: [^anInteger byteSwap32].
+	^anInteger
+]
+
+{ #category : #other }
+InterpreterProxy >> byteSwapped64IfBigEndian: anInteger [
+	"Note: for simulation only.
+	This message is not generated in C but replaced with a macro"
+	<doNotGenerate>
+	self vmEndianness = 1 ifTrue: [^anInteger byteSwap64].
+	^anInteger
+]
+
 { #category : #'callback support' }
 InterpreterProxy >> callbackEnter: callbackID [
 	"Re-enter the interpreter for executing a callback"
