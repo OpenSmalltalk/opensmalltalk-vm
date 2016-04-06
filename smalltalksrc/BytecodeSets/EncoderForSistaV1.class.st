@@ -35,9 +35,9 @@ Instance Variables (inherited)
 	93			01011101			BlockReturn nil
 *	94			01011110			BlockReturn Top [* return from enclosing block N, N = Extend A, then jump by Ext B ]
 *	95			01011111			Nop
-	96-111		0110 iiii			Send Arithmetic Message #iiii #(#+ #- #< #> #'<=' #'>=' #= #'~=' #* #/ #'\\' #@ #bitShift: #'//' #bitAnd: #bitOr:)
-	112-119	01110 iii			Send Special Message #iii #(#at: #at:put: #size #next #nextPut: #atEnd #'==' class)
-	120		01111000			UNASSIGNED (was: blockCopy:)
+	96-111		0110 iiii			Send Arithmetic Message #iiii #(#+ #- #< #> #<= #>= #= #~= #* #/ #\\ #@ #bitShift: #// #bitAnd: #bitOr:)
+	112-119	01110 iii			Send Special Message #iii #(#at: #at:put: #size #next #nextPut: #atEnd #== class)
+	120		01111000			UNASSIGNED (was: blockCopy::, reserved for #~~)
 	121		01111001			Send Special Message #value
 	122-123	0111101 i			Send Special Message #i #(#value: #do:)
 	124-127	011111 ii			Send Special Message #ii #(#new #new: #x #y))
@@ -50,7 +50,7 @@ Instance Variables (inherited)
 	200-207	11001 iii			Pop and Store Receiver Variable #iii
 	208-215	11010 iii			Pop and Store Temporary Variable #iii
 	216		11011000			Pop Stack Top
-	217		11011001			Unconditionnal trap
+	217		11011001			Unconditional trap
 	218-219	1101101 i			UNASSIGNED
 	220-223	110111 ii			UNASSIGNED
 
@@ -92,7 +92,7 @@ Instance Variables (inherited)
 **	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)
 *	255		11111111	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 (i reserved for needsOuterContext: i = 1)
 
-(1) Bytecode 235 is a super send bytecode that starts the lookup in the superclass of some class.  It has two forms, ""norma;"" and ""directed"". In the normal form, the class is the value of the method's methodClassAssociation which must be the last literal.  In the directed form the class is the class on top of stack.
+(1) Bytecode 235 is a super send bytecode that starts the lookup in the superclass of some class.  It has two forms, ""normal"" and ""directed"". In the normal form, the class is the value of the method's methodClassAssociation which must be the last literal.  In the directed form the class is the class on top of stack.
 
 (2) The Call Primitive Bytecode specifies either a primitive in the primitive table (m=0) or an inlined primitive (m=1). Non-inlined primtiives from the primitive table have index (jjjjjjj * 256) + iiiiiiii and return from the method if they succeed.  This bytecode is only valid as the first bytecode of a method.  Inline primitives have index (jjjjjjj * 256) + iiiiiiii, cannot fail, and do not return when they succeed, yielding a result (typically on top of stack after popping their arguments, but possibly in a byte data stack, for example for unboxed floating-point primitives).
 
@@ -147,7 +147,7 @@ We define the following inlined primitives:
 Class {
 	#name : #EncoderForSistaV1,
 	#superclass : #BytecodeEncoder,
-	#category : 'BytecodeSets-SistaV1'
+	#category : #'BytecodeSets-SistaV1'
 }
 
 { #category : #'bytecode decoding' }
