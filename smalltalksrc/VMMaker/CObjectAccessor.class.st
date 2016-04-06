@@ -89,6 +89,14 @@ CObjectAccessor >> asPluggableAccessor: accessorArray [
 		atPutBlock: accessorArray last
 ]
 
+{ #category : #converting }
+CObjectAccessor >> asUnsignedIntAccessor [
+
+	^ self asPluggableAccessor
+		atBlock: [:obj :index | obj unsignedIntAt: index]
+		atPutBlock: [:obj :index :value | obj unsignedIntAt: index put: value]
+]
+
 { #category : #accessing }
 CObjectAccessor >> at: index [
 	^object instVarAt: index + offset + 1

@@ -181,9 +181,10 @@ FilePluginSimulator >> recordStateOf: file [
 ]
 
 { #category : #simulation }
-FilePluginSimulator >> sqFile: file Read: count Into: byteArrayIndex At: startIndex [
-	| interpreter |
+FilePluginSimulator >> sqFile: file Read: count Into: byteArrayIndexArg At: startIndex [
+	| interpreter byteArrayIndex |
 	interpreter := interpreterProxy interpreter.
+	byteArrayIndex := byteArrayIndexArg isInteger ifTrue: [byteArrayIndexArg] ifFalse: [byteArrayIndexArg cPtrAsOop].
 	[[startIndex to: startIndex + count - 1 do:
 		[ :i |
 		file atEnd ifTrue:
@@ -213,9 +214,10 @@ FilePluginSimulator >> sqFile: file Truncate: truncatePosition [
 ]
 
 { #category : #simulation }
-FilePluginSimulator >> sqFile: file Write: count From: byteArrayIndex At: startIndex [
-	| interpreter |
+FilePluginSimulator >> sqFile: file Write: count From: byteArrayIndexArg At: startIndex [
+	| interpreter byteArrayIndex |
 	interpreter := interpreterProxy interpreter.
+	byteArrayIndex := byteArrayIndexArg isInteger ifTrue: [byteArrayIndexArg] ifFalse: [byteArrayIndexArg cPtrAsOop].
 	file isBinary
 		ifTrue:
 			[startIndex to: startIndex + count - 1 do:
