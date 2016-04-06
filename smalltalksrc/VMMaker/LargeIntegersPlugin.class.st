@@ -552,7 +552,7 @@ LargeIntegersPlugin >> cDigitOf: cPointer at: zeroBasedDigitIndex [
 	<inline: true>
 	<returnTypeC: #'unsigned int'>
 	<var: 'cPointer' type: #'unsigned int *'>
-	^self byteSwapped32IfBigEndian: (cPointer at: zeroBasedDigitIndex)
+	^self byteSwapped32IfBigEndian: ((self cCode: [cPointer] inSmalltalk: [interpreterProxy cCoerce: cPointer to: #'unsigned int *']) at: zeroBasedDigitIndex)
 ]
 
 { #category : #'C core util' }
@@ -561,7 +561,9 @@ LargeIntegersPlugin >> cDigitOf: cPointer at: zeroBasedDigitIndex put: aValue [
 	<returnTypeC: #'unsigned int'>
 	<var: 'cPointer' type: #'unsigned int *'>
 	<var: 'aValue' type: #'unsigned int'>
-	^cPointer at: zeroBasedDigitIndex put: (self byteSwapped32IfBigEndian: aValue)
+	^(self cCode: [cPointer] inSmalltalk: [interpreterProxy cCoerce: cPointer to: #'unsigned int *'])
+		at: zeroBasedDigitIndex
+		put: (self byteSwapped32IfBigEndian: aValue)
 ]
 
 { #category : #'C core' }
