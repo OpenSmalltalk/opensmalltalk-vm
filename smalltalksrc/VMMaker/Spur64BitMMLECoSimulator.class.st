@@ -56,6 +56,16 @@ Spur64BitMMLECoSimulator >> byteAtPointer: pointer [
 	^self byteAt: pointer
 ]
 
+{ #category : #'memory access' }
+Spur64BitMMLECoSimulator >> byteSwapped32IfBigEndian: w [
+	^w bitAnd: 16rFFFFFFFF
+]
+
+{ #category : #'memory access' }
+Spur64BitMMLECoSimulator >> byteSwapped64IfBigEndian: w [
+	^w bitAnd: 16rFFFFFFFFFFFFFFFF
+]
+
 { #category : #'debug support' }
 Spur64BitMMLECoSimulator >> classTableFirstPage [
 	^classTableFirstPage

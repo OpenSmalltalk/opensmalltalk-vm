@@ -56,6 +56,16 @@ Spur64BitMMLESimulator >> byteAtPointer: pointer [
 	^self byteAt: pointer
 ]
 
+{ #category : #'memory access' }
+Spur64BitMMLESimulator >> byteSwapped32IfBigEndian: w [
+	^w bitAnd: 16rFFFFFFFF
+]
+
+{ #category : #'memory access' }
+Spur64BitMMLESimulator >> byteSwapped64IfBigEndian: w [
+	^w bitAnd: 16rFFFFFFFFFFFFFFFF
+]
+
 { #category : #'debug support' }
 Spur64BitMMLESimulator >> eek [
 	self halt
