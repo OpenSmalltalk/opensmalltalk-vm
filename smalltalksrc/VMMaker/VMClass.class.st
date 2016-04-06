@@ -214,6 +214,7 @@ VMClass class >> initializeMiscConstants [
 	"These must be set only if specified, not defaulted, because they are set on the command line or in include files."
 	initializationOptions
 		at: #VMBIGENDIAN	ifPresent: [:value| VMBIGENDIAN := value];
+		at: #ObjectMemory	ifPresent: [:value| SPURVM := value beginsWith: 'Spur'];
 		at: #STACKVM		ifPresent: [:value| STACKVM := value];
 		at: #COGVM		ifPresent: [:value| COGVM := initializationOptions at: #COGVM];
 		at: #COGMTVM		ifPresent: [:value| COGMTVM := initializationOptions at: #COGMTVM]
