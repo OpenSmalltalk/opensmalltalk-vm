@@ -56,6 +56,14 @@ CArray >> asCArrayAccessor [
 ]
 
 { #category : #converting }
+CArray >> asCArrayAccessorUnitSize: requiredUnitSize [
+	self assert: ptrOffset = 0.
+	^CArrayAccessor on: (requiredUnitSize = unitSize
+								ifTrue: [self]
+								ifFalse: [self shallowCopy unitSize: requiredUnitSize])
+]
+
+{ #category : #converting }
 CArray >> asInteger [
 
 	^ self ptrAddress
@@ -83,13 +91,19 @@ CArray >> at: offset put: val [
 	self halt: 'Can''t handle unitSize ', unitSize printString
 ]
 
+{ #category : #accessing }
+CArray >> cPtrAsOop [
+	^arrayBaseAddress + ptrOffset
+]
+
 { #category : #converting }
 CArray >> coerceTo: cTypeString sim: interpreterSimulator [
 
 	^cTypeString caseOf: {
 		['int']				-> [self ptrAddress].
-		['float *']			-> [self asCArrayAccessor asFloatAccessor].
-		['int *']				-> [self asCArrayAccessor asIntAccessor].
+		['float *']			-> [(self asCArrayAccessorUnitSize: 4) asFloatAccessor].
+		['unsigned int *']	-> [(self asCArrayAccessorUnitSize: 4) asUnsignedIntAccessor].
+		['int *']				-> [(self asCArrayAccessorUnitSize: 4) asIntAccessor].
 		['char *']			-> [self shallowCopy unitSize: 1; yourself].
 		['unsigned char *']	-> [self shallowCopy unitSize: 1; yourself].
 		['unsigned']			-> [self ptrAddress].
@@ -152,4 +166,14 @@ CArray >> unitSize [
 { #category : #accessing }
 CArray >> unitSize: n [
 	unitSize := n
+]
+
+{ #category : #accessing }
+CArray >> unsignedIntAt: index [
+	^self at: index
+]
+
+{ #category : #accessing }
+CArray >> unsignedIntAt: index put: unsignedInt [
+	^ self at: index put: unsignedInt
 ]
