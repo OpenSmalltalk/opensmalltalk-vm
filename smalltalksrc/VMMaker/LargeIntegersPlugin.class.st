@@ -815,7 +815,7 @@ LargeIntegersPlugin >> digitAddLarge: firstInteger with: secondInteger [
 				len: longDigitLen.
 			sum := newSum.
 			"C index!"
-			self cDigitOf: (self cCoerce: (interpreterProxy firstIndexableField: sum) to: 'unsigned int *')
+			self cDigitOf: (interpreterProxy cCoerce: (interpreterProxy firstIndexableField: sum) to: 'unsigned int *')
 				at: longDigitLen put: over]
 		ifFalse:
 			[sum := neg 
