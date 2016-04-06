@@ -21,6 +21,13 @@ InstructionClient >> directedSuperSend: selector numArgs: numArgs [
 	 stack locations beneath the association, and the receiver just below them."
 ]
 
+{ #category : #'*BytecodeSets-instruction decoding' }
+InstructionClient >> doNop [
+	"Do nothing"
+
+
+]
+
 { #category : #'*BytecodeSets-NewsqueakV3-decoding' }
 InstructionClient >> pushExplicitOuter: n [ "<Integer>"
 	"Push the enclosing object at level n."
