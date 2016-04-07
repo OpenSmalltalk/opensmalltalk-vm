@@ -71,24 +71,32 @@ CArray >> asInteger [
 
 { #category : #accessing }
 CArray >> at: offset [
-	| ptrAddress |
-	ptrAddress := self ptrAddress.
-	unitSize = 1 ifTrue: [^ interpreter byteAt: ptrAddress + offset].
-	unitSize = 2 ifTrue: [^ interpreter shortAt: ptrAddress + (offset * 2)].
-	unitSize = 4 ifTrue: [^ interpreter long32At: ptrAddress + (offset * 4)].
-	unitSize = 8 ifTrue: [^ interpreter long64At: ptrAddress + (offset * 8)].
-	self halt: 'Can''t handle unitSize ', unitSize printString
+	| address |
+	address := unitSize * offset + self ptrAddress.
+	^unitSize <= 2
+		ifTrue:
+			[unitSize = 1
+				ifTrue: [interpreter byteAt: address]
+				ifFalse: [interpreter shortAt: address]]
+		ifFalse:
+			[unitSize = 4
+				ifTrue: [interpreter long32At: address]
+				ifFalse: [interpreter long64At: address]]
 ]
 
 { #category : #accessing }
 CArray >> at: offset put: val [
-	| ptrAddress |
-	ptrAddress := self ptrAddress.
-	unitSize = 1 ifTrue: [^ interpreter byteAt: ptrAddress + offset put: val].
-	unitSize = 2 ifTrue: [^ interpreter byteAt: ptrAddress + (offset * 2) put: val].
-	unitSize = 4 ifTrue: [^ interpreter long32At: ptrAddress + (offset * 4) put: val].
-	unitSize = 8 ifTrue: [^ interpreter long64At: ptrAddress + (offset * 8) put: val].
-	self halt: 'Can''t handle unitSize ', unitSize printString
+	| address |
+	address := unitSize * offset + self ptrAddress.
+	^unitSize <= 2
+		ifTrue:
+			[unitSize = 1
+				ifTrue: [interpreter byteAt: address put: val]
+				ifFalse: [interpreter shortAt: address put: val]]
+		ifFalse:
+			[unitSize = 4
+				ifTrue: [interpreter long32At: address put: val]
+				ifFalse: [interpreter long64At: address put: val]]
 ]
 
 { #category : #accessing }
@@ -147,9 +155,8 @@ CArray >> interpreter: interpreterSimulator address: arrayAddress unitSize: numB
 
 	interpreter := interpreterSimulator.
 	arrayBaseAddress := arrayAddress.
-	unitSize := numBytes.
-	ptrOffset := 0.
-
+	self unitSize: numBytes.
+	ptrOffset := 0
 ]
 
 { #category : #private }
@@ -165,6 +172,8 @@ CArray >> unitSize [
 
 { #category : #accessing }
 CArray >> unitSize: n [
+	(n isPowerOfTwo and: [n <= 8]) ifFalse:
+		[self error: 'unitSize must be 1, 2, 4 or 8'].
 	unitSize := n
 ]
 
