@@ -1182,11 +1182,25 @@ StackToRegisterMappingCogit >> compileBlockFramelessEntry: blockStart [
 ]
 
 { #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> compileCogFullBlockMethod: numCopied [
+	methodOrBlockNumTemps := coInterpreter tempCountOf: methodObj.
+	self cCode: '' inSmalltalk:
+		[debugStackPointers := coInterpreter debugStackPointersFor: methodObj].
+	^super compileCogFullBlockMethod: numCopied
+]
+
+{ #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> compileCogMethod: selector [
 	methodOrBlockNumTemps := coInterpreter tempCountOf: methodObj.
 	self cCode: '' inSmalltalk:
 		[debugStackPointers := coInterpreter debugStackPointersFor: methodObj].
 	^super compileCogMethod: selector
+]
+
+{ #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> compileEntireFullBlockMethod: numCopied [
+	regArgsHaveBeenPushed := false.
+	^super compileEntireFullBlockMethod: numCopied
 ]
 
 { #category : #'compile abstract instructions' }
@@ -1205,6 +1219,16 @@ StackToRegisterMappingCogit >> compileFrameBuild [
 		 ^self].
 	self genPushRegisterArgs.
 	super compileFrameBuild.
+	self initSimStackForFramefulMethod: initialPC
+]
+
+{ #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> compileFullBlockMethodFrameBuild: numCopied [
+	needsFrame ifFalse:
+		[self initSimStackForFramelessMethod: initialPC.
+		 ^self].
+	self genPushRegisterArgs.
+	super compileFullBlockMethodFrameBuild: numCopied.
 	self initSimStackForFramefulMethod: initialPC
 ]
 
