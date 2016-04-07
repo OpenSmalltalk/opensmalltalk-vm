@@ -93,8 +93,6 @@ CogVMSimulator class >> initializeWithOptions: optionsDictionaryOrArray objectMe
 	(objectMemoryClassOrNil ifNil: [self objectMemoryClass])
 		initializeWithOptions: initializationOptions.
 
-	self initializeWithOptions: initializationOptions.
-
 	((initializationOptions at: #COGMTVM ifAbsent: [false])
 			ifTrue: [CoInterpreterMT]
 			ifFalse: [CoInterpreter])
