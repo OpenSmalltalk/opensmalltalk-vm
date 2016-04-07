@@ -706,7 +706,7 @@ LargeIntegersPlugin >> createLargeFromSmallInteger: anOop [
 	val := interpreterProxy integerValueOf: anOop.
 	byteSize := self byteSizeOfCSI: val.
 	res := self createLargeIntegerNeg: val < 0 byteLength: byteSize.
-	pDigit := interpreterProxy firstIndexableField: res.
+	pDigit := self firstIndexableField: res as: #'unsigned int *'.
 	digitSize := byteSize + 3 // 4.
 	1 to: digitSize do: [:ix | self cDigitOf: pDigit at: ix - 1 put: (self digitOfCSI: val at: ix)].
 	^ res
@@ -735,7 +735,7 @@ LargeIntegersPlugin >> digit: anOop Lshift: shiftCount [
 	"Does not normalize."
 	| newOop highBit newDigitLen newByteLen oldDigitLen |
 	oldDigitLen := self digitSizeOfLargeInt: anOop.
-	(highBit := self cDigitHighBit: (interpreterProxy firstIndexableField: anOop)
+	(highBit := self cDigitHighBit: (self firstIndexableField: anOop as: #'unsigned int *')
 				len: oldDigitLen) = 0 ifTrue: [^  interpreterProxy instantiateClass: (interpreterProxy fetchClassOf: anOop) indexableSize: 1].
 	newByteLen := highBit + shiftCount + 7 // 8.
 	self remapOop: anOop in: [newOop := interpreterProxy instantiateClass: (interpreterProxy fetchClassOf: anOop)
@@ -743,9 +743,9 @@ LargeIntegersPlugin >> digit: anOop Lshift: shiftCount [
 	newDigitLen := newByteLen + 3 // 4.
 	self
 		cDigitLshift: shiftCount
-		from: (interpreterProxy firstIndexableField: anOop)
+		from: (self firstIndexableField: anOop as: #'unsigned int *')
 		len: oldDigitLen
-		to: (interpreterProxy firstIndexableField: newOop)
+		to: (self firstIndexableField: newOop as: #'unsigned int *')
 		len: newDigitLen.
 	^ newOop
 ]
@@ -757,7 +757,7 @@ LargeIntegersPlugin >> digit: anOop Rshift: shiftCount lookfirst: a [
 	Discard all digits beyond a, and all zeroes at or below a."
 	"Does not normalize."
 	| newByteLen newOop oldBitLen newBitLen oldDigitLen newDigitLen |
-	oldBitLen := self cDigitHighBit: (interpreterProxy firstIndexableField: anOop) len: a.
+	oldBitLen := self cDigitHighBit: (self firstIndexableField: anOop as: #'unsigned int *') len: a.
 	oldDigitLen := oldBitLen + 31 // 32.
 	newBitLen := oldBitLen - shiftCount.
 	newBitLen <= 0 ifTrue: ["All bits lost"
@@ -770,9 +770,9 @@ LargeIntegersPlugin >> digit: anOop Rshift: shiftCount lookfirst: a [
 					indexableSize: newByteLen].
 	self
 		cDigitRshift: shiftCount
-		from: (interpreterProxy firstIndexableField: anOop)
+		from: (self firstIndexableField: anOop as: #'unsigned int *')
 		len: oldDigitLen
-		to: (interpreterProxy firstIndexableField: newOop)
+		to: (self firstIndexableField: newOop as: #'unsigned int *')
 		len: newDigitLen.
 	^ newOop
 ]
@@ -800,22 +800,22 @@ LargeIntegersPlugin >> digitAddLarge: firstInteger with: secondInteger [
 	"	sum := Integer new: len neg: firstInteger negative."
 	self remapOop: #(shortInt longInt ) in: [sum := self createLargeIntegerNeg: neg digitLength: longDigitLen].
 	over := self
-				cDigitAdd: (interpreterProxy firstIndexableField: shortInt)
+				cDigitAdd: (self firstIndexableField: shortInt as: #'unsigned int *')
 				len: shortDigitLen
-				with: (interpreterProxy firstIndexableField: longInt)
+				with: (self firstIndexableField: longInt as: #'unsigned int *')
 				len: longDigitLen
-				into: (interpreterProxy firstIndexableField: sum).
+				into: (self firstIndexableField: sum as: #'unsigned int *').
 	over > 0
 		ifTrue: 
 			["sum := sum growby: 1."
 			self remapOop: sum in: [newSum := self createLargeIntegerNeg: neg byteLength: longDigitLen * 4 + 1].
 			self
-				cDigitCopyFrom: (interpreterProxy firstIndexableField: sum)
-				to: (interpreterProxy firstIndexableField: newSum)
+				cDigitCopyFrom: (self firstIndexableField: sum as: #'unsigned int *')
+				to: (self firstIndexableField: newSum as: #'unsigned int *')
 				len: longDigitLen.
 			sum := newSum.
 			"C index!"
-			self cDigitOf: (interpreterProxy cCoerce: (interpreterProxy firstIndexableField: sum) to: 'unsigned int *')
+			self cDigitOf: (self firstIndexableField: sum as: #'unsigned int *')
 				at: longDigitLen put: over]
 		ifFalse:
 			[sum := neg 
@@ -865,11 +865,11 @@ LargeIntegersPlugin >> digitBitLogic: firstInteger with: secondInteger opIndex: 
 	self remapOop: #(shortLarge longLarge ) in: [result := interpreterProxy instantiateClass: interpreterProxy classLargePositiveInteger indexableSize: longLen].
 	self
 		cDigitOp: opIx
-		short: (interpreterProxy firstIndexableField: shortLarge)
+		short: (self firstIndexableField: shortLarge as: #'unsigned int *')
 		len: shortLen + 3 // 4
-		long: (interpreterProxy firstIndexableField: longLarge)
+		long: (self firstIndexableField: longLarge as: #'unsigned int *')
 		len: longLen + 3 // 4
-		into: (interpreterProxy firstIndexableField: result).
+		into: (self firstIndexableField: result as: #'unsigned int *').
 	interpreterProxy failed ifTrue: [^ 0].
 	^ self normalizePositive: result
 ]
@@ -886,8 +886,8 @@ LargeIntegersPlugin >> digitCompareLarge: firstInteger with: secondInteger [
 				ifTrue: [^ -1 asOop: SmallInteger]
 				ifFalse: [^ 1 asOop: SmallInteger]].
 	^ (self
-		cDigitCompare: (interpreterProxy firstIndexableField: firstInteger)
-		with: (interpreterProxy firstIndexableField: secondInteger)
+		cDigitCompare: (self firstIndexableField: firstInteger as: #'unsigned int *')
+		with: (self firstIndexableField: secondInteger as: #'unsigned int *')
 		len: firstDigitLen)
 		asOop: SmallInteger
 ]
@@ -923,11 +923,11 @@ LargeIntegersPlugin >> digitDivLarge: firstInteger with: secondInteger negative:
 				ifTrue: [rem := self largeInt: rem growTo: firstDigitLen + 1 * 4]].
 	self remapOop: #(div rem ) in: [quo := self createLargeIntegerNeg: neg digitLength: quoDigitLen].
 	self
-		cDigitDiv: (interpreterProxy firstIndexableField: div)
+		cDigitDiv: (self firstIndexableField: div as: #'unsigned int *')
 		len: (self digitSizeOfLargeInt: div)
-		rem: (interpreterProxy firstIndexableField: rem)
+		rem: (self firstIndexableField: rem as: #'unsigned int *')
 		len: (self digitSizeOfLargeInt: rem)
-		quo: (interpreterProxy firstIndexableField: quo)
+		quo: (self firstIndexableField: quo as: #'unsigned int *')
 		len: (self digitSizeOfLargeInt: quo).
 	self remapOop: #(quo ) in: [rem := self
 					digit: rem
@@ -948,19 +948,19 @@ LargeIntegersPlugin >> digitMontgomery: firstLarge times: secondLarge modulo: th
 	firstLen := self digitSizeOfLargeInt: firstLarge.
 	secondLen := self digitSizeOfLargeInt: secondLarge.
 	thirdLen := self digitSizeOfLargeInt: thirdLarge.
+	(firstLen <= thirdLen and: [secondLen <= thirdLen]) ifFalse: [^interpreterProxy primitiveFail].
 
-	firstLen <= thirdLen ifFalse: [^interpreterProxy primitiveFail].
-	secondLen <= thirdLen ifFalse: [^interpreterProxy primitiveFail].
-	self remapOop: #(firstLarge secondLarge thirdLarge) in: [prod := interpreterProxy instantiateClass: interpreterProxy classLargePositiveInteger indexableSize: thirdLen * 4].
+	self remapOop: #(firstLarge secondLarge thirdLarge)
+		in: [prod := interpreterProxy instantiateClass: interpreterProxy classLargePositiveInteger indexableSize: thirdLen * 4].
 	self
-				cDigitMontgomery: (interpreterProxy firstIndexableField: firstLarge)
-				len: firstLen
-				times: (interpreterProxy firstIndexableField: secondLarge)
-				len: secondLen
-				modulo: (interpreterProxy firstIndexableField: thirdLarge)
-				len: thirdLen
-				mInvModB: mInv
-				into: (interpreterProxy firstIndexableField: prod).
+		cDigitMontgomery: (self firstIndexableField: firstLarge as: #'unsigned int *')
+		len: firstLen
+		times: (self firstIndexableField: secondLarge as: #'unsigned int *')
+		len: secondLen
+		modulo: (self firstIndexableField: thirdLarge as: #'unsigned int *')
+		len: thirdLen
+		mInvModB: mInv
+		into: (self firstIndexableField: prod as: #'unsigned int *').
 	^self normalizePositive: prod
 ]
 
@@ -981,13 +981,13 @@ LargeIntegersPlugin >> digitMultiplyLarge: firstInteger with: secondInteger nega
 			shortLen := secondLen.
 			longInt := firstInteger.
 			longLen := firstLen].
-	self remapOop: #(shortInt longInt ) in: [prod := self createLargeIntegerNeg: neg byteLength: longLen + shortLen].
+	self remapOop: #(shortInt longInt) in: [prod := self createLargeIntegerNeg: neg byteLength: longLen + shortLen].
 	self
-		cDigitMultiply: (interpreterProxy firstIndexableField: shortInt)
+		cDigitMultiply: (self firstIndexableField: shortInt as: #'unsigned int *')
 		len: shortLen + 3 // 4
-		with: (interpreterProxy firstIndexableField: longInt)
+		with: (self firstIndexableField: longInt as: #'unsigned int *')
 		len: longLen + 3 // 4
-		into: (interpreterProxy firstIndexableField: prod)
+		into: (self firstIndexableField: prod as: #'unsigned int *')
 		len: longLen + shortLen + 3 // 4.
 	^neg 
 		ifTrue: [self normalizeNegative: prod]
@@ -1063,11 +1063,11 @@ LargeIntegersPlugin >> digitSubLarge: firstInteger with: secondInteger [
 	self remapOop: #(smaller larger)
 		in: [res := self createLargeIntegerNeg: neg digitLength: resDigitLen].
 	self
-		cDigitSub: (interpreterProxy firstIndexableField: smaller)
+		cDigitSub: (self firstIndexableField: smaller as: #'unsigned int *')
 		len: smallerDigitLen
-		with: (interpreterProxy firstIndexableField: larger)
+		with: (self firstIndexableField: larger as: #'unsigned int *')
 		len: largeDigitLen
-		into: (interpreterProxy firstIndexableField: res).
+		into: (self firstIndexableField: res as: #'unsigned int *').
 	^neg 
 		ifTrue: [self normalizeNegative: res]
 		ifFalse: [self normalizePositive: res]
@@ -1077,7 +1077,7 @@ LargeIntegersPlugin >> digitSubLarge: firstInteger with: secondInteger [
 LargeIntegersPlugin >> highBitOfLargeInt: anOop [ 
 	<inline: true>
 	^ self
-		cDigitHighBit: (interpreterProxy firstIndexableField: anOop)
+		cDigitHighBit: (self firstIndexableField: anOop as: #'unsigned int *')
 		len: (self digitSizeOfLargeInt: anOop)
 ]
 
@@ -1140,14 +1140,14 @@ LargeIntegersPlugin >> largeInt: aBytesObject growTo: newByteLen [
 					indexableSize: newByteLen].
 	newDigitLen := newByteLen + 3 // 4.
 	oldDigitLen := self digitSizeOfLargeInt: aBytesObject.
-	oldDigitLen < newDigitLen
-		ifTrue: [copyLen := oldDigitLen]
-		ifFalse: [copyLen := newDigitLen].
+	copyLen := oldDigitLen < newDigitLen
+					ifTrue: [oldDigitLen]
+					ifFalse: [newDigitLen].
 	self
-		cDigitCopyFrom: (interpreterProxy firstIndexableField: aBytesObject)
-		to: (interpreterProxy firstIndexableField: newBytes)
+		cDigitCopyFrom: (self firstIndexableField: aBytesObject as: #'unsigned int *')
+		to: (self firstIndexableField: newBytes as: #'unsigned int *')
 		len: copyLen.
-	^ newBytes
+	^newBytes
 ]
 
 { #category : #'oop functions' }
@@ -1543,7 +1543,7 @@ LargeIntegersPlugin >> unsafeByteOfLargeInt: bytesObj at: ix [
 	"Argument bytesObj must not be aSmallInteger!"
 	<inline: true>
 	<returnTypeC: #'unsigned char'>
-	^(interpreterProxy cCoerce: (interpreterProxy firstIndexableField: bytesObj) to: #'unsigned char *') at: ix - 1
+	^(self firstIndexableField: bytesObj as: #'unsigned char *') at: ix - 1
 ]
 
 { #category : #util }
@@ -1551,5 +1551,5 @@ LargeIntegersPlugin >> unsafeDigitOfLargeInt: anOop at: ix [
 	"Argument must not be aSmallInteger!"
 	<inline: true>
 	<returnTypeC: #'unsigned int'>
-	^self cDigitOf: (interpreterProxy cCoerce: (interpreterProxy firstIndexableField: anOop) to: #'unsigned int *') at: ix - 1
+	^self cDigitOf: (self firstIndexableField: anOop as: #'unsigned int *') at: ix - 1
 ]
