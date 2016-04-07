@@ -316,7 +316,7 @@ Class {
 		'generatorTable',
 		'primitiveTable'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -3916,7 +3916,7 @@ Cogit >> cogFullBlockMethod: aMethodObj numCopied: numCopied [
 	objectRepresentation ensureNoForwardedLiteralsIn: aMethodObj.
 	methodObj := aMethodObj.
 	methodHeader := objectMemory methodHeaderOf: aMethodObj.
-	cogMethod := self compileCogFullBlockMethod.
+	cogMethod := self compileCogFullBlockMethod: numCopied.
 	(cogMethod asInteger between: MaxNegativeErrorCode and: -1) ifTrue:
 		[cogMethod asInteger = InsufficientCodeSpace ifTrue:
 			[coInterpreter callForCogCompiledCodeCompaction].
@@ -4434,7 +4434,7 @@ Cogit >> compileClosedPICPrototype [
 ]
 
 { #category : #'compile abstract instructions' }
-Cogit >> compileCogFullBlockMethod [
+Cogit >> compileCogFullBlockMethod: numCopied [
 	<returnTypeC: #'CogMethod *'>
 	| numBytecodes numBlocks numCleanBlocks result |
 	hasYoungReferent := (objectMemory isYoungObject: methodObj).
@@ -4465,7 +4465,7 @@ Cogit >> compileCogFullBlockMethod [
 
 	blockEntryLabel := nil.
 	methodLabel dependent: nil.
-	(result := self compileEntireFullBlockMethod) < 0 ifTrue:
+	(result := self compileEntireFullBlockMethod: numCopied) < 0 ifTrue:
 		[^coInterpreter cCoerceSimple: result to: #'CogMethod *'].
 	^self generateCogFullBlock
 ]
@@ -4512,13 +4512,13 @@ Cogit >> compileCogMethod: selector [
 ]
 
 { #category : #'compile abstract instructions' }
-Cogit >> compileEntireFullBlockMethod [
+Cogit >> compileEntireFullBlockMethod: numCopied [
 	"Compile the abstract instructions for the entire method, including blocks."
 	| result |	
 	self compileFullBlockEntry.
 
 	"Frame build"
-	self compileFullBlockMethodFrameBuild.
+	self compileFullBlockMethodFrameBuild: numCopied.
 	"Method body"
 	(result := self compileMethodBody) < 0 ifTrue:
 		[^result].
@@ -6514,6 +6514,46 @@ Cogit >> generateClosedPICPrototype [
 		inSmalltalk:
 			[self disassembleFrom: cPIC + (self sizeof: CogMethod) to: cPIC + closedPICSize - 1.
 			 self halt]"
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> generateCogFullBlock [
+	"We handle jump sizing simply.  First we make a pass that asks each
+	 instruction to compute its maximum size.  Then we make a pass that
+	 sizes jumps based on the maxmimum sizes.  Then we make a pass
+	 that fixes up jumps.  When fixing up a jump the jump is not allowed to
+	 choose a smaller offset but must stick to the size set in the second pass."
+	<returnTypeC: #'CogMethod *'>
+	| codeSize headerSize mapSize totalSize startAddress result method |
+	<var: #method type: #'CogMethod *'>
+	headerSize := self sizeof: CogMethod.
+	methodLabel address: methodZone freeStart.
+	self computeMaximumSizes.
+	methodLabel concretizeAt: methodZone freeStart.
+	codeSize := self generateInstructionsAt: methodLabel address + headerSize.
+	mapSize := self generateMapAt: nil start: methodLabel address + cbNoSwitchEntryOffset.
+.
+	totalSize := methodZone roundUpLength: headerSize + codeSize + mapSize.
+	totalSize > MaxMethodSize ifTrue:
+		[^self cCoerceSimple: MethodTooBig to: #'CogMethod *'].
+	startAddress := methodZone allocate: totalSize.
+	startAddress = 0 ifTrue:
+		[^self cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
+	self assert: startAddress + cbEntryOffset = fullBlockEntry address.
+	self assert: startAddress + cbNoSwitchEntryOffset = fullBlockNoContextSwitchEntry address.
+	result := self outputInstructionsAt: startAddress + headerSize.
+	self assert: startAddress + headerSize + codeSize = result.
+	backEnd padIfPossibleWithStopsFrom: result to: startAddress + totalSize - mapSize.
+	self generateMapAt: startAddress + totalSize - 1 start: startAddress + cbNoSwitchEntryOffset.
+	self flag: #TOCHECK. "It's not clear we want the same header than regular methods. 
+	It could be of the same size, but maybe the cmType could be different and the selector could be ignored." 
+	method := self fillInMethodHeader: (self cCoerceSimple: startAddress to: #'CogMethod *')
+					size: totalSize
+					selector: objectMemory nilObject.
+	postCompileHook ifNotNil:
+		[self perform: postCompileHook with: method.
+		 postCompileHook := nil].
+	^method
 ]
 
 { #category : #'generate machine code' }

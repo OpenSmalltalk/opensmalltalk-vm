@@ -154,6 +154,12 @@ SistaStackToRegisterMappingCogit >> compileBlockBodies [
 ]
 
 { #category : #'compile abstract instructions' }
+SistaStackToRegisterMappingCogit >> compileCogFullBlockMethod: numCopied [
+	counters := 0.
+	^super compileCogFullBlockMethod: numCopied
+]
+
+{ #category : #'compile abstract instructions' }
 SistaStackToRegisterMappingCogit >> compileCogMethod: selector [
 	counters := 0.
 	^super compileCogMethod: selector
@@ -163,6 +169,14 @@ SistaStackToRegisterMappingCogit >> compileCogMethod: selector [
 SistaStackToRegisterMappingCogit >> compileFrameBuild [
 	"Override to prefetch counters, if any."
 	super compileFrameBuild.
+	counters ~= 0 ifTrue:
+		[self PrefetchAw: counters]
+]
+
+{ #category : #'compile abstract instructions' }
+SistaStackToRegisterMappingCogit >> compileFullBlockMethodFrameBuild: numCopied [
+	"Override to prefetch counters if any"
+	super compileFullBlockMethodFrameBuild: numCopied.
 	counters ~= 0 ifTrue:
 		[self PrefetchAw: counters]
 ]
