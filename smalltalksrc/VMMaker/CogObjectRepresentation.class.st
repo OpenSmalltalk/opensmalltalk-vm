@@ -796,6 +796,13 @@ CogObjectRepresentation >> genPrimitiveFloatSubtract [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveFullClosureValue [
+	"Defer to the cogit for this one, to match the split for genPrimitiveClosureValue."
+	<doNotGenerate>
+	^cogit genPrimitiveFullClosureValue
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentation >> genPrimitiveGreaterOrEqual [
 	^self 
 		genSmallIntegerComparison: JumpGreaterOrEqual

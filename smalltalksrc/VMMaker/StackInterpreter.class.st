@@ -1213,7 +1213,9 @@ StackInterpreter class >> initializePrimitiveTable [
 		(205 primitiveClosureValue) "value:value:value:value:"
 		(206 primitiveClosureValueWithArgs) "valueWithArguments:"
 
-		(207 209 primitiveFail)	"reserved for Cog primitives"
+		(207 primitiveFullClosureValue) "value[:value:value:value:] et al"
+		(208 primitiveFullClosureValueWithArgs) "valueWithArguments:"
+		(209 primitiveFullClosureValueNoContextSwitch) "valueNoContextSwitch[:value:] et al"
 
 		(210 primitiveContextAt)
 		(211 primitiveContextAtPut)
@@ -1275,17 +1277,7 @@ StackInterpreter class >> initializePrimitiveTable [
 
 		(520 primitiveFail)
 		(521 529 primitiveFail) "Reserved for Spur primitives"
-		"new closure primitives (were Networking primitives)"
-		(530 primitiveFail)
-		(531 primitiveFullClosureValue) "value"
-		(532 primitiveFullClosureValue) "value:"
-		(533 primitiveFullClosureValue) "value:value:"
-		(534 primitiveFullClosureValue) "value:value:value:"
-		(535 primitiveFullClosureValue) "value:value:value:value:"
-		(536 primitiveFullClosureValueWithArgs) "valueWithArguments:"
-		(537 primitiveFullClosureValueNoContextSwitch) "valueNoContextSwitch"
-		(538 primitiveFullClosureValueNoContextSwitch) "valueNoContextSwitch:"
-		(539 primitiveFail)
+		(530 539 primitiveFail)
 
 		(540 primitiveFail)
 		(541 primitiveSmallFloatAdd)
