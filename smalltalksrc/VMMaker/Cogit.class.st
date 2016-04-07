@@ -160,6 +160,11 @@ Class {
 		'entry',
 		'cmNoCheckEntryOffset',
 		'noCheckEntry',
+		'fullBlockStackOverflowCall',
+		'fullBlockEntry',
+		'cbEntryOffset',
+		'fullBlockNoContextSwitchEntry',
+		'cbNoSwitchEntryOffset',
 		'picMNUAbort',
 		'picInterpretAbort',
 		'endCPICCase0',
@@ -311,7 +316,7 @@ Class {
 		'generatorTable',
 		'primitiveTable'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -544,6 +549,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 					blockEntryLabel blockEntryNoContextSwitch
 					stackOverflowCall sendMiss
 					entry noCheckEntry selfSendEntry dynSuperEntry
+					fullBlockStackOverflowCall fullBlockNoContextSwitchEntry fullBlockEntry
 					picMNUAbort picInterpretAbort  endCPICCase0 endCPICCase1 cPICEndOfCodeLabel)
 			as: #'AbstractInstruction *'
 				in: aCCodeGenerator.
@@ -3879,6 +3885,55 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethod tag: caseNTag isMNUCase: is
 	^0
 ]
 
+{ #category : #'jit - api' }
+Cogit >> cogFullBlockMethod: aMethodObj numCopied: numCopied [
+	"Attempt to produce a machine code method for the bytecode method
+	 object aMethodObj.  N.B. If there is no code memory available do *NOT*
+	 attempt to reclaim the method zone.  Certain clients (e.g. ceSICMiss:)
+	 depend on the zone remaining constant across method generation."
+	<api>
+	<returnTypeC: #'CogMethod *'>
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	self cCode: [] inSmalltalk: "for debugging, allow excluding methods based on selector or methodClass"
+		[self halt class initializationOptions
+			at: #DoNotJIT
+			ifPresent:
+				[:excluded| 
+				(excluded anySatisfy: [:exclude| aMethodObj = exclude]) ifTrue:
+					[coInterpreter transcript nextPutAll: 'EXCLUDING '; nextPutAll: aMethodObj; nextPutAll: ' (compiled block)'; cr; flush.
+					 ^nil]]].
+	self deny: (coInterpreter methodHasCogMethod: aMethodObj).
+	aMethodObj = breakMethod ifTrue: [self halt: 'Compilation of breakMethod'].
+	"If the generators for the alternate bytecode set are missing then interpret."
+	(coInterpreter methodUsesAlternateBytecodeSet: aMethodObj)
+		ifTrue:
+			[(self numElementsIn: generatorTable) <= 256 ifTrue:
+				[^nil].
+			 bytecodeSetOffset := 256]
+		ifFalse:
+			[bytecodeSetOffset := 0].
+	objectRepresentation ensureNoForwardedLiteralsIn: aMethodObj.
+	methodObj := aMethodObj.
+	methodHeader := objectMemory methodHeaderOf: aMethodObj.
+	cogMethod := self compileCogFullBlockMethod.
+	(cogMethod asInteger between: MaxNegativeErrorCode and: -1) ifTrue:
+		[cogMethod asInteger = InsufficientCodeSpace ifTrue:
+			[coInterpreter callForCogCompiledCodeCompaction].
+		 self maybeFreeCounters.
+		 "Right now no errors should be reported, so nothing more to do."
+		 "self reportError: (self cCoerceSimple: cogMethod to: #sqInt)."
+		 ^nil].
+	"self cCode: ''
+		inSmalltalk:
+			[coInterpreter printCogMethod: cogMethod.
+			 ""coInterpreter symbolicMethod: aMethodObj.""
+			 self assertValidMethodMap: cogMethod."
+			 "self disassembleMethod: cogMethod."
+			 "printInstructions := clickConfirm := true""]."
+	^cogMethod
+]
+
 { #category : #'in-line cacheing' }
 Cogit >> cogMNUPICSelector: selector receiver: rcvr methodOperand: methodOperand numArgs: numArgs [
 	<api>
@@ -4379,6 +4434,43 @@ Cogit >> compileClosedPICPrototype [
 ]
 
 { #category : #'compile abstract instructions' }
+Cogit >> compileCogFullBlockMethod [
+	<returnTypeC: #'CogMethod *'>
+	| numBytecodes numBlocks numCleanBlocks result |
+	hasYoungReferent := (objectMemory isYoungObject: methodObj).
+	methodOrBlockNumArgs := coInterpreter argumentCountOf: methodObj.
+	inBlock := true.
+	postCompileHook := nil.
+	maxLitIndex := -1.
+	self assert: (coInterpreter primitiveIndexOf: methodObj) = 0.
+	initialPC := coInterpreter startPCOfMethod: methodObj.
+	"initial estimate.  Actual endPC is determined in scanMethod."
+	endPC := objectMemory numBytesOf: methodObj.
+	numBytecodes := endPC - initialPC + 1.
+	self allocateOpcodes: (numBytecodes + 10) * self estimateOfAbstractOpcodesPerBytecodes
+		bytecodes: numBytecodes
+		ifFail: [^coInterpreter cCoerceSimple: MethodTooBig to: #'CogMethod *'].
+	(numBlocks := self scanMethod) < 0 ifTrue:
+		[^coInterpreter cCoerceSimple: numBlocks to: #'CogMethod *'].
+	self assert: numBlocks = 0. "blocks in full blocks are full blocks, they are not inlined."
+	numCleanBlocks := self scanForCleanBlocks.
+	self assert: numCleanBlocks = 0. "blocks in full blocks are full blocks, they are not inlined."
+	self allocateBlockStarts: numBlocks + numCleanBlocks.
+	blockCount := 0.
+	numCleanBlocks > 0 ifTrue:
+		[self addCleanBlockStarts].
+	(self maybeAllocAndInitCounters
+	 and: [self maybeAllocAndInitIRCs]) ifFalse: "Inaccurate error code, but it'll do.  This will likely never fail."
+		[^coInterpreter cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
+
+	blockEntryLabel := nil.
+	methodLabel dependent: nil.
+	(result := self compileEntireFullBlockMethod) < 0 ifTrue:
+		[^coInterpreter cCoerceSimple: result to: #'CogMethod *'].
+	^self generateCogFullBlock
+]
+
+{ #category : #'compile abstract instructions' }
 Cogit >> compileCogMethod: selector [
 	<returnTypeC: #'CogMethod *'>
 	| numBytecodes numBlocks numCleanBlocks result extra |
@@ -4420,6 +4512,21 @@ Cogit >> compileCogMethod: selector [
 ]
 
 { #category : #'compile abstract instructions' }
+Cogit >> compileEntireFullBlockMethod [
+	"Compile the abstract instructions for the entire method, including blocks."
+	| result |	
+	self compileFullBlockEntry.
+
+	"Frame build"
+	self compileFullBlockMethodFrameBuild.
+	"Method body"
+	(result := self compileMethodBody) < 0 ifTrue:
+		[^result].
+	self assert: blockCount = 0.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
 Cogit >> compileEntireMethod [
 	"Compile the abstract instructions for the entire method, including blocks."
 	| result |
@@ -4456,6 +4563,32 @@ Cogit >> compileEntry [
 { #category : #'compile abstract instructions' }
 Cogit >> compileFrameBuild [
 	self subclassResponsibility
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> compileFullBlockEntry [
+	"Compile the abstract instructions for the entire method, including blocks."
+	| jumpNoContextSwitch |
+
+	"Abort for stack overflow on full block activation (no inline cache miss possible).
+	 The flag is SendNumArgsReg."
+	fullBlockStackOverflowCall := self MoveCq: 0 R: ReceiverResultReg.
+	backEnd hasLinkRegister ifTrue: [self PushR: LinkReg].
+	"Since the only case in which this is called is the
+	 stack overflow case we can reuse the trampoline."
+	self Call: (self methodAbortTrampolineFor: methodOrBlockNumArgs).
+
+	"Entries"
+	"No context switch entry"
+	fullBlockNoContextSwitchEntry := self MoveCq: 0 R: SendNumArgsReg.
+	jumpNoContextSwitch := self Jump: 0.
+
+	self AlignmentNops: (objectMemory wordSize max: 8).
+	"Context switch entry (use ReceiverResultReg as a non-zero value; it's shorter)."
+	fullBlockEntry := self MoveR: ReceiverResultReg R: SendNumArgsReg.
+	jumpNoContextSwitch jmpTarget: self Label.
+
+	^0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -4564,6 +4697,22 @@ Cogit >> computeEntryOffsets [
 	checkedEntryAlignment := cmEntryOffset bitAnd: entryPointMask.
 	uncheckedEntryAlignment := cmNoCheckEntryOffset bitAnd: entryPointMask.
 	self assert: checkedEntryAlignment ~= uncheckedEntryAlignment
+]
+
+{ #category : #initialization }
+Cogit >> computeFullBlockEntryOffsets [
+	"Generate the entry code for a method to determine cmEntryOffset and cmNoCheckEntryOffset.  We
+	 need cmNoCheckEntryOffset up front to be able to generate the map starting from cmNoCheckEntryOffset"
+	"stack allocate the various collections so that they
+	 are effectively garbage collected on return."
+	<var: 'sendMissCall' type: #'AbstractInstruction *'>
+	self allocateOpcodes: 24 bytecodes: 0.
+	methodOrBlockNumArgs := 0.
+	self compileFullBlockEntry.
+	self computeMaximumSizes.
+	self generateInstructionsAt: methodZoneBase + (self sizeof: CogMethod).
+	cbEntryOffset := fullBlockEntry address - methodZoneBase.
+	cbNoSwitchEntryOffset := fullBlockNoContextSwitchEntry address - methodZoneBase
 ]
 
 { #category : #'generate machine code' }
@@ -7102,6 +7251,7 @@ Cogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
 	self generateStackPointerCapture.
 	self generateTrampolines.
 	self computeEntryOffsets.
+	self computeFullBlockEntryOffsets.
 	self generateClosedPICPrototype.
 	"repeat so that now the methodZone ignores the generated run-time"
 	methodZone manageFrom: methodZoneBase to: endAddress.
@@ -9837,7 +9987,6 @@ Cogit >> scanMethod [
 	| latestContinuation nExts descriptor pc numBlocks distance targetPC framelessStackDelta |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	needsFrame := false.
-	inBlock := false.
 	NewspeakVM ifTrue:
 		[numIRCs := 0].
 	(primitiveIndex > 0
