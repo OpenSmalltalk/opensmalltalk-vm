@@ -402,6 +402,12 @@ InterpreterPlugin >> expandDereferenceInterpreterProxyFunctionTable [
 	<doNotGenerate>
 ]
 
+{ #category : #'casting support' }
+InterpreterPlugin >> firstIndexableField: obj as: cType [
+	<inline: true>
+	^interpreterProxy cCoerce: (interpreterProxy firstIndexableField: obj) to: cType
+]
+
 { #category : #initialize }
 InterpreterPlugin >> getInterpreter [
 	"Note: This is coded so that plugins can be run from Squeak."
