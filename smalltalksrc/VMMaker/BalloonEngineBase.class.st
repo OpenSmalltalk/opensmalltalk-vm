@@ -34,7 +34,7 @@ Class {
 	#pools : [
 		'BalloonEngineConstants'
 	],
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #documentation }

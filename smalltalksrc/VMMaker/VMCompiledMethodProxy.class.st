@@ -4,7 +4,7 @@ A VMCompiledMethodProxy is a wrapper for the oop of a CompiledMethod object in t
 Class {
 	#name : #VMCompiledMethodProxy,
 	#superclass : #VMObjectProxy,
-	#category : 'VMMaker-Support'
+	#category : #'VMMaker-Support'
 }
 
 { #category : #accessing }
