@@ -105,7 +105,7 @@ CogSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegister [
 	cogit traceSpill: self.
 	type = SSConstant
 		ifTrue:
-			[inst := cogit annotate: (cogit PushCw: constant) objRef: constant]
+			[inst := self genPushConstant: constant]
 		ifFalse:
 			[type = SSBaseOffset
 				ifTrue:

@@ -1014,7 +1014,7 @@ SimpleStackBasedCogit >> compileFrameBuild [
 	self MoveR: SPReg R: FPReg.
 	methodLabel addDependent: (self annotateAbsolutePCRef:
 		(self PushCw: methodLabel asInteger)). "method"
-	self genMoveConstant: objectMemory nilObject R: SendNumArgsReg.
+	self genMoveNilR: SendNumArgsReg.
 	self PushR: SendNumArgsReg. "context"
 	self PushR: ReceiverResultReg.
 	methodOrBlockNumArgs + 1 to: (coInterpreter temporaryCountOfMethodHeader: methodHeader) do:
@@ -1070,7 +1070,7 @@ SimpleStackBasedCogit >> compileFullBlockMethodFrameBuild: numCopied [
 	methodLabel addDependent: (self annotateAbsolutePCRef:
 			(self PushCw: methodLabel asInteger));
 			setLabelOffset: MFMethodFlagIsBlockFlag.. "method"
-	self genMoveConstant: objectMemory nilObject R: SendNumArgsReg.
+	self genMoveNilR: SendNumArgsReg.
 	self PushR: SendNumArgsReg. "context"
 	"Closure is on stack and initially in ReceiverResultReg.
 	 It is safe to use Arg0Reg because reg args are pushed by the value primitives if there are any.".
@@ -1596,6 +1596,16 @@ SimpleStackBasedCogit >> fullBlockNoContextSwitchEntryOffset [
 	^cbNoSwitchEntryOffset
 ]
 
+{ #category : #'constant support' }
+SimpleStackBasedCogit >> genAnnotatedSubCw: constant R: reg [
+	"generates a SubCW instruction with an explicit annotation. This is called (as of today) only by the branch generation methods.
+	The annotation needs to be there for some reasons unknown to me (removing the annotation crashes the must be boolean trampolines)"
+	<inline: true>
+	self flag: #TOCHECK. "We will check with eliot if this could be a SubCq, and if not, put the proper comment"
+	self annotate: (self SubCw: constant R: TempReg) objRef: reg.
+	
+]
+
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genBlockReturn [
 	"Return from block, assuming result already loaded into ReceiverResultReg."
@@ -1622,8 +1632,9 @@ SimpleStackBasedCogit >> genCallPrimitiveBytecode [
 	^0
 ]
 
-{ #category : #'bytecode generator support' }
-SimpleStackBasedCogit >> genCompConstant: constant R: register [
+{ #category : #'constant support' }
+SimpleStackBasedCogit >> genCmpConstant: constant R: register [
+	"If the objectMemory allows it, generates a quick constant cmp, else generates a word constant cmp"
 	<inline: true>
 	^ (objectRepresentation shouldAnnotateObjectReference: constant)
 		ifTrue: [ self annotate: (self CmpCw: constant R: register) objRef: constant ]
@@ -2048,7 +2059,7 @@ SimpleStackBasedCogit >> genJumpIf: boolean to: targetBytecodePC [
 	extA := 0.
 	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
 	self PopR: TempReg.
-	self annotate: (self SubCw: boolean R: TempReg) objRef: boolean.
+	self genAnnotatedSubCw: boolean R: TempReg.
 	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
 	self CmpCq: (boolean == objectMemory falseObject
 					ifTrue: [objectMemory trueObject - objectMemory falseObject]
@@ -2190,24 +2201,32 @@ SimpleStackBasedCogit >> genLookupForPerformNumArgs: numArgs [
 	^0
 ]
 
-{ #category : #'bytecode generator support' }
+{ #category : #'constant support' }
 SimpleStackBasedCogit >> genMoveConstant: constant R: reg [
+	"If the objectMemory allows it, generates a quick constant move, else generates a word constant move"
 	<inline: true>
 	^ (objectRepresentation shouldAnnotateObjectReference: constant)
-		ifTrue: [ (self annotate: (self MoveCw: constant R: reg) objRef: constant) ]
+		ifTrue: [ self annotate: (self MoveCw: constant R: reg) objRef: constant ]
 		ifFalse: [ self MoveCq: constant R: reg ]
 	
 	
 ]
 
-{ #category : #'bytecode generator support' }
+{ #category : #'constant support' }
 SimpleStackBasedCogit >> genMoveFalseR: reg [
 	<inline: true>
 	^ self genMoveConstant: objectMemory falseObject R: reg
 	
 ]
 
-{ #category : #'bytecode generator support' }
+{ #category : #'constant support' }
+SimpleStackBasedCogit >> genMoveNilR: reg [
+	<inline: true>
+	^ self genMoveConstant: objectMemory nilObject R: reg
+	
+]
+
+{ #category : #'constant support' }
 SimpleStackBasedCogit >> genMoveTrueR: reg [
 	<inline: true>
 	^ self genMoveConstant: objectMemory trueObject R: reg
@@ -2549,6 +2568,16 @@ SimpleStackBasedCogit >> genPushClosureTempsBytecode [
 	^0
 ]
 
+{ #category : #'constant support' }
+SimpleStackBasedCogit >> genPushConstant: constant [
+	"If the objectMemory allows it, generates a quick constant push, else generates a word constant push"
+	<inline: true>
+	^ (objectRepresentation shouldAnnotateObjectReference: constant)
+		ifTrue: [ self annotate: (self PushCw: constant) objRef: constant ]
+		ifFalse: [ self PushCq: constant ]
+	
+]
+
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushConstantFalseBytecode [
 	^self genPushLiteral: objectMemory falseObject
@@ -2607,7 +2636,7 @@ SimpleStackBasedCogit >> genPushLitVarDirSupBytecode [
 
 { #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genPushLiteral: literal [
-	self annotate: (self PushCw: literal) objRef: literal.
+	self genPushConstant: literal.
 	^0
 ]
 
@@ -2829,11 +2858,7 @@ SimpleStackBasedCogit >> genQuickReturnConst [
 	<api> "because selected by CoInterpreter>>quickPrimitiveGeneratorFor:"
 	| constant |
 	constant := coInterpreter quickPrimitiveConstantFor: primitiveIndex.
-	self annotate:
-			((objectRepresentation isImmediate: constant)
-				ifTrue: [self MoveCq: constant R: ReceiverResultReg]
-				ifFalse: [self MoveCw: constant R: ReceiverResultReg])
-		objRef: constant.
+	self genMoveConstant: constant R: ReceiverResultReg.
 	self genUpArrowReturn.
 	^UnfailingPrimitive
 ]
@@ -2863,14 +2888,14 @@ SimpleStackBasedCogit >> genReturnFalse [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genReturnNil [
-	self genMoveConstant: objectMemory nilObject R: ReceiverResultReg.
+	self genMoveNilR: ReceiverResultReg.
 	^self genUpArrowReturn
 ]
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genReturnNilFromBlock [
 	self assert: inBlock.
-	self genMoveConstant: objectMemory nilObject R: ReceiverResultReg.
+	self genMoveNilR: ReceiverResultReg.
 	^self genBlockReturn
 ]
 
