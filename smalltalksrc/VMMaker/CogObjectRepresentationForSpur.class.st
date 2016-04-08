@@ -507,7 +507,7 @@ CogObjectRepresentationForSpur >> genGetActiveContextLarge: isLarge inBlock: isI
 				AddCq: 2 R: TempReg; "+2 for saved fp and saved pc"
 				MoveXwr: TempReg R: FPReg R: TempReg]
 		ifFalse:
-			[cogit genMoveConstant: objectMemory nilObject R: TempReg].
+			[cogit genMoveNilR: TempReg].
 	cogit MoveR: TempReg Mw: objectMemory baseHeaderSize + (ClosureIndex * objectMemory bytesPerOop) r: ReceiverResultReg.
 
 	"Set the receiver"

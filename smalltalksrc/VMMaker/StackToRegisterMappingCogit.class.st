@@ -1161,13 +1161,11 @@ StackToRegisterMappingCogit >> compileBlockFrameBuild: blockStart [
 	blockStart numInitialNils > 0 ifTrue:
 		[blockStart numInitialNils > 1
 			ifTrue:
-				[self genMoveConstant: objectMemory nilObject R: TempReg.
+				[self genMoveNilR: TempReg.
 				 1 to: blockStart numInitialNils do:
 					[:ign| self PushR: TempReg]]
 			ifFalse:
-				[self
-					annotate: (self PushCw: objectMemory nilObject)
-					objRef: objectMemory nilObject].
+				[self genPushConstant: objectMemory nilObject].
 		 methodOrBlockNumTemps := blockStart numArgs + blockStart numCopied]
 ]
 
@@ -1714,9 +1712,9 @@ StackToRegisterMappingCogit >> genEqualsEqualsComparisonArgIsConstant: argIsCons
 	In the case of the v3 memory manager, the constant could be annotable." 
 	<inline: true>
 	argIsConstant 
-		ifTrue: [ self genCompConstant: self ssTop constant R: rcvrReg ]
+		ifTrue: [ self genCmpConstant: self ssTop constant R: rcvrReg ]
 		ifFalse: [ rcvrIsConstant
-			ifTrue: [ self genCompConstant: (self ssValue: 1) constant R: argReg ]
+			ifTrue: [ self genCmpConstant: (self ssValue: 1) constant R: argReg ]
 			ifFalse: [ self CmpR: argReg R: rcvrReg ] ].
 ]
 
@@ -1934,7 +1932,7 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 Correct result is either 0 or the distance between them.  If result is not 0 or
 	 their distance send mustBeBoolean."
 	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
-	self annotate: (self SubCw: boolean R: TempReg) objRef: boolean.
+	self genAnnotatedSubCw: boolean R: TempReg.
 	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
 	
 	self extASpecifiesNoMustBeBoolean ifTrue: 
