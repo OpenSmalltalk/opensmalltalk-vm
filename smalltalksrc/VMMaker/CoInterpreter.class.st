@@ -152,6 +152,7 @@ CoInterpreter class >> hasCogit [
 { #category : #initialization }
 CoInterpreter class >> initializeCaches [
 	"Eliminate the AtCache"
+	super initializeCaches.
 	AtCacheTotalSize := AtCacheSize := AtCacheMask := AtCacheFixedFields := AtCacheFmt := AtCacheOop := #undefined
 ]
 
