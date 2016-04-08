@@ -91,8 +91,18 @@ FullBlockClosure >> method [
 ]
 
 { #category : #accessing }
+FullBlockClosure >> numArgs: n [
+	numArgs := n
+]
+
+{ #category : #accessing }
 FullBlockClosure >> numTemps [
 	^ self compiledBlock numTemps
+]
+
+{ #category : #accessing }
+FullBlockClosure >> outerContext: ctxt [
+	outerContext := ctxt
 ]
 
 { #category : #accessing }
