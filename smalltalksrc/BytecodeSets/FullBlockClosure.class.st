@@ -52,7 +52,7 @@ Class {
 	#instVars : [
 		'receiver'
 	],
-	#category : #'BytecodeSets-SistaV1'
+	#category : 'BytecodeSets-SistaV1'
 }
 
 { #category : #private }

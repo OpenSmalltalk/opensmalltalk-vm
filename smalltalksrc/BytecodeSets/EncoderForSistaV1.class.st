@@ -90,7 +90,7 @@ Instance Variables (inherited)
 *	252	(3)	11111100 	kkkkkkkk	sjjjjjjj		Store Temp At kkkkkkkk In Temp Vector At: jjjjjjj s = 1 implies remote inst var access instead of remote temp vector access 
 *	253	(3)	11111101 	kkkkkkkk	sjjjjjjj		Pop and Store Temp At kkkkkkkk In Temp Vector At: jjjjjjj s = 1 implies remote inst var access instead of remote temp vector access
 **	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)
-*	255		11111111	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 (i reserved for needsOuterContext: i = 1)
+*	255		11111111	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 ignoreOuterContext: i = 1
 
 (1) Bytecode 235 is a super send bytecode that starts the lookup in the superclass of some class.  It has two forms, ""normal"" and ""directed"". In the normal form, the class is the value of the method's methodClassAssociation which must be the last literal.  In the directed form the class is the class on top of stack.
 
@@ -147,7 +147,7 @@ We define the following inlined primitives:
 Class {
 	#name : #EncoderForSistaV1,
 	#superclass : #BytecodeEncoder,
-	#category : #'BytecodeSets-SistaV1'
+	#category : 'BytecodeSets-SistaV1'
 }
 
 { #category : #'bytecode decoding' }
@@ -918,8 +918,14 @@ EncoderForSistaV1 >> genPushConsArray: size [
 ]
 
 { #category : #'extended bytecode generation' }
+EncoderForSistaV1 >> genPushFullClosure: compiledBlockLiteralIndex numCopied: numCopied [
+	"By default the closure will have an outer context and the receiver will be fetched from the current context"
+	self genPushFullClosure: compiledBlockLiteralIndex numCopied: numCopied receiverOnStack: false outerContextNeeded: true
+]
+
+{ #category : #'extended bytecode generation' }
 EncoderForSistaV1 >> genPushFullClosure: compiledBlockLiteralIndex numCopied: numCopied receiverOnStack: receiverOnStack outerContextNeeded: outerContextNeeded [
-	"*	255		11111111	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 needsOuterContext: i = 1"
+	"*	255		11111111	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 ignoreOuterContext: i = 1"
 	| extendedIndex |
 	(numCopied < 1 or: [numCopied > 64]) ifTrue:
 		[self outOfRangeError: 'num copied' index: numCopied range: 1 to: 64].
@@ -931,7 +937,7 @@ EncoderForSistaV1 >> genPushFullClosure: compiledBlockLiteralIndex numCopied: nu
 	stream
 		nextPut: 255;
 		nextPut: extendedIndex;
-		nextPut: receiverOnStack asBit << 7 + (outerContextNeeded asBit << 6) + numCopied
+		nextPut: receiverOnStack asBit << 7 + (outerContextNeeded not asBit << 6) + numCopied
 ]
 
 { #category : #'bytecode generation' }
