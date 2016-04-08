@@ -234,13 +234,26 @@ sudo cp /etc/security/limits.d/squeak.conf /etc/security/limits.d/nsvm.conf
         ulimit -r 2
         exec setuidgid <account> ./coglinuxht/squeak -vm display-null -vm sound-null squeak.image
 
+THEEND
+if grep -s '<dpiAware>true</dpiAware>'; then
+cat <<THEEND >>../history/README.$REV
      Windows
      The Windows VMs are "dpiAware", which means that by default the display is
      not scaled and display pixels are mapped 1 to 1 to the screen.  If this
      behaviour is not desired you can enable scaling by either editing the
-     relevant manifest file (e.g.  Squeak.exe.manifest), changing the "true" in
+     relevant manifest file (e.g. Squeak.exe.manifest), changing the "true" in
      <dpiAware>true</dpiAware> to "false", or simply deleting the manifest file.
 THEEND
+else
+cat <<THEEND >>../history/README.$REV
+     Windows
+     The Windows VMs are not "dpiAware", which means that by default the display
+     is scaled and display pixels are not directly mapped to screen pixels.  If
+     this behaviour is not desired you can disable scaling by editing the VM's
+     manifest file (e.g. Squeak.exe.manifest), changing the "false" in
+     <dpiAware>false</dpiAware> to "true", or simply deleting the manifest file.
+THEEND
+fi
 	echo getting svn log
 	svn log ../platforms/Cross/vm/sqSCCSVersion.h >>../history/README.$REV
 	vi ../history/README.$REV
