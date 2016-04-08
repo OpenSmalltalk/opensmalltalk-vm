@@ -16,7 +16,7 @@ Class {
 		'VMMethodCacheConstants',
 		'VMObjectIndices'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -1596,16 +1596,6 @@ SimpleStackBasedCogit >> fullBlockNoContextSwitchEntryOffset [
 	^cbNoSwitchEntryOffset
 ]
 
-{ #category : #'constant support' }
-SimpleStackBasedCogit >> genAnnotatedSubCw: constant R: reg [
-	"generates a SubCW instruction with an explicit annotation. This is called (as of today) only by the branch generation methods.
-	The annotation needs to be there for some reasons unknown to me (removing the annotation crashes the must be boolean trampolines)"
-	<inline: true>
-	self flag: #TOCHECK. "We will check with eliot if this could be a SubCq, and if not, put the proper comment"
-	self annotate: (self SubCw: constant R: TempReg) objRef: reg.
-	
-]
-
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genBlockReturn [
 	"Return from block, assuming result already loaded into ReceiverResultReg."
@@ -2059,7 +2049,7 @@ SimpleStackBasedCogit >> genJumpIf: boolean to: targetBytecodePC [
 	extA := 0.
 	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
 	self PopR: TempReg.
-	self genAnnotatedSubCw: boolean R: TempReg.
+	self genSubConstant: boolean R: TempReg.
 	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
 	self CmpCq: (boolean == objectMemory falseObject
 					ifTrue: [objectMemory trueObject - objectMemory falseObject]
@@ -3353,6 +3343,15 @@ SimpleStackBasedCogit >> genStorePop: popBoolean TemporaryVariable: tempIndex [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genStoreRemoteTempLongBytecode [
 	^self genStorePop: false RemoteTemp: byte1 At: byte2
+]
+
+{ #category : #'constant support' }
+SimpleStackBasedCogit >> genSubConstant: constant R: reg [
+	"If the objectMemory allows it, generates a quick constant sub, else generates a word constant sub"
+	<inline: true>
+	^ (objectRepresentation shouldAnnotateObjectReference: constant)
+		ifTrue: [ self annotate: (self SubCw: constant R: TempReg) objRef: reg. ]
+		ifFalse: [ self SubCq: constant R: TempReg ]
 ]
 
 { #category : #initialization }

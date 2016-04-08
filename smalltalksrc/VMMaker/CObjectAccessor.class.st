@@ -8,7 +8,7 @@ Class {
 		'object',
 		'offset'
 	],
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : 'VMMaker-InterpreterSimulation'
 }
 
 { #category : #accessing }

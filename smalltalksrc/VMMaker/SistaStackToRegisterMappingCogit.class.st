@@ -62,7 +62,7 @@ Class {
 	#pools : [
 		'VMSqueakClassIndices'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -283,7 +283,7 @@ SistaStackToRegisterMappingCogit >> genCounterTripOnlyJumpIf: boolean to: target
 	 Correct result is either 0 or the distance between them.  If result is not 0 or
 	 their distance send mustBeBoolean."
 	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
-	self genAnnotatedSubCw: boolean R: TempReg.
+	self genSubConstant: boolean R: TempReg.
 	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
 
 	self CmpCq: (boolean == objectMemory falseObject
@@ -405,7 +405,7 @@ SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 Correct result is either 0 or the distance between them.  If result is not 0 or
 	 their distance send mustBeBoolean."
 	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
-	self genAnnotatedSubCw: boolean R: TempReg.
+	self genSubConstant: boolean R: TempReg.
 	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
 
 	self genFallsThroughCountLogicCounterReg: SendNumArgsReg counterAddress: counterAddress.

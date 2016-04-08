@@ -17,7 +17,7 @@ Class {
 		'CogCompilationConstants',
 		'CogRTLOpcodes'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -105,7 +105,7 @@ CogSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegister [
 	cogit traceSpill: self.
 	type = SSConstant
 		ifTrue:
-			[inst := self genPushConstant: constant]
+			[inst := cogit genPushConstant: constant]
 		ifFalse:
 			[type = SSBaseOffset
 				ifTrue:
