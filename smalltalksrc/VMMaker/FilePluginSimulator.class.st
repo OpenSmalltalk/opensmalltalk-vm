@@ -8,7 +8,7 @@ Class {
 		'openFiles',
 		'states'
 	],
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : 'VMMaker-InterpreterSimulation'
 }
 
 { #category : #translation }

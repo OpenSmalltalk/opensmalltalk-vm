@@ -5,7 +5,7 @@ Class {
 		'primitiveGenerator',
 		'primNumArgs'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }

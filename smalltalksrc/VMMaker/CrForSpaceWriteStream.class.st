@@ -1,7 +1,7 @@
 Class {
 	#name : #CrForSpaceWriteStream,
 	#superclass : #WriteStream,
-	#category : #'VMMaker-Building'
+	#category : 'VMMaker-Building'
 }
 
 { #category : #'character writing' }

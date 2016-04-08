@@ -15,5 +15,5 @@ Class {
 		'ClassMessageCompactIndex',
 		'ClassMethodContextCompactIndex'
 	],
-	#category : #'VMMaker-Interpreter'
+	#category : 'VMMaker-Interpreter'
 }
