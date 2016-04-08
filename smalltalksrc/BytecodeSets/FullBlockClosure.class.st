@@ -1,3 +1,50 @@
+"
+A FullBlockClosure is a closure that can be indepdendent of any outerContext if desired.  It has its own method (currently reusing the startpc inst var) and its own receiver.  outerContext can be either a MethodContext/Context or nil.
+
+Instance Variables
+	receiver:		<Object>
+
+Here's an example (a chunk designed to be typed into the spurreader image with this class filed in, e.g. in the simulator), circa early 2016 for creating the recursive nfib example (|nfib|nfib:=nil.nfib:=[:n|n<=1ifTrue:[1]ifFalse:[(nfib value:n-1)+(nfib value:n-2)+1]].(1to:12)collect:nfib) using FullBlockClosure:
+
+| method closure |
+method := (AssemblerMethod new
+	methodClass: Object;
+	selector: #nfib:;
+	numArgs: 1;
+	numTemps: 2;
+	literal: #ifTrue:ifFalse:;
+	pushTemporaryVariable: 0;
+	pushSpecialConstant: 1;
+	send: #<= super: false numArgs: 1;
+	jump: 'L1' if: false;
+	pushSpecialConstant: 1;
+	jump: 'L2';
+	label: 'L1';
+	pushRemoteTemp: 0 inVectorAt: 1;
+	pushTemporaryVariable: 0;
+	pushSpecialConstant: 1;
+	send: #- super: false numArgs: 1;
+	send: #value: super: false numArgs: 1;
+	pushRemoteTemp: 0 inVectorAt: 1;
+	pushTemporaryVariable: 0;
+	pushSpecialConstant: 2;
+	send: #- super: false numArgs: 1;
+	send: #value: super: false numArgs: 1;
+	send: #+ super: false numArgs: 1;
+	pushSpecialConstant: 1;
+	send: #+ super: false numArgs: 1;
+	label: 'L2';
+	blockReturnTop;
+	yourself) assemble.
+closure := FullBlockClosure new: 1.
+closure
+	outerContext: nil;
+	compiledBlock: method;
+	numArgs: 1;
+	receiver: nil.
+closure at: 1 put: (Array with: closure).
+(1 to: 12) collect: closure!
+"
 Class {
 	#name : #FullBlockClosure,
 	#superclass : #BlockClosure,
@@ -5,7 +52,7 @@ Class {
 	#instVars : [
 		'receiver'
 	],
-	#category : 'BytecodeSets-SistaV1'
+	#category : #'BytecodeSets-SistaV1'
 }
 
 { #category : #private }
