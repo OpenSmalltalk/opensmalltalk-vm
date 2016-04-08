@@ -82,6 +82,15 @@ Class {
 	#category : 'VMMaker-JITSimulation'
 }
 
+{ #category : #initialization }
+CogVMSimulator class >> initializeWithOptions: optionsDictionary [
+	super initializeWithOptions: optionsDictionary.
+
+	ByteCountsPerMicrosecond := initializationOptions
+										at: #ByteCountsPerMicrosecond
+										ifAbsent: [100]
+]
+
 { #category : #'class initialization' }
 CogVMSimulator class >> initializeWithOptions: optionsDictionaryOrArray objectMemoryClass: objectMemoryClassOrNil [
 	"The relevant ObjectMemory, Interpreter and Cogit classes must be initialized in order.
@@ -90,17 +99,11 @@ CogVMSimulator class >> initializeWithOptions: optionsDictionaryOrArray objectMe
 	initializationOptions := optionsDictionaryOrArray isArray
 							ifTrue: [Dictionary newFromPairs: optionsDictionaryOrArray]
 							ifFalse: [optionsDictionaryOrArray].
+
 	(objectMemoryClassOrNil ifNil: [self objectMemoryClass])
 		initializeWithOptions: initializationOptions.
 
-	((initializationOptions at: #COGMTVM ifAbsent: [false])
-			ifTrue: [CoInterpreterMT]
-			ifFalse: [CoInterpreter])
-		initializeWithOptions: initializationOptions.
-
-	ByteCountsPerMicrosecond := initializationOptions
-										at: #ByteCountsPerMicrosecond
-										ifAbsent: [100].
+	self initializeWithOptions: initializationOptions.
 
 	(self cogitClass withAllSuperclasses copyUpTo: Cogit) reverseDo:
 		[:c| c initializeWithOptions: initializationOptions]
