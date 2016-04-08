@@ -1800,7 +1800,7 @@ SimpleStackBasedCogit >> genExtPushRemoteTempOrInstVarLongBytecode [
 		ifFalse: 
 			[ index := byte1 + (extA << 8).
 			extA := 0.
-			extB := 0.
+			extB := 0. "don't use flags in the simple cogit"
 			(coInterpreter isReadMediatedContextInstVarIndex: index)
 				ifTrue: [ self genPushMaybeContextRemoteInstVar: index inObjectAt: byte2 - (1 << 7) ]
 				ifFalse: [ self genPushRemoteInstVar: index inObjectAt: byte2 - (1 << 7) ] ]
@@ -1925,23 +1925,23 @@ SimpleStackBasedCogit >> genExtStorePopRemoteTempOrInstVarLongBytecode [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genExtStorePopRemoteTempOrInstVarLongBytecode: boolean [
+SimpleStackBasedCogit >> genExtStorePopRemoteTempOrInstVarLongBytecode: popBoolean [
 	| index |
 	extB := 0. "simple cogit don't use the extra flag"
 	(byte2 noMask: 1 << 7)
 		ifTrue: 
-			[ self genStorePop: boolean RemoteTemp: byte1 At: byte2.
+			[ self genStorePop: popBoolean RemoteTemp: byte1 At: byte2.
 			self cppIf: IMMUTABILITY ifTrue: [ self annotateBytecode: self Label ] ]
 		ifFalse: 
 			[ index := byte1 + (extA << 8).
 			extA := 0.
 			(coInterpreter isWriteMediatedContextInstVarIndex: index)
 				ifTrue: [ self 
-						genStorePop: boolean 
+						genStorePop: popBoolean 
 						MaybeContextRemoteInstVar: index 
 						ofObjectAt: byte2 - (1 << 7) ]
 				ifFalse: [ self 
-						genStorePop: boolean 
+						genStorePop: popBoolean 
 						RemoteInstVar: index 
 						ofObjectAt: byte2 - (1 << 7)  ] ].
 	^ 0
@@ -2699,6 +2699,41 @@ SimpleStackBasedCogit >> genPushMaybeContextReceiverVariable: slotIndex [
 	^0
 ]
 
+{ #category : #'bytecode generator support' }
+SimpleStackBasedCogit >> genPushMaybeContextRemoteInstVar: slotIndex inObjectAt: objectIndex [
+	| jmpSingle jmpDone |
+	<var: #jmpSingle type: #'AbstractInstruction *'>
+	<var: #jmpDone type: #'AbstractInstruction *'>
+	self assert: needsFrame.
+	"See CoInterpreter>>contextInstructionPointer:frame: for an explanation
+	 of the instruction pointer slot handling."
+	self MoveMw: (self frameOffsetOfTemporary: objectIndex) r: FPReg R: ReceiverResultReg.
+	objectRepresentation 
+		genEnsureOopInRegNotForwarded: ReceiverResultReg 
+		scratchReg: TempReg.
+	slotIndex = InstructionPointerIndex ifTrue:
+		[self MoveCq: slotIndex R: SendNumArgsReg.
+		 self CallRT: ceFetchContextInstVarTrampoline.
+		 self PushR: SendNumArgsReg.
+		 ^0].
+	objectRepresentation
+		genLoadSlot: SenderIndex
+		sourceReg: ReceiverResultReg
+		destReg: TempReg.
+	jmpSingle := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	self MoveCq: slotIndex R: SendNumArgsReg.
+	self CallRT: ceFetchContextInstVarTrampoline.
+	jmpDone := self Jump: 0.
+	jmpSingle jmpTarget: self Label.
+	objectRepresentation
+		genLoadSlot: slotIndex
+		sourceReg: ReceiverResultReg
+		destReg: SendNumArgsReg.
+	jmpDone jmpTarget: (self PushR: SendNumArgsReg).
+	^0
+
+]
+
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushNewArrayBytecode [
 	| size popValues |
@@ -2750,6 +2785,20 @@ SimpleStackBasedCogit >> genPushReceiverVariable: index [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushReceiverVariableBytecode [
 	^self genPushReceiverVariable: (byte0 bitAnd: 15)
+]
+
+{ #category : #'bytecode generator support' }
+SimpleStackBasedCogit >> genPushRemoteInstVar: index inObjectAt: objectIndex [
+	self MoveMw: (self frameOffsetOfTemporary: objectIndex) r: FPReg R: ClassReg.
+	objectRepresentation 
+		genEnsureOopInRegNotForwarded: ClassReg 
+		scratchReg: TempReg.
+	objectRepresentation
+		genLoadSlot: index
+		sourceReg: ClassReg
+		destReg: TempReg.
+	self PushR: TempReg.
+	^0
 ]
 
 { #category : #'bytecode generators' }
@@ -3163,6 +3212,42 @@ SimpleStackBasedCogit >> genStorePop: popBoolean MaybeContextReceiverVariable: s
 ]
 
 { #category : #'bytecode generator support' }
+SimpleStackBasedCogit >> genStorePop: popBoolean MaybeContextRemoteInstVar: slotIndex ofObjectAt: objectIndex [
+	<inline: false>
+	| jmpSingle jmpDone |
+	<var: #jmpSingle type: #'AbstractInstruction *'>
+	<var: #jmpDone type: #'AbstractInstruction *'>
+	"The reason we need a frame here is that assigning to an inst var of a context may
+	 involve wholesale reorganization of stack pages, and the only way to preserve the
+	 execution state of an activation in that case is if it has a frame."
+	self assert: needsFrame.
+	self MoveMw: (self frameOffsetOfTemporary: objectIndex) r: FPReg R: ReceiverResultReg.
+	objectRepresentation 
+		genEnsureOopInRegNotForwarded: ReceiverResultReg 
+		scratchReg: TempReg.
+	objectRepresentation
+		genLoadSlot: SenderIndex
+		sourceReg: ReceiverResultReg
+		destReg: TempReg.
+	self MoveMw: 0 r: SPReg R: ClassReg.
+	jmpSingle := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	self MoveCq: slotIndex R: SendNumArgsReg.
+	self CallRT: ceStoreContextInstVarTrampoline.
+	jmpDone := self Jump: 0.
+	jmpSingle jmpTarget: self Label.
+	popBoolean ifTrue:
+		[self AddCq: objectMemory wordSize R: SPReg].
+	self
+		genStoreSourceReg: ClassReg 
+		slotIndex: slotIndex 
+		destReg: ReceiverResultReg 
+		scratchReg: TempReg 
+		inFrame: needsFrame.
+	jmpDone jmpTarget: self Label.
+	^0
+]
+
+{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
 	<inline: false>
 	needsFrame ifTrue:
@@ -3177,6 +3262,32 @@ SimpleStackBasedCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
 		scratchReg: TempReg 
 		inFrame: needsFrame.
 	^0
+]
+
+{ #category : #'bytecode generator support' }
+SimpleStackBasedCogit >> genStorePop: popBoolean RemoteInstVar: slotIndex ofObjectAt: objectIndex [
+	<inline: false>
+	"The only reason we assert needsFrame here is that in a frameless method
+	 ReceiverResultReg must and does contain only self, but the ceStoreCheck
+	 trampoline expects the target of the store to be in ReceiverResultReg.  So
+	 in a frameless method we would have a conflict between the receiver and
+	 the temote temp store, unless we we smart enough to realise that
+	 ReceiverResultReg was unused after the literal variable store, unlikely given
+	 that methods return self by default."
+	self assert: needsFrame.
+	popBoolean
+		ifTrue: [self PopR: ClassReg]
+		ifFalse: [self MoveMw: 0 r: SPReg R: ClassReg].
+	self MoveMw: (self frameOffsetOfTemporary: objectIndex) r: FPReg R: ReceiverResultReg.
+	objectRepresentation 
+		genEnsureOopInRegNotForwarded: ReceiverResultReg 
+		scratchReg: TempReg.
+	^objectRepresentation
+		genStoreSourceReg: ClassReg
+		slotIndex: slotIndex
+		destReg: ReceiverResultReg
+		scratchReg: TempReg
+		inFrame: needsFrame
 ]
 
 { #category : #'bytecode generator support' }
