@@ -1,7 +1,7 @@
 Class {
 	#name : #CogBlockMethodSurrogate32,
 	#superclass : #CogMethodSurrogate,
-	#category : 'VMMaker-JITSimulation'
+	#category : #'VMMaker-JITSimulation'
 }
 
 { #category : #accessing }

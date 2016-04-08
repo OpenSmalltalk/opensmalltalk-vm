@@ -52,7 +52,7 @@ Class {
 		'sweepIndex',
 		'preferredPinningSegment'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
