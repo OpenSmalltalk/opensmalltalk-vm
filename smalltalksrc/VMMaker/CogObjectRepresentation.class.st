@@ -131,6 +131,12 @@ CogObjectRepresentation >> genCreateClosureAt: bcpc numArgs: numArgs numCopied: 
 	self subclassResponsibility
 ]
 
+{ #category : #'bytecode generator support' }
+CogObjectRepresentation >> genCreateFullClosure: compiledBlock numArgs: numArgs numCopied: numCopied ignoreContext: ignoreContext contextNumArgs: contextNumArgs large: contextIsLarge inBlock: contextIsBlock [
+	"Create a full closure"
+	self subclassResponsibility
+]
+
 { #category : #'primitive generators' }
 CogObjectRepresentation >> genDoubleArithmetic: arithmeticOperator preOpCheck: preOpCheckOrNil [
 	<option: #DPFPReg0>
