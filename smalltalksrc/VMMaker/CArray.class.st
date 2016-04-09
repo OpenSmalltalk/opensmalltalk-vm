@@ -56,17 +56,19 @@ CArray >> asCArrayAccessor [
 ]
 
 { #category : #converting }
-CArray >> asCArrayAccessorUnitSize: requiredUnitSize [
-	self assert: ptrOffset = 0.
-	^CArrayAccessor on: (requiredUnitSize = unitSize
-								ifTrue: [self]
-								ifFalse: [self shallowCopy unitSize: requiredUnitSize])
+CArray >> asDoubleFloatAccessor [
+	^CFloatArray adoptInstance: (self shallowCopy unitSize: 8)
 ]
 
 { #category : #converting }
 CArray >> asInteger [
 
 	^ self ptrAddress
+]
+
+{ #category : #converting }
+CArray >> asSingleFloatAccessor [
+	^CFloatArray adoptInstance: (self shallowCopy unitSize: 4)
 ]
 
 { #category : #accessing }
@@ -109,9 +111,10 @@ CArray >> coerceTo: cTypeString sim: interpreterSimulator [
 
 	^cTypeString caseOf: {
 		['int']				-> [self ptrAddress].
-		['float *']			-> [(self asCArrayAccessorUnitSize: 4) asFloatAccessor].
-		['unsigned int *']	-> [(self asCArrayAccessorUnitSize: 4) asUnsignedIntAccessor].
-		['int *']				-> [(self asCArrayAccessorUnitSize: 4) asIntAccessor].
+		['float *']			-> [self asSingleFloatAccessor].
+		['double *']			-> [self asDoubleFloatAccessor].
+		['unsigned int *']	-> [self shallowCopy unitSize: 4; yourself].
+		['int *']				-> [self shallowCopy unitSize: 4; yourself].
 		['char *']			-> [self shallowCopy unitSize: 1; yourself].
 		['unsigned char *']	-> [self shallowCopy unitSize: 1; yourself].
 		['unsigned']			-> [self ptrAddress].
