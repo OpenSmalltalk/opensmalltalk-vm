@@ -1237,7 +1237,7 @@ LargeIntegersPlugin >> normalizePositive: aLargePositiveInteger [
 { #category : #util }
 LargeIntegersPlugin >> pointerToFirstDigitOfLargeInt: bytesObject [
 	<inline: true>
-	<returnTypeC: #'unsigned int'>
+	<returnTypeC: #'unsigned int *'>
 	^interpreterProxy cCoerce: (interpreterProxy firstIndexableField: bytesObject) to: #'unsigned int *'
 ]
 
