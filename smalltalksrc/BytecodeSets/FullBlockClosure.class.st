@@ -44,6 +44,33 @@ closure
 	receiver: nil.
 closure at: 1 put: (Array with: closure).
 (1 to: 12) collect: closure!
+
+Here is a second example:
+| methodBlock outerMethod |
+methodBlock := (AssemblerMethod new
+	methodClass: Object;
+	selector: #inblock2;
+	numArgs: 0;
+	numTemps: 1;
+	popIntoTemporaryVariable: 0;
+	blockReturnTop;
+	yourself) assemble.
+outerMethod := (AssemblerMethod new
+	encoder: EncoderForSistaV1 new;
+	methodClass: Object;
+	selector: #foo;
+	numTemps: 0;
+	trailerData: #[0];
+	literal: #with:;
+	binding: #Array;
+	literal: 10;
+	literal: methodBlock;
+	pushSpecialConstant: 1;
+	pushFullClosure: 3 numCopied: 1;
+	send: #value super: false numArgs: 0;
+	methodReturnTop;
+	yourself) assemble.
+self assert: (nil withArgs: #() executeMethod: outerMethod) = 1.
 "
 Class {
 	#name : #FullBlockClosure,
@@ -52,7 +79,7 @@ Class {
 	#instVars : [
 		'receiver'
 	],
-	#category : 'BytecodeSets-SistaV1'
+	#category : #'BytecodeSets-SistaV1'
 }
 
 { #category : #private }
