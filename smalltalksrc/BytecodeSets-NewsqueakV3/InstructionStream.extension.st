@@ -329,7 +329,7 @@ InstructionStream >> interpretNext3ByteSistaV1Instruction: bytecode for: client 
 	 This method handles the three-byte codes.
 	 For a table of the bytecode set, see EncoderForSistaV1's class comment."
 
-	| method byte2 byte3 |
+	| method byte2 byte3 literal |
 	method := self method.
 	byte2 := method at: pc.
 	byte3 := method at: pc + 1.
@@ -353,7 +353,10 @@ InstructionStream >> interpretNext3ByteSistaV1Instruction: bytecode for: client 
 		[^client popIntoRemoteTemp: byte2 inVectorAt: byte3].
 	"249		11111001 	xxxxxxxx	syyyyyyy	Reserved for Push Float"
 	"254-255	1111111 i	xxxxxxxx	yyyyyyyy	UNASSIGNED"
-	^self unusedBytecode: client at: startPC
+	literal := method literalAt: (extA bitShift: 8) + byte2 + 1.
+	 ^client
+			pushFullClosure: literal
+			numCopied: byte3.
 ]
 
 { #category : #'*BytecodeSets-NewsqueakV3-decoding' }
