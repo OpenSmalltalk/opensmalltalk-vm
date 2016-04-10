@@ -1423,6 +1423,11 @@ EncoderForSistaV1 >> isSpecialLiteralForPush: literal [
 	  or: [(literal isCharacter and: [literal asInteger between: 0 and: 65535])]]]]
 ]
 
+{ #category : #'special literal encodings' }
+EncoderForSistaV1 >> sizePushFullClosure: compiledBlockLiteralIndex numCopied: numCopied [
+	^self sizeOpcodeSelector: #genPushFullClosure:numCopied: withArguments: {compiledBlockLiteralIndex.numCopied}
+]
+
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> supportsClosureOpcodes [
 	^true
