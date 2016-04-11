@@ -275,6 +275,15 @@ StackDepthFinder >> pushExplicitOuter: level [
 ]
 
 { #category : #'instruction decoding' }
+StackDepthFinder >> pushFullClosure: literal numCopied: numCopied. [
+	"Push Closure bytecode."
+	numCopied = 0
+		ifTrue: [self push]
+		ifFalse: [numCopied > 1 ifTrue:
+					[self drop: numCopied - 1]].
+]
+
+{ #category : #'instruction decoding' }
 StackDepthFinder >> pushLiteralVariable: anAssociation [
 	"Push Contents Of anAssociation On Top Of Stack bytecode."
 	self push
