@@ -3106,16 +3106,16 @@ SimpleStackBasedCogit >> genShortUnconditionalJump [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSistaExtStoreAndPopLiteralVariableBytecode [
-	^ self genSistaExtStoreLiteralVariableBytecode: true
+	^ self genSistaExtStoreLiteralVariableBytecodePopBoolean: true
 ]
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSistaExtStoreAndPopReceiverVariableBytecode [
-	^ self genSistaExtStoreAndPopReceiverVariableBytecode: true
+	^ self genSistaExtStoreAndPopReceiverVariableBytecodePopBoolean: true
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genSistaExtStoreAndPopReceiverVariableBytecode: boolean [
+SimpleStackBasedCogit >> genSistaExtStoreAndPopReceiverVariableBytecodePopBoolean: boolean [
 	| index |
 	extB := 0. "Simple cogit don't use the extra flags"
 	index := byte1 + (extA << 8).
@@ -3127,11 +3127,11 @@ SimpleStackBasedCogit >> genSistaExtStoreAndPopReceiverVariableBytecode: boolean
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSistaExtStoreLiteralVariableBytecode [
-	^ self genSistaExtStoreLiteralVariableBytecode: false
+	^ self genSistaExtStoreLiteralVariableBytecodePopBoolean: false
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genSistaExtStoreLiteralVariableBytecode: boolean [
+SimpleStackBasedCogit >> genSistaExtStoreLiteralVariableBytecodePopBoolean: boolean [
 	| index |
 	extB := 0. "SimpleCogit don't use the extra flags"
 	index := byte1 + (extA << 8).
@@ -3141,7 +3141,7 @@ SimpleStackBasedCogit >> genSistaExtStoreLiteralVariableBytecode: boolean [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSistaExtStoreReceiverVariableBytecode [
-	^ self genSistaExtStoreAndPopReceiverVariableBytecode: false
+	^ self genSistaExtStoreAndPopReceiverVariableBytecodePopBoolean: false
 ]
 
 { #category : #'bytecode generators' }
