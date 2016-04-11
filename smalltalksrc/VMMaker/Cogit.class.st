@@ -160,7 +160,6 @@ Class {
 		'entry',
 		'cmNoCheckEntryOffset',
 		'noCheckEntry',
-		'fullBlockStackOverflowCall',
 		'fullBlockEntry',
 		'cbEntryOffset',
 		'fullBlockNoContextSwitchEntry',
@@ -316,7 +315,7 @@ Class {
 		'generatorTable',
 		'primitiveTable'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -434,16 +433,16 @@ Cogit class >> cog: aCompiledMethod [
 
 { #category : #'in-image compilation' }
 Cogit class >> cog: aCompiledMethod options: optionsArray [
-	^self cog: aCompiledMethod selector: aCompiledMethod selector options: optionsArray
+	^self cog: aCompiledMethod selectorOrNumCopied: aCompiledMethod selector options: optionsArray
 ]
 
 { #category : #'in-image compilation' }
 Cogit class >> cog: aCompiledMethod selector: aSelector [
-	^self cog: aCompiledMethod selector: aSelector options: #()
+	^self cog: aCompiledMethod selectorOrNumCopied: aSelector options: #()
 ]
 
 { #category : #'in-image compilation' }
-Cogit class >> cog: aCompiledMethod selector: aSelector options: optionsDictionaryOrArray [
+Cogit class >> cog: aCompiledMethod selectorOrNumCopied: selectorOrNumCopied options: optionsDictionaryOrArray [
 	"StackToRegisterMappingCogit cog: (Integer >> #benchFib) selector: #benchFib options: #(COGMTVM false)"
 	| cogit coInterpreter |
 	cogit := self instanceForTests: optionsDictionaryOrArray.
@@ -460,7 +459,9 @@ Cogit class >> cog: aCompiledMethod selector: aSelector options: optionsDictiona
 			ex pass].
 	^{ coInterpreter.
 		cogit.
-		cogit cog: (coInterpreter oopForObject: aCompiledMethod) selector: (coInterpreter oopForObject: aSelector) }
+		selectorOrNumCopied isInteger
+			ifTrue: [ cogit cogFullBlockMethod: (coInterpreter oopForObject: aCompiledMethod) numCopied: selectorOrNumCopied ]
+			ifFalse: [ cogit cog: (coInterpreter oopForObject: aCompiledMethod) selector: (coInterpreter oopForObject: selectorOrNumCopied) ] }
 ]
 
 { #category : #documentation }
@@ -549,7 +550,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 					blockEntryLabel blockEntryNoContextSwitch
 					stackOverflowCall sendMiss
 					entry noCheckEntry selfSendEntry dynSuperEntry
-					fullBlockStackOverflowCall fullBlockNoContextSwitchEntry fullBlockEntry
+					fullBlockNoContextSwitchEntry fullBlockEntry
 					picMNUAbort picInterpretAbort  endCPICCase0 endCPICCase1 cPICEndOfCodeLabel)
 			as: #'AbstractInstruction *'
 				in: aCCodeGenerator.
@@ -625,6 +626,14 @@ Cogit class >> genAndDis: methodOrDoitString [
 ]
 
 { #category : #'in-image compilation' }
+Cogit class >> genAndDis: compiledBlock numCopied: numCopied options: optionsDictionaryOrArray [
+	| tuple |
+	tuple := self cog: compiledBlock selectorOrNumCopied: numCopied options: optionsDictionaryOrArray.
+	tuple second disassembleMethod: tuple last.
+	^tuple
+]
+
+{ #category : #'in-image compilation' }
 Cogit class >> genAndDis: methodOrDoitString options: optionsDictionaryOrArray [
 	| tuple |
 	methodOrDoitString isCompiledMethod ifFalse:
@@ -637,7 +646,7 @@ Cogit class >> genAndDis: methodOrDoitString options: optionsDictionaryOrArray [
 							ifFail: nil
 							logged: false)
 			 options: optionsDictionaryOrArray].
-	tuple := self cog: methodOrDoitString selector: methodOrDoitString selector options: optionsDictionaryOrArray.
+	tuple := self cog: methodOrDoitString selectorOrNumCopied: methodOrDoitString selector options: optionsDictionaryOrArray.
 	tuple second disassembleMethod: tuple last.
 	^tuple
 ]
@@ -1285,7 +1294,7 @@ Cogit class >> testPCMappingFor: aCompiledMethod [
 { #category : #tests }
 Cogit class >> testPCMappingFor: aCompiledMethod options: optionsDictionaryOrArray [
 	| tuple |
-	tuple := self cog: aCompiledMethod selector: aCompiledMethod selector options: optionsDictionaryOrArray.
+	tuple := self cog: aCompiledMethod selectorOrNumCopied: aCompiledMethod selector options: optionsDictionaryOrArray.
 	tuple second testPCMappingForCompiledMethod: aCompiledMethod cogMethod: tuple last
 ]
 
@@ -3896,7 +3905,7 @@ Cogit >> cogFullBlockMethod: aMethodObj numCopied: numCopied [
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	self cCode: [] inSmalltalk: "for debugging, allow excluding methods based on selector or methodClass"
-		[self halt class initializationOptions
+		[self class initializationOptions
 			at: #DoNotJIT
 			ifPresent:
 				[:excluded| 
@@ -4447,9 +4456,11 @@ Cogit >> compileCogFullBlockMethod: numCopied [
 	"initial estimate.  Actual endPC is determined in scanMethod."
 	endPC := objectMemory numBytesOf: methodObj.
 	numBytecodes := endPC - initialPC + 1.
+	primitiveIndex := 0.
 	self allocateOpcodes: (numBytecodes + 10) * self estimateOfAbstractOpcodesPerBytecodes
 		bytecodes: numBytecodes
 		ifFail: [^coInterpreter cCoerceSimple: MethodTooBig to: #'CogMethod *'].
+	self flag: #TODO. "currently copiedValue access implies frameful method, this is suboptimal"
 	(numBlocks := self scanMethod) < 0 ifTrue:
 		[^coInterpreter cCoerceSimple: numBlocks to: #'CogMethod *'].
 	self assert: numBlocks = 0. "blocks in full blocks are full blocks, they are not inlined."
@@ -4572,7 +4583,7 @@ Cogit >> compileFullBlockEntry [
 
 	"Abort for stack overflow on full block activation (no inline cache miss possible).
 	 The flag is SendNumArgsReg."
-	fullBlockStackOverflowCall := self MoveCq: 0 R: ReceiverResultReg.
+	stackOverflowCall := self MoveCq: 0 R: ReceiverResultReg.
 	backEnd hasLinkRegister ifTrue: [self PushR: LinkReg].
 	"Since the only case in which this is called is the
 	 stack overflow case we can reuse the trampoline."
@@ -7084,6 +7095,7 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 		[coInterpreter checkForLastObjectOverwrite.
 		 coInterpreter primFailCode = 0
 			ifTrue: [(#(	primitiveClosureValue primitiveClosureValueWithArgs primitiveClosureValueNoContextSwitch
+						primitiveFullClosureValue primitiveFullClosureValueWithArgs primitiveFullClosureValueNoContextSwitch
 						primitiveSignal primitiveWait primitiveResume primitiveSuspend primitiveYield
 						primitiveExecuteMethodArgsArray primitiveExecuteMethod
 						primitivePerform primitivePerformWithArgs primitivePerformInSuperclass

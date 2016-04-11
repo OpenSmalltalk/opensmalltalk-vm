@@ -2227,7 +2227,7 @@ StackToRegisterMappingCogit >> genPrimitiveClosureValue [
 { #category : #'primitive generators' }
 StackToRegisterMappingCogit >> genPrimitiveFullClosureValue [
 	"Override to push the register args first."
-	self break.
+	<option: #SistaV1BytecodeSet>
 	self genPushRegisterArgs.
 	^super genPrimitiveFullClosureValue
 ]

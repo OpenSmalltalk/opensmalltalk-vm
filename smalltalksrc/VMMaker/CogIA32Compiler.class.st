@@ -2815,6 +2815,11 @@ CogIA32Compiler >> loadPICLiteralByteSize [
 	^self loadLiteralByteSize
 ]
 
+{ #category : #accessing }
+CogIA32Compiler >> machineCodeAt: anOffset [
+	^machineCode at: anOffset
+]
+
 { #category : #'generate machine code' }
 CogIA32Compiler >> machineCodeBytes [
 	"Answer the maximum number of bytes of machine code generated for any abstract instruction.
