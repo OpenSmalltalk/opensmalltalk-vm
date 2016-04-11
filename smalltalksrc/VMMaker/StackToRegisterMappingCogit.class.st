@@ -1196,12 +1196,6 @@ StackToRegisterMappingCogit >> compileCogMethod: selector [
 ]
 
 { #category : #'compile abstract instructions' }
-StackToRegisterMappingCogit >> compileEntireFullBlockMethod: numCopied [
-	regArgsHaveBeenPushed := false.
-	^super compileEntireFullBlockMethod: numCopied
-]
-
-{ #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> compileEntireMethod [
 	"Compile the abstract instructions for the entire method, including blocks."
 	regArgsHaveBeenPushed := false.
@@ -1225,7 +1219,6 @@ StackToRegisterMappingCogit >> compileFullBlockMethodFrameBuild: numCopied [
 	needsFrame ifFalse:
 		[self initSimStackForFramelessMethod: initialPC.
 		 ^self].
-	self genPushRegisterArgs.
 	super compileFullBlockMethodFrameBuild: numCopied.
 	self initSimStackForFramefulMethod: initialPC
 ]
@@ -2229,6 +2222,14 @@ StackToRegisterMappingCogit >> genPrimitiveClosureValue [
 	 Override to push the register args first."
 	self genPushRegisterArgs.
 	^super genPrimitiveClosureValue
+]
+
+{ #category : #'primitive generators' }
+StackToRegisterMappingCogit >> genPrimitiveFullClosureValue [
+	"Override to push the register args first."
+	self break.
+	self genPushRegisterArgs.
+	^super genPrimitiveFullClosureValue
 ]
 
 { #category : #'primitive generators' }
