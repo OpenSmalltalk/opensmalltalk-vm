@@ -1859,9 +1859,8 @@ StackInterpreter >> activateNewClosureMethod: blockClosure numArgs: numArgs mayC
 { #category : #'control primitives' }
 StackInterpreter >> activateNewFullClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: mayContextSwitch [
 	"Similar to activateNewMethod but for Closure and newMethod."
-	| numCopied outerContext theMethod methodHeader numTemps |
+	| numCopied theMethod methodHeader numTemps |
 	<inline: true>
-	outerContext := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
 	numCopied := self copiedValueCountOfFullClosure: blockClosure.
 	theMethod := objectMemory fetchPointer: FullClosureCompiledBlockIndex ofObject: blockClosure.
 	self assert: (objectMemory isOopCompiledMethod: theMethod).
@@ -7006,7 +7005,7 @@ StackInterpreter >> fullClosureIn: context numArgs: numArgs numCopiedValues: num
 			[newClosure := objectMemory
 								eeInstantiateSmallClassIndex: ClassFullBlockClosureCompactIndex
 								format: objectMemory indexablePointersFormat
-								numSlots: ClosureFirstCopiedValueIndex + numCopied]
+								numSlots: FullClosureFirstCopiedValueIndex + numCopied]
 		ifFalse:
 			[newClosure := objectMemory
 								eeInstantiateSmallClass: (objectMemory splObj: ClassFullBlockClosure)
