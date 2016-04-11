@@ -707,7 +707,7 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueak [
 
 		(207 genPrimitiveFullClosureValue) "value[:value:value:value:] et al"
 		"(208 genPrimitiveFullClosureValueWithArgs)" "valueWithArguments:"
-		(209 genPrimitiveFullClosureValueNoContextSwitch) "valueNoContextSwitch[:value:] et al"
+		(209 genPrimitiveFullClosureValue) "valueNoContextSwitch[:value:] et al"
 
 		"(210 primitiveContextAt)"
 		"(211 primitiveContextAtPut)"
