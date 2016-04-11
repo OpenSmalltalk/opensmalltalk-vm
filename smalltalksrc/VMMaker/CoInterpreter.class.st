@@ -611,7 +611,7 @@ CoInterpreter >> activateNewClosureMethod: blockClosure numArgs: numArgs mayCont
 { #category : #'control primitives' }
 CoInterpreter >> activateNewFullClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: mayContextSwitch [
 	"Similar to activateNewMethod but for Closure and newMethod."
-	| numCopied theMethod methodHeader numTemps |
+	| numCopied theMethod methodHeader numTemps inInterpreter switched |
 	<inline: true>
 	numCopied := self copiedValueCountOfFullClosure: blockClosure.
 	theMethod := objectMemory fetchPointer: FullClosureCompiledBlockIndex ofObject: blockClosure.
@@ -646,6 +646,20 @@ CoInterpreter >> activateNewFullClosureMethod: blockClosure numArgs: numArgs may
 		ifFalse:
 			[self maybeFlagMethodAsInterpreted: theMethod].
 
+	self assert: (self methodHasCogMethod: theMethod) not.
+	"Because this is an uncogged method we need to continue via the interpreter.
+	 We could have been reached either from the interpreter, in which case we
+	 should simply return, or from a machine code frame or from a compiled
+	 primitive.  In these latter two cases we must longjmp back to the interpreter.
+	 The instructionPointer tells us which path we took.
+	 If the sender was an interpreter frame but called through a (failing) primitive
+	 then make sure we restore the saved instruction pointer and avoid pushing
+	 ceReturnToInterpreterPC which is only valid between an interpreter caller
+	 frame and a machine code callee frame."
+	(inInterpreter := instructionPointer >= objectMemory startOfMemory) ifFalse:
+		[instructionPointer = cogit ceReturnToInterpreterPC ifTrue:
+			[instructionPointer := self iframeSavedIP: framePointer]].
+
 	self push: instructionPointer.
 	self push: framePointer.
 	framePointer := stackPointer.
@@ -676,8 +690,10 @@ CoInterpreter >> activateNewFullClosureMethod: blockClosure numArgs: numArgs may
 	self setMethod: theMethod.
 
 	"Now check for stack overflow or an event (interrupt, must scavenge, etc)"
+	switched := false.
 	stackPointer < stackLimit ifTrue:
-		[self handleStackOverflowOrEventAllowContextSwitch: mayContextSwitch]
+		[switched := self handleStackOverflowOrEventAllowContextSwitch: mayContextSwitch].
+	self returnToExecutive: inInterpreter postContextSwitch: switched
 ]
 
 { #category : #'message sending' }
