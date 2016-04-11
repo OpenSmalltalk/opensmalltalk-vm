@@ -84,8 +84,3 @@ CogIA32CompilerForTests >> hasSSE2Instructions [
 	"Answer if we support SSE2"
 	^true
 ]
-
-{ #category : #accessing }
-CogIA32CompilerForTests >> machineCodeAt: anOffset [
-	^machineCode at: anOffset
-]

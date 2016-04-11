@@ -2498,8 +2498,9 @@ SimpleStackBasedCogit >> genPrimitiveFullClosureValue [
 	 Get the method from the outerContext and see if it is cogged.  If so, jump to the
 	 block entry or the no-context-switch entry, as appropriate, and we're done.  If not,
 	 invoke the interpreter primitive."
-	| jumpFailNArgs jumpFail3 jumpFail4 jumpBCMethod primitiveRoutine result |
-	<var: #jumpFail3 type: #'AbstractInstruction *'>
+	| jumpFailNArgs jumpFailImmediateMethod jumpFail4 jumpBCMethod primitiveRoutine result |
+	<option: #SistaV1BytecodeSet>
+	<var: #jumpFailImmediateMethod type: #'AbstractInstruction *'>
 	<var: #jumpFail4 type: #'AbstractInstruction *'>
 	<var: #jumpFailNArgs type: #'AbstractInstruction *'>
 	<var: #jumpBCMethod type: #'AbstractInstruction *'>
@@ -2519,7 +2520,7 @@ SimpleStackBasedCogit >> genPrimitiveFullClosureValue [
 			updatingSlot: FullClosureReceiverIndex
 			in: ReceiverResultReg].
 	objectRepresentation genLoadSlot: FullClosureCompiledBlockIndex sourceReg: ReceiverResultReg destReg: SendNumArgsReg.
-	jumpFail3 := objectRepresentation genJumpImmediate: SendNumArgsReg.
+	jumpFailImmediateMethod := objectRepresentation genJumpImmediate: SendNumArgsReg.
 	objectRepresentation genGetFormatOf: SendNumArgsReg into: TempReg.
 	self CmpCq: objectMemory firstCompiledMethodFormat R: TempReg.
 	jumpFail4 := self JumpLess: 0.
@@ -2533,8 +2534,8 @@ SimpleStackBasedCogit >> genPrimitiveFullClosureValue [
 					ifTrue: [self fullBlockNoContextSwitchEntryOffset]
 					ifFalse: [self fullBlockEntryOffset])
 		 R: ClassReg.
-	self JumpR: TempReg.
-	jumpBCMethod jmpTarget: (jumpFail3 jmpTarget: (jumpFail4 jmpTarget: self Label)).
+	self JumpR: ClassReg.
+	jumpBCMethod jmpTarget: (jumpFailImmediateMethod jmpTarget: (jumpFail4 jmpTarget: self Label)).
 	(result := self compileInterpreterPrimitive: primitiveRoutine) < 0 ifTrue:
 		[^result].
 	jumpFailNArgs jmpTarget: self Label.
@@ -3654,6 +3655,9 @@ SimpleStackBasedCogit >> rewritePrimInvocationIn: cogMethod to: primFunctionPoin
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #primFunctionPointer declareC: #'void (*primFunctionPointer)(void)'>
 	| primIndex flags address extent |
+	self cCode: [] inSmalltalk:
+		[primFunctionPointer isInteger ifFalse:
+			[^self rewritePrimInvocationIn: cogMethod to: (self simulatedTrampolineFor: primFunctionPointer)]].
 	self assert: cogMethod cmType = CMMethod.
 	primIndex := coInterpreter
 					primitiveIndexOfMethod: cogMethod methodObject
@@ -3671,15 +3675,13 @@ SimpleStackBasedCogit >> rewritePrimInvocationIn: cogMethod to: primFunctionPoin
 						+ (externalPrimJumpOffsets at: cogMethod cmNumArgs).
 			extent := backEnd
 						rewriteJumpFullAt: address
-						target: (self cCode: [primFunctionPointer asUnsignedInteger]
-									inSmalltalk: [self simulatedTrampolineFor: primFunctionPointer])]
+						target: primFunctionPointer asUnsignedInteger]
 		ifFalse:
 			[address := cogMethod asUnsignedInteger
 						+ (externalPrimCallOffsets at: cogMethod cmNumArgs).
 			extent := backEnd
 						rewriteCallFullAt: address
-						target: (self cCode: [primFunctionPointer asUnsignedInteger]
-									inSmalltalk: [self simulatedTrampolineFor: primFunctionPointer])].
+						target: primFunctionPointer asUnsignedInteger].
 	processor
 		flushICacheFrom: cogMethod asUnsignedInteger + cmNoCheckEntryOffset
 		to: address asUnsignedInteger + extent
