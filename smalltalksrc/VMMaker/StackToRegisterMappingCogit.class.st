@@ -2554,7 +2554,8 @@ StackToRegisterMappingCogit >> genSendTrampolineFor: aRoutine numArgs: numArgs c
 ]
 
 { #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genSistaExtStoreAndPopReceiverVariableBytecode: boolean [
+StackToRegisterMappingCogit >> genSistaExtStoreAndPopReceiverVariableBytecodePopBoolean: boolean [
+	<inline: true>
 	| index needsStoreCheck |
 	needsStoreCheck := self sistaNeedsStoreCheck.
 	extB := 0.
@@ -2566,7 +2567,8 @@ StackToRegisterMappingCogit >> genSistaExtStoreAndPopReceiverVariableBytecode: b
 ]
 
 { #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genSistaExtStoreLiteralVariableBytecode: boolean [
+StackToRegisterMappingCogit >> genSistaExtStoreLiteralVariableBytecodePopBoolean: boolean [
+	<inline: true>
 	| index needsStoreCheck |
 	needsStoreCheck := self sistaNeedsStoreCheck.
 	extB := 0.
