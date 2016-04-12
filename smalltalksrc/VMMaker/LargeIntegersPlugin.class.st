@@ -903,8 +903,8 @@ LargeIntegersPlugin >> digitDivLarge: firstInteger with: secondInteger negative:
 	quoDigitLen <= 0
 		ifTrue: 
 			[self remapOop: firstInteger in: [result := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: 2].
-			result stAt: 1 put: (0 asOop: SmallInteger).
-			result stAt: 2 put: firstInteger.
+			interpreterProxy stObject: result at: 1 put: (0 asOop: SmallInteger).
+			interpreterProxy stObject: result at: 2 put: firstInteger.
 			^ result].
 	"set rem and div to copies of firstInteger and secondInteger, respectively. 
 	  However,  
@@ -936,8 +936,8 @@ LargeIntegersPlugin >> digitDivLarge: firstInteger with: secondInteger negative:
 							- 1].
 	"^ Array with: quo with: rem"
 	self remapOop: #(quo rem ) in: [result := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: 2].
-	result stAt: 1 put: quo.
-	result stAt: 2 put: rem.
+	interpreterProxy stObject: result at: 1 put: quo.
+	interpreterProxy stObject: result at: 2 put: rem.
 	^ result
 ]
 
