@@ -463,6 +463,18 @@ TParseNode >> structTargetKindIn: aCodeGen [
 	^nil
 ]
 
+{ #category : #'type inference' }
+TParseNode >> typeFrom: aCodeGenerator in: aTMethod [
+	"This is the default type in case of doubt"
+	^(self typeOrNilFrom: aCodeGenerator in: aTMethod) ifNil: [#sqInt]
+]
+
+{ #category : #'type inference' }
+TParseNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
+	"When we don't know, it's nil"
+	^nil
+]
+
 { #category : #accessing }
 TParseNode >> variableNameOrNil [
 	"Overridden in TAssignmentNode & TVariableNode to answer their variable name."
