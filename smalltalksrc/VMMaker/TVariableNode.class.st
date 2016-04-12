@@ -95,6 +95,11 @@ TVariableNode >> structTargetKindIn: aCodeGen [
 	^aCodeGen structTargetKindForVariableName: name
 ]
 
+{ #category : #'type inference' }
+TVariableNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
+	^aTMethod typeFor: self in: aCodeGenerator
+]
+
 { #category : #accessing }
 TVariableNode >> variableNameOrNil [
 	^name
