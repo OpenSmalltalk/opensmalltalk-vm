@@ -650,18 +650,12 @@ CCodeGenerator >> cLiteralFor: anObject [
 	anObject isNumber
 		ifTrue:
 			[anObject isInteger ifTrue:
-				[| printString |
-				 printString := (anObject > 0
+				[| hex |
+				 hex := (anObject > 0
 								and: [(anObject >> anObject lowBit + 1) isPowerOfTwo
 								and: [(anObject highBit = anObject lowBit and: [anObject > 65536])
-									  or: [anObject highBit - anObject lowBit >= 4]]])
-									ifTrue: ['0x', (anObject printStringBase: 16)]
-									ifFalse: [anObject printString].
-				^anObject > 16rFFFFFFFF
-						ifTrue: [printString, ObjectMemory unsignedLongLongSuffix]
-						ifFalse: [anObject < 16r7FFFFFFF
-							ifTrue: [printString]
-							ifFalse: [printString, ObjectMemory unsignedIntegerSuffix]]].
+									  or: [anObject highBit - anObject lowBit >= 4]]]).
+				^self cLiteralForInteger: anObject hex: hex].
 			anObject isFloat ifTrue:
 				[^anObject printString]]
 		ifFalse:
@@ -685,21 +679,30 @@ CCodeGenerator >> cLiteralFor: anObject name: smalltalkName [
 	"Return a string representing the C literal value for the given object.
 	 This version may use hex for integers that are bit masks."
 	anObject isInteger ifTrue:
-		[| hex dec rep |
+		[| hex dec useHexa |
 		hex := anObject printStringBase: 16.
 		dec := anObject printStringBase: 10.
-		rep := ((smalltalkName endsWith: 'Mask')
+		useHexa := ((smalltalkName endsWith: 'Mask')
 				or: [anObject digitLength > 1
 					and: [(hex asSet size * 3) <= (dec asSet size * 2)
-					and: [(smalltalkName endsWith: 'Size') not]]])
-					ifTrue: [hex first = $- ifTrue: ['-0x', hex allButFirst] ifFalse: ['0x', hex]]
-					ifFalse: [dec].
-		^anObject > 16rFFFFFFFF
-			ifTrue: [rep, ObjectMemory unsignedLongLongSuffix]
-			ifFalse: [anObject < 16r7FFFFFFF
-				ifTrue: [rep]
-				ifFalse: [rep, ObjectMemory unsignedIntegerSuffix]]].
+					and: [(smalltalkName endsWith: 'Size') not]]]).
+		^self cLiteralForInteger: anObject hex: useHexa].
 	^self cLiteralFor: anObject
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> cLiteralForInteger: anInteger hex: aBoolean [
+	| printString |
+	printString := aBoolean
+		ifTrue: [anInteger positive
+			ifTrue: ['0x' , anInteger printStringBase: 16]
+			ifFalse: ['-0x' , anInteger negated printStringBase: 16]]
+		ifFalse: [anInteger printString].
+	^anInteger > 16rFFFFFFFF
+			ifTrue: [printString, ObjectMemory unsignedLongLongSuffix]
+			ifFalse: [anInteger < 16r7FFFFFFF
+					ifTrue: [printString]
+					ifFalse: [printString, ObjectMemory unsignedIntegerSuffix]]
 ]
 
 { #category : #'error notification' }
@@ -4946,11 +4949,7 @@ CCodeGenerator >> tryToCollapseBothArmsOfConditionalExpression: msgNode on: aStr
 
 { #category : #'type inference' }
 CCodeGenerator >> typeFor: aNode in: aTMethod [
-	aNode isVariable ifTrue:
-		[^(aTMethod typeFor: aNode in: self) ifNil: [#sqInt]].
-	aNode isSend ifTrue:
-		[^self returnTypeForSend: aNode in: aTMethod].
-	^#sqInt
+	^aNode typeFrom: self in: aTMethod
 ]
 
 { #category : #'type inference' }
