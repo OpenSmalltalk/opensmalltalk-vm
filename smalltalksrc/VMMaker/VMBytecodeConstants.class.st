@@ -13,11 +13,27 @@ Class {
 		'LargeContextBit',
 		'LargeContextSize',
 		'LargeContextSlots',
+		'NewsqueakV4BytecodeSet',
+		'SistaV1BytecodeSet',
 		'SmallContextSize',
-		'SmallContextSlots'
+		'SmallContextSlots',
+		'SqueakV3PlusClosuresBytecodeSet'
 	],
 	#pools : [
 		'VMBasicConstants'
 	],
 	#category : #'VMMaker-Interpreter'
 }
+
+{ #category : #'simulator initialization' }
+VMBytecodeConstants class >> falsifyBytecodeSetFlags [
+	SqueakV3PlusClosuresBytecodeSet.
+	NewsqueakV4BytecodeSet.
+	SistaV1BytecodeSet.
+	classPool keys do:
+		[:k|
+		(k endsWith: 'BytecodeSet') ifTrue:
+			[classPool at: k put: false]]
+
+	"classPool keys select: [:k| k endsWith: 'BytecodeSet']"
+]
