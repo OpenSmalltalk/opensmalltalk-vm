@@ -1,7 +1,7 @@
 Class {
 	#name : #CogBlockMethodSurrogate64,
 	#superclass : #CogMethodSurrogate,
-	#category : #'VMMaker-JITSimulation'
+	#category : 'VMMaker-JITSimulation'
 }
 
 { #category : #accessing }
@@ -20,11 +20,6 @@ CogBlockMethodSurrogate64 >> cbUsesInstVars: aValue [
 		unsignedByteAt: address + baseHeaderSize + 3
 		put: (((memory unsignedByteAt: address + baseHeaderSize + 3) bitAnd: 16rFD) + ((aValue ifTrue: [1] ifFalse: [0]) bitShift: 1)).
 	^aValue
-]
-
-{ #category : #accessing }
-CogBlockMethodSurrogate64 >> cmHomeMethod [
-	^cogit cogMethodSurrogateAt: address - self homeOffset
 ]
 
 { #category : #accessing }
@@ -107,12 +102,12 @@ CogBlockMethodSurrogate64 >> cmUsesPenultimateLit: aValue [
 ]
 
 { #category : #accessing }
-CogBlockMethodSurrogate64 >> cpicHasMNUCase [
+CogBlockMethodSurrogate64 >> cpicHasMNUCaseOrCMIsFullBlock [
 	^(((memory unsignedByteAt: address + 2 + baseHeaderSize) bitShift: -4) bitAnd: 16r1) ~= 0
 ]
 
 { #category : #accessing }
-CogBlockMethodSurrogate64 >> cpicHasMNUCase: aValue [
+CogBlockMethodSurrogate64 >> cpicHasMNUCaseOrCMIsFullBlock: aValue [
 	memory
 		unsignedByteAt: address + baseHeaderSize + 2
 		put: (((memory unsignedByteAt: address + baseHeaderSize + 2) bitAnd: 16rEF) + ((aValue ifTrue: [1] ifFalse: [0]) bitShift: 4)).

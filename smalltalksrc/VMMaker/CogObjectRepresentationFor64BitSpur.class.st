@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'ceDereferenceSelectorIndex'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'accessing class hierarchy' }
@@ -1910,6 +1910,7 @@ CogObjectRepresentationFor64BitSpur >> maybeGenerateSelectorIndexDereferenceRout
 	cogit zeroOpcodeIndex.
 	cogit CmpCq: 0 R: ClassReg.
 	jumpNegative := cogit JumpLess: 0.
+	self halt: 'Add handling of full blocks!!'.
 	cogit
 		MoveMw: FoxMethod r: FPReg R: Scratch0Reg;
 		AddCq: 2 R: ClassReg; "Change selector index to 1-relative, skipping the method header"

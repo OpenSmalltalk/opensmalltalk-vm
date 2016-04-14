@@ -150,7 +150,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMStackFrameOffsets'
 	],
-	#category : #'VMMaker-Interpreter'
+	#category : 'VMMaker-Interpreter'
 }
 
 { #category : #translation }
@@ -319,6 +319,7 @@ StackInterpreter class >> initializeAssociationIndex [
 StackInterpreter class >> initializeBytecodeTable [
 	"StackInterpreter initializeBytecodeTable"
 
+	VMBytecodeConstants falsifyBytecodeSetFlags.
 	BytecodeSetHasDirectedSuperSend := false.
 
 	(initializationOptions at: #bytecodeTableInitializer ifAbsent: nil) ifNotNil:
@@ -337,7 +338,7 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV4 [
 	"StackInterpreter initializeBytecodeTableForNewspeakV4"
 	"Note: This table will be used to generate a C switch statement."
 
-	initializationOptions at: #NewsqueakV4BytecodeSet put: true.
+	initializationOptions at: #NewsqueakV4BytecodeSet put: (NewsqueakV4BytecodeSet := true).
 
 	BytecodeTable := Array new: 256.
 	BytecodeEncoderClassName := #EncoderForNewsqueakV4.
@@ -457,7 +458,7 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 	"StackInterpreter initializeBytecodeTableForSistaV1"
 	"Note: This table will be used to generate a C switch statement."
 
-	initializationOptions at: #SistaV1BytecodeSet put: true.
+	initializationOptions at: #SistaV1BytecodeSet put: (SistaV1BytecodeSet := true).
 
 	BytecodeTable := Array new: 256.
 	BytecodeEncoderClassName := #EncoderForSistaV1.
@@ -588,7 +589,7 @@ StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosures [
 	"StackInterpreter initializeBytecodeTableForSqueakV3PlusClosures"
 	"Note: This table will be used to generate a C switch statement."
 
-	initializationOptions at: #SqueakV3PlusClosuresBytecodeSet put: true.
+	initializationOptions at: #SqueakV3PlusClosuresBytecodeSet put: (SqueakV3PlusClosuresBytecodeSet := true).
 
 	BytecodeTable := Array new: 256.
 	BytecodeEncoderClassName := #EncoderForV3PlusClosures.
@@ -8587,6 +8588,17 @@ StackInterpreter >> isStillMarriedContextDuringGC: aContext [
 	 frameContext fields have been followed and so there is no need to follow forwarders."
 	^(self isMarriedOrWidowedContext: aContext)
 	    and: [(self isWidowedContextDuringGC: aContext) not]
+]
+
+{ #category : #'internal interpreter access' }
+StackInterpreter >> isVanillaBlockClosure: aClosure [
+	"Answer if aClosure is a vanilla BlockClosure as in the first Cog release, BlockClosure laid out as 
+	 'outerContext, startpc, numArgs.  FullBlockClosure is laid out as  outerContext, method, numArgs, receiver.
+	 So either answer true if we're not supporting FullBlockClosure, or test the startpc/method field."
+	<inline: true>
+	^SistaV1BytecodeSet
+		ifTrue: [objectMemory isIntegerObject: (objectMemory fetchPointer: ClosureStartPCIndex ofObject: aClosure)]
+		ifFalse: [true]
 ]
 
 { #category : #'frame access' }

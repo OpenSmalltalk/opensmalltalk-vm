@@ -5,7 +5,7 @@ Class {
 		'isReceiverResultRegLive',
 		'ssEntry'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
