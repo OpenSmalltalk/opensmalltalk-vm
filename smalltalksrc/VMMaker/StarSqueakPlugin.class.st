@@ -5,7 +5,7 @@ This plugin defines primitives accelerators to support StarSqueak. The plugin li
 Class {
 	#name : #StarSqueakPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #all }

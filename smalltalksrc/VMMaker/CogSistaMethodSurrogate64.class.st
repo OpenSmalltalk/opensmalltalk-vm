@@ -1,7 +1,7 @@
 Class {
 	#name : #CogSistaMethodSurrogate64,
 	#superclass : #CogMethodSurrogate64,
-	#category : 'VMMaker-JITSimulation'
+	#category : #'VMMaker-JITSimulation'
 }
 
 { #category : #accessing }

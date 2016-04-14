@@ -6,7 +6,7 @@ Note that unlike the System V x86-64 ABI, the Win64 ABI does /not/ decompose str
 Class {
 	#name : #ThreadedX64Win64FFIPlugin,
 	#superclass : #ThreadedX64FFIPlugin,
-	#category : 'VMMaker-Plugins-FFI'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }

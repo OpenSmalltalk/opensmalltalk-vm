@@ -79,7 +79,7 @@ Class {
 	#classVars : [
 		'ByteCountsPerMicrosecond'
 	],
-	#category : 'VMMaker-JITSimulation'
+	#category : #'VMMaker-JITSimulation'
 }
 
 { #category : #initialization }
@@ -830,6 +830,7 @@ CogVMSimulator >> ensureMultiThreadingOverridesAreUpToDate [
 	 on cogThreadManager being non-nil or nil respectively.  i.e. they allow us to use this one
 	 simulator class to simulate for both CoInterpreterMT and CoInterpreter."
 	| thisClass me mtInterpreterClass |
+	self cppIf: COGMTVM ifTrue: [  ] ifFalse: [ ^self ].
 	thisClass := thisContext methodClass.
 	mtInterpreterClass := thisClass superclass.
 	me := thisClass name, '>>', thisContext method selector.
@@ -2763,6 +2764,9 @@ CogVMSimulator >> primitiveDirectoryEntry [
 	name := self stringOf: self stackTop.
 	pathName := self stringOf: (self stackValue: 1).
 	
+	"temporary work-around to make it work in Pharo..."
+	self cppIf: PharoVM ifTrue: [ pathName := Smalltalk imagePath ].
+	
 	self successful ifFalse:
 		[^self primitiveFail].
 
@@ -2771,8 +2775,9 @@ CogVMSimulator >> primitiveDirectoryEntry [
 		[self pop: 3 thenPush: objectMemory nilObject.
 		 ^self].
 	arrayNilOrSymbol isArray ifFalse:
-		[arrayNilOrSymbol ~~ #primFailed ifTrue:
-			[self halt].
+		["arrayNilOrSymbol ~~ #primFailed ifTrue:
+			[self halt]. "
+		Transcript show: name, ' NOT FOUND'.
 		 ^self primitiveFail].
 
 	result := PharoVM 
