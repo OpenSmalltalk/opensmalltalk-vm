@@ -6,7 +6,7 @@ Class {
 		'joins',
 		'encoderClass'
 	],
-	#category : #'VMMaker-Support'
+	#category : 'VMMaker-Support'
 }
 
 { #category : #'instruction decoding' }

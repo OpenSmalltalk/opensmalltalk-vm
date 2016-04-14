@@ -16,7 +16,7 @@ Class {
 		'VMMethodCacheConstants',
 		'VMObjectIndices'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -1299,6 +1299,7 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	<var: #jumpClassMiss type: #'AbstractInstruction *'>
 	<var: #itsAHit type: #'AbstractInstruction *'>
 	<var: #jumpBCMethod type: #'AbstractInstruction *'>
+	self preenMethodLabel.
 	self compilePICAbort: numArgs.
 	entry := objectRepresentation genGetClassTagOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
 	self MoveR: ClassReg R: SendNumArgsReg.

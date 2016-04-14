@@ -7,7 +7,7 @@ Class {
 	#classVars : [
 		'StructTypeNameCache'
 	],
-	#category : #'VMMaker-Support'
+	#category : 'VMMaker-Support'
 }
 
 { #category : #'accessing class hierarchy' }

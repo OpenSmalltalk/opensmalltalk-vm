@@ -20,7 +20,7 @@ Class {
 		'first',
 		'last'
 	],
-	#category : #'VMMaker-SpurMemoryManager'
+	#category : 'VMMaker-SpurMemoryManager'
 }
 
 { #category : #accessing }

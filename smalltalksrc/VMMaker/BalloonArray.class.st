@@ -7,7 +7,7 @@ Class {
 	#instVars : [
 		'simArray'
 	],
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : 'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'memory access' }

@@ -4525,7 +4525,8 @@ Cogit >> compileCogMethod: selector [
 { #category : #'compile abstract instructions' }
 Cogit >> compileEntireFullBlockMethod: numCopied [
 	"Compile the abstract instructions for the entire method, including blocks."
-	| result |	
+	| result |
+	self preenMethodLabel.
 	self compileFullBlockEntry.
 
 	"Frame build"
@@ -4541,6 +4542,7 @@ Cogit >> compileEntireFullBlockMethod: numCopied [
 Cogit >> compileEntireMethod [
 	"Compile the abstract instructions for the entire method, including blocks."
 	| result |
+	self preenMethodLabel.
 	self compileAbort.
 	self compileEntry.
 	(result := self compilePrimitive) < 0 ifTrue:
@@ -6560,6 +6562,7 @@ Cogit >> generateCogFullBlock [
 	method := self fillInMethodHeader: (self cCoerceSimple: startAddress to: #'CogMethod *')
 					size: totalSize
 					selector: objectMemory nilObject.
+	method cpicHasMNUCaseOrCMIsFullBlock: true.
 	postCompileHook ifNotNil:
 		[self perform: postCompileHook with: method.
 		 postCompileHook := nil].
@@ -9109,6 +9112,15 @@ Cogit >> positiveMachineIntegerFor: value [
 ]
 
 { #category : #'compile abstract instructions' }
+Cogit >> preenMethodLabel [
+	"The methodLabel serves as the reference to the start of the current code object
+	 being produced (CMMethod, CMClosedPIC etc), but it also carries type flags for
+	 the frame method field, set via the labelOffset.  So we must clean the flags on each
+	 compilation to avoid stale lags being left behind from previous compilations."
+	methodLabel setLabelOffset: 0
+]
+
+{ #category : #'compile abstract instructions' }
 Cogit >> previousInstruction [
 	<returnTypeC: #'AbstractInstruction *'>
 	self assert: opcodeIndex > 0.
@@ -9249,7 +9261,9 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 	cogMethod cmType = CMClosedPIC
 		ifTrue:
 			[aStream crtab; nextPutAll: 'cPICNumCases: '.
-			 cogMethod cPICNumCases printOn: aStream base: 16.]
+			 cogMethod cPICNumCases printOn: aStream base: 16;
+			 tab; nextPutAll: 'cpicHasMNUCase: ';
+			 nextPutAll: (cogMethod cpicHasMNUCase ifTrue: ['yes'] ifFalse: ['no'])]
 		ifFalse:
 			[aStream crtab; nextPutAll: 'stackCheckOffset: '.
 			 cogMethod stackCheckOffset printOn: aStream base: 16.
@@ -9266,7 +9280,10 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 					[aStream
 						crtab;
 						nextPutAll: 'cmRefersToYoung: ';
-						nextPutAll: (cogMethod cmRefersToYoung ifTrue: ['yes'] ifFalse: ['no'])].
+						nextPutAll: (cogMethod cmRefersToYoung ifTrue: ['yes'] ifFalse: ['no']);
+						tab;
+						nextPutAll: 'cmIsFullBlock: ';
+						nextPutAll: (cogMethod cmIsFullBlock ifTrue: ['yes'] ifFalse: ['no'])].
 			cogMethod cmType = CMMethod ifTrue:
 				[([cogMethod nextMethodOrIRCs] on: MessageNotUnderstood do: [:ex| nil]) ifNotNil:
 					[:nmoircs| aStream crtab; nextPutAll: 'nextMethodOrIRCs: '.

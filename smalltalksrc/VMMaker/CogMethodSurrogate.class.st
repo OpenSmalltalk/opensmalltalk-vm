@@ -7,6 +7,10 @@ Class {
 		'baseHeaderSize',
 		'cogit'
 	],
+	#pools : [
+		'CogMethodConstants',
+		'VMBytecodeConstants'
+	],
 	#category : #'VMMaker-JITSimulation'
 }
 
@@ -106,10 +110,43 @@ CogMethodSurrogate >> cPICNumCases: n [
 	^self stackCheckOffset: n
 ]
 
+{ #category : #accessing }
+CogMethodSurrogate >> cmHomeMethod [
+	^cogit cogMethodSurrogateAt: ((SistaV1BytecodeSet and: [self cmIsFullBlock])
+										ifTrue: [address]
+										ifFalse: [address - self homeOffset])
+]
+
+{ #category : #accessing }
+CogMethodSurrogate >> cmIsFullBlock [
+	"Answer the value of cpicHasMNUCaseOrCMIsFullBlock"
+
+	^SistaV1BytecodeSet
+		ifTrue: [self cpicHasMNUCaseOrCMIsFullBlock]
+		ifFalse: [false]
+]
+
 { #category : #testing }
 CogMethodSurrogate >> containsAddress: anAddress [
 	^address <= anAddress asUnsignedInteger
 	  and: [address + self blockSize >= anAddress asUnsignedInteger]
+]
+
+{ #category : #accessing }
+CogMethodSurrogate >> cpicHasMNUCase [
+	"Answer if the receiver has an MNU case."
+	<inline: true>
+
+	^SistaV1BytecodeSet
+		ifTrue: [self cpicHasMNUCaseOrCMIsFullBlock and: [self cmType = CMClosedPIC]]
+		ifFalse: [self cpicHasMNUCaseOrCMIsFullBlock]
+]
+
+{ #category : #accessing }
+CogMethodSurrogate >> cpicHasMNUCase: anObject [
+	"Set if the receiver has an MNU case."
+
+	^self cpicHasMNUCaseOrCMIsFullBlock: anObject
 ]
 
 { #category : #comparing }
