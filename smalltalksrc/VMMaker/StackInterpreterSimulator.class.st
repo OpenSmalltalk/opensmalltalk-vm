@@ -55,7 +55,7 @@ Class {
 		'eventQueue',
 		'assertVEPAES'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'class initialization' }
@@ -995,7 +995,7 @@ StackInterpreterSimulator >> ioGetNextEvent: evtBuf [
 	eventQueue isEmpty ifFalse:
 		[evt :=  eventQueue next.
 		 1 to: evtBuf size do:
-			[:i| (evt at: i) ifNotNil: [:val| evtBuf at: (i - 1) put: val]]]
+			[:i| (evt at: i) ifNotNil: [:val| evtBuf at: (i - 1) put: val asInteger]]]
 ]
 
 { #category : #'I/O primitives' }
@@ -1839,6 +1839,9 @@ StackInterpreterSimulator >> primitiveDirectoryEntry [
 	name := self stringOf: self stackTop.
 	pathName := self stringOf: (self stackValue: 1).
 	
+	"temporary work-around to make it work in Pharo..."
+	self cppIf: PharoVM ifTrue: [ pathName := Smalltalk imagePath ].
+	
 	self successful ifFalse:
 		[^self primitiveFail].
 
@@ -1847,8 +1850,9 @@ StackInterpreterSimulator >> primitiveDirectoryEntry [
 		[self pop: 3 thenPush: objectMemory nilObject.
 		 ^self].
 	arrayNilOrSymbol isArray ifFalse:
-		[arrayNilOrSymbol ~~ #primFailed ifTrue:
-			[self halt].
+		["arrayNilOrSymbol ~~ #primFailed ifTrue:
+			[self halt]. "
+		Transcript show: name , ' NOT FOUND'.
 		 ^self primitiveFail].
 
 	result := PharoVM 
