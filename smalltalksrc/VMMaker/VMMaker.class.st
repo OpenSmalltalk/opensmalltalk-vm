@@ -303,7 +303,8 @@ VMMaker class >> generateAllCogConfigurationsUnderVersionControl [
 		generateSqueakCogMTVM;
 		generateSqueakSpurCogVM;
 		generateSqueakSpurCog64VM;
-		generateSqueakSpurCogSistaVM
+		generateSqueakSpurCogSistaVM;
+		generateSqueakSpurCogSista64VM
 ]
 
 { #category : #configurations }
@@ -330,7 +331,8 @@ VMMaker class >> generateAllNonSpurConfigurationsUnderVersionControl [
 
 { #category : #configurations }
 VMMaker class >> generateAllSistaConfigurationsUnderVersionControl [
-	self generateSqueakSpurCogSistaVM
+	self generateSqueakSpurCogSistaVM;
+		generateSqueakSpurCogSista64VM
 ]
 
 { #category : #configurations }
@@ -341,6 +343,7 @@ VMMaker class >> generateAllSpurConfigurations [
 		generateSqueakSpurCogVM;
 		generateSqueakSpurCog64VM;
 		generateSqueakSpurCogSistaVM;
+		generateSqueakSpurCogSista64VM;
 		generateSqueakSpurStackVM;
 		generateSqueakSpurStack64VM
 ]
@@ -354,7 +357,8 @@ VMMaker class >> generateAllSpurConfigurationsUnderVersionControl [
 		generateNewspeakSpurCogVM;
 		generateSqueakSpurCogVM;
 		generateSqueakSpurCog64VM;
-		generateSqueakSpurCogSistaVM
+		generateSqueakSpurCogSistaVM;
+		generateSqueakSpurCogSista64VM
 ]
 
 { #category : #configurations }
@@ -366,7 +370,8 @@ VMMaker class >> generateAllSqueakConfigurationsUnderVersionControl [
 		generateSqueakSpurStack64VM;
 		generateSqueakSpurCogVM;
 		generateSqueakSpurCog64VM;
-		generateSqueakSpurCogSistaVM
+		generateSqueakSpurCogSistaVM;
+		generateSqueakSpurCogSista64VM
 ]
 
 { #category : #configurations }
@@ -508,6 +513,20 @@ VMMaker class >> generateSqueakSpurCog64VM [
 		and: StackToRegisterMappingCogit
 		with: #(ObjectMemory Spur64BitCoMemoryManager)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/spur64src')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		including:#()
+]
+
+{ #category : #configurations }
+VMMaker class >> generateSqueakSpurCogSista64VM [
+	^VMMaker
+		generate: CoInterpreter
+		and: SistaStackToRegisterMappingCogit
+		with: #(	SistaVM true
+				ObjectMemory Spur64BitCoMemoryManager
+				MULTIPLEBYTECODESETS true
+				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
+		to: (FileDirectory default pathFromURI: self sourceTree, '/spursista64src')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#()
 ]
