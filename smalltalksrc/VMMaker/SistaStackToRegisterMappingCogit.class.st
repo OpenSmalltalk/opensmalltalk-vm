@@ -155,6 +155,7 @@ SistaStackToRegisterMappingCogit >> compileBlockBodies [
 
 { #category : #'compile abstract instructions' }
 SistaStackToRegisterMappingCogit >> compileCogFullBlockMethod: numCopied [
+	<option: #SistaV1BytecodeSet>
 	counters := 0.
 	^super compileCogFullBlockMethod: numCopied
 ]
