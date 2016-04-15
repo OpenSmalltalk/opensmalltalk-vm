@@ -319,7 +319,7 @@ StackInterpreter class >> initializeAssociationIndex [
 StackInterpreter class >> initializeBytecodeTable [
 	"StackInterpreter initializeBytecodeTable"
 
-	VMBytecodeConstants falsifyBytecodeSetFlags.
+	VMBytecodeConstants falsifyBytecodeSetFlags: initializationOptions.
 	BytecodeSetHasDirectedSuperSend := false.
 
 	(initializationOptions at: #bytecodeTableInitializer ifAbsent: nil) ifNotNil:
