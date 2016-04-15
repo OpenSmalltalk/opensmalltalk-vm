@@ -4927,11 +4927,14 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 			[disassemblingMethod := nil]].
 	self printMethodHeader: cogMethod on: aStream.
 
-	(mapEntries := Dictionary new)
-		at: cogMethod asInteger + cmEntryOffset put: 'entry'.
+	mapEntries := Dictionary new.
+	(cogMethod cmType = CMMethod and: [cogMethod cmIsFullBlock]) ifFalse:
+		[mapEntries at: cogMethod asInteger + cmEntryOffset put: 'entry'].
 	
 	cogMethod cmType = CMMethod ifTrue:
-		[mapEntries at: cogMethod asInteger + cmNoCheckEntryOffset put: 'noCheckEntry'].
+		[cogMethod cmIsFullBlock
+			ifTrue: [mapEntries at: cogMethod asInteger + cbNoSwitchEntryOffset put: 'noSwitchEntry']
+			ifFalse: [mapEntries at: cogMethod asInteger + cmNoCheckEntryOffset put: 'noCheckEntry']].
 
 	cogMethod cmType = CMClosedPIC
 		ifTrue:
@@ -5417,7 +5420,7 @@ Cogit >> findBlockMethodWithEntry: blockEntryMcpc startBcpc: startBcpc [
 Cogit >> findMapLocationForMcpc: targetMcpc inMethod: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
 	| mcpc map mapByte annotation |
-	mcpc := cogMethod asInteger + cmNoCheckEntryOffset.
+	mcpc := self firstMappedPCFor: cogMethod.
 	map := self mapStartFor: cogMethod.
 	mcpc = targetMcpc ifTrue: [^map].
 	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue:
@@ -5455,6 +5458,15 @@ Cogit >> findMethodForStartBcpc: startbcpc inHomeMethod: cogMethod [
 								perform: #findBlockMethodWithEntry:startBcpc:
 								arg: startbcpc)
 		to: #'CogBlockMethod *'
+]
+
+{ #category : #'method map' }
+Cogit >> firstMappedPCFor: cogMethod [
+	<var: #cogMethod type: #'CogMethod *'>
+	<inline: true>
+	^cogMethod cmIsFullBlock
+		ifTrue: [cogMethod asUnsignedInteger + cbNoSwitchEntryOffset]
+		ifFalse: [cogMethod asUnsignedInteger + cmNoCheckEntryOffset]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -7751,7 +7763,7 @@ Cogit >> mapEndFor: cogMethod [
 	end := self mapStartFor: cogMethod.
 	[(objectMemory byteAt: end) ~= MapEnd] whileTrue:
 		[end := end - 1.
-		 self assert: end > (cogMethod asInteger + cmNoCheckEntryOffset)].
+		 self assert: end > (self firstMappedPCFor: cogMethod)].
 	^end
 ]
 
@@ -7880,7 +7892,7 @@ Cogit >> mapFor: cogMethod performAllMapEntriesUntil: functionSymbol arg: arg [
 	"Analysis support"
 	<doNotGenerate>
 	| mcpc map mapByte result |
-	mcpc := cogMethod asInteger + cmNoCheckEntryOffset.
+	mcpc := self firstMappedPCFor: cogMethod.
 	map := self mapStartFor: cogMethod.
 	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue:
 		[mapByte >= FirstAnnotation
@@ -7906,7 +7918,7 @@ Cogit >> mapFor: cogMethod performUntil: functionSymbol arg: arg [
 	<var: #functionSymbol declareC: 'sqInt (*functionSymbol)(sqInt annotation, char *mcpc, sqInt arg)'>
 	<inline: true>
 	| mcpc map mapByte annotation result |
-	mcpc := cogMethod asInteger + cmNoCheckEntryOffset.
+	mcpc := self firstMappedPCFor: cogMethod.
 	map := self mapStartFor: cogMethod.
 	self inlineCacheTagsAreIndexes ifTrue:
 		[enumeratingCogMethod := cogMethod].
@@ -9313,7 +9325,7 @@ Cogit >> printPCMapPairsFor: cogMethod [
 	<var: 'cogMethod' type: #'CogMethod *'>
 	<var: 'mapByte' type: #'unsigned char'>
 	| mcpc map mapByte annotation value |
-	mcpc := cogMethod asInteger + cmNoCheckEntryOffset.
+	mcpc := self firstMappedPCFor: cogMethod.
 	map := self mapStartFor: cogMethod.
 	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue:
 		[annotation := mapByte >> AnnotationShift.
@@ -9386,7 +9398,7 @@ Cogit >> printPCMapPairsFor: cogMethod on: aStream [
 	<doNotGenerate>
 	<inline: true>
 	| mcpc map mapByte annotation |
-	mcpc := cogMethod asInteger + cmNoCheckEntryOffset.
+	mcpc := self firstMappedPCFor: cogMethod.
 	map := self mapStartFor: cogMethod.
 	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue:
 		[annotation := mapByte >> AnnotationShift.

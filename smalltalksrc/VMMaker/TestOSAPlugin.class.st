@@ -4,7 +4,7 @@ I am the Plugin for the Squeak/Applescript Interface. Since it requires platform
 Class {
 	#name : #TestOSAPlugin,
 	#superclass : #SmartSyntaxInterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #'as yet unclassified' }
