@@ -117,7 +117,7 @@ Class {
 		'numPushNilsFunction',
 		'pushNilSizeFunction'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -1786,7 +1786,7 @@ StackToRegisterMappingCogit >> genExtPushFullClosureBytecode [
 		reg := self ssStorePop: true toPreferredReg: TempReg.
 		 objectRepresentation
 			genStoreSourceReg: reg
-			slotIndex: ClosureFirstCopiedValueIndex + numCopied - i
+			slotIndex: FullClosureFirstCopiedValueIndex + numCopied - i
 			intoNewObjectInDestReg: ReceiverResultReg].
 	receiverIsOnStack
 		ifTrue: [reg := self ssStorePop: true toPreferredReg: TempReg]
