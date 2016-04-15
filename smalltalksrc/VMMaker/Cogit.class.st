@@ -295,6 +295,7 @@ Class {
 		'NSCSelectorIndex',
 		'NSCTargetIndex',
 		'NSSendIsPCAnnotated',
+		'NeedsFixupFlag',
 		'NumObjRefsInRuntime',
 		'NumOopsPerNSC',
 		'NumSpecialSelectors',
@@ -2593,17 +2594,17 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes i
 	 N.B. We do one single alloca to save embarrassing C optimizers that
 	 generate incorrect code as both gcc and the intel compiler do on x86."
 	<inline: true>
-	| opcodeSize fixupSize allocSize |
+	| opcodeBytes fixupBytes allocBytes |
 	numAbstractOpcodes := numberOfAbstractOpcodes.
-	opcodeSize := (self sizeof: CogAbstractInstruction) * numAbstractOpcodes.
-	fixupSize := (self sizeof: CogBytecodeFixup) * numAbstractOpcodes.
-	allocSize := opcodeSize + fixupSize.
-	allocSize > MaxStackAllocSize ifTrue: [^failBlock value].
+	opcodeBytes := (self sizeof: CogAbstractInstruction) * numAbstractOpcodes.
+	fixupBytes := (self sizeof: CogBytecodeFixup) * numAbstractOpcodes.
+	allocBytes := opcodeBytes + fixupBytes.
+	allocBytes > MaxStackAllocSize ifTrue: [^failBlock value].
 	self
 		cCode:
-			[abstractOpcodes := self alloca: allocSize.
-			 self b: abstractOpcodes zero: allocSize.
-			 fixups := (abstractOpcodes asUnsignedInteger + opcodeSize) asVoidPointer]
+			[abstractOpcodes := self alloca: allocBytes.
+			 self b: abstractOpcodes zero: allocBytes.
+			 fixups := (abstractOpcodes asUnsignedInteger + opcodeBytes) asVoidPointer]
 		inSmalltalk:
 			[abstractOpcodes := CArrayAccessor on:
 									 ((1 to: numAbstractOpcodes) collect: [:ign| CogCompilerClass for: self]).
@@ -4247,11 +4248,10 @@ Cogit >> compileAbstractInstructionsFrom: start through: end [
 	 descriptor isExtension ifFalse: "extended bytecodes must consume their extensions"
 		[self assert: (extA = 0 and: [extB = 0])].
 	 fixup := self fixupAt: bytecodePC - initialPC.
-	 fixup targetInstruction ~= 0 ifTrue:
+	 fixup needsFixup ifTrue:
 		["There is a fixup for this bytecode.  It must point to the first generated
 		   instruction for this bytecode.  If there isn't one we need to add a label."
-		 opcodeIndex = nextOpcodeIndex ifTrue:
-			[self Label].
+		 opcodeIndex = nextOpcodeIndex ifTrue: [self Label].
 		 fixup targetInstruction: (self abstractInstructionAt: nextOpcodeIndex)].
 	 self maybeDumpLiterals: descriptor.
 	 bytecodePC := self nextBytecodePCFor: descriptor at: bytecodePC exts: nExts in: methodObj.
@@ -4526,7 +4526,7 @@ Cogit >> compileCogMethod: selector [
 
 { #category : #'compile abstract instructions' }
 Cogit >> compileEntireFullBlockMethod: numCopied [
-	"Compile the abstract instructions for the entire method, including blocks."
+	"Compile the abstract instructions for the entire full block method."
 	<option: #SistaV1BytecodeSet>
 	| result |
 	self preenMethodLabel.
@@ -4722,13 +4722,14 @@ Cogit >> computeFullBlockEntryOffsets [
 	 need cmNoCheckEntryOffset up front to be able to generate the map starting from cmNoCheckEntryOffset"
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
-	self allocateOpcodes: 24 bytecodes: 0.
-	methodOrBlockNumArgs := 0.
-	self compileFullBlockEntry.
-	self computeMaximumSizes.
-	self generateInstructionsAt: methodZoneBase + (self sizeof: CogMethod).
-	cbEntryOffset := fullBlockEntry address - methodZoneBase.
-	cbNoSwitchEntryOffset := fullBlockNoContextSwitchEntry address - methodZoneBase
+	SistaV1BytecodeSet ifTrue:
+		[self allocateOpcodes: 24 bytecodes: 0.
+		 methodOrBlockNumArgs := 0.
+		 self compileFullBlockEntry.
+		 self computeMaximumSizes.
+		 self generateInstructionsAt: methodZoneBase + (self sizeof: CogMethod).
+		 cbEntryOffset := fullBlockEntry address - methodZoneBase.
+		 cbNoSwitchEntryOffset := fullBlockNoContextSwitchEntry address - methodZoneBase]
 ]
 
 { #category : #'generate machine code' }
@@ -5098,8 +5099,8 @@ Cogit >> ensureFixupAt: targetIndex [
 	| fixup |
 	<var: #fixup type: #'BytecodeFixup *'>
 	fixup := self fixupAt: targetIndex.
-	fixup targetInstruction = 0 ifTrue:
-		[fixup targetInstruction: (self cCoerceSimple: 1 to: #'AbstractInstruction *')].
+	fixup notAFixup ifTrue:
+		[fixup becomeFixup].
 	^fixup
 ]
 
@@ -7335,11 +7336,7 @@ Cogit >> initializeFixupAt: targetIndex [
 	"Make sure there's a flagged fixup at the targetIndex (pc relative to first pc) in fixups.
 	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction."
 	<returnTypeC: #'BytecodeFixup *'>
-	| fixup |
-	<var: #fixup type: #'BytecodeFixup *'>
-	fixup := self fixupAt: targetIndex.
-	fixup targetInstruction: (self cCoerceSimple: 1 to: #'AbstractInstruction *').
-	^fixup
+	(self fixupAt: targetIndex) becomeFixup
 ]
 
 { #category : #'newspeak support' }

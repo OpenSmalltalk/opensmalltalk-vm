@@ -8,7 +8,10 @@ Class {
 		'targetInstruction',
 		'instructionIndex'
 	],
-	#category : 'VMMaker-JIT'
+	#classVars : [
+		'NeedsFixupFlag'
+	],
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #'simulation only' }
@@ -16,6 +19,18 @@ CogBytecodeFixup class >> byteSizeForSimulator: aVMClass [
 	"Answer an approximation of the byte size of an AbstractInstruction struct.
 	 This is for estimating the alloca in allocateOpcodes:bytecodes:ifFail:"
 	^self instSize * (aVMClass sizeof: #'void *')
+]
+
+{ #category : #'class initialization' }
+CogBytecodeFixup class >> initialize [
+	"Initialize the fixup flags.  In this class we have only one flag, 1, which
+	 means set the fixup to point to the first instruction for a particular bytecode.
+	 A forward branch from one bytecode to a later one will set its jmpTarget to
+	 a fixup.  later, in compileAbstractInstructionsFrom:to:, any fixup with its
+	 targetInstruction set to NeedsFixupFlag will have its targetInstruction set
+	 to the first bytecode of the sequence.  Later still, when code is generated
+	 jumps follow fixups to eliminate the fixup and target the rigth instruction."
+	NeedsFixupFlag := 1
 ]
 
 { #category : #translation }
@@ -43,6 +58,18 @@ CogBytecodeFixup >> asInteger [
 	^self
 ]
 
+{ #category : #converting }
+CogBytecodeFixup >> becomeFixup [
+	<inline: true>
+	targetInstruction := self cCoerceSimple: NeedsFixupFlag to: #'AbstractInstruction *'
+]
+
+{ #category : #coercion }
+CogBytecodeFixup >> cCoerceSimple: flagOrAbstractOp to: cType [
+	<doNotGenerate>
+	^ flagOrAbstractOp
+]
+
 { #category : #'initialize-release' }
 CogBytecodeFixup >> initialize [
 	<doNotGenerate>
@@ -61,6 +88,18 @@ CogBytecodeFixup >> instructionIndex: anObject [
 	"Set the value of instructionIndex"
 
 	^instructionIndex := anObject
+]
+
+{ #category : #testing }
+CogBytecodeFixup >> needsFixup [
+	<inline: true>
+	^ targetInstruction asInteger = NeedsFixupFlag
+]
+
+{ #category : #testing }
+CogBytecodeFixup >> notAFixup [
+	<inline: true>
+	^ targetInstruction = 0
 ]
 
 { #category : #'debug printing' }

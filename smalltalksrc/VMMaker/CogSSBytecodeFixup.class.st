@@ -13,13 +13,85 @@ Class {
 	#instVars : [
 		'simStackPtr'
 	],
-	#category : 'VMMaker-JIT'
+	#classVars : [
+		'NeedsMergeFixupFlag',
+		'NeedsNonMergeFixupFlag',
+		'UnknownSimStackPtrFlag'
+	],
+	#category : #'VMMaker-JIT'
 }
+
+{ #category : #'class initialization' }
+CogSSBytecodeFixup class >> initialize [
+	"Initialize the fixup flags.  In this class we have two states.  A fixup is a bytecode
+	 being targeted by a branch, and a jump can target the fixup before the byetcode
+	 is generated.  A non-merge fixup is that for a bytecode that follows a return instruction.
+	 There is no control flow merge from the preceding instruction for this kind of fixup.
+	 A merge fixup is that for a bytecode where control flow arrives from both the preceding
+	 instruction and a branch.  When compileAbstractInstructionsFrom:to: finds a merge
+	 fixup, it must both set the targetInstruction and merge the stack/register state of the
+	 control flow from the preceding instruction with the stack/register state from the branch.
+	 Later still, when code is generated jumps follow fixups to eliminate the fixup and target
+	 the right instruction."
+	NeedsNonMergeFixupFlag := 1.
+	NeedsMergeFixupFlag := 2.
+	self assert: NeedsNonMergeFixupFlag < NeedsMergeFixupFlag.
+
+	UnknownSimStackPtrFlag := -2
+]
 
 { #category : #'simulation support' }
 CogSSBytecodeFixup >> asUnsignedInteger [
 	<doNotGenerate>
 	^self
+]
+
+{ #category : #converting }
+CogSSBytecodeFixup >> becomeMergeFixup [
+	<inline: true>
+	targetInstruction := self cCoerceSimple: NeedsMergeFixupFlag to: #'AbstractInstruction *'
+]
+
+{ #category : #converting }
+CogSSBytecodeFixup >> becomeNonMergeFixup [
+	<inline: true>
+	targetInstruction := self cCoerceSimple: NeedsNonMergeFixupFlag to: #'AbstractInstruction *'
+]
+
+{ #category : #testing }
+CogSSBytecodeFixup >> isBackwardBranchFixup [
+	<inline: true>
+	^ simStackPtr = UnknownSimStackPtrFlag
+]
+
+{ #category : #testing }
+CogSSBytecodeFixup >> isMergeFixupOrIsFixedUp [
+	<inline: true>
+	^ targetInstruction asUnsignedInteger >= NeedsMergeFixupFlag
+]
+
+{ #category : #testing }
+CogSSBytecodeFixup >> isNonMergeFixupOrNotAFixup [
+	<inline: true>
+	^ targetInstruction asUnsignedInteger <= NeedsNonMergeFixupFlag
+]
+
+{ #category : #testing }
+CogSSBytecodeFixup >> needsFixup [
+	<inline: true>
+	^ targetInstruction asUnsignedInteger between: NeedsNonMergeFixupFlag and: NeedsMergeFixupFlag
+]
+
+{ #category : #testing }
+CogSSBytecodeFixup >> needsFixupOrIsFixedUp [
+	<inline: true>
+	^ targetInstruction asUnsignedInteger > 0
+]
+
+{ #category : #testing }
+CogSSBytecodeFixup >> notYetFixedUp [
+	<inline: true>
+	^ targetInstruction asUnsignedInteger <= NeedsMergeFixupFlag
 ]
 
 { #category : #'debug printing' }
@@ -33,6 +105,19 @@ CogSSBytecodeFixup >> printStateOn: aStream [
 	simStackPtr ifNotNil:
 		[aStream space; print: simStackPtr].
 	aStream nextPut: $)
+]
+
+{ #category : #accessing }
+CogSSBytecodeFixup >> reinitialize [
+	<inline: true>
+	targetInstruction := 0.
+	simStackPtr := 0.
+]
+
+{ #category : #accessing }
+CogSSBytecodeFixup >> setIsBackwardBranchFixup [
+	<inline: true>
+	simStackPtr := UnknownSimStackPtrFlag
 ]
 
 { #category : #accessing }
