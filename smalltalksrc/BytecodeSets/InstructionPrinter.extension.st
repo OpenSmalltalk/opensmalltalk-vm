@@ -31,6 +31,11 @@ InstructionPrinter >> pushExplicitOuter: n [
 	self print: 'pushExplicitOuter: ', n asString
 ]
 
+{ #category : #'*BytecodeSets-instruction decoding' }
+InstructionPrinter >> pushFullClosure: cb numCopied: num [
+	self print: 'pushFullClosure: ' , cb selector , ' numCopied: ' , num
+]
+
 { #category : #'*BytecodeSets-NewsqueakV3-decoding' }
 InstructionPrinter >> pushImplicitReceiverForMessage: aSymbol [ 
 	"Print the Push Active Context's Receiver for an outer send of aSymbol on Top Of Stack bytecode."

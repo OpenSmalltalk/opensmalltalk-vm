@@ -147,7 +147,7 @@ We define the following inlined primitives:
 Class {
 	#name : #EncoderForSistaV1,
 	#superclass : #BytecodeEncoder,
-	#category : 'BytecodeSets-SistaV1'
+	#category : #'BytecodeSets-SistaV1'
 }
 
 { #category : #'bytecode decoding' }

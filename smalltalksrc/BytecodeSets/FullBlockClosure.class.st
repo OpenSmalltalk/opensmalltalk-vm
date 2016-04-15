@@ -6,7 +6,7 @@ Instance Variables
 
 Here's an example (a chunk designed to be typed into the spurreader image with this class filed in, e.g. in the simulator), circa early 2016 for creating the recursive nfib example (|nfib|nfib:=nil.nfib:=[:n|n<=1ifTrue:[1]ifFalse:[(nfib value:n-1)+(nfib value:n-2)+1]].(1to:12)collect:nfib) using FullBlockClosure:
 
-| method closure |
+(| method closure |
 method := (AssemblerMethod new
 	methodClass: Object;
 	selector: #nfib:;
@@ -43,34 +43,28 @@ closure
 	numArgs: 1;
 	receiver: nil.
 closure at: 1 put: (Array with: closure).
-(1 to: 12) collect: closure!
+(1 to: 12) collect: closure!)
 
 Here is a second example:
-| methodBlock outerMethod |
+(| methodBlock outerMethod closure |
 methodBlock := (AssemblerMethod new
 	methodClass: Object;
 	selector: #inblock2;
-	numArgs: 0;
 	numTemps: 1;
-	popIntoTemporaryVariable: 0;
+	pushTemporaryVariable: 0;
 	blockReturnTop;
 	yourself) assemble.
 outerMethod := (AssemblerMethod new
 	encoder: EncoderForSistaV1 new;
 	methodClass: Object;
 	selector: #foo;
-	numTemps: 0;
-	trailerData: #[0];
-	literal: #with:;
-	binding: #Array;
-	literal: 10;
 	literal: methodBlock;
 	pushSpecialConstant: 1;
-	pushFullClosure: 3 numCopied: 1;
-	send: #value super: false numArgs: 0;
+	pushFullClosure: 0 numCopied: 1;
 	methodReturnTop;
 	yourself) assemble.
-self assert: (nil withArgs: #() executeMethod: outerMethod) = 1.
+closure := #rcvr withArgs: #() executeMethod: outerMethod.
+{closure at: 1 . closure receiver . closure value} !)
 "
 Class {
 	#name : #FullBlockClosure,
