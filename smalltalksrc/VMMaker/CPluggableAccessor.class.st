@@ -9,7 +9,7 @@ Class {
 		'writeBlock',
 		'objectSize'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #coercion }
