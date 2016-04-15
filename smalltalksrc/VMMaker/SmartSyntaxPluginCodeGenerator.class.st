@@ -7,7 +7,7 @@ Class {
 	#instVars : [
 		'debugFlag'
 	],
-	#category : 'VMMaker-SmartSyntaxPlugins'
+	#category : #'VMMaker-SmartSyntaxPlugins'
 }
 
 { #category : #coercing }

@@ -24,7 +24,7 @@ Class {
 		'directory',
 		'interpreterFilename'
 	],
-	#category : 'VMMaker-PostProcessing'
+	#category : #'VMMaker-PostProcessing'
 }
 
 { #category : #'as yet unclassified' }

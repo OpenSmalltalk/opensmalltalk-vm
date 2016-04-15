@@ -3901,6 +3901,7 @@ Cogit >> cogFullBlockMethod: aMethodObj numCopied: numCopied [
 	 attempt to reclaim the method zone.  Certain clients (e.g. ceSICMiss:)
 	 depend on the zone remaining constant across method generation."
 	<api>
+	<option: #SistaV1BytecodeSet>
 	<returnTypeC: #'CogMethod *'>
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
@@ -4445,6 +4446,7 @@ Cogit >> compileClosedPICPrototype [
 { #category : #'compile abstract instructions' }
 Cogit >> compileCogFullBlockMethod: numCopied [
 	<returnTypeC: #'CogMethod *'>
+	<option: #SistaV1BytecodeSet>
 	| numBytecodes numBlocks numCleanBlocks result |
 	hasYoungReferent := (objectMemory isYoungObject: methodObj).
 	methodOrBlockNumArgs := coInterpreter argumentCountOf: methodObj.
@@ -4525,6 +4527,7 @@ Cogit >> compileCogMethod: selector [
 { #category : #'compile abstract instructions' }
 Cogit >> compileEntireFullBlockMethod: numCopied [
 	"Compile the abstract instructions for the entire method, including blocks."
+	<option: #SistaV1BytecodeSet>
 	| result |
 	self preenMethodLabel.
 	self compileFullBlockEntry.
@@ -4580,6 +4583,7 @@ Cogit >> compileFrameBuild [
 
 { #category : #'compile abstract instructions' }
 Cogit >> compileFullBlockEntry [
+	<option: #SistaV1BytecodeSet>
 	"Compile the abstract instructions for the entire method, including blocks."
 	| jumpNoContextSwitch |
 
@@ -6548,6 +6552,7 @@ Cogit >> generateCogFullBlock [
 	 that fixes up jumps.  When fixing up a jump the jump is not allowed to
 	 choose a smaller offset but must stick to the size set in the second pass."
 	<returnTypeC: #'CogMethod *'>
+	<option: #SistaV1BytecodeSet>
 	| codeSize headerSize mapSize totalSize startAddress result method |
 	<var: #method type: #'CogMethod *'>
 	headerSize := self sizeof: CogMethod.
