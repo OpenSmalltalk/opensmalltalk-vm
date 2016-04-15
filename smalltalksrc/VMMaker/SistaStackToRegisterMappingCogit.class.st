@@ -62,7 +62,7 @@ Class {
 	#pools : [
 		'VMSqueakClassIndices'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -155,6 +155,7 @@ SistaStackToRegisterMappingCogit >> compileBlockBodies [
 
 { #category : #'compile abstract instructions' }
 SistaStackToRegisterMappingCogit >> compileCogFullBlockMethod: numCopied [
+	<option: #SistaV1BytecodeSet>
 	counters := 0.
 	^super compileCogFullBlockMethod: numCopied
 ]

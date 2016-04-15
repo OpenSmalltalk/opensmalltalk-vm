@@ -4,7 +4,7 @@ This plugin is a fake. It doesn't do anything useful. It's sole purpose is to wr
 Class {
 	#name : #SurfacePlugin,
 	#superclass : #InterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }

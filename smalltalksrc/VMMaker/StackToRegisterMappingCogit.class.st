@@ -117,7 +117,7 @@ Class {
 		'numPushNilsFunction',
 		'pushNilSizeFunction'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -1181,6 +1181,7 @@ StackToRegisterMappingCogit >> compileBlockFramelessEntry: blockStart [
 
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> compileCogFullBlockMethod: numCopied [
+	<option: #SistaV1BytecodeSet>
 	methodOrBlockNumTemps := coInterpreter tempCountOf: methodObj.
 	self cCode: '' inSmalltalk:
 		[debugStackPointers := coInterpreter debugStackPointersFor: methodObj].
@@ -1216,6 +1217,7 @@ StackToRegisterMappingCogit >> compileFrameBuild [
 
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> compileFullBlockMethodFrameBuild: numCopied [
+	<option: #SistaV1BytecodeSet>
 	needsFrame ifFalse:
 		[self initSimStackForFramelessMethod: initialPC.
 		 ^self].

@@ -1,7 +1,7 @@
 Class {
 	#name : #CurrentImageCoInterpreterFacadeFor64BitSpurObjectRepresentation,
 	#superclass : #CurrentImageCoInterpreterFacadeForSpurObjectRepresentation,
-	#category : 'VMMaker-Support'
+	#category : #'VMMaker-Support'
 }
 
 { #category : #'accessing class hierarchy' }
