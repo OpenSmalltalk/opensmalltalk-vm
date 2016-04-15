@@ -93,6 +93,14 @@ CogMethodSurrogate >> asVoidPointer [
 ]
 
 { #category : #'instance initialization' }
+CogMethodSurrogate >> at: anAddress memory: memoryArray headerSize: headerSize cogit: aCogit [
+	address := anAddress.
+	memory := memoryArray.
+	baseHeaderSize := headerSize.
+	cogit := aCogit
+]
+
+{ #category : #'instance initialization' }
 CogMethodSurrogate >> at: anAddress objectMemory: objectMemory cogit: aCogit [
 	address := anAddress.
 	memory := objectMemory memory.

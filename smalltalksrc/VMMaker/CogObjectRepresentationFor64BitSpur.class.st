@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'ceDereferenceSelectorIndex'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'accessing class hierarchy' }
@@ -46,6 +46,25 @@ CogObjectRepresentationFor64BitSpur >> allocateCounters: nCounters [
 	^objOop
 		ifNil: [0]
 		ifNotNil: [objOop + objectMemory baseHeaderSize]
+]
+
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationFor64BitSpur >> bitAndByteOffsetOfIsFullBlockBitInto: aBlock [
+	<inline: true>
+	"This supplies the bitmask for the isFullBlock bit, and the offset of the byte containing
+	 that bit in a CogMethod header to aBlock.  We don't have named variables holding this
+	 offset.  Th efollowing assert tsts whether the values are correct by creating a surrogate
+	 on an empty ByteArray, setting the bit, and checking that the exopected values are set
+	 in the ByteArray."
+	self cCode: [] inSmalltalk:
+		[| m |
+		m := ByteArray new: 16.
+		CogBlockMethodSurrogate64 new
+			at: 0 memory: m headerSize: 8 cogit: nil;
+			cpicHasMNUCaseOrCMIsFullBlock: true.
+		self assert: m = #[0 0 0 0 0 0 0 0 0 16 0 0 0 0 0 0].
+		self assert: (m at: objectMemory baseHeaderSize + 2) = 16].
+	aBlock value: 16 value: objectMemory baseHeaderSize + 2
 ]
 
 { #category : #'sista support' }
@@ -1903,24 +1922,36 @@ CogObjectRepresentationFor64BitSpur >> maybeGenerateSelectorIndexDereferenceRout
 	"Generate the routine that converts selector indices into selector objects.
 	 It is called from the send trampolines.
 	 If the selector index is negative, convert it into a positive index into the
-	 special selectors array and index that.  Otherwise, index the current method."
-	| jumpNegative jumpNotBlock |
+	 special selectors array and index that.  Otherwise, index the current method.
+	 The routine uses Scratch0Reg & Scratch1Reg, which are available, since they
+	 are not live at point of send."
+	| jumpNegative jumpNotBlock jumpFullBlock |
 	<var: 'jumpNegative' type: #'AbstractInstruction *'>
 	<var: 'jumpNotBlock' type: #'AbstractInstruction *'>
+	<var: 'jumpFullBlock' type: #'AbstractInstruction *'>
 	cogit zeroOpcodeIndex.
 	cogit CmpCq: 0 R: ClassReg.
 	jumpNegative := cogit JumpLess: 0.
-	self halt: 'Add handling of full blocks!!'.
 	cogit
 		MoveMw: FoxMethod r: FPReg R: Scratch0Reg;
 		AddCq: 2 R: ClassReg; "Change selector index to 1-relative, skipping the method header"
 		TstCq: MFMethodFlagIsBlockFlag R: Scratch0Reg.
 	jumpNotBlock := cogit JumpZero: 0.
-	cogit "If in a block, need to find the home method..."
-		AndCq: methodZone alignment negated R: Scratch0Reg;
+	"If in a block, need to find the home method...  If using full blocks, need to test the cpicHasMNUCaseOrCMIsFullBlock bit"
+	cogit AndCq: methodZone alignment negated R: Scratch0Reg.
+	SistaV1BytecodeSet ifTrue:
+		[self bitAndByteOffsetOfIsFullBlockBitInto:
+			[:bitmask :byteOffset|
+			jumpFullBlock := cogit
+				MoveMb: byteOffset r: Scratch0Reg R: Scratch1Reg;
+				TstCq: bitmask R: Scratch1Reg;
+				JumpNonZero: 0]].
+	cogit 
 		MoveM16: 0 r: Scratch0Reg R: Scratch1Reg;
 		SubR: Scratch1Reg R: Scratch0Reg.
 	jumpNotBlock jmpTarget: cogit Label.
+	SistaV1BytecodeSet ifTrue:
+		[jumpFullBlock jmpTarget: jumpNotBlock getJmpTarget].
 	cogit "Now fetch the method object and index with the literal index to retrieve the selector"
 		AndCq: methodZone alignment negated R: Scratch0Reg;
 		MoveMw: (cogit offset: CogMethod of: #methodObject) r: Scratch0Reg R: Scratch1Reg;
