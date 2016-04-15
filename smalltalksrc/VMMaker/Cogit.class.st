@@ -326,7 +326,7 @@ Cogit class >> activeCompilerClass [
 		ifAbsent:
 			[(CogAbstractInstruction subclasses detect:
 				[:compilerClass|
-				 compilerClass ISA == (initializationOptions at: #ISA)]) defaultCompilerClass]
+				 compilerClass ISA == (initializationOptions at: #ISA ifAbsent: [#IA32])]) defaultCompilerClass]
 ]
 
 { #category : #translation }
