@@ -4,7 +4,7 @@ This is a subclass that uses CPUID to serialize instruction modification.  This 
 Class {
 	#name : #CogICacheFlushingIA32Compiler,
 	#superclass : #CogIA32Compiler,
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'inline cacheing' }

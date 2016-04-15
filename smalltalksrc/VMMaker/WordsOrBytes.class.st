@@ -4,7 +4,7 @@ Coercion specification for bits objects like ByteString, Bitmap, ByteArray, Word
 Class {
 	#name : #WordsOrBytes,
 	#superclass : #Behavior,
-	#category : #'VMMaker-SmartSyntaxPlugins'
+	#category : 'VMMaker-SmartSyntaxPlugins'
 }
 
 { #category : #'plugin generation' }
