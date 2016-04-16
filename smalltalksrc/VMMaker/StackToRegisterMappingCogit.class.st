@@ -127,7 +127,7 @@ Class {
 { #category : #translation }
 StackToRegisterMappingCogit class >> ancilliaryClasses: options [
 	^(super ancilliaryClasses: options),
-	  { self basicNew bytecodeFixupClass. self basicNew simStackEntryClass. CogSSOptStatus }
+	  { self basicNew bytecodeFixupClass. CogSimStackEntry. CogSSOptStatus }
 ]
 
 { #category : #documentation }
@@ -2368,7 +2368,7 @@ StackToRegisterMappingCogit >> genPushMaybeContextSlotIndex: slotIndex [
 	<var: #jmpSingle type: #'AbstractInstruction *'>
 	<var: #jmpDone type: #'AbstractInstruction *'>
 	self assert: needsFrame.
-	(self isCallerSavedReg: ReceiverResultReg) ifTrue:
+	(self register: ReceiverResultReg isInMask: callerSavedRegMask) ifTrue:
 		["We have no way of reloading ReceiverResultReg since we need the inst var value as the result."
 		optStatus isReceiverResultRegLive: false].
 	"See CoInterpreter>>contextInstructionPointer:frame: for an explanation
@@ -3976,8 +3976,8 @@ StackToRegisterMappingCogit >> setInterpreter: aCoInterpreter [
 	picAbortTrampolines := CArrayAccessor on: (Array new: self numRegArgs + 2).
 	picMissTrampolines := CArrayAccessor on: (Array new: self numRegArgs + 2).
 
-	simStack := CArrayAccessor on: ((1 to: self class simStackSlots) collect: [:i| self simStackEntryClass new cogit: self]).
-	simSelf := self simStackEntryClass new cogit: self.
+	simStack := CArrayAccessor on: ((1 to: self class simStackSlots) collect: [:i| CogSimStackEntry new cogit: self]).
+	simSelf := CogSimStackEntry new cogit: self.
 	optStatus := CogSSOptStatus new.
 
 	debugFixupBreaks := self class initializationOptions at: #debugFixupBreaks ifAbsent: [Set new].
@@ -3991,12 +3991,6 @@ StackToRegisterMappingCogit >> simStackAt: index [
 	<cmacro: '(index) (simStack + (index))'>
 	<returnTypeC: #'CogSimStackEntry *'>
 	^self addressOf: (simStack at: index)
-]
-
-{ #category : #initialization }
-StackToRegisterMappingCogit >> simStackEntryClass [
-	<doNotGenerate>
-	^CogSimStackEntry
 ]
 
 { #category : #'simulation stack' }

@@ -1092,6 +1092,13 @@ LargeIntegersPlugin >> initialize [
 			xorOpIndex := 2]
 ]
 
+{ #category : #util }
+LargeIntegersPlugin >> isLargeIntegerOop: oop [
+	| oopClass |
+	oopClass := interpreterProxy fetchClassOf: oop.
+	^oopClass == interpreterProxy classLargeNegativeInteger or: [oopClass == interpreterProxy classLargePositiveInteger]
+]
+
 { #category : #'oop functions' }
 LargeIntegersPlugin >> isNormalized: anInteger [ 
 	| len maxVal minVal sLen val class positive |
@@ -1351,30 +1358,31 @@ LargeIntegersPlugin >> primDigitBitXor: secondInteger [
 
 { #category : #'Integer primitives' }
 LargeIntegersPlugin >> primDigitCompare: secondInteger [ 
-	| firstVal secondVal firstInteger |
+	| firstVal secondVal firstInteger firstIsSmall secondIsSmall |
 	self debugCode: [self msg: 'primDigitCompare: secondInteger'].
-	firstInteger := self
-				primitive: 'primDigitCompare'
-				parameters: #(#Integer )
-				receiver: #Integer.
+	firstInteger := self primitive: 'primDigitCompare'.
 	"shortcut: aSmallInteger has to be smaller in Magnitude as aLargeInteger"
-	(interpreterProxy isIntegerObject: firstInteger)
-		ifTrue: ["first"
-			(interpreterProxy isIntegerObject: secondInteger)
-				ifTrue: ["second"
-					(firstVal := interpreterProxy integerValueOf: firstInteger) > (secondVal := interpreterProxy integerValueOf: secondInteger)
+	firstIsSmall := interpreterProxy isIntegerObject: firstInteger.
+	secondIsSmall := interpreterProxy isIntegerObject: secondInteger.
+	firstIsSmall ifFalse: [(self isLargeIntegerOop: firstInteger) ifFalse: [^self primitiveFail]].
+	secondIsSmall ifFalse: [(self isLargeIntegerOop: secondInteger) ifFalse: [^self primitiveFail]].
+	firstIsSmall
+		ifTrue: 
+			[secondIsSmall
+				ifTrue: 
+					[(firstVal := interpreterProxy integerValueOf: firstInteger) > (secondVal := interpreterProxy integerValueOf: secondInteger)
 						ifTrue: [^ 1 asOop: SmallInteger"first > second"]
 						ifFalse: [firstVal < secondVal
 								ifTrue: [^ -1 asOop: SmallInteger"first < second"]
 								ifFalse: [^ 0 asOop: SmallInteger"first = second"]]]
-				ifFalse: ["SECOND"
-					^ -1 asOop: SmallInteger"first < SECOND"]]
-		ifFalse: ["FIRST"
-			(interpreterProxy isIntegerObject: secondInteger)
-				ifTrue: ["second"
-					^ 1 asOop: SmallInteger"FIRST > second"]
-				ifFalse: ["SECOND"
-					^ self digitCompareLarge: firstInteger with: secondInteger]]
+				ifFalse: 
+					[^ -1 asOop: SmallInteger"first < SECOND"]]
+		ifFalse: 
+			[secondIsSmall
+				ifTrue: 
+					[^ 1 asOop: SmallInteger"FIRST > second"]
+				ifFalse: 
+					[^ self digitCompareLarge: firstInteger with: secondInteger]]
 ]
 
 { #category : #'Integer primitives' }
