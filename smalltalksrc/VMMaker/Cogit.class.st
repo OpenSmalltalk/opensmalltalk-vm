@@ -10595,6 +10595,16 @@ Cogit >> singleStep: aBoolean [
 	singleStep := aBoolean
 ]
 
+{ #category : #'translation support' }
+Cogit >> sizeof: aCType [
+	<doNotGenerate>
+	| bfc |
+	aCType == #BytecodeFixup ifTrue:
+		[bfc := self class bytecodeFixupClass.
+		 ^bfc alignedByteSizeOf: bfc forClient: self].
+	^super sizeof: aCType
+]
+
 { #category : #'compile abstract instructions' }
 Cogit >> spanFor: descriptor at: pc exts: nExts in: aMethodObj [
 	"Compute the span (jump distance) for a particular bytecode, e.g. a backward branch or a block."
