@@ -3715,6 +3715,7 @@ StackToRegisterMappingCogit >> mergeWithFixupIfRequired: fixup [
 	deadCode 
 		ifTrue: [simStackPtr := fixup simStackPtr] "case 3"
 		ifFalse: [self ssFlushTo: simStackPtr]. "case 4"
+	"cases 3 and 4"
 	deadCode := false.
 	fixup isBackwardBranchFixup ifTrue: [fixup simStackPtr: simStackPtr].
 	fixup targetInstruction: self Label.
@@ -3870,7 +3871,7 @@ StackToRegisterMappingCogit >> reinitializeFixupsFrom: start through: end [
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> restoreSimStackAtMergePoint: fixup [
 	<inline: true>
-	"All the execution paths reaching a merge point expected everything to be
+	"All the execution paths reaching a merge point expect everything to be
 	spilled on stack and the optStatus is unknown. Throw away all simStack and 
 	optStatus optimization state."
 	simSpillBase := methodOrBlockNumTemps.
