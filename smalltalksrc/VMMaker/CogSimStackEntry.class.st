@@ -20,6 +20,13 @@ Class {
 	#category : 'VMMaker-JIT'
 }
 
+{ #category : #'simulation only' }
+CogSimStackEntry class >> byteSizeForSimulator: aVMClass [
+	"Answer an approximation of the byte size of an AbstractInstruction struct.
+	 This is for estimating the alloca in allocateOpcodes:bytecodes:ifFail:"
+	^self instSize * (aVMClass sizeof: #'void *')
+]
+
 { #category : #translation }
 CogSimStackEntry class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a CogSimStackEntry struct."
@@ -118,8 +125,16 @@ CogSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegister [
 			 offset := baseOffset.
 			 register := baseRegister].
 	spilled := true.
+	self maybeAnnotateUse: inst
+]
+
+{ #category : #'compile abstract instructions' }
+CogSimStackEntry >> maybeAnnotateUse: inst [
+	<inline: true>
 	annotateUse ifTrue:
-		[cogit annotateBytecode: inst.
+		[inst annotation = 0
+			ifTrue: [cogit annotateBytecode: inst]
+			ifFalse: [cogit annotateBytecode: cogit Label].
 		 annotateUse := false]
 ]
 
@@ -128,19 +143,6 @@ CogSimStackEntry >> maybeConstant [
 	"Answer the value of constant, no assert check."
 	<cmacro: '(sse) ((sse)->constant)'>
 	^constant
-]
-
-{ #category : #'compile abstract instructions' }
-CogSimStackEntry >> mergeAt: baseOffset from: baseRegister [
-	"Discard type information because of a control-flow merge."
-	self assert: spilled.
-	type = SSSpill
-		ifTrue:
-			[self assert: (offset = baseOffset and: [register = baseRegister])]
-		ifFalse:
-			[type := SSSpill.
-			 offset := baseOffset.
-			 register := baseRegister]
 ]
 
 { #category : #accessing }
@@ -171,9 +173,7 @@ CogSimStackEntry >> popToReg: reg [
 				[SSRegister]	-> [inst := reg ~= register
 												ifTrue: [cogit MoveR: register R: reg]
 												ifFalse: [cogit Label]] }].
-	annotateUse ifTrue:
-		[cogit annotateBytecode: inst.
-		 annotateUse := false]
+	self maybeAnnotateUse: inst
 ]
 
 { #category : #printing }
@@ -260,9 +260,7 @@ CogSimStackEntry >> storeToReg: reg [
 		[SSRegister]	-> [inst := reg ~= register
 										ifTrue: [cogit MoveR: register R: reg]
 										ifFalse: [cogit Label]] }.
-	annotateUse ifTrue:
-		[cogit annotateBytecode: inst.
-		 annotateUse := false]
+	self maybeAnnotateUse: inst
 ]
 
 { #category : #accessing }

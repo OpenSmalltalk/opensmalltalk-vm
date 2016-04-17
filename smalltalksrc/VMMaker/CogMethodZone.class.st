@@ -359,7 +359,9 @@ CogMethodZone >> freeMethod: cogMethod [
 					[(objectRepresentation canPinObjects and: [cogMethod nextMethodOrIRCs ~= 0]) ifTrue:
 						[objectRepresentation freeIRCs: cogMethod nextMethodOrIRCs]]]
 			ifFalse:
-				[self assert: (cogit noAssertMethodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject.
+				[self cCode: [self assert: (cogit noAssertMethodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject]
+					inSmalltalk: [self assert: ((cogit noAssertMethodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject
+											or: [coInterpreter isKindOf: CurrentImageCoInterpreterFacade])].
 				 NewspeakVM ifTrue:
 					[self removeFromUnpairedMethodList: cogMethod]].
 		 cogit maybeFreeCountersOf: cogMethod].

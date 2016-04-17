@@ -235,7 +235,7 @@ CogARMCompiler class >> initializeAbstractRegisters [
 	Arg1Reg			:= R5.
 	VarBaseReg		:= ConcreteVarBaseReg. "Must be callee saved"
 	RISCTempReg		:= ConcreteIPReg. "a.k.a. IP"
-	Scratch0Reg		:= R12.
+	Extra0Reg			:= R12.
 	LinkReg				:= LR. "R14"
 	PCReg				:= PC. "R15"	
 
@@ -348,6 +348,17 @@ CogARMCompiler >> ands: destReg rn: srcReg imm: immediate ror: rot [
 	ANDS destReg, srcReg, #immediate ROR #rot"
 
 	^self type: 1 op: AndOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
+]
+
+{ #category : #'register allocation' }
+CogARMCompiler >> availableRegisterOrNoneFor: liveRegsMask [
+	"Answer an unused abstract register in the liveRegMask.
+	 Subclasses with more registers can override to answer them.
+	 N.B. Do /not/ allocate TempReg."
+	<returnTypeC: #sqInt>
+	(cogit register: Extra0Reg isInMask: liveRegsMask) ifFalse:
+		[^Extra0Reg].
+	^super availableRegisterOrNoneFor: liveRegsMask
 ]
 
 { #category : #'ARM convenience instructions' }
