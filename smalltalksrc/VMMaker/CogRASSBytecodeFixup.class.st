@@ -2,7 +2,7 @@ Class {
 	#name : #CogRASSBytecodeFixup,
 	#superclass : #CogSSBytecodeFixup,
 	#instVars : [
-		'mergeFixup'
+		'mergeSimStack'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -17,18 +17,18 @@ CogRASSBytecodeFixup class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock
 			value: ivn
 			value: (ivn caseOf: {
 					['targetInstruction']	-> [#'AbstractInstruction *'].
-					['mergeFixup']		-> [#'CogSimStackEntry *'] }
+					['mergeSimStack']	-> [#'CogSimStackEntry *'] }
 					otherwise: [#sqInt])]
 ]
 
 { #category : #accessing }
-CogRASSBytecodeFixup >> mergeFixup [
+CogRASSBytecodeFixup >> mergeSimStack [
 
-	^ mergeFixup
+	^ mergeSimStack
 ]
 
 { #category : #accessing }
-CogRASSBytecodeFixup >> mergeFixup: anObject [
+CogRASSBytecodeFixup >> mergeSimStack: anObject [
 
-	^mergeFixup := anObject
+	^mergeSimStack := anObject
 ]
