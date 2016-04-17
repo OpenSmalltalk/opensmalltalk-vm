@@ -1324,16 +1324,19 @@ Cogit class >> testPCMappingSelect: aBlock options: optionsDictionaryOrArray [
 		(m isQuick not
 		 and: [aBlock value: m]) ifTrue:
 			[Transcript nextPut: $.; flush.
-			 [coInterpreter.
-			  cm := cogit
+			 cm := cogit
 						cog: (coInterpreter oopForObject: m)
 						selector: (coInterpreter oopForObject: m selector).
-			   cm isNil and: [coInterpreter isCogCompiledCodeCompactionCalledFor]] whileTrue:
+			  cm ifNil:
 				[cogit methodZone clearCogCompiledCode.
-				 coInterpreter clearCogCompiledCodeCompactionCalledFor.
-				 coInterpreter initializeObjectMap].
-			 cogit testPCMappingForCompiledMethod: m cogMethod: cm].
-		 false]
+				 coInterpreter initializeObjectMap.
+				 cm := cogit
+							cog: (coInterpreter oopForObject: m)
+							selector: (coInterpreter oopForObject: m selector).
+				cm ifNil: [Transcript show: 'After 1 Cog compiled code compaction, still not able to generate the cog method...' ] ].
+			  cm ifNotNil:
+				[cogit testPCMappingForCompiledMethod: m cogMethod: cm]].
+		 false] 
 ]
 
 { #category : #documentation }
@@ -10593,6 +10596,16 @@ Cogit >> singleStep [
 Cogit >> singleStep: aBoolean [
 	<doNotGenerate>
 	singleStep := aBoolean
+]
+
+{ #category : #'translation support' }
+Cogit >> sizeof: aCType [
+	<doNotGenerate>
+	| bfc |
+	aCType == #BytecodeFixup ifTrue:
+		[bfc := self class bytecodeFixupClass.
+		 ^bfc alignedByteSizeOf: bfc forClient: self].
+	^super sizeof: aCType
 ]
 
 { #category : #'compile abstract instructions' }

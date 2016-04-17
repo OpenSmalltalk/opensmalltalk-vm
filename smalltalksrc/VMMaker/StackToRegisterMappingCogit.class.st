@@ -127,7 +127,7 @@ Class {
 { #category : #translation }
 StackToRegisterMappingCogit class >> ancilliaryClasses: options [
 	^(super ancilliaryClasses: options),
-	  { self basicNew bytecodeFixupClass. CogSimStackEntry. CogSSOptStatus }
+	  { self basicNew bytecodeFixupClass. self basicNew simStackEntryClass. CogSSOptStatus }
 ]
 
 { #category : #documentation }
@@ -1067,13 +1067,10 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 	deadCode := false.
 	[self cCode: '' inSmalltalk:
 		[(debugBytecodePointers includes: bytecodePC) ifTrue: [self halt]].
-	fixup := self fixupAt: bytecodePC - initialPC.
-	"If there's no fixup following a return there's no jump to that code and it is dead."
-	(descriptor notNil and: [descriptor isReturn]) ifTrue: [deadCode := true].
-	fixup needsFixupOrIsFixedUp ifTrue:
-		[fixup isMergeFixupOrIsFixedUp ifTrue:
-			[self merge: fixup afterContinuation: deadCode not].
-		deadCode := false].
+	 fixup := self fixupAt: bytecodePC - initialPC.
+	 "If there's no fixup following a return there's no jump to that code and it is dead."
+	 (descriptor notNil and: [descriptor isReturn]) ifTrue: [deadCode := true].
+	 self mergeWithFixupIfRequired: fixup.
 	 self cCode: '' inSmalltalk:
 		[deadCode ifFalse:
 			[self assert: simStackPtr + (needsFrame ifTrue: [0] ifFalse: [1])
@@ -1644,6 +1641,14 @@ StackToRegisterMappingCogit >> genBinaryVarOpVarInlinePrimitive: prim [
 	^0
 ]
 
+{ #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> genBlockReturn [
+	"Return from block, assuming result already loaded into ReceiverResultReg."
+	super genBlockReturn.
+	deadCode := true. "can't fall through"
+	^0
+]
+
 { #category : #initialization }
 StackToRegisterMappingCogit >> genCallPICEnilopmartNumArgs: numArgs [
 	"Generate special versions of the ceCallCogCodePopReceiverAndClassRegs
@@ -1942,6 +1947,7 @@ StackToRegisterMappingCogit >> genInlineClosure: startpc numArgs: numArgs numCop
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genJumpBackTo: targetBytecodePC [
 	self ssFlushTo: simStackPtr.
+	deadCode := true. "can't fall through"
 	^super genJumpBackTo: targetBytecodePC
 ]
 
@@ -2001,6 +2007,7 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genJumpTo: targetBytecodePC [
 	self ssFlushTo: simStackPtr.
+	deadCode := true. "can't fall through"
 	^super genJumpTo: targetBytecodePC
 ]
 
@@ -2368,7 +2375,7 @@ StackToRegisterMappingCogit >> genPushMaybeContextSlotIndex: slotIndex [
 	<var: #jmpSingle type: #'AbstractInstruction *'>
 	<var: #jmpDone type: #'AbstractInstruction *'>
 	self assert: needsFrame.
-	(self register: ReceiverResultReg isInMask: callerSavedRegMask) ifTrue:
+	(self isCallerSavedReg: ReceiverResultReg) ifTrue:
 		["We have no way of reloading ReceiverResultReg since we need the inst var value as the result."
 		optStatus isReceiverResultRegLive: false].
 	"See CoInterpreter>>contextInstructionPointer:frame: for an explanation
@@ -3176,6 +3183,7 @@ StackToRegisterMappingCogit >> genUpArrowReturn [
 						or: [regArgsHaveBeenPushed])
 							ifTrue: [methodOrBlockNumArgs + 1 * objectMemory wordSize]
 							ifFalse: [0])].
+	deadCode := true. "can't fall through"
 	^0
 ]
 
@@ -3672,38 +3680,50 @@ StackToRegisterMappingCogit >> marshallSendArguments: numArgs [
 ]
 
 { #category : #'simulation stack' }
-StackToRegisterMappingCogit >> merge: fixup afterContinuation: mergeWithContinuation [
-	"Merge control flow at a fixup.  The fixup holds the simStackPtr at the jump to this target.
-	 See stackToRegisterMapping on the class side for a full description."
+StackToRegisterMappingCogit >> mergeWithFixupIfRequired: fixup [
+	"If this bytecode has a fixup, some kind of merge needs to be done. There are 4 cases:
+		1) the bytecode has no fixup (fixup isNotAFixup)
+			do nothing
+		2) the bytecode has a non merge fixup
+			the fixup has needsNonMergeFixup.
+			The code generating non merge fixup (currently only special selector code) is responsible
+				for the merge so no need to do it.
+			We set deadCode to false as the instruction can be reached from jumps.
+		3) the bytecode has a merge fixup, but execution flow *cannot* fall through to the merge point.
+			the fixup has needsMergeFixup and deadCode = true.
+			ignores the current simStack as it does not mean anything 
+			restores the simStack to the state the jumps to the merge point expects it to be.
+		4) the bytecode has a merge fixup and execution flow *can* fall through to the merge point.
+			the fixup has needsMergeFixup and deadCode = false.
+			flushes the stack to the stack pointer so the fall through execution path simStack is 
+				in the state the merge point expects it to be. 
+			restores the simStack to the state the jumps to the merge point expects it to be.
+			
+	In addition, if this is a backjump merge point, we patch the fixup to hold the current simStackPtr 
+	for later assertions."
+	
 	<var: #fixup type: #'BytecodeFixup *'>
+	"case 1"
+	fixup notAFixup ifTrue: [^ 0].
+
+	"case 2"
+	fixup isNonMergeFixup ifTrue: [deadCode := false. ^ 0 ].
+
+	"cases 3 and 4"
+	self assert: fixup isMergeFixup.
 	self traceMerge: fixup.
-	"For now we don't try and preserve the optimization status through merges."
-	optStatus isReceiverResultRegLive: false.
-	"If this instruction follows a return or an unconditional branch then the
-	 current simStackPtr is irrelevant and we continue with that of the fixup."
-	mergeWithContinuation ifFalse:
-		[self assert: fixup isMergeFixupOrIsFixedUp.  "Must have a valid simStackPtr"
-		 simStackPtr := fixup simStackPtr].
-	fixup notYetFixedUp ifTrue:
-		["This is either a forward or backward branch target.
-		  The stack must be flushed."
-		 self ssFlushTo: simStackPtr.
-		 fixup isBackwardBranchFixup ifTrue:
-			"This is the target of a backward branch.  It doesn't have a simStackPtr yet."
-			[fixup simStackPtr: simStackPtr].
-		 fixup targetInstruction: self Label].
-	self assert: simStackPtr >= fixup simStackPtr.
+	deadCode 
+		ifTrue: [simStackPtr := fixup simStackPtr] "case 3"
+		ifFalse: [self ssFlushTo: simStackPtr]. "case 4"
+	deadCode := false.
+	fixup isBackwardBranchFixup ifTrue: [fixup simStackPtr: simStackPtr].
+	fixup targetInstruction: self Label.
+	self assert: simStackPtr = fixup simStackPtr.
 	self cCode: '' inSmalltalk:
 		[self assert: fixup simStackPtr = (self debugStackPointerFor: bytecodePC)].
-	simStackPtr := fixup simStackPtr.
-	simSpillBase := methodOrBlockNumTemps.
-	"For now throw away all type information for values on the stack, but sometime consider
-	 the more sophisticated merge described in the class side stackToRegisterMapping."
-	methodOrBlockNumTemps to: simStackPtr do:
-		[:i|
-		(self simStackAt: i)
-			mergeAt: FoxMFReceiver - (i - methodOrBlockNumArgs + 1 * objectMemory bytesPerOop)
-			from: FPReg]
+	self restoreSimStackAtMergePoint: fixup.
+	
+	^0
 ]
 
 { #category : #trampolines }
@@ -3847,6 +3867,24 @@ StackToRegisterMappingCogit >> reinitializeFixupsFrom: start through: end [
 		 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]]
 ]
 
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> restoreSimStackAtMergePoint: fixup [
+	<inline: true>
+	"All the execution paths reaching a merge point expected everything to be
+	spilled on stack and the optStatus is unknown. Throw away all simStack and 
+	optStatus optimization state."
+	simSpillBase := methodOrBlockNumTemps.
+	optStatus isReceiverResultRegLive: false.
+	methodOrBlockNumTemps to: simStackPtr do:
+		[:i|
+			(self simStackAt: i)
+				type: SSSpill;
+				offset: FoxMFReceiver - (i - methodOrBlockNumArgs + 1 * objectMemory bytesPerOop);
+				register: FPReg;
+				spilled: true].
+	^ 0
+]
+
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> scanBlock: blockStart [
 	"Scan the block to determine if the block needs a frame or not"
@@ -3976,8 +4014,8 @@ StackToRegisterMappingCogit >> setInterpreter: aCoInterpreter [
 	picAbortTrampolines := CArrayAccessor on: (Array new: self numRegArgs + 2).
 	picMissTrampolines := CArrayAccessor on: (Array new: self numRegArgs + 2).
 
-	simStack := CArrayAccessor on: ((1 to: self class simStackSlots) collect: [:i| CogSimStackEntry new cogit: self]).
-	simSelf := CogSimStackEntry new cogit: self.
+	simStack := CArrayAccessor on: ((1 to: self class simStackSlots) collect: [:i| self simStackEntryClass new cogit: self]).
+	simSelf := self simStackEntryClass new cogit: self.
 	optStatus := CogSSOptStatus new.
 
 	debugFixupBreaks := self class initializationOptions at: #debugFixupBreaks ifAbsent: [Set new].
@@ -3991,6 +4029,12 @@ StackToRegisterMappingCogit >> simStackAt: index [
 	<cmacro: '(index) (simStack + (index))'>
 	<returnTypeC: #'CogSimStackEntry *'>
 	^self addressOf: (simStack at: index)
+]
+
+{ #category : #initialization }
+StackToRegisterMappingCogit >> simStackEntryClass [
+	<doNotGenerate>
+	^CogSimStackEntry
 ]
 
 { #category : #'simulation stack' }
