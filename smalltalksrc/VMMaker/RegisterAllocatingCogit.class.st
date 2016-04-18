@@ -401,7 +401,6 @@ RegisterAllocatingCogit >> ssStorePop: popBoolean toPreferredReg: preferredReg [
 	actualReg := preferredReg.
 	self ssTop type = SSRegister ifTrue: 
 		[self assert: self ssTop liveRegister = self ssTop register.
-		self assert: self ssTop annotateUse not.
 		self assert: self ssTop spilled not].
 	self ssTop liveRegister ~= NoReg ifTrue:
 		[actualReg := self ssTop liveRegister].

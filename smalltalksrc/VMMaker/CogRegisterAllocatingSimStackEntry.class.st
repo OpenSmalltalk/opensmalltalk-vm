@@ -35,7 +35,6 @@ CogRegisterAllocatingSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegi
 			 offset := baseOffset.
 			 register := baseRegister].
 	spilled := true.
-	self maybeAnnotateUse: inst
 ]
 
 { #category : #accessing }
@@ -70,7 +69,6 @@ CogRegisterAllocatingSimStackEntry >> popToReg: reg [
 						[SSRegister]	-> [inst := reg ~= register
 														ifTrue: [cogit MoveR: register R: reg]
 														ifFalse: [cogit Label]] }]].
-	self maybeAnnotateUse: inst.
 	reg ~= TempReg ifTrue: [ liveRegister := reg ]
 ]
 
@@ -100,8 +98,6 @@ CogRegisterAllocatingSimStackEntry >> printStateOn: aStream [
 		[aStream nextPutAll: ' (spilled)'].
 	liveRegister ~= NoReg ifTrue:
 		[aStream nextPutAll: ' (live: '; nextPutAll: (cogit backEnd nameForRegister: liveRegister); nextPut: $)].
-	annotateUse ifTrue:
-		[aStream nextPutAll: ' (ANNOTATED)'].
 	bcptr ifNotNil:
 		[aStream space; nextPut: ${; print: bcptr; nextPut: $}].
 	aStream nextPut: $)
@@ -124,6 +120,5 @@ CogRegisterAllocatingSimStackEntry >> storeToReg: reg [
 				[SSRegister]	-> [inst := reg ~= register
 												ifTrue: [cogit MoveR: register R: reg]
 												ifFalse: [cogit Label]] }].
-	self maybeAnnotateUse: inst.
 	reg ~= TempReg ifTrue: [ liveRegister := reg ]
 ]
