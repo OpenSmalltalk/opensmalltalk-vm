@@ -2579,7 +2579,7 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes [
 			[abstractOpcodes := CArrayAccessor on:
 									 ((1 to: numAbstractOpcodes) collect: [:ign| CogCompilerClass for: self]).
 			 fixups := CArrayAccessor on:
-						((1 to: numAbstractOpcodes) collect: [:ign| self bytecodeFixupClass new])].
+						((1 to: numAbstractOpcodes) collect: [:ign| self bytecodeFixupClass for: self])].
 	self zeroOpcodeIndex.
 	labelCounter := 0
 ]
@@ -2612,7 +2612,7 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes i
 			[abstractOpcodes := CArrayAccessor on:
 									 ((1 to: numAbstractOpcodes) collect: [:ign| CogCompilerClass for: self]).
 			 fixups := CArrayAccessor on:
-						((1 to: numAbstractOpcodes) collect: [:ign| self bytecodeFixupClass new])].
+						((1 to: numAbstractOpcodes) collect: [:ign| self bytecodeFixupClass for: self])].
 	self zeroOpcodeIndex.
 	labelCounter := 0
 ]

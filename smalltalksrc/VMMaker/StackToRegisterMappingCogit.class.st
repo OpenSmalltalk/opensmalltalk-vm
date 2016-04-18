@@ -3816,16 +3816,22 @@ StackToRegisterMappingCogit >> prevInstIsPCAnnotated [
 { #category : #'simulation only' }
 StackToRegisterMappingCogit >> printSimStack [
 	<doNotGenerate>
+	self printSimStack: simStack toDepth: simStackPtr spillBase: simSpillBase
+]
+
+{ #category : #'simulation only' }
+StackToRegisterMappingCogit >> printSimStack: aSimStack toDepth: limit spillBase: spillBase [
+	<doNotGenerate>
 	coInterpreter transcript ensureCr.
-	simStackPtr < 0 ifTrue:
+	limit < 0 ifTrue:
 		[^coInterpreter transcript nextPutAll: 'simStackEmpty'; cr; flush].
-	0 to: simStackPtr do:
+	0 to: limit do:
 		[:i|
 		coInterpreter transcript print: i.
-		i = simSpillBase
+		i = spillBase
 			ifTrue: [coInterpreter transcript nextPutAll: ' sb'; tab]
 			ifFalse: [coInterpreter transcript tab; tab].
-		(simStack at: i) printStateOn: coInterpreter transcript.
+		(aSimStack at: i) printStateOn: coInterpreter transcript.
 		coInterpreter transcript cr; flush]
 ]
 

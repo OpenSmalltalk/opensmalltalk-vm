@@ -21,6 +21,11 @@ CogBytecodeFixup class >> byteSizeForSimulator: aVMClass [
 	^self instSize * (aVMClass sizeof: #'void *')
 ]
 
+{ #category : #'instance creation' }
+CogBytecodeFixup class >> for: aCogit [
+	^self new
+]
+
 { #category : #'class initialization' }
 CogBytecodeFixup class >> initialize [
 	"Initialize the fixup flags.  In this class we have only one flag, 1, which
