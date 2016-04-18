@@ -100,61 +100,9 @@ RegisterAllocatingCogit >> flushLiveRegistersForSend [
 ]
 
 { #category : #'bytecode generator support' }
-RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
-	<inline: false>
-	| desc fixup ok |
-	<var: #desc type: #'CogSimStackEntry *'>
-	<var: #fixup type: #'BytecodeFixup *'>
-	<var: #ok type: #'AbstractInstruction *'>
-	1halt.
-	self ssFlushTo: simStackPtr - 1.
-	desc := self ssTop.
-	self ssPop: 1.
-	(desc type == SSConstant
-	 and: [desc constant = objectMemory trueObject or: [desc constant = objectMemory falseObject]]) ifTrue:
-		["Must arrange there's a fixup at the target whether it is jumped to or
-		  not so that the simStackPtr can be kept correct."
-		 fixup := self ensureFixupAt: targetBytecodePC - initialPC.
-		 "Must enter any annotatedConstants into the map"
-		 desc annotateUse ifTrue:
-			[self annotateBytecode: (self prevInstIsPCAnnotated
-											ifTrue: [self Nop]
-											ifFalse: [self Label])].
-		 "Must annotate the bytecode for correct pc mapping."
-		 self annotateBytecode: (desc constant = boolean
-									ifTrue: [self Jump: fixup]
-									ifFalse: [self prevInstIsPCAnnotated
-												ifTrue: [self Nop]
-												ifFalse: [self Label]]).
-		 ^0].
-	desc popToReg: TempReg.
-	"Cunning trick by LPD.  If true and false are contiguous subtract the smaller.
-	 Correct result is either 0 or the distance between them.  If result is not 0 or
-	 their distance send mustBeBoolean."
-	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
-	self genSubConstant: boolean R: TempReg.
-	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
-
-	self extASpecifiesNoMustBeBoolean ifTrue: 
-		[ extA := 0. 
-		self annotateBytecode: self lastOpcode.
-		^ 0].
-	extA := 0.
-	
-.	self CmpCq: (boolean == objectMemory falseObject
-					ifTrue: [objectMemory trueObject - objectMemory falseObject]
-					ifFalse: [objectMemory falseObject - objectMemory trueObject])
-		R: TempReg.
-	ok := self JumpZero: 0.
-	self CallRT: (boolean == objectMemory falseObject
-					ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
-					ifFalse: [ceSendMustBeBooleanAddTrueTrampoline]).
-	ok jmpTarget: (self annotateBytecode: self Label).
-	^0
-]
-
-{ #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> genJumpTo: targetBytecodePC [
+	"Overriden to avoid the flush because in this cogit stack state is merged at merge point."
+	deadCode := true. "can't fall through"
 	self Jump: (self ensureFixupAt: targetBytecodePC - initialPC).
 	^ 0
 ]
@@ -215,12 +163,13 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: mergeSimStack [
 	from simStackPtr to methodOrBlockNumTemps, and if a conflict happen, we flush what remains
 	to be merged."
 	self flag: #TODO. "we could have a better algorithm with the current set of live registers to avoid flushing"
+	1halt.
 	simStackPtr to: methodOrBlockNumTemps by: -1 do:
 		[:i|
 			| currentSSEntry expectedSSEntry |
 			currentSSEntry := self simStackAt: i.
 			expectedSSEntry := self simStack: mergeSimStack at: i.
-			expectedSSEntry
+			expectedSSEntry type
 				caseOf: {
 					[SSBaseOffset]	-> [ self assert: (expectedSSEntry register = ReceiverResultReg or: [ expectedSSEntry register = FPReg ]).
 										(expectedSSEntry register = ReceiverResultReg and: [needsFrame]) ifTrue: 
@@ -238,6 +187,55 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: mergeSimStack [
 			 ]
 ]
 
+{ #category : #'simulation stack' }
+RegisterAllocatingCogit >> mergeWithFixupIfRequired: fixup [
+	"If this bytecode has a fixup, some kind of merge needs to be done. There are 4 cases:
+		1) the bytecode has no fixup (fixup isNotAFixup)
+			do nothing
+		2) the bytecode has a non merge fixup
+			the fixup has needsNonMergeFixup.
+			The code generating non merge fixup (currently only special selector code) is responsible
+				for the merge so no need to do it.
+			We set deadCode to false as the instruction can be reached from jumps.
+		3) the bytecode has a merge fixup, but execution flow *cannot* fall through to the merge point.
+			the fixup has needsMergeFixup and deadCode = true.
+			ignores the current simStack as it does not mean anything 
+			restores the simStack to the state the jumps to the merge point expects it to be.
+		4) the bytecode has a merge fixup and execution flow *can* fall through to the merge point.
+			the fixup has needsMergeFixup and deadCode = false.
+			flushes the stack to the stack pointer so the fall through execution path simStack is 
+				in the state the merge point expects it to be. 
+			restores the simStack to the state the jumps to the merge point expects it to be.
+			
+	In addition, if this is a backjump merge point, we patch the fixup to hold the current simStackPtr 
+	for later assertions."
+	
+	<var: #fixup type: #'BytecodeFixup *'>
+	"case 1"
+	fixup notAFixup ifTrue: [^ 0].
+
+	"case 2"
+	fixup isNonMergeFixup ifTrue: [deadCode := false. ^ 0 ].
+
+	"cases 3 and 4"
+	1halt.
+	self assert: fixup isMergeFixup.
+	self traceMerge: fixup.
+	deadCode 
+		ifTrue: [simStackPtr := fixup simStackPtr] "case 3"
+		ifFalse: [self mergeCurrentSimStackWith: fixup mergeSimStack]. "case 4"
+	"cases 3 and 4"
+	deadCode := false.
+	fixup isBackwardBranchFixup ifTrue: [fixup simStackPtr: simStackPtr].
+	fixup targetInstruction: self Label.
+	self assert: simStackPtr = fixup simStackPtr.
+	self cCode: '' inSmalltalk:
+		[self assert: fixup simStackPtr = (self debugStackPointerFor: bytecodePC)].
+	self restoreSimStackAtMergePoint: fixup.
+	
+	^0
+]
+
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> moveSimStackConstantsToRegisters [
 	<inline: true>
@@ -247,6 +245,21 @@ RegisterAllocatingCogit >> moveSimStackConstantsToRegisters [
 			desc := self simStackAt: i.
 			(desc type = SSConstant and: [desc liveRegister = NoReg])
 				ifTrue: [ desc storeToReg: (self allocateRegNotConflictingWith: 0) ] ]
+]
+
+{ #category : #'simulation stack' }
+RegisterAllocatingCogit >> restoreSimStackAtMergePoint: fixup [
+	<inline: true>
+	"All the execution paths reaching a merge point expect everything to be
+	spilled on stack and the optStatus is unknown. Throw away all simStack and 
+	optStatus optimization state."
+	simSpillBase := methodOrBlockNumTemps.
+	optStatus isReceiverResultRegLive: false.
+	0 to: simStackPtr do:
+		[:i|
+		self cCode: [simStack at: i put: (fixup mergeSimStack at: i)]
+			inSmalltalk: [(simStack at: i) copyFrom: (fixup mergeSimStack at: i)]].
+	^ 0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -351,6 +364,34 @@ RegisterAllocatingCogit >> ssFlushFrom: start upThroughRegister: reg [
 	 flushed, and hence any values colder than them stack."
 	<var: #desc type: #'CogSimStackEntry *'>
 	self ssFlushFrom: start upThrough: [ :desc | desc type = SSRegister and: [ desc register = reg ] ]
+]
+
+{ #category : #'simulation stack' }
+RegisterAllocatingCogit >> ssPushAnnotatedConstant: literal [
+	super ssPushAnnotatedConstant: literal.
+	self ssTop liveRegister: NoReg.
+	^0
+]
+
+{ #category : #'simulation stack' }
+RegisterAllocatingCogit >> ssPushBase: reg offset: offset [
+	super ssPushBase: reg offset: offset.
+	self ssTop liveRegister: NoReg.
+	^0
+]
+
+{ #category : #'simulation stack' }
+RegisterAllocatingCogit >> ssPushConstant: literal [
+	super ssPushConstant: literal.
+	self ssTop liveRegister: NoReg.
+	^0
+]
+
+{ #category : #'simulation stack' }
+RegisterAllocatingCogit >> ssPushRegister: reg [
+	super ssPushRegister: reg.
+	self ssTop liveRegister: NoReg.
+	^0
 ]
 
 { #category : #'simulation stack' }
