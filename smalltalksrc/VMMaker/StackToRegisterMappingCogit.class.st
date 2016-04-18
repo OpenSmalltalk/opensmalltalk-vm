@@ -953,6 +953,17 @@ StackToRegisterMappingCogit >> allocateRegNotConflictingWith: regMask [
 	^ reg
 ]
 
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> annotateInstructionForBytecode [
+	"Annotate the current instruction as having a bytecode pc.  If the current instruction
+	 is already annotated, insert a nop and annotate that.  We cannot have the same instruction
+	 address carry multiple annotations."
+	<inline: true>
+	self annotateBytecode: (self prevInstIsPCAnnotated
+								ifTrue: [self Nop]
+								ifFalse: [self Label]).
+]
+
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> anyReferencesToRegister: reg inTopNItems: n [
 	| regMask |
@@ -1248,10 +1259,10 @@ StackToRegisterMappingCogit >> doubleExtendedDoAnythingBytecode [
 			[2]	->	[(coInterpreter isReadMediatedContextInstVarIndex: byte2)
 						ifTrue: [self genPushMaybeContextReceiverVariable: byte2]
 						ifFalse: [self genPushReceiverVariable: byte2.
-								self annotateBytecode: self Label.
+								self annotateInstructionForBytecode.
 								^0]].
 			[3]	->	[self genPushLiteralIndex: byte2.
-					 self annotateBytecode: self Label.
+					 self annotateInstructionForBytecode.
 					 ^0].
 			[4]	->	[self genPushLiteralVariable: byte2.].
 			[7]	->	[self genStorePop: false LiteralVariable: byte2.
@@ -4223,7 +4234,7 @@ StackToRegisterMappingCogit >> ssPushAnnotatedConstant: literal [
 		spilled: false;
 		constant: literal;
 		bcptr: bytecodePC.
-	self annotateBytecode: self Label.
+	self annotateInstructionForBytecode.
 	^0
 ]
 
