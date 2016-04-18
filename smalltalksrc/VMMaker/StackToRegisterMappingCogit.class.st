@@ -953,17 +953,6 @@ StackToRegisterMappingCogit >> allocateRegNotConflictingWith: regMask [
 	^ reg
 ]
 
-{ #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> annotateBytecodeIfAnnotated: aSimStackEntry [
-	<var: #aSimStackEntry type: #'CogSimStackEntry *'>
-	<inline: false>
-	aSimStackEntry annotateUse ifTrue:
-		[self annotateBytecode: (self prevInstIsPCAnnotated
-									ifTrue: [self Nop]
-									ifFalse: [self Label]).
-		 aSimStackEntry annotateUse: false]
-]
-
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> anyReferencesToRegister: reg inTopNItems: n [
 	| regMask |
@@ -1259,10 +1248,10 @@ StackToRegisterMappingCogit >> doubleExtendedDoAnythingBytecode [
 			[2]	->	[(coInterpreter isReadMediatedContextInstVarIndex: byte2)
 						ifTrue: [self genPushMaybeContextReceiverVariable: byte2]
 						ifFalse: [self genPushReceiverVariable: byte2.
-								self ssTop annotateUse: true.
+								self annotateBytecode: self Label.
 								^0]].
 			[3]	->	[self genPushLiteralIndex: byte2.
-					 self ssTop annotateUse: true.
+					 self annotateBytecode: self Label.
 					 ^0].
 			[4]	->	[self genPushLiteralVariable: byte2.].
 			[7]	->	[self genStorePop: false LiteralVariable: byte2.
@@ -1971,11 +1960,6 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 		["Must arrange there's a fixup at the target whether it is jumped to or
 		  not so that the simStackPtr can be kept correct."
 		 fixup := self ensureFixupAt: targetBytecodePC - initialPC.
-		 "Must enter any annotatedConstants into the map"
-		 desc annotateUse ifTrue:
-			[self annotateBytecode: (self prevInstIsPCAnnotated
-											ifTrue: [self Nop]
-											ifFalse: [self Label])].
 		 "Must annotate the bytecode for correct pc mapping."
 		 self annotateBytecode: (desc constant = boolean
 									ifTrue: [self Jump: fixup]
@@ -2216,7 +2200,6 @@ StackToRegisterMappingCogit >> genPICMissTrampolineFor: numArgs [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genPopStackBytecode [
-	self annotateBytecodeIfAnnotated: self ssTop.
 	self ssTop spilled ifTrue:
 		[self AddCq: objectMemory wordSize R: SPReg].
 	self ssPop: 1.
@@ -2602,7 +2585,7 @@ StackToRegisterMappingCogit >> genSistaExtStoreLiteralVariableBytecodePopBoolean
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 	| primDescriptor rcvrIsConst argIsConst rcvrIsInt argIsInt rcvrInt argInt result
-	 jumpNotSmallInts jumpContinue annotateInst instToAnnotate index |
+	 jumpNotSmallInts jumpContinue index |
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
 	<var: #jumpContinue type: #'AbstractInstruction *'>
@@ -2622,10 +2605,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 			[AndRR]	-> [result := rcvrInt bitAnd: argInt].
 			[OrRR]	-> [result := rcvrInt bitOr: argInt] }.
 		(objectMemory isIntegerValue: result) ifTrue:
-			["Must enter any annotatedConstants into the map"
-			 self annotateBytecodeIfAnnotated: (self ssValue: 1).
-			 self annotateBytecodeIfAnnotated: self ssTop.
-			 "Must annotate the bytecode for correct pc mapping."
+			["Must annotate the bytecode for correct pc mapping."
 			^self ssPop: 2; ssPushAnnotatedConstant: (objectMemory integerObjectOf: result)].
 		^self genSpecialSelectorSend].
 
@@ -2643,7 +2623,6 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 		ifTrue:
 			[self ssFlushTo: simStackPtr - 2.
 			 (self ssValue: 1) popToReg: ReceiverResultReg.
-			 annotateInst := self ssTop annotateUse.
 			 self ssPop: 2.
 			 self MoveR: ReceiverResultReg R: TempReg]
 		ifFalse:
@@ -2655,7 +2634,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 	primDescriptor opcode caseOf: {
 		[AddRR] -> [argIsInt
 						ifTrue:
-							[instToAnnotate := self AddCq: argInt - ConstZero R: ReceiverResultReg.
+							[self AddCq: argInt - ConstZero R: ReceiverResultReg.
 							 jumpContinue := self JumpNoOverflow: 0.
 							 "overflow; must undo the damage before continuing"
 							 self SubCq: argInt - ConstZero R: ReceiverResultReg]
@@ -2671,7 +2650,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 									 objectRepresentation genSetSmallIntegerTagsIn: ReceiverResultReg]]].
 		[SubRR] -> [argIsInt
 						ifTrue:
-							[instToAnnotate := self SubCq: argInt - ConstZero R: ReceiverResultReg.
+							[self SubCq: argInt - ConstZero R: ReceiverResultReg.
 							 jumpContinue := self JumpNoOverflow: 0.
 							 "overflow; must undo the damage before continuing"
 							 self AddCq: argInt - ConstZero R: ReceiverResultReg]
@@ -2683,17 +2662,16 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 							 self AddR: Arg0Reg R: ReceiverResultReg.
 							 objectRepresentation genSetSmallIntegerTagsIn: Arg0Reg]].
 		[AndRR] -> [argIsInt
-						ifTrue: [instToAnnotate := self AndCq: argInt R: ReceiverResultReg]
+						ifTrue: [self AndCq: argInt R: ReceiverResultReg]
 						ifFalse: [self AndR: Arg0Reg R: ReceiverResultReg].
 					jumpContinue := self Jump: 0].
 		[OrRR]	-> [argIsInt
-						ifTrue: [instToAnnotate := self OrCq: argInt R: ReceiverResultReg]
+						ifTrue: [self OrCq: argInt R: ReceiverResultReg]
 						ifFalse: [self OrR: Arg0Reg R: ReceiverResultReg].
 					jumpContinue := self Jump: 0] }.
 	jumpNotSmallInts jmpTarget: self Label.
 	argIsInt ifTrue:
-		[annotateInst ifTrue: [self annotateBytecode: instToAnnotate].
-		 self MoveCq: argInt R: Arg0Reg].
+		[self MoveCq: argInt R: Arg0Reg].
 	index := byte0 - self firstSpecialSelectorBytecodeOffset.
 	self genMarshalledSend: index negated - 1 numArgs: 1 sendTable: ordinarySendTrampolines.
 	jumpContinue jmpTarget: self Label.
@@ -2721,7 +2699,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorClass [
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor
-	  rcvrIsInt argIsInt argInt jumpNotSmallInts inlineCAB annotateInst index |
+	  rcvrIsInt argIsInt argInt jumpNotSmallInts inlineCAB index |
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
@@ -2750,7 +2728,6 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	argIsInt
 		ifTrue:
 			[(self ssValue: 1) popToReg: ReceiverResultReg.
-			 annotateInst := self ssTop annotateUse.
 			 self ssPop: 2.
 			 self MoveR: ReceiverResultReg R: TempReg]
 		ifFalse:
@@ -2760,9 +2737,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 							ifTrue: [objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg]
 							ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: ReceiverResultReg andScratch: TempReg scratch: ClassReg].
 	argIsInt
-		ifTrue: [annotateInst
-					ifTrue: [self annotateBytecode: (self CmpCq: argInt R: ReceiverResultReg)]
-					ifFalse: [self CmpCq: argInt R: ReceiverResultReg]]
+		ifTrue: [self CmpCq: argInt R: ReceiverResultReg]
 		ifFalse: [self CmpR: Arg0Reg R: ReceiverResultReg].
 	"Cmp is weird/backwards so invert the comparison.  Further since there is a following conditional
 	 jump bytecode define non-merge fixups and leave the cond bytecode to set the mergeness."
@@ -2891,9 +2866,6 @@ StackToRegisterMappingCogit >> genStaticallyResolvedSpecialSelectorComparison [
 		[JumpGreaterOrEqual]	-> [result := rcvrInt >= argInt].
 		[JumpZero]				-> [result := rcvrInt = argInt].
 		[JumpNonZero]			-> [result := rcvrInt ~= argInt] }.
-	 "Must enter any annotatedConstants into the map"
-	 self annotateBytecodeIfAnnotated: (self ssValue: 1).
-	 self annotateBytecodeIfAnnotated: self ssTop.
 	 "Must annotate the bytecode for correct pc mapping."
 	 self ssPop: 2.
 	 ^self ssPushAnnotatedConstant: (result
@@ -3433,7 +3405,6 @@ StackToRegisterMappingCogit >> initSimStackForFramefulMethod: startpc [
 	simSelf
 		type: SSBaseOffset;
 		spilled: true;
-		annotateUse: false;
 		register: FPReg;
 		offset: FoxMFReceiver.
 	optStatus 
@@ -3448,7 +3419,6 @@ StackToRegisterMappingCogit >> initSimStackForFramefulMethod: startpc [
 		desc
 			type: SSBaseOffset;
 			spilled: true;
-			annotateUse: false;
 			register: FPReg;
 			offset: FoxCallerSavedIP + ((methodOrBlockNumArgs - i) * objectMemory wordSize);
 			bcptr: startpc].
@@ -3459,7 +3429,6 @@ StackToRegisterMappingCogit >> initSimStackForFramefulMethod: startpc [
 		desc
 			type: SSBaseOffset;
 			spilled: true;
-			annotateUse: false;
 			register: FPReg;
 			offset: FoxMFReceiver - (i - methodOrBlockNumArgs + 1 * objectMemory wordSize);
 			bcptr: startpc]
@@ -3475,7 +3444,6 @@ StackToRegisterMappingCogit >> initSimStackForFramelessBlock: startpc [
 	simSelf
 		type: SSRegister;
 		spilled: false;
-		annotateUse: false;
 		register: ReceiverResultReg.
 	optStatus
 		isReceiverResultRegLive: true;
@@ -3487,7 +3455,6 @@ StackToRegisterMappingCogit >> initSimStackForFramelessBlock: startpc [
 		desc
 			type: SSBaseOffset;
 			spilled: true;
-			annotateUse: false;
 			register: SPReg;
 			offset: ((backEnd hasLinkRegister
 								ifTrue: [methodOrBlockNumArgs - 1- i]
@@ -3503,7 +3470,6 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 	simSelf
 		type: SSRegister;
 		spilled: false;
-		annotateUse: false;
 		register: ReceiverResultReg.
 	optStatus
 		isReceiverResultRegLive: true;
@@ -3516,7 +3482,6 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 			 desc
 				type: SSRegister;
 				spilled: false;
-				annotateUse: false;
 				register: Arg0Reg;
 				bcptr: startpc.
 			 methodOrBlockNumArgs > 1 ifTrue:
@@ -3524,7 +3489,6 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 				 desc
 					type: SSRegister;
 					spilled: false;
-					annotateUse: false;
 					register: Arg1Reg;
 					bcptr: startpc]]
 		ifFalse:
@@ -3535,7 +3499,6 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 					type: SSBaseOffset;
 					register: SPReg;
 					spilled: true;
-					annotateUse: false;
 					offset: ((backEnd hasLinkRegister
 								ifTrue: [methodOrBlockNumArgs - 1- i]
 								ifFalse: [methodOrBlockNumArgs - i]) * objectMemory wordSize);
@@ -4257,10 +4220,10 @@ StackToRegisterMappingCogit >> ssPushAnnotatedConstant: literal [
 	self updateSimSpillBase.
 	self ssTop
 		type: SSConstant;
-		annotateUse: true;
 		spilled: false;
 		constant: literal;
 		bcptr: bytecodePC.
+	self annotateBytecode: self Label.
 	^0
 ]
 
@@ -4271,7 +4234,6 @@ StackToRegisterMappingCogit >> ssPushBase: reg offset: offset [
 	self ssTop
 		type: SSBaseOffset;
 		spilled: false;
-		annotateUse: false;
 		register: reg;
 		offset: offset;
 		bcptr: bytecodePC.
@@ -4285,7 +4247,6 @@ StackToRegisterMappingCogit >> ssPushConstant: literal [
 	self ssTop
 		type: SSConstant;
 		spilled: false;
-		annotateUse: false;
 		constant: literal;
 		bcptr: bytecodePC.
 	^0
@@ -4299,7 +4260,6 @@ StackToRegisterMappingCogit >> ssPushDesc: simStackEntry [
 				[simStackEntry type: SSBaseOffset].
 			simStackEntry
 				spilled: false;
-				annotateUse: false;
 				bcptr: bytecodePC.
 			 simStack
 				at: (simStackPtr := simStackPtr + 1)
@@ -4311,7 +4271,6 @@ StackToRegisterMappingCogit >> ssPushDesc: simStackEntry [
 						ifTrue: [SSBaseOffset]
 						ifFalse: [simStackEntry type]);
 				spilled: false;
-				annotateUse: false;
 				bcptr: bytecodePC].
 	self updateSimSpillBase.
 	^0
@@ -4324,7 +4283,6 @@ StackToRegisterMappingCogit >> ssPushRegister: reg [
 	self ssTop
 		type: SSRegister;
 		spilled: false;
-		annotateUse: false;
 		register: reg;
 		bcptr: bytecodePC.
 	^0
@@ -4351,9 +4309,8 @@ StackToRegisterMappingCogit >> ssStorePop: popBoolean toPreferredReg: preferredR
 	| actualReg |
 	actualReg := preferredReg.
 	self ssTop type = SSRegister ifTrue: 
-		[ self assert: self ssTop annotateUse not.
-		self assert: self ssTop spilled not.
-		actualReg := self ssTop register].
+		[self assert: self ssTop spilled not.
+		 actualReg := self ssTop register].
 	self ssStorePop: popBoolean toReg: actualReg. "generates nothing if ssTop is already in actualReg"
 	^ actualReg
 ]
