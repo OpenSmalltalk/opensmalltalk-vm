@@ -37,8 +37,7 @@ CogSimStackEntry class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 			value: (ivn = 'register' ifTrue: ['registerr'] ifFalse: [ivn]) "avoid reservedWord conflict"
 			value: (ivn caseOf: {
 						['type']			-> [#char].
-						['spilled']		-> [#char].
-						['annotateUse']	-> [#char]}
+						['spilled']		-> [#char].}
 					otherwise:
 						[#sqInt])]
 ]
@@ -46,20 +45,6 @@ CogSimStackEntry class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 { #category : #translation }
 CogSimStackEntry class >> structTypeName [
 	^'SimStackEntry'
-]
-
-{ #category : #accessing }
-CogSimStackEntry >> annotateUse [
-	"Answer the value of annotateUse"
-
-	^ annotateUse
-]
-
-{ #category : #accessing }
-CogSimStackEntry >> annotateUse: anObject [
-	"Set the value of annotateUse"
-
-	^annotateUse := anObject
 ]
 
 { #category : #accessing }
@@ -130,17 +115,6 @@ CogSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegister [
 			 offset := baseOffset.
 			 register := baseRegister].
 	spilled := true.
-	self maybeAnnotateUse: inst
-]
-
-{ #category : #'compile abstract instructions' }
-CogSimStackEntry >> maybeAnnotateUse: inst [
-	<inline: true>
-	annotateUse ifTrue:
-		[inst annotation = 0
-			ifTrue: [cogit annotateBytecode: inst]
-			ifFalse: [cogit annotateBytecode: cogit Label].
-		 annotateUse := false]
 ]
 
 { #category : #accessing }
@@ -178,7 +152,6 @@ CogSimStackEntry >> popToReg: reg [
 				[SSRegister]	-> [inst := reg ~= register
 												ifTrue: [cogit MoveR: register R: reg]
 												ifFalse: [cogit Label]] }].
-	self maybeAnnotateUse: inst
 ]
 
 { #category : #printing }
@@ -205,8 +178,6 @@ CogSimStackEntry >> printStateOn: aStream [
 							aStream print: offset] }.
 	(spilled and: [type ~= SSSpill]) ifTrue:
 		[aStream nextPutAll: ' (spilled)'].
-	annotateUse ifTrue:
-		[aStream nextPutAll: ' (ANNOTATED)'].
 	bcptr ifNotNil:
 		[aStream space; nextPut: ${; print: bcptr; nextPut: $}].
 	aStream nextPut: $)
@@ -264,8 +235,7 @@ CogSimStackEntry >> storeToReg: reg [
 		[SSConstant]	-> [inst := cogit genMoveConstant: constant R: reg].
 		[SSRegister]	-> [inst := reg ~= register
 										ifTrue: [cogit MoveR: register R: reg]
-										ifFalse: [cogit Label]] }.
-	self maybeAnnotateUse: inst
+										ifFalse: [cogit Label]] }
 ]
 
 { #category : #accessing }
