@@ -43,6 +43,11 @@ CogSimStackEntry class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 						[#sqInt])]
 ]
 
+{ #category : #translation }
+CogSimStackEntry class >> structTypeName [
+	^'SimStackEntry'
+]
+
 { #category : #accessing }
 CogSimStackEntry >> annotateUse [
 	"Answer the value of annotateUse"
