@@ -46,7 +46,7 @@ CogRASSBytecodeFixup >> mergeSimStack: anObject [
 ]
 
 { #category : #'debug printing' }
-CogRASSBytecodeFixup >> printMergeSimStack [
+CogRASSBytecodeFixup >> printSimStack [
 	<doNotGenerate>
 	self notAFixup ifFalse:
 		[cogit printSimStack: mergeSimStack toDepth: simStackPtr spillBase: -1]

@@ -163,7 +163,6 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: mergeSimStack [
 	from simStackPtr to methodOrBlockNumTemps, and if a conflict happen, we flush what remains
 	to be merged."
 	self flag: #TODO. "we could have a better algorithm with the current set of live registers to avoid flushing"
-	1halt.
 	simStackPtr to: methodOrBlockNumTemps by: -1 do:
 		[:i|
 			| currentSSEntry expectedSSEntry |
@@ -218,7 +217,6 @@ RegisterAllocatingCogit >> mergeWithFixupIfRequired: fixup [
 	fixup isNonMergeFixup ifTrue: [deadCode := false. ^ 0 ].
 
 	"cases 3 and 4"
-	1halt.
 	self assert: fixup isMergeFixup.
 	self traceMerge: fixup.
 	deadCode 
@@ -337,7 +335,7 @@ RegisterAllocatingCogit >> setMergeSimStackOf: fixup [
 
 { #category : #'simulation stack' }
 RegisterAllocatingCogit >> simStack: stack at: index [
-	<cmacro: '(index) (stack + (index))'>
+	<cmacro: '(stack,index) ((stack) + (index))'>
 	<returnTypeC: #'CogSimStackEntry *'>
 	^self addressOf: (stack at: index)
 ]

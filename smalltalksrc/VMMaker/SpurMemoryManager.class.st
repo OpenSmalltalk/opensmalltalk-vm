@@ -696,7 +696,6 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 		var: #freeListsMask type: #usqInt;
 		var: #freeLists type: #'sqInt *';
 		var: #objStackInvalidBecause type: #'char *';
-		var: #highestObjects type: #SpurCircularBuffer;
 		var: #unscannedEphemerons type: #SpurContiguousObjStack;
 		var: #heapGrowthToSizeGCRatio type: #float;
 		var: #heapSizeAtPreviousGC type: #usqInt;
