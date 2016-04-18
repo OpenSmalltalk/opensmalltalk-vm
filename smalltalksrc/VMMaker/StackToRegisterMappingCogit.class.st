@@ -127,7 +127,7 @@ Class {
 { #category : #translation }
 StackToRegisterMappingCogit class >> ancilliaryClasses: options [
 	^(super ancilliaryClasses: options),
-	  { self basicNew bytecodeFixupClass. self basicNew simStackEntryClass. CogSSOptStatus }
+	  { self basicNew simStackEntryClass. self basicNew bytecodeFixupClass. CogSSOptStatus }
 ]
 
 { #category : #documentation }
@@ -209,7 +209,7 @@ StackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 		var: #realCECallCogCodePopReceiverArg1Arg0Regs
 			declareC: 'void (*realCECallCogCodePopReceiverArg1Arg0Regs)(void)';
 		var: 'simStack'
-			declareC: 'CogSimStackEntry simStack[', self simStackSlots asString, ']';
+			declareC: 'SimStackEntry simStack[', self simStackSlots asString, ']';
 		var: 'simSelf'
 			type: #CogSimStackEntry;
 		var: #optStatus
@@ -602,7 +602,12 @@ StackToRegisterMappingCogit class >> initializeWithOptions: optionsDictionary [
 
 { #category : #translation }
 StackToRegisterMappingCogit class >> isAcceptableAncilliaryClass: aClass [
-	^true
+	^(aClass includesBehavior: CogBytecodeFixup)
+		ifTrue: [aClass == self basicNew bytecodeFixupClass]
+		ifFalse:
+			[(aClass includesBehavior: CogSimStackEntry)
+				ifTrue: [aClass == self basicNew simStackEntryClass]
+				ifFalse: [true]]
 ]
 
 { #category : #translation }
@@ -1278,7 +1283,7 @@ StackToRegisterMappingCogit >> doubleExtendedDoAnythingBytecode [
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> duplicateTopBytecode [
 	| desc |
-	<var: #desc type: #CogSimStackEntry>
+	<var: #desc type: #SimStackEntry>
 	desc := self ssTopDescriptor.
 	^self ssPushDesc: desc
 ]
@@ -4288,7 +4293,7 @@ StackToRegisterMappingCogit >> ssPushConstant: literal [
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssPushDesc: simStackEntry [
-	<var: #simStackEntry type: #CogSimStackEntry>
+	<var: #simStackEntry type: #SimStackEntry>
 	self cCode:
 			[simStackEntry type = SSSpill ifTrue:
 				[simStackEntry type: SSBaseOffset].
@@ -4372,7 +4377,7 @@ StackToRegisterMappingCogit >> ssTop [
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssTopDescriptor [
-	<returnTypeC: #CogSimStackEntry>
+	<returnTypeC: #SimStackEntry>
 	^simStack at: simStackPtr
 ]
 
