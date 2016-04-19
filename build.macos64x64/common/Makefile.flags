@@ -14,7 +14,7 @@ TARGET_VERSION_MIN:=10.6
 CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 \
 		-arch $(TARGET_ARCH) \
 		-mmacosx-version-min=$(TARGET_VERSION_MIN) -msse4.2 \
-			-fvisibility=hidden -fwrapv \
+			-fvisibility=default -fwrapv \
 			-fmacro-backtrace-limit=0 -fdiagnostics-show-note-include-stack \
 			-fmessage-length=0 -fpascal-strings -fasm-blocks -fstrict-aliasing \
 		-isysroot $(SDK) \

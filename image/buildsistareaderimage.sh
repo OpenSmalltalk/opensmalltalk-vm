@@ -10,7 +10,11 @@
 cp -p trunk50.image sistareader.image
 cp -p trunk50.changes sistareader.changes
 
+if test -n "$1"; then
+	VM="$1"
+else
 . ./getGoodSpurVM.sh
+fi
 
 echo $VM sistareader.image LoadSistaSupport.st
 $VM sistareader.image LoadSistaSupport.st

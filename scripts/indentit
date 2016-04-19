@@ -1,0 +1,2 @@
+#!/bin/bash
+exec indent -bad -bap -br -nce -cli0 -di8 -brs $@

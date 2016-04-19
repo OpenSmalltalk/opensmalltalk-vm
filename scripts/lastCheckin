@@ -1,2 +1,2 @@
-#!/bin/sh
-svn log -rBASE `dirname $0`/../platforms/Cross/vm/sqSCCSVersion.h
+#!/bin/bash
+svn log `dirname $0`/../platforms/Cross/vm/sqSCCSVersion.h | more
