@@ -3708,6 +3708,7 @@ InterpreterPrimitives >> primitiveSine [
 
 { #category : #'indexing primitives' }
 InterpreterPrimitives >> primitiveSize [
+	<accessorDepth: 0>
 	| rcvr hdr fmt fixedFields totalLength |
 	rcvr := self stackTop.
 	((objectMemory isImmediate: rcvr) "Integers are not indexable"
