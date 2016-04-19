@@ -3792,6 +3792,14 @@ CCodeGenerator >> maybeBreakForTestToInline: aNodeOrSelector in: aTMethod [
 		[aTMethod halt: aTMethod selector, ' ', selector]
 ]
 
+{ #category : #'C translation support' }
+CCodeGenerator >> maybeEmitPrimitiveFailureDefineFor: selector on: aStream [
+	 (vmClass notNil
+	 and: [(vmClass inheritsFrom: InterpreterPrimitives)
+	 and: [(vmClass primitiveTable includes: selector)]]) ifTrue:
+		[aStream nextPutAll: '#else\# define ' withCRs; nextPutAll: selector; nextPutAll: ' (void (*)(void))0\' withCRs]
+]
+
 { #category : #'C code generator' }
 CCodeGenerator >> maybePutPreambleFor: aClass on: aStream [
 	aClass preambleCCode ifNotNil:

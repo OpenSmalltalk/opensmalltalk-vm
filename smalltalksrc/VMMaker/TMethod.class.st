@@ -587,7 +587,9 @@ TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: isPr
 		aStream nextPut: $)].
 	isPrototype ifTrue:
 		[aStream nextPut: $;; cr.
-		 self terminateConditionalDefineFor: compileTimeOptionPragmas on: aStream].
+		 compileTimeOptionPragmas isEmpty ifFalse:
+			[aCodeGen maybeEmitPrimitiveFailureDefineFor: selector on: aStream.
+			 self terminateConditionalDefineFor: compileTimeOptionPragmas on: aStream]].
 	^compileTimeOptionPragmas notEmpty
 ]
 
