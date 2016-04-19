@@ -1970,7 +1970,7 @@ InterpreterPrimitives >> primitiveGetAttribute [
 InterpreterPrimitives >> primitiveGetImmutability [
 	<option: #IMMUTABILITY>
 	| rcvr |
-	rcvr := self stackValue: argumentCount.
+	rcvr := self stackValue: 0.
 	self pop: argumentCount + 1 thenPushBool: (objectMemory isOopImmutable: rcvr)
 ]
 
@@ -3511,7 +3511,7 @@ InterpreterPrimitives >> primitiveSetIdentityHash [
 InterpreterPrimitives >> primitiveSetImmutability [
 	<option: #IMMUTABILITY>
 	| rcvr wasImmutable |
-	 rcvr := self stackValue: argumentCount.
+	 rcvr := self stackValue: 1.
 	 (objectMemory isImmediate: rcvr) ifTrue:
 		[^self primitiveFailFor: PrimErrBadReceiver].
 	 wasImmutable := objectMemory isObjImmutable: rcvr.
