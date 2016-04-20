@@ -91,7 +91,7 @@ Class {
 	#classVars : [
 		'DirNames'
 	],
-	#category : 'VMMaker-Building'
+	#category : #'VMMaker-Building'
 }
 
 { #category : #initialisation }
@@ -559,6 +559,18 @@ VMMaker class >> generateSqueakSpurCogVM [
 ]
 
 { #category : #configurations }
+VMMaker class >> generateSqueakSpurRegisterCogVM [
+	"No primitives since we can use those for the Cog VM"
+	^VMMaker
+		generate: CoInterpreter
+		and: RegisterAllocatingCogit
+		with: #(ObjectMemory Spur32BitCoMemoryManager)
+		to: (FileDirectory default pathFromURI: self sourceTree, '/spurregsrc')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		including:#()
+]
+
+{ #category : #configurations }
 VMMaker class >> generateSqueakSpurStack64VM [
 	"No primitives since we can use those from the Cog VM"
 	^VMMaker
@@ -844,6 +856,14 @@ VMMaker >> buildCodeGeneratorForCogit: cogitClass includeAPIMethods: getAPIMetho
 	cogitClasses := OrderedCollection withAll: (cogitClass withAllSuperclasses copyUpThrough: VMClass) reverse.
 	cogitClasses addAllLast: ((cogitClass ancilliaryClasses: optionsDictionary) reject: [:class| class isStructClass]).
 	cogitClasses do: [:cgc| cg addClass: cgc].
+	"Now make sure to add struct classes that the most specific subclasses specify.
+	 This makes sure that struct classes are ordered as the most specific cogitClass desires.
+	 This must happen for references between the struct classes to be resolved in a specific order."
+	cogitClasses := OrderedCollection with: cogitClass with: cogitClass objectRepresentationClass.
+	cogitClasses addAll: ((cogitClass ancilliaryClasses: optionsDictionary) reject:
+							[:class|
+							 class isStructClass
+							 or: [cogitClass objectRepresentationClass includesBehavior: class]]).
 	cg addStructClasses: (cg structClassesForTranslationClasses: cogitClasses).
 
 	getAPIMethods ifTrue:

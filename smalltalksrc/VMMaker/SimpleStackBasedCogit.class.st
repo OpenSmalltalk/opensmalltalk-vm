@@ -16,7 +16,7 @@ Class {
 		'VMMethodCacheConstants',
 		'VMObjectIndices'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -1308,7 +1308,7 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 
 	cacheBaseReg := NoReg.
 	(backEnd isWithinMwOffsetRange: coInterpreter methodCacheAddress) ifFalse:
-		[self MoveCq: coInterpreter methodCacheAddress R: (cacheBaseReg := Scratch0Reg)].
+		[self MoveCq: coInterpreter methodCacheAddress R: (cacheBaseReg := Extra0Reg)].
 
 	"Do first of three probes.  See CoInterpreter>>lookupInMethodCacheSel:classTag:"
 	jumpSelectorMiss := self compileOpenPICMethodCacheProbeFor: selector withShift: 0 baseRegOrNone: cacheBaseReg.
@@ -2194,7 +2194,7 @@ SimpleStackBasedCogit >> genLookupForPerformNumArgs: numArgs [
 
 	cacheBaseReg := NoReg.
 	(backEnd isWithinMwOffsetRange: coInterpreter methodCacheAddress) ifFalse:
-		[self MoveCq: coInterpreter methodCacheAddress R: (cacheBaseReg := Scratch0Reg)].
+		[self MoveCq: coInterpreter methodCacheAddress R: (cacheBaseReg := Extra0Reg)].
 
 	"Do first of three probes.  See CoInterpreter>>lookupInMethodCacheSel:classTag:"
 	jumpSelectorMiss := self compilePerformMethodCacheProbeFor: Arg0Reg withShift: 0 baseRegOrNone: cacheBaseReg.
@@ -3476,6 +3476,12 @@ SimpleStackBasedCogit >> generateTracingTrampolines [
 		 ceTraceStoreTrampoline := self simulatedTrampolineFor: #ceShortCutTraceStore:]
 ]
 
+{ #category : #'register management' }
+SimpleStackBasedCogit >> isCallerSavedReg: reg [
+	<inline: true>
+	^self register: reg isInMask: callerSavedRegMask
+]
+
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> marshallAbsentReceiverSendArguments: numArgs [
 	self assert: needsFrame.
@@ -3644,8 +3650,8 @@ SimpleStackBasedCogit >> returnRegForStoreCheck [
 	 caller-saved we use the fact that ceStoreCheck: answers its argument to
 	 reload ReceiverResultReg cheaply.  Otherwise we don't care about the result
 	 and use the cResultRegister, effectively a no-op (see compileTrampoline...)"
-
-	^(self register: ReceiverResultReg isInMask: callerSavedRegMask)
+	<inline: true>
+	^(self isCallerSavedReg: ReceiverResultReg)
 		ifTrue: [ReceiverResultReg]
 		ifFalse: [backEnd cResultRegister]
 ]

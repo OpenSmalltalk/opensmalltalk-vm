@@ -1324,16 +1324,19 @@ Cogit class >> testPCMappingSelect: aBlock options: optionsDictionaryOrArray [
 		(m isQuick not
 		 and: [aBlock value: m]) ifTrue:
 			[Transcript nextPut: $.; flush.
-			 [coInterpreter.
-			  cm := cogit
+			 cm := cogit
 						cog: (coInterpreter oopForObject: m)
 						selector: (coInterpreter oopForObject: m selector).
-			   cm isNil and: [coInterpreter isCogCompiledCodeCompactionCalledFor]] whileTrue:
+			  cm ifNil:
 				[cogit methodZone clearCogCompiledCode.
-				 coInterpreter clearCogCompiledCodeCompactionCalledFor.
-				 coInterpreter initializeObjectMap].
-			 cogit testPCMappingForCompiledMethod: m cogMethod: cm].
-		 false]
+				 coInterpreter initializeObjectMap.
+				 cm := cogit
+							cog: (coInterpreter oopForObject: m)
+							selector: (coInterpreter oopForObject: m selector).
+				cm ifNil: [Transcript show: 'After 1 Cog compiled code compaction, still not able to generate the cog method...' ] ].
+			  cm ifNotNil:
+				[cogit testPCMappingForCompiledMethod: m cogMethod: cm]].
+		 false] 
 ]
 
 { #category : #documentation }
@@ -2576,7 +2579,7 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes [
 			[abstractOpcodes := CArrayAccessor on:
 									 ((1 to: numAbstractOpcodes) collect: [:ign| CogCompilerClass for: self]).
 			 fixups := CArrayAccessor on:
-						((1 to: numAbstractOpcodes) collect: [:ign| self bytecodeFixupClass new])].
+						((1 to: numAbstractOpcodes) collect: [:ign| self bytecodeFixupClass for: self])].
 	self zeroOpcodeIndex.
 	labelCounter := 0
 ]
@@ -2609,7 +2612,7 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes i
 			[abstractOpcodes := CArrayAccessor on:
 									 ((1 to: numAbstractOpcodes) collect: [:ign| CogCompilerClass for: self]).
 			 fixups := CArrayAccessor on:
-						((1 to: numAbstractOpcodes) collect: [:ign| self bytecodeFixupClass new])].
+						((1 to: numAbstractOpcodes) collect: [:ign| self bytecodeFixupClass for: self])].
 	self zeroOpcodeIndex.
 	labelCounter := 0
 ]
@@ -5486,7 +5489,7 @@ Cogit >> followForwardedLiteralsIn: cogMethod [
 	<api>
 	<option: #SpurObjectMemory>
 	<var: #cogMethod type: #'CogMethod *'>
-	self assert: (objectMemory isForwarded: cogMethod methodObject) not.
+	self assert: (cogMethod cmType ~= CMMethod or: [(objectMemory isForwarded: cogMethod methodObject) not]).
 	(objectMemory shouldRemapOop: cogMethod selector) ifTrue:
 		[cogMethod selector: (objectMemory remapObj: cogMethod selector).
 		 (objectMemory isYoung: cogMethod selector) ifTrue:
@@ -10593,6 +10596,16 @@ Cogit >> singleStep [
 Cogit >> singleStep: aBoolean [
 	<doNotGenerate>
 	singleStep := aBoolean
+]
+
+{ #category : #'translation support' }
+Cogit >> sizeof: aCType [
+	<doNotGenerate>
+	| bfc |
+	aCType == #BytecodeFixup ifTrue:
+		[bfc := self class bytecodeFixupClass.
+		 ^bfc alignedByteSizeOf: bfc forClient: self].
+	^super sizeof: aCType
 ]
 
 { #category : #'compile abstract instructions' }

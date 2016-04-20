@@ -71,7 +71,7 @@ Class {
 		'XMM8L',
 		'XMM9L'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #accessing }
@@ -188,13 +188,13 @@ CogX64Compiler class >> initializeAbstractRegisters [
 	Arg0Reg				:= RDI. "So as to agree with C ABI arg 0"
 	Arg1Reg				:= RSI. "So as to agree with C ABI arg 1"
 	VarBaseReg			:= RBX. "Must be callee saved"
-	"R8 is either RISCTempReg or Scratch6Reg depending on subclass."
-	Scratch0Reg			:= R10.
-	Scratch1Reg			:= R11.
-	Scratch2Reg			:= R12.
-	Scratch3Reg			:= R13.
-	Scratch4Reg			:= R14.
-	Scratch5Reg			:= R15.
+	"R8 is either RISCTempReg or Extra6Reg depending on subclass."
+	Extra0Reg				:= R10.
+	Extra1Reg				:= R11.
+	Extra2Reg				:= R12.
+	Extra3Reg				:= R13.
+	Extra4Reg				:= R14.
+	Extra5Reg				:= R15.
 
 	DPFPReg0				:= XMM0L.
 	DPFPReg1				:= XMM1L.
@@ -229,6 +229,27 @@ CogX64Compiler class >> machineCodeDeclaration [
 CogX64Compiler class >> wordSize [
 	"This is a 64-bit ISA"
 	^8
+]
+
+{ #category : #'register allocation' }
+CogX64Compiler >> availableRegisterOrNoneFor: liveRegsMask [
+	"Answer an unused abstract register in the liveRegMask.
+	 Subclasses with more registers can override to answer them.
+	 N.B. Do /not/ allocate TempReg."
+	<returnTypeC: #sqInt>
+	(cogit register: Extra5Reg isInMask: liveRegsMask) ifFalse:
+		[^Extra5Reg].
+	(cogit register: Extra4Reg isInMask: liveRegsMask) ifFalse:
+		[^Extra4Reg].
+	(cogit register: Extra3Reg isInMask: liveRegsMask) ifFalse:
+		[^Extra3Reg].
+	(cogit register: Extra2Reg isInMask: liveRegsMask) ifFalse:
+		[^Extra2Reg].
+	(cogit register: Extra1Reg isInMask: liveRegsMask) ifFalse:
+		[^Extra1Reg].
+	(cogit register: Extra0Reg isInMask: liveRegsMask) ifFalse:
+		[^Extra0Reg].
+	^super availableRegisterOrNoneFor: liveRegsMask
 ]
 
 { #category : #accessing }
