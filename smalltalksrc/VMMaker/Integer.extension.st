@@ -85,6 +85,12 @@ Integer >> byteSwap64 [
 	  ((self >> 56) bitAnd: 16rFF))))))))
 ]
 
+{ #category : #'*VMMaker-plugin generation' }
+Integer class >> ccg: cg prolog: aBlock expr: aString index: anInteger [
+
+	^cg ccgLoad: aBlock expr: aString asKindOfIntegerFrom: anInteger
+]
+
 { #category : #'*VMMaker-interpreter simulator' }
 Integer >> coerceTo: cTypeString sim: interpreter [
 

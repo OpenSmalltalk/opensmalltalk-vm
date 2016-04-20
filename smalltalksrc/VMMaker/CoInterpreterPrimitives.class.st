@@ -114,29 +114,12 @@ CoInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 ]
 
 { #category : #'method introspection support' }
-CoInterpreterPrimitives >> pcDataFor: cogMethod [
-	<var: #cogMethod type: #'CogMethod *'>
-	| cm nSlots nEntries data |
-	cm := cogMethod methodObject.
-	nSlots := (objectMemory byteSizeOf: cm) - (self startPCOfMethod: cm) * 2 + objectMemory minSlotsForShortening.
-	data := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: nSlots.
-	data ifNil: [^-1].
-	nEntries := cogit mapPCDataFor: cogMethod into: data.
-	nEntries = 0 ifTrue:
-		[^0].
-	nEntries < nSlots ifTrue:
-		[objectMemory shorten: data toIndexableSize: nEntries].
-	^data
-]
-
-{ #category : #'method introspection support' }
 CoInterpreterPrimitives >> picDataFor: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
 	| cm nSlots nEntries data |
 	cm := cogMethod methodObject.
 	nSlots := (objectMemory byteSizeOf: cm) - (self startPCOfMethod: cm) + objectMemory minSlotsForShortening.
 	data := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: nSlots.
-	data ifNil: [^-1].
 	nEntries := cogit picDataFor: cogMethod into: data.
 	nEntries = 0 ifTrue:
 		[^0].
@@ -338,23 +321,6 @@ CoInterpreterPrimitives >> primitiveLongRunningPrimitiveSemaphore [
 		[self siglong: reenterInterpreter jmp: ReturnToInterpreter]
 ]
 
-{ #category : #'method introspection primitives' }
-CoInterpreterPrimitives >> primitiveMethodPCData [
-	<export: true>
-	| methodReceiver data |
-	argumentCount ~= 0 ifTrue:
-		[^self primitiveFailFor: PrimErrBadNumArgs].
-	methodReceiver := self stackTop.
-	data := 0.
-	(self methodHasCogMethod: methodReceiver) ifTrue:
-		[data := self pcDataFor: (self cogMethodOf: methodReceiver).
-		 data = -1 ifTrue:
-			[^self primitiveFailFor: PrimErrNoMemory]].
-	data = 0 ifTrue:
-		[data := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 0].
-	self pop: 1 thenPush: data
-]
-
 { #category : #'indexing primitives' }
 CoInterpreterPrimitives >> primitiveMethodXray [
 	"Lift the veil from a method and answer an integer describing the interior state
@@ -495,7 +461,7 @@ CoInterpreterPrimitives >> primitiveProfileSemaphore [
 { #category : #'method introspection primitives' }
 CoInterpreterPrimitives >> primitiveResetCountersInMethod [
 	<export: true>
-	<option: #SistaCogit>
+	<option: #SistaStackToRegisterMappingCogit>
 	| methodReceiver |
 	argumentCount ~= 0 ifTrue:
 		[^self primitiveFailFor: PrimErrBadNumArgs].
@@ -562,7 +528,7 @@ CoInterpreterPrimitives >> primitiveSignal [
 { #category : #'method introspection primitives' }
 CoInterpreterPrimitives >> primitiveSistaMethodPICAndCounterData [
 	<export: true>
-	<option: #SistaCogit>
+	<option: #SistaStackToRegisterMappingCogit>
 	| methodReceiver data |
 	argumentCount ~= 0 ifTrue:
 		[^self primitiveFailFor: PrimErrBadNumArgs].

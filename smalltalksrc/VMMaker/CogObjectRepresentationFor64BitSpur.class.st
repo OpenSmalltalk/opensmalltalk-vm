@@ -462,8 +462,8 @@ CogObjectRepresentationFor64BitSpur >> genGetSizeOf: sourceReg into: destReg for
 	cogit MoveR: scratchReg R: formatReg.
 	cogit CmpCq: ClassMethodContextCompactIndex R: scratchReg.
 	jumpIsContext := cogit JumpZero: 0.
-	self genGetClassObjectOfClassIndex: formatReg into: Extra0Reg scratchReg: scratchReg.
-	self genLoadSlot: InstanceSpecificationIndex sourceReg: Extra0Reg destReg: formatReg.
+	self genGetClassObjectOfClassIndex: formatReg into: Scratch0Reg scratchReg: scratchReg.
+	self genLoadSlot: InstanceSpecificationIndex sourceReg: Scratch0Reg destReg: formatReg.
 	self genConvertSmallIntegerToIntegerInReg: formatReg.
 	cogit
 		AndCq: objectMemory fixedFieldsOfClassFormatMask R: formatReg;
@@ -778,8 +778,8 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveAt [
 	cogit MoveR: TempReg R: formatReg.
 	cogit CmpCq: ClassMethodContextCompactIndex R: TempReg.
 	jumpIsContext := cogit JumpZero: 0.
-	self genGetClassObjectOfClassIndex: formatReg into: Extra0Reg scratchReg: TempReg.
-	self genLoadSlot: InstanceSpecificationIndex sourceReg: Extra0Reg destReg: formatReg.
+	self genGetClassObjectOfClassIndex: formatReg into: Scratch0Reg scratchReg: TempReg.
+	self genLoadSlot: InstanceSpecificationIndex sourceReg: Scratch0Reg destReg: formatReg.
 	self genConvertSmallIntegerToIntegerInReg: formatReg.
 	cogit
 		AndCq: objectMemory fixedFieldsOfClassFormatMask R: formatReg;
@@ -898,8 +898,8 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveAtPut [
 	cogit CmpCq: ClassMethodContextCompactIndex R: formatReg.
 	jumpIsContext := cogit JumpZero: 0.
 	"get # fixed fields in formatReg"
-	self genGetClassObjectOfClassIndex: formatReg into: Extra0Reg scratchReg: TempReg.
-	self genLoadSlot: InstanceSpecificationIndex sourceReg: Extra0Reg destReg: formatReg.
+	self genGetClassObjectOfClassIndex: formatReg into: Scratch0Reg scratchReg: TempReg.
+	self genLoadSlot: InstanceSpecificationIndex sourceReg: Scratch0Reg destReg: formatReg.
 	self genConvertSmallIntegerToIntegerInReg: formatReg.
 	cogit AndCq: objectMemory fixedFieldsOfClassFormatMask R: formatReg.
 	cogit SubR: formatReg R: ClassReg.
@@ -1197,7 +1197,7 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveMirrorNewWithArg [
 	"header will contain classIndex/class's hash & format & numSlots/fixed size"
 	headerReg := SendNumArgsReg.
 	"Assume there's an available scratch register on 64-bit machines.  This holds the saved numFixedFields and then the value to fill with"
-	fillReg := Extra0Reg.
+	fillReg := Scratch0Reg.
 	self assert: fillReg > 0.
 	"inst spec will hold class's instance specification and then byte size"
 	instSpecReg := byteSizeReg := ClassReg.
@@ -1470,7 +1470,7 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveNewWithArg [
 	"header will contain classIndex/class's hash & format & numSlots/fixed size"
 	headerReg := SendNumArgsReg.
 	"Assume there's an available scratch register on 64-bit machines.  This holds the saved numFixedFields and then the value to fill with"
-	fillReg := Extra0Reg.
+	fillReg := Scratch0Reg.
 	self assert: fillReg > 0.
 	"inst spec will hold class's instance specification and then byte size"
 	instSpecReg := byteSizeReg := ClassReg.
@@ -1923,7 +1923,7 @@ CogObjectRepresentationFor64BitSpur >> maybeGenerateSelectorIndexDereferenceRout
 	 It is called from the send trampolines.
 	 If the selector index is negative, convert it into a positive index into the
 	 special selectors array and index that.  Otherwise, index the current method.
-	 The routine uses Extra0Reg & Extra1Reg, which are available, since they
+	 The routine uses Scratch0Reg & Scratch1Reg, which are available, since they
 	 are not live at point of send."
 	| jumpNegative jumpNotBlock jumpFullBlock |
 	<var: 'jumpNegative' type: #'AbstractInstruction *'>
@@ -1933,38 +1933,38 @@ CogObjectRepresentationFor64BitSpur >> maybeGenerateSelectorIndexDereferenceRout
 	cogit CmpCq: 0 R: ClassReg.
 	jumpNegative := cogit JumpLess: 0.
 	cogit
-		MoveMw: FoxMethod r: FPReg R: Extra0Reg;
+		MoveMw: FoxMethod r: FPReg R: Scratch0Reg;
 		AddCq: 2 R: ClassReg; "Change selector index to 1-relative, skipping the method header"
-		TstCq: MFMethodFlagIsBlockFlag R: Extra0Reg.
+		TstCq: MFMethodFlagIsBlockFlag R: Scratch0Reg.
 	jumpNotBlock := cogit JumpZero: 0.
 	"If in a block, need to find the home method...  If using full blocks, need to test the cpicHasMNUCaseOrCMIsFullBlock bit"
-	cogit AndCq: methodZone alignment negated R: Extra0Reg.
+	cogit AndCq: methodZone alignment negated R: Scratch0Reg.
 	SistaV1BytecodeSet ifTrue:
 		[self bitAndByteOffsetOfIsFullBlockBitInto:
 			[:bitmask :byteOffset|
 			jumpFullBlock := cogit
-				MoveMb: byteOffset r: Extra0Reg R: Extra1Reg;
-				TstCq: bitmask R: Extra1Reg;
+				MoveMb: byteOffset r: Scratch0Reg R: Scratch1Reg;
+				TstCq: bitmask R: Scratch1Reg;
 				JumpNonZero: 0]].
 	cogit 
-		MoveM16: 0 r: Extra0Reg R: Extra1Reg;
-		SubR: Extra1Reg R: Extra0Reg.
+		MoveM16: 0 r: Scratch0Reg R: Scratch1Reg;
+		SubR: Scratch1Reg R: Scratch0Reg.
 	jumpNotBlock jmpTarget: cogit Label.
 	SistaV1BytecodeSet ifTrue:
 		[jumpFullBlock jmpTarget: jumpNotBlock getJmpTarget].
 	cogit "Now fetch the method object and index with the literal index to retrieve the selector"
-		AndCq: methodZone alignment negated R: Extra0Reg;
-		MoveMw: (cogit offset: CogMethod of: #methodObject) r: Extra0Reg R: Extra1Reg;
-		MoveXwr: ClassReg R: Extra1Reg R: ClassReg;
+		AndCq: methodZone alignment negated R: Scratch0Reg;
+		MoveMw: (cogit offset: CogMethod of: #methodObject) r: Scratch0Reg R: Scratch1Reg;
+		MoveXwr: ClassReg R: Scratch1Reg R: ClassReg;
 		RetN: 0.
 	jumpNegative jmpTarget: cogit Label.
 	cogit
 		NegateR: ClassReg;
 		LogicalShiftLeftCq: 1 R: ClassReg;
-		MoveAw: objectMemory specialObjectsArrayAddress R: Extra0Reg;
+		MoveAw: objectMemory specialObjectsArrayAddress R: Scratch0Reg;
 		SubCq: 1 R: ClassReg;
-		MoveMw: SpecialSelectors + 1 * objectMemory wordSize r: Extra0Reg R: Extra1Reg; "Index, including header size"
-		MoveXwr: ClassReg R: Extra1Reg R: ClassReg;
+		MoveMw: SpecialSelectors + 1 * objectMemory wordSize r: Scratch0Reg R: Scratch1Reg; "Index, including header size"
+		MoveXwr: ClassReg R: Scratch1Reg R: ClassReg;
 		RetN: 0.
 	ceDereferenceSelectorIndex := cogit methodZoneBase.
 	cogit

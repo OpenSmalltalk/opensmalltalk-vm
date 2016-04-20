@@ -1,11 +1,11 @@
 "
-A SistaCogit is a refinement of RegisterAllocatingCogit that generates code suitable for dynamic optimization by Sista, the Speculative Inlining Smalltalk Architecture, a project by Clément Bera and Eliot Miranda.  Sista is an optimizer that exists in the Smalltalk image, /not/ in the VM,  and optimizes by substituting normal bytecoded methods by optimized bytecoded methods that may use special bytecodes for which the Cogit can generate faster code.  These bytecodes eliminate overheads such as bounds checks or polymorphic code (indexing Array, ByteArray, String etc).  But the bulk of the optimization performed is in inlining blocks and sends for the common path.
+A SistaStackToRegisterMappingCogit is a refinement of StackToRegisterMappingCogit that generates code suitable for dynamic optimization by Sista, the Speculative Inlining Smalltalk Architecture, a project by Clément Bera and Eliot Miranda.  Sista is an optimizer that exists in the Smalltalk image, /not/ in the VM,  and optimizes by substituting normal bytecoded methods by optimized bytecoded methods that may use special bytecodes for which the Cogit can generate faster code.  These bytecodes eliminate overheads such as bounds checks or polymorphic code (indexing Array, ByteArray, String etc).  But the bulk of the optimization performed is in inlining blocks and sends for the common path.
 
-The basic scheme is that SistaCogit generates code containing performance counters.  When these counters trip, a callback into the image is performed, at which point Sista analyses some portion of the stack, looking at performance data for the methods on the stack, and optimises based on the stack and performance data.  Execution then resumes in the optimized code.
+The basic scheme is that SistaStackToRegisterMappingCogit generates code containing performance counters.  When these counters trip, a callback into the image is performed, at which point Sista analyses some portion of the stack, looking at performance data for the methods on the stack, and optimises based on the stack and performance data.  Execution then resumes in the optimized code.
 
-SistaCogit adds counters to conditional branches.  Each branch has an executed and a taken count, implemented at the two 16-bit halves of a single 32-bit word.  Each counter pair is initialized with initialCounterValue.  On entry to the branch the executed count is decremented and if the count goes below zero the ceMustBeBooleanAdd[True|False] trampoline called.  The trampoline distinguishes between true mustBeBoolean and counter trips because in the former the register temporarily holding the counter value will contain zero.  Then the condition is tested, and if the branch is taken the taken count is decremented.  The two counter values allow an optimizer to collect basic block execution paths and to know what are the ""hot"" paths through execution that are worth agressively optimizing.  Since conditional branches are about 1/6 as frequent as sends, and since they can be used to determine the hot path through code, they are a better choice to count than, for example, method or block entry.
+SistaStackToRegisterMappingCogit adds counters to conditional branches.  Each branch has an executed and a taken count, implemented at the two 16-bit halves of a single 32-bit word.  Each counter pair is initialized with initialCounterValue.  On entry to the branch the executed count is decremented and if the count goes below zero the ceMustBeBooleanAdd[True|False] trampoline called.  The trampoline distinguishes between true mustBeBoolean and counter trips because in the former the register temporarily holding the counter value will contain zero.  Then the condition is tested, and if the branch is taken the taken count is decremented.  The two counter values allow an optimizer to collect basic block execution paths and to know what are the ""hot"" paths through execution that are worth agressively optimizing.  Since conditional branches are about 1/6 as frequent as sends, and since they can be used to determine the hot path through code, they are a better choice to count than, for example, method or block entry.
 
-SistaCogit implements picDataFor:into: that fills an Array with the state of the counters in a method and the state of each linked send in a method.  This is used to implement a primitive used by the optimizer to answer the branch and send data for a method as an Array.
+SistaStackToRegisterMappingCogit implements picDataFor:into: that fills an Array with the state of the counters in a method and the state of each linked send in a method.  This is used to implement a primitive used by the optimizer to answer the branch and send data for a method as an Array.
 
 Instance Variables
 	counterIndex:			<Integer>
@@ -43,9 +43,11 @@ prevMapAbsPCMcpc
 
 "
 Class {
-	#name : #SistaCogit,
+	#name : #SistaStackToRegisterMappingCogit,
 	#superclass : #RegisterAllocatingCogit,
 	#instVars : [
+		'picDataIndex',
+		'picData',
 		'numCounters',
 		'counters',
 		'counterIndex',
@@ -64,7 +66,7 @@ Class {
 }
 
 { #category : #translation }
-SistaCogit class >> additionalHeadersDo: aBinaryBlock [
+SistaStackToRegisterMappingCogit class >> additionalHeadersDo: aBinaryBlock [
 	"Evaluate aBinaryBlock with the names and contents of
 	 any additional header files that need to be generated."
 	aBinaryBlock
@@ -73,17 +75,17 @@ SistaCogit class >> additionalHeadersDo: aBinaryBlock [
 ]
 
 { #category : #translation }
-SistaCogit class >> ancilliaryClasses: options [
+SistaStackToRegisterMappingCogit class >> ancilliaryClasses: options [
 	^(super ancilliaryClasses: options) copyWith: SistaCogMethod
 ]
 
 { #category : #translation }
-SistaCogit class >> declareCVarsIn: aCodeGen [
+SistaStackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 	aCodeGen var: 'counters' type: #usqInt
 ]
 
 { #category : #'class initialization' }
-SistaCogit class >> initializeWithOptions: optionsDictionary [
+SistaStackToRegisterMappingCogit class >> initializeWithOptions: optionsDictionary [
 
 	super initializeWithOptions: optionsDictionary.
 	CounterBytes := 4.
@@ -91,7 +93,7 @@ SistaCogit class >> initializeWithOptions: optionsDictionary [
 ]
 
 { #category : #accessing }
-SistaCogit class >> numTrampolines [
+SistaStackToRegisterMappingCogit class >> numTrampolines [
 	^super numTrampolines + 1
 
 	"Cogit withAllSubclasses collect: [:c| {c. (c instVarNames select: [:ea| ea beginsWith: 'ce']) size}]"
@@ -99,7 +101,7 @@ SistaCogit class >> numTrampolines [
 ]
 
 { #category : #'compile abstract instructions' }
-SistaCogit >> compileBlockBodies [
+SistaStackToRegisterMappingCogit >> compileBlockBodies [
 	"override to maintain counterIndex when recompiling blocks; sigh."
 	<inline: false>
 	| result compiledBlocksCount blockStart savedNeedsFrame savedNumArgs savedNumTemps
@@ -152,20 +154,20 @@ SistaCogit >> compileBlockBodies [
 ]
 
 { #category : #'compile abstract instructions' }
-SistaCogit >> compileCogFullBlockMethod: numCopied [
+SistaStackToRegisterMappingCogit >> compileCogFullBlockMethod: numCopied [
 	<option: #SistaV1BytecodeSet>
 	counters := 0.
 	^super compileCogFullBlockMethod: numCopied
 ]
 
 { #category : #'compile abstract instructions' }
-SistaCogit >> compileCogMethod: selector [
+SistaStackToRegisterMappingCogit >> compileCogMethod: selector [
 	counters := 0.
 	^super compileCogMethod: selector
 ]
 
 { #category : #'compile abstract instructions' }
-SistaCogit >> compileFrameBuild [
+SistaStackToRegisterMappingCogit >> compileFrameBuild [
 	"Override to prefetch counters, if any."
 	super compileFrameBuild.
 	counters ~= 0 ifTrue:
@@ -173,7 +175,7 @@ SistaCogit >> compileFrameBuild [
 ]
 
 { #category : #'compile abstract instructions' }
-SistaCogit >> compileFullBlockMethodFrameBuild: numCopied [
+SistaStackToRegisterMappingCogit >> compileFullBlockMethodFrameBuild: numCopied [
 	"Override to prefetch counters if any"
 	super compileFullBlockMethodFrameBuild: numCopied.
 	counters ~= 0 ifTrue:
@@ -181,7 +183,7 @@ SistaCogit >> compileFullBlockMethodFrameBuild: numCopied [
 ]
 
 { #category : #disassembly }
-SistaCogit >> disassembleMethod: surrogateOrAddress on: aStream [
+SistaStackToRegisterMappingCogit >> disassembleMethod: surrogateOrAddress on: aStream [
 	<doNotGenerate>
 	| cogMethod |
 	cogMethod := super disassembleMethod: surrogateOrAddress on: aStream.
@@ -200,20 +202,20 @@ SistaCogit >> disassembleMethod: surrogateOrAddress on: aStream [
 ]
 
 { #category : #accessing }
-SistaCogit >> estimateOfAbstractOpcodesPerBytecodes [
+SistaStackToRegisterMappingCogit >> estimateOfAbstractOpcodesPerBytecodes [
 	"Due to the counter logic, the estimation is higher"
 	<inline: true>
 	^ 11
 ]
 
 { #category : #'generate machine code' }
-SistaCogit >> fillInCPICHeader: pic numArgs: numArgs numCases: numCases hasMNUCase: hasMNUCase selector: selector [
+SistaStackToRegisterMappingCogit >> fillInCPICHeader: pic numArgs: numArgs numCases: numCases hasMNUCase: hasMNUCase selector: selector [
 	pic counters: 0.
 	^super fillInCPICHeader: pic numArgs: numArgs numCases: numCases hasMNUCase: hasMNUCase selector: selector
 ]
 
 { #category : #'generate machine code' }
-SistaCogit >> fillInCounters: nCounters atEndAddress: endAddress [
+SistaStackToRegisterMappingCogit >> fillInCounters: nCounters atEndAddress: endAddress [
 	endAddress - (nCounters * CounterBytes)
 		to: endAddress - CounterBytes
 		by: CounterBytes
@@ -224,7 +226,7 @@ SistaCogit >> fillInCounters: nCounters atEndAddress: endAddress [
 ]
 
 { #category : #'generate machine code' }
-SistaCogit >> fillInCounters: nCounters atStartAddress: startAddress [
+SistaStackToRegisterMappingCogit >> fillInCounters: nCounters atStartAddress: startAddress [
 	startAddress
 		to: startAddress + (nCounters - 1 * CounterBytes)
 		by: CounterBytes
@@ -235,7 +237,7 @@ SistaCogit >> fillInCounters: nCounters atStartAddress: startAddress [
 ]
 
 { #category : #'generate machine code' }
-SistaCogit >> fillInMethodHeader: method size: size selector: selector [
+SistaStackToRegisterMappingCogit >> fillInMethodHeader: method size: size selector: selector [
 	super fillInMethodHeader: method size: size selector: selector.
 	self fillInCounters: numCounters atStartAddress: counters.
 	method counters: counters.
@@ -243,13 +245,13 @@ SistaCogit >> fillInMethodHeader: method size: size selector: selector [
 ]
 
 { #category : #'generate machine code' }
-SistaCogit >> fillInOPICHeader: pic numArgs: numArgs selector: selector [
+SistaStackToRegisterMappingCogit >> fillInOPICHeader: pic numArgs: numArgs selector: selector [
 	pic counters: 0.
 	^super fillInOPICHeader: pic numArgs: numArgs selector: selector
 ]
 
 { #category : #'bytecode generator support' }
-SistaCogit >> genCounterTripOnlyJumpIf: boolean to: targetBytecodePC [ 
+SistaStackToRegisterMappingCogit >> genCounterTripOnlyJumpIf: boolean to: targetBytecodePC [ 
 	"Specific version if the branch is only reached while falling through if the counter trips after an inlined #== branch. We do not regenerate the counter logic in this case to avoid 24 bytes instructions."
 	
 	<var: #ok type: #'AbstractInstruction *'>
@@ -300,7 +302,7 @@ SistaCogit >> genCounterTripOnlyJumpIf: boolean to: targetBytecodePC [
 ]
 
 { #category : #'bytecode generator support' }
-SistaCogit >> genExecutionCountLogicInto: binaryBlock counterReg: counterReg [
+SistaStackToRegisterMappingCogit >> genExecutionCountLogicInto: binaryBlock counterReg: counterReg [
 	<var: #countTripped type: #'AbstractInstruction *'>
 	<inline: true>
 	| counterAddress countTripped |
@@ -317,7 +319,7 @@ SistaCogit >> genExecutionCountLogicInto: binaryBlock counterReg: counterReg [
 ]
 
 { #category : #'bytecode generators' }
-SistaCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode [
+SistaStackToRegisterMappingCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode [
 	"SistaV1: *	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
 								
 	| reg literal distance targetFixUp |
@@ -346,7 +348,7 @@ SistaCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode [
 ]
 
 { #category : #'bytecode generator support' }
-SistaCogit >> genFallsThroughCountLogicCounterReg: counterReg counterAddress: counterAddress [
+SistaStackToRegisterMappingCogit >> genFallsThroughCountLogicCounterReg: counterReg counterAddress: counterAddress [
 	<inline: true>
 	"Gen this when the branch has not been taken and forwarders have been followed."
 	self SubCq: 1 R: counterReg. "Count untaken"
@@ -354,7 +356,7 @@ SistaCogit >> genFallsThroughCountLogicCounterReg: counterReg counterAddress: co
 ]
 
 { #category : #'bytecode generator support' }
-SistaCogit >> genJumpIf: boolean to: targetBytecodePC [
+SistaStackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	"The heart of performance counting in Sista.  Conditional branches are 6 times less
 	 frequent than sends and can provide basic block frequencies (send counters can't).
 	 Each conditional has a 32-bit counter split into an upper 16 bits counting executions
@@ -433,7 +435,7 @@ SistaCogit >> genJumpIf: boolean to: targetBytecodePC [
 ]
 
 { #category : #initialization }
-SistaCogit >> genMustBeBooleanTrampolineFor: boolean called: trampolineName [
+SistaStackToRegisterMappingCogit >> genMustBeBooleanTrampolineFor: boolean called: trampolineName [
 	"This can be entered in one of two states, depending on SendNumArgsReg. See
 	 e.g. genJumpIf:to:.  If SendNumArgsReg is non-zero then this has been entered via
 	 the initial test of the counter in the jump executed count (i.e. the counter has
@@ -491,14 +493,14 @@ SistaCogit >> genMustBeBooleanTrampolineFor: boolean called: trampolineName [
 ]
 
 { #category : #'bytecode generators' }
-SistaCogit >> genSpecialSelectorComparison [
+SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	"Override to count inlined branches if followed by a conditional branch.
 	 We borrow the following conditional branch's counter and when about to
 	 inline the comparison we decrement the counter (without writing it back)
 	 and if it trips simply abort the inlining, falling back to the normal send which
 	 will then continue to the conditional branch which will trip and enter the abort."
 	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor
-	  rcvrIsInt argIsInt argInt jumpNotSmallInts inlineCAB
+	  rcvrIsInt argIsInt argInt jumpNotSmallInts inlineCAB annotateInst
 	  counterAddress countTripped counterReg index |
 	<var: #countTripped type: #'AbstractInstruction *'>
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
@@ -533,6 +535,7 @@ SistaCogit >> genSpecialSelectorComparison [
 	argIsInt
 		ifTrue:
 			[(self ssValue: 1) popToReg: ReceiverResultReg.
+			 annotateInst := self ssTop annotateUse.
 			 self ssPop: 2.
 			 self MoveR: ReceiverResultReg R: TempReg]
 		ifFalse:
@@ -550,7 +553,9 @@ SistaCogit >> genSpecialSelectorComparison [
 		counterReg: counterReg.
 
 	argIsInt
-		ifTrue: [self CmpCq: argInt R: ReceiverResultReg]
+		ifTrue: [annotateInst
+					ifTrue: [self annotateBytecode: (self CmpCq: argInt R: ReceiverResultReg)]
+					ifFalse: [self CmpCq: argInt R: ReceiverResultReg]]
 		ifFalse: [self CmpR: Arg0Reg R: ReceiverResultReg].
 	"Cmp is weird/backwards so invert the comparison.  Further since there is a following conditional
 	 jump bytecode define non-merge fixups and leave the cond bytecode to set the mergeness."
@@ -571,13 +576,13 @@ SistaCogit >> genSpecialSelectorComparison [
 ]
 
 { #category : #'bytecode generators' }
-SistaCogit >> genSpecialSelectorComparisonWithoutCounters [
+SistaStackToRegisterMappingCogit >> genSpecialSelectorComparisonWithoutCounters [
 	"This method is there because if I put directly the super send in genSpecialSelectorComparison Slang does not correctly translte the code to C, it does not correctly type one of the branchDescriptor to BytecodeDescriptor"
 	^ super genSpecialSelectorComparison
 ]
 
 { #category : #'bytecode generators' }
-SistaCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
+SistaStackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 	"Override to count inlined branches if followed by a conditional branch.
 	 We borrow the following conditional branch's counter and when about to
 	 inline the comparison we decrement the counter (without writing it back)
@@ -672,7 +677,7 @@ SistaCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
 ]
 
 { #category : #'bytecode generators' }
-SistaCogit >> genUnconditionalTrapBytecode [
+SistaStackToRegisterMappingCogit >> genUnconditionalTrapBytecode [
 	"SistaV1: *	217		Trap"
 	self ssFlushTo: simStackPtr.
 	self CallRT: ceTrapTrampoline.
@@ -681,25 +686,25 @@ SistaCogit >> genUnconditionalTrapBytecode [
 ]
 
 { #category : #'bytecode generators' }
-SistaCogit >> genUnoptimizedSpecialSelectorComparison [
+SistaStackToRegisterMappingCogit >> genUnoptimizedSpecialSelectorComparison [
 	"This method is there because if I put directly the super send in genSpecialSelectorComparison Slang does not correctly translte the code to C, it does not correctly type one of the branchDescriptor to BytecodeDescriptor"
 	^ super genSpecialSelectorComparison
 ]
 
 { #category : #initialization }
-SistaCogit >> generateSistaRuntime [
+SistaStackToRegisterMappingCogit >> generateSistaRuntime [
 	"Trap sends Sista trap message to context with top of stack, so we don't need any arguments..."
 	ceTrapTrampoline := self genTrampolineFor: #ceSistaTrap called: 'ceSistaTrapTrampoline'
 ]
 
 { #category : #'method introspection' }
-SistaCogit >> getJumpTargetPCAt: pc [
+SistaStackToRegisterMappingCogit >> getJumpTargetPCAt: pc [
 	<api>
 	^backEnd jumpTargetPCAt: pc
 ]
 
 { #category : #initialization }
-SistaCogit >> initialize [
+SistaStackToRegisterMappingCogit >> initialize [
 	super initialize.
 	branchReachedOnlyForCounterTrip := false.
 	cogMethodSurrogateClass := (objectMemory ifNil: [self class objectMemoryClass]) wordSize = 4
@@ -708,13 +713,126 @@ SistaCogit >> initialize [
 ]
 
 { #category : #initialization }
-SistaCogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
+SistaStackToRegisterMappingCogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
 	initialCounterValue := MaxCounterValue.
 	super initializeCodeZoneFrom: startAddress upTo: endAddress
 ]
 
+{ #category : #'method map' }
+SistaStackToRegisterMappingCogit >> mapFor: cogMethod bcpc: startbcpc withAnnotationPerformUntil: functionSymbol arg: arg [
+	"A version of mapFor:bcpc:performUntil:arg: that passes the annotation instead of the isBackwardBranch
+	 flag. Evaluate functionSymbol for each mcpc, bcpc pair in the map until the function returns non-zero,
+	 answering that result, or 0 if it fails to.  This works only for frameful methods"
+	<var: #cogMethod type: #'CogBlockMethod *'>
+	<var: #functionSymbol declareC: 'sqInt (*functionSymbol)(BytecodeDescriptor *desc, sqInt annotation, char *mcpc, sqInt bcpc, void *arg)'>
+	<var: #arg type: #'void *'>
+	<inline: true>
+	| isInBlock mcpc bcpc endbcpc map mapByte homeMethod aMethodObj result
+	  latestContinuation byte descriptor bsOffset nExts annotation |
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	<var: #homeMethod type: #'CogMethod *'>
+	self assert: cogMethod stackCheckOffset > 0.
+	"In both CMMethod and CMBlock cases find the start of the map and
+	 skip forward to the bytecode pc map entry for the stack check."
+	cogMethod cmType = CMMethod
+		ifTrue:
+			[isInBlock := false.
+			 homeMethod := self cCoerceSimple: cogMethod to: #'CogMethod *'.
+			 self assert: startbcpc = (coInterpreter startPCOfMethodHeader: homeMethod methodHeader).
+			 map := self mapStartFor: homeMethod.
+			 annotation := (objectMemory byteAt: map) >> AnnotationShift.
+			 self assert: (annotation = IsAbsPCReference
+						 or: [annotation = IsObjectReference
+						 or: [annotation = IsRelativeCall
+						 or: [annotation = IsDisplacementX2N]]]).
+			 latestContinuation := startbcpc.
+			 aMethodObj := homeMethod methodObject.
+			 endbcpc := (objectMemory numBytesOf: aMethodObj) - 1.
+			 bsOffset := self bytecodeSetOffsetForHeader: homeMethod methodHeader]
+		ifFalse:
+			[isInBlock := true.
+			 homeMethod := cogMethod cmHomeMethod.
+			 map := self findMapLocationForMcpc: cogMethod asUnsignedInteger + (self sizeof: CogBlockMethod)
+						inMethod: homeMethod.
+			 self assert: map ~= 0.
+			 annotation := (objectMemory byteAt: map) >> AnnotationShift.
+			 self assert: (annotation >> AnnotationShift = HasBytecodePC "fiducial"
+						 or: [annotation >> AnnotationShift = IsDisplacementX2N]).
+			 [(annotation := (objectMemory byteAt: map) >> AnnotationShift) ~= HasBytecodePC] whileTrue:
+				[map := map - 1].
+			 map := map - 1. "skip fiducial; i.e. the map entry for the pc immediately following the method header."
+			 aMethodObj := homeMethod methodObject.
+			 bcpc := startbcpc - (self blockCreationBytecodeSizeForHeader: homeMethod methodHeader).
+			 bsOffset := self bytecodeSetOffsetForHeader: homeMethod methodHeader.
+			 byte := (objectMemory fetchByte: bcpc ofObject: aMethodObj) + bsOffset.
+			 descriptor := self generatorAt: byte.
+			 endbcpc := self nextBytecodePCFor: descriptor at: bcpc exts: -1 in: aMethodObj].
+	bcpc := startbcpc.
+	mcpc := cogMethod asUnsignedInteger + cogMethod stackCheckOffset.
+	nExts := 0.
+	self inlineCacheTagsAreIndexes ifTrue:
+		[enumeratingCogMethod := homeMethod].
+	"The stack check maps to the start of the first bytecode,
+	 the first bytecode being effectively after frame build."
+	result := self perform: functionSymbol
+					with: nil
+					with: annotation
+					with: (self cCoerceSimple: mcpc to: #'char *')
+					with: startbcpc
+					with: arg.
+	result ~= 0 ifTrue:
+		[^result].
+	"Now skip up through the bytecode pc map entry for the stack check." 
+	[(objectMemory byteAt: map) >> AnnotationShift ~= HasBytecodePC] whileTrue:
+		[map := map - 1].
+	map := map - 1.
+	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue: "defensive; we exit on bcpc"
+		[mapByte >= FirstAnnotation
+			ifTrue:
+				[| nextBcpc |
+				annotation := mapByte >> AnnotationShift.
+				mcpc := mcpc + ((mapByte bitAnd: DisplacementMask) * backEnd codeGranularity).
+				(self isPCMappedAnnotation: annotation) ifTrue:
+					[(annotation = IsSendCall
+					  and: [(mapByte := objectMemory byteAt: map - 1) >> AnnotationShift = IsAnnotationExtension]) ifTrue:
+						[annotation := annotation + (mapByte bitAnd: DisplacementMask).
+						 map := map - 1].
+					[byte := (objectMemory fetchByte: bcpc ofObject: aMethodObj) + bsOffset.
+					  descriptor := self generatorAt: byte.
+					  isInBlock
+						ifTrue: [bcpc >= endbcpc ifTrue: [^0]]
+						ifFalse:
+							[(descriptor isReturn and: [bcpc >= latestContinuation]) ifTrue: [^0].
+							 (descriptor isBranch or: [descriptor isBlockCreation]) ifTrue:
+								[| targetPC |
+								 targetPC := self latestContinuationPCFor: descriptor at: bcpc exts: nExts in: aMethodObj.
+								 latestContinuation := latestContinuation max: targetPC]].
+					  nextBcpc := self nextBytecodePCFor: descriptor at: bcpc exts: nExts in: aMethodObj.
+					  descriptor isMapped
+					  or: [isInBlock and: [descriptor isMappedInBlock]]] whileFalse:
+						[bcpc := nextBcpc.
+						 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
+					result := self perform: functionSymbol
+									with: descriptor
+									with: annotation
+									with: (self cCoerceSimple: mcpc to: #'char *')
+									with: bcpc
+									with: arg.
+					 result ~= 0 ifTrue:
+						[^result].
+					 bcpc := nextBcpc.
+					 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]]]
+			ifFalse:
+				[self assert: (mapByte >> AnnotationShift = IsDisplacementX2N
+							or: [mapByte >> AnnotationShift = IsAnnotationExtension]).
+				 mapByte < (IsAnnotationExtension << AnnotationShift) ifTrue:
+					[mcpc := mcpc + ((mapByte - DisplacementX2N << AnnotationShift) * backEnd codeGranularity)]].
+		 map := map - 1].
+	^0
+]
+
 { #category : #'compile abstract instructions' }
-SistaCogit >> maybeAllocAndInitCounters [
+SistaStackToRegisterMappingCogit >> maybeAllocAndInitCounters [
 	<inline: true>
 	self assert: counters = 0.
 	counterIndex := 0.
@@ -725,21 +843,21 @@ SistaCogit >> maybeAllocAndInitCounters [
 ]
 
 { #category : #'compile abstract instructions' }
-SistaCogit >> maybeFreeCounters [
+SistaStackToRegisterMappingCogit >> maybeFreeCounters [
 	<inline: true>
 	counters ~= 0 ifTrue:
 		[objectRepresentation freeCounters: counters]
 ]
 
 { #category : #compaction }
-SistaCogit >> maybeFreeCountersOf: aCogMethod [
+SistaStackToRegisterMappingCogit >> maybeFreeCountersOf: aCogMethod [
 	"Free any counters in the method."
 	<inline: true>
 	objectRepresentation freeCounters: aCogMethod counters
 ]
 
 { #category : #'garbage collection' }
-SistaCogit >> maybeMarkCountersIn: cogMethod [
+SistaStackToRegisterMappingCogit >> maybeMarkCountersIn: cogMethod [
 	"In SIsta Spur counters are held on the heap in pinned objects which must be marked
 	 to avoid them being garbage collected.  This is the hook through which that happens."
 	<var: #cogMethod type: #'CogMethod *'>
@@ -748,11 +866,11 @@ SistaCogit >> maybeMarkCountersIn: cogMethod [
 ]
 
 { #category : #'method introspection' }
-SistaCogit >> picDataFor: descriptor Annotation: isBackwardBranchAndAnnotation Mcpc: mcpc Bcpc: bcpc Method: cogMethodArg [
+SistaStackToRegisterMappingCogit >> picDataFor: descriptor Annotation: annotation Mcpc: mcpc Bcpc: bcpc Method: cogMethodArg [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #mcpc type: #'char *'>
 	<var: #cogMethodArg type: #'void *'>
-	| annotation entryPoint tuple counter |
+	| entryPoint tuple counter |
 	<var: #counter type: #'unsigned long'>
 
 	descriptor ifNil:
@@ -768,11 +886,10 @@ SistaCogit >> picDataFor: descriptor Annotation: isBackwardBranchAndAnnotation M
 								at: counterIndex.
 			 tuple := self picDataForCounter: counter at: bcpc + 1.
 			 tuple = 0 ifTrue: [^PrimErrNoMemory].
-			 objectMemory storePointer: introspectionDataIndex ofObject: introspectionData withValue: tuple.
-			 introspectionDataIndex := introspectionDataIndex + 1.
+			 objectMemory storePointer: picDataIndex ofObject: picData withValue: tuple.
+			 picDataIndex := picDataIndex + 1.
 			 counterIndex := counterIndex + 1].
 		 ^0].
-	annotation := isBackwardBranchAndAnnotation >> 1.
 	((self isPureSendAnnotation: annotation)
 	 and: [entryPoint := backEnd callTargetFromReturnAddress: mcpc asUnsignedInteger.
 		 entryPoint > methodZoneBase]) ifFalse: "send is not linked, or is not a send"
@@ -791,25 +908,25 @@ SistaCogit >> picDataFor: descriptor Annotation: isBackwardBranchAndAnnotation M
 						at: mcpc
 						bcpc: bcpc + 1].
 	tuple = 0 ifTrue: [^PrimErrNoMemory].
-	objectMemory storePointer: introspectionDataIndex ofObject: introspectionData withValue: tuple.
-	introspectionDataIndex := introspectionDataIndex + 1.
+	objectMemory storePointer: picDataIndex ofObject: picData withValue: tuple.
+	picDataIndex := picDataIndex + 1.
 	^0
 ]
 
 { #category : #'method introspection' }
-SistaCogit >> picDataFor: cogMethod into: arrayObj [
+SistaStackToRegisterMappingCogit >> picDataFor: cogMethod into: arrayObj [
 	"Collect the branch and send data for cogMethod, storing it into arrayObj."
 	<api>
 	<var: #cogMethod type: #'CogMethod *'>
 	| errCode |
 	cogMethod stackCheckOffset = 0 ifTrue:
 		[^0].
-	introspectionDataIndex := counterIndex := 0.
-	introspectionData := arrayObj.
+	picDataIndex := counterIndex := 0.
+	picData := arrayObj.
 	errCode := self
 					mapFor: (self cCoerceSimple: cogMethod to: #'CogBlockMethod *')
 					bcpc: (coInterpreter startPCOfMethod: cogMethod methodObject)
-					performUntil: #picDataFor:Annotation:Mcpc:Bcpc:Method:
+					withAnnotationPerformUntil: #picDataFor:Annotation:Mcpc:Bcpc:Method:
 					arg: cogMethod asVoidPointer.
 	errCode ~= 0 ifTrue:
 		[self assert: errCode = PrimErrNoMemory.
@@ -821,11 +938,11 @@ SistaCogit >> picDataFor: cogMethod into: arrayObj [
 		 errCode ~= 0 ifTrue:
 			[self assert: errCode = PrimErrNoMemory.
 			 ^-1]].
-	^introspectionDataIndex
+	^picDataIndex
 ]
 
 { #category : #'method introspection' }
-SistaCogit >> picDataForBlockEntry: blockEntryMcpc Method: cogMethod [
+SistaStackToRegisterMappingCogit >> picDataForBlockEntry: blockEntryMcpc Method: cogMethod [
 	"Collect the branch and send data for the block method starting at blockEntryMcpc, storing it into picData."
 	<returnTypeC: #usqInt>
 	| cogBlockMethod |
@@ -837,12 +954,12 @@ SistaCogit >> picDataForBlockEntry: blockEntryMcpc Method: cogMethod [
 	^self
 		mapFor: cogBlockMethod
 		bcpc: cogBlockMethod startpc
-		performUntil: #picDataFor:Annotation:Mcpc:Bcpc:Method:
+		withAnnotationPerformUntil: #picDataFor:Annotation:Mcpc:Bcpc:Method:
 		arg: cogMethod asVoidPointer
 ]
 
 { #category : #'method introspection' }
-SistaCogit >> picDataForCounter: counter at: bcpc [
+SistaStackToRegisterMappingCogit >> picDataForCounter: counter at: bcpc [
 	| executedCount tuple untakenCount |
 	<var: #counter type: #'unsigned long'>
 	tuple := objectMemory
@@ -862,7 +979,7 @@ SistaCogit >> picDataForCounter: counter at: bcpc [
 ]
 
 { #category : #'method introspection' }
-SistaCogit >> picDataForSendTo: cogMethod methodClassIfSuper: methodClassOrNil at: sendMcpc bcpc: sendBcpc [
+SistaStackToRegisterMappingCogit >> picDataForSendTo: cogMethod methodClassIfSuper: methodClassOrNil at: sendMcpc bcpc: sendBcpc [
 	"Answer a tuple with the send data for a linked send to cogMethod.
 	 If the target is a CogMethod (monomorphic send) answer
 		{ bytecode pc, inline cache class, target method }
@@ -902,7 +1019,7 @@ SistaCogit >> picDataForSendTo: cogMethod methodClassIfSuper: methodClassOrNil a
 ]
 
 { #category : #'method introspection' }
-SistaCogit >> populate: tuple withPICInfoFor: cPIC firstCacheTag: firstCacheTag [
+SistaStackToRegisterMappingCogit >> populate: tuple withPICInfoFor: cPIC firstCacheTag: firstCacheTag [
 	"Populate tuple (which must be large enough) with the ClosedPIC's target method class pairs.
 	 The first entry in tuple contains the bytecode pc for the send, so skip the tuple's first field."
 	<var: #cPIC type: #'CogMethod *'>
@@ -932,7 +1049,7 @@ SistaCogit >> populate: tuple withPICInfoFor: cPIC firstCacheTag: firstCacheTag 
 ]
 
 { #category : #tests }
-SistaCogit >> printPICDataForMethods [
+SistaStackToRegisterMappingCogit >> printPICDataForMethods [
 	<doNotGenerate>
 	methodZone methodsDo:
 		[:cogMethod|
@@ -943,13 +1060,13 @@ SistaCogit >> printPICDataForMethods [
 ]
 
 { #category : #'sista callbacks' }
-SistaCogit >> resetCountersIn: cogMethod [
+SistaStackToRegisterMappingCogit >> resetCountersIn: cogMethod [
 	<doNotGenerate>
 	objectRepresentation resetCountersIn: cogMethod
 ]
 
 { #category : #'compile abstract instructions' }
-SistaCogit >> scanMethod [
+SistaStackToRegisterMappingCogit >> scanMethod [
 	"Scan the method (and all embedded blocks) to determine
 		- what the last bytecode is; extra bytes at the end of a method are used to encode things like source pointers or temp names
 		- if the method needs a frame or not

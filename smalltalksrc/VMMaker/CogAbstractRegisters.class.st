@@ -24,14 +24,6 @@ Class {
 		'DPFPReg7',
 		'DPFPReg8',
 		'DPFPReg9',
-		'Extra0Reg',
-		'Extra1Reg',
-		'Extra2Reg',
-		'Extra3Reg',
-		'Extra4Reg',
-		'Extra5Reg',
-		'Extra6Reg',
-		'Extra7Reg',
 		'FPReg',
 		'LinkReg',
 		'NoReg',
@@ -39,11 +31,19 @@ Class {
 		'RISCTempReg',
 		'ReceiverResultReg',
 		'SPReg',
+		'Scratch0Reg',
+		'Scratch1Reg',
+		'Scratch2Reg',
+		'Scratch3Reg',
+		'Scratch4Reg',
+		'Scratch5Reg',
+		'Scratch6Reg',
+		'Scratch7Reg',
 		'SendNumArgsReg',
 		'TempReg',
 		'VarBaseReg'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'class initialization' }
@@ -76,14 +76,14 @@ CogAbstractRegisters class >> initialize [
 	TempReg			:= #undefined.
 
 	"A small fixed set of abstract scratch registers for register-rich machines (ARM can use 1, x64 can use 6 or 7)."
-	Extra0Reg := #undefined.
-	Extra1Reg := #undefined.
-	Extra2Reg := #undefined.
-	Extra3Reg := #undefined.
-	Extra4Reg := #undefined.
-	Extra5Reg := #undefined.
-	Extra6Reg := #undefined.
-	Extra7Reg := #undefined.
+	Scratch0Reg := #undefined.
+	Scratch1Reg := #undefined.
+	Scratch2Reg := #undefined.
+	Scratch3Reg := #undefined.
+	Scratch4Reg := #undefined.
+	Scratch5Reg := #undefined.
+	Scratch6Reg := #undefined.
+	Scratch7Reg := #undefined.
 
 	"RISC-specific registers"
 	LinkReg			:= #undefined.

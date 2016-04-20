@@ -784,8 +784,7 @@ LargeIntegersPlugin >> digitAddLarge: firstInteger with: secondInteger [
 	<var: #over type: #'unsigned int'>
 	firstDigitLen := self digitSizeOfLargeInt: firstInteger.
 	secondDigitLen := self digitSizeOfLargeInt: secondInteger.
-	neg := (interpreterProxy fetchClassOf: firstInteger)
-		= interpreterProxy classLargeNegativeInteger.
+	neg := interpreterProxy isLargeNegativeIntegerObject: firstInteger.
 	firstDigitLen <= secondDigitLen
 		ifTrue: 
 			[shortInt := firstInteger.
@@ -836,8 +835,7 @@ LargeIntegersPlugin >> digitBitLogic: firstInteger with: secondInteger opIndex: 
 			"convert it to a not normalized LargeInteger"
 			self remapOop: secondInteger in: [firstLarge := self createLargeFromSmallInteger: firstInteger]]
 		ifFalse: 
-			[(interpreterProxy fetchClassOf: firstInteger)
-				= interpreterProxy classLargeNegativeInteger ifTrue: [^ interpreterProxy primitiveFail].
+			[(interpreterProxy isLargePositiveIntegerObject: firstInteger) ifFalse: [^ interpreterProxy primitiveFail].
 			firstLarge := firstInteger].
 	(interpreterProxy isIntegerObject: secondInteger)
 		ifTrue: 
@@ -846,8 +844,7 @@ LargeIntegersPlugin >> digitBitLogic: firstInteger with: secondInteger opIndex: 
 			"convert it to a not normalized LargeInteger"
 			self remapOop: firstLarge in: [secondLarge := self createLargeFromSmallInteger: secondInteger]]
 		ifFalse: 
-			[(interpreterProxy fetchClassOf: secondInteger)
-				= interpreterProxy classLargeNegativeInteger ifTrue: [^ interpreterProxy primitiveFail].
+			[(interpreterProxy isLargePositiveIntegerObject: secondInteger) ifFalse: [^ interpreterProxy primitiveFail].
 			secondLarge := secondInteger].
 	firstLen := self byteSizeOfLargeInt: firstLarge.
 	secondLen := self byteSizeOfLargeInt: secondLarge.
@@ -1035,8 +1032,7 @@ LargeIntegersPlugin >> digitSizeOfLargeInt: anOop [
 LargeIntegersPlugin >> digitSubLarge: firstInteger with: secondInteger [ 
 	"Normalizes."
 	| firstDigitLen secondDigitLen larger largeDigitLen smaller smallerDigitLen neg resDigitLen res firstNeg |
-	firstNeg := (interpreterProxy fetchClassOf: firstInteger)
-				= interpreterProxy classLargeNegativeInteger.
+	firstNeg := interpreterProxy isLargeNegativeIntegerObject: firstInteger.
 	firstDigitLen := self digitSizeOfLargeInt: firstInteger.
 	secondDigitLen := self digitSizeOfLargeInt: secondInteger.
 	firstDigitLen = secondDigitLen ifTrue: 
@@ -1093,42 +1089,15 @@ LargeIntegersPlugin >> initialize [
 ]
 
 { #category : #'oop functions' }
-LargeIntegersPlugin >> isNormalized: anInteger [ 
-	| len maxVal minVal sLen val class positive |
-	<var: #val type: #'unsigned long'>
-	<var: #minVal type: #'unsigned long'>
-	(interpreterProxy isIntegerObject: anInteger)
-		ifTrue: [^ true].
-	class := interpreterProxy fetchClassOf: anInteger.
-	(positive := class = interpreterProxy classLargePositiveInteger) ifFalse:
-		[class = interpreterProxy classLargeNegativeInteger ifFalse:
-			[interpreterProxy primitiveFailFor: PrimErrBadArgument.
-			 ^false]].
+LargeIntegersPlugin >> isNormalized: aLargeInteger [ 
+	| len |
 	"Check for leading zero of LargeInteger"
-	len := self byteSizeOfLargeInt: anInteger.
+	len := self byteSizeOfLargeInt: aLargeInteger.
 	len = 0 ifTrue:
 		[^ false].
-	(self unsafeByteOfLargeInt: anInteger at: len) = 0 ifTrue:
+	(self unsafeByteOfLargeInt: aLargeInteger at: len) = 0 ifTrue:
 		[^ false].
-	"no leading zero, now check if anInteger is in SmallInteger range or not"
-	sLen := interpreterProxy maxSmallInteger > 16r3FFFFFFF
-				ifTrue: [8]
-				ifFalse: [4].
-	"maximal digitLength of aSmallInteger"
-	len > sLen ifTrue:
-		[^ true].
-	len < sLen ifTrue:
-		[^ false].
-	"len = sLen"
-	^positive
-		ifTrue: [maxVal := interpreterProxy maxSmallInteger. "SmallInteger maxVal"
-				"all bytes of maxVal but the highest one are just FF's"
-				 (self digitOfCSI: anInteger at: sLen // 4)
-					> (self digitOfCSI: maxVal at: sLen // 4)]
-		ifFalse: [val := self unsafeDigitOfLargeInt: anInteger at: len // 4.
-				sLen > 4 ifTrue: [val := val << 32 + (self unsafeDigitOfLargeInt: anInteger at: 1)].
-				minVal := 0 - interpreterProxy minSmallInteger.
-				val > minVal]
+	^true
 ]
 
 { #category : #'oop util' }
@@ -1154,8 +1123,7 @@ LargeIntegersPlugin >> largeInt: aBytesObject growTo: newByteLen [
 LargeIntegersPlugin >> normalize: aLargeInteger [ 
 	"Check for leading zeroes and return shortened copy if so."
 	self debugCode: [self msg: 'normalize: aLargeInteger'].
-	(interpreterProxy fetchClassOf: aLargeInteger)
-		= interpreterProxy classLargePositiveInteger
+	(interpreterProxy isLargePositiveIntegerObject: aLargeInteger)
 		ifTrue: [^ self normalizePositive: aLargeInteger]
 		ifFalse: [^ self normalizeNegative: aLargeInteger]
 ]
@@ -1388,17 +1356,6 @@ LargeIntegersPlugin >> primDigitDiv: secondInteger negative: neg [
 				primitive: 'primDigitDivNegative'
 				parameters: #(#Integer #Boolean )
 				receiver: #Integer.
-	"Avoid crashes in case of getting unnormalized args."
-	(self isNormalized: firstInteger)
-		ifFalse: [self
-				debugCode: [self msg: 'ERROR in primDigitDiv: secondInteger negative: neg'.
-					self msg: '------> receiver *not* normalized!'].
-			^ interpreterProxy primitiveFail].
-	(self isNormalized: secondInteger)
-		ifFalse: [self
-				debugCode: [self msg: 'ERROR in primDigitDiv: secondInteger negative: neg'.
-					self msg: '------> argument *not* normalized!'].
-			^ interpreterProxy primitiveFail].
 	"Coerce SmallIntegers to corresponding (not normalized) large integers  
 	and check for zerodivide."
 	(interpreterProxy isIntegerObject: firstInteger)
@@ -1406,7 +1363,15 @@ LargeIntegersPlugin >> primDigitDiv: secondInteger negative: neg [
 			self
 				remapOop: secondInteger
 				in: [firstAsLargeInteger := self createLargeFromSmallInteger: firstInteger]]
-		ifFalse: [firstAsLargeInteger := firstInteger].
+		ifFalse:
+			["Avoid crashes in case of getting unnormalized args."
+			(self isNormalized: firstInteger)
+				ifFalse:
+					[self debugCode:
+						[self msg: 'ERROR in primDigitDiv: secondInteger negative: neg'.
+						self msg: '------> receiver *not* normalized!'].
+					^ interpreterProxy primitiveFail].
+			firstAsLargeInteger := firstInteger].
 	(interpreterProxy isIntegerObject: secondInteger)
 		ifTrue: ["check for zerodivide and convert to LargeInteger"
 			(interpreterProxy integerValueOf: secondInteger)
@@ -1415,7 +1380,15 @@ LargeIntegersPlugin >> primDigitDiv: secondInteger negative: neg [
 			self
 				remapOop: firstAsLargeInteger
 				in: [secondAsLargeInteger := self createLargeFromSmallInteger: secondInteger]]
-		ifFalse: [secondAsLargeInteger := secondInteger].
+		ifFalse:
+			["Avoid crashes in case of getting unnormalized args."
+			(self isNormalized: secondInteger)
+				ifFalse:
+					[self debugCode:
+						[self msg: 'ERROR in primDigitDiv: secondInteger negative: neg'.
+						self msg: '------> argument *not* normalized!'].
+					^ interpreterProxy primitiveFail].
+			secondAsLargeInteger := secondInteger].
 	^ self
 		digitDivLarge: firstAsLargeInteger
 		with: secondAsLargeInteger

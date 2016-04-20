@@ -842,7 +842,7 @@ FFIPlugin >> ffiPushUnsignedLongLongOop: oop [
 		lowWord < 0 ifTrue:[^self ffiFail: FFIErrorCoercionFailed].
 		highWord := 0.
 	] ifFalse:[
-		(interpreterProxy fetchClassOf: oop) = interpreterProxy classLargePositiveInteger
+		(interpreterProxy isLargePositiveIntegerObject: oop)
 			ifFalse:[^interpreterProxy primitiveFail].
 		(interpreterProxy isBytes: oop) ifFalse:[^self ffiFail: FFIErrorCoercionFailed].
 		length := interpreterProxy byteSizeOf: oop.
