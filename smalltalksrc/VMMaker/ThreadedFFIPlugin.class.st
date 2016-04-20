@@ -849,7 +849,7 @@ ThreadedFFIPlugin >> ffiIntegerValueOf: oop [
 			 oop = interpreterProxy nilObject ifTrue: [^0]. "@@: should we really allow this????"
 			 oop = interpreterProxy falseObject ifTrue: [^0].
 			 oop = interpreterProxy trueObject ifTrue: [^1].
-			 (interpreterProxy fetchClassOf: oop) = interpreterProxy classLargePositiveInteger ifTrue:
+			 (interpreterProxy isLargePositiveIntegerObject: oop) ifTrue:
 				[self cppIf: BytesPerWord = 8 "Use cppIf: to get the return type of the function right.  Should be sqInt on 32-bits."
 					ifTrue: [^interpreterProxy positive64BitValueOf: oop]
 					ifFalse: [^interpreterProxy positive32BitValueOf: oop]]].
