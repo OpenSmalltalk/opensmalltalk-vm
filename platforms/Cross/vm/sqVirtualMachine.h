@@ -111,7 +111,11 @@ typedef struct VirtualMachine {
 	sqInt (*isBytes)(sqInt oop);
 	sqInt (*isFloatObject)(sqInt oop);
 	sqInt (*isIndexable)(sqInt oop);
-	sqInt (*isIntegerObject)(sqInt objectPointer);
+	sqInt (*isKindOfInteger)(sqInt oop);
+	sqInt (*isLargeIntegerObject)(sqInt oop);
+	sqInt (*isLargePositiveIntegerObject)(sqInt oop);
+	sqInt (*isLargeNegativeIntegerObject)(sqInt oop);
+	sqInt (*isIntegerObject)(sqInt oop);
 	sqInt (*isIntegerValue)(sqInt intValue);
 	sqInt (*isPointers)(sqInt oop);
 	sqInt (*isWeak)(sqInt oop);
