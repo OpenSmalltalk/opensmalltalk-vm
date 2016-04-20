@@ -500,7 +500,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	 and if it trips simply abort the inlining, falling back to the normal send which
 	 will then continue to the conditional branch which will trip and enter the abort."
 	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor
-	  rcvrIsInt argIsInt argInt jumpNotSmallInts inlineCAB annotateInst
+	  rcvrIsInt argIsInt argInt jumpNotSmallInts inlineCAB
 	  counterAddress countTripped counterReg index |
 	<var: #countTripped type: #'AbstractInstruction *'>
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
@@ -535,7 +535,6 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	argIsInt
 		ifTrue:
 			[(self ssValue: 1) popToReg: ReceiverResultReg.
-			 annotateInst := self ssTop annotateUse.
 			 self ssPop: 2.
 			 self MoveR: ReceiverResultReg R: TempReg]
 		ifFalse:
@@ -553,9 +552,7 @@ SistaStackToRegisterMappingCogit >> genSpecialSelectorComparison [
 		counterReg: counterReg.
 
 	argIsInt
-		ifTrue: [annotateInst
-					ifTrue: [self annotateBytecode: (self CmpCq: argInt R: ReceiverResultReg)]
-					ifFalse: [self CmpCq: argInt R: ReceiverResultReg]]
+		ifTrue: [self CmpCq: argInt R: ReceiverResultReg]
 		ifFalse: [self CmpR: Arg0Reg R: ReceiverResultReg].
 	"Cmp is weird/backwards so invert the comparison.  Further since there is a following conditional
 	 jump bytecode define non-merge fixups and leave the cond bytecode to set the mergeness."
