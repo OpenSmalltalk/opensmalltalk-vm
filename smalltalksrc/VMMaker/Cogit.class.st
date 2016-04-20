@@ -1324,19 +1324,16 @@ Cogit class >> testPCMappingSelect: aBlock options: optionsDictionaryOrArray [
 		(m isQuick not
 		 and: [aBlock value: m]) ifTrue:
 			[Transcript nextPut: $.; flush.
-			 cm := cogit
+			 [coInterpreter.
+			  cm := cogit
 						cog: (coInterpreter oopForObject: m)
 						selector: (coInterpreter oopForObject: m selector).
-			  cm ifNil:
+			   cm isNil and: [coInterpreter isCogCompiledCodeCompactionCalledFor]] whileTrue:
 				[cogit methodZone clearCogCompiledCode.
-				 coInterpreter initializeObjectMap.
-				 cm := cogit
-							cog: (coInterpreter oopForObject: m)
-							selector: (coInterpreter oopForObject: m selector).
-				cm ifNil: [Transcript show: 'After 1 Cog compiled code compaction, still not able to generate the cog method...' ] ].
-			  cm ifNotNil:
-				[cogit testPCMappingForCompiledMethod: m cogMethod: cm]].
-		 false] 
+				 coInterpreter clearCogCompiledCodeCompactionCalledFor.
+				 coInterpreter initializeObjectMap].
+			 cogit testPCMappingForCompiledMethod: m cogMethod: cm].
+		 false]
 ]
 
 { #category : #documentation }
@@ -2579,7 +2576,7 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes [
 			[abstractOpcodes := CArrayAccessor on:
 									 ((1 to: numAbstractOpcodes) collect: [:ign| CogCompilerClass for: self]).
 			 fixups := CArrayAccessor on:
-						((1 to: numAbstractOpcodes) collect: [:ign| self bytecodeFixupClass for: self])].
+						((1 to: numAbstractOpcodes) collect: [:ign| self bytecodeFixupClass new])].
 	self zeroOpcodeIndex.
 	labelCounter := 0
 ]
@@ -2612,7 +2609,7 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes i
 			[abstractOpcodes := CArrayAccessor on:
 									 ((1 to: numAbstractOpcodes) collect: [:ign| CogCompilerClass for: self]).
 			 fixups := CArrayAccessor on:
-						((1 to: numAbstractOpcodes) collect: [:ign| self bytecodeFixupClass for: self])].
+						((1 to: numAbstractOpcodes) collect: [:ign| self bytecodeFixupClass new])].
 	self zeroOpcodeIndex.
 	labelCounter := 0
 ]
@@ -5376,20 +5373,18 @@ Cogit >> fillInOPICHeader: pic numArgs: numArgs selector: selector [
 ]
 
 { #category : #'method map' }
-Cogit >> find: descriptor IsBackwardBranch: isBackwardBranchAndAnnotation Mcpc: mcpc Bcpc: bcpc MatchingBcpc: targetBcpc [
+Cogit >> find: descriptor IsBackwardBranch: isBackwardBranch Mcpc: mcpc Bcpc: bcpc MatchingBcpc: targetBcpc [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #mcpc type: #'char *'>
 	<var: #targetBcpc type: #'void *'>
 	<inline: true>
-	^targetBcpc asInteger = ((descriptor isNil or: [isBackwardBranchAndAnnotation anyMask: 1])
-									ifTrue: [bcpc]
-									ifFalse: [bcpc + descriptor numBytes])
+	^targetBcpc asInteger = ((descriptor isNil or: [isBackwardBranch]) ifTrue: [bcpc] ifFalse: [bcpc + descriptor numBytes])
 		ifTrue: [mcpc asInteger]
 		ifFalse: [0]
 ]
 
 { #category : #'method map' }
-Cogit >> find: descriptor IsBackwardBranch: isBackwardBranchAndAnnotation Mcpc: mcpc Bcpc: bcpc MatchingMcpc: targetMcpc [
+Cogit >> find: descriptor IsBackwardBranch: isBackwardBranch Mcpc: mcpc Bcpc: bcpc MatchingMcpc: targetMcpc [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #mcpc type: #'char *'>
 	<var: #targetMcpc type: #'void *'>
@@ -5397,19 +5392,19 @@ Cogit >> find: descriptor IsBackwardBranch: isBackwardBranchAndAnnotation Mcpc: 
 	 except backward branches, where they map to the backward branch itself.
 	 This is so that loops continue, rather than terminate prematurely."
 	^targetMcpc = mcpc
-		ifTrue: [(descriptor isNil or: [isBackwardBranchAndAnnotation anyMask: 1])
+		ifTrue: [(descriptor isNil or: [isBackwardBranch])
 					ifTrue: [bcpc]
 					ifFalse: [bcpc + descriptor numBytes]]
 		ifFalse: [0]
 ]
 
 { #category : #'method map' }
-Cogit >> findBackwardBranch: descriptor IsBackwardBranch: isBackwardBranchAndAnnotation Mcpc: mcpc Bcpc: bcpc MatchingBcpc: targetBcpc [
+Cogit >> findBackwardBranch: descriptor IsBackwardBranch: isBackwardBranch Mcpc: mcpc Bcpc: bcpc MatchingBcpc: targetBcpc [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #mcpc type: #'char *'>
 	<var: #targetBcpc type: #'void *'>
 	<inline: true>
-	^((isBackwardBranchAndAnnotation anyMask: 1) and: [targetBcpc asInteger = bcpc])
+	^(isBackwardBranch and: [targetBcpc asInteger = bcpc])
 		ifTrue: [mcpc asInteger]
 		ifFalse: [0]
 ]
@@ -5491,7 +5486,7 @@ Cogit >> followForwardedLiteralsIn: cogMethod [
 	<api>
 	<option: #SpurObjectMemory>
 	<var: #cogMethod type: #'CogMethod *'>
-	self assert: (cogMethod cmType ~= CMMethod or: [(objectMemory isForwarded: cogMethod methodObject) not]).
+	self assert: (objectMemory isForwarded: cogMethod methodObject) not.
 	(objectMemory shouldRemapOop: cogMethod selector) ifTrue:
 		[cogMethod selector: (objectMemory remapObj: cogMethod selector).
 		 (objectMemory isYoung: cogMethod selector) ifTrue:
@@ -7778,16 +7773,13 @@ Cogit >> mapEndFor: cogMethod [
 Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg [
 	"Machine-code <-> bytecode pc mapping support.  Evaluate functionSymbol
 	 for each mcpc, bcpc pair in the map until the function returns non-zero,
-	 answering that result, or 0 if it fails to.  To cut down on number of arguments.
-	 and to be usable for both pc-mapping and method introspection, we encode
-	 the annotation and the isBackwardBranch flag in the same parameter.
-	 Guilty as charged."
+	 answering that result, or 0 if it fails to.  This works only for frameful methods."
 	<var: #cogMethod type: #'CogBlockMethod *'>
-	<var: #functionSymbol declareC: 'sqInt (*functionSymbol)(BytecodeDescriptor *desc, sqInt annotationAndIsBackwardBranch, char *mcpc, sqInt bcpc, void *arg)'>
+	<var: #functionSymbol declareC: 'sqInt (*functionSymbol)(BytecodeDescriptor *desc, sqInt isBackwardBranch, char *mcpc, sqInt bcpc, void *arg)'>
 	<var: #arg type: #'void *'>
 	<inline: true>
 	| isInBlock mcpc bcpc endbcpc map mapByte homeMethod aMethodObj result
-	  latestContinuation byte descriptor bsOffset nExts annotation |
+	  latestContinuation byte descriptor bsOffset nExts |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #homeMethod type: #'CogMethod *'>
 
@@ -7797,7 +7789,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 	 the first bytecode being effectively after frame build."
 	result := self perform: functionSymbol
 					with: nil
-					with: 0 + (HasBytecodePC << 1)
+					with: false
 					with: (self cCoerceSimple: mcpc to: #'char *')
 					with: startbcpc
 					with: arg.
@@ -7812,11 +7804,10 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 			 homeMethod := self cCoerceSimple: cogMethod to: #'CogMethod *'.
 			 self assert: startbcpc = (coInterpreter startPCOfMethodHeader: homeMethod methodHeader).
 			 map := self mapStartFor: homeMethod.
-			 annotation := (objectMemory byteAt: map) >> AnnotationShift.
-			 self assert: (annotation = IsAbsPCReference
-						 or: [annotation = IsObjectReference
-						 or: [annotation = IsRelativeCall
-						 or: [annotation = IsDisplacementX2N]]]).
+			 self assert: ((objectMemory byteAt: map) >> AnnotationShift = IsAbsPCReference
+						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsObjectReference
+						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsRelativeCall
+						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsDisplacementX2N]]]).
 			 latestContinuation := startbcpc.
 			 aMethodObj := homeMethod methodObject.
 			 endbcpc := (objectMemory numBytesOf: aMethodObj) - 1.
@@ -7832,10 +7823,9 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 			 map := self findMapLocationForMcpc: cogMethod asUnsignedInteger + (self sizeof: CogBlockMethod)
 						inMethod: homeMethod.
 			 self assert: map ~= 0.
-			 annotation := (objectMemory byteAt: map) >> AnnotationShift.
-			 self assert: (annotation >> AnnotationShift = HasBytecodePC "fiducial"
-						 or: [annotation >> AnnotationShift = IsDisplacementX2N]).
-			 [(annotation := (objectMemory byteAt: map) >> AnnotationShift) ~= HasBytecodePC] whileTrue:
+			 self assert: ((objectMemory byteAt: map) >> AnnotationShift = HasBytecodePC "fiducial"
+						 or: [(objectMemory byteAt: map) >> AnnotationShift = IsDisplacementX2N]).
+			 [(objectMemory byteAt: map) >> AnnotationShift ~= HasBytecodePC] whileTrue:
 				[map := map - 1].
 			 map := map - 1. "skip fiducial; i.e. the map entry for the pc immediately following the method header."
 			 aMethodObj := homeMethod methodObject.
@@ -7846,8 +7836,6 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 			 endbcpc := self nextBytecodePCFor: descriptor at: bcpc exts: -1 in: aMethodObj.
 			 bcpc := startbcpc].
 	nExts := 0.
-	self inlineCacheTagsAreIndexes ifTrue:
-		[enumeratingCogMethod := homeMethod].
 	"Now skip up through the bytecode pc map entry for the stack check." 
 	[(objectMemory byteAt: map) >> AnnotationShift ~= HasBytecodePC] whileTrue:
 		[map := map - 1].
@@ -7855,7 +7843,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue: "defensive; we exit on bcpc"
 		[mapByte >= FirstAnnotation
 			ifTrue:
-				[| nextBcpc isBackwardBranch |
+				[| annotation nextBcpc isBackwardBranch |
 				annotation := mapByte >> AnnotationShift.
 				mcpc := mcpc + ((mapByte bitAnd: DisplacementMask) * backEnd codeGranularity).
 				(self isPCMappedAnnotation: annotation) ifTrue:
@@ -7878,7 +7866,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 										   and: [self isBackwardBranch: descriptor at: bcpc exts: nExts in: aMethodObj].
 					result := self perform: functionSymbol
 									with: descriptor
-									with: (isBackwardBranch ifTrue: [annotation << 1 + 1] ifFalse: [annotation << 1])
+									with: isBackwardBranch
 									with: (self cCoerceSimple: mcpc to: #'char *')
 									with: bcpc
 									with: arg.
@@ -10605,16 +10593,6 @@ Cogit >> singleStep [
 Cogit >> singleStep: aBoolean [
 	<doNotGenerate>
 	singleStep := aBoolean
-]
-
-{ #category : #'translation support' }
-Cogit >> sizeof: aCType [
-	<doNotGenerate>
-	| bfc |
-	aCType == #BytecodeFixup ifTrue:
-		[bfc := self class bytecodeFixupClass.
-		 ^bfc alignedByteSizeOf: bfc forClient: self].
-	^super sizeof: aCType
 ]
 
 { #category : #'compile abstract instructions' }

@@ -20,13 +20,6 @@ Class {
 	#category : 'VMMaker-JIT'
 }
 
-{ #category : #'simulation only' }
-CogSimStackEntry class >> byteSizeForSimulator: aVMClass [
-	"Answer an approximation of the byte size of an AbstractInstruction struct.
-	 This is for estimating the alloca in allocateOpcodes:bytecodes:ifFail:"
-	^self instSize * (aVMClass sizeof: #'void *')
-]
-
 { #category : #translation }
 CogSimStackEntry class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a CogSimStackEntry struct."
@@ -37,14 +30,24 @@ CogSimStackEntry class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 			value: (ivn = 'register' ifTrue: ['registerr'] ifFalse: [ivn]) "avoid reservedWord conflict"
 			value: (ivn caseOf: {
 						['type']			-> [#char].
-						['spilled']		-> [#char].}
+						['spilled']		-> [#char].
+						['annotateUse']	-> [#char]}
 					otherwise:
 						[#sqInt])]
 ]
 
-{ #category : #translation }
-CogSimStackEntry class >> structTypeName [
-	^'SimStackEntry'
+{ #category : #accessing }
+CogSimStackEntry >> annotateUse [
+	"Answer the value of annotateUse"
+
+	^ annotateUse
+]
+
+{ #category : #accessing }
+CogSimStackEntry >> annotateUse: anObject [
+	"Set the value of annotateUse"
+
+	^annotateUse := anObject
 ]
 
 { #category : #accessing }
@@ -115,6 +118,9 @@ CogSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegister [
 			 offset := baseOffset.
 			 register := baseRegister].
 	spilled := true.
+	annotateUse ifTrue:
+		[cogit annotateBytecode: inst.
+		 annotateUse := false]
 ]
 
 { #category : #accessing }
@@ -122,6 +128,19 @@ CogSimStackEntry >> maybeConstant [
 	"Answer the value of constant, no assert check."
 	<cmacro: '(sse) ((sse)->constant)'>
 	^constant
+]
+
+{ #category : #'compile abstract instructions' }
+CogSimStackEntry >> mergeAt: baseOffset from: baseRegister [
+	"Discard type information because of a control-flow merge."
+	self assert: spilled.
+	type = SSSpill
+		ifTrue:
+			[self assert: (offset = baseOffset and: [register = baseRegister])]
+		ifFalse:
+			[type := SSSpill.
+			 offset := baseOffset.
+			 register := baseRegister]
 ]
 
 { #category : #accessing }
@@ -152,6 +171,9 @@ CogSimStackEntry >> popToReg: reg [
 				[SSRegister]	-> [inst := reg ~= register
 												ifTrue: [cogit MoveR: register R: reg]
 												ifFalse: [cogit Label]] }].
+	annotateUse ifTrue:
+		[cogit annotateBytecode: inst.
+		 annotateUse := false]
 ]
 
 { #category : #printing }
@@ -178,6 +200,8 @@ CogSimStackEntry >> printStateOn: aStream [
 							aStream print: offset] }.
 	(spilled and: [type ~= SSSpill]) ifTrue:
 		[aStream nextPutAll: ' (spilled)'].
+	annotateUse ifTrue:
+		[aStream nextPutAll: ' (ANNOTATED)'].
 	bcptr ifNotNil:
 		[aStream space; nextPut: ${; print: bcptr; nextPut: $}].
 	aStream nextPut: $)
@@ -235,7 +259,10 @@ CogSimStackEntry >> storeToReg: reg [
 		[SSConstant]	-> [inst := cogit genMoveConstant: constant R: reg].
 		[SSRegister]	-> [inst := reg ~= register
 										ifTrue: [cogit MoveR: register R: reg]
-										ifFalse: [cogit Label]] }
+										ifFalse: [cogit Label]] }.
+	annotateUse ifTrue:
+		[cogit annotateBytecode: inst.
+		 annotateUse := false]
 ]
 
 { #category : #accessing }

@@ -210,6 +210,26 @@ NewObjectMemorySimulator >> isFloatObject: oop [
 	^coInterpreter isFloatObject: oop
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> isKindOfInteger: offset [
+	^coInterpreter isKindOfInteger: offset
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> isLargeIntegerObject: offset [
+	^coInterpreter isLargeIntegerObject: offset
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> isLargeNegativeIntegerObject: offset [
+	^coInterpreter isLargeNegativeIntegerObject: offset
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> isLargePositiveIntegerObject: offset [
+	^coInterpreter isLargePositiveIntegerObject: offset
+]
+
 { #category : #'memory access' }
 NewObjectMemorySimulator >> long32At: byteAddress [
 	"Return the 32-bit word at byteAddress which must be 0 mod 4."

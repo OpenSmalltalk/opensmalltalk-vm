@@ -131,14 +131,14 @@ CogMIPSELCompiler class >> initializeAbstractRegisters [
 	LinkReg					:= RA.
 
 	self flag: #todo.
-	"Extra0Reg			:= ??.
-	Extra1Reg			:= ??.
-	Extra2Reg			:= ??.
-	Extra3Reg			:= ??.
-	Extra4Reg			:= ??.
-	Extra5Reg			:= ??.
-	Extra6Reg			:= ??.
-	Extra7Reg			:= ??."
+	"Scratch0Reg			:= ??.
+	Scratch1Reg			:= ??.
+	Scratch2Reg			:= ??.
+	Scratch3Reg			:= ??.
+	Scratch4Reg			:= ??.
+	Scratch5Reg			:= ??.
+	Scratch6Reg			:= ??.
+	Scratch7Reg			:= ??."
 
 	self flag: #todo.
 	"DPFPReg0				:= ??.

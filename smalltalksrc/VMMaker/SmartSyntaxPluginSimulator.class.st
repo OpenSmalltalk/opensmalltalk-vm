@@ -52,6 +52,27 @@ SmartSyntaxPluginSimulator >> ccgLoad: forProlog expr: failBlock asKindOf: aClas
 ]
 
 { #category : #simulation }
+SmartSyntaxPluginSimulator >> ccgLoad: forProlog expr: failBlock asKindOfIntegerFrom: argIndexOrNil [ 
+	^[:oop|
+	   interpreterProxy success: (interpreterProxy isKindOfInteger: oop).
+	   oop]
+]
+
+{ #category : #simulation }
+SmartSyntaxPluginSimulator >> ccgLoad: forProlog expr: failBlock asMemberOfLargeNegativeIntegerFrom: argIndexOrNil [ 
+	^[:oop|
+	   interpreterProxy success: (interpreterProxy isLargeNegativeIntegerObject: oop).
+	   oop]
+]
+
+{ #category : #simulation }
+SmartSyntaxPluginSimulator >> ccgLoad: forProlog expr: failBlock asMemberOfLargePositiveIntegerFrom: argIndexOrNil [ 
+	^[:oop|
+	   interpreterProxy success: (interpreterProxy isLargePositiveIntegerObject: oop).
+	   oop]
+]
+
+{ #category : #simulation }
 SmartSyntaxPluginSimulator >> ccgLoad: forProlog expr: failBlock asRawOopFrom: anUndefinedObject [ 
 	^[:oop| oop]
 ]

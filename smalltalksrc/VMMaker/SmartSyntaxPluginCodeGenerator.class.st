@@ -120,6 +120,20 @@ SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asKindOf: aClass
 ]
 
 { #category : #coercing }
+SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asKindOfIntegerFrom: anInteger [ 
+
+	^String streamContents: [:aStream | aStream
+		nextPutAll: 'interpreterProxy success: (interpreterProxy isKindOfInteger: (interpreterProxy stackValue: ';
+		nextPutAll: anInteger asString;
+		nextPutAll: ')).';
+		crtab;
+		nextPutAll: (self 
+						ccgLoad: aBlock 
+						expr: aString 
+						asRawOopFrom: anInteger)]
+]
+
+{ #category : #coercing }
 SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asMemberOf: aClass from: anInteger [
 
 	^String streamContents: [:aStream | aStream
@@ -132,6 +146,34 @@ SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asMemberOf: aCla
 		nextPutAll: 	'MemberOf: ''';
 		nextPutAll:	aClass asString;
 		nextPutAll: ''').';
+		crtab;
+		nextPutAll: (self 
+						ccgLoad: aBlock 
+						expr: aString 
+						asRawOopFrom: anInteger)]
+]
+
+{ #category : #coercing }
+SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asMemberOfLargeNegativeIntegerFrom: anInteger [ 
+
+	^String streamContents: [:aStream | aStream
+		nextPutAll: 'interpreterProxy success: (interpreterProxy isLargeNegativeIntegerObject: (interpreterProxy stackValue: ';
+		nextPutAll: anInteger asString;
+		nextPutAll: ')).';
+		crtab;
+		nextPutAll: (self 
+						ccgLoad: aBlock 
+						expr: aString 
+						asRawOopFrom: anInteger)]
+]
+
+{ #category : #coercing }
+SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asMemberOfLargePositiveIntegerFrom: anInteger [ 
+
+	^String streamContents: [:aStream | aStream
+		nextPutAll: 'interpreterProxy success: (interpreterProxy isLargePositiveIntegerObject: (interpreterProxy stackValue: ';
+		nextPutAll: anInteger asString;
+		nextPutAll: ')).';
 		crtab;
 		nextPutAll: (self 
 						ccgLoad: aBlock 

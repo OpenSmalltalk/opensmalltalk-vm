@@ -696,6 +696,7 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 		var: #freeListsMask type: #usqInt;
 		var: #freeLists type: #'sqInt *';
 		var: #objStackInvalidBecause type: #'char *';
+		var: #highestObjects type: #SpurCircularBuffer;
 		var: #unscannedEphemerons type: #SpurContiguousObjStack;
 		var: #heapGrowthToSizeGCRatio type: #float;
 		var: #heapSizeAtPreviousGC type: #usqInt;
@@ -6622,6 +6623,18 @@ SpurMemoryManager >> isIndexableFormat: format [
 			or: [format >= self sixtyFourBitIndexableFormat]]
 ]
 
+{ #category : #'interpreter access' }
+SpurMemoryManager >> isInstanceOfClassLargeNegativeInteger: oop [
+	"Answer if the oop is a large negative integer instance."
+	^(self isNonImmediate: oop) and: [(self classIndexOf: oop) = ClassLargeNegativeIntegerCompactIndex]
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> isInstanceOfClassLargePositiveInteger: oop [
+	"Answer if the oop is a large positive integer instance."
+	^(self isNonImmediate: oop) and: [(self classIndexOf: oop) = ClassLargePositiveIntegerCompactIndex]
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isIntegerObject: oop [
 	^self subclassResponsibility
@@ -6636,6 +6649,12 @@ SpurMemoryManager >> isIntegerValue: intValue [
 { #category : #'free space' }
 SpurMemoryManager >> isLargeFreeObject: objOop [
 	^(self bytesInObject: objOop) >= (self numFreeLists * self allocationUnit)
+]
+
+{ #category : #'interpreter access' }
+SpurMemoryManager >> isLargeIntegerInstance: oop [
+	"Answer if the oop is a large positive or negative integer instance."
+	^(self isNonImmediate: oop) and: [((self classIndexOf: oop) - ClassLargeNegativeIntegerCompactIndex) asUnsignedInteger <= 1]
 ]
 
 { #category : #'object testing' }

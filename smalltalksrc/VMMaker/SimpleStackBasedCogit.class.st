@@ -10,15 +10,13 @@ Class {
 		'primInvokeInstruction',
 		'externalPrimCallOffsets',
 		'externalPrimJumpOffsets',
-		'externalSetPrimOffsets',
-		'introspectionDataIndex',
-		'introspectionData'
+		'externalSetPrimOffsets'
 	],
 	#pools : [
 		'VMMethodCacheConstants',
 		'VMObjectIndices'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -1310,7 +1308,7 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 
 	cacheBaseReg := NoReg.
 	(backEnd isWithinMwOffsetRange: coInterpreter methodCacheAddress) ifFalse:
-		[self MoveCq: coInterpreter methodCacheAddress R: (cacheBaseReg := Extra0Reg)].
+		[self MoveCq: coInterpreter methodCacheAddress R: (cacheBaseReg := Scratch0Reg)].
 
 	"Do first of three probes.  See CoInterpreter>>lookupInMethodCacheSel:classTag:"
 	jumpSelectorMiss := self compileOpenPICMethodCacheProbeFor: selector withShift: 0 baseRegOrNone: cacheBaseReg.
@@ -2196,7 +2194,7 @@ SimpleStackBasedCogit >> genLookupForPerformNumArgs: numArgs [
 
 	cacheBaseReg := NoReg.
 	(backEnd isWithinMwOffsetRange: coInterpreter methodCacheAddress) ifFalse:
-		[self MoveCq: coInterpreter methodCacheAddress R: (cacheBaseReg := Extra0Reg)].
+		[self MoveCq: coInterpreter methodCacheAddress R: (cacheBaseReg := Scratch0Reg)].
 
 	"Do first of three probes.  See CoInterpreter>>lookupInMethodCacheSel:classTag:"
 	jumpSelectorMiss := self compilePerformMethodCacheProbeFor: Arg0Reg withShift: 0 baseRegOrNone: cacheBaseReg.
@@ -3478,54 +3476,6 @@ SimpleStackBasedCogit >> generateTracingTrampolines [
 		 ceTraceStoreTrampoline := self simulatedTrampolineFor: #ceShortCutTraceStore:]
 ]
 
-{ #category : #'register management' }
-SimpleStackBasedCogit >> isCallerSavedReg: reg [
-	<inline: true>
-	^self register: reg isInMask: callerSavedRegMask
-]
-
-{ #category : #'method introspection' }
-SimpleStackBasedCogit >> mapPCDataFor: cogMethod into: arrayObj [
-	"Collect the branch and send data for cogMethod, storing it into arrayObj."
-	<api>
-	<var: #cogMethod type: #'CogMethod *'>
-	| errCode |
-	introspectionDataIndex := 0.
-	introspectionData := arrayObj.
-	cogMethod stackCheckOffset = 0 ifTrue:
-		[self assert: introspectionDataIndex = 0.
-		 cogMethod cmIsFullBlock
-			ifTrue:
-				[objectMemory
-					storePointerUnchecked: 0 ofObject: introspectionData withValue: objectMemory nilObject;
-					storePointerUnchecked: 1 ofObject: introspectionData withValue: (objectMemory integerObjectOf: cbNoSwitchEntryOffset);
-					storePointerUnchecked: 2 ofObject: introspectionData withValue: objectMemory nilObject;
-					storePointerUnchecked: 3 ofObject: introspectionData withValue: (objectMemory integerObjectOf: cbEntryOffset)]
-			ifFalse:
-				[objectMemory
-					storePointerUnchecked: 0 ofObject: introspectionData withValue: objectMemory nilObject;
-					storePointerUnchecked: 1 ofObject: introspectionData withValue: (objectMemory integerObjectOf: cmEntryOffset);
-					storePointerUnchecked: 2 ofObject: introspectionData withValue: objectMemory nilObject;
-					storePointerUnchecked: 3 ofObject: introspectionData withValue: (objectMemory integerObjectOf: cmNoCheckEntryOffset)].
-		 ^4].
-	errCode := self
-					mapFor: (self cCoerceSimple: cogMethod to: #'CogBlockMethod *')
-					bcpc: (coInterpreter startPCOfMethod: cogMethod methodObject)
-					performUntil: #pcDataFor:Annotation:Mcpc:Bcpc:Method:
-					arg: cogMethod asVoidPointer.
-	errCode ~= 0 ifTrue:
-		[self assert: errCode = PrimErrNoMemory.
-		 ^-1].
-	cogMethod blockEntryOffset ~= 0 ifTrue:
-		[errCode := self blockDispatchTargetsFor: cogMethod
-						perform: #pcDataForBlockEntry:Method:
-						arg: cogMethod asInteger.
-		 errCode ~= 0 ifTrue:
-			[self assert: errCode = PrimErrNoMemory.
-			 ^-1]].
-	^introspectionDataIndex
-]
-
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> marshallAbsentReceiverSendArguments: numArgs [
 	self assert: needsFrame.
@@ -3627,60 +3577,6 @@ SimpleStackBasedCogit >> parseV4Exts: nExts priorTo: bcpc in: aMethodObj into: a
 	aBinaryBlock value: extAValue value: extBValue
 ]
 
-{ #category : #'method introspection' }
-SimpleStackBasedCogit >> pcDataFor: descriptor Annotation: isBackwardBranchAndAnnotation Mcpc: mcpc Bcpc: bcpc Method: cogMethodArg [
-	<var: #descriptor type: #'BytecodeDescriptor *'>
-	<var: #mcpc type: #'char *'>
-	<var: #cogMethodArg type: #'void *'>
-
-	descriptor ifNil: "this is the stackCheck offset"
-		[self assert: introspectionDataIndex = 0.
-		 (self cCoerceSimple: cogMethodArg to: #'CogMethod *') cmIsFullBlock
-			ifTrue:
-				[objectMemory
-					storePointerUnchecked: introspectionDataIndex + 0 ofObject: introspectionData withValue: objectMemory nilObject;
-					storePointerUnchecked: introspectionDataIndex + 1 ofObject: introspectionData withValue: (objectMemory integerObjectOf: cbNoSwitchEntryOffset);
-					storePointerUnchecked: introspectionDataIndex + 2 ofObject: introspectionData withValue: objectMemory nilObject;
-					storePointerUnchecked: introspectionDataIndex + 3 ofObject: introspectionData withValue: (objectMemory integerObjectOf: cbEntryOffset)]
-			ifFalse:
-				[objectMemory
-					storePointerUnchecked: introspectionDataIndex + 0 ofObject: introspectionData withValue: objectMemory nilObject;
-					storePointerUnchecked: introspectionDataIndex + 1 ofObject: introspectionData withValue: (objectMemory integerObjectOf: cmEntryOffset);
-					storePointerUnchecked: introspectionDataIndex + 2 ofObject: introspectionData withValue: objectMemory nilObject;
-					storePointerUnchecked: introspectionDataIndex + 3 ofObject: introspectionData withValue: (objectMemory integerObjectOf: cmNoCheckEntryOffset)].
-		 objectMemory
-			storePointerUnchecked: introspectionDataIndex + 4 ofObject: introspectionData withValue: (objectMemory integerObjectOf: bcpc + 1);
-			storePointerUnchecked: introspectionDataIndex + 5 ofObject: introspectionData withValue: (objectMemory integerObjectOf: (self cCoerceSimple: cogMethodArg to: #'CogMethod *') stackCheckOffset).
-		 introspectionDataIndex := introspectionDataIndex + 6.
-		 ^0].
-
-	(self isPCMappedAnnotation: isBackwardBranchAndAnnotation >> 1) ifTrue:
-		[| actualBcpc actualMcpc |
-		 actualBcpc := (isBackwardBranchAndAnnotation anyMask: 1)
-							ifTrue: [bcpc + 1]
-							ifFalse: [bcpc + descriptor numBytes + 1].
-		 actualMcpc := mcpc asUnsignedInteger - cogMethodArg asUnsignedInteger.
-		 objectMemory
-			storePointerUnchecked: introspectionDataIndex + 0 ofObject: introspectionData withValue: (objectMemory integerObjectOf: actualBcpc);
-			storePointerUnchecked: introspectionDataIndex + 1 ofObject: introspectionData withValue: (objectMemory integerObjectOf: actualMcpc).
-		 introspectionDataIndex := introspectionDataIndex + 2].
-
-	^0
-]
-
-{ #category : #'method introspection' }
-SimpleStackBasedCogit >> pcDataForBlockEntry: blockEntryMcpc Method: cogMethod [
-	"Collect the branch and send data for the block method starting at blockEntryMcpc, storing it into picData."
-	<returnTypeC: #usqInt>
-	objectMemory
-		storePointerUnchecked: introspectionDataIndex + 0 ofObject: introspectionData withValue: objectMemory nilObject;
-		storePointerUnchecked: introspectionDataIndex + 1 ofObject: introspectionData withValue: (objectMemory integerObjectOf: blockEntryMcpc - blockNoContextSwitchOffset);
-		storePointerUnchecked: introspectionDataIndex + 2 ofObject: introspectionData withValue: objectMemory nilObject;
-		storePointerUnchecked: introspectionDataIndex + 3 ofObject: introspectionData withValue: (objectMemory integerObjectOf: blockEntryMcpc).
-	introspectionDataIndex := introspectionDataIndex + 4.
-	^0
-]
-
 { #category : #trampolines }
 SimpleStackBasedCogit >> picAbortTrampolineFor: numArgs [
 	^cePICAbortTrampoline
@@ -3748,8 +3644,8 @@ SimpleStackBasedCogit >> returnRegForStoreCheck [
 	 caller-saved we use the fact that ceStoreCheck: answers its argument to
 	 reload ReceiverResultReg cheaply.  Otherwise we don't care about the result
 	 and use the cResultRegister, effectively a no-op (see compileTrampoline...)"
-	<inline: true>
-	^(self isCallerSavedReg: ReceiverResultReg)
+
+	^(self register: ReceiverResultReg isInMask: callerSavedRegMask)
 		ifTrue: [ReceiverResultReg]
 		ifFalse: [backEnd cResultRegister]
 ]

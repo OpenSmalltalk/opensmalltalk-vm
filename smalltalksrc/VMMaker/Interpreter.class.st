@@ -3790,6 +3790,30 @@ Interpreter >> isHandlerMarked: aContext [
 
 ]
 
+{ #category : #'plugin primitive support' }
+Interpreter >> isKindOfInteger: oop [
+	"Answer true if the oop is kind of Integer (Small or Large)."
+	<api>
+	<inline: true>
+	^(self isIntegerObject: oop)
+		or: [self isLargeIntegerInstance: oop]
+]
+
+{ #category : #'plugin primitive support' }
+Interpreter >> isLargeIntegerObject: oop [
+	^(self isLargeIntegerInstance: oop)
+]
+
+{ #category : #'plugin primitive support' }
+Interpreter >> isLargeNegativeIntegerObject: oop [
+	^(self isInstanceOfClassLargeNegativeInteger: oop)
+]
+
+{ #category : #'plugin primitive support' }
+Interpreter >> isLargePositiveIntegerObject: oop [
+	^(self isInstanceOfClassLargePositiveInteger: oop)
+]
+
 { #category : #'compiled methods' }
 Interpreter >> isUnwindMarked: aContext [
 	"Is this a MethodContext whose meth has a primitive number of 198?"

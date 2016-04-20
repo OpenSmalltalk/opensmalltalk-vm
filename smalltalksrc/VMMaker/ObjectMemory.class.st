@@ -1080,7 +1080,8 @@ ObjectMemory >> bytesPerOop [
 ObjectMemory >> cCoerceSimple: value to: cTypeString [
 	<doNotGenerate>
 	^cTypeString caseOf:
-	   {	[#'char *']	->	[value] }
+	   {	[#'char *']			->	[value].
+		[#'unsigned int']	->	[value]. }
 ]
 
 { #category : #'interpreter access' }
@@ -3257,6 +3258,32 @@ ObjectMemory >> isIndexableFormat: format [
 ]
 
 { #category : #'interpreter access' }
+ObjectMemory >> isInstanceOfClassLargeNegativeInteger: oop [
+	<inline: true>
+	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
+	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
+	 phrase (objectMemory splObj: ClassLargeNegativeInteger) is expanded
+	 in-place and is _not_ evaluated if oop has a non-zero CompactClassIndex."
+	^self
+		is: oop
+		instanceOf: (self splObj: ClassLargeNegativeInteger) 
+		compactClassIndex: ClassLargeNegativeIntegerCompactIndex
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> isInstanceOfClassLargePositiveInteger: oop [
+	<inline: true>
+	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
+	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
+	 phrase (objectMemory splObj: ClassLargePositiveInteger) is expanded
+	 in-place and is _not_ evaluated if oop has a non-zero CompactClassIndex."
+	^self
+		is: oop
+		instanceOf: (self splObj: ClassLargePositiveInteger) 
+		compactClassIndex: ClassLargePositiveIntegerCompactIndex
+]
+
+{ #category : #'interpreter access' }
 ObjectMemory >> isIntegerObject: objectPointer [
 
 	^ (objectPointer bitAnd: 1) > 0
@@ -3272,6 +3299,13 @@ ObjectMemory >> isIntegerValue: intValue [
 	^self
 		cCode: [(intValue asUnsignedInteger bitXor: (intValue asUnsignedInteger << 1)) asInteger >= 0]
 		inSmalltalk: [intValue >= self minSmallInteger and: [intValue <= self maxSmallInteger]]
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> isLargeIntegerInstance: oop [
+	<inline: true>
+	^(self isInstanceOfClassLargePositiveInteger: oop)
+		or: [self isInstanceOfClassLargeNegativeInteger: oop]
 ]
 
 { #category : #'header access' }

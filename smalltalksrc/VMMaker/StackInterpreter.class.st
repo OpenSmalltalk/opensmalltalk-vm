@@ -3686,9 +3686,8 @@ StackInterpreter >> checkForAndFollowForwardedPrimitiveState [
 						 self
 							followForwardedFrameContents: framePointer
 							stackPointer: stackPointer + (argumentCount + 1 * objectMemory wordSize) "don't repeat effort"]].
-				(accessorDepth > 0
-			 	 and: [(objectMemory hasPointerFields: oop)
-				 and: [objectMemory followForwardedObjectFields: oop toDepth: accessorDepth]]) ifTrue:
+				((objectMemory hasPointerFields: oop)
+				 and: [objectMemory followForwardedObjectFields: oop toDepth: accessorDepth]) ifTrue:
 					[found := true]]]].
 	^found
 ]
@@ -8463,6 +8462,36 @@ StackInterpreter >> isFrame: aFrame onPage: aPage [
 	^false
 ]
 
+{ #category : #'internal interpreter access' }
+StackInterpreter >> isKindOfInteger: oop [
+	"Answer true if the oop is kind of Integer (Small or Large)."
+	<api>
+	<inline: true>
+	^(objectMemory isIntegerObject: oop)
+		or: [objectMemory isLargeIntegerInstance: oop]
+]
+
+{ #category : #'internal interpreter access' }
+StackInterpreter >> isLargeIntegerObject: oop [
+	<api>
+	<inline: true>
+	^objectMemory isLargeIntegerInstance: oop
+]
+
+{ #category : #'internal interpreter access' }
+StackInterpreter >> isLargeNegativeIntegerObject: oop [
+	<api>
+	<inline: true>
+	^objectMemory isInstanceOfClassLargeNegativeInteger: oop
+]
+
+{ #category : #'internal interpreter access' }
+StackInterpreter >> isLargePositiveIntegerObject: oop [
+	<api>
+	<inline: true>
+	^objectMemory isInstanceOfClassLargePositiveInteger: oop
+]
+
 { #category : #'frame access' }
 StackInterpreter >> isLiveContext: oop [
 	"Answer if the argument, which can be any object, is a live context."
@@ -11984,8 +12013,7 @@ StackInterpreter >> printStringOf: oop [
 	((objectMemory is: oop
 		  instanceOf: (objectMemory splObj: ClassByteArray)
 		  compactClassIndex: classByteArrayCompactIndex)
-	or: [(self isInstanceOfClassLargePositiveInteger: oop)
-	or: [(self isInstanceOfClassLargeNegativeInteger: oop)]])
+	or: [(objectMemory isLargeIntegerInstance: oop)])
 		ifTrue:
 			[[i < cnt] whileTrue:
 				[self printHex: (objectMemory fetchByte: i ofObject: oop).

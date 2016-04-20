@@ -582,6 +582,26 @@ InterpreterProxy >> isInterpreterProxy [
 ]
 
 { #category : #testing }
+InterpreterProxy >> isKindOfInteger: objectOrientedPointer [
+	^objectOrientedPointer isInteger
+]
+
+{ #category : #testing }
+InterpreterProxy >> isLargeIntegerObject: objectOrientedPointer [
+	^objectOrientedPointer isKindOf: LargePositiveInteger
+]
+
+{ #category : #testing }
+InterpreterProxy >> isLargeNegativeIntegerObject: objectOrientedPointer [
+	^objectOrientedPointer isMemberOf: LargeNegativeInteger
+]
+
+{ #category : #testing }
+InterpreterProxy >> isLargePositiveIntegerObject: objectOrientedPointer [
+	^objectOrientedPointer isMemberOf: LargePositiveInteger
+]
+
+{ #category : #testing }
 InterpreterProxy >> isNonImmediate: anObject [
 
 	^ (self isImmediate: anObject) not
