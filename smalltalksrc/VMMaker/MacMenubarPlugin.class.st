@@ -89,7 +89,7 @@ MacMenubarPlugin >> primitiveCreateStandardWindowMenu: inOptions [
 	| menuHandle result |
 	self primitive: 'primitiveCreateStandardWindowMenu'
 		parameters: #(SmallInteger).
-	self cppIf: #TARGET_API_MAC_CARBON
+	self cppIf: #'TARGET_API_MAC_CARBON'
 		ifTrue: [result := self cCode: 'CreateStandardWindowMenu(inOptions,&menuHandle);' inSmalltalk:[0]].
 	^interpreterProxy positiveMachineIntegerFor: (self cCoerce: menuHandle to: 'long')
 ]
@@ -126,7 +126,7 @@ MacMenubarPlugin >> primitiveDisableMenuCommand: menuHandleOop item: anInteger [
 	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: #MenuHandle.
 	commandID := self cCoerce: (interpreterProxy positive32BitValueOf: anInteger) to: #MenuCommand.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
-	self cppIf: #TARGET_API_MAC_CARBON
+	self cppIf: #'TARGET_API_MAC_CARBON'
 		ifTrue: [self cCode: 'DisableMenuCommand(menuHandle,commandID);' inSmalltalk: [menuHandle]].
 	^nil
 
@@ -178,7 +178,7 @@ MacMenubarPlugin >> primitiveDisposeMenuBar: menuHandleOop [
 	self primitive: 'primitiveDisposeMenuBar'
 		parameters: #(Oop).
 	menuBarHandle := self cCoerce: (interpreterProxy positive32BitValueOf: menuHandleOop) to: #Handle.
-	self cppIf: #TARGET_API_MAC_CARBON
+	self cppIf: #'TARGET_API_MAC_CARBON'
 		ifTrue: [self cCode: 'DisposeMenuBar(menuBarHandle);' inSmalltalk: [menuBarHandle]]
 		ifFalse: [self cCode: 'DisposeHandle(menuBarHandle);' inSmalltalk: [menuBarHandle]].
 	^nil
@@ -204,7 +204,7 @@ MacMenubarPlugin >> primitiveEnableMenuCommand: menuHandleOop item: anInteger [
 	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: #MenuHandle.
 	commandID := self cCoerce: (interpreterProxy positive32BitValueOf: anInteger) to: #MenuCommand.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
-	self cppIf: #TARGET_API_MAC_CARBON
+	self cppIf: #'TARGET_API_MAC_CARBON'
 		ifTrue: [self cCode: 'EnableMenuCommand(menuHandle,commandID);' inSmalltalk: [menuHandle]].
 	^nil
 ]
@@ -247,7 +247,7 @@ MacMenubarPlugin >> primitiveGetIndMenuItemWithCommandID: menuHandleOop commandI
 	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: #MenuHandle.
 	commandID := self cCoerce: (interpreterProxy positive32BitValueOf: aCommandID) to: #MenuCommand.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
-	self cppIf: #TARGET_API_MAC_CARBON
+	self cppIf: #'TARGET_API_MAC_CARBON'
 		ifTrue: [self cCode: 'GetIndMenuItemWithCommandID(menuHandle, kHICommandHide, 1,
                    &applicationMenu, &outIndex);' inSmalltalk: [menuHandle]].
 	^outIndex asSmallIntegerObj
@@ -266,7 +266,7 @@ MacMenubarPlugin >> primitiveGetIndMenuWithCommandID: menuHandleOop commandID: a
 	menuHandle := self cCoerce: (interpreterProxy positiveMachineIntegerValueOf: menuHandleOop) to: 'MenuHandle'.
 	commandID := self cCoerce: (interpreterProxy positive32BitValueOf: aCommandID) to: 'MenuCommand'.
 	(self ioCheckMenuHandle: menuHandle) ifFalse: [^interpreterProxy success: false].
-	self cppIf: #TARGET_API_MAC_CARBON
+	self cppIf: #'TARGET_API_MAC_CARBON'
 		ifTrue: [self cCode: 'GetIndMenuItemWithCommandID(menuHandle, kHICommandHide, 1,
                    &applicationMenu, &outIndex);' inSmalltalk: [menuHandle]].
 	outIndex asSmallIntegerObj. "to avoid elimination of the variable..."
