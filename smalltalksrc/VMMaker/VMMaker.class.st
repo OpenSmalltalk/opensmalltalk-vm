@@ -521,7 +521,7 @@ VMMaker class >> generateSqueakSpurCog64VM [
 VMMaker class >> generateSqueakSpurCogSista64VM [
 	^VMMaker
 		generate: CoInterpreter
-		and: SistaStackToRegisterMappingCogit
+		and: SistaCogit
 		with: #(	SistaVM true
 				ObjectMemory Spur64BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
@@ -536,7 +536,7 @@ VMMaker class >> generateSqueakSpurCogSistaVM [
 	"No primitives since we can use those for the Cog VM"
 	^VMMaker
 		generate: CoInterpreter
-		and: SistaStackToRegisterMappingCogit
+		and: SistaCogit
 		with: #(	SistaVM true
 				ObjectMemory Spur32BitCoMemoryManager
 				MULTIPLEBYTECODESETS true

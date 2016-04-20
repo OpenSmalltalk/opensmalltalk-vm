@@ -1460,7 +1460,7 @@ CoInterpreter >> ceCounterTripped: condition [
 	 The minor case is that there is an unlikely  possibility that the cointer tripped but condition
 	 is not a boolean, in which case a mustBeBoolean response should occur."
 	<api>
-	<option: #SistaStackToRegisterMappingCogit>
+	<option: #SistaCogit>
 	"Send e.g. thisContext conditionalBranchCounterTrippedOn: boolean."
 	| context counterTrippedSelector classTag classObj |
 	(condition = objectMemory falseObject

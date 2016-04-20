@@ -2597,10 +2597,9 @@ StackToRegisterMappingCogit >> genSistaExtStoreLiteralVariableBytecodePopBoolean
 StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 	| primDescriptor rcvrIsConst argIsConst rcvrIsInt argIsInt rcvrInt argInt result
 	 jumpNotSmallInts jumpContinue index |
+	<var: #jumpContinue type: #'AbstractInstruction *'>
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
-	<var: #jumpContinue type: #'AbstractInstruction *'>
-	<var: #instToAnnotate type: #'AbstractInstruction *'>
 	primDescriptor := self generatorAt: byte0.
 	argIsInt := (argIsConst := self ssTop type = SSConstant)
 				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)].
