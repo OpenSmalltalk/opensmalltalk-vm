@@ -45,7 +45,7 @@ Class {
 	#pools : [
 		'VMBasicConstants'
 	],
-	#category : 'VMMaker-Translation to C'
+	#category : #'VMMaker-Translation to C'
 }
 
 { #category : #'class initialization' }
@@ -488,13 +488,30 @@ CCodeGenerator >> addStructClasses: classes [
 	"Add the struct classes and save them for emitCTypesOn: later."
 	structClasses := classes.
 	structClasses do:
-		[:structClass| self addStructClass: structClass]
+		[:structClass|
+		 (structClass withAllSuperclasses copyUpTo: VMStructType) do:
+			[:structClassOrSuperclass|
+			 self addStructClass: structClassOrSuperclass]]
 ]
 
 { #category : #utilities }
 CCodeGenerator >> addStructMethodFor: aClass selector: selector [ 
 	"Add the given struct method to the code base and answer its translation
 	 or nil if it shouldn't be translated."
+	(self methodNamed: selector) ifNotNil:
+		[:tmethod|
+		 "If we're repeating an attempt to add the same thing, or
+		  if the existing method overrides this one,don't complain."
+		 (tmethod definingClass includesBehavior: aClass) ifTrue:
+			[^self].
+		 "If the methods are both simple accessors, don't complain."
+		 ((tmethod definingClass isAccessor: selector)
+		 and: [aClass isAccessor: selector]) ifTrue:
+			[^self].
+		 "If the method is overriding a method in a superclass, don't complain"
+		 (aClass inheritsFrom: tmethod definingClass)
+			ifTrue: [methods removeKey: selector]
+			ifFalse: [self error: 'conflicting implementations for ', selector storeString]].
 	^(self addMethodFor: aClass selector: selector) ifNotNil:
 		[:tmethod|
 		tmethod transformToStructClassMethodFor: self.
@@ -3773,6 +3790,14 @@ CCodeGenerator >> maybeBreakForTestToInline: aNodeOrSelector in: aTMethod [
 	and: [(breakDestInlineSelectors isEmpty or: [(breakDestInlineSelectors includes: aTMethod selector)])
 	and: [breakOnInline ~~ true]]]) ifTrue:
 		[aTMethod halt: aTMethod selector, ' ', selector]
+]
+
+{ #category : #'C translation support' }
+CCodeGenerator >> maybeEmitPrimitiveFailureDefineFor: selector on: aStream [
+	 (vmClass notNil
+	 and: [(vmClass inheritsFrom: InterpreterPrimitives)
+	 and: [(vmClass primitiveTable includes: selector)]]) ifTrue:
+		[aStream nextPutAll: '#else\# define ' withCRs; nextPutAll: selector; nextPutAll: ' (void (*)(void))0\' withCRs]
 ]
 
 { #category : #'C code generator' }

@@ -629,7 +629,7 @@ Class {
 		'VMSpurObjectRepresentationConstants',
 		'VMSqueakClassIndices'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
@@ -696,7 +696,6 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 		var: #freeListsMask type: #usqInt;
 		var: #freeLists type: #'sqInt *';
 		var: #objStackInvalidBecause type: #'char *';
-		var: #highestObjects type: #SpurCircularBuffer;
 		var: #unscannedEphemerons type: #SpurContiguousObjStack;
 		var: #heapGrowthToSizeGCRatio type: #float;
 		var: #heapSizeAtPreviousGC type: #usqInt;
@@ -6646,6 +6645,12 @@ SpurMemoryManager >> isIntegerValue: intValue [
 	^self subclassResponsibility
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> isKindOfInteger: oop [
+	<doNotGenerate>
+	^coInterpreter isKindOfInteger: oop
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> isLargeFreeObject: objOop [
 	^(self bytesInObject: objOop) >= (self numFreeLists * self allocationUnit)
@@ -6655,6 +6660,18 @@ SpurMemoryManager >> isLargeFreeObject: objOop [
 SpurMemoryManager >> isLargeIntegerInstance: oop [
 	"Answer if the oop is a large positive or negative integer instance."
 	^(self isNonImmediate: oop) and: [((self classIndexOf: oop) - ClassLargeNegativeIntegerCompactIndex) asUnsignedInteger <= 1]
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> isLargeNegativeIntegerObject: oop [
+	<doNotGenerate>
+	^coInterpreter isLargeNegativeIntegerObject: oop
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> isLargePositiveIntegerObject: oop [
+	<doNotGenerate>
+	^coInterpreter isLargePositiveIntegerObject: oop
 ]
 
 { #category : #'object testing' }

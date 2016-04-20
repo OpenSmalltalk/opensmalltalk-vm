@@ -4,7 +4,7 @@ This plugin provide GSM typecodec capabilities.
 Class {
 	#name : #SoundCodecPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #accessing }
