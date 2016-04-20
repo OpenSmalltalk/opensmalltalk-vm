@@ -267,32 +267,6 @@ InterpreterPrimitives >> isInstanceOfClassByteString: oop [
 ]
 
 { #category : #'primitive support' }
-InterpreterPrimitives >> isInstanceOfClassLargeNegativeInteger: oop [
-	<inline: true>
-	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
-	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
-	 phrase (objectMemory splObj: ClassLargeNegativeInteger) is expanded
-	 in-place and is _not_ evaluated if oop has a non-zero CompactClassIndex."
-	^objectMemory
-		is: oop
-		instanceOf: (objectMemory splObj: ClassLargeNegativeInteger) 
-		compactClassIndex: ClassLargeNegativeIntegerCompactIndex
-]
-
-{ #category : #'primitive support' }
-InterpreterPrimitives >> isInstanceOfClassLargePositiveInteger: oop [
-	<inline: true>
-	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
-	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
-	 phrase (objectMemory splObj: ClassLargePositiveInteger) is expanded
-	 in-place and is _not_ evaluated if oop has a non-zero CompactClassIndex."
-	^objectMemory
-		is: oop
-		instanceOf: (objectMemory splObj: ClassLargePositiveInteger) 
-		compactClassIndex: ClassLargePositiveIntegerCompactIndex
-]
-
-{ #category : #'primitive support' }
 InterpreterPrimitives >> isNegativeIntegerValueOf: oop [
 	"Answer true if integer object is negative.
 	Fail if object pointed by oop i not an integer."
@@ -1968,10 +1942,13 @@ InterpreterPrimitives >> primitiveGetAttribute [
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveGetImmutability [
-	<option: #IMMUTABILITY>
-	| rcvr |
-	rcvr := self stackValue: 0.
-	self pop: argumentCount + 1 thenPushBool: (objectMemory isOopImmutable: rcvr)
+	self cppIf: #IMMUTABILITY
+		ifTrue:
+			[| rcvr |
+			 rcvr := self stackValue: 0.
+			 self pop: argumentCount + 1 thenPushBool: (objectMemory isOopImmutable: rcvr)]
+		ifFalse:
+			[self primitiveFailFor: PrimErrUnsupported]
 ]
 
 { #category : #'I/O primitives' }
@@ -3509,23 +3486,26 @@ InterpreterPrimitives >> primitiveSetIdentityHash [
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveSetImmutability [
-	<option: #IMMUTABILITY>
-	| rcvr wasImmutable |
-	 rcvr := self stackValue: 1.
-	 (objectMemory isImmediate: rcvr) ifTrue:
-		[^self primitiveFailFor: PrimErrBadReceiver].
-	 wasImmutable := objectMemory isObjImmutable: rcvr.
-	 self stackTop = objectMemory trueObject
+	self cppIf: #IMMUTABILITY
 		ifTrue:
-			[(self canBeImmutable: rcvr) ifFalse:
-				[^self primitiveFailFor: PrimErrInappropriate].
-			  objectMemory setIsImmutableOf: rcvr to: true]
-		ifFalse: [
-	self stackTop = objectMemory falseObject
-		ifTrue: [objectMemory setIsImmutableOf: rcvr to: false]
-	 	ifFalse:
-			[^self primitiveFailFor: PrimErrBadArgument]].
-	 self pop: argumentCount + 1 thenPushBool: wasImmutable
+			[| rcvr wasImmutable |
+			 rcvr := self stackValue: 1.
+			 (objectMemory isImmediate: rcvr) ifTrue:
+				[^self primitiveFailFor: PrimErrBadReceiver].
+			 wasImmutable := objectMemory isObjImmutable: rcvr.
+			 self stackTop = objectMemory trueObject
+				ifTrue:
+					[(self canBeImmutable: rcvr) ifFalse:
+						[^self primitiveFailFor: PrimErrInappropriate].
+					  objectMemory setIsImmutableOf: rcvr to: true]
+				ifFalse: [
+			self stackTop = objectMemory falseObject
+				ifTrue: [objectMemory setIsImmutableOf: rcvr to: false]
+			 	ifFalse:
+					[^self primitiveFailFor: PrimErrBadArgument]].
+			 self pop: argumentCount + 1 thenPushBool: wasImmutable]
+		ifFalse:
+			[self primitiveFailFor: PrimErrUnsupported]
 ]
 
 { #category : #'I/O primitives' }
@@ -3702,7 +3682,6 @@ InterpreterPrimitives >> primitiveSine [
 
 { #category : #'indexing primitives' }
 InterpreterPrimitives >> primitiveSize [
-	<accessorDepth: 0>
 	| rcvr hdr fmt fixedFields totalLength |
 	rcvr := self stackTop.
 	((objectMemory isImmediate: rcvr) "Integers are not indexable"

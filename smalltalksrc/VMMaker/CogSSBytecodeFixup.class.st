@@ -65,21 +65,9 @@ CogSSBytecodeFixup >> isBackwardBranchFixup [
 ]
 
 { #category : #testing }
-CogSSBytecodeFixup >> isMergeFixup [
-	<inline: true>
-	^ targetInstruction asUnsignedInteger = NeedsMergeFixupFlag
-]
-
-{ #category : #testing }
 CogSSBytecodeFixup >> isMergeFixupOrIsFixedUp [
 	<inline: true>
 	^ targetInstruction asUnsignedInteger >= NeedsMergeFixupFlag
-]
-
-{ #category : #testing }
-CogSSBytecodeFixup >> isNonMergeFixup [
-	<inline: true>
-	^ targetInstruction asUnsignedInteger = NeedsNonMergeFixupFlag
 ]
 
 { #category : #testing }
