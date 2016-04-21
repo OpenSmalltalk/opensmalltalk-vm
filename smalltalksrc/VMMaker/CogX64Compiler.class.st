@@ -587,7 +587,7 @@ CogX64Compiler >> computeMaximumSize [
 		[PushCq]		-> [^(self isQuick: (operands at: 0))
 								ifTrue: [2]
 								ifFalse:
-									[(self isSignExtendedFourByteValue: (operands at: 0))
+									[(self is32BitSignedImmediate: (operands at: 0))
 										ifTrue: [5]
 										ifFalse: [self computeSizeOfPushCw]]].
 		[PushCw]		-> [^self computeSizeOfPushCw].
@@ -654,7 +654,7 @@ CogX64Compiler >> concretizeArithCqRWithRO: regOpcode raxOpcode: raxOpcode [
 			at: 2 put: (self mod: ModReg RM: reg RO: regOpcode);
 			at: 3 put: (value bitAnd: 16rFF).
 		 ^machineCodeSize := 4].
-	(self isSignExtendedFourByteValue: value) ifTrue:
+	(self is32BitSignedImmediate: value) ifTrue:
 		[reg = RAX ifTrue:
 			[machineCode
 				at: 1 put: raxOpcode;
@@ -1895,7 +1895,7 @@ CogX64Compiler >> concretizePushCq [
 			at: 0 put: 16r6A;
 			at: 1 put: (value bitAnd: 16rFF).
 		^machineCodeSize := 2].
-	(self isSignExtendedFourByteValue: value) ifTrue:
+	(self is32BitSignedImmediate: value) ifTrue:
 		[machineCode
 			at: 0 put: 16r68;
 			at: 1 put: (value bitAnd: 16rFF);
@@ -2065,7 +2065,7 @@ CogX64Compiler >> concretizeTstCqR [
 			at: 3 put: (value bitAnd: 16rFF).
 		 ^machineCodeSize := 4].
 	
-	(self isSignExtendedFourByteValue: value) ifTrue:
+	(self is32BitSignedImmediate: value) ifTrue:
 		[reg = RAX ifTrue:
 			[machineCode
 				at: 1 put: 16rA9;
@@ -2672,9 +2672,9 @@ CogX64Compiler >> instructionSizeAt: pc [
 
 { #category : #testing }
 CogX64Compiler >> is32BitSignedImmediate: a64BitUnsignedOperand [
+	"Top 32 bits all the same as the bottom 32 bits' sign bit implies we can use a sign-extended 4 byte offset."
 	^self cCode: [(self cCoerceSimple: a64BitUnsignedOperand to: #int) = (self cCoerceSimple: a64BitUnsignedOperand to: #long)]
-		inSmalltalk: [((a64BitUnsignedOperand >> 32) signedIntFromLong between: -1 and: 0)
-					and: [(a64BitUnsignedOperand >> 31) signedIntFromLong between: -1 and: 0]]
+		inSmalltalk: [((a64BitUnsignedOperand >> 32) signedIntFromLong + 1 bitXor: 1) = (a64BitUnsignedOperand >> 31 bitAnd: 1)]
 ]
 
 { #category : #testing }
@@ -2718,13 +2718,6 @@ CogX64Compiler >> isJumpAt: pc [
 CogX64Compiler >> isQuick: operand [
 	<var: #operand type: #'unsigned long'>
 	^operand signedIntFromLong64 between: -128 and: 127
-]
-
-{ #category : #testing }
-CogX64Compiler >> isSignExtendedFourByteValue: unsigned64BitValue [
-	"Top 32 bits all the same as the bottom 32 bits' sign bit  implies we can use a sign-extended 4 byte offset."
-	^((self cCode: [unsigned64BitValue >>> 32]
-			inSmalltalk: [(unsigned64BitValue >> 32) signedIntFromLong]) + 1 bitXor: 1) = (unsigned64BitValue >> 31 bitAnd: 1)
 ]
 
 { #category : #testing }
