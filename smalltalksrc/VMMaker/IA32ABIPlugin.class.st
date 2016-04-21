@@ -22,7 +22,7 @@ Class {
 	#pools : [
 		'VMBasicConstants'
 	],
-	#category : #'VMMaker-Plugins-FFI'
+	#category : 'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }

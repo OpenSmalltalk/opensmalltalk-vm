@@ -975,6 +975,16 @@ StackToRegisterMappingCogit >> anyReferencesToRegister: reg inTopNItems: n [
 	^false
 ]
 
+{ #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> assertCorrectSimStackPtr [
+	<inline: true> "generates nothing anyway"
+	 self cCode: '' inSmalltalk:
+		[deadCode ifFalse:
+			[self assert: simStackPtr + (needsFrame ifTrue: [0] ifFalse: [1])
+						= (self debugStackPointerFor: bytecodePC)]].
+	
+]
+
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> availableRegOrNoneNotConflictingWith: regMask [
 	<inline: true>
@@ -1067,41 +1077,23 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 	<var: #fixup type: #'BytecodeFixup *'>
 	self traceSimStack.
 	bytecodePC := start.
-	nExts := 0.
+	nExts := result := 0.
 	descriptor := nil.
 	deadCode := false.
-	[self cCode: '' inSmalltalk:
-		[(debugBytecodePointers includes: bytecodePC) ifTrue: [self halt]].
+	[self cCode: '' inSmalltalk: [self isDebugPC ifTrue: [self halt]].
 	 fixup := self fixupAt: bytecodePC - initialPC.
-	 "If there's no fixup following a return there's no jump to that code and it is dead."
-	 (descriptor notNil and: [descriptor isReturn]) ifTrue: [deadCode := true].
 	 self mergeWithFixupIfRequired: fixup.
-	 self cCode: '' inSmalltalk:
-		[deadCode ifFalse:
-			[self assert: simStackPtr + (needsFrame ifTrue: [0] ifFalse: [1])
-						= (self debugStackPointerFor: bytecodePC)]].
-	 byte0 := (objectMemory fetchByte: bytecodePC ofObject: methodObj) + bytecodeSetOffset.
-	 descriptor := self generatorAt: byte0.
-	 self loadSubsequentBytesForDescriptor: descriptor at: bytecodePC.
+	 self assertCorrectSimStackPtr.
+	 descriptor := self loadBytesAndGetDescriptor.
 	 nextOpcodeIndex := opcodeIndex.
 	 result := deadCode
-				ifTrue: "insert nops for dead code that is mapped so that bc to mc mapping is not many to one"
-					[(descriptor isMapped
-					  or: [inBlock and: [descriptor isMappedInBlock]]) ifTrue:
-						[self annotateBytecode: self Nop].
-						0]
-				ifFalse:
-					[self perform: descriptor generator].
-	 descriptor isExtension ifFalse: "extended bytecodes must consume their extensions"
-		[self assert: (extA = 0 and: [extB = 0])].
+				ifTrue: [self mapDeadDescriptorIfNeeded: descriptor]
+				ifFalse: [self perform: descriptor generator].
+	 self assertExtsAreConsumed: descriptor.
 	 self traceDescriptor: descriptor; traceSimStack.
-	 fixup needsFixup ifTrue:
-		["There is a fixup for this bytecode.  It must point to the first generated
-		   instruction for this bytecode.  If there isn't one we need to add a label."
-		 opcodeIndex = nextOpcodeIndex ifTrue: [self Label].
-		 fixup targetInstruction: (self abstractInstructionAt: nextOpcodeIndex)].
+	 self patchFixupTargetIfNeeded: fixup nextOpcodeIndex: nextOpcodeIndex.
 	 self maybeDumpLiterals: descriptor.
-	 bytecodePC := self nextBytecodePCFor: descriptor at: bytecodePC exts: nExts in: methodObj.
+	 bytecodePC := self nextBytecodePCFor: descriptor exts: nExts.
 	 result = 0 and: [bytecodePC <= end]] whileTrue:
 		[nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
 	self checkEnoughOpcodes.
@@ -3151,6 +3143,7 @@ StackToRegisterMappingCogit >> genUpArrowReturn [
 				ret pc in LR.
 	 A fully framed activation is described in CoInterpreter class>initializeFrameIndices.
 	 Return pops receiver and arguments off the stack.  Callee pushes the result."
+	deadCode := true. "can't fall through"
 	inBlock ifTrue:
 		[self assert: needsFrame. 
 		 self CallRT: ceNonLocalReturnTrampoline.
@@ -3170,7 +3163,6 @@ StackToRegisterMappingCogit >> genUpArrowReturn [
 						or: [regArgsHaveBeenPushed])
 							ifTrue: [methodOrBlockNumArgs + 1 * objectMemory wordSize]
 							ifFalse: [0])].
-	deadCode := true. "can't fall through"
 	^0
 ]
 
@@ -3559,6 +3551,18 @@ StackToRegisterMappingCogit >> liveRegisters [
 		[:i|
 		regsSet := regsSet bitOr: (self simStackAt: i) registerMask].
 	^regsSet
+]
+
+{ #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> mapDeadDescriptorIfNeeded: descriptor [ 
+	"insert nops for dead code that is mapped so that bc 
+	 to mc mapping is not many to one"
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	self flag: #annotateInstruction .
+	(descriptor isMapped
+		or: [inBlock and: [descriptor isMappedInBlock]]) 
+		ifTrue: [self annotateBytecode: self Nop].
+	^ 0
 ]
 
 { #category : #'simulation stack' }

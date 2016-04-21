@@ -5,7 +5,7 @@ Class {
 		'start',
 		'limit'
 	],
-	#category : #'VMMaker-SpurMemoryManager'
+	#category : 'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }

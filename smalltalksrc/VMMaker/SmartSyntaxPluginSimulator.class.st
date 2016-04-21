@@ -6,7 +6,7 @@ Class {
 		'signatureMap',
 		'forMap'
 	],
-	#category : #'VMMaker-SmartSyntaxPlugins'
+	#category : 'VMMaker-SmartSyntaxPlugins'
 }
 
 { #category : #simulation }
