@@ -5651,6 +5651,7 @@ StackInterpreter >> extStoreReceiverVariableBytecode [
 
 { #category : #'stack bytecodes' }
 StackInterpreter >> extStoreRemoteTempOrInstVarLongBytecode [
+	<inline: true>
 	| slotIndex tempIndex object |
 	slotIndex := self fetchByte.
 	tempIndex := self fetchByte.
