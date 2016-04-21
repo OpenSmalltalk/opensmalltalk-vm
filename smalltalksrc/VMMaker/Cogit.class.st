@@ -2697,6 +2697,14 @@ Cogit >> assertCStackWellAligned [
 	self assert: processor fp \\ cStackAlignment = expectedFPAlignment
 ]
 
+{ #category : #'compile abstract instructions' }
+Cogit >> assertExtsAreConsumed: descriptor [
+	 "extended bytecodes must consume their extensions"
+	 <inline: true>
+	 descriptor isExtension ifFalse:
+		[self assert: (extA = 0 and: [extB = 0])].
+]
+
 { #category : #debugging }
 Cogit >> assertSaneJumpTarget: jumpTarget [
 	<var: #jumpTarget type: #'AbstractInstruction *'>
@@ -4241,23 +4249,16 @@ Cogit >> compileAbstractInstructionsFrom: start through: end [
 	<var: #fixup type: #'BytecodeFixup *'>
 	bytecodePC := start.
 	nExts := result := 0.
-	[self cCode: '' inSmalltalk:
-		[(debugBytecodePointers includes: bytecodePC) ifTrue: [self halt]].
-	 byte0 := (objectMemory fetchByte: bytecodePC ofObject: methodObj)  + bytecodeSetOffset.
-	 descriptor := self generatorAt: byte0.
-	 self loadSubsequentBytesForDescriptor: descriptor at: bytecodePC.
+	descriptor := nil.
+	[self cCode: '' inSmalltalk: [self isDebugPC ifTrue: [self halt]].
+	 descriptor := self loadBytesAndGetDescriptor.
 	 nextOpcodeIndex := opcodeIndex.
 	 result := self perform: descriptor generator.
-	 descriptor isExtension ifFalse: "extended bytecodes must consume their extensions"
-		[self assert: (extA = 0 and: [extB = 0])].
+	 self assertExtsAreConsumed: descriptor.
 	 fixup := self fixupAt: bytecodePC - initialPC.
-	 fixup needsFixup ifTrue:
-		["There is a fixup for this bytecode.  It must point to the first generated
-		   instruction for this bytecode.  If there isn't one we need to add a label."
-		 opcodeIndex = nextOpcodeIndex ifTrue: [self Label].
-		 fixup targetInstruction: (self abstractInstructionAt: nextOpcodeIndex)].
+	 self patchFixupTargetIfNeeded: fixup nextOpcodeIndex: nextOpcodeIndex.
 	 self maybeDumpLiterals: descriptor.
-	 bytecodePC := self nextBytecodePCFor: descriptor at: bytecodePC exts: nExts in: methodObj.
+	 bytecodePC := self nextBytecodePCFor: descriptor exts: nExts.
 	 result = 0 and: [bytecodePC <= end]]
 		whileTrue:
 			[nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
@@ -7490,6 +7491,12 @@ Cogit >> isCFramePointerInUse [
 	^true
 ]
 
+{ #category : #'compile abstract instructions' }
+Cogit >> isDebugPC [ 
+	<doNotGenerate>
+	^ debugBytecodePointers includes: bytecodePC
+]
+
 { #category : #'bytecode generator support' }
 Cogit >> isDirectedSuper: descriptor extA: exta extB: extb [
 	"235	(1)	11101011	iiiiijjj	ExtendB < 64
@@ -7662,6 +7669,18 @@ Cogit >> linkedSuperSendCacheTags [
 							 off = cmNoCheckEntryOffset ifTrue:
 								[cacheTags add: (backEnd inlineCacheTagAt: mcpc)]]]]]].
 	^cacheTags
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> loadBytesAndGetDescriptor [
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	| descriptor |
+	byte0 := (objectMemory fetchByte: bytecodePC ofObject: methodObj)  + bytecodeSetOffset.
+	descriptor := self generatorAt: byte0.
+	self loadSubsequentBytesForDescriptor: descriptor at: bytecodePC.
+	^ descriptor
+	
+	
 ]
 
 { #category : #'compile abstract instructions' }
@@ -8854,6 +8873,13 @@ Cogit >> nextBytecodePCFor: descriptor at: pc exts: nExts in: aMethodObj [
 			ifFalse: [0])
 ]
 
+{ #category : #'compile abstract instructions' }
+Cogit >> nextBytecodePCFor: descriptor exts: nExts [
+	<inline: true>
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	 ^ self nextBytecodePCFor: descriptor at: bytecodePC exts: nExts in: methodObj
+]
+
 { #category : #'bytecode generator support' }
 Cogit >> nextDescriptorAndExtensionsInto: aTrinaryBlock [
 	"Peek ahead and deliver the next descriptor plus extension bytes."
@@ -9070,6 +9096,17 @@ Cogit >> outputInstructionsForGeneratedRuntimeAt: startAddress [
 	backEnd stopsFrom: endAddress to: methodZoneBase - 1.
 	self cCode: '' inSmalltalk: [methodZone freeStart: methodZoneBase].
 	^startAddress
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> patchFixupTargetIfNeeded: fixup nextOpcodeIndex: nextOpcodeIndex [
+	<var: #fixup type: #'BytecodeFixup *'>
+	<inline: true>
+	 fixup needsFixup ifTrue:
+		["There is a fixup for this bytecode.  It must point to the first generated
+		   instruction for this bytecode.  If there isn't one we need to add a label."
+		 opcodeIndex = nextOpcodeIndex ifTrue: [self Label].
+		 fixup targetInstruction: (self abstractInstructionAt: nextOpcodeIndex)].
 ]
 
 { #category : #'in-line cacheing' }

@@ -1,7 +1,7 @@
 Class {
 	#name : #SpurGenerationScavengerSimulator,
 	#superclass : #SpurGenerationScavenger,
-	#category : #'VMMaker-SpurMemoryManagerSimulation'
+	#category : 'VMMaker-SpurMemoryManagerSimulation'
 }
 
 { #category : #'remembered set' }

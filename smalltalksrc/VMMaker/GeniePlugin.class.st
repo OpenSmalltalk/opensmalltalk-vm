@@ -9,7 +9,7 @@ GeniePlugin>>majorNO should be in sync with version number of Genie.
 Class {
 	#name : #GeniePlugin,
 	#superclass : #SmartSyntaxInterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #'check installed plugin' }
