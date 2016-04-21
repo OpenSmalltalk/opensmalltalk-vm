@@ -584,10 +584,13 @@ CogX64Compiler >> computeMaximumSize [
 										ifFalse: [0])].
 		[PopR]			-> [^(operands at: 0) < 8 ifTrue: [1] ifFalse: [2]].
 		[PushR]			-> [^(operands at: 0) < 8 ifTrue: [1] ifFalse: [2]].
-		[PushCq]		-> [^(self isQuick: (operands at: 0)) ifTrue: [2] ifFalse: [5]].
-		[PushCw]		-> [^(self inCurrentCompilation: (operands at: 0))
-								ifTrue: [9]
-								ifFalse: [self pushCwByteSize]].
+		[PushCq]		-> [^(self isQuick: (operands at: 0))
+								ifTrue: [2]
+								ifFalse:
+									[(self isSignExtendedFourByteValue: (operands at: 0))
+										ifTrue: [5]
+										ifFalse: [self computeSizeOfPushCw]]].
+		[PushCw]		-> [^self computeSizeOfPushCw].
 		[PrefetchAw]	-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [7] ifFalse: [0]].
 		"Conversion"
 		[ConvertRRd]	-> [^5] }.
@@ -618,6 +621,13 @@ CogX64Compiler >> computeSizeOfArithCqR [
 CogX64Compiler >> computeSizeOfArithCwR [
 	"The implementation depends on in-line or out-of-line literals."
 	^self subclassResponsibility
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> computeSizeOfPushCw [
+	^(self inCurrentCompilation: (operands at: 0))
+		ifTrue: [9]
+		ifFalse: [self pushCwByteSize]
 ]
 
 { #category : #'generate machine code' }
@@ -1885,14 +1895,15 @@ CogX64Compiler >> concretizePushCq [
 			at: 0 put: 16r6A;
 			at: 1 put: (value bitAnd: 16rFF).
 		^machineCodeSize := 2].
-	self assert: (self isSignExtendedFourByteValue: value).
-	machineCode
-		at: 0 put: 16r68;
-		at: 1 put: (value bitAnd: 16rFF);
-		at: 2 put: (value >> 8 bitAnd: 16rFF);
-		at: 3 put: (value >> 16 bitAnd: 16rFF);
-		at: 4 put: (value >> 24 bitAnd: 16rFF).
-	^machineCodeSize := 5
+	(self isSignExtendedFourByteValue: value) ifTrue:
+		[machineCode
+			at: 0 put: 16r68;
+			at: 1 put: (value bitAnd: 16rFF);
+			at: 2 put: (value >> 8 bitAnd: 16rFF);
+			at: 3 put: (value >> 16 bitAnd: 16rFF);
+			at: 4 put: (value >> 24 bitAnd: 16rFF).
+		^machineCodeSize := 5].
+	^self concretizePushCw
 ]
 
 { #category : #'generate machine code' }
