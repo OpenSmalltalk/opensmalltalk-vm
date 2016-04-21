@@ -1953,6 +1953,11 @@ SimpleStackBasedCogit >> genExtStoreAndPopReceiverVariableBytecode [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtStoreAndPopRemoteTempOrInstVarLongBytecode [
+	^ self genExtStorePopRemoteTempOrInstVarLongBytecodePopBoolean: true
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtStoreLiteralVariableBytecode [
 	"233		11101001	i i i i i i i i	Store Literal Variable #iiiiiiii (+ Extend A * 256)"
 	| index |
@@ -1962,12 +1967,7 @@ SimpleStackBasedCogit >> genExtStoreLiteralVariableBytecode [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genExtStorePopRemoteTempOrInstVarLongBytecode [
-	^ self genExtStorePopRemoteTempOrInstVarLongBytecode: true
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genExtStorePopRemoteTempOrInstVarLongBytecode: popBoolean [
+SimpleStackBasedCogit >> genExtStorePopRemoteTempOrInstVarLongBytecodePopBoolean: popBoolean [
 	| index |
 	extB := 0. "simple cogit don't use the extra flag"
 	(byte2 noMask: 1 << 7)
@@ -2002,7 +2002,7 @@ SimpleStackBasedCogit >> genExtStoreReceiverVariableBytecode [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtStoreRemoteTempOrInstVarLongBytecode [
-	^ self genExtStorePopRemoteTempOrInstVarLongBytecode: false
+	^ self genExtStorePopRemoteTempOrInstVarLongBytecodePopBoolean: false
 ]
 
 { #category : #'bytecode generators' }

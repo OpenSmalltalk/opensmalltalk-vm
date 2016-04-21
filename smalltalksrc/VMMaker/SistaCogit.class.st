@@ -44,7 +44,7 @@ prevMapAbsPCMcpc
 "
 Class {
 	#name : #SistaCogit,
-	#superclass : #RegisterAllocatingCogit,
+	#superclass : #StackToRegisterMappingCogit,
 	#instVars : [
 		'numCounters',
 		'counters',
@@ -367,7 +367,7 @@ SistaCogit >> genJumpIf: boolean to: targetBytecodePC [
 	<var: #ok type: #'AbstractInstruction *'>
 	<var: #retry type: #'AbstractInstruction *'>
 	<var: #countTripped type: #'AbstractInstruction *'>
-	<var: #nextDescriptor type: #'AbstractInstruction *'>
+	<var: #nextDescriptor type: #'BytecodeDescriptor *'>
 
 	(coInterpreter isOptimizedMethod: methodObj) ifTrue: [ ^ super genJumpIf: boolean to: targetBytecodePC ].
 	
@@ -957,8 +957,9 @@ SistaCogit >> scanMethod [
 		- how many blocks it creates
 		- how many counters it needs/conditional branches it contains
 	 Answer the block count or on error a negative error code"
-	| latestContinuation nExts descriptor pc numBlocks distance targetPC framelessStackDelta |
+	| latestContinuation nExts descriptor pc numBlocks distance targetPC framelessStackDelta numFixups |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
+	self flag: 'numFixup should be reverted to inst var when moving back sistaCogit as subclass of RegisterAllocatingCogit'.
 	needsFrame := false.
 	numFixups := 0.
 	prevBCDescriptor := nil.

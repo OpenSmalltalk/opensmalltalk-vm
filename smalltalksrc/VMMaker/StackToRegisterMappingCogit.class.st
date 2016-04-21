@@ -1827,7 +1827,7 @@ StackToRegisterMappingCogit >> genExtPushRemoteTempOrInstVarLongBytecode [
 ]
 
 { #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genExtStorePopRemoteTempOrInstVarLongBytecode: boolean [
+StackToRegisterMappingCogit >> genExtStorePopRemoteTempOrInstVarLongBytecodePopBoolean: boolean [
 	| index maybeContext needsStoreCheck |
 	needsStoreCheck := self sistaNeedsStoreCheck.
 	maybeContext := self extBSpecifiesMaybeContext.
