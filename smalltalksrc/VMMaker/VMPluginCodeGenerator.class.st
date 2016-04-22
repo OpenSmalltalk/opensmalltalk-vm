@@ -306,6 +306,19 @@ VMPluginCodeGenerator >> localizeGlobalVariables [
 ]
 
 { #category : #public }
+VMPluginCodeGenerator >> notePluginFunctionsUsedByMacros [
+	"Declare the plugin functions that are used by macros."
+	#(
+		isKindOfInteger: #(classLargeNegativeInteger classLargePositiveInteger fetchClassOf: isIntegerObject: )
+		isIntegerObject:  #()
+		isLargeIntegerObject: #(classLargeNegativeInteger classLargePositiveInteger fetchClassOf: )
+		isLargeNegativeIntegerObject: 	#(classLargeNegativeInteger fetchClassOf: )
+		isLargePositiveIntegerObject: 	#(classLargePositiveInteger fetchClassOf: ))
+			pairsDo: [:macro :funcs |
+				(pluginFunctionsUsed includes: macro) ifTrue: [pluginFunctionsUsed addAll: funcs]].
+]
+
+{ #category : #public }
 VMPluginCodeGenerator >> noteUsedPluginFunction: aSelector [
 	"Remember aSelector and answer whether the call should be made through
 	 interpreterProxy. If not, it will be made either directly (in an internal plugin)
@@ -334,11 +347,12 @@ VMPluginCodeGenerator >> pluginClass: aPluginClass [
 VMPluginCodeGenerator >> pluginFunctionsToClone [
 	"Answer those of the used plugin functions to clone as a sorted collection.
 	 Exclude those that are static to sqVirtualMachine.c and hence always need
-	 to be called through interpreterProxy."
+	 to be called through interpreterProxy.
+	 Also exclude those that are generated as macros rather than function call."
 
 	^((pluginFunctionsUsed
 		reject: [:selector| self noteUsedPluginFunction: selector])
-			select: [:selector| InterpreterProxy includesSelector: selector])
+			select: [:selector| (InterpreterProxy includesSelector: selector) and: [(self selectorsThatAreGeneratedAsMacros includes: selector) not]])
 				asSortedCollection
 ]
 
@@ -355,8 +369,11 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 	pcc preDeclareInterpreterProxyOn: Transcript.
 	Transcript flush"
 	| pluginFuncs interpreterClass objectMemoryClass |
+	self notePluginFunctionsUsedByMacros.
+	self preDeclareMacrosForFastClassChekingOn: aStream.
 	(pluginFuncs := self pluginFunctionsToClone) isEmpty ifTrue:
 		[^super preDeclareInterpreterProxyOn: aStream].
+	
 	aStream cr; nextPutAll: '#if !defined(SQUEAK_BUILTIN_PLUGIN)'; cr.
 	interpreterClass := self referenceInterpreterClass.
 	objectMemoryClass := self referenceObjectMemoryClass.
@@ -410,7 +427,40 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 						level: 0
 							generator: self.
 				 aStream nextPutAll: ' 0'; cr]].
-	aStream nextPutAll: 'extern'; cr; nextPutAll: '#endif'; cr
+	aStream nextPutAll: 'extern'; cr; nextPutAll: '#endif'; cr.
+]
+
+{ #category : #'C code generator' }
+VMPluginCodeGenerator >> preDeclareMacrosForFastClassChekingOn: aStream [
+	"These macros can be used to check for various case of Integer type.
+	Since they can be defined based on existing API, this is a good trade off:
+	- avoid extending the interpreterProxy API like mad
+	- provide fast type checking"
+	
+	"Fast-up generated code by using a macro for this well known function unconditionnally"
+	aStream cr; nextPutAll: '#define isIntegerObject(oop) (oop & 1)'; cr. 
+	
+	aStream cr; nextPutAll: '#if SPURVM && defined(SQUEAK_BUILTIN_PLUGIN)'.
+	
+	"Compact class index are hardcoded because there is no guaranty that the pool values at generation time are that of SPUR..
+	 Make sure they are in sync with SpurMemoryManager class>>initializeCompactClassIndices"
+	aStream cr; nextPutAll: '# define LargeNegativeIntegerClassIndex 32'.
+	aStream cr; nextPutAll: '# define LargePositiveIntegerClassIndex 33'.
+	aStream cr; nextPutAll: 'extern sqInt classIndexOf(sqInt);'.
+	aStream cr; nextPutAll: '# define isKindOfInteger(oop) (isImmediate(oop) ? isIntegerObject(oop) : (unsigned)(classIndexOf(oop) - LargeNegativeIntegerClassIndex) <= 1)'.
+	aStream cr; nextPutAll: '# define isLargeIntegerObject(oop) (!isImmediate(oop) && (unsigned)(classIndexOf(oop) - LargeNegativeIntegerClassIndex) <= 1)'.
+	aStream cr; nextPutAll: '# define isLargeNegativeIntegerObject(oop) (!isImmediate(oop) && classIndexOf(oop) == LargeNegativeIntegerClassIndex)'.
+	aStream cr; nextPutAll: '# define isLargePositiveIntegerObject(oop) (!isImmediate(oop) && classIndexOf(oop) == LargePositiveIntegerClassIndex)'.
+	
+	aStream cr; nextPutAll: '#else /* defined(SQUEAK_BUILTIN_PLUGIN) && defined(SPURVM) */'.
+	
+	aStream cr; nextPutAll: '# define isLargeNegativeIntegerObject(oop) (fetchClassOf(oop) == classLargeNegativeInteger())'.
+	aStream cr; nextPutAll: '# define isLargePositiveIntegerObject(oop) (fetchClassOf(oop) == classLargePositiveInteger())'.
+	aStream cr; nextPutAll: '# define isLargeIntegerObject(oop) (isLargeNegativeIntegerObject(oop) || isLargePositiveIntegerObject(oop))'.
+	aStream cr; nextPutAll: '# define isKindOfInteger(oop) (isIntegerObject(oop) || isLargeNegativeIntegerObject(oop) || isLargePositiveIntegerObject(oop))'.
+
+	aStream cr; nextPutAll: '#endif /* defined(SQUEAK_BUILTIN_PLUGIN) && defined(SPURVM) */'; cr
+	
 ]
 
 { #category : #'C code generator' }
@@ -439,6 +489,13 @@ VMPluginCodeGenerator >> referenceObjectMemoryClass [
 	^(Smalltalk classNamed: #SpurMemoryManager) ifNil:
 		[(Smalltalk classNamed: #NewObjectMemory) ifNil:
 			[ObjectMemory]]
+]
+
+{ #category : #public }
+VMPluginCodeGenerator >> selectorsThatAreGeneratedAsMacros [
+	"Answer a list of selectors that are generated as a C macro rather than as an interpreterProxy function call."
+	
+	^#(isKindOfInteger: isIntegerObject: isLargeIntegerObject: isLargeNegativeIntegerObject: isLargePositiveIntegerObject:)
 ]
 
 { #category : #private }

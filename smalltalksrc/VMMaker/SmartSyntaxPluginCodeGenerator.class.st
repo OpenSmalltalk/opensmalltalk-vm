@@ -420,10 +420,7 @@ SmartSyntaxPluginCodeGenerator >> generateAsCDouble: aNode on: aStream indent: a
 
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateAsCInt: aNode on: aStream indent: anInteger [
-
-	aStream nextPut: $(.
-	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ' >> 1)'.
+	self genCallOf: #integerValueOf: with: aNode receiver on: aStream
 ]
 
 { #category : #'translating builtins' }
