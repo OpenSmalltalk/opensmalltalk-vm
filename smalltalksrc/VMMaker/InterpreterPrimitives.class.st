@@ -73,7 +73,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMStackFrameOffsets'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #'class initialization' }
@@ -4559,7 +4559,7 @@ InterpreterPrimitives >> primitiveUtcAndTimezoneOffset [
 	objectMemory
 		storePointerUnchecked: 1 ofObject: resultArray withValue: (objectMemory integerObjectOf: self ioLocalSecondsOffset);
 		storePointer: 0 ofObject: resultArray withValue: (self positive64BitIntegerFor: self ioUTCMicroseconds).
-	self pop: argumentCount thenPush: resultArray
+	self pop: argumentCount + 1 thenPush: resultArray
 ]
 
 { #category : #'system control primitives' }
@@ -4586,7 +4586,7 @@ InterpreterPrimitives >> primitiveUtcWithOffset [
 	objectMemory
 		storePointerUnchecked: 1 ofObject: resultArray withValue: (objectMemory integerObjectOf: self ioLocalSecondsOffset);
 		storePointer: 0 ofObject: resultArray withValue: (self positive64BitIntegerFor: self ioUTCMicroseconds - epochDelta).
-	self pop: argumentCount thenPush: resultArray
+	self pop: argumentCount + 1 thenPush: resultArray
 ]
 
 { #category : #'process primitives' }

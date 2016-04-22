@@ -7,7 +7,7 @@ Class {
 		'm23ArgX',
 		'm23ArgY'
 	],
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #'class initialization' }

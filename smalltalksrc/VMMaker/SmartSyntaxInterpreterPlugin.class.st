@@ -7,7 +7,7 @@ Class {
 	#instVars : [
 		'simulator'
 	],
-	#category : 'VMMaker-SmartSyntaxPlugins'
+	#category : #'VMMaker-SmartSyntaxPlugins'
 }
 
 { #category : #private }
