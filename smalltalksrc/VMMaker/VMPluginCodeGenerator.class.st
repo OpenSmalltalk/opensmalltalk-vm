@@ -194,9 +194,10 @@ VMPluginCodeGenerator >> emitIfdefForPluginFunctionOption: anArrayOrSymbol on: a
 ]
 
 { #category : #'C translation' }
-VMPluginCodeGenerator >> generateInterpreterProxyFunctionDeference: aNode on: aStream indent: anInteger [
+VMPluginCodeGenerator >> generateInterpreterProxyFunctionDereference: aNode on: aStream indent: anInteger [
 	| pluginsToClone |
-	(pluginsToClone := self pluginFunctionsToClone) isEmpty ifTrue:
+	pluginsToClone := self pluginFunctionsToClone copyWithoutAll: self selectorsThatAreGeneratedAsMacros.
+	pluginsToClone isEmpty ifTrue:
 		[^self].
 	aStream cr; nextPutAll: '#if !defined(SQUEAK_BUILTIN_PLUGIN)'; cr.
 	pluginsToClone do:
@@ -282,7 +283,7 @@ VMPluginCodeGenerator >> initializeCTranslationDictionary [
 	super initializeCTranslationDictionary.
 	translationDict
 		at: #expandDereferenceInterpreterProxyFunctionTable
-			put: #generateInterpreterProxyFunctionDeference:on:indent:;
+			put: #generateInterpreterProxyFunctionDereference:on:indent:;
 		at: #remapOop:in:
 			put: #generateRemapOopIn:on:indent:
 ]
@@ -347,12 +348,11 @@ VMPluginCodeGenerator >> pluginClass: aPluginClass [
 VMPluginCodeGenerator >> pluginFunctionsToClone [
 	"Answer those of the used plugin functions to clone as a sorted collection.
 	 Exclude those that are static to sqVirtualMachine.c and hence always need
-	 to be called through interpreterProxy.
-	 Also exclude those that are generated as macros rather than function call."
+	 to be called through interpreterProxy."
 
 	^((pluginFunctionsUsed
 		reject: [:selector| self noteUsedPluginFunction: selector])
-			select: [:selector| (InterpreterProxy includesSelector: selector) and: [(self selectorsThatAreGeneratedAsMacros includes: selector) not]])
+			select: [:selector| InterpreterProxy includesSelector: selector])
 				asSortedCollection
 ]
 
@@ -370,10 +370,13 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 	Transcript flush"
 	| pluginFuncs interpreterClass objectMemoryClass |
 	self notePluginFunctionsUsedByMacros.
-	self preDeclareMacrosForFastClassCheckingOn: aStream.
 	(pluginFuncs := self pluginFunctionsToClone) isEmpty ifTrue:
 		[^super preDeclareInterpreterProxyOn: aStream].
-	
+	(pluginFuncs includesAnyOf: self selectorsThatAreGeneratedAsMacros) ifTrue:
+		[self preDeclareMacrosForFastClassCheckingOn: aStream].
+	pluginFuncs := pluginFuncs copyWithoutAll: self selectorsThatAreGeneratedAsMacros.
+	pluginFuncs isEmpty ifTrue:
+		[^self].
 	aStream cr; nextPutAll: '#if !defined(SQUEAK_BUILTIN_PLUGIN)'; cr.
 	interpreterClass := self referenceInterpreterClass.
 	objectMemoryClass := self referenceObjectMemoryClass.
@@ -414,54 +417,63 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 	aStream nextPutAll: '#else /* !defined(SQUEAK_BUILTIN_PLUGIN) */'; cr.
 	pluginFuncs do:
 		[:tMethod|
-		self withOptionalVerbiageFor: tMethod selector
-			on: aStream
-			do: [tMethod static: false; export: false; emitCFunctionPrototype: aStream generator: self]
-			ifOptionalDo:
-				[aStream nextPutAll: '# define '.
-				 (TSendNode new
-					setSelector: tMethod selector
-						receiver: (TVariableNode new setName: 'interpreterProxy')
-							arguments: (tMethod args collect: [:a| TVariableNode new setName: a]))
-					emitCCodeAsArgumentOn: aStream
-						level: 0
-							generator: self.
-				 aStream nextPutAll: ' 0'; cr]].
-	aStream nextPutAll: 'extern'; cr; nextPutAll: '#endif'; cr.
+		self withGuardAgainstDefinitionOf: tMethod selector on: aStream do:
+			[self withOptionalVerbiageFor: tMethod selector
+				on: aStream
+				do: [tMethod static: false; export: false; emitCFunctionPrototype: aStream generator: self]
+				ifOptionalDo:
+					[aStream nextPutAll: '# define '.
+					 (TSendNode new
+						setSelector: tMethod selector
+							receiver: (TVariableNode new setName: 'interpreterProxy')
+								arguments: (tMethod args collect: [:a| TVariableNode new setName: a]))
+						emitCCodeAsArgumentOn: aStream
+							level: 0
+								generator: self.
+					 aStream nextPutAll: ' 0'; cr]]].
+	aStream nextPutAll: 'extern'; cr; nextPutAll: '#endif'; cr
 ]
 
 { #category : #'C code generator' }
 VMPluginCodeGenerator >> preDeclareMacrosForFastClassCheckingOn: aStream [
-	"These macros can be used to check for various case of Integer type.
-	Since they can be defined based on existing API, this is a good trade off:
-	- avoid extending the interpreterProxy API like mad
-	- provide fast type checking"
+	"These macros can be used to check for various cases of Integer types.
+	 Since they can be defined based on existing API, this is a good trade off:
+	 - avoid extending the interpreterProxy API unnecessarily
+	 - provide fast type checking"
 	
-	"Fast-up generated code by using a macro for this well known function unconditionnally"
-	#(	'#define isIntegerObject(oop) (oop & 1)' cr
-		'#if SPURVM && defined(SQUEAK_BUILTIN_PLUGIN)'
+	"Speed-up generated code for internal plugins by using macros and fixed class indices to define this well known functionality."
+	#(	'#if defined(SQUEAK_BUILTIN_PLUGIN)' cr
 
-		"Compact class index are hardcoded because there is no guarantee that the pool values at generation time are that of SPUR..
-		 Make sure they are in sync with SpurMemoryManager class>>initializeCompactClassIndices"
+		'# define isIntegerObject(oop) ((oop) & 1)' cr
+
+		'# if SPURVM'
 		'extern sqInt classIndexOf(sqInt);'
-		'# define LargeNegativeIntegerClassIndex 32'
-		'# define LargePositiveIntegerClassIndex 33'
-		'# define isKindOfInteger(oop) (isImmediate(oop) ? isIntegerObject(oop) : (unsigned)(classIndexOf(oop) - LargeNegativeIntegerClassIndex) <= 1)'
-		'# define isLargeIntegerObject(oop) (!isImmediate(oop) && (unsigned)(classIndexOf(oop) - LargeNegativeIntegerClassIndex) <= 1)'
-		'# define isLargeNegativeIntegerObject(oop) (!isImmediate(oop) && classIndexOf(oop) == LargeNegativeIntegerClassIndex)'
-		'# define isLargePositiveIntegerObject(oop) (!isImmediate(oop) && classIndexOf(oop) == LargePositiveIntegerClassIndex)'
+	"Compact class indices are hardcoded here because there is no guarantee that the pool values at generation time
+	 are that of SPUR.. Make sure they are in sync with SpurMemoryManager class>>initializeCompactClassIndices"
+		'#	define LargeNegativeIntegerClassIndex 32'
+		'#	define LargePositiveIntegerClassIndex 33'
+		'#	if BytesPerOop == 4'
+		'#	  define isImmediate(oop) ((oop) & 3)'
+		'#	else'
+		'#	  define isImmediate(oop) ((oop) & 7)'
+		'#	endif'
+		'#	define isKindOfInteger(oop) (isImmediate(oop) ? isIntegerObject(oop) : (unsigned)(classIndexOf(oop) - LargeNegativeIntegerClassIndex) <= 1)'
+		'#	define isLargeIntegerObject(oop) (!isImmediate(oop) && (unsigned)(classIndexOf(oop) - LargeNegativeIntegerClassIndex) <= 1)'
+		'#	define isLargeNegativeIntegerObject(oop) (!isImmediate(oop) && classIndexOf(oop) == LargeNegativeIntegerClassIndex)'
+		'#	define isLargePositiveIntegerObject(oop) (!isImmediate(oop) && classIndexOf(oop) == LargePositiveIntegerClassIndex)'
+		'# endif /* SPURVM */'
+		'#endif /* defined(SQUEAK_BUILTIN_PLUGIN) */' cr
 
-		'#else /* defined(SQUEAK_BUILTIN_PLUGIN) && defined(SPURVM) */'
-
+	"If the functionality has not been defined via macros, define default versions using existing plugin API"
+		'#if !defined(isKindOfInteger)'
 		'# define isLargeNegativeIntegerObject(oop) (fetchClassOf(oop) == classLargeNegativeInteger())'
 		'# define isLargePositiveIntegerObject(oop) (fetchClassOf(oop) == classLargePositiveInteger())'
 		'# define isLargeIntegerObject(oop) (isLargeNegativeIntegerObject(oop) || isLargePositiveIntegerObject(oop))'
 		'# define isKindOfInteger(oop) (isIntegerObject(oop) || isLargeNegativeIntegerObject(oop) || isLargePositiveIntegerObject(oop))'
-
-		'#endif /* defined(SQUEAK_BUILTIN_PLUGIN) && defined(SPURVM) */' cr) do:
+		'#endif' cr) do:
 		[:element|
 		aStream cr.
-		element ~~ #cr ifTrue: [aStream cr; nextPutAll: element]]
+		element ~~ #cr ifTrue: [aStream nextPutAll: element]]
 ]
 
 { #category : #'C code generator' }
@@ -496,7 +508,14 @@ VMPluginCodeGenerator >> referenceObjectMemoryClass [
 VMPluginCodeGenerator >> selectorsThatAreGeneratedAsMacros [
 	"Answer a list of selectors that are generated as a C macro rather than as an interpreterProxy function call."
 	
-	^#(isKindOfInteger: isIntegerObject: isLargeIntegerObject: isLargeNegativeIntegerObject: isLargePositiveIntegerObject:)
+	^#(isKindOfInteger: isLargeIntegerObject: isLargeNegativeIntegerObject: isLargePositiveIntegerObject:)
+]
+
+{ #category : #public }
+VMPluginCodeGenerator >> selectorsThatMayBeGeneratedAsMacros [
+	"Answer a list of selectors that maybe generated as a C macro rather than as an interpreterProxy function call."
+	
+	^self selectorsThatAreGeneratedAsMacros, #(isIntegerObject: isImmediate:)
 ]
 
 { #category : #private }
@@ -594,6 +613,16 @@ VMPluginCodeGenerator >> typeFor: aNode in: aTMethod [
 				ifTrue: [#'sqInt *']
 				ifFalse: [#sqInt]]].
 	^super typeFor: aNode in: aTMethod
+]
+
+{ #category : #'C translation' }
+VMPluginCodeGenerator >> withGuardAgainstDefinitionOf: selector on: aStream do: aBlock [
+	"Evaluate aBlock, surrounded by a define if selector is defined as a macro (i.e. by preDeclareInterpreterProxyOn:"
+	(self selectorsThatMayBeGeneratedAsMacros includes: selector) ifFalse:
+		[^aBlock value].
+	aStream nextPutAll: '#if !defined('; nextPutAll: (self cFunctionNameFor: selector); nextPut: $); cr.
+	aBlock value.
+	aStream nextPutAll: '#endif'; cr
 ]
 
 { #category : #'C translation' }
