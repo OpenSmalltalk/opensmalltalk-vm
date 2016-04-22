@@ -117,9 +117,9 @@ IA32ABIPlugin >> primAddressFieldPut [
 { #category : #'primitives-accessing' }
 IA32ABIPlugin >> primAlienReplace [
 	"Copy some number of bytes from some source object starting at the index
-	 into the receiver destination object  from startIndex to stopIndex .  The  source
-	 and destination may be Aliens or byte-indexable objects.  The primitive wll have either
-	of the following signatures:
+	 into the receiver destination object from startIndex to stopIndex.  The  source
+	 and destination may be Aliens or byte-indexable objects.  The primitive wll have
+	 either of the following signatures:
 	<Alien | indexableByteSubclass | indexableWordSubclass>
 		primReplaceFrom: start <Integer>
 		to: stop <Integer>
@@ -156,44 +156,35 @@ IA32ABIPlugin >> primAlienReplace [
 		ifFalse:
 			[totalLength := interpreterProxy byteSizeOf: array.
 			 dest := (self startOfByteData: array) + start - 1].
-	(start >= 1 and: [start - 1 <= stop and: [stop <= totalLength]])
-		ifFalse: [^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(start >= 1 and: [start - 1 <= stop and: [stop <= totalLength]]) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 
-	(interpreterProxy isIntegerObject: repl)
+	(interpreterProxy isKindOfInteger: repl)
 		ifTrue:
-			[(interpreterProxy integerValueOf: repl) <= 0 ifTrue:
-				[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-			src := (interpreterProxy integerValueOf: repl) + replStart - 1]
+			[src := (interpreterProxy positiveMachineIntegerValueOf: repl) + replStart - 1.
+			 interpreterProxy failed ifTrue:
+				[^interpreterProxy primitiveFailFor: PrimErrBadArgument]]
 		ifFalse:
-			[(interpreterProxy isLargePositiveIntegerObject: repl)
+			[(self isAlien: repl)
 				ifTrue:
-					[src := (interpreterProxy positive32BitValueOf: repl) + replStart - 1.
-					 interpreterProxy failed ifTrue:
-						[^interpreterProxy primitiveFailFor: PrimErrBadArgument]]
+					[totalLength := self sizeField: repl.
+					 src := (self startOfData: repl withSize: totalLength) + replStart - 1.
+					 totalLength = 0 "no bounds checks for zero-sized (pointer) Aliens"
+						ifTrue: [totalLength := stop - start + replStart]
+						ifFalse: [totalLength := totalLength abs]]
 				ifFalse:
-					[(self isAlien: repl)
-						ifTrue:
-							[totalLength := self sizeField: repl.
-							 src := (self startOfData: repl withSize: totalLength) + replStart - 1.
-							 totalLength = 0 "no bounds checks for zero-sized (pointer) Aliens"
-								ifTrue: [totalLength := stop - start + replStart]
-								ifFalse: [totalLength := totalLength abs]]
-						ifFalse:
-							[(interpreterProxy isWordsOrBytes: repl) ifFalse:
-								[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-							 totalLength := interpreterProxy byteSizeOf: repl.
-							 src := (self startOfByteData: repl) + replStart - 1].
-					(replStart >= 1 and: [stop - start + replStart <= totalLength]) ifFalse:
-						[^interpreterProxy primitiveFailFor: PrimErrBadIndex]]].
+					[(interpreterProxy isWordsOrBytes: repl) ifFalse:
+						[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+					 totalLength := interpreterProxy byteSizeOf: repl.
+					 src := (self startOfByteData: repl) + replStart - 1].
+			(replStart >= 1 and: [stop - start + replStart <= totalLength]) ifFalse:
+				[^interpreterProxy primitiveFailFor: PrimErrBadIndex]].
 
 	(interpreterProxy isOopImmutable: array) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 
 	count := stop - start + 1.
-	self cCode: 'memmove((void *)dest,(void *)src,count)'
-		inSmalltalk:
-			[count := count + src + dest. "squash unused var compiler warnings"
-			 self error: 'not implemented'].
+	self mem: dest asVoidPointer mo: src asVoidPointer ve: count.
 
 	interpreterProxy pop: interpreterProxy methodArgumentCount
 ]
