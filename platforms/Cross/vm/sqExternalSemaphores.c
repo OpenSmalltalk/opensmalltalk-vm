@@ -80,8 +80,8 @@ static volatile sqInt checkSignalRequests;
  * save significant lengths of time.
  */
 static volatile int useTideA = 1;
-static volatile sqInt lowTideA = (usqInt)-1 >> 1, highTideA = -1;
-static volatile sqInt lowTideB = (usqInt)-1 >> 1, highTideB = -1;
+static volatile int lowTideA = (usqInt)-1 >> 1, highTideA = -1;
+static volatile int lowTideB = (usqInt)-1 >> 1, highTideB = -1;
 
 int
 ioGetMaxExtSemTableSize(void) { return numSignalRequests; }

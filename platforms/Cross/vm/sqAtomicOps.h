@@ -236,18 +236,20 @@ AtomicGet(uint64_t *target)
 #	define sqCompareAndSwap(var,old,new) \
 	__sync_bool_compare_and_swap(&(var), old, new)
 
-# elif defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_)
-	/* support for gcc 3.x; 32-bit only */
+# elif defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_) \
+    || defined(x86_64) || defined(__x86_64) || defined(__x86_64__)
+	/* support for gcc 3.x, clang; 32-bit only */
 	/* N.B.  One cannot test the result of this expression.  If you need that
 	 * you'll have to wrap the code in a function and return the result.  This
 			sete %%al;movzbl %%al,%%eax
 	 * can be used to set al based on the condition code & extend it to 32-bits.
 	 */
 #	define sqCompareAndSwap(var,old,new) \
-	asm volatile ("movl %1, %%eax; lock cmpxchg %2, %0"\
+	(assert(sizeof(var) == 4), \
+	 asm volatile ("movl %1, %%eax; lock cmpxchg %2, %0"\
 						: "=m"(var) \
 						: "g"(old), "r"(new), "m"(var) \
-						: "memory", "%eax")
+						: "memory", "%eax"))
 # endif
 
 #else
