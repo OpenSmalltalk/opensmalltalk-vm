@@ -49,9 +49,9 @@
  *
  * Lock freedom is achieved by having an array of request counters, and an array
  * of response counters, one per external semaphore index.  To request a signal
- * the requests are locked and the relevant request is incremented.  To respond
- * to a request the VM increments the corresponding response until it matches
- * the request, signalling the associated semaphore on each increment.
+ * the relevant request is incremented via a lock-free (test-and-set) increment.
+ * To respond to a request the VM increments the corresponding response until it
+ * matches the request, signalling the associated semaphore on each increment.
  */
 
 #if !COGMTVM
@@ -71,17 +71,28 @@ typedef struct {
 # endif
 	} SignalRequest;
 
+/* We would like to use something like the following for the tides
+	typedef int semidx_t;
+ * but apparently
+	#define MaxTide ((unsigned semidx_t)-1 >> 1)
+ * is not legal; at least clang complains of mismatched parentheses.
+ */
 static SignalRequest *signalRequests = 0;
 static int numSignalRequests = 0;
 static volatile sqInt checkSignalRequests;
 
-/* The tides define the minimum range of indices into signalRequests that the
- * VM needs to scan.  With potentially thousands of indices to scan this can
- * save significant lengths of time.
+/* The tide marks define the minimum range of indices into signalRequests that
+ * the VM needs to scan.  With potentially thousands of indices to scan this can
+ * save significant lengths of time.  Every time the VM responds to requests in
+ * doSignalExternalSemaphores it switches tides by resetting the tides not in
+ * use to an empty interval, toggling useTideA, and reading the tides in use
+ * prior to the toggle.  Hence initialize the tides to an empty interval.
  */
-static volatile int useTideA = 1;
-static volatile int lowTideA = (usqInt)-1 >> 1, highTideA = -1;
-static volatile int lowTideB = (usqInt)-1 >> 1, highTideB = -1;
+#define MaxTide ((unsigned int)-1 >> 1)
+#define MinTide -1
+static volatile char useTideA = 1;
+static volatile int lowTideA = MaxTide, highTideA = MinTide;
+static volatile int lowTideB = MaxTide, highTideB = MinTide;
 
 int
 ioGetMaxExtSemTableSize(void) { return numSignalRequests; }
@@ -193,7 +204,7 @@ signalSemaphoreWithIndex(sqInt index)
 sqInt
 doSignalExternalSemaphores(sqInt externalSemaphoreTableSize)
 {
-	long i, lowTide, highTide;
+	int i, lowTide, highTide;
 	char switched, signalled = 0;
 
 	sqLowLevelMFence();
@@ -205,16 +216,16 @@ doSignalExternalSemaphores(sqInt externalSemaphoreTableSize)
 
 	sqLowLevelMFence();
 	if (useTideA) {
-		lowTideB = (unsigned long)-1 >> 1;
-		highTideB = -1;
+		lowTideB = MaxTide;
+		highTideB = MinTide;
 		useTideA = 0;
 		sqLowLevelMFence();
 		lowTide = lowTideA;
 		highTide = highTideA;
 	}
 	else {
-		lowTideA = (unsigned long)-1 >> 1;
-		highTideA = -1;
+		lowTideA = MaxTide;
+		highTideA = MinTide;
 		useTideA = 1;
 		sqLowLevelMFence();
 		lowTide = lowTideB;
@@ -254,7 +265,7 @@ doSignalExternalSemaphores(sqInt externalSemaphoreTableSize)
 int
 allRequestsAreAnswered(int externalSemaphoreTableSize)
 {
-	long i;
+	int i;
 	for (i = 1; i < externalSemaphoreTableSize; i++)
 		if (signalRequests[i].responses != signalRequests[i].requests) {
 			printf("signalRequests[%ld] requests %d responses %d\n",
