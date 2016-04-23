@@ -218,18 +218,18 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _aligner;
 #  define SQ_SWAP_8_BYTES(x) _byteswap_uint64(x)
 #else
 #  define SQ_SWAP_4_BYTES(x) \
-	(((unsigned int)(x) << 24) | \\
-	(((unsigned int)(x) <<  8) & 0xff0000U) | \\
-	(((unsigned int)(x) >>  8) & 0xff00U) | \\
+	(((unsigned int)(x) << 24) | \
+	(((unsigned int)(x) <<  8) & 0xff0000U) | \
+	(((unsigned int)(x) >>  8) & 0xff00U) | \
 	( (unsigned int)(x) >> 24))
 #  define SQ_SWAP_8_BYTES(x) \
-	(((unsigned long long)(x) << 56) | \\
-	(((unsigned long long)(x) << 40) & 0xff000000000000ULL) | \\
-	(((unsigned long long)(x) << 24) & 0xff0000000000ULL) | \\
-	(((unsigned long long)(x) << 8)  & 0xff00000000ULL) | \\
-	(((unsigned long long)(x) >> 8)  & 0xff000000ULL) | \\
-	(((unsigned long long)(x) >> 24) & 0xff0000ULL) | \\
-	(((unsigned long long)(x) >> 40) & 0xff00ULL) | \\
+	(((unsigned long long)(x) << 56) | \
+	(((unsigned long long)(x) << 40) & 0xff000000000000ULL) | \
+	(((unsigned long long)(x) << 24) & 0xff0000000000ULL) | \
+	(((unsigned long long)(x) << 8)  & 0xff00000000ULL) | \
+	(((unsigned long long)(x) >> 8)  & 0xff000000ULL) | \
+	(((unsigned long long)(x) >> 24) & 0xff0000ULL) | \
+	(((unsigned long long)(x) >> 40) & 0xff00ULL) | \
 	( (unsigned long long)(x) >> 56))
 #endif
 
