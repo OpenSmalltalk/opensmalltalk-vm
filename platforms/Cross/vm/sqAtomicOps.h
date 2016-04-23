@@ -244,12 +244,13 @@ AtomicGet(uint64_t *target)
 			sete %%al;movzbl %%al,%%eax
 	 * can be used to set al based on the condition code & extend it to 32-bits.
 	 */
-#	define sqCompareAndSwap(var,old,new) \
-	(assert(sizeof(var) == 4), \
-	 asm volatile ("movl %1, %%eax; lock cmpxchg %2, %0"\
+#	define sqCompareAndSwap(var,old,new) do { \
+	assert(sizeof(var) == 4); \
+	asm volatile ("movl %1, %%eax; lock cmpxchg %2, %0"\
 						: "=m"(var) \
 						: "g"(old), "r"(new), "m"(var) \
-						: "memory", "%eax"))
+						: "memory", "%eax"); \
+	} while (0)
 # endif
 
 #else
