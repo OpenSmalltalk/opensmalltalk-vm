@@ -55,4 +55,4 @@
   in_out_wide_path[in_size] = 0; \
 }
 
-#endif
+#endif /* __SQ_WIN32_FILE_H */
