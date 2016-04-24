@@ -66,7 +66,7 @@ TMethod >> addTypeForSelf [
 
 { #category : #'type inference' }
 TMethod >> addTypesFor: node to: typeSet in: aCodeGen [
-	"Add the value tupes for the node to typeSet.
+	"Add the value types for the node to typeSet.
 	 Answer if any type was derived from an as-yet-untyped method, which allows us to abort
 	 inferReturnTypeFromReturnsIn: if the return type depends on a yet-to-be-typed method."
 	| expr |
@@ -82,29 +82,12 @@ TMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 				inject: false
 				into: [:asYetUntyped :block|
 					asYetUntyped | (self addTypesFor: block to: typeSet in: aCodeGen)]].
-		 (#(= ~= == ~~ < > <= >= anyMask: allMask: noMask:) includes: expr selector) ifTrue:
-			[typeSet add: #sqInt. ^false].
-		 (#(+ - * / // \\ rem: quo: bitAnd: bitClear: bitOr: bitXor: bitShift:) includes: expr selector) ifTrue:
-			[| types |
-			 types := Set new.
-			 self addTypesFor: expr receiver to: types in: aCodeGen.
-			 (types size = 1 and: [types anyOne last = $*]) ifTrue: "pointer arithmetic"
-				[typeSet add: types anyOne. ^false].
-			 self addTypesFor: expr args first to: types in: aCodeGen.
-			 types := aCodeGen harmonizeReturnTypesIn: types.
-			 types size = 2 ifTrue:
-				[(types includes: #double) ifTrue:
-					[typeSet add: #double. ^false].
-				 (types includes: #float) ifTrue:
-					[typeSet add: #float. ^false].
-				^false]. "don't know; leave unspecified."
-			types notEmpty ifTrue:
-				[typeSet add: types anyOne].
-			^false].
-		"Abort only for untyped methods that will be typed, but don't be phased by recursion."
-		 ^(aCodeGen returnTypeForSend: expr in: self)
-			ifNotNil: [:type| typeSet add: type. false]
-			ifNil: [(aCodeGen methodNamed: expr selector) notNil and: [expr selector ~~ selector]]].
+		(expr typeOrNilFrom: aCodeGen in: self)
+			ifNil: [^(aCodeGen methodNamed: expr selector) notNil and: [expr selector ~~ selector]]
+			ifNotNil:
+				[:type |
+				typeSet add: type.
+				^false].].
 	expr isVariable ifTrue:
 		[(aCodeGen typeOfVariable: expr name)
 			ifNotNil: [:type| typeSet add: type]
@@ -112,16 +95,8 @@ TMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 										ifTrue: [#void]
 										ifFalse: [#sqInt])]].
 	expr isConstant ifTrue:
-		[| val |
-		 val := expr value.
-		 val isInteger ifTrue:
-			[typeSet add: ((val >= 0 ifTrue: [val] ifFalse: [-1 - val]) highBit <= 32
-									ifTrue: [#sqInt]
-									ifFalse: [#sqLong])].
-		 (#(nil true false) includes: val) ifTrue:
-			[typeSet add: #sqInt].
-		 val isFloat ifTrue:
-			[typeSet add: #float]].
+		[(expr typeOrNilFrom: aCodeGen in: self)
+			ifNotNil: [:type | typeSet add: type]]..
 	^false
 ]
 
@@ -1585,7 +1560,9 @@ TMethod >> isFunctional [
 			[^false]].
 	parseTree statements last expression nodesDo:
 		[ :n | n isReturn ifTrue: [^false]].
-	^#(sqInt usqInt sqLong usqLong #'sqInt *' #'CogMethod *' #'char *') includes: returnType
+	^#(int #'unsigned int' #long #'unsigned long' #'long long' #'unsigned long long'
+		sqInt usqInt sqLong usqLong
+		#'int *' #'unsigned int *' #'sqInt *' #'usqInt *' #'sqLong *' #'usqLong *' #'CogMethod *' #'char *') includes: returnType
 ]
 
 { #category : #inlining }
