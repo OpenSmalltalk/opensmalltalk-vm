@@ -10630,7 +10630,7 @@ StackInterpreter >> positive32BitIntegerFor: integerValue [
 	<var: 'integerValue' type: #'unsigned int'>
 	objectMemory hasSixtyFourBitImmediates
 		ifTrue:
-			[^objectMemory integerObjectOf: (integerValue bitAnd: 16rFFFFFFFF)]
+			[^objectMemory integerObjectOf: (integerValue asUnsignedLong bitAnd: 16rFFFFFFFF)]
 		ifFalse:
 			[^self maybeInlinePositive32BitIntegerFor: integerValue]
 ]
