@@ -92,3 +92,8 @@ TInlineNode >> replaceNodesIn: map [
 TInlineNode >> shouldExpand [
 	^method extractExpandCaseDirective
 ]
+
+{ #category : #'type inference' }
+TInlineNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
+	^method returnType
+]

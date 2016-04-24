@@ -371,3 +371,9 @@ TStmtListNode >> statements [
 
 	^statements
 ]
+
+{ #category : #'type inference' }
+TStmtListNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
+	statements isEmpty ifTrue: [^nil].
+	^statements last typeOrNilFrom: aCodeGenerator in: aTMethod
+]
