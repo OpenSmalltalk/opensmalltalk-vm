@@ -924,9 +924,9 @@ CCodeGenerator >> computeKernelReturnTypes [
 			intAtPointer: #sqInt intAtPointer:put: #sqInt
 		 longAt: #sqInt longAt:put: #sqInt
 			longAtPointer: #sqInt longAtPointer:put: #sqInt
-				long32At: #sqInt long32At:put: #sqInt
+				long32At: #int long32At:put: #int
 					unalignedLongAt: #sqInt unalignedLongAt:put: #sqInt
-						unalignedLong32At: #sqInt unalignedLong32At:put: #sqInt
+						unalignedLong32At: #int unalignedLong32At:put: #int
 
 		 long64At: #sqLong long64At:put: #sqLong
 		
@@ -936,10 +936,6 @@ CCodeGenerator >> computeKernelReturnTypes [
 			fetchSingleFloatAtPointer:into: #void storeSingleFloatAtPointer:from: #void
 
 		 pointerForOop: #'char *' oopForPointer: #sqInt).
-	BytesPerWord = 8 ifTrue:
-		[#(long32At: long32At:put: unalignedLong32At: unalignedLong32At:put:) do:
-			[:accessor|
-			dictionary at: accessor put: #int]].
 	^dictionary
 ]
 
@@ -4352,18 +4348,33 @@ CCodeGenerator >> printUnboundVariableReferenceWarnings [
 { #category : #'type inference' }
 CCodeGenerator >> promoteArithmeticTypes: firstType and: secondType [
 	"Answer the return type for an arithmetic send.  This is so that the inliner can still inline
-	 simple expressions.  Deal with pointer arithmetic, floating point arithmetic and promotion."
-	| firstSize secondSize |
+	 simple expressions.  Deal with pointer arithmetic, floating point arithmetic and promotion.
+	 It is important to choose deterministically to get stable source generation.
+	 Also, the behaviour of inlined and non inlined code should be unchanged."
 	((#(#double float) includes: firstType)
 	 or: [#(#double float) includes: secondType]) ifTrue:
-		[^(firstType = #float and: [secondType = #float])
-			ifTrue: [#float]
-			ifFalse: [#double]].
+		[^(firstType = #double or: [secondType = #double])
+			ifTrue: [#double]
+			ifFalse: [#float] "in C99 6.3.1.8, float+int, int is converted as a float"].
 	"deal with unknowns, answering nil."
 	(firstType isNil or: [secondType isNil]) ifTrue:
 		[^nil].
-	"Deal with promotion; answer the longest type, defaulting to the recever if they're the same.
-	 See e.g. section 6.3.1.8 Usual arithmetic conversions, from the C99 standard:
+	"Deal with integer promotion and arithmetic conversion"
+	^self promoteIntegerArithmeticTypes: firstType and: secondType
+]
+
+{ #category : #'type inference' }
+CCodeGenerator >> promoteIntegerArithmeticTypes: firstType and: secondType [
+	"Answer the return type for an arithmetic send.
+	Deal with integer promotion rules of C99.
+	See section 6.3 Conversions of the standard.
+	
+	6.3.1.1 ...snip...
+		If an int can represent all values of the original type, the value is converted to an int;
+		otherwise, it is converted to an unsigned int. These are called the integer promotions.
+		All other types are unchanged by the inte ger promotions
+
+	6.3.1.8 ...snip...
 		Otherwise, the integer promotions are performed on both operands
 		Then the following rules are applied to the promoted operands:
 
@@ -4384,16 +4395,17 @@ CCodeGenerator >> promoteArithmeticTypes: firstType and: secondType [
 			Otherwise, both operands are converted to the unsigned integer type corresponding to
 			the type of the operand with signed integer type.
 
-	It is important to choose deterministically to get stable source generation.  So if the types have
-	the same size but differ in signedness we choose the unsigned type, which is in partial agreement
-	with the above"
-	^(firstSize := self sizeOfIntegralCType: firstType) = (secondSize := self sizeOfIntegralCType: secondType)
-		ifTrue:
-			[(firstType first = $u)
-				ifTrue: [firstType]
-				ifFalse: [(secondType first = $u) ifTrue: [secondType] ifFalse: [firstType]]]
-		ifFalse:
-			[firstSize > secondSize ifTrue: [firstType] ifFalse: [secondType]]
+	This is so that the generated code behaviour is unsensitive to inlining."
+	| length1 length2 intSize |
+	length1 := self sizeOfIntegralCType: firstType.
+	length2 := self sizeOfIntegralCType: secondType.
+	intSize := self sizeOfIntegralCType: #int.
+	(length1 < intSize and: [length2 < intSize]) ifTrue: [^#int].	"Integer promotion"
+	length1 > length2 ifTrue: [^firstType].
+	length2 > length1 ifTrue: [^secondType].
+	firstType first = $u ifTrue: [^firstType].
+	secondType first = $u ifTrue: [^secondType].
+	^firstType
 ]
 
 { #category : #inlining }
