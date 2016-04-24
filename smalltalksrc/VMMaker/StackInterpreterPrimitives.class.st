@@ -130,6 +130,7 @@ StackInterpreterPrimitives >> pathTo: goal using: stack followWeak: followWeak [
 		PrimErrBadArgument if stack is not an Array
 		PrimErrBadIndex if search overflows stack
 		PrimErrNotFound if goal cannot be found"
+	<var: #index type: #sqInt> "beware, must be signed"
 	| current index next stackSize stackp freeStartAtStart |
 	(objectMemory isArray: stack) ifFalse:
 		[^PrimErrBadArgument].
