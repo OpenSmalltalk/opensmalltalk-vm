@@ -2766,15 +2766,22 @@ InterpreterPrimitives >> primitiveMousePoint [
 
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveMultiply [
-	| integerRcvr integerArg integerResult |
+	| integerRcvr integerArg integerResult overflow |
 	integerRcvr := self stackIntegerValue: 1.
 	integerArg := self stackIntegerValue: 0.
 	self successful ifTrue:
-		[integerResult := integerRcvr * integerArg.
-		"check for C overflow by seeing if computation is reversible"
-		((integerArg = 0) or: [(integerResult // integerArg) = integerRcvr])
-			ifTrue: [self pop2AndPushIntegerIfOK: integerResult]
-			ifFalse: [self primitiveFail]]
+		[overflow := integerRcvr > 0
+					ifTrue:  [integerArg > 0
+						ifTrue: [integerRcvr > (objectMemory maxSmallInteger / integerArg)]
+						ifFalse: [integerArg < (objectMemory minSmallInteger / integerRcvr)]]
+					ifFalse: [integerArg > 0
+						ifTrue: [integerRcvr < (objectMemory minSmallInteger / integerArg)]
+						ifFalse: [(integerRcvr < 0) and: [integerArg < (objectMemory maxSmallInteger / integerRcvr)]]].
+		overflow
+			ifTrue: [self primitiveFail]
+			ifFalse:
+				[integerResult := integerRcvr * integerArg.
+				self pop: 2 thenPush: (self integerObjectOf: integerResult)]]
 ]
 
 { #category : #'arithmetic largeint primitives' }

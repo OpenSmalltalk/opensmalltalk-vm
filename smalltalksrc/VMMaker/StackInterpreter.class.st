@@ -3175,17 +3175,25 @@ StackInterpreter >> bytecodePrimMod [
 
 { #category : #'common selector sends' }
 StackInterpreter >> bytecodePrimMultiply [
-	| rcvr arg result |
+	| rcvr arg result overflow oop |
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
 	(objectMemory areIntegers: rcvr and: arg)
 		ifTrue: [rcvr := objectMemory integerValueOf: rcvr.
 				arg := objectMemory integerValueOf: arg.
-				result := rcvr * arg.
-				(arg = 0
-				 or: [(result // arg) = rcvr and: [objectMemory isIntegerValue: result]]) ifTrue:
-					[self internalPop: 2 thenPush: (objectMemory integerObjectOf: result).
-					 ^self fetchNextBytecode "success"]]
+				overflow := rcvr > 0
+							ifTrue:  [arg > 0
+								ifTrue: [rcvr > (objectMemory maxSmallInteger / arg)]
+								ifFalse: [arg < (objectMemory minSmallInteger / rcvr)]]
+							ifFalse: [arg > 0
+								ifTrue: [rcvr < (objectMemory minSmallInteger / arg)]
+								ifFalse: [(rcvr < 0) and: [arg < (objectMemory maxSmallInteger / rcvr)]]].
+				overflow
+					ifFalse:
+						[result := rcvr * arg.
+						oop := self integerObjectOf: result.
+      					self internalPop: 2 thenPush: oop.
+						^self fetchNextBytecode "success"]]
 		ifFalse: [self initPrimCall.
 				self externalizeIPandSP.
 				self primitiveFloatMultiply: rcvr byArg: arg.
