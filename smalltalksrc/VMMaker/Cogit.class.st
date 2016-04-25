@@ -7878,7 +7878,11 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 				annotation := mapByte >> AnnotationShift.
 				mcpc := mcpc + ((mapByte bitAnd: DisplacementMask) * backEnd codeGranularity).
 				(self isPCMappedAnnotation: annotation) ifTrue:
-					[[byte := (objectMemory fetchByte: bcpc ofObject: aMethodObj) + bsOffset.
+					[(annotation = IsSendCall
+					  and: [(mapByte := objectMemory byteAt: map - 1) >> AnnotationShift = IsAnnotationExtension]) ifTrue:
+						[annotation := annotation + (mapByte bitAnd: DisplacementMask).
+						 map := map - 1].
+					 [byte := (objectMemory fetchByte: bcpc ofObject: aMethodObj) + bsOffset.
 					  descriptor := self generatorAt: byte.
 					  isInBlock
 						ifTrue: [bcpc >= endbcpc ifTrue: [^0]]
@@ -7893,9 +7897,9 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 					  or: [isInBlock and: [descriptor isMappedInBlock]]] whileFalse:
 						[bcpc := nextBcpc.
 						 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0]].
-					isBackwardBranch := descriptor isBranch
+					 isBackwardBranch := descriptor isBranch
 										   and: [self isBackwardBranch: descriptor at: bcpc exts: nExts in: aMethodObj].
-					result := self perform: functionSymbol
+					 result := self perform: functionSymbol
 									with: descriptor
 									with: (isBackwardBranch ifTrue: [annotation << 1 + 1] ifFalse: [annotation << 1])
 									with: (self cCoerceSimple: mcpc to: #'char *')
@@ -9180,6 +9184,7 @@ Cogit >> preenMethodLabel [
 	 being produced (CMMethod, CMClosedPIC etc), but it also carries type flags for
 	 the frame method field, set via the labelOffset.  So we must clean the flags on each
 	 compilation to avoid stale lags being left behind from previous compilations."
+	<inline: true>
 	methodLabel setLabelOffset: 0
 ]
 
