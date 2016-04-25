@@ -504,6 +504,22 @@ CogMethodZone >> methods [
 	^methods
 ]
 
+{ #category : #'method zone introspection' }
+CogMethodZone >> methodsCompiledToMachineCodeInto: arrayObj [ 
+	<api>
+	<returnTypeC: #void>
+	<var: #cogMethod type: #'CogMethod *'>
+	| cogMethod methodIndex |
+	methodIndex := 0.
+	cogMethod := cogit cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[cogMethod cmType = CMMethod ifTrue:
+			[objectMemory storePointerUnchecked: methodIndex ofObject: arrayObj withValue: cogMethod methodObject.
+			 methodIndex := methodIndex + 1].
+		 cogMethod := self methodAfter: cogMethod].
+	
+]
+
 { #category : #'simulation only' }
 CogMethodZone >> methodsDo: aBlock [
 	<doNotGenerate>
@@ -526,6 +542,7 @@ CogMethodZone >> methodsDo: aBlock [
 
 { #category : #accessing }
 CogMethodZone >> numMethods [
+	<api>
 	^methodCount
 ]
 
