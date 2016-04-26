@@ -815,8 +815,8 @@ Cogit class >> initializeAnnotationConstants [
 	IsAnnotationExtension := 1.	"Used to extend IsSendCall with different codes for exotic send types."
 	IsObjectReference := 2.
 	IsAbsPCReference := 3.
-	HasBytecodePC := 4.
-	IsRelativeCall := 5.
+	IsRelativeCall := 4.
+	HasBytecodePC := 5.
 	IsNSSendCall := NewspeakVM ifTrue: [6].
 	IsSendCall := 7.
 	"These are formed by combining IsSendCall and IsAnnotationExtension annotations."
@@ -7514,10 +7514,9 @@ Cogit >> isDirectedSuper: descriptor extA: exta extB: extb [
 
 { #category : #'method map' }
 Cogit >> isPCMappedAnnotation: annotation [
+	"See Cogit class>>initializeAnnotationConstants"
 	<inline: true>
-	^annotation >= IsSendCall
-	  or: [annotation = HasBytecodePC
-	  or: [NewspeakVM and: [annotation = IsNSSendCall]]]
+	^annotation >= HasBytecodePC
 ]
 
 { #category : #disassembly }
