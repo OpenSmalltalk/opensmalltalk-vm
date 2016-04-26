@@ -747,6 +747,18 @@ SistaCogit >> maybeMarkCountersIn: cogMethod [
 	objectRepresentation maybeMarkCounters: cogMethod counters
 ]
 
+{ #category : #'simulation only' }
+SistaCogit >> methodsCompiledToMachineCodeInto: arrayObject [
+	<doNotGenerate>
+	^methodZone methodsCompiledToMachineCodeInto: arrayObject
+]
+
+{ #category : #'simulation only' }
+SistaCogit >> numMethods [
+	<doNotGenerate>
+	^methodZone numMethods
+]
+
 { #category : #'method introspection' }
 SistaCogit >> picDataFor: descriptor Annotation: isBackwardBranchAndAnnotation Mcpc: mcpc Bcpc: bcpc Method: cogMethodArg [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
