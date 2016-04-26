@@ -837,8 +837,8 @@ Cogit class >> initializeAnnotationConstants [
 										IsAnnotationExtension
 										IsObjectReference
 										IsAbsPCReference
-										HasBytecodePC
 										IsRelativeCall
+										HasBytecodePC
 										IsNSSendCall
 										IsSendCall
 										IsSuperSend
@@ -9303,7 +9303,9 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 	cogMethod cmType = CMBlock ifTrue:
 		[aStream crtab; nextPutAll: 'homemth: '.
 		cogMethod cmHomeMethod asUnsignedInteger printOn: aStream base: 16.
-		aStream crtab; nextPutAll: 'startpc: '; print: cogMethod startpc].
+		aStream
+			nextPutAll: ' (offset '; print: cogMethod homeOffset; nextPut: $);
+			crtab; nextPutAll: 'startpc: '; print: cogMethod startpc].
 	aStream
 		crtab; nextPutAll: 'nArgs: ';	print: cogMethod cmNumArgs;
 		tab;    nextPutAll: 'type: ';	print: cogMethod cmType.
@@ -11314,6 +11316,7 @@ Cogit >> voidNSSendCache: nsSendCache [
 { #category : #'debug printing' }
 Cogit >> warnMultiple: cogMethod selectors: aSelectorOop [
 	<inline: true>
+	self cCode: 'extern void *firstIndexableField(sqInt)'.
 	self cCode:
 			[self fp: #stderr
 				r: 'Warning, attempt to use method with selector %.*s and selector %.*s\n'

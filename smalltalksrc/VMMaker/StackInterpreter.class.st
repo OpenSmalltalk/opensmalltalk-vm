@@ -4819,7 +4819,7 @@ StackInterpreter >> directedSuperclassSend [
 	(objectMemory isForwarded: class) ifTrue:
 		[class := objectMemory followForwarded: class].
 	superclass := self superclassOf: class.
-	objectMemory ensureBehaviorHash: superclass.
+	"classTagForClass: uses ensureBehaviorHash:"
 	lkupClassTag := objectMemory classTagForClass: superclass.
 	"To maintain the invariant that all receivers are unforwarded we need an explicit
 	 read barrier in the super send cases.  Even though we always follow receivers
@@ -8954,7 +8954,7 @@ StackInterpreter >> longPrintOop: oop [
 			 startIP to: lastIndex do:
 				[:index| | byte |
 				column = 1 ifTrue:
-					[self cCode: 'printf("0x%08lx: ", oop+BaseHeaderSize+index-1)'
+					[self cCode: 'printf("0x%08lx: ", (unsigned long)(oop+BaseHeaderSize+index-1))'
 						inSmalltalk: [self print: (oop+objectMemory baseHeaderSize+index-1) hex; print: ': ']].
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
 				self cCode: 'printf(" %02x/%-3d", (int)byte,(int)byte)'
@@ -11726,7 +11726,7 @@ StackInterpreter >> printOop: oop [
 			 startIP to: lastIndex do:
 				[:index| | byte |
 				column = 1 ifTrue:
-					[self cCode: 'printf("0x%08lx: ", oop+BaseHeaderSize+index-1)'
+					[self cCode: 'printf("0x%08lx: ", (unsigned long)(oop+BaseHeaderSize+index-1))'
 						inSmalltalk: [self print: (oop+objectMemory baseHeaderSize+index-1) hex; print: ': ']].
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
 				self cCode: 'printf(" %02x/%-3d", (int)byte,(int)byte)'
@@ -14596,7 +14596,7 @@ StackInterpreter >> superclassSend [
 	<sharedCodeInCase: #singleExtendedSuperBytecode>
 	| superclass |
 	superclass := self superclassOf: (self methodClassOf: method).
-	objectMemory ensureBehaviorHash: superclass.
+	"classTagForClass: uses ensureBehaviorHash:"
 	lkupClassTag := objectMemory classTagForClass: superclass.
 	"To maintain the invariant that all receivers are unforwarded we need an explicit
 	 read barrier in the super send cases.  Even though we always follow receivers
