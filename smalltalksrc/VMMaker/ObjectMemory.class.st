@@ -4514,6 +4514,21 @@ ObjectMemory >> primitiveFailCodeAfterCleanup: outPointerArray [
 ]
 
 { #category : #'debug printing' }
+ObjectMemory >> printActivationsOf: aMethodObj [
+	"Scan the heap printing the oops of any and all contexts that refer to anOop"
+	| oop |
+	<api>
+	oop := self firstAccessibleObject.
+	[oop = nil] whileFalse:
+		[((self isContextNonImm: oop)
+		  and: [aMethodObj = (self fetchPointer: MethodIndex ofObject: oop)]) ifTrue:
+			[self interpreter
+				printHex: oop; printOopShort: oop; print: ' pc ';
+				printHex: (self fetchPointer: InstructionPointerIndex ofObject: oop); cr].
+		 oop := self accessibleObjectAfter: oop]
+]
+
+{ #category : #'debug printing' }
 ObjectMemory >> printContextReferencesTo: anOop [
 	"Scan the heap printing the oops of any and all contexts that refer to anOop"
 	| oop i |
