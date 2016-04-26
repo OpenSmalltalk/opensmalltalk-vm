@@ -3043,8 +3043,10 @@ CoInterpreter >> ensureAllContextsWithMethodHaveBytecodePCs: methodObj [
 		  and: [(objectMemory fetchPointer: MethodIndex ofObject: oop) = methodObj]) ifTrue:
 			[(self isMarriedOrWidowedContext: oop)
 				ifTrue:
-					[(self checkIsStillMarriedContext: oop currentFP: stackPage headFP) ifTrue:
-						[self assert: (self isMachineCodeFrame: (self frameOfMarriedContext: oop)) not]]
+					"Since any machine-code frame activations of the method have been divorced
+					 there should only be interpreted activations of marriecd contexts."
+					[(self isWidowedContext: oop) ifFalse:
+						[self deny: (self isMachineCodeFrame: (self frameOfMarriedContext: oop))]]
 				ifFalse:
 					[self ensureContextHasBytecodePC: oop]]]
 ]

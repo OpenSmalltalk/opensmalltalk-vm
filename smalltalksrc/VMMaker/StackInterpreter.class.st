@@ -3191,7 +3191,7 @@ StackInterpreter >> bytecodePrimMultiply [
 				overflow
 					ifFalse:
 						[result := rcvr * arg.
-						oop := self integerObjectOf: result.
+						oop := objectMemory integerObjectOf: result.
       					self internalPop: 2 thenPush: oop.
 						^self fetchNextBytecode "success"]]
 		ifFalse: [self initPrimCall.
