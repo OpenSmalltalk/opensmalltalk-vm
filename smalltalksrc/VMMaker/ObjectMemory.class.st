@@ -3121,6 +3121,11 @@ ObjectMemory >> isCompiledMethod: oop [
 ]
 
 { #category : #'interpreter access' }
+ObjectMemory >> isCompiledMethodFormat: format [
+	^format >= self firstCompiledMethodFormat
+]
+
+{ #category : #'interpreter access' }
 ObjectMemory >> isCompiledMethodHeader: objHeader [
     "Answer whether the argument header has compiled method format"
     ^(self formatOfHeader: objHeader) >= self firstCompiledMethodFormat
@@ -4523,7 +4528,7 @@ ObjectMemory >> printActivationsOf: aMethodObj [
 		[((self isContextNonImm: oop)
 		  and: [aMethodObj = (self fetchPointer: MethodIndex ofObject: oop)]) ifTrue:
 			[self interpreter
-				printHex: oop; printOopShort: oop; print: ' pc ';
+				printHex: oop; space; printOopShort: oop; print: ' pc ';
 				printHex: (self fetchPointer: InstructionPointerIndex ofObject: oop); cr].
 		 oop := self accessibleObjectAfter: oop]
 ]

@@ -3041,14 +3041,7 @@ CoInterpreter >> ensureAllContextsWithMethodHaveBytecodePCs: methodObj [
 		[:oop|
 		 ((objectMemory isContextNonImm: oop)
 		  and: [(objectMemory fetchPointer: MethodIndex ofObject: oop) = methodObj]) ifTrue:
-			[(self isMarriedOrWidowedContext: oop)
-				ifTrue:
-					"Since any machine-code frame activations of the method have been divorced
-					 there should only be interpreted activations of marriecd contexts."
-					[(self isWidowedContext: oop) ifFalse:
-						[self deny: (self isMachineCodeFrame: (self frameOfMarriedContext: oop))]]
-				ifFalse:
-					[self ensureContextHasBytecodePC: oop]]]
+			[self widowOrForceToBytecodePC: oop]]
 ]
 
 { #category : #'frame access' }
@@ -3500,8 +3493,10 @@ CoInterpreter >> flushExternalPrimitiveOf: methodObj [
 	 Flush the function address and session ID of the CM.  Override
 	 to also flush the machine code call if one exists."
 	<api>
-	super flushExternalPrimitiveOf: methodObj.
-	(self methodHasCogMethod: methodObj) ifTrue:
+	| primIdx |
+	primIdx := super flushExternalPrimitiveOf: methodObj.
+	(primIdx = PrimitiveExternalCallIndex
+	 and: [self methodHasCogMethod: methodObj]) ifTrue:
 		[cogit
 			rewritePrimInvocationIn: (self cogMethodOf: methodObj)
 			to: #primitiveExternalCall]
@@ -7517,4 +7512,19 @@ CoInterpreter >> whereIs: anOop [
 	<var: 'somewhere' type: #'char *'>
 	(cogit whereIsMaybeCodeThing: anOop) ifNotNil: [:somewhere| ^somewhere].
 	^super whereIs: anOop
+]
+
+{ #category : #'frame access' }
+CoInterpreter >> widowOrForceToBytecodePC: ctxt [
+	"Either widow the context or map its pc to a bytecode one.
+	 Used to implement primitiveVoidVMStateForMethod."
+	<inline: #never> "for debugging & saving space"
+	(self isMarriedOrWidowedContext: ctxt)
+		ifTrue:
+			"Since any machine-code frame activations of the method have been divorced
+			 there should only be interpreted activations of marriecd contexts."
+			[(self isWidowedContext: ctxt) ifFalse:
+				[self deny: (self isMachineCodeFrame: (self frameOfMarriedContext: ctxt))]]
+		ifFalse:
+			[self ensureContextHasBytecodePC: ctxt]
 ]

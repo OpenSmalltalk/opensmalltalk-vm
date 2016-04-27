@@ -2290,25 +2290,11 @@ StackInterpreter >> bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitiv
 		fmt := objectMemory formatOf: obj.
 		(fmt = objectMemory indexablePointersFormat
 		  and: [objectMemory isContextNonImm: obj]) ifTrue:
-			[(self isMarriedOrWidowedContext: obj)
-				ifTrue: "The stack pages have already been discarded.  Any remaining married contexts are actually widows."
-					[self markContextAsDead: obj]
-				ifFalse:
-					[self ensureContextHasBytecodePC: obj].
-			 "Fill slots beyond top of stack with nil"
-			 (self fetchStackPointerOf: obj) + CtxtTempFrameStart
-				to: (objectMemory numSlotsOf: obj) - 1
-				do: [:i |
-					objectMemory
-						storePointerUnchecked: i
-						ofObject: obj
-						withValue: objectMemory nilObject]].
+			[self makeContextSnapshotSafe: obj].
 		 "Clean out external functions from compiled methods"
 		 (flushExtPrims
-		  and: [fmt >= objectMemory firstCompiledMethodFormat]) ifTrue:
-			["Its primitiveExternalCall"
-			 (self primitiveIndexOf: obj) = PrimitiveExternalCallIndex ifTrue:
-				[self flushExternalPrimitiveOf: obj]]]
+		  and: [objectMemory isCompiledMethodFormat: fmt]) ifTrue:
+			[self flushExternalPrimitiveOf: obj]]
 ]
 
 { #category : #'miscellaneous bytecodes' }
@@ -6511,16 +6497,21 @@ StackInterpreter >> flushBecommedClassesInMethodZone [
 
 { #category : #'plugin primitive support' }
 StackInterpreter >> flushExternalPrimitiveOf: methodObj [
-	"methodObj is a CompiledMethod containing an external primitive. Flush the function address and session ID of the CM"
-	| lit |
-	(objectMemory literalCountOf: methodObj) > 0 ifFalse:
-		[^nil]. "Something's broken"
-	lit := self literal: 0 ofMethod: methodObj.
-	((objectMemory isArray: lit) and:[(objectMemory lengthOf: lit) = 4]) ifFalse:
-		[^nil]. "Something's broken"
-	"ConstZero is a known SmallInt so no root check needed"
-	objectMemory storePointerUnchecked: 2 ofObject: lit withValue: ConstZero.
-	objectMemory storePointerUnchecked: 3 ofObject: lit withValue: ConstZero
+	"methodObj is a CompiledMethod. If it contains an external primitive,
+	 flush the function address and session ID of the CM.  Answer the prim
+	 index for the benefit of subclass overrides."
+	<inline: false>
+	| header primIdx lit |
+	header := objectMemory methodHeaderOf: methodObj.
+	primIdx := self primitiveIndexOfMethod: methodObj header: header.
+	(primIdx = PrimitiveExternalCallIndex
+	 and: [(objectMemory literalCountOfMethodHeader: header) > 0]) ifTrue: "If not, something's broken"
+		[lit := self literal: 0 ofMethod: methodObj.
+		((objectMemory isArray: lit) and: [(objectMemory numSlotsOf: lit) = 4]) ifTrue: "If not, something's broken"
+			[objectMemory
+				storePointerUnchecked: 2 ofObject: lit withValue: ConstZero;
+				storePointerUnchecked: 3 ofObject: lit withValue: ConstZero]].
+	^primIdx
 ]
 
 { #category : #'plugin primitive support' }
@@ -6538,12 +6529,9 @@ StackInterpreter >> flushExternalPrimitives [
 	 Note: We must flush the method cache here also, so that any failed
 	 primitives are looked up again."
 	objectMemory allObjectsDo:
-		[:oop| | primIdx |
-		(objectMemory isFreeObject: oop) ifFalse:
-			[(objectMemory isCompiledMethod: oop) ifTrue: "This is a compiled method"
-				[primIdx := self primitiveIndexOf: oop.
-				 primIdx = PrimitiveExternalCallIndex ifTrue: "It's primitiveExternalCall"
-					[self flushExternalPrimitiveOf: oop]]]].
+		[:oop|
+		(objectMemory isCompiledMethod: oop) ifTrue: "This is a compiled method"
+			[self flushExternalPrimitiveOf: oop]].
 	self flushMethodCache.
 	self flushExternalPrimitiveTable
 ]
@@ -9479,6 +9467,27 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 	self assert: (self frameOfMarriedContext: aContext) = page baseFP.
 	self assert: (self validStackPageBaseFrame: page).
 	^page
+]
+
+{ #category : #'frame access' }
+StackInterpreter >> makeContextSnapshotSafe: ctxt [
+	"Convert married contexts to widowed contexts, and in the CoInterpreter,
+	 map any machine code pcs to bytecode pcs, and then nil all slots beyond
+	 top of stack, so that the context can be resumed on any VM."
+	<inline: false>
+	self assert: (objectMemory isContext: ctxt).
+	"The stack pages have already been discarded.  Any remaining married contexts are actually widows."
+	(self isMarriedOrWidowedContext: ctxt)
+		ifTrue: [self markContextAsDead: ctxt]
+		ifFalse: [self ensureContextHasBytecodePC: ctxt].
+	 "Fill slots beyond top of stack with nil"
+	 (self fetchStackPointerOf: ctxt) + CtxtTempFrameStart
+		to: (objectMemory numSlotsOf: ctxt) - 1
+		do: [:i |
+			 objectMemory
+				storePointerUnchecked: i
+				ofObject: ctxt
+				withValue: objectMemory nilObject]
 ]
 
 { #category : #utilities }
