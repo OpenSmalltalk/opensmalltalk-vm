@@ -9365,7 +9365,7 @@ SpurMemoryManager >> printActivationsOf: aMethodObj [
 		 ((self isContextNonImm: obj)
 		  and: [aMethodObj = (self fetchPointer: MethodIndex ofObject: obj)]) ifTrue:
 			[coInterpreter
-				printHex: obj; printOopShort: obj; print: ' pc ';
+				printHex: obj; space; printOopShort: obj; print: ' pc ';
 				printHex: (self fetchPointer: InstructionPointerIndex ofObject: obj); cr]]
 ]
 
