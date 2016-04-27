@@ -349,13 +349,13 @@ static char *getVersionInfo(int verbose);
 
 	if ([args count] < 2) 
 		return;
-	NSMutableArray *revisedArgs = AUTORELEASEOBJ([args mutableCopyWithZone: NULL]);
-	[revisedArgs removeObjectAtIndex:0];
-
+	//NSLog(@"%@",args);
 	int i;
 	BOOL optionsCompleted = NO;
-	for (i = 0; i < [revisedArgs count]; i++) {
-		NSString *argData = revisedArgs[i];
+	for (i = 1; i < [args count]; i++) {
+		NSString *argData = args[i];
+		char *peek = i + 1 >= [args count] ? 0 : (char *)[args[i+1] UTF8String];
+		//printf("argData %s peek %s\n", [argData UTF8String], peek ? peek : "NULL");
 		if ([argData isEqualToString: @"--"]) {
 			optionsCompleted = YES;
 			continue;
@@ -365,24 +365,18 @@ static char *getVersionInfo(int verbose);
 			//guessing first parameter as image name
 			if ([argData compare: @"--"] != NSOrderedSame)
                 [self setImageNamePathIfItWasReadable:argData];
-			else
-				continue;
 			continue;
 		}
 		if (optionsCompleted)
 			[self.argsArguments addObject: argData];
 		else {
-			int result = [self parseArgument: argData
-								peek: (char *)(i >= ([revisedArgs count] - 1)
-										? 0
-										: [revisedArgs[i+1] UTF8String])];
-			if (result == 0) {	/* option not recognised */
+			int result = [self parseArgument: argData peek: peek];
+			if (result <= 0) {	/* option not recognised */
 				fprintf(stderr, "unknown option: %s\n", [argData UTF8String]);
 				[self usage];
 				exit(1);
 			}
-			if (result > 1)
-				i += result - 1;
+			i += result - 1;
 		}
 	}
 }
@@ -403,7 +397,6 @@ static char *getVersionInfo(int verbose);
 }
 
 - (void) parseEnv: (NSDictionary *) env {
-#warning untested!
 	NSString *imageNameString = env[@"SQUEAK_IMAGE"];
 	if (imageNameString) {
 		[(sqSqueakOSXInfoPlistInterface*) self.infoPlistInterfaceLogic setOverrideSqueakImageName: imageNameString];

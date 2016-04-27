@@ -94,10 +94,10 @@
   static inline sqInt oopAtPointerput(char *ptr, sqInt val)	{ return (sqInt)(*(sqInt *)ptr= val); }
 # if defined(sqMemoryBase) && !sqMemoryBase
   static inline char *pointerForOop(usqInt oop)			{ return (char *)oop; }
-  static inline sqInt oopForPointer(char *ptr)			{ return (sqInt)ptr; }
+  static inline sqInt oopForPointer(void *ptr)			{ return (sqInt)ptr; }
 # else
   static inline char *pointerForOop(usqInt oop)			{ return sqMemoryBase + oop; }
-  static inline sqInt oopForPointer(char *ptr)			{ return (sqInt)(ptr - sqMemoryBase); }
+  static inline sqInt oopForPointer(void *ptr)			{ return (sqInt)(ptr - sqMemoryBase); }
 # endif
   static inline sqInt byteAt(sqInt oop)				{ return byteAtPointer(pointerForOop(oop)); }
   static inline sqInt byteAtput(sqInt oop, int val)		{ return byteAtPointerput(pointerForOop(oop), val); }

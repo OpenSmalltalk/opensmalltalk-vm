@@ -235,7 +235,7 @@ sudo cp /etc/security/limits.d/squeak.conf /etc/security/limits.d/nsvm.conf
         exec setuidgid <account> ./coglinuxht/squeak -vm display-null -vm sound-null squeak.image
 
 THEEND
-if grep -s '<dpiAware>true</dpiAware>'; then
+if grep -s '<dpiAware>true</dpiAware>' ../build.win32x86/squeak.cog.spur/Squeak.exe.manifest; then
 cat <<THEEND >>../history/README.$REV
      Windows
      The Windows VMs are "dpiAware", which means that by default the display is
