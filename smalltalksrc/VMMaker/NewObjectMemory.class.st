@@ -2369,7 +2369,7 @@ NewObjectMemory >> printActivationsOf: aMethodObj [
 		[((self isContextNonImm: oop)
 		  and: [aMethodObj = (self fetchPointer: MethodIndex ofObject: oop)]) ifTrue:
 			[coInterpreter
-				printHex: oop; printOopShort: oop; print: ' pc ';
+				printHex: oop; space; printOopShort: oop; print: ' pc ';
 				printHex: (self fetchPointer: InstructionPointerIndex ofObject: oop); cr].
 		 oop := self accessibleObjectAfter: oop]
 ]
