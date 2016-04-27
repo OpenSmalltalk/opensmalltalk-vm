@@ -231,6 +231,13 @@ TSendNode >> isBuiltinOperator: builtinFlag [
 ]
 
 { #category : #testing }
+TSendNode >> isConditionalSend [
+	"Answer if the receiver is a send of any of the conditionals, ifTrue: ifTrue:ifFalse: et al"
+	^#(	ifTrue:ifFalse: ifFalse:ifTrue: ifTrue: ifFalse:
+		ifNil:ifNotNil: ifNotNil:ifNil: ifNil: ifNotNil) includes: selector
+]
+
+{ #category : #testing }
 TSendNode >> isLiteralArrayDeclaration [
 	^selector == #cCoerce:to:
 	  and: [arguments first isConstant
@@ -253,7 +260,7 @@ TSendNode >> isPreprocessorDirective [
 
 { #category : #testing }
 TSendNode >> isReturningIf [
-	^(#(ifTrue:ifFalse: ifFalse:ifTrue:) includes: selector)
+	^(#(ifTrue:ifFalse: ifFalse:ifTrue: ifNil:ifNotNil: ifNotNil:ifNil:) includes: selector)
 	   and: [arguments allSatisfy: [:arg| arg endsWithReturn]]
 ]
 
