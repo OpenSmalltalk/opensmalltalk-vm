@@ -713,7 +713,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	return YES;
 }
 
-- (void)  ioSetFullScreen: (sqInt) fullScreen {	
+- (void)  ioSetFullScreen: (sqInt) fullScreen {
 	
 	if ([self isInFullScreenMode] == YES && (fullScreen == 1)) 
 		return;
@@ -722,55 +722,23 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	
 	if ([self isInFullScreenMode] == NO && (fullScreen == 1)) {
 		self.savedScreenBoundsAtTimeOfFullScreen = (NSRect) [self bounds];
-		[self fadeOut];
-		[self enterFullScreenMode:[NSScreen mainScreen] withOptions: nil];
+		NSDictionary* options = [NSDictionary dictionaryWithObjectsAndKeys:
+			[NSNumber numberWithInt:
+				NSApplicationPresentationHideDock |
+				NSApplicationPresentationHideMenuBar ],
+			NSFullScreenModeApplicationPresentationOptions, nil];
+		[self enterFullScreenMode:[NSScreen mainScreen] withOptions:options];
 		extern struct	VirtualMachine* interpreterProxy;
 		interpreterProxy->fullDisplayUpdate();
-		[self fadeIn];
 	}
 	
 	if ([self isInFullScreenMode] == YES && (fullScreen == 0)) {
-		[self fadeOut];
 		[self exitFullScreenModeWithOptions: NULL];
-		[self fadeIn];
 		if ([self.window isKeyWindow] == NO) {
 			[self.window makeKeyAndOrderFront: self];
 			//	NOT SURE IF THIS IS NEEDED, MORE TESTING	[self.window setContentSize: self.savedScreenBoundsAtTimeOfFullScreen.size];
 		}
 	}
-}
-
-- (void)fadeOut {
-	CGDisplayErr    err;
-	
-	err = CGAcquireDisplayFadeReservation((CGDisplayReservationInterval)kCGMaxDisplayReservationInterval,
-										  &fadeToken);
-	if (err == kCGErrorSuccess) {
-		CGDisplayFade(fadeToken,
-					  ((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakUIFadeForFullScreenInSeconds,
-					  (CGDisplayBlendFraction)kCGDisplayBlendNormal,
-					  (CGDisplayBlendFraction)kCGDisplayBlendSolidColor,
-					  0.0f,
-					  0.0f,
-					  0.0f,
-					  TRUE);
-	} 
-} 
-
-- (void)fadeIn {
-	CGDisplayErr    err;
-	
-	err = CGDisplayFade(fadeToken,
-						((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakUIFadeForFullScreenInSeconds,
-						(CGDisplayBlendFraction)kCGDisplayBlendSolidColor,
-						(CGDisplayBlendFraction)kCGDisplayBlendNormal,
-						0.0f,
-						0.0f,
-						0.0f,
-						TRUE);
-	if (err == kCGErrorSuccess) {
-		CGReleaseDisplayFadeReservation(fadeToken);
-	} 
 }
 
 - (void) preDrawThelayers {
