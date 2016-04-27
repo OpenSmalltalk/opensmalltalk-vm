@@ -445,6 +445,12 @@ TMethod >> definingClass: aClass [
 	definingClass := aClass.
 ]
 
+{ #category : #'error handling' }
+TMethod >> deny: aBooleanOrBlock [
+	<doNotGenerate>
+	aBooleanOrBlock value ifTrue: [AssertionFailure signal: 'Assertion failed']
+]
+
 { #category : #'C code generation' }
 TMethod >> determineTypeFor: aNode in: aCodeGen [
 	aNode isSend ifTrue:
@@ -683,9 +689,10 @@ TMethod >> exitVar: exitVar label: exitLabel [
 	 Answer if a goto was generated."
 	"Optimization: If exitVar is nil, the return value of the inlined method is not being used, so don't add the assignment statement."
 
-	| labelUsed map eliminateReturnSelfs |
+	| labelUsed map elisions eliminateReturnSelfs |
 	labelUsed := false.
 	map := Dictionary new.
+	elisions := Set new.
 	"Conceivably one might ^self from a struct class and mean it.  In most cases though
 	 ^self means `get me outta here, fast'.  So unless this method is from a VMStruct class,
 	 elide any ^self's"
@@ -694,31 +701,50 @@ TMethod >> exitVar: exitVar label: exitLabel [
 	parseTree nodesDo:
 		[:node | | replacement |
 		node isReturn ifTrue:
-			[replacement := (node expression isVariable "Eliminate ^self's"
-							   and: [node expression name = 'self'
-							   and: [eliminateReturnSelfs]])
-								ifTrue: [nil]
-								ifFalse:
-									[exitVar
-										ifNil: [node expression]
-										ifNotNil: [TAssignmentNode new
-													setVariable: (TVariableNode new setName: exitVar)
-													expression: node expression]].
-			 node ~~ parseTree statements last ifTrue:
-				[replacement := replacement
-									ifNil: [TGoToNode new setLabel: exitLabel; yourself]
-									ifNotNil:
-										[TStmtListNode new
-											setArguments: #()
-											statements: {replacement.
-														  TGoToNode new setLabel: exitLabel; yourself};
-											yourself].
-				 labelUsed := true].
-			map
-				at: node
-				put: (replacement ifNil:
-						[TLabeledCommentNode new setComment: 'return ', node expression printString])]].
+			[self transformReturnSubExpression: node
+				toAssignmentOf: exitVar
+				andGoto: exitLabel
+				unless: eliminateReturnSelfs
+				into: [:rep :labelWasUsed|
+					replacement := rep.
+					labelWasUsed ifTrue: [labelUsed := true]].
+			"replaceNodesIn: is strictly top-down, so any replacement for ^expr ifTrue: [...^fu...] ifFalse: [...^bar...]
+			 will prevent replacement of either ^fu or ^bar. The corollary is that ^expr ifTrue: [foo] ifFalse: [^bar]
+			 must be transformed into expr ifTrue: [^foo] ifFalse: [^bar]"
+			(node expression isConditionalSend
+			 and: [node expression hasExplicitReturn])
+				ifTrue:
+					[elisions add: node.
+					 (node expression args reject: [:arg| arg endsWithReturn]) do:
+						[:nodeNeedingReturn|
+						 self transformReturnSubExpression: nodeNeedingReturn statements last
+							toAssignmentOf: exitVar
+							andGoto: exitLabel
+							unless: eliminateReturnSelfs
+							into: [:rep :labelWasUsed|
+								replacement := rep.
+								labelWasUsed ifTrue: [labelUsed := true]].
+						 map
+							at: nodeNeedingReturn statements last
+							put: replacement]]
+				ifFalse:
+					[map
+						at: node
+						put: (replacement ifNil:
+								[TLabeledCommentNode new setComment: 'return ', node expression printString])]]].
+	map isEmpty ifTrue:
+		[self deny: labelUsed.
+		 ^false].
+	"Now do a top-down replacement for all returns that should be mapped to assignments and gotos"
 	parseTree replaceNodesIn: map.
+	"Now it is safe to eliminate the returning ifs..."
+	elisions isEmpty ifFalse:
+		[| elisionMap |
+		 elisionMap := Dictionary new.
+		 elisions do: [:returnNode| elisionMap at: returnNode put: returnNode expression].
+		 parseTree replaceNodesIn: elisionMap].
+	"Afterwards all returns should be gone."
+	self deny: parseTree hasExplicitReturn.
 	"Now flatten any new statement lists..."
 	parseTree nodesDo:
 		[:node| | list |
@@ -1197,23 +1223,23 @@ TMethod >> inlineCaseStatementBranchesIn: aCodeGen localizingVars: varsList [
 ]
 
 { #category : #inlining }
-TMethod >> inlineCodeOrNilForStatement: aNode in: aCodeGen [
+TMethod >> inlineCodeOrNilForStatement: aNode returningNodes: returningNodes in: aCodeGen [
 	"If the given statement node can be inlined, answer the statements that replace it. Otherwise, answer nil."
 
 	| stmts |
 	aNode isReturn ifTrue:
 		[(self inlineableSend: aNode expression in: aCodeGen) ifTrue:
 			[stmts := self inlineSend: aNode expression
-				directReturn: true exitVar: nil in: aCodeGen.
+							directReturn: true exitVar: nil in: aCodeGen.
 			^stmts]].
 	(aNode isAssignment and: [aNode expression isSend])  ifTrue:
 		[(self inlineableSend: aNode expression in: aCodeGen) ifTrue:
 			[^self inlineSend: aNode expression
-				directReturn: false exitVar: aNode variable name in: aCodeGen]].
+					directReturn: false exitVar: aNode variable name in: aCodeGen]].
 	aNode isSend ifTrue:
 		[(self inlineableSend: aNode in: aCodeGen) ifTrue:
 			[^self inlineSend: aNode
-				directReturn: false exitVar: nil in: aCodeGen]].
+					directReturn: (returningNodes includes: aNode) exitVar: nil in: aCodeGen]].
 	^nil
 ]
 
@@ -2623,6 +2649,35 @@ TMethod >> transformConditionalAssignment: node in: aCodeGen [
 			yourself]
 ]
 
+{ #category : #inlining }
+TMethod >> transformReturnSubExpression: node toAssignmentOf: exitVar andGoto: exitLabel unless: eliminateReturnSelfs into: aBinaryBlock [
+	| expr replacement |
+	expr := node isReturn ifTrue: [node expression] ifFalse: [node].
+	replacement := (expr isVariable "Eliminate ^self's"
+					   and: [expr name = 'self'
+					   and: [eliminateReturnSelfs]])
+						ifTrue: [nil]
+						ifFalse:
+							[exitVar
+								ifNil: [expr]
+								ifNotNil: [TAssignmentNode new
+											setVariable: (TVariableNode new setName: exitVar)
+											expression: expr]].
+	 node == parseTree statements last
+		ifTrue:
+			[aBinaryBlock value: replacement value: false]
+		ifFalse:
+			[replacement := replacement
+								ifNil: [TGoToNode new setLabel: exitLabel; yourself]
+								ifNotNil:
+									[TStmtListNode new
+										setArguments: #()
+										statements: {replacement.
+													  TGoToNode new setLabel: exitLabel; yourself};
+										yourself].
+			 aBinaryBlock value: replacement value: true]
+]
+
 { #category : #transformations }
 TMethod >> transformToStructClassMethodFor: aCCodeGenerator [
 	"Transform this method so that it can be used on an instance of a struct class (VMStructType subclass).
@@ -2682,7 +2737,7 @@ TMethod >> transformVoidReturns [
 TMethod >> tryToInlineMethodsIn: aCodeGen [
 	"Expand any (complete) inline methods called by this method. Set the complete bit when all inlining has been done. Return true if something was inlined."
 
-	| stmtLists didSomething newStatements sendsToInline |
+	| stmtLists didSomething newStatements sendsToInline returningNodes |
 	self definedAsMacro ifTrue:
 		[complete := true.
 		 ^false].
@@ -2712,13 +2767,20 @@ TMethod >> tryToInlineMethodsIn: aCodeGen [
 		[writtenToGlobalVarsCache := nil.
 		^didSomething].
 
+	returningNodes := Set new.
+	parseTree nodesDo:
+		[:node|
+		node isReturn ifTrue:
+			[returningNodes add: node expression.
+			 node expression isConditionalSend ifTrue:
+				[returningNodes addAll: (node expression args collect: [:stmtList| stmtList statements last])]]].
 	stmtLists := self statementsListsForInliningIn: aCodeGen.
 	stmtLists do:
 		[:stmtList|
 		newStatements := OrderedCollection new: 100.
 		stmtList statements do:
 			[:stmt|
-			(self inlineCodeOrNilForStatement: stmt in: aCodeGen)
+			(self inlineCodeOrNilForStatement: stmt returningNodes: returningNodes in: aCodeGen)
 				ifNil: [newStatements addLast: stmt]
 				ifNotNil: [:inlinedStmts|
 					didSomething := true.
