@@ -6026,7 +6026,7 @@ StackInterpreter >> fetchInteger: fieldIndex ofObject: objectPointer [
 StackInterpreter >> fetchNextBytecode [
 	"This method fetches the next instruction (bytecode). Each bytecode method is responsible for fetching the next bytecode, preferably as early as possible to allow the memory system time to process the request before the next dispatch."
 
-	self cppIf: MULTIPLEBYTECODESETS
+	MULTIPLEBYTECODESETS
 		ifTrue: [currentBytecode := self fetchByte + bytecodeSetSelector]
 		ifFalse: [currentBytecode := self fetchByte]
 ]
@@ -10023,9 +10023,9 @@ StackInterpreter >> maybeInlinePositive32BitIntegerFor: integerValue [
 							eeInstantiateSmallClassIndex: ClassLargePositiveIntegerCompactIndex
 							format: (objectMemory byteFormatForNumBytes: 4)
 							numSlots: 1.
-	self cppIf: SPURVM
+	SPURVM
 		ifTrue:
-			["Memory is 8 byte aligned in Spur, make sure that oversized bytes are set to zero"
+			["Memory is 8 byte aligned in Spur, make sure that oversized bytes are set to zero" "eem 4/28/2016 questionable; they should never be read"
 			objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped32IfBigEndian: integerValue).
 			objectMemory storeLong32: 1 ofObject: newLargeInteger withValue: 0]
 		ifFalse: 
@@ -10116,14 +10116,14 @@ StackInterpreter >> methodClassOf: methodPointer [
 	 because the class index and ValueIndex of the association almost certainly share a cache line."
 	| literal |
 	literal := self followLiteral: (objectMemory literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
-	^NewspeakVM
+	NewspeakVM
 		ifTrue:
-			[literal = objectMemory nilObject
-				ifTrue: [literal]
-				ifFalse: [objectMemory followField: ValueIndex ofObject: literal]]
+			[literal ~= objectMemory nilObject ifTrue:
+				[literal := objectMemory followField: ValueIndex ofObject: literal]]
 		ifFalse:
 			[self assert: ((objectMemory isPointers: literal) and: [(objectMemory numSlotsOf: literal) > ValueIndex]).
-			 objectMemory followField: ValueIndex ofObject: literal]
+			 literal := objectMemory followField: ValueIndex ofObject: literal].
+	^literal
 ]
 
 { #category : #'compiled methods' }
@@ -10348,9 +10348,9 @@ StackInterpreter >> noInlineSigned32BitIntegerFor: integerValue [
 							eeInstantiateSmallClassIndex: largeClass
 							format: (objectMemory byteFormatForNumBytes: 4)
 							numSlots: 1.
-	self cppIf: SPURVM
+	SPURVM
 		ifTrue:
-			["Memory is 8 byte aligned in Spur, make sure that oversized bytes are set to zero"
+			["Memory is 8 byte aligned in Spur, make sure that oversized bytes are set to zero" "eem 4/28/2016 questionable; they should never be read"
 			objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped32IfBigEndian: magnitude).
 			objectMemory storeLong32: 1 ofObject: newLargeInteger withValue: 0]
 		ifFalse: 
@@ -13889,7 +13889,7 @@ StackInterpreter >> signed64BitIntegerFor: integerValue [
 							eeInstantiateSmallClassIndex: largeClass
 							format: (objectMemory byteFormatForNumBytes: sz)
 							numSlots: sz + 3 // objectMemory bytesPerOop.
-	self cppIf: SPURVM
+	SPURVM
 		ifTrue:
 			["Memory is eight byte aligned in SPUR, so we are sure to have room for 64bits word whatever allocated sz"
 			objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped64IfBigEndian: magnitude)]

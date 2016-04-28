@@ -118,6 +118,20 @@ TSendNode >> constantNumbericValueOrNil [
 	^nil
 ]
 
+{ #category : #transformations }
+TSendNode >> copyWithoutReturn [
+	self assert: self endsWithReturn.
+	^self class new
+		setSelector: selector
+			receiver: receiver
+				arguments: (arguments collect:
+								[:arg|
+								 arg endsWithReturn
+									ifTrue: [arg copyWithoutReturn]
+									ifFalse: [arg]]);
+		yourself
+]
+
 { #category : #'C code generation' }
 TSendNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen [
 	"Emit the receiver in a form that can be passed as an argument."

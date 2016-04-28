@@ -54,6 +54,13 @@ TParseNode >> anySatisfy: aBlock unless: cautionaryBlock [
 ]
 
 { #category : #transformations }
+TParseNode >> asReturnNode [
+	^TReturnNode new 
+		setExpression: self;
+		yourself
+]
+
+{ #category : #transformations }
 TParseNode >> bindVariableUsesIn: aDictionary [
 	"Bind uses of all variables in the given dictionary, but do not change variables that appear on the left-hand-side of an assignment statement."
 

@@ -76,6 +76,18 @@ Class {
 	#category : #'VMMaker-Interpreter'
 }
 
+{ #category : #'C translation' }
+InterpreterPrimitives class >> defineAtCompileTime: anObject [
+	"Override to define at translation time those variables that need to
+	 be defined at compile time only in plugins, but not in the main VM,
+	 because the VM generated is specific to these varables."
+	anObject isSymbol ifFalse:
+		[^false].
+	(#(STACKVM COGVM COGMTVM SPURVM) includes: anObject) ifTrue:
+		[^false].
+	^VMBasicConstants namesDefinedAtCompileTime includes: anObject
+]
+
 { #category : #'class initialization' }
 InterpreterPrimitives class >> initialize [
 	"Initialize the window color.  This is probably Squeak-specific, so..."
@@ -326,7 +338,7 @@ InterpreterPrimitives >> magnitude64BitIntegerFor: magnitude neg: isNegative [
 							[sz := sz + 1.
 							 (highWord := highWord >> 8) = 0 ifFalse: [sz := sz + 1]]]]].
 	newLargeInteger := objectMemory instantiateClass: largeClass indexableSize:  sz.
-	self cppIf: SPURVM
+	SPURVM
 		ifTrue:
 			["Memory is eight byte aligned in SPUR, so we are sure to have room for 64bits word whatever allocated sz"
 			objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped64IfBigEndian: magnitude)]

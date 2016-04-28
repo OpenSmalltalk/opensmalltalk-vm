@@ -80,6 +80,16 @@ TStmtListNode >> args [
 ]
 
 { #category : #transformations }
+TStmtListNode >> asReturnNode [
+	self endsWithReturn ifTrue:
+		[^self].
+	^self class new
+		setArguments: arguments
+			statements: statements allButLast, {statements last asReturnNode};
+		yourself
+]
+
+{ #category : #transformations }
 TStmtListNode >> assignLastExpressionTo: variableNode [
 	"Destructively transform the receiver so that its last expression is assigned to the argument."
 	| index |
@@ -114,6 +124,15 @@ TStmtListNode >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold
 TStmtListNode >> bindVariablesIn: aDictionary [
 
 	statements := statements collect: [ :s | s bindVariablesIn: aDictionary ].
+]
+
+{ #category : #transformations }
+TStmtListNode >> copyWithoutReturn [
+	self assert: self endsWithReturn.
+	^self class new
+		setArguments: arguments
+			statements: statements allButLast, {statements last copyWithoutReturn};
+		yourself
 ]
 
 { #category : #'C code generation' }

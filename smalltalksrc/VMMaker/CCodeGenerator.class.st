@@ -1159,7 +1159,7 @@ CCodeGenerator >> emitCConstants: constList on: aStream [
 			default = #undefined
 				ifTrue: [aStream nextPutAll: '#undef '; nextPutAll: node name; cr]
 				ifFalse:
-					[conditional := VMBasicConstants defineAtCompileTime: node name.
+					[conditional := (vmClass ifNil: VMBasicConstants) defineAtCompileTime: node name.
 					conditional ifTrue:
 						[aStream nextPutAll: '#if !defined('; nextPutAll: node name; nextPutAll: ') /* Allow this to be overridden on the compiler command line */'; cr].
 					value := vmClass
@@ -3609,7 +3609,7 @@ CCodeGenerator >> isConstantNode: aNode valueInto: aBlock [
 
 	aNode isConstant ifTrue:
 		[(aNode isDefine
-		  and: [VMBasicConstants defineAtCompileTime: aNode name]) ifTrue:
+		  and: [(vmClass ifNil: [VMBasicConstants]) defineAtCompileTime: aNode name]) ifTrue:
 			[^false].
 		 aBlock value: aNode value.
 		 ^true].
@@ -4001,7 +4001,7 @@ CCodeGenerator >> nilOrBooleanConditionFor: nodeOrNil [
 		[(vmClass notNil
 		 and: [nodeOrNil args first isConstant
 		 and: [nodeOrNil args first value isSymbol
-		 and: [(VMBasicConstants defineAtCompileTime: nodeOrNil args first value) not
+		 and: [((vmClass ifNil: [VMBasicConstants]) defineAtCompileTime: nodeOrNil args first value) not
 		 and: [(vmClass bindingOf: nodeOrNil args first value) notNil]]]]) ifTrue:
 			[self logger
 					nextPutAll: 'Warning: cppIf: reference to ';
@@ -4162,7 +4162,7 @@ CCodeGenerator >> optionIsTrue: pragma in: aClass [
 
 	"If the option is one to be defined at compile time we'll generate a
 	 conditional around its declaration and definition."
-	(VMBasicConstants defineAtCompileTime: key) ifTrue:
+	((vmClass ifNil: [VMBasicConstants]) defineAtCompileTime: key) ifTrue:
 		[^true].
 
 	"If the option is the name of a subclass of Cogit, include it if it inherits from the Cogit class."
