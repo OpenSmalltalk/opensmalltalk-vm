@@ -8,6 +8,11 @@ Class {
 }
 
 { #category : #transformations }
+TReturnNode >> asReturnNode [
+	^self
+]
+
+{ #category : #transformations }
 TReturnNode >> bindVariableUsesIn: aDictionary [
 
 	expression := expression bindVariableUsesIn: aDictionary.
@@ -30,6 +35,11 @@ TReturnNode >> bindVariableUsesIn: aDictionary andConstantFoldIf: constantFold i
 TReturnNode >> bindVariablesIn: aDictionary [
 
 	expression := expression bindVariablesIn: aDictionary.
+]
+
+{ #category : #transformations }
+TReturnNode >> copyWithoutReturn [
+	^expression
 ]
 
 { #category : #'C code generation' }

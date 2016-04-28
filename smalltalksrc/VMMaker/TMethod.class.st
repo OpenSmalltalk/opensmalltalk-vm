@@ -1227,19 +1227,21 @@ TMethod >> inlineCodeOrNilForStatement: aNode returningNodes: returningNodes in:
 	"If the given statement node can be inlined, answer the statements that replace it. Otherwise, answer nil."
 
 	| stmts |
-	aNode isReturn ifTrue:
-		[(self inlineableSend: aNode expression in: aCodeGen) ifTrue:
-			[stmts := self inlineSend: aNode expression
-							directReturn: true exitVar: nil in: aCodeGen.
-			^stmts]].
-	(aNode isAssignment and: [aNode expression isSend])  ifTrue:
-		[(self inlineableSend: aNode expression in: aCodeGen) ifTrue:
-			[^self inlineSend: aNode expression
-					directReturn: false exitVar: aNode variable name in: aCodeGen]].
-	aNode isSend ifTrue:
-		[(self inlineableSend: aNode in: aCodeGen) ifTrue:
-			[^self inlineSend: aNode
-					directReturn: (returningNodes includes: aNode) exitVar: nil in: aCodeGen]].
+	(aNode isReturn
+	 and: [self inlineableSend: aNode expression in: aCodeGen]) ifTrue:
+		[stmts := self inlineSend: aNode expression
+						directReturn: true exitVar: nil in: aCodeGen.
+		stmts last endsWithReturn ifFalse:
+			[stmts at: stmts size put: stmts last asReturnNode].
+		^stmts].
+	(aNode isAssignment
+	 and: [self inlineableSend: aNode expression in: aCodeGen]) ifTrue:
+		[^self inlineSend: aNode expression
+				directReturn: false exitVar: aNode variable name in: aCodeGen].
+	(aNode isSend
+	 and: [self inlineableSend: aNode in: aCodeGen]) ifTrue:
+		[^self inlineSend: aNode
+				directReturn: (returningNodes includes: aNode) exitVar: nil in: aCodeGen].
 	^nil
 ]
 
@@ -1439,20 +1441,24 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 			 (meth exitVar: exitVar label: exitLabel) "is label used?"
 				ifTrue: [ labels add: exitLabel ]
 				ifFalse: [ exitLabel := nil ]]].
-	(inlineStmts := OrderedCollection new: 100)
+	(inlineStmts := OrderedCollection new: meth statements size + meth args size + 2)
 		add: (label := TLabeledCommentNode new setComment: 'begin ', sel);
 		addAll: (self argAssignmentsFor: meth send: aSendNode in: aCodeGen);
 		addAll: meth statements.  "method body"
-	(directReturn
-	 and: [meth endsWithReturn not]) ifTrue:
-		[inlineStmts add:
-			(TReturnNode new setExpression: (TVariableNode new setName: 'nil'))].
-	exitLabel ~= nil ifTrue:
+	directReturn ifTrue:
+		[meth endsWithReturn
+			ifTrue:
+				[exitVar ifNotNil: "don't remove the returns if being invoked in the context of a return"
+					[inlineStmts at: inlineStmts size put: inlineStmts last copyWithoutReturn]]
+			ifFalse:
+				[inlineStmts add:
+					(TReturnNode new setExpression: (TVariableNode new setName: 'nil'))]].
+	exitLabel ifNotNil:
 		[inlineStmts add:
 			(TLabeledCommentNode new setLabel:
 				exitLabel comment: 'end ', meth selector)].
 	inlineStmts size = 1 ifTrue: "Nuke empty methods; e.g. override of flushAtCache"
-		[self assert: inlineStmts first class == TLabeledCommentNode.
+		[self assert: inlineStmts first isComment.
 		 inlineStmts removeFirst].
 	^inlineStmts
 ]
@@ -2777,7 +2783,7 @@ TMethod >> tryToInlineMethodsIn: aCodeGen [
 	stmtLists := self statementsListsForInliningIn: aCodeGen.
 	stmtLists do:
 		[:stmtList|
-		newStatements := OrderedCollection new: 100.
+		newStatements := OrderedCollection new: stmtList statements size.
 		stmtList statements do:
 			[:stmt|
 			(self inlineCodeOrNilForStatement: stmt returningNodes: returningNodes in: aCodeGen)
@@ -2786,6 +2792,17 @@ TMethod >> tryToInlineMethodsIn: aCodeGen [
 					didSomething := true.
 					newStatements addAllLast: inlinedStmts]].
 		stmtList setStatements: newStatements asArray].
+
+	"This is a hack; forgive me. The inlining abiove tends to keep return statements in statement lists.
+	 In the case of returning ifs we don't want the returns in case the returning if is generated as an expression."
+	returningNodes do:
+		[:returningNode|
+		 (returningNode isConditionalSend
+		  and: [returningNode args anySatisfy: [:alternativeNode| alternativeNode endsWithReturn]]) ifTrue:
+			[returningNode args withIndexDo:
+				[:alternativeNode :index|
+				 alternativeNode endsWithReturn ifTrue:
+					[returningNode args at: index put: alternativeNode copyWithoutReturn]]]].
 
 	didSomething ifTrue:
 		[writtenToGlobalVarsCache := nil.
