@@ -386,7 +386,7 @@ CoInterpreterPrimitives >> primitiveMethodXray [
 	 Bit 3 = method refers to young object.
 	 Bit 4 = method too big to be jitted (more than 64k of code, or needs more than 1.5Mb of stack space to compile)
 	 Bit 5 = method contains unknown/unjittable bytecode
-	 Bit 7 = method should not be jitted because it contains a primitive not to be called from machine code (unused)"
+	 Bit 6 = method should not be jitted because it contains a primitive not to be called from machine code (unused)"
 	| alreadyCogged flags cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	(self methodWithHeaderShouldBeCogged: (objectMemory methodHeaderOf: self stackTop))
@@ -402,8 +402,8 @@ CoInterpreterPrimitives >> primitiveMethodXray [
 			 cogMethod asInteger
 				caseOf: {
 					[MethodTooBig] -> [flags := 1 + 16].
-					[EncounteredUnknownBytecode] -> [1 + 32].
-					[ShouldNotJIT] -> [1 + 64] }
+					[EncounteredUnknownBytecode] -> [flags := 1 + 32].
+					[ShouldNotJIT] -> [flags := 1 + 64] }
 				otherwise: [self deny: (cogMethod asInteger between: MaxNegativeErrorCode and: NotFullyInitialized)]].
 			 (flags = 1
 			  and: [self maybeMethodHasCogMethod: self stackTop]) ifTrue:

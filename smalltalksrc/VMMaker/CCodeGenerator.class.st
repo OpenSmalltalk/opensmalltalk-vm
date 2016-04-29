@@ -4086,9 +4086,9 @@ CCodeGenerator >> node: exprNode typeCompatibleWith: argName inliningInto: targe
 		ifFalse:
 			[((exprNode isSend or: [exprNode isVariable])
 			  and: [(self
-					variableOfType: (self typeFor: exprNode in: aTMethod)
+					variableOfType: (targetMethod typeFor: argName in: self)
 					acceptsValue: exprNode
-					ofType: (targetMethod typeFor: argName in: self)) not]) ifTrue:
+					ofType: (self typeFor: exprNode in: aTMethod)) not]) ifTrue:
 				[logger
 					nextPutAll:
 						'type mismatch for formal ', argName, ' and actual "', exprNode asString,
