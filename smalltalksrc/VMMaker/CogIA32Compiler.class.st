@@ -1801,7 +1801,7 @@ CogIA32Compiler >> concretizePrefetchAw [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| addressOperand |
-	machineCodeSize := maxSize.
+	"Note that maxSize has been set to 7 or 0 in computeMaximumSize whether hasSSEInstructions or not"
 	maxSize > 0 ifTrue:
 		[addressOperand := operands at: 0.
 		 machineCode
@@ -1812,7 +1812,7 @@ CogIA32Compiler >> concretizePrefetchAw [
 			at: 4 put: (addressOperand >> 8 bitAnd: 16rFF);
 			at: 5 put: (addressOperand >> 16 bitAnd: 16rFF);
 			at: 6 put: (addressOperand >> 24 bitAnd: 16rFF)].
-	^maxSize
+	^machineCodeSize := maxSize
 ]
 
 { #category : #'generate machine code' }
