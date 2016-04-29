@@ -11,6 +11,6 @@
 # include "ppcia32abicc.c"
 #elif x86_64|x64|__x86_64|__x86_64__
 # include "x64ia32abicc.c"
-#elif defined(__ARM_ARCH__) || defined(__arm__) || defined(__arm32__) || defined(ARM32)
+#elif __ARM_ARCH__|__arm__|__arm32__|ARM32
 # include "arm32ia32abicc.c"
 #endif
