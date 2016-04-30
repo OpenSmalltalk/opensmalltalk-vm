@@ -85,6 +85,7 @@ TParseNode >> bindVariablesIn: aDictionary [
 { #category : #enumerating }
 TParseNode >> collect: aBlock [
 	| nodes |
+	self halt. "This is a misnomer; should be deleted"
 	nodes := OrderedCollection new.
 	self nodesDo: [:n| (aBlock value: n) ifTrue: [nodes add: n]].
 	^nodes
@@ -435,6 +436,14 @@ TParseNode >> removeAssertions [
 TParseNode >> replaceNodesIn: aDictionary [
 
 	^aDictionary at: self ifAbsent: [self]
+]
+
+{ #category : #enumerating }
+TParseNode >> select: aBlock [
+	| nodes |
+	nodes := OrderedCollection new.
+	self nodesDo: [:n| (aBlock value: n) ifTrue: [nodes add: n]].
+	^nodes
 ]
 
 { #category : #testing }
