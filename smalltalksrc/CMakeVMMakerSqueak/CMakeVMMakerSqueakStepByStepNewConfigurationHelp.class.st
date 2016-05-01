@@ -39,7 +39,63 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> addVMPlugins [
 	^HelpTopic
 		title:'addVMPlugins'
 		contents:
-'
+'addVMPlugins depends on custom configuration provided in our Configuration; the method depends on three other methods as described below 
+
+VMPlugins are similar to built-in plugins yet are critical for running squeak on particular systems. 
+
+The CMake configuration data needed for building them is encapsulated in sublcasses of CMakeVMPlugin.
+
+CMakeVMPlugin browseHierarchy
+
+You see that they are predominantly display and sound drivers.
+
+The process of customization ''starts'' in the initialze method of CPlatformConfigForSqueak
+
+ToolSet browse: CPlatformConfigForSqueak selector: #initialize
+
+In CPlatformConfigForSqueak>>initializeVMDrivers an OrderedCollection of CMakeVMPlugin subclasses are initialzed and stored. This collection is the universe of possible vm plugins.
+
+In our custom Configuration, we need a subset of that universe.  The CPlatformConfigForSqueak>>customizeVMDrivers forces this with a ''self subclassResponsibility''
+
+In our  new Configuration we have this method already as we copied from an existing Configuration
+
+ToolSet browse: Linux64x86w32BitConfigUsrLib selector: #customizeVMPlugins
+
+We see that the code selects specific vm plugin templates from the universe of available ones and then customizes each one.
+
+Taking Linux64x86w32BitConfigUsrLib>>customizeCMakeVMDisplayNull as an example...
+
+ToolSet browse: Linux64x86w32BitConfigUsrLib selector: #customizeCMakeVMDisplayNull
+
+We see that we set the sources, compiler definitions, flags, external libraries, linker flags and include directories needed to compile the vm plugin here.
+
+So, if we have trouble with a vm plugin, we need to look in its customzeCMakeVMXYZ  method and fix it there.
+
+These configurations are extracted from our Configuration and written out to that vm plugins directory and placed in its CMakeLists.txt file.
+
+Here is an example of the CMakeLists.txt file for the vm-display-null plugin
+
+bash-4.2$ cat oscogvm/cmake.build.linux64x86w32BitCompatibility/squeak.cog.v3/build/vm-display-null/CMakeLists.txt 
+# This is automatically generated file using Linux64x86w32BitSqueakCogSpurConfig on 1 May 2016 8:40:02.153261 am
+  project (vm-display-null)
+  cmake_minimum_required(VERSION 2.8.12)
+  include (/home/wm/usr/src/smalltalk/CMake.oscog/cogspurVMMaker/oscogvm/cmake.build.linux64x86w32BitCompatibility/squeak.cog.v3/build/directories.cmake)
+  add_definitions(-DNDEBUG -DDEBUGVM=0  -DLSB_FIRST=1 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0)
+  add_definitions(-w -m32 -msse2 -O1)
+  add_definitions(-fPIC -DPIC)
+  set(sources ${targetPlatform}/vm-display-null/sqUnixDisplayNull)
+  add_library(vm-display-null  SHARED   ${sources})
+  include_directories(  ${crossDir}/plugins/FilePlugin ${targetPlatform}/plugins/B3DAcceleratorPlugin ${crossDir}/plugins/B3DAcceleratorPlugin)
+  set(LIBRARY_OUTPUT_PATH "/home/wm/usr/src/smalltalk/CMake.oscog/cogspurVMMaker/oscogvm/cmake.products/squeak.cog.v3")
+  target_link_libraries(vm-display-null  ${LINKLIBS})
+  set_target_properties(vm-display-null PROPERTIES PREFIX ""  SUFFIX ""  LINK_FLAGS "-w -m32 -msse2 -O1")
+
+
+To modify the above output, we modify our Configuration''s customizeCMakeVMXyz methods . 
+To add or remove a vm-plugin from our configuration, we edit the customizeVMPlugins method.
+To expand the universe of available vm plugins, we modify the CMakeConfigForSqueak >>initializeVMDrivers method.
+
+
 '
 ]
 
@@ -951,6 +1007,55 @@ cmakeAddDefinitions
 ]
 
 { #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> generatePluginConfigs [
+	^HelpTopic
+		title:'generatePluginConfigs'
+		contents:
+'This method iterates over a collection of InterpreterPlugin subclasses* and asks each class to populate itself with some basic information
+
+generateFor: aCMakeVMGenerator internal: aBoolean 
+
+	^ aCMakeVMGenerator 
+		generatePlugin: self 
+		internal: aBoolean
+		extraRules: nil
+
+Then it 
+		
+CMakeVMGeneratorForSqueak generatePlugin: aPlugin internal: aBoolean extraRules: aBlock
+	" this method called back from plugin"
+	^ CMakePluginGeneratorForSqueak new
+		generate: aPlugin for: self internal: aBoolean extraRules: aBlock		
+		
+Which ends up at 
+
+CMakePluginGeneratorForSqueak >> generateByTemplate		
+		
+Here we see the familiar populating of CMakeTemplate and the writing of CMake output		
+		
+bash-4.2$ cat ADPCMCodecPlugin/CMakeLists.txt 
+  message( "Adding internal plugin: ADPCMCodecPlugin")
+  set(pluginName "ADPCMCodecPlugin")
+  set(pluginSrc "${srcPluginsDir}/ADPCMCodecPlugin")
+  set(pluginCross "${crossDir}/plugins/ADPCMCodecPlugin")
+  set(pluginPlatform "${targetPlatform}/plugins/ADPCMCodecPlugin")
+  set(LINKLIBS )
+  add_definitions(-DSQUEAK_BUILTIN_PLUGIN)
+  list( APPEND sources  "${pluginSrc}/ADPCMCodecPlugin.c")
+  include_directories(  ${pluginSrc} ${pluginCross} ${targetPlatform}/plugins/${pluginName})
+  add_library(ADPCMCodecPlugin  STATIC   ${sources})
+  set(linkFlags "${linkFlags} -m32")
+  set_property(TARGET ADPCMCodecPlugin PROPERTY LINK_FLAGS ${linkFlags})
+
+  IF(ADPCMCodecPlugin_dependencies)
+         ADD_DEPENDENCIES( ADPCMCodecPlugin  ${ADPCMCodecPlugin_dependencies})
+  ENDIF( ADPCMCodecPlugin_dependencies)
+
+
+*Where those collections of  plugin classes are stored in our Configuration. We cover that next in Specifying Plugins'
+]
+
+{ #category : #pages }
 CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> identifyBuilder [
 	^HelpTopic
 		title:'Identify Builder'
@@ -1177,34 +1282,22 @@ cmakeListAppendLINKLIBSelements
 cmakeAddExecutableNameOptionSource
 setExecutableOutputPath
 addVMPlugins
+generatePluginConfigs
+specifyingPlugins
+
+processThirdpartyLibraries
+processPlugins
+
 
 setConfigurationDirectory
 setOutputDirectory
-settingPlugins
 compilingLinkingSetup
 customizeVMDrivers
-customizePlugins
+
 aNoteOnFoo
 )
 
-"	^#(overview 
-tests 
-identifyPlatform 
-identifyPlatformAbstractBaseClass
-identifyBuilder
-createTheConfiguration
-excludingConfigFromBuilds
-setAvailableBuildTypes
-firstCMakeGeneration
-theVMGenerator
-reviewMethodRedirectPattern
-setOutputDirectory
-settingPlugins
-compilingLinkingSetup
-customizeVMDrivers
-customizePlugins
-aNoteOnFoo
-)"
+
 ]
 
 { #category : #pages }
@@ -1238,6 +1331,26 @@ The CMake template class initializes itself with some default data, which you ca
 (CMakeIncludeDirectories new) content
 
 Since this is handled for us one level above our new configuration, we will leave this one untouched.  If it turns out that we need to include some other directories, we can override the method.'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> processPlugins [
+^HelpTopic
+		title:'Process Plugins'
+		contents:
+'SystemNavigation browseAllImplementorsOf: #processPlugins:
+
+write me..'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> processThirdpartyLibraries [
+	^HelpTopic
+		title:'Process Third Party Libraries'
+		contents:
+'SystemNavigation browseAllImplementorsOf: #processThirdpartyLibraries
+
+write me..'
 ]
 
 { #category : #pages }
@@ -1471,11 +1584,62 @@ There is nothing for us to do here.'
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> settingPlugins [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> specifyingPlugins [
 	^HelpTopic
-		title:'Setting Plugins'
+		title:'Specifying Plugins'
 		contents:
-'Write Me.'
+'We can specify which plugins we want on our configuration by overriding our platform''s defaultExternalPlugins and defaultInternalPlugins methods.
+
+The default set can be further customized according to buildType if desired via the externalPlugins[BuildType] and internalPlugins[BuildType] redirect pattern
+
+We will cover only the internalPlugins scenario here. The methodology is exactly the same for externalPlugins.
+
+Let''s look first at the defaultInternalPlugins
+
+SystemNavigation browseAllImplementorsOf: #defaultInternalPlugins
+
+Looking at the Linux64x86w32BitConfigUsrLib we see that it just returns a default collection of class names. 
+
+The defaultInternalPlugins message is  typically sent from the internalPlugins[buildType] method.
+
+SystemNavigation browseAllImplementorsOf: #internalPlugins
+
+Here we see that CPlatformConfigForSqueak implements the message redirect pattern.
+
+SystemNavigation browseAllImplementorsOf: #internalPluginsBuild
+
+In CPlatformConfigForSqueak >> internalPluginsBuild forces subclasses to implement the method.
+
+Looking at 
+
+SystemNavigation browseAllImplementorsOf: #internalPluginsBuildMultiThreadedDebug
+we see the default is to return the default list provided in internalPluginsBuild.
+
+This enables configurations to customize their plugins with a good degree of granularity should we want to change the plugins we use based on buildType while keeping things simple in the default case.
+
+To summarize, a Configuration specifies what plugins it wants to build (either internal or external) by modifying or overriding the list of Plugin class names stored in defaultInternalPlugins or defaultExternalPlugins by overriding the internalPlugins[buildType] method or externalPlugins[buildType] method
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+'
 ]
 
 { #category : #pages }
