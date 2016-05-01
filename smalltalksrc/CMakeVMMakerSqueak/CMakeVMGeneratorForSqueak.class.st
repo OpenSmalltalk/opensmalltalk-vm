@@ -173,6 +173,7 @@ CMakeVMGeneratorForSqueak >> moduleName [
 { #category : #'as yet unclassified' }
 CMakeVMGeneratorForSqueak >> processPlugins: pluginGenerators [
 	| libs libDeps |
+	self flag:'tty think this trhough. Is it redundant?'.
 	libs := OrderedCollection new.
 	libDeps := Dictionary new.
 	pluginGenerators do: [:gen |

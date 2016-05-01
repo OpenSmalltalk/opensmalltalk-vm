@@ -166,6 +166,7 @@ Linux64x86w32BitConfigUsrLib >> customizeCMakeVMSoundNull [
 { #category : #plugins }
 Linux64x86w32BitConfigUsrLib >> customizeVMPlugins [
 	|mysubset iwantonly|
+	self flag: 'tty: consider pushing up to platform level on refactor'.
 	"trim the vmdrivers ordered collection of CMakeVMDriver subclasses to only those I want. then customize them for use on this OS/platform"
 	iwantonly :=	 #(#CMakeVMDisplayNull  #CMakeVMDisplayX11  #CMakeVMSoundALSA  #CMakeVMSoundNull ).
 	mysubset := vmplugins select: [:vmd | 0 < (iwantonly occurrencesOf: (vmd class name) asSymbol)]. 
