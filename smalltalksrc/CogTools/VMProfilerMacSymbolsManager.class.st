@@ -51,6 +51,12 @@ VMProfilerMacSymbolsManager class >> tempDirectory [
 	^FileDirectory on: '/tmp/vmsyms', OSProcess thisOSProcess pid printString
 ]
 
+{ #category : #'initialize-release' }
+VMProfilerMacSymbolsManager >> filter: moduleList [
+	"Some modules are giving us parsing problems at the moment.  Just ignore them for now."
+	^moduleList reject: [:t| #('CoreAUC' 'FaceCore' 'HIToolbox' 'VideoToolbox') anySatisfy: [:s| t name includesSubstring: s]]
+]
+
 { #category : #parsing }
 VMProfilerMacSymbolsManager >> hexFromStream: aStream [
 	"Fast reading of lower-case hexadecimal."
@@ -96,6 +102,7 @@ VMProfilerMacSymbolsManager >> initializeMost [
 								vmshift: (modules at: i + 1);
 								address: (maxAddressMask bitAnd: (modules at: i + 2) + (modules at: i + 1));
 								size: (modules at: i + 3)].
+	modules := self filter: modules.
 	"The primitive always answers the VM info in the first entry."
 	vmModule := modules first.
 	modules := modules asSortedCollection: [:m1 :m2| m1 address <= m2 address]
@@ -131,7 +138,10 @@ VMProfilerMacSymbolsManager >> parseAsynchronously [
 { #category : #parsing }
 VMProfilerMacSymbolsManager >> parseSymbolsFor: module [
 	| arch proc symtab symStream |
-	arch := 'i386'. "for now; needs to be fetched from a systemAttribute sometime soon."
+	arch := (Smalltalk image getSystemAttribute: 1003) caseOf: {
+				['intel']	->	['i386'].
+				['x64']	->	['x86_64'].
+				}.
 	(tempDir fileExists: module shortName) ifFalse:
 		[proc := OSProcess thisOSProcess command:
 						'cd ', tempDir fullName,
@@ -145,8 +155,14 @@ VMProfilerMacSymbolsManager >> parseSymbolsFor: module [
 					do: [:ex| "Handle flaky OSProcess stuff by reporting error and failing to parse"
 						Transcript print: ex; flush.
 						^nil].
+	module shortName = 'HIToolbox' ifTrue: [self halt].
 	[| prev |
 	 prev := self parseSymbolsFrom: symtab to: symStream.
+	"CoreAUC has a huge chunk of data at the end of its text segment that causes the profiler to spend ages
+	 counting zeros.  Hack fix by setting the end of the last symbol in the text segment to a little less than 1Mb." 
+	"00000000000f1922    retq" "Mavericks 13.4"
+	"00000000000f3b21    retq" "Yosemite 14.5"
+	module shortName = 'CoreAUC' ifTrue: [prev limit: 16rf8000].
 	 symbolsByModule
 		at: module
 		put: (self relocateSymbols: symStream contents allButFirst inModule: module).
