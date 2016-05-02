@@ -117,7 +117,7 @@ VMProfilerSymbolsManager >> symbolsSelect: aBlock [
 { #category : #accessing }
 VMProfilerSymbolsManager >> symbolsWithTypes: aSet [
 	| size stream |
-	aSet = (Set with: #module) ifTrue:
+	(aSet size = 1 and: [aSet anyOne == #module]) ifTrue:
 		[^modules].
 	size := symbolsByModule inject: 0 into: [:sum :symbols| sum + symbols size].
 	stream := (Array new: size) writeStream.
