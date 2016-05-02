@@ -712,6 +712,8 @@ VMProfiler >> openInWindow [
 		color: Color white.
 	(window respondsTo: #allowPaneSplitters:) ifTrue:
 		[window allowPaneSplitters: false].
+	"Cope with Squeak 4.1 SystemWindow background color changes"
+	window addMorph: (AlignmentMorph new color: Color white; yourself) frame: (0@0 corner: 1@1).
 	symbolListMorph := PluggableListMorphOfManyAlt
 						on: self
 						list: #symbolList
@@ -820,8 +822,6 @@ VMProfiler >> openInWindow [
 	"A Color transparent fillStyle used to be the default.  What a
 	 pain that things change so radically from release to release!"
 	graph fillStyle: Color transparent.
-	"Cope with Squeak 4.1 SystemWindow background color changes"
-	window addMorph: (AlignmentMorph new color: Color white; yourself) frame: (0@0 corner: 1@1).
 
 	self updateButtons. "weird!"
 	buttons do: [:buttonMorph| buttonMorph color: Color black]. "otherwise labels don't show :("
