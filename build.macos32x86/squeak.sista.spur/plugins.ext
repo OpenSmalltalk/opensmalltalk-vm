@@ -1,13 +1,12 @@
 # Copied, perhaps edited, from ../src/examplePlugins.ext
+# MIDIPlugin does not work on Coca so keeping it external until it can be fixed.
 EXTERNAL_PLUGINS = \
 BochsIA32Plugin \
 BochsX64Plugin \
 GdbARMPlugin \
 CroquetPlugin \
-FloatArrayPlugin \
-FloatMathPlugin \
+MIDIPlugin \
 Mpeg3Plugin \
 SqueakFFIPrims \
 SqueakSSL \
-UUIDPlugin \
 UnixOSProcessPlugin

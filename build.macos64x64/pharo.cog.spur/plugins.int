@@ -32,4 +32,4 @@ SurfacePlugin \
 UUIDPlugin \
 VMProfileMacSupportPlugin \
 # JoystickTabletPlugin \
-# SerialPlugin
+# SerialPlugin # Does not compile under 64-bits

@@ -4,6 +4,7 @@
 #
 
 VMSRCDIR:= ../../spursista64src/vm
+COGDEFS=-DIMMUTABILITY=1
 SOURCEFILE:=SqueakV50.sources
 
 APPPOST:=overwriteSqueakIcon

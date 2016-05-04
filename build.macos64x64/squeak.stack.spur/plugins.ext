@@ -1,11 +1,9 @@
 # Copied, perhaps edited, from ../src/examplePlugins.ext
+# MIDIPlugin does not work on Cocoa so keep it external until it can be fixed.
 EXTERNAL_PLUGINS = \
-BochsIA32Plugin \
 CroquetPlugin \
-FloatArrayPlugin \
-FloatMathPlugin \
+MIDIPlugin \
 Mpeg3Plugin \
 SqueakFFIPrims \
 SqueakSSL \
-UUIDPlugin \
 UnixOSProcessPlugin

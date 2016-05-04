@@ -102,6 +102,9 @@ LIBOBJ:=$(addprefix $(OBJDIR)/,$(LIBOBJ))
 
 VPATH:= $(SRCDIRS)
 
+# If plugins change from internal to external they must be recompiled.
+$(BUILD)/$(LIBNAME)/$(LIBNAME).o: plugins.int plugins.ext
+
 #############################################################################
 # Rules for automated builds
 

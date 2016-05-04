@@ -11,6 +11,8 @@ DropPlugin \
 DSAPrims \
 FFTPlugin \
 FilePlugin \
+FloatArrayPlugin \
+FloatMathPlugin \
 HostWindowPlugin \
 IA32ABI \
 JPEGReaderPlugin \
@@ -18,9 +20,7 @@ JPEGReadWriter2Plugin \
 Klatt \
 LargeIntegers \
 LocalePlugin \
-MacMenubarPlugin \
 Matrix2x3Plugin \
-MIDIPlugin \
 MiscPrimitivePlugin \
 RePlugin \
 SecurityPlugin \
@@ -31,7 +31,9 @@ SoundGenerationPlugin \
 SoundPlugin \
 StarSqueakPlugin \
 SurfacePlugin \
+UUIDPlugin \
 VMProfileMacSupportPlugin \
 # B3DAcceleratorPlugin \
 # InternetConfigPlugin \
-# JoystickTabletPlugin
+# JoystickTabletPlugin \
+# MacMenubarPlugin # Does not work under Cocoa
