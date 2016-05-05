@@ -45,7 +45,7 @@
 }
 @property (nonatomic,strong) NSCursor	*squeakCursor;
 
-- (NSInteger) parseArgument: (NSString *) argData peek: (char *) peek;
+- (int) parseArgument: (NSString *) argData peek: (char *) peek;
 - (void) parseArgs: (NSArray *) args;
 - (void) parseEnv: (NSDictionary *) env;
 - (long long) strtobkm: (const char *) chr;

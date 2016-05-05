@@ -9,7 +9,7 @@ SDKsDIR:=$(XCODE)/Platforms/MacOSX.platform/Developer/SDKs
 SDKs:=MacOSX10.12.sdk MacOSX10.11.sdk MacOSX10.10.sdk MacOSX10.9.sdk
 SDK:=$(firstword $(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
 TARGET_ARCH:=i386
-TARGET_VERSION_MIN:=10.6
+TARGET_VERSION_MIN:=10.7
 
 CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 \
 		-arch $(TARGET_ARCH) \
@@ -17,6 +17,7 @@ CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 \
 			-fvisibility=default -fwrapv \
 			-fmacro-backtrace-limit=0 -fdiagnostics-show-note-include-stack \
 			-fmessage-length=0 -fpascal-strings -fasm-blocks -fstrict-aliasing \
+			-fobjc-weak \
 		-isysroot $(SDK) \
 		-include $(PLATDIR)/iOS/vm/SqueakPureObjc_Prefix.pch
 

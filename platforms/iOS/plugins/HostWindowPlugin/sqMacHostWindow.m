@@ -57,7 +57,7 @@ sqInt createWindowWidthheightoriginXyattrlength(sqInt w,sqInt h,sqInt x,sqInt y,
 
 sqInt closeWindow(sqInt windowIndex) {
 	NSWindow	*windowHandle;
-	windowHandle = windowHandleFromIndex(windowIndex);
+	windowHandle = (__bridge NSWindow*) windowHandleFromIndex(windowIndex);
 	if(windowHandle == NULL) 
 		return 0;
 	windowBlockFromIndex(windowIndex)->context = NULL;
@@ -104,7 +104,7 @@ sqInt ioSizeOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
 sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle) {
     NSString *title = [[NSString alloc] initWithBytes:newTitle length:sizeOfTitle encoding:NSUTF8StringEncoding];
     [[[NSApplication sharedApplication] mainWindow] setTitle:title];
-    [title release];
+    RELEASEOBJ(title);
 
 	return 1;
 }

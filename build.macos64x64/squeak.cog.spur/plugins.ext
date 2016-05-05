@@ -5,7 +5,6 @@ BochsIA32Plugin \
 BochsX64Plugin \
 GdbARMPlugin \
 CroquetPlugin \
-MIDIPlugin \
 Mpeg3Plugin \
 SqueakFFIPrims \
 SqueakSSL \
