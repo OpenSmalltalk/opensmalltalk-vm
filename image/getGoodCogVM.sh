@@ -1,32 +1,32 @@
 #!/bin/sh
-# Sets the VM env var to the r3643 Cog VM for the current platform.
+# Sets the VM env var to the r3692 Cog VM for the current platform.
 # will download and install the VM in this directory if necessary.
 
-TAG=16.10.3643
-REV=3643
-LCBINDIR=4.0-3643
+TAG=16.18.3692
+REV=3692
+LCBINDIR=4.0-3692
 URL=http://www.mirandabanda.org/files/Cog/VM/VM.r$REV/
 
 . ./envvars.sh
 
 case "$OS" in
 Darwin) get_vm_from_tar \
-            Cog.app/Contents/MacOS/Squeak 6495fcad0dfc1302a7abeb40860b228e \
-            Cog.app-$TAG.tgz c024c56458e4cb9c58002a25f93bd59a
+            Cog.app/Contents/MacOS/Squeak 738b30c9c50e489fe4068e4998e53d44 \
+            Cog.app-$TAG.tgz 17f05311cf1e2f8042c8781e14a3e985
         VM=Cog.app/Contents/MacOS/Squeak;;
 Linux)
     if expr $OSREL \> 2.6.12; then
         get_vm_from_tar \
         coglinuxht/lib/squeak/$LCBINDIR/squeak  \
-        coglinuxht-$TAG.tgz b425f59475f1357fbe0c25b445f69717
+        coglinuxht-$TAG.tgz 3f2022dfb4d804a265c77aa770e34606
     else
         get_vm_from_tar \
         coglinux/lib/squeak/$LCBINDIR/squeak  \
-        coglinux-$TAG.tgz df1101e6ed629198f0806b75d9c12532
+        coglinux-$TAG.tgz 4ef3daa36509f8e6d0644ac954d9c70f
     fi;;
 CYGWIN*) get_vm_from_zip \
-            cogwin/SqueakConsole.exe 21c42946fec449edba92f5ca863e390a \
-            cogwin-$TAG.zip b38822661e97686813ac0512c825428b
+            cogwin/SqueakConsole.exe 41ca7c10b9f08d97739477439ebfaaf2 \
+            cogwin-$TAG.zip 7667b6c84c53376699aa80a183dc33f7
     VM=cogwin/SqueakConsole.exe;;
 *)  echo "don't know how to run Squeak on your system.  bailing out." 1>&2; exit 2
 esac

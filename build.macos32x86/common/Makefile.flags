@@ -11,6 +11,8 @@ SDK:=$(firstword $(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
 TARGET_ARCH:=i386
 TARGET_VERSION_MIN:=10.7
 
+# N.B. ARC isn't supported by the os-x 32-bit legacy Objective-C runtime kernel.
+# ARC is supported only on 64-bits, and then only for the 10.7 SDK and later.
 CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 \
 		-arch $(TARGET_ARCH) \
 		-mmacosx-version-min=$(TARGET_VERSION_MIN) -msse4.2 \
