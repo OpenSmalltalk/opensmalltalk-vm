@@ -162,6 +162,7 @@ void *ioLoadModuleRaw(char *pluginName)
 		if (handle == null) {
 			char * why = dlerror();
 			dprintf((stderr, "ioLoadModule(<intrinsic>): %s\n", why));
+			return NULL;
 		} else {
 			dprintf((stderr, "loaded: <intrinsic>\n"));
 			return handle;
@@ -208,7 +209,8 @@ void *ioLoadModuleRaw(char *pluginName)
 			OSErr err = FSFindFolder(kSystemDomain, kFrameworksFolderType, false, &frameworksFolderRef);
 #pragma unused(err)
 			NSURL *myURLRef = (NSURL *) CFBridgingRelease(CFURLCreateFromFSRef(kCFAllocatorDefault, &frameworksFolderRef));
-			systemFolder = RETAINOBJ([myURLRef path]);
+			RETAINOBJ(myURLRef.path);
+			systemFolder = myURLRef.path;
 		}
 		
 		pluginNameLength = strlen(pluginName);
