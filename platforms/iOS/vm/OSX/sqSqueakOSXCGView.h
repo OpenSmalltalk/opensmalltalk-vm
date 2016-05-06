@@ -80,8 +80,6 @@
 //Accessing
 -(NSString*)dragFileNameStringAtIndex:(sqInt) index;
 -(void) ioSetFullScreen: (sqInt) fullScreen;
--(void)fadeOut;
--(void)fadeIn;
 -(void) drawImageUsingClip: (CGRect) clip;
 -(NSUInteger)countNumberOfNoneSqueakImageFilesInDraggedFiles: (id<NSDraggingInfo>)info;
 -(NSMutableArray *)filterOutSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info;

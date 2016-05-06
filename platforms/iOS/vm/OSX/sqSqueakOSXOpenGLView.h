@@ -56,11 +56,12 @@
 	BOOL	syncNeeded;
 	NSMutableArray*  dragItems;
 	CGDisplayFadeReservationToken    fadeToken;
-	NSRect	savedScreenBoundsAtTimeOfFullScreen;
-	CGColorSpaceRef colorspace;	
+	CGColorSpaceRef colorspace;
 	unsigned int*      colorMap32;
-	BOOL clippyIsEmpty;
+    BOOL clippyIsEmpty;
+    BOOL fullScreenInProgress;
 	CGRect clippy;
+    void* fullScreendispBitsIndex;
 }
 @property (nonatomic,assign) NSTrackingRectTag squeakTrackingRectForCursor;
 @property (nonatomic,strong) keyBoardStrokeDetails* lastSeenKeyBoardStrokeDetails;
@@ -69,14 +70,13 @@
 @property (nonatomic,assign) int dragCount;
 @property (nonatomic,strong) NSMutableArray* dragItems;
 @property (nonatomic,weak) sqSqueakOSXScreenAndWindow *windowLogic;
-@property (nonatomic,assign) NSRect	savedScreenBoundsAtTimeOfFullScreen;
+@property (nonatomic,assign) BOOL fullScreenInProgress;
+@property (nonatomic,assign) void* fullScreendispBitsIndex;
 
 - (void) initializeVariables;
 - (void) fakeKeyDownUp: (NSEvent*) theEvent;
 - (NSString*) dragFileNameStringAtIndex:(sqInt) index;
 - (void)  ioSetFullScreen: (sqInt) fullScreen;
-- (void)fadeOut;
-- (void)fadeIn;
 - (void) drawImageUsingClip: (CGRect) clip;
 - (NSUInteger) countNumberOfNoneSqueakImageFilesInDraggedFiles: (id<NSDraggingInfo>)info;
 - (NSMutableArray *) filterOutSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info;

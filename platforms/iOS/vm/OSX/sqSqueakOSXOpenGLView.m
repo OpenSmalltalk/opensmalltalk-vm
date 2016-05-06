@@ -64,7 +64,7 @@ static NSString *stringWithCharacter(unichar character) {
 
 @implementation sqSqueakOSXOpenGLView
 @synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
-lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,savedScreenBoundsAtTimeOfFullScreen;
+lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,fullScreenInProgress,fullScreendispBitsIndex;
 
 + (NSOpenGLPixelFormat *)defaultPixelFormat {
 	NSOpenGLPixelFormatAttribute attrs[] =
@@ -97,6 +97,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	dragCount = 0;
 	dragItems = NULL;
 	clippyIsEmpty = YES;
+    fullScreenInProgress = NO;
 	colorspace = CGColorSpaceCreateDeviceRGB();
 	[self initializeSqueakColorMap];
 }
@@ -165,7 +166,18 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
         firstDrawCompleted = YES;
         return;
     }
-	if (syncNeeded) { 
+    
+    if (self.fullScreenInProgress) {
+        sqInt formObj = interpreterProxy->displayObject();
+        sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);
+        void* dispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
+        if (self.fullScreendispBitsIndex == dispBitsIndex) {
+            return;
+        }
+        self.fullScreenInProgress = NO;
+    }
+    
+	if (syncNeeded) {
 		[self drawRect: NSRectFromCGRect(clippy)];
 		syncNeeded = NO;
 		clippyIsEmpty = YES;
@@ -224,6 +236,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 - (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (NSRect) subRect { 
 //	CGL_MACRO_DECLARE_VARIABLES();
 	static void *previousLastBitsIndex=null;
+    
 	NSRect r=[self frame];
 	if (!(previousLastBitsIndex == lastBitsIndex)) {
 		previousLastBitsIndex = lastBitsIndex;
@@ -310,16 +323,17 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 //	NSLog(@" draw %f %f %f %f",rect.origin.x,rect.origin.y,rect.size.width,rect.size.height);
 	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
 	sqInt formObj = interpreterProxy->displayObject();
-	sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);	
-	void* dispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
+	sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);
+    self.fullScreendispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
+    
     static int inited=NO;
-    if ( dispBitsIndex ) {
+    if ( fullScreendispBitsIndex ) {
 		[[self openGLContext] makeCurrentContext];
 		if (!inited) {
 			[self setupOpenGL];
 			inited=YES;
 		}
-		[self loadTexturesFrom:dispBitsIndex subRectangle: rect];
+		[self loadTexturesFrom:fullScreendispBitsIndex subRectangle: rect];
 		[self defineQuad:rect];
     }
     
@@ -721,22 +735,20 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		return;
 	
 	if ([self isInFullScreenMode] == NO && (fullScreen == 1)) {
-		self.savedScreenBoundsAtTimeOfFullScreen = (NSRect) [self bounds];
+       self.fullScreenInProgress = YES;
 		NSDictionary* options = [NSDictionary dictionaryWithObjectsAndKeys:
 			[NSNumber numberWithInt:
 				NSApplicationPresentationHideDock |
 				NSApplicationPresentationHideMenuBar ],
 			NSFullScreenModeApplicationPresentationOptions, nil];
 		[self enterFullScreenMode:[NSScreen mainScreen] withOptions:options];
-		extern struct	VirtualMachine* interpreterProxy;
-		interpreterProxy->fullDisplayUpdate();
 	}
 	
 	if ([self isInFullScreenMode] == YES && (fullScreen == 0)) {
+        self.fullScreenInProgress = YES;
 		[self exitFullScreenModeWithOptions: NULL];
 		if ([self.window isKeyWindow] == NO) {
 			[self.window makeKeyAndOrderFront: self];
-			//	NOT SURE IF THIS IS NEEDED, MORE TESTING	[self.window setContentSize: self.savedScreenBoundsAtTimeOfFullScreen.size];
 		}
 	}
 }
