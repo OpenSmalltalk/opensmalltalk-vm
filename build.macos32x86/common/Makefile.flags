@@ -13,13 +13,18 @@ TARGET_VERSION_MIN:=10.7
 
 # N.B. ARC isn't supported by the os-x 32-bit legacy Objective-C runtime kernel.
 # ARC is supported only on 64-bits, and then only for the 10.7 SDK and later.
+ifeq ($(CCVERSION),6.0)
+	OBJC_CODE_MODEL := -fno-objc-arc
+else
+	OBJC_CODE_MODEL := -fobjc-weak
+endif
 CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 \
 		-arch $(TARGET_ARCH) \
 		-mmacosx-version-min=$(TARGET_VERSION_MIN) -msse4.2 \
 			-fvisibility=default -fwrapv \
 			-fmacro-backtrace-limit=0 -fdiagnostics-show-note-include-stack \
 			-fmessage-length=0 -fpascal-strings -fasm-blocks -fstrict-aliasing \
-			-fobjc-weak \
+			$(OBJC_CODE_MODEL) \
 		-isysroot $(SDK) \
 		-include $(PLATDIR)/iOS/vm/SqueakPureObjc_Prefix.pch
 
