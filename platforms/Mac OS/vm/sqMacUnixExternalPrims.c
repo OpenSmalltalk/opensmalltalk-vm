@@ -131,7 +131,7 @@ static void *tryLoadingInternals(char *libName)
 			handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
 	    if (handle == 0)
 	      {
-			char* why;
+			const char* why;
 			if (dlerror == NULL)
 				why = dlerrorSqueak();
 			else
@@ -225,7 +225,7 @@ void *ioLoadModule(char *pluginName)
 	  else
 		handle= dlopen(0, RTLD_NOW | RTLD_GLOBAL);
       if (handle == 0) {
-		char *why; 
+		const char *why;
 			if (dlerror == NULL)
 				why = dlerrorSqueak();
 			else
@@ -421,7 +421,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
       && strcmp(lookupName, "shutdownModule")
       && strcmp(lookupName, "setInterpreter")
       && strcmp(lookupName, "getModuleName")) {
-		char *why;
+      const char *why;
 	  if (dlerror == NULL)
 				why = dlerrorSqueak();
 			else
@@ -468,7 +468,7 @@ sqInt ioFreeModule(void *moduleHandle)
 	
   if (results)
     {
-	char* why;
+	const char* why;
 	if (dlerror == NULL)
 		why = dlerrorSqueak();
 	else
