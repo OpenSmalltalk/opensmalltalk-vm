@@ -4,13 +4,7 @@
 # See http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
 # for an explanation of the dependency management scheme.
 
-XCODETOOLCHAINS := /Applications/Xcode.app/Contents/Developer/Toolchains
-XCODETOOLCHAIN := $(XCODETOOLCHAINS)/XcodeDefault.xctoolchain
-
-# /usr/bin/clang, a.k.a. /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
 CC := clang
-# convoluted, but clang -version writes to /dev/tty, /not/ stdout :-(
-CCVERSION = $(shell ls $(XCODETOOLCHAIN)/usr/lib/clang)
 LD := clang
 LDCXX := clang++ # For linking c++ bundles
 

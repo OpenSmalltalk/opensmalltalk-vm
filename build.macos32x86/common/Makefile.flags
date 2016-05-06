@@ -13,10 +13,11 @@ TARGET_VERSION_MIN:=10.7
 
 # N.B. ARC isn't supported by the os-x 32-bit legacy Objective-C runtime kernel.
 # ARC is supported only on 64-bits, and then only for the 10.7 SDK and later.
-ifeq ($(CCVERSION),6.0)
-	OBJC_CODE_MODEL := -fno-objc-arc
-else
+include ../common/Makefile.clangversion
+ifdef CLANG_7_3_OR_ABOVE
 	OBJC_CODE_MODEL := -fobjc-weak
+else
+	OBJC_CODE_MODEL := -fno-objc-arc
 endif
 CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 \
 		-arch $(TARGET_ARCH) \
