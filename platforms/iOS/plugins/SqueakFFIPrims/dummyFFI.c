@@ -157,7 +157,7 @@ int ffiAlloc(int byteSize)
 
 /*  ffiFree:
 Free space from the external heap */
-int ffiFree(int pointer)
+int ffiFree(long pointer)
 {
 return 1;
 }

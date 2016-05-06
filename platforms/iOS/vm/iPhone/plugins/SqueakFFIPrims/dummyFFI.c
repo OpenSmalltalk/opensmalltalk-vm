@@ -157,7 +157,7 @@ int ffiAlloc(int byteSize)
 }
 
 
-int ffiFree(int ptr)
+int ffiFree(long ptr)
 {
 	if (ptr) free((void *)ptr);
 	return 1;
