@@ -197,6 +197,13 @@ N.B. For Squeak/Pharo/Croquet please use the archives whose names begin with
      should be used with Spur-format Squeak/Pharo/Croquet or Newspeak images.
      Squeak V5, Newspeak and the upcoming Pharo release have moved to Spur.
 
+N.B. Only the Newspeak installers on this site include a sources file.  This
+     saves space. To ensure access to the sources file using the other VMs
+     - on linux add the sources file to the same directory as the vm, e.g. add
+       cogspurlinux/lib/squeak/4.5-3692/SqueakV50.sources
+     - on Mac OS add the sources into the Resources directory of the app bundle
+     - on Windows add the sources file to the same directory as the vm
+
      Archives whose names include "64" are 64-bit Spur VMs.  They should be
      used with 64-bit Spur images.  Sample 64-bit images can be found at
          http://www.mirandabanda.org/files/Cog/SpurImages
