@@ -59,9 +59,7 @@
 	CGColorSpaceRef colorspace;
 	unsigned int*      colorMap32;
     BOOL clippyIsEmpty;
-    BOOL fullScreenInProgress;
 	CGRect clippy;
-    void* fullScreendispBitsIndex;
 }
 @property (nonatomic,assign) NSTrackingRectTag squeakTrackingRectForCursor;
 @property (nonatomic,strong) keyBoardStrokeDetails* lastSeenKeyBoardStrokeDetails;
@@ -70,8 +68,7 @@
 @property (nonatomic,assign) int dragCount;
 @property (nonatomic,strong) NSMutableArray* dragItems;
 @property (nonatomic,weak) sqSqueakOSXScreenAndWindow *windowLogic;
-@property (nonatomic,assign) BOOL fullScreenInProgress;
-@property (nonatomic,assign) void* fullScreendispBitsIndex;
+
 
 - (void) initializeVariables;
 - (void) fakeKeyDownUp: (NSEvent*) theEvent;

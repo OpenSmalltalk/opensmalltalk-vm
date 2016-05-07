@@ -62,6 +62,12 @@ static NSString *stringWithCharacter(unichar character) {
 	return [NSString stringWithCharacters: &character length: 1];
 }
 
+@interface sqSqueakOSXOpenGLView ()
+@property (nonatomic, assign) NSRect lastFrameSize;
+@property (nonatomic,assign) BOOL fullScreenInProgress;
+@property (nonatomic,assign) void* fullScreendispBitsIndex;
+@end
+
 @implementation sqSqueakOSXOpenGLView
 @synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
 lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,fullScreenInProgress,fullScreendispBitsIndex;
@@ -79,12 +85,10 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,f
 
 - (id)initWithFrame:(NSRect)frameRect {
     self = [self initWithFrame:frameRect pixelFormat:[[self class] defaultPixelFormat]];
-
     [self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
     [self setAutoresizesSubviews:YES];
     
     [self initialize];
-
     return self;
 }
 
@@ -100,6 +104,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,f
     fullScreenInProgress = NO;
 	colorspace = CGColorSpaceCreateDeviceRGB();
 	[self initializeSqueakColorMap];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector: @selector(didEnterFullScreen:) name:@"NSWindowDidEnterFullScreenNotification" object:nil];
+
+}
+
+- (void) didEnterFullScreen: (NSNotification*) aNotification {
+    //NSLog(@"Notification didEnterFullScreen");
+    [self setupFullScreendispBitsIndex];
+    self.fullScreenInProgress = NO;
 }
 
 - (void) initializeVariables {
@@ -108,6 +120,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,f
 - (void) dealloc {
 	free(colorMap32);
 	CGColorSpaceRelease(colorspace);
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
     SUPERDEALLOC
 }
 
@@ -137,15 +150,16 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,f
 }
 
 - (void) viewWillStartLiveResize {
-//	[self.window setShowsResizeIndicator: YES];
+    //NSLog(@"viewWillStartLiveResize");
+    self.fullScreenInProgress = YES;
 	[[NSCursor arrowCursor] set];
 }
 
 - (void) viewDidEndLiveResize {
-//	[self.window setShowsResizeIndicator: NO];
+    //NSLog(@"viewDidEndLiveResize");
     dispatch_async(dispatch_get_main_queue(), ^{
         [((sqSqueakOSXApplication*) gDelegateApp.squeakApplication).squeakCursor  set];
-    });
+     });
 
 }
 
@@ -166,18 +180,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,f
         firstDrawCompleted = YES;
         return;
     }
-    
-    if (self.fullScreenInProgress) {
-        sqInt formObj = interpreterProxy->displayObject();
-        sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);
-        void* dispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
-        if (self.fullScreendispBitsIndex == dispBitsIndex) {
-            return;
-        }
-        self.fullScreenInProgress = NO;
-    }
-    
-	if (syncNeeded) {
+
+    if (syncNeeded) {
 		[self drawRect: NSRectFromCGRect(clippy)];
 		syncNeeded = NO;
 		clippyIsEmpty = YES;
@@ -187,6 +191,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,f
 	}
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
+        extern sqInt getFullScreenFlag(void);
 		if (getFullScreenFlag() == 0) {
 			[self.window makeKeyAndOrderFront: self];
         }
@@ -196,6 +201,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,f
 -(void)setupOpenGL {	
 //	CGL_MACRO_DECLARE_VARIABLES();
 // Enable the multithreading
+    //NSLog(@"setupOpenGL runs");
 	CGLContextObj ctx = [[self openGLContext] CGLContextObj];
 	CGLEnable( ctx, kCGLCEMPEngine);
 
@@ -237,8 +243,22 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,f
 //	CGL_MACRO_DECLARE_VARIABLES();
 	static void *previousLastBitsIndex=null;
     
-	NSRect r=[self frame];
-	if (!(previousLastBitsIndex == lastBitsIndex)) {
+    NSRect r = self.frame;
+    
+    if (!NSEqualRects(_lastFrameSize,r)) {
+        //NSLog(@"old %f %f %f %f new %f %f %f %f",_lastFrameSize.origin.x,_lastFrameSize.origin.y,_lastFrameSize.size.width,_lastFrameSize.size.height,self.frame.origin.x,r.origin.y,r.size.width,r.size.height);
+        _lastFrameSize = r;
+        glPixelStorei( GL_UNPACK_ROW_LENGTH, r.size.width );
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+        [[self openGLContext] update];
+    }
+
+    if (!(previousLastBitsIndex == lastBitsIndex)) {
+        //NSLog(@"previousLastBitsIndex %#010x changed to %#010x",previousLastBitsIndex,lastBitsIndex);
 		previousLastBitsIndex = lastBitsIndex;
 		glTextureRangeAPPLE(GL_TEXTURE_RECTANGLE_ARB, r.size.width*r.size.height*4,lastBitsIndex);		
 	}
@@ -246,7 +266,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,f
 	glViewport( subRect.origin.x,subRect.origin.y, subRect.size.width,subRect.size.height );
 	char *subimg = ((char*)lastBitsIndex) + (unsigned int)(subRect.origin.x + (r.size.height-subRect.origin.y-subRect.size.height)*r.size.width)*4;
 	glTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, subRect.size.width, subRect.size.height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, subimg );
-	//	NSLog(@" draw %f %f %f %f",subRect.origin.x,subRect.origin.y,subRect.size.width,subRect.size.height);	
+		//NSLog(@" glTexImage2D %f %f %f %f",subRect.origin.x,subRect.origin.y,subRect.size.width,subRect.size.height);
 }
 
 -(void)defineQuad:(NSRect)r
@@ -261,78 +281,37 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,f
 	 glEnd();
 }
 
-- (void)update  // moved or resized
-{
-	NSRect rect;
-	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
-    
-	[super update];
-	
-	[[self openGLContext] makeCurrentContext];
-//	CGL_MACRO_DECLARE_VARIABLES();
-	[[self openGLContext] update];
-	
-	rect = [self bounds];
-	
-    glViewport(0, 0, rect.size.width, rect.size.height);
-	glPixelStorei( GL_UNPACK_ROW_LENGTH, rect.size.width );
-	
-	glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-	
-	glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity(); 
-	
-	[self setNeedsDisplay:true];
-
-    if (oldContext != nil) {
-        [oldContext makeCurrentContext];
-    }
-}
-
-- (void)reshape	// scrolled, moved or resized
-{
-	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
-	NSRect rect;
-	
-	[super reshape];
-	
-	[[self openGLContext] makeCurrentContext];
-//	CGL_MACRO_DECLARE_VARIABLES();
-	[[self openGLContext] update];
-	
-	rect = [self bounds];
-	
-	glViewport(0, 0, rect.size.width, rect.size.height);
-	glPixelStorei( GL_UNPACK_ROW_LENGTH, rect.size.width );
-	glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-	
-	glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-	
-	[self setNeedsDisplay:true];
-    
-    if (oldContext != nil) {
-        [oldContext makeCurrentContext];
-    }
+- (void) setupFullScreendispBitsIndex {
+    sqInt formObj = interpreterProxy->displayObject();
+    sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);
+    self.fullScreendispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
 }
 
 -(void)drawRect:(NSRect)rect
 {
-//	NSLog(@" draw %f %f %f %f",rect.origin.x,rect.origin.y,rect.size.width,rect.size.height);
-	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
-	sqInt formObj = interpreterProxy->displayObject();
-	sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);
-    self.fullScreendispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
+    if (self.fullScreenInProgress) {
+        sqInt formObj = interpreterProxy->displayObject();
+        sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);
+        void* dispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
+        if (self.fullScreendispBitsIndex == dispBitsIndex) {
+            [self clearScreen];
+            //NSLog(@"drawRect but fullScreenInProgress %f %f %f %f",rect.origin.x,rect.origin.y,rect.size.width,rect.size.height);
+            return;
+        }
+        self.fullScreenInProgress = NO;
+    }
     
-    static int inited=NO;
+	//NSLog(@" draw %f %f %f %f",rect.origin.x,rect.origin.y,rect.size.width,rect.size.height);
+	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
+	
+    [self setupFullScreendispBitsIndex];
+    
     if ( fullScreendispBitsIndex ) {
 		[[self openGLContext] makeCurrentContext];
-		if (!inited) {
-			[self setupOpenGL];
-			inited=YES;
-		}
+        static dispatch_once_t once;
+        dispatch_once(&once, ^{
+            [self setupOpenGL];
+        });
 		[self loadTexturesFrom:fullScreendispBitsIndex subRectangle: rect];
 		[self defineQuad:rect];
     }
@@ -725,6 +704,17 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,f
 
 - (BOOL)ignoreModifierKeysWhileDragging {
 	return YES;
+}
+
+- (void) clearScreen {
+    NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
+    [self.openGLContext makeCurrentContext];
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    glFlush();
+    if (oldContext != nil) {
+        [oldContext makeCurrentContext];
+    }
+
 }
 
 - (void)  ioSetFullScreen: (sqInt) fullScreen {
