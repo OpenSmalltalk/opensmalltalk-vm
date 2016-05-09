@@ -272,17 +272,6 @@ Linux32ARMv6Config >> internalPluginsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux32ARMv6Config >> postBuildActionsBuild: aMaker [
-	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
-	(aMaker config enabledebugmessages)
-		ifTrue:[	
-	aMaker config templates 
-		addLast: ((CMakeMessage new) message: (self class name), ' postBuildActionsBuild' )
-	].
-
-]
-
-{ #category : #'cmake buildType redirects' }
 Linux32ARMv6Config >> preferredIncludesBuild [
 	(enabledebugmessages)
 		ifTrue:[	

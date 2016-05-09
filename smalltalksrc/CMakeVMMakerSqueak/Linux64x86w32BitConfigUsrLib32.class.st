@@ -277,30 +277,6 @@ Linux64x86w32BitConfigUsrLib32 >> internalPluginsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux64x86w32BitConfigUsrLib32 >> postBuildActionsBuild: aMaker [
-	"SystemNavigation default browseMethodsWhoseNamesContain: 'postBuildActionsBuild:'"
-	(aMaker config enabledebugmessages)
-		ifTrue:[	
-	aMaker config templates 
-		addLast: ((CMakeMessage new) message: (self class name), ' postBuildActionsBuild' )
-	].
-	aMaker config templates 
-		addLast: ((CMakeMessage new) message: 'postBuildActionsBuild: aMaker' );
-		addLast:((CMakeCommand new) command:'include' params:'config.cmake');                                                 "cmake --help-command include "
-		addLast:((CMakeCommand new) command:'LIST' params:'REMOVE_DUPLICATES config_vars');                      "cmake --help-command LIST"
-		addLast:((CMakeCommand new) command:'FILE' params:'WRITE ${CMAKE_BINARY_DIR}/config.h.in ""');          "cmake --help-command FILE"
-		addLast:(CMakeAppendConfigHIn new);
-		addLast:((CMakeCommand new) command:'CONFIGURE_FILE' params:'${CMAKE_BINARY_DIR}/config.h.in ${CMAKE_BINARY_DIR}/config.h');
-		addLast:((CMakeCommand new) command:'GET_CMAKE_PROPERTY' params:'tmp VARIABLES');
-		addLast:((CMakeCommand new) command:'LIST' params:'REMOVE_ITEM tmp tmp');
-		addLast:((CMakeCommand new) command:'LIST' params:'SORT tmp');
-		addLast:((CMakeCommand new) command:'FILE' params:'WRITE ${CMAKE_BINARY_DIR}/config.h.status ""');
-		addLast:(CMakeAppendConfigStatus new).
-
-
-]
-
-{ #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfigUsrLib32 >> preferredIncludesBuild [
 	(enabledebugmessages)
 		ifTrue:[	
