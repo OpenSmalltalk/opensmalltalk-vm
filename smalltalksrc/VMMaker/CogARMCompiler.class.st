@@ -229,13 +229,13 @@ CogARMCompiler class >> initializeAbstractRegisters [
 	ClassReg			:= R8.
 	ReceiverResultReg	:= R7.
 	SendNumArgsReg	:= R6.
-	SPReg				:= SP. "R13"
+	SPReg				:= SP. "a.k.a. R13" self assert: SP = 13.
 	FPReg				:= R11.
 	Arg0Reg			:= R4.
 	Arg1Reg			:= R5.
-	VarBaseReg		:= ConcreteVarBaseReg. "Must be callee saved"
-	RISCTempReg		:= ConcreteIPReg. "a.k.a. IP"
-	Extra0Reg			:= R12.
+	Extra0Reg			:= R9.
+	VarBaseReg		:= R10.	"Must be callee saved" self assert: ConcreteVarBaseReg = R10.
+	RISCTempReg		:= R12.	"a.k.a. IP" self assert: ConcreteIPReg = R12.
 	LinkReg				:= LR. "R14"
 	PCReg				:= PC. "R15"	
 
@@ -2254,14 +2254,7 @@ CogARMCompiler >> genRemoveNArgsFromStack: n [
 { #category : #abi }
 CogARMCompiler >> genRestoreRegs: regMask [
 	"Restore the registers in regMask as saved by genSaveRegs:.
-	 Restore none, because the ARM ABI only defines callee saved registers, no caller-saved regs.
-	 But for the future..."
-	self assert: regMask = 0.
-	self deny: (regMask anyMask: (cogit registerMaskFor: SP and: FPReg and: LR and: PC)).
-	R0 to: R12 do:
-		[:reg|
-		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
-			[cogit PopR: reg]].
+	 Restore none, because the ARM ABI only defines callee saved registers, no caller-saved regs."
 	^0
 ]
 
@@ -2282,14 +2275,7 @@ CogARMCompiler >> genSaveRegForCCall [
 { #category : #abi }
 CogARMCompiler >> genSaveRegs: regMask [
 	"Save the registers in regMask for a call into the C run-time from a trampoline.
-	 Save none, because the ARM ABI only defines callee saved registers, no caller-saved regs.
-	 But for the future..."
-	self assert: regMask = 0.
-	self deny: (regMask anyMask: (cogit registerMaskFor: SP and: FPReg and: LR and: PC)).
-	R12 to: R0 by: -1 do:
-		[:reg|
-		 (regMask anyMask: (cogit registerMaskFor: reg)) ifTrue:
-			[cogit PushR: reg]].
+	 Save none, because the ARM ABI only defines callee saved registers, no caller-saved regs."
 	^0
 ]
 

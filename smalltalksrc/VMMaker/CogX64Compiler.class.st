@@ -2391,10 +2391,12 @@ CogX64Compiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 ar
 
 	 How can this possibly work?  Look at Cogit class>>runtime for a list of the run-time calls and their
 	 arguments, including which arguments are passed in which registers.  Look at CogX64Compiler's
-	 subclass implementations of initializeAbstractregisters.  There are no calls in which ReceiverResultReg
+	 subclass implementations of initializeAbstractRegisters.  There are no calls in which ReceiverResultReg
 	 (RDX) and/or ClassReg (RCX) are passed along with Arg0Reg and Arg1Reg, and none in which the use of
 	 either ReceiverResultReg or ClassReg conflict for args 3 & 4.  So if args are assigned in order, the
-	 registers do not get overwritten.  Yes, this is evil, but it's so nice to continue to use RCX & RDX."
+	 registers do not get overwritten.  Yes, this is evil, but it's so nice to continue to use RCX & RDX.
+
+	 Argument registers for args 0 to 3 in SysV are RDI RSI RDX RCX, and in Win64 are RDI RSI R8 R9"
 	<inline: true>
 	numArgs = 0 ifTrue: [^self].
 	(cogit isTrampolineArgConstant: regOrConst0)
