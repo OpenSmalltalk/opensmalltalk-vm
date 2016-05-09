@@ -573,8 +573,27 @@ CMakePluginGeneratorForSqueak >> initialize [
 
 { #category : #'initialize-release' }
 CMakePluginGeneratorForSqueak >> initializeConfigDotCmakeFiles [
-	"simple hard-coded Dictionary keyed by plugin name containing the contents of a Plugin's config.cmake file"
+	"simple hard-coded Dictionary keyed by plugin name containing the contents of a Plugin's config.cmake file.
+	is this true? Currently we are dumping the below into the master CMakeLists.txt file. Should it be in config.cmake? 
+	Should each plugin have its own config.cmake in its subdirectory?
+	
+	Take a look at configDotCameraPlugin and the non-portable /usr/include therein.
+	
+	This has to be rethought and specified correctly. 
+	
+	In PostBuildActions the config.cmake file is included in the CMakeLists.txt.
+	
+	config.cmake is not from pharo, it is from the original CMake work done by Ian.
+	
+	This leads me to speculate that each plugin should write its 'config.cmake' data into the config.cmake file.
+	This data should be configuration commands like config_define(THIS_THAT_ETC)
+	
+	Looking at configDotB3DAcceleratorPlugin this makes sense.
+	
+	
+		"
 	|d|
+	self flag:'tty. see this method comment.'.
 	d:=Dictionary new.
 	d 
 		at: #ADPCMCodecPlugin put: self configDotCmakeEmpty;

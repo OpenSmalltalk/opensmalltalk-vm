@@ -2562,18 +2562,8 @@ CPlatformConfigForSqueak >> frameworksBuildMultiThreadedDebug [
 
 { #category : #'source generation' }
 CPlatformConfigForSqueak >> generateByTemplate [
-	self 
-		generatePluginsList;                                        "informative list of plugins for end user"
-		generateLicense;                                             "Squeak license"
-		generateUtilsCmake;                                       "Ian's useful CMake macros. used extensivelly."
-		generatePluginsCmake;                                   "Ian's CMake Plugins Processing"
-		generateVmBuildCmake;                                  "Ian's CMake Build script"
-		generateVmConfigCmake;                               "Ian's config.cmake file used to generate gnu config.h"
-		generateVmConfigIn;                                       "Ian's code, not sure what it does yet"
-		generateTestDoubleWordAlignmentC;             "Ian's platform tests used in configuration"
-		generateTestDoubleWordOrderC;
-		generateTestLanginfoCodesetC.
-	^ CMakeVMGeneratorForSqueak generateByTemplate: self 
+	self subclassResponsibility
+
 ]
 
 { #category : #'source generation' }
