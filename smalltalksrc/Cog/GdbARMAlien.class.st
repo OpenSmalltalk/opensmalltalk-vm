@@ -342,11 +342,11 @@ GdbARMAlien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray
 	 memory read into register instructions into ProcessorSimulationTrap signals."
 	"self printRegistersOn: Transcript"
 	| pcOnEntry pc instr |
-	pcOnEntry := self pc.
+	pc := pcOnEntry := self pc.
 	self endCondition = InstructionPrefetchError ifTrue:
-		[self pc: self priorPc].
+		[pc := self pc: self priorPc].
 
-	((pc := self pc) between: minimumAddress and: memoryArray byteSize - 1) ifTrue:
+	(pc between: minimumAddress and: memoryArray byteSize - 1) ifTrue:
 		[instr := memoryArray unsignedLongAt:  pc + 1 bigEndian: false.
 
 		 (self endCondition = InstructionPrefetchError) ifTrue:
@@ -354,6 +354,9 @@ GdbARMAlien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray
 
 		 (self instructionIsAnyLoadStore: instr) ifTrue:
 			[^self handleFailingLoadStore: instr at: pc].
+
+		 (self instructionIsAnyFPArithmetic: instr) ifTrue:
+			[^self handleFailingFPArithmetic: instr at: pc].
 
 		 ^self handleExecutionPrimitiveFailureAt: pc in: memoryArray].
 
@@ -401,6 +404,22 @@ GdbARMAlien >> handleFailingBranch: instr to: address at: pc [
 				address: self lr
 				type: #return)
 			signal].
+	^self reportPrimitiveFailure
+]
+
+{ #category : #'error handling' }
+GdbARMAlien >> handleFailingFPArithmetic: instr at: pc [
+	| oneRegTransferMask twoRegTransferMask |
+	oneRegTransferMask := 16rF000F00.
+	(instr bitAnd: oneRegTransferMask) = 16rE000B00 ifTrue:
+		[^self handleOneRegTransferDoubleArithmetic: instr at: pc].
+	(instr bitAnd: oneRegTransferMask) = 16rE000A00 ifTrue:
+		[^self handleOneRegTransferSingleArithmetic: instr at: pc].
+	twoRegTransferMask := 16rFE00FC0.
+	(instr bitAnd: twoRegTransferMask) = 16rC400B00 ifTrue:
+		[^self handleTwoRegTransferDoubleArithmetic: instr at: pc].
+	(instr bitAnd: twoRegTransferMask) = 16rC400A00 ifTrue:
+		[^self handleTwoRegTransferSingleArithmetic: instr at: pc].
 	^self reportPrimitiveFailure
 ]
 
@@ -469,6 +488,30 @@ GdbARMAlien >> handleFailingLoadStore: instr at: pc [
 	self error: 'handleFailingLoadStore:at: invoked for non-load/store?'
 ]
 
+{ #category : #'floating-point emulation' }
+GdbARMAlien >> handleOneRegTransferDoubleArithmetic: instr at: pc [
+	"Emulate a one-register transfer VFP instruction."
+	| rn rd rm vn vm |
+	rn := instr >> 16 bitAnd: 15.
+	rd := instr >> 12 bitAnd: 15.
+	rm := instr bitAnd: 15.
+	vn := Float fromIEEE64BitWord: (self perform: (self registerStateGetters at: rn + 18)). "Assume accesses fp regs"
+	vm := Float fromIEEE64BitWord: (self perform: (self registerStateGetters at: rm + 18)). "Assume accesses fp regs"
+	(instr >> 18 bitAnd: 31)
+		caseOf: {
+		[8 "FMULD"]	->
+			[| r |
+			 r := vn * vm.
+			 self perform: (self registerStateSetters at: rd + 18) with: r asIEEE64BitWord].
+		[12"FADDD/FSUBD"]	->
+			[self shouldBeImplemented].
+		[32"FDIVD"]	->
+			[self shouldBeImplemented].
+		[45"FCMPD"]	->
+			[self shouldBeImplemented]. }
+		otherwise: [self reportPrimitiveFailure]
+]
+
 { #category : #accessing }
 GdbARMAlien >> ifflags [
 "The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
@@ -507,6 +550,24 @@ GdbARMAlien >> instructionIsAnyB: instr [
 		or: [self instructionIsBL: instr]
 		or: [self instructionIsBLX: instr]
 		or: [self instructionIsBX: instr]
+]
+
+{ #category : #testing }
+GdbARMAlien >> instructionIsAnyFPArithmetic: instr [
+	"Identify single register transfer and double register transfer VFP instructions.
+	 See C3.3 & C3.4 in the ARM ARM."
+	| oneRegTransferMask twoRegTransferMask |
+	oneRegTransferMask := 16rF000F00.
+	(instr bitAnd: oneRegTransferMask) = 16rE000A00 ifTrue:
+		[^true].
+	(instr bitAnd: oneRegTransferMask) = 16rE000B00 ifTrue:
+		[^true].
+	twoRegTransferMask := 16rFE00FC0.
+	(instr bitAnd: twoRegTransferMask) = 16rC400A00 ifTrue:
+		[^true].
+	(instr bitAnd: twoRegTransferMask) = 16rC400B00 ifTrue:
+		[^true].
+	^false
 ]
 
 { #category : #testing }
@@ -1100,7 +1161,8 @@ GdbARMAlien >> registerState [
 
 { #category : #'accessing-abstract' }
 GdbARMAlien >> registerStateGetters [
-	^#(	r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 sl fp r12 sp lr pc eflags)
+	^#(	r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 sl fp r12 sp lr pc eflags
+		d0 d1 d2 d3 d4 d5 d6 d7 d8 d9 d10 d11 d12 d13 d14 d15)
 ]
 
 { #category : #'accessing-abstract' }
@@ -1110,8 +1172,8 @@ GdbARMAlien >> registerStatePCIndex [
 
 { #category : #'accessing-abstract' }
 GdbARMAlien >> registerStateSetters [
-"a list of register setting messages used to initialise or reset registers"
-	^#(	r0: r1: r2: r3: r4: r5: r6: r7: r8: r9: sl: fp: r12: sp: lr: pc: eflags:)
+	^#(	r0: r1: r2: r3: r4: r5: r6: r7: r8: r9: sl: fp: r12: sp: lr: pc: eflags:
+		d0: d1: d2: d3: d4: d5: d6: d7: d8: d9: d10: d11: d12: d13: d14: d15:)
 ]
 
 { #category : #accessing }
