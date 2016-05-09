@@ -7514,7 +7514,14 @@ SpurMemoryManager >> lookupAddress: address [
 			(self lookupAddress: (self fetchPointer: classNameIndex ofObject: maybeThisClass)) ifNotNil:
 				[:maybeThisClassName| ^maybeThisClassName allButFirst, ' class']]].
 	^(self lookupAddress: (self fetchPointer: classNameIndex ofObject: class)) ifNotNil:
-		[:maybeClassName| 'a(n) ', maybeClassName allButFirst]
+		[:maybeClassName|
+		(size = 2
+		 and: [fmt = self nonIndexablePointerFormat
+		 and: ['#ClassBinding' = maybeClassName]]) ifTrue:
+			[^'a ClassBinding '
+				, ((self lookupAddress: (self fetchPointer: KeyIndex ofObject: address)) ifNil: [''])
+				, ((self lookupAddress: (self fetchPointer: ValueIndex ofObject: address)) ifNil: [''] ifNotNil: [:val| ' -> ', val])].
+		'a(n) ', maybeClassName allButFirst]
 ]
 
 { #category : #'free space' }
