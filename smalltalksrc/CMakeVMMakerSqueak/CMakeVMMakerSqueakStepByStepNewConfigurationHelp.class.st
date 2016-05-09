@@ -995,13 +995,27 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> forTheImpatient [
 	^HelpTopic
 		title:'For the impatient'
 		contents:
-'Here is the TL;DR synopsis of the methods I implemented or overrode in creating the Linux64x86w32BitSqueakCogSpurConfig.
-For a step-by-step exposition please continue to the next page.
+'Here is the TL;DR synopsis of the methods* I implemented or overrode in creating the Linux64x86w32BitSqueakCogSpurConfig.
 
-TODO: Fill this in as you go
+A step-by-step exposition begins on  the next page.
+
+
 cmakeCFlags  
 cmakeAddDefinitions
+cmakeIncludePath
+cmakeLibraryPath
+compilerFlags
+cmakeAddDefinitions
+preferredIncludes
+setGlobalOptionsAfterDetermineSystem:
+cmakeSetSourceFilesProperties
+externalLibs
+cmakeAddExecutableNameOptionSource:
+customizeVMPlugins
+specifyingPlugins
 
+
+*If the method uses the Method Redirect Pattern then (in most instances) the method to modify will be for the buildType. ie. ''methodnameBuildType''
 
 '
 ]
@@ -1011,48 +1025,11 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> generatePluginConfigs 
 	^HelpTopic
 		title:'generatePluginConfigs'
 		contents:
-'This method iterates over a collection of InterpreterPlugin subclasses* and asks each class to populate itself with some basic information
+'This method iterates over a collection of InterpreterPlugin subclasses and asks each class to populate itself with some basic information and write out its own CMakeLists.txt in a directory named after the plugin name.
 
-generateFor: aCMakeVMGenerator internal: aBoolean 
+The processing is a bit complicated, but the setup is easy.
 
-	^ aCMakeVMGenerator 
-		generatePlugin: self 
-		internal: aBoolean
-		extraRules: nil
-
-Then it 
-		
-CMakeVMGeneratorForSqueak generatePlugin: aPlugin internal: aBoolean extraRules: aBlock
-	" this method called back from plugin"
-	^ CMakePluginGeneratorForSqueak new
-		generate: aPlugin for: self internal: aBoolean extraRules: aBlock		
-		
-Which ends up at 
-
-CMakePluginGeneratorForSqueak >> generateByTemplate		
-		
-Here we see the familiar populating of CMakeTemplate and the writing of CMake output		
-		
-bash-4.2$ cat ADPCMCodecPlugin/CMakeLists.txt 
-  message( "Adding internal plugin: ADPCMCodecPlugin")
-  set(pluginName "ADPCMCodecPlugin")
-  set(pluginSrc "${srcPluginsDir}/ADPCMCodecPlugin")
-  set(pluginCross "${crossDir}/plugins/ADPCMCodecPlugin")
-  set(pluginPlatform "${targetPlatform}/plugins/ADPCMCodecPlugin")
-  set(LINKLIBS )
-  add_definitions(-DSQUEAK_BUILTIN_PLUGIN)
-  list( APPEND sources  "${pluginSrc}/ADPCMCodecPlugin.c")
-  include_directories(  ${pluginSrc} ${pluginCross} ${targetPlatform}/plugins/${pluginName})
-  add_library(ADPCMCodecPlugin  STATIC   ${sources})
-  set(linkFlags "${linkFlags} -m32")
-  set_property(TARGET ADPCMCodecPlugin PROPERTY LINK_FLAGS ${linkFlags})
-
-  IF(ADPCMCodecPlugin_dependencies)
-         ADD_DEPENDENCIES( ADPCMCodecPlugin  ${ADPCMCodecPlugin_dependencies})
-  ENDIF( ADPCMCodecPlugin_dependencies)
-
-
-*Where those collections of  plugin classes are stored in our Configuration. We cover that next in Specifying Plugins'
+The collections of  plugin classes are stored in our Configuration. We cover that next in Specifying Plugins'
 ]
 
 { #category : #pages }
@@ -1287,7 +1264,7 @@ specifyingPlugins
 
 processThirdpartyLibraries
 processPlugins
-
+postBuildActions
 
 setConfigurationDirectory
 setOutputDirectory
@@ -1298,6 +1275,27 @@ aNoteOnFoo
 )
 
 
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> postBuildActions [
+	^HelpTopic
+		title:'postBuildActions:'
+		contents:
+'postBuildActions: implements the Method Redirect pattern.
+
+ToolSet browse: CPlatformConfigForSqueak selector: #postBuildActions:
+
+Since the configuration is configured for buildType: #build the method redirect pattern will redirect to
+
+SystemNavigation browseAllImplementorsOf: #postBuildActionsBuild:
+
+We see in CPlatformConfigForSqueak that a sublcass must implement it via ''self subclassResponsibility''.
+
+The platform Config SqueakUnixConfig implements this. It can be over-ridden or extended as needed.
+
+We have nothing new to do here.
+'
 ]
 
 { #category : #pages }
@@ -1340,7 +1338,94 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> processPlugins [
 		contents:
 'SystemNavigation browseAllImplementorsOf: #processPlugins:
 
-write me..'
+This method is inhereted from the pharo code. I do not fully understand the reasoning behind it. I expect it will be refactored or rewritten.
+See the method comment in 
+SystemNavigation browseAllImplementorsOf: #initializeConfigDotCmakeFiles
+
+Presently it does (at least) three things.
+
+First, it adds plugin information to the master CMakeLists.txt file typically the add_subdirectory(''PluginName'') cmake command.
+
+Second, it adds plugin information to the master CMakeLists.txt file from the CMakePluginGeneratorForSqueak>>configDotSomePluginName group of methods
+
+
+SystemNavigation browseAllImplementorsOf: #configDotFilePlugin
+
+
+Third it generates the sqNamedPrims.h file reproduced below.
+
+bash-4.2$ cat sqNamedPrims.h 
+/* This is automatically generated file using CVMMaker on 9 May 2016 2:26:20.906098 pm */
+extern sqExport vm_exports[];
+extern sqExport os_exports[];
+extern sqExport ADPCMCodecPlugin_exports [];
+extern sqExport AsynchFilePlugin_exports [];
+extern sqExport B2DPlugin_exports [];
+extern sqExport BitBltPlugin_exports [];
+extern sqExport BMPReadWriterPlugin_exports [];
+extern sqExport CroquetPlugin_exports [];
+extern sqExport ZipPlugin_exports [];
+extern sqExport DropPlugin_exports [];
+extern sqExport DSAPrims_exports [];
+extern sqExport FFTPlugin_exports [];
+extern sqExport FileCopyPlugin_exports [];
+extern sqExport FilePlugin_exports [];
+extern sqExport FloatArrayPlugin_exports [];
+extern sqExport FloatMathPlugin_exports [];
+extern sqExport JoystickTabletPlugin_exports [];
+extern sqExport Klatt_exports [];
+extern sqExport LargeIntegers_exports [];
+extern sqExport Matrix2x3Plugin_exports [];
+extern sqExport MIDIPlugin_exports [];
+extern sqExport MiscPrimitivePlugin_exports [];
+extern sqExport Mpeg3Plugin_exports [];
+extern sqExport SecurityPlugin_exports [];
+extern sqExport SerialPlugin_exports [];
+extern sqExport SocketPlugin_exports [];
+extern sqExport SoundCodecPrims_exports [];
+extern sqExport SoundPlugin_exports [];
+extern sqExport StarSqueakPlugin_exports [];
+extern sqExport SurfacePlugin_exports [];
+extern sqExport LocalePlugin_exports [];
+
+sqExport *pluginExports[] = {
+        vm_exports,
+        os_exports,
+ADPCMCodecPlugin_exports,
+AsynchFilePlugin_exports,
+B2DPlugin_exports,
+BitBltPlugin_exports,
+BMPReadWriterPlugin_exports,
+CroquetPlugin_exports,
+ZipPlugin_exports,
+DropPlugin_exports,
+DSAPrims_exports,
+FFTPlugin_exports,
+FileCopyPlugin_exports,
+FilePlugin_exports,
+FloatArrayPlugin_exports,
+FloatMathPlugin_exports,
+JoystickTabletPlugin_exports,
+Klatt_exports,
+LargeIntegers_exports,
+Matrix2x3Plugin_exports,
+MIDIPlugin_exports,
+MiscPrimitivePlugin_exports,
+Mpeg3Plugin_exports,
+SecurityPlugin_exports,
+SerialPlugin_exports,
+SocketPlugin_exports,
+SoundCodecPrims_exports,
+SoundPlugin_exports,
+StarSqueakPlugin_exports,
+SurfacePlugin_exports,
+LocalePlugin_exports,
+NULL
+
+
+
+
+'
 ]
 
 { #category : #pages }
@@ -1350,7 +1435,15 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> processThirdpartyLibra
 		contents:
 'SystemNavigation browseAllImplementorsOf: #processThirdpartyLibraries
 
-write me..'
+I have no idea what this does. It exists in the pharo codebase. 
+
+If I do figure out its utility, then the processing architecture will be similar or identical to the Plugin processing.
+
+i.e. Libraries will be represented by objects which will have the responsibility of generating ''stuff''.
+
+
+
+.'
 ]
 
 { #category : #pages }
@@ -1453,9 +1546,11 @@ There is nothing for us to do here.'
 
 { #category : #pages }
 CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setExecutableOutputPath [
+	"This method was automatically generated. Edit it using:"
+	"a HelpBrowser edit: #setExecutableOutputPath"
 	^HelpTopic
-		title:'setExecutableOutputPath'
-		contents:
+		title: 'setExecutableOutputPath'
+		contents: 
 'SystemNavigation browseAllImplementorsOf: #setExecutableOutputPath
 
  We see that this is implemtented in CPlatformConfigForSqueak.
@@ -1464,9 +1559,11 @@ It creates a CMakeSet object and sets the ''EXECUTABLE_OUTPUT_PATH'' variable to
 
 SystemNavigation browseAllImplementorsOf: #outputDir
 
-This look customizable too, but I doubt we need it.
+Which redirects to 
 
-'
+(CPlatformConfigForSqueak basicNew) outputDirName
+
+The #outputDir method is a legacy method from the pharo code. It should be factored out after the dependency on the pharo code is removed.!' readStream nextChunkText
 ]
 
 { #category : #pages }
