@@ -310,21 +310,6 @@ SqueakIOSConfig >> internalPluginsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
-SqueakIOSConfig >> postBuildActionsBuild: aMaker [
-	"N.B. tty. This code was copied from Pharo code and converted to templates. Do not assume output it is complete or correct."
-	" override to add custom rules after all targets is defined "
-	self write: self fixLibsTemplate toFile: 'fix_libs.cmake'.
-	
-	aMaker config templates
-		addLast:((CMakeSet new) variable:#bundlePath value:  '${outputDir}/', self executableName, '.app');   "no clue what these are. tty"
-		addLast:((CMakeSet new) variable: #pluginsRelPath value:  '@executable_path/Plugins');
-		addLast:(CMakeIOSInstallCode new).
-			
-"					FILE(GLOB_RECURSE bLibs /${externalModulesDir}/*.*)
-"
-]
-
-{ #category : #'cmake buildType redirects' }
 SqueakIOSConfig >> preferredIncludesBuild [
 	(enabledebugmessages)
 		ifTrue:[	

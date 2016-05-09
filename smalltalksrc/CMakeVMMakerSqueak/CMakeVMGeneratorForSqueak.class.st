@@ -62,7 +62,6 @@ CMakeVMGeneratorForSqueak >> generateByTemplate [
 	self flag: 'tty'. "refactor so that the cascade reflects CMake terminilogy"
 	output := String new writeStream.
 	config templates: OrderedCollection new. 
-	self break.
 	config 
 		setGlobalOptions: self;    
 		cmakePrefixPath;
@@ -173,12 +172,13 @@ CMakeVMGeneratorForSqueak >> moduleName [
 { #category : #'as yet unclassified' }
 CMakeVMGeneratorForSqueak >> processPlugins: pluginGenerators [
 	| libs libDeps |
-	self flag:'tty think this trhough. Is it redundant?'.
+	self flag:'tty think this trhough. Is it redundant? answer NO. This adds plugin information to the master CMakeLists.txt file. '.
+	self flag: 'tty: gen configDotCMake and gen configDotCmakeEmpty should be moved out of CMakePluginGeneratorForSqueak and placed in the wrapper for the Plugin itself. (can it be?)'.
 	libs := OrderedCollection new.
 	libDeps := Dictionary new.
 	pluginGenerators do: [:gen |
 		gen doNotGenerate ifFalse: [
-			self  puts: (gen configDotCMake at: (gen plugin name) ifAbsent:[gen configDotCmakeEmpty]). 
+			self  puts: (gen configDotCMake at: (gen plugin name) ifAbsent:[gen configDotCmakeEmpty]). "THIS COULD BE A BUG. ONLY FileCopyPlugin is returning ConfigDotFilePlugin data"
 			gen isInternal 
 				ifTrue: [
 					libs add: gen plugin moduleName ]
