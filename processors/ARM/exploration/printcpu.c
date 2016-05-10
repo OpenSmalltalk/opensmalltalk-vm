@@ -45,19 +45,19 @@ printf("!GdbARMAlien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
 	printf("!GdbARMAlien class methodsFor: 'instance creation' stamp: 'eem %d/%d/%d %d:%02d'!\r"
 	"dataSize\r\t^%ld! !\r", m,d,y,h,i, sizeof(ARMul_State));
 
-	print(0,0);
-	print(1,1);
-	print(2,2);
-	print(3,3);
-	print(4,4);
-	print(5,5);
-	print(6,6);
-	print(7,7);
-	print(8,8);
-	print(9,9);
-	print(10,10);
-	print(11,11);
-	print(12,12);
+	print(0,r0);
+	print(1,r1);
+	print(2,r2);
+	print(3,r3);
+	print(4,r4);
+	print(5,r5);
+	print(6,r6);
+	print(7,r7);
+	print(8,r8);
+	print(9,r9);
+	print(10,r10);
+	print(11,r11);
+	print(12,r12);
 	print(13,SP);
 	print(14,LR);
 	print(15,PC);
