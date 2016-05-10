@@ -25,8 +25,7 @@ Class {
 
 { #category : #'instance creation' }
 GdbARMAlien class >> dataSize [
-
-	^1536
+	^1788
 ]
 
 { #category : #'class initialization' }
@@ -91,6 +90,326 @@ GdbARMAlien >> cflag [
 GdbARMAlien >> cflag: unsignedInteger [
 "The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
 	^self unsignedLongAt: 573 put: unsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d0 [
+	^self unsignedLongLongAt: 1529
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d0: anUnsignedInteger [
+	^self unsignedLongLongAt: 1529 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d1 [
+	^self unsignedLongLongAt: 1537
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d10 [
+	^self unsignedLongLongAt: 1609
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d10: anUnsignedInteger [
+	^self unsignedLongLongAt: 1609 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d11 [
+	^self unsignedLongLongAt: 1617
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d11: anUnsignedInteger [
+	^self unsignedLongLongAt: 1617 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d12 [
+	^self unsignedLongLongAt: 1625
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d12: anUnsignedInteger [
+	^self unsignedLongLongAt: 1625 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d13 [
+	^self unsignedLongLongAt: 1633
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d13: anUnsignedInteger [
+	^self unsignedLongLongAt: 1633 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d14 [
+	^self unsignedLongLongAt: 1641
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d14: anUnsignedInteger [
+	^self unsignedLongLongAt: 1641 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d15 [
+	^self unsignedLongLongAt: 1649
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d15: anUnsignedInteger [
+	^self unsignedLongLongAt: 1649 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d16 [
+	^self unsignedLongLongAt: 1657
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d16: anUnsignedInteger [
+	^self unsignedLongLongAt: 1657 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d17 [
+	^self unsignedLongLongAt: 1665
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d17: anUnsignedInteger [
+	^self unsignedLongLongAt: 1665 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d18 [
+	^self unsignedLongLongAt: 1673
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d18: anUnsignedInteger [
+	^self unsignedLongLongAt: 1673 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d19 [
+	^self unsignedLongLongAt: 1681
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d19: anUnsignedInteger [
+	^self unsignedLongLongAt: 1681 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d1: anUnsignedInteger [
+	^self unsignedLongLongAt: 1537 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d2 [
+	^self unsignedLongLongAt: 1545
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d20 [
+	^self unsignedLongLongAt: 1689
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d20: anUnsignedInteger [
+	^self unsignedLongLongAt: 1689 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d21 [
+	^self unsignedLongLongAt: 1697
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d21: anUnsignedInteger [
+	^self unsignedLongLongAt: 1697 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d22 [
+	^self unsignedLongLongAt: 1705
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d22: anUnsignedInteger [
+	^self unsignedLongLongAt: 1705 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d23 [
+	^self unsignedLongLongAt: 1713
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d23: anUnsignedInteger [
+	^self unsignedLongLongAt: 1713 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d24 [
+	^self unsignedLongLongAt: 1721
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d24: anUnsignedInteger [
+	^self unsignedLongLongAt: 1721 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d25 [
+	^self unsignedLongLongAt: 1729
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d25: anUnsignedInteger [
+	^self unsignedLongLongAt: 1729 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d26 [
+	^self unsignedLongLongAt: 1737
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d26: anUnsignedInteger [
+	^self unsignedLongLongAt: 1737 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d27 [
+	^self unsignedLongLongAt: 1745
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d27: anUnsignedInteger [
+	^self unsignedLongLongAt: 1745 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d28 [
+	^self unsignedLongLongAt: 1753
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d28: anUnsignedInteger [
+	^self unsignedLongLongAt: 1753 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d29 [
+	^self unsignedLongLongAt: 1761
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d29: anUnsignedInteger [
+	^self unsignedLongLongAt: 1761 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d2: anUnsignedInteger [
+	^self unsignedLongLongAt: 1545 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d3 [
+	^self unsignedLongLongAt: 1553
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d30 [
+	^self unsignedLongLongAt: 1769
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d30: anUnsignedInteger [
+	^self unsignedLongLongAt: 1769 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d31 [
+	^self unsignedLongLongAt: 1777
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d31: anUnsignedInteger [
+	^self unsignedLongLongAt: 1777 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d3: anUnsignedInteger [
+	^self unsignedLongLongAt: 1553 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d4 [
+	^self unsignedLongLongAt: 1561
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d4: anUnsignedInteger [
+	^self unsignedLongLongAt: 1561 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d5 [
+	^self unsignedLongLongAt: 1569
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d5: anUnsignedInteger [
+	^self unsignedLongLongAt: 1569 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d6 [
+	^self unsignedLongLongAt: 1577
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d6: anUnsignedInteger [
+	^self unsignedLongLongAt: 1577 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d7 [
+	^self unsignedLongLongAt: 1585
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d7: anUnsignedInteger [
+	^self unsignedLongLongAt: 1585 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d8 [
+	^self unsignedLongLongAt: 1593
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d8: anUnsignedInteger [
+	^self unsignedLongLongAt: 1593 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d9 [
+	^self unsignedLongLongAt: 1601
+]
+
+{ #category : #accessing }
+GdbARMAlien >> d9: anUnsignedInteger [
+	^self unsignedLongLongAt: 1601 put: anUnsignedInteger
 ]
 
 { #category : #disassembly }
@@ -509,7 +828,8 @@ GdbARMAlien >> handleOneRegTransferDoubleArithmetic: instr at: pc [
 			[self shouldBeImplemented].
 		[45"FCMPD"]	->
 			[self shouldBeImplemented]. }
-		otherwise: [self reportPrimitiveFailure]
+		otherwise: [self reportPrimitiveFailure].
+	self pc: pc + 4
 ]
 
 { #category : #accessing }
@@ -944,14 +1264,28 @@ GdbARMAlien >> printFields: fields inRegisterState: registerStateVector on: aStr
 
 { #category : #printing }
 GdbARMAlien >> printOn: aStream [
-	aStream nextPutAll: 'an ARMAlien('.
-	self registerState allButLast with: self registerStateGetters allButLast do: [ :state :i |
-		aStream 
-			<< i << ': ' 
-			<< (state abs > 15 ifTrue: [state hex] ifFalse: [state asString]) 
-			<< ', '].
-	aStream << 'NZCVIF: ' 
-		<< (self registerState last printStringBase: 2 length: 6 padded: true) << ')'.
+	| first |
+	first := true.
+	aStream nextPutAll: 'an ARMAlien ('.
+	self registerState with: self registerStateGetters do: [ :state :getter |
+		first
+			ifTrue: [first := false]
+			ifFalse: [aStream << ', '].
+		getter first = $d
+			ifTrue:
+				[aStream
+					<< getter << ': '
+					<< (Float fromIEEE64BitWord: state)]
+			ifFalse:
+				[getter == #eflags
+					ifTrue:
+						[aStream
+							<< 'NZCVIF: '
+							<< (state printStringBase: 2 length: 6 padded: true)]
+					ifFalse:
+						[aStream
+							<< getter << ': '
+							<< (state printStringBase: 16)]]]
 ]
 
 { #category : #printing }
@@ -1156,7 +1490,9 @@ GdbARMAlien >> registerAt: index [
 { #category : #'accessing-abstract' }
 GdbARMAlien >> registerState [
 	^{	self r0. self r1. self r2. self r3. self r4. self r5. self r6. self r7.
-		self r8. self r9. self sl. self fp. self r12. self sp. self lr. self pc. self eflags }
+		self r8. self r9. self sl. self fp. self r12. self sp. self lr. self pc. self eflags.
+		self d0. self d1. self d2. self d3. self d4. self d5. self d6. self d7.
+		self d8. self d9. self d10. self d11. self d12. self d13. self d14. self d15 }
 ]
 
 { #category : #'accessing-abstract' }
