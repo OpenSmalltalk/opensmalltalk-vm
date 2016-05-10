@@ -288,7 +288,7 @@ CogARMCompiler class >> wordSize [
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> add: destReg rn: srcReg imm: immediate ror: rot [
 "Remember the ROR is doubled by the cpu so use 30>>1 etc.
-	ADD destReg, srcReg, #immediate ROR #rot"
+	ADD destReg, srcReg, #immediate ROR #rot - ARM_ARM v7 DDI10406 p. A8-23"
 
 	^self type: 1 op: AddOpcode set: 0 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
@@ -296,7 +296,7 @@ CogARMCompiler >> add: destReg rn: srcReg imm: immediate ror: rot [
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> add: destReg rn: srcReg rm: addReg [
 "return an ADD destReg, srcReg, addReg instruction
-	ADD destReg, srcReg, addReg"
+	ADD destReg, srcReg, addReg - ARM_ARM v7 DDI10406 p. A8-24"
 
 	^self type: 0 op: AddOpcode set: 0 rn: srcReg rd: destReg shifterOperand: addReg
 ]
@@ -304,7 +304,7 @@ CogARMCompiler >> add: destReg rn: srcReg rm: addReg [
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> adds: destReg rn: srcReg imm: immediate ror: rot [
 "Remember the ROR is doubled by the cpu so use 30>>1 etc
-	ADDS destReg, srcREg, #immediate ROR #rot"
+	ADDS destReg, srcReg, #immediate ROR #rot - ARM_ARM v7 DDI10406 p. A8-23"
 
 	^self type: 1 op: AddOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
@@ -337,7 +337,7 @@ A word on the somewhat strange usage of idivmod herein; we need a declaration fo
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> and: destReg rn: srcReg imm: immediate ror: rot [
 "Remember the ROR is doubled by the cpu so use 30>>1 etc
-	AND destReg, srcReg, #immediate ROR #rot"
+	AND destReg, srcReg, #immediate ROR #rot - ARM_ARM v7 DDI10406 p. A8-34"
 
 	^self type: 1 op: AndOpcode set: 0 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
@@ -345,7 +345,7 @@ CogARMCompiler >> and: destReg rn: srcReg imm: immediate ror: rot [
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> ands: destReg rn: srcReg imm: immediate ror: rot [
 "Remember the ROR is doubled by the cpu so use 30>>1 etc
-	ANDS destReg, srcReg, #immediate ROR #rot"
+	ANDS destReg, srcReg, #immediate ROR #rot - ARM_ARM v7 DDI10406 p. A8-34"
 
 	^self type: 1 op: AndOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
@@ -364,7 +364,7 @@ CogARMCompiler >> availableRegisterOrNoneFor: liveRegsMask [
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> b: offset [
 "return a B offset instruction; offset is signed 24bits of WORD offset, so +_32Mbyte range
-	B offset"
+	B offset - ARM_ARM v7 DDI10406 pp. A8-44-5"
 	^self cond: AL br: 0 offset: offset
 
 ]
@@ -372,7 +372,7 @@ CogARMCompiler >> b: offset [
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> bics: destReg rn: srcReg imm: immediate ror: rot [
 "Remember the ROR is doubled by the cpu so use 30>>1 etc
-	BICS destReg, srcReg, #immediate ROR #rot"
+	BICS destReg, srcReg, #immediate ROR #rot - ARM_ARM v7 DDI10406 pp. A8-50-1"
 
 	^self type: 1 op: BicOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
@@ -380,7 +380,7 @@ CogARMCompiler >> bics: destReg rn: srcReg imm: immediate ror: rot [
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> bl: offset [
 "return a BL offset instruction; offset is signed 24bits of WORD offset, so +_32Mbyte range. Return address is in LR
-	BL offset"
+	BL offset - ARM_ARM v7 DDI10406 pp. A8-58-9"
 	^self cond: AL br: 1 offset: offset
 
 ]
@@ -388,7 +388,7 @@ CogARMCompiler >> bl: offset [
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> blx: targetReg [
 	"Branch&link to the address in targetReg. Return address is in LR
-	BX targetReg"
+	BLX targetReg - ARM_ARM v7 DDI10406 pp. A8-60-1"
 	<inline: true>
 	^self cond: AL bx: 1 target: targetReg
 
@@ -396,7 +396,8 @@ CogARMCompiler >> blx: targetReg [
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> bx: targetReg [
-	"Branch to address in targetReg. BX targetReg"
+	"Branch to address in targetReg. BX targetReg
+	BX targetReg  - ARM_ARM v7 DDI10406 pp. A8-62-3"
 	<inline: true>
 	^self cond: AL bx: 0 target: targetReg
 
@@ -1965,23 +1966,26 @@ CogARMCompiler >> extractOffsetFromBL: instr [
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> faddd: destReg with: srcReg [
 "FADDD or VADD instruction to add double srcReg to double destReg and stick result in double destReg
-ARM_ARM v5 DDI 01001.pdf pp. C4-6"
+FADDD destReg, destReg, srcReg -  ARM_ARM v5 DDI 01001.pdf pp. C4-6
+VADD.F64 destReg, destReg, srcReg - ARM_ARM v7 DDI10406.pdf pp. A8-536-7"
 	<inline: true>
 	^((2r11101110001100000000101100000000 bitOr: destReg<<16 ) bitOr: destReg<<12) bitOr: srcReg
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> fcmpFrom: regA to: regB [
-"FCMP or VCMP instruction to compare two fpu double registers.
-ARM_ARM v5 DDI 01001.pdf pp. C4-10"
+"FCMPD or VCMP instruction to compare two fpu double registers.
+FCMPD regA, regB - ARM_ARM v5 DDI 01001.pdf pp. C4-10
+VCMP.F64 regA, regB - ARM_ARM v7 DDI10406 -1"
 	<inline: true>
 	^(2r11101110101101000000101101000000 bitOr:(regA <<12)) bitOr: regB
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> fcmpeFrom: regA to: regB [
-	"FCMPE or VCMPE instruction to compare two fpu double registers.
-	 ARM_ARM v5 DDI 01001.pdf pp. C4-12"
+	"FCMPED or VCMPE instruction to compare two fpu double registers.
+FCMPED regA, regB - ARM_ARM v5 DDI 01001.pdf pp. C4-12
+VCMPE.F64 regA,regB - ARM_ARM v7 DDI10406 pp. 570-1"
 	<inline: true>
 	^(2r11101110101101000000101111000000 bitOr: (regA <<12)) bitOr: regB
 ]
@@ -1989,7 +1993,8 @@ CogARMCompiler >> fcmpeFrom: regA to: regB [
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> fdivd: dividend by: divisor [
 "FDIVD or VDIV instruction to divide double dividend by double divisor and stick result in double dividend
-ARM_ARM v5 DDI 01001.pdf pp. C4-32"
+FDIVD dividend, dividend, divisor - ARM_ARM v5 DDI 01001.pdf pp. C4-32
+VDIV.F64 dvidend, dividend, divisor - ARM_ARM v7 DDI10406 pp. A8-584-5"
 	<inline: true>
 	^((2r11101110100000000000101100000000 bitOr: dividend<<16 ) bitOr: dividend<<12) bitOr: divisor
 ]
@@ -1997,7 +2002,8 @@ ARM_ARM v5 DDI 01001.pdf pp. C4-32"
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> fldd: destReg rn: srcReg plus: u imm: immediate8bitValue [
 "FLDD or VLDR instruction to move a value from address in an ARM srcReg +/- offset<<2 to an fpu double destReg
-ARM_ARM v5 DDI 01001.pdf pp. C4-36"
+FLDD ARM_ARM v5 DDI 01001.pdf pp. C4-36
+VLDR.64 ARM_ARM v7 DDI10406 pp. A8-622-3"
 	<inline: true>
 	"Note that
 		offset is <<2 to make byte address 
@@ -2015,8 +2021,9 @@ CogARMCompiler >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<I
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> fmsrFrom: regA to: regB [
-"FMSR or VMSR instruction to move a value from an ARM reg to an fpu double register ready for conversion
-ARM_ARM v5 DDI 01001.pdf pp. C4-68"
+"FMSR or VMOV instruction to move a value from an ARM reg to an fpu double register ready for conversion
+FMSR regB, regA - ARM_ARM v5 DDI 01001.pdf pp. C4-68
+VMOV regB, regA - ARM_ARM v7 DDi10406 pp. A8-462-3"
 	<inline: true>
 	|destReg|
 	"the dest reg bits are spread out a little"
@@ -2027,7 +2034,8 @@ ARM_ARM v5 DDI 01001.pdf pp. C4-68"
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> fmstat [
 	"FMSTAT or VMRS unconditional transfer FP status to cpsr to choose jumps etc.
-	ARM_ARM v5 DDI 01001.pdf pp. C4-72"
+FMSTAT r15, FPSCR - ARM_ARM v5 DDI 01001.pdf pp. C4-72
+VMRS APSR_nzcv, FPSCR - ARM_ARM v7 DDI10406 pp. A8-652-3"
 	<inline: true>
 	^2r11101110111100011111101000010000
 ]
@@ -2035,7 +2043,8 @@ CogARMCompiler >> fmstat [
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> fmuld: destReg with: srcReg [
 "FMULD or VMUL instruction to multiply double srcReg by double destReg and stick result in double destReg
-ARM_ARM v5 DDI 01001.pdf pp. C4-73"
+FMULD destReg, destReg, srcReg - ARM_ARM v5 DDI 01001.pdf pp. C4-73
+VMUL.F64 destReg, destReg, srcReg - ARM_ARM v7 DDI10406 pp A8-658-9"
 	<inline: true>
 	^((2r11101110001000000000101100000000 bitOr: destReg<<16 ) bitOr: destReg<<12) bitOr: srcReg
 ]
@@ -2043,7 +2052,8 @@ ARM_ARM v5 DDI 01001.pdf pp. C4-73"
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> fsitodFrom: regA to: regB [
 "FSITOD or VCVT instruction to move convert an integer value to an fpu double
-ARM_ARM v5 DDI 01001.pdf pp. C4-95"
+FSITOD regB, regA - ARM_ARM v5 DDI 01001.pdf pp. C4-95
+VCVTW. regB, regA - ARM_ARM v7 DDI10406.pdf pp. A8-576-8"
 	<inline: true>
 	|srcReg|
 	"the src reg bits are spread out a little"
@@ -2054,27 +2064,30 @@ ARM_ARM v5 DDI 01001.pdf pp. C4-95"
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> fsqrtd: destReg [
 "FSQRTD or VSQRT instruction to square root double dividend destReg and stick result in double destReg
-ARM_ARM v5 DDI 01001.pdf pp. C4-97"
+ARM_ARM v5 DDI 01001.pdf pp. C4-97
+VSQRT.F64 destReg, destReg - ARM_ARM v7 DDI10406 pp. A8-756-7"
 	<inline: true>
 	^((2r11101110101100010000101111000000 ) bitOr: destReg<<12) bitOr: destReg
 ]
 
 { #category : #'ARM convenience instructions' }
-CogARMCompiler >> fstd: destReg rn: srcReg plus: u imm: immediate8bitValue [
-"FSTD or VSTR instruction to move a value to address in an ARM srcReg +/- offset<<2 from an fpu double destReg
-ARM_ARM v5 DDI 01001.pdf pp. C4-101"
+CogARMCompiler >> fstd: fpReg rn: addrReg plus: u imm: immediate8bitValue [
+"FSTD or VSTR instruction to move a value to address in an ARM addrReg +/- offset<<2 from an fpu double fpReg
+FSTD fpReg, addrReg, #offset - ARM_ARM v5 DDI 01001.pdf pp. C4-101
+VSTR.64 fpReg, addrReg, #offset - ARM_ARM v7 DDI10406 pp. A8-780-1"
 	<inline: true>
 	"Note that
 		offset is <<2 to make byte address 
-		u =1 -> srcReg + offset<<2
-		u=0 -> srgREg - offset<<2"
-	^(((2r11101101000000000000101100000000 bitOr:(srcReg <<16)) bitOr: destReg<<12) bitOr: u<<23) bitOr: immediate8bitValue
+		u =1 -> addrReg + offset<<2
+		u=0 -> addrReg - offset<<2"
+	^(((2r11101101000000000000101100000000 bitOr:(addrReg <<16)) bitOr: fpReg<<12) bitOr: u<<23) bitOr: immediate8bitValue
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> fsubd: destReg with: srcReg [
 "FSUBD or VSUB instruction to subtract double srcReg from double destREg and stick result in double destReg
-ARM_ARM v5 DDI 01001.pdf pp. C4-112"
+FSUBD destReg, destReg, srcReg - ARM_ARM v5 DDI 01001.pdf pp. C4-112
+VSUB.F64 destReg, destReg, srcReg - ARM_ARM v7 DDI10406 pp. A8-784-5"
 	<inline: true>
 	^((2r11101110001100000000101101000000 bitOr: destReg<<16 ) bitOr: destReg<<12) bitOr: srcReg
 ]
@@ -2186,7 +2199,7 @@ CogARMCompiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 ar
 
 { #category : #'abstract instructions' }
 CogARMCompiler >> genMulR: regSource R: regDest [
-	"Use SMULL to produce a 64-bit result, explicitly in RISCTempReg,regDest.
+	"Use SMULL to produce a 64-bit result, explicitly in RISCTempReg,regDest. - ARM_ARM v7 DDI10406 pp. A8-354-5
 	 By comparing RISCTempReg with regDest ASR 31(which effectively makes it 0 or -1) we know that the result being EQ means the hi reg and the top bit of the lo reg are the same - ie no overflow. The condition code can then be forced to oVerflow by use of MSR APSR_nzcvq, #1, lsl 28"
 	| first |
 	<var: 'first' type: #'AbstractInstruction *'>
@@ -2561,46 +2574,46 @@ CogARMCompiler >> jumpTargetPCAt: pc [
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> ldr: destReg rn: baseReg plus: u imm: immediate12bitValue [
-"	LDR destReg, [baseReg, immediate12bitValue] u=0 -> subtract imm; =1 -> add imm "
+"	LDR destReg, [baseReg, immediate12bitValue] u=0 -> subtract imm; =1 -> add imm  - ARM_ARM v7 DDI10406 pp. A8-120-1"
 	^self memMxr: AL reg: destReg  base: baseReg u: u b: 0 l: 1 imm: immediate12bitValue
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> ldr: destReg rn: baseReg plusImm: immediate12bitValue [
-"	LDR destReg, [baseReg, +immediate12bitValue]"
+"	LDR destReg, [baseReg, +immediate12bitValue] - ARM_ARM v7 DDI10406 pp. A8-120-1"
 	^self memMxr: AL reg: destReg  base: baseReg u: 1 b: 0 l: 1 imm: immediate12bitValue
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> ldr: destReg rn: baseReg rm: offsetReg [
-"	LDR destReg, [baseReg, + offsetReg]
+"	LDR destReg, [baseReg, + offsetReg]  - ARM_ARM v7 DDI10406 pp. A8-124-5
 	The contents of offsetReg are assumed to be correctly signed"
 	^self memMxr: AL reg: destReg  base: baseReg p: 1 u: 1 b: 0 w: 0 l: 1 rm: offsetReg
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> ldrb: destReg rn: baseReg plus: u imm: immediate12bitValue [
-"	LDRB destReg, [baseReg, 'u' immediate12bitValue] u=0 -> subtract imm; =1 -> add imm 
+"	LDRB destReg, [baseReg, 'u' immediate12bitValue] u=0 ->  - ARM_ARM v7 DDI10406 pp. A8-128-9
 	Note that this is a very low level interface that does not check the sign of the immediate, nor validity. See for example #concretizeMoveMbrR"
 	^self memMxr: AL reg: destReg  base: baseReg u: u b: 1 l: 1 imm: immediate12bitValue
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> ldrb: destReg rn: baseReg rm: offsetReg [
-"	LDR destReg, [baseReg, + offsetReg] 
+"	LDRB destReg, [baseReg, + offsetReg]  - ARM_ARM v7 DDI10406 pp. A8-132-3
 	The contents of offsetReg are assumed to be correctly signed"
 	^self memMxr: AL reg: destReg  base: baseReg p: 1 u: 1 b: 1 w: 0 l: 1 rm: offsetReg
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> ldrh: destReg rn: baseReg plus: u imm: immediate8bitValue [
-"	LDRH destReg, [baseReg, 'u' immediate8bitValue] u=0 -> subtract imm; =1 -> add imm "
+"	LDRH destReg, [baseReg, 'u' immediate8bitValue] u=0 -> subtract imm; =1 -> add imm  - ARM_ARM v7 DDI10406 pp. A8-152-3"
 	^self memM16xr: AL reg: destReg  base: baseReg p: 1 u: u  w: 0 l: 1 offset: immediate8bitValue
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> ldrh: destReg rn: baseReg rm: offsetReg [
-"	LDRH destReg, [baseReg, +offsetReg]
+"	LDRH destReg, [baseReg, +offsetReg]  - ARM_ARM v7 DDI10406 pp. A8-156-7
 	The contents of offsetReg are assumed to be correctly signed"
 	^self memM16xr: AL reg: destReg  base: baseReg p: 1 u: 1  w: 0 l: 1 rm: offsetReg
 ]
@@ -2817,13 +2830,13 @@ l -> load (1) or store (0)"
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> mov: destReg imm: immediate8bitValue ror: rot [
 	"Remember the ROR is doubled by the cpu so use 30>>1 etc.
-	MOV destReg, #immediate8BitValue ROR rot"
+	MOV destReg, #immediate8BitValue ROR rot - ARM_ARM v7 DDI10406 pp. A8-194-5"
 	^self type: 1 op: MoveOpcode set: 0 rn: 0 rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate8bitValue)
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> mov: destReg rn: srcReg [
-"	MOV destReg, srcReg"
+"	MOV destReg, srcReg - ARM_ARM v7 DDI10406 pp. A8-196-7"
 
 	^self type: 0 op: MoveOpcode set: 0 rn: 0 rd: destReg shifterOperand: srcReg
 ]
@@ -2838,7 +2851,7 @@ CogARMCompiler >> moveCw: constant intoR: destReg [
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> movs: destReg rn: srcReg [
-"	MOVS destReg, srcReg"
+"	MOVS destReg, srcReg - ARM_ARM v7 DDI10406 pp. A8-196-7"
 
 	^self type: 0 op: MoveOpcode set: 1 rn: 0 rd: destReg shifterOperand: srcReg
 ]
@@ -2858,7 +2871,7 @@ b) We only have business with the NZCV flags so the generated instruction shifts
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> mvn: destReg imm: immediate8bitValue ror: rot [
 	"Remember the ROR is doubled by the cpu so use 30>>1 etc.
-	MVN destReg, #immediate8BitValue ROR rot"
+	MVN destReg, #immediate8BitValue ROR rot - ARM_ARM v7 DDI10406 pp. A8-214-5"
 	^self type: 1 op: MoveNotOpcode set: 0 rn: 0 rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate8bitValue)
 ]
 
@@ -2904,7 +2917,7 @@ CogARMCompiler >> numberOfSaveableRegisters [
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> orr: destReg imm: immediate8bitValue ror: rot [
 	"Remember the ROR is doubled by the cpu so use 30>>1 etc.
-	ORR destReg, #immediate8BitValue ROR rot"
+	ORR destReg, #immediate8BitValue ROR rot - ARM_ARM v7 DDI10406 pp. A8-228-9"
 	^self type: 1 op: OrOpcode set: 0 rn: destReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate8bitValue)
 ]
 
@@ -2928,7 +2941,8 @@ CogARMCompiler >> padIfPossibleWithStopsFrom: startAddr to: endAddr [
 
 { #category : #encoding }
 CogARMCompiler >> pld: baseReg plus: u offset: immediate [
-	"hint to memory that we will want to read from baseReg +/- imediate sometime soon"
+	"hint to memory that we will want to read from baseReg +/- imediate sometime soon
+	PLD baseReg, immediate  - ARM_ARM v7 DDI10406 pp. A8-236-7"
 	<inline: true>
 	^ 2r11110101010100001111000000000000 bitOr: (baseReg<<16 bitOr:(u <<23 bitOr: immediate))
 ]
@@ -2936,7 +2950,7 @@ CogARMCompiler >> pld: baseReg plus: u offset: immediate [
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> popR: dstReg [
 "	pop word off TOS
-	LDR srcReg, [sp] #4"
+	LDR srcReg, [sp] #4 - ARM_ARM v7 DDI10406 pp. A8-120-1"
 	^self memMxr: AL reg: dstReg base: SP p: 0 u: 1 b: 0 w: 0 l: 1 imm: 4
 ]
 
@@ -2948,7 +2962,7 @@ CogARMCompiler >> pushLinkRegisterByteSize [
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> pushR: srcReg [
 "	push word to TOS 
-	STR srcReg, [sp, #-4]!"
+	STR srcReg, [sp, #-4]! - ARM_ARM v7 DDI10406 pp. A8-382-3"
 	^self memMxr: AL reg: srcReg base: SP p: 1 u: 0 b: 0 w: 1l: 0 imm: 4
 ]
 
@@ -3182,7 +3196,7 @@ CogARMCompiler >> stackPageInterruptHeadroomBytes [
 
 { #category : #encoding }
 CogARMCompiler >> stop [
-"generate a BKPT instruction. We could, given a good enough creative impulse and an over-active sense of humour, add some numerically encoded witticism to this instruction in bits 8-19 & 0-3. It has no effect on the execution but can be a way to specify which breakpoint has been hit etc."
+"generate a BKPT ( - ARM_ARM v7 DDI10406 pp. A8-56) instruction. We could, given a good enough creative impulse and an over-active sense of humour, add some numerically encoded witticism to this instruction in bits 8-19 & 0-3. It has no effect on the execution but can be a way to specify which breakpoint has been hit etc."
 	<inline: true>
 	^AL << 28 bitOr: (16r42 << 20 bitOr: (7 << 4))
 ]
@@ -3202,52 +3216,52 @@ CogARMCompiler >> storeLiteral: literal beforeFollowingAddress: followingAddress
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> str: destReg rn: baseReg plus: u imm: immediate12bitValue [
-"	STR destReg, [baseReg, 'u' immediate12bitValue] u=0 -> subtract imm; =1 -> add imm "
+"	STR destReg, [baseReg, 'u' immediate12bitValue] u=0 -> subtract imm; =1 -> add imm - ARM_ARM v7 DDI10406 pp. A8-382-3 "
 	^self memMxr: AL reg: destReg  base: baseReg u: u b: 0 l: 0 imm: immediate12bitValue
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> str: srcReg rn: baseReg plusImm: immediate12bitValue [
-"	STR srcReg, [baseReg, +immediate12bitValue]"
+"	STR srcReg, [baseReg, +immediate12bitValue] - ARM_ARM v7 DDI10406 pp. A8-382-3"
 	^self memMxr: AL reg: srcReg  base: baseReg u: 1 b: 0 l: 0 imm: immediate12bitValue
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> str: srcReg rn: baseReg rm: offsetReg [
-"	STR srcReg, [baseReg, + offsetReg] 
+"	STR srcReg, [baseReg, + offsetReg]  - ARM_ARM v7 DDI10406 pp. A8-384-5
 The contents of offsetReg are assumed to be correctly signed"
 	^self memMxr: AL reg: srcReg  base: baseReg p: 1 u: 1 b: 0 w: 0 l: 0 rm: offsetReg
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> strb: destReg rn: baseReg plus: u imm: immediate12bitValue [
-"	STRB destReg, [baseReg, 'u' immediate12bitValue] u=0 -> subtract imm; =1 -> add imm "
+"	STRB destReg, [baseReg, 'u' immediate12bitValue] u=0 -> subtract imm; =1 -> add imm  - ARM_ARM v7 DDI10406 pp. A8-388-9"
 	^self memMxr: AL reg: destReg  base: baseReg u: u b: 1 l: 0 imm: immediate12bitValue
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> strb: srcReg rn: baseReg rm: offsetReg [
-"	STRB srcReg, [baseReg, + offsetReg] 
+"	STRB srcReg, [baseReg, + offsetReg]  - ARM_ARM v7 DDI10406 pp. A8-390-1
 	The contents of offsetReg are assumed to be correctly signed"
 	^self memMxr: AL reg: srcReg  base: baseReg p: 1 u: 1 b: 1 w: 0 l: 0 rm: offsetReg
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> strh: destReg rn: baseReg plus: u imm: immediate8bitValue [
-"	STRH destReg, [baseReg, 'u' immediate8bitValue] u=0 -> subtract imm; =1 -> add imm "
+"	STRH destReg, [baseReg, 'u' immediate8bitValue] u=0 -> subtract imm; =1 -> add imm  - ARM_ARM v7 DDI10406 pp. A8-408-9"
 	^self memM16xr: AL reg: destReg  base: baseReg p: 1 u: u  w: 0 l: 0 offset: immediate8bitValue
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> strh: srcReg rn: baseReg rm: offsetReg [
-"	STRH srcReg, [baseReg, +offsetReg]"
+"	STRH srcReg, [baseReg, +offsetReg] - ARM_ARM v7 DDI10406 pp. A8-410-1"
 	^self memM16xr: AL reg: srcReg base: baseReg p: 1 u: 1 w: 0 l: 0 rm: offsetReg
 ]
 
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> sub: destReg rn: srcReg imm: immediate ror: rot [
 "	Remember the ROR is doubled by the cpu so use 30>>1 etc
-	SUB destReg, srcReg, #immediate ROR rot"
+	SUB destReg, srcReg, #immediate ROR rot - ARM_ARM v7 DDI10406 pp. A8-418-9"
 
 	^self type: 1 op: SubOpcode set: 0 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
@@ -3255,7 +3269,7 @@ CogARMCompiler >> sub: destReg rn: srcReg imm: immediate ror: rot [
 { #category : #'ARM convenience instructions' }
 CogARMCompiler >> subs: destReg rn: srcReg imm: immediate ror: rot [
 "	Remember the ROR is doubled by the cpu so use 30>>1 etc
-	SUBS destReg, srcReg, #immediate ROR rot"
+	SUBS destReg, srcReg, #immediate ROR rot - ARM_ARM v7 DDI10406 pp. A8-418-9"
 
 	^self type: 1 op: SubOpcode set: 1 rn: srcReg rd: destReg shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
@@ -3264,7 +3278,7 @@ CogARMCompiler >> subs: destReg rn: srcReg imm: immediate ror: rot [
 CogARMCompiler >> tst: ignored rn: srcReg imm: immediate ror: rot [
 "	Remember the ROR is doubled by the cpu so use 30>>1 etc"
 "also note that TST has no destReg
-	TST srcReg, #immediate ROR rot"
+	TST srcReg, #immediate ROR rot - ARM_ARM v7 DDI10406 pp. A8-452-3"
 
 	^self type: 1 op: TstOpcode set: 1 rn: srcReg rd: 0 shifterOperand: ((rot>>1) <<8 bitOr: immediate)
 ]
