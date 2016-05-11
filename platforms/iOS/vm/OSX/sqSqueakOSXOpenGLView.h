@@ -60,6 +60,9 @@
 	unsigned int*      colorMap32;
     BOOL clippyIsEmpty;
 	CGRect clippy;
+    NSRect lastFrameSize;
+    BOOL fullScreenInProgress;
+    void* fullScreendispBitsIndex;
 }
 @property (nonatomic,assign) NSTrackingRectTag squeakTrackingRectForCursor;
 @property (nonatomic,strong) keyBoardStrokeDetails* lastSeenKeyBoardStrokeDetails;

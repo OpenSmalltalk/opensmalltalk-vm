@@ -70,7 +70,7 @@ static NSString *stringWithCharacter(unichar character) {
 
 @implementation sqSqueakOSXOpenGLView
 @synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
-lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,fullScreenInProgress,fullScreendispBitsIndex;
+lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,lastFrameSize,fullScreenInProgress,fullScreendispBitsIndex;
 
 + (NSOpenGLPixelFormat *)defaultPixelFormat {
 	NSOpenGLPixelFormatAttribute attrs[] =
@@ -245,9 +245,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,f
     
     NSRect r = self.frame;
     
-    if (!NSEqualRects(_lastFrameSize,r)) {
-        //NSLog(@"old %f %f %f %f new %f %f %f %f",_lastFrameSize.origin.x,_lastFrameSize.origin.y,_lastFrameSize.size.width,_lastFrameSize.size.height,self.frame.origin.x,r.origin.y,r.size.width,r.size.height);
-        _lastFrameSize = r;
+    if (!NSEqualRects(lastFrameSize,r)) {
+        //NSLog(@"old %f %f %f %f new %f %f %f %f",lastFrameSize.origin.x,lastFrameSize.origin.y,lastFrameSize.size.width,lastFrameSize.size.height,self.frame.origin.x,r.origin.y,r.size.width,r.size.height);
+        lastFrameSize = r;
         glPixelStorei( GL_UNPACK_ROW_LENGTH, r.size.width );
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
