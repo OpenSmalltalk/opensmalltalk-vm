@@ -3601,7 +3601,7 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 		pc := self addressOfEndOfCase: i inCPIC: cPIC.
 		(self inlineCacheTagsAreIndexes not
 		 and: [objectRepresentation inlineCacheTagsMayBeObjects
-		 and: [objectRepresentation couldBeObject: (object := literalsManager backEnd literal32BeforeFollowingAddress: pc - backEnd jumpLongConditionalByteSize)]]) ifTrue:
+		 and: [objectRepresentation couldBeObject: (object := backEnd literal32BeforeFollowingAddress: pc - backEnd jumpLongConditionalByteSize)]]) ifTrue:
 			[(objectMemory isMarked: object) ifFalse:
 				[^true]].
 		"Check the potential method oop for subsequent cases."
