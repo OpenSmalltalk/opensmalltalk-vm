@@ -90,11 +90,10 @@ export SIGNING_IDENTITY="Developer ID Application: Eliot Miranda"
 	cd buiild.macos32x86/squeak.cog.spur
 	./mvm -A
 This will build CocoaFast.app, CocoaDebug.app and CocoaAssert.app applications
-containing the three basic VM configurations.  If the configuration includes
-the multi-threaded
-VM you can use mvm -AS to make the single-threaded VMs, mvm -AT to make the
-multi-threadeds in FastMT.app et al, and mvm -A to make them all.  mvm -d will
-make the Debug.app VM, etc.  mvm -? provides the gory details.
+containing the three basic VM configurations.  If the configuration includes the
+multi-threaded VM you can use mvm -S to make the single-threaded VMs, mvm -T
+to make the multi-threadeds in FastMT.app et al, and mvm -A to make them all.
+mvm -d will make the Debug.app VM, etc.  mvm -? provides the gory details.
 
 Each build directory contains three files
 	plugins.int

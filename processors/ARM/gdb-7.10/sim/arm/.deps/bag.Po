@@ -1,3 +1,0 @@
-bag.o: bag.c bag.h
-
-bag.h:
