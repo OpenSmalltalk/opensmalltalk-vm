@@ -4,13 +4,8 @@
 # See http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
 # for an explanation of the dependency management scheme.
 
-XCODETOOLCHAINS := /Applications/Xcode.app/Contents/Developer/Toolchains
-XCODETOOLCHAIN := $(XCODETOOLCHAINS)/XcodeDefault.xctoolchain
-
 # /usr/bin/clang, a.k.a. /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang
 CC := clang
-# convoluted, but clang -version writes to /dev/tty, /not/ stdout :-(
-CCVERSION = $(shell ls $(XCODETOOLCHAIN)/usr/lib/clang)
 LD := clang
 LDCXX := clang++ # For linking c++ bundles
 
@@ -20,15 +15,15 @@ DEPFLAGS = -MT $@ -MMD -MP -MF deps/$(*F).Td
 ALLFLAGS = $(DEPFLAGS) $(WARNINGS) $(CFLAGS)
 POSTCOMPILE = sed '/^$$/d' <deps/$(*F).Td | sed '/^.*:$$/d' | sed 's/^build[^/]*/$$(BUILD)/' > deps/$(*F).d; rm deps/$(*F).Td; touch -r $< deps/$(*F).d
 
-$(OBJDIR)/%.o: %.c deps/%.d
+$(OBJDIR)/%.o: %.c deps/%.d $(MAKEFILE)
 	$(CC) -x c $(ALLFLAGS) $(INCLUDES) -c $< -o $@
 	$(POSTCOMPILE)
 
-$(OBJDIR)/%.o: %.m deps/%.d
+$(OBJDIR)/%.o: %.m deps/%.d $(MAKEFILE)
 	$(CC) -x objective-c $(ALLFLAGS) $(INCLUDES) -c $< -o $@
 	$(POSTCOMPILE)
 
-$(OBJDIR)/%.o: %.cpp deps/%.d
+$(OBJDIR)/%.o: %.cpp deps/%.d $(MAKEFILE)
 	$(CC) -x c++ $(ALLFLAGS) $(INCLUDES) -c $< -o $@
 	$(POSTCOMPILE)
 
