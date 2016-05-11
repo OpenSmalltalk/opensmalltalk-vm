@@ -7,6 +7,7 @@
 # platforms/iOS/plugins/*/Makefile for examples.
 #
 # CFLAGS     adds additional compilation flags to source file compilation
+# XCFLAGS    adds additional compilation flags after all other flags
 # EXCLUDESRC defines patterns of source files to not compile, e.g. %/dump.c
 # EXTRALIBS  defines additional libraries to link into an external plugin bundle
 # INCDIRS    defines additonal directories in which to search for includes
@@ -20,14 +21,17 @@ $(info $$(LIBNAME): $(LIBNAME))
 # VM config flags.
 ifeq ($(CONFIGURATION),product)
 OFLAGS:= -g -Os
+AT_MOST_OPT_LEVEL_ONE:=-O1
 DEBUGVM=-DDEBUGVM=0 -DNDEBUG=1
 BUILD:=build
 else ifeq ($(CONFIGURATION),assert)
 OFLAGS:= -g -O1 -fno-omit-frame-pointer
+AT_MOST_OPT_LEVEL_ONE:=-O1
 DEBUGVM=-DDEBUGVM=0
 BUILD:=buildast
 else
 OFLAGS:= -g -O0 -fno-omit-frame-pointer
+AT_MOST_OPT_LEVEL_ONE:=-O0
 DEBUGVM=-DDEBUGVM=1
 BUILD:=builddbg
 endif

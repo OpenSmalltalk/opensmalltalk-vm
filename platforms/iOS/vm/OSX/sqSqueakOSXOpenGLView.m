@@ -63,7 +63,7 @@ static NSString *stringWithCharacter(unichar character) {
 }
 
 @interface sqSqueakOSXOpenGLView ()
-@property (nonatomic, assign) NSRect lastFrameSize;
+@property (nonatomic,assign) NSRect lastFrameSize;
 @property (nonatomic,assign) BOOL fullScreenInProgress;
 @property (nonatomic,assign) void* fullScreendispBitsIndex;
 @end
