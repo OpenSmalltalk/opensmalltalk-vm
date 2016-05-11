@@ -85,6 +85,10 @@ such third-party acknowledgments.
 	NSDictionary *fileAttributes;
     NSError *error;
     int isSymlink;
+    
+    if (!filePath) { //SQK-47
+        return BAD_PATH;
+    }
 	fileAttributes        = [fileMgr attributesOfItemAtPath: filePath error: &error];
     if (!fileAttributes) {
         return BAD_PATH;
