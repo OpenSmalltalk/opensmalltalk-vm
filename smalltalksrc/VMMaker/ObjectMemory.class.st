@@ -431,20 +431,6 @@ ObjectMemory class >> requiredMethodNames: options [
 	^self exportAPISelectors: options
 ]
 
-{ #category : #translation }
-ObjectMemory class >> unsignedIntegerSuffix [
-	"Answer the suffix that should be appended to unsigned integer literals in generated code."
-
-	^BytesPerWord = 4 ifTrue: ['UL'] ifFalse: ['ULL']
-]
-
-{ #category : #translation }
-ObjectMemory class >> unsignedLongLongSuffix [
-	"Answer the suffix that should be appended to unsigned integer literals in generated code."
-
-	^'ULL'
-]
-
 { #category : #accessing }
 ObjectMemory class >> wordSize [
 	"Answer the width of an object pointer, in bytes."
