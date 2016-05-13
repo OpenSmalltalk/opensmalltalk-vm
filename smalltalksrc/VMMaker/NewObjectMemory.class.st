@@ -40,6 +40,11 @@ NewObjectMemory class >> mustBeGlobal: var [
 	   or: ['checkForLeaks' = var]
 ]
 
+{ #category : #'accessing class hierarchy' }
+NewObjectMemory class >> objectRepresentationClass [
+	^CogObjectRepresentationForSqueakV3
+]
+
 { #category : #translation }
 NewObjectMemory class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 	"Remove the methods and instance variables we don't use."
