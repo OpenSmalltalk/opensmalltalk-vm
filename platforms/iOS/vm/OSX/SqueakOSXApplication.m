@@ -50,7 +50,7 @@
 		sqSqueakOSXScreenAndWindow *squeakScreenWindow = (sqSqueakOSXScreenAndWindow *) who.delegate;
 		sqSqueakOSXOpenGLView *view;
 		if (squeakScreenWindow)
-			view = squeakScreenWindow.mainViewOnWindow;
+			view = [squeakScreenWindow getMainViewOnWindow];
 		else
 			view = [who contentView];
 	   [view fakeKeyDownUp: anEvent];

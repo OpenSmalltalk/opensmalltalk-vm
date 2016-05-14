@@ -38,38 +38,12 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
 //
 
 #import <Foundation/Foundation.h>
-#import "sq.h"
+#import "sqSqueakNullScreenAndWindow.h"
 
-@interface sqSqueakScreenAndWindow : NSObject {
-	sqInt windowIndex;
+@interface sqSqueakScreenAndWindow : sqSqueakNullScreenAndWindow {
 	NSTimeInterval squeakUIFlushPrimaryDeferNMilliseconds;
 	NSTimeInterval lastFlushTime;
 	NSTimer *blip;
-	BOOL forceUpdateFlush;
 	BOOL displayIsDirty;
 }
-
-- (sqInt) ioScreenSize;
-- (sqInt) ioScreenDepth;
-- (sqInt) ioHasDisplayDepth: (sqInt) depth;
-- (void)  ioForceDisplayUpdate;
-- (void)  ioSetFullScreen: (sqInt) fullScreen;
-- (int)   ioShowDisplayOnWindow: (unsigned char*) dispBitsIndex
-						  width: (int) width 
-						 height: (int) height
-						  depth: (int) depth
-					  affectedL: (int) affectedL
-					  affectedR: (int) affectedR
-					  affectedT: (int) affectedT
-					  affectedB: (int) affectedB
-					windowIndex: (int) windowIndex;
-- (id) getMainView;
-- (void) ioForceDisplayUpdateFlush: (NSTimer*)theTimer;
-@property (nonatomic,assign) sqInt windowIndex;
-@property (nonatomic,strong) NSTimer *blip;
-@property (nonatomic,assign) NSTimeInterval	squeakUIFlushPrimaryDeferNMilliseconds;
-@property (nonatomic,assign) NSTimeInterval	lastFlushTime;
-@property (nonatomic,assign) BOOL forceUpdateFlush;
-@property (nonatomic,assign) BOOL displayIsDirty;
-
 @end

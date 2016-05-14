@@ -51,7 +51,7 @@ extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 #endif
 
 
-sqSqueakScreenAndWindow *getMainWindowDelegate() {
+sqSqueakNullScreenAndWindow *getMainWindowDelegate() {
 #ifdef BUILD_FOR_OSX
 	return ((__bridge NSWindow *) windowHandleFromIndex(1)).delegate;
 #else

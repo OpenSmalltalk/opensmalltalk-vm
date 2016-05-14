@@ -42,7 +42,7 @@
 #import "sqSqueakOSXOpenGLView.h"
 
 @class sqSqueakMainApplication;
-@class sqSqueakOSXScreenAndWindow;
+@class sqSqueakNullScreenAndWindow;
 
 @interface SqueakOSXAppDelegate : sqSqueakAppDelegate <NSApplicationDelegate> {
     NSWindow *__weak window;
@@ -56,6 +56,6 @@
 @property (nonatomic,weak) IBOutlet sqSqueakOSXOpenGLView *mainView;
 @property (nonatomic,strong) NSString *possibleImageNameAtLaunchTime;
 @property (nonatomic,assign) BOOL checkForFileNameOnFirstParm;
-@property (nonatomic, strong) sqSqueakOSXScreenAndWindow *windowHandler;
+@property (nonatomic, strong) sqSqueakNullScreenAndWindow *windowHandler;
 
 @end

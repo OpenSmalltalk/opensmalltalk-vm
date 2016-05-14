@@ -40,13 +40,13 @@
 #import "sqSqueakAppDelegate.h"
 #import "sqSqueakEventsAPI.h"
 #import "sqSqueakMainApplication+events.h"
-#import "sqSqueakScreenAndWindow.h"
+#import "sqSqueakNullScreenAndWindow.h"
 #import "sqaio.h"
 
 extern sqSqueakAppDelegate *gDelegateApp;
 extern struct	VirtualMachine* interpreterProxy;
 extern BOOL gQuitNowRightNow;
-extern sqSqueakScreenAndWindow *getMainWindowDelegate();
+extern sqSqueakNullScreenAndWindow *getMainWindowDelegate();
 
 void nativeIoProcessEvents(void) {
 

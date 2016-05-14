@@ -43,6 +43,8 @@
 @interface sqSqueakOSXScreenAndWindow : sqSqueakScreenAndWindow  <NSWindowDelegate>{
     sqSqueakOSXOpenGLView	*mainViewOnWindow;
 }
-@property (nonatomic,strong) sqSqueakOSXOpenGLView *mainViewOnWindow;
+
+- (sqSqueakOSXOpenGLView *) getMainViewOnWindow;
+- (void) mainViewOnWindow: (sqSqueakOSXOpenGLView *) aView;
 
 @end

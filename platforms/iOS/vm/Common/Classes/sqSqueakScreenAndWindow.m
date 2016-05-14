@@ -61,9 +61,15 @@ void MyProviderReleaseData (
 							) {
 }
 
+@interface sqSqueakScreenAndWindow()
+@property (nonatomic,strong) NSTimer *blip;
+@property (nonatomic,assign) NSTimeInterval	squeakUIFlushPrimaryDeferNMilliseconds;
+@property (nonatomic,assign) NSTimeInterval	lastFlushTime;
+@property (nonatomic,assign) BOOL displayIsDirty;
+@end
+
 @implementation sqSqueakScreenAndWindow
-@synthesize windowIndex;
-@synthesize blip,squeakUIFlushPrimaryDeferNMilliseconds,forceUpdateFlush,lastFlushTime,displayIsDirty;
+@synthesize blip,squeakUIFlushPrimaryDeferNMilliseconds,lastFlushTime,displayIsDirty;
 
 - (instancetype)init {
     self = [super init];
@@ -75,13 +81,6 @@ void MyProviderReleaseData (
 		displayIsDirty = NO;
 	}
     return self;
-}
-
-- (id) getMainView {
-	return NULL;
-}
-
-- (void)  ioSetFullScreen: (sqInt) fullScreen {
 }
 
 - (sqInt) ioScreenSize {
@@ -100,25 +99,12 @@ void MyProviderReleaseData (
 	
 }
 
-- (sqInt) ioScreenDepth {
-	return 32;
-}
-
-- (sqInt) ioHasDisplayDepth: (sqInt) depth {
-	if (depth == 2 || depth ==  4 || depth == 8 || depth == 16 || depth == 32 ||
-        depth == -2 || depth ==  -4 || depth == -8 || depth == -16 || depth == -32) { 
-		return true;
-    } else {
-        return false;
-    }
-}
-
-- (void) ioForceDisplayUpdateActual {
-	lastFlushTime = [NSDate timeIntervalSinceReferenceDate];
-	self.displayIsDirty = NO;
-	self.forceUpdateFlush = NO;
+- (void) ioForceDisplayUpdate {
+    lastFlushTime = [NSDate timeIntervalSinceReferenceDate];
+    self.displayIsDirty = NO;
+    self.forceUpdateFlush = NO;
     
-	[[self getMainView] preDrawThelayers];
+    [[self getMainView] preDrawThelayers];
     
     //SQK-24
     //javier_diaz_r@mac.com iOS VM problems with dragging a morph and PasteUpMorph>>flashRects:color:
@@ -129,10 +115,6 @@ void MyProviderReleaseData (
             [[self getMainView] drawThelayers];
         });
     }
-}
-
-- (void) ioForceDisplayUpdate {
-	[self ioForceDisplayUpdateActual];
 }
 
 - (int)   ioShowDisplayOnWindowActual: (unsigned char*) dispBitsIndex

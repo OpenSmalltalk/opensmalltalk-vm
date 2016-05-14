@@ -45,11 +45,23 @@
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 
+@interface sqSqueakOSXScreenAndWindow()
+    @property (nonatomic,strong) sqSqueakOSXOpenGLView *mainViewOnWindow;
+@end
+
 @implementation sqSqueakOSXScreenAndWindow
 @synthesize mainViewOnWindow;
 
 -(id) getMainView {
 	return self.mainViewOnWindow;
+}
+
+- (void) mainViewOnWindow: (id) aView {
+    self.mainViewOnWindow = aView;
+}
+
+- (sqSqueakOSXOpenGLView *) getMainViewOnWindow {
+    return self.mainViewOnWindow;
 }
 
 - (void) dealloc {

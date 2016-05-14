@@ -104,7 +104,7 @@ static char *getVersionInfo(int verbose);
 }
 
 - (void) doHeadlessSetup {
-	[super doHeadlessSetup];
+	//No super call here as we've already set headless from command line or info.plist
 	extern BOOL gSqueakHeadless;    
     // Notice that setActivationPolicy: is available in OSX 10.6 and later
     if ([NSApp respondsToSelector:@selector(setActivationPolicy:)]) {
@@ -147,7 +147,6 @@ static char *getVersionInfo(int verbose);
 
 - (int) parseArgument: (NSString *) argData peek: (char *) peek
 {
-
 	if ([argData isEqualToString: @"--"]) {
 		return 1;
 	}
@@ -344,41 +343,54 @@ static char *getVersionInfo(int verbose);
 
 
 - (void) parseArgs: (NSArray *) args {
-	commandLineArguments = [args copyWithZone:null];
-	argsArguments = [[NSMutableArray alloc] initWithCapacity: [args count]];
-
-	if ([args count] < 2) 
-		return;
-	//NSLog(@"%@",args);
-	int i;
-	BOOL optionsCompleted = NO;
-	for (i = 1; i < [args count]; i++) {
-		NSString *argData = args[i];
-		char *peek = i + 1 >= [args count] ? 0 : (char *)[args[i+1] UTF8String];
-		//printf("argData %s peek %s\n", [argData UTF8String], peek ? peek : "NULL");
-		if ([argData isEqualToString: @"--"]) {
-			optionsCompleted = YES;
-			continue;
-		}
-		if (!optionsCompleted && ![[argData substringToIndex: 1] isEqualToString: @"-"]) {
-			optionsCompleted = YES;
-			//guessing first parameter as image name
-			if ([argData compare: @"--"] != NSOrderedSame)
+    commandLineArguments = [args copyWithZone:null];
+    argsArguments = [[NSMutableArray alloc] initWithCapacity: [args count]];
+    
+    if ([args count] < 2)
+        return;
+    NSMutableArray *revisedArgs = AUTORELEASEOBJ([args mutableCopyWithZone: NULL]);
+    [revisedArgs removeObjectAtIndex:0];
+    
+    NSUInteger i,result;
+    BOOL optionsCompleted = NO;
+    for (i=0; i<[revisedArgs count]; i++) {
+        NSString *argData = revisedArgs[i];
+        
+        NSString *peek = (i == ([revisedArgs count] - 1)) ? @"" : revisedArgs[i+1];
+        
+        if ([argData isEqualToString: @"-NSDocumentRevisionsDebugMode"]) {
+            //This is an Xcode debug option, skip it for us
+            i++;
+            continue;
+        }
+        if ([argData compare: @"--"] == NSOrderedSame) {
+            optionsCompleted = YES;
+            continue;
+        }
+        if (!optionsCompleted && ![[argData substringToIndex: 1] isEqualToString: @"-"]) {
+            optionsCompleted = YES;
+            
+            //guessing first parameter as image name
+            if ([argData compare: @"--"] != NSOrderedSame) {
                 [self setImageNamePathIfItWasReadable:argData];
-			continue;
-		}
-		if (optionsCompleted)
-			[self.argsArguments addObject: argData];
-		else {
-			int result = [self parseArgument: argData peek: peek];
-			if (result <= 0) {	/* option not recognised */
-				fprintf(stderr, "unknown option: %s\n", [argData UTF8String]);
-				[self usage];
-				exit(1);
-			}
-			i += result - 1;
-		}
-	}
+            } else {
+                continue;
+            }
+        }
+        if (optionsCompleted) {
+            [self.argsArguments addObject: argData];
+        } else {
+            result = [self parseArgument: argData peek: peek.UTF8String];
+            if (result == 0)			/* option not recognised */ {
+                fprintf(stderr, "unknown option: %s\n", [argData UTF8String]);
+                [self usage];
+                exit(1);
+            }
+            if (result == 2)
+                i++;
+        }
+        
+    }
 }
 
 - (long long) strtobkm: (const char *) str {

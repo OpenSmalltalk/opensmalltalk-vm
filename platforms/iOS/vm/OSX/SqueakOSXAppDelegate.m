@@ -81,13 +81,6 @@ SqueakOSXAppDelegate *gDelegateApp;
     @autoreleasepool {
 		gDelegateApp = self;	
 		self.squeakApplication = [self makeApplicationInstance];
-		self.windowHandler = AUTORELEASEOBJ([[sqSqueakOSXScreenAndWindow alloc] init]);
-		windowHandler.mainViewOnWindow = self.mainView;
-		self.mainView.windowLogic = windowHandler;
-		windowHandler.windowIndex = 1;
-		[windowHandler.mainViewOnWindow initializeVariables];
-		self.window.delegate =  windowHandler;
-		self.window.contentResizeIncrements = NSMakeSize(8.0f,8.0f);
 		[self.squeakApplication setupEventQueue];
 		[self singleThreadStart];
 //	[self workerThreadStart];
@@ -105,7 +98,29 @@ SqueakOSXAppDelegate *gDelegateApp;
 	return NSTerminateCancel;
 }
 
+- (void) initializeTheWindowHandler {
+    [windowHandler mainViewOnWindow: self.mainView];
+    self.mainView.windowLogic = windowHandler;
+    windowHandler.windowIndex = 1;
+    [windowHandler.getMainViewOnWindow initializeVariables];
+    self.window.delegate =  windowHandler;
+    self.window.contentView = self.mainView;
+}
+
 -(void) setupWindow {
+    extern BOOL gSqueakHeadless;
+    if (gSqueakHeadless) {
+        self.windowHandler = AUTORELEASEOBJ([[sqSqueakNullScreenAndWindow alloc] init]);
+        [self initializeTheWindowHandler];
+        return;
+    } else {
+        self.windowHandler = AUTORELEASEOBJ([[sqSqueakOSXScreenAndWindow alloc] init]);
+    }
+    
+  
+    [self initializeTheWindowHandler];
+    self.window.contentResizeIncrements = NSMakeSize(8.0f,8.0f);
+
     //I setup the window with all the right properties. Some of them are depending on image information.
     
 	sqInt width,height;
@@ -129,59 +144,17 @@ SqueakOSXAppDelegate *gDelegateApp;
 	[self.window setRepresentedURL: [[self squeakApplication] imageNameURL]];
 	[self.window setInitialFirstResponder: [self mainView]];
 	[self.window setShowsResizeIndicator: NO];
-
-	extern sqInt getFullScreenFlag(void);
-#if (SQ_VI_BYTES_PER_WORD == 4)
-	NSPanel *panel;
-	if (sizeof(void*) == 8) {
-		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 64/32 bits 5.7b3 (21)",
-												 @"Only use this VM for testing, it lacks mac menu integration.",
-												 @"Dismiss",
-												 nil,
-												 nil);
-	} else {
-        return;
-	}
-#else
-	NSPanel *panel;
-	if (sizeof(long) == 8) {
-		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 64/64 bits 5.7b3 (21)",
-									@"Only use this VM for testing, it lacks mac menu integration.",
-									@"Dismiss",
-									nil,
-									nil);
-	} else {
-		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 32/64 bits 5.7b3 (21)",
-							   @"Only use this VM for testing, it lacks mac menu integration.",
-							   @"Dismiss",
-							   nil,
-							   nil);
-	}
-#endif
-	
-/*	NSRect frame= [panel frame];
-	frame.size.width *= 1.5f;
-	[panel setFrame: frame display: NO];
-	[NSApp runModalForWindow: panel];
-	[panel close];
-*/
 }
 
 -(void) setupMainView {
-    //Creates and sets the contentView for our window. 
+    extern BOOL gSqueakHeadless;
+    if (gSqueakHeadless) {
+        return;
+    }
+    //Creates and sets the contentView for our window.
     //It can right now, I have two implementations to pick (CoreGraphics or OpenGL), muy more/different could be added 
     //in the future. 
     
-    NSView *view = AUTORELEASEOBJ([[ContentViewClass alloc] initWithFrame:[[self window] frame]]);
-    self.mainView = (id) view;
-    [[self window] setContentView: view];
-    
-    [windowHandler setMainViewOnWindow: (sqSqueakOSXOpenGLView *) view];
-	[(sqSqueakOSXOpenGLView *) view setWindowLogic: windowHandler];
-	[windowHandler setWindowIndex: 1];
-	[[windowHandler mainViewOnWindow] initializeVariables];
-	[[self window] setDelegate:windowHandler];
-	[[self window] setContentResizeIncrements:NSMakeSize(8.0f,8.0f)];
 }
 
 - (id) createPossibleWindow {
