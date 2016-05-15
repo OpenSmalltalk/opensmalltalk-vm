@@ -200,11 +200,8 @@ Linux32x86SqueakCogV3Config >> dirBuildLanguageVMMM [
 ]
 
 { #category : #cmake }
-Linux32x86SqueakCogV3Config >> dirInstall [
-	"the directory of the finished product.. the place where 'make install' puts stuff.
-	SystemNavigation default browseMethodsWhoseNamesContain: 'outputDir'
-      "
-	^self squeakCogV3
+Linux32x86SqueakCogV3Config >> dirSource [
+	^self src
 ]
 
 { #category : #cmake }

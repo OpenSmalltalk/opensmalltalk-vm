@@ -157,7 +157,7 @@ SqueakCMakeVMMakerAbstractBuilder >> availableBuildConfigurations [
 
 { #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder >> availableBuildConfigurationsFor: aCategoryName [
-	"answer the CMakeVMakerSqueak configurations in a Smalltalk category that havenot excluded themselves from being built."
+	"answer the CMakeVMakerSqueak configurations in a Smalltalk category that have not excluded themselves from being built."
 
 "	(((self configurationDictionary:aCategoryName) keys asSortedCollection) size = 0)      
 		ifTrue:[^((self configurationDictionary:aCategoryName) keys asSortedCollection) sort]."
