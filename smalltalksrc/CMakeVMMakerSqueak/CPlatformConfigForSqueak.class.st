@@ -1961,15 +1961,6 @@ CPlatformConfigForSqueak >> dirIOS [
 ]
 
 { #category : #'cmake directory' }
-CPlatformConfigForSqueak >> dirInstall [
-	"the directory of the finished product.. the place where 'make install' puts stuff.
-	SystemNavigation default browseMethodsWhoseNamesContain: 'outputDir'
-      "
-	self subclassResponsibility
-
-]
-
-{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirLinux32Armv6 [
 	^'cmake.build.linux32armv6'
 ]
@@ -2011,7 +2002,21 @@ CPlatformConfigForSqueak >> dirOutput [
 
 { #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirSource [
-	^'src'
+"Have your custom Configuration return the directory where the source files are. As of 2016.05.15 they are:	
+nsspur64src
+nsspursrc
+nsspurstack64src
+nsspurstacksrc
+spur64src
+spursistasrc
+spursrc
+spurstack64src
+spurstacksrc
+src    (cog.v3 lives here)
+stacksrc"
+
+	self subclassResponsibility
+
 ]
 
 { #category : #'cmake directory' }
@@ -2937,6 +2942,26 @@ CPlatformConfigForSqueak >> nilPlatformName [
 	^nil
 ]
 
+{ #category : #'cmake source names' }
+CPlatformConfigForSqueak >> nsspur64src [
+	^ 'nsspur64src'
+]
+
+{ #category : #'cmake source names' }
+CPlatformConfigForSqueak >> nsspursrc [
+	^ 'nsspursrc'
+]
+
+{ #category : #'cmake source names' }
+CPlatformConfigForSqueak >> nsspurstack64src [
+	^ 'nsspurstack64src'
+]
+
+{ #category : #'cmake source names' }
+CPlatformConfigForSqueak >> nsspurstacksrc [
+	^ 'nsspurstacksrc'
+]
+
 { #category : #'cmake directory' }
 CPlatformConfigForSqueak >> oscogvm [
 	^'oscogvm'
@@ -2944,9 +2969,8 @@ CPlatformConfigForSqueak >> oscogvm [
 
 { #category : #'squeak compatability' }
 CPlatformConfigForSqueak >> outputDir [
-
 	"the directory where built binaries will be stored"
-	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput /  self dirInstall) ]	
+	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput / self dirBuildPlatform / self dirBuildLanguageVMMM / (buildType asString)) ]	
 
 
 ]
@@ -3457,6 +3481,31 @@ CPlatformConfigForSqueak >> setResourceProperties: maker [
 	self subclassResponsibility
 ]
 
+{ #category : #'cmake source names' }
+CPlatformConfigForSqueak >> spur64src [
+	^ 'spur64src'
+]
+
+{ #category : #'cmake source names' }
+CPlatformConfigForSqueak >> spursistasrc [
+	^ 'spursistasrc'
+]
+
+{ #category : #'cmake source names' }
+CPlatformConfigForSqueak >> spursrc [
+	^ 'spursrc'
+]
+
+{ #category : #'cmake source names' }
+CPlatformConfigForSqueak >> spurstack64src [
+	^ 'spurstack64src'
+]
+
+{ #category : #'cmake source names' }
+CPlatformConfigForSqueak >> spurstacksrc [
+	^ 'spurstacksrc'
+]
+
 { #category : #'cmake directory' }
 CPlatformConfigForSqueak >> squeakCogSpur [
 	^'squeak.cog.spur'
@@ -3487,9 +3536,21 @@ CPlatformConfigForSqueak >> squeakStackV3 [
 	^'squeak.stack.v3'
 ]
 
+{ #category : #'cmake source names' }
+CPlatformConfigForSqueak >> src [
+"where cog lives"
+	^ 'src'
+]
+
 { #category : #'squeak compatability' }
 CPlatformConfigForSqueak >> srcDir [
-		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: 'src' )]
+self flag:'tty: srcDir is a pharo thing. Factor this out in favor of the dirSource for consistency'.
+		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: (self dirSource) )]
+]
+
+{ #category : #'cmake source names' }
+CPlatformConfigForSqueak >> stacksrc [
+	^ 'stacksrc'
 ]
 
 { #category : #'cmake buildType redirects' }

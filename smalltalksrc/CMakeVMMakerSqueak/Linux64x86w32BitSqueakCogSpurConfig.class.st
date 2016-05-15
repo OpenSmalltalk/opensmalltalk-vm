@@ -215,15 +215,12 @@ Linux64x86w32BitSqueakCogSpurConfig >> defaultExternalPlugins [
 
 { #category : #cmake }
 Linux64x86w32BitSqueakCogSpurConfig >> dirBuildLanguageVMMM [
-	^self squeakCogV3
+	^self squeakCogSpur
 ]
 
 { #category : #cmake }
-Linux64x86w32BitSqueakCogSpurConfig >> dirInstall [
-	"the directory of the finished product.. the place where 'make install' puts stuff.
-	SystemNavigation default browseMethodsWhoseNamesContain: 'outputDir'
-      "
-	^self squeakCogV3
+Linux64x86w32BitSqueakCogSpurConfig >> dirSource [
+	^self spursrc
 ]
 
 { #category : #cmake }

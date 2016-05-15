@@ -405,13 +405,13 @@ CMakeVMMakerSqueakCommonConfigTest >> testPlatformSources [
 
 { #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testSrcDir [
-	"for each builder, make sure all its configurations provide a srcDir "
+	"for each builder, make sure all its configurations provide a srcDir via their dirSource method "
 	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
 		do:[:each | 
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | | o |
 					o:= configuration basicNew.
-					(o excludeFromBuild not) | (configuration isAbstractBaseClass)
+					(o excludeFromBuild not | configuration isAbstractBaseClass not)
 						ifTrue:[self assert:(o  srcDir isKindOf: FileDirectory)]]]
 
 

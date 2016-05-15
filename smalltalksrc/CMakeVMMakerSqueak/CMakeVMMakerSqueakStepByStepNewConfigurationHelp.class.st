@@ -796,6 +796,64 @@ We do this by overloading the SqueakUnixConfig>>customizeVMDrivers method.
 ]
 
 { #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> dirBuildLanguageVMMM [
+	^HelpTopic
+		title:'Specify dirBuildLanguageVMMM'
+		contents:
+'
+SystemNavigation new browseAllImplementorsOf: #dirBuildLanguageVMMM localTo:CPlatformConfigForSqueak.
+
+We scroll down to our Linux64x86w32BitSqueakCogSpurConfig which we copied from the existing Linux64x86w32BitSqueakCogV3Config.
+
+Looking at the dirBuildLanguageVMMM it initially reads (due to the copying of the existing class)
+
+dirBuildLanguageVMMM
+	^self squeakCogV3
+
+Since this is a configuration for Squeak Cog Spur, I modify the method to return
+
+dirBuildLanguageVMMM
+	^self squeakCogSpur
+
+
+As a sanity check, I verify that the method squeakCogSpur exists...
+
+SystemNavigation new browseAllImplementorsOf: #squeakCogSpur
+
+And we see the method exists and will return the sting ''squeak.cog.spur''.
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> dirSource [
+	^HelpTopic
+		title:'Specify Source Directory'
+		contents:
+'
+Eliot''s VMMaker.oscog package outputs c-source code to varios directories depending ont he vm type.
+
+SystemNavigation new browseAllImplementorsOf: #dirSource localTo:CPlatformConfigForSqueak.
+
+Evaluating the above, we see that the CPlatformConfigForSqueak lists the available source directories.
+
+The string values for these things are hard-coded in CPlatformConfigForSqueak in the ''cmake source names'' category.
+
+ToolSet browse: CPlatformConfigForSqueak category: ''cmake source names''
+
+For our Linux64x86w32BitSqueakCogSpurConfig we choose ''spursrc'' as our dirSource return value
+
+dirSource
+	^self spursrc
+
+which you can test here.
+
+(Linux64x86w32BitSqueakCogSpurConfig basicNew) dirSource
+
+'
+]
+
+{ #category : #pages }
 CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> excludingConfigFromBuilds [
 	^HelpTopic
 		title:'Excluding a Config From Builds'
@@ -999,7 +1057,8 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> forTheImpatient [
 
 A step-by-step exposition begins on  the next page.
 
-
+dirBuildLanguageVMMM
+specifyProductDirectories
 cmakeCFlags  
 cmakeAddDefinitions
 cmakeIncludePath
@@ -1222,6 +1281,7 @@ Although some details will be different, the steps involved should be the same f
 
 { #category : #accessing }
 CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> pages [
+"I need the srcDir"
 	^#(overview 
 tests 
 identifyPlatform 
@@ -1237,6 +1297,7 @@ methodRedirectPattern
 theVMGenerator
 tackingStockTwo
 forTheImpatient
+specifyDirectories
 setGlobalOptions
 cmakePrefixPath
 cmakeIncludePath
@@ -1260,14 +1321,13 @@ cmakeAddExecutableNameOptionSource
 setExecutableOutputPath
 addVMPlugins
 generatePluginConfigs
-specifyingPlugins
+specifyPlugins
 
 processThirdpartyLibraries
 processPlugins
 postBuildActions
 
 setConfigurationDirectory
-setOutputDirectory
 compilingLinkingSetup
 customizeVMDrivers
 
@@ -1635,39 +1695,6 @@ For our purposes, there is nothing we need to do.
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setOutputDirectory [
-	^HelpTopic
-		title:'Set Output Directory'
-		contents:
-'The output directory is where the finished product is placed when the compilation is successful.
-
-Typically this is ''oscogvm/cmake.products/foo/
-
-The topmost configuration CPlatformConfigForSqueak defines the output directory as such:
-
-outputDir
-	"the directory where built binaries will be stored"
-	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput /  self dirInstall) ]	
-
-which (on linux) translates to ''oscogvm/cmaike.products/(subclass resposibility))''
-
-Its that (subclass responsibility) we have to customize in our new configuration.
-
-The convention we use is [Language][VM][MemoryModel]
-
-Since I am building a Squeak Cog V3 configuration, my method should return "squeak.cog.v3"
-
-If you look at implementors of dirInstall, you will see that they typically return some pre-defined strings that are defined in the ''cmake directory'' protocol of CPlatformConfigForSqueak.
-
-For my configuration you can see that I return the "^self squeakCogV3" which returns the directory name that matches the [Language][VM][Memory Model] pattern I need.
-
-
-
-
-'
-]
-
-{ #category : #pages }
 CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setPlatformSources [
 	^HelpTopic
 		title:'setPlatformSources'
@@ -1681,9 +1708,114 @@ There is nothing for us to do here.'
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> specifyingPlugins [
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> specifyDirectories [
 	^HelpTopic
-		title:'Specifying Plugins'
+		title:'Specify Directories'
+		contents:
+'Our new Configuration must correctly name two directory trees.
+
+The first is  the cmake.build.* directory tree where the generated CMake output is placed.
+The second is the cmake.products/* directory tree where the compiled vm is placed.
+
+
+Correctly naming these is a courtesy you should extend as the system grows*.
+
+
+For this particular Configuration, we want a cmake.build.* directory that looks like this:
+
+oscogvm/cmake.products/cmake.build.linux64x86w32BitCompatibility/squeak.cog.spur
+
+
+and we want a cmake.products/* directory that looks like this:
+
+oscogvm/cmake.products/cmake.build.linux64x86w32BitCompatibility/squeak.cog.spur/build
+
+
+Each directory in those trees is accessible viathe the CPlatformConfigForSqueak in the ''cmake directory'' category.
+
+ToolSet browseClass: CPlatformConfigForSqueak category: ''cmake directory''.
+
+There are two method variants.
+
+The first variant is hardcoded in the method itself. For example the platform directories are stored as...
+
+dirLinux32Armv6
+	^''cmake.build.linux32armv6''
+
+or, for our configuration
+
+dirLinux64x86w32BitCompatibility
+	^''cmake.build.linux64x86w32BitCompatibility''
+	
+The second variant accesses the  name of a buildType directory via the SqueakCMakeVMMakerAbstractBuilder (do a printIt or doIt).
+
+dirBuild
+	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #build	
+
+
+
+Each part of the directory tree is contained/accessible via these methods. It is our job to select the corect ones for our purposes.
+
+Here is an example of mapping this output directory path
+''oscogvm/cmake.products/cmake.build.linux64x86w32BitCompatibility/squeak.cog.spur/build''
+
+to the methods that output each part.
+
+|c|
+c:=(CPlatformConfigForSqueak basicNew). 
+(c oscogvm), ''/'', (c dirOutput), ''/'', (c dirLinux64x86w32BitCompatibility), ''/'', (c squeakCogSpur), ''/'', (c dirBuild)
+
+
+The methods corresponding to each of the above directory names are:
+
+topDir
+dirOutput
+dirBuildPlatform
+dirBuildLanguageVMMM
+buildType (not a method,this is a private instance variable in the configuration)
+
+The first two, topDir and dirOutput are contained in CPlatformConfigForSqueak
+dirBuildPlatform is contained at the platform level
+
+SystemNavigation new browseAllImplementorsOf: #dirBuildPlatform localTo:CPlatformConfigForSqueak.
+
+dirBuildLangaugeVMMM is at the specific Configuration level
+SystemNavigation new browseAllImplementorsOf: #dirBuildLanguageVMMM localTo:CPlatformConfigForSqueak.
+
+buildType is set when we configure the Configuration for a particular buildType and is stored in the SqueakCMakeVMMakerAbstractBuilder at its initialization.
+
+SystemNavigation new browseAllImplementorsOf: #initializeBuildTypeAndDirectoryInfo
+
+It is this values that the CPlatformConfigForSqueak access via dirBuild, dirBuildAssert etc...
+SystemNavigation new browseAllImplementorsOf: #dirBuild
+
+
+Similarly, the build directory tree 
+''oscogvm/cmake.build.linux64x86w32BitCompatibility/squeak.cog.spur/build/''
+
+has methods corresponding to each of the above directory names. they are:
+
+topDir
+dirBuildPlatform
+dirBuildLanguageVMMM
+buildType (not a method,this is a private instance variable in the configuration)
+
+It follows then, that for our Configuration we need to make the method dirBuildLanguageVMMM return ''squeak.cog.spur''.
+
+We cover that  in the next Help page.
+
+
+*The naming convention is straightforward and convered in the ''Naming Convetions'' page of the Developer Guide Overview Help.
+
+HelpBrowser openOn:CMakeVMMakerSqueakOverviewHelp
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> specifyPlugins [
+	^HelpTopic
+		title:'Specify Plugins'
 		contents:
 'We can specify which plugins we want on our configuration by overriding our platform''s defaultExternalPlugins and defaultInternalPlugins methods.
 
