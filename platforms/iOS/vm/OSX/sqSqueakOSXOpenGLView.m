@@ -92,11 +92,16 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
     return self;
 }
 
+- (void)awakeFromNib {
+    self = [self initWithFrame: self.frame pixelFormat: [[self class] defaultPixelFormat] ];
+    [self initialize];
+}
+
 - (void)initialize {
 	inputMark = NSMakeRange(NSNotFound, 0);
 	inputSelection = NSMakeRange(0, 0);
     [self registerForDraggedTypes: [NSArray arrayWithObjects: NSFilenamesPboardType, nil]];
-	//	NSLog(@"registerForDraggedTypes");
+	//NSLog(@"registerForDraggedTypes %@",self);
 	dragInProgress = NO;
 	dragCount = 0;
 	dragItems = NULL;
@@ -631,6 +636,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (NSDragOperation)draggingEntered:(id < NSDraggingInfo >)info {
+//    NSLog(@"draggingEntered %@",info);
+
 	if (self.dragInProgress) 
 		return NSDragOperationNone;
 	dragInProgress = YES;
@@ -644,6 +651,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 - (NSDragOperation) draggingUpdated: (id<NSDraggingInfo>)info
 {
+//    NSLog(@"draggingUpdated %@",info);
 	if (self.dragCount)
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragMove numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view: self];
 	return NSDragOperationGeneric;
@@ -651,6 +659,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 - (void) draggingExited: (id<NSDraggingInfo>)info
 {
+//    NSLog(@"draggingExited %@",info);
 	if (self.dragCount)
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragLeave numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view: self];
 	self.dragCount = 0;
@@ -659,6 +668,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (BOOL) performDragOperation: (id<NSDraggingInfo>)info {
+//    NSLog(@"performDragOperation %@",info);
 	if (self.dragCount) {
 		self.dragItems = [self filterOutSqueakImageFilesFromDraggedFiles: info];
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view: self];
