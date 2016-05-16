@@ -869,7 +869,7 @@ CoInterpreterPrimitives >> primitiveVoidVMStateForMethod [
 	methodObj := self stackTop.
 	self push: instructionPointer.
 	self externalWriteBackHeadFramePointers.
-	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer.
+	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer - objectMemory wordSize.
 	(hasCogMethod := self methodHasCogMethod: methodObj) ifTrue:
 		[self divorceMachineCodeFramesWithMethod: methodObj].
 	self ensureAllContextsWithMethodHaveBytecodePCs: methodObj.
