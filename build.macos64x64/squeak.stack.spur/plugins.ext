@@ -2,8 +2,8 @@
 # MIDIPlugin does not work on Cocoa so keep it external until it can be fixed.
 EXTERNAL_PLUGINS = \
 CroquetPlugin \
-MIDIPlugin \
 Mpeg3Plugin \
 SqueakFFIPrims \
 SqueakSSL \
-UnixOSProcessPlugin
+UnixOSProcessPlugin \
+# MIDIPlugin

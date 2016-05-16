@@ -8,4 +8,5 @@ CroquetPlugin \
 Mpeg3Plugin \
 SqueakFFIPrims \
 SqueakSSL \
-UnixOSProcessPlugin
+UnixOSProcessPlugin \
+# MIDIPlugin
