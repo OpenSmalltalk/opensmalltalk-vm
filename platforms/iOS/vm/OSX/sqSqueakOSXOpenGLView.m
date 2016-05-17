@@ -85,19 +85,18 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 - (id)initWithFrame:(NSRect)frameRect {
     self = [self initWithFrame:frameRect pixelFormat:[[self class] defaultPixelFormat]];
-    [self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
-    [self setAutoresizesSubviews:YES];
-    
     [self initialize];
     return self;
 }
 
 - (void)awakeFromNib {
-    self = [self initWithFrame: self.frame pixelFormat: [[self class] defaultPixelFormat] ];
     [self initialize];
 }
 
 - (void)initialize {
+       [self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
+       [self setAutoresizesSubviews:YES];
+
 	inputMark = NSMakeRange(NSNotFound, 0);
 	inputSelection = NSMakeRange(0, 0);
     [self registerForDraggedTypes: [NSArray arrayWithObjects: NSFilenamesPboardType, nil]];
