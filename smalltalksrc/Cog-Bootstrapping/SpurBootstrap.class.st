@@ -87,6 +87,11 @@ Class {
 }
 
 { #category : #utilities }
+SpurBootstrap class >> bootstrapCuisImage: imageFileBaseName [
+	self bootstrapImage: imageFileBaseName type: #('squeak' 'cuis')
+]
+
+{ #category : #utilities }
 SpurBootstrap class >> bootstrapImage: imageFileNameOrBaseName type: typeName [
 	"SpurBootstrap bootstrapImage: '/Users/eliot/Squeak/Squeak4.5/Squeak4.5-13680'"
 	| imageFileBaseName imageFormat |
@@ -458,7 +463,7 @@ SpurBootstrap >> allocateFreeLists [
 	0 to: newHeap numFreeLists - 1 do:
 		[:i|
 		newHeap
-			storePointerUnchecked: freeListsOop
+			storePointerUnchecked: i
 			ofObject: freeListsOop
 			withValue: 0]
 ]
@@ -495,6 +500,7 @@ SpurBootstrap >> bootstrapImage: imageName type: typeNameOrArrayOfTypeNames [
 	"type can be:
 		- 'squeak'
 		- {'old squeak' 'squeak' }
+		- { 'cuis' 'squeak' }
 		- 'pharo'
 		- it might be 'newspeak', if needed (but is not implemented)"
 	imageTypes := typeNameOrArrayOfTypeNames isArray
