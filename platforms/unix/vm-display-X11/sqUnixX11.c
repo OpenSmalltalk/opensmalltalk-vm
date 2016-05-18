@@ -122,7 +122,7 @@
 #include <X11/Xatom.h>
 #define XK_MISCELLANY
 #define XK_XKB_KEYS
-#include <X11/keysymdef.h>
+#include <X11/keysym.h> /* /not/ keysymdef.h */
 #if defined(SUGAR)
 # include <X11/XF86keysym.h>
 #endif
@@ -5929,22 +5929,76 @@ sqInt display_primitivePluginRequestState(void);
 
 #if (SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 2)
 
-static int display_hostWindowCreate(int w, int h, int x, int y, char *list, int attributeListLength)
+static long display_hostWindowCreate(long w, long h, long x, long y, char *list, long attributeListLength)
 											    { return 0; }
-static int display_hostWindowClose(int index)                                               { return 0; }
-static int display_hostWindowCloseAll(void)                                                 { return 0; }
-static int display_hostWindowShowDisplay(unsigned *dispBitsIndex, int width, int height, int depth,
+static long display_hostWindowClose(long index)                                               { return 0; }
+static long display_hostWindowCloseAll(void)                                                 { return 0; }
+static long display_hostWindowShowDisplay(unsigned *dispBitsIndex, long width, long height, long depth,
 					 int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex)
 											    { return 0; }
 
-static int display_hostWindowGetSize(int windowIndex)                                       { return -1; }
-static int display_hostWindowSetSize(int windowIndex, int w, int h)                         { return -1; }
-static int display_hostWindowGetPosition(int windowIndex)                                   { return -1; }
-static int display_hostWindowSetPosition(int windowIndex, int x, int y)                     { return -1; }
+/* By convention for HostWindowPlugin, handle 1 refers to the display window */
+#define realWindowHandle(handleFromImage) (handleFromImage == 1 ? stParent : handleFromImage)
 
-static int display_hostWindowSetTitle(int windowIndex, char *newTitle, int sizeOfTitle)
+/* Window struct addresses are not small integers */
+#define isWindowHandle(winIdx) ((realWindowHandle(winIdx)) >= 65536)
+
+static long display_ioSizeOfNativeWindow(void *windowHandle);
+static long display_hostWindowGetSize(long windowIndex)
+{
+  return isWindowHandle(windowIndex)
+    ? display_ioSizeOfNativeWindow((void *)realWindowHandle(windowIndex))
+    : -1;
+}
+
+/* ioSizeOfWindowSetxy: args are int windowIndex, int w & h for the
+ * width / height to make the window. Return the actual size the OS
+ * produced in (width<<16 | height) format or -1 for failure as above. */
+static long display_hostWindowSetSize(long windowIndex, long w, long h)
+{
+  XWindowAttributes attrs;
+  int real_border_width;
+
+  if (!isWindowHandle(windowIndex)
+      || !XGetWindowAttributes(stDisplay, (Window)realWindowHandle(windowIndex), &attrs))
+    return -1;
+
+  /* At least under Gnome a window's border width in its attributes is zero
+   * but the relative position of the left-hand edge is the actual border
+   * width.
+   */
+  real_border_width= attrs.border_width ? attrs.border_width : attrs.x;
+  return XResizeWindow(stDisplay, (Window)realWindowHandle(windowIndex),
+   		       w - 2 * real_border_width,
+		       h - attrs.y - real_border_width)
+    ? display_ioSizeOfNativeWindow((void *)realWindowHandle(windowIndex))
+    : -1;
+}
+
+static long display_ioPositionOfNativeWindow(void *windowHandle);
+static long display_hostWindowGetPosition(long windowIndex)
+{
+  return isWindowHandle(windowIndex)
+    ? display_ioPositionOfNativeWindow((void *)realWindowHandle(windowIndex))
+    : -1;
+}
+
+/* ioPositionOfWindowSetxy: args are int windowIndex, int x & y for the
+ * origin x/y for the window. Return the actual origin the OS
+ * produced in (left<<16 | top) format or -1 for failure, as above */
+static long display_hostWindowSetPosition(long windowIndex, long x, long y)
+{
+  if (!isWindowHandle(windowIndex))
+    return -1;
+  return XMoveWindow(stDisplay, (Window)realWindowHandle(windowIndex), x, y)
+    ? display_ioPositionOfNativeWindow((void *)windowIndex)
+    : -1;
+}
+
+
+static long display_hostWindowSetTitle(long windowIndex, char *newTitle, long sizeOfTitle)
 { 
-  if (windowIndex != 1)
+  if (windowIndex != 1 && windowIndex != stParent && windowIndex != stWindow)
     return -1;
 
   XChangeProperty(stDisplay, stParent,
@@ -5955,7 +6009,39 @@ static int display_hostWindowSetTitle(int windowIndex, char *newTitle, int sizeO
   return 0;
 }
 
-#endif
+static long display_ioSizeOfNativeWindow(void *windowHandle)
+{
+  XWindowAttributes attrs;
+  int real_border_width;
+
+  if (!XGetWindowAttributes(stDisplay, (Window)windowHandle, &attrs))
+    return -1;
+
+  /* At least under Gnome a window's border width in its attributes is zero
+   * but the relative position of the left-hand edge is the actual border
+   * width.
+   */
+  real_border_width= attrs.border_width ? attrs.border_width : attrs.x;
+  return (attrs.width + 2 * real_border_width << 16)
+    | (attrs.height + attrs.y + real_border_width);
+}
+
+static long display_ioPositionOfNativeWindow(void *windowHandle)
+{
+  XWindowAttributes attrs;
+  Window neglected_child;
+  int rootx, rooty;
+
+  if (!XGetWindowAttributes(stDisplay, (Window)windowHandle, &attrs)
+      || !XTranslateCoordinates(stDisplay, (Window)windowHandle, attrs.root,
+				-attrs.border_width, -attrs.border_width,
+				&rootx, &rooty, &neglected_child))
+    return -1;
+
+  return (rootx - attrs.x << 16) | (rooty - attrs.y);
+}
+
+#endif /* (SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 2) */
 
 
 static char *display_winSystemName(void)
@@ -6003,10 +6089,82 @@ static void display_winExit(void)
 {
   disconnectXDisplay();
 }
+static long  display_winImageFind(char *buf, long len)	{ return 0; } static void display_winImageNotFound(void)		{}
 
+#if SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3
 
-static int  display_winImageFind(char *buf, int len)	{ return 0; }
-static void display_winImageNotFound(void)		{}
+/* eem Mar 22 2010 - new code to come up to level of Qwaq host window support
+ * on Mac & Win32.
+ * In the following functions "Display" refers to the user area of a window and
+ * "Window" refers to the entire window including border & title bar.
+ */
+static long
+display_ioSetCursorPositionXY(long x, long y)
+{
+  if (!XWarpPointer(stDisplay, None, DefaultRootWindow(stDisplay),
+      0, 0, 0, 0, x, y))
+    return -1;
+  XFlush(stDisplay);
+  return 0;
+}
+
+/* Return the pixel origin (topleft) of the platform-defined working area
+   for the screen containing the given window. */
+static long display_ioPositionOfScreenWorkArea(long windowIndex)
+{
+/* We simply hard-code this.  There's no obvious window-manager independent way
+ * to discover this that doesn't involve creating a window.
+ * We're also not attempting multi-monitor support; attempting to configure a
+ * laptop with a second monitor via ATI's "control center" resulted in no
+ * cursor and no ATI control center once the multi-monitor mode was enabled.
+ */
+#define NominalMenubarHeight 24 /* e.g. Gnome default */
+  return (0 << 16) | NominalMenubarHeight;
+}
+
+/* Return the pixel extent of the platform-defined working area
+   for the screen containing the given window. */
+static long display_ioSizeOfScreenWorkArea(long windowIndex)
+{
+  XWindowAttributes attrs;
+
+  if (!XGetWindowAttributes(stDisplay, DefaultRootWindow(stDisplay), &attrs))
+    return -1;
+
+  return (attrs.width << 16) | attrs.height;
+}
+
+void *display_ioGetWindowHandle() { return (void *)stParent; }
+
+static long display_ioPositionOfNativeDisplay(void *windowHandle)
+{
+  XWindowAttributes attrs;
+  Window neglected_child;
+  int rootx, rooty;
+
+  if (!XGetWindowAttributes(stDisplay, (Window)windowHandle, &attrs)
+       || !XTranslateCoordinates
+	       (stDisplay, (Window)windowHandle, attrs.root,
+                -attrs.border_width, -attrs.border_width,
+                &rootx, &rooty, &neglected_child))
+    return -1;
+
+  return (rootx << 16) | rooty;
+}
+
+static long display_ioSizeOfNativeDisplay(void *windowHandle)
+{
+  XWindowAttributes attrs;
+  int rootx, rooty;
+
+  if (!XGetWindowAttributes(stDisplay, (Window)windowHandle, &attrs))
+    return -1;
+
+  return (attrs.width << 16) | attrs.height;
+}
+
+#endif /* SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3 */
+
 
 SqDisplayDefine(X11);
 
