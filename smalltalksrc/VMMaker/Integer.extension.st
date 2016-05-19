@@ -33,7 +33,12 @@ Integer >> asPositiveIntegerObj [
 
 { #category : #'*VMMaker-interpreter simulator' }
 Integer >> asUnsignedInteger [
-	self assert: self >= 0.
+	"Since the simulator deals with positive integers most of the time we assert that the receiver is greater than zero.
+	 But one major exception is stack pointers in the StackInterpreterSimulator, which are negative.  So don't fail
+	 if the sender is a StackInterpreter and the receiver could be a stack pointer."
+	self >= 0 ifFalse:
+		[self assert: ((thisContext sender methodClass includesBehavior: StackInterpreter)
+					and: [thisContext sender receiver stackPages couldBeFramePointer: self])].
 	^self
 ]
 
@@ -174,7 +179,7 @@ Integer >> signedIntFromLong [
 	"Self is a signed or unsigned 32-bit integer"
 
 	| bits |
-	(self >= SmallInteger minVal and: [self <= SmallInteger maxVal]) ifTrue: "These are known to be SmallIntegers..."
+	(self >= -1073741824 and: [self <= 1073741823]) ifTrue: "These are known to be SmallIntegers..."
 		[^self].
 	bits := self bitAnd: 16rFFFFFFFF.
 	(bits digitAt: 4) <= 16r7F ifTrue: [^bits].

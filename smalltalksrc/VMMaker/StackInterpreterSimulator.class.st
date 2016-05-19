@@ -1913,9 +1913,9 @@ StackInterpreterSimulator >> primitiveExecuteMethod [
 
 { #category : #'control primitives' }
 StackInterpreterSimulator >> primitiveExecuteMethodArgsArray [
-	"self halt: thisContext selector."
-	(objectMemory isOopCompiledMethod: self stackTop) ifFalse:
-		[self halt].
+	self halt: thisContext selector.
+	"(objectMemory isOopCompiledMethod: self stackTop) ifFalse:
+		[self halt]."
 	^super primitiveExecuteMethodArgsArray
 ]
 

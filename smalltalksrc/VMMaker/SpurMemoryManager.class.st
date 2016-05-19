@@ -2775,6 +2775,11 @@ SpurMemoryManager >> checkForCompactableObjects [
 		[{them size. them first. them last}]
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> checkForLeaks [
+	^checkForLeaks
+]
+
 { #category : #'debug support' }
 SpurMemoryManager >> checkFreeSpace [
 	"Bootstrap only"
@@ -4048,9 +4053,9 @@ SpurMemoryManager >> doBecome: obj1 to: obj2 copyHash: copyHashFlag [
 	self forward: obj1 to: obj2.
 	copyHashFlag ifTrue: [self setHashBitsOf: obj2 to: (self rawHashBitsOf: obj1)].
 	((self isOldObject: obj1)
-	 and: [self isYoungObject: obj2]) ifTrue:
+	 and: [self isYoung: obj2]) ifTrue:
 		[becomeEffectsFlags := becomeEffectsFlags bitOr: OldBecameNewFlag].
-	self deny: (self isForwarded: obj2)
+	self deny: (self isOopForwarded: obj2)
 ]
 
 { #category : #'gc - scavenging' }
@@ -6088,7 +6093,7 @@ SpurMemoryManager >> innerBecomeObjectsIn: array1 to: array2 copyHash: copyHashF
 		obj1 ~= obj2 ifTrue:
 			[self doBecome: obj1 to: obj2 copyHash: copyHashFlag.
 			 self followField: i ofObject: array1.
-			 self assert: (self isForwarded: obj2) not]]
+			 self assert: (self isOopForwarded: obj2) not]]
 ]
 
 { #category : #'header formats' }
