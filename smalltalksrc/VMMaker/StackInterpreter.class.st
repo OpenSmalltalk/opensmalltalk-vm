@@ -82,6 +82,7 @@ Class {
 		'checkAllocFiller',
 		'tempOop',
 		'tempOop2',
+		'tempOop3',
 		'theUnknownShort',
 		'the2ndUnknownShort',
 		'imageFloatsBigEndian',
@@ -89,6 +90,7 @@ Class {
 		'lastMethodCacheProbeWrite',
 		'gcSemaphoreIndex',
 		'classByteArrayCompactIndex',
+		'checkedPluginName',
 		'statForceInterruptCheck',
 		'statStackOverflow',
 		'statStackPageDivorce',
@@ -133,6 +135,9 @@ Class {
 		'MethodHeaderFlagBitPosition',
 		'MethodHeaderTempCountShift',
 		'MixinIndex',
+		'PrimNumberDoExternalCall',
+		'PrimNumberExternalCall',
+		'PrimNumberFFICall',
 		'PrimitiveExternalCallIndex',
 		'PrimitiveTable',
 		'StackPageReachedButUntraced',
@@ -943,9 +948,10 @@ StackInterpreter class >> initializeMiscConstants [
 	GCModeFull := 1.				"stop-the-world global GC"
 	GCModeNewSpace := 2.		"Spur's scavenge, or V3's incremental"
 	GCModeIncremental := 4.		"incremental global gc (Dijkstra tri-colour marking); as yet unimplemented"
-	GCModeBecome := 8.			"v3 post-become sweeping"
+	GCModeBecome := 8.			"v3 post-become sweeping/Spur forwarding"
 	GCModeImageSegment := 16.	"just a flag for leak checking image segments"
 	GCModeFreeSpace := 32.		"just a flag for leak checking free space; Spur only"
+	GCCheckPrimCall := 64.		"just a flag for leak checking external primitive calls"
 
 	StackPageTraceInvalid := -1.
 	StackPageUnreached := 0.
@@ -977,6 +983,9 @@ StackInterpreter class >> initializePrimitiveTable [
 	"NOTE: The real limit here is 2047 because of the old method header layout but there is no point in going over the needed size"
 	MaxPrimitiveIndex := 575.	
 	MaxQuickPrimitiveIndex := 519.
+	PrimNumberExternalCall := 117.
+	PrimNumberFFICall := 120.
+	PrimNumberDoExternalCall := 218.
 	PrimitiveTable := Array new: MaxPrimitiveIndex + 1.
 	self primitivesClass table: PrimitiveTable from: 
 	#(	"Integer Primitives (0-19)"
@@ -1156,7 +1165,7 @@ StackInterpreter class >> initializePrimitiveTable [
 		(148 primitiveClone)
 		(149 primitiveGetAttribute)
 
-		"File Primitives (150-169) - NO LONGER INDEXED"
+		"Were File Primitives (150-169) - NO LONGER INDEXED"
 		(150 159 primitiveFail)
 		(160 primitiveAdoptInstance)
 		(161 primitiveSetOrHasIdentityHash)
@@ -1435,7 +1444,7 @@ StackInterpreter class >> mustBeGlobal: var [
 	   or: [(#('interpreterProxy' 'interpreterVersion' 'inIOProcessEvents'
 			'deferDisplayUpdates' 'extraVMMemory' 'showSurfaceFn'
 			'desiredNumStackPages' 'desiredEdenBytes'
-			'breakSelector' 'breakSelectorLength' 'sendTrace' 'checkAllocFiller'
+			'breakSelector' 'breakSelectorLength' 'sendTrace' 'checkAllocFiller' 'checkedPluginName'
 			'suppressHeartbeatFlag') includes: var)
 	   or: [ "This allows slow machines to define bytecodeSetSelector as 0
 			to avoid the interpretation overhead."
@@ -3658,13 +3667,13 @@ StackInterpreter >> checkForAndFollowForwardedPrimitiveState [
 	accessorDepth := primitiveAccessorDepthTable at: primIndex.
 	"For the method-executing primitives, failure could have been in those primitives or the
 	 primitives of the methods they execute.  Find out which failed by seeing what is in effect."
-	((primIndex = 117 and: [primitiveFunctionPointer ~~ #primitiveExternalCall])
-	 or: [primIndex = 218 and: [primitiveFunctionPointer ~~ #primitiveDoNamedPrimitiveWithArgs]])
+	((primIndex = PrimNumberExternalCall and: [primitiveFunctionPointer ~~ #primitiveExternalCall])
+	 or: [primIndex = PrimNumberDoExternalCall and: [primitiveFunctionPointer ~~ #primitiveDoNamedPrimitiveWithArgs]])
 		ifTrue:
 			[accessorDepth := self primitiveAccessorDepthForExternalPrimitiveMethod: newMethod]
 		ifFalse:
 			[self assert: (self saneFunctionPointerForFailureOfPrimIndex: primIndex)].
-	self assert: (accessorDepth between: -127 and: 127).
+	self assert: (accessorDepth between: -1 and: 4).
 	accessorDepth >= 0 ifTrue:
 		[0 to: argumentCount do:
 			[:index| | oop |
@@ -3902,6 +3911,9 @@ StackInterpreter >> checkInterpreterIntegrity [
 			[ok := false]].
 	tempOop2 = 0 ifFalse:
 		[(objectMemory checkOopIntegrity: tempOop2 named: 'tempOop2')ifFalse:
+			[ok := false]].
+	tempOop3 = 0 ifFalse:
+		[(objectMemory checkOopIntegrity: tempOop3 named: 'tempOop3')ifFalse:
 			[ok := false]].
 
 	"Callback support - check suspended callback list"
@@ -7672,7 +7684,7 @@ StackInterpreter >> initialize [
 	nextProfileTick := 0.
 	nextPollUsecs := 0.
 	nextWakeupUsecs := 0.
-	tempOop := tempOop2 := theUnknownShort := 0.
+	tempOop := tempOop2 := tempOop3 := theUnknownShort := 0.
 	interruptPending := false.
 	inIOProcessEvents := 0.
 	fullScreenFlag := 0.
@@ -8433,6 +8445,13 @@ StackInterpreter >> isEmptyList: aLinkedList [
 	^ (objectMemory fetchPointer: FirstLinkIndex ofObject: aLinkedList) = objectMemory nilObject
 ]
 
+{ #category : #'compiled methods' }
+StackInterpreter >> isExternalPrimitiveCall: aMethodObj [
+	"Answer if the method is an external primtiive call (prim 117)."
+	<inline: true>
+	^(self primitiveIndexOf: aMethodObj) = PrimNumberExternalCall
+]
+
 { #category : #'internal interpreter access' }
 StackInterpreter >> isFloatObject: oop [
 	<api>
@@ -8520,13 +8539,13 @@ StackInterpreter >> isNullExternalPrimitiveCall: aMethodObj [
 	"Answer if the method is an external primtiive call (prim 117) with a null external primtiive.
 	 This is just for an assert in the CoInterpreter."
 	| lit |
-	((self primitiveIndexOf: aMethodObj) = 117
+	((self isExternalPrimitiveCall: aMethodObj)
 	and: [(objectMemory literalCountOf: aMethodObj) > 0]) ifFalse:
 		[^false].
 
 	lit := self literal: 0 ofMethod: aMethodObj.
 	^(objectMemory isArray: lit)
-	  and: [(objectMemory lengthOf: lit) = 4
+	  and: [(objectMemory numSlotsOf: lit) = 4
 	  and: [(objectMemory fetchPointer: 3 ofObject: lit) = ConstZero
 			or: [(objectMemory fetchPointer: 3 ofObject: lit) = ConstMinusOne]]]
 ]
@@ -9518,7 +9537,10 @@ StackInterpreter >> mapInterpreterOops [
 		[tempOop := objectMemory remapObj: tempOop].
 	(tempOop2 ~= 0
 	 and: [objectMemory shouldRemapOop: tempOop2]) ifTrue:
-		[tempOop2 := objectMemory remapObj: tempOop2]
+		[tempOop2 := objectMemory remapObj: tempOop2].
+	(tempOop3 ~= 0
+	 and: [objectMemory shouldRemapOop: tempOop3]) ifTrue:
+		[tempOop3 := objectMemory remapObj: tempOop3]
 ]
 
 { #category : #'object memory support' }
@@ -9672,6 +9694,7 @@ StackInterpreter >> markAndTraceInterpreterOops: fullGCFlag [
 	self traceProfileState.
 	tempOop = 0 ifFalse: [objectMemory markAndTrace: tempOop].
 	tempOop2 = 0 ifFalse: [objectMemory markAndTrace: tempOop2].
+	tempOop3 = 0 ifFalse: [objectMemory markAndTrace: tempOop3].
 
 	1 to: objectMemory remapBufferCount do: [:i | 
 			oop := objectMemory remapBuffer at: i.
@@ -10031,6 +10054,17 @@ StackInterpreter >> maybeInlinePositive32BitIntegerFor: integerValue [
 		ifFalse: 
 			[objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped32IfBigEndian: integerValue)].
 	^newLargeInteger
+]
+
+{ #category : #'debug support' }
+StackInterpreter >> maybeLeakCheckExternalPrimCall: aMethodObj [
+	"Assert-only check for leaks after external prim calls if checkForLeaks includes the GCCheckPrimCall flag.
+	 This is ionly really useful from a low-level C debugger, hence no accessors for checkedPluginName."
+	((objectMemory checkForLeaks anyMask: GCCheckPrimCall)
+	 and: [(self isExternalPrimitiveCall: aMethodObj)
+	 and: [checkedPluginName = (objectMemory fetchPointer: 0 ofObject: (self literal: 0 ofMethod: aMethodObj))]]) ifTrue:
+		[objectMemory runLeakCheckerFor: GCCheckPrimCall].
+	^true
 ]
 
 { #category : #'primitive support' }
@@ -13978,6 +14012,7 @@ StackInterpreter >> slowPrimitiveResponse [
 		 savedFramePointer := framePointer].
 	self initPrimCall.
 	self dispatchFunctionPointer: primitiveFunctionPointer.
+	self assert: (self maybeLeakCheckExternalPrimCall: newMethod).
 	self maybeRetryFailureDueToForwarding.
 	self maybeFailForLastObjectOverwrite.
 	(FailImbalancedPrimitives

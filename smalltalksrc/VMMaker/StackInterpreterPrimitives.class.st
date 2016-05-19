@@ -408,8 +408,8 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 	spec := objectMemory fetchPointer: 1 "first literal" ofObject: methodArg.
 	isArray := self isInstanceOfClassArray: spec.
 	(isArray
-	and: [(objectMemory lengthOf: spec) = 4
-	and: [(self primitiveIndexOfMethod: methodArg header: methodHeader) = 117]]) ifFalse:
+	and: [(objectMemory numSlotsOf: spec) = 4
+	and: [(self primitiveIndexOfMethod: methodArg header: methodHeader) = PrimNumberExternalCall]]) ifFalse:
 		[^self primitiveFailFor: -3]. "invalid methodArg state"
 
 	(self argumentCountOfMethodHeader: methodHeader) = arraySize ifFalse:
@@ -480,22 +480,38 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 
 { #category : #'control primitives' }
 StackInterpreterPrimitives >> primitiveDoPrimitiveWithArgs [
-	| argumentArray arraySize index primIdx |
+	"Implement either ProtoObject>>tryPrimitive: primIndex withArgs: argArray
+	 or Context>>receiver: anObject tryPrimitive: primIndex withArgs: argArray.
+	 If this primitive fails, arrange that its error code is a negative integer, to
+	 distinguish between this failing and the primitive it invokes failing."
+	| argumentArray arraySize index primIdx savedNumArgs rcvr |
+	(argumentCount between: 2 and: 3) ifFalse:
+		[^self primitiveFailFor: PrimErrUnsupported negated].
 	argumentArray := self stackTop.
-	(objectMemory isArray: argumentArray) ifFalse: [^self primitiveFail].
+	primIdx := self stackValue: 1.
+	((objectMemory isArray: argumentArray)
+	 and: [objectMemory isIntegerObject: primIdx]) ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument negated].
 	arraySize := objectMemory numSlotsOf: argumentArray.
-	self success: (self roomToPushNArgs: arraySize).
+	(self roomToPushNArgs: arraySize) ifFalse:
+		[^self primitiveFailFor: PrimErrLimitExceeded negated].
 
-	primIdx := self stackIntegerValue: 1.
-	self successful ifFalse: [^self primitiveFail]. "invalid args"
-
+	primIdx := objectMemory integerValueOf: primIdx.
 	primitiveFunctionPointer := self functionPointerFor: primIdx inClass: nil.
 	primitiveFunctionPointer = 0 ifTrue:
 		[primitiveFunctionPointer := #primitiveDoPrimitiveWithArgs.
-		 ^self primitiveFail].
+		 ^self primitiveFailFor: PrimErrBadIndex negated].
 
 	"Pop primIndex and argArray, then push args in place..."
-	self pop: 2.
+	(savedNumArgs := argumentCount) = 3
+		ifTrue: "...and receiver if the three arg form"
+			[tempOop2 := self stackValue: 4. "actual receiver"
+			 rcvr := self stackValue: 3. "receiver for primitive"
+			 (objectMemory isOopForwarded: rcvr) ifTrue:
+				[rcvr := objectMemory followForwarded: rcvr].
+			 self pop: 4; push: rcvr] "use first arg as receiver"
+		ifFalse:
+			[self pop: 2].
 	argumentCount := arraySize.
 	index := 1.
 	[index <= argumentCount] whileTrue:
@@ -504,32 +520,39 @@ StackInterpreterPrimitives >> primitiveDoPrimitiveWithArgs [
 
 	self isPrimitiveFunctionPointerAnIndex ifTrue:
 		[self externalQuickPrimitiveResponse.
+		 tempOop2 := 0.
 		^nil].
 	"We use tempOop instead of pushRemappableOop:/popRemappableOop here because in
 	 the Cogit primitiveEnterCriticalSection, primitiveSignal, primitiveResume et al longjmp back
 	 to either the interpreter or machine code, depending on the process activated.  So if we're
-	 executing one of these primitives control won't actually return here and the matching
-	 popRemappableOop: wouldn't occur, potentially overflowing the remap buffer.  While recursion
-	 could occur (nil tryPrimitive: 118 withArgs: #(111 #())) it counts as shooting oneself in the foot."
+	 executing one of these primitives, control won't actually return here and the matching
+	 popRemappableOop: wouldn't occur, potentially overflowing the remap buffer.
+	 Note that while recursion could occur (nil tryPrimitive: 118 withArgs: #(118 #(110 #())))
+	 it counts as shooting oneself in the foot."
 	tempOop := argumentArray. "prim might alloc/gc"
-	"Run the primitive (sets primFailCode)"
 
+	"Run the primitive (sets primFailCode)"
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue:
-			[tempOop2 := newMethod.
+			[tempOop3 := newMethod.
 			 newMethod := objectMemory integerObjectOf: primIdx.
 			 self slowPrimitiveResponse.
-			 newMethod := tempOop2.
-			 tempOop2 := 0]
+			 newMethod := tempOop3.
+			 tempOop3 := 0]
 		ifFalse:
 			[self slowPrimitiveResponse].
+
 	self successful ifFalse: "If primitive failed, then restore state for failure code"
 		[self pop: arraySize.
+		 savedNumArgs = 3 ifTrue:
+			[rcvr := self stackTop.
+			 self stackTopPut: tempOop2.
+			 self push: rcvr].
 		 self pushInteger: primIdx.
 		 self push: tempOop.
 		 primitiveFunctionPointer := #primitiveDoPrimitiveWithArgs.
-		 argumentCount := 2].
-	tempOop := 0
+		 argumentCount := savedNumArgs].
+	tempOop := tempOop2 := 0
 ]
 
 { #category : #'control primitives' }
@@ -594,7 +617,7 @@ StackInterpreterPrimitives >> primitiveExternalCall [
 	"Call an external primitive. External primitive methods first literals are an array of
 		* The module name (String | Symbol)
 		* The function name (String | Symbol)
-		* The session ID (SmallInteger) [OBSOLETE] (or in Spur, the accessorDepth)
+		* The session ID (SmallInteger) [OBSOLETE], or in Spur, the accessorDepth (Integer)
 		* The function index (Integer) in the externalPrimitiveTable
 	For fast interpreter dispatch in subsequent invocations the primitiveFunctionPointer
 	in the method cache is rewritten, either to the function itself, or to zero if the external
@@ -658,7 +681,7 @@ StackInterpreterPrimitives >> primitiveExternalCall [
 		[self primitiveFailFor: PrimErrBadMethod].
 	functionLength := objectMemory lengthOf: functionName.
 
-	"Spur needs to know the primitive's accessorDepth which is stored in the last slot of the first literal."
+	"Spur needs to know the primitive's accessorDepth which is stored in the third slot of the first literal."
 	objectMemory hasSpurMemoryManagerAPI
 		ifTrue:
 			[addr := self ioLoadExternalFunction: functionName + objectMemory baseHeaderSize

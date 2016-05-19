@@ -19,6 +19,7 @@ Class {
 		'DisownVMLockOutFullGC',
 		'DoAssertionChecks',
 		'DoExpensiveAssertionChecks',
+		'GCCheckPrimCall',
 		'GCModeBecome',
 		'GCModeFreeSpace',
 		'GCModeFull',
