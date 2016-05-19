@@ -75,11 +75,6 @@ Spur32BitCoMemoryManager >> ceScheduleScavenge [
 	self scheduleScavenge
 ]
 
-{ #category : #accessing }
-Spur32BitCoMemoryManager >> checkForLeaks [
-	^checkForLeaks
-]
-
 { #category : #'debug support' }
 Spur32BitCoMemoryManager >> checkMemoryMap [
 	"Override to check that Cog methods are considered neither young nor old.
