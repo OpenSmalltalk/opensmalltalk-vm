@@ -784,6 +784,15 @@ SpurGenerationScavenger >> pastSpaceBytes [
 ]
 
 { #category : #'debug support' }
+SpurGenerationScavenger >> printRememberedSet [
+	"Print the objects in the remembered set."
+	<api>
+	0 to: rememberedSetSize - 1 do:
+		[:i|
+		coInterpreter printNum: i; space; shortPrintOop: (rememberedSet at: i)]
+]
+
+{ #category : #'debug support' }
 SpurGenerationScavenger >> printWeaklingList: listHead [
 	"Print the objects on either the weakList or the ephemeronList."
 	| corpse |
@@ -903,6 +912,10 @@ SpurGenerationScavenger >> referenceCountRememberedReferents: population [
 	0 to: rememberedSetSize - 1 do:
 		[:i| | elephant |
 		elephant := rememberedSet at: i.
+		(manager isForwarded: elephant) ifTrue:
+			[elephant := manager followForwarded: elephant.
+			 (manager isImmediate: elephant) ifTrue: "take care if elephant forwarded to an immediate"
+				[elephant := manager nilObject]].
 		0 to: (manager numPointerSlotsOf: elephant) - 1 do:
 			[:j| | referent refCount |
 			referent := manager fetchPointer: j ofObject: elephant.
