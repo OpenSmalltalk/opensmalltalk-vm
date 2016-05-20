@@ -177,10 +177,10 @@ Integer >> signedIntFromChar [
 { #category : #'*VMMaker-interpreter simulator' }
 Integer >> signedIntFromLong [
 	"Self is a signed or unsigned 32-bit integer"
+
 	| bits |
-	 "If it's already 32bits, avoid computation"
-	(self >= -16r80000000 and: [self <= 16r7FFFFFFF])
-		ifTrue: [^self].
+	(self >= -1073741824 and: [self <= 1073741823]) ifTrue: "These are known to be SmallIntegers..."
+		[^self].
 	bits := self bitAnd: 16rFFFFFFFF.
 	(bits digitAt: 4) <= 16r7F ifTrue: [^bits].
 	^bits - 16r100000000
