@@ -7048,14 +7048,18 @@ static long display_hostWindowShowDisplay(unsigned *dispBitsIndex, long width, l
 					 int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex)
 											    { return 0; }
 
-#define isWindowHandle(winIdx) ((winIdx) >= 65536)
+/* By convention for HostWindowPlugin, handle 1 refers to the display window */
+#define realWindowHandle(handleFromImage) (handleFromImage == 1 ? stParent : handleFromImage)
+
+/* Window struct addresses are not small integers */
+#define isWindowHandle(winIdx) ((realWindowHandle(winIdx)) >= 65536)
 
 static long display_ioSizeOfNativeWindow(void *windowHandle);
 static long display_hostWindowGetSize(long windowIndex)
 {
-	return isWindowHandle(windowIndex)
-			? display_ioSizeOfNativeWindow((void *)windowIndex)
-			: -1;
+  return isWindowHandle(windowIndex)
+    ? display_ioSizeOfNativeWindow((void *)realWindowHandle(windowIndex))
+    : -1;
 }
 
 /* ioSizeOfWindowSetxy: args are int windowIndex, int w & h for the
@@ -7063,31 +7067,31 @@ static long display_hostWindowGetSize(long windowIndex)
  * produced in (width<<16 | height) format or -1 for failure as above. */
 static long display_hostWindowSetSize(long windowIndex, long w, long h)
 {
-	XWindowAttributes attrs;
-	int real_border_width;
+  XWindowAttributes attrs;
+  int real_border_width;
 
-	if (!isWindowHandle(windowIndex)
-	 || !XGetWindowAttributes(stDisplay, (Window)windowIndex, &attrs))
-		return -1;
+  if (!isWindowHandle(windowIndex)
+      || !XGetWindowAttributes(stDisplay, (Window)realWindowHandle(windowIndex), &attrs))
+    return -1;
 
-	/* At least under Gnome a window's border width in its attributes is zero
-	 * but the relative position of the left-hand edge is the actual border
-	 * width.
-	 */
-	real_border_width = attrs.border_width ? attrs.border_width : attrs.x;
-	return XResizeWindow(stDisplay, (Window)windowIndex,
-						 w - 2 * real_border_width,
-						 h - attrs.y - real_border_width)
-		? display_ioSizeOfNativeWindow((void *)windowIndex)
-		: -1;
+  /* At least under Gnome a window's border width in its attributes is zero
+   * but the relative position of the left-hand edge is the actual border
+   * width.
+   */
+  real_border_width= attrs.border_width ? attrs.border_width : attrs.x;
+  return XResizeWindow(stDisplay, (Window)realWindowHandle(windowIndex),
+   		       w - 2 * real_border_width,
+		       h - attrs.y - real_border_width)
+    ? display_ioSizeOfNativeWindow((void *)realWindowHandle(windowIndex))
+    : -1;
 }
 
 static long display_ioPositionOfNativeWindow(void *windowHandle);
 static long display_hostWindowGetPosition(long windowIndex)
 {
-	return isWindowHandle(windowIndex)
-			? display_ioPositionOfNativeWindow((void *)windowIndex)
-			: -1;
+  return isWindowHandle(windowIndex)
+    ? display_ioPositionOfNativeWindow((void *)realWindowHandle(windowIndex))
+    : -1;
 }
 
 /* ioPositionOfWindowSetxy: args are int windowIndex, int x & y for the
@@ -7095,11 +7099,11 @@ static long display_hostWindowGetPosition(long windowIndex)
  * produced in (left<<16 | top) format or -1 for failure, as above */
 static long display_hostWindowSetPosition(long windowIndex, long x, long y)
 {
-	if (!isWindowHandle(windowIndex))
-		return -1;
-	return XMoveWindow(stDisplay, (Window)windowIndex, x, y)
-		? display_ioPositionOfNativeWindow((void *)windowIndex)
-		: -1;
+  if (!isWindowHandle(windowIndex))
+    return -1;
+  return XMoveWindow(stDisplay, (Window)realWindowHandle(windowIndex), x, y)
+    ? display_ioPositionOfNativeWindow((void *)windowIndex)
+    : -1;
 }
 
 
@@ -7114,6 +7118,38 @@ static long display_hostWindowSetTitle(long windowIndex, char *newTitle, long si
 		  8, PropModeReplace, newTitle, sizeOfTitle);
 
   return 0;
+}
+
+static long display_ioSizeOfNativeWindow(void *windowHandle)
+{
+  XWindowAttributes attrs;
+  int real_border_width;
+
+  if (!XGetWindowAttributes(stDisplay, (Window)windowHandle, &attrs))
+    return -1;
+
+  /* At least under Gnome a window's border width in its attributes is zero
+   * but the relative position of the left-hand edge is the actual border
+   * width.
+   */
+  real_border_width= attrs.border_width ? attrs.border_width : attrs.x;
+  return (attrs.width + 2 * real_border_width << 16)
+    | (attrs.height + attrs.y + real_border_width);
+}
+
+static long display_ioPositionOfNativeWindow(void *windowHandle)
+{
+  XWindowAttributes attrs;
+  Window neglected_child;
+  int rootx, rooty;
+
+  if (!XGetWindowAttributes(stDisplay, (Window)windowHandle, &attrs)
+      || !XTranslateCoordinates(stDisplay, (Window)windowHandle, attrs.root,
+				-attrs.border_width, -attrs.border_width,
+				&rootx, &rooty, &neglected_child))
+    return -1;
+
+  return (rootx - attrs.x << 16) | (rooty - attrs.y);
 }
 
 #endif /* (SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 2) */
@@ -7252,39 +7288,6 @@ display_ioSizeOfNativeDisplay(void *windowHandle)
 	return (attrs.width << 16) | attrs.height;
 }
 
-static long
-display_ioPositionOfNativeWindow(void *windowHandle)
-{
-	XWindowAttributes attrs;
-	Window neglected_child;
-	int rootx, rooty;
-
-	if (!XGetWindowAttributes(stDisplay, (Window)windowHandle, &attrs)
-	 || !XTranslateCoordinates(stDisplay, (Window)windowHandle, attrs.root,
-							   -attrs.border_width, -attrs.border_width,
-							   &rootx, &rooty, &neglected_child))
-		return -1;
-
-	return (rootx - attrs.x << 16) | (rooty - attrs.y);
-}
-
-static long
-display_ioSizeOfNativeWindow(void *windowHandle)
-{
-	XWindowAttributes attrs;
-	int real_border_width;
-
-	if (!XGetWindowAttributes(stDisplay, (Window)windowHandle, &attrs))
-		return -1;
-
-	/* At least under Gnome a window's border width in its attributes is zero
-	 * but the relative position of the left-hand edge is the actual border
-	 * width.
-	 */
-	real_border_width = attrs.border_width ? attrs.border_width : attrs.x;
-	return (attrs.width + 2 * real_border_width << 16)
-		 | (attrs.height + attrs.y + real_border_width);
-}
 #endif /* SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 3 */
 
 
