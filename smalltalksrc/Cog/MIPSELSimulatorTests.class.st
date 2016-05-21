@@ -4,7 +4,7 @@ Class {
 	#pools : [
 		'MIPSConstants'
 	],
-	#category : 'Cog-Processors-Tests'
+	#category : #'Cog-Processors-Tests'
 }
 
 { #category : #'tests - arithmetic' }
