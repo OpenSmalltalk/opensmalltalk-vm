@@ -1,7 +1,7 @@
 Class {
 	#name : #SpurBootstrapSqueakFamilyPrototypes,
 	#superclass : #SpurBootstrapPrototypes,
-	#category : #'Cog-Bootstrapping'
+	#category : 'Cog-Bootstrapping'
 }
 
 { #category : #accessing }
@@ -166,7 +166,7 @@ SpurBootstrapSqueakFamilyPrototypes >> ClassBuilderPROTOTYPEupdate: oldClass to:
 
 { #category : #'method prototypes' }
 SpurBootstrapSqueakFamilyPrototypes >> InstructionPrinterPROTOTYPEcallPrimitive: index [
-	"Print the callPrimitive."
+	"Print the callPrimitive bytecode."
 
-	self print: 'callPrimtive: ' , index printString
+	self print: 'callPrimitive: ' , index printString
 ]

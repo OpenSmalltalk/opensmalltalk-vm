@@ -5,7 +5,7 @@ Class {
 		'source',
 		'substitutions'
 	],
-	#category : #'Cog-Bootstrapping'
+	#category : 'Cog-Bootstrapping'
 }
 
 { #category : #patching }
