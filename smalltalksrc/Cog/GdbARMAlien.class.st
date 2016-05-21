@@ -20,7 +20,7 @@ Class {
 		'SomethingLoggedError',
 		'UnsupportedOperationError'
 	],
-	#category : 'Cog-Processors'
+	#category : #'Cog-Processors'
 }
 
 { #category : #'instance creation' }
@@ -649,6 +649,45 @@ GdbARMAlien >> fp: anUnsignedInteger [
 	^self r11: anUnsignedInteger
 ]
 
+{ #category : #accessing }
+GdbARMAlien >> fpCPSR [
+"The VFP cpsr flags are kept as a single word in the Alien structure. Return just the top 4 bits, the actual flags"
+	^(self unsignedLongAt: 1785) >>28
+]
+
+{ #category : #'floating-point emulation' }
+GdbARMAlien >> handleBasicDoubleArithmetic: instr at: pc [
+	"Emulate a basic math - add/sub/mul/div -  VFP instruction."
+	| rn rd rm vn vm |
+	rn := instr >> 16 bitAnd: 15.
+	rd := instr >> 12 bitAnd: 15.
+	rm := instr bitAnd: 15.
+	vn := Float fromIEEE64BitWord: (self perform: (self registerStateGetters at: rn + 18)). "Assume accesses fp regs"
+	vm := Float fromIEEE64BitWord: (self perform: (self registerStateGetters at: rm + 18)). "Assume accesses fp regs"
+
+	"simplest to match the entire instruction pattern rather than mess around shifting and masking and merging"
+	(instr  bitAnd: 16rFF00FF0)
+		caseOf: {
+		[16rE200B00 "FMULD"]	->
+			[| r |
+			 r := vn * vm.
+			 self perform: (self registerStateSetters at: rd + 18) with: r asIEEE64BitWord].
+		[16rE300B00 "FADDD"]	->
+			[| r |
+			 r := vn + vm.
+			 self perform: (self registerStateSetters at: rd + 18) with: r asIEEE64BitWord].
+		[16rE300B40 "FSUBD"]	->
+			[| r |
+			 r := vn - vm.
+			 self perform: (self registerStateSetters at: rd + 18) with: r asIEEE64BitWord].
+		[16rE800B00"FDIVD"]	->
+			[| r |
+			 r := vn / vm.
+			 self perform: (self registerStateSetters at: rd + 18) with: r asIEEE64BitWord].}
+		otherwise: [self reportPrimitiveFailure].
+	self pc: pc + 4
+]
+
 { #category : #'error handling' }
 GdbARMAlien >> handleExecutionPrimitiveFailureAt: pc "<Integer>" in: memoryArray [ "<Bitmap|ByteArray>"
 	"Handle an execution primitive failure for an otherwise unhandled opcode."
@@ -680,6 +719,83 @@ GdbARMAlien >> handleExecutionPrimitiveFailureIn: memoryArray "<Bitmap|ByteArray
 		 ^self handleExecutionPrimitiveFailureAt: pc in: memoryArray].
 
 	^self reportPrimitiveFailure
+]
+
+{ #category : #'floating-point emulation' }
+GdbARMAlien >> handleExtendedDoubleArithmetic: instr at: pc [
+	"Emulate an extended math - cmp/sqrt/sitod -  VFP instruction."
+	| rn rd rm vn vm vd |
+	rn := instr >> 16 bitAnd: 15.
+	rd := instr >> 12 bitAnd: 15.
+	rm := instr bitAnd: 15.
+	vn := Float fromIEEE64BitWord: (self perform: (self registerStateGetters at: rn + 18)). "Assume accesses fp regs"
+	vm := Float fromIEEE64BitWord: (self perform: (self registerStateGetters at: rm + 18)). "Assume accesses fp regs"
+
+	"simplest to match the entire instruction pattern rather than mess around shifting and masking and merging"
+	(instr  bitAnd: 16rFF00FF0)
+		caseOf: {
+		[16rEB80B80 "FCMPD"]	->
+			["read rd, compare with rm (ignore rn) and set FPSCR NZCV flags. Sigh"
+				vd := Float fromIEEE64BitWord: (self perform: (self registerStateGetters at: rd + 18)).
+				self break].
+		[16rEB80BC0 "FSITOD"]	->
+			[| r |
+			 r := vm asFloat.
+			 self perform: (self registerStateSetters at: rd + 18) with: r asIEEE64BitWord].
+		[16rEB10BC0 "FSQRTD"]	->
+			[| r |
+			 r := vm sqrt.
+			 self perform: (self registerStateSetters at: rd + 18) with: r asIEEE64BitWord].
+		}
+		otherwise: [self reportPrimitiveFailure].
+	self pc: pc + 4
+]
+
+{ #category : #'floating-point emulation' }
+GdbARMAlien >> handleFPLoadStore: instr at: pc [
+	"Emulate a VFP load/store instruction."
+	| rn rd offset |
+	rn := instr >> 16 bitAnd: 15.
+	rd := instr >> 12 bitAnd: 15.
+	offset := instr bitAnd: 16rFF.
+
+	"examine the U and Lbits"
+	(instr >>20  bitAnd: 16rF)
+		caseOf: {
+		[0"Store neg"]	->
+			[| r addr|
+			addr := (self register: rn) - (offset<<2).
+			 r := self perform: (self registerStateGetters at: rd + 18).
+			 self unsignedLongLongAt: addr put: r].
+		[1"Load neg"]	->
+			[| r addr|
+			addr := (self register: rn) - (offset<<2).
+			r := self unsignedLongLongAt: addr.
+			 self perform: (self registerStateSetters at: rd + 18) with: r ].
+		[8"Store pos"]	->
+			[| r addr|
+			addr := (self register: rn) + (offset<<2).
+			 r := self perform: (self registerStateGetters at: rd + 18).
+			 self unsignedLongLongAt: addr put: r].
+		[9"Load pos"]	->
+			[| r addr|
+			addr := (self register: rn) + (offset<<2).
+			r := self unsignedLongLongAt: addr.
+			 self perform: (self registerStateSetters at: rd + 18) with: r ].}
+		otherwise: [self reportPrimitiveFailure].
+	self pc: pc + 4
+]
+
+{ #category : #'floating-point emulation' }
+GdbARMAlien >> handleFPStatus: instr at: pc [
+	"Emulate transferring the FP status to the ARM CPSR."
+	| fpcpsr |
+	fpcpsr := self fpCPSR.
+	self vflag: (fpcpsr bitAnd: 1).
+	self cflag: ((fpcpsr >>1) bitAnd: 1).
+	self zflag: ((fpcpsr >>2) bitAnd: 1).
+	self nflag: ((fpcpsr >>3) bitAnd: 1).
+	self pc: pc + 4
 ]
 
 { #category : #'error handling' }
@@ -728,17 +844,28 @@ GdbARMAlien >> handleFailingBranch: instr to: address at: pc [
 
 { #category : #'error handling' }
 GdbARMAlien >> handleFailingFPArithmetic: instr at: pc [
-	| oneRegTransferMask twoRegTransferMask |
-	oneRegTransferMask := 16rF000F00.
-	(instr bitAnd: oneRegTransferMask) = 16rE000B00 ifTrue:
-		[^self handleOneRegTransferDoubleArithmetic: instr at: pc].
-	(instr bitAnd: oneRegTransferMask) = 16rE000A00 ifTrue:
-		[^self handleOneRegTransferSingleArithmetic: instr at: pc].
-	twoRegTransferMask := 16rFE00FC0.
-	(instr bitAnd: twoRegTransferMask) = 16rC400B00 ifTrue:
-		[^self handleTwoRegTransferDoubleArithmetic: instr at: pc].
-	(instr bitAnd: twoRegTransferMask) = 16rC400A00 ifTrue:
-		[^self handleTwoRegTransferSingleArithmetic: instr at: pc].
+	
+	"basic arithmetic"
+	(instr bitAnd: 16rF400FB0) = 16rE000B00 ifTrue:
+		[^self handleBasicDoubleArithmetic: instr at: pc].
+	
+	"extension instructions sqrt/cmp/sitod"
+	(instr bitAnd: 16rFF00F70) = 16rEB00B40 ifTrue:
+		[^self handleExtendedDoubleArithmetic: instr at: pc].
+	
+	"move ARM reg to coproc reg. "
+	(instr bitAnd: 16rFF00FFF) = 16rE000A10 ifTrue:
+		[^self handleRegToDoubleTransfer: instr at: pc].
+
+	"move FPSCR reg to ARM CPSR"
+	(instr bitAnd: 16rFFFFFFF) = 16rEF1FA10 ifTrue:
+		[^self handleFPStatus: instr at: pc].
+
+	"load and store ops. All doubles; we only use FLDD & FSTD"
+	(instr bitAnd: 16rF600F00) = 16rD000B00 ifTrue:
+		[^self handleFPLoadStore: instr at: pc].
+	
+	
 	^self reportPrimitiveFailure
 ]
 
@@ -832,6 +959,18 @@ GdbARMAlien >> handleOneRegTransferDoubleArithmetic: instr at: pc [
 	self pc: pc + 4
 ]
 
+{ #category : #'floating-point emulation' }
+GdbARMAlien >> handleRegToDoubleTransfer: instr at: pc [
+	"Emulate an ARM to VFP instruction."
+	| rn rd vn |
+	rn := (instr >> 16 bitAnd: 15) << 1 bitOr: (instr >>6 bitAnd: 1).
+	rd := instr >> 12 bitAnd: 15.
+	vn := self register: rn.
+
+	self perform: (self registerStateSetters at: rd + 18) with: vn.
+	self pc: pc + 4
+]
+
 { #category : #accessing }
 GdbARMAlien >> ifflags [
 "The ARM cpsr flags are kept as individual fields in the Alien structure. The address here is the 1-based byte offset into the ARMul_State structure"
@@ -874,19 +1013,17 @@ GdbARMAlien >> instructionIsAnyB: instr [
 
 { #category : #testing }
 GdbARMAlien >> instructionIsAnyFPArithmetic: instr [
-	"Identify single register transfer and double register transfer VFP instructions.
-	 See C3.3 & C3.4 in the ARM ARM."
-	| oneRegTransferMask twoRegTransferMask |
-	oneRegTransferMask := 16rF000F00.
-	(instr bitAnd: oneRegTransferMask) = 16rE000A00 ifTrue:
-		[^true].
-	(instr bitAnd: oneRegTransferMask) = 16rE000B00 ifTrue:
-		[^true].
-	twoRegTransferMask := 16rFE00FC0.
-	(instr bitAnd: twoRegTransferMask) = 16rC400A00 ifTrue:
-		[^true].
-	(instr bitAnd: twoRegTransferMask) = 16rC400B00 ifTrue:
-		[^true].
+	"Identify VFP instructions.
+	 See C3.1 - C3.4 in the ARM ARM v5 DDI01001."
+	| cp isFP |
+	
+	"All FP instructions are coprocessor instructions on coproc 10 or 11"
+	cp := instr>>8 bitAnd: 16rF.
+	isFP := cp = 10 or:[cp = 11].
+	(isFP and: [(instr>>25 bitAnd: 7) = 6]) ifTrue: [^true].
+	(isFP and: [(instr>>24 bitAnd: 16rF) = 16rE]) ifTrue: [^true].
+	
+	"nope"
 	^false
 ]
 

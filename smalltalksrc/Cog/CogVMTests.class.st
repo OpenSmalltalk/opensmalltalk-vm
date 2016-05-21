@@ -1,7 +1,7 @@
 Class {
 	#name : #CogVMTests,
 	#superclass : #TestCase,
-	#category : 'Cog-Tests'
+	#category : #'Cog-Tests'
 }
 
 { #category : #support }
