@@ -10,6 +10,17 @@ SpurBootstrapCuisPrototypes class >> imageType [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrapCuisPrototypes >> ArrayPROTOTYPEcreateMethod: numberOfBytesForAllButTrailer class: aCompiledMethodClass header: headerWord [ 
+	| meth delta |
+	meth := aCompiledMethodClass newMethod: numberOfBytesForAllButTrailer + self size header: headerWord.
+	"copy the trailer data"
+	delta := meth size - self size.
+	1 to: self size do:
+		[:i | meth at: delta + i put: (self at: i)].
+	^meth
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrapCuisPrototypes >> BehaviorPROTOTYPEidentityHash [
 	"Answer a SmallInteger whose value is related to the receiver's identity.
 	 Behavior implements identityHash to allow the VM to use an object representation which
@@ -325,6 +336,11 @@ SpurBootstrapCuisPrototypes >> MethodContextclassPROTOTYPEallInstancesDo: aBlock
 		[next := inst nextInstance.
 		 aBlock value: inst.
 		 inst := next]
+]
+
+{ #category : #'method prototypes' }
+SpurBootstrapCuisPrototypes >> MethodNodePROTOTYPEgenerate: trailer using: aCompiledMethodClass ifQuick: methodBlock [
+	<indirect>
 ]
 
 { #category : #'method prototypes' }

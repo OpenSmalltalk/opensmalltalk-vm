@@ -17,7 +17,7 @@ Class {
 	#pools : [
 		'VMBasicConstants'
 	],
-	#category : #'Cog-ProcessorPlugins'
+	#category : 'Cog-ProcessorPlugins'
 }
 
 { #category : #translation }
