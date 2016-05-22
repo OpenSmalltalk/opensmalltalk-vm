@@ -1051,6 +1051,7 @@ static int vm_parseArgument(int argc, char **argv)
   moduleArg("-headless",		display, "X11");
   moduleArg("-fullscreen",		display, "X11");
   moduleArg("-fullscreenDirect",	display, "X11");
+  moduleArg("-compositioninput",	display, "X11");
   moduleArg("-quartz",			display, "Quartz");
   moduleArg("-nosound",			sound,   "null");
 

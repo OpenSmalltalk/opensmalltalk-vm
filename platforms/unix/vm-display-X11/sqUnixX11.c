@@ -1709,29 +1709,100 @@ static unsigned char *lookupKeys(int (*lookup)(XIC, XKeyPressedEvent*, char*, in
 
 static int recordPendingKeys(void)
 {
-  if (inputCount > 0)
+  if (compositionInput)
     {
-      int i= iebOut - iebIn;
-      for (i= (i > 0 ? i : IEB_SIZE + i) / 4; i > 0; -- i)
-	{
-# if defined(DEBUG_XIM)
-	  fprintf(stderr, "%3d pending key %2d=0x%02x\n", inputCount, i, *pendingKey);
-# endif
-	  recordKeyboardEvent(*pendingKey, EventKeyDown, modifierState, 0);
-	  recordKeyboardEvent(*pendingKey, EventKeyChar, modifierState, 0);
-	  recordKeystroke(*pendingKey);  /* DEPRECATED */
-	  ++pendingKey;
-	  if (--inputCount == 0) break;
+      if (inputCount <= 0) {
+	if (inputBuf != inputString) {
+	  free(inputBuf);
+	  inputBuf= inputString;
 	}
-      return 1;
+	return 0;
+      }
+    
+      int utf32= 0;
+      while (inputCount > 0) {
+# if defined(DEBUG_XIM)
+	fprintf(stderr, "%3d pending key 0x%02x\n", inputCount, *pendingKey);
+# endif
+	/* 110x xxxx 10xx xxxx */
+	if (inputCount >= 2 &&
+    	    pendingKey[0] >= 0xc0 && pendingKey[0] <= 0xdf && 
+    	    pendingKey[1] >= 0x80 && pendingKey[1] <= 0xbf)
+	  {
+	    utf32= ((pendingKey[0] & 0x1f) << 6) |
+		    (pendingKey[1] & 0x3f);
+	    recordKeyboardEvent(0, EventKeyDown, modifierState, utf32);
+	    recordKeyboardEvent(0, EventKeyChar, modifierState, utf32);
+	    pendingKey += 2;
+	    inputCount -= 2;
+	  }
+	/* 1110 xxxx 10xx xxxx 10xx xxxx */
+	else if (inputCount >= 3 &&
+		 pendingKey[0] >= 0xe0 && pendingKey[0] <= 0xef && 
+		 pendingKey[1] >= 0x80 && pendingKey[1] <= 0xbf && 
+		 pendingKey[2] >= 0x80 && pendingKey[2] <= 0xbf)
+	  {
+	    utf32= ((pendingKey[0]  & 0x0f) << 12) | 
+		    ((pendingKey[1] & 0x3f) << 6) | 
+		    (pendingKey[2] & 0x3f);
+	    recordKeyboardEvent(0, EventKeyDown, modifierState, utf32);
+	    recordKeyboardEvent(0, EventKeyChar, modifierState, utf32);
+	    pendingKey += 3;
+	    inputCount -= 3;
+	  }
+	/* 1111 0xxx 10xx xxxx 10xx xxxx 10xx xxxx */
+	else if (inputCount >= 4 &&
+		 pendingKey[0] >= 0xf0 && pendingKey[0] <= 0xf7 && 
+		 pendingKey[1] >= 0x80 && pendingKey[1] <= 0xbf && 
+		 pendingKey[2] >= 0x80 && pendingKey[2] <= 0xbf && 
+		 pendingKey[3] >= 0x80 && pendingKey[3] <= 0xbf)
+	  {
+	    utf32= ((pendingKey[0] & 0x07) << 18) | 
+		    ((pendingKey[1] & 0x3f) << 12) |
+		    ((pendingKey[2] & 0x3f) << 6) |
+		    (pendingKey[3] & 0x3f);
+	    recordKeyboardEvent(0, EventKeyDown, modifierState, utf32);
+	    recordKeyboardEvent(0, EventKeyChar, modifierState, utf32);
+	    pendingKey += 4;
+	    inputCount -= 4;
+	  }
+	else
+	  {
+	    recordKeyboardEvent(*pendingKey, EventKeyDown, modifierState, 0);
+	    recordKeyboardEvent(*pendingKey, EventKeyChar, modifierState, 0);
+	    recordKeystroke(*pendingKey); /* DEPRECATED */
+	    pendingKey++;
+	    inputCount--;
+	  }
+      }
+      return 0;
     }
-  /* inputBuf is allocated by lookupKeys */
-  if (inputBuf != inputString)
+  else
     {
-      free(inputBuf);
-      inputBuf= inputString;
+      if (inputCount > 0)
+	{
+	  int i= iebOut - iebIn;
+	  for (i= (i > 0 ? i : IEB_SIZE + i) / 4; i > 0; -- i)
+	    {
+# if defined(DEBUG_XIM)
+	      fprintf(stderr, "%3d pending key %2d=0x%02x\n", inputCount, i, *pendingKey);
+# endif
+	      recordKeyboardEvent(*pendingKey, EventKeyDown, modifierState, 0);
+	      recordKeyboardEvent(*pendingKey, EventKeyChar, modifierState, 0);
+	      recordKeystroke(*pendingKey);  /* DEPRECATED */
+	      ++pendingKey;
+	      if (--inputCount == 0) break;
+	    }
+	  return 1;
+	}
+      /* inputBuf is allocated by lookupKeys */
+      if (inputBuf != inputString)
+	{
+	  free(inputBuf);
+	  inputBuf= inputString;
+	}
+      return 0;
     }
-  return 0;
 }
 
 static int xkeysym2ucs4(KeySym keysym);
