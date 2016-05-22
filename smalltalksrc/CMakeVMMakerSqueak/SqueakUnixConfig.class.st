@@ -382,7 +382,6 @@ cmake --help-variable   CMAKE_PREFIX_PATH
 SqueakUnixConfig >> cmakeWriteDirectoriesDotCmake: aMaker [
 	|temp o|
 	"We could put these inline, but other components include the directories.cmake file. So, we continue that convention"
-	self flag: 'tty, aMaker never used'.
 	o := String new writeStream.
 	temp := OrderedCollection new.
 	temp
@@ -390,8 +389,9 @@ SqueakUnixConfig >> cmakeWriteDirectoriesDotCmake: aMaker [
 		addLast: ((CMakeSet new) variable: 'buildDir' quotedValue: (self buildDir ifNil: ['${topDir}/build'] ifNotNil: [self buildDir fullName]));
 		addLast: ((CMakeSet new) variable: 'thirdpartyDir' quotedValue: '${buildDir}/thirdParty');
 		addLast: ((CMakeSet new) variable: 'platformsDir' quotedValue: (self platformsDir));
-		addLast: ((CMakeSet new) variable: 'srcDir' quotedValue: (self srcDir pathName));
-		addLast: ((CMakeSet new) variable: 'srcPluginsDir' quotedValue: (pluginsDir ifNil: [ '${srcDir}/plugins' ]));
+		addLast: ((CMakeSet new) variable: 'srcDir' quotedValue: (self dirSource pathName));    "where the vm source directory lives"
+		addLast: ((CMakeSet new) variable: 'cogDir' quotedValue: (self cogDir pathName));        "oscogvm/src  for historical reasons" 
+		addLast: ((CMakeSet new) variable: 'srcPluginsDir' quotedValue: (pluginsDir ifNil: [ '${cogDir}/plugins' ]));  "plugin source directory only in oscogvm/src/plugins"
 		addLast: ((CMakeSet new) variable: 'srcVMDir' quotedValue: '${srcDir}/vm');
 		addLast: ((CMakeSet new) variable: 'platformName' quotedValue: (self platformName));
 		addLast: ((CMakeSet new) variable: 'targetPlatform' quotedValue: '${platformsDir}/${platformName}');
