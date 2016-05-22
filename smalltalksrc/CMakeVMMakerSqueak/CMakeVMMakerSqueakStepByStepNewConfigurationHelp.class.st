@@ -1807,7 +1807,10 @@ We cover that  in the next Help page.
 
 *The naming convention is straightforward and convered in the ''Naming Convetions'' page of the Developer Guide Overview Help.
 
-HelpBrowser openOn:CMakeVMMakerSqueakOverviewHelp
+
+(HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp) model
+showTopicThat: [:topic | topic key = #namingConventions].
+
 
 '
 ]
