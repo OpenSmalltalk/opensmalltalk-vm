@@ -56,6 +56,7 @@ Class {
 	#superclass : #CPlatformConfig,
 	#instVars : [
 		'buildType',
+		'cogDir',
 		'generateBuild',
 		'generateBuildAssert',
 		'generateBuildAssertITimerHeartbeat',
@@ -795,12 +796,12 @@ CPlatformConfigForSqueak >> availableBuildTypes [
 	"
 ]
 
-{ #category : #'squeak compatability' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> buildDir [
 	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
 ]
 
-{ #category : #'squeak compatability' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> buildDirName [
 	buildType isNil
 		ifTrue:[^self dirBuildPlatform, FileDirectory slash, self dirBuildLanguageVMMM, FileDirectory slash, 'build']
@@ -1477,6 +1478,18 @@ CPlatformConfigForSqueak >> cmakeWriteDirectoriesDotCmake: aMaker [
 	self subclassResponsibility
 ]
 
+{ #category : #'cmake directory' }
+CPlatformConfigForSqueak >> cogDir [
+  " topDir=oscogvm
+    dirSource=[nsspur64src | nsspursrc |nsspurstack64src |nsspurstacksrc |spur64src |spursistasrc |spursrc | spurstack64src |spurstacksrc | src |stacksr]  Configurations customize this
+    srcDir=oscogvm/dirSource
+    cogDir=oscogvm/src   (needed by CMake for access to plugins source in oscogvm/src/plugins)
+"
+  ^ cogDir ifNil: [ cogDir := (self src) ]
+
+
+]
+
 { #category : #'source generation' }
 CPlatformConfigForSqueak >> cogitClass [
 	self subclassResponsibility
@@ -1860,7 +1873,7 @@ CPlatformConfigForSqueak >> crossSources [
 self subclassResponsibility
 ]
 
-{ #category : #plugins }
+{ #category : #'initialize-release' }
 CPlatformConfigForSqueak >> customizeVMPlugins [
 	self flag:'tty'. "is this needed on all platforms? consider moving down"
 	self subclassResponsibility
@@ -2002,18 +2015,14 @@ CPlatformConfigForSqueak >> dirOutput [
 
 { #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirSource [
-"Have your custom Configuration return the directory where the source files are. As of 2016.05.15 they are:	
-nsspur64src
-nsspursrc
-nsspurstack64src
-nsspurstacksrc
-spur64src
-spursistasrc
-spursrc
-spurstack64src
-spurstacksrc
-src    (cog.v3 lives here)
-stacksrc"
+  "
+    dirSource=[nsspur64src | nsspursrc | nsspurstack64src |nsspurstacksrc |spur64src |spursistasrc |spursrc | spurstack64src |spurstacksrc | src |stacksr]  Configurations must customize this
+    srcDir=oscogvm/dirSource
+    cogDir=oscogvm/src   (needed by CMake for access to plugins source in oscogvm/src/plugins)
+
+
+"
+
 
 	self subclassResponsibility
 
@@ -2942,24 +2951,24 @@ CPlatformConfigForSqueak >> nilPlatformName [
 	^nil
 ]
 
-{ #category : #'cmake source names' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> nsspur64src [
-	^ 'nsspur64src'
+  ^ (self topDir directoryNamed: 'nsspur64src')
 ]
 
-{ #category : #'cmake source names' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> nsspursrc [
-	^ 'nsspursrc'
+  ^ (self topDir directoryNamed: 'nsspursrc')
 ]
 
-{ #category : #'cmake source names' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> nsspurstack64src [
-	^ 'nsspurstack64src'
+  ^ (self topDir directoryNamed: 'nsspurstack64src')
 ]
 
-{ #category : #'cmake source names' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> nsspurstacksrc [
-	^ 'nsspurstacksrc'
+  ^ (self topDir directoryNamed: 'nsspurstacksrc')
 ]
 
 { #category : #'cmake directory' }
@@ -2967,7 +2976,7 @@ CPlatformConfigForSqueak >> oscogvm [
 	^'oscogvm'
 ]
 
-{ #category : #'squeak compatability' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> outputDir [
 	"the directory where built binaries will be stored"
 	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput / self dirBuildPlatform / self dirBuildLanguageVMMM / (buildType asString)) ]	
@@ -3481,29 +3490,29 @@ CPlatformConfigForSqueak >> setResourceProperties: maker [
 	self subclassResponsibility
 ]
 
-{ #category : #'cmake source names' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> spur64src [
-	^ 'spur64src'
+  ^ (self topDir directoryNamed: 'spur64src')
 ]
 
-{ #category : #'cmake source names' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> spursistasrc [
-	^ 'spursistasrc'
+  ^ (self topDir directoryNamed: 'spursistasrc')
 ]
 
-{ #category : #'cmake source names' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> spursrc [
-	^ 'spursrc'
+  ^ (self topDir directoryNamed: 'spursrc')
 ]
 
-{ #category : #'cmake source names' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> spurstack64src [
-	^ 'spurstack64src'
+  ^ (self topDir directoryNamed: 'spurstack64src')
 ]
 
-{ #category : #'cmake source names' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> spurstacksrc [
-	^ 'spurstacksrc'
+  ^ (self topDir directoryNamed: 'spurstacksrc')
 ]
 
 { #category : #'cmake directory' }
@@ -3536,21 +3545,31 @@ CPlatformConfigForSqueak >> squeakStackV3 [
 	^'squeak.stack.v3'
 ]
 
-{ #category : #'cmake source names' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> src [
 "where cog lives"
-	^ 'src'
+
+  ^ (self topDir directoryNamed: 'src')
 ]
 
-{ #category : #'squeak compatability' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> srcDir [
-self flag:'tty: srcDir is a pharo thing. Factor this out in favor of the dirSource for consistency'.
-		^ srcDir ifNil: [ srcDir := (self topDir directoryNamed: (self dirSource) )]
+  "pharo legacy naming convention. used in some cmake scripts like 'directories.cmake'
+
+ topDir=oscogvm
+    dirSource=[nsspur64src | nsspursrc |nsspurstack64src |nsspurstacksrc |spur64src |spursistasrc |spursrc | spurstack64src |spurstacksrc | src |stacksr]  Configurations customize this
+    srcDir=oscogvm/dirSource
+    cogDir=oscogvm/src   (needed by CMake for access to plugins source in oscogvm/src/plugins)
+"
+
+  ^ self dirSource
+
 ]
 
-{ #category : #'cmake source names' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> stacksrc [
-	^ 'stacksrc'
+  ^ (self topDir directoryNamed: 'stacksrc' )
+
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -3785,8 +3804,13 @@ CPlatformConfigForSqueak >> thirdpartyLibsBuildNoBuildType [
 
 ]
 
-{ #category : #'squeak compatability' }
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> topDir [
+  " topDir=oscogvm
+    dirSource=[nsspur64src | nsspursrc |nsspurstack64src |nsspurstacksrc |spur64src |spursistasrc |spursrc | spurstack64src |spurstacksrc | src |stacksr]  Configurations customize this
+    srcDir=oscogvm/dirSource
+    cogDir=oscogvm/src   (needed by CMake for access to plugins source in oscogvm/src/plugins)
+"
 	^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
 	
 ]
