@@ -1692,7 +1692,7 @@ SpurMemoryManager >> allStrongSlotsOfWeaklingAreMarked: aWeakling [
 
 { #category : #'weakness and ephemerality' }
 SpurMemoryManager >> allUnscannedEphemeronsAreActive [
-	unscannedEphemerons start to: unscannedEphemerons top - self bytesPerOop do:
+	unscannedEphemerons start to: unscannedEphemerons top - self bytesPerOop by: self bytesPerOop do:
 		[:p| | key |
 		key := self keyOfEphemeron: (self longAt: p).
 		((self isImmediate: key) or: [self isMarked: key]) ifTrue:
@@ -4611,7 +4611,7 @@ SpurMemoryManager >> findStringBeginningWith: aCString [
 SpurMemoryManager >> fireAllUnscannedEphemerons [
 	self assert: (self noUnscannedEphemerons) not.
 	self assert: self allUnscannedEphemeronsAreActive.
-	unscannedEphemerons start to: unscannedEphemerons top - self wordSize do:
+	unscannedEphemerons start to: unscannedEphemerons top - self bytesPerOop by: self bytesPerOop do:
 		[:p|
 		coInterpreter fireEphemeron: (self longAt: p)]
 ]
@@ -7665,12 +7665,12 @@ SpurMemoryManager >> mark: objOop [
 
 { #category : #'gc - global' }
 SpurMemoryManager >> markAccessibleObjectsAndFireEphemerons [
+	self assert: marking.
 	self assert: self validClassTableRootPages.
 	self assert: segmentManager allBridgesMarked.
 	self cCode: [] "for debugging markAndTrace: set (MarkStackRecord := OrderedCollection new)"
 		inSmalltalk: [MarkStackRecord ifNotNil: [MarkStackRecord resetTo: 1]].
 
-	marking := true.
 	"This must come first to enable stack page reclamation.  It clears
 	  the trace flags on stack pages and so must precede any marking.
 	  Otherwise it will clear the trace flags of reached pages."
@@ -7681,8 +7681,7 @@ SpurMemoryManager >> markAccessibleObjectsAndFireEphemerons [
 	coInterpreter markAndTraceInterpreterOops: true.
 	self assert: self validObjStacks.
 	self markWeaklingsAndMarkAndFireEphemerons.
-	self assert: self validObjStacks.
-	marking := false
+	self assert: self validObjStacks
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -7699,12 +7698,12 @@ SpurMemoryManager >> markAllUnscannedEphemerons [
 		 self
 			markAndTrace: key;
 			markAndTrace: ephemeron.
-		 unscannedEphemerons top: unscannedEphemerons top - self wordSize.
+		 unscannedEphemerons top: unscannedEphemerons top - self bytesPerOop.
 		 ptr < unscannedEphemerons top ifTrue:
 			["not the last entry; remove it by overwriting it with the last
 			  ephemeron (which must have been newly added by markAndTrace:)."
 			 self longAt: ptr put: (self longAt: unscannedEphemerons top)].
-		ptr := ptr - self wordSize]
+		ptr := ptr - self bytesPerOop]
 ]
 
 { #category : #'gc - global' }
@@ -7889,12 +7888,12 @@ SpurMemoryManager >> markInactiveEphemerons [
 				[foundInactive := true.
 				 "Now remove the inactive ephemeron from the set, and scan-mark it.
 				  Scan-marking it may add more ephemerons to the set."
-				 unscannedEphemerons top: unscannedEphemerons top - self wordSize.
+				 unscannedEphemerons top: unscannedEphemerons top - self bytesPerOop.
 				 unscannedEphemerons top > ptr ifTrue:
 					[self longAt: ptr put: (self longAt: unscannedEphemerons top)].
 				 self markAndTrace: ephemeron]
 			ifFalse:
-				[ptr := ptr + self wordSize]].
+				[ptr := ptr + self bytesPerOop]].
 	^foundInactive
 ]
 
@@ -7972,9 +7971,11 @@ SpurMemoryManager >> markObjects: objectsShouldBeUnmarkedAndUnmarkedClassesShoul
 	self initializeUnscannedEphemerons.
 	self initializeMarkStack.
 	self initializeWeaklingStack.
+	marking := true.
 	self markAccessibleObjectsAndFireEphemerons.
 	self expungeDuplicateAndUnmarkedClasses: objectsShouldBeUnmarkedAndUnmarkedClassesShouldBeExpunged.
-	self nilUnmarkedWeaklingSlots
+	self nilUnmarkedWeaklingSlots.
+	marking := false
 ]
 
 { #category : #'image segment in/out' }
@@ -8474,7 +8475,10 @@ SpurMemoryManager >> nilUnmarkedWeaklingSlots [
 		[:weakling| | anyUnmarked |
 		anyUnmarked := self nilUnmarkedWeaklingSlotsIn: weakling.
 		anyUnmarked ifTrue:
-			[coInterpreter fireFinalization: weakling]].
+			["fireFinalization: could grow the mournQueue and if so,
+			  additional pages must be marked to avoid being GC'ed."
+			 self assert: marking.
+			 coInterpreter fireFinalization: weakling]].
 	self emptyObjStack: weaklingStack
 ]
 
@@ -9858,7 +9862,7 @@ SpurMemoryManager >> pushOnUnscannedEphemeronsStack: anEphemeron [
 	unscannedEphemerons top >= unscannedEphemerons limit ifTrue:
 		[^false].
 	self longAt: unscannedEphemerons top put: anEphemeron.
-	unscannedEphemerons top: unscannedEphemerons top + self wordSize.
+	unscannedEphemerons top: unscannedEphemerons top + self bytesPerOop.
 	^true
 ]
 
