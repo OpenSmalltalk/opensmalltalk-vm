@@ -17,7 +17,7 @@ Class {
 	#pools : [
 		'ChronologyConstants'
 	],
-	#category : 'Cog-Scripts'
+	#category : #'Cog-Scripts'
 }
 
 { #category : #'instance creation' }

@@ -14,7 +14,7 @@ Class {
 		'blockEndStack',
 		'topIsVector'
 	],
-	#category : 'Cog-Scripts'
+	#category : #'Cog-Scripts'
 }
 
 { #category : #utilities }
