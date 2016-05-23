@@ -6,7 +6,7 @@ Class {
 		'classes',
 		'prefix'
 	],
-	#category : 'Cog-Morphing Bytecode Set'
+	#category : #'Cog-Morphing Bytecode Set'
 }
 
 { #category : #'code editing' }

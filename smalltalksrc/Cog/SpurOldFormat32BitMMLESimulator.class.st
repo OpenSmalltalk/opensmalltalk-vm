@@ -1,7 +1,7 @@
 Class {
 	#name : #SpurOldFormat32BitMMLESimulator,
 	#superclass : #Spur32BitMMLESimulator,
-	#category : 'Cog-Bootstrapping'
+	#category : #'Cog-Bootstrapping'
 }
 
 { #category : #'method access' }

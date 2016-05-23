@@ -20,7 +20,7 @@ Class {
 		'SomethingLoggedError',
 		'UnsupportedOperationError'
 	],
-	#category : 'Cog-Processors'
+	#category : #'Cog-Processors'
 }
 
 { #category : #'instance creation' }
@@ -652,7 +652,7 @@ GdbARMAlien >> fp: anUnsignedInteger [
 { #category : #accessing }
 GdbARMAlien >> fpCPSR [
 "The VFP cpsr flags are kept as a single word in the Alien structure. Return just the top 4 bits, the actual flags"
-	^(self unsignedLongAt: 1785) >>28
+	^(self unsignedLongAt: 1789) >>28
 ]
 
 { #category : #'floating-point emulation' }

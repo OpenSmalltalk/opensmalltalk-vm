@@ -1,7 +1,7 @@
 Class {
 	#name : #CogScripts,
 	#superclass : #Object,
-	#category : 'Cog-Scripts'
+	#category : #'Cog-Scripts'
 }
 
 { #category : #'closure scripts' }

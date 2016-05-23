@@ -15,7 +15,7 @@ Class {
 	#pools : [
 		'VMObjectIndices'
 	],
-	#category : 'Cog-Bootstrapping'
+	#category : #'Cog-Bootstrapping'
 }
 
 { #category : #munging }

@@ -7,7 +7,7 @@ Class {
 		'OpcodeExceptionMap',
 		'PostBuildStackDelta'
 	],
-	#category : 'Cog-Processors'
+	#category : #'Cog-Processors'
 }
 
 { #category : #'instance creation' }

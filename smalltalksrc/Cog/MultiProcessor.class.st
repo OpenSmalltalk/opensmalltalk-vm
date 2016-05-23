@@ -11,7 +11,7 @@ Class {
 		'coInterpreter',
 		'threadIndex'
 	],
-	#category : 'Cog-Processors'
+	#category : #'Cog-Processors'
 }
 
 { #category : #'instance creation' }
