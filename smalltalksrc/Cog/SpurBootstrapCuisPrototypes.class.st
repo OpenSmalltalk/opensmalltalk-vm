@@ -62,6 +62,11 @@ SpurBootstrapCuisPrototypes >> CharacterPROTOTYPEvalue [
 ]
 
 { #category : #'method prototypes' }
+SpurBootstrapCuisPrototypes >> CharacterclassPROTOTYPEinitialize [
+	<ignore>
+]
+
+{ #category : #'method prototypes' }
 SpurBootstrapCuisPrototypes >> ClassDescriptionPROTOTYPEupdateInstancesFrom: oldClass [
 	"Recreate any existing instances of the argument, oldClass, as instances of 
 	 the receiver, which is a newly changed class. Permute variables as necessary,
