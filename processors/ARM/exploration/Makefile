@@ -7,7 +7,7 @@ INCLUDES := -I$(GDBARM)/include \
 			-I../bfd
 LIBS:=-L../bfd -L../libiberty -L../opcodes -L../sim/arm -L../zlib \
            -lbfd -liberty -lopcodes -lopcodes -lsim -lz
-CFLAGS=-m32 $(INCLUDES) $(LIBS)
+CFLAGS=-m32 -DMODET $(INCLUDES) $(LIBS)
 
 .PHONY:	$(LIBDEPS)
 
