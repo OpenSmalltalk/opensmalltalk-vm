@@ -1,70 +1,33 @@
 "
-A FullBlockClosure is a closure that can be indepdendent of any outerContext if desired.  It has its own method (currently reusing the startpc inst var) and its own receiver.  outerContext can be either a MethodContext/Context or nil.
+I contain a sequence of operations. I am defined by Smalltalk expressions inside square brackets. I permit to defer the enclosed operations until I execute a variant of #value. I can have my own arguments and temporaries as a regular method, but I am also able to use external variables: my enclosing method or block temporaries, arguments and receiver.
+
+examples :
+[ 1 + 2 ] value
+[ :arg | 
+	| temp | 
+	temp := arg. 
+	temp ] value: 5
+[ ^ 5 ] value
+
+My return value corresponds to my final expression. A non local return (^) has the same effect as if I did not exist: it returns from my enclosing method, even if I'm nested in other blocks. 
+
+Implementation:
+
+A FullBlockClosure is a closure that can be independent of any outerContext if desired.  It has its own method (currently reusing the startpc inst var) and its own receiver.  outerContext can be either a MethodContext/Context or nil.
+
+This closure design, implemented by Eliot Miranda and Clement Bera along the sista work aims to simplify the block closure model while enhacing its capabilities. It allows lazy compilation of closures and fast machine code dispatch in Cog's JIT, while allowing inlining of methods and blocks to be independent from their enclosing blocks.
+
+At closure creation time, the bytecode specifies:
+- the compiledBlock/compiledMethod to execute when executing this block's code (in the literal frame)
+- if the receiver is the current receiver or a receiver passed on stack before the copied values.
+- if the closure needs an outerContext. outerContexts are used for non local returns and debugging. Blocks with non local returns have to set their outerContext. For other blocks (97% of blocks), it's a trade-off between performance and debuggability.
 
 Instance Variables
-	receiver:		<Object>
+	outerContext:			<Context/MethodContext|nil> 
+	compiledBlock(startpc) <CompiledMethod/CompiledBlock>
+	numArgs				<SmallInteger> 
+	receiver:				<Object>
 
-Here's an example (a chunk designed to be typed into the spurreader image with this class filed in, e.g. in the simulator), circa early 2016 for creating the recursive nfib example (|nfib|nfib:=nil.nfib:=[:n|n<=1ifTrue:[1]ifFalse:[(nfib value:n-1)+(nfib value:n-2)+1]].(1to:12)collect:nfib) using FullBlockClosure:
-
-(| method closure |
-method := (AssemblerMethod new
-	methodClass: Object;
-	selector: #nfib:;
-	numArgs: 1;
-	numTemps: 2;
-	literal: #ifTrue:ifFalse:;
-	pushTemporaryVariable: 0;
-	pushSpecialConstant: 1;
-	send: #<= super: false numArgs: 1;
-	jump: 'L1' if: false;
-	pushSpecialConstant: 1;
-	jump: 'L2';
-	label: 'L1';
-	pushRemoteTemp: 0 inVectorAt: 1;
-	pushTemporaryVariable: 0;
-	pushSpecialConstant: 1;
-	send: #- super: false numArgs: 1;
-	send: #value: super: false numArgs: 1;
-	pushRemoteTemp: 0 inVectorAt: 1;
-	pushTemporaryVariable: 0;
-	pushSpecialConstant: 2;
-	send: #- super: false numArgs: 1;
-	send: #value: super: false numArgs: 1;
-	send: #+ super: false numArgs: 1;
-	pushSpecialConstant: 1;
-	send: #+ super: false numArgs: 1;
-	label: 'L2';
-	blockReturnTop;
-	yourself) assemble.
-closure := FullBlockClosure new: 1.
-closure
-	outerContext: nil;
-	compiledBlock: method;
-	numArgs: 1;
-	receiver: nil.
-closure at: 1 put: (Array with: closure).
-(1 to: 12) collect: closure!)
-
-Here is a second example:
-(| methodBlock outerMethod closure |
-methodBlock := (AssemblerMethod new
-	methodClass: Object;
-	selector: #inblock2;
-	numTemps: 1;
-	pushTemporaryVariable: 0;
-	blockReturnTop;
-	yourself) assemble.
-outerMethod := (AssemblerMethod new
-	encoder: EncoderForSistaV1 new;
-	methodClass: Object;
-	selector: #foo;
-	literal: methodBlock;
-	pushSpecialConstant: 1;
-	pushFullClosure: 0 numCopied: 1;
-	methodReturnTop;
-	yourself) assemble.
-closure := #rcvr withArgs: #() executeMethod: outerMethod.
-{closure at: 1 . closure receiver . closure value} !)
 "
 Class {
 	#name : #FullBlockClosure,
