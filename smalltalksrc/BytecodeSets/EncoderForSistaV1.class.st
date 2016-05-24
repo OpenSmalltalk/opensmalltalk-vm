@@ -61,7 +61,7 @@ Instance Variables (inherited)
 *	227		11100011	iiiiiiii		Push Literal Variable #iiiiiiii (+ Extend A * 256)
 *	228		11100100	iiiiiiii		Push Literal #iiiiiiii (+ Extend A * 256)
 	229		11100101	iiiiiiii		Push Temporary Variable #iiiiiiii
-	230		11100110	iiiiiiii		PushNClosureTemps iiiiiiii
+	230		11100110	iiiiiiii		PushNClosureTemps iiiiiiii (Warning: May be removed later once FullBlockClosure support is complete)
 	231		11100111	jkkkkkkk	Push (Array new: kkkkkkk) (j = 0)
 									&	Pop kkkkkkk elements into: (Array new: kkkkkkk) (j = 1)
 *	232		11101000	iiiiiiii		Push Integer #iiiiiiii (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)
@@ -96,7 +96,7 @@ Instance Variables (inherited)
 
 (2) The Call Primitive Bytecode specifies either a primitive in the primitive table (m=0) or an inlined primitive (m=1). Non-inlined primtiives from the primitive table have index (jjjjjjj * 256) + iiiiiiii and return from the method if they succeed.  This bytecode is only valid as the first bytecode of a method.  Inline primitives have index (jjjjjjj * 256) + iiiiiiii, cannot fail, and do not return when they succeed, yielding a result (typically on top of stack after popping their arguments, but possibly in a byte data stack, for example for unboxed floating-point primitives).
 
-(3) ExtB lowest bit implies no store check is needed, ExtB next bit implies the object may be a context, other bits in the extension are unused.
+(3) ExtB lowest bit implies no store check is needed, ExtB second bit implies the object may be a context, other bits in the extension are unused. Third bit is reserved for object can't be read-only (not implemented).
 
 (4) ExtA = 1 implies no mustBeBoolean trampoline is needed, other bits in the extension are unused
 
@@ -1228,8 +1228,16 @@ EncoderForSistaV1 >> genSignedSingleExtendB: extendedIndex [
 
 { #category : #'extended bytecode generation' }
 EncoderForSistaV1 >> genStoreFlagExtensionIgnoreStoreCheck: ignoreStoreCheck maybeContext: maybeContext [
-	"Can be applied to the long form of store and store pop of literal variable, remote inst var, remote temp, receiver inst var.
-	The notAContext bit can be used only with instance variable stores."
+	"ignoreStoreCheck: 
+	Can be applied to the long form of store and store pop of literal variable, remote inst var, remote temp, receiver inst var.
+	If present, the VM does not generate the GC store check. 
+	The main reasons the compiler can ignore the store check are one of these two:
+	- the mutated object is always young
+	- the object stored is immediate
+	Currently the store check is for the remembered table, but we may have it for tri color marking later. So the compiler cannot really remove the store check if the object stored is old.
+
+	maybeContext:
+	Can be used only with remote instance variable stores. If marked, the object can be a context and hence needs specific VM code. Receiver inst var have a separate encoding, temp vectors and literal variable can't be contexts"
 	self genUnsignedSingleExtendB: ignoreStoreCheck asBit + (maybeContext asBit << 1)
 ]
 
