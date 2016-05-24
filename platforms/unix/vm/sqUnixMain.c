@@ -1047,11 +1047,35 @@ static int vm_parseArgument(int argc, char **argv)
       return parseModuleArgument(argc, argv, &type##Module, #type, name);
 
   moduleArg("-nodisplay",		display, "null");
+  moduleArg("-browserWindow",		display, "X11");
+  moduleArg("-browserPipes",		display, "X11");
+  moduleArg("-closequit",		display, "X11");
+  moduleArg("-cmdmod",			display, "X11");
+  moduleArg("-compositioninput",	display, "X11");
   moduleArg("-display",			display, "X11");
-  moduleArg("-headless",		display, "X11");
   moduleArg("-fullscreen",		display, "X11");
   moduleArg("-fullscreenDirect",	display, "X11");
-  moduleArg("-compositioninput",	display, "X11");
+#if (USE_X11_GLX)
+  moduleArg("-glxdebug",		display, "X11");
+#endif
+  moduleArg("-headless",		display, "X11");
+  moduleArg("-iconic",			display, "X11");
+  moduleArg("-lazy",			display, "X11");
+  moduleArg("-mapdelbs",		display, "X11");
+  moduleArg("-nointl",			display, "X11");
+  moduleArg("-notitle",			display, "X11");
+  moduleArg("-noxdnd",			display, "X11");
+  moduleArg("-optmod",			display, "X11");
+#if defined(SUGAR)
+  moduleArg("-sugarBundleId",		display, "X11");
+  moduleArg("-sugarActivityId",		display, "X11");
+#endif
+  moduleArg("-swapbtn",			display, "X11");
+  moduleArg("-xasync",			display, "X11");
+#if defined(USE_XICFONT_OPTION)
+  moduleArg("-xicfont",			display, "X11");
+#endif
+  moduleArg("-xshm",			display, "X11");
   moduleArg("-quartz",			display, "Quartz");
   moduleArg("-nosound",			sound,   "null");
 
