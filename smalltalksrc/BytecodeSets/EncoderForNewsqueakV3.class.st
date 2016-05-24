@@ -8,7 +8,7 @@ An encoder for the Newsqueak V3 bytecode set.  It adds the following bytecodes t
 Class {
 	#name : #EncoderForNewsqueakV3,
 	#superclass : #EncoderForV3PlusClosures,
-	#category : #'BytecodeSets-NewsqueakV3'
+	#category : 'BytecodeSets-NewsqueakV3'
 }
 
 { #category : #'instruction stream support' }
