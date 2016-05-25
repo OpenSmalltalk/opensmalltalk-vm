@@ -1701,7 +1701,7 @@ SpurMemoryManager >> allStrongSlotsOfWeaklingAreMarked: aWeakling [
 SpurMemoryManager >> allUnscannedEphemeronsAreActive [
 	unscannedEphemerons start to: unscannedEphemerons top - self bytesPerOop by: self bytesPerOop do:
 		[:p| | key |
-		key := self keyOfEphemeron: (self longAt: p).
+		key := self keyOfMaybeFiredEphemeron: (self longAt: p).
 		((self isImmediate: key) or: [self isMarked: key]) ifTrue:
 			[^false]].
 	^true
@@ -4995,6 +4995,13 @@ SpurMemoryManager >> followedKeyOfEphemeron: objOop [
 	^self followOopField: 0 ofObject: objOop
 ]
 
+{ #category : #'object access' }
+SpurMemoryManager >> followedKeyOfMaybeFiredEphemeron: objOop [
+	"Answer the object the ephemeron guards.  This is its first element."
+	self assert: ((self isNonImmediate: objOop) and: [self isMaybeFiredEphemeron: objOop]).
+	^self followOopField: 0 ofObject: objOop
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> formatFieldWidthShift [
 	"The format field contains 5 bits."
@@ -6280,6 +6287,8 @@ SpurMemoryManager >> is: oop instanceOf: classOop compactClassIndex: compactClas
 SpurMemoryManager >> is: oop onObjStack: objStack [
 	<inline: false>
 	| index nextPage |
+	objStack = nilObj ifTrue:
+		[^false].
 	self assert: (self numSlotsOfAny: objStack) = ObjStackPageSlots.
 	"There are four fixed slots in an obj stack, and a Topx of 0 indicates empty, so
 	  if there were 6 slots in an oop stack, full would be 2, and the last 0-rel index is 5."
@@ -7719,23 +7728,23 @@ SpurMemoryManager >> markAccessibleObjectsAndFireEphemerons [
 { #category : #'weakness and ephemerality' }
 SpurMemoryManager >> markAllUnscannedEphemerons [
 	"After firing the unscanned ephemerons we must scan-mark them.
-	 The wrinkle is that doing so may add more ephemerons to the set."
-	| ptr |
+	 The wrinkle is that doing so may add more ephemerons to the set.
+	 So we remove the first element, by overwriting it with the last element,
+	 and decrementing the top, and then markAndTrace its contents."
 	self assert: (self noUnscannedEphemerons) not.
 	self assert: self allUnscannedEphemeronsAreActive.
-	ptr := unscannedEphemerons top - self wordSize.
-	[ptr >= unscannedEphemerons start] whileTrue:
-		[| ephemeron key |
-		 key := self followedKeyOfEphemeron: (ephemeron := self longAt: ptr).
+	[unscannedEphemerons top > unscannedEphemerons start] whileTrue:
+		[| ephemeron key lastptr |
+		 ephemeron := self longAt: unscannedEphemerons start.
+		 lastptr := unscannedEphemerons top - self bytesPerOop.
+		 lastptr > unscannedEphemerons start ifTrue:
+			[self longAt: unscannedEphemerons start put: (self longAt: lastptr)].
+		 unscannedEphemerons top: lastptr.
+		 key := self followedKeyOfMaybeFiredEphemeron: ephemeron.
+		 self setIsMarkedOf: ephemeron to: false. "to get it to be fully scanned in markAndTrace:"
 		 self
 			markAndTrace: key;
-			markAndTrace: ephemeron.
-		 unscannedEphemerons top: unscannedEphemerons top - self bytesPerOop.
-		 ptr < unscannedEphemerons top ifTrue:
-			["not the last entry; remove it by overwriting it with the last
-			  ephemeron (which must have been newly added by markAndTrace:)."
-			 self longAt: ptr put: (self longAt: unscannedEphemerons top)].
-		ptr := ptr - self bytesPerOop]
+			markAndTrace: ephemeron]
 ]
 
 { #category : #'gc - global' }
@@ -8552,10 +8561,11 @@ SpurMemoryManager >> noCheckPush: objOop onObjStack: objStack [
 	"Push an element on an objStack.  Split from push:onObjStack: for testing."
 	| topx |
 	self eassert: [self isValidObjStack: objStack].
-	self cCode: [] "for debugging markAndTrace: set (MarkStackRecord := OrderedCollection new)"
+	self cCode: '' "for debugging markAndTrace: set (MarkStackRecord := OrderedCollection new)"
 		inSmalltalk:
-			[(self fetchPointer: ObjStackMyx ofObject: objStack) = MarkStackRootIndex ifTrue:
-				[MarkStackRecord ifNotNil: [MarkStackRecord addLast: {#push. objOop}]]].
+			[MarkStackRecord ifNotNil:
+				[(self fetchPointer: ObjStackMyx ofObject: objStack) = MarkStackRootIndex ifTrue:
+					[MarkStackRecord addLast: {#push. objOop}]]].
 	topx := self fetchPointer: ObjStackTopx ofObject: objStack.
 	topx >= ObjStackLimit
 		ifTrue:
@@ -9920,12 +9930,9 @@ SpurMemoryManager >> queueMourner: anEphemeronOrWeakArray [
 	self assert: ((self isNonImmediate: anEphemeronOrWeakArray)
 				and: [(self formatOf: anEphemeronOrWeakArray) = self ephemeronFormat
 				   or: [(self formatOf: anEphemeronOrWeakArray) = self weakArrayFormat]]).
-	self deny: (mournQueue ~= nilObj
-				and: [self is: anEphemeronOrWeakArray onObjStack: mournQueue]).
+	self deny: (self is: anEphemeronOrWeakArray onObjStack: mournQueue).
 	self ensureRoomOnObjStackAt: MournQueueRootIndex.
-	self push: anEphemeronOrWeakArray onObjStack: mournQueue.
-	(self formatOf: anEphemeronOrWeakArray) = self ephemeronFormat ifTrue:
-		[self setFormatOf: anEphemeronOrWeakArray to: self nonIndexablePointerFormat]
+	self push: anEphemeronOrWeakArray onObjStack: mournQueue
 ]
 
 { #category : #'interpreter access' }
