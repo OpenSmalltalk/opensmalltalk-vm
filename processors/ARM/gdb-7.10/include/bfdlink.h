@@ -432,8 +432,7 @@ struct bfd_link_info
   char path_separator;
 
   /* TAO -- removed for Cog */
-#if 0
-#else
+#if !COG
   /* Compress DWARF debug sections.  */
   enum compressed_debug_section_type compress_debug;
 #endif

@@ -6008,7 +6008,11 @@ Multiply64 (ARMul_State * state, ARMword instr, int msigned, int scc)
       state->Reg[nRdHi] = RdHi;
     }
   else
+#if COG
     fprintf (stderr, "sim: MULTIPLY64 - INVALID ARGUMENTS instr=%08x\n", instr);
+#else
+    fprintf (stderr, "sim: MULTIPLY64 - INVALID ARGUMENTS\n");
+#endif
 
   if (scc)
     /* Ensure that both RdHi and RdLo are used to compute Z,

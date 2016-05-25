@@ -12,9 +12,20 @@ INCFIRST:=../../processors/ARM/gdb-7.10/include \
           ../../processors/ARM/gdb-7.10/sim/arm \
           ../../processors/ARM/gdb-7.10/bfd \
           ../gdbarm32/bfd
+
+# assert uses warning, which is in the VM, so -undefined dynamic_lookup needed
+ifeq ($(CONFIGURATION),assert)
+    EXTRA_FOR_ASSERT:=-undefined dynamic_lookup
+else ifeq ($(CONFIGURATION),debug)
+    EXTRA_FOR_ASSERT:=-undefined dynamic_lookup
+    BUILD:=builddbg 
+else # default CONFIGURATION=product
+    EXTRA_FOR_ASSERT:=
+endif 
 EXTRALIBS:=-L../gdbarm32/bfd -L../gdbarm32/libiberty -L../gdbarm32/opcodes \
            -L../gdbarm32/sim/arm -L../gdbarm32/zlib \
-           -lbfd -liberty -lopcodes -lopcodes -lsim -lz
+           -lbfd -liberty -lopcodes -lopcodes -lsim -lz \
+			$(EXTRA_FOR_ASSERT)
 
 include ../common/Makefile.plugin
 
