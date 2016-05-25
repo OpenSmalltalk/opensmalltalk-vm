@@ -14,13 +14,16 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 	and: [rcvrOrNil name = 'super']]) ifTrue:
 		[^aTMethod superExpansionNodeFor: selector key args: arguments].
 	sel := selector isSymbol ifTrue: [selector] ifFalse: [selector key].
-	((sel == #cCode:inSmalltalk: "extracting here rather than in translation allows inlining in the block."
-	  or: [sel == #cCode:])
-	 and: [arguments first isBlockNode]) ifTrue:
-		[| block |
-		 ^(block := arguments first asTranslatorNodeIn: aTMethod) statements size = 1
-			ifTrue: [block statements first]
-			ifFalse: [block]].
+	(sel == #cCode:inSmalltalk: "extracting here rather than in translation allows inlining in the block."
+	  or: [sel == #cCode:]) ifTrue:
+		[arguments first isBlockNode ifTrue:
+			[| block |
+			 ^(block := arguments first asTranslatorNodeIn: aTMethod) statements size = 1
+				ifTrue: [block statements first]
+				ifFalse: [block]].
+		 (arguments first isLiteralNode
+		 and: [arguments first key isString]) ifTrue:
+			[^arguments first asTranslatorNodeIn: aTMethod]].
 	args := arguments
 				select: [:arg| arg notNil]
 				thenCollect: [:arg| arg asTranslatorNodeIn: aTMethod].
