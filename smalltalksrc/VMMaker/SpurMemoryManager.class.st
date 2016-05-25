@@ -978,6 +978,13 @@ SpurMemoryManager class >> objectRepresentationClass [
 	^self subclassResponsibility
 ]
 
+{ #category : #translation }
+SpurMemoryManager class >> requiredMethodNames: options [
+	"return the list of method names that should be retained for export or other support reasons"
+	^(self exportAPISelectors: options),
+	  (SpurGenerationScavenger exportAPISelectors: options)
+]
+
 { #category : #'simulation only' }
 SpurMemoryManager class >> vmProxyMajorVersion [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -6699,6 +6706,19 @@ SpurMemoryManager >> isMarked: objOop [
 	self subclassResponsibility
 ]
 
+{ #category : #'object testing' }
+SpurMemoryManager >> isMaybeFiredEphemeron: objOop [
+	^self isMaybeFiredEphemeronFormat: (self formatOf: objOop)
+]
+
+{ #category : #'header formats' }
+SpurMemoryManager >> isMaybeFiredEphemeronFormat: format [
+	"Answer if an object's format could be that of an ephemeron.  When ephemerons are born
+	 their format is ephemeronFormat, but when they fire their format is changed to 3 (inst vars
+	 plus indexable fields) or 1 (objects with inst vars), we haven't decided which yet."
+	^format <= self lastPointerFormat and: [format odd]
+]
+
 { #category : #'object enumeration' }
 SpurMemoryManager >> isMobileObject: objOop [
 	"Answer if objOop should be moved during compaction.  Non-objects
@@ -6747,6 +6767,11 @@ SpurMemoryManager >> isNonIntegerObject: oop [
 { #category : #'object enumeration' }
 SpurMemoryManager >> isNormalObject: objOop [
 	^(self classIndexOf: objOop) > self lastClassIndexPun
+]
+
+{ #category : #'object testing' }
+SpurMemoryManager >> isObjEphemeron: objOop [
+	^self isEphemeronFormat: (self formatOf: objOop)
 ]
 
 { #category : #'header access' }
@@ -7134,7 +7159,14 @@ SpurMemoryManager >> isYoungObject: objOop [
 { #category : #'object access' }
 SpurMemoryManager >> keyOfEphemeron: objOop [
 	"Answer the object the ephemeron guards.  This is its first element."
-	self assert: ((self isNonImmediate: objOop) and: [self isEphemeron: objOop]).
+	self assert: ((self isNonImmediate: objOop) and: [self isObjEphemeron: objOop]).
+	^self fetchPointer: 0 ofObject: objOop
+]
+
+{ #category : #'object access' }
+SpurMemoryManager >> keyOfMaybeFiredEphemeron: objOop [
+	"Answer the object the ephemeron guards.  This is its first element."
+	self assert: ((self isNonImmediate: objOop) and: [self isMaybeFiredEphemeron: objOop]).
 	^self fetchPointer: 0 ofObject: objOop
 ]
 
@@ -7847,7 +7879,7 @@ SpurMemoryManager >> markAndTraceObjStack: stackOrNil andContents: markAndTraceC
 	  if there were 6 slots in an oop stack, full would be 2, and the last 0-rel index is 5."
 	index := (self fetchPointer: ObjStackTopx ofObject: stackOrNil) + ObjStackNextx.
 	[index >= ObjStackFixedSlots] whileTrue:
-		[field := self fetchPointer: index ofObject: stackOrNil.
+		[field := self followObjField: index ofObject: stackOrNil.
 		 (self isImmediate: field) ifFalse:
 			[self markAndTrace: field].
 		 index := index - 1]
