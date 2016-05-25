@@ -461,9 +461,8 @@ SpurGenerationScavenger >> fireEphemeronsOnEphemeronList [
 	 to a new list, not concatenated on the one we are scanning."
 	oldList := ephemeronList.
 	ephemeronList := nil.
-	[self assert: (manager isYoung: ephemeronCorpse).
-	 ephemeronCorpse notNil] whileTrue:
-		[self assert: (manager isForwarded: ephemeronCorpse).
+	[ephemeronCorpse notNil] whileTrue:
+		[self assert: ((manager isYoung: ephemeronCorpse) and: [manager isForwarded: ephemeronCorpse]).
 		 ephemeron := manager followForwarded: ephemeronCorpse.
 		 key := manager keyOfMaybeFiredEphemeron: ephemeron.
 		 (self isScavengeSurvivor: key) ifFalse:
