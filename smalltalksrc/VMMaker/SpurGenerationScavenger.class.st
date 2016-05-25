@@ -410,15 +410,18 @@ SpurGenerationScavenger >> fireEphemeronsInRememberedSet [
 
 	i := 0.
 	[i < numRememberedEphemerons] whileTrue:
-		[ | ephemeron |
+		[ | ephemeron key |
 		 ephemeron := rememberedSet at: i.
 		 self assert: (manager isEphemeron: ephemeron).
-		 self assert: (self isScavengeSurvivor: (manager keyOfEphemeron: ephemeron)) not.
-		 coInterpreter fireEphemeron: ephemeron.
-		 manager
-			storePointerUnchecked: 0
-			ofObject: ephemeron
-			withValue: (self copyAndForward: (manager keyOfEphemeron: ephemeron)).
+		 key := manager keyOfEphemeron: ephemeron.
+		 (self isScavengeSurvivor: key) ifFalse:
+			[coInterpreter fireEphemeron: ephemeron.
+			 manager
+				storePointerUnchecked: 0
+				ofObject: ephemeron
+				withValue: (self copyAndForward: key)].
+		 "Fired ephemerons should have had their format changed."
+		 self deny: ((self isScavengeSurvivor: key) and: [manager isEphemeron: ephemeron]).
 		 (self scavengeReferentsOf: ephemeron)
 			ifTrue: "keep in set"
 				[i := i + 1]
@@ -449,23 +452,30 @@ SpurGenerationScavenger >> fireEphemeronsOnEphemeronList [
 	"There are ephemerons to be fired in the remembered set.
 	 Fire them and scavenge their keys.  Be careful since copyAndForward:
 	 can remember ephemerons (ephemerons pointing to ephemerons)."
-	| ephemeron ephemeronCorpse |
+	| ephemeron ephemeronCorpse key oldList oldCorpse | "old ones for debugging"
 	ephemeronList ifNil:
 		[^self].
+	oldCorpse := nil.
 	ephemeronCorpse := self firstCorpse: ephemeronList.
 	"Reset the list head so that new ephemerons will get added
 	 to a new list, not concatenated on the one we are scanning."
+	oldList := ephemeronList.
 	ephemeronList := nil.
-	[ephemeronCorpse notNil] whileTrue:
+	[self assert: (manager isYoung: ephemeronCorpse).
+	 ephemeronCorpse notNil] whileTrue:
 		[self assert: (manager isForwarded: ephemeronCorpse).
 		 ephemeron := manager followForwarded: ephemeronCorpse.
-		 self assert: (self isScavengeSurvivor: (manager keyOfEphemeron: ephemeron)) not.
-		 coInterpreter fireEphemeron: ephemeron.
-		 manager
-			storePointerUnchecked: 0
-			ofObject: ephemeron
-			withValue: (self copyAndForward: (manager keyOfEphemeron: ephemeron)).
+		 key := manager keyOfMaybeFiredEphemeron: ephemeron.
+		 (self isScavengeSurvivor: key) ifFalse:
+			[coInterpreter fireEphemeron: ephemeron.
+			 manager
+				storePointerUnchecked: 0
+				ofObject: ephemeron
+				withValue: (self copyAndForward: key)].
+		 "Fired ephemerons should have had their format changed."
+		 self deny: ((self isScavengeSurvivor: key) and: [manager isEphemeron: ephemeron]).
 		 self cCoerceSimple: (self scavengeReferentsOf: ephemeron) to: #void.
+		 oldCorpse := ephemeronCorpse.
 		 ephemeronCorpse := self nextCorpseOrNil: ephemeronCorpse]
 ]
 

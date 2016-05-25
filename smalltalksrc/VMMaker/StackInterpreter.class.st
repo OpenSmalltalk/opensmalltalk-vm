@@ -1551,6 +1551,9 @@ invalidCompactClassError(char *s) { /* Print a (compact) class index error messa
 # define sigsetjmp(jb,ssmf) _setjmp(jb)
 # define siglongjmp(jb,v) _longjmp(jb,v)
 #endif
+
+#define odd(v) ((int)(v)&1)
+#define even(v) (!odd(v))
 '
 ]
 
@@ -1652,7 +1655,7 @@ StackInterpreter class >> requiredMethodNames: options [
 	"return the list of method names that should be retained for export or other support reasons"
 	| requiredList |
 	requiredList := self exportAPISelectors: options.
-	requiredList addAll: (NewObjectMemory requiredMethodNames: options).
+	requiredList addAll: (self objectMemoryClass requiredMethodNames: options).
 	"A number of methods required by VM support code, jitter, specific platforms etc"
 	requiredList addAll: #(
 		assertValidExecutionPointe:r:s:
@@ -8841,6 +8844,14 @@ StackInterpreter >> literal: offset ofMethod: methodPointer [
 ]
 
 { #category : #'compiled methods' }
+StackInterpreter >> literal: offset ofMethod: methodPointer put: oop [
+	<option: #SpurMemoryManager>
+	<inline: true>
+	objectMemory storePointer: offset + LiteralStart ofObject: methodPointer withValue: oop
+
+]
+
+{ #category : #'compiled methods' }
 StackInterpreter >> literalCountOfAlternateHeader: headerPointer [
 	<inline: true>
 	^(objectMemory integerValueOf: headerPointer) bitAnd: AlternateHeaderNumLiteralsMask
@@ -12343,7 +12354,7 @@ StackInterpreter >> pushLiteralVariable: literalIndex [
 			  rare; in my work image 8.7% of literals are globals)."
 			 litVar := self literal: literalIndex.
 			 (objectMemory isForwarded: litVar) ifTrue:
-				[litVar := objectMemory followForwarded: litVar].
+				[litVar := self unfollow: litVar atIndex: literalIndex].
 			 self internalPush:
 				(objectMemory fetchPointer: ValueIndex ofObject: litVar)]
 		ifFalse:
@@ -14954,6 +14965,16 @@ StackInterpreter >> undoFetchNextBytecode [
 	"Backup the ip when it has been incremented to fetch the next bytecode."
 
 	localIP := localIP - 1
+]
+
+{ #category : #'compiled methods' }
+StackInterpreter >> unfollow: litVar atIndex: literalIndex [
+	<option: #SpurMemoryManager>
+	<inline: #never> "So rare it mustn't bulk up the common path"
+	| followed |
+	followed := objectMemory followForwarded: litVar.
+	self literal: literalIndex ofMethod: method put: followed.
+	^followed
 ]
 
 { #category : #'miscellaneous bytecodes' }
