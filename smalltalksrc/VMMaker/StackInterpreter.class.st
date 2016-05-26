@@ -6441,9 +6441,8 @@ StackInterpreter >> findUnwindThroughContext: homeContext [
 { #category : #finalization }
 StackInterpreter >> fireEphemeron: ephemeron [
 	<option: #SpurObjectMemory>
-	objectMemory
-		queueMourner: ephemeron;
-		setFormatOf: ephemeron to: objectMemory nonIndexablePointerFormat.
+	objectMemory queueMourner: ephemeron..
+	self setFormatOf: ephemeron to: self nonIndexablePointerFormat.
 	self signalFinalization: ephemeron
 ]
 

@@ -5,7 +5,7 @@ Class {
 		'parent',
 		'bootstrapping'
 	],
-	#category : #'VMMaker-SpurMemoryManagerSimulation'
+	#category : 'VMMaker-SpurMemoryManagerSimulation'
 }
 
 { #category : #accessing }
@@ -346,15 +346,12 @@ Spur32BitMMLECoSimulator >> runLeakCheckerFor: gcModes excludeUnmarkedNewSpaceOb
 		classIndicesShouldBeValid: classIndicesShouldBeValid
 ]
 
-{ #category : #'gc - global' }
+{ #category : #'generation scavenging' }
 Spur32BitMMLECoSimulator >> scavengingGCTenuringIf: tenuringCriterion [
-	"If we're /not/ a clone, clone the VM and push it over the cliff.
-	 If it survives, destroy the clone and continue.  We should be OK until next time."
-	(self leakCheckNewSpaceGC
-	 and: [parent isNil]) ifTrue:
-		[coInterpreter cr; print: 'scavenge '; print: statScavenges; tab; flush.
-		 coInterpreter cloneSimulation objectMemory scavengingGCTenuringIf: tenuringCriterion.
-		 Smalltalk garbageCollect].
+	"Run the scavenger."
+	"self halt: (statScavenges + 1) printString, ((statScavenges between: 9 and: 19)
+													ifTrue: ['th']
+													ifFalse: [#('st' 'nd' 'rd') at: (statScavenges + 1) \\ 10 ifAbsent: 'th']), ' scavenge'."
 	^super scavengingGCTenuringIf: tenuringCriterion
 ]
 

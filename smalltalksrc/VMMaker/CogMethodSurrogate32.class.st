@@ -24,7 +24,7 @@ Here's a doit to generate my code:
 Class {
 	#name : #CogMethodSurrogate32,
 	#superclass : #CogBlockMethodSurrogate32,
-	#category : #'VMMaker-JITSimulation'
+	#category : 'VMMaker-JITSimulation'
 }
 
 { #category : #accessing }
