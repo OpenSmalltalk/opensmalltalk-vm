@@ -229,7 +229,7 @@ FloatArrayPlugin >> primitiveLength [
 	(interpreterProxy isWords: rcvr) ifFalse:
 		[interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	length := interpreterProxy stSizeOf: rcvr.
-	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
+	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: #'float *'.
 	len := 0.0.
 	0 to: length-1 do:[:i|
 		len := len + ((self cCoerce: (rcvrPtr at: i) to: #double) * (self cCoerce: (rcvrPtr at: i) to: #double)).
@@ -294,7 +294,7 @@ FloatArrayPlugin >> primitiveNormalize [
 	(interpreterProxy isWords: rcvr) ifFalse:
 		[interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	length := interpreterProxy stSizeOf: rcvr.
-	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
+	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: #'float *'.
 	len := 0.0.
 	0 to: length-1 do:[:i|
 		len := len + ((self cCoerce: (rcvrPtr at: i) to: #double) * (self cCoerce: (rcvrPtr at: i) to: #double)).
