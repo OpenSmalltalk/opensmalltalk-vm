@@ -376,5 +376,6 @@ FloatArrayPlugin >> primitiveSum [
 
 { #category : #simulation }
 FloatArrayPlugin >> sqrt: aFloat [
+	<doNotGenerate>
 	^aFloat sqrt
 ]
