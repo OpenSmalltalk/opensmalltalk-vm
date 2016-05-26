@@ -4,7 +4,7 @@ FloatArrayPlugin provides fast access to FloatArrays for batch processing of flo
 Class {
 	#name : #FloatArrayPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #'translation to C' }
@@ -220,23 +220,26 @@ FloatArrayPlugin >> primitiveHashArray [
 
 { #category : #'arithmetic primitives' }
 FloatArrayPlugin >> primitiveLength [
+
 	"Primitive. Compute the length of the argument (sqrt of sum of component squares)."
+
+	| rcvr rcvrPtr length result |
 	<export: true>
-	| rcvr rcvrPtr length len |
-	<var: #rcvrPtr type: #'float *'>
-	<var: #len type: #double>
-	rcvr := interpreterProxy stackValue: 0.
-	(interpreterProxy isWords: rcvr) ifFalse:
-		[interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	<var: #rcvrPtr type:'float *'>
+	<var: #result type:'double '>
+	rcvr := interpreterProxy stackObjectValue: 0.
+	interpreterProxy failed ifTrue:[^nil].
+	interpreterProxy success: (interpreterProxy isWords: rcvr).
+	interpreterProxy failed ifTrue:[^nil].
 	length := interpreterProxy stSizeOf: rcvr.
-	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: #'float *'.
-	len := 0.0.
+	interpreterProxy success: true.
+	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
+	result := 0.0.
 	0 to: length-1 do:[:i|
-		len := len + ((self cCoerce: (rcvrPtr at: i) to: #double) * (self cCoerce: (rcvrPtr at: i) to: #double)).
+		result := result + ((self cCoerce: (rcvrPtr at: i) to: 'double') * (self cCoerce: (rcvrPtr at: i) to: 'double')).
 	].
-	len > 0.0 ifFalse:
-		[interpreterProxy primitiveFailFor: PrimErrBadReceiver].
-	interpreterProxy pop: 1 thenPush: (interpreterProxy floatObjectOf: (self sqrt: len))
+	result := self cCode: [self sqrt:result] inSmalltalk: [result sqrt].
+	interpreterProxy pop: 1 thenPush: (interpreterProxy floatObjectOf: result)
 ]
 
 { #category : #'arithmetic primitives' }
@@ -285,26 +288,30 @@ FloatArrayPlugin >> primitiveMulScalar [
 
 { #category : #'arithmetic primitives' }
 FloatArrayPlugin >> primitiveNormalize [
+
 	"Primitive. Normalize the argument (A FloatArray) in place."
-	<export: true>
+
 	| rcvr rcvrPtr length len |
-	<var: #rcvrPtr type: #'float *'>
-	<var: #len type: #double>
-	rcvr := interpreterProxy stackValue: 0.
-	(interpreterProxy isWords: rcvr) ifFalse:
-		[interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	<export: true>
+	<var: #rcvrPtr type:'float *'>
+	<var: #len type:'double '>
+	rcvr := interpreterProxy stackObjectValue: 0.
+	interpreterProxy failed ifTrue:[^nil].
+	interpreterProxy success: (interpreterProxy isWords: rcvr).
+	interpreterProxy failed ifTrue:[^nil].
 	length := interpreterProxy stSizeOf: rcvr.
-	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: #'float *'.
+	interpreterProxy success: true.
+	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
 	len := 0.0.
 	0 to: length-1 do:[:i|
-		len := len + ((self cCoerce: (rcvrPtr at: i) to: #double) * (self cCoerce: (rcvrPtr at: i) to: #double)).
+		len := len + ((self cCoerce: (rcvrPtr at: i) to: 'double') * (self cCoerce: (rcvrPtr at: i) to: 'double')).
 	].
-	len > 0.0 ifFalse:
-		[interpreterProxy primitiveFailFor: PrimErrBadReceiver].
+	interpreterProxy success: (len > 0.0).
+	interpreterProxy failed ifTrue:[^nil].
 
-	len := self sqrt: len.
+	len := self cCode: [self sqrt:len] inSmalltalk: [len sqrt].
 	0 to: length-1 do:[:i|
-		rcvrPtr at: i put: ((self cCoerce: (rcvrPtr at: i) to: #double) / len).
+		rcvrPtr at: i put: ((self cCoerce: (rcvrPtr at: i) to: 'double') / len).
 	].
 
 	"Leave receiver on the stack."
@@ -372,10 +379,4 @@ FloatArrayPlugin >> primitiveSum [
 		sum := sum + (self cCoerce: (rcvrPtr at: i) to: 'double').
 	].
 	interpreterProxy pop: 1 thenPush: (interpreterProxy floatObjectOf: sum)
-]
-
-{ #category : #simulation }
-FloatArrayPlugin >> sqrt: aFloat [
-	<doNotGenerate>
-	^aFloat sqrt
 ]

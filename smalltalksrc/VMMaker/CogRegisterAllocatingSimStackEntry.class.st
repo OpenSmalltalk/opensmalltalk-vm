@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'liveRegister'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'compile abstract instructions' }

@@ -11,7 +11,7 @@ Class {
 	#classVars : [
 		'NeedsFixupFlag'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'simulation only' }

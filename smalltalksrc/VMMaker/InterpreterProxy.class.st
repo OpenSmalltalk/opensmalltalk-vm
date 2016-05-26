@@ -14,7 +14,7 @@ Class {
 		'bb',
 		'thisSessionID'
 	],
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : 'VMMaker-InterpreterSimulation'
 }
 
 { #category : #translation }
