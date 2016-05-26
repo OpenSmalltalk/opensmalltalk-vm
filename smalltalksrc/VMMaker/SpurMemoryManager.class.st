@@ -629,7 +629,7 @@ Class {
 		'VMSpurObjectRepresentationConstants',
 		'VMSqueakClassIndices'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
@@ -749,8 +749,8 @@ SpurMemoryManager class >> initialize [
 	 with the hot end at the head of the list.  It is a word object.  The stack
 	 pointer is in ObjStackTopx and 0 means empty.  The list goes through
 	 ObjStackNextx. We don't want to shrink objStacks, since they're used
-	 in GC and its good to keep their memory around.  So unused pages
-	 created by popping emptying pages are kept on the ObjStackFreex list.
+	 in GC and it's good to keep their memory around.  So unused pages
+	 created by popping emptied pages are kept on the ObjStackFreex list.
 	 ObjStackNextx must be the last field for swizzleObjStackAt:."
 	ObjStackPageSlots := 4092. "+ double header = 16k bytes per page in 32-bits"
 	ObjStackTopx := 0.
@@ -3023,6 +3023,20 @@ SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedNewSpaceObjs classIndice
 							[coInterpreter print: 'non-root in remembered set @ '; printNum: i; print: ' = '; printHex: obj; cr.
 							 self eek.
 							 ok := false]]]].
+	self objStack: mournQueue do:
+		[:i :page| | obj |
+		obj := self fetchPointer: i ofObject: page.
+		(obj bitAnd: self wordSize - 1) ~= 0
+			ifTrue:
+				[coInterpreter print: 'misaligned oop in mournQueue @ '; printNum: i; print: ' in '; printHex: page; print: ' = '; printHex: obj; cr.
+				 self eek.
+				 ok := false]
+			ifFalse:
+				[(excludeUnmarkedNewSpaceObjs and: [(self isYoung: obj) and: [(self isMarked: obj) not]]) ifFalse:
+					[(heapMap heapMapAtWord: (self pointerForOop: obj)) = 0 ifTrue:
+						[coInterpreter print: 'object leak in mournQueue @ '; printNum: i; print: ' in '; printHex: page; print: ' = '; printHex: obj; cr.
+						 self eek.
+						 ok := false]]]].
 	1 to: remapBufferCount do:
 		[:ri| | obj |
 		obj := remapBuffer at: ri.
@@ -7601,6 +7615,21 @@ SpurMemoryManager >> mapExtraRoots [
 				[(extraRoots at: i) at: 0 put: (self remapObj: oop)]]]
 ]
 
+{ #category : #'weakness and ephemerality' }
+SpurMemoryManager >> mapMournQueue [
+	<inline: #never>
+	self objStack: mournQueue do:
+		[:i :page| | mourner |
+		mourner := self fetchPointer: i ofObject: page.
+		(self isNonImmediate: mourner) ifTrue: "someone could try and become weaklings into immediates..."
+			[(self isForwarded: mourner) ifTrue:
+				[mourner := self followForwarded: mourner].
+			 (scavenger isScavengeSurvivor: mourner) ifFalse:
+				[mourner := scavenger copyAndForwardMourner: mourner].
+			 "we could check for change but writes are cheasp with write buffers..."
+			 self storePointerUnchecked: i ofObject: page withValue: mourner]]
+]
+
 { #category : #'image segment in/out' }
 SpurMemoryManager >> mapOopsAndValidateClassRefsFrom: segmentStart to: segmentLimit outPointers: outPointerArray [
 	"This is part of loadImageSegmentFrom:outPointers:.
@@ -8890,6 +8919,23 @@ SpurMemoryManager >> numberOfForwarders [
 ]
 
 { #category : #'obj stacks' }
+SpurMemoryManager >> objStack: objStack do: aBlock [
+	"Evaluate aBinaryBlock with all indices and pages of elements in objStack"
+	<inline: true>
+	| objStackPage |
+	objStack = nilObj ifTrue:
+		[^self].
+	self eassert: [self isValidObjStack: objStack].
+	objStackPage := objStack.
+	[objStackPage ~= 0] whileTrue:
+		[| numOnThisPage |
+		 numOnThisPage := self fetchPointer: ObjStackTopx ofObject: objStackPage.
+		 numOnThisPage + ObjStackFixedSlots - 1 to: ObjStackFixedSlots by: -1 do:
+			[:i| aBlock value: i value: objStackPage].
+		 objStackPage := self fetchPointer: ObjStackNextx ofObject: objStackPage]
+]
+
+{ #category : #'obj stacks' }
 SpurMemoryManager >> objStack: objStack from: start do: aBlock [
 	"Evaluate aBlock with all elements from start (0-relative) in objStack.
 	 Answer the size of the stack *before* the enumeration commences.
@@ -9930,7 +9976,8 @@ SpurMemoryManager >> queueMourner: anEphemeronOrWeakArray [
 	self assert: ((self isNonImmediate: anEphemeronOrWeakArray)
 				and: [(self formatOf: anEphemeronOrWeakArray) = self ephemeronFormat
 				   or: [(self formatOf: anEphemeronOrWeakArray) = self weakArrayFormat]]).
-	self deny: (self is: anEphemeronOrWeakArray onObjStack: mournQueue).
+	self deny: ((self formatOf: anEphemeronOrWeakArray) = self ephemeronFormat
+				and: [self is: anEphemeronOrWeakArray onObjStack: mournQueue]).
 	self ensureRoomOnObjStackAt: MournQueueRootIndex.
 	self push: anEphemeronOrWeakArray onObjStack: mournQueue
 ]

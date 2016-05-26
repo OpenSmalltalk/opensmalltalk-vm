@@ -10,7 +10,7 @@ Squeak uses 16-bit signed samples encoded in the host's endian order.  A sound b
 Class {
 	#name : #SoundPlugin,
 	#superclass : #SmartSyntaxInterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }
@@ -49,7 +49,7 @@ SoundPlugin >> primitiveSoundGetRecordingSampleRate [
 	| rate |
 	<var: #rate type: 'double '>
 	self primitive: 'primitiveSoundGetRecordingSampleRate'.
-	rate := self snd_GetRecordingSampleRate.  "fail if not recording"
+	rate := self cCode: 'snd_GetRecordingSampleRate()'.  "fail if not recording"
 	^rate asFloatObj
 ]
 

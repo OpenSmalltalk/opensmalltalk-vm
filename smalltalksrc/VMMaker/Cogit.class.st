@@ -316,7 +316,7 @@ Class {
 		'generatorTable',
 		'primitiveTable'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -543,6 +543,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 			declareC: 'void (*postCompileHook)(CogMethod *)';
 		var: #openPICList declareC: 'CogMethod *openPICList = 0';
 		var: #maxMethodBefore type: #'CogBlockMethod *'.
+	self objectMemoryClass wordSize = 8 ifTrue:
+		[aCCodeGenerator var: 'enumeratingCogMethod' type: #'CogMethod *'].
 	aCCodeGenerator
 		declareVar: 'aMethodLabel' type: #'AbstractInstruction'; "Has to come lexicographically before backEnd & methodLabel"
 		var: #backEnd declareC: 'AbstractInstruction * const backEnd = &aMethodLabel';
@@ -2451,7 +2453,7 @@ Cogit >> addressIsInFixups: address [
 { #category : #testing }
 Cogit >> addressIsInInstructions: address [
 	<var: #address type: #'AbstractInstruction *'>
-	^self cCode: '!((unsigned)(address) & BytesPerWord-1) \
+	^self cCode: '!((usqInt)(address) & BytesPerWord-1) \
 				&& (address) >= &abstractOpcodes[0] \
 				&& (address) < &abstractOpcodes[opcodeIndex]'
 		inSmalltalk: [(abstractOpcodes object identityIndexOf: address) between: 1 and: opcodeIndex]
@@ -8973,6 +8975,7 @@ Cogit >> noContextSwitchBlockEntryOffset [
 { #category : #compaction }
 Cogit >> noTargetsFreeInClosedPIC: cPIC [
 	"Answer if all targets in the PIC are in-use methods."
+	<var: #cPIC type: #'CogMethod *'>
 	^(self cPICHasFreedTargets: cPIC) not
 ]
 

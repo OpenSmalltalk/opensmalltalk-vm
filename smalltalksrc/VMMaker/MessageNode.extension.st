@@ -22,7 +22,8 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 				ifTrue: [block statements first]
 				ifFalse: [block]].
 		 (arguments first isLiteralNode
-		 and: [arguments first key isString]) ifTrue:
+		 and: [arguments first key isString
+		 and: [arguments first key isEmpty]]) ifTrue:
 			[^arguments first asTranslatorNodeIn: aTMethod]].
 	args := arguments
 				select: [:arg| arg notNil]
