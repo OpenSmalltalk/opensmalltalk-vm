@@ -105,7 +105,8 @@ Class {
 		'debugFixupBreaks',
 		'realCECallCogCodePopReceiverArg0Regs',
 		'realCECallCogCodePopReceiverArg1Arg0Regs',
-		'deadCode'
+		'deadCode',
+		'needsTwoPath'
 	],
 	#classVars : [
 		'NeedsMergeFixupFlag',
@@ -1209,6 +1210,10 @@ StackToRegisterMappingCogit >> compileEntireMethod [
 StackToRegisterMappingCogit >> compileFrameBuild [
 	"Build a frame for a CogMethod activation.  See CoInterpreter class>>initializeFrameIndices.
 	 Override to push the register receiver and register arguments, if any."
+	self cppIf: IMMUTABILITY ifTrue: 
+		[needsTwoPath ifTrue: 
+			[self compileTwoPathFrameBuild.
+		 	^self]].
 	needsFrame ifFalse:
 		[self initSimStackForFramelessMethod: initialPC.
 		 ^self].
@@ -1224,6 +1229,33 @@ StackToRegisterMappingCogit >> compileFullBlockMethodFrameBuild: numCopied [
 		[self initSimStackForFramelessMethod: initialPC.
 		 ^self].
 	super compileFullBlockMethodFrameBuild: numCopied.
+	self initSimStackForFramefulMethod: initialPC
+]
+
+{ #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> compileTwoPathFrameBuild [
+	<option: #IMMUTABILITY>
+	"We are in a method where the frame is needed *only* for instance variable store, typically a setter method.
+	This case has 20% overhead with Immutability compared to setter without immutability because of the stack
+	frame creation. We compile two path, one where the object is immutable, one where it isn't. At the beginning 
+	of the frame build, we take one path or the other depending on the receiver mutability.
+	
+	Note: this specific case happens only where there are only instance variabel stores. We could do something
+	similar for literal variable stores, but we don't as it's too uncommon."
+	|jumpImmutable|
+	self assert: needsFrame.
+	self assert: IMMUTABILITY.
+	self assert: needsTwoPath.
+	self assert: blockCount = 0.
+	jumpImmutable := objectRepresentation genJumpImmutable: ReceiverResultReg scratchReg: TempReg.
+	"first path. The receiver is mutable"
+	self initSimStackForFramelessMethod: initialPC.
+	self compileMethodBody.
+	"second path. The receiver is mutable"
+	needsTwoPath := false. "reset because it impact inst var store compilation"
+	jumpImmutable jmpTarget: self Label.
+	self genPushRegisterArgs.
+	super compileFrameBuild.
 	self initSimStackForFramefulMethod: initialPC
 ]
 
@@ -3032,18 +3064,26 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean slotIndex: slotIndex dest
 	self 
 		cppIf: IMMUTABILITY
 		ifTrue: 
-			[ self 
-				genImmCheckStorePop: popBoolean 
-				slotIndex: slotIndex 
-				destReg: destReg 
-				needsStoreCheck: needsStoreCheck
-				needsRestoreRcvr: needsRestoreReceiver ]
+			[needsTwoPath
+				ifTrue: 
+					[self  "first path, receiver is mutable"
+						genVanillaStorePop: popBoolean 
+						slotIndex: slotIndex 
+						destReg: destReg 
+						needsStoreCheck: needsStoreCheck]
+				ifFalse: 
+					[self 
+						genImmCheckStorePop: popBoolean 
+						slotIndex: slotIndex 
+						destReg: destReg 
+						needsStoreCheck: needsStoreCheck
+						needsRestoreRcvr: needsRestoreReceiver]]
 		ifFalse: 
-			[ self 
+			[self 
 				genVanillaStorePop: popBoolean 
 				slotIndex: slotIndex 
 				destReg: destReg 
-				needsStoreCheck: needsStoreCheck ].
+				needsStoreCheck: needsStoreCheck].
 		
 ]
 
@@ -3143,13 +3183,18 @@ StackToRegisterMappingCogit >> genUpArrowReturn [
 				ret pc in LR.
 	 A fully framed activation is described in CoInterpreter class>initializeFrameIndices.
 	 Return pops receiver and arguments off the stack.  Callee pushes the result."
+	| framelessReturn |
 	deadCode := true. "can't fall through"
 	inBlock ifTrue:
 		[self assert: needsFrame. 
 		 self CallRT: ceNonLocalReturnTrampoline.
 		 self annotateBytecode: self Label.
 		 ^0].
-	needsFrame
+	self 
+		cppIf: IMMUTABILITY
+		ifTrue: [framelessReturn := needsFrame and: [needsTwoPath not]]
+		ifFalse: [framelessReturn := needsFrame].
+	framelessReturn
 		ifTrue:
 			[self MoveR: FPReg R: SPReg.
 			 self PopR: FPReg.
@@ -3946,6 +3991,7 @@ StackToRegisterMappingCogit >> scanMethod [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	needsFrame := false.
 	prevBCDescriptor := nil.
+	self cppIf: IMMUTABILITY ifTrue: [ needsTwoPath := false ].
 	NewspeakVM ifTrue:
 		[numIRCs := 0].
 	(primitiveIndex > 0
@@ -3964,11 +4010,22 @@ StackToRegisterMappingCogit >> scanMethod [
 		 (descriptor isReturn
 		  and: [pc >= latestContinuation]) ifTrue:
 			[endPC := pc].
-		 needsFrame ifFalse:
-			[(descriptor needsFrameFunction isNil
-			  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
-				ifTrue: [needsFrame := true]
-				ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]].
+		self cppIf: IMMUTABILITY 
+			ifTrue: 
+				[(needsFrame and: [needsTwoPath not]) ifFalse:
+					[(descriptor needsFrameFunction isNil
+					  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
+						ifTrue: 
+							[needsFrame := true.
+							 needsTwoPath := descriptor generator == #genStoreAndPopReceiverVariableBytecode ]
+						ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]]]
+			ifFalse: 
+				[needsFrame ifFalse:
+					[(descriptor needsFrameFunction isNil
+					  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
+						ifTrue: [needsFrame := true]
+						ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]]].
+			
 		 descriptor isBranch ifTrue:
 			[distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.

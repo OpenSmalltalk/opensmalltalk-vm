@@ -4,7 +4,7 @@ A CFloatArray is a subclass of CArray that provides access via C float or double
 Class {
 	#name : #CFloatArray,
 	#superclass : #CArray,
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : 'VMMaker-InterpreterSimulation'
 }
 
 { #category : #accessing }

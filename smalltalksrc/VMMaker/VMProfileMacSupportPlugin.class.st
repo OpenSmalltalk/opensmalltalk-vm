@@ -4,7 +4,7 @@ This class provides support for the VMProfiler on MacOS X.  This support is for 
 Class {
 	#name : #VMProfileMacSupportPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }
