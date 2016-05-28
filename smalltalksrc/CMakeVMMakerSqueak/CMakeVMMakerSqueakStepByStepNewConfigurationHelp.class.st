@@ -646,6 +646,16 @@ stacksrc
 ]
 
 { #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cogitClass [
+	^HelpTopic
+		title:'cogitClass'
+		contents:
+'
+write me.
+'
+]
+
+{ #category : #pages }
 CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> compilingLinkingSetup [
 	^HelpTopic
 		title:'Compiling and Linking Setup'
@@ -658,6 +668,16 @@ externalLibsBuild
 linkerFlags
 
 
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> configGenerateByTemplate [
+	^HelpTopic
+		title:'config generate by template'
+		contents:
+'
+write me: generate by template is in several places. including the unix config and the vm and plugin generators
 '
 ]
 
@@ -1281,8 +1301,14 @@ Although some details will be different, the steps involved should be the same f
 
 { #category : #accessing }
 CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> pages [
-"I need the srcDir"
-	^#(overview 
+
+"platformSources...cogitClass...src vs vmsrc"
+	^#(
+platformSources
+cogitClass	
+vmsrc
+configGenerateByTemplate
+	overview 
 tests 
 identifyPlatform 
 identifyPlatformAbstractBaseClass
@@ -1335,6 +1361,15 @@ aNoteOnFoo
 )
 
 
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> platformSources [
+	^HelpTopic
+		title:'platformSources'
+		contents:
+'write me
+'
 ]
 
 { #category : #pages }
@@ -2025,4 +2060,14 @@ Let''s recap next.
 '
 
 
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> vmsrc [
+	^HelpTopic
+		title:'vmsrc'
+		contents:
+'
+write me.
+'
 ]

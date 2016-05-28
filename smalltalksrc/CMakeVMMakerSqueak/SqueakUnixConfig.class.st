@@ -1052,18 +1052,28 @@ SqueakUnixConfig >> platformSources [
 	^ #(
 	'aio.c'
 	'debug.c'
-"	'dlfcn-dyld.c'
-	'mac-alias.c' "
 	'osExports.c'
 	'sqUnixCharConv.c'
-"	'sqUnixEvent.c' "
+
 	'sqUnixExternalPrims.c'
 	'sqUnixHeartbeat.c'
 	'sqUnixMain.c'
 	'sqUnixMemory.c'
+	'sqUnixSpurMemory.c'	
 	'sqUnixThreads.c'
 	'sqUnixVMProfile.c'
 	)
+	
+	"
+	'dlfcn-dyld.c'
+	'mac-alias.c' 
+	'sqUnixEvent.c' 
+
+	'sqUnixITimerHeartbeat.c'
+	'sqUnixITimerTickerHeartbeat.c'
+
+	"
+
 ]
 
 { #category : #'cmake buildType redirects' }

@@ -18,6 +18,6 @@ Class {
 
 { #category : #cmake }
 SqueakIA32BochsMacOSConfig >> dirBuildLanguageVMMM [
-	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. "
 	^self squeakCogSpur
 ]

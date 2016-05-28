@@ -545,6 +545,7 @@ ADD_EXECUTABLE (squeakvm${scriptsuffix}
   ${unix}/vm/sqUnixExternalPrims.c
   ${unix}/vm/sqUnixMain.c
   ${unix}/vm/sqUnixMemory.c
+  ${unix}/vm/sqUnixSpurMemory.c
   ${cross}/vm/sqNamedPrims.c
   ${cross}/vm/sqVirtualMachine.c
   ${bld}/version.c
@@ -1931,7 +1932,7 @@ CPlatformConfigForSqueak >> dirBuildITimerHeartbeat [
 
 { #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirBuildLanguageVMMM [
-	"the directory under buildPlatformDir  example: newspeak.cog.spur. use squeak.cog.v3 as default"
+	"the directory under buildPlatformDir  example: newspeak.cog.spur. "
 	self subclassResponsibility
 ]
 
