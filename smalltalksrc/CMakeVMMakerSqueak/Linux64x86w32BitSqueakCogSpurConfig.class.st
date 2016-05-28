@@ -11,7 +11,7 @@ linkerFlags
 
 
 SqueakLinux64x86w32CompatBuilder 
-	configureABuildFor: #Linux64x86w32BitSqueakCogV3Config withBuildType: #build;
+	configureABuildFor: #Linux64x86w32BitSqueakCogSpurConfig withBuildType: #build;
 	enableMessageTracking: true;
 	generateByTemplate.
 
@@ -50,7 +50,7 @@ AC_TRY_COMPILE([#include <sys/uuid.h>],[uuid_generatorxyz;],[
 #define HAVE_UUID_H 1 
 #define HAVE_UUIDGEN 1
 
-fl;ags in my configH method
+flags in my configH method
 
 
 "
@@ -209,6 +209,12 @@ Linux64x86w32BitSqueakCogSpurConfig >> compilerFlags [
 
 { #category : #plugins }
 Linux64x86w32BitSqueakCogSpurConfig >> defaultExternalPlugins [
+	""
+	^#()
+]
+
+{ #category : #plugins }
+Linux64x86w32BitSqueakCogSpurConfig >> defaultInternalPlugins [
 	""
 	^#()
 ]
