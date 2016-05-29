@@ -78,6 +78,7 @@ subclasses should use
 { #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfigUsrLib >> coreSourcesBuild [
 	"files to include from src/vm dir"
+	self flag:'tty revisit this. This should return a subset of the available files there'.
 	^ #(
 		'cogit.c'
 		'gcc3x-cointerp.c'

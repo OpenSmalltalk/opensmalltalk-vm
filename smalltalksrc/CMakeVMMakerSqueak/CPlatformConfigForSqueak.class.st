@@ -69,6 +69,7 @@ Class {
 		'generateBuildMultiThreadedDebug',
 		'templates',
 		'enabledebugmessages',
+		'platformSources',
 		'vmplugins'
 	],
 	#classInstVars : [
@@ -2667,8 +2668,16 @@ CPlatformConfigForSqueak >> generateVmConfigIn [
 { #category : #'initialize-release' }
 CPlatformConfigForSqueak >> initialize [
 	enabledebugmessages := false.
-	self initializeVMDrivers.
-	self customizeVMPlugins
+	self 
+		initializePlatformSources;
+		initializeVMDrivers;
+		customizeVMPlugins.
+		
+]
+
+{ #category : #'initialize-release' }
+CPlatformConfigForSqueak >> initializePlatformSources [
+	self subclassResponsibility
 ]
 
 { #category : #'initialize-release' }
@@ -3471,18 +3480,97 @@ CPlatformConfigForSqueak >> setGlobalOptionsNoBuildType: aMaker [
 	self shouldNotImplement.
 ]
 
-{ #category : #cmake }
+{ #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> setPlatformSources: aMaker [
-	|platform |
+
+	"Route this message send to the message appropriate for my buildType "
+	|d |
+	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
+	d 
+		at: #build put: [self setPlatformSourcesBuild: aMaker];
+		at: #buildAssert  put: [self setPlatformSourcesBuildAssert: aMaker];
+		at: #buildAssertITimerHeartbeat  put: [self setPlatformSourcesBuildAssertITimerHeartbeat: aMaker];
+            at:#buildDebug  put: [self setPlatformSourcesBuildDebug: aMaker];   
+		at: #buildDebugITimerHeartbeat  put: [self setPlatformSourcesBuildDebugITimerHeartbeat: aMaker ];
+		at: #buildITimerHeartbeat  put: [self setPlatformSourcesBuildITimerHeartbeat: aMaker];
+		at: #buildMultiThreaded  put: [self setPlatformSourcesBuildMultiThreaded: aMaker ];
+		at: #buildMultiThreadedAssert  put: [self setPlatformSourcesBuildMultiThreadedAssert: aMaker];
+		at: #buildMultiThreadedDebug   put: [self setPlatformSourcesBuildMultiThreadedDebug: aMaker ];
+		at: #buildNone put:[self setPlatformSourcesNoBuildType: aMaker].
+	^(d at: buildType) value
+
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> setPlatformSourcesBuild: aMaker [
+	|sourcefiles |
+	"a subclass of mine has presumably set my platformSources instance variable and invoked super"
 	(enabledebugmessages)
 		ifTrue:[	templates 
 		addLast:((CMakeMessage new) message: (self class name) , 'setPlatformSources: aMaker')
 	].
-	platform := aMaker append: '${targetPlatform}/vm/' toAll: (self platformSources).
-	templates
-		addLast:((CMakeSet new) variable:'platformVMSources' value: platform)
 
-	
+	sourcefiles := aMaker append: '${targetPlatform}/vm/' toAll: (platformSources). 
+	templates
+		addLast:((CMakeSet new) variable:'platformVMSources' value: sourcefiles)
+
+
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> setPlatformSourcesBuildAssert: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setPlatformSources:'"
+
+	^self setPlatformSourcesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> setPlatformSourcesBuildAssertITimerHeartbeat: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setPlatformSources:'"
+
+	^self setPlatformSourcesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> setPlatformSourcesBuildDebug: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setPlatformSources'"
+	^self setPlatformSourcesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> setPlatformSourcesBuildDebugITimerHeartbeat: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setPlatformSources'"
+	^self setPlatformSourcesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> setPlatformSourcesBuildITimerHeartbeat: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setPlatformSources'"
+	^self setPlatformSourcesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> setPlatformSourcesBuildMultiThreaded: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setPlatformSources'"
+	^self setPlatformSourcesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> setPlatformSourcesBuildMultiThreadedAssert: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setPlatformSources'"
+	^self setPlatformSourcesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> setPlatformSourcesBuildMultiThreadedDebug: aMaker [
+	"SystemNavigation default browseMethodsWhoseNamesContain: 'setPlatformSources'"
+	^self setPlatformSourcesBuild: aMaker
+]
+
+{ #category : #'cmake buildType redirects' }
+CPlatformConfigForSqueak >> setPlatformSourcesNoBuildType: aMaker [
+	"SHOULD NOT GET HERE"
+	self shouldNotImplement.
 ]
 
 { #category : #'cmake buildType redirects' }
