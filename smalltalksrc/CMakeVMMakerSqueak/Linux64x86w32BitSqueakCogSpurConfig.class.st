@@ -213,12 +213,6 @@ Linux64x86w32BitSqueakCogSpurConfig >> defaultExternalPlugins [
 	^#()
 ]
 
-{ #category : #plugins }
-Linux64x86w32BitSqueakCogSpurConfig >> defaultInternalPlugins [
-	""
-	^#()
-]
-
 { #category : #cmake }
 Linux64x86w32BitSqueakCogSpurConfig >> dirBuildLanguageVMMM [
 	^self squeakCogSpur
@@ -260,4 +254,28 @@ Linux64x86w32BitSqueakCogSpurConfig >> linkerFlags [
             'now'
 	   ) 
 
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x86w32BitSqueakCogSpurConfig >> setPlatformSourcesBuild:aMaker [
+	|mysubset iwantonly|
+
+	"trim the platformSources collection .c files I want.  for  this OS/platform"
+	self flag:'tty. go through the Cog svn tree and see exactly what files should be included here. debug.c feels wrong'.
+	iwantonly := #(		
+	'aio.c'
+	'debug.c'	
+	'osExports.c'
+	'sqUnixCharConv.c'
+	'sqUnixExternalPrims.c'
+	'sqUnixHeartbeat.c'
+	'sqUnixMain.c'
+	'sqUnixMemory.c'
+	'sqUnixSpurMemory.c'	
+	'sqUnixThreads.c'
+	'sqUnixVMProfile.c'
+	).		
+	mysubset := platformSources select: [:c | 0 < (iwantonly occurrencesOf: c)]. 
+	platformSources := mysubset.
+	super setPlatformSourcesBuild:aMaker
 ]

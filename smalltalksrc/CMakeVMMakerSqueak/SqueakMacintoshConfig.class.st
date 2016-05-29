@@ -418,15 +418,13 @@ SqueakMacintoshConfig >> generateVmConfigCmake [
 	"do nothing. Unless Mac uses this, then push me down"
 ]
 
-{ #category : #accessing }
-SqueakMacintoshConfig >> platformName [
-	^self macOSPlatformName
-]
-
 { #category : #'source files' }
-SqueakMacintoshConfig >> platformSources [
-	"files added from platform/Mac OS/vm dir "
-	^ #(
+SqueakMacintoshConfig >> initializePlatformSources [
+	"files added from platform/Mac OS/vm dir 	Your configuration will need a subset of these based on buildType
+	SystemNavigation browseAllImplementorsOf: #setPlatformSourcesBuild:
+	"
+		
+	platformSources :=#(
 	'NSCursorWrappers.m'
 	'nsPoolManagement.m'
 	'osExports.c'
@@ -445,6 +443,11 @@ SqueakMacintoshConfig >> platformSources [
 	'sqMacWindowUniversal.c'
 	'version.c'	
 	)
+]
+
+{ #category : #accessing }
+SqueakMacintoshConfig >> platformName [
+	^self macOSPlatformName
 ]
 
 { #category : #accessing }

@@ -1041,21 +1041,23 @@ SqueakUnixConfig >> generateVmConfigCmake [
 	template generate: self
 ]
 
-{ #category : #accessing }
-SqueakUnixConfig >> platformName [
-	^self unixPlatformName
-]
-
 { #category : #'source files' }
-SqueakUnixConfig >> platformSources [
-	"files added from platform/unix/vm dir "
-	^ #(
+SqueakUnixConfig >> initializePlatformSources [
+"	Your configuration will need a subset of these based on buildType
+	SystemNavigation browseAllImplementorsOf: #setPlatformSourcesBuild:
+	"
+
+	platformSources:= #(
 	'aio.c'
 	'debug.c'
+	'dlfcn-dyld.c'
+	'mac-alias.c' 
 	'osExports.c'
 	'sqUnixCharConv.c'
-
+	'sqUnixEvent.c' 
 	'sqUnixExternalPrims.c'
+	'sqUnixITimerHeartbeat.c'
+	'sqUnixITimerTickerHeartbeat.c'
 	'sqUnixHeartbeat.c'
 	'sqUnixMain.c'
 	'sqUnixMemory.c'
@@ -1063,17 +1065,15 @@ SqueakUnixConfig >> platformSources [
 	'sqUnixThreads.c'
 	'sqUnixVMProfile.c'
 	)
-	
-	"
-	'dlfcn-dyld.c'
-	'mac-alias.c' 
-	'sqUnixEvent.c' 
 
-	'sqUnixITimerHeartbeat.c'
-	'sqUnixITimerTickerHeartbeat.c'
 
-	"
 
+
+]
+
+{ #category : #accessing }
+SqueakUnixConfig >> platformName [
+	^self unixPlatformName
 ]
 
 { #category : #'cmake buildType redirects' }
