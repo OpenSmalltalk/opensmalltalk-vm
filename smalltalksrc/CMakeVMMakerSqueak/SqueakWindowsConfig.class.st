@@ -230,27 +230,13 @@ SqueakWindowsConfig >> frameworksBuildMultiThreadedDebug [
 	^ self frameworksBuild
 ]
 
-{ #category : #accessing }
-SqueakWindowsConfig >> msysPathFor: aPath [
-	| path |
-	self flag:'tty'. "code smell alert"
-	^aPath isString
-		ifTrue:[	path := aPath  copyReplaceAll: '\' with: '/'.]
-		ifFalse:[	path := aPath pathName copyReplaceAll: '\' with: '/'.]
-
-	
-
-]
-
-{ #category : #accessing }
-SqueakWindowsConfig >> platformName [
-	^self win32PlatformName
-]
-
 { #category : #'source files' }
-SqueakWindowsConfig >> platformSources [
-	"files added from platform/win32/vm dir "
-	^ #(
+SqueakWindowsConfig >> initializePlatformSources [
+	"files from platform/win32/vm dir 
+	Your configuration will need a subset of these based on buildType
+	SystemNavigation browseAllImplementorsOf: #setPlatformSourcesBuild:
+	"
+	platformSources:= #(
 		'sqWin32Alloc.c'
 		'sqWin32Directory.c'
 		'sqWin32Heartbeat.c'
@@ -271,6 +257,23 @@ SqueakWindowsConfig >> platformSources [
 		'sqWin32Prefs.c'
 		'sqWin32Utils.c'
 	)
+]
+
+{ #category : #accessing }
+SqueakWindowsConfig >> msysPathFor: aPath [
+	| path |
+	self flag:'tty'. "code smell alert"
+	^aPath isString
+		ifTrue:[	path := aPath  copyReplaceAll: '\' with: '/'.]
+		ifFalse:[	path := aPath pathName copyReplaceAll: '\' with: '/'.]
+
+	
+
+]
+
+{ #category : #accessing }
+SqueakWindowsConfig >> platformName [
+	^self win32PlatformName
 ]
 
 { #category : #'cmake buildType redirects' }
