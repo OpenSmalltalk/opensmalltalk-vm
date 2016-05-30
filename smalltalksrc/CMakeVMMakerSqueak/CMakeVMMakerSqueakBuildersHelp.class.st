@@ -102,9 +102,10 @@ CMakeVMMakerSqueakBuildersHelp class >> overview [
 	^HelpTopic
 		title: 'Overview'
 		contents:
-'A CMakeVMakerSqueak Builder is both a ''query'' tool and a ''build'' tool.
+'Builders are a facade interfact to CMakeVMmakerSqueak Configurations.
 
-Builders provide a facade to CMakeVMmakerSqueak Configurations.
+A CMakeVMakerSqueak Builder is both a ''query'' tool and a ''build'' tool.
+
 
 With a  Builder, you can 
 	query its configurationsCategory''s Configurations
@@ -119,14 +120,14 @@ HelpBrowser openOn: SqueakCMakeVMMakerAbstractBuilder
 SqueakCMakeVMMakerAbstractBuilder  browseHierarchy.
 
 Information on creating your own is available via HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp
-TODO: Fix above sentence to point to something useful.
+
 
 '
 ]
 
 { #category : #accessing }
 CMakeVMMakerSqueakBuildersHelp class >> pages [
-	^#(overview queryingBuilders buildTypes  generatingCMakeBuilds)
+	^#(overview queryingBuilders buildTypes  generatingCMakeBuilds CMakeVMMakerSqueakTutorialNewBuilderHelp)
 	
 "#(overview queryingBuilders buildTypes  generatingCMakeBuilds scratch)"
 ]

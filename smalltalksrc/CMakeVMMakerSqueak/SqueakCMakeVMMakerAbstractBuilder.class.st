@@ -282,7 +282,7 @@ SqueakCMakeVMMakerAbstractBuilder >> enableMessageTracking: aBoolean [
 { #category : #building }
 SqueakCMakeVMMakerAbstractBuilder >> generateByTemplate [
 	self flag:'tty'. "If we ever script builds, this inform must by bypassed"
-	(config isKindOf: CPlatformConfig)
+	(config isKindOf: CPlatformConfigForSqueak)
 		ifTrue:[
 			(config excludeFromBuild)
 				ifTrue:[self inform: '', config class, ' >>"excludeFromBuild" answers #true. Most likely because it is under development']

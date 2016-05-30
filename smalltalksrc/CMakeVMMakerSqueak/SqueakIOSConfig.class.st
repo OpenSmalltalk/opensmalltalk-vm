@@ -22,42 +22,6 @@ Class {
 	#category : #'CMakeVMMakerSqueak-IOS'
 }
 
-{ #category : #'cmake buildType redirects' }
-SqueakIOSConfig >> addVMPluginsBuild: aMaker [
-	|temp o|
-	self flag:'tty'. "I am writing sub-directory CMakeLists.txt here. Should I also write the config.cmake files?"
-	enabledebugmessages
-		ifTrue: [templates  "this message will go to the top level CMakeLists.txt file"
-				addLast: (CMakeMessage new message: self class name , 'addVMPluginsBuild: aMaker')].
-	vmplugins do:[ :vmp |                    
-		o := String new writeStream.   "each VMPlugin gets its own CMakeLists.txt file in its own directory"
-		temp := OrderedCollection new.	
-		temp
-			addAllLast:((CMakePluginVm new)    "this is the CMakeCompositTemplate"
-					config: self 
-					definitions: (vmp compilerdefinitions)
-					module: (vmp module)
-					sources: (vmp sources)
-					includedirectories: (vmp includedirectories)).
-		temp do: [:each |  o nextPutAll: (each content); cr].
-	((self buildDir) directoryExists: (vmp module))
-		ifFalse:[	(self buildDir) createDirectory: (vmp module)].
-		self write: (o contents) toFile: vmp module , FileDirectory slash , aMaker outputFileName.
-		templates   "this will go to the top level CMakeLists.txt file"
-			addLast: ((CMakeAddSubDirectory new) sourcedir: (vmp module)) 
-	].
-
-
-
-
-
-
-
-
-
-
-]
-
 { #category : #cmake }
 SqueakIOSConfig >> availableBuildTypes [
  	 ^SqueakCMakeVMMakerAbstractBuilder  default  noBuildTypes
@@ -86,94 +50,6 @@ SqueakIOSConfig >> coreSourcesBuildMultiThreaded [
 		'cogit.c'
 		'cointerpmt.c'
 		)
-]
-
-{ #category : #plugins }
-SqueakIOSConfig >> customizeCMakeVMDisplayNull [
-	|module|
-	module := vmplugins detect: [:vmd | #CMakeVMDisplayNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
-	module 
-		sources: #('${targetPlatform}/vm-display-null/sqUnixDisplayNull') ;
-		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
-		compilerflags: (self compilerFlags);
-		externallibraries: #();
-		linkerflags: (self linkerFlags);
-		includedirectories:(OrderedCollection 
-										with:'${crossDir}/plugins/FilePlugin' 
-										with: '${targetPlatform}/plugins/B3DAcceleratorPlugin'  
- 									     with: '${crossDir}/plugins/B3DAcceleratorPlugin').
-	self flag:'tty'. "I don't think includedirectories is correct. revisit"
-
-
-
-
-
-
-
-]
-
-{ #category : #plugins }
-SqueakIOSConfig >> customizeCMakeVMDisplayX11 [
-	|module|
-	module := vmplugins detect: [:vmd | #CMakeVMDisplayX11 = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
-	module 
-		sources: #( '${targetPlatform}/vm-display-X11/sqUnixX11' '${targetPlatform}/vm-display-X11/sqUnixMozilla' );
-		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
-		compilerflags: (self compilerFlags);
-		externallibraries: (self externalLibraries);
-		linkerflags: (self linkerFlags);
-		includedirectories:(OrderedCollection 
-										with:'${crossDir}/plugins/FilePlugin' 
-										with: '${targetPlatform}/plugins/B3DAcceleratorPlugin'  
- 									     with: '${crossDir}/plugins/B3DAcceleratorPlugin').
-
-]
-
-{ #category : #plugins }
-SqueakIOSConfig >> customizeCMakeVMSoundALSA [
-	|module|
-	module := vmplugins detect: [:vmd | #CMakeVMSoundALSA = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
-	module 
-		sources: #( '${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' );
-		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
-		compilerflags: (self compilerFlags);
-		externallibraries: (self externalLibraries);
-		linkerflags: (self linkerFlags);
-		includedirectories: #().
-	
-]
-
-{ #category : #plugins }
-SqueakIOSConfig >> customizeCMakeVMSoundNull [
-	|module|
-	module := vmplugins detect: [:vmd | #CMakeVMSoundNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
-	module 
-		sources: #( '${targetPlatform}/vm-sound-null/sqUnixSoundNull' );
-		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
-		compilerflags: (self compilerFlags);
-		externallibraries: (self externalLibraries);
-		linkerflags: (self linkerFlags);
-		includedirectories:#()
-
-
-]
-
-{ #category : #plugins }
-SqueakIOSConfig >> customizeVMPlugins [
-	|mysubset iwantonly|
-	"trim the vmdrivers ordered collection of CMakeVMDriver subclasses to only those I want. then customize them for use on this OS/platform"
-	iwantonly :=	 #(#CMakeVMDisplayNull  #CMakeVMDisplayX11  #CMakeVMSoundALSA  #CMakeVMSoundNull ).
-	mysubset := vmplugins select: [:vmd | 0 < (iwantonly occurrencesOf: (vmd class name) asSymbol)]. 
-	vmplugins := mysubset.
-	self 
-		customizeCMakeVMDisplayNull;
-		customizeCMakeVMDisplayX11;
-		customizeCMakeVMSoundALSA;
-		customizeCMakeVMSoundNull.
-
-
-
-
 ]
 
 { #category : #plugins }

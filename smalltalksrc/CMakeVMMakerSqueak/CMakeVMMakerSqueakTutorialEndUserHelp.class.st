@@ -5,18 +5,18 @@ A CMakeVMMakerSqueakTerseGuideHelp provides a simple walkthrough of a build usin
 
 "
 Class {
-	#name : #CMakeVMMakerSqueakExampleWorkflowHelp,
-	#superclass : #CMakeVMMakerSqueakHelp,
+	#name : #CMakeVMMakerSqueakTutorialEndUserHelp,
+	#superclass : #CMakeVMMakerSqueakTutorialsHelp,
 	#category : #'CMakeVMMakerSqueak-Help'
 }
 
 { #category : #accessing }
-CMakeVMMakerSqueakExampleWorkflowHelp class >> bookName [
-	^'Example Workflow: End User'
+CMakeVMMakerSqueakTutorialEndUserHelp class >> bookName [
+	^'Tutorial: End User'
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakExampleWorkflowHelp class >> configureAndGenerate [
+CMakeVMMakerSqueakTutorialEndUserHelp class >> configureAndGenerate [
 	^HelpTopic
 		title: 'Configure and Generate'
 		contents:
@@ -38,7 +38,7 @@ Running the above cascade provides no feedback to the user. If all went well, th
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakExampleWorkflowHelp class >> examiningOutput [
+CMakeVMMakerSqueakTutorialEndUserHelp class >> examiningOutput [
 	"This method was automatically generated. Edit it using:"
 	"a HelpBrowser edit: #examiningOutput"
 	^HelpTopic
@@ -95,7 +95,7 @@ Klatt                 StarSqueakPlugin       vm-sound-null
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakExampleWorkflowHelp class >> invokeCMake [
+CMakeVMMakerSqueakTutorialEndUserHelp class >> invokeCMake [
 	^HelpTopic
 		title: 'Invoke cmake'
 		contents:
@@ -122,11 +122,13 @@ When CMakeVMMakerSqueak is ported to different platforms, then the ''make'' comm
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakExampleWorkflowHelp class >> overview [
+CMakeVMMakerSqueakTutorialEndUserHelp class >> overview [
 	^HelpTopic
 		title: 'Overview'
 		contents:
-'On a given Platform, a platform specific Builder configures a platform specific Configuration for a buildType and instructs it to  write its CMake output to that Configuration''s build directory.
+'This tutorial covers how to generate a CMake build tree using an existing Builder and an existing Configuration. If you need a new Builder or Configuration see the Developer Guide.
+
+On a given Platform, a platform specific Builder configures a platform specific Configuration for a buildType and instructs it to  write its CMake output to that Configuration''s build directory.
 
 This terse example shows a typicall use-case of the tools.
 
@@ -147,18 +149,18 @@ To do this, I ...
 ]
 
 { #category : #accessing }
-CMakeVMMakerSqueakExampleWorkflowHelp class >> pages [
+CMakeVMMakerSqueakTutorialEndUserHelp class >> pages [
 	^#(overview selectBuilder queryBuilder selectConfiguration configureAndGenerate examiningOutput invokeCMake testDrive)
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakExampleWorkflowHelp class >> priority [
+CMakeVMMakerSqueakTutorialEndUserHelp class >> priority [
 
 	^ 3
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakExampleWorkflowHelp class >> queryBuilder [
+CMakeVMMakerSqueakTutorialEndUserHelp class >> queryBuilder [
 	^HelpTopic
 		title: 'Query the Builder'
 		contents:
@@ -186,7 +188,7 @@ SqueakCMakeVMMakerAbstractBuilder class browse.
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakExampleWorkflowHelp class >> selectBuilder [
+CMakeVMMakerSqueakTutorialEndUserHelp class >> selectBuilder [
 	^HelpTopic
 		title: 'Select a Builder'
 		contents:
@@ -201,7 +203,7 @@ SqueakCMakeVMMakerAbstractBuilder browseHierarchy.
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakExampleWorkflowHelp class >> selectConfiguration [
+CMakeVMMakerSqueakTutorialEndUserHelp class >> selectConfiguration [
 	^HelpTopic
 		title: 'Select a Configuration'
 		contents:
@@ -226,7 +228,7 @@ Linux64x86w32BitSqueakCogV3Config browseHierarchy
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakExampleWorkflowHelp class >> testDrive [
+CMakeVMMakerSqueakTutorialEndUserHelp class >> testDrive [
 	^HelpTopic
 		title: 'Test Driving the VM'
 		contents:

@@ -52,6 +52,11 @@ Class {
 	#category : #CMakeVMMakerSqueak
 }
 
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> addVMPluginsBuild: aMaker [
+	"do nothing. "
+]
+
 { #category : #cmake }
 SqueakWindowsConfig >> cmakeWriteDirectoriesDotCmake: aMaker [
 	|temp o|
@@ -134,32 +139,6 @@ SqueakWindowsConfig >> configureForBuildType: aSymbol [
 
 ]
 
-{ #category : #'initialize-release' }
-SqueakWindowsConfig >> customizeVMDrivers [
-	"
-	SystemNavigation default browseMethodsWhoseNamesContain:'customizeVMDrivers'
-
-	force platform level or lower customization of vm-display-X11 vm-sound-ALSA, etc. 
-	The configurations can select what subset they want using something like this.
-
-	|subset iwantonly|
-	iwantonly :=	 #(#CMakeVMDisplayNull  #CMakeVMDisplayX11  #CMakeVMSoundALSA  #CMakeVMSoundNull ).
-	subset := vmdrivers select: [:vmd | 0 < (iwantonly occurrencesOf: (vmd class name) asSymbol)]. 
-	vmdrivers := subset.
-
-	self 
-		customizeCMakeVMDisplayNull;
-		customizeCMakeVMDisplayX11;
-		customizeCMakeVMSoundALSA;
-		customizeCMakeVMSoundNull
-
-
-
-"
-	self flag:'tty'. "revisit this design strategy"
-	self subclassResponsibility
-]
-
 { #category : #plugins }
 SqueakWindowsConfig >> customizeVMPlugins [
 	"do nothing,. only used on linux?"
@@ -228,6 +207,12 @@ SqueakWindowsConfig >> frameworksBuildMultiThreadedAssert [
 { #category : #'cmake buildType redirects' }
 SqueakWindowsConfig >> frameworksBuildMultiThreadedDebug [
 	^ self frameworksBuild
+]
+
+{ #category : #'source generation' }
+SqueakWindowsConfig >> generateByTemplate [
+	"You can write out supporting CMake output here. See this method in SqueakUnixConfig for example"
+	^ CMakeVMGeneratorForSqueak generateByTemplate: self 
 ]
 
 { #category : #'source files' }

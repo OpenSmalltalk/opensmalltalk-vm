@@ -29,7 +29,7 @@ SqueakMacintoshConfig >> addFrameworksByTemplate: aCollection maker: aMaker [
 
 { #category : #'cmake buildType redirects' }
 SqueakMacintoshConfig >> addVMPluginsBuild: aMaker [
-	"do nothing. Unless Mac uses this, then push me down"
+	"do nothing. "
 ]
 
 { #category : #cmake }
@@ -295,31 +295,6 @@ SqueakMacintoshConfig >> configureForBuildType: aSymbol [
 
 ]
 
-{ #category : #'initialize-release' }
-SqueakMacintoshConfig >> customizeVMDrivers [
-	"
-	SystemNavigation default browseMethodsWhoseNamesContain:'customizeVMDrivers'
-	
-	force platform level or lower customization of vm-display-X11 vm-sound-ALSA, etc. 
-	The configurations can select what subset they want using something like this.
-
-	|subset iwantonly|
-	iwantonly :=	 #(#CMakeVMDisplayNull  #CMakeVMDisplayX11  #CMakeVMSoundALSA  #CMakeVMSoundNull ).
-	subset := vmdrivers select: [:vmd | 0 < (iwantonly occurrencesOf: (vmd class name) asSymbol)]. 
-	vmdrivers := subset.
-
-	self 
-		customizeCMakeVMDisplayNull;
-		customizeCMakeVMDisplayX11;
-		customizeCMakeVMSoundALSA;
-		customizeCMakeVMSoundNull
-
-
-"
-	self flag:'tty'. "revisit this design strategy"
-	self subclassResponsibility
-]
-
 { #category : #plugins }
 SqueakMacintoshConfig >> customizeVMPlugins [
 	"do nothing,. only used on linux?"
@@ -411,6 +386,12 @@ SqueakMacintoshConfig >> frameworksBuildMultiThreadedAssert [
 { #category : #'cmake buildType redirects' }
 SqueakMacintoshConfig >> frameworksBuildMultiThreadedDebug [
 	^ self frameworksBuild
+]
+
+{ #category : #'source generation' }
+SqueakMacintoshConfig >> generateByTemplate [
+	"You can write out supporting CMake output here. See this method in SqueakUnixConfig for example"
+	^ CMakeVMGeneratorForSqueak generateByTemplate: self 
 ]
 
 { #category : #'cmake buildType redirects' }

@@ -57,7 +57,12 @@ CMakeVMGeneratorForSqueak >> generateBuildScript [
 
 { #category : #'code generation' }
 CMakeVMGeneratorForSqueak >> generateByTemplate [
-	"attempt to move way from string based writing to  template based. Think Seaside renderOn composition"
+	"The bulk of CMake generation happens here.
+	
+	See CPlatformConfigForSqueak>>initialize for CMake output. that occurs prior to this method. (This may change on refactoring)
+
+	Think Seaside renderOn composition.
+	"
 	| extPlugins intPlugins |
 	self flag: 'tty'. "refactor so that the cascade reflects CMake terminilogy"
 	output := String new writeStream.
