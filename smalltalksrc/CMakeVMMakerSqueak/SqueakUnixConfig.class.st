@@ -295,6 +295,56 @@ ENDIF (NOT DEFINED __sq_config_h)
 ]
 
 { #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> addVMPluginsBuild: aMaker [
+"instance variable vmplugins was populated in CPlatformConfigForSqueak>>initialize then customized by >>customizeVMPlugins
+That initial customization will probably be the general case. 
+
+However, a subclass of me, may want further granularity on included vm plugins based on buildType. 
+Simply override me (or my addVMPlugins[buildType] cousins) and extract the subset of vmplugins you want to generate.
+
+see the ''hack'' section below.
+"
+
+	|temp o|
+	self flag:'tty'. "I am writing sub-directory CMakeLists.txt here. Should I also write the config.cmake files?"
+	enabledebugmessages
+		ifTrue: [templates  "this message will go to the top level CMakeLists.txt file"
+				addLast: (CMakeMessage new message: self class name , 'addVMPluginsBuild: aMaker')].
+			
+	"
+	hack := the subset of vmplugins that I want for this particular buildType. 
+	hack do:[:vmp| .....	 
+	"
+	vmplugins do:[ :vmp |                    
+		o := String new writeStream.   "each VMPlugin gets its own CMakeLists.txt file in its own directory"
+		temp := OrderedCollection new.	
+		temp
+			addAllLast:((CMakePluginVm new)    "this is the CMakeCompositTemplate"
+					config: self 
+					definitions: (vmp compilerdefinitions)
+					module: (vmp module)
+					sources: (vmp sources)
+					includedirectories: (vmp includedirectories)).
+		temp do: [:each |  o nextPutAll: (each content); cr].
+	((self buildDir) directoryExists: (vmp module))
+		ifFalse:[	(self buildDir) createDirectory: (vmp module)].
+		self write: (o contents) toFile: vmp module , FileDirectory slash , aMaker outputFileName.
+		templates   "this will go to the top level CMakeLists.txt file"
+			addLast: ((CMakeAddSubDirectory new) sourcedir: (vmp module)) 
+	].
+
+
+
+
+
+
+
+
+
+
+]
+
+{ #category : #'cmake buildType redirects' }
 SqueakUnixConfig >> cmakeIncludeModulesBuild [
 	"include CMake Modules. on my system they are in /usr/local/share/cmake-3.0/Modules/"
 	(enabledebugmessages)
@@ -948,28 +998,110 @@ SqueakUnixConfig >> crossSources [
 ]
 
 { #category : #'initialize-release' }
-SqueakUnixConfig >> customizeVMDrivers [
+SqueakUnixConfig >> customizeCMakeVMDisplayNull [
+	|module|
+	module := vmplugins detect: [:vmd | #CMakeVMDisplayNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	module 
+		sources: #('${targetPlatform}/vm-display-null/sqUnixDisplayNull') ;
+		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
+		compilerflags: (self compilerFlags);
+		externallibraries: #();
+		linkerflags: (self linkerFlags);
+		includedirectories:(OrderedCollection 
+										with:'${crossDir}/plugins/FilePlugin' 
+										with: '${targetPlatform}/plugins/B3DAcceleratorPlugin'  
+ 									     with: '${crossDir}/plugins/B3DAcceleratorPlugin').
+	self flag:'tty'. "I don't think includedirectories is correct. revisit"
+
+
+
+
+
+
+
+]
+
+{ #category : #'initialize-release' }
+SqueakUnixConfig >> customizeCMakeVMDisplayX11 [
+	|module|
+	module := vmplugins detect: [:vmd | #CMakeVMDisplayX11 = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	module 
+		sources: #( '${targetPlatform}/vm-display-X11/sqUnixX11' '${targetPlatform}/vm-display-X11/sqUnixMozilla' );
+		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
+		compilerflags: (self compilerFlags);
+		externallibraries: (self externalLibraries);
+		linkerflags: (self linkerFlags);
+		includedirectories:(OrderedCollection 
+										with:'${crossDir}/plugins/FilePlugin' 
+										with: '${targetPlatform}/plugins/B3DAcceleratorPlugin'  
+ 									     with: '${crossDir}/plugins/B3DAcceleratorPlugin').
+
+]
+
+{ #category : #'initialize-release' }
+SqueakUnixConfig >> customizeCMakeVMSoundALSA [
+	|module|
+	module := vmplugins detect: [:vmd | #CMakeVMSoundALSA = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	module 
+		sources: #( '${targetPlatform}/vm-sound-ALSA/sqUnixSoundALSA' );
+		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
+		compilerflags: (self compilerFlags);
+		externallibraries: (self externalLibraries);
+		linkerflags: (self linkerFlags);
+		includedirectories: #().
+	
+]
+
+{ #category : #'initialize-release' }
+SqueakUnixConfig >> customizeCMakeVMSoundNull [
+	|module|
+	module := vmplugins detect: [:vmd | #CMakeVMSoundNull = ((vmd class name) asSymbol)] ifNone:[nil].  "error handling?"
+	module 
+		sources: #( '${targetPlatform}/vm-sound-null/sqUnixSoundNull' );
+		compilerdefinitions:(OrderedCollection with: '-fPIC' with: '-DPIC');
+		compilerflags: (self compilerFlags);
+		externallibraries: (self externalLibraries);
+		linkerflags: (self linkerFlags);
+		includedirectories:#()
+
+
+]
+
+{ #category : #'initialize-release' }
+SqueakUnixConfig >> customizeVMPlugins [
+	"override me if you want a different subset of vm plugins at initialization time.
+	for customization of plugins used based on buildType, override an addVMPlugins[buildType]: aMaker  method and 
+	modify that method for whatever subset of plugins you want to use.
+	
+	I doubt if buildType plugin selection will be used much. The list created at initialization will probably be sufficient.
 	"
-	SystemNavigation default browseMethodsWhoseNamesContain:'customizeVMDrivers'
-
-	force platform level or lower customization of vm-display-X11 vm-sound-ALSA, etc. 
-	The configurations can select what subset they want using something like this.
-
-	|subset iwantonly|
+	|mysubset iwantonly|
 	iwantonly :=	 #(#CMakeVMDisplayNull  #CMakeVMDisplayX11  #CMakeVMSoundALSA  #CMakeVMSoundNull ).
-	subset := vmdrivers select: [:vmd | 0 < (iwantonly occurrencesOf: (vmd class name) asSymbol)]. 
-	vmdrivers := subset.
-
+	mysubset := vmplugins select: [:vmd | 0 < (iwantonly occurrencesOf: (vmd class name) asSymbol)]. 
+	vmplugins := mysubset.
 	self 
 		customizeCMakeVMDisplayNull;
 		customizeCMakeVMDisplayX11;
 		customizeCMakeVMSoundALSA;
-		customizeCMakeVMSoundNull
+		customizeCMakeVMSoundNull.
+		
+self flag:'tty: complete the customizeVMPlugin stack'.		
+"The following need to be thought through then written:
 
+customizeCMakeVMDisplayCustom
+customizeCMakeVMDisplayFbdev
+customizeCMakeVMDisplayQuartz
+customizeCMakeVMSoundCustom
+customizeCMakeVMSoundMacOSX
+customizeCMakeVMSoundNAS
+customizeCMakeVMSoundOSS
+customizeCMakeVMSoundPulse
+customizeCMakeVMSoundSun
 
 "
-	self flag:'tty'. "revisit this design strategy"
-	self subclassResponsibility
+
+
+
 ]
 
 { #category : #accessing }
@@ -1043,8 +1175,13 @@ SqueakUnixConfig >> generateVmConfigCmake [
 
 { #category : #'source files' }
 SqueakUnixConfig >> initializePlatformSources [
-"	Your configuration will need a subset of these based on buildType
+"  This list of files is taken directly from the Cog build tree.	
+	
+	 ls -1 Cog/platforms/unix/vm/*.c
+
+	Your configuration will need a subset of these based on buildType
 	SystemNavigation browseAllImplementorsOf: #setPlatformSourcesBuild:
+
 	"
 
 	platformSources:= #(
@@ -1056,9 +1193,9 @@ SqueakUnixConfig >> initializePlatformSources [
 	'sqUnixCharConv.c'
 	'sqUnixEvent.c' 
 	'sqUnixExternalPrims.c'
+	'sqUnixHeartbeat.c'
 	'sqUnixITimerHeartbeat.c'
 	'sqUnixITimerTickerHeartbeat.c'
-	'sqUnixHeartbeat.c'
 	'sqUnixMain.c'
 	'sqUnixMemory.c'
 	'sqUnixSpurMemory.c'	
@@ -1140,25 +1277,4 @@ SqueakUnixConfig >> standardIncludesBuild [
 { #category : #'cmake buildType redirects' }
 SqueakUnixConfig >> thirdpartyLibsBuild [
 	^ thirdpartyLibs ifNil: [ thirdpartyLibs := OrderedCollection new ].
-]
-
-{ #category : #plugins }
-SqueakUnixConfig >> vmDrivers [
-"SystemNavigation default browseMethodsWhoseNamesContain: 'vmDrivers'
-"
-	^#(
-'vm-display-Quartz' 
-'vm-display-X11'  
-'vm-display-custom'  
-'vm-display-fbdev'  
-'vm-display-null'  
-'vm-sound-ALSA'  
-'vm-sound-MacOSX'  
-'vm-sound-NAS'  
-'vm-sound-OSS'  
-'vm-sound-Sun'  
-'vm-sound-custom'
-'vm-sound-null'
-)
-
 ]

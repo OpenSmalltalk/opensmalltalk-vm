@@ -20,10 +20,9 @@ CMakeVMMakerSqueakStartHereHelp class >> nextSteps [
 	^HelpTopic
 		title: 'Next Steps'
 		contents:
-'The  Help Topic entitled "Example Workflow: End User" will walk you through an example workflow as executed on a GNU Linux system with the standard development tools. Macintosh and Windows dev tools will differ (N.B. tty The primary difference is that they have not been written yet (:  ).
+'The Help Topic entitled "Developer Guide" will explain the design of and how to add and modify the components of the CMakeVMMakerSqueak system.
 
-
-The Help Topic entitled "Developer Guide" will explain the design of and how to add and modify the components of the CMakeVMMakerSqueak system.
+The Tutorials Help Topic contains some useful tutorials
 
 
 '
@@ -46,15 +45,15 @@ CMakeVMMakerSqueakStartHereHelp class >> overview [
 
 5. The native build system compiles a VM. 
 
-The ''Example Workflow: End User'' page in this Help book provides an example of the above workflow with minimal explanation.
+The ''Tutorial: End User'' page in this Help book provides an example of the above workflow with minimal explanation.
 
 
-In-depth explanations of the system(s), tools and how to use them, see the ''CMakeVMMaker Developer Guide'''
+For in-depth explanations of the system(s), tools and how to use and extend them, see the ''CMakeVMMaker Developer Guide'''
 ]
 
 { #category : #accessing }
 CMakeVMMakerSqueakStartHereHelp class >> pages [
-	^#(overview requirements nextSteps)
+	^#(overview requirements nextSteps )
 ]
 
 { #category : #pages }
