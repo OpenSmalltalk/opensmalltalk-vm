@@ -178,27 +178,6 @@ CMakeVMMakerSqueakCommonConfigTest >> testDirBuildPlatform [
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakCommonConfigTest >> testDirSource [
-	"for each builder, make sure all its configurations provide a dirSource "
-	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
-		do:[:each | 
-			(Smalltalk at:each) 
-				allSubclassesDo:[:configuration | | o |
-					configuration isAbstractBaseClass not
-						ifTrue:[	o:= configuration basicNew.
-								o excludeFromBuild not
-									ifTrue:[self assert:(o  dirSource isString)]]]]
-
-
-
-
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testExcludeFromBuild [
 	"for each builder, make sure all its includes or excludes itself from a build "
 	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
@@ -374,25 +353,6 @@ CMakeVMMakerSqueakCommonConfigTest >> testOutputDirName [
 								ifTrue:[
 									self assert:(o  outputDirName isString).
 									self assert:(o  outputDirName size > 0)]]]
-
-
-
-
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
-CMakeVMMakerSqueakCommonConfigTest >> testPlatformSources [
-	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
-		do:[:each | 
-			(Smalltalk at:each) 
-				allSubclassesDo:[:configuration | | o |
-					o:= configuration basicNew.
-					(o excludeFromBuild not) | (configuration isAbstractBaseClass)
-						ifTrue:[self assert:(o  platformSources isArray)]]]
 
 
 
