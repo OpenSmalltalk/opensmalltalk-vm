@@ -4,42 +4,20 @@ A CMakeVMMakerSqueakNewConfigurationStepByStepHelp itemizes the steps needed to 
 HelpBrowser openOn: CMakeVMMakerSqueakNewConfigurationStepByStepHelp
 "
 Class {
-	#name : #CMakeVMMakerSqueakStepByStepNewConfigurationHelp,
-	#superclass : #CMakeVMMakerSqueakConfigurationsHelp,
+	#name : #CMakeVMMakerSqueakTutorialNewConfigurationHelp,
+	#superclass : #CMakeVMMakerSqueakTutorialsHelp,
 	#category : #'CMakeVMMakerSqueak-Help'
 }
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> aNoteOnFoo [
-	^HelpTopic
-		title:'A Note On FOO'
-		contents:
-'Since we have customized plugins, now is a good time to introduce the FOO in [PLATFORM][Language][VM][Memory Manager][BuildType][foo] 
-
-The purpose of FOO is to accomadate personal plugins that ''just work'' for an odd-ball platform or odd set of plugins or some obscure operating system..
-
-Some examples will suffice to convey the purpose of FOO. (below I encase [FOO] for clarity)
-
-Linux64x86w32BitSqueakCogV3[WithoutGL]Config
-
-SqueakBSD32x86[TTYsConfigurationFromHell]Config
-
-Linux32x86SqueakCogV3[BillyBobVeryOwn]Config
-
-Linux32x86SqueakCogV3[withoutIA32BOCHSPLugin]Config
-
-you get the idea. 
-
-
-'
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> addVMPlugins [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> addVMPlugins [
 	^HelpTopic
 		title:'addVMPlugins'
 		contents:
-'addVMPlugins depends on custom configuration provided in our Configuration; the method depends on three other methods as described below 
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+addVMPlugins depends on custom configuration provided in our Configuration; the method depends on three other methods as described below 
 
 VMPlugins are similar to built-in plugins yet are critical for running squeak on particular systems. 
 
@@ -100,20 +78,55 @@ To expand the universe of available vm plugins, we modify the CMakeConfigForSque
 ]
 
 { #category : #accessing }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> bookName [ 
-	^'Example Workflow: New Configuration'
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> bookName [ 
+	^'Tutorial: New Configuration'
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cPlatformConfigForSqueak [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> builderConfigurationInteraction [
+	^HelpTopic
+		title:'Builder Configuration Interaction'
+		contents:
+'Within the broad terms of this tutorial, you are here: 
+4. Interaction of the Builder and your Configuration
+
+I can query  the Builder for  information about its Configurations:
+
+SqueakLinux64x86w32CompatBuilder  availableBuildConfigurations
+  a SortedCollection(#Linux64x86w32BitSqueakCogV3Config)   <--A Cog V3 configuration exists. 
+
+SqueakLinux64x86w32CompatBuilder  unAvailableBuildConfigurations 
+--> a SortedCollection(#Linux64x86w32BitConfigUsrLib #Linux64x86w32BitConfigUsrLib32)
+These two Configurations are platform specific Abstract Base Classes. Abstract Base Classes cannot be built, hence they are unavailable.
+
+The Bulder can query Configurations about input and output directory paths it uses and/or creates:
+
+SqueakLinux64x86w32CompatBuilder  buildDirectory 
+-->''cmake.build.linux64x86w32BitCompatibility''                     <--this matches my platform
+
+'
+
+
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> cPlatformConfigForSqueak [
 	"This method was automatically generated. Edit it using:"
 	"a HelpBrowser edit: #cPlatformConfigForSqueak"
 	^HelpTopic
 		title: 'CPlatformConfigForSqueak'
 		contents: 
-'CPlatformConfigForSqueak browse
+'Within the broad outline of this tutorial, you are here: 
+7. Some high level classes and concepts
+	7.a  CPlatformConfigForSqueak
 
-CPlatformConfForSqueak encapsulates data and methods/behaviors  that span computer platforms. 
+CPlatformConfForSqueak encapsulates CMake constructs.
+CPlatformConfForSqueak encapsulates CMake constructs that are common to all computer platforms. 
+
+Its child classes progressively specialized CMake constructs.
+
+
+CPlatformConfigForSqueak browseHierarchy
 
 The immediate children of CPlatformConfigForSqueak
 
@@ -148,23 +161,8 @@ To understand the how and why of customizing a Configuration, we turn to the hea
 We cover that next.
 
 
-
-
-
-
-
-
-
-
-
 N.B. The ''Squeak'' prefix is unfortunate as it violates the naming convention. It is a holdover from initial attempts with the Pharo CMakeVMMaker code base.
 I will attempt to remember to rename these after the Pharo dependency is removed.
-
-
-
-
-
-
 
 
 
@@ -172,16 +170,44 @@ CPlatformConfigForSqueak is a child of CPlatformConfig, the root Configuration i
 
 This is temporary as I have decided to de-couple CMakeVMMakerSqueak from CMakeVMMaker.
 
-
 ToolSet browseMessageCategory:''cmake'' inClass: CPlatformConfigForSqueak!' readStream nextChunkText
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeAddDefinitions [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> cPlatformConfigForSqueakInitialize [
+	^HelpTopic
+		title: 'Configuration Initialization'
+		contents: 
+'Within the broad outline of this tutorial, you are here: 
+	8. Customizing your Configuration.
+
+
+	ToolSet browse: CPlatformConfigForSqueak selector: #initialize
+	
+The relevant section is..
+
+	self 
+		initializePlatformSources;
+		initializeVMPlugins;
+		customizeVMPlugins.
+			
+We will take each in turn.	
+'
+
+
+
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> cmakeAddDefinitions [
 	^HelpTopic
 		title:'cmakeAddDefinitions'
 		contents:
-'SystemNavigation browseAllImplementorsOf: #cmakeAddDefinitions
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+
+SystemNavigation browseAllImplementorsOf: #cmakeAddDefinitions
 
 We see that the CPlatformConfigForSqueak routes the method based on the buildType #build via the Method Redirect pattern to cmakeAddDefinitionsBuild
 
@@ -226,11 +252,14 @@ To match the directives specified in the mvm file
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeAddExecutableNameOptionSource [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> cmakeAddExecutableNameOptionSource [
 	^HelpTopic
 		title:'cmakeAddExecutableNameOptionSource:'
 		contents:
-'SystemNavigation browseAllImplementorsOf: #cmakeAddExecutableNameOptionSource:
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+SystemNavigation browseAllImplementorsOf: #cmakeAddExecutableNameOptionSource:
 
 We see this is a top-level method implemented only by CPlatformConfigForSqueak
 
@@ -258,11 +287,15 @@ it is something we can customize or code if we need.
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeCFlags [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> cmakeCFlags [
 	^HelpTopic
 		title:'cmakeCFlags'
 		contents:
-'SystemNavigation browseAllImplementorsOf: #cmakeCFlags
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+
+SystemNavigation browseAllImplementorsOf: #cmakeCFlags
 
 We see that  CPlatformConfigForSqueak implements it
 
@@ -352,11 +385,15 @@ In doing this, I am congizant that I may have to return to this method as I fidd
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeIncludeDirectories [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> cmakeIncludeDirectories [
 	^HelpTopic
 		title:'cmakeIncludeDirectories'
 		contents:
-'SystemNavigation browseAllImplementorsOf: #cmakeIncludeDirectories:
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+
+SystemNavigation browseAllImplementorsOf: #cmakeIncludeDirectories:
 
 We see that the sole implementor of the method is the top level configuration CPlatformConfigForSqueak
 
@@ -382,11 +419,15 @@ This is truly a global method and would only change if Eliot changed the layout 
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeIncludeModules [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> cmakeIncludeModules [
 	^HelpTopic
 		title:'cmakeIncludeModules'
 		contents:
-'CMake allows the user to include custom CMake library files (modules).  
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+
+CMake allows the user to include custom CMake library files (modules).  
 This construct allows the developer to include those modules.
 
 cmakeIncludeModules implements the Method Redirect pattern.
@@ -419,11 +460,15 @@ Let''s move on...'
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeIncludePath [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> cmakeIncludePath [
 	^HelpTopic
 		title:'cmakeIncludePath'
 		contents:
-'cmakeIncludePath implements the Method Redirect pattern.
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+
+cmakeIncludePath implements the Method Redirect pattern.
 
 ToolSet browse: CPlatformConfigForSqueak selector: #cmakeIncludePath
 
@@ -446,11 +491,14 @@ Since I don''t know for a fact that it is, I leave it alone for now.'
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeLibraryPath [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> cmakeLibraryPath [
 	^HelpTopic
 		title:'cmakeLibraryPath'
 		contents:
-'cmakeLibraryPath implements the Method Redirect pattern.
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+cmakeLibraryPath implements the Method Redirect pattern.
 
 ToolSet browse: CPlatformConfigForSqueak selector: #cmakeLibraryPath
 
@@ -474,7 +522,7 @@ Since I don''t know for a fact that it is, I leave it alone for now.
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeListAppend:LINKLIBSelements [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> cmakeListAppend:LINKLIBSelements [
 	^HelpTopic
 		title:'cmakeListAppend:LINKLIBSelements'
 		contents:
@@ -483,11 +531,14 @@ CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeListAppend:LINKLI
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeListAppendLINKLIBSelements [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> cmakeListAppendLINKLIBSelements [
 	^HelpTopic
 		title:'cmakeListAppendLINKLIBSelements'
 		contents:
-'SystemNavigation browseAllImplementorsOf: #cmakeListAppend:elements:
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+SystemNavigation browseAllImplementorsOf: #cmakeListAppend:elements:
 
 We see this is a top-level method.
 
@@ -530,20 +581,18 @@ So, we see the ability to specify what libraries we want to link against in our 
 Where to do this in the Configuration heirarchy is a matter of judgement.
 
 We will leave this one alone, bearing in mind that if we have a library linking problem, we have an idea where to look for it.		
-	
-
-
-
-
-'
+	'
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakePrefixPath [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> cmakePrefixPath [
 	^HelpTopic
 		title:'cmakePrefixPath'
 		contents:
-'ToolSet browse: CPlatformConfigForSqueak selector: #cmakePrefixPath
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+ToolSet browse: CPlatformConfigForSqueak selector: #cmakePrefixPath
 
 cmakePrefixPath implements the Method Redirect pattern.
 
@@ -560,11 +609,18 @@ We reason that this method generates  platform specific CMake output and our low
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeSetSourceFilesProperties [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> cmakeSetSourceFilesProperties [
 	^HelpTopic
 		title:'cmakeSetSourceFilesProperties'
 		contents:
-'SystemNavigation browseAllImplementorsOf: #cmakeSetSourceFilesProperties
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+This is a legacy method from the pharo system. I expect it to be refactored.
+
+SystemNavigation browseAllImplementorsOf: #cmakeSetSourceFilesProperties
+
+Here we see the Method Redirect Pattern
 
 SystemNavigation browseAllImplementorsOf: #cmakeSetSourceFilesPropertiesBuild
 
@@ -574,17 +630,20 @@ We also see that our new Linux64x86w32BitSqueakCogSpurConfig Configuration imple
 
 I suspect this method will be refactored upwards. It appears to be passing distinct compiler flags to the cogit.c and sqUnixHeartbeat.c.
 
-
 Let''s leave this one alone.
 '
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cmakeWriteDirectoriesDotCmake [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> cmakeWriteDirectoriesDotCmake [
 	^HelpTopic
 		title:'cmakeWriteDirectoriesDotCmake'
 		contents:
-'SystemNavigation browseAllImplementorsOf: #cmakeWriteDirectoriesDotCmake:
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+
+SystemNavigation browseAllImplementorsOf: #cmakeWriteDirectoriesDotCmake:
 
 Here we see that the CPlatformConfigForSqueak forces subclasses to implement this .
 
@@ -646,17 +705,7 @@ stacksrc
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> cogitClass [
-	^HelpTopic
-		title:'cogitClass'
-		contents:
-'
-write me.
-'
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> compilingLinkingSetup [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> compilingLinkingSetup [
 	^HelpTopic
 		title:'Compiling and Linking Setup'
 		contents:
@@ -672,17 +721,56 @@ linkerFlags
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> configGenerateByTemplate [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> configGenerateByTemplate [
 	^HelpTopic
-		title:'config generate by template'
+		title:'Config Generate By Template'
 		contents:
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+A Configuration starts generating CMakeOutput when a Builder sends it the #generateByTemplate message.
+
+ToolSet browse: SqueakCMakeVMMakerAbstractBuilder selector:#generateByTemplate
+ see the ''ifFalse:[config genrateByTemplate]] '' line.
+
+SystemNavigation browseAllImplementorsOf: #generateByTemplate
+
+Looking at the SqueakUnixConfig>>generateByTemplate we see the Configuration writes some CMake supporting files via some method calls
+
+		generatePluginsList;                                      
+		generateLicense;                                          
+		generateUtilsCmake;                                       
+		generatePluginsCmake;                                   
+		generateVmBuildCmake;                                  
+		generateVmConfigCmake;                               
+		generateVmConfigIn;                                  
+		generateTestDoubleWordAlignmentC;             
+		generateTestDoubleWordOrderC;
+		generateTestLanginfoCodesetC.
+
+Each of the above writes a file to the build directory.  The contents of which are hard-coded on the class side of the CPlatformConfigForSqueak
+
+For example the class method CPlatformConfigForSqueak>utilsCMake has some CMake Macros Ian wrote.
+
+ToolSet browse: (CPlatformConfigForSqueak class) selector: #utilsCMake
+
+This is high level stuff. It will probably be refactored once the CMake system matures.
+
+For now, its enough to know it exists.
+
+Looking at the SqueakWindowsConfig and SqueakMacintoshConfig in their generateByTemplate method, these calls do not (presently) exist.
+
+ToolSet browse: SqueakWindowsConfig  selector: #generateByTemplate
+ToolSet browse: SqueakMacintoshConfig  selector: #generateByTemplate
+
+While you probably will not be modifying this, this IS part of customizating a Configuration should you need these things
+
 '
-write me: generate by template is in several places. including the unix config and the vm and plugin generators
-'
+
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> configureAbstractBaseClass [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> configureAbstractBaseClass [
 	^HelpTopic
 		title:'Configure Abstract Base Class'
 		contents:
@@ -722,11 +810,14 @@ HelpBrowser openOn: CMakeVMMakerSqueakDesignPatternsHelp
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> createTheConfiguration [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> createTheConfiguration [
 	^HelpTopic
 		title:'Create the Configuration'
 		contents:
-'Our new Concrete Configuration must be created as a subclass of our Platform''s Abstract Base Class.
+'Within the broad outline of this tutorial, you are here: 
+4. Create your Configuration
+
+Our new Concrete Configuration must be created as a subclass of our Platform''s Abstract Base Class.
 
 SInce I am creating a Squeak Cog Spur config for the CMakeVMMakerSqueak-Linux64X86-32BitCompatibility Platform I choose the name:
 
@@ -789,7 +880,47 @@ In the next topic we cover how to hide our new Configuration from a builder.
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> customizePlugins [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> customizePlatformSources [
+	"This method was automatically generated. Edit it using:"
+	"a HelpBrowser edit: #customizePlatformSources"
+	^HelpTopic
+		title: 'Customize Platform Sources'
+		contents: 
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+In the previous topic we saw where the universe of possible platform sources was populated in the initializePlatformSources method of our platform level Configuration.
+
+What we need to do now is have our custom Configuration return a subset of that that universe.
+
+This is done in the setPlatformSources method.
+
+ToolSet browse: CPlatformConfigForSqueak selector: #setPlatformSources:
+
+Here we see the Method Redirect Pattern. Since I am building my Configuration for the buildType build, I must override that method
+
+SystemNavigation browseAllImplementorsOf: #setPlatformSourcesBuild:
+
+Here we see that the Linux64x86w32BitSqueakCogV3Config selects a subset of the available platform sources that it needs to build itself.
+The super call at the end of the method invokes Linux64x86w32BitSqueakCogV3Config>>setPlatformSourcesBuild:aMaker which writes the actual CMake output.
+
+If you compare the 
+
+Linux64x86w32BitSqueakCogV3Config>>setPlatformSourcesBuild: aMaker method
+
+ to
+
+the Linux64x86w32BitSqueakCogSpurConfig>>setPlatformSourcesBuild: aMaker 
+
+you will see that the latter has an additional source file 	''sqUnixSpurMemory.c'' . 
+	
+That difference is a good example of what customizing platform sources means. 
+
+!' readStream nextChunkText
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> customizePlugins [
 	^HelpTopic
 		title:'customize Plugins'
 		contents:
@@ -802,25 +933,46 @@ The default set can be further customized according to buildType if desired via 
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> customizeVMDrivers [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> customizeVMPlugins [
 	^HelpTopic
-		title:'Specify VM Drivers'
+		title:'Customize VM Plugins'
 		contents:
-'The SqueakUnixConfig contains the unverisal list of VM Drivers for *nix.
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
 
-In our concrete Configuration, we need to specify which ones we want for out build.
+As we saw in the previous page the CPlatformConfigForSqueak maintains a list of the available VM plugins in the form of ''data-bucket'' objects.
 
-We do this by overloading the SqueakUnixConfig>>customizeVMDrivers method.
+Since every configuration does not use every VM plugin, our configuration can  customize that master list.
+
+It can do this in one of two ways.
+
+First,  We can do this by overloading the SqueakUnixConfig>>customizeVMPlugins method.. 
+SystemNavigation browseAllImplementorsOf: #customizeVMPlugins
+This customization occures before the buildType has been set in the Configuration. 
+So this selection will be used regardless of buildType  unless.......
+
+
+
+Second, we override the addVMPlugins[buildType] : aMaker method in our Configuration and set our vmplugins variable there similar to how we do it in this method.
+SystemNavigation browseAllImplementorsOf: #addVMPluginsBuild:
+
+
+It is my opinion that the selecting vm plugins based on buildType will not happen and that that those selected at the initialization change will be the default.
+
+
+
 
 '
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> dirBuildLanguageVMMM [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> dirBuildLanguageVMMM [
 	^HelpTopic
 		title:'Specify dirBuildLanguageVMMM'
 		contents:
-'
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
 SystemNavigation new browseAllImplementorsOf: #dirBuildLanguageVMMM localTo:CPlatformConfigForSqueak.
 
 We scroll down to our Linux64x86w32BitSqueakCogSpurConfig which we copied from the existing Linux64x86w32BitSqueakCogV3Config.
@@ -840,13 +992,18 @@ As a sanity check, I verify that the method squeakCogSpur exists...
 
 SystemNavigation new browseAllImplementorsOf: #squeakCogSpur
 
-And we see the method exists and will return the sting ''squeak.cog.spur''.
+And we see the method exists and will return the string ''squeak.cog.spur''.
+
+(CPlatformConfigForSqueak basicNew) squeakCogSpur
+
+
+
 
 '
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> dirSource [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> dirSource [
 	^HelpTopic
 		title:'Specify Source Directory'
 		contents:
@@ -874,11 +1031,14 @@ which you can test here.
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> excludingConfigFromBuilds [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> excludingConfigFromBuilds [
 	^HelpTopic
 		title:'Excluding a Config From Builds'
 		contents:
-'Configurations can hide themselves from , or make themselves visible to Builders via their ''excludeFromBuild'' method.
+'Within the broad outline of this tutorial, you are here: 
+5. Interaction of the Builder and your Configuration
+
+Configurations can hide themselves from , or make themselves visible to Builders via their ''excludeFromBuild'' method.
 
 excludeFromBuild
 	^false   "build this configuration"
@@ -919,11 +1079,14 @@ This functionality is included with an eye towards easing automated builds for a
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> extraVMSettings [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> extraVMSettings [
 	^HelpTopic
 		title:'extraVMSettings'
 		contents:
-'SystemNavigation browseAllImplementorsOf: #extraVMSettings:
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+SystemNavigation browseAllImplementorsOf: #extraVMSettings:
 
 
 In the CPlatformConfigForSqueak>>extraVMSettings: aMaker, we see the Method Redirect Pattern employed. Since this is for buildType #build, the method will re-route to self extraVMSettingsBuild:
@@ -950,13 +1113,45 @@ For our purposes, there is nothing we need to do.
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> firstCMakeGeneration [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> fin [
+	^HelpTopic
+		title:'fin'
+		contents:
+'Within the broad outline of this tutorial, you are here: 
+
+done!
+
+To recap you have covered:
+
+1. Tests
+2. Where to place your new Configuration
+3. What Builder to use
+4. Create your Configuration
+5. Interaction of the Builder and your Configuration
+6. Generating a proof-of-concept CMake build tree.
+7. Some high level classes and concepts
+  7.a  CPlatformConfigForSqueak
+  7b. The Method Redirect Pattern (a broadly used design pattern in the system)
+  7c. The CMakeVMGeneratorForSqueak 
+8. Customizing your Configuration.
+
+
+
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> firstCMakeGeneration [
 	"This method was automatically generated. Edit it using:"
 	"a HelpBrowser edit: #firstCMakeGeneration"
 	^HelpTopic
 		title: 'First CMake Generation'
 		contents: 
-'For didactic purposes I am going to do a sanity check and generate CMake code from the configuration for the first time. 
+'Within the broad outline of this tutorial, you are here: 
+6. Generating a proof-of-concept CMake build tree.
+
+For didactic purposes I am going to do a sanity check and generate CMake code from the configuration for the first time. 
 
 If you are not familiar with the CMakeVMMakerSqueak naming conventions, please evaluate:
 HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp
@@ -1069,42 +1264,31 @@ Next we take stock of what we have accomplished and preview the remaining tasks.
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> forTheImpatient [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> generateBuildScript [
 	^HelpTopic
-		title:'For the impatient'
+		title:'Generate Build Script'
 		contents:
-'Here is the TL;DR synopsis of the methods* I implemented or overrode in creating the Linux64x86w32BitSqueakCogSpurConfig.
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
 
-A step-by-step exposition begins on  the next page.
+ToolSet browse: CPlatformConfigForSqueak selector: buildScript
 
-dirBuildLanguageVMMM
-specifyProductDirectories
-cmakeCFlags  
-cmakeAddDefinitions
-cmakeIncludePath
-cmakeLibraryPath
-compilerFlags
-cmakeAddDefinitions
-preferredIncludes
-setGlobalOptionsAfterDetermineSystem:
-cmakeSetSourceFilesProperties
-externalLibs
-cmakeAddExecutableNameOptionSource:
-customizeVMPlugins
-specifyingPlugins
+This generates a bash shell script that can be used in place of manuallinvoking cmake and make.
 
 
-*If the method uses the Method Redirect Pattern then (in most instances) the method to modify will be for the buildType. ie. ''methodnameBuildType''
 
 '
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> generatePluginConfigs [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> generatePluginConfigs [
 	^HelpTopic
 		title:'generatePluginConfigs'
 		contents:
-'This method iterates over a collection of InterpreterPlugin subclasses and asks each class to populate itself with some basic information and write out its own CMakeLists.txt in a directory named after the plugin name.
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+This method iterates over a collection of InterpreterPlugin subclasses and asks each class to populate itself with some basic information and write out its own CMakeLists.txt in a directory named after the plugin name.
 
 The processing is a bit complicated, but the setup is easy.
 
@@ -1112,11 +1296,14 @@ The collections of  plugin classes are stored in our Configuration. We cover tha
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> identifyBuilder [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> identifyBuilder [
 	^HelpTopic
 		title:'Identify Builder'
 		contents:
-'My new Configuration will be managed by a Builder.
+'Within the broad outline of this tutorial, you are here: 
+3. What Builder to use
+
+My new Configuration will be managed by a Builder.
 
 Builders are located in the CMakeVMMakerSqueak-Builder class category.
 
@@ -1161,14 +1348,16 @@ We will be using the SqueakLinux64x86w32CompatBuilder in tandem with Tests durin
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> identifyPlatform [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> identifyPlatform [
 	^HelpTopic
 		title:'Identify Platform'
 		contents:
-'My target platform is 64 bit Linux on X86 with 32 bit compatibility libraries stored in /usr/lib.
+' Within the broad outline of this tutorial, you are here: 
+2. Where to place your new Configuration
+
+My target platform is 64 bit Linux on X86 with 32 bit compatibility libraries stored in /usr/lib.
 
 I identify my Platform in the existing CMakeVMMakerSqueak-xyz class categories.  
-
 
 If I wanted a configuration for MacOSX32x86, I would place my configuration in CMakeVMMakerSqueak-MacOSX32x86.
 If SunOSx3x86 then CMakeVMMakerSqueak-SunOS32x86.
@@ -1180,11 +1369,14 @@ HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> identifyPlatformAbstractBaseClass [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> identifyPlatformAbstractBaseClass [
 	^HelpTopic
 		title:'Identify Abstract Base Class '
 		contents:
-'My new configuration must be a subclass of my Platform''s Abstract Base Class. 
+'Within the broad outline of this tutorial, you are here: 
+2. Where to place your new Configuration
+
+My new configuration must be a subclass of my Platform''s Abstract Base Class. 
 
 A Platform Abstract Base Class encapsulates common platform information. 
 
@@ -1220,17 +1412,134 @@ Linux64x86w32BitConfigUsrLib  isAbstractBaseClass
 In this workflow example I ideduce that the  AbstractBaseClass for my Platform is Linux64x86w32BitConfigUsrLib'
 ]
 
+{ #category : #pages }
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> initializePlatformSources [
+	^HelpTopic
+		title:'Initialize Platform Sources'
+		contents:
+'Within the broad outline of this tutorial, you are here: 
+  8. Customizing your Configuration.
+
+Platform Sources are platform dependent source files in the Cog development tree..
+To build the VM, CMake needs to know their names. 
+
+They reside in subdirectories of Cog/platforms
+
+bash-4.2$ ls -1 Cog/platforms/
+Cross
+Mac OS
+Plan9
+RiscOS
+iOS
+unix
+win32
+
+On the unix platform the VM depends on some platform sources they are stored in the platforms/unix/vm directory..
+
+bash-4.2$ ls -1 Cog/platforms/unix/vm/*.[ch]
+Cog/platforms/unix/vm/SqDisplay.h
+Cog/platforms/unix/vm/SqModule.h
+Cog/platforms/unix/vm/SqSound.h
+Cog/platforms/unix/vm/aio.c
+Cog/platforms/unix/vm/debug.c
+Cog/platforms/unix/vm/debug.h
+Cog/platforms/unix/vm/dlfcn-dyld.c
+Cog/platforms/unix/vm/feedback.h
+Cog/platforms/unix/vm/glibc.h
+Cog/platforms/unix/vm/mac-alias.c
+Cog/platforms/unix/vm/osExports.c
+Cog/platforms/unix/vm/sqConfig.h
+Cog/platforms/unix/vm/sqGnu.h
+Cog/platforms/unix/vm/sqPlatformSpecific.h
+Cog/platforms/unix/vm/sqUnixCharConv.c
+Cog/platforms/unix/vm/sqUnixCharConv.h
+Cog/platforms/unix/vm/sqUnixEvent.c
+Cog/platforms/unix/vm/sqUnixExternalPrims.c
+Cog/platforms/unix/vm/sqUnixGL.h
+Cog/platforms/unix/vm/sqUnixGlobals.h
+Cog/platforms/unix/vm/sqUnixHeartbeat.c
+Cog/platforms/unix/vm/sqUnixITimerHeartbeat.c
+Cog/platforms/unix/vm/sqUnixITimerTickerHeartbeat.c
+Cog/platforms/unix/vm/sqUnixMain.c
+Cog/platforms/unix/vm/sqUnixMain.h
+Cog/platforms/unix/vm/sqUnixMemory.c
+Cog/platforms/unix/vm/sqUnixSpurMemory.c
+Cog/platforms/unix/vm/sqUnixThreads.c
+Cog/platforms/unix/vm/sqUnixVMProfile.c
+Cog/platforms/unix/vm/sqUnixWindow.h
+Cog/platforms/unix/vm/sqaio.h
+Cog/platforms/unix/vm/sunos.h
+
+A subset of these must be customized in our Configuration. 
+In the initializePlatformSources step, the universe of possible sources is hard coded by hand*
+
+If you look at the system level configurations you can see the files listed 
+SystemNavigation  browseAllImplementorsOf: #initializePlatformSources  
+
+
+There are different sources for the Windows and Mac platforms which I do not cover here. As of 20160530 the Dos and Mac code has not been developed beyond what I inherited from the Pharo code..
+
+*This has already bitten me. The sqUnixSpurMemory was added as I was developing this system and was not originally in my list of initialized files. I had to debug the problem and then add it by hand.
+
+
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> initializeVMPlugins [
+	^HelpTopic
+		title:'Initialize VM Plugins'
+		contents:
+'Within the broad outline of this tutorial, you are here: 
+  8. Customizing your Configuration.
+
+VM Pluings are a type of plugin that is unique to Unix.  Their directories exist in the Cog/Platforms/unix directory
+Shown here:
+
+bash-4.2$ ls  -1d  Cog/platforms/unix/vm-*
+Cog/platforms/unix/vm-display-Quartz
+Cog/platforms/unix/vm-display-X11
+Cog/platforms/unix/vm-display-custom
+Cog/platforms/unix/vm-display-fbdev
+Cog/platforms/unix/vm-display-null
+Cog/platforms/unix/vm-sound-ALSA
+Cog/platforms/unix/vm-sound-MacOSX
+Cog/platforms/unix/vm-sound-NAS
+Cog/platforms/unix/vm-sound-OSS
+Cog/platforms/unix/vm-sound-Sun
+Cog/platforms/unix/vm-sound-custom
+Cog/platforms/unix/vm-sound-null
+Cog/platforms/unix/vm-sound-pulse
+
+
+
+ToolSet browse: CPlatformConfigForSqueak selector: #initializeVMPlugins
+
+is a hard-coded list of these VM Plugins but expressed as a list of encapsulating objects.
+These objects are just data buckets for carrying information that will be used to build them.
+
+CMakeVMPlugin browseHierarchy
+
+On initialization, the CPlatformConfgiForSqueak stores them in its vmplugins instance variable where we will customize them later.
+'
+]
+
 { #category : #accessing }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> key [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> key [
 	^'CMakeVMMakerSqueakStepByStepNewConfigurationHelp'
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> methodRedirectPattern [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> methodRedirectPattern [
 	^HelpTopic
 		title:'Review of Method Redirect Pattern'
 		contents:
-'The CPlatformConfigForSqueak provides methods that must be implemented at some level in the CPlatformConfigForSqueak hierarchy. 
+'Within the broad outline of this tutorial, you are here: 
+7. Some high level classes and concepts
+	7b. The Method Redirect Pattern (a broadly used design pattern in the system)
+
+The CPlatformConfigForSqueak provides methods that must be implemented at some level in the CPlatformConfigForSqueak hierarchy. 
 The design pattern is heavily used and you can get a sense of its scope by evaluating:
 
 ToolSet browseMessageCategory: ''cmake buildType redirects''  inClass:CPlatformConfigForSqueak
@@ -1290,25 +1599,44 @@ Invocation of the Method Redirect Pattern occurs in the VMGenerator. We cover th
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> overview [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> overview [
+	"This method was automatically generated. Edit it using:"
+	"a HelpBrowser edit: #overview"
 	^HelpTopic
-		title:'Overview'
-		contents:
+		title: 'Overview'
+		contents: 
 'This Help Topic presents the workflow the author used in creating the  Squeak, Cog, Spur CMake configuration for a 64 bit Slackware 14.1 system.with 32 bit compatability libs in /usr/lib
 
-Although some details will be different, the steps involved should be the same for any platform.'
+The broad outline of this tutorial covers
+
+1. Tests
+2. Where to place your new Configuration
+3. What Builder to use
+4. Create your Configuration
+5. Interaction of the Builder and your Configuration
+6. Generating a proof-of-concept CMake build tree.
+7. Some high level classes and concepts
+  7.a  CPlatformConfigForSqueak
+  7b. The Method Redirect Pattern (a broadly used design pattern in the system)
+  7c. The CMakeVMGeneratorForSqueak 
+8. Customizing your Configuration.
+
+
+Although some details will be different, the steps involved should be the same for any platform.
+
+
+
+
+
+!' readStream nextChunkText
 ]
 
 { #category : #accessing }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> pages [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> pages [
 
 "platformSources...cogitClass...src vs vmsrc"
 	^#(
-platformSources
-cogitClass	
-vmsrc
-configGenerateByTemplate
-	overview 
+overview 
 tests 
 identifyPlatform 
 identifyPlatformAbstractBaseClass
@@ -1322,8 +1650,18 @@ cPlatformConfigForSqueak
 methodRedirectPattern
 theVMGenerator
 tackingStockTwo
-forTheImpatient
+cPlatformConfigForSqueakInitialize
+initializePlatformSources
+customizePlatformSources
+initializeVMPlugins
+customizeVMPlugins
+configGenerateByTemplate
+specifyCogitClass
+
+vmsrc
+
 specifyDirectories
+dirBuildLanguageVMMM
 setGlobalOptions
 cmakePrefixPath
 cmakeIncludePath
@@ -1348,36 +1686,25 @@ setExecutableOutputPath
 addVMPlugins
 generatePluginConfigs
 specifyPlugins
-
 processThirdpartyLibraries
 processPlugins
 postBuildActions
-
-setConfigurationDirectory
-compilingLinkingSetup
-customizeVMDrivers
-
-aNoteOnFoo
+generateBuildScript
+fin
 )
 
 
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> platformSources [
-	^HelpTopic
-		title:'platformSources'
-		contents:
-'write me
-'
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> postBuildActions [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> postBuildActions [
 	^HelpTopic
 		title:'postBuildActions:'
 		contents:
-'postBuildActions: implements the Method Redirect pattern.
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+postBuildActions: implements the Method Redirect pattern.
 
 ToolSet browse: CPlatformConfigForSqueak selector: #postBuildActions:
 
@@ -1394,11 +1721,14 @@ We have nothing new to do here.
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> preferredIncludes [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> preferredIncludes [
 	^HelpTopic
 		title:'preferredIncludes'
 		contents:
-'SystemNavigation browseAllImplementorsOf: #preferredIncludes
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+SystemNavigation browseAllImplementorsOf: #preferredIncludes
 
 CPlatformConfig browseHierarchy
 
@@ -1427,14 +1757,18 @@ Since this is handled for us one level above our new configuration, we will leav
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> processPlugins [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> processPlugins [
 ^HelpTopic
 		title:'Process Plugins'
 		contents:
-'SystemNavigation browseAllImplementorsOf: #processPlugins:
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+SystemNavigation browseAllImplementorsOf: #processPlugins:
 
 This method is inhereted from the pharo code. I do not fully understand the reasoning behind it. I expect it will be refactored or rewritten.
 See the method comment in 
+
 SystemNavigation browseAllImplementorsOf: #initializeConfigDotCmakeFiles
 
 Presently it does (at least) three things.
@@ -1524,11 +1858,14 @@ NULL
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> processThirdpartyLibraries [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> processThirdpartyLibraries [
 	^HelpTopic
 		title:'Process Third Party Libraries'
 		contents:
-'SystemNavigation browseAllImplementorsOf: #processThirdpartyLibraries
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+SystemNavigation browseAllImplementorsOf: #processThirdpartyLibraries
 
 I have no idea what this does. It exists in the pharo codebase. 
 
@@ -1542,11 +1879,14 @@ i.e. Libraries will be represented by objects which will have the responsibility
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setAvailableBuildTypes [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> setAvailableBuildTypes [
 	^HelpTopic
 		title:'Setting Available Build Types'
 		contents:
-'Configurations  inform Builders what BuildTypes they support. via the availableBuildTypes method
+'Within the broad outline of this tutorial, you are here: 
+5. Interaction of the Builder and your Configuration
+
+Configurations  inform Builders what BuildTypes they support. via the availableBuildTypes method
 
 Here is my Builder asking my new Configuration what build types it supports (remember, this Configuration was copied, so it has been configured already)
 
@@ -1600,7 +1940,7 @@ SqueakLinux32x86Builder availableBuildTypesFor: #Linux32x86SqueakCogV3Config
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setConfigurationDirectory [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> setConfigurationDirectory [
 	^HelpTopic
 		title:'Set Configuration Directory'
 		contents:
@@ -1612,41 +1952,82 @@ Need the squeak.cog.spur directory here.
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setCoreSources [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> setCoreSources [
 	^HelpTopic
 		title:'setCoreSources'
 		contents:
-'SystemNavigation browseAllImplementorsOf: #setCoreSources:
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
 
-We see that this is a top-level Configuration method that writes a CMake Set(foo, bar) construct.
+SystemNavigation browseAllImplementorsOf: #setCoreSources:
 
-There is nothing for us to do here.'
+The ''self coreSources'' message is a Method Redirect Pattern. 
+
+ToolSet browse: CPlatformConfigForSqueak selector:#coreSources
+
+SystemNavigation browseAllImplementorsOf: #coreSourcesBuild
+
+Here we see a hard-coded list returned (this will probably be refactored on a refactoring pass)
+
+The  ''${srcVMDir}'' is a variable placeholder in CMake. It contains a path name that resolves to where those files listed above exist.
+
+We set that in (FIX ME AND IDENTIFY PRECISIELY WHERE srcVMDir gets its value)
+
+'
 
 
 
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setCrossSources [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> setCrossSources [
 	^HelpTopic
 		title:'setCrossSources'
 		contents:
-'SystemNavigation browseAllImplementorsOf: #setCrossSources:
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+SystemNavigation browseAllImplementorsOf: #setCrossSources:
 
 We see that this is a top-level Configuration method that writes a CMake Set(foo, bar) construct.
 
-There is nothing for us to do here.'
+crossSources is another hard-coded list of source files
+
+ToolSet browse: SqueakUnixConfig selector: #crossSources
+
+This list of sources is in the Cog subversion build tree under:
+
+bash-4.2$ ls -1 Cog/platforms/Cross/vm/*.c
+oscogvm/platforms/Cross/vm/sqExternalSemaphores.c
+oscogvm/platforms/Cross/vm/sqHeapMap.c
+oscogvm/platforms/Cross/vm/sqNamedPrims.c
+oscogvm/platforms/Cross/vm/sqTicker.c
+oscogvm/platforms/Cross/vm/sqVirtualMachine.c
+
+The ''${crossDir}'' is a variable placeholder that CMake will populate. The variable value is held in our configuration 
+It will resolve to "oscogvm/platforms/Cross/vm''
+
+What this is doing is creating a list of paths to files.
+
+If any Cross platform files are ever added, we will have to modify the #crossSources return value.
+
+
+
+'
 
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setExecutableOutputPath [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> setExecutableOutputPath [
 	"This method was automatically generated. Edit it using:"
 	"a HelpBrowser edit: #setExecutableOutputPath"
 	^HelpTopic
 		title: 'setExecutableOutputPath'
 		contents: 
-'SystemNavigation browseAllImplementorsOf: #setExecutableOutputPath
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+SystemNavigation browseAllImplementorsOf: #setExecutableOutputPath
 
  We see that this is implemtented in CPlatformConfigForSqueak.
 
@@ -1662,24 +2043,43 @@ The #outputDir method is a legacy method from the pharo code. It should be facto
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setExtraSources [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> setExtraSources [
 	^HelpTopic
 		title:'setExtraSources'
 		contents:
-'SystemNavigation browseAllImplementorsOf: #setExtraSources
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+SystemNavigation browseAllImplementorsOf: #setExtraSources
 
 We see that this is a top-level Configuration method that writes a CMake Set(foo, bar) construct.
 
-There is nothing for us to do here.
+You can see the CMake generated by evaluating
+
+((CMakeSet new) variable:''extraSources'' value:((SqueakUnixConfig basicNew) extraSources)) content
+
+The #extraSources method contains some hard coded values (expect refactoring)
+
+SystemNavigation browseAllImplementorsOf: #extraSources
+
+ToolSet browse: SqueakUnixConfig selector: #extraSources
+
+If we needed to we could add or remove these in our Configuration.
+
+For us, there is nothing to do here.
+
 '
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setGlobalOptions [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> setGlobalOptions [
 	^HelpTopic
 		title:'setGlobalOptions: self'
 		contents:
-'For this method there is nothing to do. Here is why.
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+For this method there is nothing to do. Here is why.
 
 Let''s start by seeing what classes implement the method
 
@@ -1705,11 +2105,14 @@ There is nothing for us to override here. Let''s move on.
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setGlobalOptionsAfterDetermineSystem [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> setGlobalOptionsAfterDetermineSystem [
 	^HelpTopic
 		title:'setGlobalOptionsAfterDetermineSystem'
 		contents:
-'SystemNavigation browseAllImplementorsOf: #setGlobalOptionsAfterDetermineSystem:
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+SystemNavigation browseAllImplementorsOf: #setGlobalOptionsAfterDetermineSystem:
 
 
 In the CPlatformConfigForSqueak>>setGlobalOptionsAfterDetermineSystem: aMaker, we see the Method Redirect Pattern employed. Since this is for buildType #build, the method will re-route to self setGlobalOptionsAfterDetermineSystemBuild
@@ -1730,24 +2133,74 @@ For our purposes, there is nothing we need to do.
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> setPlatformSources [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> setPlatformSources [
 	^HelpTopic
 		title:'setPlatformSources'
 		contents:'
+Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
 SystemNavigation browseAllImplementorsOf: #setPlatformSources:
 
-We see that this is a top-level Configuration method that writes a CMake Set(foo, bar) construct.
+We see the Method Redirect Pattern.
 
-There is nothing for us to do here.'
+SystemNavigation browseAllImplementorsOf: #setPlatformSourcesBuild:
+
+Looking at Linux64x86w32BitSqueakCogSpurConfig>>setPlatformSourceBuild: aMaker 
+
+we see work we did earlier in this tutorial. 
+
+If you recall, on Configuration initialization the platformSources variable was populated with the names of source files in Cog/platforms/unix/vm
+
+Here we must return a subset of that data.
+
+.'
 
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> specifyDirectories [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> specifyCogitClass [
+	^HelpTopic
+		title:'Specify Cogit Class'
+		contents:
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+Depending on the type of vm we are building, we must specify the cogit class	
+
+ToolSet browse: CPlatformConfigForSqueak selector: #cogitClass
+
+The types we can return are
+
+	^SimpleStackBasedCogit
+	^ StackToRegisterMappingCogit 
+	^SistaStackToRegisterMappingCogit
+
+These are subclasses of Cogit.
+Cogit browseHierarchy
+
+Since we are building a Cog VM we need the StackToRegisterMappingCogit.
+
+(I need to get with Eliot to specify this exactly)
+
+For our purposes in this tutorial, we have our Linux64x86w32BitSqueakCogSpurConfig>>cogitClass return StackToRegisterMappingCogit.
+
+ToolSet browse: Linux64x86w32BitSqueakCogSpurConfig selector: #cogitClass
+
+
+
+'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> specifyDirectories [
 	^HelpTopic
 		title:'Specify Directories'
 		contents:
-'Our new Configuration must correctly name two directory trees.
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+Our new Configuration must correctly name two directory trees.
 
 The first is  the cmake.build.* directory tree where the generated CMake output is placed.
 The second is the cmake.products/* directory tree where the compiled vm is placed.
@@ -1851,11 +2304,14 @@ showTopicThat: [:topic | topic key = #namingConventions].
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> specifyPlugins [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> specifyPlugins [
 	^HelpTopic
 		title:'Specify Plugins'
 		contents:
-'We can specify which plugins we want on our configuration by overriding our platform''s defaultExternalPlugins and defaultInternalPlugins methods.
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+We can specify which plugins we want on our configuration by overriding our platform''s defaultExternalPlugins and defaultInternalPlugins methods.
 
 The default set can be further customized according to buildType if desired via the externalPlugins[BuildType] and internalPlugins[BuildType] redirect pattern
 
@@ -1910,11 +2366,15 @@ To summarize, a Configuration specifies what plugins it wants to build (either i
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> standardIncludes [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> standardIncludes [
 	^HelpTopic
 		title:'standardIncludes'
 		contents:
-'As of CMakeVMMakerSqueak-tty.114 the method is a legacy method from the pharo CPlatformConfig. It is expect it (and this help page!) will go away on a refactoring pass when the dependency on the pharo package is removed.
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+
+As of CMakeVMMakerSqueak-tty.114 the method is a legacy method from the pharo CPlatformConfig. It is expect it (and this help page!) will go away on a refactoring pass when the dependency on the pharo package is removed.
 
 
 SystemNavigation browseAllImplementorsOf: #standardIncludes
@@ -1931,7 +2391,7 @@ There is nothing for us to do here.'
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> tackingStockOne [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> tackingStockOne [
 	^HelpTopic
 		title:'Taking Stock'
 		contents:
@@ -1943,6 +2403,15 @@ At this point, we have
 	2.a configure itself for a specific BuildType and 
 	2.b asked it to ouput its content to a specific directory.
 3. Confirmed that the Configuration outputs its data.
+
+Within the broad outline of this tutorial, you have covered the following
+1. Tests
+2. Where to place your new Configuration
+3. What Builder to use
+4. Create your Configuration
+5. Interaction of the Builder and your Configuration
+6. Generating a proof-of-concept CMake build tree.
+
 
 The remainder of our task is customizing our Configuration so that the generated data correctly builds as the intention revealing name of the Configuration implies. I.e. we expect a Linux64x86w32BitSqueakCogSpurConfig, when configured for the buildType  #build to generate CMake (and other) files that in fact, creates a release version of a squeak.cog.spur vm that runs on Linux64 with 32 bit compat libs stored in /usr/lib.
 
@@ -1960,39 +2429,41 @@ After that, we will take stock again and proceed with the customization of our e
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> tackingStockTwo [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> tackingStockTwo [
 	^HelpTopic
 		title:'Taking Stock II'
 		contents:
-'To recap, at this point, we have 
-1. Created a Configuration for a specific platform, language, VM and memory model .
-2. Invoked the appropriate  Builder for that Configuration asking it to ...
-	2.a configure itself for a specific BuildType and 
-	2.b asked it to ouput its content to a specific directory.
-3. Confirmed that the Configuration outputs its data.
-
-We know that
-
-Configuration is performed at the highest appropriate Configuration with fine-tuning at the lower Configuration levels.
-The Method Redirect Pattern is implemented in CPlatformConfigForSqueak. It is boilerplate code.
-A specific Configuration may override a Method Redirect method for a particular build type to provide custom output
-The CMakeVMGeneratorForSqueak takes our Configuration as input via the Visitor pattern and  executes the Method Redirect methods in a predictable way based on the Configurations buidType..
+'Within the broad outline of this tutorial, you have covered the following: 
+1. Tests
+2. Where to place your new Configuration
+3. What Builder to use
+4. Create your Configuration
+5. Interaction of the Builder and your Configuration
+6. Generating a proof-of-concept CMake build tree.
+7. Some high level classes and concepts
+  7.a  CPlatformConfigForSqueak
+  7b. The Method Redirect Pattern (a broadly used design pattern in the system)
+  7c. The CMakeVMGeneratorForSqueak 
 
 
 The remainder of this Example Workflow will be the customization of the Linux64x86w32BitSqueakCogSpurConfig and generating a working build.
 
-To do this by taking each statement in the CMakeVMGeneratorForSqueak>>generateByTemplate cascade in turn.
+To do this by 
 
-
+Examining the CPlatformConfigForSqueak>>initialize process
+Working through each statement in the CMakeVMGeneratorForSqueak>>generateByTemplate cascade in turn.
 '
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> tests [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> tests [
+	"This method was automatically generated. Edit it using:"
+	"a HelpBrowser edit: #tests"
 	^HelpTopic
-		title:'Tests'
-		contents:
-'We start with Tests.
+		title: 'Tests'
+		contents: 
+'Within the broad outline of this tutorial, you are here: 
+1. Tests.
 
 The Tests are in class category CMakeVMMakerSqueak-Tests.
 
@@ -2008,38 +2479,49 @@ CMakeVMMakerSqueakWindowsConfigTest
 
 As of 2014.12.09 all tests pass. 
 
-As we create the Configuration these tests will be an important check on our work and we will return to them often.'
+As we create the Configuration these tests will be an important check on our work and we will return to them often.!' readStream nextChunkText
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> theVMGenerator [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> theVMGenerator [
 	^HelpTopic
 		title:'The CMakeVMGeneratorForSqueak class'
 		contents:
-'Before we move onto setting the most common directives and flags in the Concrete Configuration, lets take a quick look at the class and  method that actually generates the CMake files for us. 
+'Within the broad outline of this tutorial, you are here: 
+7. Some high level classes and concepts
+	7c. The CMakeVMGeneratorForSqueak 
+
+Before we move onto setting the most common directives and flags in the Concrete Configuration, lets take a quick look at the class and  method that actually generates the CMake files for us. 
 
 CMakeVMGeneratorForSqueak browseHierarchy
-
 
 CMakeVMGeneratorForSqueak implements the Visitor Design pattern. It takes as input a Configuration and it operates on that Configuration in a methodical manner.
 
 The CMakeVMGeneratorForSqueak has in instance variable named ''config''. This variable is our Configuration.
 
-The methodical operation on the Configuration occur in its generateByTemplate method.
+The methodical operation and generation of CMake output occurs in two places.
 
-To see this, look at the generateByTemplate method and the long cascade that starts with:
+1. In the Configuration>>initialize method
+	ToolSet browse: CPlatformConfigForSqueak selector: #initialize
+2. In the  CMakeVMGeneratorForSqueak>>generateByTemplate method.
+	ToolSet browse: CMakeVMGeneratorForSqueak selector: #generateByTemplate
+
+The long cascade that starts with :
 
 	config 
 		setGlobalOptions: self;    
 		cmakePrefixPath;
 		cmakeIncludePath;.....
 
+is the bulk of the CMake generation.
 
-Here you see the generator iterating over the CPlatformConfigForSqueak Method Redirect methods.
+Here you see the CMakeVMGeneratorForSqueak iterating over the CPlatformConfigForSqueak Method Redirect methods.
 
+Taking the ''cmakeIncludePath'' method for example...
 SystemNavigation new browseAllImplementorsOf: #cmakeIncludePath localTo: CPlatformConfigForSqueak.
 
-Here you see that based on the Configurations buildType, the appropriate Redirect Method out of 
+you see that based on the Configurations buildType, the appropriate Redirect Method out of :
+
 cmakeIncludePathBuild
 cmakeIncludePathBuildAssert
 cmakeIncludePathBuildAssertITimerHeartbeat
@@ -2051,7 +2533,7 @@ cmakeIncludePathBuildMultiThreadedAssert
 cmakeIncludePathBuildMultiThreadedDebug
 cmakeIncludePathNoBuildType
 
-is executed.
+will be executed based on the Configurations buildType (which you set with your Builder earlier)
 
 
 For debugging and troubleshooting you new Configuration, CMakeVMGeneratorForSqueak>>generateByTemplate enables you to step through CMake generation in an entirely predictable way.
@@ -2063,11 +2545,14 @@ Let''s recap next.
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakStepByStepNewConfigurationHelp class >> vmsrc [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> vmsrc [
 	^HelpTopic
 		title:'vmsrc'
 		contents:
-'
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+
 write me.
 '
 ]

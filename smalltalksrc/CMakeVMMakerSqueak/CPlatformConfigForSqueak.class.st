@@ -696,14 +696,6 @@ CPlatformConfigForSqueak >> addDriver: name sources: aSources generator: cmakeGe
 ]
 
 { #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> addVMDrivers: aMaker [
-	"CMakeVMMaker compat"
-	self deprecated:'CMakeVMMaker holdover from pharo. use addVMPlugins: aMaker'.
-	^self addVMPlugins: aMaker
-
-]
-
-{ #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> addVMPlugins: aMaker [
 	"Route this message send to the message appropriate for my buildType "
 	|d |
@@ -1877,7 +1869,19 @@ self subclassResponsibility
 
 { #category : #'initialize-release' }
 CPlatformConfigForSqueak >> customizeVMPlugins [
-	self flag:'tty'. "is this needed on all platforms? consider moving down"
+	"This customization happens on CPlatformForSqueak>>initialization BEFORE the buildType has been set. 
+	
+	The initial customization will probably be the general case.
+	
+	HOWEVER, should a subclass of me want further granularity of included vm plugins based on buildType.
+	
+	simply override the 
+	
+		SqueakUnixConfig>>addVMPlugins[BuildType]: aMaker method
+	
+	and modify/limit the vmplugins variable there before the CMake configuration is written out.
+	
+	"
 	self subclassResponsibility
 ]
 
@@ -2668,9 +2672,10 @@ CPlatformConfigForSqueak >> generateVmConfigIn [
 { #category : #'initialize-release' }
 CPlatformConfigForSqueak >> initialize [
 	enabledebugmessages := false.
+	buildType:=cogDir:=templates:=platformSources:=vmplugins:=nil. 
 	self 
 		initializePlatformSources;
-		initializeVMDrivers;
+		initializeVMPlugins;
 		customizeVMPlugins.
 		
 ]
@@ -2681,7 +2686,7 @@ CPlatformConfigForSqueak >> initializePlatformSources [
 ]
 
 { #category : #'initialize-release' }
-CPlatformConfigForSqueak >> initializeVMDrivers [
+CPlatformConfigForSqueak >> initializeVMPlugins [
 	vmplugins := OrderedCollection new.
 	vmplugins 
 		addLast:(CMakeVMDisplayCustom new);
@@ -2695,6 +2700,7 @@ CPlatformConfigForSqueak >> initializeVMDrivers [
 		addLast:(CMakeVMSoundNAS new);
 		addLast:(CMakeVMSoundNull new);
 		addLast:(CMakeVMSoundOSS new);
+		addLast:(CMakeVMSoundPulse new);		
 		addLast:(CMakeVMSoundSun new).
 
 ]
@@ -2997,18 +3003,6 @@ CPlatformConfigForSqueak >> outputDir [
 { #category : #'cmake directory' }
 CPlatformConfigForSqueak >> outputDirName [
 	^ 'products'
-]
-
-{ #category : #'source files' }
-CPlatformConfigForSqueak >> platformSources [
-
-"	
-	SystemNavigation default browseMethodsWhoseNamesContain: 'platformSources'
-
-^#( platform specific array)
-"
-
-	self subclassResponsibility
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -3928,13 +3922,6 @@ CPlatformConfigForSqueak >> version [
 CPlatformConfigForSqueak >> vmCogExecutableName [
 
 	^'cog'
-]
-
-{ #category : #plugins }
-CPlatformConfigForSqueak >> vmDrivers [
-"SystemNavigation default browseMethodsWhoseNamesContain: 'vmDrivers'
-"
-	self subclassResponsibility
 ]
 
 { #category : #'cmake executable names' }

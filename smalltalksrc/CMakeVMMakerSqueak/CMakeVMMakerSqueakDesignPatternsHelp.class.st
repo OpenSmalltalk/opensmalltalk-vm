@@ -23,8 +23,8 @@ CMakeVMMakerSqueakDesignPatternsHelp class >> overview [
 
 They include:
 
-Visitor Pattern.
 Method Redirect Pattern*.
+Visitor Pattern.
 
 
 *N.B. tty. It might have a different name, I just named it that for reasons that will be apparent.

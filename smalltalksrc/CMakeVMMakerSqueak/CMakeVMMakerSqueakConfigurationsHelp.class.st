@@ -61,7 +61,6 @@ To use a Configuration, we tell it to configure itself for a particular build ty
 
 { #category : #accessing }
 CMakeVMMakerSqueakConfigurationsHelp class >> pages [
-"	#(overview CMakeVMMakerSqueakStepByStepNewConfigurationHelp CMakeVMMakerSqueakStepByStepNewPlatformHelp)"
-	^#(overview CMakeVMMakerSqueakStepByStepNewConfigurationHelp)
+	^#(overview )
 
 ]
