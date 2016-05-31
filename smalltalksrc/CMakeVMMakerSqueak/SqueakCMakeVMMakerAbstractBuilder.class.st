@@ -6,9 +6,10 @@ I am a facade to the various Squeak[Platform][WordSize][VM][MemoryManager]Config
 I provide facilities to query my configurations.
 I use the Visitor pattern in collecting information about my configurations.
 
-HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp.
 
 
+(HelpBrowser openOn: CMakeVMMakerSqueakDeveloperHelp) model
+   showTopicThat: [:topic | topic title beginsWith: 'Builder']. 
 
 
 "
@@ -85,12 +86,6 @@ SqueakCMakeVMMakerAbstractBuilder class >> default [
 ]
 
 { #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder class >> dirBuildPlatform [
-	default ifNil:[default:= self new].
-	^default dirBuildPlatform
-]
-
-{ #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder class >> enableMessageTracking: aBoolean [
 	default ifNil:[default:= self new].
 	^default enableMessageTracking: aBoolean
@@ -126,12 +121,6 @@ SqueakCMakeVMMakerAbstractBuilder class >> reset [
 ]
 
 { #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder class >> sourceDirectoryFor: aSymbol [
-	default ifNil:[default:= self new].
-	^default sourceDirectoryFor: aSymbol
-]
-
-{ #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder class >> unAvailableBuildConfigurations [
 	default ifNil:[default:= self new].
 	^default unAvailableBuildConfigurations
@@ -157,11 +146,14 @@ SqueakCMakeVMMakerAbstractBuilder >> availableBuildConfigurations [
 
 { #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder >> availableBuildConfigurationsFor: aCategoryName [
-	"answer the CMakeVMakerSqueak configurations in a Smalltalk category that have not excluded themselves from being built."
+	"answer the CMakeVMakerSqueak configurations in a Smalltalk category that are neither Abstract Base Classes nor excluded from builds."
 
-"	(((self configurationDictionary:aCategoryName) keys asSortedCollection) size = 0)      
-		ifTrue:[^((self configurationDictionary:aCategoryName) keys asSortedCollection) sort]."
-     ^(((self configurationDictionary:aCategoryName) select: [:info| info value excludeFromBuild not ]) keys asSortedCollection) sort
+
+
+     ^((
+	    (self configurationDictionary:aCategoryName) select: [:info| (info isAbstractBaseClass not) &  (info excludeFromBuild not)]
+         ) keys asSortedCollection
+        ) sort.
 
 
 ]
@@ -255,23 +247,6 @@ SqueakCMakeVMMakerAbstractBuilder >> configureA: configSymbol forBuildType: type
 	
 ]
 
-{ #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder >> dirBuildPlatform [
-	"Answer the root directory for this configuration's build that contains build, build.assert...etc directories. example:  cmake_build.linux32x86."
-	^self dirBuildPlatform:(self configurationsCategory)
-]
-
-{ #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder >> dirBuildPlatform: aCategoryName [
-	|info|
-	"All the configurations in a category share the same build platform."
-	info:=(self configurationDictionary:aCategoryName) at: ((self configurationDictionary:aCategoryName) keys at:1).  "i.e. aDictionary at:1"
-	^info dirBuildPlatform
-	
-	
-
-]
-
 { #category : #building }
 SqueakCMakeVMMakerAbstractBuilder >> enableMessageTracking: aBoolean [
 	(config isKindOf: CPlatformConfig)
@@ -300,10 +275,6 @@ SqueakCMakeVMMakerAbstractBuilder >> generateSources [
 ]
 
 { #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder >> getInfoForBuild: aSymbol [
-]
-
-{ #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder >> getInfoForBuilds [
 	| result|
 	"return a Dictionary of CMakeMakerSqueak-XYZ platform configurations and their associated CMakeVMakerConfigurationInfo "
@@ -320,8 +291,9 @@ SqueakCMakeVMMakerAbstractBuilder >> getInfoForBuilds [
 { #category : #initialization }
 SqueakCMakeVMMakerAbstractBuilder >> initialize [
 	"a stupid <cough>temporary</cough> hack to workaround initialization problems"
+	self flag:'tty. why is this here? its from pharo...'.
 	Cogit allSubclassesDo: [ :each | each initializeWithOptions: (VMMaker new instVarNamed: 'optionsDictionary') ].
-	scriptMode:= false. "On the chance that we ever use scripts to invoke builders, here is  a flag to bypass user interaction/informs"
+"	scriptMode:= false. On the chance that we ever use scripts to invoke builders, here is  a flag to bypass user interaction/informs"
 	self initializeBuildTypeAndDirectoryInfo.
 
 	
@@ -351,29 +323,6 @@ SqueakCMakeVMMakerAbstractBuilder >> noBuildTypes [
 ]
 
 { #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder >> sourceDirectoryFor: aSymbol [
-	"answer a subset of buildTypeAndDirectoryInfo based on the buildTypes the configuration supports   "
-	[
-	((Smalltalk at: aSymbol)  category) =  (self configurationsCategory)  "verify the class is handled by this concrete builder"
-		ifTrue:[	^self sourceDirectoryFor: aSymbol inCategory: ((Smalltalk at: aSymbol)  category).]  "if so, go get its info"
-		ifFalse:[^self userErrorInvalidTarget: aSymbol]
-	] ifError:[^'sourceDirectoryFor: ''', aSymbol , ''' not found' ].
-	^nil.
-]
-
-{ #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder >> sourceDirectoryFor: aSymbol inCategory: aCategoryName [
-	|info |
-	"extract the CMakeVMakerConfigurationInfo object for a configuration and return the sourceDirectory ."
-	info:=(self configurationDictionary:aCategoryName) at: aSymbol ifAbsent:[^SqueakCMakeVMMakerAbstractBuilder default userErrorNoSource:aSymbol].
-	^info dirSource
-
-
-
-
-]
-
-{ #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder >> unAvailableBuildConfigurations [
 	"abstract class pass through for concrete instance"
 	^self unAvailableBuildConfigurationsFor: (self configurationsCategory)
@@ -381,11 +330,14 @@ SqueakCMakeVMMakerAbstractBuilder >> unAvailableBuildConfigurations [
 
 { #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder >> unAvailableBuildConfigurationsFor: aCategoryName [
-	"answer the CMakeVMakerSqueak configurations in a Smalltalk category that havenot excluded themselves from being built."
+	"answer the CMakeVMakerSqueak configurations in a Smalltalk category that are neither Abstract Base Classes nor excluded from builds."
 
-"	(((self configurationDictionary:aCategoryName) keys asSortedCollection) size = 0)      
-		ifTrue:[^((self configurationDictionary:aCategoryName) keys asSortedCollection) sort]."
-     ^(((self configurationDictionary:aCategoryName) select: [:info| info value excludeFromBuild ]) keys asSortedCollection) sort
+
+
+     ^((
+	    (self configurationDictionary:aCategoryName) select: [:info| (info isAbstractBaseClass) |  (info excludeFromBuild)]
+         ) keys asSortedCollection
+        ) sort.
 
 
 ]
