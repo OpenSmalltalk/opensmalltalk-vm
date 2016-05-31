@@ -47,6 +47,12 @@ CMakeVMakerConfigurationInfo >> excludeFromBuild [
 	^ excludeFromBuild
 ]
 
+{ #category : #accessing }
+CMakeVMakerConfigurationInfo >> isAbstractBaseClass [
+
+	^ isAbstractBaseClass
+]
+
 { #category : #visiting }
 CMakeVMakerConfigurationInfo >> visit: aVisitor [
 	|v|
@@ -54,12 +60,14 @@ CMakeVMakerConfigurationInfo >> visit: aVisitor [
 	self flag:'tty'. "why am I not storing the instances itself?does this visit stuff really make sense? I am thinking its 'lightweight'. hmmm"
 	v:= aVisitor basicNew.
 	(v class isAbstractBaseClass)
+		ifTrue:[	
+				isAbstractBaseClass := true.
+				excludeFromBuild := true]
 		ifFalse:[
 			availableBuildTypes := v availableBuildTypes.
 			dirBuildPlatform := v dirBuildPlatform.
-			dirSource  := v dirSource.
 			excludeFromBuild := v excludeFromBuild.
-			isAbstractBaseClass := (v class) isAbstractBaseClass].
+			isAbstractBaseClass := false]. 
 
 
 ]
