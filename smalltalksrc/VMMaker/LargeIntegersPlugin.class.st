@@ -738,8 +738,11 @@ LargeIntegersPlugin >> digit: anOop Lshift: shiftCount [
 	(highBit := self cDigitHighBit: (self pointerToFirstDigitOfLargeInt: anOop)
 				len: oldDigitLen) = 0 ifTrue: [^  interpreterProxy instantiateClass: (interpreterProxy fetchClassOf: anOop) indexableSize: 1].
 	newByteLen := highBit + shiftCount + 7 // 8.
-	self remapOop: anOop in: [newOop := interpreterProxy instantiateClass: (interpreterProxy fetchClassOf: anOop)
-					indexableSize: newByteLen].
+	self remapOop: anOop in:
+		[newOop := interpreterProxy
+						instantiateClass: (interpreterProxy fetchClassOf: anOop)
+						indexableSize: newByteLen].
+	newOop ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	newDigitLen := newByteLen + 3 // 4.
 	self
 		cDigitLshift: shiftCount
@@ -766,8 +769,11 @@ LargeIntegersPlugin >> digit: anOop Rshift: shiftCount lookfirst: a [
 			indexableSize: 0].
 	newByteLen := newBitLen + 7 // 8.
 	newDigitLen := newByteLen + 3 // 4.
-	self remapOop: anOop in: [newOop := interpreterProxy instantiateClass: (interpreterProxy fetchClassOf: anOop)
-					indexableSize: newByteLen].
+	self remapOop: anOop in:
+		[newOop := interpreterProxy
+						instantiateClass: (interpreterProxy fetchClassOf: anOop)
+						indexableSize: newByteLen].
+	newOop ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	self
 		cDigitRshift: shiftCount
 		from: (self pointerToFirstDigitOfLargeInt: anOop)
@@ -798,6 +804,7 @@ LargeIntegersPlugin >> digitAddLarge: firstInteger with: secondInteger [
 			longDigitLen := firstDigitLen].
 	"	sum := Integer new: len neg: firstInteger negative."
 	self remapOop: #(shortInt longInt ) in: [sum := self createLargeIntegerNeg: neg digitLength: longDigitLen].
+	sum ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	over := self
 				cDigitAdd: (self pointerToFirstDigitOfLargeInt: shortInt)
 				len: shortDigitLen
@@ -808,6 +815,7 @@ LargeIntegersPlugin >> digitAddLarge: firstInteger with: secondInteger [
 		ifTrue: 
 			["sum := sum growby: 1."
 			self remapOop: sum in: [newSum := self createLargeIntegerNeg: neg byteLength: longDigitLen * 4 + 1].
+			newSum ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 			self
 				cDigitCopyFrom: (self pointerToFirstDigitOfLargeInt: sum)
 				to: (self pointerToFirstDigitOfLargeInt: newSum)
@@ -830,8 +838,8 @@ LargeIntegersPlugin >> digitBitLogic: firstInteger with: secondInteger opIndex: 
 	| firstLarge secondLarge firstLen secondLen shortLen shortLarge longLen longLarge result |
 	(interpreterProxy isIntegerObject: firstInteger)
 		ifTrue: 
-			[(interpreterProxy integerValueOf: firstInteger)
-				< 0 ifTrue: [^ interpreterProxy primitiveFail].
+			[(interpreterProxy integerValueOf: firstInteger) < 0 ifTrue:
+				[^ interpreterProxy primitiveFail].
 			"convert it to a not normalized LargeInteger"
 			self remapOop: secondInteger in: [firstLarge := self createLargeFromSmallInteger: firstInteger]]
 		ifFalse: 
@@ -839,8 +847,8 @@ LargeIntegersPlugin >> digitBitLogic: firstInteger with: secondInteger opIndex: 
 			firstLarge := firstInteger].
 	(interpreterProxy isIntegerObject: secondInteger)
 		ifTrue: 
-			[(interpreterProxy integerValueOf: secondInteger)
-				< 0 ifTrue: [^ interpreterProxy primitiveFail].
+			[(interpreterProxy integerValueOf: secondInteger) < 0 ifTrue:
+				[^ interpreterProxy primitiveFail].
 			"convert it to a not normalized LargeInteger"
 			self remapOop: firstLarge in: [secondLarge := self createLargeFromSmallInteger: secondInteger]]
 		ifFalse: 
@@ -859,7 +867,9 @@ LargeIntegersPlugin >> digitBitLogic: firstInteger with: secondInteger opIndex: 
 			shortLarge := secondLarge.
 			longLen := firstLen.
 			longLarge := firstLarge].
-	self remapOop: #(shortLarge longLarge ) in: [result := interpreterProxy instantiateClass: interpreterProxy classLargePositiveInteger indexableSize: longLen].
+	self remapOop: #(shortLarge longLarge) in:
+		[result := interpreterProxy instantiateClass: interpreterProxy classLargePositiveInteger indexableSize: longLen].
+	result ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	self
 		cDigitOp: opIx
 		short: (self pointerToFirstDigitOfLargeInt: shortLarge)
@@ -868,7 +878,7 @@ LargeIntegersPlugin >> digitBitLogic: firstInteger with: secondInteger opIndex: 
 		len: longLen + 3 // 4
 		into: (self pointerToFirstDigitOfLargeInt: result).
 	interpreterProxy failed ifTrue: [^ 0].
-	^ self normalizePositive: result
+	^self normalizePositive: result
 ]
 
 { #category : #'oop functions' }
@@ -949,6 +959,7 @@ LargeIntegersPlugin >> digitMontgomery: firstLarge times: secondLarge modulo: th
 
 	self remapOop: #(firstLarge secondLarge thirdLarge)
 		in: [prod := interpreterProxy instantiateClass: interpreterProxy classLargePositiveInteger indexableSize: thirdLen * 4].
+	prod ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	self
 		cDigitMontgomery: (self pointerToFirstDigitOfLargeInt: firstLarge)
 		len: firstLen
@@ -979,6 +990,7 @@ LargeIntegersPlugin >> digitMultiplyLarge: firstInteger with: secondInteger nega
 			longInt := firstInteger.
 			longLen := firstLen].
 	self remapOop: #(shortInt longInt) in: [prod := self createLargeIntegerNeg: neg byteLength: longLen + shortLen].
+	prod ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	self
 		cDigitMultiply: (self pointerToFirstDigitOfLargeInt: shortInt)
 		len: shortLen + 3 // 4
@@ -1058,6 +1070,7 @@ LargeIntegersPlugin >> digitSubLarge: firstInteger with: secondInteger [
 	resDigitLen := largeDigitLen.
 	self remapOop: #(smaller larger)
 		in: [res := self createLargeIntegerNeg: neg digitLength: resDigitLen].
+	res ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	self
 		cDigitSub: (self pointerToFirstDigitOfLargeInt: smaller)
 		len: smallerDigitLen
