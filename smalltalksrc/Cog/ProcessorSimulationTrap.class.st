@@ -16,7 +16,7 @@ Class {
 		'type',
 		'registerAccessor'
 	],
-	#category : #'Cog-Processors'
+	#category : 'Cog-Processors'
 }
 
 { #category : #debugger }

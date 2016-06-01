@@ -8,7 +8,7 @@ Class {
 	#classVars : [
 		'SavedState'
 	],
-	#category : #'Cog-Processors'
+	#category : 'Cog-Processors'
 }
 
 { #category : #debugger }

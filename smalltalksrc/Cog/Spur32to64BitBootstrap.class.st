@@ -16,7 +16,7 @@ Class {
 		'VMObjectIndices',
 		'VMSqueakClassIndices'
 	],
-	#category : #'Cog-Bootstrapping'
+	#category : 'Cog-Bootstrapping'
 }
 
 { #category : #'bootstrap image' }
