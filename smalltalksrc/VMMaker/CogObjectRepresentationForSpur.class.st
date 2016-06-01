@@ -824,6 +824,15 @@ CogObjectRepresentationForSpur >> genJumpImmutable: sourceReg scratchReg: scratc
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genJumpInOldSpace: reg [
+	"Jump if reg is old."
+	<inline: true>
+	^cogit
+		CmpCq: objectMemory storeCheckBoundary R: reg; "N.B. FLAGS := destReg - scratchReg"
+		JumpAboveOrEqual: 0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genJumpMutable: sourceReg scratchReg: scratchReg [
 	<returnTypeC: #'AbstractInstruction *'>
 	<option: #IMMUTABILITY>

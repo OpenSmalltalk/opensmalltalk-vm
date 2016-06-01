@@ -2378,7 +2378,8 @@ CCodeGenerator >> generateInlineCppIfElse: msgNode asArgument: asArgument on: aS
 			[[:node| | expansion |
 			  expansion := String streamContents: [:s| node emitCCodeOn: s level: level generator: self].
 			 "Remove tabs from first line to avoid indenting a second time"
-			 expansion := expansion allButFirst: (expansion findFirst: [:c| c ~~ Character tab]) - 1.
+			 expansion ifNotEmpty:
+				[expansion := expansion allButFirst: (expansion findFirst: [:c| c ~~ Character tab]) - 1].
 			 aStream nextPutAll: expansion]].
 
 	(self nilOrBooleanConditionFor: msgNode) ifNotNil:

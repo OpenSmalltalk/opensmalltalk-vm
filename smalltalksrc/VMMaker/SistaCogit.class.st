@@ -725,6 +725,12 @@ SistaCogit >> maybeAllocAndInitCounters [
 ]
 
 { #category : #'compile abstract instructions' }
+SistaCogit >> maybeCountCounter [
+	<inline: true>
+	numCounters := numCounters + 1
+]
+
+{ #category : #'compile abstract instructions' }
 SistaCogit >> maybeFreeCounters [
 	<inline: true>
 	counters ~= 0 ifTrue:
@@ -736,6 +742,12 @@ SistaCogit >> maybeFreeCountersOf: aCogMethod [
 	"Free any counters in the method."
 	<inline: true>
 	objectRepresentation freeCounters: aCogMethod counters
+]
+
+{ #category : #'compile abstract instructions' }
+SistaCogit >> maybeInitNumCounters [
+	<inline: true>
+	numCounters := 0
 ]
 
 { #category : #'garbage collection' }
@@ -958,81 +970,4 @@ SistaCogit >> printPICDataForMethods [
 SistaCogit >> resetCountersIn: cogMethod [
 	<doNotGenerate>
 	objectRepresentation resetCountersIn: cogMethod
-]
-
-{ #category : #'compile abstract instructions' }
-SistaCogit >> scanMethod [
-	"Scan the method (and all embedded blocks) to determine
-		- what the last bytecode is; extra bytes at the end of a method are used to encode things like source pointers or temp names
-		- if the method needs a frame or not
-		- what are the targets of any backward branches.
-		- how many blocks it creates
-		- how many counters it needs/conditional branches it contains
-	 Answer the block count or on error a negative error code"
-	| latestContinuation nExts descriptor pc numBlocks distance targetPC framelessStackDelta numFixups |
-	<var: #descriptor type: #'BytecodeDescriptor *'>
-	self flag: 'numFixup should be reverted to inst var when moving back sistaCogit as subclass of RegisterAllocatingCogit'.
-	needsFrame := false.
-	numFixups := 0.
-	prevBCDescriptor := nil.
-	numCounters := 0.
-	self
-		cppIf: IMMUTABILITY
-		ifTrue: [needsTwoPath := false].
-	NewspeakVM ifTrue:
-		[numIRCs := 0].
-	(primitiveIndex > 0
-	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
-		[^0].
-	pc := latestContinuation := initialPC.
-	numBlocks := framelessStackDelta := nExts := extA := extB := 0.
-	[pc <= endPC] whileTrue:
-		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
-		 descriptor := self generatorAt: byte0.
-		 descriptor isExtension ifTrue:
-			[descriptor opcode = Nop ifTrue: "unknown bytecode tag; see Cogit class>>#generatorTableFrom:"
-				[^EncounteredUnknownBytecode].
-			 self loadSubsequentBytesForDescriptor: descriptor at: pc.
-			 self perform: descriptor generator].
-		 (descriptor isReturn
-		  and: [pc >= latestContinuation]) ifTrue:
-			[endPC := pc].
-		 self
-			cppIf: IMMUTABILITY
-			ifTrue: [(needsFrame and: [needsTwoPath not])
-					ifFalse: [(descriptor needsFrameFunction isNil
-								or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
-							ifTrue: [needsFrame := true.
-								needsTwoPath := descriptor generator == #genStoreAndPopReceiverVariableBytecode]
-							ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]]]
-			ifFalse: [needsFrame
-					ifFalse: [(descriptor needsFrameFunction isNil
-								or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
-							ifTrue: [needsFrame := true]
-							ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]]].
-		 descriptor isBranch ifTrue:
-			[distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
-			 targetPC := pc + descriptor numBytes + distance.
-			 (self isBackwardBranch: descriptor at: pc exts: nExts in: methodObj)
-				ifTrue: [self initializeFixupAt: targetPC - initialPC]
-				ifFalse:
-					[latestContinuation := latestContinuation max: targetPC.
-					numFixups := numFixups + 1.
-					 (descriptor isBranchTrue or: [descriptor isBranchFalse]) ifTrue:
-						[numCounters := numCounters + 1]]].
-		 descriptor isBlockCreation ifTrue:
-			[numBlocks := numBlocks + 1.
-			 distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
-			 targetPC := pc + descriptor numBytes + distance.
-			 latestContinuation := latestContinuation max: targetPC.
-			 numFixups := numFixups + 1].
-		 NewspeakVM ifTrue:
-			[descriptor hasIRC ifTrue:
-				[numIRCs := numIRCs + 1]].
-		 pc := pc + descriptor numBytes.
-		 descriptor isExtension
-			ifTrue: [nExts := nExts + 1]
-			ifFalse: [nExts := extA := extB := 0].
-		 prevBCDescriptor := descriptor].
-	^numBlocks
 ]
