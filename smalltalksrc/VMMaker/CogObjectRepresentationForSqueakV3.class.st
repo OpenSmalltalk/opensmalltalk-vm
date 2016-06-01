@@ -473,6 +473,16 @@ CogObjectRepresentationForSqueakV3 >> genJumpImmediate: aRegister [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpInOldSpace: reg [
+	"Jump if reg is old."
+	<inline: true>
+	^cogit
+		MoveAw: objectMemory youngStartAddress R: TempReg;
+		CmpR: TempReg R: reg;	"N.B. FLAGS := destReg - scratchReg"
+		JumpBelow: 0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genJumpIsSmallIntegerValue: aRegister scratch: scratchReg [
 	"Generate a test for aRegister containing an integer value in the SmallInteger range, and a jump if so, answering the jump.
 	 c.f. ObjectMemory>>isIntegerValue:"
