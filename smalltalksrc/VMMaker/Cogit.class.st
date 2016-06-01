@@ -143,7 +143,6 @@ Class {
 		'primitiveIndex',
 		'backEnd',
 		'literalsManager',
-		'callerSavedRegMask',
 		'postCompileHook',
 		'methodLabel',
 		'stackCheckLabel',
@@ -1550,6 +1549,37 @@ Cogit >> CallFullRT: callTarget [
 		ifFalse: [self CallFull: callTarget]
 ]
 
+{ #category : #'compile abstract instructions' }
+Cogit >> CallFullRT: callTarget registersToBeSavedMask: registersToBeSaved [
+	<returnTypeC: #'AbstractInstruction *'>
+	| callerSavedRegsToBeSaved lastInst reg registersToBePushed |
+	<var: 'lastInst' type: #'AbstractInstruction *'>
+	callerSavedRegsToBeSaved := CallerSavedRegisterMask bitAnd: registersToBeSaved.
+
+	backEnd canPushPopMultipleRegisters
+		ifTrue: [backEnd genPushRegisterMask: callerSavedRegsToBeSaved]
+		ifFalse:
+			[registersToBePushed := callerSavedRegsToBeSaved.
+			 reg := 0.
+			 [registersToBePushed ~= 0] whileTrue:
+				[(registersToBePushed anyMask: 1) ifTrue:
+					[self PushR: reg].
+				 reg := reg + 1.
+				 registersToBePushed := registersToBePushed >>> 1]].
+
+	lastInst := self CallFullRT: callTarget.
+
+	backEnd canPushPopMultipleRegisters
+		ifTrue: [^backEnd genPopRegisterMask: callerSavedRegsToBeSaved]
+		ifFalse:
+			[[reg >= 0] whileTrue:
+				[(callerSavedRegsToBeSaved anyMask: 1 << reg) ifTrue:
+					[lastInst := self PopR: reg].
+				 reg := reg - 1].
+
+			 ^lastInst]
+]
+
 { #category : #'method map' }
 Cogit >> CallNewspeakSend: callTarget [
 	<returnTypeC: #'AbstractInstruction *'>
@@ -1563,6 +1593,37 @@ Cogit >> CallRT: callTarget [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self annotateCall: (self Call: callTarget)
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> CallRT: callTarget registersToBeSavedMask: registersToBeSaved [
+	<returnTypeC: #'AbstractInstruction *'>
+	| callerSavedRegsToBeSaved lastInst reg registersToBePushed |
+	<var: 'lastInst' type: #'AbstractInstruction *'>
+	callerSavedRegsToBeSaved := CallerSavedRegisterMask bitAnd: registersToBeSaved.
+
+	backEnd canPushPopMultipleRegisters
+		ifTrue: [backEnd genPushRegisterMask: callerSavedRegsToBeSaved]
+		ifFalse:
+			[registersToBePushed := callerSavedRegsToBeSaved.
+			 reg := 0.
+			 [registersToBePushed ~= 0] whileTrue:
+				[(registersToBePushed anyMask: 1) ifTrue:
+					[self PushR: reg].
+				 reg := reg + 1.
+				 registersToBePushed := registersToBePushed >>> 1]].
+
+	lastInst := self CallRT: callTarget.
+
+	backEnd canPushPopMultipleRegisters
+		ifTrue: [^backEnd genPopRegisterMask: callerSavedRegsToBeSaved]
+		ifFalse:
+			[[reg >= 0] whileTrue:
+				[(callerSavedRegsToBeSaved anyMask: 1 << reg) ifTrue:
+					[lastInst := self PopR: reg].
+				 reg := reg - 1].
+
+			 ^lastInst]
 ]
 
 { #category : #'abstract instructions' }
@@ -3120,12 +3181,6 @@ Cogit >> callCogCodePopReceiverAndClassRegs [
 	"This exists only for break-pointing."
 	self cCode: [self realCECallCogCodePopReceiverAndClassRegs]
 		inSmalltalk: [self ceCallCogCodePopReceiverAndClassRegs]
-]
-
-{ #category : #accessing }
-Cogit >> callerSavedRegMask [
-	<cmacro: '() callerSavedRegMask'>
-	^callerSavedRegMask
 ]
 
 { #category : #accessing }
@@ -7091,6 +7146,9 @@ Cogit >> handleABICallOrJumpSimulationTrap: aProcessorSimulationTrap evaluable: 
 		nextpc: aProcessorSimulationTrap nextpc
 		memory: coInterpreter memory.
 	self recordInstruction: {'(simulated call of '. aProcessorSimulationTrap address. '/'. evaluable selector. ')'}.
+	((printRegisters or: [printInstructions]) and: [clickConfirm]) ifTrue:
+ 		[(self confirm: 'skip run-time call?') ifFalse:
+			[clickConfirm := false. self halt]].
 	evaluable valueWithArguments: (processor
 										postCallArgumentsNumArgs: evaluable numArgs
 										in: coInterpreter memory).
@@ -7331,9 +7389,8 @@ Cogit >> initializeBackend [
 	methodLabel opcode: Label.
 	methodLabel operands at: 0 put: 0.
 	methodLabel operands at: 1 put: 0. "label offset"
-	callerSavedRegMask := backEnd callerSavedRegisterMask.
 	backEnd hasVarBaseRegister ifTrue:
-		[self assert: ((self registerMaskFor: VarBaseReg) noMask: callerSavedRegMask)].
+		[self assert: ((self registerMaskFor: VarBaseReg) noMask: CallerSavedRegisterMask)].
 	literalsManager allocateLiterals: 4; resetLiterals
 ]
 
@@ -9247,7 +9304,9 @@ Cogit >> printCogMethodFor: address [
 	<var: #cogMethod type: #'CogMethod *'>
 	cogMethod := methodZone methodFor: address.
 	cogMethod = 0
-		ifTrue: [coInterpreter print: 'not a method'; cr]
+		ifTrue: [(self codeEntryFor: address)
+					ifNil: [coInterpreter print: 'not a method'; cr]
+					ifNotNil: [coInterpreter print: 'trampoline '; print: (self codeEntryNameFor: address); cr]]
 		ifFalse: [coInterpreter printCogMethod: cogMethod]
 ]
 
@@ -9512,9 +9571,9 @@ Cogit >> printRegisterMapOn: aStream [
 	| map n |
 	map := backEnd generalPurposeRegisterMap.
 	n := 0.
-	map keys sort
+	(map keys asSortedCollection: [:a :b| (map at: a) < (map at: b)])
 		do:	[:regName| | abstractName |
-			abstractName := CogAbstractRegisters nameForRegister: (map at: regName).
+			abstractName := backEnd nameForRegister: (map at: regName).
 			aStream nextPutAll: abstractName; nextPutAll: ' => '; nextPutAll: regName]
 		separatedBy: [(n := n + 1) \\ 4 = 0 ifTrue: [aStream cr] ifFalse: [aStream tab]].
 	aStream cr; flush

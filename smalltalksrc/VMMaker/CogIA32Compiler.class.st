@@ -51,7 +51,7 @@ Class {
 		'XMM6L',
 		'XMM7L'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -118,10 +118,12 @@ CogIA32Compiler class >> initialize [
 CogIA32Compiler class >> initializeAbstractRegisters [
 	"Assign the abstract registers with the identities/indices of the relevant concrete registers."
 
+	super initializeAbstractRegisters.
+
 	"N.B. EAX ECX & EDX are caller-save (scratch) registers.  Hence we use ECX for class and EDX for
 		receiver/result since these are written in all normal sends.  EBX ESI & EDI are callee-save."
 
-	super initializeAbstractRegisters.
+	CallerSavedRegisterMask := self registerMaskFor: EAX and: ECX and: EDX.
 
 	TempReg				:= EAX.
 	ClassReg				:= ECX.
@@ -201,11 +203,6 @@ CogIA32Compiler >> callTargetFromReturnAddress: callSiteReturnAddress [
 	| callDistance |
 	callDistance := self literalBeforeFollowingAddress: callSiteReturnAddress.
 	^callSiteReturnAddress + callDistance signedIntFromLong
-]
-
-{ #category : #accessing }
-CogIA32Compiler >> callerSavedRegisterMask [
-	^cogit registerMaskFor: EAX and: ECX and: EDX
 ]
 
 { #category : #testing }

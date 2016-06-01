@@ -67,7 +67,7 @@ Class {
 		'CogCompilationConstants',
 		'CogRTLOpcodes'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -111,9 +111,11 @@ CogAbstractInstruction class >> initialize [
 
 { #category : #'class initialization' }
 CogAbstractInstruction class >> initializeAbstractRegisters [
-	"Assign the abstract registers with the identities/indices of the relevant concrete registers.
+	"Assign the abstract registers with the identities/indices of the relevant concrete registers,
+	 and assign CallerSavedRegisterMask appropriately.
 	 First set all abstract registers to #undefined via CogAbstractRegisters initialize, and then,
 	 each subclasses assigns the subset they choose with values of specific concrete registers."
+	CallerSavedRegisterMask := #undefined.
 	CogAbstractRegisters initialize
 ]
 
@@ -222,6 +224,56 @@ CogAbstractInstruction class >> printFormatForOpcodeName: opcodeName [
 	 r => integer register, f => floating point register, and nil => numeric or address operand.
 	 Subclasses can override to provide a format string for their own private opcodes."
 	^#()
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg [
+	^Cogit basicNew registerMaskFor: reg
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 and: reg3 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2 and: reg3
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2 and: reg3 and: reg4
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 and: reg9 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 and: reg9
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 and: reg9 and: reg10 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 and: reg9 and: reg10
 ]
 
 { #category : #translation }
@@ -448,12 +500,6 @@ CogAbstractInstruction >> callInstructionByteSize [
 	self subclassResponsibility
 ]
 
-{ #category : #accessing }
-CogAbstractInstruction >> callerSavedRegisterMask [
-	"Answer an abstract register mask as computed by StackToRegisterMappingCogit registerMaskFor:"
-	self subclassResponsibility
-]
-
 { #category : #testing }
 CogAbstractInstruction >> canDivQuoRem [
 	<inline: true>
@@ -464,6 +510,12 @@ CogAbstractInstruction >> canDivQuoRem [
 CogAbstractInstruction >> canMulRR [
 	<inline: true>
 	^self subclassResponsibility
+]
+
+{ #category : #testing }
+CogAbstractInstruction >> canPushPopMultipleRegisters [
+	<inline: true>
+	^false
 ]
 
 { #category : #initialization }

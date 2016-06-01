@@ -1,7 +1,7 @@
 Class {
 	#name : #CogMIPSELCompilerTests,
 	#superclass : #AbstractInstructionTests,
-	#category : 'VMMaker-Tests'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #accessing }
