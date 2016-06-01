@@ -57,6 +57,8 @@ Class {
 		'OverflowFlag',
 		'PC',
 		'PL',
+		'PopLDM',
+		'PushSTM',
 		'R0',
 		'R1',
 		'R10',
@@ -81,7 +83,7 @@ Class {
 		'VS',
 		'XorOpcode'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #accessing }
@@ -206,7 +208,7 @@ CogARMCompiler class >> initialize [
 
 	"Specific instructions"
 	self
-		initializeSpecificOpcodes: #(SMULL MSR MRS LDMFD STMFD CMPSMULL)
+		initializeSpecificOpcodes: #(SMULL MSR MRS PopLDM PushSTM LDMFD STMFD CMPSMULL)
 		in: thisContext method
 ]
 
@@ -214,26 +216,30 @@ CogARMCompiler class >> initialize [
 CogARMCompiler class >> initializeAbstractRegisters [
 	"Assign the abstract registers with the identities/indices of the relevant concrete registers."
 
-	"N.B. According to BSABI, R0-R3 are caller-save, R4-R12 are callee save.
-	 Note that R9 might be a special register for the implementation. In some slides
-	 it is refered to as sb. R10 can contain the stack limit (sl), R11 the fp. R12 is an
-	 intra-procedure scratch instruction pointer for link purposes. It can also be used.
-	 R10 is used as temporary inside a single abstract opcode implementation"
-	"R0-R3 are used when calling back to the interpreter. Using them would require
-	 saving and restoring their values, so they are omitted so far. R12 is the only
-	 scratch register at the moment.."
-
 	super initializeAbstractRegisters.
 
+	"According to IHI0042E ARM Architecture Procedure Calling Standard, in section 5.1.1:
+		A subroutine must preserve the contents of the registers r4-r8, r10, r11 and SP (and r9 in PCS variants that designate r9 as v6).
+	 SP = r13, so the callee-saved regs are r4-r8 & r10-r12.
+	 The caller-saved registers are those that are not callee-saved and not reserved for hardware/abi uses,
+	 i..e r0-r3, r9 & r12.
+	 We exclude registers 0 & 1 (TempReg/CArg0Reg & CArg1Reg) from the CallerSavedRegisterMask because we only
+	 use them for argument passing and so never want to save and restore them.  In fact restoring TempReg/CArg0Reg
+	 would overwrite function results, so it shouldn't be included under any circumstances."
+
+	CallerSavedRegisterMask := self registerMaskFor: "0 and: 1 and:" 2 and: 3 and: 9 and: 12.
+
 	TempReg			:= R0.
-	ClassReg			:= R8.
-	ReceiverResultReg	:= R7.
+	ClassReg			:= R2.
+	ReceiverResultReg	:= R5.
 	SendNumArgsReg	:= R6.
 	SPReg				:= SP. "a.k.a. R13" self assert: SP = 13.
 	FPReg				:= R11.
-	Arg0Reg			:= R4.
-	Arg1Reg			:= R5.
-	Extra0Reg			:= R9.
+	Arg0Reg			:= R3. "overlaps with last C arg reg"
+	Arg1Reg			:= R4.
+	Extra0Reg			:= R7.
+	Extra1Reg			:= R8.
+	Extra2Reg			:= R9.
 	VarBaseReg		:= R10.	"Must be callee saved" self assert: ConcreteVarBaseReg = R10.
 	RISCTempReg		:= R12.	"a.k.a. IP" self assert: ConcreteIPReg = R12.
 	LinkReg				:= LR. "R14"
@@ -247,7 +253,6 @@ CogARMCompiler class >> initializeAbstractRegisters [
 	DPFPReg5			:= D5.
 	DPFPReg6			:= D6.
 	DPFPReg7			:= D7
-
 ]
 
 { #category : #testing }
@@ -358,6 +363,10 @@ CogARMCompiler >> availableRegisterOrNoneFor: liveRegsMask [
 	<returnTypeC: #sqInt>
 	(cogit register: Extra0Reg isInMask: liveRegsMask) ifFalse:
 		[^Extra0Reg].
+	(cogit register: Extra1Reg isInMask: liveRegsMask) ifFalse:
+		[^Extra1Reg].
+	(cogit register: Extra2Reg isInMask: liveRegsMask) ifFalse:
+		[^Extra2Reg].
 	^super availableRegisterOrNoneFor: liveRegsMask
 ]
 
@@ -440,16 +449,6 @@ CogARMCompiler >> callTargetFromReturnAddress: callSiteReturnAddress [
 	^callSiteReturnAddress + 4  + callDistance signedIntFromLong
 ]
 
-{ #category : #accessing }
-CogARMCompiler >> callerSavedRegisterMask [
-	"According to IHI0042E ARM Architecture Procedure Calling Standard, in section 5.1.1:
-		A subroutine must preserve the contents of the registers r4-r8, r10, r11 and SP (and r9 in PCS variants that designate r9 as v6).
-	 SP = r13, so the callee-saved regs are r4-r8 & r10-r12.
-	 The caller-saved registers are those that are not callee-saved and not reserved for hardware/abi uses,
-	 i..e r0-r3, r9 & r12."
-	^cogit registerMaskFor: 0 and: 1 and: 2 and: 3 and: 9 and: 12
-]
-
 { #category : #testing }
 CogARMCompiler >> canDivQuoRem [
 	^true
@@ -458,6 +457,12 @@ CogARMCompiler >> canDivQuoRem [
 { #category : #testing }
 CogARMCompiler >> canMulRR [
 "we can do a MulRR be we can't simulate it correctly for some reason. More bug-fixing in the simulator one day"
+	^true
+]
+
+{ #category : #testing }
+CogARMCompiler >> canPushPopMultipleRegisters [
+	<inline: true>
 	^true
 ]
 
@@ -598,6 +603,9 @@ CogARMCompiler >> computeMaximumSize [
 		[SMULL]				-> [^4].
 		[MSR]					-> [^4].
 		[CMPSMULL]			-> [^4]. "special compare for genMulR:R: usage"
+		"ARM Specific Data Movement"
+		[PopLDM]				-> [^4].
+		[PushSTM]				-> [^4].
 		"Data Movement"						
 		[MoveCqR]				-> [^self literalLoadInstructionBytes = 4
 										ifTrue: [self literalLoadInstructionBytes]
@@ -1652,6 +1660,18 @@ CogARMCompiler >> concretizePushCw [
 ]
 
 { #category : #'generate machine code - concretize' }
+CogARMCompiler >> concretizePushOrPopMultipleRegisters: doPush [
+	self assert: (operands at: 0) ~= 0.
+	machineCode at: 0 put: AL << 28
+						  + (doPush     "2r100PUSWL"
+								ifTrue: [2r10010010 << 20]
+								ifFalse: [2r10001011 << 20])
+						  + (SP << 16)
+						  + (operands at: 0).
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code - concretize' }
 CogARMCompiler >> concretizePushR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -1922,6 +1942,9 @@ CogARMCompiler >> dispatchConcretize [
 		[SMULL]			-> [^self concretizeSMULL]	.
 		[CMPSMULL]		-> [^self concretizeCMPSMULL].
 		[MSR]				-> [^self concretizeMSR].
+		"ARM Specific Data Movement"
+		[PopLDM]			-> [^self concretizePushOrPopMultipleRegisters: false].
+		[PushSTM]			-> [^self concretizePushOrPopMultipleRegisters: true].
 		"Data Movement"
 		[MoveCqR]			-> [^self concretizeMoveCqR].
 		[MoveCwR]			-> [^self concretizeMoveCwR].
@@ -2109,30 +2132,31 @@ CogARMCompiler >> genDivR: abstractRegDivisor R: abstractRegDividend Quo: abstra
 	self assert: abstractRegQuotient ~= abstractRegRemainder.
 	rDividend := abstractRegDividend.
 	rDivisor := abstractRegDivisor.
-	rDividend = CArg0Reg ifFalse:[
-		"we need to move the value in rDividend to CArg0Reg. Best to double check if rDivisor is already using it first"
-		rDivisor = CArg0Reg ifTrue:[ "oh dear; we also need to move rDivisor's value out of the way first.. I'll move it to CArg1Reg and if some nitwit has managed to put rDividend there they deserve the crash"
-			rDividend = CArg1Reg ifTrue:[self error: 'register choices in genDivR:R:Quo:Rem: made life impossible'].
+	rDividend = CArg0Reg ifFalse:
+		["we need to move the value in rDividend to CArg0Reg. Best to double check if rDivisor is already using it first"
+		rDivisor = CArg0Reg ifTrue: "oh dear; we also need to move rDivisor's value out of the way first.. I'll move it to CArg1Reg and if some nitwit has managed to put rDividend there they deserve the crash"
+			[rDividend = CArg1Reg ifTrue:
+				[self error: 'register choices in genDivR:R:Quo:Rem: made life impossible'].
 			cogit MoveR: rDivisor R: CArg1Reg.
 			"and update rDivisor or we get buggerd by the next clause"
 			rDivisor := CArg1Reg].
-		cogit MoveR: rDividend R: CArg0Reg.
-	].
-	rDivisor = CArg1Reg ifFalse:[
-		cogit MoveR: rDivisor R: CArg1Reg].
+		cogit MoveR: rDividend R: CArg0Reg].
+	rDivisor = CArg1Reg ifFalse:
+		[cogit MoveR: rDivisor R: CArg1Reg].
 	divRemFunctionAddr := self aeabiDivModFunctionAddr.
 	cogit backEnd saveAndRestoreLinkRegAround:
 		[cogit CallFullRT: (self cCode: [divRemFunctionAddr asUnsignedInteger]
-					   inSmalltalk: [cogit simulatedTrampolineFor: divRemFunctionAddr])].
+							   inSmalltalk: [cogit simulatedTrampolineFor: divRemFunctionAddr])
+			registersToBeSavedMask: (cogit registerMaskFor: CArg2Reg and: CArg3Reg)].
 	"Now we need to move the r0/1 results back to rQuotient & rRemainder"
 	rQuotient := abstractRegQuotient.
 	rRemainder := abstractRegRemainder.
-	rQuotient = CArg0Reg ifFalse:["oh good grief, not again"
-		cogit MoveR: CArg0Reg R: rQuotient.
-		rQuotient = CArg1Reg ifTrue:[self error: 'register choices in genDivR:R:Quo:Rem: made life impossible'] ].
-	rRemainder = CArg1Reg  ifFalse:[
-		cogit MoveR: CArg1Reg R: rRemainder].
-	
+	rQuotient = CArg0Reg ifFalse: "oh good grief, not again"
+		[cogit MoveR: CArg0Reg R: rQuotient.
+		 rQuotient = CArg1Reg ifTrue:
+			[self error: 'register choices in genDivR:R:Quo:Rem: made life impossible'] ].
+	rRemainder = CArg1Reg  ifFalse:
+		[cogit MoveR: CArg1Reg R: rRemainder]
 				
 
 ]
@@ -2209,6 +2233,14 @@ CogARMCompiler >> genMulR: regSource R: regDest [
 	^first
 ]
 
+{ #category : #'generate machine code' }
+CogARMCompiler >> genPopRegisterMask: registersToBeSavedMask [
+	<inline: true>
+	^registersToBeSavedMask = 0
+		ifTrue: [cogit Label]
+		ifFalse: [cogit gen: PopLDM operand: registersToBeSavedMask]
+]
+
 { #category : #'smalltalk calling convention' }
 CogARMCompiler >> genPushRegisterArgsForAbortMissNumArgs: numArgs [
 	"Ensure that the register args are pushed before the outer and
@@ -2257,6 +2289,14 @@ CogARMCompiler >> genPushRegisterArgsForNumArgs: numArgs scratchReg: ignored [
 				[cogit PushR: Arg1Reg]]]
 ]
 
+{ #category : #'generate machine code' }
+CogARMCompiler >> genPushRegisterMask: registersToBeSavedMask [
+	<inline: true>
+	^registersToBeSavedMask = 0
+		ifTrue: [cogit Label]
+		ifFalse: [cogit gen: PushSTM operand: registersToBeSavedMask]
+]
+
 { #category : #abi }
 CogARMCompiler >> genRemoveNArgsFromStack: n [
 	"This is a no-op on ARM since the ABI passes up to 4 args in registers and trampolines currently observe that limit."
@@ -2266,9 +2306,9 @@ CogARMCompiler >> genRemoveNArgsFromStack: n [
 
 { #category : #abi }
 CogARMCompiler >> genRestoreRegs: regMask [
-	"Restore the registers in regMask as saved by genSaveRegs:.
-	 Restore none, because the ARM ABI only defines callee saved registers, no caller-saved regs."
-	^0
+	"Restore the registers in regMask as saved by genSaveRegs:."
+	<inline: true>
+	^self genPopRegisterMask: regMask
 ]
 
 { #category : #abi }
@@ -2287,9 +2327,9 @@ CogARMCompiler >> genSaveRegForCCall [
 
 { #category : #abi }
 CogARMCompiler >> genSaveRegs: regMask [
-	"Save the registers in regMask for a call into the C run-time from a trampoline.
-	 Save none, because the ARM ABI only defines callee saved registers, no caller-saved regs."
-	^0
+	"Save the registers in regMask for a call into the C run-time from a trampoline"
+	<inline: true>
+	^self genPushRegisterMask: regMask
 ]
 
 { #category : #'smalltalk calling convention' }
@@ -2315,11 +2355,15 @@ CogARMCompiler >> generalPurposeRegisterMap [
 	"Answer a Dictionary from register getter to register index."
 	^Dictionary newFromPairs:
 		{	#r0. R0.
+			#r1. R1.
+			#r2. R2.
+			#r3. R3.
 			#r4. R4.
 			#r5. R5.
 			#r6. R6.
 			#r7. R7.
 			#r8. R8.
+			#r9. R9.
 			#r10. R10.
 			#r11. R11.
 			#r12. R12	}
@@ -2886,11 +2930,15 @@ CogARMCompiler >> nameForFPRegister: reg [ "<Integer>"
 { #category : #printing }
 CogARMCompiler >> nameForRegister: reg [ "<Integer>"
 	<doNotGenerate>
-	reg < 0 ifTrue:
-		[^super nameForRegister: reg].
-	^#(LR SP PC CArg0Reg CArg0Reg CArg1Reg CArg2Reg CArg3Reg)
-		detect: [:sym| (thisContext method methodClass classPool at: sym) = reg] 
-		ifNone: [super nameForRegister: reg]
+	| default |
+	default := super nameForRegister: reg.
+	^default last = $?
+		ifTrue:
+			[#(LR SP PC CArg0Reg CArg0Reg CArg1Reg CArg2Reg CArg3Reg)
+				detect: [:sym| (thisContext method methodClass classPool at: sym) = reg] 
+				ifNone: [default]]
+		ifFalse:
+			[default]
 ]
 
 { #category : #'inline cacheing' }

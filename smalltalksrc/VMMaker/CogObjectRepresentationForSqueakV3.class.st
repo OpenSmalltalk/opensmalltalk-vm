@@ -17,7 +17,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMSqueakV3ObjectRepresentationConstants'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #'accessing class hierarchy' }
@@ -825,23 +825,23 @@ CogObjectRepresentationForSqueakV3 >> generateObjectRepresentationTrampolines [
 									genTrampolineFor: #ceStoreCheck:
 									called: 'ceStoreCheckTrampoline'
 									arg: ReceiverResultReg
-									regsToSave: (cogit callerSavedRegMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
+									regsToSave: (CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
 									result: cogit returnRegForStoreCheck.
 	ceCreateNewArrayTrampoline := cogit genTrampolineFor: #ceNewArraySlotSize:
 											called: 'ceCreateNewArrayTrampoline'
 											arg: SendNumArgsReg
-											regsToSave: (cogit callerSavedRegMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
+											regsToSave: (CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
 											result: ReceiverResultReg.
 	cePositive32BitIntegerTrampoline := cogit genTrampolineFor: #positive32BitIntegerFor:
 												called: 'cePositive32BitIntegerTrampoline'
 												arg: ReceiverResultReg
-												regsToSave: (cogit callerSavedRegMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
+												regsToSave: (CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
 												result: TempReg.
 	ceActiveContextTrampoline := self genActiveContextTrampoline.
 	ceClosureCopyTrampoline := cogit genTrampolineFor: #ceClosureCopyDescriptor:
 										called: 'ceClosureCopyTrampoline'
 										arg: SendNumArgsReg
-										regsToSave: (cogit callerSavedRegMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
+										regsToSave: (CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
 										result: ReceiverResultReg
 ]
 

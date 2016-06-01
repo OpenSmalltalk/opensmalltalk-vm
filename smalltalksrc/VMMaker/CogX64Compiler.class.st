@@ -71,7 +71,7 @@ Class {
 		'XMM8L',
 		'XMM9L'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #accessing }
@@ -172,12 +172,23 @@ CogX64Compiler class >> initializeAbstractRegisters [
 	"Assign the abstract registers with the identities/indices of the relevant concrete registers."
 	"[1] Figure 3.4 Register Usage in
 		System V Application Binary Interface
-		AMD64 Architecture Processor Supplement
-
-	N.B. RAX RCX & RDX are caller-save (scratch) registers.  Hence we use RCX for class and RDX for
-		receiver/result since these are written in all normal sends."
+		AMD64 Architecture Processor Supplement"
 
 	super initializeAbstractRegisters.
+
+	"N.B. RAX RCX & RDX are caller-save (scratch) registers.  Hence we use RCX for class and RDX for
+		receiver/result since these are written in all normal sends."
+
+	CallerSavedRegisterMask := self
+									registerMaskFor: RAX
+									and: RCX
+									and: RDX
+									and: RSI
+									and: RDI
+									and: R8
+									and: R9
+									and: R10
+									and: R11.
 
 	TempReg				:= RAX.
 	ClassReg				:= RCX.
@@ -276,25 +287,6 @@ CogX64Compiler >> callTargetFromReturnAddress: callSiteReturnAddress [
 	| callDistance |
 	callDistance := self literal32BeforeFollowingAddress: callSiteReturnAddress.
 	^callSiteReturnAddress + callDistance signedIntFromLong
-]
-
-{ #category : #accessing }
-CogX64Compiler >> callerSavedRegisterMask [
-	"See e.g. Figure 3.4 Register Usage in
-		System V Application Binary Interface
-		AMD64 Architecture Processor Supplement
-	 N.B.  We are playing fast and loose here being processor-specific.
-	 Soon enough this needs to be OS-specific."
-	^cogit
-		registerMaskFor: RAX
-		and: RCX
-		and: RDX
-		and: RSI
-		and: RDI
-		and: R8
-		and: R9
-		and: R10
-		and: R11
 ]
 
 { #category : #testing }
@@ -2400,38 +2392,38 @@ CogX64Compiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 ar
 	<inline: true>
 	numArgs = 0 ifTrue: [^self].
 	(cogit isTrampolineArgConstant: regOrConst0)
-		ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst0) R: RDI]
+		ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst0) R: RDI] "a.k.a. Arg0Reg"
 		ifFalse:
 			[regOrConst0 ~= RDI ifTrue:
 				[cogit MoveR: regOrConst0 R: RDI]].
 	numArgs = 1 ifTrue: [^self].
 	(cogit isTrampolineArgConstant: regOrConst1)
-		ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst1) R: RSI]
+		ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst1) R: RSI] "a.k.a. Arg1Reg"
 		ifFalse:
 			[regOrConst1 ~= RSI ifTrue:
 				[cogit MoveR: regOrConst1 R: RSI]].
 	numArgs = 2 ifTrue: [^self].
 	self cppIf: ABI == #SysV ifTrue:
 		[(cogit isTrampolineArgConstant: regOrConst2)
-			ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst2) R: RDX]
+			ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst2) R: RDX] "a.k.a. ReceiverResultReg"
 			ifFalse:
 				[regOrConst2 ~= RDX ifTrue:
 					[cogit MoveR: regOrConst2 R: RDX]].
 		 numArgs = 3 ifTrue: [^self].
 		 (cogit isTrampolineArgConstant: regOrConst3)
-				ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst3) R: RCX]
+				ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst3) R: RCX] "a.k.a. ClassReg"
 				ifFalse:
 					[regOrConst3 ~= RCX ifTrue:
 						[cogit MoveR: regOrConst3 R: RCX]]].
-	self cppIf: ABI == #MSVC ifTrue:
+	self cppIf: ABI == #MSVC ifTrue: "completely untested..."
 		[(cogit isTrampolineArgConstant: regOrConst2)
-			ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst2) R: R8]
+			ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst2) R: R8] "a.k.a. RISCTempReg in CogInLineLiteralsX64Compiler and Extra6Reg in CogOutOfLineLiteralsX64Compiler"
 			ifFalse:
 				[regOrConst2 ~= R8 ifTrue:
 					[cogit MoveR: regOrConst2 R: R8]].
 		 numArgs = 3 ifTrue: [^self].
 		 (cogit isTrampolineArgConstant: regOrConst3)
-				ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst3) R: R9]
+				ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst3) R: R9] "a.k.a. SendNumArgsReg"
 				ifFalse:
 					[regOrConst3 ~= R9 ifTrue:
 						[cogit MoveR: regOrConst3 R: R9]]].
@@ -2846,9 +2838,12 @@ CogX64Compiler >> nameForFPRegister: reg [ "<Integer>"
 { #category : #printing }
 CogX64Compiler >> nameForRegister: reg [ "<Integer>"
 	<doNotGenerate>
-	(reg between: 0 and: 15) ifTrue:
-		[^#(RAX RCX RDX RBX RSP RBP RSI RDI R8 R9 R10 R11 R12 R13 R14 R15) at: reg + 1].
-	^super nameForRegister: reg
+	| default |
+	default := super nameForRegister: reg.
+	^(default last = $?
+	  and: [reg between: 0 and: 15])
+		ifTrue: [#(RAX RCX RDX RBX RSP RBP RSI RDI R8 R9 R10 R11 R12 R13 R14 R15) at: reg + 1]
+		ifFalse: [default]
 ]
 
 { #category : #'inline cacheing' }

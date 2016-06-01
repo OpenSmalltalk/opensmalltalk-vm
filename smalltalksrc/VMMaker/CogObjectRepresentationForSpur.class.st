@@ -18,7 +18,7 @@ Class {
 		'VMBytecodeConstants',
 		'VMSqueakClassIndices'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -609,7 +609,9 @@ CogObjectRepresentationForSpur >> genGetActiveContextLarge: isLarge inBlock: isI
 	
 	jumpNeedScavenge jmpTarget: cogit Label.
 	cogit backEnd saveAndRestoreLinkRegAround:
-		[cogit CallRT: ceScheduleScavengeTrampoline].
+		[cogit
+			CallRT: ceScheduleScavengeTrampoline
+			registersToBeSavedMask: (cogit registerMaskFor: ReceiverResultReg and: SendNumArgsReg and: ClassReg)].
 	cogit Jump: continuation.
 	^0
 ]
@@ -1123,7 +1125,7 @@ CogObjectRepresentationForSpur >> genStoreCheckTrampoline [
 		arg: nil
 		arg: nil
 		arg: nil
-		regsToSave: (cogit callerSavedRegMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
+		regsToSave: (CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
 		pushLinkReg: true
 		resultReg: cogit returnRegForStoreCheck
 		appendOpcodes: CheckRememberedInTrampoline
@@ -1370,7 +1372,7 @@ CogObjectRepresentationForSpur >> generateObjectRepresentationTrampolines [
 	ceScheduleScavengeTrampoline := cogit
 											genTrampolineFor: #ceScheduleScavenge
 											called: 'ceScheduleScavengeTrampoline'
-											regsToSave: cogit callerSavedRegMask.
+											regsToSave: CallerSavedRegisterMask.
 	ceSmallActiveContextInMethodTrampoline := self genActiveContextTrampolineLarge: false inBlock: false called: 'ceSmallMethodContext'.
 	ceSmallActiveContextInBlockTrampoline := self genActiveContextTrampolineLarge: false inBlock: true called: 'ceSmallBlockContext'.
 	ceLargeActiveContextInMethodTrampoline := self genActiveContextTrampolineLarge: true inBlock: false called: 'ceLargeMethodContext'.

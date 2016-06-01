@@ -3429,17 +3429,17 @@ StackToRegisterMappingCogit >> generateTracingTrampolines [
 		self genTrampolineFor: #ceTraceLinkedSend:
 			called: 'ceTraceLinkedSendTrampoline'
 			arg: ReceiverResultReg
-			regsToSave: callerSavedRegMask..
+			regsToSave: CallerSavedRegisterMask..
 	ceTraceBlockActivationTrampoline :=
 		self genTrampolineFor: #ceTraceBlockActivation
 			called: 'ceTraceBlockActivationTrampoline'
-			regsToSave: callerSavedRegMask..
+			regsToSave: CallerSavedRegisterMask..
 	ceTraceStoreTrampoline :=
 		self genTrampolineFor: #ceTraceStoreOf:into:
 			called: 'ceTraceStoreTrampoline'
 			arg: TempReg
 			arg: ReceiverResultReg
-			regsToSave: callerSavedRegMask..
+			regsToSave: CallerSavedRegisterMask..
 	self cCode: [] inSmalltalk:
 		[ceTraceLinkedSendTrampoline := self simulatedTrampolineFor: #ceShortCutTraceLinkedSend:.
 		 ceTraceBlockActivationTrampoline := self simulatedTrampolineFor: #ceShortCutTraceBlockActivation:.
@@ -4137,7 +4137,7 @@ StackToRegisterMappingCogit >> ssAllocateCallReg: requiredReg [
 	"Allocate a register needed in a run-time call (i.e. flush uses of the
 	 register to the real stack).  Since the run-time can smash any and
 	 all caller-saved registers also flush all caller-saved registers."
-	self ssAllocateRequiredRegMask: (callerSavedRegMask
+	self ssAllocateRequiredRegMask: (CallerSavedRegisterMask
 										bitOr: (self registerMaskFor: requiredReg))
 		upThrough: simStackPtr
 ]
@@ -4147,7 +4147,7 @@ StackToRegisterMappingCogit >> ssAllocateCallReg: requiredReg1 and: requiredReg2
 	"Allocate registers needed in a run-time call (i.e. flush uses of the
 	 registers to the real stack).  Since the run-time can smash any and
 	 all caller-saved registers also flush all caller-saved registers."
-	self ssAllocateRequiredRegMask: (callerSavedRegMask
+	self ssAllocateRequiredRegMask: (CallerSavedRegisterMask
 										bitOr: ((self registerMaskFor: requiredReg1)
 										bitOr: (self registerMaskFor: requiredReg2)))
 		upThrough: simStackPtr
@@ -4158,7 +4158,7 @@ StackToRegisterMappingCogit >> ssAllocateCallReg: requiredReg1 and: requiredReg2
 	"Allocate registers needed in a run-time call (i.e. flush uses of the
 	 registers to the real stack).  Since the run-time can smash any and
 	 all caller-saved registers also flush all caller-saved registers."
-	self ssAllocateRequiredRegMask: (callerSavedRegMask
+	self ssAllocateRequiredRegMask: (CallerSavedRegisterMask
 										bitOr: ((self registerMaskFor: requiredReg1)
 										bitOr: ((self registerMaskFor: requiredReg2)
 										bitOr: (self registerMaskFor: requiredReg3))))
@@ -4170,7 +4170,7 @@ StackToRegisterMappingCogit >> ssAllocateCallReg: requiredReg1 and: requiredReg2
 	"Allocate registers needed in a run-time call (i.e. flush uses of the
 	 registers to the real stack).  Since the run-time can smash any and
 	 all caller-saved registers also flush all caller-saved registers."
-	self ssAllocateRequiredRegMask: (callerSavedRegMask
+	self ssAllocateRequiredRegMask: (CallerSavedRegisterMask
 										bitOr: ((self registerMaskFor: requiredReg1)
 										bitOr: ((self registerMaskFor: requiredReg2)
 										bitOr: ((self registerMaskFor: requiredReg3)

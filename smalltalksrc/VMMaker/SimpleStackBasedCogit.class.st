@@ -3402,7 +3402,7 @@ SimpleStackBasedCogit >> genTraceStoreTrampoline [
 										called: 'ceTraceStoreTrampoline'
 										arg: ClassReg
 										arg: ReceiverResultReg
-										regsToSave: callerSavedRegMask
+										regsToSave: CallerSavedRegisterMask
 ]
 
 { #category : #'bytecode generator support' }
@@ -3461,17 +3461,17 @@ SimpleStackBasedCogit >> generateTracingTrampolines [
 		self genTrampolineFor: #ceTraceLinkedSend:
 			called: 'ceTraceLinkedSendTrampoline'
 			arg: ReceiverResultReg
-			regsToSave: callerSavedRegMask.
+			regsToSave: CallerSavedRegisterMask.
 	ceTraceBlockActivationTrampoline :=
 		self genTrampolineFor: #ceTraceBlockActivation
 			called: 'ceTraceBlockActivationTrampoline'
-			regsToSave: callerSavedRegMask..
+			regsToSave: CallerSavedRegisterMask..
 	ceTraceStoreTrampoline :=
 		self genTrampolineFor: #ceTraceStoreOf:into:
 			called: 'ceTraceStoreTrampoline'
 			arg: ClassReg
 			arg: ReceiverResultReg
-			regsToSave: callerSavedRegMask..
+			regsToSave: CallerSavedRegisterMask..
 	self cCode: [] inSmalltalk:
 		[ceTraceLinkedSendTrampoline := self simulatedTrampolineFor: #ceShortCutTraceLinkedSend:.
 		 ceTraceBlockActivationTrampoline := self simulatedTrampolineFor: #ceShortCutTraceBlockActivation:.
@@ -3481,7 +3481,7 @@ SimpleStackBasedCogit >> generateTracingTrampolines [
 { #category : #'register management' }
 SimpleStackBasedCogit >> isCallerSavedReg: reg [
 	<inline: true>
-	^self register: reg isInMask: callerSavedRegMask
+	^self register: reg isInMask: CallerSavedRegisterMask
 ]
 
 { #category : #'method introspection' }
