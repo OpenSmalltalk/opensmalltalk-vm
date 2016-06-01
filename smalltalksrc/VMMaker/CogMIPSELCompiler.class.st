@@ -118,6 +118,11 @@ CogMIPSELCompiler class >> initializeAbstractRegisters [
 	 not need to save or restore them at runtime calls."
 	super initializeAbstractRegisters.
 
+	self flag: #OABI.
+	CallerSavedRegisterMask := self
+									registerMaskFor: T0 and: T1 and: T2 and: T3
+									and: T4 and: T5 and: T6 and: T7 and: T8 and: T9.
+
 	ReceiverResultReg		:= S0.
 	Arg0Reg				:= S1.
 	Arg1Reg				:= S2.
@@ -266,24 +271,6 @@ CogMIPSELCompiler >> callTargetFromReturnAddress: callSiteReturnAddress [
 	self assert: (self functionAtAddress: callSiteReturnAddress - 8) == JALR.
 	self assert: (objectMemory longAt: callSiteReturnAddress - 4) == self nop. "Delay slot"
 	^self literalAtAddress: callSiteReturnAddress - 12
-]
-
-{ #category : #accessing }
-CogMIPSELCompiler >> callerSavedRegisterMask [
-	"Volatile"
-	"See MIPSConstants initializeRegisters."
-	self flag: #OABI.
-	^cogit
-		registerMaskFor: T0
-		and: T1
-		and: T2
-		and: T3
-		and: T4
-		and: T5
-		and: T6
-		and: T7
-		and: T8
-		and: T9
 ]
 
 { #category : #testing }
@@ -2301,7 +2288,6 @@ CogMIPSELCompiler >> multR: leftReg R: rightReg [
 { #category : #printing }
 CogMIPSELCompiler >> nameForRegister: reg [ "<Integer>"
 	<doNotGenerate>
-	reg < 0 ifTrue: [^super nameForRegister: reg].
 	^MIPSConstants nameForRegister: reg
 ]
 
