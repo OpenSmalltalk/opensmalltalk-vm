@@ -19,6 +19,7 @@ Class {
 		'isMappedInBlock',
 		'isExtension',
 		'isInstVarRef',
+		'isInstVarStore',
 		'hasIRC'
 	],
 	#category : #'VMMaker-JIT'
@@ -151,6 +152,20 @@ CogBytecodeDescriptor >> isInstVarRef: anObject [
 	"Set the value of isInstVarRef"
 
 	^isInstVarRef := anObject
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isInstVarStore [
+	"Answer the value of isInstVarStore"
+
+	^ isInstVarStore
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isInstVarStore: anObject [
+	"Set the value of isInstVarStore"
+
+	^isInstVarStore := anObject
 ]
 
 { #category : #accessing }
