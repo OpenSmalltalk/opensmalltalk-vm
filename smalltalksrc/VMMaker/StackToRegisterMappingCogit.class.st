@@ -26,6 +26,7 @@ Instance Variables
 	simStack:										<CArrayAccessor of CogSimStackEntry>
 	simStackPtr:									<Integer>
 	traceSimStack:									<Integer>
+	useTwoPaths									<Boolean>
 
 callerSavedRegMask
 	- the bitmask of the ABI's caller-saved registers
@@ -78,6 +79,9 @@ simStack
 simStackPtr
 	- the pointer to the top of the simulation stack
 
+useTwoPaths
+	- a variable controlling whether to create two paths through a method based on the existence of inst var stores.  With immutability this causes a frameless path to be generated if an otherwise frameless method is frameful simply because of inst var stores.  In this case the test to take the first frameless path is if the receiver is not immutable.  Without immutability, if a frameless method contains two or more inst var stores, the first path will be code with no store check, chosen by a single check for the receiver being in new space.
+
 "
 Class {
 	#name : #StackToRegisterMappingCogit,
@@ -106,7 +110,7 @@ Class {
 		'realCECallCogCodePopReceiverArg0Regs',
 		'realCECallCogCodePopReceiverArg1Arg0Regs',
 		'deadCode',
-		'needsTwoPath'
+		'useTwoPaths'
 	],
 	#classVars : [
 		'NeedsMergeFixupFlag',
@@ -278,7 +282,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(1 144 159 genSendLiteralSelector2ArgsBytecode isMapped)
 		(1 160 175	genSendAbsentImplicit0ArgsBytecode isMapped hasIRC)
 			
-		(1 176 183 genStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability needsFrameIfImmutability: -1)
+		(1 176 183 genStoreAndPopReceiverVariableBytecode isInstVarRef isInstVarStore isMappedIfImmutability needsFrameIfImmutability: -1)
 			
 		(1 184 191 genStoreAndPopTemporaryVariableBytecode)
 
@@ -306,10 +310,10 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(2 229 229 genExtPushIntegerBytecode				needsFrameNever: 1)
 		(2 230 230 genLongPushTemporaryVariableBytecode)
 		(2 231 231 genPushNewArrayBytecode)
-		(2 232 232 genExtStoreReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
+		(2 232 232 genExtStoreReceiverVariableBytecode isInstVarRef isInstVarStore isMappedIfImmutability)
 		(2 233 233 genExtStoreLiteralVariableBytecode isMappedIfImmutability)
 		(2 234 234 genLongStoreTemporaryVariableBytecode)
-		(2 235 235 genExtStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
+		(2 235 235 genExtStoreAndPopReceiverVariableBytecode isInstVarRef isInstVarStore isMappedIfImmutability)
 		(2 236 236 genExtStoreAndPopLiteralVariableBytecode isMappedIfImmutability)
 		(2 237 237 genLongStoreAndPopTemporaryVariableBytecode)
 
@@ -408,7 +412,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 													v3:ShortForward:Branch:Distance:)
 		(1 192 199 genShortJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean"
 													v3:ShortForward:Branch:Distance:)
-		(1 200 207 genStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability needsFrameIfImmutability: -1)
+		(1 200 207 genStoreAndPopReceiverVariableBytecode isInstVarRef isInstVarStore isMappedIfImmutability needsFrameIfImmutability: -1)
 		
 		(1 208 215 genStoreAndPopTemporaryVariableBytecode)
 
@@ -446,10 +450,10 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		(2 239 239 genExtJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
 
 		"stores"
-		(2 240 240 genSistaExtStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
+		(2 240 240 genSistaExtStoreAndPopReceiverVariableBytecode isInstVarRef isInstVarStore isMappedIfImmutability)
 		(2 241 241 genSistaExtStoreAndPopLiteralVariableBytecode isMappedIfImmutability)
 		(2 242 242 genLongStoreAndPopTemporaryVariableBytecode)
-		(2 243 243 genSistaExtStoreReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
+		(2 243 243 genSistaExtStoreReceiverVariableBytecode isInstVarRef isInstVarStore isMappedIfImmutability)
 		(2 244 244 genSistaExtStoreLiteralVariableBytecode isMappedIfImmutability)
 		(2 245 245 genLongStoreTemporaryVariableBytecode)
 
@@ -488,7 +492,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 		(1  16   31 genPushTemporaryVariableBytecode needsFrameIfMod16GENumArgs: 1)
 		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
 		(1  64   95 genPushLiteralVariableBytecode needsFrameNever: 1)
-		(1  96 103 genStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability needsFrameIfImmutability: -1)
+		(1  96 103 genStoreAndPopReceiverVariableBytecode isInstVarRef isInstVarStore isMappedIfImmutability needsFrameIfImmutability: -1)
 		(1 104 111 genStoreAndPopTemporaryVariableBytecode)
 		(1 112 112 genPushReceiverBytecode needsFrameNever: 1)
 		(1 113 113 genPushConstantTrueBytecode needsFrameNever: 1)
@@ -1211,11 +1215,13 @@ StackToRegisterMappingCogit >> compileFrameBuild [
 	"Build a frame for a CogMethod activation.  See CoInterpreter class>>initializeFrameIndices.
 	 Override to push the register receiver and register arguments, if any."
 	self cppIf: IMMUTABILITY ifTrue: 
-		[needsTwoPath ifTrue: 
+		[useTwoPaths ifTrue: 
 			[self compileTwoPathFrameBuild.
 		 	^self]].
 	needsFrame ifFalse:
-		[self initSimStackForFramelessMethod: initialPC.
+		[useTwoPaths ifTrue: 
+			[self compileTwoPathFramelessInit].
+		 self initSimStackForFramelessMethod: initialPC.
 		 ^self].
 	self genPushRegisterArgs.
 	super compileFrameBuild.
@@ -1234,7 +1240,6 @@ StackToRegisterMappingCogit >> compileFullBlockMethodFrameBuild: numCopied [
 
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> compileTwoPathFrameBuild [
-	<option: #IMMUTABILITY>
 	"We are in a method where the frame is needed *only* for instance variable store, typically a setter method.
 	This case has 20% overhead with Immutability compared to setter without immutability because of the stack
 	frame creation. We compile two path, one where the object is immutable, one where it isn't. At the beginning 
@@ -1242,21 +1247,41 @@ StackToRegisterMappingCogit >> compileTwoPathFrameBuild [
 	
 	Note: this specific case happens only where there are only instance variabel stores. We could do something
 	similar for literal variable stores, but we don't as it's too uncommon."
-	|jumpImmutable|
+	<option: #IMMUTABILITY>
+	| jumpImmutable |
 	self assert: needsFrame.
-	self assert: IMMUTABILITY.
-	self assert: needsTwoPath.
+	self assert: useTwoPaths.
 	self assert: blockCount = 0.
 	jumpImmutable := objectRepresentation genJumpImmutable: ReceiverResultReg scratchReg: TempReg.
 	"first path. The receiver is mutable"
+	needsFrame := false.
 	self initSimStackForFramelessMethod: initialPC.
 	self compileMethodBody.
 	"second path. The receiver is mutable"
-	needsTwoPath := false. "reset because it impact inst var store compilation"
+	useTwoPaths := false. "reset because it impacts inst var store compilation"
+	needsFrame := true.
 	jumpImmutable jmpTarget: self Label.
 	self genPushRegisterArgs.
 	super compileFrameBuild.
 	self initSimStackForFramefulMethod: initialPC
+]
+
+{ #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> compileTwoPathFramelessInit [
+	"We are in a frameless method with at least two inst var stores. We compile two paths,
+	 one where the object is in new space, and one where it isn't. At the beginning 
+	 of the method, we take one path or the other depending on the receiver being in newSpace."
+	| jumpOld |
+	self deny: IMMUTABILITY.
+	self deny: needsFrame.
+	self assert: useTwoPaths.
+	jumpOld := objectRepresentation genJumpInOldSpace: ReceiverResultReg.
+	"first path. The receiver is young"
+	self initSimStackForFramelessMethod: initialPC.
+	self compileMethodBody.
+	"second path. The receiver is old"
+	useTwoPaths := false. "reset because it impacts inst var store compilation"
+	jumpOld jmpTarget: self Label
 ]
 
 { #category : #'simulation only' }
@@ -3064,7 +3089,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean slotIndex: slotIndex dest
 	self 
 		cppIf: IMMUTABILITY
 		ifTrue: 
-			[needsTwoPath
+			[useTwoPaths
 				ifTrue: 
 					[self  "first path, receiver is mutable"
 						genVanillaStorePop: popBoolean 
@@ -3192,7 +3217,7 @@ StackToRegisterMappingCogit >> genUpArrowReturn [
 		 ^0].
 	self 
 		cppIf: IMMUTABILITY
-		ifTrue: [framelessReturn := needsFrame and: [needsTwoPath not]]
+		ifTrue: [framelessReturn := needsFrame and: [useTwoPaths not]]
 		ifFalse: [framelessReturn := needsFrame].
 	framelessReturn
 		ifTrue:
@@ -3297,6 +3322,21 @@ StackToRegisterMappingCogit >> genVanillaStorePop: popBoolean MaybeContextSlotIn
 StackToRegisterMappingCogit >> genVanillaStorePop: popBoolean slotIndex: slotIndex destReg: destReg needsStoreCheck: needsStoreCheck [
 	<inline: true>
 	| topReg |
+
+	self cppIf: IMMUTABILITY
+		ifTrue: []
+		ifFalse: "First path, receiver is in newSpace"
+			[(destReg = ReceiverResultReg and: [needsFrame not and: [useTwoPaths]]) ifTrue:
+				[topReg := self ssStorePop: popBoolean toPreferredReg: TempReg.
+				 self MoveR: topReg
+					Mw: slotIndex * objectMemory wordSize + objectMemory baseHeaderSize
+					r: ReceiverResultReg.
+				 traceStores > 0 ifTrue:
+					[topReg ~= TempReg ifTrue:
+						[self MoveR: topReg R: TempReg].
+					 self CallRT: ceTraceStoreTrampoline].
+				 ^0]].
+
 	topReg := self 
 		allocateRegForStackEntryAt: 0 
 		notConflictingWith: (self registerMaskFor: destReg). 
@@ -3307,7 +3347,7 @@ StackToRegisterMappingCogit >> genVanillaStorePop: popBoolean slotIndex: slotInd
 		destReg: destReg
 		scratchReg: TempReg
 		inFrame: needsFrame
-		needsStoreCheck: needsStoreCheck.
+		needsStoreCheck: needsStoreCheck
 ]
 
 { #category : #initialization }
@@ -3706,6 +3746,30 @@ StackToRegisterMappingCogit >> marshallSendArguments: numArgs [
 	self ssPop: numArgs + 1
 ]
 
+{ #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> maybeCountCounter [
+	"This is a hook for SistaCogit"
+	<inline: true>
+]
+
+{ #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> maybeCountFixup [
+	"This is a hook for RegisterAllocatingCogit"
+	<inline: true>
+]
+
+{ #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> maybeInitNumCounters [
+	"This is a hook for SistaCogit"
+	<inline: true>
+]
+
+{ #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> maybeInitNumFixups [
+	"This is a hook for RegisterAllocatingCogit"
+	<inline: true>
+]
+
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> mergeWithFixupIfRequired: fixup [
 	"If this bytecode has a fixup, some kind of merge needs to be done. There are 4 cases:
@@ -3987,11 +4051,12 @@ StackToRegisterMappingCogit >> scanMethod [
 		- what are the targets of any backward branches.
 		- how many blocks it creates
 	 Answer the block count or on error a negative error code"
-	| latestContinuation nExts descriptor pc numBlocks distance targetPC framelessStackDelta |
+	| latestContinuation nExts descriptor pc numBlocks distance targetPC framelessStackDelta seenInstVarStore |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
-	needsFrame := false.
+	needsFrame := useTwoPaths := seenInstVarStore := false.
+	self maybeInitNumFixups.
+	self maybeInitNumCounters.
 	prevBCDescriptor := nil.
-	self cppIf: IMMUTABILITY ifTrue: [ needsTwoPath := false ].
 	NewspeakVM ifTrue:
 		[numIRCs := 0].
 	(primitiveIndex > 0
@@ -4010,33 +4075,40 @@ StackToRegisterMappingCogit >> scanMethod [
 		 (descriptor isReturn
 		  and: [pc >= latestContinuation]) ifTrue:
 			[endPC := pc].
-		self cppIf: IMMUTABILITY 
-			ifTrue: 
-				[(needsFrame and: [needsTwoPath not]) ifFalse:
-					[(descriptor needsFrameFunction isNil
-					  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
-						ifTrue: 
-							[needsFrame := true.
-							 needsTwoPath := descriptor generator == #genStoreAndPopReceiverVariableBytecode ]
-						ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]]]
-			ifFalse: 
-				[needsFrame ifFalse:
-					[(descriptor needsFrameFunction isNil
-					  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
-						ifTrue: [needsFrame := true]
-						ifFalse: [framelessStackDelta := framelessStackDelta + descriptor stackDelta]]].
-			
+
+		  needsFrame ifFalse:
+			[(descriptor needsFrameFunction isNil
+			  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
+					ifTrue:
+						[needsFrame := true.
+						 self cppIf: IMMUTABILITY
+							ifTrue: [useTwoPaths := descriptor isInstVarStore]]
+					ifFalse:
+						[framelessStackDelta := framelessStackDelta + descriptor stackDelta.
+						 self cppIf: IMMUTABILITY
+							ifTrue: []
+							ifFalse:
+								[descriptor isInstVarStore ifTrue:
+									[seenInstVarStore
+										ifTrue: [useTwoPaths := true]
+										ifFalse: [seenInstVarStore := true]]]]].
+
 		 descriptor isBranch ifTrue:
 			[distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 (self isBackwardBranch: descriptor at: pc exts: nExts in: methodObj)
 				ifTrue: [self initializeFixupAt: targetPC - initialPC]
-				ifFalse: [latestContinuation := latestContinuation max: targetPC]].
+				ifFalse:
+					[latestContinuation := latestContinuation max: targetPC.
+					 self maybeCountFixup.
+					 self maybeCountCounter]].
 		 descriptor isBlockCreation ifTrue:
 			[numBlocks := numBlocks + 1.
 			 distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
-			 latestContinuation := latestContinuation max: targetPC].
+			 latestContinuation := latestContinuation max: targetPC.
+			 self maybeCountFixup].
+
 		 NewspeakVM ifTrue:
 			[descriptor hasIRC ifTrue:
 				[numIRCs := numIRCs + 1]].
