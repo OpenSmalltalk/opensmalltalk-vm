@@ -20,7 +20,7 @@ Class {
 		'SomethingLoggedError',
 		'UnsupportedOperationError'
 	],
-	#category : #'Cog-Processors'
+	#category : 'Cog-Processors'
 }
 
 { #category : #'instance creation' }
@@ -1775,14 +1775,14 @@ GdbARMAlien >> smashABICallerSavedRegistersWithValuesFrom: base by: step [
 	 Smash neither R0 nor R1 since many abi calls return 2 results or a 64-bit dual-reg value.
 	 LR has to be left alone becasue a leaf call doesn't push it."
 
-	#(r2: r3:) withIndexDo:
+	#(r2: r3: r9: r12:) withIndexDo:
 		[:accessor :index|
 		self perform: accessor with: index - 1 * step + base]
 ]
 
 { #category : #'accessing-abstract' }
 GdbARMAlien >> smashCallerSavedRegistersWithValuesFrom: base by: step [
-	#(r0: r1: r2: r3: lr:) withIndexDo:
+	#(r0: r1: r2: r3: r9: r12: lr:) withIndexDo:
 		[:accessor :index|
 		self perform: accessor with: index - 1 * step + base]
 ]

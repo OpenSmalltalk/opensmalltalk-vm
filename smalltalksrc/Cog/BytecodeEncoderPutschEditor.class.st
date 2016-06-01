@@ -30,7 +30,7 @@ Class {
 		'output',
 		'codeIndex'
 	],
-	#category : #'Cog-Morphing Bytecode Set'
+	#category : 'Cog-Morphing Bytecode Set'
 }
 
 { #category : #'code editing' }

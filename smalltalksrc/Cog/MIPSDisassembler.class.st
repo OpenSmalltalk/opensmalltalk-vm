@@ -7,7 +7,7 @@ Class {
 	#pools : [
 		'MIPSConstants'
 	],
-	#category : #'Cog-Processors'
+	#category : 'Cog-Processors'
 }
 
 { #category : #'instructions - arithmetic' }
