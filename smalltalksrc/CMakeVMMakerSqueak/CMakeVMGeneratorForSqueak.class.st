@@ -5,7 +5,7 @@ A CMakeVMGeneratorForSqueak overides some CMakeVMGenerator methos for squeak com
 "
 Class {
 	#name : #CMakeVMGeneratorForSqueak,
-	#superclass : #CMakeGenerator,
+	#superclass : #CMakeGeneratorForSqueak,
 	#instVars : [
 		'internalPlugins',
 		'externalPlugins',
