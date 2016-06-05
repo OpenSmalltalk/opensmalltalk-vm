@@ -52,7 +52,7 @@ SqueakCMThirdpartyLibrary >> generateFor: aVMGenerator [
 	self break.
 	vmGen := aVMGenerator.
 	
-	gen := CMakeGenerator new
+	gen := CMakeGeneratorForSqueak new
 		output: (String new writeStream).
 	
 	libDir := (aVMGenerator thirdpartyDir / self canonicalName) assureExistence.

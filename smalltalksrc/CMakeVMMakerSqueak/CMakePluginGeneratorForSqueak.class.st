@@ -8,7 +8,7 @@ I also add Dictionary for storing a plugins config.cmake file
 "
 Class {
 	#name : #CMakePluginGeneratorForSqueak,
-	#superclass : #CMakeGenerator,
+	#superclass : #CMakeGeneratorForSqueak,
 	#instVars : [
 		'plugin',
 		'vmGen',
