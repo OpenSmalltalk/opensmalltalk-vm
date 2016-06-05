@@ -47,6 +47,17 @@ CMakePluginVm >> includedirectories [
 	^ includedirectories
 ]
 
+{ #category : #'as yet unclassified' }
+CMakePluginVm >> initialize [
+	"initialize to nonsense values to aid in debugging."
+	config := 'a config'.
+	definitions := 'vm plugin compiler definitions'.
+	module := ' vm plugin module'.
+	sources := 'vm plugin sources'.
+	includedirectories:= 'vm plugin include directories'.
+	self content:' Customize a CMakePluginVm(', config, ' ' , ' ' , definitions, ' ' , ' ' ,  module , ' ' ,self sources, ' ' , includedirectories,')'
+]
+
 { #category : #accessing }
 CMakePluginVm >> module [
 
