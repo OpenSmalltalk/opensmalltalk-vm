@@ -36,7 +36,7 @@ If you need a custom version of my subclasses, just set 'content: your custom co
 "
 Class {
 	#name : #CMakeTemplate,
-	#superclass : #CMakeGenerator,
+	#superclass : #CMakeGeneratorForSqueak,
 	#instVars : [
 		'content'
 	],
