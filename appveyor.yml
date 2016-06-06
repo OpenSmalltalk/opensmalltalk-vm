@@ -1,0 +1,42 @@
+environment:
+  BINTRAY-API-KEY:
+    secure: HsNf3W9l3BTI2ZfKHI7pV79hVCIVshmdX//1m2LVOiB2u/Iy0/R9ZOT/RBcP2RpA
+  matrix:
+    - FLAVOR: newspeak.cog.spur
+    - FLAVOR: newspeak.stack.spur
+    - FLAVOR: squeak.cog.spur
+    - FLAVOR: squeak.cog.v3
+    - FLAVOR: squeak.stack.spur
+    - FLAVOR: squeak.stack.v3
+
+matrix:
+  fast_finish: false
+
+platform:
+  - x86
+
+clone_depth: 5
+
+install:
+  - cmd: C:\\cygwin\\setup-x86.exe -q -P zip -P mingw64-i686-binutils -P mingw64-i686-gcc-core -P mingw64-i686-gcc-g++ -P mingw64-i686-headers -P mingw64-i686-runtime
+
+build: false
+
+# Cygwin build script
+#
+# NOTES:
+#
+# The stdin/stdout file descriptor appears not to be valid for the Appveyor
+# build which causes failures as certain functions attempt to redirect
+# default file handles. Ensure a dummy file descriptor is opened with 'exec'.
+test_script:
+  - cmd: c:\\cygwin\\bin\\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; ./.travis_build.sh"
+
+# We're using Travis' deployment gem, so we can use the same bintray.json
+on_success:
+  - c:\\cygwin\\bin\\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; ./.travis_prepare_deployment.sh"
+  - SET PATH=C:\\Ruby23\\bin;%PATH%
+  - gem install dpl
+  - appveyor DownloadFile https://curl.haxx.se/ca/cacert.pem
+  - SET SSL_CERT_FILE=cacert.pem
+  - dpl --provider=bintray --user=timfel --key=%BINTRAY-API-KEY% --file=.bintray.json

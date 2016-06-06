@@ -2,8 +2,8 @@
 IFS="
 	"
 trap 'exit 2' HUP INT PIPE TERM
-REV=`grep 'SvnRawRevisionString.*Rev:' "\`dirname $0\`/../platforms/Cross/vm/sqSCCSVersion.h" \
-	| sed 's/^.*Rev: \([0-9][0-9]*\) $";/\1/'`
+REV=`grep 'GitRawRevisionString.*Rev:' "\`dirname $0\`/../platforms/Cross/vm/sqSCCSVersion.h \
+	| sed 's/^.*Rev: \([0-9][0-9]*\).* $";/\1/'`
 TAG=`date +%y.%U.`$REV
 set -- Newspeak\ Spur\ Virtual\ Machine	\
 		Pharo	Cog		Cog\ Spur

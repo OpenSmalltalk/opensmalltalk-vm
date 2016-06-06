@@ -1,2 +1,2 @@
 #!/bin/bash
-svn log `dirname $0`/../platforms/Cross/vm/sqSCCSVersion.h | more
+git log -- `dirname $0`/../platforms/Cross/vm/sqSCCSVersion.h | more

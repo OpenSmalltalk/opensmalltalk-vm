@@ -11,7 +11,7 @@ fi
 for pd in $@; do
 	for d in $pd/[A-Z]*; do
 		test -d "$d" || continue
-		find "$d" -name .svn -prune -o \( -type f -a -name '*.[ch]' \) -exec \
+		find "$d" -name .git -prune -o \( -type f -a -name '*.[ch]' \) -exec \
 			scripts/revertIfEssentiallyUnchanged {} \;
 	done
 done

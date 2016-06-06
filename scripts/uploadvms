@@ -104,16 +104,15 @@ else
 fi
 
 if [ -z "$REV" ]; then
-	REV="`svnversion .. | sed 's/^.*://'`"
-	case $REV in
-	*M)	echo -n "source tree is modified, are you sure you want to continue? "
-		read a
-		case $a in
-		y|Y)	;;
-		*)		exit 1
-		esac
-		REV="`svnversion | sed 's/^.*://' | sed 's/M//'`";;
+    REV="`git log --format=%ad --date=format:%Y%m%d%H%M`"
+    if git status --porcelain | grep M; then
+	echo -n "source tree is modified, are you sure you want to continue? "
+	read a
+	case $a in
+	    y|Y)	;;
+	    *)		exit 1
 	esac
+    fi
 fi
 
 if [ -z "$TAG" ]; then
@@ -261,8 +260,8 @@ cat <<THEEND >>../history/README.$REV
      <dpiAware>false</dpiAware> to "true", or simply deleting the manifest file.
 THEEND
 fi
-	echo getting svn log
-	svn log ../platforms/Cross/vm/sqSCCSVersion.h >>../history/README.$REV
+        echo getting version control log
+	git log -- ../platforms/Cross/vm/sqSCCSVersion.h >>../history/README.$REV
 	vi ../history/README.$REV
   fi
   ../scripts/compileChangeHistory $REV

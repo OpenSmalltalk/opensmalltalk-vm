@@ -9,6 +9,7 @@
 *****************************************************************************/
 
 #include <windows.h>
+#include <errno.h>
 #include "sq.h"
 
 #if SPURVM /* Non-spur uses sqWin32Alloc.c */

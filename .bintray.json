@@ -1,0 +1,15 @@
+{
+    "package": {
+        "name": "cog",
+        "repo": "vm",
+        "subject": "opensmalltalk"
+    },
+    "version": {
+        "name": "$Rev$",
+        "desc": "Automatic build"
+    },
+    "files": [
+        {"includePattern": "./(cog_.*\\.(?:gz|zip))", "uploadPattern": "$1"}
+    ],
+    "publish": true
+}

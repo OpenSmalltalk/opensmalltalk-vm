@@ -33,7 +33,7 @@
 AC_INIT([config.h.in])
 
 SVNREV=`grep '\$Rev: ' ${srcdir}/../../../platforms/Cross/vm/sqSCCSVersion.h \
-		| sed 's/.*$Rev: \([[0-9]][[0-9]]*\).*/\1/'`
+	        | sed 's/.*$Rev: \([0-9][0-9]*\).*";/\1/'`
 AC_ARG_WITH(vmversion,
 [  --with-vmversion=M.N	vm version number [default = 4.0]],
 [ vmversion="${with_vmversion}"],

@@ -1,0 +1,6 @@
+[filter "RevDateURL"]
+    smudge = .git_filters/RevDateURL.smudge
+    clean = .git_filters/RevDateURL.clean
+    required
+[merge]
+    renormalize = true

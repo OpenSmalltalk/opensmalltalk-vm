@@ -1,0 +1,14 @@
+#!/bin/sh
+# Revert file(s) or all modified files in a directory
+# and touch them back to the checkin date
+for f in "$@"
+do
+	if [ -d "$f" ]; then
+		$0 `git status --porcelain "$f" | grep "^\s*M" | sed 's/^\s*M *//'`
+	else
+		if git checkout -- "$f"; then
+			changed="`git log --format=%ad --date="format:%Y%m%d%H%M.%S" -1 -- \"$f\"`"
+			touch -t $changed "$f"
+		fi
+	fi
+done

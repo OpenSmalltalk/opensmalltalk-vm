@@ -1,0 +1,11 @@
+#!/bin/sh
+# Touch file(s) or all modified files in a directory back to the checkin date
+for f in "$@"
+do
+	if [ -d "$f" ]; then
+		$0 "$f"/*
+	else
+                changed="`git log --format=%ad --date="format:%Y%m%d%H%M.%S" -1 -- \"$f\"`"
+		test -n "$changed" && touch -t $changed "$f"
+	fi
+done

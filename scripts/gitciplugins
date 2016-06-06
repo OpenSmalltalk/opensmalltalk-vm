@@ -1,0 +1,24 @@
+#!/bin/sh
+# checkin script for Git that serves to cause
+# platforms/Cross/vm/sqSCCSVersion.h to be checked-in so that its version
+# info reflects that of the current check-in.
+# make sure that we enable our smudge and clean filters
+# these replace occurances of $Rev$, $URL$, and $Date$ in
+# locally checked out sqSCCSVersion.h and sqPluginsSCSSVersion.h
+# with useful values
+# we keep the plugins in a separate branch in this same repository
+# and pull them in through subtree
+
+git subtree pull -P platforms/Cross/plugins origin platform/Cross/plugins -m "Merge platforms/Cross/plugins from origin"
+git add platforms/Cross/plugins
+git commit
+git subtree push -P platforms/Cross/plugins origin platform/Cross/plugins
+git subtree pull -P platforms/Cross/plugins origin platform/Cross/plugins -m "Merge platforms/Cross/plugins from origin"
+
+git subtree pull -P platforms/win32/plugins origin platform/win32/plugins -m "Merge platforms/win32/plugins from origin"
+git add platforms/win32/plugins
+git commit
+git subtree push -P platforms/win32/plugins origin platform/win32/plugins
+git subtree pull -P platforms/win32/plugins origin platform/win32/plugins -m "Merge platforms/win32/plugins from origin"
+
+`dirname $0`/updateSCCSVersions

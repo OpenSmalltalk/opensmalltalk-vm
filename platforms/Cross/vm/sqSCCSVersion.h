@@ -16,10 +16,10 @@
 #define SCCS 0
 #define RCS 0
 #define CVS 0
-#define SUBVERSION 1
+#define SUBVERSION 0
 #define BAZAAR 0
 #define MERCURIAL 0
-#define GIT 0
+#define GIT 1
 
 #include "../plugins/sqPluginsSCCSVersion.h"
 
@@ -32,6 +32,44 @@ static char SvnRawRevisionDate[] = "$Date$";
 
 static char SvnRawRepositoryURL[] = "$URL$";
 # define URL_START (SvnRawRepositoryURL + 6)
+
+static char *
+revisionAsString()
+{
+	char *maybe_space = strchr(REV_START,' ');
+	if (maybe_space)
+		*maybe_space = 0;
+	return REV_START;
+}
+
+static char *
+revisionDateAsString()
+{
+	char *maybe_paren = strchr(DATE_START,'(');
+	if (maybe_paren)
+		*(maybe_paren - 1) = 0;
+	return DATE_START;
+}
+
+static char *
+repositoryURL()
+{
+	char *maybe_platforms = strstr(URL_START, "/platforms");
+	if (maybe_platforms)
+		*maybe_platforms = 0;
+	return URL_START;
+}
+# undef REV_START
+# undef URL_START
+#elif GIT
+static char GitRawRevisionString[] = "$Rev$";
+# define REV_START (GitRawRevisionString + 6)
+
+static char GitRawRevisionDate[] = "$Date$";
+# define DATE_START (GitRawRevisionDate + 7)
+
+static char GitRawRepositoryURL[] = "$URL$";
+# define URL_START (GitRawRepositoryURL + 6)
 
 static char *
 revisionAsString()

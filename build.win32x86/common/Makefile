@@ -183,7 +183,7 @@ OBJCOPY:=	objcopy
 # Note: RC compiles the .rc files into linkable .o files
 #
 RC:=	 windres
-SVNREV:= $(shell sed -e "s/^static.*SvnRawRevisionString.*Rev: \([0-9][0-9]*\).*/\\1/p" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h)
+SVNREV:= $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9]*\).*/\\1/p" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h)
 RCFLAGS:= --include-dir $(PLATDIR)/win32/misc -D_WIN32 -DFILEVERSIONVALUES=4,0,$(SVNREV),0 '-DFILEVERSIONSTRING=\"4.0.$(SVNREV)\\0\"'
 
 .SUFFIXES:

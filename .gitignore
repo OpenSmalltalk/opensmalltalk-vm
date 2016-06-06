@@ -1,0 +1,794 @@
+
+# /
+/ChangeHistory
+/MVALOG
+/README.*
+/*.app
+/*.dmg
+/*.msi
+/*.tgz
+/*.zip
+/cog*linux*
+/cog*win*
+/nsvm*linux*
+/nsvm*win*
+
+# /build.linux32ARM/newspeak.cog.spur/build/
+/build.linux32ARM/newspeak.cog.spur/build/*
+
+# /build.linux32ARM/newspeak.cog.spur/build.assert/
+/build.linux32ARM/newspeak.cog.spur/build.assert/*
+
+# /build.linux32ARM/newspeak.cog.spur/build.debug/
+/build.linux32ARM/newspeak.cog.spur/build.debug/*
+
+# /build.linux32ARM/newspeak.stack.spur/build/
+/build.linux32ARM/newspeak.stack.spur/build/*
+
+# /build.linux32ARM/newspeak.stack.spur/build.assert/
+/build.linux32ARM/newspeak.stack.spur/build.assert/*
+
+# /build.linux32ARM/newspeak.stack.spur/build.debug/
+/build.linux32ARM/newspeak.stack.spur/build.debug/*
+
+# /build.linux32ARM/squeak.cog.spur/build/
+/build.linux32ARM/squeak.cog.spur/build/*
+
+# /build.linux32ARM/squeak.cog.spur/build.assert/
+/build.linux32ARM/squeak.cog.spur/build.assert/*
+
+# /build.linux32ARM/squeak.cog.spur/build.debug/
+/build.linux32ARM/squeak.cog.spur/build.debug/*
+
+# /build.linux32ARM/squeak.stack.spur/build/
+/build.linux32ARM/squeak.stack.spur/build/*
+
+# /build.linux32ARM/squeak.stack.spur/build.assert/
+/build.linux32ARM/squeak.stack.spur/build.assert/*
+
+# /build.linux32ARM/squeak.stack.spur/build.debug/
+/build.linux32ARM/squeak.stack.spur/build.debug/*
+
+# /build.linux32ARM/squeak.stack.v3/build/
+/build.linux32ARM/squeak.stack.v3/build/*
+
+# /build.linux32ARM/squeak.stack.v3/build.assert/
+/build.linux32ARM/squeak.stack.v3/build.assert/*
+
+# /build.linux32ARM/squeak.stack.v3/build.debug/
+/build.linux32ARM/squeak.stack.v3/build.debug/*
+
+# /build.linux32x86/bochsx64/
+/build.linux32x86/bochsx64/*
+
+# /build.linux32x86/bochsx86/
+/build.linux32x86/bochsx86/*
+
+# /build.linux32x86/gdbarm32/
+/build.linux32x86/gdbarm32/bfd
+/build.linux32x86/gdbarm32/libiberty
+/build.linux32x86/gdbarm32/opcodes
+/build.linux32x86/gdbarm32/sim
+/build.linux32x86/gdbarm32/zlib
+
+# /build.linux32x86/newspeak.cog.spur/build/
+/build.linux32x86/newspeak.cog.spur/build/*
+
+# /build.linux32x86/newspeak.cog.spur/build.assert/
+/build.linux32x86/newspeak.cog.spur/build.assert/*
+
+# /build.linux32x86/newspeak.cog.spur/build.assert.itimerheartbeat/
+/build.linux32x86/newspeak.cog.spur/build.assert.itimerheartbeat/*
+
+# /build.linux32x86/newspeak.cog.spur/build.debug/
+/build.linux32x86/newspeak.cog.spur/build.debug/*
+
+# /build.linux32x86/newspeak.cog.spur/build.debug.itimerheartbeat/
+/build.linux32x86/newspeak.cog.spur/build.debug.itimerheartbeat/*
+
+# /build.linux32x86/newspeak.cog.spur/build.itimerheartbeat/
+/build.linux32x86/newspeak.cog.spur/build.itimerheartbeat/*
+
+# /build.linux32x86/newspeak.sista.spur/build/
+/build.linux32x86/newspeak.sista.spur/build/*
+
+# /build.linux32x86/newspeak.sista.spur/build.assert/
+/build.linux32x86/newspeak.sista.spur/build.assert/*
+
+# /build.linux32x86/newspeak.sista.spur/build.assert.itimerheartbeat/
+/build.linux32x86/newspeak.sista.spur/build.assert.itimerheartbeat/*
+
+# /build.linux32x86/newspeak.sista.spur/build.debug/
+/build.linux32x86/newspeak.sista.spur/build.debug/*
+
+# /build.linux32x86/newspeak.sista.spur/build.debug.itimerheartbeat/
+/build.linux32x86/newspeak.sista.spur/build.debug.itimerheartbeat/*
+
+# /build.linux32x86/newspeak.sista.spur/build.itimerheartbeat/
+/build.linux32x86/newspeak.sista.spur/build.itimerheartbeat/*
+
+# /build.linux32x86/newspeak.stack.spur/build/
+/build.linux32x86/newspeak.stack.spur/build/*
+
+# /build.linux32x86/newspeak.stack.spur/build.assert/
+/build.linux32x86/newspeak.stack.spur/build.assert/*
+
+# /build.linux32x86/newspeak.stack.spur/build.debug/
+/build.linux32x86/newspeak.stack.spur/build.debug/*
+
+# /build.linux32x86/nsnac.cog.spur/build/
+/build.linux32x86/nsnac.cog.spur/build/*
+
+# /build.linux32x86/nsnac.cog.spur/build.assert/
+/build.linux32x86/nsnac.cog.spur/build.assert/*
+
+# /build.linux32x86/nsnac.cog.spur/build.assert.itimerheartbeat/
+/build.linux32x86/nsnac.cog.spur/build.assert.itimerheartbeat/*
+
+# /build.linux32x86/nsnac.cog.spur/build.debug/
+/build.linux32x86/nsnac.cog.spur/build.debug/*
+
+# /build.linux32x86/nsnac.cog.spur/build.debug.itimerheartbeat/
+/build.linux32x86/nsnac.cog.spur/build.debug.itimerheartbeat/*
+
+# /build.linux32x86/nsnac.cog.spur/build.itimerheartbeat/
+/build.linux32x86/nsnac.cog.spur/build.itimerheartbeat/*
+
+# /build.linux32x86/squeak.cog.spur/build/
+/build.linux32x86/squeak.cog.spur/build/*
+
+# /build.linux32x86/squeak.cog.spur/build.assert/
+/build.linux32x86/squeak.cog.spur/build.assert/*
+
+# /build.linux32x86/squeak.cog.spur/build.assert.itimerheartbeat/
+/build.linux32x86/squeak.cog.spur/build.assert.itimerheartbeat/*
+
+# /build.linux32x86/squeak.cog.spur/build.debug/
+/build.linux32x86/squeak.cog.spur/build.debug/*
+
+# /build.linux32x86/squeak.cog.spur/build.debug.itimerheartbeat/
+/build.linux32x86/squeak.cog.spur/build.debug.itimerheartbeat/*
+
+# /build.linux32x86/squeak.cog.spur/build.itimerheartbeat/
+/build.linux32x86/squeak.cog.spur/build.itimerheartbeat/*
+
+# /build.linux32x86/squeak.cog.spur.immutability/build/
+/build.linux32x86/squeak.cog.spur.immutability/build/*
+
+# /build.linux32x86/squeak.cog.spur.immutability/build.assert/
+/build.linux32x86/squeak.cog.spur.immutability/build.assert/*
+
+# /build.linux32x86/squeak.cog.spur.immutability/build.debug/
+/build.linux32x86/squeak.cog.spur.immutability/build.debug/*
+
+# /build.linux32x86/squeak.cog.v3/build/
+/build.linux32x86/squeak.cog.v3/build/*
+
+# /build.linux32x86/squeak.cog.v3/build.assert/
+/build.linux32x86/squeak.cog.v3/build.assert/*
+
+# /build.linux32x86/squeak.cog.v3/build.assert.itimerheartbeat/
+/build.linux32x86/squeak.cog.v3/build.assert.itimerheartbeat/*
+
+# /build.linux32x86/squeak.cog.v3/build.debug/
+/build.linux32x86/squeak.cog.v3/build.debug/*
+
+# /build.linux32x86/squeak.cog.v3/build.debug.itimerheartbeat/
+/build.linux32x86/squeak.cog.v3/build.debug.itimerheartbeat/*
+
+# /build.linux32x86/squeak.cog.v3/build.itimerheartbeat/
+/build.linux32x86/squeak.cog.v3/build.itimerheartbeat/*
+
+# /build.linux32x86/squeak.cog.v3/build.multithreaded/
+/build.linux32x86/squeak.cog.v3/build.multithreaded/*
+
+# /build.linux32x86/squeak.cog.v3/build.multithreaded.assert/
+/build.linux32x86/squeak.cog.v3/build.multithreaded.assert/*
+
+# /build.linux32x86/squeak.cog.v3/build.multithreaded.debug/
+/build.linux32x86/squeak.cog.v3/build.multithreaded.debug/*
+
+# /build.linux32x86/squeak.sista.spur/build/
+/build.linux32x86/squeak.sista.spur/build/*
+
+# /build.linux32x86/squeak.sista.spur/build.assert/
+/build.linux32x86/squeak.sista.spur/build.assert/*
+
+# /build.linux32x86/squeak.sista.spur/build.assert.itimerheartbeat/
+/build.linux32x86/squeak.sista.spur/build.assert.itimerheartbeat/*
+
+# /build.linux32x86/squeak.sista.spur/build.debug/
+/build.linux32x86/squeak.sista.spur/build.debug/*
+
+# /build.linux32x86/squeak.sista.spur/build.debug.itimerheartbeat/
+/build.linux32x86/squeak.sista.spur/build.debug.itimerheartbeat/*
+
+# /build.linux32x86/squeak.sista.spur/build.itimerheartbeat/
+/build.linux32x86/squeak.sista.spur/build.itimerheartbeat/*
+
+# /build.linux32x86/squeak.stack.spur/build/
+/build.linux32x86/squeak.stack.spur/build/*
+
+# /build.linux32x86/squeak.stack.spur/build.assert/
+/build.linux32x86/squeak.stack.spur/build.assert/*
+
+# /build.linux32x86/squeak.stack.spur/build.debug/
+/build.linux32x86/squeak.stack.spur/build.debug/*
+
+# /build.linux32x86/squeak.stack.v3/build/
+/build.linux32x86/squeak.stack.v3/build/*
+
+# /build.linux32x86/squeak.stack.v3/build.assert/
+/build.linux32x86/squeak.stack.v3/build.assert/*
+
+# /build.linux32x86/squeak.stack.v3/build.debug/
+/build.linux32x86/squeak.stack.v3/build.debug/*
+
+# /build.linux64x64/newspeak.cog.spur/build/
+/build.linux64x64/newspeak.cog.spur/build/*
+
+# /build.linux64x64/newspeak.cog.spur/build.assert/
+/build.linux64x64/newspeak.cog.spur/build.assert/*
+
+# /build.linux64x64/newspeak.cog.spur/build.assert.itimerheartbeat/
+/build.linux64x64/newspeak.cog.spur/build.assert.itimerheartbeat/*
+
+# /build.linux64x64/newspeak.cog.spur/build.debug/
+/build.linux64x64/newspeak.cog.spur/build.debug/*
+
+# /build.linux64x64/newspeak.cog.spur/build.debug.itimerheartbeat/
+/build.linux64x64/newspeak.cog.spur/build.debug.itimerheartbeat/*
+
+# /build.linux64x64/newspeak.cog.spur/build.itimerheartbeat/
+/build.linux64x64/newspeak.cog.spur/build.itimerheartbeat/*
+
+# /build.linux64x64/newspeak.sista.spur/build/
+/build.linux64x64/newspeak.sista.spur/build/*
+
+# /build.linux64x64/newspeak.sista.spur/build.assert/
+/build.linux64x64/newspeak.sista.spur/build.assert/*
+
+# /build.linux64x64/newspeak.sista.spur/build.assert.itimerheartbeat/
+/build.linux64x64/newspeak.sista.spur/build.assert.itimerheartbeat/*
+
+# /build.linux64x64/newspeak.sista.spur/build.debug/
+/build.linux64x64/newspeak.sista.spur/build.debug/*
+
+# /build.linux64x64/newspeak.sista.spur/build.debug.itimerheartbeat/
+/build.linux64x64/newspeak.sista.spur/build.debug.itimerheartbeat/*
+
+# /build.linux64x64/newspeak.sista.spur/build.itimerheartbeat/
+/build.linux64x64/newspeak.sista.spur/build.itimerheartbeat/*
+
+# /build.linux64x64/newspeak.stack.spur/build/
+/build.linux64x64/newspeak.stack.spur/build/*
+
+# /build.linux64x64/newspeak.stack.spur/build.assert/
+/build.linux64x64/newspeak.stack.spur/build.assert/*
+
+# /build.linux64x64/newspeak.stack.spur/build.debug/
+/build.linux64x64/newspeak.stack.spur/build.debug/*
+
+# /build.linux64x64/squeak.cog.spur/build/
+/build.linux64x64/squeak.cog.spur/build/*
+
+# /build.linux64x64/squeak.cog.spur/build.assert/
+/build.linux64x64/squeak.cog.spur/build.assert/*
+
+# /build.linux64x64/squeak.cog.spur/build.assert.itimerheartbeat/
+/build.linux64x64/squeak.cog.spur/build.assert.itimerheartbeat/*
+
+# /build.linux64x64/squeak.cog.spur/build.debug/
+/build.linux64x64/squeak.cog.spur/build.debug/*
+
+# /build.linux64x64/squeak.cog.spur/build.debug.itimerheartbeat/
+/build.linux64x64/squeak.cog.spur/build.debug.itimerheartbeat/*
+
+# /build.linux64x64/squeak.cog.spur/build.itimerheartbeat/
+/build.linux64x64/squeak.cog.spur/build.itimerheartbeat/*
+
+# /build.linux64x64/squeak.cog.spur.immutability/build/
+/build.linux64x64/squeak.cog.spur.immutability/build/*
+
+# /build.linux64x64/squeak.cog.spur.immutability/build.assert/
+/build.linux64x64/squeak.cog.spur.immutability/build.assert/*
+
+# /build.linux64x64/squeak.cog.spur.immutability/build.debug/
+/build.linux64x64/squeak.cog.spur.immutability/build.debug/*
+
+# /build.linux64x64/squeak.sista.spur/build/
+/build.linux64x64/squeak.sista.spur/build/*
+
+# /build.linux64x64/squeak.sista.spur/build.assert/
+/build.linux64x64/squeak.sista.spur/build.assert/*
+
+# /build.linux64x64/squeak.sista.spur/build.assert.itimerheartbeat/
+/build.linux64x64/squeak.sista.spur/build.assert.itimerheartbeat/*
+
+# /build.linux64x64/squeak.sista.spur/build.debug/
+/build.linux64x64/squeak.sista.spur/build.debug/*
+
+# /build.linux64x64/squeak.sista.spur/build.debug.itimerheartbeat/
+/build.linux64x64/squeak.sista.spur/build.debug.itimerheartbeat/*
+
+# /build.linux64x64/squeak.sista.spur/build.itimerheartbeat/
+/build.linux64x64/squeak.sista.spur/build.itimerheartbeat/*
+
+# /build.linux64x64/squeak.stack.spur/build/
+/build.linux64x64/squeak.stack.spur/build/*
+
+# /build.linux64x64/squeak.stack.spur/build.assert/
+/build.linux64x64/squeak.stack.spur/build.assert/*
+
+# /build.linux64x64/squeak.stack.spur/build.debug/
+/build.linux64x64/squeak.stack.spur/build.debug/*
+
+# /build.macos32x86/
+/build.macos32x86/build
+/build.macos32x86/*.app
+/build.macos32x86/*.bundle
+/build.macos32x86/LOG*
+/build.macos32x86/*.sources
+/build.macos32x86/sqNamedPrims.h
+
+# /build.macos32x86/bochsx64/
+/build.macos32x86/bochsx64/*
+
+# /build.macos32x86/bochsx86/
+/build.macos32x86/bochsx86/*
+
+# /build.macos32x86/gdbarm32/
+/build.macos32x86/gdbarm32/bfd
+/build.macos32x86/gdbarm32/libiberty
+/build.macos32x86/gdbarm32/opcodes
+/build.macos32x86/gdbarm32/sim
+/build.macos32x86/gdbarm32/zlib
+
+# /build.macos32x86/glue.cog.spur/
+/build.macos32x86/glue.cog.spur/Cocoa*.app
+/build.macos32x86/glue.cog.spur/LOG*
+/build.macos32x86/glue.cog.spur/*.sources
+/build.macos32x86/glue.cog.spur/build*
+/build.macos32x86/glue.cog.spur/deps
+/build.macos32x86/glue.cog.spur/getversion*
+/build.macos32x86/glue.cog.spur/sqNamedPrims.h
+
+# /build.macos32x86/glue.cog.spur/installer/
+/build.macos32x86/glue.cog.spur/installer/*.app
+/build.macos32x86/glue.cog.spur/installer/*.applescript
+/build.macos32x86/glue.cog.spur/installer/*.dmg
+
+# /build.macos32x86/glue.stack.spur/
+/build.macos32x86/glue.stack.spur/Cocoa*.app
+/build.macos32x86/glue.stack.spur/LOG*
+/build.macos32x86/glue.stack.spur/*.sources
+/build.macos32x86/glue.stack.spur/build*
+/build.macos32x86/glue.stack.spur/deps
+/build.macos32x86/glue.stack.spur/getversion*
+/build.macos32x86/glue.stack.spur/sqNamedPrims.h
+
+# /build.macos32x86/newspeak.cog.spur/
+/build.macos32x86/newspeak.cog.spur/Cocoa*.app
+/build.macos32x86/newspeak.cog.spur/LOG*
+/build.macos32x86/newspeak.cog.spur/*.sources
+/build.macos32x86/newspeak.cog.spur/build*
+/build.macos32x86/newspeak.cog.spur/deps
+/build.macos32x86/newspeak.cog.spur/getversion*
+/build.macos32x86/newspeak.cog.spur/sqNamedPrims.h
+
+# /build.macos32x86/newspeak.cog.spur/installer/
+/build.macos32x86/newspeak.cog.spur/installer/*.app
+/build.macos32x86/newspeak.cog.spur/installer/*.applescript
+/build.macos32x86/newspeak.cog.spur/installer/*.dmg
+
+# /build.macos32x86/newspeak.stack.spur/
+/build.macos32x86/newspeak.stack.spur/Cocoa*.app
+/build.macos32x86/newspeak.stack.spur/LOG*
+/build.macos32x86/newspeak.stack.spur/*.sources
+/build.macos32x86/newspeak.stack.spur/build*
+/build.macos32x86/newspeak.stack.spur/deps
+/build.macos32x86/newspeak.stack.spur/getversion*
+/build.macos32x86/newspeak.stack.spur/sqNamedPrims.h
+
+# /build.macos32x86/pharo.cog.spur/
+/build.macos32x86/pharo.cog.spur/Cocoa*.app
+/build.macos32x86/pharo.cog.spur/LOG*
+/build.macos32x86/pharo.cog.spur/*.sources
+/build.macos32x86/pharo.cog.spur/build*
+/build.macos32x86/pharo.cog.spur/deps
+/build.macos32x86/pharo.cog.spur/getversion*
+/build.macos32x86/pharo.cog.spur/sqNamedPrims.h
+
+# /build.macos32x86/squeak.cog.spur/
+/build.macos32x86/squeak.cog.spur/Cocoa*.app
+/build.macos32x86/squeak.cog.spur/LOG*
+/build.macos32x86/squeak.cog.spur/*.sources
+/build.macos32x86/squeak.cog.spur/build*
+/build.macos32x86/squeak.cog.spur/deps
+/build.macos32x86/squeak.cog.spur/getversion*
+/build.macos32x86/squeak.cog.spur/sqNamedPrims.h
+
+# /build.macos32x86/squeak.cog.spur+immutability/
+/build.macos32x86/squeak.cog.spur+immutability/Cocoa*.app
+/build.macos32x86/squeak.cog.spur+immutability/LOG*
+/build.macos32x86/squeak.cog.spur+immutability/*.sources
+/build.macos32x86/squeak.cog.spur+immutability/build*
+/build.macos32x86/squeak.cog.spur+immutability/deps
+/build.macos32x86/squeak.cog.spur+immutability/getversion*
+/build.macos32x86/squeak.cog.spur+immutability/sqNamedPrims.h
+
+# /build.macos32x86/squeak.cog.v3/
+/build.macos32x86/squeak.cog.v3/Cocoa*.app
+/build.macos32x86/squeak.cog.v3/LOG*
+/build.macos32x86/squeak.cog.v3/*.sources
+/build.macos32x86/squeak.cog.v3/build*
+/build.macos32x86/squeak.cog.v3/deps
+/build.macos32x86/squeak.cog.v3/getversion*
+/build.macos32x86/squeak.cog.v3/sqNamedPrims.h
+
+# /build.macos32x86/squeak.sista.spur/
+/build.macos32x86/squeak.sista.spur/Cocoa*.app
+/build.macos32x86/squeak.sista.spur/LOG*
+/build.macos32x86/squeak.sista.spur/*.sources
+/build.macos32x86/squeak.sista.spur/build*
+/build.macos32x86/squeak.sista.spur/deps
+/build.macos32x86/squeak.sista.spur/getversion*
+/build.macos32x86/squeak.sista.spur/sqNamedPrims.h
+
+# /build.macos32x86/squeak.stack.spur/
+/build.macos32x86/squeak.stack.spur/Cocoa*.app
+/build.macos32x86/squeak.stack.spur/LOG*
+/build.macos32x86/squeak.stack.spur/*.sources
+/build.macos32x86/squeak.stack.spur/build*
+/build.macos32x86/squeak.stack.spur/deps
+/build.macos32x86/squeak.stack.spur/getversion*
+/build.macos32x86/squeak.stack.spur/sqNamedPrims.h
+
+# /build.macos32x86/squeak.stack.v3/
+/build.macos32x86/squeak.stack.v3/Cocoa*.app
+/build.macos32x86/squeak.stack.v3/LOG*
+/build.macos32x86/squeak.stack.v3/*.sources
+/build.macos32x86/squeak.stack.v3/build*
+/build.macos32x86/squeak.stack.v3/deps
+/build.macos32x86/squeak.stack.v3/getversion*
+/build.macos32x86/squeak.stack.v3/sqNamedPrims.h
+
+# /build.macos32x86/xcode/CarbonTemplate/Template.xcodeproj/
+/build.macos32x86/xcode/CarbonTemplate/Template.xcodeproj/*.pbxuser
+/build.macos32x86/xcode/CarbonTemplate/Template.xcodeproj/*.mode1v3
+
+# /build.macos32x86/xcode/CocoaTemplate/CocoaTemplate.xcodeproj/
+/build.macos32x86/xcode/CocoaTemplate/CocoaTemplate.xcodeproj/*.pbxuser
+/build.macos32x86/xcode/CocoaTemplate/CocoaTemplate.xcodeproj/*.mode1v3
+
+# /build.macos64x64/bochsx64/
+/build.macos64x64/bochsx64/*
+
+# /build.macos64x64/bochsx86/
+/build.macos64x64/bochsx86/*
+
+# /build.macos64x64/gdbarm32/
+/build.macos64x64/gdbarm32/bfd
+/build.macos64x64/gdbarm32/libiberty
+/build.macos64x64/gdbarm32/opcodes
+/build.macos64x64/gdbarm32/sim
+/build.macos64x64/gdbarm32/zlib
+
+# /build.macos64x64/newspeak.cog.spur/
+/build.macos64x64/newspeak.cog.spur/Cocoa*.app
+/build.macos64x64/newspeak.cog.spur/LOG*
+/build.macos64x64/newspeak.cog.spur/*.sources
+/build.macos64x64/newspeak.cog.spur/build*
+/build.macos64x64/newspeak.cog.spur/deps
+/build.macos64x64/newspeak.cog.spur/getversion*
+/build.macos64x64/newspeak.cog.spur/sqNamedPrims.h
+
+# /build.macos64x64/newspeak.cog.spur/installer/
+/build.macos64x64/newspeak.cog.spur/installer/*.app
+/build.macos64x64/newspeak.cog.spur/installer/*.applescript
+/build.macos64x64/newspeak.cog.spur/installer/*.dmg
+
+# /build.macos64x64/newspeak.stack.spur/
+/build.macos64x64/newspeak.stack.spur/Cocoa*.app
+/build.macos64x64/newspeak.stack.spur/LOG*
+/build.macos64x64/newspeak.stack.spur/*.sources
+/build.macos64x64/newspeak.stack.spur/build*
+/build.macos64x64/newspeak.stack.spur/deps
+/build.macos64x64/newspeak.stack.spur/getversion*
+/build.macos64x64/newspeak.stack.spur/sqNamedPrims.h
+
+# /build.macos64x64/pharo.cog.spur/
+/build.macos64x64/pharo.cog.spur/Cocoa*.app
+/build.macos64x64/pharo.cog.spur/LOG*
+/build.macos64x64/pharo.cog.spur/*.sources
+/build.macos64x64/pharo.cog.spur/build*
+/build.macos64x64/pharo.cog.spur/deps
+/build.macos64x64/pharo.cog.spur/getversion*
+/build.macos64x64/pharo.cog.spur/sqNamedPrims.h
+
+# /build.macos64x64/squeak.cog.spur/
+/build.macos64x64/squeak.cog.spur/Cocoa*.app
+/build.macos64x64/squeak.cog.spur/LOG*
+/build.macos64x64/squeak.cog.spur/*.sources
+/build.macos64x64/squeak.cog.spur/build*
+/build.macos64x64/squeak.cog.spur/deps
+/build.macos64x64/squeak.cog.spur/getversion*
+/build.macos64x64/squeak.cog.spur/sqNamedPrims.h
+
+# /build.macos64x64/squeak.cog.spur.immutability/
+/build.macos64x64/squeak.cog.spur.immutability/Cocoa*.app
+/build.macos64x64/squeak.cog.spur.immutability/LOG*
+/build.macos64x64/squeak.cog.spur.immutability/*.sources
+/build.macos64x64/squeak.cog.spur.immutability/build*
+/build.macos64x64/squeak.cog.spur.immutability/deps
+/build.macos64x64/squeak.cog.spur.immutability/getversion*
+/build.macos64x64/squeak.cog.spur.immutability/sqNamedPrims.h
+
+# /build.macos64x64/squeak.sista.spur/
+/build.macos64x64/squeak.sista.spur/Cocoa*.app
+/build.macos64x64/squeak.sista.spur/LOG*
+/build.macos64x64/squeak.sista.spur/*.sources
+/build.macos64x64/squeak.sista.spur/build*
+/build.macos64x64/squeak.sista.spur/deps
+/build.macos64x64/squeak.sista.spur/getversion*
+/build.macos64x64/squeak.sista.spur/sqNamedPrims.h
+
+# /build.macos64x64/squeak.stack.spur/
+/build.macos64x64/squeak.stack.spur/Cocoa*.app
+/build.macos64x64/squeak.stack.spur/LOG*
+/build.macos64x64/squeak.stack.spur/*.sources
+/build.macos64x64/squeak.stack.spur/build*
+/build.macos64x64/squeak.stack.spur/deps
+/build.macos64x64/squeak.stack.spur/getversion*
+/build.macos64x64/squeak.stack.spur/sqNamedPrims.h
+
+# /build.win32x86/bochsx64/
+/build.win32x86/bochsx64/*
+
+# /build.win32x86/bochsx86/
+/build.win32x86/bochsx86/*
+
+# /build.win32x86/newspeak.cog.spur/
+/build.win32x86/newspeak.cog.spur/build
+/build.win32x86/newspeak.cog.spur/buildast
+/build.win32x86/newspeak.cog.spur/builddbg
+/build.win32x86/newspeak.cog.spur/deps
+/build.win32x86/newspeak.cog.spur/eitheror.exe
+/build.win32x86/newspeak.cog.spur/mkNamedPrims.exe
+/build.win32x86/newspeak.cog.spur/sqNamedPrims.h
+/build.win32x86/newspeak.cog.spur/LOG*
+
+# /build.win32x86/newspeak.cog.spur/installer/
+/build.win32x86/newspeak.cog.spur/installer/Binary
+/build.win32x86/newspeak.cog.spur/installer/Control.idt.orig
+/build.win32x86/newspeak.cog.spur/installer/Icon
+/build.win32x86/newspeak.cog.spur/installer/files.???
+/build.win32x86/newspeak.cog.spur/installer/nsvm.*
+/build.win32x86/newspeak.cog.spur/installer/*.idt
+/build.win32x86/newspeak.cog.spur/installer/*.msi
+/build.win32x86/newspeak.cog.spur/installer/*.rtf
+/build.win32x86/newspeak.cog.spur/installer/*.sources
+
+# /build.win32x86/newspeak.stack.spur/
+/build.win32x86/newspeak.stack.spur/build
+/build.win32x86/newspeak.stack.spur/buildast
+/build.win32x86/newspeak.stack.spur/builddbg
+/build.win32x86/newspeak.stack.spur/deps
+/build.win32x86/newspeak.stack.spur/eitheror.exe
+/build.win32x86/newspeak.stack.spur/mkNamedPrims.exe
+/build.win32x86/newspeak.stack.spur/sqNamedPrims.h
+/build.win32x86/newspeak.stack.spur/LOG*
+
+# /build.win32x86/squeak.cog.spur/
+/build.win32x86/squeak.cog.spur/build
+/build.win32x86/squeak.cog.spur/buildast
+/build.win32x86/squeak.cog.spur/builddbg
+/build.win32x86/squeak.cog.spur/deps
+/build.win32x86/squeak.cog.spur/eitheror.exe
+/build.win32x86/squeak.cog.spur/mkNamedPrims.exe
+/build.win32x86/squeak.cog.spur/sqNamedPrims.h
+/build.win32x86/squeak.cog.spur/LOG*
+
+# /build.win32x86/squeak.cog.v3/
+/build.win32x86/squeak.cog.v3/build
+/build.win32x86/squeak.cog.v3/buildast
+/build.win32x86/squeak.cog.v3/builddbg
+/build.win32x86/squeak.cog.v3/deps
+/build.win32x86/squeak.cog.v3/eitheror.exe
+/build.win32x86/squeak.cog.v3/mkNamedPrims.exe
+/build.win32x86/squeak.cog.v3/sqNamedPrims.h
+/build.win32x86/squeak.cog.v3/LOG*
+
+# /build.win32x86/squeak.sista.spur/
+/build.win32x86/squeak.sista.spur/build
+/build.win32x86/squeak.sista.spur/buildast
+/build.win32x86/squeak.sista.spur/builddbg
+/build.win32x86/squeak.sista.spur/eitheror.exe
+/build.win32x86/squeak.sista.spur/mkNamedPrims.exe
+/build.win32x86/squeak.sista.spur/sqNamedPrims.h
+
+# /build.win32x86/squeak.stack.spur/
+/build.win32x86/squeak.stack.spur/build
+/build.win32x86/squeak.stack.spur/buildast
+/build.win32x86/squeak.stack.spur/builddbg
+/build.win32x86/squeak.stack.spur/deps
+/build.win32x86/squeak.stack.spur/eitheror.exe
+/build.win32x86/squeak.stack.spur/mkNamedPrims.exe
+/build.win32x86/squeak.stack.spur/sqNamedPrims.h
+/build.win32x86/squeak.stack.spur/LOG*
+
+# /build.win32x86/squeak.stack.v3/
+/build.win32x86/squeak.stack.v3/build
+/build.win32x86/squeak.stack.v3/buildast
+/build.win32x86/squeak.stack.v3/builddbg
+/build.win32x86/squeak.stack.v3/deps
+/build.win32x86/squeak.stack.v3/eitheror.exe
+/build.win32x86/squeak.stack.v3/mkNamedPrims.exe
+/build.win32x86/squeak.stack.v3/sqNamedPrims.h
+/build.win32x86/squeak.stack.v3/LOG*
+
+# /history/
+/history/README.*
+
+# /image/
+/image/*.image
+/image/*.changes
+/image/*.sum
+/image/*.tgz
+/image/coglinux*
+/image/cogwin
+/image/Cog.app
+/image/cogspurlinux*
+/image/cogspurwin
+/image/CogSpur.app
+/image/Squeak-*-All-in-One.*
+/image/SqueakDebug.log
+/image/SqueakV41.sources
+/image/__MACOSX
+/image/crash.dmp
+/image/package-cache
+/image/prefs
+/image/special-dirs
+
+# /platforms/Cross/
+
+# /platforms/win32/
+
+# /processors/ARM/exploration/
+/processors/ARM/exploration/*.st
+/processors/ARM/exploration/print*
+
+# /processors/IA32/bochs/
+/processors/IA32/bochs/Makefile
+
+# /processors/IA32/bochs/bios/
+/processors/IA32/bochs/bios/*.a
+/processors/IA32/bochs/bios/Makefile
+
+# /processors/IA32/bochs/bx_debug/
+/processors/IA32/bochs/bx_debug/*.a
+/processors/IA32/bochs/bx_debug/Makefile
+
+# /processors/IA32/bochs/cpu/
+/processors/IA32/bochs/cpu/*.a
+/processors/IA32/bochs/cpu/Makefile
+
+# /processors/IA32/bochs/disasm/
+/processors/IA32/bochs/disasm/*.a
+/processors/IA32/bochs/disasm/Makefile
+
+# /processors/IA32/bochs/exploration/
+/processors/IA32/bochs/exploration/*.st
+/processors/IA32/bochs/exploration/print*
+
+# /processors/IA32/bochs/explorationx64/
+/processors/IA32/bochs/explorationx64/*.st
+/processors/IA32/bochs/explorationx64/print*
+
+# /processors/IA32/bochs/fpu/
+/processors/IA32/bochs/fpu/*.a
+/processors/IA32/bochs/fpu/Makefile
+
+# /processors/IA32/bochs/gui/
+/processors/IA32/bochs/gui/*.a
+/processors/IA32/bochs/gui/Makefile
+
+# /processors/IA32/bochs/instrument/stubs/
+/processors/IA32/bochs/instrument/stubs/*.a
+/processors/IA32/bochs/instrument/stubs/Makefile
+
+# /processors/IA32/bochs/iodev/
+/processors/IA32/bochs/iodev/*.a
+/processors/IA32/bochs/iodev/Makefile
+
+# /processors/IA32/bochs/memory/
+/processors/IA32/bochs/memory/*.a
+/processors/IA32/bochs/memory/Makefile
+
+# /processors/IA32/bochs/misc/
+/processors/IA32/bochs/misc/*.a
+/processors/IA32/bochs/misc/Makefile
+
+# /processors/IA32/linuxbochs/
+/processors/IA32/linuxbochs/Makefile
+/processors/IA32/linuxbochs/bxversion.h
+/processors/IA32/linuxbochs/bxversion.rc
+/processors/IA32/linuxbochs/config.h
+/processors/IA32/linuxbochs/config.log
+/processors/IA32/linuxbochs/config.status
+/processors/IA32/linuxbochs/ltdlconf.h
+/processors/IA32/linuxbochs/bios
+/processors/IA32/linuxbochs/build
+/processors/IA32/linuxbochs/bx_debug
+/processors/IA32/linuxbochs/cpu
+/processors/IA32/linuxbochs/disasm
+/processors/IA32/linuxbochs/doc
+/processors/IA32/linuxbochs/exploration
+/processors/IA32/linuxbochs/fpu
+/processors/IA32/linuxbochs/gui
+/processors/IA32/linuxbochs/host
+/processors/IA32/linuxbochs/instrument
+/processors/IA32/linuxbochs/iodev
+/processors/IA32/linuxbochs/libtool
+/processors/IA32/linuxbochs/memory
+/processors/IA32/linuxbochs/misc
+
+# /processors/IA32/macbochs/
+/processors/IA32/macbochs/Makefile
+/processors/IA32/macbochs/bxversion.h
+/processors/IA32/macbochs/bxversion.rc
+/processors/IA32/macbochs/config.h
+/processors/IA32/macbochs/config.log
+/processors/IA32/macbochs/config.status
+/processors/IA32/macbochs/ltdlconf.h
+/processors/IA32/macbochs/bios
+/processors/IA32/macbochs/build
+/processors/IA32/macbochs/bx_debug
+/processors/IA32/macbochs/cpu
+/processors/IA32/macbochs/disasm
+/processors/IA32/macbochs/doc
+/processors/IA32/macbochs/fpu
+/processors/IA32/macbochs/gui
+/processors/IA32/macbochs/host
+/processors/IA32/macbochs/instrument
+/processors/IA32/macbochs/iodev
+/processors/IA32/macbochs/libtool
+/processors/IA32/macbochs/memory
+/processors/IA32/macbochs/misc
+
+# /processors/IA32/winbochs/
+/processors/IA32/winbochs/Makefile
+/processors/IA32/winbochs/bxversion.h
+/processors/IA32/winbochs/bxversion.rc
+/processors/IA32/winbochs/config.h
+/processors/IA32/winbochs/config.log
+/processors/IA32/winbochs/config.status
+/processors/IA32/winbochs/ltdlconf.h
+/processors/IA32/winbochs/bios
+/processors/IA32/winbochs/build
+/processors/IA32/winbochs/bx_debug
+/processors/IA32/winbochs/cpu
+/processors/IA32/winbochs/disasm
+/processors/IA32/winbochs/doc
+/processors/IA32/winbochs/fpu
+/processors/IA32/winbochs/gui
+/processors/IA32/winbochs/host
+/processors/IA32/winbochs/instrument
+/processors/IA32/winbochs/iodev
+/processors/IA32/winbochs/libtool
+/processors/IA32/winbochs/memory
+/processors/IA32/winbochs/misc
+
+# /processors/IA32/winbochs/exploration/
+/processors/IA32/winbochs/exploration/*.exe
+/processors/IA32/winbochs/exploration/*.st
+/processors/IA32/winbochs/exploration/*.txt
+
+# /products/
+/products/*
+
+# /products/assert/
+/products/assert/*
+
+# /products/debug/
+/products/debug/*

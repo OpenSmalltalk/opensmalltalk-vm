@@ -1,13 +1,45 @@
 The Cog VM source tree
 ---------------------
-This is the README for the Cog subversion source tree:
-	http://www.squeakvm.org/svn/squeak/branches/Cog
+This is the README for the Cog Git source tree:
+	https://github.com/OpenSmalltalk/vm
 
-Contents:
-	- Overview
-	- VM source directories
-	- Platform build directories
-	- Other directories
+[![Windows Build status](https://ci.appveyor.com/api/projects/status/rn0f2rtyp2ona360/branch/Cog?svg=true)](https://ci.appveyor.com/project/timfel/vm/branch/Cog)
+[![Unix Build Status](https://travis-ci.org/OpenSmalltalk/vm.svg?branch=Cog)](https://travis-ci.org/OpenSmalltalk/vm)
+[![Download](https://api.bintray.com/packages/opensmalltalk/vm/cog/images/download.svg) ](https://bintray.com/opensmalltalk/vm/cog/_latestVersion)
+Builds are tested automatically on each commit on Travis and Appveyor, for
+Windows 32, Mac OS X 32 and 64, and on Linux 32, 64, and ARM. Squeak, Pharo, and
+Newspeak VMs are built with and without JIT, with and without Spur, and with and
+without Sista, as available per platform. All build artifacts are uploaded to
+Bintray.
+
+### Important notice for Developers:
+We rely on source file substitutions in the src tree, specifically,
+any sq*SCCSVersion.h files anywhere in the tree are processed to replace
+`$Rev$`, `$Date$`, and `$URL$` with the current revision (defined as the
+timestamp %Y%m%d%H%M of the latest commit), the human readable date of that
+commit, and the url of the origin repository these sources were cloned from.
+
+The first time you clone this repository, you *must* therefore run this command:
+```bash
+./scripts/updateSCCSVersions
+```
+This will install filters, post-commit, and post-merge hooks to update the
+sq*SCCSVersion.h files anytime you commit or merge.
+
+For easier use, we include the scripts/gitci and scripts/gitciplugins scripts to
+commit changes to this branch and changes to the Cross and win32 plugins (which
+are shared with the old Squeak interpreter trunk). If you decide not to use
+these scripts for checking in sources, you should also run the
+`updateSCCSVersions` script anytime you decide to use `git-reset` or
+`git-checkout` to make sure the stamps are updated correctly. Failing to do so
+will result in incorrect version stamps in your compiled VMs.
+
+
+### Contents:
+ - Overview
+ - VM source directories
+ - Platform build directories
+ - Other directories
 
 
 Overview
@@ -69,6 +101,7 @@ The plugins can be shared between VMs, choosing the set of plugins to include
 in a VM at build time.
 
 The VM source are in directories such as
+```
 	nscogsrc/vm			- Newspeak Cog V3
 	nsspursrc/vm		- Newspeak Cog Spur
 	nsspurstacksrc/vm	- Newspeak Stack Spur
@@ -81,14 +114,18 @@ The VM source are in directories such as
 	spurstack64src/vm	- Smalltalk Stack Spur 64-bit
 	src/vm				- Smalltalk Cog V3
 	stacksrc/vm			- Smalltalk Stack V3
+```
 
 All plugins are in the directory
+```
 	src/plugins
+```
 
 These contain many, but not all, of the plugins available for the VM.  Others
 can be found in Cog, or in various Monticello packages in various repositories.
 
 Each vm source directory contains several files, a subset of the following:
+```
 	cogit.c				- the JIT; a Cogit cooperates with a CoInterpreter.
                           This simply includes a proessor-specific JIT file
 	cogitIA32.c et al   - relevant processor-specific JIT, selected by cogit.c
@@ -104,16 +141,18 @@ Each vm source directory contains several files, a subset of the following:
 	interp.c			- the StackInterpreter's source file
 	interp.h			- defines for the VM configuration, word size, etc
 	vmCallback.h		- the structure of the VM's VMCallbackContext
-
+```
 
 Platform build directories
 --------------------------
 The current "official" build directories are of the form
 build.OS_WordSize_Processor, and include
+```
 	build.linux32x86	- uses autoconf, gcc and make
 	build.macos32x86	- 32-bit Mac OS X using XCode and clang
 	build.macos64x64	- 64-bit Mac OS X using XCode and clang
 	build.win32x86		- uses cygwin, gcc and make
+```
 More can be added as required.  In each there is a HowToBuild that describes
 the necessary steps to compile a VM.
 
@@ -129,6 +168,7 @@ Other directories
 The platforms directory contains the associated platform-specific files that
 combine with the Slang-generated source to produce complete VMs.  The structure
 is
+```
 	platforms/Cross/vm
 	platforms/Cross/plugins
 	platforms/iOS/vm
@@ -139,15 +179,20 @@ is
 	platforms/unix/plugins
 	platforms/win32/vm
 	platforms/win32/plugins
-
+```
 Each vm directory contains support for the core VM.  Each plugin directory
 contains run-time and build-time support for various plugins.  The following
-directories are external and shared with the Squeak trunk interpreter source:
+directories are subtrees that are shared with the old Squeak interpreter source:
 
-	platforms/Cross/plugins
-		- http://squeakvm.org/svn/squeak/trunk/platforms/Cross/plugins
-	platforms/win32/plugins
-		- http://squeakvm.org/svn/squeak/trunk/platforms/win32/plugins
+ - platforms/Cross/plugins
+   - https://github.com/OpenSmalltalk/vm/tree/platform/Cross/plugins
+ - platforms/win32/plugins
+   - https://github.com/OpenSmalltalk/vm/tree/platform/win32/plugins
+
+Being subtrees, their history is actually merged into the branch, but can be
+pushed separately as well. If you're not familiar with subtrees or git, the
+easiest is to use the scripts/gitciplugins script to check in any changes to
+the subtrees and push them to their respective branches.
 
 The processors directory contains the source for various processor simulators.
 The JIT is developed in Smalltalk by using one of these processor simulators

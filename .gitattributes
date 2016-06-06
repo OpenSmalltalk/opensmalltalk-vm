@@ -1,0 +1,3 @@
+sq*SCCSVersion.h filter=RevDateURL ident
+*.changes -diff
+*.sources -diff
