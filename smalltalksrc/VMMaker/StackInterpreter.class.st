@@ -10081,16 +10081,42 @@ StackInterpreter >> maybeLeakCheckExternalPrimCall: aMethodObj [
 ]
 
 { #category : #'primitive support' }
-StackInterpreter >> maybeRetryFailureDueToForwarding [
-	"In Spur a primitive may fail due to encountering a forwarder. On failure, check
-	 the accessorDepth for the primitive and if non-negative scan the args to the
-	 depth, following any forwarders.  Retry the primitive if any are found."
+StackInterpreter >> maybeMapPrimitiveFunctionPointerBackToSomethingEvaluable [
+	"In the real VM primitiveFunctionPointer is either an index (for quick primitives)
+	 or a proper function pointer to a primitive.  In the simulator it may be a small
+	 index (corresponding to a quick primitive index), a symbol (corresponding to
+	 a function pointer) or an index into the externalPrimitiveTable, or an invalid
+	 address that references an evaluable in the simulatedTrampolines dictionary
+	 of the Cogit.  The simulator expects dispatchFunctionPointer to be called with
+	 primitiveFunctionPointer being a symbol only for internal primitives.  External
+	 primitives must have their funciton pointer mapped back to an index.  This
+	 method does the reverse mapping."
+	<doNotGenerate>
+	(self isExternalPrimitiveCall: newMethod) ifTrue: "External prims must be evaluated by the right plugin..."
+		[| pfp index externalIndex |
+		 pfp := primitiveFunctionPointer.
+		 index := self mappedPluginEntries findFirst: [:entry| entry second == primitiveFunctionPointer].
+		 self assert: index ~= 0.
+		 externalIndex := 1000 + (externalPrimitiveTable object
+												indexOf: index
+												ifAbsent: [self error: 'entry not found']).
+		 self assert: ((self pluginEntryFor: externalIndex) notNil
+					   and: [(self pluginEntryFor: externalIndex) second == primitiveFunctionPointer]).
+		 primitiveFunctionPointer := externalIndex]
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> maybeRetryPrimitiveOnFailure [
+	"In Spur two cases of pirmitive failure are handled specially.  A primitive may fail due to validation
+	 encountering a forwarder. On failure, check the accessorDepth for the primitive and if non-negative
+	 scan the args to the depth, following any forwarders.  Retry the primitive if any are found.  Hence
+	 lazily and transparently following forwarders on primtiive failue.  Additionally a prmitive might fail
+	 due to an allocation failing.  Retry if primitives have failed with PrimErrNoMemory after running
+	 first the scavenger and then on a subsequent failure, the global mark-sweep collector.  Hence lazily
+	 and transparently GC on memory exhaustion."
 	<inline: true>
-	(objectMemory hasSpurMemoryManagerAPI
-	 and: [self failed
-	 and: [self checkForAndFollowForwardedPrimitiveState]]) ifTrue:
-		[self initPrimCall.
-		 self dispatchFunctionPointer: primitiveFunctionPointer]
+	(objectMemory hasSpurMemoryManagerAPI and: [self failed]) ifTrue:
+		[self retryPrimitiveOnFailure]
 ]
 
 { #category : #'return bytecodes' }
@@ -12958,6 +12984,44 @@ StackInterpreter >> resume: aProcess preemptedYieldingIf: yieldImplicitly [
 	^true
 ]
 
+{ #category : #'primitive support' }
+StackInterpreter >> retryPrimitiveOnFailure [
+	"In Spur two cases of pirmitive failure are handled specially.  A primitive may fail due to validation
+	 encountering a forwarder. On failure, check the accessorDepth for the primitive and if non-negative
+	 scan the args to the depth, following any forwarders.  Retry the primitive if any are found.  Hence
+	 lazily and transparently following forwarders on primtiive failure.  Additionally a prmitive might fail
+	 due to an allocation failing.  Retry if external primitives have failed with PrimErrNoMemory after running
+	 first the scavenger and then on a subsequent failure, the global mark-sweep collector.  Hence lazily
+	 and transparently GC on memory exhaustion."
+	<inline: true>
+	| gcDone followDone canRetry retry retried |
+	gcDone := 0.
+	followDone := canRetry := retried := false.
+	[retry := false.
+	 primFailCode = PrimErrNoMemory
+		ifTrue:
+			[(gcDone := gcDone + 1) = 1 ifTrue:
+				[canRetry := self isExternalPrimitiveCall: newMethod].
+			 canRetry ifTrue:
+				 [gcDone = 1 ifTrue:
+					[objectMemory scavengingGC].
+				 gcDone = 2 ifTrue:
+					[objectMemory fullGC].
+				 retry := gcDone <= 2]]
+		 ifFalse:
+			[followDone ifFalse:
+				[followDone := true.
+				 retry := self checkForAndFollowForwardedPrimitiveState]].
+	 retry] whileTrue:
+		[self assert: primFailCode ~= 0.
+		 retried := true.
+		 self initPrimCall.
+		 self cCode: [] inSmalltalk:
+			[self maybeMapPrimitiveFunctionPointerBackToSomethingEvaluable].
+		 self dispatchFunctionPointer: primitiveFunctionPointer].
+	^retried
+]
+
 { #category : #'callback support' }
 StackInterpreter >> returnAs: returnTypeOop ThroughCallback: vmCallbackContext Context: callbackMethodContext [
 	"callbackMethodContext is an activation of invokeCallback:[stack:registers:jmpbuf:].
@@ -14026,7 +14090,7 @@ StackInterpreter >> slowPrimitiveResponse [
 	self initPrimCall.
 	self dispatchFunctionPointer: primitiveFunctionPointer.
 	self assert: (self maybeLeakCheckExternalPrimCall: newMethod).
-	self maybeRetryFailureDueToForwarding.
+	self maybeRetryPrimitiveOnFailure.
 	self maybeFailForLastObjectOverwrite.
 	(FailImbalancedPrimitives
 	and: [self successful

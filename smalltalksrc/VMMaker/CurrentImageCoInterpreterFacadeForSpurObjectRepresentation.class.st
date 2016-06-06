@@ -42,8 +42,8 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> baseHeaderSize [
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> ceCheckForAndFollowForwardedPrimitiveState [
-	^coInterpreter ceCheckForAndFollowForwardedPrimitiveState
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> ceCheckAndMaybeRetryPrimitive: primIndex [
+	^coInterpreter ceCheckAndMaybeRetryPrimitive: primIndex
 ]
 
 { #category : #accessing }

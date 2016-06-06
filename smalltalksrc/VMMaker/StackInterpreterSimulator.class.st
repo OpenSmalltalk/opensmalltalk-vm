@@ -1475,6 +1475,11 @@ StackInterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize cre
 	^ results
 ]
 
+{ #category : #'plugin support' }
+StackInterpreterSimulator >> mappedPluginEntries [
+	^mappedPluginEntries
+]
+
 { #category : #'frame access' }
 StackInterpreterSimulator >> markContextAsDead: oop [
 	"(self withoutSmallIntegerTags: (objectMemory fetchPointer: SenderIndex ofObject: oop)) = -16r26824 ifTrue:
