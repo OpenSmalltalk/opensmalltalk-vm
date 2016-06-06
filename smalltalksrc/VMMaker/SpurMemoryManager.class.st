@@ -316,7 +316,7 @@ For details see ""60-bit immediate Floats"" below.
 
 - heap segmentation. This allows incremental heap growth (the current Squeak VM requires a contiguous chunk of memory, meaning an unfortunate trade off between space for objects and space for external code), and returning memory to the OS after GC.
 
-- no GC in any allocation.  In V3, the previous memory manager, any allocation other than the eeInstantiate... API I introduced for ""execution engine"" allocations, may cause a GC.  Consequently primitive smust use the clumsy and inefficient remapBuffer to store oops around allocations.  In Spur, no allocation can cause a GC, consequently primitives need not waste time or effort with the remapBuffer.  But this causes primitives to fail that in V3 would not.  Primitive failure code is expected to deal with allocation failure.  This allows the image to implement GC policy.
+- no GC in any allocation.  In V3, the previous memory manager, any allocation other than the eeInstantiate... API I introduced for ""execution engine"" allocations, may cause a GC.  Consequently primitive smust use the clumsy and inefficient remapBuffer to store oops around allocations.  In Spur, no allocation can cause a GC, consequently primitives need not waste time or effort with the remapBuffer.  The primitive retry machinery is used to retry prmitives that fail with a PrimErrNoMemory error after a GC.  Currently we do this for plugin primitives, not core numbered primitives; the core numbered primities that do alloate are specifically designed to fail on allocation failure, allowing image-level code to control running the GC.
 	
 
 Object Size
