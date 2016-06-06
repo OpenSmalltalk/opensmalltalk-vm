@@ -27,7 +27,7 @@
  * require 8-byte aligned addresses to access doubles in memory.
  */
 # define STACK_ALIGN_BYTES 8
-# define STACK_FP_ALIGNMENT 0
+# define STACK_FP_ALIGNMENT 4
 #endif
 
 #if defined(x86_64) || defined(__amd64) || defined(__x86_64) || defined(__amd64__) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
