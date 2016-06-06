@@ -34,6 +34,32 @@ pluginsRepositoryURL()
 }
 # undef PLUGINS_REV_START
 # undef URL_START
+#elif GIT
+static char GitRawPluginsRevisionString[] = "$Rev$";
+# define PLUGINS_REV_START (GitRawPluginsRevisionString + 6)
+
+static char GitRawPluginsRepositoryURL[] = "$URL$";
+# define URL_START (GitRawPluginsRepositoryURL + 6)
+
+static char *
+pluginsRevisionAsString()
+{
+	char *maybe_space = strchr(PLUGINS_REV_START,' ');
+	if (maybe_space)
+		*maybe_space = 0;
+	return PLUGINS_REV_START;
+}
+
+static char *
+pluginsRepositoryURL()
+{
+	char *maybe_sqplugins = strstr(URL_START, "/sqPlugins");
+	if (maybe_sqplugins)
+		*maybe_sqplugins = 0;
+	return URL_START;
+}
+# undef PLUGINS_REV_START
+# undef URL_START
 #else /* SUBVERSION */
 static char *
 pluginsRevisionAsString() { return "?"; }
