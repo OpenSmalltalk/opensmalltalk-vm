@@ -1514,7 +1514,6 @@ CogObjectRepresentationForSpur >> markIfIRC: maybeIRCs [
 
 { #category : #'primitive generators' }
 CogObjectRepresentationForSpur >> maybeCompileRetryOnPrimitiveFail: primIndex [
-	<var: #retryInst type: #'AbstractInstruction *'>
 	"If primIndex has an accessorDepth and fails, or it is external and fails with PrimErrNoMemory,
 	 call ceCheckAndMaybeRetryPrimitive if so  If ceCheck.... answers true, retry the primitive."
 	| jmp |
