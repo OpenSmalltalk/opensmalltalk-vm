@@ -1221,21 +1221,10 @@ CoInterpreter >> ceActivateFailingPrimitiveMethod: aPrimitiveMethod [
 	| methodHeader result |
 	self assert: primFailCode ~= 0.
 	self assert: newMethod = aPrimitiveMethod.
-	"If we're on Spur, check for forwarders and retry,
-	 returning if successful the second time around."
-	(objectMemory hasSpurMemoryManagerAPI
-	 and: [self checkForAndFollowForwardedPrimitiveState]) ifTrue:
-		[self initPrimCall.
-		 self cCode: [self dispatchFunctionPointer: primitiveFunctionPointer]
-			inSmalltalk:
-				[| evaluable |
-				 evaluable := primitiveFunctionPointer isInteger
-								ifTrue: [cogit simulatedTrampolines at: primitiveFunctionPointer]
-								ifFalse: [primitiveFunctionPointer].
-				 evaluable isMessageSend
-					ifTrue: [self assert: evaluable receiver == self]
-					ifFalse: [self assert: evaluable isBlock].
-				 evaluable value].
+	"If we're on Spur, retry the primitive, if appropriate,
+	 returning if successful after retry."
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[self retryPrimitiveOnFailure.
 		 self successful ifTrue:
 			[result := self stackTop.
 			 self stackTopPut: instructionPointer.
@@ -1381,18 +1370,16 @@ CoInterpreter >> ceCannotResume [
 		numArgs: 1
 ]
 
-{ #category : #'cog jit support' }
-CoInterpreter >> ceCheckForAndFollowForwardedPrimitiveState [
-	"In Spur a primitive may fail due to encountering a forwarder.
-	 On failure check the accessorDepth for the primitive and
-	 if non-negative scan the args to the depth, following any
-	 forwarders.  Answer if any are found so the prim can be retried."
-	<api>
+{ #category : #'primitive support' }
+CoInterpreter >> ceCheckAndMaybeRetryPrimitive: primIndex [
+	"Log failure and then retry if there's an accessorDepth or failure due to no memory."
 	<option: #SpurObjectMemory>
-	^self cCode: [self checkForAndFollowForwardedPrimitiveState]
-		inSmalltalk: [(self checkForAndFollowForwardedPrimitiveState)
-						ifTrue: [1]
-						ifFalse: [0]]
+	| retried |
+	cogit recordPrimTrace ifTrue:
+		[self fastLogPrim: TracePrimitiveFailure].
+	retried := self retryPrimitiveOnFailure.
+	(retried and: [cogit recordPrimTrace]) ifTrue:
+		[self fastLogPrim: TracePrimitiveRetry]
 ]
 
 { #category : #trampolines }
@@ -5907,6 +5894,14 @@ CoInterpreter >> primFailCodeAddress [
 	<returnTypeC: #usqInt>
 	^self cCode: [(self addressOf: primFailCode) asUnsignedInteger]
 		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #primFailCode in: self]
+]
+
+{ #category : #'compiled methods' }
+CoInterpreter >> primNumberExternalCall [
+	"Answer if the method is an external primtiive call (prim 117)."
+	<api>
+	<cmacro>
+	^PrimNumberExternalCall
 ]
 
 { #category : #'cog jit support' }
