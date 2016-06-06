@@ -82,7 +82,7 @@ TMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 				inject: false
 				into: [:asYetUntyped :block|
 					asYetUntyped | (self addTypesFor: block to: typeSet in: aCodeGen)]].
-		(expr typeOrNilFrom: aCodeGen in: self)
+		(aCodeGen returnTypeOrNilForSend: expr in: self)
 			ifNil: [^(aCodeGen methodNamed: expr selector) notNil and: [expr selector ~~ selector]]
 			ifNotNil:
 				[:type |
@@ -1121,16 +1121,16 @@ TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 	 For debugging answer a Dictionary from var to the nodes that determined types
 	 This for debugging:
 		(self copy inferTypesForImplicitlyTypedVariablesIn: aCodeGen)"
-	| alreadyExplicitlyTyped effectiveNodes |
+	| alreadyExplicitlyTypedOrNotToBeTyped effectiveNodes |
 	aCodeGen maybeBreakForTestToInline: selector in: self.
-	alreadyExplicitlyTyped := declarations keys asSet.
+	alreadyExplicitlyTypedOrNotToBeTyped := declarations keys asSet.
 	effectiveNodes := Dictionary new. "this for debugging"
 	parseTree nodesDo:
 		[:node| | type var |
 		"If there is something of the form i >= 0, then i should be signed, not unsigned."
 		(node isSend
 		 and: [(locals includes: (var := node receiver variableNameOrNil))
-		 and: [(alreadyExplicitlyTyped includes: var) not "don't be fooled by inferred unsigned types"
+		 and: [(alreadyExplicitlyTypedOrNotToBeTyped includes: var) not "don't be fooled by inferred unsigned types"
 		 and: [(#(<= < >= >) includes: node selector)
 		 and: [node args first isConstant
 		 and: [node args first value = 0
@@ -1142,13 +1142,16 @@ TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 		 Only observe known sends (methods in the current set) and typed local variables."
 		(node isAssignment
 		 and: [(locals includes: (var := node variable name))
-		 and: [(alreadyExplicitlyTyped includes: var) not "don't be fooled by previously inferred types"
-		 and: [(type := node expression isSend
+		 and: [(alreadyExplicitlyTypedOrNotToBeTyped includes: var) not]]) ifTrue: "don't be fooled by previously inferred types"
+		 	[type := node expression isSend
 						ifTrue: [aCodeGen returnTypeOrNilForSend: node expression in: self]
-						ifFalse: [self typeFor: node expression in: aCodeGen]) notNil
-		 and: [aCodeGen isSimpleType: type]]]]) ifTrue:
-			[aCodeGen mergeTypeOf: var in: declarations with: type method: self.
-			 effectiveNodes at: var put: { declarations at: var. node }, (effectiveNodes at: var ifAbsent: [#()])]].
+						ifFalse: [self typeFor: node expression in: aCodeGen].
+			 type "If untyped, then cannot type the variable yet. A subsequent assignment may assign a subtype of what this type ends up being"
+				ifNil: [alreadyExplicitlyTypedOrNotToBeTyped add: var] 
+				ifNotNil: "Merge simple types; complex types must be defined by the programmer."
+					[(aCodeGen isSimpleType: type) ifTrue:
+						[aCodeGen mergeTypeOf: var in: declarations with: type method: self.
+						 effectiveNodes at: var put: { declarations at: var. node }, (effectiveNodes at: var ifAbsent: [#()])]]]].
 	^effectiveNodes
 ]
 
