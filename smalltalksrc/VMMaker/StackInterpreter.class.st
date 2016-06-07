@@ -7405,14 +7405,6 @@ StackInterpreter >> handleStackOverflowOrEventAllowContextSwitch: mayContextSwit
 	^switched
 ]
 
-{ #category : #'internal interpreter access' }
-StackInterpreter >> headerIndicatesAlternateBytecodeSet: methodHeader [
-	<api>
-	<inline: true>
-	"A negative header selects the alternate bytecode set."
-	^methodHeader signedIntFromLong < 0
-]
-
 { #category : #'stack pages' }
 StackInterpreter >> highBit: anUnsignedValue [ 
 	"This is a C implementation needed by ioSetMaxExtSemTableSize
