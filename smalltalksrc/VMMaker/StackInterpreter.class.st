@@ -5138,7 +5138,7 @@ StackInterpreter >> encodeFrameFieldHasContext: hasContext "<Boolean>" isBlock: 
 
 { #category : #simulation }
 StackInterpreter >> encoderClassForHeader: headerInteger [
-	^Smalltalk classNamed: ((self headerIndicatesAlternateBytecodeSet: headerInteger)
+	^Smalltalk classNamed: ((objectMemory headerIndicatesAlternateBytecodeSet: headerInteger)
 								ifTrue: [AltBytecodeEncoderClassName]
 								ifFalse: [BytecodeEncoderClassName])
 ]
@@ -9010,7 +9010,7 @@ StackInterpreter >> longStoreBytecodeForHeader: methodHeader [
 	<api>
 	<inline: true>
 	^self cppIf: MULTIPLEBYTECODESETS
-		ifTrue: [(self headerIndicatesAlternateBytecodeSet: methodHeader)
+		ifTrue: [(objectMemory headerIndicatesAlternateBytecodeSet: methodHeader)
 					ifTrue: [AltLongStoreBytecode]
 					ifFalse: [LongStoreBytecode]]
 		ifFalse: [LongStoreBytecode]
@@ -10209,7 +10209,7 @@ StackInterpreter >> methodHeaderHasPrimitive: methodHeader [
 		ifFalse:
 			[MULTIPLEBYTECODESETS
 				ifTrue:
-					[(self headerIndicatesAlternateBytecodeSet: methodHeader)
+					[(objectMemory headerIndicatesAlternateBytecodeSet: methodHeader)
 						ifTrue: [self alternateHeaderHasPrimitiveFlag: methodHeader]
 						ifFalse: [methodHeader anyMask: V3PrimitiveBitsMask]]
 				ifFalse:
@@ -10244,7 +10244,7 @@ StackInterpreter >> methodUsesAlternateBytecodeSet: aMethodObj [
 	<api>
 	<inline: true>
 	"A negative header selects the alternate bytecode set."
-	^self headerIndicatesAlternateBytecodeSet: (objectMemory methodHeaderOf: aMethodObj)
+	^objectMemory headerIndicatesAlternateBytecodeSet: (objectMemory methodHeaderOf: aMethodObj)
 ]
 
 { #category : #'frame access' }
@@ -10938,10 +10938,10 @@ StackInterpreter >> primitiveIndexOf: methodPointer [
 
 { #category : #'compiled methods' }
 StackInterpreter >> primitiveIndexOfMethod: theMethod header: methodHeader [
-	"Note: With the Squeak V0 format we now have 10 bits of primitive index, but they are in
-	 two places for temporary backward compatibility.  The time to unpack is negligible,
-	 since the derived primitive function pointer is stored in the method cache.  With the new
-	 format we assume a 3-byte CallPrimitive with a little-endian 16-bit primitive index."
+	"Note: With the Squeak V3 format we now have 10 bits of primitive index, but they are
+	 in two places for temporary backward compatibility.  The time to unpack is negligible,
+	 since the derived primitive function pointer is stored in the method cache.  With the
+	 Spur format we assume a 3-byte CallPrimitive with a little-endian 16-bit primitive index."
 	<api>
 	<inline: true>
 	| firstBytecode |
@@ -10956,7 +10956,7 @@ StackInterpreter >> primitiveIndexOfMethod: theMethod header: methodHeader [
 		ifFalse:
 			[MULTIPLEBYTECODESETS
 				ifTrue:
-					[(self headerIndicatesAlternateBytecodeSet: methodHeader)
+					[(objectMemory headerIndicatesAlternateBytecodeSet: methodHeader)
 						ifTrue:
 							[(self alternateHeaderHasPrimitiveFlag: methodHeader)
 								ifTrue:
@@ -13588,7 +13588,7 @@ StackInterpreter >> setMethod: aMethodObj methodHeader: methodHeader [
 	self assert: (objectMemory isOopCompiledMethod: method).
 	self assert: (objectMemory methodHeaderOf: method) = methodHeader.
 	self cppIf: MULTIPLEBYTECODESETS
-		ifTrue: [bytecodeSetSelector := (self headerIndicatesAlternateBytecodeSet: methodHeader)
+		ifTrue: [bytecodeSetSelector := (objectMemory headerIndicatesAlternateBytecodeSet: methodHeader)
 											ifTrue: [256]
 											ifFalse: [0]]
 ]
@@ -14044,7 +14044,7 @@ StackInterpreter >> sizeOfCallPrimitiveBytecode: methodHeader [
 		ifTrue: [3]
 		ifFalse:
 			[MULTIPLEBYTECODESETS
-				ifTrue: [(self headerIndicatesAlternateBytecodeSet: methodHeader)
+				ifTrue: [(objectMemory headerIndicatesAlternateBytecodeSet: methodHeader)
 							ifTrue: [3]
 							ifFalse: [0]]
 				ifFalse: [0]]
