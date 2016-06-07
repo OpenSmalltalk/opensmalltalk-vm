@@ -427,6 +427,14 @@ Spur64BitMemoryManager >> hasSixtyFourBitImmediates [
 	^true
 ]
 
+{ #category : #'method access' }
+Spur64BitMemoryManager >> headerIndicatesAlternateBytecodeSet: methodHeader [
+	"A negative header selects the alternate bytecode set."
+	<api>
+	<inline: true>
+	^methodHeader signedIntFromLong64 < 0
+]
+
 { #category : #immediates }
 Spur64BitMemoryManager >> imageFormatVersion [
 	"Return a magic constant that changes when the image format changes.

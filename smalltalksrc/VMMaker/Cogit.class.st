@@ -2851,7 +2851,7 @@ Cogit >> blockCreationBytecodeSizeForHeader: aMethodHeader [
 	<inline: true>
 	^self cppIf: MULTIPLEBYTECODESETS
 		ifTrue:
-			[(coInterpreter headerIndicatesAlternateBytecodeSet: aMethodHeader)
+			[(objectMemory headerIndicatesAlternateBytecodeSet: aMethodHeader)
 				ifTrue: [AltBlockCreationBytecodeSize]
 				ifFalse: [BlockCreationBytecodeSize]]
 		ifFalse: [BlockCreationBytecodeSize]
@@ -3034,7 +3034,7 @@ Cogit >> bytecodeSetOffsetForHeader: aMethodHeader [
 	^self
 		cppIf: MULTIPLEBYTECODESETS
 		ifTrue:
-			[(coInterpreter headerIndicatesAlternateBytecodeSet: aMethodHeader)
+			[(objectMemory headerIndicatesAlternateBytecodeSet: aMethodHeader)
 				ifTrue: [256]
 				ifFalse: [0]]
 		ifFalse: [0]

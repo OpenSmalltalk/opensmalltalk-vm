@@ -146,14 +146,6 @@ NewCoObjectMemory >> growObjectMemory: delta [
 ]
 
 { #category : #simulation }
-NewCoObjectMemory >> headerIndicatesAlternateBytecodeSet: methodHeader [
-	"this is here only for in-image compilation"
-	<doNotGenerate>
-	"A negative header selects the alternate bytecode set."
-	^methodHeader signedIntFromLong < 0
-]
-
-{ #category : #simulation }
 NewCoObjectMemory >> initializeFreeSpaceForFacadeFrom: base to: limit [
 	freeStart := base.
 	endOfMemory := scavengeThreshold := limit

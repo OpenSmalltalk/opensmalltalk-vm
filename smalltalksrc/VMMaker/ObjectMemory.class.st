@@ -2422,6 +2422,14 @@ ObjectMemory >> hashBitsOf: oop [
 	^ ((self baseHeader: oop) >> HashBitsOffset) bitAnd: HashMaskUnshifted
 ]
 
+{ #category : #'method access' }
+ObjectMemory >> headerIndicatesAlternateBytecodeSet: methodHeader [
+	"A negative header selects the alternate bytecode set."
+	<api>
+	<inline: true>
+	^methodHeader signedIntFromLong < 0
+]
+
 { #category : #'header access' }
 ObjectMemory >> headerType: oop [
 

@@ -5611,6 +5611,14 @@ SpurMemoryManager >> headerForSlots: numSlots hash: hash format: formatField cla
 	+ classIndex
 ]
 
+{ #category : #'method access' }
+SpurMemoryManager >> headerIndicatesAlternateBytecodeSet: methodHeader [
+	"A negative header selects the alternate bytecode set."
+	<api>
+	<inline: true>
+	self subclassResponsibility
+]
+
 { #category : #'debug support' }
 SpurMemoryManager >> heapMap [
 	^heapMap
