@@ -8,4 +8,5 @@ LocalePlugin \
 UnicodePlugin \
 UnixOSProcessPlugin \
 UUIDPlugin \
+ImmX11Plugin \
 XDisplayControlPlugin

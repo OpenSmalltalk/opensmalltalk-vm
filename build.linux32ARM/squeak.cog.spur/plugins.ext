@@ -11,4 +11,5 @@ UnicodePlugin \
 UnixOSProcessPlugin \
 UUIDPlugin \
 WeDoPlugin \
+ImmX11Plugin \
 XDisplayControlPlugin
