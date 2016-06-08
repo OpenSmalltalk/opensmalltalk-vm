@@ -82,7 +82,7 @@ TMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 				inject: false
 				into: [:asYetUntyped :block|
 					asYetUntyped | (self addTypesFor: block to: typeSet in: aCodeGen)]].
-		(aCodeGen returnTypeOrNilForSend: expr in: self)
+		(aCodeGen returnTypeForSend: expr in: self ifNil: nil)
 			ifNil: [^(aCodeGen methodNamed: expr selector) notNil and: [expr selector ~~ selector]]
 			ifNotNil:
 				[:type |
@@ -95,8 +95,8 @@ TMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 										ifTrue: [#void]
 										ifFalse: [#sqInt])]].
 	expr isConstant ifTrue:
-		[(expr typeOrNilFrom: aCodeGen in: self)
-			ifNotNil: [:type | typeSet add: type]]..
+		[(expr typeOrNilFrom: aCodeGen in: self) ifNotNil:
+			[:type | typeSet add: type]]..
 	^false
 ]
 
@@ -454,7 +454,7 @@ TMethod >> deny: aBooleanOrBlock [
 { #category : #'C code generation' }
 TMethod >> determineTypeFor: aNode in: aCodeGen [
 	aNode isSend ifTrue:
-		[^(aCodeGen returnTypeForSend: aNode in: self) ifNil: [#sqInt]].
+		[^aCodeGen returnTypeForSend: aNode in: self ifNil: #sqInt].
 	aNode isAssignment ifTrue:
 		[^self determineTypeFor: aNode expression in: aCodeGen].
 	self error: 'don''t know how to extract return type from this kind of node'
@@ -539,8 +539,9 @@ TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: isPr
 	| compileTimeOptionPragmas returnTypeIsFunctionPointer |
 	(compileTimeOptionPragmas := self compileTimeOptionPragmas) notEmpty ifTrue:
 		[self outputConditionalDefineFor: compileTimeOptionPragmas on: aStream].
-	returnTypeIsFunctionPointer := returnType last = $)
-									and: [returnType includesSubString: (aCodeGen cFunctionNameFor: selector)].
+	returnTypeIsFunctionPointer := returnType notNil
+									and: [returnType last = $)
+									and: [returnType includesSubString: (aCodeGen cFunctionNameFor: selector)]].
 	export 
 		ifTrue:
 			[aStream nextPutAll: 'EXPORT('; nextPutAll: returnType; nextPut: $)]
@@ -551,7 +552,7 @@ TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: isPr
 					[isPrototype ifTrue:
 						[aStream nextPutAll: 'extern ']].
 			 (isPrototype or: [inline ~~ #always]) ifFalse: [aStream nextPutAll: 'inline '].
-			 aStream nextPutAll: returnType].
+			 aStream nextPutAll: (returnType ifNil: [#sqInt])].
 	(functionAttributes isNil or: [returnTypeIsFunctionPointer]) ifFalse:
 		[aStream space; nextPutAll: functionAttributes].
 	isPrototype ifTrue: [aStream space] ifFalse: [aStream cr].
@@ -1107,11 +1108,6 @@ TMethod >> inferReturnTypeIn: aCodeGen [
 	| existingReturnType |
 	existingReturnType := returnType.
 	self inferReturnTypeFromReturnsIn: aCodeGen.
-
-	"If the return type is now void, replace any and all ^expr with expr. ^self"
-	(existingReturnType ~= returnType and: [returnType = #void]) ifTrue:
-		[self transformVoidReturns].
-
 	^existingReturnType ~= returnType
 ]
 
@@ -1144,7 +1140,7 @@ TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 		 and: [(locals includes: (var := node variable name))
 		 and: [(alreadyExplicitlyTypedOrNotToBeTyped includes: var) not]]) ifTrue: "don't be fooled by previously inferred types"
 		 	[type := node expression isSend
-						ifTrue: [aCodeGen returnTypeOrNilForSend: node expression in: self]
+						ifTrue: [aCodeGen returnTypeForSend: node expression in: self ifNil: nil]
 						ifFalse: [self typeFor: node expression in: aCodeGen].
 			 type "If untyped, then cannot type the variable yet. A subsequent assignment may assign a subtype of what this type ends up being"
 				ifNil: [alreadyExplicitlyTypedOrNotToBeTyped add: var] 
@@ -1662,7 +1658,7 @@ TMethod >> isNode: aNode substitutableFor: argName inMethod: targetMeth in: aCod
 	"Don't inline expressions unless type-compatible,"
 	aNode isSend ifTrue:
 		[(aCodeGen
-				isActualType: (aCodeGen returnTypeForSend: aNode in: self)
+				isActualType: (aCodeGen returnTypeForSend: aNode in: self ifNil: #incompatible)
 				compatibleWithFormalType: (self typeFor: argName in: aCodeGen)) ifFalse:
 			[^false]].
 
@@ -2422,7 +2418,16 @@ TMethod >> returnType: aString [
 	 This string will be used in the C declaration of this function.
 	 If the type exists as a symbol, use that."
 
-	returnType := (Symbol findInterned: aString) ifNil: [aString]
+	returnType := aString isSymbol
+					ifTrue: [aString]
+					ifFalse: [(Symbol findInterned: aString) ifNil: [aString]]
+]
+
+{ #category : #testing }
+TMethod >> returnsExpression [
+	"Answer true if the last statement of this method is a return of some expression, not merely self or nil."
+
+	^parseTree returnsExpression
 ]
 
 { #category : #accessing }
@@ -2685,6 +2690,32 @@ TMethod >> transformReturnSubExpression: node toAssignmentOf: exitVar andGoto: e
 			 aBinaryBlock value: replacement value: true]
 ]
 
+{ #category : #'type inference' }
+TMethod >> transformReturns [
+	"Once the return type has been found or inferred, returns may bneed to be modified.
+	 If the return type is #void, any occurrences of ^expr must be replaced with expr. ^self.
+	 If the type is #sqInt any any occurrences of ^self are replaced with ^0."
+	(returnType == #void or: [returnType == #sqInt]) ifFalse:
+		[^self].
+	parseTree nodesWithParentsDo:
+		[:node :parent|
+		node isReturn ifTrue:
+			[(node expression isVariable and: [node expression name = 'self'])
+				ifTrue:
+					[returnType = #sqInt ifTrue:
+						[node setExpression: (TConstantNode new setValue: 0)]]
+				ifFalse:
+					[returnType = #void ifTrue:
+						[parent
+							replaceChild: node
+							with: (TStmtListNode new
+									setArguments: #()
+									statements: {node expression.
+												  TReturnNode new 
+													setExpression: (TVariableNode new setName: 'self')
+													yourself})]]]]
+]
+
 { #category : #transformations }
 TMethod >> transformToStructClassMethodFor: aCCodeGenerator [
 	"Transform this method so that it can be used on an instance of a struct class (VMStructType subclass).
@@ -2718,26 +2749,6 @@ TMethod >> transformToStructClassMethodFor: aCCodeGenerator [
 	self assert: (typeForSelf notNil and: [typeForSelf ~~ #implicit]).
 	self declarationAt: (args addFirst: selfNode name)
 		put: (declarations removeKey: 'self'), '_in_', (aCCodeGenerator cFunctionNameFor: selector)
-]
-
-{ #category : #'type inference' }
-TMethod >> transformVoidReturns [
-	"Once the return type has been found or inferred to be #void,
-	 any occurrences of ^expr must be replaced with expr. ^self."
-	self assert: returnType == #void.
-	parseTree nodesWithParentsDo:
-		[:node :parent|
-		(node isReturn
-		 and: [node expression isVariable not
-			or: [node expression name ~= 'self']]) ifTrue:
-			[parent
-				replaceChild: node
-				with: (TStmtListNode new
-						setArguments: #()
-						statements: {node expression.
-									  TReturnNode new 
-										setExpression: (TVariableNode new setName: 'self')
-										yourself})]]
 ]
 
 { #category : #inlining }

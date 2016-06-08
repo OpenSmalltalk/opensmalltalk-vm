@@ -6,7 +6,8 @@ Class {
 	#superclass : #FilePlugin,
 	#instVars : [
 		'openFiles',
-		'states'
+		'states',
+		'maxOpenFiles'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -35,6 +36,8 @@ FilePluginSimulator >> createDirectory: aString [
 FilePluginSimulator >> fileOpenName: nameIndex size: nameSize write: writeFlag secure: secureFlag [
 	"Open the named file, possibly checking security. Answer the file oop."
 	| path f index |
+	openFiles size >= maxOpenFiles ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrLimitExceeded].
 	path := interpreterProxy interpreter asString: nameIndex size: nameSize.
 	f := writeFlag
 			ifTrue: [FileStream fileNamed: path]
@@ -78,6 +81,7 @@ FilePluginSimulator >> initialiseModule [
 		at: 1 put: Transcript; "stdout"
 		at: 2 put: Transcript. "stderr"
 	states := IdentityDictionary new.
+	maxOpenFiles := VMClass initializationOptions at: #MaxFileDescriptors ifAbsent: [1024].
 	^super initialiseModule
 ]
 

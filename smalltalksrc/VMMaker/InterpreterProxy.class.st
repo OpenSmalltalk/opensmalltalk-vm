@@ -121,7 +121,6 @@ InterpreterProxy >> callbackLeave: cbID [
 { #category : #'object access' }
 InterpreterProxy >> characterObjectOf: characterCode [
 	<option: #(atLeastVMProxyMajor:minor: 1 13)>
-	<var: #cPtr type: #int>
 	^StackInterpreter objectMemoryClass characterObjectOf: characterCode
 ]
 

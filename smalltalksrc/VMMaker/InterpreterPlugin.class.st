@@ -92,8 +92,8 @@ InterpreterPlugin class >> declareCVarsIn: aCCodeGenerator [
 
 	aCCodeGenerator 
 		var: #interpreterProxy type: #'struct VirtualMachine*';
-		removeVariable: 'translatedMethodCache'.
-	self declareHeaderFilesIn: aCCodeGenerator.
+		removeVariable: 'translatedMethodCache' ifAbsent: nil.
+	self declareHeaderFilesIn: aCCodeGenerator
 ]
 
 { #category : #translation }
