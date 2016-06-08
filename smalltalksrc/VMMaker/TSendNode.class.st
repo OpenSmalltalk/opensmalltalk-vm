@@ -541,5 +541,5 @@ TSendNode >> structTargetKindIn: aCodeGen [
 
 { #category : #'type inference' }
 TSendNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
-	^aCodeGenerator returnTypeOrNilForSend: self in: aTMethod
+	^aCodeGenerator returnTypeForSend: self in: aTMethod ifNil: nil
 ]
