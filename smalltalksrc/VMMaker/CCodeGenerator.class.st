@@ -935,7 +935,8 @@ CCodeGenerator >> computeKernelReturnTypes [
 		 fetchSingleFloatAt:into: #void storeSingleFloatAt:from: #void
 			fetchSingleFloatAtPointer:into: #void storeSingleFloatAtPointer:from: #void
 
-		 pointerForOop: #'char *' oopForPointer: #sqInt).
+		 pointerForOop: #'char *' oopForPointer: #sqInt
+		 baseHeaderSize #sqInt wordSize #sqInt bytesPerOop #sqInt).
 	^dictionary
 ]
 
@@ -3265,7 +3266,10 @@ CCodeGenerator >> inferTypesForImplicitlyTypedVariablesAndMethods [
 	methods do:
 		[:m|
 		m returnType ifNil:
-			[m returnType: (self implicitReturnTypeFor: m selector)]].
+			[m returnType: (m returnsExpression
+								ifTrue: [#sqInt]
+								ifFalse: [self implicitReturnTypeFor: m])].
+		m transformReturns].
 
 	"Make a final pass to type anything assigned from the default type"
 	allMethods do:
@@ -4646,10 +4650,14 @@ CCodeGenerator >> returnPrefixFromVariable: aName [
 ]
 
 { #category : #'type inference' }
-CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod [
-	"Answer the return type for a send.  Absent sends default to #sqInt.
+CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
+	"Answer the return type for a send.  Unbound sends default to typeIfNil.
+	 Methods with types as yet unknown have a type determined either by the
+	 kernelReturnTypes or the table below, or, if they are in neither set, then nil.
 	 The inferred type should match as closely as possible the C type of
-	 generated expessions so that inlining would not change the expression."
+	 generated expessions so that inlining would not change the expression.
+	 If there is a method for sel but its return type is as yet unknown it mustn't
+	 be defaulted, since on a subsequent pass its type may be computable."
 	| sel methodOrNil |
 	methodOrNil := self anyMethodNamed: (sel := sendNode selector).
 	(methodOrNil notNil and: [methodOrNil returnType notNil]) ifTrue:
@@ -4668,12 +4676,12 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod [
 				[#/]						->	[self typeForArithmetic: sendNode in: aTMethod].
 				[#//]					->	[self typeForArithmetic: sendNode in: aTMethod].
 				[#\\]					->	[self typeForArithmetic: sendNode in: aTMethod].
-"				[#>>]					->	[self
-												promoteArithmeticTypes: (self unsignedTypeForIntegralType: (self typeFor: sendNode receiver in: aTMethod))
-												and: (self typeFor: sendNode args first in: aTMethod)].
-				[#<<]					->	[self typeForArithmetic: sendNode in: aTMethod]."
 				[#rem:]					->	[self typeForArithmetic: sendNode in: aTMethod].
 				[#quo:]					->	[self typeForArithmetic: sendNode in: aTMethod].
+				"C99 Sec Bitwise shift operators ... 3 Sematics ...
+				 The integer promotions are performed on each of the operands. The type of the result is that of the promoted left operand..."
+				[#>>]					->	[self typeFor: sendNode receiver in: aTMethod].
+				[#<<]					->	[self typeFor: sendNode receiver in: aTMethod].
 				[#addressOf:]			->	[(self typeFor: sendNode receiver in: aTMethod)
 												ifNil: [#sqInt]
 												ifNotNil: [:type| type, (type last isLetter ifTrue: [' *'] ifFalse: ['*'])]].
@@ -4724,20 +4732,12 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod [
 				[#ifTrue:ifFalse:]		->	[self typeForConditional: sendNode in: aTMethod].
 				[#ifFalse:ifTrue:]		->	[self typeForConditional: sendNode in: aTMethod].
 				[#ifTrue:]				->	[self typeForConditional: sendNode in: aTMethod].
-				[#ifFalse:]				->	[self typeForConditional: sendNode in: aTMethod] }
-				otherwise: "If there /is/ a method for sel but its retrn type is as yet unknown we /mustn't/ default it.
-							We can only default unbound selectors."
-					[methodOrNil ifNotNil: [nil] ifNil: [#sqInt]]]
-]
-
-{ #category : #'type inference' }
-CCodeGenerator >> returnTypeOrNilForSend: sendNode in: aTMethod [
-	"Answer the return type for a send.  Sends of known but as-yet-untyped methods answer nil."
-	| sel |
-	(self anyMethodNamed: (sel := sendNode selector)) ifNotNil:
-		[:m|
-		^m returnType ifNotNil: [:type| self baseTypeForType: type]].
-	^self returnTypeForSend: sendNode in: aTMethod
+				[#ifFalse:]				->	[self typeForConditional: sendNode in: aTMethod].
+				[#and:]					->	[#sqInt].
+				[#or:]					->	[#sqInt] }
+				otherwise: "If there /is/ a method for sel but its return type is as yet unknown it /mustn't/ be defaulted,
+							since on a subsequent pass its type may be computable.  Only default unbound selectors."
+					[methodOrNil ifNotNil: [nil] ifNil: [typeIfNil]]]
 ]
 
 { #category : #accessing }
