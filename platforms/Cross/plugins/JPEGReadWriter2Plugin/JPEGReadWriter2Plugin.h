@@ -40,8 +40,8 @@ void primJPEGReadImagefromByteArrayonFormdoDitheringerrorMgrReadScanlines(
     unsigned int,
     int);
 
-void primJPEGReadHeaderfromByteArrayerrorMgrReadHeader(
+void primJPEGReadHeaderfromByteArraysizeerrorMgrReadHeader(
     char*,
     char*,
-    char*, 
     unsigned int);
+    char*);

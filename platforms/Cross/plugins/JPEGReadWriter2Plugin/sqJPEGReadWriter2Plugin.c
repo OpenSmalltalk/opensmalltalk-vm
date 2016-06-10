@@ -282,11 +282,11 @@ primJPEGReadImagefromByteArrayonFormdoDitheringerrorMgrReadScanlines(
 }
 
 void
-primJPEGReadHeaderfromByteArrayerrorMgrReadHeader (
+primJPEGReadHeaderfromByteArraysizeerrorMgrReadHeader(
     char* jpegDecompressStruct,
-    char* jpegErrorMgr2Struct,
     char* source, 
-    unsigned int sourceSize)
+    unsigned int sourceSize,
+    char* jpegErrorMgr2Struct)
 {
     j_decompress_ptr pcinfo = (j_decompress_ptr)jpegDecompressStruct;
 	error_ptr2 pjerr = (error_ptr2)jpegErrorMgr2Struct;
