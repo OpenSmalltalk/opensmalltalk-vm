@@ -43,5 +43,5 @@ void primJPEGReadImagefromByteArrayonFormdoDitheringerrorMgrReadScanlines(
 void primJPEGReadHeaderfromByteArraysizeerrorMgrReadHeader(
     char*,
     char*,
-    unsigned int);
+    unsigned int,
     char*);
