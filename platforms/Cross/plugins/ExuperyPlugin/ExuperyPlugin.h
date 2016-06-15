@@ -1,0 +1,1 @@
+int ioMapCodeCache(int size);

@@ -1,0 +1,60 @@
+#!/bin/sh
+
+USE_MMX=1
+
+for ac_option
+do
+case "$ac_option" in
+	--no-mmx)
+		USE_MMX=0
+		;;
+
+
+	-h | --help | -help)
+	cat << EOF
+Options:
+	--no-mmx           Compile libmpeg3 with no MMX support.
+EOF
+		exit 0
+		;;
+
+	*)
+		;;
+esac
+done
+
+
+echo "Configuring libmpeg3"
+
+cat > global_config << EOF
+# DO NOT EDIT.  EDIT ./configure INSTEAD AND RERUN IT.
+EOF
+
+
+if test -z "$CFLAGS"; then
+	echo >> global_config "CFLAGS = -O3 -funroll-loops -fomit-frame-pointer -I. -Ivideo -Iaudio"
+#	echo >> global_config "CFLAGS = -g -I. -Ivideo -Iaudio"
+fi
+
+cat >> global_config << EOF
+CC = gcc
+NASM = nasm
+EOF
+
+
+if [ ${USE_MMX} = 1 ]; then
+cat >> global_config << EOF
+CFLAGS += -DHAVE_MMX
+MMXOBJS = \
+	video/mmxidct.o \
+	video/reconmmx.o
+MMXOBJS2 = \
+	mmxidct.o \
+	reconmmx.o
+EOF
+fi
+
+
+
+
+echo "done"

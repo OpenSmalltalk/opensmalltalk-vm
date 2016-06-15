@@ -1,0 +1,7 @@
+# DO NOT EDIT.  EDIT ./configure INSTEAD AND RERUN IT.
+CFLAGS = -O3 -funroll-loops -fomit-frame-pointer -I. -Ivideo -Iaudio
+CC = gcc
+NASM = nasm
+CFLAGS += -DHAVE_MMX
+MMXOBJS = 	video/mmxidct.o 	video/reconmmx.o
+MMXOBJS2 = 	mmxidct.o 	reconmmx.o

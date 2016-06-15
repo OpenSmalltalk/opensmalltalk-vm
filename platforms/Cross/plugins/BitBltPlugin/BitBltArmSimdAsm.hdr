@@ -1,0 +1,1957 @@
+;
+; Copyright © 2013 Raspberry Pi Foundation
+; Copyright © 2013 RISC OS Open Ltd
+;
+; Permission to use, copy, modify, distribute, and sell this software and its
+; documentation for any purpose is hereby granted without fee, provided that
+; the above copyright notice appear in all copies and that both that
+; copyright notice and this permission notice appear in supporting
+; documentation, and that the name of the copyright holders not be used in
+; advertising or publicity pertaining to distribution of the software without
+; specific, written prior permission.  The copyright holders make no
+; representations about the suitability of this software for any purpose.  It
+; is provided "as is" without express or implied warranty.
+;
+; THE COPYRIGHT HOLDERS DISCLAIM ALL WARRANTIES WITH REGARD TO THIS
+; SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
+; FITNESS, IN NO EVENT SHALL THE COPYRIGHT HOLDERS BE LIABLE FOR ANY
+; SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+; WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN
+; AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING
+; OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS
+; SOFTWARE.
+;
+
+      [ :LNOT: :DEF: DebugData
+        GBLL    DebugData
+      ]
+      [ :LNOT: :DEF: DebugPld
+        GBLL    DebugPld
+      ]
+      [ :LNOT: :DEF: VerboseBuild
+        GBLL    VerboseBuild
+      ]
+
+; Flag bitfield definitions
+FLAG_NO_HALFTONE                *       0 :SHL: 0
+FLAG_SCALAR_HALFTONE            *       1 :SHL: 0
+FLAG_VECTOR_HALFTONE            *       2 :SHL: 0
+FLAG_NO_COLOUR_MAP              *       0 :SHL: 2
+FLAG_COLOUR_MAP                 *       1 :SHL: 2
+
+FLAG_DST_WRITEONLY              *       0 :SHL: 3
+FLAG_DST_READWRITE              *       1 :SHL: 3
+FLAG_DST_READONLY               *       2 :SHL: 3
+FLAG_DST_ACCESS                 *       3 :SHL: 3
+FLAG_SPILL_NO_LINE_VARS         *       0 :SHL: 5
+FLAG_SPILL_LINE_VARS_WIDE       *       1 :SHL: 5
+FLAG_SPILL_LINE_VARS_NON_WIDE   *       2 :SHL: 5
+FLAG_SPILL_LINE_VARS            *       3 :SHL: 5
+FLAG_EXPAND_SKEW                *       0 :SHL: 7
+FLAG_NO_EXPAND_SKEW             *       1 :SHL: 7
+FLAG_PROCESS_SERIAL             *       0 :SHL: 8  ; sub-word data is presented MS-aligned, and results are expected LS-aligned
+FLAG_PROCESS_PARALLEL           *       1 :SHL: 8  ; sub-word data retains its original alignment throughout (only useful if src & dest depths same)
+FLAG_MAX_128BIT_MACRO           *       0 :SHL: 9
+FLAG_MAX_256BIT_MACRO           *       1 :SHL: 9  ; particularly tight loops can sometimes benefit from being unrolled to allow 2x 128-bit blocks to be staggered
+FLAG_PRELOAD_DST                *       0 :SHL: 10
+FLAG_NO_PRELOAD_DST             *       1 :SHL: 10
+
+; Offsets into stack
+        GBLA    args_stack_offset
+args_stack_offset       SETA    9*4
+        GBLA    locals_stack_offset
+locals_stack_offset     SETA    0
+
+; Top-level macro arguments are held in variables for convenience
+        GBLA    src_bpp
+        GBLA    dst_w_bpp
+        GBLA    flags
+        GBLA    prefetch_distance
+        GBLS    leading_pixels_reg
+        GBLS    preload_offset_reg
+        GBLS    line_saved_regs
+        GBLS    init
+        GBLS    newline
+        GBLS    reinitwk
+        GBLS    cleanup
+; Derived values
+        GBLS    prefix
+        GBLA    dst_r_bpp
+        GBLA    src_bpp_shift
+        GBLA    dst_bpp_shift
+        GBLL    sub_byte
+        GBLA    num_line_saved_regs
+        GBLA    pix_per_block
+
+; Work registers - variables so they can be reassigned between functions
+; (should always be assigned in increasing register number though)
+        GBLA    wk0_num
+        GBLA    wk1_num
+        GBLA    wk2_num
+        GBLA    wk3_num
+        GBLA    wk4_num
+        GBLA    wk5_num
+        GBLA    wk6_num
+        GBLA    wk7_num
+        GBLA    wk8_num
+        GBLA    wk9_num
+        GBLA    wk10_num
+; String versions of the same
+        GBLS    wk0
+        GBLS    wk1
+        GBLS    wk2
+        GBLS    wk3
+        GBLS    wk4
+        GBLS    wk5
+        GBLS    wk6
+        GBLS    wk7
+        GBLS    wk8
+        GBLS    wk9
+        GBLS    wk10
+
+
+ [ DebugData :LOR: DebugPld
+        IMPORT  printf
+ ]
+        GBLL    PrintAtStartOfLine
+PrintAtStartOfLine SETL {TRUE}
+        MACRO
+        Print$cond $switch, $fmt, $reg0, $reg1, $reg2
+ [ Debug$switch
+      [ "$cond" <> "" :LAND: "$cond" <> "AL"
+        LCLS    opp
+opp     SETS    :REVERSE_CC: "$cond"
+        B$opp   %FT82
+      ]
+        PUSH    {r12,r14}
+        PUSH    {r0-r12}
+        ADD     ip, sp, #15*4
+        STR     ip, [sp, #13*4]
+        MRS     v1, CPSR
+      [ "$reg0" <> ""
+        LDR     a2, [sp, #:RCONST:$reg0 * 4]
+      ]
+      [ "$reg1" <> ""
+        LDR     a3, [sp, #:RCONST:$reg1 * 4]
+      ]
+      [ "$reg2" <> ""
+        LDR     a4, [sp, #:RCONST:$reg2 * 4]
+      ]
+        ADR     a1, %FT80
+        ADR     lr, %FT81
+        B       printf
+80
+      [ PrintAtStartOfLine
+        =       "$switch: "
+      ]
+        =       "$fmt", 0
+PrintAtStartOfLine SETL "$fmt" :RIGHT: 1 = "\n"
+        ALIGN
+81      MSR     CPSR_cxsf, v1
+        POP     {r0-r12}
+        ADD     sp, sp, #4
+        POP     {r14}
+82
+ ]
+        MEND
+
+ [ :LNOT: :DEF: |objasm$version| :LAND: :LNOT: :DEF: |ads$version|
+ ; Assume asasm, which is lacking a number of key opcodes
+
+        MACRO
+$label  SEL     $Rd, $Rn, $Rm
+$label  DCI     &E6800FB0 :OR: (:RCONST:$Rn :SHL: 16) :OR: (:RCONST:$Rd :SHL: 12) :OR: (:RCONST:$Rm :SHL: 0)
+        MEND
+
+        MACRO
+$label  UADD8   $Rd, $Rn, $Rm
+$label  DCI     &E6500F90 :OR: (:RCONST:$Rn :SHL: 16) :OR: (:RCONST:$Rd :SHL: 12) :OR: (:RCONST:$Rm :SHL: 0)
+        MEND
+
+        MACRO
+$label  USUB8   $Rd, $Rn, $Rm
+$label  DCI     &E6500FF0 :OR: (:RCONST:$Rn :SHL: 16) :OR: (:RCONST:$Rd :SHL: 12) :OR: (:RCONST:$Rm :SHL: 0)
+        MEND
+
+        MACRO
+$label  USUB16  $Rd, $Rn, $Rm
+$label  DCI     &E6500F70 :OR: (:RCONST:$Rn :SHL: 16) :OR: (:RCONST:$Rd :SHL: 12) :OR: (:RCONST:$Rm :SHL: 0)
+        MEND
+
+        MACRO
+$label  SETEND $endian
+        IF "$endian" = "LE"
+$label  DCI     &F1010000
+        ELIF "$endian" = "BE"
+$label  DCI     &F1010200
+        ELSE
+        !       1, "Unrecognised SETEND endianness"
+        ENDIF
+        MEND
+
+ ]
+
+; Add a constant, using a minimal number of ARM instructions
+; Doesn't handle cases where bit 31 of constant is set, but we're not expecting any of those
+        MACRO
+$lab    AddL    $dst, $src, $const
+        LCLA    tmp
+tmp     SETA    $const
+tmp     SETA    tmp :OR: (((tmp :AND: &55555555) :SHL: 1) + ((tmp :AND: &AAAAAAAA) :SHR: 1))
+        LCLA    lsb
+lsb     SETA    tmp :AND::NOT: (tmp-1)
+tmp     SETA    tmp :OR: (tmp :SHR: 2)
+tmp     SETA    tmp :OR: (tmp :SHR: 4)
+tmp     SETA    tmp :OR: (tmp :SHR: 8)
+tmp     SETA    tmp :OR: (tmp :SHR: 16)
+        LCLA    msb
+msb     SETA    (tmp+1) :AND::NOT: tmp
+        LCLS    reg
+reg     SETS    "$src"
+$lab
+        WHILE   lsb < msb
+        ADD     $dst, $reg, #($const) :AND: (lsb * &FF)
+lsb     SETA    lsb * 256
+reg     SETS    "$dst"
+        WEND
+        MEND
+
+; Find log2 of a variable
+        MACRO
+$out    Log2    $in
+      [ $in = 0
+$out    SETA    -1
+      |
+        LCLA    tmp
+tmp     SETA    $in
+$out    SETA    0
+        WHILE   tmp > 1
+tmp     SETA    tmp / 2
+$out    SETA    $out + 1
+        WEND
+      ]
+        MEND
+
+; Find max of two numbers
+        MACRO
+$out    Max     $a, $b
+      [ $a > $b
+$out    SETA    $a
+      |
+$out    SETA    $b
+      ]
+        MEND
+
+; Find if an integer is the last in a group of a power-of-2 integers
+        MACRO
+$result IsEndOfGroup $index, $size
+        LCLA    index
+index   SETA    $index
+        LCLA    size
+size    SETA    $size
+      [ size < 2
+$result SETL    {TRUE}
+      |
+$result SETL    (index :AND::NOT: (index + 1)) :AND: (size / 2) > 0
+      ]
+        MEND
+
+; Convert an integer to a decimal string
+        MACRO
+$str    DecimalStr $num
+        LCLA    n
+n       SETA    $num
+$str    SETS    ""
+        WHILE   n <> 0
+$str    SETS    :CHR:(48 + n % 10) :CC: $str
+n       SETA    n / 10
+        WEND
+     IF :LEN: $str = 0
+$str    SETS    "0"
+  ENDIF
+        MEND
+
+; Convert a wk register index into the name of the physical register
+        MACRO
+$str    LookupWk $index
+        LCLS    wk
+wk      DecimalStr $index
+wk      SETS    "wk$wk"
+$str    SETS    $wk
+        MEND
+
+; Assign the wk registers from a list of registers
+        MACRO
+        AssignWk $list
+        LCLA    wk_num
+        LCLS    wk
+        LCLS    tail
+        LCLS    reg
+wk_num  SETA    0
+tail    SETS    "$list,"
+        WHILE   :LEN: tail > 0
+wk      DecimalStr wk_num
+wk_num  SETA    wk_num + 1
+reg     SETS    ""
+        WHILE   tail :LEFT: 1 <> ","
+reg     SETS    reg :CC: (tail :LEFT: 1)
+tail    SETS    tail :RIGHT: (:LEN:tail - 1)
+        WEND
+tail    SETS    tail :RIGHT: (:LEN:tail - 1)
+wk$wk._num SETA :RCONST: $reg
+wk$wk   DecimalStr wk$wk._num
+wk$wk   SETS    "r" :CC: wk$wk
+        WEND
+        ; Ensure the remaining ones aren't used
+        WHILE   wk_num <= 10
+wk      DecimalStr wk_num
+wk_num  SETA    wk_num + 1
+wk$wk._num SETA -1
+wk$wk   SETS    "invalid_register_wk$wk"
+        WEND
+        MEND
+
+; See if a given register name is in a comma-separated list of registers
+        MACRO
+$out    RegIsInList $reg, $list
+        LCLS    tail
+tail    SETS    "$list,"
+        WHILE   :LEN: tail > 0
+     [ :LEN: "$reg," <= :LEN: tail
+      [ "$reg," = tail :LEFT: :LEN: "$reg,"
+$out    SETL    {TRUE}
+        MEXIT
+      ]
+     ]
+        WHILE   tail :LEFT: 1 <> ","
+tail    SETS    tail :RIGHT: (:LEN:tail - 1)
+        WEND
+tail    SETS    tail :RIGHT: (:LEN:tail - 1)
+        WEND
+$out    SETL    {FALSE}
+        MEND
+
+; Count how many registers are in a comma-separated list of registers
+        MACRO
+$out    CountRegsInList $list
+$out    SETA    1
+        LCLS    tail
+tail    SETS    "$list"
+        WHILE   :LEN: tail > 0
+      [ tail :LEFT: 1 = ","
+$out    SETA    $out + 1
+      ]
+tail    SETS    tail :RIGHT: (:LEN:tail -1)
+        WEND
+        MEND
+
+; Data read macros
+
+        MACRO
+$lab    ReadFirstSubWord $base, $data, $carry, $pixels, $fixed_skew, $skew, $tmp
+$lab
+ [ src_bpp > 0 :LAND: src_bpp < 32
+        LCLS    reg0
+reg0    LookupWk $data
+     IF (flags :AND: FLAG_NO_EXPAND_SKEW) > 0
+      [ "$pixels" <> "#0"
+        AND     $tmp, $pixels, #32/src_bpp - 1
+        CMP     $tmp, $skew, LSR #src_bpp_shift
+        PrintHI Data, "ReadFirstSubWord: left@%p", $base
+        LDRHI   $reg0, [$base], #4
+        PrintHI Data, " %08X\n", $reg0
+      ]
+        CMP     $skew, #0
+        PrintHI Data, "ReadFirstSubWord: right@%p", $base
+        LDRHI   $carry, [$base], #4
+        PrintHI Data, " %08X\n", $carry
+        CMP     $tmp, #0
+        BEQ     %FT01
+        RSB     $tmp, $skew, #32
+        MOV     $reg0, $reg0, LSL $skew
+        ORR     $reg0, $reg0, $carry, LSR $tmp
+        Print   Data, "ReadFirstSubWord: skew %u -> %08X\n", $skew, $reg0
+      [ flags :AND: FLAG_PROCESS_PARALLEL = 0 :LAND: "$pixels" <> "#0"
+        AND     $tmp, $pixels, #32/src_bpp - 1
+        MOV     $tmp, $tmp, LSL #src_bpp_shift
+        MOV     $reg0, $reg0, ROR $tmp
+      ]
+01
+   ELIF $fixed_skew == 0
+     [ "$pixels" <> "#0"
+        ANDS    $tmp, $pixels, #32/src_bpp - 1
+      [ flags :AND: FLAG_PROCESS_PARALLEL = 0
+        BEQ     %FT01
+        Print   Data, "ReadFirstSubWord: left@%p", $base
+        LDR     $reg0, [$base], #4
+        Print   Data, " %08X\n", $reg0
+        MOV     $tmp, $tmp, LSL #src_bpp_shift
+        MOV     $reg0, $reg0, ROR $tmp
+01
+      |
+        PrintNE Data, "ReadFirstSubWord: left@%p", $base
+        LDRNE   $reg0, [$base], #4
+        PrintNE Data, " %08X\n", $reg0
+      ]
+     ]
+   ELSE
+      [ "$pixels" <> "#0"
+        AND     $tmp, $pixels, #32/src_bpp - 1
+        CMP     $tmp, #$fixed_skew/src_bpp
+        PrintHI Data, "ReadFirstSubWord: left@%p", $base
+        LDRHI   $reg0, [$base], #4
+        PrintHI Data, " %08X\n", $reg0
+      ]
+        Print   Data, "ReadFirstSubWord: right@%p", $base
+        LDR     $carry, [$base], #4
+        Print   Data, " %08X\n", $carry
+        CMP     $tmp, #0
+        BEQ     %FT01
+        MOV     $reg0, $reg0, LSL #$fixed_skew
+        ORR     $reg0, $reg0, $carry, LSR #32-$fixed_skew
+        Print   Data, "ReadFirstSubWord: skew $fixed_skew -> %08X\n", $reg0
+      [ flags :AND: FLAG_PROCESS_PARALLEL = 0
+        MOV     $tmp, $tmp, LSL #src_bpp_shift
+        MOV     $reg0, $reg0, ROR $tmp
+      ]
+01
+  ENDIF
+ ]
+        MEND
+
+        MACRO
+$lab    ReadLastSubWord $base, $data, $carry, $pixels, $fixed_skew, $skew, $tmp
+$lab
+ [ src_bpp > 0 :LAND: src_bpp < 32
+        LCLS    reg0
+reg0    LookupWk $data
+     IF (flags :AND: FLAG_NO_EXPAND_SKEW) > 0
+        CMP     $skew, #0
+        BHI     %FT01
+        TST     $pixels, #32/src_bpp - 1
+        PrintNE Data, "ReadLastSubWord: next@%p", $base
+        LDRNE   $reg0, [$base], #4
+        PrintNE Data, " %08X\n", $reg0
+        B       %FT02
+01
+        Print   Data, "ReadLastSubWord: left %08X\n", $carry
+        MOV     $reg0, $carry, LSL $skew
+        AND     $tmp, $pixels, #32/src_bpp - 1
+        RSB     $tmp, $tmp, #32/src_bpp
+        CMP     $tmp, $skew, LSR #src_bpp_shift
+        BHS     %FT02
+        Print   Data, "ReadLastSubWord: right@%p", $base
+        LDR     $carry, [$base], #4
+        Print   Data, " %08X\n", $carry
+        RSB     $tmp, $skew, #32
+        ORR     $reg0, $reg0, $carry, LSR $tmp
+        Print   Data, "ReadLastSubWord: skew %u -> %08X\n", $skew, $reg0
+02
+   ELIF $fixed_skew == 0
+        TST     $pixels, #32/src_bpp - 1
+        PrintNE Data, "ReadLastSubWord: next@%p", $base
+        LDRNE   $reg0, [$base], #4
+        PrintNE Data, " %08X\n", $reg0
+   ELSE
+        Print   Data, "ReadLastSubWord: left %08X\n", $carry
+        MOV     $reg0, $carry, LSL #$fixed_skew
+        AND     $tmp, $pixels, #32/src_bpp - 1
+        RSB     $tmp, $tmp, #32/src_bpp
+        CMP     $tmp, #$fixed_skew/src_bpp
+        BHS     %FT02
+        Print   Data, "ReadLastSubWord: right@%p", $base
+        LDR     $carry, [$base], #4
+        Print   Data, " %08X\n", $carry
+        ORR     $reg0, $reg0, $carry, LSR #32-$fixed_skew
+        Print   Data, "ReadLastSubWord: skew $fixed_skew -> %08X\n", $reg0
+02
+  ENDIF
+ ]
+        MEND
+
+        MACRO
+$lab    Read1Word $base, $first, $carry, $fixed_skew, $skew, $tmp
+        LCLS    reg0
+reg0    LookupWk $first
+$lab
+     IF (flags :AND: FLAG_NO_EXPAND_SKEW) > 0
+        TEQ     skew, #0
+        BNE     %FT01
+        Print   Data, "Read1Word: next@%p", $base
+        LDR     $reg0, [$base], #4
+        Print   Data, " %08X\n", $reg0
+        B       %FT02
+01
+        Print   Data, "Read1Word: left %08X, right@%p", $carry, $base
+        MOV     $reg0, $carry, LSL $skew
+        LDR     $carry, [$base], #4
+        Print   Data, " %08X", $carry
+        RSB     $tmp, $skew, #32 ; no benefit to precalculating this, will stall anyway from LDR
+        ORR     $reg0, $reg0, $carry, LSR $tmp
+        Print   Data, ", skew %u -> %08X\n", $skew, $reg0
+02
+   ELIF $fixed_skew = 0
+        Print   Data, "Read1Word: next@%p", $base
+        LDR     $reg0, [$base], #4
+        Print   Data, " %08X\n", $reg0
+   ELSE
+        Print   Data, "Read1Word: left %08X, right@%p", $carry, $base
+        MOV     $reg0, $carry, LSL #$fixed_skew
+        LDR     $carry, [$base], #4
+        Print   Data, " %08X", $carry
+        ORR     $reg0, $reg0, $carry, LSR #32-$fixed_skew
+        Print   Data, ", skew $fixed_skew -> %08X\n", $reg0
+  ENDIF
+        MEND
+
+        MACRO
+$lab    Read2Words $base, $first, $carry, $fixed_skew, $skew, $tmp
+        LCLS    reg0
+reg0    LookupWk $first
+        LCLS    reg1
+reg1    LookupWk $first+1
+$lab
+     IF (flags :AND: FLAG_NO_EXPAND_SKEW) > 0
+        TEQ     skew, #0
+        BNE     %FT01
+        Print   Data, "Read2Words: next@%p", $base
+        LDMIA   $base!, {$reg0, $reg1}
+        Print   Data, " %08X %08X\n", $reg0, $reg1
+        B       %FT02
+01
+        Print   Data, "Read2Words: left %08X, right@%p", $carry, $base
+        MOV     $reg0, $carry, LSL $skew
+        LDMIA   $base!, {$reg1, $carry}
+        Print   Data, " %08X %08X", $reg1, $carry
+        RSB     $tmp, $skew, #32 ; no benefit to precalculating this, will stall anyway from LDM
+        ORR     $reg0, $reg0, $reg1, LSR $tmp
+        MOV     $reg1, $reg1, LSL $skew
+        ORR     $reg1, $reg1, $carry, LSR $tmp
+        Print   Data, ", skew %u -> %08X %08X\n", $skew, $reg0, $reg1
+02
+   ELIF $fixed_skew = 0
+        Print   Data, "Read2Words: next@%p", $base
+        LDMIA   $base!, {$reg0, $reg1}
+        Print   Data, " %08X %08X\n", $reg0, $reg1
+   ELSE
+        Print   Data, "Read2Words: left %08X, right@%p", $carry, $base
+        MOV     $reg0, $carry, LSL #$fixed_skew
+        LDMIA   $base!, {$reg1, $carry}
+        Print   Data, " %08X %08X", $reg1, $carry
+        ORR     $reg0, $reg0, $reg1, LSR #32-$fixed_skew
+        MOV     $reg1, $reg1, LSL #$fixed_skew
+        ORR     $reg1, $reg1, $carry, LSR #32-$fixed_skew
+        Print   Data, ", skew $fixed_skew -> %08X %08X\n", $reg0, $reg1
+  ENDIF
+        MEND
+
+        MACRO
+$lab    Read4Words $base, $first, $carry, $fixed_skew, $skew, $tmp
+        LCLS    reg0
+reg0    LookupWk $first
+        LCLS    reg1
+reg1    LookupWk $first+1
+        LCLS    reg2
+reg2    LookupWk $first+2
+        LCLS    reg3
+reg3    LookupWk $first+3
+$lab
+     IF (flags :AND: FLAG_NO_EXPAND_SKEW) > 0
+        TEQ     skew, #0
+        BNE     %FT01
+        Print   Data, "Read4Words: next@%p", $base
+        LDMIA   $base!, {$reg0, $reg1, $reg2, $reg3}
+        Print   Data, " %08X %08X", $reg0, $reg1
+        Print   Data, " %08X %08X\n", $reg2, $reg3
+        B       %FT02
+01
+        Print   Data, "Read4Words: left %08X, right@%p", $carry, $base
+        LDMIA   $base!, {$reg1, $reg2}
+        Print   Data, " %08X %08X", $reg1, $reg2
+        MOV     $reg0, $carry, LSL $skew
+        RSB     $tmp, $skew, #32
+        LDMIA   $base!, {$reg3, $carry}
+        Print   Data, " %08X %08X", $reg3, $carry
+        ORR     $reg0, $reg0, $reg1, LSR $tmp
+        MOV     $reg1, $reg1, LSL $skew
+        ORR     $reg1, $reg1, $reg2, LSR $tmp
+        MOV     $reg2, $reg2, LSL $skew
+        ORR     $reg2, $reg2, $reg3, LSR $tmp
+        MOV     $reg3, $reg3, LSL $skew
+        ORR     $reg3, $reg3, $carry, LSR $tmp
+        Print   Data, ", skew %u -> %08X %08X", $skew, $reg0, $reg1
+        Print   Data, " %08X %08X\n", $reg2, $reg3
+02
+   ELIF $fixed_skew = 0
+        Print   Data, "Read4Words: next@%p", $base
+        LDMIA   $base!, {$reg0, $reg1, $reg2, $reg3}
+        Print   Data, " %08X %08X", $reg0, $reg1
+        Print   Data, " %08X %08X\n", $reg2, $reg3
+   ELSE
+        Print   Data, "Read4Words: left %08X, right@%p", $carry, $base
+        LDMIA   $base!, {$reg1, $reg2}
+        Print   Data, " %08X %08X", $reg1, $reg2
+        MOV     $reg0, $carry, LSL #$fixed_skew
+        LDMIA   $base!, {$reg3, $carry}
+        Print   Data, " %08X %08X", $reg3, $carry
+        ORR     $reg0, $reg0, $reg1, LSR #32-$fixed_skew
+        MOV     $reg1, $reg1, LSL #$fixed_skew
+        ORR     $reg1, $reg1, $reg2, LSR #32-$fixed_skew
+        MOV     $reg2, $reg2, LSL #$fixed_skew
+        ORR     $reg2, $reg2, $reg3, LSR #32-$fixed_skew
+        MOV     $reg3, $reg3, LSL #$fixed_skew
+        ORR     $reg3, $reg3, $carry, LSR #32-$fixed_skew
+        Print   Data, ", skew $fixed_skew -> %08X %08X", $reg0, $reg1
+        Print   Data, " %08X %08X\n", $reg2, $reg3
+  ENDIF
+        MEND
+
+        MACRO
+$lab    Read8Words $base, $first, $carry, $fixed_skew, $skew, $tmp
+        LCLS    reg0
+reg0    LookupWk $first
+        LCLS    reg1
+reg1    LookupWk $first+1
+        LCLS    reg2
+reg2    LookupWk $first+2
+        LCLS    reg3
+reg3    LookupWk $first+3
+        LCLS    reg4
+reg4    LookupWk $first+4
+        LCLS    reg5
+reg5    LookupWk $first+5
+        LCLS    reg6
+reg6    LookupWk $first+6
+        LCLS    reg7
+reg7    LookupWk $first+7
+$lab
+     IF (flags :AND: FLAG_NO_EXPAND_SKEW) > 0
+        TEQ     skew, #0
+        BNE     %FT01
+        LDMIA   $base!, {$reg0, $reg1, $reg2, $reg3, $reg4, $reg5, $reg6, $reg7}
+        B       %FT02
+01      LDMIA   $base!, {$reg1, $reg2, $reg3, $reg4}
+        MOV     $reg0, $carry, LSL $skew
+        RSB     $tmp, $skew, #32
+        LDMIA   $base!, {$reg5, $reg6, $reg7, $carry}
+        ORR     $reg0, $reg0, $reg1, LSR $tmp
+        MOV     $reg1, $reg1, LSL $skew
+        ORR     $reg1, $reg1, $reg2, LSR $tmp
+        MOV     $reg2, $reg2, LSL $skew
+        ORR     $reg2, $reg2, $reg3, LSR $tmp
+        MOV     $reg3, $reg3, LSL $skew
+        ORR     $reg3, $reg3, $reg4, LSR $tmp
+        MOV     $reg4, $reg4, LSL $skew
+        ORR     $reg4, $reg4, $reg5, LSR $tmp
+        MOV     $reg5, $reg5, LSL $skew
+        ORR     $reg5, $reg5, $reg6, LSR $tmp
+        MOV     $reg6, $reg6, LSL $skew
+        ORR     $reg6, $reg6, $reg7, LSR $tmp
+        MOV     $reg7, $reg7, LSL $skew
+        ORR     $reg7, $reg7, $carry, LSR $tmp
+02
+   ELIF $fixed_skew = 0
+        LDMIA   $base!, {$reg0, $reg1, $reg2, $reg3, $reg4, $reg5, $reg6, $reg7}
+   ELSE
+        LDMIA   $base!, {$reg1, $reg2, $reg3, $reg4}
+        MOV     $reg0, $carry, LSL #$fixed_skew
+        LDMIA   $base!, {$reg5, $reg6, $reg7, $carry}
+        ORR     $reg0, $reg0, $reg1, LSR #32-$fixed_skew
+        MOV     $reg1, $reg1, LSL #$fixed_skew
+        ORR     $reg1, $reg1, $reg2, LSR #32-$fixed_skew
+        MOV     $reg2, $reg2, LSL #$fixed_skew
+        ORR     $reg2, $reg2, $reg3, LSR #32-$fixed_skew
+        MOV     $reg3, $reg3, LSL #$fixed_skew
+        ORR     $reg3, $reg3, $reg4, LSR #32-$fixed_skew
+        MOV     $reg4, $reg4, LSL #$fixed_skew
+        ORR     $reg4, $reg4, $reg5, LSR #32-$fixed_skew
+        MOV     $reg5, $reg5, LSL #$fixed_skew
+        ORR     $reg5, $reg5, $reg6, LSR #32-$fixed_skew
+        MOV     $reg6, $reg6, LSL #$fixed_skew
+        ORR     $reg6, $reg6, $reg7, LSR #32-$fixed_skew
+        MOV     $reg7, $reg7, LSL #$fixed_skew
+        ORR     $reg7, $reg7, $carry, LSR #32-$fixed_skew
+  ENDIF
+        MEND
+
+; Data write macros
+
+        MACRO
+$lab    WriteFirstSubWord $base, $data, $pixels, $tmp1, $tmp2
+        ASSERT (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY
+        ; It is assumed that there is at least 1 pixel to write
+        LCLS    reg0
+reg0    LookupWk $data
+        Print   Data, "WriteFirstSubWord: %08X / %u pixels @%p\n", $reg0, $pixels, $base
+$lab    ; Pixels should be LS-aligned whether processing was done in parallel or serial
+     IF dst_w_bpp < 8
+        AND     $tmp1, $pixels, #32/dst_w_bpp - 1
+        MOV     $tmp1, $tmp1, LSL #dst_bpp_shift
+        MOV     $tmp2, #-1
+        MOV     $tmp2, $tmp2, LSL $tmp1
+        LDR     $tmp1, [$base]
+        BIC     $reg0, $reg0, $tmp2
+        AND     $tmp1, $tmp1, $tmp2
+        ORR     $tmp1, $tmp1, $reg0
+        STR     $tmp1, [$base], #4
+      [ "$reinitwk" <> ""
+        $prefix._$reinitwk "$reg0,$tmp1,$tmp2"
+      ]
+   ELIF dst_w_bpp = 8
+        ; xxaabbcc -> xx aa bbcc  byte write at +2  halfword write at +0
+        ; xxxxaabb -> xxxx  aabb                    halfword write at +0
+        ; xxxxxxaa -> xxxxxx  aa  byte write at +0
+        MOVS    $tmp1, $pixels, LSL #31 ; C = halfword, N = byte
+        BHI     %FT03
+        BCS     %FT02
+01      STRB    $reg0, [$base], #4
+        B       %FT00
+02      STRH    $reg0, [$base], #4
+        B       %FT00
+03      MOV     $tmp1, $reg0, LSR #16
+        STRH    $reg0, [$base], #2
+        STRB    $tmp1, [$base], #2
+00
+      [ "$reinitwk" <> ""
+        $prefix._$reinitwk "$tmp1"
+      ]
+   ELIF dst_w_bpp = 16
+        STRH    $reg0, [$base], #4
+  ENDIF
+        MEND
+
+        MACRO
+$lab    WriteLastSubWord $base, $data, $pixels, $aligned, $tmp1, $tmp2
+        ASSERT (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY
+        ; It is assumed that there is at least 1 pixel to write
+        LCLS    reg0
+reg0    LookupWk $data
+      [ DebugData
+        PUSH    {lr}
+        AND     lr, $pixels, #32/dst_w_bpp - 1
+        Print   Data, "WriteLastSubWord: %08X / %u pixels @%p $aligned\n", $reg0, lr, $base
+        POP     {lr}
+      ]
+$lab    ; If pixels were processed in parallel, they'll still be MS-aligned, else they'll be LS-aligned
+     IF dst_w_bpp < 8
+        AND     $tmp1, $pixels, #32/dst_w_bpp - 1
+        MOV     $tmp1, $tmp1, LSL #dst_bpp_shift
+      [ "$aligned" = "ls_aligned"
+        RSB     $tmp2, $tmp1, #32
+        MOV     $reg0, $reg0, LSL $tmp2
+      ]
+        MOV     $tmp2, #-1
+        MOV     $tmp2, $tmp2, LSR $tmp1
+        LDR     $tmp1, [$base]
+      [ "$aligned" = "ms_aligned"
+        BIC     $reg0, $reg0, $tmp2
+      ]
+        AND     $tmp1, $tmp1, $tmp2
+        ORR     $tmp1, $tmp1, $reg0
+        STR     $tmp1, [$base], #4
+      [ "$reinitwk" <> ""
+        $prefix._$reinitwk "$reg0,$tmp1,$tmp2"
+      ]
+   ELIF dst_w_bpp = 8
+        ; MS aligned case:
+        ; aaxxxxxx -> aa  xxxxxx                        byte write at +3
+        ; aabbxxxx -> aabb  xxxx  halfword write at +2
+        ; aabbccxx -> aabb cc xx  halfword write at +2  byte write at +1
+        ; LS aligned case:
+        ; xxaabbcc -> aabb cc xx  byte write at +1  halfword write at +2
+        ; xxxxaabb -> aabb  xxxx                    halfword write at +2
+        ; xxxxxxaa -> aa  xxxxxx  byte write at +3
+        MOVS    $tmp1, $pixels, LSL #31 ; C = halfword, N = byte
+        BHI     %FT03
+        BCS     %FT02
+      [ "$aligned" = "ms_aligned"
+01      MOV     $reg0, $reg0, LSR #24
+        STRB    $reg0, [$base, #3]
+        B       %FT04
+02      MOV     $reg0, $reg0, LSR #16
+        STRH    $reg0, [$base, #2]
+        B       %FT04
+03      MOV     $tmp1, $reg0, LSR #8
+        MOV     $reg0, $reg0, LSR #16
+        STRB    $tmp1, [$base, #1]
+        STRH    $reg0, [$base, #2]
+04
+      [ "$reinitwk" <> ""
+        $prefix._$reinitwk "$reg0,$tmp1"
+      ]
+      |
+01      STRB    $reg0, [$base, #3]
+        B       %FT04
+02      STRH    $reg0, [$base, #2]
+        B       %FT04
+03      MOV     $tmp1, $reg0, LSR #8
+        STRB    $reg0, [$base, #1]
+        STRH    $tmp1, [$base, #2]
+04
+      [ "$reinitwk" <> ""
+        $prefix._$reinitwk "$tmp1"
+      ]
+      ]
+        ADD     $base, $base, #4
+   ELIF dst_w_bpp = 16
+        TST     $pixels, #1
+        BEQ     %FT01
+      [ "$aligned" = "ms_aligned"
+        MOV     $reg0, $reg0, LSR #16
+      ]
+        STRH    $reg0, [$base, #2]
+        ADD     $base, $base, #4
+      [ "$aligned" = "ms_aligned" :LAND: "$reinitwk" <> ""
+        $prefix._$reinitwk "$reg0"
+      ]
+01
+  ENDIF
+        MEND
+
+        MACRO
+$lab    Write1Word $base, $first
+        LCLS    reg0
+reg0    LookupWk $first
+        Print   Data, "Write1Word: %08X @%p\n", $reg0, $base
+$lab
+        ASSERT (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY
+     IF (flags :AND: FLAG_DST_ACCESS) = FLAG_DST_READWRITE
+        STR     $reg0, [$base, #-4] ; base is assumed previously updated during read
+   ELSE
+        STR     $reg0, [$base], #4
+  ENDIF
+        MEND
+
+        MACRO
+$lab    Write2Words $base, $first, $second
+        LCLS    reg0
+reg0    LookupWk $first
+        LCLS    reg1
+      [ "$second" <> ""
+reg1    LookupWk $second
+      |
+reg1    LookupWk $first+1
+      ]
+        Print   Data, "Write2Words: %08X %08X @%p\n", $reg0, $reg1, $base
+$lab
+        ASSERT (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY
+     IF (flags :AND: FLAG_DST_ACCESS) = FLAG_DST_READWRITE
+        STMDB   $base, {$reg0, $reg1} ; base is assumed previously updated during read
+   ELSE
+        STMIA   $base!, {$reg0, $reg1}
+  ENDIF
+        MEND
+
+        MACRO
+$lab    Write4Words $base, $first, $second, $third, $fourth
+        LCLS    reg0
+reg0    LookupWk $first
+        LCLS    reg1
+      [ "$second" <> ""
+reg1    LookupWk $second
+      |
+reg1    LookupWk $first+1
+      ]
+        LCLS    reg2
+      [ "$third" <> ""
+reg2    LookupWk $third
+      |
+reg2    LookupWk $first+2
+      ]
+        LCLS    reg3
+      [ "$fourth" <> ""
+reg3    LookupWk $fourth
+      |
+reg3    LookupWk $first+3
+      ]
+        Print   Data, "Write4Words: %08X %08X", $reg0, $reg1
+        Print   Data, " %08X %08X @%p\n", $reg2, $reg3, $base
+$lab
+        ASSERT (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY
+     IF (flags :AND: FLAG_DST_ACCESS) = FLAG_DST_READWRITE
+        STMDB   $base, {$reg0, $reg1, $reg2, $reg3} ; base is assumed previously updated during read
+   ELSE
+        STMIA   $base!, {$reg0, $reg1, $reg2, $reg3}
+  ENDIF
+        MEND
+
+; Block or sub-block macros
+
+        MACRO
+$lab    ProcessLeading31Bits $pixels, $fixed_skew
+$lab    ReadFirstSubWord src, 0, carry, $pixels, $fixed_skew, skew, scratch
+  [ dst_w_bpp < 32
+        ANDS    scratch, $pixels, #32/dst_w_bpp - 1
+        BEQ     %FT02
+     IF (flags :AND: FLAG_DST_ACCESS) = FLAG_DST_READWRITE
+        LDR     $wk1, [dst]
+   ELIF (flags :AND: FLAG_DST_ACCESS) = FLAG_DST_READONLY
+        LDR     $wk1, [dst], #4
+  ENDIF
+    [ flags :AND: FLAG_PROCESS_PARALLEL = 0
+      [ (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_WRITEONLY
+        MOV     scratch, scratch, LSL #dst_bpp_shift
+        MOV     $wk1, $wk1, ROR scratch
+      ]
+        LCLA    pow2
+        LCLS    pow2str
+pow2    SETA    dst_w_bpp
+        WHILE   pow2 <= 16
+pow2str DecimalStr pow2
+        TST     $pixels, #pow2/dst_w_bpp
+        BEQ     %FT01
+        $prefix._$pow2str.bits $wk0, $wk1, $fixed_skew
+01
+pow2    SETA    pow2 * 2
+        WEND
+      [ (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY
+        WriteFirstSubWord dst, 1, $pixels, scratch, $wk2
+      ]
+    |
+        ASSERT (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY ; Can't really do read-only 32-bit processing without an indication of which bits are valid
+        $prefix._32bits $wk0, $wk1, $fixed_skew ; and return result in $wk0
+        WriteFirstSubWord dst, 0, $pixels, scratch, $wk2
+    ]
+02
+  ]
+        MEND
+
+        MACRO
+$lab    ProcessLeading127Bits $pixels, $fixed_skew
+$lab    ProcessLeading31Bits $pixels, $fixed_skew
+        TST     $pixels, #32/dst_w_bpp
+        BEQ     %FT01
+        $prefix._32bits $wk0, memory, $fixed_skew ; and store result to memory
+01      TST     $pixels, #64/dst_w_bpp
+        BEQ     %FT01
+        $prefix._64bits $wk0, $fixed_skew
+01
+        MEND
+
+        MACRO
+$lab    ProcessTrailing127Bits $pixels, $fixed_skew
+$lab
+        TST     $pixels, #128/dst_w_bpp - 1
+        BEQ     %FT02
+    [ src_bpp > 0
+      [ 16 * dst_w_bpp / src_bpp >= 64
+        ReadLastSubWord src, 0, carry, $pixels, $fixed_skew, skew, scratch
+      ]
+    ]
+        TST     $pixels, #64/dst_w_bpp
+        BEQ     %FT01
+        $prefix._64bits $wk0, $fixed_skew
+01
+    [ src_bpp > 0
+      [ 16 * dst_w_bpp / src_bpp = 32
+        TST     $pixels, #64/dst_w_bpp - 1
+        BEQ     %FT01
+        ReadLastSubWord src, 0, carry, $pixels, $fixed_skew, skew, scratch
+01
+      ]
+    ]
+        TST     $pixels, #32/dst_w_bpp
+        BEQ     %FT01
+        $prefix._32bits $wk0, memory, $fixed_skew ; and store result to memory
+01
+  [ dst_w_bpp < 32
+        TST     $pixels, #32/dst_w_bpp - 1
+        BEQ     %FT02
+     IF (flags :AND: FLAG_DST_ACCESS) = FLAG_DST_READWRITE
+        LDR     $wk1, [dst]
+   ELIF (flags :AND: FLAG_DST_ACCESS) = FLAG_DST_READONLY
+        LDR     $wk1, [dst], #4
+  ENDIF
+    [ flags :AND: FLAG_PROCESS_PARALLEL = 0
+        LCLA    pow2
+        LCLS    pow2str
+pow2    SETA    16
+        WHILE   pow2 >= dst_w_bpp
+pow2str DecimalStr pow2
+    [ src_bpp > 0
+      [ 16 * dst_w_bpp / src_bpp = pow2
+        TST     $pixels, #2*pow2/dst_w_bpp - 1
+        BEQ     %FT01
+        ReadLastSubWord src, 0, carry, $pixels, $fixed_skew, skew, scratch
+01
+      ]
+    ]
+        TST     $pixels, #pow2/dst_w_bpp
+        BEQ     %FT01
+        $prefix._$pow2str.bits $wk0, $wk1, $fixed_skew
+01
+pow2    SETA    pow2 / 2
+        WEND
+      [ (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY
+        WriteLastSubWord dst, 1, $pixels, ls_aligned, scratch, $wk0
+      ]
+    |
+        ASSERT (flags :AND: FLAG_DST_ACCESS) <> FLAG_DST_READONLY ; Can't really do read-only 32-bit processing without an indication of which bits are valid
+        ReadLastSubWord src, 0, carry, $pixels, $fixed_skew, skew, scratch
+        $prefix._32bits $wk0, $wk1, $fixed_skew ; and return result in $wk0
+        WriteLastSubWord dst, 0, $pixels, ms_aligned, scratch, $wk1
+    ]
+  ]
+02
+        MEND
+
+
+        MACRO
+$lab    FunctionPrologue $spill_type, $predecrement_x
+$lab    PUSH    {r4-r11, lr}
+        SUBS    y, y, #1
+        BLO     %FA99
+
+      [ src_bpp > 0
+        LDR     src, [sp, #args_stack_offset]
+        LDR     stride_s, [sp, #args_stack_offset+4]
+      ]
+      [ flags :AND: (FLAG_SCALAR_HALFTONE :OR: FLAG_VECTOR_HALFTONE) > 0
+        LDR     ht, [sp, #args_stack_offset+8]
+      ]
+      [ flags :AND: FLAG_VECTOR_HALFTONE > 0
+        LDR     ht_info, [sp, #args_stack_offset+12]
+      ]
+      [ flags :AND: FLAG_COLOUR_MAP > 0
+        LDR     map, [sp, #args_stack_offset+16]
+      ]
+      [ sub_byte
+        LDR     bitptrs, [sp, #args_stack_offset+20]
+      ]
+      [ "$init" <> ""
+        $prefix._$init
+      ]
+      [ $predecrement_x > 0
+        SUB     x, x, #$predecrement_x
+      ]
+      [ flags :AND: FLAG_SPILL_LINE_VARS_$spill_type = 0 :LOR: :LNOT: SpilledX
+        MOV     orig_w, x
+      ]
+      [ flags :AND: FLAG_SPILL_LINE_VARS_$spill_type > 0
+        PUSH    {$line_saved_regs}
+args_stack_offset       SETA    args_stack_offset + num_line_saved_regs * 4
+locals_stack_offset     SETA    locals_stack_offset + num_line_saved_regs * 4
+      ]
+        MEND
+
+        MACRO
+$lab    FunctionEpilogue $spill_type
+$lab
+      [ flags :AND: FLAG_SPILL_LINE_VARS_$spill_type > 0
+        LDMIA   sp, {$line_saved_regs}
+      ]
+      [ flags :AND: FLAG_SPILL_LINE_VARS_$spill_type = 0 :LOR: :LNOT: SpilledX
+        MOV     x, orig_w
+      ]
+        SUBS    y, y, #1
+      [ flags :AND: FLAG_SPILL_LINE_VARS_$spill_type > 0 :LAND: SpilledY
+       [ SpilledX
+        STR     y, [sp, #4]
+       |
+        STR     y, [sp]
+       ]
+      ]
+        ADD     dst, dst, stride_d, LSL #2
+      [ src_bpp > 0
+        ADD     src, src, stride_s, LSL #2
+      ]
+        BHS     %BA51
+      [ flags :AND: FLAG_SPILL_LINE_VARS_$spill_type > 0
+        ADD     sp, sp, #num_line_saved_regs * 4
+args_stack_offset       SETA    args_stack_offset - num_line_saved_regs * 4
+locals_stack_offset     SETA    locals_stack_offset - num_line_saved_regs * 4
+      ]
+      [ "$cleanup" <> ""
+        $prefix._$cleanup
+      ]
+99
+        POP     {r4-r11, pc}
+        MEND
+
+        MACRO
+        PreloadLeadingStep1  $bpp, $ptr, $base
+      [ $bpp > 0
+        BIC     $ptr, $base, #31
+        LCLA    offset
+offset  SETA    0
+        WHILE   offset <= prefetch_distance * 32
+       [ DebugPld
+        ADD     $ptr, $ptr, #offset
+        Print   Pld, "%p (leading, step 1)\n", $ptr
+        SUB     $ptr, $ptr, #offset
+       ]
+        PLD     [$ptr, #offset]
+offset  SETA    offset + 32
+        WEND
+      ]
+        MEND
+
+        MACRO
+        PreloadLeadingStep2  $bpp, $bpp_shift, $ptr, $base, $leading_pixels, $tmp
+  [ $bpp > 0
+    [ $base = dst
+        ; The test can be simplified further when preloading the destination -
+        ; if the destination is already 16-byte aligned, or if it's in the bottom
+        ; half of a 32-byte cacheline, then the leading pixels steps won't cause
+        ; the destination pointer to reach the next cacheline, and even if they do,
+        ; only 1 extra preload is required
+        AND     $tmp, $base, #&1C
+        CMP     $tmp, #&10
+      [ $bpp < 8
+        TSTEQ   bitptrs, #&1F
+      |
+        TSTEQ   stride_d, #&C0000000
+      ]
+        BLS     %FT01
+       [ DebugPld
+        ADD     $ptr, $ptr, #(prefetch_distance+1) * 32
+        Print   Pld, "%p (leading, step 2)\n", $ptr
+        SUB     $ptr, $ptr, #(prefetch_distance+1) * 32
+       ]
+        PLD     [$ptr, #(prefetch_distance+1) * 32]
+01
+    |
+      [ $bpp < 8
+        MOV     $tmp, bitptrs, LSR #27
+      |
+        MOV     $tmp, stride_s, LSR #30
+      ]
+      [ $bpp <= 8
+        ADD     $tmp, $tmp, $base, LSL #3-$bpp_shift
+      |
+        ADD     $tmp, $tmp, $base, LSR #$bpp_shift-3
+      ]
+        ADD     $tmp, $tmp, $leading_pixels
+        BIC     $tmp, $tmp, #256/$bpp - 1 ; now $tmp is the source cacheline corresponding to start of inner loop, in units of pixels
+      [ $bpp <= 8
+        TEQ     $tmp, $ptr, LSL #3-$bpp_shift
+      |
+        TEQ     $tmp, $ptr, LSR #$bpp_shift-3
+      ]
+        BEQ     %FT02
+01
+       [ DebugPld
+        ADD     $ptr, $ptr, #(prefetch_distance+1) * 32
+        Print   Pld, "%p (leading, step 2)\n", $ptr
+        SUB     $ptr, $ptr, #(prefetch_distance+1) * 32
+       ]
+        PLD     [$ptr, #(prefetch_distance+1) * 32]
+        ADD     $ptr, $ptr, #32
+      [ $bpp <= 8
+        TEQ     $tmp, $ptr, LSL #3-$bpp_shift
+      |
+        TEQ     $tmp, $ptr, LSR #$bpp_shift-3
+      ]
+        BNE     %BT01
+02
+    ]
+  ]
+        MEND
+
+        MACRO
+        PreloadMiddle
+      [ "$preload_offset_reg" <> ""
+       [ DebugPld
+        ADD     src, src, $preload_offset_reg
+        Print   Pld, "%p (middle)\n", src
+        SUB     src, src, $preload_offset_reg
+       ]
+        PLD     [src, $preload_offset_reg]
+      |
+        BIC     scratch, src, #31
+       [ DebugPld
+        ADD     scratch, scratch, #prefetch_distance * 32
+        Print   Pld, "%p (middle)\n", scratch
+        SUB     scratch, scratch, #prefetch_distance * 32
+       ]
+        PLD     [scratch, #prefetch_distance * 32]
+      ]
+        MEND
+
+        MACRO
+        PreloadTrailing  $bpp, $bpp_shift, $base, $trailing_pixels, $fixed_skew
+        ; We have just preloaded
+        ;  (src &~ 31) + prefetch_distance * 32
+        ; The last pixel to be read will be
+        ;  src*8/src_bpp - skew/src_bpp + x
+        ; Use leading_pixels_reg as a temporary (must avoid wk0, may be holding over source data when dst_bpp > 4 * src_bpp)
+ [ $bpp > 0
+        BIC     $leading_pixels_reg, $base, #31
+        ADD     $leading_pixels_reg, $leading_pixels_reg, #prefetch_distance * 32
+      [ $bpp <= 8
+        ADD     scratch, $trailing_pixels, $base, LSL #3-$bpp_shift
+      |
+        ADD     scratch, $trailing_pixels, $base, LSR #$bpp_shift-3
+      ]
+  [ $base <> dst :LAND: $bpp < 32
+     IF flags :AND: FLAG_NO_EXPAND_SKEW > 0
+        SUB     scratch, scratch, skew, LSR #$bpp_shift
+   ELIF $fixed_skew > 0
+        SUB     scratch, scratch, #$fixed_skew/$bpp
+  ENDIF
+  ]
+        BIC     scratch, scratch, #256/$bpp - 1 ; last cacheline to read from (inclusive), in pixel units
+01      ; There may be 0 or more extra cachelines to prefetch
+      [ $bpp <= 8
+        TEQ     scratch, $leading_pixels_reg, LSL #3-$bpp_shift
+      |
+        TEQ     scratch, $leading_pixels_reg, LSR #$bpp_shift-3
+      ]
+        BEQ     %FT02
+        ADD     $leading_pixels_reg, $leading_pixels_reg, #32
+       [ DebugPld
+        Print   Pld, "%p (trailing)\n", $leading_pixels_reg
+       ]
+        PLD     [$leading_pixels_reg]
+        B       %BT01
+02
+ ]
+        MEND
+
+        MACRO
+        PreloadLine $base, $bpp, $bpp_shift, $tmp1, $tmp2
+     [ $bpp > 0
+        BIC     $tmp1, $base, #31
+      [ $base = src
+       [ $bpp < 8
+        ADD     $tmp2, x, bitptrs, LSR #27
+       |
+        ADD     $tmp2, x, stride_s, LSR #30
+       ]
+      |
+       [ $bpp < 8
+        AND     $tmp2, bitptrs, #&1F
+        ADD     $tmp2, x, $tmp2
+       |
+        ADD     $tmp2, x, stride_d, LSR #30
+       ]
+      ]
+        SUB     $tmp2, $tmp2, #1
+       [ DebugPld
+        Print   Pld, "%p (line)\n", $tmp1
+       ]
+        PLD     [$tmp1]
+      [ $bpp < 8
+        ADD     $tmp2, $base, $tmp2, LSR #3-$bpp_shift
+      |
+        ADD     $tmp2, $base, $tmp2, LSL #$bpp_shift-3
+      ]
+        BIC     $tmp2, $tmp2, #31
+        CMP     $tmp1, $tmp2
+        BEQ     %FT02
+01      ADD     $tmp1, $tmp1, #32
+        CMP     $tmp1, $tmp2
+       [ DebugPld
+        Print   Pld, "%p (line)\n", $tmp1
+       ]
+        PLD     [$tmp1]
+        BNE     %BT01
+02
+     ]
+        MEND
+
+        MACRO
+        AssignTmpReg $reg
+        LCLS    candidate
+        WHILE   {TRUE}
+candidate LookupWk next_available_reg
+next_available_reg SETA next_available_reg + 1
+      [ $candidate <> $tmp_leading_pixels \
+          :LAND: (((src_bpp = 0 :LOR: src_bpp >= 8) :LAND: dst_w_bpp >= 8) :LOR: $candidate <> bitptrs) \
+          :LAND: ((src_bpp > 0 :LAND: src_bpp < 8) :LOR: $candidate <> stride_s) \
+          :LAND: (dst_w_bpp < 8 :LOR: $candidate <> stride_d)
+$reg    SETS    "$candidate"
+        MEXIT
+      ]
+        WEND
+        MEND
+
+        MACRO
+        CalculateLeadingPixels
+     IF dst_w_bpp = 32
+        MOV     scratch, dst, LSR #dst_bpp_shift-3
+        ANDS    $tmp_leading_pixels, scratch, #&60 :SHR: dst_bpp_shift
+   ELIF dst_w_bpp = 16
+        MOV     scratch, dst, LSR #dst_bpp_shift-3
+        AND     scratch, scratch, #&60 :SHR: dst_bpp_shift
+        ORRS    $tmp_leading_pixels, scratch, stride_d, LSR #30
+   ELIF dst_w_bpp = 8
+        AND     scratch, dst, #&60 :SHR: dst_bpp_shift
+        ORRS    $tmp_leading_pixels, scratch, stride_d, LSR #30
+   ELSE ; dst_w_bpp < 8
+        MOV     scratch, dst, LSL #3-dst_bpp_shift
+        AND     scratch, scratch, #&60 :SHR: dst_bpp_shift
+        AND     $tmp_leading_pixels, bitptrs, #&1F
+        ORRS    $tmp_leading_pixels, $tmp_leading_pixels, scratch
+  ENDIF
+        RSBNE   $tmp_leading_pixels, $tmp_leading_pixels, #128/dst_w_bpp
+        Print   Data, "Leading pixels = %u\n", $tmp_leading_pixels
+        MEND
+
+        MACRO
+        CalculateSkew
+    [ src_bpp > 0
+      [ dst_w_bpp > 4 * src_bpp
+        ; When the destination is much wider than the source, gift a number of
+        ; destination-cachelines-worth of pixels to the skew, to simplify the
+        ; decision of which write operation we need to load the next word before
+        SUB     scratch, x, $tmp_leading_pixels
+        AND     scratch, scratch, #32/src_bpp - 128/dst_w_bpp
+        ADD     $tmp_leading_pixels, $tmp_leading_pixels, scratch
+      ]
+      [ src_bpp < 8
+        ADD     skew, $tmp_leading_pixels, bitptrs, LSR #27
+      |
+        ADD     skew, $tmp_leading_pixels, stride_s, LSR #30
+      ]
+        Print   Data, "Skew = %i pixels\n", skew
+    ]
+        MEND
+
+        MACRO
+        DispatchSkew $label, $finalise_leading_pixels
+fixed_skew      SETA    0
+  [ src_bpp = 0
+last_skew       SETA    1
+  |
+    [ flags :AND: FLAG_NO_EXPAND_SKEW = 0
+last_skew       SETA    32
+     IF src_bpp = 32
+      [ "$finalise_leading_pixels" <> "" :LAND: $tmp_leading_pixels <> $leading_pixels_reg
+        MOV     $leading_pixels_reg, $tmp_leading_pixels
+      ]
+        ; Do nothing, just drop into the skew = fixed 0 case
+   ELIF src_bpp = 16
+        TST     skew, #1
+      [ "$finalise_leading_pixels" <> "" :LAND: $tmp_leading_pixels <> $leading_pixels_reg
+        MOV     $leading_pixels_reg, $tmp_leading_pixels
+      ]
+        BNE     $label.00000010
+   ELIF src_bpp = 8
+        MOVS    scratch, skew, LSL #31
+      [ "$finalise_leading_pixels" <> "" :LAND: $tmp_leading_pixels <> $leading_pixels_reg
+        MOV     $leading_pixels_reg, $tmp_leading_pixels
+      ]
+        BHI     $label.00000018
+        BCS     $label.00000010
+        BMI     $label.00000008
+   ELSE
+        !       1, "Skew branch table not yet implemented for source < 8bpp"
+  ENDIF
+    |
+last_skew       SETA    src_bpp
+      [ "$finalise_leading_pixels" <> "" :LAND: $tmp_leading_pixels <> $leading_pixels_reg
+        ASSERT  $tmp_leading_pixels <> skew
+        MOV     $leading_pixels_reg, $tmp_leading_pixels
+      ]
+      [ src_bpp_shift > 0
+        MOV     skew, skew, LSL #src_bpp_shift
+      ]
+        AND     skew, skew, #31
+    ]
+  ]
+        MEND
+
+
+        ; Generated function entry conditions are:
+        ; r0 = width (pixels)
+        ; r1 = height (rows)
+        ; r2 -> word containing top-left pixel of destination
+        ; r3 bits 0-29 = destination stride (words), bits 30-31 = pixel index into first word (iff dest is >= 8bpp)
+        ; [sp] = NULL, or -> word containing top-left pixel of source
+        ; [sp,#4] = 0, or bits 0-29 = source stride (words), bits 30-31 = pixel index into first word (iff src is >= 8bpp)
+        ; [sp,#8] = 0, or = halftone scalar, or -> after end of halftone vector
+        ; [sp,#12] = 0, or bits 0-14 = -(vector length), bits 15-16 = 0, bits 17-31 = -(words remaining before wrap)
+        ; [sp,#16] = NULL, or -> colour lookup table
+        ; [sp,#20] bits 0-4 = pixel offset within first dest word (iff dest is < 8bpp)
+        ;          bits 27-31 = pixel offset within first source word (iff src is < 8bpp)
+        ; [sp,#24...] any additional arguments: rule-dependent
+        ;
+        ; These map fairly naturally onto registers as follows:
+x               RN      0       ; pixels to go on current line
+y               RN      1       ; lines to go
+dst             RN      2
+stride_d        RN      3
+src             RN      4
+stride_s        RN      5
+ht              RN      6
+ht_info         RN      7
+map             RN      8
+bitptrs         RN      9
+skew            RN      10      ; for when it is passed to fast path in a register
+orig_w          RN      11      ; for restoring width (in pixels) at the start of each line - only used if x isn't in the list of line-saved registers
+scratch         RN      12
+carry           RN      14      ; for holding bits left over after skewing previous load - must be higher number than all work registers
+
+; Main macro to generate a fast path function
+        MACRO
+$op     GenerateFunctions $src_bpp, $dst_w_bpp, $qualifier, $flags, $prefetch_distance, $work_regs, $line_saved_regs, $leading_pixels_reg, $preload_offset_reg, $init, $newline, $reinitwk, $cleanup
+
+src_bpp                 SETA    $src_bpp
+dst_w_bpp               SETA    $dst_w_bpp
+flags                   SETA    $flags
+prefetch_distance       SETA    $prefetch_distance
+line_saved_regs         SETS    "$line_saved_regs"
+leading_pixels_reg      SETS    "$leading_pixels_reg"
+preload_offset_reg      SETS    "$preload_offset_reg"
+init                    SETS    "$init"
+newline                 SETS    "$newline"
+reinitwk                SETS    "$reinitwk"
+cleanup                 SETS    "$cleanup"
+
+prefix  SETS    "$op.$src_bpp._$dst_w_bpp.$qualifier"
+
+src_bpp_shift   Log2    src_bpp
+dst_bpp_shift   Log2    dst_w_bpp
+      [ (flags :AND: FLAG_DST_ACCESS) = FLAG_DST_WRITEONLY
+dst_r_bpp       SETA    0
+      |
+dst_r_bpp       SETA    dst_w_bpp
+      ]
+sub_byte        SETL    (src_bpp > 0 :LAND: src_bpp < 8) :LOR: dst_w_bpp < 8
+num_line_saved_regs     CountRegsInList "$line_saved_regs"
+
+        LCLL    SpilledX
+SpilledX RegIsInList x, "$line_saved_regs"
+        LCLL    SpilledY
+SpilledY RegIsInList y, "$line_saved_regs"
+
+        AssignWk "$work_regs"
+
+        LCLA    fixed_skew
+        LCLA    last_skew
+        LCLA    dst_prefetch_offset
+        LCLA    subblock
+        LCLS    label
+        LCLL    do_preload
+
+        ; Number of pixels per block is calculated such that in each block, there is
+        ; * at least 1 16-byte write to destination
+        ; * at least 1 32-byte preload of source (if source is used)
+        ; * at least 1 32-byte preload of destination (if destination is read)
+pix_per_block   SETA    16*8/dst_w_bpp
+      [ src_bpp > 0
+pix_per_block   Max     pix_per_block, 32*8/src_bpp
+      ]
+      [ dst_r_bpp > 0
+pix_per_block   Max     pix_per_block, 32*8/dst_r_bpp
+      ]
+    [ VerboseBuild
+        ! 0, "$prefix"
+        ! 0, "pixels per block       $pix_per_block"
+        ! 0, "writes per block       " :CC::STR:(pix_per_block*dst_w_bpp/8/16)
+      [ src_bpp > 0
+        ! 0, "src preloads per block " :CC::STR:(pix_per_block*src_bpp/8/32)
+      ]
+      [ dst_r_bpp > 0
+        ! 0, "dst preloads per block " :CC::STR:(pix_per_block*dst_r_bpp/8/32)
+      ]
+    ]
+
+        LCLA    next_available_reg
+next_available_reg SETA 0
+        LCLS    tmp_leading_pixels
+      [ (((src_bpp = 0 :LOR: src_bpp >= 8) :LAND: dst_w_bpp >= 8) :LOR: $leading_pixels_reg <> bitptrs) \
+          :LAND: ((src_bpp > 0 :LAND: src_bpp < 8) :LOR: $leading_pixels_reg <> stride_s) \
+          :LAND: (dst_w_bpp < 8 :LOR: $leading_pixels_reg <> stride_d) \
+          :LAND: $leading_pixels_reg <> skew
+        ; No clash
+tmp_leading_pixels SETS "$leading_pixels_reg"
+       [ VerboseBuild
+        ! 0, "tmp_leading_pixels ":CC:tmp_leading_pixels:CC:" (= leading_pixels_reg)"
+       ]
+      |
+        ; Clash - need to hold leading_pixels temporarily in another register
+tmp_leading_pixels SETS "pc" ; ensure no match with self
+        AssignTmpReg tmp_leading_pixels
+       [ VerboseBuild
+        ! 0, "tmp_leading_pixels ":CC:tmp_leading_pixels
+       ]
+      ]
+        LCLS    preload_src
+      [ src_bpp > 0
+        AssignTmpReg preload_src
+       [ VerboseBuild
+        ! 0, "preload_src ":CC:preload_src
+       ]
+      ]
+        LCLS    preload_dst
+      [ dst_r_bpp > 0 :LAND: flags :AND: FLAG_NO_PRELOAD_DST = 0
+        AssignTmpReg preload_dst
+       [ VerboseBuild
+        ! 0, "preload_dst ":CC:preload_dst
+       ]
+      ]
+
+        EXPORT  armSimd$prefix._wide
+armSimd$prefix._wide  ROUT
+ [ src_bpp > 0 :LOR: dst_r_bpp > 0
+        ; Check whether this is actually a medium-width operation
+        ; (decision made here rather in C due to availability of
+        ; variables like prefetch_distance)
+      [ (prefetch_distance+3)*pix_per_block > 256
+        ; Only slightly less likely to choose wide case, and uses valid immediate constant
+        CMP     x, #(prefetch_distance+3)*pix_per_block
+      |
+        CMP     x, #(prefetch_distance+3)*pix_per_block - 1
+      ]
+        BLO     armSimd$prefix._medium
+        FunctionPrologue  WIDE, (prefetch_distance+2)*pix_per_block
+51
+        PreloadLeadingStep1  src_bpp, $preload_src, src
+      [ flags :AND: FLAG_NO_PRELOAD_DST = 0
+        PreloadLeadingStep1  dst_r_bpp, $preload_dst, dst
+      ]
+        CalculateLeadingPixels
+        PreloadLeadingStep2  src_bpp, src_bpp_shift, $preload_src, src, $tmp_leading_pixels, scratch
+      [ flags :AND: FLAG_NO_PRELOAD_DST = 0
+        PreloadLeadingStep2  dst_r_bpp, dst_bpp_shift, $preload_dst, dst, $tmp_leading_pixels, scratch
+      ]
+        CalculateSkew
+      [ "$newline" <> ""
+        $prefix._$newline
+      ]
+        DispatchSkew $prefix._wide_fork, finalise_leading_pixels
+        WHILE   fixed_skew < last_skew
+label   SETS    "$prefix._wide_fork" :CC: :STR: fixed_skew
+$label
+        ProcessLeading127Bits $leading_pixels_reg, &$fixed_skew
+      [ dst_w_bpp > 4 * src_bpp
+        AND     $leading_pixels_reg, $leading_pixels_reg, #127/dst_w_bpp
+      ]
+      [ $leading_pixels_reg = x
+        LDR     scratch, [sp]
+        SUB     x, scratch, x
+      |
+        SUB     x, x, $leading_pixels_reg
+      ]
+      [ "$preload_offset_reg" <> ""
+        AND     $preload_offset_reg, src, #&1C
+        RSB     $preload_offset_reg, $preload_offset_reg, #prefetch_distance * 32
+      ]
+      [ dst_r_bpp > 0 :LAND: flags :AND: FLAG_NO_PRELOAD_DST = 0
+dst_prefetch_offset SETA -16
+        TST     dst, #16
+        BNE     %FT54
+      |
+dst_prefetch_offset SETA 0
+      ]
+52
+        WHILE   dst_prefetch_offset <> 16
+subblock SETA   0
+        WHILE   subblock < pix_per_block*dst_w_bpp/128
+      [ dst_w_bpp > 4 * src_bpp :LAND: src_bpp > 0
+        ASSERT  flags & FLAG_MAX_256BIT_MACRO = 0
+        AddL    scratch, x, (prefetch_distance+2)*pix_per_block + subblock*128/dst_w_bpp
+        TST     scratch, #32/src_bpp - 128/dst_w_bpp
+        BNE     %FT53
+        Read1Word src, 0, carry, &$fixed_skew, skew, scratch
+53
+      ]
+      [ flags & FLAG_MAX_256BIT_MACRO > 0
+        $prefix._256bits_head $wk0, &$fixed_skew, intra_preloads
+      |
+        $prefix._128bits_head $wk0, &$fixed_skew, intra_preloads
+      ]
+     [ src_bpp > 0
+      [ flags & FLAG_MAX_256BIT_MACRO > 0
+        ; prefetch distance = 256/bpp, block distance = 256/dst_w_bpp
+do_preload IsEndOfGroup subblock/2, 256/256*dst_w_bpp/src_bpp
+      |
+        ; prefetch distance = 256/bpp, block distance = 128/dst_w_bpp
+do_preload IsEndOfGroup subblock, 256/128*dst_w_bpp/src_bpp
+      ]
+     |
+do_preload SETL {FALSE}
+     ]
+      [ do_preload
+        PreloadMiddle
+      ]
+      [ subblock :AND: 1 = 0 :LAND:  dst_r_bpp > 0 :LAND: flags :AND: FLAG_NO_PRELOAD_DST = 0
+        ; Because we know that writes are 16-byte aligned, it's relatively easy to ensure that
+        ; destination prefetches are 32-byte aligned. It's also the easiest channel to offset
+        ; preloads for, to achieve staggered prefetches for multiple channels, because there are
+        ; always two STMs per prefetch, so there is always an opposite STM on which to put the
+        ; preload. Note, no need to BIC the base register here
+       [ DebugPld
+        ADD     dst, dst, #prefetch_distance * 32 + dst_prefetch_offset
+        Print   Pld, "%p (middle)\n", dst
+        SUB     dst, dst, #prefetch_distance * 32 + dst_prefetch_offset
+       ]
+        PLD     [dst, #prefetch_distance * 32 + dst_prefetch_offset]
+      ]
+      [ flags & FLAG_MAX_256BIT_MACRO > 0
+        $prefix._256bits_tail $wk0
+subblock SETA   subblock + 2
+      |
+        $prefix._128bits_tail $wk0
+subblock SETA   subblock + 1
+      ]
+        WEND
+        SUBS    x, x, #pix_per_block
+        BHS     %BT52
+      [ dst_prefetch_offset = -16
+        B       %FT55
+54
+      ]
+dst_prefetch_offset SETA dst_prefetch_offset + 16
+        WEND
+55
+    [ src_bpp = 0 :LAND: dst_r_bpp = 0
+        ADD     x, x, #(prefetch_distance + 2) * pix_per_block - 128/dst_w_bpp
+    |
+        ; Just before the final (prefetch_distance+1) blocks, deal with final preloads
+      [ (prefetch_distance + 2) * pix_per_block > 256
+        ADD     x, x, #(prefetch_distance + 2) * pix_per_block
+        SUB     x, x, #1
+      |
+        ADD     x, x, #(prefetch_distance + 2) * pix_per_block - 1
+      ]
+        PreloadTrailing  src_bpp, src_bpp_shift, src, x, &$fixed_skew
+      [ flags :AND: FLAG_NO_PRELOAD_DST = 0
+        PreloadTrailing  dst_r_bpp, dst_bpp_shift, dst, x
+      ]
+        SUB     x, x, #128/dst_w_bpp - 1
+    ]
+        ; The remainder of this is the same as the medium case
+56
+      [ dst_w_bpp > 4 * src_bpp :LAND: src_bpp > 0
+        MOV     scratch, #32/src_bpp - 128/dst_w_bpp
+        BICS    scratch, scratch, x
+        BNE     %FT57
+        Read1Word src, 0, carry, &$fixed_skew, skew, scratch
+57
+      ]
+        $prefix._128bits_head $wk0, &$fixed_skew
+        $prefix._128bits_tail $wk0
+        SUBS     x, x, #128/dst_w_bpp
+        BHS      %BT56
+58
+      [ dst_w_bpp > 4 * src_bpp :LAND: src_bpp > 0
+        ; This is the only case where ProcessTrailing127Bits cares about bits of 128/dst_w_bpp or higher
+        ADD      x, x, #128/dst_w_bpp
+      ]
+        ProcessTrailing127Bits x, &$fixed_skew
+      [ fixed_skew < last_skew - src_bpp
+        B       %FT59
+      ]
+fixed_skew      SETA    fixed_skew + src_bpp
+        WEND
+59
+        FunctionEpilogue  WIDE
+
+        LTORG
+
+        EXPORT  armSimd$prefix._medium
+armSimd$prefix._medium  ROUT
+ ]
+        FunctionPrologue  NON_WIDE, 0
+51
+        PreloadLine src, src_bpp, src_bpp_shift, scratch, carry
+      [ flags :AND: FLAG_NO_PRELOAD_DST = 0
+        PreloadLine dst, dst_r_bpp, dst_bpp_shift, scratch, carry
+      ]
+        CalculateLeadingPixels
+        CalculateSkew
+      [ "$newline" <> ""
+        $prefix._$newline
+      ]
+        DispatchSkew $prefix._medium_fork, finalise_leading_pixels
+        WHILE   fixed_skew < last_skew
+label   SETS    "$prefix._medium_fork" :CC: :STR: fixed_skew
+$label
+        ; Here we know we have:
+        ; 1) possible group of pixels right-aligned up to first destination block boundary
+        ; 2) 0 or more complete destination blocks
+        ; 3) possible group of pixels left-aligned up to last destination block boundary
+        ProcessLeading127Bits $leading_pixels_reg, &$fixed_skew
+      [ dst_w_bpp > 4 * src_bpp
+        AND     $leading_pixels_reg, $leading_pixels_reg, #127/dst_w_bpp
+      ]
+      [ $leading_pixels_reg = x
+        LDR     scratch, [sp]
+        SUB     x, scratch, x
+      |
+        SUB     x, x, $leading_pixels_reg
+      ]
+        SUBS    x, x, #128/dst_w_bpp
+        BLO     %FT58
+56
+      [ dst_w_bpp > 4 * src_bpp :LAND: src_bpp > 0
+        MOV     scratch, #32/src_bpp - 128/dst_w_bpp
+        BICS    scratch, scratch, x
+        BNE     %FT57
+        Read1Word src, 0, carry, &$fixed_skew, skew, scratch
+57
+      ]
+        $prefix._128bits_head $wk0, &$fixed_skew
+        $prefix._128bits_tail $wk0
+        SUBS     x, x, #128/dst_w_bpp
+        BHS      %BT56
+58
+      [ dst_w_bpp > 4 * src_bpp :LAND: src_bpp > 0
+        ; This is the only case where ProcessTrailing127Bits cares about bits of 128/dst_w_bpp or higher
+        ADD      x, x, #128/dst_w_bpp
+      ]
+        ProcessTrailing127Bits x, &$fixed_skew
+     [ src_bpp = 0
+fixed_skew      SETA    fixed_skew + 1
+     |
+      [ fixed_skew < last_skew - src_bpp
+        B       %FT59
+      ]
+fixed_skew      SETA    fixed_skew + src_bpp
+     ]
+        WEND
+59
+        FunctionEpilogue  NON_WIDE
+
+        LTORG
+
+        EXPORT  armSimd$prefix._narrow
+armSimd$prefix._narrow  ROUT
+        FunctionPrologue  NON_WIDE, 0
+      [ src_bpp > 0 :LAND: src_bpp < 32
+	; Because we're only aiming for 1-word alignment at the destination,
+	; we can at least have a constant skew for every scanline
+       [ dst_w_bpp < 8
+        ANDS    skew, bitptrs, #&1F
+       |
+        MOVS    skew, stride_d, LSR #30
+       ]
+       [ src_bpp < 8
+        RSB     skew, skew, bitptrs, LSR #27
+       |
+        RSB     skew, skew, stride_s, LSR #30
+       ]
+       [ src_bpp < dst_w_bpp
+        ADDNE   skew, skew, #32/dst_w_bpp
+       ]
+      ]
+        Print   Data, "Skew = %i pixels\n", skew
+        DispatchSkew $prefix._narrow_fork
+        WHILE   fixed_skew < last_skew
+label   SETS    "$prefix._narrow_fork" :CC: :STR: fixed_skew
+$label
+51
+        PreloadLine src, src_bpp, src_bpp_shift, scratch, carry
+      [ flags :AND: FLAG_NO_PRELOAD_DST = 0
+        PreloadLine dst, dst_r_bpp, dst_bpp_shift, scratch, carry
+      ]
+      [ "$newline" <> ""
+        $prefix._$newline
+      ]
+        ; Here we know we have:
+        ; 1) possible group of pixels right-aligned up to first destination word boundary
+        ; 2) 0 or more complete destination words
+        ; 3) possible group of pixels left-aligned up to last destination word boundary
+    [ dst_w_bpp < 32
+      [ dst_w_bpp < 8
+        ANDS    $leading_pixels_reg, bitptrs, #&1F
+      |
+        MOVS    $leading_pixels_reg, stride_d, LSR #30
+      ]
+        RSBNE   $leading_pixels_reg, $leading_pixels_reg, #32/dst_w_bpp
+        Print   Data, "Leading pixels = %u\n", $leading_pixels_reg
+        ProcessLeading31Bits $leading_pixels_reg, &$fixed_skew
+    |
+        ProcessLeading31Bits #0, &$fixed_skew
+    ]
+    [ dst_w_bpp < 32
+      [ $leading_pixels_reg = x
+        LDR     scratch, [sp]
+        SUB     x, scratch, x
+      |
+        SUB     x, x, $leading_pixels_reg
+      ]
+    ]
+        ProcessTrailing127Bits x, &$fixed_skew
+        FunctionEpilogue  NON_WIDE
+      [ fixed_skew < last_skew - src_bpp :LAND: flags :AND: FLAG_SPILL_LINE_VARS_NON_WIDE > 0
+args_stack_offset       SETA    args_stack_offset + num_line_saved_regs * 4
+locals_stack_offset     SETA    locals_stack_offset + num_line_saved_regs * 4
+      ]
+      [ src_bpp = 0
+fixed_skew      SETA    fixed_skew + 1
+      |
+fixed_skew      SETA    fixed_skew + src_bpp
+      ]
+        WEND
+
+        LTORG
+
+ [ dst_w_bpp <= 8
+        EXPORT  armSimd$prefix._tiny
+armSimd$prefix._tiny  ROUT
+        FunctionPrologue  NON_WIDE, 0
+51
+        PreloadLine src, src_bpp, src_bpp_shift, scratch, carry
+        BIC     scratch, dst, #31 ; loading dest is unconditional below
+       [ DebugPld
+        Print   Pld, "%p (tiny dst)\n", dst
+       ]
+        PLD     [scratch] ; we know we're only working within one word, and therefore one cacheline
+        LCLS    reg0
+reg0    LookupWk 0
+        LCLS    reg1
+reg1    LookupWk 1
+    [ flags :AND: FLAG_PROCESS_PARALLEL > 0
+        ASSERT  src_bpp = dst_w_bpp :LOR: src_bpp = 0
+        ASSERT  $leading_pixels_reg <> $reg0
+        ASSERT  $leading_pixels_reg <> $reg1
+        ASSERT  $leading_pixels_reg <> skew
+        ASSERT  $leading_pixels_reg <> carry
+        ; Here we use the "leading pixels" register that is guaranteed
+        ; to persist beyond the pixel processing to hold the bitmask of
+        ; which bits of the destination word are preserved or updated.
+       [ dst_w_bpp = 1
+        RSB     carry, x, #32
+       |
+        MOV     carry, #32
+        SUB     carry, carry, x, LSL #dst_bpp_shift
+       ]
+        MOV     $leading_pixels_reg, #-1
+        MOV     $leading_pixels_reg, $leading_pixels_reg, LSL carry
+       [ dst_w_bpp < 8
+        AND     skew, bitptrs, #&1F
+       |
+        MOV     skew, stride_d, LSR #30
+       ]
+      [ src_bpp > 0
+        LDR     $reg0, [src], #4
+      ]
+        MOV     carry, skew, LSL #dst_bpp_shift
+        MOV     $leading_pixels_reg, $leading_pixels_reg, LSR carry
+        Print   Data, "Mask %08X\n", $leading_pixels_reg
+      [ src_bpp > 0
+       [ dst_w_bpp < 8
+        ASSERT  $reg0 <> bitptrs
+        MOV     carry, bitptrs, LSR #27
+       |
+        ASSERT  $reg0 <> stride_s
+        MOV     carry, stride_s, LSR #30
+       ]
+      ]
+        LDR     $reg1, [dst], #4
+      [ src_bpp > 0
+        SUB     skew, carry, skew
+        RSB     carry, carry, #32/dst_w_bpp
+       [ dst_w_bpp > 1
+        MOV     skew, skew, LSL #dst_bpp_shift
+       ]
+        AND     skew, skew, #31
+        CMP     x, carry
+        LDRHI   carry, [src], #4
+        MOVLS   carry, $reg0
+        Print   Data, "First source word %08X\n", $reg0
+        PrintHI Data, "Second source word %08X\n", carry
+        MOV     $reg0, $reg0, LSL skew
+        Print   Data, "Skew %u -> ", skew
+        RSB     skew, skew, #32
+        ORR     $reg0, $reg0, carry, LSR skew
+        Print   Data, "%08X\n", $reg0
+        Print   Data, "Dest word %08X\n", $reg1
+      ]
+      [ "$newline" <> ""
+        $prefix._$newline
+      ]
+        $prefix._32bits $wk0, $wk1, 0
+        Print   Data, "After processing -> %08X\n", $wk0
+        AND     $wk0, $wk0, $leading_pixels_reg
+        BIC     $wk1, $wk1, $leading_pixels_reg
+        ORR     $wk1, $wk0, $wk1
+        Print   Data, "Masked to %08X\n", $wk1
+        STR     $wk1, [dst, #-4]
+    |
+        ; There are actually 3 state variables we need for iterating
+        ; along such short lines one pixel at a time, but the process
+        ; macro is still at liberty to use nearly all registers. So we
+        ; squeeze them into the "leading pixels" register thus:
+        ; bits 27-31: source bits until word reload (detect with C flag)
+        ; bits  5-9:  number of pixels to go
+        ; bits  0-4:  number of bits by which to rotate dest right at end
+        ; If the source is 32bpp, the callee macro will do the load for us
+        LCLS    dst_sz
+dst_sz  DecimalStr dst_w_bpp
+      [ dst_w_bpp < 8
+        AND     carry, bitptrs, #&1F
+      |
+        MOV     carry, stride_d, LSR #30
+      ]
+      [ dst_bpp_shift > 0
+        MOV     carry, carry, LSL #dst_bpp_shift
+      ]
+        ADD     scratch, carry, x, LSL #dst_bpp_shift
+     [ src_bpp > 0 :LAND: src_bpp < 32
+        ORR     skew, scratch, x, LSL #5
+        RSB     scratch, carry, #32
+      [ src_bpp < 8
+        MOV     carry, bitptrs, LSR #27
+      |
+        MOV     carry, stride_s, LSR #30
+      ]
+        LDR     $reg0, [src], #4
+      [ src_bpp_shift > 0
+        MOV     carry, carry, LSL #src_bpp_shift
+      ]
+        RSB     carry, carry, #32
+        Print   Data, "First source word %08X, ROR %u to MS", $reg0, carry
+        MOV     $reg0, $reg0, ROR carry ; first src pixel to process now MS aligned
+        Print   Data, " -> %08X\n", $reg0
+        SUB     carry, carry, #src_bpp
+        ORR     $leading_pixels_reg, skew, carry, LSL #27
+     |
+        ORR     $leading_pixels_reg, scratch, x, LSL #5
+        RSB     scratch, carry, #32
+     ]
+        LDR     $reg1, [dst], #4
+        Print   Data, "Original destination word %08X, ROR %u to MS", $reg1, scratch
+        MOV     $reg1, $reg1, ROR scratch ; first dst pixel to process now MS aligned
+        Print   Data, " -> %08X\n", $reg1
+      [ DebugData
+        PUSH    {src}
+        Print   Data, "State word %08X = ", $leading_pixels_reg
+        MOV     src, $leading_pixels_reg, LSR #27
+        Print   Data, "%u, ", src
+        MOV     src, $leading_pixels_reg, LSR #5
+        AND     src, src, #&1F
+        Print   Data, "%u, ", src
+        AND     src, $leading_pixels_reg, #&1F
+        Print   Data, "%u\n", src
+        POP     {src}
+      ]
+      [ "$newline" <> ""
+        $prefix._$newline
+      ]
+52
+        $prefix._$dst_sz.bits $wk0, $wk1, 0 ; this rotates source and dest registers left for us
+      [ src_bpp > 0 :LAND: src_bpp < 32
+        Print   Data, "Source now %08X\n", $wk0
+      ]
+        Print   Data, "Destination now %08X\n", $wk1
+        SUB     $leading_pixels_reg, $leading_pixels_reg, #1 :SHL: 5
+        TST     $leading_pixels_reg, #31 :SHL: 5
+      [ src_bpp > 0 :LAND: src_bpp < 32
+        BEQ     %FT53
+        SUBS    $leading_pixels_reg, $leading_pixels_reg, #src_bpp :SHL: 27
+        Print   Data, "State word now %08X\n", $leading_pixels_reg
+        LDRCC   $reg0, [src], #4 ; carry is NOT(borrow) on ARM
+        PrintCC Data, "Load next source word: %08X\n", $reg0
+        B       %BT52
+      |
+        BNE     %BT52
+      ]
+53      AND     scratch, $leading_pixels_reg, #&1F
+        MOV     $reg1, $reg1, ROR scratch
+        Print   Data, "Destination ROR %u -> %08X\n", scratch, $reg1
+        STR     $reg1, [dst, #-4]
+    ]
+        FunctionEpilogue  NON_WIDE
+
+        LTORG
+ ]
+
+        MEND
+
+
+        END
