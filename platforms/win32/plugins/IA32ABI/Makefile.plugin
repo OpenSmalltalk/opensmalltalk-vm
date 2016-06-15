@@ -1,0 +1,3 @@
+LIBOBJ:= ia32abicc.o IA32ABI.o
+
+include ../common/Makefile.plugin
