@@ -1244,6 +1244,13 @@ The 65537th literal is: ', literal printString. ^nil].
 	^ p
 ]
 
+{ #category : #accessing }
+EncoderForNewsqueakV4 >> maxIndexableLiterals [
+	"Answer the maximum number of literals supported by the receiver's
+	 bytecode set."
+	^65536
+]
+
 { #category : #testing }
 EncoderForNewsqueakV4 >> supportsClosureOpcodes [
 	^true
