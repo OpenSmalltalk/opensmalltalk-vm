@@ -259,7 +259,7 @@ JPEGReadWriter2Plugin >> primJPEGReadImage: aJPEGDecompressStruct fromByteArray:
 	
 	interpreterProxy success: 
 		((interpreterProxy isWordsOrBytes: formBitmapOOP) and: 
-		[formBitmapSizeInBytes = (formPitch * formHeight)]).
+		[formBitmapSizeInBytes >= (formPitch * formHeight)]).
 	interpreterProxy failed ifTrue: [^ nil].
 	
 	sourceSize := interpreterProxy stSizeOf: (interpreterProxy stackValue: 3).
@@ -316,7 +316,7 @@ JPEGReadWriter2Plugin >> primJPEGWriteImage: aJPEGCompressStruct onByteArray: de
 	formBitmapSizeInBytes := interpreterProxy byteSizeOf: formBitmapOOP.
 	interpreterProxy success: 
 		((interpreterProxy isWordsOrBytes: formBitmapOOP) and: 
-		[formBitmapSizeInBytes = (formPitch * formHeight)]).
+		[formBitmapSizeInBytes >= (formPitch * formHeight)]).
 	interpreterProxy failed ifTrue: [ ^ nil ].
 	
 	formBitmap := interpreterProxy firstIndexableField: formBitmapOOP.
