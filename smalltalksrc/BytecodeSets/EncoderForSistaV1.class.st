@@ -1431,6 +1431,13 @@ EncoderForSistaV1 >> isSpecialLiteralForPush: literal [
 	  or: [(literal isCharacter and: [literal asInteger between: 0 and: 65535])]]]]
 ]
 
+{ #category : #accessing }
+EncoderForSistaV1 >> maxIndexableLiterals [
+	"Answer the maximum number of literals supported by the receiver's
+	 bytecode set."
+	^65536
+]
+
 { #category : #'special literal encodings' }
 EncoderForSistaV1 >> sizePushFullClosure: compiledBlockLiteralIndex numCopied: numCopied [
 	^self sizeOpcodeSelector: #genPushFullClosure:numCopied: withArguments: {compiledBlockLiteralIndex.numCopied}

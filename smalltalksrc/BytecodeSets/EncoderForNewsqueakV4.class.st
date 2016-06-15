@@ -73,7 +73,7 @@ N.B.  Extension bytecodes can only come before extensible bytecodes, and only if
 Class {
 	#name : #EncoderForNewsqueakV4,
 	#superclass : #BytecodeEncoder,
-	#category : 'BytecodeSets-NewsqueakV4'
+	#category : #'BytecodeSets-NewsqueakV4'
 }
 
 { #category : #'compiled method support' }
@@ -1242,6 +1242,13 @@ The 65537th literal is: ', literal printString. ^nil].
 		 but that info is hard to get."
 	literalStream nextPut: literal.
 	^ p
+]
+
+{ #category : #accessing }
+EncoderForNewsqueakV4 >> maxIndexableLiterals [
+	"Answer the maximum number of literals supported by the receiver's
+	 bytecode set."
+	^65536
 ]
 
 { #category : #testing }
