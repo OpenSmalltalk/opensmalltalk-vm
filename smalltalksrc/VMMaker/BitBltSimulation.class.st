@@ -2090,7 +2090,7 @@ BitBltSimulation >> loadBitBltDestForm [
 		destPitch := destWidth + (destPPW-1) // destPPW * 4.
 		destBitsSize := interpreterProxy byteSizeOf: destBits.
 		((interpreterProxy isWordsOrBytes: destBits)
-			and: [destBitsSize = (destPitch * destHeight)])
+			and: [destBitsSize >= (destPitch * destHeight)])
 			ifFalse: [^ false].
 		"Skip header since external bits don't have one"
 		destBits := self oopForPointer: (interpreterProxy firstIndexableField: destBits).
@@ -2192,7 +2192,7 @@ BitBltSimulation >> loadBitBltSourceForm [
 		sourcePitch := sourceWidth + (sourcePPW-1) // sourcePPW * 4.
 		sourceBitsSize := interpreterProxy byteSizeOf: sourceBits.
 		((interpreterProxy isWordsOrBytes: sourceBits)
-			and: [sourceBitsSize = (sourcePitch * sourceHeight)])
+			and: [sourceBitsSize >= (sourcePitch * sourceHeight)])
 			ifFalse: [^ false].
 		"Skip header since external bits don't have one"
 		sourceBits := self oopForPointer: (interpreterProxy firstIndexableField: sourceBits).
