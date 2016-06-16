@@ -18,6 +18,7 @@ if ( $branch eq "Cog" || $branch eq "dev" || $branch eq "master" || $branch eq "
 }
 
 $url=`git remote get-url origin 2>/dev/null`;
+if (!$url) { $url=`git remote show origin | grep -i fetch | sed 's/^.*URL: //' 2>/dev/null` }
 $url =~ s/\s+$//m;
 
 $date = `git log --format=%ad -1`;
