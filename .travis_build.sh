@@ -1,5 +1,18 @@
 set -e
 
+travis_fold() {
+  local action=$1
+  local name=$2
+  local title="${3:-}"
+
+  if [[ "${TRAVIS:-}" = "true" ]]; then
+    echo -en "travis_fold:${action}:${name}\r\033[0K"
+  fi
+  if [[ -n "${title}" ]]; then
+    echo -e "\033[34;1m${title}\033[0m"
+  fi
+}
+
 if [[ "${APPVEYOR}" ]]; then
     ARCH="win32x86"
     TRAVIS_BUILD_DIR="$(pwd)"
@@ -73,7 +86,11 @@ case "$PLATFORM" in
     [[ ! -d "${build_directory}" ]] && exit 10
 
     pushd "${build_directory}"
+
+    travis_fold start build_vm "Building OpenSmalltalk VM..."
     echo n | ./mvm
+    travis_fold end build_vm
+
     # cat config.log
     popd
 
@@ -86,7 +103,11 @@ case "$PLATFORM" in
     [[ ! -d "${build_directory}" ]] && exit 50
 
     pushd "${build_directory}"
+
+    travis_fold start build_vm "Building OpenSmalltalk VM..."
     ./mvm -f
+    travis_fold end build_vm
+
     output_file="${output_file}.tar.gz"
     tar czf "${output_file}" ./Cocoa*.app
     popd
