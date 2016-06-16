@@ -6,6 +6,7 @@ This is the README for the Cog Git source tree:
 [![Windows Build status](https://ci.appveyor.com/api/projects/status/rn0f2rtyp2ona360/branch/Cog?svg=true)](https://ci.appveyor.com/project/timfel/vm/branch/Cog)
 [![Unix Build Status](https://travis-ci.org/OpenSmalltalk/vm.svg?branch=Cog)](https://travis-ci.org/OpenSmalltalk/vm)
 [![Download](https://api.bintray.com/packages/opensmalltalk/vm/cog/images/download.svg) ](https://bintray.com/opensmalltalk/vm/cog/_latestVersion)
+
 Builds are tested automatically on each commit on Travis and Appveyor, for
 Windows 32, Mac OS X 32 and 64, and on Linux 32, 64, and ARM. Squeak, Pharo, and
 Newspeak VMs are built with and without JIT, with and without Spur, and with and

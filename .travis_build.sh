@@ -55,9 +55,11 @@ fi
 echo "`cat platforms/Cross/vm/sqSCCSVersion.h | .git_filters/RevDateURL.smudge`" > platforms/Cross/vm/sqSCCSVersion.h
 echo "`cat platforms/Cross/plugins/sqPluginsSCCSVersion.h | .git_filters/RevDateURL.smudge`" > platforms/Cross/plugins/sqPluginsSCCSVersion.h
 
+REV=$(grep -oPm1 "Rev: [0-9]+ " platforms/Cross/vm/sqSCCSVersion.h | cut -d' ' -f2)
+
 echo $PATH
 
-output_file="${TRAVIS_BUILD_DIR}/cog_${ARCH}_${FLAVOR}"
+output_file="${TRAVIS_BUILD_DIR}/cog_${ARCH}_${FLAVOR}_${REV}"
 
 export COGVREV="$(git describe --tags --always)"
 export COGVDATE="$(git show -s --format=%cd HEAD)"
