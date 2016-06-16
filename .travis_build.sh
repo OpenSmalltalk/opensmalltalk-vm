@@ -122,7 +122,7 @@ case "$PLATFORM" in
     sed -i 's/Bochs.* //g' plugins.ext
     ./mvm -f
     output_file="${output_file}.zip"
-    zip -r "${output_file}.zip" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
+    zip -r "${output_file}" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
     popd
     ;;
   *)
