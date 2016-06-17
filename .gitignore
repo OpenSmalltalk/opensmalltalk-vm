@@ -1,3 +1,7 @@
+# global
+*.image
+*.changes
+*.sources
 
 # /
 /ChangeHistory
@@ -328,7 +332,6 @@
 /build.macos32x86/*.app
 /build.macos32x86/*.bundle
 /build.macos32x86/LOG*
-/build.macos32x86/*.sources
 /build.macos32x86/sqNamedPrims.h
 
 # /build.macos32x86/bochsx64/
@@ -347,7 +350,6 @@
 # /build.macos32x86/glue.cog.spur/
 /build.macos32x86/glue.cog.spur/Cocoa*.app
 /build.macos32x86/glue.cog.spur/LOG*
-/build.macos32x86/glue.cog.spur/*.sources
 /build.macos32x86/glue.cog.spur/build*
 /build.macos32x86/glue.cog.spur/deps
 /build.macos32x86/glue.cog.spur/getversion*
@@ -361,7 +363,6 @@
 # /build.macos32x86/glue.stack.spur/
 /build.macos32x86/glue.stack.spur/Cocoa*.app
 /build.macos32x86/glue.stack.spur/LOG*
-/build.macos32x86/glue.stack.spur/*.sources
 /build.macos32x86/glue.stack.spur/build*
 /build.macos32x86/glue.stack.spur/deps
 /build.macos32x86/glue.stack.spur/getversion*
@@ -370,7 +371,6 @@
 # /build.macos32x86/newspeak.cog.spur/
 /build.macos32x86/newspeak.cog.spur/Cocoa*.app
 /build.macos32x86/newspeak.cog.spur/LOG*
-/build.macos32x86/newspeak.cog.spur/*.sources
 /build.macos32x86/newspeak.cog.spur/build*
 /build.macos32x86/newspeak.cog.spur/deps
 /build.macos32x86/newspeak.cog.spur/getversion*
@@ -384,7 +384,6 @@
 # /build.macos32x86/newspeak.stack.spur/
 /build.macos32x86/newspeak.stack.spur/Cocoa*.app
 /build.macos32x86/newspeak.stack.spur/LOG*
-/build.macos32x86/newspeak.stack.spur/*.sources
 /build.macos32x86/newspeak.stack.spur/build*
 /build.macos32x86/newspeak.stack.spur/deps
 /build.macos32x86/newspeak.stack.spur/getversion*
@@ -393,7 +392,6 @@
 # /build.macos32x86/pharo.cog.spur/
 /build.macos32x86/pharo.cog.spur/Cocoa*.app
 /build.macos32x86/pharo.cog.spur/LOG*
-/build.macos32x86/pharo.cog.spur/*.sources
 /build.macos32x86/pharo.cog.spur/build*
 /build.macos32x86/pharo.cog.spur/deps
 /build.macos32x86/pharo.cog.spur/getversion*
@@ -402,7 +400,6 @@
 # /build.macos32x86/squeak.cog.spur/
 /build.macos32x86/squeak.cog.spur/Cocoa*.app
 /build.macos32x86/squeak.cog.spur/LOG*
-/build.macos32x86/squeak.cog.spur/*.sources
 /build.macos32x86/squeak.cog.spur/build*
 /build.macos32x86/squeak.cog.spur/deps
 /build.macos32x86/squeak.cog.spur/getversion*
@@ -411,7 +408,6 @@
 # /build.macos32x86/squeak.cog.spur+immutability/
 /build.macos32x86/squeak.cog.spur+immutability/Cocoa*.app
 /build.macos32x86/squeak.cog.spur+immutability/LOG*
-/build.macos32x86/squeak.cog.spur+immutability/*.sources
 /build.macos32x86/squeak.cog.spur+immutability/build*
 /build.macos32x86/squeak.cog.spur+immutability/deps
 /build.macos32x86/squeak.cog.spur+immutability/getversion*
@@ -420,7 +416,6 @@
 # /build.macos32x86/squeak.cog.v3/
 /build.macos32x86/squeak.cog.v3/Cocoa*.app
 /build.macos32x86/squeak.cog.v3/LOG*
-/build.macos32x86/squeak.cog.v3/*.sources
 /build.macos32x86/squeak.cog.v3/build*
 /build.macos32x86/squeak.cog.v3/deps
 /build.macos32x86/squeak.cog.v3/getversion*
@@ -429,7 +424,6 @@
 # /build.macos32x86/squeak.sista.spur/
 /build.macos32x86/squeak.sista.spur/Cocoa*.app
 /build.macos32x86/squeak.sista.spur/LOG*
-/build.macos32x86/squeak.sista.spur/*.sources
 /build.macos32x86/squeak.sista.spur/build*
 /build.macos32x86/squeak.sista.spur/deps
 /build.macos32x86/squeak.sista.spur/getversion*
@@ -438,7 +432,6 @@
 # /build.macos32x86/squeak.stack.spur/
 /build.macos32x86/squeak.stack.spur/Cocoa*.app
 /build.macos32x86/squeak.stack.spur/LOG*
-/build.macos32x86/squeak.stack.spur/*.sources
 /build.macos32x86/squeak.stack.spur/build*
 /build.macos32x86/squeak.stack.spur/deps
 /build.macos32x86/squeak.stack.spur/getversion*
@@ -447,7 +440,6 @@
 # /build.macos32x86/squeak.stack.v3/
 /build.macos32x86/squeak.stack.v3/Cocoa*.app
 /build.macos32x86/squeak.stack.v3/LOG*
-/build.macos32x86/squeak.stack.v3/*.sources
 /build.macos32x86/squeak.stack.v3/build*
 /build.macos32x86/squeak.stack.v3/deps
 /build.macos32x86/squeak.stack.v3/getversion*
@@ -477,7 +469,6 @@
 # /build.macos64x64/newspeak.cog.spur/
 /build.macos64x64/newspeak.cog.spur/Cocoa*.app
 /build.macos64x64/newspeak.cog.spur/LOG*
-/build.macos64x64/newspeak.cog.spur/*.sources
 /build.macos64x64/newspeak.cog.spur/build*
 /build.macos64x64/newspeak.cog.spur/deps
 /build.macos64x64/newspeak.cog.spur/getversion*
@@ -491,7 +482,6 @@
 # /build.macos64x64/newspeak.stack.spur/
 /build.macos64x64/newspeak.stack.spur/Cocoa*.app
 /build.macos64x64/newspeak.stack.spur/LOG*
-/build.macos64x64/newspeak.stack.spur/*.sources
 /build.macos64x64/newspeak.stack.spur/build*
 /build.macos64x64/newspeak.stack.spur/deps
 /build.macos64x64/newspeak.stack.spur/getversion*
@@ -500,7 +490,6 @@
 # /build.macos64x64/pharo.cog.spur/
 /build.macos64x64/pharo.cog.spur/Cocoa*.app
 /build.macos64x64/pharo.cog.spur/LOG*
-/build.macos64x64/pharo.cog.spur/*.sources
 /build.macos64x64/pharo.cog.spur/build*
 /build.macos64x64/pharo.cog.spur/deps
 /build.macos64x64/pharo.cog.spur/getversion*
@@ -509,7 +498,6 @@
 # /build.macos64x64/squeak.cog.spur/
 /build.macos64x64/squeak.cog.spur/Cocoa*.app
 /build.macos64x64/squeak.cog.spur/LOG*
-/build.macos64x64/squeak.cog.spur/*.sources
 /build.macos64x64/squeak.cog.spur/build*
 /build.macos64x64/squeak.cog.spur/deps
 /build.macos64x64/squeak.cog.spur/getversion*
@@ -518,7 +506,6 @@
 # /build.macos64x64/squeak.cog.spur.immutability/
 /build.macos64x64/squeak.cog.spur.immutability/Cocoa*.app
 /build.macos64x64/squeak.cog.spur.immutability/LOG*
-/build.macos64x64/squeak.cog.spur.immutability/*.sources
 /build.macos64x64/squeak.cog.spur.immutability/build*
 /build.macos64x64/squeak.cog.spur.immutability/deps
 /build.macos64x64/squeak.cog.spur.immutability/getversion*
@@ -527,7 +514,6 @@
 # /build.macos64x64/squeak.sista.spur/
 /build.macos64x64/squeak.sista.spur/Cocoa*.app
 /build.macos64x64/squeak.sista.spur/LOG*
-/build.macos64x64/squeak.sista.spur/*.sources
 /build.macos64x64/squeak.sista.spur/build*
 /build.macos64x64/squeak.sista.spur/deps
 /build.macos64x64/squeak.sista.spur/getversion*
@@ -536,7 +522,6 @@
 # /build.macos64x64/squeak.stack.spur/
 /build.macos64x64/squeak.stack.spur/Cocoa*.app
 /build.macos64x64/squeak.stack.spur/LOG*
-/build.macos64x64/squeak.stack.spur/*.sources
 /build.macos64x64/squeak.stack.spur/build*
 /build.macos64x64/squeak.stack.spur/deps
 /build.macos64x64/squeak.stack.spur/getversion*
@@ -567,7 +552,6 @@
 /build.win32x86/newspeak.cog.spur/installer/*.idt
 /build.win32x86/newspeak.cog.spur/installer/*.msi
 /build.win32x86/newspeak.cog.spur/installer/*.rtf
-/build.win32x86/newspeak.cog.spur/installer/*.sources
 
 # /build.win32x86/newspeak.stack.spur/
 /build.win32x86/newspeak.stack.spur/build
@@ -631,8 +615,6 @@
 /history/README.*
 
 # /image/
-/image/*.image
-/image/*.changes
 /image/*.sum
 /image/*.tgz
 /image/coglinux*
@@ -643,7 +625,6 @@
 /image/CogSpur.app
 /image/Squeak-*-All-in-One.*
 /image/SqueakDebug.log
-/image/SqueakV41.sources
 /image/__MACOSX
 /image/crash.dmp
 /image/package-cache
