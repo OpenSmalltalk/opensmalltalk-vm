@@ -225,8 +225,8 @@ matrix:
       env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
     - os: osx
       env: ARCH="macos64x64" FLAVOR="squeak.cog.spur"
-    - os: osx
-      env: ARCH="macos64x64" FLAVOR="squeak.sista.spur"
+    # - os: osx
+    #   env: ARCH="macos64x64" FLAVOR="squeak.sista.spur"
     - os: osx
       env: ARCH="macos64x64" FLAVOR="squeak.stack.spur"
 
