@@ -249,7 +249,7 @@ SqueakCMakeVMMakerAbstractBuilder >> configureA: configSymbol forBuildType: type
 
 { #category : #building }
 SqueakCMakeVMMakerAbstractBuilder >> enableMessageTracking: aBoolean [
-	(config isKindOf: CPlatformConfig)
+	(config isKindOf: CPlatformConfigForSqueak)
 		ifTrue:[config enabledebugmessages: aBoolean]
 		
 ]
@@ -267,9 +267,7 @@ SqueakCMakeVMMakerAbstractBuilder >> generateByTemplate [
 
 { #category : #building }
 SqueakCMakeVMMakerAbstractBuilder >> generateSources [
-	self flag: 'tty'. "This used to work, but it looks like CPlaformConfig>>generateSources breaks at 'maker cogitClass: cg'"
-	self error:'Pharo CPlatformConfig is broken. Will fix later'.
-	(config isKindOf: CPlatformConfig)
+	(config isKindOf: CPlatformConfigForSqueak)
 		ifTrue:[config generateSources]
 		
 ]
