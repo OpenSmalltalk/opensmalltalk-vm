@@ -191,6 +191,36 @@ matrix:
             - gcc-multilib
             - uuid-dev:i386
 
+    - os: osx
+      env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
+    - os: osx
+      env: ARCH="macos64x64" FLAVOR="newspeak.stack.spur"
+    - os: osx
+      env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
+    - os: osx
+      env: ARCH="macos64x64" FLAVOR="squeak.cog.spur"
+    # - os: osx
+    #   env: ARCH="macos64x64" FLAVOR="squeak.sista.spur"
+    - os: osx
+      env: ARCH="macos64x64" FLAVOR="squeak.stack.spur"
+
+    - os: osx
+      env: ARCH="macos32x86" FLAVOR="newspeak.cog.spur"
+    - os: osx
+      env: ARCH="macos32x86" FLAVOR="newspeak.stack.spur"
+    - os: osx
+      env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
+    - os: osx
+      env: ARCH="macos32x86" FLAVOR="squeak.cog.spur"
+    - os: osx
+      env: ARCH="macos32x86" FLAVOR="squeak.cog.v3"
+    - os: osx
+      env: ARCH="macos32x86" FLAVOR="squeak.sista.spur"
+    - os: osx
+      env: ARCH="macos32x86" FLAVOR="squeak.stack.spur"
+    - os: osx
+      env: ARCH="macos32x86" FLAVOR="squeak.stack.v3"
+
     - os: linux
       env: ARCH="linux32ARM" FLAVOR="newspeak.cog.spur" CHROOT="schroot -p -c rpi -- bash -c "
       sudo: required
@@ -216,36 +246,6 @@ matrix:
       sudo: required
       dist: trusty
       group: edge
-
-    - os: osx
-      env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
-    - os: osx
-      env: ARCH="macos64x64" FLAVOR="newspeak.stack.spur"
-    - os: osx
-      env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
-    - os: osx
-      env: ARCH="macos64x64" FLAVOR="squeak.cog.spur"
-    - os: osx
-      env: ARCH="macos64x64" FLAVOR="squeak.sista.spur"
-    - os: osx
-      env: ARCH="macos64x64" FLAVOR="squeak.stack.spur"
-
-    - os: osx
-      env: ARCH="macos32x86" FLAVOR="newspeak.cog.spur"
-    - os: osx
-      env: ARCH="macos32x86" FLAVOR="newspeak.stack.spur"
-    - os: osx
-      env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
-    - os: osx
-      env: ARCH="macos32x86" FLAVOR="squeak.cog.spur"
-    - os: osx
-      env: ARCH="macos32x86" FLAVOR="squeak.cog.v3"
-    - os: osx
-      env: ARCH="macos32x86" FLAVOR="squeak.sista.spur"
-    - os: osx
-      env: ARCH="macos32x86" FLAVOR="squeak.stack.spur"
-    - os: osx
-      env: ARCH="macos32x86" FLAVOR="squeak.stack.v3"
 
 install:
   - ./.travis_install.sh
