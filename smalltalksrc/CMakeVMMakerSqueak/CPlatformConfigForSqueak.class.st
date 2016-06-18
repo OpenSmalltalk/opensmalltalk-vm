@@ -3044,6 +3044,12 @@ CPlatformConfigForSqueak >> platformName [
 	self subclassResponsibility 
 ]
 
+{ #category : #'cmake directory' }
+CPlatformConfigForSqueak >> platformsDir [
+  ^ (self topDir directoryNamed: (self dirPlatforms) )
+
+]
+
 { #category : #'cmake buildType redirects' }
 CPlatformConfigForSqueak >> postBuildActions: aMaker [
 	"Route this message send to the message appropriate for my buildType "
