@@ -70,7 +70,10 @@ Class {
 		'templates',
 		'enabledebugmessages',
 		'platformSources',
-		'vmplugins'
+		'vmplugins',
+		'outputDir',
+		'buildDir',
+		'topDir'
 	],
 	#classInstVars : [
 		'isAbstractBaseClass'
@@ -792,7 +795,7 @@ CPlatformConfigForSqueak >> availableBuildTypes [
 
 { #category : #'cmake directory' }
 CPlatformConfigForSqueak >> buildDir [
-	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence].
+	^ buildDir ifNil: [ buildDir := ( self topDir / self buildDirName) assureExistence]. 
 ]
 
 { #category : #'cmake directory' }
@@ -3028,7 +3031,7 @@ CPlatformConfigForSqueak >> oscogvm [
 { #category : #'cmake directory' }
 CPlatformConfigForSqueak >> outputDir [
 	"the directory where built binaries will be stored"
-	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput / self dirBuildPlatform / self dirBuildLanguageVMMM / (buildType asString)) ]	
+	^ outputDir ifNil: [ outputDir := (self topDir / self dirOutput / self dirBuildPlatform / self dirBuildLanguageVMMM / (buildType asString)) ]	 
 
 
 ]
@@ -3774,7 +3777,7 @@ CPlatformConfigForSqueak >> topDir [
     srcDir=oscogvm/dirSource
     cogDir=oscogvm/src   (needed by CMake for access to plugins source in oscogvm/src/plugins)
 "
-	^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ]
+	^ topDir ifNil: [ topDir := FileDirectory default directoryNamed: self oscogvm ] 
 	
 ]
 
