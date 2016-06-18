@@ -157,18 +157,18 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
  * This function's roles are to use setjmp/longjmp to save the call point
  * and return to it, and to return any of the various values from the callback.
  *
- * To support x86-64, which has 6 register arguments, the function takes 8
- * arguments, the 6 register args as longs, followed by the thunkp and stackp
- * passed on the stack.  The register args get copied into a struct on the
- * stack. A pointer to the struct is then passed as an element of the
- * VMCallbackContext.
+ * To support x86-64, which has 6 integer register arguments, and 8 floating-
+ * point register arguments, the function takes 16 arguments, the 6 register
+ * args as longs, folowed by 8 floating-point arguments as doubles, followed
+ * by the thunkp and stackp passed on the stack.  The register args get copied
+ * into a struct on the stack. A pointer to the struct is then passed as an
+ * element of the VMCallbackContext.
  */
-#if defined(__GNUC__)
-# define getfparg(n) asm volatile ("movq %%xmm" #n ", %0" : "=m"(fpargs[n]) : )
-#endif
 
 long
 thunkEntry(long a0, long a1, long a2, long a3, long a4, long a5,
+			double d0, double d1, double d2, double d3,
+			double d4, double d5, double d6, double d7,
 			void *thunkp, long *stackp)
 {
 	VMCallbackContext vmcc;
@@ -184,17 +184,15 @@ thunkEntry(long a0, long a1, long a2, long a3, long a4, long a5,
 	intargs[4] = a4;
 	intargs[5] = a5;
 
-	getfparg(0);
-	getfparg(1);
-	getfparg(2);
-	getfparg(3);
-	getfparg(4);
-	getfparg(5);
-	getfparg(6);
-	getfparg(7);
+	fpargs[0] = d0;
+	fpargs[1] = d1;
+	fpargs[2] = d2;
+	fpargs[3] = d3;
+	fpargs[4] = d4;
+	fpargs[5] = d5;
+	fpargs[6] = d6;
+	fpargs[7] = d7;
 
-	vmcc.intregargsp = intargs;
-	vmcc.floatregargsp = fpargs;
 
 	if ((flags = interpreterProxy->ownVM(0)) < 0) {
 		fprintf(stderr,"Warning; callback failed to own the VM\n");
@@ -206,8 +204,8 @@ thunkEntry(long a0, long a1, long a2, long a3, long a4, long a5,
 		setRMCC(&vmcc);
 		vmcc.thunkp = thunkp;
 		vmcc.stackp = stackp + 2; /* skip address of retpc & retpc (thunk) */
-		vmcc.intregargsp = 0;
-		vmcc.floatregargsp = 0;
+		vmcc.intregargsp = intargs;
+		vmcc.floatregargsp = fpargs;
 		interpreterProxy->sendInvokeCallbackContext(&vmcc);
 		fprintf(stderr,"Warning; callback failed to invoke\n");
 		setRMCC(previousCallbackContext);

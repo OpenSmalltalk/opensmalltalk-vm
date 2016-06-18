@@ -38,11 +38,13 @@ extern sqInt callIA32DoubleReturn  (SIGNATURE);
 # define INT_REG_ARGS /* none */
 # define DBL_REG_ARGS /* none */
 #elif defined(__amd64__) || defined(__x86_64__) || defined(__amd64) || defined(__x86_64)
-/* Since the System V and Windows ABIs differ w.r.t. double parameters we don't
- * specify any DBL_REG_ARGS, even though on Unix there are eight.
- */
-# define INT_REG_ARGS long,long,long,long,long,long,
-# define DBL_REG_ARGS /* none */
+# if WIN64
+#	define INT_REG_ARGS long,long,long,long
+#	define DBL_REG_ARGS double,double,double
+# else
+#	define INT_REG_ARGS long,long,long,long,long,long,
+#	define DBL_REG_ARGS double,double,double,double,double,double,double,double,
+# endif
 #elif defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
 # define INT_REG_ARGS long,long,long,long,long,long,long,long,
 # define DBL_REG_ARGS /* none */
