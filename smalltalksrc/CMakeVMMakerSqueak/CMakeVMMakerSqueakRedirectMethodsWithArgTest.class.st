@@ -76,26 +76,6 @@ CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testExtraVMSettings [
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testSetExtraTargetProperties [
-	self flag:'tty'. "Is the self shouldnt sufficient?"
-	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
-		do:[:each | 
-			(Smalltalk at:each) 
-				allSubclassesDo:[:configuration | | o buildTypes vmGenerator|
-					o:= configuration basicNew.
-					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
-						ifTrue:[
-							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
-							buildTypes do:[:buildType |
-								o configureForBuildType: buildType.
-								vmGenerator:=CMakeVMGeneratorForSqueak new.
-								vmGenerator config: o.
-								vmGenerator output:(String new writeStream).
-								self shouldnt: [o setExtraTargetProperties: vmGenerator] raise: Error]]]].
-
-]
-
-{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testSetGlobalOptions [
 	self flag:'tty'. "Is the self shouldnt sufficient?"
 	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 

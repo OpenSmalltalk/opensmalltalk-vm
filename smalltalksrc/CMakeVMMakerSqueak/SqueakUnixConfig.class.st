@@ -438,7 +438,7 @@ SqueakUnixConfig >> cmakeWriteDirectoriesDotCmake: aMaker [
 		addLast: ((CMakeSet new) variable: 'topDir' quotedValue: (self topDir fullName));
 		addLast: ((CMakeSet new) variable: 'buildDir' quotedValue: (self buildDir ifNil: ['${topDir}/build'] ifNotNil: [self buildDir fullName]));
 		addLast: ((CMakeSet new) variable: 'thirdpartyDir' quotedValue: '${buildDir}/thirdParty');
-		addLast: ((CMakeSet new) variable: 'platformsDir' quotedValue: (self platformsDir));
+		addLast: ((CMakeSet new) variable: 'platformsDir' quotedValue: (self dirPlatforms));
 		addLast: ((CMakeSet new) variable: 'srcDir' quotedValue: (self dirSource pathName));    "where the vm source directory lives"
 		addLast: ((CMakeSet new) variable: 'cogDir' quotedValue: (self cogDir pathName));        "oscogvm/src  for historical reasons" 
 		addLast: ((CMakeSet new) variable: 'srcPluginsDir' quotedValue: (pluginsDir ifNil: [ '${cogDir}/plugins' ]));  "plugin source directory only in oscogvm/src/plugins"
@@ -1272,9 +1272,4 @@ SqueakUnixConfig >> standardIncludesBuild [
 		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE}' )
 	].
 
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakUnixConfig >> thirdpartyLibsBuild [
-	^ thirdpartyLibs ifNil: [ thirdpartyLibs := OrderedCollection new ].
 ]

@@ -1686,7 +1686,6 @@ setExecutableOutputPath
 addVMPlugins
 generatePluginConfigs
 specifyPlugins
-processThirdpartyLibraries
 processPlugins
 postBuildActions
 generateBuildScript
@@ -1855,27 +1854,6 @@ NULL
 
 
 '
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> processThirdpartyLibraries [
-	^HelpTopic
-		title:'Process Third Party Libraries'
-		contents:
-'Within the broad outline of this tutorial, you are here: 
-8. Customizing your Configuration.
-
-SystemNavigation browseAllImplementorsOf: #processThirdpartyLibraries
-
-I have no idea what this does. It exists in the pharo codebase. 
-
-If I do figure out its utility, then the processing architecture will be similar or identical to the Plugin processing.
-
-i.e. Libraries will be represented by objects which will have the responsibility of generating ''stuff''.
-
-
-
-.'
 ]
 
 { #category : #pages }

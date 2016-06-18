@@ -42,7 +42,7 @@ SqueakMacintoshConfig >> cmakeWriteDirectoriesDotCmake: aMaker [
 		addLast: ((CMakeSet new) variable: 'topDir' quotedValue: (self topDir fullName));
 		addLast: ((CMakeSet new) variable: 'buildDir' quotedValue: (self buildDir ifNil: ['${topDir}/build'] ifNotNil: [self buildDir fullName]));
 		addLast: ((CMakeSet new) variable: 'thirdpartyDir' quotedValue: '${buildDir}/thirdParty');
-		addLast: ((CMakeSet new) variable: 'platformsDir' quotedValue: (self platformsDir));
+		addLast: ((CMakeSet new) variable: 'platformsDir' quotedValue: (self dirPlatforms));
 		addLast: ((CMakeSet new) variable: 'srcDir' quotedValue: (self dirSource pathName));    "where the vm source directory lives"
 		addLast: ((CMakeSet new) variable: 'cogDir' quotedValue: (self cogDir pathName));        "oscogvm/src  for historical reasons" 
 		addLast: ((CMakeSet new) variable: 'srcPluginsDir' quotedValue: (pluginsDir ifNil: [ '${cogDir}/plugins' ]));  "plugin source directory only in oscogvm/src/plugins"
@@ -301,27 +301,6 @@ SqueakMacintoshConfig >> customizeVMPlugins [
 ]
 
 { #category : #accessing }
-SqueakMacintoshConfig >> defaultDirectoriesFromGitDir: gitRepository [
-	"Set the default values for all necessary directories taking into account the Git repostiory. An example to use this method is:
-	MTCocoaIOSCogJitDebugConfig new
-	defaultDirectoriesFromGitDir: '/Users/mariano/Pharo/vm/git/cogVM/blessed';
-	generateSources; 
-	generate.
-	"
-	| gitRepositoryString |
-	self flag:'tty'. "Squeak don't git"
-	gitRepositoryString :=  gitRepository, '/'.
-	self srcDir: gitRepositoryString, self srcDirName.
-    	self platformsDir: gitRepositoryString, self platformsDirName.
-    	self buildDir: gitRepositoryString, self buildDirName.
-	self resourcesDir: gitRepositoryString, self resourcesDirName.
-	self outputDir: gitRepositoryString, self outputDirName.
-	
-	
-	
-]
-
-{ #category : #accessing }
 SqueakMacintoshConfig >> executableType [
 	^ 'MACOSX_BUNDLE'
 ]
@@ -496,49 +475,4 @@ SqueakMacintoshConfig >> standardIncludesBuild [
 		addLast: ((CMakeMessage new) message: 'CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE =  ${CMAKE_INCLUDE_DIRECTORIES_PROJECT_BEFORE}' )
 	].
 
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacintoshConfig >> thirdpartyLibsBuild [
-	^ thirdpartyLibs ifNil: [ thirdpartyLibs := OrderedCollection new ].
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacintoshConfig >> thirdpartyLibsBuildAssert [
-	^ self thirdpartyLibs 
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacintoshConfig >> thirdpartyLibsBuildAssertITimerHeartbeat [
-	^ self thirdpartyLibs 
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacintoshConfig >> thirdpartyLibsBuildDebug [
-	^ self thirdpartyLibs 
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacintoshConfig >> thirdpartyLibsBuildDebugITimerHeartbeat [
-	^ self thirdpartyLibs 
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacintoshConfig >> thirdpartyLibsBuildITimerHeartbeat [
-	^ self thirdpartyLibs 
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacintoshConfig >> thirdpartyLibsBuildMultiThreaded [
-	^ self thirdpartyLibs 
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacintoshConfig >> thirdpartyLibsBuildMultiThreadedAssert [
-	^ self thirdpartyLibs 
-]
-
-{ #category : #'cmake buildType redirects' }
-SqueakMacintoshConfig >> thirdpartyLibsBuildMultiThreadedDebug [
-	^ self thirdpartyLibs 
 ]
