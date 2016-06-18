@@ -544,7 +544,7 @@
 	<key>SqueakMouseOptionButton3</key>
 	<integer>2</integer>
 	<key>SqueakPluginsBuiltInOrLocalOnly</key>
-	<true/>
+	<false/>
 	<key>SqueakQuitOnQuitAppleEvent</key>
 	<false/>
 	<key>SqueakTrustedDirectory</key>
