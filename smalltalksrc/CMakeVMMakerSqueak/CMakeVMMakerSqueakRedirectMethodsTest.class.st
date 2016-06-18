@@ -28,22 +28,6 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakRedirectMethodsTest >> testCommonCompilerFlags [
-	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
-		do:[:each | 
-			(Smalltalk at:each) 
-				allSubclassesDo:[:configuration | | o buildTypes|
-					o:= configuration basicNew.
-					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
-						ifTrue:[
-							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
-							buildTypes do:[:buildType |
-								o configureForBuildType: buildType.
-								self assert:(o  commonCompilerFlags isArray)]]]].
-
-]
-
-{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakRedirectMethodsTest >> testCompilerFlags [
 	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
 		do:[:each | 
@@ -168,30 +152,6 @@ CMakeVMMakerSqueakRedirectMethodsTest >> testInternalPlugins [
 							buildTypes do:[:buildType |
 								o configureForBuildType: buildType.
 								self assert:(o  externalPlugins isArray).
-								]]]].
-
-
-
-
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
-CMakeVMMakerSqueakRedirectMethodsTest >> testThirdPartyLibs [
-	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
-		do:[:each | 
-			(Smalltalk at:each) 
-				allSubclassesDo:[:configuration | | o buildTypes|
-					o:= configuration basicNew.
-					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
-						ifTrue:[
-							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
-							buildTypes do:[:buildType |
-								o configureForBuildType: buildType.
-								self assert:(o  thirdpartyLibs isKindOf: Collection).
 								]]]].
 
 

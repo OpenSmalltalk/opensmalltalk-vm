@@ -114,30 +114,6 @@ CMakeVMMakerSqueakCommonConfigTest >> testCogitClass [
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMMakerSqueakCommonConfigTest >> testCommonCompilerFlags [
-	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
-		do:[:each | 
-			(Smalltalk at:each) 
-				allSubclassesDo:[:configuration | | o |
-					configuration isAbstractBaseClass   "*"
-					ifFalse:[	o:= configuration basicNew. 
-							self assert:(o commonCompilerFlags isKindOf: Collection)]]].
-
-"*
-SqueakWin32x86Config browse
-the return array embeds 'self executableName' which does not exist in an AbstractBaseClass
-"
-
-
-
-
-
-
-
-
-]
-
-{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testCrossSources [
 	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
 		do:[:each | 
@@ -311,6 +287,27 @@ CMakeVMMakerSqueakCommonConfigTest >> testIsAbstractBaseClass [
 			(Smalltalk at:each) 
 				allSubclassesDo:[:configuration | 
 					self assert:(configuration isAbstractBaseClass basicType = #Boolean)]]
+
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakCommonConfigTest >> testIsLittleEndian [
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				allSubclassesDo:[:configuration | | o |
+					configuration isAbstractBaseClass not
+						ifTrue:[
+							o:= configuration basicNew.
+							(o excludeFromBuild not)
+								ifTrue:[	self assert:(o  isLittleEndian)]]]]
 
 
 
