@@ -53,7 +53,7 @@ tty.
 "
 Class {
 	#name : #CPlatformConfigForSqueak,
-	#superclass : #CPlatformConfig,
+	#superclass : #Object,
 	#instVars : [
 		'buildType',
 		'cogDir',
@@ -1510,7 +1510,6 @@ CPlatformConfigForSqueak >> compilerDefinitions [
 
 { #category : #compiling }
 CPlatformConfigForSqueak >> compilerFlags [
-	self flag:'tty'. "This goes away if we agree to fork the  project. "
 	self deprecated:' this catchall method has been split into dedicated methods: cmakePrefixPath cmakeIncludePath 	cmakeLibraryPath	cmakeIncludeModules;    cmakeCFlags;       '. "see method ''generate'' in CMakeVMGeneratorForSqueak browse      for old call.  "
 	self	 cmakeCFlags.
 
@@ -1885,6 +1884,16 @@ CPlatformConfigForSqueak >> customizeVMPlugins [
 	self subclassResponsibility
 ]
 
+{ #category : #plugins }
+CPlatformConfigForSqueak >> defaultExternalPlugins [
+	self shouldBeImplemented 
+]
+
+{ #category : #plugins }
+CPlatformConfigForSqueak >> defaultInternalPlugins [
+	self shouldBeImplemented 
+]
+
 { #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirARMv6 [
 	^'cmake.build.arm.v6'
@@ -2020,6 +2029,11 @@ CPlatformConfigForSqueak >> dirOutput [
 ]
 
 { #category : #'cmake directory' }
+CPlatformConfigForSqueak >> dirPlatforms [
+	^'platforms'
+]
+
+{ #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirSource [
   "
     dirSource=[nsspur64src | nsspursrc | nsspurstack64src |nsspurstacksrc |spur64src |spursistasrc |spursrc | spurstack64src |spurstacksrc | src |stacksr]  Configurations must customize this
@@ -2042,6 +2056,19 @@ CPlatformConfigForSqueak >> dirSunOS32x86 [
 { #category : #'cmake directory' }
 CPlatformConfigForSqueak >> dirWin32x86 [
 	^'cmake.build.win32x86'
+]
+
+{ #category : #utils }
+CPlatformConfigForSqueak >> doesNotUnderstand: aMessage [
+	" ignore configureXYZ: messages "
+
+	| sel  |
+	sel := aMessage selector.
+	
+	((sel beginsWith: 'configure') and: [
+		(sel indexOf: $: ) = sel size ] ) ifTrue: [ ^ self ].
+	
+	^ super doesNotUnderstand: aMessage
 ]
 
 { #category : #accessing }
@@ -2912,6 +2939,12 @@ CPlatformConfigForSqueak >> iosPlatformName [
 	^'iOS'
 ]
 
+{ #category : #testing }
+CPlatformConfigForSqueak >> isLittleEndian [
+	"default is true. Override if necessary"
+	^ true
+]
+
 { #category : #compiling }
 CPlatformConfigForSqueak >> linkerFlags [
 	self flag:'tty'. "Does this need to be ported to the redirect design pattern with linkerFlagsBuild, linkerFlagsDebug etc?"
@@ -3003,6 +3036,12 @@ CPlatformConfigForSqueak >> outputDir [
 { #category : #'cmake directory' }
 CPlatformConfigForSqueak >> outputDirName [
 	^ 'products'
+]
+
+{ #category : #accessing }
+CPlatformConfigForSqueak >> platformName [
+	"override in subclass"
+	self subclassResponsibility 
 ]
 
 { #category : #'cmake buildType redirects' }
@@ -3191,20 +3230,6 @@ CPlatformConfigForSqueak >> preferredIncludesNoBuildType [
 
 ]
 
-{ #category : #'source generation' }
-CPlatformConfigForSqueak >> prepareForGeneration [
-	"feel free to override me"
-	|i|
-	self flag:'tty'. 
-	i:= self interpreterClass.
-	((i == CoInterpreter) | (i == CoInterpreterMT ))
-		ifTrue:[self prepareForCogGeneration].   "what is more efficient? self or super?  tty."
-	(i == StackInterpreter) 
-		ifTrue:[self prepareForStackVMGeneration].
-
-
-]
-
 { #category : #'squeak compatability' }
 CPlatformConfigForSqueak >> prepareVMMaker [
 	
@@ -3214,7 +3239,7 @@ CPlatformConfigForSqueak >> prepareVMMaker [
 	maker := VMMaker forPlatform: 'Cross'.
 	
 	maker sourceDirectoryName: self srcDir pathName.
-	maker platformRootDirectoryName: self platformsDir.
+	maker platformRootDirectoryName: self dirPlatforms.
 	
 	
 	allPlugins := self internalPlugins , self externalPlugins.
@@ -3736,157 +3761,6 @@ CPlatformConfigForSqueak >> templates: anObject [
 	templates := anObject
 ]
 
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> thirdpartyLibs [
-	"Route this message send to the message appropriate for my buildType "
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self thirdpartyLibsBuild];
-		at: #buildAssert  put: [self thirdpartyLibsBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self thirdpartyLibsBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self thirdpartyLibsBuildDebug];   
-		at: #buildDebugITimerHeartbeat  put: [self thirdpartyLibsBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self thirdpartyLibsBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self thirdpartyLibsBuildMultiThreaded];
-		at: #buildMultiThreadedAssert  put: [self thirdpartyLibsBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self thirdpartyLibsBuildMultiThreadedDebug ];
-		at: #buildNone put:[self thirdpartyLibsBuildNone].
-	^(d at: buildType) value
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> thirdpartyLibsBuild [ 
-	"convenience method to customize third party libs for this buildType.  
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'addThirdpartyLibrary:'
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'processThirdpartyLibraries'	
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'thirdpartyLibs'
-
-	do nothing is an option
-	"
-	self subclassResponsibility
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> thirdpartyLibsBuildAssert [ 
-	"convenience method to customize third party libs for this buildType.  
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'addThirdpartyLibrary:'
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'processThirdpartyLibraries'	
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'thirdpartyLibs'
-"
-	^ self thirdpartyLibsBuild
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> thirdpartyLibsBuildAssertITimerHeartbeat [ 
-	"convenience method to customize third party libs for this buildType.  
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'addThirdpartyLibrary:'
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'processThirdpartyLibraries'	
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'thirdpartyLibs'
-"
-	^ self thirdpartyLibsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> thirdpartyLibsBuildDebug [ 
-	"convenience method to customize third party libs for this buildType.  
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'addThirdpartyLibrary:'
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'processThirdpartyLibraries'	
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'thirdpartyLibs'
-"
-	^ self thirdpartyLibsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> thirdpartyLibsBuildDebugITimerHeartbeat [ 
-	"convenience method to customize third party libs for this buildType.  
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'addThirdpartyLibrary:'
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'processThirdpartyLibraries'	
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'thirdpartyLibs'
-"
-	^ self thirdpartyLibsBuild
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> thirdpartyLibsBuildITimerHeartbeat [ 
-	"convenience method to customize third party libs for this buildType.  
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'addThirdpartyLibrary:'
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'processThirdpartyLibraries'	
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'thirdpartyLibs'
-"
-	^ self thirdpartyLibsBuild
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> thirdpartyLibsBuildMultiThreaded [ 
-	"convenience method to customize third party libs for this buildType.  
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'addThirdpartyLibrary:'
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'processThirdpartyLibraries'	
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'thirdpartyLibs'
-"
-	^ self thirdpartyLibsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> thirdpartyLibsBuildMultiThreadedAssert [
-	"convenience method to customize third party libs for this buildType.  
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'addThirdpartyLibrary:'
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'processThirdpartyLibraries'	
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'thirdpartyLibs'
-"
-	^ self thirdpartyLibsBuild
-
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> thirdpartyLibsBuildMultiThreadedDebug [ 
-	"convenience method to customize third party libs for this buildType.  
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'addThirdpartyLibrary:'
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'processThirdpartyLibraries'	
-
-	SystemNavigation default browseMethodsWhoseNamesContain: 'thirdpartyLibs'
-"
-	^ self thirdpartyLibsBuild
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> thirdpartyLibsBuildNoBuildType [
-	"SHOULD NOT GET HERE"
-	self shouldNotImplement.
-
-]
-
 { #category : #'cmake directory' }
 CPlatformConfigForSqueak >> topDir [
   " topDir=oscogvm
@@ -3967,23 +3841,4 @@ CPlatformConfigForSqueak >> write: aContents toFile: aFileName [
 				nextPutAll: (self fixLineEndsOf: aContents)]
 
 
-]
-
-{ #category : #'cmake buildType redirects' }
-CPlatformConfigForSqueak >> x [
-	"Route this message send to the message appropriate for my buildType "
-	|d |
-	d:= SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo copy.
-	d 
-		at: #build put: [self xBuild];
-		at: #buildAssert  put: [self xBuildAssert];
-		at: #buildAssertITimerHeartbeat  put: [self xBuildAssertITimerHeartbeat];
-            at:#buildDebug  put: [self xBuildDebug];   
-		at: #buildDebugITimerHeartbeat  put: [self xBuildDebugITimerHeartbeat ];
-		at: #buildITimerHeartbeat  put: [self xBuildITimerHeartbeat];
-		at: #buildMultiThreaded  put: [self xBuildMultiThreaded];
-		at: #buildMultiThreadedAssert  put: [self xBuildMultiThreadedAssert];
-		at: #buildMultiThreadedDebug   put: [self xBuildMultiThreadedDebug ];
-		at: #buildNone put:[self xNoBuildType].
-	^(d at: buildType) value
 ]

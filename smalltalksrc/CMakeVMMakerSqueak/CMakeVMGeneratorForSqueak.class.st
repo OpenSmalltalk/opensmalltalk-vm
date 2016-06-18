@@ -94,7 +94,8 @@ CMakeVMGeneratorForSqueak >> generateByTemplate [
 	config templates: OrderedCollection new. 
 	extPlugins := self generatePluginConfigs: config internalPlugins internal: true.
 	 intPlugins := self generatePluginConfigs: config externalPlugins internal: false.
-	self processThirdpartyLibraries.                       "<--unused in Pharo code? What exactly does this do?"
+	self flag:'tty: pharo code would download and install libraries. I think detection belongs in CMake and user should set up their own system for squeak. '.
+"	self processThirdpartyLibraries.       "
 	self processPlugins:  intPlugins, extPlugins.
 	self config templates	addLast:((CMakeCommand new) command:'target_link_libraries' params:(self moduleName , ' ${LINKLIBS}')).
 "	self cmd: 'target_link_libraries'
