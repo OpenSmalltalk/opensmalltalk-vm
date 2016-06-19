@@ -57,10 +57,9 @@ SqueakCMakeVMMakerAbstractBuilder class >> availableBuildTypesFor: aSymbol [
 ]
 
 { #category : #queries }
-SqueakCMakeVMMakerAbstractBuilder class >> buildDirectory [
-	"buildDirectory is user friendly term. dirBuildPlatform is internal naming convention. "
-	^self dirBuildPlatform
-
+SqueakCMakeVMMakerAbstractBuilder class >> buildDirectoryFor: aSymbol [
+	default ifNil:[default:= self new].
+	^default buildDirectoryFor: aSymbol
 ]
 
 { #category : #queries }
@@ -118,6 +117,12 @@ SqueakCMakeVMMakerAbstractBuilder class >> noBuildTypes [
 { #category : #'initialize-release' }
 SqueakCMakeVMMakerAbstractBuilder class >> reset [
 	default:=nil.
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder class >> sourceDirectoryFor: aSymbol [
+	default ifNil:[default:= self new].
+	^default sourceDirectoryFor: aSymbol
 ]
 
 { #category : #queries }
@@ -189,6 +194,27 @@ SqueakCMakeVMMakerAbstractBuilder >> availableBuildTypesFor: aSymbol inCategory:
 	^d availableBuildTypes
 
 
+
+
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> buildDirectoryFor: aSymbol [
+	"answer a subset of buildTypeAndDirectoryInfo based on the buildTypes the configuration supports   "
+	[
+	((Smalltalk at: aSymbol)  category) =  (self configurationsCategory)  "verify the class is handled by this concrete builder"
+		ifTrue:[^self buildDirectoryFor: aSymbol inCategory: ((Smalltalk at: aSymbol)  category).]  "if so, go get its info"
+		ifFalse:[^self userErrorInvalidTarget: aSymbol]
+	] ifError:[^'buildDirectoryFor: ''', aSymbol , ''' not found' ].
+	^nil.
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> buildDirectoryFor: aSymbol inCategory: aCategoryName [
+	|info |
+	"extract the CMakeVMakerConfigurationInfo object for a configuration and return the sourceDirectory ."
+	info:=(self configurationDictionary:aCategoryName) at: aSymbol ifAbsent:[^SqueakCMakeVMMakerAbstractBuilder default userErrorNoSource:aSymbol].
+	^info dirBuildPlatform
 
 
 ]
@@ -318,6 +344,27 @@ SqueakCMakeVMMakerAbstractBuilder >> initializeBuildTypeAndDirectoryInfo [
 { #category : #queries }
 SqueakCMakeVMMakerAbstractBuilder >> noBuildTypes [
 	^#()
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> sourceDirectoryFor: aSymbol [
+	"answer a subset of buildTypeAndDirectoryInfo based on the buildTypes the configuration supports   "
+	[
+	((Smalltalk at: aSymbol)  category) =  (self configurationsCategory)  "verify the class is handled by this concrete builder"
+		ifTrue:[^self sourceDirectoryFor: aSymbol inCategory: ((Smalltalk at: aSymbol)  category).]  "if so, go get its info"
+		ifFalse:[^self userErrorInvalidTarget: aSymbol]
+	] ifError:[^'sourceDirectoryFor: ''', aSymbol , ''' not found' ].
+	^nil.
+]
+
+{ #category : #queries }
+SqueakCMakeVMMakerAbstractBuilder >> sourceDirectoryFor: aSymbol inCategory: aCategoryName [
+	|info |
+	"extract the CMakeVMakerConfigurationInfo object for a configuration and return the sourceDirectory ."
+	info:=(self configurationDictionary:aCategoryName) at: aSymbol ifAbsent:[^SqueakCMakeVMMakerAbstractBuilder default userErrorNoSource:aSymbol].
+	^info dirSource
+
+
 ]
 
 { #category : #queries }

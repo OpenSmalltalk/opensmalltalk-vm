@@ -819,13 +819,10 @@ CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> createTheConfiguration [
 
 Our new Concrete Configuration must be created as a subclass of our Platform''s Abstract Base Class.
 
-SInce I am creating a Squeak Cog Spur config for the CMakeVMMakerSqueak-Linux64X86-32BitCompatibility Platform I choose the name:
+SInce I am creating a Squeak Cog Spur config for the CMakeVMMakerSqueak-Linux64X86-32BitCompatibility Platform I choose the name*:
 
 Linux64x86w32BitSqueakCogSpurConfig.
 
-(For a discussion on naming conventions evaluate:
-HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp
-)
 
 To create it, I must subclass the Abstract Base Class for my Platform like so:
 
@@ -874,6 +871,10 @@ TestRunner open
  For me, all tests pass.
 
 In the next topic we cover how to hide our new Configuration from a builder. 
+
+*For a discussion on naming conventions evaluate:
+HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp
+
 
 '
 
@@ -1310,14 +1311,9 @@ Builders are located in the CMakeVMMakerSqueak-Builder class category.
 Builders are subclasses of SqueakCMakeVMMakerAbstractBuilder.
 SqueakCMakeVMMakerAbstractBuilder browseHierarchy
 
-Builders are named according to the Platform they manage.
-
-(For a discussion on naming conventions evaluate:
-HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp
-)
+Builders are named* according to the Platform they manage.
 
 Builders manage configurations for one Platform in one  class category.
-
 
 My platform is Linux Linux64x86 with 32 bit compatability libs stored in /usr/lib (other linux use /usr/lib32 for this.)
 
@@ -1339,10 +1335,14 @@ SqueakLinux64x86w32CompatBuilder  unAvailableBuildConfigurations
 --> a SortedCollection(#Linux64x86w32BitConfigUsrLib #Linux64x86w32BitConfigUsrLib32)
  <--these are platform specific Abstract Base Classes. Abstract Base Classes cannot be built, hence they are unavailable.
 
-SqueakLinux64x86w32CompatBuilder  buildDirectory 
--->''cmake.build.linux64x86w32BitCompatibility''                     <--this matches my platform
 
-We will be using the SqueakLinux64x86w32CompatBuilder in tandem with Tests during Configuration development.'
+
+We will be using the SqueakLinux64x86w32CompatBuilder in tandem with Tests during Configuration development.
+
+*For a discussion on naming conventions evaluate:
+HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp
+
+'
 
 
 ]
@@ -1359,9 +1359,27 @@ My target platform is 64 bit Linux on X86 with 32 bit compatibility libraries st
 
 I identify my Platform in the existing CMakeVMMakerSqueak-xyz class categories.  
 
+As of 2016.06.19 the class categories that correspond to target platforms are:
+
+CMakeVMMakerSqueak-IA32-Bochs
+CMakeVMMakerSqueak-IOS
+CMakeVMMakerSqueak-Linux32ARMv6
+CMakeVMMakerSqueak-Linux32x86
+CMakeVMMakerSqueak-Linux64X86-32BitCompatibility
+CMakeVMMakerSqueak-Linux64x64
+CMakeVMMakerSqueak-MacOSPowerPC
+CMakeVMMakerSqueak-MacOSX32x86
+CMakeVMMakerSqueak-SunOS32x86
+CMakeVMMakerSqueak-Win32x86
+
+
+
 If I wanted a configuration for MacOSX32x86, I would place my configuration in CMakeVMMakerSqueak-MacOSX32x86.
 If SunOSx3x86 then CMakeVMMakerSqueak-SunOS32x86.
 etc.
+
+Sincy my target platform is 64 bit Linux on X86 with 32 bit compatibility libraries stored in /usr/lib. I choose
+the class category CMakeVMMakerSqueak-Linux64X86-32BitCompatibility to contain my new configurartion
 
 For a discussion on naming conventions evaluate:
 HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp
@@ -1386,7 +1404,8 @@ Linux64x86w32BitConfigUsrLib
 Linux64x86w32BitConfigUsrLib32
 
 The Suffixes ''UsrLib'' and ''UsrLib32'' refer to the location of the 32 bit compatablity libs. 
-On my system they are in /usr/lib,  so I choose  Linux64x86w32BitConfigUsrLib as my Abstract Base Class
+Some systems (Ubuntu?) place their 32 bit compatability libs in /usr/lib32. 
+On my system (Slackware) they are in /usr/lib,  so I choose  Linux64x86w32BitConfigUsrLib as my Abstract Base Class
 
 Examples of Abstract Base Classes in other class categories  include:
 
@@ -1488,9 +1507,11 @@ There are different sources for the Windows and Mac platforms which I do not cov
 
 { #category : #pages }
 CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> initializeVMPlugins [
+	"This method was automatically generated. Edit it using:"
+	"a HelpBrowser edit: #initializeVMPlugins"
 	^HelpTopic
-		title:'Initialize VM Plugins'
-		contents:
+		title: 'Initialize VM Plugins'
+		contents: 
 'Within the broad outline of this tutorial, you are here: 
   8. Customizing your Configuration.
 
@@ -1521,7 +1542,92 @@ These objects are just data buckets for carrying information that will be used t
 
 CMakeVMPlugin browseHierarchy
 
-On initialization, the CPlatformConfgiForSqueak stores them in its vmplugins instance variable where we will customize them later.
+On initialization, the CPlatformConfigForSqueak stores them in its vmplugins instance variable where we will customize them later.
+!' readStream nextChunkText
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> isAbstractBaseClass [
+	^HelpTopic
+		title:'Is Abstract Base Class'
+		contents:
+'Within the broad outline of this tutorial, you are here: 
+5. Interaction of the Builder and your Configuration
+
+Configurations  must identify themselves as NOT being an Abstract Base Class
+
+The default, inhereted from CPlatformConfigForSqueak is that a Configuration IS an Abstract Base Class.
+
+CPlatformConfigForSqueak class browse
+
+isAbstractBaseClass
+	^true
+	
+If we look at our new configuration that we just copied from an existing, we see	
+Linux64x86w32BitSqueakCogSpurConfig class browse	
+	
+isAbstractBaseClass
+	^false
+	
+	
+	
+
+
+
+	^false   "build this configuration"
+"	^true     do not build this configuration"   
+
+In our case, the Builder shows us that Linux32x86SqueakCogSpurConfig is capable of being built (I had copied an existing, working Configuration):
+
+SqueakLinux64x86w32CompatBuilder availableBuildConfigurations
+--> a SortedCollection(#Linux64x86w32BitSqueakCogSpurConfig #Linux64x86w32BitSqueakCogV3Config)
+
+
+To exclude it, override (or alter) the Configurations ''excludeFromBuild'' method
+
+Linux64x86w32BitSqueakCogSpurConfig >>excludeFromBuild
+	"over-ride to exclude yourself from a build"
+	^true
+
+And the Configuration is hidden from the Builder...
+
+SqueakLinux64x86w32CompatBuilder availableBuildConfigurations
+-->  a SortedCollection(#Linux64x86w32BitSqueakCogV3Config)
+
+
+However, since I am developing locally, I need it to be visible to the Builder , so I set it as so:
+
+Linux64x86w32BitSqueakCogSpurConfig >>excludeFromBuild
+	"over-ride to exclude yourself from a build"
+	^false
+
+And my Builder can see it again...
+
+SqueakLinux64x86w32CompatBuilder availableBuildConfigurations  
+-->  a SortedCollection(#Linux64x86w32BitSqueakCogSpurConfig #Linux64x86w32BitSqueakCogV3Config)
+
+
+N.B. tty. My opinion is that this is a weak way of doing this, but I have not thought through how to do this elegantly. 
+This functionality is included with an eye towards easing automated builds for all platforms and configurations.'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> isAbstractBaseClassAndExcludeFromBuild [
+	^HelpTopic
+		title:'ExcludeFrom Build and Abstract Base Class'
+		contents:
+'Within the broad outline of this tutorial, you are here: 
+5. Interaction of the Builder and your Configuration
+
+
+A bit of explanation about excludeFromBuild and isAbstractBaseClass is in order.
+
+Both Builders and Tests use the truth values of these methods to determine if a Configuration should be tested or built or queried
+
+The Class comment for CPlatformConfigForSqueak explains the interaction in full.
+
+ClassCommentVersionsBrowser browseCommentOf:CPlatformConfigForSqueak
+
 '
 ]
 
@@ -1643,6 +1749,9 @@ identifyPlatformAbstractBaseClass
 identifyBuilder
 createTheConfiguration
 excludingConfigFromBuilds
+isAbstractBaseClass
+isAbstractBaseClassAndExcludeFromBuild
+
 setAvailableBuildTypes
 firstCMakeGeneration
 tackingStockOne
@@ -1658,7 +1767,6 @@ customizeVMPlugins
 configGenerateByTemplate
 specifyCogitClass
 
-vmsrc
 
 specifyDirectories
 dirBuildLanguageVMMM
@@ -2520,17 +2628,4 @@ Let''s recap next.
 '
 
 
-]
-
-{ #category : #pages }
-CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> vmsrc [
-	^HelpTopic
-		title:'vmsrc'
-		contents:
-'Within the broad outline of this tutorial, you are here: 
-8. Customizing your Configuration.
-
-
-write me.
-'
 ]

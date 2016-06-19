@@ -109,8 +109,8 @@ SqueakWindowsConfig >> compilerDefinitions [
 		'-DENABLE_FAST_BLT ' }
 ]
 
-{ #category : #compiling }
-SqueakWindowsConfig >> compilerFlags [
+{ #category : #'cmake buildType redirects' }
+SqueakWindowsConfig >> compilerFlagsBuild [
 	"omit -ggdb2 to prevent generating debug info"
 	"Some flags explanation: 
 	

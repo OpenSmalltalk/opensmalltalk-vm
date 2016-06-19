@@ -72,10 +72,15 @@ Linux64x86w32BitSqueakCogV3Config >> availableBuildTypes [
 	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes copyWithoutAll: #( #buildAssertITimerHeartbeat #buildDebug #buildDebugITimerHeartbeat #buildITimerHeartbeat #buildMultiThreaded #buildMultiThreadedAssert #buildMultiThreadedDebug #buildNone)
 ]
 
+{ #category : #'source generation' }
+Linux64x86w32BitSqueakCogV3Config >> cogitClass [
+	^ StackToRegisterMappingCogit 
+
+]
+
 { #category : #'cmake buildType redirects' }
-Linux64x86w32BitSqueakCogV3Config >> cmakeAddDefinitionsBuild [
-	|definitions|
-	definitions:=#(
+Linux64x86w32BitSqueakCogV3Config >> compilerDefinitionsBuild [
+	^#(
 	 '-DNDEBUG'          
  	 '-DDEBUGVM=0'
 	 ' -DLSB_FIRST=1'
@@ -84,118 +89,10 @@ Linux64x86w32BitSqueakCogV3Config >> cmakeAddDefinitionsBuild [
 "	  '-DUSE_GLOBAL_STRUCT=0'"
  	 '-DCOGMTVM=0') .
 
-	(enabledebugmessages)
-		ifTrue:[	templates 
-		addLast:((CMakeMessage new) message: (self class name) , 'cmakeAddDefinitionsBuild')
-	] .
-	templates
-		addLast:((CMakeAddDefinitions new) definitions: definitions). 
-
-"	templates
-		addLast:((CMakeAddDefinitions new) definitions: (self compilerDefinitions asOrderedCollection)). <--this was the old pharo deprecated legacy code approach that is unsuitable for the multiple buildTypes each Configuration must support"
-
-
 ]
 
 { #category : #'cmake buildType redirects' }
-Linux64x86w32BitSqueakCogV3Config >> cmakeAddDefinitionsBuildAssert [
-	|definitions|
-"copy-n-paste from /build.linux32x86/squeak.cog.v3/build.assert/mvm  file"
-	definitions:=#(
-	 '-DDEBUGVM=0'
-       '-D_GNU_SOURCE' 
-       '-D_FILE_OFFSET_BITS=64' 
-        '-DCOGMTVM=0'
-	) .
-
-	(enabledebugmessages)
-		ifTrue:[	templates 
-		addLast:((CMakeMessage new) message: (self class name) , 'cmakeAddDefinitionsBuildAssert')
-	] .
-	templates
-		addLast:((CMakeAddDefinitions new) definitions: definitions). 
-
-"	templates
-		addLast:((CMakeAddDefinitions new) definitions: (self compilerDefinitions asOrderedCollection)). <--this was the old pharo deprecated legacy code approach that is unsuitable for the multiple buildTypes each Configuration must support"
-
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitSqueakCogV3Config >> cmakeCFlagsBuild [
-	|cflags|
-	self flag:'tty'. "#build should have -O2"
-	cflags:= String streamContents: [:stream | (self compilerFlags) asStringOn: stream delimiter: ' ' ].
-	cflags:='"', cflags, '"'.
-	(enabledebugmessages)
-		ifTrue:[	templates 
-		addLast:((CMakeMessage new) message: (self class name) , 'cmakeCFlagsBuild')
-	] .
-	templates
-		addLast:((CMakeSet new) variable:'CMAKE_C_FLAGS' value: '${CMAKE_C_FLAGS} ', cflags );
-		addLast:((CMakeSet new) variable:'CMAKE_C_FLAGS_RELEASE' value: '${CMAKE_CXX_FLAGS_RELEASE} ', cflags );
-		addLast:((CMakeSet new) variable:'CMAKE_C_FLAGS_DEBUG' value: '${CMAKE_CXX_FLAGS_DEBUG} ',cflags);		
-		addLast:((CMakeSet new) variable:'CMAKE_CXX_FLAGS' value: '${CMAKE_CXX_FLAGS} ', cflags );
-		addLast:((CMakeSet new) variable:'CMAKE_CXX_FLAGS_RELEASE' value: '${CMAKE_CXX_FLAGS_RELEASE} ', cflags );
-		addLast:((CMakeSet new) variable:'CMAKE_CXX_FLAGS_DEBUG' value: '${CMAKE_CXX_FLAGS_DEBUG} ', cflags ).
-
-	(enabledebugmessages)  "take a peek at em"
-		ifTrue:[	templates 
-		addLast:((CMakeMessage new) message: 'CMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}');
-		addLast:((CMakeMessage new) message: 'CMAKE_CXX_FLAGS_DEBUG=${CMAKE_CXX_FLAGS_DEBUG}');
-		addLast:((CMakeMessage new) message: 'CMAKE_CXX_FLAGS_RELEASE=${CMAKE_CXX_FLAGS_RELEASE}');
-		addLast:((CMakeMessage new) message: 'CMAKE_C_FLAGS=${CMAKE_C_FLAGS}');
-		addLast:((CMakeMessage new) message: 'CMAKE_C_FLAGS_DEBUG=${CMAKE_C_FLAGS_DEBUG}');
-		addLast:((CMakeMessage new) message: 'CMAKE_C_FLAGS_RELEASE=${CMAKE_C_FLAGS_RELEASE}')
-	] .
-
-
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux64x86w32BitSqueakCogV3Config >> cmakeSetSourceFilesPropertiesBuild [
-	|cflags|
-	cflags:=String streamContents: [:stream | (self compilerFlags) asStringOn: stream 
-delimiter: ' ' ].
-	cflags := '"' , cflags , '"'.
-	(enabledebugmessages)
-		ifTrue:[	templates 
-		addLast:((CMakeMessage new) message: (self class name) , 'cmakeSetSourceFilesPropertiesBuild')
-	] .
-	templates
-		addLast:((CMakeSetSourceFilesProperties new) 
-			files: (OrderedCollection with: '${srcVMDir}/cogit.c') 
-			propertiesandvalues:{'COMPILE_FLAGS' . cflags});
-		addLast:((CMakeSetSourceFilesProperties new) 
-			files: (OrderedCollection with: '${targetPlatform}/vm/sqUnixHeartbeat.c') 
-			propertiesandvalues:{'COMPILE_FLAGS' . cflags}).
-]
-
-{ #category : #'source generation' }
-Linux64x86w32BitSqueakCogV3Config >> cogitClass [
-	^ StackToRegisterMappingCogit 
-
-]
-
-{ #category : #compiling }
-Linux64x86w32BitSqueakCogV3Config >> compilerDefinitions [
-	
-	self deprecated: 'Legacy method from pharo approach. We need different definitions for each buildType'.
-
-	^#(
-	 '-DNDEBUG'          
- 	 '-DDEBUGVM=0'
-	 ' -DLSB_FIRST=1'
-	 '-D_GNU_SOURCE'
- 	 '-D_FILE_OFFSET_BITS=64'
-"	  '-DUSE_GLOBAL_STRUCT=0'"
- 	 '-DCOGMTVM=0') 
-
-]
-
-{ #category : #compiling }
-Linux64x86w32BitSqueakCogV3Config >> compilerFlags [
+Linux64x86w32BitSqueakCogV3Config >> compilerFlagsBuild [
 	^#("'-Wall'"
 		'-w'
 		'-m32'
@@ -245,15 +142,6 @@ Linux64x86w32BitSqueakCogV3Config >> externalLibsBuild [
 { #category : #'source generation' }
 Linux64x86w32BitSqueakCogV3Config >> interpreterClass [
 	^ CoInterpreter
-]
-
-{ #category : #compiling }
-Linux64x86w32BitSqueakCogV3Config >> linkerFlags [
-	^#(	'-Wl'
-            '-z'
-            'now'
-	   ) 
-
 ]
 
 { #category : #'cmake buildType redirects' }

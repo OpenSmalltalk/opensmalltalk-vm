@@ -168,6 +168,15 @@ Linux32x86Config >> internalPluginsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
+Linux32x86Config >> linkerFlagsBuild [
+	^#(	'-Wl'
+            '-z'
+            'now'
+	   ) 
+
+]
+
+{ #category : #'cmake buildType redirects' }
 Linux32x86Config >> preferredIncludesBuild [
 	(enabledebugmessages)
 		ifTrue:[	
