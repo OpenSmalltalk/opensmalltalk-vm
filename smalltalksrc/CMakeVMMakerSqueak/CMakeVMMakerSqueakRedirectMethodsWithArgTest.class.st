@@ -40,6 +40,8 @@ CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testExtraPluginSettings [
 							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
 							buildTypes do:[:buildType |
 								o configureForBuildType: buildType.
+								o enabledebugmessages:true.			
+								o templates: OrderedCollection new. 																
 								vmGenerator:=CMakeVMGeneratorForSqueak new.
 								vmGenerator config: o.
 								vmGenerator output:(String new writeStream).
@@ -114,6 +116,28 @@ CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testSetGlobalOptionsAfterDetermi
 								vmGenerator:=CMakeVMGeneratorForSqueak new.
 								vmGenerator output:(String new writeStream).
 								self shouldnt: [o setGlobalOptionsAfterDetermineSystem: vmGenerator] raise: Error]]]].
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakRedirectMethodsWithArgTest >> testSetPlatformSources [
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig ) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				allSubclassesDo:[:configuration | | o buildTypes vmGenerator|
+					o:= configuration basicNew.
+					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
+						ifTrue:[
+							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
+							buildTypes do:[:buildType |
+								o configureForBuildType: buildType.
+								o enabledebugmessages: true.
+								o templates: OrderedCollection new.
+								o initializePlatformSources.
+								vmGenerator:=CMakeVMGeneratorForSqueak new.
+								vmGenerator config: o.
+								vmGenerator output:(String new writeStream).
+								self shouldnt: [o setPlatformSources: vmGenerator] raise: Error]]]].
 
 ]
 

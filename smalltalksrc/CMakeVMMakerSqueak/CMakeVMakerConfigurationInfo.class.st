@@ -57,7 +57,7 @@ CMakeVMakerConfigurationInfo >> isAbstractBaseClass [
 CMakeVMakerConfigurationInfo >> visit: aVisitor [
 	|v|
 	"I am being visited by a CMakeVMMakerSqueak configuration class. Extract its information and store it in myself"
-	self flag:'tty'. "why am I not storing the instances itself?does this visit stuff really make sense? I am thinking its 'lightweight'. hmmm"
+	self flag:'tty dirSource and dirBuildPlatform  an instance of an irritating difference in idioms when dealing with directory paths'. 
 	v:= aVisitor basicNew.
 	(v class isAbstractBaseClass)
 		ifTrue:[	
@@ -65,7 +65,8 @@ CMakeVMakerConfigurationInfo >> visit: aVisitor [
 				excludeFromBuild := true]
 		ifFalse:[
 			availableBuildTypes := v availableBuildTypes.
-			dirBuildPlatform := v dirBuildPlatform.
+			dirBuildPlatform := v dirBuildPlatform .  "dirBuildPlatform is a String"
+			dirSource := v dirSource fullName.      "dirSource is a FileDirectory, so convert to string"
 			excludeFromBuild := v excludeFromBuild.
 			isAbstractBaseClass := false]. 
 

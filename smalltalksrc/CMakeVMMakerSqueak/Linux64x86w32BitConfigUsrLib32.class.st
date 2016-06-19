@@ -153,6 +153,15 @@ Linux64x86w32BitConfigUsrLib32 >> internalPluginsBuild [
 ]
 
 { #category : #'cmake buildType redirects' }
+Linux64x86w32BitConfigUsrLib32 >> linkerFlagsBuild [
+	^#(	'-Wl'
+            '-z'
+            'now'
+	   ) 
+
+]
+
+{ #category : #'cmake buildType redirects' }
 Linux64x86w32BitConfigUsrLib32 >> preferredIncludesBuild [
 	(enabledebugmessages)
 		ifTrue:[	

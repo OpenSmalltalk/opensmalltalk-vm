@@ -135,6 +135,28 @@ CMakeVMMakerSqueakCommonConfigTest >> testCrossSources [
 ]
 
 { #category : #'as yet unclassified' }
+CMakeVMMakerSqueakCommonConfigTest >> testCustomizeVMPlugins [
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				allSubclassesDo:[:configuration | | o buildTypes|
+					o:= configuration basicNew.							
+					(o excludeFromBuild not) & (configuration isAbstractBaseClass not)
+						ifTrue:[
+							buildTypes:=o availableBuildTypes copyWithoutAll:#(#buildNone).
+							buildTypes do:[:buildType |
+								o configureForBuildType: buildType.	
+								o initializeVMPlugins.
+							 	self assert:(o  vmplugins isKindOf:Collection)]]]]
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
 CMakeVMMakerSqueakCommonConfigTest >> testDirBuildPlatform [
 	"for each builder, make sure all its configurations provide a dirSource "
 	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
@@ -240,6 +262,26 @@ CMakeVMMakerSqueakCommonConfigTest >> testExtraSources [
 							o:= configuration basicNew.
 							(o excludeFromBuild not)
 								ifTrue:[self assert:(o  extraSources isString)]]]
+
+
+
+
+
+
+
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMMakerSqueakCommonConfigTest >> testInitializeVMPlugins [
+	#(#SqueakMacintoshConfig #SqueakUnixConfig #SqueakWindowsConfig) 
+		do:[:each | 
+			(Smalltalk at:each) 
+				allSubclassesDo:[:configuration | | o |
+							o:= configuration basicNew.
+							o initializeVMPlugins.
+							o excludeFromBuild not                                                     
+							 	ifTrue:[self assert:(o  vmplugins isKindOf:Collection)]]]
 
 
 

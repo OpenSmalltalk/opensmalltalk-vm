@@ -345,6 +345,49 @@ see the ''hack'' section below.
 ]
 
 { #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> cmakeAddDefinitions [
+	(enabledebugmessages)
+		ifTrue:[	templates 
+		addLast:((CMakeMessage new) message: (self class name) , 'cmakeAddDefinitions')
+	] .
+	templates
+		addLast:((CMakeAddDefinitions new) definitions: self compilerDefinitions).  "this reroutes to self compilerDefinitionsBuild . This suggests that the cmakeAddDefinitionsBuild is redundant because compileDefinitiosn will rerroute based on buildType"
+
+
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> cmakeCFlags [
+	|cflags|
+	cflags:= String streamContents: [:stream | (self compilerFlags) asStringOn: stream delimiter: ' ' ]. "buildType redirect to compilerFlagsBuildType"
+	cflags:='"', cflags, '"'.
+	(enabledebugmessages)
+		ifTrue:[	templates 
+		addLast:((CMakeMessage new) message: (self class name) , 'cmakeCFlags')
+	] .
+	templates
+		addLast:((CMakeSet new) variable:'CMAKE_C_FLAGS' value: '${CMAKE_C_FLAGS} ', cflags );
+		addLast:((CMakeSet new) variable:'CMAKE_C_FLAGS_RELEASE' value: '${CMAKE_CXX_FLAGS_RELEASE} ', cflags );
+		addLast:((CMakeSet new) variable:'CMAKE_C_FLAGS_DEBUG' value: '${CMAKE_CXX_FLAGS_DEBUG} ',cflags);		
+		addLast:((CMakeSet new) variable:'CMAKE_CXX_FLAGS' value: '${CMAKE_CXX_FLAGS} ', cflags );
+		addLast:((CMakeSet new) variable:'CMAKE_CXX_FLAGS_RELEASE' value: '${CMAKE_CXX_FLAGS_RELEASE} ', cflags );
+		addLast:((CMakeSet new) variable:'CMAKE_CXX_FLAGS_DEBUG' value: '${CMAKE_CXX_FLAGS_DEBUG} ', cflags ).
+
+	(enabledebugmessages)  "take a peek at em"
+		ifTrue:[	templates 
+		addLast:((CMakeMessage new) message: 'CMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}');
+		addLast:((CMakeMessage new) message: 'CMAKE_CXX_FLAGS_DEBUG=${CMAKE_CXX_FLAGS_DEBUG}');
+		addLast:((CMakeMessage new) message: 'CMAKE_CXX_FLAGS_RELEASE=${CMAKE_CXX_FLAGS_RELEASE}');
+		addLast:((CMakeMessage new) message: 'CMAKE_C_FLAGS=${CMAKE_C_FLAGS}');
+		addLast:((CMakeMessage new) message: 'CMAKE_C_FLAGS_DEBUG=${CMAKE_C_FLAGS_DEBUG}');
+		addLast:((CMakeMessage new) message: 'CMAKE_C_FLAGS_RELEASE=${CMAKE_C_FLAGS_RELEASE}')
+	] .
+
+
+
+]
+
+{ #category : #'cmake buildType redirects' }
 SqueakUnixConfig >> cmakeIncludeModulesBuild [
 	"include CMake Modules. on my system they are in /usr/local/share/cmake-3.0/Modules/"
 	(enabledebugmessages)
@@ -426,6 +469,26 @@ cmake --help-variable   CMAKE_PREFIX_PATH
 "override me if necessary"
 
 
+]
+
+{ #category : #'cmake buildType redirects' }
+SqueakUnixConfig >> cmakeSetSourceFilesProperties [
+	|cflags|
+	self flag:'tty: this needs rethinking. It should be a standard template that has different elements injected based on buildType. This should not be a redirectPattern method'.	
+	cflags:=String streamContents: [:stream | (self compilerFlags) asStringOn: stream   "compilerFlags redirects based on buildType"
+delimiter: ' ' ].
+	cflags := '"' , cflags , '"'.
+	(enabledebugmessages)
+		ifTrue:[	templates 
+		addLast:((CMakeMessage new) message: (self class name) , 'cmakeSetSourceFilesPoperties')
+	] .
+	templates
+		addLast:((CMakeSetSourceFilesProperties new)                                   "this should iterate over a set of sourceFiles that redirects on buildTypes instead of being hard-coded. "
+			files: (OrderedCollection with: '${srcVMDir}/cogit.c') 
+			propertiesandvalues:{'COMPILE_FLAGS' . cflags});
+		addLast:((CMakeSetSourceFilesProperties new) 
+			files: (OrderedCollection with: '${targetPlatform}/vm/sqUnixHeartbeat.c') 
+			propertiesandvalues:{'COMPILE_FLAGS' . cflags}).
 ]
 
 { #category : #cmake }

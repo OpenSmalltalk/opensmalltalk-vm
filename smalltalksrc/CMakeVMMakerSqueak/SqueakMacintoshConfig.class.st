@@ -79,8 +79,8 @@ SqueakMacintoshConfig >> compilerDefinitions [
 
 ]
 
-{ #category : #compiling }
-SqueakMacintoshConfig >> compilerFlags [
+{ #category : #'cmake buildType redirects' }
+SqueakMacintoshConfig >> compilerFlagsBuild [
 	"Macintosh Common compiler flags"
 	self flag:'tty'. "cut-n-paste from representative pharo macOS configs"
 	^ { 

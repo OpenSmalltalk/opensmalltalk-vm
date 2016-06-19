@@ -72,89 +72,6 @@ Linux32x86SqueakCogV3Config >> availableBuildTypes [
 	^SqueakCMakeVMMakerAbstractBuilder  default  allBuildTypes copyWithoutAll: #( #buildAssert #buildAssertITimerHeartbeat #buildDebug #buildDebugITimerHeartbeat #buildITimerHeartbeat #buildMultiThreaded #buildMultiThreadedAssert #buildMultiThreadedDebug #buildNone)
 ]
 
-{ #category : #'cmake buildType redirects' }
-Linux32x86SqueakCogV3Config >> cmakeAddDefinitionsBuild [
-	|c d  o|
-	(enabledebugmessages)
-		ifTrue:[	templates 
-		addLast:((CMakeMessage new) message: (self class name) , 'cmakeAddDefinitionsBuild')
-	] .
-	c := self compilerFlags asOrderedCollection.
-	d := self compilerDefinitions asOrderedCollection.
-	o:= OrderedCollection new.
-	o addAllLast: c; addAllLast: d.
-	templates
-		addLast:((CMakeAddDefinitions new) definitions: (self compilerDefinitions asOrderedCollection)). "see my self flag below"
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86SqueakCogV3Config >> cmakeAddDefinitionsBuildAssert [
-	|c d  o|
-	(enabledebugmessages)
-		ifTrue:[	templates 
-		addLast:((CMakeMessage new) message: (self class name) , 'cmakeAddDefinitionsBuildAssert')
-	] .
-	c := self compilerFlagsAssert asOrderedCollection.
-	d := self compilerDefinitionsAssert asOrderedCollection.
-	o:= OrderedCollection new.
-	o addAllLast: c; addAllLast: d.
-	templates
-		addLast:((CMakeAddDefinitions new) definitions: (self compilerDefinitionsAssert asOrderedCollection)). "see my self flag below"
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86SqueakCogV3Config >> cmakeCFlagsBuild [
-	|cflags|
-	self flag:'tty'. "#build should have -O2"
-	cflags:= String streamContents: [:stream | (self compilerFlags) asStringOn: stream delimiter: ' ' ].
-	cflags:='"', cflags, '"'.
-	(enabledebugmessages)
-		ifTrue:[	templates 
-		addLast:((CMakeMessage new) message: (self class name) , 'cmakeCFlagsBuild')
-	] .
-	templates
-		addLast:((CMakeSet new) variable:'CMAKE_C_FLAGS' value: '${CMAKE_C_FLAGS} ', cflags );
-		addLast:((CMakeSet new) variable:'CMAKE_C_FLAGS_RELEASE' value: '${CMAKE_CXX_FLAGS_RELEASE} ', cflags );
-		addLast:((CMakeSet new) variable:'CMAKE_C_FLAGS_DEBUG' value: '${CMAKE_CXX_FLAGS_DEBUG} ',cflags);		
-		addLast:((CMakeSet new) variable:'CMAKE_CXX_FLAGS' value: '${CMAKE_CXX_FLAGS} ', cflags );
-		addLast:((CMakeSet new) variable:'CMAKE_CXX_FLAGS_RELEASE' value: '${CMAKE_CXX_FLAGS_RELEASE} ', cflags );
-		addLast:((CMakeSet new) variable:'CMAKE_CXX_FLAGS_DEBUG' value: '${CMAKE_CXX_FLAGS_DEBUG} ', cflags ).
-
-	(enabledebugmessages)  "take a peek at em"
-		ifTrue:[	templates 
-		addLast:((CMakeMessage new) message: 'CMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}');
-		addLast:((CMakeMessage new) message: 'CMAKE_CXX_FLAGS_DEBUG=${CMAKE_CXX_FLAGS_DEBUG}');
-		addLast:((CMakeMessage new) message: 'CMAKE_CXX_FLAGS_RELEASE=${CMAKE_CXX_FLAGS_RELEASE}');
-		addLast:((CMakeMessage new) message: 'CMAKE_C_FLAGS=${CMAKE_C_FLAGS}');
-		addLast:((CMakeMessage new) message: 'CMAKE_C_FLAGS_DEBUG=${CMAKE_C_FLAGS_DEBUG}');
-		addLast:((CMakeMessage new) message: 'CMAKE_C_FLAGS_RELEASE=${CMAKE_C_FLAGS_RELEASE}')
-	] .
-
-
-
-]
-
-{ #category : #'cmake buildType redirects' }
-Linux32x86SqueakCogV3Config >> cmakeSetSourceFilesPropertiesBuild [
-	|cflags|
-	cflags:=String streamContents: [:stream | (self compilerFlags) asStringOn: stream 
-delimiter: ' ' ].
-	cflags := '"' , cflags , '"'.
-	(enabledebugmessages)
-		ifTrue:[	templates 
-		addLast:((CMakeMessage new) message: (self class name) , 'cmakeSetSourceFilesPropertiesBuild')
-	] .
-	templates
-		addLast:((CMakeSetSourceFilesProperties new) 
-			files: (OrderedCollection with: '${srcVMDir}/cogit.c') 
-			propertiesandvalues:{'COMPILE_FLAGS' . cflags});
-		addLast:((CMakeSetSourceFilesProperties new) 
-			files: (OrderedCollection with: '${targetPlatform}/vm/sqUnixHeartbeat.c') 
-			propertiesandvalues:{'COMPILE_FLAGS' . cflags}).
-]
-
 { #category : #'source generation' }
 Linux32x86SqueakCogV3Config >> cogitClass [
 	^ StackToRegisterMappingCogit 
@@ -162,8 +79,7 @@ Linux32x86SqueakCogV3Config >> cogitClass [
 ]
 
 { #category : #compiling }
-Linux32x86SqueakCogV3Config >> compilerDefinitions [
-	self deprecated: 'Legacy method from pharo approach. We need different definitions for each buildType'.
+Linux32x86SqueakCogV3Config >> compilerDefinitionsBuild [
 	^#(
 	 '-DNDEBUG'          
  	 '-DDEBUGVM=0'
@@ -175,8 +91,8 @@ Linux32x86SqueakCogV3Config >> compilerDefinitions [
 
 ]
 
-{ #category : #compiling }
-Linux32x86SqueakCogV3Config >> compilerFlags [
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> compilerFlagsBuild [
 	^#("'-Wall'"
 		'-w'
 		'-m32'
@@ -206,7 +122,7 @@ Linux32x86SqueakCogV3Config >> dirSource [
 
 { #category : #cmake }
 Linux32x86SqueakCogV3Config >> excludeFromBuild [
-	^false   "build this configuration"
+	^true   "build this configuration"
 "	^true"
 
 
@@ -228,11 +144,25 @@ Linux32x86SqueakCogV3Config >> interpreterClass [
 	^ CoInterpreter
 ]
 
-{ #category : #compiling }
-Linux32x86SqueakCogV3Config >> linkerFlags [
-	^#(	'-Wl'
-            '-z'
-            'now'
-	   ) 
+{ #category : #'cmake buildType redirects' }
+Linux32x86SqueakCogV3Config >> setPlatformSourcesBuild:aMaker [
+	|mysubset iwantonly|
 
+	"trim the platformSources collection .c files I want.  for  this OS/platform"
+	self flag:'tty. go through the Cog svn tree and see exactly what files should be included here.'.
+	iwantonly := #(		
+	'aio.c'
+	'debug.c'	
+	'osExports.c'
+	'sqUnixCharConv.c'
+	'sqUnixExternalPrims.c'
+	'sqUnixHeartbeat.c'
+	'sqUnixMain.c'
+	'sqUnixMemory.c'
+	'sqUnixThreads.c'
+	'sqUnixVMProfile.c'
+	).		
+	mysubset := platformSources select: [:c | 0 < (iwantonly occurrencesOf: c)]. 
+	platformSources := mysubset.
+	super setPlatformSourcesBuild:aMaker
 ]
