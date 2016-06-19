@@ -122,6 +122,25 @@ Linux64x64Config >> executableName [
 	^ self vmIShouldNotBeHereExecutableName
 ]
 
+{ #category : #compiling }
+Linux64x64Config >> externalLibraries [
+	^#(
+
+			'uuid'  ""
+			 'ssl'  ""
+			 'crypto' ""
+			 'm'      	"C math library"
+			 'dl'      "dynamic linking library"
+			 'pthread' "POSIX threads library"
+			 'SM'   "session management library for X11"
+			 'ICE'   "ICE is the Inter Client Exchange protocol, part of X11"
+			 'GL'    "libGL implements the GLX interface as well as the main OpenGL API entrypoints"
+			 'X11'
+			 'nsl'    "network services library"
+		)
+				
+]
+
 { #category : #'cmake buildType redirects' }
 Linux64x64Config >> externalPluginsBuild [
 	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
@@ -143,6 +162,15 @@ Linux64x64Config >> extraPluginSettingsBuild: aMaker [
 { #category : #'cmake buildType redirects' }
 Linux64x64Config >> internalPluginsBuild [
 	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
+]
+
+{ #category : #'cmake buildType redirects' }
+Linux64x64Config >> linkerFlagsBuild [
+	^#(	'-Wl'
+            '-z'
+            'now'
+	   ) 
+
 ]
 
 { #category : #'cmake buildType redirects' }
