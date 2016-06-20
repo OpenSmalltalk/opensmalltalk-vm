@@ -2481,6 +2481,7 @@ SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: co
 	 with with pointers to the other. The arguments must be arrays of the same length. 
 	 Answers PrimNoErr if the primitive succeeds, otherwise a relevant error code."
 	"Implementation: Uses lazy forwarding to defer updating references until message send."
+	<inline: false>
 	| ec |
 	self assert: becomeEffectsFlags = 0.
 	self runLeakCheckerFor: GCModeBecome.
@@ -2489,12 +2490,7 @@ SpurMemoryManager >> become: array1 with: array2 twoWay: twoWayFlag copyHash: co
 	((self isArray: array2)
 	 and: [(self numSlotsOf: array1) = (self numSlotsOf: array2)]) ifFalse:
 		[^PrimErrBadArgument].
-	(twoWayFlag or: [copyHashFlag])
-		ifTrue:
-			[ec := self containsOnlyValidBecomeObjects: array1 and: array2]
-		ifFalse:
-			[self followForwardedObjectFields: array2 toDepth: 0.
-			ec := self containsOnlyValidBecomeObjects: array1].
+	ec := self containsOnlyValidBecomeObjects: array1 and: array2 twoWay: twoWayFlag copyHash: copyHashFlag.
 	ec ~= 0 ifTrue:
 		[becomeEffectsFlags := 0.
 		 ^ec].
@@ -3799,53 +3795,39 @@ SpurMemoryManager >> computeFreeSpacePostSwizzle [
 ]
 
 { #category : #'become implementation' }
-SpurMemoryManager >> containsOnlyValidBecomeObjects: array [
-	"Answer 0 if the array contains only unpinned non-immediates.
-	 Otherwise answer an informative error code.
-	 Can't become: immediates!  Shouldn't become pinned objects."
-	| fieldOffset effectsFlags oop errCode |
-	fieldOffset := self lastPointerOfArray: array.
-	effectsFlags := 0.
-	"same size as array2"
-	[fieldOffset >= self baseHeaderSize] whileTrue:
-		[oop := self longAt: array + fieldOffset.
-		 (self isOopForwarded: oop) ifTrue:
-			[oop := self followForwarded: oop.
-			 self longAt: array + fieldOffset put: oop].
-		 (errCode := self isOopValidBecome: oop) = 0 ifFalse: [^ errCode].
-		 effectsFlags := effectsFlags bitOr: (self becomeEffectFlagsFor: oop).
-		 fieldOffset := fieldOffset - self bytesPerOop].
-	"only set flags after checking all args."
-	becomeEffectsFlags := effectsFlags.
-	^0
-]
-
-{ #category : #'become implementation' }
-SpurMemoryManager >> containsOnlyValidBecomeObjects: array1 and: array2 [
-	"Answer 0 if neither array contains only unpinned non-immediates.
-	 Otherwise answer an informative error code.
-	 Can't become: immediates!  Shouldn't become pinned objects."
-	| fieldOffset effectsFlags oop size |
+SpurMemoryManager >> containsOnlyValidBecomeObjects: array1 and: array2 twoWay: isTwoWay copyHash: copyHash [
+	"Answer 0 if neither array contains an object inappropriate for the become operation.
+	 Otherwise answer an informative error code for the first offending object found:
+		Can't become: immediates => PrimErrInappropriate
+		Shouldn't become pinned objects => PrimErrObjectIsPinned.
+		Shouldn't become immutable objects => PrimErrNoModification.
+		Can't copy hash into immediates => PrimErrInappropriate.
+		Two-way become may require memory to create copies => PrimErrNoMemory.
+	 As a side-effect unforward any forwarders in the two arrays if answering 0."
+	<inline: true>
+	| fieldOffset effectsFlags oop1 oop2 size |
 	fieldOffset := self lastPointerOf: array1.
 	effectsFlags := size := 0.
-	"same size as array2"
+	"array1 is known to be the same size as array2"
 	[fieldOffset >= self baseHeaderSize] whileTrue:
-		[oop := self longAt: array1 + fieldOffset.
-		 (self isOopForwarded: oop) ifTrue:
-			[oop := self followForwarded: oop.
-			 self longAt: array1 + fieldOffset put: oop].
-		 (self isImmediate: oop) ifTrue: [^PrimErrInappropriate].
-		 (self isPinned: oop) ifTrue: [^PrimErrObjectIsPinned].
-		 effectsFlags := effectsFlags bitOr: (self becomeEffectFlagsFor: oop).
-		 size := size + (self bytesInObject: oop).
-		 oop := self longAt: array2 + fieldOffset.
-		 (self isOopForwarded: oop) ifTrue:
-			[oop := self followForwarded: oop.
-			 self longAt: array2 + fieldOffset put: oop].
-		 (self isImmediate: oop) ifTrue: [^PrimErrInappropriate].
-		 (self isPinned: oop) ifTrue: [^PrimErrObjectIsPinned].
-		 effectsFlags := effectsFlags bitOr: (self becomeEffectFlagsFor: oop).
-		 size := size + (self bytesInObject: oop).
+		[oop1 := self longAt: array1 + fieldOffset.
+		 (self isOopForwarded: oop1) ifTrue:
+			[oop1 := self followForwarded: oop1.
+			 self longAt: array1 + fieldOffset put: oop1].
+		 self ifOopInvalidForBecome: oop1 errorCodeInto: [:errCode| ^errCode].
+		 effectsFlags := effectsFlags bitOr: (self becomeEffectFlagsFor: oop1).
+		 oop2 := self longAt: array2 + fieldOffset.
+		 (self isOopForwarded: oop2) ifTrue:
+			[oop2 := self followForwarded: oop2.
+			 self longAt: array2 + fieldOffset put: oop2].
+		 isTwoWay
+			ifTrue:
+				[self ifOopInvalidForBecome: oop2 errorCodeInto: [:errCode| ^errCode].
+				 size := size + (self bytesInObject: oop1) + (self bytesInObject: oop2).
+				 effectsFlags := effectsFlags bitOr: (self becomeEffectFlagsFor: oop2)]
+			ifFalse:
+				[(copyHash and: [self isImmediate: oop2]) ifTrue:
+					[^PrimErrInappropriate]].
 		 fieldOffset := fieldOffset - self bytesPerOop].
 	size >= (totalFreeOldSpace + (scavengeThreshold - freeStart)) ifTrue:
 		[^PrimErrNoMemory].
@@ -5677,6 +5659,18 @@ SpurMemoryManager >> ifAProxy: objOop updateCopy: copy [
 			self storePointerUnchecked: i ofObject: copy withValue: nilObj]]
 ]
 
+{ #category : #'become implementation' }
+SpurMemoryManager >> ifOopInvalidForBecome: oop errorCodeInto: aBlock [
+	"Evaluates aBlock with an appropriate error if oop is invalid for become."
+	<inline: true>
+	(self isImmediate: oop) ifTrue:
+		[^aBlock value: PrimErrInappropriate].
+	(self isPinned: oop) ifTrue:
+		[^aBlock value: PrimErrObjectIsPinned].
+	(self isObjImmutable: oop) ifTrue:
+		[^aBlock value: PrimErrNoModification]
+]
+
 { #category : #'image segment in/out' }
 SpurMemoryManager >> imageFormatVersion [
 	"Return a magic constant that changes when the image format changes.
@@ -6852,16 +6846,6 @@ SpurMemoryManager >> isOopMutable: oop [
 	<api>
 	^(self isNonImmediate: oop)
 	  and: [(self isImmutable: oop) not]
-]
-
-{ #category : #'become implementation' }
-SpurMemoryManager >> isOopValidBecome: oop [
-	"Answers 0 if the oop can be become.
-	Answers an error code in the other case"
-	(self isImmediate: oop) ifTrue: [^PrimErrInappropriate].
-	(self isPinned: oop) ifTrue: [^PrimErrObjectIsPinned].
-	(self isObjImmutable: oop) ifTrue: [^PrimErrNoModification].
-	^0
 ]
 
 { #category : #'header access' }
