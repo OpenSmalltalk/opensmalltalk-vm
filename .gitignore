@@ -2,6 +2,7 @@
 *.image
 *.changes
 *.sources
+*.swp
 
 # /
 /ChangeHistory
