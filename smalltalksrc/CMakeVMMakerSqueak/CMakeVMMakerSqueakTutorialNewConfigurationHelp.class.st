@@ -998,6 +998,13 @@ And we see the method exists and will return the string ''squeak.cog.spur''.
 (CPlatformConfigForSqueak basicNew) squeakCogSpur
 
 
+The result will be used in two places--in the build directory and the output directory relative to the directories we have specified.
+
+The build directory at the platform level now looks like:  "oscogvm/cmake.build.linux64x86w32BitCompatibility/squeak.cog.spur/
+
+The output directory at the platform level now looks like: "oscogvm/cmake.products/cmake.build.linux64x86w32BitCompatibility/squeak.cog.spur/
+
+
 
 
 '
@@ -1769,6 +1776,9 @@ specifyCogitClass
 
 
 specifyDirectories
+specifyTopDir
+specifyDirOutput
+specifyDirBuildPlatform
 dirBuildLanguageVMMM
 setGlobalOptions
 cmakePrefixPath
@@ -2279,10 +2289,64 @@ ToolSet browse: Linux64x86w32BitSqueakCogSpurConfig selector: #cogitClass
 ]
 
 { #category : #pages }
-CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> specifyDirectories [
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> specifyDirBuildPlatform [
 	^HelpTopic
-		title:'Specify Directories'
-		contents:
+		title: 'Specify dirBuildPlatform'
+		contents: 
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+
+Please evaluate:
+SystemNavigation new browseAllImplementorsOf: #dirBuildPlatform
+
+Notice that the CPlatformForSqueak forces subclasses to implement his.
+
+Looking at the classes that do implement it, notice that they are all at the platform level; i.e. they correspond to the OperatingSystem/Processor the user is compiling for.
+
+Taking the Linux64x86w32BitConfigUsrLib Confiiguration, we see its implementation of "dirBuildPlatform" returns 
+^self dirLinux64x86w32BitCompatibility
+
+SystemNavigation new browseAllImplementorsOf: #dirLinux64x86w32BitCompatibility
+
+Notice that return value is a "cmake directory string" method in CPlatformConfigForSqueak.
+
+
+The result will be used in two places--in the build directory and the output directory relative to the directories we have specified.
+
+The build directory at the platform level now looks like:  "oscogvm/cmake.build.linux64x86w32BitCompatibility
+
+The output directory at the platform level now looks like: "oscogvm/cmake.products/cmake.build.linux64x86w32BitCompatibility
+
+!'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> specifyDirOutput [
+	^HelpTopic
+		title: 'Specify dirOutput'
+		contents: 
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+SystemNavigation new browseAllImplementorsOf: #dirOutput
+
+Here, we see a  "cmake directory string" returned. 
+
+The system will use this to create the "oscogvm/cmake.products" directory which will store the compiled VM for your configuration.
+
+This will rarely, if ever, need customization.
+
+!'
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> specifyDirectories [
+	"This method was automatically generated. Edit it using:"
+	"a HelpBrowser edit: #specifyDirectories"
+	^HelpTopic
+		title: 'Specify Directories Overview'
+		contents: 
 'Within the broad outline of this tutorial, you are here: 
 8. Customizing your Configuration.
 
@@ -2305,13 +2369,19 @@ and we want a cmake.products/* directory that looks like this:
 oscogvm/cmake.products/cmake.build.linux64x86w32BitCompatibility/squeak.cog.spur/build
 
 
-Each directory in those trees is accessible viathe the CPlatformConfigForSqueak in the ''cmake directory'' category.
+Each directory in those trees is accessible via the the CPlatformConfigForSqueak method categories: ''cmake directory strings'' and "cmake directory objects"
 
-ToolSet browseClass: CPlatformConfigForSqueak category: ''cmake directory''.
+ToolSet browseClass: CPlatformConfigForSqueak category: ''cmake directory strings''.
+ToolSet browseClass: CPlatformConfigForSqueak category: ''cmake directory objects''.
 
-There are two method variants.
 
-The first variant is hardcoded in the method itself. For example the platform directories are stored as...
+Methods in "cmake directory strings" return strings.
+Methods in "cmake directory objects" return FileDirectory objects.
+
+
+In "cmake directory strings" there are two method variants.
+
+The first variant in "cmake directory strings" is hardcoded in the method itself. For example the platform directories are stored as...
 
 dirLinux32Armv6
 	^''cmake.build.linux32armv6''
@@ -2321,12 +2391,10 @@ or, for our configuration
 dirLinux64x86w32BitCompatibility
 	^''cmake.build.linux64x86w32BitCompatibility''
 	
-The second variant accesses the  name of a buildType directory via the SqueakCMakeVMMakerAbstractBuilder (do a printIt or doIt).
+The second variant  in "cmake directory strings" accesses the  name of a buildType directory via the SqueakCMakeVMMakerAbstractBuilder (do a printIt or doIt).
 
 dirBuild
 	^SqueakCMakeVMMakerAbstractBuilder default buildTypeAndDirectoryInfo at: #build	
-
-
 
 Each part of the directory tree is contained/accessible via these methods. It is our job to select the corect ones for our purposes.
 
@@ -2381,12 +2449,10 @@ We cover that  in the next Help page.
 
 *The naming convention is straightforward and convered in the ''Naming Convetions'' page of the Developer Guide Overview Help.
 
-
-(HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp) model
-showTopicThat: [:topic | topic key = #namingConventions].
+HelpBrowser openOn: CMakeVMMakerSqueakOverviewHelp) model showTopicThat: [:topic | topic key = #namingConventions].
 
 
-'
+!'
 ]
 
 { #category : #pages }
@@ -2449,6 +2515,26 @@ To summarize, a Configuration specifies what plugins it wants to build (either i
 
 
 '
+]
+
+{ #category : #pages }
+CMakeVMMakerSqueakTutorialNewConfigurationHelp class >> specifyTopDir [
+	^HelpTopic
+		title: 'Specify TopDir'
+		contents: 
+'Within the broad outline of this tutorial, you are here: 
+8. Customizing your Configuration.
+
+topDir is the root at the top of the build tree and it is fitting it is in the top Configuration.
+
+SystemNavigation new browseAllImplementorsOf: #topDir
+SystemNavigation new browseAllImplementorsOf: #oscogvm
+
+Here, we see a "cmake directory object" and "cmake directory string" used to create a FileDirectory object named ''oscogvm"
+
+This will rarely, if ever, need customization.
+
+!'
 ]
 
 { #category : #pages }
