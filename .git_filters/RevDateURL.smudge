@@ -18,7 +18,7 @@ if ( $branch eq "Cog" || $branch eq "dev" || $branch eq "master" || $branch eq "
 }
 
 if ((defined $ENV{'TRAVIS'}) || (defined $ENV{'APPVEYOR'})) {
-    $url=`git config --get remote.origin.url`;
+    $url=`git config --get remote.origin.url | head -n 1`;
 } else {
     $url=`whoami` . '@' . `hostname` . ':' . `PWD=\$(pwd) echo \${PWD##\$HOME/}`;
 }

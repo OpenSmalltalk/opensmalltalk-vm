@@ -30,9 +30,7 @@ static char SvnRawRevisionString[] = "$Rev$";
 static char SvnRawRevisionDate[] = "$Date$";
 # define DATE_START (SvnRawRevisionDate + 7)
 
-static char SvnRawRepositoryURL[] = "$URL: http://github.com/OpenSmalltalk/vm
-    SetWindowLongPtr_64bit_compatibility new (next fetch will store in remotes/origin)
-    tim/deployment-fixes                 new (next fetch will store in remotes/origin) $";
+static char SvnRawRepositoryURL[] = "$URL$";
 # define URL_START (SvnRawRepositoryURL + 6)
 
 static char *
@@ -70,9 +68,7 @@ static char GitRawRevisionString[] = "$Rev$";
 static char GitRawRevisionDate[] = "$Date$";
 # define DATE_START (GitRawRevisionDate + 7)
 
-static char GitRawRepositoryURL[] = "$URL: http://github.com/OpenSmalltalk/vm
-    SetWindowLongPtr_64bit_compatibility new (next fetch will store in remotes/origin)
-    tim/deployment-fixes                 new (next fetch will store in remotes/origin) $";
+static char GitRawRepositoryURL[] = "$URL$";
 # define URL_START (GitRawRepositoryURL + 6)
 
 static char *
