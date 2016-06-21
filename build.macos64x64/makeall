@@ -8,4 +8,4 @@ for d in newspeak.* pharo.* squeak.*; do
 	fi
 done
 echo no news is good news...
-grep -w error: newspeak.*/LOG* pharo.* squeak.*/LOG*
+grep -w error: newspeak.*/LOG* pharo.*/LOG* squeak.*/LOG*
