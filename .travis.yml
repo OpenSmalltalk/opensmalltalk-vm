@@ -251,8 +251,3 @@ install:
   - ./.travis_install.sh
 script:
   - $CHROOT ./.travis_build.sh
-
-after_success:
-  - ./.travis_prepare_deployment.sh
-  - gem install dpl
-  - dpl --provider=bintray --user=timfel --key=$BINTRAYAPIKEY --file=.bintray.json

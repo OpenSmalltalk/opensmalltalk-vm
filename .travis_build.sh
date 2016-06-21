@@ -130,3 +130,29 @@ case "$PLATFORM" in
     exit 99
     ;;
 esac
+
+exitcode=$?
+
+if [ $exitcode -eq 0 ]; then
+    [[ "$TRAVIS_PULL_REQUEST" == "true" ]] && exit $exitcode
+
+    PR=${TRAVIS_PULL_REQUEST:-${APPVEYOR_PULL_REQUEST_NUMBER:-false}}
+    BR=${TRAVIS_BRANCH:-${APPVEYOR_REPO_BRANCH}}
+
+    if [[ $PR == "false" ]] && ( [[ "$BR" == "Cog" || "$BR" == "master" ]] ); then
+	echo "`cat .bintray.json | .git_filters/RevDateURL.smudge`" > .bintray.json
+	sed -i.bak 's/$Rev: \([0-9][0-9]*\) \$/\1/' .bintray.json
+	sed -i.bak 's/$Date: \(.*\) \$/\1/' .bintray.json
+	rm -f .bintray.json.bak
+
+	if [[ "${APPVEYOR}" ]]; then
+	    export PATH="/cygdrive/c/Ruby23/bin:$PATH"
+	    appveyor DownloadFile https://curl.haxx.se/ca/cacert.pem
+	    export SSL_CERT_FILE=cacert.pem
+	fi
+	gem install dpl
+	dpl --provider=bintray --user=timfel --key=$BINTRAYAPIKEY --file=.bintray.json
+    fi
+fi
+
+exit $exitcode
