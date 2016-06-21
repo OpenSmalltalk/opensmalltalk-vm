@@ -18,6 +18,8 @@
 /nsvm*linux*
 /nsvm*win*
 
+platforms/unix/config/autom4te.cache/
+
 # /build.linux32ARM/newspeak.cog.spur/build/
 /build.linux32ARM/newspeak.cog.spur/build/*
 

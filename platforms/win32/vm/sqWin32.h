@@ -106,14 +106,14 @@ int readableFormat(int imageVersion);
 
 /* Definition for Intel Processors */
 #if defined(_M_IX86) || defined(i386)
-  #define WIN32_NAME "Win32"
-  #define WIN32_OS_NAME (fWindows95 ? "95" : "NT")
-  #define WIN32_PROCESSOR_NAME "IX86"
+# define WIN32_NAME "Win32"
+# define WIN32_OS_NAME (fWindows95 ? "95" : "NT")
+# define WIN32_PROCESSOR_NAME "IX86"
 
   /* Use console for warnings if possible */
-  #ifndef UNICODE
-    #define warnPrintf printf
-  #endif
+# ifndef UNICODE
+#	define warnPrintf printf
+# endif
 #endif /* _M_IX86 */
 
 #endif /* (_WIN32_WCE) */

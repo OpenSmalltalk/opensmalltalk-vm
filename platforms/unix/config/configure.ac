@@ -160,6 +160,20 @@ AC_DEFINE_UNQUOTED(VM_HOST, "$host")
 AC_DEFINE_UNQUOTED(VM_HOST_OS, "$host_os")
 AC_DEFINE_UNQUOTED(VM_HOST_CPU, "$host_cpu")
 
+AC_CANONICAL_TARGET
+
+target_cpu=`echo $target | sed 's,-.*,,'`
+target=`echo $target | sed 's,-unknown,,'`
+
+AC_SUBST(target)
+AC_SUBST(target_cpu)
+AC_SUBST(target_vendor)
+AC_SUBST(target_os)
+
+AC_DEFINE_UNQUOTED(VM_TARGET, "$target")
+AC_DEFINE_UNQUOTED(VM_TARGET_OS, "$target_os")
+AC_DEFINE_UNQUOTED(VM_TARGET_CPU, "$target_cpu")
+
 echo
 echo "Configuring Squeak ${VM_VERSION} (${SQ_VERSION}) for ${host}"
 echo

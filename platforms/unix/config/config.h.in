@@ -146,6 +146,10 @@
 #undef	VM_HOST_CPU
 #undef	VM_HOST_VENDOR
 #undef	VM_HOST_OS
+#undef	VM_TARGET
+#undef	VM_TARGET_CPU
+#undef	VM_TARGET_VENDOR
+#undef	VM_TARGET_OS
 #undef	VM_BUILD_STRING
 
 #undef	WORDS_BIGENDIAN

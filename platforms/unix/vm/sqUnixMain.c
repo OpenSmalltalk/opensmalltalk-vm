@@ -455,11 +455,11 @@ GetAttributeString(sqInt id)
 	/* OS type: "unix", "win32", "mac", ... */
 	return OS_TYPE;
       case 1002:
-	/* OS name: "solaris2.5" on unix, "win95" on win32, ... */
-	return VM_HOST_OS;
+	/* OS name: e.g. "solaris2.5" on unix, "win95" on win32, ... */
+	return VM_TARGET_OS;
       case 1003:
-	/* processor architecture: "68k", "x86", "PowerPC", ...  */
-	return VM_HOST_CPU;
+	/* processor architecture: e.g. "68k", "x86", "PowerPC", ...  */
+	return VM_TARGET_CPU;
       case 1004:
 	/* Interpreter version string */
 	return  (char *)interpreterVersion;
