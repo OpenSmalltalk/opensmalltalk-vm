@@ -184,7 +184,7 @@ sqInt createWindowWidthheightoriginXyattrlength(sqInt w, sqInt h, sqInt x, sqInt
 			NULL);
 
   /* Force Unicode WM_CHAR */
-  SetWindowLongW(hwnd,GWL_WNDPROC,(DWORD)HostWndProcW);
+  SetWindowLongPtrW(hwnd,GWLP_WNDPROC,(DWORD)HostWndProcW);
 
   return (int)hwnd;
 }
