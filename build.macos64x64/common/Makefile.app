@@ -91,11 +91,11 @@ $(APP)/Contents/Resources/%.bundle: $(BLDDIR)/vm/%.bundle
 
 $(VMPLIST): $(OSXDIR)/$(SYSTEM)-Info.plist getversion
 	@mkdir -p $(APP)/Contents
-	sed "s/\$$(VERSION)/`getversion VERSION_TAG`/" $< | \
-	sed "s/\$$(VERSION_NUMBER)/`getversion VERSION_NUMBER`/" | \
-	sed "s/\$$(VERSION_TAG)/`getversion VERSION_TAG`/" | \
-	sed "s/\$$(VIRTUAL_MACHINE_NICKNAME)/`getversion VIRTUAL_MACHINE_NICKNAME`/" | \
-	sed "s/\$$(VM_NICKNAME)/`getversion VM_NICKNAME`/" > $@
+	sed "s/\$$(VERSION)/`./getversion VERSION_TAG`/" $< | \
+	sed "s/\$$(VERSION_NUMBER)/`./getversion VERSION_NUMBER`/" | \
+	sed "s/\$$(VERSION_TAG)/`./getversion VERSION_TAG`/" | \
+	sed "s/\$$(VIRTUAL_MACHINE_NICKNAME)/`./getversion VIRTUAL_MACHINE_NICKNAME`/" | \
+	sed "s/\$$(VM_NICKNAME)/`./getversion VM_NICKNAME`/" > $@
 
 $(VMLOCALIZATION): $(OSXCOMMONDIR)/English.lproj/$(SYSTEM)-Localizable.strings
 	@mkdir -p $(dir $@)

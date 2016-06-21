@@ -181,7 +181,7 @@ $(PLUGINICONS): $(OSXDIR)/SqueakPlugin.icns
 
 $(PLUGINPLIST): $(PLATDIR)/iOS/plugins/Info.plist getversion
 	mkdir -p $(PLUGINBUNDLE)/Contents
-	sed "s/\$$(VERSION)/`getversion VERSION_TAG`/" $< | \
+	sed "s/\$$(VERSION)/`./getversion VERSION_TAG`/" $< | \
 	sed "s/\$(LIBNAME)/$(LIBNAME)/" > $(PLUGINPLIST)
 
 getversion:
