@@ -907,7 +907,7 @@ void SetupWindows()
 			      NULL);
   }
   /* Force Unicode WM_CHAR */
-  SetWindowLongW(stWindow,GWL_WNDPROC,(DWORD)MainWndProcW);
+  SetWindowLongPtrW(stWindow,GWLP_WNDPROC,(DWORD)MainWndProcW);
 
 #ifndef NO_WHEEL_MOUSE
   g_WM_MOUSEWHEEL = RegisterWindowMessage( TEXT("MSWHEEL_ROLLMSG") ); /* RvL 1999-04-19 00:23 */
@@ -1809,8 +1809,8 @@ int ioSetFullScreen(int fullScreen) {
 	/* SetWindowPos(stWindow, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW); */
 	browserWindow = oldBrowserWindow;
       }
-      SetWindowLong(stWindow,GWL_STYLE, WS_POPUP | WS_CLIPCHILDREN);
-      SetWindowLong(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW);
+      SetWindowLongPtr(stWindow,GWL_STYLE, WS_POPUP | WS_CLIPCHILDREN);
+      SetWindowLongPtr(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW);
       ShowWindow(stWindow, SW_SHOWMAXIMIZED);
 #else /* !defined(_WIN32_WCE) */
       ShowWindow(stWindow,SW_SHOWNORMAL);
@@ -1822,8 +1822,8 @@ int ioSetFullScreen(int fullScreen) {
 #if !defined(_WIN32_WCE)
       ShowWindow(stWindow, SW_RESTORE);
       ShowWindow(stWindow, SW_HIDE);
-      SetWindowLong(stWindow,GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN);
-      SetWindowLong(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */ );
+      SetWindowLongPtr(stWindow,GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN);
+      SetWindowLongPtr(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */ );
       SetWindowPos(stWindow,0,0,0,0,0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_NOREDRAW);
       if(browserWindow) {
 	/* Jump back into the browser */
@@ -2063,7 +2063,7 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag)
     r.right = GetSystemMetrics(SM_CXSCREEN);
     r.bottom = GetSystemMetrics(SM_CYSCREEN);
   } else {
-    AdjustWindowRect(&r, GetWindowLong(stWindow, GWL_STYLE), 0);
+    AdjustWindowRect(&r, GetWindowLongPtr(stWindow, GWL_STYLE), 0);
   }
   SetWindowPos(stWindow, NULL, 0, 0, r.right-r.left, r.bottom-r.top,
 	       SWP_NOMOVE | SWP_NOZORDER);

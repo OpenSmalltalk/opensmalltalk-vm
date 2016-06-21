@@ -143,7 +143,7 @@ static HWND glCreateClientWindow(HWND parentWindow, int x, int y, int w, int h)
   const char *className = "Squeak-OpenGLWindow";
 
   if(!parentWindow) return NULL;
-  hInstance = (HINSTANCE) GetWindowLong((HWND)parentWindow,GWL_HINSTANCE);
+  hInstance = (HINSTANCE) GetWindowLongPtr((HWND)parentWindow,GWLP_HINSTANCE);
   windowClass.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
   windowClass.lpfnWndProc = glWindowProcedure;
   windowClass.cbClsExtra = 0;
