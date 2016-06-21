@@ -1,6 +1,6 @@
 #############################################################################
 # Generic Makefile for plugins on Cocoa Mac OS X
-# Do make getversion to get makwe -n to work
+# Do make getversion to get make -n to work
 #
 # The following variables can be overridden in the platform Makefile, e.g.
 # platforms/iOS/plugins/AioPlugin/Makefile.  Look at

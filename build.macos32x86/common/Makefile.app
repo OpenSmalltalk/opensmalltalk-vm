@@ -1,12 +1,12 @@
 #############################################################################
 # Generic Makefile for VM app bundle
-# Do make getversion to get makwe -n to work
+# Do make getversion to get make -n to work
 #
 # This is designed to be invoked by Makefile in a specific build directory via
 # include ../common/Makefile.app
 #
 # Parameters:
-# VMSRCDIR defines the locaton of the VM source to build.  Required.
+# VMSRCDIR defines the location of the VM source to build.  Required.
 #
 # COGDEFS supply any command-line defines to use, and may be null.
 #
@@ -16,7 +16,7 @@
 #
 # APPSOURCE the Smalltalk source file to link into the app Resource. Optional.
 #
-# PLUGINSRCDIR defines the locaton of the plugin source, the subsets of which
+# PLUGINSRCDIR defines the location of the plugin source, the subsets of which
 # selected by plugins.int and plugins.ext will be built. Optional. Defaults to
 # ../../src
 # 
