@@ -3,8 +3,8 @@ environment:
   CYG_MIRROR: http://cygwin.mirror.constant.com
   CYG_CACHE: C:\cygwin\var\cache\setup
   CYG_BASH: C:\cygwin\bin\bash
-  BINTRAY-API-KEY:
-    secure: HsNf3W9l3BTI2ZfKHI7pV79hVCIVshmdX//1m2LVOiB2u/Iy0/R9ZOT/RBcP2RpA
+  BINTRAYAPIKEY:
+    secure: uknPzww818XWJiLecwur9p1MfrkACOyx9d3iNrw/TuD89EoPSc8zLqKdPZjWdcQd
   matrix:
     - FLAVOR: newspeak.cog.spur
     - FLAVOR: newspeak.stack.spur
@@ -36,12 +36,3 @@ build: false
 # default file handles. Ensure a dummy file descriptor is opened with 'exec'.
 test_script:
   - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; ./.travis_build.sh"'
-
-# We're using Travis' deployment gem, so we can use the same bintray.json
-on_success:
-  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; ./.travis_prepare_deployment.sh"'
-  - SET PATH=C:\\Ruby23\\bin;%PATH%
-  - gem install dpl
-  - appveyor DownloadFile https://curl.haxx.se/ca/cacert.pem
-  - SET SSL_CERT_FILE=cacert.pem
-  - dpl --provider=bintray --user=timfel --key=%BINTRAY-API-KEY% --file=.bintray.json
