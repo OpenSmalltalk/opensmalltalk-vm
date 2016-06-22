@@ -134,8 +134,6 @@ esac
 exitcode=$?
 
 if [ $exitcode -eq 0 ]; then
-    [[ "$TRAVIS_PULL_REQUEST" == "true" ]] && exit $exitcode
-
     PR=${TRAVIS_PULL_REQUEST:-${APPVEYOR_PULL_REQUEST_NUMBER:-false}}
     BR=${TRAVIS_BRANCH:-${APPVEYOR_REPO_BRANCH}}
 
@@ -146,12 +144,13 @@ if [ $exitcode -eq 0 ]; then
 	rm -f .bintray.json.bak
 
 	if [[ "${APPVEYOR}" ]]; then
-	    export PATH="/cygdrive/c/Ruby23/bin:$PATH"
 	    appveyor DownloadFile https://curl.haxx.se/ca/cacert.pem
 	    export SSL_CERT_FILE=cacert.pem
+	    export PATH="C:\\Ruby23\\bin:$PATH"
+	    export CMDSHELL="cmd /C "
 	fi
-	gem install dpl
-	dpl --provider=bintray --user=timfel --key=$BINTRAYAPIKEY --file=.bintray.json
+	$CMDSHELL gem install dpl
+	$CMDSHELL dpl --provider=bintray --user=timfel --key=$BINTRAYAPIKEY --file=.bintray.json
     fi
 fi
 
