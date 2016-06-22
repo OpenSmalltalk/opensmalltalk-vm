@@ -18,8 +18,8 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../platforms/unix/config/configure \
 	--with-vmversion=5.0 \
 	--with-src=nsspurstacksrc --disable-cogit \
-	--without-vm-display-fbdev --without-npsqueak --enable-fast-bitblt \
-	CC="gcc -march=armv6 -mfpu=vfp -mfloat-abi=hard" \
+	--without-vm-display-fbdev --without-npsqueak \
+	CC=gcc \
 	CXX=g++ \
 	CFLAGS="$OPT -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64" \
 	LIBS="-lpthread -luuid" \
