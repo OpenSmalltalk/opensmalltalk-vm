@@ -34,6 +34,7 @@ extern sqInt callIA32IntegralReturn(SIGNATURE);
 extern sqInt callIA32FloatReturn   (SIGNATURE);
 extern sqInt callIA32DoubleReturn  (SIGNATURE);
 
+#define thunkEntryType long
 #if defined(i386) || defined(__i386) || defined(__i386__)
 # define INT_REG_ARGS /* none */
 # define DBL_REG_ARGS /* none */
@@ -49,12 +50,15 @@ extern sqInt callIA32DoubleReturn  (SIGNATURE);
 # define INT_REG_ARGS long,long,long,long,long,long,long,long,
 # define DBL_REG_ARGS /* none */
 #elif defined(__ARM_ARCH__) || defined(__arm__) || defined(__arm32__) || defined(ARM32)
+# undef thunkEntryType
+# define thunkEntryType long long
 # define INT_REG_ARGS long,long,long,long,
 # define DBL_REG_ARGS double,double,double,double,double,double,double,double,
 #endif
-extern long  thunkEntry (INT_REG_ARGS DBL_REG_ARGS void *,long *);
+extern thunkEntryType  thunkEntry (INT_REG_ARGS DBL_REG_ARGS void *,long *);
 extern void *allocateExecutablePage(long *pagesize);
 extern VMCallbackContext *getMostRecentCallbackContext(void);
+#undef thunkEntryType
 
 /* Use the most minimal setjmp/longjmp pair available; no signal handling
  * wanted or necessary.

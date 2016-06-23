@@ -147,14 +147,14 @@ extern void error(char *s);
  * return to it, to correct C stack pointer alignment if necessary (see
  * STACK_ALIGN_HACK), and to return any of the various values from the callback.
  */
-long
+long long
 thunkEntry(long r0, long r1, long r2, long r3,
 			double d0, double d1, double d2, double d3,
 			double d4, double d5, double d6, double d7,
-			void* thunkp, long* stackp)
+			void *thunkpPlus16, long *stackp)
 {
   VMCallbackContext vmcc;
-  VMCallbackContext* previousCallbackContext;
+  VMCallbackContext *previousCallbackContext;
   int flags;
   int returnType;
   long regArgs[NUM_REG_ARGS];
@@ -183,8 +183,8 @@ thunkEntry(long r0, long r1, long r2, long r3,
   if ((returnType = setjmp(vmcc.trampoline)) == 0) {
     previousCallbackContext = getRMCC();
     setRMCC(&vmcc);
-    vmcc.thunkp = thunkp;
-    vmcc.stackp = stackp + 2; /* skip address of retpc & retpc (thunk) */
+    vmcc.thunkp = (void *)((char *)thunkpPlus16 - 16);
+    vmcc.stackp = stackp;
     vmcc.intregargsp = regArgs;
     vmcc.floatregargsp = dregArgs;
     interpreterProxy->sendInvokeCallbackContext(&vmcc);
@@ -198,23 +198,14 @@ thunkEntry(long r0, long r1, long r2, long r3,
   interpreterProxy->disownVM(flags);
 
   switch (returnType) {
-  case retword: {
+  case retword:
     return vmcc.rvs.valword;
-  }
-  case retword64: {
-    long long* valint64Ptr = (long long*)&vmcc.rvs.valleint64;
-    return *valint64Ptr;
-  }
-  case retdouble: {
-    double valflt64 = vmcc.rvs.valflt64;
-    error("Callback return double unimplemented");
-    return 0;
-  }
-  case retstruct: {
-    // wrong
-    memcpy( (void *)(stackp[1]), vmcc.rvs.valstruct.addr, vmcc.rvs.valstruct.size);
-    return stackp[1];
-  }
+  case retword64:
+  case retdouble:
+    return *(long long *)&vmcc.rvs.valword;
+  case retstruct:
+    memcpy((void *)r0, vmcc.rvs.valstruct.addr, vmcc.rvs.valstruct.size);
+    return r0;
   }
 
   fprintf(stderr, "Warning; invalid callback return type\n");
