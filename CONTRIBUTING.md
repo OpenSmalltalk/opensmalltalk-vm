@@ -45,6 +45,7 @@ needed
 modifications in parts of the system involved in the generation process
 * are generated from versioned imput (i.e. none of the packages to be translated
 or involved in the generation process are dirty)
+
 it's preferrable that no changes to them are submitted.
 
 # Integration of GIT with the source tree organization
