@@ -183,8 +183,11 @@ OBJCOPY:=	objcopy
 # Note: RC compiles the .rc files into linkable .o files
 #
 RC:=	 windres
-SVNREV:= $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9]*\).*/\\1/p" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h)
-RCFLAGS:= --include-dir $(PLATDIR)/win32/misc -D_WIN32 -DFILEVERSIONVALUES=4,0,$(SVNREV),0 '-DFILEVERSIONSTRING=\"4.0.$(SVNREV)\\0\"'
+SVNMAJOR := $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9][0-9][0-9]\).*/\\1/p" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h | sed -e 's/^0*//')
+SVNMINOR := $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h | sed -e 's/^0*//')
+SVNREV := $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h | sed -e 's/^0*//')
+SVNBUILD := $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]*\).*/\\1/p" -e "s/^0*//" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h | sed -e 's/^0*//')
+RCFLAGS:= --include-dir $(PLATDIR)/win32/misc -D_WIN32 -DFILEVERSIONVALUES=$(SVNMAJOR),$(SVNMINOR),$(SVNREV),$(SVNBUILD) '-DFILEVERSIONSTRING=\"$(SVNMAJOR).$(SVNMINOR).$(SVNREV).$(SVNBUILD)\\0\"'
 
 .SUFFIXES:
 .SUFFIXES:	.ccg .cc .c .o .s .i .rc .res .cg .hg .ccg .cpp
