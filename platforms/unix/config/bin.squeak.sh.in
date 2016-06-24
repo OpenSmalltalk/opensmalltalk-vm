@@ -22,33 +22,23 @@ esac
 # and so it should take precedence over /lib libc.  This is done by setting
 # LD_LIBRARY_PATH appropriately, based on ldd's idea of the libc use by the VM.
 LIBC_SO="`/usr/bin/ldd "$BIN/squeak" | /bin/fgrep /libc. | sed 's/^.*=> \([^ ]*\).*/\1/'`"
-case "$LIBC_SO" in
-/lib/libc*)					SVMLLP="/lib:/usr/lib";;
-/lib32/libc*)				SVMLLP="/lib32:/usr/lib32";;
-/lib64/libc*)				SVMLLP="/lib64:/usr/lib64";;
-/lib/tls/libc*)				SVMLLP="/lib/tls:/lib:/usr/lib/tls:/usr/lib";;
-/lib/i386-linux-gnu/libc*)	\
-	SVMLLP="/lib/i386-linux-gnu:/lib:/usr/lib/i386-linux-gnu:/usr/lib";;
-/lib/i386-linux-gnu/i686/cmov/libc*)	\
-	SVMLLP="/lib/i386-linux-gnu/i686/cmov:/lib:/usr/lib/i386-linux-gnu/i686/cmov:/usr/lib";;
-/lib/386-linux-gnu/i686/cmov/libc*)	\
-	SVMLLP="/lib/386-linux-gnu/i686/cmov:/lib:/usr/lib/386-linux-gnu/i686/cmov:/usr/lib";;
-/lib/tls/i686/cmov/libc*)	\
-	SVMLLP="/lib/tls/i686/cmov:/lib:/usr/lib/tls/i686/cmov:/usr/lib";;
-/lib/tls/i686/nosegneg/libc*)	\
-	SVMLLP="/lib/i686/nosegneg/tls:/lib:/usr/lib/i686/nosegneg/tls:/usr/lib";;
-/lib/arm-linux-gnueabihf/libc*)	\
-	SVMLLP="/lib/arm-linux-gnueabihf:/lib:/usr/lib/arm-linux-gnueabihf:/usr/lib";;
-/lib/x86_64-linux-gnu/libc*)	\
-	SVMLLP="/lib/x86_64-linux-gnu:/lib:/usr/lib/x86_64-linux-gnu:/usr/lib";;
-"")	case `/bin/uname -m || /usr/bin/uname -m` in
-	*64*)	echo "/usr/bin/ldd didn't produce any output and the system is 64 bit.  You may need to (re)install the 32-bit libraries." 1>&2;;
-	*)	echo "/usr/bin/ldd didn't produce any output. Can't infer base LD_LIBRARY_PATH. Aborting." 1>&2
-	esac
-	exit 1;;
-*)	echo "Can't infer base LD_LIBRARY_PATH. Aborting. Try adding a line for $LIBC_SO to $0. Please report your edit to squeak vm-dev." 1>&2
-	exit 1
-esac
+PLATFORMLIBDIR=`expr "$LIBC_SO" : '\(.*\)/libc.*'`
+
+if [ "$PLATFORMLIBDIR" = "" ]; then
+{
+	echo "Error. Could not determine platform's libc path for VM. " 
+	echo "Try forcing \$PLATFORMLIBDIR in $0, based on LIBC_SO."
+	echo "Please report what works to squeak [vm-dev] mail list." 
+	echo "  LIBC_SO="$LIBC_SO
+	cat /etc/*-release*  |  grep -v // | sed 's/^/  /' 
+	echo -n "  UNAME=" ; uname -a
+	MACHINE=`uname -m`
+	if [[ $MACHINE == *64* ]] ; then
+		echo "  System seems to be 64 bit. You may need to (re)install the 32-bit libraries." 
+	fi
+	exit 1 
+} 1>&2
+fi
 # prepending is less flexible but safer because it ensures we find the plugins
 # in the same directory as the VM.  We must include at least /lib and /usr/lib
 # if libraries there-in are to be found.  These directories are not implicit.
