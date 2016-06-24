@@ -27,7 +27,26 @@ other people, do it on a feature branch and open a pull request.
   later when you need to use `git bisect` to find where a bug comes from. This
   also means that you should avoid rebasing or squashing your work. Just keep
   the history.
+  
+### Regarding /src and alike directories
 
+Versioning the generated source code is of critical importance for debugging the
+VM, since it is not posssible to guarantee that source files will not differ 
+from another set of source files generated in the same environment. For this
+same reason, counting with a clean, versioned set of source files makes it 
+easier to check the newly generated source for bugs in parts of the system such 
+as the Slang translator.
+
+C source files are manually generated and committed when necessary by core
+contributors. Unless source files
+* need to be updated to fix a bug or make available new functionality urgently 
+needed
+* have been carefully checked for bugs that may have been introduced by
+modifications in parts of the system involved in the generation process
+* are generated from versioned imput (i.e. none of the packages to be translated
+or involved in the generation process are dirty)
+
+it's preferrable that no changes to them are submitted.
 
 # Integration of GIT with the source tree organization
 
