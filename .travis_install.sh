@@ -60,10 +60,10 @@ if [ ! -e "$ARMCHROOT/etc/debian_chroot" ]; then
     sudo qemu-debootstrap --no-check-gpg --include=fakeroot,build-essential --arch=armhf ${VERSION} ${ARMCHROOT} ${MIRROR}
     sudo su -c "echo \"deb ${MIRROR} jessie main contrib rpi\" > ${ARMCHROOT}/etc/apt/sources.list"
     schroot -c rpi -u root -- apt-get update
-    schroot -c rpi -u root -- apt-get --allow-unauthenticated install -qq -y \
+    schroot -c rpi -u root -- apt-get --allow-unauthenticated install -y \
 	    build-essential libcairo2-dev libpango1.0-dev libssl-dev uuid-dev uuid-runtime libasound2-dev \
 	    debhelper devscripts libssl-dev libfreetype6-dev libx11-dev libxext-dev \
-	    libx11-dev libsm-dev libice-dev libgl1-mesa-dev libgl1-mesa-glx git rubygems-integration
+	    libx11-dev libsm-dev libice-dev libgl1-mesa-dev libgl1-mesa-glx git rubygems
 fi
 schroot -c rpi -- uname -m
 
