@@ -36,3 +36,5 @@ build: false
 # default file handles. Ensure a dummy file descriptor is opened with 'exec'.
 test_script:
   - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; ./.travis_build.sh"'
+on_success:
+  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; ./.travis_deploy.sh"'
