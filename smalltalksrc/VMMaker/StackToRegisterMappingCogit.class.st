@@ -4080,13 +4080,13 @@ StackToRegisterMappingCogit >> scanMethod [
 			[(descriptor needsFrameFunction isNil
 			  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
 					ifTrue:
-						[needsFrame := true.
-						 self cppIf: IMMUTABILITY
-							ifTrue: [useTwoPaths := descriptor isInstVarStore]]
+						[needsFrame := true]
 					ifFalse:
 						[framelessStackDelta := framelessStackDelta + descriptor stackDelta.
+						 "With immutability we win simply by avoiding a frame build if the receiver is not immutable.
+						  Without immutability we win if there are two or more stores amd the receiver is new."
 						 self cppIf: IMMUTABILITY
-							ifTrue: []
+							ifTrue: [useTwoPaths := descriptor isInstVarStore]
 							ifFalse:
 								[descriptor isInstVarStore ifTrue:
 									[seenInstVarStore
