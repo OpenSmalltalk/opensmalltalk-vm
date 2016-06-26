@@ -35,6 +35,7 @@ endif
 default:	$(APP)
 
 include ../common/Makefile.vm
+include ../common/Makefile.sources
 
 cleanall: cleanapp cleanastapp cleandbgapp cleanallvm
 
