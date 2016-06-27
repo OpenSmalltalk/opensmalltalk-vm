@@ -62,6 +62,10 @@ fi
 
 if [[ "${ARCH}" == "linux32ARM" ]]; then
     # we're in  chroot at this point
+    export LC_ALL=C
+    export LC_CTYPE=C
+    export LANG=C
+    export LANGUAGE=C
     TRAVIS_BUILD_DIR="$(pwd)"
 fi
 
