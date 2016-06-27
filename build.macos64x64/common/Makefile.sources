@@ -7,7 +7,7 @@ $(SOURCESDIR):
 	mkdir -p $(SOURCESDIR)
 
 %.sources: $(SOURCESDIR) $(SOURCESDIR)/%.sources
-	test -f $(notdir $@) || ln $(SOURCESDIR)/$@ .
+	test -f $@ || ln $(SOURCESDIR)/$(notdir $@) $@
 
 $(SOURCESDIR)/PharoV50.sources: 
 	curl http://files.pharo.org/get-files/50/sources.zip -o $@.zip

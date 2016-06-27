@@ -61,6 +61,8 @@ SOURCES:=./$(SOURCEFILE)
 endif
 ifneq ($(APPSOURCE),)
 SOURCES:=$(SOURCES) $(APP)/Contents/Resources/$(APPSOURCE)
+$(APP)/Contents/Resources/$(APPSOURCE): $(SOURCESDIR)/$(APPSOURCE)
+	test -f $@ || ln $(SOURCESDIR)/$(notdir $@) $@
 endif
 
 

@@ -51,6 +51,9 @@ platforms/unix/config/autom4te.cache/
 !editnewspeakinstall.sh
 !/build.linux32ARM/asasm
 
+# Ignore special Cadence-only build directories
+/build*/glue*
+
 # Track installer directories
 !installer
 # but ignore these files (derived from `grep installer .gitignore.orig`)
