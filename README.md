@@ -187,7 +187,7 @@ There exist
 	build.macos32x86/common - Gnu Makefiles for building the various branded VMs
 	build.macos64x64/common - Gnu Makefiles for building the various branded VMs
 	build.win32x86/common   - Gnu Makefiles for building the various branded VMs
-And the intension is to add build.linuxNN????/common as soon as possible to
+And the intention is to add build.linuxNN????/common as soon as possible to
 use Gnu Makefiles to build all VMs on all platfrms.
 
 The scripts directory contains various scripts for validating and checking-in

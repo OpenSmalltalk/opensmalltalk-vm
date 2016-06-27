@@ -11,18 +11,14 @@ $(SOURCESDIR):
 
 $(SOURCESDIR)/PharoV50.sources: 
 	curl http://files.pharo.org/get-files/50/sources.zip -o $@.zip
-	(cd $(SOURCESDIR); unzip $(notdir $@.zip))
+	(cd $(SOURCESDIR); unzip $(@F).zip)
 	rm $@.zip
 	chmod 444 $@
 
-$(SOURCESDIR)/SqueakV50.sources: 
-	curl http://files.squeak.org/5.0/SqueakV50.sources.zip -o $@.zip
-	(cd $(SOURCESDIR); unzip $(notdir $@.zip))
-	rm $@.zip
-	chmod 444 $@
-
-$(SOURCESDIR)/SqueakV46.sources: 
-	curl http://files.squeak.org/4.6/SqueakV46.sources.zip -o $@.zip
-	(cd $(SOURCESDIR); unzip $(notdir $@.zip))
-	rm $@.zip
+$(SOURCESDIR)/SqueakV50.sources \
+$(SOURCESDIR)/SqueakV46.sources \
+$(SOURCESDIR)/SqueakV41.sources: 
+	curl http://ftp.squeak.org/sources_files/$(@F).gz -o $@.gz
+	(cd $(SOURCESDIR); gunzip $(@F).gz)
+	rm $@.gz
 	chmod 444 $@

@@ -147,4 +147,5 @@ print-app-settings:
 	@echo SIGNING_IDENTITY=$(SIGNING_IDENTITY)
 	@echo SOURCEFILE=$(SOURCEFILE)
 	@echo APPSOURCE=$(APPSOURCE)
+	@echo SOURCES=$(SOURCES)
 	@echo -----------------------------------------------------
