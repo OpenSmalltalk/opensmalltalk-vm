@@ -12,13 +12,13 @@ $(SOURCESDIR):
 $(SOURCESDIR)/PharoV50.sources: 
 	curl http://files.pharo.org/get-files/50/sources.zip -o $@.zip
 	(cd $(SOURCESDIR); unzip $(@F).zip)
-	test -f $@.zip && rm $@.zip
 	chmod 444 $@
+	-rm $@.zip
 
 $(SOURCESDIR)/SqueakV50.sources \
 $(SOURCESDIR)/SqueakV46.sources \
 $(SOURCESDIR)/SqueakV41.sources: 
 	curl http://ftp.squeak.org/sources_files/$(@F).gz -o $@.gz
 	(cd $(SOURCESDIR); gunzip $(@F).gz)
-	test -f $@.gz && rm $@.gz
 	chmod 444 $@
+	-rm $@.zip
