@@ -1,6 +1,6 @@
 #!/bin/bash
 # assert Stack VM with VM profiler and threaded heartbeat
-INSTALLDIR=assert/stklinuxhtARM
+INSTALLDIR=assert/stklinuxhtRPi
 OPT="-g3 -O1 -fwrapv -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then

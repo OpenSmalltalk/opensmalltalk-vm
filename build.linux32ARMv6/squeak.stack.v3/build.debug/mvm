@@ -1,6 +1,6 @@
 #!/bin/bash
 # debug Stack VM with VM profiler and threaded heartbeat
-INSTALLDIR=debug/stklinuxhtARM
+INSTALLDIR=debug/stklinuxhtRPi
 OPT="-g3 -O0 -fwrapv -DDEBUGVM=1"
 
 if [ $# -ge 1 ]; then

@@ -1,6 +1,6 @@
 #!/bin/bash
 # assert Stack Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=assert/nsstkspurlinuxhtARM
+INSTALLDIR=assert/nsstkspurlinuxhtRPi
 OPT="-g3 -O1 -fwrapv -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
