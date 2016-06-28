@@ -49,7 +49,7 @@ platforms/unix/config/autom4te.cache/
 !squeak.ico
 !Squeak.rc
 !editnewspeakinstall.sh
-!/build.linux32ARM/asasm
+!/build.linux32ARMv6/asasm
 
 # Ignore special Cadence-only build directories
 /build*/glue*

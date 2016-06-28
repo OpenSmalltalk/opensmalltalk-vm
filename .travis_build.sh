@@ -60,7 +60,7 @@ fi
 [[ -z "${ARCH}" ]] && exit 2
 [[ -z "${FLAVOR}" ]] && exit 3
 
-if [[ "${ARCH}" == "linux32ARM" ]]; then
+if [[ "${ARCH}" == "linux32ARM"* ]]; then
     # we're in  chroot at this point
     TRAVIS_BUILD_DIR="$(pwd)"
 fi

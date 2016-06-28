@@ -222,27 +222,27 @@ matrix:
       env: ARCH="macos32x86" FLAVOR="squeak.stack.v3"
 
     - os: linux
-      env: ARCH="linux32ARM" FLAVOR="newspeak.cog.spur" CHROOT="schroot -p -c rpi -- bash -c "
+      env: ARCH="linux32ARMv6" FLAVOR="newspeak.cog.spur" CHROOT="schroot -p -c rpi -- bash -c "
       sudo: required
       dist: trusty
       group: edge
     - os: linux
-      env: ARCH="linux32ARM" FLAVOR="newspeak.stack.spur" CHROOT="schroot -p -c rpi -- bash -c "
+      env: ARCH="linux32ARMv6" FLAVOR="newspeak.stack.spur" CHROOT="schroot -p -c rpi -- bash -c "
       sudo: required
       dist: trusty
       group: edge
     - os: linux
-      env: ARCH="linux32ARM" FLAVOR="squeak.cog.spur" CHROOT="schroot -p -c rpi -- bash -c "
+      env: ARCH="linux32ARMv6" FLAVOR="squeak.cog.spur" CHROOT="schroot -p -c rpi -- bash -c "
       sudo: required
       dist: trusty
       group: edge
     - os: linux
-      env: ARCH="linux32ARM" FLAVOR="squeak.stack.spur" CHROOT="schroot -p -c rpi -- bash -c "
+      env: ARCH="linux32ARMv6" FLAVOR="squeak.stack.spur" CHROOT="schroot -p -c rpi -- bash -c "
       sudo: required
       dist: trusty
       group: edge
     - os: linux
-      env: ARCH="linux32ARM" FLAVOR="squeak.stack.v3" CHROOT="schroot -p -c rpi -- bash -c "
+      env: ARCH="linux32ARMv6" FLAVOR="squeak.stack.v3" CHROOT="schroot -p -c rpi -- bash -c "
       sudo: required
       dist: trusty
       group: edge
