@@ -5,7 +5,7 @@ This is the README for the Cog Git source tree:
 
 [![Download](https://api.bintray.com/packages/opensmalltalk/vm/cog/images/download.svg) ](https://bintray.com/opensmalltalk/vm/cog/_latestVersion#files)
 [![Unix Build Status](https://travis-ci.org/OpenSmalltalk/opensmalltalk-vm.svg?branch=Cog)](https://travis-ci.org/OpenSmalltalk/opensmalltalk-vm)
-[![Windows Build status](https://ci.appveyor.com/api/projects/status/ecrpcrqt844n8lkm/branch/Cog?svg=true)](https://ci.appveyor.com/project/OpenSmalltalk/opensmalltalk-vm/branch/Cog)
+[![Windows Build status](https://ci.appveyor.com/api/projects/status/ecrpcrqt844n8lkm/branch/Cog?svg=true)](https://ci.appveyor.com/project/OpenSmalltalk/vm/branch/Cog)
 
 Builds are tested automatically on each commit on Travis and Appveyor, for
 Windows 32, Mac OS X 32 and 64, and on Linux 32, 64, and ARM. Squeak, Pharo, and
