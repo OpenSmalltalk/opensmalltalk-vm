@@ -225,7 +225,7 @@ IA32ABIPlugin >> primBoxedFree [
 	<var: #ptr type: 'sqInt *'>
 	<var: #sizeField type: 'long'>
 
-	rcvr := interpreterProxy stackObjectValue: 0.
+	rcvr := interpreterProxy stackValue: 0.
 	(interpreterProxy byteSizeOf: rcvr) >= (2 * interpreterProxy bytesPerOop) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
 	ptr := interpreterProxy firstIndexableField: rcvr.
@@ -456,7 +456,7 @@ IA32ABIPlugin >> primFree [
 		<primitive: 'primFree' error: errorCode module: 'IA32ABI'>"
 	| addr |
 	<export: true>
-	addr := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
+	addr := interpreterProxy stackPositiveMachineIntegerValue: 0.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	"Don't you dare to free Squeak's memory!"
@@ -598,7 +598,7 @@ IA32ABIPlugin >> primReturnFromContextThrough [
 	| mac vmCallbackContext vmCallbackReturnValue isMostRecent |
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
 	<var: #vmCallbackReturnValue type: #'VMCallbackReturnValue *'>
-	vmCallbackContext := self cCoerceSimple: (interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0))
+	vmCallbackContext := self cCoerceSimple: (interpreterProxy positiveMachineIntegerValueOf: (interpreterProxy stackValue: 0))
 								to: #'VMCallbackContext *'.
 	(interpreterProxy failed or: [vmCallbackContext = 0]) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
