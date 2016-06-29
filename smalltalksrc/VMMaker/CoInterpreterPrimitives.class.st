@@ -867,9 +867,9 @@ CoInterpreterPrimitives >> primitiveVoidVMStateForMethod [
 	 only steps that can be avoided is divorcing frames in the stack zone, and scanning to unlink and
 	 free if there isn't a cog method."
 	methodObj := self stackTop.
-	self push: instructionPointer.
+	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer.
+	self ensurePushedInstructionPointer.
 	self externalWriteBackHeadFramePointers.
-	activeContext := self ensureFrameIsMarried: framePointer SP: stackPointer - objectMemory wordSize.
 	(hasCogMethod := self methodHasCogMethod: methodObj) ifTrue:
 		[self divorceMachineCodeFramesWithMethod: methodObj].
 	self ensureAllContextsWithMethodHaveBytecodePCs: methodObj.
