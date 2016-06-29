@@ -42,5 +42,8 @@ fi
 # prepending is less flexible but safer because it ensures we find the plugins
 # in the same directory as the VM.  We must include at least /lib and /usr/lib
 # if libraries there-in are to be found.  These directories are not implicit.
-SVMLLP="$PLATFORMLIBDIR:/lib:/usr$PLATFORMLIBDIR:/usr/lib"
+case $PLATFORMLIBDIR in
+/lib|/usr/lib)	SVMLLP=/lib:/usr/lib;;
+*)				SVMLLP="$PLATFORMLIBDIR:/lib:/usr$PLATFORMLIBDIR:/usr/lib"
+esac
 LD_LIBRARY_PATH="$PLUGINS:$SVMLLP:${LD_LIBRARY_PATH}" exec $GDB "$BIN/squeak" "$@"
