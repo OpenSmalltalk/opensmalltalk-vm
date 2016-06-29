@@ -1,6 +1,6 @@
 set -e
 
-[[ "${ARCH}" != "linux32ARM" ]] && exit 0
+[[ "${ARCH}" != "linux32ARMv6" ]] && exit 0
 
 MIRROR=http://archive.raspbian.org/raspbian
 VERSION=jessie
