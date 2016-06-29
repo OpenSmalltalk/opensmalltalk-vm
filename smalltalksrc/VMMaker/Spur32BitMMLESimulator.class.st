@@ -110,7 +110,7 @@ Spur32BitMMLESimulator >> firstIndexableField: objOop [
 											+ self baseHeaderSize
 											+ ((self numSlotsOf: objOop) << self shiftForWord))
 				to: #'oop *'].
-	"All bit objects, and indeed CompiledMethod, though this is a non-no, start at 0"
+	"All bit objects, and indeed CompiledMethod, though this is a no-no, start at 0"
 	self assert: (fmt >= self sixtyFourBitIndexableFormat and: [fmt < self firstCompiledMethodFormat]).
 	^self
 		cCoerce: (self pointerForOop: objOop + self baseHeaderSize)

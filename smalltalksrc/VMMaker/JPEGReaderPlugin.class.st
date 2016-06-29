@@ -614,23 +614,21 @@ JPEGReaderPlugin >> primitiveColorConvertGrayscaleMCU [
 	interpreterProxy methodArgumentCount = 4
 		ifFalse:[^interpreterProxy primitiveFail].
 	ditherMask := interpreterProxy stackIntegerValue: 0.
-	arrayOop := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
+	arrayOop := interpreterProxy stackValue: 1.
 	((interpreterProxy isWords: arrayOop) and:[(interpreterProxy slotSizeOf: arrayOop) = 3])
 		ifFalse:[^interpreterProxy primitiveFail].
 	residuals := interpreterProxy firstIndexableField: arrayOop.
-	arrayOop := interpreterProxy stackObjectValue: 2.
-	interpreterProxy failed ifTrue:[^nil].
+	arrayOop := interpreterProxy stackValue: 2.
 	(interpreterProxy isWords: arrayOop)
 		ifFalse:[^interpreterProxy primitiveFail].
 	jpegBitsSize := interpreterProxy slotSizeOf: arrayOop.
 	jpegBits := interpreterProxy firstIndexableField: arrayOop.
-	arrayOop := interpreterProxy stackObjectValue: 3.
-	interpreterProxy failed ifTrue:[^nil].
+	arrayOop := interpreterProxy stackValue: 3.
 	(self yColorComponentFrom: arrayOop)
 		ifFalse:[^interpreterProxy primitiveFail].
 	self colorConvertGrayscaleMCU.
-	interpreterProxy pop: 4.
+	interpreterProxy pop: 4
 ]
 
 { #category : #primitives }
@@ -647,19 +645,17 @@ JPEGReaderPlugin >> primitiveColorConvertMCU [
 	interpreterProxy methodArgumentCount = 4
 		ifFalse:[^interpreterProxy primitiveFail].
 	ditherMask := interpreterProxy stackIntegerValue: 0.
-	arrayOop := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
+	arrayOop := interpreterProxy stackValue: 1.
 	((interpreterProxy isWords: arrayOop) and:[(interpreterProxy slotSizeOf: arrayOop) = 3])
 		ifFalse:[^interpreterProxy primitiveFail].
 	residuals := interpreterProxy firstIndexableField: arrayOop.
-	arrayOop := interpreterProxy stackObjectValue: 2.
-	interpreterProxy failed ifTrue:[^nil].
+	arrayOop := interpreterProxy stackValue: 2.
 	(interpreterProxy isWords: arrayOop)
 		ifFalse:[^interpreterProxy primitiveFail].
 	jpegBitsSize := interpreterProxy slotSizeOf: arrayOop.
 	jpegBits := interpreterProxy firstIndexableField: arrayOop.
-	arrayOop := interpreterProxy stackObjectValue: 3.
-	interpreterProxy failed ifTrue:[^nil].
+	arrayOop := interpreterProxy stackValue: 3.
 	((interpreterProxy isPointers: arrayOop) and:[(interpreterProxy slotSizeOf: arrayOop) = 3])
 		ifFalse:[^interpreterProxy primitiveFail].
 	(self yColorComponentFrom: (interpreterProxy fetchPointer: 0 ofObject: arrayOop))
@@ -669,7 +665,7 @@ JPEGReaderPlugin >> primitiveColorConvertMCU [
 	(self crColorComponentFrom: (interpreterProxy fetchPointer: 2 ofObject: arrayOop))
 		ifFalse:[^interpreterProxy primitiveFail].
 	self colorConvertMCU.
-	interpreterProxy pop: 4.
+	interpreterProxy pop: 4
 ]
 
 { #category : #primitives }
@@ -683,41 +679,35 @@ JPEGReaderPlugin >> primitiveDecodeMCU [
 	"
 	| arrayOop oop anArray |
 	<export: true>
-	<var: #anArray type: 'int *'>
+	<var: #anArray type: #'int *'>
 	self cCode:'' inSmalltalk:[self stInit].
 
 	interpreterProxy methodArgumentCount = 5 
 		ifFalse:[^interpreterProxy primitiveFail].
 
-	oop := interpreterProxy stackObjectValue: 0.
-	interpreterProxy failed ifTrue:[^nil].
+	oop := interpreterProxy stackValue: 0.
 	(self loadJPEGStreamFrom: oop)
 		ifFalse:[^interpreterProxy primitiveFail].
 
-	arrayOop := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
+	arrayOop := interpreterProxy stackValue: 1.
 	(interpreterProxy isWords: arrayOop)
 		ifFalse:[^interpreterProxy primitiveFail].
 	acTableSize := interpreterProxy slotSizeOf: arrayOop.
 	acTable := interpreterProxy firstIndexableField: arrayOop.
 
-	arrayOop := interpreterProxy stackObjectValue: 2.
-	interpreterProxy failed ifTrue:[^nil].
+	arrayOop := interpreterProxy stackValue: 2.
 	(interpreterProxy isWords: arrayOop)
 		ifFalse:[^interpreterProxy primitiveFail].
 	dcTableSize := interpreterProxy slotSizeOf: arrayOop.
 	dcTable := interpreterProxy firstIndexableField: arrayOop.
 
-	oop := interpreterProxy stackObjectValue: 3.
-	interpreterProxy failed ifTrue:[^nil].
+	oop := interpreterProxy stackValue: 3.
 	(self colorComponent: yComponent from: oop)
 		ifFalse:[^interpreterProxy primitiveFail].
 
-	arrayOop := interpreterProxy stackObjectValue: 4.
-	interpreterProxy failed ifTrue:[^nil].
-	(interpreterProxy isWords: arrayOop)
-		ifFalse:[^interpreterProxy primitiveFail].
-	(interpreterProxy slotSizeOf: arrayOop) = DCTSize2
+	arrayOop := interpreterProxy stackValue: 4.
+	((interpreterProxy isWords: arrayOop)
+	 and: [(interpreterProxy slotSizeOf: arrayOop) = DCTSize2])
 		ifFalse:[^interpreterProxy primitiveFail].
 	anArray := interpreterProxy firstIndexableField: arrayOop.
 
@@ -732,7 +722,7 @@ JPEGReaderPlugin >> primitiveDecodeMCU [
 		ofObject: (interpreterProxy stackValue: 3) 
 		withValue: (yComponent at: PriorDCValueIndex).
 
-	interpreterProxy pop: 5.
+	interpreterProxy pop: 5
 ]
 
 { #category : #primitives }
@@ -743,23 +733,21 @@ JPEGReaderPlugin >> primitiveIdctInt [
 	"
 	| arrayOop anArray qt |
 	<export: true>
-	<var: #anArray type: 'int *'>
-	<var: #qt type: 'int *'>
+	<var: #anArray type: #'int *'>
+	<var: #qt type: #'int *'>
 	self cCode:'' inSmalltalk:[self stInit].
 	interpreterProxy methodArgumentCount = 2
 		ifFalse:[^interpreterProxy primitiveFail].
-	arrayOop := interpreterProxy stackObjectValue: 0.
-	interpreterProxy failed ifTrue:[^nil].
+	arrayOop := interpreterProxy stackValue: 0.
 	((interpreterProxy isWords: arrayOop) and:[(interpreterProxy slotSizeOf: arrayOop) = DCTSize2])
 		ifFalse:[^interpreterProxy primitiveFail].
 	qt := interpreterProxy firstIndexableField: arrayOop.
-	arrayOop := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
+	arrayOop := interpreterProxy stackValue: 1.
 	((interpreterProxy isWords: arrayOop) and:[(interpreterProxy slotSizeOf: arrayOop) = DCTSize2])
 		ifFalse:[^interpreterProxy primitiveFail].
 	anArray := interpreterProxy firstIndexableField: arrayOop.
 	self idctBlockInt: anArray qt: qt.
-	interpreterProxy pop: 2.
+	interpreterProxy pop: 2
 ]
 
 { #category : #decoding }

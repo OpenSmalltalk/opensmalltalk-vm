@@ -439,15 +439,16 @@ ThreadedFFIPlugin >> ffiArgument: oop Spec: argSpec Class: argClass in: calloutS
 	"Check if oopClass is a subclass of ExternalStructure.
 	If this is the case we'll work on it's handle and not the actual oop."
 	isStruct := false.
-	((interpreterProxy isImmediate: oop) or:[oop = nilOop]) ifFalse:[
-		"#isPointers: will fail if oop is immediate so don't even attempt to use it"
-		(interpreterProxy isPointers: oop) 
-			ifTrue:[isStruct := interpreterProxy includesBehavior: oopClass 
-								ThatOf: interpreterProxy classExternalStructure.
-					(argClass = nilOop or:[isStruct]) 
-						ifFalse:[^FFIErrorCoercionFailed]].
-		"note: the test for #isPointers: above should speed up execution since no pointer type ST objects are allowed in external calls and thus if #isPointers: is true then the arg must be ExternalStructure to work. If it isn't then the code fails anyways so speed isn't an issue"
-	].
+	(oop ~= nilOop
+	 and: [interpreterProxy isPointers: oop]) ifTrue: "#isPointers: will fail if oop is immediate so don't even attempt to use it"
+		[isStruct := interpreterProxy
+						includesBehavior: oopClass 
+						ThatOf: interpreterProxy classExternalStructure.
+		 (argClass = nilOop or: [isStruct]) ifFalse:
+			[^FFIErrorCoercionFailed]].
+	"note: the test for #isPointers: above should speed up execution since no pointer type
+	 ST objects are allowed in external calls and thus if #isPointers: is true then the arg must
+	 be ExternalStructure to work. If it isn't then the code fails anyways so speed isn't an issue."
 
 	"Determine valueOop (e.g., the actual oop to pass as argument)"
 	isStruct
@@ -1816,7 +1817,7 @@ ThreadedFFIPlugin >> primitiveLogCallsTo [
 	<export: true>
 	interpreterProxy methodArgumentCount = 1 
 		ifFalse:[^interpreterProxy primitiveFail].
-	logFile := interpreterProxy stackObjectValue: 0.
+	logFile := interpreterProxy stackValue: 0.
 	logFile = interpreterProxy nilObject ifTrue:[ "disable logging"
 		ok := self ffiLogFileName: nil OfLength: 0.
 		ok ifFalse:[^interpreterProxy primitiveFail].

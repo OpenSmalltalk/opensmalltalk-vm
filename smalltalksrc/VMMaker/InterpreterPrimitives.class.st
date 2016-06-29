@@ -3336,37 +3336,43 @@ InterpreterPrimitives >> primitiveRootTableAt [
 { #category : #'I/O primitives' }
 InterpreterPrimitives >> primitiveScanCharacters [
 	"The character scanner primitive."
-	| kernDelta stops sourceString scanStopIndex scanStartIndex rcvr scanDestX scanLastIndex scanXTable scanMap maxGlyph ascii stopReason glyphIndex sourceX sourceX2 nextDestX scanRightX nilOop |
+	| kernDelta stops sourceString scanStopIndex scanStartIndex rcvr scanDestX scanLastIndex scanXTable
+	  scanMap maxGlyph ascii stopReason glyphIndex sourceX sourceX2 nextDestX scanRightX nilOop |
 
 	self methodArgumentCount = 6
 		ifFalse: [^ self primitiveFail].
 
 	"Load the receiver and arguments"
 	kernDelta := self stackIntegerValue: 0.
-	stops := self stackObjectValue: 1.
+	stops := self stackValue: 1.
 	scanRightX := self stackIntegerValue: 2.
-	sourceString := self stackObjectValue: 3.
+	sourceString := self stackValue: 3.
 	scanStopIndex := self stackIntegerValue: 4.
 	scanStartIndex := self stackIntegerValue: 5.
-	rcvr := self stackObjectValue: 6.
+	rcvr := self stackValue: 6.
 	self successful ifFalse: [^ nil].
 	
-	"check argument type and range"
-	(objectMemory isArray: stops) ifFalse: [^ self primitiveFail].
-	(objectMemory slotSizeOf: stops) >= 258 ifFalse: [^ self primitiveFail].
-	(objectMemory isBytes: sourceString) ifFalse: [^ self primitiveFail].
-	(scanStartIndex > 0 and: [scanStopIndex > 0 and: [scanStopIndex <= (objectMemory byteSizeOf: sourceString)]])
+	"check argument type and range and rcvr"
+	((objectMemory isArray: stops)
+	 and: [(objectMemory slotSizeOf: stops) >= 258
+	 and: [(objectMemory isBytes: sourceString)
+	 and: [scanStartIndex > 0
+	 and: [scanStopIndex > 0
+	 and: [scanStopIndex <= (objectMemory byteSizeOf: sourceString)
+	 and: [(objectMemory isPointers: rcvr)
+	 and: [(objectMemory slotSizeOf: rcvr) >= 4]]]]]]])
 		ifFalse: [^ self primitiveFail].
 
-	"Check receiver and required instVars"
-	((objectMemory isPointers: rcvr) and: [(objectMemory slotSizeOf: rcvr) >= 4]) ifFalse: [^ self primitiveFail].
+	"Check required rcvr instVars"
 	scanDestX := self fetchInteger: 0 ofObject: rcvr.
 	scanLastIndex := self fetchInteger: 1 ofObject: rcvr.
 	scanXTable := objectMemory fetchPointer: 2 ofObject: rcvr.
 	scanMap := objectMemory fetchPointer: 3 ofObject: rcvr.
-	((objectMemory isArray: scanXTable) and: [objectMemory isArray: scanMap]) ifFalse: [^ self primitiveFail].
-	(objectMemory slotSizeOf: scanMap) = 256 ifFalse: [^ self primitiveFail].
-	self successful ifFalse: [^ nil].
+	((objectMemory isArray: scanXTable)
+	 and: [(objectMemory isArray: scanMap)
+	 and: [(objectMemory slotSizeOf: scanMap) = 256
+	 and: [self successful "for the fetchInteger:ofObject:'s abobve"]]]) ifFalse:
+		[^ self primitiveFail].
 	maxGlyph := (objectMemory slotSizeOf: scanXTable) - 2.
 
 	"Okay, here we go. We have eliminated nearly all failure 

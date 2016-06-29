@@ -4691,7 +4691,7 @@ SpurMemoryManager >> firstIndexableField: objOop [
 								+ ((self fixedFieldsOfClassFormat: classFormat) << self shiftForWord)].
 		 "otherwise not indexable"
 		 ^0].
-	"All bit objects, and indeed CompiledMethod, though this is a non-no, start at 0"
+	"All bit objects, and indeed CompiledMethod, though this is a no-no, start at 0"
 	(fmt >= self sixtyFourBitIndexableFormat
 	 and: [fmt < self firstCompiledMethodFormat]) ifTrue:
 		[^self pointerForOop: objOop + self baseHeaderSize].

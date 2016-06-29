@@ -38,12 +38,11 @@ UUIDPlugin >> initialiseModule [
 UUIDPlugin >> primitiveMakeUUID [
 	| oop location |
 	<export: true>
-	<var: #location type: 'char*'>
-	oop := interpreterProxy stackObjectValue: 0.
-	(interpreterProxy failed
-	or: [interpreterProxy methodArgumentCount ~= 0
-	or: [(interpreterProxy isBytes: oop) not
-	or: [(interpreterProxy byteSizeOf: oop) ~= 16]]]) ifTrue:
+	<var: #location type: #'char*'>
+	oop := interpreterProxy stackValue: 0.
+	(interpreterProxy methodArgumentCount = 0
+	 and: [(interpreterProxy isBytes: oop)
+	 and: [(interpreterProxy byteSizeOf: oop) = 16]]) ifFalse:
 		[^interpreterProxy primitiveFail].
 	location := interpreterProxy firstIndexableField: oop.
 	self cCode: [self MakeUUID: location]
