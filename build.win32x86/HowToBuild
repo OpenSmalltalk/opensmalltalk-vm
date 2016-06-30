@@ -7,7 +7,7 @@ Contents:
 	- Checking out sources to build out-of-the-box
 	- Building out of the box
 	- Building a Specific Plugin Dll
-	- Building the Bochs Support Libraries
+	- Building the VM Simulator Support Libraries
 	- Building an MSI installer (Newspeak)
 	- Optimization level and gcc version (please read!)
 	- Debugging with gdb
@@ -78,8 +78,6 @@ then replace --export-dynamic with --export-all-symbols in the makefiles.
 
 Then cd to the build directory of your choice, e.g.
 	build.win32x86/squeak.cog.spur/build
-Then either remove any BochsIA32Plugin line from plugins.ext or build the
-Bochs support libraries (see Building the Bochs Support Libraries below).
 Then execute
 	./mvm
 This builds debug, assert and production versions of the VM in builddbg/vm,
@@ -111,16 +109,22 @@ to be made.  e.g.
   $ make build/vm/BochsIA32Plugin.dll
 
 
-Building the Bochs Support Libraries
+Building the VM Simulator Support Libraries
 ------------------------------------
-If you want to get the Cog VM simulator working you'll need to build the
-BochsIA32Plugin and to build that you'll need to first build bochs.  First
-check-out the processor simulator source tree containing Bochs:
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/processors
-Then build libraries winbochs/{cpu/libcpu.a,disasm/libdisasm.a,fpu/libfpu.a}
-  $ cd ../processors/IA32/winbochs
+If you want to get the Cog VM simulator working you'll need to build one or more
+of the processor simulator plugins, each of which has support libraries that
+must be built:
+	Processor   Plugin           Support Library
+	x86         BochsIA32Plugin  build.linux32x86/bochsx86
+	x86_64/x64  BochsX64Plugin   build.linux32x86/bochsx64
+	ARMv5       GdbARMPlugin     build.linux32x86/gdbarm32
+cd to the relevant directories; run conf.COG and then the build script, e.g.
+  $ cd build.linux32x86/bochsx86
   $ ./conf.COG
-  $ ../bochs/makeem
+  $ ./makeem
+
+Then when Squeak VMs are built they will include the plugin(s) for which support
+libraries have been provided.
 
 
 Building an MSI installer (Newspeak)
