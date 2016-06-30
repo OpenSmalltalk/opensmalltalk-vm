@@ -156,7 +156,7 @@ INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) -I$(DXDIR) $(XINC)
 #       The switch '-mwindows' gives us a GUI app instead of a console app.
 #		Newer cygwins want --export-all-symbols in place of --export-dynamic.
 #
-LD:=	 gcc
+LD:=	 $(CC)
 EXPORT:=--export-dynamic
 #EXPORT:=--export-all-symbols
 BASELDFLAGS:=-mno-cygwin -mthreads -Wl,--large-address-aware,$(EXPORT) -L/usr/lib/mingw

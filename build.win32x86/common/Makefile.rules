@@ -11,7 +11,7 @@
 #
 CC := gcc
 CXX:= g++
-LD := gcc
+LD := $(CC)
 LDCXX := clang++ # For linking c++ bundles
 
 DEPFLAGS = -MT $@ -MMD -MP -MF deps/$(*F).Td
