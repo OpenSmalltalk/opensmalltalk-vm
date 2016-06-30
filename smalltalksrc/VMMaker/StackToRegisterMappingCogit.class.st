@@ -2080,13 +2080,10 @@ StackToRegisterMappingCogit >> genLoadLiteralVariable: litVarIndex in: destReg [
 ]
 
 { #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genLoadUnFwdTemp: objectIndex in: destReg [
+StackToRegisterMappingCogit >> genLoadTemp: objectIndex in: destReg [
 	destReg = ReceiverResultReg ifTrue: [ optStatus isReceiverResultRegLive: false ].
 	self ssAllocateRequiredReg: destReg. 
 	self MoveMw: (self frameOffsetOfTemporary: objectIndex) r: FPReg R: destReg.
-	objectRepresentation 
-		genEnsureOopInRegNotForwarded: destReg 
-		scratchReg: TempReg.
 ]
 
 { #category : #'bytecode generator support' }
@@ -2411,7 +2408,7 @@ StackToRegisterMappingCogit >> genPushMaybeContextReceiverVariable: slotIndex [
 StackToRegisterMappingCogit >> genPushMaybeContextRemoteInstVar: slotIndex inObjectAt: index [
 	<inline: false>
 	self ssAllocateCallReg: ReceiverResultReg and: SendNumArgsReg.
-	self genLoadUnFwdTemp: index in: ReceiverResultReg.
+	self genLoadTemp: index in: ReceiverResultReg.
 	^ self genPushMaybeContextSlotIndex: slotIndex
 ]
 
@@ -2507,7 +2504,7 @@ StackToRegisterMappingCogit >> genPushRemoteInstVar: index inObjectAt: objectInd
 	| objectReg resultReg |
 	self assert: needsFrame.
 	objectReg := self allocateRegNotConflictingWith: 0.
-	self genLoadUnFwdTemp: objectIndex in: objectReg.
+	self genLoadTemp: objectIndex in: objectReg.
 	resultReg := self availableRegOrNoneNotConflictingWith: (self registerMaskFor: objectReg). 
 	resultReg = NoReg ifTrue: [resultReg := objectReg].
 	objectRepresentation
@@ -2984,7 +2981,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean MaybeContextRemoteInstVar
 	 involve wholesale reorganization of stack pages, and the only way to preserve the
 	 execution state of an activation in that case is if it has a frame."
 	self assert: needsFrame.
-	self genLoadUnFwdTemp: objectIndex in: ReceiverResultReg.
+	self genLoadTemp: objectIndex in: ReceiverResultReg.
 	self genStorePop: popBoolean MaybeContextSlotIndex: slotIndex needsStoreCheck: needsStoreCheck.
 	^ 0
 ]
@@ -3034,7 +3031,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteInstVar: slotIndex ofObjectAt: objectIndex needsStoreCheck: needsStoreCheck [
 	<inline: false>
 	self assert: needsFrame.
-	self genLoadUnFwdTemp: objectIndex in: ReceiverResultReg.
+	self genLoadTemp: objectIndex in: ReceiverResultReg.
 	self 
 		genStorePop: popBoolean 
 		slotIndex: slotIndex 
