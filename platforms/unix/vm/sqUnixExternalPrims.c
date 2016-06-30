@@ -286,6 +286,21 @@ static void *tryLoadingPath(char *varName, char *pluginName)
   return handle;
 }
 
+#ifdef PharoVM
+static void *tryLoadingLinked(char *pluginName)
+{
+  void *handle= dlopen(pluginName, RTLD_NOW | RTLD_GLOBAL);
+  DPRINTF((stderr, __FILE__ " %d tryLoadingLinked dlopen(%s) = %p\n", __LINE__, pluginName, handle));
+# if DEBUG
+  if(handle != 0) 
+	printf("%s: loaded plugin `%s'\n", exeName, libName);
+# endif
+  return handle;
+}
+#else
+# define tryLoadingLinked(pluginName) 0
+#endif
+
 
 /*  Find and load the named module.  Answer 0 if not found (do NOT fail
  *  the primitive!).
@@ -329,14 +344,15 @@ ioLoadModule(char *pluginName)
 			return handle;
 	}
 
-  if ((   handle= tryLoading(    "./",			pluginName))
-      || (handle= tryLoadingPath("SQUEAK_PLUGIN_PATH",	pluginName))
-      || (handle= tryLoadingPath("LD_LIBRARY_PATH",	pluginName))
-      || (handle= tryLoading(    "",			pluginName))
-#    if defined(VM_X11DIR)
-      || (handle= tryLoading(VM_X11DIR"/",		pluginName))
-#    endif
-      )
+    if (   (handle= tryLoadingLinked(				pluginName)) 	// Try linked/referenced libs (Pharo only)
+        || (handle= tryLoading(    "./",			pluginName))	// Try local dir
+        || (handle= tryLoadingPath("SQUEAK_PLUGIN_PATH", 	pluginName))	// Try squeak path
+        || (handle= tryLoadingPath("LD_LIBRARY_PATH",		pluginName)) 	// Try library path
+        || (handle= tryLoading(    "",				pluginName))	// Try no path
+  #    if defined(VM_X11DIR)
+        || (handle= tryLoading(VM_X11DIR"/",			pluginName))	// Try X11 path
+  #    endif
+        )
     return handle;
 
 #if defined(DARWIN)

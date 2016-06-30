@@ -143,6 +143,10 @@ extern void dumpPrimTraceLog(void);
 extern void printPhaseTime(int);
 char *getVersionInfo(int verbose);
 
+#ifdef PharoVM
+void ioProcessEventsDefault(void);
+void (*ioProcessEventsHandler) (void) = ioProcessEventsDefault;
+#endif
 
 /*
  * In the Cog VMs time management is in platforms/unix/vm/sqUnixHeartbeat.c.
@@ -604,6 +608,45 @@ static void emergencyDump(int quit)
 
 #endif
 
+#ifdef PharoVM
+
+void ioProcessEventsDefault(void)
+{
+	sqInt result;
+	extern sqInt inIOProcessEvents;
+
+#if defined(IMAGE_DUMP)
+	if (dumpImageFile) {
+		emergencyDump(0);
+		dumpImageFile= 0;
+	}
+#endif
+	/* inIOProcessEvents controls ioProcessEvents.  If negative then
+	 * ioProcessEvents is disabled.  If >= 0 inIOProcessEvents is incremented
+	 * to avoid reentrancy (i.e. for native GUIs).
+	 */
+	if (inIOProcessEvents) return;
+	inIOProcessEvents += 1;
+
+	result = dpy->ioProcessEvents();
+
+	if (inIOProcessEvents > 0)
+		inIOProcessEvents -= 1;
+}
+
+extern void setIoProcessEventsHandler(void * handler) {
+    ioProcessEventsHandler = (void(*)()) handler;
+}
+
+sqInt ioProcessEvents(void) {
+    aioPoll(0);
+    if(ioProcessEventsHandler)
+        ioProcessEventsHandler();
+    return 0;
+}
+
+#else
+
 sqInt ioProcessEvents(void)
 {
 	sqInt result;
@@ -629,6 +672,8 @@ sqInt ioProcessEvents(void)
 
 	return result;
 }
+
+#endif
 
 void	ioDrainEventQueue() {}
 

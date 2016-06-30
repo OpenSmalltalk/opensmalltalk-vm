@@ -264,12 +264,26 @@ callInitializersIn(ModuleEntry *module)
 	If anything goes wrong make sure the module is unloaded
 	(WITHOUT calling shutdownModule()) and return NULL.
 */
+
+#ifdef PharoVM
+static int moduleLoadingEnabled = 1;
+
+/* Disable module loading mechanism for the rest of current session. This operation should be not reversable! */
+void ioDisableModuleLoading() {
+	moduleLoadingEnabled = 0;
+}
+#endif
+
 static ModuleEntry *
 findAndLoadModule(char *pluginName, sqInt ffiLoad)
 {
 	void *handle;
 	ModuleEntry *module;
 
+#ifdef PharoVM
+	if (!moduleLoadingEnabled)
+		return NULL;
+#endif
 	DPRINTF(("Looking for plugin %s\n", (pluginName ? pluginName : "<intrinsic>")));
 	/* Try to load the module externally */
 	handle = ioLoadModule(pluginName);
@@ -426,6 +440,11 @@ ioLoadExternalFunctionOfLengthFromModuleOfLengthAccessorDepthInto
 /* ioLoadSymbolOfLengthFromModule
 	This entry point is exclusively for the FFI.
 */
+#ifdef PharoVM
+#  define IO_LOAD_GLOBAL(fn) ioLoadFunctionFrom(fn, "")
+#else 
+#  define IO_LOAD_GLOBAL(fn) 0 
+#endif
 void *
 ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, void *moduleHandle)
 {
@@ -438,7 +457,7 @@ ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength
 	functionName[functionNameLength] = 0;
 	return moduleHandle
 		? ioFindExternalFunctionIn(functionName, moduleHandle)
-		: 0;
+		: IO_LOAD_GLOBAL(functionName);
 }
 
 /* ioLoadModuleOfLength
