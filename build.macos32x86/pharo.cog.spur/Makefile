@@ -6,6 +6,7 @@
 VMSRCDIR:= ../../spursrc/vm
 VM:=Pharo
 COGDEFS:=-DPharoVM=1
+APPNAME:=Pharo
 
 # Now include the Makefile proper, which is common to all Mac OS builds.
 #

@@ -23,13 +23,16 @@
 # CONFIGURATION defines what version of the VM to build, product, assert or
 # debug. Optional. Defaults to product. The default is overridden in mvm script
 
+ifeq ($(APPNAME),)
+APPNAME:=Cocoa
+endif
 
 ifeq ($(CONFIGURATION),debug)
-	APP:=CocoaDebug.app
+	APP:=$(APPNAME)Debug.app
 else ifeq ($(CONFIGURATION),assert)
-	APP:=CocoaAssert.app
-else # default CONFIGURATION=product => CocoaFast.app
-	APP:=CocoaFast.app
+	APP:=$(APPNAME)Assert.app
+else # default CONFIGURATION=product => $(APPNAME)Fast.app
+	APP:=$(APPNAME)Fast.app
 endif
 
 default:	$(APP)
@@ -39,13 +42,13 @@ include ../common/Makefile.vm
 cleanall: cleanapp cleanastapp cleandbgapp cleanallvm
 
 cleanapp:
-	rm -rf CocoaFast.app
+	rm -rf $(APPNAME)Fast.app
 
 cleanastapp:
-	rm -rf CocoaAssert.app
+	rm -rf $(APPNAME)Assert.app
 
 cleandbgapp:
-	rm -rf CocoaDebug.app
+	rm -rf $(APPNAME)Debug.app
 
 VMEXE:=$(APP)/Contents/MacOS/$(VM)
 VMPLIST:=$(APP)/Contents/Info.plist
