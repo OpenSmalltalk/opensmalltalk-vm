@@ -70,12 +70,10 @@ for Newspeak Stack VMs using the Spur object representation.  Build as desired.
 
 Checking out sources to build out-of-the-box
 --------------------------------------------
-Check-out at least the relevant platform sources, vm and plugin sources, and
-the relevant build directories
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/platforms
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/build.linux32x86
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/src etc
-		(see section "VM source directories" in the root README)
+Check-out the repository from github:
+	git clone http://www.github.com/OpenSmalltalk/opensmalltalk-vm oscogvm
+	cd ./oscogvm
+	more README.md
 
 
 Building out of the box
