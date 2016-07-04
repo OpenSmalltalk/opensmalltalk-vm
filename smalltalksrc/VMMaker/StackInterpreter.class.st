@@ -5460,6 +5460,7 @@ StackInterpreter >> extPushRemoteTempOrInstVarLongBytecode [
 		ifTrue: [self pushRemoteTemp: slotIndex inVectorAt: tempIndex]
 		ifFalse: 
 			[ slotIndex := slotIndex + (extA << 8).
+			tempIndex := tempIndex - self remoteIsInstVarAccess.
 			extA := extB := 0.
 			object := self temporary: tempIndex in: localFP.
 			self pushMaybeContext: object receiverVariable: slotIndex ]
@@ -5669,6 +5670,7 @@ StackInterpreter >> extStoreRemoteTempOrInstVarLongBytecode [
 		ifTrue: [self storeRemoteTemp: slotIndex inVectorAt: tempIndex]
 		ifFalse: 
 			[ slotIndex := slotIndex + (extA << 8).
+			tempIndex := tempIndex - self remoteIsInstVarAccess.
 			extA := extB := 0.
 			object := self temporary: tempIndex in: localFP.
 			self storeMaybeContext: object receiverVariable: slotIndex withValue: self internalStackTop ]
