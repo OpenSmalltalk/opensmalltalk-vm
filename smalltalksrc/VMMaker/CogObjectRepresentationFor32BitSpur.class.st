@@ -337,7 +337,7 @@ CogObjectRepresentationFor32BitSpur >> genJumpIsSmallIntegerValue: aRegister scr
 	<returnTypeC: #'AbstractInstruction *'>
 	^cogit
 		MoveR: aRegister R: scratchReg;
-		ArithmeticShiftRightCq: 1 R: scratchReg;
+		LogicalShiftLeftCq: 1 R: scratchReg;
 		XorR: aRegister R: scratchReg;
 		JumpGreaterOrEqual: 0
 ]
