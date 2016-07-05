@@ -210,6 +210,11 @@ Spur64BitMMLECoSimulator >> initialize [
 ]
 
 { #category : #'memory access' }
+Spur64BitMMLECoSimulator >> intAt: byteAddress [ 
+	^self long32At: byteAddress
+]
+
+{ #category : #'memory access' }
 Spur64BitMMLECoSimulator >> intAt: byteAddress put: a64BitValue [
 	^self long32At: byteAddress put: (a64BitValue bitAnd: 16rFFFFFFFF)
 ]
