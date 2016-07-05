@@ -4177,6 +4177,41 @@ StackInterpreter >> checkStackIntegrity [
 	^ok
 ]
 
+{ #category : #'internal interpreter access' }
+StackInterpreter >> checkStackPointerForMaybeMarriedContext: aContext [
+	"Version of stackPointerForMaybeMarriedContext: with no side-effects (does not widow).
+	 Used for assertion checking. Safe only in external primitives (framePointer valid).
+	 Answer the stackPointer of a Context."
+	| sp |
+	<inline: true>
+	(self checkIsStillMarriedContext: aContext currentFP: framePointer) ifTrue:
+		[sp := self checkStackPointerIndexForFrame: (self frameOfMarriedContext: aContext).
+		 self assert: ReceiverIndex + (objectMemory integerValueOf: sp) < (objectMemory lengthOf: aContext).
+		 ^sp].
+	(self isMarriedOrWidowedContext: aContext) ifTrue:
+		[^self argumentCountOf: (objectMemory fetchPointer: MethodIndex ofObject: aContext)].
+	^self fetchStackPointerOf: aContext
+]
+
+{ #category : #'frame access' }
+StackInterpreter >> checkStackPointerIndexForFrame: theFP [
+	"Version of stackPointerIndexForFrame: that does not depend on writing back head frame pointers.
+	 Used for assertion checking. Safe only in external primitives (framePointer valid).
+	 Answer the 0-based index rel to the given frame.
+	 (This is what stackPointer used to be before conversion to pointer)"
+	"In the StackInterpreter stacks grow down."
+	| thePage theSP |
+	<inline: false>
+	<var: #theFP type: #'char *'>
+	<var: #thePage type: #'StackPage *'>
+	<var: #theSP type: #'char *'>
+	thePage := stackPages stackPageFor: theFP.
+	theSP := self findSPOrNilOf: theFP
+				on: thePage
+				startingFrom: (thePage = stackPage ifTrue: [framePointer] ifFalse: [thePage headFP]).
+	^self stackPointerIndexForFrame: theFP WithSP: theSP
+]
+
 { #category : #utilities }
 StackInterpreter >> checkedIntegerValueOf: intOop [
 	"Note: May be called by translated primitive code."
@@ -5851,17 +5886,17 @@ StackInterpreter >> externalInstVar: offset ofContext: aContext [
 	 If the context is still married compute the value of the
 	 relevant inst var from the spouse frame's state."
 	<inline: false>
+
 	self assert: (objectMemory isContext: aContext).
+	self assert: offset < (ReceiverIndex + (self checkStackPointerForMaybeMarriedContext: aContext)).
 	"method, closureOrNil & receiver need no special handling; only
 	 sender, pc & stackp have to be computed for married contexts."
-	((self isReadMediatedContextInstVarIndex: offset)
-	 and: [self isMarriedOrWidowedContext: aContext]) ifFalse:
-		[^objectMemory fetchPointer: offset ofObject: aContext].
-
-	self externalWriteBackHeadFramePointers.
-	^(self isStillMarriedContext: aContext)
-		ifTrue: [self fetchPointer: offset ofMarriedContext: aContext]
-		ifFalse: [objectMemory fetchPointer: offset ofObject: aContext]
+	(self isReadMediatedContextInstVarIndex: offset) ifTrue:
+		[self externalWriteBackHeadFramePointers.
+		 (self isStillMarriedContext: aContext) ifTrue:
+			[^self fetchPointer: offset ofMarriedContext: aContext]].
+	
+	^objectMemory fetchPointer: offset ofObject: aContext
 ]
 
 { #category : #'frame access' }
