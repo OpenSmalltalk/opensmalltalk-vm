@@ -3388,23 +3388,22 @@ CoInterpreter >> externalInstVar: offset ofContext: aContext [
 	| value |
 
 	self assert: (objectMemory isContext: aContext).
+	self assert: offset < (ReceiverIndex + (self checkStackPointerForMaybeMarriedContext: aContext)).
 	"method, closureOrNil & receiver need no special handling; only
 	 sender, pc & stackp have to be computed for married contexts."
-	((self isReadMediatedContextInstVarIndex: offset)
-	 and: [self isMarriedOrWidowedContext: aContext]) ifFalse:
-		[value := objectMemory fetchPointer: offset ofObject: aContext.
-		 ^(offset = InstructionPointerIndex
-		    and: [(objectMemory isIntegerObject: value)
-		    and: [value signedIntFromLong < 0]])
-			ifTrue: [self externalWriteBackHeadFramePointers.
-					self mustMapMachineCodePC: (objectMemory integerValueOf: value)
-						context: aContext]
-			ifFalse: [value]].
+	(self isReadMediatedContextInstVarIndex: offset) ifFalse:
+		[^objectMemory fetchPointer: offset ofObject: aContext].
 
 	self externalWriteBackHeadFramePointers.
-	^(self isStillMarriedContext: aContext)
-		ifTrue: [self fetchPointer: offset ofMarriedContext: aContext]
-		ifFalse: [objectMemory fetchPointer: offset ofObject: aContext]
+	(self isStillMarriedContext: aContext) ifTrue:
+		[^self fetchPointer: offset ofMarriedContext: aContext].
+	
+	value := objectMemory fetchPointer: offset ofObject: aContext.
+	(offset = InstructionPointerIndex
+ 	 and: [(objectMemory isIntegerObject: value)
+ 	 and: [value signedIntFromLong < 0]]) ifTrue:
+		[^self mustMapMachineCodePC: (objectMemory integerValueOf: value) context: aContext].
+	^value
 ]
 
 { #category : #'cog jit support' }
