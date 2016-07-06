@@ -59,16 +59,33 @@ int
 backtrace(void **retpcs, int nrpcs)
 {
 	void **__fp;
-#if defined(_MSC_VER)
+
+# if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
+  #if defined(_MSC_VER)
 	__asm {
 		mov EAX, EBP
 		mov [__fp], EAX
 	}
-#elif defined(__GNUC__)
+  #elif defined(__GNUC__)
 	asm volatile ("movl %%ebp, %0" : "=r"(__fp) : );
+  #else
+  # error "don't know how to derive ebp"
+  #endif
+#elif defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_X64)
+  #if defined(_MSC_VER)
+	__asm {
+		mov RAX, RBP
+		mov [__fp], RAX
+	}
+  #elif defined(__GNUC__)
+	asm volatile ("movq %%rbp, %0" : "=r"(__fp) : );
+  #else
+  # error "don't know how to derive ebp"
+  #endif
 #else
-# error "don't know how to derive ebp"
+#error "unknown architecture, cannot pick frame pointer"
 #endif
+
 	return backtrace_from_fp(*__fp, retpcs, nrpcs);
 }
 
@@ -79,15 +96,30 @@ backtrace_from_fp(void *startfp, void **retpcs, int nrpcs)
 	NT_TIB *tib;
 	int i = 0;
 
-#if defined(_MSC_VER)
+# if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
+  #if defined(_MSC_VER)
 	__asm {
 		mov EAX, FS:[18h]
 		mov [tib], EAX
 	}
-#elif defined(__GNUC__)
+  #elif defined(__GNUC__)
 	asm volatile ("movl %%fs:0x18, %0" : "=r" (tib) : );
+  #else
+  # error "don't know how to derive tib"
+  #endif
+#elif defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_X64)
+  #if defined(_MSC_VER)
+	__asm {
+		mov RAX, GS:[30h]
+		mov [tib], RAX
+	}
+  #elif defined(__GNUC__)
+	asm volatile ("movq %%gs:0x30, %0" : "=r" (tib) : );
+  #else
+  # error "don't know how to derive tib"
+  #endif
 #else
-# error "don't know how to derive tib"
+#error "unknown architecture, cannot pick frame pointer"
 #endif
 
 	fp = startfp;
