@@ -155,7 +155,7 @@ int recordMouseEvent(MSG *msg, UINT nrClicks);
 int recordKeyboardEvent(MSG *msg);
 int recordWindowEvent(int action, RECT *r);
 
-extern int byteSwapped(int);
+extern sqInt byteSwapped(sqInt);
 extern int convertToSqueakTime(SYSTEMTIME);
 int recordMouseDown(WPARAM, LPARAM);
 int recordModifierButtons();

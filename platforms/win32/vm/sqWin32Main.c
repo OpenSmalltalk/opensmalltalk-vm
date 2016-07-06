@@ -1829,7 +1829,7 @@ static int
 IsImage(char *name)
 { 
 	int magic;
-	int byteSwapped(int);
+	extern sqInt byteSwapped(sqInt);
 	sqImageFile fp;
 
 	fp = sqImageFileOpen(name,"rb");
