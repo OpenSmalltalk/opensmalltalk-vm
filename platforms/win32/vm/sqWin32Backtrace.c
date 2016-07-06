@@ -132,7 +132,7 @@ backtrace_from_fp(void *startfp, void **retpcs, int nrpcs)
 		retpcs[i++] = fp->retpc;
 		savedfp = fp->savedfp;
 
-#define validfp(fp,sp) (((int)(fp) & 3) == 0 && (char *)(fp) > (char *)(sp))
+#define validfp(fp,sp) (((long)(fp) & (sizeof(fp)-1)) == 0 && (char *)(fp) > (char *)(sp))
 
 		if (savedfp >= (Frame *)tib->StackBase
 		 || !validfp(savedfp,startfp)
