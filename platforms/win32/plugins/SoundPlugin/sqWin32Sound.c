@@ -57,6 +57,9 @@ int recBufferAvailable = 0;
 int recTerminate = 0;
 int recSemaphore = -1;
 
+sqInt snd_StopPlaying(void);
+sqInt snd_StopRecording(void);
+
 /* module initialization/shutdown */
 sqInt soundInit(void) {
   hRecEvent = CreateEvent( NULL, FALSE, FALSE, NULL );
