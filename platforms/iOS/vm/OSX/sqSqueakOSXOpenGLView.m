@@ -94,6 +94,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (void)initialize {
+	[self setWantsBestResolutionOpenGLSurface:YES];
        [self setAutoresizingMask:NSViewWidthSizable | NSViewHeightSizable];
        [self setAutoresizesSubviews:YES];
 
@@ -121,6 +122,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 - (void) initializeVariables {
 }
 
+- (void) preDrawThelayers {
+}
+
 - (void) dealloc {
 	free(colorMap32);
 	CGColorSpaceRelease(colorspace);
@@ -140,17 +144,32 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	return YES;
 }
 
+- (NSRect) sqScreenSize {
+  return [self convertRectToBacking: [self bounds]];
+}
+
+
+- (NSPoint) sqMousePosition: (NSEvent*)theEvent {
+	/* Our client expects the mouse coordinates in Squeak's coordinates,
+	 * but theEvent's location is in "user" coords. so we have to convert. */
+	NSPoint local_pt = [self convertPoint: [theEvent locationInWindow] fromView:nil];
+	NSPoint converted = [self convertPointToBacking: local_pt];
+	// Squeak is upside down
+	return NSMakePoint(converted.x, -converted.y);
+}
+
+
 - (void)viewDidMoveToWindow {
 	if (self.squeakTrackingRectForCursor)
 		[self removeTrackingRect: self.squeakTrackingRectForCursor];
 	
-	self.squeakTrackingRectForCursor = [self addTrackingRect: [self bounds] owner: self userData:NULL assumeInside: NO];
+	self.squeakTrackingRectForCursor = [self addTrackingRect: [self sqScreenSize] owner: self userData:NULL assumeInside: NO];
 }
 
 - (void) updateTrackingAreas {
 	[super updateTrackingAreas];
 	[self removeTrackingRect: self.squeakTrackingRectForCursor];
-	self.squeakTrackingRectForCursor = [self addTrackingRect: [self bounds] owner: self userData:NULL assumeInside: NO];
+	self.squeakTrackingRectForCursor = [self addTrackingRect: [self sqScreenSize] owner: self userData:NULL assumeInside: NO];
 }
 
 - (void) viewWillStartLiveResize {
@@ -196,7 +215,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	}
 }
 
--(void)setupOpenGL {	
+-(void)setupOpenGL {
+	NSRect r = [self convertRectToBacking: [self frame]];
 //	CGL_MACRO_DECLARE_VARIABLES();
 // Enable the multithreading
     //NSLog(@"setupOpenGL runs");
@@ -217,8 +237,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	glDisable(GL_FOG);
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_DEPTH_TEST);
-	glDisable (GL_SCISSOR_TEST);
-    glDisable (GL_CULL_FACE);
+	glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_CULL_FACE);
 	glStencilMask(0);
 	glPixelZoom(1.0,1.0);
 	
@@ -230,18 +250,18 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glPixelStorei( GL_UNPACK_ROW_LENGTH, self.frame.size.width );
+	glPixelStorei( GL_UNPACK_ROW_LENGTH, r.size.width );
 	GLuint dt = 1;
 	glDeleteTextures(1, &dt);
 	glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 1);
 	syncNeeded = NO;
 }
 
-- (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (NSRect) subRect { 
+- (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (NSRect) subRect {
 //	CGL_MACRO_DECLARE_VARIABLES();
 	static void *previousLastBitsIndex=null;
     
-    NSRect r = self.frame;
+    NSRect r = [self convertRectToBacking: [self frame]];
     
     if (!NSEqualRects(lastFrameSize,r)) {
         //NSLog(@"old %f %f %f %f new %f %f %f %f",lastFrameSize.origin.x,lastFrameSize.origin.y,lastFrameSize.size.width,lastFrameSize.size.height,self.frame.origin.x,r.origin.y,r.size.width,r.size.height);
@@ -343,10 +363,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseEvent: theEvent fromView: self];
 }
 
-- (void)scrollWheel:(NSEvent *)theEvent {
-	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordWheelEvent: theEvent fromView: self];
-}
-
 - (void)mouseUp:(NSEvent *)theEvent {
 	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseEvent: theEvent fromView: self];
 }
@@ -369,7 +385,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 - (void)otherMouseDown:(NSEvent *)theEvent {
 	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseEvent: theEvent fromView: self];
 }
- 
+
+- (void)scrollWheel:(NSEvent *)theEvent {
+	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordWheelEvent: theEvent fromView: self];
+}
+
+
 - (NSString *) dealWithOpenStepChars: (NSString *) openStep {
 	
 	unichar keyChar; 
@@ -721,7 +742,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (void)  ioSetFullScreen: (sqInt) fullScreen {
-	
 	if ([self isInFullScreenMode] == YES && (fullScreen == 1)) 
 		return;
 	if ([self isInFullScreenMode] == NO && (fullScreen == 0))
@@ -730,6 +750,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	if ([self isInFullScreenMode] == NO && (fullScreen == 1)) {
        self.fullScreenInProgress = YES;
 		NSDictionary* options = [NSDictionary dictionaryWithObjectsAndKeys:
+			[NSNumber numberWithBool:NO],
+			NSFullScreenModeAllScreens,
 			[NSNumber numberWithInt:
 				NSApplicationPresentationHideDock |
 				NSApplicationPresentationHideMenuBar ],
@@ -745,9 +767,5 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		}
 	}
 }
-
-- (void) preDrawThelayers {
-}
-
 
 @end
