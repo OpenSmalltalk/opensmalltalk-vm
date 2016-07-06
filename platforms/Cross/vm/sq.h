@@ -541,6 +541,11 @@ sqInt imageNameSize(void);
 sqInt vmPathSize(void);
 sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length);
 
+/* The following was not exported by sq.h but we need it
+   since if we don't have CURRENT_VERSION around anymore
+   and we may want to check for the image version we need it */
+sqInt readableFormat(sqInt imageVersion);
+
 /* Image security traps. */
 sqInt ioCanRenameImage(void);
 sqInt ioCanWriteImage(void);
