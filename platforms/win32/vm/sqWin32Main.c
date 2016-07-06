@@ -1073,6 +1073,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 
 
   TRY {
+#if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
   if (inVMThread)
 	ifValidWriteBackStackPointersSaveTo((void *)exp->ContextRecord->Ebp,
 										(void *)exp->ContextRecord->Esp,
@@ -1082,6 +1083,19 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
   nframes = backtrace_from_fp((void*)exp->ContextRecord->Ebp,
 							callstack+1,
 							MAXFRAMES-1);
+#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_X64)
+  if (inVMThread)
+	ifValidWriteBackStackPointersSaveTo((void *)exp->ContextRecord->Rbp,
+										(void *)exp->ContextRecord->Rsp,
+										0,
+										0);
+  callstack[0] = (void *)exp->ContextRecord->Rip;
+  nframes = backtrace_from_fp((void*)exp->ContextRecord->Rbp,
+							callstack+1,
+							MAXFRAMES-1);
+#else
+#error "unknown architecture, cannot dump stack"
+#endif
   symbolic_backtrace(++nframes, callstack, symbolic_pcs);
   wsprintf(crashInfo,
 	   TEXT("Sorry but the VM has crashed.\n\n")
@@ -1123,6 +1137,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 	      (exp->ExceptionRecord->ExceptionInformation[0] ? "write access" : "read access"),
 	      exp->ExceptionRecord->ExceptionInformation[1]);
     }
+#if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
     fprintf(f,"EAX:%08X\tEBX:%08X\tECX:%08X\tEDX:%08X\n",
 	    exp->ContextRecord->Eax,
 	    exp->ContextRecord->Ebx,
@@ -1140,6 +1155,27 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 	    exp->ContextRecord->FloatSave.ControlWord,
 	    exp->ContextRecord->FloatSave.StatusWord,
 	    exp->ContextRecord->FloatSave.TagWord);
+#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_X64)
+    fprintf(f,"RAX:%016lx\tRBX:%016lx\tRCX:%016lx\tRDX:%016lx\n",
+	    exp->ContextRecord->Rax,
+	    exp->ContextRecord->Rbx,
+	    exp->ContextRecord->Rcx,
+	    exp->ContextRecord->Rdx);
+    fprintf(f,"RSI:%016lx\tRDI:%016lx\tRBP:%016lx\tRSP:%016lx\n",
+	    exp->ContextRecord->Rsi,
+	    exp->ContextRecord->Rdi,
+	    exp->ContextRecord->Rbp,
+	    exp->ContextRecord->Rsp);
+    fprintf(f,"RIP:%016lx\tEFL:%08x\n",
+	    exp->ContextRecord->Rip,
+	    exp->ContextRecord->EFlags);
+    fprintf(f,"FP Control: %08x\nFP Status:  %08x\nFP Tag:     %08x\n",
+	    exp->ContextRecord->FloatSave.ControlWord,
+	    exp->ContextRecord->FloatSave.StatusWord,
+	    exp->ContextRecord->FloatSave.TagWord);
+#else
+#error "unknown architecture, cannot pick dump registers"
+#endif
 
 	fprintf(f, "\n\nCrashed in %s thread\n\n",
 			inVMThread ? "the VM" : "some other");
