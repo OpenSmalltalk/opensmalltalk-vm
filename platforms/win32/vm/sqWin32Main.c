@@ -1793,10 +1793,10 @@ parseVMArgument(int argc, char *argv[])
 
   /* NOTE: the following flags are "undocumented" */
 	else if (argc > 1 && !strcmp(argv[0], "-browserWindow")) {
-		browserWindow = (HWND)atoi(argv[1]);
+		browserWindow = (HWND)atol(argv[1]);
 		return 2; }
 	else if (!strncmp(argv[0], "-browserWindow:", 15)) {
-		browserWindow = (HWND)atoi(argv[0]+15);
+		browserWindow = (HWND)atol(argv[0]+15);
 		return 1; }
 
 	/* service support on 95 */
