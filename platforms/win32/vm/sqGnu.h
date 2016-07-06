@@ -164,7 +164,7 @@
 
 #define PROFILE_BYTECODE(x) __asm__("movl %0, _bcProfileCurrent" : : "i" (x))
 
-#define PROFILE_BYTECODE_END __asm__("
+#define PROFILE_BYTECODE_END __asm__("\
 	cmpl $0, _profilerActive;\
 	je 0f;\
 	pushl %ebx;\
