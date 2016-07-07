@@ -557,7 +557,7 @@ pushOutputFile(char *filenameOrStdioIndex)
 		fprintf(stderr,"output file stack is full.\n");
 		return;
 	}
-	switch ((unsigned long)filenameOrStdioIndex) {
+	switch ((usqInt)filenameOrStdioIndex) {
 	case STDOUT_FILENO: output = stdout; break;
 	case STDERR_FILENO: output = stderr; break;
 	default:
