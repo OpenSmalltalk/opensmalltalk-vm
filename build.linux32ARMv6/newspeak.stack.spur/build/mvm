@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 # Stack Spur VM and threaded heartbeat
 INSTALLDIR=nsstkspurlinuxhtRPi
 OPT="-g -O3 -fwrapv -DNDEBUG -DDEBUGVM=0 -DNO_VM_PROFILE=1"

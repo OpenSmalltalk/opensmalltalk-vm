@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 # This script first builds
 #	binutils-2.25/bfd/bfd.h
 #	binutils-2.25/libiberty/libiberty.a

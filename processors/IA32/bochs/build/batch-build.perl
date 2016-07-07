@@ -241,7 +241,7 @@ for (my $i=0; $i <= $#config_names; $i++) {
   $maybe_nohup = $nohup? "nohup" : "";
   open (BUILD, ">$name/build.sh");
   print BUILD <<BUILD_EOF;
-#!/bin/bash
+#!/bin/bash -e
 echo Running the configure script
 export CFLAGS='-g -O2 -Wall'
 export CXXFLAGS='-g -O2 -Wall'
@@ -284,7 +284,7 @@ HEADER_EOF
 
     open (XTI, ">$name/xterm-init.sh");
     print XTI <<XTI_EOF;
-#!/bin/bash
+#!/bin/bash -e
 cat <<EOF
 $header
 EOF

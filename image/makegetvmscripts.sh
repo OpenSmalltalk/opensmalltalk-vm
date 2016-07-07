@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 # Create the getGoodCogVM.sh & getGoodSpurVM.sh scripts.
 GetCogScript=getGoodCogVM.sh
 GetSpurScript=getGoodSpurVM.sh
@@ -45,7 +45,7 @@ test -n "$ABORT" || exit 1
 echo $GetCogScript $GetSpurScript
 
 cat >$GetCogScript <<END
-#!/bin/sh
+#!/bin/sh -e
 # Sets the VM env var to the r$REV Cog VM for the current platform.
 # will download and install the VM in this directory if necessary.
 
@@ -109,7 +109,7 @@ END
 chmod a+x $GetCogScript
 
 cat >$GetSpurScript <<END
-#!/bin/sh
+#!/bin/sh -e
 # Sets the VM env var to the r$REV Cog Spur VM for the current platform.
 # will download and install the VM in this directory if necessary.
 

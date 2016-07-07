@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 IFS="
 	"
 trap 'exit 2' HUP INT PIPE TERM

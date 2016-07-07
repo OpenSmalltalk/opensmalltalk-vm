@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 # Create the getGoodSpurNsvm.sh script.
 GetSpurScript=getGoodSpurNsvm.sh
 
@@ -47,7 +47,7 @@ test -n "$ABORT" || exit 1
 echo $GetSpurScript
 
 cat >$GetSpurScript <<END
-#!/bin/sh
+#!/bin/sh -e
 # Sets the VM env var to the r$REV Newspeak Spur VM for the current platform.
 # will download and install the VM in this directory if necessary.
 

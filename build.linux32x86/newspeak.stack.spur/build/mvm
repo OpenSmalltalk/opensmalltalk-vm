@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 # Stack Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=nsstkspurlinuxht
 # Some gcc versions create a broken VM using -O2
