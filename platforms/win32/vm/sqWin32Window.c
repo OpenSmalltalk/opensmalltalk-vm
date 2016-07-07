@@ -493,7 +493,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     else return DefWindowProcW(hwnd,message,wParam,lParam);
   case WM_USER+42:
     /* system tray notification */
-    if(wParam != (usqInt)hInstance) return 0;
+    if(wParam != (usqIntptr_t)hInstance) return 0;
     /* if right button, show system menu */
     /* if(lParam == WM_RBUTTONUP)
        TrackPrefsMenu(GetSystemMenu(stWindow,0)); */
@@ -1152,7 +1152,7 @@ int recordMouseEvent(MSG *msg, UINT nrClicks) {
   proto.modifiers |= ctrl ? CtrlKeyBit : 0;
   proto.modifiers |= alt ? CommandKeyBit : 0;
   proto.nrClicks = nrClicks;
-  proto.windowIndex = msg->hwnd == stWindow ? 0 : (sqInt) msg->hwnd;
+  proto.windowIndex = msg->hwnd == stWindow ? 0 : (sqIntptr_t) msg->hwnd;
 #ifndef NO_DIRECTINPUT
   /* get buffered input */
   if(msg->message == WM_MOUSEMOVE) {
@@ -1192,7 +1192,7 @@ int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles)
   evt->numFiles = numFiles;
 
   /* clean up reserved */
-  evt->windowIndex = wnd == stWindow ? 0 : (sqInt) wnd;
+  evt->windowIndex = wnd == stWindow ? 0 : (sqIntptr_t) wnd;
   return 1;
 }
 
@@ -1255,7 +1255,7 @@ int recordKeyboardEvent(MSG *msg) {
   evt->modifiers |= alt ? CommandKeyBit : 0;
   evt->modifiers |= shift ? ShiftKeyBit : 0;
   evt->modifiers |= ctrl ? CtrlKeyBit : 0;
-  evt->windowIndex = msg->hwnd == stWindow ? 0 : (sqInt) msg->hwnd;
+  evt->windowIndex = msg->hwnd == stWindow ? 0 : (sqIntptr_t) msg->hwnd;
   evt->utf32Code = keyCode;
   /* clean up reserved */
   evt->reserved1 = 0;
@@ -2437,7 +2437,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
        few extreme conditions - but to compensate for those the
        following is provided. */
     int pitch, start, end, nPix, line, left;
-    sqInt bitsPtr;
+    sqIntptr_t bitsPtr;
 
     /* compute pitch of form */
     pitch = ((width * depth) + 31 & ~31) / 8;

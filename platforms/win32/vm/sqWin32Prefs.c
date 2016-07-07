@@ -307,7 +307,7 @@ extern sqInt recordPrimTraceFunc();
 	       TEXT("1 button mouse"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED , ID_3BUTTONMOUSE, 
 	       TEXT("3 button mouse"));
-    AppendMenu(pMenu, MF_STRING | MF_POPUP, (usqInt)hMenu,
+    AppendMenu(pMenu, MF_STRING | MF_POPUP, (sqIntptr_t)hMenu,
 	       TEXT("Mouse Mapping"));
   }
   { /* Create security menu */
@@ -317,7 +317,7 @@ extern sqInt recordPrimTraceFunc();
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_IMAGEWRITE, 
 	       TEXT("Allow image writes"));    AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_SOCKETACCESS, 
 	       TEXT("Allow socket access"));
-    AppendMenu(pMenu, MF_STRING | MF_POPUP, (usqInt)hMenu,
+    AppendMenu(pMenu, MF_STRING | MF_POPUP, (sqIntptr_t)hMenu,
 	       TEXT("Security Settings"));
   }
   { /* Create media related menu */
@@ -328,7 +328,7 @@ extern sqInt recordPrimTraceFunc();
 	       TEXT("Use OpenGL (instead of D3D)"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_DEFERUPDATES, 
 	       TEXT("Defer display update"));
-    AppendMenu(pMenu, MF_STRING | MF_POPUP, (usqInt)hMenu,
+    AppendMenu(pMenu, MF_STRING | MF_POPUP, (sqIntptr_t)hMenu,
 	       TEXT("Display and Sound"));
   }
 
@@ -345,7 +345,7 @@ extern sqInt recordPrimTraceFunc();
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED , ID_DEFAULTPRINTER, 
 	       TEXT("Printer configuration ..."));
 #endif /* NO_PRINTER */
-    AppendMenu(pMenu, MF_STRING | MF_POPUP, (usqInt)hMenu,
+    AppendMenu(pMenu, MF_STRING | MF_POPUP, (sqIntptr_t)hMenu,
 	       TEXT("System Configuration"));
   }
 
@@ -374,7 +374,7 @@ extern sqInt recordPrimTraceFunc();
       AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_DUMPPRIMLOG,
 	       TEXT("Dump recent primitives"));
 #endif
-    AppendMenu(pMenu, MF_STRING | MF_POPUP, (usqInt)hMenu,
+    AppendMenu(pMenu, MF_STRING | MF_POPUP, (sqIntptr_t)hMenu,
 	       TEXT("Debug Options"));
   }
 
@@ -383,7 +383,7 @@ extern sqInt recordPrimTraceFunc();
 	     TEXT("Display version information"));
   hMenu = GetSystemMenu(stWindow,false);
   AppendMenu(hMenu,MF_SEPARATOR, 0,NULL);
-  AppendMenu(hMenu, MF_POPUP, (usqInt) pMenu, TEXT("&VM Preferences"));
+  AppendMenu(hMenu, MF_POPUP, (sqIntptr_t) pMenu, TEXT("&VM Preferences"));
   SetAllPreferences();
 }
 

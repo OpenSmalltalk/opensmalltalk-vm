@@ -53,7 +53,7 @@ typedef struct _NT_TIB
 } ThreadInformationBlock, NT_TIB;
 #endif
 
-#define ulong usqInt /* enough for holding a pointer - unsigned long does not fit in LLP64 */
+#define ulong usqIntptr_t /* enough for holding a pointer - unsigned long does not fit in LLP64 */
 
 int
 backtrace(void **retpcs, int nrpcs)

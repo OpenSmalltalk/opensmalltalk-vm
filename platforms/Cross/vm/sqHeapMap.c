@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h> /* for memset */
 
-#define ulong usqInt         /* enough for holding a pointer - unsigned long does not fit in LLP64 */
+#define ulong usqIntptr_t   /* enough for holding a pointer - unsigned long does not fit in LLP64 */
 #define uchar unsigned char
 
 #if SQ_IMAGE32
