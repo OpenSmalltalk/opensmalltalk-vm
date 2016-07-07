@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 # Sets the VM env var to the r3692 Newspeak Spur VM for the current platform.
 # will download and install the VM in this directory if necessary.
 

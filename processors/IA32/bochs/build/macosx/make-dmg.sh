@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 #
 # $Id: make-dmg.sh,v 1.1 2002/12/19 03:01:44 bdenney Exp $
 #

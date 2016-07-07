@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 . ./envvars.sh
 test -f SqueakV41.sources && exit 0
 if [ -f ../sources/SqueakV41.sources ]; then

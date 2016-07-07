@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 for d in zlib bfd libiberty opcodes sim/arm; do
 	(cd ./$d; make COG=1)
 done

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 # debug multithreaded VM with VM profiler and threaded heartbeat
 INSTALLDIR=debug/cogmtdbglinuxht
 OPT="-g3 -O0 -fwrapv -DDEBUGVM=1"

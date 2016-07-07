@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 
 for i in build-*; do
   echo "*** Starting make in $i ***"
