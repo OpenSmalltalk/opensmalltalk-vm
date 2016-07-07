@@ -25,27 +25,53 @@
  * Here we assume that if either LP32 or ILP32 are defined as 1 then special
  * effort is required to access a 64-bit datum atomically.
  *
- * Only some compilers define LP32 et al.  If not, and __LONG_MAX__ is defined
- * we can make a good guess that __LONG_MAX__ implies 32-bits or 64-bits.
+ * Only some compilers define LP32 et al.  If not, try to infer from other macros.
  */
 
-// tpr; Raspbian does not define ILP32 or LP32, therefore LP32 is #def'd below
+#if    defined(LP32) || defined(ILP32) \
+    || defined(LP64) || defined(ILP64) || defined(LLP64)
 
-#if defined(__LONG_MAX__) && !defined(LP32) && !defined(ILP32) \
-       && !defined(LP64) && !defined(ILP64) && !defined(LLP64)
-# if __LONG_MAX__ > 0xFFFFFFFF
-#	define LP64 1
-# else
-#	define LP32 1
-# endif
+#  if LP64 || ILP64 || LLP64
+#    define IS_64_BIT_ARCH 1
+#  elif LP32 || ILP32
+#    define IS_32_BIT_ARCH 1
+#  else /* unknown platform */
+#  endif
+
+#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_X64)
+
+#  define IS_64_BIT_ARCH 1
+
+#elif defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__) || defined(__arm32__)
+
+#  define IS_32_BIT_ARCH 1
+
+#elif defined(__SIZEOF_POINTER__)
+
+#  if __SIZEOF_POINTER__ == 8
+#    define IS_64_BIT_ARCH 1
+#  elif __SIZEOF_POINTER__ == 4
+#    define IS_32_BIT_ARCH 1
+#  else /* unknown platform */
+#  endif
+
+#elif defined(__LONG_MAX__)
+
+#  if __LONG_MAX__ > 0xFFFFFFFFUL
+#    define IS_64_BIT_ARCH 1
+#  else
+#    define IS_32_BIT_ARCH 1
+#  endif
+
+#else /* unknown platform */
 #endif
 
-#if LP64 || ILP64 || LLP64
+#if IS_64_BIT_ARCH
 	/* On 64-bit systems 64-bit access is automatic by default. */
 # define get64(variable) variable
 # define set64(variable,value) (variable = value)
 
-#elif LP32 || ILP32
+#elif IS_32_BIT_ARCH
 
 
 # if TARGET_OS_IS_IPHONE
@@ -153,8 +179,8 @@ AtomicGet(uint64_t *target)
 #endif
 # endif
 
-#else /* LP32 || ILP32 else LP64 || ILP64 || LLP64 */
-# error shurly shome mishtake; too drunk to shpot the programming muddle. hic.
+#else /* neither IS_64_BIT_ARCH nor IS_32_BIT_ARCH */
+# error Could not infer if architecture is 32 or 64 bits. Please modify sqAtomicOps.h inference rules.
 #endif
 
 #if defined(__GNUC__)
