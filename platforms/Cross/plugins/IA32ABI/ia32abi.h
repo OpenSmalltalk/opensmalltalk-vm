@@ -40,8 +40,8 @@ extern sqInt callIA32DoubleReturn  (SIGNATURE);
 # define DBL_REG_ARGS /* none */
 #elif defined(__amd64__) || defined(__x86_64__) || defined(__amd64) || defined(__x86_64)
 # if WIN64
-#	define INT_REG_ARGS long,long,long,long
-#	define DBL_REG_ARGS double,double,double
+#	define INT_REG_ARGS long,long,long,long,
+#	define DBL_REG_ARGS double,double,double,
 # else
 #	define INT_REG_ARGS long,long,long,long,long,long,
 #	define DBL_REG_ARGS double,double,double,double,double,double,double,double,
