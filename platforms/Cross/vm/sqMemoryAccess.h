@@ -46,6 +46,11 @@
 # error host is neither 32- nor 64-bit?
 #endif
 
+/* sqInt is a signed integer with size adequate for holding an Object Oriented Pointer (or immediate value)
+  - that is 32bits long on a 32bits image or 64bits long on a 64bits image
+  we could use C99 int32_t and int64_t once retiring legacy compiler support this time has not yet come
+  usqInt is the unsigned flavour
+  SQABS is a macro for taking absolute value of an sqInt */
 #if defined(SQ_IMAGE32)
   typedef int		sqInt;
   typedef unsigned int	usqInt;
@@ -64,6 +69,9 @@
 # define SQABS llabs
 #endif
 
+/* sqLong is a signed integer with at least 64bits on both 32 and 64 bits images
+   usqLong is the unsigned flavour
+   SQLABS is a macro for taking absolute value of a sqLong */
 #if !defined(sqLong)
 #  if SIZEOF_LONG == 8
 #     define sqLong long
@@ -79,6 +87,17 @@
 #     define SQLABS llabs
 #  endif
 #endif /* !defined(sqLong) */
+
+/* sqIntptr_t is a signed integer with enough bits to hold a pointer
+   usqIntptr_t is the unsigned flavour
+   this is essentially C99 intptr_t and uintptr_t but we support legacy compilers */
+#if SIZEOF_LONG == SIZEOF_VOID_P
+typedef long sqIntptr_t;
+typedef unsigned long usqIntptr_t;
+#else
+typedef long long sqIntptr_t;
+typedef unsigned long long usqIntptr_t;
+#endif
 
 #if defined(SQ_HOST64) && defined(SQ_IMAGE32)
   extern char *sqMemoryBase;
