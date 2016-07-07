@@ -18,6 +18,14 @@
 #include "config.h"
 #include "interp.h"
 
+#ifndef SIZEOF_LONG
+#  if LLP64
+#    define SIZEOF_LONG 4
+#  else
+#    define SIZEOF_LONG SIZEOF_VOID_P /* default is sizeof(long)==sizeof(void *) */
+#  endif
+#endif
+
 #if (SQ_VI_BYTES_PER_WORD == 4)
 # define SQ_IMAGE32 1
 #else
@@ -42,20 +50,22 @@
   typedef int		sqInt;
   typedef unsigned int	usqInt;
 # define SQABS abs
-#elif defined(SQ_HOST64)
+#elif defined(SQ_HOST64) && (SIZEOF_LONG == 8)
+#warning sqInt is long
   typedef long		sqInt;
   typedef unsigned long	usqInt;
 # define SQABS labs
 #elif (SIZEOF_LONG_LONG != 8)
 #   error long long integers are not 64-bits wide?
 #else
+#warning sqInt is long long
   typedef long long		sqInt;
   typedef unsigned long long	usqInt;
 # define SQABS llabs
 #endif
 
 #if !defined(sqLong)
-#  if SIZEOF_VOID_P == 8
+#  if SIZEOF_LONG == 8
 #     define sqLong long
 #     define usqLong unsigned long
 #     define SQLABS labs
