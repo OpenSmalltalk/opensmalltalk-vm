@@ -111,6 +111,17 @@
 # endif
 #endif /* _M_IX86 */
 
+#if defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_X64)
+  #define WIN32_NAME "Win32"
+  #define WIN32_OS_NAME "NT"
+  #define WIN32_PROCESSOR_NAME "X64"
+
+  /* Use console for warnings if possible */
+  #ifndef UNICODE
+    #define warnPrintf printf
+  #endif
+#endif /* _M_X64 & al */
+
 #endif /* (_WIN32_WCE) */
 
 
