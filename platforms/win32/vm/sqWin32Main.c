@@ -41,7 +41,7 @@
 
 /*** Crash debug -- Imported from Virtual Machine ***/
 int getFullScreenFlag(void);
-int methodPrimitiveIndex(void);
+sqInt methodPrimitiveIndex(void);
 int getCurrentBytecode(void);
 
 extern TCHAR squeakIniName[];
@@ -1032,7 +1032,7 @@ error(char *msg) {
 
 static int inCleanExit = 0; /* to suppress stack trace in Cleanup */
 
-int ioExit(void) { return ioExitWithErrorCode(0); }
+sqInt ioExit(void) { return ioExitWithErrorCode(0); }
 
 sqInt
 ioExitWithErrorCode(int ec)
