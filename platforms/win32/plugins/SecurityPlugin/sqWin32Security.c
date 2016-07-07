@@ -153,15 +153,15 @@ int ioHasFileAccess(void) {
 /* image security */
 
 static int allowImageWrite = 1;  /* allow writing the image */
-int ioCanRenameImage(void) {
+sqInt ioCanRenameImage(void) {
   return allowImageWrite; /* only when we're allowed to save the image */
 }
 
-int ioCanWriteImage(void) {
+sqInt ioCanWriteImage(void) {
   return allowImageWrite;
 }
 
-int ioDisableImageWrite(void) {
+sqInt ioDisableImageWrite(void) {
   allowImageWrite = 0;
 }
 /***************************************************************************/
@@ -226,7 +226,7 @@ int expandMyDocuments(char *pathname, char *replacement, char *result)
 
 
 /* note: following is called from VM directly, not from plugin */
-int ioInitSecurity(void) {
+sqInt ioInitSecurity(void) {
   DWORD dwType, dwSize, ok;
   TCHAR tmp[MAX_PATH+1];
   WCHAR wTmp[MAX_PATH+1];

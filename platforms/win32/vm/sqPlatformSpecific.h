@@ -32,7 +32,7 @@
 #undef sqImageFileWrite
 
 #define sqImageFile unsigned long
-int sqImageFileClose(sqImageFile h);
+sqInt sqImageFileClose(sqImageFile h);
 sqImageFile sqImageFileOpen(char *fileName, char *mode);
 squeakFileOffsetType sqImageFilePosition(sqImageFile h);
 size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h);

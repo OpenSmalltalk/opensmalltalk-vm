@@ -703,7 +703,7 @@ static int createWatcherThreads(privateSocketStruct *pss)
 /*****************************************************************************
   sqNetworkInit: Initialize network with the given DNS semaphore.
 *****************************************************************************/
-int sqNetworkInit(int semaIndex)
+sqInt sqNetworkInit(sqInt semaIndex)
 {
   int err;
   OSVERSIONINFOEX osInfo;
@@ -843,7 +843,7 @@ void sqSocketCloseConnection(SocketPtr s)
 /*****************************************************************************
   sqSocketConnectionStatus: return public status flags of the socket
 *****************************************************************************/
-int sqSocketConnectionStatus(SocketPtr s)
+sqInt sqSocketConnectionStatus(SocketPtr s)
 {
   int status;
 
@@ -858,7 +858,7 @@ int sqSocketConnectionStatus(SocketPtr s)
 	TCP => open a connection.
 	UDP => set remote address.
 *****************************************************************************/
-void sqSocketConnectToPort(SocketPtr s, int addr, int port)
+void sqSocketConnectToPort(SocketPtr s, sqInt addr, sqInt port)
 {
   int err;
   privateSocketStruct *pss = PSP(s);
@@ -912,7 +912,7 @@ void sqSocketConnectToPort(SocketPtr s, int addr, int port)
 	TCP => start listening for incoming connections.
 	UDP => associate the local port number with the socket.
 *****************************************************************************/
-void sqSocketListenOnPort(SocketPtr s, int port)
+void sqSocketListenOnPort(SocketPtr s, sqInt port)
 {
   int result;
   struct sockaddr_in addr;
@@ -978,12 +978,12 @@ void sqSocketBindToPort(SocketPtr s, int addr, int port)
 	TCP => start listening for incoming connections.
 	UDP => Just call sqListenOnPort
 *****************************************************************************/
-void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize) {
+void sqSocketListenOnPortBacklogSize(SocketPtr s, sqInt port, sqInt backlogSize) {
   sqSocketListenOnPortBacklogSizeInterface(s, port, backlogSize, 0);
 }
 
 
-void sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, int port, int backlogSize, int addr)
+void sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, sqInt port, sqInt backlogSize, sqInt addr)
 {
   int result;
   struct sockaddr_in inaddr;
@@ -1060,7 +1060,7 @@ void sqSocketDestroy(SocketPtr s)
 /*****************************************************************************
   sqSocketReceiveDataAvailable: Return non-zero if data available
 *****************************************************************************/
-int sqSocketReceiveDataAvailable(SocketPtr s)
+sqInt sqSocketReceiveDataAvailable(SocketPtr s)
 {
   int sockState;
 
@@ -1219,7 +1219,7 @@ sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 /*****************************************************************************
   sqSocketError: Return any error on the socket.
 *****************************************************************************/
-int sqSocketError(SocketPtr s)
+sqInt sqSocketError(SocketPtr s)
 {
   if(!SocketValid(s)) return -1;
   return SOCKETERROR(s);
@@ -1228,7 +1228,7 @@ int sqSocketError(SocketPtr s)
 /*****************************************************************************
   sqSocketLocalAddress: Return the address of the socket on this host.
 *****************************************************************************/
-int sqSocketLocalAddress(SocketPtr s)
+sqInt sqSocketLocalAddress(SocketPtr s)
 {
   struct sockaddr_in sin;
   int sinSize = sizeof(sin);
@@ -1242,7 +1242,7 @@ int sqSocketLocalAddress(SocketPtr s)
 /*****************************************************************************
   sqSocketLocalPort: Return the port of the socket on this host
 *****************************************************************************/
-int sqSocketLocalPort(SocketPtr s)
+sqInt sqSocketLocalPort(SocketPtr s)
 {
   struct sockaddr_in sin;
   int sinSize = sizeof(sin);
@@ -1256,7 +1256,7 @@ int sqSocketLocalPort(SocketPtr s)
 /*****************************************************************************
   sqSocketRemoteAddress: Return the address of the socket on the remote host
 *****************************************************************************/
-int sqSocketRemoteAddress(SocketPtr s)
+sqInt sqSocketRemoteAddress(SocketPtr s)
 {
   struct sockaddr_in sin;
   int sinSize = sizeof(sin);
@@ -1274,7 +1274,7 @@ int sqSocketRemoteAddress(SocketPtr s)
 /*****************************************************************************
   sqSocketRemotePort: Return the port of the socket on the remote host
 *****************************************************************************/
-int sqSocketRemotePort(SocketPtr s)
+sqInt sqSocketRemotePort(SocketPtr s)
 {
   struct sockaddr_in sin;
   int sinSize = sizeof(sin);
@@ -1316,13 +1316,13 @@ void sqSocketSetReusable (SocketPtr s)
   and a semaphore to signal upon changes in the socket state.
 *****************************************************************************/
 void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaID(
-            SocketPtr s, int netType, int socketType,
-            int recvBufSize, int sendBufSize, int semaIndex)
+            SocketPtr s, sqInt netType, sqInt socketType,
+            sqInt recvBufSize, sqInt sendBufSize, sqInt semaIndex)
 {
   sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(s, netType, socketType, recvBufSize, sendBufSize, semaIndex, semaIndex, semaIndex);
 }
 
-void	sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s, int netType, int socketType, int recvBufSize, int sendBufSize, int connSemaIndex, int readSemaIndex, int writeSemaIndex)
+void	sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s, sqInt netType, sqInt socketType, sqInt recvBufSize, sqInt sendBufSize, sqInt connSemaIndex, sqInt readSemaIndex, sqInt writeSemaIndex)
 {
 
   SOCKET newSocket;
@@ -1415,7 +1415,7 @@ void	sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
 
 /*************************************************************************/
 
-void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s, int netType, int protoType, int recvBufSize, int sendBufSize, int connSemaIndex, int readSemaIndex, int writeSemaIndex)
+void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s, sqInt netType, sqInt protoType, sqInt recvBufSize, sqInt sendBufSize, sqInt connSemaIndex, sqInt readSemaIndex, sqInt writeSemaIndex)
 {
 
   SOCKET newSocket;
@@ -1492,12 +1492,12 @@ void sqSocketCreateRawProtoTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(Soc
 
 void sqSocketAcceptFromRecvBytesSendBytesSemaID(
             SocketPtr s, SocketPtr serverSocket,
-            int recvBufSize, int sendBufSize, int semaIndex)
+            sqInt recvBufSize, sqInt sendBufSize, sqInt semaIndex)
 {
   sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(s, serverSocket, recvBufSize, sendBufSize, semaIndex, semaIndex, semaIndex);
 }
 
-void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s, SocketPtr serverSocket, int recvBufSize, int sendBufSize, int connSemaIndex, int readSemaIndex, int writeSemaIndex)
+void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s, SocketPtr serverSocket, sqInt recvBufSize, sqInt sendBufSize, sqInt connSemaIndex, sqInt readSemaIndex, sqInt writeSemaIndex)
 {
   acceptedSocketStruct *accepted;
   privateSocketStruct *pss;
@@ -1867,7 +1867,7 @@ void sqResolverAbort(void)
 /*****************************************************************************
   sqResolverAddrLookupResult: Return the result of the last name lookup
 *****************************************************************************/
-void sqResolverAddrLookupResult(char *nameForAddress, int nameSize)
+void sqResolverAddrLookupResult(char *nameForAddress, sqInt nameSize)
 {
   MoveMemory(nameForAddress, lastName, nameSize);
 }
@@ -1875,7 +1875,7 @@ void sqResolverAddrLookupResult(char *nameForAddress, int nameSize)
 /*****************************************************************************
   sqResolverAddrLookupResult: Return sizeof(result) of the last name lookup
 *****************************************************************************/
-int sqResolverAddrLookupResultSize(void)
+sqInt sqResolverAddrLookupResultSize(void)
 {
   return strlen(lastName);
 }
@@ -1883,7 +1883,7 @@ int sqResolverAddrLookupResultSize(void)
 /*****************************************************************************
   sqResolverError: Return the last error of a DNS lookup
 *****************************************************************************/
-int sqResolverError(void)
+sqInt sqResolverError(void)
 {
   return lastError;
 }
@@ -1891,7 +1891,7 @@ int sqResolverError(void)
 /*****************************************************************************
   sqResolverLocalAddress: Return the address of the local host
 *****************************************************************************/
-int sqResolverLocalAddress(void)
+sqInt sqResolverLocalAddress(void)
 {
   return addressOf(localHostName);
 }
@@ -1899,7 +1899,7 @@ int sqResolverLocalAddress(void)
 /*****************************************************************************
   sqResolverNameLookupResult: Return the address of the last DNS lookup
 *****************************************************************************/
-int sqResolverNameLookupResult(void)
+sqInt sqResolverNameLookupResult(void)
 {
   return lastAddr;
 }
@@ -1907,7 +1907,7 @@ int sqResolverNameLookupResult(void)
 /*****************************************************************************
   sqResolverStartAddrLookup: Look up the name to a given address
 *****************************************************************************/
-void sqResolverStartAddrLookup(int address)
+void sqResolverStartAddrLookup(sqInt address)
 {
   DWORD id;
   if(asyncLookupHandle) return; /* lookup in progress */
@@ -1931,7 +1931,7 @@ void sqResolverStartAddrLookup(int address)
 /*****************************************************************************
   sqResolverStartNameLookup: Look up the address to a given host name
 *****************************************************************************/
-void sqResolverStartNameLookup(char *hostName, int nameSize)
+void sqResolverStartNameLookup(char *hostName, sqInt nameSize)
 { int len;
   DWORD id;
 
@@ -1967,7 +1967,7 @@ void sqResolverStartNameLookup(char *hostName, int nameSize)
 /*****************************************************************************
   sqResolverStatus: Return resolver status
 *****************************************************************************/
-int sqResolverStatus(void)
+sqInt sqResolverStatus(void)
 {
   if(!thisNetSession)
     return RESOLVER_UNINITIALIZED; /* not initialized */
@@ -2031,13 +2031,13 @@ DWORD WINAPI sqGetHostByName(char *hostName)
 }
 
 /***** socket module initializers *****/
-int socketInit(void)
+sqInt socketInit(void)
 {
 	thisNetSession = 0;
 	return 1;
 }
 
-int socketShutdown(void)
+sqInt socketShutdown(void)
 {
 	sqNetworkShutdown();
 	sqResolverAbort();
