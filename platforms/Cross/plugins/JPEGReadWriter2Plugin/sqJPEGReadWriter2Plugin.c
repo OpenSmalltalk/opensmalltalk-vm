@@ -28,6 +28,7 @@
  *   DEALINGS IN THE SOFTWARE.
  */
 #include "JPEGReadWriter2Plugin.h"
+#include <stdlib.h> /* abs */
 
 /*
  * For more info regarding what's being done here, download libjpeg 6b from
