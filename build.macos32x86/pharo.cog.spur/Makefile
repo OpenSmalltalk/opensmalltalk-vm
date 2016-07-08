@@ -3,11 +3,19 @@
 # Do make init to allow make -n to function.
 #
 
-VMSRCDIR:= ../../spursrc/vm
+VMSRCDIR:=../../src/vm
+PLUGINSRCDIR:=../../src/plugins
 VM:=Pharo
 COGDEFS:=-DPharoVM=1
 APPNAME:=Pharo
+APPNAMEDEF:=$(APPNAME)
+USEPLUGINASDYLIB:=TRUE
+
+APPPOST:=fix-libs
 
 # Now include the Makefile proper, which is common to all Mac OS builds.
 #
 include ../common/Makefile.app
+
+fix-libs:
+#	$(shell ./fix-libs.sh $(APP))

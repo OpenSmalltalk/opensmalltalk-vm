@@ -18,6 +18,14 @@
 
 $(info $$(LIBNAME): $(LIBNAME))
 
+ifeq ($(USEPLUGINASDYLIB),TRUE)
+# I do not like to use lib "as is" because that will strip all "lib" occurences, but I do not 
+# find any better solution :(
+LIBDIR:=$(subst lib,,$(LIBNAME))
+else
+LIBDIR:=$(LIBNAME)
+endif
+
 # VM config flags.
 ifeq ($(CONFIGURATION),product)
 OFLAGS:= -g -Os
@@ -51,12 +59,13 @@ CFLAGS:= $(CFLAGS) $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(XDEFS)
 #   BUILDDIR: The location where the plugin is built
 #
 #PLUGINSRCDIR:=	../../src/plugins
-CROSSDIR:=	$(PLATDIR)/Cross/plugins/$(LIBNAME)
+	
+CROSSDIR:=	$(PLATDIR)/Cross/plugins/$(LIBDIR)
 OSXDIR:=	$(PLATDIR)/iOS/vm/OSX
-OSXPLGDIR:=	$(PLATDIR)/iOS/plugins/$(LIBNAME)
+OSXPLGDIR:=	$(PLATDIR)/iOS/plugins/$(LIBDIR)
 UNIXDIR:=	$(PLATDIR)/unix/vm
-MAKERDIR:=	$(PLUGINSRCDIR)/$(LIBNAME)
-BUILDDIR:=	$(BUILD)/$(LIBNAME)
+MAKERDIR:=	$(PLUGINSRCDIR)/$(LIBDIR)
+BUILDDIR:=	$(BUILD)/$(LIBDIR)
 
 # Support directory locations
 CROSSVMDIR:=$(PLATDIR)/Cross/vm
@@ -77,7 +86,6 @@ ifneq ($(EXCLUDESRC),)
 LIBSRC:=$(filter-out $(EXCLUDESRC),$(LIBSRC))
 endif
 
-
 #############################################################################
 # bundle settings
 #
@@ -97,6 +105,9 @@ VMDIR:=     $(BUILD)/vm
 PLUGINLIB:= $(VMDIR)/$(LIBNAME).lib
 PLUGINBUNDLE:= $(VMDIR)/$(LIBNAME).bundle
 PLUGINEXE:= $(PLUGINBUNDLE)/Contents/MacOS/$(LIBNAME)
+	
+PLUGINDYLIB:= $(VMDIR)/$(LIBNAME).dylib
+	
 # https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Introduction/Introduction.html
 PLUGINPLIST:= $(PLUGINBUNDLE)/Contents/Info.plist
 PLUGINICONS:= $(PLUGINBUNDLE)/Contents/Resources/SqueakPlugin.icns
@@ -114,7 +125,7 @@ $(BUILD)/$(LIBNAME)/$(LIBNAME).o: plugins.int plugins.ext
 
 include ../common/Makefile.rules
 
-all:	$(PLUGINLIB) $(PLUGINBUNDLE)
+all: $(PLUGINLIB) $(PLUGINBUNDLE) $(PLUGINDYLIB)
 
 print-settings:
 	@echo ---------------- Makefile.plugin settings ------------------
@@ -153,15 +164,15 @@ $(VMDIR):
 # If any prerequisites are declared all must exist to continue
 ifeq ($(realpath $(PREREQUISITES)),$(abspath $(PREREQUISITES)))
 
-$(PLUGINLIB): $(VMDIR) $(OBJDIR) $(LIBOBJ)
+$(PLUGINLIB): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ)
 	-rm $(PLUGINLIB)
 	ar -rc $(PLUGINLIB) $(LIBOBJ)
-
+	
 # Either link with normal compiler/linker or with cpp compiler/linker.  If
 # LINK_WITH_CPP is set, use e.g. clang++
-$(PLUGINBUNDLE): $(PLUGINEXE) $(PLUGINICONS) $(PLUGINPLIST)
+$(PLUGINBUNDLE): $(PLUGINREQS) $(PLUGINEXE) $(PLUGINICONS) $(PLUGINPLIST)
 
-$(PLUGINEXE): $(VMDIR) $(OBJDIR) $(LIBOBJ)
+$(PLUGINEXE): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ)
 	mkdir -p $(PLUGINBUNDLE)/Contents/MacOS
 ifneq ($(LINK_WITH_CPP),)
 	$(LDCXX) \
@@ -184,6 +195,19 @@ $(PLUGINPLIST): $(PLATDIR)/iOS/plugins/Info.plist getversion
 	sed "s/\$$(VERSION)/`./getversion VERSION_TAG`/" $< | \
 	sed "s/\$(LIBNAME)/$(LIBNAME)/" > $(PLUGINPLIST)
 
+$(PLUGINDYLIB): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ)
+ifneq ($(LINK_WITH_CPP),)
+	$(LDCXX) \
+	$(DYFFLAGS) \
+	$(LIBOBJ) $(EXTRALIBS) \
+	-o $(VMDIR)/$(LIBNAME).dylib
+else
+	$(LD) \
+	$(DYFLAGS) \
+	$(LIBOBJ) $(EXTRALIBS) \
+	-o $(VMDIR)/$(LIBNAME).dylib
+endif
+	
 getversion:
 	make -f ../common/Makefile.vm getversion
 

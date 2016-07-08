@@ -26,13 +26,19 @@
 ifeq ($(APPNAME),)
 APPNAME:=Cocoa
 endif
+ifeq ($(APPNAMEDEF),)
+APPNAMEDEF:=$(APPNAME)Fast
+endif
+ifeq ($(USEPLUGINASDYLIB),)
+USEPLUGINASDYLIB:=FALSE
+endif
 
 ifeq ($(CONFIGURATION),debug)
 	APP:=$(APPNAME)Debug.app
 else ifeq ($(CONFIGURATION),assert)
 	APP:=$(APPNAME)Assert.app
-else # default CONFIGURATION=product => $(APPNAME)Fast.app
-	APP:=$(APPNAME)Fast.app
+else # default CONFIGURATION=product => $(APPNAMEDEF).app
+	APP:=$(APPNAMEDEF).app
 endif
 
 default:	$(APP)
@@ -42,7 +48,7 @@ include ../common/Makefile.vm
 cleanall: cleanapp cleanastapp cleandbgapp cleanallvm
 
 cleanapp:
-	rm -rf $(APPNAME)Fast.app
+	rm -rf $(APPNAMEDEF).app
 
 cleanastapp:
 	rm -rf $(APPNAME)Assert.app
@@ -52,7 +58,15 @@ cleandbgapp:
 
 VMEXE:=$(APP)/Contents/MacOS/$(VM)
 VMPLIST:=$(APP)/Contents/Info.plist
+
+ifeq ($(USEPLUGINASDYLIB),FALSE)
 VMBUNDLES:=$(addprefix $(APP)/Contents/Resources/, $(addsuffix .bundle, $(EXTERNAL_PLUGINS)))
+else ifeq ($(USEPLUGINASDYLIB),TRUE)
+VMPLUGINDYLIBS:=$(addprefix $(APP)/Contents/MacOS/Plugins/lib, $(addsuffix .dylib, $(EXTERNAL_PLUGINS)))
+else 
+$(error USEPLUGINASDYLIB has to be TRUE or FALSE)
+endif 
+
 OSXICONS:=$(OSXDIR)/$(VM).icns $(wildcard $(OSXDIR)/$(SYSTEM)*.icns)
 VMICONS:=$(addprefix $(APP)/Contents/Resources/,$(notdir $(OSXICONS)))
 VMMENUNIB:=$(APP)/Contents/Resources/English.lproj/MainMenu.nib
@@ -66,7 +80,7 @@ SOURCES:=$(SOURCES) $(APP)/Contents/Resources/$(APPSOURCE)
 endif
 
 
-$(APP):	cleanbundles $(VMEXE) $(VMBUNDLES) \
+$(APP):	cleanbundles $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS) \
 		$(VMPLIST) $(VMLOCALIZATION) $(VMMENUNIB) $(VMICONS) \
  		$(SOURCES) $(APPPOST) signapp touchapp
 
@@ -76,7 +90,7 @@ $(APP):	cleanbundles $(VMEXE) $(VMBUNDLES) \
 # which the bundle build depends.
 cleanbundles:
 	-rm -rf $(APP)/Contents/Resources/*.bundle
-	-touch $(OBJDIR)/*.ignore
+	-touch $(OBJDIR)/*.ignore	
 
 $(VMEXE): $(OBJDIR)/$(VM)
 	@mkdir -p $(APP)/Contents/MacOS
@@ -91,6 +105,11 @@ $(APP)/Contents/Resources/%.bundle: $(BLDDIR)/vm/%.bundle
 		echo cp -pR $< $(APP)/Contents/Resources; \
 		cp -pR $< $(APP)/Contents/Resources; \
 	fi
+	
+$(APP)/Contents/MacOS/Plugins/%.dylib: $(BLDDIR)/vm/%.dylib
+	@mkdir -p $(APP)/Contents/MacOS/Plugins
+	cp -p $< $(APP)/Contents/MacOS/Plugins
+	
 
 $(VMPLIST): $(OSXDIR)/$(SYSTEM)-Info.plist getversion
 	@mkdir -p $(APP)/Contents
@@ -142,6 +161,7 @@ print-app-settings:
 	@echo APP=$(APP)
 	@echo VMEXE=$(VMEXE)
 	@echo VMBUNDLES=$(VMBUNDLES)
+	@echo VMPLUGINDYLIBS=$(VMPLUGINDYLIBS)
 	@echo VMPLIST=$(VMPLIST)
 	@echo VMICONS=$(VMICONS)
 	@echo SIGNING_IDENTITY=$(SIGNING_IDENTITY)
