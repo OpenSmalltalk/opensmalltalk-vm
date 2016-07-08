@@ -1120,7 +1120,9 @@ VMProfiler >> put: aString paddedTo: compositionWidth tabWidth: tabWidth on: aSt
 { #category : #reports }
 VMProfiler >> putReportPreambleOn: s [
 	| expr |
-	s nextPutAll: (SmalltalkImage current getSystemAttribute: 0); space; nextPutAll: Utilities changeStampPerSe; cr.
+	s nextPutAll: (SmalltalkImage current getSystemAttribute: 0); space; nextPutAll: Date today yyyymmdd; space.
+	Time now print24: true on: s.
+	s cr.
 	(startStats size >= 44
 	 and: [(startStats at: 44) isNumber]) ifTrue:
 		[s nextPutAll: 'eden size: '; nextPutAll: (startStats at: 44) asStringWithCommas.
