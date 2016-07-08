@@ -21,6 +21,9 @@
 #define MERCURIAL 0
 #define GIT 1
 
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include "../plugins/sqPluginsSCCSVersion.h"
 
 #if SUBVERSION
