@@ -334,7 +334,7 @@ void SetSystemTrayIcon(BOOL on)
   if(!ShellNotifyIcon) return;  /* ok, we don't have it */
   nid.cbSize = sizeof(nid);
   nid.hWnd   = stWindow;
-  nid.uID    = (UINT)hInstance;
+  nid.uID    = (usqIntptr_t)hInstance;
   nid.uFlags = NIF_MESSAGE | NIF_TIP | NIF_ICON;
   nid.uCallbackMessage = WM_USER+42;
   nid.hIcon  = LoadIcon(hInstance, MAKEINTRESOURCE(1));
