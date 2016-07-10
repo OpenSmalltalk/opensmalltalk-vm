@@ -197,28 +197,20 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _swapper;
 		((_swapper *)(&doubleVar))->i[1] = *((int *)(intPointerToFloat) + 0); \
 		((_swapper *)(&doubleVar))->i[0] = *((int *)(intPointerToFloat) + 1); \
 	} while (0)
-# elif defined(OBJECTS_32BIT_ALIGNED)
-/* this is to allow strict aliasing assumption in the optimizer */
-typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _aligner;
-/* word-based copy for machines with alignment restrictions */
-# define storeFloatAtPointerfrom(intPointerToFloat, doubleVar) do { \
-	*((int *)(intPointerToFloat) + 0) = ((_aligner *)(&doubleVar))->i[0]; \
-	*((int *)(intPointerToFloat) + 1) = ((_aligner *)(&doubleVar))->i[1]; \
-  } while (0)
-# define fetchFloatAtPointerinto(intPointerToFloat, doubleVar) do { \
-	((_aligner *)(&doubleVar))->i[0] = *((int *)(intPointerToFloat) + 0); \
-	((_aligner *)(&doubleVar))->i[1] = *((int *)(intPointerToFloat) + 1); \
-  } while (0)
-#else /* !(BigEndianFloats && !VMBIGENDIAN) && !OBJECTS_32BIT_ALIGNED */
-/* for machines that allow doubles to be on any word boundary */
-# define storeFloatAtPointerfrom(i, doubleVar) (*((double *) (i)) = (doubleVar))
-# define fetchFloatAtPointerinto(i, doubleVar) ((doubleVar) = *((double *) (i)))
+# else
+# define storeFloatAtPointerfrom(intPointerToFloat, doubleVar) \
+    memcpy((char *)intPointerToFloat,&doubleVar,sizeof(double));
+# define fetchFloatAtPointerinto(intPointerToFloat, doubleVar) \
+    memcpy(&doubleVar,(char *)intPointerToFloat,sizeof(double));
 #endif /* !(BigEndianFloats && !VMBIGENDIAN) && !OBJECTS_32BIT_ALIGNED */
+
+# define storeSingleFloatAtPointerfrom(intPointerToFloat, floatVar) \
+        memcpy((char *)intPointerToFloat,&floatVar,sizeof(float));
+# define fetchSingleFloatAtPointerinto(intPointerToFloat, floatVar) \
+        memcpy(&floatVar,(char *)intPointerToFloat,sizeof(float));
 
 #define storeFloatAtfrom(i, doubleVar)	storeFloatAtPointerfrom(pointerForOop(i), doubleVar)
 #define fetchFloatAtinto(i, doubleVar)	fetchFloatAtPointerinto(pointerForOop(i), doubleVar)
-# define storeSingleFloatAtPointerfrom(i, floatVar) (*((float *) (i)) = (float)(floatVar))
-# define fetchSingleFloatAtPointerinto(i, floatVar) ((floatVar) = *((float *) (i)))
 #define storeSingleFloatAtfrom(i, floatVar)	storeSingleFloatAtPointerfrom(pointerForOop(i), floatVar)
 #define fetchSingleFloatAtinto(i, floatVar)	fetchSingleFloatAtPointerinto(pointerForOop(i), floatVar)
 
