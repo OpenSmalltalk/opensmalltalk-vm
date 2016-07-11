@@ -1812,6 +1812,11 @@ CogVMSimulator >> ioScreenDepth [
 ]
 
 { #category : #'I/O primitives support' }
+CogVMSimulator >> ioScreenScaleFactor [
+	^ 1.0
+]
+
+{ #category : #'I/O primitives support' }
 CogVMSimulator >> ioScreenSize [
 	"Answer the screen extent packed into 32 bits.  In the simulator,
 	 displayForm gets initialized with a fake form; don't be deceived."

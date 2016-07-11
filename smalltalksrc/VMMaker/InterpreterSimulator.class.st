@@ -620,6 +620,11 @@ InterpreterSimulator >> ioScreenDepth [
 ]
 
 { #category : #'I/O primitives support' }
+InterpreterSimulator >> ioScreenScaleFactor [
+	^ 1.0
+]
+
+{ #category : #'I/O primitives support' }
 InterpreterSimulator >> ioScreenSize [
 	"Return the screen extent packed into 32 bits."
 
@@ -1296,6 +1301,14 @@ InterpreterSimulator >> primitiveResume [
 
 	byteCount > 1000000 ifTrue: [self halt].  "Ignore early process activity"
 	^ super primitiveResume
+]
+
+{ #category : #'I/O primitives' }
+InterpreterSimulator >> primitiveScreenScaleFactor [ "Dummied for now"
+
+	self pop: 1.
+	self pushFloat: 1.0
+
 ]
 
 { #category : #'I/O primitives' }
