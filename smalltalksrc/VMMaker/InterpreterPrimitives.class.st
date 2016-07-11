@@ -3426,6 +3426,17 @@ InterpreterPrimitives >> primitiveScreenDepth [
 ]
 
 { #category : #'I/O primitives' }
+InterpreterPrimitives >> primitiveScreenScaleFactor [
+	"Answer a float indicating the current scale factor for pixels of the Smalltalk window."
+	| factor |
+	<export: true>
+	<var: #factor type: #double>
+	factor := self ioScreenScaleFactor.
+	self failed ifTrue:[^self primitiveFail].
+	self pop: 1; pushFloat: factor.
+]
+
+{ #category : #'I/O primitives' }
 InterpreterPrimitives >> primitiveScreenSize [
 	"Answer a point indicating the current size of the Smalltalk window.
 	 Currently there is a limit of 65535 in each direction because the
