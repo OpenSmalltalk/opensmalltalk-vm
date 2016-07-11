@@ -1106,7 +1106,7 @@ StackInterpreter class >> initializePrimitiveTable [
 		(101 primitiveBeCursor)
 		(102 primitiveBeDisplay)
 		(103 primitiveScanCharacters)
-		(104 primitiveScreenScaleFactor)	"Used to be primitiveDrawLoop"
+		(104 primitiveFail)	"primitiveDrawLoop"
 		(105 primitiveStringReplace)
 		(106 primitiveScreenSize)
 		(107 primitiveMouseButtons)
