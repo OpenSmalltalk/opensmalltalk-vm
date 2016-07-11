@@ -146,6 +146,10 @@ sqInt ioScreenSize(void) {
 	return (w<<16)|h;
 }
 
+double ioScreenScaleFactor(void) {
+	return 1.0;
+}
+
 sqInt ioScreenDepth(void) {
 	return 32;
 }

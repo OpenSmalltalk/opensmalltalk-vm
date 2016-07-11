@@ -376,7 +376,7 @@
 	<key>NSPrincipalClass</key>
 	<string>SqueakOSXApplication</string>
 	<key>NSHighResolutionCapable</key>
-	<false/>
+	<true/>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

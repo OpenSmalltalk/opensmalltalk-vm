@@ -83,6 +83,10 @@ void MyProviderReleaseData (
     return self;
 }
 
+- (double) ioSceenScaleFactor {
+    return (double)[gDelegateApp.window backingScaleFactor];
+}
+
 - (sqInt) ioScreenSize {
 	sqInt w, h;
 	
