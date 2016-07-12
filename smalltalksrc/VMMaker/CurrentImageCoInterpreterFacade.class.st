@@ -345,6 +345,11 @@ CurrentImageCoInterpreterFacade >> fixedFieldsFieldWidth [
 	^objectMemory fixedFieldsFieldWidth
 ]
 
+{ #category : #'cog jit support' }
+CurrentImageCoInterpreterFacade >> fixedFieldsOfClassFormat: classFormat [
+	^objectMemory fixedFieldsOfClassFormat: classFormat
+]
+
 { #category : #printing }
 CurrentImageCoInterpreterFacade >> flush [
 	coInterpreter transcript flush
@@ -358,6 +363,10 @@ CurrentImageCoInterpreterFacade >> formatOfClass: classOop [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> framePointerAddress [
 	^self addressForLabel: #framePointer
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> freeObject: anObj [
 ]
 
 { #category : #accessing }
@@ -767,6 +776,11 @@ CurrentImageCoInterpreterFacade >> numSlotsOf: objOop [
 		[8]	->	[obj basicSize + obj class instSize] }
 ]
 
+{ #category : #'cog jit support' }
+CurrentImageCoInterpreterFacade >> objCouldBeClassObj: obj [
+	^(self objectForOop: obj) isBehavior
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> objectAfter: anOop [
 	^anOop + 8
@@ -950,6 +964,11 @@ CurrentImageCoInterpreterFacade >> rawHeaderOf: aMethodOop [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> rawHeaderOf: anOop put: aCogMethodSurrogate [
 	^self
+]
+
+{ #category : #'cog jit support' }
+CurrentImageCoInterpreterFacade >> remoteIsInstVarAccess [
+	^coInterpreter remoteIsInstVarAccess
 ]
 
 { #category : #accessing }
