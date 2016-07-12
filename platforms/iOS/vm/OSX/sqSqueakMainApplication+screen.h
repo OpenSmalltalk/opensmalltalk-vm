@@ -32,7 +32,7 @@
 #import "sqMacHostWindow.h"
 
 @interface sqSqueakMainApplication (screen)
-- (sqInt) ioScreenScaleFactor;
+- (double) ioScreenScaleFactor;
 - (sqInt) ioScreenSize;
 - (void) unionScreenArea: (windowDescriptorBlock *) windowBlock clip: (CGRect *) clip;
 @end
