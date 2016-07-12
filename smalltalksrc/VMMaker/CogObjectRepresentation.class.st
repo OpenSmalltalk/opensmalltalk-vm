@@ -306,6 +306,15 @@ CogObjectRepresentation >> genGetInlineCacheClassTagFrom: sourceReg into: destRe
 	self subclassResponsibility
 ]
 
+{ #category : #'bytecode generator support' }
+CogObjectRepresentation >> genGetInstanceOf: classObj into: destReg initializingIf: initializeInstance [
+	"Create an instance of classObj and assign it to destReg, initializing the instance
+	 if initializeInstance is true with nil or 0 as appropriate This is for inline primitives.
+	 Assume there is sufficient space in new space to complete the operation.
+	 Answer zero on success."
+	self subclassResponsibility
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentation >> genGetMethodHeaderOf: methodReg into: headerReg scratch: scratchReg [
 	"Get the method header (first word) of a CompiledMethod into headerReg.
@@ -1263,8 +1272,9 @@ CogObjectRepresentation >> isSmallIntegerTagNonZero [
 CogObjectRepresentation >> isUnannotatableConstant: simStackEntry [
 	<inline: true>
 	<var: 'simStackEntry' type: #'CogSimStackEntry *'>
-	^ simStackEntry type = SSConstant 
-		and: [(self shouldAnnotateObjectReference: simStackEntry constant) not ]
+	^simStackEntry type = SSConstant 
+	  and: [(objectMemory isImmediate: simStackEntry constant)
+		or: [(self shouldAnnotateObjectReference: simStackEntry constant) not]]
 ]
 
 { #category : #'garbage collection' }

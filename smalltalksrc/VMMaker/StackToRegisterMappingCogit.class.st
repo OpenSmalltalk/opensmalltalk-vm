@@ -1413,6 +1413,13 @@ StackToRegisterMappingCogit >> extASpecifiesNoMustBeBoolean [
 ]
 
 { #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> extBSpecifiesInitializeInstance [
+	"This is a negative; do not intialize if 1 is present in extB.  This is also the no-store-check bit."
+	<inline: true>
+	^ extB noMask: 1
+]
+
+{ #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> extBSpecifiesMaybeContext [
 	<inline: true>
 	^ extB anyMask: 2
@@ -2632,11 +2639,10 @@ StackToRegisterMappingCogit >> genSistaExtStoreAndPopReceiverVariableBytecodePop
 StackToRegisterMappingCogit >> genSistaExtStoreLiteralVariableBytecodePopBoolean: boolean [
 	<inline: true>
 	| index needsStoreCheck |
-	needsStoreCheck := self sistaNeedsStoreCheck.
-	extB := 0.
+	needsStoreCheck := self sistaNeedsStoreCheck and: [self ssTopNeedsStoreCheck].
 	index := byte1 + (extA << 8).
-	extA := 0.
-	^ self genStorePop: boolean LiteralVariable: index needsStoreCheck: needsStoreCheck
+	extA := extB := 0.
+	^self genStorePop: boolean LiteralVariable: index needsStoreCheck: needsStoreCheck
 ]
 
 { #category : #'bytecode generators' }
@@ -3167,13 +3173,13 @@ StackToRegisterMappingCogit >> genUnaryInlinePrimitive: prim [
 	| rcvrReg resultReg |
 	rcvrReg := self allocateRegForStackEntryAt: 0.
 	resultReg := self allocateRegNotConflictingWith: (self registerMaskFor: rcvrReg).
-	self ssTop popToReg: rcvrReg.
-	self ssPop: 1.
 	prim
 		caseOf: {
 					"00		unchecked class"
 			[1] ->	"01		unchecked pointer numSlots"
-				[objectRepresentation
+				[self ssTop popToReg: rcvrReg.
+				 self ssPop: 1.
+				 objectRepresentation
 					genGetNumSlotsOf: rcvrReg into: resultReg;
 					genConvertIntegerToSmallIntegerInReg: resultReg].
 					"02		unchecked pointer basicSize"
@@ -3184,9 +3190,19 @@ StackToRegisterMappingCogit >> genUnaryInlinePrimitive: prim [
 					"04		unchecked short16Type format numShorts"
 					"05		unchecked word32Type format numWords"
 					"06		unchecked doubleWord64Type format numDoubleWords"
+			[11] ->	"11		unchecked fixed pointer basicNew"
+				[self ssTop type ~= SSConstant ifTrue:
+					[^EncounteredUnknownBytecode].
+				 (objectRepresentation
+					genGetInstanceOf: self ssTop constant
+						into: resultReg
+							initializingIf: self extBSpecifiesInitializeInstance) ~= 0 ifTrue:
+					[^ShouldNotJIT]. "e.g. bad class"
+				 self ssPop: 1]
 				  }
 		otherwise:
 			[^EncounteredUnknownBytecode].
+	extB := 0.
 	self ssPushRegister: resultReg.
 	^0
 ]
@@ -3290,6 +3306,7 @@ StackToRegisterMappingCogit >> genVanillaStorePop: popBoolean MaybeContextSlotIn
 	<var: #jmpSingle type: #'AbstractInstruction *'>
 	<var: #jmpDone type: #'AbstractInstruction *'>
 
+	self deny: (needsStoreCheck and: [self ssTopNeedsStoreCheck not]).
 	self ssPop: 1.
 	self ssAllocateCallReg: ClassReg and: SendNumArgsReg. "for ceStoreContextInstVarTrampoline"
 	self ssPush: 1.
@@ -3320,6 +3337,7 @@ StackToRegisterMappingCogit >> genVanillaStorePop: popBoolean slotIndex: slotInd
 	<inline: true>
 	| topReg |
 
+	self deny: (needsStoreCheck and: [self ssTopNeedsStoreCheck not]).
 	self cppIf: IMMUTABILITY
 		ifTrue: []
 		ifFalse: "First path, receiver is in newSpace"
@@ -3333,10 +3351,9 @@ StackToRegisterMappingCogit >> genVanillaStorePop: popBoolean slotIndex: slotInd
 						[self MoveR: topReg R: TempReg].
 					 self CallRT: ceTraceStoreTrampoline].
 				 ^0]].
-
 	topReg := self 
-		allocateRegForStackEntryAt: 0 
-		notConflictingWith: (self registerMaskFor: destReg). 
+				allocateRegForStackEntryAt: 0 
+				notConflictingWith: (self registerMaskFor: destReg). 
 	self ssStorePop: popBoolean toReg: topReg.
 	objectRepresentation
 		genStoreSourceReg: topReg
@@ -4481,7 +4498,9 @@ StackToRegisterMappingCogit >> ssTopDescriptor [
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> ssTopNeedsStoreCheck [
 	<inline: true>
-	^ (objectRepresentation isUnannotatableConstant: self ssTop) not
+	^self ssTop type ~= SSConstant
+	  or: [(objectMemory isNonImmediate: self ssTop constant)
+		and: [objectRepresentation shouldAnnotateObjectReference:  self ssTop constant]]
 ]
 
 { #category : #'simulation stack' }

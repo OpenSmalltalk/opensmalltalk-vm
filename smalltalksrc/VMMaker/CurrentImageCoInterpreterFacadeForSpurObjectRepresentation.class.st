@@ -110,6 +110,11 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> formatMask [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> formatOfClass: classOop [ 
+	^(self objectForOop: classOop) format
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> formatShift [
 	^objectMemory formatShift
 ]
@@ -134,6 +139,16 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> identityHashFullWo
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> immutableBitMask [
 	^objectMemory immutableBitMask
+]
+
+{ #category : #'cog jit support' }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> instSpecOfClassFormat: classFormat [
+	^objectMemory instSpecOfClassFormat: classFormat
+]
+
+{ #category : #'cog jit support' }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> isFixedSizePointerFormat: formatOop [
+	^objectMemory isFixedSizePointerFormat: formatOop
 ]
 
 { #category : #accessing }
@@ -170,6 +185,11 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> oopForObject: o [
 			[o isCharacter
 				ifTrue: [o asInteger << 2 + 2]
 				ifFalse: [objectMap at: o ifAbsentPut: [objectMap size * 8 + (1024 * 1024)]]]
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> rawHashBitsOf: obj [
+	^(self objectForOop: obj) identityHash
 ]
 
 { #category : #accessing }

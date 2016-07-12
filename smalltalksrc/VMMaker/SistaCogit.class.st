@@ -328,6 +328,8 @@ SistaCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode [
 	reg := self allocateRegForStackEntryAt: 0.
 	self ssTop popToReg: reg.
 	self ssFlushTo: simStackPtr. "flushed but the value is still in reg"
+
+	self genPopStackBytecode.
 	
 	literal := self getLiteral: (extA * 256 + byte1).
 	extA := 0.
@@ -339,8 +341,6 @@ SistaCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode [
 	(objectMemory isArrayNonImm: literal)
 		ifTrue: [objectRepresentation branchIf: reg notInstanceOfBehaviors: literal target: targetFixUp]
 		ifFalse: [objectRepresentation branchIf: reg notInstanceOfBehavior: literal target: targetFixUp].
-						
-	self genPopStackBytecode.
 	
 	^0
 ]

@@ -4794,6 +4794,7 @@ SpurMemoryManager >> fixedFieldsOfClass: objOop [
 
 { #category : #'object format' }
 SpurMemoryManager >> fixedFieldsOfClassFormat: classFormat [
+	<api>
 	^classFormat bitAnd: self fixedFieldsOfClassFormatMask
 ]
 
@@ -6148,6 +6149,7 @@ SpurMemoryManager >> instSpecOfClass: classPointer [
 
 { #category : #'object format' }
 SpurMemoryManager >> instSpecOfClassFormat: classFormat [
+	<api>
 	^classFormat >> self fixedFieldsFieldWidth bitAnd: self formatMask
 ]
 
@@ -6494,6 +6496,7 @@ SpurMemoryManager >> isEphemeronFormat: format [
 
 { #category : #'header format' }
 SpurMemoryManager >> isFixedSizePointerFormat: format [
+	<api>
 	^format <= self nonIndexablePointerFormat
 	  or: [format = self ephemeronFormat]
 ]
@@ -9986,6 +9989,7 @@ SpurMemoryManager >> rawClassTagForClass: classObj [
 
 { #category : #'header access' }
 SpurMemoryManager >> rawHashBitsOf: objOop [
+	<api>
 	self flag: #endianness.
 	^(self long32At: objOop + 4) bitAnd: self identityHashHalfWordMask
 ]
