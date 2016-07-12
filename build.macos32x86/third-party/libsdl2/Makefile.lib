@@ -1,6 +1,18 @@
+include ../common/Makefile.extra
+
+$(info LIBRARY: libsdl2)
+
+# plugin definitions
 LIBSDL2URL:=http://www.libsdl.org/release/SDL2-2.0.4.tar.gz
 LIBSDL2DIR:=$(THIRDPARTYDIR)/SDL2-2.0.4
-LIBSDL2LIB:=$(THIRDPARTYINSTALLDIR)/libSDL2-2.0.0.dylib
+LIBSDL2LIBNAME:=libSDL2-2.0.0.dylib
+LIBSDL2LIB:=$(THIRDPARTYINSTALLDIR)/$(LIBSDL2LIBNAME)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+THIRDPARTYLIBS:=$(THIRDPARTYLIBS) libsdl2
+EXTRALIBS:=$(EXTRALIBS) -undefined dynamic_lookup $(LIBSDL2LIB)
+PLUGINREQS:=$(PLUGINREQS) $(THIRDPARTYLIBS)
 
 $(LIBSDL2DIR): $(THIRDPARTYDIR)
 	curl $(LIBSDL2URL) | tar x -C $(THIRDPARTYDIR)
@@ -10,4 +22,7 @@ $(LIBSDL2LIB): $(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR) $(LIBSDL2DIR)
 		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch i386' LDFLAGS='-arch i386' \
 		&& make \
 		&& make install
-	cp -f $(THIRDPARTYOUTDIR)/lib/libSDL2-2.0.0.dylib $(THIRDPARTYINSTALLDIR)
+	cp -f $(THIRDPARTYLIBDIR)/$(LIBSDL2LIBNAME) $(THIRDPARTYINSTALLDIR)
+	install_name_tool -id "@executable_path/Plugins/$(LIBSDL2LIBNAME)" $(LIBSDL2LIB)
+
+libsdl2: $(LIBSDL2LIB)

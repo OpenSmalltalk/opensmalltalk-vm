@@ -1,15 +1,28 @@
-FREETYPE2URL:=http://files.pharo.org/vm/src/lib/freetype-2.4.9.tar.gz
+include ../common/Makefile.extra
+
+$(info LIBRARY: freetype2)
+
+# plugin definitions
+FREETYPE2URL:=http://ftp.igh.cnrs.fr/pub/nongnu/freetype/freetype-2.4.9.tar.gz
 FREETYPE2DIR:=$(THIRDPARTYDIR)/freetype-2.4.9
-FREETYPE2LIB:=$(THIRDPARTYINSTALLDIR)/libfreetype.6.dylib
+FREETYPE2LIBNAME:=libfreetype.6.dylib
+FREETYPE2LIB:=$(THIRDPARTYINSTALLDIR)/$(FREETYPE2LIBNAME)
 
-$(info $$(FREETYPE2LIB): $(FREETYPE2LIB))
-
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR) $(THIRDPARTYINCLUDEDIR)/freetype2
+EXTRALIBS:=$(EXTRALIBS) $(FREETYPE2LIB)
+THIRDPARTYLIBS:=$(THIRDPARTYLIBS) freetype2
+PLUGINREQS:=$(PLUGINREQS) $(THIRDPARTYLIBS)
+	
 $(FREETYPE2DIR): $(THIRDPARTYDIR)
 	curl $(FREETYPE2URL) | tar x -C $(THIRDPARTYDIR)
 
 $(FREETYPE2LIB): $(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR) $(FREETYPE2DIR)
 	cd $(FREETYPE2DIR) \
-		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch i386' LDFLAGS='-arch i386' \
+		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch i386' LDFLAGS='-arch i386 ' \
 		&& make \
 		&& make install
-	cp -f $(THIRDPARTYOUTDIR)/lib/libfreetype.6.dylib $(THIRDPARTYINSTALLDIR)
+	cp -f $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME) $(THIRDPARTYINSTALLDIR)
+	install_name_tool -id "@executable_path/Plugins/$(FREETYPE2LIBNAME)" $(FREETYPE2LIB)
+	
+freetype2: $(FREETYPE2LIB)

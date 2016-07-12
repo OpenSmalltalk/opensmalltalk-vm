@@ -1,0 +1,34 @@
+include ../common/Makefile.extra
+
+$(info LIBRARY: cairo)
+
+# plugin definitions
+CAIROURL:=http://www.cairographics.org/releases/cairo-1.12.14.tar.xz
+CAIROLIBNAME:=libcairo.2.dylib
+CAIRODIR:=$(THIRDPARTYDIR)/cairo-1.12.14
+CAIROLIB:=$(THIRDPARTYINSTALLDIR)/$(CAIROLIBNAME)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+THIRDPARTYLIBS:=$(THIRDPARTYLIBS) cairo
+EXTRALIBS:=$(EXTRALIBS) $(CAIROLIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+
+$(CAIRODIR): $(THIRDPARTYDIR)
+	curl -L $(CAIROURL) | tar x -C $(THIRDPARTYDIR)
+
+$(CAIROLIB): $(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR) $(CAIRODIR)
+	cd $(CAIRODIR) \
+		&& ./configure \
+			--prefix='$(THIRDPARTYOUTDIR)' \
+			CFLAGS='-arch i386' \
+			LDFLAGS='-arch i386' \
+			--disable-silent-rules \
+			--disable-xlib \
+			--disable-dependency-tracking \
+		&& make \
+		&& make install
+	cp -f $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME) $(THIRDPARTYINSTALLDIR)
+	install_name_tool -id "@executable_path/Plugins/$(CAIROLIBNAME)" $(CAIROLIB)
+	
+cairo: $(CAIROLIB)

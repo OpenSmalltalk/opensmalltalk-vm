@@ -44,6 +44,7 @@ endif
 default:	$(APP)
 
 include ../common/Makefile.vm
+include ../common/Makefile.extra
 
 cleanall: cleanapp cleanastapp cleandbgapp cleanallvm
 
@@ -82,7 +83,7 @@ endif
 
 $(APP):	cleanbundles $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS) \
 		$(VMPLIST) $(VMLOCALIZATION) $(VMMENUNIB) $(VMICONS) \
- 		$(SOURCES) $(APPPOST) signapp touchapp
+ 		$(SOURCES) $(THIRDPARTYLIBS) $(APPPOST) signapp touchapp
 
 # Bundles with missing prerequisites won't be built. But we need to force the
 # attempt to make them every time in case the prerequisites /have/ been built.
