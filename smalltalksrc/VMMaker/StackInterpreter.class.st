@@ -1363,7 +1363,7 @@ StackInterpreter class >> initializeWithOptions: optionsDictionary [
 	"StackInterpreter initializeWithOptions: Dictionary new"
 
 	super initializeWithOptions: optionsDictionary.
-	(self primitivesClass withAllSuperclasses copyUpTo: self) do:
+	(self primitivesClass withAllSuperclasses copyUpTo: StackInterpreter) do:
 		[:class| class initializationOptions: initializationOptions].
 	self initializeMiscConstants. "must precede other initialization."
 	self initializeAssociationIndex.
@@ -10534,6 +10534,7 @@ StackInterpreter >> numStkPages [
 StackInterpreter >> objCouldBeClassObj: objOop [
 	"Answer if objOop looks like a class object.  WIth Spur be lenient if the object doesn't
 	 yet have a hash (i.e. is not yet in the classTable), and accept forwarding pointers."
+	<api>
 	<inline: false>
 	| fieldOop |
 	^(objectMemory isPointersNonImm: objOop)
@@ -15045,7 +15046,18 @@ StackInterpreter >> unaryInlinePrimitive: primIndex [
 				 self internalStackTopPut: (objectMemory integerObjectOf: result)].
 		"1006	unchecked doubleWord64Type format numDoubleWords"
 		[6]	->	[result := objectMemory num64BitUnitsOf: self internalStackTop.
-				 self internalStackTopPut: (objectMemory integerObjectOf: result)] }
+				 self internalStackTopPut: (objectMemory integerObjectOf: result)].
+
+		"1011	unchecked fixed pointer basicNew"
+		[11] ->	[| classObj numSlots |
+				 classObj := self internalStackTop.
+				 numSlots := objectMemory instanceSizeOf: classObj.
+				 result := objectMemory eeInstantiateSmallClass: classObj numSlots: numSlots.
+				 (extB noMask: 1) ifTrue:
+					[0 to: numSlots - 1 do:
+						[:i| objectMemory storePointerUnchecked: i ofObject: result withValue: objectMemory nilObject]].
+				 extB := 0.
+				 self internalStackTopPut: result] }
 	otherwise:
 		[localIP := localIP - 3.
 		 self respondToUnknownBytecode]
