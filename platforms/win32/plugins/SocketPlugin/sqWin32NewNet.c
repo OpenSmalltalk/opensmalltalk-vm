@@ -21,8 +21,6 @@
 /* add definition to make newer mingw header files compatible */
 #define DECLARE_STDCALL_P( type ) __stdcall type 
 
-typedef unsigned long ULONG_PTR;
-
 #include <ws2tcpip.h>
 #include <winsock2.h>
 #include <windows.h>
