@@ -98,6 +98,7 @@ platforms/unix/config/autom4te.cache/
 /image/package-cache
 /image/prefs
 /image/special-dirs
+/image/TrunkImage.zip
 
 # /platforms/Cross/
 
