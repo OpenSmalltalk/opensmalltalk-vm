@@ -35,6 +35,8 @@
 #include <stdio.h>
 #include <math.h>
 
+sqInputEvent *sqNextEventPut();
+
 #define BUFFER_SIZE 100
 static int xData[BUFFER_SIZE];
 static int yData[BUFFER_SIZE];
