@@ -1393,6 +1393,10 @@ os_error *e;
 	return true;
 }
 
+double ioScreenScaleFactor(void) {
+	return 1.0;
+}
+
 sqInt ioScreenSize(void) {
 /* return the screen size for the main Display window */
 	return ioSizeOfWindow(1);

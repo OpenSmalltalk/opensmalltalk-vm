@@ -64,6 +64,10 @@
 - (void)  ioSetFullScreen: (sqInt) fullScreen {
 }
 
+- (double) ioSceenScaleFactor {
+    return 1.0;
+}
+
 - (sqInt) ioScreenSize {
     return (10 << 16) | (10 & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
 }

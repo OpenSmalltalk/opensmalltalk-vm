@@ -33,6 +33,7 @@ struct SqDisplay
   sqInt  (*ioBeep)(void);
   sqInt  (*ioRelinquishProcessorForMicroseconds)(sqInt microSeconds);
   sqInt  (*ioProcessEvents)(void);
+  double (*ioScreenScaleFactor)(void);
   sqInt  (*ioScreenDepth)(void);
   sqInt  (*ioScreenSize)(void);
   sqInt  (*ioSetCursorWithMask)(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY);
@@ -111,6 +112,7 @@ static struct SqDisplay display_##NAME##_itf= {	\
   display_ioBeep,				\
   display_ioRelinquishProcessorForMicroseconds,	\
   display_ioProcessEvents,			\
+  display_ioScreenScaleFactor,		\
   display_ioScreenDepth,			\
   display_ioScreenSize,				\
   display_ioSetCursorWithMask,			\
