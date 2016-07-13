@@ -130,13 +130,13 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 	char *address, *alloc;
 	long bytes, delta;
 
-	address = (char *)roundUpToPage((unsigned long)minAddress);
+	address = (char *)roundUpToPage((usqIntptr_t)minAddress);
 	bytes = roundUpToPage(size);
 	delta = max(pageSize,1024*1024);
 
 # define printProbes 0
 # define printMaps 0
-	while ((unsigned long)(address + bytes) > (unsigned long)address) {
+	while ((usqIntptr_t)(address + bytes) > (usqIntptr_t)address) {
 		if (printProbes && fIsConsole)
 			printf("probing [%p,%p)\n", address, address + bytes);
 		if (address_space_used(address, bytes)) {
@@ -196,7 +196,7 @@ sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
 
 # if COGVM
 void
-sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+sqMakeMemoryExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 {
 	DWORD previous;
 
@@ -208,7 +208,7 @@ sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 }
 
 void
-sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+sqMakeMemoryNotExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 {
 	DWORD previous;
 
