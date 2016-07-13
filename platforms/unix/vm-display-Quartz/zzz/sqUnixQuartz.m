@@ -720,6 +720,11 @@ static int display_ioScreenDepth(void)
   return headless ? 1 : dpyDepth;
 }
 
+static double display_ioScreenScaleFactor(void)
+{
+  return 1.0;
+}
+
 static int display_ioScreenSize(void)
 {
   int size;

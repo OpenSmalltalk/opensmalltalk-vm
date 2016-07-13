@@ -37,6 +37,11 @@ static sqInt display_ioScreenDepth(void)
   return 1;
 }
 
+static double display_ioScreenScaleFactor(void)
+{
+  return 1.0;
+}
+
 static sqInt display_ioScreenSize(void)
 {
   int sws= getSavedWindowSize();

@@ -75,8 +75,8 @@ error "Not Win32!"
 #define PROF_THREAD_PRIORITY THREAD_PRIORITY_TIME_CRITICAL
 
 #if COGVM
-extern void sqMakeMemoryExecutableFromTo(unsigned long, unsigned long);
-extern void sqMakeMemoryNotExecutableFromTo(unsigned long, unsigned long);
+extern void sqMakeMemoryExecutableFromTo(usqIntptr_t, usqIntptr_t);
+extern void sqMakeMemoryNotExecutableFromTo(usqIntptr_t, usqIntptr_t);
 
 extern int isCFramePointerInUse(void);
 extern int osCogStackPageHeadroom(void);

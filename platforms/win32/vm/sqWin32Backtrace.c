@@ -230,7 +230,7 @@ print_backtrace(FILE *f, int nframes, int maxframes,
 BOOL (WINAPI *EnumProcessModules)(HANDLE,HMODULE*,DWORD,LPDWORD) = NULL;
 BOOL (WINAPI *GetModuleInformation)(HANDLE, HMODULE, LPMODULEINFO, DWORD)=NULL;
 
-static ulong moduleCount = 0;
+static DWORD moduleCount = 0;
 static dll_exports *all_exports = 0;
 
 static int
@@ -244,7 +244,7 @@ static  void find_in_cog(dll_exports *exports, void *pc, symbolic_pc *spc);
 static void
 get_modules(void)
 {
-	ulong moduleCount2, i;
+	DWORD moduleCount2, i;
 	HANDLE me = GetCurrentProcess();
 	HANDLE hPsApi = LoadLibrary("psapi.dll");
 	HMODULE *modules;

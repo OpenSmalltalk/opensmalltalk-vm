@@ -590,12 +590,12 @@ int finishSysExCommand(sqMidiPort *port, char *bufferPtr, int count)
       return -1;
     }
   /* return if the sysex message has not been finished */
-  if(!count) return (DWORD) srcPtr - (DWORD)bufferPtr;
+  if(!count) return (usqIntptr_t) srcPtr - (usqIntptr_t)bufferPtr;
   /* copy the last (status) byte */
   if(*srcPtr == 0xF7) buf[port->sysExLength++] = *srcPtr++;
   sendLongMidiData(port->handle, buf, port->sysExLength);
   port->sysExLength = 0; /* data has been sent */
-  return (DWORD) srcPtr - (DWORD)bufferPtr;
+  return (usqIntptr_t) srcPtr - (usqIntptr_t)bufferPtr;
 }
 
 /***************************************************************
@@ -999,7 +999,7 @@ int sqMIDIPortReadInto(int portNum, int count, char * bufferPtr) {
         }
     }
   /* compute the number of bytes actually transmitted */
-  bytesRead = (DWORD)dstPtr - (DWORD)bufferPtr;
+  bytesRead = (usqIntptr_t)dstPtr - (usqIntptr_t)bufferPtr;
   /* return zero if only the stamp is in the buffer */
 	return bytesRead == 4 ? 0 : bytesRead;
 }
@@ -1087,7 +1087,7 @@ int sqMIDIPortWriteFromAt(int portNum, int count, char * bufferPtr, int time) {
       port->pendingSize = cmdLen - count;
       srcPtr += count;
     }
-	return (DWORD) srcPtr - (DWORD) bufferPtr;
+	return (usqIntptr_t) srcPtr - (usqIntptr_t) bufferPtr;
 }
 
 /*************************************************************************************

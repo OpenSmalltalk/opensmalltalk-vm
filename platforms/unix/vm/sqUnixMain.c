@@ -632,6 +632,7 @@ sqInt ioProcessEvents(void)
 
 void	ioDrainEventQueue() {}
 
+double ioScreenScaleFactor(void)	 { return dpy->ioScreenScaleFactor(); }
 sqInt ioScreenDepth(void)		 { return dpy->ioScreenDepth(); }
 sqInt ioScreenSize(void)		 { return dpy->ioScreenSize(); }
 

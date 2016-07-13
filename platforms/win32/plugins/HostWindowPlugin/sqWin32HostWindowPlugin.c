@@ -12,6 +12,8 @@
 #include "sq.h"
 #include "HostWindowPlugin.h"
 
+sqInputEvent *sqNextEventPut();
+
 BITMAPINFO *BmiForDepth(int depth);
 extern HINSTANCE hInstance;
 extern MSG *lastMessage;
