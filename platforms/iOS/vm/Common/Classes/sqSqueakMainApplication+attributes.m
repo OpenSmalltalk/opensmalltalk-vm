@@ -80,17 +80,13 @@ extern struct VirtualMachine* interpreterProxy;
 - (const char *) getAttribute:(sqInt)indexNumber {
 	//indexNumber is a postive/negative number	
 	if (indexNumber < 0) /* VM argument */ {
-#ifndef TARGET_OS_IS_IPHONE        
-        if (-indexNumber < ([self.commandLineArguments count] - 1)) {
+        if (-indexNumber < numVMArgs)
 			return (char *) [[self.commandLineArguments objectAtIndex: -indexNumber] cStringUsingEncoding:[self currentVMEncoding]];
-		}
-#endif
 	}
 #if BUILD_FOR_OSX
 	else if (indexNumber >= 2 && indexNumber <= 1000) {
-        if (indexNumber < [self.commandLineArguments count]) {
-			return (char *) [[self.commandLineArguments objectAtIndex: indexNumber] cStringUsingEncoding:[self currentVMEncoding]];
-		}
+        if (indexNumber < ([self.commandLineArguments count] - numVMArgs))
+			return (char *) [[self.commandLineArguments objectAtIndex: indexNumber+numVMArgs] cStringUsingEncoding:[self currentVMEncoding]];
 	}
 #endif
 	else {
