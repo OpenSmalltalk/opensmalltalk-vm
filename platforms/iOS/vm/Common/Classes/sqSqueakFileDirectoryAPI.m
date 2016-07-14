@@ -56,11 +56,13 @@ sqInt dir_GetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fTy
 	 filenameSize is size of file name
 	 fType and fCreator is type and creator codes (4 bytes preallocated)
 	 */
+    @autoreleasepool {
     sqInt status = [gDelegateApp.squeakApplication.fileDirectoryLogic dir_GetMacFileTypeAndCreator: filename
                                                                                           fileNameSize: filenameSize
                                                                                                  fType: fType
                                                                                               fCreator: fCreator];
-	return status;
+    return status;
+    }
 }
 
 sqInt dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator) {
@@ -69,12 +71,14 @@ sqInt dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fTy
 	 filenameSize is size of file name
 	 fType and fCreator is type and creator codes (4 bytes)
 	 */
-	sqInt status = [gDelegateApp.squeakApplication.fileDirectoryLogic dir_SetMacFileTypeAndCreator: filename
+	@autoreleasepool {
+        sqInt status = [gDelegateApp.squeakApplication.fileDirectoryLogic dir_SetMacFileTypeAndCreator: filename
 			fileNameSize: filenameSize
 			fType: fType
 			fCreator: fCreator];
 
 	return status;
+    }
 }
 
 sqInt dir_Delimitor(void)
@@ -104,8 +108,10 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
 #define isSymlinkVar nil
 #endif
 {
-    sqInt status = dir_Lookup2(pathString, pathStringLength, index, name, nameLength, creationDate, modificationDate, isDirectory, sizeIfFile,posixPermissionsVar,isSymlinkVar);
-    return status;
+    @autoreleasepool {
+        sqInt status = dir_Lookup2(pathString, pathStringLength, index, name, nameLength, creationDate, modificationDate, isDirectory, sizeIfFile,posixPermissionsVar,isSymlinkVar);
+        return status;
+    }
 }
 
 
@@ -157,7 +163,8 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString
 	/*Implementation notes
 	 if pathStringLength = 0 then we use the current working directory
 	 if pathStringLength > 0 then we resolve the pathString and alias */
-	sqInt status =
+    @autoreleasepool {
+     sqInt status =
 	[gDelegateApp.squeakApplication.fileDirectoryLogic
 				  dir_EntryLookup: pathString 
 						   length: pathStringLength 
@@ -172,21 +179,26 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString
 				 posixPermissions: (PharoVM ? posixPermissionsVar : nil)
 						isSymlink:  (PharoVM ? isSymlinkVar : nil)];
 	return status;
+    }
 }
 
 sqInt dir_Create(char *pathString, sqInt pathStringLength){
 	//API Documented
+        @autoreleasepool {
 	sqInt status = [gDelegateApp.squeakApplication.fileDirectoryLogic
 			dir_Create: pathString 
 			length: pathStringLength];
 	return status;
+        }
 }
 
 sqInt dir_Delete(char *pathString, sqInt pathStringLength){
-	sqInt status = [gDelegateApp.squeakApplication.fileDirectoryLogic
+	    @autoreleasepool {
+            sqInt status = [gDelegateApp.squeakApplication.fileDirectoryLogic
 			dir_Delete: pathString 
 			length: pathStringLength];
 	return status;
+        }
 }
 
 NSString* createFilePathFromString(char * aFilenameString,
@@ -203,13 +215,13 @@ NSString* createFilePathFromString(char * aFilenameString,
 		NSString *newFilePath = [gDelegateApp.squeakApplication.fileDirectoryLogic resolvedAliasFiles: owningDirectoryPath];
 		filePath = [newFilePath stringByAppendingPathComponent: [filePath lastPathComponent]];
 	}
-
 	return filePath;
 }
 
 sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString,
 							  sqInt filenameLength, sqInt resolveAlias) {
 	//API Documented
+    @autoreleasepool {
 	BOOL ok;
 	
 	if (!aCharBuffer || !aFilenameString)
@@ -220,7 +232,7 @@ sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString,
 	ok = [filePath getFileSystemRepresentation: aCharBuffer maxLength: 1000];  
 	//1000 is coded by callers, really should pass in, but historical issue, this also includes null byte which is accounted for by maxLength
 	//Obviously this is a problem that lets a caller do a buffer overflow? 
-	
+    }
 	return 0;
 }
 
