@@ -80,7 +80,7 @@ extern struct VirtualMachine* interpreterProxy;
 - (const char *) getAttribute:(sqInt)indexNumber {
 	//indexNumber is a postive/negative number	
 	if (indexNumber < 0) /* VM argument */ {
-        if (-indexNumber < numVMArgs)
+        if (-indexNumber <= numVMArgs)
 			return (char *) [[self.commandLineArguments objectAtIndex: -indexNumber] cStringUsingEncoding:[self currentVMEncoding]];
 	}
 #if BUILD_FOR_OSX
