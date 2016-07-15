@@ -2982,7 +2982,7 @@ BitBltSimulation >> primitivePixelValueAtX: xVal y: yVal [
 	ppW := 32//depth. "pixels in each word"
 	stride := (width + (ppW  -1)) // ppW. "how many words per row of pixels"
 	bitsSize := interpreterProxy byteSizeOf: bitmap.
-	bitsSize = (stride * height * 4 "bytes per word")
+	bitsSize >= (stride * height * 4 "bytes per word")
 		ifFalse: [^interpreterProxy primitiveFail].
 	word := interpreterProxy fetchLong32:(yVal * stride) + (xVal//ppW) ofObject: bitmap. "load the word that contains our target"
 	mask := 16rFFFFFFFF >> (32 - depth). "make a mask to isolate the pixel within that word"
