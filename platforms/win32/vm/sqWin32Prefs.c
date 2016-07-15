@@ -100,11 +100,12 @@ void SetAllowImageWrite() {
   CheckMenuItem(vmPrefsMenu, ID_IMAGEWRITE, MF_BYCOMMAND | 
 		(ioCanWriteImage() ? MF_CHECKED : MF_UNCHECKED));
 }
-
+#ifndef NO_NETWORK
 void SetAllowSocketAccess() {
   CheckMenuItem(vmPrefsMenu, ID_SOCKETACCESS, MF_BYCOMMAND | 
 		(ioHasSocketAccess() ? MF_CHECKED : MF_UNCHECKED));
 }
+#endif
 
 void SetShowAllocations() {
   CheckMenuItem(vmPrefsMenu, ID_SHOWALLOCATIONS, MF_BYCOMMAND | 
@@ -282,7 +283,9 @@ void SetAllPreferences() {
   SetUseDirectSound();
   SetAllowFileAccess();
   SetAllowImageWrite();
+#ifndef NO_NETWORK
   SetAllowSocketAccess();
+#endif
   SetShowAllocations();
   SetPriorityBoost();
   SetB3DXUsesOpenGL();
@@ -315,8 +318,11 @@ extern sqInt recordPrimTraceFunc();
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_FILEACCESS, 
 	       TEXT("Allow file access"));
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_IMAGEWRITE, 
-	       TEXT("Allow image writes"));    AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_SOCKETACCESS, 
+	       TEXT("Allow image writes"));    
+#ifndef NO_NETWORK
+	AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_SOCKETACCESS, 
 	       TEXT("Allow socket access"));
+#endif
     AppendMenu(pMenu, MF_STRING | MF_POPUP, (sqIntptr_t)hMenu,
 	       TEXT("Security Settings"));
   }
@@ -443,19 +449,19 @@ void HandlePrefsMenu(int cmd) {
     _ioSetImageWrite(!ioCanWriteImage());
     SetAllowImageWrite();
     break;
-  case ID_SOCKETACCESS:
-    _ioSetSocketAccess(!ioHasSocketAccess());
-    SetAllowSocketAccess();
-    break;
   case ID_SHOWALLOCATIONS:
     fShowAllocations = !fShowAllocations;
     SetShowAllocations();
     break;
-  case ID_DBGPRINTSOCKET:
 #ifndef NO_NETWORK
-    win32DebugPrintSocketState();
-#endif
+  case ID_SOCKETACCESS:
+    _ioSetSocketAccess(!ioHasSocketAccess());
+    SetAllowSocketAccess();
     break;
+  case ID_DBGPRINTSOCKET:
+    win32DebugPrintSocketState();
+   break;
+#endif
   case ID_DBGPRINTSTACK:
     printCallStack();
     break;
