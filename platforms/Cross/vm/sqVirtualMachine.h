@@ -318,10 +318,10 @@ typedef struct VirtualMachine {
 /* VMCallbackContext opaque type avoids all including setjmp.h & vmCallback.h */
   sqInt (*sendInvokeCallbackContext)(vmccp);
   sqInt (*returnAsThroughCallbackContext)(int, vmccp, sqInt);
-  long  (*signedMachineIntegerValueOf)(sqInt);
-  long  (*stackSignedMachineIntegerValue)(sqInt);
-  unsigned long  (*positiveMachineIntegerValueOf)(sqInt);
-  unsigned long  (*stackPositiveMachineIntegerValue)(sqInt);
+  sqIntptr_t  (*signedMachineIntegerValueOf)(sqInt);
+  sqIntptr_t  (*stackSignedMachineIntegerValue)(sqInt);
+  usqIntptr_t (*positiveMachineIntegerValueOf)(sqInt);
+  usqIntptr_t (*stackPositiveMachineIntegerValue)(sqInt);
   sqInt	 (*getInterruptPending)(void);
   char  *(*cStringOrNullFor)(sqInt);
   void  *(*startOfAlienData)(sqInt);
