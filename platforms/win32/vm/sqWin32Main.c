@@ -13,6 +13,7 @@
 *****************************************************************************/
 #include <windows.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <fcntl.h> /* _O_BINARY */
 #include <float.h>
@@ -1315,7 +1316,7 @@ extern sqInt suppressHeartbeatFlag;
 extern sqInt desiredCogCodeSize;
 extern int traceFlags;
 extern sqInt traceStores;
-extern unsigned long debugPrimCallStackOffset;
+extern usqIntptr_t debugPrimCallStackOffset;
 extern sqInt maxLiteralCountForCompile;
 extern sqInt minBackwardJumpCountForCompile;
 #endif /* COGVM */
@@ -1643,11 +1644,15 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
   return 0;
 }
 
-static long
-strtobkm(const char *str)
+static sqIntptr_t	
+strtobkm(const char *str)	
 {
 	char *suffix;
-	int value = strtol(str, &suffix, 10);
+#if SQ_HOST64
+	sqIntptr_t value = strtoll(str, &suffix, 10);
+#else
+	sqIntptr_t value = strtol(str, &suffix, 10);
+#endif
 	switch (*suffix) {
 	case 'k': case 'K': value *= 1024; break;
 	case 'm': case 'M': value *= 1024*1024; break;
@@ -1791,8 +1796,8 @@ parseVMArgument(int argc, char *argv[])
 		traceStores = 1;
 		return 1; }
 	else if (!strcmp(argv[0], "-dpcso")) { 
-		extern unsigned long debugPrimCallStackOffset;
-		debugPrimCallStackOffset = (unsigned long)strtobkm(argv[1]);	 
+		extern usqIntptr_t debugPrimCallStackOffset;
+		debugPrimCallStackOffset = (usqIntptr_t) strtobkm(argv[1]);	 
 		return 2; }
 	else if (argc > 1 && !strcmp(argv[0], "-cogmaxlits")) { 
 		extern sqInt maxLiteralCountForCompile;
@@ -1818,12 +1823,12 @@ parseVMArgument(int argc, char *argv[])
 #endif /* COGVM */
 #if SPURVM
     else if (!strcmp(argv[0], "-maxoldspace")) { 
-		extern unsigned long maxOldSpaceSize;
-		maxOldSpaceSize = (unsigned long)strtobkm(argv[1]);	 
+		extern usqInt maxOldSpaceSize;
+		maxOldSpaceSize = (usqInt) strtobkm(argv[1]);	 
 		return 2; }
     else if (!strncmp(argv[0], "-maxoldspace:", 13)) { 
-		extern unsigned long maxOldSpaceSize;
-		maxOldSpaceSize = (unsigned long)strtobkm(argv[0]+13);	 
+		extern usqInt maxOldSpaceSize;
+		maxOldSpaceSize = (usqInt) strtobkm(argv[0]+13);	 
 		return 2; }
 #endif
 
