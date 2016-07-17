@@ -80,7 +80,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
 	windowevent->value2 = boundingRect.top;
 	windowevent->value3 = boundingRect.right;
 	windowevent->value4 = boundingRect.bottom;
-	windowevent->windowIndex =(int) hwnd;
+	windowevent->windowIndex =(sqIntptr_t) hwnd;
     }
     break;
 	
@@ -95,7 +95,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
 	windowevent->value2 = boundingRect.top;
 	windowevent->value3 = boundingRect.right;
 	windowevent->value4 = boundingRect.bottom;
-	windowevent->windowIndex =(int) hwnd;
+	windowevent->windowIndex =(sqIntptr_t) hwnd;
     }
     break;
 
@@ -106,7 +106,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
 	windowevent->type = EventTypeWindow;
 	windowevent->timeStamp = lastMessage ? lastMessage->time : GetTickCount();
 	windowevent->action = WindowEventClose;
-	windowevent->windowIndex =(int) hwnd;
+	windowevent->windowIndex =(sqIntptr_t) hwnd;
     }
     break;
 	
@@ -117,7 +117,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
         windowevent->timeStamp = lastMessage ? lastMessage->time : GetTickCount();
         if (wParam == WA_INACTIVE) windowevent->action = WindowEventIconise;
         else windowevent->action = WindowEventActivated;
-       	windowevent->windowIndex =(int) hwnd;      
+       	windowevent->windowIndex =(sqIntptr_t) hwnd;      
     }
     break; 
     	
@@ -128,7 +128,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
         windowevent->timeStamp = lastMessage ? lastMessage->time : GetTickCount();
         if (IsIconic(hwnd) != 0)windowevent->action = WindowEventIconise;
         else windowevent->action = WindowEventActivated;
-       	windowevent->windowIndex =(int) hwnd;      
+       	windowevent->windowIndex =(sqIntptr_t) hwnd;      
     }
     break;   
  }
@@ -186,7 +186,7 @@ sqInt createWindowWidthheightoriginXyattrlength(sqInt w, sqInt h, sqInt x, sqInt
 			NULL);
 
   /* Force Unicode WM_CHAR */
-  SetWindowLongPtrW(hwnd,GWLP_WNDPROC,(DWORD)HostWndProcW);
+  SetWindowLongPtrW(hwnd,GWLP_WNDPROC,(usqIntptr_t)HostWndProcW);
 
   return (int)hwnd;
 }
