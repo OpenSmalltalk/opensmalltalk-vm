@@ -34,9 +34,9 @@ void *getbaz() { return baz; }
 #include <setjmp.h>
 #include <stdio.h> /* for fprintf(stderr,...) */
 
+#include "sqMemoryAccess.h"
 #include "vmCallback.h"
 #include "sqAssert.h"
-#include "sqMemoryAccess.h"
 #include "sqVirtualMachine.h"
 #include "ia32abi.h"
 
