@@ -50,9 +50,6 @@ if [[ "${APPVEYOR}" ]]; then
 	sed -i 's/EXPORT:=--export-dynamic/#EXPORT:=--export-dynamic/g' $i
     done
 
-    sed -i 's/__BLOB_T_DEFINED/_BLOB_DEFINED/g' platforms/win32/plugins/SocketPlugin/winsock2.h
-
-    sed -i 's/|| defined(WIN32)//g' platforms/Cross/plugins/Mpeg3Plugin/libmpeg/changesForSqueak.c
 else
     PLATFORM="$(uname -s)"
 fi
