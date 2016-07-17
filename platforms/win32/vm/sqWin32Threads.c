@@ -243,7 +243,7 @@ ioInitThreads()
 
 /* this for testing crash dumps */
 static sqInt
-indirect(long p)
+indirect(sqIntptr_t p)
 {
 	if ((p & 2))
 		error("crashInThisOrAnotherThread");
