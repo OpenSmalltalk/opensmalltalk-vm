@@ -64,10 +64,10 @@
 #if defined(STACK_ALIGN_BYTES)
 # if defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__)
 #  if __GNUC__ || __clang__
-#   define getfp() ({ register unsigned long fp;					\
+#   define getfp() ({ register usqIntptr_t fp;					\
 					  asm volatile ("movl %%ebp,%0" : "=r"(fp) : );	\
 					  fp; })
-#   define getsp() ({ register unsigned long sp;					\
+#   define getsp() ({ register usqIntptr_t sp;					\
 					  asm volatile ("movl %%esp,%0" : "=r"(sp) : );	\
 					  sp; })
 #  endif
@@ -76,19 +76,19 @@
 	 * ARM DUI 0041C Page 9-7
 	 */
 #  if __GNUC__
-#   define getfp() ({ unsigned long fp;								\
+#   define getfp() ({ usqIntptr_t fp;								\
 					  asm volatile ("mov %0, %%fp" : "=r"(fp) : );	\
 					  fp; })
-#   define getsp() ({ unsigned long sp;								\
+#   define getsp() ({ usqIntptr_t sp;								\
 					  asm volatile ("mov %0, %%sp" : "=r"(sp) : );	\
 					  sp; })
 #  endif
 # elif __x86_64__
 #  if __GNUC__ || __clang__
-#   define getfp() ({ register unsigned long fp;					\
+#   define getfp() ({ register usqIntptr_t fp;					\
 					  asm volatile ("movq %%rbp,%0" : "=r"(fp) : );	\
 					  fp; })
-#   define getsp() ({ register unsigned long sp;					\
+#   define getsp() ({ register usqIntptr_t sp;					\
 					  asm volatile ("movq %%rsp,%0" : "=r"(sp) : );	\
 					  sp; })
 #  endif
@@ -96,11 +96,11 @@
 #  error define code for your processor here
 # endif
 # if !defined(getfp)
-extern unsigned long (*ceGetFP)(); /* provided by Cogit */
+extern usqIntptr_t (*ceGetFP)(); /* provided by Cogit */
 # define getfp() ceGetFP()
 # endif
 # if !defined(getsp)
-extern unsigned long (*ceGetSP)(); /* provided by Cogit */
+extern usqIntptr_t (*ceGetSP)(); /* provided by Cogit */
 # define getsp() ceGetSP()
 # endif
 # define STACK_ALIGN_MASK (STACK_ALIGN_BYTES-1)
