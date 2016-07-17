@@ -89,7 +89,7 @@ void memoryFree(void *stuff) {
 
 
 
-#if (defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )) || defined(WIN32)
+#if (defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )) || (defined(WIN32) && !defined(__GNUC__))
 #define NEEDSTRFUNCS
 #endif
 
