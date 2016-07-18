@@ -4559,7 +4559,6 @@ void initWindow(char *displayName)
     dndInitialise();
 }
 
-
 void setWindowSize(void)
 {
   int width, height, maxWidth, maxHeight;
@@ -6779,7 +6778,13 @@ int openXDisplay(void)
       initClipboard();
       initWindow(displayName);
       initPixmap();
-      if (inBrowser()) /* if so we will be reparented and mapped by plugin */
+      if (!inBrowser())
+	{
+	  setWindowSize();
+	  XMapWindow(stDisplay, stParent);
+	  XMapWindow(stDisplay, stWindow);
+	}
+      else /* if in browser we will be reparented and mapped by plugin */
 	{
 	  /* tell browser our window */
 #        if defined(DEBUG_BROWSER)
@@ -6798,16 +6803,6 @@ int openXDisplay(void)
       aioHandle(stXfd, xHandler, AIO_RX);
     }
   return 0;
-}
-
-static void
-mapXDisplay(void)
-{
-  if (!inBrowser()) {
-    setWindowSize();
-    XMapWindow(stDisplay, stParent);
-    XMapWindow(stDisplay, stWindow);
-  }
 }
 
 int forgetXDisplay(void)
@@ -7271,7 +7266,6 @@ static void display_winOpen(int argc, char *dropFiles[])
   if (launched)
     exit(0);
 
-  mapXDisplay();
 }
 
 
