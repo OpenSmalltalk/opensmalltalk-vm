@@ -2029,9 +2029,9 @@ parseArguments(int argc, char *argv[])
 int
 isCFramePointerInUse()
 {
-	extern unsigned long CStackPointer, CFramePointer;
+	extern usqIntptr_t CStackPointer, CFramePointer;
 	extern void (*ceCaptureCStackPointers)(void);
-	unsigned long currentCSP = CStackPointer;
+	usqIntptr_t currentCSP = CStackPointer;
 
 	currentCSP = CStackPointer;
 	ceCaptureCStackPointers();

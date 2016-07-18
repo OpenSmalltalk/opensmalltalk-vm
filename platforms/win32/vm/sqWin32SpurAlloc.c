@@ -44,7 +44,7 @@ void *
 sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 {
 	char *hint, *address, *alloc;
-	unsigned long alignment;
+	usqIntptr_t alignment;
 	sqInt allocBytes;
 	SYSTEM_INFO sysInfo;
 
@@ -105,7 +105,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 #define SizeForRelease(bytes) 0
 
 static int
-address_space_used(char *address, unsigned long bytes)
+address_space_used(char *address, usqInt bytes)
 {
 	MEMORY_BASIC_INFORMATION info;
 	int addressSpaceUnused;
@@ -128,7 +128,7 @@ void *
 sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress, sqInt *allocatedSizePointer)
 {
 	char *address, *alloc;
-	long bytes, delta;
+	usqInt bytes, delta;
 
 	address = (char *)roundUpToPage((usqIntptr_t)minAddress);
 	bytes = roundUpToPage(size);
