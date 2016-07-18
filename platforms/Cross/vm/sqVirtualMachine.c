@@ -98,10 +98,10 @@ sqInt  positive64BitIntegerFor(sqLong integerValue);
 usqLong positive64BitValueOf(sqInt oop);
 sqInt  signed64BitIntegerFor(sqLong integerValue);
 sqLong signed64BitValueOf(sqInt oop);
-long  signedMachineIntegerValueOf(sqInt);
-long  stackSignedMachineIntegerValue(sqInt);
-unsigned long  positiveMachineIntegerValueOf(sqInt);
-unsigned long  stackPositiveMachineIntegerValue(sqInt);
+sqIntptr_t   signedMachineIntegerValueOf(sqInt);
+sqIntptr_t   stackSignedMachineIntegerValue(sqInt);
+usqIntptr_t  positiveMachineIntegerValueOf(sqInt);
+usqIntptr_t  stackPositiveMachineIntegerValue(sqInt);
 
 /* InterpreterProxy methodsFor: 'special objects' */
 sqInt characterTable(void);
