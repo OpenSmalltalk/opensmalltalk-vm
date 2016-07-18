@@ -188,7 +188,7 @@ sqInt createWindowWidthheightoriginXyattrlength(sqInt w, sqInt h, sqInt x, sqInt
   /* Force Unicode WM_CHAR */
   SetWindowLongPtrW(hwnd,GWLP_WNDPROC,(usqIntptr_t)HostWndProcW);
 
-  return (int)hwnd;
+  return (sqInt)hwnd;
 }
 
 /* ioShowDisplayOnWindow: similar to ioShowDisplay but adds the int windowIndex
@@ -277,7 +277,7 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
        few extreme conditions - but to compensate for those the
        following is provided. */
     int pitch, start, end, nPix, line, left;
-    int bitsPtr;
+    sqIntptr_t bitsPtr;
 
     /* compute pitch of form */
     pitch = ((width * depth) + 31 & ~31) / 8;
