@@ -102,9 +102,9 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
   queue = dispatch_queue_create("cameraQueue", NULL);
   [captureOutput setSampleBufferDelegate: self queue:queue];
 #define IOS 0
-  if (IOS) {
-    dispatch_release(queue);
-  }
+#if IOS
+  dispatch_release(queue);
+#endif
 		
   // Set the video output to store frame in BGRA (It is supposed to be faster)
   NSString* key = [NSString stringWithCString: "PixelFormatType" encoding: NSASCIIStringEncoding];
@@ -120,9 +120,9 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
     captureSession = NULL;
   }
   captureSession = [[AVCaptureSession alloc] init];
-  if (IOS) {
-    [captureSession autorelease];
-  }
+#if IOS
+  [captureSession autorelease];
+#endif
   [captureSession beginConfiguration]; 
   NSString * preset = AVCaptureSessionPresetMedium;
 
