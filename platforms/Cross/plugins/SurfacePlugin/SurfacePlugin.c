@@ -32,7 +32,7 @@
 #endif
 
 typedef struct SqueakSurface {
-	long handle; /* client supplied handle */
+	usqIntptr_t handle; /* client supplied handle */
 	sqSurfaceDispatch *dispatch;
 } SqueakSurface;
 
