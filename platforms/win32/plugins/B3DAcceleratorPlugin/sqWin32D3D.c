@@ -210,7 +210,7 @@ static int d3dGetSurfaceFormat(LPDIRECTDRAWSURFACE7 lpddSurface,
 }
 
 /* d3dLockSurface: Lock the bits of the surface for BitBlt. */
-static int d3dLockSurface(LPDIRECTDRAWSURFACE7 lpddSurface, 
+static sqIntptr_t d3dLockSurface(LPDIRECTDRAWSURFACE7 lpddSurface, 
 			  int *pitch, int x, int y, int w, int h)
 {
   DDSURFACEDESC2 desc;
@@ -219,7 +219,7 @@ static int d3dLockSurface(LPDIRECTDRAWSURFACE7 lpddSurface,
   hRes = d3dLock(lpddSurface, &desc, 0);
   if(FAILED(hRes)) return 0;
   *pitch = desc.lPitch;
-  return (int) desc.lpSurface;
+  return (sqIntptr_t) desc.lpSurface;
 }
 
 /* d3dUnlockSurface: Unlock the bits of a surface after BitBlt completed. */
@@ -880,7 +880,7 @@ int d3dCreateRendererFlags(int x, int y, int w, int h, int flags) {
     return -1;
   }
   /* register the exposed surface */
-  if(!(*registerSurface)((int)renderer->lpdsTarget, 
+  if(!(*registerSurface)((sqIntptr_t)renderer->lpdsTarget, 
 			 &d3dTargetDispatch, &renderer->surfaceID)) {
     d3dReleaseRenderer(renderer);
     DPRINTF3D(1,(fp,"ERROR: Failed to register rendering target\n"));
@@ -1164,7 +1164,7 @@ int d3dAllocateTexture(int handle, int w, int h, int d) /* return handle or -1 o
   }
 
   /* register texture */
-  if(!(*registerSurface)((int)lpdsTexture, &d3dTextureDispatch, &surfaceID)) {
+  if(!(*registerSurface)((sqIntptr_t)lpdsTexture, &d3dTextureDispatch, &surfaceID)) {
     RELEASE(lpdsTexture);
     DPRINTF3D(1,(fp,"ERROR: Failed to register texture\n"));
     return -1;
