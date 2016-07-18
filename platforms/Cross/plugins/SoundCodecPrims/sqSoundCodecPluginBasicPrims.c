@@ -3852,11 +3852,12 @@ word gsm_FAC[8]	= { 18431, 20479, 22527, 24575, 26623, 28671, 30719, 32767 };
 /* glue functions */
 
 void gsmEncode(
-  long state, long frameCount,
-  long src, long srcIndex, long srcSize,
-  long dst, long dstIndex, long dstSize,
-  long *srcDelta, long *dstDelta) {
-  	long maxSrcFrames, maxDstFrames, srcPtr, dstPtr, i;
+  usqIntptr_t state, sqInt frameCount,
+  usqIntptr_t src, sqInt srcIndex, sqInt srcSize,
+  usqIntptr_t dst, sqInt dstIndex, sqInt dstSize,
+  sqInt *srcDelta, sqInt *dstDelta) {
+  	sqInt maxSrcFrames, maxDstFrames, i;
+	usqIntptr_t srcPtr, dstPtr;
 
 	maxSrcFrames = (srcSize + 1 - srcIndex) / 160;
 	maxDstFrames = (dstSize + 1 - dstIndex) / 33;
@@ -3875,11 +3876,12 @@ void gsmEncode(
 }
 
 void gsmDecode(
-  long state, long frameCount,
-  long src, long srcIndex, long srcSize,
-  long dst, long dstIndex, long dstSize,
-  long *srcDelta, long *dstDelta) {
-  	long maxSrcFrames, maxDstFrames, srcPtr, dstPtr, i;
+  usqIntptr_t state, sqInt frameCount,
+  usqIntptr_t src, sqInt srcIndex, sqInt srcSize,
+  usqIntptr_t dst, sqInt dstIndex, sqInt dstSize,
+  sqInt *srcDelta, sqInt *dstDelta) {
+  	sqInt maxSrcFrames, maxDstFrames, i;
+	usqIntptr_t srcPtr, dstPtr;
 
 	maxSrcFrames = (srcSize + 1 - srcIndex) / 33;
 	maxDstFrames = (dstSize + 1 - dstIndex) / 160;
@@ -3897,11 +3899,11 @@ void gsmDecode(
 	*dstDelta = frameCount * 160;
 }
 
-void gsmInitState(long state) {
+void gsmInitState(usqIntptr_t state) {
 	/* Initialize the given GSM state record. */
 	memset((char *) state, 0, sizeof(struct gsm_state));
 	((gsm) state)->nrp = 40;
 }
 
 	/* Return the size of a GSM state record in bytes. */
-long gsmStateBytes(void) { return sizeof(struct gsm_state); }
+sqInt gsmStateBytes(void) { return sizeof(struct gsm_state); }
