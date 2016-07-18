@@ -31,7 +31,7 @@
 #undef sqImageFileSeek
 #undef sqImageFileWrite
 
-#define sqImageFile unsigned long
+#define sqImageFile usqIntptr_t
 sqInt sqImageFileClose(sqImageFile h);
 sqImageFile sqImageFileOpen(char *fileName, char *mode);
 squeakFileOffsetType sqImageFilePosition(sqImageFile h);
