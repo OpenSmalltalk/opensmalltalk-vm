@@ -413,7 +413,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 	continue; /* need stencil bits */
 
     if(flags & B3D_STEREO)
-      if(pfd.dwFlags & PFD_STEREO == 0)
+      if((pfd.dwFlags & PFD_STEREO) == 0)
 	continue; /* need stereo caps */
 
     if((pfd.dwFlags & PFD_GENERIC_FORMAT) == 0) {
@@ -446,7 +446,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
       }
     }
   }
-  if((goodPFD.nSize == 0)) {
+  if(goodPFD.nSize == 0) {
     /* We didn't find an accellerated driver. */
     DPRINTF3D(3,(fp,"#### WARNING: No accelerated driver found; bailing out\n"));
     goto FAILED;
