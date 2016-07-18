@@ -35,7 +35,7 @@ static int FindHandleInTable(HandleTable *table, HANDLE item) {
 
   if(0 == table->size) return -1; /* so we don't explode below */
   /* Compute initial index */
-  start  = ((unsigned int)item) % table->size;
+  start  = ((usqIntptr_t)item) % table->size;
   /* search from (hash mod size) to end */
   for(index = start; index < table->size; index++) {
     element = data[index];
