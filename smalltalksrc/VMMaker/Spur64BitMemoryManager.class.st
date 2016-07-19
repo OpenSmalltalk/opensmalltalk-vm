@@ -673,11 +673,12 @@ Spur64BitMemoryManager >> isNonIntegerObject: oop [
 { #category : #'interpreter access' }
 Spur64BitMemoryManager >> isSmallFloatValue: aFloat [
 	<inline: true>
+	<var: #rawFloat type: #usqLong>
 	<var: #aFloat type: #double>
 	| exponent rawFloat |
-	rawFloat := self
-					cCode: [(self cCoerce: (self addressOf: aFloat) to: 'sqLong *') at: 0]
-					inSmalltalk: [(aFloat at: 1) << 32 + (aFloat at: 2)].
+	self
+		cCode: [self mem: (self addressOf: rawFloat) cp: (self addressOf: aFloat) y: (self sizeof: rawFloat)]
+		inSmalltalk: [rawFloat := (aFloat at: 1) << 32 + (aFloat at: 2)].
 	exponent := rawFloat >> self smallFloatMantissaBits bitAnd: 16r7FF.
 	^exponent > self smallFloatExponentOffset
 	 	ifTrue: [exponent <= (255 + self smallFloatExponentOffset)]
@@ -1095,6 +1096,8 @@ Spur64BitMemoryManager >> smallFloatBitsOf: oop [
 	 add exponent offset:	[     11 exponent     ][52mantissa][1s] 
 	 rot sign:				[1s][     11 exponent     ][52mantissa]"
 	| rot |
+	<returnTypeC: #usqLong>
+	<var: #rot type: #usqLong>
 	self assert: (self isImmediateFloat: oop).
 	rot := oop asUnsignedInteger >> self numTagBits.
 	rot > 1 ifTrue: "a.k.a. ~= +/-0.0"
@@ -1141,10 +1144,12 @@ Spur64BitMemoryManager >> smallFloatObjectOf: aFloat [
 	<inline: true>
 	<var: #aFloat type: #double>
 	| rawFloat rot |
-	<var: #rot type: #'unsigned long'>
+	<var: #rawFloat type: #usqLong>
+	<var: #rot type: #usqLong>
 	self assert: (self isSmallFloatValue: aFloat).
-	rawFloat := self cCode: [(self cCoerce: (self addressOf: aFloat) to: 'sqLong *') at: 0]
-					inSmalltalk: [(aFloat at: 1) << 32 + (aFloat at: 2)].
+	self
+		cCode: [self mem: (self addressOf: rawFloat) cp: (self addressOf: aFloat) y: (self sizeof: rawFloat)]
+		inSmalltalk: [rawFloat := (aFloat at: 1) << 32 + (aFloat at: 2)].
 	rot := self rotateLeft: rawFloat.
 	rot > 1 ifTrue: "a.k.a. ~= +/-0.0"
 		[rot := rot - (self smallFloatExponentOffset << (self smallFloatMantissaBits + 1)).
@@ -1175,12 +1180,16 @@ Spur64BitMemoryManager >> smallFloatValueOf: oop [
 	 shift away tags:		[ 000 ][8expsubset][52mantissa][1s] 
 	 add exponent offset:	[     11 exponent     ][52mantissa][1s] 
 	 rot sign:				[1s][     11 exponent     ][52mantissa]"
-	| bits |
+	| bits value |
 	<returnTypeC: #double>
+	<var: #value type: #double>
+	<var: #bits type: #usqLong>
 	bits := self smallFloatBitsOf: oop.
-	^self cCode: [(self cCoerce: (self addressOf: bits) to: #'double *') at: 0]
+	self cCode:
+			[self mem: (self addressOf: value) cp: (self addressOf: bits) y: (self sizeof: value).
+			^value]
 		inSmalltalk:
-			[(Float new: 2)
+			[^(Float new: 2)
 				at: 1 put: bits >> 32;
 				at: 2 put: (bits bitAnd: 16rFFFFFFFF);
 				* 1.0 "reduce to SmallFloat64 if possible"]
