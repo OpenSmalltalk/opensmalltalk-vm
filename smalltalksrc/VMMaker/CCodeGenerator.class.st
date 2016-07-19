@@ -741,6 +741,39 @@ CCodeGenerator >> cLiteralForInteger: anInteger hex: aBoolean [
 				ifFalse: [printString]]]
 ]
 
+{ #category : #'C code generator' }
+CCodeGenerator >> cLiteralForUnsignedInteger: anInteger hex: aBoolean longlong: llBoolean [
+	"Answer the string for generating an unsigned literal integer.
+	Use hexadecimal notation as prescribed by aBoolean.
+	Force long long suffix (LL) if the integer does not fit on 32 bits, or if llBoolean is true."
+	
+	| printString |
+	printString := aBoolean
+		ifTrue: [anInteger positive
+			ifTrue: ['0x' , (anInteger printStringBase: 16)]
+			ifFalse: ['-0x' , (anInteger negated printStringBase: 16)]]
+		ifFalse: [anInteger printString].
+	^anInteger positive
+		ifTrue: [(llBoolean or: [anInteger > 16rFFFFFFFF "UINT_MAX"])
+			ifTrue: [printString , 'ULL']
+			ifFalse: [printString , 'U']]
+		ifFalse: [self error: 'please provide positive integer']
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> cLiteralForUnsignedInteger: anInteger longlong: llBoolean [
+	"Answer the string for generating an unsigned literal integer.
+	Eventually use hexadecimal.
+	Force long long suffix (LL) if the integer does not fit on 32 bits, or if llBoolean is true."
+	
+	| hex |
+	hex := (anInteger > 0
+				and: [(anInteger >> anInteger lowBit + 1) isPowerOfTwo
+				and: [(anInteger highBit = anInteger lowBit and: [anInteger > 65536])
+					  or: [anInteger highBit - anInteger lowBit >= 4]]]).
+	^self cLiteralForUnsignedInteger: anInteger hex: hex longlong: llBoolean
+]
+
 { #category : #'error notification' }
 CCodeGenerator >> checkClassForNameConflicts: aClass [
 	"Verify that the given class does not have constant, variable, or method names that conflict with
@@ -2782,37 +2815,60 @@ CCodeGenerator >> generateSharedCodeDirective: msgNode on: aStream indent: level
 
 { #category : #'C translation' }
 CCodeGenerator >> generateShiftLeft: msgNode on: aStream indent: level [
-	"Generate a C bitShift.  If we can determine the result would overflow the word size,
-	 cast to a long long integer. If the receiver is an integer constant make sure its type
-	 is long, since the default type of numeric constants is int, which plays havoc in 64-bits."
-	| rcvr arg valueBeyondInt castToLong |
+	"Generate a C bitShift.  If we can determine the result
+	 would overflow the word size, cast to a long integer."
+	| rcvr arg castToLong type mustCastBackToSign mustCastToUnsigned canSuffixTheConstant typeIsUnsigned |
 	rcvr := msgNode receiver.
 	arg := msgNode args first.
-	valueBeyondInt := 1 bitShift: 32. "The default type of const << N is int."
-	castToLong := vmClass notNil and: [vmClass objectMemoryClass wordSize = 8].
-	castToLong ifFalse:
-		[rcvr constantNumbericValueOrNil ifNotNil:
-			[:rcvrVal|
-			 arg constantNumbericValueOrNil ifNotNil:
-				[:argVal|
-				 castToLong := rcvrVal < valueBeyondInt
-								  and: [(rcvrVal bitShift: argVal) >= valueBeyondInt]]]].
-	castToLong
+	castToLong := false.
+	rcvr constantNumbericValueOrNil ifNotNil:
+		[:rcvrVal |
+		 arg constantNumbericValueOrNil
+			ifNil: [castToLong := vmClass notNil and: [vmClass objectMemoryClass wordSize = 8]]
+			ifNotNil:
+				[:argVal |
+				| valueBeyondInt |
+				valueBeyondInt := 1 bitShift: 32. "The default type of const << N is int."
+				castToLong := rcvrVal < valueBeyondInt
+								  and: [(rcvrVal bitShift: argVal) >= valueBeyondInt]]].
+	canSuffixTheConstant := rcvr isConstant and: [rcvr name isEmpty and: [rcvr value >= 0]].
+	canSuffixTheConstant
 		ifTrue:
-			[(rcvr isConstant and: [rcvr name isEmpty])
-				ifTrue:
-					[self emitCExpression: rcvr on: aStream.
-					 aStream nextPutAll: 'LL']
-				ifFalse:
-					[aStream nextPutAll: '((long)'.
-					 self emitCExpression: rcvr on: aStream.
-					 aStream nextPut: $)]]
-		ifFalse:
-			[self emitCExpression: rcvr on: aStream.
-			 (rcvr isConstant and: [rcvr name isEmpty]) ifTrue:
-				[aStream nextPut: $L]].
-	aStream nextPutAll: ' << '.
-	self emitCExpression: arg on: aStream
+			[aStream nextPutAll: (self cLiteralForUnsignedInteger: rcvr value longlong: castToLong).
+			aStream nextPutAll: ' << '.
+			self emitCExpression: arg on: aStream indent: level.
+			^self].
+	type := self typeFor: rcvr in: currentMethod.
+	castToLong := castToLong and: [(self sizeOfIntegralCType: type) < (self sizeOfIntegralCType: #usqLong)].
+	typeIsUnsigned := type first = $u.
+	mustCastToUnsigned := typeIsUnsigned not
+		or: [castToLong
+		or: [(self sizeOfIntegralCType: type) < (self sizeOfIntegralCType: #usqInt)]].
+	mustCastBackToSign := typeIsUnsigned not.
+	mustCastBackToSign
+		ifTrue:
+			[| promotedType |
+			promotedType := castToLong
+				ifTrue: [#sqLong]
+				ifFalse: [(self sizeOfIntegralCType: type) < (self sizeOfIntegralCType: #sqInt)
+					ifTrue: [#sqInt]
+					ifFalse: [type]].
+			aStream nextPutAll: '(('; nextPutAll: promotedType; nextPut: $)].
+	mustCastToUnsigned
+		ifTrue:
+			[| unsigned |
+			unsigned := castToLong
+				ifTrue: [#usqLong]
+				ifFalse: [(self sizeOfIntegralCType: type) < (self sizeOfIntegralCType: #usqLong)
+					ifTrue: [#usqInt]
+					ifFalse: [self unsignedTypeForIntegralType: type]].
+			aStream nextPutAll: '(('; nextPutAll: unsigned; nextPutAll: ')('].
+	self emitCExpression: rcvr on: aStream indent: level.
+	mustCastToUnsigned ifTrue: [aStream nextPut: $)].
+		aStream nextPutAll: ' << '.
+		self emitCExpression: arg on: aStream indent: level.
+	mustCastToUnsigned ifTrue: [aStream nextPut: $)].
+	mustCastBackToSign ifTrue: [aStream nextPut: $)].
 ]
 
 { #category : #'C translation' }
