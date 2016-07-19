@@ -1642,6 +1642,10 @@ ioDrainEventQueue(void)
 }
 #endif /* NewspeakVM */
 
+double ioScreenScaleFactor(void)
+{
+    return 1.0;
+}
 
 /* returns the size of the Squeak window */
 sqInt ioScreenSize(void)

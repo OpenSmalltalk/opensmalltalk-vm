@@ -45,20 +45,21 @@
     BOOL forceUpdateFlush;
 }
 
-- (sqInt) ioScreenSize;
-- (sqInt) ioScreenDepth;
-- (sqInt) ioHasDisplayDepth: (sqInt) depth;
-- (void)  ioForceDisplayUpdate;
-- (void)  ioSetFullScreen: (sqInt) fullScreen;
-- (int)   ioShowDisplayOnWindow: (unsigned char*) dispBitsIndex
-                          width: (int) width
-                         height: (int) height
-                          depth: (int) depth
-                      affectedL: (int) affectedL
-                      affectedR: (int) affectedR
-                      affectedT: (int) affectedT
-                      affectedB: (int) affectedB
-                    windowIndex: (int) windowIndex;
+- (double) ioScreenScaleFactor;
+- (sqInt)  ioScreenSize;
+- (sqInt)  ioScreenDepth;
+- (sqInt)  ioHasDisplayDepth: (sqInt) depth;
+- (void)   ioForceDisplayUpdate;
+- (void)   ioSetFullScreen: (sqInt) fullScreen;
+- (int)    ioShowDisplayOnWindow: (unsigned char*) dispBitsIndex
+                           width: (int) width
+                          height: (int) height
+                           depth: (int) depth
+                       affectedL: (int) affectedL
+                       affectedR: (int) affectedR
+                       affectedT: (int) affectedT
+                       affectedB: (int) affectedB
+                     windowIndex: (int) windowIndex;
 - (id) getMainView;
 - (void) ioForceDisplayUpdateFlush: (NSTimer*)theTimer;
 - (id) getMainViewOnWindow;
