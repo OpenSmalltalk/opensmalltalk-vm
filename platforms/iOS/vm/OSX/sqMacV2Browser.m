@@ -57,10 +57,6 @@ sqInt browserGetWindowSize(void) {
 	return 0;
 }
 
-double browserGetWindowScaleFactor(voud) {
-	return 1.0;
-}
-
 BOOL browserWasHeadlessButMadeFullScreen() {
 	return gSqueakBrowserWasHeadlessButMadeFullScreen;
 }

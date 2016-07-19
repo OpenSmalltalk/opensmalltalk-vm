@@ -83,19 +83,15 @@ void MyProviderReleaseData (
     return self;
 }
 
-- (double) ioScreenScaleFactor {
-    return (double)[gDelegateApp.window backingScaleFactor];
-}
-
 - (sqInt) ioScreenSize {
 	sqInt w, h;
 	
 #if BUILD_FOR_OSX
-		NSRect
+		NSRect screenSize = [gDelegateApp.mainView bounds];
 #else
-		CGRect
+		CGRect screenSize = [gDelegateApp.mainView bounds];
 #endif
-    screenSize = [gDelegateApp.mainView sqScreenSize];
+		
 		w = (sqInt) screenSize.size.width;
 		h = (sqInt) screenSize.size.height;
 

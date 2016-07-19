@@ -872,11 +872,6 @@ ioHasDisplayDepth(sqInt depth) {
 	return false;
 }
 
-double
-ioSceenScaleFactor(void) {
-    return 1.0;
-}
-
 sqInt
 ioScreenDepth(void) {
     GDHandle mainDevice;

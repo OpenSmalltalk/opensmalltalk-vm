@@ -1642,19 +1642,6 @@ ioDrainEventQueue(void)
 }
 #endif /* NewspeakVM */
 
-double ioScreenScaleFactor(void)
-{
-    double factor = 1.0;
-    int logicalHeight = 0;
-    int physicalHeight = 0;
-    HDC dc = GetDC(stWindow);
-    if (!dc) return 1.0; /* fallback */
-    logicalHeight = GetDeviceCaps(dc, VERTRES);
-    physicalHeight = GetDeviceCaps(dc, DESKTOPVERTRES);
-    factor = (double) physicalHeight / (double) logicalHeight;
-    ReleaseDC(stWindow, dc);
-    return factor;
-}
 
 /* returns the size of the Squeak window */
 sqInt ioScreenSize(void)

@@ -522,10 +522,6 @@ int ioProcessEvents(void) {
 	return interruptPending;
 }
 
-double ioScreenScaleFactor(void) {
-	return 1.0;
-}
-
 int ioScreenSize(void) {
 	/* return the screen size as two positive 16-bit integers packed into a 32-bit integer */
 	int w = 10, h = 10;

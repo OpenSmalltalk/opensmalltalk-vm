@@ -85,8 +85,6 @@
 -(NSMutableArray *)filterOutSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info;
 -(NSMutableArray *)filterSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info;
 -(void) drawThelayers;
--(NSRect) sqScreenSize;
--(NSPoint) sqMousePosition: (NSEvent*)theEvent;
 @end
 
 #import	"SqViewClut.h"

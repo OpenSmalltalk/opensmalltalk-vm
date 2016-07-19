@@ -4928,11 +4928,6 @@ static sqInt display_ioScreenDepth(void)
 }
 
 
-static double display_ioScreenScaleFactor(void)
-{
-  return 1.0;
-}
-
 /* returns the size of the Squeak window */
 static sqInt display_ioScreenSize(void)
 {

@@ -234,7 +234,6 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth,
 		  double hScale, double vScale, sqInt landscapeFlag);
 sqInt ioSetFullScreen(sqInt fullScreen);
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds);
-double ioScreenScaleFactor(void);
 sqInt ioScreenSize(void);
 sqInt ioScreenDepth(void);
 sqInt ioSeconds(void);
