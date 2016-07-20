@@ -130,7 +130,8 @@ Class {
 SpurGenerationScavenger class >> declareCVarsIn: aCCodeGenerator [
 	#(eden futureSpace pastSpace) do:
 		[:var| aCCodeGenerator var: var type: #SpurNewSpaceSpace].
-	aCCodeGenerator var: #rememberedSet type: #'sqInt *'
+	aCCodeGenerator var: #rememberedSet type: #'sqInt *'.
+	aCCodeGenerator var: #tenuringProportion type: #double
 ]
 
 { #category : #translation }
@@ -1252,7 +1253,7 @@ SpurGenerationScavenger >> scavengerTenuringThreshold [ "(Slang flattens so need
 
 { #category : #accessing }
 SpurGenerationScavenger >> scavengerTenuringThreshold: aProportion [ "(Slang flattens so need unique selectors)"
-	<var: 'aProportion' type: #float>
+	<var: 'aProportion' type: #double>
 	tenuringProportion := aProportion.
 	tenureThreshold := aProportion = 0.0
 							ifTrue: [0]
