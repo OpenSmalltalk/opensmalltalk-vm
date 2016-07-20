@@ -1,5 +1,5 @@
 #############################################################################
-# COmmon Makefile for Win32 VM using gcc-3.4.x, cygwin and gnu make
+# COmmon Makefile for Win32 VM using gcc, cygwin and gnu make
 # Do make init to allow make -n to function.
 #############################################################################
 
@@ -109,85 +109,11 @@ ETOBJ:= $(OBJDIR)/etext.o
 DXDIR:=     $(PLATDIR)/win32/third-party/dx9sdk/Include
 
 #############################################################################
-# C compiler settings (gcc-3.4.4 cygwin 19.24)
+# Toolchain
 #
-CC:=gcc
-
-# VM config flags.
-ifeq ($(CONFIGURATION),product)
-OFLAGS:= -D_MT -O2 -march=pentium4 -momit-leaf-frame-pointer -funroll-loops
-NDEBUG:=-DNDEBUG -D'VM_LABEL(foo)=0' # Define NDEBUG for production to exclude asserts
-DEBUGVM=0
-else ifeq ($(CONFIGURATION),assert)
-OFLAGS:= -D_MT -O1 -march=pentium4 -fno-omit-frame-pointer
-DEBUGVM=0
-NDEBUG:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
-else
-OFLAGS:= -D_MT -march=pentium4
-DEBUGVM=1
-NDEBUG:=-DAllocationCheckFiller=0xADD4E55 -D'VM_LABEL(foo)=0'
-endif
-
-ifeq ($(THREADING),multi)
-COGDEFS:=-DCOGMTVM=1 -DDEBUGVM=$(DEBUGVM)
-else
-COGDEFS:=-DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
-endif
-
-# Set minimum version to WindowsXP (see /cygwin/usr/include//w32api/w32api.h)
-WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
-
-INCLUDEPATH:= -isystem/usr/include/mingw -I/usr/include/w32api
-# define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
-NOBUILTIN:= -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
-CFLAGS:= $(INCLUDEPATH) -msse2 -ggdb2 -mwindows -mthreads -mno-cygwin -mwin32 \
-	-mno-rtd -mms-bitfields -mno-accumulate-outgoing-args $(OFLAGS) $(NOBUILTIN)
-TZ:=$(shell date +%Z)
-DEFS:=	$(COGDEFS) $(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
-		-DNO_SERVICE -DNO_STD_FILE_SUPPORT -D'TZ="$(TZ)"' \
-		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' -DX86 $(XDEFS) $(CROQUET)
-XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN
+include ../common/Makefile.tools
+ 
 INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) -I$(DXDIR) $(XINC)
-
-#############################################################################
-# Linker settings
-#
-# Note: I had to use 'gcc' instead of 'ld' to prevent unresolved symbols
-#       The switch '-mwindows' gives us a GUI app instead of a console app.
-#		Newer cygwins want --export-all-symbols in place of --export-dynamic.
-#
-LD:=	 $(CC)
-EXPORT:=--export-dynamic
-#EXPORT:=--export-all-symbols
-BASELDFLAGS:=-mno-cygwin -mthreads -Wl,--large-address-aware,$(EXPORT) -L/usr/lib/mingw
-LDFLAGS:= -mwindows $(BASELDFLAGS)
-CONSOLELDFLAGS:= -mconsole $(BASELDFLAGS)
-STDLIBS:= -lddraw -ldinput -lopengl32 -lwsock32 -lcomdlg32 -lole32 -lwinmm \
-	-lversion -lwininet -luser32 -lgdi32 -lpsapi -lkernel32 -lcrtdll \
-	-ldsound -lsecur32
-
-#############################################################################
-# Tools to use
-#
-AR:= ar rc
-CP:= cp
-RM:= rm
-DLLTOOL:=	dlltool
-DLLWRAP:=	dllwrap
-STRIP:=	strip
-OBJCOPY:=	objcopy
-
-#############################################################################
-# RC settings
-#
-# Note: RC compiles the .rc files into linkable .o files
-#
-RC:=	 windres
-SVNMAJOR := $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: \([0-9][0-9][0-9][0-9]\).*/\\1/p" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h | sed -e 's/^0*//')
-SVNMINOR := $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h | sed -e 's/^0*//')
-SVNREV := $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]\).*/\\1/p" -e "s/^0*//" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h | sed -e 's/^0*//')
-SVNBUILD := $(shell sed -e "s/^static.*GitRawRevisionString.*Rev: [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]\([0-9][0-9]*\).*/\\1/p" -e "s/^0*//" -e d $(PLATDIR)/Cross/vm/sqSCCSVersion.h | sed -e 's/^0*//')
-RCFLAGS:= --include-dir $(PLATDIR)/win32/misc -D_WIN32 -DFILEVERSIONVALUES=$(SVNMAJOR),$(SVNMINOR),$(SVNREV),$(SVNBUILD) '-DFILEVERSIONSTRING=\"$(SVNMAJOR).$(SVNMINOR).$(SVNREV).$(SVNBUILD)\\0\"'
 
 .SUFFIXES:
 .SUFFIXES:	.ccg .cc .c .o .s .i .rc .res .cg .hg .ccg .cpp
@@ -266,10 +192,10 @@ print-objects:
 	@echo -----------------------------------------------------
 
 mingw32ver.exe: $(WIN32UTILDIR)/mingw32ver.c
-	$(CC) -o $@ -O1 -mconsole -mno-cygwin $<
+	$(CC) -o $@ -O1 -mconsole -m32 $<
 
 mkNamedPrims.exe: $(WIN32UTILDIR)/mkNamedPrims.c
-	$(CC) -o $@ -mconsole -mno-cygwin $<
+	$(CC) -o $@ -mconsole -m32 $<
 
 $(BTOBJ):	$(WIN32MISCDIR)/btext.c
 	$(CC) -c -o $@ -fomit-frame-pointer -O2 $<
@@ -283,13 +209,13 @@ $(VMEXE): $(OBJDIR) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
 	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -o $(VMEXE) \
 			$(BTOBJ) $(VMOBJ) $(VMEXP) $(OBJDIR)/resource.o $(LIBS) $(STDLIBS) $(ETOBJ)
-	nm --numeric-sort --defined-only -f bsd $(VMEXE) >$(VMMAP)
+	$(NM) --numeric-sort --defined-only -f bsd $(VMEXE) >$(VMMAP)
 
 $(CONSOLEVMEXE): $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
 	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
 	$(LD) $(CONSOLELDFLAGS) -o $(CONSOLEVMEXE) \
 			$(BTOBJ) $(VMOBJ) $(VMEXP) $(OBJDIR)/resource.o $(LIBS) $(STDLIBS) $(ETOBJ)
-	nm --numeric-sort --defined-only -f bsd $(CONSOLEVMEXE) >$(CONSOLEVMMAP)
+	$(NM) --numeric-sort --defined-only -f bsd $(CONSOLEVMEXE) >$(CONSOLEVMMAP)
 
 ifneq ($STRIPEXE,)
 $(STRIPEXE): $(VMEXE)

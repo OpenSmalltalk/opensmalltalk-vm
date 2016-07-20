@@ -13,5 +13,5 @@ INCLUDES+=-I../bochsx64 \
          -I../../processors/IA32/bochs \
 		 -I../../processors/IA32/bochs/instrument/stubs
 
-CFLAGS:=	-m32 -mno-cygwin -DWIN32 -msse2 -ggdb2 -mwindows -mthreads -mwin32 \
-			-mno-rtd -mms-bitfields -mno-accumulate-outgoing-args
+CFLAGS:=	-m32 -DWIN32 -msse2 -ggdb2  \
+			-mno-rtd -mms-bitfields 
