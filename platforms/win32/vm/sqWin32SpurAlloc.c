@@ -160,12 +160,12 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 			DWORD lastError = GetLastError();
 #if 0 /* Can't report this without making the system unusable... */
 			sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-						"Unable to VirtualAlloc committed memory at desired address (%d bytes requested at %p, above %p), Error: %ul",
+						"Unable to VirtualAlloc committed memory at desired address (%" PRIuSQINT " bytes requested at %p, above %p), Error: %lu",
 						bytes, address, minAddress, lastError);
 #else
 			if (fIsConsole)
 				fprintf(stderr,
-						"Unable to VirtualAlloc committed memory at desired address (%d bytes requested at %p, above %p), Error: %ul\n",
+						"Unable to VirtualAlloc committed memory at desired address (%" PRIuSQINT " bytes requested at %p, above %p), Error: %lu\n",
 						bytes, address, minAddress, lastError);
 #endif
 			return 0;
@@ -175,7 +175,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		 */
 		if (alloc && !VirtualFree(alloc, SizeForRelease(bytes), MEM_RELEASE))
 			sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
-						"Unable to VirtualFree committed memory (%d bytes requested), Error: %ul",
+						"Unable to VirtualFree committed memory (%" PRIuSQINT " bytes requested), Error: %ul",
 						bytes, GetLastError());
 		address += delta;
 	}
@@ -190,7 +190,7 @@ sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
 {
 	if (!VirtualFree(addr, SizeForRelease(sz), MEM_RELEASE))
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
-					"Unable to VirtualFree committed memory (%d bytes requested), Error: %ul",
+					"Unable to VirtualFree committed memory (%" PRIuSQINT " bytes requested), Error: %ul",
 					sz, GetLastError());
 }
 

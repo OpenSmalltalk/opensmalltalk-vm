@@ -2148,7 +2148,7 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
   bmi = BmiForDepth(depth);
   if(!bmi)
     {
-      warnPrintf(TEXT("Color depth %d not supported"), depth);
+      warnPrintf(TEXT("Color depth %" PRIdSQINT " not supported"), depth);
       return false;
     }
 
@@ -2470,8 +2470,8 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-    warnPrintf(TEXT("width=%d,height=%d,bits=%X,dc=%X\n"),
-	       width, height, dispBits,dc);
+    warnPrintf(TEXT("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQINT ",dc=%" PRIXSQINT "\n"),
+	       width, height, dispBits,(usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */
 #ifndef NO_BYTE_REVERSAL

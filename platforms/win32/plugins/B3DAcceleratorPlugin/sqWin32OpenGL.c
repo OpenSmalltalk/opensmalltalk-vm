@@ -172,7 +172,7 @@ static HWND glCreateClientWindow(HWND parentWindow, int x, int y, int w, int h)
 static void printPFD(PIXELFORMATDESCRIPTOR *pfd, int lvl)
 {
   /* Print the pixel format for information purposes */
-  DPRINTF3D(lvl,(fp,"flags (%d): ", pfd->dwFlags));
+  DPRINTF3D(lvl,(fp,"flags (%lu): ", pfd->dwFlags));
   if(pfd->dwFlags & PFD_DRAW_TO_WINDOW) 
     DPRINTF3D(lvl, (fp, "PFD_DRAW_TO_WINDOW "));
   if(pfd->dwFlags & PFD_DRAW_TO_BITMAP) 

@@ -323,8 +323,8 @@ static int acceptHandler(privateSocketStruct *pss)
 /*****************************************************************************
  ****************************************************************************/
 static void debugPrintSocket(privateSocketStruct *pss) {
-  printf("### Socket [%x]\n", pss);
-  printf("\tHandle: %x\n", pss->s);
+  printf("### Socket [%p]\n", pss);
+  printf("\tHandle: %" PRIxSQPTR "\n", pss->s);
   printf("\tType: %d\n", pss->sockType);
   printf("\tState: %x", pss->sockState & SOCK_PUBLIC_MASK);
   if(pss->sockState & SOCK_DATA_READABLE)
@@ -347,9 +347,9 @@ static void debugPrintSocket(privateSocketStruct *pss) {
     }
     printf("\tPending accepts: %d\n",n);
   }
-  printf("\tRead Watcher Op: %d\n", pss->readWatcherOp);
-  printf("\tWrite Watcher Op: %d\n",pss->writeWatcherOp);
-  printf("\tClose pending: %d\n",pss->closePending);
+  printf("\tRead Watcher Op: %lu\n", pss->readWatcherOp);
+  printf("\tWrite Watcher Op: %lu\n",pss->writeWatcherOp);
+  printf("\tClose pending: %lu\n",pss->closePending);
   printf("\tIn read select: %d\n", pss->readSelect);
   printf("\tIn write select: %d\n", pss->writeSelect);
 }

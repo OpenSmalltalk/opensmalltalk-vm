@@ -56,7 +56,7 @@ int verboseLevel = 1;
 extern int verboseLevel;
 #endif
 
-#define ERROR_CHECK if(FAILED(hRes)) { DPRINTF3D(2, (fp, "Error (%x) in %s, line %d\n", hRes, __FILE__, __LINE__))}
+#define ERROR_CHECK if(FAILED(hRes)) { DPRINTF3D(2, (fp, "Error (%lx) in %s, line %d\n", hRes, __FILE__, __LINE__))}
 
 /*****************************************************************************/
 /*****************************************************************************/
@@ -166,26 +166,26 @@ static HRESULT d3dLock(LPDIRECTDRAWSURFACE7 lpdd, DDSURFACEDESC2 *ddsd,
 	 DDLOCK_NOSYSLOCK | DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL);
   if(!FAILED(hRes)) return DD_OK;
   if(printWarnings)
-    DPRINTF3D(3,(fp,"WARNING: Failed to lock surface using DDLOCK_NOSYSLOCK | DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT (errCode=%X)\n",hRes));
+    DPRINTF3D(3,(fp,"WARNING: Failed to lock surface using DDLOCK_NOSYSLOCK | DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT (errCode=%lX)\n",hRes));
   hRes = lpdd->lpVtbl->
     Lock(lpdd, NULL, ddsd, DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT, NULL);
   if(!FAILED(hRes)) return DD_OK;
   if(printWarnings)
-    DPRINTF3D(3,(fp,"WARNING: Failed to lock surface using DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT (errCode=%X)\n",hRes));
+    DPRINTF3D(3,(fp,"WARNING: Failed to lock surface using DDLOCK_SURFACEMEMORYPTR | DDLOCK_WAIT (errCode=%lX)\n",hRes));
   hRes = lpdd->lpVtbl->Lock(lpdd, NULL, ddsd, DDLOCK_WAIT, NULL);
   if(!FAILED(hRes)) return DD_OK;
   if(printWarnings)
-    DPRINTF3D(3,(fp,"WARNING: Failed to lock surface using DDLOCK_WAIT (errCode=%X)\n",hRes));
+    DPRINTF3D(3,(fp,"WARNING: Failed to lock surface using DDLOCK_WAIT (errCode=%lX)\n",hRes));
   /* Wait until the blt completed */
   do {
     hRes = lpdd->lpVtbl->GetBltStatus(lpdd, DDGBS_ISBLTDONE);
   } while(hRes == DDERR_WASSTILLDRAWING);
   if(FAILED(hRes)) {
-    DPRINTF3D(3,(fp,"WARNING: Blt not completed on surface (errCode=%X)\n",hRes));
+    DPRINTF3D(3,(fp,"WARNING: Blt not completed on surface (errCode=%lX)\n",hRes));
   }
   hRes = lpdd->lpVtbl->Lock(lpdd, NULL, ddsd, 0, NULL);
   if(!FAILED(hRes)) return DD_OK;
-  DPRINTF3D(1,(fp,"ERROR: Failed to lock surface using (errCode=%X)\n",hRes));
+  DPRINTF3D(1,(fp,"ERROR: Failed to lock surface using (errCode=%lX)\n",hRes));
   return hRes;
 }
 
@@ -199,7 +199,7 @@ static int d3dGetSurfaceFormat(LPDIRECTDRAWSURFACE7 lpddSurface,
   desc.dwSize = sizeof(DDSURFACEDESC2);
   hRes = lpddSurface->lpVtbl->GetSurfaceDesc(lpddSurface, &desc);
   if(FAILED(hRes)) {
-    DPRINTF3D(1,(fp,"ERROR: Failed to obtain surface descriptor (d3dGetSurfaceFormat) (errCode=%X)\n",hRes));
+    DPRINTF3D(1,(fp,"ERROR: Failed to obtain surface descriptor (d3dGetSurfaceFormat) (errCode=%lX)\n",hRes));
     return 0;
   }
   *width = desc.dwWidth;
@@ -230,7 +230,7 @@ static int d3dUnlockSurface(LPDIRECTDRAWSURFACE7 lpddSurface,
 
   hRes = lpddSurface->lpVtbl->Unlock(lpddSurface, NULL);
   if(FAILED(hRes)) {
-    DPRINTF3D(1,(fp,"ERROR: Failed to unlock surface (d3dUnlockSurface) (errCode=%X)\n",hRes));
+    DPRINTF3D(1,(fp,"ERROR: Failed to unlock surface (d3dUnlockSurface) (errCode=%lX)\n",hRes));
     return 0;
   }
   return 1;
@@ -418,8 +418,8 @@ HRESULT CALLBACK EnumZBufferCallback(DDPIXELFORMAT *ddpf, LPVOID lParam)
   DDPIXELFORMAT* dest = (DDPIXELFORMAT*)lParam;
 
   DPRINTF3D(3,(fp, "### New Z-Buffer format:\n"));
-  DPRINTF3D(3,(fp, "flags: %x\n", ddpf->dwFlags));
-  DPRINTF3D(3,(fp, "depth: %d\n", ddpf->dwZBufferBitDepth));
+  DPRINTF3D(3,(fp, "flags: %lx\n", ddpf->dwFlags));
+  DPRINTF3D(3,(fp, "depth: %ld\n", ddpf->dwZBufferBitDepth));
   if(ddpf->dwFlags != DDPF_ZBUFFER) 
     D3DENUMRET_OK; /* not a z-buffer */
   if(!dest->dwSize) {
@@ -460,10 +460,10 @@ HRESULT CALLBACK EnumTextureCallback(DDPIXELFORMAT *ddpf, LPVOID lParam)
   /* Check for 16 bit textures */
   if((ddpf->dwRGBBitCount == 16) && (ddpf->dwFlags & DDPF_RGB)) {
     DPRINTF3D(3,(fp, "\nTexture: 16bit RGB\n"));
-    DPRINTF3D(3,(fp, "Red mask: %x\n", ddpf->dwRBitMask));
-    DPRINTF3D(3,(fp, "Green mask: %x\n", ddpf->dwGBitMask));
-    DPRINTF3D(3,(fp, "Blue mask: %x\n", ddpf->dwBBitMask));
-    DPRINTF3D(3,(fp, "Alpha mask: %x\n", ddpf->dwRGBAlphaBitMask));
+    DPRINTF3D(3,(fp, "Red mask: %lx\n", ddpf->dwRBitMask));
+    DPRINTF3D(3,(fp, "Green mask: %lx\n", ddpf->dwGBitMask));
+    DPRINTF3D(3,(fp, "Blue mask: %lx\n", ddpf->dwBBitMask));
+    DPRINTF3D(3,(fp, "Alpha mask: %lx\n", ddpf->dwRGBAlphaBitMask));
     if((ddpf->dwFlags & DDPF_ALPHAPIXELS) && 
        ddpf->dwRBitMask	== 0x0F00 && 
        ddpf->dwGBitMask	== 0x00F0 && 
@@ -505,10 +505,10 @@ HRESULT CALLBACK EnumTextureCallback(DDPIXELFORMAT *ddpf, LPVOID lParam)
   /* Check for 32bit textures */
   if( (ddpf->dwRGBBitCount == 32) && (ddpf->dwFlags & DDPF_RGB)) {
     DPRINTF3D(3,(fp, "\nTexture: 32bit RGB\n"));
-    DPRINTF3D(3,(fp, "Red mask: %x\n", ddpf->dwRBitMask));
-    DPRINTF3D(3,(fp, "Green mask: %x\n", ddpf->dwGBitMask));
-    DPRINTF3D(3,(fp, "Blue mask: %x\n", ddpf->dwBBitMask));
-    DPRINTF3D(3,(fp, "Alpha mask: %x\n", ddpf->dwRGBAlphaBitMask));
+    DPRINTF3D(3,(fp, "Red mask: %lx\n", ddpf->dwRBitMask));
+    DPRINTF3D(3,(fp, "Green mask: %lx\n", ddpf->dwGBitMask));
+    DPRINTF3D(3,(fp, "Blue mask: %lx\n", ddpf->dwBBitMask));
+    DPRINTF3D(3,(fp, "Alpha mask: %lx\n", ddpf->dwRGBAlphaBitMask));
     if(ddpf->dwRBitMask == 0x00FF0000 && 
        ddpf->dwGBitMask == 0x0000FF00 && 
        ddpf->dwBBitMask == 0x000000FF) {
@@ -556,19 +556,19 @@ static void d3dPrintMemoryInformation(void)
   ddsCaps.dwCaps = DDSCAPS_VIDEOMEMORY;
   hRes = lpDD->lpVtbl->GetAvailableVidMem(lpDD, &ddsCaps, &dwTotal, &dwFree);
   ERROR_CHECK;
-  DPRINTF3D(3,(fp,"Video memory: %d (available total) %d (available free)\n",
+  DPRINTF3D(3,(fp,"Video memory: %lu (available total) %lu (available free)\n",
 	     dwTotal, dwFree));
   dwTotal = dwFree = 0;
   ddsCaps.dwCaps = DDSCAPS_TEXTURE;
   hRes = lpDD->lpVtbl->GetAvailableVidMem(lpDD, &ddsCaps, &dwTotal, &dwFree);
   ERROR_CHECK;
-  DPRINTF3D(3,(fp,"Texture memory: %d (available total) %d (available free)\n",
+  DPRINTF3D(3,(fp,"Texture memory: %lu (available total) %lu (available free)\n",
 	     dwTotal, dwFree));
   dwTotal = dwFree = 0;
   ddsCaps.dwCaps = DDSCAPS_ZBUFFER;
   hRes = lpDD->lpVtbl->GetAvailableVidMem(lpDD, &ddsCaps, &dwTotal, &dwFree);
   ERROR_CHECK;
-  DPRINTF3D(3,(fp,"Z-Buffer memory: %d (available total) %d (available free)\n",
+  DPRINTF3D(3,(fp,"Z-Buffer memory: %lu (available total) %lu (available free)\n",
 	     dwTotal, dwFree));
 }
 
@@ -682,18 +682,18 @@ int d3dInitializeRenderer(d3dRenderer *renderer) {
   displayDesc.dwSize = sizeof(displayDesc);
   hRes = lpDD->lpVtbl->GetDisplayMode(lpDD, &displayDesc);
   if(FAILED(hRes)) {
-    DPRINTF3D(1,(fp, "ERROR: Failed to get current display mode (errCode=%X)\n",hRes));
+    DPRINTF3D(1,(fp, "ERROR: Failed to get current display mode (errCode=%lX)\n",hRes));
     goto cleanup;
   }
-  DPRINTF3D(3,(fp,"Current display width: %d\n",displayDesc.dwWidth));
-  DPRINTF3D(3,(fp,"Current display height: %d\n",displayDesc.dwHeight));
-  DPRINTF3D(3,(fp,"Current display depth: %d\n",displayDesc.ddpfPixelFormat.dwRGBBitCount));
+  DPRINTF3D(3,(fp,"Current display width: %lu\n",displayDesc.dwWidth));
+  DPRINTF3D(3,(fp,"Current display height: %lu\n",displayDesc.dwHeight));
+  DPRINTF3D(3,(fp,"Current display depth: %lu\n",displayDesc.ddpfPixelFormat.dwRGBBitCount));
   /* Set the display depth bit */
   switch(displayDesc.ddpfPixelFormat.dwRGBBitCount) {
   case 16: dwDisplayBitDepth = DDBD_16; break;
   case 32: dwDisplayBitDepth = DDBD_32; break;
   default:
-    DPRINTF3D(1,(fp, "ERROR: Display depth %d is not supported\n", 
+    DPRINTF3D(1,(fp, "ERROR: Display depth %lu is not supported\n", 
 	       displayDesc.ddpfPixelFormat.dwRGBBitCount));
     goto cleanup; /* we only deal with 16-32 bit */
   };
@@ -755,7 +755,7 @@ int d3dInitializeRenderer(d3dRenderer *renderer) {
   hRes = lpDD->lpVtbl->CreateSurface(lpDD, &ddsd, &lpdsZBuffer, NULL);
   if (FAILED(hRes)) {
     /* Scond try in system memory */
-    DPRINTF3D(2,(fp,"WARNING: Failed to create VRAM z-buffer (errCode=%X)\n",hRes));
+    DPRINTF3D(2,(fp,"WARNING: Failed to create VRAM z-buffer (errCode=%lX)\n",hRes));
     ddsd.ddsCaps.dwCaps = DDSCAPS_ZBUFFER | DDSCAPS_SYSTEMMEMORY;
     hRes = lpDD->lpVtbl->CreateSurface(lpDD, &ddsd, &lpdsZBuffer, NULL);
   }
@@ -1410,7 +1410,7 @@ int d3dSwapRendererBuffers(int handle) /* return true on success, false on error
 	if(!fClipperAttached) {
 	  hRes = lpddPrimary->lpVtbl->SetClipper(lpddPrimary, lpddClipper);
 	  if(FAILED(hRes)) {
-	    DPRINTF3D(2,(fp,"WARNING: Failed to attach clipper (errCode=%X)\n",hRes));
+	    DPRINTF3D(2,(fp,"WARNING: Failed to attach clipper (errCode=%lX)\n",hRes));
 	  } else {
 	    fClipperAttached = 1;
 	  }
@@ -1420,7 +1420,7 @@ int d3dSwapRendererBuffers(int handle) /* return true on success, false on error
 	if(fClipperAttached) {
 	  hRes = lpddPrimary->lpVtbl->SetClipper(lpddPrimary, NULL);
 	  if(FAILED(hRes)) {
-	    DPRINTF3D(2,(fp,"WARNING: Failed to detach clipper (errCode=%X)\n",hRes));
+	    DPRINTF3D(2,(fp,"WARNING: Failed to detach clipper (errCode=%lX)\n",hRes));
 	  } else {
 	    fClipperAttached = 0;
 	  }
@@ -1431,7 +1431,7 @@ int d3dSwapRendererBuffers(int handle) /* return true on success, false on error
 	 (meaning there's lots of stuff to clip). Attach it. */
       hRes = lpddPrimary->lpVtbl->SetClipper(lpddPrimary, lpddClipper);
       if(FAILED(hRes)) {
-	DPRINTF3D(2,(fp,"WARNING: Failed to attach clipper (errCode=%X)\n",hRes));
+	DPRINTF3D(2,(fp,"WARNING: Failed to attach clipper (errCode=%lX)\n",hRes));
       } else {
 	fClipperAttached = 1;
       }
@@ -1486,7 +1486,7 @@ int d3dSwapRendererBuffers(int handle) /* return true on success, false on error
       BltFast(lpddPrimary, dstRect.left, dstRect.top, 
 	      lpddSurface, &dxRect, DDBLTFAST_WAIT | DDBLTFAST_NOCOLORKEY);
     if(FAILED(hRes)) {
-      DPRINTF3D(2,(fp,"WARNING: IDirectDrawSurface::BltFast() failed (errCode=%X)\n",hRes));
+      DPRINTF3D(2,(fp,"WARNING: IDirectDrawSurface::BltFast() failed (errCode=%lX)\n",hRes));
     }
   }
   if(fClipperAttached || FAILED(hRes)) {
@@ -1496,7 +1496,7 @@ int d3dSwapRendererBuffers(int handle) /* return true on success, false on error
       Blt(lpddPrimary,&dstRect,lpddSurface, &dxRect, DDBLT_WAIT, NULL);
   }
   if(FAILED(hRes)) {
-    DPRINTF3D(1,(fp,"ERROR: Failed to blt to primary surface (errCode=%X)\n",hRes));
+    DPRINTF3D(1,(fp,"ERROR: Failed to blt to primary surface (errCode=%lX)\n",hRes));
     return 0;
   }
 #if 0

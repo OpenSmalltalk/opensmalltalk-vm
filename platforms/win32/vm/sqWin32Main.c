@@ -51,6 +51,9 @@ extern void printPhaseTime(int);
 /* Import from sqWin32Alloc.c */
 LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp);
 
+/* Import from sqWin32Window.c */
+char * GetAttributeString(int id);
+
 /* forwarded declaration */
 static void printCrashDebugInformation(LPEXCEPTION_POINTERS exp);
 
@@ -465,7 +468,7 @@ void gatherSystemInfo(void) {
   GetSystemInfo(&sysInfo);
 
   /* Set up the win32VersionName */
-  sprintf(tmpString, "%d.%d", osInfo.dwMajorVersion, osInfo.dwMinorVersion);
+  sprintf(tmpString, "%lu.%lu", osInfo.dwMajorVersion, osInfo.dwMinorVersion);
   win32VersionName = _strdup(tmpString);
 
   ZeroMemory(&memStat, sizeof(memStat));
@@ -503,16 +506,16 @@ void gatherSystemInfo(void) {
 	    "Hardware information: \n"
 	    "\tManufacturer: %s\n"
 	    "\tModel: %s\n"
-	    "\tNumber of processors: %d\n"
-	    "\tPage size: %d\n"
+	    "\tNumber of processors: %lu\n"
+	    "\tPage size: %lu\n"
 	    "\nMemory Information (upon launch):\n"
-	    "\tPhysical Memory Size: %d kbytes\n"
-	    "\tPhysical Memory Free: %d kbytes\n"
-	    "\tPage File Size: %d kbytes\n"
-	    "\tPage File Free: %d kbytes\n"
-	    "\tVirtual Memory Size: %d kbytes\n"
-	    "\tVirtual Memory Free: %d kbytes\n"
-	    "\tMemory Load: %d percent\n",
+	    "\tPhysical Memory Size: %" PRIuSQPTR " kbytes\n"
+	    "\tPhysical Memory Free: %" PRIuSQPTR " kbytes\n"
+	    "\tPage File Size: %" PRIuSQPTR " kbytes\n"
+	    "\tPage File Free: %" PRIuSQPTR " kbytes\n"
+	    "\tVirtual Memory Size: %" PRIuSQPTR " kbytes\n"
+	    "\tVirtual Memory Free: %" PRIuSQPTR " kbytes\n"
+	    "\tMemory Load: %lu percent\n",
 	    manufacturer, model,
 	    sysInfo.dwNumberOfProcessors,
 	    sysInfo.dwPageSize,
@@ -522,8 +525,7 @@ void gatherSystemInfo(void) {
 	    memStat.dwAvailPageFile / 1024,
 	    memStat.dwTotalVirtual / 1024,
 	    memStat.dwAvailVirtual / 1024,
-	    memStat.dwMemoryLoad,
-	    0);
+	    memStat.dwMemoryLoad);
   }
 
   /* find more information about each processor */
@@ -557,7 +559,7 @@ void gatherSystemInfo(void) {
       sprintf(tmp,
 	      "\nProcessor %d: %s\n"
 	      "\tIdentifier: %s\n"
-	      "\t~MHZ: %d\n",
+	      "\t~MHZ: %lu\n",
 	      proc, nameString, identifier, mhz);
       RegCloseKey(hk);
     }
@@ -569,7 +571,6 @@ void gatherSystemInfo(void) {
     char owner[256];
     char company[256];
     char product[256];
-    char productid[256];
 
     if(osInfo.dwPlatformId == VER_PLATFORM_WIN32_NT) {
       strcpy(keyName, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion");
@@ -591,13 +592,13 @@ void gatherSystemInfo(void) {
     }
 
     sprintf(tmpString,
-	    "Operating System: %s (Build %d %s)\n"
+	    "Operating System: %s (Build %lu %s)\n"
 	    "\tRegistered Owner: %s\n"
 	    "\tRegistered Company: %s\n"
 	    "\tSP major version: %d\n"
 	    "\tSP minor version: %d\n"
-	    "\tSuite mask: %lx\n"
-	    "\tProduct type: %lx\n",
+	    "\tSuite mask: %x\n"
+	    "\tProduct type: %x\n",
 	    product, 
 	    osInfo.dwBuildNumber, osInfo.szCSDVersion,
 	    owner, company,
@@ -636,7 +637,6 @@ void gatherSystemInfo(void) {
     char biosString[256];
     char chipType[256];
     char dacType[256];
-    char version[256];
     char *drivers, *drv;
     WCHAR buffer[256];
     DWORD memSize;
@@ -696,7 +696,7 @@ void gatherSystemInfo(void) {
 	      "\tBios String: %s\n"
 	      "\tChip Type: %s\n"
 	      "\tDAC Type: %s\n"
-	      "\tMemory Size: 0x%.8X\n",
+	      "\tMemory Size: 0x%.8lX\n",
 	      deviceDesc,
 	      adapterString,
 	      biosString,
@@ -938,7 +938,7 @@ extern char *__cogitBuildInfo;
     fflush(f);
     fprintf(f,"\n"
 	    "Current byte code: %d\n"
-	    "Primitive index: %d\n",
+	    "Primitive index: %" PRIdSQINT "\n",
 	    getCurrentBytecode(),
 	    methodPrimitiveIndex());
     fflush(f);
@@ -971,7 +971,7 @@ error(char *msg) {
   TCHAR crashInfo[1024];
   void *callstack[MAXFRAMES];
   symbolic_pc symbolic_pcs[MAXFRAMES];
-  int i, nframes;
+  int nframes;
   int inVMThread = ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread());
 
   if (inError)
@@ -1056,7 +1056,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 { 
   void *callstack[MAXFRAMES];
   symbolic_pc symbolic_pcs[MAXFRAMES];
-  int i, nframes, inVMThread;
+  int nframes, inVMThread;
   TCHAR crashInfo[1024];
   FILE *f;
   int byteCode = -2;
@@ -1129,14 +1129,16 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
     fprintf(f,"---------------------------------------------------------------------\n");
     fprintf(f,"%s\n", ctime(&crashTime));
     /* Print the exception code */
-    fprintf(f,"Exception code: %08X\nException addr: %08X\n",
+    fprintf(f,"Exception code: %08lX\nException addr: %0*" PRIXSQPTR "\n",
 	    exp->ExceptionRecord->ExceptionCode,
-	    exp->ExceptionRecord->ExceptionAddress);
+		(int) sizeof(exp->ExceptionRecord->ExceptionAddress)*2,
+	    (usqIntptr_t) exp->ExceptionRecord->ExceptionAddress);
     if(exp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
-      /* For access violations print what actually happened */
-      fprintf(f,"Access violation (%s) at %08X\n",
-	      (exp->ExceptionRecord->ExceptionInformation[0] ? "write access" : "read access"),
-	      exp->ExceptionRecord->ExceptionInformation[1]);
+		/* For access violations print what actually happened */
+		fprintf(f,"Access violation (%s) at %0*" PRIXSQPTR "\n",
+			(exp->ExceptionRecord->ExceptionInformation[0] ? "write access" : "read access"),
+			(int) sizeof(exp->ExceptionRecord->ExceptionInformation[1])*2,
+			exp->ExceptionRecord->ExceptionInformation[1]);
     }
 #if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
     fprintf(f,"EAX:%08X\tEBX:%08X\tECX:%08X\tEDX:%08X\n",
@@ -1157,17 +1159,17 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 	    exp->ContextRecord->FloatSave.StatusWord,
 	    exp->ContextRecord->FloatSave.TagWord);
 #elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_X64)
-    fprintf(f,"RAX:%016lx\tRBX:%016lx\tRCX:%016lx\tRDX:%016lx\n",
+    fprintf(f,"RAX:%016" PRIxSQPTR "\tRBX:%016" PRIxSQPTR "\tRCX:%016" PRIxSQPTR "\tRDX:%016" PRIxSQPTR "\n",
 	    exp->ContextRecord->Rax,
 	    exp->ContextRecord->Rbx,
 	    exp->ContextRecord->Rcx,
 	    exp->ContextRecord->Rdx);
-    fprintf(f,"RSI:%016lx\tRDI:%016lx\tRBP:%016lx\tRSP:%016lx\n",
+    fprintf(f,"RSI:%016" PRIxSQPTR "\tRDI:%016" PRIxSQPTR "\tRBP:%016" PRIxSQPTR "\tRSP:%016" PRIxSQPTR "\n",
 	    exp->ContextRecord->Rsi,
 	    exp->ContextRecord->Rdi,
 	    exp->ContextRecord->Rbp,
 	    exp->ContextRecord->Rsp);
-    fprintf(f,"RIP:%016lx\tEFL:%08x\n",
+    fprintf(f,"RIP:%016" PRIxSQPTR "\tEFL:%08lx\n",
 	    exp->ContextRecord->Rip,
 	    exp->ContextRecord->EFlags);
     fprintf(f,"FP Control: %08x\nFP Status:  %08x\nFP Tag:     %08x\n",
@@ -1337,7 +1339,6 @@ int
 sqMain(int argc, char *argv[])
 { 
   int virtualMemory;
-  int sz;
 
   /* set default fpu control word */
   _control87(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);

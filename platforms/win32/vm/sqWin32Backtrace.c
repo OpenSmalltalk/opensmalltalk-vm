@@ -465,7 +465,8 @@ compute_exe_symbols(dll_exports *exports)
 		ulong addr;
 		char  type, *symname;
 
-		asserta(sscanf(contents + pos, "%lx %c", &addr, &type) == 2);
+		/* Note: Scan format should better be SCNuSQPTR according to C99, if ever different from print format - but we did not define that macro */
+		asserta(sscanf(contents + pos, "%" PRIxSQPTR " %c", &addr, &type) == 2);
 		symname = strrchr(contents + pos, ' ') + 1;
 		if ((type == 't' || type == 'T')
 		 && strcmp(symname,".text")) {
@@ -601,8 +602,10 @@ printModuleInfo(FILE *f)
 	fprintf(f, "\nModule information:\n");
 	for (i = 0; i < moduleCount; i++) {
 		fprintf(f,
-				"\t%08x - %08x: %s\n", 
-				all_exports[i].info.lpBaseOfDll,
+				"\t%0*" PRIxSQPTR " - %0*" PRIxSQPTR ": %s\n", 
+				(int) sizeof(all_exports[i].info.lpBaseOfDll)*2,
+				(ulong)all_exports[i].info.lpBaseOfDll,
+				(int) sizeof(all_exports[i].info.lpBaseOfDll)*2,
 				((ulong)all_exports[i].info.lpBaseOfDll) + all_exports[i].info.SizeOfImage,
 				all_exports[i].name);
 		fflush(f);
