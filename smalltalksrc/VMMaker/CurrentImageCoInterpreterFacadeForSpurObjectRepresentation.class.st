@@ -198,6 +198,11 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> rememberedBitShift
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> remoteIsInstVarAccess [
+	^ 128
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> shiftForWord [
 	^objectMemory shiftForWord
 ]
