@@ -42,11 +42,17 @@
 /* General Squeak declarations and definitions                              */
 /****************************************************************************/
 
-int setInterruptPending(int);
+/* Import from DropPlugin/sqWin32Drop.c */
+void SetupDragAndDrop(void);
+int dropLaunchFile(char *fileName);
+
+/* Import from VM */
+void setInterruptPending(sqInt);
 sqInt forceInterruptCheck(void);
-int getInterruptKeycode(void);
-int setFullScreenFlag(int);
-extern int deferDisplayUpdates;
+sqInt getInterruptKeycode(void);
+void setFullScreenFlag(sqInt);
+sqInt getSavedWindowSize(void);
+extern sqInt deferDisplayUpdates;
 
 
 /*** Variables -- image and path names ***/

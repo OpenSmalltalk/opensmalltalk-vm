@@ -53,6 +53,14 @@ LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp);
 
 /* Import from sqWin32Window.c */
 char * GetAttributeString(int id);
+void ShowSplashScreen(void);
+void HideSplashScreen(void);
+
+/* Import from sqWin32Heartbeat.c */
+void ioReleaseTime(void);
+
+/* Import from SecurityPlugin/sqWin32Security.c */
+sqInt ioInitSecurity(void);
 
 /* forwarded declaration */
 static void printCrashDebugInformation(LPEXCEPTION_POINTERS exp);

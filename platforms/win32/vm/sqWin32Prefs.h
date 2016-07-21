@@ -33,6 +33,9 @@
 void TrackPrefsMenu(void);
 void CreatePrefsMenu(void);
 void HandlePrefsMenu(int);
+void LoadPreferences(void);
+int prefsEnableAltF4Quit(void);
+int prefsEnableF2Menu(void);
 
 #if COGVM
 # define NICKNAME "Cog"

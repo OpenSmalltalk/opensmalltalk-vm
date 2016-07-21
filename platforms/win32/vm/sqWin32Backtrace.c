@@ -193,10 +193,12 @@ print_backtrace(FILE *f, int nframes, int maxframes,
 
 	fprintf(f, "\nStack backtrace:\n");
 #if COGVM
+	sqInt addressCouldBeObj(sqInt address);
+	sqInt byteSizeOf(sqInt oop);
 	for (i = 0; i < nframes; ++i) {
 		char *name; int namelen;
 		if (addressCouldBeObj((sqInt)symbolic_pcs[i].fnameOrSelector)) {
-			extern void *firstFixedField(sqInt);
+			void *firstFixedField(sqInt);
 			name = firstFixedField((sqInt)symbolic_pcs[i].fnameOrSelector);
 			namelen = byteSizeOf((sqInt)symbolic_pcs[i].fnameOrSelector);
 		}
@@ -290,6 +292,7 @@ get_modules(void)
 	assert(GetModuleHandle(0) == all_exports[0].module);
 	all_exports[0].find_symbol = find_in_exe;
 #if COGVM
+	sqInt nilObject();
 	strcpy(all_exports[moduleCount].name,"CogCode");
 	all_exports[moduleCount].module = (void *)cogCodeBase();
 	all_exports[moduleCount].info.lpBaseOfDll = (void *)cogCodeBase();

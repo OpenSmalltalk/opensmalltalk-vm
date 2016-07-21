@@ -12,7 +12,18 @@
 #include <ole2.h>
 #include "sq.h"
 
+/* Import from VM */
 extern struct VirtualMachine *interpreterProxy;
+
+/* Import from generated plugin AioPlugin/AioPlugin.c or FilePlugin/FilePlugin.c or Win32OSProcessPlugin/Win32OSProcessPlugin.c
+   KNOWN LIMITATION: one and only one of these plugin should be internal... */
+usqInt fileRecordSize(void);
+void * fileValueOf(sqInt objectPointer);
+
+/* Import from FilePlugin/sqWin32FilePrims.c */
+sqInt sqFileOpen(void *f, char* fileNameIndex, sqInt fileNameSize, sqInt writeFlag);
+
+/* Import from sqWin32Window.c */
 extern HWND stWindow;
 
 #if 0
@@ -752,7 +763,7 @@ int dropRequestFileHandle(int dropIndex) {
   char *dropName = dropRequestFileName(dropIndex);
   if(!dropName)
     return interpreterProxy->nilObject();
-  fileHandle = instantiateClassindexableSize(classByteArray(), fileRecordSize());
+  fileHandle = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), fileRecordSize());
   wasBrowserMode = fBrowserMode;
   fBrowserMode = false;
   sqFileOpen(fileValueOf(fileHandle),(sqInt)dropName, strlen(dropName), 0);

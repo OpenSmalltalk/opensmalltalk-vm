@@ -3,6 +3,9 @@
 #include "sq.h"
 #include "../plugins/FilePlugin/FilePlugin.h"
 
+/* from VM */
+sqInt methodArgumentCount(void);
+
 #ifdef DO_DPRINTF
 #define DPRINTF(x) DPRINTF x
 #else

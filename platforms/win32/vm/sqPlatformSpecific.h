@@ -57,6 +57,8 @@ size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
 error "Not Win32!"
 #endif /* WIN32 */
 
+int ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y);
+
 /* poll and profile thread priorities.  The stack vm uses a thread to cause the
  * VM to poll for I/O, check for delay expiry et al at regular intervals.  Both
  * VMs use a thread to sample the pc for VM profiling.  The poll thread needs

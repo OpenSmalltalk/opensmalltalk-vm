@@ -19,6 +19,22 @@ void HandlePrefsMenu(int) {}
 #include "sq.h"
 #include "sqWin32Prefs.h"
 
+/* from SecurityPlugin/sqWin32Security.c */
+int ioHasFileAccess();
+int ioHasSocketAccess();
+int _ioSetFileAccess(int enable);
+int _ioSetImageWrite(int enable);
+int _ioSetSocketAccess(int enable);
+
+/* from SocketPlugin/sqWin32NewNet.c */
+int win32DebugPrintSocketState();
+
+/* from sqWin32Window.c */
+void SetTheDefaultPrinter();
+
+/* from VM */
+void printCallStack(void);
+void printAllStacks(void);
 
 /* VM preference variables */
 extern TCHAR squeakIniName[]; /* full path and name to ini file */
