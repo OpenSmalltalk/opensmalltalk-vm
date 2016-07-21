@@ -21,34 +21,12 @@ if [[ "${APPVEYOR}" ]]; then
 
     # Appveyor's GCC is pretty new, patch the Makefiles and replace the tools to
     # make it work
-    for i in gcc ar dlltool dllwrap strip objcopy nm windres; do
-	OLD=$(which $i)
-	NEW=$(which i686-w64-mingw32-$i)
-	if [[ -z $OLD ]]; then
-	    OLD=/usr/bin/$i
-	    echo "No $i, setting..."
-	fi
-	echo "Setting $OLD as $NEW"
-	rm $OLD
-	ln -s $NEW $OLD
-    done
 
     echo
-    echo "Using gcc $(gcc --version)"
+    echo "Using gcc $(i686-w64-mingw32-gcc --version)"
     echo
     test -d /usr/i686-w64-mingw32/sys-root/mingw/lib || echo "No lib dir"
     test -d /usr/i686-w64-mingw32/sys-root/mingw/include || echo "No inc dir"
-
-    for i in build.win32x86/common/Makefile build.win32x86/common/Makefile.plugin; do
-	sed -i 's#-L/usr/lib/mingw#-L/usr/i686-w64-mingw32/sys-root/mingw/lib#g' $i
-	sed -i 's#INCLUDEPATH:=.*#INCLUDEPATH:= -I/usr/i686-w64-mingw32/sys-root/mingw/include#g' $i
-	# sed -i 's/-fno-builtin-fprintf/-fno-builtin-fprintf -fno-builtin-bzero/g' $i
-	sed -i 's/-lcrtdll/-lmsvcrt -lws2_32/g' $i
-	sed -i 's/-mno-accumulate-outgoing-args/-maccumulate-outgoing-args -mstack-arg-probe/g' $i
-	sed -i 's/-mno-cygwin//g' $i
-	sed -i 's/#EXPORT:=--export-all-symbols/EXPORT:=--export-all-symbols/g' $i
-	sed -i 's/EXPORT:=--export-dynamic/#EXPORT:=--export-dynamic/g' $i
-    done
 
 else
     PLATFORM="$(uname -s)"

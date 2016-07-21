@@ -37,6 +37,9 @@ platforms/unix/config/autom4te.cache/
 !makeallclean
 !makealldirty
 !Makefile
+!Makefile.plugin
+!Makefile.rules
+!Makefile.tools
 !makeproduct
 !makeproductclean
 !mkNamedPrims.sh

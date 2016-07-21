@@ -15,10 +15,9 @@ CXXINCLUDES:= -I$(PLATDIR)/../processors/IA32/winbochs \
 			  -I$(PLATDIR)/../processors/IA32/bochs \
 			  -I$(PLATDIR)/../processors/IA32/bochs/instrument/stubs
 
-CXXFLAGS:=	-m32 -mno-cygwin -DWIN32 -msse2 -ggdb2 -mwindows -mthreads -mwin32 \
-			-mno-rtd -mms-bitfields -mno-accumulate-outgoing-args
+CXXFLAGS:=	-m32 -DWIN32 -msse2 -ggdb2 \
+			-mno-rtd -mms-bitfields
 
 .cpp.o:
 		$(CXX) -c $(CXXFLAGS) $(CXXINCLUDES) $<
 
-CXX:=g++

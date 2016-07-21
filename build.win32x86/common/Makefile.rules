@@ -1,33 +1,23 @@
 #############################################################################
-# Compilation rules for Mac OS X
+# Compilation rules for Microsoft Windows
 #
 # See http://make.mad-scientist.net/papers/advanced-auto-dependency-generation
 # for an explanation of the dependency management scheme.
-
-# gcc 3.4.x
-# Note: I had to use 'gcc' instead of 'ld' to prevent unresolved symbols
-#       The switch '-mwindows' gives us a GUI app instead of a console app.
-#		Newer cygwins want --export-all-symbols in place of --export-dynamic.
-#
-CC := gcc
-CXX:= g++
-LD := $(CC)
-LDCXX := clang++ # For linking c++ bundles
 
 DEPFLAGS = -MT $@ -MMD -MP -MF deps/$(*F).Td
 ALLFLAGS = $(DEPFLAGS) $(CFLAGS) $(INCLUDES) $(DEFS)
 POSTCOMPILE = sed '/^$$/d' <deps/$(*F).Td | sed '/^.*:$$/d' | sed 's/ [^ ]*:/:/' | sed 's/^build[^/]*/$$(BUILD)/' > deps/$(*F).d; rm deps/$(*F).Td; touch -r $< deps/$(*F).d
 
 $(OBJDIR)/%.o: %.c deps/%.d
-	$(CC) -x c $(ALLFLAGS) $(INCLUDES) -c $< -o $@
+	$(CC) -x c $(ALLFLAGS) -c $< -o $@
 	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o: %.m deps/%.d
-	$(CC) -x objective-c $(ALLFLAGS) $(INCLUDES) -c $< -o $@
+	$(CC) -x objective-c $(ALLFLAGS) -c $< -o $@
 	$(POSTCOMPILE)
 
 $(OBJDIR)/%.o: %.cpp deps/%.d
-	$(CXX) $(ALLFLAGS) $(INCLUDES) -c $< -o $@
+	$(CXX) $(ALLFLAGS) -c $< -o $@
 	$(POSTCOMPILE)
 
 %res: %.rc
@@ -43,4 +33,3 @@ deps/%.d: ;
 #.cpp.o:
 #		$(CXX) -c $(CXXFLAGS) $(CXXINCLUDES) $<
 #
-#CXX:=g++
