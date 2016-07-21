@@ -866,7 +866,7 @@ void SetupStderr()
 static void
 dumpStackIfInMainThread(FILE *optionalFile)
 {
-	extern int printCallStack(void);
+	extern void printCallStack(void);
 
 	if (!optionalFile) {
 		if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {

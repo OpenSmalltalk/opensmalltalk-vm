@@ -77,8 +77,8 @@ char            gSqueakUntrustedDirectoryName[PATH_MAX];
 char            gSqueakTrustedDirectoryName[PATH_MAX];
 int				blockOnError=0;
 
-extern sqInt printAllStacks(void);
-extern sqInt printCallStack(void);
+extern void printAllStacks(void);
+extern void printCallStack(void);
 extern void dumpPrimTraceLog(void);
 extern BOOL NSApplicationLoad(void);
 extern void pushOutputFile(char *);
