@@ -1,0 +1,15 @@
+.Set Cabinet=ON
+.Set CabinetNameTemplate=files.cab
+.Set Compress=ON
+.Set CompressionType=LZX
+.Set DiskDirectoryTemplate=
+.Set MaxDiskSize=0
+.Set RptFileName=nul
+.Set InfFileName=nul
+.Set UniqueFiles=ON
+; Sequence of files in cabinet must be same as sequence in File table
+; see http://msdn.microsoft.com/en-us/library/windows/desktop/aa368596(v=vs.85).aspx
+@@VM_EXECUTABLE@@
+@@VM_EXECUTABLE_MANIFEST@@
+index.html index.html
+@@VM_EXECUTABLE_MAP@@

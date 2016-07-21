@@ -1,0 +1,62 @@
+# Version should follow the Windows convention (0-255.0-255.0-65535)
+# For the prototype, use YY.MM.DDNN (NN should come from the image
+# name, e.g., nsboot-20YY-MM-DD.NN.image)
+# For Cog would like to use YY.MMDD.SVN where SVN is the Subversion checkin
+# id taken from platforms/Cross/vm/sqSCCSVersion.h.  But that doesn't fit
+# the 0-255 field.  So use YY.WW.SVN where WW is the week number.
+#VERSION:= 07.11.0101
+SVNREV  := $(shell grep '\$Rev: ' ../../../platforms/Cross/vm/sqSCCSVersion.h | sed 's/.*$Rev: \([0-9][0-9]*\).*/\1/' )
+#VERSION:= $(shell date +%y.%m%d.$(SVNREV))
+VERSION := $(shell date +%y.%U.$(SVNREV))
+
+# Base name of the executable (.exe is appended on Windows)
+ifndef VM_BASE_NAME
+VM_BASE_NAME := nsvm
+endif
+
+# Product name as compiled into the executable and installers
+ifndef PRODUCT_NAME
+PRODUCT_NAME := Newspeak Spur Virtual Machine
+endif
+
+# Base name of the installer (.msi is appended on Windows)
+ifndef INSTALLER_BASE_NAME
+INSTALLER_BASE_NAME := $(VM_BASE_NAME)-spur
+endif
+
+# Where to install the product (relative to C:/Program Files on
+# Windows, /Applications on Mac, and not used on Linux)
+ifndef BRAND_DIR
+BRAND_DIR := $(PRODUCT_NAME)
+endif
+
+# Used for Desktop/menubar shortcuts
+ifndef VM_LOCALIZED_NAME
+VM_LOCALIZED_NAME := $(PRODUCT_NAME)
+endif
+
+ifndef MANUFACTURER
+MANUFACTURER := Cadence Design Systems, Inc.
+endif
+
+ifndef PROJECT_REVERSE_DOMAIN
+PROJECT_REVERSE_DOMAIN := org.newspeakplatform
+endif
+
+ifndef INSTALLER_BACKGROUND
+INSTALLER_BACKGROUND := InstallerBackground
+endif
+
+ifndef INSTALLER_ICON
+INSTALLER_ICON := VolumeIcon
+endif
+
+# DO NOT use the same GUID for other projects.  If you base a
+# different project on this file, generate a new GUID using uuidgen
+# from Microsoft Windows SDK (no-cost download).  For reasons beyond
+# comprehension, most tools generate GUIDs in lowercase.  However,
+# Windows Installer insists that GUIDs must be UPPER CASE, so be sure
+# to supply the /c option to uuidgen.
+ifndef GUID_UPGRADE_CODE
+$(warning GUID_UPGRADE_CODE not provided)
+endif
