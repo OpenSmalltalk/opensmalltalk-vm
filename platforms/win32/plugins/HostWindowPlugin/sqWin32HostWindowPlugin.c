@@ -12,6 +12,9 @@
 #include "sq.h"
 #include "HostWindowPlugin.h"
 
+/* Import from sqWin32Window.c */
+int recordMouseEvent(MSG *msg, UINT nrClicks);
+int recordKeyboardEvent(MSG *msg);
 sqInputEvent *sqNextEventPut();
 
 BITMAPINFO *BmiForDepth(int depth);
@@ -36,7 +39,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
   /*  mousing */
 
   case WM_MOUSEMOVE:
-      recordMouseEvent(lastMessage);
+      recordMouseEvent(lastMessage,0);
       break;
 
   case WM_LBUTTONDOWN:
@@ -44,7 +47,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
   case WM_MBUTTONDOWN:
     if(GetFocus() != hwnd) SetFocus(hwnd);
     SetCapture(hwnd); /* capture mouse input */
-      recordMouseEvent(lastMessage);
+      recordMouseEvent(lastMessage,1);
       break;
 
   case WM_LBUTTONUP:
@@ -52,7 +55,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
   case WM_MBUTTONUP:
     if(GetFocus() != hwnd) SetFocus(hwnd);
     ReleaseCapture(); /* release mouse capture */
-      recordMouseEvent(lastMessage);
+      recordMouseEvent(lastMessage,1);
       break;
 
 
