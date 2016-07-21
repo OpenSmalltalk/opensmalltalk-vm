@@ -1510,10 +1510,10 @@ StackToRegisterMappingCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 				 self SubR: ra R: TempReg.
 				 objectRepresentation genAddSmallIntegerTagsTo: TempReg.
 				 self MoveR: TempReg R: ra].
-		[2]	->	[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ra.
-				 self MoveCq: (objectMemory integerValueOf: val) R: TempReg.
+		[2]	->	[objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ra.
+				 self MoveCq: untaggedVal R: TempReg.
 				 self MulR: TempReg R: ra.
-				 objectRepresentation genAddSmallIntegerTagsTo: ra].
+				 objectRepresentation genSetSmallIntegerTagsIn: ra].
 
 		"2016 through 2019, bitAnd:, bitOr:, bitXor, bitShift:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 		[16] -> [ self AndCq: val R: ra ].
@@ -1603,9 +1603,9 @@ StackToRegisterMappingCogit >> genBinaryVarOpConstInlinePrimitive: prim [
 		[1]	->	[self SubCq: untaggedVal R: rr ].
 		[2]	->	[self flag: 'could use MulCq:R'.
 				 objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: rr.
-				 self MoveCq: (objectMemory integerValueOf: val) R: TempReg.
+				 self MoveCq: untaggedVal R: TempReg.
 				 self MulR: TempReg R: rr.
-				 objectRepresentation genAddSmallIntegerTagsTo: rr].
+				 objectRepresentation genSetSmallIntegerTagsIn: rr].
 
 		"2016 through 2019, bitAnd:, bitOr:, bitXor, bitShift:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 		[16] -> [ self AndCq: val R: rr ].
@@ -1658,10 +1658,10 @@ StackToRegisterMappingCogit >> genBinaryVarOpVarInlinePrimitive: prim [
 				 self AddR: ra R: rr].
 		[1]	->	[self SubR: ra R: rr.
 				 objectRepresentation genAddSmallIntegerTagsTo: rr].
-		[2]	->	[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: rr.
-				 objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ra.
+		[2]	->	[self genShiftAwaySmallIntegerTagsInScratchReg: rr.
+				 self genRemoveSmallIntegerTagsInScratchReg: ra.
 				 self MulR: ra R: rr.
-				 objectRepresentation genAddSmallIntegerTagsTo: rr].
+				 self genSetSmallIntegerTagsIn: rr].
 
 		"2016 through 2019, bitAnd:, bitOr:, bitXor, bitShift:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 		[16] -> [ self AndR: ra R: rr ].
@@ -3144,6 +3144,7 @@ StackToRegisterMappingCogit >> genTrinaryInlinePrimitive: prim [
 	self ssPop: 1.
 	objectRepresentation genConvertSmallIntegerToIntegerInReg: ra1.
 	"Now: ra is the variable object, rr is long, TempReg holds the value to store."
+	self flag: #TODO. "This is not really working as the immutability and store check needs to be present. "
 	prim caseOf: {
 		"0 - 1 pointerAt:put: and byteAt:Put:"
 		[0] ->	[ adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
