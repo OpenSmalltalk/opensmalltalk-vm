@@ -126,7 +126,7 @@ typedef struct VirtualMachine {
 	double (*floatValueOf)(sqInt oop);
 	sqInt  (*integerObjectOf)(sqInt value);
 	sqInt  (*integerValueOf)(sqInt oop);
-	sqInt  (*positive32BitIntegerFor)(sqInt integerValue);
+	sqInt  (*positive32BitIntegerFor)(unsigned int integerValue);
 	usqInt (*positive32BitValueOf)(sqInt oop);
 
 	/* InterpreterProxy methodsFor: 'special objects' */
@@ -227,7 +227,7 @@ typedef struct VirtualMachine {
 #   endif
 #  endif
 
-	sqInt  (*positive64BitIntegerFor)(sqLong integerValue);
+	sqInt  (*positive64BitIntegerFor)(usqLong integerValue);
 	usqLong(*positive64BitValueOf)(sqInt oop);
 	sqInt  (*signed64BitIntegerFor)(sqLong integerValue);
 	sqLong (*signed64BitValueOf)(sqInt oop);
