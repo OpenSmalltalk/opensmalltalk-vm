@@ -28,7 +28,7 @@ extern TCHAR squeakIniName[MAX_PATH];
 
 /* imported from sqWin32Main.c */
 extern BOOL fLowRights;  /* started as low integrity process, 
-			need to use alternate untrustedUserDirectory */
+                        need to use alternate untrustedUserDirectory */
 
 /***************************************************************************/
 /***************************************************************************/
@@ -42,9 +42,9 @@ static int testDotDot(TCHAR *pathName, int index) {
   while(pathName[index]) {
     if(pathName[index] == U_DOT[0]) {
       if(pathName[index-1] == U_DOT[0]) {
-	if (pathName[index-2] == U_BACKSLASH[0]) {
-	  return 0; /* Gotcha! */
-	}
+        if (pathName[index-2] == U_BACKSLASH[0]) {
+          return 0; /* Gotcha! */
+        }
       }
     }
     index++;
@@ -55,7 +55,7 @@ static int testDotDot(TCHAR *pathName, int index) {
 static int lstrncmp(TCHAR *s1, TCHAR *s2, int len) {
   int s1Len = lstrlen(s1);
   int s2Len = lstrlen(s2);
-  int max = min(s1Len, (s2Len, len));
+  int max = min(s1Len, min(s2Len, len));
   int i;
   for (i = 0; i < max; i++) {
     if (s1[i] > s2[i]) {
@@ -252,7 +252,7 @@ sqInt ioInitSecurity(void) {
 
   /* Look up shGetFolderPathW */
   shGetFolderPath = (void*)GetProcAddress(LoadLibrary("SHFolder.dll"), 
-					  "SHGetFolderPathW");
+                                          "SHGetFolderPathW");
 
   if(shGetFolderPath) {
     /* If we have shGetFolderPath use My Documents/My Squeak */
@@ -261,11 +261,11 @@ sqInt ioInitSecurity(void) {
     /*shGetfolderPath does not return utf8*/
     if(shGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, widepath) == S_OK) {
        WideCharToMultiByte(CP_ACP,0,widepath,-1,untrustedUserDirectory,
-			  MAX_PATH,NULL,NULL); 
+                          MAX_PATH,NULL,NULL); 
       sz = strlen(untrustedUserDirectory);
       if(untrustedUserDirectory[sz-1] != '\\') 
-	strcat(untrustedUserDirectory, "\\");
-	   lstrcpy(myDocumentsFolder,untrustedUserDirectory);
+        strcat(untrustedUserDirectory, "\\");
+           lstrcpy(myDocumentsFolder,untrustedUserDirectory);
       strcat(untrustedUserDirectory, "My Squeak");
     }
   }
@@ -273,21 +273,21 @@ sqInt ioInitSecurity(void) {
 
   /* Query Squeak.ini for network installations */
   GetPrivateProfileString(TEXT("Security"), TEXT("SecureDirectory"),
-			  secureUserDirectory, secureUserDirectory,
-			  MAX_PATH, squeakIniName);
+                          secureUserDirectory, secureUserDirectory,
+                          MAX_PATH, squeakIniName);
   if(fLowRights) {/* use alternate untrustedUserDirectory */
       GetPrivateProfileString(TEXT("Security"), TEXT("UserDirectoryLow"),
-			  untrustedUserDirectory, untrustedUserDirectory,
-			  MAX_PATH, squeakIniName);
+                          untrustedUserDirectory, untrustedUserDirectory,
+                          MAX_PATH, squeakIniName);
   } else {
       GetPrivateProfileString(TEXT("Security"), TEXT("UserDirectory"),
-			  untrustedUserDirectory, untrustedUserDirectory,
-			  MAX_PATH, squeakIniName);
+                          untrustedUserDirectory, untrustedUserDirectory,
+                          MAX_PATH, squeakIniName);
   }
 
   GetPrivateProfileString(TEXT("Security"), TEXT("ResourceDirectory"),
-			  resourceDirectory, resourceDirectory,
-			  MAX_PATH, squeakIniName);
+                          resourceDirectory, resourceDirectory,
+                          MAX_PATH, squeakIniName);
 
   /* Attempt to read local user settings from registry */
   ok = RegOpenKey(HKEY_CURRENT_USER, HKEY_SQUEAK_ROOT, &hk);
@@ -295,7 +295,7 @@ sqInt ioInitSecurity(void) {
   /* Read the secure directory from the subkey. */
   dwSize = MAX_PATH;
   ok = RegQueryValueEx(hk,"SecureDirectory",NULL, &dwType, 
-		       (LPBYTE) tmp, &dwSize);
+                       (LPBYTE) tmp, &dwSize);
   if(ok == ERROR_SUCCESS) {
     if(tmp[dwSize-2] != '\\') {
       tmp[dwSize-1] = '\\';
@@ -307,7 +307,7 @@ sqInt ioInitSecurity(void) {
   /* Read the user directory from the subkey. */
   dwSize = MAX_PATH;
   ok = RegQueryValueEx(hk,"UserDirectory",NULL, &dwType, 
-		       (LPBYTE) tmp, &dwSize);
+                       (LPBYTE) tmp, &dwSize);
   if(ok == ERROR_SUCCESS) {
     if(tmp[dwSize-2] != '\\') {
       tmp[dwSize-1] = '\\';
@@ -319,7 +319,7 @@ sqInt ioInitSecurity(void) {
   /* Read the resource directory from the subkey. */
   dwSize = MAX_PATH;
   ok = RegQueryValueEx(hk,"ResourceDirectory",NULL, &dwType, 
-		       (LPBYTE) tmp, &dwSize);
+                       (LPBYTE) tmp, &dwSize);
   if(ok == ERROR_SUCCESS) {
     if(tmp[dwSize-2] != '\\') {
       tmp[dwSize-1] = '\\';
