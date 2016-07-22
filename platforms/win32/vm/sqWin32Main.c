@@ -1191,9 +1191,9 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 	    exp->ContextRecord->Rip,
 	    exp->ContextRecord->EFlags);
     fprintf(f,"FP Control: %08x\nFP Status:  %08x\nFP Tag:     %08x\n",
-	    exp->ContextRecord->FloatSave.ControlWord,
-	    exp->ContextRecord->FloatSave.StatusWord,
-	    exp->ContextRecord->FloatSave.TagWord);
+	    exp->ContextRecord->FltSave.ControlWord,
+	    exp->ContextRecord->FltSave.StatusWord,
+	    exp->ContextRecord->FltSave.TagWord);
 #else
 #error "unknown architecture, cannot pick dump registers"
 #endif
