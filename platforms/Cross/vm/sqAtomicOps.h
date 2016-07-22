@@ -28,6 +28,10 @@
  * Only some compilers define LP32 et al.  If not, try to infer from other macros.
  */
 
+#if defined(_MSC_VER)
+#include <windows.h> /* for atomic ops */
+#endif
+
 #if    defined(LP32) || defined(ILP32) \
     || defined(LP64) || defined(ILP64) || defined(LLP64)
 
@@ -160,6 +164,9 @@ AtomicGet(uint64_t *target)
 							: "m" (lo32(value)), "m" (hi32(value)) \
 							: "memory", "eax", "ebx", "ecx", "edx", "cc")
 #  endif /* __SSE2__ */
+#elif defined(_MSC_VER) && (defined (_M_AMD64) || defined(_MX64) || defined(_M_IA64))
+# define get64(variable) variable
+# define set64(variable,value) (variable = value)
 # else /* TARGET_OS_IS_IPHONE elif x86 variants etc */
 
 #if defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
@@ -233,6 +240,15 @@ AtomicGet(uint64_t *target)
 # elif GCC_HAS_BUILTIN_SYNC || defined(__clang__)
 #	define sqAtomicAddConst(var,n) __sync_fetch_and_add((sqInt *)&(var), n)
 # endif
+#elif defined(_MSC_VER)
+#	define sqAtomicAddConst(var,n) do {\
+	if (sizeof(var) == sizeof(int)) \
+		InterlockedAdd(&var,n); \
+	else if (sizeof(var) == 8) \
+		InterlockedAdd64(&var,n); \
+	else \
+		error("no interlocked add for this variable size"); \
+	} while (0)
 #endif
 
 #if !defined(sqAtomicAddConst)
@@ -279,6 +295,9 @@ AtomicGet(uint64_t *target)
 	} while (0)
 # endif
 
+#elif defined(_MSC_VER)
+#	define sqCompareAndSwap(var,old,new) \
+	InterlockedCompareExchange(&(var), new, old)
 #else
 /* Dear implementor, you have choices.  Google atomic compare and swap and you
  * will find a number of alternative implementations.
