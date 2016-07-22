@@ -38,11 +38,11 @@
 #  else /* unknown platform */
 #  endif
 
-#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_X64)
+#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
 
 #  define IS_64_BIT_ARCH 1
 
-#elif defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__) || defined(__arm32__)
+#elif defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__) || defined(__arm32__)
 
 #  define IS_32_BIT_ARCH 1
 

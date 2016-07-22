@@ -1082,7 +1082,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 
 
   TRY {
-#if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
+#if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
   if (inVMThread)
 	ifValidWriteBackStackPointersSaveTo((void *)exp->ContextRecord->Ebp,
 										(void *)exp->ContextRecord->Esp,
@@ -1092,7 +1092,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
   nframes = backtrace_from_fp((void*)exp->ContextRecord->Ebp,
 							callstack+1,
 							MAXFRAMES-1);
-#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_X64)
+#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
   if (inVMThread)
 	ifValidWriteBackStackPointersSaveTo((void *)exp->ContextRecord->Rbp,
 										(void *)exp->ContextRecord->Rsp,
@@ -1148,7 +1148,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 			(int) sizeof(exp->ExceptionRecord->ExceptionInformation[1])*2,
 			exp->ExceptionRecord->ExceptionInformation[1]);
     }
-#if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
+#if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
     fprintf(f,"EAX:%08X\tEBX:%08X\tECX:%08X\tEDX:%08X\n",
 	    exp->ContextRecord->Eax,
 	    exp->ContextRecord->Ebx,
@@ -1166,7 +1166,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 	    exp->ContextRecord->FloatSave.ControlWord,
 	    exp->ContextRecord->FloatSave.StatusWord,
 	    exp->ContextRecord->FloatSave.TagWord);
-#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_X64)
+#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
     fprintf(f,"RAX:%016" PRIxSQPTR "\tRBX:%016" PRIxSQPTR "\tRCX:%016" PRIxSQPTR "\tRDX:%016" PRIxSQPTR "\n",
 	    exp->ContextRecord->Rax,
 	    exp->ContextRecord->Rbx,
@@ -1177,6 +1177,16 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 	    exp->ContextRecord->Rdi,
 	    exp->ContextRecord->Rbp,
 	    exp->ContextRecord->Rsp);
+    fprintf(f,"R8 :%016" PRIxSQPTR "\tR9 :%016" PRIxSQPTR "\tR10:%016" PRIxSQPTR "\tR11:%016" PRIxSQPTR "\n",
+	    exp->ContextRecord->R8,
+	    exp->ContextRecord->R9,
+	    exp->ContextRecord->R10,
+	    exp->ContextRecord->R11);
+    fprintf(f,"R12:%016" PRIxSQPTR "\tR13:%016" PRIxSQPTR "\tR14:%016" PRIxSQPTR "\tR14:%015" PRIxSQPTR "\n",
+	    exp->ContextRecord->R12,
+	    exp->ContextRecord->R13,
+	    exp->ContextRecord->R14,
+	    exp->ContextRecord->R15);
     fprintf(f,"RIP:%016" PRIxSQPTR "\tEFL:%08lx\n",
 	    exp->ContextRecord->Rip,
 	    exp->ContextRecord->EFlags);
@@ -2027,7 +2037,8 @@ parseArguments(int argc, char *argv[])
  * b) answer the amount of stack room to ensure in a Cog stack page, including
  *    the size of the redzone, if any.
  */
-# if defined(i386) || defined(__i386) || defined(__i386__) || defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_X64)
+# if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__) \\
+	|| defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
 /*
  * Cog has already captured CStackPointer  before calling this routine.  Record
  * the original value, capture the pointers again and determine if CFramePointer

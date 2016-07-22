@@ -60,7 +60,7 @@ backtrace(void **retpcs, int nrpcs)
 {
 	void **__fp;
 
-# if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
+# if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
   #if defined(_MSC_VER)
 	__asm {
 		mov EAX, EBP
@@ -71,12 +71,13 @@ backtrace(void **retpcs, int nrpcs)
   #else
   # error "don't know how to derive ebp"
   #endif
-#elif defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_X64)
+#elif defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
   #if defined(_MSC_VER)
-	__asm {
+	/* __asm {
 		mov RAX, RBP
 		mov [__fp], RAX
-	}
+	}*/
+	__fp = (void **) __readgsqword(0x30);
   #elif defined(__GNUC__)
 	asm volatile ("movq %%rbp, %0" : "=r"(__fp) : );
   #else
@@ -96,7 +97,7 @@ backtrace_from_fp(void *startfp, void **retpcs, int nrpcs)
 	NT_TIB *tib;
 	int i = 0;
 
-# if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
+# if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
   #if defined(_MSC_VER)
 	__asm {
 		mov EAX, FS:[18h]
@@ -107,12 +108,13 @@ backtrace_from_fp(void *startfp, void **retpcs, int nrpcs)
   #else
   # error "don't know how to derive tib"
   #endif
-#elif defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_X64)
+#elif defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
   #if defined(_MSC_VER)
-	__asm {
+	/* __asm {
 		mov RAX, GS:[30h]
 		mov [tib], RAX
-	}
+	} */
+	tib = (NT_TIB *) __readgsqword(0x30);
   #elif defined(__GNUC__)
 	asm volatile ("movq %%gs:0x30, %0" : "=r" (tib) : );
   #else
@@ -185,6 +187,12 @@ symbolic_backtrace(int n, void **retpcs, symbolic_pc *spc)
 	return n;
 }
 
+#if COGVM
+	sqInt addressCouldBeObj(sqInt address);
+	sqInt byteSizeOf(sqInt oop);
+	void *firstFixedField(sqInt);
+#endif
+
 void
 print_backtrace(FILE *f, int nframes, int maxframes,
 				void **retpcs, symbolic_pc *symbolic_pcs)
@@ -193,12 +201,9 @@ print_backtrace(FILE *f, int nframes, int maxframes,
 
 	fprintf(f, "\nStack backtrace:\n");
 #if COGVM
-	sqInt addressCouldBeObj(sqInt address);
-	sqInt byteSizeOf(sqInt oop);
 	for (i = 0; i < nframes; ++i) {
 		char *name; int namelen;
 		if (addressCouldBeObj((sqInt)symbolic_pcs[i].fnameOrSelector)) {
-			void *firstFixedField(sqInt);
 			name = firstFixedField((sqInt)symbolic_pcs[i].fnameOrSelector);
 			namelen = byteSizeOf((sqInt)symbolic_pcs[i].fnameOrSelector);
 		}
@@ -237,11 +242,15 @@ static dll_exports *all_exports = 0;
 
 static int
 expcmp(const void *a, const void *b)
-{ return ((dll_exports *)a)->info.lpBaseOfDll - ((dll_exports *)b)->info.lpBaseOfDll; }
+{ return (sqIntptr_t)((dll_exports *)a)->info.lpBaseOfDll - (sqIntptr_t)((dll_exports *)b)->info.lpBaseOfDll; }
 
 static  void find_in_dll(dll_exports *exports, void *pc, symbolic_pc *spc);
 static  void find_in_exe(dll_exports *exports, void *pc, symbolic_pc *spc);
 static  void find_in_cog(dll_exports *exports, void *pc, symbolic_pc *spc);
+
+#if COGVM
+	sqInt nilObject();
+#endif
 
 static void
 get_modules(void)
@@ -292,7 +301,6 @@ get_modules(void)
 	assert(GetModuleHandle(0) == all_exports[0].module);
 	all_exports[0].find_symbol = find_in_exe;
 #if COGVM
-	sqInt nilObject();
 	strcpy(all_exports[moduleCount].name,"CogCode");
 	all_exports[moduleCount].module = (void *)cogCodeBase();
 	all_exports[moduleCount].info.lpBaseOfDll = (void *)cogCodeBase();
