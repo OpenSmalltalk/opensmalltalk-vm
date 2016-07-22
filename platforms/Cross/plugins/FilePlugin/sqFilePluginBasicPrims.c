@@ -35,6 +35,11 @@
 #include "FilePlugin.h"
 #include <limits.h> /* for PATH_MAX */
 
+#ifdef _MSC_VER
+#include <stdlib.h>
+#define PATH_MAX _MAX_PATH
+#endif
+
 /***
 	The state of a file is kept in the following structure,
 	which is stored directly in a Squeak bytes object.
