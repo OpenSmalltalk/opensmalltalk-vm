@@ -33,6 +33,10 @@
 # include "cogit.h"
 #endif
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
 typedef struct frame {
 	struct frame *savedfp;
 	void *retpc;
@@ -77,7 +81,7 @@ backtrace(void **retpcs, int nrpcs)
 		mov RAX, RBP
 		mov [__fp], RAX
 	}*/
-	__fp = (void **) __readgsqword(0x30);
+	__fp = (void **) _AddressOfReturnAddress();
   #elif defined(__GNUC__)
 	asm volatile ("movq %%rbp, %0" : "=r"(__fp) : );
   #else
