@@ -2037,7 +2037,7 @@ parseArguments(int argc, char *argv[])
  * b) answer the amount of stack room to ensure in a Cog stack page, including
  *    the size of the redzone, if any.
  */
-# if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__) \\
+# if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__) \
 	|| defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
 /*
  * Cog has already captured CStackPointer  before calling this routine.  Record
