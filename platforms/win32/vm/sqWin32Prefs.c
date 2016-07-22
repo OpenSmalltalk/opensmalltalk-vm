@@ -420,7 +420,7 @@ void HandlePrefsMenu(int cmd) {
   switch(cmd) {
   case ID_ABOUT: 
     MessageBox(stWindow,VM_VERSION_TEXT,
-	       TEXT("About " VM_NAME " on Win32"), MB_OK);
+	       TEXT("About ") TEXT(VM_NAME) TEXT(" on Win32"), MB_OK);
     break;
   case ID_DEFERUPDATES:
     fDeferredUpdate = !fDeferredUpdate;

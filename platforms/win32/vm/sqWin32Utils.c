@@ -146,7 +146,7 @@ int __cdecl abortMessage(const TCHAR* fmt, ...)
 	wvsprintf(buf, fmt, args);
 	va_end(args);
 
-	MessageBox(NULL,buf,TEXT(VM_NAME"!"),MB_OK | MB_TASKMODAL | MB_SETFOREGROUND);
+	MessageBox(NULL,buf,TEXT(VM_NAME) TEXT("!"),MB_OK | MB_TASKMODAL | MB_SETFOREGROUND);
   free(buf);
   exit(-1);
 }
@@ -164,7 +164,7 @@ int __cdecl warnPrintf(const TCHAR *fmt, ...)
 	va_start(args, fmt);
 	wvsprintf(buf, fmt, args);
 	va_end(args);
-  MessageBox(stWindow, buf, TEXT(VM_NAME" Warning!"), MB_OK | MB_ICONSTOP | MB_SETFOREGROUND);
+  MessageBox(stWindow, buf, TEXT(VM_NAME) TEXT(" Warning!"), MB_OK | MB_ICONSTOP | MB_SETFOREGROUND);
   free(buf);
 }
 #endif
