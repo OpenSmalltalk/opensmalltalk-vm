@@ -140,7 +140,6 @@ ifneq ($(LINK_WITH_GCC),)
 		-m64 \
 		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
-		--entry _DllMain@12 \
 		$(GCCLINKEXTRAS) \
 		$(LIBOBJ) $(EXTRALIBS)
 else ifneq ($(LINK_WITH_GPP),)
@@ -148,14 +147,12 @@ else ifneq ($(LINK_WITH_GPP),)
 		-m64 \
 		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
-		--entry _DllMain@12 \
 		$(GPPLINKEXTRAS) \
 		$(LIBOBJ) $(EXTRALIBS)
 else
-	$(DLLWRAP) -mwindows \
+	$(DLLWRAP) -mwindows -m64 \
 		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
-		--entry _DllMain@12 \
 		$(DLLWRAPEXTRAS) \
 		$(OBJDIR)/$(LIBNAME).exp \
 		$(LIBOBJ) $(EXTRALIBS)
