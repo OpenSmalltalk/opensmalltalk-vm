@@ -32,6 +32,11 @@
 # endif
 #endif
 
+#if !defined(IMAGE_SIZEOF_NT_OPTIONAL_HEADER)
+#include <winnt.h>
+#define  IMAGE_SIZEOF_NT_OPTIONAL_HEADER  sizeof(IMAGE_OPTIONAL_HEADER)
+#endif
+
 /* Windows Vista support 
  * AUTHOR: Korakurider (kr)
  * CHANGE NOTES:
