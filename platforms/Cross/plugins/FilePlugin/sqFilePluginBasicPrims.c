@@ -37,6 +37,7 @@
 
 #ifdef _MSC_VER
 #include <stdlib.h>
+#include <windows.h>
 #define PATH_MAX _MAX_PATH
 #endif
 
@@ -514,7 +515,11 @@ sqFileSync(SQFile *f) {
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
 	pentry(sqFileSync);
+#ifdef _MSC_VER
+	if(FlushFileBuffers(getFile(f)) != 0)
+#else
 	if (fsync(fileno(getFile(f))) != 0)
+#endif
 		return interpreterProxy->success(false);
 	return 1;
 }
