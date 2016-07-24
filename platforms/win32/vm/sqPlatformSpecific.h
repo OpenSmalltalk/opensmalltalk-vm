@@ -15,6 +15,13 @@
 #undef putchar
 #include "sqWin32Alloc.h"
 
+
+#ifdef _MSC_VER
+#include <windows.h>
+#define HAVE_BOOLEAN 1 /* for jpegReaderWriter plugin compatibility */
+#endif
+
+
 #ifdef _MSC_VER
 #define squeakFileOffsetType __int64
 #else
@@ -51,6 +58,10 @@ size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 # define fabsf(x)    ((float)fabs((double)(x)))
+#endif
+
+#ifdef _MSC_VER
+#define bzero(pointer,size) ZeroMemory(pointer,size)
 #endif
 
 #else 
