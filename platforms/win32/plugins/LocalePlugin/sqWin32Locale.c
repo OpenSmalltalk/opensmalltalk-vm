@@ -183,7 +183,7 @@ void	sqLocGetShortDateFormatInto(char * str) {
 static char timeFormat[] = "h:m:s";
 /* return the size in chars of the time format string */
 sqInt	sqLocTimeFormatSize(void) {
-	GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_STIMEFORMAT, NULL, 0)-1;
+	return GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_STIMEFORMAT, NULL, 0)-1;
 }
 
 /* write the string describing the time formatting into string ptr.
