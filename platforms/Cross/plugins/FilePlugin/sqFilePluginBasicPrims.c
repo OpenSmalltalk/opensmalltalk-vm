@@ -35,11 +35,6 @@
 #include "FilePlugin.h"
 #include <limits.h> /* for PATH_MAX */
 
-#ifdef _MSC_VER
-#include <stdlib.h>
-#include <windows.h>
-#define PATH_MAX _MAX_PATH
-#endif
 
 /***
 	The state of a file is kept in the following structure,
@@ -515,11 +510,7 @@ sqFileSync(SQFile *f) {
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
 	pentry(sqFileSync);
-#ifdef _MSC_VER
-	if(FlushFileBuffers(getFile(f)) != 0)
-#else
 	if (fsync(fileno(getFile(f))) != 0)
-#endif
 		return interpreterProxy->success(false);
 	return 1;
 }

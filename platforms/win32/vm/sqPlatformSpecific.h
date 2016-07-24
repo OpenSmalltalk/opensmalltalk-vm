@@ -45,7 +45,11 @@ squeakFileOffsetType sqImageFilePosition(sqImageFile h);
 size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h);
 squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos);
 size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
-
+#else /* when no WIN32_FILE_SUPPORT, add necessary stub for using regular Cross/plugins/FilePlugin functions */
+#include <stdlib.h>
+#include <io.h> /* _get_osfhandle */
+#define PATH_MAX _MAX_PATH
+#define fsync(filenumber) FlushFileBuffers((HANDLE)_get_osfhandle(filenumber))
 #endif /* WIN32_FILE_SUPPORT */
 
 /* pluggable primitive support */
