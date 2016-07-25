@@ -9,6 +9,14 @@
 #ifdef _MSC_VER
 /* disable "function XXXX: no return value" */
 #pragma warning(disable:4035)
+/* disable "unreferenced local variable" */
+#pragma warning(disable:4101)
+/* disable "not all control paths return a value" */
+#pragma warning(disable:4715)
+/* disable "must return a value" */
+#pragma warning(disable:4716)
+/* disable "funcion XXX may be unsafe" for POSIX functions */
+#pragma warning(disable:4996)
 /* optional C SEH macros */
 #define TRY __try
 #define EXCEPT(filter) __except(filter)
@@ -226,7 +234,9 @@ int sqMain(int argc, char *argv[]);
 
 #ifdef _MSC_VER
 #define COMPILER "Microsoft Visual C++ "
-#define VERSION ""
+#define __SQ_STR_HELPER(x) #x
+#define __SQ_STR(x) __SQ_STR_HELPER(x)
+#define VERSION __SQ_STR(_MSC_FULL_VER)
 #endif
 #ifdef __GNUC__
 #define COMPILER "gcc "

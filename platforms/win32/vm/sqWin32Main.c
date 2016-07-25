@@ -1576,9 +1576,33 @@ sqMain(int argc, char *argv[])
 /*                        WinMain                                           */
 /****************************************************************************/
 
-int WINAPI
-WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+#ifdef _MSC_VER
+/* use main also for gui startup. See
+  http://stackoverflow.com/a/11785733
+
+*/
+#  if defined(UNICODE)
+#pragma comment(linker, "/subsystem:windows /ENTRY:wmainCRTStartup")
+#  else
+#pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup")
+#  endif
+#endif
+
+int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 {
+
+  /* The arguments of the GUI WinMain are
+  WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+  or
+  _tWinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
+  But we can get them nevertheless:
+    http://stackoverflow.com/a/11785228 / 
+    https://msdn.microsoft.com/en-us/library/windows/desktop/ms683199.aspx
+  */
+  const HINSTANCE hInst = GetModuleHandle(NULL);
+  /* unused in Squeak: const HINSTANCE hPrevInstance = NULL; */
+  LPTSTR lpCmdLine = GetCommandLine();
+  /* unused in Squeak: int nCmdShow = .. (see http://stackoverflow.com/a/25250854) */
   DWORD mode;
 
   /* a few things which need to be done first */

@@ -294,7 +294,7 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
     bmi->bmiHeader.biWidth = nPix;
     bmi->bmiHeader.biHeight = 1;
     bmi->bmiHeader.biSizeImage = 0;
-    bitsPtr = dispBits + start + (updateRect.top * pitch);
+    bitsPtr = (sqIntptr_t)dispBits + start + (updateRect.top * pitch);
     for(line = updateRect.top; line < updateRect.bottom; line++) {
       lines = SetDIBitsToDevice(dc, left, line, nPix, 1, 0, 0, 0, 1,
 				(void*) bitsPtr, bmi, DIB_RGB_COLORS);

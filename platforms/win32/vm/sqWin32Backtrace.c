@@ -399,7 +399,7 @@ static void
 compute_exe_symbols(dll_exports *exports)
 {
 #if defined(_MSV_VER)
-# error parse of MSVC .map file as yet unimplemented
+#pragma message(" parse of MSVC .map file as yet unimplemented ")
 /* Create the file using "cl .... /link /map"
  * Parse it by looking for lines beginning with " 0001:" where 0001 is the
  * segment number of the .text segment.  Representative lines look like
