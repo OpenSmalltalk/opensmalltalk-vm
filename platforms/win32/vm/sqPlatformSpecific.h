@@ -15,6 +15,13 @@
 #undef putchar
 #include "sqWin32Alloc.h"
 
+
+#ifdef _MSC_VER
+#include <windows.h>
+#define HAVE_BOOLEAN 1 /* for jpegReaderWriter plugin compatibility */
+#endif
+
+
 #ifdef _MSC_VER
 #define squeakFileOffsetType __int64
 #else
@@ -38,7 +45,11 @@ squeakFileOffsetType sqImageFilePosition(sqImageFile h);
 size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h);
 squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos);
 size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
-
+#else /* when no WIN32_FILE_SUPPORT, add necessary stub for using regular Cross/plugins/FilePlugin functions */
+#include <stdlib.h>
+#include <io.h> /* _get_osfhandle */
+#define PATH_MAX _MAX_PATH
+#define fsync(filenumber) FlushFileBuffers((HANDLE)_get_osfhandle(filenumber))
 #endif /* WIN32_FILE_SUPPORT */
 
 /* pluggable primitive support */
@@ -51,6 +62,10 @@ size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 # define fabsf(x)    ((float)fabs((double)(x)))
+#endif
+
+#ifdef _MSC_VER
+#define bzero(pointer,size) ZeroMemory(pointer,size)
 #endif
 
 #else 

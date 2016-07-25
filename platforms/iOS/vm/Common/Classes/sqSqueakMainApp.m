@@ -90,7 +90,7 @@ static void *printRegisterState(ucontext_t *);
 
 /* Print an error message, possibly a stack trace, and exit. */
 /* Disable Intel compiler inlining of error which is used for breakpoints */
-#pragma auto_inline off
+#pragma auto_inline(off)
 #if COGVM || STACKVM
 void
 error(char *msg)
@@ -99,7 +99,7 @@ error(char *msg)
 	if (blockOnError) block();
 	abort();
 }
-#pragma auto_inline on
+#pragma auto_inline(on)
 
 static void
 block()

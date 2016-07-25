@@ -52,6 +52,9 @@
 #	 define sqLowLevelMFence() asm volatile ("mfence")
 #	endif
 # endif
+#elif defined(_MSC_VER)
+# include <intrin.h>
+# define sqLowLevelMFence() _ReadWriteBarrier() /* Note that's is deprecated, superseded by C++11 features */
 #endif
 
 #if !defined(sqLowLevelMFence)

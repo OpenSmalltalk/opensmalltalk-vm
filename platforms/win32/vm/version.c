@@ -6,8 +6,10 @@
 #endif
 
 #ifdef _MSC_VER
-# if _MSC_VER >= 1900
+# if _MSC_VER >= 2000
 	define the version string here
+# elif _MSC_VER >= 1900
+#	define __VERSION__ "Microsoft Visual Studio 2015"
 # elif _MSC_VER >= 1800
 #	define __VERSION__ "Microsoft Visual Studio 2013"
 # elif _MSC_VER >= 1700

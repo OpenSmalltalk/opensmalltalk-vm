@@ -32,7 +32,7 @@ if [[ $PR == "false" ]] && ( [[ "$BR" == "Cog" || "$BR" == "master" ]] ); then
                 resp=http.request(req);
                 json=JSON.parse(resp.body)
             };
-            json['versions'][10..-1].each { |v|
+            (json['versions'][10..-1] || []).each { |v|
                 ver=DateTime.parse(v);
                 if ver.month != lastver.month then
                     lastver=ver; next

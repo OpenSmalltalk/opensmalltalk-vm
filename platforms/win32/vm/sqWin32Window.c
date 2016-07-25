@@ -294,7 +294,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
 		if(prefsEnableAltF4Quit() || GetKeyState(VK_SHIFT) < 0) {
 			TCHAR msg[1001], label[1001];
 			GetPrivateProfileString(U_GLOBAL, TEXT("QuitDialogMessage"), 
-						TEXT("Quit " VM_NAME " without saving?"), 
+						TEXT("Quit ") TEXT(VM_NAME) TEXT(" without saving?"), 
 						msg, 1000, squeakIniName);
 			GetPrivateProfileString(U_GLOBAL, TEXT("QuitDialogLabel"), 
 						TEXT(VM_NAME), 
@@ -886,7 +886,7 @@ void SetupWindows()
   if(!browserWindow)
     stWindow = CreateWindowEx(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
 			      windowClassName,
-			      TEXT(VM_NAME"!"),
+			      TEXT(VM_NAME) TEXT("!"),
 			      WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
 			      0,
 			      0,
@@ -901,7 +901,7 @@ void SetupWindows()
     fBrowserMode = 1;
     stWindow = CreateWindowEx(0,
 			      windowClassName,
-			      TEXT(VM_NAME"!"),
+			      TEXT(VM_NAME) TEXT("!"),
 			      WS_CHILD | WS_CLIPCHILDREN,
 			      0,
 			      0,
@@ -2154,12 +2154,12 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
   bmi = BmiForDepth(depth);
   if(!bmi)
     {
-      warnPrintf(TEXT("Color depth %" PRIdSQINT " not supported"), depth);
+      warnPrintf(TEXT("Color depth %") TEXT(PRIdSQINT) TEXT(" not supported"), depth);
       return false;
     }
 
   di.cbSize      = sizeof(DOCINFO);
-  di.lpszDocName = TEXT(VM_NAME" Print Job");
+  di.lpszDocName = TEXT(VM_NAME) TEXT(" Print Job");
   di.lpszOutput  = NULL;
 
   StartDoc  (dc, &di);
@@ -2476,7 +2476,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-    warnPrintf(TEXT("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQINT ",dc=%" PRIXSQINT "\n"),
+    warnPrintf(TEXT("width=%") TEXT(PRIdSQINT) TEXT(",height=%") TEXT(PRIdSQINT) TEXT(",bits=%") TEXT(PRIXSQINT) TEXT(",dc=%") TEXT(PRIXSQINT) TEXT("\n"),
 	       width, height, dispBits,(usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */
@@ -3186,7 +3186,7 @@ int printUsage(int level)
       break;
     case 1: /* full usage */
       abortMessage(TEXT("%s"),
-                   TEXT("Usage: " VM_NAME " [vmOptions] imageFile [imageOptions]\n\n")
+                   TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [vmOptions] imageFile [imageOptions]\n\n")
                    TEXT("vmOptions:")
 		   /* TEXT("\n\t-service: ServiceName \t(install Squeak as NT service)") */
                    TEXT("\n\t-headless \t\t(force Squeak to run headless)")
@@ -3229,7 +3229,7 @@ int printUsage(int level)
     case 2: /* No image found */
     default:
       abortMessage(
-        TEXT("Could not open the " VM_NAME " image file '%s'\n\n")
+        TEXT("Could not open the ") TEXT(VM_NAME) TEXT(" image file '%s'\n\n")
         TEXT("There are several ways to open an image file. You can:\n")
         TEXT("  1. Double-click on the desired image file.\n")
         TEXT("  2. Drop the image file onto the application.\n")
