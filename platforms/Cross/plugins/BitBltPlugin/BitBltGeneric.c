@@ -527,7 +527,7 @@ static uint32_t genericCompareRow(uint32_t        width,
     return count;
 }
 
-uint32_t genericCompareColors(const compare_operation_t *op, uint32_t log2bppA, uint32_t log2bppB)
+usqInt genericCompareColors(const compare_operation_t *op, usqInt log2bppA, usqInt log2bppB)
 {
     uint32_t count = 0;
     uint32_t pixelIndexes;
