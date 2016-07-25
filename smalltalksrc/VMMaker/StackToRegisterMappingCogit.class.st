@@ -2089,6 +2089,7 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 									ifFalse: [self prevInstIsPCAnnotated
 												ifTrue: [self Nop]
 												ifFalse: [self Label]]).
+		 extA := 0.
 		 ^0].
 	desc popToReg: TempReg.
 	"Cunning trick by LPD.  If true and false are contiguous subtract the smaller.
