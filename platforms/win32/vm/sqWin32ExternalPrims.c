@@ -16,14 +16,20 @@
 #include <assert.h>
 #include "sq.h"
 
-HANDLE tryLoading(TCHAR *prefix, TCHAR *baseName, TCHAR *postfix)
+HANDLE tryLoading(TCHAR *baseName, TCHAR *postfix)
 {
-  TCHAR libName[300];
-  HANDLE h;
+  TCHAR* libName = NULL;
+  HANDLE h = NULL;
+  int postfix_sz = _tcslen(postfix);
 
-  lstrcpy(libName,prefix);
-  lstrcat(libName,baseName);
-  lstrcat(libName,postfix);
+  if (postfix_sz == 0) {
+    /* no need to copy */
+    libName = baseName;
+  } else {
+    libName = (TCHAR*) alloca((_tcslen(baseName) + postfix_sz + 1) * sizeof(TCHAR));
+    lstrcpy(libName, baseName);
+    lstrcat(libName, postfix);
+  }
   h = LoadLibrary(libName);
   if (h == NULL
 #ifdef NDEBUG /* in production ignore errors for non-existent modules */
@@ -37,28 +43,33 @@ HANDLE tryLoading(TCHAR *prefix, TCHAR *baseName, TCHAR *postfix)
 /* Return the module entry for the given module name */
 void *ioLoadModule(char *pluginName)
 {
-	HANDLE handle;
-	TCHAR *name;
+  HANDLE handle = NULL;
+  BOOL found = FALSE;
+  TCHAR* name = NULL;
 
-#ifdef UNICODE
-	name = toUnicode(pluginName);
-#else
-	name = pluginName;
-#endif
+  UTF8_TO_TCHAR(pluginName, name);
+  /*
+    Try a few search paths for the module. Note that tryLoading/LoadLibrary
+    already take care of tying to load with appended .dll path, so we don't
+    need to do that on our own.
+  */
+#define _TRY_MODULE(NAME, SUFFIX) if (found || (handle = tryLoading(NAME, SUFFIX))) found = TRUE
 
-	handle = tryLoading(TEXT(""),name,TEXT(""));
-	if(handle) return handle;
-	handle = tryLoading(TEXT(""),name,TEXT(".dll"));
-	if(handle) return handle;
-	handle = tryLoading(TEXT(""),name,TEXT("32.dll"));
-	if(handle) return handle;
-	handle = tryLoading(imagePath,name,TEXT(""));
-	if(handle) return handle;
-	handle = tryLoading(imagePath,name,TEXT(".dll"));
-	if(handle) return handle;
-	handle = tryLoading(imagePath,name,TEXT("32.dll"));
-	if(handle) return handle;
-	return 0;
+  /* Search for module in the default path */
+  _TRY_MODULE(name, TEXT(""));
+  _TRY_MODULE(name, TEXT("32"));
+
+  if (found) return handle;
+
+  /* Also search in the image path */
+  SetDllDirectory(imagePath);
+  _TRY_MODULE(name, TEXT(""));
+  _TRY_MODULE(name, TEXT("32"));
+  SetDllDirectory(NULL);
+
+#undef _TRY_MODULE
+
+  return handle;
 }
 
 #if SPURVM

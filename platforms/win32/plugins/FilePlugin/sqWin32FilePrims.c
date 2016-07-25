@@ -118,7 +118,7 @@ sqInt sqFileDeleteNameSize(char* fileNameIndex, sqInt fileNameSize) {
   WCHAR *win32Path = NULL;
 
   /* convert the file name into a null-terminated C string */
-  ALLOC_WIN32_PATH(win32Path, fileNameIndex, fileNameSize);
+  ALLOC_WIN32_PATH(win32Path, fileNameIndex, fileNameSize, FAIL());
 
   if(hasCaseSensitiveDuplicate(win32Path))
     FAIL();
@@ -182,7 +182,7 @@ sqInt sqFileOpen(SQFile *f, char* fileNameIndex, sqInt fileNameSize, sqInt write
   WCHAR *win32Path = NULL;
 
   /* convert the file name into a null-terminated C string */
-  ALLOC_WIN32_PATH(win32Path, fileNameIndex, fileNameSize);
+  ALLOC_WIN32_PATH(win32Path, fileNameIndex, fileNameSize, FAIL());
 
   if(hasCaseSensitiveDuplicate(win32Path)) {
     f->sessionID = 0;
@@ -275,8 +275,8 @@ sqInt sqFileRenameOldSizeNewSize(char* oldNameIndex, sqInt oldNameSize, char* ne
   WCHAR *newPath = NULL;
 
   /* convert the file names into a null-terminated C string */
-  ALLOC_WIN32_PATH(oldPath, oldNameIndex, oldNameSize);
-  ALLOC_WIN32_PATH(newPath, newNameIndex, newNameSize);
+  ALLOC_WIN32_PATH(oldPath, oldNameIndex, oldNameSize, FAIL());
+  ALLOC_WIN32_PATH(newPath, newNameIndex, newNameSize, FAIL());
 
   if(hasCaseSensitiveDuplicate(oldPath))
     FAIL();
@@ -388,7 +388,7 @@ sqImageFile sqImageFileOpen(char *fileName, char *mode)
       modePtr++;
     }
   /* convert the file name into a null-terminated C string */
-  ALLOC_WIN32_PATH(win32Path, fileName, -1);
+  ALLOC_WIN32_PATH(win32Path, fileName, -1, FAIL());
 
   if(hasCaseSensitiveDuplicate(win32Path))
     return 0;

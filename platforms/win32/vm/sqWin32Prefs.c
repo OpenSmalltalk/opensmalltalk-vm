@@ -37,7 +37,7 @@ void printCallStack(void);
 void printAllStacks(void);
 
 /* VM preference variables */
-extern TCHAR squeakIniName[]; /* full path and name to ini file */
+extern TCHAR* squeakIniName; /* full path and name to ini file */
 HMENU vmPrefsMenu;         /* preferences menu */
 extern int caseSensitiveFileMode;
 
@@ -51,115 +51,115 @@ extern int caseSensitiveFileMode;
 
 void SetDeferredUpdate() {
   CheckMenuItem(vmPrefsMenu, ID_DEFERUPDATES, MF_BYCOMMAND | 
-		(fDeferredUpdate ? MF_CHECKED : MF_UNCHECKED));
+    (fDeferredUpdate ? MF_CHECKED : MF_UNCHECKED));
   WritePrivateProfileString(U_GLOBAL,TEXT("DeferUpdate"),
-			    fDeferredUpdate ? U_ON : U_OFF,squeakIniName);
+          fDeferredUpdate ? U_ON : U_OFF,squeakIniName);
 }
 
 void SetShowConsole() {
   CheckMenuItem(vmPrefsMenu, ID_SHOWCONSOLE, MF_BYCOMMAND | 
-		(fShowConsole ? MF_CHECKED : MF_UNCHECKED));
+    (fShowConsole ? MF_CHECKED : MF_UNCHECKED));
   if(IsWindow(stWindow)) 
     ShowWindow(consoleWindow, fShowConsole ? SW_SHOW : SW_HIDE);
   WritePrivateProfileString(U_GLOBAL,TEXT("ShowConsole"),
-			    fShowConsole ? U_ON:U_OFF,squeakIniName);
+          fShowConsole ? U_ON:U_OFF,squeakIniName);
 }
 
 void SetDynamicConsole() {
   CheckMenuItem(vmPrefsMenu, ID_DYNAMICCONSOLE, MF_BYCOMMAND | 
-		(fDynamicConsole ? MF_CHECKED : MF_UNCHECKED));
+    (fDynamicConsole ? MF_CHECKED : MF_UNCHECKED));
   WritePrivateProfileString(U_GLOBAL,TEXT("DynamicConsole"),
-			    fDynamicConsole ? U_ON:U_OFF,squeakIniName);
+          fDynamicConsole ? U_ON:U_OFF,squeakIniName);
 }
 
 void SetReduceCPUUsage() {
   CheckMenuItem(vmPrefsMenu, ID_REDUCECPUUSAGE, MF_BYCOMMAND | 
-		(fReduceCPUUsage ? MF_CHECKED : MF_UNCHECKED));
+    (fReduceCPUUsage ? MF_CHECKED : MF_UNCHECKED));
   WritePrivateProfileString(U_GLOBAL,TEXT("ReduceCPUUsage"),
-			    fReduceCPUUsage ? U_ON:U_OFF,squeakIniName);
+          fReduceCPUUsage ? U_ON:U_OFF,squeakIniName);
 }
 
 void SetReduceCPUInBackground() {
   CheckMenuItem(vmPrefsMenu, ID_REDUCEBACKGROUNDCPU, MF_BYCOMMAND | 
-		(fReduceCPUInBackground ? MF_CHECKED : MF_UNCHECKED));
+    (fReduceCPUInBackground ? MF_CHECKED : MF_UNCHECKED));
   WritePrivateProfileString(U_GLOBAL,TEXT("ReduceCPUInBackground"),
-			    fReduceCPUInBackground ? U_ON:U_OFF,squeakIniName);
+          fReduceCPUInBackground ? U_ON:U_OFF,squeakIniName);
 }
 
 void Set3ButtonMouse() {
   CheckMenuItem(vmPrefsMenu, ID_3BUTTONMOUSE, MF_BYCOMMAND | 
-		(f3ButtonMouse ? MF_CHECKED : MF_UNCHECKED));
+    (f3ButtonMouse ? MF_CHECKED : MF_UNCHECKED));
   WritePrivateProfileString(U_GLOBAL,TEXT("3ButtonMouse"),
-			    f3ButtonMouse ? U_ON : U_OFF,squeakIniName);
+          f3ButtonMouse ? U_ON : U_OFF,squeakIniName);
 }
 
 void Set1ButtonMouse() {
   CheckMenuItem(vmPrefsMenu, ID_1BUTTONMOUSE, MF_BYCOMMAND | 
-		(f1ButtonMouse ? MF_CHECKED : MF_UNCHECKED));
+    (f1ButtonMouse ? MF_CHECKED : MF_UNCHECKED));
   WritePrivateProfileString(U_GLOBAL,TEXT("1ButtonMouse"),
-			    f1ButtonMouse ? U_ON : U_OFF,squeakIniName);
+          f1ButtonMouse ? U_ON : U_OFF,squeakIniName);
 }
 
 void SetUseDirectSound() {
   CheckMenuItem(vmPrefsMenu, ID_DIRECTSOUND, MF_BYCOMMAND | 
-		(fUseDirectSound ? MF_CHECKED : MF_UNCHECKED));
+    (fUseDirectSound ? MF_CHECKED : MF_UNCHECKED));
   WritePrivateProfileString(U_GLOBAL,TEXT("UseDirectSound"),
-			    fUseDirectSound ? U_ON : U_OFF,squeakIniName);
+          fUseDirectSound ? U_ON : U_OFF,squeakIniName);
 }
 
 void SetAllowFileAccess() {
   CheckMenuItem(vmPrefsMenu, ID_FILEACCESS, MF_BYCOMMAND | 
-		(ioHasFileAccess() ? MF_CHECKED : MF_UNCHECKED));
+    (ioHasFileAccess() ? MF_CHECKED : MF_UNCHECKED));
 }
 
 void SetAllowImageWrite() {
   CheckMenuItem(vmPrefsMenu, ID_IMAGEWRITE, MF_BYCOMMAND | 
-		(ioCanWriteImage() ? MF_CHECKED : MF_UNCHECKED));
+    (ioCanWriteImage() ? MF_CHECKED : MF_UNCHECKED));
 }
 #ifndef NO_NETWORK
 void SetAllowSocketAccess() {
   CheckMenuItem(vmPrefsMenu, ID_SOCKETACCESS, MF_BYCOMMAND | 
-		(ioHasSocketAccess() ? MF_CHECKED : MF_UNCHECKED));
+    (ioHasSocketAccess() ? MF_CHECKED : MF_UNCHECKED));
 }
 #endif
 
 void SetShowAllocations() {
   CheckMenuItem(vmPrefsMenu, ID_SHOWALLOCATIONS, MF_BYCOMMAND | 
-		(fShowAllocations ? MF_CHECKED : MF_UNCHECKED));
+    (fShowAllocations ? MF_CHECKED : MF_UNCHECKED));
 }
 
 void SetPriorityBoost() {
   CheckMenuItem(vmPrefsMenu, ID_PRIORITYBOOST, MF_BYCOMMAND | 
-		(fPriorityBoost ? MF_CHECKED : MF_UNCHECKED));
+    (fPriorityBoost ? MF_CHECKED : MF_UNCHECKED));
   WritePrivateProfileString(U_GLOBAL,TEXT("PriorityBoost"),
-			    fPriorityBoost ? U_ON : U_OFF,squeakIniName);
+          fPriorityBoost ? U_ON : U_OFF,squeakIniName);
 }
 
 void SetB3DXUsesOpenGL() {
   CheckMenuItem(vmPrefsMenu, ID_USEOPENGL, MF_BYCOMMAND | 
-		(fUseOpenGL ? MF_CHECKED : MF_UNCHECKED));
+    (fUseOpenGL ? MF_CHECKED : MF_UNCHECKED));
   WritePrivateProfileString(U_GLOBAL,TEXT("B3DXUsesOpenGL"),
-			    fUseOpenGL ? U_ON : U_OFF,squeakIniName);
+          fUseOpenGL ? U_ON : U_OFF,squeakIniName);
 }
 
 void SetCaseSensitiveFileMode() {
   CheckMenuItem(vmPrefsMenu, ID_CASEFILES, MF_BYCOMMAND | 
-		(caseSensitiveFileMode ? MF_CHECKED : MF_UNCHECKED));
+    (caseSensitiveFileMode ? MF_CHECKED : MF_UNCHECKED));
   WritePrivateProfileString(U_GLOBAL,TEXT("CaseSensitiveFileMode"),
-			    caseSensitiveFileMode ? U_ON : U_OFF,squeakIniName);
+          caseSensitiveFileMode ? U_ON : U_OFF,squeakIniName);
 }
 
 int prefsEnableAltF4Quit(void) {
   fEnableAltF4Quit   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("EnableAltF4Quit"),
-			 fEnableAltF4Quit,squeakIniName);
+       fEnableAltF4Quit,squeakIniName);
   return fEnableAltF4Quit;
 }
 
 int prefsEnableF2Menu(void) {
   fEnableF2Menu   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("EnableF2Menu"),
-			 fEnableF2Menu,squeakIniName);
+       fEnableF2Menu,squeakIniName);
   return fEnableF2Menu;
 }
 
@@ -168,16 +168,16 @@ int prefsEnableF2Menu(void) {
 #if 0 /* I don't think we need those in the menu */
 void SetEnableF2Menu() {
   CheckMenuItem(vmPrefsMenu, ID_ENABLEF2MENU, MF_BYCOMMAND | 
-		(fEnableF2Menu ? MF_CHECKED : MF_UNCHECKED));
+    (fEnableF2Menu ? MF_CHECKED : MF_UNCHECKED));
   WritePrivateProfileString(U_GLOBAL,TEXT("EnableF2Menu"),
-			    fEnableF2Menu ? U_ON : U_OFF,squeakIniName);
+          fEnableF2Menu ? U_ON : U_OFF,squeakIniName);
 }
 
 void SetEnableAltF4Quit() {
   CheckMenuItem(vmPrefsMenu, ID_ENABLEALTF4QUIT, MF_BYCOMMAND | 
-		(fEnableAltF4Quit ? MF_CHECKED : MF_UNCHECKED));
+    (fEnableAltF4Quit ? MF_CHECKED : MF_UNCHECKED));
   WritePrivateProfileString(U_GLOBAL,TEXT("EnableAltF4Quit"),
-			    enableAltF4Quit ? U_ON : U_OFF,squeakIniName);
+          enableAltF4Quit ? U_ON : U_OFF,squeakIniName);
 }
 #endif
 
@@ -186,104 +186,124 @@ void LoadPreferences()
   /* Set preferences */
 #ifndef WCE_PREFERENCES
   int size;
+  TCHAR* buf = calloc(MAX_PATH_SQUEAK + 1, sizeof(TCHAR));
 
   /* make ini file name based on executable file name */
-  lstrcpy(squeakIniName, vmName);
+  squeakIniName = _tcsdup(vmName);
   size = lstrlen(squeakIniName);
   lstrcpy(squeakIniName + (size-3), TEXT("ini"));
 
   /* get image file name from ini file */
-  size = GetPrivateProfileString(U_GLOBAL, TEXT("ImageFile"), 
-			 TEXT(""), imageName, MAX_PATH, squeakIniName);
+  size = GetPrivateProfileString(U_GLOBAL, TEXT("ImageFile"),
+    NULL, buf, MAX_PATH_SQUEAK, squeakIniName);
   if(size > 0) {
-    if( !(imageName[0] == '\\' && imageName[1] == '\\') && !(imageName[1] == ':' && imageName[2] == '\\')) {
-      /* make the path relative to VM directory */
-      lstrcpy(imageName, vmName);
-      (lstrrchr(imageName,U_BACKSLASH[0]))[1] = 0;
-      size = lstrlen(imageName);
+    if (!(buf[0] == U_BACKSLASH[0] && buf[1] == U_BACKSLASH[0])
+        && !(buf[1] == TEXT(':') && buf[2] == U_BACKSLASH[0])) {
+      lstrcpy(buf, vmName);
+      // Terminate after last folder separator.
+      TCHAR* tmpTerminate = lstrrchr(buf, U_BACKSLASH[0]);
+      tmpTerminate[1] = 0;
+      size = lstrlen(buf);
       size = GetPrivateProfileString(U_GLOBAL, TEXT("ImageFile"), 
-			 TEXT(""), imageName + size, MAX_PATH - size, squeakIniName);
-	}
+        NULL, buf + size, MAX_PATH_SQUEAK - size, squeakIniName);
+    }
   }
+
+  {
+    char* tmpImageNameUTF8 = NULL;
+    TCHAR_TO_UTF8(buf, tmpImageNameUTF8);
+    strncpy(imageName, tmpImageNameUTF8, IMAGE_NAME_SIZE);
+  }
+
 
   /* get window title from ini file */
   GetPrivateProfileString(U_GLOBAL, TEXT("WindowTitle"), 
-			 TEXT(""), windowTitle, MAX_PATH, squeakIniName);
+    NULL, buf, MAX_PATH_SQUEAK, squeakIniName);
+  {
+    char* tmpWindowTitleUTF8 = NULL;
+    TCHAR_TO_UTF8(buf, tmpWindowTitleUTF8);
+    windowTitle = _strdup(tmpWindowTitleUTF8);
+  }
 
   /* get the window class name from the ini file */
+  /* Class name maximum is 256, see lpszClassName in
+      https://msdn.microsoft.com/en-us/library/ms633577(v=vs.85).aspx
+      */
   GetPrivateProfileString(U_GLOBAL, TEXT("WindowClassName"), 
 #if NewspeakVM
-				TEXT(VM_NAME"WindowClass"),
+        TEXT(VM_NAME"WindowClass"),
 #else
-				TEXT("SqueakWindowClass"),
+        TEXT("SqueakWindowClass"),
 #endif
-				windowClassName, 
-				MAX_PATH, squeakIniName);
+        buf, 256, squeakIniName);
+  windowClassName = _tcsdup(buf);
+
   fRunSingleApp =
     GetPrivateProfileInt(U_GLOBAL, TEXT("RunSingleApp"),
-			 fRunSingleApp, squeakIniName);
+       fRunSingleApp, squeakIniName);
   fDeferredUpdate = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("DeferUpdate"), 
-			 fDeferredUpdate,squeakIniName);
+       fDeferredUpdate,squeakIniName);
   fShowConsole = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("ShowConsole"),
-			 fShowConsole,squeakIniName);
+       fShowConsole,squeakIniName);
   fDynamicConsole = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("DynamicConsole"),
-			 fDynamicConsole,squeakIniName);
+       fDynamicConsole,squeakIniName);
   fReduceCPUUsage = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("ReduceCPUUsage"),
-			 fReduceCPUUsage,squeakIniName);
+       fReduceCPUUsage,squeakIniName);
   fReduceCPUInBackground = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("ReduceCPUInBackground"),
-			 fReduceCPUInBackground,squeakIniName);
+       fReduceCPUInBackground,squeakIniName);
   f1ButtonMouse   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("1ButtonMouse"),
-			 f1ButtonMouse,squeakIniName);
+       f1ButtonMouse,squeakIniName);
   f3ButtonMouse   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("3ButtonMouse"),
-			 f3ButtonMouse,squeakIniName);
+       f3ButtonMouse,squeakIniName);
 
   fPriorityBoost   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("PriorityBoost"),
-			 fPriorityBoost,squeakIniName);
+       fPriorityBoost,squeakIniName);
 
   fUseDirectSound   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("UseDirectSound"),
-			 fUseDirectSound,squeakIniName);
+       fUseDirectSound,squeakIniName);
   fUseOpenGL   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("B3DXUsesOpenGL"),
-			 fUseOpenGL,squeakIniName);
+       fUseOpenGL,squeakIniName);
   caseSensitiveFileMode   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("CaseSensitiveFileMode"),
-			 caseSensitiveFileMode,squeakIniName);
+       caseSensitiveFileMode,squeakIniName);
   fEnableAltF4Quit   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("EnableAltF4Quit"),
-			 fEnableAltF4Quit,squeakIniName);
+       fEnableAltF4Quit,squeakIniName);
 
   fEnableF2Menu   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("EnableF2Menu"),
-			 fEnableF2Menu,squeakIniName);
+       fEnableF2Menu,squeakIniName);
 
   fEnablePrefsMenu   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("EnablePrefsMenu"),
-			 fEnablePrefsMenu,squeakIniName);
+       fEnablePrefsMenu,squeakIniName);
 # if STACKVM
-  { sqInt nStackPagesPref;
+  {
+    sqInt nStackPagesPref = 0;
+    sqInt nEdenBytesPref = 0;
     nStackPagesPref = GetPrivateProfileInt(U_GLOBAL,TEXT("SqueakNumStackPages"),0,squeakIniName);
     if (nStackPagesPref) {
-		extern sqInt desiredNumStackPages;
-		desiredNumStackPages = nStackPagesPref;
-	}
-  }
-  { sqInt nEdenBytesPref;
+      extern sqInt desiredNumStackPages;
+      desiredNumStackPages = nStackPagesPref;
+    }
     nEdenBytesPref = GetPrivateProfileInt(U_GLOBAL,TEXT("SqueakEdenBytes"),0,squeakIniName);
-    if (nEdenBytesPref) {
-		extern sqInt desiredEdenBytes;
-		desiredEdenBytes = nEdenBytesPref;
-	}
+    if (nEdenBytesPref > 0) {
+      extern sqInt desiredEdenBytes;
+      desiredEdenBytes = nEdenBytesPref;
+    }
   }
 # endif
+  free(buf);
 #endif
 }
 
@@ -318,91 +338,91 @@ extern sqInt recordPrimTraceFunc();
   if(!fEnablePrefsMenu) return;
 
   AppendMenu(pMenu,MF_STRING | MF_DISABLED, 0,
-	     TEXT("[VM Preferences]"));
+       TEXT("[VM Preferences]"));
   AppendMenu(pMenu,MF_SEPARATOR, 0,NULL);
   { /* Create mouse button menu */
     hMenu = CreatePopupMenu();
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED , ID_1BUTTONMOUSE, 
-	       TEXT("1 button mouse"));
+         TEXT("1 button mouse"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED , ID_3BUTTONMOUSE, 
-	       TEXT("3 button mouse"));
+         TEXT("3 button mouse"));
     AppendMenu(pMenu, MF_STRING | MF_POPUP, (sqIntptr_t)hMenu,
-	       TEXT("Mouse Mapping"));
+         TEXT("Mouse Mapping"));
   }
   { /* Create security menu */
     hMenu = CreatePopupMenu();
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_FILEACCESS, 
-	       TEXT("Allow file access"));
+         TEXT("Allow file access"));
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_IMAGEWRITE, 
-	       TEXT("Allow image writes"));    
+         TEXT("Allow image writes"));    
 #ifndef NO_NETWORK
-	AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_SOCKETACCESS, 
-	       TEXT("Allow socket access"));
+  AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_SOCKETACCESS, 
+         TEXT("Allow socket access"));
 #endif
     AppendMenu(pMenu, MF_STRING | MF_POPUP, (sqIntptr_t)hMenu,
-	       TEXT("Security Settings"));
+         TEXT("Security Settings"));
   }
   { /* Create media related menu */
     hMenu = CreatePopupMenu();
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_DIRECTSOUND, 
-	       TEXT("Use DirectSound"));
+         TEXT("Use DirectSound"));
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_USEOPENGL,
-	       TEXT("Use OpenGL (instead of D3D)"));
+         TEXT("Use OpenGL (instead of D3D)"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_DEFERUPDATES, 
-	       TEXT("Defer display update"));
+         TEXT("Defer display update"));
     AppendMenu(pMenu, MF_STRING | MF_POPUP, (sqIntptr_t)hMenu,
-	       TEXT("Display and Sound"));
+         TEXT("Display and Sound"));
   }
 
   { /* System related settings */
     hMenu = CreatePopupMenu();
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_REDUCECPUUSAGE, 
-	       TEXT("Reduce CPU usage"));
+         TEXT("Reduce CPU usage"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_REDUCEBACKGROUNDCPU, 
-	       TEXT("Reduce background CPU usage"));
+         TEXT("Reduce background CPU usage"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_PRIORITYBOOST, 
-	       TEXT("Thread Priority Boost"));
+         TEXT("Thread Priority Boost"));
 #ifndef NO_PRINTER
     AppendMenu(hMenu,MF_SEPARATOR, 0,NULL);
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED , ID_DEFAULTPRINTER, 
-	       TEXT("Printer configuration ..."));
+         TEXT("Printer configuration ..."));
 #endif /* NO_PRINTER */
     AppendMenu(pMenu, MF_STRING | MF_POPUP, (sqIntptr_t)hMenu,
-	       TEXT("System Configuration"));
+         TEXT("System Configuration"));
   }
 
   { /* Create debug menu */
     hMenu = CreatePopupMenu();
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED , ID_CASEFILES, 
-	       TEXT("Case sensitive files"));
+         TEXT("Case sensitive files"));
     AppendMenu(hMenu,MF_SEPARATOR, 0,NULL);
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED , ID_SHOWCONSOLE, 
-	       TEXT("Show output console"));
+         TEXT("Show output console"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_DYNAMICCONSOLE, 
-	       TEXT("Show console on errors"));
+         TEXT("Show console on errors"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_SHOWALLOCATIONS, 
-	       TEXT("Show allocation activity"));
+         TEXT("Show allocation activity"));
     AppendMenu(hMenu,MF_SEPARATOR, 0,NULL);
 #ifndef NO_NETWORK
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_DBGPRINTSOCKET,
-	       TEXT("Dump network state"));
+         TEXT("Dump network state"));
 #endif
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_DBGPRINTSTACK,
-	       TEXT("Dump call stack"));
+         TEXT("Dump call stack"));
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_PRINTALLSTACKS,
-	       TEXT("Dump all processes"));
+         TEXT("Dump all processes"));
 #if COGVM
     if (recordPrimTraceFunc())
       AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_DUMPPRIMLOG,
-	       TEXT("Dump recent primitives"));
+         TEXT("Dump recent primitives"));
 #endif
     AppendMenu(pMenu, MF_STRING | MF_POPUP, (sqIntptr_t)hMenu,
-	       TEXT("Debug Options"));
+         TEXT("Debug Options"));
   }
 
   AppendMenu(pMenu,MF_SEPARATOR, 0,NULL);
   AppendMenu(pMenu,MF_STRING | MF_UNCHECKED , ID_ABOUT, 
-	     TEXT("Display version information"));
+       TEXT("Display version information"));
   hMenu = GetSystemMenu(stWindow,false);
   AppendMenu(hMenu,MF_SEPARATOR, 0,NULL);
   AppendMenu(hMenu, MF_POPUP, (sqIntptr_t) pMenu, TEXT("&VM Preferences"));
@@ -419,8 +439,8 @@ void TrackPrefsMenu(void) {
 void HandlePrefsMenu(int cmd) {
   switch(cmd) {
   case ID_ABOUT: 
-    MessageBox(stWindow,VM_VERSION_TEXT,
-	       TEXT("About ") TEXT(VM_NAME) TEXT(" on Win32"), MB_OK);
+    MessageBox(stWindow, VM_VERSION_TEXT,
+         TEXT("About ") TEXT(VM_NAME) TEXT(" on Win32"), MB_OK);
     break;
   case ID_DEFERUPDATES:
     fDeferredUpdate = !fDeferredUpdate;
