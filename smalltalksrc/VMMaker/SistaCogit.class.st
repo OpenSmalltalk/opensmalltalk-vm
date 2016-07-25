@@ -383,7 +383,7 @@ SistaCogit >> genJumpIf: boolean to: targetBytecodePC [
 		nextDescriptor := self generatorAt: (objectMemory fetchByte: targetBytecodePC ofObject: methodObj) + bytecodeSetOffset.
 		nextDescriptor generator ==  #genPushConstantFalseBytecode ifTrue: [ ^ super genJumpIf: boolean to: targetBytecodePC ].  ].
 
-	extA := 0.
+	extA := 0. "ignore the noMustBeBoolean flag - should not be present in methods with counters"
 
 	self ssFlushTo: simStackPtr - 1.
 	self ssTop popToReg: TempReg.
