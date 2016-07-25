@@ -1514,7 +1514,7 @@ StackInterpreter class >> preGenerationHook: aCCodeGen [
 StackInterpreter class >> preambleCCode [
 	^	
 '/* Disable Intel compiler inlining of warning which is used for breakpoints */
-#pragma auto_inline off
+#pragma auto_inline(off)
 sqInt warnpid, erroronwarn;
 void
 warning(char *s) { /* Print an error message but don''t necessarily exit. */
@@ -1531,7 +1531,7 @@ warningat(char *s, int l) { /* ditto with line number. */
 	sprintf(sl, "%s %d", s, l);
 	warning(sl);
 }
-#pragma auto_inline on
+#pragma auto_inline(on)
 
 void
 invalidCompactClassError(char *s) { /* Print a (compact) class index error message and exit. */
