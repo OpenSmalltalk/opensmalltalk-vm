@@ -53,8 +53,18 @@
 #	endif
 # endif
 #elif defined(_MSC_VER)
-# include <intrin.h>
-# define sqLowLevelMFence() _ReadWriteBarrier() /* Note that's is deprecated, superseded by C++11 features */
+  /* # define sqLowLevelMFence() _asm { mfence } */
+  /* could use mfence here but */ \
+  /* See http://shipilev.net/blog/2014/on-the-fence-with-dependencies/ */ \
+# if defined(_M_IX86) || defined(_X86_)
+#  define sqLowLevelMFence() __asm { \
+  __asm lock add [esp], 0 \
+  }
+# elif defined(_WIN64) || defined(_M_X64) || defined(_M_AMD64)
+#  define sqLowLevelMFence() __asm { \
+  __asm lock addl [rsp], 0 \
+  }
+# endif
 #endif
 
 #if !defined(sqLowLevelMFence)
