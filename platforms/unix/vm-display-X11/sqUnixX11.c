@@ -672,7 +672,7 @@ static int sendSelection(XSelectionRequestEvent *requestEv, int isMultiple)
    * the case of Xdnd, XSelectionEvent is answered asynchronously
    * after the image prepares data because target (data type) is
    * informed only when the SelectionRequest is sent.
-   * dndOutSelectionRequest() sends a DragRequest event to the image
+   * dndOutSelectionRequest() sends a SQDragRequest event to the image
    * for that.  Finally, the image calls
    * HandMorph>>primitiveDndOutSend: to send the SelectionRequest.
    */

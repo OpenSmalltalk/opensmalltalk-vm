@@ -305,7 +305,7 @@ void signalDropEnter(POINTL pt)
   winPt.x = pt.x;
   winPt.y = pt.y;
   ScreenToClient(stWindow, &winPt);
-  recordDragDropEvent(stWindow, DragEnter, winPt.x, winPt.y, 0);
+  recordDragDropEvent(stWindow, SQDragEnter, winPt.x, winPt.y, 0);
 }
 
 STDMETHODIMP DropTarget_DragEnter(DropTarget *dt, 
@@ -464,14 +464,14 @@ STDMETHODIMP DropTarget_DragOver(DropTarget *dt,
     winPt.x = pt.x;
     winPt.y = pt.y;
     ScreenToClient(stWindow, &winPt);
-    recordDragDropEvent(stWindow, DragMove, winPt.x, winPt.y, 0);
+    recordDragDropEvent(stWindow, SQDragMove, winPt.x, winPt.y, 0);
   }
   return S_OK;
 }
 
 STDMETHODIMP DropTarget_DragLeave(DropTarget *dt) {
   DPRINTF(("DropTarget_DragLeave\n"));
-  recordDragDropEvent(stWindow, DragLeave, 0, 0, 0);
+  recordDragDropEvent(stWindow, SQDragLeave, 0, 0, 0);
   return S_OK;
 }
 
@@ -481,7 +481,7 @@ void signalDrop(POINTL pt)
   winPt.x = pt.x;
   winPt.y = pt.y;
   ScreenToClient(stWindow, &winPt);
-  recordDragDropEvent(stWindow, DragDrop, winPt.x, winPt.y, numDropFiles);
+  recordDragDropEvent(stWindow, SQDragDrop, winPt.x, winPt.y, numDropFiles);
 }
 
 STDMETHODIMP DropTarget_Drop(DropTarget *dt,
@@ -737,7 +737,7 @@ int dropLaunchFile(char *fileName) {
   dropFiles = calloc(1, sizeof(void*));
   dropFiles[0] = _strdup(fileName);
 
-  recordDragDropEvent(stWindow, DragDrop, 0, 0, numDropFiles);
+  recordDragDropEvent(stWindow, SQDragDrop, 0, 0, numDropFiles);
   return 1;
 }
 

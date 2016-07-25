@@ -219,7 +219,7 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
     sqSetNumberOfDropFiles(actualFilteredNumber);
     actualFilteredIndexNumber=1;
     
-    recordDragDropEvent(&theEvent, actualFilteredNumber, DragEnter);
+    recordDragDropEvent(&theEvent, actualFilteredNumber, SQDragEnter);
     for(i=1;i<=numFiles;i++) {
 	    err = AEGetNthPtr(fileList, i, typeFSRef,  &keyword, &type, (Ptr) &theFSRef, sizeof(FSRef), &size);
 	    if (err) 
@@ -244,9 +244,9 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
         actualFilteredIndexNumber++;
     }
 	theEvent.where = where;
-    recordDragDropEvent(&theEvent, actualFilteredNumber, DragDrop);
+    recordDragDropEvent(&theEvent, actualFilteredNumber, SQDragDrop);
 	theEvent.where = where;
-    recordDragDropEvent(&theEvent, actualFilteredNumber, DragLeave);
+    recordDragDropEvent(&theEvent, actualFilteredNumber, SQDragLeave);
    
    done: 
    return;
