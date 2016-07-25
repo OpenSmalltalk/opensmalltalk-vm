@@ -7,7 +7,6 @@ The Sista Cogit (e.g. SistaStackToRegisterMappingCogit) adds counters to conditi
 
 The VM provides a primitive that fills an Array with the state of the counters, and the state of each linked send in a method.  Tthe optimizer obtains the branch and send data for a method via this primitive.
 
-
 This bytecde set encodes a bytecode set for Smalltalk that lifts limits on the number of literals and branch distances, and extended push integer and push character bytecodes.  Bytecodes are ordered by length to make decoding easier.  Bytecodes marked with an * are extensible via a prefix bytecode.
 
 N.B.  Extension bytecodes can only come before extensible bytecodes, and only if valid (one cannot extend a bytecode extensible by Ext A with an Ext B).  An extensible bytecode consumes (and zeros) its extension(s).  Hence the hidden implicit variables holding extensions are always zero except after a valid sequence of extension bytecodes.
@@ -55,13 +54,13 @@ Instance Variables (inherited)
 	220-223	110111 ii			UNASSIGNED
 
 2 Byte Bytecodes
-*	224		11100000	aaaaaaaa	Extend A (Ext A = Ext A prev * 256 + Ext A)
-*	225		11100001	bbbbbbbb	Extend B (Ext B = Ext B prev * 256 + Ext B)
+*	224		11100000	aaaaaaaa	Extend A (Ext A = Ext A prev * 256 + Ext A) A is an unsigned extension.
+*	225		11100001	bbbbbbbb	Extend B (Ext B = Ext B prev * 256 + Ext B) B is a signed extension.
 *	226		11100010	iiiiiiii		Push Receiver Variable #iiiiiiii (+ Extend A * 256)
 *	227		11100011	iiiiiiii		Push Literal Variable #iiiiiiii (+ Extend A * 256)
 *	228		11100100	iiiiiiii		Push Literal #iiiiiiii (+ Extend A * 256)
 	229		11100101	iiiiiiii		Push Temporary Variable #iiiiiiii
-	230		11100110	iiiiiiii		PushNClosureTemps iiiiiiii (Warning: May be removed later once FullBlockClosure support is complete)
+	230		11100110	iiiiiiii		UNASSIGNED (was pushNClosureTemps)
 	231		11100111	jkkkkkkk	Push (Array new: kkkkkkk) (j = 0)
 									&	Pop kkkkkkk elements into: (Array new: kkkkkkk) (j = 1)
 *	232		11101000	iiiiiiii		Push Integer #iiiiiiii (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)
@@ -83,24 +82,29 @@ Instance Variables (inherited)
 	246-247	1111011 i	xxxxxxxx	UNASSIGNED
 
 3 Byte Bytecodes
-	248	(2)	11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
-	249		11111001 	xxxxxxxx	syyyyyyy	Reserved for Push Float
+	248	(2)	11111000 	iiiiiiii		mssjjjjj		Call Primitive #iiiiiiii + (jjjjj * 256) 
+								m=1 means inlined primitive, no hard return after execution. 
+								ss defines the unsafe operation set used to encode the operations. 
+								(ss = 0 means sista unsafe operations, ss = 01 means lowcode operations, other numbers are not used)
+								Inlined primitives may have extensions.
+	249		11111001 	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 ignoreOuterContext: i = 1
 **	250		11111010 	eeiiikkk		jjjjjjjj		Push Closure Num Copied iii (+ExtA//16*8) Num Args kkk (+ ExtA\\16*8) BlockSize jjjjjjjj (+ExtB*256). ee = num extensions
 	251		11111011 	kkkkkkkk	sjjjjjjj		Push Temp At kkkkkkkk In Temp Vector At: jjjjjjj, s = 1 implies remote inst var access instead of remote temp vector access 
 *	252	(3)	11111100 	kkkkkkkk	sjjjjjjj		Store Temp At kkkkkkkk In Temp Vector At: jjjjjjj s = 1 implies remote inst var access instead of remote temp vector access 
 *	253	(3)	11111101 	kkkkkkkk	sjjjjjjj		Pop and Store Temp At kkkkkkkk In Temp Vector At: jjjjjjj s = 1 implies remote inst var access instead of remote temp vector access
 **	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)
-*	255		11111111	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 ignoreOuterContext: i = 1
+*	255		11111111	xxxxxxxx	jjjjjjjj		UNASSIGNED
 
 (1) Bytecode 235 is a super send bytecode that starts the lookup in the superclass of some class.  It has two forms, ""normal"" and ""directed"". In the normal form, the class is the value of the method's methodClassAssociation which must be the last literal.  In the directed form the class is the class on top of stack.
 
 (2) The Call Primitive Bytecode specifies either a primitive in the primitive table (m=0) or an inlined primitive (m=1). Non-inlined primtiives from the primitive table have index (jjjjjjj * 256) + iiiiiiii and return from the method if they succeed.  This bytecode is only valid as the first bytecode of a method.  Inline primitives have index (jjjjjjj * 256) + iiiiiiii, cannot fail, and do not return when they succeed, yielding a result (typically on top of stack after popping their arguments, but possibly in a byte data stack, for example for unboxed floating-point primitives).
 
-(3) ExtB lowest bit implies no store check is needed, ExtB second bit implies the object may be a context, other bits in the extension are unused. Third bit is reserved for object can't be read-only (not implemented).
+(3) ExtB lowest bit implies no store check is needed, ExtB second bit implies the object may be a context, ExtB third bit implies no immutability/read-only check is needed, other bits in the extension are unused.
 
 (4) ExtA = 1 implies no mustBeBoolean trampoline is needed, other bits in the extension are unused
 
-We sort the inline primitive operations by arity.  Nullary primitives occupy the 0-999 range.  Unary primitives occupy the 1-1999 range, etc.
+Here is the specification of the sista unsafe instructions (unsafe operations, set 00). The lowcode set uses external specifications.
+We sort the inline primitive operations by arity.  Nullary primitives occupy the 0-999 range. Unary primitives occupy the 1-1999 range, up until 8 args. 8191 instructions can be encoded in each unsafe operation set, instructions from 0 to 7 arguments can have 1000 different instructions each, while 8 args instructions can have 192 different instructions.
 
 We define the following inlined primitives:
 1000	unchecked class
@@ -110,6 +114,9 @@ We define the following inlined primitives:
 1004	unchecked short16Type format numShorts
 1005	unchecked word32Type format numWords
 1006	unchecked doubleWord64Type format numDoubleWords
+	
+1010	unchecked ensure number of bytes available.
+1011	unchecked fixed-sized new. (objects with 0 to n inst vars)
 
 2000	unchecked SmallInteger #+.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
 2001	unchecked SmallInteger #-.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
@@ -118,6 +125,8 @@ We define the following inlined primitives:
 2004	unchecked SmallInteger #//.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
 2005	unchecked SmallInteger #\\.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
 2006	unchecked SmallInteger #quo:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
+
+2011	unchecked Variable-sized new (new:). Array, ByteArray, etc.
 
 2016	unchecked SmallInteger #bitAnd:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
 2017	unchecked SmallInteger #bitOr:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
@@ -138,6 +147,7 @@ We define the following inlined primitives:
 2068	unchecked DoubleWord Object>>at:.	The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The result is a SmallInteger or a LargePositiveInteger.
 2069	unchecked QuadWord Object>>at:.		The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The result is a SmallInteger or a LargePositiveInteger.
 
+The following instructions can have the ExtB check flag (See (3)).
 3000	unchecked Pointer Object>>at:put:.			The receiver is guaranteed to be a pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger
 3001	unchecked Byte Object>>at:put:.			The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 8 bits.
 3002	unchecked Word Object>>at:put:.			The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 16 bits.
@@ -786,7 +796,10 @@ EncoderForSistaV1 >> genBranchPopTrueNoMustBeBoolean: distance [
 
 { #category : #'extended bytecode generation' }
 EncoderForSistaV1 >> genCallInlinePrimitive: primitiveIndex [
-	"248		11111000	i i i i i i i i	1jjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256)"
+	"	248	(2)	11111000 	iiiiiiii		mssjjjjj		Call Primitive #iiiiiiii + (jjjjj * 256) 
+								m=1 means inlined primitive, no hard return after execution. 
+								ss defines the unsafe operation set used to encode the operations. 
+								(ss = 0 means sista unsafe operations, ss = 01 means lowcode operations, other numbers are not used)"
 	"N.B. We could have made CallPrimitive a 2-byte code taking an extension, but that would
 	 complicate the VM's determination of the primitive number and the primitive error code
 	 store since the extension, being optional, would make the sequence variable length."
@@ -800,7 +813,10 @@ EncoderForSistaV1 >> genCallInlinePrimitive: primitiveIndex [
 
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genCallPrimitive: primitiveIndex [
-	"248		11111000	i i i i i i i i	0jjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256)"
+	"248	(2)	11111000 	iiiiiiii		mssjjjjj		Call Primitive #iiiiiiii + (jjjjj * 256) 
+								m=1 means inlined primitive, no hard return after execution. 
+								ss defines the unsafe operation set used to encode the operations. 
+								(ss = 0 means sista unsafe operations, ss = 01 means lowcode operations, other numbers are not used)"
 	"N.B. We could have made CallPrimitive a 2-byte code taking an extension, but that would
 	 complicate the VM's determination of the primitive number and the primitive error code
 	 store since the extension, being optional, would make the sequence variable length."
@@ -925,7 +941,7 @@ EncoderForSistaV1 >> genPushFullClosure: compiledBlockLiteralIndex numCopied: nu
 
 { #category : #'extended bytecode generation' }
 EncoderForSistaV1 >> genPushFullClosure: compiledBlockLiteralIndex numCopied: numCopied receiverOnStack: receiverOnStack outerContextNeeded: outerContextNeeded [
-	"*	255		11111111	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 ignoreOuterContext: i = 1"
+	"*	249		11111001 	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 ignoreOuterContext: i = 1"
 	| extendedIndex |
 	(numCopied < 1 or: [numCopied > 64]) ifTrue:
 		[self outOfRangeError: 'num copied' index: numCopied range: 1 to: 64].
@@ -935,7 +951,7 @@ EncoderForSistaV1 >> genPushFullClosure: compiledBlockLiteralIndex numCopied: nu
 		[self genUnsignedSingleExtendA: extendedIndex // 256.
 		 extendedIndex := extendedIndex \\ 256].
 	stream
-		nextPut: 255;
+		nextPut: 249;
 		nextPut: extendedIndex;
 		nextPut: receiverOnStack asBit << 7 + (outerContextNeeded not asBit << 6) + numCopied
 ]
@@ -1025,11 +1041,10 @@ EncoderForSistaV1 >> genPushLiteralVar: literalIndex [
 
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genPushNClosureTemps: numTemps [
-	"	230		11100110	iiiiiiii		PushNClosureTemps iiiiiiii"
-	(numTemps < 0 or: [numTemps >= 64]) ifTrue:
-		[^self outOfRangeError: 'closure num temps' index: numTemps range: 0 to: 127].
-	stream nextPut: 230.
-	stream nextPut: numTemps
+	"Not supported anymore since we're migrating to FullBlockClosure"
+	self notify: 'This instruction should not be used any more'.
+	"backward compatibility..."
+	numTemps timesRepeat: [ self genPushSpecialLiteral: nil ]
 ]
 
 { #category : #'bytecode generation' }
@@ -1406,7 +1421,8 @@ EncoderForSistaV1 >> genUnsignedMultipleExtendA: extendedIndex [
 EncoderForSistaV1 >> genUnsignedSingleExtendA: extendedIndex [
 	(extendedIndex between: 0 and: 255) ifFalse:
 		[^self outOfRangeError: 'index' index: extendedIndex range: 0 to: 255].
-	"224		11100000	aaaaaaaa	Extend A (Ext A = Ext A prev * 256 + Ext A)"
+	"224		11100000	aaaaaaaa	Extend A (Ext A = Ext A prev * 256 + Ext A)
+	ExtA is normally unsigned."
 	stream
 		nextPut: 224;
 		nextPut: extendedIndex
@@ -1416,7 +1432,8 @@ EncoderForSistaV1 >> genUnsignedSingleExtendA: extendedIndex [
 EncoderForSistaV1 >> genUnsignedSingleExtendB: extendedIndex [
 	(extendedIndex between: 0 and: 255) ifFalse:
 		[^self outOfRangeError: 'index' index: extendedIndex range: 0 to: 255].
-	"225		11100001	sbbbbbbb	Extend B (Ext B = Ext B prev * 256 + Ext B)"
+	"225		11100001	sbbbbbbb	Extend B (Ext B = Ext B prev * 256 + Ext B).
+	ExtB is normally signed"
 	stream
 		nextPut: 225;
 		nextPut: extendedIndex
