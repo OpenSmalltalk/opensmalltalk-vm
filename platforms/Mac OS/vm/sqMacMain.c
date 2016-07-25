@@ -299,7 +299,7 @@ block()
 
 /* Print an error message, possibly a stack trace, and exit. */
 /* Disable Intel compiler inlining of error which is used for breakpoints */
-#pragma auto_inline off
+#pragma auto_inline(off)
 void
 error(char *msg)
 {
@@ -307,7 +307,7 @@ error(char *msg)
 	if (blockOnError) block();
 	abort();
 }
-#pragma auto_inline on
+#pragma auto_inline(on)
 
 static char vmLogDirA[PATH_MAX+1];
 

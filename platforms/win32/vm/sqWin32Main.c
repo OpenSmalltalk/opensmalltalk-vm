@@ -975,7 +975,7 @@ extern char *__cogitBuildInfo;
 
 /* Print an error message, possibly Smalltalk and C stack traces, and exit. */
 /* Disable Intel compiler inlining of error which is used for breakpoints */
-#pragma auto_inline off
+#pragma auto_inline(off)
 static int inError = 0;
 
 void
@@ -1062,7 +1062,7 @@ extern sqInt reportStackHeadroom;
 	return ec;
 }
 
-#pragma auto_inline on
+#pragma auto_inline(on)
 
 static void
 printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
