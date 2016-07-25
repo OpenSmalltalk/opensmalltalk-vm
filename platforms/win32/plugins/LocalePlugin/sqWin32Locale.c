@@ -58,11 +58,9 @@ void	sqLocGetLanguageInto(char * str) {
 /* return 1 (true) if the currency symbol is to be placed in front of the
  *currency amount */
 sqInt	sqLocCurrencyNotation(void) {
-	char currString[6];
-	int r;
-	if (GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_ICURRENCY,currString, 6) != 0){
-		r =(((int) currString % 2) == 0);
-		return r;
+	DWORD icurrency;
+	if (GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_ICURRENCY | LOCALE_RETURN_NUMBER,(char *)&icurrency, sizeof(icurrency)/sizeof(TCHAR)) != 0){
+		return((icurrency % 2) == 0);
 	}
 	return 0;
 }
