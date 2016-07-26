@@ -826,7 +826,7 @@ getVersionInfo(int verbose)
  * terminating process (MinGW bug?). So instead call the shutdown sequence via
  * _cexit() and then terminate explicitly.
  */
-# define exit(ec) do { _cexit(ec); ExitProcess(ec); } while (0)
+# define exit(ec) do { _cexit(); ExitProcess(ec); } while (0)
 #endif
 
 static void
