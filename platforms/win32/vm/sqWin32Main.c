@@ -1949,12 +1949,14 @@ parseVMArgument(int argc, char *argv[])
     return 1; }
 #endif /* COGVM */
 #if SPURVM
-    else if (!strcmp(argv[0], "-maxoldspace")) {
-    maxOldSpaceSize = (usqInt) strtobkm(argv[1]);
-    return 2; }
-    else if (!strncmp(argv[0], "-maxoldspace:", 13)) {
-    maxOldSpaceSize = (usqInt) strtobkm(argv[0]+13);   
-    return 2; }
+    else if (!strcmp(argv[0], "-maxoldspace")) { 
+		extern unsigned long maxOldSpaceSize;
+		maxOldSpaceSize = (usqInt) strtobkm(argv[1]);	 
+		return 2; }
+    else if (!strncmp(argv[0], "-maxoldspace:", 13)) { 
+		extern unsigned long maxOldSpaceSize;
+		maxOldSpaceSize = (usqInt) strtobkm(argv[0]+13);	 
+		return 2; }
 #endif
 
   /* NOTE: the following flags are "undocumented" */

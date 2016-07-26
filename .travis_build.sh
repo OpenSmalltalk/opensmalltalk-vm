@@ -94,15 +94,15 @@ case "$PLATFORM" in
     ;;
   "Windows")
     build_directory="./build.${ARCH}/${FLAVOR}/"
+    output_zip="${output_file}.zip"
 
     [[ ! -d "${build_directory}" ]] && exit 100
 
     pushd "${build_directory}"
     # remove bochs plugins
     sed -i 's/Bochs.* //g' plugins.ext
-    bash -e ./mvm -f
-    output_file="${output_file}.zip"
-    zip -r "${output_file}" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
+    bash -e ./mvm -f || exit 1
+    zip -r "${output_zip}" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
     popd
     ;;
   *)
