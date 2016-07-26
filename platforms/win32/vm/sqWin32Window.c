@@ -2669,7 +2669,7 @@ sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
 /*                    Image / VM File Naming                                */
 /****************************************************************************/
 
-int vmPathSize(void)
+sqInt vmPathSize(void)
 {
 #if defined(UNICODE)
   return WideCharToMultiByte(CP_UTF8, 0, vmPath, -1, NULL, 0, NULL, NULL);
