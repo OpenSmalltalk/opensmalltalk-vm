@@ -9,6 +9,14 @@
 #ifdef _MSC_VER
 /* disable "function XXXX: no return value" */
 #pragma warning(disable:4035)
+/* disable "unreferenced local variable" */
+#pragma warning(disable:4101)
+/* disable "not all control paths return a value" */
+#pragma warning(disable:4715)
+/* disable "must return a value" */
+#pragma warning(disable:4716)
+/* disable "funcion XXX may be unsafe" for POSIX functions */
+#pragma warning(disable:4996)
 /* optional C SEH macros */
 #define TRY __try
 #define EXCEPT(filter) __except(filter)
@@ -105,6 +113,11 @@
 # define WIN32_OS_NAME (fWindows95 ? "95" : "NT")
 # define WIN32_PROCESSOR_NAME "IX86"
 
+# if defined(X86)
+#  undef X86
+# endif
+# define X86    i386
+
   /* Use console for warnings if possible */
 # ifndef UNICODE
 #	define warnPrintf printf
@@ -124,6 +137,10 @@
 
 #endif /* (_WIN32_WCE) */
 
+/* due to weird include orders, make sure WIN32 is defined */
+# if !defined(WIN32)
+#  define WIN32 1
+# endif
 
 /* Experimental */
 #ifdef MINIMAL
@@ -217,7 +234,9 @@ int sqMain(int argc, char *argv[]);
 
 #ifdef _MSC_VER
 #define COMPILER "Microsoft Visual C++ "
-#define VERSION ""
+#define __SQ_STR_HELPER(x) #x
+#define __SQ_STR(x) __SQ_STR_HELPER(x)
+#define VERSION __SQ_STR(_MSC_FULL_VER)
 #endif
 #ifdef __GNUC__
 #define COMPILER "gcc "
@@ -230,6 +249,8 @@ int sqMain(int argc, char *argv[]);
 #define VERSION ""
 #endif
 
+#include <tchar.h>
+
 /********************************************************/
 /* image reversal functions                             */
 /********************************************************/
@@ -239,13 +260,19 @@ int reverse_image_words(unsigned int *dst, unsigned int *src,int depth, int widt
 /********************************************************/
 /* Declarations we may need by other modules            */
 /********************************************************/
-extern char imageName[];		/* full path and name to image */
-extern TCHAR imagePath[];		/* full path to image */
-extern TCHAR vmPath[];		    /* full path to interpreter's directory */
-extern TCHAR vmName[];		    /* name of the interpreter's executable */
-extern TCHAR windowTitle[];             /* window title string */
+
+/* already defined in sq.h */
+
+#define MAX_PATH_SQUEAK 32767
+#define IMAGE_NAME_SIZE MAX_PATH_SQUEAK
+
+/* extern char imageName[];	*/ /* full path and name to image */
+extern TCHAR* imagePath;       /* full path to image */
+extern TCHAR* vmPath;          /* full path to interpreter's directory */
+extern TCHAR* vmName;          /* name of the interpreter's executable */
+extern char*  windowTitle;     /* window title string */
 extern char vmBuildString[];            /* the vm build string */
-extern TCHAR windowClassName[];    /* class name for the window */
+extern TCHAR* windowClassName; /* class name for the window */
 
 extern UINT SQ_LAUNCH_DROP;
 
@@ -360,7 +387,7 @@ void vprintLastError(TCHAR *fmt, ...);
 /******************************************************/
 /* Misc functions                                     */
 /******************************************************/
-DWORD SqueakImageLength(TCHAR *fileName);
+DWORD SqueakImageLength(char *fileName);
 int isLocalFileName(TCHAR *fileName);
 
 #ifndef NO_PLUGIN_SUPPORT
@@ -442,5 +469,125 @@ extern DWORD ticksForBlitting; /* time needed for actual blts */
 #ifndef STACK_SIZE_PARAM_IS_A_RESERVATION
 #  define STACK_SIZE_PARAM_IS_A_RESERVATION 0x00010000
 #endif
+
+#include <malloc.h>
+/**
+    Converts multi-byte characters to wide characters. Handles paths longer
+    than 260 characters (including NULL) by prepending "\\?\" to encode UNC
+    paths as suggested in http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx#maxpath
+    "The maximum path of 32,767 characters is approximate,
+    because the "\\?\" prefix may be expanded to a longer
+    string by the system at run time, and this expansion
+    applies to the total length."
+
+    Note that we do not check for the correct path component size,
+    which should be MAX_PATH in general but can vary between file systems.
+    Actually, we should perform an additional check with
+    GetVolumneInformation to acquire lpMaximumComponentLength.
+
+    Note that another possibility would be to use 8.3 aliases
+    for path components like the Windows Explorer does. However,
+    this feature also depends on the volume specifications.
+
+    Calling alloca() should be fine because we limit path length to 32k.
+    Stack size limit is much higher.
+
+    When using an API to create a directory, the specified path cannot be
+    so long that you cannot append an 8.3 file name (that is, the directory
+    name cannot exceed MAX_PATH minus 12).
+    **/
+#define ALLOC_WIN32_PATH(out_path, in_name, in_size, FAIL) { \
+  int sz = MultiByteToWideChar(CP_UTF8, 0, in_name, in_size, NULL, 0); \
+  if (sz < MAX_PATH_SQUEAK) { \
+    if (sz >= MAX_PATH-12 /* for directory creation; see above */) { \
+      out_path = (WCHAR*)alloca((sz + 4 + 1) * sizeof(WCHAR)); \
+      out_path[0] = L'\\'; out_path[1] = L'\\'; \
+      out_path[2] = L'?'; out_path[3] = L'\\'; \
+      MultiByteToWideChar(CP_UTF8, 0, in_name, in_size, out_path + 4, sz); \
+      out_path[sz + 4] = 0; \
+      sz += 4; \
+        } else { \
+      out_path = (WCHAR*)alloca((sz + 1) * sizeof(WCHAR)); \
+      MultiByteToWideChar(CP_UTF8, 0, in_name, in_size, out_path, sz); \
+      out_path[sz] = 0; \
+        } \
+    } else { FAIL; }\
+}
+
+#define REALLOC_WIN32_PATH(in_out_wide_path, in_size) { \
+  int sz = wcslen(in_out_wide_path); \
+  WCHAR *tmp = in_out_wide_path; \
+  in_out_wide_path = (WCHAR*)alloca((in_size+1) * sizeof(WCHAR)); \
+  if(in_size < sz) tmp[in_size] = 0; \
+  wcscpy(in_out_wide_path, tmp); \
+  in_out_wide_path[in_size] = 0; \
+}
+
+
+/**
+  Convert a TCHAR to UTF-8 Bytes that Squeak may expect.
+  Takes care of ANSI vs. Wide vs. UTF-8.
+  Allocates on the stack.
+  */
+#if defined(UNICODE)
+#define TCHAR_TO_UTF8(in_tchar, out_utf8char) {\
+  int out_bytesize = WideCharToMultiByte(CP_UTF8, 0, in_tchar, -1, NULL, 0, NULL, NULL);\
+  out_utf8char = (char*) alloca((out_bytesize + 1) * sizeof(char));\
+  WideCharToMultiByte(CP_UTF8, 0, in_tchar, -1, out_utf8char, out_bytesize, NULL, NULL);\
+  out_utf8char[out_bytesize] = 0; \
+}
+#else
+#define TCHAR_TO_UTF8(in_tchar, out_utf8char) {\
+  int sz = MultiByteToWideChar(CP_ACP, 0, in_tchar, -1, NULL, 0); \
+  WCHAR* wTmpStr = (WCHAR*) alloca((sz + 1) * sizeof(WCHAR)); \
+  MultiByteToWideChar(CP_ACP, 0, in_tchar, -1, wTmpStr, sz); \
+  wTmpStr[sz] = 0;\
+  int out_bytesize = WideCharToMultiByte(CP_UTF8, 0, wTmpStr, -1, NULL, 0, NULL, NULL); \
+  out_utf8char = (char*) alloca((sz + 1) * sizeof(char)); \
+  WideCharToMultiByte(CP_UTF8, 0, wTmpStr, -1, out_utf8char, out_bytesize, NULL, NULL); \
+  out_utf8char[out_bytesize] = 0; \
+}
+#endif
+
+
+/**
+  Convert UTF-8 Bytes that come from Squeak to TCHAR string.
+  Takes care of ANSI vs. Wide vs. UTF-8.
+  Allocates on the stack.
+  */
+#if defined(UNICODE)
+#define UTF8_TO_TCHAR(in_utf8char, out_tchar) { \
+  int out_tcharsize = MultiByteToWideChar(CP_UTF8, 0, in_utf8char, -1, NULL, 0); \
+  out_tchar = (TCHAR*) alloca((out_tcharsize + 1) * sizeof(TCHAR)); \
+  MultiByteToWideChar(CP_UTF8, 0, in_utf8char, -1, out_tchar, out_tcharsize); \
+  out_tchar[out_tcharsize] = 0;\
+}
+#else
+#define UTF8_TO_TCHAR(in_utf8char, out_tchar) {\
+  int sz = MultiByteToWideChar(CP_UTF8, 0, in_utf8char, -1, NULL, 0); \
+  WCHAR* wTmpStr = (WCHAR*) alloca((sz + 1) * sizeof(WCHAR)); \
+  MultiByteToWideChar(CP_UTF8, 0, in_utf8char, -1, wTmpStr, sz); \
+  wTmpStr[sz] = 0;\
+  int out_tcharsize = WideCharToMultiByte(CP_ACP, 0, wTmpStr, -1, NULL, 0, NULL, NULL); \
+  out_tchar = (TCHAR*) alloca((out_tcharsize + 1) * sizeof(TCHAR));\
+  WideCharToMultiByte(CP_ACP, 0, wTmpStr, -1, out_tchar, out_tcharsize, NULL, NULL); \
+  out_tchar[out_tcharsize] = 0; \
+}
+#endif
+
+
+/** 
+ * Use _recalloc to alloc/realloc ptr to specified size.
+ * In case of failure, set ptr to  previeous value and execute the FAIL
+*/
+#define RECALLOC_OR_RESET(ptr, count, size, FAIL) { \
+  void* __ptr = ptr; \
+  ptr = _recalloc(__ptr, count, size); \
+  if (!ptr) { \
+    ptr = __ptr; \
+    FAIL; \
+  }\
+}
+
 
 #endif /* SQ_WIN_32_H */

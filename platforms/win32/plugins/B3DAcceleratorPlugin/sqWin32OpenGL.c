@@ -20,6 +20,10 @@
 
 #include "sqOpenGLRenderer.h"
 
+#if defined(_MSC_VER)
+#pragma comment(lib, "opengl32.lib")
+#endif
+
 #ifndef PFD_GENERIC_ACCELERATED
 #define PFD_SWAP_LAYER_BUFFERS      0x00000800
 #define PFD_GENERIC_ACCELERATED     0x00001000
@@ -140,7 +144,7 @@ static HWND glCreateClientWindow(HWND parentWindow, int x, int y, int w, int h)
 {
   WNDCLASS 	windowClass;
   HINSTANCE	hInstance;
-  const char *className = "Squeak-OpenGLWindow";
+  const TCHAR *className = TEXT("Squeak-OpenGLWindow");
 
   if(!parentWindow) return NULL;
   hInstance = (HINSTANCE) GetWindowLongPtr((HWND)parentWindow,GWLP_HINSTANCE);
@@ -155,13 +159,13 @@ static HWND glCreateClientWindow(HWND parentWindow, int x, int y, int w, int h)
   windowClass.lpszMenuName = NULL;
   windowClass.lpszClassName = className;
   RegisterClass(&windowClass);
-  return CreateWindow(className,"",
+  return CreateWindow(className, NULL,
 		      WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS |WS_VISIBLE,
-		      x,y,w,h,
+		      x, y, w, h,
 		      (HWND) parentWindow,
-		      0,
+		      NULL,
 		      hInstance,
-		      0);
+		      NULL);
 }
 
 /*****************************************************************************/
