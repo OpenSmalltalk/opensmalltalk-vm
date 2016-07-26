@@ -61,9 +61,7 @@
   __asm lock add [esp], 0 \
   }
 # elif defined(_WIN64) || defined(_M_X64) || defined(_M_AMD64)
-#  define sqLowLevelMFence() __asm { \
-  __asm lock addl [rsp], 0 \
-  }
+#  define sqLowLevelMFence MemoryBarrier
 # endif
 #endif
 
