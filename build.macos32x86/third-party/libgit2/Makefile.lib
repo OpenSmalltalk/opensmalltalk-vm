@@ -34,5 +34,10 @@ $(LIBGIT2LIB): $(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR) $(LIBGIT2DIR)
 		&& make install
 	cp -f $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME) $(THIRDPARTYINSTALLDIR)
 	install_name_tool -id "@executable_path/Plugins/$(LIBGIT2LIBNAME)" $(LIBGIT2LIB)
+	@echo "Fixing dependency links"
+	@for each in $(notdir $(wildcard $(THIRDPARTYLIBDIR)/*.dylib)); do \
+		install_name_tool -change "$(THIRDPARTYLIBDIR)/$$each" "@executable_path/Plugins/$$each" $(LIBGIT2LIB); \
+	done
+	@echo "DONE"
 	
 libgit2: $(LIBGIT2LIB)

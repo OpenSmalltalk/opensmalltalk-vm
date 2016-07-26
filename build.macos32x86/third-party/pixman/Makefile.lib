@@ -4,9 +4,9 @@ $(info LIBRARY: pixman)
 
 # plugin definitions
 PIXMANURL:=http://www.cairographics.org/releases/pixman-0.26.0.tar.gz
-PIXMANNAME:=libpixman-1.0.dylib
+PIXMANLIBNAME:=libpixman-1.0.dylib
 PIXMANDIR:=$(THIRDPARTYDIR)/pixman-0.26.0
-PIXMANLIB:=$(THIRDPARTYINSTALLDIR)/$(PIXMANNAME)
+PIXMANLIB:=$(THIRDPARTYINSTALLDIR)/$(PIXMANLIBNAME)
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
@@ -22,6 +22,7 @@ $(PIXMANLIB): $(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR) $(PIXMANDIR)
 		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch i386' LDFLAGS='-arch i386' \
 		&& make \
 		&& make install
-	cp -f $(THIRDPARTYLIBDIR)/$(PIXMANNAME) $(THIRDPARTYINSTALLDIR)
+	cp -f $(THIRDPARTYLIBDIR)/$(PIXMANLIBNAME) $(THIRDPARTYINSTALLDIR)
+	install_name_tool -id "@executable_path/Plugins/$(PIXMANLIBNAME)" $(PIXMANLIB)
 	
 pixman: $(PIXMANLIB)
