@@ -416,5 +416,6 @@ sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle) 
  * No useful return value since we're getting out of Dodge anyway.
  */
 sqInt ioCloseAllWindows(void){
+	return 0;
 }
 

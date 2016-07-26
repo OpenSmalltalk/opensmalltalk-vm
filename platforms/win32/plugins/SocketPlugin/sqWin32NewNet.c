@@ -214,6 +214,7 @@ static int removeFromList(privateSocketStruct *pss) {
     while(tmp && tmp->next != pss) tmp = tmp->next;
     if(tmp) tmp->next = pss->next;
   }
+  return 0;
 }
 
 /* cleanupSocket:
