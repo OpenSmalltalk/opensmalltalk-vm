@@ -566,7 +566,7 @@ extern DWORD ticksForBlitting; /* time needed for actual blts */
 #define UTF8_TO_TCHAR(in_utf8char, out_tchar) {\
   int sz = MultiByteToWideChar(CP_UTF8, 0, in_utf8char, -1, NULL, 0); \
   WCHAR* wTmpStr = (WCHAR*) alloca((sz + 1) * sizeof(WCHAR)); \
-  MultiByteToWideChar(CP_UTF8, 0, in_utf8char, -1 wTmpStr, sz); \
+  MultiByteToWideChar(CP_UTF8, 0, in_utf8char, -1, wTmpStr, sz); \
   wTmpStr[sz] = 0;\
   int out_tcharsize = WideCharToMultiByte(CP_ACP, 0, wTmpStr, -1, NULL, 0, NULL, NULL); \
   out_tchar = (TCHAR*) alloca((out_tcharsize + 1) * sizeof(TCHAR));\
