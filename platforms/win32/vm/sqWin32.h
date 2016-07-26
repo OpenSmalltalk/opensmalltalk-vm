@@ -514,8 +514,6 @@ extern DWORD ticksForBlitting; /* time needed for actual blts */
     } else { FAIL; }\
 }
 
-//  if(wcscpy_s(in_out_wide_path, in_size < sz ? in_size : sz, tmp) != 0) FAIL(); \
-
 #define REALLOC_WIN32_PATH(in_out_wide_path, in_size) { \
   int sz = wcslen(in_out_wide_path); \
   WCHAR *tmp = in_out_wide_path; \
