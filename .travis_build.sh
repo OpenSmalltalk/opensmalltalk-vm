@@ -68,7 +68,7 @@ case "$PLATFORM" in
     pushd "${build_directory}"
 
     travis_fold start build_vm "Building OpenSmalltalk VM..."
-    echo n | ./mvm
+    echo n | bash -e ./mvm
     travis_fold end build_vm
 
     # cat config.log
@@ -85,7 +85,7 @@ case "$PLATFORM" in
     pushd "${build_directory}"
 
     travis_fold start build_vm "Building OpenSmalltalk VM..."
-    ./mvm -f
+    bash -e ./mvm -f
     travis_fold end build_vm
 
     output_file="${output_file}.tar.gz"
@@ -100,7 +100,7 @@ case "$PLATFORM" in
     pushd "${build_directory}"
     # remove bochs plugins
     sed -i 's/Bochs.* //g' plugins.ext
-    ./mvm -f
+    bash -e ./mvm -f
     output_file="${output_file}.zip"
     zip -r "${output_file}" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
     popd
