@@ -580,6 +580,7 @@ extern DWORD ticksForBlitting; /* time needed for actual blts */
  * Use _recalloc to alloc/realloc ptr to specified size.
  * In case of failure, set ptr to  previeous value and execute the FAIL
 */
+#ifdef _MSC_VER
 #define RECALLOC_OR_RESET(ptr, count, size, FAIL) { \
   void* __ptr = ptr; \
   ptr = _recalloc(__ptr, count, size); \
@@ -588,6 +589,17 @@ extern DWORD ticksForBlitting; /* time needed for actual blts */
     FAIL; \
   }\
 }
-
+#else
+#define RECALLOC_OR_RESET(ptr, count, size, FAIL) { \
+  void* __ptr = ptr; \
+  ptr = realloc(__ptr, count*size); \
+  if (!ptr) { \
+    ptr = __ptr; \
+    FAIL; \
+  } else {\
+    memset(__ptr,0,count*size); \
+  } \
+}
+#endif
 
 #endif /* SQ_WIN_32_H */
