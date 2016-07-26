@@ -31,6 +31,10 @@
 # else
 #  include "cointerp.h"
 # endif
+#else
+#  if SPURVM
+     extern usqInt maxOldSpaceSize;
+#  endif
 #endif
 
 #if !defined(IMAGE_SIZEOF_NT_OPTIONAL_HEADER)
