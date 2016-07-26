@@ -135,6 +135,7 @@ int ioCanSetFileTypeOfSize(char* pathString, int pathStringLength) {
 /* disabling/querying */
 int ioDisableFileAccess(void) {
   allowFileAccess = 0;
+  return 0;
 }
 
 int ioHasFileAccess(void) {
@@ -158,6 +159,7 @@ sqInt ioCanWriteImage(void) {
 
 sqInt ioDisableImageWrite(void) {
   allowImageWrite = 0;
+  return 0;
 }
 /***************************************************************************/
 /***************************************************************************/
@@ -180,6 +182,7 @@ int ioCanListenOnPort(void* s, int port) {
 
 int ioDisableSocketAccess() {
   allowSocketAccess = 0;
+  return 0;
 }
 
 int ioHasSocketAccess() {
@@ -219,10 +222,16 @@ int ioInitSecurity(void) {
   }
 
 #define MY_SQUEAK TEXT("\\My Squeak")
-#define MY_DOCUMENTS_VAR TEXT("MYDOCUMENTS")
+#define MY_DOCUMENTS_VAR L"MYDOCUMENTS"
 
+#ifdef _MSC_VER
   PWSTR documentsPath = NULL;
-  if (S_OK == SHGetKnownFolderPath(&FOLDERID_Documents, 0, NULL, &documentsPath)) {
+  if (S_OK == SHGetKnownFolderPath(&FOLDERID_Documents, 0, NULL, &documentsPath))
+#else
+  WCHAR documentsPath[MAX_PATH];
+  if (S_OK == SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, documentsPath))
+#endif
+  {
 #if defined(UNICODE)
     RECALLOC_OR_RESET(tUntrustedUserDirectory,
       wcslen(documentsPath) + _tcslen(MY_SQUEAK) + 1 /* \0 */,

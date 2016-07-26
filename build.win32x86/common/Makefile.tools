@@ -63,7 +63,7 @@ LDFLAGS:= -mwindows $(BASELDFLAGS)
 CONSOLELDFLAGS:= -mconsole $(BASELDFLAGS)
 STDLIBS:= -lddraw -ldinput -lopengl32 -lws2_32 -lcomdlg32 -lole32 -lwinmm \
 	-lversion -lwininet -luser32 -lgdi32 -lpsapi -lkernel32 \
-	-ldsound -lsecur32
+	-ldsound -lsecur32 -lshfolder
 
 #############################################################################
 # Tools to use
