@@ -499,7 +499,8 @@ void gatherSystemInfo(void)
   GetSystemInfo(&sysInfo);
 
   /* Set up the win32VersionName */
-  _stprintf(tmpString, TEXT("%d.%d"), osInfo.dwMajorVersion, osInfo.dwMinorVersion);
+  _stprintf(tmpString, TEXT("%lu.%lu"),
+            (ULONG)osInfo.dwMajorVersion, (ULONG)osInfo.dwMinorVersion);
   {
     char* uTmp = NULL;
     TCHAR_TO_UTF8(tmpString, uTmp);
@@ -537,26 +538,26 @@ void gatherSystemInfo(void)
               TEXT("Hardware information: \n")
               TEXT("\tManufacturer: %s\n")
               TEXT("\tModel: %s\n")
-              TEXT("\tNumber of processors: %d\n")
-              TEXT("\tPage size: %d\n")
+              TEXT("\tNumber of processors: %lu\n")
+              TEXT("\tPage size: %lu\n")
               TEXT("\nMemory Information (upon launch):\n")
-              TEXT("\tPhysical Memory Size: %d kbytes\n")
-              TEXT("\tPhysical Memory Free: %d kbytes\n")
-              TEXT("\tPage File Size: %d kbytes\n")
-              TEXT("\tPage File Free: %d kbytes\n")
-              TEXT("\tVirtual Memory Size: %d kbytes\n")
-              TEXT("\tVirtual Memory Free: %d kbytes\n")
-              TEXT("\tMemory Load: %d percent\n"),
+              TEXT("\tPhysical Memory Size: %" ) TEXT(PRIuSQPTR) TEXT( " kbytes\n")
+              TEXT("\tPhysical Memory Free: %" ) TEXT(PRIuSQPTR) TEXT( " kbytes\n")
+              TEXT("\tPage File Size: %" ) TEXT(PRIuSQPTR) TEXT( " kbytes\n")
+              TEXT("\tPage File Free: %" ) TEXT(PRIuSQPTR) TEXT( " kbytes\n")
+              TEXT("\tVirtual Memory Size: %" ) TEXT(PRIuSQPTR) TEXT( " kbytes\n")
+              TEXT("\tVirtual Memory Free: %" ) TEXT(PRIuSQPTR) TEXT( " kbytes\n")
+              TEXT("\tMemory Load: %lu percent\n"),
               manufacturer, model,
-              sysInfo.dwNumberOfProcessors,
-              sysInfo.dwPageSize,
+              (ULONG) sysInfo.dwNumberOfProcessors,
+              (ULONG) sysInfo.dwPageSize,
               memStat.dwTotalPhys / 1024,
               memStat.dwAvailPhys / 1024,
               memStat.dwTotalPageFile / 1024,
               memStat.dwAvailPageFile / 1024,
               memStat.dwTotalVirtual / 1024,
               memStat.dwAvailVirtual / 1024,
-              memStat.dwMemoryLoad);
+              (ULONG) memStat.dwMemoryLoad);
   }
 
   /* find more information about EACH processor */
@@ -574,12 +575,12 @@ void gatherSystemInfo(void)
 
       GET_INFO_REG_S(hk, "ProcessorNameString", nameString);
       GET_INFO_REG_S(hk, "Identifier", identifier);
-      GET_INFO_REG_X(hk, "~MHz", &mhz, sizeof(DWORD), mhz = -1);
+      GET_INFO_REG_X(hk, "~MHz", &mhz, sizeof(DWORD), mhz = ~0);
       _stprintf(tmp,
-                TEXT("\nProcessor %d: %s\n")
+                TEXT("\nProcessor %u: %s\n")
                 TEXT("\tIdentifier: %s\n")
-                TEXT("\t~MHZ: %d\n"),
-                proc, nameString, identifier, mhz);
+                TEXT("\t~MHZ: %lu\n"),
+                proc, nameString, identifier, (ULONG) mhz);
       RegCloseKey(hk);
     }
   }
@@ -611,7 +612,7 @@ void gatherSystemInfo(void)
     }
 
     _stprintf(tmpString,
-              TEXT("Operating System: %s (Build %d %s)\n")
+              TEXT("Operating System: %s (Build %lu %s)\n")
               TEXT("\tRegistered Owner: %s\n")
               TEXT("\tRegistered Company: %s\n")
               TEXT("\tSP major version: %d\n")
@@ -619,7 +620,7 @@ void gatherSystemInfo(void)
               TEXT("\tSuite mask: %lx\n")
               TEXT("\tProduct type: %lx\n"),
               product, 
-              osInfo.dwBuildNumber, osInfo.szCSDVersion,
+              (ULONG) osInfo.dwBuildNumber, osInfo.szCSDVersion,
               owner, company,
               osInfo.wServicePackMajor, osInfo.wServicePackMinor,
 #if defined(_MSC_VER) && _MSC_VER < 1300
