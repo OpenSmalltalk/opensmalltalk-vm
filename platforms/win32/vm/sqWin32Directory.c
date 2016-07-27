@@ -296,13 +296,12 @@ int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int name
 		2	if the given path has bad syntax or does not reach a directory
   */
 
-  HANDLE findHandle;
   WIN32_FILE_ATTRIBUTE_DATA winAttrs;
   WCHAR *win32Path = NULL;
   int win32PathLength = 0;
   FILETIME fileTime;
   SYSTEMTIME sysTime;
-  int i, sz, fsz;
+  int sz, fsz;
 
   /* default return values */
   *name             = 0;
@@ -385,14 +384,14 @@ int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int name
 }
 
 
-dir_SetMacFileTypeAndCreator(char *filename, int filenameSize,
+int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize,
 			     char *fType, char *fCreator)
 {
   /* Win32 files are untyped, and the creator is correct by default */
   return true;
 }
 
-dir_GetMacFileTypeAndCreator(char *filename, int filenameSize,
+int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize,
 			     char *fType, char *fCreator)
 {
   /* Win32 files are untyped, and the creator is correct by default */

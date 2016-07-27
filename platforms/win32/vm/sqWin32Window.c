@@ -764,6 +764,7 @@ sqInt ioSetWindowLabelOfSize(void* lblIndex, sqInt sz) {
   memcpy(windowTitle, (void*)lblIndex, sz);
   windowTitle[sz] = 0;
   SetWindowTitle();
+  return 1;
 }
 
 sqInt ioGetWindowWidth(void) {
@@ -1160,7 +1161,9 @@ sqInputEvent *sqNextEventPut(void) {
 
 
 int recordMouseEvent(MSG *msg, UINT nrClicks) {
+#ifndef NO_DIRECTINPUT
   static DWORD firstEventTime = 0;
+#endif
   DWORD wParam;
   sqMouseEvent proto, *event;
   int alt, shift, ctrl, red, blue, yellow;
@@ -1456,12 +1459,14 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
 #else /* defined(_WIN32_WCE) */
 
   if(GetKeyState(VK_LBUTTON) & 0x8000) stButtons |= 4;
-  if(GetKeyState(VK_MBUTTON) & 0x8000)
+  if(GetKeyState(VK_MBUTTON) & 0x8000) {
     if(f1ButtonMouse) stButtons |= 4;
     else stButtons |= f3ButtonMouse ? 2 : 1;
-  if(GetKeyState(VK_RBUTTON) & 0x8000)
+  }
+  if(GetKeyState(VK_RBUTTON) & 0x8000) {
     if(f1ButtonMouse) stButtons |= 4;
     else stButtons |= f3ButtonMouse ? 1 : 2;
+  }
 
   if (stButtons == 4) {
     /* red button honours the modifiers */
@@ -1644,7 +1649,6 @@ sqInt
 ioDrainEventQueue(void)
 {
   static MSG msg;
-  POINT mousePt;
 
   if(fRunService && !fWindows95) return 1;
 
@@ -1801,7 +1805,6 @@ sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY) {
 
 int ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y) {
   ICONINFO info;
-  HCURSOR hCursor = NULL;
   HBITMAP hbmMask = NULL;
   HBITMAP hbmColor = NULL;
   HDC mDC;
@@ -2073,9 +2076,10 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenF
   return 0; /* Not implemented on CE */
 #else
   RECT r;
+#ifdef USE_DIRECT_X
   static int wasFullscreen = 0;
   static HWND oldBrowserWindow = NULL;
-
+#endif
 
   if(!IsWindow(stWindow)) return 0;
   if(!IsWindowVisible(stWindow)) return 0;
@@ -2232,13 +2236,14 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
   targetRect.right = width;
   targetRect.bottom = height;
 #ifndef NO_BYTE_REVERSAL
-  if( depth < 32 )
+  if( depth < 32 ) {
     if(depth == 16)
       reverse_image_words((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
         depth, width, &targetRect);
     else
       reverse_image_bytes((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
         depth, width, &targetRect);
+  }
 #endif /* NO_BYTE_REVERSAL */
 
   if(GDI_ERROR == StretchDIBits(dc,
@@ -2257,13 +2262,14 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 
   /* reverse the image bits if necessary */
 #ifndef NO_BYTE_REVERSAL
-  if( depth < 32 )
+  if( depth < 32 ) {
     if(depth == 16)
       reverse_image_words((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
         depth, width, &targetRect);
     else
       reverse_image_bytes((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
         depth, width, &targetRect);
+  }
 #endif /* NO_BYTE_REVERSAL */
 
   EndPage   (dc);
@@ -2451,13 +2457,14 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   /* reverse the image bits if necessary */
 #ifndef NO_BYTE_REVERSAL
   PROFILE_BEGIN(PROFILE_DISPLAY)
-  if( !lsbDisplay && depth < 32 )
+  if( !lsbDisplay && depth < 32 ) {
     if(depth == 16)
       reverse_image_words((unsigned int*) dispBits, (unsigned int*) dispBits,
         depth, width, &updateRect);
     else
       reverse_image_bytes((unsigned int*) dispBits, (unsigned int*) dispBits,
         depth, width, &updateRect);
+  }
   PROFILE_END(ticksForReversal)
 #endif /* NO_BYTE_REVERSAL */
 
@@ -2535,13 +2542,14 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   /* reverse the image bits if necessary */
 #ifndef NO_BYTE_REVERSAL
   PROFILE_BEGIN(PROFILE_DISPLAY)
-  if( !lsbDisplay && depth < 32 )
+  if( !lsbDisplay && depth < 32 ) {
     if(depth == 16)
       reverse_image_words((unsigned int*) dispBits, (unsigned int*) dispBits,
         depth, width, &updateRect);
     else
       reverse_image_bytes((unsigned int*) dispBits, (unsigned int*) dispBits,
         depth, width, &updateRect);
+  }
   PROFILE_END(ticksForReversal)
 #endif /* NO_BYTE_REVERSAL */
 #endif /* defined(_WIN32_WCE) */
@@ -2704,7 +2712,7 @@ sqInt vmPathSize(void)
 sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
 {
   char *stVMPath = (char *)sqVMPathIndex;
-  int count, i;
+  int count;
 
 #if defined(UNICODE)
   char tmp[MAX_PATH + 1] = { 0 };
@@ -2732,7 +2740,7 @@ sqInt imageNameSize(void)
 sqInt imageNameGetLength(sqInt sqImageNameIndex, sqInt length)
 {
   char *sqImageName = (char *)sqImageNameIndex;
-  int count, i;
+  int count;
 
   count = imageNameSize();
   count = min(length, count);
@@ -2935,6 +2943,7 @@ int sqLaunchDrop(void) {
           NULL, NULL);
   dropLaunchFile(tmp);
   LocalFree(argv);
+  return 1;
 }
 
 /* Check if the path/file name is subdirectory of the image path */

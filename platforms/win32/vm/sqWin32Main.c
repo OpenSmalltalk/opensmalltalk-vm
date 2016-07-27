@@ -602,7 +602,6 @@ void gatherSystemInfo(void)
     TCHAR owner[SYSTEM_INFO_BUF_SIZE];
     TCHAR company[SYSTEM_INFO_BUF_SIZE];
     TCHAR product[SYSTEM_INFO_BUF_SIZE];
-    TCHAR productid[SYSTEM_INFO_BUF_SIZE];
  
     DWORD ok = ERROR_SUCCESS;
     if (osInfo.dwPlatformId == VER_PLATFORM_WIN32_NT) {
@@ -668,8 +667,6 @@ void gatherSystemInfo(void)
     TCHAR biosString[SYSTEM_INFO_BUF_SIZE];
     TCHAR chipType[SYSTEM_INFO_BUF_SIZE];
     TCHAR dacType[SYSTEM_INFO_BUF_SIZE];
-    TCHAR version[SYSTEM_INFO_BUF_SIZE];
-    WCHAR buffer[SYSTEM_INFO_BUF_SIZE];
     TCHAR *drivers = NULL;
     TCHAR *drv = NULL;
     DWORD memSize = 0;

@@ -338,7 +338,6 @@ void pluginReceiveData(MSG *msg)
 void pluginGetURLRequest(int id, void* urlIndex, int urlSize, 
 			 void* targetIndex, int targetSize)
 {
-  static char ZeroChar[] = "";
   int ok;
   DWORD dwWritten;
   
@@ -373,7 +372,6 @@ void pluginPostURLRequest(int id, void* urlIndex, int urlSize,
 			  void* targetIndex, int targetSize, 
 			  void* postDataIndex, int postDataSize)
 {
-  static char ZeroChar[] = "";
   int ok;
   DWORD dwWritten;
 
