@@ -1851,11 +1851,9 @@ parseVMArgument(int argc, char *argv[])
 #endif /* COGVM */
 #if SPURVM
     else if (!strcmp(argv[0], "-maxoldspace")) { 
-		extern usqInt maxOldSpaceSize;
 		maxOldSpaceSize = (usqInt) strtobkm(argv[1]);	 
 		return 2; }
     else if (!strncmp(argv[0], "-maxoldspace:", 13)) { 
-		extern usqInt maxOldSpaceSize;
 		maxOldSpaceSize = (usqInt) strtobkm(argv[0]+13);	 
 		return 2; }
 #endif
