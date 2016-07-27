@@ -239,7 +239,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		(2 227 227 genExtPushLiteralVariableBytecode		needsFrameNever: 1)
 		(2 228 228 genExtPushLiteralBytecode					needsFrameNever: 1)
 		(2 229 229 genLongPushTemporaryVariableBytecode)
-		(2 230 230 genPushClosureTempsBytecode)
+		(2 230 230 unknownBytecode)
 		(2 231 231 genPushNewArrayBytecode)
 		(2 232 232 genExtPushIntegerBytecode				needsFrameNever: 1)
 		(2 233 233 genExtPushCharacterBytecode				needsFrameNever: 1)
@@ -269,7 +269,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 
 		"3 byte bytecodes"
 		(3 248 248 genCallPrimitiveBytecode)
-		(3 249 249 unknownBytecode) "reserved for Push Float"
+		(3 249 249 genExtPushFullClosureBytecode) 
 		(3 250 250 genExtPushClosureBytecode block v4:Block:Code:Size:)
 		(3 251 251 genExtPushRemoteTempOrInstVarLongBytecode)
 		(3 252 252 genExtStoreRemoteTempOrInstVarLongBytecode isMappedIfImmutability)
@@ -277,7 +277,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 
 		(3 254 254	genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode)
 			
-		(3 255 255	genExtPushFullClosureBytecode))
+		(3 255 255	unknownBytecode))
 ]
 
 { #category : #'class initialization' }
@@ -1637,8 +1637,6 @@ SimpleStackBasedCogit >> genCmpConstant: constant R: register [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genDoubleFailIfZeroArgRcvr: rcvrReg arg: argReg [
 	<option: #DPFPReg0>
-	<var: 'rcvrReg' type: #int>
-	<var: 'argReg' type: #int>
 	<returnTypeC: #'AbstractInstruction *'>
 	self MoveCq: 0 R: TempReg.
 	self ConvertR: TempReg Rd: DPFPReg2.
