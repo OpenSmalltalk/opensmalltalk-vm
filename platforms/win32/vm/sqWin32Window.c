@@ -2750,13 +2750,13 @@ sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
   char *sqImageName= (char *)sqImageNameIndex;
   char *tmpImageName;
   char *tmp;
-  int count, i;
+  int count;
 
   count = min(IMAGE_NAME_SIZE, length);
 
   /* copy the file name into a null-terminated C string */
   tmpImageName = (char *)alloca((count + 1) * sizeof(char));
-  if (0 != memcpy_s(tmpImageName, count, imageName, count)) {
+  if (0 != memcpy_s(tmpImageName, count, sqImageName, count)) {
     /* somehow copy did not work */
     return 0;
   }
