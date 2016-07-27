@@ -880,7 +880,7 @@ sqInt ioIsWindowObscured(void) {
 
 void SetupWindows()
 {
-  WNDCLASSEX wc = { 0 };
+  WNDCLASSEXW wc = { 0 };
 
   /* create our update region */
   updateRgn = CreateRectRgn(0,0,1,1);
@@ -916,10 +916,11 @@ void SetupWindows()
     exit(EXIT_FAILURE);
   }
 
-#define W_TEXT(X) L ## X
+#define _W_TEXT(X) L##X
+#define W_TEXT(X) _W_TEXT(X)
   if (!browserWindow) {
     stWindow = CreateWindowExW(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
-                               wndcls,
+                               (LPCTSTR) wndcls,
                                W_TEXT(VM_NAME) W_TEXT("!"),
                                WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
                                0,
@@ -934,7 +935,7 @@ void SetupWindows()
     /* Setup a browser window. */
     fBrowserMode = 1;
     stWindow = CreateWindowExW(0,
-                               wndcls,
+                               (LPCTSTR) wndcls,
                                W_TEXT(VM_NAME) W_TEXT("!"),
                                WS_CHILD | WS_CLIPCHILDREN,
                                0,
@@ -947,6 +948,8 @@ void SetupWindows()
                                NULL);
   }
 #undef W_TEXT
+#undef _W_TEXT
+
   if (stWindow == NULL) {
     printLastError(TEXT("Unable to create main window"));
     exit(EXIT_FAILURE);
