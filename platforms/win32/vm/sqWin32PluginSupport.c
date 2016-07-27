@@ -325,11 +325,13 @@ void pluginReceiveData(MSG *msg)
     free(localName);
     localName = NULL;
   }
-  if(id >= 0 && id < MAX_REQUESTS) req = requests[id];
-  if(req) {
-    req->localName = localName;
-    req->state = ok;
-    synchronizedSignalSemaphoreWithIndex(req->semaIndex);
+  if(id >= 0 && id < MAX_REQUESTS) {
+    req = requests[id];
+    if(req) {
+      req->localName = localName;
+      req->state = ok;
+      synchronizedSignalSemaphoreWithIndex(req->semaIndex);
+    }
   }
 }
 
