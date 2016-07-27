@@ -1663,7 +1663,6 @@ sqMain(int argc, char *argv[])
 #  else
 #pragma comment(linker, "/subsystem:windows /ENTRY:mainCRTStartup")
 #  endif
-#endif
 
 int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 {
@@ -1680,6 +1679,14 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
   /* unused in Squeak: const HINSTANCE hPrevInstance = NULL; */
   LPTSTR lpCmdLine = GetCommandLine();
   /* unused in Squeak: int nCmdShow = .. (see http://stackoverflow.com/a/25250854) */
+
+#else
+/* For cygwin, use WinMain. */
+int WINAPI
+WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+#endif
+
   DWORD mode;
 
   /* a few things which need to be done first */
