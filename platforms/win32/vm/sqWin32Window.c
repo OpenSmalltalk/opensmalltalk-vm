@@ -2190,7 +2190,7 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
   targetRect.right = width;
   targetRect.bottom = height;
 #ifndef NO_BYTE_REVERSAL
-  if( depth < 32 ) {
+  if( depth < 32 )
     if(depth == 16)
       reverse_image_words((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
 			  depth, width, &targetRect);
@@ -2215,7 +2215,7 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 
   /* reverse the image bits if necessary */
 #ifndef NO_BYTE_REVERSAL
-  if( depth < 32 ) {
+  if( depth < 32 )
     if(depth == 16)
       reverse_image_words((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
 			  depth, width, &targetRect);
