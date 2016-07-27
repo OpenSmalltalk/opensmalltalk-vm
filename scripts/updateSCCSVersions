@@ -11,14 +11,14 @@ if [ -d `dirname $0`/../.git ]; then
 else
     cd `dirname $0`/../..
     if [[ "$(basename $0)" == "post-checkout" ]]; then
-	prevHEAD=$1
-	newHEAD=$2
-	branchChange=$3
-	if [[ "$branchChange" == "0" ]] && [[ "$prevHEAD" == "$newHEAD" ]]; then
-	    # we did not switch branches and did not move to a new head (e.g. we
-	    # just did a checkout on a file
-	    exit 0
-	fi
+        prevHEAD=$1
+        newHEAD=$2
+        branchChange=$3
+        if [[ "$branchChange" == "0" ]] && [[ "$prevHEAD" == "$newHEAD" ]]; then
+            # we did not switch branches and did not move to a new head (e.g. we
+            # just did a checkout on a file
+            exit 0
+        fi
     fi
 fi
 
