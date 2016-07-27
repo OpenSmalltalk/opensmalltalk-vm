@@ -431,6 +431,7 @@ sqInt ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz) {
   int wsz = MultiByteToWideChar(CP_UTF8, 0, vmLogDirUTF8, -1, NULL, 0);
   RECALLOC_OR_RESET(vmLogDirW, wsz + 1, sizeof(WCHAR), return 0);
   MultiByteToWideChar(CP_UTF8, 0, vmLogDirUTF8, -1, vmLogDirW, wsz);
+  return 1;
 }
 
 /* New MinGW defines this, as does MSVC - so who still needs it? */
@@ -491,7 +492,7 @@ void gatherSystemInfo(void)
 
   OSVERSIONINFOEX osInfo = { 0 };
   MEMORYSTATUS memStat = { 0 };
-  SYSTEM_INFO sysInfo = { 0 };
+  SYSTEM_INFO sysInfo = { { 0 } };
   DISPLAY_DEVICE gDev = { 0 };
   unsigned int proc, screenX, screenY;
   TCHAR tmpString[4096] = { '\0' };
@@ -623,8 +624,8 @@ void gatherSystemInfo(void)
               TEXT("\tRegistered Company: %s\n")
               TEXT("\tSP major version: %d\n")
               TEXT("\tSP minor version: %d\n")
-              TEXT("\tSuite mask: %lx\n")
-              TEXT("\tProduct type: %lx\n"),
+              TEXT("\tSuite mask: %x\n")
+              TEXT("\tProduct type: %x\n"),
               product, 
               (ULONG) osInfo.dwBuildNumber, osInfo.szCSDVersion,
               owner, company,
@@ -701,7 +702,7 @@ void gatherSystemInfo(void)
                 TEXT("\tBios String: %s\n")
                 TEXT("\tChip Type: %s\n")
                 TEXT("\tDAC Type: %s\n")
-                TEXT("\tMemory Size: 0x%.8X\n"),
+                TEXT("\tMemory Size: 0x%.8lX\n"),
                 deviceDesc,
                 adapterString,
                 biosString,
@@ -1186,20 +1187,20 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
         exp->ExceptionRecord->ExceptionInformation[1]);
     }
 #if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
-    fprintf(f,"EAX:%08X\tEBX:%08X\tECX:%08X\tEDX:%08X\n",
+    fprintf(f,"EAX:%08lX\tEBX:%08lX\tECX:%08lX\tEDX:%08lX\n",
       exp->ContextRecord->Eax,
       exp->ContextRecord->Ebx,
       exp->ContextRecord->Ecx,
       exp->ContextRecord->Edx);
-    fprintf(f,"ESI:%08X\tEDI:%08X\tEBP:%08X\tESP:%08X\n",
+    fprintf(f,"ESI:%08lX\tEDI:%08lX\tEBP:%08lX\tESP:%08lX\n",
       exp->ContextRecord->Esi,
       exp->ContextRecord->Edi,
       exp->ContextRecord->Ebp,
       exp->ContextRecord->Esp);
-    fprintf(f,"EIP:%08X\tEFL:%08X\n",
+    fprintf(f,"EIP:%08lX\tEFL:%08lX\n",
       exp->ContextRecord->Eip,
       exp->ContextRecord->EFlags);
-    fprintf(f,"FP Control: %08X\nFP Status:  %08X\nFP Tag:     %08X\n",
+    fprintf(f,"FP Control: %08lX\nFP Status:  %08lX\nFP Tag:     %08lX\n",
       exp->ContextRecord->FloatSave.ControlWord,
       exp->ContextRecord->FloatSave.StatusWord,
       exp->ContextRecord->FloatSave.TagWord);
