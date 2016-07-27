@@ -123,7 +123,7 @@ int dir_Create(char *pathString, int pathLength)
   WCHAR *win32Path = NULL;
 
   /* convert the path name into a null-terminated C string */
-  ALLOC_WIN32_PATH(win32Path, pathString, pathLength, FAIL());
+  ALLOC_WIN32_PATH(win32Path, pathString, pathLength);
 
   return CreateDirectoryW(win32Path,NULL);
 }
@@ -165,7 +165,7 @@ int dir_Lookup(char *pathString, int pathLength, int index,
   *sizeIfFile       = 0;
 
   /* convert the path name into a null-terminated C string */
-  ALLOC_WIN32_PATH(win32Path, pathString, pathLength, FAIL());
+  ALLOC_WIN32_PATH(win32Path, pathString, pathLength);
   win32PathLength = wcslen(win32Path);
 
   /* check for a dir cache hit (but NEVER on the top level) */
@@ -312,7 +312,7 @@ int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int name
   *sizeIfFile       = 0;
 
   /* convert the path name into a null-terminated C string */
-  ALLOC_WIN32_PATH(win32Path, pathString, pathLength, FAIL());
+  ALLOC_WIN32_PATH(win32Path, pathString, pathLength);
   win32PathLength = wcslen(win32Path);
 
 #if !defined(_WIN32_WCE)
@@ -403,7 +403,7 @@ int dir_Delete(char *pathString, int pathLength) {
   WCHAR *win32Path = NULL;
 
   /* convert the file name into a null-terminated C string */
-  ALLOC_WIN32_PATH(win32Path, pathString, pathLength, FAIL());
+  ALLOC_WIN32_PATH(win32Path, pathString, pathLength);
 
   if(hasCaseSensitiveDuplicate(win32Path)) return false;
   return RemoveDirectoryW(win32Path) == 0 ? false : true;

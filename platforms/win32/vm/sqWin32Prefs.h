@@ -51,6 +51,6 @@ int prefsEnableF2Menu(void);
 #endif
 
 #define VM_VERSION_TEXT TEXT(NICKNAME) TEXT(NICKNAME_EXTRA) TEXT(VM_VERSION) \
-  TEXT(" (release) from ") TEXT(__DATE__) TEXT("\n") \
-  TEXT("Compiler: ") TEXT(COMPILER) TEXT(VERSION)
+		TEXT(" (release) from ") TEXT(__DATE__) TEXT("\n") \
+		TEXT("Compiler: ") TEXT(COMPILER) TEXT(VERSION)
 #endif

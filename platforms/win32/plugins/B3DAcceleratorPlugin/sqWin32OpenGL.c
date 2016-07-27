@@ -144,7 +144,7 @@ static HWND glCreateClientWindow(HWND parentWindow, int x, int y, int w, int h)
 {
   WNDCLASS 	windowClass;
   HINSTANCE	hInstance;
-  const TCHAR *className = TEXT("Squeak-OpenGLWindow");
+  const char *className = "Squeak-OpenGLWindow";
 
   if(!parentWindow) return NULL;
   hInstance = (HINSTANCE) GetWindowLongPtr((HWND)parentWindow,GWLP_HINSTANCE);
@@ -159,13 +159,13 @@ static HWND glCreateClientWindow(HWND parentWindow, int x, int y, int w, int h)
   windowClass.lpszMenuName = NULL;
   windowClass.lpszClassName = className;
   RegisterClass(&windowClass);
-  return CreateWindow(className, NULL,
+  return CreateWindow(className,"",
 		      WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS |WS_VISIBLE,
-		      x, y, w, h,
+		      x,y,w,h,
 		      (HWND) parentWindow,
-		      NULL,
+		      0,
 		      hInstance,
-		      NULL);
+		      0);
 }
 
 /*****************************************************************************/

@@ -6,31 +6,29 @@
  */
 
 #include <windows.h>
-#include <initguid.h>
-#include <KnownFolders.h> /* FOLDERID_XXX */
-#include <ShlObj.h>  /* SHGetKnownFolderPath */
-#include <lmcons.h> /* UNLEN */
+#include <shlobj.h> /* CSIDL_XXX */
 #include "sq.h"
 
 #ifndef HKEY_SQUEAK_ROOT
 /* the default place in the registry to look for */
-#define HKEY_SQUEAK_ROOT TEXT("SOFTWARE\\Squeak")
+#define HKEY_SQUEAK_ROOT "SOFTWARE\\Squeak"
 #endif
 
+static HRESULT __stdcall (*shGetFolderPath)(HWND, int, HANDLE, DWORD, WCHAR*);
 
-static char* untrustedUserDirectory;
+static TCHAR untrustedUserDirectory[MAX_PATH];
 static int untrustedUserDirectoryLen;
-static char* secureUserDirectory;
+static TCHAR secureUserDirectory[MAX_PATH];
 static int secureUserDirectoryLen;
+static TCHAR resourceDirectory[MAX_PATH];
+static int resourceDirectoryLen;
 
 /* imported from sqWin32Prefs.c */
-extern TCHAR* squeakIniName;
+extern TCHAR squeakIniName[MAX_PATH];
 
 /* imported from sqWin32Main.c */
 extern BOOL fLowRights;  /* started as low integrity process, 
-			need to use alternate untrustedUserDirectory */
-
-void __cdecl CleanupSecurity(void);
+                        need to use alternate untrustedUserDirectory */
 
 /***************************************************************************/
 /***************************************************************************/
@@ -44,9 +42,9 @@ static int testDotDot(TCHAR *pathName, int index) {
   while(pathName[index]) {
     if(pathName[index] == U_DOT[0]) {
       if(pathName[index-1] == U_DOT[0]) {
-	if (pathName[index-2] == U_BACKSLASH[0]) {
-	  return 0; /* Gotcha! */
-	}
+        if (pathName[index-2] == U_BACKSLASH[0]) {
+          return 0; /* Gotcha! */
+        }
       }
     }
     index++;
@@ -73,12 +71,19 @@ static int isAccessiblePathName(TCHAR *pathName, int writeFlag) {
   int pathLen = lstrlen(pathName);
   if (pathLen > (MAX_PATH - 1)) return 0;
 
-  TCHAR *tUntrustedUserDirectory = NULL;
-  UTF8_TO_TCHAR(untrustedUserDirectory, tUntrustedUserDirectory);
   if (pathLen >= untrustedUserDirectoryLen
-      && 0 == lstrncmp(pathName, tUntrustedUserDirectory, untrustedUserDirectoryLen)) {
+      && 0 == lstrncmp(pathName, untrustedUserDirectory, untrustedUserDirectoryLen)) {
     if (pathLen > untrustedUserDirectoryLen + 2)
-      return testDotDot(pathName, untrustedUserDirectoryLen + 2);
+      return testDotDot(pathName, untrustedUserDirectoryLen+2);
+    return 1;
+  }
+  if (writeFlag)
+    return 0;
+
+  if (pathLen >= resourceDirectoryLen
+      &&  0 == lstrncmp(pathName, resourceDirectory, resourceDirectoryLen)) {
+    if (pathLen > resourceDirectoryLen + 2)
+      return testDotDot(pathName, resourceDirectoryLen+2);
     return 1;
   }
   return 0;
@@ -203,171 +208,171 @@ char *ioGetUntrustedUserDirectory(void) {
   return untrustedUserDirectory;
 }
 
+/* helper function to expand %MYDOCUMENTSFOLDER% */
+
+int expandMyDocuments(char *pathname, char *replacement, char *result)
+{
+  TCHAR search4[MAX_PATH+1];
+  TCHAR *start;
+
+  lstrcpy(search4, TEXT("%MYDOCUMENTS%"));
+
+  if(!(start = strstr(pathname, search4))) return 0;
+
+  strncpy(result, pathname, start-pathname); 
+  result[start-pathname] = '\0';
+  sprintf(result+(start-pathname),"%s%s", replacement, start+strlen(search4));
+  
+  return strlen(result);
+}
+
+
 
 /* note: following is called from VM directly, not from plugin */
-int ioInitSecurity(void) {
-
-  TCHAR* tSecureUserDirectory = NULL;
-  TCHAR* tUntrustedUserDirectory = NULL;
-
-  atexit(CleanupSecurity);
+sqInt ioInitSecurity(void) {
+  DWORD dwType, dwSize, ok;
+  TCHAR tmp[MAX_PATH+1];
+  WCHAR wTmp[MAX_PATH+1];
+  WCHAR wDir[MAX_PATH+1];
+  TCHAR myDocumentsFolder[MAX_PATH+1];  
+  HKEY hk;
+  int dirLen,i;
 
   /* establish the secure user directory */
-  RECALLOC_OR_RESET(tSecureUserDirectory, UNLEN + 1 + _tcslen(imagePath), sizeof(TCHAR), return 0);
-  lstrcpy(tSecureUserDirectory, imagePath);
-  {
-    int dirLen = lstrlen(tSecureUserDirectory);
-    DWORD dwSize = MAX_PATH_SQUEAK - dirLen;
-    GetUserName(tSecureUserDirectory + dirLen, &dwSize);
+  lstrcpy(secureUserDirectory, imagePath);
+  dirLen = lstrlen(secureUserDirectory);
+  dwSize = MAX_PATH-dirLen;
+  GetUserName(secureUserDirectory+dirLen, &dwSize);
+
+  /* establish untrusted user directory */
+  lstrcpy(untrustedUserDirectory, TEXT("C:\\My Squeak\\%USERNAME%"));
+
+  /* establish untrusted user directory */
+  lstrcpy(resourceDirectory, imagePath);
+  if (resourceDirectory[lstrlen(resourceDirectory)-1] == '\\') {
+    resourceDirectory[lstrlen(resourceDirectory)-1] = 0;
   }
 
-#define MY_SQUEAK TEXT("\\My Squeak")
-#define MY_DOCUMENTS_VAR L"MYDOCUMENTS"
+  /* Look up shGetFolderPathW */
+  shGetFolderPath = (void*)GetProcAddress(LoadLibrary("SHFolder.dll"), 
+                                          "SHGetFolderPathW");
 
-#ifdef _MSC_VER
-  PWSTR documentsPath = NULL;
-  if (S_OK == SHGetKnownFolderPath(&FOLDERID_Documents, 0, NULL, &documentsPath))
-#else
-  WCHAR documentsPath[MAX_PATH];
-  if (S_OK == SHGetFolderPathW(NULL, CSIDL_PERSONAL, NULL, 0, documentsPath))
-#endif
-  {
-#if defined(UNICODE)
-    RECALLOC_OR_RESET(tUntrustedUserDirectory,
-      wcslen(documentsPath) + _tcslen(MY_SQUEAK) + 1 /* \0 */,
-      sizeof(WCHAR), return 0);
-    lstrcpy(tUntrustedUserDirectory, documentsPath);
-#else
-    {
-      int sz = WideCharToMultiByte(CP_ACP, 0, documentsPath, -1, NULL, 0, NULL, NULL);
-      RECALLOC_OR_RESET(tUntrustedUserDirectory, 
-        sz + _tcslen(MY_SQUEAK) + 1 /* \0 */,
-        sizeof(char), return 0);
-      WideCharToMultiByte(CP_ACP, 0, documentsPath, -1, tUntrustedUserDirectory, sz, NULL, NULL);
+  if(shGetFolderPath) {
+    /* If we have shGetFolderPath use My Documents/My Squeak */
+    WCHAR widepath[MAX_PATH];
+    int sz;
+    /*shGetfolderPath does not return utf8*/
+    if(shGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, widepath) == S_OK) {
+       WideCharToMultiByte(CP_ACP,0,widepath,-1,untrustedUserDirectory,
+                          MAX_PATH,NULL,NULL); 
+      sz = strlen(untrustedUserDirectory);
+      if(untrustedUserDirectory[sz-1] != '\\') 
+        strcat(untrustedUserDirectory, "\\");
+           lstrcpy(myDocumentsFolder,untrustedUserDirectory);
+      strcat(untrustedUserDirectory, "My Squeak");
     }
-#endif
-    /* Set the Environment variabel MYDOCUMENTS to document path, so
-       autormatic expansion can take care of things */
-    SetEnvironmentVariableW(MY_DOCUMENTS_VAR, documentsPath);
-    CoTaskMemFree(documentsPath);
-    lstrcat(tUntrustedUserDirectory, MY_SQUEAK);
-  } else {
-    /* establish untrusted user directory */
-    tUntrustedUserDirectory = _tcsdup(TEXT("C:\\My Squeak\\%USERNAME%"));
   }
 
 
   /* Query Squeak.ini for network installations */
-  {
-    TCHAR* tmp = calloc(MAX_PATH_SQUEAK + 1, sizeof(TCHAR));
-
-#define GET_SQUEAK_INI(Section, Entry, Destination, FileName) {             \
-    DWORD iniSz = GetPrivateProfileString(TEXT( #Section ), TEXT( #Entry ), \
-       NULL, tmp, MAX_PATH_SQUEAK, FileName);                               \
-    if (iniSz != 0) {                                                       \
-      BOOL ok = TRUE;                                                       \
-      RECALLOC_OR_RESET(Destination, iniSz + 1, sizeof(TCHAR), ok = FALSE); \
-      if (ok) { lstrcpy(Destination, tmp);}}}                               \
-
-    GET_SQUEAK_INI(Security, SecureDirectory, tSecureUserDirectory, squeakIniName);
-
-    if (fLowRights) {/* use alternate untrusted UserDirectory */
-      GET_SQUEAK_INI(Security, UserDirectoryLow, tUntrustedUserDirectory, squeakIniName);
-    } else {
-      GET_SQUEAK_INI(Security, UserDirectory, tUntrustedUserDirectory, squeakIniName);
-    }
-    free(tmp);
+  GetPrivateProfileString(TEXT("Security"), TEXT("SecureDirectory"),
+                          secureUserDirectory, secureUserDirectory,
+                          MAX_PATH, squeakIniName);
+  if(fLowRights) {/* use alternate untrustedUserDirectory */
+      GetPrivateProfileString(TEXT("Security"), TEXT("UserDirectoryLow"),
+                          untrustedUserDirectory, untrustedUserDirectory,
+                          MAX_PATH, squeakIniName);
+  } else {
+      GetPrivateProfileString(TEXT("Security"), TEXT("UserDirectory"),
+                          untrustedUserDirectory, untrustedUserDirectory,
+                          MAX_PATH, squeakIniName);
   }
+
+  GetPrivateProfileString(TEXT("Security"), TEXT("ResourceDirectory"),
+                          resourceDirectory, resourceDirectory,
+                          MAX_PATH, squeakIniName);
 
   /* Attempt to read local user settings from registry */
-  HKEY hk = NULL;
-  LSTATUS ok = RegOpenKey(HKEY_CURRENT_USER, HKEY_SQUEAK_ROOT, &hk);
-  if (ok == ERROR_SUCCESS) {
-    /* Reg Key is there, read from it. */
+  ok = RegOpenKey(HKEY_CURRENT_USER, HKEY_SQUEAK_ROOT, &hk);
 
-#define GET_SQUEAK_REG(Hk, Subkey, Target) {                        \
-    DWORD dwSize = 0;                                               \
-    ok = RegQueryValueEx(hk, TEXT( #Subkey ), NULL, NULL,           \
-                         NULL, &dwSize);                            \
-    if (ok == ERROR_SUCCESS) { /* Value was found */                \
-      RECALLOC_OR_RESET(Target, dwSize + 1, sizeof(BYTE), ok = -1); \
-      if (ok == ERROR_SUCCESS) { /* Alloc was ok */                 \
-        ok = RegQueryValueEx(hk, TEXT( #Subkey ), NULL, NULL,       \
-                             (LPBYTE) Target, &dwSize);             \
-        if (ok == ERROR_SUCCESS) { /* Value was copied */           \
-          if (Target[dwSize - 2] != U_BACKSLASH[0]) {               \
-            Target[dwSize - 1] = U_BACKSLASH[0];                    \
-            Target[dwSize] = 0;}}}}}                                \
-
-    /* Read the secure directory from the subkey. */
-    GET_SQUEAK_REG(hk, SecureDirectory, tSecureUserDirectory);
-    /* Read the user directory from the subkey. */
-    GET_SQUEAK_REG(hk, UserDirectory, tUntrustedUserDirectory);
-    RegCloseKey(hk);
+  /* Read the secure directory from the subkey. */
+  dwSize = MAX_PATH;
+  ok = RegQueryValueEx(hk,"SecureDirectory",NULL, &dwType, 
+                       (LPBYTE) tmp, &dwSize);
+  if(ok == ERROR_SUCCESS) {
+    if(tmp[dwSize-2] != '\\') {
+      tmp[dwSize-1] = '\\';
+      tmp[dwSize] = 0;
+    }
+    strcpy(secureUserDirectory, tmp);
   }
 
-  /* See https://msdn.microsoft.com/en-us/library/ms724265(v=vs.85).aspx
-    When using ANSI strings, the buffer size should be the string length, 
-    plus terminating null character, plus one. When using Unicode strings, 
-    the buffer size should be the string length plus the terminating null 
-    character.
-  */
-#if defined(UNICODE)
-#define EXTRA_SPACE 0
-#else
-#define EXTRA_SPACE 1
-#endif
+  /* Read the user directory from the subkey. */
+  dwSize = MAX_PATH;
+  ok = RegQueryValueEx(hk,"UserDirectory",NULL, &dwType, 
+                       (LPBYTE) tmp, &dwSize);
+  if(ok == ERROR_SUCCESS) {
+    if(tmp[dwSize-2] != '\\') {
+      tmp[dwSize-1] = '\\';
+      tmp[dwSize] = 0;
+    }
+    strcpy(untrustedUserDirectory, tmp);
+  }
 
+  /* Read the resource directory from the subkey. */
+  dwSize = MAX_PATH;
+  ok = RegQueryValueEx(hk,"ResourceDirectory",NULL, &dwType, 
+                       (LPBYTE) tmp, &dwSize);
+  if(ok == ERROR_SUCCESS) {
+    if(tmp[dwSize-2] != '\\') {
+      tmp[dwSize-1] = '\\';
+      tmp[dwSize] = 0;
+    }
+    strcpy(resourceDirectory, tmp);
+  }
 
+  RegCloseKey(hk);
   
-  TCHAR* tTmp = NULL;
-  TCHAR* tFull = NULL;
+  if(shGetFolderPath) {  
+    dwSize = expandMyDocuments(untrustedUserDirectory, myDocumentsFolder, tmp);
+    if(dwSize > 0 && dwSize < MAX_PATH)
+      strcpy(untrustedUserDirectory, tmp);
 
-#define GET_EXPANDED_PATH_TO_UTF8(in_tpath, out_utf8path) {        \
-  /* Expand any environment variables in user directory. */        \
-  DWORD envSz = ExpandEnvironmentStrings(in_tpath, NULL, 0);       \
-  BOOL ok = TRUE;                                                  \
-  DWORD tmpSize = envSz + 1 + EXTRA_SPACE;                         \
-  RECALLOC_OR_RESET(tTmp, tmpSize, sizeof(TCHAR), ok = FALSE);     \
-  if (ok) {                                                        \
-    ExpandEnvironmentStrings(in_tpath, tTmp, envSz);               \
-    /* Expand relative paths to absolute paths */                  \
-    DWORD fullSize = GetFullPathName(tTmp, 0, NULL, NULL);         \
-    RECALLOC_OR_RESET(tFull, fullSize, sizeof(TCHAR), ok = FALSE); \
-    if (ok) {                                                      \
-      char* uTmp = NULL;                                           \
-      GetFullPathName(tTmp, fullSize, tFull, NULL);                \
-      TCHAR_TO_UTF8(tFull, uTmp);                                  \
-      if (out_utf8path) free(out_utf8path);                        \
-      out_utf8path = _strdup(uTmp);}}}                             \
+    dwSize = expandMyDocuments(secureUserDirectory, myDocumentsFolder, tmp);
+    if(dwSize > 0 && dwSize < MAX_PATH)
+      strcpy(secureUserDirectory, tmp);
 
+    dwSize = expandMyDocuments(resourceDirectory, myDocumentsFolder, tmp);
+    if(dwSize > 0 && dwSize < MAX_PATH)
+      strcpy(resourceDirectory, tmp);
+  }
 
-  GET_EXPANDED_PATH_TO_UTF8(tUntrustedUserDirectory, untrustedUserDirectory);
-  GET_EXPANDED_PATH_TO_UTF8(tSecureUserDirectory, secureUserDirectory);
+  /* Expand any environment variables in user directory. */
+  MultiByteToWideChar(CP_ACP, 0, untrustedUserDirectory, -1, wDir, MAX_PATH);
+  ExpandEnvironmentStringsW(wDir, wTmp, MAX_PATH-1);
+  /* Expand relative paths to absolute paths */
+  GetFullPathNameW(wTmp, MAX_PATH, wDir, NULL);
+  WideCharToMultiByte(CP_UTF8,0,wDir,-1,untrustedUserDirectory,MAX_PATH,NULL,NULL);
 
-  secureUserDirectoryLen = strlen(secureUserDirectory);
-  untrustedUserDirectoryLen = strlen(untrustedUserDirectory);
+  /* same for the secure directory*/
+  MultiByteToWideChar(CP_ACP, 0, secureUserDirectory, -1, wDir, MAX_PATH);
+  ExpandEnvironmentStringsW(wDir, wTmp, MAX_PATH-1);
+  /* Expand relative paths to absolute paths */
+  GetFullPathNameW(wTmp, MAX_PATH, wDir, NULL);
+  WideCharToMultiByte(CP_UTF8,0,wDir,-1,secureUserDirectory,MAX_PATH,NULL,NULL);
+
+  /* and for the resource directory*/
+  MultiByteToWideChar(CP_ACP, 0, resourceDirectory, -1, wDir, MAX_PATH);
+  ExpandEnvironmentStringsW(wDir, wTmp, MAX_PATH-1);
+  /* Expand relative paths to absolute paths */
+  GetFullPathNameW(wTmp, MAX_PATH, wDir, NULL);
+  WideCharToMultiByte(CP_UTF8,0,wDir,-1,resourceDirectory,MAX_PATH,NULL,NULL);
+
+  secureUserDirectoryLen = lstrlen(secureUserDirectory);
+  untrustedUserDirectoryLen = lstrlen(untrustedUserDirectory);
+  resourceDirectoryLen = lstrlen(resourceDirectory);
 
   return 1;
-
-#undef EXTRA_SPACE
-#undef MY_SQUEAK
-#undef MY_DOCUMENTS_VAR
-#undef GET_SQUEAK_REG
-#undef GET_SQUEAK_INI
-#undef GET_EXPANDED_PATH_TO_UTF8
-}
-
-
-void __cdecl CleanupSecurity(void)
-{
-  /* Be nice and clean up */
-  free(untrustedUserDirectory);
-  untrustedUserDirectory = NULL;
-  untrustedUserDirectoryLen = 0;
-  free(secureUserDirectory);
-  secureUserDirectory = NULL;
-  secureUserDirectoryLen = 0;
 }
 
 /***************************************************************************/

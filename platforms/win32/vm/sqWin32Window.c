@@ -56,16 +56,15 @@ extern sqInt deferDisplayUpdates;
 
 
 /*** Variables -- image and path names ***/
-char   imageName[IMAGE_NAME_SIZE + 1]; /* full path and name to image */
-TCHAR* imagePath       = NULL;         /* full path to image */
-TCHAR* vmPath          = NULL;         /* full path to interpreter's directory */
-TCHAR* vmName          = NULL;         /* name of the interpreter's executable */
-char*  windowTitle     = NULL;         /* what should we display in the title? */
-TCHAR* squeakIniName   = NULL;         /* full path and name to ini file */
-TCHAR* windowClassName = NULL;         /* Window class name */
+#define IMAGE_NAME_SIZE MAX_PATH
 
-/* internal, only accessible via GetAttributeString */
-char* vmNameUTF8 = NULL;
+char imageName[MAX_PATH+1];		  /* full path and name to image */
+TCHAR imagePath[MAX_PATH+1];	  /* full path to image */
+TCHAR vmPath[MAX_PATH+1];		    /* full path to interpreter's directory */
+TCHAR vmName[MAX_PATH+1];		    /* name of the interpreter's executable */
+TCHAR windowTitle[MAX_PATH];        /* what should we display in the title? */
+TCHAR squeakIniName[MAX_PATH+1];    /* full path and name to ini file */
+TCHAR windowClassName[MAX_PATH+1];        /* Window class name */
 
 const TCHAR U_ON[]  = TEXT("1");
 const TCHAR U_OFF[] = TEXT("0");
@@ -75,30 +74,30 @@ const TCHAR U_BACKSLASH[] = TEXT("\\");
 
 /*** Variables -- Event Recording ***/
 int inputSemaphoreIndex = 0;/* if non-zero the event semaphore index */
-POINT mousePosition;    /* position at last PointerMotion event */
-int   mouseWord;      /* Input word for Squeak */
-int   buttonState = 0;    /* mouse button and modifier state when mouse
-                 button went down or 0 if not pressed */
+POINT mousePosition;		/* position at last PointerMotion event */
+int   mouseWord;			/* Input word for Squeak */
+int   buttonState = 0;		/* mouse button and modifier state when mouse
+							   button went down or 0 if not pressed */
 DWORD winButtonState = 0;
 
 #define KEYBUF_SIZE 64
-int keyBuf[KEYBUF_SIZE];  /* circular buffer */
-int keyBufGet = 0;      /* index of next item of keyBuf to read */
-int keyBufPut = 0;      /* index of next item of keyBuf to write */
-int keyBufOverflows = 0;  /* number of characters dropped */
+int keyBuf[KEYBUF_SIZE];	/* circular buffer */
+int keyBufGet = 0;			/* index of next item of keyBuf to read */
+int keyBufPut = 0;			/* index of next item of keyBuf to write */
+int keyBufOverflows = 0;	/* number of characters dropped */
 
 /*** Win32-related Variables (declared in sqWin32.h) ***/
-HWND stWindow = NULL;      /*  the squeak window */
+HWND stWindow = NULL;      /*	the squeak window */
 HWND browserWindow = NULL; /* The browser window */
-HINSTANCE hInstance;       /*  the instance of squeak running */
-HCURSOR currentCursor=0;   /*  current cursor displayed by squeak */
-HPALETTE palette;          /*  the palette (might be unused) */
-LOGPALETTE *logPal;        /*  the logical palette definition */
-BITMAPINFO *bmi1;          /*  1 bit depth bitmap info */
-BITMAPINFO *bmi4;          /*  4 bit depth bitmap info */
-BITMAPINFO *bmi8;          /*  8 bit depth bitmap info */
-BITMAPINFO *bmi16;         /*  16 bit depth bitmap info */
-BITMAPINFO *bmi32;         /*  32 bit depth bitmap info */
+HINSTANCE hInstance;	     /*	the instance of squeak running */
+HCURSOR currentCursor=0;	 /*	current cursor displayed by squeak */
+HPALETTE palette;	         /*	the palette (might be unused) */
+LOGPALETTE *logPal;	       /*	the logical palette definition */
+BITMAPINFO *bmi1;	         /*	1 bit depth bitmap info */
+BITMAPINFO *bmi4;	         /*	4 bit depth bitmap info */
+BITMAPINFO *bmi8;	         /*	8 bit depth bitmap info */
+BITMAPINFO *bmi16;	       /*	16 bit depth bitmap info */
+BITMAPINFO *bmi32;	       /*	32 bit depth bitmap info */
 BOOL fWindows95;           /* Are we running on Win95 or NT? */
 BOOL fHasFocus = 0;        /* if Squeak has the input focus */
 
@@ -137,15 +136,15 @@ BOOL  fEnablePrefsMenu = 1; /* can we get a prefs menu at all? */
 HANDLE vmWakeUpEvent = 0;      /* wake up interpret() from sleep */
 
 /* variables for cached display */
-RECT updateRect;         /*  the rectangle to update */
-HRGN updateRgn;              /*  the region to update (more accurate) */
-BOOL updateRightNow;       /*  update flag */
+RECT updateRect;		     /*	the rectangle to update */
+HRGN updateRgn;	     	     /*	the region to update (more accurate) */
+BOOL updateRightNow;	     /*	update flag */
 HWND  consoleWindow;       /* console */
 int wasFullScreen = 0;       /* are in fullscreen mode? */
 int shouldBeFullScreen = 0;  /* or should we be in fullscreen mode? */
 
 /* variables for DirectX support */
-RECT stWindowRect;      /* Client rectangle in screen coordinates */
+RECT stWindowRect;			/* Client rectangle in screen coordinates */
 
 #ifndef NO_PRINTER
 /* printer settings */
@@ -154,7 +153,7 @@ static int printerSetup = FALSE;
 #endif
 
 #ifndef NO_WHEEL_MOUSE
-UINT g_WM_MOUSEWHEEL = 0;  /* RvL: 1999-04-19 The message we receive from wheel mices */
+UINT g_WM_MOUSEWHEEL = 0;	/* RvL: 1999-04-19 The message we receive from wheel mices */
 #endif
 
 /* misc declarations */
@@ -175,8 +174,6 @@ void HideSplashScreen(void);
 sqInputEvent *sqNextEventPut(void);
 int sqLaunchDrop(void);
 
-void __cdecl CleanupPath(void);
-
 /****************************************************************************/
 /*                      Synchronization functions                           */
 /****************************************************************************/
@@ -184,10 +181,10 @@ void __cdecl CleanupPath(void);
 /* NOTE: Why do we need this? When running multi-threaded code such as in
          the networking code and in midi primitives
          we will signal the interpreter several semaphores. 
-    (Predates the internal synchronization of signalSemaphoreWithIndex ()) */
+ 	 (Predates the internal synchronization of signalSemaphoreWithIndex ()) */
 
 int synchronizedSignalSemaphoreWithIndex(int semaIndex)
-{
+{ 
   int result;
 
   /* Do our job - this is now synchronized in signalSemaphoreWithIndex */
@@ -209,12 +206,12 @@ MSG *lastMessage = NULL;
 /* The entry to the message hooks called from the window procedure.
    If another module requires to process messages by itself, it should
    put its message procedure in this place. */
-messageHook firstMessageHook = NULL;
+messageHook firstMessageHook = 0;
 
 /* The entry to a pre-message hook. Can be used to intercept any messages
    to the squeak main window. Useful for modules that wish to be notified
    about certain messages before they are processed. */
-messageHook preMessageHook = NULL;
+messageHook preMessageHook = 0;
 
 /* main window procedure(s) */
 LRESULT CALLBACK MainWndProcA(HWND hwnd,
@@ -228,7 +225,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
                               UINT message,
                               WPARAM wParam,
                               LPARAM lParam)
-{
+{ 
   PAINTSTRUCT ps;
   static UINT lastClickTime = 0;
   static UINT nrClicks = 0;
@@ -236,11 +233,9 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   UINT timeDelta = 0;
 
   /* Intercept any messages if wanted */
-  if (preMessageHook) {
-    if ((*preMessageHook)(hwnd, message,wParam, lParam)) {
-      return 1;
-    }
-  }
+  if(preMessageHook)
+    if((*preMessageHook)(hwnd, message,wParam, lParam))
+       return 1;
 
   if(message == SQ_LAUNCH_DROP) 
     return sqLaunchDrop();
@@ -263,9 +258,9 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     } else {
       buttonState = 64;
       if (zDelta < 0) {
-        recordVirtualKey(message,VK_DOWN,lParam);
+	recordVirtualKey(message,VK_DOWN,lParam);
       } else {
-        recordVirtualKey(message,VK_UP,lParam);
+	recordVirtualKey(message,VK_UP,lParam);
       }
     }
     return 1;
@@ -290,27 +285,27 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
 #endif /* defined(_WIN32_WCE) */
     if(cmd == SC_CLOSE) {
 #if NewspeakVM
-    /* Newspeak doesn't easnt to quit if the main window is closed.  Only
-     * when the last native window is closed.
-     */
-    if(fEnableAltF4Quit)
-      ShowWindow(stWindow, SW_HIDE);
+		/* Newspeak doesn't easnt to quit if the main window is closed.  Only
+		 * when the last native window is closed.
+		 */
+		if(fEnableAltF4Quit)
+			ShowWindow(stWindow, SW_HIDE);
 #else
-    if(prefsEnableAltF4Quit() || GetKeyState(VK_SHIFT) < 0) {
-      TCHAR msg[1001], label[1001];
-      GetPrivateProfileString(U_GLOBAL, TEXT("QuitDialogMessage"), 
-            TEXT("Quit ") TEXT(VM_NAME) TEXT(" without saving?"), 
-            msg, 1000, squeakIniName);
-      GetPrivateProfileString(U_GLOBAL, TEXT("QuitDialogLabel"), 
-            TEXT(VM_NAME), 
-            label, 1000, squeakIniName);
-      if(MessageBox(stWindow, msg, label, MB_YESNO) != IDYES)
-        return 0;
-      DestroyWindow(stWindow);
-      ioExit();
-      /*NOTREACHED*/
-    }
-    recordWindowEvent(WindowEventClose, NULL);
+		if(prefsEnableAltF4Quit() || GetKeyState(VK_SHIFT) < 0) {
+			TCHAR msg[1001], label[1001];
+			GetPrivateProfileString(U_GLOBAL, TEXT("QuitDialogMessage"), 
+						TEXT("Quit ") TEXT(VM_NAME) TEXT(" without saving?"), 
+						msg, 1000, squeakIniName);
+			GetPrivateProfileString(U_GLOBAL, TEXT("QuitDialogLabel"), 
+						TEXT(VM_NAME), 
+						label, 1000, squeakIniName);
+			if(MessageBox(stWindow, msg, label, MB_YESNO) != IDYES)
+				return 0;
+			DestroyWindow(stWindow);
+			ioExit();
+			/*NOTREACHED*/
+		}
+		recordWindowEvent(WindowEventClose, NULL);
 #endif /* NewspeakVM */
       break;
     }
@@ -321,7 +316,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   case WM_MOUSEMOVE:
     /* we have to be careful to not clear nrClicks if the mouse 
        happens to move in-between rapid clicks */
-    timeNow = GetMessageTime();  /* Win32 - gets time of last GetMessage() */
+    timeNow = GetMessageTime();	/* Win32 - gets time of last GetMessage() */
     timeDelta = timeNow - lastClickTime;
     if (timeDelta > GetDoubleClickTime())
       nrClicks = 0;
@@ -337,22 +332,21 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   case WM_LBUTTONDOWN:
   case WM_RBUTTONDOWN:
   case WM_MBUTTONDOWN:
-    {
-      /* update the button mask for this event */
+    { /* update the button mask for this event */
       switch (message) {
-        case WM_LBUTTONDOWN: winButtonState |= MK_LBUTTON; break;
-        case WM_RBUTTONDOWN: winButtonState |= MK_RBUTTON; break;
-        case WM_MBUTTONDOWN: winButtonState |= MK_MBUTTON; break;
+      case WM_LBUTTONDOWN: winButtonState |= MK_LBUTTON; break;
+      case WM_RBUTTONDOWN: winButtonState |= MK_RBUTTON; break;
+      case WM_MBUTTONDOWN: winButtonState |= MK_MBUTTON; break;
       }
     }
     if(GetFocus() != stWindow) SetFocus(stWindow);
     SetCapture(stWindow); /* capture mouse input */
 
-    /* count mouse clicks */
-    timeNow = GetMessageTime();    /* Win32 - gets time of last GetMessage() */
-    timeDelta = timeNow - lastClickTime;
-    nrClicks = (timeDelta <= GetDoubleClickTime()) ? (nrClicks + 1) : 1;
-    lastClickTime = timeNow;
+	/* count mouse clicks */
+	timeNow = GetMessageTime();		/* Win32 - gets time of last GetMessage() */
+	timeDelta = timeNow - lastClickTime;
+	nrClicks = (timeDelta <= GetDoubleClickTime()) ? (nrClicks + 1) : 1;
+	lastClickTime = timeNow;
 
     if(inputSemaphoreIndex) {
       recordMouseEvent(lastMessage, nrClicks);
@@ -365,16 +359,15 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     recordMouseDown(wParam, lParam);
     recordModifierButtons();
 
-    /* capture the mouse as long as the button is pressed so we can scroll outside */
+	/* capture the mouse as long as the button is pressed so we can scroll outside */
     SetCapture(stWindow);
     break;
 
   case WM_LBUTTONUP:
   case WM_RBUTTONUP:
   case WM_MBUTTONUP:
-    {
-      /* avoid posting mouse ups for which we haven't seen the
-        corresponding mouse down events (native dialogs etc) */
+    {  /* avoid posting mouse ups for which we haven't seen the
+	  corresponding mouse down events (native dialogs etc) */
       DWORD upMask = 0;
       switch (message) {
       case WM_LBUTTONUP: upMask = MK_LBUTTON; break;
@@ -399,7 +392,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     recordMouseDown(wParam,lParam);
     recordModifierButtons();
 
-    /* release capture */
+	/* release capture */
     ReleaseCapture();
     break;
     /* virtual key codes */
@@ -410,11 +403,11 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     if(inputSemaphoreIndex) {
       recordKeyboardEvent(lastMessage);
       if(wParam == VK_F2 && prefsEnableF2Menu()) {
-        TrackPrefsMenu();
+	TrackPrefsMenu();
       }
       if(wParam == VK_F4) {
-        /* We must let F4 through here if we want Alt-F4 to work */
-        return DefWindowProcW(hwnd, message, wParam, lParam);
+	/* We must let F4 through here if we want Alt-F4 to work */
+	return DefWindowProcW(hwnd, message, wParam, lParam);
       }
       break;
     }
@@ -470,7 +463,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       /* Adjust the console window */
       GetClientRect(stWindow,&stWindowRect);
       MoveWindow(consoleWindow, 0,
-     stWindowRect.bottom-100, stWindowRect.right, 100, 1);
+		 stWindowRect.bottom-100, stWindowRect.right, 100, 1);
       /* Record the global stWindowRect for DirectX */
       MapWindowPoints(stWindow, NULL, (LPPOINT)&stWindowRect, 2);
     }
@@ -513,7 +506,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     /* if double clicked, show main window */
     if(lParam == WM_LBUTTONDBLCLK) {
       if(!IsWindowVisible(stWindow))
-        ShowWindow(stWindow, SW_SHOW);
+	ShowWindow(stWindow, SW_SHOW);
       BringWindowToTop(stWindow);
     }
     return 0;
@@ -531,7 +524,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
        zero value, the message has been successfully processed */
     if(firstMessageHook)
       if((*firstMessageHook)(hwnd, message, wParam, lParam))
-        return 1;
+	return 1;
     return DefWindowProcW(hwnd,message,wParam,lParam);
   }
   return 1;
@@ -586,8 +579,7 @@ static void SetColorEntry(int index, int red, int green, int blue)
 
 /* Generic color maps and bitmap info headers 1,4,8,16,32 bits per pixel */
 void SetupPixmaps(void)
-{
-  int i;
+{ int i;
 
   logPal = malloc(sizeof(LOGPALETTE) + 255 * sizeof(PALETTEENTRY));
   if (!logPal) {
@@ -599,54 +591,54 @@ void SetupPixmaps(void)
   logPal->palNumEntries = 256;
 
   /* 1-bit colors (monochrome) */
-  SetColorEntry(0, 65535, 65535, 65535);  /* white or transparent */
-  SetColorEntry(1,     0,     0,     0);  /* black */
+  SetColorEntry(0, 65535, 65535, 65535);	/* white or transparent */
+  SetColorEntry(1,     0,     0,     0);	/* black */
 
   /* additional colors for 2-bit color */
-  SetColorEntry(2, 65535, 65535, 65535);  /* opaque white */
-  SetColorEntry(3, 32768, 32768, 32768);  /* 1/2 gray */
+  SetColorEntry(2, 65535, 65535, 65535);	/* opaque white */
+  SetColorEntry(3, 32768, 32768, 32768);	/* 1/2 gray */
 
   /* additional colors for 4-bit color */
-  SetColorEntry( 4, 65535,     0,     0);  /* red */
-  SetColorEntry( 5,     0, 65535,     0);  /* green */
-  SetColorEntry( 6,     0,     0, 65535);  /* blue */
-  SetColorEntry( 7,     0, 65535, 65535);  /* cyan */
-  SetColorEntry( 8, 65535, 65535,     0);  /* yellow */
-  SetColorEntry( 9, 65535,     0, 65535);  /* magenta */
-  SetColorEntry(10,  8192,  8192,  8192);  /* 1/8 gray */
-  SetColorEntry(11, 16384, 16384, 16384);  /* 2/8 gray */
-  SetColorEntry(12, 24576, 24576, 24576);  /* 3/8 gray */
-  SetColorEntry(13, 40959, 40959, 40959);  /* 5/8 gray */
-  SetColorEntry(14, 49151, 49151, 49151);  /* 6/8 gray */
-  SetColorEntry(15, 57343, 57343, 57343);  /* 7/8 gray */
+  SetColorEntry( 4, 65535,     0,     0);	/* red */
+  SetColorEntry( 5,     0, 65535,     0);	/* green */
+  SetColorEntry( 6,     0,     0, 65535);	/* blue */
+  SetColorEntry( 7,     0, 65535, 65535);	/* cyan */
+  SetColorEntry( 8, 65535, 65535,     0);	/* yellow */
+  SetColorEntry( 9, 65535,     0, 65535);	/* magenta */
+  SetColorEntry(10,  8192,  8192,  8192);	/* 1/8 gray */
+  SetColorEntry(11, 16384, 16384, 16384);	/* 2/8 gray */
+  SetColorEntry(12, 24576, 24576, 24576);	/* 3/8 gray */
+  SetColorEntry(13, 40959, 40959, 40959);	/* 5/8 gray */
+  SetColorEntry(14, 49151, 49151, 49151);	/* 6/8 gray */
+  SetColorEntry(15, 57343, 57343, 57343);	/* 7/8 gray */
 
 
   /* additional colors for 8-bit color */
   /* 24 more shades of gray (does not repeat 1/8th increments) */
-  SetColorEntry(16,  2048,  2048,  2048);  /*  1/32 gray */
-  SetColorEntry(17,  4096,  4096,  4096);  /*  2/32 gray */
-  SetColorEntry(18,  6144,  6144,  6144);  /*  3/32 gray */
-  SetColorEntry(19, 10240, 10240, 10240);  /*  5/32 gray */
-  SetColorEntry(20, 12288, 12288, 12288);  /*  6/32 gray */
-  SetColorEntry(21, 14336, 14336, 14336);  /*  7/32 gray */
-  SetColorEntry(22, 18432, 18432, 18432);  /*  9/32 gray */
-  SetColorEntry(23, 20480, 20480, 20480);  /* 10/32 gray */
-  SetColorEntry(24, 22528, 22528, 22528);  /* 11/32 gray */
-  SetColorEntry(25, 26624, 26624, 26624);  /* 13/32 gray */
-  SetColorEntry(26, 28672, 28672, 28672);  /* 14/32 gray */
-  SetColorEntry(27, 30720, 30720, 30720);  /* 15/32 gray */
-  SetColorEntry(28, 34815, 34815, 34815);  /* 17/32 gray */
-  SetColorEntry(29, 36863, 36863, 36863);  /* 18/32 gray */
-  SetColorEntry(30, 38911, 38911, 38911);  /* 19/32 gray */
-  SetColorEntry(31, 43007, 43007, 43007);  /* 21/32 gray */
-  SetColorEntry(32, 45055, 45055, 45055);  /* 22/32 gray */
-  SetColorEntry(33, 47103, 47103, 47103);  /* 23/32 gray */
-  SetColorEntry(34, 51199, 51199, 51199);  /* 25/32 gray */
-  SetColorEntry(35, 53247, 53247, 53247);  /* 26/32 gray */
-  SetColorEntry(36, 55295, 55295, 55295);  /* 27/32 gray */
-  SetColorEntry(37, 59391, 59391, 59391);  /* 29/32 gray */
-  SetColorEntry(38, 61439, 61439, 61439);  /* 30/32 gray */
-  SetColorEntry(39, 63487, 63487, 63487);  /* 31/32 gray */
+  SetColorEntry(16,  2048,  2048,  2048);	/*  1/32 gray */
+  SetColorEntry(17,  4096,  4096,  4096);	/*  2/32 gray */
+  SetColorEntry(18,  6144,  6144,  6144);	/*  3/32 gray */
+  SetColorEntry(19, 10240, 10240, 10240);	/*  5/32 gray */
+  SetColorEntry(20, 12288, 12288, 12288);	/*  6/32 gray */
+  SetColorEntry(21, 14336, 14336, 14336);	/*  7/32 gray */
+  SetColorEntry(22, 18432, 18432, 18432);	/*  9/32 gray */
+  SetColorEntry(23, 20480, 20480, 20480);	/* 10/32 gray */
+  SetColorEntry(24, 22528, 22528, 22528);	/* 11/32 gray */
+  SetColorEntry(25, 26624, 26624, 26624);	/* 13/32 gray */
+  SetColorEntry(26, 28672, 28672, 28672);	/* 14/32 gray */
+  SetColorEntry(27, 30720, 30720, 30720);	/* 15/32 gray */
+  SetColorEntry(28, 34815, 34815, 34815);	/* 17/32 gray */
+  SetColorEntry(29, 36863, 36863, 36863);	/* 18/32 gray */
+  SetColorEntry(30, 38911, 38911, 38911);	/* 19/32 gray */
+  SetColorEntry(31, 43007, 43007, 43007);	/* 21/32 gray */
+  SetColorEntry(32, 45055, 45055, 45055);	/* 22/32 gray */
+  SetColorEntry(33, 47103, 47103, 47103);	/* 23/32 gray */
+  SetColorEntry(34, 51199, 51199, 51199);	/* 25/32 gray */
+  SetColorEntry(35, 53247, 53247, 53247);	/* 26/32 gray */
+  SetColorEntry(36, 55295, 55295, 55295);	/* 27/32 gray */
+  SetColorEntry(37, 59391, 59391, 59391);	/* 29/32 gray */
+  SetColorEntry(38, 61439, 61439, 61439);	/* 30/32 gray */
+  SetColorEntry(39, 63487, 63487, 63487);	/* 31/32 gray */
 
   /* The remainder of color table defines a color cube with six steps
      for each primary color. Note that the corners of this cube repeat
@@ -655,15 +647,15 @@ void SetupPixmaps(void)
      */
   {
     int r, g, b;
-    for (r = 0; r < 6; r++) {
-      for (g = 0; g < 6; g++) {
-        for (b = 0; b < 6; b++) {
-          int i= 40 + ((36 * r) + (6 * b) + g);
-          if (i > 255) error("index out of range in color table compuation");
-          SetColorEntry(i, (r * 65535) / 5, (g * 65535) / 5, (b * 65535) / 5);
-        }
-      }
-    }
+
+    for (r= 0; r < 6; r++)
+      for (g= 0; g < 6; g++)
+	for (b= 0; b < 6; b++)
+	  {
+	    int i= 40 + ((36 * r) + (6 * b) + g);
+	    if (i > 255) error("index out of range in color table compuation");
+	    SetColorEntry(i, (r * 65535) / 5, (g * 65535) / 5, (b * 65535) / 5);
+	  }
   }
 
   palette = CreatePalette(logPal);
@@ -736,33 +728,23 @@ void SetupPixmaps(void)
 
 /* SetWindowTitle(): Set the main window title */
 void SetWindowTitle() {
-  char* titleString = calloc(MAX_PATH_SQUEAK + 20, sizeof(char));
-  TCHAR* title = NULL;
+  char titleString[MAX_PATH+20];
+  WCHAR wideTitle[MAX_PATH+20];
 
-  if (!IsWindow(stWindow)) {
-    return;
-  }
+  if(!IsWindow(stWindow)) return;
+  if(*windowTitle) sprintf(titleString, "%s", windowTitle);
+  else sprintf(titleString,"%s! (%s)", VM_NAME, imageName);
 
-  if (*windowTitle) {
-    sprintf(titleString, "%s", windowTitle);
-  } else {
-    sprintf(titleString, "%s! (%s)", VM_NAME, imageName);
-  }
-
-  UTF8_TO_TCHAR(titleString, title);
-  SetWindowText(stWindow, title);
-  free(titleString);
+  MultiByteToWideChar(CP_UTF8, 0, titleString, -1, wideTitle, MAX_PATH+20);
+  SetWindowTextW(stWindow, wideTitle);
 }
-
 
 char *ioGetWindowLabel(void) {
   return windowTitle;
 }
 
 sqInt ioSetWindowLabelOfSize(void* lblIndex, sqInt sz) {
-  if (sz > MAX_PATH_SQUEAK) {
-    sz = MAX_PATH_SQUEAK;
-  }
+  if(sz > MAX_PATH) sz = MAX_PATH;
   memcpy(windowTitle, (void*)lblIndex, sz);
   windowTitle[sz] = 0;
   SetWindowTitle();
@@ -818,8 +800,8 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
 
   /* If the second choice holds the target, use it, else use the more reliable window work area */
   if ((workArea2.top <= shifted.top) && (workArea2.bottom >= shifted.bottom) 
-      && (workArea2.left <= shifted.left) && (workArea2.right >= shifted.right)) {
-    workArea = workArea2;
+     && (workArea2.left <= shifted.left) && (workArea2.right >= shifted.right)) {
+	workArea = workArea2;
   }
   /* maximum size is working area */
   maxWidth  = workArea.right - workArea.left;
@@ -834,16 +816,16 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
     left = 0;
     top = 0;
   } else if ((old.left >= workArea.left) && (old.top >= workArea.top) &&
-         (old.left + width < workArea.right) && (old.top + height < workArea.bottom)) {
-    left = old.left; 
-    top = old.top;
+		     (old.left + width < workArea.right) && (old.top + height < workArea.bottom)) {
+	left = old.left; 
+	top = old.top;
   } else {
     left = (workArea.left) + ((maxWidth-width) / 2);
     top = (workArea.top) + ((maxHeight-height) / 2);
   }
   if ((old.left != left) || (old.top != top) || 
-      (old.left - old.right != width) || (old.bottom - old.top != height)) {
-    SetWindowPos(stWindow, NULL, left, top, width, height, SWP_NOZORDER);
+	  (old.left - old.right != width) || (old.bottom - old.top != height)) {
+	  SetWindowPos(stWindow, NULL, left, top, width, height, SWP_NOZORDER);
   }
   return 1;
 
@@ -851,7 +833,7 @@ sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
 
 void* ioGetWindowHandle(void)
 {
-  return stWindow;
+	return stWindow;
 }
 
 sqInt ioIsWindowObscured(void) {
@@ -879,28 +861,24 @@ sqInt ioIsWindowObscured(void) {
 
     GetWindowRect(hwnd, &hwndRect);
     if(!(hwndRect.left >= baseRect.right ||
-   baseRect.left >= hwndRect.right ||
-   hwndRect.top >= baseRect.bottom ||
-   baseRect.top >= hwndRect.bottom)) return 1; /* obscured */
+	 baseRect.left >= hwndRect.right ||
+	 hwndRect.top >= baseRect.bottom ||
+	 baseRect.top >= hwndRect.bottom)) return 1; /* obscured */
   }
   return false; /* not obscured */
 }
 
 void SetupWindows()
-{
-  WNDCLASSEX wc = { 0 };
+{ WNDCLASS wc;
 
   /* create our update region */
   updateRgn = CreateRectRgn(0,0,1,1);
 
   /* No windows at all when running as NT service */
-  if(fRunService && !fWindows95) {
-    return;
-  }
+  if(fRunService && !fWindows95) return;
 
-  wc.cbSize = sizeof(WNDCLASSEX);
   wc.style = CS_OWNDC; /* don't waste resources ;-) */
-  wc.lpfnWndProc = (WNDPROC) MainWndProcA;          /* XXX: this looks fishy */
+  wc.lpfnWndProc = (WNDPROC)MainWndProcA;
   wc.cbClsExtra = 0;
   wc.cbWndExtra = 0;
   wc.hInstance = hInstance;
@@ -909,39 +887,39 @@ void SetupWindows()
   wc.hbrBackground = GetStockObject (WHITE_BRUSH);
   wc.lpszMenuName = NULL;
   wc.lpszClassName = windowClassName;
-  RegisterClassEx(&wc);
+  RegisterClass(&wc);
 
-  if (!browserWindow) {
+  if(!browserWindow)
     stWindow = CreateWindowEx(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
-                              windowClassName,
-                              TEXT(VM_NAME) TEXT("!"),
-                              WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-                              0,
-                              0,
-                              CW_USEDEFAULT,
-                              CW_USEDEFAULT,
-                              NULL,
-                              NULL,
-                              hInstance,
-                              NULL);
-  } else {
+			      windowClassName,
+			      TEXT(VM_NAME) TEXT("!"),
+			      WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+			      0,
+			      0,
+			      CW_USEDEFAULT,
+			      CW_USEDEFAULT,
+			      NULL,
+			      NULL,
+			      hInstance,
+			      NULL);
+  else {
     /* Setup a browser window. */
     fBrowserMode = 1;
     stWindow = CreateWindowEx(0,
-                              windowClassName,
-                              TEXT(VM_NAME) TEXT("!"),
-                              WS_CHILD | WS_CLIPCHILDREN,
-                              0,
-                              0,
-                              GetSystemMetrics(SM_CXSCREEN),
-                              GetSystemMetrics(SM_CYSCREEN),
-                              browserWindow,
-                              NULL,
-                              hInstance,
-                              NULL);
+			      windowClassName,
+			      TEXT(VM_NAME) TEXT("!"),
+			      WS_CHILD | WS_CLIPCHILDREN,
+			      0,
+			      0,
+			      GetSystemMetrics(SM_CXSCREEN),
+			      GetSystemMetrics(SM_CYSCREEN),
+			      browserWindow,
+			      NULL,
+			      hInstance,
+			      NULL);
   }
   /* Force Unicode WM_CHAR */
-  SetWindowLongPtrW(stWindow, GWLP_WNDPROC, (LONG_PTR)MainWndProcW);
+  SetWindowLongPtrW(stWindow,GWLP_WNDPROC,(LONG_PTR)MainWndProcW);
 
 #ifndef NO_WHEEL_MOUSE
   g_WM_MOUSEWHEEL = RegisterWindowMessage( TEXT("MSWHEEL_ROLLMSG") ); /* RvL 1999-04-19 00:23 */
@@ -951,26 +929,26 @@ void SetupWindows()
   /* WinCE does not support RegisterClassEx(), so we must set
      the small icon after creating the window. */
   SendMessage(stWindow,WM_SETICON, FALSE,
-        (LPARAM)LoadImage(hInstance, MAKEINTRESOURCE(1),
-        IMAGE_ICON, 16, 16, 0));
+	      (LPARAM)LoadImage(hInstance, MAKEINTRESOURCE(1),
+				IMAGE_ICON, 16, 16, 0));
 
   consoleWindow = NULL; /* We do not use console under WinCE */
 
 #else /* defined(_WIN32_WCE) */
 
   consoleWindow = CreateWindowEx(0,
-         TEXT("EDIT"),
-         TEXT(""),
-         WS_CHILD | WS_BORDER |
-         WS_HSCROLL | WS_VSCROLL | ES_MULTILINE,
-         0,
-         0,
-         CW_USEDEFAULT,
-         CW_USEDEFAULT,
-         stWindow,
-         NULL,
-         hInstance,
-         NULL);
+				 TEXT("EDIT"),
+				 TEXT(""),
+				 WS_CHILD | WS_BORDER |
+				 WS_HSCROLL | WS_VSCROLL | ES_MULTILINE,
+				 0,
+				 0,
+				 CW_USEDEFAULT,
+				 CW_USEDEFAULT,
+				 stWindow,
+				 NULL,
+				 hInstance,
+				 NULL);
 #endif /* defined(_WIN32_WCE) */
 
   /* Modify the system menu for any VM options */
@@ -1021,8 +999,8 @@ void SetWindowSize(void) {
   height = (height <= maxHeight) ? height : maxHeight;
 
   SetWindowPos(stWindow, NULL, (maxWidth-width) / 2,
-      (maxHeight-height) / 2, width, height,
-      SWP_NOZORDER | SWP_HIDEWINDOW);
+  		(maxHeight-height) / 2, width, height,
+  		SWP_NOZORDER | SWP_HIDEWINDOW);
 
   /* Get the client area to recompute the window size accordingly */
   GetClientRect(stWindow,&r);
@@ -1037,8 +1015,8 @@ void SetWindowSize(void) {
   width  = (width <= maxWidth ) ? width : maxWidth;
   height = (height <= maxHeight ) ? height : maxHeight;
   SetWindowPos(stWindow, NULL, (maxWidth-width) / 2,
-      (maxHeight-height) / 2, width, height,
-      SWP_NOZORDER | SWP_HIDEWINDOW);
+  		(maxHeight-height) / 2, width, height,
+  		SWP_NOZORDER | SWP_HIDEWINDOW);
 
 }
 
@@ -1076,11 +1054,9 @@ static unsigned char keymap[256] =
 static unsigned char iKeymap[256];
 
 void SetupKeymap()
-{
-  int i;
-  for(i = 0; i < 256;i++) {
+{ int i;
+  for(i=0;i<256;i++)
     iKeymap[keymap[i]] = i;
-  }
 }
 
 
@@ -1255,13 +1231,13 @@ int recordKeyboardEvent(MSG *msg) {
       pressCode = EventKeyDown;
       /* filter out repeated meta keys */
       if(msg->lParam & 0x40000000) {
-        /* Bit 30 signifies the previous key state. */
-        if(msg->wParam == VK_SHIFT ||
-           msg->wParam == VK_CONTROL ||
-           msg->wParam == VK_MENU) {
-          /* okay, it's a meta-key */
-          return 1;
-        }
+	/* Bit 30 signifies the previous key state. */
+	if(msg->wParam == VK_SHIFT ||
+	   msg->wParam == VK_CONTROL ||
+	   msg->wParam == VK_MENU) {
+	  /* okay, it's a meta-key */
+	  return 1;
+	}
       }
       break;
     case WM_KEYUP:
@@ -1418,7 +1394,7 @@ int recordKeystroke(UINT msg, WPARAM wParam, LPARAM lParam)
     {
       /* NOTE: Interrupt key is meta, not recorded as key stroke */
       setInterruptPending(true);
-    return 1;
+	  return 1;
     }
   recordKey(keystate);
   return 1;
@@ -1432,11 +1408,11 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
 #if defined(_WIN32_WCE)
 
   if (wParam & MK_LBUTTON) stButtons |= 4;
-  if (stButtons == 4) {
-    /* red button honours the modifiers */
-    if (wParam & MK_CONTROL) stButtons = 1;  /* blue button if CTRL down */
-    else if (GetKeyState(VK_LMENU) & 0x8000) stButtons = 2;  /* yellow button if META down */
-  }
+  if (stButtons == 4)	/* red button honours the modifiers */
+    {
+      if (wParam & MK_CONTROL) stButtons = 1;	/* blue button if CTRL down */
+      else if (GetKeyState(VK_LMENU) & 0x8000) stButtons = 2;	/* yellow button if META down */
+    }
 
 #else /* defined(_WIN32_WCE) */
 
@@ -1450,13 +1426,13 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
     else stButtons |= f3ButtonMouse ? 1 : 2;
   }
 
-  if (stButtons == 4) {
-    /* red button honours the modifiers */
-    if (GetKeyState(VK_CONTROL) & 0x8000)
-      stButtons= 2;  /* blue button if CTRL down */
-    else if (GetKeyState(VK_MENU) & 0x8000)
-      stButtons= 1;  /* yellow button if META down */
-  }
+  if (stButtons == 4)	/* red button honours the modifiers */
+    {
+      if (GetKeyState(VK_CONTROL) & 0x8000)
+        stButtons= 2;	/* blue button if CTRL down */
+      else if (GetKeyState(VK_MENU) & 0x8000)
+        stButtons= 1;	/* yellow button if META down */
+    }
 
 #endif /* defined(_WIN32_WCE) */
 
@@ -1466,8 +1442,7 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
 
 /* record the modifier buttons */
 int recordModifierButtons()
-{
-  int modifiers=0;
+{ int modifiers=0;
 
   /* map both shift and caps lock to squeak shift bit */
   if(GetKeyState(VK_SHIFT) & 0x8000)
@@ -1556,81 +1531,80 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
   /* wake us up if something happens */
   ResetEvent(vmWakeUpEvent);
   MsgWaitForMultipleObjects(1, &vmWakeUpEvent, FALSE,
-          microSeconds / 1000, QS_ALLINPUT);
+			    microSeconds / 1000, QS_ALLINPUT);
   ioProcessEvents(); /* keep up with mouse moves etc. */
   return microSeconds;
 }
 
 sqInt ioProcessEvents(void)
-{
-  static MSG msg;
-  POINT mousePt;
-  int result;
-  extern sqInt inIOProcessEvents;
+{	static MSG msg;
+	POINT mousePt;
+	int result;
+	extern sqInt inIOProcessEvents;
 
-  if (fRunService && !fWindows95) return 1;
+	if (fRunService && !fWindows95) return 1;
 
 #if NewspeakVM
-  /* inIOProcessEvents controls ioProcessEvents.  If negative then
-   * ioProcessEvents is disabled.  If >= 0 inIOProcessEvents is incremented
-   * to avoid reentrancy (i.e. for native GUIs).
-   */
-  if (inIOProcessEvents) return -1;
-  inIOProcessEvents += 1;
+	/* inIOProcessEvents controls ioProcessEvents.  If negative then
+	 * ioProcessEvents is disabled.  If >= 0 inIOProcessEvents is incremented
+	 * to avoid reentrancy (i.e. for native GUIs).
+	 */
+	if (inIOProcessEvents) return -1;
+	inIOProcessEvents += 1;
 
-  result = ioDrainEventQueue();
+	result = ioDrainEventQueue();
 
-  if (inIOProcessEvents > 0)
-    inIOProcessEvents -= 1;
+	if (inIOProcessEvents > 0)
+		inIOProcessEvents -= 1;
 
-  return result;
+	return result;
 #else /* NewspeakVM */
-  /* inIOProcessEvents controls ioProcessEvents.  If negative then
-   * ioProcessEvents is disabled.  If >= 0 inIOProcessEvents is incremented
-   * to avoid reentrancy (i.e. for native GUIs).
-   */
-  if (inIOProcessEvents) return -1;
-  inIOProcessEvents += 1;
+	/* inIOProcessEvents controls ioProcessEvents.  If negative then
+	 * ioProcessEvents is disabled.  If >= 0 inIOProcessEvents is incremented
+	 * to avoid reentrancy (i.e. for native GUIs).
+	 */
+	if (inIOProcessEvents) return -1;
+	inIOProcessEvents += 1;
 
   /* WinCE doesn't retrieve WM_PAINTs from the queue with PeekMessage,
      so we won't get anything painted unless we use GetMessage() if there
      is a dirty rect. */
-  lastMessage = &msg;
-  while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE)) {
-    GetMessage(&msg,NULL,0,0);
+	lastMessage = &msg;
+	while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE)) {
+		GetMessage(&msg,NULL,0,0);
 # ifndef NO_PLUGIN_SUPPORT
-    if (msg.hwnd == NULL)
-      pluginHandleEvent(&msg);
+		if (msg.hwnd == NULL)
+			pluginHandleEvent(&msg);
 # endif
-    TranslateMessage(&msg);
-    DispatchMessage(&msg);
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
     }
 
 # ifndef NO_DIRECTINPUT
-  /* any buffered mouse input which hasn't been processed is obsolete */
-  DumpBufferedMouseTrail();
+	/* any buffered mouse input which hasn't been processed is obsolete */
+	DumpBufferedMouseTrail();
 # endif
 
-  /* If we're running in a browser check if the browser's still there */
-  if (fBrowserMode
-   && browserWindow
-   && !IsWindow(browserWindow))
-    ioExit();
+	/* If we're running in a browser check if the browser's still there */
+	if (fBrowserMode
+	 && browserWindow
+	 && !IsWindow(browserWindow))
+		ioExit();
 
-  lastMessage = NULL;
+	lastMessage = NULL;
 
-  if (inIOProcessEvents > 0)
-    inIOProcessEvents -= 1;
+	if (inIOProcessEvents > 0)
+		inIOProcessEvents -= 1;
 
-  return 1;
+	return 1;
 #endif /* NewspeakVM */
 }
 
 #if NewspeakVM
 sqInt
 ioDrainEventQueue(void)
-{
-  static MSG msg;
+{ static MSG msg;
+  POINT mousePt;
 
   if(fRunService && !fWindows95) return 1;
 
@@ -1638,36 +1612,37 @@ ioDrainEventQueue(void)
      so we won't get anything painted unless we use GetMessage() if there
      is a dirty rect. */
   lastMessage = &msg;
-  while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE)) {
-    GetMessage(&msg,NULL,0,0);
+  while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE))
+    {
+      GetMessage(&msg,NULL,0,0);
 #ifndef NO_PLUGIN_SUPPORT
-    if(msg.hwnd == NULL) {
-      pluginHandleEvent(&msg);
-    } else
+      if(msg.hwnd == NULL) {
+	pluginHandleEvent(&msg);
+      } else
 #endif
-    if(msg.hwnd != stWindow) {
-      /* Messages not sent to Squeak window */
-      if(msg.hwnd != consoleWindow && GetParent(msg.hwnd) == stWindow) {
-        /* This message has been sent to a plugin window */
-        /* Selectively pass up certain events to the parent's level */
-        switch (msg.message) {
-          case WM_LBUTTONDOWN:
-          case WM_LBUTTONUP:
-          case WM_MBUTTONDOWN:
-          case WM_MBUTTONUP:
-          case WM_RBUTTONDOWN:
-          case WM_RBUTTONUP:
-          case WM_MOUSEMOVE:
-            mousePt.x = LOWORD(msg.lParam);
-            mousePt.y = HIWORD(msg.lParam);
-            MapWindowPoints(msg.hwnd, stWindow, &mousePt, 1);
-            PostMessage(stWindow, msg.message, msg.wParam, MAKELONG(mousePt.x,mousePt.y));
-        }
-      }
+	if(msg.hwnd != stWindow) {
+	  /* Messages not sent to Squeak window */
+	  if(msg.hwnd != consoleWindow && GetParent(msg.hwnd) == stWindow) {
+	    /* This message has been sent to a plugin window */
+	    /* Selectively pass up certain events to the parent's level */
+	    switch (msg.message) {
+	      case WM_LBUTTONDOWN:
+	      case WM_LBUTTONUP:
+	      case WM_MBUTTONDOWN:
+	      case WM_MBUTTONUP:
+	      case WM_RBUTTONDOWN:
+	      case WM_RBUTTONUP:
+	      case WM_MOUSEMOVE:
+		mousePt.x = LOWORD(msg.lParam);
+		mousePt.y = HIWORD(msg.lParam);
+		MapWindowPoints(msg.hwnd, stWindow, &mousePt, 1);
+		PostMessage(stWindow, msg.message, msg.wParam, MAKELONG(mousePt.x,mousePt.y));
+	    }
+	  }
+	}
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
     }
-    TranslateMessage(&msg);
-    DispatchMessage(&msg);
-  }
 
 #ifndef NO_DIRECTINPUT
   /* any buffered mouse input which hasn't been processed is obsolete */
@@ -1718,27 +1693,25 @@ sqInt ioScreenDepth(void) {
 sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
 #if !defined(_WIN32_WCE)
-  /****************************************************/
-  /* Only one cursor is defined under CE...           */
-  /* (the wait cursor)                         :-(    */
-  /****************************************************/
+	/****************************************************/
+	/* Only one cursor is defined under CE...           */
+	/* (the wait cursor)                         :-(    */
+	/****************************************************/
   static unsigned char *andMask=0,*xorMask=0;
   static int cx=0,cy=0,cursorSize=0;
   int i;
 
-  if(!IsWindow(stWindow)) {
-    return 1;
-  }
-  if(!andMask || !xorMask) {
-     /* Determine the cursor size.
-      NOTE: On NT this is actually not necessary, as NT _can_
-      create cursors of different sizes. However, on Win95 the
-      cursor will be created, BUT WILL NOT BE SHOWN! */
-    cx = GetSystemMetrics(SM_CXCURSOR);
-    cy = GetSystemMetrics(SM_CYCURSOR);
-    cursorSize = cx*cy / 8;
-    andMask = malloc(cursorSize);
-    xorMask = malloc(cursorSize);
+  if(!IsWindow(stWindow)) return 1;
+  if(!andMask || !xorMask)
+	{ /* Determine the cursor size.
+		 NOTE: On NT this is actually not necessary, as NT _can_
+		 create cursors of different sizes. However, on Win95 the
+		 cursor will be created, BUT WILL NOT BE SHOWN! */
+      cx = GetSystemMetrics(SM_CXCURSOR);
+      cy = GetSystemMetrics(SM_CYCURSOR);
+      cursorSize = cx*cy / 8;
+      andMask = malloc(cursorSize);
+      xorMask = malloc(cursorSize);
   }
 
   /* free last used cursor */
@@ -1746,37 +1719,42 @@ sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt of
 
   memset(andMask,0xff,cursorSize);
   memset(xorMask,0x00,cursorSize);
-  if(cursorMaskIndex) {
-    /* New Cursors specify mask and bits:
+  if(cursorMaskIndex)
+    { /* New Cursors specify mask and bits:
          Mask    Bit    Result
          0       0      Transparent
          0       1      Invert
          1       0      White
          1       1      Black
-     */
-    for (i=0; i<16; i++) {
-      andMask[i*cx/8+0] = ~(checkedLongAt(cursorMaskIndex + (4 * i)) >> 24) & 0xFF;
-      andMask[i*cx/8+1] = ~(checkedLongAt(cursorMaskIndex + (4 * i)) >> 16) & 0xFF;
+      */
+      for (i=0; i<16; i++)
+        {
+          andMask[i*cx/8+0] = ~(checkedLongAt(cursorMaskIndex + (4 * i)) >> 24) & 0xFF;
+          andMask[i*cx/8+1] = ~(checkedLongAt(cursorMaskIndex + (4 * i)) >> 16) & 0xFF;
+        }
+      for (i=0; i<16; i++)
+        {
+          xorMask[i*cx/8+0] = (~(checkedLongAt(cursorBitsIndex + (4 * i)) >> 24) & 0xFF) ^ (andMask[i*cx/8+0]);
+          xorMask[i*cx/8+1] = (~(checkedLongAt(cursorBitsIndex + (4 * i)) >> 16) & 0xFF) ^ (andMask[i*cx/8+1]);
+        }
     }
-    for (i=0; i<16; i++) {
-      xorMask[i*cx/8+0] = (~(checkedLongAt(cursorBitsIndex + (4 * i)) >> 24) & 0xFF) ^ (andMask[i*cx/8+0]);
-      xorMask[i*cx/8+1] = (~(checkedLongAt(cursorBitsIndex + (4 * i)) >> 16) & 0xFF) ^ (andMask[i*cx/8+1]);
-    }
-  } else {
-     /* Old Cursor: Just make all 1-bits black */
-    for (i=0; i<16; i++) {
+  else /* Old Cursor: Just make all 1-bits black */
+    for (i=0; i<16; i++)
+      {
         andMask[i*cx/8+0] = ~(checkedLongAt(cursorBitsIndex + (4 * i)) >> 24) & 0xFF;
         andMask[i*cx/8+1] = ~(checkedLongAt(cursorBitsIndex + (4 * i)) >> 16) & 0xFF;
-    }
-  }
+      }
 
   currentCursor = CreateCursor(hInstance,-offsetX,-offsetY,cx,cy,andMask,xorMask);
-  if (currentCursor) {
+  if(currentCursor)
+    {
       SetCursor(0);
       SetCursor(currentCursor);
-  } else {
+    }
+  else
+    {
       printLastError(TEXT("CreateCursor failed"));
-  }
+    }
 #endif /* !defined(_WIN32_WCE) */
   return 1;
 }
@@ -1831,46 +1809,49 @@ sqInt ioSetFullScreen(sqInt fullScreen) {
     shouldBeFullScreen = fullScreen;
     return 1;
   }
-  if(fullScreen) {
+  if(fullScreen)
+    {
 #if !defined(_WIN32_WCE)
-    if(browserWindow) {
-      /* Jump out of the browser */
-      HWND oldBrowserWindow = browserWindow;
-      browserWindow = NULL;
-      DestroyWindow(stWindow);
-      SetupWindows();
-      /* I'm not exactly sure which one of the following three
-         does the trick for IE - but using all three works,
-         so hey, who cares ;-) */
-      SetForegroundWindow(stWindow);
-      SetActiveWindow(stWindow);
-      BringWindowToTop(stWindow);
-      /* SetWindowPos(stWindow, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW); */
-      browserWindow = oldBrowserWindow;
-    }
-    SetWindowLongPtr(stWindow,GWL_STYLE, WS_POPUP | WS_CLIPCHILDREN);
-    SetWindowLongPtr(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW);
-    ShowWindow(stWindow, SW_SHOWMAXIMIZED);
+      if(browserWindow) {
+	/* Jump out of the browser */
+	HWND oldBrowserWindow = browserWindow;
+	browserWindow = NULL;
+	DestroyWindow(stWindow);
+	SetupWindows();
+	/* I'm not exactly sure which one of the following three
+	   does the trick for IE - but using all three works,
+	   so hey, who cares ;-) */
+	SetForegroundWindow(stWindow);
+	SetActiveWindow(stWindow);
+	BringWindowToTop(stWindow);
+	/* SetWindowPos(stWindow, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW); */
+	browserWindow = oldBrowserWindow;
+      }
+      SetWindowLongPtr(stWindow,GWL_STYLE, WS_POPUP | WS_CLIPCHILDREN);
+      SetWindowLongPtr(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW);
+      ShowWindow(stWindow, SW_SHOWMAXIMIZED);
 #else /* !defined(_WIN32_WCE) */
-    ShowWindow(stWindow,SW_SHOWNORMAL);
+      ShowWindow(stWindow,SW_SHOWNORMAL);
 #endif /* !defined(_WIN32_WCE) */
-    setFullScreenFlag(1);
-  } else {
-#if !defined(_WIN32_WCE)
-    ShowWindow(stWindow, SW_RESTORE);
-    ShowWindow(stWindow, SW_HIDE);
-    SetWindowLongPtr(stWindow,GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN);
-    SetWindowLongPtr(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */ );
-    SetWindowPos(stWindow,0,0,0,0,0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_NOREDRAW);
-    if(browserWindow) {
-      /* Jump back into the browser */
-      DestroyWindow(stWindow);
-      SetupWindows();
+      setFullScreenFlag(1);
     }
+  else
+    {
+#if !defined(_WIN32_WCE)
+      ShowWindow(stWindow, SW_RESTORE);
+      ShowWindow(stWindow, SW_HIDE);
+      SetWindowLongPtr(stWindow,GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN);
+      SetWindowLongPtr(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */ );
+      SetWindowPos(stWindow,0,0,0,0,0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_NOREDRAW);
+      if(browserWindow) {
+	/* Jump back into the browser */
+	DestroyWindow(stWindow);
+	SetupWindows();
+      }
 #endif /* !defined(_WIN32_WCE) */
-    ShowWindow(stWindow,SW_SHOWNORMAL);
-    setFullScreenFlag(0);
-  }
+      ShowWindow(stWindow,SW_SHOWNORMAL);
+      setFullScreenFlag(0);
+    }
   /* get us back in the foreground */
   SetForegroundWindow(stWindow);
   wasFullScreen = shouldBeFullScreen = fullScreen;
@@ -1902,7 +1883,7 @@ sqInt ioSetFullScreen(sqInt fullScreen) {
 #endif
 
 int reverse_image_bytes(unsigned int* dst, unsigned int *src,
-      int depth, int width, RECT *rect)
+			int depth, int width, RECT *rect)
 {
   int pitch, first, last, nWords, delta, yy;
 
@@ -1924,34 +1905,30 @@ int reverse_image_bytes(unsigned int* dst, unsigned int *src,
   delta = pitch - nWords;
   if(nWords <= 0) return 1;
 
-  {
-    /* the inner loop */
+  { /* the inner loop */
     register DWORD* srcPixPtr SRC_PIX_REG;
     register DWORD* dstPixPtr DST_PIX_REG;
     srcPixPtr = ((DWORD*)src) + (rect->top * pitch) + first;
     dstPixPtr = ((DWORD*)dst) + (rect->top * pitch) + first;
-    if (reverseBits) {
-      for(yy = rect->top;
-          yy < rect->bottom;
-          yy++, srcPixPtr += delta, dstPixPtr += delta) {
-        int i = nWords;
-        do {
-          unsigned int value = *srcPixPtr++;
-          BYTE_SWAP(value);
-          *dstPixPtr++ = ~value;
-        } while(--i);
+    if(reverseBits) {
+      for(yy = rect->top; yy < rect->bottom;
+	  yy++, srcPixPtr += delta, dstPixPtr += delta) {
+	int i = nWords;
+	do {
+	  unsigned int value = *srcPixPtr++;
+	  BYTE_SWAP(value);
+	  *dstPixPtr++ = ~value;
+	} while(--i);
       }
-    } else {
-      /* !reverseBits */
-      for(yy = rect->top;
-          yy < rect->bottom;
-          yy++, srcPixPtr += delta, dstPixPtr += delta) {
-        int i = nWords;
-        do {
-          unsigned int value = *srcPixPtr++;
-          BYTE_SWAP(value);
-          *dstPixPtr++ = value;
-        } while(--i);
+    } else { /* !reverseBits */
+      for(yy = rect->top; yy < rect->bottom;
+	  yy++, srcPixPtr += delta, dstPixPtr += delta) {
+	int i = nWords;
+	do {
+	  unsigned int value = *srcPixPtr++;
+	  BYTE_SWAP(value);
+	  *dstPixPtr++ = value;
+	} while(--i);
       }
     }
   }
@@ -1959,7 +1936,7 @@ int reverse_image_bytes(unsigned int* dst, unsigned int *src,
 }
 
 int reverse_image_words(unsigned int *dst, unsigned int *src,
-                        int depth, int width, RECT *rect)
+			int depth, int width, RECT *rect)
 {
   int pitch, first, last, nWords, delta, yy;
 
@@ -1971,20 +1948,18 @@ int reverse_image_words(unsigned int *dst, unsigned int *src,
   delta = pitch - nWords;
   if(nWords <= 0) return 1;
 
-  {
-    /* the inner loop */
+  { /* the inner loop */
     register DWORD* srcPixPtr SRC_PIX_REG;
     register DWORD* dstPixPtr DST_PIX_REG;
     srcPixPtr = ((DWORD*)src) + (rect->top * pitch) + first;
     dstPixPtr = ((DWORD*)dst) + (rect->top * pitch) + first;
-    for(yy = rect->top;
-        yy < rect->bottom;
-        yy++, srcPixPtr += delta, dstPixPtr += delta) {
+    for(yy = rect->top; yy < rect->bottom;
+	yy++, srcPixPtr += delta, dstPixPtr += delta) {
       int i = nWords;
       do {
-        unsigned int value = *srcPixPtr++;
-        WORD_SWAP(value);
-        *dstPixPtr++ = value;
+	unsigned int value = *srcPixPtr++;
+	WORD_SWAP(value);
+	*dstPixPtr++ = value;
       } while(--i);
     }
   }
@@ -1992,7 +1967,7 @@ int reverse_image_words(unsigned int *dst, unsigned int *src,
 }
 
 int copy_image_words(unsigned int *dst, unsigned int *src,
-                     int depth, int width, RECT *rect)
+		     int depth, int width, RECT *rect)
 {
   int pitch, first, last, nWords, delta, yy;
 
@@ -2004,16 +1979,14 @@ int copy_image_words(unsigned int *dst, unsigned int *src,
   delta = pitch - nWords;
   if(nWords <= 0) return 1;
 
-  {
-    /* the inner loop */
+  {/* the inner loop */
     DWORD* srcPixPtr;
     DWORD* dstPixPtr;
     srcPixPtr = ((DWORD*)src) + (rect->top * pitch) + first;
     dstPixPtr = ((DWORD*)dst) + (rect->top * pitch) + first;
-    for(yy = rect->top;
-        yy < rect->bottom;
-        yy++, srcPixPtr += pitch, dstPixPtr += pitch) {
-      memcpy(dstPixPtr, srcPixPtr, nWords * 4);
+    for(yy = rect->top; yy < rect->bottom;
+	yy++, srcPixPtr += pitch, dstPixPtr += pitch) {
+      memcpy(dstPixPtr, srcPixPtr, nWords*4);
     }
   }
   return 1;
@@ -2029,8 +2002,7 @@ int copy_image_words(unsigned int *dst, unsigned int *src,
 /****************************************************************************/
 
 BITMAPINFO *BmiForDepth(int depth)
-{
-  BITMAPINFO *bmi = NULL;
+{ BITMAPINFO *bmi = NULL;
   switch(depth) {
     case 1: bmi = bmi1; break;
     case 4: bmi = bmi4; break;
@@ -2113,7 +2085,7 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenF
     AdjustWindowRect(&r, GetWindowLongPtr(stWindow, GWL_STYLE), 0);
   }
   SetWindowPos(stWindow, NULL, 0, 0, r.right-r.left, r.bottom-r.top,
-         SWP_NOMOVE | SWP_NOZORDER);
+	       SWP_NOMOVE | SWP_NOZORDER);
   SetFocus(stWindow);
   return 1;
 #endif /* _WIN32_WCE */
@@ -2121,9 +2093,9 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenF
 
 /* force an update of the squeak window if using deferred updates */
 sqInt ioForceDisplayUpdate(void) {
-  /* With Newspeak and the native GUI we do not want the main window to appear
-   * unless explicitly asked for.
-   */
+	/* With Newspeak and the native GUI we do not want the main window to appear
+	 * unless explicitly asked for.
+	 */
 #if !NewspeakVM
   /* Show the main window if it's been hidden so far */
   if(IsWindow(stWindow) && !IsWindowVisible(stWindow)) {
@@ -2145,8 +2117,8 @@ sqInt ioForceDisplayUpdate(void) {
 }
 
 sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double hDPI, double vDPI, sqInt landscapeFlag)
-  /* print a form with the given bitmap, width, height, and depth at
-     the given horizontal and vertical scales in the given orientation */
+	/* print a form with the given bitmap, width, height, and depth at
+	   the given horizontal and vertical scales in the given orientation */
 {
 #ifdef NO_PRINTER
   warnPrintf(TEXT("This VM does not support printing.\n"));
@@ -2221,11 +2193,10 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
   if( depth < 32 ) {
     if(depth == 16)
       reverse_image_words((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
-        depth, width, &targetRect);
+			  depth, width, &targetRect);
     else
       reverse_image_bytes((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
-        depth, width, &targetRect);
-  }
+			  depth, width, &targetRect);
 #endif /* NO_BYTE_REVERSAL */
 
   if(GDI_ERROR == StretchDIBits(dc,
@@ -2247,18 +2218,17 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
   if( depth < 32 ) {
     if(depth == 16)
       reverse_image_words((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
-        depth, width, &targetRect);
+			  depth, width, &targetRect);
     else
       reverse_image_bytes((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
-        depth, width, &targetRect);
-  }
+			  depth, width, &targetRect);
 #endif /* NO_BYTE_REVERSAL */
 
   EndPage   (dc);
   EndDoc    (dc);
   DeleteDC  (dc);
 
-  return true;
+	return true;
 #endif /* NO_PRINTER */
 }
 
@@ -2280,22 +2250,22 @@ HDC CreateBitmapDC(HDC dc, int depth, int width, int height, void** pBitsOut)
   BITMAPINFO *bmi;
 
   bmi = BmiForDepth(depth);
-  if(!bmi) {
+  if(!bmi)
     abortMessage(TEXT("Fatal error: Color depth %d not supported"),depth);
-  }
 
-  if (depth != lastDepth || width != lastWidth || height != lastHeight) {
-    lastDepth = depth;
-    lastHeight = height;
-    lastWidth = width;
-    bmi->bmiHeader.biWidth = width;
-    bmi->bmiHeader.biHeight = -height;
-    if (hbm) { DeleteObject(hbm) };
-    hbm = CreateDIBSection(dc, bmi, DIB_RGB_COLORS, &pBits, NULL, 0);
-    if (!hbm) {
-      abortMessage(TEXT("Fatal error: Cannot create device bitmap!"));
+  if (depth != lastDepth || width != lastWidth || height != lastHeight)
+    {
+      lastDepth = depth;
+      lastHeight = height;
+      lastWidth = width;
+      bmi->bmiHeader.biWidth = width;
+      bmi->bmiHeader.biHeight = -height;
+      if (hbm)
+	DeleteObject(hbm);
+      hbm = CreateDIBSection(dc, bmi, DIB_RGB_COLORS, &pBits, NULL, 0);
+      if (!hbm)
+	abortMessage(TEXT("Fatal error: Cannot create device bitmap!"));
     }
-  }
 
   *pBitsOut = pBits;
   memDC = CreateCompatibleDC(dc);
@@ -2314,9 +2284,8 @@ void ReleaseBitmapDC(HDC memDC)
 #endif /* USE_DIB_SECTIONS */
 
 sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
-      sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB)
-{
-  HDC dc;
+		  sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB)
+{ HDC dc;
   BITMAPINFO *bmi;
   int lines;
   int lsbDisplay;
@@ -2328,7 +2297,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
     return 1;
 #if 0
   if(ioDirectXShowDisplayBits(dispBits, width, height, depth,
-            affectedL, affectedR, affectedT, affectedB))
+			      affectedL, affectedR, affectedT, affectedB))
     return 1;
 #endif
   /* Try to accumulate the changes */
@@ -2349,7 +2318,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
       else
         /* Set the update region manually */
         SetRectRgn(updateRgn, updateRect.left, updateRect.top,
-       updateRect.right,updateRect.bottom);
+		   updateRect.right,updateRect.bottom);
     }
   else
     {
@@ -2384,10 +2353,10 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   if(lsbDisplay) depth = -depth;
 
 #if defined(USE_DIB_SECTIONS)
-  /******************************************************/
-  /* Windows CE version, using DIBSection               */
-  /* (does not support palettes or SetDIBitsToDevice()) */
-  /******************************************************/
+	/******************************************************/
+	/* Windows CE version, using DIBSection               */
+	/* (does not support palettes or SetDIBitsToDevice()) */
+	/******************************************************/
   {
     void* pBits;
     HDC memDC;
@@ -2401,28 +2370,28 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 
     PROFILE_BEGIN(PROFILE_DISPLAY)
       if( !lsbDisplay && depth < 32 ) {
-  if(depth == 16)
-    reverse_image_words((unsigned int*) pBits, (unsigned int*) dispBits,
-            depth, width, &updateRect);
-  else
-    reverse_image_bytes((unsigned int*) pBits, (unsigned int*) dispBits,
-            depth, width, &updateRect);
+	if(depth == 16)
+	  reverse_image_words((unsigned int*) pBits, (unsigned int*) dispBits,
+			      depth, width, &updateRect);
+	else
+	  reverse_image_bytes((unsigned int*) pBits, (unsigned int*) dispBits,
+			      depth, width, &updateRect);
       } else {
-  copy_image_words((int*)pBits, (int*) dispBits,
-       depth, width, &updateRect);
+	copy_image_words((int*)pBits, (int*) dispBits,
+			 depth, width, &updateRect);
       }
     PROFILE_END(ticksForReversal)
 
       PROFILE_BEGIN(PROFILE_DISPLAY);
     BitBlt(dc,
-     updateRect.left,/* dst_x */
-     updateRect.top, /* dst_y */
-     (updateRect.right - updateRect.left),/* dst_w */
-     (updateRect.bottom - updateRect.top),/* dst_h */
-     memDC,
-     updateRect.left, /* src_x */
-     updateRect.top,  /* src_y */
-     SRCCOPY);
+	   updateRect.left,/* dst_x */
+	   updateRect.top, /* dst_y */
+	   (updateRect.right - updateRect.left),/* dst_w */
+	   (updateRect.bottom - updateRect.top),/* dst_h */
+	   memDC,
+	   updateRect.left, /* src_x */
+	   updateRect.top,  /* src_y */
+	   SRCCOPY);
 
     ReleaseBitmapDC(memDC);
     ReleaseDC(stWindow,dc);
@@ -2442,11 +2411,10 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   if( !lsbDisplay && depth < 32 ) {
     if(depth == 16)
       reverse_image_words((unsigned int*) dispBits, (unsigned int*) dispBits,
-        depth, width, &updateRect);
+			  depth, width, &updateRect);
     else
       reverse_image_bytes((unsigned int*) dispBits, (unsigned int*) dispBits,
-        depth, width, &updateRect);
-  }
+			  depth, width, &updateRect);
   PROFILE_END(ticksForReversal)
 #endif /* NO_BYTE_REVERSAL */
 
@@ -2470,17 +2438,17 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   SelectClipRgn(dc,updateRgn);
 
   lines = SetDIBitsToDevice(dc,
-                            0, /* dst_x */
-                            0, /* dst_y */
-                            width,  /* dst_w */
-                            height, /* dst_h */
-                            0, /* src_x */
-                            0, /* src_y */
-                            0, /* start scan line in DIB */
-                            height, /* num scan lines in DIB */
-                            (void*) dispBits,  /* bits */
-                            bmi,
-                            DIB_RGB_COLORS);
+  	    0, /* dst_x */
+  	    0, /* dst_y */
+  	    width,  /* dst_w */
+  	    height, /* dst_h */
+  	    0, /* src_x */
+  	    0, /* src_y */
+  	    0, /* start scan line in DIB */
+  	    height, /* num scan lines in DIB */
+	    (void*) dispBits,  /* bits */
+	    bmi,
+	    DIB_RGB_COLORS);
 
   if(lines == 0) {
     /* Note: the above is at least five times faster than what follows.
@@ -2506,7 +2474,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
     bitsPtr = dispBits + start + (updateRect.top * pitch);
     for(line = updateRect.top; line < updateRect.bottom; line++) {
       lines = SetDIBitsToDevice(dc, left, line, nPix, 1, 0, 0, 0, 1,
-        (void*) bitsPtr, bmi, DIB_RGB_COLORS);
+				(void*) bitsPtr, bmi, DIB_RGB_COLORS);
       bitsPtr += pitch;
     }
   }
@@ -2519,7 +2487,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
     warnPrintf(TEXT("width=%") TEXT(PRIdSQINT) TEXT(",height=%") TEXT(PRIdSQINT) TEXT(",bits=%") TEXT(PRIXSQINT) TEXT(",dc=%") TEXT(PRIXSQINT) TEXT("\n"),
-         width, height, dispBits,(usqIntptr_t)dc);
+	       width, height, dispBits,(usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */
 #ifndef NO_BYTE_REVERSAL
@@ -2527,11 +2495,10 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   if( !lsbDisplay && depth < 32 ) {
     if(depth == 16)
       reverse_image_words((unsigned int*) dispBits, (unsigned int*) dispBits,
-        depth, width, &updateRect);
+			  depth, width, &updateRect);
     else
       reverse_image_bytes((unsigned int*) dispBits, (unsigned int*) dispBits,
-        depth, width, &updateRect);
-  }
+			  depth, width, &updateRect);
   PROFILE_END(ticksForReversal)
 #endif /* NO_BYTE_REVERSAL */
 #endif /* defined(_WIN32_WCE) */
@@ -2542,7 +2509,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 /*                      Clipboard                                           */
 /****************************************************************************/
 
-sqInt clipboardSize(void) {
+sqInt clipboardSize(void) { 
   HANDLE h;
   WCHAR *src;
   int i, count, bytesNeeded;
@@ -2560,7 +2527,7 @@ sqInt clipboardSize(void) {
 
   /* How many bytes do we need to store those unicode chars in UTF8 format? */
   bytesNeeded = WideCharToMultiByte(CP_UTF8, 0, src, -1,
-            NULL, 0, NULL, NULL );
+				    NULL, 0, NULL, NULL );
   if (bytesNeeded > 0) {
     unsigned char *tmp = malloc(bytesNeeded+1);
 
@@ -2658,7 +2625,7 @@ sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
 
   /* How many bytes do we need to store the UTF8 representation? */
   bytesNeeded = WideCharToMultiByte(CP_UTF8, 0, src, -1,
-            NULL, 0, NULL, NULL );
+				    NULL, 0, NULL, NULL );
 
   /* Convert Unicode text to UTF8. */
   cvt = tmp = malloc(bytesNeeded);
@@ -2684,98 +2651,79 @@ sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
 
 sqInt vmPathSize(void)
 {
-#if defined(UNICODE)
-  return WideCharToMultiByte(CP_UTF8, 0, vmPath, -1, NULL, 0, NULL, NULL);
-#else
   return lstrlen(vmPath);
-#endif
 }
 
 sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
 {
-  char *stVMPath = (char *)sqVMPathIndex;
-  int count;
+  char *stVMPath= (char *)sqVMPathIndex;
+  int count, i;
 
-#if defined(UNICODE)
-  char tmp[MAX_PATH + 1] = { 0 };
-  count = WideCharToMultiByte(CP_UTF8, 0, vmPath, -1, tmp, MAX_PATH,
-                              NULL, NULL);
-#else
-  char *tmp = vmPath;
-  count = lstrlen(vmPath);
-  count = min(length, count);
-#endif
+  count= lstrlen(vmPath);
+  count= (length < count) ? length : count;
 
   /* copy the file name into the Squeak string */
-  if (0 != memcpy_s(stVMPath, count, tmp, count)) {
-    /* somehow copy did not work */
-    return 0;
-  }
+  for (i= 0; i < count; i++)
+    stVMPath[i]= (char) vmPath[i]; /* will remove leading zeros from unicode */
+
   return count;
 }
 
 sqInt imageNameSize(void)
 {
-  return strnlen(imageName, IMAGE_NAME_SIZE);
+  return strlen(imageName);
 }
 
 sqInt imageNameGetLength(sqInt sqImageNameIndex, sqInt length)
 {
-  char *sqImageName = (char *)sqImageNameIndex;
-  int count;
+  char *sqImageName= (char *)sqImageNameIndex;
+  int count, i;
 
-  count = imageNameSize();
-  count = min(length, count);
+  count= strlen(imageName);
+  count= (length < count) ? length : count;
 
   /* copy the file name into the Squeak string */
-  if (0 != memcpy_s(sqImageName, count, imageName, count)) {
-    /* somehow copy did not work */
-    return 0;
-  }
+  for (i= 0; i < count; i++)
+    sqImageName[i]= imageName[i];
+
   return count;
 }
 
 sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
 {
   char *sqImageName= (char *)sqImageNameIndex;
-  char *tmpImageName;
+  char tmpImageName[MAX_PATH+1];
   char *tmp;
   int count, i;
 
-  count = min(IMAGE_NAME_SIZE, length);
+  count= (IMAGE_NAME_SIZE < length) ? IMAGE_NAME_SIZE : length;
 
   /* copy the file name into a null-terminated C string */
-  tmpImageName = (char *)alloca((count + 1) * sizeof(char));
-  if (0 != memcpy_s(tmpImageName, count, imageName, count)) {
-    /* somehow copy did not work */
-    return 0;
-  }
-  tmpImageName[count] = '\0';
+  for (i= 0; i < count; i++)
+    tmpImageName[i]= sqImageName[i];
+
+  tmpImageName[count]= 0;
 
   /* Note: We have to preserve the fully qualified image path */
   tmp = strrchr(tmpImageName,'\\');
-  if(tmp) {
-    /* fully qualified */
-    strncpy(imageName,tmpImageName, IMAGE_NAME_SIZE);
-  } else {
-    /* not qualified */
-    tmp = strrchr(imageName,'\\');
-    if (!tmp) {
-      /* but both aren't so we don't care too much */
-      strncpy(imageName, tmpImageName, IMAGE_NAME_SIZE);
-    } else {
-      /* append local name to image dir */
-      tmp++; *tmp = '\0';
-      count = IMAGE_NAME_SIZE - (tmp-imageName);
-      if (count < length) {
-        tmpImageName[count] = '\0';
-      }
-      if (0 != strncat_s(imageName, IMAGE_NAME_SIZE, tmpImageName, count)) {
-        /* somehow concatenation did not work */
-        return 0;
-      }
+  if(tmp)
+    { /* fully qualified */
+      strcpy(imageName,tmpImageName);
     }
-  }
+  else
+    { /* not qualified */
+      tmp = strrchr(imageName,'\\');
+      if(!tmp)
+        strcpy(imageName,tmpImageName);
+      else
+        {
+          tmp++; *tmp = 0;
+          count = IMAGE_NAME_SIZE - (tmp-imageName);
+          if(count < length)
+            tmpImageName[count] = 0;
+          strcat(imageName,tmpImageName);
+        }
+    }
   SetWindowTitle();
   return 1;
 }
@@ -2795,20 +2743,13 @@ extern char *gdInfoString;
 extern char *win32VersionName;
 
 char * GetAttributeString(sqInt id) {
-  /* This is a hook for getting various status strings back from
-     the OS. In particular, it allows Squeak to be passed arguments
-     such as the name of a file to be processed. Command line options
-     could be reported this way as well.
-  */
+	/* This is a hook for getting various status strings back from
+	   the OS. In particular, it allows Squeak to be passed arguments
+	   such as the name of a file to be processed. Command line options
+	   could be reported this way as well.
+	*/
   /* id == 0 : return the full name of the VM */
-  if (id == 0) {
-    if (!vmNameUTF8) {
-      char* tmp = NULL;
-      TCHAR_TO_UTF8(vmName, tmp);
-      vmNameUTF8 = _strdup(tmp);
-    }
-    return vmNameUTF8;
-  }
+  if(id == 0) return fromUnicode(vmName);
   /* 0 < id <= 1000 : return options of the image (e.g. given *after* the image name) */
   if(id > 0 && id <= 1000)
     return GetImageOption(id-1);
@@ -2830,22 +2771,20 @@ char * GetAttributeString(sqInt id) {
     case 1006: /* VM build ID */
       return vmBuildString;
 #if STACKVM
-    case 1007: {
-      /* interpreter build info */
-      extern char *__interpBuildInfo;
-      return __interpBuildInfo;
-    }
+	case 1007: { /* interpreter build info */
+		extern char *__interpBuildInfo;
+		return __interpBuildInfo;
+	}
 # if COGVM
-    case 1008: {
-      /* cogit build info */
-      extern char *__cogitBuildInfo;
-      return __cogitBuildInfo;
-    }
+	case 1008: { /* cogit build info */
+		extern char *__cogitBuildInfo;
+		return __cogitBuildInfo;
+	}
 # endif
 #endif
 
-    case 1009: /* source tree version info */
-    return sourceVersionString(' ');
+	  case 1009: /* source tree version info */
+		return sourceVersionString(' ');
 
     /* Windows internals */
     case 10001: /* addl. hardware info */
@@ -2922,7 +2861,7 @@ int sqLaunchDrop(void) {
 
   /* Convert Unicode text to UTF8. */
   WideCharToMultiByte(CP_UTF8, 0, argv[argc-1], -1, tmp, MAX_PATH, 
-          NULL, NULL);
+		      NULL, NULL);
   dropLaunchFile(tmp);
   LocalFree(argv);
   return 1;
@@ -2938,41 +2877,26 @@ int isLocalFileName(TCHAR *fileName)
 }
 
 #if defined(_WIN32_WCE)
-  /* WinCE does not support short file names, and has
-     no concept of a current directory. Space is at a
-     premium, the file system is small, and we are unlikely
-     to have a full sources file anyway (too big). All these
-     factors means that we stick with a simpler scheme, of
-     either requiring the image name to be fully pathed, or
-     if not, popping up a file open dialog */
+	/* WinCE does not support short file names, and has
+	   no concept of a current directory. Space is at a
+	   premium, the file system is small, and we are unlikely
+	   to have a full sources file anyway (too big). All these
+	   factors means that we stick with a simpler scheme, of
+	   either requiring the image name to be fully pathed, or
+	   if not, popping up a file open dialog */
 
-void SetupFilesAndPath() {
-  TCHAR* tmp = NULL;
-  /* arrange so that the paths are cleared */
-  atexit(CleanupPath);
-#if defined(UNICODE)
-  WCHAR* tmpImageName = NULL;
-  {
-    int sz = MultiByteToWideChar(CP_UTF8, 0, imageName, -1, NULL, 0);
-    tmpImageName = (WCHAR*)alloca((sz + 1) * sizeof(WCHAR));
-    MultiByteToWideChar(CP_UTF8, 0, imageName, -1, tmpImageName, sz);
-  }
-#else
-  char tmpImageName = imageName;
-#endif
-  imagePath = _tcsdup(tmpImageName);
+void SetupFilesAndPath(){ 
+  char *tmp;
+  lstrcpy(imagePath, imageName);
   tmp = lstrrchr(imagePath,'\\');
-  if (tmp) {
-    tmp[1] = '\0';
-  }
+  if(tmp) tmp[1] = 0;
 }
 
 #else /* defined(_WIN32_WCE) */
 
 void
 LongFileNameFromPossiblyShortName(TCHAR *nameBuffer)
-{
-  TCHAR oldDir[MAX_PATH+1];
+{ TCHAR oldDir[MAX_PATH+1];
   TCHAR testName[13];
   TCHAR nameBuf[MAX_PATH+1];
   TCHAR *shortName;
@@ -3024,64 +2948,29 @@ recurseDown:
 }
 
 void SetupFilesAndPath() {
-  TCHAR* tmp = NULL;
-  TCHAR* imageNameTmp = NULL;
-  WCHAR* tmpName = NULL;
-  WCHAR* imageNameW = NULL;
- 
-  /* arrange so that the paths are cleared */
-  atexit(CleanupPath);
+  char *tmp;
+  WCHAR tmpName[MAX_PATH];
+  WCHAR imageNameW[MAX_PATH];
 
   /* get the full path for the image */
-  ALLOC_WIN32_PATH(tmpName, imageName, strnlen(imageName, IMAGE_NAME_SIZE), return);
-  int szImageNameW = GetFullPathNameW(tmpName, 0, NULL, NULL);
-  imageNameW = (WCHAR*) alloca(szImageNameW * sizeof(WCHAR));
-  GetFullPathNameW(tmpName, szImageNameW, imageNameW, NULL);
- 
+  MultiByteToWideChar(CP_UTF8, 0, imageName, -1, tmpName, MAX_PATH);
+  GetFullPathNameW(tmpName, MAX_PATH, imageNameW, NULL);
+
   /* and copy back to a UTF-8 string */
-  WideCharToMultiByte(CP_UTF8, 0, imageNameW, -1, imageName, MAX_PATH_SQUEAK, NULL, NULL);
- 
+  WideCharToMultiByte(CP_UTF8, 0, imageNameW,-1,imageName,MAX_PATH,NULL,NULL);
+
   /* get the VM directory */
-  if (vmPath) free(vmPath);
-  vmPath = _tcsdup(vmName);
+  lstrcpy(vmPath, vmName);
   tmp = lstrrchr(vmPath,U_BACKSLASH[0]);
-  if (tmp) {
-    *tmp = '\0';
-  }
+  if(tmp) *tmp = 0;
   lstrcat(vmPath,U_BACKSLASH);
- 
-#if defined(UNICODE)
-  imageNameTmp = imageNameW;
-#else
-  imageNameTmp = imageName;
-#endif
-  if (imagePath) free(imagePath);
-  imagePath = _tcsdup(imageNameTmp);
+
+  lstrcpy(imagePath, imageName);
   tmp = lstrrchr(imagePath,U_BACKSLASH[0]);
-  if (tmp) {
-    tmp[1] = '\0';
-  }
+  if(tmp) tmp[1] = 0;
 }
 
 #endif /* !defined(_WIN32_WCE) */
-
-void __cdecl CleanupPath(void)
-{
-  free(imagePath);
-       imagePath = NULL;
-  free(vmPath);
-       vmPath = NULL;
-  free(vmName);
-       vmName = NULL;
-  free(vmNameUTF8);
-       vmNameUTF8 = NULL;
-  free(windowTitle);
-       windowTitle = NULL;
-  free(squeakIniName);
-       squeakIniName = NULL;
-  free(windowClassName);
-       windowClassName = NULL;
-}
 
 /* SqueakImageLength():
    Return the length of the image if it is a valid Squeak image file.
@@ -3114,7 +3003,7 @@ DWORD SqueakImageLength(char *fileName) {
   /* open image file */
   MultiByteToWideChar(CP_UTF8, 0, fileName, -1, wideName, MAX_PATH);
   hFile = CreateFileW(wideName, GENERIC_READ, FILE_SHARE_READ,
-          NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
   if(hFile == INVALID_HANDLE_VALUE) return 0;
   dwSize = SqueakImageLengthFromHandle(hFile);
   CloseHandle(hFile);
@@ -3130,21 +3019,17 @@ DWORD SqueakImageLength(char *fileName) {
    If it is found, copy the name into imageName and return true.
 */
 int findImageFile(void) {
-  WIN32_FIND_DATAW findData = { 0 };
+  WIN32_FIND_DATAW findData;
   HANDLE findHandle;
   int nextFound;
 
-  findHandle = FindFirstFileW(L"*.image", &findData);
-  if (findHandle == INVALID_HANDLE_VALUE) {
-    return 0; /* Not found */
-  }
-  nextFound = FindNextFileW(findHandle, &findData);
+  findHandle = FindFirstFileW(L"*.image",&findData);
+  if(findHandle == INVALID_HANDLE_VALUE) return 0; /* Not found */
+  nextFound = FindNextFileW(findHandle,&findData);
   FindClose(findHandle);
-  if (nextFound) {
-    return 0; /* more than one entry */
-  }
+  if(nextFound) return 0; /* more than one entry */
   WideCharToMultiByte(CP_UTF8, 0, findData.cFileName, -1, 
-                      imageName, MAX_PATH_SQUEAK, NULL, NULL);
+		      imageName, MAX_PATH, NULL, NULL);
   return 1;
 }
 
@@ -3153,28 +3038,26 @@ int findImageFile(void) {
    Copy the selection into imageName and return true.
 */
 int openImageFile(void) {
-  OPENFILENAMEW ofn = { 0 };
-  WCHAR* path = (WCHAR*) calloc(MAX_PATH_SQUEAK, sizeof(WCHAR));
-  int ok = 1;
+  OPENFILENAMEW ofn;
+  WCHAR path[MAX_PATH];
 
+  memset(&ofn, 0, sizeof(ofn));
+  path[0] = 0;
   ofn.lStructSize = sizeof(ofn);
   ofn.lpstrFilter = L"Image Files (*.image)\0*.image\0All Files (*.*)\0*.*\0";
   ofn.lpstrFile = path;
-  ofn.nMaxFile = MAX_PATH_SQUEAK;
+  ofn.nMaxFile = MAX_PATH;
 #ifdef __GNUC__
-  ofn.lpstrTitle = L"" VM_NAME L": Please select an image file...";
+  ofn.lpstrTitle = L""VM_NAME": Please select an image file...";
 #else
   ofn.lpstrTitle = L"Please select an image file...";
 #endif
   ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
   ofn.lpstrDefExt = L"image";
-  if (GetOpenFileNameW(&ofn)) {
-    WideCharToMultiByte(CP_UTF8, 0, path, -1, imageName, MAX_PATH, NULL, NULL);
-  } else {
-    ok = 0;
-  }
-  free(path);
-  return ok;
+  if (!GetOpenFileNameW(&ofn)) return 0;
+  WideCharToMultiByte(CP_UTF8, 0, path, -1, 
+		      imageName, MAX_PATH, NULL, NULL);
+  return 1;
 }
 
 /****************************************************************************/
@@ -3188,9 +3071,9 @@ static DWORD splashTime;
 
 /* splash window procedure */
 static LRESULT CALLBACK SplashWndProcA(HWND hwnd,
-        UINT message,
-        WPARAM wParam,
-        LPARAM lParam) {
+				UINT message,
+				WPARAM wParam,
+				LPARAM lParam) {
   PAINTSTRUCT ps;
   HDC mdc;
   HANDLE hOld;
@@ -3201,12 +3084,12 @@ static LRESULT CALLBACK SplashWndProcA(HWND hwnd,
     mdc = CreateCompatibleDC(ps.hdc);
     hOld = SelectObject(mdc, hSplashDIB);
     BitBlt(ps.hdc, ps.rcPaint.left, ps.rcPaint.top,
-     ps.rcPaint.right-ps.rcPaint.left,
-     ps.rcPaint.bottom-ps.rcPaint.top,
-     mdc,
-     ps.rcPaint.left,
-     ps.rcPaint.top,
-     SRCCOPY);
+	   ps.rcPaint.right-ps.rcPaint.left,
+	   ps.rcPaint.bottom-ps.rcPaint.top,
+	   mdc,
+	   ps.rcPaint.left,
+	   ps.rcPaint.top,
+	   SRCCOPY);
     SelectObject(mdc, hOld);
     DeleteDC(mdc);
     EndPaint(hwnd,&ps);
@@ -3219,37 +3102,32 @@ static LRESULT CALLBACK SplashWndProcA(HWND hwnd,
 
 void ShowSplashScreen(void) {
   WNDCLASS wc;
-  TCHAR splashFile[1024];
-  TCHAR splashTitle[1024];
+  char splashFile[1024];
+  char splashTitle[1024];
   BITMAP bm;
   RECT wa, rSplash;
 
   /* Look if we have a splash file somewhere */
-  GetPrivateProfileString(TEXT("Global"), TEXT("SplashScreen"),
-                          TEXT("Splash.bmp"),
-                          splashFile, 1024, squeakIniName);
+  GetPrivateProfileString("Global", "SplashScreen", "Splash.bmp", 
+			  splashFile, 1024, squeakIniName);
 
   /* Also get the title for the splash window */
-  GetPrivateProfileString(TEXT("Global"), TEXT("SplashTitle"),
-                          TEXT(VM_NAME) TEXT("!"),
-                          splashTitle, 1024, squeakIniName);
+  GetPrivateProfileString("Global", "SplashTitle", VM_NAME"!",
+			  splashTitle, 1024, squeakIniName);
 
   /* Look for the mimimum splash time to use */
-  splashTime = GetPrivateProfileInt(TEXT("Global"), TEXT("SplashTime"),
-                                    1000, squeakIniName);
+  splashTime = GetPrivateProfileInt("Global", "SplashTime", 
+				    1000, squeakIniName);
 
-  if(!splashFile[0]) {
-    return; /* no splash file */
-  }
+  if(!splashFile[0]) return; /* no splash file */
 
   /* Load the splash screen picture */
-  hSplashDIB = LoadImage(NULL, splashFile, IMAGE_BITMAP, 0, 0,
-       LR_CREATEDIBSECTION | LR_LOADFROMFILE);
+  hSplashDIB = LoadImage(NULL, splashFile, IMAGE_BITMAP,0,0,
+			 LR_CREATEDIBSECTION | LR_LOADFROMFILE);
   if(!hSplashDIB) {
     /* ignore the common case but print failures for the others */
-    if(GetLastError() != ERROR_FILE_NOT_FOUND) {
-      printLastError(TEXT("LoadImage failed"));
-    }
+    if(GetLastError() != ERROR_FILE_NOT_FOUND)
+      printLastError("LoadImage failed");
     return;
   }
   GetObject(hSplashDIB, sizeof(bm), &bm);
@@ -3275,13 +3153,13 @@ void ShowSplashScreen(void) {
   RegisterClass(&wc);
   
   hSplashWnd = CreateWindowEx(0,
-            TEXT("SqueakSplashWindow"),
-            splashTitle,
-            WS_POPUP,
-            rSplash.left,rSplash.top,
-            rSplash.right-rSplash.left,
-            rSplash.bottom-rSplash.top,
-            NULL, NULL, hInstance, NULL);
+			      TEXT("SqueakSplashWindow"),
+			      splashTitle,
+			      WS_POPUP,
+			      rSplash.left,rSplash.top,
+			      rSplash.right-rSplash.left,
+			      rSplash.bottom-rSplash.top,
+			      NULL, NULL, hInstance, NULL);
 
   /* put it up */
   ShowWindow(hSplashWnd, SW_SHOW);
@@ -3321,7 +3199,7 @@ int printUsage(int level)
       abortMessage(TEXT("%s"),
                    TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [vmOptions] imageFile [imageOptions]\n\n")
                    TEXT("vmOptions:")
-                /* TEXT("\n\t-service: ServiceName \t(install Squeak as NT service)") */
+		   /* TEXT("\n\t-service: ServiceName \t(install Squeak as NT service)") */
                    TEXT("\n\t-headless \t\t(force Squeak to run headless)")
                    TEXT("\n\t-timephases (print start load and run times)")
                    TEXT("\n\t-log: LogFile \t\t(use LogFile for VM messages)")
@@ -3333,14 +3211,14 @@ int printUsage(int level)
                    TEXT("\n\t-breakmnu: string \t(call warning on MNU of sel for debug)")
                    TEXT("\n\t-leakcheck: n \t(leak check on GC (1=full,2=incr,3=both))")
                    TEXT("\n\t-eden: bytes \t(set eden memory size to bytes)")
-                   TEXT("\n\t-stackpages: n \t(use n stack pages)")
+				   TEXT("\n\t-stackpages: n \t(use n stack pages)")
                    TEXT("\n\t-numextsems: n \t(allow up to n external semaphores)")
                    TEXT("\n\t-checkpluginwrites \t(check for writes past end of object in plugins")
                    TEXT("\n\t-noheartbeat \t(no heartbeat for debug)")
 #endif /* STACKVM */
 #if STACKVM || NewspeakVM
 # if COGVM
-                   TEXT("\n\t-trace[=num]\tenable tracing (optionally to a specific value)\n")
+					TEXT("\n\t-trace[=num]\tenable tracing (optionally to a specific value)\n")
 # else
                    TEXT("\n\t-sendtrace \t(trace sends to stdout for debug)")
 # endif
@@ -3361,30 +3239,12 @@ int printUsage(int level)
       break;
     case 2: /* No image found */
     default:
-    {
-      TCHAR* tImageName = NULL;
-#if defined(UNICODE)
-      int sz = MultiByteToWideChar(CP_UTF8, 0, imageName, -1, NULL, 0);
-      tImageName = (TCHAR*) alloca((sz + 1) * sizeof(TCHAR));
-      MultiByteToWideChar(CP_UTF8, 0, imageName, -1, tImageName, sz);
-      tImageName[sz] = 0;
-#else
-      int sz1 = MultiByteToWideChar(CP_UTF8, 0, imageName, -1, NULL, 0);
-      WCHAR* wImageName = (WCHAR*) alloca((sz1 + 1) * sizeof(WCHAR));
-      MultiByteToWideChar(CP_UTF8, 0, imageName, -1, wImageName, sz1);
-      wImageName[sz1] = 0;
-      int sz = WideCharToMultiByte(CP_ACP, 0, wImageName, -1, NULL, 0, NULL, NULL);
-      tImageName = (TCHAR* )alloca((sz + 1) * sizeof(TCHAR));
-      WideCharToMultiByte(CP_ACP, 0, wImageName, -1, tImageName, sz, NULL, NULL);
-      tImageName[sz] = 0;
-#endif
       abortMessage(
         TEXT("Could not open the ") TEXT(VM_NAME) TEXT(" image file '%s'\n\n")
         TEXT("There are several ways to open an image file. You can:\n")
         TEXT("  1. Double-click on the desired image file.\n")
         TEXT("  2. Drop the image file onto the application.\n")
-        TEXT("Aborting...\n"), tImageName);
-    }
+        TEXT("Aborting...\n"), toUnicode(imageName));
   }
   return -1;
 }

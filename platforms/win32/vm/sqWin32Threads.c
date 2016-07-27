@@ -78,7 +78,7 @@ duplicateAndSetThreadHandleForCurrentThread(void)
 		return 0;
 	}
 	lastError = GetLastError();
-	printLastError(TEXT("DuplicateHandle"));
+	printLastError("DuplicateHandle");
 	return lastError;
 }
 

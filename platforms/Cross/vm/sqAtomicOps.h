@@ -169,39 +169,9 @@ AtomicGet(uint64_t *target)
 							: "m" (lo32(value)), "m" (hi32(value)) \
 							: "memory", "eax", "ebx", "ecx", "edx", "cc")
 #  endif /* __SSE2__ */
-
-# elif defined(_MSC_VER) && (defined(_M_IX86) || defined(_X86_) || defined(i386))
-
-# pragma message(" TODO: verify thoroughly")
-/* see http://web.archive.org/web/20120411073941/http://www.niallryan.com/node/137 */
-
-static __inline void
-AtomicSet(__int64 *target, __int64 new_value)
-{
-   __asm
-   {
-      mov edi, target
-      fild qword ptr [new_value]
-      fistp qword ptr [edi]
-   }
-}
-
-static __inline __int64
-AtomicGet(__int64 *target)
-{
-   __asm
-   {
-      mov edi, target
-      xor eax, eax
-      xor edx, edx
-      xor ebx, ebx
-      xor ecx, ecx
-      lock cmpxchg8b [edi]
-   }
-}
-#	define get64(variable) AtomicGet(&((__int64)variable))
-#	define set64(variable,value) AtomicSet(&((__int64)variable), (__int64)value)
-
+#elif defined(_MSC_VER) && (defined (_M_AMD64) || defined(_MX64) || defined(_M_IA64))
+# define get64(variable) variable
+# define set64(variable,value) (variable = value)
 # else /* TARGET_OS_IS_IPHONE elif x86 variants etc */
 
 #if defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
