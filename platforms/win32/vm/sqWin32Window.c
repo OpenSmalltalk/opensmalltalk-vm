@@ -729,7 +729,7 @@ void SetupPixmaps(void)
 
 /* SetWindowTitle(): Set the main window title */
 void SetWindowTitle() {
-  char* titleString = calloc(MAX_PATH_SQUEAK + 20, sizeof(char));
+  char* titleString = NULL;
   TCHAR* title = NULL;
 
   if (!IsWindow(stWindow)) {
@@ -737,8 +737,10 @@ void SetWindowTitle() {
   }
 
   if (*windowTitle) {
-    sprintf(titleString, "%s", windowTitle);
+    titleString = _strdup(windowTitle);
   } else {
+    int sz = strlen(VM_NAME) + strlen(imageName) + 5;
+    titleString = calloc(sz, sizeof(char));
     sprintf(titleString, "%s! (%s)", VM_NAME, imageName);
   }
 
