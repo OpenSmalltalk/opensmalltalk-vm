@@ -211,16 +211,18 @@ fopen_for_append(char *filename)
 static int
 OutputLogMessage(char *string)
 {
-  FILE *fp;
-
-  if (!*logName) return 1;
+  FILE* fp;
   char* logNameUTF8 = NULL;
-  TCHAR_TO_UTF8(logName, logNameUTF8);
-  fp = fopen_for_append(logNameUTF8);
-  if (!fp) return 1;
-  fprintf(fp, "%s", string);
-  fflush(fp);
-  fclose(fp);
+
+  if (logName && *logName) {
+    TCHAR_TO_UTF8(logName, logNameUTF8);
+    fp = fopen_for_append(logNameUTF8);
+    if (fp) {
+      fprintf(fp, "%s", string);
+      fflush(fp);
+      fclose(fp);
+    }
+  }
   return 1;
 }
 
