@@ -925,7 +925,7 @@ void SetupWindows()
 #define W_TEXT(X) _W_TEXT(X)
   if (!browserWindow) {
     stWindow = CreateWindowExW(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
-                               (LPCTSTR) wndcls,
+                               (LPCWSTR) (MAKEINTATOM(wndcls)),
                                W_TEXT(VM_NAME) W_TEXT("!"),
                                WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
                                0,
@@ -940,7 +940,7 @@ void SetupWindows()
     /* Setup a browser window. */
     fBrowserMode = 1;
     stWindow = CreateWindowExW(0,
-                               (LPCTSTR) wndcls,
+                               (LPCWSTR) (MAKEINTATOM(wndcls)),
                                W_TEXT(VM_NAME) W_TEXT("!"),
                                WS_CHILD | WS_CLIPCHILDREN,
                                0,
