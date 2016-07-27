@@ -740,14 +740,19 @@ void SetWindowTitle() {
     titleString = _strdup(windowTitle);
   } else {
     int sz = strlen(VM_NAME) + strlen(imageName) + 5;
-    titleString = calloc(sz, sizeof(char));
-    lstrcat(titleString, VM_NAME);
-    lstrcat(titleString, "! (");
-    lstrcat(titleString, imageName);
-    lstrcat(titleString, ")");
+    titleString = calloc(1, sz);
+    if (!titleString) {
+         title = TEXT("OpenSmalltalkVM");
+         goto finally;
+    }
+    strcat(titleString, VM_NAME);
+    strcat(titleString, "! (");
+    strcat(titleString, imageName);
+    strcat(titleString, ")");
   }
 
   UTF8_TO_TCHAR(titleString, title);
+finally:
   SetWindowText(stWindow, title);
   free(titleString);
 }
