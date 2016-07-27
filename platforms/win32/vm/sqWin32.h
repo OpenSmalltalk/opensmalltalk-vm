@@ -597,7 +597,7 @@ extern DWORD ticksForBlitting; /* time needed for actual blts */
     ptr = __ptr; \
     FAIL; \
   } else {\
-    memset(__ptr,0,count*size); \
+    memset(ptr,0,count*size); \
   } \
 }
 #endif
