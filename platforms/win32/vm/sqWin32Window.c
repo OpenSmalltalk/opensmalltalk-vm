@@ -900,40 +900,50 @@ void SetupWindows()
   wc.hCursor = NULL;
   wc.hbrBackground = GetStockObject (WHITE_BRUSH);
   wc.lpszMenuName = NULL;
+#if defined(UNICODE)
   wc.lpszClassName = windowClassName;
-  if (!RegisterClassEx(&wc)) {
+#else
+  int sz = MultiByteToWideChar(CP_ACP, 0, windowClassName, -1, NULL, 0);
+  WCHAR* wWindowClassName = (WCHAR*) alloca((sz + 1) * sizeof(WCHAR));
+  MultiByteToWideChar(CP_ACP, 0, windowClassName, -1, wWindowClassName, sz);
+  wWindowClassName[sz] = 0;
+  wc.lpszClassName = wWindowClassName;
+#endif
+
+  ATOM wndcls = RegisterClassExW(&wc);
+  if (!wndcls) {
     printLastError(TEXT("Unable to register main window class"));
     exit(EXIT_FAILURE);
   }
 
   if (!browserWindow) {
-    stWindow = CreateWindowExW(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
-                               windowClassName,
-                               TEXT(VM_NAME) TEXT("!"),
-                               WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-                               0,
-                               0,
-                               CW_USEDEFAULT,
-                               CW_USEDEFAULT,
-                               NULL,
-                               NULL,
-                               hInstance,
-                               NULL);
+    stWindow = CreateWindowEx(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
+                              wndcls,
+                              TEXT(VM_NAME) TEXT("!"),
+                              WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+                              0,
+                              0,
+                              CW_USEDEFAULT,
+                              CW_USEDEFAULT,
+                              NULL,
+                              NULL,
+                              hInstance,
+                              NULL);
   } else {
     /* Setup a browser window. */
     fBrowserMode = 1;
-    stWindow = CreateWindowExW(0,
-                               windowClassName,
-                               TEXT(VM_NAME) TEXT("!"),
-                               WS_CHILD | WS_CLIPCHILDREN,
-                               0,
-                               0,
-                               GetSystemMetrics(SM_CXSCREEN),
-                               GetSystemMetrics(SM_CYSCREEN),
-                               browserWindow,
-                               NULL,
-                               hInstance,
-                               NULL);
+    stWindow = CreateWindowEx(0,
+                              wndcls,
+                              TEXT(VM_NAME) TEXT("!"),
+                              WS_CHILD | WS_CLIPCHILDREN,
+                              0,
+                              0,
+                              GetSystemMetrics(SM_CXSCREEN),
+                              GetSystemMetrics(SM_CYSCREEN),
+                              browserWindow,
+                              NULL,
+                              hInstance,
+                              NULL);
   }
   if (stWindow == NULL) {
     printLastError(TEXT("Unable to create main window"));
