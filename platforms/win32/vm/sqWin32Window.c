@@ -583,6 +583,11 @@ void SetupPixmaps(void)
   int i;
 
   logPal = malloc(sizeof(LOGPALETTE) + 255 * sizeof(PALETTEENTRY));
+  if (!logPal) {
+    printLastError(TEXT("malloc pallette"));
+    return;
+  }
+
   logPal->palVersion = 0x300;
   logPal->palNumEntries = 256;
 
