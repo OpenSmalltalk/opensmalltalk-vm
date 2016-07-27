@@ -579,7 +579,7 @@ void gatherSystemInfo(void)
 
       GET_INFO_REG_S(hk, "ProcessorNameString", nameString);
       GET_INFO_REG_S(hk, "Identifier", identifier);
-      GET_INFO_REG_X(hk, "~MHz", &mhz, sizeof(DWORD), mhz = ~0);
+      GET_INFO_REG_X(hk, "~MHz", &mhz, sizeof(mhz), mhz = ~0);
       _stprintf(tmp,
                 TEXT("\nProcessor %u: %s\n")
                 TEXT("\tIdentifier: %s\n")
@@ -691,7 +691,7 @@ void gatherSystemInfo(void)
       GET_INFO_REG_S(hk, "HardwareInformation.BiosString", biosString);
       GET_INFO_REG_S(hk, "HardwareInformation.ChipType", chipType);
       GET_INFO_REG_S(hk, "HardwareInformation.DacType", dacType);
-      GET_INFO_REG_X(hk, "HardwareInformation.MemorySize", memSize, sizeof(DWORD), memSize = -1);
+      GET_INFO_REG_X(hk, "HardwareInformation.MemorySize", &memSize, sizeof(memSize), memSize = -1);
 
       _stprintf(tmp,
                 TEXT("\nDevice: %s\n")
