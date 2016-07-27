@@ -990,7 +990,7 @@ error(char *msg) {
   int inVMThread = ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread());
 
   if (inError) {
-    exit(-2);
+    exit(EXIT_FAILURE);
   }
 
   inError = 1;
@@ -1057,14 +1057,14 @@ error(char *msg) {
   print_backtrace(stdout, nframes, MAXFRAMES, callstack, symbolic_pcs);
   /* /Don't/ print the caller's stack to stdout here; Cleanup will do so. */
   /* dumpStackIfInMainThread(0); */
-  exit(-1);
+  exit(EXIT_FAILURE);
 }
 
 static int inCleanExit = 0; /* to suppress stack trace in Cleanup */
 
 sqInt ioExit(void)
 {
-  return ioExitWithErrorCode(0);
+  return ioExitWithErrorCode(EXIT_SUCCESS);
 }
 
 sqInt
@@ -1528,7 +1528,7 @@ sqMain(int argc, char *argv[])
     sqServiceInstall();
     /* When installing was successful we won't come
        to this point. Otherwise ... */
-    exit(-1); /* this will show any printfs during install */
+    exit(EXIT_FAILURE); /* this will show any printfs during install */
   }
 #endif
 

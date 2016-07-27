@@ -932,6 +932,10 @@ void SetupWindows()
                                hInstance,
                                NULL);
   }
+  if (stWindow == NULL) {
+    printLastError(TEXT("Unable to creat main window"));
+    exit(EXIT_FAILURE);
+  }
 
 #ifndef NO_WHEEL_MOUSE
   g_WM_MOUSEWHEEL = RegisterWindowMessage( TEXT("MSWHEEL_ROLLMSG") ); /* RvL 1999-04-19 00:23 */
