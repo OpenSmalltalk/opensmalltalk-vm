@@ -64,28 +64,9 @@ size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
 # define fabsf(x)    ((float)fabs((double)(x)))
 #endif
 
-
-#if defined(_MSC_VER)
-/* We use Windows "safe" version of POSIX API. 
-   And our own bzero (which is not POSIX)
-*/
-#  if defined(alloca)
-#    undef alloca
-#  endif
-#  define alloca _alloca
-
-#  if defined(snprintf)
-#    undef snprintf
-#  endif
-# define snprintf _snprintf
-
-
-#  if defined(bzero)
-#    undef bzero
-#  endif
-#  define bzero(pointer,size) ZeroMemory(pointer,size)
+#ifdef _MSC_VER
+#define bzero(pointer,size) ZeroMemory(pointer,size)
 #endif
-
 
 #else 
 error "Not Win32!"

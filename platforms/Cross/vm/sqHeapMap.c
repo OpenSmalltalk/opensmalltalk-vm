@@ -29,11 +29,6 @@
 #define ulong usqIntptr_t   /* enough for holding a pointer - unsigned long does not fit in LLP64 */
 #define uchar unsigned char
 
-#if defined(_MSC_VER)
-/* Import from sqWin32Main.c */
-void error(char* msg);
-#endif
-
 #if SQ_IMAGE32
 /*
  * 32-bit address space = 2^32 bytes = 2^30 words.  If we have 256 root pages

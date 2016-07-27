@@ -14,7 +14,7 @@ typedef struct glRenderer {
   HGLRC context;
   HDC   hDC;
 
-  void (APIENTRY *glDrawRangeElements) (GLenum, GLuint, GLuint, GLsizei, GLenum, const GLvoid*);
+  void APIENTRY (*glDrawRangeElements) (GLenum, GLuint, GLuint, GLsizei, GLenum, const GLvoid*);
 
 } glRenderer;
 

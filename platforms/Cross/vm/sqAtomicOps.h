@@ -26,15 +26,11 @@
  * effort is required to access a 64-bit datum atomically.
  *
  * Only some compilers define LP32 et al.  If not, try to infer from other macros.
- * (Also, same for LONG_MAX, the name defined by the Standard)
  */
-
-#include <limits.h>
-
 
 #if defined(_MSC_VER)
 #include <windows.h> /* for atomic ops */
-#endif	
+#endif
 
 #if    defined(LP32) || defined(ILP32) \
     || defined(LP64) || defined(ILP64) || defined(LLP64)
@@ -63,10 +59,9 @@
 #  else /* unknown platform */
 #  endif
 
-#elif defined(LONG_MAX) || defined(__LONG_MAX__)
+#elif defined(__LONG_MAX__)
 
-#  if (defined(LONG_MAX) && LONG_MAX > 0xFFFFFFFFUL) \
-   || (defined(__LONG_MAX__) &&  __LONG_MAX__ > 0xFFFFFFFFUL)
+#  if __LONG_MAX__ > 0xFFFFFFFFUL
 #    define IS_64_BIT_ARCH 1
 #  else
 #    define IS_32_BIT_ARCH 1

@@ -4,7 +4,7 @@
   /* Some compilers use different win32 definitions.
      Define WIN32 so we have only to check for one symbol. */
 # if !defined(WIN32)
-#  define WIN32 1
+#  define WIN32
 # endif
 #endif
 
@@ -13,15 +13,15 @@
 # if defined(SQ_CONFIG_DONE)
 #   error configuration conflict
 # endif
-# if defined(_M_IX86) || defined(X86) || defined(_M_I386) || defined(_X86_) \
-  || defined(i386) || defined(i486) || defined(i586) || defined(i686) \
-  || defined(__i386__) || defined(__386__) || defined(I386) \
-    \
-  || defined(_M_X64) || defined(__amd64__) || defined(__amd64) \
-  || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) \
-  || defined(x64) \
-    \
-  || defined(_WIN32_WCE)
+# if defined(_M_IX86) || defined(X86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(i486) || defined(i586) || defined(i686) || defined(__i386__) || defined(__386__) || defined(I386)
+  /* x86 systems */
+  /* Note: We include a generic sqWin32.h to override some settings */
+#  include "sqWin32.h"
+#  define SQ_CONFIG_DONE
+# elif  defined(_M_X64) || defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64)
+#  include "sqWin32.h"
+#  define SQ_CONFIG_DONE
+# elif defined(_WIN32_WCE)
 #  include "sqWin32.h"
 #  define SQ_CONFIG_DONE
 # else

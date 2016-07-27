@@ -20,10 +20,6 @@
 
 #include "sqOpenGLRenderer.h"
 
-#if defined(_MSC_VER)
-#pragma comment(lib, "opengl32.lib")
-#endif
-
 #ifndef PFD_GENERIC_ACCELERATED
 #define PFD_SWAP_LAYER_BUFFERS      0x00000800
 #define PFD_GENERIC_ACCELERATED     0x00001000
