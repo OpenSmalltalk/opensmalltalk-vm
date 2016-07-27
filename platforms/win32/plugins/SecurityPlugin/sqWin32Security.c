@@ -14,7 +14,7 @@
 #define HKEY_SQUEAK_ROOT "SOFTWARE\\Squeak"
 #endif
 
-static HRESULT __stdcall (*shGetFolderPath)(HWND, int, HANDLE, DWORD, WCHAR*);
+static HRESULT (__stdcall *shGetFolderPath)(HWND, int, HANDLE, DWORD, WCHAR*);
 
 static TCHAR untrustedUserDirectory[MAX_PATH];
 static int untrustedUserDirectoryLen;
