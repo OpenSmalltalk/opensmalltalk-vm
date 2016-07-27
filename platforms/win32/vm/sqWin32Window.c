@@ -901,7 +901,10 @@ void SetupWindows()
   wc.hbrBackground = GetStockObject (WHITE_BRUSH);
   wc.lpszMenuName = NULL;
   wc.lpszClassName = windowClassName;
-  RegisterClassEx(&wc);
+  if (!RegisterClassEx(&wc)) {
+    printLastError(TEXT("Unable to register main window class"));
+    exit(EXIT_FAILURE);
+  }
 
   if (!browserWindow) {
     stWindow = CreateWindowExW(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
@@ -933,7 +936,7 @@ void SetupWindows()
                                NULL);
   }
   if (stWindow == NULL) {
-    printLastError(TEXT("Unable to creat main window"));
+    printLastError(TEXT("Unable to create main window"));
     exit(EXIT_FAILURE);
   }
 
