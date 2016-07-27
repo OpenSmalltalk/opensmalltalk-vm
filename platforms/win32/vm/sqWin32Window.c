@@ -216,11 +216,18 @@ messageHook firstMessageHook = NULL;
    about certain messages before they are processed. */
 messageHook preMessageHook = NULL;
 
-/* main window procedure */
-LRESULT CALLBACK MainWndProc(HWND hwnd,
-                             UINT message,
-                             WPARAM wParam,
-                             LPARAM lParam)
+/* main window procedure(s) */
+LRESULT CALLBACK MainWndProcA(HWND hwnd,
+                              UINT message,
+                              WPARAM wParam,
+                              LPARAM lParam) {
+  return DefWindowProc(hwnd, message, wParam, lParam);
+}
+
+LRESULT CALLBACK MainWndProcW(HWND hwnd,
+                              UINT message,
+                              WPARAM wParam,
+                              LPARAM lParam)
 {
   PAINTSTRUCT ps;
   static UINT lastClickTime = 0;
@@ -893,7 +900,7 @@ void SetupWindows()
 
   wc.cbSize = sizeof(WNDCLASSEX);
   wc.style = CS_OWNDC; /* don't waste resources ;-) */
-  wc.lpfnWndProc = (WNDPROC) MainWndProc;
+  wc.lpfnWndProc = (WNDPROC) MainWndProcA;          /* XXX: this looks fishy */
   wc.cbClsExtra = 0;
   wc.cbWndExtra = 0;
   wc.hInstance = hInstance;
@@ -901,57 +908,40 @@ void SetupWindows()
   wc.hCursor = NULL;
   wc.hbrBackground = GetStockObject (WHITE_BRUSH);
   wc.lpszMenuName = NULL;
-#if defined(UNICODE)
   wc.lpszClassName = windowClassName;
-#else
-  int sz = MultiByteToWideChar(CP_ACP, 0, windowClassName, -1, NULL, 0);
-  WCHAR* wWindowClassName = (WCHAR*) alloca((sz + 1) * sizeof(WCHAR));
-  MultiByteToWideChar(CP_ACP, 0, windowClassName, -1, wWindowClassName, sz);
-  wWindowClassName[sz] = 0;
-  wc.lpszClassName = wWindowClassName;
-#endif
+  RegisterClassEx(&wc);
 
-  ATOM wndcls = RegisterClassExW(&wc);
-  if (!wndcls) {
-    printLastError(TEXT("Unable to register main window class"));
-    exit(EXIT_FAILURE);
-  }
-
-#define W_TEXT(X) L ## X
   if (!browserWindow) {
-    stWindow = CreateWindowExW(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
-                               wndcls,
-                               W_TEXT(VM_NAME) W_TEXT("!"),
-                               WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-                               0,
-                               0,
-                               CW_USEDEFAULT,
-                               CW_USEDEFAULT,
-                               NULL,
-                               NULL,
-                               hInstance,
-                               NULL);
+    stWindow = CreateWindowEx(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
+                              windowClassName,
+                              TEXT(VM_NAME) TEXT("!"),
+                              WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+                              0,
+                              0,
+                              CW_USEDEFAULT,
+                              CW_USEDEFAULT,
+                              NULL,
+                              NULL,
+                              hInstance,
+                              NULL);
   } else {
     /* Setup a browser window. */
     fBrowserMode = 1;
-    stWindow = CreateWindowExW(0,
-                               wndcls,
-                               W_TEXT(VM_NAME) W_TEXT("!"),
-                               WS_CHILD | WS_CLIPCHILDREN,
-                               0,
-                               0,
-                               GetSystemMetrics(SM_CXSCREEN),
-                               GetSystemMetrics(SM_CYSCREEN),
-                               browserWindow,
-                               NULL,
-                               hInstance,
-                               NULL);
+    stWindow = CreateWindowEx(0,
+                              windowClassName,
+                              TEXT(VM_NAME) TEXT("!"),
+                              WS_CHILD | WS_CLIPCHILDREN,
+                              0,
+                              0,
+                              GetSystemMetrics(SM_CXSCREEN),
+                              GetSystemMetrics(SM_CYSCREEN),
+                              browserWindow,
+                              NULL,
+                              hInstance,
+                              NULL);
   }
-#undef W_TEXT
-  if (stWindow == NULL) {
-    printLastError(TEXT("Unable to create main window"));
-    exit(EXIT_FAILURE);
-  }
+  /* Force Unicode WM_CHAR */
+  SetWindowLongPtrW(stWindow, GWLP_WNDPROC, (LONG_PTR)MainWndProcW);
 
 #ifndef NO_WHEEL_MOUSE
   g_WM_MOUSEWHEEL = RegisterWindowMessage( TEXT("MSWHEEL_ROLLMSG") ); /* RvL 1999-04-19 00:23 */
