@@ -494,7 +494,7 @@ void gatherSystemInfo(void)
   SYSTEM_INFO sysInfo = { 0 };
   DISPLAY_DEVICE gDev = { 0 };
   unsigned int proc, screenX, screenY;
-  TCHAR tmpString[4096];
+  TCHAR tmpString[4096] = { '\0' };
 
   TCHAR keyName[SYSTEM_INFO_BUF_SIZE] = { 0 };
   HKEY hk = NULL;
