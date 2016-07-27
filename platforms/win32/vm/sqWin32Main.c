@@ -429,7 +429,7 @@ sqInt ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz) {
   vmLogDirUTF8[sz] = 0;
 
   int wsz = MultiByteToWideChar(CP_UTF8, 0, vmLogDirUTF8, -1, NULL, 0);
-  RECALLOC_OR_RESET(vmLogDirW, wsz, sizeof(WCHAR), return 0);
+  RECALLOC_OR_RESET(vmLogDirW, wsz + 1, sizeof(WCHAR), return 0);
   MultiByteToWideChar(CP_UTF8, 0, vmLogDirUTF8, -1, vmLogDirW, wsz);
   return 1;
 }

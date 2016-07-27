@@ -729,7 +729,7 @@ void SetupPixmaps(void)
 
 /* SetWindowTitle(): Set the main window title */
 void SetWindowTitle() {
-  char* titleString = NULL;
+  char* titleString = calloc(MAX_PATH_SQUEAK + 20, sizeof(char));
   TCHAR* title = NULL;
 
   if (!IsWindow(stWindow)) {
@@ -737,22 +737,12 @@ void SetWindowTitle() {
   }
 
   if (*windowTitle) {
-    titleString = _strdup(windowTitle);
+    sprintf(titleString, "%s", windowTitle);
   } else {
-    int sz = strlen(VM_NAME) + strlen(imageName) + 5;
-    titleString = calloc(1, sz);
-    if (!titleString) {
-         title = TEXT("OpenSmalltalkVM");
-         goto finally;
-    }
-    strcat(titleString, VM_NAME);
-    strcat(titleString, "! (");
-    strcat(titleString, imageName);
-    strcat(titleString, ")");
+    sprintf(titleString, "%s! (%s)", VM_NAME, imageName);
   }
 
   UTF8_TO_TCHAR(titleString, title);
-finally:
   SetWindowText(stWindow, title);
   free(titleString);
 }
@@ -891,7 +881,7 @@ sqInt ioIsWindowObscured(void) {
 
 void SetupWindows()
 {
-  WNDCLASSEXW wc = { 0 };
+  WNDCLASSEX wc = { 0 };
 
   /* create our update region */
   updateRgn = CreateRectRgn(0,0,1,1);
@@ -901,7 +891,7 @@ void SetupWindows()
     return;
   }
 
-  wc.cbSize = sizeof(WNDCLASSEXW);
+  wc.cbSize = sizeof(WNDCLASSEX);
   wc.style = CS_OWNDC; /* don't waste resources ;-) */
   wc.lpfnWndProc = (WNDPROC) MainWndProc;
   wc.cbClsExtra = 0;
@@ -927,11 +917,10 @@ void SetupWindows()
     exit(EXIT_FAILURE);
   }
 
-#define _W_TEXT(X) L##X
-#define W_TEXT(X) _W_TEXT(X)
+#define W_TEXT(X) L ## X
   if (!browserWindow) {
     stWindow = CreateWindowExW(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
-                               (LPCWSTR) (MAKEINTATOM(wndcls)),
+                               wndcls,
                                W_TEXT(VM_NAME) W_TEXT("!"),
                                WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
                                0,
@@ -946,7 +935,7 @@ void SetupWindows()
     /* Setup a browser window. */
     fBrowserMode = 1;
     stWindow = CreateWindowExW(0,
-                               (LPCWSTR) (MAKEINTATOM(wndcls)),
+                               wndcls,
                                W_TEXT(VM_NAME) W_TEXT("!"),
                                WS_CHILD | WS_CLIPCHILDREN,
                                0,
@@ -959,8 +948,6 @@ void SetupWindows()
                                NULL);
   }
 #undef W_TEXT
-#undef _W_TEXT
-
   if (stWindow == NULL) {
     printLastError(TEXT("Unable to create main window"));
     exit(EXIT_FAILURE);
@@ -2763,13 +2750,13 @@ sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
   char *sqImageName= (char *)sqImageNameIndex;
   char *tmpImageName;
   char *tmp;
-  int count;
+  int count, i;
 
   count = min(IMAGE_NAME_SIZE, length);
 
   /* copy the file name into a null-terminated C string */
   tmpImageName = (char *)alloca((count + 1) * sizeof(char));
-  if (0 != memcpy_s(tmpImageName, count, sqImageName, count)) {
+  if (0 != memcpy_s(tmpImageName, count, imageName, count)) {
     /* somehow copy did not work */
     return 0;
   }
