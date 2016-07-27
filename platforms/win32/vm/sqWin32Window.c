@@ -741,7 +741,10 @@ void SetWindowTitle() {
   } else {
     int sz = strlen(VM_NAME) + strlen(imageName) + 5;
     titleString = calloc(sz, sizeof(char));
-    sprintf(titleString, "%s! (%s)", VM_NAME, imageName);
+    lstrcat(titleString, VM_NAME);
+    lstrcat(titleString, "! (");
+    lstrcat(titleString, imageName);
+    lstrcat(titleString, ")");
   }
 
   UTF8_TO_TCHAR(titleString, title);
@@ -892,7 +895,7 @@ void SetupWindows()
     return;
   }
 
-  wc.cbSize = sizeof(WNDCLASSEX);
+  wc.cbSize = sizeof(WNDCLASSEXW);
   wc.style = CS_OWNDC; /* don't waste resources ;-) */
   wc.lpfnWndProc = (WNDPROC) MainWndProc;
   wc.cbClsExtra = 0;
