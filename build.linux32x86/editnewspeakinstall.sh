@@ -1,7 +1,5 @@
 #!/bin/bash -e
 # Edit the installed directory tree to rename squeak to nsvm and install source
-set -v
-set -o xtrace
 INSTALLDIR="$1"
 shift
 cd $INSTALLDIR
