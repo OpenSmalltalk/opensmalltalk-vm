@@ -916,35 +916,37 @@ void SetupWindows()
     exit(EXIT_FAILURE);
   }
 
+#define W_TEXT(X) L ## X
   if (!browserWindow) {
-    stWindow = CreateWindowEx(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
-                              wndcls,
-                              TEXT(VM_NAME) TEXT("!"),
-                              WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-                              0,
-                              0,
-                              CW_USEDEFAULT,
-                              CW_USEDEFAULT,
-                              NULL,
-                              NULL,
-                              hInstance,
-                              NULL);
+    stWindow = CreateWindowExW(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
+                               wndcls,
+                               W_TEXT(VM_NAME) W_TEXT("!"),
+                               WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+                               0,
+                               0,
+                               CW_USEDEFAULT,
+                               CW_USEDEFAULT,
+                               NULL,
+                               NULL,
+                               hInstance,
+                               NULL);
   } else {
     /* Setup a browser window. */
     fBrowserMode = 1;
-    stWindow = CreateWindowEx(0,
-                              wndcls,
-                              TEXT(VM_NAME) TEXT("!"),
-                              WS_CHILD | WS_CLIPCHILDREN,
-                              0,
-                              0,
-                              GetSystemMetrics(SM_CXSCREEN),
-                              GetSystemMetrics(SM_CYSCREEN),
-                              browserWindow,
-                              NULL,
-                              hInstance,
-                              NULL);
+    stWindow = CreateWindowExW(0,
+                               wndcls,
+                               W_TEXT(VM_NAME) W_TEXT("!"),
+                               WS_CHILD | WS_CLIPCHILDREN,
+                               0,
+                               0,
+                               GetSystemMetrics(SM_CXSCREEN),
+                               GetSystemMetrics(SM_CYSCREEN),
+                               browserWindow,
+                               NULL,
+                               hInstance,
+                               NULL);
   }
+#undef W_TEXT
   if (stWindow == NULL) {
     printLastError(TEXT("Unable to create main window"));
     exit(EXIT_FAILURE);
