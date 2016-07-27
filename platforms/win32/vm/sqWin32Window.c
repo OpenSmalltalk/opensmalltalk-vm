@@ -216,18 +216,11 @@ messageHook firstMessageHook = NULL;
    about certain messages before they are processed. */
 messageHook preMessageHook = NULL;
 
-/* main window procedure(s) */
-LRESULT CALLBACK MainWndProcA(HWND hwnd,
-                              UINT message,
-                              WPARAM wParam,
-                              LPARAM lParam) {
-  return DefWindowProc(hwnd, message, wParam, lParam);
-}
-
-LRESULT CALLBACK MainWndProcW(HWND hwnd,
-                              UINT message,
-                              WPARAM wParam,
-                              LPARAM lParam)
+/* main window procedure */
+LRESULT CALLBACK MainWndProc(HWND hwnd,
+                             UINT message,
+                             WPARAM wParam,
+                             LPARAM lParam)
 {
   PAINTSTRUCT ps;
   static UINT lastClickTime = 0;
@@ -894,7 +887,7 @@ void SetupWindows()
 
   wc.cbSize = sizeof(WNDCLASSEX);
   wc.style = CS_OWNDC; /* don't waste resources ;-) */
-  wc.lpfnWndProc = (WNDPROC) MainWndProcA;          /* XXX: this looks fishy */
+  wc.lpfnWndProc = (WNDPROC) MainWndProc;
   wc.cbClsExtra = 0;
   wc.cbWndExtra = 0;
   wc.hInstance = hInstance;
@@ -906,36 +899,34 @@ void SetupWindows()
   RegisterClassEx(&wc);
 
   if (!browserWindow) {
-    stWindow = CreateWindowEx(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
-                              windowClassName,
-                              TEXT(VM_NAME) TEXT("!"),
-                              WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-                              0,
-                              0,
-                              CW_USEDEFAULT,
-                              CW_USEDEFAULT,
-                              NULL,
-                              NULL,
-                              hInstance,
-                              NULL);
+    stWindow = CreateWindowExW(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
+                               windowClassName,
+                               TEXT(VM_NAME) TEXT("!"),
+                               WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+                               0,
+                               0,
+                               CW_USEDEFAULT,
+                               CW_USEDEFAULT,
+                               NULL,
+                               NULL,
+                               hInstance,
+                               NULL);
   } else {
     /* Setup a browser window. */
     fBrowserMode = 1;
-    stWindow = CreateWindowEx(0,
-                              windowClassName,
-                              TEXT(VM_NAME) TEXT("!"),
-                              WS_CHILD | WS_CLIPCHILDREN,
-                              0,
-                              0,
-                              GetSystemMetrics(SM_CXSCREEN),
-                              GetSystemMetrics(SM_CYSCREEN),
-                              browserWindow,
-                              NULL,
-                              hInstance,
-                              NULL);
+    stWindow = CreateWindowExW(0,
+                               windowClassName,
+                               TEXT(VM_NAME) TEXT("!"),
+                               WS_CHILD | WS_CLIPCHILDREN,
+                               0,
+                               0,
+                               GetSystemMetrics(SM_CXSCREEN),
+                               GetSystemMetrics(SM_CYSCREEN),
+                               browserWindow,
+                               NULL,
+                               hInstance,
+                               NULL);
   }
-  /* Force Unicode WM_CHAR */
-  SetWindowLongPtrW(stWindow, GWLP_WNDPROC, (LONG_PTR)MainWndProcW);
 
 #ifndef NO_WHEEL_MOUSE
   g_WM_MOUSEWHEEL = RegisterWindowMessage( TEXT("MSWHEEL_ROLLMSG") ); /* RvL 1999-04-19 00:23 */

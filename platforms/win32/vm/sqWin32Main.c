@@ -483,7 +483,7 @@ void gatherSystemInfo(void)
                              (LPBYTE) dest, &dwSize);         \
   if (ERROR_SUCCESS != ok) {                                  \
     dflt;                                                     \
-      }                                                           \
+  }                                                           \
 }
 #define GET_INFO_REG_S(hive, name, dest) \
   GET_INFO_REG_X(hive, name, dest, \
