@@ -2408,7 +2408,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   /* reverse the image bits if necessary */
 #ifndef NO_BYTE_REVERSAL
   PROFILE_BEGIN(PROFILE_DISPLAY)
-  if( !lsbDisplay && depth < 32 ) {
+  if( !lsbDisplay && depth < 32 )
     if(depth == 16)
       reverse_image_words((unsigned int*) dispBits, (unsigned int*) dispBits,
 			  depth, width, &updateRect);
@@ -2492,7 +2492,7 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   /* reverse the image bits if necessary */
 #ifndef NO_BYTE_REVERSAL
   PROFILE_BEGIN(PROFILE_DISPLAY)
-  if( !lsbDisplay && depth < 32 ) {
+  if( !lsbDisplay && depth < 32 )
     if(depth == 16)
       reverse_image_words((unsigned int*) dispBits, (unsigned int*) dispBits,
 			  depth, width, &updateRect);
