@@ -151,7 +151,7 @@ squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
     DWORD code = exp->ExceptionRecord->ExceptionCode;
     if((code >= EXCEPTION_FLT_DENORMAL_OPERAND) && (code <= EXCEPTION_FLT_UNDERFLOW)) {
       /* turn on the default masking of exceptions in the FPU and proceed */
-      _control87(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+      _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
       result = EXCEPTION_CONTINUE_EXECUTION;
     }
   }
@@ -1368,7 +1368,7 @@ sqMain(int argc, char *argv[])
   int virtualMemory;
 
   /* set default fpu control word */
-  _control87(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+  _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
 
   LoadPreferences();
 
