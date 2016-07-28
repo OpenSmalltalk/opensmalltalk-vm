@@ -1637,6 +1637,8 @@ SimpleStackBasedCogit >> genCmpConstant: constant R: register [
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genDoubleFailIfZeroArgRcvr: rcvrReg arg: argReg [
 	<option: #DPFPReg0>
+	<var: 'rcvrReg' type: #int>
+	<var: 'argReg' type: #int>
 	<returnTypeC: #'AbstractInstruction *'>
 	self MoveCq: 0 R: TempReg.
 	self ConvertR: TempReg Rd: DPFPReg2.

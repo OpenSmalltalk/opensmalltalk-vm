@@ -421,8 +421,8 @@ VMMaker class >> generateNewspeakSpurCog64VM [
 		with: #(	ObjectMemory Spur64BitCoMemoryManager
 				MULTIPLEBYTECODESETS true
 				NewspeakVM true)
-		to: (FileDirectory default directoryNamed: self sourceTree, '/nsspur64src') fullName
-		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
+		to: (FileDirectory default pathFromURI: self sourceTree, '/nsspur64src')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#()
 
 ]
@@ -451,8 +451,8 @@ VMMaker class >> generateNewspeakSpurStack64VM [
 				MULTIPLEBYTECODESETS true
 				NewspeakVM true
 				FailImbalancedPrimitives false)
-		to: (FileDirectory default directoryNamed: self sourceTree, '/nsspurstack64src') fullName
-		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
+		to: (FileDirectory default pathFromURI: self sourceTree, '/nsspurstack64src')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including: #()
 ]
 
@@ -465,8 +465,8 @@ VMMaker class >> generateNewspeakSpurStackVM [
 				MULTIPLEBYTECODESETS true
 				NewspeakVM true
 				FailImbalancedPrimitives false)
-		to: (FileDirectory default directoryNamed: self sourceTree, '/nsspurstacksrc') fullName
-		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
+		to: (FileDirectory default pathFromURI: self sourceTree, '/nsspurstacksrc')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including: #()
 ]
 
@@ -577,8 +577,8 @@ VMMaker class >> generateSqueakSpurStack64VM [
 		generate: StackInterpreter
 		with: #(ObjectMemory Spur64BitMemoryManager
 				FailImbalancedPrimitives false)
-		to: (FileDirectory default directoryNamed: self sourceTree, '/spurstack64src') fullName
-		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
+		to: (FileDirectory default pathFromURI: self sourceTree, '/spurstack64src')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including: #()
 ]
 
@@ -589,8 +589,8 @@ VMMaker class >> generateSqueakSpurStackVM [
 		generate: StackInterpreter
 		with: #(ObjectMemory Spur32BitMemoryManager
 				FailImbalancedPrimitives false)
-		to: (FileDirectory default directoryNamed: self sourceTree, '/spurstacksrc') fullName
-		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
+		to: (FileDirectory default pathFromURI: self sourceTree, '/spurstacksrc')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including: #()
 ]
 
@@ -600,8 +600,8 @@ VMMaker class >> generateSqueakStackVM [
 	^VMMaker
 		generate: StackInterpreter
 		with: #(FailImbalancedPrimitives false)
-		to: (FileDirectory default directoryNamed: self sourceTree, '/stacksrc') fullName
-		platformDir: (FileDirectory default directoryNamed: self sourceTree, '/platforms') fullName
+		to: (FileDirectory default pathFromURI: self sourceTree, '/stacksrc')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including: #()
 ]
 
@@ -656,7 +656,7 @@ VMMaker class >> initialize [
 	 Another is where the source tree is at the same level as the VMMaker image,
 	 in which case it is likely called oscogvm or Cog."
 	#('../platforms' 'oscogvm/platforms' 'Cog/platforms' '../oscogvm/platforms')
-		with: #('../' 'oscogvm' 'Cog' '../oscogvm')
+		with: #('..' 'oscogvm' 'Cog' '../oscogvm')
 		do: [:dir :path|
 			(FileDirectory default directoryExists: dir) ifTrue:
 				[DirNames at: #sourceTree put: path.
