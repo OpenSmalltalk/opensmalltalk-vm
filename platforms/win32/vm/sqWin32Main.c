@@ -1158,20 +1158,20 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 			exp->ExceptionRecord->ExceptionInformation[1]);
     }
 #if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
-    fprintf(f,"EAX:%08X\tEBX:%08X\tECX:%08X\tEDX:%08X\n",
+    fprintf(f,"EAX:%08lX\tEBX:%08lX\tECX:%08lX\tEDX:%08lX\n",
 	    exp->ContextRecord->Eax,
 	    exp->ContextRecord->Ebx,
 	    exp->ContextRecord->Ecx,
 	    exp->ContextRecord->Edx);
-    fprintf(f,"ESI:%08X\tEDI:%08X\tEBP:%08X\tESP:%08X\n",
+    fprintf(f,"ESI:%08lX\tEDI:%08lX\tEBP:%08lX\tESP:%08lX\n",
 	    exp->ContextRecord->Esi,
 	    exp->ContextRecord->Edi,
 	    exp->ContextRecord->Ebp,
 	    exp->ContextRecord->Esp);
-    fprintf(f,"EIP:%08X\tEFL:%08X\n",
+    fprintf(f,"EIP:%08lX\tEFL:%08lX\n",
 	    exp->ContextRecord->Eip,
 	    exp->ContextRecord->EFlags);
-    fprintf(f,"FP Control: %08X\nFP Status:  %08X\nFP Tag:     %08X\n",
+    fprintf(f,"FP Control: %08lX\nFP Status:  %08lX\nFP Tag:     %08lX\n",
 	    exp->ContextRecord->FloatSave.ControlWord,
 	    exp->ContextRecord->FloatSave.StatusWord,
 	    exp->ContextRecord->FloatSave.TagWord);
