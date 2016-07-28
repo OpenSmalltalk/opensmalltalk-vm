@@ -1981,7 +1981,7 @@ StackToRegisterMappingCogit >> genGenericStorePop: popBoolean MaybeContextSlotIn
 				destReg: ReceiverResultReg 
 				scratchReg: TempReg 
 				needsStoreCheck: needsStoreCheck 
-				needRestoreRcvr: true]
+				needRestoreRcvr: needsRestoreReceiver]
 		ifFalse:
 			[objectRepresentation
 				genStoreSourceReg: ClassReg
@@ -3008,7 +3008,7 @@ StackToRegisterMappingCogit >> genStaticallyResolvedSpecialSelectorComparison [
 
 { #category : #'bytecode generator stores' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIndex [
-	<inline: false>
+	<inline: true>
 	^self 
 		genStorePop: popBoolean 
 		LiteralVariable: litVarIndex 
@@ -3024,20 +3024,19 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 	and ReceiverResultReg holds only the receiver in frameless methods."
 	self assert: needsFrame.
 	self genLoadLiteralVariable: litVarIndex in: ReceiverResultReg.
-	self 
+	^self 
 		genGenericStorePop: popBoolean 
 		slotIndex: ValueIndex 
 		destReg: ReceiverResultReg
 		needsStoreCheck: needsStoreCheck
 		needsRestoreRcvr: false
-		needsImmutabilityCheck: needsImmCheck.
-	^ 0
+		needsImmutabilityCheck: needsImmCheck
 		
 ]
 
 { #category : #'bytecode generator stores' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean MaybeContextReceiverVariable: slotIndex [ 
-	<inline: false>
+	<inline: true>
 	^self 
 		genStorePop: popBoolean 
 		MaybeContextReceiverVariable: slotIndex 
@@ -3054,13 +3053,12 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean MaybeContextReceiverVaria
 	self assert: needsFrame.
 	self ssFlushUpThroughReceiverVariable: slotIndex.
 	self ensureReceiverResultRegContainsSelf.
-	self 
+	^self 
 		genGenericStorePop: popBoolean 
 		MaybeContextSlotIndex: slotIndex 
 		needsStoreCheck: needsStoreCheck
 		needsRestoreRcvr: true
-		needsImmutabilityCheck: needsImmCheck.
-	^ 0
+		needsImmutabilityCheck: needsImmCheck
 ]
 
 { #category : #'bytecode generator stores' }
@@ -3071,18 +3069,17 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean MaybeContextRemoteInstVar
 	 execution state of an activation in that case is if it has a frame."
 	self assert: needsFrame.
 	self genLoadTemp: objectIndex in: ReceiverResultReg.
-	self 
+	^self 
 		genGenericStorePop: popBoolean 
 		MaybeContextSlotIndex: slotIndex 
 		needsStoreCheck: needsStoreCheck
 		needsRestoreRcvr: false
-		needsImmutabilityCheck: needsImmCheck.
-	^ 0
+		needsImmutabilityCheck: needsImmCheck
 ]
 
 { #category : #'bytecode generator stores' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotIndex [
-	<inline: false>
+	<inline: true>
 	^self 
 		genStorePop: popBoolean 
 		ReceiverVariable: slotIndex 
@@ -3097,14 +3094,13 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 	self ssFlushUpThroughReceiverVariable: slotIndex.
 	self ensureReceiverResultRegContainsSelf.
 	"In two path compilation the receiver is young AND mutable, hence no store check nor immutability check is needed"
-	self 
+	^self 
 		genGenericStorePop: popBoolean 
 		slotIndex: slotIndex 
 		destReg: ReceiverResultReg 
 		needsStoreCheck: (useTwoPaths not and: [needsStoreCheck])
 		needsRestoreRcvr: true "ReceiverResultReg is kept live with the receiver across the operation"
-		needsImmutabilityCheck: (needsImmCheck and: [useTwoPaths not]). 
-	^ 0
+		needsImmutabilityCheck: (needsImmCheck and: [useTwoPaths not])
 		
 ]
 
@@ -3113,19 +3109,18 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteInstVar: slotIndex 
 	<inline: false>
 	self assert: needsFrame.
 	self genLoadTemp: objectIndex in: ReceiverResultReg.
-	self 
+	^self 
 		genGenericStorePop: popBoolean 
 		slotIndex: slotIndex 
 		destReg: ReceiverResultReg 
 		needsStoreCheck: needsStoreCheck
 		needsRestoreRcvr: false
-		needsImmutabilityCheck: needsImmCheck.
-	^ 0
+		needsImmutabilityCheck: needsImmCheck
 ]
 
 { #category : #'bytecode generator stores' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remoteTempIndex [
-	<inline: false>
+	<inline: true>
 	^ self genStorePop: popBoolean RemoteTemp: slotIndex At: remoteTempIndex needsStoreCheck: self ssTopNeedsStoreCheck
 ]
 
@@ -3145,14 +3140,13 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At:
 	self ssAllocateRequiredReg: ReceiverResultReg. 
 	optStatus isReceiverResultRegLive: false.
 	self MoveMw: (self frameOffsetOfTemporary: remoteTempIndex) r: FPReg R: ReceiverResultReg.
-	self 
+	^self 
 		genGenericStorePop: popBoolean 
 		slotIndex: slotIndex 
 		destReg: ReceiverResultReg 
 		needsStoreCheck: needsStoreCheck
 		needsRestoreRcvr: false "We don't keep ReceiverResultReg live with the receiver across this operation"
-		needsImmutabilityCheck: false. "never do immutability check on temp vectors"
-	^ 0
+		needsImmutabilityCheck: false "never do immutability check on temp vectors"
 ]
 
 { #category : #'bytecode generator stores' }
