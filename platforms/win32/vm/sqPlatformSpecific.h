@@ -67,6 +67,7 @@ size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
  *  CRT Alphabetical Function Reference
  *  https://msdn.microsoft.com/en-US/library/634ca0c2.aspx */
 #  include <malloc.h>
+#  include <float.h>
 #  ifndef alloca
 #    define alloca _alloca
 #  endif
@@ -77,6 +78,9 @@ size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
 #  endif
 #  if _MSC_VER < 1900 /* not available before MSVC 2015 */
 #    define snprintf _snprintf
+#    ifndef isnan
+#      define isnan _isnan
+#    endif
 #  endif
 #  if _MSC_VER < 1300 /* maybe not available before MSVC 7.0 2003 ??? */
 #    define fabsf(x)    ((float)fabs((double)(x)))
