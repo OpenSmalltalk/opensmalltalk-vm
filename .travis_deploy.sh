@@ -27,7 +27,7 @@ if [[ $PR == "false" ]] && ( [[ "$BR" == "Cog" || "$BR" == "master" ]] ); then
             http=Net::HTTP.new(uri.host,uri.port);
             http.use_ssl=true;
             http.start {
-                req=Net::HTTP::Get.new(uri);
+                req=Net::HTTP::Get.new(uri.request_uri);
                 req.basic_auth(user,pass);
                 resp=http.request(req);
                 json=JSON.parse(resp.body)
@@ -43,7 +43,7 @@ if [[ $PR == "false" ]] && ( [[ "$BR" == "Cog" || "$BR" == "master" ]] ); then
                 http=Net::HTTP.new(uri.host,uri.port);
                 http.use_ssl=true;
                 http.start {
-                    req=Net::HTTP::Delete.new(uri);
+                    req=Net::HTTP::Delete.new(uri.request_uri);
                     req.basic_auth(user,pass);
                     resp=http.request(req);
                     puts 'Deleted ' + v + ' ' + resp.body
