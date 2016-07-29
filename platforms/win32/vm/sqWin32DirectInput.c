@@ -22,7 +22,10 @@
 *****************************************************************************/
 #ifndef NO_DIRECTINPUT
 
+#ifndef DIRECTINPUT_VERSION
 #define DIRECTINPUT_VERSION 0x700 /* restrict to DX7 */
+#endif 
+
 #include <windows.h>
 #include <ole2.h>
 #include "sq.h"
@@ -58,7 +61,11 @@ HRESULT InitDirectInput( HANDLE hInstance, HWND hWnd )
   DIPROPDWORD propWord;
 
   /* connect to direct input */
-  hr = DirectInputCreate( hInstance, DIRECTINPUT_VERSION, &lpDI, NULL );
+#if DIRECTINPUT_VERSION >= 0x0800
+  hr = DirectInput8Create( hInstance, DIRECTINPUT_VERSION,  &IID_IDirectInput8, &lpDI, NULL ); /* require dinput8.lib */
+#else
+  hr = DirectInputCreate( hInstance, DIRECTINPUT_VERSION, &lpDI, NULL ); /* require dinput.lib */
+#endif
   ERROR_CHECK(hr, "Error creating DirectInput object");
 
   /* get the mouse */
