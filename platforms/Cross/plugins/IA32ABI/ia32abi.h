@@ -35,17 +35,15 @@ extern sqInt callIA32FloatReturn   (SIGNATURE);
 extern sqInt callIA32DoubleReturn  (SIGNATURE);
 
 #define thunkEntryType long
-#if defined(i386) || defined(__i386) || defined(__i386__)
+#if defined(i386) || defined(__i386) || defined(__i386__) || (defined(_WIN32) && !defined(_WIN64)) || defined(_M_IX86)
 # define INT_REG_ARGS /* none */
 # define DBL_REG_ARGS /* none */
+#elif WIN64 || defined(_M_X64) || defined(_M_AMD64) || defined(_WIN64)
+# define INT_REG_ARGS long,long,long,long,
+# define DBL_REG_ARGS double,double,double,
 #elif defined(__amd64__) || defined(__x86_64__) || defined(__amd64) || defined(__x86_64)
-# if WIN64
-#	define INT_REG_ARGS long,long,long,long,
-#	define DBL_REG_ARGS double,double,double,
-# else
-#	define INT_REG_ARGS long,long,long,long,long,long,
-#	define DBL_REG_ARGS double,double,double,double,double,double,double,double,
-# endif
+# define INT_REG_ARGS long,long,long,long,long,long,
+# define DBL_REG_ARGS double,double,double,double,double,double,double,double,
 #elif defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
 # define INT_REG_ARGS long,long,long,long,long,long,long,long,
 # define DBL_REG_ARGS /* none */

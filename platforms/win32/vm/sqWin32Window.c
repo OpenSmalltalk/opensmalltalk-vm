@@ -582,6 +582,11 @@ void SetupPixmaps(void)
 { int i;
 
   logPal = malloc(sizeof(LOGPALETTE) + 255 * sizeof(PALETTEENTRY));
+  if (!logPal) {
+    printLastError(TEXT("malloc pallette"));
+    return;
+  }
+
   logPal->palVersion = 0x300;
   logPal->palNumEntries = 256;
 
@@ -743,6 +748,7 @@ sqInt ioSetWindowLabelOfSize(void* lblIndex, sqInt sz) {
   memcpy(windowTitle, (void*)lblIndex, sz);
   windowTitle[sz] = 0;
   SetWindowTitle();
+  return 1;
 }
 
 sqInt ioGetWindowWidth(void) {
@@ -1113,7 +1119,9 @@ sqInputEvent *sqNextEventPut(void) {
 
 
 int recordMouseEvent(MSG *msg, UINT nrClicks) {
+#ifndef NO_DIRECTINPUT
   static DWORD firstEventTime = 0;
+#endif
   DWORD wParam;
   sqMouseEvent proto, *event;
   int alt, shift, ctrl, red, blue, yellow;
@@ -1409,12 +1417,14 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
 #else /* defined(_WIN32_WCE) */
 
   if(GetKeyState(VK_LBUTTON) & 0x8000) stButtons |= 4;
-  if(GetKeyState(VK_MBUTTON) & 0x8000)
+  if(GetKeyState(VK_MBUTTON) & 0x8000) {
     if(f1ButtonMouse) stButtons |= 4;
     else stButtons |= f3ButtonMouse ? 2 : 1;
-  if(GetKeyState(VK_RBUTTON) & 0x8000)
+  }
+  if(GetKeyState(VK_RBUTTON) & 0x8000) {
     if(f1ButtonMouse) stButtons |= 4;
     else stButtons |= f3ButtonMouse ? 1 : 2;
+  }
 
   if (stButtons == 4)	/* red button honours the modifiers */
     {
@@ -1755,7 +1765,6 @@ sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY) {
 
 int ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y) {
   ICONINFO info;
-  HCURSOR hCursor = NULL;
   HBITMAP hbmMask = NULL;
   HBITMAP hbmColor = NULL;
   HDC mDC;
@@ -2021,9 +2030,10 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenF
   return 0; /* Not implemented on CE */
 #else
   RECT r;
+#ifdef USE_DIRECT_X
   static int wasFullscreen = 0;
   static HWND oldBrowserWindow = NULL;
-
+#endif
 
   if(!IsWindow(stWindow)) return 0;
   if(!IsWindowVisible(stWindow)) return 0;
@@ -2854,6 +2864,7 @@ int sqLaunchDrop(void) {
 		      NULL, NULL);
   dropLaunchFile(tmp);
   LocalFree(argv);
+  return 1;
 }
 
 /* Check if the path/file name is subdirectory of the image path */

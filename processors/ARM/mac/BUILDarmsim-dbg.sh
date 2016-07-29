@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 # This script builds debug versions of
 #	gdb-7.6/opcodes/libopcodes.a
 #	gdb-7.6/sim/arm/libsim.a

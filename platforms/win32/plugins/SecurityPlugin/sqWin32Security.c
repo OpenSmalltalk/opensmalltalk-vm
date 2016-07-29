@@ -14,7 +14,7 @@
 #define HKEY_SQUEAK_ROOT "SOFTWARE\\Squeak"
 #endif
 
-static HRESULT __stdcall (*shGetFolderPath)(HWND, int, HANDLE, DWORD, WCHAR*);
+static HRESULT (__stdcall *shGetFolderPath)(HWND, int, HANDLE, DWORD, WCHAR*);
 
 static TCHAR untrustedUserDirectory[MAX_PATH];
 static int untrustedUserDirectoryLen;
@@ -140,6 +140,7 @@ int ioCanSetFileTypeOfSize(char* pathString, int pathStringLength) {
 /* disabling/querying */
 int ioDisableFileAccess(void) {
   allowFileAccess = 0;
+  return 0;
 }
 
 int ioHasFileAccess(void) {
@@ -163,6 +164,7 @@ sqInt ioCanWriteImage(void) {
 
 sqInt ioDisableImageWrite(void) {
   allowImageWrite = 0;
+  return 0;
 }
 /***************************************************************************/
 /***************************************************************************/
@@ -185,6 +187,7 @@ int ioCanListenOnPort(void* s, int port) {
 
 int ioDisableSocketAccess() {
   allowSocketAccess = 0;
+  return 0;
 }
 
 int ioHasSocketAccess() {

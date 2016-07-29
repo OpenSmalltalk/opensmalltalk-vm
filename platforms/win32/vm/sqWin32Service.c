@@ -501,6 +501,7 @@ DWORD WINAPI sqThreadMain(DWORD ignored)
   HKEY hk;
   static TCHAR tmpString[256];
   static TCHAR lbuf[50];
+  char *cmd;
 
   /* first of all set a few flags */
   fHeadlessImage  = 1; /* no windows please */
@@ -546,7 +547,8 @@ DWORD WINAPI sqThreadMain(DWORD ignored)
   RegCloseKey(hk);
 
   /* and away we go ... */
-  sqMain(printCommandLine(0), 0);
+  cmd = printCommandLine(0);
+  sqMain(0,&cmd);
   return 1;
 }
 

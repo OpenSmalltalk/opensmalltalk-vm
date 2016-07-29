@@ -30,6 +30,10 @@
 # else
 #	include "cointerp.h"
 # endif
+#else
+#  if SPURVM
+     extern usqInt maxOldSpaceSize;
+#  endif
 #endif
 
 #if !defined(IMAGE_SIZEOF_NT_OPTIONAL_HEADER)
@@ -147,7 +151,7 @@ squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
     DWORD code = exp->ExceptionRecord->ExceptionCode;
     if((code >= EXCEPTION_FLT_DENORMAL_OPERAND) && (code <= EXCEPTION_FLT_UNDERFLOW)) {
       /* turn on the default masking of exceptions in the FPU and proceed */
-      _control87(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+      _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
       result = EXCEPTION_CONTINUE_EXECUTION;
     }
   }
@@ -1041,7 +1045,7 @@ error(char *msg) {
   print_backtrace(stdout, nframes, MAXFRAMES, callstack, symbolic_pcs);
   /* /Don't/ print the caller's stack to stdout here; Cleanup will do so. */
   /* dumpStackIfInMainThread(0); */
-  exit(-1);
+  exit(EXIT_FAILURE);
 }
 
 static int inCleanExit = 0; /* to suppress stack trace in Cleanup */
@@ -1154,20 +1158,20 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 			exp->ExceptionRecord->ExceptionInformation[1]);
     }
 #if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
-    fprintf(f,"EAX:%08X\tEBX:%08X\tECX:%08X\tEDX:%08X\n",
+    fprintf(f,"EAX:%08lX\tEBX:%08lX\tECX:%08lX\tEDX:%08lX\n",
 	    exp->ContextRecord->Eax,
 	    exp->ContextRecord->Ebx,
 	    exp->ContextRecord->Ecx,
 	    exp->ContextRecord->Edx);
-    fprintf(f,"ESI:%08X\tEDI:%08X\tEBP:%08X\tESP:%08X\n",
+    fprintf(f,"ESI:%08lX\tEDI:%08lX\tEBP:%08lX\tESP:%08lX\n",
 	    exp->ContextRecord->Esi,
 	    exp->ContextRecord->Edi,
 	    exp->ContextRecord->Ebp,
 	    exp->ContextRecord->Esp);
-    fprintf(f,"EIP:%08X\tEFL:%08X\n",
+    fprintf(f,"EIP:%08lX\tEFL:%08lX\n",
 	    exp->ContextRecord->Eip,
 	    exp->ContextRecord->EFlags);
-    fprintf(f,"FP Control: %08X\nFP Status:  %08X\nFP Tag:     %08X\n",
+    fprintf(f,"FP Control: %08lX\nFP Status:  %08lX\nFP Tag:     %08lX\n",
 	    exp->ContextRecord->FloatSave.ControlWord,
 	    exp->ContextRecord->FloatSave.StatusWord,
 	    exp->ContextRecord->FloatSave.TagWord);
@@ -1364,7 +1368,7 @@ sqMain(int argc, char *argv[])
   int virtualMemory;
 
   /* set default fpu control word */
-  _control87(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+  _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
 
   LoadPreferences();
 
@@ -1462,7 +1466,7 @@ sqMain(int argc, char *argv[])
     sqServiceInstall();
     /* When installing was successful we won't come
        to this point. Otherwise ... */
-    exit(-1); /* this will show any printfs during install */
+    exit(EXIT_FAILURE); /* this will show any printfs during install */
   }
 #endif
 
@@ -1847,11 +1851,9 @@ parseVMArgument(int argc, char *argv[])
 #endif /* COGVM */
 #if SPURVM
     else if (!strcmp(argv[0], "-maxoldspace")) { 
-		extern usqInt maxOldSpaceSize;
 		maxOldSpaceSize = (usqInt) strtobkm(argv[1]);	 
 		return 2; }
     else if (!strncmp(argv[0], "-maxoldspace:", 13)) { 
-		extern usqInt maxOldSpaceSize;
 		maxOldSpaceSize = (usqInt) strtobkm(argv[0]+13);	 
 		return 2; }
 #endif

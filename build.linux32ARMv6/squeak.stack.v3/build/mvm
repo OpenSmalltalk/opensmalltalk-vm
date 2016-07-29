@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 # Stack VM with VM profiler and threaded heartbeat
 INSTALLDIR=stklinuxhtRPi
 OPT="-g -O3 -fwrapv -DNDEBUG -DDEBUGVM=0 -DNO_VM_PROFILE=1"

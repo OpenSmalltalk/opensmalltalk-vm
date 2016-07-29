@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 # Make the libraries we depend on
 for d in cpu fpu disasm
 do

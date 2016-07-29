@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 CFLAGS="-g -O2 -m32"
 mkdir -p zlib bfd libiberty opcodes sim/common sim/arm
 for d in zlib; do

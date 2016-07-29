@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 trap 'exit 2' HUP INT PIPE TERM
 for td in *.v3 *.spur; do
 	for d in $td/build*; do

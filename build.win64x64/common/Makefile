@@ -104,7 +104,7 @@ ETOBJ:= $(OBJDIR)/etext.o
 .PRECIOUS: mkNamedPrims.exe
 
 #############################################################################
-# DirectX definitions
+# DirectX definitions - NOT USED - superseded by mingw provided files
 #
 DXDIR:=     $(PLATDIR)/win32/third-party/dx9sdk/Include
 
@@ -113,7 +113,7 @@ DXDIR:=     $(PLATDIR)/win32/third-party/dx9sdk/Include
 #
 include ../common/Makefile.tools
  
-INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) -I$(DXDIR) $(XINC)
+INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 
 .SUFFIXES:
 .SUFFIXES:	.ccg .cc .c .o .s .i .rc .res .cg .hg .ccg .cpp

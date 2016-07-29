@@ -105,6 +105,11 @@
 # define WIN32_OS_NAME (fWindows95 ? "95" : "NT")
 # define WIN32_PROCESSOR_NAME "IX86"
 
+# if defined(X86)
+#  undef X86
+# endif
+# define X86    i386
+
   /* Use console for warnings if possible */
 # ifndef UNICODE
 #	define warnPrintf printf
@@ -124,6 +129,10 @@
 
 #endif /* (_WIN32_WCE) */
 
+/* due to weird include orders, make sure WIN32 is defined */
+# if !defined(WIN32)
+#  define WIN32 1
+# endif
 
 /* Experimental */
 #ifdef MINIMAL

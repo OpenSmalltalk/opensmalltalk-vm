@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 trap 'exit 2' HUP INT PIPE TERM
 DIRS="newspeak.cog.spur newspeak.stack.spur squeak.cog.spur squeak.sista.spur squeak.stack.spur"
 for d in $DIRS; do

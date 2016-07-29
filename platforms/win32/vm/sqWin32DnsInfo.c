@@ -177,4 +177,5 @@ EXPORT(int) primitiveDnsInfo(void) {
     memcpy(vm->firstIndexableField(stroop), buf, sz);
     vm->popthenPush(vm->methodArgumentCount()+1, stroop);
   }
+  return 1;
 }

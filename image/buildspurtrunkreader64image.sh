@@ -1,5 +1,4 @@
-#!/bin/sh
-#!/bin/sh
+#!/bin/sh -e
 . ./envvars.sh
 
 test -f spurreader.image || ./buildspurtrunkreaderimage.sh

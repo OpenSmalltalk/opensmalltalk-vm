@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 . ./envvars.sh
 ./getsqueak45.sh
 . ./getGoodCogVM.sh

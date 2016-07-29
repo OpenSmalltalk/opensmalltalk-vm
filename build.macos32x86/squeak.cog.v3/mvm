@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 A=;D=;F=
 if [ $# = 0 ]; then
 	A=1;D=1;F=1
@@ -22,11 +22,11 @@ else
 	shift `expr $OPTIND - 1`
 fi
 if [ -n "$D" ]; then
-	make $@ debug 2>&1 | tee LOGD
+	make $@ debug 2>&1 | tee LOGD ; test ${PIPESTATUS[0]} -eq 0
 fi
 if [ -n "$A" ]; then
-	make $@ assert 2>&1 | tee LOGA
+	make $@ assert 2>&1 | tee LOGA ; test ${PIPESTATUS[0]} -eq 0
 fi
 if [ -n "$F" ]; then
-	make $@ 2>&1 | tee LOGF
+	make $@ 2>&1 | tee LOGF ; test ${PIPESTATUS[0]} -eq 0
 fi

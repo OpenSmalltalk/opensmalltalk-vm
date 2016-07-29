@@ -325,18 +325,19 @@ void pluginReceiveData(MSG *msg)
     free(localName);
     localName = NULL;
   }
-  if(id >= 0 && id < MAX_REQUESTS) req = requests[id];
-  if(req) {
-    req->localName = localName;
-    req->state = ok;
-    synchronizedSignalSemaphoreWithIndex(req->semaIndex);
+  if(id >= 0 && id < MAX_REQUESTS) {
+    req = requests[id];
+    if(req) {
+      req->localName = localName;
+      req->state = ok;
+      synchronizedSignalSemaphoreWithIndex(req->semaIndex);
+    }
   }
 }
 
 void pluginGetURLRequest(int id, void* urlIndex, int urlSize, 
 			 void* targetIndex, int targetSize)
 {
-  static char ZeroChar[] = "";
   int ok;
   DWORD dwWritten;
   
@@ -371,7 +372,6 @@ void pluginPostURLRequest(int id, void* urlIndex, int urlSize,
 			  void* targetIndex, int targetSize, 
 			  void* postDataIndex, int postDataSize)
 {
-  static char ZeroChar[] = "";
   int ok;
   DWORD dwWritten;
 

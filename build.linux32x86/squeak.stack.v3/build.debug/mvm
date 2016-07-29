@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 # debug Stack VM with VM profiler and threaded heartbeat
 INSTALLDIR=debug/stklinuxht
 OPT="-g3 -O0 -fwrapv -DDEBUGVM=1"
