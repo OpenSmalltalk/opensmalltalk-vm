@@ -9,6 +9,7 @@
 *
 *****************************************************************************/
 #include <windows.h>
+#include <math.h>
 #include "sq.h"
 
 /*****************************************************************************
@@ -204,5 +205,20 @@ void vprintLastError(TCHAR *fmt, ...)
   warnPrintf(TEXT("%s (%ld: %s)\n"), buf, lastError, lpMsgBuf);
   LocalFree( lpMsgBuf );
   free(buf);
+}
+#endif
+
+
+/************************************************************************************/
+/* missing round function in MSVC before 2013                                       */
+/* http://stackoverflow.com/questions/485525/round-for-float-in-c/11074691#11074691 */
+/************************************************************************************/
+#if defined(_MSC_VER) && (_MSC_VER < 1800)
+double round(double x)
+{
+    double truncated,roundedFraction;
+    double fraction= modf(x, &truncated);
+    modf(2.0*fraction, &roundedFraction);
+    return truncated + roundedFraction;
 }
 #endif

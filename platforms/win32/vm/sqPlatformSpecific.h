@@ -71,6 +71,7 @@ size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
 #  if _MSC_VER < 1800 /* not available before MSVC 2013 */
 #    define atoll(x)              _atoi64(x)
 #    define strtoll(beg,end,base) _strtoi64(beg,end,base)
+     double round(double);
 #  endif
 #  if _MSC_VER < 1900 /* not available before MSVC 2015 */
 #    define snprintf _snprintf
