@@ -67,7 +67,9 @@ size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
  *  CRT Alphabetical Function Reference
  *  https://msdn.microsoft.com/en-US/library/634ca0c2.aspx */
 #  include <malloc.h>
-#  define alloca(x) _alloca(x)
+#  ifndef alloca
+#    define alloca _alloca
+#  endif
 #  if _MSC_VER < 1800 /* not available before MSVC 2013 */
 #    define atoll(x)              _atoi64(x)
 #    define strtoll(beg,end,base) _strtoi64(beg,end,base)
