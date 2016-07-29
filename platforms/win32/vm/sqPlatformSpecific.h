@@ -60,12 +60,31 @@ size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
 #  define VM_EXPORT __declspec( dllexport ) 
 #endif 
 
-#if defined(_MSC_VER) || defined(__MINGW32__)
-# define fabsf(x)    ((float)fabs((double)(x)))
+
+/* missing functions */
+#ifdef _MSC_VER
+/* see on msdn the list of functions available
+ *  CRT Alphabetical Function Reference
+ *  https://msdn.microsoft.com/en-US/library/634ca0c2.aspx */
+#  include <malloc.h>
+#  define alloca(x) _alloca(x)
+#  if _MSC_VER < 1800 /* not available before MSVC 2013 */
+#    define atoll(x)              _atoi64(x)
+#    define strtoll(beg,end,base) _strtoi64(beg,end,base)
+#  endif
+#  if _MSC_VER < 1900 /* not available before MSVC 2015 */
+#    define snprintf _snprintf
+#  endif
+#  if _MSC_VER < 1300 /* maybe not available before MSVC 7.0 2003 ??? */
+#    define fabsf(x)    ((float)fabs((double)(x)))
+#  endif
+#  define bzero(pointer,size) ZeroMemory(pointer,size)
 #endif
 
-#ifdef _MSC_VER
-#define bzero(pointer,size) ZeroMemory(pointer,size)
+#ifdef __GNUC__
+#  if __GNUC__ < 3
+#    define fabsf(x)    ((float)fabs((double)(x))) /* not sure if really necessary, but was in original file */
+#  endif
 #endif
 
 #else 

@@ -20,24 +20,6 @@
 #define FINALLY
 #endif
 
-#ifdef _MSC_VER
-/* see on msdn the list of functions available
- *  CRT Alphabetical Function Reference
- *  https://msdn.microsoft.com/en-US/library/634ca0c2.aspx
- # include <malloc.h>
- # include <stdlib.h>
- # include <stdio.h> */
-#  define alloca(x) _alloca(x)
-#  if _MSC_VER < 1800 /* not available before MSVC 2013 */
-#    define atoll(x)              _atoi64(x)
-#    define strtoll(beg,end,base) _strtoi64(beg,end,base)
-#  endif
-#  if _MSC_VER < 1900 /* not available before MSVC 2015 */
-#    define snprintf _snprintf
-#  endif
-#endif
-
-
 #define NO_TABLET
 
 
