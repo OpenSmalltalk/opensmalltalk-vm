@@ -78,6 +78,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		NSOpenGLPFAAccelerated,
 		NSOpenGLPFANoRecovery,
 		NSOpenGLPFABackingStore,
+		NSOpenGLPFAAllowOfflineRenderers, // Enables automatic graphics card switching
 		0
     };
     return AUTORELEASEOBJ([[NSOpenGLPixelFormat alloc] initWithAttributes:attrs]);
