@@ -1,0 +1,28 @@
+include ../common/Makefile.extra
+
+$(info LIBRARY: libssh2)
+
+# plugin definitions
+LIBSSH2URL:=http://www.libssh2.org/download/libssh2-1.4.3.tar.gz
+LIBSSH2DIR:=$(THIRDPARTYDIR)/libssh2-1.4.3
+LIBSSH2LIBNAME:=libssh2.1.dylib
+LIBSSH2LIB:=$(THIRDPARTYINSTALLDIR)/$(LIBSSH2LIBNAME)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(LIBSSH2LIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+
+$(LIBSSH2DIR)/configure: $(THIRDPARTYDIR)
+	curl -L $(LIBSSH2URL) | tar x -C $(THIRDPARTYDIR)
+	touch $(LIBSSH2DIR)/configure
+
+$(LIBSSH2LIB): $(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR) $(LIBSSH2DIR)/configure
+	cd $(LIBSSH2DIR) \
+		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch x86_64' LDFLAGS='-arch x86_64' \
+		&& make \
+		&& make install
+	cp -f $(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME) $(THIRDPARTYINSTALLDIR)
+	install_name_tool -id "@executable_path/Plugins/$(LIBSSH2LIBNAME)" $(LIBSSH2LIB)
+	
+libssh2: $(LIBSSH2LIB)
