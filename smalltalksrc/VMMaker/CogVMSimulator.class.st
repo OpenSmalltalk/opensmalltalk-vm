@@ -609,7 +609,7 @@ CogVMSimulator >> collectSends [
 	expecting := false
 ]
 
-{ #category : #'process primitive support' }
+{ #category : #'cog jit support' }
 CogVMSimulator >> commenceCogCompiledCodeCompaction [
 	self halt.
 	^super commenceCogCompiledCodeCompaction
@@ -2434,7 +2434,7 @@ CogVMSimulator >> openAsMorph [
 							ifNotNil: [FileDirectory default localNameFor: imageName]
 							ifNil: [' synthetic image'].
 	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
-
+	window paneColor: Color lightBlue.
 	window addMorph: (displayView := SimulatorImageMorph new image: displayForm)
 			frame: (0@0 corner: 1@0.8).
 	displayView activeHand addEventListener: self.
@@ -3000,7 +3000,10 @@ CogVMSimulator >> primitiveObjectPointsTo [
 { #category : #'debugging traps' }
 CogVMSimulator >> primitivePerform [
 	| selector |
+	"If called from the machine code perform primitive, it should not have been found."
 	selector := self stackValue: argumentCount - 1.
+	(self methodHasCogMethod: newMethod) ifTrue:
+		[self deny: (self newMethodInLookupCacheAt: selector and: (objectMemory fetchClassTagOf: (self stackValue: argumentCount)))].
 	self sendBreakpoint: selector receiver: (self stackValue: argumentCount).
 	(self filterPerformOf: selector to: (self stackValue: argumentCount)) ifTrue:
 		[^self pop: argumentCount].
@@ -3071,6 +3074,18 @@ CogVMSimulator >> print: it [
 
 	traceOn ifTrue:
 		[it isString ifTrue: [transcript nextPutAll: it] ifFalse: [it printOn: transcript]]
+]
+
+{ #category : #'debug printing' }
+CogVMSimulator >> printActivationNameForSelector: aSelector startClass: startClass [
+	super printActivationNameForSelector: aSelector startClass: startClass.
+	"(self transcript dependents detect: [:d| d isTextView] ifNone: []) ifNotNil:
+		[:textView| | text size |
+		text := textView text asString.
+		((size := text size) >= 30
+		and: [(text copyFrom: size - 29 to: size) = 'Object(ProtoObject)>initialize']) ifTrue:
+			[self doOrDefer: [self changed: #byteCountText; changed: #composeAll].
+			 self halt]"
 ]
 
 { #category : #'debug printing' }

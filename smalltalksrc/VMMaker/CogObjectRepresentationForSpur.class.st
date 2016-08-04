@@ -1601,6 +1601,15 @@ CogObjectRepresentationForSpur >> maybeNoteDescriptor: descriptor blockStart: bl
 		[blockStart hasInstVarRef: true]
 ]
 
+{ #category : #'method cacheing' }
+CogObjectRepresentationForSpur >> maybeShiftClassTagRegisterForMethodCacheProbe: classTagReg [
+	"Generate a shift of the register containing the class tag in a method cache probe.
+	 c.f. SpurMemoryManager>>methodCacheHashOf:with:"
+
+	cogit LogicalShiftLeftCq: 2 R: classTagReg.
+	^0
+]
+
 { #category : #'sista support' }
 CogObjectRepresentationForSpur >> mixed: numNonImmediates branchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
 	| jmpImmediate jumps label numCases classObj index |
