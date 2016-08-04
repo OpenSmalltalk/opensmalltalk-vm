@@ -1302,8 +1302,7 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	<var: #jumpBCMethod type: #'AbstractInstruction *'>
 	self preenMethodLabel.
 	self compilePICAbort: numArgs.
-	entry := objectRepresentation genGetClassTagOf: ReceiverResultReg into: ClassReg scratchReg: TempReg.
-	self MoveR: ClassReg R: SendNumArgsReg.
+	entry := objectRepresentation genGetClassTagOf: ReceiverResultReg into: SendNumArgsReg scratchReg: TempReg.
 
 	self flag: #lookupInMethodCacheSel:classTag:. "so this method shows up as a sender of lookupInMethodCacheSel:class:"
 
@@ -1360,14 +1359,20 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 { #category : #'in-line cacheing' }
 SimpleStackBasedCogit >> compileOpenPICMethodCacheProbeFor: selector withShift: shift baseRegOrNone: baseRegOrNone [
 	"Compile one method cache probe in an OpenPIC's lookup of selector.
-	 Answer the jump taken if the selector probe fails."
+	 Answer the jump taken if the selector probe fails.
+	 The class tag of the receiver must be in SendNumArgsReg.  ClassReg and TempReg are used as scratch registers.
+	 On a hit, the offset of the entry is in ClassReg."
 	<returnTypeC: #'AbstractInstruction *'>
 	<inline: false>
 	| jumpSelectorMiss |
 	<var: 'jumpSelectorMiss' type: #'AbstractInstruction *'>
 	self MoveR: SendNumArgsReg R: ClassReg.
+	objectRepresentation maybeShiftClassTagRegisterForMethodCacheProbe: ClassReg.
 	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
-	objectMemory shiftForWord > shift ifTrue:
+	self assert: shift <= objectMemory shiftForWord.
+	"Need to shift the hash right by shift to form the probe, and then shift the probe left by shiftForWord to form the index.
+	 So shift left by shiftForWord - shift and and with the shifted mask."
+	shift < objectMemory shiftForWord ifTrue:
 		[self LogicalShiftLeftCq: objectMemory shiftForWord - shift R: ClassReg].
 	self AndCq: MethodCacheMask << objectMemory shiftForWord R: ClassReg.
 	baseRegOrNone = NoReg
@@ -1400,8 +1405,12 @@ SimpleStackBasedCogit >> compilePerformMethodCacheProbeFor: selectorReg withShif
 	| jumpSelectorMiss |
 	<var: 'jumpSelectorMiss' type: #'AbstractInstruction *'>
 	self MoveR: SendNumArgsReg R: ClassReg.
+	objectRepresentation maybeShiftClassTagRegisterForMethodCacheProbe: ClassReg.
 	self XorR: selectorReg R: ClassReg.
-	objectMemory shiftForWord > shift ifTrue:
+	self assert: shift <= objectMemory shiftForWord.
+	"Need to shift the hash right by shift to form the probe, and then shift the probe left by shiftForWord to form the index.
+	 So shift left by shiftForWord - shift and and with the shifted mask."
+	shift < objectMemory shiftForWord ifTrue:
 		[self LogicalShiftLeftCq: objectMemory shiftForWord - shift R: ClassReg].
 	self AndCq: MethodCacheMask << objectMemory shiftForWord R: ClassReg.
 	baseRegOrNone = NoReg
@@ -2224,7 +2233,7 @@ SimpleStackBasedCogit >> genLookupForPerformNumArgs: numArgs [
 
 	"Second probe missed.  Do last probe.  Shift hash right two and retry."
 	jumpSelectorMiss jmpTarget: self Label.
-	jumpSelectorMiss := self compilePerformMethodCacheProbeFor: Arg0Reg withShift: 1 baseRegOrNone: cacheBaseReg.
+	jumpSelectorMiss := self compilePerformMethodCacheProbeFor: Arg0Reg withShift: 2 baseRegOrNone: cacheBaseReg.
 	self JumpZero: itsAHit.
 
 	"Last probe missed.  Caller will generate the call to fall back on the interpreter primitive."

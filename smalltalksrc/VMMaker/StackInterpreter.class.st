@@ -1977,7 +1977,7 @@ StackInterpreter >> addNewMethodToCache: classObj [
 			Also, flushing is good when reprobe chains are getting full."
 	| probe hash primitiveIndex |
 	<inline: false>
-	hash := messageSelector bitXor: (objectMemory classTagForClass: classObj).  "drop low-order zeros from addresses (if classObj not classTag)"
+	hash := objectMemory methodCacheHashOf: messageSelector with: (objectMemory classTagForClass: classObj).  "shift drops low-order zeros from addresses"
 	(objectMemory isOopCompiledMethod: newMethod)
 		ifTrue:
 			[primitiveIndex := self primitiveIndexOf: newMethod.
@@ -2018,7 +2018,7 @@ StackInterpreter >> addNewMethodToNSCache: rule [
 	<inline: false>
 	| classObj probe hash primitiveIndex |
 	classObj := lkupClass.
-	hash := (messageSelector bitXor: lkupClassTag) bitXor: (method bitXor: rule).
+	hash := (objectMemory methodCacheHashOf: messageSelector with: lkupClassTag) bitXor: (method bitXor: rule).
 	self deny: rule = LookupRuleOrdinary.
 
 	(objectMemory isOopCompiledMethod: newMethod)
@@ -7801,7 +7801,7 @@ StackInterpreter >> inlineLookupInMethodCacheSel: selector classTag: classTag [
 
 	| hash probe |
 	<inline: true>
-	hash := selector bitXor: classTag.  "shift drops two low-order zeros from addresses"
+	hash := objectMemory methodCacheHashOf: selector with: classTag.  "shift drops two low-order zeros from addresses"
 
 	probe := hash bitAnd: MethodCacheMask.  "first probe"
 	(((methodCache at: probe + MethodCacheSelector) = selector) and:
@@ -7836,7 +7836,7 @@ StackInterpreter >> inlineLookupInNSMethodCacheSel: selector classTag: classTag 
 
 	| hash probe |
 	<inline: true>
-	hash := (selector bitXor: classTag) bitXor: (callingMethod bitXor: lookupRule).
+	hash := (objectMemory methodCacheHashOf: selector with: classTag) bitXor: (callingMethod bitXor: lookupRule).
 
 	probe := hash bitAnd: NSMethodCacheMask.  "first probe"
 	(((((nsMethodCache at: probe + NSMethodCacheSelector) = selector) and:
@@ -11664,6 +11664,8 @@ StackInterpreter >> printMethodCache [
 { #category : #'debug printing' }
 StackInterpreter >> printMethodCacheFor: thing [
 	<api>
+	| n |
+	n := 0.
 	0 to: MethodCacheSize - 1 by: MethodCacheEntrySize do:
 		[:i | | s c m p |
 		s := methodCache at: i + MethodCacheSelector.
@@ -11676,7 +11678,7 @@ StackInterpreter >> printMethodCacheFor: thing [
 		 and: [(self addressCouldBeClassObj: c)
 			or: [self addressCouldBeClassObj: (objectMemory classForClassTag: c)]]]]) ifTrue:
 			[self cCode: [] inSmalltalk: [self transcript ensureCr].
-			 self printNum: i; cr; tab.
+			 self printNum: i; space; printHexnp: i; cr; tab.
 			 (objectMemory isBytesNonImm: s)
 				ifTrue: [self cCode: 'printf("%lx %.*s\n", s, (int)(numBytesOf(s)), (char *)firstIndexableField(s))'
 						inSmalltalk: [self printHex: s; space; print: (self stringOf: s); cr]]
@@ -11692,7 +11694,9 @@ StackInterpreter >> printMethodCacheFor: thing [
 						ifFalse: [self printNum: p]]
 				inSmalltalk:
 					[p isSymbol ifTrue: [self print: p] ifFalse: [self printNum: p]].
-			self cr]]
+			self cr]].
+	n > 1 ifTrue:
+		[self printNum: n; cr]
 ]
 
 { #category : #'debug printing' }
@@ -13025,6 +13029,7 @@ StackInterpreter >> retryPrimitiveOnFailure [
 	 due to an allocation failing.  Retry if external primitives have failed with PrimErrNoMemory after running
 	 first the scavenger and then on a subsequent failure, the global mark-sweep collector.  Hence lazily
 	 and transparently GC on memory exhaustion."
+	<option: #SpurObjectMemory>
 	<inline: false>
 	| gcDone followDone canRetry retry retried |
 	gcDone := 0.

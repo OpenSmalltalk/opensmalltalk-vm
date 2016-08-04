@@ -4722,10 +4722,9 @@ Cogit >> compilePICAbort: numArgs [
 
 { #category : #debugging }
 Cogit >> compileSendTrace [
-	<api>
-	<cmacro: '() (traceFlags & 2)'>
-	"256 = count sends, which is simulation only"
-	^(traceFlags bitAnd: 256 + 2) ~= 0
+	"2 is trace sends; 256+2 is traceLinkedSends, so one can trace just unlinked sends using 2"
+	<cmacro: '() ((traceFlags & 258) == 258)'>
+	^traceFlags allMask: 256 + 2
 ]
 
 { #category : #initialization }
@@ -9417,8 +9416,8 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 	cogMethod cmType = CMClosedPIC
 		ifTrue:
 			[aStream crtab; nextPutAll: 'cPICNumCases: '.
-			 cogMethod cPICNumCases printOn: aStream base: 16;
-			 tab; nextPutAll: 'cpicHasMNUCase: ';
+			 cogMethod cPICNumCases printOn: aStream base: 16.
+			 aStream tab; nextPutAll: 'cpicHasMNUCase: ';
 			 nextPutAll: (cogMethod cpicHasMNUCase ifTrue: ['yes'] ifFalse: ['no'])]
 		ifFalse:
 			[aStream crtab; nextPutAll: 'stackCheckOffset: '.

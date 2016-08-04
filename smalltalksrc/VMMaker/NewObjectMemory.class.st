@@ -2095,6 +2095,14 @@ NewObjectMemory >> maybeFillWithAllocationCheckFillerFrom: start to: end [
 			[:p| self longAt: p put: p]]
 ]
 
+{ #category : #'interpreter access' }
+NewObjectMemory >> methodCacheHashOf: selector with: classTag [
+	"Since class tags are class objects, and classes are aligned on a 4 byte boundary there
+	 is no need to shift the class to include the least significant bits of the class in the hash."
+	<inline: true>
+	^selector bitXor: classTag
+]
+
 { #category : #'primitive support' }
 NewObjectMemory >> minLargeHeaderSize [
 	"Answer the smallest byte size requiring a large header."

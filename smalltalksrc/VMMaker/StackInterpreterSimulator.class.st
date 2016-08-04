@@ -1537,7 +1537,7 @@ StackInterpreterSimulator >> openAsMorph [
 							ifNotNil: [FileDirectory default localNameFor: imageName]
 							ifNil: [' synthetic image'].
 	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
-
+	window paneColor: Color lightBlue.
 	window addMorph: (displayView := SimulatorImageMorph new image: displayForm)
 			frame: (0@0 corner: 1@0.8).
 	displayView activeHand addEventListener: self.
