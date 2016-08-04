@@ -543,7 +543,8 @@ CoInterpreter >> activateNewClosureMethod: blockClosure numArgs: numArgs mayCont
 	 the last block method we failed to compile and avoid recompiling it."
 	(self methodWithHeaderShouldBeCogged: methodHeader)
 		ifTrue:
-			[theMethod = lastCoggableInterpretedBlockMethod
+			[(instructionPointer < objectMemory startOfMemory "If from machine code (via value primitive) attempt jitting"
+			  or: [theMethod = lastCoggableInterpretedBlockMethod]) "If from interpreter and repeat block, attempt jitting"
 				ifTrue:
 					[theMethod ~= lastUncoggableInterpretedBlockMethod ifTrue:
 						[cogit cog: theMethod selector: objectMemory nilObject.
@@ -2284,6 +2285,9 @@ CoInterpreter >> ceSendFromInLineCacheMiss: cogMethodOrPIC [
 	self assert: (objectMemory addressCouldBeOop: rcvr).
 	classTag := objectMemory fetchClassTagOf: rcvr.
 	argumentCount := numArgs.
+	false ifTrue: "would like to assert this but must also allow for an interpretable method in the cache."
+		[self deny: (cogMethodOrPIC cmType = CMOpenPIC
+					and: [self newMethodInLookupCacheAt: cogMethodOrPIC selector and: classTag])].
 	(self lookupInMethodCacheSel: cogMethodOrPIC selector classTag: classTag)
 		ifTrue:"check for coggability because method is in the cache"
 			[self
@@ -2410,7 +2414,7 @@ CoInterpreter >> ceTraceLinkedSend: theReceiver [
 CoInterpreter >> ceTraceStoreOf: aValue into: anObject [
 	<api>
 	"For assertion checking."
-	self assert: ((objectMemory isIntegerObject: aValue) or: [objectMemory addressCouldBeObj: aValue]).
+	self assert: ((objectMemory isImmediate: aValue) or: [objectMemory addressCouldBeObj: aValue]).
 	self assert: (objectMemory addressCouldBeObj: anObject)
 ]
 
@@ -2629,7 +2633,7 @@ CoInterpreter >> cogit: aCogit [
 	cogit := aCogit
 ]
 
-{ #category : #'process primitive support' }
+{ #category : #'cog jit support' }
 CoInterpreter >> commenceCogCompiledCodeCompaction [
 	| startTime |
 	<var: #startTime type: #usqLong>
@@ -2652,6 +2656,7 @@ CoInterpreter >> commenceCogCompiledCodeCompaction [
 		 self externalWriteBackHeadStackPointer].
 	self assertValidStackedInstructionPointers: #'__LINE__'.
 	cogit compactCogCompiledCode.
+	self nilUncoggableMethods.
 	instructionPointer ~= 0 ifTrue:
 		[instructionPointer := self popStack.
 		 self externalWriteBackHeadStackPointer].
@@ -5761,6 +5766,25 @@ CoInterpreter >> newMethodAddress [
 		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #newMethod in: self]
 ]
 
+{ #category : #'method lookup cache' }
+CoInterpreter >> newMethodInLookupCacheAt: selector and: classTag [
+	"Answer if classTag x messageSelector => newMethod is in the lookup cache.
+	 This is for assert checking to check that open PICs find entries."
+	| probe hash |
+	<inline: false>
+	hash := objectMemory methodCacheHashOf: selector with: classTag.
+
+	0 to: CacheProbeMax-1 do:
+		[:p |
+		probe := (hash >> p) bitAnd: MethodCacheMask.
+		((methodCache at: probe + MethodCacheSelector) = selector
+		 and: [(methodCache at: probe + MethodCacheClass) = classTag
+		 and: [(methodCache at: probe + MethodCacheMethod) = newMethod]]) ifTrue:
+			[^true]].
+
+	^false
+]
+
 { #category : #'cog jit support' }
 CoInterpreter >> nextProfileTick [
 	<doNotGenerate>
@@ -5801,6 +5825,12 @@ CoInterpreter >> nilLocalFP [
 	localFP := nil
 ]
 
+{ #category : #'cog jit support' }
+CoInterpreter >> nilUncoggableMethods [
+	<inline: true>
+	lastCoggableInterpretedBlockMethod := lastUncoggableInterpretedBlockMethod := nil
+]
+
 { #category : #'compiled methods' }
 CoInterpreter >> noAssertHeaderOf: methodPointer [
 	<api>
@@ -5826,9 +5856,7 @@ CoInterpreter >> postBecomeAction: theBecomeEffectsFlags [
 	 and: [theBecomeEffectsFlags anyMask: OldBecameNewFlag]) ifTrue:
 		[cogit addAllToYoungReferrers].
 	cogit cogitPostGCAction: gcMode.
-
-	lastCoggableInterpretedBlockMethod := lastUncoggableInterpretedBlockMethod := nil.
-
+	self nilUncoggableMethods.
 	gcMode := 0
 ]
 
@@ -5839,7 +5867,7 @@ CoInterpreter >> postGCAction: gcModeArg [
 	self assert: gcModeArg = gcMode.
 	super postGCAction: gcModeArg.
 	cogit cogitPostGCAction: gcModeArg.
-	lastCoggableInterpretedBlockMethod := lastUncoggableInterpretedBlockMethod := nil.
+	self nilUncoggableMethods.
 	gcMode := 0
 ]
 
@@ -6272,6 +6300,8 @@ CoInterpreter >> printLogEntryAt: i [
 { #category : #'debug printing' }
 CoInterpreter >> printMethodCacheFor: thing [
 	<api>
+	| n |
+	n := 0.
 	0 to: MethodCacheSize - 1 by: MethodCacheEntrySize do:
 		[:i | | s c m p |
 		s := methodCache at: i + MethodCacheSelector.
@@ -6286,8 +6316,9 @@ CoInterpreter >> printMethodCacheFor: thing [
 		 and: [c ~= 0
 		 and: [(self addressCouldBeClassObj: c)
 			or: [self addressCouldBeClassObj: (objectMemory classForClassTag: c)]]]]) ifTrue:
-			[self cCode: [] inSmalltalk: [self transcript ensureCr].
-			 self printNum: i; cr; tab.
+			[n := n + 1.
+			 self cCode: [] inSmalltalk: [self transcript ensureCr].
+			 self printNum: i; space; printHexnp: i; cr; tab.
 			 (objectMemory isBytesNonImm: s)
 				ifTrue: [self cCode: 'printf("%lx %.*s\n", s, (int)(numBytesOf(s)), (char *)firstIndexableField(s))'
 						inSmalltalk: [self printHex: s; space; print: (self stringOf: s); cr]]
@@ -6295,7 +6326,7 @@ CoInterpreter >> printMethodCacheFor: thing [
 			 self tab.
 			 (self addressCouldBeClassObj: c)
 				ifTrue: [self shortPrintOop: c]
-				ifFalse: [self printNum: c; space; shortPrintOop: (objectMemory classForClassTag: c)].
+				ifFalse: [self printNum: c; space; printHexnp: c; space; shortPrintOop: (objectMemory classForClassTag: c)].
 			self tab; shortPrintOop: m; tab.
 			self cCode:
 					[p > 1024
@@ -6303,7 +6334,9 @@ CoInterpreter >> printMethodCacheFor: thing [
 						ifFalse: [self printNum: p]]
 				inSmalltalk:
 					[p isSymbol ifTrue: [self print: p] ifFalse: [self printNum: p]].
-			self cr]]
+			self cr]].
+	n > 1 ifTrue:
+		[self printNum: n; cr]
 ]
 
 { #category : #'debug printing' }
