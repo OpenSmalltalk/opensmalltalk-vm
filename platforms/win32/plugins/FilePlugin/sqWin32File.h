@@ -28,9 +28,6 @@
     name cannot exceed MAX_PATH minus 12).
 **/
 
-#ifdef _MSC_VER
-# define alloca _alloca
-#endif
 
 #define ALLOC_WIN32_PATH(out_path, in_name, in_size) { \
   int sz = MultiByteToWideChar(CP_UTF8, 0, in_name, in_size, NULL, 0); \
