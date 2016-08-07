@@ -1276,7 +1276,7 @@ void __cdecl Cleanup(void)
 /* SQ_IMAGE_MAGIC - the magic number for embedded images "SQIM" */
 #define SQ_IMAGE_MAGIC 0x83817377
 
-int sqImageFile findEmbeddedImage(void) {
+sqImageFile findEmbeddedImage(void) {
 	sqImageFile f;
 	int endMarker;
 	int magic;
@@ -1323,7 +1323,7 @@ int sqImageFile findEmbeddedImage(void) {
 	return f;
 }
 #else
-int findEmbeddedImage(void) { return 0; }
+sqImageFile findEmbeddedImage(void) { return 0; }
 #endif
 
 
