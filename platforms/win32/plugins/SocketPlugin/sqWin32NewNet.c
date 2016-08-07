@@ -363,6 +363,7 @@ int win32DebugPrintSocketState(void) {
     debugPrintSocket(pss);
     pss = pss->next;
   }
+  return 1;
 }
 
 static void debugCheckWatcherThreads(privateSocketStruct *pss, char* caller) {
@@ -1362,7 +1363,7 @@ void	sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
      of windows get this done without failing. */
   if(runningVista && socketType == TCPSocketType) {
     unsigned int val = 65536;
-    setsockopt(newSocket, SOL_SOCKET, SO_RCVBUF, &val, sizeof(val));
+    setsockopt(newSocket, SOL_SOCKET, SO_RCVBUF, (char *)&val, sizeof(val));
   }
 
   /* initialize private socket structure */
@@ -1761,7 +1762,7 @@ sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue
   if (opt->optType == 1) {
     len= sizeof(optval);
     if ((getsockopt(SOCKET(s), opt->optLevel, opt->optName,
-		    (void*)&optval,&len)) < 0)
+		    (char*)&optval,&len)) < 0)
       {
 	/* printf("getsockopt() returned < 0\n"); */
 	goto barf;
@@ -2651,18 +2652,17 @@ sqInt sqSocketSendUDPToSizeDataBufCount(SocketPtr s, char *addr, sqInt addrSize,
 
 sqInt sqSocketReceiveUDPDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 {
-  int nRead;
-
   if (SocketValid(s) && (UDPSocketType == s->socketType))
-    {
+  {
       socklen_t saddrSize= sizeof(SOCKETPEER(s));
       int nread= recvfrom(SOCKET(s), buf, bufSize, 0, &SOCKETPEER(s).sa, &saddrSize);
       if (nread >= 0)
-	{
-	  SOCKETPEERSIZE(s)= saddrSize;
-	  return nread;
-	}
-		}
+      {
+          SOCKETPEERSIZE(s)= saddrSize;
+          return nread;
+      }
+  }
+  return 0;
 }
 
 #endif /* NO_NETWORK */
