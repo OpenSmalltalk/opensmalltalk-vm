@@ -3,8 +3,8 @@ include ../common/Makefile.extra
 $(info LIBRARY: freetype2)
 
 # plugin definitions
-FREETYPE2URL:=http://ftp.igh.cnrs.fr/pub/nongnu/freetype/freetype-2.4.9.tar.gz
-FREETYPE2DIR:=$(THIRDPARTYDIR)/freetype-2.4.9
+FREETYPE2URL:=http://ftp.igh.cnrs.fr/pub/nongnu/freetype/freetype-2.6.5.tar.gz
+FREETYPE2DIR:=$(THIRDPARTYDIR)/freetype-2.6.5
 FREETYPE2LIBNAME:=libfreetype.6.dylib
 FREETYPE2LIB:=$(THIRDPARTYINSTALLDIR)/$(FREETYPE2LIBNAME)
 
