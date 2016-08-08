@@ -1538,7 +1538,6 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 
 sqInt ioProcessEvents(void)
 {	static MSG msg;
-	POINT mousePt;
 	int result;
 	extern sqInt inIOProcessEvents;
 

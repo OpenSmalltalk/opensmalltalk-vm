@@ -2453,7 +2453,6 @@ void sqResolverHostNameResultSize(char *name, sqInt nameSize)
 
 void sqSocketBindToAddressSize(SocketPtr s, char *addr, sqInt addrSize)
 {
-  int result;
   privateSocketStruct *pss= PSP(s);
 
   if (!(SocketValid(s) && addressValid(addr, addrSize)))
