@@ -1,4 +1,4 @@
-typedef struct { char *mname; void *fnameOrSelector; int offset; } symbolic_pc;
+typedef struct { char *mname; void *fnameOrSelector; sqIntptr_t offset; } symbolic_pc;
 
 extern int  backtrace(void *retpcs[], int nrpcs);
 extern int  backtrace_from_fp(void *fp,void *retpcs[], int nrpcs);

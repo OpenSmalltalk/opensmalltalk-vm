@@ -217,7 +217,7 @@ print_backtrace(FILE *f, int nframes, int maxframes,
 			namelen = strlen(name);
 		}
 		fprintf(f,
-				"\t[%p] %.*s + %d in %s\n",
+				"\t[%p] %.*s + 0x%" PRIxSQPTR " in %s\n",
 				retpcs[i],
 				namelen, name,
 				symbolic_pcs[i].offset,
@@ -226,7 +226,7 @@ print_backtrace(FILE *f, int nframes, int maxframes,
 #else
 	for (i = 0; i < nframes; ++i)
 		fprintf(f,
-				"\t[%p] %s + %d in %s\n",
+				"\t[%p] %s + 0x%" PRIxSQPTR " in %s\n",
 				retpcs[i],
 				symbolic_pcs[i].fnameOrSelector
 					? symbolic_pcs[i].fnameOrSelector
