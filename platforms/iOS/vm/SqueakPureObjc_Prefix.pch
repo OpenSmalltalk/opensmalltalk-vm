@@ -7,8 +7,8 @@
 #endif
 
 #if __has_feature(objc_arc)
-#define RELEASEOBJ(x)
-#define RETAINOBJ(x) 
+#define RELEASEOBJ(x) x
+#define RETAINOBJ(x) x
 #define AUTORELEASEOBJ(x) x
 #define SUPERDEALLOC
 #else
