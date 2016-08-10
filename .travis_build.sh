@@ -109,7 +109,14 @@ case "$PLATFORM" in
     travis_fold end build_vm
 
     output_file="${output_file}.tar.gz"
-    tar czf "${output_file}" ./Cocoa*.app
+	if [ -e ./Cocoa*.app ]; then 
+    	tar czf "${output_file}" ./Cocoa*.app
+	elif [ -e ./Pharo*.app ]; then
+    	tar czf "${output_file}" ./Pharo*.app
+	else
+		echo "No artifacts to archive"
+	fi
+		
     popd
     ;;
   "Windows")
