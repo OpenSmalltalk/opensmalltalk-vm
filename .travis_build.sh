@@ -115,6 +115,7 @@ case "$PLATFORM" in
     	tar czf "${output_file}" ./Pharo*.app
 	else
 		echo "No artifacts to archive"
+		exit 1
 	fi
 		
     popd
