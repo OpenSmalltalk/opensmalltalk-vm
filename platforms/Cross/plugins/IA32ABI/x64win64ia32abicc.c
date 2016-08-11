@@ -192,7 +192,7 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
 long
 thunkEntry(long long rcx, long long rdx,
            long long r8, long long r9,
-			void *thunkp, long *stackp)
+			void *thunkp, sqIntptr_t *stackp)
 {
 	VMCallbackContext vmcc;
 	VMCallbackContext *previousCallbackContext;

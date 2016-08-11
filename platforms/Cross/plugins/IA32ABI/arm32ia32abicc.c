@@ -151,7 +151,7 @@ long long
 thunkEntry(long r0, long r1, long r2, long r3,
 			double d0, double d1, double d2, double d3,
 			double d4, double d5, double d6, double d7,
-			void *thunkpPlus16, long *stackp)
+			void *thunkpPlus16, sqIntptr_t *stackp)
 {
   VMCallbackContext vmcc;
   VMCallbackContext *previousCallbackContext;

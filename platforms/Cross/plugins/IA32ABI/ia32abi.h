@@ -53,7 +53,7 @@ extern sqInt callIA32DoubleReturn  (SIGNATURE);
 # define INT_REG_ARGS long,long,long,long,
 # define DBL_REG_ARGS double,double,double,double,double,double,double,double,
 #endif
-extern thunkEntryType  thunkEntry (INT_REG_ARGS DBL_REG_ARGS void *,long *);
+extern thunkEntryType  thunkEntry (INT_REG_ARGS DBL_REG_ARGS void *,sqIntptr_t *);
 extern void *allocateExecutablePage(long *pagesize);
 extern VMCallbackContext *getMostRecentCallbackContext(void);
 #undef thunkEntryType

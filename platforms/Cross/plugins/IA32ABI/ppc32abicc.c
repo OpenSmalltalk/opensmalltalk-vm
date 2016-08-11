@@ -208,7 +208,7 @@ callIA32DoubleReturn(SIGNATURE) { double (*f)(), r;
  * is then passed as the 3rd argument of sendInvokeCallbackStackRegistersJmpbuf
  */
 long
-thunkEntry(void *thunkp, long *stackp)
+thunkEntry(void *thunkp, sqIntptr_t *stackp)
 {
 	jmp_buf trampoline;
 	CallBackReturnSpec * volatile rs;
