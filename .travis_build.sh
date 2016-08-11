@@ -105,7 +105,7 @@ case "$PLATFORM" in
     pushd "${build_directory}"
 
     travis_fold start build_vm "Building OpenSmalltalk VM..."
-    ./mvm -f
+    make
     travis_fold end build_vm
 
     output_file="${output_file}.tar.gz"
@@ -128,7 +128,7 @@ case "$PLATFORM" in
     pushd "${build_directory}"
     # remove bochs plugins
     sed -i 's/Bochs.* //g' plugins.ext
-    make
+	./mvm -f
     output_file="${output_file}.zip"
     zip -r "${output_file}" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
     popd
