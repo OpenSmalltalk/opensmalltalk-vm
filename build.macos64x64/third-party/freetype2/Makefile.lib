@@ -19,7 +19,7 @@ $(FREETYPE2DIR)/configure: $(THIRDPARTYDIR)
 
 $(FREETYPE2LIB): $(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR) $(FREETYPE2DIR)/configure
 	cd $(FREETYPE2DIR) \
-		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch x86_64 -g3 -O0' LDFLAGS='-arch x86_64' \
+		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch x86_64' LDFLAGS='-arch x86_64' \
 		&& make \
 		&& make install
 	cp -f $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME) $(THIRDPARTYINSTALLDIR)
