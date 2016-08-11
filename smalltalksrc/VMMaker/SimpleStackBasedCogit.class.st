@@ -482,6 +482,8 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForNewsqueak [
 		"(118 primitiveDoPrimitiveWithArgs)"
 		"(119 primitiveFlushCacheSelective)"
 
+		(148 genPrimitiveShallowCopy 0)			"a.k.a. clone"
+
 		(169 genPrimitiveNotIdentical 1)
 
 		(170 genPrimitiveAsCharacter)				"SmallInteger>>asCharacter, Character class>>value:"
@@ -673,6 +675,8 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueak [
 		"(117 primitiveExternalCall)"
 		"(118 primitiveDoPrimitiveWithArgs)"
 		"(119 primitiveFlushCacheSelective)"
+
+		(148 genPrimitiveShallowCopy 0)			"a.k.a. clone"
 
 		(169 genPrimitiveNotIdentical 1)
 
