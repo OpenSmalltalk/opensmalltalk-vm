@@ -393,12 +393,20 @@ platforms/unix/config/autom4te.cache/
 /build.macos32x86/newspeak.stack.spur/sqNamedPrims.h
 
 # /build.macos32x86/pharo.cog.spur/
-/build.macos32x86/pharo.cog.spur/Cocoa*.app
+/build.macos32x86/pharo.cog.spur/Pharo*.app
 /build.macos32x86/pharo.cog.spur/LOG*
 /build.macos32x86/pharo.cog.spur/build*
 /build.macos32x86/pharo.cog.spur/deps
 /build.macos32x86/pharo.cog.spur/getversion*
 /build.macos32x86/pharo.cog.spur/sqNamedPrims.h
+
+# /build.macos32x86/pharo.stack.spur/
+/build.macos32x86/pharo.stack.spur/Pharo*.app
+/build.macos32x86/pharo.stack.spur/LOG*
+/build.macos32x86/pharo.stack.spur/build*
+/build.macos32x86/pharo.stack.spur/deps
+/build.macos32x86/pharo.stack.spur/getversion*
+/build.macos32x86/pharo.stack.spur/sqNamedPrims.h
 
 # /build.macos32x86/squeak.cog.spur/
 /build.macos32x86/squeak.cog.spur/Cocoa*.app
@@ -491,7 +499,7 @@ platforms/unix/config/autom4te.cache/
 /build.macos64x64/newspeak.stack.spur/sqNamedPrims.h
 
 # /build.macos64x64/pharo.cog.spur/
-/build.macos64x64/pharo.cog.spur/Cocoa*.app
+/build.macos64x64/pharo.cog.spur/Pharo*.app
 /build.macos64x64/pharo.cog.spur/LOG*
 /build.macos64x64/pharo.cog.spur/build*
 /build.macos64x64/pharo.cog.spur/deps
@@ -776,3 +784,8 @@ platforms/unix/config/autom4te.cache/
 
 # /products/debug/
 /products/debug/*
+
+# generatedsrc 
+/.generatedsrc/*
+/.generated64src/*
+
