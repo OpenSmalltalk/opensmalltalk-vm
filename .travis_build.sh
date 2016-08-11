@@ -128,7 +128,7 @@ case "$PLATFORM" in
     pushd "${build_directory}"
     # remove bochs plugins
     sed -i 's/Bochs.* //g' plugins.ext
-    ./mvm -f
+    make
     output_file="${output_file}.zip"
     zip -r "${output_file}" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
     popd
