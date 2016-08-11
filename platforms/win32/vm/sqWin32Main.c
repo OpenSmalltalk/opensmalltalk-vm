@@ -1191,7 +1191,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 	    exp->ContextRecord->R9,
 	    exp->ContextRecord->R10,
 	    exp->ContextRecord->R11);
-    fprintf(f,"R12:%016" PRIxSQPTR "\tR13:%016" PRIxSQPTR "\tR14:%016" PRIxSQPTR "\tR14:%015" PRIxSQPTR "\n",
+    fprintf(f,"R12:%016" PRIxSQPTR "\tR13:%016" PRIxSQPTR "\tR14:%016" PRIxSQPTR "\tR15:%016" PRIxSQPTR "\n",
 	    exp->ContextRecord->R12,
 	    exp->ContextRecord->R13,
 	    exp->ContextRecord->R14,
