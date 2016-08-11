@@ -153,9 +153,9 @@ CogRTLOpcodes class >> initialize [
 		M16r	- memory 16-bit halfword whose address is at a constant offset from an address in a register
 		M32r	- memory 32-bit halfword whose address is at a constant offset from an address in a register
 		M64r	- memory 64-bit doubleword whose address is at a constant offset from an address in a register
-		Xbr		- memory word whose address is r * byte size away from an address in a register
-		X16r	- memory word whose address is r * (2 bytes size) away from an address in a register
-		X32r	- memory word whose address is r * (4 bytes size) away from an address in a register
+		Xbr		- memory byte whose address is r * byte size away from an address in a register
+		X16r	- memory 16-bit halfword whose address is r * (2 bytes size) away from an address in a register
+		X32r	- memory 32-bit halfword whose address is r * (4 bytes size) away from an address in a register
 		Xwr		- memory word whose address is r * word size away from an address in a register
 		Xowr	- memory word whose address is o + (r * word size) away from an address in a register (scaled indexed)
 

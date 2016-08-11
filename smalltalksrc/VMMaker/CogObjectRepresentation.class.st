@@ -1000,6 +1000,12 @@ CogObjectRepresentation >> genPrimitiveQuo [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveShallowCopy [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentation >> genPrimitiveSmallFloatAdd [
 	<option: #Spur64BitMemoryManager>
 	^self genSmallFloatArithmetic: AddRdRd preOpCheck: nil
