@@ -1,7 +1,7 @@
 Class {
 	#name : #SpurBootstrap32,
 	#superclass : #SpurBootstrap,
-	#category : 'Cog-Bootstrapping'
+	#category : #'Cog-Bootstrapping'
 }
 
 { #category : #bootstrap }

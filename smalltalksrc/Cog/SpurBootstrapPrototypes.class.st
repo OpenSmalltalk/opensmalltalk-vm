@@ -1,7 +1,7 @@
 Class {
 	#name : #SpurBootstrapPrototypes,
 	#superclass : #Object,
-	#category : 'Cog-Bootstrapping'
+	#category : #'Cog-Bootstrapping'
 }
 
 { #category : #'accessing method dictionary' }

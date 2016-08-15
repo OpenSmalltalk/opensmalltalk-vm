@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'processor'
 	],
-	#category : 'Cog-Processors-Tests'
+	#category : #'Cog-Processors-Tests'
 }
 
 { #category : #tests }
