@@ -1373,7 +1373,7 @@ CogObjectRepresentationFor32BitSpur >> genPrimitiveShallowCopy [
 	<var: #jumpNoSpace type: #'AbstractInstruction *'>
 	<var: #jumpIsMethod type: #'AbstractInstruction *'>
 	<var: #jumpImmediate type: #'AbstractInstruction *'>
-	true ifTrue: [^UnimplementedPrimitive].
+
 	jumpImmediate := self genJumpImmediate: ReceiverResultReg.
 	resultReg := Arg0Reg.
 	slotsReg := Arg1Reg.
