@@ -20,7 +20,7 @@ Class {
 		'packagesAndPatches',
 		'imageTypes'
 	],
-	#category : 'Cog-Bootstrapping'
+	#category : #'Cog-Bootstrapping'
 }
 
 { #category : #baselines }
