@@ -6340,6 +6340,16 @@ CoInterpreter >> printMethodCacheFor: thing [
 ]
 
 { #category : #'debug printing' }
+CoInterpreter >> printMethodFieldForPrintContext: aContext [
+	<inline: true>
+	| meth |
+	meth := objectMemory fetchPointer: MethodIndex ofObject: aContext.
+	(self methodHasCogMethod: meth) ifTrue:
+		[self printHexnp: (self cogMethodOf: meth); space].
+	self shortPrintOop: meth.
+]
+
+{ #category : #'debug printing' }
 CoInterpreter >> printMethodHeaderOop: anOop [
 	"Print the CogMethod and its header if this is a CogMethod reference."
 	| cogMethod |
