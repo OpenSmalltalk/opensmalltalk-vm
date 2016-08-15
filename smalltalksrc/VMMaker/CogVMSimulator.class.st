@@ -3214,7 +3214,7 @@ CogVMSimulator >> printHex: anInteger [
 CogVMSimulator >> printHexnp: anInteger [
 
 	traceOn ifTrue:
-		[transcript nextPutAll: (anInteger storeStringBase: 16)]
+		[transcript nextPutAll: (anInteger asInteger storeStringBase: 16)]
 ]
 
 { #category : #'debug printing' }
@@ -3832,13 +3832,13 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		addLine;
 		add: 'print ext head frame' action: #printExternalHeadFrame;
 		add: 'print int head frame' action: #printHeadFrame;
-		add: 'print mc/cog frame' action: [self printFrame: cogit processor fp WithSP: cogit processor sp];
-		add: 'short print ext frame & callers' action: [self shortPrintFrameAndCallers: framePointer];
-		add: 'short print int frame & callers' action: [self shortPrintFrameAndCallers: localFP];
-		add: 'short print mc/cog frame & callers' action: [self shortPrintFrameAndCallers: cogit processor fp];
-		add: 'long print ext frame & callers' action: [self printFrameAndCallers: framePointer SP: stackPointer];
-		add: 'long print int frame & callers' action: [self printFrameAndCallers: localFP SP: localSP];
-		add: 'long print mc/cog frame & callers' action: [self printFrameAndCallers: cogit processor fp SP: cogit processor sp];
+		add: 'print mc/cog head frame' action: [self printFrame: cogit processor fp WithSP: cogit processor sp];
+		add: 'short print ext head frame & callers' action: [self shortPrintFrameAndCallers: framePointer];
+		add: 'short print int head frame & callers' action: [self shortPrintFrameAndCallers: localFP];
+		add: 'short print mc/cog head frame & callers' action: [self shortPrintFrameAndCallers: cogit processor fp];
+		add: 'long print ext head frame & callers' action: [self printFrameAndCallers: framePointer SP: stackPointer];
+		add: 'long print int head frame & callers' action: [self printFrameAndCallers: localFP SP: localSP];
+		add: 'long print mc/cog head frame & callers' action: [self printFrameAndCallers: cogit processor fp SP: cogit processor sp];
 		add: 'print frame...' action: [(self promptHex: 'print frame') ifNotNil: [:fp| self printFrame: fp]];
 		add: 'print call stack' action: #printCallStack;
 		add: 'print stack call stack' action: #printStackCallStack;
@@ -3848,8 +3848,8 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'print all stacks' action: #printAllStacks;
 		add: 'write back local ptrs' action: [stackPointer := localSP. framePointer := localFP. instructionPointer := localIP.
 											self writeBackHeadFramePointers];
-		add: 'write back mc ptrs' action: [stackPointer := cogit processor sp. framePointer := cogit processor fp. instructionPointer := cogit processor eip.
-											self writeBackHeadFramePointers];
+		add: 'write back mc ptrs' action: [stackPointer := cogit processor sp. framePointer := cogit processor fp. instructionPointer := cogit processor pc.
+											self externalWriteBackHeadFramePointers];
 		addLine;
 		add: 'print rump C stack' action: [objectMemory printMemoryFrom: cogit processor sp to: cogit getCStackPointer];
 		add: 'print registers' action: [cogit processor printRegistersOn: transcript];
@@ -3893,7 +3893,6 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'print trampoline table' target: cogit action: #printTrampolineTable;
 		add: 'print prim trace log' action: #dumpPrimTraceLog;
 		add: 'report recent instructions' target: cogit action: #reportLastNInstructions;
-		add: 'set break pc', cogit breakPC menuPrompt, '...-ve to disable or remove' action: [cogit promptForBreakPC];
 		add: (cogit singleStep
 				ifTrue: ['no single step']
 				ifFalse: ['single step'])
@@ -3908,6 +3907,7 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 			action: [cogit printInstructions: cogit printInstructions not];
 		addLine;
 		add: 'click step' action: [cogit setClickStepBreakBlock];
+		add: 'set break pc', cogit breakPC menuPrompt, '...-ve to disable or remove' action: [cogit promptForBreakPC];
 		add: 'set break count...' action: [|s| s := UIManager default request: 'break count (dec)'.
 											s notEmpty ifTrue: [breakCount := Integer readFrom: s readStream]];
 		add: 'set break selector...' action: [|s| s := UIManager default request: 'break selector'.
