@@ -1433,15 +1433,10 @@ StackToRegisterMappingCogit >> extBSpecifiesMaybeContext [
 ]
 
 { #category : #testing }
-StackToRegisterMappingCogit >> extBSpecifiesNoImmCheck [ 
+StackToRegisterMappingCogit >> extBSpecifiesStoreCheck [ 
+	"This is a negative check"
 	<inline: true>
-	^ extB anyMask: 4
-]
-
-{ #category : #testing }
-StackToRegisterMappingCogit >> extBSpecifiesNoStoreCheck [ 
-	<inline: true>
-	^ extB anyMask: 1
+	^ extB noMask: 1
 ]
 
 { #category : #'bytecode generator support' }
@@ -1973,23 +1968,27 @@ StackToRegisterMappingCogit >> genGenericStorePop: popBoolean MaybeContextSlotIn
 	self CallRT: ceStoreContextInstVarTrampoline.
 	jmpDone := self Jump: 0.
 	jmpSingle jmpTarget: self Label.
-	(IMMUTABILITY and: [needsImmCheck])
-		ifTrue: 
-			[objectRepresentation 
-				genStoreWithImmutabilityCheckSourceReg: ClassReg 
-				slotIndex: slotIndex 
-				destReg: ReceiverResultReg 
-				scratchReg: TempReg 
-				needsStoreCheck: needsStoreCheck 
-				needRestoreRcvr: needsRestoreReceiver]
-		ifFalse:
-			[objectRepresentation
-				genStoreSourceReg: ClassReg
-				slotIndex: slotIndex
-				destReg: ReceiverResultReg
-				scratchReg: TempReg
-				inFrame: true
-				needsStoreCheck: needsStoreCheck].
+	self 
+		cppIf: IMMUTABILITY
+		ifTrue:
+			[needsImmCheck
+				ifTrue: 
+					[objectRepresentation 
+						genStoreWithImmutabilityCheckSourceReg: ClassReg 
+						slotIndex: slotIndex 
+						destReg: ReceiverResultReg 
+						scratchReg: TempReg 
+						needsStoreCheck: needsStoreCheck 
+						needRestoreRcvr: needsRestoreReceiver.
+					jmpDone jmpTarget: self Label.
+					^0]].
+	objectRepresentation
+			genStoreSourceReg: ClassReg
+			slotIndex: slotIndex
+			destReg: ReceiverResultReg
+			scratchReg: TempReg
+			inFrame: true
+			needsStoreCheck: needsStoreCheck.
 	jmpDone jmpTarget: self Label.
 	^0
 ]
@@ -2005,33 +2004,34 @@ StackToRegisterMappingCogit >> genGenericStorePop: popBoolean slotIndex: slotInd
 	<inline: true>
 	"We have two very different paths as only the immutability path requires a specific register 
 	for the value on top of stack as well as the stack flush"
-	(IMMUTABILITY and: [needsImmCheck])
-		ifTrue: 
-			[self ssAllocateRequiredReg: ClassReg.
-			 "we replace the top value for the flush"
-			 self ssStoreAndReplacePop: popBoolean toReg: ClassReg.
-			 self ssFlushTo: simStackPtr.
-			 objectRepresentation 
-				genStoreWithImmutabilityCheckSourceReg: ClassReg 
-				slotIndex: slotIndex 
-				destReg: destReg 
-				scratchReg: TempReg 
-				needsStoreCheck: needsStoreCheck 
-				needRestoreRcvr: needsRestoreReceiver ]
-		ifFalse:
-			[| topReg |
-			 topReg := self 
-						allocateRegForStackEntryAt: 0 
-						notConflictingWith: (self registerMaskFor: destReg). 
-			 self ssStorePop: popBoolean toReg: topReg.
-			 objectRepresentation
-				genStoreSourceReg: topReg
-				slotIndex: slotIndex
-				destReg: destReg
-				scratchReg: TempReg
-				inFrame: needsFrame
-				needsStoreCheck: needsStoreCheck].
-	^ 0
+	| topReg |
+	self 
+		cppIf: IMMUTABILITY
+		ifTrue:
+			[needsImmCheck
+				ifTrue: 
+					[self ssAllocateRequiredReg: ClassReg.
+					 "we replace the top value for the flush"
+					 self ssStoreAndReplacePop: popBoolean toReg: ClassReg.
+					 self ssFlushTo: simStackPtr.
+					 ^objectRepresentation 
+						genStoreWithImmutabilityCheckSourceReg: ClassReg 
+						slotIndex: slotIndex 
+						destReg: destReg 
+						scratchReg: TempReg 
+						needsStoreCheck: needsStoreCheck 
+						needRestoreRcvr: needsRestoreReceiver]].
+		 topReg := self 
+					allocateRegForStackEntryAt: 0 
+					notConflictingWith: (self registerMaskFor: destReg). 
+		 self ssStorePop: popBoolean toReg: topReg.
+		 ^objectRepresentation
+			genStoreSourceReg: topReg
+			slotIndex: slotIndex
+			destReg: destReg
+			scratchReg: TempReg
+			inFrame: needsFrame
+			needsStoreCheck: needsStoreCheck
 	
 ]
 
@@ -4169,7 +4169,7 @@ StackToRegisterMappingCogit >> sistaNeedsStoreCheck [
 	<inline: true>
 	"The store check can be ignored if the value assigned doesn't need it (immediate, etc)
 	In addition, the extB low bit is marked by the optimizer if the store check is not required"
-	^ self ssTopNeedsStoreCheck and: [ self extBSpecifiesNoStoreCheck ]
+	^ self ssTopNeedsStoreCheck and: [ self extBSpecifiesStoreCheck ]
 ]
 
 { #category : #'span functions' }
