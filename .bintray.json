@@ -5,11 +5,11 @@
         "subject": "opensmalltalk"
     },
     "version": {
-        "name": "$Rev$",
+        "name": "$Rev$-no-exit",
         "desc": "Automatic build"
     },
     "files": [
-        {"includePattern": "./(cog_.*\\.(?:gz|zip))", "uploadPattern": "$1"}
+        {"includePattern": "./(cog_.*\\.(?:gz|zip))", "uploadPattern": "no-exit/$1"}
     ],
     "publish": true
 }

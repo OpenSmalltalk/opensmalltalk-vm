@@ -312,10 +312,10 @@ beatStateMachine(void *careLess)
 		 */
 		extern char *revisionAsString();
 		errno = er;
-		perror("pthread_setschedparam failed");
-		fprintf(stderr,
-				"Read e.g. https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/r3732#linux\n");
-		exit(errno);
+		// perror("pthread_setschedparam failed (this VM does not exit here)");
+		// fprintf(stderr,
+		// 		"Read e.g. https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/r3732#linux\n");
+		// exit(errno);
 	}
 	beatState = active;
 	while (beatState != condemned) {

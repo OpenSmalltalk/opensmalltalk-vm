@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash -e
 # Upload a trunk46-spur.image/.changes to mirandabanda.org
 RemoteUser=eliotmiranda@highland-park.dreamhost.com
 RemoteRoot=mirandabanda.org/files/Cog/SpurImages

@@ -67,7 +67,7 @@ repositoryURL()
 # undef URL_START
 #elif GIT
 # define PREFIX ""
-static char GitRawRevisionString[] = "$Rev$";
+static char GitRawRevisionString[] = "$Rev$ (no-exit)";
 # define REV_START (GitRawRevisionString + 6)
 
 static char GitRawRevisionDate[] = "$Date$";
