@@ -1223,6 +1223,7 @@ StackToRegisterMappingCogit >> compileFrameBuild [
 			[self compileTwoPathFramelessInit].
 		 self initSimStackForFramelessMethod: initialPC.
 		 ^self].
+	self deny: useTwoPaths.
 	self genPushRegisterArgs.
 	super compileFrameBuild.
 	self initSimStackForFramefulMethod: initialPC
@@ -4081,7 +4082,7 @@ StackToRegisterMappingCogit >> scanMethod [
 							ifTrue: [descriptor is1ByteInstVarStore
 									ifTrue: [useTwoPaths := true]
 									ifFalse: [needsFrame := true. useTwoPaths := false]]
-							ifFalse: [needsFrame := true]]
+							ifFalse: [needsFrame := true. useTwoPaths := false]]
 					ifFalse:
 						[framelessStackDelta := framelessStackDelta + descriptor stackDelta.
 						 "Without immutability we win if there are two or more stores and the receiver is new."
