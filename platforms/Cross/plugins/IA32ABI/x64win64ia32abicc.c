@@ -223,10 +223,10 @@ thunkEntry(long long rcx, long long rdx,
 				_asm mov r8 , xmm2;
 				_asm mov r9 , xmm3;
 #elif __GNUC__
-				asm("movq %%rcx,%%xmm0");
-				asm("movq %%rdx,%%xmm1");
-				asm("movq %%r8 ,%%xmm2");
-				asm("movq %%r9 ,%%xmm3");
+				asm("movq %rcx,%xmm0");
+				asm("movq %rdx,%xmm1");
+				asm("movq %r8 ,%xmm2");
+				asm("movq %r9 ,%xmm3");
 #else
 # error need to load edx with vmcc.rvs.valleint64.high on this compiler
 #endif
