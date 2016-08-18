@@ -226,9 +226,9 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _swapper;
 #endif /* !(BigEndianFloats && !VMBIGENDIAN) && !OBJECTS_32BIT_ALIGNED */
 
 # define storeSingleFloatAtPointerfrom(intPointerToFloat, floatVar) \
-        memcpy((char *)intPointerToFloat,&floatVar,sizeof(float));
+        do {float __f=floatVar; memcpy((char *)intPointerToFloat,&__f,sizeof(float));} while(0)
 # define fetchSingleFloatAtPointerinto(intPointerToFloat, floatVar) \
-        memcpy(&floatVar,(char *)intPointerToFloat,sizeof(float));
+        do {float __f; memcpy(&__f,(char *)intPointerToFloat,sizeof(float)); floatVar=__f;} while(0)
 
 #define storeFloatAtfrom(i, doubleVar)	storeFloatAtPointerfrom(pointerForOop(i), doubleVar)
 #define fetchFloatAtinto(i, doubleVar)	fetchFloatAtPointerinto(pointerForOop(i), doubleVar)
