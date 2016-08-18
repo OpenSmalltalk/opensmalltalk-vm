@@ -9,7 +9,7 @@
 # include "ia32abicc.c"
 #elif powerpc|ppc
 # include "ppcia32abicc.c"
-#elif x86_64|x64|__x86_64|__x86_64__
+#elif x86_64|x64|__x86_64|__x86_64__|_M_AMD64|_M_X64
 # if WIN64
 #	include "x64win64ia32abicc.c"
 # else
@@ -18,3 +18,4 @@
 #elif __ARM_ARCH__|__arm__|__arm32__|ARM32
 # include "arm32ia32abicc.c"
 #endif
+	
