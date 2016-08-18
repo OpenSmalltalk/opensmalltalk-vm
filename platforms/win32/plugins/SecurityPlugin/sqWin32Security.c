@@ -14,7 +14,7 @@
 #define HKEY_SQUEAK_ROOT "SOFTWARE\\Squeak"
 #endif
 
-static HRESULT __stdcall (*shGetFolderPath)(HWND, int, HANDLE, DWORD, WCHAR*);
+static HRESULT (__stdcall *shGetFolderPath)(HWND, int, HANDLE, DWORD, WCHAR*);
 
 static TCHAR untrustedUserDirectory[MAX_PATH];
 static int untrustedUserDirectoryLen;
@@ -28,7 +28,7 @@ extern TCHAR squeakIniName[MAX_PATH];
 
 /* imported from sqWin32Main.c */
 extern BOOL fLowRights;  /* started as low integrity process, 
-			need to use alternate untrustedUserDirectory */
+                        need to use alternate untrustedUserDirectory */
 
 /***************************************************************************/
 /***************************************************************************/
@@ -42,9 +42,9 @@ static int testDotDot(TCHAR *pathName, int index) {
   while(pathName[index]) {
     if(pathName[index] == U_DOT[0]) {
       if(pathName[index-1] == U_DOT[0]) {
-	if (pathName[index-2] == U_BACKSLASH[0]) {
-	  return 0; /* Gotcha! */
-	}
+        if (pathName[index-2] == U_BACKSLASH[0]) {
+          return 0; /* Gotcha! */
+        }
       }
     }
     index++;
@@ -55,7 +55,7 @@ static int testDotDot(TCHAR *pathName, int index) {
 static int lstrncmp(TCHAR *s1, TCHAR *s2, int len) {
   int s1Len = lstrlen(s1);
   int s2Len = lstrlen(s2);
-  int max = min(s1Len, (s2Len, len));
+  int max = min(s1Len, min(s2Len, len));
   int i;
   for (i = 0; i < max; i++) {
     if (s1[i] > s2[i]) {
@@ -140,6 +140,7 @@ int ioCanSetFileTypeOfSize(char* pathString, int pathStringLength) {
 /* disabling/querying */
 int ioDisableFileAccess(void) {
   allowFileAccess = 0;
+  return 0;
 }
 
 int ioHasFileAccess(void) {
@@ -153,16 +154,17 @@ int ioHasFileAccess(void) {
 /* image security */
 
 static int allowImageWrite = 1;  /* allow writing the image */
-int ioCanRenameImage(void) {
+sqInt ioCanRenameImage(void) {
   return allowImageWrite; /* only when we're allowed to save the image */
 }
 
-int ioCanWriteImage(void) {
+sqInt ioCanWriteImage(void) {
   return allowImageWrite;
 }
 
-int ioDisableImageWrite(void) {
+sqInt ioDisableImageWrite(void) {
   allowImageWrite = 0;
+  return 0;
 }
 /***************************************************************************/
 /***************************************************************************/
@@ -185,6 +187,7 @@ int ioCanListenOnPort(void* s, int port) {
 
 int ioDisableSocketAccess() {
   allowSocketAccess = 0;
+  return 0;
 }
 
 int ioHasSocketAccess() {
@@ -226,7 +229,7 @@ int expandMyDocuments(char *pathname, char *replacement, char *result)
 
 
 /* note: following is called from VM directly, not from plugin */
-int ioInitSecurity(void) {
+sqInt ioInitSecurity(void) {
   DWORD dwType, dwSize, ok;
   TCHAR tmp[MAX_PATH+1];
   WCHAR wTmp[MAX_PATH+1];
@@ -252,7 +255,7 @@ int ioInitSecurity(void) {
 
   /* Look up shGetFolderPathW */
   shGetFolderPath = (void*)GetProcAddress(LoadLibrary("SHFolder.dll"), 
-					  "SHGetFolderPathW");
+                                          "SHGetFolderPathW");
 
   if(shGetFolderPath) {
     /* If we have shGetFolderPath use My Documents/My Squeak */
@@ -261,11 +264,11 @@ int ioInitSecurity(void) {
     /*shGetfolderPath does not return utf8*/
     if(shGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, widepath) == S_OK) {
        WideCharToMultiByte(CP_ACP,0,widepath,-1,untrustedUserDirectory,
-			  MAX_PATH,NULL,NULL); 
+                          MAX_PATH,NULL,NULL); 
       sz = strlen(untrustedUserDirectory);
       if(untrustedUserDirectory[sz-1] != '\\') 
-	strcat(untrustedUserDirectory, "\\");
-	   lstrcpy(myDocumentsFolder,untrustedUserDirectory);
+        strcat(untrustedUserDirectory, "\\");
+           lstrcpy(myDocumentsFolder,untrustedUserDirectory);
       strcat(untrustedUserDirectory, "My Squeak");
     }
   }
@@ -273,21 +276,21 @@ int ioInitSecurity(void) {
 
   /* Query Squeak.ini for network installations */
   GetPrivateProfileString(TEXT("Security"), TEXT("SecureDirectory"),
-			  secureUserDirectory, secureUserDirectory,
-			  MAX_PATH, squeakIniName);
+                          secureUserDirectory, secureUserDirectory,
+                          MAX_PATH, squeakIniName);
   if(fLowRights) {/* use alternate untrustedUserDirectory */
       GetPrivateProfileString(TEXT("Security"), TEXT("UserDirectoryLow"),
-			  untrustedUserDirectory, untrustedUserDirectory,
-			  MAX_PATH, squeakIniName);
+                          untrustedUserDirectory, untrustedUserDirectory,
+                          MAX_PATH, squeakIniName);
   } else {
       GetPrivateProfileString(TEXT("Security"), TEXT("UserDirectory"),
-			  untrustedUserDirectory, untrustedUserDirectory,
-			  MAX_PATH, squeakIniName);
+                          untrustedUserDirectory, untrustedUserDirectory,
+                          MAX_PATH, squeakIniName);
   }
 
   GetPrivateProfileString(TEXT("Security"), TEXT("ResourceDirectory"),
-			  resourceDirectory, resourceDirectory,
-			  MAX_PATH, squeakIniName);
+                          resourceDirectory, resourceDirectory,
+                          MAX_PATH, squeakIniName);
 
   /* Attempt to read local user settings from registry */
   ok = RegOpenKey(HKEY_CURRENT_USER, HKEY_SQUEAK_ROOT, &hk);
@@ -295,7 +298,7 @@ int ioInitSecurity(void) {
   /* Read the secure directory from the subkey. */
   dwSize = MAX_PATH;
   ok = RegQueryValueEx(hk,"SecureDirectory",NULL, &dwType, 
-		       (LPBYTE) tmp, &dwSize);
+                       (LPBYTE) tmp, &dwSize);
   if(ok == ERROR_SUCCESS) {
     if(tmp[dwSize-2] != '\\') {
       tmp[dwSize-1] = '\\';
@@ -307,7 +310,7 @@ int ioInitSecurity(void) {
   /* Read the user directory from the subkey. */
   dwSize = MAX_PATH;
   ok = RegQueryValueEx(hk,"UserDirectory",NULL, &dwType, 
-		       (LPBYTE) tmp, &dwSize);
+                       (LPBYTE) tmp, &dwSize);
   if(ok == ERROR_SUCCESS) {
     if(tmp[dwSize-2] != '\\') {
       tmp[dwSize-1] = '\\';
@@ -319,7 +322,7 @@ int ioInitSecurity(void) {
   /* Read the resource directory from the subkey. */
   dwSize = MAX_PATH;
   ok = RegQueryValueEx(hk,"ResourceDirectory",NULL, &dwType, 
-		       (LPBYTE) tmp, &dwSize);
+                       (LPBYTE) tmp, &dwSize);
   if(ok == ERROR_SUCCESS) {
     if(tmp[dwSize-2] != '\\') {
       tmp[dwSize-1] = '\\';

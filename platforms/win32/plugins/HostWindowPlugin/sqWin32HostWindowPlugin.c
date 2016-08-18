@@ -12,6 +12,11 @@
 #include "sq.h"
 #include "HostWindowPlugin.h"
 
+/* Import from sqWin32Window.c */
+int recordMouseEvent(MSG *msg, UINT nrClicks);
+int recordKeyboardEvent(MSG *msg);
+sqInputEvent *sqNextEventPut();
+
 BITMAPINFO *BmiForDepth(int depth);
 extern HINSTANCE hInstance;
 extern MSG *lastMessage;
@@ -34,7 +39,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
   /*  mousing */
 
   case WM_MOUSEMOVE:
-      recordMouseEvent(lastMessage);
+      recordMouseEvent(lastMessage,0);
       break;
 
   case WM_LBUTTONDOWN:
@@ -42,7 +47,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
   case WM_MBUTTONDOWN:
     if(GetFocus() != hwnd) SetFocus(hwnd);
     SetCapture(hwnd); /* capture mouse input */
-      recordMouseEvent(lastMessage);
+      recordMouseEvent(lastMessage,1);
       break;
 
   case WM_LBUTTONUP:
@@ -50,7 +55,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
   case WM_MBUTTONUP:
     if(GetFocus() != hwnd) SetFocus(hwnd);
     ReleaseCapture(); /* release mouse capture */
-      recordMouseEvent(lastMessage);
+      recordMouseEvent(lastMessage,1);
       break;
 
 
@@ -78,7 +83,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
 	windowevent->value2 = boundingRect.top;
 	windowevent->value3 = boundingRect.right;
 	windowevent->value4 = boundingRect.bottom;
-	windowevent->windowIndex =(int) hwnd;
+	windowevent->windowIndex =(sqIntptr_t) hwnd;
     }
     break;
 	
@@ -93,7 +98,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
 	windowevent->value2 = boundingRect.top;
 	windowevent->value3 = boundingRect.right;
 	windowevent->value4 = boundingRect.bottom;
-	windowevent->windowIndex =(int) hwnd;
+	windowevent->windowIndex =(sqIntptr_t) hwnd;
     }
     break;
 
@@ -104,7 +109,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
 	windowevent->type = EventTypeWindow;
 	windowevent->timeStamp = lastMessage ? lastMessage->time : GetTickCount();
 	windowevent->action = WindowEventClose;
-	windowevent->windowIndex =(int) hwnd;
+	windowevent->windowIndex =(sqIntptr_t) hwnd;
     }
     break;
 	
@@ -115,7 +120,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
         windowevent->timeStamp = lastMessage ? lastMessage->time : GetTickCount();
         if (wParam == WA_INACTIVE) windowevent->action = WindowEventIconise;
         else windowevent->action = WindowEventActivated;
-       	windowevent->windowIndex =(int) hwnd;      
+       	windowevent->windowIndex =(sqIntptr_t) hwnd;      
     }
     break; 
     	
@@ -126,7 +131,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
         windowevent->timeStamp = lastMessage ? lastMessage->time : GetTickCount();
         if (IsIconic(hwnd) != 0)windowevent->action = WindowEventIconise;
         else windowevent->action = WindowEventActivated;
-       	windowevent->windowIndex =(int) hwnd;      
+       	windowevent->windowIndex =(sqIntptr_t) hwnd;      
     }
     break;   
  }
@@ -184,9 +189,9 @@ sqInt createWindowWidthheightoriginXyattrlength(sqInt w, sqInt h, sqInt x, sqInt
 			NULL);
 
   /* Force Unicode WM_CHAR */
-  SetWindowLongPtrW(hwnd,GWLP_WNDPROC,(DWORD)HostWndProcW);
+  SetWindowLongPtrW(hwnd,GWLP_WNDPROC,(usqIntptr_t)HostWndProcW);
 
-  return (int)hwnd;
+  return (sqInt)hwnd;
 }
 
 /* ioShowDisplayOnWindow: similar to ioShowDisplay but adds the int windowIndex
@@ -275,7 +280,7 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
        few extreme conditions - but to compensate for those the
        following is provided. */
     int pitch, start, end, nPix, line, left;
-    int bitsPtr;
+    sqIntptr_t bitsPtr;
 
     /* compute pitch of form */
     pitch = ((width * depth) + 31 & ~31) / 8;
@@ -301,8 +306,8 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-    warnPrintf(TEXT("width=%d,height=%d,bits=%X,dc=%X\n"),
-	       width, height, dispBits,dc);
+    warnPrintf(TEXT("width=%" PRIdSQINT ",height=%" PRIdSQINT ",bits=%" PRIXSQPTR ",dc=%" PRIXSQPTR "\n"),
+	       width, height, (usqIntptr_t)dispBits, (usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */
 
@@ -411,5 +416,6 @@ sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle) 
  * No useful return value since we're getting out of Dodge anyway.
  */
 sqInt ioCloseAllWindows(void){
+	return 0;
 }
 

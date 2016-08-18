@@ -10,7 +10,7 @@
 *****************************************************************************/
 #include "sq.h"
 
-int ioDisablePowerManager(int disableIfNonZero) { return success(false); }
+sqInt ioDisablePowerManager(sqInt disableIfNonZero) { return success(false); }
 
 #ifdef NO_SOUND
 int snd_AvailableSpace(void) { return success(false); }

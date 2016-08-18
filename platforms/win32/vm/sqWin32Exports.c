@@ -7,7 +7,9 @@ int win32JoystickDebugInfo(void);
 int win32JoystickDebugPrintRawValues(void);
 int win32JoystickDebugPrintAlternativeValues(void);
 #endif
+#ifndef NO_NETWORK
 int win32DebugPrintSocketState(void);
+#endif
 int primitivePluginBrowserReady(void);
 int primitivePluginRequestURLStream(void);
 int primitivePluginRequestURL(void);
@@ -33,7 +35,9 @@ void *os_exports[][3] = {
 	XFN(win32JoystickDebugPrintRawValues)
 	XFN(win32JoystickDebugPrintAlternativeValues)
 #endif
+#ifndef NO_NETWORK
 	XFN(win32DebugPrintSocketState)
+#endif
 	XFND(primitivePluginBrowserReady,"\377")
 	XFND(primitivePluginRequestURLStream,"\001")
 	XFND(primitivePluginRequestURL,"\001")

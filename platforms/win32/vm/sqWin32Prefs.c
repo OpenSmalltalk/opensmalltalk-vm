@@ -19,6 +19,22 @@ void HandlePrefsMenu(int) {}
 #include "sq.h"
 #include "sqWin32Prefs.h"
 
+/* from SecurityPlugin/sqWin32Security.c */
+int ioHasFileAccess();
+int ioHasSocketAccess();
+int _ioSetFileAccess(int enable);
+int _ioSetImageWrite(int enable);
+int _ioSetSocketAccess(int enable);
+
+/* from SocketPlugin/sqWin32NewNet.c */
+int win32DebugPrintSocketState();
+
+/* from sqWin32Window.c */
+void SetTheDefaultPrinter();
+
+/* from VM */
+void printCallStack(void);
+void printAllStacks(void);
 
 /* VM preference variables */
 extern TCHAR squeakIniName[]; /* full path and name to ini file */
@@ -100,11 +116,12 @@ void SetAllowImageWrite() {
   CheckMenuItem(vmPrefsMenu, ID_IMAGEWRITE, MF_BYCOMMAND | 
 		(ioCanWriteImage() ? MF_CHECKED : MF_UNCHECKED));
 }
-
+#ifndef NO_NETWORK
 void SetAllowSocketAccess() {
   CheckMenuItem(vmPrefsMenu, ID_SOCKETACCESS, MF_BYCOMMAND | 
 		(ioHasSocketAccess() ? MF_CHECKED : MF_UNCHECKED));
 }
+#endif
 
 void SetShowAllocations() {
   CheckMenuItem(vmPrefsMenu, ID_SHOWALLOCATIONS, MF_BYCOMMAND | 
@@ -282,7 +299,9 @@ void SetAllPreferences() {
   SetUseDirectSound();
   SetAllowFileAccess();
   SetAllowImageWrite();
+#ifndef NO_NETWORK
   SetAllowSocketAccess();
+#endif
   SetShowAllocations();
   SetPriorityBoost();
   SetB3DXUsesOpenGL();
@@ -307,7 +326,7 @@ extern sqInt recordPrimTraceFunc();
 	       TEXT("1 button mouse"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED , ID_3BUTTONMOUSE, 
 	       TEXT("3 button mouse"));
-    AppendMenu(pMenu, MF_STRING | MF_POPUP, (int)hMenu,
+    AppendMenu(pMenu, MF_STRING | MF_POPUP, (sqIntptr_t)hMenu,
 	       TEXT("Mouse Mapping"));
   }
   { /* Create security menu */
@@ -315,9 +334,12 @@ extern sqInt recordPrimTraceFunc();
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_FILEACCESS, 
 	       TEXT("Allow file access"));
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_IMAGEWRITE, 
-	       TEXT("Allow image writes"));    AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_SOCKETACCESS, 
+	       TEXT("Allow image writes"));    
+#ifndef NO_NETWORK
+	AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_SOCKETACCESS, 
 	       TEXT("Allow socket access"));
-    AppendMenu(pMenu, MF_STRING | MF_POPUP, (int)hMenu,
+#endif
+    AppendMenu(pMenu, MF_STRING | MF_POPUP, (sqIntptr_t)hMenu,
 	       TEXT("Security Settings"));
   }
   { /* Create media related menu */
@@ -328,7 +350,7 @@ extern sqInt recordPrimTraceFunc();
 	       TEXT("Use OpenGL (instead of D3D)"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_DEFERUPDATES, 
 	       TEXT("Defer display update"));
-    AppendMenu(pMenu, MF_STRING | MF_POPUP, (int)hMenu,
+    AppendMenu(pMenu, MF_STRING | MF_POPUP, (sqIntptr_t)hMenu,
 	       TEXT("Display and Sound"));
   }
 
@@ -345,7 +367,7 @@ extern sqInt recordPrimTraceFunc();
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED , ID_DEFAULTPRINTER, 
 	       TEXT("Printer configuration ..."));
 #endif /* NO_PRINTER */
-    AppendMenu(pMenu, MF_STRING | MF_POPUP, (int)hMenu,
+    AppendMenu(pMenu, MF_STRING | MF_POPUP, (sqIntptr_t)hMenu,
 	       TEXT("System Configuration"));
   }
 
@@ -374,7 +396,7 @@ extern sqInt recordPrimTraceFunc();
       AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_DUMPPRIMLOG,
 	       TEXT("Dump recent primitives"));
 #endif
-    AppendMenu(pMenu, MF_STRING | MF_POPUP, (int)hMenu,
+    AppendMenu(pMenu, MF_STRING | MF_POPUP, (sqIntptr_t)hMenu,
 	       TEXT("Debug Options"));
   }
 
@@ -383,7 +405,7 @@ extern sqInt recordPrimTraceFunc();
 	     TEXT("Display version information"));
   hMenu = GetSystemMenu(stWindow,false);
   AppendMenu(hMenu,MF_SEPARATOR, 0,NULL);
-  AppendMenu(hMenu, MF_POPUP, (UINT) pMenu, TEXT("&VM Preferences"));
+  AppendMenu(hMenu, MF_POPUP, (sqIntptr_t) pMenu, TEXT("&VM Preferences"));
   SetAllPreferences();
 }
 
@@ -398,7 +420,7 @@ void HandlePrefsMenu(int cmd) {
   switch(cmd) {
   case ID_ABOUT: 
     MessageBox(stWindow,VM_VERSION_TEXT,
-	       TEXT("About " VM_NAME " on Win32"), MB_OK);
+	       TEXT("About ") TEXT(VM_NAME) TEXT(" on Win32"), MB_OK);
     break;
   case ID_DEFERUPDATES:
     fDeferredUpdate = !fDeferredUpdate;
@@ -443,19 +465,19 @@ void HandlePrefsMenu(int cmd) {
     _ioSetImageWrite(!ioCanWriteImage());
     SetAllowImageWrite();
     break;
-  case ID_SOCKETACCESS:
-    _ioSetSocketAccess(!ioHasSocketAccess());
-    SetAllowSocketAccess();
-    break;
   case ID_SHOWALLOCATIONS:
     fShowAllocations = !fShowAllocations;
     SetShowAllocations();
     break;
-  case ID_DBGPRINTSOCKET:
 #ifndef NO_NETWORK
-    win32DebugPrintSocketState();
-#endif
+  case ID_SOCKETACCESS:
+    _ioSetSocketAccess(!ioHasSocketAccess());
+    SetAllowSocketAccess();
     break;
+  case ID_DBGPRINTSOCKET:
+    win32DebugPrintSocketState();
+   break;
+#endif
   case ID_DBGPRINTSTACK:
     printCallStack();
     break;

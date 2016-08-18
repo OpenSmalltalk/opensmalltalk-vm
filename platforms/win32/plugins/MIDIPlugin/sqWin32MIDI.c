@@ -335,7 +335,7 @@ static DWORD WINAPI midiNotifyThread(DWORD ignored)
                    two of the functions allowed from within MIDI callbacks, e.g.,
                    midiOutShortMsg and SetEvent
   *************************************************************************************/
-static void CALLBACK midiInCallback(HMIDIIN  hMidiIn,UINT  uMsg, DWORD  dwUser,
+static void CALLBACK midiInCallback(HMIDIIN  hMidiIn,UINT  uMsg, DWORD_PTR  dwUser,
                              DWORD  dwParam1, DWORD  dwParam2)
 { int cmd, cmdLen;
   sqMidiInEvent *dst;
@@ -509,7 +509,7 @@ static void sendLongMidiData(HMIDIOUT midiOutPort, char *data, int numBytes)
    if(!header)
      { /* allocate new header */
        header = GlobalLock(GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE | GMEM_ZEROINIT, sizeof(MIDIHDR)));
-       header->dwUser = (DWORD)midiHeaderList;
+       header->dwUser = (DWORD_PTR)midiHeaderList;
        midiHeaderList = header;
      }
    if(header->lpData)
@@ -590,12 +590,12 @@ int finishSysExCommand(sqMidiPort *port, char *bufferPtr, int count)
       return -1;
     }
   /* return if the sysex message has not been finished */
-  if(!count) return (DWORD) srcPtr - (DWORD)bufferPtr;
+  if(!count) return (usqIntptr_t) srcPtr - (usqIntptr_t)bufferPtr;
   /* copy the last (status) byte */
   if(*srcPtr == 0xF7) buf[port->sysExLength++] = *srcPtr++;
   sendLongMidiData(port->handle, buf, port->sysExLength);
   port->sysExLength = 0; /* data has been sent */
-  return (DWORD) srcPtr - (DWORD)bufferPtr;
+  return (usqIntptr_t) srcPtr - (usqIntptr_t)bufferPtr;
 }
 
 /***************************************************************
@@ -807,7 +807,7 @@ int sqMIDIOpenPort(int portNum, int readSemaIndex, int interfaceClockRate) {
       port->name[MAXPNAMELEN] = 0;
       DBGPRINTF(TEXT("Opening input interface %s\n"), caps.szPname);
       err = midiInOpen(&handle, portNum - midiOutNumDevices,
-                       (DWORD)midiInCallback, (DWORD)port, CALLBACK_FUNCTION);
+                       (DWORD_PTR)midiInCallback, (DWORD_PTR)port, CALLBACK_FUNCTION);
       if(err)
         { /* fail if we can't open a particular input device */
 #ifndef NO_WARNINGS
@@ -999,7 +999,7 @@ int sqMIDIPortReadInto(int portNum, int count, char * bufferPtr) {
         }
     }
   /* compute the number of bytes actually transmitted */
-  bytesRead = (DWORD)dstPtr - (DWORD)bufferPtr;
+  bytesRead = (usqIntptr_t)dstPtr - (usqIntptr_t)bufferPtr;
   /* return zero if only the stamp is in the buffer */
 	return bytesRead == 4 ? 0 : bytesRead;
 }
@@ -1087,7 +1087,7 @@ int sqMIDIPortWriteFromAt(int portNum, int count, char * bufferPtr, int time) {
       port->pendingSize = cmdLen - count;
       srcPtr += count;
     }
-	return (DWORD) srcPtr - (DWORD) bufferPtr;
+	return (usqIntptr_t) srcPtr - (usqIntptr_t) bufferPtr;
 }
 
 /*************************************************************************************

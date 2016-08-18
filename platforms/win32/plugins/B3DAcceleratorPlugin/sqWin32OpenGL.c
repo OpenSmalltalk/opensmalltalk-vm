@@ -172,7 +172,7 @@ static HWND glCreateClientWindow(HWND parentWindow, int x, int y, int w, int h)
 static void printPFD(PIXELFORMATDESCRIPTOR *pfd, int lvl)
 {
   /* Print the pixel format for information purposes */
-  DPRINTF3D(lvl,(fp,"flags (%d): ", pfd->dwFlags));
+  DPRINTF3D(lvl,(fp,"flags (%lu): ", pfd->dwFlags));
   if(pfd->dwFlags & PFD_DRAW_TO_WINDOW) 
     DPRINTF3D(lvl, (fp, "PFD_DRAW_TO_WINDOW "));
   if(pfd->dwFlags & PFD_DRAW_TO_BITMAP) 
@@ -413,7 +413,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 	continue; /* need stencil bits */
 
     if(flags & B3D_STEREO)
-      if(pfd.dwFlags & PFD_STEREO == 0)
+      if((pfd.dwFlags & PFD_STEREO) == 0)
 	continue; /* need stereo caps */
 
     if((pfd.dwFlags & PFD_GENERIC_FORMAT) == 0) {
@@ -446,7 +446,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
       }
     }
   }
-  if((goodPFD.nSize == 0)) {
+  if(goodPFD.nSize == 0) {
     /* We didn't find an accellerated driver. */
     DPRINTF3D(3,(fp,"#### WARNING: No accelerated driver found; bailing out\n"));
     goto FAILED;

@@ -44,7 +44,7 @@ void *
 sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 {
 	char *hint, *address, *alloc;
-	unsigned long alignment;
+	usqIntptr_t alignment;
 	sqInt allocBytes;
 	SYSTEM_INFO sysInfo;
 
@@ -105,7 +105,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 #define SizeForRelease(bytes) 0
 
 static int
-address_space_used(char *address, unsigned long bytes)
+address_space_used(char *address, usqInt bytes)
 {
 	MEMORY_BASIC_INFORMATION info;
 	int addressSpaceUnused;
@@ -128,15 +128,15 @@ void *
 sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress, sqInt *allocatedSizePointer)
 {
 	char *address, *alloc;
-	long bytes, delta;
+	usqInt bytes, delta;
 
-	address = (char *)roundUpToPage((unsigned long)minAddress);
+	address = (char *)roundUpToPage((usqIntptr_t)minAddress);
 	bytes = roundUpToPage(size);
 	delta = max(pageSize,1024*1024);
 
 # define printProbes 0
 # define printMaps 0
-	while ((unsigned long)(address + bytes) > (unsigned long)address) {
+	while ((usqIntptr_t)(address + bytes) > (usqIntptr_t)address) {
 		if (printProbes && fIsConsole)
 			printf("probing [%p,%p)\n", address, address + bytes);
 		if (address_space_used(address, bytes)) {
@@ -160,12 +160,12 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 			DWORD lastError = GetLastError();
 #if 0 /* Can't report this without making the system unusable... */
 			sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
-						"Unable to VirtualAlloc committed memory at desired address (%d bytes requested at %p, above %p), Error: %ul",
+						"Unable to VirtualAlloc committed memory at desired address (%" PRIuSQINT " bytes requested at %p, above %p), Error: %lu",
 						bytes, address, minAddress, lastError);
 #else
 			if (fIsConsole)
 				fprintf(stderr,
-						"Unable to VirtualAlloc committed memory at desired address (%d bytes requested at %p, above %p), Error: %ul\n",
+						"Unable to VirtualAlloc committed memory at desired address (%" PRIuSQINT " bytes requested at %p, above %p), Error: %lu\n",
 						bytes, address, minAddress, lastError);
 #endif
 			return 0;
@@ -175,7 +175,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		 */
 		if (alloc && !VirtualFree(alloc, SizeForRelease(bytes), MEM_RELEASE))
 			sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
-						"Unable to VirtualFree committed memory (%d bytes requested), Error: %ul",
+						"Unable to VirtualFree committed memory (%" PRIuSQINT " bytes requested), Error: %ul",
 						bytes, GetLastError());
 		address += delta;
 	}
@@ -190,13 +190,13 @@ sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
 {
 	if (!VirtualFree(addr, SizeForRelease(sz), MEM_RELEASE))
 		sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Warning:"),
-					"Unable to VirtualFree committed memory (%d bytes requested), Error: %ul",
+					"Unable to VirtualFree committed memory (%" PRIuSQINT " bytes requested), Error: %ul",
 					sz, GetLastError());
 }
 
 # if COGVM
 void
-sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+sqMakeMemoryExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 {
 	DWORD previous;
 
@@ -208,7 +208,7 @@ sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 }
 
 void
-sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+sqMakeMemoryNotExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 {
 	DWORD previous;
 

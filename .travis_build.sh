@@ -1,3 +1,4 @@
+#!/bin/bash
 set -e
 
 travis_fold() {
@@ -21,38 +22,13 @@ if [[ "${APPVEYOR}" ]]; then
 
     # Appveyor's GCC is pretty new, patch the Makefiles and replace the tools to
     # make it work
-    for i in gcc ar dlltool dllwrap strip objcopy nm windres; do
-	OLD=$(which $i)
-	NEW=$(which i686-w64-mingw32-$i)
-	if [[ -z $OLD ]]; then
-	    OLD=/usr/bin/$i
-	    echo "No $i, setting..."
-	fi
-	echo "Setting $OLD as $NEW"
-	rm $OLD
-	ln -s $NEW $OLD
-    done
 
     echo
-    echo "Using gcc $(gcc --version)"
+    echo "Using gcc $(i686-w64-mingw32-gcc --version)"
     echo
     test -d /usr/i686-w64-mingw32/sys-root/mingw/lib || echo "No lib dir"
     test -d /usr/i686-w64-mingw32/sys-root/mingw/include || echo "No inc dir"
 
-    for i in build.win32x86/common/Makefile build.win32x86/common/Makefile.plugin; do
-	sed -i 's#-L/usr/lib/mingw#-L/usr/i686-w64-mingw32/sys-root/mingw/lib#g' $i
-	sed -i 's#INCLUDEPATH:=.*#INCLUDEPATH:= -I/usr/i686-w64-mingw32/sys-root/mingw/include#g' $i
-	# sed -i 's/-fno-builtin-fprintf/-fno-builtin-fprintf -fno-builtin-bzero/g' $i
-	sed -i 's/-lcrtdll/-lmsvcrt -lws2_32/g' $i
-	sed -i 's/-mno-accumulate-outgoing-args/-maccumulate-outgoing-args -mstack-arg-probe/g' $i
-	sed -i 's/-mno-cygwin//g' $i
-	sed -i 's/#EXPORT:=--export-all-symbols/EXPORT:=--export-all-symbols/g' $i
-	sed -i 's/EXPORT:=--export-dynamic/#EXPORT:=--export-dynamic/g' $i
-    done
-
-    sed -i 's/__BLOB_T_DEFINED/_BLOB_DEFINED/g' platforms/win32/plugins/SocketPlugin/winsock2.h
-
-    sed -i 's/|| defined(WIN32)//g' platforms/Cross/plugins/Mpeg3Plugin/libmpeg/changesForSqueak.c
 else
     PLATFORM="$(uname -s)"
 fi
@@ -60,8 +36,12 @@ fi
 [[ -z "${ARCH}" ]] && exit 2
 [[ -z "${FLAVOR}" ]] && exit 3
 
-if [[ "${ARCH}" == "linux32ARM" ]]; then
+if [[ "${ARCH}" == "linux32ARM"* ]]; then
     # we're in  chroot at this point
+    export LC_ALL=C
+    export LC_CTYPE=C
+    export LANG=C
+    export LANGUAGE=C
     TRAVIS_BUILD_DIR="$(pwd)"
 fi
 
@@ -88,7 +68,7 @@ case "$PLATFORM" in
     pushd "${build_directory}"
 
     travis_fold start build_vm "Building OpenSmalltalk VM..."
-    echo n | ./mvm
+    echo n | bash -e ./mvm
     travis_fold end build_vm
 
     # cat config.log
@@ -105,32 +85,24 @@ case "$PLATFORM" in
     pushd "${build_directory}"
 
     travis_fold start build_vm "Building OpenSmalltalk VM..."
-    make
+    bash -e ./mvm -f
     travis_fold end build_vm
 
     output_file="${output_file}.tar.gz"
-	if [ -e ./Cocoa*.app ]; then 
-    	tar czf "${output_file}" ./Cocoa*.app
-	elif [ -e ./Pharo*.app ]; then
-    	tar czf "${output_file}" ./Pharo*.app
-	else
-		echo "No artifacts to archive"
-		exit 1
-	fi
-		
+    tar czf "${output_file}" ./Cocoa*.app
     popd
     ;;
   "Windows")
     build_directory="./build.${ARCH}/${FLAVOR}/"
+    output_zip="${output_file}.zip"
 
     [[ ! -d "${build_directory}" ]] && exit 100
 
     pushd "${build_directory}"
     # remove bochs plugins
     sed -i 's/Bochs.* //g' plugins.ext
-	./mvm -f
-    output_file="${output_file}.zip"
-    zip -r "${output_file}" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
+    bash -e ./mvm -f || exit 1
+    zip -r "${output_zip}" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
     popd
     ;;
   *)
@@ -138,28 +110,3 @@ case "$PLATFORM" in
     exit 99
     ;;
 esac
-
-exitcode=$?
-
-if [ $exitcode -eq 0 ]; then
-    PR=${TRAVIS_PULL_REQUEST:-${APPVEYOR_PULL_REQUEST_NUMBER:-false}}
-    BR=${TRAVIS_BRANCH:-${APPVEYOR_REPO_BRANCH}}
-
-    if [[ $PR == "false" ]] && ( [[ "$BR" == "Cog" || "$BR" == "master" ]] ); then
-	echo "`cat .bintray.json | .git_filters/RevDateURL.smudge`" > .bintray.json
-	sed -i.bak 's/$Rev: \([0-9][0-9]*\) \$/\1/' .bintray.json
-	sed -i.bak 's/$Date: \(.*\) \$/\1/' .bintray.json
-	rm -f .bintray.json.bak
-
-	if [[ "${APPVEYOR}" ]]; then
-	    appveyor DownloadFile https://curl.haxx.se/ca/cacert.pem
-	    export SSL_CERT_FILE=cacert.pem
-	    export PATH="C:\\Ruby23\\bin:$PATH"
-	    export CMDSHELL="cmd /C "
-	fi
-	$CMDSHELL gem install dpl
-	$CMDSHELL dpl --provider=bintray --user=timfel --key=$BINTRAYAPIKEY --file=.bintray.json
-    fi
-fi
-
-exit $exitcode

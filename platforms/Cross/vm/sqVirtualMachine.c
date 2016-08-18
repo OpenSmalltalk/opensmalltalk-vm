@@ -90,18 +90,18 @@ sqInt  floatObjectOf(double aFloat);
 double floatValueOf(sqInt oop);
 sqInt  integerObjectOf(sqInt value);
 sqInt  integerValueOf(sqInt oop);
-sqInt  positive32BitIntegerFor(sqInt integerValue);
+sqInt  positive32BitIntegerFor(unsigned int integerValue);
 usqInt  positive32BitValueOf(sqInt oop);
 sqInt  signed32BitIntegerFor(sqInt integerValue);
 int    signed32BitValueOf(sqInt oop);
-sqInt  positive64BitIntegerFor(sqLong integerValue);
+sqInt  positive64BitIntegerFor(usqLong integerValue);
 usqLong positive64BitValueOf(sqInt oop);
 sqInt  signed64BitIntegerFor(sqLong integerValue);
 sqLong signed64BitValueOf(sqInt oop);
-long  signedMachineIntegerValueOf(sqInt);
-long  stackSignedMachineIntegerValue(sqInt);
-unsigned long  positiveMachineIntegerValueOf(sqInt);
-unsigned long  stackPositiveMachineIntegerValue(sqInt);
+sqIntptr_t   signedMachineIntegerValueOf(sqInt);
+sqIntptr_t   stackSignedMachineIntegerValue(sqInt);
+usqIntptr_t  positiveMachineIntegerValueOf(sqInt);
+usqIntptr_t  stackPositiveMachineIntegerValue(sqInt);
 
 /* InterpreterProxy methodsFor: 'special objects' */
 sqInt characterTable(void);
@@ -557,7 +557,7 @@ pushOutputFile(char *filenameOrStdioIndex)
 		fprintf(stderr,"output file stack is full.\n");
 		return;
 	}
-	switch ((unsigned long)filenameOrStdioIndex) {
+	switch ((usqInt)filenameOrStdioIndex) {
 	case STDOUT_FILENO: output = stdout; break;
 	case STDERR_FILENO: output = stderr; break;
 	default:

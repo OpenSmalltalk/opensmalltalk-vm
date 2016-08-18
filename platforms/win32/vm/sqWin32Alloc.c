@@ -176,7 +176,7 @@ int sqMemoryExtraBytesLeft(int includingSwap) {
 
 # if COGVM
 void
-sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+sqMakeMemoryExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 {
 	DWORD previous;
 
@@ -188,7 +188,7 @@ sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 }
 
 void
-sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+sqMakeMemoryNotExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 {
 	DWORD previous;
 

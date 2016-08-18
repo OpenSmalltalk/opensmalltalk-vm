@@ -78,6 +78,10 @@ WindowPtr getSTWindow(void) {
     return  windowHandleFromIndex(1);
 }
 
+double ioScreenScaleFactor(void) {
+    return 1.0;
+}
+
 /*
  * Brad's Mac-ification of Andreas' window sizing prims.
  */
@@ -870,6 +874,11 @@ ioHasDisplayDepth(sqInt depth) {
 		return true;
 	}
 	return false;
+}
+
+double
+ioSceenScaleFactor(void) {
+    return 1.0;
 }
 
 sqInt

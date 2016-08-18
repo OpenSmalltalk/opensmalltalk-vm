@@ -126,7 +126,7 @@ typedef struct VirtualMachine {
 	double (*floatValueOf)(sqInt oop);
 	sqInt  (*integerObjectOf)(sqInt value);
 	sqInt  (*integerValueOf)(sqInt oop);
-	sqInt  (*positive32BitIntegerFor)(sqInt integerValue);
+	sqInt  (*positive32BitIntegerFor)(unsigned int integerValue);
 	usqInt (*positive32BitValueOf)(sqInt oop);
 
 	/* InterpreterProxy methodsFor: 'special objects' */
@@ -227,7 +227,7 @@ typedef struct VirtualMachine {
 #   endif
 #  endif
 
-	sqInt  (*positive64BitIntegerFor)(sqLong integerValue);
+	sqInt  (*positive64BitIntegerFor)(usqLong integerValue);
 	usqLong(*positive64BitValueOf)(sqInt oop);
 	sqInt  (*signed64BitIntegerFor)(sqLong integerValue);
 	sqLong (*signed64BitValueOf)(sqInt oop);
@@ -318,10 +318,10 @@ typedef struct VirtualMachine {
 /* VMCallbackContext opaque type avoids all including setjmp.h & vmCallback.h */
   sqInt (*sendInvokeCallbackContext)(vmccp);
   sqInt (*returnAsThroughCallbackContext)(int, vmccp, sqInt);
-  long  (*signedMachineIntegerValueOf)(sqInt);
-  long  (*stackSignedMachineIntegerValue)(sqInt);
-  unsigned long  (*positiveMachineIntegerValueOf)(sqInt);
-  unsigned long  (*stackPositiveMachineIntegerValue)(sqInt);
+  sqIntptr_t  (*signedMachineIntegerValueOf)(sqInt);
+  sqIntptr_t  (*stackSignedMachineIntegerValue)(sqInt);
+  usqIntptr_t (*positiveMachineIntegerValueOf)(sqInt);
+  usqIntptr_t (*stackPositiveMachineIntegerValue)(sqInt);
   sqInt	 (*getInterruptPending)(void);
   char  *(*cStringOrNullFor)(sqInt);
   void  *(*startOfAlienData)(sqInt);

@@ -15,10 +15,10 @@
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -27,7 +27,7 @@
  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
- 
+
  The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
  "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
  and its contributors", in the same place and form as other third-party acknowledgments. 
@@ -264,7 +264,7 @@ static char *getVersionInfo(int verbose);
 		gMaxHeapSize = (usqInt) [self strtobkm: peek];
 		return 2;
 	}
-    
+
     if ([argData isEqualToString: @"-NSDocumentRevisionsDebugMode"]) {
         return 2;
     }
@@ -347,21 +347,22 @@ static char *getVersionInfo(int verbose);
 
 
 - (void) parseArgs: (NSArray *) args {
+	numVMArgs = 0;
     commandLineArguments = [args copyWithZone:null];
     argsArguments = [[NSMutableArray alloc] initWithCapacity: [args count]];
-    
+
     if ([args count] < 2)
         return;
     NSMutableArray *revisedArgs = AUTORELEASEOBJ([args mutableCopyWithZone: NULL]);
     [revisedArgs removeObjectAtIndex:0];
-    
+
     NSUInteger i,result;
     BOOL optionsCompleted = NO;
     for (i=0; i<[revisedArgs count]; i++) {
         NSString *argData = revisedArgs[i];
-        
+
         NSString *peek = (i == ([revisedArgs count] - 1)) ? @"" : revisedArgs[i+1];
-        
+
         if ([argData isEqualToString: @"-NSDocumentRevisionsDebugMode"]) {
             //This is an Xcode debug option, skip it for us
             i++;
@@ -373,7 +374,7 @@ static char *getVersionInfo(int verbose);
         }
         if (!optionsCompleted && ![[argData substringToIndex: 1] isEqualToString: @"-"]) {
             optionsCompleted = YES;
-            
+
             //guessing first parameter as image name
             if ([argData compare: @"--"] != NSOrderedSame) {
                 [self setImageNamePathIfItWasReadable:argData];
@@ -392,9 +393,13 @@ static char *getVersionInfo(int verbose);
             }
             if (result == 2)
                 i++;
+			numVMArgs = i + 1;
         }
-        
     }
+#if 0 // debugging
+	printf("self.commandLineArguments count = %d numVMArgs = %d\n",
+			(int)[self.commandLineArguments count], (int)numVMArgs);
+#endif
 }
 
 - (long long) strtobkm: (const char *) str {

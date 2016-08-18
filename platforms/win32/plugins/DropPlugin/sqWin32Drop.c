@@ -12,7 +12,18 @@
 #include <ole2.h>
 #include "sq.h"
 
+/* Import from VM */
 extern struct VirtualMachine *interpreterProxy;
+
+/* Import from generated plugin AioPlugin/AioPlugin.c or FilePlugin/FilePlugin.c or Win32OSProcessPlugin/Win32OSProcessPlugin.c
+   KNOWN LIMITATION: one and only one of these plugin should be internal... */
+usqInt fileRecordSize(void);
+void * fileValueOf(sqInt objectPointer);
+
+/* Import from FilePlugin/sqWin32FilePrims.c */
+sqInt sqFileOpen(void *f, char* fileNameIndex, sqInt fileNameSize, sqInt writeFlag);
+
+/* Import from sqWin32Window.c */
 extern HWND stWindow;
 
 #if 0
@@ -294,7 +305,7 @@ void signalDropEnter(POINTL pt)
   winPt.x = pt.x;
   winPt.y = pt.y;
   ScreenToClient(stWindow, &winPt);
-  recordDragDropEvent(stWindow, DragEnter, winPt.x, winPt.y, 0);
+  recordDragDropEvent(stWindow, SQDragEnter, winPt.x, winPt.y, 0);
 }
 
 STDMETHODIMP DropTarget_DragEnter(DropTarget *dt, 
@@ -453,14 +464,14 @@ STDMETHODIMP DropTarget_DragOver(DropTarget *dt,
     winPt.x = pt.x;
     winPt.y = pt.y;
     ScreenToClient(stWindow, &winPt);
-    recordDragDropEvent(stWindow, DragMove, winPt.x, winPt.y, 0);
+    recordDragDropEvent(stWindow, SQDragMove, winPt.x, winPt.y, 0);
   }
   return S_OK;
 }
 
 STDMETHODIMP DropTarget_DragLeave(DropTarget *dt) {
   DPRINTF(("DropTarget_DragLeave\n"));
-  recordDragDropEvent(stWindow, DragLeave, 0, 0, 0);
+  recordDragDropEvent(stWindow, SQDragLeave, 0, 0, 0);
   return S_OK;
 }
 
@@ -470,7 +481,7 @@ void signalDrop(POINTL pt)
   winPt.x = pt.x;
   winPt.y = pt.y;
   ScreenToClient(stWindow, &winPt);
-  recordDragDropEvent(stWindow, DragDrop, winPt.x, winPt.y, numDropFiles);
+  recordDragDropEvent(stWindow, SQDragDrop, winPt.x, winPt.y, numDropFiles);
 }
 
 STDMETHODIMP DropTarget_Drop(DropTarget *dt,
@@ -726,7 +737,7 @@ int dropLaunchFile(char *fileName) {
   dropFiles = calloc(1, sizeof(void*));
   dropFiles[0] = _strdup(fileName);
 
-  recordDragDropEvent(stWindow, DragDrop, 0, 0, numDropFiles);
+  recordDragDropEvent(stWindow, SQDragDrop, 0, 0, numDropFiles);
   return 1;
 }
 
@@ -752,7 +763,7 @@ int dropRequestFileHandle(int dropIndex) {
   char *dropName = dropRequestFileName(dropIndex);
   if(!dropName)
     return interpreterProxy->nilObject();
-  fileHandle = instantiateClassindexableSize(classByteArray(), fileRecordSize());
+  fileHandle = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), fileRecordSize());
   wasBrowserMode = fBrowserMode;
   fBrowserMode = false;
   sqFileOpen(fileValueOf(fileHandle),(sqInt)dropName, strlen(dropName), 0);

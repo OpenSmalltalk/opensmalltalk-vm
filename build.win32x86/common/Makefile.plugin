@@ -1,9 +1,6 @@
 #############################################################################
 # Generic Makefile for plugins
 #############################################################################
-AR:= ar rc
-CP:= cp
-RM:= rm
 
 # The following are the four key locations (set via invocation):
 # PLUGINSRCDIR: Where is the root of the src plugins source tree?
@@ -27,9 +24,12 @@ BUILDDIR:=	$(BUILD)/$(LIBNAME)
 CROSSVMDIR:=$(PLATDIR)/Cross/vm
 WIN32VMDIR:=$(PLATDIR)/win32/vm
 
+#############################################################################
+# DirectX definitions - NOT USED - superseded by mingw provided files
+#
 DXDIR:=     $(PLATDIR)/win32/third-party/dx9sdk/Include
 
-INCLUDES:= -I. -I$(DXDIR) \
+INCLUDES:= -I. \
 			-I$(VMSRCDIR) -I$(WIN32VMDIR) -I$(CROSSVMDIR) \
 			-I$(MAKERDIR) -I$(WIN32DIR) -I$(CROSSDIR)
 
@@ -43,34 +43,34 @@ MAKERSRC:= $(wildcard $(MAKERDIR)/*.c)
 LIBSRC:= $(notdir $(MAKERSRC) $(WIN32SRC) $(CROSSSRC))
 
 #############################################################################
-# C compiler settings (gcc-3.4.4 cygwin 19.24)
+# C compiler settings (gcc 4.x)
 #
-NDEBUG:=-DNDEBUG
-# Set minimum version to WindowsXP (see /cygwin/usr/include//w32api/w32api.h)
-WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
-INCLUDEPATH:= -isystem/usr/include/mingw -I/usr/include/w32api
-CFLAGS:= $(INCLUDEPATH) -msse2 -ggdb2 -mwindows -mdll -mno-cygwin -mwin32 \
-	-mno-rtd -mms-bitfields -mno-accumulate-outgoing-args $(OFLAGS)
-DEFS:=	$(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
-		-DNO_SERVICE -DNO_STD_FILE_SUPPORT \
-		$(NDEBUG) -DLSB_FIRST -DVM_NAME=\"$(VM)\" -DX86 $(XDEFS)
-# define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
+include ../common/Makefile.tools
+
+# overrides of default toolchain settings
+
 ifeq ($(CONFIGURATION),product)
-OFLAGS:= -D_MT -O1 -march=pentium4 -momit-leaf-frame-pointer -funroll-loops \
-		-fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
+OFLAGS:= -O1 -march=pentium4 -momit-leaf-frame-pointer -funroll-loops 
 NDEBUG:=-DNDEBUG
 DEBUGVM=0
 else ifeq ($(CONFIGURATION),assert)
-OFLAGS:= -D_MT -O1 -march=pentium4 -fno-omit-frame-pointer \
-		-fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
+OFLAGS:= -O1 -march=pentium4 -fno-omit-frame-pointer
 DEBUGVM=0
 NDEBUG:=
 else
-OFLAGS:= -D_MT -march=pentium4 \
-		-fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
+OFLAGS:= -march=pentium4 
 DEBUGVM=1
 NDEBUG:=
 endif
+
+XDEFS:=	
+DEFS:=	$(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
+		-DNO_SERVICE -DNO_STD_FILE_SUPPORT \
+		$(NDEBUG) -DLSB_FIRST -DVM_NAME=\"$(VM)\" -DX86 $(XDEFS)
+
+	
+CFLAGS:= -msse2 -ggdb2 -m32 -mdll \
+	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS)
 
 
 #############################################################################
@@ -79,10 +79,8 @@ endif
 # Note: By default DLLTOOL/DLLWRAP do the work for everything related to plugins
 # but if LINK_WITH_GCC we use gcc and if LINK_WITH_GPP we use g++.
 #
-DLLTOOL:=	dlltool
-DLLWRAP:=	dllwrap -mno-cygwin
-#OPTSTRIP:=	strip # for production
 OPTSTRIP:=	echo not doing strip
+
 
 .SUFFIXES:	.c .cpp .o .s .rc .res .dep
 
@@ -141,16 +139,16 @@ $(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ)
 		$(DLLTOOLEXTRAS) \
 		$(LIBOBJ)
 ifneq ($(LINK_WITH_GCC),)
-	gcc -shared \
-		-mno-cygwin \
+	$(CC) -shared \
+		-m32 \
 		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
 		--entry _DllMain@12 \
 		$(GCCLINKEXTRAS) \
 		$(LIBOBJ) $(EXTRALIBS)
 else ifneq ($(LINK_WITH_GPP),)
-	g++ -shared \
-		-mno-cygwin \
+	$(CXX) -shared \
+		-m32 \
 		-def $(OBJDIR)/$(LIBNAME).def \
 		-o   $(VMDIR)/$(LIBNAME).dll \
 		--entry _DllMain@12 \

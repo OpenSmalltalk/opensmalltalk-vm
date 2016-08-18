@@ -57,6 +57,9 @@ int recBufferAvailable = 0;
 int recTerminate = 0;
 int recSemaphore = -1;
 
+sqInt snd_StopPlaying(void);
+sqInt snd_StopRecording(void);
+
 /* module initialization/shutdown */
 sqInt soundInit(void) {
   hRecEvent = CreateEvent( NULL, FALSE, FALSE, NULL );
@@ -70,6 +73,7 @@ sqInt soundShutdown(void) {
   snd_StopRecording();
   CloseHandle(hPlayEvent);
   CloseHandle(hRecEvent);
+  return 1;
 }
 
 sqInt snd_StopPlaying(void) {
@@ -110,7 +114,7 @@ DWORD WINAPI playCallback( LPVOID ignored ) {
 	return 0; /* done playing */
       }
       playBufferAvailable = 1;
-      playBufferIndex = ++playBufferIndex & 1;
+      playBufferIndex = playBufferIndex ^ 1;
       synchronizedSignalSemaphoreWithIndex(playSemaphore);
     }
   }
@@ -121,7 +125,7 @@ DWORD WINAPI recCallback( LPVOID ignored ) {
     if(WaitForSingleObject(hRecEvent, INFINITE) == WAIT_OBJECT_0) {
       if(recTerminate) return 0; /* done playing */
       recBufferAvailable = 1;
-      recBufferIndex = ++recBufferIndex & 1;
+      recBufferIndex = recBufferIndex ^ 1;
       synchronizedSignalSemaphoreWithIndex(recSemaphore);
     }
   }
@@ -515,7 +519,7 @@ sqInt snd_RecordSamplesIntoAtLength(void* buf, sqInt startSliceIndex,
     return 0;
   }
 
-  dstPtr = (char*)(buf + startSliceIndex * bytesPerSlice);
+  dstPtr = (char*)(buf) + startSliceIndex * bytesPerSlice;
   memcpy(dstPtr, srcPtr+recBufferPosition, bytesCopied);
   recBufferPosition = (recBufferPosition + bytesCopied) % recBufferSize;
   if(recBufferPosition == 0) {

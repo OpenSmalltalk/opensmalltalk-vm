@@ -1,17 +1,19 @@
 /* SoundCodec Plugin */
 /* prototypes */
+#include "sqMemoryAccess.h"
+
 void gsmEncode(
-	long state, long frameCount,
-	long src, long srcIndex, long srcSize,
-	long dst, long dstIndex, long dstSize,
-	long *srcDelta, long *dstDelta);
+	usqIntptr_t state, sqInt frameCount,
+	usqIntptr_t src, sqInt srcIndex, sqInt srcSize,
+	usqIntptr_t dst, sqInt dstIndex, sqInt dstSize,
+	sqInt *srcDelta, sqInt *dstDelta);
 	
 void gsmDecode(
-	long state, long frameCount,
-	long src, long srcIndex, long srcSize,
-	long dst, long dstIndex, long dstSize,
-	long *srcDelta, long *dstDelta);
+	usqIntptr_t state, sqInt frameCount,
+	usqIntptr_t src, sqInt srcIndex, sqInt srcSize,
+	usqIntptr_t dst, sqInt dstIndex, sqInt dstSize,
+	sqInt *srcDelta, sqInt *dstDelta);
 	
-void gsmInitState(long state);
+void gsmInitState(usqIntptr_t state);
 
-long gsmStateBytes(void);
+sqInt gsmStateBytes(void);

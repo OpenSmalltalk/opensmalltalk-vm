@@ -20,11 +20,13 @@
  ****************************************************************************/
 
 #include "sqMemoryAccess.h" 
+#include "sqAssert.h" /* for error */
 
 #include <stdlib.h>
 #include <string.h> /* for memset */
+#include <stdio.h> /* for perror */
 
-#define ulong unsigned long
+#define ulong usqIntptr_t   /* enough for holding a pointer - unsigned long does not fit in LLP64 */
 #define uchar unsigned char
 
 #if SQ_IMAGE32

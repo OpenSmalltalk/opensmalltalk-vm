@@ -12,19 +12,14 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
-#ifdef __MINGW32__
-# define _STRUCT_NAME(foo) foo
-# include <basetyps.h>
-#endif
 #include <limits.h>
-#include <windef.h>
-#include <winbase.h> /* damn right 2 (must preceed wincon.h in later mingw vers) */
-#include <wincon.h> /* damn right */
+#include <windows.h>
 
 #define ForCOGMTVMImplementation 1
 
 #include "sq.h"
 #include "sqAssert.h"
+#include "sqWin32.h" /* for printLastError */
 
 /*
  * A note on thread handles and Ids.  The only globally shared and globally
@@ -243,7 +238,7 @@ ioInitThreads()
 
 /* this for testing crash dumps */
 static sqInt
-indirect(long p)
+indirect(sqIntptr_t p)
 {
 	if ((p & 2))
 		error("crashInThisOrAnotherThread");

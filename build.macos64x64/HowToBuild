@@ -61,15 +61,10 @@ for Newspeak Stack VMs using the Spur object representation.  Build as desired.
 
 Checking out sources to build out-of-the-box
 --------------------------------------------
-Check-out at least the relevant platform sources, vm and plugin sources,
-processor sources and the relevant build directories
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/platforms
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/processors
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/{spursrc,src} etc
-		(see section "VM source directories" in the root README)
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/sources
-		(this is needed only to install Smalltalk source files)
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/build.macos64x64
+Check-out the repository from github:
+	git clone http://www.github.com/OpenSmalltalk/opensmalltalk-vm oscogvm
+	cd ./oscogvm
+	more README.md
 
 
 Building out of the box
@@ -85,6 +80,12 @@ you have installed a suitable certificate via Keychain Access and that the
 signing identity is in the SIGNING_IDENTITY environment variable, e.g. in the
 author's .profile is the line
 export SIGNING_IDENTITY="Developer ID Application: Eliot Miranda"
+
+1a. If you're doing a build in a headless context, e.g. logged in via ssh, then
+codesign may fail as it cannot ask for permission.  In this case you'll need to
+manually grant permission via
+	security -v unlock-keychain -p <PASSWORD> /Users/ME/Library/Keychains/login.keychain
+where PASSWORD and ME are replaced by suitable values.
 
 2. cd to the VM configuration of your choice and run the mvm script, e.g.
 	cd buiild.macos64x64/squeak.cog.spur
@@ -158,15 +159,20 @@ The files in build.macos64x64/common are
 
 Building the VM Simulator Support Libraries
 -------------------------------------------
-As of this writing there are three processors with three sets of support
-libraries.  If you want to build these they are in
-	build.macos64x64/{bochsx86,bochsx64,gdbarm32}
-In each directory there is a conf.COG script.  Cd to the directory, run the
-script, and in the case of the bochs directories also run makeem.  e.g.
-	$ cd build.macos64x64/bochsx86
-	$ ./conf.COG
-	$ ../../processors/IA32/bochs/makeem
-Then cd to the VM build directoruy of your choice and build.
+If you want to get the Cog VM simulator working you'll need to build one or more
+of the processor simulator plugins, each of which has support libraries that
+must be built:
+	Processor   Plugin           Support Library
+	x86         BochsIA32Plugin  build.linux32x86/bochsx86
+	x86_64/x64  BochsX64Plugin   build.linux32x86/bochsx64
+	ARMv5       GdbARMPlugin     build.linux32x86/gdbarm32
+cd to the relevant directories; run conf.COG and then the build script, e.g.
+  $ cd build.linux32x86/bochsx86
+  $ ./conf.COG
+  $ ./makeem
+
+Then when Squeak VMs are built they will include the plugin(s) for which support
+libraries have been provided.
 
 
 Using Different Compilers

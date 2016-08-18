@@ -404,7 +404,7 @@ sqImageFile sqImageFileOpen(char *fileName, char *mode)
   if(h == INVALID_HANDLE_VALUE)
     return 0;
  
-  return (DWORD)h+1;
+  return (usqIntptr_t)h+1;
 }
 
 squeakFileOffsetType sqImageFilePosition(sqImageFile h)

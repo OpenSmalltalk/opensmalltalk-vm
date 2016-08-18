@@ -45,6 +45,7 @@ default:	$(APP)
 
 include ../common/Makefile.vm
 include ../common/Makefile.extra
+include ../common/Makefile.sources
 
 cleanall: cleanapp cleanastapp cleandbgapp cleanallvm
 
@@ -78,7 +79,19 @@ SOURCES:=./$(SOURCEFILE)
 endif
 ifneq ($(APPSOURCE),)
 SOURCES:=$(SOURCES) $(APP)/Contents/Resources/$(APPSOURCE)
+$(APP)/Contents/Resources/$(APPSOURCE): $(SOURCESDIR)/$(APPSOURCE)
+	test -f $@ || ln $(SOURCESDIR)/$(notdir $@) $@
 endif
+
+SED_COMMAND_INFO_PLIST:=\
+	s!$$(VERSION)!$(shell ./getversion VERSION_TAG)!g;\
+	s!$$(VERSION_NUMBER)!$(shell ./getversion VERSION_NUMBER)!g;\
+	s!$$(VERSION_TAG)!$(shell ./getversion VERSION_TAG)!g;\
+	s!$$(VIRTUAL_MACHINE_NICKNAME)!$(shell ./getversion VIRTUAL_MACHINE_NICKNAME)!g;\
+	s!$$(VM_NICKNAME)!$(shell ./getversion VM_NICKNAME)!g;\
+	s!$$(VM_MAJOR)!$(shell ./getversion VM_MAJOR)!g;\
+	s!$$(VM_MINOR)!$(shell ./getversion VM_MINOR)!g;\
+	#
 
 
 $(APP):	cleanbundles $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS) \
@@ -114,11 +127,8 @@ $(APP)/Contents/MacOS/Plugins/%.dylib: $(BLDDIR)/vm/%.dylib
 
 $(VMPLIST): $(OSXDIR)/$(SYSTEM)-Info.plist getversion
 	@mkdir -p $(APP)/Contents
-	sed "s/\$$(VERSION)/`./getversion VERSION_TAG`/" $< | \
-	sed "s/\$$(VERSION_NUMBER)/`./getversion VERSION_NUMBER`/" | \
-	sed "s/\$$(VERSION_TAG)/`./getversion VERSION_TAG`/" | \
-	sed "s/\$$(VIRTUAL_MACHINE_NICKNAME)/`./getversion VIRTUAL_MACHINE_NICKNAME`/" | \
-	sed "s/\$$(VM_NICKNAME)/`./getversion VM_NICKNAME`/" > $@
+	cp -p $< $@
+	sed -i '' '$(SED_COMMAND_INFO_PLIST)' $@
 
 $(VMLOCALIZATION): $(OSXCOMMONDIR)/English.lproj/$(SYSTEM)-Localizable.strings
 	@mkdir -p $(dir $@)
@@ -168,4 +178,5 @@ print-app-settings:
 	@echo SIGNING_IDENTITY=$(SIGNING_IDENTITY)
 	@echo SOURCEFILE=$(SOURCEFILE)
 	@echo APPSOURCE=$(APPSOURCE)
+	@echo SOURCES=$(SOURCES)
 	@echo -----------------------------------------------------

@@ -1,0 +1,10 @@
+#!/bin/sh
+if [ "$1" = rm -o "$1" = mk ]; then
+	rm -f SqueakV50.sources
+fi
+if [ "$1" = mk ]; then
+	ln ../../../sources/SqueakV50.sources .
+fi
+if [ \( "$1" != rm \) -a \( "$1" != mk \) ]; then
+	echo usage: $0 'mk|rm'
+fi

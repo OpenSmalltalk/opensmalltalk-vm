@@ -677,7 +677,7 @@ static int sendSelection(XSelectionRequestEvent *requestEv, int isMultiple)
    * the case of Xdnd, XSelectionEvent is answered asynchronously
    * after the image prepares data because target (data type) is
    * informed only when the SelectionRequest is sent.
-   * dndOutSelectionRequest() sends a DragRequest event to the image
+   * dndOutSelectionRequest() sends a SQDragRequest event to the image
    * for that.  Finally, the image calls
    * HandMorph>>primitiveDndOutSend: to send the SelectionRequest.
    */
@@ -4564,7 +4564,6 @@ void initWindow(char *displayName)
     dndInitialise();
 }
 
-
 void setWindowSize(void)
 {
   int width, height, maxWidth, maxHeight;
@@ -4932,6 +4931,11 @@ static sqInt display_ioScreenDepth(void)
   return d;
 }
 
+
+static double display_ioScreenScaleFactor(void)
+{
+  return 1.0;
+}
 
 /* returns the size of the Squeak window */
 static sqInt display_ioScreenSize(void)
@@ -6784,7 +6788,13 @@ int openXDisplay(void)
       initClipboard();
       initWindow(displayName);
       initPixmap();
-      if (inBrowser()) /* if so we will be reparented and mapped by plugin */
+      if (!inBrowser())
+	{
+	  setWindowSize();
+	  XMapWindow(stDisplay, stParent);
+	  XMapWindow(stDisplay, stWindow);
+	}
+      else /* if in browser we will be reparented and mapped by plugin */
 	{
 	  /* tell browser our window */
 #        if defined(DEBUG_BROWSER)
@@ -6803,16 +6813,6 @@ int openXDisplay(void)
       aioHandle(stXfd, xHandler, AIO_RX);
     }
   return 0;
-}
-
-static void
-mapXDisplay(void)
-{
-  if (!inBrowser()) {
-    setWindowSize();
-    XMapWindow(stDisplay, stParent);
-    XMapWindow(stDisplay, stWindow);
-  }
 }
 
 int forgetXDisplay(void)
@@ -7276,7 +7276,6 @@ static void display_winOpen(int argc, char *dropFiles[])
   if (launched)
     exit(0);
 
-  mapXDisplay();
 }
 
 

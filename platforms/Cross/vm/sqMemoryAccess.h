@@ -18,6 +18,14 @@
 #include "config.h"
 #include "interp.h"
 
+#ifndef SIZEOF_LONG
+#  if LLP64
+#    define SIZEOF_LONG 4
+#  else
+#    define SIZEOF_LONG SIZEOF_VOID_P /* default is sizeof(long)==sizeof(void *) */
+#  endif
+#endif
+
 #if (SQ_VI_BYTES_PER_WORD == 4)
 # define SQ_IMAGE32 1
 #else
@@ -38,24 +46,44 @@
 # error host is neither 32- nor 64-bit?
 #endif
 
+/* sqInt is a signed integer with size adequate for holding an Object Oriented Pointer (or immediate value)
+  - that is 32bits long on a 32bits image or 64bits long on a 64bits image
+  we could use C99 int32_t and int64_t once retiring legacy compiler support this time has not yet come
+  usqInt is the unsigned flavour
+  SQABS is a macro for taking absolute value of an sqInt */
 #if defined(SQ_IMAGE32)
   typedef int		sqInt;
   typedef unsigned int	usqInt;
+#define PRIdSQINT "d"
+#define PRIuSQINT "u"
+#define PRIxSQINT "x"
+#define PRIXSQINT "X"
 # define SQABS abs
-#elif defined(SQ_HOST64)
+#elif defined(SQ_HOST64) && (SIZEOF_LONG == 8)
   typedef long		sqInt;
   typedef unsigned long	usqInt;
+#define PRIdSQINT "ld"
+#define PRIuSQINT "lu"
+#define PRIxSQINT "lx"
+#define PRIXSQINT "lX"
 # define SQABS labs
 #elif (SIZEOF_LONG_LONG != 8)
 #   error long long integers are not 64-bits wide?
 #else
   typedef long long		sqInt;
   typedef unsigned long long	usqInt;
+#define PRIdSQINT "lld"
+#define PRIuSQINT "llu"
+#define PRIxSQINT "llx"
+#define PRIXSQINT "llX"
 # define SQABS llabs
 #endif
 
+/* sqLong is a signed integer with at least 64bits on both 32 and 64 bits images
+   usqLong is the unsigned flavour
+   SQLABS is a macro for taking absolute value of a sqLong */
 #if !defined(sqLong)
-#  if SIZEOF_VOID_P == 8
+#  if SIZEOF_LONG == 8
 #     define sqLong long
 #     define usqLong unsigned long
 #     define SQLABS labs
@@ -69,6 +97,26 @@
 #     define SQLABS llabs
 #  endif
 #endif /* !defined(sqLong) */
+
+/* sqIntptr_t is a signed integer with enough bits to hold a pointer
+   usqIntptr_t is the unsigned flavour
+   this is essentially C99 intptr_t and uintptr_t but we support legacy compilers
+   the C99 printf formats macros are also defined with SQ prefix */
+#if SIZEOF_LONG == SIZEOF_VOID_P
+typedef long sqIntptr_t;
+typedef unsigned long usqIntptr_t;
+#define PRIdSQPTR "ld"
+#define PRIuSQPTR "lu"
+#define PRIxSQPTR "lx"
+#define PRIXSQPTR "lX"
+#else
+typedef long long sqIntptr_t;
+typedef unsigned long long usqIntptr_t;
+#define PRIdSQPTR "lld"
+#define PRIuSQPTR "llu"
+#define PRIxSQPTR "llx"
+#define PRIXSQPTR "llX"
+#endif
 
 #if defined(SQ_HOST64) && defined(SQ_IMAGE32)
   extern char *sqMemoryBase;
@@ -170,28 +218,20 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _swapper;
 		((_swapper *)(&doubleVar))->i[1] = *((int *)(intPointerToFloat) + 0); \
 		((_swapper *)(&doubleVar))->i[0] = *((int *)(intPointerToFloat) + 1); \
 	} while (0)
-# elif defined(OBJECTS_32BIT_ALIGNED)
-/* this is to allow strict aliasing assumption in the optimizer */
-typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _aligner;
-/* word-based copy for machines with alignment restrictions */
-# define storeFloatAtPointerfrom(intPointerToFloat, doubleVar) do { \
-	*((int *)(intPointerToFloat) + 0) = ((_aligner *)(&doubleVar))->i[0]; \
-	*((int *)(intPointerToFloat) + 1) = ((_aligner *)(&doubleVar))->i[1]; \
-  } while (0)
-# define fetchFloatAtPointerinto(intPointerToFloat, doubleVar) do { \
-	((_aligner *)(&doubleVar))->i[0] = *((int *)(intPointerToFloat) + 0); \
-	((_aligner *)(&doubleVar))->i[1] = *((int *)(intPointerToFloat) + 1); \
-  } while (0)
-#else /* !(BigEndianFloats && !VMBIGENDIAN) && !OBJECTS_32BIT_ALIGNED */
-/* for machines that allow doubles to be on any word boundary */
-# define storeFloatAtPointerfrom(i, doubleVar) (*((double *) (i)) = (doubleVar))
-# define fetchFloatAtPointerinto(i, doubleVar) ((doubleVar) = *((double *) (i)))
+# else
+# define storeFloatAtPointerfrom(intPointerToFloat, doubleVar) \
+    memcpy((char *)intPointerToFloat,&doubleVar,sizeof(double));
+# define fetchFloatAtPointerinto(intPointerToFloat, doubleVar) \
+    memcpy(&doubleVar,(char *)intPointerToFloat,sizeof(double));
 #endif /* !(BigEndianFloats && !VMBIGENDIAN) && !OBJECTS_32BIT_ALIGNED */
+
+# define storeSingleFloatAtPointerfrom(intPointerToFloat, floatVar) \
+        do {float __f=floatVar; memcpy((char *)intPointerToFloat,&__f,sizeof(float));} while(0)
+# define fetchSingleFloatAtPointerinto(intPointerToFloat, floatVar) \
+        do {float __f; memcpy(&__f,(char *)intPointerToFloat,sizeof(float)); floatVar=__f;} while(0)
 
 #define storeFloatAtfrom(i, doubleVar)	storeFloatAtPointerfrom(pointerForOop(i), doubleVar)
 #define fetchFloatAtinto(i, doubleVar)	fetchFloatAtPointerinto(pointerForOop(i), doubleVar)
-# define storeSingleFloatAtPointerfrom(i, floatVar) (*((float *) (i)) = (float)(floatVar))
-# define fetchSingleFloatAtPointerinto(i, floatVar) ((floatVar) = *((float *) (i)))
 #define storeSingleFloatAtfrom(i, floatVar)	storeSingleFloatAtPointerfrom(pointerForOop(i), floatVar)
 #define fetchSingleFloatAtinto(i, floatVar)	fetchSingleFloatAtPointerinto(pointerForOop(i), floatVar)
 

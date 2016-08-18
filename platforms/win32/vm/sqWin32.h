@@ -1,11 +1,6 @@
 #ifndef SQ_WIN_32_H
 #define SQ_WIN_32_H
 
-/* The following is not exported by sq.h but we need it
-   since if we don't have CURRENT_VERSION around anymore
-   and we may want to check for the image version we need it */
-
-int readableFormat(int imageVersion);
 
 /*************************************************************/
 /* NOTE: For a list of possible definitions see file README. */
@@ -110,14 +105,34 @@ int readableFormat(int imageVersion);
 # define WIN32_OS_NAME (fWindows95 ? "95" : "NT")
 # define WIN32_PROCESSOR_NAME "IX86"
 
+# if defined(X86)
+#  undef X86
+# endif
+# define X86    i386
+
   /* Use console for warnings if possible */
 # ifndef UNICODE
 #	define warnPrintf printf
 # endif
 #endif /* _M_IX86 */
 
+#if defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_X64)
+  #define WIN32_NAME "Win32"
+  #define WIN32_OS_NAME "NT"
+  #define WIN32_PROCESSOR_NAME "X64"
+
+  /* Use console for warnings if possible */
+  #ifndef UNICODE
+    #define warnPrintf printf
+  #endif
+#endif /* _M_X64 & al */
+
 #endif /* (_WIN32_WCE) */
 
+/* due to weird include orders, make sure WIN32 is defined */
+# if !defined(WIN32)
+#  define WIN32 1
+# endif
 
 /* Experimental */
 #ifdef MINIMAL

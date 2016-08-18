@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 trap 'exit 2' HUP INT PIPE TERM
 if [ "$1" = -fork ]; then
 	shift

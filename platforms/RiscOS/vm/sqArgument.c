@@ -55,8 +55,7 @@ static int IsImage(char *name) {
  */
 FILE *fp;
 int magic;
-int byteSwapped(int);
-extern int readableFormat(int imageVersion);
+extern sqInt byteSwapped(sqInt);
 
 	fp = fopen(name,"rb");
 	if(!fp) return 0; /* could not open file */

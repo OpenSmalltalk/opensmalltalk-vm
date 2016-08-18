@@ -242,7 +242,13 @@ profileStateMachine(void *ignored)
 			pctype pc;
 			VMContext.ContextFlags = CONTEXT_CONTROL | THREAD_GET_CONTEXT;
 			GetThreadContext(VMThread, &VMContext);
+#if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
 			pc = VMContext.Eip;
+#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
+			pc = VMContext.Rip;
+#else
+#error "unknown architecture, cannot pick program counter"
+#endif
 			pc_buffer[pc_buffer_index] = pc;
 			if (++pc_buffer_index >= pc_buffer_size) {
 				pc_buffer_index = 0;
@@ -339,7 +345,7 @@ ioNewProfileSamplesInto(void *sampleBuffer)
 	memcpy(sampleBuffer,
 		   pc_buffer + pc_buffer_index,
 		   (pc_buffer_size - pc_buffer_index) * sizeof(pctype));
-	memcpy((pctype *)sampleBuffer + pc_buffer_index,
+	memcpy((pctype *)sampleBuffer + (pc_buffer_size - pc_buffer_index),
 		   pc_buffer,
 		   pc_buffer_index * sizeof(pctype));
 	return pc_buffer_size;

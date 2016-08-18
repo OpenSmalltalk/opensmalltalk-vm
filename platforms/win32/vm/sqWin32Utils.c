@@ -9,6 +9,7 @@
 *
 *****************************************************************************/
 #include <windows.h>
+#include <math.h>
 #include "sq.h"
 
 /*****************************************************************************
@@ -146,7 +147,7 @@ int __cdecl abortMessage(const TCHAR* fmt, ...)
 	wvsprintf(buf, fmt, args);
 	va_end(args);
 
-	MessageBox(NULL,buf,TEXT(VM_NAME"!"),MB_OK | MB_TASKMODAL | MB_SETFOREGROUND);
+	MessageBox(NULL,buf,TEXT(VM_NAME) TEXT("!"),MB_OK | MB_TASKMODAL | MB_SETFOREGROUND);
   free(buf);
   exit(-1);
 }
@@ -164,7 +165,7 @@ int __cdecl warnPrintf(const TCHAR *fmt, ...)
 	va_start(args, fmt);
 	wvsprintf(buf, fmt, args);
 	va_end(args);
-  MessageBox(stWindow, buf, TEXT(VM_NAME" Warning!"), MB_OK | MB_ICONSTOP | MB_SETFOREGROUND);
+  MessageBox(stWindow, buf, TEXT(VM_NAME) TEXT(" Warning!"), MB_OK | MB_ICONSTOP | MB_SETFOREGROUND);
   free(buf);
 }
 #endif
@@ -181,7 +182,7 @@ void printLastError(TCHAR *prefix)
   FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                 NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                 (LPTSTR) &lpMsgBuf, 0, NULL );
-  warnPrintf(TEXT("%s (%d) -- %s\n"), prefix, lastError, lpMsgBuf);
+  warnPrintf(TEXT("%s (%ld) -- %s\n"), prefix, lastError, lpMsgBuf);
   LocalFree( lpMsgBuf );
 }
 #endif
@@ -201,8 +202,23 @@ void vprintLastError(TCHAR *fmt, ...)
   FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                 NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                 (LPTSTR) &lpMsgBuf, 0, NULL );
-  warnPrintf(TEXT("%s (%d: %s)\n"), buf, lastError, lpMsgBuf);
+  warnPrintf(TEXT("%s (%ld: %s)\n"), buf, lastError, lpMsgBuf);
   LocalFree( lpMsgBuf );
   free(buf);
+}
+#endif
+
+
+/************************************************************************************/
+/* missing round function in MSVC before 2013                                       */
+/* http://stackoverflow.com/questions/485525/round-for-float-in-c/11074691#11074691 */
+/************************************************************************************/
+#if defined(_MSC_VER) && (_MSC_VER < 1800)
+double round(double x)
+{
+    double truncated,roundedFraction;
+    double fraction= modf(x, &truncated);
+    modf(2.0*fraction, &roundedFraction);
+    return truncated + roundedFraction;
 }
 #endif

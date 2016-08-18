@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 
 # Bochs x86 simulator for the BochsIA32Alien plugin.
 # this sets up the x86 compile for Cog on linux.  Disable as much inessential

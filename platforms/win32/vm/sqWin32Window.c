@@ -42,11 +42,17 @@
 /* General Squeak declarations and definitions                              */
 /****************************************************************************/
 
-int setInterruptPending(int);
+/* Import from DropPlugin/sqWin32Drop.c */
+void SetupDragAndDrop(void);
+int dropLaunchFile(char *fileName);
+
+/* Import from VM */
+void setInterruptPending(sqInt);
 sqInt forceInterruptCheck(void);
-int getInterruptKeycode(void);
-int setFullScreenFlag(int);
-extern int deferDisplayUpdates;
+sqInt getInterruptKeycode(void);
+void setFullScreenFlag(sqInt);
+sqInt getSavedWindowSize(void);
+extern sqInt deferDisplayUpdates;
 
 
 /*** Variables -- image and path names ***/
@@ -155,7 +161,7 @@ int recordMouseEvent(MSG *msg, UINT nrClicks);
 int recordKeyboardEvent(MSG *msg);
 int recordWindowEvent(int action, RECT *r);
 
-extern int byteSwapped(int);
+extern sqInt byteSwapped(sqInt);
 extern int convertToSqueakTime(SYSTEMTIME);
 int recordMouseDown(WPARAM, LPARAM);
 int recordModifierButtons();
@@ -303,7 +309,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
 		if(prefsEnableAltF4Quit() || GetKeyState(VK_SHIFT) < 0) {
 			TCHAR msg[1001], label[1001];
 			GetPrivateProfileString(U_GLOBAL, TEXT("QuitDialogMessage"), 
-						TEXT("Quit " VM_NAME " without saving?"), 
+						TEXT("Quit ") TEXT(VM_NAME) TEXT(" without saving?"), 
 						msg, 1000, squeakIniName);
 			GetPrivateProfileString(U_GLOBAL, TEXT("QuitDialogLabel"), 
 						TEXT(VM_NAME), 
@@ -508,7 +514,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     else return DefWindowProcW(hwnd,message,wParam,lParam);
   case WM_USER+42:
     /* system tray notification */
-    if(wParam != (UINT)hInstance) return 0;
+    if(wParam != (usqIntptr_t)hInstance) return 0;
     /* if right button, show system menu */
     /* if(lParam == WM_RBUTTONUP)
        TrackPrefsMenu(GetSystemMenu(stWindow,0)); */
@@ -591,6 +597,11 @@ void SetupPixmaps(void)
 { int i;
 
   logPal = malloc(sizeof(LOGPALETTE) + 255 * sizeof(PALETTEENTRY));
+  if (!logPal) {
+    printLastError(TEXT("malloc pallette"));
+    return;
+  }
+
   logPal->palVersion = 0x300;
   logPal->palNumEntries = 256;
 
@@ -752,6 +763,7 @@ sqInt ioSetWindowLabelOfSize(void* lblIndex, sqInt sz) {
   memcpy(windowTitle, (void*)lblIndex, sz);
   windowTitle[sz] = 0;
   SetWindowTitle();
+  return 1;
 }
 
 sqInt ioGetWindowWidth(void) {
@@ -895,7 +907,7 @@ void SetupWindows()
   if(!browserWindow)
     stWindow = CreateWindowEx(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
 			      windowClassName,
-			      TEXT(VM_NAME"!"),
+			      TEXT(VM_NAME) TEXT("!"),
 			      WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
 			      0,
 			      0,
@@ -910,7 +922,7 @@ void SetupWindows()
     fBrowserMode = 1;
     stWindow = CreateWindowEx(0,
 			      windowClassName,
-			      TEXT(VM_NAME"!"),
+			      TEXT(VM_NAME) TEXT("!"),
 			      WS_CHILD | WS_CLIPCHILDREN,
 			      0,
 			      0,
@@ -922,7 +934,7 @@ void SetupWindows()
 			      NULL);
   }
   /* Force Unicode WM_CHAR */
-  SetWindowLongPtrW(stWindow,GWLP_WNDPROC,(DWORD)MainWndProcW);
+  SetWindowLongPtrW(stWindow,GWLP_WNDPROC,(LONG_PTR)MainWndProcW);
 
 #ifndef NO_WHEEL_MOUSE
   g_WM_MOUSEWHEEL = RegisterWindowMessage( TEXT("MSWHEEL_ROLLMSG") ); /* RvL 1999-04-19 00:23 */
@@ -1122,7 +1134,9 @@ sqInputEvent *sqNextEventPut(void) {
 
 
 int recordMouseEvent(MSG *msg, UINT nrClicks) {
+#ifndef NO_DIRECTINPUT
   static DWORD firstEventTime = 0;
+#endif
   DWORD wParam;
   sqMouseEvent proto, *event;
   int alt, shift, ctrl, red, blue, yellow;
@@ -1167,7 +1181,7 @@ int recordMouseEvent(MSG *msg, UINT nrClicks) {
   proto.modifiers |= ctrl ? CtrlKeyBit : 0;
   proto.modifiers |= alt ? CommandKeyBit : 0;
   proto.nrClicks = nrClicks;
-  proto.windowIndex = msg->hwnd == stWindow ? 0 : (int) msg->hwnd;
+  proto.windowIndex = msg->hwnd == stWindow ? 0 : (sqIntptr_t) msg->hwnd;
 #ifndef NO_DIRECTINPUT
   /* get buffered input */
   if(msg->message == WM_MOUSEMOVE) {
@@ -1207,7 +1221,7 @@ int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles)
   evt->numFiles = numFiles;
 
   /* clean up reserved */
-  evt->windowIndex = wnd == stWindow ? 0 : (int) wnd;
+  evt->windowIndex = wnd == stWindow ? 0 : (sqIntptr_t) wnd;
   return 1;
 }
 
@@ -1270,7 +1284,7 @@ int recordKeyboardEvent(MSG *msg) {
   evt->modifiers |= alt ? CommandKeyBit : 0;
   evt->modifiers |= shift ? ShiftKeyBit : 0;
   evt->modifiers |= ctrl ? CtrlKeyBit : 0;
-  evt->windowIndex = msg->hwnd == stWindow ? 0 : (int) msg->hwnd;
+  evt->windowIndex = msg->hwnd == stWindow ? 0 : (sqIntptr_t) msg->hwnd;
   evt->utf32Code = keyCode;
   /* clean up reserved */
   evt->reserved1 = 0;
@@ -1341,12 +1355,12 @@ int recordWindowEvent(int action, RECT *r) {
   return 1;
 }
 
-int ioSetInputSemaphore(int semaIndex) {
+sqInt ioSetInputSemaphore(sqInt semaIndex) {
   inputSemaphoreIndex = semaIndex;
   return 1;
 }
 
-int ioGetNextEvent(sqInputEvent *evt) {
+sqInt ioGetNextEvent(sqInputEvent *evt) {
   if (eventBufferGet == eventBufferPut) {
     ioProcessEvents();
   }
@@ -1362,7 +1376,7 @@ int ioGetNextEvent(sqInputEvent *evt) {
 /*              State based primitive set                                   */
 /****************************************************************************/
 
-int ioGetKeystroke(void)
+sqInt ioGetKeystroke(void)
 {
   int keystate;
   ioProcessEvents();  /* process all pending events */
@@ -1374,7 +1388,7 @@ int ioGetKeystroke(void)
   return keystate;
 }
 
-int ioPeekKeystroke(void)
+sqInt ioPeekKeystroke(void)
 {
   int keystate;
   ioProcessEvents();  /* process all pending events */
@@ -1455,12 +1469,14 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
 #else /* defined(_WIN32_WCE) */
 
   if(GetKeyState(VK_LBUTTON) & 0x8000) stButtons |= 4;
-  if(GetKeyState(VK_MBUTTON) & 0x8000)
+  if(GetKeyState(VK_MBUTTON) & 0x8000) {
     if(f1ButtonMouse) stButtons |= 4;
     else stButtons |= f3ButtonMouse ? 2 : 1;
-  if(GetKeyState(VK_RBUTTON) & 0x8000)
+  }
+  if(GetKeyState(VK_RBUTTON) & 0x8000) {
     if(f1ButtonMouse) stButtons |= 4;
     else stButtons |= f3ButtonMouse ? 1 : 2;
+  }
 
   if (stButtons == 4)	/* red button honours the modifiers */
     {
@@ -1515,7 +1531,7 @@ int recordModifierButtons()
   return 1;
 }
 
-int ioGetButtonState(void)
+sqInt ioGetButtonState(void)
 {
   if(fReduceCPUUsage || (fReduceCPUInBackground && !fHasFocus)) {
     MSG msg;
@@ -1532,7 +1548,7 @@ int ioGetButtonState(void)
   return buttonState;
 }
 
-int ioMousePoint(void)
+sqInt ioMousePoint(void)
 {
   if(fReduceCPUUsage || (fReduceCPUInBackground && !fHasFocus)) {
     MSG msg;
@@ -1553,7 +1569,7 @@ int ioMousePoint(void)
 /****************************************************************************/
 /*              Misc support primitves                                      */
 /****************************************************************************/
-int ioBeep(void)
+sqInt ioBeep(void)
 {
   MessageBeep(0);
   return 1;
@@ -1562,7 +1578,7 @@ int ioBeep(void)
 /*
  * In the Cog VMs time management is in platforms/win32/vm/sqin32Heartbeat.c.
  */
-int ioRelinquishProcessorForMicroseconds(int microSeconds)
+sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
   /* wake us up if something happens */
   ResetEvent(vmWakeUpEvent);
@@ -1572,10 +1588,8 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds)
   return microSeconds;
 }
 
-int
-ioProcessEvents(void)
+sqInt ioProcessEvents(void)
 {	static MSG msg;
-	POINT mousePt;
 	int result;
 	extern sqInt inIOProcessEvents;
 
@@ -1716,9 +1730,13 @@ ioDrainEventQueue(void)
 }
 #endif /* NewspeakVM */
 
+double ioScreenScaleFactor(void)
+{
+    return 1.0;
+}
 
 /* returns the size of the Squeak window */
-int ioScreenSize(void)
+sqInt ioScreenSize(void)
 {
   static RECT r;
 
@@ -1734,7 +1752,7 @@ int ioScreenSize(void)
 }
 
 /* returns the depth of the OS display */
-int ioScreenDepth(void) {
+sqInt ioScreenDepth(void) {
   int depth;
   HDC dc = GetDC(stWindow);
   if(!dc) return 0; /* fail */
@@ -1744,7 +1762,7 @@ int ioScreenDepth(void) {
 }
 
 
-int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, int offsetY)
+sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
 #if !defined(_WIN32_WCE)
 	/****************************************************/
@@ -1813,13 +1831,12 @@ int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, i
   return 1;
 }
 
-int ioSetCursor(int cursorBitsIndex, int offsetX, int offsetY) {
+sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY) {
   return ioSetCursorWithMask(cursorBitsIndex, 0, offsetX, offsetY);
 }
 
 int ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y) {
   ICONINFO info;
-  HCURSOR hCursor = NULL;
   HBITMAP hbmMask = NULL;
   HBITMAP hbmColor = NULL;
   HDC mDC;
@@ -1855,7 +1872,7 @@ int ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y) {
   return 1;
 }
 
-int ioSetFullScreen(int fullScreen) {
+sqInt ioSetFullScreen(sqInt fullScreen) {
   if(!IsWindow(stWindow)) return 1;
   if(wasFullScreen == fullScreen) return 1;
   /* NOTE: No modifications if the window is not currently
@@ -2068,7 +2085,7 @@ BITMAPINFO *BmiForDepth(int depth)
   return bmi;
 }
 
-int ioHasDisplayDepth(int depth) {
+sqInt ioHasDisplayDepth(sqInt depth) {
   /* MSB variants */
   if(depth == 1 || depth == 4 || depth == 8 || depth == 16 || depth == 32)
     return 1;
@@ -2079,15 +2096,16 @@ int ioHasDisplayDepth(int depth) {
 }
 
 
-int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag)
+sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
 {
 #ifdef _WIN32_WCE
   return 0; /* Not implemented on CE */
 #else
   RECT r;
+#ifdef USE_DIRECT_X
   static int wasFullscreen = 0;
   static HWND oldBrowserWindow = NULL;
-
+#endif
 
   if(!IsWindow(stWindow)) return 0;
   if(!IsWindowVisible(stWindow)) return 0;
@@ -2146,7 +2164,7 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag)
 }
 
 /* force an update of the squeak window if using deferred updates */
-int ioForceDisplayUpdate(void) {
+sqInt ioForceDisplayUpdate(void) {
 	/* With Newspeak and the native GUI we do not want the main window to appear
 	 * unless explicitly asked for.
 	 */
@@ -2170,7 +2188,7 @@ int ioForceDisplayUpdate(void) {
   return 1;
 }
 
-int ioFormPrint(int bitsAddr, int width, int height, int depth, double hDPI, double vDPI, int landscapeFlag)
+sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double hDPI, double vDPI, sqInt landscapeFlag)
 	/* print a form with the given bitmap, width, height, and depth at
 	   the given horizontal and vertical scales in the given orientation */
 {
@@ -2218,12 +2236,12 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth, double hDPI, dou
   bmi = BmiForDepth(depth);
   if(!bmi)
     {
-      warnPrintf(TEXT("Color depth %d not supported"), depth);
+      warnPrintf(TEXT("Color depth %") TEXT(PRIdSQINT) TEXT(" not supported"), depth);
       return false;
     }
 
   di.cbSize      = sizeof(DOCINFO);
-  di.lpszDocName = TEXT(VM_NAME" Print Job");
+  di.lpszDocName = TEXT(VM_NAME) TEXT(" Print Job");
   di.lpszOutput  = NULL;
 
   StartDoc  (dc, &di);
@@ -2337,8 +2355,8 @@ void ReleaseBitmapDC(HDC memDC)
 
 #endif /* USE_DIB_SECTIONS */
 
-int ioShowDisplay(int dispBits, int width, int height, int depth,
-		  int affectedL, int affectedR, int affectedT, int affectedB)
+sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
+		  sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB)
 { HDC dc;
   BITMAPINFO *bmi;
   int lines;
@@ -2511,7 +2529,7 @@ int ioShowDisplay(int dispBits, int width, int height, int depth,
        few extreme conditions - but to compensate for those the
        following is provided. */
     int pitch, start, end, nPix, line, left;
-    int bitsPtr;
+    sqIntptr_t bitsPtr;
 
     /* compute pitch of form */
     pitch = ((width * depth) + 31 & ~31) / 8;
@@ -2540,8 +2558,8 @@ int ioShowDisplay(int dispBits, int width, int height, int depth,
 
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-    warnPrintf(TEXT("width=%d,height=%d,bits=%X,dc=%X\n"),
-	       width, height, dispBits,dc);
+    warnPrintf(TEXT("width=%") TEXT(PRIdSQINT) TEXT(",height=%") TEXT(PRIdSQINT) TEXT(",bits=%") TEXT(PRIXSQINT) TEXT(",dc=%") TEXT(PRIXSQINT) TEXT("\n"),
+	       width, height, dispBits,(usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */
 #ifndef NO_BYTE_REVERSAL
@@ -2563,7 +2581,7 @@ int ioShowDisplay(int dispBits, int width, int height, int depth,
 /*                      Clipboard                                           */
 /****************************************************************************/
 
-int clipboardSize(void) { 
+sqInt clipboardSize(void) { 
   HANDLE h;
   WCHAR *src;
   int i, count, bytesNeeded;
@@ -2604,7 +2622,7 @@ int clipboardSize(void) {
 }
 
 /* send the given string to the clipboard */
-int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex) {
+sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
   HANDLE h;
   unsigned char *src, *tmp, *cvt;
   int i, wcharsNeeded, utf8Count;
@@ -2659,7 +2677,7 @@ int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex) {
 
 
 /* transfer the clipboard data into the given byte array */
-int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex) {
+sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
   HANDLE h;
   unsigned char *dst, *cvt, *tmp;
   WCHAR *src;
@@ -2703,12 +2721,12 @@ int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex) {
 /*                    Image / VM File Naming                                */
 /****************************************************************************/
 
-int vmPathSize(void)
+sqInt vmPathSize(void)
 {
   return lstrlen(vmPath);
 }
 
-int vmPathGetLength(int sqVMPathIndex, int length)
+sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
 {
   char *stVMPath= (char *)sqVMPathIndex;
   int count, i;
@@ -2723,12 +2741,12 @@ int vmPathGetLength(int sqVMPathIndex, int length)
   return count;
 }
 
-int imageNameSize(void)
+sqInt imageNameSize(void)
 {
   return strlen(imageName);
 }
 
-int imageNameGetLength(int sqImageNameIndex, int length)
+sqInt imageNameGetLength(sqInt sqImageNameIndex, sqInt length)
 {
   char *sqImageName= (char *)sqImageNameIndex;
   int count, i;
@@ -2743,7 +2761,7 @@ int imageNameGetLength(int sqImageNameIndex, int length)
   return count;
 }
 
-int imageNamePutLength(int sqImageNameIndex, int length)
+sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
 {
   char *sqImageName= (char *)sqImageNameIndex;
   char tmpImageName[MAX_PATH+1];
@@ -2782,7 +2800,7 @@ int imageNamePutLength(int sqImageNameIndex, int length)
   return 1;
 }
 
-int sqGetFilenameFromString(char *buf, char *fileName, int length, int alias) {
+sqInt sqGetFilenameFromString(char *buf, char *fileName, sqInt length, sqInt alias) {
   memcpy(buf, fileName, length);
   buf[length] = 0;
   return 1;
@@ -2796,7 +2814,7 @@ extern char *osInfoString;
 extern char *gdInfoString;
 extern char *win32VersionName;
 
-char * GetAttributeString(int id) {
+char * GetAttributeString(sqInt id) {
 	/* This is a hook for getting various status strings back from
 	   the OS. In particular, it allows Squeak to be passed arguments
 	   such as the name of a file to be processed. Command line options
@@ -2851,14 +2869,14 @@ char * GetAttributeString(int id) {
   return NULL;
 }
 
-int attributeSize(int id) {
+sqInt attributeSize(sqInt id) {
   char *attrValue;
   attrValue = GetAttributeString(id);
   if(!attrValue) return primitiveFail();
   return strlen(attrValue);
 }
 
-int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
+sqInt getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length) {
   char *srcPtr, *dstPtr, *end;
   int charsToMove;
 
@@ -2918,6 +2936,7 @@ int sqLaunchDrop(void) {
 		      NULL, NULL);
   dropLaunchFile(tmp);
   LocalFree(argv);
+  return 1;
 }
 
 /* Check if the path/file name is subdirectory of the image path */
@@ -3250,7 +3269,7 @@ int printUsage(int level)
       break;
     case 1: /* full usage */
       abortMessage(TEXT("%s"),
-                   TEXT("Usage: " VM_NAME " [vmOptions] imageFile [imageOptions]\n\n")
+                   TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [vmOptions] imageFile [imageOptions]\n\n")
                    TEXT("vmOptions:")
 		   /* TEXT("\n\t-service: ServiceName \t(install Squeak as NT service)") */
                    TEXT("\n\t-headless \t\t(force Squeak to run headless)")
@@ -3293,7 +3312,7 @@ int printUsage(int level)
     case 2: /* No image found */
     default:
       abortMessage(
-        TEXT("Could not open the " VM_NAME " image file '%s'\n\n")
+        TEXT("Could not open the ") TEXT(VM_NAME) TEXT(" image file '%s'\n\n")
         TEXT("There are several ways to open an image file. You can:\n")
         TEXT("  1. Double-click on the desired image file.\n")
         TEXT("  2. Drop the image file onto the application.\n")

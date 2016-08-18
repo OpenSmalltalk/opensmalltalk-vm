@@ -19,7 +19,12 @@ $(FREETYPE2DIR)/configure: $(THIRDPARTYDIR)
 
 $(FREETYPE2LIB): $(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR) $(FREETYPE2DIR)/configure
 	cd $(FREETYPE2DIR) \
-		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch i386' LDFLAGS='-arch i386 ' \
+		&& ./configure \
+			--prefix='$(THIRDPARTYOUTDIR)' \
+			PKG_CONFIG='$(PKG_CONFIG)' \
+			PKG_CONFIG_PATH='$(PKG_CONFIG_PATH)' \
+			CFLAGS='-arch i386' \
+			LDFLAGS='-arch i386 ' \
 		&& make \
 		&& make install
 	cp -f $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME) $(THIRDPARTYINSTALLDIR)

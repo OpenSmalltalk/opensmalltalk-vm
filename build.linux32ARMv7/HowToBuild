@@ -1,0 +1,248 @@
+How To Build On Linux ARM v7 (e.g. Android devices (*))
+---------------------
+
+
+Contents:
+	- Overview
+	- Checking out sources to build out-of-the-box
+	- Building out of the box
+	- Compiling in 32-bit mode on a 64-bit linux
+	- How to configure and build a VM on Unix
+	- Testing an external plugin has completely linked
+	- Optimization level and gcc version (please read!)
+	- BitBlt optimizations on ARM
+	- Installing support libraries
+
+
+Overview
+--------
+The "Cog" VM comes in a bewildering variety of forms.  The first distinction
+is between Squeak/Croquet VMs that run Squeak, Pharo, Cuis, Croquet images
+and their ilk, and between Newspeak VMs that run Newspeak.
+
+Another distinction is between Stack, Cog and Sista VMs.  Stack VMs are those
+with context-to-stack mapping that optimise message sending by keeping method
+activations on a stack instead of in contexts.  These are pure interpreters but
+significantly faster than the standard context-based Interpreter VM.  Cog VMs
+add a JIT to the mix, compiling methods used more than once to maxchine code on
+the fly.  Sista VMs, as yet unrealised and in development, add support for
+adaptive optimization that does speculative inlining at the bytecode-to-bytecode
+level.  These are targeted for release in 2015.
+
+Another distinction is between "v3" VMs and Spur VMs.  "v3" is the original
+object representation for Squeak as described in the back-to-the-future paper.
+Spur, as described on the www.mirandabanda.org blog, is a faster object
+representation which uses generation scavenging, lazy forwarding for fast
+become, and a single object header format common to 32 and 64 bit versions.
+
+Another distinction is between normal single-threaded VMs that schedule "green"
+Smalltalk processes above a single-threaded VM, and "multi-threaded" VMs that
+share the VM between any number of native threads such that only one native
+thread owns the VM at any one time, switching between threads on FFI calls and
+callbacks or on Smalltalk process switches when Smalltalk processes are owned
+by threads.  This multi-threaded support is as yet experimental.
+
+A distinction on linux is between VMs with an itimer hearbeat or a threaded
+heartbeat.  VMs with an itimer hearbeat  use setitimer to deliver a SIGALRM
+signal at regular intervals to interrupt the VM to check for events.  These
+signals can be troublesome, interrupting foreign code that cannot cope with
+such signals.  VMs with a threaded heartbeat use a high-priority thread that
+loops, blocking on nanosleep and then interrupting the VM, performing the same
+function as the itimer heartbeat but without using signals.  These VMs are to
+be preferred but suport for multiple thread priorities in user-level processes
+has only been available on linux in kernels later than 2.6.12.
+
+The final distinction is between production, assert and debug VMs.  Production
+VMs are fully optimized, although they may include debugging symbols, and as
+their name implies are for use in production.  Assert and debug VMs include
+many assert checks that are disabled in the production VMs.  These asserts are
+very helpful in debugging VM problems but significantly impact performance.
+The difference between assert and debug VMs is that assert VMs are compiled
+with moderate optimization, which improves the performance of the asserts,
+whereas debug VMs are compiled with no optimization at all, providing maximum
+debuggability with minimum performance.
+
+This directory tree provides build directories for some of this matrix.  For
+example, squeak.cog.v3 contains build directories for Smalltalk Cog VMs using
+the old object representation, newspeak.stack.spur contains build directories
+for Newspeak Stack VMs using the Spur object representation.  Build as desired.
+
+
+Checking out sources to build out-of-the-box
+--------------------------------------------
+Check-out the repository from github:
+	git clone http://www.github.com/OpenSmalltalk/opensmalltalk-vm oscogvm
+	cd ./oscogvm
+	more README.md
+
+
+Building out of the box
+-----------------------
+Install the tools (gcc, X11-devel, etc, e.g. libpng, libuuid libX11 & libxt
+source). See "Installing support libraries" below.  If the configure step fails
+when "checking for C compiler default output file name", you have yet to install
+all the necessary support packages (e.g. libuuid).
+Then cd to the build directory of your choice, e.g.
+	build.linux32x86/squeak.cog.spur/build
+Then execute
+	./mvm
+answering "y" to perform a clean build or "n" to rebuild without recionfiguring.
+Again, if the configure step fails when "checking for C compiler default output
+file name", you have yet to install all the necessary support (e.g. lubuuid).
+
+The subdirectories confrm to the production/assert/debug x itimer vs threaded
+heartbeat x single vs multi-threaded parts of the matrix described above.  For
+example, build.linux32x86/squeak.cog.v3 includes
+
+	build
+	build.itimerheartbeat
+	build.multithreaded
+
+	build.assert
+	build.assert.itimerheartbeat
+	build.multithreaded.assert
+
+	build.debug
+	build.multithreaded.debug
+	build.debug.itimerheartbeat
+
+subdirectories. It includes two convenience scripts that will make all
+configurations:
+	makeallclean
+	makealldirty
+
+Each build directory contains three files
+	mvm
+	plugins.int
+	plugins.ext
+The mvm script runs ../platforms/unix/config/configure with the relevant
+options, runs make, and then make install to create a VM directory tree in
+../products, ../products/assert or ../products/debug as appropriate.
+plugins.int and plugins.ext determine the set of plugins to be taken from
+the supplied plugins directory (which defaults to ../src/plugins), and which
+are to be linked into the VM (plugins.int) or compiled as external shared
+objects to be dynamically linked at run-time (plugins.ext).
+
+Finally, at the build.linux32x86 level the makeall script will run all the
+makeallclean scripts it can find.
+
+
+Compiling in 32-bit mode on a 64-bit linux
+-------------------------------
+If you're building the VM on a 64-bit OS, you'll need a compiler which can
+compile and link to 32-bit binaries. On most Linuxes the gcc-multilib package
+provides the 32-bit compiler and the ia32-libs provides the 32-bit libraries.
+You'll also have to add the -m32 switch to all gcc & g++ invocations.  The
+easiest way to do this is to add CC="gcc -m32" & CXX="g++ -m32" to the configure
+script:
+     ../../platforms/unix/config/configure CC="gcc -m32" CXX="g++ -m32" --without-npsqueak CFLAGS="-g -O2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
+To run a 32-bit VM on a 64-bit OS, you'll also need the 32-bit libraries
+provided by the ia32-libs package.
+
+According to Paul DeBruicker the following packages need to be installed to
+compile in 32-bt mode on 64-bit ubuntu.  YMMV.
+
+build-essential
+lib32asound2-dev
+libgl1-mesa-dev
+libglu1-mesa-dev
+ia32-libs
+gcc-multilib
+g++multilib
+
+In addition phil@highoctane.be installed libc6dev-i386.
+
+This in itself may not be enough, but persistence will pay off.  See for example
+http://permalink.gmane.org/gmane.comp.lang.smalltalk.pharo.devel/75198.
+
+
+How to configure and build a VM on Unix
+-------------------------------
+The mvm scripts are themselves wrappers around an adaptation of Ian Piumarta's
+Squeak build system above autoconf to the Cog sources.  One can choose the vm
+source files, plugin source files, and optimization level to compile a VM of
+your choice.  To find the full set of options via
+
+	../platforms/unix/config/configure --help
+
+You can see the use of configure in the various mvm scripts in each build
+directory.  
+
+e.g.
+     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
+     make install prefix=WhereYouWantTheVmToGo
+
+	N.B. If you're on a 64-bit linux read 3e below!!
+	N.B. On Ubuntu *do not* supply "LIBS=-lpthread -luuid", i.e. use
+     ../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0"
+
+
+N.B. The plugin set is defined by plugins.ext and plugins.int in the build dir.
+
+Be prepared to install libuuid support.  e.g. on CentOS 6.5 use
+sudo yum -y install libuuid-devel
+
+
+Testing an external plugin has completely linked
+-------------------------------
+You may find that an external plugin compiles and links but does not load.
+This is usually because it contans undefined symbols.  To find undefined
+symbols, remake the plugin, capturing the link step and then supply
+	-Wl,--warn-unresolved-symbols -Wl,--no-allow-shlib-undefined
+when manually repeating the link command
+
+
+Optimization level and gcc version
+----------------------------------
+There are issues with gcc version > 4.2.1.  Any of the following flags may break the build at -O2:
+-ftree-pre
+-fpartial-inlining
+-fcaller-saves
+
+So turn them off.  e.g.
+     ../../platforms/unix/config/configure --without-npsqueak CFLAGS="-g -O2 -fno-caller-saves -fno-partial-inlining -fno-tree-pre -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DNDEBUG -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS="-lpthread -luuid"
+See http://smallissimo.blogspot.fr/2013/02/compiling-squeak-cog-virtual-machine-on.html
+
+There appear to be issues with 3.4.x gcc version on RedHat.  In particular
+compiling the Newspeak VM with either of
+	gcc version 3.4.6 20060404 (Red Hat 3.4.6-3)
+	gcc version 3.4.6 20060404 (Red Hat 3.4.6-10)
+using -O2 results in a VM that segfaults early in startup.  For these compilers
+it is probably wise to use -O1, even though -O3 seems to work.
+
+
+BitBlt optimizations on ARM
+---------------------------
+On ARM, BitBlt optimizations can be enbaled by including --enable-fast-bitblt as an option to ../platforms/unix/config/configure (not by default).
+This requires the use of the assembler asasm (cf. http://lists.squeakfoundation.org/pipermail/vm-dev/2013-May/012959.html and http://forum.world.st/commit-2774-add-instructions-for-enableFastBlt-on-arm-linux-td4704245.html). 
+However it is tricky to build from source and pre-packaged versions for Raspbian, Ubuntu, etc do not seem to be available. Therefore
+asasm is included in Cog/build.linux32ARMv7/ as a pre-built binary. The Makefiles for BitBltPlugin and vm-display-X11 reference it directly.
+
+
+Installing support libraries
+----------------------------
+Different linux distributions have different mechanisms for loading packages.
+Here are some examples:
+
+CentOS
+sudo yum install cairo-devel
+sudo yum install pango-devel
+sudo yum install libuuid-devel
+sudo yum install libX11-devel
+sudo yum install mesa-libGL-devel 
+
+Ubuntu
+sudo apt-get install libcairo2-dev   
+sudo apt-get install libpango1.0-dev
+
+Raspbian
+sudo apt-get update
+sudo apt-get install libcairo2-dev   
+sudo apt-get install libpango1.0-dev
+sudo apt-get install libssl-dev
+sudo apt-get install uuid-dev uuid-runtime
+sudo apt-get install libasound2-dev
+
+More advice and examples for other distros gratefully received.
+
+(*) see ../build.linux32ARMv6/HowToBuild for Raspbian and Raspberry Pi.

@@ -77,8 +77,8 @@ char            gSqueakUntrustedDirectoryName[PATH_MAX];
 char            gSqueakTrustedDirectoryName[PATH_MAX];
 int				blockOnError=0;
 
-extern sqInt printAllStacks(void);
-extern sqInt printCallStack(void);
+extern void printAllStacks(void);
+extern void printCallStack(void);
 extern void dumpPrimTraceLog(void);
 extern BOOL NSApplicationLoad(void);
 extern void pushOutputFile(char *);
@@ -90,7 +90,7 @@ static void *printRegisterState(ucontext_t *);
 
 /* Print an error message, possibly a stack trace, and exit. */
 /* Disable Intel compiler inlining of error which is used for breakpoints */
-#pragma auto_inline off
+#pragma auto_inline(off)
 #if COGVM || STACKVM
 void
 error(char *msg)
@@ -99,7 +99,7 @@ error(char *msg)
 	if (blockOnError) block();
 	abort();
 }
-#pragma auto_inline on
+#pragma auto_inline(on)
 
 static void
 block()

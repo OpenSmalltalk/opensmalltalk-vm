@@ -27,6 +27,8 @@
     so long that you cannot append an 8.3 file name (that is, the directory 
     name cannot exceed MAX_PATH minus 12).
 **/
+
+
 #define ALLOC_WIN32_PATH(out_path, in_name, in_size) { \
   int sz = MultiByteToWideChar(CP_UTF8, 0, in_name, in_size, NULL, 0); \
   if(sz >= 32767) FAIL(); \

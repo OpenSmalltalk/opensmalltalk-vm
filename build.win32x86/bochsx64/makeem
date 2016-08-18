@@ -1,0 +1,2 @@
+#!/bin/bash -e
+exec ../../processors/IA32/bochs/makeem

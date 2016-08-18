@@ -7,7 +7,7 @@ Contents:
 	- Checking out sources to build out-of-the-box
 	- Building out of the box
 	- Building a Specific Plugin Dll
-	- Building the Bochs Support Libraries
+	- Building the VM Simulator Support Libraries
 	- Building an MSI installer (Newspeak)
 	- Optimization level and gcc version (please read!)
 	- Debugging with gdb
@@ -59,30 +59,24 @@ for Newspeak Stack VMs using the Spur object representation.  Build as desired.
 
 Checking out sources to build out-of-the-box
 --------------------------------------------
-Check-out at least the relevant platform sources, vm and plugin sources, and
-the relevant build directories
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/platforms
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/build.win32x86
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/sources
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/src etc
-		(see section "VM source directories" in the root README)
+Check-out the repository from github:
+	git clone http://www.github.com/OpenSmalltalk/opensmalltalk-vm oscogvm
+	cd ./oscogvm
+	more README.md
 
 
 Building out of the box
 -----------------------
 1. Install the tools:
-- Install cygwin from www.cygwin.com.  As of writing the VM is built using
-CYGWIN_NT-5.1 mcstalkerxp 1.5.24(0.156/4/2) 2007-01-31 10:57 i686 Cygwin
+- Install cygwin from www.cygwin.com.
 Make sure you install the MinGW support, which is in the list of packages called
-"mingw-binutils: Binutils for MinGW.org Win32 toolchain".
-If on compiling you see the error
-	--export-dynamic is not supported for PE targets, did you mean --export-all-symbols?
-then replace --export-dynamic with --export-all-symbols in the makefiles.
+"mingw64-i686-gcc-core,mingw64-i686-gcc-g++,mingw64-i686-headers,mingw64-i686-runtime".
+Note that the .appveyor.yml file may be used as example to automate installation of these tools
+
+Alternatively, an installation of mingw32 and msys may work, but has not been tested.
 
 Then cd to the build directory of your choice, e.g.
-	build.win32x86/squeak.cog.spur/build
-Then either remove any BochsIA32Plugin line from plugins.ext or build the
-Bochs support libraries (see Building the Bochs Support Libraries below).
+	build.win32x86/squeak.cog.spur/
 Then execute
 	./mvm
 This builds debug, assert and production versions of the VM in builddbg/vm,
@@ -91,6 +85,12 @@ it will also create VMs in buildmtdbg/vm, buildmtast/vm and buildmt/vm.  The
 system builds two VMs in each build/vm directory, e.g. Squeak.exe and
 SqueakConsole.exe.  The latter is to be used with console applications that wish
 to access standard i/o.
+
+For building with clang instead of gcc, it is possible to pass options to make via mvm after --:
+	./mvm -f -- CC=i686-w64-mingw32-clang
+	
+If building from mingw32, it may be necessary to omit the tool prefix:
+	./mvm -f -- TOOLPREFIX=''
 
 Each build directory contains two files
 	plugins.int
@@ -114,16 +114,22 @@ to be made.  e.g.
   $ make build/vm/BochsIA32Plugin.dll
 
 
-Building the Bochs Support Libraries
+Building the VM Simulator Support Libraries
 ------------------------------------
-If you want to get the Cog VM simulator working you'll need to build the
-BochsIA32Plugin and to build that you'll need to first build bochs.  First
-check-out the processor simulator source tree containing Bochs:
-     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/processors
-Then build libraries winbochs/{cpu/libcpu.a,disasm/libdisasm.a,fpu/libfpu.a}
-  $ cd ../processors/IA32/winbochs
+If you want to get the Cog VM simulator working you'll need to build one or more
+of the processor simulator plugins, each of which has support libraries that
+must be built:
+	Processor   Plugin           Support Library
+	x86         BochsIA32Plugin  build.linux32x86/bochsx86
+	x86_64/x64  BochsX64Plugin   build.linux32x86/bochsx64
+	ARMv5       GdbARMPlugin     build.linux32x86/gdbarm32
+cd to the relevant directories; run conf.COG and then the build script, e.g.
+  $ cd build.linux32x86/bochsx86
   $ ./conf.COG
-  $ ../bochs/makeem
+  $ ./makeem
+
+Then when Squeak VMs are built they will include the plugin(s) for which support
+libraries have been provided.
 
 
 Building an MSI installer (Newspeak)
@@ -139,10 +145,11 @@ for the VM.  First build the VM then cd to the installer and make, e.g.:
 
 Optimization level and gcc version
 ----------------------------------
-There are issues with gcc version > 4.2.1.  Any of the following flags may break the build at -O2:
+There used to be issues with gcc version > 4.2.1.  Any of the following flags may break the build at -O2:
 -ftree-pre
 -fpartial-inlining
 -fcaller-saves
+However, with removal of some Undefined Behavior in source code, this list might well be out of date.
 
 See http://smallissimo.blogspot.fr/2013/02/compiling-squeak-cog-virtual-machine-on.html
 

@@ -43,6 +43,11 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 extern BOOL gSqueakHeadless;
 
 @implementation sqSqueakMainApplication (screen) 
+
+- (double) ioScreenScaleFactor {
+	return 1.0;
+}
+
 - (sqInt) ioScreenSize {
 	sqInt w, h;
 	sqInt browserGetWindowSize(void);
