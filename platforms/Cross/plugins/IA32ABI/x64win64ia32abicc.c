@@ -177,7 +177,8 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
  *		address of retpc-/        <--\
  *		address of address of ret pc-/
  *		thunkp
- * esp->retpc (thunkEntry)
+ *      space for saving 4 registers rcx,rdx,r8,r9
+ * rsp->retpc (thunkEntry)
  *
  * This function's roles are to use setjmp/longjmp to save the call point
  * and return to it, and to return any of the various values from the callback.
@@ -199,37 +200,14 @@ thunkEntry(long long rcx, long long rdx,
 	long long flags, returnType;
 	long long intargs[4];
 	double fpargs[4];
+
+	intargs[0] = rcx;
+	intargs[1] = rdx;
+	intargs[2] = r8;
+	intargs[3] = r9;
 	
-	int64_or_double regs[4];
-	regs[0].i = rcx;
-	regs[1].i = rdx;
-	regs[2].i = r8;
-	regs[3].i = r9;
-
-	intargs[0] = regs[0].i;
-	intargs[1] = regs[1].i;
-	intargs[2] = regs[2].i;
-	intargs[3] = regs[3].i;
-
-	fpargs[0] = regs[0].d;
-	fpargs[1] = regs[1].d;
-	fpargs[2] = regs[2].d;
-	fpargs[3] = regs[3].d;
-
-	/* loadFloatRegs(regs[0].d,regs[1].d,regs[2].d,regs[3].d); */
-#if _MSC_VER
-				_asm mov rcx, xmm0;
-				_asm mov rdx, xmm1;
-				_asm mov r8 , xmm2;
-				_asm mov r9 , xmm3;
-#elif __GNUC__
-				asm("movq %rcx,%xmm0");
-				asm("movq %rdx,%xmm1");
-				asm("movq %r8 ,%xmm2");
-				asm("movq %r9 ,%xmm3");
-#else
-# error need to load edx with vmcc.rvs.valleint64.high on this compiler
-#endif
+extern void saveFloatRegsWin64(long long xmm0,long long xmm1,long long xmm2, long long xmm3,double *fpargs); /* fake passing long long args */
+    saveFloatRegsWin64(rcx,rdx,r8,r9,fpargs); /* the callee expects double parameters that it will retrieve thru registers */
 
 	if ((flags = interpreterProxy->ownVM(0)) < 0) {
 		fprintf(stderr,"Warning; callback failed to own the VM\n");
