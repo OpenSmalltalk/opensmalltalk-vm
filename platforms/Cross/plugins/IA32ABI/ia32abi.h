@@ -39,6 +39,8 @@ extern sqInt callIA32DoubleReturn  (SIGNATURE);
 # define INT_REG_ARGS /* none */
 # define DBL_REG_ARGS /* none */
 #elif WIN64 || defined(_M_X64) || defined(_M_AMD64) || defined(_WIN64)
+# undef thunkEntryType
+# define thunkEntryType long long
 # define INT_REG_ARGS long long,long long,long long,long long,
 # define DBL_REG_ARGS /* double,double,double,double, NOT INCLUDED because only 4 parameters are passed in registers, either int or float */
 #elif defined(__amd64__) || defined(__x86_64__) || defined(__amd64) || defined(__x86_64)

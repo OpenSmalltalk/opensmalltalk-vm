@@ -190,7 +190,7 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
  * passed as an element of the VMCallbackContext.
  */
 
-long
+long long
 thunkEntry(long long rcx, long long rdx,
            long long r8, long long r9,
 			void *thunkp, sqIntptr_t *stackp)
