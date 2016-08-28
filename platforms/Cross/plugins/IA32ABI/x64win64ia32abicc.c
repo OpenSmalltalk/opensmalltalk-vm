@@ -234,29 +234,11 @@ extern void saveFloatRegsWin64(long long xmm0,long long xmm1,long long xmm2, lon
 
 	case retword:	return vmcc.rvs.valword;
 
-	case retword64: {
-		long vhigh = vmcc.rvs.valleint64.high;
-#if _MSC_VER
-				_asm mov edx, dword ptr vhigh;
-#elif __GNUC__
-				asm("mov %0,%%edx" : : "m"(vhigh));
-#else
-# error need to load edx with vmcc.rvs.valleint64.high on this compiler
-#endif
-				return vmcc.rvs.valleint64.low;
-	}
+	case retword64:  return (((unsigned long long)vmcc.rvs.valleint64.high) << 32)  | (unsigned int)vmcc.rvs.valleint64.low;
 
-	case retdouble: {
-		double valflt64 = vmcc.rvs.valflt64;
-#if _MSC_VER
-				_asm fld qword ptr valflt64;
-#elif __GNUC__
-				asm("fldl %0" : : "m"(valflt64));
-#else
-# error need to load %f0 with vmcc.rvs.valflt64 on this compiler
-#endif
-				return 0;
-	}
+	case retdouble:
+					fakeReturnDouble( vmcc.rvs.valflt64 );
+					return 0;
 
 	case retstruct:	memcpy( (void *)(stackp[1]),
 							vmcc.rvs.valstruct.addr,

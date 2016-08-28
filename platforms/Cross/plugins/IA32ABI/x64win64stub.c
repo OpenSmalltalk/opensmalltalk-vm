@@ -14,5 +14,9 @@ void saveFloatRegsWin64(double xmm0,double xmm1,double xmm2, double xmm3,double 
 	fpargs[2]=xmm2;
 	fpargs[3]=xmm3;
 }
+double fakeReturnDouble(double xmm0)
+{
+	return xmm0;
+}
 #endif
 #endif
