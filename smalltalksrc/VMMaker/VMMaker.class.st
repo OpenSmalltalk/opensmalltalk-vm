@@ -498,7 +498,7 @@ VMMaker class >> generateSqueakCogVM [
 VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass options: optionsArray [
 	^VMMaker
 		generate: interpreterClass
-		and: StackToRegisterMappingCogit
+		and: SimpleStackBasedCogit
 		with: optionsArray
 		to: (FileDirectory default pathFromURI: self sourceTree, '/src')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
@@ -552,7 +552,9 @@ VMMaker class >> generateSqueakSpurCogVM [
 	^VMMaker
 		generate: CoInterpreter
 		and: StackToRegisterMappingCogit
-		with: #(ObjectMemory Spur32BitCoMemoryManager)
+		with: #(ObjectMemory Spur32BitCoMemoryManager
+				MULTIPLEBYTECODESETS true
+				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/spursrc')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#()
