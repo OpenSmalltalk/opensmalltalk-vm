@@ -4851,7 +4851,7 @@ StackInterpreter >> directedSuperclassSend [
 	 the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
 	<sharedCodeInCase: #extSendSuperBytecode>
-	<option: #SistaVM>
+	<option: #BytecodeSetHasDirectedSuperSend>
 	| class superclass |
 	class := self internalPopStack.
 	(objectMemory isForwarded: class) ifTrue:
@@ -5315,6 +5315,7 @@ StackInterpreter >> extJumpIfFalse [
 StackInterpreter >> extJumpIfNotInstanceOfBehaviorsOrPopBytecode [
 	"254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
 	| tosClassTag literal distance |
+	SistaVM ifFalse: [^self respondToUnknownBytecode].
 	tosClassTag := objectMemory fetchClassTagOf: self internalStackTop.
 	literal := self literal: extA << 8 + self fetchByte.
 	distance := extB << 8 + self fetchByte.
@@ -5588,7 +5589,7 @@ StackInterpreter >> extSendSuperBytecode [
 	byte := self fetchByte.
 	messageSelector := self literal: (byte >> 3) + (extA << 5).
 	extA := 0.
-	SistaVM ifTrue:
+	BytecodeSetHasDirectedSuperSend ifTrue:
 		[extB >= 64 ifTrue:
 			[argumentCount := (byte bitAnd: 7) + (extB - 64 << 3).
 			 extB := 0.
@@ -15077,7 +15078,9 @@ StackInterpreter >> unaryInlinePrimitive: primIndex [
 { #category : #'sista bytecodes' }
 StackInterpreter >> unconditionnalTrapBytecode [
 	"SistaV1: *	217	Trap"
-	^ self respondToSistaTrap
+	SistaVM 
+		ifTrue: [^self respondToSistaTrap]
+		ifFalse: [^self respondToUnknownBytecode]
 ]
 
 { #category : #'interpreter shell' }

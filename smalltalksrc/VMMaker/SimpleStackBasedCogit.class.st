@@ -1631,6 +1631,7 @@ SimpleStackBasedCogit >> genCallPrimitiveBytecode [
 							m=1 means inlined primitive, no hard return after execution."
 	bytecodePC ~= initialPC ifTrue:
 		[^EncounteredUnknownBytecode].
+	byte2 < 128 ifFalse: [^EncounteredUnknownBytecode].
 	self assert: (primitiveIndex = (byte1 + (byte2 << 8))
 				or: [primitiveIndex = 0 "disabled primitives, e.g. stream prims"
 					and: [(coInterpreter primitiveIndexOf: methodObj) = (byte1 + (byte2 << 8))]]).
@@ -1671,6 +1672,14 @@ SimpleStackBasedCogit >> genExtJumpIfFalse [
 	extB := 0.
 	target := distance + 2 + bytecodePC.
 	^self genJumpIf: objectMemory falseObject to: target
+]
+
+{ #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode [
+	"SistaV1: *	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
+	"Non supported in non Sista VMs"
+	^EncounteredUnknownBytecode
+	
 ]
 
 { #category : #'bytecode generators' }
