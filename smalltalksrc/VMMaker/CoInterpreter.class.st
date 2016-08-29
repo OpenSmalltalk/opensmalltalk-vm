@@ -5395,10 +5395,9 @@ CoInterpreter >> maybeFixClonedCompiledMethod: objOop [
 
 { #category : #'compiled methods' }
 CoInterpreter >> maybeFlagMethodAsInterpreted: aMethod [
-	"In the Sista VM the flag bit in the method header is taken to identify optimized methods.
-	 In other VMs it can be used to flag methods that are interpreted, if it has been requested
+	"The flag bit can be used to flag methods that are interpreted, if it has been requested
 	 from the image header flags."
-	(SistaVM not and: [flagInterpretedMethods]) ifTrue:
+	flagInterpretedMethods ifTrue:
 		[| rawHeader realHeader |
 		 rawHeader := self rawHeaderOf: aMethod.
 		 realHeader := (self isCogMethodReference: rawHeader)
@@ -7005,9 +7004,6 @@ CoInterpreter >> setImageHeaderFlagsFrom: headerFlags [
 	flagInterpretedMethods := (headerFlags bitAnd: 8) ~= 0.
 	preemptionYields := (headerFlags bitAnd: 16) = 0.
 	newFinalization := (headerFlags bitAnd: 64) ~= 0.
-
-	(SistaVM and: [flagInterpretedMethods]) ifTrue:
-		[self print: 'warning, flagInterpretedMethods inoperable in Sista VMs.'; cr]
 ]
 
 { #category : #'internal interpreter access' }
