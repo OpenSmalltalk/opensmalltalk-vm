@@ -1337,8 +1337,7 @@ static void redrawDisplay(int l, int r, int t, int b)
 
   sqInt displayObj= displayObject();
 
-  if ((((((unsigned)(oopAt(displayObj))) >> 8) & 15) <= 4)
-      && ((lengthOf(displayObj)) >= 4))
+  if (lengthOf(displayObj) >= 4)
     {
       sqInt dispBits= fetchPointerofObject(0, displayObj);
       sqInt w= fetchIntegerofObject(1, displayObj);
