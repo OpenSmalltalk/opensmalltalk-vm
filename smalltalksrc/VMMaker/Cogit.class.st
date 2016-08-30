@@ -10189,7 +10189,8 @@ Cogit >> scanBlock: blockStart [
 			 blockStart
 				startpc: blockStart startpc + descriptor numBytes;
 				span: blockStart span - descriptor numBytes.
-			 framelessStackDelta := framelessStackDelta - 1]]
+			 framelessStackDelta := framelessStackDelta - 1]].
+	^0
 ]
 
 { #category : #'compile abstract instructions' }
