@@ -339,8 +339,10 @@ InstructionStream >> interpretNext3ByteSistaV1Instruction: bytecode for: client 
 		[byte3 >= 128 ifTrue:
 			[^client callInlinePrimitive: byte2 + (byte3 - 128 bitShift: 8)].
 		 ^client callPrimitive: byte2 + (byte3 bitShift: 8)].
-	"249		11111001 	xxxxxxxx	syyyyyyy	Reserved for Push Float"
-	bytecode = 249 ifTrue: [^ self unusedBytecode: client at: startPC].
+	"*	249		11111001	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 ignoreOuterContext: i = 1"
+	bytecode = 249 ifTrue:
+		[literal := method literalAt: (extA bitShift: 8) + byte2 + 1.
+		 ^client pushFullClosure: literal numCopied: (byte3 bitAnd: 16r3F)].
 	bytecode = 250 ifTrue:
 		["**	250  11111010  eeiiikkk  jjjjjjjj  Push Closure Num Copied iii (+ExtA//16*8) Num Args kkk (+ ExtA\\16*8) BlockSize jjjjjjjj (+ExtB*256). ee = num extensions"
 		 ^client
@@ -354,13 +356,9 @@ InstructionStream >> interpretNext3ByteSistaV1Instruction: bytecode for: client 
 	bytecode = 253 ifTrue:
 		[^client popIntoRemoteTemp: byte2 inVectorAt: byte3].
 	"**	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
-	literal := method literalAt: (extA bitShift: 8) + byte2 + 1.
-	bytecode = 253 ifTrue: 
+	bytecode = 254 ifTrue: 
 		[^ client branchIfNotInstanceOf: literal distance: (extB bitShift: 8) + byte3 ].
-	"*	255		11111111	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 ignoreOuterContext: i = 1"
-	 ^client
-			pushFullClosure: literal
-			numCopied: (byte3 bitAnd: 16r3F).
+	^self unusedBytecode: client at: startPC
 ]
 
 { #category : #'*BytecodeSets-NewsqueakV3-decoding' }
@@ -638,7 +636,7 @@ InstructionStream >> interpretNextSistaV1InstructionFor: client [
 		 offset < 8 ifTrue:
 		 	[^client popIntoTemporaryVariable: offset].
 		 offset = 8 ifTrue: [ ^ client doPop ].
-		 offset = 8 ifTrue: [ ^ client trap ].
+		 offset = 9 ifTrue: [ ^ client trap ].
 		 ^self unusedBytecode: client at: savedPC].
 	"2 byte and 3 byte codes"
 	byte < 248 ifTrue:
