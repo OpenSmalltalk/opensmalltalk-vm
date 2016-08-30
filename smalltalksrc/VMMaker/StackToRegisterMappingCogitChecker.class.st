@@ -6,10 +6,12 @@ Class {
 
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogitChecker >> scanBlock: blockStart [
-	super scanBlock: blockStart.
+	| result |
+	 (result := super scanBlock: blockStart) < 0 ifTrue: [^result].
 	needsFrame ifTrue:
 		[| tempCount |
 		 tempCount := coInterpreter tempCountForBlockStartingAt: blockStart startpc + 1 in: methodObj.
 		 blockStart numInitialNils ~= tempCount ifTrue:
-			[blockStart numInitialNils: tempCount]]
+			[blockStart numInitialNils: tempCount]].
+	^0
 ]

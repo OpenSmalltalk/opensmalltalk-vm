@@ -1120,7 +1120,7 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 	compiledBlocksCount := 0.
 	[compiledBlocksCount < blockCount] whileTrue:
 		[blockStart := self blockStartAt: compiledBlocksCount.
-		 self scanBlock: blockStart.
+		  (result := self scanBlock: blockStart) < 0 ifTrue: [^result].
 		 initialOpcodeIndex := opcodeIndex.
 		 literalsManager saveForBlockCompile.
 		 NewspeakVM ifTrue:
@@ -3698,7 +3698,8 @@ StackToRegisterMappingCogit >> scanBlock: blockStart [
 	 the simulated stack, e.g. for pushNil; returnTopFromBlock methods."
 	needsFrame ifFalse:
 		[self assert: (framelessStackDelta >= 0 and: [blockStart numInitialNils >= framelessStackDelta]).
-		 blockStart numInitialNils: blockStart numInitialNils - framelessStackDelta]
+		 blockStart numInitialNils: blockStart numInitialNils - framelessStackDelta].
+	^0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -3848,7 +3849,7 @@ StackToRegisterMappingCogit >> sistaV1: descriptor Num: pc Push: nExts Nils: aMe
 StackToRegisterMappingCogit >> sistaV1PushNilSize: aMethodObj numInitialNils: numInitialNils [
 	"230		11100110	iiiiiiii		PushNClosureTemps iiiiiiii"
 	<inline: true>
-	^numInitialNils = 0 ifTrue: [0] ifFalse: [2]
+	^numInitialNils
 ]
 
 { #category : #'span functions' }
