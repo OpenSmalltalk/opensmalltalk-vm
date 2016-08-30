@@ -1,6 +1,12 @@
 Extension { #name : #BytecodeEncoder }
 
 { #category : #'*BytecodeSets-opcode sizing' }
+BytecodeEncoder >> sizeBranchIfNotInstanceOf: behaviorOrArrayOfBehaviorLiteralIndex distance: jumpDistance [
+	^self sizeOpcodeSelector: #genBranchIfNotInstanceOf:distance:
+			withArguments: {behaviorOrArrayOfBehaviorLiteralIndex. jumpDistance}
+]
+
+{ #category : #'*BytecodeSets-opcode sizing' }
 BytecodeEncoder >> sizeCallInlinePrimitive: primitiveIndex [
 	^self sizeOpcodeSelector: #genCallInlinePrimitive: withArguments: {primitiveIndex}
 ]
@@ -26,8 +32,18 @@ BytecodeEncoder >> sizeSendImplicit: selectorLiteralIndex numArgs: numArgs [
 ]
 
 { #category : #'*BytecodeSets-opcode sizing' }
+BytecodeEncoder >> sizeTrap [
+	^self sizeOpcodeSelector: #genTrap withArguments: #()
+]
+
+{ #category : #'*BytecodeSets-opcode sizing' }
 BytecodeEncoder >> sizeTrapIfNotInstanceOf: litIndex [
 	^self sizeOpcodeSelector: #genTrapIfNotInstanceOf: withArguments: {litIndex}
+]
+
+{ #category : #'*BytecodeSets-opcode sizing' }
+BytecodeEncoder >> sizeUnsignedSingleExtendB: anInteger [
+	^self sizeOpcodeSelector: #genUnsignedSingleExtendB: withArguments: {anInteger}
 ]
 
 { #category : #'*BytecodeSets-bytecode decoding' }
