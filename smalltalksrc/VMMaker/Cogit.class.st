@@ -1052,6 +1052,11 @@ Cogit class >> isNonArgumentImplicitReceiverVariableName: aString [
 		'objectMemory' 'objectRepresentation' 'manager') includes: aString
 ]
 
+{ #category : #accessing }
+Cogit class >> maxNegativeErrorCode [
+	^MaxNegativeErrorCode
+]
+
 { #category : #translation }
 Cogit class >> mustBeGlobal: var [
 	"Answer if a variable must be global and exported.  Used for inst vars that are accessed from VM
