@@ -1242,7 +1242,7 @@ EncoderForSistaV1 >> genSignedSingleExtendB: extendedIndex [
 ]
 
 { #category : #'extended bytecode generation' }
-EncoderForSistaV1 >> genStoreFlagExtensionIgnoreStoreCheck: ignoreStoreCheck maybeContext: maybeContext [
+EncoderForSistaV1 >> genStoreFlagExtensionIgnoreStoreCheck: ignoreStoreCheck maybeContext: maybeContext ignoreReadOnlyCheck: ignoreReadOnlyCheck [
 	"ignoreStoreCheck: 
 	Can be applied to the long form of store and store pop of literal variable, remote inst var, remote temp, receiver inst var.
 	If present, the VM does not generate the GC store check. 
@@ -1252,21 +1252,33 @@ EncoderForSistaV1 >> genStoreFlagExtensionIgnoreStoreCheck: ignoreStoreCheck may
 	Currently the store check is for the remembered table, but we may have it for tri color marking later. So the compiler cannot really remove the store check if the object stored is old.
 
 	maybeContext:
-	Can be used only with remote instance variable stores. If marked, the object can be a context and hence needs specific VM code. Receiver inst var have a separate encoding, temp vectors and literal variable can't be contexts"
-	self genUnsignedSingleExtendB: ignoreStoreCheck asBit + (maybeContext asBit << 1)
+	Can be used only with remote instance variable stores and receiver variable stores. If marked, the object can be a context and hence needs specific VM code. Receiver inst var have a separate encoding, temp vectors and literal variable can't be contexts
+	
+	ignoreReadOnlyCheck:
+	no read-only check will be performed by the VM. Normally each store has a read-only check.
+	"
+	self genUnsignedSingleExtendB: ignoreStoreCheck asBit + (maybeContext asBit << 1) + (ignoreReadOnlyCheck asBit << 2)
 ]
 
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genStoreInstVar: instVarIndex [
 	"243		11110011	iiiiiiii		Store Receiver Variable #iiiiiii (+ Extend A * 256)"
-	self genStoreInstVarLong: instVarIndex
+	self genStoreInstVarLong: instVarIndex maybeContext: false
 ]
 
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genStoreInstVarLong: instVarIndex [
 	"243		11110011	iiiiiiii		Store Receiver Variable #iiiiiii (+ Extend A * 256)"
+	^self genStoreInstVarLong: instVarIndex maybeContext: instVarIndex < MethodContext instSize
+]
+
+{ #category : #'bytecode generation' }
+EncoderForSistaV1 >> genStoreInstVarLong: instVarIndex maybeContext: maybeContext [
+	"243		11110011	iiiiiiii		Store Receiver Variable #iiiiiii (+ Extend A * 256)"
 	(instVarIndex < 0 or: [instVarIndex > 65535]) ifTrue:
 		[^self outOfRangeError: 'index' index: instVarIndex range: 0 to: 65535].
+	maybeContext ifTrue:
+		[self genStoreFlagExtensionIgnoreStoreCheck: false maybeContext: maybeContext ignoreReadOnlyCheck: false].
 	instVarIndex > 255 ifTrue:
 		[self genUnsignedSingleExtendA: instVarIndex // 256].
 	stream
