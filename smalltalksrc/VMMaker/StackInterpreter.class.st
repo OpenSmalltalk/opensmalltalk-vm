@@ -10541,12 +10541,12 @@ StackInterpreter >> objCouldBeClassObj: objOop [
 	^(objectMemory isPointersNonImm: objOop)
 	  and: [(objectMemory numSlotsOfAny: objOop) > InstanceSpecificationIndex
 	  and: [fieldOop := objectMemory fetchPointer: SuperclassIndex ofObject: objOop.
-			((objectMemory isNonImmediate: fieldOop)
+			((objectMemory addressCouldBeObj: fieldOop)
 			and:[ (objectMemory isPointersNonImm: fieldOop)
 				or: [(objectMemory isOopForwarded: fieldOop)
 					and: [objectMemory isPointers: (objectMemory followForwarded: fieldOop)]]])
 	  and: [fieldOop := objectMemory fetchPointer: MethodDictionaryIndex ofObject: objOop.
-			((objectMemory isNonImmediate: fieldOop)
+			((objectMemory addressCouldBeObj: fieldOop)
 			and:[ (objectMemory isPointersNonImm: fieldOop)
 				or: [(objectMemory isOopForwarded: fieldOop)
 					and: [objectMemory isPointers: (objectMemory followForwarded: fieldOop)]]])
@@ -13773,7 +13773,8 @@ StackInterpreter >> shortPrint: oop [
 	((objectMemory isPointersNonImm: oop)
 	 and: [classOop ~= objectMemory nilObject
 	 and: [((objectMemory instanceSizeOf: classOop) between: ValueIndex + 1 and: ValueIndex + 2)
-	 and: [(objectMemory isBytes: (objectMemory fetchPointer: KeyIndex ofObject: oop))]]]) ifTrue:
+	 and: [(objectMemory addressCouldBeObj: (objectMemory fetchPointer: KeyIndex ofObject: oop))]
+	 and: [(objectMemory isBytesNonImm: (objectMemory fetchPointer: KeyIndex ofObject: oop))]]]) ifTrue:
 		[| classLookupKey |
 		 classLookupKey := objectMemory fetchClassOfNonImm: (objectMemory splObj: SchedulerAssociation).
 		 [classLookupKey = objectMemory nilObject ifTrue:
