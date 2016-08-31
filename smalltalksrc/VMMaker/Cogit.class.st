@@ -6944,6 +6944,9 @@ Cogit >> generateRunTimeTrampolines [
 														called: 'ceSendMustBeBooleanAddTrueTrampoline'.
 	ceNonLocalReturnTrampoline := self genNonLocalReturnTrampoline.
 	ceCheckForInterruptTrampoline := self genCheckForInterruptsTrampoline.
+	"Neither of the context inst var access trampolines save registers.  Their operation could cause
+	 arbitrary update of stack frames, so the assumption is that callers flush the stack before calling
+	 the context inst var access trampolines, and that everything except the result is dead afterwards."
 	ceFetchContextInstVarTrampoline := self genTrampolineFor: #ceContext:instVar:
 											called: 'ceFetchContextInstVarTrampoline'
 											arg: ReceiverResultReg
