@@ -1332,12 +1332,13 @@ static sqInt display_clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqIn
 static void redrawDisplay(int l, int r, int t, int b)
 {
   extern sqInt displayObject(void);
+  extern sqInt isPointers(sqInt);
   extern sqInt lengthOf(sqInt);
   extern sqInt fetchPointerofObject(sqInt, sqInt);
 
   sqInt displayObj= displayObject();
 
-  if (lengthOf(displayObj) >= 4)
+  if (isPointers(displayObj) && lengthOf(displayObj) >= 4)
     {
       sqInt dispBits= fetchPointerofObject(0, displayObj);
       sqInt w= fetchIntegerofObject(1, displayObj);
