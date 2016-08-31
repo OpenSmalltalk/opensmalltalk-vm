@@ -1704,14 +1704,25 @@ StackToRegisterMappingCogit >> genGenericStorePop: popBoolean MaybeContextSlotIn
 	- needRestoreRcvr (ensures the recevier is live across the store)
 	- needsImmCheck (do the call-back if the receiver is immutable)"
 	<inline: true>
-	| jmpSingle jmpDone |
 	<var: #jmpSingle type: #'AbstractInstruction *'>
 	<var: #jmpDone type: #'AbstractInstruction *'>
+	<var: #mutableJump type: #'AbstractInstruction *'>
+	<var: #immutabilityFailure type: #'AbstractInstruction *'>
+	| immutabilityFailure mutableJump |
 	"The reason we need a frame here is that assigning to an inst var of a context may
 	 involve wholesale reorganization of stack pages, and the only way to preserve the
 	 execution state of an activation in that case is if it has a frame."
-	"Context stores do not require Imm checks as contexts can't be immutable"
 	self assert: needsFrame.
+	self 
+		cppIf: IMMUTABILITY
+		ifTrue:
+			[needsImmCheck
+				ifTrue: 
+					[mutableJump := objectRepresentation genJumpMutable: ReceiverResultReg scratchReg: TempReg.
+					 objectRepresentation genStoreTrampolineCall: slotIndex.
+					 needsRestoreReceiver ifTrue: [ self putSelfInReceiverResultReg ].
+					 immutabilityFailure := self Jump: 0.
+					 mutableJump jmpTarget: self Label.]].
 	self ssPop: 1.
 	self ssAllocateCallReg: ClassReg and: SendNumArgsReg. "for ceStoreContextInstVarTrampoline"
 	self ssPush: 1.
@@ -1720,33 +1731,13 @@ StackToRegisterMappingCogit >> genGenericStorePop: popBoolean MaybeContextSlotIn
 		sourceReg: ReceiverResultReg
 		destReg: TempReg.
 	self ssStoreAndReplacePop: popBoolean toReg: ClassReg.
-	jmpSingle := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
+	self ssFlushTo: simStackPtr.
 	self MoveCq: slotIndex R: SendNumArgsReg.
 	self CallRT: ceStoreContextInstVarTrampoline.
-	jmpDone := self Jump: 0.
-	jmpSingle jmpTarget: self Label.
 	self 
 		cppIf: IMMUTABILITY
 		ifTrue:
-			[needsImmCheck
-				ifTrue: 
-					[objectRepresentation 
-						genStoreWithImmutabilityCheckSourceReg: ClassReg 
-						slotIndex: slotIndex 
-						destReg: ReceiverResultReg 
-						scratchReg: TempReg 
-						needsStoreCheck: needsStoreCheck 
-						needRestoreRcvr: needsRestoreReceiver.
-					jmpDone jmpTarget: self Label.
-					^0]].
-	objectRepresentation
-			genStoreSourceReg: ClassReg
-			slotIndex: slotIndex
-			destReg: ReceiverResultReg
-			scratchReg: TempReg
-			inFrame: true
-			needsStoreCheck: needsStoreCheck.
-	jmpDone jmpTarget: self Label.
+			[needsImmCheck ifTrue:[immutabilityFailure jmpTarget: self Label]].
 	^0
 ]
 
@@ -2427,22 +2418,26 @@ StackToRegisterMappingCogit >> genSendTrampolineFor: aRoutine numArgs: numArgs c
 ]
 
 { #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genSistaExtStoreAndPopReceiverVariableBytecodePopBoolean: boolean [
+StackToRegisterMappingCogit >> genSistaExtStoreAndPopReceiverVariableBytecodePopBoolean: popBoolean [
 	<inline: true>
-	| index needsStoreCheck needsImmCheck |
+	| index needsStoreCheck needsImmCheck maybeContext |
 	needsStoreCheck := self sistaNeedsStoreCheck.
 	needsImmCheck := self extBSpecifiesImmCheck.
+	"Long form and short form exist for popInto. Only the long form exists for store.
+	Store have an explicit flag to mark context accessing, while popInto context accessing are done through the long form,
+	hence generate the context form if the flag is set or if this is a popInto."
+	maybeContext := popBoolean or: [self extBSpecifiesMaybeContext].
 	extB := 0.
 	index := byte1 + (extA << 8).
 	extA := 0.
-	^(coInterpreter isWriteMediatedContextInstVarIndex: index)
+	^((coInterpreter isWriteMediatedContextInstVarIndex: index) and: [maybeContext])
 		ifTrue: [self 
-				genStorePop: boolean 
+				genStorePop: popBoolean 
 				MaybeContextReceiverVariable: index 
 				needsStoreCheck: needsStoreCheck 
 				needsImmutabilityCheck: needsImmCheck]
 		ifFalse: [self 
-				 genStorePop: boolean 
+				 genStorePop: popBoolean 
 				 ReceiverVariable: index 
 				 needsStoreCheck: needsStoreCheck 
 				 needsImmutabilityCheck: needsImmCheck]
