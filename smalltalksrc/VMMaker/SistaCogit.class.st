@@ -992,7 +992,9 @@ SistaCogit >> genUnaryInlinePrimitive: prim [
 					genConvertIntegerToSmallIntegerInReg: resultReg].
 					"02		unchecked pointer basicSize"
 			[3] ->	"03		unchecked byte numBytes"
-				[objectRepresentation
+				[self ssTop popToReg: rcvrReg.
+				 self ssPop: 1.
+				 objectRepresentation
 					genGetNumBytesOf: rcvrReg into: resultReg;
 					genConvertIntegerToSmallIntegerInReg: resultReg].
 					"04		unchecked short16Type format numShorts"
