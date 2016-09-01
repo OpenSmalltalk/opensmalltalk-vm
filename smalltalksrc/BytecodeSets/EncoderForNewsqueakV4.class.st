@@ -1257,6 +1257,14 @@ EncoderForNewsqueakV4 >> supportsClosureOpcodes [
 ]
 
 { #category : #testing }
+EncoderForNewsqueakV4 >> supportsFullBlocks [
+	"Answer if the instruction set supports full closures (closure creation from
+	 specfic methods instead of bytecodes embedded in an outer home method)."
+	
+	^false
+]
+
+{ #category : #testing }
 EncoderForNewsqueakV4 >> usesAlternateBytecodeSet [
 	"Answer if the receiver encodes the alternate bytecode set (indicated by the sign flag set in a CompiledMethod's header)."
 	^true
