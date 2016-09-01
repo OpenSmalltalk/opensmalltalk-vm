@@ -1041,8 +1041,6 @@ EncoderForSistaV1 >> genPushLiteralVar: literalIndex [
 
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genPushNClosureTemps: numTemps [
-	"Not supported anymore since we're migrating to FullBlockClosure"
-	self notify: 'This instruction should not be used any more'.
 	"backward compatibility..."
 	numTemps timesRepeat: [ self genPushSpecialLiteral: nil ]
 ]
@@ -1474,5 +1472,13 @@ EncoderForSistaV1 >> sizePushFullClosure: compiledBlockLiteralIndex numCopied: n
 
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> supportsClosureOpcodes [
+	^true
+]
+
+{ #category : #testing }
+EncoderForSistaV1 >> supportsFullBlocks [
+	"Answer if the instruction set supports full closures (closure creation from
+	 specfic methods instead of bytecodes embedded in an outer home method)."
+	
 	^true
 ]
