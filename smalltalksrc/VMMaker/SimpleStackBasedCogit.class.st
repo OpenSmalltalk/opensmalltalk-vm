@@ -275,7 +275,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		(3 252 252 genExtStoreRemoteTempOrInstVarLongBytecode isMappedIfImmutability)
 		(3 253 253 genExtStoreAndPopRemoteTempOrInstVarLongBytecode isMappedIfImmutability)
 
-		(3 254 254	genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode)
+		(3 254 254	genExtJumpIfNotInstanceOfBehaviorsBytecode)
 			
 		(3 255 255	unknownBytecode))
 ]
@@ -1670,7 +1670,7 @@ SimpleStackBasedCogit >> genExtJumpIfFalse [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode [
+SimpleStackBasedCogit >> genExtJumpIfNotInstanceOfBehaviorsBytecode [
 	"SistaV1: *	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
 	"Non supported in non Sista VMs"
 	^EncounteredUnknownBytecode

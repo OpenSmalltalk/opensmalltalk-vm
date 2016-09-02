@@ -467,7 +467,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		(3 252 252 genExtStoreRemoteTempOrInstVarLongBytecode isMappedIfImmutability)
 		(3 253 253 genExtStoreAndPopRemoteTempOrInstVarLongBytecode isMappedIfImmutability)
 
-		(3 254 254	genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode branch v4:Long:BranchIfNotInstanceOf:Distance:)
+		(3 254 254	genExtJumpIfNotInstanceOfBehaviorsBytecode branch v4:Long:BranchIfNotInstanceOf:Distance:)
 		
 		(3 255 255	unknownBytecode))
 ]

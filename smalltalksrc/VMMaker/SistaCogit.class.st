@@ -559,7 +559,7 @@ SistaCogit >> genExecutionCountLogicInto: binaryBlock counterReg: counterReg [
 ]
 
 { #category : #'bytecode generators' }
-SistaCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode [
+SistaCogit >> genExtJumpIfNotInstanceOfBehaviorsBytecode [
 	"SistaV1: *	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
 								
 	| reg literal distance targetFixUp |
@@ -570,7 +570,7 @@ SistaCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode [
 	reg := self allocateRegForStackEntryAt: 0.
 	self ssTop popToReg: reg.
 	self ssFlushTo: simStackPtr. "flushed but the value is still in reg"
-
+	
 	self genPopStackBytecode.
 	
 	literal := self getLiteral: (extA * 256 + byte1).
@@ -583,7 +583,7 @@ SistaCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode [
 	(objectMemory isArrayNonImm: literal)
 		ifTrue: [objectRepresentation branchIf: reg notInstanceOfBehaviors: literal target: targetFixUp]
 		ifFalse: [objectRepresentation branchIf: reg notInstanceOfBehavior: literal target: targetFixUp].
-	
+
 	^0
 ]
 

@@ -584,7 +584,7 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 		(252		extStoreRemoteTempOrInstVarLongBytecode)
 		(253		extStoreAndPopRemoteTempOrInstVarLongBytecode)
 				
-		(254		extJumpIfNotInstanceOfBehaviorsOrPopBytecode)
+		(254		extJumpIfNotInstanceOfBehaviorsBytecode)
 
 		(255		unknownBytecode)
 	)
@@ -5313,11 +5313,11 @@ StackInterpreter >> extJumpIfFalse [
 ]
 
 { #category : #'sista bytecodes' }
-StackInterpreter >> extJumpIfNotInstanceOfBehaviorsOrPopBytecode [
+StackInterpreter >> extJumpIfNotInstanceOfBehaviorsBytecode [
 	"254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
 	| tosClassTag literal distance |
 	SistaVM ifFalse: [^self respondToUnknownBytecode].
-	tosClassTag := objectMemory fetchClassTagOf: self internalStackTop.
+	tosClassTag := objectMemory fetchClassTagOf: self internalPopStack.
 	literal := self literal: extA << 8 + self fetchByte.
 	distance := extB << 8 + self fetchByte.
 	extA := 0.
@@ -5326,16 +5326,13 @@ StackInterpreter >> extJumpIfNotInstanceOfBehaviorsOrPopBytecode [
 		ifTrue:
 			[0 to: (objectMemory numSlotsOf: literal) asInteger - 1 do: [:i |
 				tosClassTag = (objectMemory rawClassTagForClass: (objectMemory fetchPointer: i ofObject: literal))
-					ifTrue: 
-						[ self internalPopStack.
-						^ self fetchNextBytecode ] ].
-			localIP := localIP + distance.
-				^ self fetchNextBytecode]
+					ifTrue: [ ^ self fetchNextBytecode ] ].
+			 localIP := localIP + distance.
+			 ^ self fetchNextBytecode]
 		ifFalse:
 			[tosClassTag ~= (objectMemory rawClassTagForClass: literal) ifTrue:
 				[localIP := localIP + distance.
 				^ self fetchNextBytecode]].
-	self internalPopStack.
 	self fetchNextBytecode
 ]
 
@@ -5713,29 +5710,6 @@ StackInterpreter >> extStoreRemoteTempOrInstVarLongBytecode [
 			extA := extB := 0.
 			object := self temporary: tempIndex in: localFP.
 			self storeMaybeContext: object receiverVariable: slotIndex withValue: self internalStackTop ]
-]
-
-{ #category : #'sista bytecodes' }
-StackInterpreter >> extTrapIfNotInstanceOfBehaviorsBytecode [
-	"SistaV1: *	236	11101100	iiiiiiii	Trap If Not Instance Of Behavior/Array Of Behavior #iiiiiiii (+ Extend A * 256, where Extend A >= 0)"
-	| tos tosClassTag literal |
-	tos := self internalStackTop.
-	tosClassTag := objectMemory fetchClassTagOf: tos.
-	literal := self literal: extA << 8 + self fetchByte.
-	extA := 0.
-	(objectMemory isArrayNonImm: literal)
-		ifTrue:
-			[| i |
-			 i := (objectMemory numSlotsOf: literal) asInteger.
-			 [(i := i -1) < 0
-			  or: [tosClassTag = (objectMemory rawClassTagForClass: (objectMemory fetchPointer: i ofObject: literal))]] whileTrue.
-			 i < 0 ifTrue:
-				[^self respondToSistaTrap]]
-		ifFalse:
-			[tosClassTag ~= (objectMemory rawClassTagForClass: literal) ifTrue:
-				[^self respondToSistaTrap]].
-	self internalPopStack.
-	self fetchNextBytecode
 ]
 
 { #category : #'jump bytecodes' }
