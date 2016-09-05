@@ -5,8 +5,10 @@ Class {
 		'ceScheduleScavengeTrampoline',
 		'ceSmallActiveContextInMethodTrampoline',
 		'ceSmallActiveContextInBlockTrampoline',
+		'ceSmallActiveContextInFullBlockTrampoline',
 		'ceLargeActiveContextInMethodTrampoline',
 		'ceLargeActiveContextInBlockTrampoline',
+		'ceLargeActiveContextInFullBlockTrampoline',
 		'ceStoreCheckContextReceiverTrampoline',
 		'ceStoreTrampolines'
 	],
@@ -43,7 +45,11 @@ CogObjectRepresentationForSpur class >> initializeMiscConstants [
 { #category : #accessing }
 CogObjectRepresentationForSpur class >> numTrampolines [
 	^super numTrampolines
-	 + 6 "(small,large)x(method,block) context creation, ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline"
+	 + (SistaV1BytecodeSet
+		ifTrue: [8] "(small,large)x(method,block,fullBlock) context creation,
+					 ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline"
+		ifFalse: [6] "(small,large)x(method,block) context creation,
+					 ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline")
 	 + ((initializationOptions at: #IMMUTABILITY ifAbsent: [false])
 		ifTrue: [NumStoreTrampolines]
 		ifFalse: [0])
@@ -483,14 +489,13 @@ CogObjectRepresentationForSpur >> genGetActiveContextLarge: isLarge inBlock: isI
 		OrCq: MFMethodFlagHasContextFlag R: ClassReg;
 		MoveR: ClassReg Mw: FoxMethod r: FPReg.
 	"now get the home CogMethod into ClassReg and save for post-instantiation."
-	isInBlock
-		ifTrue:
-			[cogit
-				SubCq: 3 R: ClassReg; "-3 is -(hasContext+isBlock) flags"
-				MoveM16: 0 r: ClassReg R: TempReg;
-				SubR: TempReg R: ClassReg]
-		ifFalse:
-			[cogit SubCq: 1 R: ClassReg]. "-1 is hasContext flag"
+	isInBlock caseOf: {
+	[InFullBlock]	-> [cogit SubCq: 3 R: ClassReg]. "-3 is -(hasContext+isBlock) flags"
+	[InVanillaBlock]	-> [cogit
+							SubCq: 3 R: ClassReg; "-3 is -(hasContext+isBlock) flags"
+							MoveM16: 0 r: ClassReg R: TempReg;
+							SubR: TempReg R: ClassReg].
+	[0]				-> [cogit SubCq: 1 R: ClassReg]. "-1 is hasContext flag" }.
 
 	"instantiate the context..."
 	slotSize := isLarge ifTrue: [LargeContextSlots] ifFalse: [SmallContextSlots].
@@ -539,7 +544,7 @@ CogObjectRepresentationForSpur >> genGetActiveContextLarge: isLarge inBlock: isI
 	cogit MoveR: TempReg Mw: objectMemory baseHeaderSize + (StackPointerIndex * objectMemory bytesPerOop) r: ReceiverResultReg.
 
 	"Set closureOrNil to either the stacked receiver or nil"
-	isInBlock
+	isInBlock > 0
 		ifTrue:
 			[cogit
 				MoveR: SendNumArgsReg R: TempReg;
@@ -621,12 +626,14 @@ CogObjectRepresentationForSpur >> genGetActiveContextNumArgs: numArgs large: isL
 	"Get the active context into ReceiverResultReg, creating it if necessary."
 	| routine |
 	routine := isLargeContext
-				ifFalse: [isInBlock
-							ifFalse: [ceSmallActiveContextInMethodTrampoline]
-							ifTrue: [ceSmallActiveContextInBlockTrampoline]]
-				ifTrue: [isInBlock
-							ifFalse: [ceLargeActiveContextInMethodTrampoline]
-							ifTrue: [ceLargeActiveContextInBlockTrampoline]].
+				ifFalse: [isInBlock caseOf: {
+						[0]				-> [ceSmallActiveContextInMethodTrampoline].
+						[InVanillaBlock]	-> [ceSmallActiveContextInBlockTrampoline].
+						[InFullBlock]	-> [ceSmallActiveContextInFullBlockTrampoline] }]
+				ifTrue: [isInBlock caseOf: {
+						[0]				-> [ceLargeActiveContextInMethodTrampoline].
+						[InVanillaBlock]	-> [ceLargeActiveContextInBlockTrampoline].
+						[InFullBlock]	-> [ceLargeActiveContextInFullBlockTrampoline] }].
 	cogit
 		MoveCq: numArgs R: SendNumArgsReg;
 		CallRT: routine.
@@ -1417,10 +1424,14 @@ CogObjectRepresentationForSpur >> generateObjectRepresentationTrampolines [
 											genTrampolineFor: #ceScheduleScavenge
 											called: 'ceScheduleScavengeTrampoline'
 											regsToSave: CallerSavedRegisterMask.
-	ceSmallActiveContextInMethodTrampoline := self genActiveContextTrampolineLarge: false inBlock: false called: 'ceSmallMethodContext'.
-	ceSmallActiveContextInBlockTrampoline := self genActiveContextTrampolineLarge: false inBlock: true called: 'ceSmallBlockContext'.
-	ceLargeActiveContextInMethodTrampoline := self genActiveContextTrampolineLarge: true inBlock: false called: 'ceLargeMethodContext'.
-	ceLargeActiveContextInBlockTrampoline := self genActiveContextTrampolineLarge: true inBlock: true called: 'ceLargeBlockContext'
+	ceSmallActiveContextInMethodTrampoline := self genActiveContextTrampolineLarge: false inBlock: 0 called: 'ceSmallMethodContext'.
+	ceSmallActiveContextInBlockTrampoline := self genActiveContextTrampolineLarge: false inBlock: InVanillaBlock called: 'ceSmallBlockContext'.
+	SistaV1BytecodeSet ifTrue:
+		[ceSmallActiveContextInFullBlockTrampoline := self genActiveContextTrampolineLarge: false inBlock: InFullBlock called: 'ceSmallFullBlockContext'].
+	ceLargeActiveContextInMethodTrampoline := self genActiveContextTrampolineLarge: true inBlock: 0 called: 'ceLargeMethodContext'.
+	ceLargeActiveContextInBlockTrampoline := self genActiveContextTrampolineLarge: true inBlock: InVanillaBlock called: 'ceLargeBlockContext'.
+	SistaV1BytecodeSet ifTrue:
+		[ceLargeActiveContextInFullBlockTrampoline := self genActiveContextTrampolineLarge: true inBlock: InFullBlock called: 'ceLargeFullBlockContext']
 ]
 
 { #category : #'bytecode generator support' }
