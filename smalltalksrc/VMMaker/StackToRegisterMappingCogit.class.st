@@ -1233,7 +1233,8 @@ StackToRegisterMappingCogit >> compileFrameBuild [
 StackToRegisterMappingCogit >> compileFullBlockMethodFrameBuild: numCopied [
 	<option: #SistaV1BytecodeSet>
 	needsFrame ifFalse:
-		[self initSimStackForFramelessMethod: initialPC.
+		[ self assert: methodOrBlockNumArgs = 0. "Else calling convention would have put args in regs while block activation expects them on stack"
+		 self initSimStackForFramelessMethod: initialPC.
 		 ^self].
 	super compileFullBlockMethodFrameBuild: numCopied.
 	self initSimStackForFramefulMethod: initialPC

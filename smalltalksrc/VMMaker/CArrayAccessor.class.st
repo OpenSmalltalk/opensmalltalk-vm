@@ -37,6 +37,12 @@ CArrayAccessor >> at: index [
 ]
 
 { #category : #accessing }
+CArrayAccessor >> at: index ifAbsent: aBlock [
+	"This is a simulation-time-only convenience..."
+	^object at: index + offset + 1 ifAbsent: aBlock
+]
+
+{ #category : #accessing }
 CArrayAccessor >> at: index put: value [
 	^object at: index + offset + 1 put: value
 ]
