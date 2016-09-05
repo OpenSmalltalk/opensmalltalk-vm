@@ -372,7 +372,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
             return SQSSL_OUT_OF_MEMORY;
         }
     }
-    logprintf("sqConnectSSL: input token %d bytes\n", srcLen);
+    logprintf("sqConnectSSL: input token %" PRIdSQINT " bytes\n", srcLen);
     memcpy(ssl->dataBuf + ssl->dataLen, srcBuf, srcLen);
     ssl->dataLen += srcLen;
 
@@ -442,7 +442,7 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
             return SQSSL_OUT_OF_MEMORY;
         }
     }
-    logprintf("sqConnectSSL: input token %d bytes\n", srcLen);
+    logprintf("sqConnectSSL: input token %" PRIdSQINT " bytes\n", srcLen);
     memcpy(ssl->dataBuf + ssl->dataLen, srcBuf, srcLen);
     ssl->dataLen += srcLen;
 
@@ -496,7 +496,7 @@ sqInt sqEncryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
     ssl->outLen = 0;
     ssl->outMax = dstLen;
 
-    logprintf("sqEncryptSSL: Encrypting %d bytes\n", srcLen);
+    logprintf("sqEncryptSSL: Encrypting %" PRIdSQINT " bytes\n", srcLen);
 
     status = SSLWrite(ssl->ctx, srcBuf, srcLen, &nbytes);
     if (nbytes != srcLen) {
@@ -538,7 +538,7 @@ sqInt sqDecryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
             return SQSSL_OUT_OF_MEMORY;
         }
     }
-    logprintf("sqDecryptSSL: Input data %d bytes\n", srcLen);
+    logprintf("sqDecryptSSL: Input data %" PRIdSQINT " bytes\n", srcLen);
     memcpy(ssl->dataBuf + ssl->dataLen, srcBuf, srcLen);
     ssl->dataLen += srcLen;
 
@@ -572,7 +572,7 @@ char* sqGetStringPropertySSL(sqInt handle, int propID)
     case SQSSL_PROP_CERTNAME:   return ssl->certName;
     case SQSSL_PROP_SERVERNAME: return ssl->serverName;
     default:
-        logprintf("sqGetStringPropertySSL: Unknown property ID %d\n", propID);
+        logprintf("sqGetStringPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
         return NULL;
     }
     return NULL;
@@ -600,7 +600,7 @@ sqInt sqSetStringPropertySSL(sqInt handle, int propID, char* propName,
         property[propLen] = '\0';
     }
 
-    logprintf("sqSetStringPropertySSL(%d): %s\n",
+    logprintf("sqSetStringPropertySSL(%" PRIdSQINT "): %s\n",
               propID, property ? property : "(null)");
 
     switch(propID) {
@@ -620,7 +620,7 @@ sqInt sqSetStringPropertySSL(sqInt handle, int propID, char* propName,
         if (property) {
             free(property);
         }
-        logprintf("sqSetStringPropertySSL: Unknown property ID %d\n", propID);
+        logprintf("sqSetStringPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
         return 0;
     }
     return 1;
@@ -646,7 +646,7 @@ int sqGetIntPropertySSL(sqInt handle, int propID)
     case SQSSL_PROP_VERSION:   return SQSSL_VERSION;
     case SQSSL_PROP_LOGLEVEL:  return ssl->loglevel;
     default:
-        logprintf("sqGetIntPropertySSL: Unknown property ID %d\n", propID);
+        logprintf("sqGetIntPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
         return 0;
     }
     return 0;
@@ -670,13 +670,13 @@ sqInt sqSetIntPropertySSL(sqInt handle, sqInt propID, sqInt propValue)
     case SQSSL_PROP_SSLSTATE:  // falltrough
     case SQSSL_PROP_CERTSTATE: // falltrough
     case SQSSL_PROP_VERSION:
-        logprintf("sqSetIntPropertySSL: property is readonly %d\n", propID);
+        logprintf("sqSetIntPropertySSL: property is readonly %" PRIdSQINT "\n", propID);
         break;
     case SQSSL_PROP_LOGLEVEL:
         ssl->loglevel = propValue;
         break;
     default:
-        logprintf("sqSetIntPropertySSL: Unknown property ID %d\n", propID);
+        logprintf("sqSetIntPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
         return 0;
     }
     return 1;
