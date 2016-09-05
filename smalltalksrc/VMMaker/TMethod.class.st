@@ -1564,9 +1564,10 @@ TMethod >> isConditionalToBeTransformedForAssignment: aSend in: aCodeGen [
 			[:arg| | stmt |
 			self assert: arg isStmtList.
 			arg statements size > 1
-			or: [(stmt := arg statements first) isSend
+			or: [(stmt := arg statements first) isSwitch
+			or: [stmt isSend
 				and: [(aCodeGen mayInline: stmt selector)
-					or: [self isConditionalToBeTransformedForAssignment: stmt in: aCodeGen]]]]]
+					or: [self isConditionalToBeTransformedForAssignment: stmt in: aCodeGen]]]]]]
 ]
 
 { #category : #inlining }
