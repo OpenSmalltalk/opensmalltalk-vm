@@ -1240,6 +1240,10 @@ StackToRegisterMappingCogit >> compileFullBlockFramelessEntry: numCopied [
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> compileFullBlockMethodFrameBuild: numCopied [
 	<option: #SistaV1BytecodeSet>
+	useTwoPaths ifTrue: 
+		[ "method with only inst var store, we compile only slow path for now" 
+		 useTwoPaths := false.
+		 self cppIf: IMMUTABILITY ifTrue: [ needsFrame := true ] ].
 	needsFrame ifFalse:
 		[self assert: numCopied = 0.
 		 self compileFullBlockFramelessEntry: numCopied.
@@ -3224,7 +3228,7 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 	optStatus
 		isReceiverResultRegLive: true;
 		ssEntry: (self addressOf: simSelf).
-	self assert: methodOrBlockNumTemps >= methodOrBlockNumArgs.
+	self assert: methodOrBlockNumTemps = methodOrBlockNumArgs.
 	self assert: self numRegArgs <= 2.
 	(methodOrBlockNumArgs between: 1 and: self numRegArgs)
 		ifTrue:
