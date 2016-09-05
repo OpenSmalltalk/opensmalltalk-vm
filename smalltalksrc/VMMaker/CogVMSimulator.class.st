@@ -2280,7 +2280,7 @@ CogVMSimulator >> maybeCheckStackDepth: delta sp: sp pc: mcpc [
 		 bcpc > lastbcpc ifTrue:
 			[bcpc := lastbcpc]].
 	asp := self stackPointerIndexForFrame: framePointer WithSP: sp + objectMemory wordSize.
-	csp := debugStackPointers at: bcpc.
+	csp := debugStackPointers at: bcpc ifAbsent: [-1].
 	"Compensate lazily for absent receiver sends."
 	(NewspeakVM
 	 and: [asp - delta = csp

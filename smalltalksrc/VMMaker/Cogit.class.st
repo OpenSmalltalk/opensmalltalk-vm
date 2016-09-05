@@ -4684,7 +4684,7 @@ Cogit >> compileEntireFullBlockMethod: numCopied [
 	(result := self compileMethodBody) < 0 ifTrue:
 		[^result].
 	self assert: blockCount = 0.
-	^-1
+	^0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -7990,7 +7990,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 	 skip forward to the bytecode pc map entry for the stack check."
 	cogMethod cmType = CMMethod
 		ifTrue:
-			[isInBlock := false.
+			[isInBlock := cogMethod cmIsFullBlock.
 			 homeMethod := self cCoerceSimple: cogMethod to: #'CogMethod *'.
 			 self assert: startbcpc = (coInterpreter startPCOfMethodHeader: homeMethod methodHeader).
 			 map := self mapStartFor: homeMethod.
