@@ -632,7 +632,8 @@ CoInterpreter >> activateNewFullClosureMethod: blockClosure numArgs: numArgs may
 	 the last block method we failed to compile and avoid recompiling it."
 	(self methodWithHeaderShouldBeCogged: methodHeader)
 		ifTrue:
-			[theMethod = lastCoggableInterpretedBlockMethod
+			[(instructionPointer < objectMemory startOfMemory "If from machine code (via value primitive) attempt jitting"
+			  or: [theMethod = lastCoggableInterpretedBlockMethod]) "If from interpreter and repeat block, attempt jitting"
 				ifTrue:
 					[theMethod ~= lastUncoggableInterpretedBlockMethod ifTrue:
 						[cogit cogFullBlockMethod: theMethod numCopied: numCopied.
@@ -5741,7 +5742,8 @@ CoInterpreter >> mustMapMachineCodePC: theIP context: aOnceMarriedContext [
 		[^objectMemory nilObject].
 	maybeClosure := objectMemory fetchPointer: ClosureIndex ofObject: aOnceMarriedContext.
 	methodObj := objectMemory fetchPointer: MethodIndex ofObject: aOnceMarriedContext.
-	maybeClosure ~= objectMemory nilObject
+	(maybeClosure ~= objectMemory nilObject
+	and: [self isVanillaBlockClosure: maybeClosure])
 		ifTrue: [self assert: (theIP signedBitShift: -16) < -1.
 				startBcpc := self startPCOfClosure: maybeClosure]
 		ifFalse: [self assert: (theIP signedBitShift: -16) = -1.

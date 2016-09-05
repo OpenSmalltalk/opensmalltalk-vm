@@ -1116,7 +1116,7 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 	savedNeedsFrame := needsFrame.
 	savedNumArgs := methodOrBlockNumArgs.
 	savedNumTemps := methodOrBlockNumTemps.
-	inBlock := true.
+	inBlock := InVanillaBlock.
 	compiledBlocksCount := 0.
 	[compiledBlocksCount < blockCount] whileTrue:
 		[blockStart := self blockStartAt: compiledBlocksCount.
@@ -1232,9 +1232,16 @@ StackToRegisterMappingCogit >> compileFrameBuild [
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> compileFullBlockMethodFrameBuild: numCopied [
 	<option: #SistaV1BytecodeSet>
+	| blockStart |
+	<var: 'blockStart' type: #CogBlockStart>
 	needsFrame ifFalse:
-		[ self assert: methodOrBlockNumArgs = 0. "Else calling convention would have put args in regs while block activation expects them on stack"
-		 self initSimStackForFramelessMethod: initialPC.
+		[self cCode: [] inSmalltalk: [blockStart := CogBlockStart new].
+		 blockStart
+			startpc: initialPC;
+			numArgs: methodOrBlockNumArgs;
+			numCopied: numCopied;
+			numInitialNils: 0.
+		 self compileBlockFramelessEntry: blockStart.
 		 ^self].
 	super compileFullBlockMethodFrameBuild: numCopied.
 	self initSimStackForFramefulMethod: initialPC
@@ -2335,7 +2342,7 @@ StackToRegisterMappingCogit >> genPushRemoteTempLongBytecode [
 StackToRegisterMappingCogit >> genPushTemporaryVariable: index [
 	"If a frameless method (not a block), only argument temps can be accessed.
 	 This is assured by the use of needsFrameIfMod16GENumArgs: in pushTemp."
-	self assert: (inBlock or: [needsFrame or: [index < methodOrBlockNumArgs]]).
+	self assert: (inBlock > 0 or: [needsFrame or: [index < methodOrBlockNumArgs]]).
 	^self ssPushDesc: (simStack at: index)
 ]
 
@@ -2351,7 +2358,7 @@ StackToRegisterMappingCogit >> genReturnReceiver [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genReturnTopFromBlock [
-	self assert: inBlock.
+	self assert: inBlock > 0.
 	self ssTop popToReg: ReceiverResultReg.
 	self ssPop: 1.
 	^self genBlockReturn
@@ -2928,7 +2935,7 @@ StackToRegisterMappingCogit >> genUpArrowReturn [
 	 Return pops receiver and arguments off the stack.  Callee pushes the result."
 	| framelessReturn |
 	deadCode := true. "can't fall through"
-	inBlock ifTrue:
+	inBlock > 0 ifTrue:
 		[self assert: needsFrame. 
 		 self CallRT: ceNonLocalReturnTrampoline.
 		 self annotateBytecode: self Label.
@@ -3299,7 +3306,7 @@ StackToRegisterMappingCogit >> mapDeadDescriptorIfNeeded: descriptor [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	self flag: #annotateInstruction .
 	(descriptor isMapped
-		or: [inBlock and: [descriptor isMappedInBlock]]) 
+		or: [inBlock > 0 and: [descriptor isMappedInBlock]]) 
 		ifTrue: [self annotateBytecode: self Nop].
 	^ 0
 ]
@@ -3646,7 +3653,7 @@ StackToRegisterMappingCogit >> scanBlock: blockStart [
 	needsFrame := false.
 	prevBCDescriptor := nil.
 	methodOrBlockNumArgs := blockStart numArgs.
-	inBlock := true.
+	inBlock := InVanillaBlock.
 	pc := blockStart startpc.
 	end := blockStart startpc + blockStart span.
 	framelessStackDelta := nExts := extA := extB := 0.
