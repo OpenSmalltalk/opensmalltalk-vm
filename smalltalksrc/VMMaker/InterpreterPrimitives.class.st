@@ -155,11 +155,15 @@ InterpreterPrimitives >> canBeImmutable: oop [
 	necessarily across stack pages"
 	(objectMemory isContext: oop) ifTrue: [ ^ false ].
 	
-	"I don't get it for semaphores so they can't be immutable"
+	"Weak structures can't be immutable"
+	(objectMemory isEphemeron: oop) ifTrue: [^ false].
+	(objectMemory isWeakNonImm: oop) ifTrue: [^ false].
+	
+	"No clue what is going on for semaphores so they can't be immutable"
 	(objectMemory isSemaphoreObj: oop) ifTrue: [^ false].
 	
-	"simple version of process management: we forbid Process and LinkedList instances to be immutable 
-	as well as the Processor and the array of activeProcess"
+	"Simple version of process management: we forbid Process and LinkedList instances to be immutable 
+	 as well as the Processor and the array of activeProcess"
 	scheduler := self fetchPointer: ValueIndex ofObject: (self splObj: SchedulerAssociation).
 	processLists := objectMemory fetchPointer: ProcessListsIndex ofObject: scheduler.
 	oop = scheduler ifTrue: [ ^ false ].
@@ -4332,10 +4336,10 @@ InterpreterPrimitives >> primitiveStringReplace [
 	replStart := self stackIntegerValue: 0.
 
 	self successful ifFalse:
-		[^self primitiveFailFor: PrimErrBadArgument].
+		[^self primitiveFailFor: PrimErrBadArgument]. 
 	(objectMemory isImmediate: repl) ifTrue: "can happen in LgInt copy"
 		[^self primitiveFailFor: PrimErrBadArgument].
-	(objectMemory isObjImmutable: array) ifTrue:
+	(stop >= start and: [objectMemory isObjImmutable: array]) ifTrue:
 		[^self primitiveFailFor: PrimErrNoModification].
 
 	hdr := objectMemory baseHeader: array.
