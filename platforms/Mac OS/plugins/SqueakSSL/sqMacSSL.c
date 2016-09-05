@@ -572,7 +572,7 @@ char* sqGetStringPropertySSL(sqInt handle, int propID)
     case SQSSL_PROP_CERTNAME:   return ssl->certName;
     case SQSSL_PROP_SERVERNAME: return ssl->serverName;
     default:
-        logprintf("sqGetStringPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
+        logprintf("sqGetStringPropertySSL: Unknown property ID %d\n", propID);
         return NULL;
     }
     return NULL;
@@ -600,7 +600,7 @@ sqInt sqSetStringPropertySSL(sqInt handle, int propID, char* propName,
         property[propLen] = '\0';
     }
 
-    logprintf("sqSetStringPropertySSL(%" PRIdSQINT "): %s\n",
+    logprintf("sqSetStringPropertySSL(%d): %s\n",
               propID, property ? property : "(null)");
 
     switch(propID) {
@@ -620,7 +620,7 @@ sqInt sqSetStringPropertySSL(sqInt handle, int propID, char* propName,
         if (property) {
             free(property);
         }
-        logprintf("sqSetStringPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
+        logprintf("sqSetStringPropertySSL: Unknown property ID %d\n", propID);
         return 0;
     }
     return 1;
@@ -646,7 +646,7 @@ int sqGetIntPropertySSL(sqInt handle, int propID)
     case SQSSL_PROP_VERSION:   return SQSSL_VERSION;
     case SQSSL_PROP_LOGLEVEL:  return ssl->loglevel;
     default:
-        logprintf("sqGetIntPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
+        logprintf("sqGetIntPropertySSL: Unknown property ID %d\n", propID);
         return 0;
     }
     return 0;
@@ -673,7 +673,7 @@ sqInt sqSetIntPropertySSL(sqInt handle, sqInt propID, sqInt propValue)
         logprintf("sqSetIntPropertySSL: property is readonly %" PRIdSQINT "\n", propID);
         break;
     case SQSSL_PROP_LOGLEVEL:
-        ssl->loglevel = propValue;
+        ssl->loglevel = (int)propValue;
         break;
     default:
         logprintf("sqSetIntPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
