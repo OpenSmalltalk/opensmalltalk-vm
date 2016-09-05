@@ -632,7 +632,7 @@ sqInt sqSetStringPropertySSL(sqInt handle, int propID, char* propName,
                 propID - the property id to retrieve
         Returns: The integer value of the property.
 */
-sqInt sqGetIntPropertySSL(sqInt handle, int propID)
+sqInt sqGetIntPropertySSL(sqInt handle, sqInt propID)
 {
     sqSSL* ssl = sqSSLFromHandle(handle);
 
@@ -646,7 +646,7 @@ sqInt sqGetIntPropertySSL(sqInt handle, int propID)
     case SQSSL_PROP_VERSION:   return SQSSL_VERSION;
     case SQSSL_PROP_LOGLEVEL:  return ssl->loglevel;
     default:
-        logprintf("sqGetIntPropertySSL: Unknown property ID %d\n", propID);
+        logprintf("sqGetIntPropertySSL: Unknown property ID %" PRIdSQINT "\n", propID);
         return 0;
     }
     return 0;
