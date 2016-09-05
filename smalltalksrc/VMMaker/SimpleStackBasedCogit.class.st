@@ -863,7 +863,7 @@ SimpleStackBasedCogit >> compileBlockBodies [
 	"scanBlock: in compileBlockEntry: sets both of these appropriately for each block."
 	savedNeedsFrame := needsFrame.
 	savedNumArgs := methodOrBlockNumArgs.
-	inBlock := true.
+	inBlock := InVanillaBlock.
 	compiledBlocksCount := 0.
 	[compiledBlocksCount < blockCount] whileTrue:
 		[blockStart := self blockStartAt: compiledBlocksCount.
@@ -979,12 +979,13 @@ SimpleStackBasedCogit >> compileBlockFrameBuild: blockStart [
 SimpleStackBasedCogit >> compileBlockFramelessEntry: blockStart [
 	"Make sure ReceiverResultReg holds the receiver, loaded from the closure,
 	 which is what is initially in ReceiverResultReg.  We must annotate the first
-	 instruction so that findMethodForStartBcpc:inHomeMethod: can function.
-	 We need two annotations because the first is a fiducial."
+	 instruction in vanilla blocks so that findMethodForStartBcpc:inHomeMethod:
+	 can function. We need two annotations because the first is a fiducial."
 	<var: #blockStart type: #'BlockStart *'>
-	self deny: blockStart hasInstVarRef. "Else we would need to unforward the receiver"
-	self annotateBytecode: blockStart entryLabel.
-	self annotateBytecode: blockStart entryLabel.
+	self deny: blockStart hasInstVarRef. "Else we would need to unforward the receiver in Spur"
+	blockStart entryLabel ifNotNil:
+		[self annotateBytecode: blockStart entryLabel.
+		 self annotateBytecode: blockStart entryLabel].
 	objectRepresentation
 		genLoadSlot: ClosureOuterContextIndex
 			sourceReg: ReceiverResultReg
@@ -2945,7 +2946,7 @@ SimpleStackBasedCogit >> genReturnNil [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genReturnNilFromBlock [
-	self assert: inBlock.
+	self assert: inBlock > 0.
 	self genMoveNilR: ReceiverResultReg.
 	^self genBlockReturn
 ]
@@ -2964,7 +2965,7 @@ SimpleStackBasedCogit >> genReturnReceiver [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genReturnTopFromBlock [
-	self assert: inBlock.
+	self assert: inBlock > 0.
 	self PopR: ReceiverResultReg.
 	^self genBlockReturn
 ]
@@ -3444,7 +3445,7 @@ SimpleStackBasedCogit >> genUpArrowReturn [
 				args
 		sp->	ret pc.
 	 Return pops receiver and arguments off the stack.  Callee pushes the result."
-	inBlock ifTrue:
+	inBlock > 0 ifTrue:
 		[self assert: needsFrame.
 		 self CallRT: ceNonLocalReturnTrampoline.
 		 self annotateBytecode: self Label.

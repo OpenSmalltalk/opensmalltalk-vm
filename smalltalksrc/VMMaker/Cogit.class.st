@@ -981,6 +981,10 @@ Cogit class >> initializeMiscConstants [
 	"6 is a fine number for the max number of PCI entries.  8 is too large."
 	MaxCPICCases := 6.
 
+	"One variable defines whether in a block and whether in a vanilla or full block."
+	InVanillaBlock := 1.
+	InFullBlock := 2.
+
 	NSCSelectorIndex := (NSSendCache instVarNames indexOf: #selector) - 1.
 	NSCNumArgsIndex := (NSSendCache instVarNames indexOf: #numArgs) - 1.
 	NSCClassTagIndex := (NSSendCache instVarNames indexOf: #classTag) - 1.
@@ -4596,7 +4600,7 @@ Cogit >> compileCogFullBlockMethod: numCopied [
 	| numBytecodes numBlocks numCleanBlocks result |
 	hasYoungReferent := (objectMemory isYoungObject: methodObj).
 	methodOrBlockNumArgs := coInterpreter argumentCountOf: methodObj.
-	inBlock := true.
+	inBlock := InFullBlock.
 	postCompileHook := nil.
 	maxLitIndex := -1.
 	self assert: (coInterpreter primitiveIndexOf: methodObj) = 0.
@@ -4636,7 +4640,7 @@ Cogit >> compileCogMethod: selector [
 	hasYoungReferent := (objectMemory isYoungObject: methodObj)
 						  or: [objectMemory isYoung: selector].
 	methodOrBlockNumArgs := coInterpreter argumentCountOf: methodObj.
-	inBlock := false.
+	inBlock := 0.
 	postCompileHook := nil.
 	maxLitIndex := -1.
 	extra := ((primitiveIndex := coInterpreter primitiveIndexOf: methodObj) > 0
@@ -9020,7 +9024,7 @@ Cogit >> needsFrameIfImmutability: stackDelta [
 
 { #category : #'compile abstract instructions' }
 Cogit >> needsFrameIfInBlock: stackDelta [
-	^inBlock
+	^inBlock > 0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -10235,7 +10239,7 @@ Cogit >> scanBlock: blockStart [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	needsFrame := false.
 	methodOrBlockNumArgs := blockStart numArgs.
-	inBlock := true.
+	inBlock := InVanillaBlock.
 	pc := blockStart startpc.
 	end := blockStart startpc + blockStart span.
 	framelessStackDelta := nExts := extA := extB := 0.
