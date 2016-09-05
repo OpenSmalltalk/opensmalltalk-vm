@@ -26,7 +26,15 @@
  * effort is required to access a 64-bit datum atomically.
  *
  * Only some compilers define LP32 et al.  If not, try to infer from other macros.
+ * (Also, same for LONG_MAX, the name defined by the Standard)
  */
+
+#include <limits.h>
+
+
+#if defined(_MSC_VER)
+#include <windows.h> /* for atomic ops */
+#endif	
 
 #if    defined(LP32) || defined(ILP32) \
     || defined(LP64) || defined(ILP64) || defined(LLP64)
@@ -38,11 +46,11 @@
 #  else /* unknown platform */
 #  endif
 
-#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_X64)
+#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
 
 #  define IS_64_BIT_ARCH 1
 
-#elif defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__) || defined(__arm32__)
+#elif defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__) || defined(__arm32__)
 
 #  define IS_32_BIT_ARCH 1
 
@@ -55,9 +63,10 @@
 #  else /* unknown platform */
 #  endif
 
-#elif defined(__LONG_MAX__)
+#elif defined(LONG_MAX) || defined(__LONG_MAX__)
 
-#  if __LONG_MAX__ > 0xFFFFFFFFUL
+#  if (defined(LONG_MAX) && LONG_MAX > 0xFFFFFFFFUL) \
+   || (defined(__LONG_MAX__) &&  __LONG_MAX__ > 0xFFFFFFFFUL)
 #    define IS_64_BIT_ARCH 1
 #  else
 #    define IS_32_BIT_ARCH 1
@@ -160,6 +169,39 @@ AtomicGet(uint64_t *target)
 							: "m" (lo32(value)), "m" (hi32(value)) \
 							: "memory", "eax", "ebx", "ecx", "edx", "cc")
 #  endif /* __SSE2__ */
+
+# elif defined(_MSC_VER) && (defined(_M_IX86) || defined(_X86_) || defined(i386))
+
+# pragma message(" TODO: verify thoroughly")
+/* see http://web.archive.org/web/20120411073941/http://www.niallryan.com/node/137 */
+
+static __inline void
+AtomicSet(__int64 *target, __int64 new_value)
+{
+   __asm
+   {
+      mov edi, target
+      fild qword ptr [new_value]
+      fistp qword ptr [edi]
+   }
+}
+
+static __inline __int64
+AtomicGet(__int64 *target)
+{
+   __asm
+   {
+      mov edi, target
+      xor eax, eax
+      xor edx, edx
+      xor ebx, ebx
+      xor ecx, ecx
+      lock cmpxchg8b [edi]
+   }
+}
+#	define get64(variable) AtomicGet(&((__int64)variable))
+#	define set64(variable,value) AtomicSet(&((__int64)variable), (__int64)value)
+
 # else /* TARGET_OS_IS_IPHONE elif x86 variants etc */
 
 #if defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
@@ -233,6 +275,15 @@ AtomicGet(uint64_t *target)
 # elif GCC_HAS_BUILTIN_SYNC || defined(__clang__)
 #	define sqAtomicAddConst(var,n) __sync_fetch_and_add((sqInt *)&(var), n)
 # endif
+#elif defined(_MSC_VER)
+#	define sqAtomicAddConst(var,n) do {\
+	if (sizeof(var) == sizeof(int)) \
+		InterlockedAdd(&var,n); \
+	else if (sizeof(var) == 8) \
+		InterlockedAdd64(&var,n); \
+	else \
+		error("no interlocked add for this variable size"); \
+	} while (0)
 #endif
 
 #if !defined(sqAtomicAddConst)
@@ -279,6 +330,9 @@ AtomicGet(uint64_t *target)
 	} while (0)
 # endif
 
+#elif defined(_MSC_VER)
+#	define sqCompareAndSwap(var,old,new) \
+	InterlockedCompareExchange(&(var), new, old)
 #else
 /* Dear implementor, you have choices.  Google atomic compare and swap and you
  * will find a number of alternative implementations.

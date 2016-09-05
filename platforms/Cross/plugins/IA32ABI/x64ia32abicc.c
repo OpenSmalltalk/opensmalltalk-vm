@@ -41,9 +41,9 @@ void *getbaz() { return baz; }
 #include <setjmp.h>
 #include <stdio.h> /* for fprintf(stderr,...) */
 
+#include "sqMemoryAccess.h"
 #include "vmCallback.h"
 #include "sqAssert.h"
-#include "sqMemoryAccess.h"
 #include "sqVirtualMachine.h"
 #include "ia32abi.h"
 
@@ -169,7 +169,7 @@ long
 thunkEntry(long a0, long a1, long a2, long a3, long a4, long a5,
 			double d0, double d1, double d2, double d3,
 			double d4, double d5, double d6, double d7,
-			void *thunkp, long *stackp)
+			void *thunkp, sqIntptr_t *stackp)
 {
 	VMCallbackContext vmcc;
 	VMCallbackContext *previousCallbackContext;

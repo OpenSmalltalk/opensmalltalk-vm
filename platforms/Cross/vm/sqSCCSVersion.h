@@ -27,6 +27,7 @@
 #include "../plugins/sqPluginsSCCSVersion.h"
 
 #if SUBVERSION
+# define PREFIX "r"
 static char SvnRawRevisionString[] = "$Rev$";
 # define REV_START (SvnRawRevisionString + 6)
 
@@ -65,6 +66,7 @@ repositoryURL()
 # undef REV_START
 # undef URL_START
 #elif GIT
+# define PREFIX ""
 static char GitRawRevisionString[] = "$Rev$";
 # define REV_START (GitRawRevisionString + 6)
 
@@ -103,6 +105,7 @@ repositoryURL()
 # undef REV_START
 # undef URL_START
 #else /* SUBVERSION */
+# define PREFIX ""
 char *
 revisionAsString() { return "?"; }
 
@@ -117,7 +120,7 @@ sourceVersionString(char separator)
 {
 	if (!sourceVersion) {
 #if 1 /* a) mingw32 doesn't have asprintf and b) on Mac OS it segfaults. */
-		char *fmt = "VM: r%s %s Date: %s%cPlugins: r%s %s";
+		char *fmt = "VM: " PREFIX "%s %s Date: %s%cPlugins: " PREFIX "%s %s";
 		int len = strlen(fmt)
 				+ strlen(revisionAsString())
 				+ strlen(repositoryURL())
@@ -130,7 +133,8 @@ sourceVersionString(char separator)
 				separator,
 				pluginsRevisionAsString(), pluginsRepositoryURL());
 #else
-		asprintf(&sourceVersion, "VM: r%s %s Date: %s%cPlugins: r%s %s",
+		asprintf(&sourceVersion,
+				"VM: " PREFIX "%s %s Date: %s%cPlugins: " PREFIX "%s %s",
 				revisionAsString(), repositoryURL(), revisionDateAsString(),
 				separator,
 				pluginsRevisionAsString(), pluginsRepositoryURL());

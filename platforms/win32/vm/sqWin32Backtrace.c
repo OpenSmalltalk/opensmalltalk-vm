@@ -33,6 +33,10 @@
 # include "cogit.h"
 #endif
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
 typedef struct frame {
 	struct frame *savedfp;
 	void *retpc;
@@ -60,7 +64,7 @@ backtrace(void **retpcs, int nrpcs)
 {
 	void **__fp;
 
-# if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
+# if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
   #if defined(_MSC_VER)
 	__asm {
 		mov EAX, EBP
@@ -71,12 +75,13 @@ backtrace(void **retpcs, int nrpcs)
   #else
   # error "don't know how to derive ebp"
   #endif
-#elif defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_X64)
+#elif defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
   #if defined(_MSC_VER)
-	__asm {
+	/* __asm {
 		mov RAX, RBP
 		mov [__fp], RAX
-	}
+	}*/
+	__fp = (void **) _AddressOfReturnAddress();
   #elif defined(__GNUC__)
 	asm volatile ("movq %%rbp, %0" : "=r"(__fp) : );
   #else
@@ -96,7 +101,7 @@ backtrace_from_fp(void *startfp, void **retpcs, int nrpcs)
 	NT_TIB *tib;
 	int i = 0;
 
-# if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
+# if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
   #if defined(_MSC_VER)
 	__asm {
 		mov EAX, FS:[18h]
@@ -107,12 +112,13 @@ backtrace_from_fp(void *startfp, void **retpcs, int nrpcs)
   #else
   # error "don't know how to derive tib"
   #endif
-#elif defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_X64)
+#elif defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
   #if defined(_MSC_VER)
-	__asm {
+	/* __asm {
 		mov RAX, GS:[30h]
 		mov [tib], RAX
-	}
+	} */
+	tib = (NT_TIB *) __readgsqword(0x30);
   #elif defined(__GNUC__)
 	asm volatile ("movq %%gs:0x30, %0" : "=r" (tib) : );
   #else
@@ -185,6 +191,12 @@ symbolic_backtrace(int n, void **retpcs, symbolic_pc *spc)
 	return n;
 }
 
+#if COGVM
+	sqInt addressCouldBeObj(sqInt address);
+	sqInt byteSizeOf(sqInt oop);
+	void *firstFixedField(sqInt);
+#endif
+
 void
 print_backtrace(FILE *f, int nframes, int maxframes,
 				void **retpcs, symbolic_pc *symbolic_pcs)
@@ -196,7 +208,6 @@ print_backtrace(FILE *f, int nframes, int maxframes,
 	for (i = 0; i < nframes; ++i) {
 		char *name; int namelen;
 		if (addressCouldBeObj((sqInt)symbolic_pcs[i].fnameOrSelector)) {
-			extern void *firstFixedField(sqInt);
 			name = firstFixedField((sqInt)symbolic_pcs[i].fnameOrSelector);
 			namelen = byteSizeOf((sqInt)symbolic_pcs[i].fnameOrSelector);
 		}
@@ -206,7 +217,7 @@ print_backtrace(FILE *f, int nframes, int maxframes,
 			namelen = strlen(name);
 		}
 		fprintf(f,
-				"\t[%p] %.*s + %d in %s\n",
+				"\t[%p] %.*s + 0x%" PRIxSQPTR " in %s\n",
 				retpcs[i],
 				namelen, name,
 				symbolic_pcs[i].offset,
@@ -215,7 +226,7 @@ print_backtrace(FILE *f, int nframes, int maxframes,
 #else
 	for (i = 0; i < nframes; ++i)
 		fprintf(f,
-				"\t[%p] %s + %d in %s\n",
+				"\t[%p] %s + 0x%" PRIxSQPTR " in %s\n",
 				retpcs[i],
 				symbolic_pcs[i].fnameOrSelector
 					? symbolic_pcs[i].fnameOrSelector
@@ -235,11 +246,15 @@ static dll_exports *all_exports = 0;
 
 static int
 expcmp(const void *a, const void *b)
-{ return ((dll_exports *)a)->info.lpBaseOfDll - ((dll_exports *)b)->info.lpBaseOfDll; }
+{ return (sqIntptr_t)((dll_exports *)a)->info.lpBaseOfDll - (sqIntptr_t)((dll_exports *)b)->info.lpBaseOfDll; }
 
 static  void find_in_dll(dll_exports *exports, void *pc, symbolic_pc *spc);
 static  void find_in_exe(dll_exports *exports, void *pc, symbolic_pc *spc);
 static  void find_in_cog(dll_exports *exports, void *pc, symbolic_pc *spc);
+
+#if COGVM
+	sqInt nilObject();
+#endif
 
 static void
 get_modules(void)
@@ -465,7 +480,8 @@ compute_exe_symbols(dll_exports *exports)
 		ulong addr;
 		char  type, *symname;
 
-		asserta(sscanf(contents + pos, "%lx %c", &addr, &type) == 2);
+		/* Note: Scan format should better be SCNuSQPTR according to C99, if ever different from print format - but we did not define that macro */
+		asserta(sscanf(contents + pos, "%" PRIxSQPTR " %c", &addr, &type) == 2);
 		symname = strrchr(contents + pos, ' ') + 1;
 		if ((type == 't' || type == 'T')
 		 && strcmp(symname,".text")) {
@@ -601,8 +617,10 @@ printModuleInfo(FILE *f)
 	fprintf(f, "\nModule information:\n");
 	for (i = 0; i < moduleCount; i++) {
 		fprintf(f,
-				"\t%08x - %08x: %s\n", 
-				all_exports[i].info.lpBaseOfDll,
+				"\t%0*" PRIxSQPTR " - %0*" PRIxSQPTR ": %s\n", 
+				(int) sizeof(all_exports[i].info.lpBaseOfDll)*2,
+				(ulong)all_exports[i].info.lpBaseOfDll,
+				(int) sizeof(all_exports[i].info.lpBaseOfDll)*2,
 				((ulong)all_exports[i].info.lpBaseOfDll) + all_exports[i].info.SizeOfImage,
 				all_exports[i].name);
 		fflush(f);

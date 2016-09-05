@@ -42,11 +42,17 @@
 /* General Squeak declarations and definitions                              */
 /****************************************************************************/
 
-int setInterruptPending(int);
+/* Import from DropPlugin/sqWin32Drop.c */
+void SetupDragAndDrop(void);
+int dropLaunchFile(char *fileName);
+
+/* Import from VM */
+void setInterruptPending(sqInt);
 sqInt forceInterruptCheck(void);
-int getInterruptKeycode(void);
-int setFullScreenFlag(int);
-extern int deferDisplayUpdates;
+sqInt getInterruptKeycode(void);
+void setFullScreenFlag(sqInt);
+sqInt getSavedWindowSize(void);
+extern sqInt deferDisplayUpdates;
 
 
 /*** Variables -- image and path names ***/
@@ -288,7 +294,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
 		if(prefsEnableAltF4Quit() || GetKeyState(VK_SHIFT) < 0) {
 			TCHAR msg[1001], label[1001];
 			GetPrivateProfileString(U_GLOBAL, TEXT("QuitDialogMessage"), 
-						TEXT("Quit " VM_NAME " without saving?"), 
+						TEXT("Quit ") TEXT(VM_NAME) TEXT(" without saving?"), 
 						msg, 1000, squeakIniName);
 			GetPrivateProfileString(U_GLOBAL, TEXT("QuitDialogLabel"), 
 						TEXT(VM_NAME), 
@@ -576,6 +582,11 @@ void SetupPixmaps(void)
 { int i;
 
   logPal = malloc(sizeof(LOGPALETTE) + 255 * sizeof(PALETTEENTRY));
+  if (!logPal) {
+    printLastError(TEXT("malloc pallette"));
+    return;
+  }
+
   logPal->palVersion = 0x300;
   logPal->palNumEntries = 256;
 
@@ -737,6 +748,7 @@ sqInt ioSetWindowLabelOfSize(void* lblIndex, sqInt sz) {
   memcpy(windowTitle, (void*)lblIndex, sz);
   windowTitle[sz] = 0;
   SetWindowTitle();
+  return 1;
 }
 
 sqInt ioGetWindowWidth(void) {
@@ -880,7 +892,7 @@ void SetupWindows()
   if(!browserWindow)
     stWindow = CreateWindowEx(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
 			      windowClassName,
-			      TEXT(VM_NAME"!"),
+			      TEXT(VM_NAME) TEXT("!"),
 			      WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
 			      0,
 			      0,
@@ -895,7 +907,7 @@ void SetupWindows()
     fBrowserMode = 1;
     stWindow = CreateWindowEx(0,
 			      windowClassName,
-			      TEXT(VM_NAME"!"),
+			      TEXT(VM_NAME) TEXT("!"),
 			      WS_CHILD | WS_CLIPCHILDREN,
 			      0,
 			      0,
@@ -1107,7 +1119,9 @@ sqInputEvent *sqNextEventPut(void) {
 
 
 int recordMouseEvent(MSG *msg, UINT nrClicks) {
+#ifndef NO_DIRECTINPUT
   static DWORD firstEventTime = 0;
+#endif
   DWORD wParam;
   sqMouseEvent proto, *event;
   int alt, shift, ctrl, red, blue, yellow;
@@ -1403,12 +1417,14 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
 #else /* defined(_WIN32_WCE) */
 
   if(GetKeyState(VK_LBUTTON) & 0x8000) stButtons |= 4;
-  if(GetKeyState(VK_MBUTTON) & 0x8000)
+  if(GetKeyState(VK_MBUTTON) & 0x8000) {
     if(f1ButtonMouse) stButtons |= 4;
     else stButtons |= f3ButtonMouse ? 2 : 1;
-  if(GetKeyState(VK_RBUTTON) & 0x8000)
+  }
+  if(GetKeyState(VK_RBUTTON) & 0x8000) {
     if(f1ButtonMouse) stButtons |= 4;
     else stButtons |= f3ButtonMouse ? 1 : 2;
+  }
 
   if (stButtons == 4)	/* red button honours the modifiers */
     {
@@ -1522,7 +1538,6 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 
 sqInt ioProcessEvents(void)
 {	static MSG msg;
-	POINT mousePt;
 	int result;
 	extern sqInt inIOProcessEvents;
 
@@ -1644,16 +1659,7 @@ ioDrainEventQueue(void)
 
 double ioScreenScaleFactor(void)
 {
-    double factor = 1.0;
-    int logicalHeight = 0;
-    int physicalHeight = 0;
-    HDC dc = GetDC(stWindow);
-    if (!dc) return 1.0; /* fallback */
-    logicalHeight = GetDeviceCaps(dc, VERTRES);
-    physicalHeight = GetDeviceCaps(dc, DESKTOPVERTRES);
-    factor = (double) physicalHeight / (double) logicalHeight;
-    ReleaseDC(stWindow, dc);
-    return factor;
+    return 1.0;
 }
 
 /* returns the size of the Squeak window */
@@ -1758,7 +1764,6 @@ sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY) {
 
 int ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y) {
   ICONINFO info;
-  HCURSOR hCursor = NULL;
   HBITMAP hbmMask = NULL;
   HBITMAP hbmColor = NULL;
   HDC mDC;
@@ -2024,9 +2029,10 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenF
   return 0; /* Not implemented on CE */
 #else
   RECT r;
+#ifdef USE_DIRECT_X
   static int wasFullscreen = 0;
   static HWND oldBrowserWindow = NULL;
-
+#endif
 
   if(!IsWindow(stWindow)) return 0;
   if(!IsWindowVisible(stWindow)) return 0;
@@ -2157,12 +2163,12 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
   bmi = BmiForDepth(depth);
   if(!bmi)
     {
-      warnPrintf(TEXT("Color depth %d not supported"), depth);
+      warnPrintf(TEXT("Color depth %") TEXT(PRIdSQINT) TEXT(" not supported"), depth);
       return false;
     }
 
   di.cbSize      = sizeof(DOCINFO);
-  di.lpszDocName = TEXT(VM_NAME" Print Job");
+  di.lpszDocName = TEXT(VM_NAME) TEXT(" Print Job");
   di.lpszOutput  = NULL;
 
   StartDoc  (dc, &di);
@@ -2479,8 +2485,8 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
 
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-    warnPrintf(TEXT("width=%d,height=%d,bits=%X,dc=%X\n"),
-	       width, height, dispBits,dc);
+    warnPrintf(TEXT("width=%") TEXT(PRIdSQINT) TEXT(",height=%") TEXT(PRIdSQINT) TEXT(",bits=%") TEXT(PRIXSQINT) TEXT(",dc=%") TEXT(PRIXSQINT) TEXT("\n"),
+	       width, height, dispBits,(usqIntptr_t)dc);
   }
   /* reverse the image bits if necessary */
 #ifndef NO_BYTE_REVERSAL
@@ -2857,6 +2863,7 @@ int sqLaunchDrop(void) {
 		      NULL, NULL);
   dropLaunchFile(tmp);
   LocalFree(argv);
+  return 1;
 }
 
 /* Check if the path/file name is subdirectory of the image path */
@@ -3189,7 +3196,7 @@ int printUsage(int level)
       break;
     case 1: /* full usage */
       abortMessage(TEXT("%s"),
-                   TEXT("Usage: " VM_NAME " [vmOptions] imageFile [imageOptions]\n\n")
+                   TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [vmOptions] imageFile [imageOptions]\n\n")
                    TEXT("vmOptions:")
 		   /* TEXT("\n\t-service: ServiceName \t(install Squeak as NT service)") */
                    TEXT("\n\t-headless \t\t(force Squeak to run headless)")
@@ -3232,7 +3239,7 @@ int printUsage(int level)
     case 2: /* No image found */
     default:
       abortMessage(
-        TEXT("Could not open the " VM_NAME " image file '%s'\n\n")
+        TEXT("Could not open the ") TEXT(VM_NAME) TEXT(" image file '%s'\n\n")
         TEXT("There are several ways to open an image file. You can:\n")
         TEXT("  1. Double-click on the desired image file.\n")
         TEXT("  2. Drop the image file onto the application.\n")

@@ -157,9 +157,6 @@ static char *getVersionInfo(int verbose);
 		if ([argData compare:  @"-psn_" options: NSLiteralSearch range: NSMakeRange(0,5)] == NSOrderedSame) {
 			return 1;
 		}
-		if ([argData isEqualToString: @"-NSDocumentRevisionsDebugMode"]) {
-			return 1;
-		}
 	NS_HANDLER;
 	NS_ENDHANDLER;
 

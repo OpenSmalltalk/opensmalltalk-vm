@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 # assert VM with VM profiler and threaded heartbeat
 INSTALLDIR=assert/cogspurlinuxhtRPi
 OPT="-g3 -O1 -fwrapv -DDEBUGVM=0"

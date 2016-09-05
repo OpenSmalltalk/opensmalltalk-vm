@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash -e
 # Build a Spur image that starts up in a simple REPL, which is
 # really useful for VMMaker simulation testing.
 . ./envvars.sh

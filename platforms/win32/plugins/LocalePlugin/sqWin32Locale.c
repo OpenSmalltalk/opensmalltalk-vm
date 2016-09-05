@@ -58,11 +58,9 @@ void	sqLocGetLanguageInto(char * str) {
 /* return 1 (true) if the currency symbol is to be placed in front of the
  *currency amount */
 sqInt	sqLocCurrencyNotation(void) {
-	char currString[6];
-	int r;
-	if (GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_ICURRENCY,currString, 6) != 0){
-		r =(((int) currString % 2) == 0);
-		return r;
+	DWORD icurrency;
+	if (GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_ICURRENCY | LOCALE_RETURN_NUMBER,(char *)&icurrency, sizeof(icurrency)/sizeof(TCHAR)) != 0){
+		return((icurrency % 2) == 0);
 	}
 	return 0;
 }
@@ -183,7 +181,7 @@ void	sqLocGetShortDateFormatInto(char * str) {
 static char timeFormat[] = "h:m:s";
 /* return the size in chars of the time format string */
 sqInt	sqLocTimeFormatSize(void) {
-	GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_STIMEFORMAT, NULL, 0)-1;
+	return GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_STIMEFORMAT, NULL, 0)-1;
 }
 
 /* write the string describing the time formatting into string ptr.

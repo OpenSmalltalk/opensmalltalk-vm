@@ -214,6 +214,7 @@ static int removeFromList(privateSocketStruct *pss) {
     while(tmp && tmp->next != pss) tmp = tmp->next;
     if(tmp) tmp->next = pss->next;
   }
+  return 0;
 }
 
 /* cleanupSocket:
@@ -323,8 +324,8 @@ static int acceptHandler(privateSocketStruct *pss)
 /*****************************************************************************
  ****************************************************************************/
 static void debugPrintSocket(privateSocketStruct *pss) {
-  printf("### Socket [%x]\n", pss);
-  printf("\tHandle: %x\n", pss->s);
+  printf("### Socket [%p]\n", pss);
+  printf("\tHandle: %" PRIxSQPTR "\n", pss->s);
   printf("\tType: %d\n", pss->sockType);
   printf("\tState: %x", pss->sockState & SOCK_PUBLIC_MASK);
   if(pss->sockState & SOCK_DATA_READABLE)
@@ -347,9 +348,9 @@ static void debugPrintSocket(privateSocketStruct *pss) {
     }
     printf("\tPending accepts: %d\n",n);
   }
-  printf("\tRead Watcher Op: %d\n", pss->readWatcherOp);
-  printf("\tWrite Watcher Op: %d\n",pss->writeWatcherOp);
-  printf("\tClose pending: %d\n",pss->closePending);
+  printf("\tRead Watcher Op: %lu\n", pss->readWatcherOp);
+  printf("\tWrite Watcher Op: %lu\n",pss->writeWatcherOp);
+  printf("\tClose pending: %lu\n",pss->closePending);
   printf("\tIn read select: %d\n", pss->readSelect);
   printf("\tIn write select: %d\n", pss->writeSelect);
 }
@@ -362,6 +363,7 @@ int win32DebugPrintSocketState(void) {
     debugPrintSocket(pss);
     pss = pss->next;
   }
+  return 1;
 }
 
 static void debugCheckWatcherThreads(privateSocketStruct *pss, char* caller) {
@@ -1361,7 +1363,7 @@ void	sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
      of windows get this done without failing. */
   if(runningVista && socketType == TCPSocketType) {
     unsigned int val = 65536;
-    setsockopt(newSocket, SOL_SOCKET, SO_RCVBUF, &val, sizeof(val));
+    setsockopt(newSocket, SOL_SOCKET, SO_RCVBUF, (char *)&val, sizeof(val));
   }
 
   /* initialize private socket structure */
@@ -1760,7 +1762,7 @@ sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue
   if (opt->optType == 1) {
     len= sizeof(optval);
     if ((getsockopt(SOCKET(s), opt->optLevel, opt->optName,
-		    (void*)&optval,&len)) < 0)
+		    (char*)&optval,&len)) < 0)
       {
 	/* printf("getsockopt() returned < 0\n"); */
 	goto barf;
@@ -2452,7 +2454,6 @@ void sqResolverHostNameResultSize(char *name, sqInt nameSize)
 
 void sqSocketBindToAddressSize(SocketPtr s, char *addr, sqInt addrSize)
 {
-  int result;
   privateSocketStruct *pss= PSP(s);
 
   if (!(SocketValid(s) && addressValid(addr, addrSize)))
@@ -2651,18 +2652,17 @@ sqInt sqSocketSendUDPToSizeDataBufCount(SocketPtr s, char *addr, sqInt addrSize,
 
 sqInt sqSocketReceiveUDPDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 {
-  int nRead;
-
   if (SocketValid(s) && (UDPSocketType == s->socketType))
-    {
+  {
       socklen_t saddrSize= sizeof(SOCKETPEER(s));
       int nread= recvfrom(SOCKET(s), buf, bufSize, 0, &SOCKETPEER(s).sa, &saddrSize);
       if (nread >= 0)
-	{
-	  SOCKETPEERSIZE(s)= saddrSize;
-	  return nread;
-	}
-		}
+      {
+          SOCKETPEERSIZE(s)= saddrSize;
+          return nread;
+      }
+  }
+  return 0;
 }
 
 #endif /* NO_NETWORK */

@@ -1,0 +1,161 @@
+How To Build On Win32-64bits
+----------------------------
+
+
+Contents:
+	- Overview
+	- Checking out sources to build out-of-the-box
+	- Building out of the box
+	- Building a Specific Plugin Dll
+	- Building the VM Simulator Support Libraries
+	- Building an MSI installer (Newspeak)
+	- Optimization level and gcc version (please read!)
+	- Debugging with gdb
+
+
+Overview
+--------
+The "Cog" VM comes in a bewildering variety of forms.  The first distinction
+is between Squeak/Croquet VMs that run Squeak, Pharo, Cuis, Croquet images
+and their ilk, and between Newspeak VMs that run Newspeak.
+
+Another distinction is between Stack, Cog and Sista VMs.  Stack VMs are those
+with context-to-stack mapping that optimise message sending by keeping method
+activations on a stack instead of in contexts.  These are pure interpreters but
+significantly faster than the standard context-based Interpreter VM.  Cog VMs
+add a JIT to the mix, compiling methods used more than once to maxchine code on
+the fly.  Sista VMs, as yet unrealised and in development, add support for
+adaptive optimization that does speculative inlining at the bytecode-to-bytecode
+level.  These are targeted for release in 2015.
+
+Another distinction is between "v3" VMs and Spur VMs.  "v3" is the original
+object representation for Squeak as described in the back-to-the-future paper.
+Spur, as described on the www.mirandabanda.org blog, is a faster object
+representation which uses generation scavenging, lazy forwarding for fast
+become, and a single object header format common to 32 and 64 bit versions.
+
+Another distinction is between normal single-threaded VMs that schedule "green"
+Smalltalk processes above a single-threaded VM, and "multi-threaded" VMs that
+share the VM between any number of native threads such that only one native
+thread owns the VM at any one time, switching between threads on FFI calls and
+callbacks or on Smalltalk process switches when Smalltalk processes are owned
+by threads.  This multi-threaded support is as yet experimental.
+
+The final distinction is between production, assert and debug VMs.  Production
+VMs are fully optimized, although they may include debugging symbols, and as
+their name implies are for use in production.  Assert and debug VMs include
+many assert checks that are disabled in the production VMs.  These asserts are
+very helpful in debugging VM problems but significantly impact performance.
+The difference between assert and debug VMs is that assert VMs are compiled
+with moderate optimization, which improves the performance of the asserts,
+whereas debug VMs are compiled with no optimization at all, providing maximum
+debuggability with minimum performance.
+
+This directory tree provides build directories for some of this matrix.  For
+example, newspeak.stack.spur contains a build directory
+for Newspeak Stack VMs using the Spur object representation.  Build as desired.
+
+
+Checking out sources to build out-of-the-box
+--------------------------------------------
+Check-out the repository from github:
+	git clone http://www.github.com/OpenSmalltalk/opensmalltalk-vm oscogvm
+	cd ./oscogvm
+	more README.md
+
+
+Building out of the box
+-----------------------
+1. Install the tools:
+- Install
+  either cygwin 64bits version from www.cygwin.com.
+  either mingw 64bits version and msys from www.mingw.com.
+
+Then cd to the build directory of your choice, e.g.
+	build.win64x64/squeak.stack.spur/
+Then execute
+	./mvm
+This builds debug, assert and production versions of the VM in builddbg/vm,
+buildast/vm and build/vm.  If the configuration includes multi-threaded builds
+it will also create VMs in buildmtdbg/vm, buildmtast/vm and buildmt/vm.  The
+system builds two VMs in each build/vm directory, e.g. Squeak.exe and
+SqueakConsole.exe.  The latter is to be used with console applications that wish
+to access standard i/o.
+
+For building with clang instead of gcc, it is possible to pass options to make via mvm after --:
+	./mvm -f -- CC=x86_64-w64-mingw32-clang
+	
+If building from mingw64, it may be necessary to omit the tool prefix:
+	./mvm -f -- TOOLPREFIX=''
+
+Each build directory contains two files
+	plugins.int
+	plugins.ext
+that determine the set of plugins to be taken from the supplied plugins
+directory (which defaults to ../src/plugins), and which are to be linked
+into the VM (plugins.int) or compiled as external dlls to be dynamically
+linked at run-time (plugins.ext). Tailor these files as you wish.
+
+The Newspeak builds include an installer.  See Building an MSI installer below.
+
+Finally, at the build.win64x64 level the makeall script will run all the
+mvm scripts it can find.
+
+
+Building a Specific Plugin Dll
+------------------------------
+To make only a specific dll one must use the target of the plugin dll (or .lib)
+to be made.  e.g.
+  $ cd squeak.cog.spur
+  $ make build/vm/BochsIA32Plugin.dll
+
+
+Building the VM Simulator Support Libraries
+------------------------------------
+If you want to get the Cog VM simulator working you'll need to build one or more
+of the processor simulator plugins, each of which has support libraries that
+must be built:
+	Processor   Plugin           Support Library
+	x86         BochsIA32Plugin  build.linux32x86/bochsx86
+	x86_64/x64  BochsX64Plugin   build.linux32x86/bochsx64
+	ARMv5       GdbARMPlugin     build.linux32x86/gdbarm32
+cd to the relevant directories; run conf.COG and then the build script, e.g.
+  $ cd build.linux32x86/bochsx86
+  $ ./conf.COG
+  $ ./makeem
+
+Then when Squeak VMs are built they will include the plugin(s) for which support
+libraries have been provided.
+
+
+Building an MSI installer (Newspeak)
+------------------------------------
+The Newspeak builds include an installer subdirectory.  The installer build
+creates an MSI installer that provides a platform-conformat install experience
+for the VM.  First build the VM then cd to the installer and make, e.g.:
+  $ cd newspeak.cog.spur
+  $ ./mvm
+  $ cd installer
+  $ make
+
+
+Optimization level and gcc version
+----------------------------------
+There used to be issues with gcc version > 4.2.1.  Any of the following flags may break the build at -O2:
+-ftree-pre
+-fpartial-inlining
+-fcaller-saves
+However, with removal of some Undefined Behavior in source code, this list might well be out of date.
+
+See http://smallissimo.blogspot.fr/2013/02/compiling-squeak-cog-virtual-machine-on.html
+
+Debugging with gdb
+------------------
+
+Note that even the stripped production VM can be used for debug using the
+unstripped VM to provide symbols, e.g.
+	U:\ gdb bin/Squeak.exe
+	...
+	(no debugging symbols found)
+	(gdb) file SqueakUnstripped.exe
+	(gdb) run trunk.image

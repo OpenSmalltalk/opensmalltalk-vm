@@ -315,7 +315,7 @@ MyDragTrackingHandler(DragTrackingMessage message, WindowPtr theWindow, void *re
 						theEvent.where = mouse;
                     	fn = interpreterProxy->ioLoadFunctionFrom("recordDragDropEvent", "");
                     	if (fn != 0) {
-                    	    ((int (*) (EventRecord *theEvent, int numberOfItems, int dragType)) fn)(&theEvent, gNumDropFiles,DragEnter);
+                    	    ((int (*) (EventRecord *theEvent, int numberOfItems, int dragType)) fn)(&theEvent, gNumDropFiles,SQDragEnter);
                     	}
 					} 
 				}
@@ -332,7 +332,7 @@ MyDragTrackingHandler(DragTrackingMessage message, WindowPtr theWindow, void *re
 				theEvent.where = mouse;
              	fn = interpreterProxy->ioLoadFunctionFrom("recordDragDropEvent", "");
             	if (fn != 0) {
-            	    ((int (*) (EventRecord *theEvent,  int numberOfItems, int dragType)) fn)(&theEvent,gNumDropFiles,DragMove);
+            	    ((int (*) (EventRecord *theEvent,  int numberOfItems, int dragType)) fn)(&theEvent,gNumDropFiles,SQDragMove);
             	    
             	}
 			}
@@ -349,7 +349,7 @@ MyDragTrackingHandler(DragTrackingMessage message, WindowPtr theWindow, void *re
 				theEvent.where = mouse;
             	fn = interpreterProxy->ioLoadFunctionFrom("recordDragDropEvent", "");
             	if (fn != 0) {
-            	    ((int (*) (EventRecord *theEvent, int numberOfItems, int dragType)) fn)(&theEvent, gNumDropFiles,DragLeave);
+            	    ((int (*) (EventRecord *theEvent, int numberOfItems, int dragType)) fn)(&theEvent, gNumDropFiles,SQDragLeave);
             	    
             	}
 			}
@@ -523,7 +523,7 @@ MyDragReceiveHandler(WindowPtr theWindow, void *refcon, DragReference theDragRef
 
 	fn = interpreterProxy->ioLoadFunctionFrom("recordDragDropEvent", "");
 	if (fn != 0) {
-	    ((int (*) (EventRecord *theEvent, int numberOfItems, int dragType)) fn)(&theEvent, gNumDropFiles,DragDrop);
+	    ((int (*) (EventRecord *theEvent, int numberOfItems, int dragType)) fn)(&theEvent, gNumDropFiles,SQDragDrop);
 	}
 	return noErr;
 }

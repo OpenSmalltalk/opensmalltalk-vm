@@ -68,16 +68,15 @@ Check-out the repository from github:
 Building out of the box
 -----------------------
 1. Install the tools:
-- Install cygwin from www.cygwin.com.  As of writing the VM is built using
-CYGWIN_NT-5.1 mcstalkerxp 1.5.24(0.156/4/2) 2007-01-31 10:57 i686 Cygwin
+- Install cygwin from www.cygwin.com.
 Make sure you install the MinGW support, which is in the list of packages called
-"mingw-binutils: Binutils for MinGW.org Win32 toolchain".
-If on compiling you see the error
-	--export-dynamic is not supported for PE targets, did you mean --export-all-symbols?
-then replace --export-dynamic with --export-all-symbols in the makefiles.
+"mingw64-i686-gcc-core,mingw64-i686-gcc-g++,mingw64-i686-headers,mingw64-i686-runtime".
+Note that the .appveyor.yml file may be used as example to automate installation of these tools
+
+Alternatively, an installation of mingw32 and msys may work, but has not been tested.
 
 Then cd to the build directory of your choice, e.g.
-	build.win32x86/squeak.cog.spur/build
+	build.win32x86/squeak.cog.spur/
 Then execute
 	./mvm
 This builds debug, assert and production versions of the VM in builddbg/vm,
@@ -86,6 +85,12 @@ it will also create VMs in buildmtdbg/vm, buildmtast/vm and buildmt/vm.  The
 system builds two VMs in each build/vm directory, e.g. Squeak.exe and
 SqueakConsole.exe.  The latter is to be used with console applications that wish
 to access standard i/o.
+
+For building with clang instead of gcc, it is possible to pass options to make via mvm after --:
+	./mvm -f -- CC=i686-w64-mingw32-clang
+	
+If building from mingw32, it may be necessary to omit the tool prefix:
+	./mvm -f -- TOOLPREFIX=''
 
 Each build directory contains two files
 	plugins.int
@@ -140,10 +145,11 @@ for the VM.  First build the VM then cd to the installer and make, e.g.:
 
 Optimization level and gcc version
 ----------------------------------
-There are issues with gcc version > 4.2.1.  Any of the following flags may break the build at -O2:
+There used to be issues with gcc version > 4.2.1.  Any of the following flags may break the build at -O2:
 -ftree-pre
 -fpartial-inlining
 -fcaller-saves
+However, with removal of some Undefined Behavior in source code, this list might well be out of date.
 
 See http://smallissimo.blogspot.fr/2013/02/compiling-squeak-cog-virtual-machine-on.html
 

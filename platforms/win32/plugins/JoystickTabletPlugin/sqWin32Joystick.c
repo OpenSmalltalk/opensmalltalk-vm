@@ -177,14 +177,14 @@ EXPORT(int) win32JoystickDebugPrintAlternativeValues(void)
 		else
 			warnPrintf(TEXT("\t<unknown error: %d>\n\n"), err);
 	} else {
-		warnPrintf(TEXT("\tX: %d\n"), info.dwXpos);
-		warnPrintf(TEXT("\tY: %d\n"), info.dwYpos);
-		warnPrintf(TEXT("\tZ: %d\n"), info.dwZpos);
-		warnPrintf(TEXT("\tR: %d\n"), info.dwRpos);
-		warnPrintf(TEXT("\tU: %d\n"), info.dwUpos);
-		warnPrintf(TEXT("\tV: %d\n"), info.dwVpos);
-		warnPrintf(TEXT("\tButtons: %x\n"), info.dwButtons);
-		warnPrintf(TEXT("\tPOV: %d\n"), info.dwPOV);
+		warnPrintf(TEXT("\tX: %lu\n"), info.dwXpos);
+		warnPrintf(TEXT("\tY: %lu\n"), info.dwYpos);
+		warnPrintf(TEXT("\tZ: %lu\n"), info.dwZpos);
+		warnPrintf(TEXT("\tR: %lu\n"), info.dwRpos);
+		warnPrintf(TEXT("\tU: %lu\n"), info.dwUpos);
+		warnPrintf(TEXT("\tV: %lu\n"), info.dwVpos);
+		warnPrintf(TEXT("\tButtons: %lx\n"), info.dwButtons);
+		warnPrintf(TEXT("\tPOV: %lu\n"), info.dwPOV);
 	}
 	pop(1); /* Leave rcvr on stack */
 	return 1;

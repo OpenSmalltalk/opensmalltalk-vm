@@ -30,7 +30,7 @@
 # define STACK_FP_ALIGNMENT 4
 #endif
 
-#if defined(x86_64) || defined(__amd64) || defined(__x86_64) || defined(__amd64__) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
+#if defined(x86_64) || defined(__amd64) || defined(__x86_64) || defined(__amd64__) || defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
 /* From the System V ABI:
  * 3.2.2 The Stack Frame
  * ...	The end of the input argument area shall be aligned on a 16 (32, if

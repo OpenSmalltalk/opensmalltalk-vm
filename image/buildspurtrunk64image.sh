@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash -e
 . ./envvars.sh
 
 test -f SpurVMMaker.image || ./buildspurtrunkvmmakerimage.sh

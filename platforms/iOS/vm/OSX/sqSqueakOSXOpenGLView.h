@@ -84,8 +84,6 @@
 -(void)setupOpenGL;
 - (void) drawThelayers;
 - (void) preDrawThelayers;
-- (NSRect) sqScreenSize;
-- (NSPoint) sqMousePosition: (NSEvent*)theEvent;
 @end
 
 #import	"SqViewClut.h"

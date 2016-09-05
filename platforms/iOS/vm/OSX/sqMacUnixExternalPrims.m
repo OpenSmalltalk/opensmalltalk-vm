@@ -33,12 +33,12 @@
  /* Author: Ian.Piumarta@INRIA.Fr
  *
  * Last edited: 2005-04-06 06:09:36 by piumarta on pauillac.hpl.hp.com
-	
+
  * Altered by John M McIntosh johnmci@smalltalkconsulting.com Feb 24th, 2006 for os-x carbon support
  3.8.11b2 load from resource location first, avoid plugins external directory because of intel migration effort issues.
  3.8.17b1 April 25, 2007, JMM rework for 10.2.8 backwards support using Ian's dl* logic. 
  5.0.0b6  Nov 27, 2009, JMM rework for the 32/64bit 5.0 VM
-  
+
  */
 #import "sqSqueakOSXInfoPlistInterface.h"
 #import "SqueakOSXAppDelegate.h"
@@ -46,8 +46,8 @@
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 
-# define dprintf(ARGS) if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakDebug) fprintf ARGS
- 
+#define dprintf(ARGS) do { if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakDebug) fprintf ARGS; } while (0)
+
 #if defined(HAVE_LIBDL)	/* non-starter without this! */
 
 #include <dlfcn.h> 
@@ -83,60 +83,74 @@ void *ioLoadModuleRaw(char *pluginName);
  *  moduleName and suffix.  Answer the new module entry, or 0 if the shared
  *  library could not be loaded.
  */
-static void *tryLoadingInternals(NSString *libNameString) {	
+static void *
+tryLoadingInternals(NSString *libNameString)
+{	
 	struct stat buf;
-	int         err;
-	void        *handle = NULL;
+	void        *handle;
 	const char* libName = [libNameString fileSystemRepresentation];
-	
-	if ((!(err= stat(libName, &buf))) && S_ISDIR(buf.st_mode)) {
+
+	if (stat(libName, &buf))
+		dprintf((stderr, "%s does not exist\n", libName));
+	else if (S_ISDIR(buf.st_mode))
 		dprintf((stderr, "ignoring directory: %s\n", libName));
-	} else {
+	else {
 	    dprintf((stderr, "tryLoading %s\n", libName));
-		handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
-	    if (handle == NULL) {
+		if ((handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL)))
+			return handle;
+		if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakDebug) {
 			const char* why = dlerror();
-			if ((!err) && (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakDebug))
-				fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, why);
-		} else {
-		    return handle;
+			fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, why);
 		}
 	}
 	return NULL;
 }
 
-static void *tryLoading(NSString *dirNameString, char *moduleName)
+/* Function to attempt to load a bundle for moduleName under dirNameString, e.g.
+ * VM.app/Resources/<moduleName>.bundle/Contents/MacOS/<moduleName>
+ */
+static void *
+tryLoadingBundle(NSString *dirNameString, char *moduleName)
 {
-	void        *handle= NULL;
+	void        *handle;
 	NSString    *libName;
-	
+
 	libName = [dirNameString stringByAppendingPathComponent: @(moduleName)];
 	libName = [libName stringByAppendingPathExtension: @"bundle/Contents/MacOS/"];
 	libName = [libName stringByAppendingPathComponent: @(moduleName)];
-	handle = tryLoadingInternals(libName);
-	if (handle) 
-		return handle;
-	
-	libName = [dirNameString stringByAppendingPathComponent: @(moduleName)];
-	handle = tryLoadingInternals(libName);
-	if (handle) 
-		return handle;
-	
-	if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakPluginsBuiltInOrLocalOnly)
-		return NULL;
-	
+
+	return tryLoadingInternals(libName);
+}
+
+/* Function to attempt to load a dylib for moduleName under dirNameString, e.g.
+ * VM.app/Contents/MacOS/Plugins/<moduleName>
+ * VM.app/Contents/MacOS/Plugins/lib<moduleName>
+ * VM.app/Contents/MacOS/Plugins/<moduleName>.so
+ * etc
+ */
+static void *
+tryLoadingVariations(NSString *dirNameString, char *moduleName)
+{
+	void        *handle;
+	NSString    *libName;
+	char	     **prefix, **suffix;
 	static char *prefixes[]= { "", "lib", 0 };
 	static char *suffixes[]= { "", "so", "dylib",0 };
-	char	     **prefix= NULL, **suffix= NULL;
+
+	if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakPluginsBuiltInOrLocalOnly)
+		return NULL;
 
 	for (prefix= prefixes;  *prefix;  ++prefix)
 		for (suffix= suffixes;  *suffix;  ++suffix)		{
 			libName = [dirNameString stringByAppendingPathComponent: @(*prefix)];
-			libName = [libName stringByAppendingString: @(moduleName)];
-			libName = [libName stringByAppendingPathExtension: @(*suffix)];
+			if (**prefix)
+				libName = [libName stringByAppendingString: @(moduleName)];
+			else
+				libName = [libName stringByAppendingPathComponent: @(moduleName)];
+			if (**suffix)
+				libName = [libName stringByAppendingPathExtension: @(*suffix)];
 
-			handle = tryLoadingInternals(libName);
-			if (handle) 
+			if ((handle = tryLoadingInternals(libName)))
 				return handle;
 		}
 	return NULL;
@@ -146,16 +160,18 @@ static void *tryLoading(NSString *dirNameString, char *moduleName)
 /*  Find and load the named module.  Answer 0 if not found (do NOT fail
  *  the primitive!).
  */
-void *ioLoadModule(char *pluginName) {
+void *
+ioLoadModule(char *pluginName) {
 	@autoreleasepool {
 		void* result = ioLoadModuleRaw(pluginName);
 		return result;
 	}
 }
-	
-void *ioLoadModuleRaw(char *pluginName)
+
+void *
+ioLoadModuleRaw(char *pluginName)
 {
-	void *handle= null;
+	void *handle;
 
 	if ((pluginName == null) || (pluginName[0] == 0x00)) {
 		handle = dlopen(0, RTLD_NOW | RTLD_GLOBAL);
@@ -168,22 +184,24 @@ void *ioLoadModuleRaw(char *pluginName)
 			return handle;
 		}
     }
-	
+
 	/* first, look in the "<Squeak VM directory>Plugins" directory for the library */
 	NSString *pluginDirPath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent: @"Contents/MacOS/Plugins"];
-	// [[gDelegateApp.squeakApplication.vmPathStringURL path] stringByAppendingPathComponent: @"Plugins/"];
 	NSString *vmDirPath = [[NSBundle mainBundle] resourcePath];
 
 	if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakPluginsBuiltInOrLocalOnly) {
-	  if ( (handle= tryLoading( vmDirPath, pluginName)) || (handle= tryLoading( pluginDirPath,	pluginName)))
-			return handle;
-    } else {
-		  if ((   handle= tryLoading( pluginDirPath,	pluginName))
-			  || (handle= tryLoading( @"./",			pluginName))
-			  || (handle= tryLoading( vmDirPath,		pluginName))
-			  || (handle= tryLoading( @"",				pluginName))
-			  )
-			return handle;
+	  if ((   handle= tryLoadingVariations( pluginDirPath,	pluginName))
+		  || (handle= tryLoadingBundle( vmDirPath,			pluginName))
+		  )
+		return handle;
+	}
+    else {
+	  if ((   handle= tryLoadingVariations( pluginDirPath,	pluginName))
+		  || (handle= tryLoadingVariations( @"./",			pluginName))
+		  || (handle= tryLoadingBundle( vmDirPath,			pluginName))
+		  || (handle= tryLoadingVariations( @"",			pluginName))
+		  )
+		return handle;
 	}
 
 	// the following is needed so that, for example, the FFI can pick up
@@ -197,13 +215,13 @@ void *ioLoadModuleRaw(char *pluginName)
 			"/Carbon.framework/Frameworks",
 			0
 		};
-		
+
 		static NSString *systemFolder = NULL;
 		char **framework= NULL;
 		char workingData[PATH_MAX+1];
 		size_t pluginNameLength;
 		NSString *path,*path2;
-		
+
 		if (!systemFolder) {
 			struct FSRef frameworksFolderRef;
 			OSErr err = FSFindFolder(kSystemDomain, kFrameworksFolderType, false, &frameworksFolderRef);
@@ -212,21 +230,23 @@ void *ioLoadModuleRaw(char *pluginName)
 			RETAINOBJ(myURLRef.path);
 			systemFolder = myURLRef.path;
 		}
-		
+
+#define LENGTHOFDOTFRAMEWORK 10 /* i.e. strlen(".framework") */
+#define LODF LENGTHOFDOTFRAMEWORK /* and same for short */
 		pluginNameLength = strlen(pluginName);
-		if (pluginNameLength > 10) {
-			strncpy(workingData,pluginName+pluginNameLength-10,10);
-			workingData[10] = 0x00;
+		if (pluginNameLength > LENGTHOFDOTFRAMEWORK) {
+			strncpy(workingData,pluginName+pluginNameLength-LODF,LODF);
+			workingData[LODF] = 0x00;
 			if (strcmp(workingData,".framework") == 0) {
-				strncpy(workingData,pluginName,pluginNameLength-10);
-				workingData[pluginNameLength-10] = 0x00;
+				strncpy(workingData,pluginName,pluginNameLength-LODF);
+				workingData[pluginNameLength-LODF] = 0x00;
 				path = [vmDirPath stringByAppendingPathComponent: @(pluginName)];
 				if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakPluginsBuiltInOrLocalOnly) {
 					path2 = [path stringByAppendingPathComponent: @(workingData)];
 					if ((handle = tryLoadingInternals(path2)))
 						return handle;
 				} else {
-					if ((handle= tryLoading(path, workingData)))
+					if ((handle= tryLoadingVariations(path, workingData)))
 						return handle;
 				}
 				path = [pluginDirPath stringByAppendingPathComponent: @(pluginName)];
@@ -236,7 +256,7 @@ void *ioLoadModuleRaw(char *pluginName)
 					if ((handle = tryLoadingInternals(path2)))
 						return handle;
 				} else {
-					if ((handle= tryLoading(path, workingData)))
+					if ((handle= tryLoadingVariations(path, workingData)))
 						return handle;
 				}
 
@@ -246,30 +266,30 @@ void *ioLoadModuleRaw(char *pluginName)
 					if ((handle = tryLoadingInternals(path2)))
 						return handle;
 				} else {
-					if ((handle= tryLoading(path, workingData)))
+					if ((handle= tryLoadingVariations(path, workingData)))
 						return handle;
 				}
 			}
 		}
-		
+
 		if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakPluginsBuiltInOrLocalOnly)
 			return NULL;
-		
+
 		for (framework= frameworks;  *framework;  ++framework) {
 			path = [[systemFolder stringByAppendingPathComponent: @(*framework)]
 					stringByAppendingPathComponent: @(pluginName)];
-			if ((handle= tryLoading(path, pluginName)))
+			if ((handle= tryLoadingVariations(path, pluginName)))
 				return handle;
-			
+
 			path = [systemFolder stringByAppendingPathComponent: @(*framework)];
 			path = [path stringByAppendingPathComponent: @(pluginName)];
 			path = [path stringByAppendingPathExtension: @"framework"];
-			
-			if ((handle= tryLoading(path, pluginName)))
+
+			if ((handle= tryLoadingVariations(path, pluginName)))
 				return handle;
 		}
 	}
-	
+
 	return NULL;
 }
 
@@ -325,7 +345,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 sqInt ioFreeModule(void *moduleHandle)
 {
   int results = dlclose(moduleHandle);
-	
+
   if (results) {
 	  char* why = dlerror();
       dprintf((stderr, "ioFreeModule(%ld): %s\n", (long) moduleHandle, why));

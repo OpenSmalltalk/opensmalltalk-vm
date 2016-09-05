@@ -170,7 +170,7 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
  * is then passed as an element of the VMCallbackContext.
  */
 long
-thunkEntry(void *thunkp, long *stackp)
+thunkEntry(void *thunkp, sqIntptr_t *stackp)
 {
 	VMCallbackContext vmcc;
 	VMCallbackContext *previousCallbackContext;

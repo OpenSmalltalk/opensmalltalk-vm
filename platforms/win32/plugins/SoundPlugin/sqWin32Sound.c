@@ -519,7 +519,7 @@ sqInt snd_RecordSamplesIntoAtLength(void* buf, sqInt startSliceIndex,
     return 0;
   }
 
-  dstPtr = (char*)(buf + startSliceIndex * bytesPerSlice);
+  dstPtr = (char*)(buf) + startSliceIndex * bytesPerSlice;
   memcpy(dstPtr, srcPtr+recBufferPosition, bytesCopied);
   recBufferPosition = (recBufferPosition + bytesCopied) % recBufferSize;
   if(recBufferPosition == 0) {

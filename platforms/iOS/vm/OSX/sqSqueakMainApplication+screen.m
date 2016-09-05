@@ -45,20 +45,7 @@ extern BOOL gSqueakHeadless;
 @implementation sqSqueakMainApplication (screen) 
 
 - (double) ioScreenScaleFactor {
-	double factor = 1.0;
-
-	if (gSqueakHeadless && !browserActiveAndDrawingContextOk())
-		return factor;
-	if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode())
-		return browserGetWindowScaleFactor();
-	
-	if (getSTWindow() == NULL && !gSqueakExplicitWindowOpenNeeded) {
-		makeMainWindow();
-	}
-	@synchronized(gDelegateApp.window) {
-		factor = (double)[gDelegateApp.window backingScaleFactor];
-	}
-	return factor;
+	return 1.0;
 }
 
 - (sqInt) ioScreenSize {

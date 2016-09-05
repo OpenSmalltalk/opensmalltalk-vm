@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 # Spur VM with VM profiler and itimer heartbeat
 INSTALLDIR=cogspurlinux
 # Some gcc versions create a broken VM using -O2

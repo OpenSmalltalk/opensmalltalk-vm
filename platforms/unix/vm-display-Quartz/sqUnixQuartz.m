@@ -2128,7 +2128,7 @@ static int     inputCharCode;
       int count= [[[info draggingPasteboard]
 		    propertyListForType: NSFilenamesPboardType] count];
       noteMousePoint([info draggingLocation]);
-      noteDragEvent(DragEnter, dragCount= count);
+      noteDragEvent(SQDragEnter, dragCount= count);
       return NSDragOperationCopy;
     }
   return NSDragOperationNone;
@@ -2137,14 +2137,14 @@ static int     inputCharCode;
 - (int) draggingUpdated: (id<NSDraggingInfo>)info
 {
   noteMousePoint([info draggingLocation]);
-  noteDragEvent(DragMove, dragCount);
+  noteDragEvent(SQDragMove, dragCount);
   return NSDragOperationCopy;
 }
 
 - (void) draggingExited: (id<NSDraggingInfo>)info
 {
   noteMousePoint([info draggingLocation]);
-  noteDragEvent(DragLeave, dragCount);
+  noteDragEvent(SQDragLeave, dragCount);
   dragCount= 0;
 }
 
@@ -2173,7 +2173,7 @@ static int     inputCharCode;
       for (i= 0;  i < uxDropFileCount;  ++i)
 	uxDropFileNames[i]= strdup([[files objectAtIndex: i] cString]);
     }
-  noteDragEvent(DragDrop, uxDropFileCount);
+  noteDragEvent(SQDragDrop, uxDropFileCount);
   dragCount= 0;
 
   return YES;	// under some duress, I might add (see sqUxDragDrop.c)

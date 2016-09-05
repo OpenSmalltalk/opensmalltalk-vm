@@ -54,16 +54,28 @@
 #if defined(SQ_IMAGE32)
   typedef int		sqInt;
   typedef unsigned int	usqInt;
+#define PRIdSQINT "d"
+#define PRIuSQINT "u"
+#define PRIxSQINT "x"
+#define PRIXSQINT "X"
 # define SQABS abs
 #elif defined(SQ_HOST64) && (SIZEOF_LONG == 8)
   typedef long		sqInt;
   typedef unsigned long	usqInt;
+#define PRIdSQINT "ld"
+#define PRIuSQINT "lu"
+#define PRIxSQINT "lx"
+#define PRIXSQINT "lX"
 # define SQABS labs
 #elif (SIZEOF_LONG_LONG != 8)
 #   error long long integers are not 64-bits wide?
 #else
   typedef long long		sqInt;
   typedef unsigned long long	usqInt;
+#define PRIdSQINT "lld"
+#define PRIuSQINT "llu"
+#define PRIxSQINT "llx"
+#define PRIXSQINT "llX"
 # define SQABS llabs
 #endif
 
@@ -88,13 +100,22 @@
 
 /* sqIntptr_t is a signed integer with enough bits to hold a pointer
    usqIntptr_t is the unsigned flavour
-   this is essentially C99 intptr_t and uintptr_t but we support legacy compilers */
+   this is essentially C99 intptr_t and uintptr_t but we support legacy compilers
+   the C99 printf formats macros are also defined with SQ prefix */
 #if SIZEOF_LONG == SIZEOF_VOID_P
 typedef long sqIntptr_t;
 typedef unsigned long usqIntptr_t;
+#define PRIdSQPTR "ld"
+#define PRIuSQPTR "lu"
+#define PRIxSQPTR "lx"
+#define PRIXSQPTR "lX"
 #else
 typedef long long sqIntptr_t;
 typedef unsigned long long usqIntptr_t;
+#define PRIdSQPTR "lld"
+#define PRIuSQPTR "llu"
+#define PRIxSQPTR "llx"
+#define PRIXSQPTR "llX"
 #endif
 
 #if defined(SQ_HOST64) && defined(SQ_IMAGE32)
@@ -205,9 +226,9 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _swapper;
 #endif /* !(BigEndianFloats && !VMBIGENDIAN) && !OBJECTS_32BIT_ALIGNED */
 
 # define storeSingleFloatAtPointerfrom(intPointerToFloat, floatVar) \
-        memcpy((char *)intPointerToFloat,&floatVar,sizeof(float));
+        do {float __f=floatVar; memcpy((char *)intPointerToFloat,&__f,sizeof(float));} while(0)
 # define fetchSingleFloatAtPointerinto(intPointerToFloat, floatVar) \
-        memcpy(&floatVar,(char *)intPointerToFloat,sizeof(float));
+        do {float __f; memcpy(&__f,(char *)intPointerToFloat,sizeof(float)); floatVar=__f;} while(0)
 
 #define storeFloatAtfrom(i, doubleVar)	storeFloatAtPointerfrom(pointerForOop(i), doubleVar)
 #define fetchFloatAtinto(i, doubleVar)	fetchFloatAtPointerinto(pointerForOop(i), doubleVar)

@@ -452,7 +452,7 @@ static enum XdndState dndOutSelectionRequest(enum XdndState state, XSelectionReq
       return state;
     }
   memcpy(&xdndOutRequestEvent, req, sizeof(xdndOutRequestEvent));
-  recordDragEvent(DragRequest, 1);
+  recordDragEvent(SQDragRequest, 1);
   return state;
 }
 
@@ -645,7 +645,7 @@ static enum XdndState dndInEnter(enum XdndState state, XClientMessageEvent *evt)
 static enum XdndState dndInLeave(enum XdndState state)
 {
   fdebugf((stderr, "Receive XdndLeave (input)\n"));
-  recordDragEvent(DragLeave, 1);
+  recordDragEvent(SQDragLeave, 1);
   return XdndStateIdle;
 }
 
@@ -669,7 +669,7 @@ static enum XdndState dndInPosition(enum XdndState state, XClientMessageEvent *e
     }
   
   if ((state == XdndStateEntered) && xdndWillAccept)
-    recordDragEvent(DragEnter, 1);
+    recordDragEvent(SQDragEnter, 1);
   
   if (xdndWillAccept)
     {
@@ -683,7 +683,7 @@ static enum XdndState dndInPosition(enum XdndState state, XClientMessageEvent *e
     {
       /*fdebugf((stderr, "  dndInPosition: accepting\n"));*/
       dndSendStatus(1, XdndActionCopy);
-      recordDragEvent(DragMove, 1);
+      recordDragEvent(SQDragMove, 1);
     }
   else /* won't accept */
     {
@@ -718,7 +718,7 @@ enum XdndState dndInDrop(enum XdndState state, XClientMessageEvent *evt)
   if (isUrlList == 0)
     {
       fdebugf((stderr, "  dndInDrop: no url list\n"));
-      recordDragEvent(DragDrop, 0);
+      recordDragEvent(SQDragDrop, 0);
       return state;
     }
   dndInDestroyTypes();
@@ -743,7 +743,7 @@ enum XdndState dndInDrop(enum XdndState state, XClientMessageEvent *evt)
     }
 
   dndSendFinished();
-  recordDragEvent(DragLeave, 1);
+  recordDragEvent(SQDragLeave, 1);
 
   return XdndStateIdle;
 }
@@ -845,7 +845,7 @@ static void
 generateSqueakDropEventIfDroppedFiles()
 {
 	if (uxDropFileCount)
-		recordDragEvent(DragDrop, uxDropFileCount);
+		recordDragEvent(SQDragDrop, uxDropFileCount);
 }
 
 static void dndGetSelection(Window owner, Atom property)
@@ -887,7 +887,7 @@ static enum XdndState dndInSelectionNotify(enum XdndState state, XSelectionEvent
 
   dndGetSelection(evt->requestor, evt->property);
   dndSendFinished();
-  recordDragEvent(DragLeave, 1);
+  recordDragEvent(SQDragLeave, 1);
   return XdndStateIdle;
 }
 
@@ -896,7 +896,7 @@ static enum XdndState dndInFinished(enum XdndState state)
 {
   fdebugf((stderr, "Internal signal DndInFinished (input)\n"));
   dndSendFinished();
-  recordDragEvent(DragLeave, 1);
+  recordDragEvent(SQDragLeave, 1);
   dndInDestroyTypes();
   return XdndStateIdle;
 }

@@ -4,6 +4,8 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
+	<key>NSSupportsAutomaticGraphicsSwitching</key>
+	<true/>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -375,8 +377,6 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>SqueakOSXApplication</string>
-	<key>NSHighResolutionCapable</key>
-	<true/>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

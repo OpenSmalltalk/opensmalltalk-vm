@@ -78,6 +78,10 @@ WindowPtr getSTWindow(void) {
     return  windowHandleFromIndex(1);
 }
 
+double ioScreenScaleFactor(void) {
+    return 1.0;
+}
+
 /*
  * Brad's Mac-ification of Andreas' window sizing prims.
  */

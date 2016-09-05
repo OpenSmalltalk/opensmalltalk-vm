@@ -314,8 +314,7 @@ beatStateMachine(void *careLess)
 		errno = er;
 		perror("pthread_setschedparam failed");
 		fprintf(stderr,
-				"Read e.g. http://www.mirandabanda.org/files/Cog/VM/VM.r%s/README.%s\n",
-				revisionAsString(), revisionAsString());
+				"Read e.g. https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/r3732#linux\n");
 		exit(errno);
 	}
 	beatState = active;

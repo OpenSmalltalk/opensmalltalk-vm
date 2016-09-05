@@ -17,6 +17,7 @@
 ****************************************************************************/
 
 #include <Carbon/Carbon.h>
+double ioScreenScaleFactor(void);
 void SetWindowTitle(int windowIndex,char *title);
 WindowPtr getSTWindow(void);
 WindowPtr SetUpWindow(int t,int l,int b, int r, UInt32 windowType, UInt32 windowAttributes);

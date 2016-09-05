@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 
 # Bochs x64 simulator for the BochsX64Alien plugin.
 # this sets up the x64 compile for Cog on linux.  Disable as much inessential

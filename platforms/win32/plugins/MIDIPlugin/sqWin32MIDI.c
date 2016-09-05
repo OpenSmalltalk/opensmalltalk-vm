@@ -335,7 +335,7 @@ static DWORD WINAPI midiNotifyThread(DWORD ignored)
                    two of the functions allowed from within MIDI callbacks, e.g.,
                    midiOutShortMsg and SetEvent
   *************************************************************************************/
-static void CALLBACK midiInCallback(HMIDIIN  hMidiIn,UINT  uMsg, DWORD  dwUser,
+static void CALLBACK midiInCallback(HMIDIIN  hMidiIn,UINT  uMsg, DWORD_PTR  dwUser,
                              DWORD  dwParam1, DWORD  dwParam2)
 { int cmd, cmdLen;
   sqMidiInEvent *dst;
@@ -509,7 +509,7 @@ static void sendLongMidiData(HMIDIOUT midiOutPort, char *data, int numBytes)
    if(!header)
      { /* allocate new header */
        header = GlobalLock(GlobalAlloc(GMEM_MOVEABLE | GMEM_SHARE | GMEM_ZEROINIT, sizeof(MIDIHDR)));
-       header->dwUser = (DWORD)midiHeaderList;
+       header->dwUser = (DWORD_PTR)midiHeaderList;
        midiHeaderList = header;
      }
    if(header->lpData)
@@ -807,7 +807,7 @@ int sqMIDIOpenPort(int portNum, int readSemaIndex, int interfaceClockRate) {
       port->name[MAXPNAMELEN] = 0;
       DBGPRINTF(TEXT("Opening input interface %s\n"), caps.szPname);
       err = midiInOpen(&handle, portNum - midiOutNumDevices,
-                       (DWORD)midiInCallback, (DWORD)port, CALLBACK_FUNCTION);
+                       (DWORD_PTR)midiInCallback, (DWORD_PTR)port, CALLBACK_FUNCTION);
       if(err)
         { /* fail if we can't open a particular input device */
 #ifndef NO_WARNINGS

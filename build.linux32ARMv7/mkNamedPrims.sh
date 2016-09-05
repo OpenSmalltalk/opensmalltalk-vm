@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -e
 # Generate a sqNamedPrims.h file from plugins.int.  The plugins.int used should
 # be the one and only argument.
 if [ $# != 1 -o ! -f "$1" ]; then

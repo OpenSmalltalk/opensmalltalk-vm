@@ -30,6 +30,15 @@
 # else
 #	include "cointerp.h"
 # endif
+#else
+#  if SPURVM
+     extern usqInt maxOldSpaceSize;
+#  endif
+#endif
+
+#if !defined(IMAGE_SIZEOF_NT_OPTIONAL_HEADER)
+#include <winnt.h>
+#define  IMAGE_SIZEOF_NT_OPTIONAL_HEADER  sizeof(IMAGE_OPTIONAL_HEADER)
 #endif
 
 /* Windows Vista support 
@@ -50,6 +59,17 @@ extern void printPhaseTime(int);
 
 /* Import from sqWin32Alloc.c */
 LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp);
+
+/* Import from sqWin32Window.c */
+char * GetAttributeString(int id);
+void ShowSplashScreen(void);
+void HideSplashScreen(void);
+
+/* Import from sqWin32Heartbeat.c */
+void ioReleaseTime(void);
+
+/* Import from SecurityPlugin/sqWin32Security.c */
+sqInt ioInitSecurity(void);
 
 /* forwarded declaration */
 static void printCrashDebugInformation(LPEXCEPTION_POINTERS exp);
@@ -131,7 +151,7 @@ squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
     DWORD code = exp->ExceptionRecord->ExceptionCode;
     if((code >= EXCEPTION_FLT_DENORMAL_OPERAND) && (code <= EXCEPTION_FLT_UNDERFLOW)) {
       /* turn on the default masking of exceptions in the FPU and proceed */
-      _control87(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+      _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
       result = EXCEPTION_CONTINUE_EXECUTION;
     }
   }
@@ -465,7 +485,7 @@ void gatherSystemInfo(void) {
   GetSystemInfo(&sysInfo);
 
   /* Set up the win32VersionName */
-  sprintf(tmpString, "%d.%d", osInfo.dwMajorVersion, osInfo.dwMinorVersion);
+  sprintf(tmpString, "%lu.%lu", osInfo.dwMajorVersion, osInfo.dwMinorVersion);
   win32VersionName = _strdup(tmpString);
 
   ZeroMemory(&memStat, sizeof(memStat));
@@ -503,16 +523,16 @@ void gatherSystemInfo(void) {
 	    "Hardware information: \n"
 	    "\tManufacturer: %s\n"
 	    "\tModel: %s\n"
-	    "\tNumber of processors: %d\n"
-	    "\tPage size: %d\n"
+	    "\tNumber of processors: %lu\n"
+	    "\tPage size: %lu\n"
 	    "\nMemory Information (upon launch):\n"
-	    "\tPhysical Memory Size: %d kbytes\n"
-	    "\tPhysical Memory Free: %d kbytes\n"
-	    "\tPage File Size: %d kbytes\n"
-	    "\tPage File Free: %d kbytes\n"
-	    "\tVirtual Memory Size: %d kbytes\n"
-	    "\tVirtual Memory Free: %d kbytes\n"
-	    "\tMemory Load: %d percent\n",
+	    "\tPhysical Memory Size: %" PRIuSQPTR " kbytes\n"
+	    "\tPhysical Memory Free: %" PRIuSQPTR " kbytes\n"
+	    "\tPage File Size: %" PRIuSQPTR " kbytes\n"
+	    "\tPage File Free: %" PRIuSQPTR " kbytes\n"
+	    "\tVirtual Memory Size: %" PRIuSQPTR " kbytes\n"
+	    "\tVirtual Memory Free: %" PRIuSQPTR " kbytes\n"
+	    "\tMemory Load: %lu percent\n",
 	    manufacturer, model,
 	    sysInfo.dwNumberOfProcessors,
 	    sysInfo.dwPageSize,
@@ -522,8 +542,7 @@ void gatherSystemInfo(void) {
 	    memStat.dwAvailPageFile / 1024,
 	    memStat.dwTotalVirtual / 1024,
 	    memStat.dwAvailVirtual / 1024,
-	    memStat.dwMemoryLoad,
-	    0);
+	    memStat.dwMemoryLoad);
   }
 
   /* find more information about each processor */
@@ -557,7 +576,7 @@ void gatherSystemInfo(void) {
       sprintf(tmp,
 	      "\nProcessor %d: %s\n"
 	      "\tIdentifier: %s\n"
-	      "\t~MHZ: %d\n",
+	      "\t~MHZ: %lu\n",
 	      proc, nameString, identifier, mhz);
       RegCloseKey(hk);
     }
@@ -569,7 +588,6 @@ void gatherSystemInfo(void) {
     char owner[256];
     char company[256];
     char product[256];
-    char productid[256];
 
     if(osInfo.dwPlatformId == VER_PLATFORM_WIN32_NT) {
       strcpy(keyName, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion");
@@ -591,13 +609,13 @@ void gatherSystemInfo(void) {
     }
 
     sprintf(tmpString,
-	    "Operating System: %s (Build %d %s)\n"
+	    "Operating System: %s (Build %lu %s)\n"
 	    "\tRegistered Owner: %s\n"
 	    "\tRegistered Company: %s\n"
 	    "\tSP major version: %d\n"
 	    "\tSP minor version: %d\n"
-	    "\tSuite mask: %lx\n"
-	    "\tProduct type: %lx\n",
+	    "\tSuite mask: %x\n"
+	    "\tProduct type: %x\n",
 	    product, 
 	    osInfo.dwBuildNumber, osInfo.szCSDVersion,
 	    owner, company,
@@ -636,7 +654,6 @@ void gatherSystemInfo(void) {
     char biosString[256];
     char chipType[256];
     char dacType[256];
-    char version[256];
     char *drivers, *drv;
     WCHAR buffer[256];
     DWORD memSize;
@@ -696,7 +713,7 @@ void gatherSystemInfo(void) {
 	      "\tBios String: %s\n"
 	      "\tChip Type: %s\n"
 	      "\tDAC Type: %s\n"
-	      "\tMemory Size: 0x%.8X\n",
+	      "\tMemory Size: 0x%.8lX\n",
 	      deviceDesc,
 	      adapterString,
 	      biosString,
@@ -866,7 +883,7 @@ void SetupStderr()
 static void
 dumpStackIfInMainThread(FILE *optionalFile)
 {
-	extern int printCallStack(void);
+	extern void printCallStack(void);
 
 	if (!optionalFile) {
 		if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
@@ -938,7 +955,7 @@ extern char *__cogitBuildInfo;
     fflush(f);
     fprintf(f,"\n"
 	    "Current byte code: %d\n"
-	    "Primitive index: %d\n",
+	    "Primitive index: %" PRIdSQINT "\n",
 	    getCurrentBytecode(),
 	    methodPrimitiveIndex());
     fflush(f);
@@ -962,7 +979,7 @@ extern char *__cogitBuildInfo;
 
 /* Print an error message, possibly Smalltalk and C stack traces, and exit. */
 /* Disable Intel compiler inlining of error which is used for breakpoints */
-#pragma auto_inline off
+#pragma auto_inline(off)
 static int inError = 0;
 
 void
@@ -971,7 +988,7 @@ error(char *msg) {
   TCHAR crashInfo[1024];
   void *callstack[MAXFRAMES];
   symbolic_pc symbolic_pcs[MAXFRAMES];
-  int i, nframes;
+  int nframes;
   int inVMThread = ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread());
 
   if (inError)
@@ -1028,7 +1045,7 @@ error(char *msg) {
   print_backtrace(stdout, nframes, MAXFRAMES, callstack, symbolic_pcs);
   /* /Don't/ print the caller's stack to stdout here; Cleanup will do so. */
   /* dumpStackIfInMainThread(0); */
-  exit(-1);
+  exit(EXIT_FAILURE);
 }
 
 static int inCleanExit = 0; /* to suppress stack trace in Cleanup */
@@ -1049,14 +1066,14 @@ extern sqInt reportStackHeadroom;
 	return ec;
 }
 
-#pragma auto_inline on
+#pragma auto_inline(on)
 
 static void
 printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 { 
   void *callstack[MAXFRAMES];
   symbolic_pc symbolic_pcs[MAXFRAMES];
-  int i, nframes, inVMThread;
+  int nframes, inVMThread;
   TCHAR crashInfo[1024];
   FILE *f;
   int byteCode = -2;
@@ -1074,7 +1091,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 
 
   TRY {
-#if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
+#if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
   if (inVMThread)
 	ifValidWriteBackStackPointersSaveTo((void *)exp->ContextRecord->Ebp,
 										(void *)exp->ContextRecord->Esp,
@@ -1084,7 +1101,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
   nframes = backtrace_from_fp((void*)exp->ContextRecord->Ebp,
 							callstack+1,
 							MAXFRAMES-1);
-#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_X64)
+#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
   if (inVMThread)
 	ifValidWriteBackStackPointersSaveTo((void *)exp->ContextRecord->Rbp,
 										(void *)exp->ContextRecord->Rsp,
@@ -1129,51 +1146,63 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
     fprintf(f,"---------------------------------------------------------------------\n");
     fprintf(f,"%s\n", ctime(&crashTime));
     /* Print the exception code */
-    fprintf(f,"Exception code: %08X\nException addr: %08X\n",
+    fprintf(f,"Exception code: %08lX\nException addr: %0*" PRIXSQPTR "\n",
 	    exp->ExceptionRecord->ExceptionCode,
-	    exp->ExceptionRecord->ExceptionAddress);
+		(int) sizeof(exp->ExceptionRecord->ExceptionAddress)*2,
+	    (usqIntptr_t) exp->ExceptionRecord->ExceptionAddress);
     if(exp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
-      /* For access violations print what actually happened */
-      fprintf(f,"Access violation (%s) at %08X\n",
-	      (exp->ExceptionRecord->ExceptionInformation[0] ? "write access" : "read access"),
-	      exp->ExceptionRecord->ExceptionInformation[1]);
+		/* For access violations print what actually happened */
+		fprintf(f,"Access violation (%s) at %0*" PRIXSQPTR "\n",
+			(exp->ExceptionRecord->ExceptionInformation[0] ? "write access" : "read access"),
+			(int) sizeof(exp->ExceptionRecord->ExceptionInformation[1])*2,
+			exp->ExceptionRecord->ExceptionInformation[1]);
     }
-#if defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
-    fprintf(f,"EAX:%08X\tEBX:%08X\tECX:%08X\tEDX:%08X\n",
+#if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
+    fprintf(f,"EAX:%08lX\tEBX:%08lX\tECX:%08lX\tEDX:%08lX\n",
 	    exp->ContextRecord->Eax,
 	    exp->ContextRecord->Ebx,
 	    exp->ContextRecord->Ecx,
 	    exp->ContextRecord->Edx);
-    fprintf(f,"ESI:%08X\tEDI:%08X\tEBP:%08X\tESP:%08X\n",
+    fprintf(f,"ESI:%08lX\tEDI:%08lX\tEBP:%08lX\tESP:%08lX\n",
 	    exp->ContextRecord->Esi,
 	    exp->ContextRecord->Edi,
 	    exp->ContextRecord->Ebp,
 	    exp->ContextRecord->Esp);
-    fprintf(f,"EIP:%08X\tEFL:%08X\n",
+    fprintf(f,"EIP:%08lX\tEFL:%08lX\n",
 	    exp->ContextRecord->Eip,
 	    exp->ContextRecord->EFlags);
-    fprintf(f,"FP Control: %08X\nFP Status:  %08X\nFP Tag:     %08X\n",
+    fprintf(f,"FP Control: %08lX\nFP Status:  %08lX\nFP Tag:     %08lX\n",
 	    exp->ContextRecord->FloatSave.ControlWord,
 	    exp->ContextRecord->FloatSave.StatusWord,
 	    exp->ContextRecord->FloatSave.TagWord);
-#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_X64)
-    fprintf(f,"RAX:%016lx\tRBX:%016lx\tRCX:%016lx\tRDX:%016lx\n",
+#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
+    fprintf(f,"RAX:%016" PRIxSQPTR "\tRBX:%016" PRIxSQPTR "\tRCX:%016" PRIxSQPTR "\tRDX:%016" PRIxSQPTR "\n",
 	    exp->ContextRecord->Rax,
 	    exp->ContextRecord->Rbx,
 	    exp->ContextRecord->Rcx,
 	    exp->ContextRecord->Rdx);
-    fprintf(f,"RSI:%016lx\tRDI:%016lx\tRBP:%016lx\tRSP:%016lx\n",
+    fprintf(f,"RSI:%016" PRIxSQPTR "\tRDI:%016" PRIxSQPTR "\tRBP:%016" PRIxSQPTR "\tRSP:%016" PRIxSQPTR "\n",
 	    exp->ContextRecord->Rsi,
 	    exp->ContextRecord->Rdi,
 	    exp->ContextRecord->Rbp,
 	    exp->ContextRecord->Rsp);
-    fprintf(f,"RIP:%016lx\tEFL:%08x\n",
+    fprintf(f,"R8 :%016" PRIxSQPTR "\tR9 :%016" PRIxSQPTR "\tR10:%016" PRIxSQPTR "\tR11:%016" PRIxSQPTR "\n",
+	    exp->ContextRecord->R8,
+	    exp->ContextRecord->R9,
+	    exp->ContextRecord->R10,
+	    exp->ContextRecord->R11);
+    fprintf(f,"R12:%016" PRIxSQPTR "\tR13:%016" PRIxSQPTR "\tR14:%016" PRIxSQPTR "\tR15:%016" PRIxSQPTR "\n",
+	    exp->ContextRecord->R12,
+	    exp->ContextRecord->R13,
+	    exp->ContextRecord->R14,
+	    exp->ContextRecord->R15);
+    fprintf(f,"RIP:%016" PRIxSQPTR "\tEFL:%08lx\n",
 	    exp->ContextRecord->Rip,
 	    exp->ContextRecord->EFlags);
     fprintf(f,"FP Control: %08x\nFP Status:  %08x\nFP Tag:     %08x\n",
-	    exp->ContextRecord->FloatSave.ControlWord,
-	    exp->ContextRecord->FloatSave.StatusWord,
-	    exp->ContextRecord->FloatSave.TagWord);
+	    exp->ContextRecord->FltSave.ControlWord,
+	    exp->ContextRecord->FltSave.StatusWord,
+	    exp->ContextRecord->FltSave.TagWord);
 #else
 #error "unknown architecture, cannot pick dump registers"
 #endif
@@ -1247,7 +1276,7 @@ void __cdecl Cleanup(void)
 /* SQ_IMAGE_MAGIC - the magic number for embedded images "SQIM" */
 #define SQ_IMAGE_MAGIC 0x83817377
 
-int sqImageFile findEmbeddedImage(void) {
+sqImageFile findEmbeddedImage(void) {
 	sqImageFile f;
 	int endMarker;
 	int magic;
@@ -1294,7 +1323,7 @@ int sqImageFile findEmbeddedImage(void) {
 	return f;
 }
 #else
-int findEmbeddedImage(void) { return 0; }
+sqImageFile findEmbeddedImage(void) { return 0; }
 #endif
 
 
@@ -1337,10 +1366,9 @@ int
 sqMain(int argc, char *argv[])
 { 
   int virtualMemory;
-  int sz;
 
   /* set default fpu control word */
-  _control87(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+  _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
 
   LoadPreferences();
 
@@ -1438,7 +1466,7 @@ sqMain(int argc, char *argv[])
     sqServiceInstall();
     /* When installing was successful we won't come
        to this point. Otherwise ... */
-    exit(-1); /* this will show any printfs during install */
+    exit(EXIT_FAILURE); /* this will show any printfs during install */
   }
 #endif
 
@@ -1823,11 +1851,9 @@ parseVMArgument(int argc, char *argv[])
 #endif /* COGVM */
 #if SPURVM
     else if (!strcmp(argv[0], "-maxoldspace")) { 
-		extern usqInt maxOldSpaceSize;
 		maxOldSpaceSize = (usqInt) strtobkm(argv[1]);	 
 		return 2; }
     else if (!strncmp(argv[0], "-maxoldspace:", 13)) { 
-		extern usqInt maxOldSpaceSize;
 		maxOldSpaceSize = (usqInt) strtobkm(argv[0]+13);	 
 		return 2; }
 #endif
@@ -2018,7 +2044,8 @@ parseArguments(int argc, char *argv[])
  * b) answer the amount of stack room to ensure in a Cog stack page, including
  *    the size of the redzone, if any.
  */
-# if defined(i386) || defined(__i386) || defined(__i386__) || defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_X64)
+# if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__) \
+	|| defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
 /*
  * Cog has already captured CStackPointer  before calling this routine.  Record
  * the original value, capture the pointers again and determine if CFramePointer

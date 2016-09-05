@@ -48,9 +48,14 @@
 #import "sqVirtualMachine.h"
 
 #import <QuartzCore/QuartzCore.h>
+#import <QuartzCore/CIImage.h>
+
+//#import <OpenGL/CGLMacro.h>
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct	VirtualMachine* interpreterProxy;
+
+#define max(x, y) (x > y? x: y)
 
 static NSString *stringWithCharacter(unichar character) {
 	return [NSString stringWithCharacters: &character length: 1];
@@ -59,6 +64,17 @@ static NSString *stringWithCharacter(unichar character) {
 @implementation sqSqueakOSXCGView
 @synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
 lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,savedScreenBoundsAtTimeOfFullScreen;
+
++ (NSOpenGLPixelFormat *)defaultPixelFormat {
+	NSOpenGLPixelFormatAttribute attrs[] =
+    {
+		NSOpenGLPFAAccelerated,
+		NSOpenGLPFANoRecovery,
+		NSOpenGLPFABackingStore,
+		0
+    };
+    return AUTORELEASEOBJ([[NSOpenGLPixelFormat alloc] initWithAttributes:attrs]);
+}
 
 - (id)initWithFrame:(NSRect)frameRect {
     self = [super initWithFrame:frameRect];
@@ -72,6 +88,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 }
 
 - (void)awakeFromNib {
+	//self = [self initWithFrame: self.frame pixelFormat: [[self class] defaultPixelFormat] ];
+//    self = [self initWithFrame: self.frame];
     [self initialize];
 }
 
@@ -109,21 +127,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 - (BOOL)isOpaque {
 	return YES;
 }
-
-- (NSRect) sqScreenSize {
-  return [self convertRectToBacking: [self bounds]];
-}
-
-
-- (NSPoint) sqMousePosition: (NSEvent*)theEvent {
-	/* Our client expects the mouse coordinates in Squeak's coordinates,
-	 * but theEvent's location is in "user" coords. so we have to convert. */
-	NSPoint local_pt = [self convertPoint: [theEvent locationInWindow] fromView:nil];
-	NSPoint converted = [self convertPointToBacking: local_pt];
-	// Squeak is upside down
-	return NSMakePoint(converted.x, -converted.y);
-}
-
 
 - (void)viewDidMoveToWindow {
 	if (self.squeakTrackingRectForCursor)
@@ -191,16 +194,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 - (void) performDraw: (CGRect)rect {
 	sqInt form = interpreterProxy->displayObject(); // Form
 
-    CGContextRef context;
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1010 && defined(NSFoundationVersionNumber10_10)
-    if (floor(NSFoundationVersionNumber) >= NSFoundationVersionNumber10_10) {
-        context = [[NSGraphicsContext currentContext] CGContext];
-    } else { // Deprecated in OSX 10.10
-        context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-    }
-#else
-    context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-#endif
+    CGContextRef context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
     CGContextSaveGState(context);
     
     int width = interpreterProxy->positive32BitValueOf(interpreterProxy->fetchPointerofObject(1, form));
@@ -209,65 +203,43 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	void* bits = (void*)interpreterProxy->firstIndexableField(formBits); // bits
     int bitSize = interpreterProxy->byteSizeOf(formBits);
     int bytePerRow = 4*width;
+    
+    CGRect r = NSRectToCGRect([self frame]);
+    int y2 = max(r.size.height - (rect.origin.y), 0);
+    int y1 = max(y2 - rect.size.height, 0);
+    
+    CGRect swapRect = CGRectIntersection(CGRectMake(0, 0, width, height), CGRectMake(rect.origin.x, y1, rect.size.width, y2));
+    [self swapColors: bits imageWidth:width clipRect: swapRect];
+    
+    CGDataProviderRef pref = CGDataProviderCreateWithData (NULL, bits, bitSize, NULL);
+    CGContextTranslateCTM(context, 0, height);
+    CGContextScaleCTM(context, 1, -1);
+    CGImageRef image = CGImageCreate(width, 
+                                     height, 
+                                     8, 
+                                     32, 
+                                     bytePerRow, 
+                                     colorspace, 
+                                     kCGBitmapByteOrder32Big | kCGImageAlphaLast, 
+                                     pref, 
+                                     NULL, 
+                                     NO, 
+                                     kCGRenderingIntentDefault);
+    
+    CGContextClipToRect(context,rect);
+    CGContextDrawImage(context, CGRectMake(0, 0, width, height), image);
 
-
-	CGAffineTransform  deviceTransform = CGContextGetUserSpaceToDeviceSpaceTransform(context);
-
-	CGFloat frameHeight = [self frame].size.height * deviceTransform.d;
-    CGFloat y2 = MAX(frameHeight - rect.origin.y, 0);
-    CGFloat y1 = MAX(y2 - rect.size.height, 0);
-
-	CGRect swapRect = CGRectIntersection(CGRectMake(0, 0, width, height), CGRectMake(rect.origin.x, y1, rect.size.width, y2));
-	if (!CGRectIsNull(swapRect)) {
-		[self swapColors: bits imageWidth:width clipRect: swapRect];
-
-		CGDataProviderRef pref = CGDataProviderCreateWithData (NULL, bits, bitSize, NULL);
-		CGImageRef image = CGImageCreate(width,
-										 height,
-										 8,
-										 32,
-										 bytePerRow,
-										 colorspace,
-										 kCGBitmapByteOrder32Big | kCGImageAlphaLast,
-										 pref,
-										 NULL,
-										 NO,
-										 kCGRenderingIntentDefault);
-
-		CGRect userClipRect = CGRectMake(rect.origin.x / deviceTransform.a,
-										 rect.origin.y / deviceTransform.d,
-										 rect.size.width / deviceTransform.a,
-										 rect.size.height / deviceTransform.d);
-
-
-		CGContextTranslateCTM(context, 0, height / deviceTransform.d);
-		CGContextScaleCTM(context, 1 , -1);
-
-
-		CGContextClipToRect(context, userClipRect);
-
-		CGRect imageBounds = CGContextConvertRectToUserSpace(context, CGRectMake(deviceTransform.tx, deviceTransform.ty, width, height));
-
-		CGContextDrawImage(context, imageBounds, image);
-
-		[self swapColors:bits imageWidth:width clipRect: swapRect];
-
-	    CGImageRelease(image);
-		CGDataProviderRelease(pref);
-	}
+    [self swapColors:bits imageWidth:width clipRect: swapRect];
+    
+    CGImageRelease(image);
+    CGDataProviderRelease(pref);
+    
     CGContextRestoreGState(context);
 }
 
 -(void)drawRect:(NSRect)rect
 {
-	CGRect rectToDraw;
-	if (clippyIsEmpty) {
-		NSSize backingSize = [self convertRectToBacking:rect].size;
-		rectToDraw = CGRectMake(0, 0, backingSize.width, backingSize.height);
-	} else {
-		rectToDraw = clippy;
-	}
-	[self performDraw: rectToDraw];
+    [self performDraw:(clippyIsEmpty? NSRectToCGRect(rect):clippy)];
     clippyIsEmpty = YES;
     syncNeeded = NO;
 }
@@ -589,7 +561,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	self.dragCount = (int) [self countNumberOfNoneSqueakImageFilesInDraggedFiles: info];
 	
 	if [(self.dragCount)
-		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragEnter numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex] view: self];
+		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragEnter numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex] view: self];
 	
 	return NSDragOperationGeneric;
 }
@@ -597,14 +569,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 - (NSDragOperation) draggingUpdated: (id<NSDraggingInfo>)info
 {
 	if (self.dragCount)
-		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragMove numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex  view: self];
+		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragMove numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex  view: self];
 	return NSDragOperationGeneric;
 }
 
 - (void) draggingExited: (id<NSDraggingInfo>)info
 {
 	if (self.dragCount)
-		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragLeave numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex  view: self];
+		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragLeave numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex  view: self];
 	self.dragCount = 0;
 	self.dragInProgress = NO;
 	self.dragItems = NULL;
@@ -613,7 +585,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 - (BOOL) performDragOperation: (id<NSDraggingInfo>)info {
 	if (self.dragCount) {
 		self.dragItems = [self filterOutSqueakImageFilesFromDraggedFiles: info];
-		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex  view: self];
+		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex  view: self];
 	} 
 	
 	NSArray *images = [self filterSqueakImageFilesFromDraggedFiles: info];
@@ -662,8 +634,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	if ([self isInFullScreenMode] == NO && (fullScreen == 1)) {
 		self.savedScreenBoundsAtTimeOfFullScreen = (NSRect) [self bounds];
 		NSDictionary* options = [NSDictionary dictionaryWithObjectsAndKeys:
-			[NSNumber numberWithBool:NO],
-			NSFullScreenModeAllScreens,
 			[NSNumber numberWithInt:
 				NSApplicationPresentationHideDock |
 				NSApplicationPresentationHideMenuBar ],

@@ -1,0 +1,169 @@
+#############################################################################
+# Generic Makefile for plugins
+#############################################################################
+
+# The following are the four key locations (set via invocation):
+# PLUGINSRCDIR: Where is the root of the src plugins source tree?
+# VMSRCDIR: Where is the src/vm source directory?
+# PLATDIR: Where is the root of the platforms tree?
+# BUILDDIR: Which irectory should objects be compiled into?
+
+#############################################################################
+# Standard directory locations:
+#   CROSSDIR: The location of the cross platform sources
+#   WIN32DIR: The location of the win32 sources
+#   MAKERDIR: The location of the VMMaker generated sources
+#   BUILDDIR: The location where the plugin is built
+#
+CROSSDIR:=	$(PLATDIR)/Cross/plugins/$(LIBNAME)
+WIN32DIR:=	$(PLATDIR)/win32/plugins/$(LIBNAME)
+MAKERDIR:=	$(PLUGINSRCDIR)/plugins/$(LIBNAME)
+BUILDDIR:=	$(BUILD)/$(LIBNAME)
+
+# Support directory locations
+CROSSVMDIR:=$(PLATDIR)/Cross/vm
+WIN32VMDIR:=$(PLATDIR)/win32/vm
+
+#############################################################################
+# DirectX definitions - NOT USED - superseded by mingw provided files
+#
+DXDIR:=     $(PLATDIR)/win32/third-party/dx9sdk/Include
+
+INCLUDES:= -I. \
+			-I$(VMSRCDIR) -I$(WIN32VMDIR) -I$(CROSSVMDIR) \
+			-I$(MAKERDIR) -I$(WIN32DIR) -I$(CROSSDIR)
+
+#############################################################################
+# If no source files were given, use standard set
+#
+
+CROSSSRC:= $(wildcard $(CROSSDIR)/*.c) $(wildcard $(CROSSDIR)/*.cpp)
+WIN32SRC:= $(wildcard $(WIN32DIR)/*.c) $(wildcard $(WIN32DIR)/*.cpp)
+MAKERSRC:= $(wildcard $(MAKERDIR)/*.c)
+LIBSRC:= $(notdir $(MAKERSRC) $(WIN32SRC) $(CROSSSRC))
+
+#############################################################################
+# C compiler settings (gcc 4.x)
+#
+include ../common/Makefile.tools
+
+# overrides of default toolchain settings
+
+ifeq ($(CONFIGURATION),product)
+OFLAGS:= -O1 -momit-leaf-frame-pointer -funroll-loops 
+NDEBUG:=-DNDEBUG
+DEBUGVM=0
+else ifeq ($(CONFIGURATION),assert)
+OFLAGS:= -O1 -fno-omit-frame-pointer
+DEBUGVM=0
+NDEBUG:=
+else
+OFLAGS:=  
+DEBUGVM=1
+NDEBUG:=
+endif
+
+XDEFS:=	
+DEFS:=	$(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
+		-DNO_SERVICE -DNO_STD_FILE_SUPPORT \
+		$(NDEBUG) -DLSB_FIRST -DVM_NAME=\"$(VM)\" $(XDEFS)
+
+	
+CFLAGS:= -msse2 -ggdb2 -m64 -mdll \
+	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS)
+
+
+#############################################################################
+# DLL settings
+#
+# Note: By default DLLTOOL/DLLWRAP do the work for everything related to plugins
+# but if LINK_WITH_GCC we use gcc and if LINK_WITH_GPP we use g++.
+#
+OPTSTRIP:=	echo not doing strip
+
+
+.SUFFIXES:	.c .cpp .o .s .rc .res .dep
+
+#############################################################################
+# Plugin settings
+#
+OBJDIR:=    $(BUILD)/$(LIBNAME)
+VMDIR:=     $(BUILD)/vm
+PLUGINLIB:= $(VMDIR)/$(LIBNAME).lib
+PLUGINDLL:= $(VMDIR)/$(LIBNAME).dll
+LIBOBJ ?= 	$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LIBSRC)))		 
+LIBOBJ:=    $(addprefix $(OBJDIR)/,$(LIBOBJ))
+
+
+VPATH:= $(MAKERDIR) $(WIN32DIR) $(CROSSDIR) $(OBJDIR)
+
+all:	$(PLUGINLIB) $(PLUGINDLL)
+
+print-settings:
+	@echo ---------------- Makefile settings ------------------
+	@echo VPATH=$(VPATH)
+	@echo INCLUDES=$(INCLUDES)
+	@echo CFLAGS=$(CFLAGS)
+	@echo ALLFLAGS=$(ALLFLAGS)
+	@echo PLUGINSRCDIR=$(PLUGINSRCDIR)
+	@echo VMSRCDIR=$(VMSRCDIR)
+	@echo CROSSDIR=$(CROSSDIR)
+	@echo WIN32DIR=$(WIN32DIR)
+	@echo MAKERDIR=$(MAKERDIR)
+	@echo CROSSSRC=$(CROSSSRC)
+	@echo WIN32SRC=$(WIN32SRC)
+	@echo MAKERSRC=$(MAKERSRC)
+	@echo LIBSRC=$(LIBSRC)
+	@echo LIBOBJ=$(LIBOBJ)
+	@echo OBJDIR=$(OBJDIR)
+	@echo VMDIR=$(VMDIR)
+	@echo PLUGINLIB=$(PLUGINLIB)
+	@echo PLUGINDLL=$(PLUGINDLL)
+	@echo -----------------------------------------------------
+
+$(OBJDIR):
+	mkdir $(OBJDIR)
+
+$(VMDIR):
+	mkdir $(VMDIR)
+
+$(PLUGINLIB): $(VMDIR) $(OBJDIR) $(LIBOBJ)
+	-$(RM) $(PLUGINLIB)
+	$(AR) $(PLUGINLIB) $(LIBOBJ)
+
+$(PLUGINDLL): $(VMDIR) $(OBJDIR) $(LIBOBJ)
+	$(DLLTOOL) \
+		--output-def $(OBJDIR)/$(LIBNAME).def \
+		--output-exp $(OBJDIR)/$(LIBNAME).exp \
+		--output-lib $(OBJDIR)/$(LIBNAME).lib \
+		$(DLLTOOLEXTRAS) \
+		$(LIBOBJ)
+ifneq ($(LINK_WITH_GCC),)
+	$(CC) -shared \
+		-m64 \
+		-def $(OBJDIR)/$(LIBNAME).def \
+		-o   $(VMDIR)/$(LIBNAME).dll \
+		$(GCCLINKEXTRAS) \
+		$(LIBOBJ) $(EXTRALIBS)
+else ifneq ($(LINK_WITH_GPP),)
+	$(CXX) -shared \
+		-m64 \
+		-def $(OBJDIR)/$(LIBNAME).def \
+		-o   $(VMDIR)/$(LIBNAME).dll \
+		$(GPPLINKEXTRAS) \
+		$(LIBOBJ) $(EXTRALIBS)
+else
+	$(DLLWRAP) -mwindows -m64 \
+		-def $(OBJDIR)/$(LIBNAME).def \
+		-o   $(VMDIR)/$(LIBNAME).dll \
+		$(DLLWRAPEXTRAS) \
+		$(OBJDIR)/$(LIBNAME).exp \
+		$(LIBOBJ) $(EXTRALIBS)
+endif
+	$(OPTSTRIP) --strip-all $(VMDIR)/$(LIBNAME).dll
+	-$(RM) $(OBJDIR)/$(LIBNAME).lib
+
+#############################################################################
+# Rules for automated builds
+#
+include ../common/Makefile.rules

@@ -1,4 +1,4 @@
-#!/bin/bash  -x
+#!/bin/bash -ex
 . ./envvars.sh
 
 # Author tty.

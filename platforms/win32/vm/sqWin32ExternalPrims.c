@@ -77,7 +77,6 @@ ioFindExternalFunctionInAccessorDepthInto(char *lookupName, void *moduleHandle,
 	if (f && accessorDepthPtr) {
 		void *accessorDepthVarPtr;
 		snprintf(buffer,256,"%sAccessorDepth",lookupName);
-		accessorDepthVarPtr =
 # ifdef UNICODE
 		accessorDepthVarPtr = GetProcAddress(moduleHandle, toUnicode(buffer));
 # else
