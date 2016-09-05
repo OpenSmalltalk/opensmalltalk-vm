@@ -982,17 +982,29 @@ SimpleStackBasedCogit >> compileBlockFramelessEntry: blockStart [
 	 instruction in vanilla blocks so that findMethodForStartBcpc:inHomeMethod:
 	 can function. We need two annotations because the first is a fiducial."
 	<var: #blockStart type: #'BlockStart *'>
-	self deny: blockStart hasInstVarRef. "Else we would need to unforward the receiver in Spur"
 	blockStart entryLabel ifNotNil:
 		[self annotateBytecode: blockStart entryLabel.
 		 self annotateBytecode: blockStart entryLabel].
-	objectRepresentation
-		genLoadSlot: ClosureOuterContextIndex
-			sourceReg: ReceiverResultReg
-				destReg: TempReg;
-		genLoadSlot: ReceiverIndex
-			sourceReg: TempReg
-				destReg: ReceiverResultReg
+	blockStart hasInstVarRef
+		ifTrue: "Use ReceiverResultReg for Context to agree with store check trampoline"
+			[objectRepresentation
+				genLoadSlot: ClosureOuterContextIndex
+					sourceReg: ReceiverResultReg
+						destReg: ReceiverResultReg;
+				genLoadSlot: ReceiverIndex
+					sourceReg: ReceiverResultReg
+						destReg: Arg0Reg.
+			objectRepresentation
+				genEnsureOopInRegNotForwarded: Arg0Reg scratchReg: TempReg updatingSlot: ReceiverIndex in: ReceiverResultReg.
+			self MoveR: Arg0Reg R: ReceiverResultReg]
+		ifFalse:
+			[objectRepresentation
+				genLoadSlot: ClosureOuterContextIndex
+					sourceReg: ReceiverResultReg
+						destReg: TempReg;
+				genLoadSlot: ReceiverIndex
+					sourceReg: TempReg
+						destReg: ReceiverResultReg].
 ]
 
 { #category : #'compile abstract instructions' }
@@ -1047,6 +1059,26 @@ SimpleStackBasedCogit >> compileFrameBuild [
 	NewspeakVM ifTrue:
 		[numIRCs > 0 ifTrue:
 		 	[self PrefetchAw: theIRCs]]
+]
+
+{ #category : #'compile abstract instructions' }
+SimpleStackBasedCogit >> compileFullBlockFramelessEntry: numCopied [ 
+	"Make sure ReceiverResultReg holds the receiver, loaded from the closure,
+	 which is what is initially in ReceiverResultReg.  "
+	"Use ReceiverResultReg for Context to agree with store check trampoline"
+	objectRepresentation
+		genLoadSlot: ClosureOuterContextIndex
+			sourceReg: ReceiverResultReg
+				destReg: ReceiverResultReg;
+		genLoadSlot: ReceiverIndex
+			sourceReg: ReceiverResultReg
+				destReg: Arg0Reg.
+	self flag: #TODO. "we could follow the receiver only if the block has inst var ref. Currently we use scanMethod for fullBlock 
+	and that scanner does not provide this information. We could extend it based on the scanBlock: method"
+	objectRepresentation
+		genEnsureOopInRegNotForwarded: Arg0Reg scratchReg: TempReg updatingSlot: ReceiverIndex in: ReceiverResultReg.
+	self MoveR: Arg0Reg R: ReceiverResultReg
+
 ]
 
 { #category : #'compile abstract instructions' }
