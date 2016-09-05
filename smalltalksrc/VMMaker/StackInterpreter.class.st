@@ -6226,8 +6226,16 @@ StackInterpreter >> findHomeForContext: aContext [
 	closureOrNil := objectMemory fetchPointer: ClosureIndex ofObject: aContext.
 	closureOrNil = objectMemory nilObject ifTrue:
 		[^aContext].
-	(objectMemory fetchClassOf: closureOrNil) ~= (objectMemory splObj: ClassBlockClosure) ifTrue:
-		[^nil].
+	ClassBlockClosureCompactIndex ~= 0
+		ifTrue:
+			[((objectMemory compactClassIndexOf: closureOrNil) ~= ClassBlockClosureCompactIndex
+			  and: [(objectMemory compactClassIndexOf: closureOrNil) ~= ClassFullBlockClosureCompactIndex]) ifTrue:
+				[^nil]]
+		ifFalse:
+			[(objectMemory fetchClassOf: closureOrNil) ~= (objectMemory splObj: ClassBlockClosure) ifTrue:
+				[(ClassFullBlockClosureCompactIndex ~= 0
+				  and: [(objectMemory fetchClassOf: closureOrNil) = (objectMemory splObj: ClassFullBlockClosure)]) ifFalse:
+					[^nil]]].
 	^self findHomeForContext: (objectMemory fetchPointer: ClosureOuterContextIndex ofObject: closureOrNil)
 ]
 
@@ -13792,12 +13800,14 @@ StackInterpreter >> shortPrintContext: aContext [
 		ifNil: [self print: ' BOGUS CONTEXT (can''t determine home)']
 		ifNotNil:
 			[:home|
-			self printActivationNameFor: (objectMemory fetchPointer: MethodIndex ofObject: aContext)
-		receiver: (home isNil
-					ifTrue: [objectMemory nilObject]
-					ifFalse: [objectMemory fetchPointer: ReceiverIndex ofObject: home])
-		isBlock: home ~= aContext
-		firstTemporary: (objectMemory fetchPointer: 0 + CtxtTempFrameStart ofObject: home)].
+			 self printActivationNameFor: (objectMemory
+											fetchPointer: MethodIndex
+											ofObject: (home ifNil: [aContext]))
+				receiver: (home
+							ifNil: [objectMemory nilObject]
+							ifNotNil: [objectMemory fetchPointer: ReceiverIndex ofObject: home])
+				isBlock: home ~= aContext
+				firstTemporary: (objectMemory fetchPointer: 0 + CtxtTempFrameStart ofObject: home)].
 	self cr
 ]
 
