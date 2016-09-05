@@ -1230,18 +1230,20 @@ StackToRegisterMappingCogit >> compileFrameBuild [
 ]
 
 { #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> compileFullBlockFramelessEntry: numCopied [
+	"Make sure ReceiverResultReg holds the receiver, loaded from
+	 the closure, which is what is initially in ReceiverResultReg"
+	self initSimStackForFramelessBlock: initialPC.
+	super compileFullBlockFramelessEntry: numCopied
+]
+
+{ #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> compileFullBlockMethodFrameBuild: numCopied [
 	<option: #SistaV1BytecodeSet>
-	| blockStart |
-	<var: 'blockStart' type: #CogBlockStart>
 	needsFrame ifFalse:
-		[self cCode: [] inSmalltalk: [blockStart := CogBlockStart new].
-		 blockStart
-			startpc: initialPC;
-			numArgs: methodOrBlockNumArgs;
-			numCopied: numCopied;
-			numInitialNils: 0.
-		 self compileBlockFramelessEntry: (self addressOf: blockStart).
+		[self assert: numCopied = 0.
+		 self compileFullBlockFramelessEntry: numCopied.
+		 self initSimStackForFramelessBlock: initialPC.
 		 ^self].
 	super compileFullBlockMethodFrameBuild: numCopied.
 	self initSimStackForFramefulMethod: initialPC
