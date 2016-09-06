@@ -6403,18 +6403,16 @@ StackInterpreter >> findSelectorAndClassForMethod: meth lookupClass: startClass 
 ]
 
 { #category : #'debug support' }
-StackInterpreter >> findSelectorOfMethod: methArg [
-	| meth classObj classDict classDictSize methodArray i |
-	(objectMemory addressCouldBeObj: methArg) ifFalse:
+StackInterpreter >> findSelectorOfMethod: meth [
+	| classObj classDict classDictSize methodArray i |
+	(objectMemory addressCouldBeObj: meth) ifFalse:
 		[^objectMemory nilObject].
-	(objectMemory isForwarded: methArg)
-		ifTrue: [meth := objectMemory followForwarded: methArg]
-		ifFalse: [meth := methArg].
+	(objectMemory isForwarded: meth) ifTrue:
+		[^self findSelectorOfMethod: (objectMemory followForwarded: meth)].
 	 (objectMemory isOopCompiledMethod: meth) ifFalse:
 		[^objectMemory nilObject].
-	NewspeakVM ifTrue:
-		[(self maybeSelectorOfMethod: meth) ifNotNil:
-			[:selector| ^selector]].
+	(self maybeSelectorOfMethod: meth) ifNotNil:
+		[:selector| ^selector].
 	classObj := self safeMethodClassOf: meth.
 	(self addressCouldBeClassObj: classObj) ifTrue:
 		[classDict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: classObj.
@@ -10150,9 +10148,14 @@ StackInterpreter >> maybeSelectorOfMethod: methodObj [
 	 a symbol or a pointer object whose first slot references the method and
 	 whose second slot is a symbol (i.e. an AdditionalMethodState).  If a Symbol
 	 can't be found answer nil.  This isn't satisfactory, as it puts a lot of information
-	 into the VM, but it is needed for adequate crash debugging at Cadence."
-	| penultimateLiteral maybeSelector |
+	 into the VM, but it is needed for adequate crash debugging at Cadence.
+	 With full blocks as of 9/2016 the last literal of a CompiledBlock is a back pointer
+	 to the enclosing block or compiled method."
+	| ultimateLiteral penultimateLiteral maybeSelector |
 	self assert: (objectMemory isOopCompiledMethod: methodObj).
+	ultimateLiteral := self ultimateLiteralOf: methodObj.
+	(objectMemory isOopCompiledMethod: ultimateLiteral) ifTrue:
+		[^self maybeSelectorOfMethod: ultimateLiteral].
 	penultimateLiteral := self penultimateLiteralOf: methodObj.
 	(objectMemory isWordsOrBytes: penultimateLiteral) ifTrue:
 		[^(objectMemory fetchClassTagOfNonImm: penultimateLiteral)
@@ -15013,6 +15016,13 @@ StackInterpreter >> tryLoadNewPlugin: pluginString pluginEntries: pluginEntries 
 									cg accessorDepthForSelector: fnSymbol}].
 		 self transcript show: '...done'].
 	^pluginString asString -> plugin
+]
+
+{ #category : #'debug printing' }
+StackInterpreter >> ultimateLiteralOf: aMethodOop [
+	<api>
+	self assert: (objectMemory isOopCompiledMethod: aMethodOop).
+	^self literal: (objectMemory literalCountOf: aMethodOop) - 1 ofMethod: aMethodOop
 ]
 
 { #category : #'internal interpreter access' }
