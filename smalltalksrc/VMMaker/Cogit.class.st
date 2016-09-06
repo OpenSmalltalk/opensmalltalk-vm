@@ -1076,8 +1076,8 @@ Cogit class >> mustBeGlobal: var [
 		ceCallCogCodePopReceiverAndClassRegs realCECallCogCodePopReceiverAndClassRegs
 		'ceReturnToInterpreterTrampoline' 'ceCannotResumeTrampoline'
 		ceTryLockVMOwner ceUnlockVMOwner
-		'cmEntryOffset' 'cmNoCheckEntryOffset' 'cmDynSuperEntryOffset' 'cmSelfSendEntryOffset' 'missOffset'
-		'blockNoContextSwitchOffset' breakPC
+		'cmEntryOffset' 'cmNoCheckEntryOffset' 'cmDynSuperEntryOffset' 'cmSelfSendEntryOffset'
+		'missOffset' 'cbEntryOffset' 'cbNoSwitchEntryOffset' 'blockNoContextSwitchOffset' breakPC
 		CFramePointer CStackPointer 'cFramePointerInUse' ceGetFP ceGetSP
 		traceFlags 'traceStores' debugPrimCallStackOffset)
 			includes: var
@@ -5272,7 +5272,7 @@ Cogit >> enterCogCodePopReceiver [
 { #category : #accessing }
 Cogit >> entryOffset [
 	<api>
-	<cmacro: '() cmEntryOffset'>
+	<cmacro>
 	^cmEntryOffset
 ]
 
@@ -9090,7 +9090,7 @@ Cogit >> noAssertMethodClassAssociationOf: methodPointer [
 { #category : #accessing }
 Cogit >> noCheckEntryOffset [
 	<api>
-	<cmacro: '() cmNoCheckEntryOffset'>
+	<cmacro>
 	^cmNoCheckEntryOffset
 ]
 

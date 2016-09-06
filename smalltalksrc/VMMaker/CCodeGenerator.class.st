@@ -413,7 +413,9 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 		literal := method isQuick
 					ifTrue: [method decompile block statements last expr key]
 					ifFalse: [method literalAt: 1].
-		self addMacro: '() ', (self cLiteralFor: literal value name: method selector) for: selector.
+		self addMacro: '() ', (method isReturnField
+								ifTrue: [literal]
+								ifFalse: [self cLiteralFor: literal value name: method selector]) for: selector.
 		(inlineList includes: selector) ifTrue:
 			[inlineList := inlineList copyWithout: selector]].
 	^tmethod
