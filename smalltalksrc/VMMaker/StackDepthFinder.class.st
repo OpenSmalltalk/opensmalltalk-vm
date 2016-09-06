@@ -176,7 +176,9 @@ StackDepthFinder >> jumpOrPop: delta IfNotInstanceOf: behaviors [
 { #category : #private }
 StackDepthFinder >> method: method pc: startpc [
 	super method: method pc: startpc.
-	joins := Array new: method endPC.
+	"The + 1 is there for full blocks ending with non local return,
+	as the following pc is mapped and beyong endPC"
+	joins := Array new: method endPC + 1.
 	stackp := method numTemps
 ]
 
@@ -381,7 +383,8 @@ StackDepthFinder >> stackPointers [
 	 For the convenience of clients, write the stack depth for extended bytecodes
 	 to the bytecode pc, as well as the bytecocdes' extensions' pcs."
 	| method stackPointers end |
-	stackPointers :=  Array new: (end := (method := self method) endPC).
+	"endPC +1 because of full blocks that can end with NLR effectively mapping the pc right after the end PC"
+	stackPointers :=  Array new: (end := (method := self method) endPC) + 1.
 	encoderClass ifNil: [encoderClass := method encoderClass].
 	[pc <= end] whileTrue:
 		[stackPointers at: pc put: stackp.
@@ -390,6 +393,7 @@ StackDepthFinder >> stackPointers [
 			delta > 0 ifTrue:
 				[stackPointers at: pc + delta put: stackp]].
 		 self interpretNextInstructionFor: self].
+	stackPointers at: end + 1 put: (stackPointers at: end).
 	^stackPointers
 ]
 
