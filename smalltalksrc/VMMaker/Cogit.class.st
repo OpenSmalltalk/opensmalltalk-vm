@@ -10961,7 +10961,8 @@ Cogit >> testBcToMcPcMappingForCogMethod: cogMethod [
 		currentSubMethod := self innermostSubMethodFor: bcpc in: subMethods startingAt: 1.
 		subCogMethod := currentSubMethod cogMethod.
 		(subCogMethod stackCheckOffset > 0
-		 and: [desc isNil or: [desc isMapped]]) ifTrue:
+		 and: [desc isNil or: [desc isMapped 
+		 or: [ inBlock = InFullBlock and: [desc isMappedInBlock]]]]) ifTrue:
 			[startBcpc := subCogMethod = cogMethod
 							ifTrue: [coInterpreter startPCOfMethod: aMethodObj]
 							ifFalse: [currentSubMethod startpc].
