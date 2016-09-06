@@ -1,4 +1,11 @@
 #!/bin/bash -e
+case "`uname -m`" in # ensure we see x86 as machine type
+i*86) ;; # we're good
+*) if type i386 2>&1 >/dev/null; then
+	echo "Re-exec as x86"
+	exec i386 "$0" "$@"
+fi ;;
+esac
 # Spur VM with VM profiler and itimer heartbeat
 INSTALLDIR=nsnaccogspurlinux
 # Some gcc versions create a broken VM using -O2

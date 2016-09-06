@@ -1,4 +1,11 @@
 #!/bin/bash -e
+case "`uname -m`" in # ensure we see x86 as machine type
+i*86) ;; # we're good
+*) if type i386 2>&1 >/dev/null; then
+	echo "Re-exec as x86"
+	exec i386 "$0" "$@"
+fi ;;
+esac
 # debug Stack Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=debug/nsstkspurlinuxht
 OPT="-g3 -O0 -fwrapv -DDEBUGVM=1"
