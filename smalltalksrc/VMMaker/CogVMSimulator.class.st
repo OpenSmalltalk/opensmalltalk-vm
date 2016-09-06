@@ -3888,15 +3888,17 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 									n: (m selector + objectMemory baseHeaderSize)
 									cmp: (objectMemory numBytesOf: m selector)) = 0]]) ifTrue:
 						[cogit printCogMethod: m]]]];
+		add: 'print cog methods with method...' action:
+			[(self promptHex: 'method') ifNotNil: [:methodOop|
+			 cogMethodZone methodsDo:
+				[:m|
+				m methodObject = methodOop ifTrue:
+					[cogit printCogMethod: m]]]];
 		add: 'print cog method for...' action: [(self promptHex: 'pc') ifNotNil: [:pc| cogit printCogMethodFor: pc]];
 		add: 'print cog method header for...' action: [(self promptHex: 'pc') ifNotNil: [:pc| cogit printCogMethodHeaderFor: pc]];
 		add: 'print trampoline table' target: cogit action: #printTrampolineTable;
 		add: 'print prim trace log' action: #dumpPrimTraceLog;
 		add: 'report recent instructions' target: cogit action: #reportLastNInstructions;
-		add: (cogit singleStep
-				ifTrue: ['no single step']
-				ifFalse: ['single step'])
-			action: [cogit singleStep: cogit singleStep not];
 		add: (cogit printRegisters
 				ifTrue: ['no print registers each instruction']
 				ifFalse: ['print registers each instruction'])
@@ -3906,6 +3908,10 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 				ifFalse: ['print instructions each instruction'])
 			action: [cogit printInstructions: cogit printInstructions not];
 		addLine;
+		add: (cogit singleStep
+				ifTrue: ['no single step']
+				ifFalse: ['single step'])
+			action: [cogit singleStep: cogit singleStep not];
 		add: 'click step' action: [cogit setClickStepBreakBlock];
 		add: 'set break pc', cogit breakPC menuPrompt, '...-ve to disable or remove' action: [cogit promptForBreakPC];
 		add: 'set break count...' action: [|s| s := UIManager default request: 'break count (dec)'.
