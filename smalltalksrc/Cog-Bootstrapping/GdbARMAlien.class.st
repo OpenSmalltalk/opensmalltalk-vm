@@ -498,27 +498,10 @@ GdbARMAlien >> disassembleFrom: startAddress to: endAddress in: memory for: aSym
 			[:label| aStream nextPutAll: label; nextPut: $:; cr].
 		(labelDictionary at: address ifAbsent: []) ifNotNil:
 			[:label|
-			label isArray
-				ifTrue: [label first == #literal
-							ifTrue:
-								[label size = 4 ifTrue:
-									[aStream nextPutAll: label last; nextPut: $:; cr].
-								 aStream
-									nextPutAll: (address printStringBase: 16 length: 8 padded: true) asLowercase;
-									nextPut: $:; space;
-									nextPutAll: ((aSymbolManager objectMemory longAt: address) printStringBase: 16 length: 8 padded: true) asLowercase.
-								 (aSymbolManager lookupAddress: (aSymbolManager objectMemory longAt: address)) ifNotNil:
-									[:name| aStream space; nextPutAll: name]]
-							ifFalse:
-								[aStream
-									nextPutAll: label first;
-									nextPut: $:; cr;
-									nextPutAll: (address printStringBase: 16 length: 8 padded: true) asLowercase;
-									nextPut: $:; space;
-									nextPutAll: (aSymbolManager perform: label second with: address) asString].
-						string := nil.
-						size := label third]
-				ifFalse: [aStream nextPutAll: label; nextPut: $:; cr]].
+			self printLabel: label on: aStream at: address for: aSymbolManager.
+			label isArray ifTrue:
+				[string := nil.
+				 size := label third]].
 		string ifNotNil:
 			[aStream nextPutAll: (self decorateDisassembly: string for: aSymbolManager fromAddress: address).
 			 (string includesSubString: ': ldr	') ifTrue:"i.e. colon space 'ldr' tab" 
@@ -542,7 +525,9 @@ GdbARMAlien >> disassembleFrom: startAddress to: endAddress in: memory for: aSym
 		address := address + size]
 			valueWithArguments: (self
 									primitiveDisassembleAt: address
-									inMemory: memory)]
+									inMemory: memory)].
+	(labelDictionary at: address ifAbsent: []) ifNotNil:
+		[:label| self printLabel: label on: aStream at: address for: aSymbolManager]
 ]
 
 { #category : #accessing }
@@ -1397,6 +1382,30 @@ GdbARMAlien >> printFields: fields inRegisterState: registerStateVector on: aStr
 							 aStream nextPut: $)]].
 				(fields at: index + 1) ~~ #cr ifTrue:
 					[aStream tab]]]
+]
+
+{ #category : #printing }
+GdbARMAlien >> printLabel: label on: aStream at: address for: aSymbolManager [
+	"Print label on aStream.  The label is either a triple of {type, printer, size} or a simple string."
+	label isArray
+		ifTrue: [label first == #literal
+					ifTrue:
+						[label size = 4 ifTrue:
+							[aStream nextPutAll: label last; nextPut: $:; cr].
+						 aStream
+							nextPutAll: (address printStringBase: 16 length: 8 padded: true) asLowercase;
+							nextPut: $:; space;
+							nextPutAll: ((aSymbolManager objectMemory longAt: address) printStringBase: 16 length: 8 padded: true) asLowercase.
+						 (aSymbolManager lookupAddress: (aSymbolManager objectMemory longAt: address)) ifNotNil:
+							[:name| aStream space; nextPutAll: name]]
+					ifFalse:
+						[aStream
+							nextPutAll: label first;
+							nextPut: $:; cr;
+							nextPutAll: (address printStringBase: 16 length: 8 padded: true) asLowercase;
+							nextPut: $:; space;
+							nextPutAll: (aSymbolManager perform: label second with: address) asString]]
+		ifFalse: [aStream nextPutAll: label; nextPut: $:; cr]
 ]
 
 { #category : #printing }
