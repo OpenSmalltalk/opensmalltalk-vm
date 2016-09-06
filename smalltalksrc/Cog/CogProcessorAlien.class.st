@@ -98,30 +98,19 @@ CogProcessorAlien >> disassembleFrom: startAddress to: endAddress in: memory for
 			[:label| aStream nextPutAll: label; nextPut: $:; cr].
 		  (labelDictionary at: address ifAbsent: []) ifNotNil:
 			[:label|
-			label isArray
-				ifTrue: [label first == #literal
-							ifTrue:
-								[aStream
-									nextPutAll: (address printStringBase: 16 length: 8 padded: true) asLowercase;
-									nextPut: $:; space;
-									nextPutAll: (aSymbolManager lookupAddress: (aSymbolManager objectMemory longAt: address))]
-							ifFalse:
-								[aStream
-									nextPutAll: label first;
-									nextPut: $:; cr;
-									nextPutAll: (address printStringBase: 16 length: 8 padded: true) asLowercase;
-									nextPut: $:; space;
-									nextPutAll: (aSymbolManager perform: label second with: address) asString].
-						string := nil.
-						size := label third]
-				ifFalse: [aStream nextPutAll: label; nextPut: $:; cr]].
+			self printLabel: label on: aStream at: address for: aSymbolManager.
+			label isArray ifTrue:
+				[string := nil.
+				 size := label third]].
 		  string ifNotNil:
 			[aStream nextPutAll: (self decorateDisassembly: string for: aSymbolManager fromAddress: address)].
 		  aStream cr; flush.
 		  address := address + size]
 			valueWithArguments: (self
 									primitiveDisassembleAt: address
-									inMemory: memory)]
+									inMemory: memory)].
+	(labelDictionary at: address ifAbsent: []) ifNotNil:
+		[:label| self printLabel: label on: aStream at: address for: aSymbolManager]
 ]
 
 { #category : #disassembly }
@@ -180,6 +169,26 @@ CogProcessorAlien >> endianness [
 { #category : #opcodes }
 CogProcessorAlien >> nopOpcode [
 	self subclassResponsibility.
+]
+
+{ #category : #printing }
+CogProcessorAlien >> printLabel: label on: aStream at: address for: aSymbolManager [
+	"Print label on aStream.  The label is either a triple of {type, printer, size} or a simple string."
+	label isArray
+		ifTrue: [label first == #literal
+					ifTrue:
+						[aStream
+							nextPutAll: (address printStringBase: 16 length: 8 padded: true) asLowercase;
+							nextPut: $:; space;
+							nextPutAll: (aSymbolManager lookupAddress: (aSymbolManager objectMemory longAt: address))]
+					ifFalse:
+						[aStream
+							nextPutAll: label first;
+							nextPut: $:; cr;
+							nextPutAll: (address printStringBase: 16 length: 8 padded: true) asLowercase;
+							nextPut: $:; space;
+							nextPutAll: (aSymbolManager perform: label second with: address) asString]]
+		ifFalse: [aStream nextPutAll: label; nextPut: $:; cr]
 ]
 
 { #category : #printing }
