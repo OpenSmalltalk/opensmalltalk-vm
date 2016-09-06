@@ -867,7 +867,8 @@ Cogit class >> initializeAnnotationConstants [
 										IsDirectedSuperSend
 										IsNSSelfSend
 										IsNSDynamicSuperSend
-										IsNSImplicitReceiverSend)
+										IsNSImplicitReceiverSend),
+										{'IsRelativeCall:\HasBytecodePC' withCRs}
 ]
 
 { #category : #'class initialization' }
@@ -5122,7 +5123,7 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 		(cogMethod cmType = CMMethod) ifTrue:
 			[mapEntries keysAndValuesDo:
 				[:mcpc :label| | bcpc selectorOrNone |
-				((range includes: mcpc)
+				(((range includes: mcpc) or: [range last + 1 = mcpc])
 				 and: [(AnnotationsWithBytecodePCs includes: label)
 				 and: [range cogMethod stackCheckOffset > 0]]) ifTrue:
 					[bcpc := self bytecodePCFor: mcpc startBcpc: range startpc in: range cogMethod.
@@ -9431,7 +9432,7 @@ Cogit >> printMapEntry: annotation mcpc: mcpc args: tupleOfStreamCodeRangesAndMe
 	self startMcpcAndCogMethodForMcpc: mcpc in: cogMethod do:
 		[:startmcpc :subMethod| | name codeRange |
 		"Find the start of the block by searching the code ranges."
-		codeRange := codeRanges detect: [:range| range includes: mcpc].
+		codeRange := codeRanges detect: [:range| range includes: mcpc] ifNone: [codeRanges detect: [:range| range last + 1 = mcpc]].
 		codeRange first = mcpc ifTrue:
 			[aStream nextPutAll: 'startpc: '; print: codeRange startpc; cr].
 		aStream
@@ -10876,7 +10877,10 @@ Cogit >> startMcpcAndCogMethodForMcpc: mcpc in: cogMethod do: aBinaryBlock [
 	| startMcpc |
 	startMcpc := ((self codeRangesFor: cogMethod)
 					detect: [:range| range includes: mcpc]
-					ifNone: [^nil]) first.
+					ifNone:
+						[(self codeRangesFor: cogMethod)
+							detect: [:range| range last + 1 = mcpc]
+							ifNone: [^nil]]) first.
 	^aBinaryBlock
 		value: startMcpc
 		value: (startMcpc = (cogMethod asInteger + (self sizeof: CogMethod))
