@@ -535,6 +535,11 @@ CurrentImageCoInterpreterFacade >> isNonIntegerObject: anOop [
 	^objectMemory isNonIntegerObject: anOop
 ]
 
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> isOopCompiledMethod: anOop [
+	^(objectMap keyAtValue: anOop) isCompiledMethod
+]
+
 { #category : #'cog jit support' }
 CurrentImageCoInterpreterFacade >> isOptimizedMethod: methodObj [
 	^coInterpreter isOptimizedMethodHeader: (self methodHeaderOf: methodObj)
@@ -1124,6 +1129,13 @@ CurrentImageCoInterpreterFacade >> transcript [
 { #category : #'object map' }
 CurrentImageCoInterpreterFacade >> trueObject [
 	^objectMap at: true
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> ultimateLiteralOf: methodObj [
+	| meth |
+	meth := (objectMap keyAtValue: methodObj).
+	^self oopForObject: (meth literalAt: meth numLiterals)
 ]
 
 { #category : #accessing }
