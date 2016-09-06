@@ -3858,6 +3858,7 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 					 self warnMultiple: cogMethod selectors: aSelectorOop.
 					^nil]]]
 		ifFalse: [self deny: (coInterpreter methodHasCogMethod: aMethodObj)].
+	self deny: (objectMemory isCompiledMethod: (coInterpreter ultimateLiteralOf: aMethodObj)).
 	"coInterpreter stringOf: aSelectorOop"
 	coInterpreter
 		compilationBreak: aSelectorOop
@@ -4058,6 +4059,7 @@ Cogit >> cogFullBlockMethod: aMethodObj numCopied: numCopied [
 					[coInterpreter transcript nextPutAll: 'EXCLUDING '; nextPutAll: aMethodObj; nextPutAll: ' (compiled block)'; cr; flush.
 					 ^nil]]].
 	self deny: (coInterpreter methodHasCogMethod: aMethodObj).
+	self assert: (objectMemory isCompiledMethod: (coInterpreter ultimateLiteralOf: aMethodObj)).
 	aMethodObj = breakMethod ifTrue: [self halt: 'Compilation of breakMethod'].
 	"If the generators for the alternate bytecode set are missing then interpret."
 	(coInterpreter methodUsesAlternateBytecodeSet: aMethodObj)
