@@ -1599,9 +1599,9 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveShallowCopy [
 	| formatReg resultReg slotsReg ptrReg
 	  jumpImmediate jumpIsMethod jumpVariable jumpTooBig jumpEmpty jumpNoSpace
 	  continuance copyLoop |
-	<var: #continue type: #'AbstractInstruction *'>
 	<var: #copyLoop type: #'AbstractInstruction *'>
 	<var: #jumpTooBig type: #'AbstractInstruction *'>
+	<var: #continuance type: #'AbstractInstruction *'>
 	<var: #jumpVariable type: #'AbstractInstruction *'>
 	<var: #jumpNoSpace type: #'AbstractInstruction *'>
 	<var: #jumpIsMethod type: #'AbstractInstruction *'>

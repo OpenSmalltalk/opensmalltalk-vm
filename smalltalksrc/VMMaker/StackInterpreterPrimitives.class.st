@@ -748,6 +748,9 @@ StackInterpreterPrimitives >> primitiveFindNextUnwindContext [
 	calleeContext := self stackValue: 1.
 	(stopContext = objectMemory nilObject or: [objectMemory isContext: stopContext]) ifFalse:
 		[^self primitiveFail].
+	"The following should never be true, but developing full blocks, early in September
+	 2016 we were seeing invalid invocations of this primitive..  Hence the assert:"
+	self assert: stopContext ~= calleeContext.
 	self externalWriteBackHeadFramePointers.
 	(self isStillMarriedContext: calleeContext)
 		ifTrue:
