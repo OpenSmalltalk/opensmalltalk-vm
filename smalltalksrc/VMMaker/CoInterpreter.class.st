@@ -3406,7 +3406,7 @@ CoInterpreter >> externalInstVar: offset ofContext: aContext [
 	| value |
 
 	self assert: (objectMemory isContext: aContext).
-	self assert: offset < (ReceiverIndex + (self checkStackPointerForMaybeMarriedContext: aContext)).
+	self assert: offset <= (ReceiverIndex + (self checkStackPointerForMaybeMarriedContext: aContext)).
 	"method, closureOrNil & receiver need no special handling; only
 	 sender, pc & stackp have to be computed for married contexts."
 	(self isReadMediatedContextInstVarIndex: offset) ifFalse:
