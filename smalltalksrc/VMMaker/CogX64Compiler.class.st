@@ -438,9 +438,11 @@ CogX64Compiler >> computeMaximumSize [
 		[MoveAwR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0))
 								ifTrue: [7]
 								ifFalse: [(operands at: 1) = RAX ifTrue: [10] ifFalse: [14]]].
+		[MoveA32R]	-> [^(operands at: 1) = RAX ifTrue: [9] ifFalse: [13]].
 		[MoveRAw]		-> [^(self isAddressRelativeToVarBase: (operands at: 1))
 								ifTrue: [7]
 								ifFalse: [(operands at: 0) = RAX ifTrue: [10] ifFalse: [14]]].
+		[MoveRA32]	-> [^(operands at: 0) = RAX ifTrue: [9] ifFalse: [13]].
 		[MoveAbR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0))
 								ifTrue: [7]
 								ifFalse: [(operands at: 1) = RAX ifTrue: [10] ifFalse: [14]]].
@@ -980,6 +982,40 @@ CogX64Compiler >> concretizeLoadEffectiveAddressMwrR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveA32R [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| addressOperand reg offset |
+	addressOperand := operands at: 0.
+	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *')) ifTrue:
+		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
+	reg := operands at: 1.
+	reg = RAX
+		ifTrue: [offset := 0]
+		ifFalse:
+			[machineCode
+				at: 0 put: (self rexR: 0 x: 0 b: reg);
+				at: 1 put: 16r90 + (reg \\ 8).
+			 offset := 2].
+	machineCode
+		at: 0 + offset put: 16rA1;
+		at: 1 + offset put: (addressOperand bitAnd: 16rFF);
+		at: 2 + offset put: (addressOperand >> 8 bitAnd: 16rFF);
+		at: 3 + offset put: (addressOperand >> 16 bitAnd: 16rFF);
+		at: 4 + offset put: (addressOperand >> 24 bitAnd: 16rFF);
+		at: 5 + offset put: (addressOperand >> 32 bitAnd: 16rFF);
+		at: 6 + offset put: (addressOperand >> 40 bitAnd: 16rFF);
+		at: 7 + offset put: (addressOperand >> 48 bitAnd: 16rFF);
+		at: 8 + offset put: (addressOperand >> 56 bitAnd: 16rFF).
+	reg = RAX ifTrue:
+		[^machineCodeSize := 9].
+	machineCode
+		at: 11 put: (machineCode at: 0);
+		at: 12 put: (machineCode at: 1).
+	^machineCodeSize := 13
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeMoveAbR [
 	"N.B. The Cogit makes no assumption about the upper bits being set to zero because we
 	 deny byteReadsZeroExtend.  The cogit will clear the register before hand if necessary."
@@ -1327,6 +1363,40 @@ CogX64Compiler >> concretizeMoveMwrR [
 		at: 6 put: (offset >> 16 bitAnd: 16rFF);
 		at: 7 put: (offset >> 24 bitAnd: 16rFF).
 	^machineCodeSize := 8
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveRA32 [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| addressOperand reg offset |
+	reg := operands at: 0.
+	addressOperand := operands at: 1.
+	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *')) ifTrue:
+		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
+	reg = RAX
+		ifTrue: [offset := 0]
+		ifFalse:
+			[machineCode
+				at: 0 put: (self rexR: 0 x: 0 b: reg);
+				at: 1 put: 16r90 + (reg \\ 8).
+			 offset := 2].
+	machineCode
+		at: 0 + offset put: 16rA3;
+		at: 1 + offset put: (addressOperand bitAnd: 16rFF);
+		at: 2 + offset put: (addressOperand >>   8 bitAnd: 16rFF);
+		at: 3 + offset put: (addressOperand >> 16 bitAnd: 16rFF);
+		at: 4 + offset put: (addressOperand >> 24 bitAnd: 16rFF);
+		at: 5 + offset put: (addressOperand >> 32 bitAnd: 16rFF);
+		at: 6 + offset put: (addressOperand >> 40 bitAnd: 16rFF);
+		at: 7 + offset put: (addressOperand >> 48 bitAnd: 16rFF);
+		at: 8 + offset put: (addressOperand >> 56 bitAnd: 16rFF).
+	reg = RAX ifTrue:
+		[^machineCodeSize := 9].
+	machineCode
+		at: 11 put: (machineCode at: 0);
+		at: 12 put: (machineCode at: 1).
+	^machineCodeSize := 13
 ]
 
 { #category : #'generate machine code' }
@@ -2200,7 +2270,9 @@ CogX64Compiler >> dispatchConcretize [
 		[MoveC32R]		-> [^self concretizeMoveC32R].
 		[MoveRR]			-> [^self concretizeReverseOpRR: 16r89].
 		[MoveAwR]			-> [^self concretizeMoveAwR].
+		[MoveA32R]		-> [^self concretizeMoveA32R].
 		[MoveRAw]			-> [^self concretizeMoveRAw].
+		[MoveRA32]		-> [^self concretizeMoveRA32].
 		[MoveAbR]			-> [^self concretizeMoveAbR].
 		[MoveRAb]			-> [^self concretizeMoveRAb].
 		[MoveMbrR]			-> [^self concretizeMoveMbrR].

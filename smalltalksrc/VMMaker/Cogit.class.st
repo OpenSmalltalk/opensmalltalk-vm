@@ -2000,6 +2000,17 @@ Cogit >> LogicalShiftRightR: reg1 R: reg2 [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> MoveA32: address R: reg [ 
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: (objectMemory wordSize = 8
+					ifTrue: [MoveA32R]
+					ifFalse: [MoveAwR])
+		literal: address
+		operand: reg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> MoveAb: address R: reg [ 
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2069,6 +2080,17 @@ Cogit >> MoveMw: offset r: baseReg R: destReg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: MoveMwrR quickConstant: offset operand: baseReg operand: destReg
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> MoveR: reg A32: address [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: (objectMemory wordSize = 8
+					ifTrue: [MoveRA32]
+					ifFalse: [MoveRAw])
+		operand: reg
+		literal: address
 ]
 
 { #category : #'abstract instructions' }
