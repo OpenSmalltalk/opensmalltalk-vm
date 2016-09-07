@@ -202,7 +202,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		if(error != SSL_ERROR_WANT_READ) {
 			if(ssl->loglevel) printf("sqConnectSSL: SSL_connect failed\n");
 			ERR_print_errors_fp(stdout);
-			return -1;
+			return SQSSL_GENERIC_ERROR;
 		}
 		if(ssl->loglevel) printf("sqConnectSSL: sqCopyBioSSL\n");
 		return sqCopyBioSSL(ssl, ssl->bioWrite, dstBuf, dstLen);
