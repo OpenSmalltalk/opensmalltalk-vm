@@ -547,14 +547,13 @@ SistaCogit >> genExecutionCountLogicInto: binaryBlock counterReg: counterReg [
 	<inline: true>
 	| counterAddress countTripped |
 	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
-	self flag: 'will need to use MoveAw32:R: if 64 bits'.
 	self assert: objectMemory wordSize = CounterBytes.
-	self MoveAw: counterAddress R: counterReg.
+	self MoveA32: counterAddress R: counterReg.
 	self SubCq: 16r10000 R: counterReg. "Count executed"
 	"If counter trips simply abort the comparison continuing to the following
 	 branch *without* writing back.  A double decrement will not trip the second time."
 	countTripped := self JumpCarry: 0.
-	self MoveR: counterReg Aw: counterAddress. "write back"
+	self MoveR: counterReg A32: counterAddress. "write back"
 	binaryBlock value: counterAddress value: countTripped
 ]
 
@@ -592,7 +591,7 @@ SistaCogit >> genFallsThroughCountLogicCounterReg: counterReg counterAddress: co
 	<inline: true>
 	"Gen this when the branch has not been taken and forwarders have been followed."
 	self SubCq: 1 R: counterReg. "Count untaken"
-	self MoveR: counterReg Aw: counterAddress. "write back"
+	self MoveR: counterReg A32: counterAddress. "write back"
 ]
 
 { #category : #'bytecode generator support' }
