@@ -13091,7 +13091,7 @@ StackInterpreter >> returnAs: returnTypeOop ThroughCallback: vmCallbackContext C
 							[instructionPointer := (self frameCallerSavedIP: framePointer) asUnsignedInteger.
 							 stackPointer := framePointer + (self frameStackedReceiverOffset: framePointer) + objectMemory wordSize.
 							 framePointer := self frameCallerFP: framePointer.
-							 self setMethod: (self frameMethod: framePointer).
+							 self setMethod: (self frameMethodObject: framePointer).
 							 self restoreCStackStateForCallbackContext: vmCallbackContext.
 							 "N.B. siglongjmp is defines as _longjmp on non-win32 platforms.
 							  This matches the use of _setjmp in ia32abicc.c."
