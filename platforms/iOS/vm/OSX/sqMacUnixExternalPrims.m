@@ -116,7 +116,9 @@ tryLoadingBundle(NSString *dirNameString, char *moduleName)
 	NSString    *libName;
 
 	libName = [dirNameString stringByAppendingPathComponent: @(moduleName)];
-	libName = [libName stringByAppendingPathExtension: @"bundle/Contents/MacOS/"];
+	libName = [libName stringByAppendingPathExtension: @"bundle"];
+	libName = [libName stringByAppendingPathComponent: @"Contents"];
+	libName = [libName stringByAppendingPathComponent: @"MacOS"];
 	libName = [libName stringByAppendingPathComponent: @(moduleName)];
 
 	return tryLoadingInternals(libName);
