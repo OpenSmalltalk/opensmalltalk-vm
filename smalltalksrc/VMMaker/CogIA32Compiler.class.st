@@ -12,6 +12,7 @@ Class {
 	#superclass : #CogAbstractInstruction,
 	#classVars : [
 		'CDQ',
+		'CLD',
 		'CMPXCHGAwR',
 		'CMPXCHGMwrR',
 		'CPUID',
@@ -23,17 +24,22 @@ Class {
 		'EDX',
 		'ESI',
 		'ESP',
+		'FSTPD',
+		'FSTPS',
 		'IDIVR',
 		'IMULRR',
 		'LFENCE',
 		'LOCK',
 		'MFENCE',
+		'MOVSB',
+		'MOVSD',
 		'ModReg',
 		'ModRegInd',
 		'ModRegIndDisp32',
 		'ModRegIndSIB',
 		'ModRegRegDisp32',
 		'ModRegRegDisp8',
+		'REP',
 		'SFENCE',
 		'SIB1',
 		'SIB2',
@@ -110,7 +116,7 @@ CogIA32Compiler class >> initialize [
 
 	"Specific instructions"
 	self
-		initializeSpecificOpcodes: #(CDQ IDIVR IMULRR CPUID LFENCE MFENCE SFENCE LOCK CMPXCHGAwR CMPXCHGMwrR XCHGAwR XCHGMwrR XCHGRR)
+		initializeSpecificOpcodes: #(CDQ IDIVR IMULRR CPUID LFENCE MFENCE SFENCE LOCK CMPXCHGAwR CMPXCHGMwrR XCHGAwR XCHGMwrR XCHGRR FSTPS FSTPD CLD REP MOVSB MOVSD)
 		in: thisContext method
 ]
 
@@ -179,11 +185,37 @@ CogIA32Compiler >> byteReadsZeroExtend [
 	^true
 ]
 
+{ #category : #abi }
+CogIA32Compiler >> cFloatResultToRd: reg [
+	cogit gen: FSTPD operand: -8 operand: SPReg .
+	cogit MoveM64: -8 r: SPReg Rd: reg
+]
+
+{ #category : #abi }
+CogIA32Compiler >> cFloatResultToRs: reg [
+	cogit gen: FSTPS operand: -4 operand: SPReg.
+	cogit MoveM32: -4 r: SPReg Rs: reg
+]
+
 { #category : #accessing }
 CogIA32Compiler >> cResultRegister [
 	"Answer the register through which C funcitons return integral results."
 	<inline: true>
 	^EAX
+]
+
+{ #category : #accessing }
+CogIA32Compiler >> cResultRegisterHigh [
+	"Answer the abstract register for the C result register.
+	 Only partially implemented.  Works on x86 since TempReg = EAX = C result reg."
+	^ EDX
+]
+
+{ #category : #accessing }
+CogIA32Compiler >> cResultRegisterLow [
+	"Answer the abstract register for the C result register.
+	 Only partially implemented.  Works on x86 since TempReg = EAX = C result reg."
+	^ EAX
 ]
 
 { #category : #'inline cacheing' }
@@ -239,6 +271,10 @@ CogIA32Compiler >> computeMaximumSize [
 		[Fill32]					-> [^4].
 		[Nop]					-> [^1].
 		"Specific Control/Data Movement"
+		[REP]					-> [^1].
+		[CLD]					-> [^1].
+		[MOVSB]				-> [^1].
+		[MOVSD]				-> [^1].
 		[CDQ]					-> [^1].
 		[IDIVR]					-> [^2].
 		[IMULRR]				-> [^3].
@@ -259,9 +295,13 @@ CogIA32Compiler >> computeMaximumSize [
 									   or: [(operands at: 1) = EAX])
 										ifTrue: [1]
 										ifFalse: [2]].
+		[FSTPS]					-> [^7].
+		[FSTPD]					-> [^7].
+						
 		"Control"
 		[CallFull]					-> [^5].
 		[Call]						-> [^5].
+		[CallR]					-> [^2].
 		[JumpR]						-> [^2].
 		[JumpFull]					-> [self resolveJumpTarget. ^5].
 		[JumpLong]					-> [self resolveJumpTarget. ^5].
@@ -297,6 +337,11 @@ CogIA32Compiler >> computeMaximumSize [
 
 		"Arithmetic"
 		[AddCqR]		-> [^(self isQuick: (operands at: 0))
+											ifTrue: [3]
+											ifFalse: [(operands at: 1) = EAX
+														ifTrue: [5]
+														ifFalse: [6]]].
+		[AddcCqR]		-> [^(self isQuick: (operands at: 0))
 											ifTrue: [3]
 											ifFalse: [(operands at: 1) = EAX
 														ifTrue: [5]
@@ -339,6 +384,7 @@ CogIA32Compiler >> computeMaximumSize [
 		[XorRR]			-> [^2].
 		[SubRR]			-> [^2].
 		[NegateR]		-> [^2].
+		[NotR]		-> [^2].
 		[LoadEffectiveAddressMwrR]
 						-> [^((self isQuick: (operands at: 0))
 											ifTrue: [3]
@@ -358,15 +404,35 @@ CogIA32Compiler >> computeMaximumSize [
 		[MulRdRd]					-> [^4].
 		[DivRdRd]					-> [^4].
 		[SqrtRd]					-> [^4].
+		[XorRdRd]					-> [^4].
+						
+		[AddRsRs]				-> [^4].
+		[CmpRsRs]				-> [^3].
+		[SubRsRs]				-> [^4].
+		[MulRsRs]				-> [^4].
+		[DivRsRs]				-> [^4].
+		[SqrtRs]					-> [^4].
+		[XorRsRs]					-> [^3].
+						
 		"Data Movement"
 		[MoveCqR]		-> [^(operands at: 0) = 0 ifTrue: [2] ifFalse: [5]].
 		[MoveCwR]		-> [^5].
 		[MoveRR]		-> [^2].
 		[MoveRdRd]		-> [^4].
+		[MoveRsRs]		-> [^4].
 		[MoveAwR]		-> [^(operands at: 1) = EAX ifTrue: [5] ifFalse: [6]].
 		[MoveRAw]		-> [^(operands at: 0) = EAX ifTrue: [5] ifFalse: [6]].
 		[MoveAbR]		-> [^7].
 		[MoveRAb]		-> [^(operands at: 0) = EAX ifTrue: [5] ifFalse: [6]].
+		[MoveRM32r]	-> [^((self isQuick: (operands at: 1))
+									ifTrue: [((operands at: 1) = 0
+											and: [(operands at: 2) ~= EBP])
+												ifTrue: [2]
+												ifFalse: [3]]
+									ifFalse: [6])
+								+ ((operands at: 2) = ESP
+									ifTrue: [1]
+									ifFalse: [0])].
 		[MoveRMwr]	-> [^((self isQuick: (operands at: 1))
 									ifTrue: [((operands at: 1) = 0
 											and: [(operands at: 2) ~= EBP])
@@ -382,10 +448,22 @@ CogIA32Compiler >> computeMaximumSize [
 										+ ((operands at: 2) = ESP
 											ifTrue: [1]
 											ifFalse: [0])].
+		[MoveRsM32r]	-> [^((self isQuick: (operands at: 1))
+											ifTrue: [5]
+											ifFalse: [8])
+										+ ((operands at: 2) = ESP
+											ifTrue: [1]
+											ifFalse: [0])].
 		[MoveMbrR]		-> [^(operands at: 1) = ESP
 								ifTrue: [(self isQuick: (operands at: 0)) ifTrue: [5] ifFalse: [8]]
 								ifFalse: [(self isQuick: (operands at: 0)) ifTrue: [4] ifFalse: [7]]].
 		[MoveRMbr]		-> [^(operands at: 2) = ESP
+								ifTrue: [7]
+								ifFalse: [(self isQuick: (operands at: 1)) ifTrue: [3] ifFalse: [6]]].
+		[MoveM8rR]		-> [^(operands at: 1) = ESP
+								ifTrue: [(self isQuick: (operands at: 0)) ifTrue: [5] ifFalse: [8]]
+								ifFalse: [(self isQuick: (operands at: 0)) ifTrue: [4] ifFalse: [7]]].
+		[MoveRM8r]		-> [^(operands at: 2) = ESP
 								ifTrue: [7]
 								ifFalse: [(self isQuick: (operands at: 1)) ifTrue: [3] ifFalse: [6]]].
 		[MoveM16rR]	-> [^(operands at: 1) = ESP
@@ -400,6 +478,21 @@ CogIA32Compiler >> computeMaximumSize [
 										+ ((operands at: 1) = ESP
 											ifTrue: [1]
 											ifFalse: [0])].
+		[MoveM32rRs]	-> [^((self isQuick: (operands at: 0))
+											ifTrue: [5]
+											ifFalse: [8])
+										+ ((operands at: 1) = ESP
+											ifTrue: [1]
+											ifFalse: [0])].
+		[MoveM32rR]		-> [^((self isQuick: (operands at: 0))
+									ifTrue: [((operands at: 0) = 0
+											and: [(operands at: 1) ~= EBP])
+												ifTrue: [2]
+												ifFalse: [3]]
+									ifFalse: [6])
+								+ ((operands at: 1) = ESP
+									ifTrue: [1]
+									ifFalse: [0])].
 		[MoveMwrR]		-> [^((self isQuick: (operands at: 0))
 									ifTrue: [((operands at: 0) = 0
 											and: [(operands at: 1) ~= EBP])
@@ -434,7 +527,18 @@ CogIA32Compiler >> computeMaximumSize [
 		[PushCw]		-> [^5].
 		[PrefetchAw]	-> [^self hasSSEInstructions ifTrue: [7] ifFalse: [0]].
 		"Conversion"
-		[ConvertRRd]	-> [^4] }.
+		[ConvertRRd]	-> [^4].
+		[ConvertRdR]	-> [^4].
+
+		[ConvertRsRd]	-> [^4].
+		[ConvertRdRs]	-> [^4].
+		[ConvertRsR]	-> [^4].
+		[ConvertRRs]	-> [^4].
+
+		[SignExtend8RR] -> [^3].
+		[SignExtend16RR] -> [^3].
+		[ZeroExtend8RR] -> [^3].
+		[ZeroExtend16RR] -> [^3]. }.
 	^0 "to keep C compiler quiet"
 ]
 
@@ -507,6 +611,51 @@ CogIA32Compiler >> concretizeAddCwR [
 		at: 4 put: (value >> 16 bitAnd: 16rFF);
 		at: 5 put: (value >> 24 bitAnd: 16rFF).
 	 ^machineCodeSize := 6
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeAddcCqR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| value reg |
+	value := operands at: 0.
+	reg := operands at: 1.
+	(self isQuick: value) ifTrue:
+		[machineCode
+			at: 0 put: 16r83;
+			at: 1 put: (self mod: ModReg RM: reg RO: 2);
+			at: 2 put: (value bitAnd: 16rFF).
+		 ^machineCodeSize := 3].
+	reg = EAX ifTrue:
+		[machineCode
+			at: 0 put: 16r15;
+			at: 1 put: (value bitAnd: 16rFF);
+			at: 2 put: (value >> 8 bitAnd: 16rFF);
+			at: 3 put: (value >> 16 bitAnd: 16rFF);
+			at: 4 put: (value >> 24 bitAnd: 16rFF).
+		 ^machineCodeSize := 5].
+	machineCode
+		at: 0 put: 16r81;
+		at: 1 put: (self mod: ModReg RM: reg RO: 2);
+		at: 2 put: (value bitAnd: 16rFF);
+		at: 3 put: (value >> 8 bitAnd: 16rFF);
+		at: 4 put: (value >> 16 bitAnd: 16rFF);
+		at: 5 put: (value >> 24 bitAnd: 16rFF).
+	 ^machineCodeSize := 6
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeAddcRR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	"Assemble the ADC instruction"
+	| regLHS regRHS |
+	regLHS := operands at: 0.
+	regRHS := operands at: 1.
+	machineCode
+		at: 0 put: 16r13;
+		at: 1 put: (self mod: ModReg RM: regLHS RO: regRHS).
+	^machineCodeSize := 2
 ]
 
 { #category : #'generate machine code' }
@@ -638,6 +787,13 @@ CogIA32Compiler >> concretizeCDQ [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizeCLD [
+	<inline: true>
+	machineCode at: 0 put: 16rFC.
+	^machineCodeSize := 1
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeCMPXCHGAwR [
 	<inline: true>
 	| addressOperand reg |
@@ -725,6 +881,19 @@ CogIA32Compiler >> concretizeCall [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizeCallR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| reg |
+	"CmpRR RHS LHS computes LHS - RHS, i.e. apparently reversed.  You have to think subtract."
+	reg := operands at: 0.
+	machineCode
+		at: 0 put: 16rFF;
+		at: 1 put: (self mod: ModReg RM: reg RO: 2).
+	^machineCodeSize := 2
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeCmpCqR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -798,6 +967,22 @@ CogIA32Compiler >> concretizeCmpRdRd [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizeCmpRsRs [
+	"Will get inlined into concretizeAt: switch.
+	 We use UCOMISS (see p 4-260 [2])"
+	<inline: true>
+	| regLHS regRHS |
+	"CmpRR RHS LHS computes LHS - RHS, i.e. apparently reversed.  You have to think subtract."
+	regRHS := operands at: 0.
+	regLHS := operands at: 1.
+	machineCode
+		at: 0 put: 16r0F;
+		at: 1 put: 16r2E;
+		at: 2 put: (self mod: ModReg RM: regRHS RO: regLHS).
+	^machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeConditionalJump: conditionCode [
 	"Will get inlined into concretizeAt: switch."
 	"Sizing/generating jumps.
@@ -840,6 +1025,39 @@ CogIA32Compiler >> concretizeConditionalJumpLong: conditionCode [
 { #category : #'generate machine code' }
 CogIA32Compiler >> concretizeConvertRRd [
 	"Will get inlined into concretizeAt: switch."
+	"CVTSI2D"
+	<inline: true>
+	| srcReg destReg |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16rF2;
+		at: 1 put: 16r0F;
+		at: 2 put: 16r2A;
+		at: 3 put: (self mod: ModReg RM: srcReg RO: destReg).
+	 ^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeConvertRRs [
+	"Will get inlined into concretizeAt: switch."
+	"CVTSI2SS"
+	<inline: true>
+	| srcReg destReg |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16rF3;
+		at: 1 put: 16r0F;
+		at: 2 put: 16r2A;
+		at: 3 put: (self mod: ModReg RM: srcReg RO: destReg).
+	 ^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeConvertRdR [
+	"Will get inlined into concretizeAt: switch."
+	"CVTSD2SI"
 	<inline: true>
 	| srcReg destReg |
 	srcReg := operands at:0.
@@ -847,7 +1065,55 @@ CogIA32Compiler >> concretizeConvertRRd [
 	machineCode
 		at: 0 put: 16rF2;
 		at: 1 put: 16r0F;
-		at: 2 put: 16r2A;
+		at: 2 put: 16r2D;
+		at: 3 put: (self mod: ModReg RM: srcReg RO: destReg).
+	 ^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeConvertRdRs [
+	"Will get inlined into concretizeAt: switch."
+	"CVTSD2SS"
+	<inline: true>
+	| srcReg destReg |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16rF2;
+		at: 1 put: 16r0F;
+		at: 2 put: 16r5A;
+		at: 3 put: (self mod: ModReg RM: srcReg RO: destReg).
+	 ^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeConvertRsR [
+	"Will get inlined into concretizeAt: switch."
+	"CVTSS2SI"
+	<inline: true>
+	| srcReg destReg |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16rF3;
+		at: 1 put: 16r0F;
+		at: 2 put: 16r2D;
+		at: 3 put: (self mod: ModReg RM: srcReg RO: destReg).
+	 ^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeConvertRsRd [
+	"Will get inlined into concretizeAt: switch."
+	"CVTSS2SD"
+	<inline: true>
+	| srcReg destReg |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16rF3;
+		at: 1 put: 16r0F;
+		at: 2 put: 16r5A;
 		at: 3 put: (self mod: ModReg RM: srcReg RO: destReg).
 	 ^machineCodeSize := 4
 ]
@@ -860,6 +1126,94 @@ CogIA32Compiler >> concretizeFENCE: regOpcode [
 		at: 1 put: 16rAE;
 		at: 2 put: (self mod: ModReg RM: 0 RO: regOpcode).
 	^machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeFSTPD [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| srcReg offset destReg |
+	srcReg := 3.
+	offset := operands at: 0.
+	destReg := operands at: 1.
+	destReg ~= ESP ifTrue:
+		[(self isQuick: offset) ifTrue:
+			"FSTP dest"
+			[machineCode
+				at: 0 put: 16rDD;
+				at: 1 put: (self mod: ModRegRegDisp8 RM: destReg RO: srcReg);
+				at: 2 put: (offset bitAnd: 16rFF).
+			 ^machineCodeSize := 3].
+		"FSTP dest"
+		machineCode
+			at: 0 put: 16rDD;
+			at: 1 put: (self mod: ModRegRegDisp32 RM: destReg RO: srcReg);
+			at: 2 put: (offset bitAnd: 16rFF);
+			at: 3 put: (offset >> 8 bitAnd: 16rFF);
+			at: 4 put: (offset >> 16 bitAnd: 16rFF);
+			at: 5 put: (offset >> 24 bitAnd: 16rFF).
+		^machineCodeSize := 6].
+	"ESP:"
+	(self isQuick: offset) ifTrue:
+		[machineCode
+			at: 0 put: 16rDD;
+			at: 1 put: (self mod: ModRegRegDisp8 RM: destReg RO: srcReg);
+			at: 2 put: (self s: SIB1 i: 4 b: destReg);
+			at: 3 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := 4].
+	machineCode
+		at: 0 put: 16rDD;
+		at: 1 put: (self mod: ModRegRegDisp32 RM: destReg RO: srcReg);
+		at: 2 put: (self s: SIB1 i: 4 b: destReg);
+		at: 3 put: (offset bitAnd: 16rFF);
+		at: 4 put: (offset >> 8 bitAnd: 16rFF);
+		at: 5 put: (offset >> 16 bitAnd: 16rFF);
+		at: 6 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 7
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeFSTPS [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| srcReg offset destReg |
+	srcReg := 3.
+	offset := operands at: 0.
+	destReg := operands at: 1.
+	destReg ~= ESP ifTrue:
+		[(self isQuick: offset) ifTrue:
+			"FSTP dest"
+			[machineCode
+				at: 0 put: 16rD9;
+				at: 1 put: (self mod: ModRegRegDisp8 RM: destReg RO: srcReg);
+				at: 2 put: (offset bitAnd: 16rFF).
+			 ^machineCodeSize := 3].
+		"FSTP dest"
+		machineCode
+			at: 0 put: 16rD9;
+			at: 1 put: (self mod: ModRegRegDisp32 RM: destReg RO: srcReg);
+			at: 2 put: (offset bitAnd: 16rFF);
+			at: 3 put: (offset >> 8 bitAnd: 16rFF);
+			at: 4 put: (offset >> 16 bitAnd: 16rFF);
+			at: 5 put: (offset >> 24 bitAnd: 16rFF).
+		^machineCodeSize := 6].
+	"ESP:"
+	(self isQuick: offset) ifTrue:
+		[machineCode
+			at: 0 put: 16rD9;
+			at: 1 put: (self mod: ModRegRegDisp8 RM: destReg RO: srcReg);
+			at: 2 put: (self s: SIB1 i: 4 b: destReg);
+			at: 3 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := 4].
+	machineCode
+		at: 0 put: 16rD9;
+		at: 1 put: (self mod: ModRegRegDisp32 RM: destReg RO: srcReg);
+		at: 2 put: (self s: SIB1 i: 4 b: destReg);
+		at: 3 put: (offset bitAnd: 16rFF);
+		at: 4 put: (offset >> 8 bitAnd: 16rFF);
+		at: 5 put: (offset >> 16 bitAnd: 16rFF);
+		at: 6 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 7
 ]
 
 { #category : #'generate machine code' }
@@ -1079,6 +1433,20 @@ CogIA32Compiler >> concretizeLogicalShiftRightCqR [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizeMOVSB [
+	<inline: true>
+	machineCode at: 0 put: 16rA4.
+	^machineCodeSize := 1
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeMOVSD [
+	<inline: true>
+	machineCode at: 0 put: 16rA5.
+	^machineCodeSize := 1
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeMoveAbR [
 	"N.B. we zero-extend because we state byteReadsZeroExtend."
 	"Will get inlined into concretizeAt: switch."
@@ -1204,6 +1572,56 @@ CogIA32Compiler >> concretizeMoveM16rR [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizeMoveM32rRs [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| srcReg offset destReg |
+	offset := operands at: 0.
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
+	srcReg ~= ESP ifTrue:
+		[(self isQuick: offset) ifTrue:
+			[machineCode
+				at: 0 put: 16rF3;
+				at: 1 put: 16r0F;
+				at: 2 put: 16r10;
+				at: 3 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
+				at: 4 put: (offset bitAnd: 16rFF).
+			 ^machineCodeSize := 5].
+		machineCode
+			at: 0 put: 16rF3;
+			at: 1 put: 16r0F;
+			at: 2 put: 16r10;
+			at: 3 put: (self mod: ModRegRegDisp32 RM: srcReg RO: destReg);
+			at: 4 put: (offset bitAnd: 16rFF);
+			at: 5 put: (offset >> 8 bitAnd: 16rFF);
+			at: 6 put: (offset >> 16 bitAnd: 16rFF);
+			at: 7 put: (offset >> 24 bitAnd: 16rFF).
+		^machineCodeSize := 8].
+	"ESP:"
+	(self isQuick: offset) ifTrue:
+		[machineCode
+			at: 0 put: 16rF3;
+			at: 1 put: 16r0F;
+			at: 2 put: 16r10;
+			at: 3 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
+			at: 4 put: (self s: SIB1 i: 4 b: srcReg);
+			at: 5 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := 6].
+	machineCode
+		at: 0 put: 16rF3;
+		at: 1 put: 16r0F;
+		at: 2 put: 16r10;
+		at: 3 put: (self mod: ModRegRegDisp32 RM: srcReg RO: destReg);
+		at: 4 put: (self s: SIB1 i: 4 b: srcReg);
+		at: 5 put: (offset bitAnd: 16rFF);
+		at: 6 put: (offset >> 8 bitAnd: 16rFF);
+		at: 7 put: (offset >> 16 bitAnd: 16rFF);
+		at: 8 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 9
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeMoveM64rRd [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -1251,6 +1669,53 @@ CogIA32Compiler >> concretizeMoveM64rRd [
 		at: 7 put: (offset >> 16 bitAnd: 16rFF);
 		at: 8 put: (offset >> 24 bitAnd: 16rFF).
 	^machineCodeSize := 9
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeMoveM8rR [
+	"Will get inlined into concretizeAt: switch."
+	"movzwl"
+	<inline: true>
+	| srcReg offset destReg |
+	offset := operands at: 0.
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
+	srcReg ~= ESP ifTrue:
+		[(self isQuick: offset) ifTrue:
+			[machineCode
+				at: 0 put: 16r0F;
+				at: 1 put: 16rB6;
+				at: 2 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
+				at: 3 put: (offset bitAnd: 16rFF).
+			 ^machineCodeSize := 4].
+		machineCode
+			at: 0 put: 16r0F;
+			at: 1 put: 16rB6;
+			at: 2 put: (self mod: ModRegRegDisp32 RM: srcReg RO: destReg);
+			at: 3 put: (offset bitAnd: 16rFF);
+			at: 4 put: (offset >> 8 bitAnd: 16rFF);
+			at: 5 put: (offset >> 16 bitAnd: 16rFF);
+			at: 6 put: (offset >> 24 bitAnd: 16rFF).
+		^machineCodeSize := 7].
+	"ESP:"
+	(self isQuick: offset) ifTrue:
+		[machineCode
+			at: 0 put: 16r0F;
+			at: 1 put: 16rB6;
+			at: 2 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
+			at: 3 put: (self s: SIB1 i: 4 b: srcReg);
+			at: 4 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := 5].
+	machineCode
+		at: 0 put: 16r0F;
+		at: 1 put: 16rB6;
+		at: 2 put: (self mod: ModRegRegDisp32 RM: srcReg RO: destReg);
+		at: 3 put: (self s: SIB1 i: 4 b: srcReg);
+		at: 4 put: (offset bitAnd: 16rFF);
+		at: 5 put: (offset >> 8 bitAnd: 16rFF);
+		at: 6 put: (offset >> 16 bitAnd: 16rFF);
+		at: 7 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 8
 ]
 
 { #category : #'generate machine code' }
@@ -1640,6 +2105,90 @@ CogIA32Compiler >> concretizeMoveRdM64r [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizeMoveRdRd [
+	"Will get inlined into concretizeAt: switch."
+	"MOVSD"
+	<inline: true>
+	| srcReg destReg |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16rF2;
+		at: 1 put: 16r0F;
+		at: 2 put: 16r11;
+		at: 3 put: (self mod: ModReg RM: destReg RO: srcReg).
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeMoveRsM32r [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| srcReg offset destReg |
+	srcReg := operands at: 0.
+	offset := operands at: 1.
+	destReg := operands at: 2.
+	destReg ~= ESP ifTrue:
+		[(self isQuick: offset) ifTrue:
+			"MOVSD destReg, srcReg"
+			[machineCode
+				at: 0 put: 16rF3;
+				at: 1 put: 16r0F;
+				at: 2 put: 16r11;
+				at: 3 put: (self mod: ModRegRegDisp8 RM: destReg RO: srcReg);
+				at: 4 put: (offset bitAnd: 16rFF).
+			 ^machineCodeSize := 5].
+		"MOVSD destReg, srcReg"
+		machineCode
+			at: 0 put: 16rF3;
+			at: 1 put: 16r0F;
+			at: 2 put: 16r11;
+			at: 3 put: (self mod: ModRegRegDisp32 RM: destReg RO: srcReg);
+			at: 4 put: (offset bitAnd: 16rFF);
+			at: 5 put: (offset >> 8 bitAnd: 16rFF);
+			at: 6 put: (offset >> 16 bitAnd: 16rFF);
+			at: 7 put: (offset >> 24 bitAnd: 16rFF).
+		^machineCodeSize := 8].
+	"ESP:"
+	(self isQuick: offset) ifTrue:
+		[machineCode
+			at: 0 put: 16rF3;
+			at: 1 put: 16r0F;
+			at: 2 put: 16r11;
+			at: 3 put: (self mod: ModRegRegDisp8 RM: destReg RO: srcReg);
+			at: 4 put: (self s: SIB1 i: 4 b: destReg);
+			at: 5 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := 6].
+	machineCode
+		at: 0 put: 16rF3;
+		at: 1 put: 16r0F;
+		at: 2 put: 16r11;
+		at: 3 put: (self mod: ModRegRegDisp32 RM: destReg RO: srcReg);
+		at: 4 put: (self s: SIB1 i: 4 b: destReg);
+		at: 5 put: (offset bitAnd: 16rFF);
+		at: 6 put: (offset >> 8 bitAnd: 16rFF);
+		at: 7 put: (offset >> 16 bitAnd: 16rFF);
+		at: 8 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := 9
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeMoveRsRs [
+	"Will get inlined into concretizeAt: switch."
+	"MOVSS"
+	<inline: true>
+	| srcReg destReg |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16rF3;
+		at: 1 put: 16r0F;
+		at: 2 put: 16r11;
+		at: 3 put: (self mod: ModReg RM: destReg RO: srcReg).
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeMoveXbrRR [
 	"N.B. we zero-extend because we state byteReadsZeroExtend."
 	"Will get inlined into concretizeAt: switch."
@@ -1717,6 +2266,18 @@ CogIA32Compiler >> concretizeNop [
 	<inline: true>
 	machineCode at: 0 put: 16r90.
 	^machineCodeSize := 1
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeNotR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| reg |
+	reg := operands at: 0.
+	machineCode
+		at: 0 put: 16rF7;
+		at: 1 put: (self mod: ModReg RM: reg RO: 2).
+	^machineCodeSize := 2
 ]
 
 { #category : #'generate machine code' }
@@ -1853,6 +2414,13 @@ CogIA32Compiler >> concretizePushR [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizeREP [
+	<inline: true>
+	machineCode at: 0 put: 16rF3.
+	^machineCodeSize := 1
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeRetN [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -1895,6 +2463,51 @@ CogIA32Compiler >> concretizeSEE2OpRdRd: opCode [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizeSEEOpRsRs: opCode [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| regLHS regRHS |
+	regRHS := self operands at: 0.
+	regLHS := self operands at: 1.
+	machineCode
+		at: 0 put: 16rF3;
+		at: 1 put: 16r0F;
+		at: 2 put: opCode;
+		at: 3 put: (self mod: ModReg RM: regRHS RO: regLHS).
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeSignExtend16RR [
+	"Will get inlined into concretizeAt: switch."
+	"movswl"
+	<inline: true>
+	| srcReg destReg |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16r0F;
+		at: 1 put: 16rBF;
+		at: 2 put: (self mod: ModReg RM: srcReg RO: destReg).
+	^ machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeSignExtend8RR [
+	"Will get inlined into concretizeAt: switch."
+	"movsbl"
+	<inline: true>
+	| srcReg destReg |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16r0F;
+		at: 1 put: 16rBE;
+		at: 2 put: (self mod: ModReg RM: srcReg RO: destReg).
+	^ machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizeSqrtRd [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -1902,6 +2515,21 @@ CogIA32Compiler >> concretizeSqrtRd [
 	reg := operands at: 0.
 	machineCode
 		at: 0 put: 16rF2;
+		at: 1 put: 16r0F;
+		at: 2 put: 16r51;
+		at: 3 put: (self mod: ModReg RM: reg RO: reg).
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeSqrtRs [
+	"Will get inlined into concretizeAt: switch."
+	"SRTSS"
+	<inline: true>
+	| reg |
+	reg := operands at: 0.
+	machineCode
+		at: 0 put: 16rF3;
 		at: 1 put: 16r0F;
 		at: 2 put: 16r51;
 		at: 3 put: (self mod: ModReg RM: reg RO: reg).
@@ -1969,6 +2597,20 @@ CogIA32Compiler >> concretizeSubCwR [
 		at: 4 put: (value >> 16 bitAnd: 16rFF);
 		at: 5 put: (value >> 24 bitAnd: 16rFF).
 	 ^machineCodeSize := 6
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeSubbRR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	"Assemble the SBB instruction"
+	| regLHS regRHS |
+	regLHS := operands at: 0.
+	regRHS := operands at: 1.
+	machineCode
+		at: 0 put: 16r1B;
+		at: 1 put: (self mod: ModReg RM: regLHS RO: regRHS).
+	^machineCodeSize := 2
 ]
 
 { #category : #'generate machine code' }
@@ -2103,6 +2745,64 @@ CogIA32Compiler >> concretizeXorCwR [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizeXorRdRd [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| regLHS regRHS |
+	regRHS := self operands at: 0.
+	regLHS := self operands at: 1.
+	machineCode
+		at: 0 put: 16r66;
+		at: 1 put: 16r0f;
+		at: 2 put: 16r57;
+		at: 3 put: (self mod: ModReg RM: regRHS RO: regLHS).
+	^machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeXorRsRs [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| regLHS regRHS |
+	regRHS := self operands at: 0.
+	regLHS := self operands at: 1.
+	machineCode
+		at: 0 put: 16r0F;
+		at: 1 put: 16r57;
+		at: 2 put: (self mod: ModReg RM: regRHS RO: regLHS).
+	^machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeZeroExtend16RR [
+	"Will get inlined into concretizeAt: switch."
+	"movzwl"
+	| srcReg destReg |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16r0F;
+		at: 1 put: 16rB7;
+		at: 2 put: (self mod: ModReg RM: srcReg RO: destReg).
+	^ machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeZeroExtend8RR [
+	"Will get inlined into concretizeAt: switch."
+	"movzbl"
+	<inline: true>
+	| srcReg destReg |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16r0F;
+		at: 1 put: 16rB6;
+		at: 2 put: (self mod: ModReg RM: srcReg RO: destReg).
+	^ machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> dispatchConcretize [
 	"Attempt to generate concrete machine code for the instruction at address.
 	 This is the inner dispatch of concretizeAt: actualAddress which exists only
@@ -2129,8 +2829,11 @@ CogIA32Compiler >> dispatchConcretize [
 		[XCHGAwR]				-> [^self concretizeXCHGAwR].
 		[XCHGMwrR]			-> [^self concretizeXCHGMwrR].
 		[XCHGRR]				-> [^self concretizeXCHGRR].
+		[FSTPS]					-> [^self concretizeFSTPS].
+		[FSTPD]					-> [^self concretizeFSTPD].
 		"Control"
 		[Call]					-> [^self concretizeCall].
+		[CallR]					-> [^self concretizeCallR].
 		[CallFull]				-> [^self concretizeCall].
 		[JumpR]					-> [^self concretizeJumpR].
 		[JumpFull]				-> [^self concretizeJumpLong].
@@ -2169,7 +2872,10 @@ CogIA32Compiler >> dispatchConcretize [
 		[AddCqR]					-> [^self concretizeAddCqR].
 		[AddCwR]					-> [^self concretizeAddCwR].
 		[AddRR]						-> [^self concretizeOpRR: 16r03].
+		[AddcRR]					-> [^self concretizeAddcRR].
+		[AddcCqR]					-> [^self concretizeAddcCqR].
 		[AddRdRd]					-> [^self concretizeSEE2OpRdRd: 16r58].
+		[AddRsRs]					-> [^self concretizeSEEOpRsRs: 16r58].
 		[AndCqR]					-> [^self concretizeAndCqR].
 		[AndCwR]					-> [^self concretizeAndCwR].
 		[AndRR]						-> [^self concretizeOpRR: 16r23].
@@ -2178,19 +2884,26 @@ CogIA32Compiler >> dispatchConcretize [
 		[CmpCwR]					-> [^self concretizeCmpCwR].
 		[CmpRR]					-> [^self concretizeReverseOpRR: 16r39].
 		[CmpRdRd]					-> [^self concretizeCmpRdRd].
+		[CmpRsRs]					-> [^self concretizeCmpRsRs].
 		[DivRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5E].
+		[DivRsRs]					-> [^self concretizeSEEOpRsRs: 16r5E].
 		[MulRdRd]					-> [^self concretizeSEE2OpRdRd: 16r59].
+		[MulRsRs]					-> [^self concretizeSEEOpRsRs: 16r59].
 		[OrCqR]						-> [^self concretizeOrCqR].
 		[OrCwR]					-> [^self concretizeOrCwR].
 		[OrRR]						-> [^self concretizeOpRR: 16r0B].
 		[SubCqR]					-> [^self concretizeSubCqR].
 		[SubCwR]					-> [^self concretizeSubCwR].
 		[SubRR]						-> [^self concretizeOpRR: 16r2B].
+		[SubbRR]					-> [^self concretizeSubbRR].
 		[SubRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5C].
+		[SubRsRs]					-> [^self concretizeSEEOpRsRs: 16r5C].
 		[SqrtRd]						-> [^self concretizeSqrtRd].
+		[SqrtRs]						-> [^self concretizeSqrtRs].
 		[XorCwR]						-> [^self concretizeXorCwR].
 		[XorRR]							-> [^self concretizeOpRR: 16r33].
 		[NegateR]						-> [^self concretizeNegateR].
+		[NotR]							-> [^self concretizeNotR].
 		[LoadEffectiveAddressMwrR]	-> [^self concretizeLoadEffectiveAddressMwrR].
 		[ArithmeticShiftRightCqR]		-> [^self concretizeArithmeticShiftRightCqR].
 		[LogicalShiftRightCqR]			-> [^self concretizeLogicalShiftRightCqR].
@@ -2201,14 +2914,21 @@ CogIA32Compiler >> dispatchConcretize [
 		[MoveCqR]			-> [^self concretizeMoveCqR].
 		[MoveCwR]			-> [^self concretizeMoveCwR].
 		[MoveRR]			-> [^self concretizeReverseOpRR: 16r89].
+		[MoveRdRd]			-> [^self concretizeMoveRdRd].
+		[MoveRsRs]			-> [^self concretizeMoveRsRs].
 		[MoveAwR]			-> [^self concretizeMoveAwR].
 		[MoveRAw]			-> [^self concretizeMoveRAw].
 		[MoveAbR]			-> [^self concretizeMoveAbR].
 		[MoveRAb]			-> [^self concretizeMoveRAb].
 		[MoveMbrR]			-> [^self concretizeMoveMbrR].
 		[MoveRMbr]			-> [^self concretizeMoveRMbr].
+		[MoveRM8r]			-> [^self concretizeMoveRMbr].
+		[MoveM8rR]			-> [^self concretizeMoveM8rR].
 		[MoveM16rR]		-> [^self concretizeMoveM16rR].
 		[MoveRM16r]		-> [^self concretizeMoveRM16r].
+		[MoveM32rR]		-> [^self concretizeMoveMwrR].
+		[MoveRM32r]		-> [^self concretizeMoveRMwr].
+		[MoveM32rRs]		-> [^self concretizeMoveM32rRs].
 		[MoveM64rRd]		-> [^self concretizeMoveM64rRd].
 		[MoveMwrR]		-> [^self concretizeMoveMwrR].
 		[MoveXbrRR]		-> [^self concretizeMoveXbrRR].
@@ -2217,13 +2937,43 @@ CogIA32Compiler >> dispatchConcretize [
 		[MoveRXwrR]		-> [^self concretizeMoveRXwrR].
 		[MoveRMwr]		-> [^self concretizeMoveRMwr].
 		[MoveRdM64r]		-> [^self concretizeMoveRdM64r].
+		[MoveRsM32r]		-> [^self concretizeMoveRsM32r].
 		[PopR]				-> [^self concretizePopR].
 		[PushR]				-> [^self concretizePushR].
 		[PushCq]			-> [^self concretizePushCq].
 		[PushCw]			-> [^self concretizePushCw].
 		[PrefetchAw]		-> [^self concretizePrefetchAw].
 		"Conversion"
-		[ConvertRRd]		-> [^self concretizeConvertRRd] }
+		[ConvertRRd]		-> [^self concretizeConvertRRd].
+		[ConvertRdR]		-> [^self concretizeConvertRdR].
+
+		[ConvertRsRd]		-> [^self concretizeConvertRsRd].
+		[ConvertRdRs]		-> [^self concretizeConvertRdRs].
+		[ConvertRsR]		-> [^self concretizeConvertRsR].
+		[ConvertRRs]		-> [^self concretizeConvertRRs].
+
+		[SignExtend8RR]	-> [^ self concretizeSignExtend8RR].
+		[SignExtend16RR]	-> [^ self concretizeSignExtend16RR].
+		[ZeroExtend8RR]	-> [^ self concretizeZeroExtend8RR].
+		[ZeroExtend16RR]	-> [^ self concretizeZeroExtend16RR].
+	}  otherwise: [^ self dispatchConcretize2].
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> dispatchConcretize2 [
+	"Attempt to generate concrete machine code for the instruction at address.
+	 This is the inner dispatch of concretizeAt: actualAddress which exists only
+	 to get around the branch size limits in the SqueakV3 (blue book derived)
+	 bytecode set."
+	<returnTypeC: #void>
+	opcode caseOf: {
+		[XorRsRs]				-> [^self concretizeXorRsRs].
+		[XorRdRd]				-> [^self concretizeXorRdRd].
+		[REP]					-> [^self concretizeREP].
+		[CLD]					-> [^self concretizeCLD].
+		[MOVSB]				-> [^self concretizeMOVSB].
+		[MOVSD]				-> [^self concretizeMOVSD].
+ }.
 ]
 
 { #category : #'inline cacheing' }
@@ -2401,9 +3151,219 @@ CogIA32Compiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 a
 		ifTrue: [cogit PushCq: (cogit trampolineArgValue: regOrConst0)]
 ]
 
+{ #category : #abi }
+CogIA32Compiler >> genMarshallNArgs: numArgs floatArg: regOrConst0 floatArg: regOrConst1 floatArg: regOrConst2 floatArg: regOrConst3 [
+	"Generate the code to pass up to four arguments in a C run-time call.  Hack: each argument is
+	 either a negative number, which encodes a constant, or a non-negative number, that of a register.
+
+	 Run-time calls have no more than four arguments, so chosen so that on ARM, where in its C ABI the
+	 first four integer arguments are passed in registers, all arguments can be passed in registers.  We
+	 defer to the back end to generate this code not so much that the back end knows whether it uses
+	 the stack or registers to pass arguments (it does, but...). In fact we defer for an extremely evil reason.
+	 Doing so allows the x64 (where up to 6 args are passed) to assign the register arguments in an order
+	 that allows some of the argument registers to be used for specific abstract  registers, specifically
+	 ReceiverResultReg and ClassReg.  This is evil, evil, evil, but also it's really nice to keep using the old
+	 register assignments the original author has grown accustomed to."
+	<inline: true>
+	numArgs = 0 ifTrue:
+		[^self].
+	numArgs > 1 ifTrue:
+		[numArgs > 2 ifTrue:
+			[numArgs > 3 ifTrue:
+				[(cogit isTrampolineArgConstant: regOrConst3)
+					ifFalse: [cogit PushRd: regOrConst3]
+					ifTrue: [cogit PushC64: (cogit trampolineArgValue: regOrConst3)]].
+			 (cogit isTrampolineArgConstant: regOrConst2)
+				ifFalse: [cogit PushRd: regOrConst2]
+				ifTrue: [cogit PushC64: (cogit trampolineArgValue: regOrConst2)]].
+		(cogit isTrampolineArgConstant: regOrConst1)
+			ifFalse: [cogit PushRd: regOrConst1]
+			ifTrue: [cogit PushC64: (cogit trampolineArgValue: regOrConst1)]].
+	(cogit isTrampolineArgConstant: regOrConst0)
+		ifFalse: [cogit PushRd: regOrConst0]
+		ifTrue: [cogit PushC64: (cogit trampolineArgValue: regOrConst0)]
+]
+
+{ #category : #'abstract instructions' }
+CogIA32Compiler >> genMemCopy: originalSourceReg to: originalDestReg constantSize: size [
+	| numbytes numwords sourceReg destReg countReg inst |
+
+	"Get the abstract registers for ECX, EDI and ESI"
+	sourceReg := ESI.
+	destReg := EDI.
+	countReg := ECX.
+
+	"Put the source in ESI and the dest in EDI"
+	inst := cogit Label.
+	originalSourceReg ~= sourceReg ifTrue: [
+		originalDestReg = sourceReg ifTrue: [
+			cogit MoveR: originalDestReg R: TempReg.
+		].
+		cogit MoveR: originalSourceReg R: sourceReg.
+	].
+
+	originalDestReg ~= destReg ifTrue: [
+		originalDestReg = sourceReg ifTrue: [
+			cogit MoveR: TempReg R: destReg.
+		] ifFalse: [
+			cogit MoveR: originalDestReg R: destReg.
+		]
+	].
+
+	"Store the count and clear the direction"
+	cogit gen: CLD.
+
+	"First copy the bytes"
+	numbytes := size bitAnd: 16r03.
+	numbytes > 0 ifTrue: [
+		cogit MoveCq: numbytes R: countReg.
+		cogit gen: REP.
+		cogit gen: MOVSB.
+	].
+
+	"Now copy the words"
+	numwords := size // 4.
+	cogit MoveCq:  numwords R: countReg.
+	cogit gen: REP.
+	cogit gen: MOVSD.
+
+
+]
+
+{ #category : #'abstract instructions' }
+CogIA32Compiler >> genMemCopy: originalSourceReg to: originalDestReg size: originalSize [
+	| spilledSize size sourceReg destReg countReg inst |
+
+	"Get the abstract registers for ECX, EDI and ESI"
+	sourceReg := ESI.
+	destReg := EDI.
+	countReg := ECX.
+
+	"TODO: Avoid spilling"
+	spilledSize := false.
+	(originalSize = sourceReg or: [originalSize = destReg]) ifTrue: [
+		cogit PushR: originalSize.
+		spilledSize := true.
+	].
+
+	"Put the source in ESI and the dest in EDI"
+	inst := cogit Label.
+	originalSourceReg ~= sourceReg ifTrue: [
+		originalDestReg = sourceReg ifTrue: [
+			cogit MoveR: originalDestReg R: TempReg.
+		].
+		cogit MoveR: originalSourceReg R: sourceReg.
+	].
+
+	originalDestReg ~= destReg ifTrue: [
+		originalDestReg = sourceReg ifTrue: [
+			cogit MoveR: TempReg R: destReg.
+		] ifFalse: [
+			cogit MoveR: originalDestReg R: destReg.
+		]
+	].
+
+	"Put the original size register in somewhere different than ECX"
+	spilledSize ifTrue: [
+		cogit PopR: TempReg.
+		size := TempReg.
+	] ifFalse: [
+		originalSize = countReg ifTrue: [
+			cogit MoveR: originalSize R: TempReg.
+			size := TempReg.
+		] ifFalse: [
+			size := originalSize.
+		]
+	].
+
+	cogit gen: CLD.
+
+	"First copy the bytes"
+	cogit MoveR: size R: countReg.
+	cogit AndCq: 16r03 R: countReg.
+	cogit gen: REP.
+	cogit gen: MOVSB.
+
+	"Now copy the words"
+	cogit MoveR: size R: countReg.
+	cogit LogicalShiftRightCq: 2 R: countReg.
+	cogit gen: REP.
+	cogit gen: MOVSD.
+
+
+]
+
+{ #category : #'abstract instructions' }
+CogIA32Compiler >> genMoveCf32: constantFloat32 Rs: register [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #constantFloat32 type: #float>
+	| inst |
+	inst := cogit PushCw: constantFloat32 asIEEE32BitWord.
+	cogit PopRs: register.
+	^ inst
+]
+
+{ #category : #'abstract instructions' }
+CogIA32Compiler >> genMoveCf64: constantFloat64 Rd: register [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #constantFloat64 type: #double>
+	| inst |
+	inst := cogit PushC64: constantFloat64 asIEEE64BitWord.
+	cogit PopRd: register.
+	^ inst
+]
+
 { #category : #'abstract instructions' }
 CogIA32Compiler >> genMulR: regSource R: regDest [
 	^cogit gen: IMULRR operand: regSource operand: regDest
+]
+
+{ #category : #'abstract instructions' }
+CogIA32Compiler >> genPopRd: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	| inst |
+	inst := cogit MoveM64: 0 r: SPReg Rd: reg .
+	cogit AddCq: 8 R: SPReg.
+	^ inst
+]
+
+{ #category : #'abstract instructions' }
+CogIA32Compiler >> genPopRs: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	| inst |
+	inst := cogit MoveM32: 0 r: SPReg Rs: reg .
+	cogit AddCq: 4 R: SPReg.
+	^ inst
+]
+
+{ #category : #'abstract instructions' }
+CogIA32Compiler >> genPushC64: constant64Bits [
+	<inline: true>
+	<var: #constant64Bits type: #sqLong>
+	<returnTypeC: #'AbstractInstruction *'>
+	| inst highPart |
+	BytesPerWord == 4 ifTrue: [
+		highPart := self cCode: '(constant64Bits >> 32ll)' inSmalltalk: [ constant64Bits bitShift: -32 ].
+		inst :=cogit PushCw: highPart.
+		cogit PushCw: (constant64Bits bitAnd: 16rFFFFFFFF).
+		^ inst
+	] ifFalse: [
+		^ cogit PushCw: constant64Bits.
+	]
+]
+
+{ #category : #'abstract instructions' }
+CogIA32Compiler >> genPushRd: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	| inst |
+	inst := cogit MoveRd: reg M64: -8 r: SPReg.
+	cogit SubCq: 8 R: SPReg.
+	^ inst
 ]
 
 { #category : #'smalltalk calling convention' }
@@ -2488,9 +3448,25 @@ CogIA32Compiler >> genPushRegisterArgsForNumArgs: numArgs scratchReg: scratchReg
 				 cogit PushR: scratchReg]] "Restore return address"
 ]
 
+{ #category : #'abstract instructions' }
+CogIA32Compiler >> genPushRs: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	| inst |
+	inst := cogit MoveRs: reg M32: -4 r: SPReg.
+	cogit SubCq: 4 R: SPReg.
+	^ inst
+]
+
 { #category : #abi }
 CogIA32Compiler >> genRemoveNArgsFromStack: n [ 
 	cogit AddCq: n * 4 R: ESP.
+	^0
+]
+
+{ #category : #abi }
+CogIA32Compiler >> genRemoveNFloatArgsFromStack: n [ 
+	cogit AddCq: n * 8 R: ESP.
 	^0
 ]
 

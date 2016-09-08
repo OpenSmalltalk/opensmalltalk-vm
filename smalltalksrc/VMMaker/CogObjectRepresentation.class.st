@@ -9,7 +9,16 @@ Class {
 		'methodZone',
 		'objectMemory',
 		'coInterpreter',
-		'ceStoreCheckTrampoline'
+		'ceStoreCheckTrampoline',
+		'ceByteSizeOfTrampoline',
+		'ceInstantiateClassTrampoline',
+		'ceInstantiateClassIndexableSizeTrampoline',
+		'ceFloatObjectOfTrampoline',
+		'ceFloatValueOfTrampoline',
+		'ceSigned64BitIntegerTrampoline',
+		'ceSigned64BitValueOfTrampoline',
+		'cePositive64BitIntegerTrampoline',
+		'cePositive64BitValueOfTrampoline'
 	],
 	#pools : [
 		'CogAbstractRegisters',
@@ -43,7 +52,7 @@ CogObjectRepresentation class >> initializeMiscConstants [
 
 { #category : #accessing }
 CogObjectRepresentation class >> numTrampolines [
-	^1 "ceStoreCheckTrampoline"
+	^1 "ceStoreCheckTrampoline" + (LowcodeVM ifTrue: [ 9 ] ifFalse: [ 0 ])
 ]
 
 { #category : #translation }
@@ -416,6 +425,241 @@ CogObjectRepresentation >> genJumpSmallInteger: aRegister scratchReg: scratch [
 	 Answer the jump.  Use scratch if required.  Subclasses will override if scratch is needed."
 	<inline: true>
 	^self genJumpSmallInteger: aRegister
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcByteSizeOf: oop to: resultRegister [
+	<option: #LowcodeVM>
+	"TODO: Optimize this one avoiding the trampoline"
+	oop ~= ReceiverResultReg ifTrue: [cogit MoveR: oop R: ReceiverResultReg ].
+	cogit CallRT: ceByteSizeOfTrampoline.
+
+	cogit MoveR: TempReg R: resultRegister.
+	cogit ssPushNativeRegister: resultRegister.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcFloat32: value toOop: object [
+	<option: #LowcodeVM>
+	cogit ConvertRs: value Rd: DPFPReg0.
+	cogit CallRT: ceFloatObjectOfTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushRegister: ReceiverResultReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcFloat64: value toOop: object [
+	<option: #LowcodeVM>
+	value ~= DPFPReg0 ifTrue: [ cogit MoveRd: value Rd: DPFPReg0].
+	cogit CallRT: ceFloatObjectOfTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushRegister: ReceiverResultReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcInstantiateOop: classOop [
+	<option: #LowcodeVM>
+	classOop ~= ReceiverResultReg ifTrue: [cogit MoveR: classOop R: ReceiverResultReg].
+	cogit CallRT: ceInstantiateClassTrampoline.
+
+	cogit MoveR: TempReg R: classOop.
+	cogit ssPushRegister: classOop.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcInstantiateOop: classOop constantIndexableSize: indexableSize [
+	<option: #LowcodeVM>
+	classOop ~= ReceiverResultReg ifTrue: [cogit MoveR: classOop R: ReceiverResultReg].
+	cogit MoveCq: indexableSize R: Arg0Reg.
+	cogit CallRT: ceInstantiateClassIndexableSizeTrampoline.
+
+	cogit MoveR: TempReg R: classOop.
+	cogit ssPushRegister: classOop.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcInstantiateOop: classOop indexableSize: indexableSize [
+	<option: #LowcodeVM>
+	classOop ~= ReceiverResultReg ifTrue: [
+		indexableSize = ReceiverResultReg ifTrue: [
+			cogit MoveR: indexableSize R: TempReg.
+		].
+		cogit MoveR: classOop R: ReceiverResultReg
+	].
+
+	indexableSize ~= Arg0Reg ifTrue: [
+		indexableSize = ReceiverResultReg ifTrue: [
+			cogit MoveR: TempReg R: Arg0Reg.
+		] ifFalse: [
+			cogit MoveR: indexableSize R: Arg0Reg.
+		]
+	].
+
+	cogit CallRT: ceInstantiateClassIndexableSizeTrampoline.
+
+	cogit MoveR: TempReg R: classOop.
+	cogit ssPushRegister: classOop.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcInt64ToOop: value [
+	<option: #LowcodeVM>
+	value ~= ReceiverResultReg ifTrue: [ cogit MoveR: value R: ReceiverResultReg.].
+	cogit CallRT: ceSigned64BitIntegerTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushRegister: ReceiverResultReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcInt64ToOop: valueLow highPart: valueHigh [
+	<option: #LowcodeVM>
+	"Put the arguments in the correct registers"
+	valueLow ~= ReceiverResultReg ifTrue: [
+		valueHigh = ReceiverResultReg ifTrue: [
+			cogit MoveR: valueHigh R: TempReg.
+		].
+		cogit MoveR: valueLow R: ReceiverResultReg.
+	].
+
+	valueHigh ~= Arg0Reg ifTrue: [
+		valueHigh = ReceiverResultReg ifTrue: [
+			cogit MoveR: TempReg R: Arg0Reg.
+		] ifFalse: [
+			cogit MoveR: valueHigh R: Arg0Reg.
+		]
+	].
+
+	"Call the trampoline"
+	cogit CallRT: ceSigned64BitIntegerTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushRegister: ReceiverResultReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcOop: object toFloat32: value [
+	<option: #LowcodeVM>
+	object ~= ReceiverResultReg ifTrue: [ cogit MoveR: object R: ReceiverResultReg].
+	cogit CallRT: ceFloatValueOfTrampoline.
+
+	cogit ConvertRd: DPFPReg0 Rs: value.
+	cogit ssPushNativeRegisterSingleFloat: value.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcOop: object toFloat64: value [
+	<option: #LowcodeVM>
+	object ~= ReceiverResultReg ifTrue: [ cogit MoveR: object R: ReceiverResultReg].
+	cogit CallRT: ceFloatValueOfTrampoline.
+
+	DPFPReg0 ~= value ifTrue: [cogit MoveRd: DPFPReg0 Rd: value.].
+	cogit ssPushNativeRegisterDoubleFloat: value.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcOop: object toInt64: valueLow highPart: valueHigh [
+	<option: #LowcodeVM>
+	object ~= ReceiverResultReg ifTrue: [ cogit MoveR: object R: ReceiverResultReg.].
+	cogit CallRT: ceSigned64BitValueOfTrampoline.
+
+	Arg0Reg ~= valueHigh ifTrue: [cogit MoveR: Arg0Reg R: valueHigh].
+	cogit MoveR: TempReg R: valueLow.
+
+	cogit ssPushNativeRegister: valueLow secondRegister: valueHigh.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcOop: object toUInt64: valueLow highPart: valueHigh [
+	<option: #LowcodeVM>
+	object ~= ReceiverResultReg ifTrue: [ cogit MoveR: object R: ReceiverResultReg.].
+	cogit CallRT: cePositive64BitValueOfTrampoline.
+
+	Arg0Reg ~= valueHigh ifTrue: [cogit MoveR: Arg0Reg R: valueHigh].
+	cogit MoveR: TempReg R: valueLow.
+
+	cogit ssPushNativeRegister: valueLow secondRegister: valueHigh.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcOopToInt64: value [
+	<option: #LowcodeVM>
+	value ~= ReceiverResultReg ifTrue: [ cogit MoveR: value R: ReceiverResultReg.].
+	cogit CallRT: ceSigned64BitValueOfTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushNativeRegister: ReceiverResultReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcOopToPointer: object [
+	<option: #LowcodeVM>
+	"Assume this is always correct"
+	cogit MoveMw: BaseHeaderSize r: object R: object.
+	cogit ssPushNativeRegister: object.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcOopToUInt64: value [
+	<option: #LowcodeVM>
+	value ~= ReceiverResultReg ifTrue: [ cogit MoveR: value R: ReceiverResultReg.].
+	cogit CallRT: cePositive64BitValueOfTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushNativeRegister: ReceiverResultReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcPointerToOop: pointer class: pointerClass [
+	<option: #LowcodeVM>
+	cogit PushR: pointer.
+	cogit annotate: (cogit MoveCw: pointerClass R: ReceiverResultReg) objRef: pointerClass.
+	cogit MoveCq: BytesPerOop R: Arg0Reg.
+	cogit CallRT: ceInstantiateClassIndexableSizeTrampoline.
+
+	cogit PopR: pointer.
+	cogit MoveR: pointer Mw: BaseHeaderSize r: TempReg.
+
+	cogit MoveR: TempReg R: pointer.
+	cogit ssPushRegister: pointer.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcUInt64ToOop: value [
+	<option: #LowcodeVM>
+	value ~= ReceiverResultReg ifTrue: [ cogit MoveR: value R: ReceiverResultReg.].
+	cogit CallRT: cePositive64BitIntegerTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushRegister: ReceiverResultReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentation >> genLcUInt64ToOop: valueLow highPart: valueHigh [
+	<option: #LowcodeVM>
+	"Put the arguments in the correct registers"
+	valueLow ~= ReceiverResultReg ifTrue: [
+		valueHigh = ReceiverResultReg ifTrue: [
+			cogit MoveR: valueHigh R: TempReg.
+		].
+		cogit MoveR: valueLow R: ReceiverResultReg.
+	].
+
+	valueHigh ~= Arg0Reg ifTrue: [
+		valueHigh = ReceiverResultReg ifTrue: [
+			cogit MoveR: TempReg R: Arg0Reg.
+		] ifFalse: [
+			cogit MoveR: valueHigh R: Arg0Reg.
+		]
+	].
+
+	"Call the trampoline"
+	cogit CallRT: cePositive64BitIntegerTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushRegister: ReceiverResultReg.
 ]
 
 { #category : #'compile abstract instructions' }
@@ -1210,6 +1454,72 @@ CogObjectRepresentation >> genStoreSourceReg: sourceReg slotIndex: index destReg
 				scratchReg: scratchReg 
 				inFrame: inFrame 
 				needsStoreCheck: true ]
+]
+
+{ #category : #initialization }
+CogObjectRepresentation >> generateLowcodeObjectTrampolines [
+	ceFloatObjectOfTrampoline := cogit genTrampolineFor: #floatObjectOf:
+												called: 'ceFloatObjectOfTrampoline'
+												floatArg: DPFPReg0
+												result: TempReg.
+	ceFloatValueOfTrampoline := cogit genTrampolineFor: #floatValueOf:
+												called: 'ceFloatValueOfTrampoline'
+												arg: ReceiverResultReg
+												floatResult: DPFPReg0.
+	ceInstantiateClassIndexableSizeTrampoline := cogit genTrampolineFor: #instantiateClass:indexableSize:
+												called: 'ceInstantiateClassIndexableSizeTrampoline'
+												arg: ReceiverResultReg
+												arg: Arg0Reg
+												result: TempReg.
+	ceInstantiateClassTrampoline := cogit genTrampolineFor: #instantiateClass:indexableSize:
+												called: 'ceInstantiateClassTrampoline'
+												arg: ReceiverResultReg
+												arg: 0
+												result: TempReg.
+	ceByteSizeOfTrampoline := cogit genTrampolineFor: #byteSizeOf:
+												called: 'ceByteSizeOfTrampoline'
+												arg: ReceiverResultReg
+												arg: Arg0Reg
+												result: TempReg.
+	BytesPerOop = 4 ifTrue: [
+		cePositive64BitIntegerTrampoline := cogit genTrampolineFor: #positive64BitIntegerFor:
+													called: 'cePositive64BitIntegerTrampoline'
+													arg: ReceiverResultReg
+													arg: Arg0Reg
+													result: TempReg.
+		cePositive64BitValueOfTrampoline := cogit genTrampolineFor: #positive64BitValueOf:
+													called: 'cePositive64BitValueOfTrampoline'
+													arg: ReceiverResultReg
+													result: TempReg
+													result: Arg0Reg.
+		ceSigned64BitIntegerTrampoline := cogit genTrampolineFor: #signed64BitIntegerFor:
+													called: 'ceSigned64BitIntegerTrampoline'
+													arg: ReceiverResultReg
+													arg: Arg0Reg
+													result: TempReg.
+		ceSigned64BitValueOfTrampoline := cogit genTrampolineFor: #signed64BitValueOf:
+													called: 'ceSigned64BitValueOfTrampoline'
+													arg: ReceiverResultReg
+													result: TempReg
+													result: Arg0Reg.
+	] ifFalse: [
+		cePositive64BitIntegerTrampoline := cogit genTrampolineFor: #positive64BitIntegerFor:
+													called: 'cePositive64BitIntegerTrampoline'
+													arg: ReceiverResultReg
+													result: TempReg.
+		cePositive64BitValueOfTrampoline := cogit genTrampolineFor: #positive64BitValueOf:
+													called: 'cePositive64BitValueOfTrampoline'
+													arg: ReceiverResultReg
+													result: TempReg.
+		ceSigned64BitIntegerTrampoline := cogit genTrampolineFor: #signed64BitIntegerFor:
+													called: 'ceSigned64BitIntegerTrampoline'
+													arg: ReceiverResultReg
+													result: TempReg.
+		ceSigned64BitValueOfTrampoline := cogit genTrampolineFor: #signed64BitValueOf:
+													called: 'ceSigned64BitValueOfTrampoline'
+													arg: ReceiverResultReg
+													result: TempReg.
+	]
 ]
 
 { #category : #initialization }

@@ -703,6 +703,11 @@ CurrentImageCoInterpreterFacade >> methodUsesAlternateBytecodeSet: methodObjOop 
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> nativeStackPointerAddress [
+	^self addressForLabel: #nativeStackPointer
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> newMethodAddress [
 	^self addressForLabel: #newMethod
 ]
@@ -995,6 +1000,11 @@ CurrentImageCoInterpreterFacade >> scavengeThresholdAddress [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> shadowCallStackAddress [
+	^self addressForLabel: #shadowCallStackAddress
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> shiftForWord [
 	^objectMemory shiftForWord
 ]
@@ -1032,7 +1042,8 @@ CurrentImageCoInterpreterFacade >> splObj: splObjIndex [
 		[ClassLargeNegativeInteger]	-> [self oopForObject: LargeNegativeInteger].
 		[ClassLargePositiveInteger]	-> [self oopForObject: LargePositiveInteger].
 		[ClassSmallInteger]				-> [self oopForObject: SmallInteger].
-		[CompactClasses]				-> [self oopForObject: Smalltalk compactClassesArray]
+		[CompactClasses]				-> [self oopForObject: Smalltalk compactClassesArray].
+		[LowcodeContextMark]				-> [self oopForObject: (Smalltalk globals at: #LowcodeNativeContext ifPresent: [:cls | cls signalingObject ]) ]
 		}
 ]
 
