@@ -207,6 +207,7 @@ VMClass class >> initializeMiscConstants [
 	PharoVM := initializationOptions at: #PharoVM ifAbsentPut: [false].
 	NewspeakVM := initializationOptions at: #NewspeakVM ifAbsentPut: [false].
 	SistaVM := initializationOptions at: #SistaVM ifAbsentPut: [false].
+	LowcodeVM := initializationOptions at: #LowcodeVM ifAbsentPut: [false].
 	"But not these; they're compile-time"
 	MULTIPLEBYTECODESETS := initializationOptions at: #MULTIPLEBYTECODESETS ifAbsent: [false].
 	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsent: [false].
@@ -806,6 +807,96 @@ VMClass >> fetchSingleFloatAtPointer: pointer into: aFloat [
 	^self fetchSingleFloatAt: pointer into: aFloat
 ]
 
+{ #category : #'memory access' }
+VMClass >> floatAtPointer: pointer [
+	<doNotGenerate>
+	self halt.
+]
+
+{ #category : #'memory access' }
+VMClass >> floatAtPointer: pointer put: value [
+	<doNotGenerate>
+	self halt.
+]
+
+{ #category : #'C library simulation' }
+VMClass >> free: pointer [
+	<doNotGenerate>
+	"Do nothing"
+]
+
+{ #category : #'memory access' }
+VMClass >> int16AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 16 bit integer."
+	<doNotGenerate>
+
+	^self shortAt: pointer
+]
+
+{ #category : #'memory access' }
+VMClass >> int16AtPointer: pointer put: value [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 16 bit integer."
+	<doNotGenerate>
+
+	^self shortAt: pointer put: value
+]
+
+{ #category : #'memory access' }
+VMClass >> int32AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 32 bit integer."
+	<doNotGenerate>
+
+	^self longAt: pointer
+]
+
+{ #category : #'memory access' }
+VMClass >> int32AtPointer: pointer put: value [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 32 bit integer."
+	<doNotGenerate>
+
+	^self longAt: pointer put: value
+]
+
+{ #category : #'memory access' }
+VMClass >> int64AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is the width of a machine word."
+	<doNotGenerate>
+
+	^self halt
+]
+
+{ #category : #'memory access' }
+VMClass >> int64AtPointer: pointer put: longValue [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and longValue is the width of a machine word."
+	<doNotGenerate>
+
+	^self halt.
+]
+
+{ #category : #'memory access' }
+VMClass >> int8AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 16 bit integer."
+	<doNotGenerate>
+
+	^self at: pointer
+]
+
+{ #category : #'memory access' }
+VMClass >> int8AtPointer: pointer put: value [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 16 bit integer."
+	<doNotGenerate>
+
+	^self at: pointer put: value
+]
+
 { #category : #testing }
 VMClass >> isCurrentImageFacade [
 	^false
@@ -816,6 +907,24 @@ VMClass >> isInterpreterProxy [
 	<doNotGenerate>
 	"Return false since I am a real Interpreter simulation"
 	^false
+]
+
+{ #category : #'memory access' }
+VMClass >> long64AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is the width of a machine word."
+	<doNotGenerate>
+
+	^self halt
+]
+
+{ #category : #'memory access' }
+VMClass >> long64AtPointer: pointer put: longValue [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and longValue is the width of a machine word."
+	<doNotGenerate>
+
+	^self halt.
 ]
 
 { #category : #'memory access' }
@@ -841,6 +950,12 @@ VMClass >> majorVersion [
 	"This is implemented in sqVirtualMachine.c, so this form is for simulation only."
 	<doNotGenerate>
 	^self class vmProxyMajorVersion
+]
+
+{ #category : #'C library simulation' }
+VMClass >> malloc: size [
+	<doNotGenerate>
+	^ ByteArray new: size
 ]
 
 { #category : #'C library simulation' }
@@ -972,6 +1087,24 @@ VMClass >> oopForPointer: pointerOrSurrogate [
 	^pointerOrSurrogate asInteger
 ]
 
+{ #category : #'memory access' }
+VMClass >> pointerAtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is the width of a machine word."
+	<doNotGenerate>
+
+	^self longAt: pointer
+]
+
+{ #category : #'memory access' }
+VMClass >> pointerAtPointer: pointer put: value [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is the width of a machine word."
+	<doNotGenerate>
+
+	^self longAt: pointer put: value
+]
+
 { #category : #'translation support' }
 VMClass >> pointerForOop: oop [
 	"This gets implemented by Macros in C, where its types will also be checked.
@@ -1016,6 +1149,18 @@ VMClass >> safe: signedInteger mod: positiveModulus [
 	^(remainder := signedInteger \\ positiveModulus) < 0
 		ifTrue: [remainder + positiveModulus]
 		ifFalse: [remainder]
+]
+
+{ #category : #'memory access' }
+VMClass >> singleFloatAtPointer: pointer [
+	<doNotGenerate>
+	self halt.
+]
+
+{ #category : #'memory access' }
+VMClass >> singleFloatAtPointer: pointer put: value [
+	<doNotGenerate>
+	self halt.
 ]
 
 { #category : #'translation support' }
@@ -1144,6 +1289,78 @@ VMClass >> strlen: aCString [
 	len := 0.
 	[(self byteAt: aCString + len) = 0 ifTrue: [^len].
 	len := len + 1] repeat
+]
+
+{ #category : #'memory access' }
+VMClass >> uint16AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 16 bit integer."
+	<doNotGenerate>
+
+	^self shortAt: pointer
+]
+
+{ #category : #'memory access' }
+VMClass >> uint16AtPointer: pointer put: value [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 16 bit integer."
+	<doNotGenerate>
+
+	^self shortAt: pointer put: value
+]
+
+{ #category : #'memory access' }
+VMClass >> uint32AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 32 bit integer."
+	<doNotGenerate>
+
+	^self longAt: pointer
+]
+
+{ #category : #'memory access' }
+VMClass >> uint32AtPointer: pointer put: value [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 32 bit integer."
+	<doNotGenerate>
+
+	^self longAt: pointer put: value
+]
+
+{ #category : #'memory access' }
+VMClass >> uint64AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is the width of a machine word."
+	<doNotGenerate>
+
+	^self halt
+]
+
+{ #category : #'memory access' }
+VMClass >> uint64AtPointer: pointer put: longValue [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and longValue is the width of a machine word."
+	<doNotGenerate>
+
+	^self halt.
+]
+
+{ #category : #'memory access' }
+VMClass >> uint8AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 16 bit integer."
+	<doNotGenerate>
+
+	^self at: pointer
+]
+
+{ #category : #'memory access' }
+VMClass >> uint8AtPointer: pointer put: value [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 16 bit integer."
+	<doNotGenerate>
+
+	^self at: pointer put: value
 ]
 
 { #category : #simulation }

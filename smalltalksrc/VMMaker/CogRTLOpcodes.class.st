@@ -9,6 +9,9 @@ Class {
 		'AddCwR',
 		'AddRR',
 		'AddRdRd',
+		'AddRsRs',
+		'AddcCqR',
+		'AddcRR',
 		'AlignmentNops',
 		'AndCqR',
 		'AndCqRR',
@@ -18,13 +21,21 @@ Class {
 		'ArithmeticShiftRightRR',
 		'Call',
 		'CallFull',
+		'CallR',
 		'CmpC32R',
 		'CmpCqR',
 		'CmpCwR',
 		'CmpRR',
 		'CmpRdRd',
+		'CmpRsRs',
 		'ConvertRRd',
+		'ConvertRRs',
+		'ConvertRdR',
+		'ConvertRdRs',
+		'ConvertRsR',
+		'ConvertRsRd',
 		'DivRdRd',
+		'DivRsRs',
 		'Fill32',
 		'FirstJump',
 		'FirstShortJump',
@@ -77,14 +88,18 @@ Class {
 		'MoveCwR',
 		'MoveM16rR',
 		'MoveM32rR',
+		'MoveM32rRs',
 		'MoveM64rRd',
+		'MoveM8rR',
 		'MoveMbrR',
+		'MoveMs8rR',
 		'MoveMwrR',
 		'MoveRA32',
 		'MoveRAb',
 		'MoveRAw',
 		'MoveRM16r',
 		'MoveRM32r',
+		'MoveRM8r',
 		'MoveRMbr',
 		'MoveRMwr',
 		'MoveRR',
@@ -97,14 +112,18 @@ Class {
 		'MoveRdM64r',
 		'MoveRdR',
 		'MoveRdRd',
+		'MoveRsM32r',
+		'MoveRsRs',
 		'MoveX16rRR',
 		'MoveX32rRR',
 		'MoveXbrRR',
 		'MoveXowrR',
 		'MoveXwrRR',
 		'MulRdRd',
+		'MulRsRs',
 		'NegateR',
 		'Nop',
+		'NotR',
 		'OrCqR',
 		'OrCwR',
 		'OrRR',
@@ -116,16 +135,25 @@ Class {
 		'RetN',
 		'RotateLeftCqR',
 		'RotateRightCqR',
+		'SignExtend16RR',
+		'SignExtend8RR',
 		'SqrtRd',
+		'SqrtRs',
 		'Stop',
 		'SubCqR',
 		'SubCwR',
 		'SubRR',
 		'SubRdRd',
+		'SubRsRs',
+		'SubbRR',
 		'TstCqR',
 		'XorCqR',
 		'XorCwR',
-		'XorRR'
+		'XorRR',
+		'XorRdRd',
+		'XorRsRs',
+		'ZeroExtend16RR',
+		'ZeroExtend8RR'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -141,6 +169,7 @@ CogRTLOpcodes class >> initialize [
 			(self initialize)
 	The operand specifiers are
 		R		- general purpose register
+		Rs		- single-precision floating-point register
 		Rd		- double-precision floating-point register
 		Cq		- a `quick' constant that can be encoded in the minimum space possible.
 		Cw		- a constant with word size where word is the default operand size for the Smalltalk VM, 32-bits
@@ -205,6 +234,7 @@ CogRTLOpcodes class >> initialize [
 						"Control"
 						Call					"call within the code zone"
 						CallFull				"call anywhere within the full address space"
+						CallR
 						RetN
 						JumpR				"Not a regular jump, i.e. not pc dependent."
 						Stop				"Halt the processor"
@@ -248,17 +278,20 @@ CogRTLOpcodes class >> initialize [
 						MoveAbR
 						MoveRAb
 						MoveMwrR MoveRMwr MoveXwrRR MoveRXwrR MoveXowrR MoveRXowr
+						MoveM8rR MoveMs8rR MoveRM8r 
 						MoveM16rR MoveRM16r MoveX16rRR MoveRX16rR
 						MoveM32rR MoveRM32r MoveX32rRR MoveRX32rR
 						MoveMbrR MoveRMbr MoveXbrRR MoveRXbrR
 						MoveCqR MoveCwR MoveC32R MoveC64R
 						MoveRRd MoveRdR MoveRdRd MoveM64rRd MoveRdM64r
+						MoveRsRs MoveM32rRs MoveRsM32r
 						PopR PushR PushCq PushCw
 						PrefetchAw
 
 						"Arithmetic; destination is always last operand except Cmp; CmpXR is SubRX with no update of result"
 						LoadEffectiveAddressMwrR LoadEffectiveAddressXowrR "Variants of add/multiply"
 						NegateR "2's complement negation"
+						NotR
 						ArithmeticShiftRightCqR ArithmeticShiftRightRR
 						LogicalShiftRightCqR LogicalShiftRightRR
 						LogicalShiftLeftCqR LogicalShiftLeftRR
@@ -267,13 +300,19 @@ CogRTLOpcodes class >> initialize [
 						CmpRR AddRR SubRR AndRR OrRR XorRR
 						CmpCqR AddCqR SubCqR AndCqR OrCqR TstCqR XorCqR
 						CmpCwR CmpC32R AddCwR SubCwR AndCwR OrCwR XorCwR
+						AddcRR AddcCqR SubbRR
 
 						AndCqRR "Three address ops for RISCs; feel free to add and extend"
 
-						CmpRdRd AddRdRd SubRdRd MulRdRd DivRdRd SqrtRd
+						CmpRdRd AddRdRd SubRdRd MulRdRd DivRdRd SqrtRd XorRdRd
+						CmpRsRs AddRsRs SubRsRs MulRsRs DivRsRs SqrtRs XorRsRs
 
 						"Conversion"
-						ConvertRRd
+						ConvertRRd ConvertRdR
+						ConvertRsRd ConvertRdRs ConvertRsR ConvertRRs
+
+						SignExtend8RR SignExtend16RR
+						ZeroExtend8RR ZeroExtend16RR
 
 						LastRTLCode).
 
@@ -343,7 +382,7 @@ CogRTLOpcodes class >> printFormatForOpcodeName: opcodeName [
 		(Label nil) (Literal nil)
 		('Mb' nil) ('Mw' nil) ('M16' nil) ('M32' nil) ('M64' nil)
 		('Nops' nil)
-		('R' $r) ('Rd' $f)
+		('R' $r) ('Rd' $f) ('Rs' $f)
 		('Xbr' $r) ('Xwr' $r) ('X16r' $r) ('X32r' $r) ('X64r' $r) ('X' $r) ('ow' nil)
 		('Greater' exit) ('Xor' exit) ('r' $r))
 				detect: [:pair| operands endsWith: pair first]
