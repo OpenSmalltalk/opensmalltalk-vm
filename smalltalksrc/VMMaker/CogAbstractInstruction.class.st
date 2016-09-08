@@ -438,6 +438,31 @@ CogAbstractInstruction >> asUnsignedInteger [
 ]
 
 { #category : #'register allocation' }
+CogAbstractInstruction >> availableFloatRegisterOrNoneFor: liveRegsMask [
+	"Answer an unused abstract register in the liveRegMask.
+	 Subclasses with more registers can override to answer them."
+	<returnTypeC: #sqInt>
+	(liveRegsMask anyMask: (cogit registerMaskFor: DPFPReg0)) ifFalse:
+		[^DPFPReg0].
+	(liveRegsMask anyMask: (cogit registerMaskFor: DPFPReg1)) ifFalse:
+		[^DPFPReg1].
+	(liveRegsMask anyMask: (cogit registerMaskFor: DPFPReg2)) ifFalse:
+		[^DPFPReg2].
+	(liveRegsMask anyMask: (cogit registerMaskFor: DPFPReg3)) ifFalse:
+		[^DPFPReg3].
+	(liveRegsMask anyMask: (cogit registerMaskFor: DPFPReg4)) ifFalse:
+		[^DPFPReg4].
+	(liveRegsMask anyMask: (cogit registerMaskFor: DPFPReg5)) ifFalse:
+		[^DPFPReg5].
+	(liveRegsMask anyMask: (cogit registerMaskFor: DPFPReg6)) ifFalse:
+		[^DPFPReg6].
+	(liveRegsMask anyMask: (cogit registerMaskFor: DPFPReg7)) ifFalse:
+		[^DPFPReg7].
+
+	^ NoReg
+]
+
+{ #category : #'register allocation' }
 CogAbstractInstruction >> availableRegisterOrNoneFor: liveRegsMask [
 	"Answer an unused abstract register in the liveRegMask.
 	 Subclasses with more registers can override to answer them.
@@ -730,6 +755,23 @@ CogAbstractInstruction >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrC
 	^self subclassResponsibility
 ]
 
+{ #category : #abi }
+CogAbstractInstruction >> genMarshallNArgs: numArgs floatArg: regOrConst0 floatArg: regOrConst1 floatArg: regOrConst2 floatArg: regOrConst3 [
+	"Generate the code to pass up to four arguments in a C run-time call.  Hack: each argument is
+	 either a negative number, which encodes a constant, or a non-negative number, that of a register.
+
+	 Run-time calls have no more than four arguments, so chosen so that on ARM, where in its C ABI the
+	 first four integer arguments are passed in registers, all arguments can be passed in registers.  We
+	 defer to the back end to generate this code not so much that the back end knows whether it uses
+	 the stack or registers to pass arguments (it does, but...). In fact we defer for an extremely evil reason.
+	 Doing so allows the x64 (where up to 6 args are passed) to assign the register arguments in an order
+	 that allows some of the argument registers to be used for specific abstract  registers, specifically
+	 ReceiverResultReg and ClassReg.  This is evil, evil, evil, but also it's really nice to keep using the old
+	 register assignments the original author has grown accustomed to."
+	<inline: true>
+	^self subclassResponsibility
+]
+
 { #category : #'abstract instructions' }
 CogAbstractInstruction >> genMulR: regSource R: regDest [
 	"Generate whatever code necessary to do a bytesPerOop x bytesPerOop multiplication,
@@ -797,6 +839,14 @@ CogAbstractInstruction >> genSubstituteReturnAddress: retpc [
 CogAbstractInstruction >> genWriteCResultIntoReg: abstractRegister [
 	| cResultReg |
 	cResultReg := self cResultRegister.
+	abstractRegister ~= cResultReg ifTrue:
+		[cogit gen: MoveRR operand: cResultReg operand: abstractRegister]
+]
+
+{ #category : #abi }
+CogAbstractInstruction >> genWriteCSecondResultIntoReg: abstractRegister [
+	| cResultReg |
+	cResultReg := self cResultRegisterHigh.
 	abstractRegister ~= cResultReg ifTrue:
 		[cogit gen: MoveRR operand: cResultReg operand: abstractRegister]
 ]

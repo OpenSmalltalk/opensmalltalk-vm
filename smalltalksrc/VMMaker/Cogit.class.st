@@ -238,6 +238,7 @@ Class {
 		'ceUnlockVMOwner',
 		'extA',
 		'extB',
+		'extBFirstZero',
 		'tempOop',
 		'numIRCs',
 		'indexOfIRC',
@@ -251,9 +252,13 @@ Class {
 		'cPICPrototype',
 		'cPICEndOfCodeOffset',
 		'cPICEndOfCodeLabel',
+		'maxCPICCases',
 		'debugBytecodePointers',
 		'debugOpcodeIndices',
-		'disassemblingMethod'
+		'disassemblingMethod',
+		'ceMallocTrampoline',
+		'ceFreeTrampoline',
+		'ceFFICalloutTrampoline'
 	],
 	#classVars : [
 		'AltBlockCreationBytecodeSize',
@@ -736,6 +741,7 @@ Cogit class >> generatorTableFrom: anArray [
 						isExtension: (tuple includes: #extension);
 						isInstVarRef: (tuple includes: #isInstVarRef);	"for Spur"
 						is1ByteInstVarStore: (tuple includes: #is1ByteInstVarStore);	"for Spur"
+						isCallPrimitive: (tuple includes: #callPrimitive);
 						hasIRC: (tuple includes: #hasIRC);			"for Newspeak"
 						yourself.
 		"As a hack to cut down on descriptor flags, use opcode to tag unusedBytecode for scanning.
@@ -1107,7 +1113,7 @@ Cogit class >> notesAndQueries [
 
 { #category : #accessing }
 Cogit class >> numTrampolines [
-	^35 "27 + 4 each for self and super sends"
+	^38 "30 + 4 each for self and super sends"
 
 	"self withAllSubclasses collect: [:c| {c. (c instVarNames select: [:ea| ea beginsWith: 'ce']) size}]"
 ]
@@ -1479,6 +1485,27 @@ Cogit >> AddRd: dpreg1 Rd: dpreg2 [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> AddRs: dpreg1 Rs: dpreg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: AddRsRs operand: dpreg1 operand: dpreg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> AddcCq: quickConstant R: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: AddcCqR quickConstant: quickConstant operand: reg
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> AddcR: reg1 R: reg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: AddcRR operand: reg1 operand: reg2
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> AlignmentNops: alignment [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -1599,6 +1626,13 @@ Cogit >> CallNewspeakSend: callTarget [
 	^self annotateNewspeakSend: (self Call: callTarget)
 ]
 
+{ #category : #'abstract instructions' }
+Cogit >> CallR: callTarget [ 
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: CallR operand: callTarget
+]
+
 { #category : #'method map' }
 Cogit >> CallRT: callTarget [
 	"Big assumption here that calls and jumps look the same as regards their displacement.
@@ -1683,10 +1717,52 @@ Cogit >> CmpRd: dpreg1 Rd: dpreg2 [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> CmpRs: dpreg1 Rs: dpreg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: CmpRsRs operand: dpreg1 operand: dpreg2
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> ConvertR: reg1 Rd: dpreg2 [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: ConvertRRd operand: reg1 operand: dpreg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> ConvertR: reg1 Rs: dpreg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: ConvertRRs operand: reg1 operand: dpreg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> ConvertRd: reg1 R: dpreg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: ConvertRdR operand: reg1 operand: dpreg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> ConvertRd: reg1 Rs: dpreg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: ConvertRdRs operand: reg1 operand: dpreg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> ConvertRs: reg1 R: dpreg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: ConvertRsR operand: reg1 operand: dpreg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> ConvertRs: reg1 Rd: dpreg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: ConvertRsRd operand: reg1 operand: dpreg2
 ]
 
 { #category : #'abstract instructions' }
@@ -1704,6 +1780,13 @@ Cogit >> DivRd: dpreg1 Rd: dpreg2 [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: DivRdRd operand: dpreg1 operand: dpreg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> DivRs: dpreg1 Rs: dpreg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: DivRsRs operand: dpreg1 operand: dpreg2
 ]
 
 { #category : #'abstract instructions' }
@@ -2040,6 +2123,22 @@ Cogit >> MoveC32: wordConstant R: reg [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> MoveCf32: constantFloat32 Rs: register [
+	<inline: true>
+	<var: #constantFloat32 type: #float>
+	<returnTypeC: #'AbstractInstruction *'>
+	^ backEnd genMoveCf32: constantFloat32 Rs: register
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> MoveCf64: constantFloat64 Rd: register [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #constantFloat64 type: #double>
+	^ backEnd genMoveCf64: constantFloat64 Rd: register
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> MoveCq: quickConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2061,10 +2160,31 @@ Cogit >> MoveM16: offset r: baseReg R: destReg [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> MoveM32: offset r: baseReg R: destReg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: MoveM32rR quickConstant: offset operand: baseReg operand: destReg
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> MoveM32: offset r: baseReg Rs: destDPReg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: MoveM32rRs quickConstant: offset operand: baseReg operand: destDPReg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> MoveM64: offset r: baseReg Rd: destDPReg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: MoveM64rRd quickConstant: offset operand: baseReg operand: destDPReg
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> MoveM8: offset r: baseReg R: destReg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: MoveM8rR quickConstant: offset operand: baseReg operand: destReg
 ]
 
 { #category : #'abstract instructions' }
@@ -2112,6 +2232,20 @@ Cogit >> MoveR: srcReg M16: offset r: baseReg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: MoveRM16r operand: srcReg quickConstant: offset operand: baseReg
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> MoveR: sourceReg M32: offset r: baseReg [ 
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: MoveRM32r operand: sourceReg quickConstant: offset operand: baseReg
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> MoveR: sourceReg M8: offset r: baseReg [ 
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: MoveRM8r operand: sourceReg quickConstant: offset operand: baseReg
 ]
 
 { #category : #'abstract instructions' }
@@ -2187,6 +2321,20 @@ Cogit >> MoveRd: dpreg1 Rd: dpreg2 [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> MoveRs: sourceDPReg M32: offset r: baseReg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: MoveRsM32r operand: sourceDPReg quickConstant: offset operand: baseReg
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> MoveRs: dpreg1 Rs: dpreg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: MoveRsRs operand: dpreg1 operand: dpreg2
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> MoveUniqueC32: wordConstant R: reg [
 	"Generate a MoveC32R instruction to move a 32-bit constant into a register.
 	 If the backEnd is using out-of-line literals then those for inline caches cannot be shared,
@@ -2251,6 +2399,13 @@ Cogit >> MulRd: dpreg1 Rd: dpreg2 [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> MulRs: dpreg1 Rs: dpreg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: MulRsRs operand: dpreg1 operand: dpreg2
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> NegateR: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2262,6 +2417,13 @@ Cogit >> Nop [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: Nop
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> NotR: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: NotR operand: reg
 ]
 
 { #category : #'abstract instructions' }
@@ -2293,10 +2455,32 @@ Cogit >> PopR: reg [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> PopRd: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^ backEnd genPopRd: reg
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> PopRs: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^ backEnd genPopRs: reg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> PrefetchAw: address [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: PrefetchAw literal: address
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> PushC64: constant64Bits [
+	<inline: true>
+	<var: #constant64Bits type: #sqLong>
+	<returnTypeC: #'AbstractInstruction *'>
+	^ backEnd genPushC64: constant64Bits
 ]
 
 { #category : #'abstract instructions' }
@@ -2321,6 +2505,20 @@ Cogit >> PushR: reg [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> PushRd: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^ backEnd genPushRd: reg
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> PushRs: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^ backEnd genPushRs: reg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> RetN: offset [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2342,10 +2540,31 @@ Cogit >> RotateRightCq: quickConstant R: reg [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> SignExtend16R: reg1 R: reg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: SignExtend16RR operand: reg1 operand: reg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> SignExtend8R: reg1 R: reg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: SignExtend8RR operand: reg1 operand: reg2
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> SqrtRd: dpreg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: SqrtRd operand: dpreg
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> SqrtRs: dpreg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: SqrtRs operand: dpreg
 ]
 
 { #category : #'abstract instructions' }
@@ -2384,6 +2603,20 @@ Cogit >> SubRd: dpreg1 Rd: dpreg2 [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> SubRs: dpreg1 Rs: dpreg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: SubRsRs operand: dpreg1 operand: dpreg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> SubbR: reg1 R: reg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: SubbRR operand: reg1 operand: reg2
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> TstCq: quickConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2402,6 +2635,34 @@ Cogit >> XorR: reg1 R: reg2 [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: XorRR operand: reg1 operand: reg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> XorRd: reg1 Rd: reg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: XorRdRd operand: reg1 operand: reg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> XorRs: reg1 Rs: reg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: XorRsRs operand: reg1 operand: reg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> ZeroExtend16R: reg1 R: reg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: ZeroExtend16RR operand: reg1 operand: reg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> ZeroExtend8R: reg1 R: reg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: ZeroExtend8RR operand: reg1 operand: reg2
 ]
 
 { #category : #'in-line cacheing' }
@@ -3390,6 +3651,21 @@ Cogit >> ceEnterCogCodePopReceiverReg [
 	self simulateEnilopmart: ceEnterCogCodePopReceiverReg numArgs: 1
 ]
 
+{ #category : #'trampoline support' }
+Cogit >> ceFree: pointer [
+	<api>
+	<var: #pointer type: #'void*'>
+	self free: pointer
+]
+
+{ #category : #'trampoline support' }
+Cogit >> ceMalloc: size [
+	<api>
+	<var: #size type: #'size_t'>
+	<returnTypeC: #'void*'>
+	^ self malloc: size
+]
+
 { #category : #accessing }
 Cogit >> ceReturnToInterpreterPC [
 	<api>
@@ -4341,7 +4617,7 @@ Cogit >> collectMapEntry: annotation address: mcpc into: aDictionary [
 			aDictionary
 				at: mcpc
 				put: extant, ':\' withCRs, (self class annotationConstantNames at: annotation + 1)]
-		ifAbsentPut: [self class annotationConstantNames at: annotation + 1].
+		ifAbsent: [ aDictionary at: mcpc put: (self class annotationConstantNames at: annotation + 1)].
 	^0
 ]
 
@@ -4517,6 +4793,35 @@ Cogit >> compileCPICEntry [
 ]
 
 { #category : #initialization }
+Cogit >> compileCallFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 floatResultReg: resultRegOrNone regsToSave: regMask [
+	"Generate a call to aRoutine with up to 4 arguments.  If resultRegOrNone is not
+	 NoReg assign the C result to resultRegOrNone.  If saveRegs, save all registers.
+	 Hack: a negative arg value indicates an abstract register, a non-negative value
+	 indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<inline: false>
+	| regsToSave |
+	regsToSave := resultRegOrNone = NoReg
+						ifTrue: [regMask]
+						ifFalse: [regMask bitClear: (self registerMaskFor: resultRegOrNone)].
+	cStackAlignment > objectMemory wordSize ifTrue:
+		[backEnd
+			genAlignCStackSavingRegisters: regsToSave
+			numArgs: numArgs
+			wordAlignment: cStackAlignment / objectMemory wordSize].
+	backEnd
+		genSaveRegs: regsToSave;
+		genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3.
+	self CallFullRT: (self cCode: [aRoutine asUnsignedInteger]
+						inSmalltalk: [self simulatedTrampolineFor: aRoutine]).
+	resultRegOrNone ~= NoReg ifTrue:
+		[backEnd cFloatResultToRd: resultRegOrNone].
+	 numArgs > 0 ifTrue:
+		[backEnd genRemoveNArgsFromStack: numArgs].
+	backEnd genRestoreRegs: regsToSave
+]
+
+{ #category : #initialization }
 Cogit >> compileCallFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 resultReg: resultRegOrNone regsToSave: regMask [
 	"Generate a call to aRoutine with up to 4 arguments.  If resultRegOrNone is not
 	 NoReg assign the C result to resultRegOrNone.  If saveRegs, save all registers.
@@ -4542,6 +4847,66 @@ Cogit >> compileCallFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrCo
 		[backEnd genWriteCResultIntoReg: resultRegOrNone].
 	 numArgs > 0 ifTrue:
 		[backEnd genRemoveNArgsFromStack: numArgs].
+	backEnd genRestoreRegs: regsToSave
+]
+
+{ #category : #initialization }
+Cogit >> compileCallFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 resultReg: resultRegOrNone resultReg: resultReg2OrNone regsToSave: regMask [
+	"Generate a call to aRoutine with up to 4 arguments.  If resultRegOrNone is not
+	 NoReg assign the C result to resultRegOrNone.  If saveRegs, save all registers.
+	 Hack: a negative arg value indicates an abstract register, a non-negative value
+	 indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<inline: false>
+	| regsToSave |
+	regsToSave := resultRegOrNone = NoReg
+						ifTrue: [regMask]
+						ifFalse: [regMask bitClear: (self registerMaskFor: resultRegOrNone)].
+	cStackAlignment > objectMemory wordSize ifTrue:
+		[backEnd
+			genAlignCStackSavingRegisters: regsToSave
+			numArgs: numArgs
+			wordAlignment: cStackAlignment / objectMemory wordSize].
+	backEnd
+		genSaveRegs: regsToSave;
+		genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3.
+	self CallFullRT: (self cCode: [aRoutine asUnsignedInteger]
+						inSmalltalk: [self simulatedTrampolineFor: aRoutine]).
+	resultRegOrNone ~= NoReg ifTrue:
+		[backEnd genWriteCResultIntoReg: resultRegOrNone].
+	resultReg2OrNone ~= NoReg ifTrue:
+		[backEnd genWriteCSecondResultIntoReg: resultReg2OrNone].
+	 numArgs > 0 ifTrue:
+		[backEnd genRemoveNArgsFromStack: numArgs].
+	backEnd genRestoreRegs: regsToSave
+]
+
+{ #category : #initialization }
+Cogit >> compileCallFor: aRoutine numArgs: numArgs floatArg: regOrConst0 floatArg: regOrConst1 floatArg: regOrConst2 floatArg: regOrConst3 resultReg: resultRegOrNone regsToSave: regMask [
+	"Generate a call to aRoutine with up to 4 arguments.  If resultRegOrNone is not
+	 NoReg assign the C result to resultRegOrNone.  If saveRegs, save all registers.
+	 Hack: a negative arg value indicates an abstract register, a non-negative value
+	 indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<inline: false>
+	| regsToSave |
+	regsToSave := resultRegOrNone = NoReg
+						ifTrue: [regMask]
+						ifFalse: [regMask bitClear: (self registerMaskFor: resultRegOrNone)].
+	cStackAlignment > objectMemory wordSize ifTrue:
+		[backEnd
+			genAlignCStackSavingRegisters: regsToSave
+			numArgs: numArgs
+			wordAlignment: cStackAlignment / objectMemory wordSize].
+	backEnd
+		genSaveRegs: regsToSave;
+		genMarshallNArgs: numArgs floatArg: regOrConst0 floatArg: regOrConst1 floatArg: regOrConst2 floatArg: regOrConst3.
+	self CallFullRT: (self cCode: [aRoutine asUnsignedInteger]
+						inSmalltalk: [self simulatedTrampolineFor: aRoutine]).
+	resultRegOrNone ~= NoReg ifTrue:
+		[backEnd genWriteCResultIntoReg: resultRegOrNone].
+	 numArgs > 0 ifTrue:
+		[backEnd genRemoveNFloatArgsFromStack: numArgs].
 	backEnd genRestoreRegs: regsToSave
 ]
 
@@ -4836,6 +5201,34 @@ Cogit >> compileSendTrace [
 ]
 
 { #category : #initialization }
+Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 regsToSave: regMask pushLinkReg: pushLinkReg floatResultReg: resultRegOrNone [
+	"Generate a trampoline with up to four arguments.  Generate either a call or a jump to aRoutine
+	 as requested by callJumpBar.  If generating a call and resultRegOrNone is not NoReg pass the C
+	 result back in resultRegOrNone.
+	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<inline: false>
+	self genSmalltalkToCStackSwitch: pushLinkReg.
+	self
+		compileCallFor: aRoutine
+		numArgs: numArgs
+		arg: regOrConst0
+		arg: regOrConst1
+		arg: regOrConst2
+		arg: regOrConst3
+		floatResultReg: resultRegOrNone
+		regsToSave: regMask.
+	backEnd genLoadStackPointers.
+	(pushLinkReg and: [backEnd hasLinkRegister])
+		ifTrue:
+			[backEnd hasPCRegister
+				ifTrue: [self PopR: PCReg]
+				ifFalse: [self PopR: LinkReg. 
+						self RetN: 0]]
+		ifFalse: [self RetN: 0]
+]
+
+{ #category : #initialization }
 Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 regsToSave: regMask pushLinkReg: pushLinkReg resultReg: resultRegOrNone [
 	"Generate a trampoline with up to four arguments.  Generate either a call or a jump to aRoutine
 	 as requested by callJumpBar.  If generating a call and resultRegOrNone is not NoReg pass the C
@@ -4851,6 +5244,63 @@ Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: r
 		arg: regOrConst1
 		arg: regOrConst2
 		arg: regOrConst3
+		resultReg: resultRegOrNone
+		regsToSave: regMask.
+	backEnd genLoadStackPointers.
+	(pushLinkReg and: [backEnd hasLinkRegister])
+		ifTrue:
+			[backEnd hasPCRegister
+				ifTrue: [self PopR: PCReg]
+				ifFalse: [self PopR: LinkReg. 
+						self RetN: 0]]
+		ifFalse: [self RetN: 0]
+]
+
+{ #category : #initialization }
+Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 regsToSave: regMask pushLinkReg: pushLinkReg resultReg: resultRegOrNone resultReg: resultReg2OrNone [
+	"Generate a trampoline with up to four arguments.  Generate either a call or a jump to aRoutine
+	 as requested by callJumpBar.  If generating a call and resultRegOrNone is not NoReg pass the C
+	 result back in resultRegOrNone.
+	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<inline: false>
+	self genSmalltalkToCStackSwitch: pushLinkReg.
+	self
+		compileCallFor: aRoutine
+		numArgs: numArgs
+		arg: regOrConst0
+		arg: regOrConst1
+		arg: regOrConst2
+		arg: regOrConst3
+		resultReg: resultRegOrNone
+		resultReg: resultReg2OrNone
+		regsToSave: regMask.
+	backEnd genLoadStackPointers.
+	(pushLinkReg and: [backEnd hasLinkRegister])
+		ifTrue:
+			[backEnd hasPCRegister
+				ifTrue: [self PopR: PCReg]
+				ifFalse: [self PopR: LinkReg. 
+						self RetN: 0]]
+		ifFalse: [self RetN: 0]
+]
+
+{ #category : #initialization }
+Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs floatArg: regOrConst0 floatArg: regOrConst1 floatArg: regOrConst2 floatArg: regOrConst3 regsToSave: regMask pushLinkReg: pushLinkReg resultReg: resultRegOrNone [
+	"Generate a trampoline with up to four arguments.  Generate either a call or a jump to aRoutine
+	 as requested by callJumpBar.  If generating a call and resultRegOrNone is not NoReg pass the C
+	 result back in resultRegOrNone.
+	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<inline: false>
+	self genSmalltalkToCStackSwitch: pushLinkReg.
+	self
+		compileCallFor: aRoutine
+		numArgs: numArgs
+		floatArg: regOrConst0
+		floatArg: regOrConst1
+		floatArg: regOrConst2
+		floatArg: regOrConst3
 		resultReg: resultRegOrNone
 		regsToSave: regMask.
 	backEnd genLoadStackPointers.
@@ -5401,9 +5851,10 @@ Cogit >> extABytecode [
 { #category : #'bytecode generators' }
 Cogit >> extBBytecode [
 	"225		11100001	sbbbbbbb	Extend B (Ext B = Ext B prev * 256 + Ext B)"
-	extB := (extB = 0 and: [byte1 > 127])
+	extB := (extB = 0 and: [extBFirstZero not and: [byte1 > 127]])
 				ifTrue: [byte1 - 256]
 				ifFalse: [(extB bitShift: 8) + byte1].
+	extBFirstZero := extB = 0.
 	^0
 ]
 
@@ -6106,6 +6557,37 @@ Cogit >> genExternalizePointersForPrimitiveCall [
 ]
 
 { #category : #initialization }
+Cogit >> genFFICalloutTrampoline [
+	<option: #LowcodeVM>
+	| startAddress |
+	opcodeIndex := 0.
+	backEnd hasLinkRegister ifTrue: [
+		self MoveR: LinkReg Aw: coInterpreter instructionPointerAddress
+	] ifFalse: [
+		self PopR: ClassReg.
+		self MoveR: ClassReg Aw: coInterpreter instructionPointerAddress
+	].
+
+	self CallR: TempReg.
+
+	backEnd hasLinkRegister ifTrue: [
+		self MoveAw: coInterpreter instructionPointerAddress R: LinkReg 
+	] ifFalse: [
+		self MoveAw: coInterpreter instructionPointerAddress R: ClassReg.
+		self PushR: ClassReg.
+	].
+
+	self RetN: 0.
+
+	startAddress := methodZoneBase.
+	self outputInstructionsForGeneratedRuntimeAt: startAddress.
+	self recordGeneratedRunTime: 'ceFFICalloutTrampoline' address: startAddress.
+	self recordRunTimeObjectReferences.
+	^ startAddress
+
+]
+
+{ #category : #initialization }
 Cogit >> genGetLeafCallStackPointer [
 	"Generate a routine that answers the stack pointer immedately
 	 after a leaf call, used for checking stack pointer alignment."
@@ -6556,6 +7038,26 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 arg: regOrC
 ]
 
 { #category : #initialization }
+Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 floatResult: resultReg [
+	"Generate a trampoline with one argument that answers a result.
+	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<var: #aString type: #'char *'>
+	^self
+		genTrampolineFor: aRoutine
+		called: aString
+		numArgs: 1
+		arg: regOrConst0
+		arg: nil
+		arg: nil
+		arg: nil
+		regsToSave: self emptyRegisterMask
+		pushLinkReg: true
+		floatResultReg: resultReg
+		appendOpcodes: false
+]
+
+{ #category : #initialization }
 Cogit >> genTrampolineFor: aRoutine  called: aString arg: regOrConst0 regsToSave: regMask [
 	"Generate a trampoline with one argument.
 	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
@@ -6616,6 +7118,75 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 result: res
 ]
 
 { #category : #initialization }
+Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 result: resultReg result: resultReg2 [
+	"Generate a trampoline with one argument that answers a result.
+	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<var: #aString type: #'char *'>
+	^self
+		genTrampolineFor: aRoutine
+		called: aString
+		numArgs: 1
+		arg: regOrConst0
+		arg: nil
+		arg: nil
+		arg: nil
+		regsToSave: self emptyRegisterMask
+		pushLinkReg: true
+		resultReg: resultReg
+		resultReg: resultReg2
+		appendOpcodes: false
+]
+
+{ #category : #initialization }
+Cogit >> genTrampolineFor: aRoutine called: aString floatArg: regOrConst0 result: resultReg [
+	"Generate a trampoline with one argument that answers a result.
+	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<var: #aString type: #'char *'>
+	^self
+		genTrampolineFor: aRoutine
+		called: aString
+		numArgs: 1
+		floatArg: regOrConst0
+		floatArg: nil
+		floatArg: nil
+		floatArg: nil
+		regsToSave: self emptyRegisterMask
+		pushLinkReg: true
+		resultReg: resultReg
+		appendOpcodes: false
+]
+
+{ #category : #initialization }
+Cogit >> genTrampolineFor: aRoutine called: trampolineName numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 regsToSave: regMask pushLinkReg: pushLinkReg floatResultReg: resultRegOrNone appendOpcodes: appendBoolean [
+	"Generate a trampoline with up to four arguments.  Generate either a call or a jump to aRoutineOrNil
+	 as requested by callJumpBar.  If generating a call and resultRegOrNone is not NoReg pass the C result
+	 back in resultRegOrNone.
+	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<var: #trampolineName type: #'char *'>
+	| startAddress |
+	<inline: false>
+	startAddress := methodZoneBase.
+	appendBoolean ifFalse:
+		[self zeroOpcodeIndex].
+	self compileTrampolineFor: aRoutine
+		numArgs: numArgs
+		arg: regOrConst0
+		arg: regOrConst1
+		arg: regOrConst2
+		arg: regOrConst3
+		regsToSave: regMask
+		pushLinkReg: pushLinkReg
+		floatResultReg: resultRegOrNone.
+	self outputInstructionsForGeneratedRuntimeAt: startAddress.
+	self recordGeneratedRunTime: trampolineName address: startAddress.
+	self recordRunTimeObjectReferences.
+	^startAddress
+]
+
+{ #category : #initialization }
 Cogit >> genTrampolineFor: aRoutine called: trampolineName numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 regsToSave: regMask pushLinkReg: pushLinkReg resultReg: resultRegOrNone appendOpcodes: appendBoolean [
 	"Generate a trampoline with up to four arguments.  Generate either a call or a jump to aRoutineOrNil
 	 as requested by callJumpBar.  If generating a call and resultRegOrNone is not NoReg pass the C result
@@ -6634,6 +7205,63 @@ Cogit >> genTrampolineFor: aRoutine called: trampolineName numArgs: numArgs arg:
 		arg: regOrConst1
 		arg: regOrConst2
 		arg: regOrConst3
+		regsToSave: regMask
+		pushLinkReg: pushLinkReg
+		resultReg: resultRegOrNone.
+	self outputInstructionsForGeneratedRuntimeAt: startAddress.
+	self recordGeneratedRunTime: trampolineName address: startAddress.
+	self recordRunTimeObjectReferences.
+	^startAddress
+]
+
+{ #category : #initialization }
+Cogit >> genTrampolineFor: aRoutine called: trampolineName numArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 regsToSave: regMask pushLinkReg: pushLinkReg resultReg: resultRegOrNone resultReg: resultReg2OrNone appendOpcodes: appendBoolean [
+	"Generate a trampoline with up to four arguments.  Generate either a call or a jump to aRoutineOrNil
+	 as requested by callJumpBar.  If generating a call and resultRegOrNone is not NoReg pass the C result
+	 back in resultRegOrNone.
+	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<var: #trampolineName type: #'char *'>
+	| startAddress |
+	<inline: false>
+	startAddress := methodZoneBase.
+	appendBoolean ifFalse:
+		[self zeroOpcodeIndex].
+	self compileTrampolineFor: aRoutine
+		numArgs: numArgs
+		arg: regOrConst0
+		arg: regOrConst1
+		arg: regOrConst2
+		arg: regOrConst3
+		regsToSave: regMask
+		pushLinkReg: pushLinkReg
+		resultReg: resultRegOrNone
+		resultReg: resultReg2OrNone.
+	self outputInstructionsForGeneratedRuntimeAt: startAddress.
+	self recordGeneratedRunTime: trampolineName address: startAddress.
+	self recordRunTimeObjectReferences.
+	^startAddress
+]
+
+{ #category : #initialization }
+Cogit >> genTrampolineFor: aRoutine called: trampolineName numArgs: numArgs floatArg: regOrConst0 floatArg: regOrConst1 floatArg: regOrConst2 floatArg: regOrConst3 regsToSave: regMask pushLinkReg: pushLinkReg resultReg: resultRegOrNone appendOpcodes: appendBoolean [
+	"Generate a trampoline with up to four arguments.  Generate either a call or a jump to aRoutineOrNil
+	 as requested by callJumpBar.  If generating a call and resultRegOrNone is not NoReg pass the C result
+	 back in resultRegOrNone.
+	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<var: #aRoutine type: #'void *'>
+	<var: #trampolineName type: #'char *'>
+	| startAddress |
+	<inline: false>
+	startAddress := methodZoneBase.
+	appendBoolean ifFalse:
+		[self zeroOpcodeIndex].
+	self compileTrampolineFor: aRoutine
+		numArgs: numArgs
+		floatArg: regOrConst0
+		floatArg: regOrConst1
+		floatArg: regOrConst2
+		floatArg: regOrConst3
 		regsToSave: regMask
 		pushLinkReg: pushLinkReg
 		resultReg: resultRegOrNone.
@@ -7069,7 +7697,17 @@ Cogit >> generateRunTimeTrampolines [
 	ceReturnToInterpreterTrampoline := self
 											genReturnTrampolineFor: #ceReturnToInterpreter:
 											called: 'ceReturnToInterpreterTrampoline'
+											arg: ReceiverResultReg.
+	ceMallocTrampoline := self genTrampolineFor: #ceMalloc:
+											called: 'ceMallocTrampoline'
 											arg: ReceiverResultReg
+											result: TempReg.
+	ceFreeTrampoline := self genTrampolineFor: #ceFree:
+											called: 'ceFreeTrampoline'
+											arg: ReceiverResultReg.
+	self cppIf: LowcodeVM ifTrue: [
+		ceFFICalloutTrampoline := self genFFICalloutTrampoline.
+	]
 ]
 
 { #category : #initialization }
@@ -10268,6 +10906,7 @@ Cogit >> scanBlock: blockStart [
 	pc := blockStart startpc.
 	end := blockStart startpc + blockStart span.
 	framelessStackDelta := nExts := extA := extB := 0.
+	extBFirstZero := false.
 	[pc < end] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		 descriptor := self generatorAt: byte0.
@@ -10330,6 +10969,7 @@ Cogit >> scanMethod [
 		[^0].
 	pc := latestContinuation := initialPC.
 	numBlocks := framelessStackDelta := nExts := extA := extB := 0.
+	extBFirstZero := false.
 	[pc <= endPC] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		 descriptor := self generatorAt: byte0.
@@ -10553,6 +11193,7 @@ Cogit >> setInterpreter: aCoInterpreter [
 	trampolineTableIndex := 0.
 
 	extA := extB := 0.
+	extBFirstZero := false.
 
 	compilationTrace ifNil: [compilationTrace := self class initializationOptions at: #compilationTrace ifAbsent: [0]].
 	debugOpcodeIndices := self class initializationOptions at: #debugOpcodeIndices ifAbsent: [Set new].

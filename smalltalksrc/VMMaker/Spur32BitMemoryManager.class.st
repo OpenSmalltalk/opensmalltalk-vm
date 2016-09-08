@@ -358,6 +358,7 @@ Spur32BitMemoryManager >> floatObjectOf: aFloat [
 	| newFloatObj |
 	<inline: false>
 	<var: #aFloat type: #double>
+	<api>
 	newFloatObj := self
 						eeInstantiateSmallClassIndex: ClassFloatCompactIndex
 						format: self firstLongFormat

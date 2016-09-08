@@ -1,6 +1,12 @@
 Class {
 	#name : #CogObjectRepresentationFor32BitSpur,
 	#superclass : #CogObjectRepresentationForSpur,
+	#instVars : [
+		'ceSigned32BitIntegerTrampoline',
+		'ceSigned32BitValueOfTrampoline',
+		'cePositive32BitValueOfTrampoline',
+		'cePositive32BitIntegerTrampoline'
+	],
 	#category : #'VMMaker-JIT'
 }
 
@@ -8,6 +14,11 @@ Class {
 CogObjectRepresentationFor32BitSpur class >> defaultObjectMemoryClass [
 	"For in-image compilation."
 	^Spur32BitCoMemoryManager
+]
+
+{ #category : #accessing }
+CogObjectRepresentationFor32BitSpur class >> numTrampolines [
+	^ super numTrampolines + 4 "lowcode"
 ]
 
 { #category : #'sista support' }
@@ -391,6 +402,46 @@ CogObjectRepresentationFor32BitSpur >> genJumpSmallIntegerInScratchReg: aRegiste
 	<returnTypeC: #'AbstractInstruction *'>
 	cogit AndCq: 1 R: aRegister.
 	^cogit JumpNonZero: 0
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationFor32BitSpur >> genLcInt32ToOop: value [
+	<option: #LowcodeVM>
+	value ~= ReceiverResultReg ifTrue: [ cogit MoveR: value R: ReceiverResultReg.].
+	cogit CallRT: ceSigned32BitIntegerTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushRegister: ReceiverResultReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationFor32BitSpur >> genLcOopToInt32: value [
+	<option: #LowcodeVM>
+	value ~= ReceiverResultReg ifTrue: [ cogit MoveR: value R: ReceiverResultReg.].
+	cogit CallRT: ceSigned32BitValueOfTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushNativeRegister: ReceiverResultReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationFor32BitSpur >> genLcOopToUInt32: value [
+	<option: #LowcodeVM>
+	value ~= ReceiverResultReg ifTrue: [ cogit MoveR: value R: ReceiverResultReg.].
+	cogit CallRT: cePositive32BitValueOfTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushNativeRegister: ReceiverResultReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationFor32BitSpur >> genLcUInt32ToOop: value [
+	<option: #LowcodeVM>
+	value ~= ReceiverResultReg ifTrue: [ cogit MoveR: value R: ReceiverResultReg.].
+	cogit CallRT: cePositive32BitIntegerTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushRegister: ReceiverResultReg.
 ]
 
 { #category : #'primitive generators' }
@@ -1689,6 +1740,27 @@ CogObjectRepresentationFor32BitSpur >> genStoreHeader: header intoNewInstance: r
 		MoveR: scratchReg Mw: 0 r: rcvrReg;
 		MoveCq: header >> 32 R: scratchReg;
 		MoveR: scratchReg Mw: 4 r: rcvrReg
+]
+
+{ #category : #initialization }
+CogObjectRepresentationFor32BitSpur >> generateLowcodeObjectTrampolines [
+	super generateLowcodeObjectTrampolines.
+	cePositive32BitIntegerTrampoline := cogit genTrampolineFor: #positive32BitIntegerFor:
+												called: 'cePositive32BitIntegerTrampoline'
+												arg: ReceiverResultReg
+												result: TempReg.
+	cePositive32BitValueOfTrampoline := cogit genTrampolineFor: #positive32BitValueOf:
+												called: 'cePositive32BitValueOfTrampoline'
+												arg: ReceiverResultReg
+												result: TempReg.
+	ceSigned32BitIntegerTrampoline := cogit genTrampolineFor: #signed32BitIntegerFor:
+												called: 'ceSigned32BitIntegerTrampoline'
+												arg: ReceiverResultReg
+												result: TempReg.
+	ceSigned32BitValueOfTrampoline := cogit genTrampolineFor: #signed32BitValueOf:
+												called: 'ceSigned32BitValueOfTrampoline'
+												arg: ReceiverResultReg
+												result: TempReg.
 ]
 
 { #category : #'compile abstract instructions' }

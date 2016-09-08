@@ -63,6 +63,8 @@ Class {
 		'KeyIndex',
 		'LastLinkIndex',
 		'LiteralStart',
+		'LowcodeContextMark',
+		'LowcodeNativeContextClass',
 		'MessageArgumentsIndex',
 		'MessageLookupClassIndex',
 		'MessageSelectorIndex',

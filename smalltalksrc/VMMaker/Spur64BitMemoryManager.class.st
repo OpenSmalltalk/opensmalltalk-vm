@@ -393,6 +393,7 @@ Spur64BitMemoryManager >> floatObjectOf: aFloat [
 	| newFloatObj |
 	<inline: false>
 	<var: #aFloat type: #double>
+	<api>
 	(self isSmallFloatValue: aFloat) ifTrue:
 		[^self smallFloatObjectOf: aFloat].
 	newFloatObj := self

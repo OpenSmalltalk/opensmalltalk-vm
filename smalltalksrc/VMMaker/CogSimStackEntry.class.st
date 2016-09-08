@@ -118,6 +118,11 @@ CogSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegister [
 ]
 
 { #category : #accessing }
+CogSimStackEntry >> floatRegisterMask [
+	^ 0
+]
+
+{ #category : #accessing }
 CogSimStackEntry >> maybeConstant [
 	"Answer the value of constant, no assert check."
 	<cmacro: '(sse) ((sse)->constant)'>

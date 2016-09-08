@@ -390,10 +390,9 @@ StackDepthFinder >> stackPointers [
 		[stackPointers at: pc put: stackp.
 		 encoderClass extensionsAt: pc in: method into:
 			[:extA :extB :delta|
-			delta > 0 ifTrue:
-				[stackPointers at: pc + delta put: stackp]].
+			2 to: delta by: 2 do: [ :dlt |
+				stackPointers at: pc + dlt put: stackp]].
 		 self interpretNextInstructionFor: self].
-	stackPointers at: end + 1 put: (stackPointers at: end).
 	^stackPointers
 ]
 

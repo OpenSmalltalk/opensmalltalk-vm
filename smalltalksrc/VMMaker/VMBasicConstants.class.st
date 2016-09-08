@@ -27,6 +27,7 @@ Class {
 		'GCModeIncremental',
 		'GCModeNewSpace',
 		'IMMUTABILITY',
+		'LowcodeVM',
 		'MULTIPLEBYTECODESETS',
 		'NewspeakVM',
 		'PharoVM',
