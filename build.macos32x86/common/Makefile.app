@@ -69,6 +69,10 @@ else
 $(error USEPLUGINASDYLIB has to be TRUE or FALSE)
 endif 
 
+ifneq ($(THIRDPARTYLIBS),) 
+THIRDPARTYPREREQS:=$(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR)
+endif
+
 OSXICONS:=$(OSXDIR)/$(VM).icns $(wildcard $(OSXDIR)/$(SYSTEM)*.icns)
 VMICONS:=$(addprefix $(APP)/Contents/Resources/,$(notdir $(OSXICONS)))
 VMMENUNIB:=$(APP)/Contents/Resources/English.lproj/MainMenu.nib
@@ -93,7 +97,7 @@ SED_COMMAND_INFO_PLIST:=\
 	s!$$(VM_MINOR)!$(shell ./getversion VM_MINOR)!g;\
 	#
 
-$(APP):	cleanbundles $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS) \
+$(APP):	cleanbundles $(THIRDPARTYPREREQS) $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS) \
 		$(VMPLIST) $(VMLOCALIZATION) $(VMMENUNIB) $(VMICONS) \
  		$(SOURCES) $(THIRDPARTYLIBS) $(APPPOST) signapp touchapp
 

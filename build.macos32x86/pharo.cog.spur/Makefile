@@ -3,14 +3,16 @@
 # Do make init to allow make -n to function.
 #
 
-VMSRCDIR:=../../.generatedsrc/vm
-PLUGINSRCDIR:=../../.generatedsrc/plugins
+VMSRCDIR:=../../pharosrc/vm
+PLUGINSRCDIR:=../../pharosrc/plugins
 VM:=Pharo
 COGDEFS:=-DPharoVM=1
 APPNAME:=Pharo
 APPNAMEDEF:=$(APPNAME)
 USEPLUGINASDYLIB:=TRUE
 THIRDPARTYLIBS:=pkgconfig freetype2 libssh2 libgit2 libsdl2 pixman libpng cairo
+
+#CFLAGS=$(CFLAGS) -DNSZombieEnabled=YES
 
 # Now include the Makefile proper, which is common to all Mac OS builds.
 #
