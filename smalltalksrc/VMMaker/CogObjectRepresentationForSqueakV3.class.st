@@ -8,7 +8,10 @@ Class {
 		'ceCreateNewArrayTrampoline',
 		'cePositive32BitIntegerTrampoline',
 		'ceActiveContextTrampoline',
-		'ceClosureCopyTrampoline'
+		'ceClosureCopyTrampoline',
+		'ceSigned32BitIntegerTrampoline',
+		'ceSigned32BitValueOfTrampoline',
+		'cePositive32BitValueOfTrampoline'
 	],
 	#classVars : [
 		'RootBitDigitLength'
@@ -34,7 +37,7 @@ CogObjectRepresentationForSqueakV3 class >> initialize [
 
 { #category : #accessing }
 CogObjectRepresentationForSqueakV3 class >> numTrampolines [
-	^super numTrampolines + 4
+	^super numTrampolines + 4 + (LowcodeVM ifTrue: [ 3 ] ifFalse: [ 0 ])
 ]
 
 { #category : #'garbage collection' }
@@ -396,6 +399,10 @@ CogObjectRepresentationForSqueakV3 >> genGetInlineCacheClassTagFrom: sourceReg i
 	^entryLabel
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genGetNumSlotsOf: srcRegister into: destRegister [
+]
+
 { #category : #'primitive generators' }
 CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg formatReg: formatReg scratchReg: scratchReg abortJumpsInto: aBinaryBlock [
 	"Get the size of the non-immediate object in sourceReg into destReg using formatReg
@@ -549,6 +556,264 @@ CogObjectRepresentationForSqueakV3 >> genJumpSmallIntegerInScratchReg: aRegister
 	<returnTypeC: #'AbstractInstruction *'>
 	cogit AndCq: 1 R: aRegister.
 	^cogit JumpNonZero: 0
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcFirstFieldPointer: objectReg [
+	<option: #LowcodeVM>
+	cogit AddCq: 4 R: objectReg.
+	cogit ssPushNativeRegister: objectReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcFirstIndexableFieldPointer: objectReg [
+	<option: #LowcodeVM>
+	"TODO: Fixme for fixed fields"
+	cogit AddCq: 4 R: objectReg.
+	cogit ssPushNativeRegister: objectReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcInt32ToOop: value [
+	<option: #LowcodeVM>
+	value ~= ReceiverResultReg ifTrue: [ cogit MoveR: value R: ReceiverResultReg.].
+	cogit CallRT: ceSigned32BitIntegerTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushRegister: ReceiverResultReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcIsBytes: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	| isInteger isNotBytes falseTarget cont |
+	
+	"Check for integer"
+	cogit MoveR: objectReg R: TempReg.
+	cogit AndCq: 1 R: TempReg.
+	isInteger := cogit JumpNonZero: 0.
+
+	"Get the class format"
+	self genGetClassFormatOfNonInt: objectReg into: valueReg scratchReg: TempReg.
+
+	"Hack: consider a compiled method as bytes too."
+	cogit CmpCq: 8 R: valueReg.
+	isNotBytes := cogit JumpLess: 0.
+
+	"True result"
+	cogit MoveCq: 1 R: valueReg.
+	cont := cogit Jump: 0.
+
+	"False result"
+	falseTarget := cogit Label.
+	isInteger jmpTarget: falseTarget.
+	isNotBytes jmpTarget: falseTarget.
+	cogit MoveCq: 0 R: valueReg.
+
+	"Return"
+	cont jmpTarget: cogit Label.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcIsFloatObject: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	"TODO: Implement this one"
+	cogit MoveCq: 1 R: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcIsIndexable: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	| isInteger isNotIndexable falseTarget cont |
+	
+	"Check for integer"
+	cogit MoveR: objectReg R: TempReg.
+	cogit AndCq: 1 R: TempReg.
+	isInteger := cogit JumpNonZero: 0.
+
+	"Get the class format"
+	self genGetClassFormatOfNonInt: objectReg into: valueReg scratchReg: TempReg.
+
+	"Hack: consider a compiled method as bytes too."
+	cogit CmpCq: 2 R: valueReg.
+	isNotIndexable := cogit JumpLess: 0.
+
+	"True result"
+	cogit MoveCq: 1 R: valueReg.
+	cont := cogit Jump: 0.
+
+	"False result"
+	falseTarget := cogit Label.
+	isInteger jmpTarget: falseTarget.
+	isNotIndexable jmpTarget: falseTarget.
+	cogit MoveCq: 0 R: valueReg.
+
+	"Return"
+	cont jmpTarget: cogit Label.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcIsIntegerObject: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	"TODO: Support larger integers"
+	cogit AndCq: 1 R: objectReg.
+	cogit ssPushNativeRegister: objectReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcIsPointers: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	| isInteger isNotIndexable falseTarget cont |
+	
+	"Check for integer"
+	cogit MoveR: objectReg R: TempReg.
+	cogit AndCq: 1 R: TempReg.
+	isInteger := cogit JumpNonZero: 0.
+
+	"Get the class format"
+	self genGetClassFormatOfNonInt: objectReg into: valueReg scratchReg: TempReg.
+
+	"Hack: consider a compiled method as bytes too."
+	cogit CmpCq: 3 R: valueReg.
+	isNotIndexable := cogit JumpGreater: 0.
+
+	"True result"
+	cogit MoveCq: 1 R: valueReg.
+	cont := cogit Jump: 0.
+
+	"False result"
+	falseTarget := cogit Label.
+	isInteger jmpTarget: falseTarget.
+	isNotIndexable jmpTarget: falseTarget.
+	cogit MoveCq: 0 R: valueReg.
+
+	"Return"
+	cont jmpTarget: cogit Label.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcIsWords: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	| isInteger isNotWords falseTarget cont |
+	
+	"Check for integer"
+	cogit MoveR: objectReg R: TempReg.
+	cogit AndCq: 1 R: TempReg.
+	isInteger := cogit JumpNonZero: 0.
+
+	"Get the class format"
+	self genGetClassFormatOfNonInt: objectReg into: valueReg scratchReg: TempReg.
+
+	"Check for the words format"
+	cogit CmpCq: 6 R: valueReg.
+	isNotWords := cogit JumpNonZero: 0.
+
+	"True result"
+	cogit MoveCq: 1 R: valueReg.
+	cont := cogit Jump: 0.
+
+	"False result"
+	falseTarget := cogit Label.
+	isInteger jmpTarget: falseTarget.
+	isNotWords jmpTarget: falseTarget.
+	cogit MoveCq: 0 R: valueReg.
+
+	"Return"
+	cont jmpTarget: cogit Label.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcIsWordsOrBytes: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	| isInteger isNotBytes falseTarget cont |
+	
+	"Check for integer"
+	cogit MoveR: objectReg R: TempReg.
+	cogit AndCq: 1 R: TempReg.
+	isInteger := cogit JumpNonZero: 0.
+
+	"Get the class format"
+	self genGetClassFormatOfNonInt: objectReg into: valueReg scratchReg: TempReg.
+
+	"Hack: consider a compiled method as bytes too."
+	cogit CmpCq: 6 R: valueReg.
+	isNotBytes := cogit JumpLess: 0.
+
+	"True result"
+	cogit MoveCq: 1 R: valueReg.
+	cont := cogit Jump: 0.
+
+	"False result"
+	falseTarget := cogit Label.
+	isInteger jmpTarget: falseTarget.
+	isNotBytes jmpTarget: falseTarget.
+	cogit MoveCq: 0 R: valueReg.
+
+	"Return"
+	cont jmpTarget: cogit Label.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcLoadObject: object at: fieldIndex [
+	<option: #LowcodeVM>
+	cogit AddCq: 1 R: fieldIndex.
+	cogit MoveXwr: fieldIndex R: object R: object.
+	cogit ssPushRegister: object
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcLoadObject: object field: fieldIndex [
+	<option: #LowcodeVM>
+	cogit MoveMw: (fieldIndex+ 1) * BytesPerWord r: object R: object.
+	cogit ssPushRegister: object
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcOopToInt32: value [
+	<option: #LowcodeVM>
+	value ~= ReceiverResultReg ifTrue: [ cogit MoveR: value R: ReceiverResultReg.].
+	cogit CallRT: ceSigned32BitValueOfTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushNativeRegister: ReceiverResultReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcOopToUInt32: value [
+	<option: #LowcodeVM>
+	value ~= ReceiverResultReg ifTrue: [ cogit MoveR: value R: ReceiverResultReg.].
+	cogit CallRT: cePositive32BitValueOfTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushNativeRegister: ReceiverResultReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcStore: value object: object at: fieldIndex [
+	<option: #LowcodeVM>
+	cogit AddCq: 1 R: fieldIndex.
+	cogit MoveR: value Xwr: fieldIndex R: object
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcStore: value object: object field: fieldIndex [
+	<option: #LowcodeVM>
+	cogit MoveR: value Mw: (fieldIndex+ 1) * BytesPerWord r: object
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcUInt32ToOop: value [
+	<option: #LowcodeVM>
+	value ~= ReceiverResultReg ifTrue: [ cogit MoveR: value R: ReceiverResultReg.].
+	cogit CallRT: cePositive32BitIntegerTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushRegister: ReceiverResultReg.
 ]
 
 { #category : #'bytecode generator support' }
@@ -852,7 +1117,24 @@ CogObjectRepresentationForSqueakV3 >> generateObjectRepresentationTrampolines [
 										called: 'ceClosureCopyTrampoline'
 										arg: SendNumArgsReg
 										regsToSave: (CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
-										result: ReceiverResultReg
+										result: ReceiverResultReg.
+										
+	self cppIf: LowcodeVM ifTrue: [
+		cePositive32BitValueOfTrampoline := cogit genTrampolineFor: #positive32BitValueOf:
+													called: 'cePositive32BitValueOfTrampoline'
+													arg: ReceiverResultReg
+													result: TempReg.
+		ceSigned32BitIntegerTrampoline := cogit genTrampolineFor: #signed32BitIntegerFor:
+													called: 'ceSigned32BitIntegerTrampoline'
+													arg: ReceiverResultReg
+													result: TempReg.
+		ceSigned32BitValueOfTrampoline := cogit genTrampolineFor: #signed32BitValueOf:
+													called: 'ceSigned32BitValueOfTrampoline'
+													arg: ReceiverResultReg
+													result: TempReg.
+
+		self generateLowcodeObjectTrampolines
+	]
 ]
 
 { #category : #'garbage collection' }

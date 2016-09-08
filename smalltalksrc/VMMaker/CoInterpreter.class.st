@@ -2687,8 +2687,18 @@ CoInterpreter >> commenceCogCompiledCodeCompaction [
 CoInterpreter >> commonCallerReturn [
 	"Return to the previous context/frame (sender for method activations, caller for block activations)."
 	<sharedCodeNamed: 'commonCallerReturn' inCase: #returnTopFromBlock>
-	| callersFPOrNull |
+	| callersFPOrNull doWeHaveANativeFrame |
 	<var: #callersFPOrNull type: #'char *'>
+
+	"TODO: Store/restore the nativeSP more properly, when it exists"
+	self cppIf: LowcodeVM ifTrue: [ 
+		doWeHaveANativeFrame := self frameHasNativeFrame: localFP.
+		doWeHaveANativeFrame ifTrue: [
+			nativeStackPointer := (self nativePreviousStackPointerIn: localFP) - 1.
+			nativeSP := 0.
+			self setFrameHasNotNativeFrame: localFP.
+		].
+	].
 
 	callersFPOrNull := self frameCallerFP: localFP.
 	callersFPOrNull == 0 "baseFrame" ifTrue:
@@ -2885,6 +2895,12 @@ CoInterpreter >> createClosureNumArgs: numArgs numCopied: numCopied startpc: ini
 				withValue: (stackPages longAt: stackPointer + ((numCopied - i) * objectMemory wordSize))]].
 	"Assume caller will pop stack"
 	^newClosure
+]
+
+{ #category : #'stack pages' }
+CoInterpreter >> defaultNativeStackFrameSize [
+	<api>
+	^ super defaultNativeStackFrameSize
 ]
 
 { #category : #'process primitive support' }
@@ -4390,7 +4406,8 @@ CoInterpreter >> internalizeIPandSP [
 	self assert: instructionPointer ~= cogit ceReturnToInterpreterPC.
 	localIP := self pointerForOop: instructionPointer.
 	localSP := self pointerForOop: stackPointer.
-	localFP := self pointerForOop: framePointer
+	localFP := self pointerForOop: framePointer.
+	self cppIf: LowcodeVM ifTrue: [ nativeSP := 0. ]
 ]
 
 { #category : #'trampoline support' }
@@ -5761,6 +5778,96 @@ CoInterpreter >> mustMapMachineCodePC: theIP context: aOnceMarriedContext [
 	^objectMemory integerObjectOf: bcpc + 1
 ]
 
+{ #category : #'internal interpreter access' }
+CoInterpreter >> nativeFramePointerIn: theFP [
+	"See StackInterpreter class>>initializeFrameIndices"
+	<option: #LowcodeVM>
+	<returnTypeC: #'char*'>
+	<var: #theFP type: #'char *'>
+	^(self isMachineCodeFrame: theFP)
+		ifTrue:
+			[stackPages pointerAtPointer: theFP + FoxMFReceiver - (BytesPerWord*3) ]
+		ifFalse:
+			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*3) ]
+]
+
+{ #category : #'internal interpreter access' }
+CoInterpreter >> nativeFramePointerIn: theFP put: valueOopPointer [
+	"See StackInterpreter class>>initializeFrameIndices"
+	<option: #LowcodeVM>
+	<returnTypeC: #'char*'>
+	<var: #theFP type: #'char *'>
+	<var: #valueOopPointer type: #'char*'>
+	^(self isMachineCodeFrame: theFP)
+		ifTrue:
+			[stackPages pointerAtPointer: theFP + FoxMFReceiver - (BytesPerWord*3) put: valueOopPointer]
+		ifFalse:
+			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*3) put: valueOopPointer]
+]
+
+{ #category : #'internal interpreter access' }
+CoInterpreter >> nativePreviousStackPointerIn: theFP [
+	"See StackInterpreter class>>initializeFrameIndices"
+	<option: #LowcodeVM>
+	<returnTypeC: #'char*'>
+	<var: #theFP type: #'char *'>
+	^(self isMachineCodeFrame: theFP)
+		ifTrue:
+			[stackPages pointerAtPointer: theFP + FoxMFReceiver - (BytesPerWord*2)]
+		ifFalse:
+			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*2)]
+]
+
+{ #category : #'internal interpreter access' }
+CoInterpreter >> nativePreviousStackPointerIn: theFP put: valueOopPointer [
+	"See StackInterpreter class>>initializeFrameIndices"
+	<option: #LowcodeVM>
+	<returnTypeC: #'char*'>
+	<var: #theFP type: #'char *'>
+	<var: #valueOopPointer type: #'char *'>
+	^(self isMachineCodeFrame: theFP)
+		ifTrue:
+			[stackPages pointerAtPointer: theFP + FoxMFReceiver - (BytesPerWord*2) put: valueOopPointer]
+		ifFalse:
+			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*2) put: valueOopPointer]
+]
+
+{ #category : #'trampoline support' }
+CoInterpreter >> nativeStackPointerAddress [
+	<option: #LowcodeVM>
+	<api>
+	<returnTypeC: #usqInt>
+	^self cCode: [(self addressOf: nativeStackPointer) asUnsignedInteger]
+		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #nativeStackPointer in: self]
+]
+
+{ #category : #'internal interpreter access' }
+CoInterpreter >> nativeStackPointerIn: theFP [
+	"See StackInterpreter class>>initializeFrameIndices"
+	<option: #LowcodeVM>
+	<returnTypeC: #'char*'>
+	<var: #theFP type: #'char *'>
+	^(self isMachineCodeFrame: theFP)
+		ifTrue:
+			[stackPages pointerAtPointer: theFP + FoxMFReceiver - (BytesPerWord*4)]
+		ifFalse:
+			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*4)]
+]
+
+{ #category : #'internal interpreter access' }
+CoInterpreter >> nativeStackPointerIn: theFP put: valueOopPointer [
+	"See StackInterpreter class>>initializeFrameIndices"
+	<option: #LowcodeVM>
+	<returnTypeC: #'char*'>
+	<var: #theFP type: #'char *'>
+	<var: #valueOopPointer type: #'char *'>
+	^(self isMachineCodeFrame: theFP)
+		ifTrue:
+			[stackPages pointerAtPointer: theFP + FoxMFReceiver - (BytesPerWord*4) put: valueOopPointer]
+		ifFalse:
+			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*4) put: valueOopPointer]
+]
+
 { #category : #'cog jit support' }
 CoInterpreter >> newMethod [
 	<doNotGenerate>
@@ -5860,6 +5967,24 @@ CoInterpreter >> noAssertHeaderOf: methodPointer [
 CoInterpreter >> positive32BitIntegerFor: integerValue [
 	<api>
 	^super positive32BitIntegerFor: integerValue
+]
+
+{ #category : #trampolines }
+CoInterpreter >> positive32BitValueOf: oop [
+	<api>
+	^super positive32BitValueOf: oop
+]
+
+{ #category : #trampolines }
+CoInterpreter >> positive64BitIntegerFor: integerValue [
+	<api>
+	^super positive64BitIntegerFor: integerValue
+]
+
+{ #category : #trampolines }
+CoInterpreter >> positive64BitValueOf: oop [
+	<api>
+	^super positive64BitValueOf: oop
 ]
 
 { #category : #'object memory support' }
@@ -7037,6 +7162,42 @@ CoInterpreter >> setUpForUseByFacade: aCurrentImageCoInterpreterFacade [
 	numStackPages := 0
 ]
 
+{ #category : #'trampoline support' }
+CoInterpreter >> shadowCallStackAddress [
+	<option: #LowcodeVM>
+	<api>
+	<returnTypeC: #usqInt>
+	^self cCode: [(self addressOf: shadowCallStackPointer) asUnsignedInteger]
+		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #shadowCallStackPointer in: self]
+]
+
+{ #category : #'internal interpreter access' }
+CoInterpreter >> shadowCallStackPointerIn: theFP [
+	"See StackInterpreter class>>initializeFrameIndices"
+	<option: #LowcodeVM>
+	<returnTypeC: #'char*'>
+	<var: #theFP type: #'char *'>
+	^(self isMachineCodeFrame: theFP)
+		ifTrue:
+			[stackPages pointerAtPointer: theFP + FoxMFReceiver - (BytesPerWord*5)]
+		ifFalse:
+			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*5)]
+]
+
+{ #category : #'internal interpreter access' }
+CoInterpreter >> shadowCallStackPointerIn: theFP put: valueOopPointer [
+	"See StackInterpreter class>>initializeFrameIndices"
+	<option: #LowcodeVM>
+	<returnTypeC: #'char*'>
+	<var: #theFP type: #'char *'>
+	<var: #valueOopPointer type: #'char *'>
+	^(self isMachineCodeFrame: theFP)
+		ifTrue:
+			[stackPages pointerAtPointer: theFP + FoxMFReceiver - (BytesPerWord*5) put: valueOopPointer]
+		ifFalse:
+			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*5) put: valueOopPointer]
+]
+
 { #category : #'debug printing' }
 CoInterpreter >> shortPrintFrame: theFP [
 	<inline: false>
@@ -7069,6 +7230,30 @@ CoInterpreter >> siglong: aJumpBuf jmp: returnValue [
 		[self assert: (self isOnRumpCStack: cogit processor sp).
 		 self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true line: nil].
 	aJumpBuf returnValue: returnValue; signal
+]
+
+{ #category : #trampolines }
+CoInterpreter >> signed32BitIntegerFor: integerValue [
+	<api>
+	^super signed32BitIntegerFor: integerValue
+]
+
+{ #category : #trampolines }
+CoInterpreter >> signed32BitValueOf: oop [
+	<api>
+	^super signed32BitValueOf: oop
+]
+
+{ #category : #trampolines }
+CoInterpreter >> signed64BitIntegerFor: integerValue [
+	<api>
+	^super signed64BitIntegerFor: integerValue
+]
+
+{ #category : #trampolines }
+CoInterpreter >> signed64BitValueOf: oop [
+	<api>
+	^super signed64BitValueOf: oop
 ]
 
 { #category : #'cog jit support' }

@@ -11,7 +11,9 @@ Class {
 	#name : #CogSSBytecodeFixup,
 	#superclass : #CogBytecodeFixup,
 	#instVars : [
-		'simStackPtr'
+		'simStackPtr',
+		'simNativeStackPtr',
+		'simNativeStackSize'
 	],
 	#classVars : [
 		'NeedsMergeFixupFlag',
@@ -124,12 +126,48 @@ CogSSBytecodeFixup >> reinitialize [
 	<inline: true>
 	targetInstruction := 0.
 	simStackPtr := 0.
+	self cppIf: LowcodeVM ifTrue: [
+		simNativeStackPtr := 0.
+	]
 ]
 
 { #category : #accessing }
 CogSSBytecodeFixup >> setIsBackwardBranchFixup [
 	<inline: true>
-	simStackPtr := UnknownSimStackPtrFlag
+	simStackPtr := UnknownSimStackPtrFlag.
+	self cppIf: LowcodeVM ifTrue: [ 
+		simNativeStackPtr := UnknownSimStackPtrFlag.
+		simNativeStackSize := 0.
+	]
+
+]
+
+{ #category : #accessing }
+CogSSBytecodeFixup >> simNativeStackPtr [
+	"Answer the value of simStackPtr"
+
+	^ simNativeStackPtr
+]
+
+{ #category : #accessing }
+CogSSBytecodeFixup >> simNativeStackPtr: anObject [
+	"Set the value of simStackPtr"
+
+	^simNativeStackPtr := anObject
+]
+
+{ #category : #accessing }
+CogSSBytecodeFixup >> simNativeStackSize [
+	"Answer the value of simStackPtr"
+
+	^ simNativeStackSize
+]
+
+{ #category : #accessing }
+CogSSBytecodeFixup >> simNativeStackSize: anObject [
+	"Set the value of simStackPtr"
+
+	^simNativeStackSize := anObject
 ]
 
 { #category : #accessing }
