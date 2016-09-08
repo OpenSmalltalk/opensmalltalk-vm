@@ -5,3 +5,4 @@ EXTERNAL_PLUGINS = \
 UUIDPlugin \
 Win32OSProcessPlugin
 #SqueakFFIPrims \
+
