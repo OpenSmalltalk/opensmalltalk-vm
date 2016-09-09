@@ -158,6 +158,20 @@ tryLoadingVariations(NSString *dirNameString, char *moduleName)
 	return NULL;
 }
 
+#ifdef PharoVM
+static void *tryLoadingLinked(char *libName)
+{
+    void *handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
+    DPRINTF((stderr, __FILE__ " %d tryLoadingLinked dlopen(%s) = %p\n", __LINE__, libName, handle));
+# if DEBUG
+    if(handle != 0)
+        printf("%s: loaded plugin `%s'\n", exeName, libName);
+# endif
+    return handle;
+}
+#else
+# define tryLoadingLinked(libName) 0
+#endif
 
 /*  Find and load the named module.  Answer 0 if not found (do NOT fail
  *  the primitive!).
@@ -192,13 +206,15 @@ ioLoadModuleRaw(char *pluginName)
 	NSString *vmDirPath = [[NSBundle mainBundle] resourcePath];
 
 	if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakPluginsBuiltInOrLocalOnly) {
-	  if ((   handle= tryLoadingVariations( pluginDirPath,	pluginName))
+	  if ((   handle= tryLoadingLinked(                     pluginName))
+          || (handle= tryLoadingVariations( pluginDirPath,	pluginName))
 		  || (handle= tryLoadingBundle( vmDirPath,			pluginName))
 		  )
 		return handle;
 	}
     else {
-	  if ((   handle= tryLoadingVariations( pluginDirPath,	pluginName))
+	  if ((   handle= tryLoadingLinked(                     pluginName))
+          || (handle= tryLoadingVariations( pluginDirPath,	pluginName))
 		  || (handle= tryLoadingVariations( @"./",			pluginName))
 		  || (handle= tryLoadingBundle( vmDirPath,			pluginName))
 		  || (handle= tryLoadingVariations( @"",			pluginName))

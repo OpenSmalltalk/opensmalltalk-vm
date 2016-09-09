@@ -287,10 +287,10 @@ static void *tryLoadingPath(char *varName, char *pluginName)
 }
 
 #ifdef PharoVM
-static void *tryLoadingLinked(char *pluginName)
+static void *tryLoadingLinked(char *libName)
 {
-  void *handle= dlopen(pluginName, RTLD_NOW | RTLD_GLOBAL);
-  DPRINTF((stderr, __FILE__ " %d tryLoadingLinked dlopen(%s) = %p\n", __LINE__, pluginName, handle));
+  void *handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
+  DPRINTF((stderr, __FILE__ " %d tryLoadingLinked dlopen(%s) = %p\n", __LINE__, libName, handle));
 # if DEBUG
   if(handle != 0) 
 	printf("%s: loaded plugin `%s'\n", exeName, libName);
@@ -298,7 +298,7 @@ static void *tryLoadingLinked(char *pluginName)
   return handle;
 }
 #else
-# define tryLoadingLinked(pluginName) 0
+# define tryLoadingLinked(libName) 0
 #endif
 
 
