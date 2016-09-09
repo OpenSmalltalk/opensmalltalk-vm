@@ -44,7 +44,7 @@ endif
 default:	$(APP)
 
 include ../common/Makefile.vm
-include ../common/Makefile.extra
+include ../common/Makefile.lib.extra
 include ../common/Makefile.sources
 
 cleanall: cleanapp cleanastapp cleandbgapp cleanallvm
