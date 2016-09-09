@@ -21,6 +21,7 @@ $(FREETYPE2LIB): pkgconfig libpng $(FREETYPE2DIR)/configure
 	cd $(FREETYPE2DIR) \
 		&& ./configure \
 			--prefix='$(THIRDPARTYOUTDIR)' \
+			--without-png \
 			PKG_CONFIG='$(PKG_CONFIG)' \
 			PKG_CONFIG_PATH='$(PKG_CONFIG_PATH)' \
 			CFLAGS='-arch i386' \
