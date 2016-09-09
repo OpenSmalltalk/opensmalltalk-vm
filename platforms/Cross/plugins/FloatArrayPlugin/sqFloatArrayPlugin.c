@@ -1,3 +1,5 @@
+#include <FloatArrayPlugin.h>
+
 void quicksort(float* array, int from, int to) {
     int stack[to - from + 1];
     int top = -1;
