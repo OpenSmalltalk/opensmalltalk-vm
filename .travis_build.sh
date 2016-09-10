@@ -89,7 +89,7 @@ case "$PLATFORM" in
     travis_fold end build_vm
 
     output_file="${output_file}.tar.gz"
-    tar czf "${output_file}" ./Cocoa*.app
+    tar czf "${output_file}" ./*.app
     popd
     ;;
   "Windows")
