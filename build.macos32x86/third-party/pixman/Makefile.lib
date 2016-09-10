@@ -17,9 +17,14 @@ $(PIXMANDIR)/configure:
 	curl -L $(PIXMANURL) | tar x -C $(THIRDPARTYDIR)
 	touch $(PIXMANDIR)/configure
 
-$(PIXMANLIB): $(PIXMANDIR)/configure
+$(PIXMANLIB): pkgconfig $(PIXMANDIR)/configure
 	cd $(PIXMANDIR) \
-		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch i386' LDFLAGS='-arch i386' \
+		&& ./configure \
+			--prefix='$(THIRDPARTYOUTDIR)' \
+			PKG_CONFIG="$(PKG_CONFIG)" \
+			PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" \
+			CFLAGS='-arch i386' \
+			LDFLAGS='-arch i386' \
 		&& make \
 		&& make install
 	cp -f $(THIRDPARTYLIBDIR)/$(PIXMANLIBNAME) $(THIRDPARTYINSTALLDIR)
