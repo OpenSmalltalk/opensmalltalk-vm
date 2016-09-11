@@ -13,9 +13,10 @@ SqueakSSL \
 SurfacePlugin \
 UUIDPlugin \
 SerialPlugin \
-SDL2DisplayPlugin \
 ObjectiveCPlugin \
-# No quicktime, no MIDI
+SDL2DisplayPlugin \
+EventsHandlerPlugin \
+# Not working in 64bits (weird)
 # MIDIPlugin \
 # could work, but I don't know if relevant:
 # TestOSAPlugin \
