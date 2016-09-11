@@ -1,6 +1,6 @@
-include ../common/Makefile.extra
+include ../common/Makefile.lib.extra
 
-$(info LIBRARY: pixman)
+$(info LIBRARY: libpng)
 
 # plugin definitions
 LIBPNGURL:=ftp://ftp.simplesystems.org/pub/libpng/png/src/history/libpng12/libpng-1.2.49.tar.gz
@@ -13,11 +13,11 @@ INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
 EXTRALIBS:=$(EXTRALIBS) $(LIBPNGLIB)
 PLUGINREQS:=$(THIRDPARTYLIBS)
 
-$(LIBPNGDIR)/configure: $(THIRDPARTYDIR)
+$(LIBPNGDIR)/configure:
 	curl -L $(LIBPNGURL) | tar x -C $(THIRDPARTYDIR)
 	touch $(LIBPNGDIR)/configure
 
-$(LIBPNGLIB): $(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR) $(LIBPNGDIR)/configure
+$(LIBPNGLIB): $(LIBPNGDIR)/configure
 	cd $(LIBPNGDIR) \
 		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch x86_64' LDFLAGS='-arch x86_64' \
 		&& make \

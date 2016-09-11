@@ -1,4 +1,4 @@
-include ../common/Makefile.extra
+include ../common/Makefile.lib.extra
 
 $(info LIBRARY: cairo)
 
@@ -13,16 +13,16 @@ INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
 EXTRALIBS:=$(EXTRALIBS) $(CAIROLIB)
 PLUGINREQS:=$(THIRDPARTYLIBS)
 
-$(CAIRODIR)/configure: $(THIRDPARTYDIR)
+$(CAIRODIR)/configure:
 	curl -L $(CAIROURL) | tar x -C $(THIRDPARTYDIR)
 	touch $(CAIRODIR)/configure
 
-$(CAIROLIB): $(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR) $(CAIRODIR)/configure pkgconfig
+$(CAIROLIB): pkgconfig libpng freetype2 pixman $(CAIRODIR)/configure
 	cd $(CAIRODIR) \
 		&& ./configure \
-			--prefix='$(THIRDPARTYOUTDIR)' \
-			PKG_CONFIG='$(PKG_CONFIG)' \
-			PKG_CONFIG_PATH='$(PKG_CONFIG_PATH)' \
+			--prefix="$(THIRDPARTYOUTDIR)" \
+			PKG_CONFIG="$(PKG_CONFIG)" \
+			PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" \
 			CFLAGS='-arch x86_64' \
 			LDFLAGS='-arch x86_64' \
 			--disable-silent-rules \

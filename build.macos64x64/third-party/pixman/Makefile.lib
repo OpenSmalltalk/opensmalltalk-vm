@@ -1,4 +1,4 @@
-include ../common/Makefile.extra
+include ../common/Makefile.lib.extra
 
 $(info LIBRARY: pixman)
 
@@ -13,13 +13,18 @@ INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
 EXTRALIBS:=$(EXTRALIBS) $(PIXMANLIB)
 PLUGINREQS:=$(THIRDPARTYLIBS)
 
-$(PIXMANDIR)/configure: $(THIRDPARTYDIR)
+$(PIXMANDIR)/configure:
 	curl -L $(PIXMANURL) | tar x -C $(THIRDPARTYDIR)
 	touch $(PIXMANDIR)/configure
 
-$(PIXMANLIB): $(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR) $(PIXMANDIR)/configure
+$(PIXMANLIB): pkgconfig $(PIXMANDIR)/configure
 	cd $(PIXMANDIR) \
-		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch x86_64' LDFLAGS='-arch x86_64' \
+		&& ./configure \
+			--prefix='$(THIRDPARTYOUTDIR)' \
+			PKG_CONFIG="$(PKG_CONFIG)" \
+			PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" \
+			CFLAGS='-arch x86_64' \
+			LDFLAGS='-arch x86_64' \
 		&& make \
 		&& make install
 	cp -f $(THIRDPARTYLIBDIR)/$(PIXMANLIBNAME) $(THIRDPARTYINSTALLDIR)

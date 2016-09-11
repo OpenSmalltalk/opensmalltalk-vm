@@ -1,4 +1,4 @@
-include ../common/Makefile.extra
+include ../common/Makefile.lib.extra
 
 $(info LIBRARY: pkgconfig)
 
@@ -6,24 +6,26 @@ $(info LIBRARY: pkgconfig)
 PKGCONFIGURL:=http://pkgconfig.freedesktop.org/releases/pkg-config-0.23.tar.gz
 PKGCONFIGDIR:=$(THIRDPARTYDIR)/pkg-config-0.23
 PKGCONFIGBIN:=$(THIRDPARTYOUTDIR)/bin/pkg-config
-PKGCONFIGLIB:=$(THIRDPARTYLIBDIR)/pkgconfig
+PKGCONFIGLIB:=$(THIRDPARTYOUTDIR)/lib/pkgconfig
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
-EXTRALIBS:=$(EXTRALIBS) $(PKGCONFIGLIB)
 PLUGINREQS:=$(THIRDPARTYLIBS)
 	
 # export this values if pkg_config is included
 PKG_CONFIG:=$(PKGCONFIGBIN)
 PKG_CONFIG_PATH:=$(PKGCONFIGLIB)
 
-$(PKGCONFIGDIR)/configure: $(THIRwDPARTYDIR)
+$(PKGCONFIGDIR)/configure:
 	curl -L $(PKGCONFIGURL) | tar x -C $(THIRDPARTYDIR)
 	touch $(PKGCONFIGDIR)/configure
 
-$(PKGCONFIGBIN): $(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR) $(PKGCONFIGDIR)/configure
+$(PKGCONFIGBIN): $(PKGCONFIGDIR)/configure
 	cd $(PKGCONFIGDIR) \
-		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS=' -std=gnu89 -arch x86_64' LDFLAGS='-arch x86_64' \
+		&& ./configure \
+			--prefix='$(THIRDPARTYOUTDIR)' \
+			CFLAGS='-std=gnu89 -arch x86_64' \
+			LDFLAGS='-arch x86_64' \
 		&& make \
 		&& make install
 	

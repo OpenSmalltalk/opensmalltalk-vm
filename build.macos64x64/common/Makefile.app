@@ -44,7 +44,7 @@ endif
 default:	$(APP)
 
 include ../common/Makefile.vm
-include ../common/Makefile.extra
+include ../common/Makefile.lib.extra
 include ../common/Makefile.sources
 
 cleanall: cleanapp cleanastapp cleandbgapp cleanallvm
@@ -68,6 +68,10 @@ VMPLUGINDYLIBS:=$(addprefix $(APP)/Contents/MacOS/Plugins/lib, $(addsuffix .dyli
 else 
 $(error USEPLUGINASDYLIB has to be TRUE or FALSE)
 endif 
+
+ifneq ($(THIRDPARTYLIBS),) 
+THIRDPARTYPREREQS:=$(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR)
+endif
 
 OSXICONS:=$(OSXDIR)/$(VM).icns $(wildcard $(OSXDIR)/$(SYSTEM)*.icns)
 VMICONS:=$(addprefix $(APP)/Contents/Resources/,$(notdir $(OSXICONS)))
@@ -94,7 +98,7 @@ SED_COMMAND_INFO_PLIST:=\
 	#
 
 
-$(APP):	cleanbundles $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS) \
+$(APP):	cleanbundles $(THIRDPARTYPREREQS) $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS) \
 		$(VMPLIST) $(VMLOCALIZATION) $(VMMENUNIB) $(VMICONS) \
  		$(SOURCES) $(THIRDPARTYLIBS) $(APPPOST) signapp touchapp
 

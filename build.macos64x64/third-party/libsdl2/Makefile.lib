@@ -1,4 +1,4 @@
-include ../common/Makefile.extra
+include ../common/Makefile.lib.extra
 
 $(info LIBRARY: libsdl2)
 
@@ -13,11 +13,11 @@ INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
 EXTRALIBS:=$(EXTRALIBS) -undefined dynamic_lookup $(LIBSDL2LIB)
 PLUGINREQS:=$(PLUGINREQS) $(THIRDPARTYLIBS)
 
-$(LIBSDL2DIR)/configure: $(THIRDPARTYDIR)
+$(LIBSDL2DIR)/configure:
 	curl $(LIBSDL2URL) | tar x -C $(THIRDPARTYDIR)
 	touch $(LIBSDL2DIR)/configure
 
-$(LIBSDL2LIB): $(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR) $(LIBSDL2DIR)/configure
+$(LIBSDL2LIB): $(LIBSDL2DIR)/configure
 	cd $(LIBSDL2DIR) \
 		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch x86_64' LDFLAGS='-arch x86_64' \
 		&& make \
