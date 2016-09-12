@@ -89,7 +89,8 @@ case "$PLATFORM" in
     travis_fold end build_vm
 
     output_file="${output_file}.tar.gz"
-    tar czf "${output_file}" ./*.app
+	echo "Archiving files into $output_file"
+    tar cvzf "${output_file}" ./*.app
     popd
     ;;
   "Windows")
