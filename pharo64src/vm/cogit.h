@@ -33,7 +33,6 @@ extern char * codeEntryFor(char *address);
 extern char * codeEntryNameFor(char *address);
 extern sqInt cogCodeBase(void);
 extern sqInt cogCodeConstituents(void);
-extern CogMethod * cogFullBlockMethodnumCopied(sqInt aMethodObj, sqInt numCopied);
 extern void cogitPostGCAction(sqInt gcMode);
 extern sqInt cogMethodDoesntLookKosher(CogMethod *cogMethod);
 extern CogMethod * cogMNUPICSelectorreceivermethodOperandnumArgs(sqInt selector, sqInt rcvr, sqInt methodOperand, sqInt numArgs);

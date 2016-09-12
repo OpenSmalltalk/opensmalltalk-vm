@@ -32,8 +32,6 @@
 #define MinSmallInteger -1152921504606846976
 #define MaxSmallInteger 1152921504606846975
 
-#define MULTIPLEBYTECODESETS 1
-
 #define STACKVM 1
 #define SPURVM 1
 #define COGVM 1
