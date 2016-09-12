@@ -23,34 +23,56 @@
 # CONFIGURATION defines what version of the VM to build, product, assert or
 # debug. Optional. Defaults to product. The default is overridden in mvm script
 
+ifeq ($(APPNAME),)
+APPNAME:=Cocoa
+endif
+ifeq ($(APPNAMEDEF),)
+APPNAMEDEF:=$(APPNAME)Fast
+endif
+ifeq ($(USEPLUGINASDYLIB),)
+USEPLUGINASDYLIB:=FALSE
+endif
 
 ifeq ($(CONFIGURATION),debug)
-	APP:=CocoaDebug.app
+	APP:=$(APPNAME)Debug.app
 else ifeq ($(CONFIGURATION),assert)
-	APP:=CocoaAssert.app
-else # default CONFIGURATION=product => CocoaFast.app
-	APP:=CocoaFast.app
+	APP:=$(APPNAME)Assert.app
+else # default CONFIGURATION=product => $(APPNAMEDEF).app
+	APP:=$(APPNAMEDEF).app
 endif
 
 default:	$(APP)
 
 include ../common/Makefile.vm
+include ../common/Makefile.lib.extra
 include ../common/Makefile.sources
 
 cleanall: cleanapp cleanastapp cleandbgapp cleanallvm
 
 cleanapp:
-	rm -rf CocoaFast.app
+	rm -rf $(APPNAMEDEF).app
 
 cleanastapp:
-	rm -rf CocoaAssert.app
+	rm -rf $(APPNAME)Assert.app
 
 cleandbgapp:
-	rm -rf CocoaDebug.app
+	rm -rf $(APPNAME)Debug.app
 
 VMEXE:=$(APP)/Contents/MacOS/$(VM)
 VMPLIST:=$(APP)/Contents/Info.plist
+
+ifeq ($(USEPLUGINASDYLIB),FALSE)
 VMBUNDLES:=$(addprefix $(APP)/Contents/Resources/, $(addsuffix .bundle, $(EXTERNAL_PLUGINS)))
+else ifeq ($(USEPLUGINASDYLIB),TRUE)
+VMPLUGINDYLIBS:=$(addprefix $(APP)/Contents/MacOS/Plugins/lib, $(addsuffix .dylib, $(EXTERNAL_PLUGINS)))
+else 
+$(error USEPLUGINASDYLIB has to be TRUE or FALSE)
+endif 
+
+ifneq ($(THIRDPARTYLIBS),) 
+THIRDPARTYPREREQS:=$(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR)
+endif
+
 OSXICONS:=$(OSXDIR)/$(VM).icns $(wildcard $(OSXDIR)/$(SYSTEM)*.icns)
 VMICONS:=$(addprefix $(APP)/Contents/Resources/,$(notdir $(OSXICONS)))
 VMMENUNIB:=$(APP)/Contents/Resources/English.lproj/MainMenu.nib
@@ -76,9 +98,9 @@ SED_COMMAND_INFO_PLIST:=\
 	#
 
 
-$(APP):	cleanbundles $(VMEXE) $(VMBUNDLES) \
+$(APP):	cleanbundles $(THIRDPARTYPREREQS) $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS) \
 		$(VMPLIST) $(VMLOCALIZATION) $(VMMENUNIB) $(VMICONS) \
- 		$(SOURCES) $(APPPOST) signapp touchapp
+ 		$(SOURCES) $(THIRDPARTYLIBS) $(APPPOST) signapp touchapp
 
 # Bundles with missing prerequisites won't be built. But we need to force the
 # attempt to make them every time in case the prerequisites /have/ been built.
@@ -86,7 +108,7 @@ $(APP):	cleanbundles $(VMEXE) $(VMBUNDLES) \
 # which the bundle build depends.
 cleanbundles:
 	-rm -rf $(APP)/Contents/Resources/*.bundle
-	-touch $(OBJDIR)/*.ignore
+	-touch $(OBJDIR)/*.ignore	
 
 $(VMEXE): $(OBJDIR)/$(VM)
 	@mkdir -p $(APP)/Contents/MacOS
@@ -101,6 +123,11 @@ $(APP)/Contents/Resources/%.bundle: $(BLDDIR)/vm/%.bundle
 		echo cp -pR $< $(APP)/Contents/Resources; \
 		cp -pR $< $(APP)/Contents/Resources; \
 	fi
+	
+$(APP)/Contents/MacOS/Plugins/%.dylib: $(BLDDIR)/vm/%.dylib
+	@mkdir -p $(APP)/Contents/MacOS/Plugins
+	cp -p $< $(APP)/Contents/MacOS/Plugins
+	
 
 $(VMPLIST): $(OSXDIR)/$(SYSTEM)-Info.plist getversion
 	@mkdir -p $(APP)/Contents
@@ -149,6 +176,7 @@ print-app-settings:
 	@echo APP=$(APP)
 	@echo VMEXE=$(VMEXE)
 	@echo VMBUNDLES=$(VMBUNDLES)
+	@echo VMPLUGINDYLIBS=$(VMPLUGINDYLIBS)
 	@echo VMPLIST=$(VMPLIST)
 	@echo VMICONS=$(VMICONS)
 	@echo SIGNING_IDENTITY=$(SIGNING_IDENTITY)

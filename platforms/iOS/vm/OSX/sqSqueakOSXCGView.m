@@ -209,6 +209,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
     int y1 = max(y2 - rect.size.height, 0);
     
     CGRect swapRect = CGRectIntersection(CGRectMake(0, 0, width, height), CGRectMake(rect.origin.x, y1, rect.size.width, y2));
+    if ((swapRect.origin.x == INFINITY) || (swapRect.origin.y == INFINITY)) {
+        return;
+    }
     [self swapColors: bits imageWidth:width clipRect: swapRect];
     
     CGDataProviderRef pref = CGDataProviderCreateWithData (NULL, bits, bitSize, NULL);

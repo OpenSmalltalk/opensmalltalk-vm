@@ -477,72 +477,54 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 #define encode(c, k,  s) 		 if (aSelector == @selector(s)) { unicode = c; keyCode = k; unicodeString = [NSString stringWithCharacters: &unicode length: 1]; } 
 //http://developer.apple.com/documentation/mac/Text/Text-571.html
 	
-	encode(  8, 51, deleteBackward:)
-	else encode( 8, 51, deleteWordBackward:) 
-		else encode(127, 51, deleteForward:)
-			else encode(127, 51, deleteWordForward:)
-				else encode( 8, 51, deleteBackwardByDecomposingPreviousCharacter:) 
-				
-				
-				else encode( (isFunctionKey ? 3: 13), (isFunctionKey ? 76: 36), insertNewline:) 
-					else encode( 13, 36, insertLineBreak:) 
-						else encode( 13, 36, insertNewlineIgnoringFieldEditor:) 
-							
-							else encode(  9, 48, insertTab:)
-								else encode(  9, 48, insertBacktab:)
-									else encode(  9, 48, insertTabIgnoringFieldEditor:)
-										
-										else encode( 28, 123,  moveLeft:)
-											else encode( 29, 124, moveRight:)
-												else encode( 30, 126, moveUp:)
-													else encode( 31, 125, moveDown:)
-																
-														else encode( 30, 126, moveBackward:)
-															else encode( 31, 125, moveForward:)
-																else encode( 28, 123, moveLeftAndModifySelection:)
-																	else encode( 29, 124, moveRightAndModifySelection:)
-																
-																		else encode( 30, 126, moveUpAndModifySelection:)
-																			else encode( 31, 125, moveDownAndModifySelection:)
-																				else encode( 28, 123, moveWordLeftAndModifySelection:)
-																					else encode( 29, 124, moveWordRightAndModifySelection:)
-																
-																						else encode( 28, 123, moveWordLeft:)
-																							else encode( 29, 124, moveWordRight:)
-																								else encode( 30, 126, moveParagraphBackwardAndModifySelection:)
-																									else encode( 31, 125, moveParagraphForwardAndModifySelection:)
-																										
-																										else encode( 11, 116, pageUp:)
-																											else encode( 12, 121, pageDown:)
-																
-																												else encode( 11, 116, pageUpAndModifySelection:)
-																													else encode( 12, 121, pageDownAndModifySelection:)
-																
-																														else encode( (isFunctionKey ? 11 : 30), (isFunctionKey ? 116 : 126), scrollPageUp:)
-																															else encode( (isFunctionKey ? 12 : 31), (isFunctionKey ? 121 : 125), scrollPageDown:)
-																																
-																																else encode(  1, 115, moveToBeginningOfDocument:)
-																																	else encode(  4, 119, moveToEndOfDocument:)
-																
-																																		else encode(  (isFunctionKey ? 1 : 28), (isFunctionKey ? 115 : 123), moveToLeftEndOfLine:)
-																																			else encode(  (isFunctionKey ? 4 : 29), (isFunctionKey ? 119 : 124), moveToRightEndOfLine:)
-																																				
-																																				else encode(  (isFunctionKey ? 1 : 28), (isFunctionKey ? 115 : 123), moveToLeftEndOfLineAndModifySelection:)
-																																					else encode(  (isFunctionKey ? 4 : 29), (isFunctionKey ? 119 : 124), moveToRightEndOfLineAndModifySelection:)
-																																						
-																																				else encode(  1, 115, scrollToBeginningOfDocument:)
-																																					else encode(  4, 119, scrollToEndOfDocument:)
-																
-																																				else encode(  1, 115, moveToBeginningOfDocumentAndModifySelection:)
-																																					else encode(  4, 119, moveToEndOfDocumentAndModifySelection:)
-																																						
-			 																																			
-																																						else encode( 27, 53, cancelOperation:)
-																																							else encode( 27, 53, cancel:)
-																																								else encode( 27, 53, complete:)
-																																									else encode( 27, 71, delete:)
-																																								else 
-																																									return;
+	encode(  8, 51,         deleteBackward:)
+	else encode( 8, 51,     deleteWordBackward:)
+	else encode(127, 51,    deleteForward:)
+	else encode(127, 51,    deleteWordForward:)
+	else encode( 8, 51,     deleteBackwardByDecomposingPreviousCharacter:) 
+	else encode( (isFunctionKey ? 3: 13), (isFunctionKey ? 76: 36), insertNewline:) 
+	else encode( 13, 36,    insertLineBreak:) 
+	else encode( 13, 36,    insertNewlineIgnoringFieldEditor:) 
+	else encode(  9, 48,    insertTab:)
+	else encode(  9, 48,    insertBacktab:)
+	else encode(  9, 48,    insertTabIgnoringFieldEditor:)
+	else encode( 28, 123,   moveLeft:)
+	else encode( 29, 124,   moveRight:)
+	else encode( 30, 126,   moveUp:)
+	else encode( 31, 125,   moveDown:)
+	else encode( 30, 126,   moveBackward:)
+	else encode( 31, 125,   moveForward:)
+	else encode( 28, 123,   moveLeftAndModifySelection:)
+	else encode( 29, 124,   moveRightAndModifySelection:)
+	else encode( 30, 126,   moveUpAndModifySelection:)
+	else encode( 31, 125,   moveDownAndModifySelection:)
+	else encode( 28, 123,   moveWordLeftAndModifySelection:)
+	else encode( 29, 124,   moveWordRightAndModifySelection:)
+	else encode( 28, 123,   moveWordLeft:)
+	else encode( 29, 124,   moveWordRight:)
+	else encode( 30, 126,   moveParagraphBackwardAndModifySelection:)
+	else encode( 31, 125,   moveParagraphForwardAndModifySelection:)																										
+	else encode( 11, 116,   pageUp:)
+	else encode( 12, 121,   pageDown:)
+	else encode( 11, 116,   pageUpAndModifySelection:)
+	else encode( 12, 121,   pageDownAndModifySelection:)
+	else encode( (isFunctionKey ? 11 : 30), (isFunctionKey ? 116 : 126), scrollPageUp:)
+	else encode( (isFunctionKey ? 12 : 31), (isFunctionKey ? 121 : 125), scrollPageDown:)
+	else encode(  1, 115,   moveToBeginningOfDocument:)
+	else encode(  4, 119,   moveToEndOfDocument:)
+	else encode(  (isFunctionKey ? 1 : 28), (isFunctionKey ? 115 : 123), moveToLeftEndOfLine:)
+	else encode(  (isFunctionKey ? 4 : 29), (isFunctionKey ? 119 : 124), moveToRightEndOfLine:)
+	else encode(  (isFunctionKey ? 1 : 28), (isFunctionKey ? 115 : 123), moveToLeftEndOfLineAndModifySelection:)
+	else encode(  (isFunctionKey ? 4 : 29), (isFunctionKey ? 119 : 124), moveToRightEndOfLineAndModifySelection:)
+	else encode(  1, 115,   scrollToBeginningOfDocument:)
+	else encode(  4, 119,   scrollToEndOfDocument:)
+	else encode(  1, 115,   moveToBeginningOfDocumentAndModifySelection:)
+	else encode(  4, 119,   moveToEndOfDocumentAndModifySelection:)
+	else encode( 27, 53,    cancelOperation:)
+	else encode( 27, 53,    cancel:)
+	else encode( 27, 53,    complete:)
+	else encode( 27, 71,    delete:)
+	else return;
 	
 	@synchronized(self) {
 		keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);

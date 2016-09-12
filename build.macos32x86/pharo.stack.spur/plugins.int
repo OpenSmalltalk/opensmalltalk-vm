@@ -4,23 +4,20 @@ ADPCMCodecPlugin \
 AioPlugin \
 AsynchFilePlugin \
 B2DPlugin \
-BitBltPlugin \
 BMPReadWriterPlugin \
-ZipPlugin \
-DropPlugin \
+BitBltPlugin \
+ClipboardExtendedPlugin \
 DSAPrims \
+DropPlugin \
 FFTPlugin \
 FilePlugin \
+FloatArrayPlugin \
+GeniePlugin \
 HostWindowPlugin \
 IA32ABI \
-JPEGReaderPlugin \
-JPEGReadWriter2Plugin \
-Klatt \
 LargeIntegers \
-LocalePlugin \
 Matrix2x3Plugin \
 MiscPrimitivePlugin \
-RePlugin \
 SecurityPlugin \
 SocketPlugin \
 SoundCodecPrims \
@@ -28,8 +25,7 @@ SoundGenerationPlugin \
 SoundPlugin \
 SqueakFFIPrims \
 StarSqueakPlugin \
-SurfacePlugin \
-UUIDPlugin \
-VMProfileMacSupportPlugin \
-# SerialPlugin \
-# JoystickTabletPlugin
+UnixOSProcessPlugin \
+ZipPlugin \
+# IA32FFIPlugin \
+# Klatt \

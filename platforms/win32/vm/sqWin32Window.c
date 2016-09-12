@@ -174,6 +174,17 @@ void HideSplashScreen(void);
 sqInputEvent *sqNextEventPut(void);
 int sqLaunchDrop(void);
 
+#ifdef PharoVM
+/**
+ * HACK: Hook for SDL2.
+ */
+static void (*ioCheckForEventsHooks)(void);
+
+EXPORT(void) setIoProcessEventsHandler(void * handler) {
+    ioCheckForEventsHooks = (void (*)())handler;
+}
+#endif
+
 /****************************************************************************/
 /*                      Synchronization functions                           */
 /****************************************************************************/
@@ -253,7 +264,11 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       evt->charCode = (zDelta > 0) ? 30 : 31;
       evt->pressCode = EventKeyChar;
       evt->modifiers = CtrlKeyBit;
+#ifdef PharoVM
+     evt->utf32Code = evt->charCode;
+#else
       evt->utf32Code = 0;
+#endif
       evt->reserved1 = 0;
     } else {
       buttonState = 64;
@@ -1273,11 +1288,48 @@ int recordKeyboardEvent(MSG *msg) {
   evt->utf32Code = keyCode;
   /* clean up reserved */
   evt->reserved1 = 0;
+
+  /* so the image can distinguish between control sequence
+     like SOH and characters with modifier like ctrl+a */
+  if(pressCode == EventKeyChar && ctrl)
+  {
+    evt->utf32Code = MapVirtualKey(LOBYTE(HIWORD(msg->lParam)), 1);
+    return 1;
+  }
+
   /* note: several keys are not reported as character events;
      most noticably the mapped virtual keys. For those we
-     generate extra character events here */
-  if(pressCode == EventKeyDown && virtCode != 0) {
+     generate extra character events here (not for CTRL+VK_RETURN*/
+  if(pressCode == EventKeyDown && virtCode != 0 && (evt->charCode != VK_RETURN || !ctrl)) {
     /* generate extra character event */
+    sqKeyboardEvent *extra = (sqKeyboardEvent*)sqNextEventPut();
+    *extra = *evt;
+    extra->pressCode = EventKeyChar;
+  }
+  
+  /* some more keypress events for which windows only reports keydown and keyup
+  */
+  /* ctlr+m, but report as keyValue = VK_RETURN and charCode m/M */
+  if(pressCode == EventKeyDown && ctrl && evt->charCode == 77)
+  {
+    evt->utf32Code = (shift) ? 77 : 109;
+    evt->charCode = VK_RETURN;
+    sqKeyboardEvent *extra = (sqKeyboardEvent*)sqNextEventPut();
+    *extra = *evt;
+    extra->pressCode = EventKeyChar;
+  }
+  /* ctlr+<number> */
+  if(pressCode == EventKeyDown && ctrl && evt->charCode >= 48 && evt->charCode <= 57)
+  {
+    evt->utf32Code = evt->charCode;
+    sqKeyboardEvent *extra = (sqKeyboardEvent*)sqNextEventPut();
+    *extra = *evt;
+    extra->pressCode = EventKeyChar;
+  }
+  /* ctlr+Tab */
+  if(pressCode == EventKeyDown && ctrl && evt->charCode == 9)
+  {
+    evt->utf32Code = evt->charCode;
     sqKeyboardEvent *extra = (sqKeyboardEvent*)sqNextEventPut();
     *extra = *evt;
     extra->pressCode = EventKeyChar;
@@ -1569,6 +1621,26 @@ sqInt ioProcessEvents(void)
      so we won't get anything painted unless we use GetMessage() if there
      is a dirty rect. */
 	lastMessage = &msg;
+
+#ifdef PharoVM
+	if(ioCheckForEventsHooks) {
+		/* HACK for SDL 2 */
+     		ioCheckForEventsHooks();
+	}
+	else {
+	
+		while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE)) {
+			GetMessage(&msg,NULL,0,0);
+# ifndef NO_PLUGIN_SUPPORT
+			if (msg.hwnd == NULL)
+				pluginHandleEvent(&msg);
+# endif
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+
+		}
+	}
+#else
 	while(PeekMessage(&msg,NULL,0,0,PM_NOREMOVE)) {
 		GetMessage(&msg,NULL,0,0);
 # ifndef NO_PLUGIN_SUPPORT
@@ -1577,7 +1649,8 @@ sqInt ioProcessEvents(void)
 # endif
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
-    }
+    	}
+#endif
 
 # ifndef NO_DIRECTINPUT
 	/* any buffered mouse input which hasn't been processed is obsolete */
@@ -3192,7 +3265,7 @@ int printUsage(int level)
 {
   switch(level) {
     case 0: /* No command line given */
-      abortMessage(TEXT("Usage: squeak [options] <imageFile>"));
+      abortMessage(TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [options] <imageFile>"));
       break;
     case 1: /* full usage */
       abortMessage(TEXT("%s"),

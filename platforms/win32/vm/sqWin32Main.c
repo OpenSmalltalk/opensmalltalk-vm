@@ -1415,7 +1415,8 @@ sqMain(int argc, char *argv[])
       /* Search the current directory if there's a single image file */
       if(!findImageFile()) {
 	/* Nope. Give the user a chance to open an image interactively */
-	if(!openImageFile()) return -1; /* User cancelled file open */
+	
+          if(fHeadlessImage || !openImageFile()) return -1; /* User cancelled file open */
       }
     }
   }

@@ -1,0 +1,28 @@
+include ../common/Makefile.lib.extra
+
+$(info LIBRARY: libpng)
+
+# plugin definitions
+LIBPNGURL:=ftp://ftp.simplesystems.org/pub/libpng/png/src/history/libpng12/libpng-1.2.49.tar.gz
+LIBPNGDIR:=$(THIRDPARTYDIR)/libpng-1.2.49
+LIBPNGLIBNAME:=libpng12.0.dylib
+LIBPNGLIB:=$(THIRDPARTYINSTALLDIR)/$(LIBPNGLIBNAME)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(LIBPNGLIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+
+$(LIBPNGDIR)/configure:
+	curl -L $(LIBPNGURL) | tar x -C $(THIRDPARTYDIR)
+	touch $(LIBPNGDIR)/configure
+
+$(LIBPNGLIB): $(LIBPNGDIR)/configure
+	cd $(LIBPNGDIR) \
+		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch x86_64' LDFLAGS='-arch x86_64' \
+		&& make \
+		&& make install
+	cp -f $(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME) $(THIRDPARTYINSTALLDIR)
+	install_name_tool -id "@executable_path/Plugins/$(LIBPNGLIBNAME)" $(LIBPNGLIB)
+	
+libpng: $(LIBPNGLIB)
