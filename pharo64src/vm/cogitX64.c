@@ -42,7 +42,7 @@ char *__cogitBuildInfo = __buildInfo;
 #define ArithmeticShiftRightRR 83
 #define BadRegisterSet 1
 #define BlockCreationBytecodeSize 4
-#define BytecodeSetHasDirectedSuperSend 1
+#define BytecodeSetHasDirectedSuperSend 0
 #define Call 6
 #define CallerSavedRegisterMask 0xFC7
 #define CallFull 7
@@ -53,7 +53,6 @@ char *__cogitBuildInfo = __buildInfo;
 #define ClassArrayCompactIndex 51
 #define ClassBlockClosureCompactIndex 37
 #define ClassFloatCompactIndex 34
-#define ClassFullBlockClosureCompactIndex 38
 #define ClassMethodContextCompactIndex 36
 #define ClassReg 1
 #define ClosureFirstCopiedValueIndex 3
@@ -100,9 +99,6 @@ char *__cogitBuildInfo = __buildInfo;
 #define FoxSavedFP 0
 #define FoxThisContext -16
 #define FPReg 5
-#define FullClosureCompiledBlockIndex 1
-#define FullClosureFirstCopiedValueIndex 4
-#define FullClosureReceiverIndex 3
 #define GCModeBecome 8
 #define GCModeFull 1
 #define GCModeNewSpace 2
@@ -219,7 +215,7 @@ char *__cogitBuildInfo = __buildInfo;
 #define MoveX32rRR 59
 #define MoveXbrRR 63
 #define MoveXwrRR 49
-#define MULTIPLEBYTECODESETS 1
+#define MULTIPLEBYTECODESETS 0
 #define MulRdRd 114
 #define NeedsMergeFixupFlag 2
 #define NeedsNonMergeFixupFlag 1
@@ -233,7 +229,7 @@ char *__cogitBuildInfo = __buildInfo;
 #define NumSendTrampolines 4
 #define NumSpecialSelectors 32
 #define NumStoreTrampolines 5
-#define NumTrampolines 60
+#define NumTrampolines 54
 #define OrCqR 100
 #define OrCwR 108
 #define OrRR 94
@@ -277,7 +273,7 @@ char *__cogitBuildInfo = __buildInfo;
 #define SIB1 0
 #define SIB4 2
 #define SIB8 3
-#define SistaV1BytecodeSet 1
+#define SistaV1BytecodeSet 0
 #define SistaVM 0
 #define SmallContextSlots 22
 #define SPReg 4
@@ -489,7 +485,6 @@ extern char * codeEntryNameFor(char *address);
 extern sqInt cogCodeBase(void);
 extern sqInt cogCodeConstituents(void);
 static sqInt NoDbgRegParms cogExtendPICCaseNMethodtagisMNUCase(CogMethod *cPIC, sqInt caseNMethod, sqInt caseNTag, sqInt isMNUCase);
-extern CogMethod * cogFullBlockMethodnumCopied(sqInt aMethodObj, sqInt numCopied);
 extern void cogitPostGCAction(sqInt gcMode);
 extern sqInt cogMethodDoesntLookKosher(CogMethod *cogMethod);
 extern CogMethod * cogMNUPICSelectorreceivermethodOperandnumArgs(sqInt selector, sqInt rcvr, sqInt methodOperand, sqInt numArgs);
@@ -503,9 +498,7 @@ static sqInt NoDbgRegParms compileBlockDispatchFromto(sqInt lowBlockStartIndex, 
 static void NoDbgRegParms compileBlockEntry(BlockStart *blockStart);
 static void NoDbgRegParms compileCallFornumArgsargargargargresultRegregsToSave(void *aRoutine, sqInt numArgs, sqInt regOrConst0, sqInt regOrConst1, sqInt regOrConst2, sqInt regOrConst3, sqInt resultRegOrNone, sqInt regMask);
 static AbstractInstruction * compileCPICEntry(void);
-static sqInt NoDbgRegParms compileEntireFullBlockMethod(sqInt numCopied);
 static void compileEntry(void);
-static sqInt compileFullBlockEntry(void);
 static sqInt compileMethodBody(void);
 static sqInt NoDbgRegParms compilePICAbort(sqInt numArgs);
 static void NoDbgRegParms compileTrampolineFornumArgsargargargargregsToSavepushLinkRegresultReg(void *aRoutine, sqInt numArgs, sqInt regOrConst0, sqInt regOrConst1, sqInt regOrConst2, sqInt regOrConst3, sqInt regMask, sqInt pushLinkReg, sqInt resultRegOrNone);
@@ -525,8 +518,6 @@ static sqInt NoDbgRegParms deltaToSkipPrimAndErrorStoreInheader(sqInt aMethodObj
 static sqInt NoDbgRegParms endPCOf(sqInt aMethod);
 extern void enterCogCodePopReceiver(void);
 static sqInt NoDbgRegParms expectedClosedPICPrototype(CogMethod *cPIC);
-static sqInt extABytecode(void);
-static sqInt extBBytecode(void);
 static sqInt NoDbgRegParms fillInBlockHeadersAt(sqInt startAddress);
 static CogMethod * NoDbgRegParms fillInMethodHeadersizeselector(CogMethod *method, sqInt size, sqInt selector);
 static sqInt NoDbgRegParms findBackwardBranchIsBackwardBranchMcpcBcpcMatchingBcpc(BytecodeDescriptor *descriptor, sqInt isBackwardBranchAndAnnotation, char *mcpc, sqInt bcpc, void *targetBcpc);
@@ -546,7 +537,6 @@ static void (*genEnilopmartForandandforCallcalled(sqInt regArg1, sqInt regArg2Or
 static void NoDbgRegParms genEnilopmartReturn(sqInt forCall);
 static void NoDbgRegParms generateCaptureCStackPointers(sqInt captureFramePointer);
 static void generateClosedPICPrototype(void);
-static CogMethod * generateCogFullBlock(void);
 static CogMethod * NoDbgRegParms generateCogMethod(sqInt selector);
 static sqInt NoDbgRegParms generateInstructionsAt(sqInt eventualAbsoluteAddress);
 static sqInt NoDbgRegParms generateMapAtstart(sqInt addressOrNull, sqInt startAddress);
@@ -601,7 +591,7 @@ static AbstractInstruction * NoDbgRegParms gMoveAwR(sqInt address, sqInt reg);
 static AbstractInstruction * NoDbgRegParms gMoveCwR(sqInt wordConstant, sqInt reg);
 static AbstractInstruction * NoDbgRegParms gMoveRMwr(sqInt sourceReg, sqInt offset, sqInt baseReg);
 static AbstractInstruction * NoDbgRegParms gMoveRR(sqInt reg1, sqInt reg2);
-static sqInt NoDbgRegParms mapEndFor(CogMethod *cogMethod);
+static usqInt NoDbgRegParms mapEndFor(CogMethod *cogMethod);
 static sqInt NoDbgRegParms mapForperformUntilarg(CogMethod *cogMethod, sqInt (*functionSymbol)(sqInt annotation, char *mcpc, sqInt arg), sqInt arg);
 static sqInt NoDbgRegParms mapObjectReferencesInClosedPIC(CogMethod *cPIC);
 static void mapObjectReferencesInGeneratedRuntime(void);
@@ -816,7 +806,6 @@ static AbstractInstruction * NoDbgRegParms genCheckRememberedBitOfscratch(sqInt 
 static sqInt NoDbgRegParms genConvertCharacterToCodeInReg(sqInt reg);
 static sqInt NoDbgRegParms genConvertIntegerToCharacterInReg(sqInt reg);
 static sqInt NoDbgRegParms genCreateClosureAtnumArgsnumCopiedcontextNumArgslargeinBlock(sqInt bcpc, sqInt numArgs, sqInt numCopied, sqInt ctxtNumArgs, sqInt isLargeCtxt, sqInt isInBlock);
-static sqInt NoDbgRegParms genCreateFullClosurenumArgsnumCopiedignoreContextcontextNumArgslargeinBlock(sqInt compiledBlock, sqInt numArgs, sqInt numCopied, sqInt ignoreContext, sqInt contextNumArgs, sqInt contextIsLarge, sqInt contextIsBlock);
 static sqInt NoDbgRegParms genEnsureObjInRegNotForwardedscratchReg(sqInt reg, sqInt scratch);
 static sqInt NoDbgRegParms genEnsureOopInRegNotForwardedscratchReg(sqInt reg, sqInt scratch);
 static sqInt NoDbgRegParms genEnsureOopInRegNotForwardedscratchRegjumpBackTo(sqInt reg, sqInt scratch, AbstractInstruction *instruction);
@@ -968,28 +957,11 @@ static sqInt genCallPrimitiveBytecode(void);
 static AbstractInstruction * NoDbgRegParms genDoubleFailIfZeroArgRcvrarg(int rcvrReg, int argReg);
 static sqInt genExtendedSendBytecode(void);
 static sqInt genExtendedSuperBytecode(void);
-static sqInt genExtJumpIfFalse(void);
-static sqInt genExtJumpIfNotInstanceOfBehaviorsBytecode(void);
-static sqInt genExtJumpIfTrue(void);
-static sqInt genExtNopBytecode(void);
-static sqInt genExtPushCharacterBytecode(void);
-static sqInt genExtPushIntegerBytecode(void);
-static sqInt genExtPushLiteralBytecode(void);
-static sqInt genExtPushLitVarDirSupBytecode(void);
-static sqInt genExtPushPseudoVariable(void);
-static sqInt genExtPushReceiverVariableBytecode(void);
-static sqInt genExtSendBytecode(void);
-static sqInt genExtSendSuperBytecode(void);
-static sqInt genExtStoreAndPopRemoteTempOrInstVarLongBytecode(void);
-static sqInt genExtStoreRemoteTempOrInstVarLongBytecode(void);
-static sqInt genExtUnconditionalJump(void);
 static sqInt genFastPrimFail(void);
 static void NoDbgRegParms genFastPrimTraceUsingand(sqInt r1, sqInt r2);
 static sqInt genLongJumpIfFalse(void);
 static sqInt genLongJumpIfTrue(void);
-static sqInt genLongPushTemporaryVariableBytecode(void);
 static sqInt genLongStoreAndPopTemporaryVariableBytecode(void);
-static sqInt genLongStoreTemporaryVariableBytecode(void);
 static sqInt genLongUnconditionalBackwardJump(void);
 static sqInt genLongUnconditionalForwardJump(void);
 static sqInt NoDbgRegParms genLookupForPerformNumArgs(sqInt numArgs);
@@ -999,13 +971,10 @@ static void NoDbgRegParms genPrimReturnEnterCogCodeEnilopmart(sqInt profiling);
 static sqInt genPushClosureTempsBytecode(void);
 static sqInt genPushConstantFalseBytecode(void);
 static sqInt genPushConstantNilBytecode(void);
-static sqInt genPushConstantOneBytecode(void);
 static sqInt genPushConstantTrueBytecode(void);
-static sqInt genPushConstantZeroBytecode(void);
 static sqInt genPushLiteralConstantBytecode(void);
 static sqInt NoDbgRegParms genPushLiteralIndex(sqInt literalIndex);
 static sqInt genPushLiteralVariableBytecode(void);
-static sqInt genPushLitVarDirSup16CasesBytecode(void);
 static sqInt genPushQuickIntegerConstantBytecode(void);
 static sqInt genPushReceiverVariableBytecode(void);
 static sqInt genPushTemporaryVariableBytecode(void);
@@ -1014,25 +983,18 @@ extern sqInt genQuickReturnInstVar(void);
 extern sqInt genQuickReturnSelf(void);
 static sqInt genReturnFalse(void);
 static sqInt genReturnNil(void);
-static sqInt genReturnNilFromBlock(void);
 static sqInt genReturnTrue(void);
 static sqInt genSecondExtendedSendBytecode(void);
 static sqInt genSendLiteralSelector0ArgsBytecode(void);
 static sqInt genSendLiteralSelector1ArgBytecode(void);
 static sqInt genSendLiteralSelector2ArgsBytecode(void);
 static sqInt genShortJumpIfFalse(void);
-static sqInt genShortJumpIfTrue(void);
 static sqInt genShortUnconditionalJump(void);
-static sqInt genSistaExtStoreAndPopLiteralVariableBytecode(void);
-static sqInt genSistaExtStoreAndPopReceiverVariableBytecode(void);
-static sqInt genSistaExtStoreLiteralVariableBytecode(void);
-static sqInt genSistaExtStoreReceiverVariableBytecode(void);
 static sqInt genSpecialSelectorSend(void);
 static sqInt genStoreAndPopReceiverVariableBytecode(void);
 static sqInt genStoreAndPopRemoteTempLongBytecode(void);
 static sqInt genStoreAndPopTemporaryVariableBytecode(void);
 static sqInt genStoreRemoteTempLongBytecode(void);
-static sqInt genUnconditionalTrapBytecode(void);
 extern sqInt mapPCDataForinto(CogMethod *cogMethod, sqInt arrayObj);
 static void maybeCompileAllocFillerCheck(void);
 static sqInt numSpecialSelectors(void);
@@ -1046,10 +1008,6 @@ static sqInt NoDbgRegParms v3BlockCodeSize(BytecodeDescriptor *descriptor, sqInt
 static sqInt NoDbgRegParms v3LongForwardBranchDistance(BytecodeDescriptor *descriptor, sqInt pc, sqInt nExts, sqInt aMethodObj);
 static sqInt NoDbgRegParms v3LongBranchDistance(BytecodeDescriptor *descriptor, sqInt pc, sqInt nExts, sqInt aMethodObj);
 static sqInt NoDbgRegParms v3ShortForwardBranchDistance(BytecodeDescriptor *descriptor, sqInt pc, sqInt nExts, sqInt aMethodObj);
-static sqInt NoDbgRegParms v4BlockCodeSize(BytecodeDescriptor *descriptor, sqInt pc, sqInt nExts, sqInt aMethodObj);
-static sqInt NoDbgRegParms v4LongForwardBranchDistance(BytecodeDescriptor *descriptor, sqInt pc, sqInt nExts, sqInt aMethodObj);
-static sqInt NoDbgRegParms v4LongBranchIfNotInstanceOfDistance(BytecodeDescriptor *descriptor, sqInt pc, sqInt nExts, sqInt aMethodObj);
-static sqInt NoDbgRegParms v4LongBranchDistance(BytecodeDescriptor *descriptor, sqInt pc, sqInt nExts, sqInt aMethodObj);
 extern void voidCogCompiledCode(void);
 static BlockStart * NoDbgRegParms addBlockStartAtnumArgsnumCopiedspan(sqInt bytecodepc, sqInt numArgs, sqInt numCopied, sqInt span);
 static void NoDbgRegParms adjustArgumentsForPerform(sqInt numArgs);
@@ -1062,12 +1020,9 @@ static sqInt NoDbgRegParms compileAbstractInstructionsFromthrough(sqInt start, s
 static sqInt compileBlockBodies(void);
 static void NoDbgRegParms compileBlockFrameBuild(BlockStart *blockStart);
 static void NoDbgRegParms compileBlockFramelessEntry(BlockStart *blockStart);
-static CogMethod * NoDbgRegParms compileCogFullBlockMethod(sqInt numCopied);
 static CogMethod * NoDbgRegParms compileCogMethod(sqInt selector);
 static sqInt compileEntireMethod(void);
 static void compileFrameBuild(void);
-static void NoDbgRegParms compileFullBlockFramelessEntry(sqInt numCopied);
-static void NoDbgRegParms compileFullBlockMethodFrameBuild(sqInt numCopied);
 #if IMMUTABILITY
 static void compileTwoPathFrameBuild(void);
 #endif /* IMMUTABILITY */
@@ -1084,10 +1039,6 @@ static sqInt genBlockReturn(void);
 static void (*genCallPICEnilopmartNumArgs(sqInt numArgs))(void) ;
 static sqInt NoDbgRegParms genEqualsEqualsNoBranchArgIsConstantrcvrIsConstantargRegrcvrReg(sqInt argIsConstant, sqInt rcvrIsConstant, sqInt argReg, sqInt rcvrRegOrNone);
 static sqInt genExternalizePointersForPrimitiveCall(void);
-static sqInt genExtPushClosureBytecode(void);
-static sqInt genExtPushFullClosureBytecode(void);
-static sqInt genExtPushRemoteTempOrInstVarLongBytecode(void);
-static sqInt NoDbgRegParms genExtStorePopRemoteTempOrInstVarLongBytecodePopBoolean(sqInt boolean);
 static void generateEnilopmarts(void);
 static void generateMissAbortTrampolines(void);
 static void generateSendTrampolines(void);
@@ -1095,33 +1046,27 @@ static void generateTracingTrampolines(void);
 static sqInt NoDbgRegParms genJumpBackTo(sqInt targetBytecodePC);
 static sqInt NoDbgRegParms genJumpIfto(sqInt boolean, sqInt targetBytecodePC);
 static sqInt NoDbgRegParms genJumpTo(sqInt targetBytecodePC);
-static void NoDbgRegParms genLoadTempin(sqInt objectIndex, sqInt destReg);
 static sqInt NoDbgRegParms genMarshalledSendnumArgssendTable(sqInt selectorIndex, sqInt numArgs, sqInt *sendTable);
 static sqInt NoDbgRegParms genMethodAbortTrampolineFor(sqInt numArgs);
 static sqInt NoDbgRegParms genPICAbortTrampolineFor(sqInt numArgs);
 static sqInt NoDbgRegParms genPICMissTrampolineFor(sqInt numArgs);
 static sqInt genPopStackBytecode(void);
 static sqInt genPrimitiveClosureValue(void);
-static sqInt genPrimitiveFullClosureValue(void);
 static sqInt genPrimitivePerform(void);
 static sqInt genPushActiveContextBytecode(void);
 static sqInt genPushClosureCopyCopiedValuesBytecode(void);
-static sqInt NoDbgRegParms genPushLiteralVariableGivenDirectedSuper(sqInt literalIndex);
 static sqInt NoDbgRegParms genPushLiteralVariable(sqInt literalIndex);
 static sqInt NoDbgRegParms genPushLiteral(sqInt literal);
 static sqInt NoDbgRegParms genPushMaybeContextReceiverVariable(sqInt slotIndex);
-static sqInt NoDbgRegParms genPushMaybeContextRemoteInstVarinObjectAt(sqInt slotIndex, sqInt index);
 static sqInt genPushNewArrayBytecode(void);
 static sqInt genPushReceiverBytecode(void);
 static sqInt NoDbgRegParms genPushReceiverVariable(sqInt index);
 static void genPushRegisterArgs(void);
-static sqInt NoDbgRegParms genPushRemoteInstVarinObjectAt(sqInt index, sqInt objectIndex);
 static sqInt genPushRemoteTempLongBytecode(void);
 static sqInt NoDbgRegParms genPushTemporaryVariable(sqInt index);
 static sqInt genReturnReceiver(void);
 static sqInt genReturnTopFromBlock(void);
 static sqInt genReturnTopFromMethod(void);
-static sqInt NoDbgRegParms genSendDirectedSupernumArgs(sqInt selectorIndex, sqInt numArgs);
 static sqInt NoDbgRegParms genSendSupernumArgs(sqInt selectorIndex, sqInt numArgs);
 static sqInt NoDbgRegParms genSendTrampolineFornumArgscalledargargargarg(void *aRoutine, sqInt numArgs, char *aString, sqInt regOrConst0, sqInt regOrConst1, sqInt regOrConst2, sqInt regOrConst3);
 static sqInt NoDbgRegParms genSendnumArgs(sqInt selectorIndex, sqInt numArgs);
@@ -1133,9 +1078,7 @@ static sqInt genSpecialSelectorEqualsEqualsWithForwarders(void);
 static sqInt genStaticallyResolvedSpecialSelectorComparison(void);
 static sqInt NoDbgRegParms genStorePopLiteralVariableneedsStoreCheckneedsImmutabilityCheck(sqInt popBoolean, sqInt litVarIndex, sqInt needsStoreCheck, sqInt needsImmCheck);
 static sqInt NoDbgRegParms genStorePopMaybeContextReceiverVariableneedsStoreCheckneedsImmutabilityCheck(sqInt popBoolean, sqInt slotIndex, sqInt needsStoreCheck, sqInt needsImmCheck);
-static sqInt NoDbgRegParms genStorePopMaybeContextRemoteInstVarofObjectAtneedsStoreCheckneedsImmutabilityCheck(sqInt popBoolean, sqInt slotIndex, sqInt objectIndex, sqInt needsStoreCheck, sqInt needsImmCheck);
 static sqInt NoDbgRegParms genStorePopReceiverVariableneedsStoreCheckneedsImmutabilityCheck(sqInt popBoolean, sqInt slotIndex, sqInt needsStoreCheck, sqInt needsImmCheck);
-static sqInt NoDbgRegParms genStorePopRemoteInstVarofObjectAtneedsStoreCheckneedsImmutabilityCheck(sqInt popBoolean, sqInt slotIndex, sqInt objectIndex, sqInt needsStoreCheck, sqInt needsImmCheck);
 static sqInt NoDbgRegParms genStorePopRemoteTempAtneedsStoreCheck(sqInt popBoolean, sqInt slotIndex, sqInt remoteTempIndex, sqInt needsStoreCheck);
 static sqInt NoDbgRegParms genStorePopTemporaryVariable(sqInt popBoolean, sqInt tempIndex);
 static sqInt genUpArrowReturn(void);
@@ -1157,8 +1100,6 @@ static sqInt NoDbgRegParms pushNilSizenumInitialNils(sqInt aMethodObj, sqInt num
 static void NoDbgRegParms reinitializeFixupsFromthrough(sqInt start, sqInt end);
 static sqInt NoDbgRegParms scanBlock(BlockStart *blockStart);
 static sqInt scanMethod(void);
-static sqInt NoDbgRegParms squeakV3orSistaV1PushNilSizenumInitialNils(sqInt aMethodObj, sqInt numInitialNils);
-static sqInt NoDbgRegParms squeakV3orSistaV1NumPushNils(BytecodeDescriptor *descriptor, sqInt pc, sqInt nExts, sqInt aMethodObj);
 static void NoDbgRegParms ssAllocateCallReg(sqInt requiredReg);
 static void NoDbgRegParms ssAllocateCallRegand(sqInt requiredReg1, sqInt requiredReg2);
 static void NoDbgRegParms ssAllocateCallRegandand(sqInt requiredReg1, sqInt requiredReg2, sqInt requiredReg3);
@@ -1184,6 +1125,8 @@ static SimStackEntry ssTopDescriptor(void);
 static CogSimStackEntry * NoDbgRegParms ssValue(sqInt n);
 static sqInt NoDbgRegParms tryCollapseTempVectorInitializationOfSize(sqInt slots);
 static void updateSimSpillBase(void);
+static sqInt NoDbgRegParms v3PushNilSizenumInitialNils(sqInt aMethodObj, sqInt numInitialNils);
+static sqInt NoDbgRegParms v3NumPushNils(BytecodeDescriptor *descriptor, sqInt pc, sqInt nExts, sqInt aMethodObj);
 
 
 /*** Variables ***/
@@ -1229,7 +1172,6 @@ static void (*ceFlushICache)(unsigned long from, unsigned long to);
 unsigned long (*ceGetFP)(void);
 unsigned long (*ceGetSP)(void);
 static sqInt ceLargeActiveContextInBlockTrampoline;
-static sqInt ceLargeActiveContextInFullBlockTrampoline;
 static sqInt ceLargeActiveContextInMethodTrampoline;
 static sqInt ceMethodAbortTrampoline;
 static sqInt ceNonLocalReturnTrampoline;
@@ -1241,7 +1183,6 @@ static sqInt ceScheduleScavengeTrampoline;
 static sqInt ceSendMustBeBooleanAddFalseTrampoline;
 static sqInt ceSendMustBeBooleanAddTrueTrampoline;
 static sqInt ceSmallActiveContextInBlockTrampoline;
-static sqInt ceSmallActiveContextInFullBlockTrampoline;
 static sqInt ceSmallActiveContextInMethodTrampoline;
 static sqInt ceStoreCheckContextReceiverTrampoline;
 static sqInt ceStoreCheckTrampoline;
@@ -1289,7 +1230,7 @@ static sqInt firstSend;
 static BytecodeFixup * fixups;
 static AbstractInstruction * fullBlockEntry;
 static AbstractInstruction * fullBlockNoContextSwitchEntry;
-static BytecodeDescriptor generatorTable[512] = {
+static BytecodeDescriptor generatorTable[256] = {
 	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
 	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
 	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
@@ -1545,263 +1486,7 @@ static BytecodeDescriptor generatorTable[512] = {
 	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
 	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
 	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genPushReceiverVariableBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genPushLitVarDirSup16CasesBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLitVarDirSup16CasesBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLitVarDirSup16CasesBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLitVarDirSup16CasesBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLitVarDirSup16CasesBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLitVarDirSup16CasesBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLitVarDirSup16CasesBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLitVarDirSup16CasesBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLitVarDirSup16CasesBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLitVarDirSup16CasesBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLitVarDirSup16CasesBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLitVarDirSup16CasesBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLitVarDirSup16CasesBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLitVarDirSup16CasesBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLitVarDirSup16CasesBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLitVarDirSup16CasesBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushLiteralConstantBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushTemporaryVariableBytecode, 0, needsFrameIfMod16GENumArgs, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushTemporaryVariableBytecode, 0, needsFrameIfMod16GENumArgs, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushTemporaryVariableBytecode, 0, needsFrameIfMod16GENumArgs, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushTemporaryVariableBytecode, 0, needsFrameIfMod16GENumArgs, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushTemporaryVariableBytecode, 0, needsFrameIfMod16GENumArgs, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushTemporaryVariableBytecode, 0, needsFrameIfMod16GENumArgs, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushTemporaryVariableBytecode, 0, needsFrameIfMod16GENumArgs, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushTemporaryVariableBytecode, 0, needsFrameIfMod16GENumArgs, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushTemporaryVariableBytecode, 0, needsFrameIfMod16GENumArgs, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushTemporaryVariableBytecode, 0, needsFrameIfMod16GENumArgs, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushTemporaryVariableBytecode, 0, needsFrameIfMod16GENumArgs, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushTemporaryVariableBytecode, 0, needsFrameIfMod16GENumArgs, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushReceiverBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushConstantTrueBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushConstantFalseBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushConstantNilBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushConstantZeroBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPushConstantOneBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genExtPushPseudoVariable, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ duplicateTopBytecode, 0, needsFrameNever, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ unknownBytecode, 0, 0, 0, Nop, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0 },
-	{ unknownBytecode, 0, 0, 0, Nop, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0 },
-	{ unknownBytecode, 0, 0, 0, Nop, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0 },
-	{ unknownBytecode, 0, 0, 0, Nop, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0 },
-	{ genReturnReceiver, 0, needsFrameIfInBlock, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0 },
-	{ genReturnTrue, 0, needsFrameIfInBlock, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0 },
-	{ genReturnFalse, 0, needsFrameIfInBlock, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0 },
-	{ genReturnNil, 0, needsFrameIfInBlock, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0 },
-	{ genReturnTopFromMethod, 0, needsFrameIfInBlock, -1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0 },
-	{ genReturnNilFromBlock, 0, needsFrameNever, -1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0 },
-	{ genReturnTopFromBlock, 0, needsFrameNever, -1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0 },
-	{ genExtNopBytecode, 0, needsFrameNever, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genSpecialSelectorArithmetic, 0, 0, 0, AddRR, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorArithmetic, 0, 0, 0, SubRR, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorComparison, 0, 0, 0, JumpLess, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorComparison, 0, 0, 0, JumpGreater, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorComparison, 0, 0, 0, JumpLessOrEqual, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorComparison, 0, 0, 0, JumpGreaterOrEqual, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorComparison, 0, 0, 0, JumpZero, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorComparison, 0, 0, 0, JumpNonZero, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorArithmetic, 0, 0, 0, AndRR, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorArithmetic, 0, 0, 0, OrRR, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorEqualsEquals, 0, needsFrameNever, -1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genSpecialSelectorClass, 0, needsFrameIfStackGreaterThanOne, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSpecialSelectorSend, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector0ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector0ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector0ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector0ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector0ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector0ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector0ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector0ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector0ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector0ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector0ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector0ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector0ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector0ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector0ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector0ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector1ArgBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector1ArgBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector1ArgBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector1ArgBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector1ArgBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector1ArgBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector1ArgBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector1ArgBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector1ArgBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector1ArgBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector1ArgBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector1ArgBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector1ArgBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector1ArgBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector1ArgBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector1ArgBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genShortUnconditionalJump, v3ShortForwardBranchDistance, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genShortUnconditionalJump, v3ShortForwardBranchDistance, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genShortUnconditionalJump, v3ShortForwardBranchDistance, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genShortUnconditionalJump, v3ShortForwardBranchDistance, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genShortUnconditionalJump, v3ShortForwardBranchDistance, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genShortUnconditionalJump, v3ShortForwardBranchDistance, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genShortUnconditionalJump, v3ShortForwardBranchDistance, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genShortUnconditionalJump, v3ShortForwardBranchDistance, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genShortJumpIfTrue, v3ShortForwardBranchDistance, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genShortJumpIfTrue, v3ShortForwardBranchDistance, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genShortJumpIfTrue, v3ShortForwardBranchDistance, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genShortJumpIfTrue, v3ShortForwardBranchDistance, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genShortJumpIfTrue, v3ShortForwardBranchDistance, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genShortJumpIfTrue, v3ShortForwardBranchDistance, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genShortJumpIfTrue, v3ShortForwardBranchDistance, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genShortJumpIfTrue, v3ShortForwardBranchDistance, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genShortJumpIfFalse, v3ShortForwardBranchDistance, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0 },
-	{ genShortJumpIfFalse, v3ShortForwardBranchDistance, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0 },
-	{ genShortJumpIfFalse, v3ShortForwardBranchDistance, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0 },
-	{ genShortJumpIfFalse, v3ShortForwardBranchDistance, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0 },
-	{ genShortJumpIfFalse, v3ShortForwardBranchDistance, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0 },
-	{ genShortJumpIfFalse, v3ShortForwardBranchDistance, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0 },
-	{ genShortJumpIfFalse, v3ShortForwardBranchDistance, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0 },
-	{ genShortJumpIfFalse, v3ShortForwardBranchDistance, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0 },
-	{ genStoreAndPopReceiverVariableBytecode, 0, needsFrameIfImmutability, -1, 0, 1, 0, 0, 0, 0, IMMUTABILITY, 0, 0, 1, 1 },
-	{ genStoreAndPopReceiverVariableBytecode, 0, needsFrameIfImmutability, -1, 0, 1, 0, 0, 0, 0, IMMUTABILITY, 0, 0, 1, 1 },
-	{ genStoreAndPopReceiverVariableBytecode, 0, needsFrameIfImmutability, -1, 0, 1, 0, 0, 0, 0, IMMUTABILITY, 0, 0, 1, 1 },
-	{ genStoreAndPopReceiverVariableBytecode, 0, needsFrameIfImmutability, -1, 0, 1, 0, 0, 0, 0, IMMUTABILITY, 0, 0, 1, 1 },
-	{ genStoreAndPopReceiverVariableBytecode, 0, needsFrameIfImmutability, -1, 0, 1, 0, 0, 0, 0, IMMUTABILITY, 0, 0, 1, 1 },
-	{ genStoreAndPopReceiverVariableBytecode, 0, needsFrameIfImmutability, -1, 0, 1, 0, 0, 0, 0, IMMUTABILITY, 0, 0, 1, 1 },
-	{ genStoreAndPopReceiverVariableBytecode, 0, needsFrameIfImmutability, -1, 0, 1, 0, 0, 0, 0, IMMUTABILITY, 0, 0, 1, 1 },
-	{ genStoreAndPopReceiverVariableBytecode, 0, needsFrameIfImmutability, -1, 0, 1, 0, 0, 0, 0, IMMUTABILITY, 0, 0, 1, 1 },
-	{ genStoreAndPopTemporaryVariableBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genStoreAndPopTemporaryVariableBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genStoreAndPopTemporaryVariableBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genStoreAndPopTemporaryVariableBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genStoreAndPopTemporaryVariableBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genStoreAndPopTemporaryVariableBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genStoreAndPopTemporaryVariableBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genStoreAndPopTemporaryVariableBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genPopStackBytecode, 0, needsFrameNever, -1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genUnconditionalTrapBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ unknownBytecode, 0, 0, 0, Nop, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0 },
-	{ unknownBytecode, 0, 0, 0, Nop, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0 },
-	{ unknownBytecode, 0, 0, 0, Nop, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0 },
-	{ unknownBytecode, 0, 0, 0, Nop, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0 },
-	{ unknownBytecode, 0, 0, 0, Nop, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0 },
-	{ unknownBytecode, 0, 0, 0, Nop, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0 },
-	{ extABytecode, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 1, 0, 0 },
-	{ extBBytecode, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 1, 0, 0 },
-	{ genExtPushReceiverVariableBytecode, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 1, 0 },
-	{ genExtPushLitVarDirSupBytecode, 0, needsFrameNever, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genExtPushLiteralBytecode, 0, needsFrameNever, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genLongPushTemporaryVariableBytecode, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ unknownBytecode, 0, 0, 0, Nop, 2, 0, 0, 0, 0, 0, 0, 1, 0, 0 },
-	{ genPushNewArrayBytecode, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genExtPushIntegerBytecode, 0, needsFrameNever, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genExtPushCharacterBytecode, 0, needsFrameNever, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genExtSendBytecode, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genExtSendSuperBytecode, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ unknownBytecode, 0, 0, 0, Nop, 2, 0, 0, 0, 0, 0, 0, 1, 0, 0 },
-	{ genExtUnconditionalJump, v4LongBranchDistance, 0, 0, 0, 2, 0, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genExtJumpIfTrue, v4LongBranchDistance, 0, 0, 0, 2, 1, 0, 0, 0, 1, 0, 0, 0, 0 },
-	{ genExtJumpIfFalse, v4LongBranchDistance, 0, 0, 0, 2, 0, 1, 0, 0, 1, 0, 0, 0, 0 },
-	{ genSistaExtStoreAndPopReceiverVariableBytecode, 0, 0, 0, 0, 2, 0, 0, 0, 0, IMMUTABILITY, 0, 0, 1, 0 },
-	{ genSistaExtStoreAndPopLiteralVariableBytecode, 0, 0, 0, 0, 2, 0, 0, 0, 0, IMMUTABILITY, 0, 0, 0, 0 },
-	{ genLongStoreAndPopTemporaryVariableBytecode, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genSistaExtStoreReceiverVariableBytecode, 0, 0, 0, 0, 2, 0, 0, 0, 0, IMMUTABILITY, 0, 0, 1, 0 },
-	{ genSistaExtStoreLiteralVariableBytecode, 0, 0, 0, 0, 2, 0, 0, 0, 0, IMMUTABILITY, 0, 0, 0, 0 },
-	{ genLongStoreTemporaryVariableBytecode, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ unknownBytecode, 0, 0, 0, Nop, 2, 0, 0, 0, 0, 0, 0, 1, 0, 0 },
-	{ unknownBytecode, 0, 0, 0, Nop, 2, 0, 0, 0, 0, 0, 0, 1, 0, 0 },
-	{ genCallPrimitiveBytecode, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genExtPushFullClosureBytecode, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genExtPushClosureBytecode, v4BlockCodeSize, 0, 0, 0, 3, 0, 0, 0, 1, 0, 0, 0, 0, 0 },
-	{ genExtPushRemoteTempOrInstVarLongBytecode, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ genExtStoreRemoteTempOrInstVarLongBytecode, 0, 0, 0, 0, 3, 0, 0, 0, 0, IMMUTABILITY, 0, 0, 0, 0 },
-	{ genExtStoreAndPopRemoteTempOrInstVarLongBytecode, 0, 0, 0, 0, 3, 0, 0, 0, 0, IMMUTABILITY, 0, 0, 0, 0 },
-	{ genExtJumpIfNotInstanceOfBehaviorsBytecode, v4LongBranchIfNotInstanceOfDistance, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	{ unknownBytecode, 0, 0, 0, Nop, 3, 0, 0, 0, 0, 0, 0, 1, 0, 0 }
+	{ genSendLiteralSelector2ArgsBytecode, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0 }
 };
 static sqInt guardPageSize;
 static sqInt hasYoungReferent;
@@ -2182,9 +1867,7 @@ wantsNearAddressFor(AbstractInstruction * self_in_wantsNearAddressFor, sqInt anO
 static CogMethod * NoDbgRegParms
 cmHomeMethod(CogBlockMethod * self_in_cmHomeMethod)
 {
-	return ((self_in_cmHomeMethod->cpicHasMNUCaseOrCMIsFullBlock)
-		? ((CogMethod *) self_in_cmHomeMethod)
-		: ((CogMethod *) ((((usqInt)self_in_cmHomeMethod)) - ((self_in_cmHomeMethod->homeOffset)))));
+	return ((CogMethod *) ((((usqInt)self_in_cmHomeMethod)) - ((self_in_cmHomeMethod->homeOffset))));
 }
 
 	/* CogBytecodeDescriptor>>#isBranch */
@@ -2729,9 +2412,15 @@ assertSaneJumpTarget(AbstractInstruction *jumpTarget)
 static sqInt NoDbgRegParms
 blockCreationBytecodeSizeForHeader(sqInt aMethodHeader)
 {
-	return (headerIndicatesAlternateBytecodeSet(aMethodHeader)
+	return 
+#  if MULTIPLEBYTECODESETS
+		(headerIndicatesAlternateBytecodeSet(aMethodHeader)
 				? AltBlockCreationBytecodeSize
-				: BlockCreationBytecodeSize);
+				: BlockCreationBytecodeSize)
+#  else /* MULTIPLEBYTECODESETS */
+		BlockCreationBytecodeSize
+#  endif /* MULTIPLEBYTECODESETS */
+		;
 }
 
 
@@ -2746,7 +2435,7 @@ static sqInt NoDbgRegParms
 blockDispatchTargetsForperformarg(CogMethod *cogMethod, usqInt (*binaryFunction)(sqInt mcpc, sqInt arg), sqInt arg)
 {
     sqInt blockEntry;
-    sqInt end;
+    usqInt end;
     sqInt pc;
     sqInt result;
     usqInt targetpc;
@@ -2790,7 +2479,7 @@ bytecodePCForstartBcpcin(sqInt mcpc, sqInt startbcpc, CogBlockMethod *cogMethod)
     sqInt byte;
     BytecodeDescriptor *descriptor;
     sqInt distance;
-    usqInt endbcpc;
+    sqInt endbcpc;
     CogMethod *homeMethod;
     sqInt isBackwardBranch;
     sqInt isInBlock;
@@ -2819,7 +2508,7 @@ return result;
 	   skip forward to the bytecode pc map entry for the stack check. */
 	bcpc = startbcpc;
 	if (((cogMethod->cmType)) == CMMethod) {
-		isInBlock = (cogMethod->cpicHasMNUCaseOrCMIsFullBlock);
+		isInBlock = 0;
 		homeMethod = ((CogMethod *) cogMethod);
 		assert(startbcpc == (startPCOfMethodHeader((homeMethod->methodHeader))));
 		map = ((((usqInt)homeMethod)) + ((homeMethod->blockSize))) - 1;
@@ -2833,9 +2522,15 @@ return result;
 		endbcpc = (numBytesOf(aMethodObj)) - 1;
 		/* begin bytecodeSetOffsetForHeader: */
 		aMethodHeader = (homeMethod->methodHeader);
-		bsOffset = (headerIndicatesAlternateBytecodeSet(aMethodHeader)
+		bsOffset = 
+#    if MULTIPLEBYTECODESETS
+			(headerIndicatesAlternateBytecodeSet(aMethodHeader)
 						? 256
-						: 0);
+						: 0)
+#    else /* MULTIPLEBYTECODESETS */
+			0
+#    endif /* MULTIPLEBYTECODESETS */
+			;
 		bcpc += deltaToSkipPrimAndErrorStoreInheader(aMethodObj, (homeMethod->methodHeader));
 	}
 	else {
@@ -2857,9 +2552,15 @@ map -= 1;
 		bcpc = startbcpc - (blockCreationBytecodeSizeForHeader((homeMethod->methodHeader)));
 		/* begin bytecodeSetOffsetForHeader: */
 		aMethodHeader1 = (homeMethod->methodHeader);
-		bsOffset = (headerIndicatesAlternateBytecodeSet(aMethodHeader1)
+		bsOffset = 
+#    if MULTIPLEBYTECODESETS
+			(headerIndicatesAlternateBytecodeSet(aMethodHeader1)
 						? 256
-						: 0);
+						: 0)
+#    else /* MULTIPLEBYTECODESETS */
+			0
+#    endif /* MULTIPLEBYTECODESETS */
+			;
 		byte = (fetchByteofObject(bcpc, aMethodObj)) + bsOffset;
 		descriptor = generatorAt(byte);
 		endbcpc = (bcpc + ((descriptor->numBytes))) + (((descriptor->isBlockCreation)
@@ -3366,17 +3067,12 @@ if (!(asserta(validInlineCacheTag(cacheTag1)))) {
 				sendTable1 = ordinarySendTrampolines;
 			}
 			else {
-if (annotation == IsDirectedSuperSend) {
-					targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
-					sendTable1 = directedSuperSendTrampolines;
-				}
-				else {
 assert(annotation == IsSuperSend);
-					targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
-					sendTable1 = superSendTrampolines;
+				targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
+				sendTable1 = superSendTrampolines;
 
 
-				}
+
 			}
 			
 			/* It's a linked send; find which kind. */
@@ -3431,17 +3127,12 @@ checkIfValidOopRefpccogMethod(sqInt annotation, char *mcpc, sqInt cogMethod)
 				sendTable = ordinarySendTrampolines;
 			}
 			else {
-if (annotation == IsDirectedSuperSend) {
-					offset1 = cmNoCheckEntryOffset;
-					sendTable = directedSuperSendTrampolines;
-				}
-				else {
 assert(annotation == IsSuperSend);
-					offset1 = cmNoCheckEntryOffset;
-					sendTable = superSendTrampolines;
+				offset1 = cmNoCheckEntryOffset;
+				sendTable = superSendTrampolines;
 
 
-				}
+
 			}
 			offset = offset1;
 
@@ -3622,7 +3313,7 @@ static sqInt NoDbgRegParms
 closedPICRefersToUnmarkedObject(CogMethod *cPIC)
 {
     sqInt i;
-    usqInt object;
+    sqInt object;
     sqInt pc;
 
 	if (!((isImmediate((cPIC->selector)))
@@ -3822,45 +3513,6 @@ target = (((sqInt)cPIC)) + (picInterpretAbortOffset());
 	flushICacheFromto(processor, ((usqInt)cPIC), (((usqInt)cPIC)) + closedPICSize);
 	(cPIC->cPICNumCases = ((cPIC->cPICNumCases)) + 1);
 	return 0;
-}
-
-
-/*	Attempt to produce a machine code method for the bytecode method
-	object aMethodObj. N.B. If there is no code memory available do *NOT*
-	attempt to reclaim the method zone. Certain clients (e.g. ceSICMiss:)
-	depend on the zone remaining constant across method generation. */
-
-	/* Cogit>>#cogFullBlockMethod:numCopied: */
-CogMethod *
-cogFullBlockMethodnumCopied(sqInt aMethodObj, sqInt numCopied)
-{
-    CogMethod *cogMethod;
-
-	assert(!((methodHasCogMethod(aMethodObj))));
-	assert(isOopCompiledMethod(ultimateLiteralOf(aMethodObj)));
-	if (aMethodObj == breakMethod) {
-		haltmsg("Compilation of breakMethod");
-	}
-	if (methodUsesAlternateBytecodeSet(aMethodObj)) {
-		if ((numElementsIn(generatorTable)) <= 256) {
-			return null;
-		}
-		bytecodeSetOffset = 256;
-	}
-	else {
-bytecodeSetOffset = 0;
-	}
-	ensureNoForwardedLiteralsIn(aMethodObj);
-	methodObj = aMethodObj;
-	methodHeader = methodHeaderOf(aMethodObj);
-	cogMethod = compileCogFullBlockMethod(numCopied);
-	if ((((((sqInt)cogMethod)) >= MaxNegativeErrorCode) && ((((sqInt)cogMethod)) <= -1))) {
-		if ((((sqInt)cogMethod)) == InsufficientCodeSpace) {
-			callForCogCompiledCodeCompaction();
-		}
-		return null;
-	}
-	return cogMethod;
 }
 
 	/* Cogit>>#cogitPostGCAction: */
@@ -4524,26 +4176,6 @@ compileCPICEntry(void)
 }
 
 
-/*	Compile the abstract instructions for the entire full block method. */
-
-	/* Cogit>>#compileEntireFullBlockMethod: */
-static sqInt NoDbgRegParms
-compileEntireFullBlockMethod(sqInt numCopied)
-{
-    sqInt result;
-
-	/* begin preenMethodLabel */
-	((methodLabel->operands))[1] = 0;
-	compileFullBlockEntry();
-	compileFullBlockMethodFrameBuild(numCopied);
-	if (((result = compileMethodBody())) < 0) {
-		return result;
-	}
-	assert(blockCount == 0);
-	return 0;
-}
-
-
 /*	The entry code to a method checks that the class of the current receiver
 	matches that in the inline cache. Other non-obvious elements are that its
 	alignment must be
@@ -4570,41 +4202,6 @@ compileEntry(void)
 		(abstractInstruction->annotation = IsRelativeCall);
 
 	}
-}
-
-
-/*	Compile the abstract instructions for the entire method, including blocks. */
-/*	Abort for stack overflow on full block activation (no inline cache miss
-	possible). The flag is SendNumArgsReg. */
-
-	/* Cogit>>#compileFullBlockEntry */
-static sqInt
-compileFullBlockEntry(void)
-{
-    sqInt alignment;
-    AbstractInstruction *anInstruction;
-    AbstractInstruction *anInstruction1;
-    sqInt callTarget;
-    AbstractInstruction * jumpNoContextSwitch;
-
-	/* begin MoveCq:R: */
-	anInstruction = genoperandoperand(MoveCqR, 0, ReceiverResultReg);
-	stackOverflowCall = anInstruction;
-	/* begin Call: */
-	callTarget = methodAbortTrampolineFor(methodOrBlockNumArgs);
-	genoperand(Call, callTarget);
-	/* begin MoveCq:R: */
-	anInstruction1 = genoperandoperand(MoveCqR, 0, SendNumArgsReg);
-	fullBlockNoContextSwitchEntry = anInstruction1;
-	/* begin Jump: */
-	jumpNoContextSwitch = genoperand(Jump, ((sqInt)0));
-	/* begin AlignmentNops: */
-	alignment = ((BytesPerWord < 8) ? 8 : BytesPerWord);
-	genoperand(AlignmentNops, alignment);
-	/* begin MoveR:R: */
-	fullBlockEntry = genoperandoperand(MoveRR, ReceiverResultReg, SendNumArgsReg);
-	jmpTarget(jumpNoContextSwitch, gLabel());
-	return 0;
 }
 
 
@@ -4736,26 +4333,7 @@ computeEntryOffsets(void)
 static void
 computeFullBlockEntryOffsets(void)
 {
-    unsigned long fixupSize;
-    unsigned long opcodeSize;
-
-	/* begin allocateOpcodes:bytecodes: */
-	numAbstractOpcodes = 24;
-	opcodeSize = (sizeof(CogAbstractInstruction)) * numAbstractOpcodes;
-	fixupSize = (sizeof(CogBytecodeFixup)) * numAbstractOpcodes;
-	abstractOpcodes = alloca(opcodeSize + fixupSize);
-	bzero(abstractOpcodes, opcodeSize + fixupSize);
-	fixups = ((void *)((((usqInt)abstractOpcodes)) + opcodeSize));
-	zeroOpcodeIndex();
-	labelCounter = 0;
-	methodOrBlockNumArgs = 0;
-	compileFullBlockEntry();
-	computeMaximumSizes();
-	generateInstructionsAt(methodZoneBase + (sizeof(CogMethod)));
-	cbEntryOffset = ((fullBlockEntry->address)) - methodZoneBase;
-	cbNoSwitchEntryOffset = ((fullBlockNoContextSwitchEntry->address)) - methodZoneBase;
-
-}
+	}
 
 
 /*	This pass assigns maximum sizes to all abstract instructions and
@@ -5125,9 +4703,15 @@ endPCOf(sqInt aMethod)
 			return pc - 1;
 		}
 	}
-	bsOffset = (methodUsesAlternateBytecodeSet(aMethod)
+	bsOffset = 
+#  if MULTIPLEBYTECODESETS
+		(methodUsesAlternateBytecodeSet(aMethod)
 				? 256
-				: 0);
+				: 0)
+#  else /* MULTIPLEBYTECODESETS */
+		0
+#  endif /* MULTIPLEBYTECODESETS */
+		;
 	nExts = 0;
 	end = numBytesOf(aMethod);
 	while (pc <= end) {
@@ -5240,31 +4824,6 @@ pc += cPICCaseSize;
 		errors += 256;
 	}
 	return errors;
-}
-
-
-/*	224		11100000	aaaaaaaa	Extend A (Ext A = Ext A prev * 256 + Ext A) */
-
-	/* Cogit>>#extABytecode */
-static sqInt
-extABytecode(void)
-{
-	extA = (((usqInt) extA << 8)) + byte1;
-	return 0;
-}
-
-
-/*	225		11100001	sbbbbbbb	Extend B (Ext B = Ext B prev * 256 + Ext B) */
-
-	/* Cogit>>#extBBytecode */
-static sqInt
-extBBytecode(void)
-{
-	extB = ((extB == 0)
-	 && (byte1 > 0x7F)
-		? byte1 - 256
-		: (((usqInt) extB << 8)) + byte1);
-	return 0;
 }
 
 
@@ -5385,7 +4944,7 @@ findMapLocationForMcpcinMethod(sqInt targetMcpc, CogMethod *cogMethod)
     sqInt mapByte;
     usqInt mcpc;
 
-	mcpc = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+	mcpc = (0
 		? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 		: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 	map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -5455,7 +5014,7 @@ findIsBackwardBranchMcpcBcpcMatchingMcpc(BytecodeDescriptor *descriptor, sqInt i
 static usqInt NoDbgRegParms
 firstMappedPCFor(CogMethod *cogMethod)
 {
-	return ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+	return (0
 		? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 		: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 }
@@ -5479,7 +5038,7 @@ followForwardedLiteralsIn(CogMethod *cogMethod)
 		}
 	}
 	/* begin mapFor:performUntil:arg: */
-	mcpc = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+	mcpc = (0
 		? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 		: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 	map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -5927,55 +5486,6 @@ jumpNext = compileCPICEntry();
 	storeLiteralbeforeFollowingAddress(backEnd, 0, ((endCPICCase0->address)) - (jumpLongByteSize(backEnd)));
 	methodZoneBase = alignUptoRoutineBoundary(endAddress);
 	cPICPrototype = cPIC;
-}
-
-
-/*	We handle jump sizing simply. First we make a pass that asks each
-	instruction to compute its maximum size. Then we make a pass that
-	sizes jumps based on the maxmimum sizes. Then we make a pass
-	that fixes up jumps. When fixing up a jump the jump is not allowed to
-	choose a smaller offset but must stick to the size set in the second pass. */
-
-	/* Cogit>>#generateCogFullBlock */
-static CogMethod *
-generateCogFullBlock(void)
-{
-    sqInt codeSize;
-    unsigned long headerSize;
-    sqInt mapSize;
-    CogMethod *method;
-    sqInt result;
-    sqInt startAddress;
-    sqInt totalSize;
-
-	headerSize = sizeof(CogMethod);
-	(methodLabel->address = freeStart());
-	computeMaximumSizes();
-	concretizeAt(methodLabel, freeStart());
-	codeSize = generateInstructionsAt(((methodLabel->address)) + headerSize);
-	mapSize = generateMapAtstart(null, ((methodLabel->address)) + cbNoSwitchEntryOffset);
-	totalSize = roundUpLength((headerSize + codeSize) + mapSize);
-	if (totalSize > MaxMethodSize) {
-		return ((CogMethod *) MethodTooBig);
-	}
-	startAddress = allocate(totalSize);
-	if (startAddress == 0) {
-return ((CogMethod *) InsufficientCodeSpace);
-	}
-	assert((startAddress + cbEntryOffset) == ((fullBlockEntry->address)));
-	assert((startAddress + cbNoSwitchEntryOffset) == ((fullBlockNoContextSwitchEntry->address)));
-	result = outputInstructionsAt(startAddress + headerSize);
-	assert(((startAddress + headerSize) + codeSize) == result);
-	padIfPossibleWithStopsFromto(backEnd, result, (startAddress + totalSize) - mapSize);
-	generateMapAtstart((startAddress + totalSize) - 1, startAddress + cbNoSwitchEntryOffset);
-	flag("TOCHECK");
-	method = fillInMethodHeadersizeselector(((CogMethod *) startAddress), totalSize, nilObject());
-	(method->cpicHasMNUCaseOrCMIsFullBlock = 1);
-	if (!(postCompileHook == null)) {
-		postCompileHook(method);
-		postCompileHook = null;
-	}
-	return method;
 }
 
 
@@ -6682,17 +6192,12 @@ incrementUsageOfTargetIfLinkedSendmcpcignored(sqInt annotation, char *mcpc, sqIn
 				sendTable1 = ordinarySendTrampolines;
 			}
 			else {
-if (annotation == IsDirectedSuperSend) {
-					targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
-					sendTable1 = directedSuperSendTrampolines;
-				}
-				else {
 assert(annotation == IsSuperSend);
-					targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
-					sendTable1 = superSendTrampolines;
+				targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
+				sendTable1 = superSendTrampolines;
 
 
-				}
+
 			}
 			
 			/* It's a linked send. */
@@ -7158,7 +6663,7 @@ gMoveRR(sqInt reg1, sqInt reg2)
 /*	Answer the address of the null byte at the end of the method map. */
 
 	/* Cogit>>#mapEndFor: */
-static sqInt NoDbgRegParms
+static usqInt NoDbgRegParms
 mapEndFor(CogMethod *cogMethod)
 {
     usqInt end;
@@ -7184,7 +6689,7 @@ mapForperformUntilarg(CogMethod *cogMethod, sqInt (*functionSymbol)(sqInt annota
     usqInt mcpc;
     sqInt result;
 
-	mcpc = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+	mcpc = (0
 		? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 		: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 	map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -7342,7 +6847,7 @@ assert((noAssertMethodClassAssociationOf((cogMethod->methodObject))) == (nilObje
 					}
 				}
 				/* begin mapFor:performUntil:arg: */
-				mcpc = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+				mcpc = (0
 					? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 					: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 				map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -7426,7 +6931,7 @@ if (((cogMethod->cmType)) == CMMethod) {
 					(cogMethod->methodObject = remapOop((cogMethod->methodObject)));
 				}
 				/* begin mapFor:performUntil:arg: */
-				mcpc = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+				mcpc = (0
 					? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 					: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 				map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -7519,7 +7024,7 @@ assert((cogMethodDoesntLookKosher(cogMethod)) == 0);
 					}
 				}
 				/* begin mapFor:performUntil:arg: */
-				mcpc = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+				mcpc = (0
 					? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 					: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 				map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -7636,7 +7141,7 @@ markAndTraceMachineCodeOfMarkedMethods(void)
 			maybeMarkCountersIn(cogMethod);
 			/* begin maybeMarkIRCsIn: */
 			/* begin mapFor:performUntil:arg: */
-			mcpc = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+			mcpc = (0
 				? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 				: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 			map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -7679,7 +7184,7 @@ if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 			maybeMarkCountersIn(cogMethod);
 			/* begin maybeMarkIRCsIn: */
 			/* begin mapFor:performUntil:arg: */
-			mcpc1 = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+			mcpc1 = (0
 				? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 				: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 			map1 = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -7782,7 +7287,7 @@ markAndTraceOrFreeCogMethodfirstVisit(CogMethod *cogMethod, sqInt firstVisit)
 			maybeMarkCountersIn(cogMethod);
 			/* begin maybeMarkIRCsIn: */
 			/* begin mapFor:performUntil:arg: */
-			mcpc = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+			mcpc = (0
 				? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 				: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 			map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -7912,17 +7417,12 @@ markLiteralsAndUnlinkIfUnmarkedSendpcmethod(sqInt annotation, char *mcpc, sqInt 
 				sendTable1 = ordinarySendTrampolines;
 			}
 			else {
-if (annotation == IsDirectedSuperSend) {
-					targetMethod1 = ((CogMethod *) (entryPoint1 - cmNoCheckEntryOffset));
-					sendTable1 = directedSuperSendTrampolines;
-				}
-				else {
 assert(annotation == IsSuperSend);
-					targetMethod1 = ((CogMethod *) (entryPoint1 - cmNoCheckEntryOffset));
-					sendTable1 = superSendTrampolines;
+				targetMethod1 = ((CogMethod *) (entryPoint1 - cmNoCheckEntryOffset));
+				sendTable1 = superSendTrampolines;
 
 
-				}
+
 			}
 			
 			/* It's a linked send. */
@@ -8008,7 +7508,7 @@ markMethodAndReferents(CogBlockMethod *aCogMethod)
 		: cmHomeMethod(aCogMethod));
 	(cogMethod->cmUsageCount = CMMaxUsageCount);
 	/* begin mapFor:performUntil:arg: */
-	mcpc = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+	mcpc = (0
 		? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 		: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 	map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -8112,7 +7612,7 @@ mcPCForBackwardBranchstartBcpcin(sqInt bcpc, sqInt startbcpc, CogBlockMethod *co
     sqInt byte;
     BytecodeDescriptor *descriptor;
     sqInt distance;
-    usqInt endbcpc;
+    sqInt endbcpc;
     CogMethod *homeMethod;
     sqInt isBackwardBranch;
     sqInt isInBlock;
@@ -8144,7 +7644,7 @@ return result;
 	   skip forward to the bytecode pc map entry for the stack check. */
 	bcpc1 = startbcpc;
 	if (((cogMethod->cmType)) == CMMethod) {
-		isInBlock = (cogMethod->cpicHasMNUCaseOrCMIsFullBlock);
+		isInBlock = 0;
 		homeMethod = ((CogMethod *) cogMethod);
 		assert(startbcpc == (startPCOfMethodHeader((homeMethod->methodHeader))));
 		map = ((((usqInt)homeMethod)) + ((homeMethod->blockSize))) - 1;
@@ -8158,9 +7658,15 @@ return result;
 		endbcpc = (numBytesOf(aMethodObj)) - 1;
 		/* begin bytecodeSetOffsetForHeader: */
 		aMethodHeader = (homeMethod->methodHeader);
-		bsOffset = (headerIndicatesAlternateBytecodeSet(aMethodHeader)
+		bsOffset = 
+#    if MULTIPLEBYTECODESETS
+			(headerIndicatesAlternateBytecodeSet(aMethodHeader)
 						? 256
-						: 0);
+						: 0)
+#    else /* MULTIPLEBYTECODESETS */
+			0
+#    endif /* MULTIPLEBYTECODESETS */
+			;
 		bcpc1 += deltaToSkipPrimAndErrorStoreInheader(aMethodObj, (homeMethod->methodHeader));
 	}
 	else {
@@ -8182,9 +7688,15 @@ map -= 1;
 		bcpc1 = startbcpc - (blockCreationBytecodeSizeForHeader((homeMethod->methodHeader)));
 		/* begin bytecodeSetOffsetForHeader: */
 		aMethodHeader1 = (homeMethod->methodHeader);
-		bsOffset = (headerIndicatesAlternateBytecodeSet(aMethodHeader1)
+		bsOffset = 
+#    if MULTIPLEBYTECODESETS
+			(headerIndicatesAlternateBytecodeSet(aMethodHeader1)
 						? 256
-						: 0);
+						: 0)
+#    else /* MULTIPLEBYTECODESETS */
+			0
+#    endif /* MULTIPLEBYTECODESETS */
+			;
 		byte = (fetchByteofObject(bcpc1, aMethodObj)) + bsOffset;
 		descriptor = generatorAt(byte);
 		endbcpc = (bcpc1 + ((descriptor->numBytes))) + (((descriptor->isBlockCreation)
@@ -8568,7 +8080,7 @@ printPCMapPairsFor(CogMethod *cogMethod)
     usqInt mcpc;
     sqInt value;
 
-	mcpc = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+	mcpc = (0
 		? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 		: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 	map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -8745,7 +8257,7 @@ relocateCallsAndSelfReferencesInMethod(CogMethod *cogMethod)
 		: picAbortTrampolineFor((cogMethod->cmNumArgs)))));
 	relocateCallBeforeReturnPCby(backEnd, (((sqInt)cogMethod)) + missOffset, -callDelta);
 	/* begin mapFor:performUntil:arg: */
-	mcpc = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+	mcpc = (0
 		? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 		: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 	map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -8853,17 +8365,12 @@ relocateCallBeforeReturnPCby(backEnd, ((sqInt)mcpc), -callDelta);
 			sendTable1 = ordinarySendTrampolines;
 		}
 		else {
-if (annotation == IsDirectedSuperSend) {
-				offset1 = cmNoCheckEntryOffset;
-				sendTable1 = directedSuperSendTrampolines;
-			}
-			else {
 assert(annotation == IsSuperSend);
-				offset1 = cmNoCheckEntryOffset;
-				sendTable1 = superSendTrampolines;
+			offset1 = cmNoCheckEntryOffset;
+			sendTable1 = superSendTrampolines;
 
 
-			}
+
 		}
 		targetMethod = ((CogMethod *) (entryPoint - offset1));
 		if (((targetMethod->cmType)) != CMFree) {
@@ -8969,17 +8476,12 @@ if (entryPoint1 > methodZoneBase) {
 					sendTable = ordinarySendTrampolines;
 				}
 				else {
-if (annotation == IsDirectedSuperSend) {
-						targetMethod1 = ((CogMethod *) (entryPoint1 - cmNoCheckEntryOffset));
-						sendTable = directedSuperSendTrampolines;
-					}
-					else {
 assert(annotation == IsSuperSend);
-						targetMethod1 = ((CogMethod *) (entryPoint1 - cmNoCheckEntryOffset));
-						sendTable = superSendTrampolines;
+					targetMethod1 = ((CogMethod *) (entryPoint1 - cmNoCheckEntryOffset));
+					sendTable = superSendTrampolines;
 
 
-					}
+
 				}
 				
 				/* Since the unlinking routines may rewrite the cacheTag to the send's selector, and
@@ -9244,7 +8746,7 @@ unlinkAllSends(void)
 	while (cogMethod < (limitZony())) {
 		if (((cogMethod->cmType)) == CMMethod) {
 			/* begin mapFor:performUntil:arg: */
-			mcpc = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+			mcpc = (0
 				? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 				: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 			map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -9306,17 +8808,12 @@ unlinkIfFreeOrLinkedSendpcof(sqInt annotation, char *mcpc, sqInt theSelector)
 				sendTable1 = ordinarySendTrampolines;
 			}
 			else {
-if (annotation == IsDirectedSuperSend) {
-					targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
-					sendTable1 = directedSuperSendTrampolines;
-				}
-				else {
 assert(annotation == IsSuperSend);
-					targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
-					sendTable1 = superSendTrampolines;
+				targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
+				sendTable1 = superSendTrampolines;
 
 
-				}
+
 			}
 			
 			/* It's a linked send. */
@@ -9355,22 +8852,17 @@ unlinkIfInvalidClassSendpcignored(sqInt annotation, char *mcpc, sqInt superfluit
 				sendTable1 = ordinarySendTrampolines;
 			}
 			else {
-if (annotation == IsDirectedSuperSend) {
-					targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
-					sendTable1 = directedSuperSendTrampolines;
-				}
-				else {
 assert(annotation == IsSuperSend);
-					targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
-					sendTable1 = superSendTrampolines;
+				targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
+				sendTable1 = superSendTrampolines;
 
 
-				}
+
 			}
 			
 			/* It's a linked send, but maybe a super send or linked to an OpenPIC, in which case the cache tag will be a selector.... */
 if (!(((annotation == IsSuperSend)
-				 || (annotation == IsDirectedSuperSend))
+				 || (0))
 				 || (((targetMethod1->cmType)) == CMOpenPIC))) {
 				if (!(isValidClassTag(inlineCacheTagAt(backEnd, ((sqInt)mcpc))))) {
 					/* begin unlinkSendAt:targetMethod:sendTable: */
@@ -9407,17 +8899,12 @@ unlinkIfLinkedSendToFreepcignored(sqInt annotation, char *mcpc, sqInt superfluit
 				sendTable1 = ordinarySendTrampolines;
 			}
 			else {
-if (annotation == IsDirectedSuperSend) {
-					targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
-					sendTable1 = directedSuperSendTrampolines;
-				}
-				else {
 assert(annotation == IsSuperSend);
-					targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
-					sendTable1 = superSendTrampolines;
+				targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
+				sendTable1 = superSendTrampolines;
 
 
-				}
+
 			}
 			
 			/* It's a linked send. */
@@ -9457,17 +8944,12 @@ unlinkIfLinkedSendpcignored(sqInt annotation, char *mcpc, sqInt superfluity)
 				sendTable1 = ordinarySendTrampolines;
 			}
 			else {
-if (annotation == IsDirectedSuperSend) {
-					targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
-					sendTable1 = directedSuperSendTrampolines;
-				}
-				else {
 assert(annotation == IsSuperSend);
-					targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
-					sendTable1 = superSendTrampolines;
+				targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
+				sendTable1 = superSendTrampolines;
 
 
-				}
+
 			}
 			
 			/* It's a linked send. */
@@ -9503,17 +8985,12 @@ unlinkIfLinkedSendpcto(sqInt annotation, char *mcpc, sqInt theCogMethod)
 				sendTable1 = ordinarySendTrampolines;
 			}
 			else {
-if (annotation == IsDirectedSuperSend) {
-					targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
-					sendTable1 = directedSuperSendTrampolines;
-				}
-				else {
 assert(annotation == IsSuperSend);
-					targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
-					sendTable1 = superSendTrampolines;
+				targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
+				sendTable1 = superSendTrampolines;
 
 
-				}
+
 			}
 			
 			/* It's a linked send. */
@@ -9556,7 +9033,7 @@ unlinkSendsLinkedForInvalidClasses(void)
 	while (cogMethod < (limitZony())) {
 		if (((cogMethod->cmType)) == CMMethod) {
 			/* begin mapFor:performUntil:arg: */
-			mcpc = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+			mcpc = (0
 				? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 				: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 			map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -9634,8 +9111,7 @@ unlinkSendsOfisMNUSelector(sqInt selector, sqInt isMNUSelector)
 	if (isMNUSelector) {
 while (cogMethod < (limitZony())) {
 			if (((cogMethod->cmType)) != CMFree) {
-				if (((cogMethod->cpicHasMNUCaseOrCMIsFullBlock))
-				 && (((cogMethod->cmType)) == CMClosedPIC)) {
+				if ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)) {
 					assert(((cogMethod->cmType)) == CMClosedPIC);
 					freeMethod(cogMethod);
 					mustScanAndUnlink = 1;
@@ -9672,7 +9148,7 @@ return;
 	while (cogMethod < (limitZony())) {
 		if (((cogMethod->cmType)) == CMMethod) {
 			/* begin mapFor:performUntil:arg: */
-			mcpc = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+			mcpc = (0
 				? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 				: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 			map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -9733,7 +9209,7 @@ unlinkSendsToFree(void)
 	while (cogMethod < (limitZony())) {
 		if (((cogMethod->cmType)) == CMMethod) {
 			/* begin mapFor:performUntil:arg: */
-			mcpc = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+			mcpc = (0
 				? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 				: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 			map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -9808,7 +9284,7 @@ unlinkSendsToandFreeIf(sqInt targetMethodObject, sqInt freeIfTrue)
 	while (cogMethod < (limitZony())) {
 		if (((cogMethod->cmType)) == CMMethod) {
 			/* begin mapFor:performUntil:arg: */
-			mcpc = ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)
+			mcpc = (0
 				? (((usqInt)cogMethod)) + cbNoSwitchEntryOffset
 				: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 			map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
@@ -13870,15 +13346,10 @@ maybeGenerateSelectorIndexDereferenceRoutine(void)
     AbstractInstruction *anInstruction12;
     AbstractInstruction *anInstruction2;
     AbstractInstruction *anInstruction3;
-    AbstractInstruction *anInstruction4;
-    AbstractInstruction *anInstruction5;
     AbstractInstruction *anInstruction6;
     AbstractInstruction *anInstruction7;
     AbstractInstruction *anInstruction8;
     AbstractInstruction *anInstruction9;
-    sqInt bitmask;
-    sqInt byteOffset;
-    AbstractInstruction *jumpFullBlock;
     AbstractInstruction *jumpNegative;
     AbstractInstruction *jumpNotBlock;
     sqInt offset;
@@ -13902,23 +13373,11 @@ maybeGenerateSelectorIndexDereferenceRoutine(void)
 	quickConstant = -(alignment());
 	/* begin gen:quickConstant:operand: */
 	anInstruction2 = genoperandoperand(AndCqR, quickConstant, Extra0Reg);
-	/* begin bitAndByteOffsetOfIsFullBlockBitInto: */
-	byteOffset = BaseHeaderSize + 2;
-	/* begin MoveMb:r:R: */
-	anInstruction4 = genoperandoperandoperand(MoveMbrR, byteOffset, Extra0Reg, Extra1Reg);
-	/* begin TstCq:R: */
-	anInstruction5 = genoperandoperand(TstCqR, 16, Extra1Reg);
-	/* begin JumpNonZero: */
-	jumpFullBlock = genConditionalBranchoperand(JumpNonZero, ((sqInt)0));
-
-
 	/* begin MoveM16:r:R: */
 	anInstruction8 = genoperandoperandoperand(MoveM16rR, 0, Extra0Reg, Extra1Reg);
 	/* begin SubR:R: */
 	genoperandoperand(SubRR, Extra1Reg, Extra0Reg);
 	jmpTarget(jumpNotBlock, gLabel());
-	jmpTarget(jumpFullBlock, getJmpTarget(jumpNotBlock));
-
 	/* begin AndCq:R: */
 	quickConstant1 = -(alignment());
 	/* begin gen:quickConstant:operand: */
@@ -14110,105 +13569,6 @@ genCreateClosureAtnumArgsnumCopiedcontextNumArgslargeinBlock(sqInt bcpc, sqInt n
 }
 
 
-/*	Create a full closure with the given values. */
-
-	/* CogObjectRepresentationForSpur>>#genCreateFullClosure:numArgs:numCopied:ignoreContext:contextNumArgs:large:inBlock: */
-static sqInt NoDbgRegParms
-genCreateFullClosurenumArgsnumCopiedignoreContextcontextNumArgslargeinBlock(sqInt compiledBlock, sqInt numArgs, sqInt numCopied, sqInt ignoreContext, sqInt contextNumArgs, sqInt contextIsLarge, sqInt contextIsBlock)
-{
-    AbstractInstruction *abstractInstruction;
-    sqInt address;
-    sqInt address1;
-    AbstractInstruction *anInstruction;
-    AbstractInstruction *anInstruction1;
-    AbstractInstruction *anInstruction10;
-    AbstractInstruction *anInstruction11;
-    AbstractInstruction *anInstruction2;
-    AbstractInstruction *anInstruction3;
-    AbstractInstruction *anInstruction4;
-    AbstractInstruction *anInstruction5;
-    AbstractInstruction *anInstruction6;
-    AbstractInstruction *anInstruction7;
-    AbstractInstruction *anInstruction8;
-    AbstractInstruction *anInstruction9;
-    usqInt byteSize;
-    sqInt constant;
-    usqLong header;
-    sqInt numSlots;
-    sqInt quickConstant;
-    sqInt quickConstant1;
-    AbstractInstruction *skip;
-
-
-	/* First get thisContext into ReceiverResultReg and thence in ClassReg. */
-if (ignoreContext) {
-
-		/* First get thisContext into ReceiverResultReg and thence in ClassReg. */
-/* begin genMoveNilR: */
-		constant = nilObject();
-		if (shouldAnnotateObjectReference(constant)) {
-			annotateobjRef(gMoveCwR(constant, ClassReg), constant);
-		}
-		else {
-/* begin MoveCq:R: */
-			anInstruction11 = genoperandoperand(MoveCqR, constant, ClassReg);
-		}
-	}
-	else {
-genGetActiveContextNumArgslargeinBlock(contextNumArgs, contextIsLarge, contextIsBlock);
-		/* begin MoveR:R: */
-		genoperandoperand(MoveRR, ReceiverResultReg, ClassReg);
-	}
-	numSlots = FullClosureFirstCopiedValueIndex + numCopied;
-	byteSize = smallObjectBytesForSlots(numSlots);
-	assert(ClassFullBlockClosureCompactIndex != 0);
-	header = headerForSlotsformatclassIndex(numSlots, indexablePointersFormat(), ClassFullBlockClosureCompactIndex);
-	/* begin MoveAw:R: */
-	address = freeStartAddress();
-	/* begin gen:literal:operand: */
-	anInstruction2 = genoperandoperand(MoveAwR, address, ReceiverResultReg);
-	/* begin genStoreHeader:intoNewInstance:using: */
-	anInstruction3 = genoperandoperand(MoveCqR, header, TempReg);
-	/* begin MoveR:Mw:r: */
-	anInstruction4 = genoperandoperandoperand(MoveRMwr, TempReg, 0, ReceiverResultReg);
-	/* begin LoadEffectiveAddressMw:r:R: */
-	anInstruction5 = genoperandoperandoperand(LoadEffectiveAddressMwrR, byteSize, ReceiverResultReg, TempReg);
-	/* begin MoveR:Aw: */
-	address1 = freeStartAddress();
-	/* begin gen:operand:literal: */
-	anInstruction6 = genoperandoperand(MoveRAw, TempReg, address1);
-	/* begin CmpCq:R: */
-	quickConstant = getScavengeThreshold();
-	/* begin gen:quickConstant:operand: */
-	anInstruction = genoperandoperand(CmpCqR, quickConstant, TempReg);
-	/* begin JumpBelow: */
-	skip = genConditionalBranchoperand(JumpBelow, ((sqInt)0));
-	/* begin CallRT: */
-	abstractInstruction = genoperand(Call, ceScheduleScavengeTrampoline);
-	(abstractInstruction->annotation = IsRelativeCall);
-	jmpTarget(skip, gLabel());
-	/* begin MoveR:Mw:r: */
-	anInstruction7 = genoperandoperandoperand(MoveRMwr, ClassReg, (ClosureOuterContextIndex * BytesPerOop) + BaseHeaderSize, ReceiverResultReg);
-	/* begin genMoveConstant:R: */
-	if (shouldAnnotateObjectReference(compiledBlock)) {
-		annotateobjRef(gMoveCwR(compiledBlock, TempReg), compiledBlock);
-	}
-	else {
-/* begin MoveCq:R: */
-		anInstruction1 = genoperandoperand(MoveCqR, compiledBlock, TempReg);
-	}
-	/* begin MoveR:Mw:r: */
-	anInstruction8 = genoperandoperandoperand(MoveRMwr, TempReg, (ClosureStartPCIndex * BytesPerOop) + BaseHeaderSize, ReceiverResultReg);
-	/* begin MoveCq:R: */
-	quickConstant1 = ((numArgs << 3) | 1);
-	/* begin gen:quickConstant:operand: */
-	anInstruction9 = genoperandoperand(MoveCqR, quickConstant1, TempReg);
-	/* begin MoveR:Mw:r: */
-	anInstruction10 = genoperandoperandoperand(MoveRMwr, TempReg, (ClosureNumArgsIndex * BytesPerOop) + BaseHeaderSize, ReceiverResultReg);
-	return 0;
-}
-
-
 /*	Make sure that the object in reg is not forwarded. This routine assumes
 	the object will
 	never be forwarded to an immediate, as it is used to unforward literal
@@ -14386,13 +13746,9 @@ generateObjectRepresentationTrampolines(void)
 	ceScheduleScavengeTrampoline = genTrampolineForcalledregsToSave(ceScheduleScavenge, "ceScheduleScavengeTrampoline", CallerSavedRegisterMask);
 	ceSmallActiveContextInMethodTrampoline = genActiveContextTrampolineLargeinBlockcalled(0, 0, "ceSmallMethodContext");
 	ceSmallActiveContextInBlockTrampoline = genActiveContextTrampolineLargeinBlockcalled(0, InVanillaBlock, "ceSmallBlockContext");
-	ceSmallActiveContextInFullBlockTrampoline = genActiveContextTrampolineLargeinBlockcalled(0, InFullBlock, "ceSmallFullBlockContext");
-
 	ceLargeActiveContextInMethodTrampoline = genActiveContextTrampolineLargeinBlockcalled(1, 0, "ceLargeMethodContext");
 	ceLargeActiveContextInBlockTrampoline = genActiveContextTrampolineLargeinBlockcalled(1, InVanillaBlock, "ceLargeBlockContext");
-	ceLargeActiveContextInFullBlockTrampoline = genActiveContextTrampolineLargeinBlockcalled(1, InFullBlock, "ceLargeFullBlockContext");
-
-}
+	}
 
 
 /*	Create a trampoline to answer the active context that will
@@ -14649,6 +14005,8 @@ genGetActiveContextNumArgslargeinBlock(sqInt numArgs, sqInt isLargeContext, sqIn
 {
     AbstractInstruction *abstractInstruction;
     AbstractInstruction *anInstruction;
+    sqInt ceLargeActiveContextInFullBlockTrampoline;
+    sqInt ceSmallActiveContextInFullBlockTrampoline;
     sqInt routine;
 
 	if (isLargeContext) {
@@ -21593,274 +20951,6 @@ genExtendedSuperBytecode(void)
 	return genSendSupernumArgs(byte1 & 0x1F, ((usqInt) byte1) >> 5);
 }
 
-
-/*	244		11110100	i i i i i i i i	Pop and Jump 0n False i i i i i i i i (+
-	Extend B * 256, where Extend B >= 0)
- */
-
-	/* SimpleStackBasedCogit>>#genExtJumpIfFalse */
-static sqInt
-genExtJumpIfFalse(void)
-{
-    sqInt distance;
-    sqInt target;
-
-	distance = byte1 + (((sqInt)((usqInt)(extB) << 8)));
-	assert(distance == (v4LongForwardBranchDistance(generatorAt(byte0), bytecodePC, ((extA != 0
-	? 1
-	: 0)) + ((extB != 0
-	? 1
-	: 0)), methodObj)));
-	extB = 0;
-	target = (distance + 2) + bytecodePC;
-	return genJumpIfto(falseObject(), target);
-}
-
-
-/*	SistaV1: *	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of
-	Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >=
-	0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)
- */
-/*	Non supported in non Sista VMs */
-
-	/* SimpleStackBasedCogit>>#genExtJumpIfNotInstanceOfBehaviorsBytecode */
-static sqInt
-genExtJumpIfNotInstanceOfBehaviorsBytecode(void)
-{
-	return EncounteredUnknownBytecode;
-}
-
-
-/*	243		11110011	i i i i i i i i	Pop and Jump 0n True i i i i i i i i (+
-	Extend B * 256, where Extend B >= 0)
- */
-
-	/* SimpleStackBasedCogit>>#genExtJumpIfTrue */
-static sqInt
-genExtJumpIfTrue(void)
-{
-    sqInt distance;
-    sqInt target;
-
-	distance = byte1 + (((sqInt)((usqInt)(extB) << 8)));
-	assert(distance == (v4LongForwardBranchDistance(generatorAt(byte0), bytecodePC, ((extA != 0
-	? 1
-	: 0)) + ((extB != 0
-	? 1
-	: 0)), methodObj)));
-	extB = 0;
-	target = (distance + 2) + bytecodePC;
-	return genJumpIfto(trueObject(), target);
-}
-
-
-/*	NewspeakV4: 221		11011101		Nop */
-/*	SistaV1:		 91		01011011'		Nop */
-
-	/* SimpleStackBasedCogit>>#genExtNopBytecode */
-static sqInt
-genExtNopBytecode(void)
-{
-	extA = (extB = 0);
-	return 0;
-}
-
-
-/*	SistaV1:		233		11101001	iiiiiiii		Push Character #iiiiiiii (+ Extend B *
-	256) 
- */
-
-	/* SimpleStackBasedCogit>>#genExtPushCharacterBytecode */
-static sqInt
-genExtPushCharacterBytecode(void)
-{
-    sqInt value;
-
-	value = byte1 + (((sqInt)((usqInt)(extB) << 8)));
-	extB = 0;
-	return genPushLiteral(characterObjectOf(value));
-}
-
-
-/*	NewsqueakV4:	229		11100101	iiiiiiii	Push Integer #iiiiiiii (+ Extend B *
-	256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)
-	SistaV1:		232		11101000	iiiiiiii	Push Integer #iiiiiiii (+ Extend B * 256,
-	where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)
- */
-
-	/* SimpleStackBasedCogit>>#genExtPushIntegerBytecode */
-static sqInt
-genExtPushIntegerBytecode(void)
-{
-    sqInt value;
-
-	value = byte1 + (((sqInt)((usqInt)(extB) << 8)));
-	extB = 0;
-	return genPushLiteral(((value << 3) | 1));
-}
-
-
-/*	228		11100100	i i i i i i i i	Push Literal #iiiiiiii (+ Extend A * 256) */
-
-	/* SimpleStackBasedCogit>>#genExtPushLiteralBytecode */
-static sqInt
-genExtPushLiteralBytecode(void)
-{
-    sqInt index;
-
-	index = byte1 + (((sqInt)((usqInt)(extA) << 8)));
-	extA = 0;
-	return genPushLiteralIndex(index);
-}
-
-
-/*	227		11100011	i i i i i i i i	Push Literal Variable #iiiiiiii (+ Extend A
-	* 256)
- */
-
-	/* SimpleStackBasedCogit>>#genExtPushLitVarDirSupBytecode */
-static sqInt
-genExtPushLitVarDirSupBytecode(void)
-{
-    sqInt index;
-
-	index = byte1 + (((sqInt)((usqInt)(extA) << 8)));
-	extA = 0;
-	return genPushLiteralVariableGivenDirectedSuper(index);
-}
-
-
-/*	SistaV1: *	82			01010010			Push thisContext, (then Extend B = 1 => push
-	thisProcess) 
- */
-
-	/* SimpleStackBasedCogit>>#genExtPushPseudoVariable */
-static sqInt
-genExtPushPseudoVariable(void)
-{
-    sqInt ext;
-
-	ext = extB;
-	extB = 0;
-	
-	switch (ext) {
-	case 0:
-		return genPushActiveContextBytecode();
-
-	default:
-		return unknownBytecode();
-
-	}
-	return 0;
-}
-
-
-/*	226		11100010	i i i i i i i i	Push Receiver Variable #iiiiiiii (+ Extend A
-	* 256)
- */
-
-	/* SimpleStackBasedCogit>>#genExtPushReceiverVariableBytecode */
-static sqInt
-genExtPushReceiverVariableBytecode(void)
-{
-    sqInt index;
-
-	index = byte1 + (((sqInt)((usqInt)(extA) << 8)));
-	extA = 0;
-	return (isReadMediatedContextInstVarIndex(index)
-		? genPushMaybeContextReceiverVariable(index)
-		: genPushReceiverVariable(index));
-}
-
-
-/*	238		11101110	i i i i i j j j	Send Literal Selector #iiiii (+ Extend A *
-	32) with jjj (+ Extend B * 8) Arguments
- */
-
-	/* SimpleStackBasedCogit>>#genExtSendBytecode */
-static sqInt
-genExtSendBytecode(void)
-{
-    sqInt litIndex;
-    sqInt nArgs;
-
-	litIndex = (((usqInt) byte1) >> 3) + (((sqInt)((usqInt)(extA) << 5)));
-	extA = 0;
-	nArgs = (byte1 & 7) + (((sqInt)((usqInt)(extB) << 3)));
-	extB = 0;
-	return genSendnumArgs(litIndex, nArgs);
-}
-
-
-/*	239		11101111	i i i i i j j j	Send To Superclass Literal Selector #iiiii
-	(+ Extend A * 32) with jjj (+ Extend B * 8) Arguments
- */
-
-	/* SimpleStackBasedCogit>>#genExtSendSuperBytecode */
-static sqInt
-genExtSendSuperBytecode(void)
-{
-    int isDirected;
-    sqInt litIndex;
-    sqInt nArgs;
-
-	if ((isDirected = extB >= 64)) {
-		extB = extB & 0x3F;
-	}
-	litIndex = (((usqInt) byte1) >> 3) + (((sqInt)((usqInt)(extA) << 5)));
-	extA = 0;
-	nArgs = (byte1 & 7) + (((sqInt)((usqInt)(extB) << 3)));
-	extB = 0;
-	return (isDirected
-		? genSendDirectedSupernumArgs(litIndex, nArgs)
-		: genSendSupernumArgs(litIndex, nArgs));
-}
-
-	/* SimpleStackBasedCogit>>#genExtStoreAndPopRemoteTempOrInstVarLongBytecode */
-static sqInt
-genExtStoreAndPopRemoteTempOrInstVarLongBytecode(void)
-{
-	return genExtStorePopRemoteTempOrInstVarLongBytecodePopBoolean(1);
-}
-
-	/* SimpleStackBasedCogit>>#genExtStoreRemoteTempOrInstVarLongBytecode */
-static sqInt
-genExtStoreRemoteTempOrInstVarLongBytecode(void)
-{
-	return genExtStorePopRemoteTempOrInstVarLongBytecodePopBoolean(0);
-}
-
-
-/*	242		11110010	i i i i i i i i	Jump i i i i i i i i (+ Extend B * 256,
-	where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)
- */
-
-	/* SimpleStackBasedCogit>>#genExtUnconditionalJump */
-static sqInt
-genExtUnconditionalJump(void)
-{
-    AbstractInstruction *abstractInstruction;
-    sqInt distance;
-    sqInt target;
-
-	distance = byte1 + (((sqInt)((usqInt)(extB) << 8)));
-	assert(distance == (v4LongBranchDistance(generatorAt(byte0), bytecodePC, ((extA != 0
-	? 1
-	: 0)) + ((extB != 0
-	? 1
-	: 0)), methodObj)));
-	extB = 0;
-	target = (distance + 2) + bytecodePC;
-	if (distance < 0) {
-return genJumpBackTo(target);
-	}
-	genJumpTo(target);
-	/* begin annotateBytecode: */
-	abstractInstruction = lastOpcode();
-	(abstractInstruction->annotation = HasBytecodePC);
-	return 0;
-}
-
 	/* SimpleStackBasedCogit>>#genFastPrimFail */
 static sqInt
 genFastPrimFail(void)
@@ -21942,16 +21032,6 @@ genLongJumpIfTrue(void)
 }
 
 
-/*	230		11100110	i i i i i i i i	Push Temporary Variable #iiiiiiii */
-
-	/* SimpleStackBasedCogit>>#genLongPushTemporaryVariableBytecode */
-static sqInt
-genLongPushTemporaryVariableBytecode(void)
-{
-	return genPushTemporaryVariable(byte1);
-}
-
-
 /*	237		11101101	i i i i i i i i	Pop and Store Temporary Variable #iiiiiiii */
 
 	/* SimpleStackBasedCogit>>#genLongStoreAndPopTemporaryVariableBytecode */
@@ -21959,16 +21039,6 @@ static sqInt
 genLongStoreAndPopTemporaryVariableBytecode(void)
 {
 	return genStorePopTemporaryVariable(1, byte1);
-}
-
-
-/*	234		11101010	i i i i i i i i	Store Temporary Variable #iiiiiiii */
-
-	/* SimpleStackBasedCogit>>#genLongStoreTemporaryVariableBytecode */
-static sqInt
-genLongStoreTemporaryVariableBytecode(void)
-{
-	return genStorePopTemporaryVariable(0, byte1);
 }
 
 	/* SimpleStackBasedCogit>>#genLongUnconditionalBackwardJump */
@@ -22233,31 +21303,11 @@ genPushConstantNilBytecode(void)
 	return genPushLiteral(nilObject());
 }
 
-
-/*	79			01001111		Push 1 */
-
-	/* SimpleStackBasedCogit>>#genPushConstantOneBytecode */
-static sqInt
-genPushConstantOneBytecode(void)
-{
-	return genPushLiteral((((sqInt)1 << 3) | 1));
-}
-
 	/* SimpleStackBasedCogit>>#genPushConstantTrueBytecode */
 static sqInt
 genPushConstantTrueBytecode(void)
 {
 	return genPushLiteral(trueObject());
-}
-
-
-/*	78			01001110		Push 0 */
-
-	/* SimpleStackBasedCogit>>#genPushConstantZeroBytecode */
-static sqInt
-genPushConstantZeroBytecode(void)
-{
-	return genPushLiteral((((sqInt)0 << 3) | 1));
 }
 
 	/* SimpleStackBasedCogit>>#genPushLiteralConstantBytecode */
@@ -22285,16 +21335,6 @@ static sqInt
 genPushLiteralVariableBytecode(void)
 {
 	return genPushLiteralVariable(byte0 & 0x1F);
-}
-
-
-/*	e.g. SistaV1: 16-31		0001 iiii			Push Literal Variable #iiii */
-
-	/* SimpleStackBasedCogit>>#genPushLitVarDirSup16CasesBytecode */
-static sqInt
-genPushLitVarDirSup16CasesBytecode(void)
-{
-	return genPushLiteralVariableGivenDirectedSuper(byte0 & 15);
 }
 
 	/* SimpleStackBasedCogit>>#genPushQuickIntegerConstantBytecode */
@@ -22405,26 +21445,6 @@ genReturnNil(void)
 	return genUpArrowReturn();
 }
 
-	/* SimpleStackBasedCogit>>#genReturnNilFromBlock */
-static sqInt
-genReturnNilFromBlock(void)
-{
-    AbstractInstruction *anInstruction;
-    sqInt constant;
-
-	assert(inBlock > 0);
-	/* begin genMoveNilR: */
-	constant = nilObject();
-	if (shouldAnnotateObjectReference(constant)) {
-		annotateobjRef(gMoveCwR(constant, ReceiverResultReg), constant);
-	}
-	else {
-/* begin MoveCq:R: */
-		anInstruction = genoperandoperand(MoveCqR, constant, ReceiverResultReg);
-	}
-	return genBlockReturn();
-}
-
 	/* SimpleStackBasedCogit>>#genReturnTrue */
 static sqInt
 genReturnTrue(void)
@@ -22489,18 +21509,6 @@ genShortJumpIfFalse(void)
 	return genJumpIfto(falseObject(), target);
 }
 
-	/* SimpleStackBasedCogit>>#genShortJumpIfTrue */
-static sqInt
-genShortJumpIfTrue(void)
-{
-    sqInt distance;
-    sqInt target;
-
-	distance = v3ShortForwardBranchDistance(generatorAt(byte0), bytecodePC, 0, methodObj);
-	target = (distance + 1) + bytecodePC;
-	return genJumpIfto(trueObject(), target);
-}
-
 	/* SimpleStackBasedCogit>>#genShortUnconditionalJump */
 static sqInt
 genShortUnconditionalJump(void)
@@ -22513,102 +21521,6 @@ genShortUnconditionalJump(void)
 	return genJumpTo(target);
 }
 
-	/* SimpleStackBasedCogit>>#genSistaExtStoreAndPopLiteralVariableBytecode */
-static sqInt
-genSistaExtStoreAndPopLiteralVariableBytecode(void)
-{
-    sqInt index;
-    sqInt needsImmCheck;
-    sqInt needsStoreCheck;
-
-	/* begin genSistaExtStoreLiteralVariableBytecodePopBoolean: */
-	needsStoreCheck = (((((ssTop())->type)) != SSConstant)
-	 || ((isNonImmediate(((ssTop())->constant)))
-	 && (shouldAnnotateObjectReference(((ssTop())->constant)))))
-	 && ((extB & 1) == 0);
-	needsImmCheck = (extB & 4) == 0;
-	index = byte1 + (((sqInt)((usqInt)(extA) << 8)));
-	extA = (extB = 0);
-	return genStorePopLiteralVariableneedsStoreCheckneedsImmutabilityCheck(1, index, needsStoreCheck, needsImmCheck);
-}
-
-	/* SimpleStackBasedCogit>>#genSistaExtStoreAndPopReceiverVariableBytecode */
-static sqInt
-genSistaExtStoreAndPopReceiverVariableBytecode(void)
-{
-    sqInt index;
-    sqInt maybeContext;
-    sqInt needsImmCheck;
-    sqInt needsStoreCheck;
-
-	/* begin genSistaExtStoreAndPopReceiverVariableBytecodePopBoolean: */
-	needsStoreCheck = (((((ssTop())->type)) != SSConstant)
-	 || ((isNonImmediate(((ssTop())->constant)))
-	 && (shouldAnnotateObjectReference(((ssTop())->constant)))))
-	 && ((extB & 1) == 0);
-
-	/* Long form and short form exist for popInto. Only the long form exists for store.
-	   Store have an explicit flag to mark context accessing, while popInto context accessing are done through the long form,
-	   hence generate the context form if the flag is set or if this is a popInto. */
-	needsImmCheck = (extB & 4) == 0;
-	maybeContext = 1;
-	extB = 0;
-	index = byte1 + (((sqInt)((usqInt)(extA) << 8)));
-	extA = 0;
-	return ((isWriteMediatedContextInstVarIndex(index))
-	 && (maybeContext)
-		? genStorePopMaybeContextReceiverVariableneedsStoreCheckneedsImmutabilityCheck(1, index, needsStoreCheck, needsImmCheck)
-		: genStorePopReceiverVariableneedsStoreCheckneedsImmutabilityCheck(1, index, needsStoreCheck, needsImmCheck));
-}
-
-	/* SimpleStackBasedCogit>>#genSistaExtStoreLiteralVariableBytecode */
-static sqInt
-genSistaExtStoreLiteralVariableBytecode(void)
-{
-    sqInt index;
-    sqInt needsImmCheck;
-    sqInt needsStoreCheck;
-
-	/* begin genSistaExtStoreLiteralVariableBytecodePopBoolean: */
-	needsStoreCheck = (((((ssTop())->type)) != SSConstant)
-	 || ((isNonImmediate(((ssTop())->constant)))
-	 && (shouldAnnotateObjectReference(((ssTop())->constant)))))
-	 && ((extB & 1) == 0);
-	needsImmCheck = (extB & 4) == 0;
-	index = byte1 + (((sqInt)((usqInt)(extA) << 8)));
-	extA = (extB = 0);
-	return genStorePopLiteralVariableneedsStoreCheckneedsImmutabilityCheck(0, index, needsStoreCheck, needsImmCheck);
-}
-
-	/* SimpleStackBasedCogit>>#genSistaExtStoreReceiverVariableBytecode */
-static sqInt
-genSistaExtStoreReceiverVariableBytecode(void)
-{
-    sqInt index;
-    sqInt maybeContext;
-    sqInt needsImmCheck;
-    sqInt needsStoreCheck;
-
-	/* begin genSistaExtStoreAndPopReceiverVariableBytecodePopBoolean: */
-	needsStoreCheck = (((((ssTop())->type)) != SSConstant)
-	 || ((isNonImmediate(((ssTop())->constant)))
-	 && (shouldAnnotateObjectReference(((ssTop())->constant)))))
-	 && ((extB & 1) == 0);
-
-	/* Long form and short form exist for popInto. Only the long form exists for store.
-	   Store have an explicit flag to mark context accessing, while popInto context accessing are done through the long form,
-	   hence generate the context form if the flag is set or if this is a popInto. */
-	needsImmCheck = (extB & 4) == 0;
-	maybeContext = extB & 2;
-	extB = 0;
-	index = byte1 + (((sqInt)((usqInt)(extA) << 8)));
-	extA = 0;
-	return ((isWriteMediatedContextInstVarIndex(index))
-	 && (maybeContext)
-		? genStorePopMaybeContextReceiverVariableneedsStoreCheckneedsImmutabilityCheck(0, index, needsStoreCheck, needsImmCheck)
-		: genStorePopReceiverVariableneedsStoreCheckneedsImmutabilityCheck(0, index, needsStoreCheck, needsImmCheck));
-}
-
 	/* SimpleStackBasedCogit>>#genSpecialSelectorSend */
 static sqInt
 genSpecialSelectorSend(void)
@@ -22616,9 +21528,15 @@ genSpecialSelectorSend(void)
     sqInt index;
     sqInt numArgs;
 
-	index = byte0 - ((bytecodeSetOffset == 256
+	index = byte0 - (
+#if MULTIPLEBYTECODESETS
+	(bytecodeSetOffset == 256
 		? AltFirstSpecialSelector + 256
-		: FirstSpecialSelector));
+		: FirstSpecialSelector)
+#else /* MULTIPLEBYTECODESETS */
+	FirstSpecialSelector
+#endif /* MULTIPLEBYTECODESETS */
+	);
 	numArgs = specialSelectorNumArgs(index);
 	return genSendnumArgs((-index) - 1, numArgs);
 }
@@ -22658,16 +21576,6 @@ genStoreRemoteTempLongBytecode(void)
 }
 
 
-/*	SistaV1: *	217		Trap */
-
-	/* SimpleStackBasedCogit>>#genUnconditionalTrapBytecode */
-static sqInt
-genUnconditionalTrapBytecode(void)
-{
-	return EncounteredUnknownBytecode;
-}
-
-
 /*	Collect the branch and send data for cogMethod, storing it into arrayObj. */
 
 	/* SimpleStackBasedCogit>>#mapPCDataFor:into: */
@@ -22684,7 +21592,7 @@ mapPCDataForinto(CogMethod *cogMethod, sqInt arrayObj)
     CogBlockMethod *cogMethod1;
     BytecodeDescriptor *descriptor;
     sqInt distance;
-    usqInt endbcpc;
+    sqInt endbcpc;
     sqInt errCode;
     CogMethod *homeMethod;
     sqInt isBackwardBranch;
@@ -22704,8 +21612,8 @@ mapPCDataForinto(CogMethod *cogMethod, sqInt arrayObj)
 	introspectionData = arrayObj;
 	if (((cogMethod->stackCheckOffset)) == 0) {
 		assert(introspectionDataIndex == 0);
-		if ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)) {
-			storePointerUncheckedofObjectwithValue(0, introspectionData, nilObject());
+		if (0) {
+storePointerUncheckedofObjectwithValue(0, introspectionData, nilObject());
 			storePointerUncheckedofObjectwithValue(1, introspectionData, ((cbNoSwitchEntryOffset << 3) | 1));
 			storePointerUncheckedofObjectwithValue(2, introspectionData, nilObject());
 			storePointerUncheckedofObjectwithValue(3, introspectionData, ((cbEntryOffset << 3) | 1));
@@ -22736,7 +21644,7 @@ errCode = result;
 	   skip forward to the bytecode pc map entry for the stack check. */
 	bcpc = startbcpc;
 	if (((cogMethod1->cmType)) == CMMethod) {
-		isInBlock = (cogMethod1->cpicHasMNUCaseOrCMIsFullBlock);
+		isInBlock = 0;
 		homeMethod = ((CogMethod *) cogMethod1);
 		assert(startbcpc == (startPCOfMethodHeader((homeMethod->methodHeader))));
 		map = ((((usqInt)homeMethod)) + ((homeMethod->blockSize))) - 1;
@@ -22750,9 +21658,15 @@ errCode = result;
 		endbcpc = (numBytesOf(aMethodObj)) - 1;
 		/* begin bytecodeSetOffsetForHeader: */
 		aMethodHeader = (homeMethod->methodHeader);
-		bsOffset = (headerIndicatesAlternateBytecodeSet(aMethodHeader)
+		bsOffset = 
+#    if MULTIPLEBYTECODESETS
+			(headerIndicatesAlternateBytecodeSet(aMethodHeader)
 						? 256
-						: 0);
+						: 0)
+#    else /* MULTIPLEBYTECODESETS */
+			0
+#    endif /* MULTIPLEBYTECODESETS */
+			;
 		bcpc += deltaToSkipPrimAndErrorStoreInheader(aMethodObj, (homeMethod->methodHeader));
 	}
 	else {
@@ -22774,9 +21688,15 @@ map -= 1;
 		bcpc = startbcpc - (blockCreationBytecodeSizeForHeader((homeMethod->methodHeader)));
 		/* begin bytecodeSetOffsetForHeader: */
 		aMethodHeader1 = (homeMethod->methodHeader);
-		bsOffset = (headerIndicatesAlternateBytecodeSet(aMethodHeader1)
+		bsOffset = 
+#    if MULTIPLEBYTECODESETS
+			(headerIndicatesAlternateBytecodeSet(aMethodHeader1)
 						? 256
-						: 0);
+						: 0)
+#    else /* MULTIPLEBYTECODESETS */
+			0
+#    endif /* MULTIPLEBYTECODESETS */
+			;
 		byte = (fetchByteofObject(bcpc, aMethodObj)) + bsOffset;
 		descriptor = generatorAt(byte);
 		endbcpc = (bcpc + ((descriptor->numBytes))) + (((descriptor->isBlockCreation)
@@ -22926,9 +21846,15 @@ maybeCompileAllocFillerCheck(void)
 static sqInt
 numSpecialSelectors(void)
 {
-	return (bytecodeSetOffset == 256
+	return 
+#  if MULTIPLEBYTECODESETS
+		(bytecodeSetOffset == 256
 				? AltNumSpecialSelectors
-				: NumSpecialSelectors);
+				: NumSpecialSelectors)
+#  else /* MULTIPLEBYTECODESETS */
+		NumSpecialSelectors
+#  endif /* MULTIPLEBYTECODESETS */
+		;
 }
 
 
@@ -22959,8 +21885,8 @@ pcDataForAnnotationMcpcBcpcMethod(BytecodeDescriptor *descriptor, sqInt isBackwa
 
 		/* this is the stackCheck offset */
 assert(introspectionDataIndex == 0);
-		if (((((CogMethod *) cogMethodArg))->cpicHasMNUCaseOrCMIsFullBlock)) {
-			storePointerUncheckedofObjectwithValue(introspectionDataIndex, introspectionData, nilObject());
+		if (0) {
+storePointerUncheckedofObjectwithValue(introspectionDataIndex, introspectionData, nilObject());
 			storePointerUncheckedofObjectwithValue(introspectionDataIndex + 1, introspectionData, ((cbNoSwitchEntryOffset << 3) | 1));
 			storePointerUncheckedofObjectwithValue(introspectionDataIndex + 2, introspectionData, nilObject());
 			storePointerUncheckedofObjectwithValue(introspectionDataIndex + 3, introspectionData, ((cbEntryOffset << 3) | 1));
@@ -23205,9 +22131,9 @@ primitiveGeneratorOrNil(void)
 	{ genPrimitiveClosureValue, 3 },
 	{ genPrimitiveClosureValue, 4 },
 	{ 0, -1 },
-	{ genPrimitiveFullClosureValue, -1 },
 	{ 0, -1 },
-	{ genPrimitiveFullClosureValue, -1 },
+	{ 0, -1 },
+	{ 0, -1 },
 	{ 0, -1 },
 	{ 0, -1 },
 	{ 0, -1 },
@@ -23667,195 +22593,6 @@ v3ShortForwardBranchDistance(BytecodeDescriptor *descriptor, sqInt pc, sqInt nEx
 {
 	assert(nExts == 0);
 	return ((fetchByteofObject(pc, aMethodObj)) & 7) + 1;
-}
-
-
-/*	253		11111101 eei i i kkk	jjjjjjjj		Push Closure Num Copied iii (+ Ext A
-	// 16 * 8) Num Args kkk (+ Ext A \\ 16 * 8) BlockSize jjjjjjjj (+ Ext B *
-	256). ee = num extensions
- */
-
-	/* SimpleStackBasedCogit>>#v4:Block:Code:Size: */
-static sqInt NoDbgRegParms
-v4BlockCodeSize(BytecodeDescriptor *descriptor, sqInt pc, sqInt nExts, sqInt aMethodObj)
-{
-    sqInt byte;
-    sqInt byteOne;
-    sqInt ea;
-    sqInt eb;
-    sqInt extAValue;
-    sqInt extBValue;
-    sqInt extBValue1;
-    sqInt extByte;
-    sqInt pc1;
-
-
-	/* If nExts < 0 it isn't known and we rely on the number of extensions encoded in the eeiiikkk byte. */
-byteOne = fetchByteofObject(pc + 1, aMethodObj);
-	assert((nExts < 0)
-	 || (nExts == (((usqInt) byteOne) >> 6)));
-	/* begin parseV4Exts:priorTo:in:into: */
-	extAValue = (extBValue1 = 0);
-	pc1 = (pc - (((usqInt) byteOne) >> 6)) - (((usqInt) byteOne) >> 6);
-	while (pc1 < pc) {
-byte = fetchByteofObject(pc1, aMethodObj);
-		pc1 += 1;
-		extByte = fetchByteofObject(pc1, aMethodObj);
-		pc1 += 1;
-		assert((byte == 224)
-		 || (byte == 225));
-		if (byte == 224) {
-extAValue = (((usqInt) extAValue << 8)) + extByte;
-		}
-		else {
-extBValue1 = ((extBValue1 == 0)
-			 && (extByte > 0x7F)
-				? extByte - 256
-				: (((usqInt) extBValue1 << 8)) + extByte);
-		}
-	}
-	extBValue = extBValue1;
-
-	return (fetchByteofObject(pc + 2, aMethodObj)) + (((sqInt)((usqInt)(extBValue) << 8)));
-}
-
-
-/*	242		11110010	i i i i i i i i	Jump i i i i i i i i (+ Extend B * 256,
-	where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)
- */
-/*	243		11110011	i i i i i i i i	Pop and Jump 0n True i i i i i i i i (+
-	Extend A * 256)
- */
-/*	244		11110100	i i i i i i i i	Pop and Jump 0n False i i i i i i i i (+
-	Extend A * 256)
- */
-
-	/* SimpleStackBasedCogit>>#v4:LongForward:Branch:Distance: */
-static sqInt NoDbgRegParms
-v4LongForwardBranchDistance(BytecodeDescriptor *descriptor, sqInt pc, sqInt nExts, sqInt aMethodObj)
-{
-    sqInt byte;
-    sqInt ea;
-    sqInt eb;
-    sqInt extAValue;
-    sqInt extBValue;
-    sqInt extBValue1;
-    sqInt extByte;
-    sqInt pc1;
-
-	assert(nExts >= 0);
-	/* begin parseV4Exts:priorTo:in:into: */
-	extAValue = (extBValue1 = 0);
-	pc1 = (pc - nExts) - nExts;
-	while (pc1 < pc) {
-byte = fetchByteofObject(pc1, aMethodObj);
-		pc1 += 1;
-		extByte = fetchByteofObject(pc1, aMethodObj);
-		pc1 += 1;
-		assert((byte == 224)
-		 || (byte == 225));
-		if (byte == 224) {
-extAValue = (((usqInt) extAValue << 8)) + extByte;
-		}
-		else {
-extBValue1 = ((extBValue1 == 0)
-			 && (extByte > 0x7F)
-				? extByte - 256
-				: (((usqInt) extBValue1 << 8)) + extByte);
-		}
-	}
-	extBValue = extBValue1;
-
-	return (fetchByteofObject(pc + 1, aMethodObj)) + (((sqInt)((usqInt)(extBValue) << 8)));
-}
-
-
-/*	**	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of
-	Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >=
-	0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)
- */
-
-	/* SimpleStackBasedCogit>>#v4:Long:BranchIfNotInstanceOf:Distance: */
-static sqInt NoDbgRegParms
-v4LongBranchIfNotInstanceOfDistance(BytecodeDescriptor *descriptor, sqInt pc, sqInt nExts, sqInt aMethodObj)
-{
-    sqInt byte;
-    sqInt ea;
-    sqInt eb;
-    sqInt extAValue;
-    sqInt extBValue;
-    sqInt extBValue1;
-    sqInt extByte;
-    sqInt pc1;
-
-	assert(nExts >= 0);
-	/* begin parseV4Exts:priorTo:in:into: */
-	extAValue = (extBValue1 = 0);
-	pc1 = (pc - nExts) - nExts;
-	while (pc1 < pc) {
-byte = fetchByteofObject(pc1, aMethodObj);
-		pc1 += 1;
-		extByte = fetchByteofObject(pc1, aMethodObj);
-		pc1 += 1;
-		assert((byte == 224)
-		 || (byte == 225));
-		if (byte == 224) {
-extAValue = (((usqInt) extAValue << 8)) + extByte;
-		}
-		else {
-extBValue1 = ((extBValue1 == 0)
-			 && (extByte > 0x7F)
-				? extByte - 256
-				: (((usqInt) extBValue1 << 8)) + extByte);
-		}
-	}
-	extBValue = extBValue1;
-
-	return (fetchByteofObject(pc + 2, aMethodObj)) + (((sqInt)((usqInt)(extBValue) << 8)));
-}
-
-
-/*	242		11110010	i i i i i i i i	Jump i i i i i i i i (+ Extend B * 256,
-	where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)
- */
-
-	/* SimpleStackBasedCogit>>#v4:Long:Branch:Distance: */
-static sqInt NoDbgRegParms
-v4LongBranchDistance(BytecodeDescriptor *descriptor, sqInt pc, sqInt nExts, sqInt aMethodObj)
-{
-    sqInt byte;
-    sqInt ea;
-    sqInt eb;
-    sqInt extAValue;
-    sqInt extBValue;
-    sqInt extBValue1;
-    sqInt extByte;
-    sqInt pc1;
-
-	assert(nExts >= 0);
-	/* begin parseV4Exts:priorTo:in:into: */
-	extAValue = (extBValue1 = 0);
-	pc1 = (pc - nExts) - nExts;
-	while (pc1 < pc) {
-byte = fetchByteofObject(pc1, aMethodObj);
-		pc1 += 1;
-		extByte = fetchByteofObject(pc1, aMethodObj);
-		pc1 += 1;
-		assert((byte == 224)
-		 || (byte == 225));
-		if (byte == 224) {
-extAValue = (((usqInt) extAValue << 8)) + extByte;
-		}
-		else {
-extBValue1 = ((extBValue1 == 0)
-			 && (extByte > 0x7F)
-				? extByte - 256
-				: (((usqInt) extBValue1 << 8)) + extByte);
-		}
-	}
-	extBValue = extBValue1;
-
-	return (fetchByteofObject(pc + 1, aMethodObj)) + (((sqInt)((usqInt)(extBValue) << 8)));
 }
 
 	/* SimpleStackBasedCogit>>#voidCogCompiledCode */
@@ -24351,72 +23088,6 @@ genLoadSlotsourceRegdestReg(ClosureOuterContextIndex, ReceiverResultReg, TempReg
 	}
 }
 
-	/* StackToRegisterMappingCogit>>#compileCogFullBlockMethod: */
-static CogMethod * NoDbgRegParms
-compileCogFullBlockMethod(sqInt numCopied)
-{
-    unsigned long allocBytes;
-    unsigned long fixupBytes;
-    sqInt numBlocks;
-    sqInt numBytecodes;
-    sqInt numCleanBlocks;
-    unsigned long opcodeBytes;
-    sqInt result;
-
-	methodOrBlockNumTemps = tempCountOf(methodObj);
-	hasYoungReferent = isYoungObject(methodObj);
-	methodOrBlockNumArgs = argumentCountOf(methodObj);
-	inBlock = InFullBlock;
-	postCompileHook = null;
-	maxLitIndex = -1;
-	assert((primitiveIndexOf(methodObj)) == 0);
-
-	/* initial estimate.  Actual endPC is determined in scanMethod. */
-initialPC = startPCOfMethod(methodObj);
-	endPC = numBytesOf(methodObj);
-	numBytecodes = (endPC - initialPC) + 1;
-	primitiveIndex = 0;
-	/* begin allocateOpcodes:bytecodes:ifFail: */
-	numAbstractOpcodes = (numBytecodes + 10) * 10;
-	opcodeBytes = (sizeof(CogAbstractInstruction)) * numAbstractOpcodes;
-	fixupBytes = (sizeof(CogBytecodeFixup)) * numAbstractOpcodes;
-	allocBytes = opcodeBytes + fixupBytes;
-	if (allocBytes > MaxStackAllocSize) {
-		return ((CogMethod *) MethodTooBig);
-
-		goto l1;
-	}
-	abstractOpcodes = alloca(allocBytes);
-	bzero(abstractOpcodes, allocBytes);
-	fixups = ((void *)((((usqInt)abstractOpcodes)) + opcodeBytes));
-	zeroOpcodeIndex();
-	labelCounter = 0;
-l1:	/* end allocateOpcodes:bytecodes:ifFail: */;
-	flag("TODO");
-	if (((numBlocks = scanMethod())) < 0) {
-		return ((CogMethod *) numBlocks);
-	}
-	assert(numBlocks == 0);
-	numCleanBlocks = scanForCleanBlocks();
-	assert(numCleanBlocks == 0);
-	allocateBlockStarts(numBlocks + numCleanBlocks);
-	blockCount = 0;
-	if (numCleanBlocks > 0) {
-addCleanBlockStarts();
-	}
-	if (!(maybeAllocAndInitIRCs())) {
-
-		/* Inaccurate error code, but it'll do.  This will likely never fail. */
-return ((CogMethod *) InsufficientCodeSpace);
-	}
-	blockEntryLabel = null;
-	(methodLabel->dependent = null);
-	if (((result = compileEntireFullBlockMethod(numCopied))) < 0) {
-		return ((CogMethod *) result);
-	}
-	return generateCogFullBlock();
-}
-
 	/* StackToRegisterMappingCogit>>#compileCogMethod: */
 static CogMethod * NoDbgRegParms
 compileCogMethod(sqInt selector)
@@ -24622,127 +23293,6 @@ compileFrameBuild(void)
 	}
 	/* begin annotateBytecode: */
 	(stackCheckLabel->annotation = HasBytecodePC);
-	initSimStackForFramefulMethod(initialPC);
-}
-
-
-/*	Make sure ReceiverResultReg holds the receiver, loaded from the closure,
-	which is what is initially in ReceiverResultReg.  */
-/*	Use ReceiverResultReg for Context to agree with store check trampoline */
-/*	Make sure ReceiverResultReg holds the receiver, loaded from
-	the closure, which is what is initially in ReceiverResultReg */
-
-	/* StackToRegisterMappingCogit>>#compileFullBlockFramelessEntry: */
-static void NoDbgRegParms
-compileFullBlockFramelessEntry(sqInt numCopied)
-{
-	initSimStackForFramelessBlock(initialPC);
-	genLoadSlotsourceRegdestReg(ClosureOuterContextIndex, ReceiverResultReg, ReceiverResultReg);
-	genLoadSlotsourceRegdestReg(ReceiverIndex, ReceiverResultReg, Arg0Reg);
-	flag("TODO");
-	genEnsureOopInRegNotForwardedscratchRegupdatingSlotin(Arg0Reg, TempReg, ReceiverIndex, ReceiverResultReg);
-	/* begin MoveR:R: */
-	genoperandoperand(MoveRR, Arg0Reg, ReceiverResultReg);
-}
-
-
-/*	Build a frame for a block activation. See CoInterpreter
-	class>>initializeFrameIndices. closure (in ReceiverResultReg)
-	arg0
-	...
-	argN
-	caller's saved ip/this stackPage (for a base frame)
-	fp->	saved fp
-	method
-	context (uninitialized?)
-	receiver
-	first temp
-	...
-	sp->	Nth temp
-	Avoid use of SendNumArgsReg which is the flag determining whether
-	context switch is allowed on stack-overflow. */
-
-	/* StackToRegisterMappingCogit>>#compileFullBlockMethodFrameBuild: */
-static void NoDbgRegParms
-compileFullBlockMethodFrameBuild(sqInt numCopied)
-{
-    AbstractInstruction *abstractInstruction;
-    sqInt address;
-    AbstractInstruction *anInstruction;
-    AbstractInstruction *anInstruction1;
-    sqInt constant;
-    sqInt i;
-    sqInt iLimiT;
-
-	if (useTwoPaths) {
-
-		/* method with only inst var store, we compile only slow path for now */
-
-		/* method with only inst var store, we compile only slow path for now */
-useTwoPaths = 0;
-		
-#    if IMMUTABILITY
-		needsFrame = 1;
-
-#    endif /* IMMUTABILITY */
-
-	}
-	if (!needsFrame) {
-		assert(numCopied == 0);
-		compileFullBlockFramelessEntry(numCopied);
-		initSimStackForFramelessBlock(initialPC);
-		return;
-	}
-	if (!needsFrame) {
-		return;
-	}
-	/* begin PushR: */
-	genoperand(PushR, FPReg);
-	/* begin MoveR:R: */
-	genoperandoperand(MoveRR, SPReg, FPReg);
-	/* begin MoveR:R: */
-	genoperandoperand(MoveRR, ReceiverResultReg, ClassReg);
-	addDependent(methodLabel, annotateAbsolutePCRef(gPushCw(((sqInt)methodLabel))));
-	((methodLabel->operands))[1] = MFMethodFlagIsBlockFlag;
-	/* begin genMoveNilR: */
-	constant = nilObject();
-	if (shouldAnnotateObjectReference(constant)) {
-		annotateobjRef(gMoveCwR(constant, SendNumArgsReg), constant);
-	}
-	else {
-/* begin MoveCq:R: */
-		anInstruction = genoperandoperand(MoveCqR, constant, SendNumArgsReg);
-	}
-	/* begin PushR: */
-	genoperand(PushR, SendNumArgsReg);
-	flag("TODO");
-	genLoadSlotsourceRegdestReg(FullClosureReceiverIndex, ClassReg, Arg0Reg);
-	genEnsureOopInRegNotForwardedscratchRegupdatingSlotin(Arg0Reg, TempReg, FullClosureReceiverIndex, ReceiverResultReg);
-	/* begin MoveR:R: */
-	genoperandoperand(MoveRR, Arg0Reg, ReceiverResultReg);
-	/* begin PushR: */
-	genoperand(PushR, ReceiverResultReg);
-	for (i = 0; i < numCopied; i += 1) {
-genLoadSlotsourceRegdestReg(i + FullClosureFirstCopiedValueIndex, ClassReg, TempReg);
-		/* begin PushR: */
-		genoperand(PushR, TempReg);
-	}
-	for (i = ((methodOrBlockNumArgs + numCopied) + 1), iLimiT = (temporaryCountOfMethodHeader(methodHeader)); i <= iLimiT; i += 1) {
-		/* begin PushR: */
-		genoperand(PushR, SendNumArgsReg);
-	}
-	/* begin MoveAw:R: */
-	address = stackLimitAddress();
-	/* begin gen:literal:operand: */
-	anInstruction1 = genoperandoperand(MoveAwR, address, TempReg);
-	/* begin CmpR:R: */
-	genoperandoperand(CmpRR, TempReg, SPReg);
-	/* begin JumpBelow: */
-	genConditionalBranchoperand(JumpBelow, ((sqInt)stackOverflowCall));
-	/* begin annotateBytecode: */
-	abstractInstruction = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
-	(abstractInstruction->annotation = HasBytecodePC);
-	stackCheckLabel = abstractInstruction;
 	initSimStackForFramefulMethod(initialPC);
 }
 
@@ -25356,149 +23906,6 @@ genExternalizePointersForPrimitiveCall(void)
 }
 
 
-/*	Block compilation. At this point in the method create the block. Note its
-	start and defer generating code for it until after the method and any
-	other preceding
-	blocks. The block's actual code will be compiled later. */
-/*	253		11111101 eei i i kkk	jjjjjjjj		Push Closure Num Copied iii (+ Ext A
-	// 16 * 8) Num Args kkk (+ Ext A \\ 16 * 8) BlockSize jjjjjjjj (+ Ext B *
-	256). ee = num extensions
- */
-
-	/* StackToRegisterMappingCogit>>#genExtPushClosureBytecode */
-static sqInt
-genExtPushClosureBytecode(void)
-{
-    sqInt i;
-    sqInt numArgs;
-    sqInt numCopied;
-    sqInt reg;
-    sqInt startpc;
-
-	assert(needsFrame);
-	startpc = bytecodePC + (((generatorAt(byte0))->numBytes));
-	addBlockStartAtnumArgsnumCopiedspan(startpc, (numArgs = (byte1 & 7) + ((extA % 16) * 8)), (numCopied = ((((usqInt) byte1) >> 3) & 7) + ((extA / 16) * 8)), byte2 + (((sqInt)((usqInt)(extB) << 8))));
-	extA = (extB = 0);
-	/* begin genInlineClosure:numArgs:numCopied: */
-	assert(getActiveContextAllocatesInMachineCode());
-	(optStatus.isReceiverResultRegLive = 0);
-	ssAllocateCallRegandand(ReceiverResultReg, SendNumArgsReg, ClassReg);
-	genNoPopCreateClosureAtnumArgsnumCopiedcontextNumArgslargeinBlock(startpc + 1, numArgs, numCopied, methodOrBlockNumArgs, methodNeedsLargeContext(methodObj), inBlock);
-	for (i = 1; i <= numCopied; i += 1) {
-reg = ssStorePoptoPreferredReg(1, TempReg);
-		genStoreSourceRegslotIndexintoNewObjectInDestReg(reg, (ClosureFirstCopiedValueIndex + numCopied) - i, ReceiverResultReg);
-	}
-	ssPushRegister(ReceiverResultReg);
-
-	return 0;
-}
-
-
-/*	Full Block creation compilation. The block's actual code will be compiled
-	separatedly. 
- */
-/*	*	255		11111111	xxxxxxxx	siyyyyyy	push Closure Compiled block literal
-	index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1
-	ignoreOuterContext: i = 1
- */
-
-	/* StackToRegisterMappingCogit>>#genExtPushFullClosureBytecode */
-static sqInt
-genExtPushFullClosureBytecode(void)
-{
-    sqInt compiledBlock;
-    sqInt i;
-    int ignoreContext;
-    sqInt numCopied;
-    int receiverIsOnStack;
-    sqInt reg;
-
-	assert(needsFrame);
-	compiledBlock = getLiteral(byte1 + (((sqInt)((usqInt)(extA) << 8))));
-	extA = 0;
-	numCopied = byte2 & ((1U << 6) - 1);
-	receiverIsOnStack = byte2 & (1U << 7);
-	ignoreContext = byte2 & (1U << 6);
-	(optStatus.isReceiverResultRegLive = 0);
-	ssAllocateCallRegandand(ReceiverResultReg, SendNumArgsReg, ClassReg);
-	genCreateFullClosurenumArgsnumCopiedignoreContextcontextNumArgslargeinBlock(compiledBlock, argumentCountOf(compiledBlock), numCopied, ignoreContext, methodOrBlockNumArgs, methodNeedsLargeContext(methodObj), inBlock);
-	for (i = 1; i <= numCopied; i += 1) {
-reg = ssStorePoptoPreferredReg(1, TempReg);
-		genStoreSourceRegslotIndexintoNewObjectInDestReg(reg, (FullClosureFirstCopiedValueIndex + numCopied) - i, ReceiverResultReg);
-	}
-	if (receiverIsOnStack) {
-reg = ssStorePoptoPreferredReg(1, TempReg);
-	}
-	else {
-storeToReg((&simSelf), (reg = TempReg));
-	}
-	genStoreSourceRegslotIndexintoNewObjectInDestReg(reg, FullClosureReceiverIndex, ReceiverResultReg);
-	ssPushRegister(ReceiverResultReg);
-	return 0;
-}
-
-	/* StackToRegisterMappingCogit>>#genExtPushRemoteTempOrInstVarLongBytecode */
-static sqInt
-genExtPushRemoteTempOrInstVarLongBytecode(void)
-{
-    sqInt index;
-    sqInt maybeContext;
-
-	return ((byte2 & (remoteIsInstVarAccess())) == 0
-		? genPushRemoteTempLongBytecode()
-		: ((maybeContext = extB & 2),
-			(index = byte1 + (((sqInt)((usqInt)(extA) << 8)))),
-			(extA = 0),
-			(extB = 0),
-			((isReadMediatedContextInstVarIndex(index))
-				 && (maybeContext)
-					? genPushMaybeContextRemoteInstVarinObjectAt(index, byte2 - (remoteIsInstVarAccess()))
-					: genPushRemoteInstVarinObjectAt(index, byte2 - (remoteIsInstVarAccess())))));
-}
-
-	/* StackToRegisterMappingCogit>>#genExtStorePopRemoteTempOrInstVarLongBytecodePopBoolean: */
-static sqInt NoDbgRegParms
-genExtStorePopRemoteTempOrInstVarLongBytecodePopBoolean(sqInt boolean)
-{
-    AbstractInstruction *abstractInstruction;
-    sqInt index;
-    sqInt maybeContext;
-    sqInt needsImmCheck;
-    sqInt needsStoreCheck;
-
-	needsStoreCheck = (((((ssTop())->type)) != SSConstant)
-	 || ((isNonImmediate(((ssTop())->constant)))
-	 && (shouldAnnotateObjectReference(((ssTop())->constant)))))
-	 && ((extB & 1) == 0);
-	maybeContext = extB & 2;
-	needsImmCheck = (extB & 4) == 0;
-	extB = 0;
-	if ((byte2 & (remoteIsInstVarAccess())) == 0) {
-		genStorePopRemoteTempAtneedsStoreCheck(boolean, byte1, byte2, needsStoreCheck);
-		
-#    if IMMUTABILITY
-		/* begin annotateBytecode: */
-		abstractInstruction = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
-		(abstractInstruction->annotation = HasBytecodePC);
-
-#    endif /* IMMUTABILITY */
-
-	}
-	else {
-index = byte1 + (((sqInt)((usqInt)(extA) << 8)));
-		extA = 0;
-		if ((isWriteMediatedContextInstVarIndex(index))
-		 && (maybeContext)) {
-			genStorePopMaybeContextRemoteInstVarofObjectAtneedsStoreCheckneedsImmutabilityCheck(boolean, index, byte2 - (remoteIsInstVarAccess()), needsStoreCheck, needsImmCheck);
-		}
-		else {
-genStorePopRemoteInstVarofObjectAtneedsStoreCheckneedsImmutabilityCheck(boolean, index, byte2 - (remoteIsInstVarAccess()), needsStoreCheck, needsImmCheck);
-		}
-	}
-	return 0;
-}
-
-
 /*	Enilopmarts transfer control from C into machine code (backwards
 	trampolines). 
  */
@@ -25606,14 +24013,6 @@ generateSendTrampolines(void)
 		-2 - numArgs)
 	: SendNumArgsReg)));
 	}
-	for (numArgs = 0; numArgs < NumSendTrampolines; numArgs += 1) {
-		directedSuperSendTrampolines[numArgs] = (genSendTrampolineFornumArgscalledargargargarg(ceSendabovetonumArgs, numArgs, trampolineNamenumArgs("ceDirectedSuperSend", numArgs), ClassReg, TempReg, ReceiverResultReg, (numArgs <= (NumSendTrampolines - 2)
-	? (/* begin trampolineArgConstant: */
-		assert(numArgs >= 0),
-		-2 - numArgs)
-	: SendNumArgsReg)));
-	}
-
 	for (numArgs = 0; numArgs < NumSendTrampolines; numArgs += 1) {
 		superSendTrampolines[numArgs] = (genSendTrampolineFornumArgscalledargargargarg(ceSendsupertonumArgs, numArgs, trampolineNamenumArgs("ceSuperSend", numArgs), ClassReg, trampolineArgConstant(1), ReceiverResultReg, (numArgs <= (NumSendTrampolines - 2)
 	? (/* begin trampolineArgConstant: */
@@ -25782,37 +24181,15 @@ deadCode = 1;
 	return 0;
 }
 
-	/* StackToRegisterMappingCogit>>#genLoadTemp:in: */
-static void NoDbgRegParms
-genLoadTempin(sqInt objectIndex, sqInt destReg)
-{
-    AbstractInstruction *anInstruction;
-    sqInt offset;
-
-	if (destReg == ReceiverResultReg) {
-		(optStatus.isReceiverResultRegLive = 0);
-	}
-	ssAllocateRequiredReg(destReg);
-	/* begin MoveMw:r:R: */
-	offset = frameOffsetOfTemporary(objectIndex);
-	/* begin gen:quickConstant:operand:operand: */
-	anInstruction = genoperandoperandoperand(MoveMwrR, offset, FPReg, destReg);
-}
-
 	/* StackToRegisterMappingCogit>>#genMarshalledSend:numArgs:sendTable: */
 static sqInt NoDbgRegParms
 genMarshalledSendnumArgssendTable(sqInt selectorIndex, sqInt numArgs, sqInt *sendTable)
 {
     AbstractInstruction *anInstruction;
-    AbstractInstruction *anInstruction1;
     sqInt annotation;
 
 	assert(needsFrame);
 	/* begin annotationForSendTable: */
-	if (sendTable == directedSuperSendTrampolines) {
-		annotation = IsDirectedSuperSend;
-		goto l2;
-	}
 	if (sendTable == superSendTrampolines) {
 		annotation = IsSuperSend;
 		goto l2;
@@ -25821,22 +24198,12 @@ genMarshalledSendnumArgssendTable(sqInt selectorIndex, sqInt numArgs, sqInt *sen
 	annotation = IsSendCall;
 l2:	/* end annotationForSendTable: */;
 	if ((annotation == IsSuperSend)
-	 || (annotation == IsDirectedSuperSend)) {
+	 || (0)) {
 		genEnsureOopInRegNotForwardedscratchReg(ReceiverResultReg, TempReg);
 	}
 	if (numArgs >= (NumSendTrampolines - 1)) {
 		/* begin MoveCq:R: */
 		anInstruction = genoperandoperand(MoveCqR, numArgs, SendNumArgsReg);
-	}
-	if (annotation == IsDirectedSuperSend) {
-		/* begin genMoveConstant:R: */
-		if (shouldAnnotateObjectReference(tempOop)) {
-			annotateobjRef(gMoveCwR(tempOop, TempReg), tempOop);
-		}
-		else {
-/* begin MoveCq:R: */
-			anInstruction1 = genoperandoperand(MoveCqR, tempOop, TempReg);
-		}
 	}
 	genLoadInlineCacheWithSelector(selectorIndex);
 	((gCall(sendTable[((numArgs < (NumSendTrampolines - 1)) ? numArgs : (NumSendTrampolines - 1))]))->annotation = annotation);
@@ -26001,68 +24368,6 @@ genPrimitiveClosureValue(void)
 }
 
 
-/*	Check the argument count. Fail if wrong.
-	Get the method from the outerContext and see if it is cogged. If so, jump
-	to the
-	block entry or the no-context-switch entry, as appropriate, and we're
-	done. If not,
-	invoke the interpreter primitive. */
-/*	Override to push the register args first. */
-
-	/* StackToRegisterMappingCogit>>#genPrimitiveFullClosureValue */
-static sqInt
-genPrimitiveFullClosureValue(void)
-{
-    AbstractInstruction *anInstruction;
-    AbstractInstruction *anInstruction1;
-    AbstractInstruction *anInstruction2;
-    AbstractInstruction *jumpBCMethod;
-    AbstractInstruction *jumpFail4;
-    AbstractInstruction *jumpFailImmediateMethod;
-    AbstractInstruction *jumpFailNArgs;
-    void (*primitiveRoutine)();
-    sqInt quickConstant;
-    sqInt quickConstant1;
-    sqInt quickConstant2;
-    sqInt result;
-
-	genPushRegisterArgs();
-	genLoadSlotsourceRegdestReg(ClosureNumArgsIndex, ReceiverResultReg, TempReg);
-	/* begin CmpCq:R: */
-	quickConstant = ((methodOrBlockNumArgs << 3) | 1);
-	/* begin gen:quickConstant:operand: */
-	anInstruction = genoperandoperand(CmpCqR, quickConstant, TempReg);
-	/* begin JumpNonZero: */
-	jumpFailNArgs = genConditionalBranchoperand(JumpNonZero, ((sqInt)0));
-	genLoadSlotsourceRegdestReg(FullClosureCompiledBlockIndex, ReceiverResultReg, SendNumArgsReg);
-	jumpFailImmediateMethod = genJumpImmediate(SendNumArgsReg);
-	genGetFormatOfinto(SendNumArgsReg, TempReg);
-	/* begin CmpCq:R: */
-	quickConstant1 = firstCompiledMethodFormat();
-	/* begin gen:quickConstant:operand: */
-	anInstruction1 = genoperandoperand(CmpCqR, quickConstant1, TempReg);
-	/* begin JumpLess: */
-	jumpFail4 = genConditionalBranchoperand(JumpLess, ((sqInt)0));
-	genLoadSlotsourceRegdestReg(HeaderIndex, SendNumArgsReg, ClassReg);
-	jumpBCMethod = genJumpImmediate(ClassReg);
-	primitiveRoutine = functionPointerForCompiledMethodprimitiveIndex(methodObj, primitiveIndex);
-	/* begin AddCq:R: */
-	quickConstant2 = (primitiveRoutine == primitiveFullClosureValueNoContextSwitch
-		? fullBlockNoContextSwitchEntryOffset()
-		: fullBlockEntryOffset());
-	/* begin gen:quickConstant:operand: */
-	anInstruction2 = genoperandoperand(AddCqR, quickConstant2, ClassReg);
-	/* begin JumpR: */
-	genoperand(JumpR, ClassReg);
-	jmpTarget(jumpBCMethod, jmpTarget(jumpFailImmediateMethod, jmpTarget(jumpFail4, gLabel())));
-	if (((result = compileInterpreterPrimitive(primitiveRoutine))) < 0) {
-		return result;
-	}
-	jmpTarget(jumpFailNArgs, gLabel());
-	return CompletePrimitive;
-}
-
-
 /*	Generate an in-line perform primitive. The lookup code requires the
 	selector to be in Arg0Reg.
 	adjustArgumentsForPerform: adjusts the arguments once
@@ -26131,72 +24436,6 @@ reg = ssStorePoptoPreferredReg(1, TempReg);
 	return 0;
 }
 
-
-/*	This is a version of genPushLiteralVariable: that looks ahead for a
-	directed super send bytecode
-	and does not generate any code for the dereference yet if followed by a
-	directed super send.
- */
-
-	/* StackToRegisterMappingCogit>>#genPushLiteralVariableGivenDirectedSuper: */
-static sqInt NoDbgRegParms
-genPushLiteralVariableGivenDirectedSuper(sqInt literalIndex)
-{
-    sqInt bcpc;
-    sqInt descriptor;
-    BytecodeDescriptor *descriptor1;
-    sqInt eA;
-    sqInt eB;
-    sqInt exta;
-    sqInt extb;
-    sqInt savedB0;
-    sqInt savedB1;
-    sqInt savedB2;
-    sqInt savedB3;
-    sqInt savedEA;
-    sqInt savedEB;
-
-	/* begin nextDescriptorAndExtensionsInto: */
-	descriptor1 = generatorAt(byte0);
-	savedB0 = byte0;
-	savedB1 = byte1;
-	savedB2 = byte2;
-	savedB3 = byte3;
-	savedEA = extA;
-	savedEB = extB;
-	bcpc = bytecodePC + ((descriptor1->numBytes));
-	do {
-if (bcpc > endPC) {
-			goto l1;
-		}
-		byte0 = (fetchByteofObject(bcpc, methodObj)) + bytecodeSetOffset;
-		descriptor1 = generatorAt(byte0);
-		loadSubsequentBytesForDescriptorat(descriptor1, bcpc);
-		if (!((descriptor1->isExtension))) {
-			eA = extA;
-			eB = extB;
-			extA = savedEA;
-			extB = savedEB;
-			byte0 = savedB0;
-			byte1 = savedB1;
-			byte2 = savedB2;
-			byte3 = savedB3;
-			if ((descriptor1 != null)
-			 && ((((descriptor1->generator)) == genExtSendSuperBytecode)
-			 && (eB >= 64))) {
-				ssPushConstant(getLiteral(literalIndex));
-				return 0;
-			}
-
-			goto l1;
-		}
-		((descriptor1->generator))();
-		bcpc += (descriptor1->numBytes);
-	} while(1);
-l1:	/* end nextDescriptorAndExtensionsInto: */;
-	return genPushLiteralVariable(literalIndex);
-}
-
 	/* StackToRegisterMappingCogit>>#genPushLiteralVariable: */
 static sqInt NoDbgRegParms
 genPushLiteralVariable(sqInt literalIndex)
@@ -26245,50 +24484,6 @@ genPushMaybeContextReceiverVariable(sqInt slotIndex)
 
 	ssAllocateCallRegand(ReceiverResultReg, SendNumArgsReg);
 	ensureReceiverResultRegContainsSelf();
-	/* begin genPushMaybeContextSlotIndex: */
-	assert(needsFrame);
-	if (CallerSavedRegisterMask & (1ULL << ReceiverResultReg)) {
-
-		/* We have no way of reloading ReceiverResultReg since we need the inst var value as the result. */
-(optStatus.isReceiverResultRegLive = 0);
-	}
-	if (slotIndex == InstructionPointerIndex) {
-		/* begin MoveCq:R: */
-		anInstruction = genoperandoperand(MoveCqR, slotIndex, SendNumArgsReg);
-		/* begin CallRT: */
-		abstractInstruction = genoperand(Call, ceFetchContextInstVarTrampoline);
-		(abstractInstruction->annotation = IsRelativeCall);
-		return ssPushRegister(SendNumArgsReg);
-	}
-	genLoadSlotsourceRegdestReg(SenderIndex, ReceiverResultReg, TempReg);
-	/* begin genJumpNotSmallIntegerInScratchReg: */
-	jmpSingle = genJumpNotSmallInteger(TempReg);
-	/* begin MoveCq:R: */
-	anInstruction1 = genoperandoperand(MoveCqR, slotIndex, SendNumArgsReg);
-	/* begin CallRT: */
-	abstractInstruction1 = genoperand(Call, ceFetchContextInstVarTrampoline);
-	(abstractInstruction1->annotation = IsRelativeCall);
-	/* begin Jump: */
-	jmpDone = genoperand(Jump, ((sqInt)0));
-	jmpTarget(jmpSingle, gLabel());
-	genLoadSlotsourceRegdestReg(slotIndex, ReceiverResultReg, SendNumArgsReg);
-	jmpTarget(jmpDone, gLabel());
-	return ssPushRegister(SendNumArgsReg);
-}
-
-	/* StackToRegisterMappingCogit>>#genPushMaybeContextRemoteInstVar:inObjectAt: */
-static sqInt NoDbgRegParms
-genPushMaybeContextRemoteInstVarinObjectAt(sqInt slotIndex, sqInt index)
-{
-    AbstractInstruction *abstractInstruction;
-    AbstractInstruction *abstractInstruction1;
-    AbstractInstruction *anInstruction;
-    AbstractInstruction *anInstruction1;
-    AbstractInstruction *jmpDone;
-    AbstractInstruction *jmpSingle;
-
-	ssAllocateCallRegand(ReceiverResultReg, SendNumArgsReg);
-	genLoadTempin(index, ReceiverResultReg);
 	/* begin genPushMaybeContextSlotIndex: */
 	assert(needsFrame);
 	if (CallerSavedRegisterMask & (1ULL << ReceiverResultReg)) {
@@ -26391,24 +24586,6 @@ genPushRegisterArgs(void)
 	}
 }
 
-	/* StackToRegisterMappingCogit>>#genPushRemoteInstVar:inObjectAt: */
-static sqInt NoDbgRegParms
-genPushRemoteInstVarinObjectAt(sqInt index, sqInt objectIndex)
-{
-    sqInt objectReg;
-    sqInt resultReg;
-
-	assert(needsFrame);
-	objectReg = allocateRegNotConflictingWith(0);
-	genLoadTempin(objectIndex, objectReg);
-	resultReg = availableRegisterOrNoneFor(backEnd, (liveRegisters()) | (1ULL << objectReg));
-	if (resultReg == NoReg) {
-		resultReg = objectReg;
-	}
-	genLoadSlotsourceRegdestReg(byte1, objectReg, resultReg);
-	return ssPushRegister(resultReg);
-}
-
 	/* StackToRegisterMappingCogit>>#genPushRemoteTempLongBytecode */
 static sqInt
 genPushRemoteTempLongBytecode(void)
@@ -26479,17 +24656,6 @@ genReturnTopFromMethod(void)
 	popToReg(ssTop(), ReceiverResultReg);
 	ssPop(1);
 	return genUpArrowReturn();
-}
-
-	/* StackToRegisterMappingCogit>>#genSendDirectedSuper:numArgs: */
-static sqInt NoDbgRegParms
-genSendDirectedSupernumArgs(sqInt selectorIndex, sqInt numArgs)
-{
-	assert((((ssTop())->type)) == SSConstant);
-	tempOop = ((ssTop())->constant);
-	ssPop(1);
-	marshallSendArguments(numArgs);
-	return genMarshalledSendnumArgssendTable(selectorIndex, numArgs, directedSuperSendTrampolines);
 }
 
 	/* StackToRegisterMappingCogit>>#genSendSuper:numArgs: */
@@ -26707,9 +24873,15 @@ genRemoveSmallIntegerTagsInScratchReg(Arg0Reg);
 /* begin MoveCq:R: */
 		anInstruction7 = genoperandoperand(MoveCqR, argInt, Arg0Reg);
 	}
-	index = byte0 - ((bytecodeSetOffset == 256
+	index = byte0 - (
+#if MULTIPLEBYTECODESETS
+	(bytecodeSetOffset == 256
 		? AltFirstSpecialSelector + 256
-		: FirstSpecialSelector));
+		: FirstSpecialSelector)
+#else /* MULTIPLEBYTECODESETS */
+	FirstSpecialSelector
+#endif /* MULTIPLEBYTECODESETS */
+	);
 	genMarshalledSendnumArgssendTable((-index) - 1, 1, ordinarySendTrampolines);
 	jmpTarget(jumpContinue, gLabel());
 	return 0;
@@ -26852,9 +25024,15 @@ marshallSendArguments(1);
 /* begin MoveCq:R: */
 		anInstruction1 = genoperandoperand(MoveCqR, argInt, Arg0Reg);
 	}
-	index = byte0 - ((bytecodeSetOffset == 256
+	index = byte0 - (
+#if MULTIPLEBYTECODESETS
+	(bytecodeSetOffset == 256
 		? AltFirstSpecialSelector + 256
-		: FirstSpecialSelector));
+		: FirstSpecialSelector)
+#else /* MULTIPLEBYTECODESETS */
+	FirstSpecialSelector
+#endif /* MULTIPLEBYTECODESETS */
+	);
 	return genMarshalledSendnumArgssendTable((-index) - 1, 1, ordinarySendTrampolines);
 }
 
@@ -27315,79 +25493,6 @@ jmpTarget(immutabilityFailure, gLabel());
 	return 0;
 }
 
-
-/*	The reason we need a frame here is that assigning to an inst var of a
-	context may
-	involve wholesale reorganization of stack pages, and the only way to
-	preserve the
-	execution state of an activation in that case is if it has a frame. */
-
-	/* StackToRegisterMappingCogit>>#genStorePop:MaybeContextRemoteInstVar:ofObjectAt:needsStoreCheck:needsImmutabilityCheck: */
-static sqInt NoDbgRegParms
-genStorePopMaybeContextRemoteInstVarofObjectAtneedsStoreCheckneedsImmutabilityCheck(sqInt popBoolean, sqInt slotIndex, sqInt objectIndex, sqInt needsStoreCheck, sqInt needsImmCheck)
-{
-    AbstractInstruction *abstractInstruction;
-    AbstractInstruction *abstractInstruction1;
-    AbstractInstruction *abstractInstruction2;
-    AbstractInstruction *abstractInstruction3;
-    AbstractInstruction *anInstruction;
-    AbstractInstruction *anInstruction1;
-    AbstractInstruction *immutabilityFailure;
-    AbstractInstruction *mutableJump;
-
-	assert(needsFrame);
-	genLoadTempin(objectIndex, ReceiverResultReg);
-	/* begin genGenericStorePop:MaybeContextSlotIndex:needsStoreCheck:needsRestoreRcvr:needsImmutabilityCheck: */
-	assert(needsFrame);
-	
-#  if IMMUTABILITY
-	if (needsImmCheck) {
-mutableJump = genJumpMutablescratchReg(ReceiverResultReg, TempReg);
-		/* begin genStoreTrampolineCall: */
-		if (slotIndex >= (NumStoreTrampolines - 1)) {
-			/* begin MoveCq:R: */
-			anInstruction1 = genoperandoperand(MoveCqR, slotIndex, TempReg);
-			/* begin CallRT: */
-			abstractInstruction1 = genoperand(Call, ceStoreTrampolines[NumStoreTrampolines - 1]);
-			(abstractInstruction1->annotation = IsRelativeCall);
-		}
-		else {
-/* begin CallRT: */
-			abstractInstruction2 = genoperand(Call, ceStoreTrampolines[slotIndex]);
-			(abstractInstruction2->annotation = IsRelativeCall);
-		}
-		/* begin annotateBytecode: */
-		abstractInstruction3 = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
-		(abstractInstruction3->annotation = HasBytecodePC);
-		/* begin Jump: */
-		immutabilityFailure = genoperand(Jump, ((sqInt)0));
-		jmpTarget(mutableJump, gLabel());
-	}
-
-#  endif /* IMMUTABILITY */
-
-	ssPop(1);
-	ssAllocateCallRegand(ClassReg, SendNumArgsReg);
-	ssPush(1);
-	genLoadSlotsourceRegdestReg(SenderIndex, ReceiverResultReg, TempReg);
-	ssStoreAndReplacePoptoReg(popBoolean, ClassReg);
-	ssFlushTo(simStackPtr);
-	/* begin MoveCq:R: */
-	anInstruction = genoperandoperand(MoveCqR, slotIndex, SendNumArgsReg);
-	/* begin CallRT: */
-	abstractInstruction = genoperand(Call, ceStoreContextInstVarTrampoline);
-	(abstractInstruction->annotation = IsRelativeCall);
-	
-#  if IMMUTABILITY
-	if (needsImmCheck) {
-jmpTarget(immutabilityFailure, gLabel());
-	}
-
-#  endif /* IMMUTABILITY */
-
-	return 0;
-}
-
 	/* StackToRegisterMappingCogit>>#genStorePop:ReceiverVariable:needsStoreCheck:needsImmutabilityCheck: */
 static sqInt NoDbgRegParms
 genStorePopReceiverVariableneedsStoreCheckneedsImmutabilityCheck(sqInt popBoolean, sqInt slotIndex, sqInt needsStoreCheck, sqInt needsImmCheck)
@@ -27417,31 +25522,6 @@ ssAllocateRequiredReg(ClassReg);
 	topReg = allocateRegForStackEntryAtnotConflictingWith(0, 1ULL << ReceiverResultReg);
 	ssStorePoptoReg(popBoolean, topReg);
 	return genStoreSourceRegslotIndexdestRegscratchReginFrameneedsStoreCheck(topReg, slotIndex, ReceiverResultReg, TempReg, needsFrame, needsStoreCheck1);
-}
-
-	/* StackToRegisterMappingCogit>>#genStorePop:RemoteInstVar:ofObjectAt:needsStoreCheck:needsImmutabilityCheck: */
-static sqInt NoDbgRegParms
-genStorePopRemoteInstVarofObjectAtneedsStoreCheckneedsImmutabilityCheck(sqInt popBoolean, sqInt slotIndex, sqInt objectIndex, sqInt needsStoreCheck, sqInt needsImmCheck)
-{
-    sqInt topReg;
-
-	assert(needsFrame);
-	genLoadTempin(objectIndex, ReceiverResultReg);
-	/* begin genGenericStorePop:slotIndex:destReg:needsStoreCheck:needsRestoreRcvr:needsImmutabilityCheck: */
-	
-#  if IMMUTABILITY
-	if (needsImmCheck) {
-ssAllocateRequiredReg(ClassReg);
-		ssStoreAndReplacePoptoReg(popBoolean, ClassReg);
-		ssFlushTo(simStackPtr);
-		return genStoreWithImmutabilityCheckSourceRegslotIndexdestRegscratchRegneedsStoreCheckneedRestoreRcvr(ClassReg, slotIndex, ReceiverResultReg, TempReg, needsStoreCheck, 0);
-	}
-
-#  endif /* IMMUTABILITY */
-
-	topReg = allocateRegForStackEntryAtnotConflictingWith(0, 1ULL << ReceiverResultReg);
-	ssStorePoptoReg(popBoolean, topReg);
-	return genStoreSourceRegslotIndexdestRegscratchReginFrameneedsStoreCheck(topReg, slotIndex, ReceiverResultReg, TempReg, needsFrame, needsStoreCheck);
 }
 
 
@@ -27971,7 +26051,7 @@ return 0;
 static sqInt NoDbgRegParms
 pushNilSizenumInitialNils(sqInt aMethodObj, sqInt numInitialNils)
 {
-    sqInt (* const pushNilSizeFunction)(sqInt,sqInt) = squeakV3orSistaV1PushNilSizenumInitialNils;
+    sqInt (* const pushNilSizeFunction)(sqInt,sqInt) = v3PushNilSizenumInitialNils;
 
 	return pushNilSizeFunction(aMethodObj, numInitialNils);
 }
@@ -28032,7 +26112,7 @@ scanBlock(BlockStart *blockStart)
     sqInt framelessStackDelta;
     sqInt nExts;
     sqInt numPushNils;
-    sqInt (* const numPushNilsFunction)(struct _BytecodeDescriptor *,sqInt,sqInt,sqInt) = squeakV3orSistaV1NumPushNils;
+    sqInt (* const numPushNilsFunction)(struct _BytecodeDescriptor *,sqInt,sqInt,sqInt) = v3NumPushNils;
     sqInt pc;
     sqInt pushingNils;
 
@@ -28242,23 +26322,6 @@ nExts = (extA = (extB = 0));
 		prevBCDescriptor = descriptor;
 	}
 	return numBlocks;
-}
-
-	/* StackToRegisterMappingCogit>>#squeakV3orSistaV1PushNilSize:numInitialNils: */
-static sqInt NoDbgRegParms
-squeakV3orSistaV1PushNilSizenumInitialNils(sqInt aMethodObj, sqInt numInitialNils)
-{
-	return (methodUsesAlternateBytecodeSet(aMethodObj),
-	numInitialNils);
-}
-
-	/* StackToRegisterMappingCogit>>#squeakV3orSistaV1:Num:Push:Nils: */
-static sqInt NoDbgRegParms
-squeakV3orSistaV1NumPushNils(BytecodeDescriptor *descriptor, sqInt pc, sqInt nExts, sqInt aMethodObj)
-{
-	return ((((descriptor->generator)) == genPushConstantNilBytecode
-		? 1
-		: 0));
 }
 
 
@@ -28672,4 +26735,20 @@ updateSimSpillBase(void)
 	if (simSpillBase > simStackPtr) {
 		simSpillBase = ((simStackPtr < 0) ? 0 : simStackPtr);
 	}
+}
+
+	/* StackToRegisterMappingCogit>>#v3PushNilSize:numInitialNils: */
+static sqInt NoDbgRegParms
+v3PushNilSizenumInitialNils(sqInt aMethodObj, sqInt numInitialNils)
+{
+	return numInitialNils;
+}
+
+	/* StackToRegisterMappingCogit>>#v3:Num:Push:Nils: */
+static sqInt NoDbgRegParms
+v3NumPushNils(BytecodeDescriptor *descriptor, sqInt pc, sqInt nExts, sqInt aMethodObj)
+{
+	return (((descriptor->generator)) == genPushConstantNilBytecode
+		? 1
+		: 0);
 }

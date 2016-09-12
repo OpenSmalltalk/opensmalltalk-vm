@@ -76,9 +76,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"GeniePlugin v2.0 11 September 2016 VMMaker.oscog-eem.1950 (i)"
+	"GeniePlugin v2.0 12 September 2016 VMMaker.oscog-eem.1950 (i)"
 #else
-	"GeniePlugin v2.0 11 September 2016 VMMaker.oscog-eem.1950 (e)"
+	"GeniePlugin v2.0 12 September 2016 VMMaker.oscog-eem.1950 (e)"
 #endif
 ;
 
