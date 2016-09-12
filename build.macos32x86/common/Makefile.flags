@@ -34,6 +34,10 @@ BFLAGS:=-arch $(TARGET_ARCH) \
 		-bundle \
 		-isysroot $(SDK)
 
+DYFLAGS:=-arch $(TARGET_ARCH) \
+		-shared \
+		-isysroot $(SDK)
+
 WARNINGS:= -Wno-missing-field-initializers -Wno-missing-prototypes \
 	-Wno-missing-braces -Wparentheses -Wswitch -Wno-unused-function \
 	-Wno-unused-label -Wno-unused-parameter -Wunused-variable -Wunused-value \

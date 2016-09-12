@@ -1111,7 +1111,11 @@ fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long wheelM
 	evt->charCode = macKeyCode;
 	evt->pressCode = EventKeyDown;
 	evt->utf32Code = 0;
+#ifdef PharoVM
+	evt->modifiers = modifierMap[((controlKey | optionKey | cmdKey | shiftKey) >> 8)];
+#else
 	evt->modifiers = modifierMap[(controlKey >> 8)];
+#endif
 	evt->windowIndex = windowActive;
 	/* generate extra character event */
         extra = (sqKeyboardEvent*)nextEventPut();

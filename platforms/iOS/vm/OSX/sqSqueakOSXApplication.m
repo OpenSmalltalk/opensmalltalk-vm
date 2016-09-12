@@ -51,7 +51,11 @@
 #	define IMAGE_DIALECT_NAME "Newspeak"
 #	define DEFAULT_IMAGE_NAME "newspeak.image"
 #	define IMAGE_ENV_NAME "NEWSPEAK_IMAGE"
-# else
+# elif PharoVM
+#	define IMAGE_DIALECT_NAME "Pharo"
+#	define DEFAULT_IMAGE_NAME "Pharo.image"
+#	define IMAGE_ENV_NAME "PHARO_IMAGE"
+# else 
 #	define IMAGE_DIALECT_NAME "Squeak"
 #	define DEFAULT_IMAGE_NAME "squeak.image"
 #	define IMAGE_ENV_NAME "SQUEAK_IMAGE"

@@ -107,7 +107,9 @@ extern sqInt interpret(void);  //This is a VM Callback
 }
 
 - (void) doHeadlessSetup {
-	gSqueakHeadless = false;
+#ifndef PharoVM
+    gSqueakHeadless = false;
+#endif
 }
 
 - (void) doMemorySetup {
