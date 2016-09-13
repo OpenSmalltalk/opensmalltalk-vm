@@ -168,7 +168,7 @@ ifeq ($(realpath $(PREREQUISITES)),$(abspath $(PREREQUISITES)))
 $(PLUGINLIB): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ)
 	-rm $(PLUGINLIB)
 	ar -rc $(PLUGINLIB) $(LIBOBJ)
-	
+
 # Either link with normal compiler/linker or with cpp compiler/linker.  If
 # LINK_WITH_CPP is set, use e.g. clang++
 $(PLUGINBUNDLE): $(PLUGINREQS) $(PLUGINEXE) $(PLUGINICONS) $(PLUGINPLIST)
