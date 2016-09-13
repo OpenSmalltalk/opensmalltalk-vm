@@ -3,9 +3,9 @@ include ../common/Makefile.lib.extra
 $(info LIBRARY: libgit2)
 
 # plugin definitions
-LIBGIT2URL:=https://github.com/libgit2/libgit2/archive/v0.23.0.tar.gz
-LIBGIT2DIR:=$(THIRDPARTYDIR)/libgit2-0.23.0
-LIBGIT2LIBNAME:=libgit2.0.23.0.dylib
+LIBGIT2URL:=https://github.com/libgit2/libgit2/archive/v0.24.1.tar.gz
+LIBGIT2DIR:=$(THIRDPARTYDIR)/libgit2-0.24.1
+LIBGIT2LIBNAME:=libgit2.0.24.0.dylib
 LIBGIT2LIB:=$(THIRDPARTYINSTALLDIR)/$(LIBGIT2LIBNAME)
 
 # ensure third-party library is built and recognised by plugins
