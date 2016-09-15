@@ -1,8 +1,25 @@
 # Copied, perhaps edited, from ../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
+ClipboardExtendedPlugin \
 CroquetPlugin \
-FloatArrayPlugin \
+FT2Plugin \
 FloatMathPlugin \
+JPEGReadWriter2Plugin \
+JPEGReaderPlugin \
+LocalePlugin \
+MIDIPlugin \
 Mpeg3Plugin \
+RePlugin \
 SqueakSSL \
-UnixOSProcessPlugin
+SurfacePlugin \
+UUIDPlugin \
+SerialPlugin \
+ObjectiveCPlugin \
+SDL2DisplayPlugin \
+EventsHandlerPlugin \
+# could work, but I don't know if relevant:
+# TestOSAPlugin \
+# not working (because of Cocoa vs Carbon):
+# QuicktimePlugin \
+# JoystickTabletPlugin \
+# B3DAcceleratorPlugin \

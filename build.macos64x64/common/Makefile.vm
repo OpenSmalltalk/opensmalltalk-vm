@@ -88,7 +88,6 @@ include plugins.ext
 LIBS:= $(addprefix $(OBJDIR)/, $(addsuffix .lib, $(INTERNAL_PLUGINS)))
 BUNDLES:= $(addprefix $(OBJDIR)/, $(addsuffix .bundle, $(EXTERNAL_PLUGINS)))
 
-
 # VM config flags.
 ifeq ($(CONFIGURATION),debug)
 OFLAGS:= -g -O0 -fno-omit-frame-pointer
@@ -206,9 +205,13 @@ endif
 #############################################################################
 # Building plugins
 #
-.PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.bundle
+.PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.bundle $(OBJDIR)/%.dylib
 
+ifeq ($(USEPLUGINASDYLIB),TRUE)
+plugin-makefile = $(firstword $(realpath $(OSXPLUGINSDIR)/$(subst lib,,$(1))/Makefile ../common/Makefile.plugin))
+else
 plugin-makefile = $(firstword $(realpath $(OSXPLUGINSDIR)/$(1)/Makefile ../common/Makefile.plugin))
+endif
 
 # Internal plugin.  Build as lib then link in lib
 # Check for Makefile in iOS plugins directory otherwise use default Makefile
@@ -246,8 +249,24 @@ $(OBJDIR)/%.bundle:	FORCE
 		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" \
+		APP=$(APP) VM=$(VM) BLDDIR=$(BLDDIR) \
 		$(PLUGINHACK) \
 		$(OBJDIR)/$(*F).bundle
+		
+# External plugin. Made in the "Pharo way": as a simple dylib to be included in 
+# Plugins directory
+$(OBJDIR)/%.dylib:	FORCE
+	@-mkdir -p $(BLDDIR)/$(*F)
+	test $@ -ot $(call plugin-makefile,$(*F)) && rm -rf $(BUILD)/vm/$(*F).* || true
+	rm -f $(BUILD)/vm/$(*F).ignore
+	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
+		-f $(call plugin-makefile,$(*F)) MAKEFILE=$(call plugin-makefile,$(*F)) \
+		CONFIGURATION=$(CONFIGURATION) ARCH=$(TARGET_ARCH) \
+		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
+		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" \
+		APP=$(APP) VM=$(VM) BLDDIR=$(BLDDIR) USEPLUGINASDYLIB=TRUE \
+		$(PLUGINHACK) \
+		$(OBJDIR)/$(*F).dylib
 
 # It would be nice to have this abbreviation but it creates havoc eem 2/2016
 #%.bundle: $(OBJDIR)/%.bundle

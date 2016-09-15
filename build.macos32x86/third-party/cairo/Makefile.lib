@@ -1,0 +1,41 @@
+include ../common/Makefile.lib.extra
+
+$(info LIBRARY: cairo)
+
+# plugin definitions
+CAIROURL:=http://www.cairographics.org/releases/cairo-1.12.14.tar.xz
+CAIROLIBNAME:=libcairo.2.dylib
+CAIRODIR:=$(THIRDPARTYDIR)/cairo-1.12.14
+CAIROLIB:=$(THIRDPARTYINSTALLDIR)/$(CAIROLIBNAME)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(CAIROLIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+
+$(CAIRODIR)/configure:
+	curl -L $(CAIROURL) | tar x -C $(THIRDPARTYDIR)
+	touch $(CAIRODIR)/configure
+
+$(CAIROLIB): pkgconfig libpng freetype2 pixman $(CAIRODIR)/configure
+	cd $(CAIRODIR) \
+		&& ./configure \
+			--prefix="$(THIRDPARTYOUTDIR)" \
+			PKG_CONFIG="$(PKG_CONFIG)" \
+			PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" \
+			CFLAGS='-arch i386' \
+			LDFLAGS='-arch i386' \
+			--disable-silent-rules \
+			--disable-xlib \
+			--disable-dependency-tracking \
+		&& make \
+		&& make install
+	cp -f $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME) $(THIRDPARTYINSTALLDIR)
+	install_name_tool -id "@executable_path/Plugins/$(CAIROLIBNAME)" $(CAIROLIB)
+	@echo "Fixing dependency links"
+	@for each in $(notdir $(wildcard $(THIRDPARTYLIBDIR)/*.dylib)); do \
+		install_name_tool -change "$(THIRDPARTYLIBDIR)/$$each" "@executable_path/Plugins/$$each" $(CAIROLIB); \
+	done
+	@echo "DONE"
+	
+cairo: $(CAIROLIB)

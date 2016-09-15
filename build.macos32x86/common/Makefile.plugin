@@ -6,15 +6,16 @@
 # platforms/iOS/plugins/AioPlugin/Makefile.  Look at
 # platforms/iOS/plugins/*/Makefile for examples.
 #
-# CFLAGS     adds additional compilation flags to source file compilation
-# XCFLAGS    adds additional compilation flags after all other flags
-# EXCLUDESRC defines patterns of source files to not compile, e.g. %/dump.c
-# EXTRALIBS  defines additional libraries to link into an external plugin bundle
-# INCDIRS    defines additonal directories in which to search for includes
-# LIBSRC     overrides the set of files to compile (if EXCLUDESRC inconvenient)
-# LINK_WITH_CPP set to non-empty to link external plugin bundle with c++ runtime
-# SRCDIRS    supplies additional directories containing files to compile.
-# PREREQUISITES supplies names of files that must exist to make lib or bundle
+# CFLAGS     		adds additional compilation flags to source file compilation
+# XCFLAGS    		adds additional compilation flags after all other flags
+# EXCLUDESRC 		defines patterns of source files to not compile, e.g. %/dump.c
+# EXTRALIBS  		defines additional libraries to link into an external plugin bundle
+# INCDIRS    		defines additonal directories in which to search for includes
+# LIBSRC     		overrides the set of files to compile (if EXCLUDESRC inconvenient)
+# LINK_WITH_CPP 	set to non-empty to link external plugin bundle with c++ runtime
+# SRCDIRS    		supplies additional directories containing files to compile.
+# PREREQUISITES 	supplies names of files that must exist to make lib or bundle
+# THIRDPARTYLIBS 	supplies names for third-party libraries that needs to be built
 
 $(info $$(LIBNAME): $(LIBNAME))
 
@@ -51,12 +52,21 @@ CFLAGS:= $(CFLAGS) $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(XDEFS)
 #   BUILDDIR: The location where the plugin is built
 #
 #PLUGINSRCDIR:=	../../src/plugins
-CROSSDIR:=	$(PLATDIR)/Cross/plugins/$(LIBNAME)
+	
+ifeq ($(USEPLUGINASDYLIB),TRUE)
+# I do not like to use lib "as is" because that will strip all "lib" occurences, but I do not 
+# find any better solution :(
+LIBDIR:=$(subst lib,,$(LIBNAME))
+else
+LIBDIR:=$(LIBNAME)
+endif
+
+CROSSDIR:=	$(PLATDIR)/Cross/plugins/$(LIBDIR)
 OSXDIR:=	$(PLATDIR)/iOS/vm/OSX
-OSXPLGDIR:=	$(PLATDIR)/iOS/plugins/$(LIBNAME)
+OSXPLGDIR:=	$(PLATDIR)/iOS/plugins/$(LIBDIR)
 UNIXDIR:=	$(PLATDIR)/unix/vm
-MAKERDIR:=	$(PLUGINSRCDIR)/$(LIBNAME)
-BUILDDIR:=	$(BUILD)/$(LIBNAME)
+MAKERDIR:=	$(PLUGINSRCDIR)/$(LIBDIR)
+BUILDDIR:=	$(BUILD)/$(LIBDIR)
 
 # Support directory locations
 CROSSVMDIR:=$(PLATDIR)/Cross/vm
@@ -77,7 +87,6 @@ ifneq ($(EXCLUDESRC),)
 LIBSRC:=$(filter-out $(EXCLUDESRC),$(LIBSRC))
 endif
 
-
 #############################################################################
 # bundle settings
 #
@@ -97,6 +106,9 @@ VMDIR:=     $(BUILD)/vm
 PLUGINLIB:= $(VMDIR)/$(LIBNAME).lib
 PLUGINBUNDLE:= $(VMDIR)/$(LIBNAME).bundle
 PLUGINEXE:= $(PLUGINBUNDLE)/Contents/MacOS/$(LIBNAME)
+	
+PLUGINDYLIB:= $(VMDIR)/$(LIBNAME).dylib
+	
 # https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Introduction/Introduction.html
 PLUGINPLIST:= $(PLUGINBUNDLE)/Contents/Info.plist
 PLUGINICONS:= $(PLUGINBUNDLE)/Contents/Resources/SqueakPlugin.icns
@@ -114,7 +126,7 @@ $(BUILD)/$(LIBNAME)/$(LIBNAME).o: plugins.int plugins.ext
 
 include ../common/Makefile.rules
 
-all:	$(PLUGINLIB) $(PLUGINBUNDLE)
+all: $(PLUGINLIB) $(PLUGINBUNDLE) $(PLUGINDYLIB)
 
 print-settings:
 	@echo ---------------- Makefile.plugin settings ------------------
@@ -153,15 +165,15 @@ $(VMDIR):
 # If any prerequisites are declared all must exist to continue
 ifeq ($(realpath $(PREREQUISITES)),$(abspath $(PREREQUISITES)))
 
-$(PLUGINLIB): $(VMDIR) $(OBJDIR) $(LIBOBJ)
+$(PLUGINLIB): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ)
 	-rm $(PLUGINLIB)
 	ar -rc $(PLUGINLIB) $(LIBOBJ)
 
 # Either link with normal compiler/linker or with cpp compiler/linker.  If
 # LINK_WITH_CPP is set, use e.g. clang++
-$(PLUGINBUNDLE): $(PLUGINEXE) $(PLUGINICONS) $(PLUGINPLIST)
+$(PLUGINBUNDLE): $(PLUGINREQS) $(PLUGINEXE) $(PLUGINICONS) $(PLUGINPLIST)
 
-$(PLUGINEXE): $(VMDIR) $(OBJDIR) $(LIBOBJ)
+$(PLUGINEXE): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ)
 	mkdir -p $(PLUGINBUNDLE)/Contents/MacOS
 ifneq ($(LINK_WITH_CPP),)
 	$(LDCXX) \
@@ -184,6 +196,21 @@ $(PLUGINPLIST): $(PLATDIR)/iOS/plugins/Info.plist getversion
 	sed "s/\$$(VERSION)/`./getversion VERSION_TAG`/" $< | \
 	sed "s/\$(LIBNAME)/$(LIBNAME)/" > $(PLUGINPLIST)
 
+$(PLUGINDYLIB): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ)
+ifneq ($(LINK_WITH_CPP),)
+	$(LDCXX) \
+	$(DYFLAGS) \
+	-install_name @executable_path/Plugins/$(LIBNAME).dylib \
+	$(LIBOBJ) $(EXTRALIBS) \
+	-o $(VMDIR)/$(LIBNAME).dylib
+else
+	$(LD) \
+	$(DYFLAGS) \
+	-install_name @executable_path/Plugins/$(LIBNAME).dylib \
+	$(LIBOBJ) $(EXTRALIBS) \
+	-o $(VMDIR)/$(LIBNAME).dylib
+endif
+	
 getversion:
 	make -f ../common/Makefile.vm getversion
 

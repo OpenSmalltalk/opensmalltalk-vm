@@ -152,8 +152,13 @@
 /*** Variables -- X11 Related ***/
 
 /* name of Squeak windows in Xrm and the WM */
-#define xResClass	"Squeak"
-#define xResName	"squeak"
+#ifdef PharoVM
+# define xResClass	"pharo-vm"
+# define xResName	"Pharo"
+#else
+# define xResClass	"Squeak"
+# define xResName	"squeak"
+#endif
 
 char		*displayName= 0;	/* name of display, or 0 for $DISPLAY */
 Display		*stDisplay= null;	/* Squeak display */
@@ -7385,8 +7390,8 @@ static void display_printUsage(void)
   printf("  -lazy                 go to sleep when main window unmapped\n");
   printf("  -mapdelbs             map Delete key onto Backspace\n");
   printf("  -nointl               disable international keyboard support\n");
-  printf("  -notitle              disable the Squeak window title bar\n");
-  printf("  -title <t>            use t as the Squeak window title instead of the image name\n");
+  printf("  -notitle              disable the " xResName " window title bar\n");
+  printf("  -title <t>            use t as the " xResName " window title instead of the image name\n");
   printf("  -ldtoms <n>           launch drop timeout milliseconds\n");
   printf("  -noxdnd               disable X drag-and-drop protocol support\n");
   printf("  -optmod <n>           map Mod<n> to the Option key\n");
@@ -7405,7 +7410,7 @@ static void display_printUsage(void)
 static void display_printUsageNotes(void)
 {
   printf("  Using `unix:0' for <dpy> may improve local display performance.\n");
-  printf("  -xshm only works when Squeak is running on the X server host.\n");
+  printf("  -xshm only works when " xResName " is running on the X server host.\n");
 }
 
 
