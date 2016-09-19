@@ -6,10 +6,17 @@
 XCODE:=/Applications/Xcode.app/Contents/Developer
 XCUB:=$(XCODE)/usr/bin
 SDKsDIR:=$(XCODE)/Platforms/MacOSX.platform/Developer/SDKs
-SDKs:=MacOSX10.12.sdk MacOSX10.11.sdk MacOSX10.10.sdk MacOSX10.9.sdk
+#Build the oldest SDK installed
+SDKs:=MacOSX10.9.sdk MacOSX10.10.sdk MacOSX10.11.sdk MacOSX10.12.sdk
 SDK:=$(firstword $(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
 TARGET_ARCH:=x86_64
 TARGET_VERSION_MIN:=10.7
+
+print-sdks:
+	@echo ---------------- Makefile.flags settings ------------------
+	@echo SDKs=$(realpath $(addprefix $(SDKsDIR)/, $(SDKs)))
+	@echo SDK=$(SDK)
+	@echo -----------------------------------------------------
 
 # N.B. ARC isn't supported by the os-x 32-bit legacy Objective-C runtime kernel.
 # ARC is supported only on 64-bits, and then only for the 10.7 SDK and later.
@@ -31,7 +38,7 @@ BFLAGS:=-arch $(TARGET_ARCH) \
 
 DYFLAGS:=-arch $(TARGET_ARCH) \
 		-shared \
-		-isysroot $(SDK) 		
+		-isysroot $(SDK)
 
 WARNINGS:= -Wno-missing-field-initializers -Wno-missing-prototypes \
 	-Wno-missing-braces -Wparentheses -Wswitch -Wno-unused-function \
