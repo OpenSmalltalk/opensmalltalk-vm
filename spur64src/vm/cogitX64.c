@@ -591,7 +591,7 @@ static AbstractInstruction * NoDbgRegParms gMoveAwR(sqInt address, sqInt reg);
 static AbstractInstruction * NoDbgRegParms gMoveCwR(sqInt wordConstant, sqInt reg);
 static AbstractInstruction * NoDbgRegParms gMoveRMwr(sqInt sourceReg, sqInt offset, sqInt baseReg);
 static AbstractInstruction * NoDbgRegParms gMoveRR(sqInt reg1, sqInt reg2);
-static usqInt NoDbgRegParms mapEndFor(CogMethod *cogMethod);
+static sqInt NoDbgRegParms mapEndFor(CogMethod *cogMethod);
 static sqInt NoDbgRegParms mapForperformUntilarg(CogMethod *cogMethod, sqInt (*functionSymbol)(sqInt annotation, char *mcpc, sqInt arg), sqInt arg);
 static sqInt NoDbgRegParms mapObjectReferencesInClosedPIC(CogMethod *cPIC);
 static void mapObjectReferencesInGeneratedRuntime(void);
@@ -1683,7 +1683,7 @@ genWriteCResultIntoReg(AbstractInstruction * self_in_genWriteCResultIntoReg, sqI
 
 	cResultReg = RAX;
 	if (abstractRegister != cResultReg) {
-		genoperandoperand(MoveRR, cResultReg, abstractRegister);
+genoperandoperand(MoveRR, cResultReg, abstractRegister);
 	}
 	return self_in_genWriteCResultIntoReg;
 }
@@ -1724,7 +1724,7 @@ initializeSharableLiteral(AbstractInstruction * self_in_initializeSharableLitera
 	(self_in_initializeSharableLiteral->opcode) = Literal;
 
 	/* separate := nil for Slang */
-	(self_in_initializeSharableLiteral->annotation) = null;
+(self_in_initializeSharableLiteral->annotation) = null;
 	(self_in_initializeSharableLiteral->address) = null;
 	(self_in_initializeSharableLiteral->dependent) = null;
 	((self_in_initializeSharableLiteral->operands))[0] = literal;
@@ -1743,7 +1743,7 @@ initializeUniqueLiteral(AbstractInstruction * self_in_initializeUniqueLiteral, s
 	(self_in_initializeUniqueLiteral->opcode) = Literal;
 
 	/* separate := nil for Slang */
-	(self_in_initializeUniqueLiteral->annotation) = null;
+(self_in_initializeUniqueLiteral->annotation) = null;
 	(self_in_initializeUniqueLiteral->address) = null;
 	(self_in_initializeUniqueLiteral->dependent) = null;
 	((self_in_initializeUniqueLiteral->operands))[0] = literal;
@@ -1924,7 +1924,7 @@ concretizeArithCwR(AbstractInstruction * self_in_concretizeArithCwR, sqInt x64op
 	reg = ((self_in_concretizeArithCwR->operands))[1];
 
 	/* Tst & Cmp; backwards */
-	reverse = (x64opcode == 133)
+reverse = (x64opcode == 133)
 	 || (x64opcode == 57);
 	((self_in_concretizeArithCwR->machineCode))[0] = (rexRxb(self_in_concretizeArithCwR, RISCTempReg, 0, RISCTempReg));
 	((self_in_concretizeArithCwR->machineCode))[1] = (184 + (RISCTempReg & 7));
@@ -2044,7 +2044,7 @@ literalBeforeFollowingAddress(AbstractInstruction * self_in_literalBeforeFollowi
 	lastByte = byteAt(followingAddress - 1);
 
 	/* ArithCwR */
-	base = followingAddress - ((lastByte <= 144
+base = followingAddress - ((lastByte <= 144
 	? (lastByte == 144
 			? 9
 			: 10)
@@ -2094,7 +2094,7 @@ sizePCDependentInstructionAt(AbstractInstruction * self_in_sizePCDependentInstru
 	: (self_in_sizePCDependentInstructionAt->address))) + 2);
 	}
 	else {
-		maximumSpan = target - (eventualAbsoluteAddress + 2);
+maximumSpan = target - (eventualAbsoluteAddress + 2);
 	}
 	(self_in_sizePCDependentInstructionAt->address) = eventualAbsoluteAddress;
 	if (((self_in_sizePCDependentInstructionAt->opcode)) >= FirstShortJump) {
@@ -2105,7 +2105,7 @@ sizePCDependentInstructionAt(AbstractInstruction * self_in_sizePCDependentInstru
 					: 6));
 	}
 	else {
-		
+
 		switch ((self_in_sizePCDependentInstructionAt->opcode)) {
 		case JumpLong:
 			(self_in_sizePCDependentInstructionAt->machineCodeSize) = 5;
@@ -2147,7 +2147,7 @@ storeLiteralbeforeFollowingAddress(AbstractInstruction * self_in_storeLiteralbef
 	lastByte = byteAt(followingAddress - 1);
 
 	/* ArithCwR */
-	base = followingAddress - ((lastByte <= 144
+base = followingAddress - ((lastByte <= 144
 	? (lastByte == 144
 			? 9
 			: 10)
@@ -2194,7 +2194,7 @@ gAndCqRR(sqInt quickConstant, sqInt srcReg, sqInt destReg)
     AbstractInstruction *first;
 
 	if (srcReg == destReg) {
-		/* begin gen:quickConstant:operand: */
+/* begin gen:quickConstant:operand: */
 		anInstruction1 = genoperandoperand(AndCqR, quickConstant, destReg);
 		return anInstruction1;
 	}
@@ -2447,12 +2447,12 @@ blockDispatchTargetsForperformarg(CogMethod *cogMethod, usqInt (*binaryFunction)
 	pc = blockEntry;
 	end = (mapEndFor(cogMethod)) - 1;
 	while (pc < end) {
-		if (isJumpAt(backEnd, pc)) {
+if (isJumpAt(backEnd, pc)) {
 			targetpc = jumpTargetPCAt(backEnd, pc);
 			if (targetpc < blockEntry) {
-				result = binaryFunction(targetpc, arg);
+result = binaryFunction(targetpc, arg);
 				if (result != 0) {
-					return result;
+return result;
 				}
 			}
 		}
@@ -2501,7 +2501,7 @@ bytecodePCForstartBcpcin(sqInt mcpc, sqInt startbcpc, CogBlockMethod *cogMethod)
 	mcpc1 = (((usqInt)cogMethod)) + ((cogMethod->stackCheckOffset));
 	result = findIsBackwardBranchMcpcBcpcMatchingMcpc(null, (0 + (((sqInt)((usqInt)(HasBytecodePC) << 1)))), (((char *) mcpc1)), startbcpc, (((void *)mcpc)));
 	if (result != 0) {
-		return result;
+return result;
 	}
 
 	/* In both CMMethod and CMBlock cases find the start of the map and
@@ -2534,7 +2534,7 @@ bytecodePCForstartBcpcin(sqInt mcpc, sqInt startbcpc, CogBlockMethod *cogMethod)
 		bcpc += deltaToSkipPrimAndErrorStoreInheader(aMethodObj, (homeMethod->methodHeader));
 	}
 	else {
-		isInBlock = 1;
+isInBlock = 1;
 		assert(bcpc == ((cogMethod->startpc)));
 		homeMethod = cmHomeMethod(cogMethod);
 		map = findMapLocationForMcpcinMethod((((usqInt)cogMethod)) + (sizeof(CogBlockMethod)), homeMethod);
@@ -2547,7 +2547,7 @@ bytecodePCForstartBcpcin(sqInt mcpc, sqInt startbcpc, CogBlockMethod *cogMethod)
 		}
 
 		/* skip fiducial; i.e. the map entry for the pc immediately following the method header. */
-		map -= 1;
+map -= 1;
 		aMethodObj = (homeMethod->methodObject);
 		bcpc = startbcpc - (blockCreationBytecodeSizeForHeader((homeMethod->methodHeader)));
 		/* begin bytecodeSetOffsetForHeader: */
@@ -2578,8 +2578,12 @@ bytecodePCForstartBcpcin(sqInt mcpc, sqInt startbcpc, CogBlockMethod *cogMethod)
 	while (((mapByte = byteAt(map))) != MapEnd) {
 
 		/* defensive; we exit on bcpc */
-		if (mapByte >= FirstAnnotation) {
-			annotation = ((usqInt) mapByte) >> AnnotationShift;
+if (mapByte >= FirstAnnotation) {
+
+			/* defensive; we exit on bcpc */
+
+			/* defensive; we exit on bcpc */
+annotation = ((usqInt) mapByte) >> AnnotationShift;
 			mcpc1 += (mapByte & DisplacementMask);
 			if (annotation >= HasBytecodePC) {
 				if ((annotation == IsSendCall)
@@ -2588,15 +2592,15 @@ bytecodePCForstartBcpcin(sqInt mcpc, sqInt startbcpc, CogBlockMethod *cogMethod)
 					map -= 1;
 				}
 				while (1) {
-					byte = (fetchByteofObject(bcpc, aMethodObj)) + bsOffset;
+byte = (fetchByteofObject(bcpc, aMethodObj)) + bsOffset;
 					descriptor = generatorAt(byte);
 					if (isInBlock) {
-						if (bcpc >= endbcpc) {
-							return 0;
+if (bcpc >= endbcpc) {
+return 0;
 						}
 					}
 					else {
-						if (((descriptor->isReturn))
+if (((descriptor->isReturn))
 						 && (bcpc >= latestContinuation)) {
 							return 0;
 						}
@@ -2625,7 +2629,7 @@ bytecodePCForstartBcpcin(sqInt mcpc, sqInt startbcpc, CogBlockMethod *cogMethod)
 	? (((sqInt)((usqInt)(annotation) << 1))) + 1
 	: ((sqInt)((usqInt)(annotation) << 1)))), (((char *) mcpc1)), bcpc, (((void *)mcpc)));
 				if (result != 0) {
-					return result;
+return result;
 				}
 				bcpc = nextBcpc;
 				nExts = ((descriptor->isExtension)
@@ -2634,7 +2638,7 @@ bytecodePCForstartBcpcin(sqInt mcpc, sqInt startbcpc, CogBlockMethod *cogMethod)
 			}
 		}
 		else {
-			assert(((((usqInt) mapByte) >> AnnotationShift) == IsDisplacementX2N)
+assert(((((usqInt) mapByte) >> AnnotationShift) == IsDisplacementX2N)
 			 || ((((usqInt) mapByte) >> AnnotationShift) == IsAnnotationExtension));
 			if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 				mcpc1 += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
@@ -2660,8 +2664,8 @@ CallRTregistersToBeSavedMask(sqInt callTarget, sqInt registersToBeSaved)
 	registersToBePushed = callerSavedRegsToBeSaved;
 	reg = 0;
 	while (registersToBePushed != 0) {
-		if (registersToBePushed & 1) {
-			/* begin PushR: */
+if (registersToBePushed & 1) {
+/* begin PushR: */
 			genoperand(PushR, reg);
 		}
 		reg += 1;
@@ -2673,7 +2677,7 @@ CallRTregistersToBeSavedMask(sqInt callTarget, sqInt registersToBeSaved)
 	(abstractInstruction->annotation = IsRelativeCall);
 	lastInst = abstractInstruction;
 	while (reg >= 0) {
-		if (callerSavedRegsToBeSaved & (1ULL << reg)) {
+if (callerSavedRegsToBeSaved & (1ULL << reg)) {
 			/* begin PopR: */
 			lastInst = genoperand(PopR, reg);
 		}
@@ -2788,7 +2792,7 @@ ceCPICMissreceiver(CogMethod *cPIC, sqInt receiver)
 			 && (methodShouldBeCogged(methodOrSelectorIndex))) {
 
 				/* We assume cog:selector: will *not* reclaim the method zone */
-				cogselector(methodOrSelectorIndex, selector);
+cogselector(methodOrSelectorIndex, selector);
 			}
 			newTargetMethodOrNil = methodOrSelectorIndex;
 			errorSelectorOrNil = null;
@@ -2803,7 +2807,7 @@ ceCPICMissreceiver(CogMethod *cPIC, sqInt receiver)
 				 && (methodShouldBeCogged(methodOrSelectorIndex))) {
 
 					/* We assume cog:selector: will *not* reclaim the method zone */
-					cogselector(methodOrSelectorIndex, splObj(SelectorDoesNotUnderstand));
+cogselector(methodOrSelectorIndex, splObj(SelectorDoesNotUnderstand));
 				}
 				newTargetMethodOrNil = methodOrSelectorIndex;
 				errorSelectorOrNil = SelectorDoesNotUnderstand;
@@ -2821,7 +2825,7 @@ ceCPICMissreceiver(CogMethod *cPIC, sqInt receiver)
 	l1:	/* end lookup:for:methodAndErrorSelectorInto: */;
 	}
 	else {
-		newTargetMethodOrNil = (errorSelectorOrNil = null);
+newTargetMethodOrNil = (errorSelectorOrNil = null);
 	}
 	assert(outerReturn == (stackTop()));
 	cacheTag = inlineCacheTagForInstance(receiver);
@@ -2874,7 +2878,9 @@ ceSICMiss(sqInt receiver)
 
 
 	/* Whether we can relink to a PIC or not we need to pop off the inner return and identify the target method. */
-	innerReturn = ((usqInt)(popStack()));
+
+	/* Whether we can relink to a PIC or not we need to pop off the inner return and identify the target method. */
+innerReturn = ((usqInt)(popStack()));
 	targetMethod = ((CogMethod *) (innerReturn - missOffset));
 	if (isOopForwarded(receiver)) {
 		return ceSendFromInLineCacheMiss(targetMethod);
@@ -2898,7 +2904,7 @@ ceSICMiss(sqInt receiver)
 		 && (methodShouldBeCogged(methodOrSelectorIndex))) {
 
 			/* We assume cog:selector: will *not* reclaim the method zone */
-			cogselector(methodOrSelectorIndex, selector);
+cogselector(methodOrSelectorIndex, selector);
 		}
 		newTargetMethodOrNil = methodOrSelectorIndex;
 		errorSelectorOrNil = null;
@@ -2913,7 +2919,7 @@ ceSICMiss(sqInt receiver)
 			 && (methodShouldBeCogged(methodOrSelectorIndex))) {
 
 				/* We assume cog:selector: will *not* reclaim the method zone */
-				cogselector(methodOrSelectorIndex, splObj(SelectorDoesNotUnderstand));
+cogselector(methodOrSelectorIndex, splObj(SelectorDoesNotUnderstand));
 			}
 			newTargetMethodOrNil = methodOrSelectorIndex;
 			errorSelectorOrNil = SelectorDoesNotUnderstand;
@@ -2944,12 +2950,17 @@ l1:	/* end lookup:for:methodAndErrorSelectorInto: */;
 	if (!(pic)) {
 
 		/* otherwise attempt to create a closed PIC for the two cases. */
-		pic = cogPICSelectornumArgsCase0MethodCase1MethodtagisMNUCase((targetMethod->selector), (targetMethod->cmNumArgs), targetMethod, newTargetMethodOrNil, cacheTag, errorSelectorOrNil == SelectorDoesNotUnderstand);
+
+		/* otherwise attempt to create a closed PIC for the two cases. */
+pic = cogPICSelectornumArgsCase0MethodCase1MethodtagisMNUCase((targetMethod->selector), (targetMethod->cmNumArgs), targetMethod, newTargetMethodOrNil, cacheTag, errorSelectorOrNil == SelectorDoesNotUnderstand);
 		if ((((((sqInt)pic)) >= MaxNegativeErrorCode) && ((((sqInt)pic)) <= -1))) {
 
 			/* For some reason the PIC couldn't be generated, most likely a lack of code memory.
 			   Continue as if this is an unlinked send. */
 			if ((((sqInt)pic)) == InsufficientCodeSpace) {
+
+				/* For some reason the PIC couldn't be generated, most likely a lack of code memory.
+				   Continue as if this is an unlinked send. */
 				callForCogCompiledCodeCompaction();
 			}
 			return ceSendFromInLineCacheMiss(targetMethod);
@@ -3023,13 +3034,13 @@ checkIfValidOopRefAndTargetpccogMethod(sqInt annotation, char *mcpc, sqInt cogMe
 		entryPoint1 = callTargetFromReturnAddress(backEnd, ((sqInt)mcpc));
 		tagCouldBeObj = 0;
 		if (tagCouldBeObj) {
-			if (couldBeObject(cacheTag1)) {
+if (couldBeObject(cacheTag1)) {
 				if (!(asserta(checkValidOopReference(cacheTag1)))) {
 					return 4;
 				}
 			}
 			else {
-				if (!(asserta(validInlineCacheTag(cacheTag1)))) {
+if (!(asserta(validInlineCacheTag(cacheTag1)))) {
 					return 5;
 				}
 			}
@@ -3041,7 +3052,7 @@ checkIfValidOopRefAndTargetpccogMethod(sqInt annotation, char *mcpc, sqInt cogMe
 			}
 		}
 		else {
-			if (!(asserta(validInlineCacheTag(cacheTag1)))) {
+if (!(asserta(validInlineCacheTag(cacheTag1)))) {
 				return 7;
 			}
 		}
@@ -3050,20 +3061,22 @@ checkIfValidOopRefAndTargetpccogMethod(sqInt annotation, char *mcpc, sqInt cogMe
 		if (entryPoint > methodZoneBase) {
 
 			/* It's a linked send; find which kind. */
-			/* begin targetMethodAndSendTableFor:annotation:into: */
+/* begin targetMethodAndSendTableFor:annotation:into: */
 			if (annotation == IsSendCall) {
 				targetMethod1 = ((CogMethod *) (entryPoint - cmEntryOffset));
 				sendTable1 = ordinarySendTrampolines;
 			}
 			else {
-				assert(annotation == IsSuperSend);
+assert(annotation == IsSuperSend);
 				targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
 				sendTable1 = superSendTrampolines;
 
 
 
 			}
-			if (!(asserta((((targetMethod1->cmType)) == CMMethod)
+			
+			/* It's a linked send; find which kind. */
+if (!(asserta((((targetMethod1->cmType)) == CMMethod)
 				 || ((((targetMethod1->cmType)) == CMClosedPIC)
 				 || (((targetMethod1->cmType)) == CMOpenPIC))))) {
 				return 8;
@@ -3108,13 +3121,13 @@ checkIfValidOopRefpccogMethod(sqInt annotation, char *mcpc, sqInt cogMethod)
 			offset = entryPoint;
 		}
 		else {
-			/* begin offsetAndSendTableFor:annotation:into: */
+/* begin offsetAndSendTableFor:annotation:into: */
 			if (annotation == IsSendCall) {
 				offset1 = cmEntryOffset;
 				sendTable = ordinarySendTrampolines;
 			}
 			else {
-				assert(annotation == IsSuperSend);
+assert(annotation == IsSuperSend);
 				offset1 = cmNoCheckEntryOffset;
 				sendTable = superSendTrampolines;
 
@@ -3130,8 +3143,10 @@ checkIfValidOopRefpccogMethod(sqInt annotation, char *mcpc, sqInt cogMethod)
 		 && ((((((CogMethod *) (entryPoint - offset)))->cmType)) != CMOpenPIC))) {
 
 			/* linked non-super send, cacheTag is a cacheTag */
-			if (!(validInlineCacheTag(selectorOrCacheTag))) {
-				print("cache tag leak in CM ");
+if (!(validInlineCacheTag(selectorOrCacheTag))) {
+
+				/* linked non-super send, cacheTag is a cacheTag */
+print("cache tag leak in CM ");
 				printHex(((sqInt)cogMethod));
 				print(" @ ");
 				printHex(((sqInt)mcpc));
@@ -3142,7 +3157,7 @@ checkIfValidOopRefpccogMethod(sqInt annotation, char *mcpc, sqInt cogMethod)
 		else {
 
 			/* unlinked send or super send; cacheTag is a selector unless 64-bit, in which case it is an index. */
-					}
+		}
 	}
 	return 0;
 }
@@ -3167,11 +3182,11 @@ checkIntegrityOfObjectReferencesInCode(sqInt gcModes)
 					print("young referrer CM ");
 					printHex(((sqInt)cogMethod));
 					if (count == 0) {
-						print(" is not in youngReferrers");
+print(" is not in youngReferrers");
 						cr();
 					}
 					else {
-						print(" is in youngReferrers ");
+print(" is in youngReferrers ");
 						printNum(count);
 						print(" times!");
 						cr();
@@ -3217,13 +3232,13 @@ checkIntegrityOfObjectReferencesInCode(sqInt gcModes)
 
 			}
 			else {
-				if (((cogMethod->cmType)) == CMClosedPIC) {
+if (((cogMethod->cmType)) == CMClosedPIC) {
 					if (!(checkValidObjectReferencesInClosedPIC(cogMethod))) {
 						ok = 0;
 					}
 				}
 				else {
-					if (((cogMethod->cmType)) == CMOpenPIC) {
+if (((cogMethod->cmType)) == CMOpenPIC) {
 						if ((mapForperformUntilarg(cogMethod, checkIfValidOopRefpccogMethod, ((sqInt)cogMethod))) != 0) {
 							ok = 0;
 						}
@@ -3241,7 +3256,7 @@ static sqInt NoDbgRegParms
 checkMaybeObjRefInClosedPIC(sqInt maybeObject)
 {
 	if (maybeObject == 0) {
-		return 1;
+return 1;
 	}
 	if (!(couldBeObject(maybeObject))) {
 		return 1;
@@ -3260,7 +3275,7 @@ checkValidObjectReferencesInClosedPIC(CogMethod *cPIC)
 	ok = 1;
 
 	/* first we check the obj ref at the beginning of the CPIC */
-	pc = (((sqInt)cPIC)) + firstCPICCaseOffset;
+pc = (((sqInt)cPIC)) + firstCPICCaseOffset;
 	if (!(checkMaybeObjRefInClosedPIC(literalBeforeFollowingAddress(backEnd, pc - (jumpLongByteSize(backEnd)))))) {
 		print("object leak in CPIC ");
 		printHex(((sqInt)cPIC));
@@ -3271,7 +3286,7 @@ checkValidObjectReferencesInClosedPIC(CogMethod *cPIC)
 	}
 
 	/* For each case we check any object reference at the end address - sizeof(conditional instruction) and then increment the end address by case size */
-	pc = addressOfEndOfCaseinCPIC((cPIC->cPICNumCases), cPIC);
+pc = addressOfEndOfCaseinCPIC((cPIC->cPICNumCases), cPIC);
 	for (i = 2; i <= ((cPIC->cPICNumCases)); i += 1) {
 		if (!(checkMaybeObjRefInClosedPIC(literalBeforeFollowingAddress(backEnd, (pc - (jumpLongConditionalByteSize(backEnd))) - (cmpC32RTempByteSize(backEnd)))))) {
 			print("object leak in CPIC ");
@@ -3383,7 +3398,7 @@ cogCodeConstituents(void)
 
 
 	/* + 3 for start, freeStart and end */
-	count = (trampolineTableIndex / 2) + 3;
+count = (trampolineTableIndex / 2) + 3;
 	cogMethod = ((CogMethod *) methodZoneBase);
 	while (cogMethod < (limitZony())) {
 		if (((cogMethod->cmType)) != CMFree) {
@@ -3393,7 +3408,7 @@ cogCodeConstituents(void)
 	}
 	constituents = instantiateClassindexableSize(classArray(), count * 2);
 	if (!(constituents)) {
-		return constituents;
+return constituents;
 	}
 	pushRemappableOop(constituents);
 	if ((((label = stringForCString("CogCode"))) == null)
@@ -3470,21 +3485,25 @@ cogExtendPICCaseNMethodtagisMNUCase(CogMethod *cPIC, sqInt caseNMethod, sqInt ca
 	 && (methodHasCogMethod(caseNMethod))) {
 
 		/* this isn't an MNU and we have an already cogged method to jump to */
-		operand = 0;
+
+		/* this isn't an MNU and we have an already cogged method to jump to */
+operand = 0;
 		target = (((sqInt)(cogMethodOf(caseNMethod)))) + cmNoCheckEntryOffset;
 	}
 	else {
-		operand = caseNMethod;
+operand = caseNMethod;
 		if (isMNUCase) {
 
 			/* this is an MNU so tag the CPIC header and setup a jump to the MNUAbort */
-			(cPIC->cpicHasMNUCaseOrCMIsFullBlock) = 1;
+(cPIC->cpicHasMNUCaseOrCMIsFullBlock) = 1;
 			target = (((sqInt)cPIC)) + (sizeof(CogMethod));
 		}
 		else {
 
 			/* setup a jump to the interpretAborth so we can cog the target method */
-			target = (((sqInt)cPIC)) + (picInterpretAbortOffset());
+
+			/* setup a jump to the interpretAborth so we can cog the target method */
+target = (((sqInt)cPIC)) + (picInterpretAbortOffset());
 		}
 	}
 	address = addressOfEndOfCaseinCPIC(((cPIC->cPICNumCases)) + 1, cPIC);
@@ -3602,7 +3621,7 @@ cogMNUPICSelectorreceivermethodOperandnumArgs(sqInt selector, sqInt rcvr, sqInt 
 	assert(endCPICCase0 != null);
 	startAddress = allocate(closedPICSize);
 	if (startAddress == 0) {
-		callForCogCompiledCodeCompaction();
+callForCogCompiledCodeCompaction();
 		return 0;
 	}
 	memcpy(startAddress, cPICPrototype, closedPICSize);
@@ -3654,7 +3673,7 @@ cogOpenPICSelectornumArgs(sqInt selector, sqInt numArgs)
 	compilationBreakpointisMNUCase(selector, numBytesOf(selector), 0);
 	startAddress = allocate(openPICSize);
 	if (startAddress == 0) {
-		return ((CogMethod *) InsufficientCodeSpace);
+return ((CogMethod *) InsufficientCodeSpace);
 	}
 	(methodLabel->address = startAddress);
 	(methodLabel->dependent = null);
@@ -3723,7 +3742,7 @@ cogPICSelectornumArgsCase0MethodCase1MethodtagisMNUCase(sqInt selector, sqInt nu
 	compilationBreakpointisMNUCase(selector, numBytesOf(selector), isMNUCase);
 	startAddress = allocate(closedPICSize);
 	if (startAddress == 0) {
-		return ((CogMethod *) InsufficientCodeSpace);
+return ((CogMethod *) InsufficientCodeSpace);
 	}
 	memcpy(startAddress, cPICPrototype, closedPICSize);
 	configureCPICCase0Case1MethodtagisMNUCasenumArgsdelta(((CogMethod *) startAddress), case0CogMethod, case1MethodOrNil, case1Tag, isMNUCase, numArgs, startAddress - cPICPrototype);
@@ -3779,7 +3798,7 @@ cogselector(sqInt aMethodObj, sqInt aSelectorOop)
 		bytecodeSetOffset = 256;
 	}
 	else {
-		bytecodeSetOffset = 0;
+bytecodeSetOffset = 0;
 	}
 	ensureNoForwardedLiteralsIn(aMethodObj);
 	methodObj = aMethodObj;
@@ -3872,7 +3891,7 @@ compileBlockDispatchFromto(sqInt lowBlockStartIndex, sqInt highBlockStartIndex)
     sqInt quickConstant;
 
 	if (lowBlockStartIndex == highBlockStartIndex) {
-		blockStart = blockStartAt(lowBlockStartIndex);
+blockStart = blockStartAt(lowBlockStartIndex);
 		/* begin Jump: */
 		jumpTarget = (blockStart->entryLabel);
 		genoperand(Jump, ((sqInt)jumpTarget));
@@ -3882,13 +3901,13 @@ compileBlockDispatchFromto(sqInt lowBlockStartIndex, sqInt highBlockStartIndex)
 	assert(((halfWay >= lowBlockStartIndex) && (halfWay <= highBlockStartIndex)));
 
 	/* N.B. FLAGS := TempReg - startpc */
-	blockStart = blockStartAt(halfWay);
+blockStart = blockStartAt(halfWay);
 	/* begin CmpCq:R: */
 	quickConstant = (((((blockStart->startpc)) + 1) << 3) | 1);
 	/* begin gen:quickConstant:operand: */
 	anInstruction = genoperandoperand(CmpCqR, quickConstant, TempReg);
 	if (lowBlockStartIndex == halfWay) {
-		/* begin JumpLessOrEqual: */
+/* begin JumpLessOrEqual: */
 		jumpTarget1 = (blockStart->entryLabel);
 		genConditionalBranchoperand(JumpLessOrEqual, ((sqInt)jumpTarget1));
 		compileBlockDispatchFromto(halfWay + 1, highBlockStartIndex);
@@ -3905,11 +3924,11 @@ compileBlockDispatchFromto(sqInt lowBlockStartIndex, sqInt highBlockStartIndex)
 	jmp = genConditionalBranchoperand(JumpGreater, ((sqInt)0));
 	compileBlockDispatchFromto(lowBlockStartIndex, halfWay);
 	if (halfWay == highBlockStartIndex) {
-		blockStart = blockStartAt(highBlockStartIndex);
+blockStart = blockStartAt(highBlockStartIndex);
 		jmpTarget(jmp, (blockStart->entryLabel));
 	}
 	else {
-		jmpTarget(jmp, gLabel());
+jmpTarget(jmp, gLabel());
 		compileBlockDispatchFromto(halfWay + 1, highBlockStartIndex);
 	}
 	return 0;
@@ -3972,7 +3991,7 @@ compileBlockEntry(BlockStart *blockStart)
 		}
 	}
 	else {
-		compileBlockFramelessEntry(blockStart);
+compileBlockFramelessEntry(blockStart);
 	}
 }
 
@@ -4011,7 +4030,7 @@ compileCallFornumArgsargargargargresultRegregsToSave(void *aRoutine, sqInt numAr
 		regMaskCopy = ((usqInt)regsToSave);
 		numRegsPushed = 0;
 		while (regMaskCopy != 0) {
-			numRegsPushed += regMaskCopy & 1;
+numRegsPushed += regMaskCopy & 1;
 			regMaskCopy = ((usqInt) regMaskCopy >> 1);
 		}
 		if ((numRegsPushed == 0)
@@ -4020,7 +4039,7 @@ compileCallFornumArgsargargargargresultRegregsToSave(void *aRoutine, sqInt numAr
 		}
 		wordsPushedModAlignment = (numRegsPushed + numArgs) % (cStackAlignment / BytesPerWord);
 		if (wordsPushedModAlignment != 0) {
-			delta = (cStackAlignment / BytesPerWord) - wordsPushedModAlignment;
+delta = (cStackAlignment / BytesPerWord) - wordsPushedModAlignment;
 			/* begin SubCq:R: */
 			anInstruction = genoperandoperand(SubCqR, delta * BytesPerWord, SPReg);
 		}
@@ -4029,7 +4048,7 @@ compileCallFornumArgsargargargargresultRegregsToSave(void *aRoutine, sqInt numAr
 	genSaveRegs(backEnd, regsToSave);
 	/* begin genMarshallNArgs:arg:arg:arg:arg: */
 	if (numArgs == 0) {
-		((AbstractInstruction *) backEnd);
+((AbstractInstruction *) backEnd);
 		goto l15;
 	}
 	if (regOrConst0 < NoReg) {
@@ -4037,13 +4056,13 @@ compileCallFornumArgsargargargargresultRegregsToSave(void *aRoutine, sqInt numAr
 		anInstruction6 = genoperandoperand(MoveCqR, -2 - regOrConst0, RDI);
 	}
 	else {
-		if (regOrConst0 != RDI) {
+if (regOrConst0 != RDI) {
 			/* begin MoveR:R: */
 			genoperandoperand(MoveRR, regOrConst0, RDI);
 		}
 	}
 	if (numArgs == 1) {
-		((AbstractInstruction *) backEnd);
+((AbstractInstruction *) backEnd);
 		goto l15;
 	}
 	if (regOrConst1 < NoReg) {
@@ -4051,13 +4070,13 @@ compileCallFornumArgsargargargargresultRegregsToSave(void *aRoutine, sqInt numAr
 		anInstruction1 = genoperandoperand(MoveCqR, -2 - regOrConst1, RSI);
 	}
 	else {
-		if (regOrConst1 != RSI) {
+if (regOrConst1 != RSI) {
 			/* begin MoveR:R: */
 			genoperandoperand(MoveRR, regOrConst1, RSI);
 		}
 	}
 	if (numArgs == 2) {
-		((AbstractInstruction *) backEnd);
+((AbstractInstruction *) backEnd);
 		goto l15;
 	}
 	
@@ -4067,13 +4086,13 @@ compileCallFornumArgsargargargargresultRegregsToSave(void *aRoutine, sqInt numAr
 		anInstruction2 = genoperandoperand(MoveCqR, -2 - regOrConst2, RDX);
 	}
 	else {
-		if (regOrConst2 != RDX) {
+if (regOrConst2 != RDX) {
 			/* begin MoveR:R: */
 			genoperandoperand(MoveRR, regOrConst2, RDX);
 		}
 	}
 	if (numArgs == 3) {
-		((AbstractInstruction *) backEnd);
+((AbstractInstruction *) backEnd);
 		goto l15;
 	}
 	if (regOrConst3 < NoReg) {
@@ -4081,7 +4100,7 @@ compileCallFornumArgsargargargargresultRegregsToSave(void *aRoutine, sqInt numAr
 		anInstruction3 = genoperandoperand(MoveCqR, -2 - regOrConst3, RCX);
 	}
 	else {
-		if (regOrConst3 != RCX) {
+if (regOrConst3 != RCX) {
 			/* begin MoveR:R: */
 			genoperandoperand(MoveRR, regOrConst3, RCX);
 		}
@@ -4093,18 +4112,22 @@ compileCallFornumArgsargargargargresultRegregsToSave(void *aRoutine, sqInt numAr
 #  if ABI == MSVC
 
 	/* completely untested... */
-	if (regOrConst2 < NoReg) {
-		/* begin MoveCq:R: */
+	/* a.k.a. RISCTempReg in CogInLineLiteralsX64Compiler and Extra6Reg in CogOutOfLineLiteralsX64Compiler */
+if (regOrConst2 < NoReg) {
+
+		/* completely untested... */
+		/* a.k.a. RISCTempReg in CogInLineLiteralsX64Compiler and Extra6Reg in CogOutOfLineLiteralsX64Compiler */
+/* begin MoveCq:R: */
 		anInstruction4 = genoperandoperand(MoveCqR, -2 - regOrConst2, R8);
 	}
 	else {
-		if (regOrConst2 != R8) {
+if (regOrConst2 != R8) {
 			/* begin MoveR:R: */
 			genoperandoperand(MoveRR, regOrConst2, R8);
 		}
 	}
 	if (numArgs == 3) {
-		((AbstractInstruction *) backEnd);
+((AbstractInstruction *) backEnd);
 		goto l15;
 	}
 	if (regOrConst3 < NoReg) {
@@ -4112,7 +4135,7 @@ compileCallFornumArgsargargargargresultRegregsToSave(void *aRoutine, sqInt numAr
 		anInstruction5 = genoperandoperand(MoveCqR, -2 - regOrConst3, R9);
 	}
 	else {
-		if (regOrConst3 != R9) {
+if (regOrConst3 != R9) {
 			/* begin MoveR:R: */
 			genoperandoperand(MoveRR, regOrConst3, R9);
 		}
@@ -4132,7 +4155,7 @@ l15:	/* end genMarshallNArgs:arg:arg:arg:arg: */;
 		genWriteCResultIntoReg(backEnd, resultRegOrNone);
 	}
 	if (numArgs > 0) {
-		genRemoveNArgsFromStack(backEnd, numArgs);
+genRemoveNArgsFromStack(backEnd, numArgs);
 	}
 	genRestoreRegs(backEnd, regsToSave);
 }
@@ -4375,7 +4398,7 @@ configureCPICCase0Case1MethodtagisMNUCasenumArgsdelta(CogMethod *cPIC, CogMethod
 	else {
 
 		/* We do not scavenge PICs, hence we cannot cache the MNU method if it is in new space. */
-		operand = ((case1Method == null)
+operand = ((case1Method == null)
 		 || (isYoungObject(case1Method))
 			? 0
 			: case1Method);
@@ -4386,7 +4409,7 @@ configureCPICCase0Case1MethodtagisMNUCasenumArgsdelta(CogMethod *cPIC, CogMethod
 	rewriteCallAttarget(backEnd, (((sqInt)cPIC)) + firstCPICCaseOffset, (((sqInt)case0CogMethod)) + cmNoCheckEntryOffset);
 
 	/* update the cpic case */
-	caseEndAddress = addressOfEndOfCaseinCPIC(2, cPIC);
+caseEndAddress = addressOfEndOfCaseinCPIC(2, cPIC);
 	rewriteCPICCaseAttagobjReftarget(caseEndAddress, case1Tag, operand, ((sqInt)((isMNUCase
 	? (((sqInt)cPIC)) + (sizeof(CogMethod))
 	: targetEntry))));
@@ -4426,7 +4449,7 @@ configureMNUCPICmethodOperandnumArgsdelta(CogMethod *cPIC, sqInt methodOperand, 
 	rewriteCallAttarget(backEnd, (((sqInt)cPIC)) + missOffset, picAbortTrampolineFor(numArgs));
 
 	/* set the jump to the case0 method */
-	operand = ((methodOperand == null)
+operand = ((methodOperand == null)
 	 || (isYoungObject(methodOperand))
 		? 0
 		: methodOperand);
@@ -4477,7 +4500,7 @@ cPICCompactAndIsNowEmpty(CogMethod *cPIC)
 
 
 		/* Collect all target triples except for triples whose entry-point is a freed method */
-		valid = 1;
+valid = 1;
 		if (!(((((usqInt)cPIC)) <= (((usqInt)entryPoint)))
 			 && (((((usqInt)cPIC)) + ((cPIC->blockSize))) >= (((usqInt)entryPoint))))) {
 			targetMethod = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
@@ -4485,13 +4508,13 @@ cPICCompactAndIsNowEmpty(CogMethod *cPIC)
 			 || (((targetMethod->cmType)) == CMFree));
 			if (((targetMethod->cmType)) == CMFree) {
 				if (i == 1) {
-					return 1;
+return 1;
 				}
 				valid = 0;
 			}
 		}
 		if (valid) {
-			tags[used] = ((i > 1
+tags[used] = ((i > 1
 	? literal32BeforeFollowingAddress(backEnd, pc - (jumpLongConditionalByteSize(backEnd)))
 	: 0));
 			targets[used] = entryPoint;
@@ -4505,17 +4528,17 @@ cPICCompactAndIsNowEmpty(CogMethod *cPIC)
 		return 0;
 	}
 	if (used == 0) {
-		return 1;
+return 1;
 	}
 	(cPIC->cPICNumCases = used);
 	if (used == 1) {
-		pc = addressOfEndOfCaseinCPIC(2, cPIC);
+pc = addressOfEndOfCaseinCPIC(2, cPIC);
 		/* begin rewriteCPIC:caseJumpTo: */
 		rewriteCPICJumpAttarget(backEnd, (((((sqInt)cPIC)) + firstCPICCaseOffset) - (jumpLongByteSize(backEnd))) - 11, pc);
 		return 0;
 	}
 	for (i = 1; i < used; i += 1) {
-		pc = addressOfEndOfCaseinCPIC(i + 1, cPIC);
+pc = addressOfEndOfCaseinCPIC(i + 1, cPIC);
 		rewriteCPICCaseAttagobjReftarget(pc, tags[i], methods[i], targets[i]);
 	}
 	/* begin rewriteCPIC:caseJumpTo: */
@@ -4538,7 +4561,9 @@ cPICHasForwardedClass(CogMethod *cPIC)
 
 
 	/* start by finding the address of the topmost case, the cPICNumCases'th one */
-	pc = (addressOfEndOfCaseinCPIC((cPIC->cPICNumCases), cPIC)) - (jumpLongConditionalByteSize(backEnd));
+
+	/* start by finding the address of the topmost case, the cPICNumCases'th one */
+pc = (addressOfEndOfCaseinCPIC((cPIC->cPICNumCases), cPIC)) - (jumpLongConditionalByteSize(backEnd));
 	for (i = 2; i <= ((cPIC->cPICNumCases)); i += 1) {
 		classIndex = literal32BeforeFollowingAddress(backEnd, pc);
 		if (isForwardedClassIndex(classIndex)) {
@@ -4606,7 +4631,7 @@ cPICHasTarget(CogMethod *cPIC, CogMethod *targetMethod)
 	/* Since this is a fast test doing simple compares we don't need to care that some
 	   cases have nonsense addresses in there. Just zip on through. */
 	/* First jump is unconditional; subsequent ones are conditional */
-	pc = (((sqInt)cPIC)) + firstCPICCaseOffset;
+pc = (((sqInt)cPIC)) + firstCPICCaseOffset;
 	if (target == (jumpLongTargetBeforeFollowingAddress(backEnd, pc))) {
 		return 1;
 	}
@@ -4690,7 +4715,7 @@ endPCOf(sqInt aMethod)
 	nExts = 0;
 	end = numBytesOf(aMethod);
 	while (pc <= end) {
-		byte = fetchByteofObject(pc, aMethod);
+byte = fetchByteofObject(pc, aMethod);
 		descriptor = generatorAt(byte + bsOffset);
 		if (((descriptor->isReturn))
 		 && (pc >= latestContinuation)) {
@@ -4752,7 +4777,7 @@ expectedClosedPICPrototype(CogMethod *cPIC)
 	errors = 0;
 
 	/* First jump is unconditional; subsequent ones are conditional */
-	pc = (((usqInt)cPIC)) + firstCPICCaseOffset;
+pc = (((usqInt)cPIC)) + firstCPICCaseOffset;
 	object = literalBeforeFollowingAddress(backEnd, pc - (jumpLongByteSize(backEnd)));
 	if (!(asserta(object == 99282957))) {
 		errors = 1;
@@ -4764,7 +4789,7 @@ expectedClosedPICPrototype(CogMethod *cPIC)
 	for (i = 1; i < MaxCPICCases; i += 1) {
 
 		/* verify information in case is as expected. */
-		pc += cPICCaseSize;
+pc += cPICCaseSize;
 		methodObjPC = (pc - (jumpLongConditionalByteSize(backEnd))) - (cmpC32RTempByteSize(backEnd));
 		object = literalBeforeFollowingAddress(backEnd, methodObjPC);
 		if (!(asserta(object == (195929424 + i)))) {
@@ -4820,7 +4845,7 @@ fillInBlockHeadersAt(sqInt startAddress)
 		blockNoContextSwitchOffset = ((blockEntryLabel->address)) - ((blockEntryNoContextSwitch->address));
 	}
 	else {
-		assert(blockNoContextSwitchOffset == (((blockEntryLabel->address)) - ((blockEntryNoContextSwitch->address))));
+assert(blockNoContextSwitchOffset == (((blockEntryLabel->address)) - ((blockEntryNoContextSwitch->address))));
 	}
 	for (i = 0; i < blockCount; i += 1) {
 		blockStart = blockStartAt(i);
@@ -4858,7 +4883,7 @@ fillInMethodHeadersizeselector(CogMethod *method, sqInt size, sqInt selector)
 		assert(methodHeader == ((originalMethod->methodHeader)));
 			}
 	else {
-		rawHeaderOfput(methodObj, ((sqInt)method));
+rawHeaderOfput(methodObj, ((sqInt)method));
 			}
 	(method->methodHeader = methodHeader);
 	(method->selector = selector);
@@ -4924,7 +4949,7 @@ findMapLocationForMcpcinMethod(sqInt targetMcpc, CogMethod *cogMethod)
 		: (((usqInt)cogMethod)) + cmNoCheckEntryOffset);
 	map = ((((usqInt)cogMethod)) + ((cogMethod->blockSize))) - 1;
 	if (mcpc == targetMcpc) {
-		return map;
+return map;
 	}
 	while (((mapByte = byteAt(map))) != MapEnd) {
 		annotation = ((usqInt) mapByte) >> AnnotationShift;
@@ -4934,7 +4959,7 @@ findMapLocationForMcpcinMethod(sqInt targetMcpc, CogMethod *cogMethod)
 	: mapByte & DisplacementMask));
 		}
 		if (mcpc >= targetMcpc) {
-			assert(mcpc == targetMcpc);
+assert(mcpc == targetMcpc);
 			if (annotation == IsDisplacementX2N) {
 				map -= 1;
 				mapByte = byteAt(map);
@@ -5023,7 +5048,7 @@ followForwardedLiteralsIn(CogMethod *cogMethod)
 		if (mapByte >= FirstAnnotation) {
 
 			/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-			mcpc += (mapByte & DisplacementMask);
+mcpc += (mapByte & DisplacementMask);
 			if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 			 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 				annotation += mapByte & DisplacementMask;
@@ -5031,11 +5056,11 @@ followForwardedLiteralsIn(CogMethod *cogMethod)
 			}
 			result = remapIfObjectRefpchasYoung(annotation, (((char *) mcpc)), 0);
 			if (result != 0) {
-				goto l1;
+goto l1;
 			}
 		}
 		else {
-			if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
+if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 				mcpc += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
 			}
 		}
@@ -5071,7 +5096,7 @@ followForwardedMethods(void)
 		cogMethod = ((CogMethod *) (roundUpLength((((sqInt)cogMethod)) + ((cogMethod->blockSize)))));
 	}
 	if (freedPIC) {
-		unlinkSendsToFree();
+unlinkSendsToFree();
 	}
 }
 
@@ -5117,13 +5142,13 @@ followMethodReferencesInClosedPIC(CogMethod *cPIC)
 
 
 	/* first we check the potential method oop load at the beginning of the CPIC */
-	pc = addressOfEndOfCaseinCPIC(1, cPIC);
+pc = addressOfEndOfCaseinCPIC(1, cPIC);
 
 	/* We find the end address of the cPICNumCases'th case and can then just step forward by the case size thereafter */
-	refersToYoung = followMaybeObjRefInClosedPICAt(pc - (jumpLongByteSize(backEnd)));
+refersToYoung = followMaybeObjRefInClosedPICAt(pc - (jumpLongByteSize(backEnd)));
 
 	/* Next we check the potential potential method oop load for each case. */
-	pc = addressOfEndOfCaseinCPIC((cPIC->cPICNumCases), cPIC);
+pc = addressOfEndOfCaseinCPIC((cPIC->cPICNumCases), cPIC);
 	for (i = 2; i <= ((cPIC->cPICNumCases)); i += 1) {
 		if (followMaybeObjRefInClosedPICAt((pc - (jumpLongConditionalByteSize(backEnd))) - (cmpC32RTempByteSize(backEnd)))) {
 			refersToYoung = 1;
@@ -5167,7 +5192,7 @@ freeUnmarkedMachineCode(void)
 		cogMethod = ((CogMethod *) (roundUpLength((((sqInt)cogMethod)) + ((cogMethod->blockSize)))));
 	}
 	if (freedMethod) {
-		unlinkSendsToFree();
+unlinkSendsToFree();
 	}
 }
 
@@ -5324,7 +5349,7 @@ generateCaptureCStackPointers(sqInt captureFramePointer)
 	labelCounter = 0;
 
 	/* Must happen first; value may be used in accessing any of the following addresses */
-	startAddress = methodZoneBase;
+startAddress = methodZoneBase;
 	/* begin PushR: */
 	genoperand(PushR, VarBaseReg);
 	/* begin MoveCq:R: */
@@ -5333,7 +5358,7 @@ generateCaptureCStackPointers(sqInt captureFramePointer)
 	anInstruction1 = genoperandoperand(MoveCqR, quickConstant1, VarBaseReg);
 
 	if (captureFramePointer) {
-		/* begin MoveR:Aw: */
+/* begin MoveR:Aw: */
 		address = cFramePointerAddress();
 		/* begin gen:operand:literal: */
 		anInstruction2 = genoperandoperand(MoveRAw, FPReg, address);
@@ -5410,7 +5435,7 @@ generateClosedPICPrototype(void)
 	/* At the end of the entry code we need to jump to the first case code, which is actually the last chunk.
 	   On each entension we must update this jump to move back one case. */
 	/* 16r5EAF00D is the method oop, or 0, for the 1st case. */
-	jumpNext = compileCPICEntry();
+jumpNext = compileCPICEntry();
 	/* begin MoveUniqueCw:R: */
 	anInstruction2 = genoperandoperand(MoveCwR, 99282957, SendNumArgsReg);
 	/* begin JumpLong: */
@@ -5433,7 +5458,7 @@ generateClosedPICPrototype(void)
 		jumpTarget = ((cPICPrototypeCaseOffset()) + 13262352) + (h * 16);
 		genConditionalBranchoperand(JumpLongZero, ((sqInt)jumpTarget));
 		if (h == 1) {
-			/* begin Label */
+/* begin Label */
 			endCPICCase1 = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 		}
 	}
@@ -5494,7 +5519,7 @@ generateCogMethod(sqInt selector)
 	}
 	startAddress = allocate(totalSize);
 	if (startAddress == 0) {
-		return ((CogMethod *) InsufficientCodeSpace);
+return ((CogMethod *) InsufficientCodeSpace);
 	}
 	assert((startAddress + cmEntryOffset) == ((entry->address)));
 	assert((startAddress + cmNoCheckEntryOffset) == ((noCheckEntry->address)));
@@ -5544,11 +5569,11 @@ generateInstructionsAt(sqInt eventualAbsoluteAddress)
 			absoluteAddress += (abstractInstruction->machineCodeSize);
 		}
 		else {
-			absoluteAddress = concretizeAt(abstractInstruction, absoluteAddress);
+absoluteAddress = concretizeAt(abstractInstruction, absoluteAddress);
 		}
 	}
 	for (j = 0; j < pcDependentIndex; j += 1) {
-		fixup = fixupAt(j);
+fixup = fixupAt(j);
 		abstractInstruction = abstractInstructionAt((fixup->instructionIndex));
 		concretizeAt(abstractInstruction, (abstractInstruction->address));
 	}
@@ -5572,12 +5597,12 @@ static sqInt NoDbgRegParms
 generateMapAtstart(sqInt addressOrNull, sqInt startAddress)
 {
     unsigned char annotation;
-    usqInt delta;
+    sqInt delta;
     sqInt i;
     AbstractInstruction *instruction;
     sqInt length;
-    usqInt location;
-    usqInt mapEntry;
+    sqInt location;
+    sqInt mapEntry;
     sqInt maxDelta;
     usqInt mcpc;
 
@@ -5608,8 +5633,12 @@ generateMapAtstart(sqInt addressOrNull, sqInt startAddress)
 			if (annotation > IsSendCall) {
 
 				/* Add the necessary IsAnnotationExtension */
-				if (!(addressOrNull == null)) {
-					mapEntry = (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift))) + (annotation - IsSendCall);
+if (!(addressOrNull == null)) {
+
+					/* Add the necessary IsAnnotationExtension */
+
+					/* Add the necessary IsAnnotationExtension */
+mapEntry = (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift))) + (annotation - IsSendCall);
 					/* begin addToMap:instruction:byte:at:for: */
 					byteAtput(addressOrNull - length, mapEntry);
 				}
@@ -5681,7 +5710,7 @@ generateRunTimeTrampolines(void)
 	ceStoreContextInstVarTrampoline = genTrampolineForcalledargargargresult(ceContextinstVarvalue, "ceStoreContextInstVarTrampoline", ReceiverResultReg, SendNumArgsReg, ClassReg, ReceiverResultReg);
 
 	/* These two are unusual; they are reached by return instructions. */
-	ceCannotResumeTrampoline = genTrampolineForcalled(ceCannotResume, "ceCannotResumeTrampoline");
+ceCannotResumeTrampoline = genTrampolineForcalled(ceCannotResume, "ceCannotResumeTrampoline");
 	ceBaseFrameReturnTrampoline = genReturnTrampolineForcalledarg(ceBaseFrameReturn, "ceBaseFrameReturnTrampoline", ReceiverResultReg);
 	ceReturnToInterpreterTrampoline = genReturnTrampolineForcalledarg(ceReturnToInterpreter, "ceReturnToInterpreterTrampoline", ReceiverResultReg);
 }
@@ -5701,7 +5730,7 @@ generateStackPointerCapture(void)
 
 
 	/* For the benefit of the following assert, assume the minimum at first. */
-	cFramePointerInUse = 0;
+cFramePointerInUse = 0;
 	assertCStackWellAligned();
 	oldMethodZoneBase = methodZoneBase;
 	oldTrampolineTableIndex = trampolineTableIndex;
@@ -5849,7 +5878,7 @@ genLoadCStackPointersForPrimCall(void)
 		anInstruction = genoperandoperand(MoveAwR, address, SPReg);
 	}
 	else {
-		/* begin MoveAw:R: */
+/* begin MoveAw:R: */
 		address1 = cStackPointerAddress();
 		/* begin gen:literal:operand: */
 		anInstruction1 = genoperandoperand(MoveAwR, address1, TempReg);
@@ -5956,7 +5985,7 @@ genSmalltalkToCStackSwitch(sqInt pushLinkReg)
 		genLoadCStackPointers(backEnd);
 	}
 	else {
-		genLoadCStackPointer(backEnd);
+genLoadCStackPointer(backEnd);
 	}
 	return 0;
 }
@@ -6036,7 +6065,7 @@ genTrampolineForcallednumArgsargargargargregsToSavepushLinkRegresultRegappendOpc
 
 	startAddress = methodZoneBase;
 	if (!appendBoolean) {
-		zeroOpcodeIndex();
+zeroOpcodeIndex();
 	}
 	compileTrampolineFornumArgsargargargargregsToSavepushLinkRegresultReg(aRoutine, numArgs, regOrConst0, regOrConst1, regOrConst2, regOrConst3, regMask, pushLinkReg, resultRegOrNone);
 	outputInstructionsForGeneratedRuntimeAt(startAddress);
@@ -6157,21 +6186,25 @@ incrementUsageOfTargetIfLinkedSendmcpcignored(sqInt annotation, char *mcpc, sqIn
 		if (entryPoint > methodZoneBase) {
 
 			/* It's a linked send. */
-			/* begin targetMethodAndSendTableFor:annotation:into: */
+/* begin targetMethodAndSendTableFor:annotation:into: */
 			if (annotation == IsSendCall) {
 				targetMethod1 = ((CogMethod *) (entryPoint - cmEntryOffset));
 				sendTable1 = ordinarySendTrampolines;
 			}
 			else {
-				assert(annotation == IsSuperSend);
+assert(annotation == IsSuperSend);
 				targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
 				sendTable1 = superSendTrampolines;
 
 
 
 			}
-			if (((targetMethod1->cmUsageCount)) < (CMMaxUsageCount / 2)) {
-				(targetMethod1->cmUsageCount = ((targetMethod1->cmUsageCount)) + 1);
+			
+			/* It's a linked send. */
+if (((targetMethod1->cmUsageCount)) < (CMMaxUsageCount / 2)) {
+
+				/* It's a linked send. */
+(targetMethod1->cmUsageCount = ((targetMethod1->cmUsageCount)) + 1);
 			}
 
 		}
@@ -6202,7 +6235,7 @@ indexForSelectorinat(sqInt selector, CogMethod *cogMethod, sqInt mcpc)
 	}
 
 	/* Then search the method's literal frame... open code fetchPointer:ofObject: for speed... */
-	methodOop = (cogMethod->methodObject);
+methodOop = (cogMethod->methodObject);
 	for (i = LiteralStart, iLimiT = (literalCountOfMethodHeader((cogMethod->methodHeader))); i <= iLimiT; i += 1) {
 		if ((longAt(((i * BytesPerOop) + BaseHeaderSize) + methodOop)) == selector) {
 			assert(selector == (literalofMethod(i - 1, methodOop)));
@@ -6630,7 +6663,7 @@ gMoveRR(sqInt reg1, sqInt reg2)
 /*	Answer the address of the null byte at the end of the method map. */
 
 	/* Cogit>>#mapEndFor: */
-static usqInt NoDbgRegParms
+static sqInt NoDbgRegParms
 mapEndFor(CogMethod *cogMethod)
 {
     usqInt end;
@@ -6666,7 +6699,7 @@ mapForperformUntilarg(CogMethod *cogMethod, sqInt (*functionSymbol)(sqInt annota
 		if (mapByte >= FirstAnnotation) {
 
 			/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-			mcpc += (mapByte & DisplacementMask);
+mcpc += (mapByte & DisplacementMask);
 			if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 			 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 				annotation += mapByte & DisplacementMask;
@@ -6674,11 +6707,11 @@ mapForperformUntilarg(CogMethod *cogMethod, sqInt (*functionSymbol)(sqInt annota
 			}
 			result = functionSymbol(annotation, (((char *) mcpc)), arg);
 			if (result != 0) {
-				return result;
+return result;
 			}
 		}
 		else {
-			if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
+if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 				mcpc += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
 			}
 		}
@@ -6702,13 +6735,13 @@ mapObjectReferencesInClosedPIC(CogMethod *cPIC)
 
 
 	/* first we check the potential method oop load at the beginning of the CPIC */
-	pc = addressOfEndOfCaseinCPIC(1, cPIC);
+pc = addressOfEndOfCaseinCPIC(1, cPIC);
 
 	/* We find the end address of the cPICNumCases'th case and can then just step forward by the case size thereafter */
-	refersToYoung = remapMaybeObjRefInClosedPICAt(pc - (jumpLongByteSize(backEnd)));
+refersToYoung = remapMaybeObjRefInClosedPICAt(pc - (jumpLongByteSize(backEnd)));
 
 	/* Next we check the potential class ref in the compare instruction, and the potential method oop load for each case. */
-	pc = addressOfEndOfCaseinCPIC((cPIC->cPICNumCases), cPIC);
+pc = addressOfEndOfCaseinCPIC((cPIC->cPICNumCases), cPIC);
 	for (i = 2; i <= ((cPIC->cPICNumCases)); i += 1) {
 		if (remapMaybeObjRefInClosedPICAt((pc - (jumpLongConditionalByteSize(backEnd))) - (cmpC32RTempByteSize(backEnd)))) {
 			refersToYoung = 1;
@@ -6735,7 +6768,7 @@ mapObjectReferencesInGeneratedRuntime(void)
 		literal = literalBeforeFollowingAddress(backEnd, mcpc);
 		mappedLiteral = remapObject(literal);
 		if (mappedLiteral != literal) {
-			/* begin storeLiteral:atAnnotatedAddress:using: */
+/* begin storeLiteral:atAnnotatedAddress:using: */
 			storeLiteralbeforeFollowingAddress(((AbstractInstruction *) backEnd), mappedLiteral, mcpc);
 			codeModified = 1;
 		}
@@ -6784,7 +6817,7 @@ mapObjectReferencesInMachineCodeForBecome(void)
 				}
 			}
 			else {
-				if (isYoung((cogMethod->selector))) {
+if (isYoung((cogMethod->selector))) {
 					hasYoungObj = 1;
 				}
 				if (((cogMethod->cmType)) == CMMethod) {
@@ -6804,7 +6837,7 @@ mapObjectReferencesInMachineCodeForBecome(void)
 							rawHeaderOfput(remappedMethod, ((sqInt)cogMethod));
 						}
 						else {
-							assert((noAssertMethodClassAssociationOf((cogMethod->methodObject))) == (nilObject()));
+assert((noAssertMethodClassAssociationOf((cogMethod->methodObject))) == (nilObject()));
 							(cogMethod->methodHeader = rawHeaderOf(remappedMethod));
 							(cogMethod->methodObject = remappedMethod);
 						}
@@ -6824,7 +6857,7 @@ mapObjectReferencesInMachineCodeForBecome(void)
 					if (mapByte >= FirstAnnotation) {
 
 						/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-						mcpc += (mapByte & DisplacementMask);
+mcpc += (mapByte & DisplacementMask);
 						if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 						 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 							annotation += mapByte & DisplacementMask;
@@ -6832,11 +6865,11 @@ mapObjectReferencesInMachineCodeForBecome(void)
 						}
 						result = remapIfObjectRefpchasYoung(annotation, (((char *) mcpc)), hasYoungObjPtr);
 						if (result != 0) {
-							goto l1;
+goto l1;
 						}
 					}
 					else {
-						if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
+if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 							mcpc += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
 						}
 					}
@@ -6844,11 +6877,11 @@ mapObjectReferencesInMachineCodeForBecome(void)
 				}
 			l1:	/* end mapFor:performUntil:arg: */;
 				if (hasYoungObj) {
-					ensureInYoungReferrers(cogMethod);
+ensureInYoungReferrers(cogMethod);
 					hasYoungObj = 0;
 				}
 				else {
-					(cogMethod->cmRefersToYoung = 0);
+(cogMethod->cmRefersToYoung = 0);
 				}
 			}
 		}
@@ -6856,12 +6889,12 @@ mapObjectReferencesInMachineCodeForBecome(void)
 	}
 	pruneYoungReferrers();
 	if (freedPIC) {
-		unlinkSendsToFree();
+unlinkSendsToFree();
 	}
 	if (codeModified) {
 
 		/* After updating oops in inline caches we need to flush the icache. */
-		flushICacheFromto(processor, ((usqInt)codeBase), ((usqInt)(limitZony())));
+flushICacheFromto(processor, ((usqInt)codeBase), ((usqInt)(limitZony())));
 	}
 }
 
@@ -6893,7 +6926,7 @@ mapObjectReferencesInMachineCodeForFullGC(void)
 				mapObjectReferencesInClosedPIC(cogMethod);
 			}
 			else {
-				if (((cogMethod->cmType)) == CMMethod) {
+if (((cogMethod->cmType)) == CMMethod) {
 					assert(((cogMethod->objectHeader)) == (nullHeaderForMachineCodeMethod()));
 					(cogMethod->methodObject = remapOop((cogMethod->methodObject)));
 				}
@@ -6908,7 +6941,7 @@ mapObjectReferencesInMachineCodeForFullGC(void)
 					if (mapByte >= FirstAnnotation) {
 
 						/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-						mcpc += (mapByte & DisplacementMask);
+mcpc += (mapByte & DisplacementMask);
 						if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 						 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 							annotation += mapByte & DisplacementMask;
@@ -6916,11 +6949,11 @@ mapObjectReferencesInMachineCodeForFullGC(void)
 						}
 						result = remapIfObjectRefpchasYoung(annotation, (((char *) mcpc)), 0);
 						if (result != 0) {
-							goto l1;
+goto l1;
 						}
 					}
 					else {
-						if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
+if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 							mcpc += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
 						}
 					}
@@ -6935,7 +6968,7 @@ mapObjectReferencesInMachineCodeForFullGC(void)
 	if (codeModified) {
 
 		/* After updating oops in inline caches we need to flush the icache. */
-		flushICacheFromto(processor, ((usqInt)codeBase), ((usqInt)(limitZony())));
+flushICacheFromto(processor, ((usqInt)codeBase), ((usqInt)(limitZony())));
 	}
 }
 
@@ -6975,7 +7008,7 @@ mapObjectReferencesInMachineCodeForYoungGC(void)
 			assert(!((cogMethod->cmRefersToYoung)));
 		}
 		else {
-			assert((cogMethodDoesntLookKosher(cogMethod)) == 0);
+assert((cogMethodDoesntLookKosher(cogMethod)) == 0);
 			if ((cogMethod->cmRefersToYoung)) {
 				assert((((cogMethod->cmType)) == CMMethod)
 				 || (((cogMethod->cmType)) == CMOpenPIC));
@@ -7001,7 +7034,7 @@ mapObjectReferencesInMachineCodeForYoungGC(void)
 					if (mapByte >= FirstAnnotation) {
 
 						/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-						mcpc += (mapByte & DisplacementMask);
+mcpc += (mapByte & DisplacementMask);
 						if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 						 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 							annotation += mapByte & DisplacementMask;
@@ -7009,11 +7042,11 @@ mapObjectReferencesInMachineCodeForYoungGC(void)
 						}
 						result = remapIfObjectRefpchasYoung(annotation, (((char *) mcpc)), hasYoungObjPtr);
 						if (result != 0) {
-							goto l1;
+goto l1;
 						}
 					}
 					else {
-						if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
+if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 							mcpc += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
 						}
 					}
@@ -7021,10 +7054,10 @@ mapObjectReferencesInMachineCodeForYoungGC(void)
 				}
 			l1:	/* end mapFor:performUntil:arg: */;
 				if (hasYoungObj) {
-					hasYoungObj = 0;
+hasYoungObj = 0;
 				}
 				else {
-					(cogMethod->cmRefersToYoung = 0);
+(cogMethod->cmRefersToYoung = 0);
 				}
 			}
 		}
@@ -7034,7 +7067,7 @@ mapObjectReferencesInMachineCodeForYoungGC(void)
 	if (codeModified) {
 
 		/* After updating oops in inline caches we need to flush the icache. */
-		flushICacheFromto(processor, ((usqInt)methodZoneBase), ((usqInt)(limitZony())));
+flushICacheFromto(processor, ((usqInt)methodZoneBase), ((usqInt)(limitZony())));
 	}
 }
 
@@ -7118,7 +7151,7 @@ markAndTraceMachineCodeOfMarkedMethods(void)
 				if (mapByte >= FirstAnnotation) {
 
 					/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-					mcpc += (mapByte & DisplacementMask);
+mcpc += (mapByte & DisplacementMask);
 					if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 					 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 						annotation += mapByte & DisplacementMask;
@@ -7126,11 +7159,11 @@ markAndTraceMachineCodeOfMarkedMethods(void)
 					}
 					result = markLiteralspcmethod(annotation, (((char *) mcpc)), (((sqInt)cogMethod)));
 					if (result != 0) {
-						goto l1;
+goto l1;
 					}
 				}
 				else {
-					if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
+if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 						mcpc += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
 					}
 				}
@@ -7161,7 +7194,7 @@ markAndTraceMachineCodeOfMarkedMethods(void)
 				if (mapByte1 >= FirstAnnotation) {
 
 					/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-					mcpc1 += (mapByte1 & DisplacementMask);
+mcpc1 += (mapByte1 & DisplacementMask);
 					if ((((annotation1 = ((usqInt) mapByte1) >> AnnotationShift)) == IsSendCall)
 					 && ((((usqInt) ((mapByte1 = byteAt(map1 - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 						annotation1 += mapByte1 & DisplacementMask;
@@ -7169,11 +7202,11 @@ markAndTraceMachineCodeOfMarkedMethods(void)
 					}
 					result1 = markLiteralspcmethod(annotation1, (((char *) mcpc1)), (((sqInt)cogMethod)));
 					if (result1 != 0) {
-						goto l2;
+goto l2;
 					}
 				}
 				else {
-					if (mapByte1 < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
+if (mapByte1 < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 						mcpc1 += (((sqInt)((usqInt)((mapByte1 - DisplacementX2N)) << AnnotationShift)));
 					}
 				}
@@ -7189,7 +7222,7 @@ markAndTraceMachineCodeOfMarkedMethods(void)
 	if (codeModified) {
 
 		/* After updating oops in inline caches we need to flush the icache. */
-		flushICacheFromto(processor, ((usqInt)methodZoneBase), ((usqInt)(limitZony())));
+flushICacheFromto(processor, ((usqInt)methodZoneBase), ((usqInt)(limitZony())));
 	}
 }
 
@@ -7247,7 +7280,7 @@ markAndTraceOrFreeCogMethodfirstVisit(CogMethod *cogMethod, sqInt firstVisit)
 			return 1;
 		}
 		if (firstVisit) {
-			/* begin markLiteralsAndUnlinkUnmarkedSendsIn: */
+/* begin markLiteralsAndUnlinkUnmarkedSendsIn: */
 			assert(((cogMethod->cmType)) == CMMethod);
 			assert(isMarked((cogMethod->methodObject)));
 			markAndTraceLiteralinat((cogMethod->selector), cogMethod, (&((cogMethod->selector))));
@@ -7264,7 +7297,7 @@ markAndTraceOrFreeCogMethodfirstVisit(CogMethod *cogMethod, sqInt firstVisit)
 				if (mapByte >= FirstAnnotation) {
 
 					/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-					mcpc += (mapByte & DisplacementMask);
+mcpc += (mapByte & DisplacementMask);
 					if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 					 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 						annotation += mapByte & DisplacementMask;
@@ -7272,11 +7305,11 @@ markAndTraceOrFreeCogMethodfirstVisit(CogMethod *cogMethod, sqInt firstVisit)
 					}
 					result = markLiteralsAndUnlinkIfUnmarkedSendpcmethod(annotation, (((char *) mcpc)), (((sqInt)cogMethod)));
 					if (result != 0) {
-						goto l1;
+goto l1;
 					}
 				}
 				else {
-					if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
+if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 						mcpc += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
 					}
 				}
@@ -7378,20 +7411,22 @@ markLiteralsAndUnlinkIfUnmarkedSendpcmethod(sqInt annotation, char *mcpc, sqInt 
 		if (entryPoint1 > methodZoneBase) {
 
 			/* It's a linked send. */
-			/* begin targetMethodAndSendTableFor:annotation:into: */
+/* begin targetMethodAndSendTableFor:annotation:into: */
 			if (annotation == IsSendCall) {
 				targetMethod1 = ((CogMethod *) (entryPoint1 - cmEntryOffset));
 				sendTable1 = ordinarySendTrampolines;
 			}
 			else {
-				assert(annotation == IsSuperSend);
+assert(annotation == IsSuperSend);
 				targetMethod1 = ((CogMethod *) (entryPoint1 - cmNoCheckEntryOffset));
 				sendTable1 = superSendTrampolines;
 
 
 
 			}
-			if ((!cacheTagMarked)
+			
+			/* It's a linked send. */
+if ((!cacheTagMarked)
 			 || (markAndTraceOrFreeCogMethodfirstVisit(targetMethod1, (((usqInt)targetMethod1)) > (((usqInt)mcpc))))) {
 
 				/* Either the cacheTag is unmarked (e.g. new class) or the target
@@ -7407,7 +7442,7 @@ markLiteralsAndUnlinkIfUnmarkedSendpcmethod(sqInt annotation, char *mcpc, sqInt 
 		else {
 
 			/* cacheTag is selector */
-					}
+		}
 
 	}
 	return 0;
@@ -7449,7 +7484,7 @@ markLiteralspcmethod(sqInt annotation, char *mcpc, sqInt cogMethod)
 		entryPoint1 = callTargetFromReturnAddress(backEnd, ((sqInt)mcpc));
 		tagCouldBeObj1 = 0;
 		if (tagCouldBeObj1) {
-					}
+		}
 
 	}
 	return 0;
@@ -7483,7 +7518,7 @@ markMethodAndReferents(CogBlockMethod *aCogMethod)
 		if (mapByte >= FirstAnnotation) {
 
 			/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-			mcpc += (mapByte & DisplacementMask);
+mcpc += (mapByte & DisplacementMask);
 			if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 			 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 				annotation += mapByte & DisplacementMask;
@@ -7491,11 +7526,11 @@ markMethodAndReferents(CogBlockMethod *aCogMethod)
 			}
 			result = incrementUsageOfTargetIfLinkedSendmcpcignored(annotation, (((char *) mcpc)), 0);
 			if (result != 0) {
-				goto l1;
+goto l1;
 			}
 		}
 		else {
-			if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
+if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 				mcpc += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
 			}
 		}
@@ -7602,7 +7637,7 @@ mcPCForBackwardBranchstartBcpcin(sqInt bcpc, sqInt startbcpc, CogBlockMethod *co
 		? ((sqInt)(((char *) mcpc)))
 		: 0);
 	if (result != 0) {
-		return result;
+return result;
 	}
 
 	/* In both CMMethod and CMBlock cases find the start of the map and
@@ -7635,7 +7670,7 @@ mcPCForBackwardBranchstartBcpcin(sqInt bcpc, sqInt startbcpc, CogBlockMethod *co
 		bcpc1 += deltaToSkipPrimAndErrorStoreInheader(aMethodObj, (homeMethod->methodHeader));
 	}
 	else {
-		isInBlock = 1;
+isInBlock = 1;
 		assert(bcpc1 == ((cogMethod->startpc)));
 		homeMethod = cmHomeMethod(cogMethod);
 		map = findMapLocationForMcpcinMethod((((usqInt)cogMethod)) + (sizeof(CogBlockMethod)), homeMethod);
@@ -7648,7 +7683,7 @@ mcPCForBackwardBranchstartBcpcin(sqInt bcpc, sqInt startbcpc, CogBlockMethod *co
 		}
 
 		/* skip fiducial; i.e. the map entry for the pc immediately following the method header. */
-		map -= 1;
+map -= 1;
 		aMethodObj = (homeMethod->methodObject);
 		bcpc1 = startbcpc - (blockCreationBytecodeSizeForHeader((homeMethod->methodHeader)));
 		/* begin bytecodeSetOffsetForHeader: */
@@ -7679,8 +7714,12 @@ mcPCForBackwardBranchstartBcpcin(sqInt bcpc, sqInt startbcpc, CogBlockMethod *co
 	while (((mapByte = byteAt(map))) != MapEnd) {
 
 		/* defensive; we exit on bcpc */
-		if (mapByte >= FirstAnnotation) {
-			annotation = ((usqInt) mapByte) >> AnnotationShift;
+if (mapByte >= FirstAnnotation) {
+
+			/* defensive; we exit on bcpc */
+
+			/* defensive; we exit on bcpc */
+annotation = ((usqInt) mapByte) >> AnnotationShift;
 			mcpc += (mapByte & DisplacementMask);
 			if (annotation >= HasBytecodePC) {
 				if ((annotation == IsSendCall)
@@ -7689,15 +7728,15 @@ mcPCForBackwardBranchstartBcpcin(sqInt bcpc, sqInt startbcpc, CogBlockMethod *co
 					map -= 1;
 				}
 				while (1) {
-					byte = (fetchByteofObject(bcpc1, aMethodObj)) + bsOffset;
+byte = (fetchByteofObject(bcpc1, aMethodObj)) + bsOffset;
 					descriptor = generatorAt(byte);
 					if (isInBlock) {
-						if (bcpc1 >= endbcpc) {
-							return ((sqInt) 0);
+if (bcpc1 >= endbcpc) {
+return ((sqInt) 0);
 						}
 					}
 					else {
-						if (((descriptor->isReturn))
+if (((descriptor->isReturn))
 						 && (bcpc1 >= latestContinuation)) {
 							return ((sqInt) 0);
 						}
@@ -7726,7 +7765,7 @@ mcPCForBackwardBranchstartBcpcin(sqInt bcpc, sqInt startbcpc, CogBlockMethod *co
 	? (((sqInt)((usqInt)(annotation) << 1))) + 1
 	: ((sqInt)((usqInt)(annotation) << 1)))), (((char *) mcpc)), bcpc1, (((void *)bcpc)));
 				if (result != 0) {
-					return result;
+return result;
 				}
 				bcpc1 = nextBcpc;
 				nExts = ((descriptor->isExtension)
@@ -7735,7 +7774,7 @@ mcPCForBackwardBranchstartBcpcin(sqInt bcpc, sqInt startbcpc, CogBlockMethod *co
 			}
 		}
 		else {
-			assert(((((usqInt) mapByte) >> AnnotationShift) == IsDisplacementX2N)
+assert(((((usqInt) mapByte) >> AnnotationShift) == IsDisplacementX2N)
 			 || ((((usqInt) mapByte) >> AnnotationShift) == IsAnnotationExtension));
 			if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 				mcpc += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
@@ -7776,7 +7815,7 @@ methodhasSameCodeAscheckPenultimate(sqInt methodA, sqInt methodB, sqInt compareP
 		return 0;
 	}
 	for (li = 1; li < numLitsA; li += 1) {
-		if ((fetchPointerofObject(li, methodA)) != (fetchPointerofObject(li, methodB))) {
+if ((fetchPointerofObject(li, methodA)) != (fetchPointerofObject(li, methodB))) {
 			if ((li < (numLitsA - 1))
 			 || (comparePenultimateLiteral)) {
 				return 0;
@@ -7951,17 +7990,21 @@ patchToOpenPICFornumArgsreceiver(sqInt selector, sqInt numArgs, sqInt receiver)
 
 
 	/* See if an Open PIC is already available. */
-	outerReturn = stackTop();
+outerReturn = stackTop();
 	oPIC = openPICWithSelector(selector);
 	if (!(oPIC)) {
 
 		/* otherwise attempt to create an Open PIC. */
-		oPIC = cogOpenPICSelectornumArgs(selector, numArgs);
+
+		/* otherwise attempt to create an Open PIC. */
+oPIC = cogOpenPICSelectornumArgs(selector, numArgs);
 		if ((((((sqInt)oPIC)) >= MaxNegativeErrorCode) && ((((sqInt)oPIC)) <= -1))) {
 
 			/* For some reason the PIC couldn't be generated, most likely a lack of code memory. */
-			if ((((sqInt)oPIC)) == InsufficientCodeSpace) {
-				callForCogCompiledCodeCompaction();
+if ((((sqInt)oPIC)) == InsufficientCodeSpace) {
+
+				/* For some reason the PIC couldn't be generated, most likely a lack of code memory. */
+callForCogCompiledCodeCompaction();
 			}
 			return 0;
 		}
@@ -8012,18 +8055,18 @@ printCogMethodFor(void *address)
 
 	cogMethod = methodFor(address);
 	if (cogMethod == 0) {
-		if ((codeEntryFor(address)) == null) {
+if ((codeEntryFor(address)) == null) {
 			print("not a method");
 			cr();
 		}
 		else {
-			print("trampoline ");
+print("trampoline ");
 			print(codeEntryNameFor(address));
 			cr();
 		}
 	}
 	else {
-		printCogMethod(cogMethod);
+printCogMethod(cogMethod);
 	}
 }
 
@@ -8047,7 +8090,7 @@ printPCMapPairsFor(CogMethod *cogMethod)
 			value = (mapByte & DisplacementMask) + IsSendCall;
 		}
 		else {
-			value = annotation;
+value = annotation;
 			mcpc += 1 * ((annotation == IsDisplacementX2N
 	? ((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift))
 	: mapByte & DisplacementMask));
@@ -8224,7 +8267,7 @@ relocateCallsAndSelfReferencesInMethod(CogMethod *cogMethod)
 		if (mapByte >= FirstAnnotation) {
 
 			/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-			mcpc += (mapByte & DisplacementMask);
+mcpc += (mapByte & DisplacementMask);
 			if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 			 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 				annotation += mapByte & DisplacementMask;
@@ -8232,11 +8275,11 @@ relocateCallsAndSelfReferencesInMethod(CogMethod *cogMethod)
 			}
 			result = relocateIfCallOrMethodReferencemcpcdelta(annotation, (((char *) mcpc)), refDelta);
 			if (result != 0) {
-				goto l1;
+goto l1;
 			}
 		}
 		else {
-			if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
+if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 				mcpc += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
 			}
 		}
@@ -8270,15 +8313,15 @@ relocateCallsInClosedPIC(CogMethod *cPIC)
 		 && (((((usqInt)cPIC)) + ((cPIC->blockSize))) >= (((usqInt)entryPoint)))) {
 
 			/* Interpret/MNU */
-					}
+		}
 		else {
-			targetMethod = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
+targetMethod = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
 			assert(((targetMethod->cmType)) == CMMethod);
 			if (i == 1) {
-				relocateJumpLongBeforeFollowingAddressby(backEnd, pc, -(callDelta - ((targetMethod->objectHeader))));
+relocateJumpLongBeforeFollowingAddressby(backEnd, pc, -(callDelta - ((targetMethod->objectHeader))));
 			}
 			else {
-				relocateJumpLongConditionalBeforeFollowingAddressby(backEnd, pc, -(callDelta - ((targetMethod->objectHeader))));
+relocateJumpLongConditionalBeforeFollowingAddressby(backEnd, pc, -(callDelta - ((targetMethod->objectHeader))));
 			}
 		}
 	}
@@ -8313,7 +8356,7 @@ relocateIfCallOrMethodReferencemcpcdelta(sqInt annotation, char *mcpc, sqInt ref
 		if (entryPoint <= methodZoneBase) {
 
 			/* send is not linked; just relocate */
-			relocateCallBeforeReturnPCby(backEnd, ((sqInt)mcpc), -callDelta);
+relocateCallBeforeReturnPCby(backEnd, ((sqInt)mcpc), -callDelta);
 			return 0;
 		}
 		/* begin offsetAndSendTableFor:annotation:into: */
@@ -8322,7 +8365,7 @@ relocateIfCallOrMethodReferencemcpcdelta(sqInt annotation, char *mcpc, sqInt ref
 			sendTable1 = ordinarySendTrampolines;
 		}
 		else {
-			assert(annotation == IsSuperSend);
+assert(annotation == IsSuperSend);
 			offset1 = cmNoCheckEntryOffset;
 			sendTable1 = superSendTrampolines;
 
@@ -8333,7 +8376,7 @@ relocateIfCallOrMethodReferencemcpcdelta(sqInt annotation, char *mcpc, sqInt ref
 		if (((targetMethod->cmType)) != CMFree) {
 
 			/* send target not freed; just relocate. */
-			relocateCallBeforeReturnPCby(backEnd, ((sqInt)mcpc), -(callDelta - ((targetMethod->objectHeader))));
+relocateCallBeforeReturnPCby(backEnd, ((sqInt)mcpc), -(callDelta - ((targetMethod->objectHeader))));
 			return 0;
 		}
 		unlinkedRoutine = sendTable1[((((targetMethod->cmNumArgs)) < (NumSendTrampolines - 1)) ? ((targetMethod->cmNumArgs)) : (NumSendTrampolines - 1))];
@@ -8381,7 +8424,7 @@ remapIfObjectRefpchasYoung(sqInt annotation, char *mcpc, sqInt hasYoungPtr)
 		if (couldBeObject(literal)) {
 			mappedLiteral = remapObject(literal);
 			if (literal != mappedLiteral) {
-				/* begin storeLiteral:atAnnotatedAddress:using: */
+/* begin storeLiteral:atAnnotatedAddress:using: */
 				storeLiteralbeforeFollowingAddress(((AbstractInstruction *) backEnd), mappedLiteral, ((usqInt)mcpc));
 				codeModified = 1;
 			}
@@ -8407,7 +8450,7 @@ remapIfObjectRefpchasYoung(sqInt annotation, char *mcpc, sqInt hasYoungPtr)
 		 && (couldBeObject(cacheTag1))) {
 			mappedCacheTag = remapObject(cacheTag1);
 			if (cacheTag1 != mappedCacheTag) {
-				rewriteInlineCacheTagat(backEnd, mappedCacheTag, ((usqInt)mcpc));
+rewriteInlineCacheTagat(backEnd, mappedCacheTag, ((usqInt)mcpc));
 				codeModified = 1;
 			}
 			if ((hasYoungPtr != 0)
@@ -8420,24 +8463,38 @@ remapIfObjectRefpchasYoung(sqInt annotation, char *mcpc, sqInt hasYoungPtr)
 			/* Since the unlinking routines may rewrite the cacheTag to the send's selector, and
 			   since they don't have the cogMethod to hand and can't add it to youngReferrers,
 			   the method must remain in youngReferrers if the targetMethod's selector is young. */
-			if (entryPoint1 > methodZoneBase) {
+			/* It's a linked send. */
+if (entryPoint1 > methodZoneBase) {
 
+				/* Since the unlinking routines may rewrite the cacheTag to the send's selector, and
+				   since they don't have the cogMethod to hand and can't add it to youngReferrers,
+				   the method must remain in youngReferrers if the targetMethod's selector is young. */
 				/* It's a linked send. */
-				/* begin targetMethodAndSendTableFor:annotation:into: */
+/* begin targetMethodAndSendTableFor:annotation:into: */
 				if (annotation == IsSendCall) {
 					targetMethod1 = ((CogMethod *) (entryPoint1 - cmEntryOffset));
 					sendTable = ordinarySendTrampolines;
 				}
 				else {
-					assert(annotation == IsSuperSend);
+assert(annotation == IsSuperSend);
 					targetMethod1 = ((CogMethod *) (entryPoint1 - cmNoCheckEntryOffset));
 					sendTable = superSendTrampolines;
 
 
 
 				}
-				if (isYoung((targetMethod1->selector))) {
-					(((sqInt *) hasYoungPtr))[0] = 1;
+				
+				/* Since the unlinking routines may rewrite the cacheTag to the send's selector, and
+				   since they don't have the cogMethod to hand and can't add it to youngReferrers,
+				   the method must remain in youngReferrers if the targetMethod's selector is young. */
+				/* It's a linked send. */
+if (isYoung((targetMethod1->selector))) {
+
+					/* Since the unlinking routines may rewrite the cacheTag to the send's selector, and
+					   since they don't have the cogMethod to hand and can't add it to youngReferrers,
+					   the method must remain in youngReferrers if the targetMethod's selector is young. */
+					/* It's a linked send. */
+(((sqInt *) hasYoungPtr))[0] = 1;
 				}
 
 			}
@@ -8467,7 +8524,7 @@ remapMaybeObjRefInClosedPICAt(sqInt mcpc)
 	}
 	subject = remapOop(object);
 	if (object != subject) {
-		storeLiteralbeforeFollowingAddress(backEnd, subject, mcpc);
+storeLiteralbeforeFollowingAddress(backEnd, subject, mcpc);
 		codeModified = 1;
 	}
 	return isYoungObject(subject);
@@ -8490,7 +8547,7 @@ rewriteCPICCaseAttagobjReftarget(sqInt followingAddress, sqInt newTag, sqInt new
 	storeLiteralbeforeFollowingAddress(backEnd, newObjRef, methodObjPC);
 
 	/* rewite the tag via the first ldr */
-	classTagPC = followingAddress - (jumpLongConditionalByteSize(backEnd));
+classTagPC = followingAddress - (jumpLongConditionalByteSize(backEnd));
 	storeLiteral32beforeFollowingAddress(backEnd, newTag, classTagPC);
 	rewriteConditionalJumpLongAttarget(backEnd, followingAddress, newTarget);
 }
@@ -8574,7 +8631,7 @@ spanForCleanBlockStartingAt(sqInt startPC)
 	pc = startPC;
 	end = numBytesOf(methodObj);
 	while (pc <= end) {
-		descriptor = generatorAt((fetchByteofObject(pc, methodObj)) + bytecodeSetOffset);
+descriptor = generatorAt((fetchByteofObject(pc, methodObj)) + bytecodeSetOffset);
 		pc += (descriptor->numBytes);
 		if ((descriptor->isReturn)) {
 			return pc - startPC;
@@ -8699,7 +8756,7 @@ unlinkAllSends(void)
 				if (mapByte >= FirstAnnotation) {
 
 					/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-					mcpc += (mapByte & DisplacementMask);
+mcpc += (mapByte & DisplacementMask);
 					if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 					 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 						annotation += mapByte & DisplacementMask;
@@ -8707,11 +8764,11 @@ unlinkAllSends(void)
 					}
 					result = unlinkIfLinkedSendpcignored(annotation, (((char *) mcpc)), 0);
 					if (result != 0) {
-						goto l1;
+goto l1;
 					}
 				}
 				else {
-					if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
+if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 						mcpc += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
 					}
 				}
@@ -8720,7 +8777,7 @@ unlinkAllSends(void)
 		l1:	/* end mapFor:performUntil:arg: */;
 		}
 		else {
-			if (((cogMethod->cmType)) != CMFree) {
+if (((cogMethod->cmType)) != CMFree) {
 				freeMethod(cogMethod);
 			}
 		}
@@ -8745,20 +8802,22 @@ unlinkIfFreeOrLinkedSendpcof(sqInt annotation, char *mcpc, sqInt theSelector)
 		if (entryPoint > methodZoneBase) {
 
 			/* It's a linked send. */
-			/* begin targetMethodAndSendTableFor:annotation:into: */
+/* begin targetMethodAndSendTableFor:annotation:into: */
 			if (annotation == IsSendCall) {
 				targetMethod1 = ((CogMethod *) (entryPoint - cmEntryOffset));
 				sendTable1 = ordinarySendTrampolines;
 			}
 			else {
-				assert(annotation == IsSuperSend);
+assert(annotation == IsSuperSend);
 				targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
 				sendTable1 = superSendTrampolines;
 
 
 
 			}
-			if ((((targetMethod1->cmType)) == CMFree)
+			
+			/* It's a linked send. */
+if ((((targetMethod1->cmType)) == CMFree)
 			 || (((targetMethod1->selector)) == theSelector)) {
 				/* begin unlinkSendAt:targetMethod:sendTable: */
 				unlinkedRoutine = sendTable1[((((targetMethod1->cmNumArgs)) < (NumSendTrampolines - 1)) ? ((targetMethod1->cmNumArgs)) : (NumSendTrampolines - 1))];
@@ -8787,20 +8846,22 @@ unlinkIfInvalidClassSendpcignored(sqInt annotation, char *mcpc, sqInt superfluit
 		if (entryPoint > methodZoneBase) {
 
 			/* It's a linked send, but maybe a super send or linked to an OpenPIC, in which case the cache tag will be a selector.... */
-			/* begin targetMethodAndSendTableFor:annotation:into: */
+/* begin targetMethodAndSendTableFor:annotation:into: */
 			if (annotation == IsSendCall) {
 				targetMethod1 = ((CogMethod *) (entryPoint - cmEntryOffset));
 				sendTable1 = ordinarySendTrampolines;
 			}
 			else {
-				assert(annotation == IsSuperSend);
+assert(annotation == IsSuperSend);
 				targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
 				sendTable1 = superSendTrampolines;
 
 
 
 			}
-			if (!(((annotation == IsSuperSend)
+			
+			/* It's a linked send, but maybe a super send or linked to an OpenPIC, in which case the cache tag will be a selector.... */
+if (!(((annotation == IsSuperSend)
 				 || (0))
 				 || (((targetMethod1->cmType)) == CMOpenPIC))) {
 				if (!(isValidClassTag(inlineCacheTagAt(backEnd, ((sqInt)mcpc))))) {
@@ -8832,21 +8893,25 @@ unlinkIfLinkedSendToFreepcignored(sqInt annotation, char *mcpc, sqInt superfluit
 		if (entryPoint > methodZoneBase) {
 
 			/* It's a linked send. */
-			/* begin targetMethodAndSendTableFor:annotation:into: */
+/* begin targetMethodAndSendTableFor:annotation:into: */
 			if (annotation == IsSendCall) {
 				targetMethod1 = ((CogMethod *) (entryPoint - cmEntryOffset));
 				sendTable1 = ordinarySendTrampolines;
 			}
 			else {
-				assert(annotation == IsSuperSend);
+assert(annotation == IsSuperSend);
 				targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
 				sendTable1 = superSendTrampolines;
 
 
 
 			}
-			if (((targetMethod1->cmType)) == CMFree) {
-				/* begin unlinkSendAt:targetMethod:sendTable: */
+			
+			/* It's a linked send. */
+if (((targetMethod1->cmType)) == CMFree) {
+
+				/* It's a linked send. */
+/* begin unlinkSendAt:targetMethod:sendTable: */
 				unlinkedRoutine = sendTable1[((((targetMethod1->cmNumArgs)) < (NumSendTrampolines - 1)) ? ((targetMethod1->cmNumArgs)) : (NumSendTrampolines - 1))];
 				rewriteInlineCacheAttagtarget(backEnd, ((sqInt)mcpc), inlineCacheValueForSelectorinat((targetMethod1->selector), enumeratingCogMethod, mcpc), unlinkedRoutine);
 				codeModified = 1;
@@ -8873,20 +8938,22 @@ unlinkIfLinkedSendpcignored(sqInt annotation, char *mcpc, sqInt superfluity)
 		if (entryPoint > methodZoneBase) {
 
 			/* It's a linked send. */
-			/* begin targetMethodAndSendTableFor:annotation:into: */
+/* begin targetMethodAndSendTableFor:annotation:into: */
 			if (annotation == IsSendCall) {
 				targetMethod1 = ((CogMethod *) (entryPoint - cmEntryOffset));
 				sendTable1 = ordinarySendTrampolines;
 			}
 			else {
-				assert(annotation == IsSuperSend);
+assert(annotation == IsSuperSend);
 				targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
 				sendTable1 = superSendTrampolines;
 
 
 
 			}
-			/* begin unlinkSendAt:targetMethod:sendTable: */
+			
+			/* It's a linked send. */
+/* begin unlinkSendAt:targetMethod:sendTable: */
 			unlinkedRoutine = sendTable1[((((targetMethod1->cmNumArgs)) < (NumSendTrampolines - 1)) ? ((targetMethod1->cmNumArgs)) : (NumSendTrampolines - 1))];
 			rewriteInlineCacheAttagtarget(backEnd, ((sqInt)mcpc), inlineCacheValueForSelectorinat((targetMethod1->selector), enumeratingCogMethod, mcpc), unlinkedRoutine);
 			codeModified = 1;
@@ -8912,21 +8979,25 @@ unlinkIfLinkedSendpcto(sqInt annotation, char *mcpc, sqInt theCogMethod)
 		if (entryPoint > methodZoneBase) {
 
 			/* It's a linked send. */
-			/* begin targetMethodAndSendTableFor:annotation:into: */
+/* begin targetMethodAndSendTableFor:annotation:into: */
 			if (annotation == IsSendCall) {
 				targetMethod1 = ((CogMethod *) (entryPoint - cmEntryOffset));
 				sendTable1 = ordinarySendTrampolines;
 			}
 			else {
-				assert(annotation == IsSuperSend);
+assert(annotation == IsSuperSend);
 				targetMethod1 = ((CogMethod *) (entryPoint - cmNoCheckEntryOffset));
 				sendTable1 = superSendTrampolines;
 
 
 
 			}
-			if ((((sqInt)targetMethod1)) == theCogMethod) {
-				/* begin unlinkSendAt:targetMethod:sendTable: */
+			
+			/* It's a linked send. */
+if ((((sqInt)targetMethod1)) == theCogMethod) {
+
+				/* It's a linked send. */
+/* begin unlinkSendAt:targetMethod:sendTable: */
 				unlinkedRoutine = sendTable1[((((targetMethod1->cmNumArgs)) < (NumSendTrampolines - 1)) ? ((targetMethod1->cmNumArgs)) : (NumSendTrampolines - 1))];
 				rewriteInlineCacheAttagtarget(backEnd, ((sqInt)mcpc), inlineCacheValueForSelectorinat((targetMethod1->selector), enumeratingCogMethod, mcpc), unlinkedRoutine);
 				codeModified = 1;
@@ -8972,7 +9043,7 @@ unlinkSendsLinkedForInvalidClasses(void)
 				if (mapByte >= FirstAnnotation) {
 
 					/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-					mcpc += (mapByte & DisplacementMask);
+mcpc += (mapByte & DisplacementMask);
 					if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 					 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 						annotation += mapByte & DisplacementMask;
@@ -8980,11 +9051,11 @@ unlinkSendsLinkedForInvalidClasses(void)
 					}
 					result = unlinkIfInvalidClassSendpcignored(annotation, (((char *) mcpc)), 0);
 					if (result != 0) {
-						goto l1;
+goto l1;
 					}
 				}
 				else {
-					if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
+if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 						mcpc += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
 					}
 				}
@@ -8993,7 +9064,7 @@ unlinkSendsLinkedForInvalidClasses(void)
 		l1:	/* end mapFor:performUntil:arg: */;
 		}
 		else {
-			if ((((cogMethod->cmType)) == CMClosedPIC)
+if ((((cogMethod->cmType)) == CMClosedPIC)
 			 && (cPICHasForwardedClass(cogMethod))) {
 				freeMethod(cogMethod);
 				freedPIC = 1;
@@ -9002,13 +9073,13 @@ unlinkSendsLinkedForInvalidClasses(void)
 		cogMethod = ((CogMethod *) (roundUpLength((((sqInt)cogMethod)) + ((cogMethod->blockSize)))));
 	}
 	if (freedPIC) {
-		unlinkSendsToFree();
+unlinkSendsToFree();
 	}
 	else {
-		if (codeModified) {
+if (codeModified) {
 
 			/* After possibly updating inline caches we need to flush the icache. */
-			flushICacheFromto(processor, ((usqInt)methodZoneBase), ((usqInt)(limitZony())));
+flushICacheFromto(processor, ((usqInt)methodZoneBase), ((usqInt)(limitZony())));
 		}
 	}
 }
@@ -9038,7 +9109,7 @@ unlinkSendsOfisMNUSelector(sqInt selector, sqInt isMNUSelector)
 	cogMethod = ((CogMethod *) methodZoneBase);
 	mustScanAndUnlink = 0;
 	if (isMNUSelector) {
-		while (cogMethod < (limitZony())) {
+while (cogMethod < (limitZony())) {
 			if (((cogMethod->cmType)) != CMFree) {
 				if ((cogMethod->cpicHasMNUCaseOrCMIsFullBlock)) {
 					assert(((cogMethod->cmType)) == CMClosedPIC);
@@ -9046,7 +9117,7 @@ unlinkSendsOfisMNUSelector(sqInt selector, sqInt isMNUSelector)
 					mustScanAndUnlink = 1;
 				}
 				else {
-					if (((cogMethod->selector)) == selector) {
+if (((cogMethod->selector)) == selector) {
 						mustScanAndUnlink = 1;
 						if (((cogMethod->cmType)) == CMClosedPIC) {
 							freeMethod(cogMethod);
@@ -9058,7 +9129,7 @@ unlinkSendsOfisMNUSelector(sqInt selector, sqInt isMNUSelector)
 		}
 	}
 	else {
-		while (cogMethod < (limitZony())) {
+while (cogMethod < (limitZony())) {
 			if ((((cogMethod->cmType)) != CMFree)
 			 && (((cogMethod->selector)) == selector)) {
 				mustScanAndUnlink = 1;
@@ -9070,7 +9141,7 @@ unlinkSendsOfisMNUSelector(sqInt selector, sqInt isMNUSelector)
 		}
 	}
 	if (!mustScanAndUnlink) {
-		return;
+return;
 	}
 	codeModified = 0;
 	cogMethod = ((CogMethod *) methodZoneBase);
@@ -9087,7 +9158,7 @@ unlinkSendsOfisMNUSelector(sqInt selector, sqInt isMNUSelector)
 				if (mapByte >= FirstAnnotation) {
 
 					/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-					mcpc += (mapByte & DisplacementMask);
+mcpc += (mapByte & DisplacementMask);
 					if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 					 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 						annotation += mapByte & DisplacementMask;
@@ -9095,11 +9166,11 @@ unlinkSendsOfisMNUSelector(sqInt selector, sqInt isMNUSelector)
 					}
 					result = unlinkIfFreeOrLinkedSendpcof(annotation, (((char *) mcpc)), selector);
 					if (result != 0) {
-						goto l1;
+goto l1;
 					}
 				}
 				else {
-					if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
+if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 						mcpc += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
 					}
 				}
@@ -9112,7 +9183,7 @@ unlinkSendsOfisMNUSelector(sqInt selector, sqInt isMNUSelector)
 	if (codeModified) {
 
 		/* After possibly updating inline caches we need to flush the icache. */
-		flushICacheFromto(processor, ((usqInt)methodZoneBase), ((usqInt)(limitZony())));
+flushICacheFromto(processor, ((usqInt)methodZoneBase), ((usqInt)(limitZony())));
 	}
 }
 
@@ -9148,7 +9219,7 @@ unlinkSendsToFree(void)
 				if (mapByte >= FirstAnnotation) {
 
 					/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-					mcpc += (mapByte & DisplacementMask);
+mcpc += (mapByte & DisplacementMask);
 					if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 					 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 						annotation += mapByte & DisplacementMask;
@@ -9156,11 +9227,11 @@ unlinkSendsToFree(void)
 					}
 					result = unlinkIfLinkedSendToFreepcignored(annotation, (((char *) mcpc)), 0);
 					if (result != 0) {
-						goto l1;
+goto l1;
 					}
 				}
 				else {
-					if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
+if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 						mcpc += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
 					}
 				}
@@ -9169,7 +9240,7 @@ unlinkSendsToFree(void)
 		l1:	/* end mapFor:performUntil:arg: */;
 		}
 		else {
-			if (((cogMethod->cmType)) == CMClosedPIC) {
+if (((cogMethod->cmType)) == CMClosedPIC) {
 				assert(noTargetsFreeInClosedPIC(cogMethod));
 			}
 		}
@@ -9178,7 +9249,7 @@ unlinkSendsToFree(void)
 	if (codeModified) {
 
 		/* After possibly updating inline caches we need to flush the icache. */
-		flushICacheFromto(processor, ((usqInt)methodZoneBase), ((usqInt)(limitZony())));
+flushICacheFromto(processor, ((usqInt)methodZoneBase), ((usqInt)(limitZony())));
 	}
 }
 
@@ -9223,7 +9294,7 @@ unlinkSendsToandFreeIf(sqInt targetMethodObject, sqInt freeIfTrue)
 				if (mapByte >= FirstAnnotation) {
 
 					/* If this is an IsSendCall annotation, peek ahead for an IsAnnotationExtension, and consume it. */
-					mcpc += (mapByte & DisplacementMask);
+mcpc += (mapByte & DisplacementMask);
 					if ((((annotation = ((usqInt) mapByte) >> AnnotationShift)) == IsSendCall)
 					 && ((((usqInt) ((mapByte = byteAt(map - 1)))) >> AnnotationShift) == IsAnnotationExtension)) {
 						annotation += mapByte & DisplacementMask;
@@ -9231,11 +9302,11 @@ unlinkSendsToandFreeIf(sqInt targetMethodObject, sqInt freeIfTrue)
 					}
 					result = unlinkIfLinkedSendpcto(annotation, (((char *) mcpc)), (((sqInt)targetMethod)));
 					if (result != 0) {
-						goto l1;
+goto l1;
 					}
 				}
 				else {
-					if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
+if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 						mcpc += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
 					}
 				}
@@ -9244,7 +9315,7 @@ unlinkSendsToandFreeIf(sqInt targetMethodObject, sqInt freeIfTrue)
 		l1:	/* end mapFor:performUntil:arg: */;
 		}
 		else {
-			if ((((cogMethod->cmType)) == CMClosedPIC)
+if ((((cogMethod->cmType)) == CMClosedPIC)
 			 && (cPICHasTarget(cogMethod, targetMethod))) {
 				freeMethod(cogMethod);
 				freedPIC = 1;
@@ -9253,16 +9324,16 @@ unlinkSendsToandFreeIf(sqInt targetMethodObject, sqInt freeIfTrue)
 		cogMethod = ((CogMethod *) (roundUpLength((((sqInt)cogMethod)) + ((cogMethod->blockSize)))));
 	}
 	if (freeIfTrue) {
-		freeMethod(targetMethod);
+freeMethod(targetMethod);
 	}
 	if (freedPIC) {
-		unlinkSendsToFree();
+unlinkSendsToFree();
 	}
 	else {
-		if (codeModified) {
+if (codeModified) {
 
 			/* After possibly updating inline caches we need to flush the icache. */
-			flushICacheFromto(processor, ((usqInt)methodZoneBase), ((usqInt)(limitZony())));
+flushICacheFromto(processor, ((usqInt)methodZoneBase), ((usqInt)(limitZony())));
 		}
 	}
 }
@@ -9420,15 +9491,19 @@ compactCompiledCode(void)
 				/* For non-Newspeak there should be a one-to-one mapping between bytecoded and
 				   cog methods.  For Newspeak not necessarily, but only for anonymous accessors. */
 				/* Only update the original method's header if it is referring to this CogMethod. */
-				if ((((sqInt)(rawHeaderOf((dest->methodObject))))) == (((sqInt)source))) {
-					rawHeaderOfput((dest->methodObject), ((sqInt)dest));
+if ((((sqInt)(rawHeaderOf((dest->methodObject))))) == (((sqInt)source))) {
+
+					/* For non-Newspeak there should be a one-to-one mapping between bytecoded and
+					   cog methods.  For Newspeak not necessarily, but only for anonymous accessors. */
+					/* Only update the original method's header if it is referring to this CogMethod. */
+rawHeaderOfput((dest->methodObject), ((sqInt)dest));
 				}
 				else {
-					assert((noAssertMethodClassAssociationOf((dest->methodObject))) == (nilObject()));
+assert((noAssertMethodClassAssociationOf((dest->methodObject))) == (nilObject()));
 									}
 			}
 			else {
-				if (((dest->cmType)) == CMOpenPIC) {
+if (((dest->cmType)) == CMOpenPIC) {
 					(dest->nextOpenPIC = ((usqInt)openPICList));
 					openPICList = dest;
 				}
@@ -9463,7 +9538,7 @@ followForwardedLiteralsInOpenPICList(void)
 
 	openPIC = openPICList;
 	while (openPIC != null) {
-		followForwardedLiteralsIn(openPIC);
+followForwardedLiteralsIn(openPIC);
 		openPIC = ((CogMethod *) ((openPIC->nextOpenPIC)));
 	}
 }
@@ -9481,11 +9556,15 @@ freeMethod(CogMethod *cogMethod)
 		/* For non-Newspeak there should ne a one-to-one mapping between bytecoded and
 		   cog methods.  For Newspeak not necessarily, but only for anonymous accessors. */
 		/* Only reset the original method's header if it is referring to this CogMethod. */
-		if ((((sqInt)(rawHeaderOf((cogMethod->methodObject))))) == (((sqInt)cogMethod))) {
-			rawHeaderOfput((cogMethod->methodObject), (cogMethod->methodHeader));
+if ((((sqInt)(rawHeaderOf((cogMethod->methodObject))))) == (((sqInt)cogMethod))) {
+
+			/* For non-Newspeak there should ne a one-to-one mapping between bytecoded and
+			   cog methods.  For Newspeak not necessarily, but only for anonymous accessors. */
+			/* Only reset the original method's header if it is referring to this CogMethod. */
+rawHeaderOfput((cogMethod->methodObject), (cogMethod->methodHeader));
 					}
 		else {
-			assert((noAssertMethodClassAssociationOf((cogMethod->methodObject))) == (nilObject()));
+assert((noAssertMethodClassAssociationOf((cogMethod->methodObject))) == (nilObject()));
 					}
 	}
 	if (((cogMethod->cmType)) == CMOpenPIC) {
@@ -9517,10 +9596,10 @@ freeOlderMethodsForCompaction(void)
 	freedSoFar = initialFreeSpace;
 
 	/* 4 needs to be e.g. a start-up parameter */
-	amountToFree = zoneSize / 4;
+amountToFree = zoneSize / 4;
 	freeableUsage = 0;
 	do {
-		cogMethod = ((CogMethod *) baseAddress);
+cogMethod = ((CogMethod *) baseAddress);
 		while (((((usqInt)cogMethod)) < mzFreeStart)
 		 && (freedSoFar < amountToFree)) {
 			if ((((cogMethod->cmType)) != CMFree)
@@ -9585,7 +9664,7 @@ methodFor(void *address)
 	 && ((((usqInt)cogMethod)) <= (((usqInt)address)))) {
 		nextMethod = ((CogMethod *) (roundUpLength((((sqInt)cogMethod)) + ((cogMethod->blockSize)))));
 		if (nextMethod == cogMethod) {
-			return 0;
+return 0;
 		}
 		if (((((usqInt)address)) >= (((usqInt)cogMethod)))
 		 && ((((usqInt)address)) < (((usqInt)nextMethod)))) {
@@ -9667,7 +9746,7 @@ openPICWithSelector(sqInt aSelector)
 
 	openPIC = openPICList;
 	do {
-		if ((openPIC == null)
+if ((openPIC == null)
 		 || (((openPIC->selector)) == aSelector)) {
 			return openPIC;
 		}
@@ -9706,7 +9785,7 @@ planCompaction(void)
 			delta -= (cogMethod->blockSize);
 		}
 		else {
-			assert((cogMethodDoesntLookKosher(cogMethod)) == 0);
+assert((cogMethodDoesntLookKosher(cogMethod)) == 0);
 			(cogMethod->objectHeader = delta);
 					}
 		cogMethod = ((CogMethod *) (roundUpLength((((sqInt)cogMethod)) + ((cogMethod->blockSize)))));
@@ -9841,7 +9920,7 @@ pruneYoungReferrers(void)
 	}
 	dest = limitAddress;
 	while (1) {
-		next = dest - BytesPerWord;
+next = dest - BytesPerWord;
 		if (!((next >= youngReferrers)
 		 && (((((CogMethod *) (longAt(next))))->cmRefersToYoung)))) break;
 		dest = next;
@@ -9875,7 +9954,7 @@ relocateAndPruneYoungReferrers(void)
 	}
 	dest = limitAddress;
 	while (1) {
-		next = dest - BytesPerWord;
+next = dest - BytesPerWord;
 		if (!((next >= youngReferrers)
 		 && (((((cogMethod = ((CogMethod *) (longAt(next))))->cmType)) != CMFree)
 		 && ((cogMethod->cmRefersToYoung))))) break;
@@ -9921,7 +10000,7 @@ relocateMethodsPreCompaction(void)
 				relocateCallsInClosedPIC(cogMethod);
 			}
 			else {
-				relocateCallsAndSelfReferencesInMethod(cogMethod);
+relocateCallsAndSelfReferencesInMethod(cogMethod);
 			}
 		}
 		cogMethod = ((CogMethod *) (roundUpLength((((sqInt)cogMethod)) + ((cogMethod->blockSize)))));
@@ -9941,12 +10020,15 @@ removeFromOpenPICList(CogMethod *anOpenPIC)
 
 		/* N.B. Use self rather than coInterpreter to avoid attempting to cast nil.
 		   Conversion to CogMethod done in the nextOpenPIC accessor. */
+
+		/* N.B. Use self rather than coInterpreter to avoid attempting to cast nil.
+		   Conversion to CogMethod done in the nextOpenPIC accessor. */
 		openPICList = ((CogMethod *) ((anOpenPIC->nextOpenPIC)));
 		return null;
 	}
 	prevPIC = openPICList;
 	do {
-		assert((prevPIC != null)
+assert((prevPIC != null)
 		 && (((prevPIC->cmType)) == CMOpenPIC));
 		if (((prevPIC->nextOpenPIC)) == (((sqInt)anOpenPIC))) {
 			(prevPIC->nextOpenPIC = (anOpenPIC->nextOpenPIC));
@@ -10878,7 +10960,7 @@ genSmallIntegerComparison(sqInt jumpOpcode)
 		annotateobjRef(gMoveCwR(constant, ReceiverResultReg), constant);
 	}
 	else {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction = genoperandoperand(MoveCqR, constant, ReceiverResultReg);
 	}
 	/* begin genPrimReturn */
@@ -10911,13 +10993,17 @@ genSmallIntegerComparisonorDoubleComparisoninvert(sqInt jumpOpcode, AbstractInst
 
 	r = genSmallIntegerComparison(jumpOpcode);
 	if (r < 0) {
-		return r;
+return r;
 	}
 	
 #  if defined(DPFPReg0)
 
 	/* Fall through on non-SmallInteger argument.  Argument may be a Float : let us check or fail */
-	jumpNonInt = genJumpImmediate(Arg0Reg);
+
+	/* Fall through on non-SmallInteger argument.  Argument may be a Float : let us check or fail */
+
+	/* Fall through on non-SmallInteger argument.  Argument may be a Float : let us check or fail */
+jumpNonInt = genJumpImmediate(Arg0Reg);
 
 	genGetCompactClassIndexNonImmOfinto(Arg0Reg, SendNumArgsReg);
 	genCmpClassFloatCompactIndexR(SendNumArgsReg);
@@ -10930,23 +11016,23 @@ genSmallIntegerComparisonorDoubleComparisoninvert(sqInt jumpOpcode, AbstractInst
 	if (invertComparison) {
 
 		/* May need to invert for NaNs */
-		/* begin CmpRd:Rd: */
+/* begin CmpRd:Rd: */
 		genoperandoperand(CmpRdRd, DPFPReg0, DPFPReg1);
 	}
 	else {
-		/* begin CmpRd:Rd: */
+/* begin CmpRd:Rd: */
 		genoperandoperand(CmpRdRd, DPFPReg1, DPFPReg0);
 	}
 
 	/* FP jumps are a little weird */
-	jumpCond = jumpFPOpcodeGenerator(0);
+jumpCond = jumpFPOpcodeGenerator(0);
 	/* begin genMoveFalseR: */
 	constant = falseObject();
 	if (shouldAnnotateObjectReference(constant)) {
 		annotateobjRef(gMoveCwR(constant, ReceiverResultReg), constant);
 	}
 	else {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction = genoperandoperand(MoveCqR, constant, ReceiverResultReg);
 	}
 	/* begin genPrimReturn */
@@ -11212,7 +11298,7 @@ genFetchIndexRegisterfrominto(sqInt indexReg, sqInt tableObj, sqInt destReg)
 		annotateobjRef(gMoveCwR(tableObj, destReg), tableObj);
 	}
 	else {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction = genoperandoperand(MoveCqR, tableObj, destReg);
 	}
 	/* begin MoveXwr:R:R: */
@@ -11235,10 +11321,10 @@ genFloatArithmeticpreOpCheckboxed(sqInt arithmeticOperator, AbstractInstruction 
 	/* begin genLoadArgAtDepth:into: */
 	assert(0 < (numRegArgs()));
 	if (rcvrBoxed) {
-		genGetDoubleValueOfinto(ReceiverResultReg, DPFPReg0);
+genGetDoubleValueOfinto(ReceiverResultReg, DPFPReg0);
 	}
 	else {
-		genGetSmallFloatValueOfscratchinto(ReceiverResultReg, TempReg, DPFPReg0);
+genGetSmallFloatValueOfscratchinto(ReceiverResultReg, TempReg, DPFPReg0);
 	}
 	jumpNotSmallFloat = genJumpNotSmallFloat(Arg0Reg);
 	genGetSmallFloatValueOfscratchinto(Arg0Reg, TempReg, DPFPReg1);
@@ -11296,33 +11382,33 @@ genFloatComparisoninvertboxed(AbstractInstruction *(*jumpOpcodeGenerator)(void *
 	/* begin genLoadArgAtDepth:into: */
 	assert(0 < (numRegArgs()));
 	if (rcvrBoxed) {
-		genGetDoubleValueOfinto(ReceiverResultReg, DPFPReg0);
+genGetDoubleValueOfinto(ReceiverResultReg, DPFPReg0);
 	}
 	else {
-		genGetSmallFloatValueOfscratchinto(ReceiverResultReg, TempReg, DPFPReg0);
+genGetSmallFloatValueOfscratchinto(ReceiverResultReg, TempReg, DPFPReg0);
 	}
 	jumpNotSmallFloat = genJumpNotSmallFloat(Arg0Reg);
 	genGetSmallFloatValueOfscratchinto(Arg0Reg, TempReg, DPFPReg1);
 	if (invertComparison) {
 
 		/* May need to invert for NaNs */
-		/* begin CmpRd:Rd: */
+/* begin CmpRd:Rd: */
 		compare = genoperandoperand(CmpRdRd, DPFPReg0, DPFPReg1);
 	}
 	else {
-		/* begin CmpRd:Rd: */
+/* begin CmpRd:Rd: */
 		compare = genoperandoperand(CmpRdRd, DPFPReg1, DPFPReg0);
 	}
 
 	/* FP jumps are a little weird */
-	jumpCond = jumpOpcodeGenerator(0);
+jumpCond = jumpOpcodeGenerator(0);
 	/* begin genMoveFalseR: */
 	constant = falseObject();
 	if (shouldAnnotateObjectReference(constant)) {
 		annotateobjRef(gMoveCwR(constant, ReceiverResultReg), constant);
 	}
 	else {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction = genoperandoperand(MoveCqR, constant, ReceiverResultReg);
 	}
 	/* begin genPrimReturn */
@@ -11427,7 +11513,7 @@ genGetInlineCacheClassTagFromintoforEntry(sqInt sourceReg, sqInt destReg, sqInt 
     sqInt quickConstant;
 
 	if (forEntry) {
-		/* begin AlignmentNops: */
+/* begin AlignmentNops: */
 		genoperand(AlignmentNops, BytesPerWord);
 	}
 	/* begin Label */
@@ -11834,7 +11920,7 @@ genPrimitiveAt(void)
 	methodInBounds = anInstruction8;
 	
 	/* formatReg already contains a value <= 16r1f, so no need to zero it */
-	/* begin MoveXbr:R:R: */
+/* begin MoveXbr:R:R: */
 	genoperandoperandoperand(MoveXbrRR, Arg1Reg, ReceiverResultReg, formatReg);
 	/* begin MoveR:R: */
 	genoperandoperand(MoveRR, formatReg, ReceiverResultReg);
@@ -12208,7 +12294,7 @@ genPrimitiveIdentityHash(void)
 
 
 	/* uses TstCqR */
-	jumpImm = genJumpImmediate(ReceiverResultReg);
+jumpImm = genJumpImmediate(ReceiverResultReg);
 	genGetHashFieldNonImmOfasSmallIntegerInto(ReceiverResultReg, TempReg);
 	/* begin CmpCq:R: */
 	anInstruction = genoperandoperand(CmpCqR, ConstZero, TempReg);
@@ -12331,10 +12417,10 @@ genPrimitiveNew(void)
 	}
 
 	/* inst spec will hold class's instance specification, then byte size and finally end of new object. */
-	headerReg = (fillReg = SendNumArgsReg);
+headerReg = (fillReg = SendNumArgsReg);
 
 	/* get freeStart as early as possible so as not to wait later... */
-	instSpecReg = (byteSizeReg = ClassReg);
+instSpecReg = (byteSizeReg = ClassReg);
 	/* begin MoveAw:R: */
 	address = freeStartAddress();
 	/* begin gen:literal:operand: */
@@ -12513,15 +12599,15 @@ genPrimitiveNewWithArg(void)
 	assert(0 < (numRegArgs()));
 
 	/* Assume there's an available scratch register on 64-bit machines.  This holds the saved numFixedFields and then the value to fill with */
-	headerReg = SendNumArgsReg;
+headerReg = SendNumArgsReg;
 	fillReg = Extra0Reg;
 	assert(fillReg > 0);
 
 	/* The max slots we'll allocate here are those for a single header */
-	instSpecReg = (byteSizeReg = ClassReg);
+instSpecReg = (byteSizeReg = ClassReg);
 
 	/* get freeStart as early as possible so as not to wait later... */
-	maxSlots = (numSlotsMask()) - 1;
+maxSlots = (numSlotsMask()) - 1;
 	/* begin MoveAw:R: */
 	address = freeStartAddress();
 	/* begin gen:literal:operand: */
@@ -12737,7 +12823,7 @@ genPrimitiveShallowCopy(void)
 	resultReg = Arg0Reg;
 
 	/* get freeStart as early as possible so as not to wait later... */
-	slotsReg = Arg1Reg;
+slotsReg = Arg1Reg;
 	/* begin MoveAw:R: */
 	address = freeStartAddress();
 	/* begin gen:literal:operand: */
@@ -13195,13 +13281,13 @@ getLiteralCountOfplusOneinBytesintoscratch(sqInt methodReg, sqInt plusOne, sqInt
 	genGetMethodHeaderOfintoscratch(methodReg, litCountReg, scratchReg);
 	assert((1ULL << (numTagBits())) == BytesPerWord);
 	if (inBytes) {
-		/* begin AndCq:R: */
+/* begin AndCq:R: */
 		quickConstant = ((sqInt)((usqInt)((alternateHeaderNumLiteralsMask())) << (numTagBits())));
 		/* begin gen:quickConstant:operand: */
 		anInstruction = genoperandoperand(AndCqR, quickConstant, litCountReg);
 	}
 	else {
-		/* begin LogicalShiftRightCq:R: */
+/* begin LogicalShiftRightCq:R: */
 		quickConstant1 = numTagBits();
 		genoperandoperand(LogicalShiftRightCqR, quickConstant1, litCountReg);
 		/* begin AndCq:R: */
@@ -13210,7 +13296,7 @@ getLiteralCountOfplusOneinBytesintoscratch(sqInt methodReg, sqInt plusOne, sqInt
 		anInstruction1 = genoperandoperand(AndCqR, quickConstant2, litCountReg);
 	}
 	if (plusOne) {
-		/* begin AddCq:R: */
+/* begin AddCq:R: */
 		quickConstant3 = (inBytes
 			? LiteralStart * BytesPerWord
 			: LiteralStart);
@@ -13474,7 +13560,7 @@ genCreateClosureAtnumArgsnumCopiedcontextNumArgslargeinBlock(sqInt bcpc, sqInt n
 
 	genNoPopCreateClosureAtnumArgsnumCopiedcontextNumArgslargeinBlock(bcpc, numArgs, numCopied, ctxtNumArgs, isLargeCtxt, isInBlock);
 	for (i = 1; i <= numCopied; i += 1) {
-		/* begin PopR: */
+/* begin PopR: */
 		genoperand(PopR, TempReg);
 		/* begin MoveR:Mw:r: */
 		anInstruction = genoperandoperandoperand(MoveRMwr, TempReg, (((numCopied - i) + ClosureFirstCopiedValueIndex) * BytesPerOop) + BaseHeaderSize, ReceiverResultReg);
@@ -13728,7 +13814,7 @@ genGetActiveContextLargeinBlock(sqInt isLarge, sqInt isInBlock)
 
 
 	/* load the flag; stash it in both TempReg & ClassReg; do the compare (a prime candidated for use of AndCq:R:R:) */
-	/* begin MoveMw:r:R: */
+/* begin MoveMw:r:R: */
 	anInstruction7 = genoperandoperandoperand(MoveMwrR, FoxMethod, FPReg, ClassReg);
 	gAndCqRR(MFMethodFlagHasContextFlag, ClassReg, TempReg);
 	/* begin JumpZero: */
@@ -13827,7 +13913,7 @@ genGetActiveContextLargeinBlock(sqInt isLarge, sqInt isInBlock)
 	/* begin MoveR:Mw:r: */
 	anInstruction24 = genoperandoperandoperand(MoveRMwr, TempReg, BaseHeaderSize + (StackPointerIndex * BytesPerOop), ReceiverResultReg);
 	if (isInBlock > 0) {
-		/* begin MoveR:R: */
+/* begin MoveR:R: */
 		genoperandoperand(MoveRR, SendNumArgsReg, TempReg);
 		/* begin AddCq:R: */
 		anInstruction4 = genoperandoperand(AddCqR, 2, TempReg);
@@ -13835,13 +13921,13 @@ genGetActiveContextLargeinBlock(sqInt isLarge, sqInt isInBlock)
 		genoperandoperandoperand(MoveXwrRR, TempReg, FPReg, TempReg);
 	}
 	else {
-		/* begin genMoveNilR: */
+/* begin genMoveNilR: */
 		constant = nilObject();
 		if (shouldAnnotateObjectReference(constant)) {
 			annotateobjRef(gMoveCwR(constant, TempReg), constant);
 		}
 		else {
-			/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 			anInstruction36 = genoperandoperand(MoveCqR, constant, TempReg);
 		}
 	}
@@ -13924,7 +14010,7 @@ genGetActiveContextNumArgslargeinBlock(sqInt numArgs, sqInt isLargeContext, sqIn
     sqInt routine;
 
 	if (isLargeContext) {
-		
+
 		switch (isInBlock) {
 		case 0:
 			routine = ceLargeActiveContextInMethodTrampoline;
@@ -13944,7 +14030,7 @@ genGetActiveContextNumArgslargeinBlock(sqInt numArgs, sqInt isLargeContext, sqIn
 		}
 	}
 	else {
-		
+
 		switch (isInBlock) {
 		case 0:
 			routine = ceSmallActiveContextInMethodTrampoline;
@@ -14043,7 +14129,7 @@ genGetClassObjectOfClassIndexintoscratchReg(sqInt instReg, sqInt destReg, sqInt 
 		anInstruction3 = genoperandoperandoperand(MoveMwrR, offset, scratchReg, destReg);
 	}
 	else {
-		/* begin AddCq:R: */
+/* begin AddCq:R: */
 		quickConstant = classTableRootObj();
 		/* begin gen:quickConstant:operand: */
 		anInstruction = genoperandoperand(AddCqR, quickConstant, scratchReg);
@@ -14084,7 +14170,7 @@ genGetClassObjectOfintoscratchReginstRegIsReceiver(sqInt instReg, sqInt destReg,
     sqInt quickConstant2;
 
 	if (instReg == destReg) {
-		return BadRegisterSet;
+return BadRegisterSet;
 	}
 	/* begin MoveR:R: */
 	loop = genoperandoperand(MoveRR, instReg, scratchReg);
@@ -14104,7 +14190,7 @@ genGetClassObjectOfintoscratchReginstRegIsReceiver(sqInt instReg, sqInt destReg,
 	if (!instRegIsReceiver) {
 
 		/* if it is forwarded... */
-		/* begin CmpCq:R: */
+/* begin CmpCq:R: */
 		quickConstant = isForwardedObjectClassIndexPun();
 		/* begin gen:quickConstant:operand: */
 		anInstruction = genoperandoperand(CmpCqR, quickConstant, scratchReg);
@@ -14188,7 +14274,7 @@ genGetFormatOfintoleastSignificantHalfOfBaseHeaderIntoScratch(sqInt sourceReg, s
 		anInstruction1 = genoperandoperandoperand(MoveMbrR, 3, sourceReg, destReg);
 	}
 	else {
-		/* begin MoveMw:r:R: */
+/* begin MoveMw:r:R: */
 		anInstruction2 = genoperandoperandoperand(MoveMwrR, 0, sourceReg, destReg);
 		/* begin MoveR:R: */
 		genoperandoperand(MoveRR, destReg, scratchRegOrNone);
@@ -14348,11 +14434,11 @@ genNewArrayOfSizeinitialized(sqInt size, sqInt initialized)
 			annotateobjRef(gMoveCwR(constant, TempReg), constant);
 		}
 		else {
-			/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 			anInstruction1 = genoperandoperand(MoveCqR, constant, TempReg);
 		}
 		for (i = 0; i < size; i += 1) {
-			/* begin MoveR:Mw:r: */
+/* begin MoveR:Mw:r: */
 			anInstruction2 = genoperandoperandoperand(MoveRMwr, TempReg, (i * BytesPerWord) + BaseHeaderSize, ReceiverResultReg);
 		}
 	}
@@ -14410,7 +14496,7 @@ genNoPopCreateClosureAtnumArgsnumCopiedcontextNumArgslargeinBlock(sqInt bcpc, sq
 
 
 	/* First get thisContext into ReceiverResultRega and thence in ClassReg. */
-	genGetActiveContextNumArgslargeinBlock(ctxtNumArgs, isLargeCtxt, isInBlock);
+genGetActiveContextNumArgslargeinBlock(ctxtNumArgs, isLargeCtxt, isInBlock);
 	/* begin MoveR:R: */
 	genoperandoperand(MoveRR, ReceiverResultReg, ClassReg);
 	numSlots = ClosureFirstCopiedValueIndex + numCopied;
@@ -14469,7 +14555,7 @@ genPrimitiveAsCharacter(void)
 		reg = ReceiverResultReg;
 	}
 	else {
-		if (methodOrBlockNumArgs > 1) {
+if (methodOrBlockNumArgs > 1) {
 			return UnimplementedPrimitive;
 		}
 		reg = Arg0Reg;
@@ -14514,12 +14600,12 @@ genPrimitiveIdenticalOrNotIf(sqInt orNot)
 	/* begin CmpR:R: */
 	comp = genoperandoperand(CmpRR, Arg0Reg, ReceiverResultReg);
 	if (orNot) {
-		/* begin JumpZero: */
+/* begin JumpZero: */
 		jumpCmp = genConditionalBranchoperand(JumpZero, ((sqInt)0));
 		genEnsureOopInRegNotForwardedscratchRegjumpBackTo(Arg0Reg, TempReg, comp);
 	}
 	else {
-		/* begin JumpNonZero: */
+/* begin JumpNonZero: */
 		jumpCmp = genConditionalBranchoperand(JumpNonZero, ((sqInt)0));
 	}
 	/* begin genMoveTrueR: */
@@ -14528,7 +14614,7 @@ genPrimitiveIdenticalOrNotIf(sqInt orNot)
 		annotateobjRef(gMoveCwR(constant, ReceiverResultReg), constant);
 	}
 	else {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction = genoperandoperand(MoveCqR, constant, ReceiverResultReg);
 	}
 	/* begin genPrimReturn */
@@ -14537,7 +14623,7 @@ genPrimitiveIdenticalOrNotIf(sqInt orNot)
 	genoperand(RetN, 0);
 	jmpTarget(jumpCmp, gLabel());
 	if (!orNot) {
-		genEnsureOopInRegNotForwardedscratchRegjumpBackTo(Arg0Reg, TempReg, comp);
+genEnsureOopInRegNotForwardedscratchRegjumpBackTo(Arg0Reg, TempReg, comp);
 	}
 	/* begin genMoveFalseR: */
 	constant1 = falseObject();
@@ -14545,7 +14631,7 @@ genPrimitiveIdenticalOrNotIf(sqInt orNot)
 		annotateobjRef(gMoveCwR(constant1, ReceiverResultReg), constant1);
 	}
 	else {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction1 = genoperandoperand(MoveCqR, constant1, ReceiverResultReg);
 	}
 	/* begin genPrimReturn */
@@ -14799,9 +14885,11 @@ genStoreCheckReceiverRegvalueRegscratchReginFrame(sqInt destReg, sqInt valueReg,
 
 
 	/* Is value stored an immediate?  If so we're done */
-
 	/* Get the old/new boundary in scratchReg */
-	jmpImmediate = genJumpImmediate(valueReg);
+
+	/* Is value stored an immediate?  If so we're done */
+	/* Get the old/new boundary in scratchReg */
+jmpImmediate = genJumpImmediate(valueReg);
 	/* begin MoveCw:R: */
 	wordConstant = storeCheckBoundary();
 	/* begin gen:literal:operand: */
@@ -14820,13 +14908,13 @@ genStoreCheckReceiverRegvalueRegscratchReginFrame(sqInt destReg, sqInt valueReg,
 	assert(destReg == ReceiverResultReg);
 	/* begin evaluateTrampolineCallBlock:protectLinkRegIfNot: */
 	if (inFrame) {
-		/* begin CallRT: */
+/* begin CallRT: */
 		abstractInstruction = genoperand(Call, ceStoreCheckTrampoline);
 		(abstractInstruction->annotation = IsRelativeCall);
 
 	}
 	else {
-		/* begin CallRT: */
+/* begin CallRT: */
 		abstractInstruction = genoperand(Call, ceStoreCheckTrampoline);
 		(abstractInstruction->annotation = IsRelativeCall);
 
@@ -14857,7 +14945,7 @@ genStoreSourceRegslotIndexdestRegscratchReginFrameneedsStoreCheck(sqInt sourceRe
 	/* begin MoveR:Mw:r: */
 	anInstruction = genoperandoperandoperand(MoveRMwr, sourceReg, (index * BytesPerWord) + BaseHeaderSize, destReg);
 	if (needsStoreCheck) {
-		return genStoreCheckReceiverRegvalueRegscratchReginFrame(destReg, sourceReg, scratchReg, inFrame);
+return genStoreCheckReceiverRegvalueRegscratchReginFrame(destReg, sourceReg, scratchReg, inFrame);
 	}
 	return 0;
 }
@@ -14958,7 +15046,7 @@ genStoreWithImmutabilityAndStoreCheckSourceRegslotIndexdestRegscratchRegneedRest
 	anInstruction = genoperandoperandoperand(MoveRMwr, sourceReg, (index * BytesPerWord) + BaseHeaderSize, destReg);
 
 	/* Get the old/new boundary in scratchReg */
-	jmpImmediate = genJumpImmediate(sourceReg);
+jmpImmediate = genJumpImmediate(sourceReg);
 	/* begin MoveCw:R: */
 	wordConstant = storeCheckBoundary();
 	/* begin gen:literal:operand: */
@@ -14984,7 +15072,7 @@ genStoreWithImmutabilityAndStoreCheckSourceRegslotIndexdestRegscratchRegneedRest
 		(abstractInstruction1->annotation = IsRelativeCall);
 	}
 	else {
-		/* begin CallRT: */
+/* begin CallRT: */
 		abstractInstruction2 = genoperand(Call, ceStoreTrampolines[index]);
 		(abstractInstruction2->annotation = IsRelativeCall);
 	}
@@ -14992,7 +15080,7 @@ genStoreWithImmutabilityAndStoreCheckSourceRegslotIndexdestRegscratchRegneedRest
 	abstractInstruction3 = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 	(abstractInstruction3->annotation = HasBytecodePC);
 	if (needRestoreRcvr) {
-		/* begin putSelfInReceiverResultReg */
+/* begin putSelfInReceiverResultReg */
 		storeToReg((&simSelf), ReceiverResultReg);
 	}
 	jmpTarget(jmpImmediate, jmpTarget(jmpDestYoung, jmpTarget(jmpSourceOld, gLabel())));
@@ -15033,7 +15121,7 @@ genStoreWithImmutabilityButNoStoreCheckSourceRegslotIndexdestRegscratchRegneedRe
 		(abstractInstruction1->annotation = IsRelativeCall);
 	}
 	else {
-		/* begin CallRT: */
+/* begin CallRT: */
 		abstractInstruction2 = genoperand(Call, ceStoreTrampolines[index]);
 		(abstractInstruction2->annotation = IsRelativeCall);
 	}
@@ -15041,7 +15129,7 @@ genStoreWithImmutabilityButNoStoreCheckSourceRegslotIndexdestRegscratchRegneedRe
 	abstractInstruction3 = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 	(abstractInstruction3->annotation = HasBytecodePC);
 	if (needRestoreRcvr) {
-		/* begin putSelfInReceiverResultReg */
+/* begin putSelfInReceiverResultReg */
 		storeToReg((&simSelf), ReceiverResultReg);
 	}
 	/* begin Jump: */
@@ -15078,10 +15166,10 @@ genStoreWithImmutabilityCheckSourceRegslotIndexdestRegscratchRegneedsStoreCheckn
 	assert(scratchReg == TempReg);
 	assert(sourceReg == ClassReg);
 	if (needsStoreCheck) {
-		genStoreWithImmutabilityAndStoreCheckSourceRegslotIndexdestRegscratchRegneedRestoreRcvr(sourceReg, index, destReg, scratchReg, needRestoreRcvr);
+genStoreWithImmutabilityAndStoreCheckSourceRegslotIndexdestRegscratchRegneedRestoreRcvr(sourceReg, index, destReg, scratchReg, needRestoreRcvr);
 	}
 	else {
-		genStoreWithImmutabilityButNoStoreCheckSourceRegslotIndexdestRegscratchRegneedRestoreRcvr(sourceReg, index, destReg, scratchReg, needRestoreRcvr);
+genStoreWithImmutabilityButNoStoreCheckSourceRegslotIndexdestRegscratchRegneedRestoreRcvr(sourceReg, index, destReg, scratchReg, needRestoreRcvr);
 	}
 	return 0;
 }
@@ -15219,7 +15307,7 @@ maybeCompileRetryOnPrimitiveFail(sqInt primIndex)
 		jmp = genConditionalBranchoperand(JumpZero, ((sqInt)0));
 	}
 	else {
-		if ((primNumberExternalCall()) != primIndex) {
+if ((primNumberExternalCall()) != primIndex) {
 			return 0;
 		}
 		/* begin MoveAw:R: */
@@ -15344,13 +15432,13 @@ ensureSpilledAtfrom(SimStackEntry * self_in_ensureSpilledAtfrom, sqInt baseOffse
 			inst = annotateobjRef(gPushCw(constant), constant);
 		}
 		else {
-			/* begin PushCq: */
+/* begin PushCq: */
 			anInstruction = genoperand(PushCq, constant);
 			inst = anInstruction;
 		}
 	}
 	else {
-		if (((self_in_ensureSpilledAtfrom->type)) == SSBaseOffset) {
+if (((self_in_ensureSpilledAtfrom->type)) == SSBaseOffset) {
 			/* begin MoveMw:r:R: */
 			offset = (self_in_ensureSpilledAtfrom->offset);
 			baseReg = (self_in_ensureSpilledAtfrom->registerr);
@@ -15360,7 +15448,7 @@ ensureSpilledAtfrom(SimStackEntry * self_in_ensureSpilledAtfrom, sqInt baseOffse
 			inst = genoperand(PushR, TempReg);
 		}
 		else {
-			assert(((self_in_ensureSpilledAtfrom->type)) == SSRegister);
+assert(((self_in_ensureSpilledAtfrom->type)) == SSRegister);
 			/* begin PushR: */
 			reg = (self_in_ensureSpilledAtfrom->registerr);
 			inst = genoperand(PushR, reg);
@@ -15390,7 +15478,7 @@ popToReg(SimStackEntry * self_in_popToReg, sqInt reg)
 		inst = genoperand(PopR, reg);
 	}
 	else {
-		
+
 		switch ((self_in_popToReg->type)) {
 		case SSBaseOffset:
 			/* begin MoveMw:r:R: */
@@ -15407,7 +15495,7 @@ popToReg(SimStackEntry * self_in_popToReg, sqInt reg)
 				inst = annotateobjRef(gMoveCwR(constant, reg), constant);
 			}
 			else {
-				/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 				anInstruction1 = genoperandoperand(MoveCqR, constant, reg);
 				inst = anInstruction1;
 			}
@@ -15419,7 +15507,7 @@ popToReg(SimStackEntry * self_in_popToReg, sqInt reg)
 				inst = genoperandoperand(MoveRR, reg1, reg);
 			}
 			else {
-				/* begin Label */
+/* begin Label */
 				inst = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 			}
 			break;
@@ -15486,7 +15574,7 @@ storeToReg(SimStackEntry * self_in_storeToReg, sqInt reg)
 			inst = annotateobjRef(gMoveCwR(constant, reg), constant);
 		}
 		else {
-			/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 			anInstruction1 = genoperandoperand(MoveCqR, constant, reg);
 			inst = anInstruction1;
 		}
@@ -15498,7 +15586,7 @@ storeToReg(SimStackEntry * self_in_storeToReg, sqInt reg)
 			inst = genoperandoperand(MoveRR, reg1, reg);
 		}
 		else {
-			/* begin Label */
+/* begin Label */
 			inst = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 		}
 		break;
@@ -16069,7 +16157,7 @@ concretizeMoveRX32rR(AbstractInstruction * self_in_concretizeMoveRX32rR)
 		offset = 1;
 	}
 	else {
-		offset = 0;
+offset = 0;
 	}
 	if ((base & 7) != RBP) {
 		((self_in_concretizeMoveRX32rR->machineCode))[offset] = 137;
@@ -16109,7 +16197,7 @@ concretizeMoveX32rRR(AbstractInstruction * self_in_concretizeMoveX32rRR)
 		offset = 1;
 	}
 	else {
-		offset = 0;
+offset = 0;
 	}
 	if ((base & 7) != RBP) {
 		((self_in_concretizeMoveX32rRR->machineCode))[offset + 3] = 139;
@@ -16274,7 +16362,6 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
     AbstractInstruction *jumpTarget1113;
     AbstractInstruction *jumpTarget1114;
     AbstractInstruction *jumpTarget1115;
-    AbstractInstruction *jumpTarget1116;
     AbstractInstruction *jumpTarget112;
     AbstractInstruction *jumpTarget113;
     AbstractInstruction *jumpTarget114;
@@ -16290,6 +16377,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
     AbstractInstruction *jumpTarget123;
     AbstractInstruction *jumpTarget124;
     AbstractInstruction *jumpTarget125;
+    AbstractInstruction *jumpTarget126;
     AbstractInstruction *jumpTarget13;
     AbstractInstruction *jumpTarget14;
     AbstractInstruction *jumpTarget15;
@@ -16997,14 +17085,14 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 
 	case JumpGreaterOrEqual:
 		/* begin concretizeConditionalJump: */
-		jumpTarget119 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget119);
-		if ((addressIsInInstructions(jumpTarget119))
-		 || (jumpTarget119 == (methodLabel()))) {
-			jumpTarget119 = ((AbstractInstruction *) ((jumpTarget119->address)));
+		jumpTarget120 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
+		assertSaneJumpTarget(jumpTarget120);
+		if ((addressIsInInstructions(jumpTarget120))
+		 || (jumpTarget120 == (methodLabel()))) {
+			jumpTarget120 = ((AbstractInstruction *) ((jumpTarget120->address)));
 		}
-		assert(jumpTarget119 != 0);
-		jumpTarget29 = jumpTarget119;
+		assert(jumpTarget120 != 0);
+		jumpTarget29 = jumpTarget120;
 		offset33 = (((int) jumpTarget29)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
 		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
 			? isQuick(self_in_dispatchConcretize, offset33)
@@ -17015,14 +17103,14 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			goto l116;
 		}
 		/* begin concretizeConditionalJumpLong: */
-		jumpTarget1110 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget1110);
-		if ((addressIsInInstructions(jumpTarget1110))
-		 || (jumpTarget1110 == (methodLabel()))) {
-			jumpTarget1110 = ((AbstractInstruction *) ((jumpTarget1110->address)));
+		jumpTarget119 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
+		assertSaneJumpTarget(jumpTarget119);
+		if ((addressIsInInstructions(jumpTarget119))
+		 || (jumpTarget119 == (methodLabel()))) {
+			jumpTarget119 = ((AbstractInstruction *) ((jumpTarget119->address)));
 		}
-		assert(jumpTarget1110 != 0);
-		jumpTarget210 = jumpTarget1110;
+		assert(jumpTarget119 != 0);
+		jumpTarget210 = jumpTarget119;
 		offset123 = (((int) jumpTarget210)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
 		((self_in_dispatchConcretize->machineCode))[0] = 15;
 		((self_in_dispatchConcretize->machineCode))[1] = (128 + 13);
@@ -17036,14 +17124,14 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 
 	case JumpGreater:
 		/* begin concretizeConditionalJump: */
-		jumpTarget120 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget120);
-		if ((addressIsInInstructions(jumpTarget120))
-		 || (jumpTarget120 == (methodLabel()))) {
-			jumpTarget120 = ((AbstractInstruction *) ((jumpTarget120->address)));
+		jumpTarget121 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
+		assertSaneJumpTarget(jumpTarget121);
+		if ((addressIsInInstructions(jumpTarget121))
+		 || (jumpTarget121 == (methodLabel()))) {
+			jumpTarget121 = ((AbstractInstruction *) ((jumpTarget121->address)));
 		}
-		assert(jumpTarget120 != 0);
-		jumpTarget30 = jumpTarget120;
+		assert(jumpTarget121 != 0);
+		jumpTarget30 = jumpTarget121;
 		offset34 = (((int) jumpTarget30)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
 		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
 			? isQuick(self_in_dispatchConcretize, offset34)
@@ -17054,14 +17142,14 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			goto l121;
 		}
 		/* begin concretizeConditionalJumpLong: */
-		jumpTarget1111 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget1111);
-		if ((addressIsInInstructions(jumpTarget1111))
-		 || (jumpTarget1111 == (methodLabel()))) {
-			jumpTarget1111 = ((AbstractInstruction *) ((jumpTarget1111->address)));
+		jumpTarget1110 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
+		assertSaneJumpTarget(jumpTarget1110);
+		if ((addressIsInInstructions(jumpTarget1110))
+		 || (jumpTarget1110 == (methodLabel()))) {
+			jumpTarget1110 = ((AbstractInstruction *) ((jumpTarget1110->address)));
 		}
-		assert(jumpTarget1111 != 0);
-		jumpTarget211 = jumpTarget1111;
+		assert(jumpTarget1110 != 0);
+		jumpTarget211 = jumpTarget1110;
 		offset124 = (((int) jumpTarget211)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
 		((self_in_dispatchConcretize->machineCode))[0] = 15;
 		((self_in_dispatchConcretize->machineCode))[1] = (128 + 15);
@@ -17075,14 +17163,14 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 
 	case JumpLessOrEqual:
 		/* begin concretizeConditionalJump: */
-		jumpTarget121 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget121);
-		if ((addressIsInInstructions(jumpTarget121))
-		 || (jumpTarget121 == (methodLabel()))) {
-			jumpTarget121 = ((AbstractInstruction *) ((jumpTarget121->address)));
+		jumpTarget122 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
+		assertSaneJumpTarget(jumpTarget122);
+		if ((addressIsInInstructions(jumpTarget122))
+		 || (jumpTarget122 == (methodLabel()))) {
+			jumpTarget122 = ((AbstractInstruction *) ((jumpTarget122->address)));
 		}
-		assert(jumpTarget121 != 0);
-		jumpTarget31 = jumpTarget121;
+		assert(jumpTarget122 != 0);
+		jumpTarget31 = jumpTarget122;
 		offset35 = (((int) jumpTarget31)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
 		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
 			? isQuick(self_in_dispatchConcretize, offset35)
@@ -17093,14 +17181,14 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			goto l126;
 		}
 		/* begin concretizeConditionalJumpLong: */
-		jumpTarget1112 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget1112);
-		if ((addressIsInInstructions(jumpTarget1112))
-		 || (jumpTarget1112 == (methodLabel()))) {
-			jumpTarget1112 = ((AbstractInstruction *) ((jumpTarget1112->address)));
+		jumpTarget1111 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
+		assertSaneJumpTarget(jumpTarget1111);
+		if ((addressIsInInstructions(jumpTarget1111))
+		 || (jumpTarget1111 == (methodLabel()))) {
+			jumpTarget1111 = ((AbstractInstruction *) ((jumpTarget1111->address)));
 		}
-		assert(jumpTarget1112 != 0);
-		jumpTarget212 = jumpTarget1112;
+		assert(jumpTarget1111 != 0);
+		jumpTarget212 = jumpTarget1111;
 		offset125 = (((int) jumpTarget212)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
 		((self_in_dispatchConcretize->machineCode))[0] = 15;
 		((self_in_dispatchConcretize->machineCode))[1] = (128 + 14);
@@ -17115,14 +17203,14 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 	case JumpAbove:
 	case JumpFPGreater:
 		/* begin concretizeConditionalJump: */
-		jumpTarget122 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget122);
-		if ((addressIsInInstructions(jumpTarget122))
-		 || (jumpTarget122 == (methodLabel()))) {
-			jumpTarget122 = ((AbstractInstruction *) ((jumpTarget122->address)));
+		jumpTarget123 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
+		assertSaneJumpTarget(jumpTarget123);
+		if ((addressIsInInstructions(jumpTarget123))
+		 || (jumpTarget123 == (methodLabel()))) {
+			jumpTarget123 = ((AbstractInstruction *) ((jumpTarget123->address)));
 		}
-		assert(jumpTarget122 != 0);
-		jumpTarget32 = jumpTarget122;
+		assert(jumpTarget123 != 0);
+		jumpTarget32 = jumpTarget123;
 		offset36 = (((int) jumpTarget32)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
 		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
 			? isQuick(self_in_dispatchConcretize, offset36)
@@ -17133,14 +17221,14 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			goto l131;
 		}
 		/* begin concretizeConditionalJumpLong: */
-		jumpTarget1113 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget1113);
-		if ((addressIsInInstructions(jumpTarget1113))
-		 || (jumpTarget1113 == (methodLabel()))) {
-			jumpTarget1113 = ((AbstractInstruction *) ((jumpTarget1113->address)));
+		jumpTarget1112 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
+		assertSaneJumpTarget(jumpTarget1112);
+		if ((addressIsInInstructions(jumpTarget1112))
+		 || (jumpTarget1112 == (methodLabel()))) {
+			jumpTarget1112 = ((AbstractInstruction *) ((jumpTarget1112->address)));
 		}
-		assert(jumpTarget1113 != 0);
-		jumpTarget213 = jumpTarget1113;
+		assert(jumpTarget1112 != 0);
+		jumpTarget213 = jumpTarget1112;
 		offset126 = (((int) jumpTarget213)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
 		((self_in_dispatchConcretize->machineCode))[0] = 15;
 		((self_in_dispatchConcretize->machineCode))[1] = (128 + 7);
@@ -17155,14 +17243,14 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 	case JumpBelowOrEqual:
 	case JumpFPLessOrEqual:
 		/* begin concretizeConditionalJump: */
-		jumpTarget123 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget123);
-		if ((addressIsInInstructions(jumpTarget123))
-		 || (jumpTarget123 == (methodLabel()))) {
-			jumpTarget123 = ((AbstractInstruction *) ((jumpTarget123->address)));
+		jumpTarget124 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
+		assertSaneJumpTarget(jumpTarget124);
+		if ((addressIsInInstructions(jumpTarget124))
+		 || (jumpTarget124 == (methodLabel()))) {
+			jumpTarget124 = ((AbstractInstruction *) ((jumpTarget124->address)));
 		}
-		assert(jumpTarget123 != 0);
-		jumpTarget33 = jumpTarget123;
+		assert(jumpTarget124 != 0);
+		jumpTarget33 = jumpTarget124;
 		offset37 = (((int) jumpTarget33)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
 		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
 			? isQuick(self_in_dispatchConcretize, offset37)
@@ -17173,14 +17261,14 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			goto l136;
 		}
 		/* begin concretizeConditionalJumpLong: */
-		jumpTarget1114 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget1114);
-		if ((addressIsInInstructions(jumpTarget1114))
-		 || (jumpTarget1114 == (methodLabel()))) {
-			jumpTarget1114 = ((AbstractInstruction *) ((jumpTarget1114->address)));
+		jumpTarget1113 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
+		assertSaneJumpTarget(jumpTarget1113);
+		if ((addressIsInInstructions(jumpTarget1113))
+		 || (jumpTarget1113 == (methodLabel()))) {
+			jumpTarget1113 = ((AbstractInstruction *) ((jumpTarget1113->address)));
 		}
-		assert(jumpTarget1114 != 0);
-		jumpTarget214 = jumpTarget1114;
+		assert(jumpTarget1113 != 0);
+		jumpTarget214 = jumpTarget1113;
 		offset127 = (((int) jumpTarget214)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
 		((self_in_dispatchConcretize->machineCode))[0] = 15;
 		((self_in_dispatchConcretize->machineCode))[1] = (128 + 6);
@@ -17194,14 +17282,14 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 
 	case JumpFPOrdered:
 		/* begin concretizeConditionalJump: */
-		jumpTarget124 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget124);
-		if ((addressIsInInstructions(jumpTarget124))
-		 || (jumpTarget124 == (methodLabel()))) {
-			jumpTarget124 = ((AbstractInstruction *) ((jumpTarget124->address)));
+		jumpTarget125 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
+		assertSaneJumpTarget(jumpTarget125);
+		if ((addressIsInInstructions(jumpTarget125))
+		 || (jumpTarget125 == (methodLabel()))) {
+			jumpTarget125 = ((AbstractInstruction *) ((jumpTarget125->address)));
 		}
-		assert(jumpTarget124 != 0);
-		jumpTarget34 = jumpTarget124;
+		assert(jumpTarget125 != 0);
+		jumpTarget34 = jumpTarget125;
 		offset38 = (((int) jumpTarget34)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
 		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
 			? isQuick(self_in_dispatchConcretize, offset38)
@@ -17212,14 +17300,14 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			goto l141;
 		}
 		/* begin concretizeConditionalJumpLong: */
-		jumpTarget1115 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget1115);
-		if ((addressIsInInstructions(jumpTarget1115))
-		 || (jumpTarget1115 == (methodLabel()))) {
-			jumpTarget1115 = ((AbstractInstruction *) ((jumpTarget1115->address)));
+		jumpTarget1114 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
+		assertSaneJumpTarget(jumpTarget1114);
+		if ((addressIsInInstructions(jumpTarget1114))
+		 || (jumpTarget1114 == (methodLabel()))) {
+			jumpTarget1114 = ((AbstractInstruction *) ((jumpTarget1114->address)));
 		}
-		assert(jumpTarget1115 != 0);
-		jumpTarget215 = jumpTarget1115;
+		assert(jumpTarget1114 != 0);
+		jumpTarget215 = jumpTarget1114;
 		offset128 = (((int) jumpTarget215)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
 		((self_in_dispatchConcretize->machineCode))[0] = 15;
 		((self_in_dispatchConcretize->machineCode))[1] = (128 + 11);
@@ -17233,14 +17321,14 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 
 	case JumpFPUnordered:
 		/* begin concretizeConditionalJump: */
-		jumpTarget125 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget125);
-		if ((addressIsInInstructions(jumpTarget125))
-		 || (jumpTarget125 == (methodLabel()))) {
-			jumpTarget125 = ((AbstractInstruction *) ((jumpTarget125->address)));
+		jumpTarget126 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
+		assertSaneJumpTarget(jumpTarget126);
+		if ((addressIsInInstructions(jumpTarget126))
+		 || (jumpTarget126 == (methodLabel()))) {
+			jumpTarget126 = ((AbstractInstruction *) ((jumpTarget126->address)));
 		}
-		assert(jumpTarget125 != 0);
-		jumpTarget35 = jumpTarget125;
+		assert(jumpTarget126 != 0);
+		jumpTarget35 = jumpTarget126;
 		offset39 = (((int) jumpTarget35)) - (((int) (((self_in_dispatchConcretize->address)) + 2)));
 		if ((((self_in_dispatchConcretize->machineCodeSize)) == 0
 			? isQuick(self_in_dispatchConcretize, offset39)
@@ -17251,14 +17339,14 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			goto l146;
 		}
 		/* begin concretizeConditionalJumpLong: */
-		jumpTarget1116 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
-		assertSaneJumpTarget(jumpTarget1116);
-		if ((addressIsInInstructions(jumpTarget1116))
-		 || (jumpTarget1116 == (methodLabel()))) {
-			jumpTarget1116 = ((AbstractInstruction *) ((jumpTarget1116->address)));
+		jumpTarget1115 = ((AbstractInstruction *) (((self_in_dispatchConcretize->operands))[0]));
+		assertSaneJumpTarget(jumpTarget1115);
+		if ((addressIsInInstructions(jumpTarget1115))
+		 || (jumpTarget1115 == (methodLabel()))) {
+			jumpTarget1115 = ((AbstractInstruction *) ((jumpTarget1115->address)));
 		}
-		assert(jumpTarget1116 != 0);
-		jumpTarget216 = jumpTarget1116;
+		assert(jumpTarget1115 != 0);
+		jumpTarget216 = jumpTarget1115;
 		offset129 = (((int) jumpTarget216)) - (((int) (((self_in_dispatchConcretize->address)) + 6)));
 		((self_in_dispatchConcretize->machineCode))[0] = 15;
 		((self_in_dispatchConcretize->machineCode))[1] = (128 + 10);
@@ -17274,7 +17362,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 		/* begin concretizeRetN */
 		offset1 = ((self_in_dispatchConcretize->operands))[0];
 		if (offset1 == 0) {
-			((self_in_dispatchConcretize->machineCode))[0] = 195;
+((self_in_dispatchConcretize->machineCode))[0] = 195;
 			(self_in_dispatchConcretize->machineCodeSize) = 1;
 			goto l12;
 		}
@@ -17378,12 +17466,12 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			skip = 0;
 		}
 		else {
-			if (reg4 > 7) {
-				((self_in_dispatchConcretize->machineCode))[0] = 65;
+if (reg4 > 7) {
+((self_in_dispatchConcretize->machineCode))[0] = 65;
 				skip = 2;
 			}
 			else {
-				skip = 1;
+skip = 1;
 			}
 			((self_in_dispatchConcretize->machineCode))[skip - 1] = 129;
 			((self_in_dispatchConcretize->machineCode))[skip] = (modRMRO(self_in_dispatchConcretize, ModReg, reg4, 7));
@@ -17541,7 +17629,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 		reg7 = ((self_in_dispatchConcretize->operands))[1];
 		((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg7));
 		if (distance == 1) {
-			((self_in_dispatchConcretize->machineCode))[1] = 209;
+((self_in_dispatchConcretize->machineCode))[1] = 209;
 			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModReg, reg7, 0));
 			(self_in_dispatchConcretize->machineCodeSize) = 3;
 			goto l24;
@@ -17560,7 +17648,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 		reg8 = ((self_in_dispatchConcretize->operands))[1];
 		((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg8));
 		if (distance1 == 1) {
-			((self_in_dispatchConcretize->machineCode))[1] = 209;
+((self_in_dispatchConcretize->machineCode))[1] = 209;
 			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModReg, reg8, 1));
 			(self_in_dispatchConcretize->machineCodeSize) = 3;
 			goto l25;
@@ -17579,7 +17667,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 		reg9 = ((self_in_dispatchConcretize->operands))[1];
 		((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg9));
 		if (distance2 == 1) {
-			((self_in_dispatchConcretize->machineCode))[1] = 209;
+((self_in_dispatchConcretize->machineCode))[1] = 209;
 			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModReg, reg9, 7));
 			(self_in_dispatchConcretize->machineCodeSize) = 3;
 			goto l26;
@@ -17598,7 +17686,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 		reg10 = ((self_in_dispatchConcretize->operands))[1];
 		((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg10));
 		if (distance3 == 1) {
-			((self_in_dispatchConcretize->machineCode))[1] = 209;
+((self_in_dispatchConcretize->machineCode))[1] = 209;
 			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModReg, reg10, 5));
 			(self_in_dispatchConcretize->machineCodeSize) = 3;
 			goto l27;
@@ -17617,7 +17705,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 		reg11 = ((self_in_dispatchConcretize->operands))[1];
 		((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg11));
 		if (distance4 == 1) {
-			((self_in_dispatchConcretize->machineCode))[1] = 209;
+((self_in_dispatchConcretize->machineCode))[1] = 209;
 			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModReg, reg11, 4));
 			(self_in_dispatchConcretize->machineCodeSize) = 3;
 			goto l28;
@@ -17754,7 +17842,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 		}
 		reg12 = ((self_in_dispatchConcretize->operands))[1];
 		if (value2 == 0) {
-			((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, reg12, 0, reg12));
+((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, reg12, 0, reg12));
 			((self_in_dispatchConcretize->machineCode))[1] = 49;
 			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModReg, reg12, reg12));
 			(self_in_dispatchConcretize->machineCodeSize) = 3;
@@ -17874,7 +17962,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 				goto l59;
 			}
 			if (offset110 == 0) {
-				((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, srcReg12, destReg13));
+((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, srcReg12, destReg13));
 				((self_in_dispatchConcretize->machineCode))[3] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg12));
 				(self_in_dispatchConcretize->machineCodeSize) = 4;
 				goto l59;
@@ -17905,7 +17993,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			offset20 = 0;
 		}
 		else {
-			((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg20));
+((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg20));
 			((self_in_dispatchConcretize->machineCode))[1] = (144 + (reg20 % 8));
 			offset20 = 2;
 		}
@@ -17941,7 +18029,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			offset16 = 0;
 		}
 		else {
-			((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg18));
+((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg18));
 			((self_in_dispatchConcretize->machineCode))[1] = (144 + (reg18 % 8));
 			offset16 = 2;
 		}
@@ -18008,7 +18096,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 				goto l61;
 			}
 			if (offset111 == 0) {
-				((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, destReg14, srcReg13));
+((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, destReg14, srcReg13));
 				((self_in_dispatchConcretize->machineCode))[3] = (sib(self_in_dispatchConcretize, SIB1, 4, destReg14));
 				(self_in_dispatchConcretize->machineCodeSize) = 4;
 				goto l61;
@@ -18037,7 +18125,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			offset21 = 0;
 		}
 		else {
-			((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg21));
+((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg21));
 			((self_in_dispatchConcretize->machineCode))[1] = (144 + (reg21 % 8));
 			offset21 = 2;
 		}
@@ -18073,7 +18161,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			offset17 = 0;
 		}
 		else {
-			((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg19));
+((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg19));
 			((self_in_dispatchConcretize->machineCode))[1] = (144 + (reg19 % 8));
 			offset17 = 2;
 		}
@@ -18141,7 +18229,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 				goto l63;
 			}
 			if (offset112 == 0) {
-				((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, srcReg14, destReg15));
+((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, srcReg14, destReg15));
 				((self_in_dispatchConcretize->machineCode))[3] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg14));
 				(self_in_dispatchConcretize->machineCodeSize) = 4;
 				goto l63;
@@ -18172,7 +18260,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			offset22 = 0;
 		}
 		else {
-			((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg22));
+((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg22));
 			((self_in_dispatchConcretize->machineCode))[1] = (144 + (reg22 % 8));
 			offset22 = 2;
 		}
@@ -18240,7 +18328,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 				goto l65;
 			}
 			if (offset113 == 0) {
-				((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, baseReg1, srcReg15));
+((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, baseReg1, srcReg15));
 				((self_in_dispatchConcretize->machineCode))[3] = (sib(self_in_dispatchConcretize, SIB1, 4, baseReg1));
 				(self_in_dispatchConcretize->machineCodeSize) = 4;
 				goto l65;
@@ -18269,7 +18357,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			offset23 = 0;
 		}
 		else {
-			((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg23));
+((self_in_dispatchConcretize->machineCode))[0] = (rexRxb(self_in_dispatchConcretize, 0, 0, reg23));
 			((self_in_dispatchConcretize->machineCode))[1] = (144 + (reg23 % 8));
 			offset23 = 2;
 		}
@@ -18324,7 +18412,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			goto l33;
 		}
 		if (offset3 == 0) {
-			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, srcReg1, destReg3));
+((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, srcReg1, destReg3));
 			((self_in_dispatchConcretize->machineCode))[3] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg1));
 			(self_in_dispatchConcretize->machineCodeSize) = 4;
 			goto l33;
@@ -18377,7 +18465,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			goto l34;
 		}
 		if (offset4 == 0) {
-			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, baseReg, srcReg2));
+((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, baseReg, srcReg2));
 			((self_in_dispatchConcretize->machineCode))[3] = (sib(self_in_dispatchConcretize, SIB1, 4, baseReg));
 			(self_in_dispatchConcretize->machineCodeSize) = 4;
 			goto l34;
@@ -18467,7 +18555,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			skip1 = 1;
 		}
 		else {
-			skip1 = 0;
+skip1 = 0;
 		}
 		if ((destReg5 & 7) != RSP) {
 			if (isQuick(self_in_dispatchConcretize, offset6)) {
@@ -18516,12 +18604,12 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			skip2 = 0;
 		}
 		else {
-			((self_in_dispatchConcretize->machineCode))[(skip2 = 1)] = (rexwrxb(self_in_dispatchConcretize, 0, destReg6, 0, srcReg5));
+((self_in_dispatchConcretize->machineCode))[(skip2 = 1)] = (rexwrxb(self_in_dispatchConcretize, 0, destReg6, 0, srcReg5));
 		}
 		((self_in_dispatchConcretize->machineCode))[skip2 + 1] = 15;
 		((self_in_dispatchConcretize->machineCode))[skip2 + 2] = 0x7E;
 		if (offset7 == 0) {
-			if ((srcReg5 & 6) != RSP) {
+if ((srcReg5 & 6) != RSP) {
 				((self_in_dispatchConcretize->machineCode))[skip2 + 3] = (modRMRO(self_in_dispatchConcretize, ModRegInd, srcReg5, destReg6));
 				(self_in_dispatchConcretize->machineCodeSize) = skip2 + 4;
 				goto l37;
@@ -18529,7 +18617,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			if ((srcReg5 & 7) == RSP) {
 
 				/* RBP & R13 fall through */
-				((self_in_dispatchConcretize->machineCode))[skip2 + 3] = (modRMRO(self_in_dispatchConcretize, ModRegInd, srcReg5, destReg6));
+((self_in_dispatchConcretize->machineCode))[skip2 + 3] = (modRMRO(self_in_dispatchConcretize, ModRegInd, srcReg5, destReg6));
 				((self_in_dispatchConcretize->machineCode))[skip2 + 4] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg5));
 				(self_in_dispatchConcretize->machineCodeSize) = skip2 + 5;
 				goto l37;
@@ -18592,7 +18680,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			goto l38;
 		}
 		if (offset8 == 0) {
-			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, srcReg6, destReg7));
+((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, srcReg6, destReg7));
 			((self_in_dispatchConcretize->machineCode))[3] = (sib(self_in_dispatchConcretize, SIB1, 4, srcReg6));
 			(self_in_dispatchConcretize->machineCodeSize) = 4;
 			goto l38;
@@ -18651,7 +18739,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 		if ((base1 & 7) != RBP) {
 
 			/* RBP,R13 */
-			((self_in_dispatchConcretize->machineCode))[1 + offset9] = (modRMRO(self_in_dispatchConcretize, ModRegInd, 4, src));
+((self_in_dispatchConcretize->machineCode))[1 + offset9] = (modRMRO(self_in_dispatchConcretize, ModRegInd, 4, src));
 			((self_in_dispatchConcretize->machineCode))[2 + offset9] = (sib(self_in_dispatchConcretize, SIB1, index1, base1));
 			(self_in_dispatchConcretize->machineCodeSize) = 3 + offset9;
 			goto l40;
@@ -18746,7 +18834,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			goto l43;
 		}
 		if (offset10 == 0) {
-			((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, destReg8, srcReg7));
+((self_in_dispatchConcretize->machineCode))[2] = (modRMRO(self_in_dispatchConcretize, ModRegInd, destReg8, srcReg7));
 			((self_in_dispatchConcretize->machineCode))[3] = (sib(self_in_dispatchConcretize, SIB1, 4, destReg8));
 			(self_in_dispatchConcretize->machineCodeSize) = 4;
 			goto l43;
@@ -18779,12 +18867,12 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			skip3 = 0;
 		}
 		else {
-			((self_in_dispatchConcretize->machineCode))[(skip3 = 1)] = (rexwrxb(self_in_dispatchConcretize, 0, srcReg8, 0, destReg9));
+((self_in_dispatchConcretize->machineCode))[(skip3 = 1)] = (rexwrxb(self_in_dispatchConcretize, 0, srcReg8, 0, destReg9));
 		}
 		((self_in_dispatchConcretize->machineCode))[skip3 + 1] = 15;
 		((self_in_dispatchConcretize->machineCode))[skip3 + 2] = 214;
 		if (offset11 == 0) {
-			if ((destReg9 & 6) != RSP) {
+if ((destReg9 & 6) != RSP) {
 				((self_in_dispatchConcretize->machineCode))[skip3 + 3] = (modRMRO(self_in_dispatchConcretize, ModRegInd, destReg9, srcReg8));
 				(self_in_dispatchConcretize->machineCodeSize) = skip3 + 4;
 				goto l44;
@@ -18792,7 +18880,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 			if ((destReg9 & 7) == RSP) {
 
 				/* RBP & R13 fall through */
-				((self_in_dispatchConcretize->machineCode))[skip3 + 3] = (modRMRO(self_in_dispatchConcretize, ModRegInd, destReg9, srcReg8));
+((self_in_dispatchConcretize->machineCode))[skip3 + 3] = (modRMRO(self_in_dispatchConcretize, ModRegInd, destReg9, srcReg8));
 				((self_in_dispatchConcretize->machineCode))[skip3 + 4] = (sib(self_in_dispatchConcretize, SIB1, 4, destReg9));
 				(self_in_dispatchConcretize->machineCodeSize) = skip3 + 5;
 				goto l44;
@@ -18852,7 +18940,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 		/* begin concretizePopR */
 		reg14 = ((self_in_dispatchConcretize->operands))[0];
 		if (reg14 < 8) {
-			((self_in_dispatchConcretize->machineCode))[0] = (88 + reg14);
+((self_in_dispatchConcretize->machineCode))[0] = (88 + reg14);
 			(self_in_dispatchConcretize->machineCodeSize) = 1;
 			goto l47;
 		}
@@ -18866,7 +18954,7 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 		/* begin concretizePushR */
 		reg15 = ((self_in_dispatchConcretize->operands))[0];
 		if (reg15 < 8) {
-			((self_in_dispatchConcretize->machineCode))[0] = (80 + reg15);
+((self_in_dispatchConcretize->machineCode))[0] = (80 + reg15);
 			(self_in_dispatchConcretize->machineCodeSize) = 1;
 			goto l48;
 		}
@@ -19028,7 +19116,9 @@ genDivRRQuoRem(AbstractInstruction * self_in_genDivRRQuoRem, sqInt abstractRegDi
 	 || (rDivisor == RDX)) {
 
 		/* Slang, sigh... */
-		rUnused = RAX;
+
+		/* Slang, sigh... */
+rUnused = RAX;
 		while (rUnused <= RDI) {
 			if ((rUnused != RSP)
 			 && ((rUnused != RBP)
@@ -19045,7 +19135,7 @@ genDivRRQuoRem(AbstractInstruction * self_in_genDivRRQuoRem, sqInt abstractRegDi
 					genDivRRQuoRem(self_in_genDivRRQuoRem, rDivisor, rUnused, rQuotient, rRemainder);
 				}
 				else {
-					genDivRRQuoRem(self_in_genDivRRQuoRem, rUnused, rDividend, rQuotient, rRemainder);
+genDivRRQuoRem(self_in_genDivRRQuoRem, rUnused, rDividend, rQuotient, rRemainder);
 				}
 				/* begin PopR: */
 				genoperand(PopR, rUnused);
@@ -19079,7 +19169,7 @@ genDivRRQuoRem(AbstractInstruction * self_in_genDivRRQuoRem, sqInt abstractRegDi
 			genoperandoperand(XCHGRR, rDivisor, rDividend);
 		}
 		else {
-			/* begin MoveR:R: */
+/* begin MoveR:R: */
 			genoperandoperand(MoveRR, rDividend, RAX);
 		}
 	}
@@ -19092,7 +19182,7 @@ genDivRRQuoRem(AbstractInstruction * self_in_genDivRRQuoRem, sqInt abstractRegDi
 		genoperandoperand(XCHGRR, rQuotient, rRemainder);
 	}
 	else {
-		if (rQuotient == RDX) {
+if (rQuotient == RDX) {
 			if (rRemainder != RDX) {
 				/* begin MoveR:R: */
 				genoperandoperand(MoveRR, RDX, rRemainder);
@@ -19103,7 +19193,7 @@ genDivRRQuoRem(AbstractInstruction * self_in_genDivRRQuoRem, sqInt abstractRegDi
 			}
 		}
 		else {
-			if (rQuotient != RAX) {
+if (rQuotient != RAX) {
 				/* begin MoveR:R: */
 				genoperandoperand(MoveRR, RAX, rQuotient);
 			}
@@ -19114,15 +19204,15 @@ genDivRRQuoRem(AbstractInstruction * self_in_genDivRRQuoRem, sqInt abstractRegDi
 		}
 	}
 	if (saveRestoreExchanged >= 0) {
-		/* begin PopR: */
+/* begin PopR: */
 		genoperand(PopR, saveRestoreExchanged);
 	}
 	if (saveRestoreEDX) {
-		/* begin PopR: */
+/* begin PopR: */
 		genoperand(PopR, RDX);
 	}
 	if (saveRestoreEAX) {
-		/* begin PopR: */
+/* begin PopR: */
 		genoperand(PopR, RAX);
 	}
 	return self_in_genDivRRQuoRem;
@@ -19239,9 +19329,9 @@ genPushRegisterArgsForAbortMissNumArgs(AbstractInstruction * self_in_genPushRegi
     AbstractInstruction *anInstruction9;
 
 	if (numArgs <= 2) {
-		assert((numRegArgs()) <= 2);
+assert((numRegArgs()) <= 2);
 		if (numArgs == 0) {
-			/* begin MoveMw:r:R: */
+/* begin MoveMw:r:R: */
 			anInstruction = genoperandoperandoperand(MoveMwrR, 0, SPReg, TempReg);
 			/* begin PushR: */
 			genoperand(PushR, TempReg);
@@ -19254,7 +19344,7 @@ genPushRegisterArgsForAbortMissNumArgs(AbstractInstruction * self_in_genPushRegi
 			return self_in_genPushRegisterArgsForAbortMissNumArgs;
 		}
 		if (numArgs == 1) {
-			/* begin MoveMw:r:R: */
+/* begin MoveMw:r:R: */
 			anInstruction4 = genoperandoperandoperand(MoveMwrR, BytesPerWord, SPReg, TempReg);
 			/* begin PushR: */
 			genoperand(PushR, TempReg);
@@ -19269,7 +19359,7 @@ genPushRegisterArgsForAbortMissNumArgs(AbstractInstruction * self_in_genPushRegi
 			return self_in_genPushRegisterArgsForAbortMissNumArgs;
 		}
 		if (numArgs == 2) {
-			/* begin PushR: */
+/* begin PushR: */
 			genoperand(PushR, Arg1Reg);
 			/* begin MoveMw:r:R: */
 			anInstruction8 = genoperandoperandoperand(MoveMwrR, BytesPerWord * 2, SPReg, TempReg);
@@ -19313,20 +19403,21 @@ genPushRegisterArgsForNumArgsscratchReg(AbstractInstruction * self_in_genPushReg
 
 	assert((numRegArgs()) < (NumSendTrampolines - 1));
 	if (numArgs <= 2) {
-		assert((numRegArgs()) <= 2);
+assert((numRegArgs()) <= 2);
 		
 		/* a.k.a.
 		   cogit gen: XCHGMwrR operand: 0 operand: SPReg operand: ReceiverResultReg.
 		   but XCHG is slow. */
-		/* begin MoveMw:r:R: */
+		/* Save return pc */
+/* begin MoveMw:r:R: */
 		anInstruction2 = genoperandoperandoperand(MoveMwrR, 0, SPReg, scratchReg);
 		/* begin MoveR:Mw:r: */
 		anInstruction3 = genoperandoperandoperand(MoveRMwr, ReceiverResultReg, 0, SPReg);
 		if (numArgs > 0) {
-			/* begin PushR: */
+/* begin PushR: */
 			genoperand(PushR, Arg0Reg);
 			if (numArgs > 1) {
-				/* begin PushR: */
+/* begin PushR: */
 				genoperand(PushR, Arg1Reg);
 			}
 		}
@@ -19361,11 +19452,11 @@ genRestoreRegsExcept(AbstractInstruction * self_in_genRestoreRegsExcept, sqInt p
 	for (reg = RAX; reg <= R15; reg += 1) {
 		if (!(((reg >= RSP) && (reg <= RBP)))) {
 			if (preservedReg == reg) {
-				/* begin AddCq:R: */
+/* begin AddCq:R: */
 				anInstruction = genoperandoperand(AddCqR, 8, RSP);
 			}
 			else {
-				/* begin PopR: */
+/* begin PopR: */
 				genoperand(PopR, reg);
 			}
 		}
@@ -19610,7 +19701,7 @@ jmpTarget(AbstractInstruction * self_in_jmpTarget, AbstractInstruction *anAbstra
 
 	aDependent = (self_in_jmpTarget->dependent);
 	while (aDependent != null) {
-		jmpTarget(aDependent, anAbstractInstruction);
+jmpTarget(aDependent, anAbstractInstruction);
 		aDependent = (aDependent->dependent);
 	}
 	((self_in_jmpTarget->operands))[0] = (((usqInt)anAbstractInstruction));
@@ -19666,13 +19757,13 @@ jumpTargetPCAt(AbstractInstruction * self_in_jumpTargetPCAt, sqInt pc)
 
 	size = instructionSizeAt(self_in_jumpTargetPCAt, pc);
 	if (size == 2) {
-		byte = byteAt(pc + 1);
+byte = byteAt(pc + 1);
 		offset = ((byte & 128) == 0
 			? byte
 			: byte - 256);
 	}
 	else {
-		byte = byteAt((pc + size) - 1);
+byte = byteAt((pc + size) - 1);
 		offset = ((byte & 128) == 0
 			? byte
 			: byte - 256);
@@ -19772,7 +19863,7 @@ relocateCallBeforeReturnPCby(AbstractInstruction * self_in_relocateCallBeforeRet
     sqInt distance;
 
 	if (delta != 0) {
-		distance = (((((sqInt)((usqInt)((byteAt(retpc - 1))) << 24))) + (((sqInt)((usqInt)((byteAt(retpc - 2))) << 16)))) + (((sqInt)((usqInt)((byteAt(retpc - 3))) << 8)))) + (byteAt(retpc - 4));
+distance = (((((sqInt)((usqInt)((byteAt(retpc - 1))) << 24))) + (((sqInt)((usqInt)((byteAt(retpc - 2))) << 16)))) + (((sqInt)((usqInt)((byteAt(retpc - 3))) << 8)))) + (byteAt(retpc - 4));
 		distance += delta;
 		byteAtput(retpc - 1, (((usqInt) distance) >> 24) & 0xFF);
 		byteAtput(retpc - 2, (((usqInt) distance) >> 16) & 0xFF);
@@ -20003,12 +20094,12 @@ sizeHasModrmat(AbstractInstruction * self_in_sizeHasModrmat, sqInt op, sqInt pc)
 	ro = (((usqInt) modrm) >> 3) & 7;
 	rm = modrm & 7;
 	if (mod == 3) {
-		return 2;
+return 2;
 	}
 	if (rm != 4) {
 
 		/* no SIB byte */
-		
+
 		switch (mod) {
 		case 0:
 			return (rm == 5
@@ -20066,7 +20157,7 @@ stopsFromto(AbstractInstruction * self_in_stopsFromto, sqInt startAddr, sqInt en
     sqInt addr;
 
 	for (addr = startAddr; addr <= endAddr; addr += 1) {
-		byteAtput(addr, 204);
+byteAtput(addr, 204);
 	}
 	return self_in_stopsFromto;
 }
@@ -20106,7 +20197,7 @@ twoByteInstructionSizeAt(AbstractInstruction * self_in_twoByteInstructionSizeAt,
 	case 128:
 		
 		/* long conditional jumps */
-		return 6;
+return 6;
 
 	default:
 		error("Case not found and no otherwise clause");
@@ -20271,7 +20362,8 @@ compileInterpreterPrimitive(void (*primitiveRoutine)(void))
 
 
 	/* Save processor fp, sp and return pc in the interpreter's frame stack and instruction pointers */
-	genExternalizePointersForPrimitiveCall();
+	/* Switch to the C stack. */
+genExternalizePointersForPrimitiveCall();
 	genLoadCStackPointersForPrimCall();
 	flags = primitivePropertyFlags(primitiveIndex);
 	if (flags & PrimCallDoNotJIT) {
@@ -20280,7 +20372,7 @@ compileInterpreterPrimitive(void (*primitiveRoutine)(void))
 	if (flags & PrimCallCollectsProfileSamples) {
 
 		/* Test nextProfileTick for being non-zero and call checkProfileTick if so */
-		/* begin MoveAw:R: */
+/* begin MoveAw:R: */
 		address2 = nextProfileTickAddress();
 		/* begin gen:literal:operand: */
 		anInstruction2 = genoperandoperand(MoveAwR, address2, TempReg);
@@ -20321,8 +20413,12 @@ compileInterpreterPrimitive(void (*primitiveRoutine)(void))
 	if (flags & (PrimCallNeedsNewMethod + PrimCallMayCallBack)) {
 
 		/* The ceActivateFailingPrimitiveMethod: machinery can't handle framelessness. */
-		if (flags & PrimCallMayCallBack) {
-			needsFrame = 1;
+if (flags & PrimCallMayCallBack) {
+
+			/* The ceActivateFailingPrimitiveMethod: machinery can't handle framelessness. */
+
+			/* The ceActivateFailingPrimitiveMethod: machinery can't handle framelessness. */
+needsFrame = 1;
 		}
 		addDependent(methodLabel, annotateAbsolutePCRef(gMoveCwR(((sqInt)methodLabel), ClassReg)));
 		/* begin MoveMw:r:R: */
@@ -20361,7 +20457,7 @@ compileInterpreterPrimitive(void (*primitiveRoutine)(void))
 	else {
 
 		/* Call the C primitive routine. */
-		/* begin CallFullRT: */
+/* begin CallFullRT: */
 		/* begin CallFull: */
 		anInstruction27 = genoperand(CallFull, ((sqInt)primitiveRoutine));
 		primInvokeInstruction = anInstruction27;
@@ -20410,10 +20506,12 @@ compileInterpreterPrimitive(void (*primitiveRoutine)(void))
 	if (flags & PrimCallCollectsProfileSamples) {
 
 		/* The sample is collected by cePrimReturnEnterCogCode for external calls */
-		if (!(jmpSamplePrim == null)) {
+		/* Call ceCheckProfileTick: to record sample and then continue. */
+if (!(jmpSamplePrim == null)) {
 
+			/* The sample is collected by cePrimReturnEnterCogCode for external calls */
 			/* Call ceCheckProfileTick: to record sample and then continue. */
-			jmpTarget(jmpSamplePrim, gLabel());
+jmpTarget(jmpSamplePrim, gLabel());
 			assert(flags & PrimCallNeedsNewMethod);
 			/* begin CallFullRT: */
 			callTarget = ((unsigned long)ceCheckProfileTick);
@@ -20441,7 +20539,8 @@ compileInterpreterPrimitive(void (*primitiveRoutine)(void))
 	if (!(jmp == null)) {
 
 		/* Jump to restore of receiver reg and proceed to frame build for failure. */
-		jmpTarget(jmp, gLabel());
+		/* Restore receiver reg from stack.  If on RISCs ret pc is in LinkReg, if on CISCs ret pc is on stack. */
+jmpTarget(jmp, gLabel());
 		/* begin MoveMw:r:R: */
 		offset2 = BytesPerWord * (methodOrBlockNumArgs + (1));
 		/* begin gen:quickConstant:operand:operand: */
@@ -20488,7 +20587,7 @@ compileOpenPICMethodCacheProbeForwithShiftbaseRegOrNone(sqInt selector, sqInt sh
 		anInstruction1 = genoperandoperandoperand(MoveMwrR, offset, ClassReg, TempReg);
 	}
 	else {
-		/* begin AddR:R: */
+/* begin AddR:R: */
 		genoperandoperand(AddRR, baseRegOrNone, ClassReg);
 		/* begin MoveMw:r:R: */
 		anInstruction2 = genoperandoperandoperand(MoveMwrR, ((sqInt)((usqInt)(MethodCacheSelector) << (shiftForWord()))), ClassReg, TempReg);
@@ -20503,7 +20602,7 @@ compileOpenPICMethodCacheProbeForwithShiftbaseRegOrNone(sqInt selector, sqInt sh
 		anInstruction3 = genoperandoperandoperand(MoveMwrR, offset1, ClassReg, TempReg);
 	}
 	else {
-		/* begin MoveMw:r:R: */
+/* begin MoveMw:r:R: */
 		anInstruction4 = genoperandoperandoperand(MoveMwrR, ((sqInt)((usqInt)(MethodCacheClass) << (shiftForWord()))), ClassReg, TempReg);
 	}
 	/* begin CmpR:R: */
@@ -20614,7 +20713,7 @@ compilePerformMethodCacheProbeForwithShiftbaseRegOrNone(sqInt selectorReg, sqInt
 		anInstruction1 = genoperandoperandoperand(MoveMwrR, offset, ClassReg, TempReg);
 	}
 	else {
-		/* begin AddR:R: */
+/* begin AddR:R: */
 		genoperandoperand(AddRR, baseRegOrNone, ClassReg);
 		/* begin MoveMw:r:R: */
 		anInstruction2 = genoperandoperandoperand(MoveMwrR, ((sqInt)((usqInt)(MethodCacheSelector) << (shiftForWord()))), ClassReg, TempReg);
@@ -20630,7 +20729,7 @@ compilePerformMethodCacheProbeForwithShiftbaseRegOrNone(sqInt selectorReg, sqInt
 		anInstruction3 = genoperandoperandoperand(MoveMwrR, offset1, ClassReg, TempReg);
 	}
 	else {
-		/* begin MoveMw:r:R: */
+/* begin MoveMw:r:R: */
 		anInstruction4 = genoperandoperandoperand(MoveMwrR, ((sqInt)((usqInt)(MethodCacheClass) << (shiftForWord()))), ClassReg, TempReg);
 	}
 	/* begin CmpR:R: */
@@ -20677,7 +20776,7 @@ compilePrimitive(void)
 	 && (code != UnimplementedPrimitive)) {
 
 		/* Generator failed, so no point continuing... */
-		return code;
+return code;
 	}
 	if (code == UnfailingPrimitive) {
 		return 0;
@@ -20708,13 +20807,13 @@ extendedPushBytecode(void)
 	variableType = (((usqInt) byte1) >> 6) & 3;
 	variableIndex = byte1 & 0x3F;
 	if (variableType == 0) {
-		return genPushReceiverVariable(variableIndex);
+return genPushReceiverVariable(variableIndex);
 	}
 	if (variableType == 1) {
-		return genPushTemporaryVariable(variableIndex);
+return genPushTemporaryVariable(variableIndex);
 	}
 	if (variableType == 2) {
-		return genPushLiteralIndex(variableIndex);
+return genPushLiteralIndex(variableIndex);
 	}
 	return genPushLiteralVariable(variableIndex);
 }
@@ -20730,12 +20829,12 @@ extendedStoreAndPopBytecode(void)
 	variableType = (((usqInt) byte1) >> 6) & 3;
 	variableIndex = byte1 & 0x3F;
 	if (variableType == 0) {
-		return genStorePopReceiverVariableneedsStoreCheckneedsImmutabilityCheck(1, variableIndex, ((((ssTop())->type)) != SSConstant)
+return genStorePopReceiverVariableneedsStoreCheckneedsImmutabilityCheck(1, variableIndex, ((((ssTop())->type)) != SSConstant)
 		 || ((isNonImmediate(((ssTop())->constant)))
 		 && (shouldAnnotateObjectReference(((ssTop())->constant)))), 1);
 	}
 	if (variableType == 1) {
-		genStorePopTemporaryVariable(1, variableIndex);
+genStorePopTemporaryVariable(1, variableIndex);
 		
 #    if IMMUTABILITY
 		/* begin annotateBytecode: */
@@ -20747,7 +20846,7 @@ extendedStoreAndPopBytecode(void)
 		return 0;
 	}
 	if (variableType == 3) {
-		return genStorePopLiteralVariableneedsStoreCheckneedsImmutabilityCheck(1, variableIndex, ((((ssTop())->type)) != SSConstant)
+return genStorePopLiteralVariableneedsStoreCheckneedsImmutabilityCheck(1, variableIndex, ((((ssTop())->type)) != SSConstant)
 		 || ((isNonImmediate(((ssTop())->constant)))
 		 && (shouldAnnotateObjectReference(((ssTop())->constant)))), 1);
 	}
@@ -20765,12 +20864,12 @@ extendedStoreBytecode(void)
 	variableType = (((usqInt) byte1) >> 6) & 3;
 	variableIndex = byte1 & 0x3F;
 	if (variableType == 0) {
-		return genStorePopReceiverVariableneedsStoreCheckneedsImmutabilityCheck(0, variableIndex, ((((ssTop())->type)) != SSConstant)
+return genStorePopReceiverVariableneedsStoreCheckneedsImmutabilityCheck(0, variableIndex, ((((ssTop())->type)) != SSConstant)
 		 || ((isNonImmediate(((ssTop())->constant)))
 		 && (shouldAnnotateObjectReference(((ssTop())->constant)))), 1);
 	}
 	if (variableType == 1) {
-		genStorePopTemporaryVariable(0, variableIndex);
+genStorePopTemporaryVariable(0, variableIndex);
 		
 #    if IMMUTABILITY
 		/* begin annotateBytecode: */
@@ -20782,7 +20881,7 @@ extendedStoreBytecode(void)
 		return 0;
 	}
 	if (variableType == 3) {
-		return genStorePopLiteralVariableneedsStoreCheckneedsImmutabilityCheck(0, variableIndex, ((((ssTop())->type)) != SSConstant)
+return genStorePopLiteralVariableneedsStoreCheckneedsImmutabilityCheck(0, variableIndex, ((((ssTop())->type)) != SSConstant)
 		 || ((isNonImmediate(((ssTop())->constant)))
 		 && (shouldAnnotateObjectReference(((ssTop())->constant)))), 1);
 	}
@@ -21016,7 +21115,7 @@ genLookupForPerformNumArgs(sqInt numArgs)
 	genLoadSlotsourceRegdestReg(HeaderIndex, SendNumArgsReg, ClassReg);
 
 	/* Adjust arguments and jump to the method's unchecked entry-point. */
-	jumpInterpret = genJumpImmediate(ClassReg);
+jumpInterpret = genJumpImmediate(ClassReg);
 	/* begin AddCq:R: */
 	anInstruction = genoperandoperand(AddCqR, cmNoCheckEntryOffset, ClassReg);
 	adjustArgumentsForPerform(numArgs);
@@ -21275,7 +21374,7 @@ genQuickReturnConst(void)
 		annotateobjRef(gMoveCwR(constant, ReceiverResultReg), constant);
 	}
 	else {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction = genoperandoperand(MoveCqR, constant, ReceiverResultReg);
 	}
 	genUpArrowReturn();
@@ -21321,7 +21420,7 @@ genReturnFalse(void)
 		annotateobjRef(gMoveCwR(constant, ReceiverResultReg), constant);
 	}
 	else {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction = genoperandoperand(MoveCqR, constant, ReceiverResultReg);
 	}
 	return genUpArrowReturn();
@@ -21340,7 +21439,7 @@ genReturnNil(void)
 		annotateobjRef(gMoveCwR(constant, ReceiverResultReg), constant);
 	}
 	else {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction = genoperandoperand(MoveCqR, constant, ReceiverResultReg);
 	}
 	return genUpArrowReturn();
@@ -21359,7 +21458,7 @@ genReturnTrue(void)
 		annotateobjRef(gMoveCwR(constant, ReceiverResultReg), constant);
 	}
 	else {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction = genoperandoperand(MoveCqR, constant, ReceiverResultReg);
 	}
 	return genUpArrowReturn();
@@ -21514,13 +21613,13 @@ mapPCDataForinto(CogMethod *cogMethod, sqInt arrayObj)
 	if (((cogMethod->stackCheckOffset)) == 0) {
 		assert(introspectionDataIndex == 0);
 		if (0) {
-			storePointerUncheckedofObjectwithValue(0, introspectionData, nilObject());
+storePointerUncheckedofObjectwithValue(0, introspectionData, nilObject());
 			storePointerUncheckedofObjectwithValue(1, introspectionData, ((cbNoSwitchEntryOffset << 3) | 1));
 			storePointerUncheckedofObjectwithValue(2, introspectionData, nilObject());
 			storePointerUncheckedofObjectwithValue(3, introspectionData, ((cbEntryOffset << 3) | 1));
 		}
 		else {
-			storePointerUncheckedofObjectwithValue(0, introspectionData, nilObject());
+storePointerUncheckedofObjectwithValue(0, introspectionData, nilObject());
 			storePointerUncheckedofObjectwithValue(1, introspectionData, ((cmEntryOffset << 3) | 1));
 			storePointerUncheckedofObjectwithValue(2, introspectionData, nilObject());
 			storePointerUncheckedofObjectwithValue(3, introspectionData, ((cmNoCheckEntryOffset << 3) | 1));
@@ -21537,7 +21636,7 @@ mapPCDataForinto(CogMethod *cogMethod, sqInt arrayObj)
 	mcpc = (((usqInt)cogMethod1)) + ((cogMethod1->stackCheckOffset));
 	result = pcDataForAnnotationMcpcBcpcMethod(null, (0 + (((sqInt)((usqInt)(HasBytecodePC) << 1)))), (((char *) mcpc)), startbcpc, (((void *)cogMethod)));
 	if (result != 0) {
-		errCode = result;
+errCode = result;
 		goto l4;
 	}
 
@@ -21571,7 +21670,7 @@ mapPCDataForinto(CogMethod *cogMethod, sqInt arrayObj)
 		bcpc += deltaToSkipPrimAndErrorStoreInheader(aMethodObj, (homeMethod->methodHeader));
 	}
 	else {
-		isInBlock = 1;
+isInBlock = 1;
 		assert(bcpc == ((cogMethod1->startpc)));
 		homeMethod = cmHomeMethod(cogMethod1);
 		map = findMapLocationForMcpcinMethod((((usqInt)cogMethod1)) + (sizeof(CogBlockMethod)), homeMethod);
@@ -21584,7 +21683,7 @@ mapPCDataForinto(CogMethod *cogMethod, sqInt arrayObj)
 		}
 
 		/* skip fiducial; i.e. the map entry for the pc immediately following the method header. */
-		map -= 1;
+map -= 1;
 		aMethodObj = (homeMethod->methodObject);
 		bcpc = startbcpc - (blockCreationBytecodeSizeForHeader((homeMethod->methodHeader)));
 		/* begin bytecodeSetOffsetForHeader: */
@@ -21615,8 +21714,12 @@ mapPCDataForinto(CogMethod *cogMethod, sqInt arrayObj)
 	while (((mapByte = byteAt(map))) != MapEnd) {
 
 		/* defensive; we exit on bcpc */
-		if (mapByte >= FirstAnnotation) {
-			annotation = ((usqInt) mapByte) >> AnnotationShift;
+if (mapByte >= FirstAnnotation) {
+
+			/* defensive; we exit on bcpc */
+
+			/* defensive; we exit on bcpc */
+annotation = ((usqInt) mapByte) >> AnnotationShift;
 			mcpc += (mapByte & DisplacementMask);
 			if (annotation >= HasBytecodePC) {
 				if ((annotation == IsSendCall)
@@ -21625,16 +21728,16 @@ mapPCDataForinto(CogMethod *cogMethod, sqInt arrayObj)
 					map -= 1;
 				}
 				while (1) {
-					byte = (fetchByteofObject(bcpc, aMethodObj)) + bsOffset;
+byte = (fetchByteofObject(bcpc, aMethodObj)) + bsOffset;
 					descriptor = generatorAt(byte);
 					if (isInBlock) {
-						if (bcpc >= endbcpc) {
-							errCode = 0;
+if (bcpc >= endbcpc) {
+errCode = 0;
 							goto l4;
 						}
 					}
 					else {
-						if (((descriptor->isReturn))
+if (((descriptor->isReturn))
 						 && (bcpc >= latestContinuation)) {
 							errCode = 0;
 							goto l4;
@@ -21664,7 +21767,7 @@ mapPCDataForinto(CogMethod *cogMethod, sqInt arrayObj)
 	? (((sqInt)((usqInt)(annotation) << 1))) + 1
 	: ((sqInt)((usqInt)(annotation) << 1)))), (((char *) mcpc)), bcpc, (((void *)cogMethod)));
 				if (result != 0) {
-					errCode = result;
+errCode = result;
 					goto l4;
 				}
 				bcpc = nextBcpc;
@@ -21674,7 +21777,7 @@ mapPCDataForinto(CogMethod *cogMethod, sqInt arrayObj)
 			}
 		}
 		else {
-			assert(((((usqInt) mapByte) >> AnnotationShift) == IsDisplacementX2N)
+assert(((((usqInt) mapByte) >> AnnotationShift) == IsDisplacementX2N)
 			 || ((((usqInt) mapByte) >> AnnotationShift) == IsAnnotationExtension));
 			if (mapByte < (((sqInt)((usqInt)(IsAnnotationExtension) << AnnotationShift)))) {
 				mcpc += (((sqInt)((usqInt)((mapByte - DisplacementX2N)) << AnnotationShift)));
@@ -21685,13 +21788,13 @@ mapPCDataForinto(CogMethod *cogMethod, sqInt arrayObj)
 	errCode = 0;
 l4:	/* end mapFor:bcpc:performUntil:arg: */;
 	if (errCode != 0) {
-		assert(errCode == PrimErrNoMemory);
+assert(errCode == PrimErrNoMemory);
 		return -1;
 	}
 	if (((cogMethod->blockEntryOffset)) != 0) {
 		errCode = blockDispatchTargetsForperformarg(cogMethod, pcDataForBlockEntryMethod, ((sqInt)cogMethod));
 		if (errCode != 0) {
-			assert(errCode == PrimErrNoMemory);
+assert(errCode == PrimErrNoMemory);
 			return -1;
 		}
 	}
@@ -21781,15 +21884,15 @@ pcDataForAnnotationMcpcBcpcMethod(BytecodeDescriptor *descriptor, sqInt isBackwa
 	if (!(descriptor)) {
 
 		/* this is the stackCheck offset */
-		assert(introspectionDataIndex == 0);
+assert(introspectionDataIndex == 0);
 		if (0) {
-			storePointerUncheckedofObjectwithValue(introspectionDataIndex, introspectionData, nilObject());
+storePointerUncheckedofObjectwithValue(introspectionDataIndex, introspectionData, nilObject());
 			storePointerUncheckedofObjectwithValue(introspectionDataIndex + 1, introspectionData, ((cbNoSwitchEntryOffset << 3) | 1));
 			storePointerUncheckedofObjectwithValue(introspectionDataIndex + 2, introspectionData, nilObject());
 			storePointerUncheckedofObjectwithValue(introspectionDataIndex + 3, introspectionData, ((cbEntryOffset << 3) | 1));
 		}
 		else {
-			storePointerUncheckedofObjectwithValue(introspectionDataIndex, introspectionData, nilObject());
+storePointerUncheckedofObjectwithValue(introspectionDataIndex, introspectionData, nilObject());
 			storePointerUncheckedofObjectwithValue(introspectionDataIndex + 1, introspectionData, ((cmEntryOffset << 3) | 1));
 			storePointerUncheckedofObjectwithValue(introspectionDataIndex + 2, introspectionData, nilObject());
 			storePointerUncheckedofObjectwithValue(introspectionDataIndex + 3, introspectionData, ((cmNoCheckEntryOffset << 3) | 1));
@@ -22382,7 +22485,7 @@ primitiveGeneratorOrNil(void)
 	if (isQuickPrimitiveIndex(primitiveIndex)) {
 
 		/* an unused one */
-		primitiveDescriptor = (&(primitiveGeneratorTable[0]));
+primitiveDescriptor = (&(primitiveGeneratorTable[0]));
 		(primitiveDescriptor->primitiveGenerator = quickPrimitiveGeneratorFor(primitiveIndex));
 		return primitiveDescriptor;
 	}
@@ -22404,7 +22507,7 @@ recordCallOffsetIn(CogMethod *cogMethod)
 		externalSetPrimOffsets[(cogMethod->cmNumArgs)] = offset;
 	}
 	else {
-		assert((externalSetPrimOffsets[(cogMethod->cmNumArgs)]) == offset);
+assert((externalSetPrimOffsets[(cogMethod->cmNumArgs)]) == offset);
 	}
 	offsetTable = (isJump(primInvokeInstruction)
 		? externalPrimJumpOffsets
@@ -22414,7 +22517,7 @@ recordCallOffsetIn(CogMethod *cogMethod)
 		offsetTable[(cogMethod->cmNumArgs)] = offset;
 	}
 	else {
-		assert((offsetTable[(cogMethod->cmNumArgs)]) == offset);
+assert((offsetTable[(cogMethod->cmNumArgs)]) == offset);
 	}
 }
 
@@ -22445,7 +22548,7 @@ rewritePrimInvocationInto(CogMethod *cogMethod, void (*primFunctionPointer)(void
 		extent = rewriteJumpFullAttarget(backEnd, address, ((usqInt)primFunctionPointer));
 	}
 	else {
-		address = (((usqInt)cogMethod)) + (externalPrimCallOffsets[(cogMethod->cmNumArgs)]);
+address = (((usqInt)cogMethod)) + (externalPrimCallOffsets[(cogMethod->cmNumArgs)]);
 		extent = rewriteCallFullAttarget(backEnd, address, ((usqInt)primFunctionPointer));
 	}
 	flushICacheFromto(processor, (((usqInt)cogMethod)) + cmNoCheckEntryOffset, (((usqInt)address)) + extent);
@@ -22524,12 +22627,16 @@ addBlockStartAtnumArgsnumCopiedspan(sqInt bytecodepc, sqInt numArgs, sqInt numCo
 
 
 	/* Transcript ensureCr; nextPutAll: 'addBlockStartAt: '; print: bytecodepc; cr; flush. */
-	if (blockCount > 0) {
-		i = blockCount - 1;
+if (blockCount > 0) {
+
+		/* Transcript ensureCr; nextPutAll: 'addBlockStartAt: '; print: bytecodepc; cr; flush. */
+
+		/* Transcript ensureCr; nextPutAll: 'addBlockStartAt: '; print: bytecodepc; cr; flush. */
+i = blockCount - 1;
 		while (1) {
 
 			/* check for repeat addition during recompilation due to initialNil miscount. */
-			blockStart = (&(blockStarts[i]));
+blockStart = (&(blockStarts[i]));
 			if (((blockStart->startpc)) == bytecodepc) {
 				return blockStart;
 			}
@@ -22543,7 +22650,7 @@ addBlockStartAtnumArgsnumCopiedspan(sqInt bytecodepc, sqInt numArgs, sqInt numCo
 		blockStart = (&(blockStarts[i + 1]));
 	}
 	else {
-		blockStart = (&(blockStarts[blockCount]));
+blockStart = (&(blockStarts[blockCount]));
 	}
 	blockCount += 1;
 	(blockStart->startpc = bytecodepc);
@@ -22584,8 +22691,8 @@ adjustArgumentsForPerform(sqInt numArgs)
 	assert((numRegArgs()) <= 2);
 	assert(numArgs >= 1);
 	if (numArgs <= 2) {
-		if (numArgs == 2) {
-			/* begin MoveR:R: */
+if (numArgs == 2) {
+/* begin MoveR:R: */
 			genoperandoperand(MoveRR, Arg1Reg, Arg0Reg);
 		}
 		return;
@@ -22653,12 +22760,14 @@ allocateRegNotConflictingWith(sqInt regMask)
 	if (reg == NoReg) {
 
 		/* No free register, choose one that does not conflict with regMask */
-		reg = freeAnyRegNotConflictingWith(regMask);
+
+		/* No free register, choose one that does not conflict with regMask */
+reg = freeAnyRegNotConflictingWith(regMask);
 	}
 	if (reg == ReceiverResultReg) {
 
 		/* If we've allocated RcvrResultReg, it's not live anymore */
-		(optStatus.isReceiverResultRegLive = 0);
+(optStatus.isReceiverResultRegLive = 0);
 	}
 	return reg;
 }
@@ -22725,7 +22834,7 @@ compileAbstractInstructionsFromthrough(sqInt start, sqInt end)
 	descriptor = null;
 	deadCode = 0;
 	while (1) {
-		fixup = fixupAt(bytecodePC - initialPC);
+fixup = fixupAt(bytecodePC - initialPC);
 		mergeWithFixupIfRequired(fixup);
 		/* begin assertCorrectSimStackPtr */
 		descriptor = loadBytesAndGetDescriptor();
@@ -22746,6 +22855,9 @@ compileAbstractInstructionsFromthrough(sqInt start, sqInt end)
 			/* There is a fixup for this bytecode.  It must point to the first generated
 			   instruction for this bytecode.  If there isn't one we need to add a label. */
 			if (opcodeIndex == nextOpcodeIndex) {
+
+				/* There is a fixup for this bytecode.  It must point to the first generated
+				   instruction for this bytecode.  If there isn't one we need to add a label. */
 				/* begin Label */
 				genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 			}
@@ -22801,7 +22913,7 @@ compileBlockBodies(void)
 		}
 		initialOpcodeIndex = opcodeIndex;
 		while (1) {
-			compileBlockEntry(blockStart);
+compileBlockEntry(blockStart);
 			initialStackPtr = simStackPtr;
 			if (((result = compileAbstractInstructionsFromthrough(((blockStart->startpc)) + (pushNilSizenumInitialNils(methodObj, (blockStart->numInitialNils))), (((blockStart->startpc)) + ((blockStart->span))) - 1))) < 0) {
 				return result;
@@ -22876,14 +22988,14 @@ compileBlockFrameBuild(BlockStart *blockStart)
 	if ((blockStart->hasInstVarRef)) {
 
 		/* Use ReceiverResultReg for Context to agree with store check trampoline */
-		genLoadSlotsourceRegdestReg(ClosureOuterContextIndex, ClassReg, ReceiverResultReg);
+genLoadSlotsourceRegdestReg(ClosureOuterContextIndex, ClassReg, ReceiverResultReg);
 		genLoadSlotsourceRegdestReg(ReceiverIndex, ReceiverResultReg, Arg0Reg);
 		genEnsureOopInRegNotForwardedscratchRegupdatingSlotin(Arg0Reg, TempReg, ReceiverIndex, ReceiverResultReg);
 		/* begin MoveR:R: */
 		genoperandoperand(MoveRR, Arg0Reg, ReceiverResultReg);
 	}
 	else {
-		genLoadSlotsourceRegdestReg(ClosureOuterContextIndex, ClassReg, Arg0Reg);
+genLoadSlotsourceRegdestReg(ClosureOuterContextIndex, ClassReg, Arg0Reg);
 		genLoadSlotsourceRegdestReg(ReceiverIndex, Arg0Reg, ReceiverResultReg);
 	}
 	/* begin PushR: */
@@ -22912,7 +23024,7 @@ compileBlockFrameBuild(BlockStart *blockStart)
 				annotateobjRef(gMoveCwR(constant, TempReg), constant);
 			}
 			else {
-				/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 				anInstruction = genoperandoperand(MoveCqR, constant, TempReg);
 			}
 			for (ign = 1; ign <= ((blockStart->numInitialNils)); ign += 1) {
@@ -22921,13 +23033,13 @@ compileBlockFrameBuild(BlockStart *blockStart)
 			}
 		}
 		else {
-			/* begin genPushConstant: */
+/* begin genPushConstant: */
 			constant1 = nilObject();
 			if (shouldAnnotateObjectReference(constant1)) {
 				annotateobjRef(gPushCw(constant1), constant1);
 			}
 			else {
-				/* begin PushCq: */
+/* begin PushCq: */
 				anInstruction1 = genoperand(PushCq, constant1);
 			}
 		}
@@ -22964,14 +23076,14 @@ compileBlockFramelessEntry(BlockStart *blockStart)
 	if ((blockStart->hasInstVarRef)) {
 
 		/* Use ReceiverResultReg for Context to agree with store check trampoline */
-		genLoadSlotsourceRegdestReg(ClosureOuterContextIndex, ReceiverResultReg, ReceiverResultReg);
+genLoadSlotsourceRegdestReg(ClosureOuterContextIndex, ReceiverResultReg, ReceiverResultReg);
 		genLoadSlotsourceRegdestReg(ReceiverIndex, ReceiverResultReg, Arg0Reg);
 		genEnsureOopInRegNotForwardedscratchRegupdatingSlotin(Arg0Reg, TempReg, ReceiverIndex, ReceiverResultReg);
 		/* begin MoveR:R: */
 		genoperandoperand(MoveRR, Arg0Reg, ReceiverResultReg);
 	}
 	else {
-		genLoadSlotsourceRegdestReg(ClosureOuterContextIndex, ReceiverResultReg, TempReg);
+genLoadSlotsourceRegdestReg(ClosureOuterContextIndex, ReceiverResultReg, TempReg);
 		genLoadSlotsourceRegdestReg(ReceiverIndex, TempReg, ReceiverResultReg);
 	}
 }
@@ -23002,7 +23114,7 @@ compileCogMethod(sqInt selector)
 		: 10);
 
 	/* initial estimate.  Actual endPC is determined in scanMethod. */
-	initialPC = startPCOfMethod(methodObj);
+initialPC = startPCOfMethod(methodObj);
 	endPC = (isQuickPrimitiveIndex(primitiveIndex)
 		? initialPC - 1
 		: numBytesOf(methodObj));
@@ -23030,12 +23142,12 @@ l1:	/* end allocateOpcodes:bytecodes:ifFail: */;
 	allocateBlockStarts(numBlocks + numCleanBlocks);
 	blockCount = 0;
 	if (numCleanBlocks > 0) {
-		addCleanBlockStarts();
+addCleanBlockStarts();
 	}
 	if (!(maybeAllocAndInitIRCs())) {
 
 		/* Inaccurate error code, but it'll do.  This will likely never fail. */
-		return ((CogMethod *) InsufficientCodeSpace);
+return ((CogMethod *) InsufficientCodeSpace);
 	}
 	blockEntryLabel = null;
 	(methodLabel->dependent = null);
@@ -23143,7 +23255,7 @@ compileFrameBuild(void)
 		annotateobjRef(gMoveCwR(constant, SendNumArgsReg), constant);
 	}
 	else {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction = genoperandoperand(MoveCqR, constant, SendNumArgsReg);
 	}
 	/* begin PushR: */
@@ -23171,7 +23283,7 @@ compileFrameBuild(void)
 		stackCheckLabel = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 	}
 	else {
-		/* begin JumpAboveOrEqual: */
+/* begin JumpAboveOrEqual: */
 		jumpSkip = genConditionalBranchoperand(JumpAboveOrEqual, ((sqInt)0));
 		/* begin MoveCq:R: */
 		anInstruction1 = genoperandoperand(MoveCqR, 0, SendNumArgsReg);
@@ -23240,7 +23352,7 @@ compileTwoPathFrameBuild(void)
 	/* begin genJumpInOldSpace: */
 	
 	/* N.B. FLAGS := destReg - scratchReg */
-	/* begin CmpCq:R: */
+/* begin CmpCq:R: */
 	quickConstant = storeCheckBoundary();
 	/* begin gen:quickConstant:operand: */
 	anInstruction3 = genoperandoperand(CmpCqR, quickConstant, ReceiverResultReg);
@@ -23257,7 +23369,7 @@ compileTwoPathFrameBuild(void)
 l7:	/* end compileMethodBody */;
 
 	/* reset because it impacts inst var store compilation */
-	useTwoPaths = 0;
+useTwoPaths = 0;
 	needsFrame = 1;
 	jmpTarget(jumpOld, jmpTarget(jumpImmutable, gLabel()));
 	genPushRegisterArgs();
@@ -23275,7 +23387,7 @@ l7:	/* end compileMethodBody */;
 		annotateobjRef(gMoveCwR(constant, SendNumArgsReg), constant);
 	}
 	else {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction = genoperandoperand(MoveCqR, constant, SendNumArgsReg);
 	}
 	/* begin PushR: */
@@ -23303,7 +23415,7 @@ l7:	/* end compileMethodBody */;
 		stackCheckLabel = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 	}
 	else {
-		/* begin JumpAboveOrEqual: */
+/* begin JumpAboveOrEqual: */
 		jumpSkip = genConditionalBranchoperand(JumpAboveOrEqual, ((sqInt)0));
 		/* begin MoveCq:R: */
 		anInstruction1 = genoperandoperand(MoveCqR, 0, SendNumArgsReg);
@@ -23340,7 +23452,7 @@ compileTwoPathFramelessInit(void)
 	/* begin genJumpInOldSpace: */
 	
 	/* N.B. FLAGS := destReg - scratchReg */
-	/* begin CmpCq:R: */
+/* begin CmpCq:R: */
 	quickConstant = storeCheckBoundary();
 	/* begin gen:quickConstant:operand: */
 	anInstruction = genoperandoperand(CmpCqR, quickConstant, ReceiverResultReg);
@@ -23356,7 +23468,7 @@ compileTwoPathFramelessInit(void)
 l1:	/* end compileMethodBody */;
 
 	/* reset because it impacts inst var store compilation */
-	useTwoPaths = 0;
+useTwoPaths = 0;
 	jmpTarget(jumpOld, gLabel());
 }
 
@@ -23387,10 +23499,10 @@ doubleExtendedDoAnythingBytecode(void)
 
 	opType = ((usqInt) byte1) >> 5;
 	if (opType == 0) {
-		return genSendnumArgs(byte2, byte1 & 0x1F);
+return genSendnumArgs(byte2, byte1 & 0x1F);
 	}
 	if (opType == 1) {
-		return genSendSupernumArgs(byte2, byte1 & 0x1F);
+return genSendSupernumArgs(byte2, byte1 & 0x1F);
 	}
 	
 	switch (opType) {
@@ -23399,14 +23511,14 @@ doubleExtendedDoAnythingBytecode(void)
 			genPushMaybeContextReceiverVariable(byte2);
 		}
 		else {
-			genPushReceiverVariable(byte2);
+genPushReceiverVariable(byte2);
 			/* begin annotateInstructionForBytecode */
 			if (prevInstIsPCAnnotated()) {
 				/* begin Nop */
 				abstractInstruction = gen(Nop);
 			}
 			else {
-				/* begin Label */
+/* begin Label */
 				abstractInstruction = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 			}
 			(abstractInstruction->annotation = HasBytecodePC);
@@ -23421,7 +23533,7 @@ doubleExtendedDoAnythingBytecode(void)
 			abstractInstruction1 = gen(Nop);
 		}
 		else {
-			/* begin Label */
+/* begin Label */
 			abstractInstruction1 = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 		}
 		(abstractInstruction1->annotation = HasBytecodePC);
@@ -23438,7 +23550,7 @@ doubleExtendedDoAnythingBytecode(void)
 #    if IMMUTABILITY
 
 		/* genStorePop:LiteralVariable: annotates; don't annotate twice */
-		return 0;
+return 0;
 
 #    endif /* IMMUTABILITY */
 
@@ -23446,13 +23558,15 @@ doubleExtendedDoAnythingBytecode(void)
 	default:
 		
 		/* 5 & 6 */
-		if (isWriteMediatedContextInstVarIndex(byte2)) {
-			genStorePopMaybeContextReceiverVariableneedsStoreCheckneedsImmutabilityCheck(opType == 6, byte2, ((((ssTop())->type)) != SSConstant)
+if (isWriteMediatedContextInstVarIndex(byte2)) {
+
+			/* 5 & 6 */
+genStorePopMaybeContextReceiverVariableneedsStoreCheckneedsImmutabilityCheck(opType == 6, byte2, ((((ssTop())->type)) != SSConstant)
 			 || ((isNonImmediate(((ssTop())->constant)))
 			 && (shouldAnnotateObjectReference(((ssTop())->constant)))), 1);
 		}
 		else {
-			genStorePopReceiverVariableneedsStoreCheckneedsImmutabilityCheck(opType == 6, byte2, ((((ssTop())->type)) != SSConstant)
+genStorePopReceiverVariableneedsStoreCheckneedsImmutabilityCheck(opType == 6, byte2, ((((ssTop())->type)) != SSConstant)
 			 || ((isNonImmediate(((ssTop())->constant)))
 			 && (shouldAnnotateObjectReference(((ssTop())->constant)))), 1);
 		}
@@ -23460,7 +23574,7 @@ doubleExtendedDoAnythingBytecode(void)
 #    if IMMUTABILITY
 
 		/* genStorePop:LiteralVariable: annotates; don't annotate twice */
-		return 0;
+return 0;
 
 #    endif /* IMMUTABILITY */
 
@@ -23501,19 +23615,19 @@ ensureFixupAt(sqInt targetIndex)
 	if ((((usqInt)((fixup->targetInstruction)))) <= NeedsNonMergeFixupFlag) {
 
 		/* convert a non-merge into a merge */
-		/* begin becomeMergeFixup */
+/* begin becomeMergeFixup */
 		(fixup->targetInstruction) = ((AbstractInstruction *) NeedsMergeFixupFlag);
 		(fixup->simStackPtr = simStackPtr);
 	}
 	else {
-		if (((fixup->simStackPtr)) == UnknownSimStackPtrFlag) {
+if (((fixup->simStackPtr)) == UnknownSimStackPtrFlag) {
 
 			/* this is the target of a backward branch and
 			   so doesn't have a simStackPtr assigned yet. */
 			(fixup->simStackPtr = simStackPtr);
 		}
 		else {
-			assert(((fixup->simStackPtr)) == simStackPtr);
+assert(((fixup->simStackPtr)) == simStackPtr);
 		}
 	}
 	return fixup;
@@ -23552,7 +23666,7 @@ ensureReceiverResultRegContainsSelf(void)
 		(optStatus.isReceiverResultRegLive = 1);
 	}
 	else {
-		assert((((simSelf.type)) == SSRegister)
+assert((((simSelf.type)) == SSRegister)
 		 && (((simSelf.registerr)) == ReceiverResultReg));
 		assert(((optStatus.isReceiverResultRegLive))
 		 && (((optStatus.ssEntry)) == ((&simSelf))));
@@ -23617,7 +23731,7 @@ genBlockReturn(void)
 	genoperand(RetN, (methodOrBlockNumArgs + 1) * BytesPerWord);
 
 	/* can't fall through */
-	deadCode = 1;
+deadCode = 1;
 	return 0;
 }
 
@@ -23652,8 +23766,8 @@ static void (*genCallPICEnilopmartNumArgs(sqInt numArgs))(void)
 	reg = SendNumArgsReg;
 	genoperand(PopR, reg);
 	if (numArgs > 0) {
-		if (numArgs > 1) {
-			/* begin PopR: */
+if (numArgs > 1) {
+/* begin PopR: */
 			genoperand(PopR, Arg1Reg);
 			assert((numRegArgs()) == 2);
 		}
@@ -23702,30 +23816,30 @@ genEqualsEqualsNoBranchArgIsConstantrcvrIsConstantargRegrcvrReg(sqInt argIsConst
 	label = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 	/* begin genEqualsEqualsComparisonArgIsConstant:rcvrIsConstant:argReg:rcvrReg: */
 	if (argIsConstant) {
-		/* begin genCmpConstant:R: */
+/* begin genCmpConstant:R: */
 		constant1 = ((ssTop())->constant);
 		if (shouldAnnotateObjectReference(constant1)) {
 			annotateobjRef(gCmpCwR(constant1, rcvrRegOrNone), constant1);
 		}
 		else {
-			/* begin CmpCq:R: */
+/* begin CmpCq:R: */
 			anInstruction = genoperandoperand(CmpCqR, constant1, rcvrRegOrNone);
 		}
 	}
 	else {
-		if (rcvrIsConstant) {
-			/* begin genCmpConstant:R: */
+if (rcvrIsConstant) {
+/* begin genCmpConstant:R: */
 			constant2 = ((ssValue(1))->constant);
 			if (shouldAnnotateObjectReference(constant2)) {
 				annotateobjRef(gCmpCwR(constant2, argReg), constant2);
 			}
 			else {
-				/* begin CmpCq:R: */
+/* begin CmpCq:R: */
 				anInstruction1 = genoperandoperand(CmpCqR, constant2, argReg);
 			}
 		}
 		else {
-			/* begin CmpR:R: */
+/* begin CmpR:R: */
 			genoperandoperand(CmpRR, argReg, rcvrRegOrNone);
 		}
 	}
@@ -23736,10 +23850,10 @@ genEqualsEqualsNoBranchArgIsConstantrcvrIsConstantargRegrcvrReg(sqInt argIsConst
 	/* begin JumpZero: */
 	jumpEqual = genConditionalBranchoperand(JumpZero, ((sqInt)0));
 	if (!argIsConstant) {
-		genEnsureOopInRegNotForwardedscratchRegjumpBackTo(argReg, TempReg, label);
+genEnsureOopInRegNotForwardedscratchRegjumpBackTo(argReg, TempReg, label);
 	}
 	if (!rcvrIsConstant) {
-		genEnsureOopInRegNotForwardedscratchRegjumpBackTo(rcvrRegOrNone, TempReg, label);
+genEnsureOopInRegNotForwardedscratchRegjumpBackTo(rcvrRegOrNone, TempReg, label);
 	}
 	/* begin genMoveFalseR: */
 	constant = falseObject();
@@ -23747,7 +23861,7 @@ genEqualsEqualsNoBranchArgIsConstantrcvrIsConstantargRegrcvrReg(sqInt argIsConst
 		annotateobjRef(gMoveCwR(constant, resultReg), constant);
 	}
 	else {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction2 = genoperandoperand(MoveCqR, constant, resultReg);
 	}
 	/* begin Jump: */
@@ -23939,7 +24053,7 @@ genJumpBackTo(sqInt targetBytecodePC)
 	ssFlushTo(simStackPtr);
 
 	/* can't fall through */
-	deadCode = 1;
+deadCode = 1;
 	/* begin MoveAw:R: */
 	address = stackLimitAddress();
 	/* begin gen:literal:operand: */
@@ -23986,21 +24100,24 @@ genJumpIfto(sqInt boolean, sqInt targetBytecodePC)
 
 		/* Must arrange there's a fixup at the target whether it is jumped to or
 		   not so that the simStackPtr can be kept correct. */
-
 		/* Must annotate the bytecode for correct pc mapping. */
-		fixup = ensureFixupAt(targetBytecodePC - initialPC);
+
+		/* Must arrange there's a fixup at the target whether it is jumped to or
+		   not so that the simStackPtr can be kept correct. */
+		/* Must annotate the bytecode for correct pc mapping. */
+fixup = ensureFixupAt(targetBytecodePC - initialPC);
 		/* begin annotateBytecode: */
 		if (((desc->constant)) == boolean) {
 			/* begin Jump: */
 			abstractInstruction = genoperand(Jump, ((sqInt)fixup));
 		}
 		else {
-			if (prevInstIsPCAnnotated()) {
+if (prevInstIsPCAnnotated()) {
 				/* begin Nop */
 				abstractInstruction = gen(Nop);
 			}
 			else {
-				/* begin Label */
+/* begin Label */
 				abstractInstruction = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 			}
 		}
@@ -24015,7 +24132,7 @@ genJumpIfto(sqInt boolean, sqInt targetBytecodePC)
 		annotateobjRef(gSubCwR(boolean, TempReg), TempReg);
 	}
 	else {
-		/* begin SubCq:R: */
+/* begin SubCq:R: */
 		anInstruction = genoperandoperand(SubCqR, boolean, TempReg);
 	}
 	/* begin JumpZero: */
@@ -24057,7 +24174,7 @@ genJumpTo(sqInt targetBytecodePC)
 	ssFlushTo(simStackPtr);
 
 	/* can't fall through */
-	deadCode = 1;
+deadCode = 1;
 	/* begin Jump: */
 	jumpTarget = ensureFixupAt(targetBytecodePC - initialPC);
 	genoperand(Jump, ((sqInt)jumpTarget));
@@ -24311,7 +24428,7 @@ genPushClosureCopyCopiedValuesBytecode(void)
 	ssAllocateCallRegandand(ReceiverResultReg, SendNumArgsReg, ClassReg);
 	genNoPopCreateClosureAtnumArgsnumCopiedcontextNumArgslargeinBlock(startpc + 1, numArgs, numCopied, methodOrBlockNumArgs, methodNeedsLargeContext(methodObj), inBlock);
 	for (i = 1; i <= numCopied; i += 1) {
-		reg = ssStorePoptoPreferredReg(1, TempReg);
+reg = ssStorePoptoPreferredReg(1, TempReg);
 		genStoreSourceRegslotIndexintoNewObjectInDestReg(reg, (ClosureFirstCopiedValueIndex + numCopied) - i, ReceiverResultReg);
 	}
 	ssPushRegister(ReceiverResultReg);
@@ -24338,7 +24455,7 @@ genPushLiteralVariable(sqInt literalIndex)
 		annotateobjRef(gMoveCwR(association, TempReg), association);
 	}
 	else {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction = genoperandoperand(MoveCqR, association, TempReg);
 	}
 	genEnsureObjInRegNotForwardedscratchReg(TempReg, freeReg);
@@ -24372,7 +24489,7 @@ genPushMaybeContextReceiverVariable(sqInt slotIndex)
 	if (CallerSavedRegisterMask & (1ULL << ReceiverResultReg)) {
 
 		/* We have no way of reloading ReceiverResultReg since we need the inst var value as the result. */
-		(optStatus.isReceiverResultRegLive = 0);
+(optStatus.isReceiverResultRegLive = 0);
 	}
 	if (slotIndex == InstructionPointerIndex) {
 		/* begin MoveCq:R: */
@@ -24412,17 +24529,17 @@ genPushNewArrayBytecode(void)
 		ssFlushTo(simStackPtr);
 	}
 	else {
-		ssAllocateCallRegand(SendNumArgsReg, ReceiverResultReg);
+ssAllocateCallRegand(SendNumArgsReg, ReceiverResultReg);
 	}
 	size = byte1 & 0x7F;
 	if (!popValues) {
-		if (tryCollapseTempVectorInitializationOfSize(size)) {
+if (tryCollapseTempVectorInitializationOfSize(size)) {
 			return 0;
 		}
 	}
 	genNewArrayOfSizeinitialized(size, !popValues);
 	if (popValues) {
-		for (i = (size - 1); i >= 0; i += -1) {
+for (i = (size - 1); i >= 0; i += -1) {
 			/* begin PopR: */
 			genoperand(PopR, TempReg);
 			genStoreSourceRegslotIndexintoNewObjectInDestReg(TempReg, i, ReceiverResultReg);
@@ -24636,7 +24753,7 @@ genSpecialSelectorArithmetic(void)
 		if (isIntegerValue(result)) {
 
 			/* Must annotate the bytecode for correct pc mapping. */
-			return (ssPop(2),
+return (ssPop(2),
 				ssPushAnnotatedConstant(((result << 3) | 1)));
 		}
 		return genSpecialSelectorSend();
@@ -24652,14 +24769,14 @@ genSpecialSelectorArithmetic(void)
 		return genSpecialSelectorSend();
 	}
 	if (argIsInt) {
-		ssFlushTo(simStackPtr - 2);
+ssFlushTo(simStackPtr - 2);
 		popToReg(ssValue(1), ReceiverResultReg);
 		ssPop(2);
 		/* begin MoveR:R: */
 		genoperandoperand(MoveRR, ReceiverResultReg, TempReg);
 	}
 	else {
-		marshallSendArguments(1);
+marshallSendArguments(1);
 		/* begin MoveR:R: */
 		genoperandoperand(MoveRR, Arg0Reg, TempReg);
 	}
@@ -24669,7 +24786,7 @@ genSpecialSelectorArithmetic(void)
 		jumpNotSmallInts = genJumpNotSmallInteger(TempReg);
 	}
 	else {
-		/* begin genJumpNotSmallIntegersIn:andScratch:scratch: */
+/* begin genJumpNotSmallIntegersIn:andScratch:scratch: */
 		genoperandoperand(AndRR, ReceiverResultReg, TempReg);
 		/* begin genJumpNotSmallIntegerInScratchReg: */
 		jumpNotSmallInts = genJumpNotSmallInteger(TempReg);
@@ -24678,7 +24795,7 @@ genSpecialSelectorArithmetic(void)
 	switch ((primDescriptor->opcode)) {
 	case AddRR:
 		if (argIsInt) {
-			/* begin AddCq:R: */
+/* begin AddCq:R: */
 			literal = argInt - ConstZero;
 			anInstruction = genoperandoperand(AddCqR, argInt - ConstZero, ReceiverResultReg);
 			/* begin JumpNoOverflow: */
@@ -24687,17 +24804,17 @@ genSpecialSelectorArithmetic(void)
 			anInstruction1 = genoperandoperand(SubCqR, argInt - ConstZero, ReceiverResultReg);
 		}
 		else {
-			genRemoveSmallIntegerTagsInScratchReg(ReceiverResultReg);
+genRemoveSmallIntegerTagsInScratchReg(ReceiverResultReg);
 			/* begin AddR:R: */
 			genoperandoperand(AddRR, Arg0Reg, ReceiverResultReg);
 			/* begin JumpNoOverflow: */
 			jumpContinue = genConditionalBranchoperand(JumpNoOverflow, ((sqInt)0));
 			if (rcvrIsInt) {
-				/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 				anInstruction2 = genoperandoperand(MoveCqR, rcvrInt, ReceiverResultReg);
 			}
 			else {
-				/* begin SubR:R: */
+/* begin SubR:R: */
 				genoperandoperand(SubRR, Arg0Reg, ReceiverResultReg);
 				genSetSmallIntegerTagsIn(ReceiverResultReg);
 			}
@@ -24705,7 +24822,7 @@ genSpecialSelectorArithmetic(void)
 		break;
 	case SubRR:
 		if (argIsInt) {
-			/* begin SubCq:R: */
+/* begin SubCq:R: */
 			anInstruction3 = genoperandoperand(SubCqR, argInt - ConstZero, ReceiverResultReg);
 			/* begin JumpNoOverflow: */
 			jumpContinue = genConditionalBranchoperand(JumpNoOverflow, ((sqInt)0));
@@ -24714,7 +24831,7 @@ genSpecialSelectorArithmetic(void)
 			anInstruction4 = genoperandoperand(AddCqR, argInt - ConstZero, ReceiverResultReg);
 		}
 		else {
-			genRemoveSmallIntegerTagsInScratchReg(Arg0Reg);
+genRemoveSmallIntegerTagsInScratchReg(Arg0Reg);
 			/* begin SubR:R: */
 			genoperandoperand(SubRR, Arg0Reg, ReceiverResultReg);
 			/* begin JumpNoOverflow: */
@@ -24726,11 +24843,11 @@ genSpecialSelectorArithmetic(void)
 		break;
 	case AndRR:
 		if (argIsInt) {
-			/* begin AndCq:R: */
+/* begin AndCq:R: */
 			anInstruction5 = genoperandoperand(AndCqR, argInt, ReceiverResultReg);
 		}
 		else {
-			/* begin AndR:R: */
+/* begin AndR:R: */
 			genoperandoperand(AndRR, Arg0Reg, ReceiverResultReg);
 		}
 		/* begin Jump: */
@@ -24738,11 +24855,11 @@ genSpecialSelectorArithmetic(void)
 		break;
 	case OrRR:
 		if (argIsInt) {
-			/* begin OrCq:R: */
+/* begin OrCq:R: */
 			anInstruction6 = genoperandoperand(OrCqR, argInt, ReceiverResultReg);
 		}
 		else {
-			/* begin OrR:R: */
+/* begin OrR:R: */
 			genoperandoperand(OrRR, Arg0Reg, ReceiverResultReg);
 		}
 		/* begin Jump: */
@@ -24753,7 +24870,7 @@ genSpecialSelectorArithmetic(void)
 	}
 	jmpTarget(jumpNotSmallInts, gLabel());
 	if (argIsInt) {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction7 = genoperandoperand(MoveCqR, argInt, Arg0Reg);
 	}
 	index = byte0 - (
@@ -24783,7 +24900,7 @@ genSpecialSelectorClass(void)
 		ssAllocateRequiredRegand((topReg = SendNumArgsReg), ClassReg);
 	}
 	else {
-		ssAllocateRequiredReg(ClassReg);
+ssAllocateRequiredReg(ClassReg);
 	}
 	ssPush(1);
 	popToReg(ssTop(), topReg);
@@ -24836,7 +24953,7 @@ genSpecialSelectorComparison(void)
 	nextPC1 = bytecodePC + ((primDescriptor1->numBytes));
 	nExts = 0;
 	while (1) {
-		branchDescriptor1 = generatorAt((fetchByteofObject(nextPC1, methodObj)) + bytecodeSetOffset);
+branchDescriptor1 = generatorAt((fetchByteofObject(nextPC1, methodObj)) + bytecodeSetOffset);
 		if (!((branchDescriptor1->isExtension))) break;
 		nExts += 1;
 		nextPC1 += (branchDescriptor1->numBytes);
@@ -24864,16 +24981,16 @@ genSpecialSelectorComparison(void)
 		 || (rcvrIsInt);
 	}
 	if (!inlineCAB) {
-		return genSpecialSelectorSend();
+return genSpecialSelectorSend();
 	}
 	if (argIsInt) {
-		popToReg(ssValue(1), ReceiverResultReg);
+popToReg(ssValue(1), ReceiverResultReg);
 		ssPop(2);
 		/* begin MoveR:R: */
 		genoperandoperand(MoveRR, ReceiverResultReg, TempReg);
 	}
 	else {
-		marshallSendArguments(1);
+marshallSendArguments(1);
 		/* begin MoveR:R: */
 		genoperandoperand(MoveRR, Arg0Reg, TempReg);
 	}
@@ -24883,17 +25000,17 @@ genSpecialSelectorComparison(void)
 		jumpNotSmallInts = genJumpNotSmallInteger(TempReg);
 	}
 	else {
-		/* begin genJumpNotSmallIntegersIn:andScratch:scratch: */
+/* begin genJumpNotSmallIntegersIn:andScratch:scratch: */
 		genoperandoperand(AndRR, ReceiverResultReg, TempReg);
 		/* begin genJumpNotSmallIntegerInScratchReg: */
 		jumpNotSmallInts = genJumpNotSmallInteger(TempReg);
 	}
 	if (argIsInt) {
-		/* begin CmpCq:R: */
+/* begin CmpCq:R: */
 		anInstruction = genoperandoperand(CmpCqR, argInt, ReceiverResultReg);
 	}
 	else {
-		/* begin CmpR:R: */
+/* begin CmpR:R: */
 		genoperandoperand(CmpRR, Arg0Reg, ReceiverResultReg);
 	}
 	genConditionalBranchoperand(((branchDescriptor->isBranchTrue)
@@ -24904,7 +25021,7 @@ genSpecialSelectorComparison(void)
 	genoperand(Jump, ((sqInt)jumpTarget));
 	jmpTarget(jumpNotSmallInts, gLabel());
 	if (argIsInt) {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction1 = genoperandoperand(MoveCqR, argInt, Arg0Reg);
 	}
 	index = byte0 - (
@@ -25004,7 +25121,7 @@ genSpecialSelectorEqualsEqualsWithForwarders(void)
 	nextPC1 = bytecodePC + ((primDescriptor->numBytes));
 	nExts = 0;
 	while (1) {
-		branchDescriptor1 = generatorAt((fetchByteofObject(nextPC1, methodObj)) + bytecodeSetOffset);
+branchDescriptor1 = generatorAt((fetchByteofObject(nextPC1, methodObj)) + bytecodeSetOffset);
 		if (!((branchDescriptor1->isExtension))) break;
 		nExts += 1;
 		nextPC1 += (branchDescriptor1->numBytes);
@@ -25027,8 +25144,8 @@ genSpecialSelectorEqualsEqualsWithForwarders(void)
 	 || (unforwardRcvr));
 	argReg1 = (rcvrReg1 = NoReg);
 	if (unforwardArg) {
-		if (unforwardRcvr) {
-			/* begin allocateRegForStackTopTwoEntriesInto: */
+if (unforwardRcvr) {
+/* begin allocateRegForStackTopTwoEntriesInto: */
 			topRegistersMask = 0;
 			rTop1 = (rNext1 = NoReg);
 			if ((((ssTop())->type)) == SSRegister) {
@@ -25054,7 +25171,7 @@ genSpecialSelectorEqualsEqualsWithForwarders(void)
 			popToReg(ssValue(1), rcvrReg1);
 		}
 		else {
-			argReg1 = allocateRegForStackEntryAtnotConflictingWith(0, 0);
+argReg1 = allocateRegForStackEntryAtnotConflictingWith(0, 0);
 			popToReg(ssTop(), argReg1);
 			if (((ssValue(1))->spilled)) {
 				/* begin AddCq:R: */
@@ -25064,7 +25181,7 @@ genSpecialSelectorEqualsEqualsWithForwarders(void)
 		}
 	}
 	else {
-		assert(unforwardRcvr);
+assert(unforwardRcvr);
 		assert(!((((ssTop())->spilled))));
 		rcvrReg1 = allocateRegForStackEntryAtnotConflictingWith(1, 0);
 		popToReg(ssValue(1), rcvrReg1);
@@ -25085,30 +25202,30 @@ genSpecialSelectorEqualsEqualsWithForwarders(void)
 	label = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 	/* begin genEqualsEqualsComparisonArgIsConstant:rcvrIsConstant:argReg:rcvrReg: */
 	if (!unforwardArg) {
-		/* begin genCmpConstant:R: */
+/* begin genCmpConstant:R: */
 		constant = ((ssTop())->constant);
 		if (shouldAnnotateObjectReference(constant)) {
 			annotateobjRef(gCmpCwR(constant, rcvrReg), constant);
 		}
 		else {
-			/* begin CmpCq:R: */
+/* begin CmpCq:R: */
 			anInstruction = genoperandoperand(CmpCqR, constant, rcvrReg);
 		}
 	}
 	else {
-		if (!unforwardRcvr) {
-			/* begin genCmpConstant:R: */
+if (!unforwardRcvr) {
+/* begin genCmpConstant:R: */
 			constant1 = ((ssValue(1))->constant);
 			if (shouldAnnotateObjectReference(constant1)) {
 				annotateobjRef(gCmpCwR(constant1, argReg), constant1);
 			}
 			else {
-				/* begin CmpCq:R: */
+/* begin CmpCq:R: */
 				anInstruction1 = genoperandoperand(CmpCqR, constant1, argReg);
 			}
 		}
 		else {
-			/* begin CmpR:R: */
+/* begin CmpR:R: */
 			genoperandoperand(CmpRR, argReg, rcvrReg);
 		}
 	}
@@ -25116,12 +25233,14 @@ genSpecialSelectorEqualsEqualsWithForwarders(void)
 	if ((((fixupAt(nextPC - initialPC))->targetInstruction)) == 0) {
 
 		/* The next instruction is dead.  we can skip it. */
-		deadCode = 1;
+
+		/* The next instruction is dead.  we can skip it. */
+deadCode = 1;
 		ensureFixupAt(targetBytecodePC - initialPC);
 		ensureFixupAt(postBranchPC - initialPC);
 	}
 	else {
-		ssPushConstant(trueObject());
+ssPushConstant(trueObject());
 	}
 	assert(unforwardArg
 	 || (unforwardRcvr));
@@ -25134,17 +25253,19 @@ genSpecialSelectorEqualsEqualsWithForwarders(void)
 	else {
 
 		/* branchDescriptor is branchFalse */
-		fixup = ((usqInt)(ensureNonMergeFixupAt(targetBytecodePC - initialPC)));
+
+		/* branchDescriptor is branchFalse */
+fixup = ((usqInt)(ensureNonMergeFixupAt(targetBytecodePC - initialPC)));
 		/* begin JumpZero: */
 		jumpTarget1 = ((void *) (((usqInt)(ensureNonMergeFixupAt(postBranchPC - initialPC)))));
 		genConditionalBranchoperand(JumpZero, ((sqInt)jumpTarget1));
 	}
 	if (unforwardArg) {
-		if (unforwardRcvr) {
-			genEnsureOopInRegNotForwardedscratchRegjumpBackTo(argReg, TempReg, label);
+if (unforwardRcvr) {
+genEnsureOopInRegNotForwardedscratchRegjumpBackTo(argReg, TempReg, label);
 		}
 		else {
-			/* begin genEnsureOopInRegNotForwarded:scratchReg:ifForwarder:ifNotForwarder: */
+/* begin genEnsureOopInRegNotForwarded:scratchReg:ifForwarder:ifNotForwarder: */
 			assert(argReg != TempReg);
 
 			/* notionally
@@ -25164,17 +25285,17 @@ genSpecialSelectorEqualsEqualsWithForwarders(void)
 			/* begin Jump: */
 			genoperand(Jump, ((sqInt)(((void *) label))));
 			if (fixup == 0) {
-				/* begin Label */
+/* begin Label */
 				finished = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 			}
 			else {
-				finished = ((AbstractInstruction *) fixup);
+finished = ((AbstractInstruction *) fixup);
 			}
 			jmpTarget(imm, jmpTarget(ok, finished));
 		}
 	}
 	if (unforwardRcvr) {
-		/* begin genEnsureOopInRegNotForwarded:scratchReg:ifForwarder:ifNotForwarder: */
+/* begin genEnsureOopInRegNotForwarded:scratchReg:ifForwarder:ifNotForwarder: */
 		assert(rcvrReg != TempReg);
 
 		/* notionally
@@ -25194,11 +25315,11 @@ genSpecialSelectorEqualsEqualsWithForwarders(void)
 		/* begin Jump: */
 		genoperand(Jump, ((sqInt)(((void *) label))));
 		if (fixup == 0) {
-			/* begin Label */
+/* begin Label */
 			finished1 = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 		}
 		else {
-			finished1 = ((AbstractInstruction *) fixup);
+finished1 = ((AbstractInstruction *) fixup);
 		}
 		jmpTarget(imm1, jmpTarget(ok1, finished1));
 	}
@@ -25274,7 +25395,7 @@ genStorePopLiteralVariableneedsStoreCheckneedsImmutabilityCheck(sqInt popBoolean
 		annotateobjRef(gMoveCwR(association, ReceiverResultReg), association);
 	}
 	else {
-		/* begin MoveCq:R: */
+/* begin MoveCq:R: */
 		anInstruction = genoperandoperand(MoveCqR, association, ReceiverResultReg);
 	}
 	genEnsureObjInRegNotForwardedscratchReg(ReceiverResultReg, TempReg);
@@ -25282,7 +25403,7 @@ genStorePopLiteralVariableneedsStoreCheckneedsImmutabilityCheck(sqInt popBoolean
 	
 #  if IMMUTABILITY
 	if (needsImmCheck) {
-		ssAllocateRequiredReg(ClassReg);
+ssAllocateRequiredReg(ClassReg);
 		ssStoreAndReplacePoptoReg(popBoolean, ClassReg);
 		ssFlushTo(simStackPtr);
 		return genStoreWithImmutabilityCheckSourceRegslotIndexdestRegscratchRegneedsStoreCheckneedRestoreRcvr(ClassReg, ValueIndex, ReceiverResultReg, TempReg, needsStoreCheck, 0);
@@ -25323,7 +25444,7 @@ genStorePopMaybeContextReceiverVariableneedsStoreCheckneedsImmutabilityCheck(sqI
 	
 #  if IMMUTABILITY
 	if (needsImmCheck) {
-		mutableJump = genJumpMutablescratchReg(ReceiverResultReg, TempReg);
+mutableJump = genJumpMutablescratchReg(ReceiverResultReg, TempReg);
 		/* begin genStoreTrampolineCall: */
 		if (slotIndex >= (NumStoreTrampolines - 1)) {
 			/* begin MoveCq:R: */
@@ -25333,7 +25454,7 @@ genStorePopMaybeContextReceiverVariableneedsStoreCheckneedsImmutabilityCheck(sqI
 			(abstractInstruction1->annotation = IsRelativeCall);
 		}
 		else {
-			/* begin CallRT: */
+/* begin CallRT: */
 			abstractInstruction2 = genoperand(Call, ceStoreTrampolines[slotIndex]);
 			(abstractInstruction2->annotation = IsRelativeCall);
 		}
@@ -25364,7 +25485,7 @@ genStorePopMaybeContextReceiverVariableneedsStoreCheckneedsImmutabilityCheck(sqI
 	
 #  if IMMUTABILITY
 	if (needsImmCheck) {
-		jmpTarget(immutabilityFailure, gLabel());
+jmpTarget(immutabilityFailure, gLabel());
 	}
 
 #  endif /* IMMUTABILITY */
@@ -25390,7 +25511,7 @@ genStorePopReceiverVariableneedsStoreCheckneedsImmutabilityCheck(sqInt popBoolea
 	
 #  if IMMUTABILITY
 	if (needsImmCheck1) {
-		ssAllocateRequiredReg(ClassReg);
+ssAllocateRequiredReg(ClassReg);
 		ssStoreAndReplacePoptoReg(popBoolean, ClassReg);
 		ssFlushTo(simStackPtr);
 		return genStoreWithImmutabilityCheckSourceRegslotIndexdestRegscratchRegneedsStoreCheckneedRestoreRcvr(ClassReg, slotIndex, ReceiverResultReg, TempReg, needsStoreCheck1, 1);
@@ -25481,7 +25602,7 @@ genUpArrowReturn(void)
 
 
 	/* can't fall through */
-	deadCode = 1;
+deadCode = 1;
 	if (inBlock > 0) {
 		assert(needsFrame);
 		/* begin CallRT: */
@@ -25503,7 +25624,7 @@ genUpArrowReturn(void)
 #  endif /* IMMUTABILITY */
 
 	if (framelessReturn) {
-		/* begin MoveR:R: */
+/* begin MoveR:R: */
 		genoperandoperand(MoveRR, FPReg, SPReg);
 		/* begin PopR: */
 		genoperand(PopR, FPReg);
@@ -25511,7 +25632,7 @@ genUpArrowReturn(void)
 		genoperand(RetN, (methodOrBlockNumArgs + 1) * BytesPerWord);
 	}
 	else {
-		/* begin RetN: */
+/* begin RetN: */
 		offset = ((methodOrBlockNumArgs > 2)
 		 || (regArgsHaveBeenPushed)
 			? (methodOrBlockNumArgs + 1) * BytesPerWord
@@ -25559,10 +25680,10 @@ initSimStackForFramefulMethod(sqInt startpc)
 	(optStatus.ssEntry = (&simSelf));
 
 	/* N.B. Includes num args */
-	simSpillBase = methodOrBlockNumTemps;
+simSpillBase = methodOrBlockNumTemps;
 
 	/* args */
-	simStackPtr = simSpillBase - 1;
+simStackPtr = simSpillBase - 1;
 	for (i = 0; i < methodOrBlockNumArgs; i += 1) {
 		desc = simStackAt(i);
 		(desc->type = SSBaseOffset);
@@ -25642,7 +25763,7 @@ initSimStackForFramelessMethod(sqInt startpc)
 		}
 	}
 	else {
-		for (i = 0; i < methodOrBlockNumArgs; i += 1) {
+for (i = 0; i < methodOrBlockNumArgs; i += 1) {
 			desc = simStackAt(i);
 			(desc->type = SSBaseOffset);
 			(desc->registerr = SPReg);
@@ -25665,7 +25786,7 @@ liveRegisters(void)
 		regsSet = 0;
 	}
 	else {
-		regsSet = 1ULL << ReceiverResultReg;
+regsSet = 1ULL << ReceiverResultReg;
 		if ((methodOrBlockNumArgs <= 2)
 		 && (methodOrBlockNumArgs > 0)) {
 			regsSet = regsSet | (1ULL << Arg0Reg);
@@ -25723,6 +25844,10 @@ marshallSendArguments(sqInt numArgs)
 		/* If there are no spills and no references to ReceiverResultReg
 		   the fetch of ReceiverResultReg from the stack can be avoided
 		   by assigning directly to ReceiverResultReg and pushing it. */
+
+		/* If there are no spills and no references to ReceiverResultReg
+		   the fetch of ReceiverResultReg from the stack can be avoided
+		   by assigning directly to ReceiverResultReg and pushing it. */
 		numSpilled = numberOfSpillsInTopNItems(numArgs + 1);
 		anyRefs = anyReferencesToRegisterinTopNItems(ReceiverResultReg, numArgs + 1);
 		if ((numSpilled > 0)
@@ -25731,7 +25856,7 @@ marshallSendArguments(sqInt numArgs)
 			storeToReg(simStackAt(simStackPtr - numArgs), ReceiverResultReg);
 		}
 		else {
-			cascade0 = simStackAt(simStackPtr - numArgs);
+cascade0 = simStackAt(simStackPtr - numArgs);
 			storeToReg(cascade0, ReceiverResultReg);
 			(cascade0->type = SSRegister);
 			(cascade0->registerr = ReceiverResultReg);
@@ -25744,19 +25869,23 @@ marshallSendArguments(sqInt numArgs)
 		   so last to first so e.g. previous contents don't get overwritten.
 		   Also check for any arg registers in use by other args. */
 		if (numArgs > 0) {
+
+			/* Move the args to the register arguments, being careful to do
+			   so last to first so e.g. previous contents don't get overwritten.
+			   Also check for any arg registers in use by other args. */
 			if (numArgs > 1) {
-				ssAllocateRequiredRegupThrough(Arg0Reg, simStackPtr - 2);
+ssAllocateRequiredRegupThrough(Arg0Reg, simStackPtr - 2);
 				ssAllocateRequiredRegupThrough(Arg1Reg, simStackPtr - 1);
 			}
 			else {
-				ssAllocateRequiredRegupThrough(Arg0Reg, simStackPtr - 1);
+ssAllocateRequiredRegupThrough(Arg0Reg, simStackPtr - 1);
 			}
 		}
 		if (numArgs > 1) {
-			popToReg(simStackAt(simStackPtr), Arg1Reg);
+popToReg(simStackAt(simStackPtr), Arg1Reg);
 		}
 		if (numArgs > 0) {
-			popToReg(simStackAt((simStackPtr - numArgs) + 1), Arg0Reg);
+popToReg(simStackAt((simStackPtr - numArgs) + 1), Arg0Reg);
 		}
 		popToReg(simStackAt(simStackPtr - numArgs), ReceiverResultReg);
 	}
@@ -25813,10 +25942,10 @@ mergeWithFixupIfRequired(BytecodeFixup *fixup)
 	if (deadCode) {
 
 		/* case 3 */
-		simStackPtr = (fixup->simStackPtr);
+simStackPtr = (fixup->simStackPtr);
 	}
 	else {
-		ssFlushTo(simStackPtr);
+ssFlushTo(simStackPtr);
 	}
 	deadCode = 0;
 	if (((fixup->simStackPtr)) == UnknownSimStackPtrFlag) {
@@ -25903,8 +26032,8 @@ prevInstIsPCAnnotated(void)
 	}
 	prevIndex = opcodeIndex - 1;
 	while (1) {
-		if (prevIndex <= 0) {
-			return 0;
+if (prevIndex <= 0) {
+return 0;
 		}
 		prevInst = abstractInstructionAt(prevIndex);
 		if (isPCMappedAnnotation((!((prevInst->annotation))
@@ -25946,7 +26075,7 @@ reinitializeFixupsFromthrough(sqInt start, sqInt end)
 	pc = start;
 	nExts = 0;
 	while (pc <= end) {
-		/* begin reinitialize */
+/* begin reinitialize */
 		self_in_reinitialize = fixupAt(pc - initialPC);
 		(self_in_reinitialize->targetInstruction) = 0;
 		(self_in_reinitialize->simStackPtr) = 0;
@@ -25963,7 +26092,7 @@ reinitializeFixupsFromthrough(sqInt start, sqInt end)
 			pc = (pc + ((descriptor->numBytes))) + distance;
 		}
 		else {
-			pc += (descriptor->numBytes);
+pc += (descriptor->numBytes);
 		}
 		nExts = ((descriptor->isExtension)
 			? nExts + 1
@@ -25996,7 +26125,7 @@ scanBlock(BlockStart *blockStart)
 	framelessStackDelta = (nExts = (extA = (extB = 0)));
 	pushingNils = 1;
 	while (pc < end) {
-		byte0 = (fetchByteofObject(pc, methodObj)) + bytecodeSetOffset;
+byte0 = (fetchByteofObject(pc, methodObj)) + bytecodeSetOffset;
 		descriptor = generatorAt(byte0);
 		if ((descriptor->isExtension)) {
 			loadSubsequentBytesForDescriptorat(descriptor, pc);
@@ -26008,7 +26137,7 @@ scanBlock(BlockStart *blockStart)
 				needsFrame = 1;
 			}
 			else {
-				framelessStackDelta += (descriptor->stackDelta);
+framelessStackDelta += (descriptor->stackDelta);
 			}
 		}
 		/* begin maybeNoteDescriptor:blockStart: */
@@ -26031,12 +26160,25 @@ scanBlock(BlockStart *blockStart)
 			   Rarely we may end up over-estimating.  We will correct by checking the stack depth
 			   at the end of the block in compileBlockBodies. */
 			if (((numPushNils = numPushNilsFunction(descriptor, pc, nExts, methodObj))) > 0) {
+
+				/* Count the initial number of pushed nils acting as temp initializers.  We can't tell
+				   whether an initial pushNil is an operand reference or a temp initializer, except
+				   when the pushNil is a jump target (has a fixup), which never happens:
+				   self systemNavigation browseAllSelect:
+				   [:m| | ebc |
+				   (ebc := m embeddedBlockClosures
+				   select: [:ea| ea decompile statements first isMessage]
+				   thenCollect: [:ea| ea decompile statements first selector]) notEmpty
+				   and: [(#(whileTrue whileFalse whileTrue: whileFalse:) intersection: ebc) notEmpty]]
+				   or if the bytecode set has a push multiple nils bytecode.  We simply count initial nils.
+				   Rarely we may end up over-estimating.  We will correct by checking the stack depth
+				   at the end of the block in compileBlockBodies. */
 				assert((((descriptor->numBytes)) == 1)
 				 || (((descriptor->generator)) == genPushClosureTempsBytecode));
 				(blockStart->numInitialNils = ((blockStart->numInitialNils)) + numPushNils);
 			}
 			else {
-				pushingNils = 0;
+pushingNils = 0;
 			}
 		}
 		pc = (pc + ((descriptor->numBytes))) + (((descriptor->isBlockCreation)
@@ -26046,7 +26188,7 @@ scanBlock(BlockStart *blockStart)
 			nExts += 1;
 		}
 		else {
-			nExts = (extA = (extB = 0));
+nExts = (extA = (extB = 0));
 		}
 		prevBCDescriptor = descriptor;
 	}
@@ -26096,7 +26238,7 @@ scanMethod(void)
 			if (((descriptor->opcode)) == Nop) {
 
 				/* unknown bytecode tag; see Cogit class>>#generatorTableFrom: */
-				return EncounteredUnknownBytecode;
+return EncounteredUnknownBytecode;
 			}
 			loadSubsequentBytesForDescriptorat(descriptor, pc);
 			((descriptor->generator))();
@@ -26110,13 +26252,19 @@ scanMethod(void)
 			 || (((descriptor->needsFrameFunction))(framelessStackDelta))) {
 
 				/* With immutability we win simply by avoiding a frame build if the receiver is young and not immutable. */
-				
+
 #        if IMMUTABILITY
-				if ((descriptor->is1ByteInstVarStore)) {
-					useTwoPaths = 1;
+
+				/* With immutability we win simply by avoiding a frame build if the receiver is young and not immutable. */
+if ((descriptor->is1ByteInstVarStore)) {
+
+					/* With immutability we win simply by avoiding a frame build if the receiver is young and not immutable. */
+
+					/* With immutability we win simply by avoiding a frame build if the receiver is young and not immutable. */
+useTwoPaths = 1;
 				}
 				else {
-					needsFrame = 1;
+needsFrame = 1;
 					useTwoPaths = 0;
 				}
 
@@ -26130,17 +26278,17 @@ scanMethod(void)
 			else {
 
 				/* Without immutability we win if there are two or more stores and the receiver is new. */
-				framelessStackDelta += (descriptor->stackDelta);
+framelessStackDelta += (descriptor->stackDelta);
 				
 #        if IMMUTABILITY
 
 #        else /* IMMUTABILITY */
 				if ((descriptor->is1ByteInstVarStore)) {
 					if (seenInstVarStore) {
-						useTwoPaths = 1;
+useTwoPaths = 1;
 					}
 					else {
-						seenInstVarStore = 1;
+seenInstVarStore = 1;
 					}
 				}
 
@@ -26155,7 +26303,7 @@ scanMethod(void)
 				initializeFixupAt(targetPC - initialPC);
 			}
 			else {
-				latestContinuation = ((latestContinuation < targetPC) ? targetPC : latestContinuation);
+latestContinuation = ((latestContinuation < targetPC) ? targetPC : latestContinuation);
 			}
 		}
 		if ((descriptor->isBlockCreation)) {
@@ -26169,7 +26317,7 @@ scanMethod(void)
 			nExts += 1;
 		}
 		else {
-			nExts = (extA = (extB = 0));
+nExts = (extA = (extB = 0));
 		}
 		prevBCDescriptor = descriptor;
 	}
@@ -26235,7 +26383,7 @@ ssAllocateRequiredRegMaskupThrough(sqInt requiredRegsMask, sqInt stackPtr)
 	if (!((liveRegs & requiredRegsMask) == 0)) {
 
 		/* Some live, must spill */
-		ssFlushTo(lastRequired);
+ssFlushTo(lastRequired);
 		assert(((liveRegisters()) & requiredRegsMask) == 0);
 	}
 }
@@ -26357,7 +26505,7 @@ ssPushAnnotatedConstant(sqInt literal)
 		abstractInstruction = gen(Nop);
 	}
 	else {
-		/* begin Label */
+/* begin Label */
 		abstractInstruction = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
 	}
 	(abstractInstruction->annotation = HasBytecodePC);
@@ -26449,8 +26597,8 @@ ssStoreAndReplacePoptoReg(sqInt popBoolean, sqInt reg)
 	ssStorePoptoReg(popBoolean
 	 || (topSpilled), reg);
 	if (!popBoolean) {
-		if (!topSpilled) {
-			ssPop(1);
+if (!topSpilled) {
+ssPop(1);
 		}
 		ssPushRegister(reg);
 	}
@@ -26486,11 +26634,11 @@ static void NoDbgRegParms
 ssStorePoptoReg(sqInt popBoolean, sqInt reg)
 {
 	if (popBoolean) {
-		popToReg(ssTop(), reg);
+popToReg(ssTop(), reg);
 		ssPop(1);
 	}
 	else {
-		storeToReg(ssTop(), reg);
+storeToReg(ssTop(), reg);
 	}
 }
 
@@ -26542,7 +26690,7 @@ tryCollapseTempVectorInitializationOfSize(sqInt slots)
     sqInt tempIndex;
 
 	if (slots != 1) {
-		return 0;
+return 0;
 	}
 	pushArrayDesc = generatorAt(bytecodeSetOffset + (fetchByteofObject(bytecodePC, methodObj)));
 	assert(((pushArrayDesc->generator)) == genPushNewArrayBytecode);
@@ -26551,7 +26699,7 @@ tryCollapseTempVectorInitializationOfSize(sqInt slots)
 		tempIndex = (fetchByteofObject(bytecodePC + ((pushArrayDesc->numBytes)), methodObj)) & 7;
 	}
 	else {
-		if (!(((storeArrayDesc->generator)) == genLongStoreAndPopTemporaryVariableBytecode)) {
+if (!(((storeArrayDesc->generator)) == genLongStoreAndPopTemporaryVariableBytecode)) {
 			return 0;
 		}
 		tempIndex = fetchByteofObject((bytecodePC + ((pushArrayDesc->numBytes))) + 1, methodObj);
@@ -26576,7 +26724,7 @@ tryCollapseTempVectorInitializationOfSize(sqInt slots)
 	evaluateat(storeArrayDesc, bytecodePC + ((pushArrayDesc->numBytes)));
 
 	/* + pushArrayDesc numBytes this gets added by nextBytecodePCFor:at:exts:in: */
-	bytecodePC = ((bytecodePC + ((storeArrayDesc->numBytes))) + ((pushValueDesc->numBytes))) + ((storeValueDesc->numBytes));
+bytecodePC = ((bytecodePC + ((storeArrayDesc->numBytes))) + ((pushValueDesc->numBytes))) + ((storeValueDesc->numBytes));
 	return 1;
 }
 
