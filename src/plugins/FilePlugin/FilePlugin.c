@@ -40,7 +40,7 @@ static char __buildInfo[] = "FilePlugin VMMaker.oscog-eem.1950 uuid: b4089b49-14
 #define DirBadPath 2
 #define DirNoMoreEntries 1
 #if !defined(PharoVM) /* Allow this to be overridden on the compiler command line */
-# define PharoVM 1
+# define PharoVM 0
 #endif
 #define PrimErrBadArgument 3
 #define PrimErrBadIndex 4

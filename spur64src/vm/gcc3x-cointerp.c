@@ -15605,7 +15605,7 @@ printFrameWithSP(char *theFP, char *theSP)
     usqInt index;
     sqInt methodField;
     usqInt numArgs;
-    usqInt numTemps;
+    sqInt numTemps;
     char *rcvrAddress;
     sqInt rcvrOrClosure;
     sqInt theMethod;
@@ -35089,7 +35089,7 @@ changeClassOfto(sqInt rcvr, sqInt argClass)
     sqInt fmt;
     usqInt instBytes;
     sqInt instFormat;
-    usqInt newFormat;
+    sqInt newFormat;
     sqInt normalizedInstFormat;
     usqInt numBytes;
     usqInt numSlots;
@@ -35258,7 +35258,7 @@ return PrimErrBadReceiver;
 	/* begin set:classIndexTo:formatTo: */
 	assert(((classIndex >= 0) && (classIndex <= (classIndexMask()))));
 	assert(((newFormat >= 0) && (newFormat <= (formatMask()))));
-	longAtput(rcvr, ((longAt(rcvr)) & (~((((sqInt)((usqInt)((formatMask())) << (formatShift())))) + (classIndexMask())))) + (classIndex + (newFormat << (formatShift()))));
+	longAtput(rcvr, ((longAt(rcvr)) & (~((((sqInt)((usqInt)((formatMask())) << (formatShift())))) + (classIndexMask())))) + (classIndex + (((sqInt)((usqInt)(newFormat) << (formatShift()))))));
 	return 0;
 }
 
@@ -37116,7 +37116,7 @@ scavengeFutureSurvivorSpaceStartingAt(sqInt initialAddress)
     usqInt numSlots1;
     usqInt numSlots2;
     sqInt obj;
-    usqInt ptr;
+    sqInt ptr;
     usqInt slotBytes;
 
 	ptr = initialAddress;
@@ -48574,7 +48574,7 @@ maybeSplObj(sqInt index)
 static sqInt NoDbgRegParms
 moveARunOfObjectsStartingAtupTo(usqInt startAddress, usqInt limit)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
-    usqInt chunkBytes;
+    sqInt chunkBytes;
     sqInt classIndex;
     sqInt classIndex1;
     sqInt dest;
@@ -55028,8 +55028,8 @@ writeSegmentnextSegmenttoFile(SpurSegmentInfo *segment, SpurSegmentInfo *nextSeg
 {
     usqLong firstSavedBridgeWord;
     sqInt nWritten;
-    sqInt pier1;
-    sqInt pier2;
+    usqInt pier1;
+    usqInt pier2;
     usqLong secondSavedBridgeWord;
 
 	pier1 = (((segment->segSize)) + ((segment->segStart))) - (2 * BaseHeaderSize);
@@ -65029,7 +65029,7 @@ if (((next & (tagMask())) == 0)
 static sqInt
 retryPrimitiveOnFailure(void)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
-    sqInt accessorDepth;
+    signed char accessorDepth;
     sqInt canRetry;
     sqInt firstBytecode;
     sqInt followDone;

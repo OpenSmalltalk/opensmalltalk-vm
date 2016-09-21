@@ -6,14 +6,12 @@
 	ByteArray Collections-Native-TheIntegrator.19 uuid: a77ff4e7-d8e2-407e-a3c9-0e2dc3895a4d
 	ByteString Collections-Strings-TheIntegrator.415 uuid: a443030d-28b7-4881-b7ac-3c6ce3714aa5
 	SampledSound Sound-GuillermoPolito.69 uuid: ab9cfd18-4610-4306-ae3d-5b258f0baed3
-	String Collections-Strings-TheIntegrator.415 uuid: a443030d-28b7-4881-b7ac-3c6ce3714aa5
  */
 static char __buildInfo[] = "MiscPrimitivePlugin VMMaker.oscog-eem.1950 uuid: b4089b49-1494-49d2-8966-57cba5c92194\n\
 Bitmap Graphics-Primitives-TheIntegrator.189 uuid: d7816753-f913-4052-b9f7-112f08db9526\n\
 ByteArray Collections-Native-TheIntegrator.19 uuid: a77ff4e7-d8e2-407e-a3c9-0e2dc3895a4d\n\
 ByteString Collections-Strings-TheIntegrator.415 uuid: a443030d-28b7-4881-b7ac-3c6ce3714aa5\n\
-SampledSound Sound-GuillermoPolito.69 uuid: ab9cfd18-4610-4306-ae3d-5b258f0baed3\n\
-String Collections-Strings-TheIntegrator.415 uuid: a443030d-28b7-4881-b7ac-3c6ce3714aa5 " __DATE__ ;
+SampledSound Sound-GuillermoPolito.69 uuid: ab9cfd18-4610-4306-ae3d-5b258f0baed3 " __DATE__ ;
 
 
 
@@ -45,13 +43,13 @@ String Collections-Strings-TheIntegrator.415 uuid: a443030d-28b7-4881-b7ac-3c6ce
 /*** Function Prototypes ***/
 static sqInt encodeBytesOfinat(sqInt anInt, unsigned char *ba, sqInt i);
 static sqInt encodeIntinat(sqInt anInt, unsigned char *ba, sqInt i);
+static sqInt findSubstringinstartingAtmatchTable(sqInt key, sqInt body, sqInt start, sqInt matchTable);
 EXPORT(const char*) getModuleName(void);
 EXPORT(sqInt) primitiveCompareString(void);
 EXPORT(sqInt) primitiveCompressToByteArray(void);
 EXPORT(sqInt) primitiveConvert8BitSigned(void);
 EXPORT(sqInt) primitiveDecompressFromByteArray(void);
 EXPORT(sqInt) primitiveFindFirstInString(void);
-EXPORT(sqInt) primitiveFindSubstring(void);
 EXPORT(sqInt) primitiveIndexOfAsciiInString(void);
 EXPORT(sqInt) primitiveStringHash(void);
 EXPORT(sqInt) primitiveTranslateStringWithTable(void);
@@ -141,6 +139,13 @@ ba[i] = ((anInt / 256) + 224);
 ba[(i + 1) + j] = ((((usqInt) anInt) >> ((3 - j) * 8)) & 0xFF);
 	}
 	return (i + 1) + 4;
+}
+
+	/* ByteString>>#findSubstring:in:startingAt:matchTable: */
+static sqInt
+findSubstringinstartingAtmatchTable(sqInt key, sqInt body, sqInt start, sqInt matchTable)
+{
+	return findInstartingAtmatchTable(key, body, start, matchTable);
 }
 
 
@@ -705,79 +710,6 @@ if (failed()) {
 	return null;
 }
 
-
-/*	Answer the index in the string body at which the substring key first
-	occurs, at or beyond start. The match is determined using matchTable,
-	which can be used to effect, eg, case-insensitive matches. If no match is
-	found, zero will be returned.
-	
-	The algorithm below is not optimum -- it is intended to be translated to C
-	which will go so fast that it wont matter.
- */
-
-	/* String>>#primitiveFindSubstring */
-EXPORT(sqInt)
-primitiveFindSubstring(void)
-{
-    unsigned char *body;
-    sqInt index;
-    unsigned char *key;
-    unsigned char *matchTable;
-    sqInt rcvr;
-    sqInt start;
-    sqInt startIndex;
-    sqInt startIndexLimiT;
-
-	rcvr = stackValue(4);
-	if (!(isBytes(stackValue(3)))) {
-		return primitiveFail();
-	}
-	key = arrayValueOf(stackValue(3));
-	key -= 1;
-	if (!(isBytes(stackValue(2)))) {
-		return primitiveFail();
-	}
-	body = arrayValueOf(stackValue(2));
-	body -= 1;
-	start = stackIntegerValue(1);
-	if (!(isBytes(stackValue(0)))) {
-		return primitiveFail();
-	}
-	matchTable = arrayValueOf(stackValue(0));
-	matchTable -= 1;
-	if (failed()) {
-		return null;
-	}
-	if ((sizeOfSTArrayFromCPrimitive(key + 1)) == 0) {
-		if (failed()) {
-			return null;
-		}
-		pop(5);
-		pushInteger(0);
-		return null;
-	}
-	for (startIndex = start, startIndexLimiT = (((sizeOfSTArrayFromCPrimitive(body + 1)) - (sizeOfSTArrayFromCPrimitive(key + 1))) + 1); startIndex <= startIndexLimiT; startIndex += 1) {
-		index = 1;
-		while ((matchTable[(asciiValue(body[(startIndex + index) - 1])) + 1]) == (matchTable[(asciiValue(key[index])) + 1])) {
-			if (index == (sizeOfSTArrayFromCPrimitive(key + 1))) {
-				if (failed()) {
-					return null;
-				}
-				pop(5);
-				pushInteger(startIndex);
-				return null;
-			}
-			index += 1;
-		}
-	}
-	if (failed()) {
-		return null;
-	}
-	pop(5);
-	pushInteger(0);
-	return null;
-}
-
 	/* ByteString class>>#primitiveIndexOfAsciiInString */
 EXPORT(sqInt)
 primitiveIndexOfAsciiInString(void)
@@ -947,7 +879,6 @@ void* MiscPrimitivePlugin_exports[][3] = {
 	{(void*)_m, "primitiveConvert8BitSigned\000\000", (void*)primitiveConvert8BitSigned},
 	{(void*)_m, "primitiveDecompressFromByteArray\000\001", (void*)primitiveDecompressFromByteArray},
 	{(void*)_m, "primitiveFindFirstInString\000\000", (void*)primitiveFindFirstInString},
-	{(void*)_m, "primitiveFindSubstring\000\000", (void*)primitiveFindSubstring},
 	{(void*)_m, "primitiveIndexOfAsciiInString\000\000", (void*)primitiveIndexOfAsciiInString},
 	{(void*)_m, "primitiveStringHash\000\000", (void*)primitiveStringHash},
 	{(void*)_m, "primitiveTranslateStringWithTable\000\000", (void*)primitiveTranslateStringWithTable},
@@ -962,7 +893,6 @@ signed char primitiveCompressToByteArrayAccessorDepth = 0;
 signed char primitiveConvert8BitSignedAccessorDepth = 0;
 signed char primitiveDecompressFromByteArrayAccessorDepth = 1;
 signed char primitiveFindFirstInStringAccessorDepth = 0;
-signed char primitiveFindSubstringAccessorDepth = 0;
 signed char primitiveIndexOfAsciiInStringAccessorDepth = 0;
 signed char primitiveStringHashAccessorDepth = 0;
 signed char primitiveTranslateStringWithTableAccessorDepth = 0;

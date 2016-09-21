@@ -2479,7 +2479,7 @@ bytecodePCForstartBcpcin(sqInt mcpc, sqInt startbcpc, CogBlockMethod *cogMethod)
     sqInt byte;
     BytecodeDescriptor *descriptor;
     sqInt distance;
-    usqInt endbcpc;
+    sqInt endbcpc;
     CogMethod *homeMethod;
     sqInt isBackwardBranch;
     sqInt isInBlock;
@@ -5597,12 +5597,12 @@ static sqInt NoDbgRegParms
 generateMapAtstart(sqInt addressOrNull, sqInt startAddress)
 {
     unsigned char annotation;
-    sqInt delta;
+    usqInt delta;
     sqInt i;
     AbstractInstruction *instruction;
     sqInt length;
-    sqInt location;
-    sqInt mapEntry;
+    usqInt location;
+    usqInt mapEntry;
     sqInt maxDelta;
     usqInt mcpc;
 
@@ -7612,7 +7612,7 @@ mcPCForBackwardBranchstartBcpcin(sqInt bcpc, sqInt startbcpc, CogBlockMethod *co
     sqInt byte;
     BytecodeDescriptor *descriptor;
     sqInt distance;
-    usqInt endbcpc;
+    sqInt endbcpc;
     CogMethod *homeMethod;
     sqInt isBackwardBranch;
     sqInt isInBlock;
@@ -21592,7 +21592,7 @@ mapPCDataForinto(CogMethod *cogMethod, sqInt arrayObj)
     CogBlockMethod *cogMethod1;
     BytecodeDescriptor *descriptor;
     sqInt distance;
-    usqInt endbcpc;
+    sqInt endbcpc;
     sqInt errCode;
     CogMethod *homeMethod;
     sqInt isBackwardBranch;
