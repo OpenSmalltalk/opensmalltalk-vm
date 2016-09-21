@@ -3,8 +3,7 @@
 # Do make init to allow make -n to function.
 #
 
-VMSRCDIR:=../../pharosrc/vm
-PLUGINSRCDIR:=../../pharosrc/plugins
+VMSRCDIR:=../../spursrc/vm
 VM:=Pharo
 COGDEFS:=-DPharoVM=1
 APPNAME:=Pharo
