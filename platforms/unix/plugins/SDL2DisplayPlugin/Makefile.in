@@ -1,0 +1,17 @@
+# Makefile.in for FT2Plugin on Unix
+#
+
+[make_cfg]
+[make_plg]
+
+TARGET= SDL2DisplayPlugin$a
+OBJS= SDL2DisplayPlugin$o 
+XINCLUDES= [includes] -I/usr/include/SDL2
+
+$(TARGET) : $(OBJS) Makefile
+	$(LINK) $(TARGET) $(OBJS) -lSDL2
+	$(RANLIB) $(TARGET)
+
+[make_targets]
+
+.force :
