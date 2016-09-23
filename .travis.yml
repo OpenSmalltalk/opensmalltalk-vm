@@ -226,6 +226,12 @@ matrix:
     dist: trusty
     group: edge
   - os: linux
+    env: ARCH="linux32ARMv6" FLAVOR="pharo.cog.spur" CHROOT="schroot -p -c rpi --
+      bash -c "
+    sudo: required
+    dist: trusty
+    group: edge
+  - os: linux
     env: ARCH="linux32ARMv6" FLAVOR="squeak.stack.spur" CHROOT="schroot -p -c rpi
       -- bash -c "
     sudo: required
