@@ -149,7 +149,7 @@ static int maybeOpenDir(char *unixPath)
   return true;
 }
 
-#ifdef PharoVM
+#if PharoVM
 sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
 /* outputs: */  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
 		sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt * posixPermissions, sqInt *isSymlink)
@@ -180,7 +180,7 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   *modificationDate = 0;
   *isDirectory      = false;
   *sizeIfFile       = 0;
-#ifdef PharoVM
+#if PharoVM
   *posixPermissions = 0;
   *isSymlink        = false;
 #endif
@@ -249,7 +249,7 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   else
     *sizeIfFile= statBuf.st_size;
 
-#ifdef PharoVM
+#if PharoVM
   *isSymlink = S_ISLNK(statBuf.st_mode);
   *posixPermissions = statBuf.st_mode & 0777;
 #endif
@@ -258,7 +258,7 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
 }
 
 
-#ifdef PharoVM
+#if PharoVM
 sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString, sqInt nameStringLength,
 /* outputs: */  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
 		sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink)
@@ -286,7 +286,7 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString
   *modificationDate = 0;
   *isDirectory      = false;
   *sizeIfFile       = 0;
-#ifdef PharoVM
+#if PharoVM
   *posixPermissions = 0;
   *isSymlink        = false;
 #endif
@@ -318,7 +318,7 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString
   else
     *sizeIfFile= statBuf.st_size;
   
-#ifdef PharoVM
+#if PharoVM
   *isSymlink = S_ISLNK(statBuf.st_mode);
   *posixPermissions = statBuf.st_mode & 0777;
 #endif

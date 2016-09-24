@@ -45,8 +45,9 @@
 #import "sq.h"
 
 extern SqueakOSXAppDelegate *gDelegateApp;
+#define thePListInterface ((sqSqueakOSXInfoPlistInterface *)gDelegateApp.squeakApplication.infoPlistInterfaceLogic)
 
-#define dprintf(ARGS) do { if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakDebug) fprintf ARGS; } while (0)
+#define dprintf(ARGS) do { if (thePListInterface.SqueakDebug) fprintf ARGS; } while (0)
 
 #if defined(HAVE_LIBDL)	/* non-starter without this! */
 
@@ -98,7 +99,7 @@ tryLoadingInternals(NSString *libNameString)
 	    dprintf((stderr, "tryLoading %s\n", libName));
 		if ((handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL)))
 			return handle;
-		if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakDebug) {
+		if (thePListInterface.SqueakDebug) {
 			const char* why = dlerror();
 			fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, why);
 		}
@@ -139,7 +140,11 @@ tryLoadingVariations(NSString *dirNameString, char *moduleName)
 	static char *prefixes[]= { "", "lib", 0 };
 	static char *suffixes[]= { "", "so", "dylib",0 };
 
-	if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakPluginsBuiltInOrLocalOnly)
+	if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly)
+		return NULL;
+
+	/* don't prepend dirNameString to absolute paths */
+	if (*moduleName == '/')
 		return NULL;
 
 	for (prefix= prefixes;  *prefix;  ++prefix)
@@ -158,8 +163,9 @@ tryLoadingVariations(NSString *dirNameString, char *moduleName)
 	return NULL;
 }
 
-#ifdef PharoVM
-static void *tryLoadingLinked(char *libName)
+#if PharoVM
+static void *
+tryLoadingLinked(char *libName)
 {
     void *handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
     DPRINTF((stderr, __FILE__ " %d tryLoadingLinked dlopen(%s) = %p\n", __LINE__, libName, handle));
@@ -169,9 +175,24 @@ static void *tryLoadingLinked(char *libName)
 # endif
     return handle;
 }
-#else
-# define tryLoadingLinked(libName) 0
-#endif
+#else /* PharoVM */
+static void *
+tryLoadingLinked(char *libName)
+{
+    void *handle;
+
+	if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly)
+		return NULL;
+
+	handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
+    DPRINTF((stderr, __FILE__ " %d tryLoadingLinked dlopen(%s) = %p\n", __LINE__, libName, handle));
+# if DEBUG
+    if(handle != 0)
+        printf("%s: loaded plugin `%s'\n", exeName, libName);
+# endif
+    return handle;
+}
+#endif /* PharoVM */
 
 /*  Find and load the named module.  Answer 0 if not found (do NOT fail
  *  the primitive!).
@@ -205,7 +226,7 @@ ioLoadModuleRaw(char *pluginName)
 	NSString *pluginDirPath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent: @"Contents/MacOS/Plugins"];
 	NSString *vmDirPath = [[NSBundle mainBundle] resourcePath];
 
-	if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakPluginsBuiltInOrLocalOnly) {
+	if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly) {
 	  if ((   handle= tryLoadingLinked(                     pluginName))
           || (handle= tryLoadingVariations( pluginDirPath,	pluginName))
 		  || (handle= tryLoadingBundle( vmDirPath,			pluginName))
@@ -259,7 +280,7 @@ ioLoadModuleRaw(char *pluginName)
 				strncpy(workingData,pluginName,pluginNameLength-LODF);
 				workingData[pluginNameLength-LODF] = 0x00;
 				path = [vmDirPath stringByAppendingPathComponent: @(pluginName)];
-				if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakPluginsBuiltInOrLocalOnly) {
+				if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly) {
 					path2 = [path stringByAppendingPathComponent: @(workingData)];
 					if ((handle = tryLoadingInternals(path2)))
 						return handle;
@@ -269,7 +290,7 @@ ioLoadModuleRaw(char *pluginName)
 				}
 				path = [pluginDirPath stringByAppendingPathComponent: @(pluginName)];
 
-				if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakPluginsBuiltInOrLocalOnly) {
+				if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly) {
 					path2 = [path stringByAppendingPathComponent: @(workingData)];
 					if ((handle = tryLoadingInternals(path2)))
 						return handle;
@@ -279,7 +300,7 @@ ioLoadModuleRaw(char *pluginName)
 				}
 
 				path = [systemFolder stringByAppendingPathComponent: @(pluginName)];
-				if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakPluginsBuiltInOrLocalOnly) {
+				if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly) {
 					path2 = [path stringByAppendingPathComponent: @(workingData)];
 					if ((handle = tryLoadingInternals(path2)))
 						return handle;
@@ -290,7 +311,7 @@ ioLoadModuleRaw(char *pluginName)
 			}
 		}
 
-		if (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakPluginsBuiltInOrLocalOnly)
+		if (thePListInterface.SqueakPluginsBuiltInOrLocalOnly)
 			return NULL;
 
 		for (framework= frameworks;  *framework;  ++framework) {
@@ -331,7 +352,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 
   dprintf((stderr, "ioFindExternalFunctionIn(%s, %ld)\n",lookupName, (long) moduleHandle));
 
-  if ((fn == NULL) && (((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakDebug)
+  if ((fn == NULL) && (thePListInterface.SqueakDebug)
       && strcmp(lookupName, "initialiseModule")
       && strcmp(lookupName, "shutdownModule")
       && strcmp(lookupName, "setInterpreter")
