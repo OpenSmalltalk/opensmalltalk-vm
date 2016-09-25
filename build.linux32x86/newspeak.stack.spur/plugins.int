@@ -11,6 +11,7 @@ FileCopyPlugin \
 FilePlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
+HostWindowPlugin \
 ZipPlugin \
 JPEGReadWriter2Plugin \
 JPEGReaderPlugin \
