@@ -7,14 +7,18 @@ LIBPNGURL:=ftp://ftp.simplesystems.org/pub/libpng/png/src/history/libpng12/libpn
 LIBPNGDIR:=$(THIRDPARTYDIR)/libpng-1.2.49
 LIBPNGLIBNAME:=libpng12.0.dylib
 LIBPNGLIB:=$(THIRDPARTYINSTALLDIR)/$(LIBPNGLIBNAME)
+LIBPNGARCHIVE:=$(THIRDPARTYCACHEDIR)/libpng-1.2.49.tar.gz
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
 EXTRALIBS:=$(EXTRALIBS) $(LIBPNGLIB)
 PLUGINREQS:=$(THIRDPARTYLIBS)
+	
+$(LIBPNGARCHIVE): 
+	curl -o $(LIBPNGARCHIVE) -L $(LIBPNGURL) 
 
-$(LIBPNGDIR)/configure:
-	curl -L $(LIBPNGURL) | tar x -C $(THIRDPARTYDIR)
+$(LIBPNGDIR)/configure: $(LIBPNGARCHIVE)
+	tar x -f $(LIBPNGARCHIVE) -C $(THIRDPARTYDIR)
 	touch $(LIBPNGDIR)/configure
 
 $(LIBPNGLIB): $(LIBPNGDIR)/configure

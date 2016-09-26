@@ -7,14 +7,18 @@ CAIROURL:=http://www.cairographics.org/releases/cairo-1.12.14.tar.xz
 CAIROLIBNAME:=libcairo.2.dylib
 CAIRODIR:=$(THIRDPARTYDIR)/cairo-1.12.14
 CAIROLIB:=$(THIRDPARTYINSTALLDIR)/$(CAIROLIBNAME)
+CAIROARCHIVE:=$(THIRDPARTYCACHEDIR)/cairo-1.12.14.tar.xz
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
 EXTRALIBS:=$(EXTRALIBS) $(CAIROLIB)
 PLUGINREQS:=$(THIRDPARTYLIBS)
 
-$(CAIRODIR)/configure:
-	curl -L $(CAIROURL) | tar x -C $(THIRDPARTYDIR)
+$(CAIROARCHIVE): 
+	curl -o $(CAIROARCHIVE) -L $(CAIROURL) 
+
+$(CAIRODIR)/configure: $(CAIROARCHIVE)
+	tar x -f $(CAIROARCHIVE) -C $(THIRDPARTYDIR)
 	touch $(CAIRODIR)/configure
 
 $(CAIROLIB): pkgconfig libpng freetype2 pixman $(CAIRODIR)/configure

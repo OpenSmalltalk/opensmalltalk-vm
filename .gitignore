@@ -17,6 +17,7 @@
 /cog*win*
 /nsvm*linux*
 /nsvm*win*
+/.thirdparty-cache*
 
 platforms/unix/config/autom4te.cache/
 

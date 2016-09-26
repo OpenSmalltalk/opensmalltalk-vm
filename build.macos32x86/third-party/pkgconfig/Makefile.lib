@@ -7,6 +7,7 @@ PKGCONFIGURL:=http://pkgconfig.freedesktop.org/releases/pkg-config-0.23.tar.gz
 PKGCONFIGDIR:=$(THIRDPARTYDIR)/pkg-config-0.23
 PKGCONFIGBIN:=$(THIRDPARTYOUTDIR)/bin/pkg-config
 PKGCONFIGLIB:=$(THIRDPARTYOUTDIR)/lib/pkgconfig
+PKGCONFIGARCHIVE:=$(THIRDPARTYCACHEDIR)/pkg-config-0.23.tar.gz
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
@@ -16,8 +17,11 @@ PLUGINREQS:=$(THIRDPARTYLIBS)
 PKG_CONFIG:=$(PKGCONFIGBIN)
 PKG_CONFIG_PATH:=$(PKGCONFIGLIB)
 
-$(PKGCONFIGDIR)/configure:
-	curl -L $(PKGCONFIGURL) | tar x -C $(THIRDPARTYDIR)
+$(PKGCONFIGARCHIVE): 
+	curl -o $(PKGCONFIGARCHIVE) -L $(PKGCONFIGURL)
+
+$(PKGCONFIGDIR)/configure: $(PKGCONFIGARCHIVE)
+	tar x -f $(PKGCONFIGARCHIVE) -C $(THIRDPARTYDIR)
 	touch $(PKGCONFIGDIR)/configure
 
 $(PKGCONFIGBIN): $(PKGCONFIGDIR)/configure
