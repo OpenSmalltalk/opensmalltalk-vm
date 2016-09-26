@@ -289,8 +289,9 @@ VMProfiler >> checkMorph: help get: getter set: setter [
 	checkBoxButton := UpdatingThreePhaseButtonMorph checkBox.
 	#(onImage pressedImage offImage)
 		with: #(onImage: pressedImage: offImage:)
-		do: [:get :set|
-			(checkBoxButton perform: get) colors last = Color white ifTrue:
+		do: [:get :set| | form |
+			((form := checkBoxButton perform: get) isColorForm
+			 and: [form colors last = Color white]) ifTrue:
 				[checkBoxButton
 					perform: set
 					with: ((checkBoxButton perform: get) copy
