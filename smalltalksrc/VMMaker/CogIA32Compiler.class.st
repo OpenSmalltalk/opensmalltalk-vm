@@ -2809,35 +2809,21 @@ CogIA32Compiler >> dispatchConcretize [
 	 to get around the branch size limits in the SqueakV3 (blue book derived)
 	 bytecode set."
 	<returnTypeC: #void>
+	opcode >= CDQ ifTrue:
+		[^self dispatchConcretizeProcessorSpecific].
 	opcode caseOf: {
 		"Noops & Pseudo Ops"
 		[Label]				-> [^self concretizeLabel].
 		[AlignmentNops]	-> [^self concretizeAlignmentNops].
 		[Fill32]				-> [^self concretizeFill32].
 		[Nop]				-> [^self concretizeNop].
-		"Specific Control/Data Movement"
-		[CDQ]					-> [^self concretizeCDQ].
-		[IDIVR]					-> [^self concretizeIDIVR].
-		[IMULRR]				-> [^self concretizeMulRR].
-		[CPUID]					-> [^self concretizeCPUID].
-		[CMPXCHGAwR]			-> [^self concretizeCMPXCHGAwR].
-		[CMPXCHGMwrR]		-> [^self concretizeCMPXCHGMwrR].
-		[LFENCE]				-> [^self concretizeFENCE: 5].
-		[MFENCE]				-> [^self concretizeFENCE: 6].
-		[SFENCE]				-> [^self concretizeFENCE: 7].
-		[LOCK]					-> [^self concretizeLOCK].
-		[XCHGAwR]				-> [^self concretizeXCHGAwR].
-		[XCHGMwrR]			-> [^self concretizeXCHGMwrR].
-		[XCHGRR]				-> [^self concretizeXCHGRR].
-		[FSTPS]					-> [^self concretizeFSTPS].
-		[FSTPD]					-> [^self concretizeFSTPD].
 		"Control"
 		[Call]					-> [^self concretizeCall].
 		[CallR]					-> [^self concretizeCallR].
 		[CallFull]				-> [^self concretizeCall].
-		[JumpR]					-> [^self concretizeJumpR].
+		[JumpR]				-> [^self concretizeJumpR].
 		[JumpFull]				-> [^self concretizeJumpLong].
-		[JumpLong]				-> [^self concretizeJumpLong].
+		[JumpLong]			-> [^self concretizeJumpLong].
 		[JumpLongZero]		-> [^self concretizeConditionalJump: 16r4].
 		[JumpLongNonZero]	-> [^self concretizeConditionalJump: 16r5].
 		[Jump]					-> [^self concretizeJump].
@@ -2871,14 +2857,14 @@ CogIA32Compiler >> dispatchConcretize [
 		"Arithmetic"
 		[AddCqR]					-> [^self concretizeAddCqR].
 		[AddCwR]					-> [^self concretizeAddCwR].
-		[AddRR]						-> [^self concretizeOpRR: 16r03].
+		[AddRR]					-> [^self concretizeOpRR: 16r03].
 		[AddcRR]					-> [^self concretizeAddcRR].
 		[AddcCqR]					-> [^self concretizeAddcCqR].
 		[AddRdRd]					-> [^self concretizeSEE2OpRdRd: 16r58].
 		[AddRsRs]					-> [^self concretizeSEEOpRsRs: 16r58].
 		[AndCqR]					-> [^self concretizeAndCqR].
 		[AndCwR]					-> [^self concretizeAndCwR].
-		[AndRR]						-> [^self concretizeOpRR: 16r23].
+		[AndRR]					-> [^self concretizeOpRR: 16r23].
 		[TstCqR]					-> [^self concretizeTstCqR].
 		[CmpCqR]					-> [^self concretizeCmpCqR].
 		[CmpCwR]					-> [^self concretizeCmpCwR].
@@ -2889,12 +2875,12 @@ CogIA32Compiler >> dispatchConcretize [
 		[DivRsRs]					-> [^self concretizeSEEOpRsRs: 16r5E].
 		[MulRdRd]					-> [^self concretizeSEE2OpRdRd: 16r59].
 		[MulRsRs]					-> [^self concretizeSEEOpRsRs: 16r59].
-		[OrCqR]						-> [^self concretizeOrCqR].
+		[OrCqR]					-> [^self concretizeOrCqR].
 		[OrCwR]					-> [^self concretizeOrCwR].
 		[OrRR]						-> [^self concretizeOpRR: 16r0B].
 		[SubCqR]					-> [^self concretizeSubCqR].
 		[SubCwR]					-> [^self concretizeSubCwR].
-		[SubRR]						-> [^self concretizeOpRR: 16r2B].
+		[SubRR]					-> [^self concretizeOpRR: 16r2B].
 		[SubbRR]					-> [^self concretizeSubbRR].
 		[SubRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5C].
 		[SubRsRs]					-> [^self concretizeSEEOpRsRs: 16r5C].
@@ -2902,28 +2888,30 @@ CogIA32Compiler >> dispatchConcretize [
 		[SqrtRs]						-> [^self concretizeSqrtRs].
 		[XorCwR]						-> [^self concretizeXorCwR].
 		[XorRR]							-> [^self concretizeOpRR: 16r33].
+		[XorRdRd]						-> [^self concretizeXorRdRd].
+		[XorRsRs]						-> [^self concretizeXorRsRs].
 		[NegateR]						-> [^self concretizeNegateR].
 		[NotR]							-> [^self concretizeNotR].
 		[LoadEffectiveAddressMwrR]	-> [^self concretizeLoadEffectiveAddressMwrR].
 		[ArithmeticShiftRightCqR]		-> [^self concretizeArithmeticShiftRightCqR].
 		[LogicalShiftRightCqR]			-> [^self concretizeLogicalShiftRightCqR].
 		[LogicalShiftLeftCqR]			-> [^self concretizeLogicalShiftLeftCqR].
-		[ArithmeticShiftRightRR]			-> [^self concretizeArithmeticShiftRightRR].
+		[ArithmeticShiftRightRR]		-> [^self concretizeArithmeticShiftRightRR].
 		[LogicalShiftLeftRR]				-> [^self concretizeLogicalShiftLeftRR].
 		"Data Movement"
 		[MoveCqR]			-> [^self concretizeMoveCqR].
 		[MoveCwR]			-> [^self concretizeMoveCwR].
 		[MoveRR]			-> [^self concretizeReverseOpRR: 16r89].
-		[MoveRdRd]			-> [^self concretizeMoveRdRd].
+		[MoveRdRd]		-> [^self concretizeMoveRdRd].
 		[MoveRsRs]			-> [^self concretizeMoveRsRs].
 		[MoveAwR]			-> [^self concretizeMoveAwR].
 		[MoveRAw]			-> [^self concretizeMoveRAw].
 		[MoveAbR]			-> [^self concretizeMoveAbR].
 		[MoveRAb]			-> [^self concretizeMoveRAb].
-		[MoveMbrR]			-> [^self concretizeMoveMbrR].
-		[MoveRMbr]			-> [^self concretizeMoveRMbr].
-		[MoveRM8r]			-> [^self concretizeMoveRMbr].
-		[MoveM8rR]			-> [^self concretizeMoveM8rR].
+		[MoveMbrR]		-> [^self concretizeMoveMbrR].
+		[MoveRMbr]		-> [^self concretizeMoveRMbr].
+		[MoveRM8r]		-> [^self concretizeMoveRMbr].
+		[MoveM8rR]		-> [^self concretizeMoveM8rR].
 		[MoveM16rR]		-> [^self concretizeMoveM16rR].
 		[MoveRM16r]		-> [^self concretizeMoveRM16r].
 		[MoveM32rR]		-> [^self concretizeMoveMwrR].
@@ -2937,43 +2925,44 @@ CogIA32Compiler >> dispatchConcretize [
 		[MoveRXwrR]		-> [^self concretizeMoveRXwrR].
 		[MoveRMwr]		-> [^self concretizeMoveRMwr].
 		[MoveRdM64r]		-> [^self concretizeMoveRdM64r].
-		[MoveRsM32r]		-> [^self concretizeMoveRsM32r].
 		[PopR]				-> [^self concretizePopR].
 		[PushR]				-> [^self concretizePushR].
 		[PushCq]			-> [^self concretizePushCq].
 		[PushCw]			-> [^self concretizePushCw].
 		[PrefetchAw]		-> [^self concretizePrefetchAw].
 		"Conversion"
-		[ConvertRRd]		-> [^self concretizeConvertRRd].
-		[ConvertRdR]		-> [^self concretizeConvertRdR].
-
-		[ConvertRsRd]		-> [^self concretizeConvertRsRd].
-		[ConvertRdRs]		-> [^self concretizeConvertRdRs].
-		[ConvertRsR]		-> [^self concretizeConvertRsR].
-		[ConvertRRs]		-> [^self concretizeConvertRRs].
-
-		[SignExtend8RR]	-> [^ self concretizeSignExtend8RR].
-		[SignExtend16RR]	-> [^ self concretizeSignExtend16RR].
-		[ZeroExtend8RR]	-> [^ self concretizeZeroExtend8RR].
-		[ZeroExtend16RR]	-> [^ self concretizeZeroExtend16RR].
-	}  otherwise: [^ self dispatchConcretize2].
+		[ConvertRRd]		-> [^self concretizeConvertRRd] }
 ]
 
 { #category : #'generate machine code' }
-CogIA32Compiler >> dispatchConcretize2 [
+CogIA32Compiler >> dispatchConcretizeProcessorSpecific [
 	"Attempt to generate concrete machine code for the instruction at address.
-	 This is the inner dispatch of concretizeAt: actualAddress which exists only
-	 to get around the branch size limits in the SqueakV3 (blue book derived)
+	 This is part of the inner dispatch of concretizeAt: actualAddress which exists only
+	 to get around the number of literals limits in the SqueakV3 (blue book derived)
 	 bytecode set."
 	<returnTypeC: #void>
 	opcode caseOf: {
-		[XorRsRs]				-> [^self concretizeXorRsRs].
-		[XorRdRd]				-> [^self concretizeXorRdRd].
+		"Specific Control/Data Movement"
+		[CDQ]					-> [^self concretizeCDQ].
+		[IDIVR]					-> [^self concretizeIDIVR].
+		[IMULRR]				-> [^self concretizeMulRR].
+		[CPUID]					-> [^self concretizeCPUID].
+		[CMPXCHGAwR]			-> [^self concretizeCMPXCHGAwR].
+		[CMPXCHGMwrR]		-> [^self concretizeCMPXCHGMwrR].
+		[LFENCE]				-> [^self concretizeFENCE: 5].
+		[MFENCE]				-> [^self concretizeFENCE: 6].
+		[SFENCE]				-> [^self concretizeFENCE: 7].
+		[LOCK]					-> [^self concretizeLOCK].
+		[XCHGAwR]				-> [^self concretizeXCHGAwR].
+		[XCHGMwrR]			-> [^self concretizeXCHGMwrR].
+		[XCHGRR]				-> [^self concretizeXCHGRR].
+		[FSTPS]					-> [^self concretizeFSTPS].
+		[FSTPD]				-> [^self concretizeFSTPD].
 		[REP]					-> [^self concretizeREP].
 		[CLD]					-> [^self concretizeCLD].
 		[MOVSB]				-> [^self concretizeMOVSB].
 		[MOVSD]				-> [^self concretizeMOVSD].
- }.
+	}
 ]
 
 { #category : #'inline cacheing' }

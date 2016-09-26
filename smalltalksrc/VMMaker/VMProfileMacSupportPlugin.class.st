@@ -43,17 +43,20 @@ VMProfileMacSupportPlugin >> primitiveExecutableModulesAndOffsets [
 	"Answer an Array of quads for executable modules (the VM executable
 	 and loaded libraries).  Each quad is the module's name, its vm address
 	 relocation in memory, the (unrelocated) start address, and the size."
-	| present nimages resultObj name valueObj nameObjData slide start size h s |
+	| present nimages resultObj name valueObj nameObjData slide start size h h64 s |
 	<export: true>
 	<var: #name type: 'const char *'>
 	<var: #nameObjData type: #'char *'>
 	<var: #h type: 'const struct mach_header *'>
+	<var: #h64 type: 'const struct mach_header_64 *'>
 	<var: #s type: 'const struct section *'>
 	<var: #start type: 'unsigned long'>
 	<var: #size type: 'unsigned long'>
-	present := self cCode: '_dyld_present()' inSmalltalk: [false].
-	present ifFalse:
-		[^interpreterProxy primitiveFail].
+	self cppIf: #'MAC_OS_X_VERSION_MIN_REQUIRED' <= #'MAC_OS_X_VERSION_10_4'
+		ifTrue: "_dyld_present was deprecated in 10.5"
+			[present := self cCode: '_dyld_present()' inSmalltalk: [false].
+			 present ifFalse:
+				[^interpreterProxy primitiveFail]].
 	nimages := self cCode: '_dyld_image_count()' inSmalltalk: [0].
 	resultObj := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: nimages * 4.
 	resultObj = 0 ifTrue:
@@ -65,12 +68,21 @@ VMProfileMacSupportPlugin >> primitiveExecutableModulesAndOffsets [
 		start := size := -1. "impossible start & size"
 		name := self cCode: '_dyld_get_image_name(i)' inSmalltalk: [0].
 		slide   := self cCode: '_dyld_get_image_vmaddr_slide(i)' inSmalltalk: [0].
-		h        := self cCode: '_dyld_get_image_header(i)' inSmalltalk: [0].
-		h ~= nil ifTrue:
-			[s := self cCode: 'getsectbynamefromheader(h,SEG_TEXT,SECT_TEXT)' inSmalltalk: [0].
-			 s ~= nil ifTrue:
-				[start := self cCode: 's->addr' inSmalltalk: [0].
-				 size := self cCode: 's->size' inSmalltalk: [0]]].
+		self cppIf: #'__x86_64__'
+			ifTrue:
+				[h64 := self cCode: '_dyld_get_image_header(i)' inSmalltalk: [0].
+				 h64 ifNotNil:
+					[s := self cCode: 'getsectbynamefromheader_64(h64,SEG_TEXT,SECT_TEXT)' inSmalltalk: [0].
+					 s ~= nil ifTrue:
+						[start := self cCode: 's->addr' inSmalltalk: [0].
+						 size := self cCode: 's->size' inSmalltalk: [0]]]]
+			ifFalse:
+				[h := self cCode: '_dyld_get_image_header(i)' inSmalltalk: [0].
+				 h ifNotNil:
+					[s := self cCode: 'getsectbynamefromheader(h,SEG_TEXT,SECT_TEXT)' inSmalltalk: [0].
+					 s ~= nil ifTrue:
+						[start := self cCode: 's->addr' inSmalltalk: [0].
+						 size := self cCode: 's->size' inSmalltalk: [0]]]].
 
 		valueObj := interpreterProxy
 						instantiateClass: interpreterProxy classString
