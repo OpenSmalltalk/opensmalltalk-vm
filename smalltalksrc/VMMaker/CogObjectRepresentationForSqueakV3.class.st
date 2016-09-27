@@ -1119,7 +1119,7 @@ CogObjectRepresentationForSqueakV3 >> generateObjectRepresentationTrampolines [
 										regsToSave: (CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
 										result: ReceiverResultReg.
 										
-	self cppIf: LowcodeVM ifTrue: [
+	LowcodeVM ifTrue: [
 		cePositive32BitValueOfTrampoline := cogit genTrampolineFor: #positive32BitValueOf:
 													called: 'cePositive32BitValueOfTrampoline'
 													arg: ReceiverResultReg

@@ -511,7 +511,9 @@ VMMaker class >> generateSqueakSpurCog64VM [
 	^VMMaker
 		generate: CoInterpreter
 		and: StackToRegisterMappingCogit
-		with: #(ObjectMemory Spur64BitCoMemoryManager)
+		with: #(ObjectMemory Spur64BitCoMemoryManager
+				MULTIPLEBYTECODESETS true
+				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/spur64src')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#()
@@ -578,7 +580,9 @@ VMMaker class >> generateSqueakSpurStack64VM [
 	^VMMaker
 		generate: StackInterpreter
 		with: #(ObjectMemory Spur64BitMemoryManager
-				FailImbalancedPrimitives false)
+				FailImbalancedPrimitives false
+				MULTIPLEBYTECODESETS true
+				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/spurstack64src')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including: #()

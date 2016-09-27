@@ -3458,7 +3458,7 @@ StackInterpreter >> callPrimitiveBytecode [
 	"Note that we simply skip a callPrimitiveBytecode at the start of a method
 	 that contains a primitive.  This because methods like Context(Part)>>reset
 	 have to be updated to skip the callPrimtiive bytecode otherwise."
-	self cppIf: SistaVM
+	SistaVM
 		ifTrue:
 			[| byte1 byte2 prim primSet header |
 			 byte1 := self fetchByte.
@@ -3490,8 +3490,7 @@ StackInterpreter >> callPrimitiveBytecode [
 					[^self trinaryInlinePrimitive: prim - 3000].
 			 ].
 		
-		self cppIf: LowcodeVM
-			ifTrue: [
+			LowcodeVM ifTrue: [
 				primSet = 1 ifTrue: [
 					prim < 1000 ifTrue:
 						[^self lowcodeNullaryInlinePrimitive: prim].
@@ -4421,7 +4420,7 @@ StackInterpreter >> commonCallerReturn [
 	<var: #callersFPOrNull type: #'char *'>
 
 	"TODO: Store/restore the nativeSP more properly, when it exists"
-	self cppIf: LowcodeVM ifTrue: [ 
+	LowcodeVM ifTrue: [ 
 		doWeHaveANativeFrame := self frameHasNativeFrame: localFP.
 		doWeHaveANativeFrame ifTrue: [
 			nativeStackPointer := (self nativePreviousStackPointerIn: localFP) - 1.
@@ -7849,7 +7848,7 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 			[breakSelectorLength := objectMemory minSmallInteger]].
 	methodDictLinearSearchLimit := 8.
 	self initialCleanup.
-	self cppIf: LowcodeVM ifTrue: [ self setupNativeStack ].
+	LowcodeVM ifTrue: [ self setupNativeStack ].
 	profileSemaphore := profileProcess := profileMethod := objectMemory nilObject.
 	interruptKeycode := 2094. "cmd-. as used for Mac but no other OS"
 	[globalSessionID = 0] whileTrue:
@@ -8586,7 +8585,7 @@ StackInterpreter >> internalizeIPandSP [
 	localIP := self pointerForOop: instructionPointer.
 	localSP := self pointerForOop: stackPointer.
 	localFP := self pointerForOop: framePointer.
-	self cppIf: LowcodeVM ifTrue: [ nativeSP := 0. ]
+	LowcodeVM ifTrue: [ nativeSP := 0. ]
 ]
 
 { #category : #'interpreter shell' }

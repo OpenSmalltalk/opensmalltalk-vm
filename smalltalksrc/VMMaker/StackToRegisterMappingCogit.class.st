@@ -1459,7 +1459,7 @@ StackToRegisterMappingCogit >> ensureFixupAt: targetIndex [
 		ifTrue: "convert a non-merge into a merge"
 			[fixup becomeMergeFixup.
 			 fixup simStackPtr: simStackPtr.
-			 self cppIf: LowcodeVM ifTrue: [
+			 LowcodeVM ifTrue: [
 				 fixup simNativeStackPtr: simNativeStackPtr.
 				 fixup simNativeStackSize: simNativeStackSize.]]
 		ifFalse:
@@ -1467,12 +1467,12 @@ StackToRegisterMappingCogit >> ensureFixupAt: targetIndex [
 				ifTrue: ["this is the target of a backward branch and
 						 so doesn't have a simStackPtr assigned yet."
 						fixup simStackPtr: simStackPtr.
-			 			self cppIf: LowcodeVM ifTrue: [
+			 			LowcodeVM ifTrue: [
 				 			fixup simNativeStackPtr: simNativeStackPtr.
 				 			fixup simNativeStackSize: simNativeStackSize.]]
 				ifFalse: [
 					self assert: fixup simStackPtr = simStackPtr.
-					self cppIf: LowcodeVM ifTrue: [
+					LowcodeVM ifTrue: [
 				 		self assert: fixup simNativeStackPtr = simNativeStackPtr.
 		 			 	self assert: fixup simNativeStackSize = simNativeStackSize.]]].
 	^fixup
@@ -1665,7 +1665,7 @@ StackToRegisterMappingCogit >> genCallPrimitiveBytecode [
 	prim := byte2 - 128 << 8 + byte1.
 	primSet := prim >> 13 bitAnd: 3.
 	prim := prim bitAnd: 8191.
-	self cppIf: LowcodeVM
+	LowcodeVM
 		ifTrue:
 			[
 			primSet = 1 ifTrue: [
@@ -11598,7 +11598,7 @@ StackToRegisterMappingCogit >> genUpArrowReturn [
 	framelessReturn
 		ifTrue:
 			[
-			 self cppIf: LowcodeVM ifTrue: [ hasNativeFrame ifTrue: [ self leaveNativeFrame ] ].
+			 LowcodeVM ifTrue: [ hasNativeFrame ifTrue: [ self leaveNativeFrame ] ].
 			 self MoveR: FPReg R: SPReg.
 			 self PopR: FPReg.
 			 backEnd hasLinkRegister ifTrue:
@@ -11818,7 +11818,7 @@ StackToRegisterMappingCogit >> initSimStackForFramefulMethod: startpc [
 		ssEntry: (self addressOf: simSelf).
 	simSpillBase := methodOrBlockNumTemps. "N.B. Includes num args"
 	simStackPtr := simSpillBase - 1.
-	self cppIf: LowcodeVM ifTrue: [
+	LowcodeVM ifTrue: [
 		simNativeSpillBase := simNativeStackPtr := -1.
 		simNativeStackSize := 0.
 	].
@@ -11871,7 +11871,7 @@ StackToRegisterMappingCogit >> initSimStackForFramelessBlock: startpc [
 								ifFalse: [methodOrBlockNumArgs - i]) * objectMemory wordSize);
 			bcptr: startpc].
 	simSpillBase := simStackPtr := methodOrBlockNumTemps - 1.
-	self cppIf: LowcodeVM ifTrue: [
+	LowcodeVM ifTrue: [
 		simNativeSpillBase := simNativeStackPtr := -1.
 		simNativeStackSize := 0.
 	].
@@ -11918,7 +11918,7 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 								ifFalse: [methodOrBlockNumArgs - i]) * objectMemory wordSize);
 					bcptr: startpc]].
 	simSpillBase := simStackPtr := methodOrBlockNumArgs - 1.
-	self cppIf: LowcodeVM ifTrue: [
+	LowcodeVM ifTrue: [
 		simNativeSpillBase := simNativeStackPtr := -1.
 		simNativeStackSize := 0.
 	].
@@ -11967,7 +11967,7 @@ StackToRegisterMappingCogit >> liveFloatRegisters [
 	(simSpillBase max: 0) to: simStackPtr do:
 		[:i|
 		regsSet := regsSet bitOr: (self simStackAt: i) floatRegisterMask].
-	self cppIf: LowcodeVM ifTrue: [ 
+	LowcodeVM ifTrue: [ 
 		(simNativeSpillBase max: 0) to: simNativeStackPtr do:
 			[:i|
 			regsSet := regsSet bitOr: (self simNativeStackAt: i) nativeFloatRegisterMask].
@@ -11990,7 +11990,7 @@ StackToRegisterMappingCogit >> liveRegisters [
 	(simSpillBase max: 0) to: simStackPtr do:
 		[:i|
 		regsSet := regsSet bitOr: (self simStackAt: i) registerMask].
-	self cppIf: LowcodeVM ifTrue: [ 
+	LowcodeVM ifTrue: [ 
 		(simNativeSpillBase max: 0) to: simNativeStackPtr do:
 			[:i|
 			regsSet := regsSet bitOr: (self simNativeStackAt: i) nativeRegisterMask].
@@ -12166,7 +12166,7 @@ StackToRegisterMappingCogit >> mergeWithFixupIfRequired: fixup [
 	deadCode ifTrue: [
 		"case 3"
 		simStackPtr := fixup simStackPtr.
-		self cppIf: LowcodeVM ifTrue: [
+		LowcodeVM ifTrue: [
 			simNativeStackPtr := fixup simNativeStackPtr.
 			simNativeStackSize := fixup simNativeStackSize.
 		] 
@@ -12179,14 +12179,14 @@ StackToRegisterMappingCogit >> mergeWithFixupIfRequired: fixup [
 	deadCode := false.
 	fixup isBackwardBranchFixup ifTrue: [
 		fixup simStackPtr: simStackPtr.
-		self cppIf: LowcodeVM ifTrue: [
+		LowcodeVM ifTrue: [
 			fixup simNativeStackPtr: simNativeStackPtr.
 			fixup simNativeStackSize: simNativeStackSize.
 		]
 	].
 	fixup targetInstruction: self Label.
 	self assert: simStackPtr = fixup simStackPtr.
-	self cppIf: LowcodeVM ifTrue: [
+	LowcodeVM ifTrue: [
 		self assert: simNativeStackPtr = fixup simNativeStackPtr.
 		self assert: simNativeStackSize = fixup simNativeStackSize.
 	].
@@ -12360,7 +12360,7 @@ StackToRegisterMappingCogit >> restoreSimStackAtMergePoint: fixup [
 				offset: FoxMFReceiver - (i - methodOrBlockNumArgs + 1 * objectMemory bytesPerOop);
 				register: FPReg;
 				spilled: true].
-	self cppIf: LowcodeVM ifTrue: [
+	LowcodeVM ifTrue: [
 		0 to: simNativeStackPtr do: [ :i |
 			(self simNativeStackAt: i)
 				ensureIsMarkedAsSpilled
@@ -12377,7 +12377,7 @@ StackToRegisterMappingCogit >> scanBlock: blockStart [
 	<var: #blockStart type: #'BlockStart *'>
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	needsFrame := false.
-	self cppIf: LowcodeVM ifTrue: [ hasNativeFrame := false ].
+	LowcodeVM ifTrue: [ hasNativeFrame := false ].
 	prevBCDescriptor := nil.
 	methodOrBlockNumArgs := blockStart numArgs.
 	inBlock := InVanillaBlock.
@@ -12444,7 +12444,7 @@ StackToRegisterMappingCogit >> scanMethod [
 	| latestContinuation nExts descriptor pc numBlocks distance targetPC framelessStackDelta seenInstVarStore |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	needsFrame := useTwoPaths := seenInstVarStore := false.
-	self cppIf: LowcodeVM ifTrue: [ hasNativeFrame := false ].
+	LowcodeVM ifTrue: [ hasNativeFrame := false ].
 	self maybeInitNumFixups.
 	self maybeInitNumCounters.
 	prevBCDescriptor := nil.
@@ -12679,7 +12679,7 @@ StackToRegisterMappingCogit >> ssAllocateRequiredFloatRegMask: requiredRegsMask 
 		liveRegs := liveRegs bitOr: (self simStackAt: i) registerMask.
 		((self simStackAt: i) floatRegisterMask bitAnd: requiredRegsMask) ~= 0 ifTrue:
 			[lastRequired := i]].
-	self cppIf: LowcodeVM ifTrue: [ 
+	LowcodeVM ifTrue: [ 
 		(simNativeSpillBase max: 0) to: nativeStackPtr do:
 			[:i|
 			liveRegs := liveRegs bitOr: (self simNativeStackAt: i) nativeRegisterMask.
@@ -12733,7 +12733,7 @@ StackToRegisterMappingCogit >> ssAllocateRequiredRegMask: requiredRegsMask upThr
 		liveRegs := liveRegs bitOr: (self simStackAt: i) registerMask.
 		((self simStackAt: i) registerMask bitAnd: requiredRegsMask) ~= 0 ifTrue:
 			[lastRequired := i]].
-	self cppIf: LowcodeVM ifTrue: [
+	LowcodeVM ifTrue: [
 		(simNativeSpillBase max: 0) to: nativeStackPtr do:
 			[:i|
 			liveRegs := liveRegs bitOr: (self simNativeStackAt: i) nativeRegisterMask.
@@ -12759,7 +12759,7 @@ StackToRegisterMappingCogit >> ssFlushTo: index [
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssFlushTo: index nativeFlushTo: nativeIndex [
-	self cppIf: LowcodeVM ifTrue: [ 
+	LowcodeVM ifTrue: [ 
 		self ssNativeFlushTo: nativeIndex.
 	].
 	methodOrBlockNumTemps to: simSpillBase - 1 do:
@@ -12789,7 +12789,7 @@ StackToRegisterMappingCogit >> ssFlushUpThroughReceiverVariable: slotIndex [
 	"Any occurrences on the stack of the value being stored (which is the top of stack)
 	 must be flushed, and hence any values colder than them stack."
 	<var: #desc type: #'CogSimStackEntry *'>
-	self cppIf: LowcodeVM ifTrue: [ self ssNativeFlushTo: simNativeStackPtr. ].
+	LowcodeVM ifTrue: [ self ssNativeFlushTo: simNativeStackPtr. ].
 	self ssFlushUpThrough: 
 		[ :desc |  
 			desc type = SSBaseOffset
@@ -12802,7 +12802,7 @@ StackToRegisterMappingCogit >> ssFlushUpThroughRegister: reg [
 	"Any occurrences on the stack of the register must be
 	 flushed, and hence any values colder than them stack."
 	<var: #desc type: #'CogSimStackEntry *'>
-	self cppIf: LowcodeVM ifTrue: [ self ssNativeFlushTo: simNativeStackPtr ].
+	LowcodeVM ifTrue: [ self ssNativeFlushTo: simNativeStackPtr ].
 	self ssFlushUpThrough: [ :desc | desc type = SSRegister and: [ desc register = reg ] ]
 ]
 
@@ -12811,7 +12811,7 @@ StackToRegisterMappingCogit >> ssFlushUpThroughTemporaryVariable: tempIndex [
 	"Any occurrences on the stack of the value being stored (which is the top of stack)
 	 must be flushed, and hence any values colder than them stack."
 	<var: #desc type: #'CogSimStackEntry *'>
-	self cppIf: LowcodeVM ifTrue: [ self ssNativeFlushTo: simNativeStackPtr ].
+	LowcodeVM ifTrue: [ self ssNativeFlushTo: simNativeStackPtr ].
 	self ssFlushUpThrough: 
 		[ :desc |
 			desc type = SSBaseOffset
