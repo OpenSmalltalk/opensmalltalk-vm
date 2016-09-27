@@ -126,7 +126,7 @@ CogSSBytecodeFixup >> reinitialize [
 	<inline: true>
 	targetInstruction := 0.
 	simStackPtr := 0.
-	self cppIf: LowcodeVM ifTrue: [
+	LowcodeVM ifTrue: [
 		simNativeStackPtr := 0.
 	]
 ]
@@ -135,7 +135,7 @@ CogSSBytecodeFixup >> reinitialize [
 CogSSBytecodeFixup >> setIsBackwardBranchFixup [
 	<inline: true>
 	simStackPtr := UnknownSimStackPtrFlag.
-	self cppIf: LowcodeVM ifTrue: [ 
+	LowcodeVM ifTrue: [ 
 		simNativeStackPtr := UnknownSimStackPtrFlag.
 		simNativeStackSize := 0.
 	]

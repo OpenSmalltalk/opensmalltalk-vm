@@ -2691,7 +2691,7 @@ CoInterpreter >> commonCallerReturn [
 	<var: #callersFPOrNull type: #'char *'>
 
 	"TODO: Store/restore the nativeSP more properly, when it exists"
-	self cppIf: LowcodeVM ifTrue: [ 
+	LowcodeVM ifTrue: [ 
 		doWeHaveANativeFrame := self frameHasNativeFrame: localFP.
 		doWeHaveANativeFrame ifTrue: [
 			nativeStackPointer := (self nativePreviousStackPointerIn: localFP) - 1.
@@ -4407,7 +4407,7 @@ CoInterpreter >> internalizeIPandSP [
 	localIP := self pointerForOop: instructionPointer.
 	localSP := self pointerForOop: stackPointer.
 	localFP := self pointerForOop: framePointer.
-	self cppIf: LowcodeVM ifTrue: [ nativeSP := 0. ]
+	LowcodeVM ifTrue: [ nativeSP := 0. ]
 ]
 
 { #category : #'trampoline support' }
