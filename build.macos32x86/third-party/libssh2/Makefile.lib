@@ -7,19 +7,26 @@ LIBSSH2URL:=http://www.libssh2.org/download/libssh2-1.4.3.tar.gz
 LIBSSH2DIR:=$(THIRDPARTYDIR)/libssh2-1.4.3
 LIBSSH2LIBNAME:=libssh2.1.dylib
 LIBSSH2LIB:=$(THIRDPARTYINSTALLDIR)/$(LIBSSH2LIBNAME)
+LIBSSH2ARCHIVE:=$(THIRDPARTYCACHEDIR)/libssh2-1.4.3.tar.gz
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
 EXTRALIBS:=$(EXTRALIBS) $(LIBSSH2LIB)
 PLUGINREQS:=$(THIRDPARTYLIBS)
 
-$(LIBSSH2DIR)/configure:
-	curl -L $(LIBSSH2URL) | tar x -C $(THIRDPARTYDIR)
+$(LIBSSH2ARCHIVE): 
+	curl -o $(LIBSSH2ARCHIVE) -L $(LIBSSH2URL) 
+
+$(LIBSSH2DIR)/configure: $(LIBSSH2ARCHIVE)
+	tar x -f $(LIBSSH2ARCHIVE) -C $(THIRDPARTYDIR)
 	touch $(LIBSSH2DIR)/configure
 
 $(LIBSSH2LIB): $(LIBSSH2DIR)/configure
 	cd $(LIBSSH2DIR) \
-		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch i386' LDFLAGS='-arch i386' \
+		&& ./configure \
+			--prefix='$(THIRDPARTYOUTDIR)' \
+			CFLAGS='-arch i386' \
+			LDFLAGS='-arch i386 -L/usr/local/lib' \
 		&& make \
 		&& make install
 	cp -f $(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME) $(THIRDPARTYINSTALLDIR)

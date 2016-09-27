@@ -7,14 +7,18 @@ PIXMANURL:=http://www.cairographics.org/releases/pixman-0.26.0.tar.gz
 PIXMANLIBNAME:=libpixman-1.0.dylib
 PIXMANDIR:=$(THIRDPARTYDIR)/pixman-0.26.0
 PIXMANLIB:=$(THIRDPARTYINSTALLDIR)/$(PIXMANLIBNAME)
+PIXMANARCHIVE:=$(THIRDPARTYCACHEDIR)/pixman-0.26.0.tar.gz
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
 EXTRALIBS:=$(EXTRALIBS) $(PIXMANLIB)
 PLUGINREQS:=$(THIRDPARTYLIBS)
 
-$(PIXMANDIR)/configure:
-	curl -L $(PIXMANURL) | tar x -C $(THIRDPARTYDIR)
+$(PIXMANARCHIVE): 
+	curl -o $(PIXMANARCHIVE) -L $(PIXMANURL) 
+
+$(PIXMANDIR)/configure: $(PIXMANARCHIVE)
+	tar x -f $(PIXMANARCHIVE) -C $(THIRDPARTYDIR)
 	touch $(PIXMANDIR)/configure
 
 $(PIXMANLIB): pkgconfig $(PIXMANDIR)/configure
