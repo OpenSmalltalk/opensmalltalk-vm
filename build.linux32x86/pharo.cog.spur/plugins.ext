@@ -8,5 +8,5 @@ RePlugin \
 InternetConfigPlugin \
 SurfacePlugin \
 EventsHandlerPlugin \
-SDL2DisplayPlugin \
+#SDL2DisplayPlugin \
 
