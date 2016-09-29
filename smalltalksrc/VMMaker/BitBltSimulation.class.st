@@ -2374,6 +2374,7 @@ BitBltSimulation >> lockSurfaces [
 	].
 	(sourceBits == 0 and:[noSource not]) ifTrue:["Blitting *from* OS surface"
 		sourceHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: sourceForm.
+		interpreterProxy failed ifTrue:[^nil]. "fetch sourceHandle could fail"
 		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
 		fn := self cCoerce: lockSurfaceFn to: 'sqInt (*)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)'.
 		"Warping requiring the entire surface"
