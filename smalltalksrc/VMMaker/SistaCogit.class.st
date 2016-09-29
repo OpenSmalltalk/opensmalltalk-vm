@@ -676,7 +676,8 @@ SistaCogit >> genJumpIf: boolean to: targetBytecodePC [
 	"If we're in an image which hasn't got the Sista code loaded then the ceCounterTripped:
 	 trampoline will return directly to machine code, returning the boolean.  So the code should
 	 jump back to the retry point. The trampoline makes sure that TempReg has been reloaded."
-	self annotateBytecode: (self Jump: retry).
+	self annotateBytecode: self Label. "For some reason if I write self annotateBytecode: (self Jump: retry) the annotation is not at the correct place."
+	self Jump: retry.
 	
 	ok jmpTarget: self Label.
 	^0
