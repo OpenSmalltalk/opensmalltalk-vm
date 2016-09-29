@@ -71,10 +71,30 @@ extern unsigned long _etext;
 /*
  * The pc collection scheme is an event buffer into which are written pcs.  The
  * image then builds up the histogram from the samples.  8 meg of buffer is 23
- * minutes of 32-bit pc samples at 1.5KHz, plenty for practical profiling.
+ * minutes of 32-bit pc samples at 1.5KHz, plenty for practical profiling.  On
+ * some 64-bit platforms, in practice, code fits in the 32-bit address space,
+ * so there is no need to squander another 4 bytes per sample.  To force 32-bit
+ * samples on 64-bits provide -DVMProfiler32BitCode=1 on the command line (or
+ * =0 to force 64-bit samples on e.g. 64-bit Mac OS X).
  */
 
+#if LP64 || ILP64 || LLP64
+# if !defined(VMProfiler32BitCode)
+#	if  __APPLE__ && __MACH__
+#	  define VMProfiler32BitCode 1
+#	else
+#	  define VMProfiler32BitCode 0
+#	endif
+# endif
+#endif
+
+#if VMProfiler32BitCode
+typedef unsigned int pctype;
+#elif LLP64
+typedef unsigned long long pctype;
+#else
 typedef unsigned long pctype;
+#endif
 
 static void
 bail_out(int err, char *err_string)
