@@ -168,27 +168,34 @@ static void
 pcbufferSIGPROFhandler(int sig, siginfo_t *info, ucontext_t *uap)
 {
 #if __DARWIN_UNIX03 && __APPLE__ && __MACH__ && __i386__
-	pctype pc = uap->uc_mcontext->__ss.__eip;
+# define _PC_IN_UCONTEXT uc_mcontext->__ss.__eip
 #elif __APPLE__ && __MACH__ && __i386__
-	pctype pc = uap->uc_mcontext->ss.eip;
+# define _PC_IN_UCONTEXT uc_mcontext->ss.eip
 #elif __APPLE__ && __MACH__ && __ppc__
-	pctype pc = uap->uc_mcontext->ss.srr0;
+# define _PC_IN_UCONTEXT uc_mcontext->ss.srr0
 #elif __DARWIN_UNIX03 && __APPLE__ && __MACH__ && __x86_64__
-	pctype pc = uap->uc_mcontext->__ss.__rip;
+# define _PC_IN_UCONTEXT uc_mcontext->__ss.__rip
 #elif __APPLE__ && __MACH__ && __x86_64__
-	pctype pc = uap->uc_mcontext->ss.rip;
+# define _PC_IN_UCONTEXT uc_mcontext->ss.rip
 #elif __linux__ && __i386__
-	pctype pc = uap->uc_mcontext.gregs[REG_EIP];
+# define _PC_IN_UCONTEXT uc_mcontext.gregs[REG_EIP]
 #elif __linux__ && __x86_64__
-	pctype pc = uap->uc_mcontext.gregs[REG_RIP];
+# define _PC_IN_UCONTEXT uc_mcontext.gregs[REG_RIP]
 #elif __linux__ && __arm__
-	pctype pc = uap->uc_mcontext.arm_pc;
+# define _PC_IN_UCONTEXT uc_mcontext.arm_pc
 #elif __FreeBSD__ && __i386__
-	pctype pc = uap->uc_mcontext.mc_eip;
+# define _PC_IN_UCONTEXT uc_mcontext.mc_eip
 #else
 # error need to implement extracting pc from a ucontext_t on this system
 #endif
-	pc_buffer[pc_buffer_index] = pc;
+
+# if VMProfiler32BitCode
+	pc_buffer[pc_buffer_index] = uap->_PC_IN_UCONTEXT > 0xffffffffULL
+									? 0xffffffff
+									: (pctype)(uap->_PC_IN_UCONTEXT);
+# else
+	pc_buffer[pc_buffer_index] = uap->_PC_IN_UCONTEXT;
+# endif
 	if (++pc_buffer_index >= pc_buffer_size) {
 		pc_buffer_index = 0;
 		pc_buffer_wrapped = 1;
