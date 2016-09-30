@@ -2,8 +2,22 @@
 # checkin script for Git that serves to cause
 # platforms/Cross/vm/sqSCCSVersion.h to be checked-in so that its version
 # info reflects that of the current check-in.
+
+echo sanity checking generated files...
+
 rm -rf src/plugins/[A-Z]*FFIPlugin
 `dirname $0`/revertUnchangedPlugins src/plugins
+
+if [ -n "`\`dirname $0\`/findUnofficialFiles`" ]; then
+	echo the following files are generated from modified Monticello packages.
+	echo "Do you still want to check in?  y/N \c"
+	read n
+	case $n in
+	"")					exit 1;;
+	n|N|no|nO\No|NO)	exit 1;;
+	esac
+fi
+
 # make sure that we enable our smudge and clean filters
 # these replace occurences of $Rev$, $URL$, and $Date$ in
 # locally checked out sqSCCSVersion.h and sqPluginsSCSSVersion.h
