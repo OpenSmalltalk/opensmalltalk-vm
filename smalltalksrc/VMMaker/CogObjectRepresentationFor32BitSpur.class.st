@@ -1744,6 +1744,7 @@ CogObjectRepresentationFor32BitSpur >> genStoreHeader: header intoNewInstance: r
 
 { #category : #initialization }
 CogObjectRepresentationFor32BitSpur >> generateLowcodeObjectTrampolines [
+	<option: #LowcodeVM>
 	super generateLowcodeObjectTrampolines.
 	cePositive32BitIntegerTrampoline := cogit genTrampolineFor: #positive32BitIntegerFor:
 												called: 'cePositive32BitIntegerTrampoline'
