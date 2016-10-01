@@ -546,9 +546,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		var: #postCompileHook
 			declareC: 'void (*postCompileHook)(CogMethod *)';
 		var: #openPICList declareC: 'CogMethod *openPICList = 0';
-		var: #maxMethodBefore type: #'CogBlockMethod *'.
-	self objectMemoryClass wordSize = 8 ifTrue:
-		[aCCodeGenerator var: 'enumeratingCogMethod' type: #'CogMethod *'].
+		var: #maxMethodBefore type: #'CogBlockMethod *';
+		var: 'enumeratingCogMethod' type: #'CogMethod *'.
 	aCCodeGenerator
 		declareVar: 'aMethodLabel' type: #'AbstractInstruction'; "Has to come lexicographically before backEnd & methodLabel"
 		var: #backEnd declareC: 'AbstractInstruction * const backEnd = &aMethodLabel';
@@ -2951,7 +2950,7 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes [
 									 ((1 to: numAbstractOpcodes) collect: [:ign| CogCompilerClass for: self]).
 			 fixups := CArrayAccessor on:
 						((1 to: numAbstractOpcodes) collect: [:ign| self bytecodeFixupClass for: self])].
-	self zeroOpcodeIndex.
+	self zeroOpcodeIndexForNewOpcodes.
 	labelCounter := 0
 ]
 
@@ -2984,7 +2983,7 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes i
 									 ((1 to: numAbstractOpcodes) collect: [:ign| CogCompilerClass for: self]).
 			 fixups := CArrayAccessor on:
 						((1 to: numAbstractOpcodes) collect: [:ign| self bytecodeFixupClass for: self])].
-	self zeroOpcodeIndex.
+	self zeroOpcodeIndexForNewOpcodes.
 	labelCounter := 0
 ]
 
@@ -4887,6 +4886,7 @@ Cogit >> compileCallFor: aRoutine numArgs: numArgs floatArg: regOrConst0 floatAr
 	 NoReg assign the C result to resultRegOrNone.  If saveRegs, save all registers.
 	 Hack: a negative arg value indicates an abstract register, a non-negative value
 	 indicates a constant."
+	<option: #LowcodeVM>
 	<var: #aRoutine type: #'void *'>
 	<inline: false>
 	| regsToSave |
@@ -5291,6 +5291,7 @@ Cogit >> compileTrampolineFor: aRoutine numArgs: numArgs floatArg: regOrConst0 f
 	 as requested by callJumpBar.  If generating a call and resultRegOrNone is not NoReg pass the C
 	 result back in resultRegOrNone.
 	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<option: #LowcodeVM>
 	<var: #aRoutine type: #'void *'>
 	<inline: false>
 	self genSmalltalkToCStackSwitch: pushLinkReg.
@@ -7121,6 +7122,7 @@ Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 result: res
 Cogit >> genTrampolineFor: aRoutine called: aString arg: regOrConst0 result: resultReg result: resultReg2 [
 	"Generate a trampoline with one argument that answers a result.
 	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<option: #LowcodeVM>
 	<var: #aRoutine type: #'void *'>
 	<var: #aString type: #'char *'>
 	^self
@@ -7249,6 +7251,7 @@ Cogit >> genTrampolineFor: aRoutine called: trampolineName numArgs: numArgs floa
 	 as requested by callJumpBar.  If generating a call and resultRegOrNone is not NoReg pass the C result
 	 back in resultRegOrNone.
 	 Hack: a negative value indicates an abstract register, a non-negative value indicates a constant."
+	<option: #LowcodeVM>
 	<var: #aRoutine type: #'void *'>
 	<var: #trampolineName type: #'char *'>
 	| startAddress |
@@ -8236,6 +8239,7 @@ Cogit >> inlineCacheValueForSelector: selector in: aCogMethod at: mcpc [
 	"Answer the value to put in an inline-cache that is being loaded with the selector.
 	 Usually this is simply the selector, but in 64-bits the cache is only 32-bits wide
 	 and so the cache is loaded with the index of the selector."
+	<var: #aCogMethod type: #'CogMethod *'>
 	<inline: true>
 	^self inlineCacheTagsAreIndexes
 		ifTrue: [self indexForSelector: selector in: aCogMethod at: mcpc]
@@ -12196,6 +12200,15 @@ Cogit >> withAnnotation: annotation pc: mcpc evaluate: aBinaryBlock [
 
 { #category : #accessing }
 Cogit >> zeroOpcodeIndex [
+	"Access for the object representations when they need to prepend code to trampolines."
+	"Eliminate stale dependent info."
+	0 to: opcodeIndex - 1 do:
+		[:i| (abstractOpcodes at: i) dependent: nil].
+	self zeroOpcodeIndexForNewOpcodes
+]
+
+{ #category : #accessing }
+Cogit >> zeroOpcodeIndexForNewOpcodes [
 	"Access for the object representations when they need to prepend code to trampolines."
 	opcodeIndex := 0.
 	literalsManager resetLiterals

@@ -1096,6 +1096,7 @@ CogObjectRepresentationForSqueakV3 >> generateObjectRepresentationTrampolines [
 	"Do the store check.  Answer the argument for the benefit of the code generator;
 	 ReceiverResultReg may be caller-saved and hence smashed by this call.  Answering
 	 it allows the code generator to reload ReceiverResultReg cheaply."
+	<option: #LowcodeVM>
 	ceStoreCheckTrampoline := cogit
 									genTrampolineFor: #ceStoreCheck:
 									called: 'ceStoreCheckTrampoline'
@@ -1119,8 +1120,8 @@ CogObjectRepresentationForSqueakV3 >> generateObjectRepresentationTrampolines [
 										regsToSave: (CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
 										result: ReceiverResultReg.
 										
-	LowcodeVM ifTrue: [
-		cePositive32BitValueOfTrampoline := cogit genTrampolineFor: #positive32BitValueOf:
+	LowcodeVM ifTrue:
+		[cePositive32BitValueOfTrampoline := cogit genTrampolineFor: #positive32BitValueOf:
 													called: 'cePositive32BitValueOfTrampoline'
 													arg: ReceiverResultReg
 													result: TempReg.
@@ -1133,8 +1134,7 @@ CogObjectRepresentationForSqueakV3 >> generateObjectRepresentationTrampolines [
 													arg: ReceiverResultReg
 													result: TempReg.
 
-		self generateLowcodeObjectTrampolines
-	]
+		self generateLowcodeObjectTrampolines]
 ]
 
 { #category : #'garbage collection' }

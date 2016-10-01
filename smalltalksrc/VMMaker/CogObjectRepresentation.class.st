@@ -1458,6 +1458,7 @@ CogObjectRepresentation >> genStoreSourceReg: sourceReg slotIndex: index destReg
 
 { #category : #initialization }
 CogObjectRepresentation >> generateLowcodeObjectTrampolines [
+	<option: #LowcodeVM>
 	ceFloatObjectOfTrampoline := cogit genTrampolineFor: #floatObjectOf:
 												called: 'ceFloatObjectOfTrampoline'
 												floatArg: DPFPReg0
