@@ -24,6 +24,10 @@ static char __buildInfo[] = "UnixOSProcessPlugin VMConstruction-Plugins-OSProces
 #include <pthread.h>
 #include <errno.h>
 
+#ifdef __OpenBSD__
+#include <sys/signalvar.h>
+#endif
+
 /* Default EXPORT macro that does nothing (see comment in sq.h): */
 #define EXPORT(returnType) returnType
 
