@@ -149,7 +149,7 @@ void closeBytecodeTraceFile() { if (bct) { fclose(bct); bct = 0; } }
 # endif
 # define bytecodeDispatchDebugHook() do { char line[64], expected[64]; \
 	/* print byteCount pc byteCode(hex) stackPtr */ \
-	sprintf(expected, "%ld: %d %d(%x) %d %s\n", \
+	snprintf(expected, sizeof(expected), "%ld: %d %d(%x) %d %s\n", \
 			++GIV(byteCount), localIP-GIV(method)-3, currentBytecode, currentBytecode, \
 			(localFP-localSP)/sizeof(sqInt)-5, bytecodeNameTable[currentBytecode]); \
 	printf(expected); \
