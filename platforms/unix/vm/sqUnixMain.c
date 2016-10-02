@@ -583,7 +583,8 @@ static void emergencyDump(int quit)
   for (i= 0; ++i;)
     {
       struct stat sb;
-      sprintf(imageName, "%s-emergency-dump-%d.image", baseName, i);
+      snprintf(imageName, sizeof(imageName), "%s-emergency-dump-%d.image",
+        baseName, i);
       if (stat(imageName, &sb))
 	break;
     }
@@ -1111,14 +1112,14 @@ struct SqModule *queryLoadModule(char *type, char *name, int query)
   char modName[MAXPATHLEN], itfName[32];
   struct SqModule *module= 0;
   void *itf= 0;
-  sprintf(modName, "vm-%s-%s", type, name);
+  snprintf(modName, sizeof(modName), "vm-%s-%s", type, name);
 #ifdef DEBUG_MODULES
   printf("looking for module %s\n", modName);
 #endif
   modulesDo (module)
     if (!strcmp(module->name, modName))
       return module;
-  sprintf(itfName, "%s_%s", type, name);
+  snprintf(itfName, sizeof(itfName), "%s_%s", type, name);
   itf= ioFindExternalFunctionIn(itfName, ioLoadModule(0));
   if (!itf)
     {
