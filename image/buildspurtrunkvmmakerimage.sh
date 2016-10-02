@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/sh -e
 . ./envvars.sh
 
 ./updatespurimage.sh
