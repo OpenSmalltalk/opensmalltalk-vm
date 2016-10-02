@@ -17,6 +17,11 @@ case "$BIN" in
 /*) PLUGINS="$BIN";;
 *) PLUGINS="`pwd`/$BIN"
 esac
+
+if [ $(uname -s) = "OpenBSD" ]; then
+  LD_LIBRARY_PATH="$PLUGINS:${LD_LIBRARY_PATH}" exec $GDB "$BIN/squeak" "$@"
+fi
+
 # On some linuxes there multiple versions of the C library.  If the image uses
 # libc (e.g. through the FFI) then it must use the same version that the VM uses
 # and so it should take precedence over /lib libc.  This is done by setting
