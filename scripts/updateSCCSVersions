@@ -1,20 +1,22 @@
-#!/bin/bash -e
+#!/bin/sh -e
 # checkin script for Git that serves to cause
 # platforms/Cross/vm/sqSCCSVersion.h to be checked-in so that its version
 # info reflects that of the current check-in.
-if [ -d `dirname $0`/../.git ]; then
-    mkdir -p `dirname $0`/../.git/hooks/
-    cp -f $0 `dirname $0`/../.git/hooks/post-commit
-    cp -f $0 `dirname $0`/../.git/hooks/post-merge
-    cp -f $0 `dirname $0`/../.git/hooks/post-checkout
-    cd `dirname $0`/..
+
+WRKDIR=$(dirname $0)
+if [ -d $WRKDIR/../.git ]; then
+    mkdir -p $WRKDIR/../.git/hooks/
+    cp -f $0 $WRKDIR/../.git/hooks/post-commit
+    cp -f $0 $WRKDIR/../.git/hooks/post-merge
+    cp -f $0 $WRKDIR/../.git/hooks/post-checkout
+    cd $WRKDIR/..
 else
-    cd `dirname $0`/../..
-    if [[ "$(basename $0)" == "post-checkout" ]]; then
+    cd $WRKDIR/../..
+    if [ "$(basename $0)" = "post-checkout" ]; then
         prevHEAD=$1
         newHEAD=$2
         branchChange=$3
-        if [[ "$branchChange" == "0" ]] && [[ "$prevHEAD" == "$newHEAD" ]]; then
+        if [ "$branchChange" = "0" ] && [ "$prevHEAD" = "$newHEAD" ]; then
             # we did not switch branches and did not move to a new head (e.g. we
             # just did a checkout on a file
             exit 0
