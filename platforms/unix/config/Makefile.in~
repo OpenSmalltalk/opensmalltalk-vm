@@ -49,7 +49,7 @@ $(squeak) : config.sh $(SQLIBS) version.o
 	@echo
 	@size $(squeak)
 	@echo
-	@./$(squeak) -version || ./$(squeak) --version 
+	@./$(squeak) -version
 	@echo
 
 version.o : version.c

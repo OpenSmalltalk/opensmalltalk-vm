@@ -1639,8 +1639,8 @@ static void vm_printUsage(void)
   printf("  "VMOPTION("jit")"                  enable the dynamic compiler (if available)\n");
 # endif
   printf("  "VMOPTION("notimer")"              disable interval timer for low-res clock\n");
-  printf("  "VMOPTION("display")" <dpy>        equivalent to '-vm-display-X11 "VMOPTION("display")" <dpy>'\n");
-  printf("  "VMOPTION("headless")"             equivalent to '-vm-display-X11 "VMOPTION("headless")"'\n");
+  printf("  "VMOPTION("display")" <dpy>        equivalent to '-vm-display-X11 -display <dpy>'\n");
+  printf("  "VMOPTION("headless")"             equivalent to '-vm-display-X11 -headless'\n");
   printf("  "VMOPTION("nodisplay")"            equivalent to '-vm-display-null'\n");
   printf("  "VMOPTION("nomixer")"              disable modification of mixer settings\n");
   printf("  "VMOPTION("nosound")"              equivalent to '-vm-sound-null'\n");
