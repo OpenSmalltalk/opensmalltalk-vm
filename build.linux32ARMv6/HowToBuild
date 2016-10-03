@@ -180,6 +180,8 @@ N.B. The plugin set is defined by plugins.ext and plugins.int in the build dir.
 
 Be prepared to install libuuid support.  e.g. on CentOS 6.5 use
 sudo yum -y install libuuid-devel
+and on raspbian use
+sudo apt-get install libuuid-devel
 
 
 Testing an external plugin has completely linked
@@ -241,6 +243,9 @@ sudo apt-get install libpango1.0-dev
 sudo apt-get install libssl-dev
 sudo apt-get install uuid-dev uuid-runtime
 sudo apt-get install libasound2-dev
+sudo apt-get install libgl-mesa-dev
+sudo apt-get install libgles1-mesa-dev
+sudo apt-get install libgles2-mesa-dev
 
 More advice and examples for other distros gratefully received.
 

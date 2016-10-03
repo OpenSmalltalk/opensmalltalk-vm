@@ -71,10 +71,30 @@ extern unsigned long _etext;
 /*
  * The pc collection scheme is an event buffer into which are written pcs.  The
  * image then builds up the histogram from the samples.  8 meg of buffer is 23
- * minutes of 32-bit pc samples at 1.5KHz, plenty for practical profiling.
+ * minutes of 32-bit pc samples at 1.5KHz, plenty for practical profiling.  On
+ * some 64-bit platforms, in practice, code fits in the 32-bit address space,
+ * so there is no need to squander another 4 bytes per sample.  To force 32-bit
+ * samples on 64-bits provide -DVMProfiler32BitCode=1 on the command line (or
+ * =0 to force 64-bit samples on e.g. 64-bit Mac OS X).
  */
 
+#if LP64 || ILP64 || LLP64
+# if !defined(VMProfiler32BitCode)
+#	if  __APPLE__ && __MACH__
+#	  define VMProfiler32BitCode 1
+#	else
+#	  define VMProfiler32BitCode 0
+#	endif
+# endif
+#endif
+
+#if VMProfiler32BitCode
+typedef unsigned int pctype;
+#elif LLP64
+typedef unsigned long long pctype;
+#else
 typedef unsigned long pctype;
+#endif
 
 static void
 bail_out(int err, char *err_string)
@@ -148,27 +168,34 @@ static void
 pcbufferSIGPROFhandler(int sig, siginfo_t *info, ucontext_t *uap)
 {
 #if __DARWIN_UNIX03 && __APPLE__ && __MACH__ && __i386__
-	pctype pc = uap->uc_mcontext->__ss.__eip;
+# define _PC_IN_UCONTEXT uc_mcontext->__ss.__eip
 #elif __APPLE__ && __MACH__ && __i386__
-	pctype pc = uap->uc_mcontext->ss.eip;
+# define _PC_IN_UCONTEXT uc_mcontext->ss.eip
 #elif __APPLE__ && __MACH__ && __ppc__
-	pctype pc = uap->uc_mcontext->ss.srr0;
+# define _PC_IN_UCONTEXT uc_mcontext->ss.srr0
 #elif __DARWIN_UNIX03 && __APPLE__ && __MACH__ && __x86_64__
-	pctype pc = uap->uc_mcontext->__ss.__rip;
+# define _PC_IN_UCONTEXT uc_mcontext->__ss.__rip
 #elif __APPLE__ && __MACH__ && __x86_64__
-	pctype pc = uap->uc_mcontext->ss.rip;
+# define _PC_IN_UCONTEXT uc_mcontext->ss.rip
 #elif __linux__ && __i386__
-	pctype pc = uap->uc_mcontext.gregs[REG_EIP];
+# define _PC_IN_UCONTEXT uc_mcontext.gregs[REG_EIP]
 #elif __linux__ && __x86_64__
-	pctype pc = uap->uc_mcontext.gregs[REG_RIP];
+# define _PC_IN_UCONTEXT uc_mcontext.gregs[REG_RIP]
 #elif __linux__ && __arm__
-	pctype pc = uap->uc_mcontext.arm_pc;
+# define _PC_IN_UCONTEXT uc_mcontext.arm_pc
 #elif __FreeBSD__ && __i386__
-	pctype pc = uap->uc_mcontext.mc_eip;
+# define _PC_IN_UCONTEXT uc_mcontext.mc_eip
 #else
 # error need to implement extracting pc from a ucontext_t on this system
 #endif
-	pc_buffer[pc_buffer_index] = pc;
+
+# if VMProfiler32BitCode
+	pc_buffer[pc_buffer_index] = uap->_PC_IN_UCONTEXT > 0xffffffffULL
+									? 0xffffffff
+									: (pctype)(uap->_PC_IN_UCONTEXT);
+# else
+	pc_buffer[pc_buffer_index] = uap->_PC_IN_UCONTEXT;
+# endif
 	if (++pc_buffer_index >= pc_buffer_size) {
 		pc_buffer_index = 0;
 		pc_buffer_wrapped = 1;

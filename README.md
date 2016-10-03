@@ -128,7 +128,7 @@ can be found in Cog, or in various Monticello packages in various repositories.
 Each vm source directory contains several files, a subset of the following:
 ```
 	cogit.c				- the JIT; a Cogit cooperates with a CoInterpreter.
-                          This simply includes a proessor-specific JIT file
+                          This simply includes a processor-specific JIT file
 	cogitIA32.c et al   - relevant processor-specific JIT, selected by cogit.c
 	cogit.h				- the Cogit's API, as used by the CoInterpreter
 	cogmethod.h			- the structure of a CogMethod, the output of the Cogit
@@ -160,33 +160,39 @@ the necessary steps to compile a VM.
 Within each build.OS_WordSize_Processor directory are a set of build directories
 for specific configurations of Cog, and for support code and makefiles.  For
 example, there exist
+```
 	build.macos32x86/squeak.cog.spur   - A Cog JIT VM with Squeak branding,
                                          using the Spur memory manager.
 	build.macos32x86/squeak.stack.spur - A Stack interpreter VM with Squeak
                                          branding, and the Spur memory manager.
 	build.macos32x86/squeak.cog.v3     - A Cog JIT VM with Squeak branding,
-                                         iusing the old Squeak memory manager.
+                                         using the old Squeak memory manager.
 	build.macos32x86/pharo.cog.spur    - A Cog JIT VM with Pharo branding and
                                          plugins (not yet implemented) using the
                                          Spur memory manager.
+```
     etc.
 
 There exist
+```
     build.macos32x86/bochsx86 - Support libraries for the BochsIA32Plugin which
                                 is used to develop Cog itself.
     build.macos32x86/bochsx64 - Support libraries for the BochsX64Plugin which
                                 is used to develop Cog itself.
     build.macos32x86/gdbarm32 - Support libraries for the GdbARMPlugin which
                                 is used to develop Cog itself.
+```
 and the intention is to add such directories to contain e.g. support code for
 the Pharo Cairo and Freetype plugins, and anything else needed.  By placing
 support directories in each build directory they can be shared between various
 branded VM builds, avoiding duplication.
 
 There exist
+```
 	build.macos32x86/common - Gnu Makefiles for building the various branded VMs
 	build.macos64x64/common - Gnu Makefiles for building the various branded VMs
 	build.win32x86/common   - Gnu Makefiles for building the various branded VMs
+```
 And the intention is to add build.linuxNN????/common as soon as possible to
 use Gnu Makefiles to build all VMs on all platfrms.
 
