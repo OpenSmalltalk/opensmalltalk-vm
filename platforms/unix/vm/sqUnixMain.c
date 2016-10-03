@@ -1652,7 +1652,7 @@ static void vm_printUsage(void)
 static void vm_printUsageNotes(void)
 {
 #if SPURVM
-	printf("  If '"VMOPTION("memory")"' or '"VMOPTION("maxoldspace")' are not specified then the heap will grow dynamically.\n");
+	printf("  If '"VMOPTION("memory")"' or '"VMOPTION("maxoldspace")"' are not specified then the heap will grow dynamically.\n");
 #else
 	printf("  If '"VMOPTION("memory")"' is not specified then the heap will grow dynamically.\n");
 #endif
