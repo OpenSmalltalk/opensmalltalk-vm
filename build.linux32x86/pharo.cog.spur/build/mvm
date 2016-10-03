@@ -1,5 +1,6 @@
 #!/bin/bash -e
 # PharoVM with VM profiler and threaded heartbeat
+
 case "`uname -m`" in # ensure we see x86 as machine type
 i*86) ;; # we're good
 *) if type i386 2>&1 >/dev/null; then
