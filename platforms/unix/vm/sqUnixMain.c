@@ -1449,7 +1449,7 @@ static int vm_parseArgument(int argc, char **argv)
 
   /* vm arguments */
 
-  if      (!strcmp(argv[0], VMOPTIONX("help")))		{ usage();		return 1; }
+  if      (!strcmp(argv[0], VMOPTION("help")))		{ usage();		return 1; }
   else if (!strcmp(argv[0], VMOPTION("noevents")))	{ noEvents	= 1;	return 1; }
   else if (!strcmp(argv[0], VMOPTION("nomixer")))	{ noSoundMixer	= 1;	return 1; }
   else if (!strcmp(argv[0], VMOPTION("notimer")))	{ useItimer	= 0;	return 1; }
