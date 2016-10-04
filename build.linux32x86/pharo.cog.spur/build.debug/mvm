@@ -7,7 +7,7 @@ i*86) ;; # we're good
 fi ;;
 esac
 # debug Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=debug/cogspurlinuxht
+INSTALLDIR=debug/phcogspurlinuxht
 OPT="-g3 -O0 -fwrapv -DDEBUGVM=1"
 OPT="$OPT -DPharoVM"
 

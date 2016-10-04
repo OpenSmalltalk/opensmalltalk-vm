@@ -7,7 +7,7 @@ i*86) ;; # we're good
 fi ;;
 esac
 # Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=sistaspurlinuxht
+INSTALLDIR=sqsistaspurlinuxht
 # Some gcc versions create a broken VM using -O2
 case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in
 3.4.*)	OPT="-g -O1 -fwrapv -DNDEBUG -DDEBUGVM=0";;

@@ -1,6 +1,6 @@
 #!/bin/bash -e
 # Stack Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=stkspur64linuxht
+INSTALLDIR=sqstkspur64linuxht
 OPT="-g -O1 -fwrapv -DNDEBUG -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
