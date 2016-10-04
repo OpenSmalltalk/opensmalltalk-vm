@@ -1402,130 +1402,135 @@ static int vm_parseArgument(int argc, char **argv)
 
   /* legacy compatibility */		/*** XXX to be removed at some time ***/
 
+#ifdef PharoVM
+# define VMOPTION(arg) "--"arg
+# define VMOPTIONX(arg) "-"arg
+#else
+# define VMOPTION(arg) "-"arg
+#endif
+
 # define moduleArg(arg, type, name)						\
-    if (!strcmp(argv[0], arg))							\
+    if (!strcmp(argv[0], VMOPTIONX(arg)))							\
       return parseModuleArgument(argc, argv, &type##Module, #type, name);
 
-  moduleArg("-nodisplay",		display, "null");
-  moduleArg("-browserWindow",		display, "X11");
-  moduleArg("-browserPipes",		display, "X11");
-  moduleArg("-closequit",		display, "X11");
-  moduleArg("-cmdmod",			display, "X11");
-  moduleArg("-compositioninput",	display, "X11");
-  moduleArg("-display",			display, "X11");
-  moduleArg("-fullscreen",		display, "X11");
-  moduleArg("-fullscreenDirect",	display, "X11");
+  moduleArg("nodisplay",		display, "null");
+  moduleArg("browserWindow",		display, "X11");
+  moduleArg("browserPipes",		display, "X11");
+  moduleArg("closequit",		display, "X11");
+  moduleArg("cmdmod",			display, "X11");
+  moduleArg("compositioninput",	display, "X11");
+  moduleArg("display",			display, "X11");
+  moduleArg("fullscreen",		display, "X11");
+  moduleArg("fullscreenDirect",	display, "X11");
 #if (USE_X11_GLX)
-  moduleArg("-glxdebug",		display, "X11");
+  moduleArg("glxdebug",		display, "X11");
 #endif
-  moduleArg("-headless",		display, "X11");
-  moduleArg("-iconic",			display, "X11");
-  moduleArg("-lazy",			display, "X11");
-  moduleArg("-mapdelbs",		display, "X11");
-  moduleArg("-nointl",			display, "X11");
-  moduleArg("-notitle",			display, "X11");
-  moduleArg("-noxdnd",			display, "X11");
-  moduleArg("-optmod",			display, "X11");
+  moduleArg("headless",		display, "X11");
+  moduleArg("iconic",			display, "X11");
+  moduleArg("lazy",			display, "X11");
+  moduleArg("mapdelbs",		display, "X11");
+  moduleArg("nointl",			display, "X11");
+  moduleArg("notitle",			display, "X11");
+  moduleArg("noxdnd",			display, "X11");
+  moduleArg("optmod",			display, "X11");
 #if defined(SUGAR)
-  moduleArg("-sugarBundleId",		display, "X11");
-  moduleArg("-sugarActivityId",		display, "X11");
+  moduleArg("sugarBundleId",		display, "X11");
+  moduleArg("sugarActivityId",		display, "X11");
 #endif
-  moduleArg("-swapbtn",			display, "X11");
-  moduleArg("-xasync",			display, "X11");
+  moduleArg("swapbtn",			display, "X11");
+  moduleArg("xasync",			display, "X11");
 #if defined(USE_XICFONT_OPTION)
-  moduleArg("-xicfont",			display, "X11");
+  moduleArg("xicfont",			display, "X11");
 #endif
-  moduleArg("-xshm",			display, "X11");
-  moduleArg("-quartz",			display, "Quartz");
-  moduleArg("-nosound",			sound,   "null");
+  moduleArg("xshm",			display, "X11");
+  moduleArg("quartz",			display, "Quartz");
+  moduleArg("nosound",			sound,   "null");
 
 # undef moduleArg
 
   /* vm arguments */
 
-  if      (!strcmp(argv[0], "-help"))		{ usage();		return 1; }
-  else if (!strcmp(argv[0], "-noevents"))	{ noEvents	= 1;	return 1; }
-  else if (!strcmp(argv[0], "-nomixer"))	{ noSoundMixer	= 1;	return 1; }
-  else if (!strcmp(argv[0], "-notimer"))	{ useItimer	= 0;	return 1; }
-  else if (!strcmp(argv[0], "-nohandlers"))	{ installHandlers= 0;	return 1; }
-  else if (!strcmp(argv[0], "-blockonerror")) { blockOnError = 1; return 1; }
-  else if (!strcmp(argv[0], "-blockonwarn")) { erroronwarn = blockOnError = 1; return 1; }
-  else if (!strcmp(argv[0], "-exitonwarn")) { erroronwarn = 1; return 1; }
-  else if (!strcmp(argv[0], "-timephases")) {
-	printPhaseTime(1);
-	return 1; }
+  if      (!strcmp(argv[0], VMOPTIONX("help")))		{ usage();		return 1; }
+  else if (!strcmp(argv[0], VMOPTION("noevents")))	{ noEvents	= 1;	return 1; }
+  else if (!strcmp(argv[0], VMOPTION("nomixer")))	{ noSoundMixer	= 1;	return 1; }
+  else if (!strcmp(argv[0], VMOPTION("notimer")))	{ useItimer	= 0;	return 1; }
+  else if (!strcmp(argv[0], VMOPTION("nohandlers")))	{ installHandlers= 0;	return 1; }
+  else if (!strcmp(argv[0], VMOPTION("blockonerror"))) 	{ blockOnError = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("blockonwarn"))) 	{ erroronwarn = blockOnError = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("exitonwarn"))) 	{ erroronwarn = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("timephases"))) 	{ printPhaseTime(1); return 1; }
 #if !STACKVM && !COGVM
-  else if (!strncmp(argv[0],"-jit", 4))		{ useJit	= jitArgs(argv[0]+4);	return 1; }
-  else if (!strcmp(argv[0], "-nojit"))		{ useJit	= 0;	return 1; }
-  else if (!strcmp(argv[0], "-spy"))		{ withSpy	= 1;	return 1; }
+  else if (!strncmp(argv[0],VMOPTION("jit"), 4))	{ useJit	= jitArgs(argv[0]+4);	return 1; }
+  else if (!strcmp(argv[0], VMOPTION("nojit")))		{ useJit	= 0;	return 1; }
+  else if (!strcmp(argv[0], VMOPTION("spy")))		{ withSpy	= 1;	return 1; }
 #endif /* !STACKVM && !COGVM */
-  else if (!strcmp(argv[0], "-version"))	{ versionInfo();	return 1; }
-  else if (!strcmp(argv[0], "-single"))		{ runAsSingleInstance=1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("version")))	{ versionInfo();	return 1; }
+  else if (!strcmp(argv[0], VMOPTION("single")))	{ runAsSingleInstance=1; return 1; }
   /* option requires an argument */
   else if (argc > 1)
     {
-      if (!strcmp(argv[0], "-memory"))	{ extraMemory=	 strtobkm(argv[1]);	 return 2; }
+      if (!strcmp(argv[0], VMOPTION("memory")))		{ extraMemory=	 strtobkm(argv[1]);	 return 2; }
 #if !STACKVM && !COGVM
-      else if (!strcmp(argv[0], "-procs"))	{ jitProcs=	 atoi(argv[1]);		 return 2; }
-      else if (!strcmp(argv[0], "-maxpic"))	{ jitMaxPIC=	 atoi(argv[1]);		 return 2; }
+      else if (!strcmp(argv[0], VMOPTION("procs")))	{ jitProcs=	 atoi(argv[1]);		 return 2; }
+      else if (!strcmp(argv[0], VMOPTION("maxpic")))	{ jitMaxPIC=	 atoi(argv[1]);		 return 2; }
 #endif /* !STACKVM && !COGVM */
-      else if (!strcmp(argv[0], "-mmap"))	{ useMmap=	 strtobkm(argv[1]);	 return 2; }
-      else if (!strcmp(argv[0], "-plugins"))	{ squeakPlugins= strdup(argv[1]);	 return 2; }
-      else if (!strcmp(argv[0], "-encoding"))	{ setEncoding(&sqTextEncoding, argv[1]); return 2; }
-      else if (!strcmp(argv[0], "-pathenc"))	{ setEncoding(&uxPathEncoding, argv[1]); return 2; }
+      else if (!strcmp(argv[0], VMOPTION("mmap")))	{ useMmap=	 strtobkm(argv[1]);	 return 2; }
+      else if (!strcmp(argv[0], VMOPTION("plugins")))	{ squeakPlugins= strdup(argv[1]);	 return 2; }
+      else if (!strcmp(argv[0], VMOPTION("encoding")))	{ setEncoding(&sqTextEncoding, argv[1]); return 2; }
+      else if (!strcmp(argv[0], VMOPTION("pathenc")))	{ setEncoding(&uxPathEncoding, argv[1]); return 2; }
 #if (STACKVM || NewspeakVM) && !COGVM
-	  else if (!strcmp(argv[0], "-sendtrace")) { extern sqInt sendTrace; sendTrace = 1; return 1; }
+	  else if (!strcmp(argv[0], VMOPTION("sendtrace"))) { extern sqInt sendTrace; sendTrace = 1; return 1; }
 #endif
 #if STACKVM || NewspeakVM
-      else if (!strcmp(argv[0], "-breaksel")) { 
+      else if (!strcmp(argv[0], VMOPTION("breaksel"))) { 
 		extern void setBreakSelector(char *);
 		setBreakSelector(argv[1]);
 		return 2; }
 #endif
 #if STACKVM
-      else if (!strcmp(argv[0], "-breakmnu")) { 
+      else if (!strcmp(argv[0], VMOPTION("breakmnu"))) { 
 		extern void setBreakMNUSelector(char *);
 		setBreakMNUSelector(argv[1]);
 		return 2; }
-      else if (!strcmp(argv[0], "-eden")) {
+      else if (!strcmp(argv[0], VMOPTION("eden"))) {
 		extern sqInt desiredEdenBytes;
 		desiredEdenBytes = strtobkm(argv[1]);
 		return 2; }
-      else if (!strcmp(argv[0], "-leakcheck")) { 
+      else if (!strcmp(argv[0], VMOPTION("leakcheck"))) { 
 		extern sqInt checkForLeaks;
 		checkForLeaks = atoi(argv[1]);	 
 		return 2; }
-      else if (!strcmp(argv[0], "-stackpages")) {
+      else if (!strcmp(argv[0], VMOPTION("stackpages"))) {
 		extern sqInt desiredNumStackPages;
 		desiredNumStackPages = atoi(argv[1]);
 		return 2; }
-      else if (!strcmp(argv[0], "-numextsems")) { 
+      else if (!strcmp(argv[0], VMOPTION("numextsems"))) { 
 		ioSetMaxExtSemTableSize(atoi(argv[1]));
 		return 2; }
-      else if (!strcmp(argv[0], "-checkpluginwrites")) { 
+      else if (!strcmp(argv[0], VMOPTION("checkpluginwrites"))) { 
 		extern sqInt checkAllocFiller;
 		checkAllocFiller = 1;
 		return 1; }
-      else if (!strcmp(argv[0], "-noheartbeat")) { 
+      else if (!strcmp(argv[0], VMOPTION("noheartbeat"))) { 
 		extern sqInt suppressHeartbeatFlag;
 		suppressHeartbeatFlag = 1;
 		return 1; }
-      else if (!strcmp(argv[0], "-warnpid")) { 
+      else if (!strcmp(argv[0], VMOPTION("warnpid"))) { 
 		extern sqInt warnpid;
 		warnpid = getpid();
 		return 1; }
-      else if (!strcmp(argv[0], "-pollpip")) { 
+      else if (!strcmp(argv[0], VMOPTION("pollpip"))) { 
 		extern sqInt pollpip;
 		pollpip = atoi(argv[1]);	 
 		return 2; }
 #endif /* STACKVM */
 #if COGVM
-      else if (!strcmp(argv[0], "-codesize")) { 
+      else if (!strcmp(argv[0], VMOPTION("codesize"))) { 
 		extern sqInt desiredCogCodeSize;
 		desiredCogCodeSize = strtobkm(argv[1]);	 
 		return 2; }
 # define TLSLEN (sizeof("-trace")-1)
-      else if (!strncmp(argv[0], "-trace", TLSLEN)) { 
+      else if (!strncmp(argv[0], VMOPTION("trace"), TLSLEN)) { 
 		extern int traceFlags;
 		char *equalsPos = strchr(argv[0],'=');
 
@@ -1539,31 +1544,31 @@ static int vm_parseArgument(int argc, char **argv)
 
 		traceFlags = atoi(equalsPos + 1);
 		return 1; }
-      else if (!strcmp(argv[0], "-tracestores")) { 
+      else if (!strcmp(argv[0], VMOPTION("tracestores"))) { 
 		extern sqInt traceStores;
 		traceStores = 1;
 		return 1; }
-      else if (!strcmp(argv[0], "-cogmaxlits")) { 
+      else if (!strcmp(argv[0], VMOPTION("cogmaxlits"))) { 
 		extern sqInt maxLiteralCountForCompile;
 		maxLiteralCountForCompile = strtobkm(argv[1]);	 
 		return 2; }
-      else if (!strcmp(argv[0], "-cogminjumps")) { 
+      else if (!strcmp(argv[0], VMOPTION("cogminjumps"))) { 
 		extern sqInt minBackwardJumpCountForCompile;
 		minBackwardJumpCountForCompile = strtobkm(argv[1]);	 
 		return 2; }
-      else if (!strcmp(argv[0], "-reportheadroom")
+      else if (!strcmp(argv[0], VMOPTION("reportheadroom"))
 			|| !strcmp(argv[0], "-rh")) { 
 		extern sqInt reportStackHeadroom;
 		reportStackHeadroom = 1;
 		return 1; }
 #endif /* COGVM */
 #if SPURVM
-      else if (!strcmp(argv[0], "-maxoldspace")) { 
+      else if (!strcmp(argv[0], VMOPTION("maxoldspace"))) { 
 		extern unsigned long maxOldSpaceSize;
 		maxOldSpaceSize = (unsigned long)strtobkm(argv[1]);	 
 		return 2; }
 #endif
-      else if (!strcmp(argv[0], "-textenc")) {
+      else if (!strcmp(argv[0], VMOPTION("textenc"))) {
 		int i, len = strlen(argv[1]);
 		char *buf = (char *)alloca(len + 1);
 		for (i = 0;  i < len;  ++i)
@@ -1584,62 +1589,62 @@ static int vm_parseArgument(int argc, char **argv)
 static void vm_printUsage(void)
 {
   printf("\nCommon <option>s:\n");
-  printf("  -encoding <enc>       set the internal character encoding (default: MacRoman)\n");
-  printf("  -help                 print this help message, then exit\n");
-  printf("  -memory <size>[mk]    use fixed heap size (added to image size)\n");
-  printf("  -mmap <size>[mk]      limit dynamic heap size (default: %dm)\n", DefaultMmapSize);
-  printf("  -timephases           print start load and run times\n");
+  printf("  "VMOPTION("encoding")" <enc>       set the internal character encoding (default: MacRoman)\n");
+  printf("  "VMOPTION("help")"                 print this help message, then exit\n");
+  printf("  "VMOPTION("memory")" <size>[mk]    use fixed heap size (added to image size)\n");
+  printf("  "VMOPTION("mmap")" <size>[mk]      limit dynamic heap size (default: %dm)\n", DefaultMmapSize);
+  printf("  "VMOPTION("timephases")"           print start load and run times\n");
 #if STACKVM || NewspeakVM
-  printf("  -breaksel selector    set breakpoint on send of selector\n");
+  printf("  "VMOPTION("breaksel")" selector    set breakpoint on send of selector\n");
 #endif
 #if STACKVM
-  printf("  -breakmnu selector    set breakpoint on MNU of selector\n");
-  printf("  -eden <size>[mk]      use given eden size\n");
-  printf("  -leakcheck num        check for leaks in the heap\n");
-  printf("  -stackpages <num>     use given number of stack pages\n");
+  printf("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
+  printf("  "VMOPTION("eden")" <size>[mk]      use given eden size\n");
+  printf("  "VMOPTION("leakcheck")" num        check for leaks in the heap\n");
+  printf("  "VMOPTION("stackpages")" <num>     use given number of stack pages\n");
 #endif
-  printf("  -noevents             disable event-driven input support\n");
-  printf("  -nohandlers           disable sigsegv & sigusr1 handlers\n");
-  printf("  -pollpip              output . on each poll for input\n");
-  printf("  -checkpluginwrites    check for writes past end of object in plugins\n");
-  printf("  -pathenc <enc>        set encoding for pathnames (default: UTF-8)\n");
-  printf("  -plugins <path>       specify alternative plugin location (see manpage)\n");
-  printf("  -textenc <enc>        set encoding for external text (default: UTF-8)\n");
-  printf("  -version              print version information, then exit\n");
+  printf("  "VMOPTION("noevents")"             disable event-driven input support\n");
+  printf("  "VMOPTION("nohandlers")"           disable sigsegv & sigusr1 handlers\n");
+  printf("  "VMOPTION("pollpip")"              output . on each poll for input\n");
+  printf("  "VMOPTION("checkpluginwrites")"    check for writes past end of object in plugins\n");
+  printf("  "VMOPTION("pathenc")" <enc>        set encoding for pathnames (default: UTF-8)\n");
+  printf("  "VMOPTION("plugins")" <path>       specify alternative plugin location (see manpage)\n");
+  printf("  "VMOPTION("textenc")" <enc>        set encoding for external text (default: UTF-8)\n");
+  printf("  "VMOPTION("version")"              print version information, then exit\n");
   printf("  -vm-<sys>-<dev>       use the <dev> driver for <sys> (see below)\n");
 #if STACKVM || NewspeakVM
 # if COGVM
-  printf("  -trace[=num]          enable tracing (optionally to a specific value)\n");
+  printf("  "VMOPTION("trace")"[=num]          enable tracing (optionally to a specific value)\n");
 # else
-  printf("  -sendtrace            enable send tracing\n");
+  printf("  "VMOPTION("sendtrace")"            enable send tracing\n");
 # endif
-  printf("  -warnpid              print pid in warnings\n");
+  printf("  "VMOPTION("warnpid")"              print pid in warnings\n");
 #endif
 #if COGVM
-  printf("  -codesize <size>[mk]  set machine code memory to bytes\n");
-  printf("  -tracestores          enable store tracing (assert check stores)\n");
-  printf("  -cogmaxlits <n>       set max number of literals for methods compiled to machine code\n");
-  printf("  -cogminjumps <n>      set min number of backward jumps for interpreted methods to be considered for compilation to machine code\n");
-  printf("  -reportheadroom       report unused stack headroom on exit\n");
+  printf("  "VMOPTION("codesize")" <size>[mk]  set machine code memory to bytes\n");
+  printf("  "VMOPTION("tracestores")"          enable store tracing (assert check stores)\n");
+  printf("  "VMOPTION("cogmaxlits")" <n>       set max number of literals for methods compiled to machine code\n");
+  printf("  "VMOPTION("cogminjumps")" <n>      set min number of backward jumps for interpreted methods to be considered for compilation to machine code\n");
+  printf("  "VMOPTION("reportheadroom")"       report unused stack headroom on exit\n");
 #endif
 #if SPURVM
-  printf("  -maxoldspace <size>[mk]    set max size of old space memory to bytes\n");
+  printf("  "VMOPTION("maxoldspace")" <size>[mk]    set max size of old space memory to bytes\n");
 #endif
-  printf("  -blockonerror         on error or segv block, not exit.  useful for attaching gdb\n");
-  printf("  -blockonwarn          on warning block, don't warn.  useful for attaching gdb\n");
-  printf("  -exitonwarn           treat warnings as errors, exiting on warn\n");
+  printf("  "VMOPTION("blockonerror")"         on error or segv block, not exit.  useful for attaching gdb\n");
+  printf("  "VMOPTION("blockonwarn")"          on warning block, don't warn.  useful for attaching gdb\n");
+  printf("  "VMOPTION("exitonwarn")"           treat warnings as errors, exiting on warn\n");
 #if 1
   printf("Deprecated:\n");
 # if !STACKVM
-  printf("  -jit                  enable the dynamic compiler (if available)\n");
+  printf("  "VMOPTION("jit")"                  enable the dynamic compiler (if available)\n");
 # endif
-  printf("  -notimer              disable interval timer for low-res clock\n");
-  printf("  -display <dpy>        equivalent to '-vm-display-X11 -display <dpy>'\n");
-  printf("  -headless             equivalent to '-vm-display-X11 -headless'\n");
-  printf("  -nodisplay            equivalent to '-vm-display-null'\n");
-  printf("  -nomixer              disable modification of mixer settings\n");
-  printf("  -nosound              equivalent to '-vm-sound-null'\n");
-  printf("  -quartz               equivalent to '-vm-display-Quartz'\n");
+  printf("  "VMOPTION("notimer")"              disable interval timer for low-res clock\n");
+  printf("  "VMOPTION("display")" <dpy>        equivalent to '-vm-display-X11 "VMOPTION("display")" <dpy>'\n");
+  printf("  "VMOPTION("headless")"             equivalent to '-vm-display-X11 "VMOPTION("headless")"'\n");
+  printf("  "VMOPTION("nodisplay")"            equivalent to '-vm-display-null'\n");
+  printf("  "VMOPTION("nomixer")"              disable modification of mixer settings\n");
+  printf("  "VMOPTION("nosound")"              equivalent to '-vm-sound-null'\n");
+  printf("  "VMOPTION("quartz")"               equivalent to '-vm-display-Quartz'\n");
 #endif
 }
 
@@ -1647,9 +1652,9 @@ static void vm_printUsage(void)
 static void vm_printUsageNotes(void)
 {
 #if SPURVM
-	printf("  If `-memory' or '-maxoldspace' are not specified then the heap will grow dynamically.\n");
+	printf("  If '"VMOPTION("memory")"' or '"VMOPTION("maxoldspace")"' are not specified then the heap will grow dynamically.\n");
 #else
-	printf("  If `-memory' is not specified then the heap will grow dynamically.\n");
+	printf("  If '"VMOPTION("memory")"' is not specified then the heap will grow dynamically.\n");
 #endif
   printf("  <argument>s are ignored, but are processed by the " IMAGE_DIALECT_NAME " image.\n");
   printf("  The first <argument> normally names a " IMAGE_DIALECT_NAME " `script' to execute.\n");
@@ -1686,11 +1691,11 @@ static void usage(void)
   if (useJit)
     {
       printf("\njit <option>s:\n");
-      printf("  -align <n>            align functions at <n>-byte boundaries\n");
-      printf("  -jit<o>[,<d>...]      set optimisation [and debug] levels\n");
-      printf("  -maxpic <n>           set maximum PIC size to <n> entries\n");
-      printf("  -procs <n>            allow <n> concurrent volatile processes\n");
-      printf("  -spy                  enable the system spy\n");
+      printf("  "VMOPTION("align")" <n>            align functions at <n>-byte boundaries\n");
+      printf("  "VMOPTION("jit")"<o>[,<d>...]      set optimisation [and debug] levels\n");
+      printf("  "VMOPTION("maxpic")" <n>           set maximum PIC size to <n> entries\n");
+      printf("  "VMOPTION("procs")" <n>            allow <n> concurrent volatile processes\n");
+      printf("  "VMOPTION("spy")"                  enable the system spy\n");
     }
   printf("\nNotes:\n");
   printf("  <imageName> defaults to `" DEFAULT_IMAGE_NAME "'.\n");
