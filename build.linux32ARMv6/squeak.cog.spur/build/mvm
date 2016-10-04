@@ -1,6 +1,6 @@
 #!/bin/bash -e
 # Spur VM with VM profiler and threaded heartbeat
-INSTALLDIR=cogspurlinuxhtRPi
+INSTALLDIR=sqcogspurlinuxhtRPi
 OPT="-g -O2 -fwrapv -DNDEBUG -DDEBUGVM=0"
 
 if [ $# -ge 1 ]; then
