@@ -1404,13 +1404,12 @@ static int vm_parseArgument(int argc, char **argv)
 
 #ifdef PharoVM
 # define VMOPTION(arg) "--"arg
-# define VMOPTIONX(arg) "-"arg
 #else
 # define VMOPTION(arg) "-"arg
 #endif
 
 # define moduleArg(arg, type, name)						\
-    if (!strcmp(argv[0], VMOPTIONX(arg)))							\
+    if (!strcmp(argv[0], VMOPTION(arg)))							\
       return parseModuleArgument(argc, argv, &type##Module, #type, name);
 
   moduleArg("nodisplay",		display, "null");
