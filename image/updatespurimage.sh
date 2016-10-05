@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/sh -e
 # Update the latest Spur image.
 . ./envvars.sh
 
