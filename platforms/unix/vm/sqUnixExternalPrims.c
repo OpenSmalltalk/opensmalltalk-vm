@@ -161,7 +161,8 @@ tryLoadModule(char *in, char *name)
       continue;
     }
   }
-  sprintf(out, "/" MODULE_PREFIX "%s" MODULE_SUFFIX, name);
+  snprintf(out, sizeof(path) - (out - path),
+    "/" MODULE_PREFIX "%s" MODULE_SUFFIX, name);
   handle= dlopen(path, RTLD_NOW | RTLD_GLOBAL);
   DPRINTF((stderr, __FILE__ " %d tryLoading dlopen(%s) = %p\n", __LINE__, path, handle));
   if (!handle) {
@@ -202,11 +203,7 @@ void *ioLoadModule(char *pluginName)
 
   /* try dlopen()ing LIBRARY_PREFIX<name>LIBRARY_SUFFIX searching only the default locations modulo LD_LIBRARY_PATH et al */
 
-# if defined(HAVE_SNPRINTF)
   snprintf(path, sizeof(path), "%s%s%s", LIBRARY_PREFIX, pluginName, LIBRARY_SUFFIX);
-# else
-  sprintf(path, "%s%s%s", LIBRARY_PREFIX, pluginName, LIBRARY_SUFFIX);
-# endif
 
   handle= dlopen(path, RTLD_NOW | RTLD_GLOBAL);
   DPRINTF((stderr, __FILE__ " %d ioLoadModule dlopen(%s) = %p%s\n", __LINE__, path, handle, handle ? "" : dlerror()));
@@ -236,7 +233,7 @@ tryLoading(char *dirName, char *moduleName)
 		char        libName[NAME_MAX + 32];	/* headroom for prefix/suffix */
 		struct stat buf;
 		int         n;
-		n = sprintf(libName,"%s%s%s%s",dirName,*prefix,moduleName,*suffix);
+		n = snprintf(libName, sizeof(libName), "%s%s%s%s",dirName,*prefix,moduleName,*suffix);
 		assert(n >= 0 && n < NAME_MAX + 32);
 		if (!stat(libName, &buf)) {
 			if (S_ISDIR(buf.st_mode))
@@ -277,7 +274,7 @@ static void *tryLoadingPath(char *varName, char *pluginName)
 	   path= strtok(0, ":"))
 	{
 	  char buf[MAXPATHLEN];
-	  sprintf(buf, "%s/", path);
+	  snprintf(buf, sizeof(buf), "%s/", path);
 	  DPRINTF((stderr, "  path dir = %s\n", buf));
 	  if ((handle= tryLoading(buf, pluginName)) != 0)
 	    break;
@@ -384,7 +381,7 @@ ioLoadModule(char *pluginName)
     for (framework= frameworks;  *framework;  ++framework)
       {
 	char path[NAME_MAX];
-	sprintf(path, "%s/%s.framework/", *framework, pluginName);
+	snprintf(path, sizeof(path), "%s/%s.framework/", *framework, pluginName);
 	if ((handle= tryLoading(path, pluginName)))
 	  return handle;
       }
@@ -394,11 +391,7 @@ ioLoadModule(char *pluginName)
   /* finally (for VM hackers) try the pre-install build location */
   {
     char pluginDir[MAXPATHLEN];
-#  ifdef HAVE_SNPRINTF
     snprintf(pluginDir, sizeof(pluginDir), "%s%s/.libs/", vmPath, pluginName);
-#  else
-    sprintf(pluginDir, "%s%s/.libs/", vmPath, pluginName);
-#  endif
     if ((handle= tryLoading(pluginDir, pluginName)))
       return handle;
   }
@@ -425,11 +418,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
   char buf[256];
   void *fn;
 
-#ifdef HAVE_SNPRINTF
   snprintf(buf, sizeof(buf), "%s", lookupName);
-#else
-  sprintf(buf, "%s", lookupName);
-#endif
 
   if (!*lookupName) /* avoid errors in dlsym from eitherPlugin: code. */
     return 0;
@@ -452,11 +441,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
   if (fn && accessorDepthPtr) {
 	signed char *accessorDepthVarPtr;
 
-# ifdef HAVE_SNPRINTF
 	snprintf(buf+strlen(buf), sizeof(buf), "AccessorDepth");
-# else
-	sprintf(buf+strlen(buf), "AccessorDepth");
-# endif
 	accessorDepthVarPtr = dlsym(moduleHandle, buf);
 	/* The Slang machinery assumes accessor depth defaults to -1, which
 	 * means "no accessor depth".  It saves space not outputting -1 depths.
