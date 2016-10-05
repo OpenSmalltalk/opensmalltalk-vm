@@ -1,0 +1,12 @@
+#!/bin/bash -e
+# libsdl2 third-party library
+
+pushd .
+cd `dirname $0`
+case $1 in 
+	install) 	make install THIRDPARTYINSTALLDIR=$2 ;;
+	clean) 		make clean ;;
+	*) 		make all ;;
+esac
+popd
+
