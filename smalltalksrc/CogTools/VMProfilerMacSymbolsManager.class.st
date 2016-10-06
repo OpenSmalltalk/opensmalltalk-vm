@@ -138,14 +138,14 @@ VMProfilerMacSymbolsManager >> parseAsynchronously [
 { #category : #parsing }
 VMProfilerMacSymbolsManager >> parseSymbolsFor: module [
 	| arch proc symtab symStream |
-	arch := (Smalltalk image getSystemAttribute: 1003) caseOf: {
-				['intel']	->	['i386'].
-				['x64']	->	['x86_64'].
-				}.
 	(tempDir fileExists: module shortName) ifFalse:
-		[proc := OSProcess thisOSProcess command:
+		[arch := (Smalltalk image getSystemAttribute: 1003) caseOf: {
+					['intel']	->	['i386'].
+					['x64']	->	['x86_64'] }.
+		 "N.B. Don't use the -f option (which meant flat symbols) as in El Capitan it is misinterpreted to mean -format."
+		 proc := OSProcess thisOSProcess command:
 						'cd ', tempDir fullName,
-						';nm -n -arch ', arch, ' -f "', module name, '" | grep -v " [aAU] " >"', module shortName, '"'].
+						';nm -n -arch ', arch, " -f" ' "', module name, '" | grep -v " [aAU] " >"', module shortName, '"'].
 	symStream := (Array new: 1000) writeStream.
 	symStream nextPut: module.
 	proc ifNotNil:
