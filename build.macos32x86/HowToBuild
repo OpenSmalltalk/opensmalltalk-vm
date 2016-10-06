@@ -185,5 +185,13 @@ For example, to install gcc 5.2 see
 best pointer I've found.
 
 
+Installing third-party libraries
+-----------------------------------------
+The Pharo VM depends on a number of third-party libraries.  cmake is needed to
+build the libraries.  Pre-compiled binaries for cmake can be downloaded from
+https://cmake.org/download.  Once e.g. /Applications/CMake.app is installed,
+ensure /Applications/CMake.app/Contents/bin is in PATH.
+
+
 Eliot Miranda
-February 2016
+October 2016
