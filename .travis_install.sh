@@ -64,6 +64,7 @@ if [ ! -e "$ARMCHROOT/etc/debian_chroot" ]; then
 	    build-essential libcairo2-dev libpango1.0-dev libssl-dev uuid-dev uuid-runtime libasound2-dev \
 	    debhelper devscripts libssl-dev libfreetype6-dev libx11-dev libxext-dev \
 	    libx11-dev libsm-dev libice-dev libgl1-mesa-dev libgl1-mesa-glx git
+    schroot -c rpi -u root -- apt-get --allow-unauthenticated install -y cmake
 fi
 schroot -c rpi -- uname -m
 
