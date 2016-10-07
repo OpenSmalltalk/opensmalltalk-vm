@@ -62,6 +62,9 @@ export COGVOPTS="-DCOGVREV=\"${COGVREV}\" -DCOGVDATE=\"${COGVDATE// /_}\" -DCOGV
 case "$PLATFORM" in
   "Linux")
     build_directory="./build.${ARCH}/${FLAVOR}/build"
+	if [[ "${HEARTBEAT}" == "itimer" ]]; then
+		build_directory="${build_directory}.itimerheartbeat"
+	fi
 
     [[ ! -d "${build_directory}" ]] && exit 10
 

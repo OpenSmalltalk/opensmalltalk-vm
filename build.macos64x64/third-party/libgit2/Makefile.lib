@@ -3,11 +3,11 @@ include ../common/Makefile.lib.extra
 $(info LIBRARY: libgit2)
 
 # plugin definitions
-LIBGIT2URL:=https://github.com/libgit2/libgit2/archive/v0.24.1.tar.gz
-LIBGIT2DIR:=$(THIRDPARTYDIR)/libgit2-0.24.1
+LIBGIT2URL:=https://github.com/libgit2/libgit2/archive/v0.24.2.tar.gz
+LIBGIT2DIR:=$(THIRDPARTYDIR)/libgit2-0.24.2
 LIBGIT2LIBNAME:=libgit2.0.24.0.dylib
 LIBGIT2LIB:=$(THIRDPARTYINSTALLDIR)/$(LIBGIT2LIBNAME)
-LIBGIT2ARCHIVE:=$(THIRDPARTYCACHEDIR)/libgit2-v0.24.1.tar.gz
+LIBGIT2ARCHIVE:=$(THIRDPARTYCACHEDIR)/libgit2-v0.24.2.tar.gz
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
@@ -27,6 +27,8 @@ $(LIBGIT2LIB): $(LIBGIT2DIR)/CMakeLists.txt
 			-DCMAKE_INSTALL_PREFIX=$(THIRDPARTYOUTDIR) \
 			-DUSE_SSH=ON \
 			-DBUILD_CLAR=OFF \
+			-DOPENSSL_FOUND=ON \
+			-DOPENSSL_LIBRARIES=/usr/local/lib \
 			-DLIBSSH2_FOUND=ON \
 			-DLIBSSH2_INCLUDE_DIRS=$(THIRDPARTYINCLUDEDIR) \
 			-DLIBSSH2_LIBRARIES=$(THIRDPARTYLIBDIR)/libssh2.1.dylib \
