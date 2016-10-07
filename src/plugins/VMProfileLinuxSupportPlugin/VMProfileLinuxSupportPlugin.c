@@ -13,6 +13,12 @@ static char __buildInfo[] = "VMProfileLinuxSupportPlugin VMMaker.oscog-eem.1851 
 #include <string.h>
 #include <time.h>
 #include <limits.h>
+#ifdef __OpenBSD__
+#include <dlfcn.h>
+#define RTLD_MODE RTLD_LAZY
+#else
+#define RTLD_MODE (RTLD_LAZY | RTLD_NODELETE)
+#endif
 #ifndef _GNU_SOURCE
 # define _GNU_SOURCE
 #endif
@@ -171,7 +177,7 @@ primitiveDLSymInLibrary(void)
 	symName = malloc(sz + 1);
 	strncpy(symName, firstIndexableField(nameObj), sz);
 	symName[sz] = 0;
-	lib = dlopen(libName, RTLD_LAZY | RTLD_NODELETE);
+	lib = dlopen(libName, RTLD_MODE);
 	if (!(lib)) {
 		free(libName);
 		free(symName);

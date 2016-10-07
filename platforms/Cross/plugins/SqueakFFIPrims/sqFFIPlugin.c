@@ -8,7 +8,7 @@
 *****************************************************************************/
 
 #include <stdio.h>
-#if !WIN32 && !__FreeBSD__
+#if !WIN32 && !__FreeBSD__ && !__OpenBSD__
 # include <alloca.h>
 #endif
 #include <string.h>
