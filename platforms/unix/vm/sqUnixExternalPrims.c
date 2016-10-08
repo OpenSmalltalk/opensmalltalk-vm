@@ -441,7 +441,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
   if (fn && accessorDepthPtr) {
 	signed char *accessorDepthVarPtr;
 
-	snprintf(buf+strlen(buf), sizeof(buf), "AccessorDepth");
+	snprintf(buf+strlen(buf), sizeof(buf) - strlen(buf), "AccessorDepth");
 	accessorDepthVarPtr = dlsym(moduleHandle, buf);
 	/* The Slang machinery assumes accessor depth defaults to -1, which
 	 * means "no accessor depth".  It saves space not outputting -1 depths.
