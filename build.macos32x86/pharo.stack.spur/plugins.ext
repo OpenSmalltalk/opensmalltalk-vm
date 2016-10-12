@@ -6,7 +6,6 @@ FloatMathPlugin \
 JPEGReadWriter2Plugin \
 JPEGReaderPlugin \
 LocalePlugin \
-MIDIPlugin \
 Mpeg3Plugin \
 RePlugin \
 SqueakSSL \
@@ -18,6 +17,7 @@ ObjectiveCPlugin \
 # could work, but I don't know if relevant:
 # TestOSAPlugin \
 # not working (because of Cocoa vs Carbon):
+# MIDIPlugin \
 # QuicktimePlugin \
 # JoystickTabletPlugin \
 # B3DAcceleratorPlugin \
