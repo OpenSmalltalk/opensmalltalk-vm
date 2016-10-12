@@ -1658,12 +1658,14 @@ SimpleStackBasedCogit >> frameOffsetOfTemporary: index [
 { #category : #accessing }
 SimpleStackBasedCogit >> fullBlockEntryOffset [
 	<api>
+	<cmacro>
 	^cbEntryOffset
 ]
 
 { #category : #accessing }
 SimpleStackBasedCogit >> fullBlockNoContextSwitchEntryOffset [
 	<api>
+	<cmacro>
 	^cbNoSwitchEntryOffset
 ]
 
