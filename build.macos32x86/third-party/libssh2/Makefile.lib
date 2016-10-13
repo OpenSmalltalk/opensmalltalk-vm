@@ -23,10 +23,7 @@ $(LIBSSH2DIR)/configure: $(LIBSSH2ARCHIVE)
 
 $(LIBSSH2LIB): $(LIBSSH2DIR)/configure
 	cd $(LIBSSH2DIR) \
-		&& ./configure \
-			--prefix='$(THIRDPARTYOUTDIR)' \
-			CFLAGS='-arch i386' \
-			LDFLAGS='-arch i386 -L/usr/local/lib -L/usr/local/opt/openssl/lib' \
+		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch i386' LDFLAGS='-arch i386 -L/usr/lib' \
 		&& make \
 		&& make install
 	cp -f $(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME) $(THIRDPARTYINSTALLDIR)

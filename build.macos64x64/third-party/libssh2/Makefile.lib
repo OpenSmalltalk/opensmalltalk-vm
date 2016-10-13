@@ -23,10 +23,7 @@ $(LIBSSH2DIR)/configure: $(LIBSSH2ARCHIVE)
 
 $(LIBSSH2LIB): $(LIBSSH2DIR)/configure
 	cd $(LIBSSH2DIR) \
-		&& ./configure \
-			--prefix='$(THIRDPARTYOUTDIR)' \
-			CFLAGS='-arch x86_64' \
-			LDFLAGS='-arch x86_64 -L/usr/local/lib' \
+		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch x86_64' LDFLAGS='-arch x86_64 -L/usr/lib' \
 		&& make \
 		&& make install
 	cp -f $(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME) $(THIRDPARTYINSTALLDIR)
