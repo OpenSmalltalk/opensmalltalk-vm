@@ -50,7 +50,11 @@ ioClearProfile(void)
 #	define __USE_GNU /* to get register defines in sys/ucontext.h */
 # endif
 #endif
+#ifdef __OpenBSD__
+#include <sys/signal.h>
+#else
 #include <sys/ucontext.h>
+#endif
 #if  __linux__ && UNDEF__USE_GNU
 # undef __USE_GNU
 #endif
@@ -169,6 +173,8 @@ pcbufferSIGPROFhandler(int sig, siginfo_t *info, ucontext_t *uap)
 # define _PC_IN_UCONTEXT uc_mcontext.arm_pc
 #elif __FreeBSD__ && __i386__
 # define _PC_IN_UCONTEXT uc_mcontext.mc_eip
+#elif __OpenBSD__
+# define _PC_IN_UCONTEXT sc_rip
 #else
 # error need to implement extracting pc from a ucontext_t on this system
 #endif
