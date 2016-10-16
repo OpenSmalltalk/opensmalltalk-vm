@@ -1,0 +1,42 @@
+include ../common/Makefile.lib.extra
+
+$(info LIBRARY: openssl)
+
+# plugin definitions
+OPENSSLURL:=https://www.openssl.org/source/openssl-1.0.2j.tar.gz
+OPENSSLDIR:=$(THIRDPARTYDIR)/openssl-1.0.2j
+OPENSSLLIBNAME:=libssl.1.0.0.dylib
+OPENSSLALLLIBNAMES:=libcrypto.1.0.0.dylib $(OPENSSLLIBNAME)
+OPENSSLLIB:=$(THIRDPARTYINSTALLDIR)/$(OPENSSLLIBNAME)
+OPENSSLARCHIVE:=$(THIRDPARTYCACHEDIR)/openssl-1.0.2j.tar.gz
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(OPENSSLLIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+
+$(OPENSSLARCHIVE): 
+	curl -o $(OPENSSLARCHIVE) -L $(OPENSSLURL) 
+
+$(OPENSSLDIR)/configure: $(OPENSSLARCHIVE)
+	tar x -f $(OPENSSLARCHIVE) -C $(THIRDPARTYDIR)
+	touch $(OPENSSLDIR)/configure
+
+$(OPENSSLLIB): $(OPENSSLDIR)/configure
+	cd $(OPENSSLDIR) \
+		&& ./Configure darwin-i386-cc --prefix='$(THIRDPARTYOUTDIR)' shared \
+		&& LDFLAGS='-Wl,-rpath,@executable_path:@executable_path/Plugins' make \
+		&& make install
+	@for each in $(OPENSSLALLLIBNAMES); do \
+		cp -f $(THIRDPARTYLIBDIR)/$$each $(THIRDPARTYINSTALLDIR) \
+			&& chmod +w $(THIRDPARTYINSTALLDIR)/$$each \
+			&& install_name_tool -id "@executable_path/Plugins/$$each" $(THIRDPARTYINSTALLDIR)/$$each ; \
+	done
+	@echo "Fixing dependency links"
+	# libssl has a dependency with libcrypto
+	for each in $(OPENSSLALLLIBNAMES); do \
+		install_name_tool -change "$(THIRDPARTYLIBDIR)/$$each" "@executable_path/Plugins/$$each" $(OPENSSLLIB); \
+	done
+	@echo "DONE"
+
+openssl: $(OPENSSLLIB)
