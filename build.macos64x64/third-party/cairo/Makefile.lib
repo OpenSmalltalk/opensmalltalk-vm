@@ -37,7 +37,7 @@ $(CAIROLIB): pkgconfig libpng freetype2 pixman $(CAIRODIR)/configure
 	cp -f $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME) $(THIRDPARTYINSTALLDIR)
 	install_name_tool -id "@executable_path/Plugins/$(CAIROLIBNAME)" $(CAIROLIB)
 	@echo "Fixing dependency links"
-	@for each in $(notdir $(wildcard $(THIRDPARTYLIBDIR)/*.dylib)); do \
+	@for each in $(PIXMANLIBNAME) $(FREETYPE2LIBNAME) $(LIBPNGLIBNAME); do \
 		install_name_tool -change "$(THIRDPARTYLIBDIR)/$$each" "@executable_path/Plugins/$$each" $(CAIROLIB); \
 	done
 	@echo "DONE"
