@@ -59,6 +59,9 @@
 # include <execinfo.h>
 # define BACKTRACE_DEPTH 64
 #endif
+#if __OpenBSD__
+# include <sys/signal.h>
+#endif
 #if __FreeBSD__
 # include <sys/ucontext.h>
 #endif
@@ -870,6 +873,9 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 # elif __FreeBSD__ && __i386__
 			void *fp = (void *)(uap ? uap->uc_mcontext.mc_ebp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.mc_esp: 0);
+# elif __OpenBSD__
+			void *fp = (void *)(uap ? uap->sc_rbp: 0);
+			void *sp = (void *)(uap ? uap->sc_rsp: 0);
 # elif __sun__ && __i386__
       void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
       void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);

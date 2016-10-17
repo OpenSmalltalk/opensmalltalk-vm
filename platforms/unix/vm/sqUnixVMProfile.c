@@ -50,7 +50,11 @@ ioClearProfile(void)
 #	define __USE_GNU /* to get register defines in sys/ucontext.h */
 # endif
 #endif
+#ifdef __OpenBSD__
+#include <sys/signal.h>
+#else
 #include <sys/ucontext.h>
+#endif
 #if  __linux__ && UNDEF__USE_GNU
 # undef __USE_GNU
 #endif
@@ -71,26 +75,10 @@ extern unsigned long _etext;
 /*
  * The pc collection scheme is an event buffer into which are written pcs.  The
  * image then builds up the histogram from the samples.  8 meg of buffer is 23
- * minutes of 32-bit pc samples at 1.5KHz, plenty for practical profiling.  On
- * some 64-bit platforms, in practice, code fits in the 32-bit address space,
- * so there is no need to squander another 4 bytes per sample.  To force 32-bit
- * samples on 64-bits provide -DVMProfiler32BitCode=1 on the command line (or
- * =0 to force 64-bit samples on e.g. 64-bit Mac OS X).
+ * minutes of 32-bit pc samples at 1.5KHz, plenty for practical profiling.
  */
 
-#if LP64 || ILP64 || LLP64
-# if !defined(VMProfiler32BitCode)
-#	if  __APPLE__ && __MACH__
-#	  define VMProfiler32BitCode 1
-#	else
-#	  define VMProfiler32BitCode 0
-#	endif
-# endif
-#endif
-
-#if VMProfiler32BitCode
-typedef unsigned int pctype;
-#elif LLP64
+#if LLP64
 typedef unsigned long long pctype;
 #else
 typedef unsigned long pctype;
@@ -185,17 +173,13 @@ pcbufferSIGPROFhandler(int sig, siginfo_t *info, ucontext_t *uap)
 # define _PC_IN_UCONTEXT uc_mcontext.arm_pc
 #elif __FreeBSD__ && __i386__
 # define _PC_IN_UCONTEXT uc_mcontext.mc_eip
+#elif __OpenBSD__
+# define _PC_IN_UCONTEXT sc_rip
 #else
 # error need to implement extracting pc from a ucontext_t on this system
 #endif
 
-# if VMProfiler32BitCode
-	pc_buffer[pc_buffer_index] = uap->_PC_IN_UCONTEXT > 0xffffffffULL
-									? 0xffffffff
-									: (pctype)(uap->_PC_IN_UCONTEXT);
-# else
 	pc_buffer[pc_buffer_index] = uap->_PC_IN_UCONTEXT;
-# endif
 	if (++pc_buffer_index >= pc_buffer_size) {
 		pc_buffer_index = 0;
 		pc_buffer_wrapped = 1;

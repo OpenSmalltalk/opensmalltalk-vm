@@ -453,7 +453,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 	signed char *accessorDepthVarPtr;
 
 # ifdef HAVE_SNPRINTF
-	snprintf(buf+strlen(buf), sizeof(buf), "AccessorDepth");
+	snprintf(buf+strlen(buf), sizeof(buf) - strlen(buf), "AccessorDepth");
 # else
 	sprintf(buf+strlen(buf), "AccessorDepth");
 # endif
