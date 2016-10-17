@@ -3,11 +3,11 @@ include ../common/Makefile.lib.extra
 $(info LIBRARY: cairo)
 
 # plugin definitions
-CAIROURL:=http://www.cairographics.org/releases/cairo-1.12.14.tar.xz
+CAIROURL:=http://www.cairographics.org/releases/cairo-1.14.6.tar.xz
 CAIROLIBNAME:=libcairo.2.dylib
-CAIRODIR:=$(THIRDPARTYDIR)/cairo-1.12.14
+CAIRODIR:=$(THIRDPARTYDIR)/cairo-1.14.6
 CAIROLIB:=$(THIRDPARTYINSTALLDIR)/$(CAIROLIBNAME)
-CAIROARCHIVE:=$(THIRDPARTYCACHEDIR)/cairo-1.12.14.tar.xz
+CAIROARCHIVE:=$(THIRDPARTYCACHEDIR)/cairo-1.14.6.tar.xz
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
