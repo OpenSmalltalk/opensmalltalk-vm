@@ -1,7 +1,15 @@
 #!/bin/bash -e
 # PharoVM with VM profiler and threaded heartbeat
 INSTALLDIR=phcogspurlinuxhtRPi
+# disable build of all dependencies by default because travis build takes too much time then fails.
+# in case we build "non-dependency" version, we need to remove plugins with dependencies (SDL2 in particular)
+if [ $1 = "all" ]; then
 THIRDPARTYLIBS="libsdl2 libssh2 libgit2"
+EXTERNALPLUGINS="plugins.ext.all"
+else
+THIRDPARTYLIBS=
+EXTERNALPLUGINS="plugins.ext"
+fi
 OPT="-g -O2 -fwrapv -DNDEBUG -DDEBUGVM=0 -DPharoVM"
 
 if [ $# -ge 1 ]; then
@@ -18,7 +26,7 @@ n|no|N|NO)	echo "ok but this isn't safe!!";;
 	done
 esac
 test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -p ../../plugins.int .)
-test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
+test -f plugins.ext || (test -f ../$EXTERNALPLUGINS && cp -p ../plugins.ext ./plugins.ext || cp -p ../../$EXTERNALPLUGINS ./plugins.ext)
 
 for lib in ${THIRDPARTYLIBS}; do
 	../../third-party/${lib}/mvm
