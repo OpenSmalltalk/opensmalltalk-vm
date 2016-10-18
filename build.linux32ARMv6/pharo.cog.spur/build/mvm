@@ -6,6 +6,7 @@ INSTALLDIR=phcogspurlinuxhtRPi
 if [ $1 = "all" ]; then
 THIRDPARTYLIBS="libsdl2 libssh2 libgit2"
 EXTERNALPLUGINS="plugins.ext.all"
+shift 
 else
 THIRDPARTYLIBS=
 EXTERNALPLUGINS="plugins.ext"
