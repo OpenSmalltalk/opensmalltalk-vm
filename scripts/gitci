@@ -10,6 +10,7 @@ rm -rf src/plugins/[A-Z]*FFIPlugin
 
 if [ -n "`\`dirname $0\`/findUnofficialFiles`" ]; then
 	echo the following files are generated from modified Monticello packages.
+	`dirname $0`/findUnofficialFiles
 	echo "Do you still want to check in?  y/N \c"
 	read n
 	case $n in
