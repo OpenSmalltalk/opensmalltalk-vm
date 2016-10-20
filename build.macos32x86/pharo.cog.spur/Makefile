@@ -9,7 +9,7 @@ COGDEFS:=-DPharoVM=1
 APPNAME:=Pharo
 APPNAMEDEF:=$(APPNAME)
 USEPLUGINASDYLIB:=TRUE
-THIRDPARTYLIBS:=pkgconfig freetype2 libssh2 libgit2 libsdl2 pixman libpng cairo
+THIRDPARTYLIBS:=pkgconfig freetype2 openssl libssh2 libgit2 libsdl2 pixman libpng cairo
 
 #CFLAGS=$(CFLAGS) -DNSZombieEnabled=YES
 
@@ -21,6 +21,7 @@ include ../common/Makefile.app
 #
 include ../third-party/pkgconfig/Makefile.lib
 include ../third-party/freetype2/Makefile.lib
+include ../third-party/openssl/Makefile.lib
 include ../third-party/libssh2/Makefile.lib
 include ../third-party/libgit2/Makefile.lib
 include ../third-party/libsdl2/Makefile.lib
