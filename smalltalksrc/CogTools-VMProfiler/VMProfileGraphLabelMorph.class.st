@@ -136,6 +136,7 @@ VMProfileGraphLabelMorph >> getLabelsSelector: anObject [
 { #category : #initialization }
 VMProfileGraphLabelMorph >> initialize [
 	super initialize.
+	color := Color lightBlue lighter lighter.
 	positionedLabels := Dictionary new.
 	font := TextStyle default defaultFont.
 	getLabelsSelector := #positionedLabels

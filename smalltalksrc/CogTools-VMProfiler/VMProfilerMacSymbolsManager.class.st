@@ -51,6 +51,29 @@ VMProfilerMacSymbolsManager class >> tempDirectory [
 	^FileDirectory on: '/tmp/vmsyms', OSProcess thisOSProcess pid printString
 ]
 
+{ #category : #parsing }
+VMProfilerMacSymbolsManager >> archName [
+	"Answer the architecture name for use with nm, size et al."
+	^(Smalltalk image getSystemAttribute: 1003) caseOf: {
+		['intel']	->	['i386'].
+		['x64']	->	['x86_64'] }
+]
+
+{ #category : #parsing }
+VMProfilerMacSymbolsManager >> computeLimitFor: module initialShift: initialShift [
+	"If we can't find a non-text symbol following the last text symbol, compute the ernd of text using the size command."
+	| sizeFileName proc text size |
+	(tempDir fileExists: (sizeFileName := module shortName, '.size')) ifFalse:
+		["N.B. Don't use the -f option (which meant flat symbols) as in El Capitan it is misinterpreted to mean -format."
+		 proc := OSProcess thisOSProcess command:
+						'cd ', tempDir fullName,
+						';size -arch ', self archName, " -f" ' "', module name, '" >"', sizeFileName, '"'.
+		 [proc isComplete] whileFalse: [(Delay forMilliseconds: 25) wait]].
+	text := (StandardFileStream readOnlyFileNamed: (tempDir fullNameFor: sizeFileName)) contentsOfEntireFile.
+	size := Integer readFrom: (text copyAfter: Character lf) readStream.
+	^size + initialShift
+]
+
 { #category : #'initialize-release' }
 VMProfilerMacSymbolsManager >> filter: moduleList [
 	"Some modules are giving us parsing problems at the moment.  Just ignore them for now."
@@ -80,7 +103,7 @@ VMProfilerMacSymbolsManager >> initialize [
 VMProfilerMacSymbolsManager >> initializeMost [
 	| shortNames |
 	initialized := false.
-	maxAddressMask := (2 raisedToInteger: 32) - 1.
+	maxAddressMask := (2 raisedToInteger: Smalltalk wordSize * 8) - 1.
 	modulesByName := Dictionary new.
 	symbolsByModule := Dictionary new.
 	shortNames := Set new.
@@ -131,21 +154,19 @@ VMProfilerMacSymbolsManager >> parseAsynchronously [
 	[modules allButFirst do:
 		[:module|
 		symbolsByModule at: module put: { module }.
-		self parseSymbolsFor: module].
+		(self parseSymbolsFor: module) ifNil:
+			[symbolsByModule removeKey: module]].
 	 initialized := true] forkAt: Processor userBackgroundPriority
 ]
 
 { #category : #parsing }
 VMProfilerMacSymbolsManager >> parseSymbolsFor: module [
-	| arch proc symtab symStream |
+	| proc symtab symStream |
 	(tempDir fileExists: module shortName) ifFalse:
-		[arch := (Smalltalk image getSystemAttribute: 1003) caseOf: {
-					['intel']	->	['i386'].
-					['x64']	->	['x86_64'] }.
-		 "N.B. Don't use the -f option (which meant flat symbols) as in El Capitan it is misinterpreted to mean -format."
+		["N.B. Don't use the -f option (which meant flat symbols) as in El Capitan it is misinterpreted to mean -format."
 		 proc := OSProcess thisOSProcess command:
 						'cd ', tempDir fullName,
-						';nm -n -arch ', arch, " -f" ' "', module name, '" | grep -v " [aAU] " >"', module shortName, '"'].
+						';nm -n -arch ', self archName, " -f" ' "', module name, '" | grep -v " [aAU] " >"', module shortName, '"'].
 	symStream := (Array new: 1000) writeStream.
 	symStream nextPut: module.
 	proc ifNotNil:
@@ -155,6 +176,9 @@ VMProfilerMacSymbolsManager >> parseSymbolsFor: module [
 					do: [:ex| "Handle flaky OSProcess stuff by reporting error and failing to parse"
 						Transcript print: ex; flush.
 						^nil].
+	"Have caller eliminate modules with no text."
+	symtab size = 0 ifTrue:
+		[^nil].
 	module shortName = 'HIToolbox' ifTrue: [self halt].
 	[| prev |
 	 prev := self parseSymbolsFrom: symtab to: symStream.
@@ -187,7 +211,7 @@ VMProfilerMacSymbolsManager >> parseSymbolsFrom: symtab "<ReadStream>" to: symSt
 		   and: [(address := self hexFromStream: line) ~= maxAddressMask
 		   and: [address ~= 0 "on 10.6 this eliminates initial mh_dylib_header entries"]]]) ifTrue:
 			[| symbol |
-			 prev notNil ifTrue:
+			 prev ifNotNil:
 				[prev limit: address].
 			 ('Tt' includes: line peek)
 				ifTrue:
@@ -249,7 +273,8 @@ VMProfilerMacSymbolsManager >> relocateAndFilter: symbols in: module initialShif
 	| shift prev lastSize |
 	prev := nil.
 	shift := initialShift.
-	symbols last limit isNil ifTrue: [self halt].
+	symbols last limit ifNil:
+		[symbols last limit: (self computeLimitFor: module initialShift: initialShift)].
 	symbols do:
 		[:s| | address |
 		lastSize := s limit ifNotNil: [:limit| limit - s address].
