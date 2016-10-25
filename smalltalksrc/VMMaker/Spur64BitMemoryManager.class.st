@@ -1143,6 +1143,7 @@ Spur64BitMemoryManager >> smallFloatObjectOf: aFloat [
 	 shift:					[8expsubset][52 mantissa][1s][ 000 ] 
 	 or/add tags:			[8expsubset][52mantissa][1s][3tags]"
 	<inline: true>
+	<returnTypeC: #sqInt>
 	<var: #aFloat type: #double>
 	| rawFloat rot |
 	<var: #rawFloat type: #usqLong>
