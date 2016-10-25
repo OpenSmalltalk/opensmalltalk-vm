@@ -65,6 +65,11 @@ VMPSymbol >> hash [
 	^address hash bitXor: name hash
 ]
 
+{ #category : #comparing }
+VMPSymbol >> importance [
+	^self subclassResponsibility
+]
+
 { #category : #accessing }
 VMPSymbol >> limit [
 	"Answer the value of limit"

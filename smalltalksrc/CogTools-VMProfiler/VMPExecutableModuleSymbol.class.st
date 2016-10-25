@@ -40,6 +40,11 @@ VMPExecutableModuleSymbol >> hash [
 	^self class hash bitXor: name hash
 ]
 
+{ #category : #comparing }
+VMPExecutableModuleSymbol >> importance [
+	^0
+]
+
 { #category : #testing }
 VMPExecutableModuleSymbol >> nameMatches: aPattern [
 	^(super nameMatches: aPattern)

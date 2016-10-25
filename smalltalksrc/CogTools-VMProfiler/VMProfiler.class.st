@@ -21,9 +21,11 @@ Class {
 	#superclass : #Model,
 	#instVars : [
 		'sampleBuffer',
-		'lowResolution',
-		'highResSamples',
-		'lowResSamples',
+		'sampleBag',
+		'sortedSamples',
+		'sortedSymbols',
+		'sortedSymbolsBeforeCogCode',
+		'sortedSymbolsAfterCogCode',
 		'symbolsMode',
 		'symbolTypes',
 		'symbolManager',
@@ -333,9 +335,7 @@ VMProfiler >> clearProfile [
 	self clearVMProfile.
 	self stopVMProfile.
 	
-	highResSamples atAllPut: 0.
-	lowResSamples atAllPut: 0.
-	total := 0.
+	self initializeSamples.
 	elapsedTime := 0.
 	elapsedStats := nil.
 
@@ -367,16 +367,25 @@ VMProfiler >> computeCogCodeModule [
 
 { #category : #profiling }
 VMProfiler >> computeHistograms: numSamples [
-	sampleBuffer isNil ifTrue:
+	sampleBuffer ifNil:
 		[sampleBuffer := Bitmap new: self profileSize].
 	self getVMProfileSamplesInto: sampleBuffer.
 	Cursor wait showWhile:
 		[1 to: numSamples do:
-			[:i| | pc |
-			pc := sampleBuffer at: i.
-			highResSamples noCheckAt: pc put: (highResSamples noCheckAt: pc) + 1.
-			lowResSamples at: pc // lowResolution + 1 put: (lowResSamples at: pc // lowResolution + 1) + 1]].
+			[:i|
+			sampleBag add: (sampleBuffer at: i)].
+		 sortedSamples := sampleBag sortedElements].
 	total := total + numSamples
+]
+
+{ #category : #sorting }
+VMProfiler >> computeSortedSymbols [
+	sortedSymbols := cogCodeConstituents
+						ifNil: [self sortSymbols: symbolManager modules]
+						ifNotNil:
+							[self sortedSymbolsBeforeCogCode,
+							 (self sortSymbols: {symbolManager cogModule}),
+							 self sortedSymbolsAfterCogCode]
 ]
 
 { #category : #profiling }
@@ -550,17 +559,15 @@ VMProfiler >> highAddressText [
 
 { #category : #accessing }
 VMProfiler >> highAddressText: aText [
-	highAddress := ((Integer readFrom: aText asString asUppercase readStream base: 16) max: 0) min: 16rFFFFFFFF.
+	highAddress := ((Integer readFrom: aText asString asUppercase readStream base: 16) max: 0) min: self highestAddress.
 	self selectSymbolsInRange
 ]
 
-{ #category : #accessing }
-VMProfiler >> highResSamplesFor: sym [
-	| samples |
-	samples := 0.
-	sym address to: sym limit - 1 do:
-			[:a| samples := samples + (highResSamples at: a)].
-	^samples
+{ #category : #sorting }
+VMProfiler >> highestAddress [
+	^(sortedSamples isEmpty
+		ifTrue: [symbolManager modules last limit]
+		ifFalse: [symbolManager modules last limit max: sortedSamples last key]) asPowerOfTwo - 1
 ]
 
 { #category : #opening }
@@ -582,15 +589,7 @@ VMProfiler >> initialExtent [
 
 { #category : #initialization }
 VMProfiler >> initialize [
-	"Use a SparseLargeArray so we can apparently have a sample per pc in the entire address space"
-	highResSamples := SparseLargeArray
-							new: (2 raisedToInteger: 32)
-							chunkSize: 32 * 1024
-							arrayClass: Array
-							base: 0
-							defaultValue: 0.
-	lowResolution := 16 * 1024.
-	lowResSamples := Array new: (2 raisedToInteger: 32) / lowResolution withAll: 0.
+	self initializeSamples.
 	self initializeSymbols.
 	self clearHistory.
 	symbolsMode := #byAddress.
@@ -602,6 +601,12 @@ VMProfiler >> initialize [
 	total := rangeTotal := startTime := elapsedTime := 0.
 	gcPriorToProfile := clearPriorToProfile := true.
 	forkProfile := false
+]
+
+{ #category : #initialization }
+VMProfiler >> initializeSamples [
+	sampleBag := Bag new. sortedSamples := sampleBag sortedElements.
+	total := 0.
 ]
 
 { #category : #initialization }
@@ -631,13 +636,10 @@ VMProfiler >> interpReport: s [
 		symbolList := {interp}, labels.
 		symbolList withIndexDo:
 			[:sym :index| | samples |
-			samples := 0.
-			sym address
-				to: (index < symbolList size
-						ifTrue: [(symbolList at: index + 1) address]
-						ifFalse: [interp limit]) - 1
-				do:
-					[:a| samples := samples + (highResSamples at: a)].
+			samples := self samplesForRange: sym address
+							to: (index < symbolList size
+									ifTrue: [(symbolList at: index + 1) address]
+									ifFalse: [interp limit]).
 			samples > 0 ifTrue:
 				[totals at: sym put: samples.
 				 samplesInInterp := samplesInInterp + samples]]].
@@ -832,53 +834,35 @@ VMProfiler >> openInWindow [
 ]
 
 { #category : #graph }
-VMProfiler >> plot: data from: start to: end addressRange: startAddress to: limitAddress [
-	| histSeries intSeries resolution prevX prevY prevI sum integral bin binsPerPoint fillInIntegral |
+VMProfiler >> plotGraph [
+	sortedSamples isEmpty ifTrue: [^self].
+	highAddress = 0 ifTrue:
+		[highAddress := self highestAddress.
+		 self updateAddressDependents].
+	self plotSamplesFrom: lowAddress to: highAddress.
+	graph fullDrawOn: Display getCanvas
+]
+
+{ #category : #graph }
+VMProfiler >> plotSamplesFrom: startAddress to: endAddress [
+	| histSeries intSeries integral range |
 	graph clear.
 	histSeries := graph series: #histogram.
 	intSeries := graph alternateSeries: #integral.
-	fillInIntegral := Preferences vmProfilerFillInIntegral.
-	intSeries color: Color magenta; type: #stepped; drawArea: fillInIntegral.
-	resolution := graph drawBounds width.
-	binsPerPoint := end - start + 1 >= resolution
-					ifTrue: [(end - start + 1 / resolution) ceiling]
-					ifFalse: [1].
-	prevY := prevI := integral := 0.
-	prevX := bin := start.
-	[bin <= end] whileTrue:
-		[binsPerPoint > 1
-			ifTrue:
-				[sum := 0.
-				 bin to: (bin + binsPerPoint - 1 min: end) do:
-					[:i| sum := sum + (data at: i)]]
-			ifFalse:
-				[sum := data at: bin].
-		sum = 0
-			ifTrue:
-				[(bin = start or: [prevY ~= 0]) ifTrue:
-					[histSeries addPoint: bin @ sum.
-					 intSeries addPoint: bin @ integral]]
-			ifFalse:
-				[prevY = 0 ifTrue:
-					[histSeries addPoint: prevX @ prevY.
-					 intSeries addPoint: prevX @ prevI].
-				 histSeries addPoint: bin @ sum.
-				 intSeries addPoint: bin @ (integral := integral + sum)].
-		prevX := bin.
-		prevY := sum.
-		prevI := integral.
-		bin := bin + binsPerPoint].
-	histSeries addPoint: end @ 0.
-	intSeries addPoint: end @ integral.
-	(fillInIntegral and: [integral ~= 0]) ifTrue:
-		[intSeries addPoint: end @ 0].
+	intSeries color: Color magenta; type: #stepped; drawArea: Preferences vmProfilerFillInIntegral.
+	range := self plotSamplesFrom: startAddress to: endAddress intoHistogram: histSeries andIntegral: intSeries.
+	histSeries addPoint: range last @ 0.
+	intSeries addPoint: range last @ (integral := intSeries points isEmpty ifTrue: [0] ifFalse: [intSeries points last y]).
+	(integral ~= 0 and: [Preferences vmProfilerFillInIntegral]) ifTrue:
+		[intSeries addPoint: range last @ 0].
+	self assert: histSeries points isEmpty = intSeries points isEmpty.
+	histSeries points notEmpty ifTrue:
+		[self assert: histSeries points first x = intSeries points first x.
+		 self assert: histSeries points last x = intSeries points last x].
 	rangeTotal := integral.
 	graph xAxisFormatter:
-		[:n| | address |
-		address := [startAddress + ((n asFloat - start) * (limitAddress - startAddress) / (end - start))]
-					on: ZeroDivide
-					do: [:ex| 0].
-		(address rounded asInteger printStringRadix: 16) allButFirst: 3].
+		[:n|
+		((range first + (n asFloat - range first)) rounded asInteger printStringRadix: 16) allButFirst: 3].
 	graph yAxisFormatter:
 		[:n|
 		(n rounded = n
@@ -887,31 +871,52 @@ VMProfiler >> plot: data from: start to: end addressRange: startAddress to: limi
 				[n >= 100
 					ifTrue: [n rounded]
 					ifFalse: [(n * 10) rounded / 10]]) printString].
-	graph limitMinX: start limitMaxX: end.
+	graph limitMinX: range first limitMaxX: range last.
 	self changed: #positionedLabels; changed: #totalText
 ]
 
 { #category : #graph }
-VMProfiler >> plotGraph [
-	lowResSamples first ifNil: [^self].
-	(lowAddress = 0 and: [highAddress = 0]) ifTrue:
-		[highAddress := (1 << 32) - 1.
-		 self updateAddressDependents].
-	highAddress - lowAddress / lowResolution > 100
-		ifTrue:
-			[self plot: lowResSamples
-				from: lowAddress // lowResolution + 1
-				to: (highAddress + lowResolution - 1 // lowResolution + 1
-						min: lowResSamples size)
-				addressRange: lowAddress
-				to: highAddress]
-		ifFalse:
-			[self plot: highResSamples
-				from: lowAddress
-				to: highAddress
-				addressRange: lowAddress
-				to: highAddress].
-	graph fullDrawOn: Display getCanvas
+VMProfiler >> plotSamplesFrom: startAddress to: endAddress intoHistogram: histogramSeries andIntegral: integralSeries [
+	"Plot the samples in the range startAddress to: endAddress, inclusive.  Answer the range actually
+	 plotted, which may be larger due to rounding when putting multiple addresses in the same bin."
+	| resolution sampleIndex numSamples nextSample plotter |
+	resolution := graph drawBounds width.
+	numSamples := sortedSamples size.
+	sampleIndex := sortedSamples findBinaryIndex: [:sample| startAddress - sample key] ifNone: [:lowIdx :highIdx| highIdx].
+	sampleIndex > numSamples ifTrue:
+		[^startAddress to: endAddress].
+	plotter := VMGraphPlotter new histogram: histogramSeries integral: integralSeries startAddress: startAddress.
+	nextSample := sortedSamples at: sampleIndex.
+	endAddress - startAddress + 1 > (resolution * 1.5) ifTrue:
+		[| binsPerPoint range sum |
+		 binsPerPoint := (endAddress - startAddress + 1 / resolution) ceiling.
+		 range := startAddress to: endAddress + binsPerPoint - 1 by: binsPerPoint.
+		 range do:
+			[:address| | next |
+			 next := address + binsPerPoint.
+			 sum := 0.
+			 [nextSample key < next] whileTrue:
+				[self assert: nextSample key >= address.
+				 sum := sum + nextSample value.
+				 (sampleIndex := sampleIndex + 1) > numSamples ifTrue:
+					[plotter addPlotFor: sum at: address.
+					 ^range].
+				nextSample := sortedSamples at: sampleIndex].
+			 plotter addPlotFor: sum at: address].
+			 ^range].
+		plotter plotAsBars: true.
+	startAddress to: endAddress do:
+		[:address|
+		 nextSample key <= address
+			ifTrue:
+				[self assert: nextSample key >= address.
+				 plotter addPlotFor: nextSample value at: address.
+				 (sampleIndex := sampleIndex + 1) > numSamples ifTrue:
+					[^startAddress to: endAddress].
+				 nextSample := sortedSamples at: sampleIndex]
+			ifFalse:
+				[plotter addPlotFor: 0 at: address]].
+	^startAddress to: endAddress
 ]
 
 { #category : #accessing }
@@ -930,9 +935,9 @@ VMProfiler >> positionedLabels [
 		[:type| counts at: type put: 0].
 	types := types select: [:type| symbolTypes includes: type].
 	symbolsInRange := symbolManager symbolsSelect: [:sym| sym address <= highAddress and: [sym limit >= lowAddress and: [(symbolTypes includes: sym type)]]].
-	"If there are kots if klabels then choose to display only those with samples"
+	"If there are lots of labels then choose to display only those with samples"
 	symbolsInRange size > (maxLabels / 2) ifTrue:
-		[significantSymbolsInRange := symbolsInRange select: [:s| (self symHasLowResSamples: s) and: [(self highResSamplesFor: s) > 0]]].
+		[significantSymbolsInRange := symbolsInRange select: [:s| (self samplesForSymbol: s) > 0]].
 	(symbolsInRange size > maxLabels
 	 and: [significantSymbolsInRange size >= (maxLabels / 2)]) ifTrue:
 		[symbolsInRange := significantSymbolsInRange].
@@ -1197,6 +1202,24 @@ VMProfiler >> report: s [
 		self class reportGCStats: elapsedStats upTime: elapsedTime on: s]
 ]
 
+{ #category : #accessing }
+VMProfiler >> samplesForRange: address to: limit [
+	| numSamples sampleIndex size nextSample |
+	numSamples := 0.
+	sampleIndex := sortedSamples findBinaryIndex: [:sample| address - sample key] ifNone: [:lowIdx :highIdx| highIdx].
+	size := sortedSamples size.
+	[sampleIndex <= size
+	 and: [(nextSample := sortedSamples at: sampleIndex) key < limit]] whileTrue:
+		[numSamples := numSamples + nextSample value.
+		 sampleIndex := sampleIndex + 1].
+	^numSamples
+]
+
+{ #category : #accessing }
+VMProfiler >> samplesForSymbol: sym [
+	^self samplesForRange: sym address to: sym limit
+]
+
 { #category : #menus }
 VMProfiler >> selectBenchmark: expressionString [ 
 	expressionTextMorph setText: expressionString asText
@@ -1257,6 +1280,36 @@ VMProfiler >> showingPrivateFunctions [
 { #category : #buttons }
 VMProfiler >> showingPublicFunctions [
 	^symbolTypes includes: #publicFunction
+]
+
+{ #category : #sorting }
+VMProfiler >> sortSymbols: modules [
+	"Answer an Array of all the symbols in each of modules, which is assumed to be sorted."
+	^Array streamContents:
+		[:s| | prev |
+		 modules do:
+			[:m|
+			prev
+				ifNil: [prev := m]
+				ifNotNil: [m address > prev address ifFalse: [self error: 'modules not sorted']].
+			s nextPut: m;
+			  nextPutAll: ((symbolManager symbolsInModule: m) sorted:
+								[:s1 :s2|
+								 s1 address = s2 address
+									ifTrue: [s1 importance > s2 importance]
+									ifFalse: [s1 address < s2 address]])]]
+]
+
+{ #category : #sorting }
+VMProfiler >> sortedSymbolsAfterCogCode [
+	^sortedSymbolsAfterCogCode ifNil:
+		[sortedSymbolsAfterCogCode := self sortSymbols: (symbolManager modules select: [:m| m address > cogCodeConstituents last])]
+]
+
+{ #category : #sorting }
+VMProfiler >> sortedSymbolsBeforeCogCode [
+	^sortedSymbolsBeforeCogCode ifNil:
+		[sortedSymbolsBeforeCogCode := self sortSymbols: (symbolManager modules select: [:m| m address < cogCodeConstituents second])]
 ]
 
 { #category : #spying }
@@ -1335,6 +1388,7 @@ VMProfiler >> stopProfiling [
 	self computeStats: vmParameters.
 	self computeHistograms: numSamples.
 	self computeCogCodeModule.
+	self computeSortedSymbols.
 	self clearHistory.
 	self updateButtons
 ]
@@ -1343,13 +1397,6 @@ VMProfiler >> stopProfiling [
 VMProfiler >> stopVMProfile [
 	"Stop profiling the virtual machine."
 	^self primitiveControlVMProfile: false size: self profileSize
-]
-
-{ #category : #accessing }
-VMProfiler >> symHasLowResSamples: sym [
-	^(sym address // lowResolution to: sym limit // lowResolution)
-		anySatisfy:
-			[:pc| (lowResSamples at: pc + 1) > 0]
 ]
 
 { #category : #accessing }
@@ -1516,13 +1563,13 @@ VMProfiler >> totalsDo: septuaryBlock [
 	(symbolManager symbolsInModule: symbolManager vmModule) do:
 		[:sym| | samples |
 		((#(publicFunction privateFunction) includes: sym type)
-		 and: [(samples := self highResSamplesFor: sym) > 0]) ifTrue:
+		 and: [(samples := self samplesForSymbol: sym) > 0]) ifTrue:
 			[vmTotals at: sym put: samples.
 			 samplesInVM := samplesInVM + samples]].
 	 (symbolManager symbolsInModule: symbolManager cogModule) do:
 		[:sym| | samples |
 		((#(publicFunction privateFunction) includes: sym type)
-		 and: [(samples := self highResSamplesFor: sym) > 0]) ifTrue:
+		 and: [(samples := self samplesForSymbol: sym) > 0]) ifTrue:
 			[cogTotals at: sym put: samples.
 			 samplesInCog := samplesInCog + samples]].
 	 ((symbolManager modules
@@ -1532,8 +1579,7 @@ VMProfiler >> totalsDo: septuaryBlock [
 		(symbolManager symbolsInModule: module) do:
 			[:sym| | samples |
 			((#(publicFunction privateFunction) includes: sym type)
-			and: [(self symHasLowResSamples: sym)
-			and: [(samples := self highResSamplesFor: sym) > 0]]) ifTrue:
+			and: [(samples := self samplesForSymbol: sym) > 0]) ifTrue:
 				[nonVMTotals at: sym put: samples.
 				 samplesInNonVMModules := samplesInNonVMModules + samples]]].
 	samplesInNonVM := total - samplesInVM - samplesInCog.
@@ -1580,7 +1626,7 @@ VMProfiler >> updateAddressSelection [
 			 max := i]].
 	min
 		ifNil: [lowAddress := 0.
-			   highAddress := highAddress := (1 << 32) - 1.
+			   highAddress := self highestAddress.
 			   minSelectionIndex := maxSelectionIndex := 0]
 		ifNotNil:
 			[minSelectionIndex := min. maxSelectionIndex := max.
