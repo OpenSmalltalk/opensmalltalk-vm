@@ -3426,6 +3426,19 @@ ObjectMemory >> isPointersNonImm: oop [
 	^(self formatOf: oop) <= self lastPointerFormat
 ]
 
+{ #category : #'header formats' }
+ObjectMemory >> isPureBitsFormat: format [
+	^format >= self firstLongFormat
+	  and: [format < self firstCompiledMethodFormat]
+]
+
+{ #category : #'object format' }
+ObjectMemory >> isPureBitsNonImm: objOop [
+	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"
+
+	^self isPureBitsFormat: (self formatOf: objOop)
+]
+
 { #category : #'interpreter access' }
 ObjectMemory >> isSemaphoreObj: anObj [
 	^(self fetchClassOfNonImm: anObj) = (self splObj: ClassSemaphore)
