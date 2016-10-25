@@ -29,8 +29,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 { #category : #'Cog compiled code' }
 VMProfilerSymbolsManager >> addCogModuleSymbols: symbols [
-	[self initialized] whileFalse:
-		[(Delay forMilliseconds: 100) wait].
+	self initialized ifFalse:
+		[Cursor wait showWhile:
+			[[self initialized] whileFalse:
+				[(Delay forMilliseconds: 100) wait]]].
 	modules
 		removeAllSuchThat: [:existingModule| cogModule name = existingModule name];
 		add: cogModule.
@@ -107,7 +109,7 @@ VMProfilerSymbolsManager >> symbolsSelect: aBlock [
 		[:module|
 		(aBlock value: module) ifTrue:
 			[stream nextPut: module].
-		(symbolsByModule at: module) do:
+		(symbolsByModule at: module ifAbsent: [#()]) do:
 			[:sym|
 			(aBlock value: sym) ifTrue:
 				[stream nextPut: sym]]].
@@ -123,7 +125,7 @@ VMProfilerSymbolsManager >> symbolsWithTypes: aSet [
 	stream := (Array new: size) writeStream.
 	modules do:
 		[:module|
-		(symbolsByModule at: module) do:
+		(symbolsByModule at: module ifAbsent: [#()]) do:
 			[:sym|
 			(aSet includes: sym type) ifTrue:
 				[stream nextPut: sym]]].
