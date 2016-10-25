@@ -3,7 +3,8 @@ The Cog VM source tree
 This is the README for the Cog Git source tree:
 	https://github.com/OpenSmalltalk/opensmalltalk-vm
 
-[![Download](https://api.bintray.com/packages/opensmalltalk/vm/cog/images/download.svg) ](https://bintray.com/opensmalltalk/vm/cog/_latestVersion#files)
+[![Download stable](https://img.shields.io/badge/download-stable-green.svg)](https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/latest)
+[![Download bleedingEdge](https://img.shields.io/badge/download-bleeding%20edge-blue.svg)](https://bintray.com/opensmalltalk/vm/cog/_latestVersion#files)
 [![Unix Build Status](https://travis-ci.org/OpenSmalltalk/opensmalltalk-vm.svg?branch=Cog)](https://travis-ci.org/OpenSmalltalk/opensmalltalk-vm)
 [![Windows Build status](https://ci.appveyor.com/api/projects/status/ecrpcrqt844n8lkm/branch/Cog?svg=true)](https://ci.appveyor.com/project/OpenSmalltalk/vm/branch/Cog)
 
