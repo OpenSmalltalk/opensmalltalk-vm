@@ -4632,15 +4632,25 @@ StackInterpreter >> commonVariable: rcvr at: index cacheIndex: atIx [
 			[self assert: (objectMemory isContextNonImm: rcvr) not.
 			 fixedFields := atCache at: atIx+AtCacheFixedFields.
 			 ^objectMemory fetchPointer: index + fixedFields - 1 ofObject: rcvr].
-		 fmt < objectMemory firstByteFormat ifTrue:  "Bitmap"
-			[result := objectMemory fetchLong32: index - 1 ofObject: rcvr.
+		 fmt < objectMemory firstByteFormat ifTrue: "64, 32, & 16 bits"
+			[objectMemory hasSpurMemoryManagerAPI ifTrue:
+				[fmt >= objectMemory firstShortFormat ifTrue:
+					[^objectMemory integerObjectOf:
+						(objectMemory fetchShort16: index - 1 ofObject: rcvr)].
+				 fmt = objectMemory sixtyFourBitIndexableFormat ifTrue:
+					[^self positive64BitIntegerFor:
+						(objectMemory fetchLong64: index - 1 ofObject: rcvr)]].
+			 result := objectMemory fetchLong32: index - 1 ofObject: rcvr.
 			 ^self positive32BitIntegerFor: result].
 		 fmt >= objectMemory firstStringyFakeFormat  "Note fmt >= firstStringyFormat is an artificial flag for strings"
 			ifTrue: "String"
-				["Spur supports the String at:[put:] primitives on WideString"
+				["Spur supports the String at:[put:] primitives on WideString and DoubleByteString"
 				 result := (objectMemory hasSpurMemoryManagerAPI
-							and: [fmt - objectMemory firstStringyFakeFormat < objectMemory firstByteFormat])
-								ifTrue: [objectMemory fetchLong32: index - 1 ofObject: rcvr]
+							and: [fmt < (objectMemory firstByteFormat + objectMemory firstStringyFakeFormat)])
+								ifTrue:
+									[fmt < (objectMemory firstShortFormat + objectMemory firstStringyFakeFormat)
+										ifTrue: [objectMemory fetchLong32: index - 1 ofObject: rcvr]
+										ifFalse: [objectMemory fetchShort16: index - 1 ofObject: rcvr]]
 								ifFalse: [objectMemory fetchByte: index - 1 ofObject: rcvr].
 				^self characterForAscii: result]
 			ifFalse:
@@ -4666,8 +4676,21 @@ StackInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 			[self assert: (objectMemory isContextNonImm: rcvr) not.
 			 fixedFields := atCache at: atIx+AtCacheFixedFields.
 			 ^objectMemory storePointer: index + fixedFields - 1 ofObject: rcvr withValue: value].
-		fmt < objectMemory firstByteFormat ifTrue:  "Bitmap"
-			[valToPut := self positive32BitValueOf: value.
+		fmt < objectMemory firstByteFormat ifTrue:  "64, 32, & 16 bits"
+			[objectMemory hasSpurMemoryManagerAPI ifTrue:
+				[fmt >= objectMemory firstShortFormat ifTrue:
+					[valToPut := (objectMemory isIntegerObject: value)
+									ifTrue: [objectMemory integerValueOf: value]
+									ifFalse: [-1].
+					(valToPut >= 0 and: [valToPut <= 65535]) ifFalse: [^self primitiveFailFor: PrimErrBadArgument].
+					^objectMemory storeShort16: index - 1 ofObject: rcvr withValue: valToPut].
+				 fmt = objectMemory sixtyFourBitIndexableFormat ifTrue:
+					[| val64ToPut |
+					 val64ToPut := self positive64BitValueOf: value.
+					 self successful ifTrue:
+						[^objectMemory storeLong64: index - 1 ofObject: rcvr withValue: val64ToPut].
+					 ^self primitiveFailFor: PrimErrBadArgument]].
+			 valToPut := self positive32BitValueOf: value.
 			 self successful ifTrue:
 				[^objectMemory storeLong32: index - 1 ofObject: rcvr withValue: valToPut].
 			 ^self primitiveFailFor: PrimErrBadArgument].
@@ -4683,9 +4706,15 @@ StackInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 						 valToPut := (objectMemory isIntegerObject: valToPut)
 										ifTrue: [objectMemory integerValueOf: valToPut]
 										ifFalse: [-1]].
-				 (objectMemory hasSpurMemoryManagerAPI
-				  and: [fmt - objectMemory firstStringyFakeFormat < objectMemory firstByteFormat]) ifTrue:
-					[^objectMemory storeLong32: index - 1 ofObject: rcvr withValue: valToPut]]
+				 objectMemory hasSpurMemoryManagerAPI ifTrue:
+				 	[fmt < (objectMemory firstByteFormat + objectMemory firstStringyFakeFormat) ifTrue:
+						[fmt < (objectMemory firstShortFormat + objectMemory firstStringyFakeFormat)
+							ifTrue:
+								[self assert: fmt ~= (objectMemory sixtyFourBitIndexableFormat + objectMemory firstStringyFakeFormat).
+								 ^objectMemory storeLong32: index - 1 ofObject: rcvr withValue: valToPut]
+							ifFalse:
+								[(valToPut >= 0 and: [valToPut <= 65535]) ifFalse: [^self primitiveFailFor: PrimErrBadArgument].
+								 ^objectMemory storeShort16: index - 1 ofObject: rcvr withValue: valToPut]]]]
 			ifFalse:
 				[(fmt >= objectMemory firstCompiledMethodFormat
 				  and: [index < (self firstByteIndexOfMethod: rcvr)]) ifTrue:
@@ -4693,7 +4722,7 @@ StackInterpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 				valToPut := (objectMemory isIntegerObject: value)
 								ifTrue: [objectMemory integerValueOf: value]
 								ifFalse: [-1]].
-		((valToPut >= 0) and: [valToPut <= 255]) ifFalse: [^self primitiveFailFor: PrimErrBadArgument].
+		(valToPut >= 0 and: [valToPut <= 255]) ifFalse: [^self primitiveFailFor: PrimErrBadArgument].
 		^objectMemory storeByte: index - 1 ofObject: rcvr withValue: valToPut].
 
 	^self primitiveFailFor: ((objectMemory isIndexable: rcvr)
@@ -20242,11 +20271,14 @@ StackInterpreter >> subscript: array with: index format: fmt [
 	fmt >= objectMemory firstByteFormat ifTrue:
 		[^objectMemory integerObjectOf:
 			(objectMemory fetchByte: index - 1 ofObject: array)].
-	(objectMemory hasSpurMemoryManagerAPI
-	 and: [fmt >= objectMemory firstShortFormat]) ifTrue:
-		[^objectMemory integerObjectOf:
-			(objectMemory fetchShort16: index - 1 ofObject: array)].
-	"double-word type objects; for now assume no 64-bit indexable objects"
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[fmt >= objectMemory firstShortFormat ifTrue:
+			[^objectMemory integerObjectOf:
+				(objectMemory fetchShort16: index - 1 ofObject: array)].
+		 fmt = objectMemory sixtyFourBitIndexableFormat ifTrue:
+			[^self positive64BitIntegerFor:
+				(objectMemory fetchLong64: index - 1 ofObject: array)]].
+	"32bit-word type objects; for now assume no 64-bit indexable objects"
 	^self positive32BitIntegerFor:
 			(objectMemory fetchLong32: index - 1 ofObject: array)
 ]
@@ -20269,18 +20301,24 @@ StackInterpreter >> subscript: array with: index storing: oopToStore format: fmt
 			 ^self].
 		 objectMemory storeByte: index - 1 ofObject: array withValue: signedValueToStore.
 		 ^self].
-	(objectMemory hasSpurMemoryManagerAPI
-	 and: [fmt >= objectMemory firstShortFormat]) ifTrue:
-		[(objectMemory isIntegerObject: oopToStore) ifFalse:
-			[primFailCode := PrimErrBadArgument.
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[fmt >= objectMemory firstShortFormat ifTrue:
+			[(objectMemory isIntegerObject: oopToStore) ifFalse:
+				[primFailCode := PrimErrBadArgument.
+				 ^self].
+			 signedValueToStore := objectMemory integerValueOf: oopToStore.
+			 (signedValueToStore >= 0 and: [signedValueToStore <= 65535]) ifFalse:
+				[primFailCode := PrimErrBadArgument.
+				 ^self].
+			 objectMemory storeShort16: index - 1 ofObject: array withValue: signedValueToStore.
 			 ^self].
-		 signedValueToStore := objectMemory integerValueOf: oopToStore.
-		 (signedValueToStore >= 0 and: [signedValueToStore <= 65535]) ifFalse:
-			[primFailCode := PrimErrBadArgument.
-			 ^self].
-		 objectMemory storeShort16: index - 1 ofObject: array withValue: signedValueToStore.
-		 ^self].
-	"double-word type objects; for now assume no 64-bit indexable objects"
+		 fmt = objectMemory sixtyFourBitIndexableFormat ifTrue:
+			[| unsigned64BitValueToStore |
+			 unsigned64BitValueToStore := self positive64BitValueOf: oopToStore.
+			 self successful ifTrue:
+				[objectMemory storeLong64: index - 1 ofObject: array withValue: unsigned64BitValueToStore].
+			 ^self]].
+	"32bit-word type objects"
 	unsignedValueToStore := self positive32BitValueOf: oopToStore.
 	self successful ifTrue:
 		[objectMemory storeLong32: index - 1 ofObject: array withValue: unsignedValueToStore]
