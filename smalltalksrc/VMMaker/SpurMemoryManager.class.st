@@ -6886,6 +6886,13 @@ SpurMemoryManager >> isPureBitsFormat: format [
 ]
 
 { #category : #'object testing' }
+SpurMemoryManager >> isPureBitsNonImm: objOop [
+	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"
+
+	^self isPureBitsFormat: (self formatOf: objOop)
+]
+
+{ #category : #'object testing' }
 SpurMemoryManager >> isReallyYoung: oop [
 	<api>
 	"Answer if oop is young."
