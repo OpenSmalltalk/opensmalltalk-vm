@@ -2002,12 +2002,6 @@ CogObjectRepresentationFor64BitSpur >> inlineCacheTagForInstance: oop [
 		ifFalse: [objectMemory classIndexOf: oop]
 ]
 
-{ #category : #'in-line cacheing' }
-CogObjectRepresentationFor64BitSpur >> literalBeforeInlineCacheTagAt: callSiteReturnAddress [
-	"Answer a literal loaded before the inline cache tag load for the return address of a send."
-	^self literalBeforeFollowingAddress: callSiteReturnAddress - 12 "5 for the call plus 7 for the selectorIndex/classIndex load"
-]
-
 { #category : #initialization }
 CogObjectRepresentationFor64BitSpur >> log2BytesPerWord [
 	^3
