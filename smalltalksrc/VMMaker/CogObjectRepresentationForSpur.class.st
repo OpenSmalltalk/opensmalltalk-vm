@@ -241,6 +241,17 @@ CogObjectRepresentationForSpur >> genCheckRememberedBitOf: objReg scratch: scrat
 	^cogit JumpNonZero: 0
 ]
 
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationForSpur >> genCmpClassIndex: classIndex R: reg [
+	"It is safe to use a short comparison for the known classes; these will not
+	 change with become, etc... But it's probably not safe to assume the hash of
+	 some other class won't change over time, so to be sure of generating the
+	 same size code over time, use a long comparison for unknown classes."
+	classIndex < objectMemory classTablePageSize
+		ifTrue: [cogit CmpCq: classIndex R: TempReg]
+		ifFalse: [cogit CmpCw: classIndex R: TempReg]
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genConvertCharacterToCodeInReg: reg [ 
 	cogit LogicalShiftRightCq: objectMemory numTagBits R: reg.
@@ -789,6 +800,15 @@ CogObjectRepresentationForSpur >> genGetInstanceOf: classObj into: destReg initi
 					Mw: i * objectMemory wordSize + objectMemory baseHeaderSize
 					r: destReg]].
 	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genGetNumBytesOf: srcReg into: destReg [
+	"Get the size in byte-sized slots of the object in srcReg into destReg.
+	 srcReg may equal destReg.
+	 destReg <- numSlots << self shiftForWord - (fmt bitAnd: 3).
+	 Assumes the object in srcReg has a byte format, i.e. 16 to 23 or 24 to 31 "
+	self subclassResponsibility
 ]
 
 { #category : #'compile abstract instructions' }
