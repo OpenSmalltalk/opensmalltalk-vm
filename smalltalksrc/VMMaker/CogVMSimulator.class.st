@@ -2434,7 +2434,8 @@ CogVMSimulator >> openAsMorph [
 							ifNotNil: [FileDirectory default localNameFor: imageName]
 							ifNil: [' synthetic image'].
 	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
-	window paneColor: Color lightBlue.
+	window paneColor: self windowColorToUse.
+
 	window addMorph: (displayView := SimulatorImageMorph new image: displayForm)
 			frame: (0@0 corner: 1@0.8).
 	displayView activeHand addEventListener: self.
@@ -2465,8 +2466,11 @@ CogVMSimulator >> openAsMorph [
 CogVMSimulator >> openAsMorphNoTranscript [
 	"Open a morphic view on this simulation."
 	| localImageName borderWidth window |
-	localImageName := FileDirectory default localNameFor: imageName.
-	window := (SystemWindow labelled: 'Simulation of ' , localImageName) model: self.
+	localImageName := imageName
+							ifNotNil: [FileDirectory default localNameFor: imageName]
+							ifNil: [' synthetic image'].
+	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
+	window paneColor: self windowColorToUse.
 
 	window addMorph: (displayView := SimulatorImageMorph new image: displayForm)
 			frame: (0@0 corner: 1@0.95).
@@ -4019,6 +4023,11 @@ CogVMSimulator >> warpBits [
 CogVMSimulator >> whereIs: anOop [
 	(self isOnRumpCStack: anOop) ifTrue: [^'is on rump C stack'].
 	^super whereIs: anOop
+]
+
+{ #category : #UI }
+CogVMSimulator >> windowColorToUse [
+	^Color lightBlue
 ]
 
 { #category : #'primitive support' }
