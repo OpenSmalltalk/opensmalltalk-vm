@@ -2860,6 +2860,12 @@ CogX64Compiler >> leafCallStackPointerDelta [
 	^8
 ]
 
+{ #category : #'inline cacheing' }
+CogX64Compiler >> literalBeforeInlineCacheTagAt: callSiteReturnAddress [
+	"Answer a literal loaded before the inline cache tag load for the return address of a send."
+	^self literalBeforeFollowingAddress: callSiteReturnAddress - 12 "5 for the call plus 7 for the selectorIndex/classIndex load"
+]
+
 { #category : #accessing }
 CogX64Compiler >> loadPICLiteralByteSize [
 	"Answer the byte size of a MoveCwR opcode's corresponding machine code
