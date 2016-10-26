@@ -367,6 +367,25 @@ CogObjectRepresentationFor64BitSpur >> genGetInlineCacheClassTagFrom: sourceReg 
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationFor64BitSpur >> genGetNumBytesOf: srcReg into: destReg [
+	"Get the size in byte-sized slots of the object in srcReg into destReg.
+	 srcReg may equal destReg.
+	 destReg <- numSlots << self shiftForWord - (fmt bitAnd: 7).
+	 Assumes the object in srcReg has a byte format, i.e. 16 to 23 or 24 to 31 "
+	<var: #jmp type: #'AbstractInstruction *'>
+	| jmp |
+	self genGetRawSlotSizeOfNonImm: srcReg into: destReg.
+	cogit CmpCq: objectMemory numSlotsMask R: destReg.
+	jmp := cogit JumpLess: 0.
+	self genGetOverflowSlotsOf: srcReg into: destReg.
+	jmp jmpTarget: (cogit LogicalShiftLeftCq: objectMemory shiftForWord R: destReg). 
+	self genGetBits: 7 ofFormatByteOf: srcReg into: TempReg.
+	"Now: fmt bitAnd: 3 in TempReg"
+	cogit SubR: TempReg R: destReg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationFor64BitSpur >> genGetOverflowSlotsOf: srcReg into: destReg [
 	cogit
 		MoveMw: objectMemory baseHeaderSize negated r: srcReg R: destReg;
@@ -1981,6 +2000,12 @@ CogObjectRepresentationFor64BitSpur >> inlineCacheTagForInstance: oop [
 	^(objectMemory isImmediate: oop)
 		ifTrue: [oop bitAnd: objectMemory tagMask]
 		ifFalse: [objectMemory classIndexOf: oop]
+]
+
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationFor64BitSpur >> literalBeforeInlineCacheTagAt: callSiteReturnAddress [
+	"Answer a literal loaded before the inline cache tag load for the return address of a send."
+	^self literalBeforeFollowingAddress: callSiteReturnAddress - 12 "5 for the call plus 7 for the selectorIndex/classIndex load"
 ]
 
 { #category : #initialization }
