@@ -3379,6 +3379,14 @@ SpurMemoryManager >> classIndexMask [
 
 { #category : #'header access' }
 SpurMemoryManager >> classIndexOf: objOop [
+	"Answer objOop's classIndex from the object header.
+	 A note on performance:
+		This routine uses longAt:, which does a 32-bit load on the 32-bit system, and a 64-bit load
+		on the 64-bit system.  Since the only 64-bit implementation(s) is/are little-endian, and
+		since all of isGrey,isPinned,isRemembered,format,isUmmutable and classIndex fit within
+		the least significant 32-bits we could use long32At: to access these, in the hope that the
+		32-bit access will be quicker on 64-bits by virtue of fetching half the bits.  But experiments
+		show that doing this does not produce any increase; at least any signal is lost in the noise."
 	<api>
 	^(self longAt: objOop) bitAnd: self classIndexMask
 ]
@@ -5047,6 +5055,11 @@ SpurMemoryManager >> formatOf: objOop [
 	 12 - 15 16-bit indexable	(14 & 15 unused in 32-bits)
 	 16 - 23 byte indexable		(20-23 unused in 32-bits)
 	 24 - 31 compiled method	(28-31 unused in 32-bits)"
+	"A note on performance.  Since the format field is, by design, aligned on a byte boundary
+	 in the fourth byte of the header we could access it via
+		^(self byteAt: objOop + 3) bitAnd: self formatMask
+	 but al least on e.g. Core i7 x86-64 using the clang 6 compiler, this makes no difference,
+	 or at least any change is in the noise."
 	^(self longAt: objOop) >> self formatShift bitAnd: self formatMask
 ]
 
