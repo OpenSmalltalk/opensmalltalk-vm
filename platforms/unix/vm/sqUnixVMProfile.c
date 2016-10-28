@@ -197,7 +197,7 @@ initProfileThread()
 	sigprof_handler_action.sa_sigaction = pcbufferSIGPROFhandler;
 	sigprof_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
 	sigemptyset(&sigprof_handler_action.sa_mask);
-    (void)sigaction(SIGPROF, &sigprof_handler_action, 0);
+	(void)sigaction(SIGPROF, &sigprof_handler_action, 0);
 
 	mainThread = pthread_self();
 	if ((er = pthread_getschedparam(pthread_self(),
@@ -238,7 +238,7 @@ ioControlNewProfile(int on, unsigned long buffer_size)
 	}
 	if (profileState == dead)
 		initProfileThread();
-    setState(on ? active : quiescent);
+   	setState(on ? active : quiescent);
 	return pc_buffer_wrapped ? pc_buffer_size : pc_buffer_index;
 }
 
