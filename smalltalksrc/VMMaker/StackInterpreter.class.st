@@ -16288,10 +16288,12 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 { #category : #'callback support' }
 StackInterpreter >> positiveMachineIntegerFor: value [
 	<var: #value type: #'unsigned long'>
-	<inline: true>
-	^objectMemory wordSize = 8
-		ifTrue: [self positive64BitIntegerFor: value]
-		ifFalse: [self positive32BitIntegerFor: value]
+	<inline: false>
+	| resultObj |
+	objectMemory wordSize = 8
+		ifTrue: [resultObj := self positive64BitIntegerFor: value]
+		ifFalse: [resultObj := self positive32BitIntegerFor: value].
+	^resultObj
 ]
 
 { #category : #'object memory support' }
