@@ -4909,11 +4909,14 @@ StackInterpreter >> defaultNativeStackFrameSize [
 { #category : #initialization }
 StackInterpreter >> defaultNumStackPages [
 	"Return the default number of stack pages allocate at startup.
-	 This default suits Qwaq Forums (specifically general rendering).
+	 This V3 default suits Qwaq Forums (specifically general rendering).
+	 The Spur default reflects tuning for GC performance ast Cadence.
 	 It is probably a bit high for normal use but QF is profligate with processes.
 	 The actual value can be set via vmParameterAt: and/or a preference in the ini file."
 	<inline: false>
-	^160
+	^objectMemory hasSpurMemoryManagerAPI
+		ifTrue: [50]
+		ifFalse: [160]
 ]
 
 { #category : #'debug support' }
@@ -8645,6 +8648,7 @@ StackInterpreter >> interpreterAllocationReserveBytes [
 	 to senders, etc.  But the snapshot primitive voids all stack pages.
 	 So a safe margin is the size of a large context times the maximum
 	 number of frames per page times the number of pages."
+	<inline: #never>
 	| maxUsedBytesPerPage maxFramesPerPage |
 	maxUsedBytesPerPage := self stackPageFrameBytes + self stackLimitOffset.
 	maxFramesPerPage := maxUsedBytesPerPage / objectMemory wordSize // FrameSlots.

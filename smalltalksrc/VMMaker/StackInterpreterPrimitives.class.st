@@ -1492,7 +1492,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		9	incremental GCs (SqueakV3) or scavenges (Spur) since startup (read-only)
 		10	total milliseconds in incremental GCs (SqueakV3) or scavenges (Spur) since startup (read-only)
 		11	tenures of surving objects since startup (read-only)
-		12-20 were specific to ikp's JITTER VM, now 12-19 are open for use
+		12-20 were specific to ikp's JITTER VM, now 12-18 are open for use
+		19	scavenge threshold, the effective size of eden.  When eden fills to the threshold a scavenge is scheduled. Newer Spur VMs only.
 		20	utc microseconds at VM start-up (actually at time initialization, which precedes image load).
 		21	root table size (read-only)
 		22	root table overflows since startup (read-only)
@@ -1550,9 +1551,9 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 	paramsArraySize := 71.
 	argumentCount = 0 ifTrue:
 		[result := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: paramsArraySize.
-		objectMemory storePointer:			 0	ofObject: result withValue: (self positive64BitIntegerFor: objectMemory oldSpaceSize).
+		objectMemory storePointer:				0	ofObject: result withValue: (self positiveMachineIntegerFor: objectMemory oldSpaceSize).
 		objectMemory storePointerUnchecked: 1	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory newSpaceSize).
-		objectMemory storePointer:			 2	ofObject: result withValue: (self positive64BitIntegerFor: objectMemory totalMemorySize).
+		objectMemory storePointer:				2	ofObject: result withValue: (self positiveMachineIntegerFor: objectMemory totalMemorySize).
 		"objectMemory storePointerUnchecked: 3	ofObject: result withValue: objectMemory nilObject was allocationCount".
 		"objectMemory storePointerUnchecked: 4	ofObject: result withValue: objectMemory nilObject allocationsBetweenGCs".
 		objectMemory storePointerUnchecked: 5	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory tenuringThreshold).
@@ -1572,9 +1573,11 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 															ifFalse: [objectMemory statIncrGCUsecs]) + 500 // 1000).
 		objectMemory storePointerUnchecked: 10	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statTenures).
 		"JITTER VM info"
-		11 to: 18 do:
+		11 to: 17 do:
 			[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: ConstZero].
-		objectMemory storePointer: 19	ofObject: result withValue: (objectMemory positive64BitIntegerFor: self ioUTCStartMicroseconds).
+		objectMemory hasSpurMemoryManagerAPI ifTrue:
+			[objectMemory storePointerUnchecked: 18	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory scavengeThresholdAsExtent)].
+		objectMemory storePointer:				19	ofObject: result withValue: (objectMemory positive64BitIntegerFor: self ioUTCStartMicroseconds).
 		objectMemory storePointerUnchecked: 20	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory rootTableCount).
 		objectMemory storePointerUnchecked: 21	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statRootTableOverflows).
 		objectMemory storePointerUnchecked: 22	ofObject: result withValue: (objectMemory integerObjectOf: extraVMMemory).
@@ -1646,9 +1649,9 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg := objectMemory integerValueOf: arg.
 		(arg < 1 or: [arg > paramsArraySize]) ifTrue: [^self primitiveFailFor: PrimErrBadIndex].
 		result := objectMemory nilObject.
-		arg = 1		ifTrue: [result := self positive64BitIntegerFor: objectMemory oldSpaceSize].
+		arg = 1		ifTrue: [result := self positiveMachineIntegerFor: objectMemory oldSpaceSize].
 		arg = 2		ifTrue: [result := objectMemory integerObjectOf: objectMemory newSpaceSize].
-		arg = 3		ifTrue: [result := self positive64BitIntegerFor: objectMemory totalMemorySize].
+		arg = 3		ifTrue: [result := self positiveMachineIntegerFor: objectMemory totalMemorySize].
 		arg = 4		ifTrue: [result := objectMemory nilObject "was allocationCount"].
 		arg = 5		ifTrue: [result := objectMemory nilObject "was allocationsBetweenGCs"].
 		arg = 6		ifTrue: [result := objectMemory integerObjectOf: objectMemory tenuringThreshold].
@@ -1661,7 +1664,10 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 																		ifTrue: [objectMemory statScavengeGCUsecs]
 																		ifFalse: [objectMemory statIncrGCUsecs]) + 500 // 1000].
 		arg = 11	ifTrue: [result := objectMemory integerObjectOf: objectMemory statTenures].
-		(arg between: 12 and: 19) ifTrue: [result := ConstZero]. "Was JITTER VM info"
+		(arg between: 12 and: 18) ifTrue: [result := ConstZero]. "Was JITTER VM info"
+		arg = 19	ifTrue: [result := objectMemory hasSpurMemoryManagerAPI
+										ifTrue: [objectMemory integerObjectOf: objectMemory scavengeThresholdAsExtent]
+										ifFalse: [ConstZero]].
 		arg = 20	ifTrue: [result := objectMemory positive64BitIntegerFor: self ioUTCStartMicroseconds].
 		arg = 21	ifTrue: [result := objectMemory integerObjectOf: objectMemory rootTableCount].
 		arg = 22	ifTrue: [result := objectMemory integerObjectOf: objectMemory statRootTableOverflows].

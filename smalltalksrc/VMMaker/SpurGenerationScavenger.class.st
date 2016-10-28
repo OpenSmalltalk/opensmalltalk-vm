@@ -740,11 +740,9 @@ SpurGenerationScavenger >> newSpaceCapacity [
 ]
 
 { #category : #initialization }
-SpurGenerationScavenger >> newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes [ 
+SpurGenerationScavenger >> newSpaceStart: startAddress newSpaceBytes: totalBytes survivorBytes: requestedSurvivorBytes [
 	| actualEdenBytes survivorBytes |
-
-	actualEdenBytes := requestedEdenBytes.
-	survivorBytes := totalBytes - actualEdenBytes // 2 truncateTo: manager allocationUnit.
+	survivorBytes := requestedSurvivorBytes truncateTo: manager allocationUnit.
 	actualEdenBytes := totalBytes - survivorBytes - survivorBytes truncateTo: manager allocationUnit.
 	self assert: totalBytes - actualEdenBytes - survivorBytes - survivorBytes < manager allocationUnit.
 
@@ -753,7 +751,7 @@ SpurGenerationScavenger >> newSpaceStart: startAddress newSpaceBytes: totalBytes
 
 	pastSpace start: startAddress; limit: startAddress + survivorBytes.
 	futureSpace start: pastSpace limit; limit: pastSpace limit + survivorBytes.
-	eden start: futureSpace limit; limit: futureSpace limit + actualEdenBytes.
+	eden start: futureSpace limit; limit: startAddress + totalBytes.
 
 	self assert: self futureSpace limit <= (startAddress + totalBytes).
 	self assert: self eden start \\ manager allocationUnit
