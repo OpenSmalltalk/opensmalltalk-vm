@@ -157,6 +157,32 @@ The files in build.macos32x86/common are
 		internal plugins.
 
 
+SDKs and Problems
+-------------------------------------------
+The makefiles will use the oldest available SDK that is installed that is new
+enough to build the system.  The 32-bit build requires at least the 10.9 SDK.
+To obtain SDKs it is best to web search for "obtaining older sdks for Xcode",
+and follow the instructions you find.
+
+On Sierra people have reported that the support libraries for the SSLPlugin
+(libssl.dylib and libcrypto.dylib) are missing.  The symptom is an error
+message such as this in the output (and the LOG file produced) of the make:
+
+ld: library not found for -lssl
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+make[1]: *** [build/vm/SqueakSSL.bundle/Contents/MacOS/SqueakSSL] Error 1
+
+These libraries should be in the /usr/lib directory for the SDK being used.  Use
+
+make print-sdks
+
+to print the SDK, which might be e.g. /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk.
+Libraries would then be found in /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk/usr/lib.
+If they, or any other Apple support libraries, are missing, locate them (they
+may be in /usr/lib) and copy or link them into the SDK /usr/lib and retry the
+build.
+
+
 Building the VM Simulator Support Libraries
 -------------------------------------------
 If you want to get the Cog VM simulator working you'll need to build one or more
