@@ -21,12 +21,12 @@ matrix:
   include:
   - os: linux
     env: ARCH="linux64x64" FLAVOR="newspeak.cog.spur"
-  - os: linux
-    env: ARCH="linux64x64" FLAVOR="newspeak.stack.spur"
-  - os: linux
-    env: ARCH="linux64x64" FLAVOR="squeak.cog.spur"
-  - os: linux
-    env: ARCH="linux64x64" FLAVOR="squeak.stack.spur"
+  # - os: linux
+  #   env: ARCH="linux64x64" FLAVOR="newspeak.stack.spur"
+  # - os: linux
+  #   env: ARCH="linux64x64" FLAVOR="squeak.cog.spur"
+  # - os: linux
+  #   env: ARCH="linux64x64" FLAVOR="squeak.stack.spur"
   - os: linux
     env: ARCH="linux32x86" FLAVOR="newspeak.cog.spur"
     addons:
@@ -49,200 +49,200 @@ matrix:
         - libglapi-mesa:i386
         - gcc-multilib
         - uuid-dev:i386
-  - os: linux
-    env: ARCH="linux32x86" FLAVOR="newspeak.stack.spur"
-    addons:
-      apt:
-        packages:
-        - debhelper
-        - devscripts
-        - libc6-dev:i386
-        - libasound2:i386
-        - libasound2-dev:i386
-        - libssl-dev:i386
-        - libssl0.9.8:i386
-        - libfreetype6-dev:i386
-        - libx11-dev:i386
-        - libsm-dev:i386
-        - libice-dev:i386
-        - libgl1-mesa-glx:i386
-        - libgl1-mesa-dev:i386
-        - libxext-dev:i386
-        - libglapi-mesa:i386
-        - gcc-multilib
-        - uuid-dev:i386
-  - os: linux
-    env: ARCH="linux32x86" FLAVOR="squeak.cog.spur"
-    addons:
-      apt:
-        packages:
-        - debhelper
-        - devscripts
-        - libc6-dev:i386
-        - libasound2:i386
-        - libasound2-dev:i386
-        - libssl-dev:i386
-        - libssl0.9.8:i386
-        - libfreetype6-dev:i386
-        - libx11-dev:i386
-        - libsm-dev:i386
-        - libice-dev:i386
-        - libgl1-mesa-glx:i386
-        - libgl1-mesa-dev:i386
-        - libxext-dev:i386
-        - libglapi-mesa:i386
-        - gcc-multilib
-        - uuid-dev:i386
-  - os: linux
-    env: ARCH="linux32x86" FLAVOR="squeak.cog.v3"
-    addons:
-      apt:
-        packages:
-        - debhelper
-        - devscripts
-        - libc6-dev:i386
-        - libasound2:i386
-        - libasound2-dev:i386
-        - libssl-dev:i386
-        - libssl0.9.8:i386
-        - libfreetype6-dev:i386
-        - libx11-dev:i386
-        - libsm-dev:i386
-        - libice-dev:i386
-        - libgl1-mesa-glx:i386
-        - libgl1-mesa-dev:i386
-        - libxext-dev:i386
-        - libglapi-mesa:i386
-        - gcc-multilib
-        - uuid-dev:i386
-  - os: linux
-    env: ARCH="linux32x86" FLAVOR="squeak.sista.spur"
-    addons:
-      apt:
-        packages:
-        - debhelper
-        - devscripts
-        - libc6-dev:i386
-        - libasound2:i386
-        - libasound2-dev:i386
-        - libssl-dev:i386
-        - libssl0.9.8:i386
-        - libfreetype6-dev:i386
-        - libx11-dev:i386
-        - libsm-dev:i386
-        - libice-dev:i386
-        - libgl1-mesa-glx:i386
-        - libgl1-mesa-dev:i386
-        - libxext-dev:i386
-        - libglapi-mesa:i386
-        - gcc-multilib
-        - uuid-dev:i386
-  - os: linux
-    env: ARCH="linux32x86" FLAVOR="squeak.stack.spur"
-    addons:
-      apt:
-        packages:
-        - debhelper
-        - devscripts
-        - libc6-dev:i386
-        - libasound2:i386
-        - libasound2-dev:i386
-        - libssl-dev:i386
-        - libssl0.9.8:i386
-        - libfreetype6-dev:i386
-        - libx11-dev:i386
-        - libsm-dev:i386
-        - libice-dev:i386
-        - libgl1-mesa-glx:i386
-        - libgl1-mesa-dev:i386
-        - libxext-dev:i386
-        - libglapi-mesa:i386
-        - gcc-multilib
-        - uuid-dev:i386
-  - os: linux
-    env: ARCH="linux32x86" FLAVOR="squeak.stack.v3"
-    addons:
-      apt:
-        packages:
-        - debhelper
-        - devscripts
-        - libc6-dev:i386
-        - libasound2:i386
-        - libasound2-dev:i386
-        - libssl-dev:i386
-        - libssl0.9.8:i386
-        - libfreetype6-dev:i386
-        - libx11-dev:i386
-        - libsm-dev:i386
-        - libice-dev:i386
-        - libgl1-mesa-glx:i386
-        - libgl1-mesa-dev:i386
-        - libxext-dev:i386
-        - libglapi-mesa:i386
-        - gcc-multilib
-        - uuid-dev:i386
-  - os: osx
-    env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
-  - os: osx
-    env: ARCH="macos64x64" FLAVOR="newspeak.stack.spur"
-  - os: osx
-    env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
-  - os: osx
-    env: ARCH="macos64x64" FLAVOR="squeak.cog.spur"
-  - os: osx
-    env: ARCH="macos64x64" FLAVOR="squeak.stack.spur"
-  - os: osx
-    env: ARCH="macos32x86" FLAVOR="newspeak.cog.spur"
-  - os: osx
-    env: ARCH="macos32x86" FLAVOR="newspeak.stack.spur"
-  - os: osx
-    env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
-  - os: osx
-    env: ARCH="macos32x86" FLAVOR="squeak.cog.spur"
-  - os: osx
-    env: ARCH="macos32x86" FLAVOR="squeak.cog.v3"
-  - os: osx
-    env: ARCH="macos32x86" FLAVOR="squeak.sista.spur"
-  - os: osx
-    env: ARCH="macos32x86" FLAVOR="squeak.stack.spur"
-  - os: osx
-    env: ARCH="macos32x86" FLAVOR="squeak.stack.v3"
-  - os: linux
-    env: ARCH="linux32ARMv6" FLAVOR="newspeak.cog.spur" CHROOT="schroot -p -c rpi
-      -- bash -c "
-    sudo: required
-    dist: trusty
-    group: edge
-  - os: linux
-    env: ARCH="linux32ARMv6" FLAVOR="newspeak.stack.spur" CHROOT="schroot -p -c rpi
-      -- bash -c "
-    sudo: required
-    dist: trusty
-    group: edge
-  - os: linux
-    env: ARCH="linux32ARMv6" FLAVOR="squeak.cog.spur" CHROOT="schroot -p -c rpi --
-      bash -c "
-    sudo: required
-    dist: trusty
-    group: edge
-  - os: linux
-    env: ARCH="linux32ARMv6" FLAVOR="pharo.cog.spur" CHROOT="schroot -p -c rpi --
-      bash -c "
-    sudo: required
-    dist: trusty
-    group: edge
-  - os: linux
-    env: ARCH="linux32ARMv6" FLAVOR="squeak.stack.spur" CHROOT="schroot -p -c rpi
-      -- bash -c "
-    sudo: required
-    dist: trusty
-    group: edge
-  - os: linux
-    env: ARCH="linux32ARMv6" FLAVOR="squeak.stack.v3" CHROOT="schroot -p -c rpi --
-      bash -c "
-    sudo: required
-    dist: trusty
-    group: edge
+  # - os: linux
+  #   env: ARCH="linux32x86" FLAVOR="newspeak.stack.spur"
+  #   addons:
+  #     apt:
+  #       packages:
+  #       - debhelper
+  #       - devscripts
+  #       - libc6-dev:i386
+  #       - libasound2:i386
+  #       - libasound2-dev:i386
+  #       - libssl-dev:i386
+  #       - libssl0.9.8:i386
+  #       - libfreetype6-dev:i386
+  #       - libx11-dev:i386
+  #       - libsm-dev:i386
+  #       - libice-dev:i386
+  #       - libgl1-mesa-glx:i386
+  #       - libgl1-mesa-dev:i386
+  #       - libxext-dev:i386
+  #       - libglapi-mesa:i386
+  #       - gcc-multilib
+  #       - uuid-dev:i386
+  # - os: linux
+  #   env: ARCH="linux32x86" FLAVOR="squeak.cog.spur"
+  #   addons:
+  #     apt:
+  #       packages:
+  #       - debhelper
+  #       - devscripts
+  #       - libc6-dev:i386
+  #       - libasound2:i386
+  #       - libasound2-dev:i386
+  #       - libssl-dev:i386
+  #       - libssl0.9.8:i386
+  #       - libfreetype6-dev:i386
+  #       - libx11-dev:i386
+  #       - libsm-dev:i386
+  #       - libice-dev:i386
+  #       - libgl1-mesa-glx:i386
+  #       - libgl1-mesa-dev:i386
+  #       - libxext-dev:i386
+  #       - libglapi-mesa:i386
+  #       - gcc-multilib
+  #       - uuid-dev:i386
+  # - os: linux
+  #   env: ARCH="linux32x86" FLAVOR="squeak.cog.v3"
+  #   addons:
+  #     apt:
+  #       packages:
+  #       - debhelper
+  #       - devscripts
+  #       - libc6-dev:i386
+  #       - libasound2:i386
+  #       - libasound2-dev:i386
+  #       - libssl-dev:i386
+  #       - libssl0.9.8:i386
+  #       - libfreetype6-dev:i386
+  #       - libx11-dev:i386
+  #       - libsm-dev:i386
+  #       - libice-dev:i386
+  #       - libgl1-mesa-glx:i386
+  #       - libgl1-mesa-dev:i386
+  #       - libxext-dev:i386
+  #       - libglapi-mesa:i386
+  #       - gcc-multilib
+  #       - uuid-dev:i386
+  # - os: linux
+  #   env: ARCH="linux32x86" FLAVOR="squeak.sista.spur"
+  #   addons:
+  #     apt:
+  #       packages:
+  #       - debhelper
+  #       - devscripts
+  #       - libc6-dev:i386
+  #       - libasound2:i386
+  #       - libasound2-dev:i386
+  #       - libssl-dev:i386
+  #       - libssl0.9.8:i386
+  #       - libfreetype6-dev:i386
+  #       - libx11-dev:i386
+  #       - libsm-dev:i386
+  #       - libice-dev:i386
+  #       - libgl1-mesa-glx:i386
+  #       - libgl1-mesa-dev:i386
+  #       - libxext-dev:i386
+  #       - libglapi-mesa:i386
+  #       - gcc-multilib
+  #       - uuid-dev:i386
+  # - os: linux
+  #   env: ARCH="linux32x86" FLAVOR="squeak.stack.spur"
+  #   addons:
+  #     apt:
+  #       packages:
+  #       - debhelper
+  #       - devscripts
+  #       - libc6-dev:i386
+  #       - libasound2:i386
+  #       - libasound2-dev:i386
+  #       - libssl-dev:i386
+  #       - libssl0.9.8:i386
+  #       - libfreetype6-dev:i386
+  #       - libx11-dev:i386
+  #       - libsm-dev:i386
+  #       - libice-dev:i386
+  #       - libgl1-mesa-glx:i386
+  #       - libgl1-mesa-dev:i386
+  #       - libxext-dev:i386
+  #       - libglapi-mesa:i386
+  #       - gcc-multilib
+  #       - uuid-dev:i386
+  # - os: linux
+  #   env: ARCH="linux32x86" FLAVOR="squeak.stack.v3"
+  #   addons:
+  #     apt:
+  #       packages:
+  #       - debhelper
+  #       - devscripts
+  #       - libc6-dev:i386
+  #       - libasound2:i386
+  #       - libasound2-dev:i386
+  #       - libssl-dev:i386
+  #       - libssl0.9.8:i386
+  #       - libfreetype6-dev:i386
+  #       - libx11-dev:i386
+  #       - libsm-dev:i386
+  #       - libice-dev:i386
+  #       - libgl1-mesa-glx:i386
+  #       - libgl1-mesa-dev:i386
+  #       - libxext-dev:i386
+  #       - libglapi-mesa:i386
+  #       - gcc-multilib
+  #       - uuid-dev:i386
+  # - os: osx
+  #   env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
+  # - os: osx
+  #   env: ARCH="macos64x64" FLAVOR="newspeak.stack.spur"
+  # - os: osx
+  #   env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
+  # - os: osx
+  #   env: ARCH="macos64x64" FLAVOR="squeak.cog.spur"
+  # - os: osx
+  #   env: ARCH="macos64x64" FLAVOR="squeak.stack.spur"
+  # - os: osx
+  #   env: ARCH="macos32x86" FLAVOR="newspeak.cog.spur"
+  # - os: osx
+  #   env: ARCH="macos32x86" FLAVOR="newspeak.stack.spur"
+  # - os: osx
+  #   env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
+  # - os: osx
+  #   env: ARCH="macos32x86" FLAVOR="squeak.cog.spur"
+  # - os: osx
+  #   env: ARCH="macos32x86" FLAVOR="squeak.cog.v3"
+  # - os: osx
+  #   env: ARCH="macos32x86" FLAVOR="squeak.sista.spur"
+  # - os: osx
+  #   env: ARCH="macos32x86" FLAVOR="squeak.stack.spur"
+  # - os: osx
+  #   env: ARCH="macos32x86" FLAVOR="squeak.stack.v3"
+  # - os: linux
+  #   env: ARCH="linux32ARMv6" FLAVOR="newspeak.cog.spur" CHROOT="schroot -p -c rpi
+  #     -- bash -c "
+  #   sudo: required
+  #   dist: trusty
+  #   group: edge
+  # - os: linux
+  #   env: ARCH="linux32ARMv6" FLAVOR="newspeak.stack.spur" CHROOT="schroot -p -c rpi
+  #     -- bash -c "
+  #   sudo: required
+  #   dist: trusty
+  #   group: edge
+  # - os: linux
+  #   env: ARCH="linux32ARMv6" FLAVOR="squeak.cog.spur" CHROOT="schroot -p -c rpi --
+  #     bash -c "
+  #   sudo: required
+  #   dist: trusty
+  #   group: edge
+  # - os: linux
+  #   env: ARCH="linux32ARMv6" FLAVOR="pharo.cog.spur" CHROOT="schroot -p -c rpi --
+  #     bash -c "
+  #   sudo: required
+  #   dist: trusty
+  #   group: edge
+  # - os: linux
+  #   env: ARCH="linux32ARMv6" FLAVOR="squeak.stack.spur" CHROOT="schroot -p -c rpi
+  #     -- bash -c "
+  #   sudo: required
+  #   dist: trusty
+  #   group: edge
+  # - os: linux
+  #   env: ARCH="linux32ARMv6" FLAVOR="squeak.stack.v3" CHROOT="schroot -p -c rpi --
+  #     bash -c "
+  #   sudo: required
+  #   dist: trusty
+  #   group: edge
 install:
 - ./.travis_install.sh
 script:
