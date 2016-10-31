@@ -16,12 +16,15 @@ curl -f -s -L --retry 3 -o "nsboot.zip" "${GH_BASE}/nsboot/archive/${REV_NSBOOT}
 unzip -q "newspeak.zip"
 unzip -q "nsboot.zip"
 
-sudo cat >/etc/security/limits.d/nsvm.conf <<END
-*       hard    rtprio  2
-*       soft    rtprio  2
-END
-
 cd "nsboot"*
-exec setuidgid "${USER}" ./build32.sh -t -u -v "${TRAVIS_BUILD_DIR}/products/"*/nsvm
+
+if [[ "${ARCH}" = *"64x64" ]]; then
+  BUILD_SCRIPT="build64.sh"
+else
+  BUILD_SCRIPT="build32.sh"
+fi
+
+ulimit -r 2
+exec setuidgid "${USER}" "./{$BUILD_SCRIPT}" -t -u -v "${TRAVIS_BUILD_DIR}/products/"*/nsvm
 
 popd > /dev/null
