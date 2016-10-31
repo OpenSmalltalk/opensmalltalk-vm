@@ -1833,7 +1833,7 @@ SimpleStackBasedCogit >> genExtPushIntegerBytecode [
 	"NewsqueakV4:	229		11100101	iiiiiiii	Push Integer #iiiiiiii (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)
 	SistaV1:		232		11101000	iiiiiiii	Push Integer #iiiiiiii (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)"
 	| value |
-	value := byte1 + ((extB > 127 ifTrue: [extB - 256] ifFalse: [extB]) << 8).
+	value := byte1 + ((extB > 127 ifTrue: [extB - 256] ifFalse: [extB]) bitShift: 8).
 	extB := 0.
 	^self genPushLiteral: (objectMemory integerObjectOf: value)
 ]
@@ -2092,7 +2092,7 @@ SimpleStackBasedCogit >> genExtTrapIfNotInstanceOfBehaviorsBytecode [
 SimpleStackBasedCogit >> genExtUnconditionalJump [
 	"242		11110010	i i i i i i i i	Jump i i i i i i i i (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)"
 	| distance target |
-	distance := byte1 + ((extB > 127 ifTrue: [extB - 256] ifFalse: [extB]) << 8).
+	distance := byte1 + ((extB > 127 ifTrue: [extB - 256] ifFalse: [extB]) bitShift: 8).
 	self assert: distance = (self v4: (self generatorAt: byte0)
 								Long: bytecodePC
 								Branch: (extA ~= 0 ifTrue: [1] ifFalse: [0]) + (extB ~= 0 ifTrue: [1] ifFalse: [0])
@@ -3956,7 +3956,7 @@ SimpleStackBasedCogit >> v4: descriptor Long: pc Branch: nExts Distance: aMethod
 	self assert: nExts >= 0.
 	self parseV4Exts: nExts priorTo: pc in: aMethodObj into: [:ea :eb| extBValue := eb].
 	^(objectMemory fetchByte: pc + 1 ofObject: aMethodObj)
-	+ (extBValue << 8)
+	+ (extBValue bitShift: 8)
 ]
 
 { #category : #'span functions' }
