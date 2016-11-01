@@ -252,7 +252,7 @@ SpurSegmentManager >> findEmptySegNearestInSizeTo: size [
 				ifNil: [best := seg]
 				ifNotNil:
 					[(size >= (seg segSize * 0.75)
-					 and: [(seg segSize - size) abs < delta]) ifTrue:
+					 and: [(self cCoerce: (seg segSize - size) to: #sqInt ) abs < delta]) ifTrue:
 						[best := seg. delta := (seg segSize - size) abs]]]].
 	^best
 ]

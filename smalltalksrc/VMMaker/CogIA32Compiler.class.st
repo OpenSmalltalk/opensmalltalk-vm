@@ -2969,7 +2969,7 @@ CogIA32Compiler >> dispatchConcretizeProcessorSpecific [
 CogIA32Compiler >> flushICacheFrom: startAddress "<Integer>" to: endAddress [ "<Integer>"
 	<cmacro: '(me,startAddress,endAddress) 0'>
 	"On Intel processors where code and data have the same linear address, no
-	 special action is required to flush the instruciton cache.  One only needs to
+	 special action is required to flush the instruction cache.  One only needs to
 	 execute a serializing instruction (e.g. CPUID) if code and data are at different
 	 virtual addresses (e.g. a debugger using memory-mapping to access a debugee).
 	 Using the macro avoids an unnecessary call."
@@ -3880,6 +3880,7 @@ CogIA32Compiler >> rewriteCPICJumpAt: addressFollowingJump target: jumpTargetAdd
 	"Rewrite the short jump instruction to jump to a new cpic case target. "
 	<var: #addressFollowingJump type: #usqInt>
 	<var: #jumpTargetAddress type: #usqInt>
+	<var: #callDistance type: #sqInt> "prevent type inference for avoiding warning on abs"
 	| callDistance |
 	callDistance := jumpTargetAddress - addressFollowingJump.
 	self assert: callDistance abs < 128.
