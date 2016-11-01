@@ -38,9 +38,11 @@ if [ "$PLATFORMLIBDIR" = "" ]; then
 	cat /etc/*-release*  |  grep -v // | sed 's/^/  /' 
 	echo -n "  UNAME=" ; uname -a
 	MACHINE=`uname -m`
-	if [[ $MACHINE == *64* ]] ; then
-		echo "  System seems to be 64 bit. You may need to (re)install the 32-bit libraries." 
-	fi
+	case "$MACHINE" in
+		*64*)
+			echo "  System seems to be 64 bit. You may need to (re)install the 32-bit libraries."
+			;;
+	esac
 	exit 1 
 } 1>&2
 fi
