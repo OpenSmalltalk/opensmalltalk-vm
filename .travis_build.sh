@@ -114,3 +114,10 @@ case "$PLATFORM" in
     exit 99
     ;;
 esac
+
+git clone git://github.com/newspeaklanguage/nsboot.git
+git -C nsboot reset --hard abb722e474e2126203f05245e9da45c065efe991
+git clone git://github.com/newspeaklanguage/newspeak.git
+git -C newspeak reset --hard 7fed4bc928ac3fa85fa28493ca1e26c359f875ac
+cd nsboot
+./build32.sh -v ./products/nscogspurlinuxht/bin/nsvm
