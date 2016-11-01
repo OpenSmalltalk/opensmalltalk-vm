@@ -1111,6 +1111,7 @@ InterpreterPrimitives >> primitiveClockLogAddresses [
 	| result runInNOut usecs uidx msecs midx v1 v2 |
 	<var: #usecs type: #'void *'>
 	<var: #msecs type: #'void *'>
+	<var: #runInNOut type: #sqInt> "bypass type inference which would deduce int"
 	argumentCount ~= 1 ifTrue:
 		[^self primitiveFail].
 	runInNOut := (self stackValue: 0) == objectMemory trueObject.
