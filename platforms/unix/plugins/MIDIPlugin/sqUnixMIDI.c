@@ -36,8 +36,8 @@
 #include "config.h"
 #include "debug.h"
 
-/* this simply doesn't work */
-#if defined(USE_MIDI_ALSA)
+/* It would work now but the linking has not ctahced up */
+#if 0 /* defined(USE_MIDI_ALSA) */
 # include "sqUnixMIDIALSA.inc"
 #else
 

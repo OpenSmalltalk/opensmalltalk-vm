@@ -69,7 +69,10 @@ sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-y
      build-essential \
      python-dev \
      libffi-dev \
-     zlib1g-dev
+     zlib1g-dev \
+     libtool \
+     automake \
+     autoconf
 
 sudo chown $USER /etc/schroot/schroot.conf
 echo "
