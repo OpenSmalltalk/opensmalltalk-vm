@@ -2,8 +2,21 @@
 # checkin script for Git that serves to cause
 # platforms/Cross/vm/sqSCCSVersion.h to be checked-in so that its version
 # info reflects that of the current check-in.
+#
+# git add -A stages All
+# git add . stages new and modified, without deleted
+# git add -u stages modified and deleted, without new
 
 echo sanity checking generated files...
+
+if [ "$1" = "-?" -o "$1" = -help -o "$1" = --help ]; then
+	echo usage: $0 [git add args]
+	echo e.g. $0 -u
+	echo git add -A stages All\; This is the default
+	echo git add . stages new and modified, without deleted
+	echo git add -u stages modified and deleted, without new
+	exit 0
+fi
 
 rm -rf src/plugins/[A-Z]*FFIPlugin
 `dirname $0`/revertUnchangedPlugins src/plugins
