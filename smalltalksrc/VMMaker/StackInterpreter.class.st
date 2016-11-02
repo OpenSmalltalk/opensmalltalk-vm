@@ -30,7 +30,6 @@ Class {
 		'localAbsentReceiverOrZero',
 		'extA',
 		'extB',
-		'extBFirstZero',
 		'primitiveFunctionPointer',
 		'methodCache',
 		'nsMethodCache',
@@ -5393,10 +5392,9 @@ StackInterpreter >> extBBytecode [
 	| byte |
 	byte := self fetchByte.
 	self fetchNextBytecode.
-	extB := (extB = 0 and: [extBFirstZero not and: [ byte > 127 ]])
+	extB := (extB = 0 and: [byte > 127])
 				ifTrue: [byte - 256]
-				ifFalse: [(extB bitShift: 8) + byte].
-	extBFirstZero := extB = 0.
+				ifFalse: [(extB bitShift: 8) + byte]
 ]
 
 { #category : #'jump bytecodes' }
@@ -5504,7 +5502,7 @@ StackInterpreter >> extPushFullClosureBytecode [
 StackInterpreter >> extPushIntegerBytecode [
 	"229		11100101	i i i i i i i i	Push Integer #iiiiiiii (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)"
 	| value |
-	value := self fetchByte + ((extB > 127 ifTrue: [extB - 256] ifFalse: [extB]) bitShift: 8).
+	value := self fetchByte + (extB << 8).
 	self fetchNextBytecode.
 	extB := 0.
 	self internalPush: (objectMemory integerObjectOf: value)
@@ -5814,7 +5812,7 @@ StackInterpreter >> extUnconditionalJump [
 	"242		11110010	i i i i i i i i	Jump i i i i i i i i (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)"
 	| byte offset |
 	byte := self fetchByte.
-	offset := byte + ((extB > 127 ifTrue: [extB - 256] ifFalse: [extB]) bitShift: 8).
+	offset := byte + (extB << 8).
 	extB := 0.
 	localIP := localIP + offset.
 	self ifBackwardsCheckForEvents: offset.
@@ -7720,7 +7718,7 @@ StackInterpreter >> includesBehavior: aClass ThatOf: aSuperclass [
 { #category : #'simulation support' }
 StackInterpreter >> initExtensions [
 	<inline: true>
-	self cppIf: MULTIPLEBYTECODESETS ifTrue: [extA := extB := 0. extBFirstZero := false]
+	extA := extB := 0
 ]
 
 { #category : #'object memory support' }

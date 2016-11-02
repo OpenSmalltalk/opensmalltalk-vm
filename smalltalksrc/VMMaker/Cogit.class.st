@@ -238,7 +238,6 @@ Class {
 		'ceUnlockVMOwner',
 		'extA',
 		'extB',
-		'extBFirstZero',
 		'tempOop',
 		'numIRCs',
 		'indexOfIRC',
@@ -5852,10 +5851,9 @@ Cogit >> extABytecode [
 { #category : #'bytecode generators' }
 Cogit >> extBBytecode [
 	"225		11100001	sbbbbbbb	Extend B (Ext B = Ext B prev * 256 + Ext B)"
-	extB := (extB = 0 and: [extBFirstZero not and: [byte1 > 127]])
+	extB := (extB = 0 and: [byte1 > 127])
 				ifTrue: [byte1 - 256]
 				ifFalse: [(extB bitShift: 8) + byte1].
-	extBFirstZero := extB = 0.
 	^0
 ]
 
@@ -10910,7 +10908,6 @@ Cogit >> scanBlock: blockStart [
 	pc := blockStart startpc.
 	end := blockStart startpc + blockStart span.
 	framelessStackDelta := nExts := extA := extB := 0.
-	extBFirstZero := false.
 	[pc < end] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		 descriptor := self generatorAt: byte0.
@@ -10973,7 +10970,6 @@ Cogit >> scanMethod [
 		[^0].
 	pc := latestContinuation := initialPC.
 	numBlocks := framelessStackDelta := nExts := extA := extB := 0.
-	extBFirstZero := false.
 	[pc <= endPC] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		 descriptor := self generatorAt: byte0.
@@ -11197,7 +11193,6 @@ Cogit >> setInterpreter: aCoInterpreter [
 	trampolineTableIndex := 0.
 
 	extA := extB := 0.
-	extBFirstZero := false.
 
 	compilationTrace ifNil: [compilationTrace := self class initializationOptions at: #compilationTrace ifAbsent: [0]].
 	debugOpcodeIndices := self class initializationOptions at: #debugOpcodeIndices ifAbsent: [Set new].
