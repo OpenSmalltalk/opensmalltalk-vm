@@ -238,9 +238,11 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator addConstantForBinding: (self bindingOf: #MULTIPLEBYTECODESETS).
 	MULTIPLEBYTECODESETS == false ifTrue:
 		[aCCodeGenerator
-			removeVariable: 'extA';
-			removeVariable: 'extB';
 			removeVariable: 'bytecodeSetSelector'].
+	BytecodeSetHasExtensions == false ifTrue:
+		[aCCodeGenerator
+			removeVariable: 'extA';
+			removeVariable: 'extB'].
 	aCCodeGenerator
 		var: #methodCache
 		declareC: 'long methodCache[MethodCacheSize + 1 /* ', (MethodCacheSize + 1) printString, ' */]'.
@@ -359,9 +361,9 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV4 [
 	"Note: This table will be used to generate a C switch statement."
 
 	initializationOptions at: #NewsqueakV4BytecodeSet put: (NewsqueakV4BytecodeSet := true).
-
 	BytecodeTable := Array new: 256.
 	BytecodeEncoderClassName := #EncoderForNewsqueakV4.
+	BytecodeSetHasExtensions := true.
 	LongStoreBytecode := 234.
 	self table: BytecodeTable from:
 	#(	"1 byte bytecodes"
@@ -483,6 +485,7 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 	BytecodeTable := Array new: 256.
 	BytecodeEncoderClassName := #EncoderForSistaV1.
 	BytecodeSetHasDirectedSuperSend := true.
+	BytecodeSetHasExtensions := true.
 	LongStoreBytecode := 245.
 	self table: BytecodeTable from:
 	#(	"1 byte bytecodes"
@@ -7718,7 +7721,7 @@ StackInterpreter >> includesBehavior: aClass ThatOf: aSuperclass [
 { #category : #'simulation support' }
 StackInterpreter >> initExtensions [
 	<inline: true>
-	extA := extB := 0
+	BytecodeSetHasExtensions ifTrue: [extA := extB := 0]
 ]
 
 { #category : #'object memory support' }
