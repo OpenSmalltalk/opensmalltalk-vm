@@ -6,7 +6,17 @@ UndefinedObject >> addBreakpoint: address [
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
+UndefinedObject >> asIntegerPtr [
+	^self
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
 UndefinedObject >> asUnsignedInteger [
+	^self
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+UndefinedObject >> asUnsignedIntegerPtr [
 	^self
 ]
 

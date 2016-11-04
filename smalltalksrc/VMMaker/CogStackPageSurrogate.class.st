@@ -43,7 +43,17 @@ CogStackPageSurrogate >> asInteger [
 ]
 
 { #category : #accessing }
+CogStackPageSurrogate >> asIntegerPtr [
+	^address
+]
+
+{ #category : #accessing }
 CogStackPageSurrogate >> asUnsignedInteger [
+	^address
+]
+
+{ #category : #accessing }
+CogStackPageSurrogate >> asUnsignedIntegerPtr [
 	^address
 ]
 
