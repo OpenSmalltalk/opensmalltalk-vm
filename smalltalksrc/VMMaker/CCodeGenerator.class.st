@@ -1666,6 +1666,15 @@ CCodeGenerator >> generateAsInteger: msgNode on: aStream indent: level [
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateAsIntegerPtr: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream nextPutAll:'((sqIntptr_t)'.
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPut: $)
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateAsLong: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
@@ -1687,6 +1696,15 @@ CCodeGenerator >> generateAsUnsignedInteger: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
 	aStream nextPutAll:'((usqInt)'.
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPut: $)
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateAsUnsignedIntegerPtr: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream nextPutAll:'((usqIntptr_t)'.
 	self emitCExpression: msgNode receiver on: aStream.
 	aStream nextPut: $)
 ]
@@ -3473,7 +3491,9 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#inline:						#generateInlineDirective:on:indent:
 	#asFloat					#generateAsFloat:on:indent:
 	#asInteger					#generateAsInteger:on:indent:
+	#asIntegerPtr				#generateAsIntegerPtr:on:indent:
 	#asUnsignedInteger		#generateAsUnsignedInteger:on:indent:
+	#asUnsignedIntegerPtr		#generateAsUnsignedIntegerPtr:on:indent:
 	#asLong					#generateAsLong:on:indent:
 	#asUnsignedLong			#generateAsUnsignedLong:on:indent:
 	#asUnsignedLongLong		#generateAsUnsignedLongLong:on:indent:
@@ -3721,7 +3741,7 @@ CCodeGenerator >> isGlobalStructureBuild [
 
 { #category : #inlining }
 CCodeGenerator >> isIntegralCType: aCType [ "<String>"
-	^(#('sqLong' 'usqLong' 'sqInt' 'usqInt'
+	^(#('sqLong' 'usqLong' 'sqInt' 'usqInt' 'sqIntptr_t' 'usqIntptr_t'
 		'long' 'int' 'short' 'char' 'signed char'
 		'size_t' 'pid_t') includes: aCType asString)
 	or: [(aCType beginsWith: 'unsigned') "Accept e.g. 'unsigned long' and also 'unsigned  : 8'"
@@ -4787,7 +4807,9 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 				[#sqrt]					->	[#double].
 				[#asLong]				->	[#long].
 				[#asInteger]			->	[#sqInt].
+				[#asIntegerPtr]			->	[#'sqIntptr_t'].
 				[#asUnsignedInteger]	->	[#usqInt].
+				[#asUnsignedIntegerPtr]->	[#'usqIntptr_t'].
 				[#asUnsignedLong]		->	[#'unsigned long'].
 				[#asUnsignedLongLong]		->	[#'unsigned long long'].
 				[#asVoidPointer]		->	[#'void *'].
@@ -4891,6 +4913,8 @@ CCodeGenerator >> signedTypeForIntegralType: aCTypeString [
 	(aCTypeString beginsWith: 'usq') ifTrue:
 		[^aCTypeString allButFirst].
 
+	aCTypeString = 'size_t' ifTrue: [^#usqIntptr_t].
+	
 	self error: 'unknown type'.
 	^#long
 ]
@@ -4906,18 +4930,21 @@ CCodeGenerator >> sizeOfIntegralCType: anIntegralCType [ "<String>"
 						ifFalse: [(anIntegralCType beginsWith: 'signed ')
 									ifTrue: [(anIntegralCType allButFirst: 7) withBlanksTrimmed]
 									ifFalse: [anIntegralCType]].
+	
 	^prunedCType asString caseOf: {
 		['sqLong']	->	[8].
 		['usqLong']	->	[8].
 		['long long']	->	[8].
-		['sqInt']		->	[BytesPerWord].
-		['usqInt']	->	[BytesPerWord].
+		['sqInt']		->	[BytesPerOop].
+		['usqInt']	->	[BytesPerOop].
+		['sqIntptr_t']	->	[BytesPerWord].
+		['usqIntptr_t']	->	[BytesPerWord].
 		['int']		->	[4].
 		['short']		->	[2].
 		['short int']	->	[2].
 		['char']		->	[1].
-		['long']		->	[BytesPerWord].
-		['size_t']		->	[BytesPerWord].
+		['long']		->	[BytesPerWord]. "It's ambiguous on LLP64 and we'll later remove it"
+		['size_t']	->	[BytesPerWord].
 		['pid_t']		->	[BytesPerWord].
 	}
 	otherwise:

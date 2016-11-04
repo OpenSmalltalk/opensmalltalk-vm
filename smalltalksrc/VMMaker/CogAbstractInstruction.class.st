@@ -432,7 +432,19 @@ CogAbstractInstruction >> asInteger [
 ]
 
 { #category : #coercion }
+CogAbstractInstruction >> asIntegerPtr [
+	<doNotGenerate>
+	^self
+]
+
+{ #category : #coercion }
 CogAbstractInstruction >> asUnsignedInteger [
+	<doNotGenerate>
+	^self
+]
+
+{ #category : #coercion }
+CogAbstractInstruction >> asUnsignedIntegerPtr [
 	<doNotGenerate>
 	^self
 ]

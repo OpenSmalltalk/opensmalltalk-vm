@@ -1680,7 +1680,7 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAt [
 	byteSize < BytesPerWord
 		ifTrue:
 			[isSigned ifTrue: "sign extend value"
-				[mask := 1 << (byteSize * 8 - 1).
+				[mask := 1 asUnsignedLongLong << (byteSize * 8 - 1).
 				value := (value bitAnd: mask-1) - (value bitAnd: mask)].
 			 "note: byte/short (&long if BytesPerWord=8) never exceed SmallInteger range"
 			 valueOop := interpreterProxy integerObjectOf: value]
@@ -1688,7 +1688,7 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAt [
 			[isSigned
 				ifTrue:
 					[byteSize < 8 ifTrue: "sign extend value"
-						[mask := 1 << (byteSize * 8 - 1).
+						[mask := 1 asUnsignedLongLong << (byteSize * 8 - 1).
 						value := (value bitAnd: mask-1) - (value bitAnd: mask)].
 					 valueOop := interpreterProxy signed64BitIntegerFor: value]
 				ifFalse:[valueOop := interpreterProxy positive64BitIntegerFor: value]].
@@ -1723,10 +1723,10 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAtPut [
 	byteSize < BytesPerWord ifTrue:
 		[isSigned
 			ifTrue:
-				[max := 1 << (8 * byteSize - 1).
+				[max := 1 asUnsignedLongLong << (8 * byteSize - 1).
 				(value >= (0 - max) and: [value < max]) ifFalse: [^interpreterProxy primitiveFail]]
 			ifFalse:
-				[value asUnsignedLongLong < (1 << (8*byteSize)) ifFalse: [^interpreterProxy primitiveFail]]].
+				[value asUnsignedLongLong < (1 asUnsignedLongLong << (8 * byteSize)) ifFalse: [^interpreterProxy primitiveFail]]].
 	byteSize <= 2
 		ifTrue:
 			[byteSize = 1

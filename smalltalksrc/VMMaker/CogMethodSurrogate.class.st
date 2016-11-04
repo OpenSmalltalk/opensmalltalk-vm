@@ -81,9 +81,23 @@ CogMethodSurrogate >> asInteger [
 ]
 
 { #category : #accessing }
+CogMethodSurrogate >> asIntegerPtr [
+	"Answer the surrogate's adress. This is equivalent to a C cast to usqIntptr_t,
+	 which is precisely what Slang generates for asIntegerPtr"
+	^address
+]
+
+{ #category : #accessing }
 CogMethodSurrogate >> asUnsignedInteger [
 	"Answer the surrogate's adress. This is equivalent to a C cast to usqInt,
 	 which is precisely what Slang generates for asUnsignedInteger"
+	^address
+]
+
+{ #category : #accessing }
+CogMethodSurrogate >> asUnsignedIntegerPtr [
+	"Answer the surrogate's adress. This is equivalent to a C cast to usqIntptr_t,
+	 which is precisely what Slang generates for asUnsignedIntegerPtr"
 	^address
 ]
 

@@ -43,7 +43,19 @@ CogSSBytecodeFixup class >> initialize [
 ]
 
 { #category : #'simulation support' }
+CogSSBytecodeFixup >> asIntegerPtr [
+	<doNotGenerate>
+	^self
+]
+
+{ #category : #'simulation support' }
 CogSSBytecodeFixup >> asUnsignedInteger [
+	<doNotGenerate>
+	^self
+]
+
+{ #category : #'simulation support' }
+CogSSBytecodeFixup >> asUnsignedIntegerPtr [
 	<doNotGenerate>
 	^self
 ]

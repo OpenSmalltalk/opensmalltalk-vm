@@ -578,7 +578,10 @@ InterpreterPlugin >> sizeof: objectSymbolOrClass [
 			[^8].
 		(objectSymbolOrClass last == $*
 		 or: [#long == objectSymbolOrClass
-		 or: [#'unsigned long' == objectSymbolOrClass]]) ifTrue:
+		 or: [#'unsigned long' == objectSymbolOrClass
+		 or: [#'sqIntptr_t' == objectSymbolOrClass
+		 or: [#'usqIntptr_t' == objectSymbolOrClass
+		 or: [#'size_t' == objectSymbolOrClass]]]]]) ifTrue:
 			[^interpreterProxy wordSize].
 		(#(usqInt sqInt) includes: objectSymbolOrClass) ifTrue:
 			[^interpreterProxy bytesPerOop]].
