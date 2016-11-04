@@ -148,12 +148,13 @@ print-settings:
 	@echo INCDIRS=$(INCDIRS)
 	@echo LIBSRC=$(LIBSRC)
 	@echo LIBOBJ=$(LIBOBJ)
+	@echo BUILD=$(BUILD)
 	@echo OBJDIR=$(OBJDIR)
 	@echo VMDIR=$(VMDIR)
 	@echo PLUGINLIB=$(PLUGINLIB)
 	@echo PLUGINEXE=$(PLUGINEXE)
 	@echo PLUGINBUNDLE=$(PLUGINBUNDLE)
-	@echo deps=$(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC))))
+	@echo deps=$(patsubst %,deps/%.d,$(notdir $(basename $(LIBSRC))))
 	@echo -----------------------------------------------------
 
 $(OBJDIR):
