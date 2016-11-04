@@ -704,7 +704,7 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 		var: #heapGrowthToSizeGCRatio type: #float;
 		var: #heapSizeAtPreviousGC type: #usqInt;
 		var: #totalFreeOldSpace type: #usqInt;
-		var: #maxOldSpaceSize type: #'unsigned long'.
+		var: #maxOldSpaceSize type: #usqInt.
 	aCCodeGenerator
 		var: #remapBuffer
 		declareC: 'sqInt remapBuffer[RemapBufferSize + 1 /* ', (RemapBufferSize + 1) printString, ' */]'.
@@ -10650,7 +10650,7 @@ SpurMemoryManager >> setLastSegment: segInfo [
 
 { #category : #accessing }
 SpurMemoryManager >> setMaxOldSpaceSize: limit [
-	<var: #limit type: #'unsigned long'>
+	<var: #limit type: #usqInt>
 	maxOldSpaceSize := limit.
 	^0
 ]

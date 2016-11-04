@@ -592,7 +592,7 @@ Spur32BitMemoryManager >> integerObjectOf: value [
 { #category : #immediates }
 Spur32BitMemoryManager >> integerObjectOfCharacterObject: oop [
 	"Immediate characters are unsigned"
-	^(self cCoerceSimple: oop to: #'unsigned long') >> 1
+	^(self cCoerceSimple: oop to: #usqInt) >> 1
 ]
 
 { #category : #immediates }
