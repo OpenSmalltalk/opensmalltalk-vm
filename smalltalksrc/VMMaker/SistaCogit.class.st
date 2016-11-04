@@ -1123,7 +1123,7 @@ SistaCogit >> picDataFor: descriptor Annotation: isBackwardBranchAndAnnotation M
 	<var: #mcpc type: #'char *'>
 	<var: #cogMethodArg type: #'void *'>
 	| annotation entryPoint tuple counter |
-	<var: #counter type: #'unsigned long'>
+	<var: #counter type: #usqInt>
 
 	descriptor ifNil:
 		[^0].
@@ -1134,7 +1134,7 @@ SistaCogit >> picDataFor: descriptor Annotation: isBackwardBranchAndAnnotation M
 							cCoerce: ((self
 											cCoerceSimple: cogMethodArg
 											to: #'CogMethod *') counters)
-							to: #'unsigned long *')
+							to: #'usqInt *')
 								at: counterIndex.
 			 tuple := self picDataForCounter: counter at: bcpc + 1.
 			 tuple = 0 ifTrue: [^PrimErrNoMemory].
@@ -1214,7 +1214,7 @@ SistaCogit >> picDataForBlockEntry: blockEntryMcpc Method: cogMethod [
 { #category : #'method introspection' }
 SistaCogit >> picDataForCounter: counter at: bcpc [
 	| executedCount tuple untakenCount |
-	<var: #counter type: #'unsigned long'>
+	<var: #counter type: #usqInt>
 	tuple := objectMemory
 				eeInstantiateClassIndex: ClassArrayCompactIndex
 				format: objectMemory arrayFormat
