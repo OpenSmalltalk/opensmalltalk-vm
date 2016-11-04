@@ -183,6 +183,17 @@ may be in /usr/lib) and copy or link them into the SDK /usr/lib and retry the
 build.
 
 
+Signing Problems
+-------------------------------------------
+The makefiles will attempt to sign the VM .app bundles that are built iff the
+environment variable SIGNING_IDENTITY is set (see "Building out of the box"
+above).  codesign, the Xcode utility for signing, may fail if Keychain Access
+is not set-up properly.  If you're logging in remotely, e.g. via ssh, and get
+an "User interaction is not allowed." error then see
+http://stackoverflow.com/questions/20205162/user-interaction-is-not-allowed-trying-to-sign-an-osx-app-using-codesign
+	"Login your build user via the GUI and open Keychain Access. Select your signing private key, right-click, choose Get Info, change to the Access Control tab and select the "Allow all applications to access this item"."
+
+
 Building the VM Simulator Support Libraries
 -------------------------------------------
 If you want to get the Cog VM simulator working you'll need to build one or more
