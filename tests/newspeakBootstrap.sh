@@ -2,7 +2,7 @@
 set -e
 
 readonly REV_NEWSPEAK="7fed4bc928ac3fa85fa28493ca1e26c359f875ac"
-readonly REV_NSBOOT="abb722e474e2126203f05245e9da45c065efe991"
+readonly REV_NSBOOT="afc5b23866b518d926e300bca9efdf41b6e62fe0"
 readonly GH_BASE="https://github.com/newspeaklanguage"
 readonly TMP_DIR=$(mktemp -d 2>/dev/null || mktemp -d -t 'newspeak')
 
@@ -40,7 +40,7 @@ fi
 
 case "$(uname -s)" in
   "Linux")
-    NSVM=$(find "${TRAVIS_BUILD_DIR}/products" -type f -name "nsvm" | head -n 1)
+    NSVM=$(find "${TRAVIS_BUILD_DIR}/products" -type f -path "*/bin/nsvm" | head -n 1)
     ;;
   "Darwin")
     VM_BUILD_DIR="${TRAVIS_BUILD_DIR}/build.${ARCH}/${FLAVOR}"
