@@ -6,12 +6,12 @@ environment:
   BINTRAYAPIKEY:
     secure: uknPzww818XWJiLecwur9p1MfrkACOyx9d3iNrw/TuD89EoPSc8zLqKdPZjWdcQd
   matrix:
-    - FLAVOR: newspeak.cog.spur
-    - FLAVOR: newspeak.stack.spur
     - FLAVOR: squeak.cog.spur
     - FLAVOR: squeak.cog.v3
     - FLAVOR: squeak.stack.spur
     - FLAVOR: squeak.stack.v3
+    - FLAVOR: newspeak.cog.spur
+    - FLAVOR: newspeak.stack.spur
 
 matrix:
   fast_finish: false
