@@ -824,7 +824,7 @@ InterpreterProxy >> positive64BitValueOf: oop [
 
 { #category : #converting }
 InterpreterProxy >> positiveMachineIntegerValueOf: oop [
-	<returnTypeC: #'unsigned long'>
+	<returnTypeC: #'usqIntptr_t'>
 	oop isInteger ifFalse:[self error: 'Not an integer object'].
 	^oop < 0 
 		ifTrue: [self primitiveFail. 0]
@@ -993,7 +993,7 @@ InterpreterProxy >> signed64BitValueOf: oop [
 
 { #category : #converting }
 InterpreterProxy >> signedMachineIntegerValueOf: oop [
-	<returnTypeC: #'long'>
+	<returnTypeC: #'sqIntptr_t'>
 	oop isInteger ifFalse:[self error:'Not an integer object'].
 	^oop
 ]
@@ -1056,11 +1056,13 @@ InterpreterProxy >> stackObjectValue: offset [
 
 { #category : #'stack access' }
 InterpreterProxy >> stackPositiveMachineIntegerValue: offset [
+	<returnTypeC: #'usqIntptr_t'>
 	^self positiveMachineIntegerValueOf: (self stackValue: offset)
 ]
 
 { #category : #'stack access' }
 InterpreterProxy >> stackSignedMachineIntegerValue: offset [
+	<returnTypeC: #'sqIntptr_t'>
 	^self signedMachineIntegerValueOf: (self stackValue: offset)
 ]
 

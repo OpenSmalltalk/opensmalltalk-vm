@@ -167,7 +167,7 @@ CogMIPSELCompiler class >> initializeAbstractRegisters [
 { #category : #translation }
 CogMIPSELCompiler class >> machineCodeDeclaration [
 	"Answer the declaration for the machineCode array."
-	^{#'unsigned long'. '[', self basicNew machineCodeWords printString, ']'}
+	^{#'usqIntptr_t'. '[', self basicNew machineCodeWords printString, ']'}
 ]
 
 { #category : #'debug printing' }

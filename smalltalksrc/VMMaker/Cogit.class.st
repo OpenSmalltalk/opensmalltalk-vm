@@ -517,9 +517,9 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		addHeaderFile:'"cogit.h"'.
 	aCCodeGenerator
 		var: #ceGetFP
-			declareC: 'unsigned long (*ceGetFP)(void)';
+			declareC: 'usqIntptr_t (*ceGetFP)(void)';
 		var: #ceGetSP
-			declareC: 'unsigned long (*ceGetSP)(void)';
+			declareC: 'usqIntptr_t (*ceGetSP)(void)';
 		var: #ceCaptureCStackPointers
 			declareC: 'void (*ceCaptureCStackPointers)(void)';
 		var: #ceEnterCogCodePopReceiverReg
@@ -535,11 +535,11 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		var: #realCECallCogCodePopReceiverAndClassRegs
 			declareC: 'void (*realCECallCogCodePopReceiverAndClassRegs)(void)';
 		var: #ceFlushICache
-			declareC: 'static void (*ceFlushICache)(unsigned long from, unsigned long to)';
+			declareC: 'static void (*ceFlushICache)(usqIntptr_t from, usqIntptr_t to)';
 		var: #ceCheckFeaturesFunction
-			declareC: 'static unsigned long (*ceCheckFeaturesFunction)(void)';
+			declareC: 'static usqIntptr_t (*ceCheckFeaturesFunction)(void)';
 		var: #ceTryLockVMOwner
-			declareC: 'unsigned long (*ceTryLockVMOwner)(void)';
+			declareC: 'usqIntptr_t (*ceTryLockVMOwner)(void)';
 		var: #ceUnlockVMOwner
 			declareC: 'void (*ceUnlockVMOwner)(void)';
 		var: #postCompileHook
@@ -590,8 +590,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		declareVar: #CFramePointer type: #'void *';
 		declareVar: #CStackPointer type: #'void *';
-		declareVar: #minValidCallAddress type: #'unsigned long';
-		declareVar: #debugPrimCallStackOffset type: #'unsigned long'.
+		declareVar: #minValidCallAddress type: #'usqIntptr_t';
+		declareVar: #debugPrimCallStackOffset type: #'usqIntptr_t'.
 	aCCodeGenerator vmClass generatorTable ifNotNil:
 		[:bytecodeGenTable|
 		aCCodeGenerator
@@ -3365,7 +3365,7 @@ Cogit >> cCoerceSimple: value to: cTypeString [
 
 { #category : #'trampoline support' }
 Cogit >> cFramePointerAddress [
-	<cmacro: '() ((unsigned long)&CFramePointer)'>
+	<cmacro: '() ((usqIntptr_t)&CFramePointer)'>
 	^(backEnd wantsNearAddressFor: #CFramePointer)
 		ifTrue: [self simulatedReadWriteVariableAddress: #getCFramePointer in: self]
 		ifFalse: [coInterpreter inMemoryCFramePointerAddress]
@@ -3504,7 +3504,7 @@ Cogit >> cPICPrototypeCaseOffset [
 
 { #category : #'trampoline support' }
 Cogit >> cStackPointerAddress [
-	<cmacro: '() ((unsigned long)&CStackPointer)'>
+	<cmacro: '() ((usqIntptr_t)&CStackPointer)'>
 	^(backEnd wantsNearAddressFor: #CStackPointer)
 		ifTrue: [self simulatedReadWriteVariableAddress: #getCStackPointer in: self]
 		ifFalse: [coInterpreter inMemoryCStackPointerAddress]
@@ -6599,7 +6599,7 @@ Cogit >> genGetLeafCallStackPointer [
 		RetN: 0.
 	self outputInstructionsForGeneratedRuntimeAt: startAddress.
 	self recordGeneratedRunTime: 'ceGetFP' address: startAddress.
-	ceGetFP := self cCoerceSimple: startAddress to: #'unsigned long (*)(void)'.
+	ceGetFP := self cCoerceSimple: startAddress to: #'usqIntptr_t (*)(void)'.
 	startAddress := methodZoneBase.
 	self zeroOpcodeIndex.
 	self MoveR: SPReg R: backEnd cResultRegister.
@@ -6608,7 +6608,7 @@ Cogit >> genGetLeafCallStackPointer [
 	self RetN: 0.
 	self outputInstructionsForGeneratedRuntimeAt: startAddress.
 	self recordGeneratedRunTime: 'ceGetSP' address: startAddress.
-	ceGetSP := self cCoerceSimple: startAddress to: #'unsigned long (*)(void)'
+	ceGetSP := self cCoerceSimple: startAddress to: #'usqIntptr_t (*)(void)'
 ]
 
 { #category : #initialization }
@@ -7809,7 +7809,7 @@ Cogit >> generateVMOwnerLockFunctions [
 			backEnd generateLowLevelTryLock: coInterpreter vmOwnerLockAddress.
 			self outputInstructionsForGeneratedRuntimeAt: startAddress.
 			self recordGeneratedRunTime: 'ceTryLockVMOwner' address: startAddress.
-			ceTryLockVMOwner := self cCoerceSimple: startAddress to: #'unsigned long (*)(void)'.
+			ceTryLockVMOwner := self cCoerceSimple: startAddress to: #'usqIntptr_t (*)(void)'.
 
 			self zeroOpcodeIndex.
 			initialPC := 0.
@@ -9520,7 +9520,7 @@ Cogit >> maybeGenerateCheckFeatures [
 		 backEnd generateCheckFeatures.
 		 self outputInstructionsForGeneratedRuntimeAt: startAddress.
 		 self recordGeneratedRunTime: 'ceCheckFeaturesFunction' address: startAddress.
-		 ceCheckFeaturesFunction := self cCoerceSimple: startAddress to: #'unsigned long (*)(void)']
+		 ceCheckFeaturesFunction := self cCoerceSimple: startAddress to: #'usqIntptr_t (*)(void)']
 ]
 
 { #category : #initialization }
@@ -9533,7 +9533,7 @@ Cogit >> maybeGenerateICacheFlush [
 		 backEnd generateICacheFlush.
 		 self outputInstructionsForGeneratedRuntimeAt: startAddress.
 		 self recordGeneratedRunTime: 'ceFlushICache' address: startAddress.
-		 ceFlushICache := self cCoerceSimple: startAddress to: #'void (*)(unsigned long,unsigned long)']
+		 ceFlushICache := self cCoerceSimple: startAddress to: #'void (*)(usqIntptr_t,usqIntptr_t)']
 ]
 
 { #category : #'garbage collection' }
@@ -10004,7 +10004,7 @@ Cogit >> picInterpretAbortOffset [
 
 { #category : #'profiling primitives' }
 Cogit >> positiveMachineIntegerFor: value [
-	<var: #value type: #'unsigned long'>
+	<var: #value type: #'usqIntptr_t'>
 	<inline: true>
 	^objectMemory wordSize = 8
 		ifTrue: [coInterpreter positive64BitIntegerFor: value]
