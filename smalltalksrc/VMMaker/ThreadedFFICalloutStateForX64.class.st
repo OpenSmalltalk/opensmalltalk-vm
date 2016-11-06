@@ -41,12 +41,6 @@ ThreadedFFICalloutStateForX64 >> floatRegisterIndex [
 ]
 
 { #category : #accessing }
-ThreadedFFICalloutStateForX64 >> floatRegisterIndex: anObject [
-
-	^floatRegisterIndex := anObject
-]
-
-{ #category : #accessing }
 ThreadedFFICalloutStateForX64 >> floatRegisters [
 	"Answer the value of floatRegisters"
 
@@ -54,9 +48,13 @@ ThreadedFFICalloutStateForX64 >> floatRegisters [
 ]
 
 { #category : #accessing }
-ThreadedFFICalloutStateForX64 >> floatRegisters: anObject [
+ThreadedFFICalloutStateForX64 >> incrementFloatRegisterIndex [
+	^floatRegisterIndex := floatRegisterIndex + 1
+]
 
-	^floatRegisters := anObject
+{ #category : #accessing }
+ThreadedFFICalloutStateForX64 >> incrementIntegerRegisterIndex [
+	^integerRegisterIndex := integerRegisterIndex + 1
 ]
 
 { #category : #'initialize-release' }
@@ -74,20 +72,8 @@ ThreadedFFICalloutStateForX64 >> integerRegisterIndex [
 ]
 
 { #category : #accessing }
-ThreadedFFICalloutStateForX64 >> integerRegisterIndex: anObject [
-
-	^integerRegisterIndex := anObject
-]
-
-{ #category : #accessing }
 ThreadedFFICalloutStateForX64 >> integerRegisters [
 	"Answer the value of integerRegisters"
 
 	^ integerRegisters
-]
-
-{ #category : #accessing }
-ThreadedFFICalloutStateForX64 >> integerRegisters: anObject [
-
-	^integerRegisters := anObject
 ]

@@ -1,5 +1,5 @@
 "
-This subclass is for the Win64 x86-64 ABI.  The System V ABI uses 4 integer registers and 4 double-precision floating-point registers.  See w.g. https://msdn.microsoft.com/en-us/library/ms235286.aspx, or google for ""Overview of x64 Calling Conventions - MSDN - Microsoft"".
+This subclass is for the Win64 x86-64 ABI.  The Win64 ABI uses 4 integer registers or 4 double-precision floating-point registers or a mix of the two.  See w.g. https://msdn.microsoft.com/en-us/library/ms235286.aspx, or google for ""Overview of x64 Calling Conventions - MSDN - Microsoft"".
 
 Note that unlike the System V x86-64 ABI, the Win64 ABI does /not/ decompose structs passed by value across available parameter registers.
 "
@@ -8,6 +8,11 @@ Class {
 	#superclass : #ThreadedX64FFIPlugin,
 	#category : #'VMMaker-Plugins-FFI'
 }
+
+{ #category : #translation }
+ThreadedX64Win64FFIPlugin class >> calloutStateClass [
+	^ThreadedFFICalloutStateForX64Win64
+]
 
 { #category : #translation }
 ThreadedX64Win64FFIPlugin class >> identifyingPredefinedMacros [
@@ -66,7 +71,7 @@ ThreadedX64Win64FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in:
 	self registerArgsSlop + self cStackAlignment > 0 ifTrue:
 		[self setsp: calloutState argVector].
 
-	calloutState floatRegisterIndex > 0 ifTrue:
+	calloutState floatRegisterSignature > 0 ifTrue:
 		[self 
 			load: (calloutState floatRegisters at: 0)
 			Flo: (calloutState floatRegisters at: 1)
@@ -132,12 +137,15 @@ ThreadedX64Win64FFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSp
 	<var: #pointer type: #'void *'>
 	<var: #argSpec type: #'sqInt *'>
 	<var: #calloutState type: #'CalloutState *'>
+	<var: #arg type: #usqLong>
 	<inline: true>
 	structSize <= 0 ifTrue:
 		[^FFIErrorStructSize].
-	(structSize <= 16
+	(structSize <= WordSize
 	 and: [(structSize bitAnd: structSize - 1) = 0 "a.k.a. structSize isPowerOfTwo"]) ifTrue:
-		[^self ffiPushUnsignedLongLong: (self cCoerceSimple: pointer to: #usqLong) in: calloutState].
+		[| arg |
+		self mem: (self addressOf: arg) cp: pointer y: structSize.
+		^self ffiPushUnsignedLongLong: arg in: calloutState].
 
 	"For now just push the pointer; we should copy the struct to the outgoing stack frame!!"
 	self flag: 'quick hack'.
@@ -170,5 +178,5 @@ ThreadedX64Win64FFIPlugin >> ffiReturnStruct: intRet ofType: ffiRetType in: call
 { #category : #marshalling }
 ThreadedX64Win64FFIPlugin >> returnStructInRegisters: returnStructSize [
 	"Answer if a struct result of a given size is returned in memory or not."
-	^returnStructSize <= WordSize
+	^returnStructSize <= WordSize and: ["returnStructSize isPowerOfTwo" (returnStructSize bitAnd: returnStructSize-1) = 0]
 ]
