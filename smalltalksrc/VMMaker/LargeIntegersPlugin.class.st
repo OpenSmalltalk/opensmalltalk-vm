@@ -1149,9 +1149,9 @@ LargeIntegersPlugin >> normalizeNegative: aLargeNegativeInteger [
 	"Check for leading zeroes and return shortened copy if so."
 	"First establish len = significant length."
 	| val val2 sLen digitLen byteLen oldByteLen minVal |
-	<var: #val type: #'unsigned long'>
-	<var: #val2 type: #'unsigned long'>
-	<var: #minVal type: #'unsigned long'>
+	<var: #val type: #usqInt>
+	<var: #val2 type: #usqInt>
+	<var: #minVal type: #usqInt>
 	digitLen := self digitSizeOfLargeInt: aLargeNegativeInteger.
 	[digitLen ~= 0 and: [(self unsafeDigitOfLargeInt: aLargeNegativeInteger at: digitLen) = 0]]
 		whileTrue: [digitLen := digitLen - 1].
@@ -1186,9 +1186,9 @@ LargeIntegersPlugin >> normalizePositive: aLargePositiveInteger [
 	"Check for leading zeroes and return shortened copy if so."
 	"First establish len = significant length."
 	| val val2 sLen digitLen byteLen oldByteLen maxVal |
-	<var: #val type: #'unsigned long'>
-	<var: #val2 type: #'unsigned long'>
-	<var: #maxVal type: #'unsigned long'>
+	<var: #val type: #usqInt>
+	<var: #val2 type: #usqInt>
+	<var: #maxVal type: #usqInt>
 	digitLen := self digitSizeOfLargeInt: aLargePositiveInteger.
 	[digitLen ~= 0 and: [(self unsafeDigitOfLargeInt: aLargePositiveInteger at: digitLen) = 0]]
 		whileTrue: [digitLen := digitLen - 1].

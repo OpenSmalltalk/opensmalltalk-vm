@@ -113,7 +113,7 @@ InterpreterPrimitives class >> windowColorSpecification [
 { #category : #'primitive support' }
 InterpreterPrimitives >> asUnsigned: anInteger [
 	<inline: true>
-	^self cCode: [anInteger asUnsignedLong] inSmalltalk: [anInteger bitAnd: objectMemory maxCInteger]
+	^self cCode: [anInteger asUnsignedInteger] inSmalltalk: [anInteger bitAnd: objectMemory maxCInteger]
 ]
 
 { #category : #'primitive support' }
