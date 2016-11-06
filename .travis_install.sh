@@ -15,7 +15,6 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
     sudo apt-get remove -q -y gvfs-daemons
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-yes \
             devscripts \
-            libc6:i386 \
             libc6-dev:i386 \
             libasound2:i386 \
             libasound2-dev:i386 \
