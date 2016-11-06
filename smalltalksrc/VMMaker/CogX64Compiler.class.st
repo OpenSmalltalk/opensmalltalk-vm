@@ -826,7 +826,7 @@ CogX64Compiler >> concretizeConvertRRd [
 CogX64Compiler >> concretizeFill32 [
 	<inline: true>
 	| word |
-	<var: #word type: #'unsigned long'>
+	<var: #word type: #'usqIntptr_t'>
 	word := operands at: 0.
 	machineCode at: 0 put: (word bitAnd: 16rFF).
 	machineCode at: 1 put: (word >> 8 bitAnd: 16rFF).

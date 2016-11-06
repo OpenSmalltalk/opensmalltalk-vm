@@ -943,7 +943,7 @@ Spur64BitMemoryManager >> objectBytesForSlots: numSlots [
 Spur64BitMemoryManager >> oldRawNumSlotsOf: objOop [
 	<returnTypeC: #usqInt>
 	<inline: true>
-	^(self longAt: objOop) asUnsignedLong >> self numSlotsFullShift
+	^(self longAt: objOop) asUnsignedInteger >> self numSlotsFullShift
 ]
 
 { #category : #'cog jit support' }
@@ -963,7 +963,7 @@ Spur64BitMemoryManager >> rawOverflowSlotsOf: objOop [
 	<inline: true>
 	self flag: #endianness.
 	^self
-		cCode: [((self longAt: objOop - self baseHeaderSize) << 8) asUnsignedLong >> 8]
+		cCode: [((self longAt: objOop - self baseHeaderSize) << 8) asUnsignedInteger >> 8]
 		inSmalltalk: [(self longAt: objOop - self baseHeaderSize) bitAnd: 16rFFFFFFFFFFFFFF]
 ]
 
@@ -983,7 +983,7 @@ Spur64BitMemoryManager >> rotateLeft: anInteger [
 
 { #category : #'interpreter access' }
 Spur64BitMemoryManager >> rotateRight: anInteger [
-	^(self cCode: [anInteger] inSmalltalk: [anInteger bitAnd: 1]) << 63 + (anInteger asUnsignedLong >> 1)
+	^(self cCode: [anInteger] inSmalltalk: [anInteger bitAnd: 1]) << 63 + (anInteger asUnsignedInteger >> 1)
 ]
 
 { #category : #'interpreter access' }
