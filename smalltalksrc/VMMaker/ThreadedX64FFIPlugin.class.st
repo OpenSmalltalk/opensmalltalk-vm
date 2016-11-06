@@ -63,7 +63,7 @@ ThreadedX64FFIPlugin >> ffiPushDoubleFloat: value in: calloutState [
 	calloutState floatRegisterIndex < NumFloatRegArgs
 		ifTrue:
 			[calloutState floatRegisters at: calloutState floatRegisterIndex put: value.
-			 calloutState floatRegisterIndex: calloutState floatRegisterIndex + 1]
+			 calloutState incrementFloatRegisterIndex]
 		ifFalse:
 			[calloutState currentArg + WordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
@@ -80,7 +80,7 @@ ThreadedX64FFIPlugin >> ffiPushPointer: pointer in: calloutState [
 	calloutState integerRegisterIndex < NumIntRegArgs
 		ifTrue:
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: pointer asInteger.
-			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
+			 calloutState incrementIntegerRegisterIndex]
 		ifFalse:
 			[calloutState currentArg + WordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
@@ -96,7 +96,7 @@ ThreadedX64FFIPlugin >> ffiPushSignedByte: value in: calloutState [
 	calloutState integerRegisterIndex < NumIntRegArgs
 		ifTrue:
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: (self cCoerceSimple: value to: #'signed char').
-			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
+			 calloutState incrementIntegerRegisterIndex]
 		ifFalse:
 			[calloutState currentArg + WordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
@@ -112,7 +112,7 @@ ThreadedX64FFIPlugin >> ffiPushSignedChar: value in: calloutState [
 	calloutState integerRegisterIndex < NumIntRegArgs
 		ifTrue:
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: (self cCoerceSimple: value to: #'signed char').
-			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
+			 calloutState incrementIntegerRegisterIndex]
 		ifFalse:
 			[calloutState currentArg + WordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
@@ -128,7 +128,7 @@ ThreadedX64FFIPlugin >> ffiPushSignedInt: value in: calloutState [
 	calloutState integerRegisterIndex < NumIntRegArgs
 		ifTrue:
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: value.
-			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
+			 calloutState incrementIntegerRegisterIndex]
 		ifFalse:
 			[calloutState currentArg + WordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
@@ -146,7 +146,7 @@ ThreadedX64FFIPlugin >> ffiPushSignedLongLong: value in: calloutState [
 	calloutState integerRegisterIndex < NumIntRegArgs
 		ifTrue:
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: (self cCoerceSimple: value to: #usqInt).
-			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
+			 calloutState incrementIntegerRegisterIndex]
 		ifFalse:
 			[calloutState currentArg + WordSize > calloutState limit ifTrue: [^FFIErrorCallFrameTooBig].
 			 interpreterProxy longAt: calloutState currentArg put: value.
@@ -161,7 +161,7 @@ ThreadedX64FFIPlugin >> ffiPushSignedShort: value in: calloutState [
 	calloutState integerRegisterIndex < NumIntRegArgs
 		ifTrue:
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: (self cCoerceSimple: value to: #'signed short').
-			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
+			 calloutState incrementIntegerRegisterIndex]
 		ifFalse:
 			[calloutState currentArg + WordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
@@ -179,7 +179,7 @@ ThreadedX64FFIPlugin >> ffiPushSingleFloat: value in: calloutState [
 	calloutState floatRegisterIndex < NumFloatRegArgs
 		ifTrue:
 			[(self cCoerce: calloutState floatRegisters + calloutState floatRegisterIndex to: #'float *') at: 0 put: value.
-			 calloutState floatRegisterIndex: calloutState floatRegisterIndex + 1]
+			 calloutState incrementFloatRegisterIndex]
 		ifFalse:
 			[calloutState currentArg + WordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
@@ -204,7 +204,7 @@ ThreadedX64FFIPlugin >> ffiPushUnsignedByte: value in: calloutState [
 	calloutState integerRegisterIndex < NumIntRegArgs
 		ifTrue:
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: (self cCoerceSimple: value to: #'unsigned char').
-			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
+			 calloutState incrementIntegerRegisterIndex]
 		ifFalse:
 			[calloutState currentArg + WordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
@@ -221,7 +221,7 @@ ThreadedX64FFIPlugin >> ffiPushUnsignedChar: value in: calloutState [
 	calloutState integerRegisterIndex < NumIntRegArgs
 		ifTrue:
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: (self cCoerceSimple: value to: #'unsigned char').
-			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
+			 calloutState incrementIntegerRegisterIndex]
 		ifFalse:
 			[calloutState currentArg + WordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
@@ -237,7 +237,7 @@ ThreadedX64FFIPlugin >> ffiPushUnsignedInt: value in: calloutState [
 	calloutState integerRegisterIndex < NumIntRegArgs
 		ifTrue:
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: value.
-			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
+			 calloutState incrementIntegerRegisterIndex]
 		ifFalse:
 			[calloutState currentArg + WordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
@@ -256,7 +256,7 @@ ThreadedX64FFIPlugin >> ffiPushUnsignedLongLong: value in: calloutState [
 	calloutState integerRegisterIndex < NumIntRegArgs
 		ifTrue:
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: value.
-			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
+			 calloutState incrementIntegerRegisterIndex]
 		ifFalse:
 			[calloutState currentArg + WordSize > calloutState limit ifTrue: [^FFIErrorCallFrameTooBig].
 			 interpreterProxy longAt: calloutState currentArg put: value.
@@ -271,7 +271,7 @@ ThreadedX64FFIPlugin >> ffiPushUnsignedShort: value in: calloutState [
 	calloutState integerRegisterIndex < NumIntRegArgs
 		ifTrue:
 			[calloutState integerRegisters at: calloutState integerRegisterIndex put: (self cCoerceSimple: value to: #'unsigned short').
-			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
+			 calloutState incrementIntegerRegisterIndex]
 		ifFalse:
 			[calloutState currentArg + WordSize > calloutState limit ifTrue:
 				[^FFIErrorCallFrameTooBig].
