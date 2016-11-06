@@ -212,7 +212,7 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		var: #interpreterProxy  type: #'struct VirtualMachine*'.
 	aCCodeGenerator
 		declareVar: #sendTrace type: 'volatile int';
-		declareVar: #byteCount type: 'unsigned long'.
+		declareVar: #byteCount type: #usqInt.
 	"These need to be pointers or unsigned."
 	self declareC: #(instructionPointer method newMethod)
 		as: #usqInt
@@ -245,10 +245,10 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 			removeVariable: 'extB'].
 	aCCodeGenerator
 		var: #methodCache
-		declareC: 'long methodCache[MethodCacheSize + 1 /* ', (MethodCacheSize + 1) printString, ' */]'.
+		declareC: 'sqIntptr_t methodCache[MethodCacheSize + 1 /* ', (MethodCacheSize + 1) printString, ' */]'.
 	aCCodeGenerator
 		var: #nsMethodCache
-		declareC: 'long nsMethodCache[NSMethodCacheSize + 1 /* ', (NSMethodCacheSize + 1) printString, ' */]'.
+		declareC: 'sqIntptr_t nsMethodCache[NSMethodCacheSize + 1 /* ', (NSMethodCacheSize + 1) printString, ' */]'.
 	AtCacheTotalSize isInteger ifTrue:
 		[aCCodeGenerator
 			var: #atCache
@@ -2013,7 +2013,7 @@ StackInterpreter >> addNewMethodToCache: classObj [
 			methodCache at: probe + MethodCacheSelector put: messageSelector.
 			methodCache at: probe + MethodCacheClass put: (objectMemory classTagForClass: classObj).
 			methodCache at: probe + MethodCacheMethod put: newMethod.
-			methodCache at: probe + MethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #long).
+			methodCache at: probe + MethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #'sqIntptr_t').
 			lastMethodCacheProbeWrite := probe. "this for primitiveExternalMethod"
 			^self]].
 
@@ -2022,7 +2022,7 @@ StackInterpreter >> addNewMethodToCache: classObj [
 	methodCache at: probe + MethodCacheSelector put: messageSelector.
 	methodCache at: probe + MethodCacheClass put: (objectMemory classTagForClass: classObj).
 	methodCache at: probe + MethodCacheMethod put: newMethod.
-	methodCache at: probe + MethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #long).
+	methodCache at: probe + MethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #'sqIntptr_t').
 	lastMethodCacheProbeWrite := probe. "this for primitiveExternalMethod"
 
 	"...and zap the following entries"
@@ -2058,7 +2058,7 @@ StackInterpreter >> addNewMethodToNSCache: rule [
 			nsMethodCache at: probe + NSMethodCacheCallingMethod put: method.
 			nsMethodCache at: probe + NSMethodCacheDepthOrLookupRule put: rule.
 			nsMethodCache at: probe + NSMethodCacheTargetMethod put: newMethod.
-			nsMethodCache at: probe + NSMethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #long).
+			nsMethodCache at: probe + NSMethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #'sqIntptr_t').
 			nsMethodCache at: probe + NSMethodCacheActualReceiver put: localAbsentReceiverOrZero.
 			"lastMethodCacheProbeWrite := probe." "this for primitiveExternalMethod"
 			^self]].
@@ -2070,7 +2070,7 @@ StackInterpreter >> addNewMethodToNSCache: rule [
 	nsMethodCache at: probe + NSMethodCacheCallingMethod put: method.
 	nsMethodCache at: probe + NSMethodCacheDepthOrLookupRule put: rule.
 	nsMethodCache at: probe + NSMethodCacheTargetMethod put: newMethod.
-	nsMethodCache at: probe + NSMethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #long).
+	nsMethodCache at: probe + NSMethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: #'sqIntptr_t').
 	nsMethodCache at: probe + NSMethodCacheActualReceiver put: localAbsentReceiverOrZero.
 	"lastMethodCacheProbeWrite := probe. ""this for primitiveExternalMethod"
 
@@ -8927,7 +8927,7 @@ StackInterpreter >> isPrimitiveFunctionPointerAnIndex [
 	 to hold either a function pointer or the index of a quick primitive. Since
 	 quick primitive indices are small they can't be confused with function
 	 addresses. "
-	^(self cCoerce: primitiveFunctionPointer to: 'unsigned long') <= MaxQuickPrimitiveIndex
+	^(self cCoerce: primitiveFunctionPointer to: #'usqIntptr_t') <= MaxQuickPrimitiveIndex
 ]
 
 { #category : #'compiled methods' }
@@ -9327,7 +9327,7 @@ StackInterpreter >> longPrintOop: oop [
 			 startIP to: lastIndex do:
 				[:index| | byte |
 				column = 1 ifTrue:
-					[self cCode: 'printf("0x%08lx: ", (unsigned long)(oop+BaseHeaderSize+index-1))'
+					[self cCode: 'printf("0x%08" PRIxSQPTR ": ", (usqIntptr_t)(oop+BaseHeaderSize+index-1))'
 						inSmalltalk: [self print: (oop+objectMemory baseHeaderSize+index-1) hex; print: ': ']].
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
 				self cCode: 'printf(" %02x/%-3d", (int)byte,(int)byte)'
@@ -16288,7 +16288,7 @@ StackInterpreter >> positive64BitIntegerFor: integerValue [
 
 { #category : #'callback support' }
 StackInterpreter >> positiveMachineIntegerFor: value [
-	<var: #value type: #'unsigned long'>
+	<var: #value type: #'usqIntptr_t'>
 	<inline: false>
 	| resultObj |
 	objectMemory wordSize = 8
@@ -17106,7 +17106,7 @@ StackInterpreter >> printHex: n [
 	| len buf |
 	<var: #buf declareC: 'char buf[37]'> "large enough for a 64-bit value in hex plus the null plus 16 spaces"
 	self cCode: 'memset(buf,'' '',36)' inSmalltalk: [buf := 'doh!'].
-	len := self cCode: 'sprintf(buf + 2 + 2 * BytesPerWord, "0x%lx", (unsigned long)(n))'.
+	len := self cCode: 'sprintf(buf + 2 + 2 * BytesPerWord, "0x%" PRIxSQPTR, (usqIntptr_t)(n))'.
 	self cCode: 'printf("%s", buf + len)'.
 	len touch: buf
 ]
@@ -17180,7 +17180,7 @@ StackInterpreter >> printMethodCacheFor: thing [
 			[self cCode: [] inSmalltalk: [self transcript ensureCr].
 			 self printNum: i; space; printHexnp: i; cr; tab.
 			 (objectMemory isBytesNonImm: s)
-				ifTrue: [self cCode: 'printf("%lx %.*s\n", s, (int)(numBytesOf(s)), (char *)firstIndexableField(s))'
+				ifTrue: [self cCode: 'printf("%" PRIxSQPTR " %.*s\n", s, (int)(numBytesOf(s)), (char *)firstIndexableField(s))'
 						inSmalltalk: [self printHex: s; space; print: (self stringOf: s); cr]]
 				ifFalse: [self shortPrintOop: s].
 			 self tab.
@@ -17350,7 +17350,7 @@ StackInterpreter >> printOop: oop [
 			 startIP to: lastIndex do:
 				[:index| | byte |
 				column = 1 ifTrue:
-					[self cCode: 'printf("0x%08lx: ", (unsigned long)(oop+BaseHeaderSize+index-1))'
+					[self cCode: 'printf("0x%08" PRIxSQPTR ": ", (usqIntptr_t)(oop+BaseHeaderSize+index-1))'
 						inSmalltalk: [self print: (oop+objectMemory baseHeaderSize+index-1) hex; print: ': ']].
 				byte := objectMemory fetchByte: index - 1 ofObject: oop.
 				self cCode: 'printf(" %02x/%-3d", (int)byte,(int)byte)'
@@ -18741,7 +18741,7 @@ StackInterpreter >> rewriteMethodCacheEntryForExternalPrimitiveToFunction: local
 	(methodCache at: lastMethodCacheProbeWrite + MethodCacheMethod) = newMethod ifTrue:
 		[methodCache
 			at: lastMethodCacheProbeWrite + MethodCachePrimFunction
-			put: (self cCoerce: localPrimAddress to: #long)]
+			put: (self cCoerce: localPrimAddress to: #'sqIntptr_t')]
 ]
 
 { #category : #'primitive support' }
@@ -20062,6 +20062,7 @@ StackInterpreter >> stackPointerIndexForFrame: theFP WithSP: theSP [
 { #category : #'stack access' }
 StackInterpreter >> stackPositiveMachineIntegerValue: offset [
 	<api>
+	<returnTypeC: #'usqIntptr_t'>
 	"In the StackInterpreter stacks grow down."
 	| integerPointer |
 	integerPointer := stackPages longAt: stackPointer + (offset*objectMemory wordSize).
@@ -20071,6 +20072,7 @@ StackInterpreter >> stackPositiveMachineIntegerValue: offset [
 { #category : #'stack access' }
 StackInterpreter >> stackSignedMachineIntegerValue: offset [
 	<api>
+	<returnTypeC: #'sqIntptr_t'>
 	"In the StackInterpreter stacks grow down."
 	| integerPointer |
 	integerPointer := stackPages longAt: stackPointer + (offset*objectMemory wordSize).
