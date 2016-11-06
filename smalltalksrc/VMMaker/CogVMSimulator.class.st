@@ -3350,7 +3350,7 @@ CogVMSimulator >> rewriteMethodCacheEntryForExternalPrimitiveToFunction: localPr
 	(methodCache at: lastMethodCacheProbeWrite + MethodCacheMethod) = newMethod ifTrue:
 		[methodCache
 			at: lastMethodCacheProbeWrite + MethodCachePrimFunction
-			put: (self cCoerce: localPrimAddress to: #long)]
+			put: (self cCoerce: localPrimAddress to: #'sqIntptr_t')]
 ]
 
 { #category : #'rump c stack' }

@@ -1026,7 +1026,7 @@ LargeIntegersPlugin >> digitSizeOfCSI: csi [
 	   the same as the largest legal subscript."
 	^(interpreterProxy maxSmallInteger <= 16r3FFFFFFF)
 		ifTrue: [1]
-		ifFalse: [csi > 16rFFFFFFFF asLong "asLong is not really needed here, but avoid generating a warning in 32bits, and harmless in 64bits"
+		ifFalse: [csi > 16rFFFFFFFF asIntegerPtr "conversion is not really needed here, but avoid generating a warning in 32bits, and harmless in 64bits"
 			ifTrue: [2]
 			ifFalse: [csi < -16rFFFFFFFF
 				ifTrue: [2]

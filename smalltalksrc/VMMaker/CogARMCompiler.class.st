@@ -269,7 +269,7 @@ CogARMCompiler class >> isRISCTempRegister: reg [
 { #category : #translation }
 CogARMCompiler class >> machineCodeDeclaration [
 	"Answer the declaration for the machineCode array."
-	^{#'unsigned long'. '[', self basicNew machineCodeWords printString, ']'}
+	^{#'usqIntptr_t'. '[', self basicNew machineCodeWords printString, ']'}
 ]
 
 { #category : #accessing }
@@ -2562,7 +2562,7 @@ CogARMCompiler >> isCallPrecedingReturnPC: mcpc [
 { #category : #testing }
 CogARMCompiler >> isInImmediateJumpRange: operand [
 	"ARM calls and jumps span +/- 32 mb, more than enough for intra-zone calls and jumps."
-	<var: #operand type: #'unsigned long'>
+	<var: #operand type: #'usqIntptr_t'>
 	^operand signedIntFromLong between: -16r2000000 and: 16r1FFFFFC
 ]
 

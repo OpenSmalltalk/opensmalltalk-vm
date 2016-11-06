@@ -358,7 +358,7 @@ ThreadedFFIPlugin >> ffiAddressOf: rcvr startingAt: byteOffset size: byteSize [
 		ifFalse:
 			[byteOffset+byteSize-1 <= rcvrSize ifFalse:
 				[^interpreterProxy primitiveFail].
-			addr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: #long].
+			addr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: #'sqIntptr_t'].
 	addr := addr + byteOffset - 1.
 	^addr
 ]
@@ -861,7 +861,7 @@ ThreadedFFIPlugin >> ffiIntegerValueOf: oop [
 ThreadedFFIPlugin >> ffiLoadCalloutAddress: lit [
 	"Load the address of the foreign function from the given object"
 	| addressPtr address ptr |
-	<var: #ptr type: #'long *'>
+	<var: #ptr type: #'sqIntptr_t *'>
 	"Lookup the address"
 	addressPtr := interpreterProxy fetchPointer: 0 ofObject: lit.
 	"Make sure it's an external handle"
@@ -1525,7 +1525,7 @@ ThreadedFFIPlugin >> primitiveFFIAllocate [
 	| byteSize addr oop ptr |
 	<export: true>
 	<inline: false>
-	<var: #ptr type: #'long *'>
+	<var: #ptr type: #'sqIntptr_t *'>
 	byteSize := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue:
 		[^nil].
@@ -1534,7 +1534,7 @@ ThreadedFFIPlugin >> primitiveFFIAllocate [
 		[^interpreterProxy primitiveFail].
 	oop := interpreterProxy 
 			instantiateClass: interpreterProxy classExternalAddress 
-			indexableSize: (self sizeof: #long).
+			indexableSize: (self sizeof: #'sqIntptr_t').
 	ptr := interpreterProxy firstIndexableField: oop.
 	ptr at: 0 put: addr.
 	^interpreterProxy pop: 2 thenPush: oop
@@ -1621,16 +1621,16 @@ ThreadedFFIPlugin >> primitiveFFIFree [
 	| addr oop ptr |
 	<export: true>
 	<inline: false>
-	<var: #ptr type: #'long *'>
+	<var: #ptr type: #'sqIntptr_t *'>
 	oop := interpreterProxy stackObjectValue: 0.
 	((interpreterProxy fetchClassOf: oop) = interpreterProxy classExternalAddress
-	 and: [(interpreterProxy byteSizeOf: oop) = (self sizeof: #long)]) ifFalse:
+	 and: [(interpreterProxy byteSizeOf: oop) = (self sizeof: #'sqIntptr_t')]) ifFalse:
 		[^interpreterProxy primitiveFail].
 	ptr := interpreterProxy firstIndexableField: oop.
 	addr := ptr at: 0.
 	"Don't you dare to free Squeak's memory!"
 	(addr = 0
-	 or: [(addr asUnsignedLong bitAnd: (self sizeof: #long) - 1) ~= 0
+	 or: [(addr asUnsignedIntegerPtr bitAnd: (self sizeof: #'sqIntptr_t') - 1) ~= 0
 	 or: [interpreterProxy isInMemory: addr]]) ifTrue:
 		[^interpreterProxy primitiveFail].
 	self ffiFree: addr.
@@ -1841,7 +1841,7 @@ ThreadedFFIPlugin >> primitiveSetManualSurfacePointer [
 		ptr(uint32/uint64, 0)"
 	| surfaceID ptr result |
 	<export: true>
-	<var: #ptr type: #'unsigned long'>
+	<var: #ptr type: #'usqIntptr_t'>
 	
 	interpreterProxy methodArgumentCount = 2 ifFalse: [^interpreterProxy primitiveFail].
 	surfaceID := interpreterProxy stackIntegerValue: 1.

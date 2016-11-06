@@ -86,10 +86,10 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 			AllocatedSizeInto: (self cCode: [self addressOf: allocatedSize]
 									inSmalltalk: [[:sz| allocatedSize := sz]])) ifNotNil:
 		[:segAddress| | newSegIndex newSeg |
-		 newSegIndex := self insertSegmentFor: segAddress asUnsignedLong.
+		 newSegIndex := self insertSegmentFor: segAddress asUnsignedIntegerPtr.
 		 newSeg := self addressOf: (segments at: newSegIndex).
 		 newSeg
-			segStart: segAddress asUnsignedLong;
+			segStart: segAddress asUnsignedIntegerPtr;
 			segSize: allocatedSize.
 		 self bridgeFrom: (self addressOf: (segments at: newSegIndex - 1)) to: newSeg.
 		 self bridgeFrom: newSeg to: (newSegIndex = (numSegments - 1) ifFalse:

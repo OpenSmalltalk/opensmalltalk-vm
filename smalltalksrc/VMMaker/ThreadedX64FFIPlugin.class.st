@@ -18,13 +18,6 @@ ThreadedX64FFIPlugin class >> calloutStateClass [
 ]
 
 { #category : #translation }
-ThreadedX64FFIPlugin class >> excludingPredefinedMacros [
-	"Answer the predefined macros that disqualify the platforms a subclass handles, if any.
-	 This can be used to differentiate e.g. x64 Sys V from x64 Win64."
-	^#('WIN64')
-]
-
-{ #category : #translation }
 ThreadedX64FFIPlugin class >> identifyingPredefinedMacros [
 	"Answer the predefined macros that identify the platforms a subclass handles, if any.
 	 If the subclass isn't yet ready for production (a work in progress) simply answer nil.

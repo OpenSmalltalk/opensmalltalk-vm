@@ -4817,7 +4817,7 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 				[#signedIntToShort]	->	[#usqInt]. "c.f. generateSignedIntToShort:on:indent:"
 				[#cCoerce:to:]			->	[sendNode args last value].
 				[#cCoerceSimple:to:]	->	[sendNode args last value].
-				[#sizeof:]				->	[#'unsigned long']. "Technically it's a size_t but it matches unsigned long on target architectures so far..."
+				[#sizeof:]				->	[#'usqIntptr_t']. "Technically it's a size_t but it matches on target architectures so far..."
 				[#ifTrue:ifFalse:]		->	[self typeForConditional: sendNode in: aTMethod].
 				[#ifFalse:ifTrue:]		->	[self typeForConditional: sendNode in: aTMethod].
 				[#ifTrue:]				->	[self typeForConditional: sendNode in: aTMethod].

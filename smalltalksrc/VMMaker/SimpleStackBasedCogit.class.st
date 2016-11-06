@@ -1305,7 +1305,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 			["Call ceCheckProfileTick: to record sample and then continue."
 			jmpSamplePrim jmpTarget: self Label.
 			self assert: (flags anyMask: PrimCallNeedsNewMethod).
-			self CallFullRT: (self cCode: [#ceCheckProfileTick asUnsignedLong]
+			self CallFullRT: (self cCode: [#ceCheckProfileTick asUnsignedIntegerPtr]
 							   inSmalltalk: [self simulatedTrampolineFor: #ceCheckProfileTick]).
 			"reenter the post-primitive call flow"
 			self Jump: continuePostSamplePrim].
@@ -1314,7 +1314,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 		jmpSampleNonPrim jmpTarget: self Label.
 		self MoveCq: 0 R: TempReg.
 		self MoveR: TempReg Aw: coInterpreter newMethodAddress.
-		self CallFullRT: (self cCode: [#ceCheckProfileTick asUnsignedLong]
+		self CallFullRT: (self cCode: [#ceCheckProfileTick asUnsignedIntegerPtr]
 						   inSmalltalk: [self simulatedTrampolineFor: #ceCheckProfileTick]).
 		"reenter the post-primitive call flow"
 		self Jump: continuePostSampleNonPrim].
@@ -2510,7 +2510,7 @@ SimpleStackBasedCogit >> genPrimReturnEnterCogCodeEnilopmart: profiling [
 		 should be up-to-date.  Need to save and restore the link reg around this call."
 		 jmpSample jmpTarget: self Label.
 		 backEnd saveAndRestoreLinkRegAround:
-			[self CallFullRT: (self cCode: '(unsigned long)ceCheckProfileTick'
+			[self CallFullRT: (self cCode: '(usqIntptr_t)ceCheckProfileTick'
 						inSmalltalk: [self simulatedTrampolineFor: #ceCheckProfileTick])].
 		 self Jump: continuePostSample]
 ]

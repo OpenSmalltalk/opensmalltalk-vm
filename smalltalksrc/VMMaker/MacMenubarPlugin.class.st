@@ -91,7 +91,7 @@ MacMenubarPlugin >> primitiveCreateStandardWindowMenu: inOptions [
 		parameters: #(SmallInteger).
 	self cppIf: #'TARGET_API_MAC_CARBON'
 		ifTrue: [result := self cCode: 'CreateStandardWindowMenu(inOptions,&menuHandle);' inSmalltalk:[0]].
-	^interpreterProxy positiveMachineIntegerFor: (self cCoerce: menuHandle to: 'long')
+	^interpreterProxy positiveMachineIntegerFor: (self cCoerce: menuHandle to: #'usqIntptr_t')
 ]
 
 { #category : #'system primitives' }
@@ -270,7 +270,7 @@ MacMenubarPlugin >> primitiveGetIndMenuWithCommandID: menuHandleOop commandID: a
 		ifTrue: [self cCode: 'GetIndMenuItemWithCommandID(menuHandle, kHICommandHide, 1,
                    &applicationMenu, &outIndex);' inSmalltalk: [menuHandle]].
 	outIndex asSmallIntegerObj. "to avoid elimination of the variable..."
-	^interpreterProxy positiveMachineIntegerFor: (self cCoerce: applicationMenu to: 'long')
+	^interpreterProxy positiveMachineIntegerFor: (self cCoerce: applicationMenu to: #'usqIntptr_t')
 
 
 ]
@@ -345,7 +345,7 @@ MacMenubarPlugin >> primitiveGetMenuBar [
 	self primitive: 'primitiveGetMenuBar'
 		parameters: #().
 	menuHandle := self cCode: 'GetMenuBar()' inSmalltalk:[0].
-	^interpreterProxy positiveMachineIntegerFor: (self cCoerce: menuHandle to: 'long')
+	^interpreterProxy positiveMachineIntegerFor: (self cCoerce: menuHandle to: #'usqIntptr_t')
 ]
 
 { #category : #'system primitives' }
@@ -356,7 +356,7 @@ MacMenubarPlugin >> primitiveGetMenuHandle: menuID [
 	self primitive: 'primitiveGetMenuHandle'
 		parameters: #(SmallInteger).
 	menuHandle := self cCode: 'GetMenuHandle(menuID)' inSmalltalk:[0].
-	^interpreterProxy positiveMachineIntegerFor: (self cCoerce: menuHandle to: 'long')
+	^interpreterProxy positiveMachineIntegerFor: (self cCoerce: menuHandle to: #'usqIntptr_t')
 ]
 
 { #category : #'system primitives' }
@@ -634,7 +634,7 @@ MacMenubarPlugin >> primitiveNewMenu: menuID menuTitle: menuTitle [
 		parameters: #(SmallInteger ByteArray).
 	constStr255 := self cCoerce: menuTitle to: #ConstStr255Param.	
 	menuHandle := self cCode: 'NewMenu(menuID,constStr255)' inSmalltalk:[0].
-	^interpreterProxy positiveMachineIntegerFor: (self cCoerce: menuHandle to: 'long')
+	^interpreterProxy positiveMachineIntegerFor: (self cCoerce: menuHandle to: #'usqIntptr_t')
 ]
 
 { #category : #'system primitives' }
