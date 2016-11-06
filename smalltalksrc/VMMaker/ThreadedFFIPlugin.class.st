@@ -163,6 +163,9 @@ ThreadedFFIPlugin class >> preambleCCode [
 #if defined(__GNUC__) && (defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__))
 # define setsp(sp) asm volatile ("movl %0,%%esp" : : "m"(sp))
 # define getsp() ({ void *esp; asm volatile ("movl %%esp,%0" : "=r"(esp) : ); esp;})
+# elif defined(__GNUC__) && (defined(__amd64__) || defined(__x86_64__) ||  defined(__amd64) || defined(__x86_64))
+# define setsp(sp) asm volatile ("movq %0,%%rsp" : : "m"(sp))
+# define getsp() ({ void *rsp; asm volatile ("movq %%rsp,%0" : "=r"(rsp) : ); rsp;})
 # elif defined(__GNUC__) && (defined(__arm__))
 # define setsp(sp) asm volatile ("ldr %%sp, %0" : : "m"(sp))
 # define getsp() ({ void *sp; asm volatile ("mov %0, %%sp" : "=r"(sp) : ); sp;})
@@ -210,10 +213,14 @@ ThreadedFFIPlugin class >> preambleCCode [
 # if WIN32
 #	define PLATFORM_API_USES_CALLEE_POPS_CONVENTION 1
 # endif
+# elif defined(__amd64__) || defined(__x86_64__) ||  defined(__amd64) || defined(__x86_64)
+# if WIN32 | WIN64
+#	define PLATFORM_API_USES_CALLEE_POPS_CONVENTION 1
+# endif
 #endif /* defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__) */
 
 #if !defined(ALLOCA_LIES_SO_USE_GETSP)
-# if defined(__MINGW32__) && (__GNUC__ >= 3)
+# if defined(__MINGW32__) && (__GNUC__ >= 3) && (defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__))
     /*
      * cygwin -mno-cygwin (MinGW) gcc 3.4.x''s alloca is a library routine that answers
      * %esp + 4, so the outgoing stack is offset by one word if uncorrected.
