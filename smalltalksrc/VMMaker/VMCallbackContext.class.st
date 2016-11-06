@@ -26,16 +26,16 @@ VMCallbackContext class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 			value: ivn
 			value: (ivn caseOf: {
 					['thunkp']				-> [#'void *'].
-					['stackp']				-> [#'long *'].
-					['intregargsp']			-> [#'long *'].
+					['stackp']				-> [#'sqIntptr_t *'].
+					['intregargsp']			-> [#'sqIntptr_t *'].
 					['floatregargsp']		-> [#'double *'].
 					['rvs']					-> [
 						'union {
-							long valword;
+							sqIntptr_t valword;
 							struct { int low, high; } valleint64;
 							struct { int high, low; } valbeint64;
 							double valflt64;
-							struct { void *addr; long size; } valstruct;
+							struct { void *addr; sqIntptr_t size; } valstruct;
 						}'].
 					['savedCStackPointer']		-> [#'void *'].
 					['savedCFramePointer']		-> [#'void *'].

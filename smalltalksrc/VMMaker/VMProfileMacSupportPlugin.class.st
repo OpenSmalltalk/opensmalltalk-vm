@@ -35,7 +35,7 @@ VMProfileMacSupportPlugin >> primitiveDLSym [
 	self free: name.
 	^interpreterProxy methodReturnValue: (addr = 0
 												ifTrue: [interpreterProxy nilObject]
-												ifFalse: [interpreterProxy positiveMachineIntegerFor: addr asUnsignedLong])
+												ifFalse: [interpreterProxy positiveMachineIntegerFor: addr asUnsignedIntegerPtr])
 ]
 
 { #category : #primitives }
@@ -51,9 +51,9 @@ VMProfileMacSupportPlugin >> primitiveExecutableModulesAndOffsets [
 	<var: #h64 type: 'const struct mach_header_64 *'>
 	<var: #s64 type: 'const struct section_64 *'>
 	<var: #s type: 'const struct section *'>
-	<var: #start type: 'unsigned long'>
-	<var: #slide type: 'unsigned long'>
-	<var: #size type: 'unsigned long'>
+	<var: #start type: 'usqIntptr_t'>
+	<var: #slide type: 'usqIntptr_t'>
+	<var: #size type: 'usqIntptr_t'>
 	self cppIf: #'MAC_OS_X_VERSION_MIN_REQUIRED' <= #'MAC_OS_X_VERSION_10_4'
 		ifTrue: "_dyld_present was deprecated in 10.5"
 			[(self cCode: '_dyld_present()' inSmalltalk: false) ifFalse:

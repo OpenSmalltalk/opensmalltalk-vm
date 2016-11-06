@@ -3149,7 +3149,7 @@ BitBltSimulation >> rgbComponentAlpha32 [
 	<inline: false> "This particular method should be optimized in itself"
 
 	"Give the compile a couple of hints"
-	<var: #deltaX type: 'register long'>
+	<var: #deltaX type: 'register sqInt'>
 	<var: #sourceWord type: #'unsigned int'>
 	<var: #destWord type: #'unsigned int'>
 
@@ -3158,8 +3158,8 @@ BitBltSimulation >> rgbComponentAlpha32 [
 	(good to know on an Intel architecture) but then the increments
 	would be different between ST code and C code so must hope the
 	compiler notices what happens (MS Visual C does)"
-	<var: #srcIndex type: 'register long'>
-	<var: #dstIndex type: 'register long'>
+	<var: #srcIndex type: 'register sqIntptr_t'>
+	<var: #dstIndex type: 'register sqIntptr_t'>
 	
 	deltaY := bbH + 1. "So we can pre-decrement"
 	srcY := sy.
