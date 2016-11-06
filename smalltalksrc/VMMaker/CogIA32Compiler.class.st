@@ -1220,7 +1220,7 @@ CogIA32Compiler >> concretizeFSTPS [
 CogIA32Compiler >> concretizeFill32 [
 	<inline: true>
 	| word |
-	<var: #word type: #'unsigned long'>
+	<var: #word type: #'usqIntptr_t'>
 	word := operands at: 0.
 	machineCode at: 0 put: (word bitAnd: 16rFF).
 	machineCode at: 1 put: (word >> 8 bitAnd: 16rFF).
@@ -3675,7 +3675,7 @@ CogIA32Compiler >> isPCDependent [
 
 { #category : #testing }
 CogIA32Compiler >> isQuick: operand [
-	<var: #operand type: #'unsigned long'>
+	<var: #operand type: #'usqIntptr_t'>
 	^operand signedIntFromLong between: -128 and: 127
 ]
 
