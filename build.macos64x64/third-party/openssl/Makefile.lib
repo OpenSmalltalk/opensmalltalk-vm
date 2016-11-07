@@ -18,15 +18,15 @@ PLUGINREQS:=$(THIRDPARTYLIBS)
 $(OPENSSLARCHIVE): 
 	curl -o $(OPENSSLARCHIVE) -L $(OPENSSLURL) 
 
-$(OPENSSLDIR)/configure: $(OPENSSLARCHIVE)
+ $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME): $(OPENSSLARCHIVE)
 	tar x -f $(OPENSSLARCHIVE) -C $(THIRDPARTYDIR)
-	touch $(OPENSSLDIR)/configure
-
-$(OPENSSLLIB): $(OPENSSLDIR)/configure
 	cd $(OPENSSLDIR) \
 		&& ./Configure darwin64-x86_64-cc --prefix='$(THIRDPARTYOUTDIR)' shared \
 		&& LDFLAGS='-Wl,-rpath,@executable_path:@executable_path/Plugins' make \
 		&& make install
+
+# Assuming building libssl will also build libcrypto
+$(OPENSSLLIB):  $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME)
 	@for each in $(OPENSSLALLLIBNAMES); do \
 		cp -f $(THIRDPARTYLIBDIR)/$$each $(THIRDPARTYINSTALLDIR) \
 			&& chmod +w $(THIRDPARTYINSTALLDIR)/$$each \
