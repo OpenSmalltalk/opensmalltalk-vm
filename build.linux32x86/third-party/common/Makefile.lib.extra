@@ -14,8 +14,6 @@ THIRDPARTYINCLUDEDIR?=$(THIRDPARTYOUTDIR)/include
 THIRDPARTYCACHEDIR?=../../../.thirdparty-cache
 THIRDPARTYOUTDIR?=$(abspath ../../../.thirdparty-cache/linux/i386)
 
-#THIRDPARTYINSTALLDIR:=$(BLDDIR)/third-party
-
 $(THIRDPARTYDIR):
 	if [ ! -d $(THIRDPARTYDIR) ]; then mkdir -p $(THIRDPARTYDIR); fi
 	
