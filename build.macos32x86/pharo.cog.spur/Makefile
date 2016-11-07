@@ -9,6 +9,7 @@ COGDEFS:=-DPharoVM=1
 APPNAME:=Pharo
 APPNAMEDEF:=$(APPNAME)
 USEPLUGINASDYLIB:=TRUE
+THIRDPARTYOUTDIR?=$(abspath ../../.thirdparty-cache/macOS/i386)
 THIRDPARTYLIBS:=pkgconfig freetype2 openssl libssh2 libgit2 libsdl2 pixman libpng cairo
 
 #CFLAGS=$(CFLAGS) -DNSZombieEnabled=YES
