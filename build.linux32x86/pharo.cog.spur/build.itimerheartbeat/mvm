@@ -28,9 +28,9 @@ read a
 case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)	test -f Makefile && make reallyclean
-	for lib in ${THIRDPARTYLIBS}; do
-		../../third-party/${lib}/mvm clean
-	done
+#	for lib in ${THIRDPARTYLIBS}; do
+#		../../third-party/${lib}/mvm clean
+#	done
 esac
 test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -p ../../plugins.int .)
 test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
