@@ -8,12 +8,14 @@
 *****************************************************************************/
 
 #include <stdio.h>
+#include <stdlib.h> /* proto for alloca in MINGW */
 #if !WIN32 && !__FreeBSD__ && !__OpenBSD__
 # include <alloca.h>
 #endif
 #include <string.h>
 
 #ifdef _MSC_VER
+# include <windows.h>
 # define alloca _alloca
 #endif
 
