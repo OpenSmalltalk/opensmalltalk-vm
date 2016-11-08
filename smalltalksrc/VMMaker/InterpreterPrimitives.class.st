@@ -400,22 +400,19 @@ InterpreterPrimitives >> magnitude64BitValueOf: oop [
 ]
 
 { #category : #'primitive support' }
-InterpreterPrimitives >> positive32BitValueOf: oop [
+InterpreterPrimitives >> maybeInlinePositive32BitValueOf: oop [
 	"Convert the given object into an integer value.
 	The object may be either a positive SmallInteger or a four-byte LargePositiveInteger."
-	<returnTypeC: #usqInt>
+	<notOption: #Spur64BitMemoryManager>
+	<returnTypeC: #'unsigned int'>
 	| value ok sz |
 	(objectMemory isIntegerObject: oop) ifTrue:
 		[value := objectMemory integerValueOf: oop.
-		 (value < 0
-		  or: [objectMemory wordSize > 4
-		  and: [self cCode: [(self cCoerceSimple: value to: #'unsigned int') ~= value]
-					inSmalltalk: [value >> 32 ~= 0]]]) ifTrue:
+		 (value < 0) ifTrue:
 			[self primitiveFail. value := 0].
 		 ^value].
 
-	(objectMemory hasSixtyFourBitImmediates
-	 or: [objectMemory isNonIntegerImmediate: oop])
+	(objectMemory isNonIntegerImmediate: oop)
 		ifTrue:
 			[self primitiveFail.
 			 ^0]
@@ -432,6 +429,76 @@ InterpreterPrimitives >> positive32BitValueOf: oop [
 				[self primitiveFail.
 				 ^0].
 			^self cCoerceSimple: (objectMemory byteSwapped32IfBigEndian: (objectMemory fetchLong32: 0 ofObject: oop)) to: #'unsigned int']
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> noInlineSigned32BitValueOf: oop [
+	"Convert the given object into an integer value.
+	The object may be either a SmallInteger or a four-byte LargeInteger."
+	| value negative ok magnitude |
+	<notOption: #Spur64BitMemoryManager>
+	<inline: false>
+	<returnTypeC: #int>
+	<var: #value type: #int>
+	<var: #magnitude type: #'unsigned int'>
+	self deny: objectMemory hasSixtyFourBitImmediates.
+	(objectMemory isIntegerObject: oop) ifTrue:
+		[^objectMemory integerValueOf: oop].
+
+	(objectMemory isNonIntegerImmediate: oop) ifTrue:
+		[self primitiveFail.
+		 ^0].
+
+	ok := objectMemory
+			isClassOfNonImm: oop
+			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
+			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
+	ok
+		ifTrue: [negative := false]
+		ifFalse:
+			[negative := true.
+			 ok := objectMemory isClassOfNonImm: oop
+							equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
+							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
+			 ok ifFalse:
+				[self primitiveFail.
+				 ^0]].
+	(objectMemory numBytesOfBytes: oop) > 4 ifTrue:
+		[^self primitiveFail].
+
+	magnitude := self cCoerceSimple: (objectMemory byteSwapped32IfBigEndian: (objectMemory fetchLong32: 0 ofObject: oop)) to: #'unsigned int'.
+
+	(negative
+		ifTrue: [magnitude > 16r80000000]
+		ifFalse: [magnitude >= 16r80000000])
+			ifTrue:
+				[self primitiveFail.
+				^0].
+	negative
+		ifTrue: [value := 0 - magnitude]
+		ifFalse: [value := magnitude].
+	^value
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> positive32BitValueOf: oop [
+	"Convert the given object into an integer value.
+	The object may be either a positive SmallInteger or a four-byte LargePositiveInteger."
+	<returnTypeC: #'unsigned int'>
+	objectMemory hasSixtyFourBitImmediates
+		ifTrue:
+			[(objectMemory isIntegerObject: oop) ifTrue:
+				[| value64 |
+				value64 := objectMemory integerValueOf: oop.
+				 (value64 < 0
+		 			 or: [self cCode: [(self cCoerceSimple: value64 to: #'unsigned int') ~= value64]
+							inSmalltalk: [value64 >> 32 ~= 0]]) ifTrue:
+						[self primitiveFail. value64 := 0].
+				 ^value64].
+			self primitiveFail.
+			^0]
+		ifFalse:
+			[^self maybeInlinePositive32BitValueOf: oop]
 ]
 
 { #category : #'primitive support' }
@@ -4833,58 +4900,22 @@ InterpreterPrimitives >> signalNoResume: aSemaphore [
 { #category : #'primitive support' }
 InterpreterPrimitives >> signed32BitValueOf: oop [
 	"Convert the given object into an integer value.
-	The object may be either a positive SmallInteger or a four-byte LargeInteger."
-	| value negative ok magnitude |
-	<inline: false>
+	The object may be either a SmallInteger or a four-byte LargeInteger."
 	<returnTypeC: #int>
-	<var: #value type: #int>
-	<var: #magnitude type: #'unsigned int'>
-	<var: #value64 type: #long>
-	(objectMemory isIntegerObject: oop) ifTrue:
-		[objectMemory wordSize = 4
-			ifTrue:
-				[^objectMemory integerValueOf: oop]
-			ifFalse: "Must fail for SmallIntegers with digitLength > 4"
+	
+	objectMemory hasSixtyFourBitImmediates
+		ifTrue:
+			[(objectMemory isIntegerObject: oop) ifTrue:
 				[| value64 |
 				 value64 := objectMemory integerValueOf: oop.
 				 (self cCode: [(self cCoerceSimple: value64 to: #int) ~= value64]
 						inSmalltalk: [value64 >> 31 ~= 0 and: [value64 >> 31 ~= -1]]) ifTrue:
 					[self primitiveFail. value64 := 0].
-				 ^value64]].
-
-	(objectMemory isNonIntegerImmediate: oop) ifTrue:
-		[self primitiveFail.
-		 ^0].
-
-	ok := objectMemory
-			isClassOfNonImm: oop
-			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
-			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
-	ok
-		ifTrue: [negative := false]
+				 ^value64].
+			self primitiveFail.
+		 	^0]
 		ifFalse:
-			[negative := true.
-			 ok := objectMemory isClassOfNonImm: oop
-							equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
-							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
-			 ok ifFalse:
-				[self primitiveFail.
-				 ^0]].
-	(objectMemory numBytesOfBytes: oop) > 4 ifTrue:
-		[^self primitiveFail].
-
-	magnitude := self cCoerceSimple: (objectMemory byteSwapped32IfBigEndian: (objectMemory fetchLong32: 0 ofObject: oop)) to: #'unsigned int'.
-
-	(negative
-		ifTrue: [magnitude > 16r80000000]
-		ifFalse: [magnitude >= 16r80000000])
-			ifTrue:
-				[self primitiveFail.
-				^0].
-	negative
-		ifTrue: [value := 0 - magnitude]
-		ifFalse: [value := magnitude].
-	^value
+			[^self noInlineSigned32BitValueOf: oop]
 ]
 
 { #category : #'primitive support' }
