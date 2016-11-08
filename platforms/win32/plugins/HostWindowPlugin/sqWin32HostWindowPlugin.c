@@ -311,14 +311,14 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
   }
   /* reverse the image bits if necessary */
 
-  if( !lsbDisplay && depth < 32 )
+  if( !lsbDisplay && depth < 32 ) {
     if(depth == 16)
       reverse_image_words((unsigned int*) dispBits, (unsigned int*) dispBits,
 			  depth, width, &updateRect);
     else
       reverse_image_bytes((unsigned int*) dispBits, (unsigned int*) dispBits,
 			  depth, width, &updateRect);
-
+  }
   return 1;
 }
 
