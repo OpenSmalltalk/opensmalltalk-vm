@@ -2,9 +2,9 @@ SmalltalkCISpec {
   #loading : [],
   #testing : {
     #allTestCases : true,
+    #defaultTimeout : 10,
     #exclude : {
-      #classes : [ 
-        #BasiBehaviorClassMetaclassTest,
+      #classes : [
         #BrowserTest,
         #ClosureCompilerTest,
         #DecompilerTests,
