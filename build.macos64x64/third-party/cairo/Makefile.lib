@@ -17,11 +17,8 @@ PLUGINREQS:=$(THIRDPARTYLIBS)
 $(CAIROARCHIVE): 
 	curl -o $(CAIROARCHIVE) -L $(CAIROURL) 
 
-$(CAIRODIR)/configure: $(CAIROARCHIVE)
+$(THIRDPARTYLIBDIR)/$(CAIROLIBNAME): $(CAIROARCHIVE)
 	tar x -f $(CAIROARCHIVE) -C $(THIRDPARTYDIR)
-	touch $(CAIRODIR)/configure
-
-$(CAIROLIB): pkgconfig libpng freetype2 pixman $(CAIRODIR)/configure
 	cd $(CAIRODIR) \
 		&& ./configure \
 			--prefix="$(THIRDPARTYOUTDIR)" \
@@ -34,6 +31,8 @@ $(CAIROLIB): pkgconfig libpng freetype2 pixman $(CAIRODIR)/configure
 			--disable-dependency-tracking \
 		&& make \
 		&& make install
+
+$(CAIROLIB): pkgconfig libpng freetype2 pixman $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME)
 	cp -f $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME) $(THIRDPARTYINSTALLDIR)
 	install_name_tool -id "@executable_path/Plugins/$(CAIROLIBNAME)" $(CAIROLIB)
 	@echo "Fixing dependency links"

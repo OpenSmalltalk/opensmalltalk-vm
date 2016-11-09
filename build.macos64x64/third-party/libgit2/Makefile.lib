@@ -17,11 +17,8 @@ PLUGINREQS:=$(THIRDPARTYLIBS)
 $(LIBGIT2ARCHIVE): 
 	curl -o $(LIBGIT2ARCHIVE) -L $(LIBGIT2URL) 
 
-$(LIBGIT2DIR)/CMakeLists.txt: $(LIBGIT2ARCHIVE)
+$(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME): $(LIBGIT2ARCHIVE)
 	tar x -f $(LIBGIT2ARCHIVE) -C $(THIRDPARTYDIR)
-	touch $(LIBGIT2DIR)/CMakeLists.txt
-
-$(LIBGIT2LIB): $(LIBGIT2DIR)/CMakeLists.txt
 	cd $(LIBGIT2DIR) \
 		&& cmake \
 			-DCMAKE_INSTALL_PREFIX=$(THIRDPARTYOUTDIR) \
@@ -36,6 +33,8 @@ $(LIBGIT2LIB): $(LIBGIT2DIR)/CMakeLists.txt
 			-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-rpath,@executable_path:@executable_path/Plugins \
 		&& make \
 		&& make install
+
+$(LIBGIT2LIB): libssh2 $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME)
 	cp -f $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME) $(THIRDPARTYINSTALLDIR)
 	install_name_tool -id "@executable_path/Plugins/$(LIBGIT2LIBNAME)" $(LIBGIT2LIB)
 	@echo "Fixing dependency links"
