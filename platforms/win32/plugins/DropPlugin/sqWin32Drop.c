@@ -267,7 +267,7 @@ typedef struct DropTarget {
 
 static DropTarget stDropTarget;
 
-static int numDropFiles;
+static unsigned int numDropFiles = 0;
 static char** dropFiles = NULL;
 
 static void freeDropFiles(void) {
@@ -758,15 +758,16 @@ char *dropRequestFileName(int dropIndex) {
   return dropFiles[dropIndex-1];
 }
 
-int dropRequestFileHandle(int dropIndex) {
-  int fileHandle, wasBrowserMode;
+sqInt dropRequestFileHandle(sqInt dropIndex) {
+  sqInt fileHandle;
+  int wasBrowserMode;
   char *dropName = dropRequestFileName(dropIndex);
   if(!dropName)
     return interpreterProxy->nilObject();
   fileHandle = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), fileRecordSize());
   wasBrowserMode = fBrowserMode;
   fBrowserMode = false;
-  sqFileOpen(fileValueOf(fileHandle),(sqInt)dropName, strlen(dropName), 0);
+  sqFileOpen(fileValueOf(fileHandle),dropName, strlen(dropName), 0);
   fBrowserMode = wasBrowserMode;
   return fileHandle;
 }
