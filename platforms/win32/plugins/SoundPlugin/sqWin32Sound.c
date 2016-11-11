@@ -174,7 +174,7 @@ sqInt snd_PlaySamplesFromAtLength(sqInt frameCount,  void* srcBufPtr,
   }
   /* mix in stuff */
   { 
-    int i;
+    unsigned int i;
     short *shortSrc = (short*)(((char*)srcBufPtr)+startIndex);
     short *shortDst = (short*)dstPtr;
     dstLen /=2;
