@@ -65,9 +65,9 @@ EXPORT(long) ioUnlockSurface(long surfaceID, long x, long y, long w, long h);
 EXPORT(long) ioShowSurface(long surfaceID, long x, long y, long w, long h);
 
 /* client entry points */
-EXPORT(long) ioRegisterSurface(long surfaceHandle, sqSurfaceDispatch *fn, long *surfaceID);
+EXPORT(long) ioRegisterSurface(sqIntptr_t surfaceHandle, sqSurfaceDispatch *fn, long *surfaceID);
 EXPORT(long) ioUnregisterSurface(long surfaceID);
-EXPORT(long) ioFindSurface(long surfaceID, sqSurfaceDispatch *fn, long *surfaceHandle);
+EXPORT(long) ioFindSurface(long surfaceID, sqSurfaceDispatch *fn, sqIntptr_t *surfaceHandle);
 #pragma export off
 
 /* ioGetSurfaceFormat:
@@ -127,7 +127,7 @@ EXPORT(long) ioShowSurface(long surfaceID, long x, long y, long w, long h)
 	the set of surface functions. The new ID is returned
 	in surfaceID. Returns true if successful, false 
 	otherwise. */
-EXPORT(long) ioRegisterSurface(long surfaceHandle, sqSurfaceDispatch *fn, long *surfaceID)
+EXPORT(long) ioRegisterSurface(sqIntptr_t surfaceHandle, sqSurfaceDispatch *fn, long *surfaceID)
 {
 	long index;
 
@@ -155,7 +155,7 @@ EXPORT(long) ioRegisterSurface(long surfaceHandle, sqSurfaceDispatch *fn, long *
 }
 
 /* ioUnregisterSurface:
-	Unregister the surface with the given handle.
+	Unregister the surface with the given ID.
 	Returns true if successful, false otherwise. */
 EXPORT(long) ioUnregisterSurface(long surfaceID)
 {
@@ -174,7 +174,7 @@ EXPORT(long) ioUnregisterSurface(long surfaceID)
 	the given set of surface functions. The registered handle
 	is returned in surfaceHandle. Return true if successful
 	(e.g., the surface has been found), false otherwise. */
-EXPORT(long) ioFindSurface(long surfaceID, sqSurfaceDispatch *fn, long *surfaceHandle)
+EXPORT(long) ioFindSurface(long surfaceID, sqSurfaceDispatch *fn, sqIntptr_t *surfaceHandle)
 {
 	SqueakSurface *surface;
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) return 0;

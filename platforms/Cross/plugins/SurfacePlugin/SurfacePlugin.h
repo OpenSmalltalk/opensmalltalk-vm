@@ -1,15 +1,17 @@
 #ifndef __SQ_DRAW_SURFACE_H
 #define __SQ_DRAW_SURFACE_H
+
+#include "sqMemoryAccess.h"
 /* v1.0 */
 #define SQ_SURFACE_MAJOR 1
 #define SQ_SURFACE_MINOR 0
 
 /* Plugins creating their own surfaces must register these using
    the following set of functions. The typedefs are for easier casts. */
-typedef long (*fn_getSurfaceFormat)(void * surfaceHandle, long* width, long* height, long* depth, long* isMSB);
-typedef long (*fn_lockSurface)(void * surfaceHandle, long *pitch, long x, long y, long w, long h);
-typedef long (*fn_unlockSurface)(void * surfaceHandle, long x, long y, long w, long h);
-typedef long (*fn_showSurface)(void * surfaceHandle, long x, long y, long w, long h);
+typedef long (*fn_getSurfaceFormat)(sqIntptr_t surfaceHandle, long* width, long* height, long* depth, long* isMSB);
+typedef sqIntptr_t (*fn_lockSurface)(sqIntptr_t surfaceHandle, long *pitch, long x, long y, long w, long h);
+typedef long (*fn_unlockSurface)(sqIntptr_t surfaceHandle, long x, long y, long w, long h);
+typedef long (*fn_showSurface)(sqIntptr_t surfaceHandle, long x, long y, long w, long h);
 
 typedef struct sqSurfaceDispatch {
 	/* Version information. Must be provided by the client
@@ -27,14 +29,14 @@ typedef struct sqSurfaceDispatch {
 
 /* The functions for sqSurfaceDispatch are:
 
-	long getSurfaceFormat(long handle, long* width, long* height, long* depth, long* isMSB);
+	long getSurfaceFormat(sqIntptr_t handle, long* width, long* height, long* depth, long* isMSB);
 		Return general information about the OS drawing surface.
 		Return true if successful, false otherwise.
 
 		The returned values describe the basic properties such as
 		width, height, depth and LSB vs. MSB pixels.
 
-	long lockSurface(long handle, long *pitch, long x, long y, long w, long h);
+	sqIntptr_t lockSurface(sqIntptr_t handle, long *pitch, long x, long y, long w, long h);
 		Lock the bits of the surface.
 		Return a pointer to the actual surface bits, or NULL on failure.
 		If successful, store the pitch of the surface (e.g., the bytes
@@ -65,14 +67,14 @@ typedef struct sqSurfaceDispatch {
 		be inside the source and dest boundingBox) but it is not aligned to word boundaries
 		yet. It is up to the support code to compute accurate alignment if necessary.
 
-	long unlockSurface(long handle, long x, long y, long w, long h);
+	long unlockSurface(sqIntptr_t handle, long x, long y, long w, long h);
 		Unlock the bits of a (possibly modified) surface after BitBlt completed.
 		The return value is ignored.
 
 		The arguments provided specify the dirty region of the surface. If the
 		surface is unmodified all arguments are set to zero.
 
-	long showSurface(long handle, long x, long y, long w, long h);
+	long showSurface(sqIntptr_t handle, long x, long y, long w, long h);
 		Display the contents of the surface on the actual screen.
 
 		If ioShowSurface() is called the surface in question represents
@@ -82,7 +84,7 @@ typedef struct sqSurfaceDispatch {
 	the surface plugin:
 
 	long ioGetSurfaceFormat(long surfaceID, long* width, long* height, long* depth, long* isMSB);
-	long ioLockSurface(long surfaceID, long *pitch, long x, long y, long w, long h);
+	sqIntptr_t ioLockSurface(long surfaceID, long *pitch, long x, long y, long w, long h);
 	long ioUnlockSurface(long surfaceID, long x, long y, long w, long h);
 
 	These functions are looked up in the registered surfaces and invoked
@@ -104,17 +106,17 @@ typedef struct sqSurfaceDispatch {
 
 /* The following are the entry points for the surface manager:
 
-	long ioRegisterSurface(long surfaceHandle, sqSurfaceDispatch *fn, long *surfaceID);
+	long ioRegisterSurface(sqIntptr_t surfaceHandle, sqSurfaceDispatch *fn, long *surfaceID);
 		Register a new surface with the given handle and
 		the set of surface functions. The new ID is returned
 		in surfaceID. Returns true if successful, false 
 		otherwise.
 
 	long ioUnregisterSurface(long surfaceID);
-		Unregister the surface with the given handle.
+		Unregister the surface with the given ID.
 		Returns true if successful, false otherwise.
 
-	long ioFindSurface(long surfaceID, sqSurfaceDispatch *fn, long *surfaceHandle);
+	long ioFindSurface(long surfaceID, sqSurfaceDispatch *fn, sqIntptr_t *surfaceHandle);
 		Find the surface with the given ID, and, optionally,
 		the given set of surface functions. The registered handle
 		is returned in surfaceHandle. Return true if successful
@@ -124,8 +126,8 @@ typedef struct sqSurfaceDispatch {
 		interpreterProxy->ioLoadFunctionFrom("ioRegisterSurface","SurfacePlugin");
 	The typedefs below are for easier casts.
 */
-typedef long (*fn_ioRegisterSurface)(long surfaceHandle, sqSurfaceDispatch *fn, long *surfaceID);
+typedef long (*fn_ioRegisterSurface)(sqIntptr_t surfaceHandle, sqSurfaceDispatch *fn, long *surfaceID);
 typedef long (*fn_ioUnregisterSurface)(long surfaceID);
-typedef long (*fn_ioFindSurface)(long surfaceID, sqSurfaceDispatch *fn, long *surfaceHandle);
+typedef long (*fn_ioFindSurface)(long surfaceID, sqSurfaceDispatch *fn, sqIntptr_t *surfaceHandle);
 
 #endif /* __SQ_DRAW_SURFACE_H */

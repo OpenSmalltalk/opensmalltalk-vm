@@ -1515,10 +1515,10 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 
 #include "SurfacePlugin.h"
 
-int osxGetSurfaceFormat(int handle, int* width, int* height, int* depth, int* isMSB);
-char *osxLockSurface(int handle, int *pitch, int x, int y, int w, int h);
-int osxUnlockSurface(int handle, int x, int y, int w, int h);
-int osxShowSurface(int handle, int x, int y, int w, int h);
+int osxGetSurfaceFormat(sqIntptr_t handle, int* width, int* height, int* depth, int* isMSB);
+sqIntptr_t osxLockSurface(sqIntptr_t handle, int *pitch, int x, int y, int w, int h);
+int osxUnlockSurface(sqIntptr_t handle, int x, int y, int w, int h);
+int osxShowSurface(sqIntptr_t handle, int x, int y, int w, int h);
 
 
 static sqSurfaceDispatch osxTargetDispatch = {
@@ -1537,11 +1537,11 @@ static int surfaceID;
 void SetupSurface(int whichWindowIndex) {
     registerSurface = (fn_ioRegisterSurface) interpreterProxy->ioLoadFunctionFrom("ioRegisterSurface","SurfacePlugin");
     unregisterSurface = (fn_ioUnregisterSurface) interpreterProxy->ioLoadFunctionFrom("ioUnregisterSurface","SurfacePlugin");
-    (*registerSurface)(whichWindowIndex, &osxTargetDispatch, &surfaceID);
+    (*registerSurface)((sqIntptr_t)whichWindowIndex, &osxTargetDispatch, &surfaceID);
 }
 
 
-int osxGetSurfaceFormat(int index, int* width, int* height, int* depth, int* isMSB) {
+int osxGetSurfaceFormat(sqIntptr_t index, int* width, int* height, int* depth, int* isMSB) {
     PixMapHandle pix;
     Rect        rectangle;
     
@@ -1555,7 +1555,7 @@ int osxGetSurfaceFormat(int index, int* width, int* height, int* depth, int* isM
     return 1;
 }
 
-char *osxLockSurface(int index, int *pitch, int x, int y, int w, int h) {
+sqIntptr_t osxLockSurface(sqIntptr_t index, int *pitch, int x, int y, int w, int h) {
     static int rememberW=0;
     static int offsetTitle=0;
 	windowDescriptorBlock *targetWindowBlock = windowBlockFromIndex(index);
@@ -1583,15 +1583,15 @@ char *osxLockSurface(int index, int *pitch, int x, int y, int w, int h) {
         DisposeRgn(rect);
     }
     
-    return (char *)GetPixBaseAddr(pixMap) + offsetTitle;
+    return (sqIntptr_t)GetPixBaseAddr(pixMap) + offsetTitle;
 }
 
-int osxUnlockSurface(int index, int x, int y, int w, int h) {
+int osxUnlockSurface(sqIntptr_t index, int x, int y, int w, int h) {
     //NOPE UnlockPortBits(GetWindowPort(windowHandleFromIndex(index))); 
 	return 1;
 }
 
-int osxShowSurface(int index, int x, int y, int w, int h) {
+int osxShowSurface(sqIntptr_t index, int x, int y, int w, int h) {
 	static RgnHandle dirtyRgn = NULL;
 	static RgnHandle maskRect;
 	extern	long	gSqueakUIFlushPrimaryDeferNMilliseconds;

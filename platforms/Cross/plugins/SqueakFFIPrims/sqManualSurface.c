@@ -53,10 +53,10 @@ typedef struct {
 
 /* Create the dispatch-table that SurfacePlugin will use to interact with
    instances of "struct ManualSurface" */
-static long manualSurfaceGetFormat(void *, long*, long*, long*, long*);
-static long manualSurfaceLock(void *, long *, long, long, long, long);
-static long manualSurfaceUnlock(void *, long, long, long, long);
-static long manualSurfaceShow(void *, long, long, long, long);
+static long manualSurfaceGetFormat(sqIntptr_t, long*, long*, long*, long*);
+static sqIntptr_t manualSurfaceLock(sqIntptr_t, long *, long, long, long, long);
+static long manualSurfaceUnlock(sqIntptr_t, long, long, long, long);
+static long manualSurfaceShow(sqIntptr_t, long, long, long, long);
 static sqSurfaceDispatch manualSurfaceDispatch = {
   1,
   0,
@@ -68,18 +68,18 @@ static sqSurfaceDispatch manualSurfaceDispatch = {
 
 /* sqSurfaceDispatch functions *****************************************************************************/
 
-long manualSurfaceGetFormat(void *surfaceArg, long* width, long* height, long* depth, long* isMSB) {
-	ManualSurface* surface = surfaceArg;
+long manualSurfaceGetFormat(sqIntptr_t surfaceArg, long* width, long* height, long* depth, long* isMSB) {
+	ManualSurface* surface = (ManualSurface *)surfaceArg;
 	*width = surface->width;
 	*height = surface->height;
 	*depth = surface->depth;
 	*isMSB = surface->isMSB;
-	DPRINTF(("Getting Surface Format: %lx %ld %ld %ld %ld\n", (long) surface, *width, *height, *depth, *isMSB));
+	DPRINTF(("Getting Surface Format: %" PRIxSQPTR " %ld %ld %ld %ld\n", (sqIntptr_t) surface, *width, *height, *depth, *isMSB));
 	return 1;
 }
 
-long manualSurfaceLock(void *surfaceArg, long *pitch, long x, long y, long w, long h) {
-	ManualSurface* surface = surfaceArg;
+sqIntptr_t manualSurfaceLock(sqIntptr_t surfaceArg, long *pitch, long x, long y, long w, long h) {
+	ManualSurface* surface = (ManualSurface *)surfaceArg;
 	/* Ideally, would be atomic.  But it doens't matter for the forseeable future,
 	   since it is only called via BitBlt primitives. */
 	int wasLocked = surface->isLocked;
@@ -96,18 +96,18 @@ long manualSurfaceLock(void *surfaceArg, long *pitch, long x, long y, long w, lo
 	
 	/* Success!  Return the pointer. */
 	*pitch = surface->rowPitch;
-	DPRINTF(("Locked Surface: %lx Input Rect: %ld %ld %ld %ld  Row Pitch: %ld\n", (long) surface, x, y, w, h, *pitch));
-	return (long)(surface->ptr);
+	DPRINTF(("Locked Surface: %" PRIxSQPTR " Input Rect: %ld %ld %ld %ld  Row Pitch: %ld\n", (sqIntptr_t) surface, x, y, w, h, *pitch));
+	return (sqIntptr_t)(surface->ptr);
 }
 
-long manualSurfaceUnlock(void *surfaceArg, long x, long y, long w, long h) {
-	ManualSurface* surface = surfaceArg;
+long manualSurfaceUnlock(sqIntptr_t surfaceArg, long x, long y, long w, long h) {
+	ManualSurface* surface = (ManualSurface *)surfaceArg;
     surface->isLocked = 0;
-	DPRINTF(("Unlocked Surface: %lx Rect: %ld %ld %ld %ld\n", (long) surface, x, y, w, h));
+	DPRINTF(("Unlocked Surface: %" PRIxSQPTR " Rect: %ld %ld %ld %ld\n", (sqIntptr_t) surface, x, y, w, h));
 	return 1;	
 }
 
-long manualSurfaceShow(void *surfaceArg, long x, long y, long w, long h) {
+long manualSurfaceShow(sqIntptr_t surfaceArg, long x, long y, long w, long h) {
 	/* Unsupported */
 	return 0;
 }
@@ -135,7 +135,7 @@ long createManualSurface(long width, long height, long rowPitch, long depth, lon
 	newSurface->ptr = NULL;
 	newSurface->isLocked = FALSE;
 	
-	result = registerSurface((long)newSurface, &manualSurfaceDispatch, &surfaceID);
+	result = registerSurface((sqIntptr_t)newSurface, &manualSurfaceDispatch, &surfaceID);
 	if (!result) {
 		/* Failed to register surface. */
 		free(newSurface);
@@ -150,7 +150,7 @@ long destroyManualSurface(long surfaceID) {
 }
 
 long setManualSurfacePointer(long surfaceID, void* ptr) {
-	long surfaceHandle;
+	sqIntptr_t surfaceHandle;
 	ManualSurface *surface;
 	long result;
 	if (!findSurface) return FALSE; /* failure... couldn't init function-pointer */
@@ -159,6 +159,6 @@ long setManualSurfacePointer(long surfaceID, void* ptr) {
 	surface = (ManualSurface*)surfaceHandle;	
 	if (surface->isLocked) return FALSE; /* can't set pointer while surface is locked */
 	surface->ptr = ptr;
-	DPRINTF(("Set Surface: %lx Pointer: %lx\n", surfaceID, (long)ptr));
+	DPRINTF(("Set Surface: %lx Pointer: %" PRIxSQPTR "\n", surfaceID, (sqIntptr_t)ptr));
 	return TRUE;
 }
