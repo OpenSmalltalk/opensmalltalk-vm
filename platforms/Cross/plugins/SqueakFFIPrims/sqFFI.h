@@ -157,9 +157,9 @@ int ffiLogCallOfLength(void *nameIndex, int nameLength);
 void initSurfacePluginFunctionPointers();
 void initManualSurfaceFunctionPointers
 	(fn_ioRegisterSurface, fn_ioUnregisterSurface, fn_ioFindSurface);
-long createManualSurface
-	(long width, long height, long rowPitch, long depth, long isMSB);
-long destroyManualSurface(long surfaceID);
-long setManualSurfacePointer(long surfaceID, void* ptr);
+int createManualSurface
+	(int width, int height, int rowPitch, int depth, int isMSB);
+int destroyManualSurface(int surfaceID);
+int setManualSurfacePointer(int surfaceID, void* ptr);
 
 #endif /* SQ_FFI_H */

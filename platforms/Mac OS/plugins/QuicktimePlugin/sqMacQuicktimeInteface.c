@@ -64,7 +64,7 @@ sqInt sqQuicktimeShutdown() {
 	return true;
 }
 
-long stQuicktimeSetSurfacewidthheightrowBytesdepthmovie(char * buffer, int width, int height, int rowBytes, int depth, void *movie)
+int stQuicktimeSetSurfacewidthheightrowBytesdepthmovie(char * buffer, int width, int height, int rowBytes, int depth, void *movie)
 {
 	QuickTimeBitMapForSqueak *bitMap;
 	int sqHandle;
@@ -81,7 +81,7 @@ long stQuicktimeSetSurfacewidthheightrowBytesdepthmovie(char * buffer, int width
 	return sqHandle;
 }
 
-long stQuicktimeSetToExistingSurfacegworldwidthheightrowBytesdepthmovie
+int stQuicktimeSetToExistingSurfacegworldwidthheightrowBytesdepthmovie
 	(int sqHandle, char * buffer, int width, int height, int rowBytes, int depth, void *movie)
 {
 	QuickTimeBitMapForSqueak *bitMap;
