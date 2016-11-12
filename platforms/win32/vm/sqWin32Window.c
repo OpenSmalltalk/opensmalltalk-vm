@@ -2262,13 +2262,14 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
   targetRect.right = width;
   targetRect.bottom = height;
 #ifndef NO_BYTE_REVERSAL
-  if( depth < 32 )
+  if( depth < 32 ) {
     if(depth == 16)
       reverse_image_words((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
 			  depth, width, &targetRect);
     else
       reverse_image_bytes((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
 			  depth, width, &targetRect);
+  }
 #endif /* NO_BYTE_REVERSAL */
 
   if(GDI_ERROR == StretchDIBits(dc,
@@ -2287,13 +2288,14 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 
   /* reverse the image bits if necessary */
 #ifndef NO_BYTE_REVERSAL
-  if( depth < 32 )
+  if( depth < 32 ) {
     if(depth == 16)
       reverse_image_words((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
 			  depth, width, &targetRect);
     else
       reverse_image_bytes((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
 			  depth, width, &targetRect);
+  }
 #endif /* NO_BYTE_REVERSAL */
 
   EndPage   (dc);
@@ -2480,13 +2482,14 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   /* reverse the image bits if necessary */
 #ifndef NO_BYTE_REVERSAL
   PROFILE_BEGIN(PROFILE_DISPLAY)
-  if( !lsbDisplay && depth < 32 )
+  if( !lsbDisplay && depth < 32 ) {
     if(depth == 16)
       reverse_image_words((unsigned int*) dispBits, (unsigned int*) dispBits,
 			  depth, width, &updateRect);
     else
       reverse_image_bytes((unsigned int*) dispBits, (unsigned int*) dispBits,
 			  depth, width, &updateRect);
+  }
   PROFILE_END(ticksForReversal)
 #endif /* NO_BYTE_REVERSAL */
 
@@ -2564,13 +2567,14 @@ sqInt ioShowDisplay(sqInt dispBits, sqInt width, sqInt height, sqInt depth,
   /* reverse the image bits if necessary */
 #ifndef NO_BYTE_REVERSAL
   PROFILE_BEGIN(PROFILE_DISPLAY)
-  if( !lsbDisplay && depth < 32 )
+  if( !lsbDisplay && depth < 32 ) {
     if(depth == 16)
       reverse_image_words((unsigned int*) dispBits, (unsigned int*) dispBits,
 			  depth, width, &updateRect);
     else
       reverse_image_bytes((unsigned int*) dispBits, (unsigned int*) dispBits,
 			  depth, width, &updateRect);
+  }
   PROFILE_END(ticksForReversal)
 #endif /* NO_BYTE_REVERSAL */
 #endif /* defined(_WIN32_WCE) */

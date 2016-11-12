@@ -236,7 +236,7 @@ sqInt ioInitSecurity(void) {
   WCHAR wDir[MAX_PATH+1];
   TCHAR myDocumentsFolder[MAX_PATH+1];  
   HKEY hk;
-  int dirLen,i;
+  int dirLen;
 
   /* establish the secure user directory */
   lstrcpy(secureUserDirectory, imagePath);
