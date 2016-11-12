@@ -58,7 +58,7 @@ EXPORT(long) shutdownModule(void);
 
 /* critical FXBlt entry points */
 EXPORT(long) ioGetSurfaceFormat (long surfaceID, long* width, long* height, long* depth, long* isMSB);
-EXPORT(long) ioLockSurface (long surfaceID, long *pitch, long x, long y, long w, long h);
+EXPORT(sqIntptr_t) ioLockSurface (long surfaceID, long *pitch, long x, long y, long w, long h);
 EXPORT(long) ioUnlockSurface(long surfaceID, long x, long y, long w, long h);
 
 /* interpreter entry point */
@@ -87,7 +87,7 @@ EXPORT(long) ioGetSurfaceFormat (long surfaceID, long* width, long* height, long
 	Lock the bits of the surface. 
 	Return a pointer to the actual surface bits,
 	or NULL on failure. */
-EXPORT(long) ioLockSurface (long surfaceID, long *pitch, long x, long y, long w, long h)
+EXPORT(sqIntptr_t) ioLockSurface (long surfaceID, long *pitch, long x, long y, long w, long h)
 {
 	SqueakSurface *surface;
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) FAIL;
