@@ -3866,10 +3866,10 @@ BitBltSimulation >> unlockSurfaces [
 	"Unlock the bits of any OS surfaces."
 	"See the comment in lockSurfaces. Similar rules apply. That is, the area provided in ioUnlockSurface can be used to determine the dirty region after drawing. If a source is unlocked, then the area will be (0,0,0,0) to indicate that no portion is dirty."
 	| sourceHandle destHandle destLocked fn |
-	<var: #fn declareC:'sqInt (*fn)(sqInt, sqInt, sqInt, sqInt, sqInt)'>
+	<var: #fn declareC:'int (*fn)(int, int, int, int, int)'>
 	hasSurfaceLock ifTrue:[
 		unlockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
-		fn := self cCoerce: unlockSurfaceFn to: 'sqInt (*)(sqInt, sqInt, sqInt, sqInt, sqInt)'.
+		fn := self cCoerce: unlockSurfaceFn to: 'int (*)(int, int, int, int, int)'.
 		destLocked := false.
 		destHandle := interpreterProxy fetchPointer: FormBitsIndex ofObject: destForm.
 		(interpreterProxy isIntegerObject: destHandle) ifTrue:[

@@ -382,7 +382,7 @@ LargeIntegersPlugin >> cDigitDiv: pDiv len: divLen rem: pRem len: remLen quo: pQ
 								+ (self cDigitOf: pRem at: l - 1) + (self cDigitOf: pDiv at: i - 1).
 					self cDigitOf: pRem at: l - 1 put: (a bitAnd: 16rFFFFFFFF).
 					l := l + 1]].
-		self cDigitOf: pQuo at: quoLen - k put: q].
+		self cDigitOf: pQuo at: quoLen - k put: (self cCoerceSimple: q to: #'unsigned int')].
 	^0
 ]
 
@@ -1202,7 +1202,10 @@ LargeIntegersPlugin >> normalizePositive: aLargePositiveInteger [
 		ifTrue: 
 			[maxVal := interpreterProxy maxSmallInteger.
 			val2 := val.
-			digitLen > 1 ifTrue: [val2 := val2 << 32 + (self unsafeDigitOfLargeInt: aLargePositiveInteger at: 1)].
+			digitLen > 1 ifTrue:
+				["Note: asUnsignedLongLong is not necessary because this branch is for 64 bits only.
+				but we want to avoid a C Compiler warning on 32 bits"
+				val2 := val2 asUnsignedLongLong << 32 + (self unsafeDigitOfLargeInt: aLargePositiveInteger at: 1)].
 			val2 <= maxVal
 				ifTrue: [^val2 asOop: SmallInteger]].
 	"Return self, or a shortened copy"

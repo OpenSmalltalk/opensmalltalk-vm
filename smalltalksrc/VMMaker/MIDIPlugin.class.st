@@ -122,7 +122,7 @@ MIDIPlugin >> primitiveMIDIRead: portNum into: array [
 	arrayLength := interpreterProxy byteSizeOf: array cPtrAsOop.
 	bytesRead := self sqMIDIPort: portNum
 			Read: arrayLength
-			Into: array asInteger.
+			Into: array.
 	^bytesRead asSmallIntegerObj
 ]
 
@@ -135,7 +135,7 @@ MIDIPlugin >> primitiveMIDIWrite: portNum from: array at: time [
 	arrayLength := interpreterProxy byteSizeOf: array cPtrAsOop.
 	bytesWritten := self sqMIDIPort: portNum
 			Write: arrayLength
-			From: array asInteger
+			From: array
 			At: time.
 	^bytesWritten asSmallIntegerObj
 ]
