@@ -19378,10 +19378,11 @@ StackInterpreter >> shortPrintContext: aContext [
 	(self isMarriedOrWidowedContext: aContext)
 		ifTrue: [(self checkIsStillMarriedContext: aContext currentFP: framePointer)
 					ifTrue:
-						[(self isMachineCodeFrame: (theFP := self frameOfMarriedContext: aContext))
+						[theFP := self frameOfMarriedContext: aContext.
+						(self isMachineCodeFrame: theFP)
 							ifTrue: [self print: ' M (']
 							ifFalse: [self print: ' I ('].
-						 self printHex: theFP asUnsignedInteger; print: ') ']
+						 self printHex: theFP asUnsignedIntegerPtr; print: ') ']
 					ifFalse:
 						[self print: ' w ']]
 		ifFalse: [self print: ' s '].

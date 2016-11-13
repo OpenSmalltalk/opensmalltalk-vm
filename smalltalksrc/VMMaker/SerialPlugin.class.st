@@ -100,7 +100,7 @@ SerialPlugin >> primitiveSerialPortReadByName: portName into: array startingAt: 
 	port := self cCode: 'calloc(portNameSize+1, sizeof(char))'.
 	self cCode: 'memcpy(port, portName, portNameSize)'.
 
-	arrayPtr := array asInteger + startIndex - 1.
+	arrayPtr := array + startIndex - 1.
 	bytesRead := self cCode: 'serialPortReadIntoByName( port, count, arrayPtr)'.
 	
 	self free: port.
@@ -116,7 +116,7 @@ SerialPlugin >> primitiveSerialPortWrite: portNum from: array startingAt: startI
 
 	interpreterProxy success: (startIndex >= 1 and: [startIndex + count - 1 <= (interpreterProxy byteSizeOf: array cPtrAsOop)]).
 	interpreterProxy failed
-		ifFalse: [arrayPtr := array asInteger + startIndex - 1.
+		ifFalse: [arrayPtr := array + startIndex - 1.
 			bytesWritten := self
 						serialPort: portNum
 						Write: count
@@ -140,7 +140,7 @@ SerialPlugin >> primitiveSerialPortWriteByName: portName from: array startingAt:
 
 	interpreterProxy success: (startIndex >= 1 and: [startIndex + count - 1 <= (interpreterProxy byteSizeOf: array cPtrAsOop)]).
 	interpreterProxy failed
-		ifFalse: [arrayPtr := array asInteger + startIndex - 1.
+		ifFalse: [arrayPtr := array + startIndex - 1.
 			bytesWritten := self cCode: 'serialPortWriteFromByName(port, count, arrayPtr)' ].
 	
 	self free: port.
