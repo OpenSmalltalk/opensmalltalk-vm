@@ -2341,11 +2341,11 @@ BitBltSimulation >> lockSurfaces [
 	"
 	| sourceHandle destHandle l r t b fn |
 	<inline: true>
-	<var: #fn declareC:'sqInt (*fn)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)'>
+	<var: #fn declareC:'sqIntptr_t (*fn)(sqIntptr_t, int*, int, int, int, int)'>
 	hasSurfaceLock := false.
 	destBits = 0 ifTrue:["Blitting *to* OS surface"
 		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
-		fn := self cCoerce: lockSurfaceFn to: 'sqInt (*)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)'.
+		fn := self cCoerce: lockSurfaceFn to: 'sqIntptr_t (*)(sqIntptr_t, int*, int, int, int, int)'.
 		destHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: destForm.
 		(sourceBits = 0 and:[noSource not]) ifTrue:[
 			sourceHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: sourceForm.
@@ -2376,7 +2376,7 @@ BitBltSimulation >> lockSurfaces [
 		sourceHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: sourceForm.
 		interpreterProxy failed ifTrue:[^nil]. "fetch sourceHandle could fail"
 		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
-		fn := self cCoerce: lockSurfaceFn to: 'sqInt (*)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)'.
+		fn := self cCoerce: lockSurfaceFn to: 'sqIntptr_t (*)(sqIntptr_t, int*, int, int, int, int)'.
 		"Warping requiring the entire surface"
 		isWarping ifTrue:[
 			sourceBits := self cCode:'fn(sourceHandle, &sourcePitch, 0, 0, sourceWidth, sourceHeight)'.
@@ -3017,7 +3017,7 @@ BitBltSimulation >> queryDestSurface: handle [
 	resizes the main window.
 	Note: Moved to a separate function for better inlining of the caller."
 	querySurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^false]].
-	^(self cCode:' ((sqInt (*) (sqInt, sqInt*, sqInt*, sqInt*, sqInt*))querySurfaceFn)
+	^(self cCode:' ((int (*) (sqIntptr_t, int*, int*, int*, int*))querySurfaceFn)
 		(handle, &destWidth, &destHeight, &destDepth, &destMSB)'
 			 inSmalltalk:[false])
 ]
@@ -3031,7 +3031,7 @@ BitBltSimulation >> querySourceSurface: handle [
 	resizes the main window.
 	Note: Moved to a separate function for better inlining of the caller."
 	querySurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^false]].
-	^(self cCode:' ((sqInt (*) (sqInt, sqInt*, sqInt*, sqInt*, sqInt*))querySurfaceFn)
+	^(self cCode:' ((int (*) (sqIntptr_t, int*, int*, int*, int*))querySurfaceFn)
 		(handle, &sourceWidth, &sourceHeight, &sourceDepth, &sourceMSB)'
 			inSmalltalk:[false])
 ]
@@ -3866,10 +3866,10 @@ BitBltSimulation >> unlockSurfaces [
 	"Unlock the bits of any OS surfaces."
 	"See the comment in lockSurfaces. Similar rules apply. That is, the area provided in ioUnlockSurface can be used to determine the dirty region after drawing. If a source is unlocked, then the area will be (0,0,0,0) to indicate that no portion is dirty."
 	| sourceHandle destHandle destLocked fn |
-	<var: #fn declareC:'int (*fn)(int, int, int, int, int)'>
+	<var: #fn declareC:'int (*fn)(sqIntptr_t, int, int, int, int)'>
 	hasSurfaceLock ifTrue:[
 		unlockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
-		fn := self cCoerce: unlockSurfaceFn to: 'int (*)(int, int, int, int, int)'.
+		fn := self cCoerce: unlockSurfaceFn to: 'int (*)(sqIntptr_t, int, int, int, int)'.
 		destLocked := false.
 		destHandle := interpreterProxy fetchPointer: FormBitsIndex ofObject: destForm.
 		(interpreterProxy isIntegerObject: destHandle) ifTrue:[
