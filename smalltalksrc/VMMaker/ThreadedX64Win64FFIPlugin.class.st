@@ -85,21 +85,21 @@ ThreadedX64Win64FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in:
 			[atomicType = FFITypeSingleFloat
 				ifTrue:
 					[floatRet := self 
-						dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'float (*)(long, long, long, long)') 
+						dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'float (*)(sqIntptr_t, sqIntptr_t, sqIntptr_t, sqIntptr_t)') 
 						with: (calloutState integerRegisters at: 0)
 						with: (calloutState integerRegisters at: 1)
 						with: (calloutState integerRegisters at: 2)
 						with: (calloutState integerRegisters at: 3)]
 				ifFalse: "atomicType = FFITypeDoubleFloat"
 					[floatRet := self 
-						dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'double (*)(long, long, long, long)') 
+						dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'double (*)(sqIntptr_t, sqIntptr_t, sqIntptr_t, sqIntptr_t)') 
 						with: (calloutState integerRegisters at: 0)
 						with: (calloutState integerRegisters at: 1)
 						with: (calloutState integerRegisters at: 2)
 						with: (calloutState integerRegisters at: 3)]]
 		ifFalse:
 			[intRet := self 
-				dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'usqLong (*)(long, long, long, long)') 
+				dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'usqIntptr_t (*)(sqIntptr_t, sqIntptr_t, sqIntptr_t, sqIntptr_t)') 
 				with: (calloutState integerRegisters at: 0)
 				with: (calloutState integerRegisters at: 1)
 				with: (calloutState integerRegisters at: 2)
