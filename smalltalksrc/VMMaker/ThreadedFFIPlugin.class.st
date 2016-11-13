@@ -1505,7 +1505,7 @@ ThreadedFFIPlugin >> primitiveCreateManualSurface [
 				inSmalltalk: [self create: width Man: height ual: rowPitch Surf: depth ace: isMSB].
 	result < 0 ifTrue:
 		[^interpreterProxy primitiveFail].
-	result := interpreterProxy signedMachineIntegerFor: result.
+	result := interpreterProxy signed32BitIntegerFor: result.
 	^interpreterProxy pop: 6 thenPush: result
 	
 ]
