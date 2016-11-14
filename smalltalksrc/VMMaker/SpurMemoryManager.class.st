@@ -4566,6 +4566,11 @@ SpurMemoryManager >> fetchShort16: shortIndex ofObject: objOop [
 	^self shortAt: objOop + self baseHeaderSize + (shortIndex << 1)
 ]
 
+{ #category : #'object access' }
+SpurMemoryManager >> fetchUnsignedShort16: shortIndex ofObject: objOop [
+	^self cCoerceSimple: (self shortAt: objOop + self baseHeaderSize + (shortIndex << 1)) to: #'unsigned short'
+]
+
 { #category : #instantiation }
 SpurMemoryManager >> fillObj: objOop numSlots: numSlots with: fillValue [
 	self subclassResponsibility

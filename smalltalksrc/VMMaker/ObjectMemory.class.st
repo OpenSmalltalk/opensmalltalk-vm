@@ -1883,6 +1883,11 @@ ObjectMemory >> fetchShort16: shortIndex ofObject: oop [
 	^self shortAt: oop + self baseHeaderSize + (shortIndex << 1)
 ]
 
+{ #category : #'object access' }
+ObjectMemory >> fetchUnsignedShort16: shortIndex ofObject: oop [
+	^self cCoerceSimple: (self shortAt: oop + self baseHeaderSize + (shortIndex << 1)) to: #'unsigned short'
+]
+
 { #category : #finalization }
 ObjectMemory >> finalizeReference: oop [ 
 	"During sweep phase we have encountered a weak reference. Check if its object
