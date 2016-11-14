@@ -606,6 +606,7 @@ VMClass class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
 	aStream
 		nextPutAll: '#define MinSmallInteger '; print: self objectMemoryClass minSmallInteger; cr;
 		nextPutAll: '#define MaxSmallInteger '; print: self objectMemoryClass maxSmallInteger; cr;
+		nextPutAll: '#define NumSmallIntegerTagBits '; print: self objectMemoryClass numSmallIntegerTagBits; cr;
 		cr.
 ]
 
