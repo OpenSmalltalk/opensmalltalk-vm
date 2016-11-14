@@ -3940,7 +3940,7 @@ InterpreterPrimitives >> primitiveSlotAt [
 	 and: [fmt >= objectMemory firstShortFormat]) ifTrue:
 		[numSlots := objectMemory num16BitUnitsOf: rcvr.
 		 (self asUnsigned: index) < numSlots ifTrue:
-			[self pop: argumentCount + 1 thenPushInteger: (objectMemory fetchShort16: index ofObject: rcvr).
+			[self pop: argumentCount + 1 thenPushInteger: (objectMemory fetchUnsignedShort16: index ofObject: rcvr).
 			 ^0].
 		 ^self primitiveFailFor: PrimErrBadIndex].
 
