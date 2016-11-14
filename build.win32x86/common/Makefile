@@ -47,6 +47,7 @@ OBJDIR:= $(BUILD)/vm
 PLATDIR:=../../platforms
 CROSSDIR:=$(PLATDIR)/Cross/vm
 WIN32DIR:=$(PLATDIR)/win32/vm
+WIN32PLUGINSDIR:=$(PLATDIR)/win32/plugins
 WIN32MISCDIR:=$(PLATDIR)/win32/misc
 WIN32UTILDIR:=$(PLATDIR)/win32/util
 
@@ -204,7 +205,7 @@ $(ETOBJ):	$(WIN32MISCDIR)/etext.c
 	$(CC) -c -o $@ -fomit-frame-pointer -O2 $<
 
 vm:	$(VMEXE)
-
+	
 $(VMEXE): $(OBJDIR) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
 	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -o $(VMEXE) \
@@ -247,18 +248,17 @@ $(VMDEF) $(VMEXP) $(VMLIB): $(VMOBJ)
 # Building plugins
 #
 
-.PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.dll
+#.PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.dll
 
 # Check for Makefile in win32 plugins directory otherwise use default Makefile
-plugin-makefile = $(firstword $(realpath \
-					$(PLATDIR)/win32/plugins/$(*F)/Makefile.plugin \
-					../common/Makefile.plugin))
+plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Makefile.plugin ../common/Makefile.plugin)))
 
 # Internal plugin.  Build as lib then link in lib
 $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
-	@-mkdir $(BUILD)/$(*F)
-	$(MAKE) $(MFLAGS) CONFIGURATION=$(CONFIGURATION) BUILD=$(BUILD) \
+	@-mkdir -p $(BUILD)/$(*F)
+	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
+		CONFIGURATION=$(CONFIGURATION) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
 		$(OBJDIR)/$(*F).lib
