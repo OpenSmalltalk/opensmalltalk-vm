@@ -6,6 +6,7 @@ environment:
   BINTRAYAPIKEY:
     secure: uknPzww818XWJiLecwur9p1MfrkACOyx9d3iNrw/TuD89EoPSc8zLqKdPZjWdcQd
   matrix:
+    - FLAVOR: squeak.sista.spur
     - FLAVOR: squeak.cog.spur
     - FLAVOR: squeak.cog.v3
     - FLAVOR: squeak.stack.spur
