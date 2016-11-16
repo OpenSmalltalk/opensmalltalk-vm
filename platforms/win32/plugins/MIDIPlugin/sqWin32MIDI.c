@@ -881,7 +881,7 @@ int sqMIDIParameter(int whichParameter, int modify, int newValue) {
       for(i=0;i<MAX_DEVICES;i++)
         {
           port = midiPorts[i];
-          if(port)
+          if(port) {
             if(port->flags & MIDI_OUT_DEVICE)
               {
                 /* reset output device */
@@ -898,6 +898,7 @@ int sqMIDIParameter(int whichParameter, int modify, int newValue) {
                 midiInStart((HMIDIIN) (port->handle));
                 port->inBufferStart = port->inBufferEnd = 0;
               }
+		  }
         }
 			break;
 		case sqMIDIClockTicksPerSec:

@@ -57,7 +57,7 @@ struct VirtualMachine* interpreterProxy;
 #define objIsAlien(anOop) (interpreterProxy->includesBehaviorThatOf(interpreterProxy->fetchClassOf(anOop), interpreterProxy->classAlien()))
 #define objIsUnsafeAlien(anOop) (interpreterProxy->includesBehaviorThatOf(interpreterProxy->fetchClassOf(anOop), interpreterProxy->classUnsafeAlien()))
 
-#define sizeField(alien) (*(long *)pointerForOop((sqInt)(alien) + BaseHeaderSize))
+#define sizeField(alien) (*(long long *)pointerForOop((sqInt)(alien) + BaseHeaderSize))
 #define dataPtr(alien) pointerForOop((sqInt)(alien) + BaseHeaderSize + BytesPerOop)
 #define isIndirect(alien) (sizeField(alien) < 0)
 #define startOfParameterData(alien) (isIndirect(alien)	\
@@ -69,7 +69,7 @@ struct VirtualMachine* interpreterProxy;
 								:  (void  *)dataPtr(alien))
 
 #define isSmallInt(oop) (((oop)&7)==1)
-#define intVal(oop) (((long)(oop))>>3)
+#define intVal(oop) (((long long)(oop))>>3)
 
 extern void loadFloatRegs(double,double,double,double);
 

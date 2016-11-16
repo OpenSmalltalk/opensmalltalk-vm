@@ -17,7 +17,8 @@ static fn_ioFindSurface findSurface = 0;
 extern struct VirtualMachine *interpreterProxy;
 
 /******************* Surface manager entry points *******************/
-static int memGetSurfaceFormat(memSurface *ms, int *w, int *h, int *d, int *msbFlag) {
+static int memGetSurfaceFormat(sqIntptr_t handle, int *w, int *h, int *d, int *msbFlag) {
+  memSurface *ms = (memSurface *) handle;
   *w = ms->width;
   *h = ms->height;
   *d = ms->depth;
@@ -25,18 +26,19 @@ static int memGetSurfaceFormat(memSurface *ms, int *w, int *h, int *d, int *msbF
   return 1;
 }
 
-static int memLock(memSurface *ms, int *stride, int x, int y, int w, int h){
+static sqIntptr_t memLock(sqIntptr_t handle, int *stride, int x, int y, int w, int h){
   /* Locking can be safely ignored for memory surfaces but we need to fill in 
      the stride and return the bits */
+  memSurface *ms = (memSurface *) handle;
   *stride = ms->stride;
-  return (int)ms->bits;
+  return (sqIntptr_t)ms->bits;
 }
 
-static int memUnlock(memSurface *ms, int x, int y, int w, int h){
+static int memUnlock(sqIntptr_t handle, int x, int y, int w, int h){
   return 1; /* ignored */
 }
 
-static int memShow(memSurface *ms, int x, int y, int w, int h) {
+static int memShow(sqIntptr_t handle, int x, int y, int w, int h) {
   /* unsupported */
   return 0;
 }
@@ -65,7 +67,7 @@ int memCreateSurfaceWidthHeightDepth(int w, int h, int d) {
   ms->stride = w * (d >> 3);
   ms->bits = calloc(ms->stride, ms->height);
   /* register memory surface */
-  if(!(*registerSurface)((int)ms, &memSurfaceDispatch, &id)) {
+  if(!(*registerSurface)((sqIntptr_t)ms, &memSurfaceDispatch, &id)) {
     /* registration failed; bail */
     free(ms->bits);
     free(ms);
@@ -76,7 +78,7 @@ int memCreateSurfaceWidthHeightDepth(int w, int h, int d) {
 
 int memDestroySurface(int id) {
   memSurface *ms;
-  if(!(*findSurface)(id, &memSurfaceDispatch, (int*) &ms)) return 0;
+  if(!(*findSurface)(id, &memSurfaceDispatch, (sqIntptr_t*) &ms)) return 0;
   (*unregisterSurface)(id);
   free(ms->bits);
   free(ms);
@@ -85,26 +87,26 @@ int memDestroySurface(int id) {
 
 int memGetSurfaceWidth(int id) {
   memSurface *ms;
-  if(!(*findSurface)(id, &memSurfaceDispatch, (int*) &ms)) return 0;
+  if(!(*findSurface)(id, &memSurfaceDispatch, (sqIntptr_t*) &ms)) return 0;
   return ms->width;
 }
 
 int memGetSurfaceHeight(int id) {
   memSurface *ms;
-  if(!(*findSurface)(id, &memSurfaceDispatch, (int*) &ms)) return 0;
+  if(!(*findSurface)(id, &memSurfaceDispatch, (sqIntptr_t*) &ms)) return 0;
   return ms->height;
 }
 
 int memGetSurfaceDepth(int id) {
   memSurface *ms;
-  if(!(*findSurface)(id, &memSurfaceDispatch, (int*) &ms)) return 0;
+  if(!(*findSurface)(id, &memSurfaceDispatch, (sqIntptr_t*) &ms)) return 0;
   return ms->depth;
 }
 
-int memGetSurfaceBits(int id) {
+sqIntptr_t memGetSurfaceBits(int id) {
   memSurface *ms;
-  if(!(*findSurface)(id, &memSurfaceDispatch, (int*) &ms)) return 0;
-  return (int) ms->bits;
+  if(!(*findSurface)(id, &memSurfaceDispatch, (sqIntptr_t*) &ms)) return 0;
+  return (sqIntptr_t) ms->bits;
 }
 
 int memInitialize(void) {

@@ -128,7 +128,7 @@ sourceVersionString(char separator)
 				+ strlen(pluginsRevisionAsString())
 				+ strlen(pluginsRepositoryURL());
 		sourceVersion = malloc(len);
-		sprintf(sourceVersion, fmt,
+		snprintf(sourceVersion, len, fmt,
 				revisionAsString(), repositoryURL(), revisionDateAsString(),
 				separator,
 				pluginsRevisionAsString(), pluginsRepositoryURL());

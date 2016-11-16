@@ -1,0 +1,32 @@
+#ifdef _WIN32
+1                       ICON    DISCARDABLE     "Croquet.ico"
+2                       ICON    DISCARDABLE     "Croquet.ico"
+3                       ICON    DISCARDABLE     "Croquet.ico"
+
+1 VERSIONINFO
+ FILEVERSION FILEVERSIONVALUES
+ PRODUCTVERSION 5,0,0,0
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0xaL
+ FILEOS 0x10001L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"    // Lang=US English, CharSet=Windows Multilin
+        BEGIN
+            VALUE "CompanyName", "Squeak.org\0"
+            VALUE "FileDescription", "Croquet Cog Spur Virtual Machine\0"
+            VALUE "FileVersion", FILEVERSIONSTRING
+            VALUE "LegalCopyright", "Copyright \251 Squeak.org 1996-2014\0"
+            VALUE "ProductName", "Croquet Cog Spur\0"
+            VALUE "ProductVersion", "5.0\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END
+#endif

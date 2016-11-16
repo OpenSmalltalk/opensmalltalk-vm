@@ -243,7 +243,7 @@ static void fastPathRightToLeft(operation_t *op, uint32_t flags)
 	operation_t opToDest = *op;
 	uint32_t shift = log2table[op->src.depth];
 	uint32_t stride = op->src.pitch;
-	uint32_t line = (uint32_t) op->src.bits;
+	uint32_t line = (uint32_t) ((usqIntptr_t)op->src.bits & 0xFFFFFFFFU);
 	/* Convert to pixels. It doesn't matter if we lose the MS bits of
 	 * addresses, since they're passed down as pixel offsets anyway */
 	if (shift > 3) {
@@ -360,7 +360,7 @@ static void fastPathDepthConv(operation_t *op, uint32_t flags)
 	operation_t opToDest = *op;
 	uint32_t shift = log2table[op->dest.depth];
 	uint32_t stride = op->src.pitch;
-	uint32_t line = (uint32_t) op->dest.bits;
+	uint32_t line = (uint32_t) ((usqIntptr_t)op->dest.bits & 0xFFFFFFFFU);
 	/* Convert to pixels. It doesn't matter if we lose the MS bits of
 	 * addresses, since they're passed down as pixel offsets anyway */
 	if (shift > 3) {

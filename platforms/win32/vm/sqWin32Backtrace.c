@@ -319,7 +319,7 @@ get_modules(void)
 static dll_exports *
 dll_exports_for_pc(void *retpc)
 {
-	int i;
+	unsigned int i;
 
 	if (!all_exports)
 		get_modules();
@@ -517,7 +517,7 @@ compute_dll_symbols(dll_exports *exports)
 {
 	char *dllbase = (char *)exports->module;
     PIMAGE_EXPORT_DIRECTORY pExportDir;
-    int i, j, n;
+    unsigned int i, j, n;
     PWORD ordinals;
     ulong *functions;
     ulong exportsStartRVA, exportsEndRVA;
@@ -609,7 +609,7 @@ find_in_cog(dll_exports *exports, void *pc, symbolic_pc *spc)
 void
 printModuleInfo(FILE *f)
 {
-	int i;
+	unsigned int i;
 
 	if (!all_exports)
 		get_modules();
