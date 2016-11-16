@@ -1,18 +1,48 @@
 environment:
-  CYG_ROOT: C:\cygwin
   CYG_MIRROR: http://cygwin.mirror.constant.com
-  CYG_CACHE: C:\cygwin\var\cache\setup
-  CYG_BASH: C:\cygwin\bin\bash
   BINTRAYAPIKEY:
     secure: uknPzww818XWJiLecwur9p1MfrkACOyx9d3iNrw/TuD89EoPSc8zLqKdPZjWdcQd
   matrix:
     - FLAVOR: squeak.sista.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
     - FLAVOR: squeak.cog.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
     - FLAVOR: squeak.cog.v3
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
     - FLAVOR: squeak.stack.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
     - FLAVOR: squeak.stack.v3
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
     - FLAVOR: newspeak.cog.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
     - FLAVOR: newspeak.stack.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
+    - FLAVOR: squeak.stack.spur
+      ARCH: win64x64
+      CYG_ROOT: C:\cygwin64
+      CYG_SETUP: setup-x86_64.exe
+      MINGW_ARCH: x86_64
 
 matrix:
   fast_finish: false
@@ -24,7 +54,8 @@ clone_depth: 5
 
 install:
   - ps: 'Start-FileDownload "http://cygwin.com/setup-x86.exe" -FileName "setup-x86.exe"'
-  - 'setup-x86.exe -qnNdO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_CACHE%" -P mingw64-i686-gcc-core,mingw64-i686-gcc-g++,mingw64-i686-headers,mingw64-i686-runtime,zip'
+  - ps: 'Start-FileDownload "http://cygwin.com/setup-x86_64.exe" -FileName "setup-x86_64.exe"'
+  - '%CYG_SETUP% -qnNdO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_ROOT%\var\cache\setup" -P mingw64-%MINGW_ARCH%-gcc-core,mingw64-%MINGW_ARCH%-gcc-g++,mingw64-%MINGW_ARCH%-headers,mingw64-%MINGW_ARCH%-runtime,zip'
 
 build: false
 
@@ -36,6 +67,6 @@ build: false
 # build which causes failures as certain functions attempt to redirect
 # default file handles. Ensure a dummy file descriptor is opened with 'exec'.
 test_script:
-  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./.travis_build.sh"'
+  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./.travis_build.sh"'
 on_success:
-  - '%CYG_BASH% -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./.travis_deploy.sh"'
+  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./.travis_deploy.sh"'
