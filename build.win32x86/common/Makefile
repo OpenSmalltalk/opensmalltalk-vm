@@ -205,8 +205,12 @@ $(ETOBJ):	$(WIN32MISCDIR)/etext.c
 	$(CC) -c -o $@ -fomit-frame-pointer -O2 $<
 
 vm:	$(VMEXE)
-	
-$(VMEXE): $(OBJDIR) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
+
+ifneq ($(THIRDPARTYLIBS),) 
+THIRDPARTYPREREQS:=$(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR) $(THIRDPARTYCACHEDIR)
+endif
+
+$(VMEXE): $(THIRDPARTYPREREQS) $(THIRDPARTYLIBS) $(OBJDIR) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
 	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -o $(VMEXE) \
 			$(BTOBJ) $(VMOBJ) $(VMEXP) $(OBJDIR)/resource.o $(LIBS) $(STDLIBS) $(ETOBJ)
@@ -248,14 +252,14 @@ $(VMDEF) $(VMEXP) $(VMLIB): $(VMOBJ)
 # Building plugins
 #
 
-#.PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.dll
+.PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.dll
 
 # Check for Makefile in win32 plugins directory otherwise use default Makefile
 plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Makefile.plugin ../common/Makefile.plugin)))
 
 # Internal plugin.  Build as lib then link in lib
-$(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
-	@-mkdir -p $(BUILD)/$(*F)
+# $(call plugin-makefile,$(*F))
+$(OBJDIR)/%.lib: 
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
 		CONFIGURATION=$(CONFIGURATION) \
@@ -264,10 +268,12 @@ $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 		$(OBJDIR)/$(*F).lib
 
 # External plugin.  Build as dll and copy to vm dir ($(OBJDIR)).
-$(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
-	@-mkdir $(BUILD)/$(*F)
-	$(MAKE) $(MFLAGS) CONFIGURATION=$(CONFIGURATION) BUILD=$(BUILD) \
+# $(call plugin-makefile,$(*F))
+$(OBJDIR)/%.dll: 
+	@-mkdir -p $(BUILD)/$(*F)
+	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
+		CONFIGURATION=$(CONFIGURATION) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		COGDEFS="$(COGDEFS)" LIBNAME=$(*F) $(OBJDIR)/$(*F).dll
 
