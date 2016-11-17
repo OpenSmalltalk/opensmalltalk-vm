@@ -535,11 +535,11 @@ static void hid_GetDeviceInfo (io_object_t hidDevice, CFMutableDictionaryRef hid
                     CFArrayApplyFunction (refCFTopElement, range, hid_TopLevelElementHandler, NULL);
                 }
             }
+            CFRelease (usbProperties);
         }
         else
             HIDReportError ("IORegistryEntryCreateCFProperties failed to create usbProperties.");
 
-        CFRelease (usbProperties);
         if (kIOReturnSuccess != IOObjectRelease (parent2))
             HIDReportError ("IOObjectRelease error with parent2.");
         if (kIOReturnSuccess != IOObjectRelease (parent1))
