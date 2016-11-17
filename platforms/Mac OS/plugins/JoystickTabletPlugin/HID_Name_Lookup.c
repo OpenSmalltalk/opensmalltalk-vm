@@ -268,7 +268,7 @@ Boolean HIDGetElementNameFromVendorProductCookie (const long pVendorID, const lo
 							sprintf(pName, "#{V:Macally, P:iShock, C:%ld}#", pCookie);
 #else
 							result = false;
-#endif FAKE_IT
+#endif /* FAKE_IT */
 							break;
 					}
 					break;
@@ -277,7 +277,7 @@ Boolean HIDGetElementNameFromVendorProductCookie (const long pVendorID, const lo
 					sprintf(pName, "#{V:Macally, P:%ld, C:%ld}#", pProductID, pCookie); break;
 #else
 					result = false;
-#endif FAKE_IT
+#endif /* FAKE_IT */
 					break;
 			}
 			break;
