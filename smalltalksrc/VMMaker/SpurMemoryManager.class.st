@@ -5962,8 +5962,9 @@ SpurMemoryManager >> initialize [
 	heapMap := CogCheck32BitHeapMap new.
 
 	"N.B. We *don't* initialize extraRoots because we don't simulate it."
-
-	maxOldSpaceSize := self class initializationOptions ifNotNil: [:initOpts| initOpts at: #maxOldSpaceSize ifAbsent: [0]]
+	maxOldSpaceSize := self class initializationOptions
+							ifNotNil: [:initOpts| initOpts at: #maxOldSpaceSize ifAbsent: [0]]
+							ifNil: [0]
 ]
 
 { #category : #snapshot }
