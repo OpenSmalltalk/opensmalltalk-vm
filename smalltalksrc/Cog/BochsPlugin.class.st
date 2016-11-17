@@ -154,7 +154,7 @@ BochsPlugin >> primitiveNewCPU [
 		pop: 1
 		thenPush: (interpreterProxy positiveMachineIntegerFor:
 										(self cCoerceSimple: cpu
-											to: 'unsigned long'))
+											to: 'usqIntptr_t'))
 ]
 
 { #category : #primitives }

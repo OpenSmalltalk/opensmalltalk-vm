@@ -132,9 +132,9 @@ GdbARMPlugin >> primitiveNewCPU [
 		[^interpreterProxy primitiveFail].
 	interpreterProxy
 		pop: 1
-		thenPush: (interpreterProxy positive32BitIntegerFor:
+		thenPush: (interpreterProxy positiveMachineIntegerFor:
 										(self cCoerceSimple: cpu
-											to: 'unsigned long'))
+											to: 'usqIntptr_t'))
 ]
 
 { #category : #primitives }
