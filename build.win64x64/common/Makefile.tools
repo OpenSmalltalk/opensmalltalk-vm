@@ -5,12 +5,12 @@
 TOOLPREFIX:=x86_64-w64-mingw32-
 
 #############################################################################
-# C compiler settings (gcc 4.x)
+# C compiler settings (Use clang for having a working FFI)
 #
-CC:= $(TOOLPREFIX)gcc
-CXX:= $(TOOLPREFIX)g++
+CC:= $(TOOLPREFIX)clang
+CXX:= $(TOOLPREFIX)clang++
 
-WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function -Wno-unused-but-set-variable
+WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-label -Wno-unused-function 
 
 # VM config flags.
 ifeq ($(CONFIGURATION),product)
