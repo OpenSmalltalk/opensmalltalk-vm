@@ -29,7 +29,7 @@
 # define MicrosecondsPerSecond 1000000i64
 # define MillisecondsPerSecond 1000i64
 
-# define MicrosecondsPerMillisecond 1000000i64
+# define MicrosecondsPerMillisecond 1000i64
 
 # define TocksPerSecond      10000000i64
 # define TocksPerMillisecond 10000i64
