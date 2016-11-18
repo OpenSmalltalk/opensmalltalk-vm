@@ -10,14 +10,14 @@ if [[ "${APPVEYOR}" ]]; then
 
     # Appveyor's GCC is pretty new, patch the Makefiles and replace the tools to
     # make it work
-	if [[ "$(uname -o)" == "Cygwin" ]]; then
-		echo
-		echo "Using gcc $(i686-w64-mingw32-gcc --version)"
-		echo "Using 64-bit gcc $(x86_64-w64-mingw32-gcc --version)"
-		echo
-		test -d /usr/i686-w64-mingw32/sys-root/mingw/lib || echo "No lib dir"
-		test -d /usr/i686-w64-mingw32/sys-root/mingw/include || echo "No inc dir"
-	fi
+
+    echo
+    echo "Using gcc $(i686-w64-mingw32-gcc --version)"
+    echo "Using 64-bit gcc $(x86_64-w64-mingw32-gcc --version)"
+    echo
+    test -d /usr/i686-w64-mingw32/sys-root/mingw/lib || echo "No lib dir"
+    test -d /usr/i686-w64-mingw32/sys-root/mingw/include || echo "No inc dir"
+
 else
     PLATFORM="$(uname -s)"
 fi
