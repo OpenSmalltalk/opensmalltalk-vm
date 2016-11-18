@@ -653,7 +653,7 @@ static void *dlopenSqueak(const char *path, int mode)
 static void *dlsymSqueak(void *handle, const char *symbol)
 {
   char		_symbol[256];
-  NSSymbol	*nsSymbol= 0;
+  NSSymbol	nsSymbol= 0;
 
   snprintf(_symbol, sizeof(_symbol), "_%s", symbol);
 
