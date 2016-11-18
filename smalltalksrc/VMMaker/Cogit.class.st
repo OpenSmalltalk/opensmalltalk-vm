@@ -1409,8 +1409,8 @@ ceCPICMissTrampoline
 	return pc left on stack because it is used to locate the failing send target PIC of a linked send
 
 ceSendFromInLineCacheMissTrampoline
-	not used, but its addres is used as a key in the simulator.  An open PIC calls ceSendFromInLineCacheMiss
-	after it has switched from the Smalltalk to teh C stack (an inline trampoline) hence there is no return pc
+	not used, but its address is used as a key in the simulator.  An open PIC calls ceSendFromInLineCacheMiss
+	after it has switched from the Smalltalk to the C stack (an inline trampoline) hence there is no return pc
 	left on the Smalltalk stack (except that of the send that invoked the open PIC).
 
 ceStoreCheckTrampoline
