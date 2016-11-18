@@ -584,7 +584,7 @@ void processMIDIByte(int aByte) {
 			startMIDICommand(aByte);
 		} else {
 			/* data byte arrived in idle state: use running status if possible */
-			if (lastCmdByte == nil) {
+			if (lastCmdByte == 0) {
 				return;  /* last command byte is not defined; just skip this byte */
 			} else {
 				/* process this data as if it had the last command byte in front of it */
