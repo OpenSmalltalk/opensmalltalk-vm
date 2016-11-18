@@ -65,7 +65,7 @@ static pRecDevice hid_DisposeDevice (pRecDevice ppDevice);
 static IONotificationPortRef	gNotifyPort;
 static io_iterator_t		gAddedIter;
 static CFRunLoopRef		gRunLoop;
-#endif USE_NOTIFICATIONS
+#endif //USE_NOTIFICATIONS
 
 // for element retrieval
 static pRecDevice gCurrentGetDevice = NULL;
@@ -276,7 +276,7 @@ static void hid_AddElement (CFTypeRef refElement, pRecElement * ppElementCurrent
 #if 0
             else
                 HIDReportError ("CFNumberGetValue error when getting value for refUsage or refUsagePage.");
-#endif 0
+#endif //0
         }
         else // collection
 			pElement = (pRecElement) malloc (sizeof (recElement));
@@ -732,7 +732,7 @@ static void hid_AddDevices (void *refCon, io_iterator_t iterator)
 			HIDReportErrorNum ("hid_AddDevices: IOServiceAddInterestNotification error: x0%8.8lX.", result);
 #else
 		result = (*(IOHIDDeviceInterface**)pNewDevice->interface)->setRemovalCallback (pNewDevice->interface, hid_RemovalCallbackFunction,pNewDeviceAt,0);
-#endif USE_NOTIFICATIONS
+#endif //USE_NOTIFICATIONS
 
 		// release the device object, it is no longer needed
 		result = IOObjectRelease (ioHIDDeviceObject);
@@ -799,7 +799,7 @@ static pRecDevice hid_DisposeDevice (pRecDevice pDevice)
 			if (kIOReturnSuccess != result)
 				HIDReportErrorNum ("hid_DisposeDevice: IOObjectRelease error: 0x%8.8X.", result);
 		}
-#endif USE_NOTIFICATIONS
+#endif //USE_NOTIFICATIONS
 
 		// remove this device from the device list
 		if (gpDeviceList == pDevice)	// head of list?
