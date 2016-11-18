@@ -2970,7 +2970,7 @@ BalloonEnginePlugin >> stepToFirstWideBezierIn: bezier at: yValue [
 
 	"Compute primary x direction of curve (e.g., 1: left to right; -1: right to left)."
 	xDir := ((self bezierUpdateDataOf: bezier) at: GBUpdateDX).
-	xDir = 0 ifTrue:[((self bezierUpdateDataOf: bezier) at: GBUpdateDDX)].
+	xDir = 0 ifTrue:[xDir := ((self bezierUpdateDataOf: bezier) at: GBUpdateDDX)].
 	xDir >= 0 ifTrue:[xDir := 1] ifFalse:[xDir := -1].
 
 	"Adjust the curve to start/end at the right position"
