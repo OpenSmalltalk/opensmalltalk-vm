@@ -258,6 +258,7 @@ void *ioLoadModule(char *pluginName)
 			CFRelease(bundleURL);
 			filePath = CFURLCopyFileSystemPath (bundleURL2, kCFURLPOSIXPathStyle);
 			CFRelease(bundleURL2);
+            CFRelease(resourcePathString);
 			
 			CFStringGetCString (filePath,vmDirPath,DOCUMENT_NAME_SIZE, kCFStringEncodingUTF8);
 			strcat(vmDirPath,"/");
