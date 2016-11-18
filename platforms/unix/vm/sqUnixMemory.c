@@ -91,7 +91,7 @@ extern int useMmap;
 # define ALWAYS_USE_MMAP 1
 #endif
 
-#if defined(SQ_IMAGE32) && defined(SQ_HOST64)
+#if SQ_IMAGE32 && SQ_HOST64
 char *sqMemoryBase= (char *)-1;
 #endif
 
@@ -284,7 +284,7 @@ sqInt uxMemoryExtraBytesLeft(sqInt includingSwap)			{ return 0; }
 
 
 
-#if defined(SQ_IMAGE32) && defined(SQ_HOST64)
+#if SQ_IMAGE32 && SQ_HOST64
 
 usqInt sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 {
