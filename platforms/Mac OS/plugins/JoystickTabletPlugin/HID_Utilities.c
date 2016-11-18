@@ -204,7 +204,7 @@ static void hid_AddElement (CFTypeRef refElement, pRecElement * ppElementCurrent
 {
 	pRecDevice pDevice = gCurrentGetDevice;
     pRecElement pElement = NULL;
-    long elementType, usagePage, usage;
+    long elementType=0, usagePage=0, usage=0;
     CFTypeRef refElementType = CFDictionaryGetValue (refElement, CFSTR(kIOHIDElementTypeKey));
     CFTypeRef refUsagePage = CFDictionaryGetValue (refElement, CFSTR(kIOHIDElementUsagePageKey));
     CFTypeRef refUsage = CFDictionaryGetValue (refElement, CFSTR(kIOHIDElementUsageKey));
