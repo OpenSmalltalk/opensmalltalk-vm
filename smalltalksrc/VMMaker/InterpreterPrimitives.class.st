@@ -802,14 +802,15 @@ InterpreterPrimitives >> primitiveBeCursor [
 		maskObj := self stackTop].
 	self success: argumentCount < 2.
 
-	self success: ((objectMemory isPointers: cursorObj) and: [(objectMemory lengthOf: cursorObj) >= 5]).
+	self successful ifTrue: [
+		self success: ((objectMemory isPointers: cursorObj) and: [(objectMemory lengthOf: cursorObj) >= 5])].
 	self successful ifTrue: [
 		bitsObj := objectMemory fetchPointer: 0 ofObject: cursorObj.
 		extentX := self fetchInteger: 1 ofObject: cursorObj.
 		extentY := self fetchInteger: 2 ofObject: cursorObj.
 		depth := self fetchInteger: 3 ofObject: cursorObj.
-		offsetObj := objectMemory fetchPointer: 4 ofObject: cursorObj].
-		self success: ((objectMemory isPointers: offsetObj) and: [(objectMemory lengthOf: offsetObj) >= 2]).
+		offsetObj := objectMemory fetchPointer: 4 ofObject: cursorObj.
+		self success: ((objectMemory isPointers: offsetObj) and: [(objectMemory lengthOf: offsetObj) >= 2])].
 
 	self successful ifTrue: [
 		offsetX := self fetchInteger: 0 ofObject: offsetObj.
