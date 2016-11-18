@@ -3,11 +3,11 @@ include ../common/Makefile.lib.extra
 $(info LIBRARY: libgit2)
 
 # plugin definitions
-LIBGIT2URL:=https://github.com/libgit2/libgit2/archive/v0.25.0-rc1.tar.gz
-LIBGIT2DIR:=$(THIRDPARTYDIR)/libgit2-0.25.0-rc1
-LIBGIT2LIBNAME:=libgit2.0.25.0.dylib
+LIBGIT2URL:=https://github.com/libgit2/libgit2/archive/v0.24.1.tar.gz
+LIBGIT2DIR:=$(THIRDPARTYDIR)/libgit2-0.24.1
+LIBGIT2LIBNAME:=libgit2.dll
 LIBGIT2LIB:=$(THIRDPARTYINSTALLDIR)/$(LIBGIT2LIBNAME)
-LIBGIT2ARCHIVE:=$(THIRDPARTYCACHEDIR)/libgit2-v0.25.0-rc1.tar.gz
+LIBGIT2ARCHIVE:=$(THIRDPARTYCACHEDIR)/libgit2-v0.24.1.tar.gz
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
@@ -26,19 +26,13 @@ $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME): $(LIBGIT2ARCHIVE)
 			-DBUILD_CLAR=OFF \
 			-DLIBSSH2_FOUND=ON \
 			-DLIBSSH2_INCLUDE_DIRS=$(THIRDPARTYINCLUDEDIR) \
-			-DLIBSSH2_LIBRARIES=$(THIRDPARTYLIBDIR)/libssh2.1.dylib \
-			-DCMAKE_C_FLAGS=-m32 \
-			-DCMAKE_CXX_FLAGS=-m32 \
-			-DCMAKE_OSX_ARCHITECTURES=i386 \
-			-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-rpath,@executable_path:@executable_path/Plugins \
+			-DLIBSSH2_LIBRARIES=$(THIRDPARTYLIBDIR)/libssh2-1.dll \
+			-G "MSYS Makefiles" \
+			-DCMAKE_C_FLAGS="$(THIRDPARTY_CFLAGS)" \
 		&& make \
 		&& make install
 
 $(LIBGIT2LIB): libssh2 $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME)
 	cp -f $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME) $(THIRDPARTYINSTALLDIR)
-	install_name_tool -id "@executable_path/Plugins/$(LIBGIT2LIBNAME)" $(LIBGIT2LIB)
-	@echo "Fixing dependency links"
-	install_name_tool -change "$(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME)" "@executable_path/Plugins/$(LIBSSH2LIBNAME)" $(LIBGIT2LIB)
-	@echo "DONE"
 	
 libgit2: $(LIBGIT2LIB)
