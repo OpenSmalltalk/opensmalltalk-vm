@@ -58,7 +58,7 @@
  static usqInt	gHeapSize;
  static  void *startOfmmapForANONMemory,*startOfmmapForImageFile;
  static 	 size_t fileRoundedUpToPageSize,freeSpaceRoundedUpToPageSize;
-#if defined(SQ_HOST64) && defined(SQ_IMAGE32)
+#if SQ_HOST64 && SQ_IMAGE32
 __attribute__ ((visibility("default"))) char * sqMemoryBase=0;
 #endif
 
@@ -123,7 +123,7 @@ sqAllocateMemoryMac(usqInt desiredHeapSize, sqInt minHeapSize, FILE * f,usqInt h
 		 perror("startOfmmapForANONMemory failed");
 		 exit(42);
 	 }
-#if defined(SQ_HOST64) && defined(SQ_IMAGE32)
+#if SQ_HOST64 && SQ_IMAGE32
 		sqMemoryBase= (char*)startOfmmapForImageFile+headersize;
 		return 0;
 #else
@@ -139,7 +139,7 @@ sqAllocateMemoryMac(usqInt desiredHeapSize, sqInt minHeapSize, FILE * f,usqInt h
 		}
 		actually = (char*) debug+pageSize-1;
 		actually = (void*) (((size_t) actually) & pageMask);
-#if defined(SQ_HOST64) && defined(SQ_IMAGE32)
+#if SQ_HOST64 && SQ_IMAGE32
 		sqMemoryBase= actually;
 		return 0;
 #else
