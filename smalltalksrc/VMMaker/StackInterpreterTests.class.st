@@ -5,6 +5,69 @@ Class {
 }
 
 { #category : #tests }
+StackInterpreterTests >> testByteMemoryAccess [
+	"self new testByteMemoryAccess"
+	| om |
+	om := NewCoObjectMemorySimulator new allocateMemoryOfSize: 16.
+	om byteAt: 0 put: 16r11.
+	om byteAt: 1 put: 16r22.
+	om byteAt: 2 put: 16r33.
+	om byteAt: 3 put: 16r44.
+	self assert: (om longAt: 0) equals: 16r44332211.
+	self assert: (om byteAt: 0) equals: 16r11.
+	self assert: (om byteAt: 1) equals: 16r22.
+	self assert: (om byteAt: 2) equals: 16r33.
+	self assert: (om byteAt: 3) equals: 16r44.
+	om := Spur32BitMMLECoSimulator new allocateMemoryOfSize: 16.
+	om byteAt: 0 put: 16r11.
+	om byteAt: 1 put: 16r22.
+	om byteAt: 2 put: 16r33.
+	om byteAt: 3 put: 16r44.
+	self assert: (om longAt: 0) equals: 16r44332211.
+	self assert: (om byteAt: 0) equals: 16r11.
+	self assert: (om byteAt: 1) equals: 16r22.
+	self assert: (om byteAt: 2) equals: 16r33.
+	self assert: (om byteAt: 3) equals: 16r44.
+	om := Spur64BitMMLECoSimulator new allocateMemoryOfSize: 32.
+	om byteAt: 0 put: 16r11.
+	om byteAt: 1 put: 16r22.
+	om byteAt: 2 put: 16r33.
+	om byteAt: 3 put: 16r44.
+	om byteAt: 4 put: 16r55.
+	om byteAt: 5 put: 16r66.
+	om byteAt: 6 put: 16r77.
+	om byteAt: 7 put: 16r88.
+	self assert: (om longAt: 0) equals: 16r8877665544332211.
+	self assert: (om byteAt: 0) equals: 16r11.
+	self assert: (om byteAt: 1) equals: 16r22.
+	self assert: (om byteAt: 2) equals: 16r33.
+	self assert: (om byteAt: 3) equals: 16r44.
+	self assert: (om byteAt: 4) equals: 16r55.
+	self assert: (om byteAt: 5) equals: 16r66.
+	self assert: (om byteAt: 6) equals: 16r77.
+	self assert: (om byteAt: 7) equals: 16r88.
+	(Smalltalk classNamed: #DoubleWordArray) ifNotNil:
+		[om := Spur64BitMMLECoSimulatorFor64Bits new allocateMemoryOfSize: 32.
+		 om byteAt: 0 put: 16r11.
+		 om byteAt: 1 put: 16r22.
+		 om byteAt: 2 put: 16r33.
+		 om byteAt: 3 put: 16r44.
+		 om byteAt: 4 put: 16r55.
+		 om byteAt: 5 put: 16r66.
+		 om byteAt: 6 put: 16r77.
+		 om byteAt: 7 put: 16r88.
+		 self assert: (om longAt: 0) equals: 16r8877665544332211.
+		 self assert: (om byteAt: 0) equals: 16r11.
+		 self assert: (om byteAt: 1) equals: 16r22.
+		 self assert: (om byteAt: 2) equals: 16r33.
+		 self assert: (om byteAt: 3) equals: 16r44.
+		 self assert: (om byteAt: 4) equals: 16r55.
+		 self assert: (om byteAt: 5) equals: 16r66.
+		 self assert: (om byteAt: 6) equals: 16r77.
+		 self assert: (om byteAt: 7) equals: 16r88]
+]
+
+{ #category : #tests }
 StackInterpreterTests >> testImmediateFloats [
 	"self new testImmediateFloats"
 	| vm smm smallFloatOop |
@@ -54,6 +117,45 @@ StackInterpreterTests >> testPointerTaggingDetagging [
 ]
 
 { #category : #tests }
+StackInterpreterTests >> testShortMemoryAccess [
+	"self new testShortMemoryAccess"
+	| om |
+	om := NewCoObjectMemorySimulator new allocateMemoryOfSize: 16.
+	om shortAt: 0 put: 16r2211.
+	om shortAt: 2 put: 16r4433.
+	self assert: (om longAt: 0) equals: 16r44332211.
+	self assert: (om shortAt: 0) equals: 16r2211.
+	self assert: (om shortAt: 2) equals: 16r4433.
+	om := Spur32BitMMLECoSimulator new allocateMemoryOfSize: 16.
+	om shortAt: 0 put: 16r2211.
+	om shortAt: 2 put: 16r4433.
+	self assert: (om longAt: 0) equals: 16r44332211.
+	self assert: (om shortAt: 0) equals: 16r2211.
+	self assert: (om shortAt: 2) equals: 16r4433.
+	om := Spur64BitMMLECoSimulator new allocateMemoryOfSize: 32.
+	om shortAt: 0 put: 16r2211.
+	om shortAt: 2 put: 16r4433.
+	om shortAt: 4 put: 16r6655.
+	om shortAt: 6 put: 16r8877.
+	self assert: (om longAt: 0) equals: 16r8877665544332211.
+	self assert: (om shortAt: 0) equals: 16r2211.
+	self assert: (om shortAt: 2) equals: 16r4433.
+	self assert: (om shortAt: 4) equals: 16r6655.
+	self assert: (om shortAt: 6) equals: 16r8877.
+	(Smalltalk classNamed: #DoubleWordArray) ifNotNil:
+		[om := Spur64BitMMLECoSimulatorFor64Bits new allocateMemoryOfSize: 32.
+		 om shortAt: 0 put: 16r2211.
+		 om shortAt: 2 put: 16r4433.
+		 om shortAt: 4 put: 16r6655.
+		 om shortAt: 6 put: 16r8877.
+		 self assert: (om longAt: 0) equals: 16r8877665544332211.
+		 self assert: (om shortAt: 0) equals: 16r2211.
+		 self assert: (om shortAt: 2) equals: 16r4433.
+		 self assert: (om shortAt: 4) equals: 16r6655.
+		 self assert: (om shortAt: 6) equals: 16r8877]
+]
+
+{ #category : #tests }
 StackInterpreterTests >> testUnalignedMemoryAccess [
 	"self new testUnalignedMemoryAccess"
 	| om |
@@ -90,4 +192,16 @@ StackInterpreterTests >> testUnalignedMemoryAccess [
 	self assert: (om unalignedLongAt: 0) equals: 16r4455667788AAAAAA.
 	self assert: (om unalignedLongAt: 8) equals: 16rAAAAAAAAAA112233.
 	self assert: (om unalignedLongAt: 3) equals: 16r1122334455667788.
+	(Smalltalk classNamed: #DoubleWordArray) ifNotNil:
+		[om := Spur64BitMMLECoSimulatorFor64Bits new allocateMemoryOfSize: 32.
+		 om unalignedLongAt: 3 put: 16r1122334455667788.
+		 self assert: (om unalignedLongAt: 0) equals: 16r4455667788000000.
+		 self assert: (om unalignedLongAt: 8) equals: 16r112233.
+		 self assert: (om unalignedLongAt: 3) equals: 16r1122334455667788.
+		 om longAt: 0 put: 16rAAAAAAAAAAAAAAAA.
+		 om longAt: 8 put: 16rAAAAAAAAAAAAAAAA.
+		 om unalignedLongAt: 3 put: 16r1122334455667788.
+		 self assert: (om unalignedLongAt: 0) equals: 16r4455667788AAAAAA.
+		 self assert: (om unalignedLongAt: 8) equals: 16rAAAAAAAAAA112233.
+		 self assert: (om unalignedLongAt: 3) equals: 16r1122334455667788]
 ]

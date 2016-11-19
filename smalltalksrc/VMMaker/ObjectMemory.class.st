@@ -1707,6 +1707,14 @@ ObjectMemory >> containOnlyOops: array1 and: array2 [
 	^ true
 ]
 
+{ #category : #simulation }
+ObjectMemory >> convertToArray [
+	<doNotGenerate>
+	"I dont believe it -- this *just works*"
+
+	memory:= memory as: Array
+]
+
 { #category : #'image segment in/out' }
 ObjectMemory >> copyObj: oop toSegment: segmentWordArray addr: lastSeg stopAt: stopAddr saveOopAt: oopPtr headerAt: hdrPtr [
 	"Copy this object into the segment beginning at lastSeg.
@@ -6024,4 +6032,18 @@ ObjectMemory >> whereIsMaybeHeapThing: anOop [
 ObjectMemory >> wordSize [
 	"Answer the manager's word size, which is assumed to be equivalent to the underlying machine's word size."
 	^4
+]
+
+{ #category : #simulation }
+ObjectMemory >> writeEnableMemory [
+	<doNotGenerate>
+	memory class == ReadOnlyArrayWrapper ifTrue:
+		[memory := memory array]
+]
+
+{ #category : #simulation }
+ObjectMemory >> writeProtectMemory [
+	<doNotGenerate>
+	memory class ~~ ReadOnlyArrayWrapper ifTrue:
+		[memory := ReadOnlyArrayWrapper around: memory]
 ]
