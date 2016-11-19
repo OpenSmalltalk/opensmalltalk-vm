@@ -188,11 +188,13 @@ StackInterpreterSimulator >> browserPluginReturnIfNeeded [
 
 { #category : #'memory access' }
 StackInterpreterSimulator >> byteAt: byteAddress [
+	self deprecated.
 	^objectMemory byteAt: byteAddress
 ]
 
 { #category : #'memory access' }
 StackInterpreterSimulator >> byteAt: byteAddress put: byte [
+	self deprecated.
 	^objectMemory byteAt: byteAddress put: byte
 ]
 
@@ -341,13 +343,6 @@ StackInterpreterSimulator >> close [  "close any files that ST may have opened"
 StackInterpreterSimulator >> cogit [
 	"We don't have a cogit; try and get by on our own devices."
 	^self
-]
-
-{ #category : #initialization }
-StackInterpreterSimulator >> convertToArray [
-	"I dont believe it -- this *just works*"
-
-	objectMemory memory: (objectMemory memory as: Array)
 ]
 
 { #category : #'I/O primitives support' }
@@ -890,6 +885,7 @@ StackInterpreterSimulator >> insufficientMemorySpecifiedError [
 StackInterpreterSimulator >> integerAt: byteAddress [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 
+	self deprecated.
 	^objectMemory memory integerAt: (byteAddress // 4) + 1
 ]
 
@@ -897,6 +893,7 @@ StackInterpreterSimulator >> integerAt: byteAddress [
 StackInterpreterSimulator >> integerAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 
+	self deprecated.
 	^objectMemory memory integerAt: (byteAddress // 4) + 1 put: a32BitValue
 ]
 
@@ -1402,11 +1399,13 @@ StackInterpreterSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromS
 
 { #category : #'memory access' }
 StackInterpreterSimulator >> longAt: byteAddress [
+	self deprecated.
 	^objectMemory longAt: byteAddress
 ]
 
 { #category : #'memory access' }
 StackInterpreterSimulator >> longAt: byteAddress put: a32BitValue [
+	self deprecated.
 	^objectMemory longAt: byteAddress put: a32BitValue
 ]
 
@@ -1713,15 +1712,11 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 		setHeapBase: heapBase
 		memoryLimit: heapBase + heapSize
 		endOfMemory: heapBase + dataSize. "bogus for Spur"
-	objectMemory memory: ((objectMemory endianness == #little 
-					ifTrue: [LittleEndianBitmap]
-					ifFalse: [Bitmap]) new: objectMemory memoryLimit // 4).
-
+	objectMemory allocateMemoryOfSize: objectMemory memoryLimit.
 	"read in the image in bulk, then swap the bytes if necessary"
 	f position: headerSize.
 	count := objectMemory readHeapFromImageFile: f dataBytes: dataSize.
-	count ~= dataSize ifTrue: [self halt].
-	]
+	count ~= dataSize ifTrue: [self halt]]
 		ensure: [f close].
 
 	self ensureImageFormatIsUpToDate: swapBytes.
@@ -2904,10 +2899,10 @@ StackInterpreterSimulator >> windowColorToUse [
 
 { #category : #'debug printing' }
 StackInterpreterSimulator >> withMemoryProtectionDo: aBlock [
-	self writeProtectMemory.
+	objectMemory writeProtectMemory.
 	stackPages writeProtectMemory.
 	^aBlock ensure:
-		[self writeEnableMemory.
+		[objectMemory writeEnableMemory.
 		 stackPages writeEnableMemory]
 ]
 
@@ -2921,14 +2916,4 @@ StackInterpreterSimulator >> withoutSmallIntegerTags: anInteger [
 				(anInteger bitClear: signBit + 1) - signBit]
 		ifFalse: ["positive"
 				anInteger - 1]
-]
-
-{ #category : #'debug printing' }
-StackInterpreterSimulator >> writeEnableMemory [
-	objectMemory memory: objectMemory memory array
-]
-
-{ #category : #'debug printing' }
-StackInterpreterSimulator >> writeProtectMemory [
-	objectMemory memory: (ReadOnlyArrayWrapper around: objectMemory memory)
 ]

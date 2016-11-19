@@ -424,14 +424,12 @@ CurrentImageCoInterpreterFacade >> indexablePointersFormat [
 
 { #category : #'initialize-release' }
 CurrentImageCoInterpreterFacade >> initialize [
-	memory := (VMBIGENDIAN
-					ifTrue: [Bitmap]
-					ifFalse: [LittleEndianBitmap]) new: 1024*1024/4.
 	objectMemory := self class objectMemoryClass simulatorClass new.
-	objectMemory memory: memory.
+	objectMemory allocateMemoryOfSize: 1024*1024.
 	objectMemory
 		initializeFreeSpaceForFacadeFrom: self startOfMemory
 		to: self variablesBase.
+	memory := objectMemory memory.
 	coInterpreter := CoInterpreter new.
 	coInterpreter
 		instVarNamed: 'objectMemory'

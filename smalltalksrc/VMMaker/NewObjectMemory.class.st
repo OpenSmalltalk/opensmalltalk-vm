@@ -333,6 +333,13 @@ NewObjectMemory >> allocateInterpreterChunk: byteSize [
 	^nil
 ]
 
+{ #category : #simulation }
+NewObjectMemory >> allocateMemoryOfSize: limit [
+	<doNotGenerate>
+	super allocateMemoryOfSize: limit.
+	freeStart := memoryLimit
+]
+
 { #category : #snapshot }
 NewObjectMemory >> baseAddressOfImage [
 	"Answer the base address of the image data written to a sapshot."

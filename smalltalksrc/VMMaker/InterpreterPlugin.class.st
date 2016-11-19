@@ -328,6 +328,12 @@ InterpreterPlugin >> cCoerce: value to: cType [
 	^value
 ]
 
+{ #category : #simulation }
+InterpreterPlugin >> cCoerceSimple: value to: cType [
+	"Coercion without type mapping.  Don't even bother to check for valid types..."
+	^value
+]
+
 { #category : #'simulation support' }
 InterpreterPlugin >> doesNotUnderstand: aMessage [
 	<doNotGenerate>

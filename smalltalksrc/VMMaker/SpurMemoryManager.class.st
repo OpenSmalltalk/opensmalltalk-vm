@@ -993,6 +993,11 @@ SpurMemoryManager class >> requiredMethodNames: options [
 ]
 
 { #category : #'simulation only' }
+SpurMemoryManager class >> simulatorClass [
+	^self subclassResponsibility
+]
+
+{ #category : #'simulation only' }
 SpurMemoryManager class >> vmProxyMajorVersion [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^StackInterpreter vmProxyMajorVersion
@@ -1748,11 +1753,11 @@ SpurMemoryManager >> allocateLargestFreeChunk [
 ]
 
 { #category : #testing }
-SpurMemoryManager >> allocateMemoryOfSize: limit [
+SpurMemoryManager >> allocateMemoryOfSize: memoryBytes [
 	<doNotGenerate>
-	memory := (self endianness == #little
-					ifTrue: [LittleEndianBitmap]
-					ifFalse: [Bitmap]) new: limit // 4
+	| bytesPerElement |
+	bytesPerElement := (self memoryClass basicNew: 0) bytesPerElement.
+	memory := self memoryClass new: memoryBytes + bytesPerElement - 1 // bytesPerElement
 ]
 
 { #category : #'spur bootstrap' }
@@ -1765,15 +1770,13 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 	self assert: (memoryBytes \\ self allocationUnit = 0
 				and: [newSpaceBytes \\ self allocationUnit = 0
 				and: [codeBytes \\ self allocationUnit = 0]]).
-	memory := (self endianness == #little
-					ifTrue: [LittleEndianBitmap]
-					ifFalse: [Bitmap]) new: (memoryBytes + newSpaceBytes + codeBytes + stackBytes) // 4.
+	self allocateMemoryOfSize: memoryBytes + newSpaceBytes + codeBytes + stackBytes.
 	newSpaceStart := codeBytes + stackBytes.
 	endOfMemory := freeOldSpaceStart := memoryBytes + newSpaceBytes + codeBytes + stackBytes.
 	"leave newSpace empty for the bootstrap"
 	freeStart := newSpaceBytes + newSpaceStart.
 	oldSpaceStart := newSpaceLimit := newSpaceBytes + newSpaceStart.
-	scavengeThreshold := memory size * 4. "Bitmap is a 4-byte per word array"
+	scavengeThreshold := memory size * memory bytesPerElement. "i.e. /don't/ scavenge."
 	scavenger := SpurGenerationScavengerSimulator new.
 	scavenger manager: self.
 	scavenger newSpaceStart: newSpaceStart
@@ -3843,6 +3846,14 @@ SpurMemoryManager >> containsOnlyValidBecomeObjects: array1 and: array2 twoWay: 
 	"only set flags after checking all args."
 	becomeEffectsFlags := effectsFlags.
 	^0
+]
+
+{ #category : #simulation }
+SpurMemoryManager >> convertToArray [
+	<doNotGenerate>
+	"I dont believe it -- this *just works*"
+
+	memory:= memory as: Array
 ]
 
 { #category : #compaction }
@@ -8206,6 +8217,14 @@ SpurMemoryManager >> memoryBaseForImageRead [
 	^oldSpaceStart
 ]
 
+{ #category : #simulation }
+SpurMemoryManager >> memoryClass [
+	"Answer the class to use for the memory inst var in simulation.
+	 Answer nil if a suitable class isn't available."
+	<doNotGenerate>
+	^self subclassResponsibility
+]
+
 { #category : #snapshot }
 SpurMemoryManager >> memoryLimit [
 	^endOfMemory
@@ -9413,6 +9432,20 @@ SpurMemoryManager >> positive64BitValueOf: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
 	^coInterpreter positive64BitValueOf: oop
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> positiveMachineIntegerFor: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter positiveMachineIntegerFor: integerValue
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> positiveMachineIntegerValueOf: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter positiveMachineIntegerValueOf: integerValue
 ]
 
 { #category : #'store check' }
@@ -11038,13 +11071,14 @@ SpurMemoryManager >> sqAllocateMemorySegmentOfSize: segmentSize Above: minAddres
 	 depending on the number of segments.
 	 The delta will be the distance between segments to be bridged."
 	| delta newMemory start |
+	self assert: segmentSize \\ memory bytesPerElement = 0.
 	delta := segmentManager numSegments odd ifTrue: [1024 * 1024] ifFalse: [0].
 	"A previous shrink may have freed up memory.  Don't bother to grow if there's already room."
-	segmentManager lastSegment segLimit + segmentSize + delta <= (memory size * 4) ifTrue:
+	segmentManager lastSegment segLimit + segmentSize + delta <= (memory size * memory bytesPerElement) ifTrue:
 		[allocSizePtrOrBlock value: segmentSize.
 		 ^minAddress + delta].
-	start := memory size * 4 + delta.
-	newMemory := memory class new: memory size + (segmentSize + delta / 4).
+	start := memory size * memory bytesPerElement + delta.
+	newMemory := memory class new: memory size + (segmentSize + delta / memory bytesPerElement).
 	newMemory replaceFrom: 1 to: memory size with: memory startingAt: 1.
 	memory := newMemory.
 	allocSizePtrOrBlock value: segmentSize.
@@ -12203,8 +12237,22 @@ SpurMemoryManager >> wordSizeClassIndexPun [
 	^self subclassResponsibility
 ]
 
+{ #category : #simulation }
+SpurMemoryManager >> writeEnableMemory [
+	<doNotGenerate>
+	memory class == ReadOnlyArrayWrapper ifTrue:
+		[memory := memory array]
+]
+
 { #category : #snapshot }
 SpurMemoryManager >> writeImageSegmentsToFile: aBinaryStream [
 	<doNotGenerate>
 	^segmentManager writeImageSegmentsToFile: aBinaryStream
+]
+
+{ #category : #simulation }
+SpurMemoryManager >> writeProtectMemory [
+	<doNotGenerate>
+	memory class ~~ ReadOnlyArrayWrapper ifTrue:
+		[memory := ReadOnlyArrayWrapper around: memory]
 ]
