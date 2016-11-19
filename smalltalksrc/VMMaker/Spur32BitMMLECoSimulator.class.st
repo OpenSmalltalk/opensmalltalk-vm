@@ -21,30 +21,21 @@ Spur32BitMMLECoSimulator >> bootstrapping: aBoolean [
 
 { #category : #'memory access' }
 Spur32BitMMLECoSimulator >> byteAt: byteAddress [
-	| lowBits long |
+	| lowBits long32 |
 	lowBits := byteAddress bitAnd: 3.
-	long := self longAt: byteAddress - lowBits.
-	^(lowBits caseOf: {
-		[0] -> [ long ].
-		[1] -> [ long bitShift: -8  ].
-		[2] -> [ long bitShift: -16 ].
-		[3] -> [ long bitShift: -24 ]
-	}) bitAnd: 16rFF
+	long32 := self long32At: byteAddress - lowBits.
+	^(long32 bitShift: -8 * lowBits) bitAnd: 16rFF
 ]
 
 { #category : #'memory access' }
 Spur32BitMMLECoSimulator >> byteAt: byteAddress put: byte [
-	| lowBits long longAddress |
+	| lowBits long32 longAddress mask value |
 	lowBits := byteAddress bitAnd: 3.
 	longAddress := byteAddress - lowBits.
-	long := self longAt: longAddress.
-	long := (lowBits caseOf: {
-		[0] -> [ (long bitAnd: 16rFFFFFF00) bitOr: byte ].
-		[1] -> [ (long bitAnd: 16rFFFF00FF) bitOr: (byte bitShift: 8) ].
-		[2] -> [ (long bitAnd: 16rFF00FFFF) bitOr: (byte bitShift: 16)  ].
-		[3] -> [ (long bitAnd: 16r00FFFFFF) bitOr: (byte bitShift: 24)  ]
-	}).
-	self longAt: longAddress put: long.
+	long32 := self long32At: longAddress.
+	mask := (16rFF bitShift: 8 * lowBits) bitInvert.
+	value := byte bitShift: 8 * lowBits.
+	self long32At: longAddress put: ((long32 bitAnd: mask) bitOr: value).
 	^byte
 ]
 

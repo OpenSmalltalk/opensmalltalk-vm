@@ -205,13 +205,6 @@ InterpreterSimulator >> commonSend [
 	^super commonSend
 ]
 
-{ #category : #initialization }
-InterpreterSimulator >> convertToArray [
-	"I dont believe it -- this *just works*"
-	
-	memory := memory as: Array
-]
-
 { #category : #'I/O primitives support' }
 InterpreterSimulator >> copyBits [
 
