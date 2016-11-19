@@ -1100,7 +1100,6 @@ isCFramePointerInUse()
 	extern void (*ceCaptureCStackPointers)(void);
 	unsigned long currentCSP = CStackPointer;
 
-	currentCSP = CStackPointer;
 	ceCaptureCStackPointers();
 	assert(CStackPointer < currentCSP);
 	return CFramePointer >= CStackPointer && CFramePointer <= currentCSP;
