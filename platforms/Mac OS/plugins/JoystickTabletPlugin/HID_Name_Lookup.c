@@ -154,7 +154,7 @@ static Boolean xml_search_cookie(const long pVendorID, const long pProductID, co
 static Boolean xml_search_usage(const long pVendorID, const long pProductID, const long pUsagePage, const long pUsage, char* pCstr)
 {
 	static CFPropertyListRef tCFPropertyListRef = NULL;
-	Boolean results = false;
+	Boolean results = false, didAllocateVendorCFStringRef = false;
 
 	if (NULL == tCFPropertyListRef)
 		tCFPropertyListRef = xml_load(CFSTR("HID_device_usage_strings"), CFSTR("plist"));
@@ -175,6 +175,7 @@ static Boolean xml_search_usage(const long pVendorID, const long pProductID, con
 				if (!CFDictionaryGetValueIfPresent(vendorCFDictionaryRef, CFSTR("Name"), (const void**) &vendorCFStringRef))
 				{
 					vendorCFStringRef = CFStringCreateWithFormat(kCFAllocatorDefault, NULL, CFSTR("v: %ld"), pVendorID);
+                    didAllocateVendorCFStringRef = true;
 					//CFShow(vendorCFStringRef);
 				}
 				productKeyCFStringRef = CFStringCreateWithFormat(kCFAllocatorDefault, NULL, CFSTR("%ld"), pProductID);
@@ -214,6 +215,8 @@ static Boolean xml_search_usage(const long pVendorID, const long pProductID, con
 					}
 					CFRelease(usageKeyCFStringRef);
 				}
+                if(didAllocateVendorCFStringRef)
+                    CFRelease(vendorCFStringRef);
 				CFRelease(productKeyCFStringRef);
 			}
 			CFRelease(vendorKeyCFStringRef);
