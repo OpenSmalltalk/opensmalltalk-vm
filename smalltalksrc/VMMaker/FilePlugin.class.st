@@ -681,7 +681,7 @@ FilePlugin >> primitiveFileReadWithPinning [
 
 	"Note: adjust startIndex for zero-origin byte indexing"
 	elementSize := slotSize = 0
-						ifTrue: [0]
+						ifTrue: [1]
 						ifFalse: [(interpreterProxy byteSizeOf: array) // slotSize].
 	bytesRead := self
 					sqFile: file
@@ -896,7 +896,7 @@ FilePlugin >> primitiveFileWrite [
 
 	"Note: adjust startIndex for zero-origin byte indexing"
 	elementSize := slotSize = 0
-						ifTrue: [0]
+						ifTrue: [1]
 						ifFalse: [(interpreterProxy byteSizeOf: array) // slotSize].
 	bytesWritten := self
 						sqFile: file
