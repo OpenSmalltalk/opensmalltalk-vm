@@ -375,7 +375,7 @@ static long
 strtobkm(const char *str)
 {
   char *suffix;
-  int value= strtol(str, &suffix, 10);
+  long value= strtol(str, &suffix, 10);
   switch (*suffix)
     {
     case 'k': case 'K':
