@@ -89,11 +89,12 @@ RegisterAllocatingCogit >> flushLiveRegistersForCRunTimeCall [
 ]
 
 { #category : #'bytecode generator support' }
-RegisterAllocatingCogit >> flushLiveRegistersForSend [
+RegisterAllocatingCogit >> flushLiveRegistersForSend: numArgs [
 	<inline: true>
-	0 to: simStackPtr do:
+	simSelf liveRegister: NoReg.
+	0 to: simStackPtr - numArgs - 1 do:
 		[:i|
-		 self assert: (self simStackAt: i) type = (i <= methodOrBlockNumTemps
+		 self assert: (self simStackAt: i) type = (i < methodOrBlockNumTemps
 													ifTrue: [SSBaseOffset]
 													ifFalse: [SSSpill]).
 		 (self simStackAt: i) liveRegister: NoReg]
@@ -109,7 +110,7 @@ RegisterAllocatingCogit >> genJumpTo: targetBytecodePC [
 
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> genMarshalledSend: selectorIndex numArgs: numArgs sendTable: sendTable [
-	self flushLiveRegistersForSend.
+	self flushLiveRegistersForSend: numArgs.
 	^super genMarshalledSend: selectorIndex numArgs: numArgs sendTable: sendTable
 ]
 
@@ -260,22 +261,24 @@ RegisterAllocatingCogit >> moveSimStackConstantsToRegisters [
 { #category : #'simulation stack' }
 RegisterAllocatingCogit >> restoreSimStackAtMergePoint: fixup [
 	<inline: true>
-	"All the execution paths reaching a merge point expect everything to be
-	spilled on stack and the optStatus is unknown. Throw away all simStack and 
-	optStatus optimization state."
-	simSpillBase := methodOrBlockNumTemps.
-	optStatus isReceiverResultRegLive: false.
-	0 to: simStackPtr do:
-		[:i|
-		self cCode: [simStack at: i put: (fixup mergeSimStack at: i)]
-			inSmalltalk: [(simStack at: i) copyFrom: (fixup mergeSimStack at: i)]].
-	^ 0
+	"All the execution paths reaching a merge point expect everything to be spilled
+	 on stack and the optStatus is unknown.  If the merge point follows a return, it
+	 isn't a merge, but a sdkip past a return.  If it is a real merge point then throw
+	 away all simStack and optStatus optimization state."
+	fixup mergeSimStack ifNotNil:
+		[simSpillBase := methodOrBlockNumTemps.
+		 optStatus isReceiverResultRegLive: false.
+		 0 to: simStackPtr do:
+			[:i|
+			self cCode: [simStack at: i put: (fixup mergeSimStack at: i)]
+				inSmalltalk: [(simStack at: i) copyFrom: (fixup mergeSimStack at: i)]]].
+	^0
 ]
 
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> setMergeSimStackOf: fixup [
 	<var: #fixup type: #'BytecodeFixup *'>
-	self assert: nextFixup < numFixups.
+	self assert: nextFixup <= numFixups.
 	self moveSimStackConstantsToRegisters.
 	self cCode: [fixup mergeSimStack: mergeSimStacksBase + (nextFixup * self simStackSlots * (self sizeof: CogSimStackEntry))].
 	nextFixup := nextFixup + 1.
