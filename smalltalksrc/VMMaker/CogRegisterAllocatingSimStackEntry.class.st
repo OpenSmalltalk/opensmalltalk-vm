@@ -85,7 +85,7 @@ CogRegisterAllocatingSimStackEntry >> printStateOn: aStream [
 							aStream print: offset].
 		[SSConstant]	-> [aStream
 								nextPutAll: 'const ';
-								print: constant].
+								nextPutAll: (cogit coInterpreter shortPrint: constant)].
 		[SSRegister]	-> [aStream
 								nextPutAll: 'reg ';
 								nextPutAll: (cogit backEnd nameForRegister: register)].
