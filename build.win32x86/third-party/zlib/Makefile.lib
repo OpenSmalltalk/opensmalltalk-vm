@@ -15,7 +15,7 @@ EXTRALIBS:=$(EXTRALIBS) $(ZLIBLIB)
 PLUGINREQS:=$(THIRDPARTYLIBS)
 	
 $(ZLIBARCHIVE): 
-	wget -q -O $(ZLIBARCHIVE) $(ZLIBURL) 
+	$(WGET) -O $(ZLIBARCHIVE) $(ZLIBURL) 
 
 # IMPORTANT: the copy to libz.dll is because libssh2.dll config tries to load a "libz.dll" no 
 # matters the real name :(

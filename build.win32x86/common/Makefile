@@ -11,6 +11,9 @@
 # CONFIGURATION configuration of VM to build from product, assert & debug
 # THREADING whether to build a multi-threaded FFI VM
 
+.PHONY: all
+all: default
+
 VM?=Squeak
 VM_NAME?=$(VM)
 CONFIGURATION=product
@@ -72,6 +75,14 @@ LIBS:= $(addprefix $(OBJDIR)/, $(addsuffix .lib, $(INTERNAL_PLUGINS)))
 DLLS:= $(addprefix $(OBJDIR)/, $(addsuffix .dll, $(EXTERNAL_PLUGINS)))
 
 #############################################################################
+# The third-party libraries
+#
+ifneq ($(THIRDPARTYLIBS),)
+include ../common/Makefile.lib.extra
+THIRDPARTYPREREQS:=$(THIRDPARTYCACHEDIR) $(THIRDPARTYOUTDIR) 
+endif
+
+#############################################################################
 # Generic VM source file definitions
 #
 VMOBJ:=	$(VMSRC:.c=.o)
@@ -101,7 +112,6 @@ VMDEFIN:=$(VM).def.in
 BTOBJ:= $(OBJDIR)/btext.o
 ETOBJ:= $(OBJDIR)/etext.o
 
-
 .PRECIOUS: mkNamedPrims.exe
 
 #############################################################################
@@ -119,11 +129,10 @@ INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 .SUFFIXES:
 .SUFFIXES:	.ccg .cc .c .o .s .i .rc .res .cg .hg .ccg .cpp
 
-
-
 #############################################################################
 # Common build rules
 #
+	
 default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE) nukelibs
 
 svnver:
@@ -148,7 +157,7 @@ debug:
 	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug THREADING=single $(@,debug=) default
 
 # Do make init to allow make -n to function.
-init:	$(OBJDIR) mkNamedPrims.exe
+init: $(THIRDPARTYPREREQS) $(OBJDIR) mkNamedPrims.exe
 
 cleanall:	clean cleanmt cleanast cleanmtast cleandbg cleanmtdbg
 
@@ -206,11 +215,7 @@ $(ETOBJ):	$(WIN32MISCDIR)/etext.c
 
 vm:	$(VMEXE)
 
-ifneq ($(THIRDPARTYLIBS),) 
-THIRDPARTYPREREQS:=$(THIRDPARTYINSTALLDIR) $(THIRDPARTYOUTDIR) $(THIRDPARTYCACHEDIR)
-endif
-
-$(VMEXE): $(OBJDIR) $(THIRDPARTYPREREQS) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
+$(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
 	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -o $(VMEXE) \
 			$(BTOBJ) $(VMOBJ) $(VMEXP) $(OBJDIR)/resource.o $(LIBS) $(STDLIBS) $(ETOBJ)

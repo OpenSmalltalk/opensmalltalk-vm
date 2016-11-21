@@ -1,14 +1,11 @@
-# 
+	# 
 # THIRDPARTYLIBS			The libraries to build (you define them in ./third-party/LIB/Makefile.lib)
 # THIRDPARTYDIR				Where to build libraries
 # THIRDPARTYOUTDIR 			Where to first install libraries (output place)
 # THIRDPARTYCACHEDIR 		Where to download thirdparty libraries
 # 
-# REQUIRES: 
-#   USEPLUGINASDYLIB 		Used to define where to place built libraries (default is FALSE (or absent)). 
-# 
 
-THIRDPARTYDIR?=$(BUILD)
+THIRDPARTYDIR?=$(BUILD)/third-party
 #windows installs dlls in bin dir
 THIRDPARTYLIBDIR?=$(THIRDPARTYOUTDIR)/bin
 THIRDPARTYINCLUDEDIR?=$(THIRDPARTYOUTDIR)/include
@@ -17,6 +14,7 @@ THIRDPARTYOUTDIR?=$(abspath $(THIRDPARTYCACHEDIR)/windows/i386)
 THIRDPARTYINSTALLDIR?=$(BUILD)/vm
 THIRDPARTY_CFLAGS?=-m32 -static-libgcc -static-libstdc++
 THIRDPARTY_LDFLAGS?=-m32 -static-libgcc -static-libstdc++
+WGET?=wget -q --no-check-certificate 
 
 
 $(THIRDPARTYDIR):

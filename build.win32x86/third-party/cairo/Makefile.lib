@@ -15,7 +15,7 @@ EXTRALIBS:=$(EXTRALIBS) $(CAIROLIB)
 PLUGINREQS:=$(THIRDPARTYLIBS)
 
 $(CAIROARCHIVE): 
-	wget -q -O $(CAIROARCHIVE) $(CAIROURL) 
+	$(WGET) -O $(CAIROARCHIVE) $(CAIROURL) 
 
 # IMPORTANT: This hack of "echo..." is needed to properly compile cairo. 
 # this is a long time error reported by Igor a lot of time ago: 
