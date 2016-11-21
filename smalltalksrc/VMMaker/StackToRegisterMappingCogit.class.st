@@ -13204,7 +13204,7 @@ StackToRegisterMappingCogit >> traceDescriptor: descriptor [
 StackToRegisterMappingCogit >> traceFixup: fixup [
 	<cmacro: '(ign) 0'>
 	| index |
-	(compilationTrace anyMask: 8) ifTrue:
+	(compilationTrace anyMask: 32) ifTrue:
 		[index := (fixups object identityIndexOf: fixup) - 1.
 		 coInterpreter transcript
 			ensureCr;
@@ -13218,7 +13218,7 @@ StackToRegisterMappingCogit >> traceFixup: fixup [
 StackToRegisterMappingCogit >> traceMerge: fixup [
 	<cmacro: '(ign) 0'>
 	| index |
-	(compilationTrace anyMask: 4) ifTrue:
+	(compilationTrace anyMask: 16) ifTrue:
 		[index := (fixups object identityIndexOf: fixup) - 1.
 		 coInterpreter transcript
 			ensureCr;
@@ -13231,14 +13231,14 @@ StackToRegisterMappingCogit >> traceMerge: fixup [
 { #category : #'simulation only' }
 StackToRegisterMappingCogit >> traceSimStack [
 	<cmacro: '() 0'>
-	(compilationTrace anyMask: 1) ifTrue:
+	(compilationTrace anyMask: 4) ifTrue:
 		[self printSimStack]
 ]
 
 { #category : #'simulation only' }
 StackToRegisterMappingCogit >> traceSpill: simStackEntry [
 	<cmacro: '(ign) 0'>
-	(compilationTrace anyMask: 2) ifTrue:
+	(compilationTrace anyMask: 8) ifTrue:
 		[coInterpreter transcript cr; print: bytecodePC; space; print: simStackEntry; flush]
 ]
 
