@@ -14,6 +14,8 @@
 #ifndef SQ_FFI_H
 #define SQ_FFI_H
 
+#include "sqMemoryAccess.h"
+
 /* What follows is the old FFI API when spread across several marshalling files.
  * With the ThreadedFFIPlugin all marshalling is in a single generated plugin
  * and so the following API is not wanted.
@@ -81,7 +83,7 @@ int ffiCleanup(void);
 
 /* Allocate/free external memory */
 int ffiAlloc(int byteSize);
-int ffiFree(int ptr);
+int ffiFree(sqIntptr_t ptr);
 
 /* general <=32bit integer loads */
 int ffiPushSignedByte(int value);
