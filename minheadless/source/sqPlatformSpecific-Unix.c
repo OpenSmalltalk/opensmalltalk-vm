@@ -18,8 +18,6 @@
 #include "config.h"
 #include "debug.h"
 
-#include "sqUnixMemory.c"
-#include "sqUnixSpurMemory.c"
 #include "sqPlatformSpecific-NullWindow.c"
 
 #if !defined(min)
@@ -114,11 +112,6 @@ osCogStackPageHeadroom()
 }
 #endif /* COGVM */
 
-sqInt amInVMThread(void)
-{
-    return false;
-}
-
 /* Time */
 void ioInitTime(void)
 {
@@ -187,8 +180,55 @@ sqLong ioHighResClock(void)
   ioFilenamefromStringofLengthresolveAliases. Most platforms can ignore the
   resolveAlias boolean - it seems to only be of use by OSX but is crucial there.
 */
-sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filenameLength, sqInt aBoolean)
+sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filenameLength, sqInt resolveAlias)
 {
+    int numLinks= 0;
+    struct stat st;
+
+    memcpy(aCharBuffer, aFilenameString, filenameLength);
+    aCharBuffer[filenameLength]= 0;
+
+    if (resolveAlias)
+    {
+        for (;;)	/* aCharBuffer might refer to link or alias */
+        {
+            if (!lstat(aCharBuffer, &st) && S_ISLNK(st.st_mode))	/* symlink */
+            {
+                char linkbuf[PATH_MAX+1];
+                if (++numLinks > MAXSYMLINKS)
+                    return -1;	/* too many levels of indirection */
+
+	            filenameLength= readlink(aCharBuffer, linkbuf, PATH_MAX);
+	            if ((filenameLength < 0) || (filenameLength >= PATH_MAX))
+                    return -1;	/* link unavailable or path too long */
+
+	            linkbuf[filenameLength]= 0;
+
+	            if (filenameLength > 0 && *linkbuf == '/') /* absolute */
+	               strcpy(aCharBuffer, linkbuf);
+	            else {
+                    char *lastSeparator = strrchr(aCharBuffer,'/');
+                    char *append = lastSeparator ? lastSeparator + 1 : aCharBuffer;
+                    if (append - aCharBuffer + strlen(linkbuf) > PATH_MAX)
+                        return -1; /* path too long */
+                    strcpy(append,linkbuf);
+	            }
+                continue;
+            }
+
+#    if defined(DARWIN)
+            if (isMacAlias(aCharBuffer))
+            {
+                if ((++numLinks > MAXSYMLINKS) || !resolveMacAlias(aCharBuffer, aCharBuffer, PATH_MAX))
+                    return -1;		/* too many levels or bad alias */
+                continue;
+            }
+#    endif
+
+	        break;			/* target is no longer a symlink or alias */
+        }
+    }
+
     return 0;
 }
 
@@ -207,27 +247,7 @@ sqInt ioExitWithErrorCode(int errorCode)
     exit(errorCode);
 }
 
-sqInt crashInThisOrAnotherThread(sqInt flags)
-{
-    abort();
-}
-
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
-{
-    return 0;
-}
-
-double ioScreenScaleFactor(void)
-{
-    return 4.0/3.0;
-}
-
-sqInt ioScreenSize(void)
-{
-    return 0;
-}
-
-sqInt ioScreenDepth(void)
 {
     return 0;
 }
@@ -306,11 +326,6 @@ sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
     return 0;
-}
-
-/* Threads*/
-void ioInitThreads(void)
-{
 }
 
 /* Asychronous IO */

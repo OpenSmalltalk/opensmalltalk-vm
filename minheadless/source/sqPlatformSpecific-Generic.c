@@ -98,6 +98,7 @@ sqLong ioHighResClock(void)
 */
 sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filenameLength, sqInt aBoolean)
 {
+    memcpy(aCharBuffer, aFilenameString, filenameLength);
     return 0;
 }
 
@@ -122,21 +123,6 @@ sqInt crashInThisOrAnotherThread(sqInt flags)
 }
 
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
-{
-    return 0;
-}
-
-double ioScreenScaleFactor(void)
-{
-    return 4.0/3.0;
-}
-
-sqInt ioScreenSize(void)
-{
-    return 0;
-}
-
-sqInt ioScreenDepth(void)
 {
     return 0;
 }

@@ -111,3 +111,18 @@ sqInt ioProcessEvents(void)
 {
     return 0;
 }
+
+double ioScreenScaleFactor(void)
+{
+    return 4.0/3.0;
+}
+
+sqInt ioScreenSize(void)
+{
+    return 0;
+}
+
+sqInt ioScreenDepth(void)
+{
+    return 0;
+}

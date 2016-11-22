@@ -30,6 +30,11 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 
+#include "sq.h"
+#include "sqMemoryAccess.h"
+#include "config.h"
+#include "debug.h"
+
 #if SPURVM
 
 /* Spur uses a segmented heap; it can add or remove segments, provided they

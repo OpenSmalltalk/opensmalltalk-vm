@@ -347,8 +347,7 @@ int main(int argc, char *argv[], char *envp[])
     aioInit();
     imgInit();
 
-    /* run Squeak */
-    printf("Running interpreter\n");
+    /* Run Squeak */
     interpret();
 
     return 0;

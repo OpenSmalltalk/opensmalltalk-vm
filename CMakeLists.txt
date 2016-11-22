@@ -168,8 +168,13 @@ set(VM_PLATFORM_SOURCES
 if(UNIX)
 set(VM_PLATFORM_SOURCES
 	minheadless/source/sqUnixCharConv.c
+	minheadless/source/sqUnixSpurMemory.c
+	minheadless/source/sqUnixMemory.c
+	minheadless/source/sqUnixThreads.c
 	${VM_PLATFORM_SOURCES}
 )
+
+set(VM_DEPENDENCIES_LIBRARIES pthread ${VM_DEPENDENCIES_LIBRARIES})
 endif()
 
 set(VM_SOURCES
@@ -188,5 +193,5 @@ target_compile_definitions(OpenSmalltalkVMInternalPlugins PRIVATE
 	-DSQUEAK_BUILTIN_PLUGIN
 )
 
-add_executable(OpenSmalltalkVM ${VM_SOURCES} minheadless/source/sqMain.c)
-target_link_libraries(OpenSmalltalkVM OpenSmalltalkVMCore OpenSmalltalkVMInternalPlugins ${VM_DEPENDENCIES_LIBRARIES})
+add_executable(squeak ${VM_SOURCES} minheadless/source/sqMain.c)
+target_link_libraries(squeak OpenSmalltalkVMCore OpenSmalltalkVMInternalPlugins ${VM_DEPENDENCIES_LIBRARIES})

@@ -34,6 +34,11 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 
+#include "sq.h"
+#include "sqMemoryAccess.h"
+#include "config.h"
+#include "debug.h"
+
 #if !SPURVM /* Spur uses sqUnixSpurMemory.c */
 void *uxAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize);
 
