@@ -31,4 +31,4 @@ deps/%.d: ;
 
 .PRECIOUS: deps/%.d
 
--include $(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC))))
+-include $(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC) $(LIBSRC))))

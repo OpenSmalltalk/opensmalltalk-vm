@@ -9,12 +9,10 @@
 # 
 
 THIRDPARTYDIR?=$(BLDDIR)
-THIRDPARTYOUTDIR?=$(abspath $(THIRDPARTYDIR)/../out)
 THIRDPARTYLIBDIR?=$(THIRDPARTYOUTDIR)/lib
 THIRDPARTYINCLUDEDIR?=$(THIRDPARTYOUTDIR)/include
 THIRDPARTYCACHEDIR?=../../../.thirdparty-cache
-
-#THIRDPARTYINSTALLDIR:=$(BLDDIR)/third-party
+THIRDPARTYOUTDIR?=$(abspath ../../../.thirdparty-cache/linux/x86_64)
 
 $(THIRDPARTYDIR):
 	if [ ! -d $(THIRDPARTYDIR) ]; then mkdir -p $(THIRDPARTYDIR); fi

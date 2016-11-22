@@ -442,7 +442,7 @@ static DWORD WINAPI readWatcherThread(privateSocketStruct *pss)
 {
   struct timeval tv= { 1000, 0 }; /* Timeout value == 1000 sec */
   fd_set fds;
-  int n, doWait, sema;
+  int n, doWait;
 
   while(1) {
     doWait = 1;

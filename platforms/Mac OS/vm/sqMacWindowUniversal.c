@@ -947,7 +947,7 @@ ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX,
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;
 	biggerCursorActive = false;
 
-	if (cursorMaskIndex == nil) {
+	if (cursorMaskIndex == 0) {
 		for (i = 0; i < 16; i++) {
 			macCursor.data[i] = CFSwapInt16BigToHost((short)(checkedLongAt(cursorBitsIndex + (4 * i)) >> 16)) & 0xFFFF;
 			macCursor.mask[i] = CFSwapInt16BigToHost((short)(checkedLongAt(cursorBitsIndex + (4 * i)) >> 16)) & 0xFFFF;
@@ -1139,7 +1139,7 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 	//						(bounds are greater/equal or kMaximizeRes not set) and
 	//						(depth is less/equal or kShallowDepth not set) and
 	//						(request match or kAbsoluteRequest not set)
-	if	(	nil == requestRecPtr->displayMode
+	if	(	0 == requestRecPtr->displayMode
 			&&
 			(	(horizontal >= requestRecPtr->reqHorizontal &&
 				vertical >= requestRecPtr->reqVertical)
@@ -1197,10 +1197,10 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 		else
 		{
 			// match resolution: minimize Æh & Æv
-			if	(	abs((requestRecPtr->reqHorizontal - horizontal)) <=
-					abs((requestRecPtr->reqHorizontal - requestRecPtr->availHorizontal)) &&
-					abs((requestRecPtr->reqVertical - vertical)) <=
-					abs((requestRecPtr->reqVertical - requestRecPtr->availVertical))
+			if	(	labs((long)(requestRecPtr->reqHorizontal - horizontal)) <=
+					labs((long)(requestRecPtr->reqHorizontal - requestRecPtr->availHorizontal)) &&
+					labs((long)(requestRecPtr->reqVertical - vertical)) <=
+					labs((long)(requestRecPtr->reqVertical - requestRecPtr->availVertical))
 				)
 			{
 				// now we have a smaller or equal delta

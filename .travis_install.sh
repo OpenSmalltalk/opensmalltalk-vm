@@ -1,5 +1,37 @@
 set -e
 
+if [[ "${ARCH}" = "linux64x64" ]]; then
+    sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-yes \
+            debhelper \
+            devscripts \
+            libasound2-dev \
+            libssl-dev \
+            libfreetype6-dev \
+            libx11-dev \
+            libxext-dev \
+            gcc-multilib \
+            uuid-dev
+elif [[ "${ARCH}" = "linux32x86" ]]; then
+    sudo apt-get remove -q -y gvfs-daemons
+    sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-yes \
+            devscripts \
+            libc6-dev:i386 \
+            libasound2:i386 \
+            libasound2-dev:i386 \
+            libssl-dev:i386 \
+            libssl0.9.8:i386 \
+            libfreetype6-dev:i386 \
+            libx11-dev:i386 \
+            libsm-dev:i386 \
+            libice-dev:i386 \
+            libgl1-mesa-glx:i386 \
+            libgl1-mesa-dev:i386 \
+            libxext-dev:i386 \
+            libglapi-mesa:i386 \
+            gcc-multilib \
+            uuid-dev:i386
+fi
+
 [[ "${ARCH}" != "linux32ARMv6" ]] && exit 0
 
 MIRROR=http://archive.raspbian.org/raspbian

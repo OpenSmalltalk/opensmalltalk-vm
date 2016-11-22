@@ -28,14 +28,18 @@
 
 #if (SQ_VI_BYTES_PER_WORD == 4)
 # define SQ_IMAGE32 1
+# define SQ_IMAGE64 0
 #else
 # define SQ_IMAGE64 1
+# define SQ_IMAGE32 0
 #endif
 
 #if (SQ_IMAGE64 || SPURVM)
+# define OBJECTS_64BIT_ALIGNED 1
 # define OBJECTS_32BIT_ALIGNED 0
 #else
 # define OBJECTS_32BIT_ALIGNED 1
+# define OBJECTS_64BIT_ALIGNED 0
 #endif
 
 #if (SIZEOF_VOID_P == 4)
@@ -51,7 +55,7 @@
   we could use C99 int32_t and int64_t once retiring legacy compiler support this time has not yet come
   usqInt is the unsigned flavour
   SQABS is a macro for taking absolute value of an sqInt */
-#if defined(SQ_IMAGE32)
+#if SQ_IMAGE32
   typedef int		sqInt;
   typedef unsigned int	usqInt;
 #define PRIdSQINT "d"
@@ -59,7 +63,7 @@
 #define PRIxSQINT "x"
 #define PRIXSQINT "X"
 # define SQABS abs
-#elif defined(SQ_HOST64) && (SIZEOF_LONG == 8)
+#elif SQ_HOST64 && (SIZEOF_LONG == 8)
   typedef long		sqInt;
   typedef unsigned long	usqInt;
 #define PRIdSQINT "ld"
@@ -118,7 +122,7 @@ typedef unsigned long long usqIntptr_t;
 #define PRIXSQPTR "llX"
 #endif
 
-#if defined(SQ_HOST64) && defined(SQ_IMAGE32)
+#if SQ_HOST64 && SQ_IMAGE32
   extern char *sqMemoryBase;
 # define SQ_FAKE_MEMORY_OFFSET	16 // (1*1024*1024)	/* nonzero to debug addr xlation */
 #else
@@ -132,8 +136,8 @@ typedef unsigned long long usqIntptr_t;
   static inline sqInt byteAtPointerput(char *ptr, int val)	{ return (sqInt)(*((unsigned char *)ptr)= (unsigned char)val); }
   static inline sqInt shortAtPointer(char *ptr)			{ return (sqInt)(*((short *)ptr)); }
   static inline sqInt shortAtPointerput(char *ptr, int val)	{ return (sqInt)(*((short *)ptr)= (short)val); }
-  static inline sqInt intAtPointer(char *ptr)			{ return (sqInt)(*((unsigned int *)ptr)); }
-  static inline sqInt intAtPointerput(char *ptr, int val)	{ return (sqInt)(*((unsigned int *)ptr)= val); }
+  static inline sqInt intAtPointer(char *ptr)			{ return (sqInt)(*((int *)ptr)); }
+  static inline sqInt intAtPointerput(char *ptr, int val)	{ return (sqInt)(*((int *)ptr)= val); }
   static inline sqInt longAtPointer(char *ptr)			{ return *(sqInt *)ptr; }
   static inline sqInt longAtPointerput(char *ptr, sqInt val)	{ return *(sqInt *)ptr= val; }
   static inline sqLong long64AtPointer(char *ptr)			{ return *(sqLong *)ptr; }

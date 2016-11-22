@@ -20,6 +20,11 @@
 int numJoySticks=0;
 JOYCAPS *joySticks = NULL;
 
+/* direct use of interpreter API */
+int methodArgumentCount(void);
+int stackIntegerValue(int);
+int failed(void);
+	
 int joystickRead(int index)
 {
 	JOYINFO joyInfo;
@@ -74,10 +79,6 @@ EXPORT(int) win32JoystickDebugInfo(void)
 {
 	int i;
 	JOYCAPS *caps;
-
-	int methodArgumentCount(void);
-	int stackIntegerValue(int);
-	int failed(void);
 
 	if(methodArgumentCount() != 0) return primitiveFail();
 	warnPrintf(TEXT("<--- Joystick debug information --->\n"));

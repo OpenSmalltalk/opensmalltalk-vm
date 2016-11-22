@@ -190,9 +190,10 @@ static HRESULT d3dLock(LPDIRECTDRAWSURFACE7 lpdd, DDSURFACEDESC2 *ddsd,
 }
 
 /* d3dGetSurfaceFormat: Return information about the given surface. */
-static int d3dGetSurfaceFormat(LPDIRECTDRAWSURFACE7 lpddSurface, 
+static int d3dGetSurfaceFormat(sqIntptr_t handle, 
 			       int* width, int* height, int* depth, int* isMSB)
 {
+  LPDIRECTDRAWSURFACE7 lpddSurface=(LPDIRECTDRAWSURFACE7) handle;
   DDSURFACEDESC2 desc;
   HRESULT hRes;
 
@@ -210,9 +211,10 @@ static int d3dGetSurfaceFormat(LPDIRECTDRAWSURFACE7 lpddSurface,
 }
 
 /* d3dLockSurface: Lock the bits of the surface for BitBlt. */
-static sqIntptr_t d3dLockSurface(LPDIRECTDRAWSURFACE7 lpddSurface, 
+static sqIntptr_t d3dLockSurface(sqIntptr_t handle, 
 			  int *pitch, int x, int y, int w, int h)
 {
+  LPDIRECTDRAWSURFACE7 lpddSurface=(LPDIRECTDRAWSURFACE7) handle;
   DDSURFACEDESC2 desc;
   HRESULT hRes;
 
@@ -223,9 +225,10 @@ static sqIntptr_t d3dLockSurface(LPDIRECTDRAWSURFACE7 lpddSurface,
 }
 
 /* d3dUnlockSurface: Unlock the bits of a surface after BitBlt completed. */
-static int d3dUnlockSurface(LPDIRECTDRAWSURFACE7 lpddSurface, 
+static int d3dUnlockSurface(sqIntptr_t handle, 
 			    int x, int y, int w, int h)
 {
+  LPDIRECTDRAWSURFACE7 lpddSurface=(LPDIRECTDRAWSURFACE7) handle;
   HRESULT hRes;
 
   hRes = lpddSurface->lpVtbl->Unlock(lpddSurface, NULL);
@@ -237,7 +240,7 @@ static int d3dUnlockSurface(LPDIRECTDRAWSURFACE7 lpddSurface,
 }
 
 /* d3dShowSurface: Blt the modified contents of the surface to the screen. */
-static int d3dShowSurface(LPDIRECTDRAWSURFACE7 lpddSurface, 
+static int d3dShowSurface(sqIntptr_t handle, 
 			  int x, int y, int w, int h)
 {
   /* unsupported */
@@ -909,7 +912,7 @@ static DDSURFACEDESC2 *d3dGetRendererDesc(int handle) {
      Note: This information could be obtained from the renderer 
      directly but it's safer to see if the surface has really been
      registered. */
-  if(!(*findSurface)(renderer->surfaceID, &d3dTargetDispatch, (int*) (&lpdsTarget))) {
+  if(!(*findSurface)(renderer->surfaceID, &d3dTargetDispatch, (sqIntptr_t*) (&lpdsTarget))) {
     return NULL;
   }
   /* But make sure we're talking about the right surface here */
@@ -1182,7 +1185,7 @@ int d3dDestroyTexture(int rendererHandle, int handle) /* return true on success,
   lpDevice = renderer->lpDevice;
 
   /* Look if the surface was registered as D3D surface */
-  if(!(*findSurface)(handle, &d3dTextureDispatch, (int*) (&lpdsTexture)))
+  if(!(*findSurface)(handle, &d3dTextureDispatch, (sqIntptr_t*) (&lpdsTexture)))
     return 0;
 
   /* release and unregister texture */
@@ -1198,7 +1201,7 @@ int d3dActualTextureDepth(int rendererHandle, int handle) /* return depth or <0 
   DDSURFACEDESC2 desc;
   HRESULT hRes;
   /* Look if the surface was registered as D3D surface */
-  if(!(*findSurface)(handle, &d3dTextureDispatch, (int*) (&lpdsTexture)))
+  if(!(*findSurface)(handle, &d3dTextureDispatch, (sqIntptr_t*) (&lpdsTexture)))
     return -1;
   desc.dwSize = sizeof(desc);
   hRes = lpdsTexture->lpVtbl->GetSurfaceDesc(lpdsTexture, &desc);
@@ -1214,7 +1217,7 @@ int d3dTextureColorMasks(int rendererHandle, int handle, int masks[4])  /* retur
   DDSURFACEDESC2 desc;
   HRESULT hRes;
   /* Look if the surface was registered as D3D surface */
-  if(!(*findSurface)(handle, &d3dTextureDispatch, (int*) (&lpdsTexture)))
+  if(!(*findSurface)(handle, &d3dTextureDispatch, (sqIntptr_t*) (&lpdsTexture)))
     return 0;
   desc.dwSize = sizeof(desc);
   hRes = lpdsTexture->lpVtbl->GetSurfaceDesc(lpdsTexture, &desc);
@@ -1235,7 +1238,7 @@ int d3dTextureSurfaceHandle(int rendererHandle, int handle) {
   /* d3dTextures alias the texture and the surface handle */
   LPDIRECTDRAWSURFACE7 lpdsTexture;
   /* Look if the surface was registered as D3D surface */
-  if(!(*findSurface)(handle, &d3dTextureDispatch, (int*) (&lpdsTexture))) {
+  if(!(*findSurface)(handle, &d3dTextureDispatch, (sqIntptr_t*) (&lpdsTexture))) {
     DPRINTF3D(3, (fp, "WARNING: Texture (%d) not registered\n", handle));
     return -1;
   }
@@ -1977,7 +1980,7 @@ int d3dRenderVertexBuffer(int handle, int primType, int flags, int texHandle, fl
 
   if(texHandle >= 0 && (flags & B3D_VB_HAS_TEXTURES)) {
     /* Look if the surface was registered as D3D surface */
-    if(!(*findSurface)(texHandle, &d3dTextureDispatch, (int*) (&lpdsTexture))) {
+    if(!(*findSurface)(texHandle, &d3dTextureDispatch, (sqIntptr_t*) (&lpdsTexture))) {
       DPRINTF3D(4, (fp,"WARNING: Texture (%d) not registered\n", texHandle));
       lpdsTexture = NULL;
     }

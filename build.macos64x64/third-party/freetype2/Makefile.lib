@@ -17,11 +17,8 @@ PLUGINREQS:=$(PLUGINREQS) $(THIRDPARTYLIBS)
 $(FREETYPE2ARCHIVE): 
 	curl -o $(FREETYPE2ARCHIVE) -L $(FREETYPE2URL) 
 	
-$(FREETYPE2DIR)/configure: $(FREETYPE2ARCHIVE)
+$(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME): $(FREETYPE2ARCHIVE)
 	tar x -f $(FREETYPE2ARCHIVE) -C $(THIRDPARTYDIR)
-	touch $(FREETYPE2DIR)/configure
-
-$(FREETYPE2LIB): pkgconfig libpng $(FREETYPE2DIR)/configure
 	cd $(FREETYPE2DIR) \
 		&& ./configure \
 			--prefix='$(THIRDPARTYOUTDIR)' \
@@ -32,6 +29,8 @@ $(FREETYPE2LIB): pkgconfig libpng $(FREETYPE2DIR)/configure
 			LDFLAGS='-arch x86_64 ' \
 		&& make \
 		&& make install
+
+$(FREETYPE2LIB): pkgconfig libpng $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME)
 	cp -f $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME) $(THIRDPARTYINSTALLDIR)
 	install_name_tool -id "@executable_path/Plugins/$(FREETYPE2LIBNAME)" $(FREETYPE2LIB)
 	

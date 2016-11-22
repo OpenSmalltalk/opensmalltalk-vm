@@ -51,6 +51,7 @@ sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) 
 	if (! data) return 0;
  	
 	err = PasteboardPutItemFlavor( pb, (PasteboardItemID)1, kUTTypeUTF8PlainText, data, 0);
+	CFRelease(data);
 	if (err) return 0;
 	
 	/** To get the UTF-16 form most apps (e.g. Word, Thunderbird) need, use an intermediate CFString **/
@@ -82,9 +83,10 @@ sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) 
 									 NULL);
 		if (converted > 0) {
 			data = CFDataCreateWithBytesNoCopy (kCFAllocatorDefault, bytes, needed, kCFAllocatorMalloc);
-			err = PasteboardPutItemFlavor (pb, (PasteboardItemID)1, kUTTypeUTF16PlainText, data, 0);
-			CFRelease (str);
-			return 0;	
+			if(data) {
+				err = PasteboardPutItemFlavor (pb, (PasteboardItemID)1, kUTTypeUTF16PlainText, data, 0);
+				CFRelease(data);
+			}	
 		} else {
 			free (bytes);
 		}

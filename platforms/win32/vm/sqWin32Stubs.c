@@ -72,8 +72,8 @@ int serialPortClose(int portNum) { return 1; }
 int serialPortOpen(
   int portNum, int baudRate, int stopBitsType, int parityType, int dataBits,
   int inFlowCtrl, int outFlowCtrl, int xOnChar, int xOffChar) { return success(false); }
-int serialPortReadInto(int portNum, int count, int bufferPtr) { return success(false); }
-int serialPortWriteFrom(int portNum, int count, int bufferPtr) { return success(false); }
+int serialPortReadInto(int portNum, int count, void *bufferPtr) { return success(false); }
+int serialPortWriteFrom(int portNum, int count, void *bufferPtr) { return success(false); }
 #endif
 
 #ifdef NO_MIDI
@@ -81,23 +81,23 @@ void SetupMIDI(void) {}
 int sqMIDIGetClock(void) { return success(false); }
 int sqMIDIGetPortCount(void) { return success(false); }
 int sqMIDIGetPortDirectionality(int portNum) { return success(false); }
-int sqMIDIGetPortName(int portNum, int namePtr, int length) { return success(false); }
+int sqMIDIGetPortName(int portNum, char *namePtr, int length) { return success(false); }
 int sqMIDIClosePort(int portNum) { return 1; }
 int sqMIDIOpenPort(int portNum, int readSemaIndex, int interfaceClockRate) { return success(false); }
 int sqMIDIParameter(int whichParameter, int modify, int newValue) { return success(false); }
-int sqMIDIPortReadInto(int portNum, int count, int bufferPtr) { return success(false); }
-int sqMIDIPortWriteFromAt(int portNum, int count, int bufferPtr, int time) { return success(false); }
+int sqMIDIPortReadInto(int portNum, int count, char *bufferPtr) { return success(false); }
+int sqMIDIPortWriteFromAt(int portNum, int count, char *bufferPtr, int time) { return success(false); }
 #endif
 
 
 #ifdef NO_ASYNC_FILES
 int asyncFileClose(AsyncFile *f) { return success(false); }
-int asyncFileOpen(AsyncFile *f, long fileNamePtr, int fileNameSize, int writeFlag, int semaIndex) { return success(false); }
+int asyncFileOpen(AsyncFile *f, char *fileNamePtr, int fileNameSize, int writeFlag, int semaIndex) { return success(false); }
 int asyncFileRecordSize() { return success(false); }
-int asyncFileReadResult(AsyncFile *f, int bufferPtr, int bufferSize) { return success(false); }
+int asyncFileReadResult(AsyncFile *f, void *bufferPtr, int bufferSize) { return success(false); }
 int asyncFileReadStart(AsyncFile *f, int fPosition, int count) { return success(false); }
 int asyncFileWriteResult(AsyncFile *f) { return success(false); }
-int asyncFileWriteStart(AsyncFile *f, int fPosition, int bufferPtr, int bufferSize) { return success(false); }
+int asyncFileWriteStart(AsyncFile *f, int fPosition, void *bufferPtr, int bufferSize) { return success(false); }
 #endif
 
 #ifdef NO_TABLET

@@ -37,8 +37,8 @@ typedef struct SqueakSurface {
 } SqueakSurface;
 
 static SqueakSurface *surfaceArray = NULL;
-static long numSurfaces = 0;
-static long maxSurfaces = 0;
+static int numSurfaces = 0;
+static int maxSurfaces = 0;
 
 #ifdef SQUEAK_BUILTIN_PLUGIN
 static const char *moduleName = "SurfacePlugin "__DATE__" (i)";
@@ -57,23 +57,23 @@ EXPORT(long) initialiseModule(void);
 EXPORT(long) shutdownModule(void);
 
 /* critical FXBlt entry points */
-EXPORT(long) ioGetSurfaceFormat (long surfaceID, long* width, long* height, long* depth, long* isMSB);
-EXPORT(long) ioLockSurface (long surfaceID, long *pitch, long x, long y, long w, long h);
-EXPORT(long) ioUnlockSurface(long surfaceID, long x, long y, long w, long h);
+EXPORT(int) ioGetSurfaceFormat (int surfaceID, int* width, int* height, int* depth, int* isMSB);
+EXPORT(sqIntptr_t) ioLockSurface (int surfaceID, int *pitch, int x, int y, int w, int h);
+EXPORT(int) ioUnlockSurface(int surfaceID, int x, int y, int w, int h);
 
 /* interpreter entry point */
-EXPORT(long) ioShowSurface(long surfaceID, long x, long y, long w, long h);
+EXPORT(int) ioShowSurface(int surfaceID, int x, int y, int w, int h);
 
 /* client entry points */
-EXPORT(long) ioRegisterSurface(long surfaceHandle, sqSurfaceDispatch *fn, long *surfaceID);
-EXPORT(long) ioUnregisterSurface(long surfaceID);
-EXPORT(long) ioFindSurface(long surfaceID, sqSurfaceDispatch *fn, long *surfaceHandle);
+EXPORT(int) ioRegisterSurface(sqIntptr_t surfaceHandle, sqSurfaceDispatch *fn, int *surfaceID);
+EXPORT(int) ioUnregisterSurface(int surfaceID);
+EXPORT(int) ioFindSurface(int surfaceID, sqSurfaceDispatch *fn, sqIntptr_t *surfaceHandle);
 #pragma export off
 
 /* ioGetSurfaceFormat:
 	Return information describing the given surface.
 	Return true if successful, false otherwise. */
-EXPORT(long) ioGetSurfaceFormat (long surfaceID, long* width, long* height, long* depth, long* isMSB)
+EXPORT(int) ioGetSurfaceFormat (int surfaceID, int* width, int* height, int* depth, int* isMSB)
 {
 	SqueakSurface *surface;
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) FAIL;
@@ -87,7 +87,7 @@ EXPORT(long) ioGetSurfaceFormat (long surfaceID, long* width, long* height, long
 	Lock the bits of the surface. 
 	Return a pointer to the actual surface bits,
 	or NULL on failure. */
-EXPORT(long) ioLockSurface (long surfaceID, long *pitch, long x, long y, long w, long h)
+EXPORT(sqIntptr_t) ioLockSurface (int surfaceID, int *pitch, int x, int y, int w, int h)
 {
 	SqueakSurface *surface;
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) FAIL;
@@ -100,7 +100,7 @@ EXPORT(long) ioLockSurface (long surfaceID, long *pitch, long x, long y, long w,
 /* ioUnlockSurface:
 	Unlock the bits of the surface. 
 	The return value is ignored. */
-EXPORT(long) ioUnlockSurface(long surfaceID, long x, long y, long w, long h)
+EXPORT(int) ioUnlockSurface(int surfaceID, int x, int y, int w, int h)
 {
 	SqueakSurface *surface;
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) FAIL;
@@ -112,7 +112,7 @@ EXPORT(long) ioUnlockSurface(long surfaceID, long x, long y, long w, long h)
 
 /* ioShowSurface:
 	Transfer the bits of a surface to the screen. */
-EXPORT(long) ioShowSurface(long surfaceID, long x, long y, long w, long h)
+EXPORT(int) ioShowSurface(int surfaceID, int x, int y, int w, int h)
 {
 	SqueakSurface *surface;
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) FAIL;
@@ -127,9 +127,9 @@ EXPORT(long) ioShowSurface(long surfaceID, long x, long y, long w, long h)
 	the set of surface functions. The new ID is returned
 	in surfaceID. Returns true if successful, false 
 	otherwise. */
-EXPORT(long) ioRegisterSurface(long surfaceHandle, sqSurfaceDispatch *fn, long *surfaceID)
+EXPORT(int) ioRegisterSurface(sqIntptr_t surfaceHandle, sqSurfaceDispatch *fn, int *surfaceID)
 {
-	long index;
+	int index;
 
 	if(!fn) return 0;
 	if(fn->majorVersion != 1 && fn->minorVersion != 0) return 0;
@@ -155,9 +155,9 @@ EXPORT(long) ioRegisterSurface(long surfaceHandle, sqSurfaceDispatch *fn, long *
 }
 
 /* ioUnregisterSurface:
-	Unregister the surface with the given handle.
+	Unregister the surface with the given ID.
 	Returns true if successful, false otherwise. */
-EXPORT(long) ioUnregisterSurface(long surfaceID)
+EXPORT(int) ioUnregisterSurface(int surfaceID)
 {
 	SqueakSurface *surface;
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) return 0;
@@ -174,7 +174,7 @@ EXPORT(long) ioUnregisterSurface(long surfaceID)
 	the given set of surface functions. The registered handle
 	is returned in surfaceHandle. Return true if successful
 	(e.g., the surface has been found), false otherwise. */
-EXPORT(long) ioFindSurface(long surfaceID, sqSurfaceDispatch *fn, long *surfaceHandle)
+EXPORT(int) ioFindSurface(int surfaceID, sqSurfaceDispatch *fn, sqIntptr_t *surfaceHandle)
 {
 	SqueakSurface *surface;
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) return 0;

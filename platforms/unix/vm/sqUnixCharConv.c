@@ -251,7 +251,7 @@ static void iconvFail(char *toCode, char *fromCode)
   if (!warned++)
     {
       char buf[256];
-      sprintf(buf, "iconv_open(%s, %s)", toCode, fromCode);
+      snprintf(buf, sizeof(buf), "iconv_open(%s, %s)", toCode, fromCode);
       perror(buf);
     }
 }

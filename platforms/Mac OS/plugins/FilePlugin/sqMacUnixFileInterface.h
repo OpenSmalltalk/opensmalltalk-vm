@@ -15,3 +15,4 @@ OSErr squeakFindImage(char *pathName);
 OSErr getFSRef(char *pathString,FSRef *theFSRef,CFStringEncoding encoding);
 void PathToFileViaFSRef(char *pathName, int pathNameMax, FSRef *theFSRef,CFStringEncoding encoding);
 OSErr getFInfoViaFSRef(FSRef *theFSRef,	FInfo *finderInfo);
+int ux2sqPath(char *from, int fromLen, char *to, int toLen, int term);

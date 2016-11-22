@@ -20,11 +20,8 @@ PKG_CONFIG_PATH:=$(PKGCONFIGLIB)
 $(PKGCONFIGARCHIVE): 
 	curl -o $(PKGCONFIGARCHIVE) -L $(PKGCONFIGURL)
 
-$(PKGCONFIGDIR)/configure: $(PKGCONFIGARCHIVE)
+$(PKGCONFIGLIB): $(PKGCONFIGARCHIVE)
 	tar x -f $(PKGCONFIGARCHIVE) -C $(THIRDPARTYDIR)
-	touch $(PKGCONFIGDIR)/configure
-
-$(PKGCONFIGBIN): $(PKGCONFIGDIR)/configure
 	cd $(PKGCONFIGDIR) \
 		&& ./configure \
 			--prefix='$(THIRDPARTYOUTDIR)' \
@@ -32,5 +29,7 @@ $(PKGCONFIGBIN): $(PKGCONFIGDIR)/configure
 			LDFLAGS='-arch i386' \
 		&& make \
 		&& make install
+
+$(PKGCONFIGBIN): $(PKGCONFIGLIB)
 	
 pkgconfig: $(PKGCONFIGBIN)

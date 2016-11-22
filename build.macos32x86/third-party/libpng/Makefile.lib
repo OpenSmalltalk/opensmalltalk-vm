@@ -17,15 +17,14 @@ PLUGINREQS:=$(THIRDPARTYLIBS)
 $(LIBPNGARCHIVE): 
 	curl -o $(LIBPNGARCHIVE) -L $(LIBPNGURL) 
 
-$(LIBPNGDIR)/configure: $(LIBPNGARCHIVE)
+$(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME): $(LIBPNGARCHIVE)
 	tar x -f $(LIBPNGARCHIVE) -C $(THIRDPARTYDIR)
-	touch $(LIBPNGDIR)/configure
-
-$(LIBPNGLIB): $(LIBPNGDIR)/configure
 	cd $(LIBPNGDIR) \
 		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch i386' LDFLAGS='-arch i386' \
 		&& make \
 		&& make install
+
+$(LIBPNGLIB): $(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME)
 	cp -f $(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME) $(THIRDPARTYINSTALLDIR)
 	install_name_tool -id "@executable_path/Plugins/$(LIBPNGLIBNAME)" $(LIBPNGLIB)
 	

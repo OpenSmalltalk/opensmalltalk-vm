@@ -3,7 +3,7 @@
 # platforms/Cross/vm/sqSCCSVersion.h to be checked-in so that its version
 # info reflects that of the current check-in.
 
-if [ -f `dirname $0`/../.git ]; then
+if [ -d `dirname $0`/../.git ]; then
 	hooks_dir="`git rev-parse --git-dir`/hooks"
     mkdir -p $hooks_dir
     cp -f $0 $hooks_dir/post-commit

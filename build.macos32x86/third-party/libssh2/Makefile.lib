@@ -17,11 +17,8 @@ PLUGINREQS:=$(THIRDPARTYLIBS)
 $(LIBSSH2ARCHIVE): 
 	curl -o $(LIBSSH2ARCHIVE) -L $(LIBSSH2URL) 
 
-$(LIBSSH2DIR)/configure: $(LIBSSH2ARCHIVE)
+$(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME): $(LIBSSH2ARCHIVE)
 	tar x -f $(LIBSSH2ARCHIVE) -C $(THIRDPARTYDIR)
-	touch $(LIBSSH2DIR)/configure
-
-$(LIBSSH2LIB): openssl $(LIBSSH2DIR)/configure
 	cd $(LIBSSH2DIR) \
 		&& ./configure \
 			--prefix='$(THIRDPARTYOUTDIR)' \
@@ -29,6 +26,8 @@ $(LIBSSH2LIB): openssl $(LIBSSH2DIR)/configure
 			LDFLAGS='-arch i386' \
 		&& make \
 		&& make install
+
+$(LIBSSH2LIB): openssl $(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME)
 	cp -f $(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME) $(THIRDPARTYINSTALLDIR)
 	install_name_tool -id "@executable_path/Plugins/$(LIBSSH2LIBNAME)" $(LIBSSH2LIB)
 	@echo "Fixing dependency links"

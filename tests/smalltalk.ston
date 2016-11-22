@@ -1,0 +1,40 @@
+SmalltalkCISpec {
+  #loading : [],
+  #testing : {
+    #allTestCases : true,
+    #defaultTimeout : 10,
+    #hidePassingTests : true,
+    #exclude : {
+      #classes : [
+        #BrowserTest,
+        #ClosureCompilerTest,
+        #DecompilerTests,
+        #ExceptionTests,
+        #FileList2ModalDialogsTest,
+        #FontTest,
+        #IslandVMTweaksTestCase,
+        #LangEnvBugs,
+        #LocaleTest,
+        #MVCToolBuilderTests,
+        #PackageDependencyTest,
+        #SocketTest,
+        #SqueakSSLTest,
+        #StandardSystemFontsTest,
+        #UnimplementedCallBugz,
+        #WebClientServerTest,
+
+        #FileHandleTest,
+        #GLMTextMorphicTest,
+        #GTSpotterStepFilteringTest,
+        #GTSpotterTest,
+        #NetNameResolverTest,
+        #PharoIssueTest,
+        #ReleaseTest,
+        #SimulateMouseSpecification,
+        #ZnCharacterEncoderTests,
+        #ZnResponseTests
+      ],
+      #categories : [ 'TxText*' ]
+    }
+  }
+}
