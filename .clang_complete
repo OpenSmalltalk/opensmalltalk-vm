@@ -1,0 +1,5 @@
+-Iplatforms/Cross/vm
+-Isrc/vm
+-Iminheadless/include
+-Iminheadless/source
+-DSPURVM

@@ -1,0 +1,5 @@
+INTERNAL_PLUGIN(FilePlugin)
+INTERNAL_PLUGIN(LargeIntegers)
+INTERNAL_PLUGIN(LocalePlugin)
+INTERNAL_PLUGIN(MiscPrimitivePlugin)
+INTERNAL_PLUGIN(SecurityPlugin)

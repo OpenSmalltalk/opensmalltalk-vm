@@ -64,4 +64,40 @@
 
 #endif /* Platform specific macro */
 
+#if defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
+#   define SIZEOF_VOID_P 8
+#   define SIZEOF_LONG 8
+#   define SIZEOF_LONG_LONG 8
+#   define VM_TARGET_CPU "x86_64"
+#elif defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__) || defined(__arm32__)
+#   define SIZEOF_VOID_P 4
+#   define SIZEOF_LONG 4
+#   define SIZEOF_LONG_LONG 8
+#   define VM_TARGET_CPU "x86"
+#else
+#   error Unknown architecture. Please fix inference rule for determining size of pointer
+#endif
+
+#if defined (__unix__) || defined(__linux__)
+#   define HAVE_MMAP 1
+#   define HAVE_DIRENT_H 1
+#   define HAVE_UNISTD_H 1
+#   define HAVE_TM_GMTOFF 1
+
+#   define OS_TYPE "unix"
+#   if defined(__linux__)
+#       define VM_TARGET_OS "linux"
+#   else
+#       define VM_TARGET_OS "unix"
+#   endif
+#elif defined(_WIN32)
+#   define OS_TYPE "win32"
+#   define VM_TARGET_OS "win32"
+#else
+#   define OS_TYPE "unknown"
+#   define VM_TARGET_OS "unknown"
+#endif
+
+#define VM_BUILD_STRING "Minimimalistic headless built for " VM_TARGET_OS " on "__DATE__ " "__TIME__" Compiler: "__VERSION__
+
 #endif /*SQ_CONFIG_CONFIG_H*/
