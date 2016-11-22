@@ -291,14 +291,16 @@ static int tryToLoadImageFromFileName(const char *fileName)
 #endif
     sqImageFileClose(imageFile);
 
-    strcpy(imageName, shortImageName);
+    if(imageName != fileName)
+        strcpy(imageName, fileName);
     return 1;
 }
 
 void imgInit()
 {
     /* Try to load the image as was passed. */
-    if(tryToLoadImageFromFileName(shortImageName))
+    sprintf(imageName, "./%s", shortImageName);
+    if(tryToLoadImageFromFileName(imageName))
         return;
 
     /* Make the image path relative to the VM*/
