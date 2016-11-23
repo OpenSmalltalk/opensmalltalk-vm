@@ -12285,6 +12285,17 @@ StackToRegisterMappingCogit >> prevInstIsPCAnnotated [
 ]
 
 { #category : #'simulation only' }
+StackToRegisterMappingCogit >> printOptStatus [
+	<doNotGenerate>
+	coInterpreter transcript ensureCr; nextPutAll: 'opt: '.
+	(optStatus isReceiverResultRegLive ~~ true
+	 and: [optStatus ssEntry isNil]) ifTrue:
+		[coInterpreter transcript nextPutAll: 'none'].
+	optStatus printStateOn: coInterpreter transcript.
+	coInterpreter transcript cr; flush
+]
+
+{ #category : #'simulation only' }
 StackToRegisterMappingCogit >> printSimStack [
 	<doNotGenerate>
 	self printSimStack: simStack toDepth: simStackPtr spillBase: simSpillBase
@@ -12757,13 +12768,14 @@ StackToRegisterMappingCogit >> ssFlushTo: index [
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssFlushTo: index nativeFlushTo: nativeIndex [
-	LowcodeVM ifTrue: [ 
-		self ssNativeFlushTo: nativeIndex.
-	].
+	LowcodeVM ifTrue:
+		[self ssNativeFlushTo: nativeIndex].
+	0 to: methodOrBlockNumTemps - 1 do:
+		[:i| self assert: (self simStackAt: i) type = SSBaseOffset].
 	methodOrBlockNumTemps to: simSpillBase - 1 do:
 		[:i| self assert: (self simStackAt: i) spilled].
 	simSpillBase <= index ifTrue:
-		[(simSpillBase max: 0) to: index do:
+		[(simSpillBase max: methodOrBlockNumTemps) to: index do:
 			[:i|
 			self assert: needsFrame.
 			(self simStackAt: i)
@@ -13232,7 +13244,7 @@ StackToRegisterMappingCogit >> traceMerge: fixup [
 StackToRegisterMappingCogit >> traceSimStack [
 	<cmacro: '() 0'>
 	(compilationTrace anyMask: 4) ifTrue:
-		[self printSimStack]
+		[self printOptStatus; printSimStack]
 ]
 
 { #category : #'simulation only' }
