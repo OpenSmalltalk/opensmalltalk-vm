@@ -1119,7 +1119,7 @@ CurrentImageCoInterpreterFacade >> storePointerUnchecked: zeroRelativeIndex ofOb
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> stringOf: anOop [
-	^self lookupAddress: anOop
+	^(self lookupAddress: anOop) asString
 ]
 
 { #category : #testing }
