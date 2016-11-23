@@ -62,7 +62,7 @@ void *ioLoadModule(char *pluginName)
             return moduleHandle;
     }
 
-#if 0
+#if 1
     fprintf(stderr, "Failed to load module: %s\n", pluginName);
 #endif
     return 0;

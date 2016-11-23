@@ -1,3 +1,9 @@
+#include <stdlib.h>
+#include <time.h>
+#include "sq.h"
+#include "sqMemoryAccess.h"
+#include "config.h"
+
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
 {
     return false;
@@ -37,7 +43,7 @@ sqInt ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
 
 sqInt ioHasDisplayDepth(sqInt depth)
 {
-    return 0;
+    return true;
 }
 
 sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)

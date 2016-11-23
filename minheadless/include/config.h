@@ -73,7 +73,7 @@
 #   define SIZEOF_VOID_P 4
 #   define SIZEOF_LONG 4
 #   define SIZEOF_LONG_LONG 8
-#   define VM_TARGET_CPU "x86"
+#   define VM_TARGET_CPU "i686"
 #else
 #   error Unknown architecture. Please fix inference rule for determining size of pointer
 #endif
@@ -86,12 +86,12 @@
 
 #   define OS_TYPE "unix"
 #   if defined(__linux__)
-#       define VM_TARGET_OS "linux"
+#       define VM_TARGET_OS "linux-gnu"
 #   else
 #       define VM_TARGET_OS "unix"
 #   endif
 #elif defined(_WIN32)
-#   define OS_TYPE "win32"
+#   define OS_TYPE "Win32"
 #   define VM_TARGET_OS "win32"
 #else
 #   define OS_TYPE "unknown"

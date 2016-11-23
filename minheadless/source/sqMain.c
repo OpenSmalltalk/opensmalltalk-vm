@@ -2,7 +2,7 @@
 #include <string.h>
 
 #include "sq.h"
-#include "sqSCCSVersion.h"
+#include "sqGitVersionString.h"
 
 #define DefaultHeapSize		  20	     	/* megabytes BEYOND actual image size */
 #define DefaultMmapSize		1024     	/* megabytes of virtual memory */
@@ -26,6 +26,7 @@ static int vmArgumentCount;
 static char **vmArgumentVector;
 
 extern void initGlobalStructure(void); // this is effectively null if a global register is not being used
+extern void findExecutablePath(const char *localVmName, char *dest, size_t destSize);
 
 extern void ioInitTime(void);
 extern void ioInitThreads(void);
@@ -109,7 +110,6 @@ sqInt ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz)
 char *
 GetAttributeString(sqInt id)
 {
-    //printf("GetAttributeString %d\n", id);
     if (id < 0)	/* VM argument */
     {
         if (-id  < vmArgumentCount)
@@ -156,7 +156,7 @@ GetAttributeString(sqInt id)
 #endif
 
     case 1009: /* source tree version info */
-        return sourceVersionString(' ');
+        return SOURCE_VERSION_STRING;
 
     default:
         if ((id - 2) < squeakArgumentCount)
@@ -185,33 +185,9 @@ static void outOfMemory(void)
   error("out of memory\n");
 }
 
-static int isAbsolutePath(const char *path)
-{
-#ifdef _WIN32
-    return *path == '\\' || (path[0] != 0 && && path[1] == ':');
-#else
-    /* Assume UNIX style path. */
-    return *path == '/';
-#endif
-}
-
 static void recordPathsForVMName(const char *localVmName)
 {
-    const char *lastSeparator = strrchr(localVmName, '/');
-#ifdef _WIN32
-    const char *lastSeparator2 = strrchr(localVmName, '\\');
-    if(!lastSeparator || lastSeparator < lastSeparator2)
-        lastSeparator = lastSeparator2;
-#endif
-
-    if(!isAbsolutePath(localVmName))
-    {
-        /* TODO: Get the current working directory*/
-        strcpy(vmPath, "./");
-    }
-
-    if(lastSeparator)
-        strncat(vmPath, localVmName, lastSeparator - localVmName + 1);
+    findExecutablePath(localVmName, vmPath, sizeof(vmPath));
 }
 
 static void usage(void)
@@ -230,10 +206,14 @@ static void parseArguments(int argc, char **argv)
         int n= 0;
         if (!strcmp(*argv, "--"))		/* escape from option processing */
             break;
+        if (!strcmp(*argv, "-headless") || !strcmp(*argv, "-interactive"))
+            n = 1;
+
         if (n == 0)			/* option not recognised */
         {
             fprintf(stderr, "unknown option: %s\n", argv[0]);
             usage();
+            exit(0);
         }
 
         while (n--)
@@ -323,9 +303,9 @@ int main(int argc, char *argv[], char *envp[])
 
     /* Make parameters global for access from plugins */
 
-    argCnt= argc;
-    argVec= argv;
-    envVec= envp;
+    argCnt = argc;
+    argVec = argv;
+    envVec = envp;
 
     initGlobalStructure();
 

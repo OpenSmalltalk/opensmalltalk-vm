@@ -4,8 +4,6 @@
 #include "sqMemoryAccess.h"
 #include "config.h"
 
-#include "sqPlatformSpecific-NullWindow.c"
-
 void ioInitTime(void)
 {
 }
@@ -225,6 +223,35 @@ void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
     return 0;
 }
 #endif
+
+static int isAbsolutePath(const char *path)
+{
+#ifdef _WIN32
+    return *path == '\\' || (path[0] != 0 && && path[1] == ':');
+#else
+    /* Assume UNIX style path. */
+    return *path == '/';
+#endif
+}
+
+void findExecutablePath(const char *localVmName, char *dest, size_t destSize)
+{
+    const char *lastSeparator = strrchr(localVmName, '/');
+#ifdef _WIN32
+    const char *lastSeparator2 = strrchr(localVmName, '\\');
+    if(!lastSeparator || lastSeparator < lastSeparator2)
+        lastSeparator = lastSeparator2;
+#endif
+
+    if(!isAbsolutePath(localVmName))
+    {
+        /* TODO: Get the current working directory*/
+        strcpy(dest, "./");
+    }
+
+    if(lastSeparator)
+        strncat(dest, localVmName, lastSeparator - localVmName + 1);
+}
 
 void *os_exports[][3]=
 {

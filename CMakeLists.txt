@@ -75,17 +75,24 @@ if(COG_JIT)
 	#add_definitions(CogVM=1)
 endif()
 
+# Get the version string
+include(GetGitVersion.cmake)
+
 # Check for 64 bits
 if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 	if(BUILD_I386_VERSION)
 		set(CMAKE_ASM-ATT_FLAGS "--32")
-		set(CMAKE_CXX_FLAGS "-m32")
-		set(CMAKE_C_FLAGS "-m32")
+		set(CMAKE_CXX_FLAGS "-m32 -msse2")
+		set(CMAKE_C_FLAGS "-m32 -msse2")
 	else()
 		set(VM_64BITS TRUE)
 		set(SourceFolderName "${SourceFolderName}64")
 	endif()
 else()
+	if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "i.86")
+		set(CMAKE_CXX_FLAGS "msse2")
+		set(CMAKE_C_FLAGS "-msse2")
+	endif()
 	set(VM_64BITS False)
 endif()
 
@@ -162,19 +169,34 @@ include_directories(
 
 set(VM_PLATFORM_SOURCES
 	minheadless/source/sqExternalPrimitives.c
-	minheadless/source/sqPlatformSpecific.c
 )
 
 if(UNIX)
-set(VM_PLATFORM_SOURCES
-	minheadless/source/sqUnixCharConv.c
-	minheadless/source/sqUnixSpurMemory.c
-	minheadless/source/sqUnixMemory.c
-	minheadless/source/sqUnixThreads.c
-	${VM_PLATFORM_SOURCES}
-)
+	set(VM_PLATFORM_SOURCES
+		minheadless/source/sqPlatformSpecific-Unix.c
+		minheadless/source/sqPlatformSpecific-NullWindow.c
+		minheadless/source/sqUnixCharConv.c
+		minheadless/source/sqUnixSpurMemory.c
+		minheadless/source/sqUnixMemory.c
+		minheadless/source/sqUnixThreads.c
+		minheadless/source/sqUnixHeartbeat.c
+		${VM_PLATFORM_SOURCES}
+	)
 
-set(VM_DEPENDENCIES_LIBRARIES pthread ${VM_DEPENDENCIES_LIBRARIES})
+	set(VM_DEPENDENCIES_LIBRARIES pthread ${VM_DEPENDENCIES_LIBRARIES})
+elseif(WIN32)
+	set(VM_PLATFORM_SOURCES
+		minheadless/source/sqPlatformSpecific-Win32.c
+		minheadless/source/sqPlatformSpecific-NullWindow.c
+		${VM_PLATFORM_SOURCES}
+	)
+else()
+	set(VM_PLATFORM_SOURCES
+		minheadless/source/sqPlatformSpecific-Generic.c
+		minheadless/source/sqPlatformSpecific-NullWindow.c
+		${VM_PLATFORM_SOURCES}
+	)
+
 endif()
 
 set(VM_SOURCES
@@ -195,3 +217,5 @@ target_compile_definitions(OpenSmalltalkVMInternalPlugins PRIVATE
 
 add_executable(squeak ${VM_SOURCES} minheadless/source/sqMain.c)
 target_link_libraries(squeak OpenSmalltalkVMCore OpenSmalltalkVMInternalPlugins ${VM_DEPENDENCIES_LIBRARIES})
+
+add_dependencies(squeak sqGitVersionString)

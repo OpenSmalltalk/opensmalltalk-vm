@@ -18,8 +18,6 @@
 #include "config.h"
 #include "debug.h"
 
-#include "sqPlatformSpecific-NullWindow.c"
-
 #if !defined(min)
 # define min(x,y) (((x)>(y))?(y):(x))
 #endif
@@ -112,70 +110,6 @@ osCogStackPageHeadroom()
 }
 #endif /* COGVM */
 
-/* Time */
-void ioInitTime(void)
-{
-}
-
-long ioMSecs(void)
-{
-    return 0;
-}
-
-long ioMicroMSecs(void)
-{
-    return 0;
-}
-
-unsigned volatile long long  ioUTCMicrosecondsNow()
-{
-    return 0;
-}
-
-unsigned volatile long long  ioUTCMicroseconds()
-{
-    return 0;
-}
-
-unsigned volatile long long  ioLocalMicrosecondsNow()
-{
-    return 0;
-}
-
-unsigned volatile long long  ioLocalMicroseconds()
-{
-    return 0;
-}
-
-unsigned          long long  ioUTCStartMicroseconds()
-{
-    return 0;
-}
-
-sqInt	ioLocalSecondsOffset()
-{
-    return 0;
-}
-
-void	ioUpdateVMTimezone()
-{
-}
-
-# if ITIMER_HEARTBEAT		/* Hack; allow heartbeat to avoid */
-int numAsyncTickees; /* prodHighPriorityThread unless necessary */
-# endif						/* see platforms/unix/vm/sqUnixHeartbeat.c */
-
-void	ioGetClockLogSizeUsecsIdxMsecsIdx(sqInt *runInNOutp, void **usecsp, sqInt *uip, void **msecsp, sqInt *mip)
-{
-}
-
-/* this function should return the value of the high performance
-   counter if there is such a thing on this platform (otherwise return 0) */
-sqLong ioHighResClock(void)
-{
-    return 0;
-}
-
 /* New filename converting function; used by the interpreterProxy function
   ioFilenamefromStringofLengthresolveAliases. Most platforms can ignore the
   resolveAlias boolean - it seems to only be of use by OSX but is crucial there.
@@ -252,34 +186,6 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
     return 0;
 }
 
-sqInt ioSeconds(void)
-{
-    return 0;
-}
-
-sqInt ioSecondsNow(void)
-{
-    return time(NULL);
-}
-
-void  ioInitHeartbeat(void)
-{
-}
-
-int   ioHeartbeatMilliseconds(void)
-{
-    return 0;
-}
-
-void  ioSetHeartbeatMilliseconds(int milliseconds)
-{
-}
-
-unsigned long ioHeartbeatFrequency(int frequency)
-{
-    return 0;
-}
-
 void  ioProfileStatus(sqInt *running, void **exestartpc, void **exelimitpc,
 					  void **vmhst, long *nvmhbin, void **eahst, long *neahbin)
 {
@@ -331,6 +237,56 @@ sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 /* Asychronous IO */
 void aioInit(void)
 {
+}
+
+/* Executable path. */
+static void pathCopyAbs(char *target, const char *src, size_t targetSize)
+{
+    if (src[0] == '/')
+    {
+        strcpy(target, src);
+    }
+    else
+    {
+        getcwd(target, targetSize);
+        strcat(target, "/");
+        strcat(target, src);
+    }
+}
+
+void findExecutablePath(const char *localVmName, char *dest, size_t destSize)
+{
+#if defined(__linux__)
+    static char	 name[MAXPATHLEN+1];
+    int    len;
+#endif
+
+#if defined(__linux__)
+    if ((len = readlink("/proc/self/exe", name, sizeof(name))) > 0)
+    {
+        struct stat st;
+        name[len]= '\0';
+        if (!stat(name, &st))
+            localVmName= name;
+    }
+#endif
+
+    /* get canonical path to vm */
+    if (realpath(localVmName, dest) == 0)
+        pathCopyAbs(dest, localVmName, destSize);
+
+    /* truncate vmPath to dirname */
+    {
+        int i= 0;
+        for (i = strlen(dest); i >= 0; i--)
+        {
+            if ('/' == dest[i])
+            {
+                dest[i+1]= '\0';
+                break;
+            }
+        }
+    }
 }
 
 /* OS Exports */
