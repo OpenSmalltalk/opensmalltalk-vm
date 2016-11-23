@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include "sq.h"
+#include "sqaio.h"
 #include "sqMemoryAccess.h"
 #include "config.h"
 
@@ -12,6 +13,19 @@ static sqInt currentDisplayFullscreenFlag;
 static sqInt screenWidth = 1920;
 static sqInt screenHeight = 1080;
 static sqInt screenDepth = 32;
+
+void ioInitWindowSystem(void)
+{
+}
+
+void ioShutdownWindowSystem(void)
+{
+}
+
+const char *ioWindowSystemName(void)
+{
+    return "null";
+}
 
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
 {
@@ -104,11 +118,6 @@ sqInt ioGetNextEvent(sqInputEvent *evt)
     return 0;
 }
 
-sqInt ioSetInputSemaphore(sqInt semaIndex)
-{
-    return 0;
-}
-
 sqInt ioGetButtonState(void)
 {
     return 0;
@@ -131,6 +140,7 @@ sqInt ioPeekKeystroke(void)
 
 sqInt ioProcessEvents(void)
 {
+    aioPoll(0);
     return 0;
 }
 

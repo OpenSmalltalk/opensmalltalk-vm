@@ -2,4 +2,5 @@
 -Isrc/vm
 -Iminheadless/include
 -Iminheadless/source
+-I/usr/include/SDL2
 -DSPURVM

@@ -157,6 +157,46 @@ else()
 	)
 endif()
 
+# Find SDL2
+find_path(SDL2_INCLUDE_DIR
+  NAMES SDL.h
+  PATH_SUFFIXES SDL2
+)
+
+find_path(SDL2_LIBRARY_PATH
+  NAMES SDL2-2.0.lib SDL2-2.0.a libSDL2-2.0.a libSDL2-2.0.so SDL2.lib SDL2.a libSDL2.a
+)
+
+find_library(SDL2_LIBRARY NAMES SDL2-2.0 SDL2 PATHS ${SDL2_LIBRARY_PATH})
+
+message("${SDL2_LIBRARY_PATH} ${SDL2_INCLUDE_DIR} ${SDL2_LIBRARY}")
+
+set(SDL2_FOUND False)
+if(SDL2_INCLUDE_DIR AND SDL2_LIBRARY)
+	set(SDL2_FOUND True)
+	include_directories("${SDL2_INCLUDE_DIR}")
+endif()
+
+# Choose the window system
+option(SUPPORT_TRADITIONAL_DISPLAY "Enables building a VM with support for a window." ON)
+
+if(SUPPORT_TRADITIONAL_DISPLAY)
+	if(SDL2_FOUND)
+		set(VM_WINDOW_SYSTEM
+			minheadless/source/sqPlatformSpecific-SDL2Window.c
+		)
+		set(VM_DEPENDENCIES_LIBRARIES ${SDL2_LIBRARY} ${VM_DEPENDENCIES_LIBRARIES})
+	else()
+		set(VM_WINDOW_SYSTEM
+			minheadless/source/sqPlatformSpecific-NullWindow.c
+		)
+	endif()
+else()
+	set(VM_WINDOW_SYSTEM
+		minheadless/source/sqPlatformSpecific-NullWindow.c
+	)
+endif()
+
 # Different source categories
 set(VM_COMMON_SOURCES
 	platforms/Cross/vm/sq.h
@@ -181,13 +221,13 @@ include_directories(
 
 set(VM_PLATFORM_SOURCES
 	minheadless/source/sqExternalPrimitives.c
+	minheadless/source/sqEventCommon.c
 )
 
 if(UNIX)
 	set(VM_PLATFORM_SOURCES
 		minheadless/source/aioUnix.c
 		minheadless/source/sqPlatformSpecific-Unix.c
-		minheadless/source/sqPlatformSpecific-NullWindow.c
 		minheadless/source/sqUnixCharConv.c
 		minheadless/source/sqUnixSpurMemory.c
 		minheadless/source/sqUnixMemory.c
@@ -200,13 +240,11 @@ if(UNIX)
 elseif(WIN32)
 	set(VM_PLATFORM_SOURCES
 		minheadless/source/sqPlatformSpecific-Win32.c
-		minheadless/source/sqPlatformSpecific-NullWindow.c
 		${VM_PLATFORM_SOURCES}
 	)
 else()
 	set(VM_PLATFORM_SOURCES
 		minheadless/source/sqPlatformSpecific-Generic.c
-		minheadless/source/sqPlatformSpecific-NullWindow.c
 		${VM_PLATFORM_SOURCES}
 	)
 
@@ -216,6 +254,7 @@ set(VM_SOURCES
 	${VM_COMMON_SOURCES}
 	${VM_FAVLOR_SOURCES}
 	${VM_PLATFORM_SOURCES}
+	${VM_WINDOW_SYSTEM}
 )
 
 include("Plugins.cmake")

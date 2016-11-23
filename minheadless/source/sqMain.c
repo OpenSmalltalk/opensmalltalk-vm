@@ -28,6 +28,10 @@ static char **vmArgumentVector;
 extern void initGlobalStructure(void); // this is effectively null if a global register is not being used
 extern void findExecutablePath(const char *localVmName, char *dest, size_t destSize);
 
+extern void ioInitWindowSystem(void);
+extern void ioShutdownWindowSystem(void);
+extern const char *ioWindowSystemName(void);
+
 extern void ioInitTime(void);
 extern void ioInitThreads(void);
 extern void aioInit(void);
@@ -138,7 +142,7 @@ GetAttributeString(sqInt id)
         return  (char *)interpreterVersion;
     case 1005:
         /* window system name */
-        return  "null";
+        return  (char*)ioWindowSystemName();
     case 1006:
         /* vm build string */
         return VM_BUILD_STRING;
@@ -322,6 +326,7 @@ int main(int argc, char *argv[], char *envp[])
     parseArguments(argc, argv);
 
     /* Initialize the VM */
+    ioInitWindowSystem();
     ioInitTime();
     ioInitThreads();
     aioInit();
