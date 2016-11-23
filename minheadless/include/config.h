@@ -87,8 +87,10 @@
 #   define OS_TYPE "unix"
 #   if defined(__linux__)
 #       define VM_TARGET_OS "linux-gnu"
+#       define HAVE_EPOLL   1
 #   else
 #       define VM_TARGET_OS "unix"
+#       define HAVE_KQUEUE   1
 #   endif
 #elif defined(_WIN32)
 #   define OS_TYPE "Win32"

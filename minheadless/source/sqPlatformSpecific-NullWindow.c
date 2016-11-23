@@ -4,6 +4,15 @@
 #include "sqMemoryAccess.h"
 #include "config.h"
 
+static sqInt currentDisplayWidth;
+static sqInt currentDisplayHeight;
+static sqInt currentDisplayDepth;
+static sqInt currentDisplayFullscreenFlag;
+
+static sqInt screenWidth = 1920;
+static sqInt screenHeight = 1080;
+static sqInt screenDepth = 32;
+
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
 {
     return false;
@@ -48,6 +57,11 @@ sqInt ioHasDisplayDepth(sqInt depth)
 
 sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
 {
+    currentDisplayWidth = width;
+    currentDisplayHeight = height;
+    currentDisplayDepth = depth;
+    currentDisplayFullscreenFlag = fullDisplayUpdate();
+
     return 0;
 }
 
@@ -63,22 +77,24 @@ sqInt ioSetWindowLabelOfSize(void *lblIndex, sqInt sz)
 
 sqInt ioGetWindowWidth(void)
 {
-    return 0;
+    return currentDisplayWidth;
 }
 
 sqInt ioGetWindowHeight(void)
 {
-    return 0;
+    return currentDisplayHeight;
 }
 
 sqInt ioSetWindowWidthHeight(sqInt w, sqInt h)
 {
+    currentDisplayWidth = w;
+    currentDisplayHeight = h;
     return 0;
 }
 
 sqInt ioIsWindowObscured(void)
 {
-    return 0;
+    return false;
 }
 
 /* Events */
@@ -120,15 +136,31 @@ sqInt ioProcessEvents(void)
 
 double ioScreenScaleFactor(void)
 {
-    return 4.0/3.0;
+    return (double)screenWidth / (double)screenHeight;
 }
 
 sqInt ioScreenSize(void)
 {
-    return 0;
+    return screenWidth | (screenHeight << 16);
 }
 
 sqInt ioScreenDepth(void)
+{
+    return screenDepth;
+}
+
+/* Clipboard */
+sqInt clipboardSize(void)
+{
+    return 0;
+}
+
+sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
+{
+    return 0;
+}
+
+sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
     return 0;
 }

@@ -14,6 +14,7 @@
 #include <fcntl.h>
 
 #include "sq.h"
+#include "sqaio.h"
 #include "sqMemoryAccess.h"
 #include "config.h"
 #include "debug.h"
@@ -183,6 +184,7 @@ sqInt ioExitWithErrorCode(int errorCode)
 
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
+    aioSleepForUsecs(microSeconds);
     return 0;
 }
 
@@ -216,27 +218,6 @@ void  ioClearProfile(void)
 sqInt ioDisablePowerManager(sqInt disableIfNonZero)
 {
     return true;
-}
-
-/* Clipboard */
-sqInt clipboardSize(void)
-{
-    return 0;
-}
-
-sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
-{
-    return 0;
-}
-
-sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
-{
-    return 0;
-}
-
-/* Asychronous IO */
-void aioInit(void)
-{
 }
 
 /* Executable path. */

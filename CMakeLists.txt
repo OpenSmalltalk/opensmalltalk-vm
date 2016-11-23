@@ -65,8 +65,13 @@ endif()
 
 # Pharo branding
 option(PHARO_BRANDING "Pharo Branding" ON)
+set(VM_EXECUTABLE_NAME squeak)
+set(VM_LIBRARY_NAME SqueakVMCore)
+
 if(PHARO_BRANDING)
 	add_definitions(-DPharoVM=1)
+	set(VM_EXECUTABLE_NAME pharo)
+	set(VM_LIBRARY_NAME PharoVMCore)
 endif()
 
 # Cog JIT
@@ -84,14 +89,21 @@ if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 		set(CMAKE_ASM-ATT_FLAGS "--32")
 		set(CMAKE_CXX_FLAGS "-m32 -msse2")
 		set(CMAKE_C_FLAGS "-m32 -msse2")
+		set(FFI_VARIANT_IA32 True)
 	else()
 		set(VM_64BITS TRUE)
 		set(SourceFolderName "${SourceFolderName}64")
+		if(WIN32)
+			set(FFI_VARIANT_X64_WIN64 True)
+		else()
+			set(FFI_VARIANT_X64_SYSV True)
+		endif()
 	endif()
 else()
 	if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "i.86")
 		set(CMAKE_CXX_FLAGS "msse2")
 		set(CMAKE_C_FLAGS "-msse2")
+		set(FFI_VARIANT_IA32 True)
 	endif()
 	set(VM_64BITS False)
 endif()
@@ -173,6 +185,7 @@ set(VM_PLATFORM_SOURCES
 
 if(UNIX)
 	set(VM_PLATFORM_SOURCES
+		minheadless/source/aioUnix.c
 		minheadless/source/sqPlatformSpecific-Unix.c
 		minheadless/source/sqPlatformSpecific-NullWindow.c
 		minheadless/source/sqUnixCharConv.c
@@ -203,19 +216,18 @@ set(VM_SOURCES
 	${VM_COMMON_SOURCES}
 	${VM_FAVLOR_SOURCES}
 	${VM_PLATFORM_SOURCES}
-
 )
 
 include("Plugins.cmake")
 
-add_library(OpenSmalltalkVMCore STATIC ${VM_SOURCES})
+# Build the VM core library
+add_library(${VM_LIBRARY_NAME} STATIC ${VM_SOURCES} ${VM_INTERNAL_PLUGIN_SOURCES})
+add_dependencies(${VM_LIBRARY_NAME} sqGitVersionString)
 
-add_library(OpenSmalltalkVMInternalPlugins STATIC ${VM_INTERNAL_PLUGIN_SOURCES})
-target_compile_definitions(OpenSmalltalkVMInternalPlugins PRIVATE
+target_compile_definitions(${VM_LIBRARY_NAME} PRIVATE
 	-DSQUEAK_BUILTIN_PLUGIN
 )
 
-add_executable(squeak ${VM_SOURCES} minheadless/source/sqMain.c)
-target_link_libraries(squeak OpenSmalltalkVMCore OpenSmalltalkVMInternalPlugins ${VM_DEPENDENCIES_LIBRARIES})
-
-add_dependencies(squeak sqGitVersionString)
+# Build the VM executable(s)
+add_executable(${VM_EXECUTABLE_NAME} minheadless/source/sqMain.c)
+target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})

@@ -24,6 +24,25 @@ static const char *moduleNamePatterns[] = {
 };
 
 static const char *additionalModuleSearchPaths[] = {
+#ifdef _WIN32
+#endif
+
+#if defined(__linux__) || defined(unix) || defined(__APPLE__)
+    "/lib/",
+    "/usr/lib/",
+    "/usr/local/lib/",
+#   if defined(__linux__)
+#       if defined(__i386__)
+    "/lib/i386-linux-gnu/",
+    "/usr/lib/i386-linux-gnu/",
+    "/usr/local/lib/i386-linux-gnu/",
+#       elif defined(__x86_64__)
+    "/lib/x86_64-linux-gnu/",
+    "/usr/lib/x86_64-linux-gnu/",
+    "/usr/local/lib/x86_64-linux-gnu/",
+#       endif
+#   endif
+#endif
     NULL
 };
 

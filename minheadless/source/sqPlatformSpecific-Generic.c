@@ -185,45 +185,6 @@ sqInt ioDisablePowerManager(sqInt disableIfNonZero)
     return true;
 }
 
-/* Clipboard */
-sqInt clipboardSize(void)
-{
-    return 0;
-}
-
-sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
-{
-    return 0;
-}
-
-sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
-{
-    return 0;
-}
-
-/* Modules */
-void *ioLoadModule(char *pluginName)
-{
-    return 0;
-}
-
-sqInt ioFreeModule(void *moduleHandle)
-{
-    return 0;
-}
-
-#if SPURVM
-void *ioFindExternalFunctionInAccessorDepthInto(char *lookupName, void *moduleHandle, sqInt *accessorDepthPtr)
-{
-    return 0;
-}
-#else
-void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
-{
-    return 0;
-}
-#endif
-
 static int isAbsolutePath(const char *path)
 {
 #ifdef _WIN32
