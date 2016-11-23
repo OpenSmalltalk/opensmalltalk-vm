@@ -4654,12 +4654,12 @@ Cogit >> compilationTrace [
 
 { #category : #'simulation only' }
 Cogit >> compilationTrace: anInteger [
-	"1 = compilation
-	 2 = bytecode descriptor.
-	 4 = simStack.
-	 8 = spill
+	"  1 = method/block compilation
+	   2 = bytecode descriptor.
+	   4 = simStack & optStatus
+	   8 = spill
 	 16 = merge
-	32 = fixup"
+	 32 = fixup"
 	compilationTrace := anInteger
 ]
 
@@ -5764,12 +5764,16 @@ Cogit >> exclude: aMethodObj [
 			ifPresent:
 				[:excluded| 
 				(excluded anySatisfy: [:exclude| aMethodObj = exclude]) ifTrue:
-					[coInterpreter transcript nextPutAll: 'EXCLUDING '; nextPutAll: aMethodObj; nextPutAll: ' (compiled block)'; cr; flush.
+					[coInterpreter transcript
+						ensureCr; nextPutAll: 'EXCLUDING ';
+						nextPutAll: aMethodObj; nextPutAll: ' (compiled block)';
+						cr; flush.
 					 ^true]].
 		 (compilationTrace anyMask: 1) ifTrue:
 			[| methodClass |
 			 methodClass := coInterpreter nameOfClass: (coInterpreter methodClassOf: aMethodObj).
 			 coInterpreter transcript
+				ensureCr;
 				nextPutAll: 'compiling compiled block in ';
 				nextPutAll: methodClass;
 				cr; flush]].
@@ -5790,10 +5794,8 @@ Cogit >> exclude: aMethodObj selector: aSelectorOop [
 				selector := coInterpreter stringOf: aSelectorOop.
 				(excluded anySatisfy: [:exclude| selector = exclude or: [methodClass = exclude]]) ifTrue:
 					[coInterpreter transcript
-						nextPutAll: 'EXCLUDING ';
-						nextPutAll: methodClass;
-						nextPutAll: '>>#';
-						nextPutAll: selector;
+						ensureCr; nextPutAll: 'EXCLUDING ';
+						nextPutAll: methodClass; nextPutAll: '>>#'; nextPutAll: selector;
 						cr; flush.
 					 ^true]].
 		 (compilationTrace anyMask: 1) ifTrue:
@@ -5802,10 +5804,8 @@ Cogit >> exclude: aMethodObj selector: aSelectorOop [
 			 selector isEmpty ifTrue:
 				[selector := coInterpreter stringOf: (coInterpreter maybeSelectorOfMethod: aMethodObj)].
 			 coInterpreter transcript
-				nextPutAll: 'compiling ';
-				nextPutAll: methodClass;
-				nextPutAll: '>>#';
-				nextPutAll: selector;
+				ensureCr; nextPutAll: 'compiling ';
+				nextPutAll: methodClass; nextPutAll: '>>#'; nextPutAll: selector;
 				cr; flush]].
 	^false
 ]
