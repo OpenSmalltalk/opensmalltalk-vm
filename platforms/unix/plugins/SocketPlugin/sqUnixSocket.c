@@ -705,7 +705,7 @@ void sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, sqInt port, sqInt bac
     }
 
   PSP(s)->multiListen= (backlogSize > 1);
-  FPRINTF((stderr, "listenOnPortBacklogSize(%d, %d)\n", SOCKET(s), backlogSize));
+  FPRINTF((stderr, "listenOnPortBacklogSize(%d, %ld)\n", SOCKET(s), backlogSize));
   memset(&saddr, 0, sizeof(saddr));
   saddr.sin_family= AF_INET;
   saddr.sin_port= htons((short)port);
@@ -1125,7 +1125,7 @@ sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
   if (TCPSocketType != s->socketType)
     {
       /* --- UDP/RAW --- */
-      FPRINTF((stderr, "UDP sendData(%d, %d)\n", SOCKET(s), bufSize));
+      FPRINTF((stderr, "UDP sendData(%d, %ld)\n", SOCKET(s), bufSize));
       if ((nsent= sendto(SOCKET(s), buf, bufSize, 0, (struct sockaddr *)&SOCKETPEER(s), sizeof(SOCKETPEER(s)))) <= 0)
 	{
       int err = errno;
@@ -1139,12 +1139,12 @@ sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
   else
     {
       /* --- TCP --- */
-      FPRINTF((stderr, "TCP sendData(%d, %d)\n", SOCKET(s), bufSize));
+      FPRINTF((stderr, "TCP sendData(%d, %ld)\n", SOCKET(s), bufSize));
       if ((nsent= write(SOCKET(s), buf, bufSize)) <= 0)
 	{
 	  if ((nsent == -1) && (errno == EWOULDBLOCK))
 	    {
-	      FPRINTF((stderr, "TCP sendData(%d, %d) -> %d [blocked]",
+	      FPRINTF((stderr, "TCP sendData(%d, %ld) -> %d [blocked]",
 		       SOCKET(s), bufSize, nsent));
 	      return 0;
 	    }
@@ -1631,7 +1631,7 @@ void sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *ho
   struct addrinfo request;
   int gaiError= 0;
 
-  FPRINTF((stderr, "GetAddressInfo %d %d %d %d %d %d\n", hostSize, servSize, flags, family, type, protocol));
+  FPRINTF((stderr, "GetAddressInfo %ld %ld %ld %ld %ld %ld\n", hostSize, servSize, flags, family, type, protocol));
 
   if (addrList)
     {
@@ -1899,7 +1899,7 @@ void sqResolverGetNameInfoSizeFlags(char *addr, sqInt addrSize, sqInt flags)
   int niFlags= 0;
   int gaiError= 0;
 
-  FPRINTF((stderr, "GetNameInfoSizeFlags %p %d %d\n", addr, addrSize, flags));
+  FPRINTF((stderr, "GetNameInfoSizeFlags %p %ld %ld\n", addr, addrSize, flags));
 
   nameInfoValid= 0;
 
@@ -2048,7 +2048,7 @@ void sqSocketListenBacklog(SocketPtr s, sqInt backlogSize)
 
   PSP(s)->multiListen= (backlogSize > 1);
 
-  FPRINTF((stderr, "listenBacklog(%d, %d)\n", SOCKET(s), backlogSize));
+  FPRINTF((stderr, "listenBacklog(%d, %ld)\n", SOCKET(s), backlogSize));
 
   if (TCPSocketType == s->socketType)
     {

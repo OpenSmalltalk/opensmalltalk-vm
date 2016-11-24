@@ -258,6 +258,7 @@ void *ioLoadModule(char *pluginName)
 			CFRelease(bundleURL);
 			filePath = CFURLCopyFileSystemPath (bundleURL2, kCFURLPOSIXPathStyle);
 			CFRelease(bundleURL2);
+            CFRelease(resourcePathString);
 			
 			CFStringGetCString (filePath,vmDirPath,DOCUMENT_NAME_SIZE, kCFStringEncodingUTF8);
 			strcat(vmDirPath,"/");
@@ -653,7 +654,7 @@ static void *dlopenSqueak(const char *path, int mode)
 static void *dlsymSqueak(void *handle, const char *symbol)
 {
   char		_symbol[256];
-  NSSymbol	*nsSymbol= 0;
+  NSSymbol	nsSymbol= 0;
 
   snprintf(_symbol, sizeof(_symbol), "_%s", symbol);
 

@@ -90,7 +90,8 @@ usqInt
 sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 {
 	char *hint, *address, *alloc;
-	unsigned long alignment, allocBytes;
+    unsigned long alignment;
+    sqInt allocBytes;
 
 	if (pageSize) {
 		fprintf(stderr, "sqAllocateMemory: already called\n");
