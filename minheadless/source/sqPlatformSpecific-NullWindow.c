@@ -174,3 +174,9 @@ sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
     return 0;
 }
+
+/* OS Exports */
+void *winsys_exports[][3]=
+{
+    { 0, 0, 0 }
+};

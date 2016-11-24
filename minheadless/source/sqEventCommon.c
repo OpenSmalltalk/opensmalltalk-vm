@@ -12,3 +12,9 @@ sqInt ioSetInputSemaphore(sqInt semaIndex)
         inputEventSemaIndex= semaIndex;
     return true;
 }
+
+void ioSignalInputEvent(void)
+{
+  if (inputEventSemaIndex > 0)
+    signalSemaphoreWithIndex(inputEventSemaIndex);
+}

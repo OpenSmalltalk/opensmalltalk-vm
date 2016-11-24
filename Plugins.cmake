@@ -81,6 +81,10 @@ add_vm_plugin_auto(SocketPlugin INTERNAL)
 add_vm_plugin_auto(B2DPlugin INTERNAL)
 add_vm_plugin_auto(BitBltPlugin INTERNAL)
 
+add_vm_plugin_auto(FloatArrayPlugin INTERNAL)
+add_vm_plugin_auto(FloatMathPlugin INTERNAL)
+add_vm_plugin_auto(Matrix2x3Plugin INTERNAL)
+
 # Basic external plugins
 add_vm_plugin_auto(SurfacePlugin EXTERNAL)
 

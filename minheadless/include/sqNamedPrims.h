@@ -4,6 +4,7 @@
 
 extern sqExport vm_exports[];
 extern sqExport os_exports[];
+extern sqExport winsys_exports[];
 
 #define INTERNAL_PLUGIN(pluginName) \
 	extern sqExport pluginName ## _exports[];
@@ -16,6 +17,7 @@ extern sqExport os_exports[];
 sqExport *pluginExports[] = {
 	vm_exports,
 	os_exports,
+	winsys_exports,
 
 #include "sqInternalPlugins.inc"
 
