@@ -286,7 +286,8 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(1   96 101 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
 		(1 102 102 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
 		(1 103 103 genSpecialSelectorClass needsFrameIfStackGreaterThanOne: notMapped 0) "not mapped because it is directly inlined (for now)"
-		(1 104 111 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
+		(1 104 104 genSpecialSelectorNotEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 105 111 genSpecialSelectorSend isMapped) " #value #value: #do: #new #new: #x #y"
 
 		(1 112 127 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 128 143 genSendLiteralSelector1ArgBytecode isMapped)
@@ -411,7 +412,8 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		(1 112 117 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
 		(1 118 118 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
 		(1 119 119 genSpecialSelectorClass needsFrameIfStackGreaterThanOne: notMapped 0) "not mapped because it is directly inlined (for now)"
-		(1 120 127 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
+		(1 120 120 genSpecialSelectorNotEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 121 127 genSpecialSelectorSend isMapped) "#value #value: #do: #new #new: #x #y"
 
 		(1 128 143 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 144 159 genSendLiteralSelector1ArgBytecode isMapped)
@@ -568,7 +570,8 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 		(1 192 197 genSpecialSelectorSend isMapped) "#at: #at:put: #size #next #nextPut: #atEnd"
 		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
 		(1 199 199 genSpecialSelectorClass needsFrameIfStackGreaterThanOne: notMapped 0) "not mapped because it is directly inlined (for now)"
-		(1 200 207 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
+		(1 200 200 genSpecialSelectorNotEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 201 207 genSpecialSelectorSend isMapped) " #value #value: #do: #new #new: #x #y"
 		(1 208 223 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 224 239 genSendLiteralSelector1ArgBytecode isMapped)
 		(1 240 255 genSendLiteralSelector2ArgsBytecode isMapped))
@@ -1687,39 +1690,19 @@ StackToRegisterMappingCogit >> genCallPrimitiveBytecode [
 ]
 
 { #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genEqualsEqualsComparisonArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg [
-	"Generates the Cmp instruction for #==. The instruction is different if one of the operands is a constant.
-	In the case of the v3 memory manager, the constant could be annotable." 
+StackToRegisterMappingCogit >> genCmpArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg [
+	"Generates the Cmp instruction for the top two ssStack values. 
+	ssTop is called the argument and ssValue: 1 is called the receiver.
+	0 or 1 value on ssStack is a constant (but not 2). If a value is a constant, then noReg is passed as argReg or rcvrReg.
+	The instruction is different if one of the operands is a constant.
+	In the case of the v3 memory manager, the constant could be annotable."
 	<inline: true>
+	self assert: (argReg ~= NoReg or: [rcvrReg ~= NoReg]).
 	argIsConstant 
 		ifTrue: [ self genCmpConstant: self ssTop constant R: rcvrReg ]
 		ifFalse: [ rcvrIsConstant
 			ifTrue: [ self genCmpConstant: (self ssValue: 1) constant R: argReg ]
 			ifFalse: [ self CmpR: argReg R: rcvrReg ] ].
-]
-
-{ #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genEqualsEqualsNoBranchArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrRegOrNone [
-	"Generates the machine code for #== in the case where the instruction is not followed by a branch"
-	| label jumpEqual jumpNotEqual resultReg |
-	<var: #label type: #'AbstractInstruction *'>
-	<var: #jumpEqual type: #'AbstractInstruction *'>
-	<var: #jumpNotEqual type: #'AbstractInstruction *'>
-	label := self Label.
-	self genEqualsEqualsComparisonArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrRegOrNone.
-	self ssPop: 2.
-	resultReg := rcvrRegOrNone = NoReg ifTrue: [argReg] ifFalse: [rcvrRegOrNone].
-	jumpEqual := self JumpZero: 0.
-	 argIsConstant ifFalse:
-		[objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label].
-	 rcvrIsConstant ifFalse:
-		[objectRepresentation genEnsureOopInRegNotForwarded: rcvrRegOrNone scratchReg: TempReg jumpBackTo: label].
-	 self genMoveFalseR: resultReg.
-	 jumpNotEqual := self Jump: 0.
-	 jumpEqual jmpTarget: (self genMoveTrueR: resultReg).
-	 jumpNotEqual jmpTarget: self Label.
-	 self ssPushRegister: resultReg.
-	 ^0
 ]
 
 { #category : #'bytecode generators' }
@@ -1871,6 +1854,94 @@ StackToRegisterMappingCogit >> genExternalizePointersForPrimitiveCall [
 	^super genExternalizePointersForPrimitiveCall
 ]
 
+{ #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
+	| nextPC branchDescriptor unforwardRcvr argReg targetBytecodePC
+	unforwardArg  rcvrReg postBranchPC label fixup |
+	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
+	<var: #label type: #'AbstractInstruction *'>
+	
+	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
+		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
+
+	"If an operand is an annotable constant, it may be forwarded, so we need to store it into a 
+	register so the forwarder check can jump back to the comparison after unforwarding the constant.
+	However, if one of the operand is an unnanotable constant, does not allocate a register for it 
+	(machine code will use operations on constants) and does not generate forwarder checks."
+	unforwardRcvr := (objectRepresentation isUnannotatableConstant: (self ssValue: 1)) not.
+	unforwardArg := (objectRepresentation isUnannotatableConstant: self ssTop) not.
+
+	self 
+		allocateEqualsEqualsRegistersArgNeedsReg: unforwardArg 
+		rcvrNeedsReg: unforwardRcvr 
+		into: [ :rcvr :arg | rcvrReg:= rcvr. argReg := arg ].
+
+	"If not followed by a branch, resolve to true or false."
+	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse:
+		[^ self 
+			genIdenticalNoBranchArgIsConstant: unforwardArg not
+			rcvrIsConstant: unforwardRcvr not
+			argReg: argReg 
+			rcvrReg: rcvrReg 
+			orNotIf: orNot].
+	
+	"If branching the stack must be flushed for the merge"
+	self ssFlushTo: simStackPtr - 2.
+	
+	label := self Label.
+	self genCmpArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
+	self ssPop: 2.
+
+	"Further since there is a following conditional jump bytecode, define
+	 non-merge fixups and leave the cond bytecode to set the mergeness."
+	(self fixupAt: nextPC - initialPC) notAFixup
+		ifTrue: "The next instruction is dead.  we can skip it."
+			[deadCode := true.
+		 	 self ensureFixupAt: targetBytecodePC - initialPC.
+			 self ensureFixupAt: postBranchPC - initialPC]
+		ifFalse:
+			[self ssPushConstant: objectMemory trueObject]. "dummy value"
+
+	self assert: (unforwardArg or: [unforwardRcvr]).
+	"We could use (branchDescriptor isBranchTrue xor: orNot) to simplify this."
+	orNot 
+		ifFalse: [branchDescriptor isBranchTrue
+					ifTrue: 
+						[ fixup := (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
+						self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger ]
+					ifFalse: "branchDescriptor is branchFalse"
+						[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
+						self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ]]
+		ifTrue: [branchDescriptor isBranchTrue
+					ifFalse: "branchDescriptor is branchFalse"
+						[ fixup := (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
+						self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger ]
+					ifTrue:
+						[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
+						self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ]].
+		
+	"The forwarders checks need to jump back to the comparison (label) if a forwarder is found, else 
+	jump forward either to the next forwarder check or to the postBranch or branch target (fixup)."
+	unforwardArg ifTrue: 
+		[ unforwardRcvr
+			ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ]
+			ifFalse: [ objectRepresentation 
+				genEnsureOopInRegNotForwarded: argReg 
+				scratchReg: TempReg 
+				ifForwarder: label
+				ifNotForwarder: fixup ] ].
+	unforwardRcvr ifTrue: 
+		[ objectRepresentation 
+			genEnsureOopInRegNotForwarded: rcvrReg 
+			scratchReg: TempReg 
+			ifForwarder: label
+			ifNotForwarder: fixup ].
+		
+	"Not reached, execution flow have jumped to fixup"
+	
+	^0
+]
+
 { #category : #'bytecode generator stores' }
 StackToRegisterMappingCogit >> genGenericStorePop: popBoolean MaybeContextSlotIndex: slotIndex needsStoreCheck: needsStoreCheck needsRestoreRcvr: needsRestoreReceiver needsImmutabilityCheck: needsImmCheck [
 	"Generates a store into an object that *may* be a context.
@@ -1957,6 +2028,30 @@ StackToRegisterMappingCogit >> genGenericStorePop: popBoolean slotIndex: slotInd
 ]
 
 { #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> genIdenticalNoBranchArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrRegOrNone orNotIf: orNot [
+	"Generates the machine code for #== in the case where the instruction is not followed by a branch"
+	| label jumpEqual jumpNotEqual resultReg |
+	<var: #label type: #'AbstractInstruction *'>
+	<var: #jumpEqual type: #'AbstractInstruction *'>
+	<var: #jumpNotEqual type: #'AbstractInstruction *'>
+	label := self Label.
+	self genCmpArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrRegOrNone.
+	self ssPop: 2.
+	resultReg := rcvrRegOrNone = NoReg ifTrue: [argReg] ifFalse: [rcvrRegOrNone].
+	jumpEqual := self JumpZero: 0.
+	 argIsConstant ifFalse:
+		[objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label].
+	 rcvrIsConstant ifFalse:
+		[objectRepresentation genEnsureOopInRegNotForwarded: rcvrRegOrNone scratchReg: TempReg jumpBackTo: label].
+	 orNot ifFalse: [self genMoveFalseR: resultReg] ifTrue: [self genMoveTrueR: resultReg].
+	 jumpNotEqual := self Jump: 0.
+	 jumpEqual jmpTarget: (orNot ifFalse: [self genMoveTrueR: resultReg] ifTrue: [self genMoveFalseR: resultReg]).
+	 jumpNotEqual jmpTarget: self Label.
+	 self ssPushRegister: resultReg.
+	 ^0
+]
+
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genInlineClosure: startpc numArgs: numArgs numCopied: numCopied [
 	<inline: true>
 	self assert: objectRepresentation getActiveContextAllocatesInMachineCode.
@@ -1980,6 +2075,29 @@ StackToRegisterMappingCogit >> genInlineClosure: startpc numArgs: numArgs numCop
 			intoNewObjectInDestReg: ReceiverResultReg].
 	 self ssPushRegister: ReceiverResultReg
 
+]
+
+{ #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> genInlinedIdenticalOrNotIf: orNot [
+	"Decompose code generation for #== into a common constant-folding version,
+	 followed by a double dispatch throguh the objectRepresentation to a version
+	 that doesn't deal with forwarders and a version that does."
+	| primDescriptor result |
+	<var: #primDescriptor type: #'BytecodeDescriptor *'>
+	primDescriptor := self generatorAt: byte0.
+	
+	((objectRepresentation isUnannotatableConstant: self ssTop)
+	 and: [ objectRepresentation isUnannotatableConstant: (self ssValue: 1) ]) ifTrue:
+		[self assert: primDescriptor isMapped not.
+		 result := (orNot
+					ifFalse: [self ssTop constant = (self ssValue: 1) constant]
+					ifTrue: [self ssTop constant ~= (self ssValue: 1) constant])
+									ifTrue: [objectMemory trueObject]
+									ifFalse: [objectMemory falseObject].
+		 self ssPop: 2.
+		 ^self ssPushConstant: result].
+
+	^objectRepresentation genInlinedIdenticalOrNotIfGuts: orNot
 ]
 
 { #category : #'bytecode generator support' }
@@ -11287,101 +11405,6 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	^self genMarshalledSend: index negated - 1 numArgs: 1 sendTable: ordinarySendTrampolines
 ]
 
-{ #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
-	"Decompose code generation for #== into a common constant-folding version,
-	 followed by a double dispatch throguh the objectRepresentation to a version
-	 that doesn't deal with forwarders and a version that does."
-	| primDescriptor result |
-	<var: #primDescriptor type: #'BytecodeDescriptor *'>
-	primDescriptor := self generatorAt: byte0.
-	
-	((objectRepresentation isUnannotatableConstant: self ssTop)
-	 and: [ objectRepresentation isUnannotatableConstant: (self ssValue: 1) ]) ifTrue:
-		[self assert: primDescriptor isMapped not.
-		 result := self ssTop constant = (self ssValue: 1) constant
-									ifTrue: [objectMemory trueObject]
-									ifFalse: [objectMemory falseObject].
-		 self ssPop: 2.
-		 ^self ssPushConstant: result].
-
-	^objectRepresentation genSpecialSelectorEqualsEqualsGuts
-]
-
-{ #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
-	| nextPC branchDescriptor unforwardRcvr argReg targetBytecodePC
-	unforwardArg  rcvrReg postBranchPC label fixup |
-	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
-	<var: #label type: #'AbstractInstruction *'>
-	
-	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
-		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
-
-	"If an operand is an annotable constant, it may be forwarded, so we need to store it into a 
-	register so the forwarder check can jump back to the comparison after unforwarding the constant.
-	However, if one of the operand is an unnanotable constant, does not allocate a register for it 
-	(machine code will use operations on constants) and does not generate forwarder checks."
-	unforwardRcvr := (objectRepresentation isUnannotatableConstant: (self ssValue: 1)) not.
-	unforwardArg := (objectRepresentation isUnannotatableConstant: self ssTop) not.
-
-	self 
-		allocateEqualsEqualsRegistersArgNeedsReg: unforwardArg 
-		rcvrNeedsReg: unforwardRcvr 
-		into: [ :rcvr :arg | rcvrReg:= rcvr. argReg := arg ].
-
-	"If not followed by a branch, resolve to true or false."
-	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse:
-		[^ self genEqualsEqualsNoBranchArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg].
-	
-	"If branching the stack must be flushed for the merge"
-	self ssFlushTo: simStackPtr - 2.
-	
-	label := self Label.
-	self genEqualsEqualsComparisonArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
-	self ssPop: 2.
-
-	"Further since there is a following conditional jump bytecode, define
-	 non-merge fixups and leave the cond bytecode to set the mergeness."
-	(self fixupAt: nextPC - initialPC) notAFixup
-		ifTrue: "The next instruction is dead.  we can skip it."
-			[deadCode := true.
-		 	 self ensureFixupAt: targetBytecodePC - initialPC.
-			 self ensureFixupAt: postBranchPC - initialPC]
-		ifFalse:
-			[self ssPushConstant: objectMemory trueObject]. "dummy value"
-
-	self assert: (unforwardArg or: [ unforwardRcvr ]).
-	branchDescriptor isBranchTrue 
-		ifTrue: 
-			[ fixup := (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
-			self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger ]
-		ifFalse: "branchDescriptor is branchFalse"
-			[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-			self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ].
-		
-	"The forwarders checks need to jump back to the comparison (label) if a forwarder is found, else 
-	jump forward either to the next forwarder check or to the postBranch or branch target (fixup)."
-	unforwardArg ifTrue: 
-		[ unforwardRcvr
-			ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ]
-			ifFalse: [ objectRepresentation 
-				genEnsureOopInRegNotForwarded: argReg 
-				scratchReg: TempReg 
-				ifForwarder: label
-				ifNotForwarder: fixup ] ].
-	unforwardRcvr ifTrue: 
-		[ objectRepresentation 
-			genEnsureOopInRegNotForwarded: rcvrReg 
-			scratchReg: TempReg 
-			ifForwarder: label
-			ifNotForwarder: fixup ].
-		
-	"Not reached, execution flow have jumped to fixup"
-	
-	^0
-]
-
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genStaticallyResolvedSpecialSelectorComparison [
 	"Assumes both operands are ints"
@@ -11615,7 +11638,7 @@ StackToRegisterMappingCogit >> genUpArrowReturn [
 ]
 
 { #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genVanillaSpecialSelectorEqualsEquals [
+StackToRegisterMappingCogit >> genVanillaInlinedIdenticalOrNotIf: orNot [
 	| nextPC postBranchPC targetBytecodePC branchDescriptor
 	  rcvrReg argReg argIsConstant rcvrIsConstant  |
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
@@ -11624,11 +11647,9 @@ StackToRegisterMappingCogit >> genVanillaSpecialSelectorEqualsEquals [
 		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
 	
 	argIsConstant := self ssTop type = SSConstant.
-	"they can't be both constants because we do not have instructions manipulating two constants, 
-	if this is the case, which can happen due to annotable constants that can be moved in memory 
-	with become and therefore can't resolve #== at compilation time, still write the rcvr into a 
-	register as if it was not a constant. It's uncommon anyway."
-	rcvrIsConstant := argIsConstant not and: [(self ssValue: 1) type = SSConstant]. 
+	"They can't be both constants to use correct machine opcodes.
+	 However annotable constants can't be resolved statically, hence we need to careful."
+	rcvrIsConstant := argIsConstant not and: [(self ssValue: 1) type = SSConstant].
 	
 	self 
 		allocateEqualsEqualsRegistersArgNeedsReg: argIsConstant not 
@@ -11637,12 +11658,17 @@ StackToRegisterMappingCogit >> genVanillaSpecialSelectorEqualsEquals [
 	
 	"If not followed by a branch, resolve to true or false."
 	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse:
-		[ ^ self genEqualsEqualsNoBranchArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg].
+		[^ self 
+			genIdenticalNoBranchArgIsConstant: argIsConstant 
+			rcvrIsConstant: rcvrIsConstant 
+			argReg: argReg 
+			rcvrReg: rcvrReg 
+			orNotIf: orNot].
 	
 	"If branching the stack must be flushed for the merge"
 	self ssFlushTo: simStackPtr - 2.
 	
-	self genEqualsEqualsComparisonArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg.
+	self genCmpArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg.
 	self ssPop: 2.
 
 	"Further since there is a following conditional jump bytecode, define
@@ -11655,7 +11681,10 @@ StackToRegisterMappingCogit >> genVanillaSpecialSelectorEqualsEquals [
 		ifFalse:
 			[self ssPushConstant: objectMemory trueObject]. "dummy value"
 		
-	self genConditionalBranch: (branchDescriptor isBranchTrue ifTrue: [JumpZero] ifFalse: [JumpNonZero])
+	"We could simplify this with a xor:"
+	self genConditionalBranch: (orNot 
+						ifFalse: [branchDescriptor isBranchTrue ifTrue: [JumpZero] ifFalse: [JumpNonZero]]
+						ifTrue: [branchDescriptor isBranchTrue ifTrue: [JumpNonZero] ifFalse: [JumpZero]])
 		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
 
 	"If the branch is dead, then we can just fall through postBranchPC (only a nop in-between), else 
