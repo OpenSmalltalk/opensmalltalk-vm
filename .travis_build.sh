@@ -38,7 +38,7 @@ echo "`cat platforms/Cross/plugins/sqPluginsSCCSVersion.h | .git_filters/RevDate
 
 REV=$(grep -m1 "SvnRawRevisionString" platforms/Cross/vm/sqSCCSVersion.h | sed 's/[^0-9.]*\([0-9.]*\).*/\1/')
 
-echo $PATH
+# echo $PATH
 
 output_file="${TRAVIS_BUILD_DIR}/cog_${ARCH}_${FLAVOR}_${REV}"
 
@@ -60,9 +60,9 @@ build_linux_in() {
 }
 
 tar_linux_product() {
-    local file_name=$1
+    local file_path=$1
     pushd "./products"
-    tar czf "../${file_name}.tar.gz" "./"
+    tar czf "${file_path}.tar.gz" "./"
     popd
 }
 
