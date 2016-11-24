@@ -112,9 +112,9 @@ build_windows() {
     popd
 }
 
-if [[ $(type -t build_$PLATFORM) ]]; then
-    build_$PLATFORM
-else
-    echo "Unsupported platform '${os_name}'." 1>&2
+if [[ ! $(type -t build_$PLATFORM) ]]; then
+    echo "Unsupported platform '$(uname -s)'." 1>&2
     exit 99
 fi
+
+build_$PLATFORM
