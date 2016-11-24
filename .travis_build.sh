@@ -66,9 +66,9 @@ case "$PLATFORM" in
     if [[ -d "${build_directory}.itimerheartbeat" ]]; then
         pushd "${build_directory}.itimerheartbeat"
 
-        travis_fold start build_vm "Building OpenSmalltalk VM with itimerheartbeat..."
+        travis_fold start build_itimer_vm "Building OpenSmalltalk VM with itimerheartbeat..."
         echo n | bash -e ./mvm
-        travis_fold end build_vm
+        travis_fold end build_itimer_vm
 
         # cat config.log
         popd
