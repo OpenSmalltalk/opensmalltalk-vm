@@ -51,10 +51,6 @@ export COGVOPTS="-DCOGVREV=\"${COGVREV}\" -DCOGVDATE=\"${COGVDATE// /_}\" -DCOGV
 case "$PLATFORM" in
   "Linux")
     build_directory="./build.${ARCH}/${FLAVOR}/build"
-	if [[ "${HEARTBEAT}" == "itimer" ]]; then
-		build_directory="${build_directory}.itimerheartbeat"
-	fi
-
     [[ ! -d "${build_directory}" ]] && exit 10
 
     pushd "${build_directory}"
@@ -65,6 +61,18 @@ case "$PLATFORM" in
 
     # cat config.log
     popd
+
+    # Also build VM with itimerheartbeat if available
+    if [[ -d "${build_directory}.itimerheartbeat" ]]; then
+        pushd "${build_directory}.itimerheartbeat"
+
+        travis_fold start build_vm "Building OpenSmalltalk VM with itimerheartbeat..."
+        echo n | bash -e ./mvm
+        travis_fold end build_vm
+
+        # cat config.log
+        popd
+    fi
 
     output_file="${output_file}.tar.gz"
     tar czf "${output_file}" "./products"
