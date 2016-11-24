@@ -84,7 +84,7 @@ build_linux() {
     tar_linux_product "${output_file}_itimer"
 }
 
-build_darwin() {
+build_osx() {
     build_directory="./build.${ARCH}/${FLAVOR}"
 
     [[ ! -d "${build_directory}" ]] && exit 50
