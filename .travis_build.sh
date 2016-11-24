@@ -6,7 +6,7 @@ source ./.travis_helpers.sh
 if [[ "${APPVEYOR}" ]]; then
     TRAVIS_BUILD_DIR="$(pwd)"
     TRAVIS_TAG="${APPVEYOR_REPO_TAG}"
-    PLATFORM="Windows"
+    PLATFORM="windows"
 
     # Appveyor's GCC is pretty new, patch the Makefiles and replace the tools to
     # make it work
@@ -17,9 +17,8 @@ if [[ "${APPVEYOR}" ]]; then
     echo
     test -d /usr/i686-w64-mingw32/sys-root/mingw/lib || echo "No lib dir"
     test -d /usr/i686-w64-mingw32/sys-root/mingw/include || echo "No inc dir"
-
 else
-    PLATFORM="$(uname -s)"
+    PLATFORM="${TRAVIS_OS_NAME}"
 fi
 
 [[ -z "${ARCH}" ]] && exit 2
@@ -48,36 +47,44 @@ export COGVDATE="$(git show -s --format=%cd HEAD)"
 export COGVURL="$(git config --get remote.origin.url)"
 export COGVOPTS="-DCOGVREV=\"${COGVREV}\" -DCOGVDATE=\"${COGVDATE// /_}\" -DCOGVURL=\"${COGVURL//\//\\\/}\""
 
-case "$PLATFORM" in
-  "Linux")
+build_linux_in() {
+    local build_dir=$1
+    local fold_name=$2
+
+    pushd "${build_dir}"
+    travis_fold start "${fold_name}" "Building OpenSmalltalk VM in ${build_dir}..."
+    echo n | bash -e ./mvm
+    travis_fold end "${fold_name}"
+    # cat config.log
+    popd
+}
+
+tar_linux_product() {
+    local file_name=$1
+    pushd "./products"
+    tar czf "../${file_name}.tar.gz" "./"
+    popd
+}
+
+build_linux() {
     build_directory="./build.${ARCH}/${FLAVOR}/build"
     [[ ! -d "${build_directory}" ]] && exit 10
 
-    pushd "${build_directory}"
-
-    travis_fold start build_vm "Building OpenSmalltalk VM..."
-    echo n | bash -e ./mvm
-    travis_fold end build_vm
-
-    # cat config.log
-    popd
+    build_linux_in "${build_directory}" "build_vm"
+    tar_linux_product "${output_file}"
 
     # Also build VM with itimerheartbeat if available
-    if [[ -d "${build_directory}.itimerheartbeat" ]]; then
-        pushd "${build_directory}.itimerheartbeat"
-
-        travis_fold start build_itimer_vm "Building OpenSmalltalk VM with itimerheartbeat..."
-        echo n | bash -e ./mvm
-        travis_fold end build_itimer_vm
-
-        # cat config.log
-        popd
+    if [[ ! -d "${build_directory}.itimerheartbeat" ]]; then
+        return
     fi
 
-    output_file="${output_file}.tar.gz"
-    tar czf "${output_file}" "./products"
-    ;;
-  "Darwin")
+    rm -rf "./products" # Clear products directory
+
+    build_linux_in "${build_directory}.itimerheartbeat" "build_itimer_vm"
+    tar_linux_product "${output_file}_itimer"
+}
+
+build_darwin() {
     build_directory="./build.${ARCH}/${FLAVOR}"
 
     [[ ! -d "${build_directory}" ]] && exit 50
@@ -88,14 +95,12 @@ case "$PLATFORM" in
     bash -e ./mvm -f
     travis_fold end build_vm
 
-    output_file="${output_file}.tar.gz"
-	echo "Archiving files into $output_file"
-    tar cvzf "${output_file}" ./*.app
+    tar cvzf "${output_file}.tar.gz" ./*.app
     popd
-    ;;
-  "Windows")
+}
+
+build_windows() {
     build_directory="./build.${ARCH}/${FLAVOR}/"
-    output_zip="${output_file}.zip"
 
     [[ ! -d "${build_directory}" ]] && exit 100
 
@@ -103,11 +108,13 @@ case "$PLATFORM" in
     # remove bochs plugins
     sed -i 's/Bochs.* //g' plugins.ext
     bash -e ./mvm -f || exit 1
-    zip -r "${output_zip}" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
+    zip -r "${output_file}.zip" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
     popd
-    ;;
-  *)
+}
+
+if [[ $(type -t build_$PLATFORM) ]]; then
+    build_$PLATFORM
+else
     echo "Unsupported platform '${os_name}'." 1>&2
     exit 99
-    ;;
-esac
+fi
