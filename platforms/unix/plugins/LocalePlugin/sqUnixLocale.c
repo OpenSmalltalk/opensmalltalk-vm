@@ -613,7 +613,7 @@ sqInt sqLocCurrencyNotation(void)
  * does precisely this.
  */
 #define safestrcpy(str,source) do { \
-	char *src = (source); \
+	const char *src = (source); \
 	int len = strlen(src); \
 	strncpy(str,src,len); \
 } while (0)
