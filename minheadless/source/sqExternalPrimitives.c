@@ -17,6 +17,7 @@ static const char *moduleNamePatterns[] = {
     "%s%s",
 #ifdef _WIN32
     "%s%s.dll",
+    "%slib%s.dll",
 #elif __APPLE__
     "%s%s",
     "%s%s.dylib",
@@ -122,6 +123,7 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
         char buf[256];
         signed char *accessorDepthVarPtr;
 
+        strcpy(buf, lookupName);
     	snprintf(buf+strlen(buf), sizeof(buf) - strlen(buf), "AccessorDepth");
     	accessorDepthVarPtr = getModuleSymbol(moduleHandle, buf);
     	/* The Slang machinery assumes accessor depth defaults to -1, which

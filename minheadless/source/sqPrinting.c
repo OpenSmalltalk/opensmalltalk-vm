@@ -15,6 +15,7 @@ void error(char *errorMessage)
 void sqError(char *errorMessage)
 {
     fprintf(stderr, "%s\n", errorMessage);
+    abort();
 }
 
 
