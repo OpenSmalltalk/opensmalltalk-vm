@@ -440,6 +440,14 @@ squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos)
   return ofs.offset;
 }
 
+squeakFileOffsetType sqImageFileSeekEnd(sqImageFile h, squeakFileOffsetType pos)
+{
+    win32FileOffset ofs;
+    ofs.offset = pos;
+    ofs.dwLow = SetFilePointer((HANDLE)(h - 1), ofs.dwLow, &ofs.dwHigh, FILE_END);
+    return ofs.offset;
+}
+
 size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h)
 {
   DWORD dwReallyWritten;

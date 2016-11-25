@@ -36,6 +36,7 @@
 #undef sqImageFilePosition
 #undef sqImageFileRead
 #undef sqImageFileSeek
+#undef sqImageFileSeekEnd
 #undef sqImageFileWrite
 
 #define sqImageFile usqIntptr_t
@@ -44,11 +45,15 @@ sqImageFile sqImageFileOpen(char *fileName, char *mode);
 squeakFileOffsetType sqImageFilePosition(sqImageFile h);
 size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h);
 squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos);
+squeakFileOffsetType sqImageFileSeekEnd(sqImageFile h, squeakFileOffsetType pos);
 size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
 #else /* when no WIN32_FILE_SUPPORT, add necessary stub for using regular Cross/plugins/FilePlugin functions */
 #include <stdlib.h>
 #include <io.h> /* _get_osfhandle */
+#ifndef PATH_MAX
 #define PATH_MAX _MAX_PATH
+#endif
+
 #define fsync(filenumber) FlushFileBuffers((HANDLE)_get_osfhandle(filenumber))
 #endif /* WIN32_FILE_SUPPORT */
 
@@ -94,6 +99,9 @@ size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
 #    define fabsf(x)    ((float)fabs((double)(x)))
 #  endif
 #  define bzero(pointer,size) ZeroMemory(pointer,size)
+#else
+#  include <string.h>
+#  define bzero(pointer,size) memset(pointer, 0, size)
 #endif
 
 #ifdef __GNUC__

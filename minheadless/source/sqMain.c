@@ -252,17 +252,17 @@ static void parseArguments(int argc, char **argv)
 static int tryToLoadImageFromFileName(const char *fileName)
 {
     size_t imageSize = 0;
-    FILE *imageFile = 0;
+    sqImageFile imageFile = 0;
 
     /* Open the image file. */
-    imageFile = fopen(fileName, "rb");
+    imageFile = sqImageFileOpen(fileName, "rb");
     if(!imageFile)
         return 0;
 
     /* Get the size of the image file*/
-    fseek(imageFile, 0, SEEK_END);
-    imageSize = ftell(imageFile);
-    fseek(imageFile, 0, SEEK_SET);
+    sqImageFileSeekEnd(imageFile, 0);
+    imageSize = sqImageFilePosition(imageFile);
+    sqImageFileSeek(imageFile, 0);
 
     if (extraMemory)
         useMmap= 0;
@@ -334,6 +334,7 @@ int main(int argc, char *argv[], char *envp[])
     ioInitWindowSystem();
     ioInitTime();
     ioInitThreads();
+    ioVMThread = ioCurrentOSThread();
     aioInit();
     imgInit();
 

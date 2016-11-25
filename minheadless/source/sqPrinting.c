@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include "sq.h"
+#include "sqConfig.h"
 
 #ifdef error
 #undef error
@@ -97,7 +98,7 @@ extern int sqAskSecurityYesNoQuestion(const char *question)
 }
 
 #ifndef printLastError
-void printLastError(TCHAR *prefix)
+void printLastError(const TCHAR *prefix)
 { LPVOID lpMsgBuf;
   DWORD lastError;
 
@@ -150,6 +151,24 @@ int sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const char* fmt, ...)
     return result;
 }
 #endif
+
+#ifndef abortMessage
+int abortMessage(const TCHAR* fmt, ...)
+{
+    TCHAR *buf;
+    va_list args;
+
+    buf = (TCHAR*)calloc(sizeof(TCHAR), 4096);
+    va_start(args, fmt);
+    wvsprintf(buf, fmt, args);
+    va_end(args);
+
+    MessageBox(NULL, buf, TEXT(VM_NAME) TEXT("!"), MB_OK | MB_TASKMODAL | MB_SETFOREGROUND);
+    free(buf);
+    exit(-1);
+}
+#endif
+
 #else
 void sqMessagePrintf(const char *format, ...)
 {

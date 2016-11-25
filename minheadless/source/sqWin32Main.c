@@ -5,10 +5,10 @@
 extern int main(int argc, char *argv[], char *envp[]);
 
 int CALLBACK WinMain(
-  _In_ HINSTANCE hInstance,
-  _In_ HINSTANCE hPrevInstance,
-  _In_ LPSTR     lpCmdLine,
-  _In_ int       nCmdShow
+  HINSTANCE hInstance,
+  HINSTANCE hPrevInstance,
+  LPSTR     lpCmdLine,
+  int       nCmdShow
 )
 {
     return main(__argc, __argv, _environ);

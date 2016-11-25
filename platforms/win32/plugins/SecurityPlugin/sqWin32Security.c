@@ -8,6 +8,7 @@
 #include <windows.h>
 #include <shlobj.h> /* CSIDL_XXX */
 #include "sq.h"
+#include "sqWin32.h"
 
 #ifndef HKEY_SQUEAK_ROOT
 /* the default place in the registry to look for */
@@ -213,10 +214,10 @@ char *ioGetUntrustedUserDirectory(void) {
 
 int expandMyDocuments(char *pathname, char *replacement, char *result)
 {
-  TCHAR search4[MAX_PATH+1];
-  TCHAR *start;
+  CHAR search4[MAX_PATH+1];
+  CHAR *start;
 
-  lstrcpy(search4, TEXT("%MYDOCUMENTS%"));
+  strcpy(search4, TEXT("%MYDOCUMENTS%"));
 
   if(!(start = strstr(pathname, search4))) return 0;
 
@@ -255,7 +256,7 @@ sqInt ioInitSecurity(void) {
   }
 
   /* Look up shGetFolderPathW */
-  shGetFolderPath = (void*)GetProcAddress(LoadLibrary("SHFolder.dll"), 
+  shGetFolderPath = (void*)GetProcAddress(LoadLibraryA("SHFolder.dll"), 
                                           "SHGetFolderPathW");
 
   if(shGetFolderPath) {

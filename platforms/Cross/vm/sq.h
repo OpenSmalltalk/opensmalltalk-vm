@@ -68,6 +68,7 @@
 #define sqImageFilePosition(f)               		   ftell(f)
 #define sqImageFileRead(ptr, sz, count, f)   		   fread(ptr, sz, count, f)
 #define sqImageFileSeek(f, pos)              		   fseek(f, pos, SEEK_SET)
+#define sqImageFileSeekEnd(f, pos)              	   fseek(f, pos, SEEK_END)
 #define sqImageFileWrite(ptr, sz, count, f)  		   fwrite(ptr, sz, count, f)
 #define sqImageFileStartLocation(fileRef, fileName, size)  0
 
