@@ -114,7 +114,10 @@ RegisterAllocatingCogit >> ensureFixupAt: targetIndex [
 	<var: #fixup type: #'BytecodeFixup *'>
 	fixup := self fixupAt: targetIndex.
 	fixup needsFixup 
-		ifTrue: [self mergeCurrentSimStackWith: fixup mergeSimStack ]
+		ifTrue:
+			[fixup mergeSimStack
+				ifNil: [self setMergeSimStackOf: fixup]
+				ifNotNil: [self mergeCurrentSimStackWith: fixup mergeSimStack]]
 		ifFalse: 
 			[self assert: fixup mergeSimStack isNil.
 			self moveSimStackConstantsToRegisters.
@@ -561,6 +564,7 @@ RegisterAllocatingCogit >> restoreSimStackAtMergePoint: fixup [
 	 away all simStack and optStatus optimization state."
 	fixup mergeSimStack ifNotNil:
 		[simSpillBase := methodOrBlockNumTemps.
+		 self flag: 'try and maintain this through the merge'.
 		 optStatus isReceiverResultRegLive: false.
 		 0 to: simStackPtr do:
 			[:i|
@@ -575,6 +579,7 @@ RegisterAllocatingCogit >> setMergeSimStackOf: fixup [
 	self assert: nextFixup <= numFixups.
 	self moveSimStackConstantsToRegisters.
 	self cCode: [fixup mergeSimStack: mergeSimStacksBase + (nextFixup * self simStackSlots * (self sizeof: CogSimStackEntry))].
+	fixup simStackPtr: simStackPtr.
 	nextFixup := nextFixup + 1.
 	self cCode: [self mem: fixup mergeSimStack cp: simStack y: self simStackSlots * (self sizeof: CogSimStackEntry)]
 		inSmalltalk: [fixup mergeSimStack: self copySimStack]
