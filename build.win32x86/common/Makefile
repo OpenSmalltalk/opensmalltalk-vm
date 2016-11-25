@@ -268,6 +268,7 @@ $(OBJDIR)/%.lib:
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
 		CONFIGURATION=$(CONFIGURATION) \
+		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
 		$(OBJDIR)/$(*F).lib
@@ -280,6 +281,7 @@ $(OBJDIR)/%.dll:
 		-f $(call plugin-makefile,$(*F)) \
 		CONFIGURATION=$(CONFIGURATION) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
+		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
 		COGDEFS="$(COGDEFS)" LIBNAME=$(*F) $(OBJDIR)/$(*F).dll
 
 #############################################################################
