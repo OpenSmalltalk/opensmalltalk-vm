@@ -1185,7 +1185,7 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 StackToRegisterMappingCogit >> compileBlockBodies [
 	<inline: false>
 	| result compiledBlocksCount blockStart savedNeedsFrame savedNumArgs savedNumTemps
-	  initialStackPtr initialOpcodeIndex initialIndexOfIRC |
+	  initialStackPtr initialOpcodeIndex initialIndexOfIRC initialCounterIndex |
 	<var: #blockStart type: #'BlockStart *'>
 	self assert: blockCount > 0.
 	"scanBlock: in compileBlockEntry: sets both of these appropriately for each block."
@@ -1196,8 +1196,9 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 	compiledBlocksCount := 0.
 	[compiledBlocksCount < blockCount] whileTrue:
 		[blockStart := self blockStartAt: compiledBlocksCount.
-		  (result := self scanBlock: blockStart) < 0 ifTrue: [^result].
+		 (result := self scanBlock: blockStart) < 0 ifTrue: [^result].
 		 initialOpcodeIndex := opcodeIndex.
+		 initialCounterIndex := self maybeCounterIndex."for SistaCogit"
 		 literalsManager saveForBlockCompile.
 		 NewspeakVM ifTrue:
 			[initialIndexOfIRC := indexOfIRC].
@@ -1223,6 +1224,7 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 					inSmalltalk: [initialOpcodeIndex to: opcodeIndex - 1 do:
 									[:i| abstractOpcodes at: i put: (CogCompilerClass for: self)]].
 				 opcodeIndex := initialOpcodeIndex.
+				 self maybeSetCounterIndex: initialCounterIndex. "For SistaCogit"
 				 literalsManager resetForBlockCompile.
 				 NewspeakVM ifTrue:
 					[indexOfIRC := initialIndexOfIRC]].
@@ -12148,6 +12150,13 @@ StackToRegisterMappingCogit >> maybeCountFixup [
 ]
 
 { #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> maybeCounterIndex [
+	"Hook for SistaCogit to allow it to reuse compileBlockBodies"
+	<inline: true>
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> maybeInitNumCounters [
 	"This is a hook for SistaCogit"
 	<inline: true>
@@ -12156,6 +12165,12 @@ StackToRegisterMappingCogit >> maybeInitNumCounters [
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> maybeInitNumFixups [
 	"This is a hook for RegisterAllocatingCogit"
+	<inline: true>
+]
+
+{ #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> maybeSetCounterIndex: value [
+	"Hook for SistaCogit to allow it to reuse compileBlockBodies"
 	<inline: true>
 ]
 
@@ -12327,23 +12342,23 @@ StackToRegisterMappingCogit >> printOptStatus [
 { #category : #'simulation only' }
 StackToRegisterMappingCogit >> printSimStack [
 	<doNotGenerate>
-	self printSimStack: simStack toDepth: simStackPtr spillBase: simSpillBase
+	self printSimStack: simStack toDepth: simStackPtr spillBase: simSpillBase on: coInterpreter transcript
 ]
 
 { #category : #'simulation only' }
-StackToRegisterMappingCogit >> printSimStack: aSimStack toDepth: limit spillBase: spillBase [
+StackToRegisterMappingCogit >> printSimStack: aSimStack toDepth: limit spillBase: spillBase on: aStream [
 	<doNotGenerate>
-	coInterpreter transcript ensureCr.
+	aStream ensureCr.
 	limit < 0 ifTrue:
-		[^coInterpreter transcript nextPutAll: 'simStackEmpty'; cr; flush].
+		[^aStream nextPutAll: 'simStackEmpty'; cr; flush].
 	0 to: limit do:
 		[:i|
-		coInterpreter transcript print: i.
+		aStream print: i.
 		i = spillBase
-			ifTrue: [coInterpreter transcript nextPutAll: ' sb'; tab]
-			ifFalse: [coInterpreter transcript tab; tab].
-		(aSimStack at: i) printStateOn: coInterpreter transcript.
-		coInterpreter transcript cr; flush]
+			ifTrue: [aStream nextPutAll: ' sb'; tab]
+			ifFalse: [aStream tab; tab].
+		(aSimStack at: i) printStateOn: aStream.
+		aStream cr; flush]
 ]
 
 { #category : #'span functions' }
