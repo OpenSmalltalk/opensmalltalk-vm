@@ -188,7 +188,7 @@ sqInt ioDisablePowerManager(sqInt disableIfNonZero)
 static int isAbsolutePath(const char *path)
 {
 #ifdef _WIN32
-    return *path == '\\' || (path[0] != 0 && && path[1] == ':');
+    return *path == '\\' || (path[0] != 0 && path[1] == ':');
 #else
     /* Assume UNIX style path. */
     return *path == '/';

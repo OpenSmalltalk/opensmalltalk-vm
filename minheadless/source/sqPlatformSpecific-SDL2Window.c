@@ -318,54 +318,6 @@ static void handleKeyUp(const SDL_Event *rawEvent)
     recordEvent(&event);
 }
 
-static const char *utf8ToUtf32(const char *string, int *dest)
-{
-    unsigned int first;
-    unsigned int sequenceSize;
-    unsigned int i;
-    unsigned int byte;
-    *dest = 0;
-
-    first = (*string) & 0xFF;
-    if(first == 0)
-        return string;
-
-    /* Single byte case */
-    ++string;
-    if(first <= 127)
-    {
-        *dest = first;
-        return string;
-    }
-
-    /* Count the size of the character */
-    sequenceSize = 0;
-    while(first & 0x80)
-    {
-        first = (first << 1) & 0xFF;
-        ++sequenceSize;
-    }
-
-    first >>= sequenceSize;
-
-    /* Decode the full code point. */
-    *dest = first;
-    --sequenceSize;
-
-    for(i = 0; i < sequenceSize; ++i)
-    {
-        /* Fetch the next byte */
-        byte = *string;
-        if(!byte)
-            return string;
-        ++string;
-
-        /* Append the byte data */
-        *dest = (*dest << 6) | (byte & 63);
-    }
-
-    return string;
-}
 static void handleTextInput(const SDL_Event *rawEvent)
 {
     int utf32;
@@ -386,7 +338,7 @@ static void handleTextInput(const SDL_Event *rawEvent)
     position = rawEvent->text.text;
     while(*position)
     {
-        position = utf8ToUtf32(position, &utf32);
+        position = sqUTF8ToUTF32Iterate(position, &utf32);
         if(!utf32)
             break;
 

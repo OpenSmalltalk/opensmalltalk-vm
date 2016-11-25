@@ -100,6 +100,12 @@
 #   define VM_TARGET_OS "unknown"
 #endif
 
+#if defined(_MSC_VER)
+#define VM_BUILD_STRING "Minimimalistic headless built for " VM_TARGET_OS " on "__DATE__ " "__TIME__" Compiler: Visual C"
+#else
 #define VM_BUILD_STRING "Minimimalistic headless built for " VM_TARGET_OS " on "__DATE__ " "__TIME__" Compiler: "__VERSION__
+#endif
+
+#define USE_INLINE_MEMORY_ACCESSORS 1
 
 #endif /*SQ_CONFIG_CONFIG_H*/

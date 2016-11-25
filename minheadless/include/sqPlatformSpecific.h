@@ -30,6 +30,7 @@
 #define _SQ_PLATFORM_SPECIFIC_H
 
 #include "sqMemoryAccess.h"
+#include "sqPlatformSpecific-Common.h"
 
 #if defined(_WIN32)
 #include "sqPlatformSpecific-Win32.h"

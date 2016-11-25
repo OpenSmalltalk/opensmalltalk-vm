@@ -36,13 +36,14 @@ extern BOOL fLowRights;  /* started as low integrity process,
 /***************************************************************************/
 /* file security */
 static int allowFileAccess = 1;  /* full access to files */
-static const TCHAR U_DOT[] = TEXT(".");
+static const TCHAR SEC_U_DOT[] = TEXT(".");
+static const TCHAR SEC_U_BACKSLASH[] = TEXT("\\");
 
 static int testDotDot(TCHAR *pathName, int index) {
   while(pathName[index]) {
-    if(pathName[index] == U_DOT[0]) {
-      if(pathName[index-1] == U_DOT[0]) {
-        if (pathName[index-2] == U_BACKSLASH[0]) {
+    if(pathName[index] == SEC_U_DOT[0]) {
+      if(pathName[index-1] == SEC_U_DOT[0]) {
+        if (pathName[index-2] == SEC_U_BACKSLASH[0]) {
           return 0; /* Gotcha! */
         }
       }
@@ -239,7 +240,7 @@ sqInt ioInitSecurity(void) {
   int dirLen;
 
   /* establish the secure user directory */
-  lstrcpy(secureUserDirectory, imagePath);
+  sqUTF8ToUTF16Copy(secureUserDirectory, sizeof(secureUserDirectory)/sizeof(secureUserDirectory[0]), sqGetCurrentImagePath());
   dirLen = lstrlen(secureUserDirectory);
   dwSize = MAX_PATH-dirLen;
   GetUserName(secureUserDirectory+dirLen, &dwSize);
@@ -248,7 +249,7 @@ sqInt ioInitSecurity(void) {
   lstrcpy(untrustedUserDirectory, TEXT("C:\\My Squeak\\%USERNAME%"));
 
   /* establish untrusted user directory */
-  lstrcpy(resourceDirectory, imagePath);
+  sqUTF8ToUTF16Copy(resourceDirectory, sizeof(resourceDirectory) / sizeof(resourceDirectory[0]), sqGetCurrentImagePath());
   if (resourceDirectory[lstrlen(resourceDirectory)-1] == '\\') {
     resourceDirectory[lstrlen(resourceDirectory)-1] = 0;
   }
@@ -383,11 +384,11 @@ sqInt ioInitSecurity(void) {
 int _ioSetImageWrite(int enable) {
   if(enable == allowImageWrite) return 1;
   if(!allowImageWrite) {
-    if(MessageBox(stWindow, TEXT("WARNING: Re-enabling the ability to write the image is a serious security hazard. Do you want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if(!sqAskSecurityYesNoQuestion("WARNING: Re-enabling the ability to write the image is a serious security hazard. Do you want to continue?"))
       return 0;
-    if(MessageBox(stWindow, TEXT("WARNING: Untrusted code could WIPE OUT your entire hard disk, STEAL your credit card information and send your PERSONAL documents to the entire world. Do you really want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if(!sqAskSecurityYesNoQuestion("WARNING: Untrusted code could WIPE OUT your entire hard disk, STEAL your credit card information and send your PERSONAL documents to the entire world. Do you really want to continue?"))
       return 0;
-    if(MessageBox(stWindow, TEXT("WARNING: This is your last chance. If you proceed you will have to deal with the implications on your own. WE ARE REJECTING EVERY RESPONSIBILITY IF YOU CLICK ON YES. Do you want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if(!sqAskSecurityYesNoQuestion("WARNING: This is your last chance. If you proceed you will have to deal with the implications on your own. WE ARE REJECTING EVERY RESPONSIBILITY IF YOU CLICK ON YES. Do you want to continue?"))
       return 0;
   }
   allowImageWrite = enable;
@@ -397,11 +398,11 @@ int _ioSetImageWrite(int enable) {
 int _ioSetFileAccess(int enable) {
   if(enable == allowFileAccess) return 1;
   if(!allowFileAccess) {
-    if(MessageBox(stWindow, TEXT("WARNING: Re-enabling the ability to access arbitrary files is a serious security hazard. Do you want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if (!sqAskSecurityYesNoQuestion("WARNING: Re-enabling the ability to write the image is a serious security hazard. Do you want to continue?"))
       return 0;
-    if(MessageBox(stWindow, TEXT("WARNING: Untrusted code could WIPE OUT your entire hard disk, STEAL your credit card information and send your PERSONAL documents to the entire world. Do you really want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if (!sqAskSecurityYesNoQuestion("WARNING: Untrusted code could WIPE OUT your entire hard disk, STEAL your credit card information and send your PERSONAL documents to the entire world. Do you really want to continue?"))
       return 0;
-    if(MessageBox(stWindow, TEXT("WARNING: This is your last chance. If you proceed you will have to deal with the implications on your own. WE ARE REJECTING EVERY RESPONSIBILITY IF YOU CLICK ON YES. Do you want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if (!sqAskSecurityYesNoQuestion("WARNING: This is your last chance. If you proceed you will have to deal with the implications on your own. WE ARE REJECTING EVERY RESPONSIBILITY IF YOU CLICK ON YES. Do you want to continue?"))
       return 0;
   }
   allowFileAccess = enable;
@@ -411,11 +412,11 @@ int _ioSetFileAccess(int enable) {
 int _ioSetSocketAccess(int enable) {
   if(enable == allowSocketAccess) return 1;
   if(!allowSocketAccess) {
-    if(MessageBox(stWindow, TEXT("WARNING: Re-enabling the ability to use sockets is a serious security hazard. Do you want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if (!sqAskSecurityYesNoQuestion("WARNING: Re-enabling the ability to write the image is a serious security hazard. Do you want to continue?"))
       return 0;
-    if(MessageBox(stWindow, TEXT("WARNING: Untrusted code could WIPE OUT your entire hard disk, STEAL your credit card information and send your PERSONAL documents to the entire world. Do you really want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if (!sqAskSecurityYesNoQuestion("WARNING: Untrusted code could WIPE OUT your entire hard disk, STEAL your credit card information and send your PERSONAL documents to the entire world. Do you really want to continue?"))
       return 0;
-    if(MessageBox(stWindow, TEXT("WARNING: This is your last chance. If you proceed you will have to deal with the implications on your own. WE ARE REJECTING EVERY RESPONSIBILITY IF YOU CLICK ON YES. Do you want to continue?"), TEXT("Squeak Security Alert"), MB_YESNO | MB_ICONSTOP) != IDYES)
+    if (!sqAskSecurityYesNoQuestion("WARNING: This is your last chance. If you proceed you will have to deal with the implications on your own. WE ARE REJECTING EVERY RESPONSIBILITY IF YOU CLICK ON YES. Do you want to continue?"))
       return 0;
   }
   allowSocketAccess = enable;

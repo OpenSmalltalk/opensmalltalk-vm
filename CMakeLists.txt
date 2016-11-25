@@ -1,5 +1,5 @@
 # SLVM native runtime cmake build script.
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.1)
 project(OpenSmalltalkVM)
 
 # Check the build type
@@ -33,8 +33,11 @@ if(LIB_DL)
 endif()
 
 # Add a build x86_32 version on x86_64 systems.
-if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64")
+if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64")
 	option(BUILD_I386_VERSION "Build x86 32 bits version" OFF)
+    set(SQUEAK_PLATFORM_X86_64 True)
+elseif("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "i.86")
+    set(SQUEAK_PLATFORM_X86_32 True)
 endif()
 
 # Output paths.
@@ -83,13 +86,10 @@ endif()
 # Get the version string
 include(GetGitVersion.cmake)
 
-# Check for 64 bits
-if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
+# Platform specific checks/settings.
+if(SQUEAK_PLATFORM_X86_64)
 	if(BUILD_I386_VERSION)
-		set(CMAKE_ASM-ATT_FLAGS "--32")
-		set(CMAKE_CXX_FLAGS "-m32 -msse2")
-		set(CMAKE_C_FLAGS "-m32 -msse2")
-		set(FFI_VARIANT_IA32 True)
+        set(SQUEAK_PLATFORM_X86_32 True)
 	else()
 		set(VM_64BITS TRUE)
 		set(SourceFolderName "${SourceFolderName}64")
@@ -98,14 +98,21 @@ if("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64")
 		else()
 			set(FFI_VARIANT_X64_SYSV True)
 		endif()
+        set(COGIT_PLATFORM_SUFFIX "X64")
 	endif()
 else()
-	if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "i.86")
-		set(CMAKE_CXX_FLAGS "msse2")
-		set(CMAKE_C_FLAGS "-msse2")
-		set(FFI_VARIANT_IA32 True)
-	endif()
 	set(VM_64BITS False)
+endif()
+
+if(SQUEAK_PLATFORM_X86_32)
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    else()
+        set(CMAKE_ASM-ATT_FLAGS "--32")
+        set(CMAKE_CXX_FLAGS "-m32 -msse2")
+        set(CMAKE_C_FLAGS "-m32 -msse2")
+    endif()
+    set(COGIT_PLATFORM_SUFFIX "IA32")
+    set(FFI_VARIANT_IA32 True)
 endif()
 
 set(SourceFolderName "${SourceFolderName}src")
@@ -132,7 +139,7 @@ include(${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
 include(${CMAKE_ROOT}/Modules/CheckLibraryExists.cmake)
 
 # Enable the assembler.
-enable_language(ASM-ATT)
+#enable_language(ASM-ATT)
 
 # Set output dir.
 set(EXECUTABLE_OUTPUT_PATH "${OpenSmalltalkVM_BINARY_DIR}/dist")
@@ -148,7 +155,7 @@ include_directories(
 # VM Flavor sources
 if(COG_JIT)
 	set(VM_FAVLOR_SOURCES
-		${SourceFolderName}/vm/cogit.c
+		${SourceFolderName}/vm/cogit${COGIT_PLATFORM_SUFFIX}.c
 		${SourceFolderName}/vm/cointerp.c
 	)
 else()
@@ -220,8 +227,21 @@ include_directories(
 )
 
 set(VM_PLATFORM_SOURCES
+    minheadless/include/sqConfig.h
+    minheadless/include/sqEventCommon.h
+    minheadless/include/sqNamedPrims.h
+    minheadless/include/sqPlatformSpecific.h
+    minheadless/include/sqPlatformSpecific-Common.h
+    minheadless/include/sqPlatformSpecific-Generic.h
+    minheadless/include/sqPlatformSpecific-Unix.h
+    minheadless/include/sqPlatformSpecific-Win32.h
+    minheadless/include/sqQueue.h
+    minheadless/include/sqWin32Alloc.h
+	minheadless/source/sqaio.h
 	minheadless/source/sqExternalPrimitives.c
 	minheadless/source/sqEventCommon.c
+    minheadless/source/sqPrinting.c
+    minheadless/source/sqTextEncoding.c
 )
 
 if(UNIX)
@@ -239,9 +259,21 @@ if(UNIX)
 	set(VM_DEPENDENCIES_LIBRARIES pthread ${VM_DEPENDENCIES_LIBRARIES})
 elseif(WIN32)
 	set(VM_PLATFORM_SOURCES
+        minheadless/include/sqWin32Alloc.h
 		minheadless/source/sqPlatformSpecific-Win32.c
+        minheadless/source/sqWin32.h
+        minheadless/source/sqWin32Alloc.c
+    	minheadless/source/sqWin32SpurAlloc.c
+    	minheadless/source/sqWin32Common.c
+    	minheadless/source/sqWin32Directory.c
+    	minheadless/source/sqWin32Threads.c
 		${VM_PLATFORM_SOURCES}
 	)
+    add_definitions(
+        -D_CRT_SECURE_NO_WARNINGS
+        -DUNICODE
+        -D_UNICODE
+    )
 else()
 	set(VM_PLATFORM_SOURCES
 		minheadless/source/sqPlatformSpecific-Generic.c
@@ -256,17 +288,31 @@ set(VM_SOURCES
 	${VM_PLATFORM_SOURCES}
 	${VM_WINDOW_SYSTEM}
 )
-
+source_group("VM Common Sources" FILES ${VM_COMMON_SOURCES})
+source_group("VM Flavor Sources" FILES ${VM_FAVLOR_SOURCES})
+source_group("VM Platform Sources" FILES ${VM_PLATFORM_SOURCES})
+source_group("VM Window System" FILES ${VM_WINDOW_SYSTEM})
 include("Plugins.cmake")
 
 # Build the VM core library
-add_library(${VM_LIBRARY_NAME} STATIC ${VM_SOURCES} ${VM_INTERNAL_PLUGIN_SOURCES})
+set(VM_CORE_LIBRARY_TYPE STATIC)
+#if(WIN32)
+#    set(VM_CORE_LIBRARY_TYPE SHARED)
+#endif()
+
+add_library(${VM_LIBRARY_NAME} ${VM_CORE_LIBRARY_TYPE} ${VM_SOURCES} ${VM_INTERNAL_PLUGIN_SOURCES})
 add_dependencies(${VM_LIBRARY_NAME} sqGitVersionString)
 
 target_compile_definitions(${VM_LIBRARY_NAME} PRIVATE
 	-DSQUEAK_BUILTIN_PLUGIN
+    -DBUILD_VM_CORE
 )
 
 # Build the VM executable(s)
 add_executable(${VM_EXECUTABLE_NAME} minheadless/source/sqMain.c)
 target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
+
+if(WIN32)
+    add_executable(${VM_EXECUTABLE_NAME}w WIN32 minheadless/source/sqMain.c minheadless/source/sqWin32Main.c)
+    target_link_libraries(${VM_EXECUTABLE_NAME}w ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
+endif()

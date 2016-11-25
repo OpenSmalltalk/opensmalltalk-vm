@@ -11,11 +11,13 @@ set(VM_INTERNAL_PLUGINS_INC_SOURCES "")
 
 macro(add_vm_plugin NAME TYPE)
     set(VM_PLUGIN_${NAME}_SOURCES ${ARGN})
+    set(VM_PLUGIN_${NAME}_TYPE ${TYPE})
     option(BUILD_PLUGIN_${NAME} "Build plugin ${NAME}" ON)
     if(BUILD_PLUGIN_${NAME})
         if("${TYPE}" STREQUAL "INTERNAL")
             set(VM_INTERNAL_PLUGINS_INC_SOURCES "${VM_INTERNAL_PLUGINS_INC_SOURCES}\nINTERNAL_PLUGIN(${NAME})")
             set(VM_INTERNAL_PLUGIN_SOURCES ${VM_PLUGIN_${NAME}_SOURCES} ${VM_INTERNAL_PLUGIN_SOURCES})
+            source_group("${NAME} Plugin" FILES ${VM_PLUGIN_${NAME}_SOURCES})
         else()
             add_library(${NAME} SHARED ${ARGN})
         endif()
@@ -40,6 +42,14 @@ macro(add_vm_plugin_auto NAME TYPE)
         "${CrossPlatformPluginFolder}/${NAME}/*.h"
     )
     add_vm_plugin_sources(${NAME} ${TYPE} ${PLUGIN_SOURCES})
+endmacro()
+
+macro(vm_plugin_link_libraries NAME)
+    if(VM_PLUGIN_${NAME}_TYPE STREQUAL "EXTERNAL")
+        target_link_libraries(${NAME} ${ARGN})
+    else()
+        set(VM_DEPENDENCIES_LIBRARIES ${ARGN} ${VM_DEPENDENCIES_LIBRARIES})
+    endif()
 endmacro()
 
 # The sources of the FFI plugin are special.
@@ -77,9 +87,14 @@ add_vm_plugin_auto(LocalePlugin INTERNAL)
 add_vm_plugin_auto(MiscPrimitivePlugin INTERNAL)
 add_vm_plugin_auto(SecurityPlugin INTERNAL)
 add_vm_plugin_auto(SocketPlugin INTERNAL)
+if(WIN32)
+    vm_plugin_link_libraries(SocketPlugin Ws2_32)
+endif()
 
 add_vm_plugin_auto(B2DPlugin INTERNAL)
-add_vm_plugin_auto(BitBltPlugin INTERNAL)
+add_vm_plugin_sources(BitBltPlugin INTERNAL
+    "${PluginsSourceFolderName}/BitBltPlugin/BitBltPlugin.c"
+)
 
 add_vm_plugin_auto(FloatArrayPlugin INTERNAL)
 add_vm_plugin_auto(FloatMathPlugin INTERNAL)
@@ -93,7 +108,7 @@ find_package(Freetype)
 if(FREETYPE_FOUND)
     include_directories(${FREETYPE_INCLUDE_DIRS})
     add_vm_plugin_auto(FT2Plugin EXTERNAL)
-    target_link_libraries(FT2Plugin ${FREETYPE_LIBRARIES})
+    vm_plugin_link_libraries(FT2Plugin ${FREETYPE_LIBRARIES})
 endif()
 
 # OSProcess

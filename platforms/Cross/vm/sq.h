@@ -54,6 +54,7 @@
 */
 #define EXPORT(returnType) returnType
 #define VM_EXPORT
+#define VM_FUNCTION_EXPORT(returnType) returnType
 
 /* Image save/restore macros. */
 

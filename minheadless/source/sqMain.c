@@ -44,6 +44,11 @@ char *getImageName(void)
     return imageName;
 }
 
+extern const char *sqGetCurrentImagePath()
+{
+    return imageName;
+}
+
 sqInt imageNameGetLength(sqInt sqImageNameIndex, sqInt length)
 {
     char *sqImageName = pointerForOop(sqImageNameIndex);

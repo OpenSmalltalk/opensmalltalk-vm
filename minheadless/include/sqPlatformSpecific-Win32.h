@@ -58,6 +58,14 @@ size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
 #  define EXPORT(returnType) __declspec( dllexport ) returnType
 #  undef VM_EXPORT
 #  define VM_EXPORT __declspec( dllexport )
+
+#  if defined(BUILD_VM_CORE) && !defined(VM_CORE_STATIC)
+#    undef VM_FUNCTION_EXPORT
+#    define VM_FUNCTION_EXPORT(returnType) __declspec( dllexport ) returnType
+#  else
+#    undef VM_FUNCTION_EXPORT
+#    define VM_FUNCTION_EXPORT(returnType) __declspec( dllimport ) returnType
+#  endif
 #endif
 
 

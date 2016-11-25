@@ -132,6 +132,23 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 
 #if defined(_WIN32)
 
+static void *loadModuleHandle(const char *fileName)
+{
+    WCHAR convertedPath[MAX_PATH + 1];
+    sqUTF8ToUTF16Copy(convertedPath, MAX_PATH + 1, fileName);
+    return LoadLibraryW(convertedPath);
+}
+
+static sqInt freeModuleHandle(void *module)
+{
+    return FreeLibrary((HMODULE)module) ? 1 : 0;
+}
+
+static void *getModuleSymbol(void *module, const char *symbol)
+{
+    return (void*)GetProcAddress((HMODULE)module, symbol);
+}
+
 #elif defined(__linux__) || defined(__unix__)
 
 #include <dlfcn.h>
