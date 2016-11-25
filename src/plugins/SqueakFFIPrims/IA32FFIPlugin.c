@@ -15,6 +15,7 @@ static char __buildInfo[] = "ThreadedIA32FFIPlugin VMMaker.oscog-nice.1990 uuid:
 
 /* Default EXPORT macro that does nothing (see comment in sq.h): */
 #define EXPORT(returnType) returnType
+#define VM_EXPORT
 
 /* Do not include the entire sq.h file but just those parts needed. */
 #include "sqConfig.h"			/* Configuration options */
@@ -53,10 +54,10 @@ static char __buildInfo[] = "ThreadedIA32FFIPlugin VMMaker.oscog-nice.1990 uuid:
 #endif
 #if !defined(getsp)
 # define getsp() 0
-#endif 
+#endif
 #if !defined(setsp)
 # define setsp(ignored) 0
-#endif 
+#endif
 
 #if !defined(STACK_ALIGN_BYTES)
 # if __APPLE__ && __MACH__ && __i386__
@@ -71,7 +72,7 @@ static char __buildInfo[] = "ThreadedIA32FFIPlugin VMMaker.oscog-nice.1990 uuid:
 #  define STACK_ALIGN_BYTES 16
 # elif defined(sparc) || defined(__sparc__) || defined(__sparclite__)
 #  define STACK_ALIGN_BYTES 8
-# elif defined(__arm__) 
+# elif defined(__arm__)
 #  define STACK_ALIGN_BYTES 8
 # else
 #  define STACK_ALIGN_BYTES 0
@@ -129,7 +130,7 @@ warning(char *s) { /* Print an error message but don't exit. */
 
 /* sanitize */
 #ifdef SQUEAK_BUILTIN_PLUGIN
-# define EXTERN 
+# define EXTERN
 #else
 # define EXTERN extern
 #endif
@@ -626,7 +627,7 @@ ffiArgByValuein(sqInt oop, CalloutState *calloutState)
 					intValue = integerValueOf(oop);
 					goto l1;
 				}
-				
+
 #        if SPURVM
 				if (isCharacterObject(oop)) {
 
@@ -645,7 +646,7 @@ ffiArgByValuein(sqInt oop, CalloutState *calloutState)
 
 			}
 			else {
-				
+
 #        if SPURVM
 
 				/* No non-immediate characters in Spur */
@@ -675,7 +676,7 @@ ffiArgByValuein(sqInt oop, CalloutState *calloutState)
 					goto l1;
 				}
 				if (isLargePositiveIntegerObject(oop)) {
-					
+
 #          if BytesPerWord == 8
 
 					/* Use cppIf: to get the return type of the function right.  Should be sqInt on 32-bits. */
@@ -696,7 +697,7 @@ ffiArgByValuein(sqInt oop, CalloutState *calloutState)
 		if (failed()) {
 			return FFIErrorCoercionFailed;
 		}
-		
+
 		switch (atomicType) {
 		case 0:
 			return FFIErrorAttemptToPassVoid;
@@ -895,7 +896,7 @@ ffiArgumentSpecClassin(sqInt oop, sqInt argSpec, sqInt argClass, CalloutState *c
 
 				/* Since this involves passing the address of the first indexable field we need to fail
 				   the call if it is threaded and the object is young, since it may move during the call. */
-				
+
 #        if COGMTVM
 				if ((((calloutState->callFlags)) & FFICallFlagThreaded)
 				 && (isYoung(valueOop))) {
@@ -1046,7 +1047,7 @@ ffiArgumentSpecClassin(sqInt oop, sqInt argSpec, sqInt argClass, CalloutState *c
 					}
 					atomicType2 = FFITypeUnsignedByte;
 				}
-				
+
 #        if COGMTVM
 
 				/* Since all the following pass the address of the first indexable field we need to fail
@@ -1171,7 +1172,7 @@ ffiArgumentSpecClassin(sqInt oop, sqInt argSpec, sqInt argClass, CalloutState *c
 						intValue = integerValueOf(valueOop);
 						goto l4;
 					}
-					
+
 #          if SPURVM
 					if (isCharacterObject(valueOop)) {
 
@@ -1190,7 +1191,7 @@ ffiArgumentSpecClassin(sqInt oop, sqInt argSpec, sqInt argClass, CalloutState *c
 
 				}
 				else {
-					
+
 #          if SPURVM
 
 					/* No non-immediate characters in Spur */
@@ -1220,7 +1221,7 @@ ffiArgumentSpecClassin(sqInt oop, sqInt argSpec, sqInt argClass, CalloutState *c
 						goto l4;
 					}
 					if (isLargePositiveIntegerObject(valueOop)) {
-						
+
 #            if BytesPerWord == 8
 
 						/* Use cppIf: to get the return type of the function right.  Should be sqInt on 32-bits. */
@@ -1241,7 +1242,7 @@ ffiArgumentSpecClassin(sqInt oop, sqInt argSpec, sqInt argClass, CalloutState *c
 			if (failed()) {
 				return FFIErrorCoercionFailed;
 			}
-			
+
 			switch (atomicType1) {
 			case 0:
 				return FFIErrorAttemptToPassVoid;
@@ -1308,11 +1309,11 @@ ffiArgumentSpecClassin(sqInt oop, sqInt argSpec, sqInt argClass, CalloutState *c
 
 /*	Support for generic callout. Prepare a pointer reference to an atomic type
 	for callout.
-	Note: 
+	Note:
 	for type 'void*' we allow ByteArray/String/Symbol, wordVariableSubclass,
 	Alien or ExternalAddress.
 	for other types we allow ByteArray, wordVariableSubclass, Alien or
-	ExternalAddress. 
+	ExternalAddress.
  */
 
 	/* ThreadedFFIPlugin>>#ffiAtomicArgByReference:Class:in: */
@@ -1379,7 +1380,7 @@ ffiAtomicArgByReferenceClassin(sqInt oop, sqInt oopClass, CalloutState *calloutS
 		}
 		atomicType = FFITypeUnsignedByte;
 	}
-	
+
 #  if COGMTVM
 
 	/* Since all the following pass the address of the first indexable field we need to fail
@@ -1545,7 +1546,7 @@ ffiAtomicStructByReferenceClassin(sqInt oop, sqInt oopClass, CalloutState *callo
 /*	Go out, call this guy and create the return value. This *must* be inlined
 	because of
 	the alloca of the outgoing stack frame in
-	ffiCall:WithFlags:NumArgs:Args:AndTypes: 
+	ffiCall:WithFlags:NumArgs:Args:AndTypes:
  */
 
 	/* ThreadedIA32FFIPlugin>>#ffiCalloutTo:SpecOnStack:in: */
@@ -1587,7 +1588,7 @@ ffiCalloutToSpecOnStackin(void *procAddr, sqInt specOnStack, CalloutState *callo
 
 	intRet = 0;
 	myThreadIndex = 0;
-	
+
 #  if COGMTVM
 	if (((calloutState->callFlags)) & FFICallFlagThreaded) {
 		myThreadIndex = disownVM(0);
@@ -1610,7 +1611,7 @@ ffiCalloutToSpecOnStackin(void *procAddr, sqInt specOnStack, CalloutState *callo
 	if (isCalleePopsConvention((calloutState->callFlags))) {
 		setsp((calloutState->argVector));
 	}
-	
+
 #  if COGMTVM
 	if (((calloutState->callFlags)) & FFICallFlagThreaded) {
 		ownVM(myThreadIndex);
@@ -1658,12 +1659,12 @@ ffiCalloutToSpecOnStackin(void *procAddr, sqInt specOnStack, CalloutState *callo
 					oop = methodReturnValue(strOop);
 					goto l4;
 				}
-				
+
 #if SPURVM
 				oop2 = instantiateClassindexableSize(classExternalAddress(), BytesPerWord);
 				ptr = firstIndexableField(oop2);
 				ptr[0] = (((sqInt) intRet));
-				
+
 #if SPURVM
 				retOop1 = instantiateClassindexableSize(classExternalData(), 0);
 
@@ -1680,7 +1681,7 @@ ffiCalloutToSpecOnStackin(void *procAddr, sqInt specOnStack, CalloutState *callo
 				oop2 = instantiateClassindexableSize(classExternalAddress(), BytesPerWord);
 				ptr = firstIndexableField(oop2);
 				ptr[0] = (((sqInt) intRet));
-				
+
 #if SPURVM
 				retOop1 = instantiateClassindexableSize(classExternalData(), 0);
 
@@ -1701,7 +1702,7 @@ ffiCalloutToSpecOnStackin(void *procAddr, sqInt specOnStack, CalloutState *callo
 			classOop = (((calloutState->ffiRetHeader)) & FFIFlagStructure
 				? classByteArray()
 				: classExternalAddress());
-			
+
 #if SPURVM
 			oop2 = instantiateClassindexableSize(classOop, BytesPerWord);
 
@@ -1713,7 +1714,7 @@ ffiCalloutToSpecOnStackin(void *procAddr, sqInt specOnStack, CalloutState *callo
 ;
 			ptr = firstIndexableField(oop2);
 			ptr[0] = (((sqInt) intRet));
-			
+
 #if SPURVM
 			retOop1 = instantiateClassindexableSize(retClass1, 0);
 
@@ -1736,7 +1737,7 @@ ffiCalloutToSpecOnStackin(void *procAddr, sqInt specOnStack, CalloutState *callo
 			ffiRetType = fetchPointerofObject(0, argTypes);
 			retClass = fetchPointerofObject(1, ffiRetType);
 			retOop = instantiateClassindexableSize(retClass, 0);
-			
+
 #if SPURVM
 			oop1 = instantiateClassindexableSize(classByteArray(), (calloutState->structReturnSize));
 
@@ -1935,7 +1936,7 @@ l4:	/* end ffiLoadCalloutAddress: */;
 		 && ((slotSizeOf(argTypeArray)) == (nArgs + 1)))) {
 		return ffiFail(FFIErrorBadArgs);
 	}
-	
+
 #  if COGMTVM
 	if (!(((flags & FFICallTypesMask) == FFICallTypeCDecl)
 		 || ((flags & FFICallTypesMask) == FFICallTypeApi))) {
@@ -2000,7 +2001,7 @@ l4:	/* end ffiLoadCalloutAddress: */;
 			while (((calloutState->stringArgIndex)) > 0) {
 				free(((calloutState->stringArgs))[(calloutState->stringArgIndex = ((calloutState->stringArgIndex)) - 1)]);
 			}
-			
+
 #      if COGMTVM
 			if (err == (-PrimErrObjectMayMove)) {
 				return PrimErrObjectMayMove;
@@ -2024,7 +2025,7 @@ l4:	/* end ffiLoadCalloutAddress: */;
 			while (((calloutState->stringArgIndex)) > 0) {
 				free(((calloutState->stringArgs))[(calloutState->stringArgIndex = ((calloutState->stringArgIndex)) - 1)]);
 			}
-			
+
 #      if COGMTVM
 			if (err == (-PrimErrObjectMayMove)) {
 				return PrimErrObjectMayMove;
@@ -2051,7 +2052,7 @@ l2:	/* end ffiLogCallout: */;
 		storeIntegerofObjectwithValue(ExternalFunctionStackSizeIndex, externalFunction, stackSize);
 	}
 	/* begin ffiCalloutTo:SpecOnStack:in: */
-	
+
 #  if COGMTVM
 	if (((calloutState->callFlags)) & FFICallFlagThreaded) {
 		myThreadIndex = disownVM(0);
@@ -2074,7 +2075,7 @@ l2:	/* end ffiLogCallout: */;
 	if (isCalleePopsConvention((calloutState->callFlags))) {
 		setsp((calloutState->argVector));
 	}
-	
+
 #  if COGMTVM
 	if (((calloutState->callFlags)) & FFICallFlagThreaded) {
 		ownVM(myThreadIndex);
@@ -2122,12 +2123,12 @@ l2:	/* end ffiLogCallout: */;
 					oop3 = methodReturnValue(strOop);
 					goto l10;
 				}
-				
+
 #if SPURVM
 				oop2 = instantiateClassindexableSize(classExternalAddress(), BytesPerWord);
 				ptr1 = firstIndexableField(oop2);
 				ptr1[0] = (((sqInt) intRet));
-				
+
 #if SPURVM
 				retOop1 = instantiateClassindexableSize(classExternalData(), 0);
 
@@ -2144,7 +2145,7 @@ l2:	/* end ffiLogCallout: */;
 				oop2 = instantiateClassindexableSize(classExternalAddress(), BytesPerWord);
 				ptr1 = firstIndexableField(oop2);
 				ptr1[0] = (((sqInt) intRet));
-				
+
 #if SPURVM
 				retOop1 = instantiateClassindexableSize(classExternalData(), 0);
 
@@ -2165,7 +2166,7 @@ l2:	/* end ffiLogCallout: */;
 			classOop = (((calloutState->ffiRetHeader)) & FFIFlagStructure
 				? classByteArray()
 				: classExternalAddress());
-			
+
 #if SPURVM
 			oop2 = instantiateClassindexableSize(classOop, BytesPerWord);
 
@@ -2177,7 +2178,7 @@ l2:	/* end ffiLogCallout: */;
 ;
 			ptr1 = firstIndexableField(oop2);
 			ptr1[0] = (((sqInt) intRet));
-			
+
 #if SPURVM
 			retOop1 = instantiateClassindexableSize(retClass1, 0);
 
@@ -2200,7 +2201,7 @@ l2:	/* end ffiLogCallout: */;
 			ffiRetType = fetchPointerofObject(0, argTypes);
 			retClass = fetchPointerofObject(1, ffiRetType);
 			retOop = instantiateClassindexableSize(retClass, 0);
-			
+
 #if SPURVM
 			oop1 = instantiateClassindexableSize(classByteArray(), (calloutState->structReturnSize));
 
@@ -2445,7 +2446,7 @@ ffiIntegerValueOf(sqInt oop)
 		if (isIntegerObject(oop)) {
 			return integerValueOf(oop);
 		}
-		
+
 #    if SPURVM
 		if (isCharacterObject(oop)) {
 
@@ -2462,7 +2463,7 @@ ffiIntegerValueOf(sqInt oop)
 
 	}
 	else {
-		
+
 #    if SPURVM
 
 		/* No non-immediate characters in Spur */
@@ -2487,7 +2488,7 @@ ffiIntegerValueOf(sqInt oop)
 			return 1;
 		}
 		if (isLargePositiveIntegerObject(oop)) {
-			
+
 #      if BytesPerWord == 8
 
 			/* Use cppIf: to get the return type of the function right.  Should be sqInt on 32-bits. */
@@ -2660,7 +2661,7 @@ ffiLogCallout(sqInt lit)
 }
 
 
-/*	This is a special entry point exposed such that client code can 
+/*	This is a special entry point exposed such that client code can
 	enable and disable logging of FFI calls. */
 
 	/* ThreadedFFIPlugin>>#ffiLogCallsTo: */
@@ -2732,7 +2733,7 @@ ffiPushPointerContentsOfin(sqInt oop, CalloutState *calloutState)
 
 		/* Since this involves passing the address of the first indexable field we need to fail
 		   the call if it is threaded and the object is young, since it may move during the call. */
-		
+
 #    if COGMTVM
 		if ((((calloutState->callFlags)) & FFICallFlagThreaded)
 		 && (isYoung(oop))) {
@@ -2751,7 +2752,7 @@ ffiPushPointerContentsOfin(sqInt oop, CalloutState *calloutState)
 		return 0;
 	}
 	if (includesBehaviorThatOf(ptrClass, classAlien())) {
-		
+
 #    if COGMTVM
 		if ((((calloutState->callFlags)) & FFICallFlagThreaded)
 		 && ((isDirectAlien(oop))
@@ -2973,7 +2974,7 @@ ffiPushStructureContentsOfin(sqInt oop, CalloutState *calloutState)
 
 			/* Since this involves passing the address of the first indexable field we need to fail
 			   the call if it is threaded and the object is young, since it may move during the call. */
-			
+
 #      if COGMTVM
 			if ((((calloutState->callFlags)) & FFICallFlagThreaded)
 			 && (isYoung(oop))) {
@@ -3214,12 +3215,12 @@ ffiReturnPointerofTypein(usqLong retVal, sqInt retType, CalloutState *calloutSta
 			}
 			return methodReturnValue(strOop);
 		}
-		
+
 #if SPURVM
 		oop = instantiateClassindexableSize(classExternalAddress(), BytesPerWord);
 		ptr = firstIndexableField(oop);
 		ptr[0] = (((sqInt) retVal));
-		
+
 #if SPURVM
 		retOop = instantiateClassindexableSize(classExternalData(), 0);
 
@@ -3236,7 +3237,7 @@ ffiReturnPointerofTypein(usqLong retVal, sqInt retType, CalloutState *calloutSta
 		oop = instantiateClassindexableSize(classExternalAddress(), BytesPerWord);
 		ptr = firstIndexableField(oop);
 		ptr[0] = (((sqInt) retVal));
-		
+
 #if SPURVM
 		retOop = instantiateClassindexableSize(classExternalData(), 0);
 
@@ -3256,7 +3257,7 @@ ffiReturnPointerofTypein(usqLong retVal, sqInt retType, CalloutState *calloutSta
 	classOop = (((calloutState->ffiRetHeader)) & FFIFlagStructure
 		? classByteArray()
 		: classExternalAddress());
-	
+
 #if SPURVM
 	oop = instantiateClassindexableSize(classOop, BytesPerWord);
 
@@ -3268,7 +3269,7 @@ ffiReturnPointerofTypein(usqLong retVal, sqInt retType, CalloutState *calloutSta
 ;
 	ptr = firstIndexableField(oop);
 	ptr[0] = (((sqInt) retVal));
-	
+
 #if SPURVM
 	retOop = instantiateClassindexableSize(retClass, 0);
 
@@ -3297,7 +3298,7 @@ ffiReturnStructofTypein(usqLong longLongRet, sqInt ffiRetType, CalloutState *cal
 
 	retClass = fetchPointerofObject(1, ffiRetType);
 	retOop = instantiateClassindexableSize(retClass, 0);
-	
+
 #if SPURVM
 	oop = instantiateClassindexableSize(classByteArray(), (calloutState->structReturnSize));
 
@@ -3600,7 +3601,7 @@ primitiveCallout(void)
 		return;
 	}
 	externalFunction = literalofMethod(0, meth);
-	
+
 #  if COGMTVM
 	nArgs = methodArgumentCount();
 	retryCount = 0;
@@ -3662,7 +3663,7 @@ primitiveCallout(void)
 			result = ffiFail(FFIErrorBadArgs);
 			goto l3;
 		}
-		
+
 #    if COGMTVM
 		if (!(((flags & FFICallTypesMask) == FFICallTypeCDecl)
 			 || ((flags & FFICallTypesMask) == FFICallTypeApi))) {
@@ -3731,7 +3732,7 @@ primitiveCallout(void)
 				while (((calloutState->stringArgIndex)) > 0) {
 					free(((calloutState->stringArgs))[(calloutState->stringArgIndex = ((calloutState->stringArgIndex)) - 1)]);
 				}
-				
+
 #        if COGMTVM
 				if (err == (-PrimErrObjectMayMove)) {
 					result = PrimErrObjectMayMove;
@@ -3757,7 +3758,7 @@ primitiveCallout(void)
 				while (((calloutState->stringArgIndex)) > 0) {
 					free(((calloutState->stringArgs))[(calloutState->stringArgIndex = ((calloutState->stringArgIndex)) - 1)]);
 				}
-				
+
 #        if COGMTVM
 				if (err == (-PrimErrObjectMayMove)) {
 					result = PrimErrObjectMayMove;
@@ -3786,7 +3787,7 @@ primitiveCallout(void)
 			storeIntegerofObjectwithValue(ExternalFunctionStackSizeIndex, externalFunction, stackSize);
 		}
 		/* begin ffiCalloutTo:SpecOnStack:in: */
-		
+
 #    if COGMTVM
 		if (((calloutState->callFlags)) & FFICallFlagThreaded) {
 			myThreadIndex = disownVM(0);
@@ -3809,7 +3810,7 @@ primitiveCallout(void)
 		if (isCalleePopsConvention((calloutState->callFlags))) {
 			setsp((calloutState->argVector));
 		}
-		
+
 #    if COGMTVM
 		if (((calloutState->callFlags)) & FFICallFlagThreaded) {
 			ownVM(myThreadIndex);
@@ -3857,12 +3858,12 @@ primitiveCallout(void)
 						oop3 = methodReturnValue(strOop);
 						goto l16;
 					}
-					
+
 #if SPURVM
 					oop2 = instantiateClassindexableSize(classExternalAddress(), BytesPerWord);
 					ptr2 = firstIndexableField(oop2);
 					ptr2[0] = (((sqInt) intRet));
-					
+
 #if SPURVM
 					retOop1 = instantiateClassindexableSize(classExternalData(), 0);
 
@@ -3879,7 +3880,7 @@ primitiveCallout(void)
 					oop2 = instantiateClassindexableSize(classExternalAddress(), BytesPerWord);
 					ptr2 = firstIndexableField(oop2);
 					ptr2[0] = (((sqInt) intRet));
-					
+
 #if SPURVM
 					retOop1 = instantiateClassindexableSize(classExternalData(), 0);
 
@@ -3900,7 +3901,7 @@ primitiveCallout(void)
 				classOop = (((calloutState->ffiRetHeader)) & FFIFlagStructure
 					? classByteArray()
 					: classExternalAddress());
-				
+
 #if SPURVM
 				oop2 = instantiateClassindexableSize(classOop, BytesPerWord);
 
@@ -3912,7 +3913,7 @@ primitiveCallout(void)
 ;
 				ptr2 = firstIndexableField(oop2);
 				ptr2[0] = (((sqInt) intRet));
-				
+
 #if SPURVM
 				retOop1 = instantiateClassindexableSize(retClass1, 0);
 
@@ -3935,7 +3936,7 @@ primitiveCallout(void)
 				ffiRetType = fetchPointerofObject(0, argTypes);
 				retClass = fetchPointerofObject(1, ffiRetType);
 				retOop = instantiateClassindexableSize(retClass, 0);
-				
+
 #if SPURVM
 				oop11 = instantiateClassindexableSize(classByteArray(), (calloutState->structReturnSize));
 
@@ -4086,7 +4087,7 @@ l10:	/* end ffiLoadCalloutAddress: */;
 		ffiFail(FFIErrorBadArgs);
 		goto l6;
 	}
-	
+
 #  if COGMTVM
 	if (!(((flags1 & FFICallTypesMask) == FFICallTypeCDecl)
 		 || ((flags1 & FFICallTypesMask) == FFICallTypeApi))) {
@@ -4155,7 +4156,7 @@ l10:	/* end ffiLoadCalloutAddress: */;
 			while (((calloutState1->stringArgIndex)) > 0) {
 				free(((calloutState1->stringArgs))[(calloutState1->stringArgIndex = ((calloutState1->stringArgIndex)) - 1)]);
 			}
-			
+
 #      if COGMTVM
 			if (err1 == (-PrimErrObjectMayMove)) {
 				goto l6;
@@ -4180,7 +4181,7 @@ l10:	/* end ffiLoadCalloutAddress: */;
 			while (((calloutState1->stringArgIndex)) > 0) {
 				free(((calloutState1->stringArgs))[(calloutState1->stringArgIndex = ((calloutState1->stringArgIndex)) - 1)]);
 			}
-			
+
 #      if COGMTVM
 			if (err1 == (-PrimErrObjectMayMove)) {
 				goto l6;
@@ -4208,7 +4209,7 @@ l5:	/* end ffiLogCallout: */;
 		storeIntegerofObjectwithValue(ExternalFunctionStackSizeIndex, externalFunction, stackSize1);
 	}
 	/* begin ffiCalloutTo:SpecOnStack:in: */
-	
+
 #  if COGMTVM
 	if (((calloutState1->callFlags)) & FFICallFlagThreaded) {
 		myThreadIndex1 = disownVM(0);
@@ -4231,7 +4232,7 @@ l5:	/* end ffiLogCallout: */;
 	if (isCalleePopsConvention((calloutState1->callFlags))) {
 		setsp((calloutState1->argVector));
 	}
-	
+
 #  if COGMTVM
 	if (((calloutState1->callFlags)) & FFICallFlagThreaded) {
 		ownVM(myThreadIndex1);
@@ -4279,12 +4280,12 @@ l5:	/* end ffiLogCallout: */;
 					oop4 = methodReturnValue(strOop1);
 					goto l24;
 				}
-				
+
 #if SPURVM
 				oop21 = instantiateClassindexableSize(classExternalAddress(), BytesPerWord);
 				ptr3 = firstIndexableField(oop21);
 				ptr3[0] = (((sqInt) intRet1));
-				
+
 #if SPURVM
 				retOop11 = instantiateClassindexableSize(classExternalData(), 0);
 
@@ -4301,7 +4302,7 @@ l5:	/* end ffiLogCallout: */;
 				oop21 = instantiateClassindexableSize(classExternalAddress(), BytesPerWord);
 				ptr3 = firstIndexableField(oop21);
 				ptr3[0] = (((sqInt) intRet1));
-				
+
 #if SPURVM
 				retOop11 = instantiateClassindexableSize(classExternalData(), 0);
 
@@ -4322,7 +4323,7 @@ l5:	/* end ffiLogCallout: */;
 			classOop1 = (((calloutState1->ffiRetHeader)) & FFIFlagStructure
 				? classByteArray()
 				: classExternalAddress());
-			
+
 #if SPURVM
 			oop21 = instantiateClassindexableSize(classOop1, BytesPerWord);
 
@@ -4334,7 +4335,7 @@ l5:	/* end ffiLogCallout: */;
 ;
 			ptr3 = firstIndexableField(oop21);
 			ptr3[0] = (((sqInt) intRet1));
-			
+
 #if SPURVM
 			retOop11 = instantiateClassindexableSize(retClass11, 0);
 
@@ -4357,7 +4358,7 @@ l5:	/* end ffiLogCallout: */;
 			ffiRetType1 = fetchPointerofObject(0, argTypes2);
 			retClass2 = fetchPointerofObject(1, ffiRetType1);
 			retOop2 = instantiateClassindexableSize(retClass2, 0);
-			
+
 #if SPURVM
 			oop12 = instantiateClassindexableSize(classByteArray(), (calloutState1->structReturnSize));
 
@@ -4576,7 +4577,7 @@ primitiveCalloutWithArgs(void)
 		primitiveFailFor(PrimErrBadNumArgs);
 		return;
 	}
-	
+
 #  if COGMTVM
 	retryCount = 0;
 	while (1) {
@@ -4644,7 +4645,7 @@ primitiveCalloutWithArgs(void)
 			result = ffiFail(FFIErrorBadArgs);
 			goto l3;
 		}
-		
+
 #    if COGMTVM
 		if (!(((flags & FFICallTypesMask) == FFICallTypeCDecl)
 			 || ((flags & FFICallTypesMask) == FFICallTypeApi))) {
@@ -4713,7 +4714,7 @@ primitiveCalloutWithArgs(void)
 				while (((calloutState->stringArgIndex)) > 0) {
 					free(((calloutState->stringArgs))[(calloutState->stringArgIndex = ((calloutState->stringArgIndex)) - 1)]);
 				}
-				
+
 #        if COGMTVM
 				if (err == (-PrimErrObjectMayMove)) {
 					result = PrimErrObjectMayMove;
@@ -4739,7 +4740,7 @@ primitiveCalloutWithArgs(void)
 				while (((calloutState->stringArgIndex)) > 0) {
 					free(((calloutState->stringArgs))[(calloutState->stringArgIndex = ((calloutState->stringArgIndex)) - 1)]);
 				}
-				
+
 #        if COGMTVM
 				if (err == (-PrimErrObjectMayMove)) {
 					result = PrimErrObjectMayMove;
@@ -4768,7 +4769,7 @@ primitiveCalloutWithArgs(void)
 			storeIntegerofObjectwithValue(ExternalFunctionStackSizeIndex, externalFunction, stackSize);
 		}
 		/* begin ffiCalloutTo:SpecOnStack:in: */
-		
+
 #    if COGMTVM
 		if (((calloutState->callFlags)) & FFICallFlagThreaded) {
 			myThreadIndex = disownVM(0);
@@ -4791,7 +4792,7 @@ primitiveCalloutWithArgs(void)
 		if (isCalleePopsConvention((calloutState->callFlags))) {
 			setsp((calloutState->argVector));
 		}
-		
+
 #    if COGMTVM
 		if (((calloutState->callFlags)) & FFICallFlagThreaded) {
 			ownVM(myThreadIndex);
@@ -4839,12 +4840,12 @@ primitiveCalloutWithArgs(void)
 						oop3 = methodReturnValue(strOop);
 						goto l16;
 					}
-					
+
 #if SPURVM
 					oop2 = instantiateClassindexableSize(classExternalAddress(), BytesPerWord);
 					ptr2 = firstIndexableField(oop2);
 					ptr2[0] = (((sqInt) intRet));
-					
+
 #if SPURVM
 					retOop1 = instantiateClassindexableSize(classExternalData(), 0);
 
@@ -4861,7 +4862,7 @@ primitiveCalloutWithArgs(void)
 					oop2 = instantiateClassindexableSize(classExternalAddress(), BytesPerWord);
 					ptr2 = firstIndexableField(oop2);
 					ptr2[0] = (((sqInt) intRet));
-					
+
 #if SPURVM
 					retOop1 = instantiateClassindexableSize(classExternalData(), 0);
 
@@ -4882,7 +4883,7 @@ primitiveCalloutWithArgs(void)
 				classOop = (((calloutState->ffiRetHeader)) & FFIFlagStructure
 					? classByteArray()
 					: classExternalAddress());
-				
+
 #if SPURVM
 				oop2 = instantiateClassindexableSize(classOop, BytesPerWord);
 
@@ -4894,7 +4895,7 @@ primitiveCalloutWithArgs(void)
 ;
 				ptr2 = firstIndexableField(oop2);
 				ptr2[0] = (((sqInt) intRet));
-				
+
 #if SPURVM
 				retOop1 = instantiateClassindexableSize(retClass1, 0);
 
@@ -4917,7 +4918,7 @@ primitiveCalloutWithArgs(void)
 				ffiRetType = fetchPointerofObject(0, argTypes);
 				retClass = fetchPointerofObject(1, ffiRetType);
 				retOop = instantiateClassindexableSize(retClass, 0);
-				
+
 #if SPURVM
 				oop11 = instantiateClassindexableSize(classByteArray(), (calloutState->structReturnSize));
 
@@ -5074,7 +5075,7 @@ l10:	/* end ffiLoadCalloutAddress: */;
 		ffiFail(FFIErrorBadArgs);
 		goto l6;
 	}
-	
+
 #  if COGMTVM
 	if (!(((flags1 & FFICallTypesMask) == FFICallTypeCDecl)
 		 || ((flags1 & FFICallTypesMask) == FFICallTypeApi))) {
@@ -5143,7 +5144,7 @@ l10:	/* end ffiLoadCalloutAddress: */;
 			while (((calloutState1->stringArgIndex)) > 0) {
 				free(((calloutState1->stringArgs))[(calloutState1->stringArgIndex = ((calloutState1->stringArgIndex)) - 1)]);
 			}
-			
+
 #      if COGMTVM
 			if (err1 == (-PrimErrObjectMayMove)) {
 				goto l6;
@@ -5168,7 +5169,7 @@ l10:	/* end ffiLoadCalloutAddress: */;
 			while (((calloutState1->stringArgIndex)) > 0) {
 				free(((calloutState1->stringArgs))[(calloutState1->stringArgIndex = ((calloutState1->stringArgIndex)) - 1)]);
 			}
-			
+
 #      if COGMTVM
 			if (err1 == (-PrimErrObjectMayMove)) {
 				goto l6;
@@ -5196,7 +5197,7 @@ l5:	/* end ffiLogCallout: */;
 		storeIntegerofObjectwithValue(ExternalFunctionStackSizeIndex, externalFunction, stackSize1);
 	}
 	/* begin ffiCalloutTo:SpecOnStack:in: */
-	
+
 #  if COGMTVM
 	if (((calloutState1->callFlags)) & FFICallFlagThreaded) {
 		myThreadIndex1 = disownVM(0);
@@ -5219,7 +5220,7 @@ l5:	/* end ffiLogCallout: */;
 	if (isCalleePopsConvention((calloutState1->callFlags))) {
 		setsp((calloutState1->argVector));
 	}
-	
+
 #  if COGMTVM
 	if (((calloutState1->callFlags)) & FFICallFlagThreaded) {
 		ownVM(myThreadIndex1);
@@ -5267,12 +5268,12 @@ l5:	/* end ffiLogCallout: */;
 					oop4 = methodReturnValue(strOop1);
 					goto l24;
 				}
-				
+
 #if SPURVM
 				oop21 = instantiateClassindexableSize(classExternalAddress(), BytesPerWord);
 				ptr3 = firstIndexableField(oop21);
 				ptr3[0] = (((sqInt) intRet1));
-				
+
 #if SPURVM
 				retOop11 = instantiateClassindexableSize(classExternalData(), 0);
 
@@ -5289,7 +5290,7 @@ l5:	/* end ffiLogCallout: */;
 				oop21 = instantiateClassindexableSize(classExternalAddress(), BytesPerWord);
 				ptr3 = firstIndexableField(oop21);
 				ptr3[0] = (((sqInt) intRet1));
-				
+
 #if SPURVM
 				retOop11 = instantiateClassindexableSize(classExternalData(), 0);
 
@@ -5310,7 +5311,7 @@ l5:	/* end ffiLogCallout: */;
 			classOop1 = (((calloutState1->ffiRetHeader)) & FFIFlagStructure
 				? classByteArray()
 				: classExternalAddress());
-			
+
 #if SPURVM
 			oop21 = instantiateClassindexableSize(classOop1, BytesPerWord);
 
@@ -5322,7 +5323,7 @@ l5:	/* end ffiLogCallout: */;
 ;
 			ptr3 = firstIndexableField(oop21);
 			ptr3[0] = (((sqInt) intRet1));
-			
+
 #if SPURVM
 			retOop11 = instantiateClassindexableSize(retClass11, 0);
 
@@ -5345,7 +5346,7 @@ l5:	/* end ffiLogCallout: */;
 			ffiRetType1 = fetchPointerofObject(0, argTypes2);
 			retClass2 = fetchPointerofObject(1, ffiRetType1);
 			retOop2 = instantiateClassindexableSize(retClass2, 0);
-			
+
 #if SPURVM
 			oop12 = instantiateClassindexableSize(classByteArray(), (calloutState1->structReturnSize));
 
@@ -6024,7 +6025,7 @@ setInterpreter(struct VirtualMachine*anInterpreter)
 	ok = ((interpreterProxy->majorVersion()) == (VM_PROXY_MAJOR))
 	 && ((interpreterProxy->minorVersion()) >= (VM_PROXY_MINOR));
 	if (ok) {
-		
+
 #if !defined(SQUEAK_BUILTIN_PLUGIN)
 		booleanValueOf = interpreterProxy->booleanValueOf;
 		byteSizeOf = interpreterProxy->byteSizeOf;
