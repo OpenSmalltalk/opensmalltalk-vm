@@ -1,0 +1,36 @@
+include ../common/Makefile.lib.extra
+
+$(info LIBRARY: freetype2)
+
+# plugin definitions
+FREETYPE2URL:=http://ftp.igh.cnrs.fr/pub/nongnu/freetype/freetype-2.6.5.tar.gz
+FREETYPE2DIR:=$(THIRDPARTYDIR)/freetype-2.6.5
+FREETYPE2LIBNAME:=libfreetype-6.dll
+FREETYPE2LIB:=$(THIRDPARTYINSTALLDIR)/$(FREETYPE2LIBNAME)
+FREETYPE2ARCHIVE:=$(THIRDPARTYCACHEDIR)/freetype-2.6.5.tar.gz
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR) $(THIRDPARTYINCLUDEDIR)/freetype2
+EXTRALIBS:=$(EXTRALIBS) $(FREETYPE2LIB)
+PLUGINREQS:=$(PLUGINREQS) $(THIRDPARTYLIBS)
+	
+$(FREETYPE2ARCHIVE): 
+	$(WGET) -O $(FREETYPE2ARCHIVE) $(FREETYPE2URL) 
+	
+$(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME): $(FREETYPE2ARCHIVE)
+	tar x -f $(FREETYPE2ARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(FREETYPE2DIR) \
+		&& ./configure \
+			--prefix='$(THIRDPARTYOUTDIR)' \
+			--without-png \
+			PKG_CONFIG='$(PKG_CONFIG)' \
+			PKG_CONFIG_PATH='$(PKG_CONFIG_PATH)' \
+			CFLAGS='$(THIRDPARTY_CFLAGS)' \
+			LDFLAGS='$(THIRDPARTY_LDFLAGS)' \
+		&& make \
+		&& make install
+
+$(FREETYPE2LIB): pkgconfig libpng $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME)
+	cp -f $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME) $(THIRDPARTYINSTALLDIR)
+	
+freetype2: $(FREETYPE2LIB)

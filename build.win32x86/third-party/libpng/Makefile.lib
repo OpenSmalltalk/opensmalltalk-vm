@@ -1,0 +1,33 @@
+include ../common/Makefile.lib.extra
+
+$(info LIBRARY: libpng)
+
+# plugin definitions
+LIBPNGURL:=ftp://ftp.simplesystems.org/pub/libpng/png/src/libpng16/libpng-1.6.26.tar.gz
+LIBPNGDIR:=$(THIRDPARTYDIR)/libpng-1.6.26
+LIBPNGLIBNAME:=libpng16-16.dll
+LIBPNGLIB:=$(THIRDPARTYINSTALLDIR)/$(LIBPNGLIBNAME)
+LIBPNGARCHIVE:=$(THIRDPARTYCACHEDIR)/libpng-1.6.26.tar.gz
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(LIBPNGLIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+	
+$(LIBPNGARCHIVE): 
+	$(WGET) -O $(LIBPNGARCHIVE) $(LIBPNGURL) 
+
+$(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME): $(LIBPNGARCHIVE)
+	tar x -f $(LIBPNGARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(LIBPNGDIR) \
+		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' \
+			CFLAGS='$(THIRDPARTY_CFLAGS) -march=pentium4 -I$(THIRDPARTYINCLUDEDIR)' \
+			CPPFLAGS='$(THIRDPARTY_CFLAGS) -march=pentium4 -I$(THIRDPARTYINCLUDEDIR)' \
+			LDFLAGS='$(THIRDPARTY_LDFLAGS) -march=pentium4 -L$(THIRDPARTYLIBDIR)' \
+		&& make \
+		&& make install
+
+$(LIBPNGLIB): pkgconfig zlib $(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME)
+	cp -f $(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME) $(THIRDPARTYINSTALLDIR)
+	
+libpng: $(LIBPNGLIB)

@@ -1,0 +1,30 @@
+include ../common/Makefile.lib.extra
+
+$(info LIBRARY: pkgconfig)
+
+# plugin definitions
+PKGCONFIGURL:=http://pkgconfig.freedesktop.org/releases/pkg-config-0.29.1.tar.gz
+PKGCONFIGDIR:=$(THIRDPARTYDIR)/pkg-config-0.29.1
+PKGCONFIGBIN:=$(THIRDPARTYOUTDIR)/bin/pkg-config.exe
+PKGCONFIGLIB:=$(THIRDPARTYOUTDIR)/lib/pkgconfig
+PKGCONFIGARCHIVE:=$(THIRDPARTYCACHEDIR)/pkg-config-0.29.1.tar.gz
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+	
+# export this values if pkg_config is included
+PKG_CONFIG:=$(PKGCONFIGBIN)
+PKG_CONFIG_PATH:=$(PKGCONFIGLIB)
+
+$(PKGCONFIGARCHIVE): 
+	$(WGET) -O $(PKGCONFIGARCHIVE) $(PKGCONFIGURL)
+
+$(PKGCONFIGBIN): $(PKGCONFIGARCHIVE)
+	tar x -f $(PKGCONFIGARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(PKGCONFIGDIR) \
+		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' --with-internal-glib \
+		&& make \
+		&& make install
+	
+pkgconfig: $(PKGCONFIGBIN)

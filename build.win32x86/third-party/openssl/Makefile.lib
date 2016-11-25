@@ -1,0 +1,34 @@
+include ../common/Makefile.lib.extra
+
+$(info LIBRARY: openssl)
+
+# plugin definitions
+OPENSSLURL:=https://www.openssl.org/source/openssl-1.0.2j.tar.gz
+OPENSSLDIR:=$(THIRDPARTYDIR)/openssl-1.0.2j
+OPENSSLLIBNAME:=ssleay32.dll
+OPENSSLALLLIBNAMES:=libeay32.dll $(OPENSSLLIBNAME)
+OPENSSLLIB:=$(THIRDPARTYINSTALLDIR)/$(OPENSSLLIBNAME)
+OPENSSLARCHIVE:=$(THIRDPARTYCACHEDIR)/openssl-1.0.2j.tar.gz
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(OPENSSLLIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+
+$(OPENSSLARCHIVE): 
+	$(WGET) -O $(OPENSSLARCHIVE) $(OPENSSLURL) 
+
+$(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME): $(OPENSSLARCHIVE)
+	tar x -f $(OPENSSLARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(OPENSSLDIR) \
+		&& ./Configure mingw --prefix='$(THIRDPARTYOUTDIR)' shared $(THIRDPARTY_CFLAGS) \
+		&& make \
+		&& make install
+
+# Assuming building ssleay32.dll will also build libeay32.dll
+$(OPENSSLLIB): $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME)
+	@for each in $(OPENSSLALLLIBNAMES); do \
+		cp -f $(THIRDPARTYLIBDIR)/$$each $(THIRDPARTYINSTALLDIR); \
+	done
+
+openssl: $(OPENSSLLIB)

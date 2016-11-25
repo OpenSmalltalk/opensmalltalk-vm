@@ -1,0 +1,38 @@
+include ../common/Makefile.lib.extra
+
+$(info LIBRARY: zlib)
+
+# plugin definitions
+ZLIBURL:=http://zlib.net/zlib-1.2.8.tar.gz
+ZLIBDIR:=$(THIRDPARTYDIR)/zlib-1.2.8
+ZLIBLIBNAME:=zlib1.dll
+ZLIBLIB:=$(THIRDPARTYINSTALLDIR)/$(ZLIBLIBNAME:)
+ZLIBARCHIVE:=$(THIRDPARTYCACHEDIR)/zlib-1.2.8.tar.gz
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(ZLIBLIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+	
+$(ZLIBARCHIVE): 
+	$(WGET) -O $(ZLIBARCHIVE) $(ZLIBURL) 
+
+# IMPORTANT: the copy to libz.dll is because libssh2.dll config tries to load a "libz.dll" no 
+# matters the real name :(
+$(THIRDPARTYLIBDIR)/$(ZLIBLIBNAME): $(ZLIBARCHIVE)
+	tar x -f $(ZLIBARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(ZLIBDIR) \
+		&& make -fwin32/Makefile.gcc \
+			CFLAGS='$(THIRDPARTY_CFLAGS)' \
+			LDFLAGS='$(THIRDPARTY_LDFLAGS)' \
+		&& make install -fwin32/Makefile.gcc \
+			SHARED_MODE=1 \
+			INCLUDE_PATH='$(THIRDPARTYOUTDIR)/include' \
+			LIBRARY_PATH='$(THIRDPARTYOUTDIR)/lib' \
+			BINARY_PATH='$(THIRDPARTYOUTDIR)/bin'
+	cp $(THIRDPARTYLIBDIR)/zlib1.dll $(THIRDPARTYLIBDIR)/libz.dll
+
+$(ZLIBLIB): $(THIRDPARTYLIBDIR)/$(ZLIBLIBNAME)
+	cp -f $(THIRDPARTYLIBDIR)/$(ZLIBLIBNAME) $(THIRDPARTYINSTALLDIR)
+	
+zlib: $(ZLIBLIB)

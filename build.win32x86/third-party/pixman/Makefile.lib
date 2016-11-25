@@ -1,0 +1,35 @@
+include ../common/Makefile.lib.extra
+
+$(info LIBRARY: pixman)
+
+# plugin definitions
+PIXMANURL:=http://www.cairographics.org/releases/pixman-0.34.0.tar.gz
+PIXMANLIBNAME:=libpixman-1-0.dll
+PIXMANDIR:=$(THIRDPARTYDIR)/pixman-0.34.0
+PIXMANLIB:=$(THIRDPARTYINSTALLDIR)/$(PIXMANLIBNAME)
+PIXMANARCHIVE:=$(THIRDPARTYCACHEDIR)/pixman-0.34.0.tar.gz
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(PIXMANLIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+
+$(PIXMANARCHIVE): 
+	$(WGET) -O $(PIXMANARCHIVE) $(PIXMANURL) 
+
+$(THIRDPARTYLIBDIR)/$(PIXMANLIBNAME): $(PIXMANARCHIVE)
+	tar x -f $(PIXMANARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(PIXMANDIR) \
+		&& ./configure \
+			--prefix='$(THIRDPARTYOUTDIR)' \
+			PKG_CONFIG="$(PKG_CONFIG)" \
+			PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" \
+			CFLAGS='$(THIRDPARTY_CFLAGS)' \
+			LDFLAGS='$(THIRDPARTY_LDFLAGS)' \
+		&& make \
+		&& make install
+
+$(PIXMANLIB): pkgconfig $(THIRDPARTYLIBDIR)/$(PIXMANLIBNAME)
+	cp -f $(THIRDPARTYLIBDIR)/$(PIXMANLIBNAME) $(THIRDPARTYINSTALLDIR)
+	
+pixman: $(PIXMANLIB)
