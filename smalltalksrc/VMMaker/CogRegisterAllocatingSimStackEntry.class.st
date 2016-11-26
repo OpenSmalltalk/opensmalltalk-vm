@@ -8,6 +8,17 @@ Class {
 }
 
 { #category : #'compile abstract instructions' }
+CogRegisterAllocatingSimStackEntry >> copyLiveRegisterIfSameAs: simStackEntry [
+	<inline: true>
+	self flag: 'should this also apply to SSConstant entries assigned to registers?'.
+	(self ~~ simStackEntry
+	 and: [type = simStackEntry type
+	 and: [type = SSBaseOffset
+	 and: [register = simStackEntry register and: [offset = simStackEntry offset]]]]) ifTrue:
+		[liveRegister := simStackEntry liveRegister]
+]
+
+{ #category : #'compile abstract instructions' }
 CogRegisterAllocatingSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegister [
 	spilled ifTrue:
 		[type = SSSpill ifTrue:
@@ -57,18 +68,6 @@ CogRegisterAllocatingSimStackEntry >> liveRegister: anObject [
 	^liveRegister := anObject
 ]
 
-{ #category : #'compile abstract instructions' }
-CogRegisterAllocatingSimStackEntry >> noteLiveRegisterIn: simStackEntry [
-	"Copy the liveRegister state in simStackEntry into the receiver if it is the same value at a different location on the stack."
-	<inline: true>
-	self flag: 'should this also apply to SSConstant entries assigned to registers?'.
-	(self ~~ simStackEntry
-	 and: [type = simStackEntry type
-	 and: [type = SSBaseOffset
-	 and: [register = simStackEntry register and: [offset = simStackEntry offset]]]]) ifTrue:
-		[liveRegister := simStackEntry liveRegister]
-]
-
 { #category : #accessing }
 CogRegisterAllocatingSimStackEntry >> offset [
 	"Answer the value of offset"
@@ -98,7 +97,7 @@ CogRegisterAllocatingSimStackEntry >> popToReg: reg [
 												ifFalse: [cogit Label]] }]].
 	reg ~= TempReg ifTrue:
 		[liveRegister := reg.
-		 cogit observeLiveRegisterIn: self]
+		 cogit copyLiveRegisterToCopiesOf: self]
 ]
 
 { #category : #printing }
@@ -190,5 +189,5 @@ CogRegisterAllocatingSimStackEntry >> storeToReg: reg [
 												ifFalse: [cogit Label]] }].
 	reg ~= TempReg ifTrue:
 		[liveRegister := reg.
-		 cogit observeLiveRegisterIn: self]
+		 cogit copyLiveRegisterToCopiesOf: self]
 ]

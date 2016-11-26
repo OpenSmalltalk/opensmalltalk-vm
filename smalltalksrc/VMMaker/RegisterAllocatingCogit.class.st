@@ -91,6 +91,15 @@ RegisterAllocatingCogit >> compileEntireMethod [
 	^super compileEntireMethod
 ]
 
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> copyLiveRegisterToCopiesOf: simStackEntry [
+	"Copy the liveRegister in simStackEntry into all corresponding stack entries."
+	<var: #simStackEntry type: #'SimStackEntry *'>
+	simStackPtr to: 0 by: -1 do:
+		[:i|
+		(self simStackAt: i) copyLiveRegisterIfSameAs: simStackEntry]
+]
+
 { #category : #'simulation only' }
 RegisterAllocatingCogit >> copySimStack [
 	<doNotGenerate>
@@ -360,7 +369,7 @@ RegisterAllocatingCogit >> genStorePop: popBoolean TemporaryVariable: tempIndex 
 		r: FPReg.
 	reg ~= TempReg ifTrue:
 		[(self simStackAt: tempIndex) liveRegister: reg.
-		 self observeLiveRegisterIn: (self simStackAt: tempIndex)].
+		 self copyLiveRegisterToCopiesOf: (self simStackAt: tempIndex)].
 	^0
 ]
 
@@ -499,15 +508,6 @@ RegisterAllocatingCogit >> moveSimStackConstantsToRegisters [
 			desc := self simStackAt: i.
 			(desc type = SSConstant and: [desc liveRegister = NoReg])
 				ifTrue: [ desc storeToReg: (self allocateRegNotConflictingWith: 0) ] ]
-]
-
-{ #category : #'bytecode generator support' }
-RegisterAllocatingCogit >> observeLiveRegisterIn: simStackEntry [
-	"Copy the liveRegister in simStackEntry into all corresponding stack entries."
-	<var: #simStackEntry type: #'SimStackEntry *'>
-	simStackPtr to: 0 by: -1 do:
-		[:i|
-		(self simStackAt: i) noteLiveRegisterIn: simStackEntry]
 ]
 
 { #category : #'bytecode generator support' }
