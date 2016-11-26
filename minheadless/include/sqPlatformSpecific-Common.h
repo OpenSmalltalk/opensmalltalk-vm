@@ -1,3 +1,6 @@
+#include "sqPath.h"
+#include "sqTextEncoding.h"
+
 /**
  * Printing and reporting functions.
  * In some platforms, such as Windows, stdout, stderr and stdin are not always usable
@@ -22,8 +25,3 @@ extern void sqErrorPrintf(const char *format, ...);
 extern int sqAskSecurityYesNoQuestion(const char *question);
 
 extern const char *sqGetCurrentImagePath(void);
-
-/* Text encoding conversions. */
-extern const char *sqUTF8ToUTF32Iterate(const char *string, int *dest);
-extern unsigned short *sqUTF8ToUTF16Copy(unsigned short *dest, size_t destSize, const char *src);
-extern unsigned short *sqUTF8toUTF16New(const char *string);

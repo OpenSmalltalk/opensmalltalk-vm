@@ -57,28 +57,10 @@ set(SqueakFFIPrims_Sources
     "${CrossPlatformPluginFolder}/SqueakFFIPrims/sqFFI.h"
     "${CrossPlatformPluginFolder}/SqueakFFIPrims/sqFFIPlugin.c"
     "${CrossPlatformPluginFolder}/SqueakFFIPrims/sqManualSurface.c"
+    "${PluginsSourceFolderName}/SqueakFFIPrims/SqueakFFIPrims.c"
 )
 
-if(FFI_VARIANT_IA32)
-    set(SqueakFFIPrims_Sources
-        "${PluginsSourceFolderName}/SqueakFFIPrims/IA32FFIPlugin.c"
-        ${SqueakFFIPrims_Sources}
-    )
-elseif(FFI_VARIANT_X64_WIN64)
-    set(SqueakFFIPrims_Sources
-        "${PluginsSourceFolderName}/SqueakFFIPrims/X64Win64FFIPlugin.c"
-        ${SqueakFFIPrims_Sources}
-    )
-elseif(FFI_VARIANT_X64_SYSV)
-    set(SqueakFFIPrims_Sources
-        "${PluginsSourceFolderName}/SqueakFFIPrims/X64SysVFFIPlugin.c"
-        ${SqueakFFIPrims_Sources}
-    )
-else()
-    message("TODO: Add the source of the current architecture FFI e.g. ARM, PPC, MIPS, etc...")
-endif()
-
-add_vm_plugin_sources(SqueakFFIPrims EXTERNAL ${SqueakFFIPrims_Sources})
+add_vm_plugin_sources(SqueakFFIPrims INTERNAL ${SqueakFFIPrims_Sources})
 
 # Basic internal plugins
 add_vm_plugin_auto(FilePlugin INTERNAL)

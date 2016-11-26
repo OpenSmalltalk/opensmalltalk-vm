@@ -22,6 +22,7 @@ resolveAlias boolean - it seems to only be of use by OSX but is crucial there.
 sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filenameLength, sqInt aBoolean)
 {
     memcpy(aCharBuffer, aFilenameString, filenameLength);
+    aCharBuffer[filenameLength] = 0;
     return 0;
 }
 
@@ -77,16 +78,6 @@ sqInt ioDisablePowerManager(sqInt disableIfNonZero)
     return true;
 }
 
-static int isAbsolutePath(const char *path)
-{
-#ifdef _WIN32
-    return *path == '\\' || (path[0] != 0 && path[1] == ':');
-#else
-    /* Assume UNIX style path. */
-    return *path == '/';
-#endif
-}
-
 void findExecutablePath(const char *localVmName, char *dest, size_t destSize)
 {
     const char *lastSeparator = strrchr(localVmName, '/');
@@ -96,7 +87,7 @@ void findExecutablePath(const char *localVmName, char *dest, size_t destSize)
         lastSeparator = lastSeparator2;
 #endif
 
-    if (!isAbsolutePath(localVmName))
+    if (!sqIsAbsolutePath(localVmName))
     {
         /* TODO: Get the current working directory*/
         strcpy(dest, "./");

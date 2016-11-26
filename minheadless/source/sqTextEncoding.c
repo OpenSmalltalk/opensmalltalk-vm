@@ -49,7 +49,37 @@ const char *sqUTF8ToUTF32Iterate(const char *string, int *dest)
     return string;
 }
 
+extern const unsigned short*sqUTF16ToUTF32Iterate(const unsigned short *string, int *dest)
+{
+    unsigned int first;
+    *dest = 0;
+
+    first = (*string) & 0xFF;
+    if (first == 0)
+        return string;
+    
+    *dest = first;
+    /* TODO: Implement this properly. */
+    ++string;
+    return string;
+}
+
 extern unsigned short *sqUTF8ToUTF16Copy(unsigned short *dest, size_t destSize, const char *src)
+{
+    unsigned short *originalDestination = dest;
+
+    /* TODO: Implement this properly. */
+    while (*src && destSize > 1)
+    {
+        *dest++ = *src++;
+        --destSize;
+    }
+
+    *dest = 0;
+    return originalDestination;
+}
+
+extern unsigned short *sqUTF16ToUTF8Copy(char *dest, size_t destSize, const unsigned short *src)
 {
     unsigned short *originalDestination = dest;
 

@@ -12,10 +12,10 @@ endif ()
 # Turn on warnings
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 	# using Visual Studio C++
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
+	set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} /W3")
 	set(VM_MSVC TRUE)
 else()
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pthread")
+	set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pthread")
 
 	# Export symbols from applications.
 	#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--export-dynamic")
@@ -233,16 +233,19 @@ set(VM_PLATFORM_SOURCES
     minheadless/include/sqConfig.h
     minheadless/include/sqEventCommon.h
     minheadless/include/sqNamedPrims.h
+    minheadless/include/sqPath.h
     minheadless/include/sqPlatformSpecific.h
     minheadless/include/sqPlatformSpecific-Common.h
     minheadless/include/sqPlatformSpecific-Generic.h
     minheadless/include/sqPlatformSpecific-Unix.h
     minheadless/include/sqPlatformSpecific-Win32.h
     minheadless/include/sqQueue.h
+    minheadless/include/sqTextEncoding.h
     minheadless/include/sqWin32Alloc.h
 	minheadless/source/sqaio.h
 	minheadless/source/sqExternalPrimitives.c
 	minheadless/source/sqEventCommon.c
+    minheadless/source/sqPath.c
     minheadless/source/sqPrinting.c
     minheadless/source/sqTextEncoding.c
 )
@@ -282,8 +285,12 @@ elseif(WIN32)
         -DWIN32_FILE_SUPPORT
         -DNO_SERVICE
         -DNO_STD_FILE_SUPPORT
+        -DLSB_FIRST
     )
     set(VM_DEPENDENCIES_LIBRARIES Winmm ${VM_DEPENDENCIES_LIBRARIES})
+    if(SQUEAK_PLATFORM_X86_32)
+        add_definitions(-DX86)
+    endif()
     if(NOT VM_MSVC)
         # Compile for Windows XP when using MinGW
         add_definitions(-D_WIN32_WINNT=0x501)

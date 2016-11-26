@@ -97,6 +97,7 @@ sqLong ioHighResClock(void)
 sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filenameLength, sqInt aBoolean)
 {
     memcpy(aCharBuffer, aFilenameString, filenameLength);
+    aCharBuffer[filenameLength] = 0;
     return 0;
 }
 

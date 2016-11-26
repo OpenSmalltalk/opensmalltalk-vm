@@ -221,20 +221,6 @@ sqInt ioDisablePowerManager(sqInt disableIfNonZero)
 }
 
 /* Executable path. */
-static void pathCopyAbs(char *target, const char *src, size_t targetSize)
-{
-    if (src[0] == '/')
-    {
-        strcpy(target, src);
-    }
-    else
-    {
-        getcwd(target, targetSize);
-        strcat(target, "/");
-        strcat(target, src);
-    }
-}
-
 void findExecutablePath(const char *localVmName, char *dest, size_t destSize)
 {
 #if defined(__linux__)
@@ -254,7 +240,7 @@ void findExecutablePath(const char *localVmName, char *dest, size_t destSize)
 
     /* get canonical path to vm */
     if (realpath(localVmName, dest) == 0)
-        pathCopyAbs(dest, localVmName, destSize);
+        sqPathMakeAbsolute(dest, localVmName, destSize);
 
     /* truncate vmPath to dirname */
     {

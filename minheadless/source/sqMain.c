@@ -1,3 +1,10 @@
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
 #include <stdio.h>
 #include <string.h>
 
@@ -8,6 +15,7 @@
 #define DefaultMmapSize		1024     	/* megabytes of virtual memory */
 
 char imageName[FILENAME_MAX];
+static char imagePath[FILENAME_MAX];
 
 int    argCnt=		0;	/* global copies for access from plugins */
 char **argVec=		0;
@@ -44,9 +52,9 @@ char *getImageName(void)
     return imageName;
 }
 
-extern const char *sqGetCurrentImagePath()
+const char *sqGetCurrentImagePath()
 {
-    return imageName;
+    return imagePath;
 }
 
 sqInt imageNameGetLength(sqInt sqImageNameIndex, sqInt length)
@@ -280,27 +288,33 @@ static int tryToLoadImageFromFileName(const char *fileName)
 #endif
     sqImageFileClose(imageFile);
 
-    if(imageName != fileName)
-        strcpy(imageName, fileName);
+    sqPathMakeAbsolute(imageName, sizeof(imageName), fileName);
+    sqPathExtractDirname(imagePath, sizeof(imagePath), imageName);
     return 1;
 }
 
+static char tempImageNameAttempt[FILENAME_MAX];
 void imgInit()
 {
+
     /* Try to load the image as was passed. */
-    sprintf(imageName, "./%s", shortImageName);
-    if(tryToLoadImageFromFileName(imageName))
+    sprintf(tempImageNameAttempt, "./%s", shortImageName);
+    if(tryToLoadImageFromFileName(tempImageNameAttempt))
         return;
 
     /* Make the image path relative to the VM*/
-    sprintf(imageName, "%s/%s", vmPath, shortImageName);
-    if(tryToLoadImageFromFileName(imageName))
+    sprintf(tempImageNameAttempt, "%s/%s", vmPath, shortImageName);
+    if(tryToLoadImageFromFileName(tempImageNameAttempt))
         return;
 
     /* Failed. */
     fprintf(stderr, "Failed to open image file named: %s\n", shortImageName);
     exit(1);
 }
+
+#ifdef _WIN32
+extern sqInt ioInitSecurity(void);
+#endif
 
 int main(int argc, char *argv[], char *envp[])
 {
@@ -311,13 +325,20 @@ int main(int argc, char *argv[], char *envp[])
 
 
     /* Make parameters global for access from plugins */
-
     argCnt = argc;
     argVec = argv;
     envVec = envp;
 
     initGlobalStructure();
 
+    /* Use UTF-8 for the console*/
+#ifdef _WIN32
+    if (GetConsoleCP())
+    {
+        SetConsoleCP(CP_UTF8);
+        SetConsoleOutputCP(CP_UTF8);
+    }
+#endif
     /* Allocate arrays to store copies of pointers to command line
         arguments.  Used by getAttributeIntoLength(). */
     if ((vmArgumentVector = calloc(argc + 1, sizeof(char *))) == 0)
