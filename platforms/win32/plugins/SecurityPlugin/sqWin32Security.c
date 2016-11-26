@@ -17,15 +17,19 @@
 
 static HRESULT (__stdcall *shGetFolderPath)(HWND, int, HANDLE, DWORD, WCHAR*);
 
-static TCHAR untrustedUserDirectory[MAX_PATH];
+static WCHAR untrustedUserDirectory[MAX_PATH];
 static int untrustedUserDirectoryLen;
-static TCHAR secureUserDirectory[MAX_PATH];
+static WCHAR secureUserDirectory[MAX_PATH];
 static int secureUserDirectoryLen;
-static TCHAR resourceDirectory[MAX_PATH];
+static WCHAR resourceDirectory[MAX_PATH];
 static int resourceDirectoryLen;
 
+static char untrustedUserDirectoryUTF8[MAX_PATH];
+static char secureUserDirectoryUTF8[MAX_PATH];
+static char resourceDirectoryUTF8[MAX_PATH];
+
 /* imported from sqWin32Prefs.c */
-extern TCHAR squeakIniName[MAX_PATH];
+extern WCHAR squeakIniName[MAX_PATH];
 
 /* imported from sqWin32Main.c */
 extern BOOL fLowRights;  /* started as low integrity process, 
@@ -37,10 +41,10 @@ extern BOOL fLowRights;  /* started as low integrity process,
 /***************************************************************************/
 /* file security */
 static int allowFileAccess = 1;  /* full access to files */
-static const TCHAR SEC_U_DOT[] = TEXT(".");
-static const TCHAR SEC_U_BACKSLASH[] = TEXT("\\");
+static const WCHAR SEC_U_DOT[] = TEXT(".");
+static const WCHAR SEC_U_BACKSLASH[] = TEXT("\\");
 
-static int testDotDot(TCHAR *pathName, int index) {
+static int testDotDot(WCHAR *pathName, int index) {
   while(pathName[index]) {
     if(pathName[index] == SEC_U_DOT[0]) {
       if(pathName[index-1] == SEC_U_DOT[0]) {
@@ -54,7 +58,7 @@ static int testDotDot(TCHAR *pathName, int index) {
   return 1;
 }
 
-static int lstrncmp(TCHAR *s1, TCHAR *s2, int len) {
+static int lstrncmp(WCHAR *s1, WCHAR *s2, int len) {
   int s1Len = lstrlen(s1);
   int s2Len = lstrlen(s2);
   int max = min(s1Len, min(s2Len, len));
@@ -69,7 +73,7 @@ static int lstrncmp(TCHAR *s1, TCHAR *s2, int len) {
   return 0;
 }
 
-static int isAccessiblePathName(TCHAR *pathName, int writeFlag) {
+static int isAccessiblePathName(WCHAR *pathName, int writeFlag) {
   int pathLen = lstrlen(pathName);
   if (pathLen > (MAX_PATH - 1)) return 0;
 
@@ -91,7 +95,7 @@ static int isAccessiblePathName(TCHAR *pathName, int writeFlag) {
   return 0;
 }
 
-static int isAccessibleFileName(TCHAR *fileName, int writeFlag) {
+static int isAccessibleFileName(WCHAR *fileName, int writeFlag) {
   return isAccessiblePathName(fileName, writeFlag);
 }
 
@@ -203,40 +207,50 @@ int ioHasSocketAccess() {
 /* SecurityPlugin primitive support */
 
 char *ioGetSecureUserDirectory(void) {
-  return secureUserDirectory;
+  return secureUserDirectoryUTF8;
 }
 
 char *ioGetUntrustedUserDirectory(void) {
-  return untrustedUserDirectory;
+  return untrustedUserDirectoryUTF8;
 }
 
 /* helper function to expand %MYDOCUMENTSFOLDER% */
 
-int expandMyDocuments(char *pathname, char *replacement, char *result)
+int expandMyDocuments(WCHAR *pathname, WCHAR *replacement, WCHAR *result)
 {
-  CHAR search4[MAX_PATH+1];
-  CHAR *start;
+/*  WCHAR search4[MAX_PATH+1];
+  WCHAR *start;
 
-  strcpy(search4, TEXT("%MYDOCUMENTS%"));
+  lstrcpy(search4, TEXT("%MYDOCUMENTS%"));
 
-  if(!(start = strstr(pathname, search4))) return 0;
+  if(!(start = wstrstr(pathname, search4))) return 0;
 
-  strncpy(result, pathname, start-pathname); 
+  wstrncpy(result, pathname, start-pathname); 
   result[start-pathname] = '\0';
-  sprintf(result+(start-pathname),"%s%s", replacement, start+strlen(search4));
-  
-  return strlen(result);
+  sprintf(result+(start-pathname),"%s%s", replacement, start+lstrlen(search4));
+*/
+  /* TODO: Implement this properly. */
+  return 0;
 }
 
+static void expandVariableInDirectory(WCHAR *directory, WCHAR *wDir, WCHAR *wTmp)
+{
+    /* Expand environment variables. */
+    lstrcpy(wDir, directory);
+    ExpandEnvironmentStringsW(wDir, wTmp, MAX_PATH - 1);
 
+    /* Expand relative paths to absolute paths */
+    GetFullPathNameW(wTmp, MAX_PATH, wDir, NULL);
+    lstrcpy(directory, wDir);
+}
 
 /* note: following is called from VM directly, not from plugin */
 sqInt ioInitSecurity(void) {
   DWORD dwType, dwSize, ok;
-  TCHAR tmp[MAX_PATH+1];
+  WCHAR tmp[MAX_PATH+1];
   WCHAR wTmp[MAX_PATH+1];
   WCHAR wDir[MAX_PATH+1];
-  TCHAR myDocumentsFolder[MAX_PATH+1];  
+  WCHAR myDocumentsFolder[MAX_PATH+1];  
   HKEY hk;
   int dirLen;
 
@@ -244,7 +258,7 @@ sqInt ioInitSecurity(void) {
   sqUTF8ToUTF16Copy(secureUserDirectory, sizeof(secureUserDirectory)/sizeof(secureUserDirectory[0]), sqGetCurrentImagePath());
   dirLen = lstrlen(secureUserDirectory);
   dwSize = MAX_PATH-dirLen;
-  GetUserName(secureUserDirectory+dirLen, &dwSize);
+  GetUserNameW(secureUserDirectory+dirLen, &dwSize);
 
   /* establish untrusted user directory */
   lstrcpy(untrustedUserDirectory, TEXT("C:\\My Squeak\\%USERNAME%"));
@@ -261,76 +275,73 @@ sqInt ioInitSecurity(void) {
 
   if(shGetFolderPath) {
     /* If we have shGetFolderPath use My Documents/My Squeak */
-    WCHAR widepath[MAX_PATH];
     int sz;
     /*shGetfolderPath does not return utf8*/
-    if(shGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, widepath) == S_OK) {
-       WideCharToMultiByte(CP_ACP,0,widepath,-1,untrustedUserDirectory,
-                          MAX_PATH,NULL,NULL); 
-      sz = strlen(untrustedUserDirectory);
+    if(shGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, untrustedUserDirectory) == S_OK) {
+      sz = lstrlen(untrustedUserDirectory);
       if(untrustedUserDirectory[sz-1] != '\\') 
-        strcat(untrustedUserDirectory, "\\");
-           lstrcpy(myDocumentsFolder,untrustedUserDirectory);
-      strcat(untrustedUserDirectory, "My Squeak");
+        lstrcat(untrustedUserDirectory, L"\\");
+      lstrcpy(myDocumentsFolder,untrustedUserDirectory);
+      lstrcat(untrustedUserDirectory, L"My Squeak");
     }
   }
 
 
   /* Query Squeak.ini for network installations */
-  GetPrivateProfileString(TEXT("Security"), TEXT("SecureDirectory"),
+  GetPrivateProfileStringW(L"Security", L"SecureDirectory",
                           secureUserDirectory, secureUserDirectory,
                           MAX_PATH, squeakIniName);
   if(fLowRights) {/* use alternate untrustedUserDirectory */
-      GetPrivateProfileString(TEXT("Security"), TEXT("UserDirectoryLow"),
+      GetPrivateProfileStringW(L"Security", L"UserDirectoryLow",
                           untrustedUserDirectory, untrustedUserDirectory,
                           MAX_PATH, squeakIniName);
   } else {
-      GetPrivateProfileString(TEXT("Security"), TEXT("UserDirectory"),
+      GetPrivateProfileStringW(L"Security", L"UserDirectory",
                           untrustedUserDirectory, untrustedUserDirectory,
                           MAX_PATH, squeakIniName);
   }
 
-  GetPrivateProfileString(TEXT("Security"), TEXT("ResourceDirectory"),
+  GetPrivateProfileString(L"Security", L"ResourceDirectory",
                           resourceDirectory, resourceDirectory,
                           MAX_PATH, squeakIniName);
 
   /* Attempt to read local user settings from registry */
-  ok = RegOpenKey(HKEY_CURRENT_USER, HKEY_SQUEAK_ROOT, &hk);
+  ok = RegOpenKeyA(HKEY_CURRENT_USER, HKEY_SQUEAK_ROOT, &hk);
 
   /* Read the secure directory from the subkey. */
   dwSize = MAX_PATH;
-  ok = RegQueryValueEx(hk,"SecureDirectory",NULL, &dwType, 
+  ok = RegQueryValueExW(hk, L"SecureDirectory",NULL, &dwType, 
                        (LPBYTE) tmp, &dwSize);
   if(ok == ERROR_SUCCESS) {
     if(tmp[dwSize-2] != '\\') {
       tmp[dwSize-1] = '\\';
       tmp[dwSize] = 0;
     }
-    strcpy(secureUserDirectory, tmp);
+    lstrcpy(secureUserDirectory, tmp);
   }
 
   /* Read the user directory from the subkey. */
   dwSize = MAX_PATH;
-  ok = RegQueryValueEx(hk,"UserDirectory",NULL, &dwType, 
+  ok = RegQueryValueExW(hk, L"UserDirectory",NULL, &dwType, 
                        (LPBYTE) tmp, &dwSize);
   if(ok == ERROR_SUCCESS) {
     if(tmp[dwSize-2] != '\\') {
       tmp[dwSize-1] = '\\';
       tmp[dwSize] = 0;
     }
-    strcpy(untrustedUserDirectory, tmp);
+    lstrcpy(untrustedUserDirectory, tmp);
   }
 
   /* Read the resource directory from the subkey. */
   dwSize = MAX_PATH;
-  ok = RegQueryValueEx(hk,"ResourceDirectory",NULL, &dwType, 
+  ok = RegQueryValueExW(hk, L"ResourceDirectory",NULL, &dwType, 
                        (LPBYTE) tmp, &dwSize);
   if(ok == ERROR_SUCCESS) {
     if(tmp[dwSize-2] != '\\') {
       tmp[dwSize-1] = '\\';
       tmp[dwSize] = 0;
     }
-    strcpy(resourceDirectory, tmp);
+    lstrcpy(resourceDirectory, tmp);
   }
 
   RegCloseKey(hk);
@@ -338,41 +349,30 @@ sqInt ioInitSecurity(void) {
   if(shGetFolderPath) {  
     dwSize = expandMyDocuments(untrustedUserDirectory, myDocumentsFolder, tmp);
     if(dwSize > 0 && dwSize < MAX_PATH)
-      strcpy(untrustedUserDirectory, tmp);
+      lstrcpy(untrustedUserDirectory, tmp);
 
     dwSize = expandMyDocuments(secureUserDirectory, myDocumentsFolder, tmp);
     if(dwSize > 0 && dwSize < MAX_PATH)
-      strcpy(secureUserDirectory, tmp);
+      lstrcpy(secureUserDirectory, tmp);
 
     dwSize = expandMyDocuments(resourceDirectory, myDocumentsFolder, tmp);
     if(dwSize > 0 && dwSize < MAX_PATH)
-      strcpy(resourceDirectory, tmp);
+      lstrcpy(resourceDirectory, tmp);
   }
 
-  /* Expand any environment variables in user directory. */
-  MultiByteToWideChar(CP_ACP, 0, untrustedUserDirectory, -1, wDir, MAX_PATH);
-  ExpandEnvironmentStringsW(wDir, wTmp, MAX_PATH-1);
-  /* Expand relative paths to absolute paths */
-  GetFullPathNameW(wTmp, MAX_PATH, wDir, NULL);
-  WideCharToMultiByte(CP_UTF8,0,wDir,-1,untrustedUserDirectory,MAX_PATH,NULL,NULL);
-
-  /* same for the secure directory*/
-  MultiByteToWideChar(CP_ACP, 0, secureUserDirectory, -1, wDir, MAX_PATH);
-  ExpandEnvironmentStringsW(wDir, wTmp, MAX_PATH-1);
-  /* Expand relative paths to absolute paths */
-  GetFullPathNameW(wTmp, MAX_PATH, wDir, NULL);
-  WideCharToMultiByte(CP_UTF8,0,wDir,-1,secureUserDirectory,MAX_PATH,NULL,NULL);
-
-  /* and for the resource directory*/
-  MultiByteToWideChar(CP_ACP, 0, resourceDirectory, -1, wDir, MAX_PATH);
-  ExpandEnvironmentStringsW(wDir, wTmp, MAX_PATH-1);
-  /* Expand relative paths to absolute paths */
-  GetFullPathNameW(wTmp, MAX_PATH, wDir, NULL);
-  WideCharToMultiByte(CP_UTF8,0,wDir,-1,resourceDirectory,MAX_PATH,NULL,NULL);
+  /* Expand the directories. */
+  expandVariableInDirectory(untrustedUserDirectory, wDir, wTmp);
+  expandVariableInDirectory(secureUserDirectory, wDir, wTmp);
+  expandVariableInDirectory(resourceDirectory, wDir, wTmp);
 
   secureUserDirectoryLen = lstrlen(secureUserDirectory);
   untrustedUserDirectoryLen = lstrlen(untrustedUserDirectory);
   resourceDirectoryLen = lstrlen(resourceDirectory);
+
+  /* Keep a UTF-8 copy*/
+  sqUTF16ToUTF8Copy(untrustedUserDirectoryUTF8, sizeof(untrustedUserDirectoryUTF8), untrustedUserDirectory);
+  sqUTF16ToUTF8Copy(secureUserDirectoryUTF8, sizeof(secureUserDirectoryUTF8), secureUserDirectory);
+  sqUTF16ToUTF8Copy(resourceDirectoryUTF8, sizeof(resourceDirectoryUTF8), resourceDirectory);
 
   return 1;
 }
