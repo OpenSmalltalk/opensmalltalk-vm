@@ -179,6 +179,21 @@ CogX64Compiler class >> initializeAbstractRegisters [
 	"N.B. RAX RCX & RDX are caller-save (scratch) registers.  Hence we use RCX for class and RDX for
 		receiver/result since these are written in all normal sends."
 
+	ABI = #SysV
+		ifTrue: [self initializeAbstractRegistersSysV]
+		ifFalse: [self initializeAbstractRegistersWin64]
+]
+
+{ #category : #'class initialization' }
+CogX64Compiler class >> initializeAbstractRegistersSysV [
+	"Assign the abstract registers with the identities/indices of the relevant concrete registers."
+	"[1] Figure 3.4 Register Usage in
+		System V Application Binary Interface
+		AMD64 Architecture Processor Supplement"
+
+	"N.B. RAX RCX & RDX are caller-save (scratch) registers.  Hence we use RCX for class and RDX for
+		receiver/result since these are written in all normal sends."
+
 	CallerSavedRegisterMask := self
 									registerMaskFor: RAX
 									and: RCX
@@ -202,6 +217,61 @@ CogX64Compiler class >> initializeAbstractRegisters [
 	"R8 is either RISCTempReg or Extra6Reg depending on subclass."
 	Extra0Reg				:= R10.
 	Extra1Reg				:= R11.
+	Extra2Reg				:= R12.
+	Extra3Reg				:= R13.
+	Extra4Reg				:= R14.
+	Extra5Reg				:= R15.
+
+	DPFPReg0				:= XMM0L.
+	DPFPReg1				:= XMM1L.
+	DPFPReg2				:= XMM2L.
+	DPFPReg3				:= XMM3L.
+	DPFPReg4				:= XMM4L.
+	DPFPReg5				:= XMM5L.
+	DPFPReg6				:= XMM6L.
+	DPFPReg7				:= XMM7L.
+	DPFPReg8				:= XMM8L.
+	DPFPReg9				:= XMM9L.
+	DPFPReg10				:= XMM10L.
+	DPFPReg11				:= XMM11L.
+	DPFPReg12				:= XMM12L.
+	DPFPReg13				:= XMM13L.
+	DPFPReg14				:= XMM14L.
+	DPFPReg15				:= XMM15L
+]
+
+{ #category : #'class initialization' }
+CogX64Compiler class >> initializeAbstractRegistersWin64 [
+	"Assign the abstract registers with the identities/indices of the relevant concrete registers."
+
+	"N.B. Since receiver/result are written in all normal sends,
+	it's better to use scratch registers for them (those which are caller-saved).
+	In Win64 ABI, this does not let that many choices:
+	- RAX is TempReg (overwritten by result etc...)
+	- RCX and RDX are used for first 2 args (see genMarshallNArgs:arg:arg:arg:arg:)
+	- it remains R8,R9,R10 & R11 : we choose the first two"
+
+	CallerSavedRegisterMask := self
+									registerMaskFor: RAX
+									and: RCX
+									and: RDX
+									and: R8
+									and: R9
+									and: R10
+									and: R11.
+
+	TempReg				:= RAX.
+	ClassReg				:= R8.
+	ReceiverResultReg		:= R9.
+	SendNumArgsReg		:= R10.
+	SPReg					:= RSP.
+	FPReg					:= RBP.
+	Arg0Reg				:= RCX. "So as to agree with C ABI arg 0"
+	Arg1Reg				:= RDX. "So as to agree with C ABI arg 1"
+	VarBaseReg			:= RBX. "Must be callee saved"
+	"R11 is either RISCTempReg or Extra6Reg depending on subclass."
+	Extra0Reg				:= RDI.
+	Extra1Reg				:= RSI.
 	Extra2Reg				:= R12.
 	Extra3Reg				:= R13.
 	Extra4Reg				:= R14.
@@ -2958,7 +3028,10 @@ CogX64Compiler >> nsSendCacheAt: callSiteReturnAddress [
 
 { #category : #accessing }
 CogX64Compiler >> numIntRegArgs [
-	^6
+	self
+		cppIf: #WIN64
+		ifTrue: [^4]
+		ifFalse: [^6]
 ]
 
 { #category : #abi }
