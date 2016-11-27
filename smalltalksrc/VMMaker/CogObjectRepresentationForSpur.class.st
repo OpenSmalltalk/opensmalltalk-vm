@@ -842,12 +842,6 @@ CogObjectRepresentationForSpur >> genGetRawSlotSizeOfNonImm: sourceReg into: des
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genInlinedIdenticalOrNotIfGuts: orNot [
-	<inline: true>
-	^ cogit genForwardersInlinedIdenticalOrNotIf: orNot
-]
-
-{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genJumpBaseHeaderImmutable: baseHeaderReg [
 	"baseHeader holds at least the least significant 32 bits of the object"
 	<returnTypeC: #'AbstractInstruction *'>
@@ -1355,6 +1349,12 @@ CogObjectRepresentationForSpur >> genSetCharacterTagsIn: reg [
 CogObjectRepresentationForSpur >> genSetSmallIntegerTagsIn: scratchReg [
 	cogit OrCq: 1 R: scratchReg.
 	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genSpecialSelectorEqualsEqualsGuts [
+	< inline: true >
+	^ cogit genSpecialSelectorEqualsEqualsWithForwarders
 ]
 
 { #category : #initialization }
