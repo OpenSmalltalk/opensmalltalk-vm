@@ -41,12 +41,12 @@
 
 #define sqImageFile usqIntptr_t
 sqInt sqImageFileClose(sqImageFile h);
-sqImageFile sqImageFileOpen(char *fileName, char *mode);
+sqImageFile sqImageFileOpen(const char *fileName, const char *mode);
 squeakFileOffsetType sqImageFilePosition(sqImageFile h);
 size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h);
 squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos);
 squeakFileOffsetType sqImageFileSeekEnd(sqImageFile h, squeakFileOffsetType pos);
-size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
+size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h);
 #else /* when no WIN32_FILE_SUPPORT, add necessary stub for using regular Cross/plugins/FilePlugin functions */
 #include <stdlib.h>
 #include <io.h> /* _get_osfhandle */
