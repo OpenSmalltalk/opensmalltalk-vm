@@ -3449,7 +3449,7 @@ CogIA32Compiler >> genPushRs: reg [
 
 { #category : #abi }
 CogIA32Compiler >> genRemoveNArgsFromStack: n [ 
-	cogit AddCq: n * 4 R: ESP.
+	n = 0 ifFalse: [cogit AddCq: n * 4 R: ESP].
 	^0
 ]
 

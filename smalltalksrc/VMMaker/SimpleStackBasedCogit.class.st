@@ -95,8 +95,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForNewspeakV4 [
 		(1   80 101 genSpecialSelectorSend isMapped) "#+ #- #< #> #<= #>= #= #~= #* #/ #\\ #@ #bitShift: #// #bitAnd: #bitOr: #at: #at:put: #size #next #nextPut: #atEnd"
 		(1 102 102 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
 		(1 103 103 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
-		(1 104 104 genSpecialSelectorNotEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 105 111 genSpecialSelectorSend isMapped) "#value #value: #do: #new #new: #x #y"
+		(1 104 111 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
 
 		(1 112 127 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 128 143 genSendLiteralSelector1ArgBytecode isMapped)
@@ -208,8 +207,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		(1   96 117 genSpecialSelectorSend isMapped) "#+ #- #< #> #<= #>= #= #~= #* #/ #\\ #@ #bitShift: #// #bitAnd: #bitOr: #at: #at:put: #size #next #nextPut: #atEnd"
 		(1 118 118 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
 		(1 119 119 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
-		(1 120 120 genSpecialSelectorNotEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 121 127 genSpecialSelectorSend isMapped) "#value #value: #do: #new #new: #x #y"
+		(1 120 127 genSpecialSelectorSend isMapped) "#blockCopy: #value #value: #do: #new #new: #x #y"
 
 		(1 128 143 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 144 159 genSendLiteralSelector1ArgBytecode isMapped)
@@ -354,8 +352,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSqueakV3PlusClosures [
 		(1 176 197 genSpecialSelectorSend isMapped)
 		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
 		(1 199 199 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
-		(1 200 200 genSpecialSelectorNotEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 201 207 genSpecialSelectorSend isMapped)
+		(1 200 207 genSpecialSelectorSend isMapped)
 		(1 208 223 genSendLiteralSelector0ArgsBytecode isMapped)
 		(1 224 239 genSendLiteralSelector1ArgBytecode isMapped)
 		(1 240 255 genSendLiteralSelector2ArgsBytecode isMapped))
@@ -2148,29 +2145,6 @@ SimpleStackBasedCogit >> genFastPrimTraceUsing: r1 and: r2 [
 ]
 
 { #category : #'bytecode generator support' }
-SimpleStackBasedCogit >> genInlinedIdenticalOrNotIf: orNot [
-	| jumpNotEqual jumpPush |
-	<var: #jumpNotEqual type: #'AbstractInstruction *'>
-	<var: #jumpPush type: #'AbstractInstruction *'>
-	self PopR: Arg0Reg.
-	objectRepresentation
-		genEnsureOopInRegNotForwarded: Arg0Reg
-		scratchReg: TempReg.
-	self MoveMw: 0 r: SPReg R: ClassReg.
-	objectRepresentation
-		genEnsureOopInRegNotForwarded: ClassReg
-		scratchReg: TempReg.
-	self CmpR: Arg0Reg R: ClassReg.
-	jumpNotEqual := self genConditionalBranch: (orNot ifTrue: [JumpZero] ifFalse: [JumpZero]) operand: 0.
-	self annotate: (self genMoveTrueR: Arg0Reg)
-		objRef: objectMemory trueObject.
-	jumpPush := self Jump: 0.
-	jumpNotEqual jmpTarget: (self genMoveFalseR: Arg0Reg).
-	jumpPush jmpTarget: (self MoveR: Arg0Reg Mw: 0 r: SPReg).
-	^0
-]
-
-{ #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genJumpBackTo: targetBytecodePC [
 	self MoveAw: coInterpreter stackLimitAddress R: TempReg.
 	self CmpR: TempReg R: SPReg. "N.B. FLAGS := SPReg - TempReg"
@@ -3264,12 +3238,25 @@ SimpleStackBasedCogit >> genSpecialSelectorClass [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSpecialSelectorEqualsEquals [
-	^ self genInlinedIdenticalOrNotIf: false
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genSpecialSelectorNotEqualsEquals [
-	^ self genInlinedIdenticalOrNotIf: true
+	| jumpNotEqual jumpPush |
+	<var: #jumpNotEqual type: #'AbstractInstruction *'>
+	<var: #jumpPush type: #'AbstractInstruction *'>
+	self PopR: Arg0Reg.
+	objectRepresentation
+		genEnsureOopInRegNotForwarded: Arg0Reg
+		scratchReg: TempReg.
+	self MoveMw: 0 r: SPReg R: ClassReg.
+	objectRepresentation
+		genEnsureOopInRegNotForwarded: ClassReg
+		scratchReg: TempReg.
+	self CmpR: Arg0Reg R: ClassReg.
+	jumpNotEqual := self JumpNonZero: 0.
+	self annotate: (self genMoveTrueR: Arg0Reg)
+		objRef: objectMemory trueObject.
+	jumpPush := self Jump: 0.
+	jumpNotEqual jmpTarget: (self genMoveFalseR: Arg0Reg).
+	jumpPush jmpTarget: (self MoveR: Arg0Reg Mw: 0 r: SPReg).
+	^0
 ]
 
 { #category : #'bytecode generators' }

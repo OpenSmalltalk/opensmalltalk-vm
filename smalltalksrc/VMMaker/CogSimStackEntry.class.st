@@ -172,7 +172,7 @@ CogSimStackEntry >> printStateOn: aStream [
 							aStream print: offset].
 		[SSConstant]	-> [aStream
 								nextPutAll: 'const ';
-								nextPutAll: (cogit coInterpreter shortPrint: constant)].
+								print: constant].
 		[SSRegister]	-> [aStream
 								nextPutAll: 'reg ';
 								nextPutAll: (cogit backEnd nameForRegister: register)].

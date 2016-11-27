@@ -5,7 +5,7 @@ Instance Variables
 	simStackPtr:		<Integer>
 
 simStackPtr
-	- the simStackPtr at the jump to this fixup.  It should either agree with the incoming fixup if control continues, or replace the simStackPtr if control doesn't continue (the incomming control flow ended with a return)
+	- the simStackPtr at the jump to this fixup.  It should either agree with the incoming fixup if control continues, or replace the simStackPtr if contrl doesn't continue (the incomming control flow ended with a return)
 "
 Class {
 	#name : #CogSSBytecodeFixup,

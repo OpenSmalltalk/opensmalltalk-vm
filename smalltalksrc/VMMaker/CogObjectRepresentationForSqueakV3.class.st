@@ -475,12 +475,6 @@ CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg form
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genInlinedIdenticalOrNotIf: orNot [
-	<inline: true>
-	^ cogit genVanillaInlinedIdenticalOrNotIf: orNot
-]
-
-{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genJumpImmediate: aRegister [
 	^self genJumpSmallInteger: aRegister
 ]
@@ -1034,6 +1028,12 @@ CogObjectRepresentationForSqueakV3 >> genSetSmallIntegerTagsIn: scratchReg [
 CogObjectRepresentationForSqueakV3 >> genShiftAwaySmallIntegerTagsInScratchReg: scratchReg [
 	cogit ArithmeticShiftRightCq: 1 R: scratchReg.
 	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genSpecialSelectorEqualsEqualsGuts [
+	< inline: true >
+	^ cogit genVanillaSpecialSelectorEqualsEquals
 ]
 
 { #category : #'compile abstract instructions' }
