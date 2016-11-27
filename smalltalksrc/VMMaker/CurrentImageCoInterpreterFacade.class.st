@@ -701,11 +701,6 @@ CurrentImageCoInterpreterFacade >> methodUsesAlternateBytecodeSet: methodObjOop 
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> nameOfClass: objOop [
-	^(objectMap keyAtValue: objOop) name
-]
-
-{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> nativeStackPointerAddress [
 	^self addressForLabel: #nativeStackPointer
 ]
@@ -842,11 +837,6 @@ CurrentImageCoInterpreterFacade >> primErrTable [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> primFailCodeAddress [
 	^self addressForLabel: #primFailCode
-]
-
-{ #category : #accessing }
-CurrentImageCoInterpreterFacade >> primNumberExternalCall [
-	^coInterpreter primNumberExternalCall
 ]
 
 { #category : #accessing }
@@ -1018,13 +1008,6 @@ CurrentImageCoInterpreterFacade >> shiftForWord [
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> shortPrint: oop [
-	^(objectMemory isImmediate: oop)
-		ifTrue: [coInterpreter shortPrint: oop]
-		ifFalse: [(objectMap keyAtValue: oop) printString]
-]
-
-{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> sizeOfCallPrimitiveBytecode: methodHeaderOop [
 	^coInterpreter sizeOfCallPrimitiveBytecode: methodHeaderOop
 ]
@@ -1119,7 +1102,7 @@ CurrentImageCoInterpreterFacade >> storePointerUnchecked: zeroRelativeIndex ofOb
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> stringOf: anOop [
-	^(self lookupAddress: anOop) asString
+	^self lookupAddress: anOop
 ]
 
 { #category : #testing }
