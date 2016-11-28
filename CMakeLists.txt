@@ -38,6 +38,7 @@ endif()
 if(SQUEAK_PLATFORM_X86_64)
 	if(BUILD_I386_VERSION)
         set(SQUEAK_PLATFORM_X86_32 True)
+	    set(SQUEAK_PLATFORM_X86_64 False)
 	else()
 		set(VM_64BITS TRUE)
 		set(SourceFolderName "${SourceFolderName}64")
@@ -150,10 +151,11 @@ add_definitions(-DUSE_GLOBAL_STRUCT=0
 
 # Configuration
 include(CheckIncludeFiles)
-include(CheckFunctionExists) 
-include(CheckSymbolExists) 
-include(CheckLibraryExists) 
+include(CheckFunctionExists)
+include(CheckSymbolExists)
+include(CheckLibraryExists)
 include(CheckTypeSize)
+include(CheckCSourceCompiles)
 
 include (TestBigEndian)
 test_big_endian(WORDS_BIGENDIAN)
@@ -163,9 +165,25 @@ endif()
 
 set(HAVE_INTERP_H 1)
 check_include_files (alloca.h HAVE_ALLOCA_H)
-check_function_exists(alloca HAVE_ALLOCA)
+if(HAVE_ALLOCA_H)
+	check_c_source_compiles("
+		#include <alloca.h>
 
-check_include_files(dirent.h HAVE_SYS_NDIR_H)
+		int main()
+		{
+			return (int*)alloca(5);
+		}
+		" HAVE_ALLOCA)
+else()
+	check_c_source_compiles("
+		int main()
+		{
+			return (int*)alloca(5);
+		}
+		" HAVE_ALLOCA)
+endif()
+
+check_include_files(dirent.h HAVE_DIRENT_H)
 check_include_files(features.h HAVE_FEATURES_H)
 check_include_files(unistd.h HAVE_UNISTD_H)
 check_include_files(ndir.h HAVE_NDIR_H)
@@ -183,32 +201,57 @@ check_library_exists(dyld dlopen "" HAVE_DYLD)
 # check_library_exists(ffi ffi_call "" HAVE_LIBFFI)
 
 # System calls
-check_function_exists(at_exit AT_EXIT)
+check_function_exists(atexit AT_EXIT)
 
 check_function_exists(snprintf HAVE_SNPRINTF)
 check_function_exists(__snprintf HAVE___SNPRINTF)
 check_function_exists(nanosleep HAVE_NANOSLEEP)
 
 check_function_exists(mmap HAVE_MMAP)
-check_function_exists(kqueue HAVE_EPOLL)
+check_function_exists(kqueue HAVE_KQUEUE)
 check_function_exists(select HAVE_SELECT)
 check_function_exists(epoll_create1 HAVE_EPOLL)
 check_function_exists(epoll_pwait HAVE_EPOLL_PWAIT)
 
-# structures
+# Time structures
 set(CMAKE_EXTRA_INCLUDE_FILES time.h)
 if(HAVE_SYS_TIME_H)
     set(CMAKE_EXTRA_INCLUDE_FILES sys/time.h ${CMAKE_EXTRA_INCLUDE_FILES})
 endif()
-check_type_size("struct tm_gmtoff" HAVE_TM_GMTOFF)
+check_c_source_compiles(
+"#include <time.h>
+
+int main()
+{
+	struct tm *tm = 0;
+	return (int)tm->tm_gmtoff;
+}
+"
+	HAVE_TM_GMTOFF
+)
 check_type_size("struct timezone" HAVE_TIMEZONE)
 set(CMAKE_EXTRA_INCLUDE_FILES)
 
 # Type sizes
-check_type_size("int" SIZEOF_INT)
-check_type_size("long" SIZEOF_LONG)
-check_type_size("long long" SIZEOF_LONG_LONG)
-check_type_size("void*" SIZEOF_VOID_P)
+if(BUILD_I386_VERSION OR SQUEAK_PLATFORM_X86_32)
+	set(SIZEOF_INT 4)
+	set(SIZEOF_LONG 4)
+	set(SIZEOF_LONG_LONG 8)
+	set(SIZEOF_VOID_P 4)
+else()
+	check_type_size("int" SIZEOF_INT)
+	check_type_size("long" SIZEOF_LONG)
+	check_type_size("long long" SIZEOF_LONG_LONG)
+	check_type_size("void*" SIZEOF_VOID_P)
+endif()
+
+if("${SIZEOF_LONG}" STREQUAL "8")
+	set(SQUEAK_INT64_TYPEDEF "long")
+elseif("${SIZEOF_LONG_LONG}" STREQUAL "8")
+	set(SQUEAK_INT64_TYPEDEF "long long")
+else()
+	message(FATAL_ERROR "Failed to find a 64 bits integer type.")
+endif()
 
 if(HAVE_LIBDL)
 	set(VM_DEPENDENCIES_LIBRARIES dl ${VM_DEPENDENCIES_LIBRARIES})
@@ -257,13 +300,12 @@ find_path(SDL2_LIBRARY_PATH
 
 find_library(SDL2_LIBRARY NAMES SDL2-2.0 SDL2 PATHS ${SDL2_LIBRARY_PATH})
 
-message("${SDL2_LIBRARY_PATH} ${SDL2_INCLUDE_DIR} ${SDL2_LIBRARY}")
-
 set(SDL2_FOUND False)
 if(SDL2_INCLUDE_DIR AND SDL2_LIBRARY)
 	set(SDL2_FOUND True)
 	include_directories("${SDL2_INCLUDE_DIR}")
 endif()
+message("SDL2 Found: ${SDL2_FOUND}")
 
 # Choose the window system
 option(SUPPORT_TRADITIONAL_DISPLAY "Enables building a VM with support for a window." ON)
