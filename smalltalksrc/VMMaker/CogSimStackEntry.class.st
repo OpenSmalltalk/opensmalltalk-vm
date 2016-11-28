@@ -172,7 +172,7 @@ CogSimStackEntry >> printStateOn: aStream [
 							aStream print: offset].
 		[SSConstant]	-> [aStream
 								nextPutAll: 'const ';
-								print: constant].
+								nextPutAll: (cogit coInterpreter shortPrint: constant)].
 		[SSRegister]	-> [aStream
 								nextPutAll: 'reg ';
 								nextPutAll: (cogit backEnd nameForRegister: register)].
@@ -209,6 +209,11 @@ CogSimStackEntry >> registerMask [
 		or: [type = SSRegister])
 			ifTrue: [cogit registerMaskFor: register]
 			ifFalse: [0]
+]
+
+{ #category : #accessing }
+CogSimStackEntry >> registerMaskOrNone [
+	^type = SSRegister ifTrue: [cogit registerMaskFor: register] ifFalse: [0]
 ]
 
 { #category : #accessing }

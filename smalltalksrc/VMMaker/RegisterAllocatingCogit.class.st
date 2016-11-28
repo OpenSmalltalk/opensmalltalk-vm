@@ -10,10 +10,22 @@ Class {
 	#instVars : [
 		'numFixups',
 		'mergeSimStacksBase',
-		'nextFixup'
+		'nextFixup',
+		'scratchSimStack',
+		'scratchSpillBase',
+		'scratchOptStatus'
 	],
 	#category : #'VMMaker-JIT'
 }
+
+{ #category : #'C translation' }
+RegisterAllocatingCogit class >> declareCVarsIn: aCodeGen [
+	aCodeGen
+		var: #scratchSimStack
+			type: #'CogSimStackEntry *';
+		var: #scratchOptStatus
+			type: #CogSSOptStatus
+]
 
 { #category : #'compile abstract instructions' }
 RegisterAllocatingCogit >> allocateMergeFixups [
@@ -34,10 +46,43 @@ RegisterAllocatingCogit >> allocateMergeFixups [
 		 self b: mergeSimStacksBase zero: mergeSimStackBytes]
 ]
 
+{ #category : #'simulation stack' }
+RegisterAllocatingCogit >> allocateRegForStackEntryAt: index [
+	"If the stack entry is already in a register, answers it,
+	else allocate a new register for it"
+	<inline: true>
+	^self allocateRegForStackEntryAt: index notConflictingWith: (self registerMaskFor: FPReg and: SPReg and: TempReg)
+]
+
 { #category : #'simulation only' }
 RegisterAllocatingCogit >> bytecodeFixupClass [
 	<doNotGenerate>
 	^CogRASSBytecodeFixup
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> captureUnspilledSpillsForSpecialSelectorSend: liveRegisterMask [
+	"Since we're allocating values in registers we would like to keep those registers live on the inlined path
+	 and reload registers along the non-inlined send path.  But any values that would need to be spilled
+	 along the non-inlined path must be captured before the split so that both paths can join.  If we don't
+	 capture the values on the non-inlined path we could access stale values.  So for all stack entries that
+	 would be spilled along the non-inlined path, assign them to registers, or spill if none are available."
+	| i liveRegs reg |
+	liveRegs := liveRegisterMask.
+	optStatus isReceiverResultRegLive ifTrue:
+		[liveRegs := liveRegs + (self registerMaskFor: ReceiverResultReg)].
+	reg := TempReg. "Anything but NoReg"
+	i := simStackPtr + 1. "We must spill a contiguous range at the hot top of stack, so we assign coldest first :-("
+	[reg ~= NoReg and: [i > simSpillBase and: [i > 0]]] whileTrue:
+		[i := i - 1.
+		 self deny: ((self simStackAt: i) spilled and: [(self simStackAt: i) type = SSBaseOffset]).
+		 ((self simStackAt: i) spilled not
+		  and: [(self simStackAt: i) type = SSBaseOffset]) ifTrue:
+			[reg := self allocateRegNotConflictingWith: liveRegs.
+			 reg ~= NoReg ifTrue:
+				[(self simStackAt: i) storeToReg: reg]]].
+	reg = NoReg ifTrue:
+		[self ssFlushTo: i]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -54,10 +99,30 @@ RegisterAllocatingCogit >> compileEntireMethod [
 	^super compileEntireMethod
 ]
 
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> copyLiveRegisterToCopiesOf: simStackEntry [
+	"Copy the liveRegister in simStackEntry into all corresponding stack entries."
+	<var: #simStackEntry type: #'SimStackEntry *'>
+	simStackPtr to: 0 by: -1 do:
+		[:i|
+		(self simStackAt: i) copyLiveRegisterIfSameAs: simStackEntry]
+]
+
 { #category : #'simulation only' }
 RegisterAllocatingCogit >> copySimStack [
 	<doNotGenerate>
 	^CArrayAccessor on: (simStack object collect: [:stackEntry| stackEntry copy])
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> copySimStackToScratch: spillBase [
+	<inline: true>
+	self cCode: [self mem: scratchSimStack cp: simStack y: self simStackSlots * (self sizeof: CogSimStackEntry)]
+		inSmalltalk: [0 to: simStackPtr do:
+						[:i|
+						scratchSimStack at: i put: (simStack at: i) copy]].
+	scratchSpillBase := spillBase.
+	scratchOptStatus := self cCode: [optStatus] inSmalltalk: [optStatus copy]
 ]
 
 { #category : #'bytecode generator support' }
@@ -66,7 +131,10 @@ RegisterAllocatingCogit >> ensureFixupAt: targetIndex [
 	<var: #fixup type: #'BytecodeFixup *'>
 	fixup := self fixupAt: targetIndex.
 	fixup needsFixup 
-		ifTrue: [self mergeCurrentSimStackWith: fixup mergeSimStack ]
+		ifTrue:
+			[fixup mergeSimStack
+				ifNil: [self setMergeSimStackOf: fixup]
+				ifNotNil: [self mergeCurrentSimStackWith: fixup mergeSimStack]]
 		ifFalse: 
 			[self assert: fixup mergeSimStack isNil.
 			self moveSimStackConstantsToRegisters.
@@ -75,11 +143,59 @@ RegisterAllocatingCogit >> ensureFixupAt: targetIndex [
 
 ]
 
+{ #category : #'compile abstract instructions' }
+RegisterAllocatingCogit >> ensureNonMergeFixupAt: targetIndex [
+	"Make sure there's a flagged fixup at the targetIndex (pc relative to first pc) in fixups.
+	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction."
+	| fixup |
+	fixup := super ensureNonMergeFixupAt: targetIndex.
+	self setMergeSimStackOf: fixup.
+	^fixup
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> ensureReceiverResultRegContainsSelf [
+	super ensureReceiverResultRegContainsSelf.
+	0 to: simStackPtr do:
+		[:i|
+		(simSelf isSameEntryAs: (self simStackAt: i))
+			ifTrue: [(self simStackAt: i) liveRegister: ReceiverResultReg]
+			ifFalse:
+				[(self simStackAt: i) liveRegister = ReceiverResultReg ifTrue:
+					[(self simStackAt: i) liveRegister: NoReg]]].
+	simSelf liveRegister: ReceiverResultReg
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> existsInstVarRefBeforeSendOrReturn [
+	"Answer if the current bytecode is followed by an inst var ref before the next full send."
+	| pc nExts descriptor |
+	pc := bytecodePC.
+	nExts := 0.
+	[pc <= endPC] whileTrue:
+		[descriptor := self generatorAt: pc.
+		 (descriptor isMapped
+		  or: [descriptor isBranchTrue
+		  or: [descriptor isBranchFalse
+		  or: [descriptor spanFunction notNil]]]) ifTrue:
+			[^false].
+		 descriptor isInstVarRef ifTrue:
+			[^true].
+		 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0].
+		 pc := self nextBytecodePCFor: descriptor at: pc exts: nExts in: methodObj].
+	^false
+]
+
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> flushLiveRegistersForCRunTimeCall [
 	<inline: true>
+	| reg |
+	self assert: simSelf type = SSBaseOffset.
+	reg := simSelf liveRegister.
+	(reg ~= NoReg and: [(self isCallerSavedReg: reg)]) ifTrue:
+		[simSelf liveRegister: NoReg].
 	0 to: simStackPtr do:
-		[:i| | reg |
+		[:i|
 		 self assert: (self simStackAt: i) type = (i <= methodOrBlockNumTemps
 													ifTrue: [SSBaseOffset]
 													ifFalse: [SSSpill]).
@@ -91,12 +207,44 @@ RegisterAllocatingCogit >> flushLiveRegistersForCRunTimeCall [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> flushLiveRegistersForSend [
 	<inline: true>
+	self assert: simSelf type = SSBaseOffset.
+	simSelf liveRegister: NoReg.
 	0 to: simStackPtr do:
 		[:i|
-		 self assert: (self simStackAt: i) type = (i <= methodOrBlockNumTemps
-													ifTrue: [SSBaseOffset]
-													ifFalse: [SSSpill]).
+		 self assert: ((self simStackAt: i) spilled
+					 and: [(self simStackAt: i) type = SSConstant
+						or: [((self simStackAt: i) type = SSBaseOffset
+							or: [i >= methodOrBlockNumTemps
+								and: (self simStackAt: i) type = SSSpill])
+							 and: [(self simStackAt: i) register = FPReg
+							 and: [(self simStackAt: i) offset = (self frameOffsetOfTemporary: i)]]]]).
 		 (self simStackAt: i) liveRegister: NoReg]
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> frameOffsetOfLastTemp [
+	^self frameOffsetOfTemporary: methodOrBlockNumTemps
+]
+
+{ #category : #'simulation stack' }
+RegisterAllocatingCogit >> freeAnyRegNotConflictingWith: regMask [
+	"Spill the closest register on stack not conflicting with regMask. 
+	 Override so no assertion failure if no register can be allocated."
+	<var: #desc type: #'CogSimStackEntry *'>
+	| reg index |
+	self assert: needsFrame.
+	reg := NoReg.
+	index := simSpillBase max: 0.
+	[reg = NoReg and: [index < simStackPtr]] whileTrue: 
+		[ | desc |
+		 desc := self simStackAt: index.
+		 desc type = SSRegister ifTrue:
+			[(regMask anyMask: (self registerMaskFor: desc register)) ifFalse: 
+				[reg := desc register]].
+		 index := index + 1].
+	reg ~= NoReg ifTrue:
+		[self ssAllocateRequiredReg: reg].
+	^reg
 ]
 
 { #category : #'bytecode generator support' }
@@ -113,17 +261,231 @@ RegisterAllocatingCogit >> genMarshalledSend: selectorIndex numArgs: numArgs sen
 	^super genMarshalledSend: selectorIndex numArgs: numArgs sendTable: sendTable
 ]
 
+{ #category : #'bytecode generators' }
+RegisterAllocatingCogit >> genSpecialSelectorArithmetic [
+	| primDescriptor rcvrIsConst argIsConst rcvrIsInt argIsInt rcvrInt argInt result
+	 jumpNotSmallInts jumpContinue index rcvrReg argReg regMask |
+	<var: #jumpContinue type: #'AbstractInstruction *'>
+	<var: #primDescriptor type: #'BytecodeDescriptor *'>
+	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
+	primDescriptor := self generatorAt: byte0.
+	argIsInt := (argIsConst := self ssTop type = SSConstant)
+				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)].
+	rcvrIsInt := (rcvrIsConst := (self ssValue: 1) type = SSConstant)
+				 and: [objectMemory isIntegerObject: (rcvrInt := (self ssValue: 1) constant)].
+
+	(argIsInt and: [rcvrIsInt]) ifTrue:
+		[rcvrInt := objectMemory integerValueOf: rcvrInt.
+		 argInt := objectMemory integerValueOf: argInt.
+		 primDescriptor opcode caseOf: {
+			[AddRR]	-> [result := rcvrInt + argInt].
+			[SubRR]	-> [result := rcvrInt - argInt].
+			[AndRR]	-> [result := rcvrInt bitAnd: argInt].
+			[OrRR]	-> [result := rcvrInt bitOr: argInt] }.
+		(objectMemory isIntegerValue: result) ifTrue:
+			["Must annotate the bytecode for correct pc mapping."
+			^self ssPop: 2; ssPushAnnotatedConstant: (objectMemory integerObjectOf: result)].
+		^self genSpecialSelectorSend].
+
+	"If there's any constant involved other than a SmallInteger don't attempt to inline."
+	((rcvrIsConst and: [rcvrIsInt not])
+	 or: [argIsConst and: [argIsInt not]]) ifTrue:
+		[^self genSpecialSelectorSend].
+
+	"If we know nothing about the types then better not to inline as the inline cache and
+	 primitive code is not terribly slow so wasting time on duplicating tag tests is pointless."
+	(argIsInt or: [rcvrIsInt]) ifFalse:
+		[^self genSpecialSelectorSend].
+
+	"Since one or other of the arguments is an integer we can very likely profit from inlining.
+	 But if the other type is not SmallInteger or if the operation overflows then we will need to do a send.
+	 Since we're allocating values in registers we would like to keep those registers live on the inlined path
+	 and reload registers along the non-inlined send path.  But any values that would need to be spilled
+	 along the non-inlined path must be captured before the split so that both paths can join.  If we don't
+	 capture the values on the non-iblined path we could access stale values.  So for all stack entries that
+	 would be spilled along the non-inlined path, assign them to registers, or spill if none are available."
+	argIsInt
+		ifTrue:
+			[rcvrReg := self allocateRegForStackEntryAt: 1.
+			 (self ssValue: 1) popToReg: rcvrReg.
+			 self MoveR: rcvrReg R: TempReg.
+			 regMask := self registerMaskFor: rcvrReg]
+		ifFalse:
+			[self allocateRegForStackTopTwoEntriesInto: [:rTop :rNext| argReg := rTop. rcvrReg := rNext].
+			 self ssTop popToReg: argReg.
+			 (self ssValue: 1) popToReg: rcvrReg.
+			 self MoveR: argReg R: TempReg.
+			 regMask := self registerMaskFor: rcvrReg and: argReg].
+	self ssPop: 2.
+	self captureUnspilledSpillsForSpecialSelectorSend: regMask.
+	jumpNotSmallInts := (argIsInt or: [rcvrIsInt])
+							ifTrue: [objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg]
+							ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: rcvrReg andScratch: TempReg scratch: ClassReg].
+	primDescriptor opcode caseOf: {
+		[AddRR] -> [argIsInt
+						ifTrue:
+							[self AddCq: argInt - ConstZero R: rcvrReg.
+							 jumpContinue := self JumpNoOverflow: 0.
+							 "overflow; must undo the damage before continuing"
+							 self SubCq: argInt - ConstZero R: rcvrReg]
+						ifFalse:
+							[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: rcvrReg.
+							 self AddR: argReg R: rcvrReg.
+							jumpContinue := self JumpNoOverflow: 0.
+							"overflow; must undo the damage before continuing"
+							 rcvrIsInt
+								ifTrue: [self MoveCq: rcvrInt R: rcvrReg]
+								ifFalse:
+									[self SubR: argReg R: rcvrReg.
+									 objectRepresentation genSetSmallIntegerTagsIn: rcvrReg]]].
+		[SubRR] -> [argIsInt
+						ifTrue:
+							[self SubCq: argInt - ConstZero R: rcvrReg.
+							 jumpContinue := self JumpNoOverflow: 0.
+							 "overflow; must undo the damage before continuing"
+							 self AddCq: argInt - ConstZero R: rcvrReg]
+						ifFalse:
+							[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: argReg.
+							 self SubR: argReg R: rcvrReg.
+							 jumpContinue := self JumpNoOverflow: 0.
+							 "overflow; must undo the damage before continuing"
+							 self AddR: argReg R: rcvrReg.
+							 objectRepresentation genSetSmallIntegerTagsIn: argReg]].
+		[AndRR] -> [argIsInt
+						ifTrue: [self AndCq: argInt R: rcvrReg]
+						ifFalse: [self AndR: argReg R: rcvrReg].
+					jumpContinue := self Jump: 0].
+		[OrRR]	-> [argIsInt
+						ifTrue: [self OrCq: argInt R: rcvrReg]
+						ifFalse: [self OrR: argReg R: rcvrReg].
+					jumpContinue := self Jump: 0] }.
+	jumpNotSmallInts jmpTarget: self Label.
+	self ssPushRegister: rcvrReg.
+	self copySimStackToScratch: (simSpillBase min: simStackPtr - 1).
+	self ssPop: 1.
+	self ssFlushTo: simStackPtr.
+	self deny: rcvrReg = Arg0Reg.
+	argIsInt
+		ifTrue: [self MoveCq: argInt R: Arg0Reg]
+		ifFalse: [argReg ~= Arg0Reg ifTrue: [self MoveR: argReg R: Arg0Reg]].
+	rcvrReg ~= ReceiverResultReg ifTrue: [self MoveR: rcvrReg R: ReceiverResultReg].
+	index := byte0 - self firstSpecialSelectorBytecodeOffset.
+	self genMarshalledSend: index negated - 1 numArgs: 1 sendTable: ordinarySendTrampolines.
+	self reconcileRegisterStateForJoinAfterSpecialSelectorSend.
+	jumpContinue jmpTarget: self Label.
+	^0
+]
+
+{ #category : #'bytecode generators' }
+RegisterAllocatingCogit >> genSpecialSelectorClass [
+	| topReg destReg scratchReg |
+	topReg := self allocateRegForStackEntryAt: 0.
+	destReg := self allocateRegNotConflictingWith: (self registerMaskFor: topReg).
+	scratchReg := self allocateRegNotConflictingWith: (self registerMaskFor: topReg and: destReg).
+	self ssTop popToReg: topReg.
+	self asserta: (objectRepresentation
+					genGetClassObjectOf: topReg
+					into: destReg
+					scratchReg: scratchReg
+					instRegIsReceiver: false) ~= BadRegisterSet.
+	self ssPop: 1; ssPushRegister: destReg.
+	^0
+]
+
+{ #category : #'bytecode generators' }
+RegisterAllocatingCogit >> genSpecialSelectorComparison [
+	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor
+	  rcvrIsInt argIsInt argInt jumpNotSmallInts inlineCAB index rcvrReg argReg regMask |
+	<var: #primDescriptor type: #'BytecodeDescriptor *'>
+	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
+	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
+	primDescriptor := self generatorAt: byte0.
+	argIsInt := self ssTop type = SSConstant
+				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)].
+	rcvrIsInt := (self ssValue: 1) type = SSConstant
+				 and: [objectMemory isIntegerObject: (self ssValue: 1) constant].
+
+	(argIsInt and: [rcvrIsInt]) ifTrue:
+		[^ self genStaticallyResolvedSpecialSelectorComparison].
+
+	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
+		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
+
+	"Only interested in inlining if followed by a conditional branch."
+	inlineCAB := branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse].
+	"Further, only interested in inlining = and ~= if there's a SmallInteger constant involved.
+	 The relational operators successfully statically predict SmallIntegers; the equality operators do not."
+	(inlineCAB and: [primDescriptor opcode = JumpZero or: [primDescriptor opcode = JumpNonZero]]) ifTrue:
+		[inlineCAB := argIsInt or: [rcvrIsInt]].
+	inlineCAB ifFalse:
+		[^self genSpecialSelectorSend].
+
+	"In-line, but if the types are not SmallInteger then we will need to do a send.
+	 Since we're allocating values in registers we would like to keep those registers live on the inlined path
+	 and reload registers along the non-inlined send path.  But any values that would need to be spilled
+	 along the non-inlined path must be captured before the split so that both paths can join.  If we don't
+	 capture the values on the non-iblined path we could access stale values.  So for all stack entries that
+	 would be spilled along the non-inlined path, assign them to registers, or spill if none are available."
+	argIsInt
+		ifTrue:
+			[rcvrReg := self allocateRegForStackEntryAt: 1.
+			 (self ssValue: 1) popToReg: rcvrReg.
+			 self MoveR: rcvrReg R: TempReg.
+			 regMask := self registerMaskFor: rcvrReg]
+		ifFalse:
+			[self allocateRegForStackTopTwoEntriesInto: [:rTop :rNext| argReg := rTop. rcvrReg := rNext].
+			 rcvrReg = Arg0Reg ifTrue:
+				[rcvrReg := argReg. argReg := Arg0Reg].
+			 self ssTop popToReg: argReg.
+			 (self ssValue: 1) popToReg: rcvrReg.
+			 self MoveR: argReg R: TempReg.
+			 regMask := self registerMaskFor: rcvrReg and: argReg].
+	self ssPop: 2.
+	self captureUnspilledSpillsForSpecialSelectorSend: regMask.
+	jumpNotSmallInts := (argIsInt or: [rcvrIsInt])
+							ifTrue: [objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg]
+							ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: rcvrReg andScratch: TempReg scratch: ClassReg].
+	argIsInt
+		ifTrue: [self CmpCq: argInt R: rcvrReg]
+		ifFalse: [self CmpR: argReg R: rcvrReg].
+	"Cmp is weird/backwards so invert the comparison.  Further since there is a following conditional
+	 jump bytecode define non-merge fixups and leave the cond bytecode to set the mergeness."
+	self genConditionalBranch: (branchDescriptor isBranchTrue
+				ifTrue: [primDescriptor opcode]
+				ifFalse: [self inverseBranchFor: primDescriptor opcode])
+		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
+	self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
+	jumpNotSmallInts jmpTarget: self Label.
+	self ssFlushTo: simStackPtr.
+	self deny: rcvrReg = Arg0Reg.
+	argIsInt
+		ifTrue: [self MoveCq: argInt R: Arg0Reg]
+		ifFalse: [argReg ~= Arg0Reg ifTrue: [self MoveR: argReg R: Arg0Reg]].
+	rcvrReg ~= ReceiverResultReg ifTrue: [self MoveR: rcvrReg R: ReceiverResultReg].
+	index := byte0 - self firstSpecialSelectorBytecodeOffset.
+	self genMarshalledSend: index negated - 1 numArgs: 1 sendTable: ordinarySendTrampolines.
+	^0
+]
+
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> genStorePop: popBoolean TemporaryVariable: tempIndex [
-	"Override so that if a register other than TempReg is allocated, the temp is marked as being live in that register."
+	<inline: false>
 	| reg |
 	self ssFlushUpThroughTemporaryVariable: tempIndex.
-	reg := self ssStorePop: popBoolean toPreferredReg: TempReg.
+	"ssStorePop:toPreferredReg: will allocate a register, and indeed may allocate ReceiverResultReg
+	 if, for example, the ssEntry to be popped is already in ReceiverResultReg (as the result of a send).
+	 ReceiverResultReg is not a good choice for a temporary variable; it has other uses.  So if the ssEntry
+	 at top of stack has ReceiverResultReg as its live variable, try and allocate an alternative."
+	((self ssTop registerMaskOrNone anyMask: self registerMaskUndesirableForTempVars)
+	 and: [(reg := self availableRegOrNoneNotConflictingWith:  self registerMaskUndesirableForTempVars) ~= NoReg])
+		ifTrue: [self ssStorePop: popBoolean toReg: reg]
+		ifFalse: [reg := self ssStorePop: popBoolean toPreferredReg: TempReg].
 	self MoveR: reg
 		Mw: (self frameOffsetOfTemporary: tempIndex)
 		r: FPReg.
 	reg ~= TempReg ifTrue:
-		[(self simStackAt: tempIndex) liveRegister: reg].
+		[(self simStackAt: tempIndex) liveRegister: reg.
+		 self copyLiveRegisterToCopiesOf: (self simStackAt: tempIndex)].
 	^0
 ]
 
@@ -150,13 +512,28 @@ RegisterAllocatingCogit >> initSimStackForFramelessMethod: startpc [
 	0 to: simStackPtr do:
 		[:i| | desc |
 		desc := self simStackAt: 1.
-		desc liveRegister: (desc type = SSRegister ifTrue: [desc register] ifFalse: [NoReg])]
+		desc liveRegister: desc registerOrNone]
 ]
 
-{ #category : #'compile abstract instructions' }
-RegisterAllocatingCogit >> maybeCountFixup [
+{ #category : #initialization }
+RegisterAllocatingCogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
+	scratchSimStack := self cCode: [self malloc: self simStackSlots * (self sizeof: CogSimStackEntry)]
+							inSmalltalk: [CArrayAccessor on: ((1 to: self simStackSlots) collect: [:ign| CogRegisterAllocatingSimStackEntry new])].
+	super initializeCodeZoneFrom: startAddress upTo: endAddress
+]
+
+{ #category : #'as yet unclassified' }
+RegisterAllocatingCogit >> maybeCountFixup: descriptor [
+	"Count needed fixups; descriptor is known to be a branch or a block creation."
+	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<inline: true>
-	numFixups := numFixups + 1
+	numFixups := numFixups + ((descriptor isBranchTrue or: [descriptor isBranchFalse])
+									ifTrue:
+										[(prevBCDescriptor generator == #genSpecialSelectorEqualsEquals
+										   or: [prevBCDescriptor generator == #genSpecialSelectorComparison])
+											ifTrue: [3]
+											ifFalse: [2]]
+									ifFalse:  [1])
 ]
 
 { #category : #'compile abstract instructions' }
@@ -257,27 +634,83 @@ RegisterAllocatingCogit >> moveSimStackConstantsToRegisters [
 				ifTrue: [ desc storeToReg: (self allocateRegNotConflictingWith: 0) ] ]
 ]
 
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> receiverRefOnScratchSimStack [
+	simStackPtr to: (0 max: scratchSpillBase) by: -1 do:
+		[:i|
+		 ((self addressOf: (scratchSimStack at: i)) register = ReceiverResultReg
+		  and: [(self addressOf: (scratchSimStack at: i)) type = SSBaseOffset]) ifTrue:
+			[^true]].
+	^false
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> reconcileRegisterStateForJoinAfterSpecialSelectorSend [
+	"When the control flow from the inlined special selector code (e.g. add or comparison)
+	 joins the control flow from the send, taken when the inlined code fails, we should decide
+	 whether to reload any registers known to contain useful values or mark them as dead."
+	 
+	"If ReceiverResultReg is live along the inlined path, and is used before the next full send,
+	 reload it on the uncommon path."
+	scratchOptStatus isReceiverResultRegLive ifTrue:
+		[(self existsInstVarRefBeforeSendOrReturn
+		  or: [self receiverRefOnScratchSimStack])
+			ifTrue:
+				[optStatus isReceiverResultRegLive: true.
+				 optStatus ssEntry storeToReg: ReceiverResultReg]
+			ifFalse: [optStatus isReceiverResultRegLive: false]].
+
+	"Restore the simStack to that in scratchSimStack,
+	 popping any spilled state back into allocated registers."
+	simSpillBase := scratchSpillBase.
+	simStackPtr to: 0 by: -1 do:
+		[:i|
+		 self assert: (i = simStackPtr
+						ifTrue: [(self simStackAt: i) type = SSRegister]
+						ifFalse: [(self simStackAt: i) spilled]).
+		 (self addressOf: (scratchSimStack at: i)) spilled ifTrue:
+			[self assert: ((scratchSimStack at: i) isSameEntryAs: (self simStackAt: i)).
+			 ^self].
+		 (self addressOf: (scratchSimStack at: i)) reconcileWith: (self simStackAt: i).
+		 simStack
+			at: i
+			put: (self
+					cCode: [scratchSimStack at: i]
+					inSmalltalk: [(scratchSimStack at: i) copy])]
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> registerMaskUndesirableForTempVars [
+	"Answer the mask containing registers to avoid for temporary variables."
+	<inline: true>
+	^self registerMaskFor: ReceiverResultReg and: ClassReg and: SendNumArgsReg and: TempReg
+]
+
 { #category : #'simulation stack' }
 RegisterAllocatingCogit >> restoreSimStackAtMergePoint: fixup [
 	<inline: true>
-	"All the execution paths reaching a merge point expect everything to be
-	spilled on stack and the optStatus is unknown. Throw away all simStack and 
-	optStatus optimization state."
-	simSpillBase := methodOrBlockNumTemps.
-	optStatus isReceiverResultRegLive: false.
-	0 to: simStackPtr do:
-		[:i|
-		self cCode: [simStack at: i put: (fixup mergeSimStack at: i)]
-			inSmalltalk: [(simStack at: i) copyFrom: (fixup mergeSimStack at: i)]].
-	^ 0
+	"All the execution paths reaching a merge point expect everything to be spilled
+	 on stack and the optStatus is unknown.  If the merge point follows a return, it
+	 isn't a merge, but a sdkip past a return.  If it is a real merge point then throw
+	 away all simStack and optStatus optimization state."
+	fixup mergeSimStack ifNotNil:
+		[simSpillBase := methodOrBlockNumTemps.
+		 self flag: 'try and maintain this through the merge'.
+		 optStatus isReceiverResultRegLive: false.
+		 0 to: simStackPtr do:
+			[:i|
+			self cCode: [simStack at: i put: (fixup mergeSimStack at: i)]
+				inSmalltalk: [(simStack at: i) copyFrom: (fixup mergeSimStack at: i)]]].
+	^0
 ]
 
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> setMergeSimStackOf: fixup [
 	<var: #fixup type: #'BytecodeFixup *'>
-	self assert: nextFixup < numFixups.
+	self assert: nextFixup <= numFixups.
 	self moveSimStackConstantsToRegisters.
 	self cCode: [fixup mergeSimStack: mergeSimStacksBase + (nextFixup * self simStackSlots * (self sizeof: CogSimStackEntry))].
+	fixup simStackPtr: simStackPtr.
 	nextFixup := nextFixup + 1.
 	self cCode: [self mem: fixup mergeSimStack cp: simStack y: self simStackSlots * (self sizeof: CogSimStackEntry)]
 		inSmalltalk: [fixup mergeSimStack: self copySimStack]
@@ -286,7 +719,7 @@ RegisterAllocatingCogit >> setMergeSimStackOf: fixup [
 { #category : #'simulation stack' }
 RegisterAllocatingCogit >> simStack: stack at: index [
 	<cmacro: '(stack,index) ((stack) + (index))'>
-	<returnTypeC: #'CogSimStackEntry *'>
+	<returnTypeC: #'SimStackEntry *'>
 	^self addressOf: (stack at: index)
 ]
 
@@ -310,7 +743,7 @@ RegisterAllocatingCogit >> ssFlushFrom: start upThrough: unaryBlock [
 RegisterAllocatingCogit >> ssFlushFrom: start upThroughRegister: reg [
 	"Any occurrences on the stack of the register must be
 	 flushed, and hence any values colder than them stack."
-	<var: #desc type: #'CogSimStackEntry *'>
+	<var: #desc type: #'SimStackEntry *'>
 	self ssFlushFrom: start upThrough: [ :desc | desc type = SSRegister and: [ desc register = reg ] ]
 ]
 
@@ -352,9 +785,10 @@ RegisterAllocatingCogit >> ssStorePop: popBoolean toPreferredReg: preferredReg [
 	self ssTop type = SSRegister ifTrue: 
 		[self assert: (self ssTop liveRegister = NoReg
 					  or: [self ssTop liveRegister = self ssTop register]).
-		self assert: self ssTop spilled not].
+		self assert: self ssTop spilled not.
+		actualReg := self ssTop register].
 	self ssTop liveRegister ~= NoReg ifTrue:
 		[actualReg := self ssTop liveRegister].
 	self ssStorePop: popBoolean toReg: actualReg. "generates nothing if ssTop is already in actualReg"
-	^ actualReg
+	^actualReg
 ]
