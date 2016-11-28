@@ -99,59 +99,6 @@ SistaCogit class >> numTrampolines [
 ]
 
 { #category : #'compile abstract instructions' }
-SistaCogit >> compileBlockBodies [
-	"override to maintain counterIndex when recompiling blocks; sigh."
-	<inline: false>
-	| result compiledBlocksCount blockStart savedNeedsFrame savedNumArgs savedNumTemps
-	  initialStackPtr initialOpcodeIndex initialCounterIndex initialIndexOfIRC |
-	<var: #blockStart type: #'BlockStart *'>
-	self assert: blockCount > 0.
-	"scanBlock: in compileBlockEntry: sets both of these appropriately for each block."
-	savedNeedsFrame := needsFrame.
-	savedNumArgs := methodOrBlockNumArgs.
-	savedNumTemps := methodOrBlockNumTemps.
-	inBlock := InVanillaBlock.
-	compiledBlocksCount := 0.
-	[compiledBlocksCount < blockCount] whileTrue:
-		[blockStart := self blockStartAt: compiledBlocksCount.
-		 (result := self scanBlock: blockStart) < 0 ifTrue: [^result].
-		 initialOpcodeIndex := opcodeIndex.
-		 initialCounterIndex := counterIndex.
-		 NewspeakVM ifTrue:
-			[initialIndexOfIRC := indexOfIRC].
-		 [self compileBlockEntry: blockStart.
-		  initialStackPtr := simStackPtr.
-		  (result := self compileAbstractInstructionsFrom: blockStart startpc + (self pushNilSize: methodObj numInitialNils: blockStart numInitialNils)
-						through: blockStart startpc + blockStart span - 1) < 0 ifTrue:
-			[^result].
-		  "If the final simStackPtr is less than the initial simStackPtr then scanBlock: over-
-		   estimated the number of initial nils (because it assumed one or more pushNils to
-		   produce an operand were pushNils to initialize temps.  This is very rare, so
-		   compensate by checking, adjusting numInitialNils and recompiling the block body.
-		   N.B.  No need to reinitialize the literalsManager because it answers existing literals."
-		  initialStackPtr = simStackPtr]
-			whileFalse:
-				[self assert: initialStackPtr > simStackPtr.
-				 blockStart numInitialNils: blockStart numInitialNils + simStackPtr - initialStackPtr.
-				 blockStart fakeHeader dependent: nil.
-				 self reinitializeFixupsFrom: blockStart startpc + blockStart numInitialNils
-					through: blockStart startpc + blockStart span - 1.
-				 self cCode: 'bzero(abstractOpcodes + initialOpcodeIndex,
-									(opcodeIndex - initialOpcodeIndex) * sizeof(AbstractInstruction))'
-					inSmalltalk: [initialOpcodeIndex to: opcodeIndex - 1 do:
-									[:i| abstractOpcodes at: i put: (CogCompilerClass for: self)]].
-				 opcodeIndex := initialOpcodeIndex.
-				 counterIndex := initialCounterIndex.
-				 NewspeakVM ifTrue:
-					[indexOfIRC := initialIndexOfIRC]].
-		compiledBlocksCount := compiledBlocksCount + 1].
-	needsFrame := savedNeedsFrame.
-	methodOrBlockNumArgs := savedNumArgs.
-	methodOrBlockNumTemps := savedNumTemps.
-	^0
-]
-
-{ #category : #'compile abstract instructions' }
 SistaCogit >> compileCogFullBlockMethod: numCopied [
 	<option: #SistaV1BytecodeSet>
 	counters := 0.
@@ -594,6 +541,113 @@ SistaCogit >> genFallsThroughCountLogicCounterReg: counterReg counterAddress: co
 	self MoveR: counterReg A32: counterAddress. "write back"
 ]
 
+{ #category : #'bytecode generators' }
+SistaCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
+	"Override to count inlined branches if followed by a conditional branch.
+	 We borrow the following conditional branch's counter and when about to
+	 inline the comparison we decrement the counter (without writing it back)
+	 and if it trips simply abort the inlining, falling back to the normal send which
+	 will then continue to the conditional branch which will trip and enter the abort."
+	| nextPC postBranchPC targetBytecodePC branchDescriptor counterReg fixup jumpEqual jumpNotEqual
+	  counterAddress countTripped unforwardArg unforwardRcvr argReg rcvrReg regMask |
+	<var: #fixup type: #'BytecodeFixup *'>
+	<var: #countTripped type: #'AbstractInstruction *'>
+	<var: #label type: #'AbstractInstruction *'>
+	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
+	<var: #jumpEqual type: #'AbstractInstruction *'>
+	<var: #jumpNotEqual type: #'AbstractInstruction *'>
+
+	((coInterpreter isOptimizedMethod: methodObj) or: [needsFrame not]) ifTrue:
+		[^super genForwardersInlinedIdenticalOrNotIf: orNot].
+
+	regMask := 0.
+	
+	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
+		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
+	
+	unforwardRcvr := (objectRepresentation isUnannotatableConstant: (self ssValue: 1)) not.
+	unforwardArg := (objectRepresentation isUnannotatableConstant: self ssTop) not.
+	
+	"If an operand is an annotable constant, it may be forwarded, so we need to store it into a 
+	register so the forwarder check can jump back to the comparison after unforwarding the constant.
+	However, if one of the operand is an unnanotable constant, does not allocate a register for it 
+	(machine code will use operations on constants)."
+	rcvrReg:= argReg := NoReg.
+	self 
+		allocateEqualsEqualsRegistersArgNeedsReg: unforwardArg 
+		rcvrNeedsReg: unforwardRcvr 
+		into: [ :rcvr :arg | rcvrReg:= rcvr. argReg := arg ].
+		
+	argReg ~= NoReg ifTrue: [ regMask := self registerMaskFor: argReg ].
+	rcvrReg ~= NoReg ifTrue: [ regMask := regMask bitOr: (self registerMaskFor: rcvrReg) ].
+	
+	"Only interested in inlining if followed by a conditional branch."
+	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse:
+		[^ self 
+			genIdenticalNoBranchArgIsConstant: unforwardArg not
+			rcvrIsConstant: unforwardRcvr not
+			argReg: argReg 
+			rcvrReg: rcvrReg 
+			orNotIf: orNot].
+	
+	"If branching the stack must be flushed for the merge"
+	self ssFlushTo: simStackPtr - 2.
+	
+	unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg ].
+	unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg ].
+	
+	counterReg := self allocateRegNotConflictingWith: regMask.
+	self 
+		genExecutionCountLogicInto: [ :cAddress :countTripBranch | 
+			counterAddress := cAddress. 
+			countTripped := countTripBranch ] 
+		counterReg: counterReg.
+	
+	self assert: (unforwardArg or: [ unforwardRcvr ]).
+	self genCmpArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
+	self ssPop: 2.
+	
+	"We could use (branchDescriptor isBranchTrue xor: orNot) to simplify this."
+	orNot 
+		ifFalse: [branchDescriptor isBranchTrue
+					ifTrue: 
+						[ fixup := (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
+						self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger ]
+					ifFalse: "branchDescriptor is branchFalse"
+						[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
+						self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ]]
+		ifTrue: [branchDescriptor isBranchTrue
+					ifFalse: "branchDescriptor is branchFalse"
+						[ fixup := (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
+						self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger ]
+					ifTrue:
+						[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
+						self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ]].
+	
+	self genFallsThroughCountLogicCounterReg: counterReg counterAddress: counterAddress.
+	self Jump: fixup.
+	
+	countTripped jmpTarget: self Label.
+	
+	"inlined version of #== ignoring the branchDescriptor if the counter trips to have normal state for the optimizer"
+	self ssPop: -2. 
+	self genCmpArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
+	self ssPop: 2. 
+	
+	"This code necessarily directly falls through the jumpIf: code which pops the top of the stack into TempReg. 
+	We therefore directly assign the result to TempReg to save one move instruction"
+	jumpEqual := orNot ifFalse: [self JumpZero: 0] ifTrue: [self JumpNonZero: 0].
+	self genMoveFalseR: TempReg.
+	jumpNotEqual := self Jump: 0.
+	jumpEqual jmpTarget: (self genMoveTrueR: TempReg).
+	jumpNotEqual jmpTarget: self Label.
+	self ssPushRegister: TempReg.
+	
+	(self fixupAt: nextPC - initialPC) notAFixup ifTrue: [ branchReachedOnlyForCounterTrip := true ].
+	
+	^ 0
+]
+
 { #category : #'bytecode generator support' }
 SistaCogit >> genJumpIf: boolean to: targetBytecodePC [
 	"The heart of performance counting in Sista.  Conditional branches are 6 times less
@@ -837,101 +891,6 @@ SistaCogit >> genSpecialSelectorComparisonWithoutCounters [
 	^ super genSpecialSelectorComparison
 ]
 
-{ #category : #'bytecode generators' }
-SistaCogit >> genSpecialSelectorEqualsEqualsWithForwarders [
-	"Override to count inlined branches if followed by a conditional branch.
-	 We borrow the following conditional branch's counter and when about to
-	 inline the comparison we decrement the counter (without writing it back)
-	 and if it trips simply abort the inlining, falling back to the normal send which
-	 will then continue to the conditional branch which will trip and enter the abort."
-	| nextPC postBranchPC targetBytecodePC branchDescriptor counterReg fixup jumpEqual jumpNotEqual
-	  counterAddress countTripped unforwardArg unforwardRcvr argReg rcvrReg regMask |
-	<var: #fixup type: #'BytecodeFixup *'>
-	<var: #countTripped type: #'AbstractInstruction *'>
-	<var: #label type: #'AbstractInstruction *'>
-	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
-	<var: #jumpEqual type: #'AbstractInstruction *'>
-	<var: #jumpNotEqual type: #'AbstractInstruction *'>
-
-	((coInterpreter isOptimizedMethod: methodObj) or: [needsFrame not]) ifTrue:
-		[^super genSpecialSelectorEqualsEqualsWithForwarders].
-
-	regMask := 0.
-	
-	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
-		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
-	
-	unforwardRcvr := (objectRepresentation isUnannotatableConstant: (self ssValue: 1)) not.
-	unforwardArg := (objectRepresentation isUnannotatableConstant: self ssTop) not.
-	
-	"If an operand is an annotable constant, it may be forwarded, so we need to store it into a 
-	register so the forwarder check can jump back to the comparison after unforwarding the constant.
-	However, if one of the operand is an unnanotable constant, does not allocate a register for it 
-	(machine code will use operations on constants)."
-	rcvrReg:= argReg := NoReg.
-	self 
-		allocateEqualsEqualsRegistersArgNeedsReg: unforwardArg 
-		rcvrNeedsReg: unforwardRcvr 
-		into: [ :rcvr :arg | rcvrReg:= rcvr. argReg := arg ].
-		
-	argReg ~= NoReg ifTrue: [ regMask := self registerMaskFor: argReg ].
-	rcvrReg ~= NoReg ifTrue: [ regMask := regMask bitOr: (self registerMaskFor: rcvrReg) ].
-	
-	"Only interested in inlining if followed by a conditional branch."
-	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse:
-		[^ self genEqualsEqualsNoBranchArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg].
-	
-	"If branching the stack must be flushed for the merge"
-	self ssFlushTo: simStackPtr - 2.
-	
-	unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg ].
-	unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg ].
-	
-	counterReg := self allocateRegNotConflictingWith: regMask.
-	self 
-		genExecutionCountLogicInto: [ :cAddress :countTripBranch | 
-			counterAddress := cAddress. 
-			countTripped := countTripBranch ] 
-		counterReg: counterReg.
-	
-	self assert: (unforwardArg or: [ unforwardRcvr ]).
-	
-	self genEqualsEqualsComparisonArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
-	
-	self ssPop: 2.
-	
-	branchDescriptor isBranchTrue 
-		ifTrue: 
-			[ fixup := self ensureNonMergeFixupAt: postBranchPC - initialPC.
-			self JumpZero: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger. ]
-		ifFalse: 
-			[ fixup := self ensureNonMergeFixupAt: targetBytecodePC - initialPC.
-			self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger. ].
-	
-	self genFallsThroughCountLogicCounterReg: counterReg counterAddress: counterAddress.
-	self Jump: fixup.
-	
-	countTripped jmpTarget: self Label.
-	
-	"inlined version of #== ignoring the branchDescriptor if the counter trips to have normal state for the optimizer"
-	self ssPop: -2. 
-	self genEqualsEqualsComparisonArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
-	self ssPop: 2. 
-	
-	"This code necessarily directly falls through the jumpIf: code which pops the top of the stack into TempReg. 
-	We therefore directly assign the result to TempReg to save one move instruction"
-	jumpEqual := self JumpZero: 0.
-	self genMoveFalseR: TempReg.
-	jumpNotEqual := self Jump: 0.
-	jumpEqual jmpTarget: (self genMoveTrueR: TempReg).
-	jumpNotEqual jmpTarget: self Label.
-	self ssPushRegister: TempReg.
-	
-	(self fixupAt: nextPC - initialPC) notAFixup ifTrue: [ branchReachedOnlyForCounterTrip := true ].
-	
-	^ 0
-]
-
 { #category : #'inline primitive generators' }
 SistaCogit >> genTrinaryInlinePrimitive: prim [
 	"Unary inline primitives."
@@ -1077,6 +1036,12 @@ SistaCogit >> maybeCountCounter [
 ]
 
 { #category : #'compile abstract instructions' }
+SistaCogit >> maybeCounterIndex [
+	<inline: true>
+	^counterIndex
+]
+
+{ #category : #'compile abstract instructions' }
 SistaCogit >> maybeFreeCounters [
 	<inline: true>
 	counters ~= 0 ifTrue:
@@ -1103,6 +1068,12 @@ SistaCogit >> maybeMarkCountersIn: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
 	<inline: true>
 	objectRepresentation maybeMarkCounters: cogMethod counters
+]
+
+{ #category : #'compile abstract instructions' }
+SistaCogit >> maybeSetCounterIndex: value [
+	<inline: true>
+	counterIndex := value
 ]
 
 { #category : #'simulation only' }

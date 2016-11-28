@@ -5,13 +5,17 @@ Class {
 }
 
 { #category : #'class initialization' }
-CogOutOfLineLiteralsX64Compiler class >> initializeAbstractRegisters [
+CogOutOfLineLiteralsX64Compiler class >> initializeAbstractRegistersSysV [
 	"Assign the abstract registers with the identities/indices of the relevant concrete registers."
+	super initializeAbstractRegistersSysV.
+	Extra6Reg := R8
+]
 
-	super initializeAbstractRegisters.
-	Extra6Reg := SysV
-		ifTrue: [R8]
-		ifFalse: [R11]
+{ #category : #'class initialization' }
+CogOutOfLineLiteralsX64Compiler class >> initializeAbstractRegistersWin64 [
+	"Assign the abstract registers with the identities/indices of the relevant concrete registers."
+	super initializeAbstractRegistersWin64.
+	Extra6Reg := R11
 ]
 
 { #category : #testing }

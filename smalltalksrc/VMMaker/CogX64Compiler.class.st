@@ -104,8 +104,10 @@ CogX64Compiler class >> initialize [
 
 	self ~~ CogX64Compiler ifTrue: [^self].
 
-	SysV ifNil:
-		[SysV := true]. "Default ABI; set to tru for SysV, false for WIN64"
+	initializationOptions
+		at: #ABI
+		ifPresent: [:abi| SysV := abi asUppercase ~= #WIN64]
+		ifAbsent: [SysV := true]. "Default ABI; set to true for SysV, false for WIN64"
 
 	RAX := 0.
 	RCX := 1.  "Were they completely mad or simply sadistic?"
@@ -175,7 +177,24 @@ CogX64Compiler class >> initializeAbstractRegisters [
 
 	SysV
 		ifTrue: [self initializeAbstractRegistersSysV]
-		ifFalse: [self initializeAbstractRegistersWin64]
+		ifFalse: [self initializeAbstractRegistersWin64].
+
+	DPFPReg0				:= XMM0L.
+	DPFPReg1				:= XMM1L.
+	DPFPReg2				:= XMM2L.
+	DPFPReg3				:= XMM3L.
+	DPFPReg4				:= XMM4L.
+	DPFPReg5				:= XMM5L.
+	DPFPReg6				:= XMM6L.
+	DPFPReg7				:= XMM7L.
+	DPFPReg8				:= XMM8L.
+	DPFPReg9				:= XMM9L.
+	DPFPReg10				:= XMM10L.
+	DPFPReg11				:= XMM11L.
+	DPFPReg12				:= XMM12L.
+	DPFPReg13				:= XMM13L.
+	DPFPReg14				:= XMM14L.
+	DPFPReg15				:= XMM15L
 ]
 
 { #category : #'class initialization' }
@@ -214,24 +233,7 @@ CogX64Compiler class >> initializeAbstractRegistersSysV [
 	Extra2Reg				:= R12.
 	Extra3Reg				:= R13.
 	Extra4Reg				:= R14.
-	Extra5Reg				:= R15.
-
-	DPFPReg0				:= XMM0L.
-	DPFPReg1				:= XMM1L.
-	DPFPReg2				:= XMM2L.
-	DPFPReg3				:= XMM3L.
-	DPFPReg4				:= XMM4L.
-	DPFPReg5				:= XMM5L.
-	DPFPReg6				:= XMM6L.
-	DPFPReg7				:= XMM7L.
-	DPFPReg8				:= XMM8L.
-	DPFPReg9				:= XMM9L.
-	DPFPReg10				:= XMM10L.
-	DPFPReg11				:= XMM11L.
-	DPFPReg12				:= XMM12L.
-	DPFPReg13				:= XMM13L.
-	DPFPReg14				:= XMM14L.
-	DPFPReg15				:= XMM15L
+	Extra5Reg				:= R15
 ]
 
 { #category : #'class initialization' }
@@ -269,24 +271,7 @@ CogX64Compiler class >> initializeAbstractRegistersWin64 [
 	Extra2Reg				:= R12.
 	Extra3Reg				:= R13.
 	Extra4Reg				:= R14.
-	Extra5Reg				:= R15.
-
-	DPFPReg0				:= XMM0L.
-	DPFPReg1				:= XMM1L.
-	DPFPReg2				:= XMM2L.
-	DPFPReg3				:= XMM3L.
-	DPFPReg4				:= XMM4L.
-	DPFPReg5				:= XMM5L.
-	DPFPReg6				:= XMM6L.
-	DPFPReg7				:= XMM7L.
-	DPFPReg8				:= XMM8L.
-	DPFPReg9				:= XMM9L.
-	DPFPReg10				:= XMM10L.
-	DPFPReg11				:= XMM11L.
-	DPFPReg12				:= XMM12L.
-	DPFPReg13				:= XMM13L.
-	DPFPReg14				:= XMM14L.
-	DPFPReg15				:= XMM15L
+	Extra5Reg				:= R15
 ]
 
 { #category : #testing }
@@ -2532,16 +2517,11 @@ CogX64Compiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 ar
 
 	 Argument registers for args 0 to 3 in SysV are RDI RSI RDX RCX, and in Win64 are RCX RDX R8 R9"
 	<inline: true>
-	self 
-		cppIf: SysV
-		ifTrue: []
-		ifFalse:
-			["WIN64 ABI allways reserve shadow space on the stack for callee to save up to 4 register parameters"
-			cogit SubCq: 32 R: RSP].
+	SysV ifFalse: "WIN64 ABI allways reserve shadow space on the stack for callee to save up to 4 register parameters"
+		[cogit SubCq: 32 R: RSP].
 	numArgs = 0 ifTrue: [^self].
-	self 
-		cppIf: SysV
-		ifTrue:
+	SysV
+		 ifTrue:
 			[(cogit isTrampolineArgConstant: regOrConst0)
 				ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst0) R: RDI] "a.k.a. Arg0Reg"
 				ifFalse:
@@ -2684,8 +2664,7 @@ CogX64Compiler >> genRemoveNArgsFromStack: n [
 	"This is a no-op on x64 SysV since the ABI passes up to 6 args in registers and trampolines currently observe a limit of 4.
 	But the WIN64 ABI allways reserve shadow space for saving up to 4 parameter registers (even if less than 4 args)."
 	self assert: n <= 4.
-	self cppIf: SysV ifTrue: [] ifFalse:
-		[cogit AddCq: 32 R: RSP].
+	SysV ifFalse: [cogit AddCq: 32 R: RSP].
 	^0
 ]
 
@@ -3029,10 +3008,7 @@ CogX64Compiler >> nsSendCacheAt: callSiteReturnAddress [
 
 { #category : #accessing }
 CogX64Compiler >> numIntRegArgs [
-	self
-		cppIf: SysV
-		ifTrue: [^6]
-		ifFalse: [^4]
+	^SysV ifTrue: [6] ifFalse: [4]
 ]
 
 { #category : #abi }
