@@ -16,6 +16,12 @@
 extern void warning(char *);
 extern void warningat(char *,int);
 
+extern void sqError(char *errorMessage);
+
+#ifndef error
+#define error sqError
+#endif
+
 #undef assert
 # define __stringify(foo) #foo
 # define __stringifyNum(n) __stringify(n)

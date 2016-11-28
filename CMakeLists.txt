@@ -59,6 +59,8 @@ endif()
 
 if(SQUEAK_PLATFORM_X86_32)
     if (MSVC)
+        set(CMAKE_CXX_FLAGS "/arch:SSE2")
+        set(CMAKE_C_FLAGS "/arch:SSE2")
     else()
         set(CMAKE_ASM-ATT_FLAGS "--32")
         set(CMAKE_CXX_FLAGS "-m32 -msse2")
@@ -413,14 +415,24 @@ elseif(WIN32)
         -DWIN32_FILE_SUPPORT
         -DNO_SERVICE
         -DNO_STD_FILE_SUPPORT
+        -Dsetjmp=_setjmp
+        -D_WIN32_WINNT=0x501
+        -DWINVER=0x501
+        -DWIN32=1
     )
     set(VM_DEPENDENCIES_LIBRARIES Winmm ${VM_DEPENDENCIES_LIBRARIES})
     if(SQUEAK_PLATFORM_X86_32)
-        add_definitions(-DX86)
-    endif()
-    if(NOT VM_MSVC)
-        # Compile for Windows XP when using MinGW
-        add_definitions(-D_WIN32_WINNT=0x501)
+        if(MSVC)
+            add_definitions(-DALLOCA_LIES_SO_USE_GETSP=0)
+        else()
+            add_definitions(
+                -DSTACK_ALIGN_BYTES=16
+                -DALLOCA_LIES_SO_USE_GETSP=0
+            )
+        endif()
+        add_definitions(
+            -DX86
+        )
     endif()
 else()
 	set(VM_PLATFORM_SOURCES

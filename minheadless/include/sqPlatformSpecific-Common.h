@@ -8,6 +8,7 @@
 extern void sqMessagePrintf(const char *format, ...);
 extern void sqWarnPrintf(const char *format, ...);
 extern void sqErrorPrintf(const char *format, ...);
+extern void sqError(char *errorMessage);
 
 /*
 #define messagePrintf sqMessagePrintf
@@ -19,7 +20,9 @@ extern void sqErrorPrintf(const char *format, ...);
 #define warnPrintf printf
 #define errorPrintf printf
 
+#ifndef error
 #define error sqError
+#endif
 
 /* Function used by the Squeak security plugin. In a headless VM, do not create a message box. */
 extern int sqAskSecurityYesNoQuestion(const char *question);

@@ -211,9 +211,13 @@ sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt 
 /* Interpreter entry points. */
 
 /* Disable Intel compiler inlining of error which is used for breakpoints */
-#pragma auto_inline(off)
-void error(char *s);
-#pragma auto_inline(on)
+#ifdef __INTEL_COMPILER 
+#   pragma auto_inline(off)
+#endif
+extern void error(char *s);
+#ifdef __INTEL_COMPILER 
+#   pragma auto_inline(on)
+#endif
 sqInt checkedByteAt(sqInt byteAddress);
 sqInt checkedByteAtput(sqInt byteAddress, sqInt byte);
 sqInt checkedLongAt(sqInt byteAddress);

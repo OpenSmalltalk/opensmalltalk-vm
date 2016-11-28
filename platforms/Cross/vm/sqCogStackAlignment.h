@@ -9,17 +9,27 @@
  *			eem Wed Jul 14 2010 make 16 bytes the default alignment for all x86.
  */
  
-#if __i386__
-# if __SSE2__ || (__APPLE__ && __MACH__) || __linux__
+#if __i386__ || defined(X86)
+#   if __SSE2__ || (__APPLE__ && __MACH__) || __linux__
 /* 16-byte stack alignment on x86 is required for SSE instructions which
  * require 16-byte aligned addresses to access 64 or 128 bit values in memory.
  */
-#	define STACK_ALIGN_BYTES 16
-#	define STACK_FP_ALIGNMENT 8 /* aligned sp - retpc - saved fp */
-# else
-#	define STACK_ALIGN_BYTES 4
-#	define STACK_FP_ALIGNMENT 0
-# endif
+#	    define STACK_ALIGN_BYTES 16
+#	    define STACK_FP_ALIGNMENT 8 /* aligned sp - retpc - saved fp */
+#   else
+#       ifndef STACK_ALIGN_BYTES
+#	        define STACK_ALIGN_BYTES 4
+#	        define STACK_FP_ALIGNMENT 0
+#       elif !defined(STACK_FP_ALIGNMENT)
+#           if STACK_ALIGN_BYTES > 8
+#	            define STACK_FP_ALIGNMENT 8
+#           else
+#	            define STACK_FP_ALIGNMENT 0
+#           endif
+#       else
+#	        define STACK_FP_ALIGNMENT 0
+#       endif
+#   endif
 #endif
 
 #if defined(__arm__) || defined(__arm32__) || defined(ARM32)
@@ -95,14 +105,17 @@
 # else /* !(__i386__ || __arm__ || __x86_64__) */
 #  error define code for your processor here
 # endif
+
 # if !defined(getfp)
-extern usqIntptr_t (*ceGetFP)(); /* provided by Cogit */
+VM_EXPORT extern usqIntptr_t (*ceGetFP)(); /* provided by Cogit */
 # define getfp() ceGetFP()
 # endif
+
 # if !defined(getsp)
-extern usqIntptr_t (*ceGetSP)(); /* provided by Cogit */
+VM_EXPORT extern usqIntptr_t (*ceGetSP)(); /* provided by Cogit */
 # define getsp() ceGetSP()
 # endif
+
 # define STACK_ALIGN_MASK (STACK_ALIGN_BYTES-1)
 #	define assertCStackWellAligned() do {									\
 	extern sqInt cFramePointerInUse;										\
