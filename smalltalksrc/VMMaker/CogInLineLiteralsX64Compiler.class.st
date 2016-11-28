@@ -5,13 +5,19 @@ Class {
 }
 
 { #category : #'class initialization' }
-CogInLineLiteralsX64Compiler class >> initializeAbstractRegisters [
+CogInLineLiteralsX64Compiler class >> initializeAbstractRegistersSysV [
 	"Assign the abstract registers with the identities/indices of the relevant concrete registers."
 
-	super initializeAbstractRegisters.
-	RISCTempReg := SysV
-		ifTrue: [R8]
-		ifFalse: [R11]
+	super initializeAbstractRegistersSysV.
+	RISCTempReg := R8
+]
+
+{ #category : #'class initialization' }
+CogInLineLiteralsX64Compiler class >> initializeAbstractRegistersWin64 [
+	"Assign the abstract registers with the identities/indices of the relevant concrete registers."
+
+	super initializeAbstractRegistersWin64.
+	RISCTempReg := R11
 ]
 
 { #category : #testing }

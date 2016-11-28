@@ -6351,7 +6351,7 @@ CoInterpreter >> printFrameMethodFor: theFP [
 		[homeMethod := self mframeHomeMethod: theFP.
 		 self print: 'hm: '; printHex: homeMethod asInteger; tab].
 	obj := self frameMethodObject: theFP.
-	self printHex: obj; space; shortPrintOop: obj
+	self shortPrintOop: obj
 ]
 
 { #category : #'debug printing' }
