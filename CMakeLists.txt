@@ -10,7 +10,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "")
 endif ()
 
 # Turn on warnings
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+if (MSVC)
 	# using Visual Studio C++
 	set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} /W3")
 	set(VM_MSVC TRUE)
@@ -27,17 +27,59 @@ if(NOT VM_MSVC)
 	set(VM_DEPENDENCIES_LIBRARIES m ${VM_DEPENDENCIES_LIBRARIES})
 endif()
 
-find_library(LIB_DL NAMES dl dyld)
-if(LIB_DL)
-	set(VM_DEPENDENCIES_LIBRARIES ${LIB_DL} ${VM_DEPENDENCIES_LIBRARIES})
-endif()
-
 # Add a build x86_32 version on x86_64 systems.
 if("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "x86_64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64")
 	option(BUILD_I386_VERSION "Build x86 32 bits version" OFF)
     set(SQUEAK_PLATFORM_X86_64 True)
 elseif("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "i.86")
     set(SQUEAK_PLATFORM_X86_32 True)
+endif()
+
+if(SQUEAK_PLATFORM_X86_64)
+	if(BUILD_I386_VERSION)
+        set(SQUEAK_PLATFORM_X86_32 True)
+	else()
+		set(VM_64BITS TRUE)
+		set(SourceFolderName "${SourceFolderName}64")
+		if(WIN32)
+			set(FFI_VARIANT_X64_WIN64 True)
+		else()
+			set(FFI_VARIANT_X64_SYSV True)
+		endif()
+        set(COGIT_PLATFORM_SUFFIX "X64")
+        set(VM_TARGET_CPU "x86_64")
+	endif()
+else()
+	set(VM_64BITS False)
+endif()
+
+if(SQUEAK_PLATFORM_X86_32)
+    if (MSVC)
+    else()
+        set(CMAKE_ASM-ATT_FLAGS "--32")
+        set(CMAKE_CXX_FLAGS "-m32 -msse2")
+        set(CMAKE_C_FLAGS "-m32 -msse2")
+    endif()
+    set(COGIT_PLATFORM_SUFFIX "IA32")
+    set(FFI_VARIANT_IA32 True)
+    set(VM_TARGET_CPU "i686")
+endif()
+
+set(VM_TARGET "${CMAKE_SYSTEM}")
+
+if(WIN32)
+    set(OS_TYPE "Win32")
+    set(VM_TARGET_OS "Win32")
+elseif(UNIX)
+    set(OS_TYPE "unix")
+    if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+        set(VM_TARGET_OS "darwing")
+        set(DARWIN True)
+    elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+        set(VM_TARGET_OS "linux-gnu")
+    else()
+        set(VM_TARGET_OS "${CMAKE_SYSTEM_NAME}")
+    endif()
 endif()
 
 # Output paths.
@@ -89,35 +131,6 @@ endif()
 # Get the version string
 include(GetGitVersion.cmake)
 
-# Platform specific checks/settings.
-if(SQUEAK_PLATFORM_X86_64)
-	if(BUILD_I386_VERSION)
-        set(SQUEAK_PLATFORM_X86_32 True)
-	else()
-		set(VM_64BITS TRUE)
-		set(SourceFolderName "${SourceFolderName}64")
-		if(WIN32)
-			set(FFI_VARIANT_X64_WIN64 True)
-		else()
-			set(FFI_VARIANT_X64_SYSV True)
-		endif()
-        set(COGIT_PLATFORM_SUFFIX "X64")
-	endif()
-else()
-	set(VM_64BITS False)
-endif()
-
-if(SQUEAK_PLATFORM_X86_32)
-    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-    else()
-        set(CMAKE_ASM-ATT_FLAGS "--32")
-        set(CMAKE_CXX_FLAGS "-m32 -msse2")
-        set(CMAKE_C_FLAGS "-m32 -msse2")
-    endif()
-    set(COGIT_PLATFORM_SUFFIX "IA32")
-    set(FFI_VARIANT_IA32 True)
-endif()
-
 set(SourceFolderName "${SourceFolderName}src")
 set(PluginsSourceFolderName "src/plugins")
 
@@ -135,14 +148,79 @@ add_definitions(-DUSE_GLOBAL_STRUCT=0
 	-DUSE_INLINE_MEMORY_ACCESSORS
 )
 
-# Perform platform checks
-include(${CMAKE_ROOT}/Modules/CheckIncludeFile.cmake)
-include(${CMAKE_ROOT}/Modules/CheckIncludeFileCXX.cmake)
-include(${CMAKE_ROOT}/Modules/CheckFunctionExists.cmake)
-include(${CMAKE_ROOT}/Modules/CheckLibraryExists.cmake)
+# Configuration
+include(CheckIncludeFiles)
+include(CheckFunctionExists) 
+include(CheckSymbolExists) 
+include(CheckLibraryExists) 
+include(CheckTypeSize)
 
-# Enable the assembler.
-#enable_language(ASM-ATT)
+include (TestBigEndian)
+test_big_endian(WORDS_BIGENDIAN)
+if(WORDS_BIGENDIAN)
+    add_definitions(-DLSB_FIRST)
+endif()
+
+set(HAVE_INTERP_H 1)
+check_include_files (alloca.h HAVE_ALLOCA_H)
+check_function_exists(alloca HAVE_ALLOCA)
+
+check_include_files(dirent.h HAVE_SYS_NDIR_H)
+check_include_files(features.h HAVE_FEATURES_H)
+check_include_files(unistd.h HAVE_UNISTD_H)
+check_include_files(ndir.h HAVE_NDIR_H)
+check_include_files(sys/ndir.h HAVE_SYS_NDIR_H)
+check_include_files(sys/dir.h HAVE_SYS_DIR_H)
+check_include_files(sys/filio.h HAVE_SYS_FILIO_H)
+check_include_files(sys/time.h HAVE_SYS_TIME_H)
+
+check_include_files(dlfcn.h HAVE_DLFCN_H)
+check_library_exists(dl dlopen "" HAVE_LIBDL)
+check_library_exists(dyld dlopen "" HAVE_DYLD)
+
+# check_include_files(iconv.h HAVE_ICONV_H)
+# check_library_exists(iconv iconv "" HAVE_ICONV)
+# check_library_exists(ffi ffi_call "" HAVE_LIBFFI)
+
+# System calls
+check_function_exists(at_exit AT_EXIT)
+
+check_function_exists(snprintf HAVE_SNPRINTF)
+check_function_exists(__snprintf HAVE___SNPRINTF)
+check_function_exists(nanosleep HAVE_NANOSLEEP)
+
+check_function_exists(mmap HAVE_MMAP)
+check_function_exists(kqueue HAVE_EPOLL)
+check_function_exists(select HAVE_SELECT)
+check_function_exists(epoll_create1 HAVE_EPOLL)
+check_function_exists(epoll_pwait HAVE_EPOLL_PWAIT)
+
+# structures
+set(CMAKE_EXTRA_INCLUDE_FILES time.h)
+if(HAVE_SYS_TIME_H)
+    set(CMAKE_EXTRA_INCLUDE_FILES sys/time.h ${CMAKE_EXTRA_INCLUDE_FILES})
+endif()
+check_type_size("struct tm_gmtoff" HAVE_TM_GMTOFF)
+check_type_size("struct timezone" HAVE_TIMEZONE)
+set(CMAKE_EXTRA_INCLUDE_FILES)
+
+# Type sizes
+check_type_size("int" SIZEOF_INT)
+check_type_size("long" SIZEOF_LONG)
+check_type_size("long long" SIZEOF_LONG_LONG)
+check_type_size("void*" SIZEOF_VOID_P)
+
+if(HAVE_LIBDL)
+	set(VM_DEPENDENCIES_LIBRARIES dl ${VM_DEPENDENCIES_LIBRARIES})
+endif()
+if(HAVE_DYLD)
+	set(VM_DEPENDENCIES_LIBRARIES dyld ${VM_DEPENDENCIES_LIBRARIES})
+endif()
+if(HAVE_ICONV)
+    set(VM_DEPENDENCIES_LIBRARIES iconv ${VM_DEPENDENCIES_LIBRARIES})
+endif()
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/minheadless/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 # Set output dir.
 set(EXECUTABLE_OUTPUT_PATH "${OpenSmalltalkVM_BINARY_DIR}/dist")
@@ -285,7 +363,6 @@ elseif(WIN32)
         -DWIN32_FILE_SUPPORT
         -DNO_SERVICE
         -DNO_STD_FILE_SUPPORT
-        -DLSB_FIRST
     )
     set(VM_DEPENDENCIES_LIBRARIES Winmm ${VM_DEPENDENCIES_LIBRARIES})
     if(SQUEAK_PLATFORM_X86_32)
