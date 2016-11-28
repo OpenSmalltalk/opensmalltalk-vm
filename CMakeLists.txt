@@ -15,8 +15,11 @@ if (MSVC)
 	set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} /W3")
 	set(VM_MSVC TRUE)
 else()
-	set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pthread")
-
+	set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+    if(UNIX)
+        set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+    endif()
+    
 	# Export symbols from applications.
 	#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--export-dynamic")
 endif()
@@ -157,8 +160,13 @@ include(CheckLibraryExists)
 include(CheckTypeSize)
 include(CheckCSourceCompiles)
 
+if(NOT WIN32)
 include (TestBigEndian)
 test_big_endian(WORDS_BIGENDIAN)
+else()
+    set(WORDS_BIGENDIAN False)
+endif()
+
 if(WORDS_BIGENDIAN)
     add_definitions(-DLSB_FIRST)
 endif()
