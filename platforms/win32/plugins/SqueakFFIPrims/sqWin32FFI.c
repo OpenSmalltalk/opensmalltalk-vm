@@ -69,7 +69,7 @@ int ffiAlloc(int byteSize)
 	return (int) malloc(byteSize);
 }
 
-int ffiFree(int ptr)
+int ffiFree(sqIntptr_t ptr)
 {
 	if(ptr) free((void*)ptr);
 	return 1;

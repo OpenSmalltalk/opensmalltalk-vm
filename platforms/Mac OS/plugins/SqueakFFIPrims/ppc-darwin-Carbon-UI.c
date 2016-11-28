@@ -147,7 +147,7 @@ int ffiAlloc(int byteSize)
 }
 
 
-int ffiFree(int ptr)
+int ffiFree(sqIntptr_t ptr)
 {
   DPRINTF(("ffiFree(%08x)\n", ptr));
   if (ptr) free((void *)ptr);
