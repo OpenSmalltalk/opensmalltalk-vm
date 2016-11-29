@@ -134,20 +134,39 @@ CogRegisterAllocatingSimStackEntry >> printStateOn: aStream [
 ]
 
 { #category : #'compile abstract instructions' }
-CogRegisterAllocatingSimStackEntry >> reconcileWith: simStackEntry [
-	"Make the state of each simStackEntry, a stack entry along the non-inlined special selector path,
-	 the same as the corresponding simStackEntry along the inlined path (the receiver)."
+CogRegisterAllocatingSimStackEntry >> reconcilePoppingWith: simStackEntry [
+	"Make the state of a simStackEntry, a stack entry along the inlined special selector path,
+	 the same as the corresponding simStackEntry along the non-inlined path (the receiver)."
 	<var: #simStackEntry type: #'SimStackEntry *'>
-	type = SSConstant ifTrue:
+	simStackEntry type = SSConstant ifTrue:
 		[cogit AddCw: BytesPerWord R: SPReg.
 		 ^self].
-	liveRegister ~= NoReg ifTrue:
-		[simStackEntry popToReg: liveRegister.
-		 ^self].
-	type = SSRegister ifTrue:
-		[simStackEntry popToReg: register.
+	simStackEntry registerOrNone ~= NoReg ifTrue:
+		[cogit PopR: simStackEntry registerOrNone.
 		 ^self].
 	self halt
+]
+
+{ #category : #'compile abstract instructions' }
+CogRegisterAllocatingSimStackEntry >> reconcileWith: targetEntry [
+	"Make the state of the receiver, a stack entry at a backward jump,
+	 the same as the corresponding simStackEntry at the target of the jump"
+	<var: #targetEntry type: #'targetEntry *'>
+	targetEntry liveRegister = NoReg ifTrue:
+		[^self].
+	targetEntry type = SSConstant ifTrue:
+		[self assert: (type = SSConstant and: [constant = targetEntry constant]).
+		 ^self].
+	liveRegister ~= NoReg ifTrue:
+		[liveRegister ~= targetEntry liveRegister ifTrue:
+			[cogit MoveR: liveRegister R: targetEntry liveRegister].
+		 ^self].
+	type caseOf: {
+		[SSBaseOffset]	-> [cogit MoveMw: offset r: register R: targetEntry liveRegister].
+		[SSSpill]		-> [cogit MoveMw: offset r: register R: targetEntry liveRegister].
+		[SSConstant]	-> [cogit genMoveConstant: constant R: targetEntry liveRegister].
+		[SSRegister]	-> [register ~= targetEntry liveRegister ifTrue:
+								[cogit MoveR: register R: targetEntry liveRegister]] }
 ]
 
 { #category : #accessing }
@@ -183,8 +202,7 @@ CogRegisterAllocatingSimStackEntry >> registerOrNone [
 CogRegisterAllocatingSimStackEntry >> storeToReg: reg [
 	liveRegister ~= NoReg
 		ifTrue:
-			[self deny: spilled.
-			 self deny: (type = SSRegister and: [register ~= liveRegister]).
+			[self deny: (type = SSRegister and: [register ~= liveRegister]).
 			 reg ~= liveRegister
 				ifTrue: [cogit MoveR: liveRegister R: reg]
 				ifFalse: [cogit Label]]

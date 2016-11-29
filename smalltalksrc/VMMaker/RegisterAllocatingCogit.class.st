@@ -22,7 +22,7 @@ Class {
 RegisterAllocatingCogit class >> declareCVarsIn: aCodeGen [
 	aCodeGen
 		var: #scratchSimStack
-			type: #'CogSimStackEntry *';
+			type: #'SimStackEntry *';
 		var: #scratchOptStatus
 			type: #CogSSOptStatus
 ]
@@ -245,6 +245,32 @@ RegisterAllocatingCogit >> freeAnyRegNotConflictingWith: regMask [
 	reg ~= NoReg ifTrue:
 		[self ssAllocateRequiredReg: reg].
 	^reg
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> genJumpBackTo: targetBytecodePC [
+	| nothingToFlush label |
+	<var: #label type: #'AbstractInstruction *'>
+	"If there's nothing to flush then the stack state at this point is the same as that after
+	 the check for interrups and we can avoid generating the register reload code twice."
+	(nothingToFlush := simStackPtr < 0 or: [self ssTop spilled]) ifTrue:
+		[label := self Label].
+	self reconcileRegisterStateForBackwardJoin: (self fixupAt: targetBytecodePC - initialPC).
+	self MoveAw: coInterpreter stackLimitAddress R: TempReg.
+	self CmpR: TempReg R: SPReg. "N.B. FLAGS := SPReg - TempReg"
+	self JumpAboveOrEqual: (self fixupAt: targetBytecodePC - initialPC).
+
+	self ssFlushTo: simStackPtr.
+	self CallRT: ceCheckForInterruptTrampoline.
+	self annotateBytecode: self Label.
+	nothingToFlush
+		ifTrue:
+			[self Jump: label]
+		ifFalse:
+			[self reconcileRegisterStateForBackwardJoin: (self fixupAt: targetBytecodePC - initialPC).
+			 self Jump: (self fixupAt: targetBytecodePC - initialPC)].
+	deadCode := true. "can't fall through"
+	^0
 ]
 
 { #category : #'bytecode generator support' }
@@ -543,13 +569,14 @@ RegisterAllocatingCogit >> maybeCountFixup: descriptor [
 	"Count needed fixups; descriptor is known to be a branch or a block creation."
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<inline: true>
-	numFixups := numFixups + ((descriptor isBranchTrue or: [descriptor isBranchFalse])
+	numFixups := numFixups + (descriptor isBranch
 									ifTrue:
-										[(prevBCDescriptor generator == #genSpecialSelectorEqualsEquals
-										   or: [prevBCDescriptor generator == #genSpecialSelectorComparison])
-											ifTrue: [3]
-											ifFalse: [2]]
-									ifFalse:  [1])
+										[((descriptor isBranchTrue or: [descriptor isBranchFalse])
+										  and: [prevBCDescriptor generator == #genSpecialSelectorEqualsEquals
+												or: [prevBCDescriptor generator == #genSpecialSelectorComparison]])
+													ifTrue: [3]
+													ifFalse: [2]] "Forward branches only need one, but backward branches need two"
+									ifFalse:  [1]) "blocks"
 ]
 
 { #category : #'compile abstract instructions' }
@@ -629,7 +656,9 @@ RegisterAllocatingCogit >> mergeWithFixupIfRequired: fixup [
 		ifFalse: [self mergeCurrentSimStackWith: fixup mergeSimStack]. "case 4"
 	"cases 3 and 4"
 	deadCode := false.
-	fixup isBackwardBranchFixup ifTrue: [fixup simStackPtr: simStackPtr].
+	fixup isBackwardBranchFixup ifTrue:
+		[self assert: fixup mergeSimStack isNil.
+		 self setMergeSimStackOf: fixup].
 	fixup targetInstruction: self Label.
 	self assert: simStackPtr = fixup simStackPtr.
 	self cCode: '' inSmalltalk:
@@ -642,12 +671,15 @@ RegisterAllocatingCogit >> mergeWithFixupIfRequired: fixup [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> moveSimStackConstantsToRegisters [
 	<inline: true>
+	<var: #desc type: #'SimStackEntry *'>
+	self flag: 'I think this should be done at the merge point if required.  e.g. self at: 1 put: (expr ifTrue: [a] ifFalse: [b]) does not need to assign'. 
 	(simSpillBase max: 0) to: simStackPtr do: 
-		[:i|
-			| desc |
-			desc := self simStackAt: i.
-			(desc type = SSConstant and: [desc liveRegister = NoReg])
-				ifTrue: [ desc storeToReg: (self allocateRegNotConflictingWith: 0) ] ]
+		[:i| | desc reg |
+		 desc := self simStackAt: i.
+		 (desc type = SSConstant and: [desc liveRegister = NoReg]) ifTrue:
+			[reg := self allocateRegNotConflictingWith: 0.
+			 reg ~= NoReg ifTrue:
+				[desc storeToReg: reg]]]
 ]
 
 { #category : #'bytecode generator support' }
@@ -658,6 +690,22 @@ RegisterAllocatingCogit >> receiverRefOnScratchSimStack [
 		  and: [(self addressOf: (scratchSimStack at: i)) type = SSBaseOffset]) ifTrue:
 			[^true]].
 	^false
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> reconcileRegisterStateForBackwardJoin: fixup [ 
+	<var: #fixup type: #'SSBytecodeFixup *'>
+	| fixupSimStack |
+	<var: #fixupSimStack type: #'SimStackEntry *'>
+	self assert: (optStatus ssEntry isSameEntryAs: simSelf). 
+	fixup isReceiverResultRegSelf ifTrue:
+		[optStatus isReceiverResultRegLive ifFalse:
+			[optStatus ssEntry storeToReg: ReceiverResultReg]].
+	fixupSimStack := fixup mergeSimStack.
+	simStackPtr to: 0 by: -1 do:
+		[:i|
+		 self assert: (self simStackAt: i) spilled.
+		 (self simStackAt: i) reconcileWith: (fixupSimStack at: i)]
 ]
 
 { #category : #'bytecode generator support' }
@@ -687,7 +735,7 @@ RegisterAllocatingCogit >> reconcileRegisterStateForJoinAfterSpecialSelectorSend
 		 (self addressOf: (scratchSimStack at: i)) spilled ifTrue:
 			[self assert: ((scratchSimStack at: i) isSameEntryAs: (self simStackAt: i)).
 			 ^self].
-		 (self addressOf: (scratchSimStack at: i)) reconcileWith: (self simStackAt: i).
+		 (self simStackAt: i) reconcilePoppingWith: (self addressOf: (scratchSimStack at: i)).
 		 simStack
 			at: i
 			put: (self
@@ -726,7 +774,9 @@ RegisterAllocatingCogit >> setMergeSimStackOf: fixup [
 	self assert: nextFixup <= numFixups.
 	self moveSimStackConstantsToRegisters.
 	self cCode: [fixup mergeSimStack: mergeSimStacksBase + (nextFixup * self simStackSlots * (self sizeof: CogSimStackEntry))].
-	fixup simStackPtr: simStackPtr.
+	fixup
+		simStackPtr: simStackPtr;
+		isReceiverResultRegSelf: optStatus isReceiverResultRegLive.
 	nextFixup := nextFixup + 1.
 	self cCode: [self mem: fixup mergeSimStack cp: simStack y: self simStackSlots * (self sizeof: CogSimStackEntry)]
 		inSmalltalk: [fixup mergeSimStack: self copySimStack]
