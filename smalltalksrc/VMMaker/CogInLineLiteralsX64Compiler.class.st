@@ -9,7 +9,7 @@ CogInLineLiteralsX64Compiler class >> initializeAbstractRegisters [
 	"Assign the abstract registers with the identities/indices of the relevant concrete registers."
 
 	super initializeAbstractRegisters.
-	RISCTempReg := ABI = #SysV
+	RISCTempReg := SysV
 		ifTrue: [R8]
 		ifFalse: [R11]
 ]
