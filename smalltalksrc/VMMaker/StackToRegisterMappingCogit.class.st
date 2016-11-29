@@ -12544,11 +12544,11 @@ StackToRegisterMappingCogit >> scanMethod [
 		 descriptor isBranch ifTrue:
 			[distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
+			 self maybeCountFixup: descriptor.
 			 (self isBackwardBranch: descriptor at: pc exts: nExts in: methodObj)
 				ifTrue: [self initializeFixupAt: targetPC - initialPC]
 				ifFalse:
 					[latestContinuation := latestContinuation max: targetPC.
-					 self maybeCountFixup: descriptor.
 					 self maybeCountCounter]].
 		 descriptor isBlockCreation ifTrue:
 			[numBlocks := numBlocks + 1.
