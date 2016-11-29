@@ -16,7 +16,8 @@ Class {
 	#superclass : #CogSSBytecodeFixup,
 	#instVars : [
 		'cogit',
-		'mergeSimStack'
+		'mergeSimStack',
+		'isReceiverResultRegSelf'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -43,7 +44,20 @@ CogRASSBytecodeFixup class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock
 { #category : #'initialize-release' }
 CogRASSBytecodeFixup >> cogit: aCogit [
 	cogit := aCogit.
+	isReceiverResultRegSelf := false.
 	^self
+]
+
+{ #category : #accessing }
+CogRASSBytecodeFixup >> isReceiverResultRegSelf [
+
+	^ isReceiverResultRegSelf
+]
+
+{ #category : #accessing }
+CogRASSBytecodeFixup >> isReceiverResultRegSelf: anObject [
+
+	^isReceiverResultRegSelf := anObject
 ]
 
 { #category : #accessing }
@@ -75,4 +89,12 @@ CogRASSBytecodeFixup >> printStateOn: aStream [
 		[aStream skip: -1; space; nextPut: $(.
 		 cogit printSimStack: mergeSimStack toDepth: simStackPtr spillBase: -1 on: aStream.
 		 aStream nextPut: $); nextPut: $)]
+]
+
+{ #category : #accessing }
+CogRASSBytecodeFixup >> reinitialize [
+	<inline: true>
+	super reinitialize.
+	mergeSimStack := nil.
+	isReceiverResultRegSelf := false
 ]
