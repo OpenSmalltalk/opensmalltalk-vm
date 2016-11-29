@@ -96,12 +96,10 @@
 #  error define code for your processor here
 # endif
 # if !defined(getfp)
-extern usqIntptr_t (*ceGetFP)(); /* provided by Cogit */
-# define getfp() ceGetFP()
+# define getfp() ceGetFP() /* provided by Cogit */
 # endif
 # if !defined(getsp)
-extern usqIntptr_t (*ceGetSP)(); /* provided by Cogit */
-# define getsp() ceGetSP()
+# define getsp() ceGetSP() /* provided by Cogit */
 # endif
 # define STACK_ALIGN_MASK (STACK_ALIGN_BYTES-1)
 #	define assertCStackWellAligned() do {									\
