@@ -14,7 +14,6 @@ Class {
 	#name : #CogX64Compiler,
 	#superclass : #CogAbstractInstruction,
 	#classVars : [
-		'ABI',
 		'CDQ',
 		'CMPXCHGAwR',
 		'CMPXCHGMwrR',
@@ -51,6 +50,7 @@ Class {
 		'SIB2',
 		'SIB4',
 		'SIB8',
+		'SysV',
 		'XCHGAwR',
 		'XCHGMwrR',
 		'XCHGRR',
@@ -73,12 +73,6 @@ Class {
 	],
 	#category : #'VMMaker-JIT'
 }
-
-{ #category : #accessing }
-CogX64Compiler class >> ABI [
-	"Answer the name of the supported ABI, #SysV or #MSVC"
-	^ABI
-]
 
 { #category : #translation }
 CogX64Compiler class >> ISA [
@@ -110,8 +104,8 @@ CogX64Compiler class >> initialize [
 
 	self ~~ CogX64Compiler ifTrue: [^self].
 
-	ABI ifNil:
-		[ABI := #SysV]. "Default ABI; other choice is #MSVC"
+	SysV ifNil:
+		[SysV := true]. "Default ABI; set to tru for SysV, false for WIN64"
 
 	RAX := 0.
 	RCX := 1.  "Were they completely mad or simply sadistic?"
@@ -179,7 +173,7 @@ CogX64Compiler class >> initializeAbstractRegisters [
 	"N.B. RAX RCX & RDX are caller-save (scratch) registers.  Hence we use RCX for class and RDX for
 		receiver/result since these are written in all normal sends."
 
-	ABI = #SysV
+	SysV
 		ifTrue: [self initializeAbstractRegistersSysV]
 		ifFalse: [self initializeAbstractRegistersWin64]
 ]
@@ -298,6 +292,12 @@ CogX64Compiler class >> initializeAbstractRegistersWin64 [
 { #category : #testing }
 CogX64Compiler class >> isAbstract [
 	^self == CogX64Compiler
+]
+
+{ #category : #accessing }
+CogX64Compiler class >> isSysV [
+	"Answer true is ABI is SysV, false otherwise (for WIN64)"
+	^SysV
 ]
 
 { #category : #translation }
@@ -2533,38 +2533,15 @@ CogX64Compiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 ar
 	 Argument registers for args 0 to 3 in SysV are RDI RSI RDX RCX, and in Win64 are RCX RDX R8 R9"
 	<inline: true>
 	self 
-		cppIf: #WIN64
-		ifTrue:
+		cppIf: SysV
+		ifTrue: []
+		ifFalse:
 			["WIN64 ABI allways reserve shadow space on the stack for callee to save up to 4 register parameters"
 			cogit SubCq: 32 R: RSP].
 	numArgs = 0 ifTrue: [^self].
 	self 
-		cppIf: #WIN64
+		cppIf: SysV
 		ifTrue:
-			[(cogit isTrampolineArgConstant: regOrConst0)
-				ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst0) R: RCX] "a.k.a. Arg0Reg"
-				ifFalse:
-					[regOrConst0 ~= RCX ifTrue:
-						[cogit MoveR: regOrConst0 R: RCX]].
-			numArgs = 1 ifTrue: [^self].
-			(cogit isTrampolineArgConstant: regOrConst1)
-				ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst1) R: RDX] "a.k.a. Arg1Reg"
-				ifFalse:
-					[regOrConst1 ~= RDX ifTrue:
-						[cogit MoveR: regOrConst1 R: RDX]].
-			numArgs = 2 ifTrue: [^self].
-			(cogit isTrampolineArgConstant: regOrConst2)
-				ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst2) R: R8] "a.k.a. RISCTempReg in CogInLineLiteralsX64Compiler and Extra6Reg in CogOutOfLineLiteralsX64Compiler"
-				ifFalse:
-					[regOrConst2 ~= R8 ifTrue:
-						[cogit MoveR: regOrConst2 R: R8]].
-			 numArgs = 3 ifTrue: [^self].
-			 (cogit isTrampolineArgConstant: regOrConst3)
-					ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst3) R: R9] "a.k.a. SendNumArgsReg"
-					ifFalse:
-						[regOrConst3 ~= R9 ifTrue:
-							[cogit MoveR: regOrConst3 R: R9]]]
-		ifFalse:
 			[(cogit isTrampolineArgConstant: regOrConst0)
 				ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst0) R: RDI] "a.k.a. Arg0Reg"
 				ifFalse:
@@ -2587,7 +2564,31 @@ CogX64Compiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 ar
 					ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst3) R: RCX] "a.k.a. ClassReg"
 					ifFalse:
 						[regOrConst3 ~= RCX ifTrue:
-							[cogit MoveR: regOrConst3 R: RCX]]].
+							[cogit MoveR: regOrConst3 R: RCX]]]
+		ifFalse:
+			[(cogit isTrampolineArgConstant: regOrConst0)
+				ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst0) R: RCX] "a.k.a. Arg0Reg"
+				ifFalse:
+					[regOrConst0 ~= RCX ifTrue:
+						[cogit MoveR: regOrConst0 R: RCX]].
+			numArgs = 1 ifTrue: [^self].
+			(cogit isTrampolineArgConstant: regOrConst1)
+				ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst1) R: RDX] "a.k.a. Arg1Reg"
+				ifFalse:
+					[regOrConst1 ~= RDX ifTrue:
+						[cogit MoveR: regOrConst1 R: RDX]].
+			numArgs = 2 ifTrue: [^self].
+			(cogit isTrampolineArgConstant: regOrConst2)
+				ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst2) R: R8] "a.k.a. RISCTempReg in CogInLineLiteralsX64Compiler and Extra6Reg in CogOutOfLineLiteralsX64Compiler"
+				ifFalse:
+					[regOrConst2 ~= R8 ifTrue:
+						[cogit MoveR: regOrConst2 R: R8]].
+			 numArgs = 3 ifTrue: [^self].
+			 (cogit isTrampolineArgConstant: regOrConst3)
+					ifTrue: [cogit MoveCq: (cogit trampolineArgValue: regOrConst3) R: R9] "a.k.a. SendNumArgsReg"
+					ifFalse:
+						[regOrConst3 ~= R9 ifTrue:
+							[cogit MoveR: regOrConst3 R: R9]]].
 	self assert: numArgs <= 4
 ]
 
@@ -2683,7 +2684,7 @@ CogX64Compiler >> genRemoveNArgsFromStack: n [
 	"This is a no-op on x64 SysV since the ABI passes up to 6 args in registers and trampolines currently observe a limit of 4.
 	But the WIN64 ABI allways reserve shadow space for saving up to 4 parameter registers (even if less than 4 args)."
 	self assert: n <= 4.
-	self cppIf: #WIN64 ifTrue:
+	self cppIf: SysV ifTrue: [] ifFalse:
 		[cogit AddCq: 32 R: RSP].
 	^0
 ]
@@ -3029,9 +3030,9 @@ CogX64Compiler >> nsSendCacheAt: callSiteReturnAddress [
 { #category : #accessing }
 CogX64Compiler >> numIntRegArgs [
 	self
-		cppIf: #WIN64
-		ifTrue: [^4]
-		ifFalse: [^6]
+		cppIf: SysV
+		ifTrue: [^6]
+		ifFalse: [^4]
 ]
 
 { #category : #abi }

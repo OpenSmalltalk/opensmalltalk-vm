@@ -4901,8 +4901,7 @@ Cogit >> compileCallFor: aRoutine numArgs: numArgs floatArg: regOrConst0 floatAr
 						inSmalltalk: [self simulatedTrampolineFor: aRoutine]).
 	resultRegOrNone ~= NoReg ifTrue:
 		[backEnd genWriteCResultIntoReg: resultRegOrNone].
-	 numArgs > 0 ifTrue:
-		[backEnd genRemoveNFloatArgsFromStack: numArgs].
+	backEnd genRemoveNFloatArgsFromStack: numArgs.
 	backEnd genRestoreRegs: regsToSave
 ]
 
