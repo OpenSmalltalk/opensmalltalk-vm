@@ -9,7 +9,7 @@ CogOutOfLineLiteralsX64Compiler class >> initializeAbstractRegisters [
 	"Assign the abstract registers with the identities/indices of the relevant concrete registers."
 
 	super initializeAbstractRegisters.
-	Extra6Reg := ABI = #SysV
+	Extra6Reg := SysV
 		ifTrue: [R8]
 		ifFalse: [R11]
 ]
