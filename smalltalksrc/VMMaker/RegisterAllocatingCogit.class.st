@@ -649,6 +649,20 @@ RegisterAllocatingCogit >> liveRegisters [
 	^regsSet
 ]
 
+{ #category : #'simulation stack' }
+RegisterAllocatingCogit >> liveRegistersExceptingTopNItems: n [
+	| regsSet |
+	regsSet := 0.
+	0 to: simStackPtr - n do:
+		[:i|
+		regsSet := regsSet bitOr: (self simStackAt: i) registerMask].
+	LowcodeVM ifTrue:
+		[(simNativeSpillBase max: 0) to: simNativeStackPtr - n do:
+			[:i|
+			regsSet := regsSet bitOr: (self simNativeStackAt: i) nativeRegisterMask]].
+	^regsSet
+]
+
 { #category : #'compile abstract instructions' }
 RegisterAllocatingCogit >> maybeCountFixup: descriptor [
 	"Count needed fixups; descriptor is known to be a branch or a block creation."
@@ -932,7 +946,7 @@ RegisterAllocatingCogit >> ssStorePop: popBoolean toPreferredReg: preferredReg [
 	"Store or pop the top simulated stack entry to a register.
 	 Use preferredReg if the entry is not itself a register.
 	 Answer the actual register the result ends up in."
-	| actualReg |
+	| actualReg liveRegisters |
 	actualReg := preferredReg.
 	self ssTop type = SSRegister ifTrue: 
 		[self assert: (self ssTop liveRegister = NoReg
@@ -941,6 +955,12 @@ RegisterAllocatingCogit >> ssStorePop: popBoolean toPreferredReg: preferredReg [
 		actualReg := self ssTop register].
 	self ssTop liveRegister ~= NoReg ifTrue:
 		[actualReg := self ssTop liveRegister].
+	liveRegisters := self liveRegistersExceptingTopNItems: 1.
+	(self register: actualReg isInMask: liveRegisters) ifTrue:
+		[actualReg := self allocateRegNotConflictingWith: (self registerMaskFor: preferredReg).
+		 actualReg = NoReg ifTrue:
+			[actualReg := preferredReg]].
+	self deny: (self register: actualReg isInMask: liveRegisters).
 	self ssStorePop: popBoolean toReg: actualReg. "generates nothing if ssTop is already in actualReg"
 	^actualReg
 ]
