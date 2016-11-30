@@ -812,9 +812,6 @@ RegisterAllocatingCogit >> reconcileRegisterStateForJoinAfterSpecialSelectorSend
 		 self assert: (i = simStackPtr
 						ifTrue: [(self simStackAt: i) type = SSRegister]
 						ifFalse: [(self simStackAt: i) spilled]).
-		 (self simStack: scratchSimStack at: i) spilled ifTrue:
-			[self assert: ((self simStack: scratchSimStack at: i) isSameEntryAs: (self simStackAt: i)).
-			 ^self].
 		 (self simStackAt: i) reconcilePoppingWith: (self simStack: scratchSimStack at: i).
 		 simStack
 			at: i

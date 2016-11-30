@@ -908,7 +908,7 @@ StackToRegisterMappingCogit >> allocateRegForStackEntryAt: index notConflictingW
 	stackEntry := self ssValue: index.
 	mask := stackEntry registerMaskOrNone.
 	(mask ~= 0 and: [mask noMask: regMask]) ifTrue: 
-		[^stackEntry register].
+		[^stackEntry registerOrNone].
 	^self allocateRegNotConflictingWith: regMask
 ]
 
