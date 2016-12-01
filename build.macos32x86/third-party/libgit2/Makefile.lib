@@ -23,23 +23,27 @@ $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME): $(LIBGIT2ARCHIVE)
 		&& cmake \
 			-DCMAKE_INSTALL_PREFIX=$(THIRDPARTYOUTDIR) \
 			-DUSE_SSH=ON \
+			-DCURL=ON \
 			-DBUILD_CLAR=OFF \
-			-DCURL=OFF \
+			-DOPENSSL_FOUND=ON \
 			-DLIBSSH2_FOUND=ON \
 			-DLIBSSH2_INCLUDE_DIRS=$(THIRDPARTYINCLUDEDIR) \
 			-DLIBSSH2_LIBRARIES=$(THIRDPARTYLIBDIR)/libssh2.1.dylib \
-			-DCMAKE_C_FLAGS="-m32 -L$(THIRDPARTYLIBDIR)" \
-			-DCMAKE_CXX_FLAGS="-m32 -L$(THIRDPARTYLIBDIR)" \
+			-DCMAKE_C_FLAGS="-m32 -L$(THIRDPARTYLIBDIR) -lssl -lcrypto" \
 			-DCMAKE_OSX_ARCHITECTURES=i386 \
 			-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-rpath,@executable_path:@executable_path/Plugins \
 		&& make \
 		&& make install
 
-$(LIBGIT2LIB): libssh2 $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME)
+$(LIBGIT2LIB): openssl libssh2 $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME)
 	cp -f $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME) $(THIRDPARTYINSTALLDIR)
 	install_name_tool -id "@executable_path/Plugins/$(LIBGIT2LIBNAME)" $(LIBGIT2LIB)
 	@echo "Fixing dependency links"
-	install_name_tool -change "$(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME)" "@executable_path/Plugins/$(LIBSSH2LIBNAME)" $(LIBGIT2LIB)
+	install_name_tool -change "$(THIRDPARTYLIBDIR)/" "@executable_path/Plugins/$(LIBSSH2LIBNAME)" $(LIBGIT2LIB)
+	# libssh2 has a dependency with openssl libraries (they come in OPENSSLALLLIBNAMES var)
+	@for each in $(OPENSSLALLLIBNAMES); do \
+		install_name_tool -change "$(THIRDPARTYLIBDIR)/$$each" "@executable_path/Plugins/$$each" $(LIBGIT2LIB); \
+	done
 	@echo "DONE"
 	
 libgit2: $(LIBGIT2LIB)
