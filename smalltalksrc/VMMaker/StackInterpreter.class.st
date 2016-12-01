@@ -19759,8 +19759,8 @@ StackInterpreter >> slowPrimitiveResponse [
 			[self flag: 'Would be nice to make this a message send of e.g. unbalancedPrimitive to the current process or context'.
 			 "This is necessary but insufficient; the result may still have been written to the stack.
 			   At least we'll know something is wrong."
-			 stackPointer := savedStackPointer.
-			 self failUnbalancedPrimitive]].
+			 self failUnbalancedPrimitive.
+			 stackPointer := savedStackPointer]].
 	"If we are profiling, take accurate primitive measures"
 	nextProfileTick > 0 ifTrue:
 		[self checkProfileTick: newMethod].
