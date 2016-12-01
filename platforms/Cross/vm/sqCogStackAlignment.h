@@ -9,8 +9,8 @@
  *			eem Wed Jul 14 2010 make 16 bytes the default alignment for all x86.
  */
  
-#if __i386__
-# if __SSE2__ || (__APPLE__ && __MACH__) || __linux__
+#if __i386__ || _M_IX86
+# if __SSE2__ || (__APPLE__ && __MACH__) || __linux__ || _M_IX86_FP==2
 /* 16-byte stack alignment on x86 is required for SSE instructions which
  * require 16-byte aligned addresses to access 64 or 128 bit values in memory.
  */
@@ -96,12 +96,10 @@
 #  error define code for your processor here
 # endif
 # if !defined(getfp)
-extern usqIntptr_t (*ceGetFP)(); /* provided by Cogit */
-# define getfp() ceGetFP()
+# define getfp() ceGetFP() /* provided by Cogit */
 # endif
 # if !defined(getsp)
-extern usqIntptr_t (*ceGetSP)(); /* provided by Cogit */
-# define getsp() ceGetSP()
+# define getsp() ceGetSP() /* provided by Cogit */
 # endif
 # define STACK_ALIGN_MASK (STACK_ALIGN_BYTES-1)
 #	define assertCStackWellAligned() do {									\
