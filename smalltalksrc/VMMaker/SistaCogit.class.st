@@ -98,6 +98,12 @@ SistaCogit class >> numTrampolines [
 	"self instVarNames select: [:ea| ea beginsWith: 'ce']"
 ]
 
+{ #category : #'in-line cacheing' }
+SistaCogit >> allowEarlyOpenPICPromotion [
+	<inline: true>
+	^ false
+]
+
 { #category : #'compile abstract instructions' }
 SistaCogit >> compileCogFullBlockMethod: numCopied [
 	<option: #SistaV1BytecodeSet>
