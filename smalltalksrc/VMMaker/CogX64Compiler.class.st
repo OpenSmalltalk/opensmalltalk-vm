@@ -104,6 +104,12 @@ CogX64Compiler class >> initialize [
 
 	self ~~ CogX64Compiler ifTrue: [^self].
 
+	initializationOptions ifNil: [ initializationOptions := Dictionary new ].
+	initializationOptions
+		at: #ABI
+		ifPresent: [:abi| SysV := abi asUppercase ~= #WIN64]
+		ifAbsent: [SysV := true]. "Default ABI; set to true for SysV, false for WIN64"
+
 	RAX := 0.
 	RCX := 1.  "Were they completely mad or simply sadistic?"
 	RDX := 2.
@@ -267,16 +273,6 @@ CogX64Compiler class >> initializeAbstractRegistersWin64 [
 	Extra3Reg				:= R13.
 	Extra4Reg				:= R14.
 	Extra5Reg				:= R15
-]
-
-{ #category : #'class initialization' }
-CogX64Compiler class >> initializeMiscConstants [
-	super initializeMiscConstants.
-	initializationOptions
-		at: #ABI
-		ifPresent: [:abi| SysV := abi asUppercase ~= #WIN64]
-		ifAbsent: [SysV := true]. "Default ABI; set to true for SysV, false for WIN64"
-
 ]
 
 { #category : #testing }
