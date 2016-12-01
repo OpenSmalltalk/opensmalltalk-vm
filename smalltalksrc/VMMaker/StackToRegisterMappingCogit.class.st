@@ -12345,6 +12345,12 @@ StackToRegisterMappingCogit >> printSimStack [
 ]
 
 { #category : #'simulation only' }
+StackToRegisterMappingCogit >> printSimStack: aSimStack [
+	<doNotGenerate>
+	self printSimStack: aSimStack toDepth: simStackPtr spillBase: simSpillBase on: coInterpreter transcript
+]
+
+{ #category : #'simulation only' }
 StackToRegisterMappingCogit >> printSimStack: aSimStack toDepth: limit spillBase: spillBase on: aStream [
 	<doNotGenerate>
 	aStream ensureCr.
