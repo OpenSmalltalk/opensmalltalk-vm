@@ -1,4 +1,6 @@
-include ../common/Makefile.lib.extra
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
 include ../../third-party/libgit2.spec
 
 # plugin definitions
