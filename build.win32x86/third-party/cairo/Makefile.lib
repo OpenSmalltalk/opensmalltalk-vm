@@ -1,14 +1,15 @@
-include ../common/Makefile.lib.extra
-
-$(info LIBRARY: cairo)
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
+include ../../third-party/cairo.spec
 
 # plugin definitions
-CAIROURL:=http://www.cairographics.org/releases/cairo-1.14.6.tar.xz
-CAIROLIBNAME:=libcairo-2.dll
-CAIRODIR:=$(THIRDPARTYDIR)/cairo-1.14.6
+CAIROURL:=$(cairo_spec_download_url)
+CAIROLIBNAME:=$(cairo_spec_product_name_windows)
+CAIRODIR:=$(THIRDPARTYDIR)/$(cairo_spec_unpack_dir_name)
+CAIROARCHIVE:=$(THIRDPARTYCACHEDIR)/$(cairo_spec_archive_name)
 CAIROLIB:=$(THIRDPARTYINSTALLDIR)/$(CAIROLIBNAME)
-CAIROARCHIVE:=$(THIRDPARTYCACHEDIR)/cairo-1.14.6.tar.xz
-
+	
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
 EXTRALIBS:=$(EXTRALIBS) $(CAIROLIB)

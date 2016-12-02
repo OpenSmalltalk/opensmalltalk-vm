@@ -5,5 +5,5 @@ openssl_spec_product1_name_macOS:=libssl.1.0.0.dylib
 openssl_spec_product2_name_macOS:=libcrypto.1.0.0.dylib
 openssl_spec_product1_name_linux:=
 openssl_spec_product2_name_linux:=
-openssl_spec_product1_name_windows:=
-openssl_spec_product2_name_windows:=
+openssl_spec_product1_name_windows:=ssleay32.dll
+openssl_spec_product2_name_windows:=libeay32.dll

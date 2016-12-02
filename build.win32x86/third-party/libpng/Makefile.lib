@@ -1,13 +1,14 @@
-include ../common/Makefile.lib.extra
-
-$(info LIBRARY: libpng)
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
+include ../../third-party/libpng.spec
 
 # plugin definitions
-LIBPNGURL:=ftp://ftp.simplesystems.org/pub/libpng/png/src/libpng16/libpng-1.6.26.tar.gz
-LIBPNGDIR:=$(THIRDPARTYDIR)/libpng-1.6.26
-LIBPNGLIBNAME:=libpng16-16.dll
+LIBPNGURL:=$(libpng_spec_download_url)
+LIBPNGLIBNAME:=$(libpng_spec_product_name_windows)
+LIBPNGDIR:=$(THIRDPARTYDIR)/$(libpng_spec_unpack_dir_name)
+LIBPNGARCHIVE:=$(THIRDPARTYCACHEDIR)/$(libpng_spec_archive_name)
 LIBPNGLIB:=$(THIRDPARTYINSTALLDIR)/$(LIBPNGLIBNAME)
-LIBPNGARCHIVE:=$(THIRDPARTYCACHEDIR)/libpng-1.6.26.tar.gz
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)

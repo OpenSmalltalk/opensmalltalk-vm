@@ -1,13 +1,14 @@
-include ../common/Makefile.lib.extra
-
-$(info LIBRARY: pkgconfig)
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
+include ../../third-party/pkgconfig.spec
 
 # plugin definitions
-PKGCONFIGURL:=http://pkgconfig.freedesktop.org/releases/pkg-config-0.29.1.tar.gz
-PKGCONFIGDIR:=$(THIRDPARTYDIR)/pkg-config-0.29.1
+PKGCONFIGURL:=$(pkgconfig_spec_download_url)
+PKGCONFIGDIR:=$(THIRDPARTYDIR)/$(pkgconfig_spec_unpack_dir_name)
+PKGCONFIGARCHIVE:=$(THIRDPARTYCACHEDIR)/$(pkgconfig_spec_archive_name)
 PKGCONFIGBIN:=$(THIRDPARTYOUTDIR)/bin/pkg-config.exe
 PKGCONFIGLIB:=$(THIRDPARTYOUTDIR)/lib/pkgconfig
-PKGCONFIGARCHIVE:=$(THIRDPARTYCACHEDIR)/pkg-config-0.29.1.tar.gz
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
