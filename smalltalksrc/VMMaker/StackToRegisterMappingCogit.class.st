@@ -935,7 +935,7 @@ StackToRegisterMappingCogit >> allocateRegForStackTopThreeEntriesInto: trinaryBl
 			ifTrue:
 				[ rThird := ReceiverResultReg.  "Free ReceiverResultReg if it was not free"
 				self ssAllocateRequiredReg: ReceiverResultReg.
-				optStatus isReceiverResultRegLive: false ]
+				self voidReceiverResultRegContainsSelf ]
 			ifFalse: [ rThird := self allocateRegNotConflictingWith: topRegistersMask ].
 		topRegistersMask := topRegistersMask bitOr: (self registerMaskFor: rThird) ].
 	
@@ -985,7 +985,7 @@ StackToRegisterMappingCogit >> allocateRegNotConflictingWith: regMask [
 	reg = NoReg ifTrue: "No free register, choose one that does not conflict with regMask"
 		[reg := self freeAnyRegNotConflictingWith: regMask].
 	reg = ReceiverResultReg ifTrue: "If we've allocated RcvrResultReg, it's not live anymore"
-		[optStatus isReceiverResultRegLive: false].
+		[self voidReceiverResultRegContainsSelf].
 	^ reg
 ]
 
@@ -1769,7 +1769,7 @@ StackToRegisterMappingCogit >> genExtPushFullClosureBytecode [
 	numCopied := byte2 bitAnd: 1<< 6 - 1.
 	receiverIsOnStack := byte2 anyMask: 1 << 7.
 	ignoreContext := byte2 anyMask: 1 << 6.
-	optStatus isReceiverResultRegLive: false.
+	self voidReceiverResultRegContainsSelf.
 	self ssAllocateCallReg: ReceiverResultReg
 		and: SendNumArgsReg
 		and: ClassReg.
@@ -2057,7 +2057,7 @@ StackToRegisterMappingCogit >> genIdenticalNoBranchArgIsConstant: argIsConstant 
 StackToRegisterMappingCogit >> genInlineClosure: startpc numArgs: numArgs numCopied: numCopied [
 	<inline: true>
 	self assert: objectRepresentation getActiveContextAllocatesInMachineCode.
-	 optStatus isReceiverResultRegLive: false.
+	 self voidReceiverResultRegContainsSelf.
 	 self ssAllocateCallReg: ReceiverResultReg
 		and: SendNumArgsReg
 		and: ClassReg.
@@ -2178,7 +2178,7 @@ StackToRegisterMappingCogit >> genLoadLiteralVariable: litVarIndex in: destReg [
 	<inline: true>
 	| association |
 	association := self getLiteral: litVarIndex.
-	destReg = ReceiverResultReg ifTrue: [ optStatus isReceiverResultRegLive: false ].
+	destReg = ReceiverResultReg ifTrue: [self voidReceiverResultRegContainsSelf].
 	self ssAllocateRequiredReg: destReg.
 	self genMoveConstant: association R: destReg.
 	objectRepresentation genEnsureObjInRegNotForwarded: destReg scratchReg: TempReg.
@@ -2186,7 +2186,7 @@ StackToRegisterMappingCogit >> genLoadLiteralVariable: litVarIndex in: destReg [
 
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genLoadTemp: objectIndex in: destReg [
-	destReg = ReceiverResultReg ifTrue: [ optStatus isReceiverResultRegLive: false ].
+	destReg = ReceiverResultReg ifTrue: [self voidReceiverResultRegContainsSelf].
 	self ssAllocateRequiredReg: destReg. 
 	self MoveMw: (self frameOffsetOfTemporary: objectIndex) r: FPReg R: destReg.
 ]
@@ -10696,7 +10696,7 @@ StackToRegisterMappingCogit >> genMarshalledSend: selectorIndex numArgs: numArgs
 		[self genMoveConstant: tempOop R: TempReg].
 	self genLoadInlineCacheWithSelector: selectorIndex.
 	(self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1))) annotation: annotation.
-	optStatus isReceiverResultRegLive: false.
+	self voidReceiverOptStatus.
 	^self ssPushRegister: ReceiverResultReg
 ]
 
@@ -10772,7 +10772,7 @@ StackToRegisterMappingCogit >> genNSSend: selectorIndex numArgs: numArgs depth: 
 	self MoveUniqueCw: nsSendCache R: SendNumArgsReg.
 	self CallNewspeakSend: (sendTable at: (numArgs min: NumSendTrampolines - 1)).
 
-	optStatus isReceiverResultRegLive: false.
+	self voidReceiverOptStatus.
 	self ssPushRegister: ReceiverResultReg.
 	^0
 ]
@@ -10782,7 +10782,7 @@ StackToRegisterMappingCogit >> genOutlineClosure: startpc numArgs: numArgs numCo
 	<inline: true>
 	numCopied > 0 ifTrue:
 		[self ssFlushTo: simStackPtr].
-	optStatus isReceiverResultRegLive: false.
+	self voidReceiverResultRegContainsSelf.
 	objectRepresentation getActiveContextAllocatesInMachineCode
 		ifTrue: [self ssAllocateCallReg: ReceiverResultReg
 					and: SendNumArgsReg
@@ -10892,7 +10892,7 @@ StackToRegisterMappingCogit >> genPrimitivePerform [
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genPushActiveContextBytecode [
 	self assert: needsFrame.
-	optStatus isReceiverResultRegLive: false.
+	self voidReceiverResultRegContainsSelf.
 	objectRepresentation getActiveContextAllocatesInMachineCode
 		ifTrue: [self ssAllocateCallReg: ReceiverResultReg
 					and: SendNumArgsReg
@@ -10931,7 +10931,7 @@ StackToRegisterMappingCogit >> genPushClosureCopyCopiedValuesBytecode [
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genPushEnclosingObjectAt: level [
 	"Uncached push enclosing object"
-	optStatus isReceiverResultRegLive: false.
+	self voidReceiverResultRegContainsSelf.
 	self ssAllocateCallReg: SendNumArgsReg and: ReceiverResultReg.
 	self MoveCq: level R: SendNumArgsReg.
 	self CallRT: ceEnclosingObjectTrampoline.
@@ -11003,7 +11003,7 @@ StackToRegisterMappingCogit >> genPushMaybeContextSlotIndex: slotIndex [
 	self assert: needsFrame.
 	(self isCallerSavedReg: ReceiverResultReg) ifTrue:
 		["We have no way of reloading ReceiverResultReg since we need the inst var value as the result."
-		optStatus isReceiverResultRegLive: false].
+		self voidReceiverResultRegContainsSelf].
 	"See CoInterpreter>>contextInstructionPointer:frame: for an explanation
 	 of the instruction pointer slot handling."
 	slotIndex = InstructionPointerIndex ifTrue:
@@ -11031,7 +11031,7 @@ StackToRegisterMappingCogit >> genPushMaybeContextSlotIndex: slotIndex [
 StackToRegisterMappingCogit >> genPushNewArrayBytecode [
 	| size popValues |
 	self assert: needsFrame.
-	optStatus isReceiverResultRegLive: false.
+	self voidReceiverResultRegContainsSelf.
 	(popValues := byte1 > 127)
 		ifTrue: [self ssFlushTo: simStackPtr]
 		ifFalse: [self ssAllocateCallReg: SendNumArgsReg and: ReceiverResultReg].
@@ -11056,7 +11056,7 @@ StackToRegisterMappingCogit >> genPushNewArrayBytecode [
 StackToRegisterMappingCogit >> genPushReceiverBytecode [
 	optStatus isReceiverResultRegLive ifTrue:
 		[^self ssPushRegister: ReceiverResultReg].
-	self assert: simSelf liveRegister = NoReg.
+	self assert: simSelf registerOrNone = NoReg.
 	^self ssPushDesc: simSelf
 ]
 
@@ -11565,7 +11565,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At:
 	"N.B.  No need to check the stack for references because we generate code for
 	 remote temp loads that stores the result in a register, deferring only the register push."
 	self ssAllocateRequiredReg: ReceiverResultReg. 
-	optStatus isReceiverResultRegLive: false.
+	self voidReceiverResultRegContainsSelf.
 	self MoveMw: (self frameOffsetOfTemporary: remoteTempIndex) r: FPReg R: ReceiverResultReg.
 	^self 
 		genGenericStorePop: popBoolean 
@@ -12422,21 +12422,20 @@ StackToRegisterMappingCogit >> restoreSimStackAtMergePoint: fixup [
 	spilled on stack and the optStatus is unknown. Throw away all simStack and 
 	optStatus optimization state."
 	simSpillBase := methodOrBlockNumTemps.
-	optStatus isReceiverResultRegLive: false.
+	self voidReceiverOptStatus.
 	methodOrBlockNumTemps to: simStackPtr do:
 		[:i|
-			(self simStackAt: i)
-				type: SSSpill;
-				offset: FoxMFReceiver - (i - methodOrBlockNumArgs + 1 * objectMemory bytesPerOop);
-				register: FPReg;
-				spilled: true].
-	LowcodeVM ifTrue: [
-		0 to: simNativeStackPtr do: [ :i |
+		 (self simStackAt: i)
+			type: SSSpill;
+			offset: FoxMFReceiver - (i - methodOrBlockNumArgs + 1 * objectMemory bytesPerOop);
+			register: FPReg;
+			spilled: true].
+	LowcodeVM ifTrue:
+		[0 to: simNativeStackPtr do:
+			[ :i |
 			(self simNativeStackAt: i)
-				ensureIsMarkedAsSpilled
-		].
-		simNativeSpillBase := simNativeStackPtr + 1
-	].
+				ensureIsMarkedAsSpilled].
+		simNativeSpillBase := simNativeStackPtr + 1].
 	^ 0
 ]
 
@@ -13451,4 +13450,27 @@ StackToRegisterMappingCogit >> v4PushNilSize: aMethodObj numInitialNils: numInit
 	 225		11100001	sbbbbbbb	Extend B (Ext B = Ext B prev * 256 + Ext B)"
 	<inline: true>
 	^3 * numInitialNils
+]
+
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> voidReceiverOptStatus [
+	"Used to mark ReceiverResultReg as dead or not containing simSelf.
+	 Used when the simStack has already been flushed, e.g. for sends."
+	<inline: true>
+	optStatus isReceiverResultRegLive: false
+]
+
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> voidReceiverResultRegContainsSelf [
+	"Used when ReceiverResultReg is allocated for other than simSelf, and
+	 there may be references to ReceiverResultReg which need to be spilled."
+	| spillIndex |
+	optStatus isReceiverResultRegLive: false.
+	spillIndex := -1.
+	(methodOrBlockNumTemps max: simSpillBase) to: simStackPtr do:
+		[:i|
+		(self simStackAt: i) registerOrNone = ReceiverResultReg ifTrue:
+			[spillIndex := i]].
+	spillIndex > 0 ifTrue:
+		[self ssFlushTo: simStackPtr - spillIndex]
 ]

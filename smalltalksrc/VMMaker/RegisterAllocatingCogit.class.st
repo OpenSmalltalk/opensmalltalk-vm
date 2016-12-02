@@ -84,6 +84,7 @@ RegisterAllocatingCogit >> captureUnspilledSpillsForSpecialSelectorSend: liveReg
 	 would be spilled along the non-inlined path, assign them to registers, or spill if none are available."
 	| i liveRegs reg |
 	liveRegs := liveRegisterMask.
+	self assert: (simSelf liveRegister = ReceiverResultReg) = optStatus isReceiverResultRegLive.
 	optStatus isReceiverResultRegLive ifTrue:
 		[liveRegs := liveRegs + (self registerMaskFor: ReceiverResultReg)].
 	reg := TempReg. "Anything but NoReg"
@@ -190,7 +191,7 @@ RegisterAllocatingCogit >> ensureNonMergeFixupAt: targetIndex [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> ensureReceiverResultRegContainsSelf [
 	super ensureReceiverResultRegContainsSelf.
-	0 to: simStackPtr do:
+	methodOrBlockNumTemps to: simStackPtr do:
 		[:i|
 		(simSelf isSameEntryAs: (self simStackAt: i))
 			ifTrue: [(self simStackAt: i) liveRegister: ReceiverResultReg]
@@ -203,11 +204,12 @@ RegisterAllocatingCogit >> ensureReceiverResultRegContainsSelf [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> existsInstVarRefBeforeSendOrReturn [
 	"Answer if the current bytecode is followed by an inst var ref before the next full send."
-	| pc nExts descriptor |
+	| pc nExts byte descriptor |
 	pc := bytecodePC.
 	nExts := 0.
 	[pc <= endPC] whileTrue:
-		[descriptor := self generatorAt: pc.
+		[byte := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
+		 descriptor := self generatorAt: byte.
 		 (descriptor isMapped
 		  or: [descriptor isBranchTrue
 		  or: [descriptor isBranchFalse
@@ -811,18 +813,27 @@ RegisterAllocatingCogit >> moveVolatileSimStackEntriesToRegisters [
 							self at: 1 put: (expr ifTrue: [a] ifFalse: [b])
 						 The first one needs 1 saving to a register to reconcile with 2.
 						 The second one has 1 on both paths, but we're not clever enough to spot this case yet.]
-	 Volatile contents are constants and base-offset references other than temporaries and spills (regsier ~= FPReg)"
+	 Volatile contents are anything not spilled to the stack, because as yet we can only merge registers."
 	<inline: true>
 	<var: #desc type: #'SimStackEntry *'>
 	(simSpillBase max: 0) to: simStackPtr do: 
 		[:i| | desc reg |
 		 desc := self simStackAt: i.
-		 ((desc type = SSConstant or: [desc type = SSBaseOffset and: [desc register ~= FPReg]])
-		  and: [desc liveRegister = NoReg]) ifTrue:
-			[reg := self allocateRegNotConflictingWith: 0.
-			 reg = NoReg
-				ifTrue: [self halt] "have to spill"
-				ifFalse: [desc storeToReg: reg]]]
+		 desc spilled
+			ifTrue: [simSpillBase := i]
+			ifFalse:
+				[desc registerOrNone = NoReg ifTrue:
+					[reg := self allocateRegNotConflictingWith: 0.
+					 reg = NoReg
+						ifTrue: [self halt] "have to spill"
+						ifFalse: [desc storeToReg: reg]]]]
+]
+
+{ #category : #accessing }
+RegisterAllocatingCogit >> needsFrame [
+	"for asserts"
+	<cmacro: '() needsFrame'>
+	^needsFrame
 ]
 
 { #category : #'bytecode generator support' }
@@ -865,9 +876,7 @@ RegisterAllocatingCogit >> reconcileRegisterStateForJoinAfterSpecialSelectorSend
 			ifTrue:
 				[optStatus isReceiverResultRegLive: true.
 				 optStatus ssEntry storeToReg: ReceiverResultReg]
-			ifFalse:
-				[optStatus isReceiverResultRegLive: false.
-				 optStatus ssEntry liveRegister: NoReg]].
+			ifFalse: [self voidReceiverOptStatus]].
 
 	"Restore the simStack to that in scratchSimStack,
 	 popping any spilled state back into allocated registers."
@@ -938,8 +947,9 @@ RegisterAllocatingCogit >> restoreSimStackAtMergePoint: fixup [
 	 on stack and the optStatus is unknown.  If the merge point follows a return, it
 	 isn't a merge, but a skip past a return.  If it is a real merge point then throw
 	 away all simStack and optStatus optimization state."
-	(optStatus isReceiverResultRegLive: fixup isReceiverResultRegSelf) ifFalse:
-		[simSelf liveRegister: NoReg].
+	simSelf liveRegister: ((optStatus isReceiverResultRegLive: fixup isReceiverResultRegSelf)
+							ifTrue: [ReceiverResultReg]
+							ifFalse: [NoReg]).
 	fixup mergeSimStack ifNotNil:
 		[simSpillBase := methodOrBlockNumTemps.
 		 0 to: simStackPtr do:
@@ -970,6 +980,17 @@ RegisterAllocatingCogit >> setMergeSimStackOf: fixup [
 		isReceiverResultRegSelf: optStatus isReceiverResultRegLive.
 	self cCode: [self mem: fixup mergeSimStack cp: simStack y: self simStackSlots * (self sizeof: CogSimStackEntry)]
 		inSmalltalk: [fixup mergeSimStack: self copySimStack]
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> simSelfOnStackInReceiverResultReg [
+	"For assert checking only."
+	methodOrBlockNumArgs to: simStackPtr do:
+		[:i|
+		 ((simSelf isSameEntryAs: (self simStackAt: i))
+		  and: [(self simStackAt: i) registerOrNone = ReceiverResultReg]) ifTrue:
+			[^true]].
+	^false
 ]
 
 { #category : #'simulation stack' }
@@ -1053,4 +1074,29 @@ RegisterAllocatingCogit >> ssStorePop: popBoolean toPreferredReg: preferredReg [
 	self deny: (self register: actualReg isInMask: liveRegisters).
 	self ssStorePop: popBoolean toReg: actualReg. "generates nothing if ssTop is already in actualReg"
 	^actualReg
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> voidReceiverOptStatus [
+	"Used to mark ReceiverResultReg as dead or not containing simSelf.
+	 Used when the simStack has already been flushed, e.g. for sends."
+	<inline: true>
+	super voidReceiverOptStatus.
+	simSelf liveRegister: NoReg
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> voidReceiverResultRegContainsSelf [
+	"Used when ReceiverResultReg is allocated for other than simSelf, and
+	 there may be references to ReceiverResultReg which need to be spilled."
+	self assert: (simSelf liveRegister = ReceiverResultReg) = optStatus isReceiverResultRegLive.
+	optStatus isReceiverResultRegLive ifFalse:
+		[self deny: self simSelfOnStackInReceiverResultReg.
+		 ^self].
+	optStatus isReceiverResultRegLive: false.
+	methodOrBlockNumTemps to: simStackPtr do:
+		[:i|
+		(simSelf isSameEntryAs: (self simStackAt: i)) ifTrue:
+			[(self simStackAt: i) liveRegister: NoReg]].
+	simSelf liveRegister: NoReg
 ]
