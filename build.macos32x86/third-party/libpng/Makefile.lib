@@ -1,13 +1,12 @@
 include ../common/Makefile.lib.extra
-
-$(info LIBRARY: pixman)
+include ../../third-party/libpng.spec
 
 # plugin definitions
-LIBPNGURL:=ftp://ftp.simplesystems.org/pub/libpng/png/src/history/libpng12/libpng-1.2.49.tar.gz
-LIBPNGDIR:=$(THIRDPARTYDIR)/libpng-1.2.49
-LIBPNGLIBNAME:=libpng12.0.dylib
+LIBPNGURL:=$(libpng_spec_download_url)
+LIBPNGLIBNAME:=$(libpng_spec_product_name_macOS)
+LIBPNGDIR:=$(THIRDPARTYDIR)/$(libpng_spec_unpack_dir_name)
+LIBPNGARCHIVE:=$(THIRDPARTYCACHEDIR)/$(libpng_spec_archive_name)
 LIBPNGLIB:=$(THIRDPARTYINSTALLDIR)/$(LIBPNGLIBNAME)
-LIBPNGARCHIVE:=$(THIRDPARTYCACHEDIR)/libpng-1.2.49.tar.gz
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)

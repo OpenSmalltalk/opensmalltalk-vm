@@ -1,13 +1,12 @@
 include ../common/Makefile.lib.extra
-
-$(info LIBRARY: pixman)
+include ../../third-party/pixman.spec
 
 # plugin definitions
-PIXMANURL:=http://www.cairographics.org/releases/pixman-0.34.0.tar.gz
-PIXMANLIBNAME:=libpixman-1.0.dylib
-PIXMANDIR:=$(THIRDPARTYDIR)/pixman-0.34.0
+PIXMANURL:=$(pixman_spec_download_url)
+PIXMANLIBNAME:=$(pixman_spec_product_name_macOS)
+PIXMANDIR:=$(THIRDPARTYDIR)/$(pixman_spec_unpack_dir_name)
+PIXMANARCHIVE:=$(THIRDPARTYCACHEDIR)/$(pixman_spec_archive_name)
 PIXMANLIB:=$(THIRDPARTYINSTALLDIR)/$(PIXMANLIBNAME)
-PIXMANARCHIVE:=$(THIRDPARTYCACHEDIR)/pixman-0.34.0.tar.gz
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)

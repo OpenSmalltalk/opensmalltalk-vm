@@ -1,13 +1,12 @@
 include ../common/Makefile.lib.extra
-
-$(info LIBRARY: libgit2)
+include ../../third-party/libgit2.spec
 
 # plugin definitions
-LIBGIT2URL:=https://github.com/libgit2/libgit2/archive/v0.23.0.tar.gz
-LIBGIT2DIR:=$(THIRDPARTYDIR)/libgit2-0.23.0
-LIBGIT2LIBNAME:=libgit2.0.23.0.dylib
+LIBGIT2URL:=$(libgit2_spec_download_url)
+LIBGIT2LIBNAME:=$(libgit2_spec_product_name_macOS)
+LIBGIT2DIR:=$(THIRDPARTYDIR)/$(libgit2_spec_unpack_dir_name)
+LIBGIT2ARCHIVE:=$(THIRDPARTYCACHEDIR)/$(libgit2_spec_archive_name)
 LIBGIT2LIB:=$(THIRDPARTYINSTALLDIR)/$(LIBGIT2LIBNAME)
-LIBGIT2ARCHIVE:=$(THIRDPARTYCACHEDIR)/libgit2-v0.23.0.tar.gz
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)

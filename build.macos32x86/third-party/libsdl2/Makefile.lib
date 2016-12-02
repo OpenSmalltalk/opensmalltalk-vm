@@ -1,14 +1,13 @@
 include ../common/Makefile.lib.extra
-
-$(info LIBRARY: libsdl2)
+include ../../third-party/libsdl2.spec
 
 # plugin definitions
-LIBSDL2URL:=http://www.libsdl.org/release/SDL2-2.0.4.tar.gz
-LIBSDL2DIR:=$(THIRDPARTYDIR)/SDL2-2.0.4
-LIBSDL2LIBNAME:=libSDL2-2.0.0.dylib
+LIBSDL2URL:=$(libsdl2_spec_download_url)
+LIBSDL2LIBNAME:=$(libsdl2_spec_product_name_macOS)
+LIBSDL2DIR:=$(THIRDPARTYDIR)/$(libsdl2_spec_unpack_dir_name)
+LIBSDL2ARCHIVE:=$(THIRDPARTYCACHEDIR)/$(libsdl2_spec_archive_name)
 LIBSDL2LIB:=$(THIRDPARTYINSTALLDIR)/$(LIBSDL2LIBNAME)
-LIBSDL2ARCHIVE:=$(THIRDPARTYCACHEDIR)/SDL2-2.0.4.tar.gz
-
+	
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
 EXTRALIBS:=$(EXTRALIBS) -undefined dynamic_lookup $(LIBSDL2LIB)
