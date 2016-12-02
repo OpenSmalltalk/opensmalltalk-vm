@@ -2749,15 +2749,6 @@ SimpleStackBasedCogit >> genPushEnclosingObjectAt: level [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genPushEnclosingObjectBytecode [
-	"Uncached push enclosing object"
-	| levelOop |
-	levelOop := self getLiteral: byte1.
-	self assert: (objectMemory isIntegerObject: levelOop).
-	^self genPushEnclosingObjectAt: (objectMemory integerValueOf: levelOop)
-]
-
-{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushLitVarDirSup16CasesBytecode [
 	"e.g. SistaV1: 16-31		0001 iiii			Push Literal Variable #iiii"
 	^self genPushLiteralVariableGivenDirectedSuper: (byte0 bitAnd: 15)
