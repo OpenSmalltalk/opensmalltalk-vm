@@ -80,8 +80,9 @@ CogRegisterAllocatingSimStackEntry >> popToReg: reg [
 	<var: #inst type: #'AbstractInstruction *'>
 	liveRegister ~= NoReg
 		ifTrue: 
-			[self deny: spilled.
-			 self deny: (type = SSRegister and: [register ~= liveRegister]).
+			[self deny: (type = SSRegister and: [register ~= liveRegister and: [cogit needsFrame]]).
+			 spilled ifTrue: "This is rare, and in some cases it isn't even needed (e.g. frameful return) but we can't tell as yet."
+				[cogit AddCq: objectRepresentation wordSize R: SPReg].
 			 reg ~= liveRegister
 				ifTrue: [cogit MoveR: liveRegister R: reg]
 				ifFalse: [cogit Label]]
