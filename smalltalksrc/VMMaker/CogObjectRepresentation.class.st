@@ -1748,3 +1748,9 @@ CogObjectRepresentation >> validInlineCacheTag: classIndexOrTagPattern [
 CogObjectRepresentation >> valueOfAssociation: association [
 	self subclassResponsibility
 ]
+
+{ #category : #accessing }
+CogObjectRepresentation >> wordSize [
+	<doNotGenerate>
+	^objectMemory wordSize
+]
