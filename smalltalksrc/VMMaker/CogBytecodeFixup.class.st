@@ -6,7 +6,8 @@ Class {
 	#superclass : #VMStructType,
 	#instVars : [
 		'targetInstruction',
-		'instructionIndex'
+		'instructionIndex',
+		'bcpc'
 	],
 	#classVars : [
 		'NeedsFixupFlag'
@@ -44,12 +45,13 @@ CogBytecodeFixup class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 
 	self allInstVarNames do:
 		[:ivn|
-		aBinaryBlock
-			value: ivn
-			value: (ivn = 'targetInstruction'
-					ifTrue: [#'AbstractInstruction *']
-					ifFalse:
-						[#sqInt])]
+		ivn ~= 'bcpc' ifTrue:
+			[aBinaryBlock
+				value: ivn
+				value: (ivn = 'targetInstruction'
+						ifTrue: [#'AbstractInstruction *']
+						ifFalse:
+							[#sqInt])]]
 ]
 
 { #category : #translation }
@@ -61,6 +63,18 @@ CogBytecodeFixup class >> structTypeName [
 CogBytecodeFixup >> asInteger [
 	<doNotGenerate>
 	^self
+]
+
+{ #category : #accessing }
+CogBytecodeFixup >> bcpc [
+
+	^ bcpc
+]
+
+{ #category : #accessing }
+CogBytecodeFixup >> bcpc: anObject [
+
+	^bcpc := anObject
 ]
 
 { #category : #converting }
@@ -111,7 +125,19 @@ CogBytecodeFixup >> notAFixup [
 CogBytecodeFixup >> printStateOn: aStream [
 	<doNotGenerate>
 	targetInstruction ifNotNil:
-		[aStream space; nextPut: $(; print: targetInstruction; nextPut: $)]
+		[aStream space; nextPut: $(; print: targetInstruction; nextPutAll: ' bc '; print: bcpc; nextPut: $)]
+]
+
+{ #category : #simulation }
+CogBytecodeFixup >> recordBcpc: bytecodePC [
+	<inline: true>
+	self cCode: '' inSmalltalk:
+		[bcpc
+			ifNil: [bcpc := bytecodePC]
+			ifNotNil:
+				[bcpc := bcpc isInteger
+							ifTrue: [{bcpc. bytecodePC}]
+							ifFalse: [bcpc, {bytecodePC}]]]
 ]
 
 { #category : #accessing }
