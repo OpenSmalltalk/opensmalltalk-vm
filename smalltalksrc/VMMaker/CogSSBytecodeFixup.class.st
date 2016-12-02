@@ -129,7 +129,9 @@ CogSSBytecodeFixup >> printStateOn: aStream [
 	targetInstruction ifNotNil:
 		[aStream space; print: targetInstruction].
 	simStackPtr ifNotNil:
-		[aStream space; print: simStackPtr].
+		[aStream nextPutAll: ' sp '; print: simStackPtr].
+	bcpc ifNotNil:
+		[aStream nextPutAll: ' bc '; print: bcpc].
 	aStream nextPut: $)
 ]
 

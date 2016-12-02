@@ -1465,20 +1465,21 @@ StackToRegisterMappingCogit >> ensureFixupAt: targetIndex [
 			 fixup simStackPtr: simStackPtr.
 			 LowcodeVM ifTrue: [
 				 fixup simNativeStackPtr: simNativeStackPtr.
-				 fixup simNativeStackSize: simNativeStackSize.]]
+				 fixup simNativeStackSize: simNativeStackSize]]
 		ifFalse:
 			[fixup isBackwardBranchFixup
-				ifTrue: ["this is the target of a backward branch and
+				ifTrue: "this is the target of a backward branch and
 						 so doesn't have a simStackPtr assigned yet."
-						fixup simStackPtr: simStackPtr.
-			 			LowcodeVM ifTrue: [
-				 			fixup simNativeStackPtr: simNativeStackPtr.
-				 			fixup simNativeStackSize: simNativeStackSize.]]
-				ifFalse: [
-					self assert: fixup simStackPtr = simStackPtr.
-					LowcodeVM ifTrue: [
-				 		self assert: fixup simNativeStackPtr = simNativeStackPtr.
-		 			 	self assert: fixup simNativeStackSize = simNativeStackSize.]]].
+						[fixup simStackPtr: simStackPtr.
+			 			 LowcodeVM ifTrue:
+				 			[fixup simNativeStackPtr: simNativeStackPtr.
+				 			 fixup simNativeStackSize: simNativeStackSize]]
+				ifFalse:
+					[self assert: fixup simStackPtr = simStackPtr.
+					 LowcodeVM ifTrue:
+				 		[self assert: fixup simNativeStackPtr = simNativeStackPtr.
+		 			 	 self assert: fixup simNativeStackSize = simNativeStackSize]]].
+	fixup recordBcpc: bytecodePC.
 	^fixup
 ]
 
@@ -11055,6 +11056,7 @@ StackToRegisterMappingCogit >> genPushNewArrayBytecode [
 StackToRegisterMappingCogit >> genPushReceiverBytecode [
 	optStatus isReceiverResultRegLive ifTrue:
 		[^self ssPushRegister: ReceiverResultReg].
+	self assert: simSelf liveRegister = NoReg.
 	^self ssPushDesc: simSelf
 ]
 
@@ -12339,6 +12341,14 @@ StackToRegisterMappingCogit >> printOptStatus [
 ]
 
 { #category : #'simulation only' }
+StackToRegisterMappingCogit >> printSimSelf [
+	<doNotGenerate>
+	coInterpreter transcript ensureCr; nextPutAll: 'self: '.
+	simSelf printStateOn: coInterpreter transcript.
+	coInterpreter transcript cr; flush
+]
+
+{ #category : #'simulation only' }
 StackToRegisterMappingCogit >> printSimStack [
 	<doNotGenerate>
 	self printSimStack: simStack toDepth: simStackPtr spillBase: simSpillBase on: coInterpreter transcript
@@ -13290,7 +13300,7 @@ StackToRegisterMappingCogit >> traceMerge: fixup [
 StackToRegisterMappingCogit >> traceSimStack [
 	<cmacro: '() 0'>
 	(compilationTrace anyMask: 4) ifTrue:
-		[self printOptStatus; printSimStack]
+		[self printOptStatus; printSimSelf; printSimStack]
 ]
 
 { #category : #'simulation only' }

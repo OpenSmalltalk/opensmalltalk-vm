@@ -5727,6 +5727,7 @@ Cogit >> ensureFixupAt: targetIndex [
 	fixup := self fixupAt: targetIndex.
 	fixup notAFixup ifTrue:
 		[fixup becomeFixup].
+	fixup recordBcpc: bytecodePC.
 	^fixup
 ]
 

@@ -172,10 +172,9 @@ RegisterAllocatingCogit >> ensureFixupAt: targetIndex [
 				ifNotNil: [self mergeCurrentSimStackWith: fixup mergeSimStack]]
 		ifFalse: 
 			[self assert: fixup mergeSimStack isNil.
-			self moveSimStackConstantsToRegisters.
-			self setMergeSimStackOf: fixup ].
-	^super ensureFixupAt: targetIndex.
-
+			self moveVolatileSimStackEntriesToRegisters.
+			self setMergeSimStackOf: fixup].
+	^super ensureFixupAt: targetIndex
 ]
 
 { #category : #'compile abstract instructions' }
@@ -184,7 +183,7 @@ RegisterAllocatingCogit >> ensureNonMergeFixupAt: targetIndex [
 	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction."
 	| fixup |
 	fixup := super ensureNonMergeFixupAt: targetIndex.
-	self setMergeSimStackOf: fixup.
+	fixup mergeSimStack ifNil: [self setMergeSimStackOf: fixup].
 	^fixup
 ]
 
@@ -804,17 +803,26 @@ RegisterAllocatingCogit >> mergeWithFixupIfRequired: fixup [
 ]
 
 { #category : #'bytecode generator support' }
-RegisterAllocatingCogit >> moveSimStackConstantsToRegisters [
+RegisterAllocatingCogit >> moveVolatileSimStackEntriesToRegisters [
+	"When jumping forward to a merge point the stack mst be reconcilable with the state that falls through to the merge point.
+	 We cannot easily arrange that later we add code to the branch, e.g. to spill values.  Instead, any volatile contents must be
+	 moved to registers.  [In fact, that's not exactly true, consider these two code sequences:
+							self at: (expr ifTrue: [1] ifFalse: [2]) put: a
+							self at: 1 put: (expr ifTrue: [a] ifFalse: [b])
+						 The first one needs 1 saving to a register to reconcile with 2.
+						 The second one has 1 on both paths, but we're not clever enough to spot this case yet.]
+	 Volatile contents are constants and base-offset references other than temporaries and spills (regsier ~= FPReg)"
 	<inline: true>
 	<var: #desc type: #'SimStackEntry *'>
-	self flag: 'I think this should be done at the merge point if required.  e.g. self at: 1 put: (expr ifTrue: [a] ifFalse: [b]) does not need to assign'. 
 	(simSpillBase max: 0) to: simStackPtr do: 
 		[:i| | desc reg |
 		 desc := self simStackAt: i.
-		 (desc type = SSConstant and: [desc liveRegister = NoReg]) ifTrue:
+		 ((desc type = SSConstant or: [desc type = SSBaseOffset and: [desc register ~= FPReg]])
+		  and: [desc liveRegister = NoReg]) ifTrue:
 			[reg := self allocateRegNotConflictingWith: 0.
-			 reg ~= NoReg ifTrue:
-				[desc storeToReg: reg]]]
+			 reg = NoReg
+				ifTrue: [self halt] "have to spill"
+				ifFalse: [desc storeToReg: reg]]]
 ]
 
 { #category : #'bytecode generator support' }
@@ -857,7 +865,9 @@ RegisterAllocatingCogit >> reconcileRegisterStateForJoinAfterSpecialSelectorSend
 			ifTrue:
 				[optStatus isReceiverResultRegLive: true.
 				 optStatus ssEntry storeToReg: ReceiverResultReg]
-			ifFalse: [optStatus isReceiverResultRegLive: false]].
+			ifFalse:
+				[optStatus isReceiverResultRegLive: false.
+				 optStatus ssEntry liveRegister: NoReg]].
 
 	"Restore the simStack to that in scratchSimStack,
 	 popping any spilled state back into allocated registers."
@@ -928,7 +938,8 @@ RegisterAllocatingCogit >> restoreSimStackAtMergePoint: fixup [
 	 on stack and the optStatus is unknown.  If the merge point follows a return, it
 	 isn't a merge, but a skip past a return.  If it is a real merge point then throw
 	 away all simStack and optStatus optimization state."
-	optStatus isReceiverResultRegLive: fixup isReceiverResultRegSelf.
+	(optStatus isReceiverResultRegLive: fixup isReceiverResultRegSelf) ifFalse:
+		[simSelf liveRegister: NoReg].
 	fixup mergeSimStack ifNotNil:
 		[simSpillBase := methodOrBlockNumTemps.
 		 0 to: simStackPtr do:
@@ -941,7 +952,7 @@ RegisterAllocatingCogit >> restoreSimStackAtMergePoint: fixup [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> setMergeSimStackOf: fixup [
 	<var: #fixup type: #'BytecodeFixup *'>
-	self moveSimStackConstantsToRegisters.
+	self moveVolatileSimStackEntriesToRegisters.
 	fixup mergeSimStack
 		ifNil:
 			[self assert: nextFixup <= numFixups.
