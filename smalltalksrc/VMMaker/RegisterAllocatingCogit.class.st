@@ -170,7 +170,7 @@ RegisterAllocatingCogit >> ensureFixupAt: targetIndex [
 		ifTrue:
 			[fixup mergeSimStack
 				ifNil: [self setMergeSimStackOf: fixup]
-				ifNotNil: [self mergeCurrentSimStackWith: fixup mergeSimStack]]
+				ifNotNil: [self mergeCurrentSimStackWith: fixup]]
 		ifFalse: 
 			[self assert: fixup mergeSimStack isNil.
 			self moveVolatileSimStackEntriesToRegisters.
@@ -724,17 +724,18 @@ RegisterAllocatingCogit >> maybeInitNumFixups [
 ]
 
 { #category : #'bytecode generator support' }
-RegisterAllocatingCogit >> mergeCurrentSimStackWith: mergeSimStack [
+RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup [
+	<var: #fixup type: #'BytecodeFixup *'>
+	| mergeSimStack currentEntry targetEntry |
 	<var: #mergeSimStack type: #'SimStackEntry *'>
 	"At a merge point the cogit expects the stack to be in the same state as mergeSimStack.
 	 mergeSimStack is the state as of some jump forward to this point.  So make simStack agree
 	 with mergeSimStack (it is, um, problematic to plant code at the jump).
 	 Values may have to be assigned to registers.  Registers may have to be swapped.
 	 The state of optStatus must agree."
-	| currentEntry targetEntry |
 	<var: #currentEntry type: #'SimStackEntry *'>
 	<var: #targetEntry type: #'SimStackEntry *'>
-	mergeSimStack ifNil: [^self].
+	(mergeSimStack := fixup mergeSimStack) ifNil: [^self].
 	"Assignments amongst the registers must be made in order to avoid overwriting.
 	 If necessary exchange registers amongst simStack's entries to resolve any conflicts."
 	self resolveRegisterOrderConflictsBetweenCurrentSimStackAnd: mergeSimStack.
@@ -751,7 +752,11 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: mergeSimStack [
 			at: i
 			put: (self
 					cCode: [mergeSimStack at: i]
-					inSmalltalk: [(mergeSimStack at: i) copy])"]
+					inSmalltalk: [(mergeSimStack at: i) copy])"].
+
+	"a.k.a. fixup isReceiverResultRegSelf: (fixup isReceiverResultRegSelf and: [optStatus isReceiverResultRegLive])"
+	optStatus isReceiverResultRegLive ifFalse:
+		[fixup isReceiverResultRegSelf: false]
 ]
 
 { #category : #'simulation stack' }
@@ -789,7 +794,7 @@ RegisterAllocatingCogit >> mergeWithFixupIfRequired: fixup [
 	self traceMerge: fixup.
 	deadCode 
 		ifTrue: [simStackPtr := fixup simStackPtr] "case 3"
-		ifFalse: [self mergeCurrentSimStackWith: fixup mergeSimStack]. "case 4"
+		ifFalse: [self mergeCurrentSimStackWith: fixup]. "case 4"
 	"cases 3 and 4"
 	deadCode := false.
 	fixup isBackwardBranchFixup ifTrue:
