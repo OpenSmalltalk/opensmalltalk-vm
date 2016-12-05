@@ -58,7 +58,6 @@ unzip -q -o smalltalkCI.zip
 
 pushd smalltalkCI-* > /dev/null
 
-export SMALLTALK_CI_VM="${VM}"
-"./run.sh" -s "${SMALLTALK_VERSION}" "${STON_CONFIG}"
+"./run.sh" -s "${SMALLTALK_VERSION}" --vm "${VM}" "${STON_CONFIG}"
 
 popd > /dev/null
