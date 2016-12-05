@@ -51,7 +51,10 @@ RegisterAllocatingCogit >> allocateRegForStackEntryAt: index [
 	"If the stack entry is already in a register, answers it,
 	else allocate a new register for it"
 	<inline: true>
-	^self allocateRegForStackEntryAt: index notConflictingWith: (self registerMaskFor: FPReg and: SPReg and: TempReg)
+	| reg |
+	(reg := (self ssValue: index) registerOrNone) ~= NoReg ifTrue:
+		[^reg].
+	^self allocateRegForStackEntryAt: index notConflictingWith: (self liveRegisters bitOr: (self registerMaskFor: FPReg and: SPReg and: TempReg))
 ]
 
 { #category : #'bytecode generator support' }
@@ -73,32 +76,6 @@ RegisterAllocatingCogit >> assignToTempRegConflictingRegisterIn: conflictingRegi
 RegisterAllocatingCogit >> bytecodeFixupClass [
 	<doNotGenerate>
 	^CogRASSBytecodeFixup
-]
-
-{ #category : #'bytecode generator support' }
-RegisterAllocatingCogit >> captureUnspilledSpillsForSpecialSelectorSend: liveRegisterMask [
-	"Since we're allocating values in registers we would like to keep those registers live on the inlined path
-	 and reload registers along the non-inlined send path.  But any values that would need to be spilled
-	 along the non-inlined path must be captured before the split so that both paths can join.  If we don't
-	 capture the values on the non-inlined path we could access stale values.  So for all stack entries that
-	 would be spilled along the non-inlined path, assign them to registers, or spill if none are available."
-	| i liveRegs reg |
-	liveRegs := liveRegisterMask.
-	self assert: (simSelf liveRegister = ReceiverResultReg) = optStatus isReceiverResultRegLive.
-	optStatus isReceiverResultRegLive ifTrue:
-		[liveRegs := liveRegs + (self registerMaskFor: ReceiverResultReg)].
-	reg := TempReg. "Anything but NoReg"
-	i := simStackPtr + 1. "We must spill a contiguous range at the hot top of stack, so we assign coldest first :-("
-	[reg ~= NoReg and: [i > simSpillBase and: [i > 0]]] whileTrue:
-		[i := i - 1.
-		 ((self simStackAt: i) spilled not
-		  and: [(self simStackAt: i) type = SSBaseOffset]) ifTrue:
-			[reg := self allocateRegNotConflictingWith: liveRegs.
-			 reg ~= NoReg ifTrue:
-				[(self simStackAt: i) storeToReg: reg.
-				 liveRegs := liveRegs bitOr: (self registerMaskFor: reg)]]].
-	reg = NoReg ifTrue:
-		[self ssFlushTo: i]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -159,6 +136,28 @@ RegisterAllocatingCogit >> copySimStackToScratch: spillBase [
 						scratchSimStack at: i put: (simStack at: i) copy]].
 	scratchSpillBase := spillBase.
 	scratchOptStatus := self cCode: [optStatus] inSmalltalk: [optStatus copy]
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> deassignRegisterForTempVar: targetEntry in: mergeSimStack [
+	"If merging a non-temp with a temp that has a live register we can assign
+	 to the register, but must unassign the register from the temp, otherwise
+	 the temp will acquire the merged value without an assignment.  The targetEntry
+	 must also be transmogrified into an SSRegister entry."
+	<var: #targetEntry type: #'SimStackEntry *'>
+	<var: #mergeSimStack type: #'SimStackEntry *'>
+	<inline: true>
+	| reg |
+	reg := targetEntry liveRegister.
+	self assert: (targetEntry type = SSBaseOffset and: [targetEntry register = FPReg]).
+	simStackPtr to: 0 by: -1 do:
+		[:j| | duplicateEntry |
+		 duplicateEntry := self simStack: mergeSimStack at: j.
+		 (targetEntry isSameEntryAs: duplicateEntry) ifTrue:
+			[duplicateEntry liveRegister: NoReg]].
+	targetEntry
+		type: SSRegister;
+		register: reg
 ]
 
 { #category : #'bytecode generator support' }
@@ -410,8 +409,9 @@ RegisterAllocatingCogit >> genMarshalledSend: selectorIndex numArgs: numArgs sen
 
 { #category : #'bytecode generators' }
 RegisterAllocatingCogit >> genSpecialSelectorArithmetic [
-	| primDescriptor rcvrIsConst argIsConst rcvrIsInt argIsInt rcvrInt argInt result
-	 jumpNotSmallInts jumpContinue index rcvrReg argReg regMask |
+	| primDescriptor rcvrIsConst argIsConst rcvrIsInt argIsInt rcvrInt argInt destReg
+	 jumpNotSmallInts jumpContinue jumpOverflow index rcvrReg argReg regMask |
+	<var: #jumpOverflow type: #'AbstractInstruction *'>
 	<var: #jumpContinue type: #'AbstractInstruction *'>
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
@@ -422,13 +422,14 @@ RegisterAllocatingCogit >> genSpecialSelectorArithmetic [
 				 and: [objectMemory isIntegerObject: (rcvrInt := (self ssValue: 1) constant)].
 
 	(argIsInt and: [rcvrIsInt]) ifTrue:
-		[rcvrInt := objectMemory integerValueOf: rcvrInt.
+		[| result |
+		 rcvrInt := objectMemory integerValueOf: rcvrInt.
 		 argInt := objectMemory integerValueOf: argInt.
 		 primDescriptor opcode caseOf: {
 			[AddRR]	-> [result := rcvrInt + argInt].
 			[SubRR]	-> [result := rcvrInt - argInt].
 			[AndRR]	-> [result := rcvrInt bitAnd: argInt].
-			[OrRR]	-> [result := rcvrInt bitOr: argInt] }.
+			[OrRR]		-> [result := rcvrInt bitOr: argInt] }.
 		(objectMemory isIntegerValue: result) ifTrue:
 			["Must annotate the bytecode for correct pc mapping."
 			^self ssPop: 2; ssPushAnnotatedConstant: (objectMemory integerObjectOf: result)].
@@ -445,12 +446,10 @@ RegisterAllocatingCogit >> genSpecialSelectorArithmetic [
 		[^self genSpecialSelectorSend].
 
 	"Since one or other of the arguments is an integer we can very likely profit from inlining.
-	 But if the other type is not SmallInteger or if the operation overflows then we will need to do a send.
-	 Since we're allocating values in registers we would like to keep those registers live on the inlined path
-	 and reload registers along the non-inlined send path.  But any values that would need to be spilled
-	 along the non-inlined path must be captured before the split so that both paths can join.  If we don't
-	 capture the values on the non-iblined path we could access stale values.  So for all stack entries that
-	 would be spilled along the non-inlined path, assign them to registers, or spill if none are available."
+	 But if the other type is not SmallInteger or if the operation overflows then we will need
+	 to do a send.  Since we're allocating values in registers we would like to keep those
+	 registers live on the inlined path and reload registers along the non-inlined send path.
+	 See reconcileRegisterStateForJoinAfterSpecialSelectorSend below."
 	argIsInt
 		ifTrue:
 			[rcvrReg := self allocateRegForStackEntryAt: 1.
@@ -463,51 +462,77 @@ RegisterAllocatingCogit >> genSpecialSelectorArithmetic [
 			 (self ssValue: 1) popToReg: rcvrReg.
 			 self MoveR: argReg R: TempReg.
 			 regMask := self registerMaskFor: rcvrReg and: argReg].
+
+	"rcvrReg can be reused for the result iff the receiver is a constant or is an SSRegister that is not used elsewhere."
+	destReg := (rcvrIsInt
+				 or: [(self ssValue: 1) type = SSRegister
+					 and: [(self anyReferencesToRegister: rcvrReg inAllButTopNItems: 2) not]])
+					ifTrue: [rcvrReg]
+					ifFalse: [self allocateRegNotConflictingWith: regMask].
 	self ssPop: 2.
-	self captureUnspilledSpillsForSpecialSelectorSend: regMask.
 	jumpNotSmallInts := (argIsInt or: [rcvrIsInt])
 							ifTrue: [objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg]
 							ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: rcvrReg andScratch: TempReg scratch: ClassReg].
+	rcvrReg ~= destReg ifTrue:
+		[self MoveR: rcvrReg R: destReg].
 	primDescriptor opcode caseOf: {
 		[AddRR] -> [argIsInt
 						ifTrue:
-							[self AddCq: argInt - ConstZero R: rcvrReg.
+							[self AddCq: argInt - ConstZero R: destReg.
 							 jumpContinue := self JumpNoOverflow: 0.
-							 "overflow; must undo the damage before continuing"
-							 self SubCq: argInt - ConstZero R: rcvrReg]
+							 "overflow; must undo the damage before doing send"
+							 rcvrReg = destReg ifTrue:
+								[self SubCq: argInt - ConstZero R: rcvrReg]]
 						ifFalse:
-							[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: rcvrReg.
-							 self AddR: argReg R: rcvrReg.
-							jumpContinue := self JumpNoOverflow: 0.
-							"overflow; must undo the damage before continuing"
-							 rcvrIsInt
-								ifTrue: [self MoveCq: rcvrInt R: rcvrReg]
-								ifFalse:
-									[self SubR: argReg R: rcvrReg.
-									 objectRepresentation genSetSmallIntegerTagsIn: rcvrReg]]].
+							[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: destReg.
+							 self AddR: argReg R: destReg.
+							 jumpContinue := self JumpNoOverflow: 0.
+							"overflow; must undo the damage before doing send"
+							 destReg = rcvrReg ifTrue:
+								[rcvrIsInt
+									ifTrue: [self MoveCq: rcvrInt R: rcvrReg]
+									ifFalse:
+										[self SubR: argReg R: rcvrReg.
+										 objectRepresentation genSetSmallIntegerTagsIn: rcvrReg]]]].
 		[SubRR] -> [argIsInt
 						ifTrue:
-							[self SubCq: argInt - ConstZero R: rcvrReg.
+							[self SubCq: argInt - ConstZero R: destReg.
 							 jumpContinue := self JumpNoOverflow: 0.
-							 "overflow; must undo the damage before continuing"
-							 self AddCq: argInt - ConstZero R: rcvrReg]
+							 "overflow; must undo the damage before doing send"
+							 rcvrReg = destReg ifTrue:
+								[self AddCq: argInt - ConstZero R: rcvrReg]]
 						ifFalse:
-							[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: argReg.
-							 self SubR: argReg R: rcvrReg.
-							 jumpContinue := self JumpNoOverflow: 0.
-							 "overflow; must undo the damage before continuing"
-							 self AddR: argReg R: rcvrReg.
-							 objectRepresentation genSetSmallIntegerTagsIn: argReg]].
+							[(self anyReferencesToRegister: argReg inAllButTopNItems: 0)
+								ifTrue: "argReg is live; cannot strip tags and continue on no overflow without restoring tags"
+									[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: argReg.
+									 self SubR: argReg R: destReg.
+									 jumpOverflow := self JumpOverflow: 0.
+									 "no overflow; must undo the damage before continuing"
+									 objectRepresentation genSetSmallIntegerTagsIn: argReg.
+									 jumpContinue := self Jump: 0.
+									 jumpOverflow jmpTarget: self Label.
+									 "overflow; must undo the damage before doing send"
+									 (rcvrIsInt or: [destReg ~= rcvrReg]) ifFalse:
+										[self AddR: argReg R: destReg].
+									 objectRepresentation genSetSmallIntegerTagsIn: argReg]
+								ifFalse:
+									[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: argReg.
+									 self SubR: argReg R: destReg.
+									 jumpContinue := self JumpNoOverflow: 0.
+									 "overflow; must undo the damage before doing send"
+									 (rcvrIsInt or: [destReg ~= rcvrReg]) ifFalse:
+										[self AddR: argReg R: rcvrReg].
+									 objectRepresentation genSetSmallIntegerTagsIn: argReg]]].
 		[AndRR] -> [argIsInt
-						ifTrue: [self AndCq: argInt R: rcvrReg]
-						ifFalse: [self AndR: argReg R: rcvrReg].
+						ifTrue: [self AndCq: argInt R: destReg]
+						ifFalse: [self AndR: argReg R: destReg].
 					jumpContinue := self Jump: 0].
 		[OrRR]	-> [argIsInt
-						ifTrue: [self OrCq: argInt R: rcvrReg]
-						ifFalse: [self OrR: argReg R: rcvrReg].
+						ifTrue: [self OrCq: argInt R: destReg]
+						ifFalse: [self OrR: argReg R: destReg].
 					jumpContinue := self Jump: 0] }.
 	jumpNotSmallInts jmpTarget: self Label.
-	self ssPushRegister: rcvrReg.
+	self ssPushRegister: destReg.
 	self copySimStackToScratch: (simSpillBase min: simStackPtr - 1).
 	self ssPop: 1.
 	self ssFlushTo: simStackPtr.
@@ -567,12 +592,10 @@ RegisterAllocatingCogit >> genSpecialSelectorComparison [
 	inlineCAB ifFalse:
 		[^self genSpecialSelectorSend].
 
-	"In-line, but if the types are not SmallInteger then we will need to do a send.
-	 Since we're allocating values in registers we would like to keep those registers live on the inlined path
-	 and reload registers along the non-inlined send path.  But any values that would need to be spilled
-	 along the non-inlined path must be captured before the split so that both paths can join.  If we don't
-	 capture the values on the non-iblined path we could access stale values.  So for all stack entries that
-	 would be spilled along the non-inlined path, assign them to registers, or spill if none are available."
+	"In-line the comparison and the jump, but if the types are not SmallInteger then we will need
+	 to do a send and fall through to the following conditional branch.  Since we're allocating values
+	 in registers we would like to keep those registers live on the inlined path and reload registers
+	 along the non-inlined send path.  The merge logic at the branch destinations handles this."
 	argIsInt
 		ifTrue:
 			[rcvrReg := self allocateRegForStackEntryAt: 1.
@@ -588,7 +611,6 @@ RegisterAllocatingCogit >> genSpecialSelectorComparison [
 			 self MoveR: argReg R: TempReg.
 			 regMask := self registerMaskFor: rcvrReg and: argReg].
 	self ssPop: 2.
-	self captureUnspilledSpillsForSpecialSelectorSend: regMask.
 	jumpNotSmallInts := (argIsInt or: [rcvrIsInt])
 							ifTrue: [objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg]
 							ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: rcvrReg andScratch: TempReg scratch: ClassReg].
@@ -733,8 +755,9 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup [
 	 with mergeSimStack (it is, um, problematic to plant code at the jump).
 	 Values may have to be assigned to registers.  Registers may have to be swapped.
 	 The state of optStatus must agree."
-	<var: #currentEntry type: #'SimStackEntry *'>
 	<var: #targetEntry type: #'SimStackEntry *'>
+	<var: #currentEntry type: #'SimStackEntry *'>
+	<var: #duplicateEntry type: #'SimStackEntry *'>
 	(mergeSimStack := fixup mergeSimStack) ifNil: [^self].
 	"Assignments amongst the registers must be made in order to avoid overwriting.
 	 If necessary exchange registers amongst simStack's entries to resolve any conflicts."
@@ -744,7 +767,9 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup [
 		[:i|
 		 currentEntry := self simStack: simStack at: i.
 		 targetEntry := self simStack: mergeSimStack at: i.
-		 currentEntry reconcileForwardsWith: targetEntry.
+		 (currentEntry reconcileForwardsWith: targetEntry) ifTrue:
+			[self assert: i >= methodOrBlockNumArgs.
+			 self deassignRegisterForTempVar: targetEntry in: mergeSimStack].
 		 "Note, we could update the simStack and spillBase here but that is done in restoreSimStackAtMergePoint:
 		 spilled ifFalse:
 			[simSpillBase := i - 1].
