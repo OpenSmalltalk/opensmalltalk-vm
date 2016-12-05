@@ -10526,7 +10526,7 @@ Cogit >> recordProcessing [
 	"Set RRRName ito the selector that accesses ReceiverResultReg (RRR) to alter instruction printing to add the value of RRR as a suffix
 		(RRRName := #rdx)
 		(RRRName := #edx)
-		(RRRName := #nil)"
+		(RRRName := nil)"
 	printRegisters ifTrue:
 		[RRRName ifNil: [processor printRegistersOn: coInterpreter transcript].
 		 printInstructions ifFalse:
