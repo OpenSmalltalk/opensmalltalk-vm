@@ -6201,7 +6201,11 @@ CoInterpreter >> printCogMethod: cogMethod [
 		[self print: ': Open PIC '].
 	self print: ' selector: '; printHex: cogMethod selector.
 	cogMethod selector = objectMemory nilObject
-		ifTrue: [self print: ' (nil)']
+		ifTrue: [| s |
+			(cogMethod cmType = CMMethod
+			 and: [(s := self maybeSelectorOfMethod: cogMethod methodObject) notNil])
+				ifTrue: [self print: ' (nil: '; printStringOf: s; print: ')']
+				ifFalse: [self print: ' (nil)']]
 		ifFalse: [self space; printStringOf: cogMethod selector].
 	self cr
 ]
