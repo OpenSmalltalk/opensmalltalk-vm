@@ -1,0 +1,7 @@
+# I need to use a different version of pkgconfig for windows because version 0.29.1 does not work
+# with macOS and 0.23 does not work with Windows. 
+# Since this is a support library and it will not go to the final product, we do not care which 
+# version we use...
+pkgconfig_spec_download_url:=http://pkgconfig.freedesktop.org/releases/pkg-config-0.29.1.tar.gz
+pkgconfig_spec_archive_name:=pkg-config-0.29.1.tar.gz
+pkgconfig_spec_unpack_dir_name:=pkg-config-0.29.1
