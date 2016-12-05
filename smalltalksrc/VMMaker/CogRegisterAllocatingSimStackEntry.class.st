@@ -163,25 +163,31 @@ CogRegisterAllocatingSimStackEntry >> reconcileForwardsWith: targetEntry [
 	 the same as the corresponding simStackEntry at the target of a preceding
 	 jump to the beginning of the next basic block.  Make sure targetEntry
 	 reflects the state of the merged simStack; it will be installed as the current
-	 entry by restoreSimStackAtMergePoint: in mergeWithFixupIfRequired:."
+	 entry by restoreSimStackAtMergePoint: in mergeWithFixupIfRequired:.
+
+	 Answer if the liveRegister for the targetEntry (if any) should be deassigned;
+	 this is because if merging a non-temp with a temp that has a live register we
+	 can assign to the register, but must unassign the register from the temp,
+	 otherwise the temp will acquire the merged value without an assignment."
 	<var: #targetEntry type: #'targetEntry *'>
 	| targetReg |
 	(targetReg := targetEntry registerOrNone) = NoReg ifTrue:
 		[self assert: (self isSameEntryAs: targetEntry).
-		 ^self].
+		 ^false].
 	liveRegister ~= NoReg ifTrue:
 		[liveRegister ~= targetReg ifTrue:
 			[cogit MoveR: liveRegister R: targetReg].
 		 (spilled and: [targetEntry spilled not]) ifTrue:
 			[cogit AddCq: objectRepresentation wordSize R: SPReg].
-		 ^self].
+		 ^false].
 	spilled
 		ifTrue:
 			[targetEntry spilled ifFalse:
 				[cogit PopR: targetReg. "KISS; generate the least number of instructions..."
-				 ^self]]
+				 ^false]]
 		ifFalse:
-			[self deny: targetEntry spilled].
+			[targetEntry spilled ifTrue:
+				[cogit SubCq: objectRepresentation wordSize R: SPReg]].
 	type caseOf: {
 		[SSBaseOffset]	-> [cogit MoveMw: offset r: register R: targetReg].
 		[SSSpill]		-> [cogit MoveMw: offset r: register R: targetReg].
@@ -192,7 +198,13 @@ CogRegisterAllocatingSimStackEntry >> reconcileForwardsWith: targetEntry [
 	 and: [type ~= SSConstant or: [constant ~= targetEntry constant]]) ifTrue:
 		[targetEntry
 			register: targetReg;
-			type: SSRegister]
+			type: SSRegister].
+	"If merging a non-temp with a temp that has a live register we can assign
+	 to the register, but must unassign the register from the temp, otherwise
+	 the temp will acquire the merged value without an assignment."
+	^targetEntry type = SSBaseOffset
+	  and: [targetEntry register = FPReg
+	  and: [(self isSameEntryAs: targetEntry) not]]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -212,14 +224,10 @@ CogRegisterAllocatingSimStackEntry >> reconcilePoppingWith: targetEntry [
 				[SSRegister]	-> [targetReg ~= register ifTrue:
 										[cogit MoveR: register R: targetReg]] }.
 		 ^self].
-	targetEntry type = SSConstant ifTrue:
-		[self assert: (targetEntry registerOrNone) = NoReg.
-		 cogit AddCq: objectRepresentation wordSize R: SPReg.
-		 ^self].
-	(targetReg := targetEntry registerOrNone) ~= NoReg ifTrue:
-		[cogit PopR: targetReg.
-		 ^self].
-	self halt
+	(targetEntry type ~= SSConstant
+	 and: [(targetReg := targetEntry registerOrNone) ~= NoReg])
+		ifTrue: [cogit PopR: targetReg]
+		ifFalse: [cogit AddCq: objectRepresentation wordSize R: SPReg]
 ]
 
 { #category : #accessing }
