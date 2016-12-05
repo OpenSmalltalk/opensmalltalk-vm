@@ -97,7 +97,6 @@ SED_COMMAND_INFO_PLIST:=\
 	s!$$(VM_MINOR)!$(shell ./getversion VM_MINOR)!g;\
 	#
 
-
 $(APP):	cleanbundles $(THIRDPARTYPREREQS) $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS) \
 		$(VMPLIST) $(VMLOCALIZATION) $(VMMENUNIB) $(VMICONS) \
  		$(SOURCES) $(THIRDPARTYLIBS) $(APPPOST) signapp touchapp
@@ -108,7 +107,7 @@ $(APP):	cleanbundles $(THIRDPARTYPREREQS) $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS
 # which the bundle build depends.
 cleanbundles:
 	-rm -rf $(APP)/Contents/Resources/*.bundle
-	-touch $(OBJDIR)/*.ignore	
+	-touch $(OBJDIR)/*.ignore
 
 $(VMEXE): $(OBJDIR)/$(VM)
 	@mkdir -p $(APP)/Contents/MacOS

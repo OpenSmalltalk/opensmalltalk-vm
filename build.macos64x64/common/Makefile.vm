@@ -256,7 +256,7 @@ $(OBJDIR)/%.bundle:	FORCE
 		
 # External plugin. Made in the "Pharo way": as a simple dylib to be included in 
 # Plugins directory
-$(OBJDIR)/%.dylib:	FORCE
+$(OBJDIR)/%.dylib: FORCE
 	@-mkdir -p $(BLDDIR)/$(*F)
 	test $@ -ot $(call plugin-makefile,$(*F)) && rm -rf $(BUILD)/vm/$(*F).* || true
 	rm -f $(BUILD)/vm/$(*F).ignore

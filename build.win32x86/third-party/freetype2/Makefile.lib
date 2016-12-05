@@ -1,13 +1,14 @@
-include ../common/Makefile.lib.extra
-
-$(info LIBRARY: freetype2)
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
+include ../../third-party/freetype2.spec
 
 # plugin definitions
-FREETYPE2URL:=http://ftp.igh.cnrs.fr/pub/nongnu/freetype/freetype-2.6.5.tar.gz
-FREETYPE2DIR:=$(THIRDPARTYDIR)/freetype-2.6.5
-FREETYPE2LIBNAME:=libfreetype-6.dll
+FREETYPE2URL:=$(freetype2_spec_download_url)
+FREETYPE2LIBNAME:=$(freetype2_spec_product_name_windows)
+FREETYPE2DIR:=$(THIRDPARTYDIR)/$(freetype2_spec_unpack_dir_name)
+FREETYPE2ARCHIVE:=$(THIRDPARTYCACHEDIR)/$(freetype2_spec_archive_name)
 FREETYPE2LIB:=$(THIRDPARTYINSTALLDIR)/$(FREETYPE2LIBNAME)
-FREETYPE2ARCHIVE:=$(THIRDPARTYCACHEDIR)/freetype-2.6.5.tar.gz
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR) $(THIRDPARTYINCLUDEDIR)/freetype2
