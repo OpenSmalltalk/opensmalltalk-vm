@@ -34,7 +34,7 @@
 
 #if defined(_WIN32)
 #include "sqPlatformSpecific-Win32.h"
-#elif defined(__linux__) || defined(__unix__)
+#elif defined(__linux__) || defined(__unix__) || defined(__APPLE__)
 #include "sqPlatformSpecific-Unix.h"
 #else
 #include "sqPlatformSpecific-Generic.h"

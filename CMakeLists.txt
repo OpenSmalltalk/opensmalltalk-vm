@@ -19,7 +19,7 @@ else()
     if(UNIX)
         set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
     endif()
-    
+
 	# Export symbols from applications.
 	#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--export-dynamic")
 endif()
@@ -79,7 +79,7 @@ if(WIN32)
 elseif(UNIX)
     set(OS_TYPE "unix")
     if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-        set(VM_TARGET_OS "darwing")
+        set(VM_TARGET_OS "darwin")
         set(DARWIN True)
     elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
         set(VM_TARGET_OS "linux-gnu")
@@ -393,6 +393,9 @@ if(UNIX)
 	)
 
 	set(VM_DEPENDENCIES_LIBRARIES pthread ${VM_DEPENDENCIES_LIBRARIES})
+	if(APPLE)
+		add_definitions(-DBUILD_FOR_OSX=1)
+	endif()
 elseif(WIN32)
 	set(VM_PLATFORM_SOURCES
         minheadless/include/sqWin32Alloc.h
