@@ -15,10 +15,10 @@ extern char *squeakPlugins;
 
 static const char *moduleNamePatterns[] = {
     "%s%s",
-#ifdef _WIN32
+#if defined(_WIN32)
     "%s%s.dll",
     "%slib%s.dll",
-#elif __APPLE__
+#elif defined(__APPLE__)
     "%s%s",
     "%s%s.dylib",
     "%slib%s.dylib",
@@ -156,7 +156,7 @@ static void *getModuleSymbol(void *module, const char *symbol)
     return (void*)GetProcAddress((HMODULE)module, symbol);
 }
 
-#elif defined(__linux__) || defined(__unix__)
+#elif defined(__linux__) || defined(__unix__) || defined(__APPLE__)
 
 #include <dlfcn.h>
 

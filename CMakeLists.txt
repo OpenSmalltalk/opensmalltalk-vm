@@ -1,6 +1,14 @@
-# SLVM native runtime cmake build script.
+# OpenSmalltalkVM cmake build script.
 cmake_minimum_required(VERSION 3.1)
 project(OpenSmalltalkVM)
+
+# Set output dir.
+# OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT can be used before including this
+# project using add_subdirectory()
+if(NOT OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT)
+	set(EXECUTABLE_OUTPUT_PATH "${OpenSmalltalkVM_BINARY_DIR}/dist")
+	set(LIBRARY_OUTPUT_PATH "${OpenSmalltalkVM_BINARY_DIR}/dist")
+endif()
 
 # Check the build type
 if (CMAKE_BUILD_TYPE STREQUAL "")
@@ -79,7 +87,8 @@ if(WIN32)
 elseif(UNIX)
     set(OS_TYPE "unix")
     if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-        set(VM_TARGET_OS "darwin")
+	    set(OS_TYPE "Mac OS")
+        set(VM_TARGET_OS "1000") # Used to recognise OS X
         set(DARWIN True)
     elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
         set(VM_TARGET_OS "linux-gnu")
@@ -163,8 +172,8 @@ include(CheckTypeSize)
 include(CheckCSourceCompiles)
 
 if(NOT WIN32)
-include (TestBigEndian)
-test_big_endian(WORDS_BIGENDIAN)
+	include (TestBigEndian)
+	test_big_endian(WORDS_BIGENDIAN)
 else()
     set(WORDS_BIGENDIAN False)
 endif()
@@ -273,17 +282,11 @@ if(HAVE_ICONV)
     set(VM_DEPENDENCIES_LIBRARIES iconv ${VM_DEPENDENCIES_LIBRARIES})
 endif()
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/minheadless/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-
-# Set output dir.
-set(EXECUTABLE_OUTPUT_PATH "${OpenSmalltalkVM_BINARY_DIR}/dist")
-set(LIBRARY_OUTPUT_PATH "${OpenSmalltalkVM_BINARY_DIR}/dist")
-
 # Add the current directory.
 include_directories(
-.
-"${PROJECT_SOURCE_DIR}/platforms/Cross/vm"
-"${SourceFolderName}/vm"
+	.
+	"${PROJECT_SOURCE_DIR}/platforms/Cross/vm"
+	"${SourceFolderName}/vm"
 )
 
 # VM Flavor sources
@@ -296,6 +299,16 @@ else()
 	set(VM_FAVLOR_SOURCES
 		${SourceFolderName}/vm/interp.c
 	)
+endif()
+
+# Find required Apple frameworks
+if(APPLE)
+	find_library(CoreFoundation_LIBRARY CoreFoundation)
+	find_library(CoreServices_LIBRARY CoreServices)
+	set(VM_DEPENDENCIES_LIBRARIES
+		${CoreServices_LIBRARY}
+		${CoreFoundation_LIBRARY}
+		${VM_DEPENDENCIES_LIBRARIES})
 endif()
 
 # Find SDL2
@@ -385,12 +398,22 @@ if(UNIX)
 		minheadless/source/aioUnix.c
 		minheadless/source/sqPlatformSpecific-Unix.c
 		minheadless/source/sqUnixCharConv.c
-		minheadless/source/sqUnixSpurMemory.c
-		minheadless/source/sqUnixMemory.c
 		minheadless/source/sqUnixThreads.c
 		minheadless/source/sqUnixHeartbeat.c
 		${VM_PLATFORM_SOURCES}
 	)
+
+	if(SPUR_OBJECT_MODEL)
+		set(VM_PLATFORM_SOURCES
+			minheadless/source/sqUnixSpurMemory.c
+			${VM_PLATFORM_SOURCES}
+		)
+	else()
+		set(VM_PLATFORM_SOURCES
+			minheadless/source/sqUnixMemory.c
+			${VM_PLATFORM_SOURCES}
+		)
+	endif()
 
 	set(VM_DEPENDENCIES_LIBRARIES pthread ${VM_DEPENDENCIES_LIBRARIES})
 	if(APPLE)
@@ -458,6 +481,9 @@ source_group("VM Flavor Sources" FILES ${VM_FAVLOR_SOURCES})
 source_group("VM Platform Sources" FILES ${VM_PLATFORM_SOURCES})
 source_group("VM Window System" FILES ${VM_WINDOW_SYSTEM})
 include("Plugins.cmake")
+
+# Generate the config dot h.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/minheadless/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 # Build the VM core library
 set(VM_CORE_LIBRARY_TYPE STATIC)

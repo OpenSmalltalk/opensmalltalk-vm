@@ -159,7 +159,7 @@
 
 /* damage containment */
 
-#cmakedefine DARWIN
+#cmakedefine DARWIN 1
 
 #ifdef _WIN32
 #   ifndef WIN32

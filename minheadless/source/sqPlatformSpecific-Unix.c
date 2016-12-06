@@ -19,6 +19,10 @@
 #include "config.h"
 #include "debug.h"
 
+#ifdef __APPLE__
+#include "mac-alias.c"
+#endif
+
 #if !defined(min)
 # define min(x,y) (((x)>(y))?(y):(x))
 #endif
