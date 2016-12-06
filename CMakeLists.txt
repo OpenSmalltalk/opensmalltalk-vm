@@ -19,7 +19,7 @@ else()
     if(UNIX)
         set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
     endif()
-    
+
 	# Export symbols from applications.
 	#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--export-dynamic")
 endif()
@@ -393,6 +393,10 @@ if(UNIX)
 	)
 
 	set(VM_DEPENDENCIES_LIBRARIES pthread ${VM_DEPENDENCIES_LIBRARIES})
+
+	if(NOT APPLE)
+		add_definitions(-D_GNU_SOURCE)
+	endif()
 elseif(WIN32)
 	set(VM_PLATFORM_SOURCES
         minheadless/include/sqWin32Alloc.h
