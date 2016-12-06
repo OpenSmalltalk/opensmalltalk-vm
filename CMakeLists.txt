@@ -395,6 +395,8 @@ if(UNIX)
 	set(VM_DEPENDENCIES_LIBRARIES pthread ${VM_DEPENDENCIES_LIBRARIES})
 	if(APPLE)
 		add_definitions(-DBUILD_FOR_OSX=1)
+	else()
+		add_definitions(-D_GNU_SOURCE)
 	endif()
 elseif(WIN32)
 	set(VM_PLATFORM_SOURCES

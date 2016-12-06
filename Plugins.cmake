@@ -95,11 +95,6 @@ endif()
 
 # OSProcess
 if(UNIX)
-    add_definitions(
-        -D_XOPEN_SOURCE=700
-        -D_XOPEN_SOURCE_EXTENDED=1
-        -D_DEFAULT_SOURCE=1
-    )
     add_vm_plugin_auto(UnixOSProcessPlugin INTERNAL)
 endif()
 
