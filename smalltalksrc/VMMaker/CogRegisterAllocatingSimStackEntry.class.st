@@ -172,7 +172,16 @@ CogRegisterAllocatingSimStackEntry >> reconcileForwardsWith: targetEntry [
 	<var: #targetEntry type: #'targetEntry *'>
 	| targetReg |
 	(targetReg := targetEntry registerOrNone) = NoReg ifTrue:
-		[self assert: (self isSameEntryAs: targetEntry).
+		[| reg |
+		 self assert: targetEntry spilled.
+		 (self isSameEntryAs: targetEntry) ifTrue:
+			[self assert: spilled.
+			 ^false].
+		 (reg := self registerOrNone) = NoReg ifTrue: [reg := TempReg].
+		 self storeToReg: reg.
+		 spilled
+			ifTrue: [cogit MoveR: reg Mw: targetEntry offset r: targetEntry register]
+			ifFalse: [cogit PushR: reg].
 		 ^false].
 	liveRegister ~= NoReg ifTrue:
 		[liveRegister ~= targetReg ifTrue:

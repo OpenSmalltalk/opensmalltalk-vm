@@ -1914,7 +1914,7 @@ StackToRegisterMappingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 		 	 self ensureFixupAt: targetBytecodePC - initialPC.
 			 self ensureFixupAt: postBranchPC - initialPC]
 		ifFalse:
-			[self ssPushConstant: objectMemory trueObject]. "dummy value"
+			[self deny: deadCode]. "push dummy value below"
 
 	self assert: (unforwardArg or: [unforwardRcvr]).
 	"We could use (branchDescriptor isBranchTrue xor: orNot) to simplify this."
@@ -1933,6 +1933,9 @@ StackToRegisterMappingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 					ifTrue:
 						[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
 						self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ]].
+
+	deadCode ifFalse:
+		[self ssPushConstant: objectMemory trueObject]. "dummy value"
 		
 	"The forwarders checks need to jump back to the comparison (label) if a forwarder is found, else 
 	jump forward either to the next forwarder check or to the postBranch or branch target (fixup)."
@@ -2158,12 +2161,12 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 		^ 0].
 	extA := 0.
 	
-.	self CmpCq: (boolean == objectMemory falseObject
+.	self CmpCq: (boolean = objectMemory falseObject
 					ifTrue: [objectMemory trueObject - objectMemory falseObject]
 					ifFalse: [objectMemory falseObject - objectMemory trueObject])
 		R: TempReg.
 	ok := self JumpZero: 0.
-	self CallRT: (boolean == objectMemory falseObject
+	self CallRT: (boolean = objectMemory falseObject
 					ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
 					ifFalse: [ceSendMustBeBooleanAddTrueTrampoline]).
 	ok jmpTarget: (self annotateBytecode: self Label).
@@ -11694,7 +11697,7 @@ StackToRegisterMappingCogit >> genVanillaInlinedIdenticalOrNotIf: orNot [
 		 	 self ensureFixupAt: targetBytecodePC - initialPC.
 			 self ensureFixupAt: postBranchPC - initialPC]
 		ifFalse:
-			[self ssPushConstant: objectMemory trueObject]. "dummy value"
+			[self deny: deadCode]. "push dummy value below"
 		
 	"We could simplify this with a xor:"
 	self genConditionalBranch: (orNot 
@@ -11704,7 +11707,9 @@ StackToRegisterMappingCogit >> genVanillaInlinedIdenticalOrNotIf: orNot [
 
 	"If the branch is dead, then we can just fall through postBranchPC (only a nop in-between), else 
 	we need to jump over the code of the branch"
-	deadCode ifFalse: [self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC)].
+	deadCode ifFalse:
+		[self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
+		 self ssPushConstant: objectMemory trueObject]. "dummy value"
 	^0
 ]
 
@@ -12389,7 +12394,7 @@ StackToRegisterMappingCogit >> printSimStack: aSimStack toDepth: limit spillBase
 				[width := width + tabWidth]]].
 	0 to: limit do:
 		[:i|
-		tempNamesOrNil ifNotNil:
+		width ifNotNil:
 			[self put: (tempNamesOrNil at: i + 1 ifAbsent: ['']) paddedTo: width tabWidth: tabWidth on: aStream].
 		aStream print: i.
 		i = spillBase
