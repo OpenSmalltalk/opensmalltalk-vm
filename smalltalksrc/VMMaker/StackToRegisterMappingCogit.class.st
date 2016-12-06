@@ -12375,11 +12375,22 @@ StackToRegisterMappingCogit >> printSimStack: aSimStack [
 { #category : #'simulation only' }
 StackToRegisterMappingCogit >> printSimStack: aSimStack toDepth: limit spillBase: spillBase on: aStream [
 	<doNotGenerate>
+	| tempNamesOrNil width tabWidth |
 	aStream ensureCr.
 	limit < 0 ifTrue:
 		[^aStream nextPutAll: 'simStackEmpty'; cr; flush].
+	inBlock ~~ true ifTrue:
+		[(tempNamesOrNil := self class initializationOptions at: #tempNames ifAbsent: [#()]) isEmpty ifFalse:
+			[| tab longest |
+			 longest := tempNamesOrNil inject: '' into: [:m :t| m size >= t size ifTrue: [m] ifFalse: [t]].
+			 tabWidth := self widthInDefaultFontOf: (tab := String with: Character tab).
+			 width := self widthInDefaultFontOf: longest, tab.
+			 width <= ((self widthInDefaultFontOf: longest, (String with: Character space)) + 4) ifTrue:
+				[width := width + tabWidth]]].
 	0 to: limit do:
 		[:i|
+		tempNamesOrNil ifNotNil:
+			[self put: (tempNamesOrNil at: i + 1 ifAbsent: ['']) paddedTo: width tabWidth: tabWidth on: aStream].
 		aStream print: i.
 		i = spillBase
 			ifTrue: [aStream nextPutAll: ' sb'; tab]
@@ -12392,6 +12403,20 @@ StackToRegisterMappingCogit >> printSimStack: aSimStack toDepth: limit spillBase
 StackToRegisterMappingCogit >> pushNilSize: aMethodObj numInitialNils: numInitialNils [
 	<inline: true>
 	^self perform: pushNilSizeFunction with: aMethodObj with: numInitialNils
+]
+
+{ #category : #'simulation only' }
+StackToRegisterMappingCogit >> put: aString paddedTo: compositionWidth tabWidth: tabWidth on: aStream [
+	<doNotGenerate>
+	| fittedString size width |
+	fittedString := aString.
+	size := fittedString size.
+	[(width := self widthInDefaultFontOf: fittedString) > compositionWidth] whileTrue:
+		[size := size - 2.
+		 fittedString := aString contractTo: size].
+	aStream
+		nextPutAll: fittedString;
+		tab: compositionWidth - width + (width \\ tabWidth) // tabWidth
 ]
 
 { #category : #'bytecode generator support' }
@@ -13485,4 +13510,16 @@ StackToRegisterMappingCogit >> voidReceiverResultRegContainsSelf [
 			[spillIndex := i]].
 	spillIndex > 0 ifTrue:
 		[self ssFlushTo: simStackPtr - spillIndex]
+]
+
+{ #category : #'simulation only' }
+StackToRegisterMappingCogit >> widthInDefaultFontOf: aString [
+	<doNotGenerate>
+	^(NewParagraph new
+		compose: aString asText
+		style: TextStyle default
+		from: 1
+		in: Display boundingBox;
+		adjustRightX)
+		extent x
 ]
