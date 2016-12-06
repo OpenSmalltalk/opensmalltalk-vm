@@ -161,6 +161,19 @@ RegisterAllocatingCogit >> deassignRegisterForTempVar: targetEntry in: mergeSimS
 ]
 
 { #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> directionForMergeWith: mergeSimStack [
+	"Answer > 0 if values must be pushed from simStack to merge with mergeSimStack, otherwise < 0 (the default)."
+	<var: #mergeSimStack type: #'SimStackEntry *'>
+	<inline: true>
+	simStackPtr to: methodOrBlockNumArgs by: -1 do:
+		[:i|
+		 (self simStack: mergeSimStack at: i) spilled ifTrue:
+			[(self simStack: simStack at: i) spilled ifFalse:
+				[^1]]].
+	^-1
+]
+
+{ #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> ensureFixupAt: targetIndex [
 	| fixup |	
 	<var: #fixup type: #'BytecodeFixup *'>
@@ -325,7 +338,7 @@ RegisterAllocatingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 		 	 self ensureFixupAt: targetBytecodePC - initialPC.
 			 self ensureFixupAt: postBranchPC - initialPC]
 		ifFalse:
-			[self ssPushConstant: objectMemory trueObject]. "dummy value"
+			[self deny: deadCode]. "push dummy value below"
 
 	self assert: (unforwardArg or: [unforwardRcvr]).
 	"We could use (branchDescriptor isBranchTrue xor: orNot) to simplify this."
@@ -344,7 +357,9 @@ RegisterAllocatingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 					ifTrue:
 						[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
 						self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ]].
-		
+
+	deadCode ifFalse:
+		[self ssPushConstant: objectMemory trueObject]. "dummy value"
 	"The forwarders checks need to jump back to the comparison (label) if a forwarder is found, else 
 	jump forward either to the next forwarder check or to the postBranch or branch target (fixup)."
 	unforwardArg ifTrue: 
@@ -394,6 +409,66 @@ RegisterAllocatingCogit >> genJumpBackTo: targetBytecodePC [
 ]
 
 { #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
+	<inline: false>
+	| desc reg fixup ok |
+	<var: #desc type: #'CogSimStackEntry *'>
+	<var: #fixup type: #'BytecodeFixup *'>
+	<var: #ok type: #'AbstractInstruction *'>
+	desc := self ssTop.
+	self ssPop: 1.
+	(desc type == SSConstant
+	 and: [desc constant = objectMemory trueObject or: [desc constant = objectMemory falseObject]]) ifTrue:
+		["Must arrange there's a fixup at the target whether it is jumped to or
+		  not so that the simStackPtr can be kept correct."
+		 fixup := self ensureFixupAt: targetBytecodePC - initialPC.
+		 "Must annotate the bytecode for correct pc mapping."
+		 self annotateBytecode: (desc constant = boolean
+									ifTrue: [self Jump: fixup]
+									ifFalse: [self prevInstIsPCAnnotated
+												ifTrue: [self Nop]
+												ifFalse: [self Label]]).
+		 extA := 0.
+		 ^0].
+	"try and use the top entry's register if anty, but only if it can be destroyed."
+	reg := (desc type ~= SSRegister
+			or: [(self anyReferencesToRegister: desc register inAllButTopNItems: 0)
+			or: [(desc register = ReceiverResultReg and: [optStatus isReceiverResultRegLive])]])
+				ifTrue: [TempReg]
+				ifFalse: [desc register].
+	desc popToReg: reg.
+	"Cunning trick by LPD.  If true and false are contiguous subtract the smaller.
+	 Correct result is either 0 or the distance between them.  If result is not 0 or
+	 their distance send mustBeBoolean."
+	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
+	self genSubConstant: boolean R: reg.
+	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
+	
+	self extASpecifiesNoMustBeBoolean ifTrue: 
+		[extA := 0. 
+		 self annotateBytecode: self lastOpcode.
+		 ^0].
+	extA := 0.
+	
+.	self CmpCq: (boolean = objectMemory falseObject
+					ifTrue: [objectMemory trueObject - objectMemory falseObject]
+					ifFalse: [objectMemory falseObject - objectMemory trueObject])
+		R: reg.
+	ok := self JumpZero: 0.
+	reg ~= TempReg ifTrue:
+		[self MoveR: reg R: TempReg].
+	self copySimStackToScratch: simSpillBase.
+	self ssFlushTo: simStackPtr.
+	self CallRT: (boolean = objectMemory falseObject
+					ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
+					ifFalse: [ceSendMustBeBooleanAddTrueTrampoline]).
+	"NOTREACHED"
+	ok jmpTarget: (self annotateBytecode: self Label).
+	self restoreSimStackFromScratch.
+	^0
+]
+
+{ #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> genJumpTo: targetBytecodePC [
 	"Overriden to avoid the flush because in this cogit stack state is merged at merge point."
 	deadCode := true. "can't fall through"
@@ -405,6 +480,29 @@ RegisterAllocatingCogit >> genJumpTo: targetBytecodePC [
 RegisterAllocatingCogit >> genMarshalledSend: selectorIndex numArgs: numArgs sendTable: sendTable [
 	self flushLiveRegistersForSend.
 	^super genMarshalledSend: selectorIndex numArgs: numArgs sendTable: sendTable
+]
+
+{ #category : #initialization }
+RegisterAllocatingCogit >> genMustBeBooleanTrampolineFor: boolean called: trampolineName [
+	<var: #trampolineName type: #'char *'>
+	"For RegisterAllocatingCogit we want the address following a conditional branch not to be reachable, so we
+	 don't have to generate code to reload registers.  Instead simply convert to an interpreter frame."
+	<inline: false>
+	self zeroOpcodeIndex.
+	"If the objectRepresentation does want true & false to be mobile then we need to record these addresses."
+	self assert: (objectRepresentation shouldAnnotateObjectReference: boolean) not.
+	self AddCq: boolean R: TempReg.
+	^self genTrampolineFor: #ceSendMustBeBooleanInterpreting:
+		called: trampolineName
+		numArgs: 1
+		arg: TempReg
+		arg: nil
+		arg: nil
+		arg: nil
+		regsToSave: self emptyRegisterMask
+		pushLinkReg: true
+		resultReg: NoReg
+		appendOpcodes: true
 ]
 
 { #category : #'bytecode generators' }
@@ -660,6 +758,61 @@ RegisterAllocatingCogit >> genStorePop: popBoolean TemporaryVariable: tempIndex 
 	^0
 ]
 
+{ #category : #'bytecode generators' }
+RegisterAllocatingCogit >> genVanillaInlinedIdenticalOrNotIf: orNot [
+	| nextPC postBranchPC targetBytecodePC branchDescriptor
+	  rcvrReg argReg argIsConstant rcvrIsConstant  |
+	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
+	
+	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
+		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
+	
+	argIsConstant := self ssTop type = SSConstant.
+	"They can't be both constants to use correct machine opcodes.
+	 However annotable constants can't be resolved statically, hence we need to careful."
+	rcvrIsConstant := argIsConstant not and: [(self ssValue: 1) type = SSConstant].
+	
+	self 
+		allocateEqualsEqualsRegistersArgNeedsReg: argIsConstant not 
+		rcvrNeedsReg: rcvrIsConstant not 
+		into: [ :rcvr :arg | rcvrReg:= rcvr. argReg := arg ].
+	
+	"If not followed by a branch, resolve to true or false."
+	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse:
+		[^ self 
+			genIdenticalNoBranchArgIsConstant: argIsConstant 
+			rcvrIsConstant: rcvrIsConstant 
+			argReg: argReg 
+			rcvrReg: rcvrReg 
+			orNotIf: orNot].
+	
+	self genCmpArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg.
+	self ssPop: 2.
+
+	"Further since there is a following conditional jump bytecode, define
+	 non-merge fixups and leave the cond bytecode to set the mergeness."
+	(self fixupAt: nextPC - initialPC) notAFixup
+		ifTrue: "The next instruction is dead.  we can skip it."
+			[deadCode := true.
+		 	 self ensureFixupAt: targetBytecodePC - initialPC.
+			 self ensureFixupAt: postBranchPC - initialPC]
+		ifFalse:
+			[self deny: deadCode]. "push dummy value below"
+		
+	"We could simplify this with a xor:"
+	self genConditionalBranch: (orNot 
+						ifFalse: [branchDescriptor isBranchTrue ifTrue: [JumpZero] ifFalse: [JumpNonZero]]
+						ifTrue: [branchDescriptor isBranchTrue ifTrue: [JumpNonZero] ifFalse: [JumpZero]])
+		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
+
+	"If the branch is dead, then we can just fall through postBranchPC (only a nop in-between), else 
+	we need to jump over the code of the branch"
+	deadCode ifFalse:
+		[self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
+		 self ssPushConstant: objectMemory trueObject]. "dummy value"
+	^0
+]
+
 { #category : #'simulation stack' }
 RegisterAllocatingCogit >> initSimStackForFramefulMethod: startpc [
 	super initSimStackForFramefulMethod: startpc.
@@ -748,7 +901,7 @@ RegisterAllocatingCogit >> maybeInitNumFixups [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup [
 	<var: #fixup type: #'BytecodeFixup *'>
-	| mergeSimStack currentEntry targetEntry |
+	| mergeSimStack direction currentEntry targetEntry |
 	<var: #mergeSimStack type: #'SimStackEntry *'>
 	"At a merge point the cogit expects the stack to be in the same state as mergeSimStack.
 	 mergeSimStack is the state as of some jump forward to this point.  So make simStack agree
@@ -763,21 +916,43 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup [
 	 If necessary exchange registers amongst simStack's entries to resolve any conflicts."
 	self resolveRegisterOrderConflictsBetweenCurrentSimStackAnd: mergeSimStack.
 	self assert: (self conflcitsResolvedBetweenSimStackAnd: mergeSimStack).
-	simStackPtr to: 0 by: -1 do:
-		[:i|
-		 currentEntry := self simStack: simStack at: i.
-		 targetEntry := self simStack: mergeSimStack at: i.
-		 (currentEntry reconcileForwardsWith: targetEntry) ifTrue:
-			[self assert: i >= methodOrBlockNumArgs.
-			 self deassignRegisterForTempVar: targetEntry in: mergeSimStack].
-		 "Note, we could update the simStack and spillBase here but that is done in restoreSimStackAtMergePoint:
-		 spilled ifFalse:
-			[simSpillBase := i - 1].
-		 simStack
-			at: i
-			put: (self
-					cCode: [mergeSimStack at: i]
-					inSmalltalk: [(mergeSimStack at: i) copy])"].
+	"Must determine if we will push or pop values.
+	 If pushing values must enumerate from bottom to top.
+	 If popping, must enumerate from top to bottom."
+	direction := self directionForMergeWith: mergeSimStack.
+	direction > 0
+		ifTrue:
+			[0 to: simStackPtr do:
+				[:i|
+				 currentEntry := self simStack: simStack at: i.
+				 targetEntry := self simStack: mergeSimStack at: i.
+				 (currentEntry reconcileForwardsWith: targetEntry) ifTrue:
+					[self assert: i >= methodOrBlockNumArgs.
+					 self deassignRegisterForTempVar: targetEntry in: mergeSimStack].
+				 "Note, we could update the simStack and spillBase here but that is done in restoreSimStackAtMergePoint:
+				 spilled ifFalse:
+					[simSpillBase := i - 1].
+				 simStack
+					at: i
+					put: (self
+							cCode: [mergeSimStack at: i]
+							inSmalltalk: [(mergeSimStack at: i) copy])"]]
+		ifFalse:
+			[simStackPtr to: 0 by: -1 do:
+				[:i|
+				 currentEntry := self simStack: simStack at: i.
+				 targetEntry := self simStack: mergeSimStack at: i.
+				 (currentEntry reconcileForwardsWith: targetEntry) ifTrue:
+					[self assert: i >= methodOrBlockNumArgs.
+					 self deassignRegisterForTempVar: targetEntry in: mergeSimStack].
+				 "Note, we could update the simStack and spillBase here but that is done in restoreSimStackAtMergePoint:
+				 spilled ifFalse:
+					[simSpillBase := i - 1].
+				 simStack
+					at: i
+					put: (self
+							cCode: [mergeSimStack at: i]
+							inSmalltalk: [(mergeSimStack at: i) copy])"]].
 
 	"a.k.a. fixup isReceiverResultRegSelf: (fixup isReceiverResultRegSelf and: [optStatus isReceiverResultRegLive])"
 	optStatus isReceiverResultRegLive ifFalse:
@@ -986,6 +1161,17 @@ RegisterAllocatingCogit >> restoreSimStackAtMergePoint: fixup [
 			self cCode: [simStack at: i put: (fixup mergeSimStack at: i)]
 				inSmalltalk: [(simStack at: i) copyFrom: (fixup mergeSimStack at: i)]]].
 	^0
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> restoreSimStackFromScratch [
+	<inline: true>
+	self cCode: [self mem: simStack cp: scratchSimStack y: self simStackSlots * (self sizeof: CogSimStackEntry)]
+		inSmalltalk: [0 to: simStackPtr do:
+						[:i|
+						simStack at: i put: (scratchSimStack at: i)]].
+	simSpillBase := scratchSpillBase.
+	optStatus := scratchOptStatus
 ]
 
 { #category : #'bytecode generator support' }

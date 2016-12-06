@@ -2199,7 +2199,7 @@ SimpleStackBasedCogit >> genJumpIf: boolean to: targetBytecodePC [
 					ifFalse: [objectMemory falseObject - objectMemory trueObject])
 		R: TempReg.
 	ok := self JumpZero: 0.
-	self CallRT: (boolean == objectMemory falseObject
+	self CallRT: (boolean = objectMemory falseObject
 					ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
 					ifFalse: [ceSendMustBeBooleanAddTrueTrampoline]).
 	ok jmpTarget: (self annotateBytecode: self Label).
@@ -3472,8 +3472,8 @@ SimpleStackBasedCogit >> genSubConstant: constant R: reg [
 	"If the objectMemory allows it, generates a quick constant sub, else generates a word constant sub"
 	<inline: true>
 	^ (objectRepresentation shouldAnnotateObjectReference: constant)
-		ifTrue: [ self annotate: (self SubCw: constant R: TempReg) objRef: reg. ]
-		ifFalse: [ self SubCq: constant R: TempReg ]
+		ifTrue: [ self annotate: (self SubCw: constant R: reg) objRef: reg. ]
+		ifFalse: [ self SubCq: constant R: reg ]
 ]
 
 { #category : #initialization }
