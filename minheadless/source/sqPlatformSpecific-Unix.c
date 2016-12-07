@@ -27,6 +27,10 @@
 # define min(x,y) (((x)>(y))?(y):(x))
 #endif
 
+void ioInitPlatformSpecific(void)
+{
+}
+
 time_t convertToSqueakTime(time_t unixTime)
 {
 #ifdef HAVE_TM_GMTOFF

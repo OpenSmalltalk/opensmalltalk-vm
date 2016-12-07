@@ -323,30 +323,30 @@ find_path(SDL2_LIBRARY_PATH
 
 find_library(SDL2_LIBRARY NAMES SDL2-2.0 SDL2 PATHS ${SDL2_LIBRARY_PATH})
 
-set(SDL2_FOUND False)
+set(HAVE_SDL2 False)
 if(SDL2_INCLUDE_DIR AND SDL2_LIBRARY)
-	set(SDL2_FOUND True)
+	set(HAVE_SDL2 True)
 	include_directories("${SDL2_INCLUDE_DIR}")
 endif()
-message("SDL2 Found: ${SDL2_FOUND}")
+message("SDL2 Found: ${HAVE_SDL2}")
 
 # Choose the window system
 option(SUPPORT_TRADITIONAL_DISPLAY "Enables building a VM with support for a window." ON)
 
 if(SUPPORT_TRADITIONAL_DISPLAY)
-	if(SDL2_FOUND)
+	if(HAVE_SDL2)
 		set(VM_WINDOW_SYSTEM
-			minheadless/source/sqPlatformSpecific-SDL2Window.c
+			minheadless/source/sqWindow-SDL2.c
 		)
 		set(VM_DEPENDENCIES_LIBRARIES ${SDL2_LIBRARY} ${VM_DEPENDENCIES_LIBRARIES})
 	else()
 		set(VM_WINDOW_SYSTEM
-			minheadless/source/sqPlatformSpecific-NullWindow.c
+			minheadless/source/sqWindow-Null.c
 		)
 	endif()
 else()
 	set(VM_WINDOW_SYSTEM
-		minheadless/source/sqPlatformSpecific-NullWindow.c
+		minheadless/source/sqWindow-Null.c
 	)
 endif()
 

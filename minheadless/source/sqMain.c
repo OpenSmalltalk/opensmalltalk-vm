@@ -1,7 +1,4 @@
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#else
+#ifndef _WIN32
 #include <unistd.h>
 #endif
 
@@ -316,6 +313,8 @@ void imgInit()
 extern sqInt ioInitSecurity(void);
 #endif
 
+extern void ioInitPlatformSpecific(void);
+
 int main(int argc, char *argv[], char *envp[])
 {
     /* check the interpreter's size assumptions for basic data types */
@@ -331,14 +330,9 @@ int main(int argc, char *argv[], char *envp[])
 
     initGlobalStructure();
 
-    /* Use UTF-8 for the console*/
-#ifdef _WIN32
-    if (GetConsoleCP())
-    {
-        SetConsoleCP(CP_UTF8);
-        SetConsoleOutputCP(CP_UTF8);
-    }
-#endif
+    /* Perform platform specific initialization. */
+    ioInitPlatformSpecific();
+
     /* Allocate arrays to store copies of pointers to command line
         arguments.  Used by getAttributeIntoLength(). */
     if ((vmArgumentVector = calloc(argc + 1, sizeof(char *))) == 0)

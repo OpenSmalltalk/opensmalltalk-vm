@@ -1,3 +1,6 @@
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
 #include <stdlib.h>
 #include <time.h>
 #include <assert.h>
@@ -5,6 +8,53 @@
 #include "sqaio.h"
 #include "sqMemoryAccess.h"
 #include "config.h"
+
+#ifndef PROCESS_SYSTEM_DPI_AWARE
+#define PROCESS_SYSTEM_DPI_AWARE 1
+#endif
+
+#ifndef PROCESS_PER_MONITOR_DPI_AWARE
+#define PROCESS_PER_MONITOR_DPI_AWARE 2
+#endif
+
+typedef HRESULT WINAPI (*SetProcessDpiAwarenessFunctionPointer) (int awareness);
+
+static void enableHighDPIAwareness()
+{
+    SetProcessDpiAwarenessFunctionPointer setProcessDpiAwareness;
+    HMODULE shcore;
+
+    /* Load the library with the DPI awareness library */
+    shcore = LoadLibraryA("Shcore.dll");
+    if(!shcore)
+        return;
+
+    /* Get a function pointer to the set DPI awareness function. */        
+    setProcessDpiAwareness = (SetProcessDpiAwarenessFunctionPointer)GetProcAddress(shcore, "SetProcessDpiAwareness");
+    if(!setProcessDpiAwareness)
+    {
+        FreeLibrary(shcore);
+        return;
+    }
+        
+    /* Set the DPI awareness. */
+    if(setProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE) != S_OK)
+        setProcessDpiAwareness(PROCESS_SYSTEM_DPI_AWARE);
+        
+    FreeLibrary(shcore);
+}
+
+void ioInitPlatformSpecific(void)
+{
+    /* Use UTF-8 for the console. */
+    if (GetConsoleCP())
+    {
+        SetConsoleCP(CP_UTF8);
+        SetConsoleOutputCP(CP_UTF8);
+    }
+
+    enableHighDPIAwareness();
+}
 
 void aioInit(void)
 {

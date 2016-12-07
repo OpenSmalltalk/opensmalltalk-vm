@@ -131,13 +131,32 @@ const char *ioWindowSystemName(void)
 
 static void createWindow(sqInt width, sqInt height, sqInt fullscreenFlag)
 {
+    int flags;
+    int actualWindowX, actualWindowY;
+    int actualWindowWidth, actualWindowHeight;
+    SDL_Rect displayBounds;
+        
     if(window)
         return;
 
+    flags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
+    if(fullscreenFlag)
+        flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+
     modifiersState = convertModifiers(SDL_GetModState());
-    window = SDL_CreateWindow("", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
+    window = SDL_CreateWindow("", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, flags);
     if(!window)
         return;
+        
+    if(!fullscreenFlag)
+    {
+        SDL_GetWindowPosition(window, &actualWindowX, &actualWindowY);
+        SDL_GetWindowSize(window, &actualWindowWidth, &actualWindowHeight);
+        SDL_GetDisplayUsableBounds(0, &displayBounds);
+        if(actualWindowWidth + actualWindowX >= displayBounds.w || actualWindowHeight + actualWindowY >= displayBounds.h)
+            SDL_MaximizeWindow(window);
+    }
+    
     windowID = SDL_GetWindowID(window);
     windowRenderer = SDL_CreateRenderer(window, 0, 0);
 }
@@ -490,6 +509,7 @@ sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt of
     SDL_Cursor *newCursor;
     Uint8 convertedCursorBits[32];
     Uint8 convertedCursorMask[32];
+    int i;
 
     unsigned int *cursorBits = (unsigned int*)pointerForOop(cursorBitsIndex);
     unsigned int *cursorMask = (unsigned int*)pointerForOop(cursorMaskIndex);
@@ -498,7 +518,7 @@ sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt of
         cursorMask = cursorBits;
 
     /* Remove the extra padding */
-    for(int i = 0; i < 16; ++i)
+    for(i = 0; i < 16; ++i)
     {
         convertedCursorBits[i*2 + 0]= (cursorBits[i] >> 24) & 0xFF;
         convertedCursorBits[i*2 + 1]= (cursorBits[i] >> 16) & 0xFF;
@@ -525,6 +545,8 @@ static void blitRect32(
     uint8_t *destPixels, int destPitch,
     int copyX, int copyY, int width, int height)
 {
+    int y;
+    
     if(sourcePitch == destPitch &&
         surfaceWidth == width && surfaceHeight == height && copyX == 0 && copyY == 0)
     {
@@ -545,7 +567,7 @@ static void blitRect32(
         destPixels += copyY*destPitch;
         sourcePixels += copyY*sourcePitch;
 
-        for(int y = 0; y < height; ++y)
+        for(y = 0; y < height; ++y)
         {
             memcpy(destPixels, sourcePixels, copyPitch);
             destPixels += destPitch;

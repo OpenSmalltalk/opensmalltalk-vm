@@ -4,6 +4,10 @@
 #include "sqMemoryAccess.h"
 #include "config.h"
 
+void ioInitPlatformSpecific(void)
+{
+}
+
 void ioInitTime(void)
 {
 }
