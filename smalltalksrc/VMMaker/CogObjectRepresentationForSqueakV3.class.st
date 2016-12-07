@@ -475,7 +475,7 @@ CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg form
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genInlinedIdenticalOrNotIf: orNot [
+CogObjectRepresentationForSqueakV3 >> genInlinedIdenticalOrNotIfGuts: orNot [
 	<inline: true>
 	^ cogit genVanillaInlinedIdenticalOrNotIf: orNot
 ]
