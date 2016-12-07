@@ -14,6 +14,8 @@
 char imageName[FILENAME_MAX];
 static char imagePath[FILENAME_MAX];
 
+static int headlessMode = 0;
+
 int    argCnt=		0;	/* global copies for access from plugins */
 char **argVec=		0;
 char **envVec=		0;
@@ -33,13 +35,20 @@ static char **vmArgumentVector;
 extern void initGlobalStructure(void); // this is effectively null if a global register is not being used
 extern void findExecutablePath(const char *localVmName, char *dest, size_t destSize);
 
-extern void ioInitWindowSystem(void);
+extern void ioInitWindowSystem(sqInt headlessMode);
 extern void ioShutdownWindowSystem(void);
 extern const char *ioWindowSystemName(void);
 
 extern void ioInitTime(void);
 extern void ioInitThreads(void);
 extern void aioInit(void);
+
+#ifdef _WIN32
+extern sqInt ioInitSecurity(void);
+#endif
+
+extern void ioInitPlatformSpecific(void);
+extern void ioInitializeInternalPluginPrimitives(void);
 
 static long   extraMemory=	0;
 int    useMmap=		DefaultMmapSize * 1024 * 1024;
@@ -220,8 +229,17 @@ static void parseArguments(int argc, char **argv)
         int n= 0;
         if (!strcmp(*argv, "--"))		/* escape from option processing */
             break;
-        if (!strcmp(*argv, "-headless") || !strcmp(*argv, "-interactive"))
+
+        if (!strcmp(*argv, "-headless") || !strcmp(*argv, "--headless"))
+        {
+            headlessMode = 1;
             n = 1;
+        }
+        else if(!strcmp(*argv, "-interactive") || !strcmp(*argv, "--interactive"))
+        {
+            headlessMode = 0;
+            n = 1;
+        }
 
         if (n == 0)			/* option not recognised */
         {
@@ -309,12 +327,6 @@ void imgInit()
     exit(1);
 }
 
-#ifdef _WIN32
-extern sqInt ioInitSecurity(void);
-#endif
-
-extern void ioInitPlatformSpecific(void);
-
 int main(int argc, char *argv[], char *envp[])
 {
     /* check the interpreter's size assumptions for basic data types */
@@ -329,6 +341,9 @@ int main(int argc, char *argv[], char *envp[])
     envVec = envp;
 
     initGlobalStructure();
+
+    /* Initialize the list of internal primitives. */
+    ioInitializeInternalPluginPrimitives();
 
     /* Perform platform specific initialization. */
     ioInitPlatformSpecific();
@@ -346,7 +361,7 @@ int main(int argc, char *argv[], char *envp[])
     parseArguments(argc, argv);
 
     /* Initialize the VM */
-    ioInitWindowSystem();
+    ioInitWindowSystem(headlessMode);
     ioInitTime();
     ioInitThreads();
     ioVMThread = ioCurrentOSThread();

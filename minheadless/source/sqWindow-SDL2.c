@@ -5,6 +5,7 @@
 #include "sqaio.h"
 #include "sqMemoryAccess.h"
 #include "sqEventCommon.h"
+#include "sqWindow.h"
 #include "config.h"
 
 extern int getSavedWindowSize();
@@ -19,6 +20,8 @@ typedef struct sqSDLEventQueue
 #define sqSDLEventQueueIsFull(queue) sqQueueIsFull(queue, SQ_EVENT_QUEUE_SIZE)
 #define sqSDLEventQueuePush(queue, value) sqQueuePush(queue, SQ_EVENT_QUEUE_SIZE, value)
 #define sqSDLEventQueuePopInto(queue, result) sqQueuePopInto(queue, SQ_EVENT_QUEUE_SIZE, result)
+
+static sqInt sqSDL2_processEvents(void);
 
 static sqEventQueue eventQueue;
 static sqSDLEventQueue sdlEventQueue;
@@ -50,7 +53,7 @@ static sqInt setSDL2InputSemaphoreIndex(sqInt semaIndex)
     return true;
 }
 
-void sdl2SignalInputEvent(void)
+static void sdl2SignalInputEvent(void)
 {
     if (sdl2InputEventSemaIndex > 0)
         signalSemaphoreWithIndex(sdl2InputEventSemaIndex);
@@ -114,19 +117,14 @@ static int convertKeySymToCharacter(int symbol)
         return symbol;
 }
 
-void ioInitWindowSystem(void)
+static void sqSDL2_initialize(void)
 {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
 }
 
-void ioShutdownWindowSystem(void)
+static void sqSDL2_shutdown(void)
 {
     SDL_Quit();
-}
-
-const char *ioWindowSystemName(void)
-{
-    return "sdl2";
 }
 
 static void createWindow(sqInt width, sqInt height, sqInt fullscreenFlag)
@@ -481,34 +479,34 @@ static void handleEvents()
     newSDLEvent = 0;
 }
 
-sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
+static sqInt sqSDL2_setCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
 {
     return false;
 }
 
-sqInt ioForceDisplayUpdate(void)
+static sqInt sqSDL2_forceDisplayUpdate(void)
 {
     presentWindow();
     return 0;
 }
 
-sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth,
+static sqInt sqSDL2_formPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth,
 		  double hScale, double vScale, sqInt landscapeFlag)
 {
     return 0;
 }
 
-sqInt ioSetFullScreen(sqInt fullScreen)
+static sqInt sqSDL2_setFullScreen(sqInt fullScreen)
 {
     return 0;
 }
 
-sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY)
+static sqInt sqSDL2_setCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY)
 {
     return 0;
 }
 
-sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
+static sqInt sqSDL2_setCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
     SDL_Cursor *newCursor;
     Uint8 convertedCursorBits[32];
@@ -580,7 +578,7 @@ static void blitRect32(
     }
 }
 
-sqInt ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
+static sqInt sqSDL2_showDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
 		    sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB)
 {
     if(!window)
@@ -622,12 +620,12 @@ sqInt ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
     return 0;
 }
 
-sqInt ioHasDisplayDepth(sqInt depth)
+static sqInt sqSDL2_hasDisplayDepth(sqInt depth)
 {
     return depth == 32;
 }
 
-sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
+static sqInt sqSDL2_setDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
 {
     if(window)
     {
@@ -640,17 +638,17 @@ sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenF
     return 0;
 }
 
-char* ioGetWindowLabel(void)
+static char* sqSDL2_getWindowLabel(void)
 {
     return "";
 }
 
-sqInt ioSetWindowLabelOfSize(void *lblIndex, sqInt sz)
+static sqInt sqSDL2_setWindowLabelOfSize(void *lblIndex, sqInt sz)
 {
     return 0;
 }
 
-sqInt ioGetWindowWidth(void)
+static sqInt sqSDL2_getWindowWidth(void)
 {
     int width = 0;
     int height = 0;
@@ -659,7 +657,7 @@ sqInt ioGetWindowWidth(void)
     return width;
 }
 
-sqInt ioGetWindowHeight(void)
+static sqInt sqSDL2_getWindowHeight(void)
 {
     int width = 0;
     int height = 0;
@@ -668,20 +666,20 @@ sqInt ioGetWindowHeight(void)
     return height;
 }
 
-sqInt ioSetWindowWidthHeight(sqInt w, sqInt h)
+static sqInt sqSDL2_setWindowWidthHeight(sqInt w, sqInt h)
 {
     if(window)
         SDL_SetWindowSize(window, w, h);
     return 0;
 }
 
-sqInt ioIsWindowObscured(void)
+static sqInt sqSDL2_isWindowObscured(void)
 {
     return false;
 }
 
 /* Events */
-sqInt ioGetNextEvent(sqInputEvent *evt)
+static sqInt sqSDL2_getNextEvent(sqInputEvent *evt)
 {
     if(sqEventQueueIsEmpty(eventQueue))
     {
@@ -695,7 +693,7 @@ sqInt ioGetNextEvent(sqInputEvent *evt)
     return 0;
 }
 
-sqInt ioGetNextSDL2Event(void *buffer, size_t bufferSize)
+static sqInt sqSDL2_getNextSDL2Event(void *buffer, size_t bufferSize)
 {
     SDL_Event event;
     size_t copySize;
@@ -715,36 +713,35 @@ sqInt ioGetNextSDL2Event(void *buffer, size_t bufferSize)
     return true;
 }
 
-sqInt ioGetButtonState(void)
+static sqInt sqSDL2_getButtonState(void)
 {
-    ioProcessEvents();
+    sqSDL2_processEvents();
     return buttonState | (modifiersState << 3);
 }
 
-sqInt ioGetKeystroke(void)
+static sqInt sqSDL2_getKeystroke(void)
 {
     return 0;
 }
 
-sqInt ioMousePoint(void)
+static sqInt sqSDL2_mousePoint(void)
 {
-    ioProcessEvents();
+    sqSDL2_processEvents();
     return (mousePositionX<<16) | mousePositionY;
 }
 
-sqInt ioPeekKeystroke(void)
+static sqInt sqSDL2_peekKeystroke(void)
 {
     return 0;
 }
 
-sqInt ioProcessEvents(void)
+static sqInt sqSDL2_processEvents(void)
 {
     handleEvents();
-    aioPoll(0);
     return 0;
 }
 
-double ioScreenScaleFactor(void)
+static double sqSDL2_screenScaleFactor(void)
 {
     SDL_Rect bounds;
     if(SDL_GetDisplayBounds(0, &bounds) != 0)
@@ -755,29 +752,29 @@ double ioScreenScaleFactor(void)
     return (double)bounds.w / (double)bounds.h;
 }
 
-sqInt ioScreenSize(void)
+static sqInt sqSDL2_screenSize(void)
 {
     int winSize = getSavedWindowSize();
     return winSize;
 }
 
-sqInt ioScreenDepth(void)
+static sqInt sqSDL2_screenDepth(void)
 {
     return 32;
 }
 
 /* Clipboard */
-sqInt clipboardSize(void)
+static sqInt sqSDL2_clipboardSize(void)
 {
     return 0;
 }
 
-sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
+static sqInt sqSDL2_clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
     return 0;
 }
 
-sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
+static sqInt sqSDL2_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
     return 0;
 }
@@ -809,7 +806,7 @@ sqInt primitivePollVMSDL2Event()
     bufferOop = stackValue(1);
     size = stackIntegerValue(0);
 
-    result = ioGetNextSDL2Event(firstIndexableField(bufferOop), size);
+    result = sqSDL2_getNextSDL2Event(firstIndexableField(bufferOop), size);
     popthenPush(1 + (argumentCountOf(primitiveMethod())), result ? trueObject() : falseObject());
 
     return 0;
@@ -831,10 +828,45 @@ sqInt primitiveSetVMSDL2Input()
 #define XFN(export) {"", #export, (void*)export},
 #define XFND(export,depth) {"", #export "\000" depth, (void*)export},
 
-void *winsys_exports[][3]=
+static void *sdl2_exports[][3]=
 {
     XFND(primitiveIsVMDisplayUsingSDL2, "\001")
     XFND(primitivePollVMSDL2Event, "\001")
     XFND(primitiveSetVMSDL2Input, "\001")
     { 0, 0, 0 }
+};
+
+sqWindowSystem sqSDL2WindowSystem = {
+    .name = "sdl2",
+    .primitives = sdl2_exports,
+
+    .initialize = sqSDL2_initialize,
+    .shutdown = sqSDL2_shutdown,
+    .setCursorARGB = sqSDL2_setCursorARGB,
+    .forceDisplayUpdate = sqSDL2_forceDisplayUpdate,
+    .formPrint = sqSDL2_formPrint,
+    .setFullScreen = sqSDL2_setFullScreen,
+    .setCursor = sqSDL2_setCursor,
+    .setCursorWithMask = sqSDL2_setCursorWithMask,
+    .showDisplay = sqSDL2_showDisplay,
+    .hasDisplayDepth = sqSDL2_hasDisplayDepth,
+    .setDisplayMode = sqSDL2_setDisplayMode,
+    .getWindowLabel = sqSDL2_getWindowLabel,
+    .setWindowLabelOfSize = sqSDL2_setWindowLabelOfSize,
+    .getWindowWidth = sqSDL2_getWindowWidth,
+    .getWindowHeight = sqSDL2_getWindowHeight,
+    .setWindowWidthHeight = sqSDL2_setWindowWidthHeight,
+    .isWindowObscured = sqSDL2_isWindowObscured,
+    .getNextEvent = sqSDL2_getNextEvent,
+    .getButtonState = sqSDL2_getButtonState,
+    .getKeystroke = sqSDL2_getKeystroke,
+    .mousePoint = sqSDL2_mousePoint,
+    .peekKeystroke = sqSDL2_peekKeystroke,
+    .processEvents = sqSDL2_processEvents,
+    .screenScaleFactor = sqSDL2_screenScaleFactor,
+    .screenSize = sqSDL2_screenSize,
+    .screenDepth = sqSDL2_screenDepth,
+    .clipboardSize = sqSDL2_clipboardSize,
+    .clipboardReadIntoAt = sqSDL2_clipboardReadIntoAt,
+    .clipboardWriteFromAt = sqSDL2_clipboardWriteFromAt,
 };

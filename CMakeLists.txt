@@ -333,21 +333,14 @@ message("SDL2 Found: ${HAVE_SDL2}")
 # Choose the window system
 option(SUPPORT_TRADITIONAL_DISPLAY "Enables building a VM with support for a window." ON)
 
+set(VM_WINDOW_SYSTEM)
 if(SUPPORT_TRADITIONAL_DISPLAY)
 	if(HAVE_SDL2)
 		set(VM_WINDOW_SYSTEM
 			minheadless/source/sqWindow-SDL2.c
 		)
 		set(VM_DEPENDENCIES_LIBRARIES ${SDL2_LIBRARY} ${VM_DEPENDENCIES_LIBRARIES})
-	else()
-		set(VM_WINDOW_SYSTEM
-			minheadless/source/sqWindow-Null.c
-		)
 	endif()
-else()
-	set(VM_WINDOW_SYSTEM
-		minheadless/source/sqWindow-Null.c
-	)
 endif()
 
 # Different source categories
@@ -391,6 +384,9 @@ set(VM_PLATFORM_SOURCES
     minheadless/source/sqPath.c
     minheadless/source/sqPrinting.c
     minheadless/source/sqTextEncoding.c
+	minheadless/source/sqWindow-Null.c
+	minheadless/source/sqWindow-Dispatch.c
+	minheadless/source/sqInternalPrimitives.c
 )
 
 if(UNIX)

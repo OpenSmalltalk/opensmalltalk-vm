@@ -133,6 +133,10 @@
 #cmakedefine HAVE_TM_GMTOFF
 #cmakedefine HAVE_TIMEZONE
 
+/* window systems */
+#cmakedefine SUPPORT_TRADITIONAL_DISPLAY
+#cmakedefine HAVE_SDL2
+
 /* typedefs */
 
 #define	squeakInt64 @SQUEAK_INT64_TYPEDEF@
