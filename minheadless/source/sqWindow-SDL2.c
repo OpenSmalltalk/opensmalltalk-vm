@@ -8,6 +8,10 @@
 #include "sqWindow.h"
 #include "config.h"
 
+#if defined(__unix__) || defined(__APPLE__) || defined(__linux__)
+#include <signal.h>
+#endif
+
 extern int getSavedWindowSize();
 
 typedef struct sqSDLEventQueue
@@ -120,6 +124,11 @@ static int convertKeySymToCharacter(int symbol)
 static void sqSDL2_initialize(void)
 {
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
+
+#if defined(__unix__) || defined(__APPLE__) || defined(__linux__)
+    signal(SIGINT, SIG_DFL);
+    signal(SIGTERM, SIG_DFL);
+#endif
 }
 
 static void sqSDL2_shutdown(void)
@@ -296,6 +305,7 @@ static void handleKeyDown(const SDL_Event *rawEvent)
         sqEventUnion event;
         memset(&event, 0, sizeof(event));
         event.key.type = EventTypeKeyboard;
+        event.key.timeStamp = rawEvent->key.timestamp;
         event.key.pressCode = EventKeyDown;
         event.key.charCode = rawEvent->key.keysym.sym;
         event.key.utf32Code = character;
@@ -312,6 +322,7 @@ static void handleKeyDown(const SDL_Event *rawEvent)
         sqEventUnion event;
         memset(&event, 0, sizeof(event));
         event.key.type = EventTypeKeyboard;
+        event.key.timeStamp = rawEvent->key.timestamp;
         event.key.pressCode = EventKeyChar;
         event.key.charCode = character;
         event.key.utf32Code = character;
@@ -332,6 +343,7 @@ static void handleKeyUp(const SDL_Event *rawEvent)
     sqEventUnion event;
     memset(&event, 0, sizeof(event));
     event.key.type = EventTypeKeyboard;
+    event.key.timeStamp = rawEvent->key.timestamp;
     event.key.pressCode = EventKeyUp;
     event.key.charCode = convertKeySymToCharacter(rawEvent->key.keysym.sym);
     event.key.utf32Code = convertKeySymToCharacter(rawEvent->key.keysym.sym);
@@ -353,6 +365,7 @@ static void handleTextInput(const SDL_Event *rawEvent)
     sqEventUnion event;
     memset(&event, 0, sizeof(event));
     event.key.type = EventTypeKeyboard;
+    event.key.timeStamp = rawEvent->text.timestamp;
     event.key.pressCode = EventKeyChar;
     event.key.modifiers = modifiersState;
 
@@ -382,6 +395,7 @@ static void handleMouseButtonDown(const SDL_Event *rawEvent)
     sqEventUnion event;
     memset(&event, 0, sizeof(event));
     event.mouse.type = EventTypeMouse;
+    event.mouse.timeStamp = rawEvent->button.timestamp;
     event.mouse.x = mousePositionX = rawEvent->button.x;
     event.mouse.y = mousePositionY = rawEvent->button.y;
     event.mouse.buttons = buttonState;
@@ -403,6 +417,7 @@ static void handleMouseButtonUp(const SDL_Event *rawEvent)
     sqEventUnion event;
     memset(&event, 0, sizeof(event));
     event.mouse.type = EventTypeMouse;
+    event.mouse.timeStamp = rawEvent->button.timestamp;
     event.mouse.x = mousePositionX = rawEvent->button.x;
     event.mouse.y = mousePositionY = rawEvent->button.y;
     event.mouse.buttons = buttonState;
@@ -422,11 +437,54 @@ static void handleMouseMotion(const SDL_Event *rawEvent)
     sqEventUnion event;
     memset(&event, 0, sizeof(event));
     event.mouse.type = EventTypeMouse;
+    event.mouse.timeStamp = rawEvent->motion.timestamp;
     event.mouse.x = mousePositionX = rawEvent->motion.x;
     event.mouse.y = mousePositionY = rawEvent->motion.y;
     event.mouse.buttons = buttonState;
     event.mouse.modifiers = modifiersState;
     recordLowImportanceEvent(&event);
+}
+
+static void handleWindowEvent(const SDL_Event *rawEvent)
+{
+    if(rawEvent->window.windowID != windowID)
+    {
+        recordSDLEvent(rawEvent);
+        return;
+    }
+
+    switch(rawEvent->window.event)
+    {
+    case SDL_WINDOWEVENT_CLOSE:
+        {
+            sqEventUnion event;
+            memset(&event, 0, sizeof(event));
+            event.window.type = EventTypeWindow;
+            event.window.timeStamp = rawEvent->window.timestamp;
+            event.window.action = WindowEventClose;
+            recordEvent(&event);
+        }
+        break;
+    case SDL_WINDOWEVENT_MOVED:
+    case SDL_WINDOWEVENT_SIZE_CHANGED:
+    case SDL_WINDOWEVENT_RESIZED:
+        {
+            sqEventUnion event;
+            SDL_Rect rect;
+            SDL_GetWindowPosition(window, &rect.x, &rect.y);
+            SDL_GetRendererOutputSize(windowRenderer, &rect.w, &rect.h);
+            memset(&event, 0, sizeof(event));
+            event.window.type = EventTypeWindow;
+            event.window.timeStamp = rawEvent->window.timestamp;
+            event.window.action = WindowEventMetricChange;
+            event.window.value1 = rect.x;
+            event.window.value2 = rect.y;
+            event.window.value3 = rect.x + rect.w;
+            event.window.value4 = rect.y + rect.h;
+            recordEvent(&event);
+        }
+        break;
+    }
 }
 
 static void handleEvent(const SDL_Event *event)
@@ -454,8 +512,8 @@ static void handleEvent(const SDL_Event *event)
     case SDL_MOUSEWHEEL:
         handleMouseWheel(event);
         break;
-    case SDL_QUIT:
-        ioExit();
+    case SDL_WINDOWEVENT:
+        handleWindowEvent(event);
         break;
     default:
         /* Record the unhandled SDL events for the image. */
@@ -640,11 +698,20 @@ static sqInt sqSDL2_setDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt
 
 static char* sqSDL2_getWindowLabel(void)
 {
-    return "";
+    return (char*)SDL_GetWindowTitle(window);
 }
 
-static sqInt sqSDL2_setWindowLabelOfSize(void *lblIndex, sqInt sz)
+static sqInt sqSDL2_setWindowLabelOfSize(void *lblIndex, sqInt size)
 {
+    char *buffer;
+
+    buffer = (char*)malloc(size + 1);
+    memcpy(buffer, lblIndex, size);
+    buffer[size] = 0;
+
+    SDL_SetWindowTitle(window, buffer);
+
+    free(buffer);
     return 0;
 }
 
@@ -652,8 +719,8 @@ static sqInt sqSDL2_getWindowWidth(void)
 {
     int width = 0;
     int height = 0;
-    if(window)
-        SDL_GetWindowSize(window, &width, &height);
+    if(windowRenderer)
+        SDL_GetRendererOutputSize(windowRenderer, &width, &height);
     return width;
 }
 
@@ -661,8 +728,8 @@ static sqInt sqSDL2_getWindowHeight(void)
 {
     int width = 0;
     int height = 0;
-    if(window)
-        SDL_GetWindowSize(window, &width, &height);
+    if(windowRenderer)
+        SDL_GetRendererOutputSize(windowRenderer, &width, &height);
     return height;
 }
 
@@ -743,19 +810,18 @@ static sqInt sqSDL2_processEvents(void)
 
 static double sqSDL2_screenScaleFactor(void)
 {
-    SDL_Rect bounds;
-    if(SDL_GetDisplayBounds(0, &bounds) != 0)
-    {
-        return 1.0;
-    }
-
-    return (double)bounds.w / (double)bounds.h;
+    return 1.0;
 }
 
 static sqInt sqSDL2_screenSize(void)
 {
-    int winSize = getSavedWindowSize();
-    return winSize;
+    int width;
+    int height;
+    if(!windowRenderer)
+        return getSavedWindowSize();
+
+    SDL_GetRendererOutputSize(windowRenderer, &width, &height);
+    return height | (width << 16);
 }
 
 static sqInt sqSDL2_screenDepth(void)
@@ -766,16 +832,40 @@ static sqInt sqSDL2_screenDepth(void)
 /* Clipboard */
 static sqInt sqSDL2_clipboardSize(void)
 {
-    return 0;
+    if(!SDL_HasClipboardText())
+        return 0;
+
+    return strlen(SDL_GetClipboardText());
 }
 
 static sqInt sqSDL2_clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
-    return 0;
+    sqInt clipSize;
+    char *clipboardText;
+
+    clipboardText = SDL_GetClipboardText();
+    if(!clipboardText)
+        clipboardText = "";
+
+    clipSize = count;
+    if(count < clipSize)
+        clipSize = count;
+
+    memcpy(pointerForOop(byteArrayIndex + startIndex), (void *)clipboardText, clipSize);
+    return clipSize;
 }
 
 static sqInt sqSDL2_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
+    char *buffer;
+
+    buffer = (char*)malloc(count + 1);
+    memcpy(buffer, pointerForOop(byteArrayIndex + startIndex), count);
+    buffer[count] = 0;
+
+    SDL_SetClipboardText(buffer);
+
+    free(buffer);
     return 0;
 }
 
