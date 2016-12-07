@@ -67,6 +67,7 @@ CogInLineLiteralsX64Compiler >> concretizeArithCwR: x64opcode [
 		at: 12 put: (reverse
 					ifTrue: [self mod: ModReg RM: reg RO: RISCTempReg]
 					ifFalse: [self mod: ModReg RM: RISCTempReg RO: reg]).
+	self assert: (machineCode at: 12) > 16r90. "See literalBeforeFollowingAddress:"
 	^machineCodeSize := 13
 ]
 
@@ -101,11 +102,8 @@ CogInLineLiteralsX64Compiler >> concretizeMoveCwR [
 		at:  7 put: (value >> 40 bitAnd: 16rFF);
 		at:  8 put: (value >> 48 bitAnd: 16rFF);
 		at:  9 put: (value >> 56 bitAnd: 16rFF).
-	opcode = MoveCqR ifTrue:
-		[^machineCodeSize := 10].
-	"Add a nop to disambiguate between MoveCwR/PushCwR and ArithCwR, which ends with a (self mod: ModReg RM: 0 RO: 0)"
+	"Add a nop to disambiguate between MoveCwR/PushCw and ArithCwR, which ends with a (self mod: ModReg RM: 0 RO: 0)"
 	machineCode at: 10 put: 16r90.
-	self assert: (self mod: ModReg RM: 0 RO: 0) > 16r90.
 	^machineCodeSize := 11
 ]
 
@@ -142,9 +140,8 @@ CogInLineLiteralsX64Compiler >> concretizePushCw [
 		at:  8 put: (value >> 48 bitAnd: 16rFF);
 		at:  9 put: (value >> 56 bitAnd: 16rFF);
 		at: 10 put: 16r41;
-		at: 11 put: 16r48 + RISCTempReg. "The 48 will disambiguate between MoveCwR, PushCwR and ArithCwR, which ends with a (self mod: ModReg RM: 0 RO: 0)"
-		self assert: RISCTempReg >= 8.
-	self assert: (self mod: ModReg RM: 0 RO: 0) > 16r57.
+		at: 11 put: 16r48 + RISCTempReg. "The 48 will disambiguate between MoveCwR, PushCw and ArithCwR, which ends with a (self mod: ModReg RM: 0 RO: 0)"
+	self assert: (machineCode at: 11) < 16r90. "see literalBeforeFollowingAddress:"
 	^machineCodeSize := 12
 ]
 
@@ -179,18 +176,20 @@ CogInLineLiteralsX64Compiler >> literal32BeforeFollowingAddress: followingAddres
 { #category : #'inline cacheing' }
 CogInLineLiteralsX64Compiler >> literalBeforeFollowingAddress: followingAddress [
 	"Answer the literal embedded in the instruction immediately preceding followingAddress.
-	 This is used in the MoveCwR, PushCwR and CmpCwR cases; these are distinguished by a
-	 nop following the literal load in MoveCwR, a 16r50 + reg ending the PushCwR sequence, and
-	 a (self mod: ModReg RM: rX RO: rY) ending the CmpCwR sequence, which is at least 16rC0."
+	 This is used in the MoveCwR, PushCw and ArithCwR cases; these are distinguished by a
+	 nop following the literal load in MoveCwR, a 16r48 + reg ending the PushCw sequence, and
+	 a (self mod: ModReg RM: rX RO: rY) ending the ArithCwR sequence, which is at least 16rC0."
 	| lastByte base |
 	lastByte := objectMemory byteAt: followingAddress - 1.
-	base := followingAddress - (lastByte <= 16r90
-									ifTrue:
-										[lastByte = 16r90
-											ifTrue: [9]		"MoveCwR"
-											ifFalse: [10]]	"PushCwR"
-									ifFalse: [11]).			"ArithCwR"
+	base := followingAddress - (lastByte = 16r90
+									ifTrue: [9]				"MoveCwR"
+									ifFalse:
+										[lastByte < 16r90
+											ifTrue: [10]		"PushCw"
+											ifFalse: [11]]).	"ArithCwR"
 	^objectMemory unalignedLongAt: base
+	
+	"(Symbol allSymbols select: [:s| '*Cw:R:' match: s]), {#PushCw:} collect: [:s| {s. (self systemNavigation allCallsOn: s localToPackage: #VMMaker) size}]"
 ]
 
 { #category : #accessing }
@@ -270,8 +269,8 @@ CogInLineLiteralsX64Compiler >> sizePCDependentInstructionAt: eventualAbsoluteAd
 { #category : #'inline cacheing' }
 CogInLineLiteralsX64Compiler >> storeLiteral: literal beforeFollowingAddress: followingAddress [
 	"Rewrite the literal in the instruction immediately preceding followingAddress.
-	 This is used in the MoveCwR, PushCwR and CmpCwR cases; these are distinguished by a
-	 nop following the literal load in MoveCwR, a 16r50 + reg ending the PushCwR sequence, and
+	 This is used in the MoveCwR, PushCw and CmpCwR cases; these are distinguished by a
+	 nop following the literal load in MoveCwR, a 16r50 + reg ending the PushCw sequence, and
 	 a (self mod: ModReg RM: rX RO: rY) ending the CmpCwR sequence, which is at least 16rC0."
 	| lastByte base |
 	lastByte := objectMemory byteAt: followingAddress - 1.
@@ -279,7 +278,7 @@ CogInLineLiteralsX64Compiler >> storeLiteral: literal beforeFollowingAddress: fo
 									ifTrue:
 										[lastByte = 16r90
 											ifTrue: [9]		"MoveCwR"
-											ifFalse: [10]]	"PushCwR"
+											ifFalse: [10]]	"PushCw"
 									ifFalse: [11]).			"ArithCwR"
 	objectMemory unalignedLongAt: base put: literal
 ]

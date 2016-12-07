@@ -13,7 +13,9 @@ Class {
 		'nextFixup',
 		'scratchSimStack',
 		'scratchSpillBase',
-		'scratchOptStatus'
+		'scratchOptStatus',
+		'ceSendMustBeBooleanAddTrueLongTrampoline',
+		'ceSendMustBeBooleanAddFalseLongTrampoline'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -25,6 +27,16 @@ RegisterAllocatingCogit class >> declareCVarsIn: aCodeGen [
 			type: #'SimStackEntry *';
 		var: #scratchOptStatus
 			type: #CogSSOptStatus
+]
+
+{ #category : #accessing }
+RegisterAllocatingCogit class >> numTrampolines [
+	^super numTrampolines + 2 "includes long sendMustBeBoolean trampolines"
+
+	"Cogit withAllSubclasses, CogObjectRepresentation withAllSubclasses collect:
+		[:c| {c. (c instVarNames select: [:ea| ea beginsWith: 'ce']) size}]"
+	"self allInstVarNames select: [:ea| ea beginsWith: 'ce']"
+	"self instVarNames select: [:ea| ea beginsWith: 'ce']"
 ]
 
 { #category : #'compile abstract instructions' }
@@ -295,6 +307,20 @@ RegisterAllocatingCogit >> freeAnyRegNotConflictingWith: regMask [
 	^reg
 ]
 
+{ #category : #'trampoline support' }
+RegisterAllocatingCogit >> genCallMustBeBooleanFor: boolean [
+	self assert: ((self generatorAt: byte0) numBytes between: 1 and: 2).
+	^self CallRT: ((self generatorAt: byte0) numBytes = 1
+					ifTrue:
+						[boolean = objectMemory falseObject
+							ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
+							ifFalse: [ceSendMustBeBooleanAddTrueTrampoline]]
+					ifFalse:
+						[boolean = objectMemory falseObject
+							ifTrue: [ceSendMustBeBooleanAddFalseLongTrampoline]
+							ifFalse: [ceSendMustBeBooleanAddTrueLongTrampoline]])
+]
+
 { #category : #'bytecode generators' }
 RegisterAllocatingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 	| nextPC branchDescriptor unforwardRcvr argReg targetBytecodePC
@@ -459,9 +485,7 @@ RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 		[self MoveR: reg R: TempReg].
 	self copySimStackToScratch: simSpillBase.
 	self ssFlushTo: simStackPtr.
-	self CallRT: (boolean = objectMemory falseObject
-					ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
-					ifFalse: [ceSendMustBeBooleanAddTrueTrampoline]).
+	self genCallMustBeBooleanFor: boolean.
 	"NOTREACHED"
 	ok jmpTarget: (self annotateBytecode: self Label).
 	self restoreSimStackFromScratch.
@@ -483,7 +507,13 @@ RegisterAllocatingCogit >> genMarshalledSend: selectorIndex numArgs: numArgs sen
 ]
 
 { #category : #initialization }
-RegisterAllocatingCogit >> genMustBeBooleanTrampolineFor: boolean called: trampolineName [
+RegisterAllocatingCogit >> genMustBeBooleanLongTrampolineFor: boolean called: trampolineName [
+	<inline: true>
+	^self genMustBeBooleanTrampolineFor: boolean branchBytes: 2 called: trampolineName
+]
+
+{ #category : #initialization }
+RegisterAllocatingCogit >> genMustBeBooleanTrampolineFor: boolean branchBytes: branchBytes called: trampolineName [
 	<var: #trampolineName type: #'char *'>
 	"For RegisterAllocatingCogit we want the address following a conditional branch not to be reachable, so we
 	 don't have to generate code to reload registers.  Instead simply convert to an interpreter frame."
@@ -492,17 +522,23 @@ RegisterAllocatingCogit >> genMustBeBooleanTrampolineFor: boolean called: trampo
 	"If the objectRepresentation does want true & false to be mobile then we need to record these addresses."
 	self assert: (objectRepresentation shouldAnnotateObjectReference: boolean) not.
 	self AddCq: boolean R: TempReg.
-	^self genTrampolineFor: #ceSendMustBeBooleanInterpreting:
+	^self genTrampolineFor: #ceSendMustBeBooleanTo:interpretingAtDelta:
 		called: trampolineName
-		numArgs: 1
+		numArgs: 2
 		arg: TempReg
-		arg: nil
+		arg: (self trampolineArgConstant: branchBytes)
 		arg: nil
 		arg: nil
 		regsToSave: self emptyRegisterMask
 		pushLinkReg: true
 		resultReg: NoReg
 		appendOpcodes: true
+]
+
+{ #category : #initialization }
+RegisterAllocatingCogit >> genMustBeBooleanTrampolineFor: boolean called: trampolineName [
+	<inline: true>
+	^self genMustBeBooleanTrampolineFor: boolean branchBytes: 1 called: trampolineName
 ]
 
 { #category : #'bytecode generators' }
@@ -811,6 +847,17 @@ RegisterAllocatingCogit >> genVanillaInlinedIdenticalOrNotIf: orNot [
 		[self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
 		 self ssPushConstant: objectMemory trueObject]. "dummy value"
 	^0
+]
+
+{ #category : #initialization }
+RegisterAllocatingCogit >> generateRunTimeTrampolines [
+	"Generate the run-time entries at the base of the native code zone and update the base."
+	
+	ceSendMustBeBooleanAddFalseLongTrampoline := self genMustBeBooleanLongTrampolineFor: objectMemory falseObject
+														called: 'ceSendMustBeBooleanAddFalseTrampoline'.
+	ceSendMustBeBooleanAddTrueLongTrampoline := self genMustBeBooleanLongTrampolineFor: objectMemory trueObject
+														called: 'ceSendMustBeBooleanAddTrueTrampoline'.
+	super generateRunTimeTrampolines
 ]
 
 { #category : #'simulation stack' }
