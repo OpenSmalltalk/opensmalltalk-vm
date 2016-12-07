@@ -2796,6 +2796,7 @@ Cogit >> addressIsInCodeZone: address [
 
 { #category : #testing }
 Cogit >> addressIsInCurrentCompilation: address [
+	<inline: true>
 	^address asUnsignedInteger >= methodLabel address
 	  and: [address asUnsignedInteger < methodZone youngReferrers]
 ]
@@ -4965,16 +4966,14 @@ Cogit >> compileClosedPICPrototype [
 	jumpNext := self compileCPICEntry.
 	"At the end of the entry code we need to jump to the first case code, which is actually the last chunk.
 	 On each entension we must update this jump to move back one case."
-	"16r5EAF00D is the method oop, or 0, for the 1st case."
-	self MoveUniqueCw: 16r5EAF00D R: SendNumArgsReg.
+	self MoveUniqueCw: self firstPrototypeMethodOop R: SendNumArgsReg.
 	self JumpLong: self cPICPrototypeCaseOffset + 16rCA5E10.
 	endCPICCase0 := self Label.
 	1 to: MaxCPICCases - 1 do:
 		[:h|
 		h = (MaxCPICCases - 1) ifTrue:
 			[jumpNext jmpTarget: self Label]. "this is where we jump to for the first case"
-		"16rBADA550+h is the method oop, or 0, for the Nth case."
-		self MoveUniqueCw: 16rBADA550 + h R: SendNumArgsReg.
+		self MoveUniqueCw: self subsequentPrototypeMethodOop + h R: SendNumArgsReg.
 		"16rBABE1F15+h is the class tag for the Nth case"
 		self CmpC32: 16rBABE1F15+h R: TempReg.
 		self JumpLongZero: self cPICPrototypeCaseOffset + 16rCA5E10 + (h * 16).
@@ -5828,7 +5827,7 @@ Cogit >> expectedClosedPICPrototype: cPIC [
 	pc := cPIC asUnsignedInteger + firstCPICCaseOffset.
 	"First jump is unconditional; subsequent ones are conditional"
 	object := backEnd literalBeforeFollowingAddress: pc - backEnd jumpLongByteSize.
-	(self asserta: object = 16r5EAF00D) ifFalse:
+	(self asserta: object = self firstPrototypeMethodOop) ifFalse:
 		[errors := 1].
 
 	entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc.
@@ -5842,7 +5841,7 @@ Cogit >> expectedClosedPICPrototype: cPIC [
 		"verify information in case is as expected."
 		methodObjPC := pc - backEnd jumpLongConditionalByteSize - backEnd cmpC32RTempByteSize.
 		object := backEnd literalBeforeFollowingAddress: methodObjPC.
-		(self asserta: object = (16rBADA550 + i)) ifFalse:
+		(self asserta: object = (self subsequentPrototypeMethodOop+ i)) ifFalse:
 			[errors := errors bitOr: 4].
 
 		classTagPC := pc - backEnd jumpLongConditionalByteSize.
@@ -5862,7 +5861,7 @@ Cogit >> expectedClosedPICPrototype: cPIC [
 
 		"verify information in case is as expected post update."
 		object := backEnd literalBeforeFollowingAddress: methodObjPC.
-		(self asserta: object = (16rBADA550 + i bitXor: 16rA5A5A5A5)) ifFalse:
+		(self asserta: object = (self subsequentPrototypeMethodOop + i bitXor: 16rA5A5A5A5)) ifFalse:
 			[errors := errors bitOr: 32].
 		classTag := backEnd literal32BeforeFollowingAddress: classTagPC.
 		(self asserta: classTag = (16rBABE1F15 + i bitXor: 16r5A5A5A5A)) ifFalse:
@@ -6160,6 +6159,16 @@ Cogit >> firstMappedPCFor: cogMethod [
 	^cogMethod cmIsFullBlock
 		ifTrue: [cogMethod asUnsignedInteger + cbNoSwitchEntryOffset]
 		ifFalse: [cogMethod asUnsignedInteger + cmNoCheckEntryOffset]
+]
+
+{ #category : #'in-line cacheing' }
+Cogit >> firstPrototypeMethodOop [
+	"Answer a fake value for the first method oop in the PIC prototype.
+	 Since we use MoveUniqueCw:R: it must not be confused with a method-relative address."
+	<inline: false>
+	^(self addressIsInCurrentCompilation: 16r5EAF00D)
+		ifTrue: [16rCA7F00D]
+		ifFalse: [16r5EAF00D]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -6466,6 +6475,13 @@ Cogit >> gen: opcode "<Integer>" uniqueLiteral: operandOne "<Integer>" operand: 
 	^literalsManager
 		uniqueLiteral: operandOne
 		forInstruction: (self gen: opcode operand: operandOne operand: operandTwo)
+]
+
+{ #category : #'trampoline support' }
+Cogit >> genCallMustBeBooleanFor: boolean [
+	^self CallRT: (boolean = objectMemory falseObject
+					ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
+					ifFalse: [ceSendMustBeBooleanAddTrueTrampoline])
 ]
 
 { #category : #initialization }
@@ -11616,6 +11632,16 @@ Cogit >> subMethodsAsRangesFor: surrogateOrAddress [
 		 ^codeRanges size > 1 "omit the block dispatch range"
 			ifTrue: [codeRanges allButLast]
 			ifFalse: [codeRanges]]
+]
+
+{ #category : #'in-line cacheing' }
+Cogit >> subsequentPrototypeMethodOop [
+	"Answer a fake value for the method oop in other than the first case in the PIC prototype.
+	 Since we use MoveUniqueCw:R: it must not be confused with a method-relative address."
+	<inline: false>
+	^(self addressIsInCurrentCompilation: 16rBADA550)
+		ifTrue: [16rDEADEAD]
+		ifFalse: [16rBADA550]
 ]
 
 { #category : #'in-line cacheing' }

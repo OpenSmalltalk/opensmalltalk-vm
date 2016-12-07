@@ -728,10 +728,7 @@ SistaCogit >> genJumpIf: boolean to: targetBytecodePC [
 	ok := self JumpZero: 0.
 	self MoveCq: 0 R: SendNumArgsReg. "if counterReg is 0 this is a mustBeBoolean, not a counter trip."
 	
-	countTripped jmpTarget:
-		(self CallRT: (boolean == objectMemory falseObject
-						ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
-						ifFalse: [ceSendMustBeBooleanAddTrueTrampoline])).
+	countTripped jmpTarget: (self genCallMustBeBooleanFor: boolean).
 						
 	"If we're in an image which hasn't got the Sista code loaded then the ceCounterTripped:
 	 trampoline will return directly to machine code, returning the boolean.  So the code should
