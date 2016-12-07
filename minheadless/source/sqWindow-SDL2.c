@@ -135,7 +135,7 @@ static void createWindow(sqInt width, sqInt height, sqInt fullscreenFlag)
     int actualWindowX, actualWindowY;
     int actualWindowWidth, actualWindowHeight;
     SDL_Rect displayBounds;
-        
+
     if(window)
         return;
 
@@ -147,16 +147,20 @@ static void createWindow(sqInt width, sqInt height, sqInt fullscreenFlag)
     window = SDL_CreateWindow("", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, flags);
     if(!window)
         return;
-        
+
     if(!fullscreenFlag)
     {
         SDL_GetWindowPosition(window, &actualWindowX, &actualWindowY);
         SDL_GetWindowSize(window, &actualWindowWidth, &actualWindowHeight);
+#if SDL_VERSION_ATLEAST(2, 5, 0)
         SDL_GetDisplayUsableBounds(0, &displayBounds);
+#else
+        SDL_GetDisplayBounds(0, &displayBounds);
+#endif
         if(actualWindowWidth + actualWindowX >= displayBounds.w || actualWindowHeight + actualWindowY >= displayBounds.h)
             SDL_MaximizeWindow(window);
     }
-    
+
     windowID = SDL_GetWindowID(window);
     windowRenderer = SDL_CreateRenderer(window, 0, 0);
 }
@@ -546,7 +550,7 @@ static void blitRect32(
     int copyX, int copyY, int width, int height)
 {
     int y;
-    
+
     if(sourcePitch == destPitch &&
         surfaceWidth == width && surfaceHeight == height && copyX == 0 && copyY == 0)
     {
