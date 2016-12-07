@@ -8,10 +8,6 @@
 #include "sqWindow.h"
 #include "config.h"
 
-#if defined(__unix__) || defined(__APPLE__) || defined(__linux__)
-#include <signal.h>
-#endif
-
 extern int getSavedWindowSize();
 
 typedef struct sqSDLEventQueue
@@ -123,12 +119,9 @@ static int convertKeySymToCharacter(int symbol)
 
 static void sqSDL2_initialize(void)
 {
-    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
+    SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
 
-#if defined(__unix__) || defined(__APPLE__) || defined(__linux__)
-    signal(SIGINT, SIG_DFL);
-    signal(SIGTERM, SIG_DFL);
-#endif
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
 }
 
 static void sqSDL2_shutdown(void)
