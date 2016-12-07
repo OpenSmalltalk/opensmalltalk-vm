@@ -2566,7 +2566,7 @@ CogMIPSELCompiler >> relocateMethodReferenceBeforeAddress: pc by: delta [
 	"cogit disassembleFrom: pc - 16 to: pc + 16 a StackToRegisterMappingCogit."
 	
 	((self opcodeAtAddress: pc - 8) = ADDIU and: [(self opcodeAtAddress: pc - 4) = SW]) ifTrue:
-		["PushCwR"
+		["PushCw"
 		oldValue := self literalAtAddress: pc - 12.
 		newValue := oldValue + delta.
 		self literalAtAddress: pc - 12 put: newValue.	
@@ -2958,8 +2958,8 @@ CogMIPSELCompiler >> stopsFrom: startAddr to: endAddr [
 
 { #category : #'inline cacheing' }
 CogMIPSELCompiler >> storeLiteral: literal beforeFollowingAddress: followingAddress [
-	"Rewrite the long constant loaded by a MoveCwR or PushCwR before the given address"
-	self flag: #bogus. "The caller ought to know what it is patching, and this should be split into separate methods with stricter checking."
+	"Rewrite the long constant loaded by a MoveCwR or PushCw before the given address"
+	self flag: #bogus. "The caller ought to know what it is patching, and this should be split into separate methods with stricter checking. rmacnak 12/13/2015"
 	
 	"Cmp/MoveCwR
 	 pc-8	lui rx, uper
