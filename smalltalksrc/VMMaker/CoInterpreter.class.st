@@ -497,7 +497,7 @@ CoInterpreter >> activateCoggedNewMethod: inInterpreter [
 	(self methodHeaderHasPrimitive: methodHeader) ifTrue:
 		[| initialPC |
 		 "Store the error code if the method starts with a long store temp.  No instructionPointer skip because we're heading for machine code."
-		 initialPC := (self initialPCForHeader: methodHeader method: newMethod) + (self sizeOfCallPrimitiveBytecode: methodHeader).
+		 initialPC := (self initialIPForHeader: methodHeader method: newMethod) + (self sizeOfCallPrimitiveBytecode: methodHeader).
 		 primFailCode ~= 0 ifTrue:
 			[(objectMemory byteAt: initialPC) = (self longStoreBytecodeForHeader: methodHeader) ifTrue:
 				[errorCode := self getErrorObjectFromPrimFailCode.
@@ -687,7 +687,7 @@ CoInterpreter >> activateNewFullClosureMethod: blockClosure numArgs: numArgs may
 
 	numArgs + numCopied + 1 to: numTemps do: [ :i | self push: objectMemory nilObject].
 
-	instructionPointer := (self initialPCForHeader: methodHeader method: theMethod) - 1.
+	instructionPointer := (self initialIPForHeader: methodHeader method: theMethod) - 1.
 	
 	self setMethod: theMethod.
 
@@ -735,7 +735,7 @@ CoInterpreter >> activateNewMethod [
 	numArgs+1 to: numTemps do:
 		[:i | self push: objectMemory nilObject].
 
-	instructionPointer := (self initialPCForHeader: methodHeader method: newMethod) - 1.
+	instructionPointer := (self initialIPForHeader: methodHeader method: newMethod) - 1.
 
 	(self methodHeaderHasPrimitive: methodHeader) ifTrue:
 		["Skip the CallPrimitive bytecode, if it's there, and store the error code if the method starts
@@ -4356,7 +4356,7 @@ CoInterpreter >> internalActivateNewMethod [
 		[:i | self internalPush: objectMemory nilObject].
 
 	"-1 to account for pre-increment in fetchNextBytecode"
-	localIP := self pointerForOop: (self initialPCForHeader: methodHeader method: newMethod) - 1.
+	localIP := self pointerForOop: (self initialIPForHeader: methodHeader method: newMethod) - 1.
 
 	(self methodHeaderHasPrimitive: methodHeader) ifTrue:
 		["Skip the CallPrimitive bytecode, if it's there, and store the error code if the method starts
@@ -4622,7 +4622,7 @@ CoInterpreter >> justActivateNewMethod [
 	self push: instructionPointer.
 	self push: framePointer.
 	framePointer := stackPointer.
-	initialIP := self initialPCForHeader: methodHeader method: newMethod.
+	initialIP := self initialIPForHeader: methodHeader method: newMethod.
 	activateCogMethod
 		ifTrue:
 			[self push: cogMethod asUnsignedInteger.
@@ -4918,7 +4918,7 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 			 numArgs := self argumentCountOfMethodHeader: header.
 			 "If this is a synthetic context its IP could be pointing at the CallPrimitive opcode.  If so, skip it."
 			 ((self methodHeaderHasPrimitive: header)
-			  and: [theIP = (1 + (objectMemory lastPointerOfMethodHeader: header))]) ifTrue:
+			  and: [theIP = (1 + (self startPCOfMethodHeader: header))]) ifTrue:
 				[theIP := theIP + (self sizeOfCallPrimitiveBytecode: header)].
 			 stackPages
 				longAt: (pointer := pointer - objectMemory wordSize)
