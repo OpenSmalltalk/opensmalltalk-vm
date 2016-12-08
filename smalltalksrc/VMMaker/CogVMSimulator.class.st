@@ -1047,12 +1047,9 @@ CogVMSimulator >> findNewMethodInClassTag: classTag [
 			ifFalse: [(self nameOfClass: class)].
 		self cr; print: cName , '>>' , (self stringOf: messageSelector)].
 "
-	(self stringOf: messageSelector) = 'doesNotUnderstand:' ifTrue: [self halt].
+	messageSelector = (objectMemory splObj: SelectorDoesNotUnderstand) ifTrue: [self halt].
 
-	sendCount := sendCount + 1.
-
-	printSends ifTrue:
-		[self cr; print: byteCount; space; printStringOf: messageSelector; cr].
+	self logSend: messageSelector.
 "
 	(sendCount > 1000 and: [sendCount\\10 = 0]) ifTrue:
 		[Transcript print: sendCount; space.
@@ -2137,7 +2134,7 @@ CogVMSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromStart: loggi
 { #category : #'debugging traps' }
 CogVMSimulator >> logSend: oop [
 	sendCount := sendCount + 1.
-	printSends ifTrue:
+	(printSends or: [printBytecodeAtEachStep]) ifTrue:
 		[transcript print: byteCount; nextPut: $/; print: sendCount; space.
 		 self printStringOf: oop.
 		 transcript cr; flush]
@@ -2174,6 +2171,8 @@ CogVMSimulator >> lookupOrdinaryNoMNUEtcInClass: class [
 { #category : #'frame access' }
 CogVMSimulator >> makeBaseFrameFor: aContext [ "<Integer>"
 	"aContext =  26431360 ifTrue: [self halt]."
+	"(objectMemory fetchPointer: MethodIndex ofObject: aContext) = 16rD4C178 ifTrue:
+		[self halt]."
 	^super makeBaseFrameFor: aContext
 ]
 

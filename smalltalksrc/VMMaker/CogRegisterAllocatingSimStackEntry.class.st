@@ -128,7 +128,7 @@ CogRegisterAllocatingSimStackEntry >> printStateOn: aStream [
 	(spilled and: [type ~= SSSpill]) ifTrue:
 		[aStream nextPutAll: ' (spilled)'].
 	liveRegister ~= NoReg ifTrue:
-		[aStream nextPutAll: ' (live: '; nextPutAll: (cogit backEnd nameForRegister: liveRegister); nextPut: $)].
+		[aStream nextPutAll: ' (live: '; nextPutAll: (liveRegister ifNil: ['NIL!!'] ifNotNil: [cogit backEnd nameForRegister: liveRegister]); nextPut: $)].
 	bcptr ifNotNil:
 		[aStream space; nextPut: ${; print: bcptr; nextPut: $}].
 	aStream nextPut: $)

@@ -1925,7 +1925,7 @@ StackInterpreter >> activateNewFullClosureMethod: blockClosure numArgs: numArgs 
 
 	numArgs + numCopied + 1 to: numTemps do: [ :i | self push: objectMemory nilObject].
 
-	instructionPointer := (self initialPCForHeader: methodHeader method: theMethod) - 1.
+	instructionPointer := (self initialIPForHeader: methodHeader method: theMethod) - 1.
 	
 	self setMethod: theMethod.
 
@@ -3509,7 +3509,7 @@ StackInterpreter >> callPrimitiveBytecode [
 				[header := objectMemory methodHeaderOf: method.
 				 ((self methodHeaderHasPrimitive: header)
 				  and: [localIP asUnsignedInteger
-						= (self initialPCForHeader: header method: method) + (self sizeOfCallPrimitiveBytecode: header)]) ifTrue:
+						= (self initialIPForHeader: header method: method) + (self sizeOfCallPrimitiveBytecode: header)]) ifTrue:
 					[^self].
 				 localIP := localIP - 3.
 				 ^self respondToUnknownBytecode].
@@ -3553,7 +3553,7 @@ StackInterpreter >> callPrimitiveBytecode [
 			[| header |
 			 header := objectMemory methodHeaderOf: method.
 			 ((self methodHeaderHasPrimitive: header)
-			  and: [localIP asInteger = (self initialPCForHeader: header method: method)])
+			  and: [localIP asInteger = (self initialIPForHeader: header method: method)])
 				ifTrue:
 					[localIP := localIP + (self sizeOfCallPrimitiveBytecode: header) - 1.
 					 ^self fetchNextBytecode]
@@ -7686,6 +7686,19 @@ StackInterpreter >> ifCurrentStackPageHasValidHeadPointers: thePage [
 	^true
 ]
 
+{ #category : #'frame access' }
+StackInterpreter >> ifSoAssertValidIPAssign: index ofContext: maybeMarriedContext with: anOop [
+	self assert: (index ~= InstructionPointerIndex
+				or: [(objectMemory isContextNonImm: maybeMarriedContext) not
+				or: [| mo |
+					mo := self fetchPointer: MethodIndex ofObject: maybeMarriedContext.
+					(anOop = objectMemory nilObject
+					 or: [(objectMemory isIntegerObject: anOop)
+						  and: [(objectMemory integerValueOf: anOop)
+								between: (LiteralStart + (objectMemory literalCountOf: mo)) * objectMemory bytesPerOop
+								and: (objectMemory numBytesOf: mo)]])]])
+]
+
 { #category : #'debug support' }
 StackInterpreter >> ifValidWriteBackStack: theCFP Pointers: theCSP Save: savedFPP To: savedSPP [
 	"This is for low-level error reporting.  If either of the C stack pointers are
@@ -7848,7 +7861,7 @@ StackInterpreter >> initialCleanup [
 ]
 
 { #category : #'compiled methods' }
-StackInterpreter >> initialPCForHeader: methodHeader method: theMethod [
+StackInterpreter >> initialIPForHeader: methodHeader method: theMethod [
 	"Answer a pointer to the initial byte for a method; used only in methods that build a frame."
 	<inline: true>
 	^theMethod
@@ -8202,7 +8215,7 @@ StackInterpreter >> internalActivateNewMethod [
 		[:i | self internalPush: objectMemory nilObject].
 
 	"-1 to account for pre-increment in fetchNextBytecode"
-	localIP := self pointerForOop: (self initialPCForHeader: methodHeader method: newMethod) - 1.
+	localIP := self pointerForOop: (self initialIPForHeader: methodHeader method: newMethod) - 1.
 
 	(self methodHeaderHasPrimitive: methodHeader) ifTrue:
 		["Skip the CallPrimitive bytecode, if it's there, and store the error code if the method starts
@@ -9196,7 +9209,7 @@ StackInterpreter >> justActivateNewMethod [
 	numArgs+1 to: numTemps do:
 		[:i | self push: objectMemory nilObject].
 
-	instructionPointer := (self initialPCForHeader: methodHeader method: newMethod) - 1.
+	instructionPointer := (self initialIPForHeader: methodHeader method: newMethod) - 1.
 
 	(self methodHeaderHasPrimitive: methodHeader) ifTrue:
 		["Skip the CallPrimitive bytecode, if it's there, and store the error code if the method starts
@@ -14917,7 +14930,7 @@ StackInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 			 numArgs := self argumentCountOfMethodHeader: header.
 			 "If this is a synthetic context its IP could be pointing at the CallPrimitive opcode.  If so, skip it."
 			 ((self methodHeaderHasPrimitive: header)
-			  and: [theIP = (1 + (objectMemory lastPointerOfMethodHeader: header))]) ifTrue:
+			  and: [theIP = (1 + (self startPCOfMethodHeader: header))]) ifTrue:
 				[theIP := theIP + (self sizeOfCallPrimitiveBytecode: header)].
 			 stackPages longAt: pointer put: rcvr].
 	"Put the arguments on the stack"
@@ -20163,6 +20176,13 @@ StackInterpreter >> startPCOfMethod: aCompiledMethod [
 	^(objectMemory literalCountOf: aCompiledMethod) + LiteralStart * objectMemory bytesPerOop
 ]
 
+{ #category : #'compiled methods' }
+StackInterpreter >> startPCOfMethodHeader: methodHeader [
+	"Answer the zero-relative index to the initial byte for a method.
+	 Zero-relative version of CompiledMethod>>startpc."
+	^(objectMemory literalCountOfMethodHeader: methodHeader) + LiteralStart * objectMemory bytesPerOop
+]
+
 { #category : #'stack bytecodes' }
 StackInterpreter >> storeAndPopReceiverVariableBytecode [
 	| rcvr top instVarIndex |
@@ -20222,7 +20242,7 @@ StackInterpreter >> storeLiteralVariable: literalIndex withValue: anObject [
 ]
 
 { #category : #'stack bytecodes' }
-StackInterpreter >> storeMaybeContext: obj receiverVariable: fieldIndex withValue: anObject [
+StackInterpreter >> storeMaybeContext: obj receiverVariable: fieldIndex withValue: anOop [
 	"Must trap accesses to married and widowed contexts.
 	 But don't want to check on all inst var accesses.  This
 	 method is only used by the long-form bytecodes, evading the cost."
@@ -20231,10 +20251,9 @@ StackInterpreter >> storeMaybeContext: obj receiverVariable: fieldIndex withValu
 	and: [(objectMemory isContextNonImm: obj)
 	and: [self isMarriedOrWidowedContext: obj]])
 		ifTrue:
-			[self instVar: fieldIndex ofContext: obj put: anObject]
+			[self instVar: fieldIndex ofContext: obj put: anOop]
 		ifFalse:
-			[objectMemory storePointerImmutabilityCheck: fieldIndex ofObject: obj withValue: anObject]
-
+			[objectMemory storePointerImmutabilityCheck: fieldIndex ofObject: obj withValue: anOop]
 ]
 
 { #category : #'stack bytecodes' }
