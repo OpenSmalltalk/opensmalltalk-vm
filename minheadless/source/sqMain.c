@@ -311,9 +311,12 @@ static int tryToLoadImageFromFileName(const char *fileName)
 static char tempImageNameAttempt[FILENAME_MAX];
 void imgInit()
 {
+    /* If the image name is empty, try to load the default image. */
+    if(!shortImageName[0])
+        strcpy(shortImageName, DEFAULT_IMAGE_NAME);
 
     /* Try to load the image as was passed. */
-    sprintf(tempImageNameAttempt, "./%s", shortImageName);
+    sprintf(tempImageNameAttempt, "%s", shortImageName);
     if(tryToLoadImageFromFileName(tempImageNameAttempt))
         return;
 
@@ -323,7 +326,7 @@ void imgInit()
         return;
 
     /* Failed. */
-    fprintf(stderr, "Failed to open image file named: %s\n", shortImageName);
+    fprintf(stderr, "Failed to open image file named: '%s'\n", shortImageName);
     exit(1);
 }
 

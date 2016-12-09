@@ -32,6 +32,30 @@ else()
 	#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--export-dynamic")
 endif()
 
+# Set optimization flags
+set(CMAKE_CONFIGURATION_TYPES Debug Release RelWithDebInfo Assert)
+if (MSVC)
+else()
+	set(COMMON_FLAGS "")
+	if(WIN32)
+		set(COMMON_FLAGS "-falign-loops=16 -falign-jumps=16 -falign-functions=16 -falign-labels=16 -Dsetjmp=_setjmp"
+		)
+	endif()
+	set(OPTIMIZATION_FLAGS "-O3 -fno-omit-frame-pointer -finline-functions ${COMMON_FLAGS}")
+
+	set(CMAKE_C_FLAGS_DEBUG "-g ${COMMON_FLAGS} -DDEBUGVM=1")
+	set(CMAKE_CXX_FLAGS_DEBUG "-g ${COMMON_FLAGS} -DDEBUGVM=1")
+
+	set(CMAKE_C_FLAGS_RELEASE "${OPTIMIZATION_FLAGS} -DNDEBUG -DDEBUGVM=0")
+	set(CMAKE_CXX_FLAGS_RELEASE "${OPTIMIZATION_FLAGS} -DNDEBUG -DDEBUGVM=0")
+
+	set(CMAKE_C_FLAGS_RELWITHDEBINFO "-g ${OPTIMIZATION_FLAGS} -DNDEBUG -DDEBUGVM=0")
+	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g ${OPTIMIZATION_FLAGS} -DNDEBUG -DDEBUGVM=0")
+
+	set(CMAKE_C_FLAGS_ASSERT "${OPTIMIZATION_FLAGS} -DDEBUGVM=1")
+	set(CMAKE_CXX_FLAGS_ASSERT "${OPTIMIZATION_FLAGS} -DDEBUGVM=1")
+endif()
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 if(NOT VM_MSVC)
@@ -121,6 +145,7 @@ endif()
 option(LOWCODE_EXTENSIONS "Lowcode Extensions" OFF)
 if(LOWCODE_EXTENSIONS)
 	add_definitions(-DLowcodeVM=1)
+	set(SourceFolderName "${SourceFolderName}lowcode")
 endif()
 
 # Pharo branding
@@ -128,14 +153,16 @@ option(PHARO_BRANDING "Pharo Branding" ON)
 set(VM_EXECUTABLE_NAME squeak)
 set(VM_LIBRARY_NAME SqueakVMCore)
 set(VM_NAME Squeak)
+set(DEFAULT_IMAGE_NAME "Squeak.image")
 
 if(PHARO_BRANDING)
 	add_definitions(-DPharoVM=1)
 	set(VM_EXECUTABLE_NAME pharo)
 	set(VM_LIBRARY_NAME PharoVMCore)
     set(VM_NAME Pharo)
+	set(DEFAULT_IMAGE_NAME "Pharo.image")
 endif()
-add_definitions(-DVM_NAME="${VM_NAME}")
+add_definitions(-DVM_NAME="${VM_NAME}" -DDEFAULT_IMAGE_NAME="${DEFAULT_IMAGE_NAME}")
 
 # Cog JIT
 option(COG_JIT "Cog JIT" ON)
@@ -150,12 +177,6 @@ set(SourceFolderName "${SourceFolderName}src")
 set(PluginsSourceFolderName "src/plugins")
 
 message("Source folder name: ${SourceFolderName}")
-
-# Debug defines
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-	add_definitions(-DDEBUGVM=1)
-else()
-endif()
 
 # Common defines
 add_definitions(-DUSE_GLOBAL_STRUCT=0
@@ -291,14 +312,21 @@ include_directories(
 
 # VM Flavor sources
 if(COG_JIT)
+	set(InterpreterSource ${SourceFolderName}/vm/cointerp.c)
 	set(VM_FAVLOR_SOURCES
 		${SourceFolderName}/vm/cogit${COGIT_PLATFORM_SUFFIX}.c
-		${SourceFolderName}/vm/cointerp.c
+		${InterpreterSource}
 	)
 else()
+	set(InterpreterSource ${SourceFolderName}/vm/interp.c)
 	set(VM_FAVLOR_SOURCES
-		${SourceFolderName}/vm/interp.c
+		${InterpreterSource}
 	)
+endif()
+
+# Compile the interpreter with less aggresive optimization options.
+if(NOT ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug"))
+	set_source_files_properties(${InterpreterSource} PROPERTIES COMPILE_FLAGS -O1)
 endif()
 
 # Find required Apple frameworks
@@ -328,7 +356,6 @@ if(SDL2_INCLUDE_DIR AND SDL2_LIBRARY)
 	set(HAVE_SDL2 True)
 	include_directories("${SDL2_INCLUDE_DIR}")
 endif()
-message("SDL2 Found: ${HAVE_SDL2}")
 
 # Choose the window system
 option(SUPPORT_TRADITIONAL_DISPLAY "Enables building a VM with support for a window." ON)

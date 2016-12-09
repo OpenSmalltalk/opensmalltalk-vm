@@ -480,6 +480,20 @@ static void handleWindowEvent(const SDL_Event *rawEvent)
     }
 }
 
+static void handleDropFileEvent(const SDL_Event *rawEvent)
+{
+    sqEventUnion event;
+    recordSDLEvent(rawEvent);
+
+    /* TODO: Support dropping files here or in the image.*/
+    {
+        event.dnd.type = EventTypeDragDropFiles;
+        event.dnd.timeStamp = rawEvent->window.timestamp;
+        event.dnd.dragType = SQDragDrop;
+    }
+    SDL_free(rawEvent->drop.file);
+}
+
 static void handleEvent(const SDL_Event *event)
 {
     switch(event->type)
@@ -507,6 +521,9 @@ static void handleEvent(const SDL_Event *event)
         break;
     case SDL_WINDOWEVENT:
         handleWindowEvent(event);
+        break;
+    case SDL_DROPFILE:
+        handleDropFileEvent(event);
         break;
     default:
         /* Record the unhandled SDL events for the image. */

@@ -90,7 +90,7 @@ void *ioLoadModule(char *pluginName)
             return moduleHandle;
     }
 
-#if 1
+#if DEBUGVM
     fprintf(stderr, "Failed to load module: %s\n", pluginName);
 #endif
     return 0;
