@@ -56,11 +56,22 @@ endmacro()
 set(SqueakFFIPrims_Sources
     "${CrossPlatformPluginFolder}/SqueakFFIPrims/sqFFI.h"
     "${CrossPlatformPluginFolder}/SqueakFFIPrims/sqFFIPlugin.c"
+    "${CrossPlatformPluginFolder}/SqueakFFIPrims/sqFFITestFuncs.c"
     "${CrossPlatformPluginFolder}/SqueakFFIPrims/sqManualSurface.c"
     "${PluginsSourceFolderName}/SqueakFFIPrims/SqueakFFIPrims.c"
 )
 
 add_vm_plugin_sources(SqueakFFIPrims INTERNAL ${SqueakFFIPrims_Sources})
+
+# The sources of the IA32ABI plugin are special.
+set(IA32ABI_Sources
+    "${CrossPlatformPluginFolder}/IA32ABI/AlienSUnitTestProcedures.c"
+    "${CrossPlatformPluginFolder}/IA32ABI/xabicc.c"
+    "${CrossPlatformPluginFolder}/IA32ABI/x64win64stub.c"
+    "${PluginsSourceFolderName}/IA32ABI/IA32ABI.c"
+)
+
+add_vm_plugin_sources(IA32ABI INTERNAL ${IA32ABI_Sources})
 
 # Basic internal plugins
 add_vm_plugin_auto(FilePlugin INTERNAL)
@@ -85,6 +96,14 @@ add_vm_plugin_auto(Matrix2x3Plugin INTERNAL)
 # Basic external plugins
 add_vm_plugin_auto(SurfacePlugin EXTERNAL)
 
+# Drop plugin
+add_vm_plugin_sources(DropPlugin INTERNAL
+    "${PluginsSourceFolderName}/DropPlugin/DropPlugin.c"
+)
+
+# Extra plugins
+add_vm_plugin_auto(ZipPlugin INTERNAL) # Used by Monticello
+
 # Free type plugin
 find_package(Freetype)
 if(FREETYPE_FOUND)
@@ -96,6 +115,9 @@ endif()
 # OSProcess
 if(UNIX)
     add_vm_plugin_auto(UnixOSProcessPlugin INTERNAL)
+endif()
+if(WIN32)
+    add_vm_plugin_auto(Win32OSProcessPlugin INTERNAL)
 endif()
 
 # Write the list of plugins.

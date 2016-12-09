@@ -170,6 +170,29 @@ static sqInt sqNull_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqIn
     return 0;
 }
 
+/* Drag/Drop*/
+extern sqInt nilObject(void);
+
+static sqInt sqNull_dropInit (void)
+{
+    return 1;
+}
+
+static sqInt sqNull_dropShutdown (void)
+{
+    return 1;
+}
+
+static char* sqNull_dropRequestFileName(sqInt dropIndex)
+{
+    return 0;
+}
+
+static sqInt sqNull_dropRequestFileHandle(sqInt dropIndex)
+{
+    return nilObject();
+}
+
 sqWindowSystem sqNullWindowSystem = {
     .name = "null",
 
@@ -202,4 +225,8 @@ sqWindowSystem sqNullWindowSystem = {
     .clipboardSize = sqNull_clipboardSize,
     .clipboardReadIntoAt = sqNull_clipboardReadIntoAt,
     .clipboardWriteFromAt = sqNull_clipboardWriteFromAt,
+    .dropInit = sqNull_dropInit,
+    .dropShutdown = sqNull_dropShutdown,
+    .dropRequestFileName = sqNull_dropRequestFileName,
+    .dropRequestFileHandle = sqNull_dropRequestFileHandle,
 };

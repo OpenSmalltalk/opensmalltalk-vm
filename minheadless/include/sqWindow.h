@@ -68,6 +68,12 @@ typedef struct
     sqInt (*clipboardReadIntoAt)(sqInt count, sqInt byteArrayIndex, sqInt startIndex);
 
     sqInt (*clipboardWriteFromAt)(sqInt count, sqInt byteArrayIndex, sqInt startIndex);
+
+    sqInt (*dropInit) (void);
+    sqInt (*dropShutdown) (void);
+
+    char* (*dropRequestFileName)(sqInt dropIndex);
+    sqInt (*dropRequestFileHandle)(sqInt dropIndex);
 } sqWindowSystem;
 
 #endif /* SQUEAK_WINDOW_H */

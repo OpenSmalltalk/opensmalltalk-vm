@@ -199,3 +199,36 @@ sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
     return currentWindowSystem->clipboardWriteFromAt(count, byteArrayIndex, startIndex);
 }
+
+sqInt dropInit (void)
+{
+    return currentWindowSystem->dropInit();
+}
+
+sqInt dropShutdown (void)
+{
+    return currentWindowSystem->dropShutdown();
+}
+
+char* dropRequestFileName(sqInt dropIndex)
+{
+    return currentWindowSystem->dropRequestFileName(dropIndex);
+}
+
+sqInt dropRequestFileHandle(sqInt dropIndex)
+{
+    return currentWindowSystem->dropRequestFileHandle(dropIndex);
+}
+
+sqInt sqSecFileAccessCallback(void *callback)
+{
+    return 0;
+}
+
+void sqSetNumberOfDropFiles(sqInt numberOfFiles)
+{
+}
+
+void sqSetFileInformation(sqInt dropIndex, void *dropFile)
+{
+}

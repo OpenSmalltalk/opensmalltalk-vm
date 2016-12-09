@@ -44,6 +44,8 @@ static int mousePositionX = 0;
 static int mousePositionY = 0;
 
 static sqInt sdl2InputEventSemaIndex = 0;
+static char droppedFileName[FILENAME_MAX];
+
 static sqInt setSDL2InputSemaphoreIndex(sqInt semaIndex)
 {
     if (semaIndex == 0)
@@ -483,15 +485,20 @@ static void handleWindowEvent(const SDL_Event *rawEvent)
 static void handleDropFileEvent(const SDL_Event *rawEvent)
 {
     sqEventUnion event;
-    recordSDLEvent(rawEvent);
+    strcpy(droppedFileName, rawEvent->drop.file);
+    SDL_free(rawEvent->drop.file);
 
     /* TODO: Support dropping files here or in the image.*/
     {
         event.dnd.type = EventTypeDragDropFiles;
         event.dnd.timeStamp = rawEvent->window.timestamp;
         event.dnd.dragType = SQDragDrop;
+        event.dnd.numFiles = 1;
+        event.dnd.x = mousePositionX;
+        event.dnd.y = mousePositionY;
+        event.dnd.modifiers = modifiersState;
+        recordEvent(&event);
     }
-    SDL_free(rawEvent->drop.file);
 }
 
 static void handleEvent(const SDL_Event *event)
@@ -792,7 +799,7 @@ static sqInt sqSDL2_getNextSDL2Event(void *buffer, size_t bufferSize)
 
 static sqInt sqSDL2_getButtonState(void)
 {
-    sqSDL2_processEvents();
+    ioProcessEvents();
     return buttonState | (modifiersState << 3);
 }
 
@@ -803,7 +810,7 @@ static sqInt sqSDL2_getKeystroke(void)
 
 static sqInt sqSDL2_mousePoint(void)
 {
-    sqSDL2_processEvents();
+    ioProcessEvents();
     return (mousePositionX<<16) | mousePositionY;
 }
 
@@ -877,6 +884,48 @@ static sqInt sqSDL2_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqIn
 
     free(buffer);
     return 0;
+}
+
+/* Drag/Drop*/
+#include "FilePlugin.h"
+extern SQFile * fileValueOf(sqInt objectPointer);
+extern sqInt classByteArray(void);
+extern sqInt instantiateClassindexableSize(sqInt classPointer, sqInt size);
+extern sqInt nilObject(void);
+
+static usqIntptr_t fileRecordSize(void)
+{
+	return sizeof(SQFile);
+}
+
+static sqInt sqSDL2_dropInit (void)
+{
+    return 1;
+}
+
+static sqInt sqSDL2_dropShutdown (void)
+{
+    return 1;
+}
+
+static char* sqSDL2_dropRequestFileName(sqInt dropIndex)
+{
+    if(dropIndex == 1)
+        return droppedFileName;
+    return NULL;
+}
+
+static sqInt sqSDL2_dropRequestFileHandle(sqInt dropIndex)
+{
+    if(droppedFileName[0] && dropIndex == 1)
+    {
+        // you cannot be serious?
+		sqInt handle = instantiateClassindexableSize(classByteArray(), fileRecordSize());
+		sqFileOpen(fileValueOf(handle), droppedFileName, strlen(droppedFileName), 0);
+		return handle;
+    }
+
+    return nilObject();
 }
 
 /* SDL2 primitives*/
@@ -969,4 +1018,8 @@ sqWindowSystem sqSDL2WindowSystem = {
     .clipboardSize = sqSDL2_clipboardSize,
     .clipboardReadIntoAt = sqSDL2_clipboardReadIntoAt,
     .clipboardWriteFromAt = sqSDL2_clipboardWriteFromAt,
+    .dropInit = sqSDL2_dropInit,
+    .dropShutdown = sqSDL2_dropShutdown,
+    .dropRequestFileName = sqSDL2_dropRequestFileName,
+    .dropRequestFileHandle = sqSDL2_dropRequestFileHandle,
 };
