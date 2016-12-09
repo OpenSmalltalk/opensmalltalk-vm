@@ -6,7 +6,6 @@ AsynchFilePlugin \
 B2DPlugin \
 BMPReadWriterPlugin \
 BitBltPlugin \
-ClipboardExtendedPlugin \
 DSAPrims \
 DropPlugin \
 FFTPlugin \

@@ -102,7 +102,7 @@ platforms/unix/config/autom4te.cache/
 /image/package-cache
 /image/prefs
 /image/special-dirs
-/image/TrunkImage.zip
+/image/*.zip
 
 # /platforms/Cross/
 
