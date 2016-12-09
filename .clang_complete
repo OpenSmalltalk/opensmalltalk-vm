@@ -1,4 +1,5 @@
 -Iplatforms/Cross/vm
+-include
 -Isrc/vm
 -Iminheadless/include
 -Iminheadless/source

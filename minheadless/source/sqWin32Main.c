@@ -1,8 +1,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <stdlib.h>
-
-extern int main(int argc, char *argv[], char *envp[]);
+#include "SqueakVirtualMachine.h"
 
 int CALLBACK WinMain(
   HINSTANCE hInstance,
@@ -11,5 +10,5 @@ int CALLBACK WinMain(
   int       nCmdShow
 )
 {
-    return main(__argc, __argv, _environ);
+    return squeak_main(__argc, __argv);
 }

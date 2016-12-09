@@ -306,6 +306,7 @@ endif()
 # Add the current directory.
 include_directories(
 	.
+	"${PROJECT_SOURCE_DIR}/include"
 	"${PROJECT_SOURCE_DIR}/platforms/Cross/vm"
 	"${SourceFolderName}/vm"
 )
@@ -414,6 +415,7 @@ set(VM_PLATFORM_SOURCES
 	minheadless/source/sqWindow-Null.c
 	minheadless/source/sqWindow-Dispatch.c
 	minheadless/source/sqInternalPrimitives.c
+	minheadless/source/sqVirtualMachineInterface.c
 )
 
 if(UNIX)
@@ -514,6 +516,10 @@ set(VM_CORE_LIBRARY_TYPE STATIC)
 #    set(VM_CORE_LIBRARY_TYPE SHARED)
 #endif()
 
+if("${VM_CORE_LIBRARY_TYPE}" STREQUAL "STATIC")
+	add_definitions(-DBUILD_SQUEAK_STATIC)
+endif()
+
 add_library(${VM_LIBRARY_NAME} ${VM_CORE_LIBRARY_TYPE} ${VM_SOURCES} ${VM_INTERNAL_PLUGIN_SOURCES})
 add_dependencies(${VM_LIBRARY_NAME} sqGitVersionString)
 
@@ -527,6 +533,6 @@ add_executable(${VM_EXECUTABLE_NAME} minheadless/source/sqMain.c)
 target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
 
 if(WIN32)
-    add_executable(${VM_EXECUTABLE_NAME}w WIN32 minheadless/source/sqMain.c minheadless/source/sqWin32Main.c)
+    add_executable(${VM_EXECUTABLE_NAME}w WIN32 minheadless/source/sqWin32Main.c)
     target_link_libraries(${VM_EXECUTABLE_NAME}w ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
 endif()
