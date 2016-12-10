@@ -442,7 +442,7 @@ InterpreterPrimitives >> noInlineSigned32BitValueGutsOf: oop [
 	<var: #value type: #int>
 	<var: #magnitude type: #'unsigned int'>
 	self deny: objectMemory hasSixtyFourBitImmediates.
-	self deny: (objectMemory isIntegerValue: oop).
+	self deny: (objectMemory isIntegerObject: oop).
 
 	(objectMemory isNonIntegerImmediate: oop) ifTrue:
 		[self primitiveFail.
