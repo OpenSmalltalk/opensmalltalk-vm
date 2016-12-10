@@ -116,7 +116,8 @@ Class {
 		'simNativeStackPtr',
 		'simNativeSpillBase',
 		'simNativeStackSize',
-		'hasNativeFrame'
+		'hasNativeFrame',
+		'blockPass'
 	],
 	#classVars : [
 		'NeedsMergeFixupFlag',
@@ -1206,7 +1207,8 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 	inBlock := InVanillaBlock.
 	compiledBlocksCount := 0.
 	[compiledBlocksCount < blockCount] whileTrue:
-		[blockStart := self blockStartAt: compiledBlocksCount.
+		[blockPass := 1.
+		 blockStart := self blockStartAt: compiledBlocksCount.
 		 (result := self scanBlock: blockStart) < 0 ifTrue: [^result].
 		 initialOpcodeIndex := opcodeIndex.
 		 initialCounterIndex := self maybeCounterIndex."for SistaCogit"
@@ -1226,6 +1228,7 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 		  initialStackPtr = simStackPtr]
 			whileFalse:
 				[self assert: initialStackPtr > simStackPtr.
+				 blockPass := blockPass + 1. "for asserts :-("
 				 blockStart numInitialNils: blockStart numInitialNils + simStackPtr - initialStackPtr.
 				 blockStart fakeHeader dependent: nil.
 				 self reinitializeFixupsFrom: blockStart startpc + blockStart numInitialNils
@@ -12153,6 +12156,12 @@ StackToRegisterMappingCogit >> marshallSendArguments: numArgs [
 	self ssPop: numArgs + 1
 ]
 
+{ #category : #debugging }
+StackToRegisterMappingCogit >> maybeCompilingFirstPassOfBlockWithInitialPushNil [
+	"For assert checking; or rather for avoiding assert fails when dealing with the hack for block temps in the SqueakV3PlusClosures bytecode set."
+	^inBlock = InVanillaBlock and: [methodOrBlockNumTemps > methodOrBlockNumArgs and: [blockPass = 1]]
+]
+
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> maybeCountCounter [
 	"This is a hook for SistaCogit"
@@ -12866,7 +12875,8 @@ StackToRegisterMappingCogit >> ssFlushTo: index nativeFlushTo: nativeIndex [
 	LowcodeVM ifTrue:
 		[self ssNativeFlushTo: nativeIndex].
 	0 to: methodOrBlockNumTemps - 1 do:
-		[:i| self assert: (self simStackAt: i) type = SSBaseOffset].
+		[:i| self assert: ((self simStackAt: i) type = SSBaseOffset
+						or: [self maybeCompilingFirstPassOfBlockWithInitialPushNil])].
 	methodOrBlockNumTemps to: simSpillBase - 1 do:
 		[:i| self assert: (self simStackAt: i) spilled].
 	simSpillBase <= index ifTrue:
@@ -12989,7 +12999,8 @@ StackToRegisterMappingCogit >> ssNativeTop [
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssPop: n [
 	self assert: (simStackPtr - n >= (methodOrBlockNumTemps - 1)
-				or: [needsFrame not and: [simStackPtr - n >= -1]]).
+				or: [(needsFrame not and: [simStackPtr - n >= -1])
+				or: [self maybeCompilingFirstPassOfBlockWithInitialPushNil]]).
 	simStackPtr := simStackPtr - n
 ]
 
