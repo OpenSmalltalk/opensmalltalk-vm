@@ -102,7 +102,8 @@ Class {
 		'nativeStackPointer',
 		'lowcodeCalloutState',
 		'shadowCallStackPointer',
-		'debugCallbackPath'
+		'debugCallbackPath',
+		'callbackReturnSP'
 	],
 	#classVars : [
 		'AccessModifierPrivate',
@@ -1467,7 +1468,7 @@ StackInterpreter class >> mustBeGlobal: var [
 			'deferDisplayUpdates' 'extraVMMemory' 'showSurfaceFn'
 			'desiredNumStackPages' 'desiredEdenBytes'
 			'breakSelector' 'breakSelectorLength' 'sendTrace' 'checkAllocFiller' 'checkedPluginName'
-			'suppressHeartbeatFlag' 'debugCallbackPath') includes: var)
+			'suppressHeartbeatFlag' 'debugCallbackPath' 'callbackReturnSP') includes: var)
 	   or: [ "This allows slow machines to define bytecodeSetSelector as 0
 			to avoid the interpretation overhead."
 			MULTIPLEBYTECODESETS not and: [var = 'bytecodeSetSelector']]]]
@@ -7081,6 +7082,15 @@ StackInterpreter >> frameIsBlockActivation: theFP [ "<Integer>"
 	<inline: true>
 	<var: #theFP type: #'char *'>
 	^(stackPages byteAt: theFP + FoxFrameFlags + 3) ~= 0
+]
+
+{ #category : #'frame access' }
+StackInterpreter >> frameLastArgumentOffset [
+	"Answer the offset in bytes from the frame pointer to the last argument,
+	 which is simply the address of the word above the saved ip.  See the
+	 diagram in StackInterpreter class>>initializeFrameIndices."
+	<inline: true>
+	^FoxCallerSavedIP + objectMemory wordSize
 ]
 
 { #category : #'frame access' }
@@ -18669,6 +18679,7 @@ StackInterpreter >> returnAs: returnTypeOop ThroughCallback: vmCallbackContext C
 							 framePointer := self frameCallerFP: framePointer.
 							 self setMethod: (self frameMethodObject: framePointer).
 							 self restoreCStackStateForCallbackContext: vmCallbackContext.
+							 callbackReturnSP := stackPointer.
 							 "N.B. siglongjmp is defines as _longjmp on non-win32 platforms.
 							  This matches the use of _setjmp in ia32abicc.c."
 							 self siglong: vmCallbackContext trampoline jmp: (self integerValueOf: returnTypeOop).
@@ -18699,6 +18710,7 @@ StackInterpreter >> returnAs: returnTypeOop ThroughCallback: vmCallbackContext C
 	self setStackPageAndLimit: thePage.
 	self restoreCStackStateForCallbackContext: vmCallbackContext.
 	debugCallbackPath := debugCallbackPath bitOr: 2048.
+	callbackReturnSP := stackPointer.
 	 "N.B. siglongjmp is defines as _longjmp on non-win32 platforms.
 	  This matches the use of _setjmp in ia32abicc.c."
 	self siglong: vmCallbackContext trampoline jmp: (self integerValueOf: returnTypeOop).
