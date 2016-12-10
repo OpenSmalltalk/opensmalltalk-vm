@@ -70,7 +70,7 @@ FakeStdinStream >> next [
 								inWorld: ActiveWorld
 								onCancelReturn: nil 
 								acceptOnCR: true.
-				inputLine ifNil: [self halt]].
+				inputLine ifNil: [self atEnd: true. ^nil]].
 		 collection size <= inputLine size ifTrue:
 			[collection := collection species new: inputLine size + 1].
 		 collection
