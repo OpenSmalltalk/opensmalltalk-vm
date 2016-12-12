@@ -22,13 +22,20 @@ CogObjectRepresentationFor32BitSpur class >> numTrampolines [
 ]
 
 { #category : #'sista support' }
-CogObjectRepresentationFor32BitSpur >> allImmediate: immediateMask branchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
-	| jmpImmediate |
+CogObjectRepresentationFor32BitSpur >> allImmediate: immediateMask branchIf: reg instanceOfBehaviors: arrayObj target: targetFixUp [
 	< inline: true>	
 	<var: #targetFixUp type: #'AbstractInstruction *'>
 	self assert: immediateMask = objectMemory tagMask.
-	jmpImmediate := self genJumpNotImmediate: reg.
-	jmpImmediate jmpTarget: targetFixUp.
+	(self genJumpImmediate: reg) jmpTarget: targetFixUp.
+	^0
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationFor32BitSpur >> allImmediate: immediateMask branchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
+	< inline: true>	
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	self assert: immediateMask = objectMemory tagMask.
+	(self genJumpNotImmediate: reg) jmpTarget: targetFixUp.
 	^0
 ]
 
@@ -46,9 +53,28 @@ CogObjectRepresentationFor32BitSpur >> allocateCounters: nCounters [
 ]
 
 { #category : #'sista support' }
+CogObjectRepresentationFor32BitSpur >> branch2CasesIf: reg instanceOfBehaviors: arrayObj target: targetFixUp [
+	<inline: true>
+	self Jump: targetFixUp
+]
+
+{ #category : #'sista support' }
 CogObjectRepresentationFor32BitSpur >> branch2CasesIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
 	"nothing to do, 2 immediates so all immediates are allowed"
 	<inline: true>
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationFor32BitSpur >> branchIf: reg hasImmediateTag: classIndex target: targetFixUp [
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	| jmpImmediate|
+	<inline: true>
+	cogit MoveR: reg R: TempReg.
+	classIndex = objectMemory smallIntegerTag ifTrue:
+		[jmpImmediate := self genJumpSmallIntegerInScratchReg: TempReg].
+	classIndex = objectMemory characterTag ifTrue:
+		[jmpImmediate := self genJumpCharacterInScratchReg: TempReg].
+	jmpImmediate jmpTarget: targetFixUp
 ]
 
 { #category : #'sista support' }
