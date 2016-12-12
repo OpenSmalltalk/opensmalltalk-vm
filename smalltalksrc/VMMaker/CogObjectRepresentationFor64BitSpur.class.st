@@ -19,6 +19,24 @@ CogObjectRepresentationFor64BitSpur class >> wordSize [
 ]
 
 { #category : #'sista support' }
+CogObjectRepresentationFor64BitSpur >> allImmediate: immediateMask branchIf: reg instanceOfBehaviors: arrayObj target: targetFixUp [
+	| tag1 tag2 |
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	immediateMask = objectMemory tagMask ifTrue: [(self genJumpImmediate: reg) jmpTarget: targetFixUp. ^0].
+	"TempReg holds the rcvr tag"
+	"In this case one immediate tag out of the three is not present in arrayObj."
+	tag1 := objectMemory classTagForClass: (objectMemory fetchPointer: 0 ofObject: arrayObj).
+	tag2 := objectMemory classTagForClass: (objectMemory fetchPointer: 1 ofObject: arrayObj).
+	(tag1 = objectMemory smallIntegerTag or: [tag2 = objectMemory smallIntegerTag]) ifTrue:
+		[(self genJumpSmallIntegerInScratchReg: TempReg) jmpTarget: targetFixUp].
+	(tag1 = objectMemory characterTag or: [tag2 = objectMemory characterTag]) ifTrue:
+		[(self genJumpCharacterInScratchReg: TempReg) jmpTarget: targetFixUp].
+	(tag1 = objectMemory smallFloatTag or: [tag2 = objectMemory smallFloatTag]) ifTrue:
+		[(self genJumpSmallFloatInScratchReg: TempReg) jmpTarget: targetFixUp].
+	^0
+]
+
+{ #category : #'sista support' }
 CogObjectRepresentationFor64BitSpur >> allImmediate: immediateMask branchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
 	| incorrectTag tag1 tag2 |
 	<var: #targetFixUp type: #'AbstractInstruction *'>
@@ -68,6 +86,29 @@ CogObjectRepresentationFor64BitSpur >> bitAndByteOffsetOfIsFullBlockBitInto: aBl
 ]
 
 { #category : #'sista support' }
+CogObjectRepresentationFor64BitSpur >> branch2CasesIf: reg instanceOfBehaviors: arrayObj target: targetFixUp [
+	| classObj tag1 tag2 |
+	< inline: true>		
+	
+	"look for the 2 tags requiring jmps"
+	0 to: (objectMemory numSlotsOf: arrayObj) - 1 do:
+		[:i|
+		 classObj := objectMemory fetchPointer: i ofObject: arrayObj.
+		 (objectMemory isImmediateClass: classObj)
+			ifTrue: [ tag1
+				ifNil: [tag1 := objectMemory classTagForClass: classObj ]
+				ifNotNil: [tag2 := objectMemory classTagForClass: classObj ] ] ].
+		
+	(tag1 = objectMemory smallIntegerTag or: [tag2 = objectMemory smallIntegerTag]) ifTrue:
+		[(self genJumpSmallIntegerInScratchReg: TempReg) jmpTarget: targetFixUp].
+	(tag1 = objectMemory characterTag or: [tag2 = objectMemory characterTag]) ifTrue:
+		[(self genJumpCharacterInScratchReg: TempReg) jmpTarget: targetFixUp].
+	(tag1 = objectMemory smallFloatTag or: [tag2 = objectMemory smallFloatTag]) ifTrue:
+		[(self genJumpSmallFloatInScratchReg: TempReg) jmpTarget: targetFixUp].
+	^ 0
+]
+
+{ #category : #'sista support' }
 CogObjectRepresentationFor64BitSpur >> branch2CasesIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
 	"Only 2 immediate type allowed out of the three. Look for the third and jump to target fixup if it's the third.
 	TempReg currently holds the rcvr tag and the receiver is immediate."
@@ -88,6 +129,21 @@ CogObjectRepresentationFor64BitSpur >> branch2CasesIf: reg notInstanceOfBehavior
 	cogit CmpCq: incorrectTag R: TempReg.
 	cogit JumpZero: targetFixUp.
 	
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationFor64BitSpur >> branchIf: reg hasImmediateTag: classIndex target: targetFixUp [
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	| jmpImmediate|
+	<inline: true>
+	cogit MoveR: reg R: TempReg.
+	classIndex = objectMemory smallIntegerTag ifTrue:
+		[jmpImmediate := self genJumpSmallIntegerInScratchReg: TempReg].
+	classIndex = objectMemory characterTag ifTrue:
+		[jmpImmediate := self genJumpCharacterInScratchReg: TempReg].
+	classIndex = objectMemory smallFloatTag ifTrue:
+		[jmpImmediate := self genJumpSmallFloatInScratchReg: TempReg].
+	jmpImmediate jmpTarget: targetFixUp
 ]
 
 { #category : #'sista support' }
