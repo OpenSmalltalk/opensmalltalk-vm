@@ -73,6 +73,55 @@ CogObjectRepresentationForSpur >> allocateNPinnedSlots: nSlots [
 ]
 
 { #category : #'sista support' }
+CogObjectRepresentationForSpur >> branchIf: reg instanceOfBehavior: classObj target: targetFixUp [
+	"Generate a branch if reg is an instance of classObj, otherwise fall-
+	 through. Cannot change the value of reg (may be used afterwards)."
+	| classIndex jmp |
+	<inline: true>
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	<var: #jmp type: #'AbstractInstruction *'>
+	classIndex := objectMemory classTagForClass: classObj.
+	(objectMemory isImmediateClass: classObj)
+		ifTrue:
+			[self branchIf: reg hasImmediateTag: classIndex target: targetFixUp ]
+		ifFalse:
+			[jmp := (self genJumpImmediate: reg) .
+			 self genGetClassIndexOfNonImm: reg into: TempReg.
+			 self genCmpClassIndex: classIndex R: TempReg.
+			 cogit JumpZero: targetFixUp.
+			jmp jmpTarget: cogit Label ].
+	^0
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> branchIf: reg instanceOfBehaviors: arrayObj target: targetFixUp [
+	"Generate a branch if reg is an instance of any of the classes in arrayObj,
+	 otherwise fall-through. reg should not be edited."
+	
+	| allImmediate noneImmediate immediateMask numNonImmediates classObj |
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	
+	"let me tell you all about it, let me falsify"
+	allImmediate := true. noneImmediate := true. immediateMask := 0. numNonImmediates := 0.
+	0 to: (objectMemory numSlotsOf: arrayObj) - 1 do:
+		[:i|
+		 classObj := objectMemory fetchPointer: i ofObject: arrayObj.
+		 (objectMemory isImmediateClass: classObj)
+			ifTrue:
+				[noneImmediate := false.
+				 immediateMask := immediateMask + (objectMemory classTagForClass: classObj)]
+			ifFalse:
+				[allImmediate := false.
+				 numNonImmediates := numNonImmediates + 1]].
+
+	noneImmediate ifTrue: [ ^ self noneImmediateBranchIf: reg instanceOfBehaviors: arrayObj target: targetFixUp ].
+
+	allImmediate ifTrue: [ ^ self allImmediate: immediateMask branchIf: reg instanceOfBehaviors: arrayObj target: targetFixUp ].
+
+	^ self mixed: numNonImmediates branchIf: reg instanceOfBehaviors: arrayObj target: targetFixUp
+]
+
+{ #category : #'sista support' }
 CogObjectRepresentationForSpur >> branchIf: reg notInstanceOfBehavior: classObj target: targetFixUp [
 	"Generate a branch if reg is an instance of classObj, otherwise fall-
 	 through. Cannot change the value of reg (may be used afterwards)."
@@ -1883,6 +1932,48 @@ CogObjectRepresentationForSpur >> maybeShiftClassTagRegisterForMethodCacheProbe:
 ]
 
 { #category : #'sista support' }
+CogObjectRepresentationForSpur >> mixed: numNonImmediates branchIf: reg instanceOfBehaviors: arrayObj target: targetFixUp [
+	| jmpImmediate numCases classObj index jmp |
+	<var: #label type: #'AbstractInstruction *'>
+	<var: #jmpImmediate type: #'AbstractInstruction *'>
+	<var: #jmp type: #'AbstractInstruction *'>
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	numCases := objectMemory numSlotsOf: arrayObj.
+	jmpImmediate := self genJumpImmediate: reg.
+	
+	"Rcvr is non immediate"
+	self genGetClassIndexOfNonImm: reg into: TempReg.
+	index := 0.
+	0 to: numCases - 1 do:
+		[:i|
+			classObj := objectMemory fetchPointer: i ofObject: arrayObj.
+			(objectMemory isImmediateClass: classObj) ifFalse: [
+				self genCmpClassIndex: (objectMemory classTagForClass: classObj) R: TempReg.
+				cogit JumpZero: targetFixUp.
+				index := index + 1 ] ].
+	jmp := cogit Jump: 0.
+	
+	"Rcvr is immediate"
+	jmpImmediate jmpTarget: cogit Label.
+	numCases - numNonImmediates "num Immediates allowed"
+		caseOf:
+		{[ 1 ] -> [ "1 immediate needs to jump. Find it and jump."
+			0 to: numCases - 1 do:
+				[ :j |
+				classObj := objectMemory fetchPointer: j ofObject: arrayObj.
+				(objectMemory isImmediateClass: classObj) ifTrue: [
+					self branchIf: reg hasImmediateTag: (objectMemory classTagForClass: classObj) target: targetFixUp ] ] ] .
+		[ 2 ] -> [ "2 immediates needs to jump"
+				self branch2CasesIf: reg instanceOfBehaviors: arrayObj target: targetFixUp ] .
+		[ 3 ] -> [ "all 3 needs to jump" self Jump: targetFixUp ] }.
+	
+	jmp jmpTarget: self Label.
+	
+	^ 0
+		
+]
+
+{ #category : #'sista support' }
 CogObjectRepresentationForSpur >> mixed: numNonImmediates branchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
 	| jmpImmediate jumps label numCases classObj index |
 	<var: #label type: #'AbstractInstruction *'>
@@ -1925,6 +2016,24 @@ CogObjectRepresentationForSpur >> mixed: numNonImmediates branchIf: reg notInsta
 	
 	^ 0
 		
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> noneImmediateBranchIf: reg instanceOfBehaviors: arrayObj target: targetFixUp [
+	"All classes in arrayObj are not immediate"
+	| classObj jmp |
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	<var: #label type: #'AbstractInstruction *'>
+	<var: #jmp type: #'AbstractInstruction *'>
+	jmp := self genJumpImmediate: reg.
+	self genGetClassIndexOfNonImm: reg into: TempReg.
+	0 to: (objectMemory numSlotsOf: arrayObj) - 1 do:
+		[:i|
+		 classObj := objectMemory fetchPointer: i ofObject: arrayObj.
+		 self genCmpClassIndex: (objectMemory classTagForClass: classObj) R: TempReg.
+		cogit JumpZero: targetFixUp ].
+	jmp jmpTarget: self Label.
+	^0
 ]
 
 { #category : #'sista support' }
