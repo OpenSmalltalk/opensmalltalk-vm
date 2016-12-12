@@ -147,7 +147,7 @@ SistaCogit >> disassembleMethod: surrogateOrAddress on: aStream [
 			 addr := i * CounterBytes + counters.
 			 addr printOn: aStream base: 16.
 			 aStream nextPut: $:; space.
-			 (objectMemory longAt: addr) printOn: aStream base: 16.
+			 (objectMemory long32At: addr) printOn: aStream base: 16.
 			 aStream cr].
 		 aStream flush]
 ]
@@ -499,8 +499,7 @@ SistaCogit >> genExecutionCountLogicInto: binaryBlock counterReg: counterReg [
 	<var: #countTripped type: #'AbstractInstruction *'>
 	<inline: true>
 	| counterAddress countTripped |
-	counterAddress := counters + ((self sizeof: #sqInt) * counterIndex).
-	self assert: objectMemory wordSize = CounterBytes.
+	counterAddress := counters + (CounterBytes * counterIndex).
 	self MoveA32: counterAddress R: counterReg.
 	self SubCq: 16r10000 R: counterReg. "Count executed"
 	"If counter trips simply abort the comparison continuing to the following
@@ -731,7 +730,7 @@ SistaCogit >> genJumpIf: boolean to: targetBytecodePC [
 
 	self genFallsThroughCountLogicCounterReg: SendNumArgsReg counterAddress: counterAddress.
 
-	self CmpCq: (boolean == objectMemory falseObject
+	self CmpCq: (boolean = objectMemory falseObject
 					ifTrue: [objectMemory trueObject - objectMemory falseObject]
 					ifFalse: [objectMemory falseObject - objectMemory trueObject])
 		R: TempReg.
