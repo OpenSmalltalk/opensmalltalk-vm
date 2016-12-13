@@ -31,7 +31,7 @@ ThreadedIA32FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: cal
 	[(calloutState callFlags anyMask: FFICallFlagThreaded) ifTrue:
 		[myThreadIndex := interpreterProxy disownVM: 0]].
 
-	self registerArgsSlop + self cStackAlignment > 0 ifTrue:
+	(self allocaLiesSoSetSpBeforeCall or: [self mustAlignStack]) ifTrue:
 		[self setsp: calloutState argVector].
 
 	atomicType := self atomicTypeOf: calloutState ffiRetHeader.
@@ -256,13 +256,6 @@ ThreadedIA32FFIPlugin >> ffiReturnStruct: longLongRet ofType: ffiRetType in: cal
 			[self mem: (interpreterProxy firstIndexableField: oop) cp: calloutState limit y: calloutState structReturnSize].
 	interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
 	^interpreterProxy methodReturnValue: retOop
-]
-
-{ #category : #marshalling }
-ThreadedIA32FFIPlugin >> registerArgsSlop [
-	"Answer any space needed to prevent the alloca'ed outgoing arguments marshalling area from
-	 being overwritten by any register arguments during calls during marshalling.  On x86 this is 0"
-	^0
 ]
 
 { #category : #marshalling }
