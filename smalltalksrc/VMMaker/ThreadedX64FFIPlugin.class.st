@@ -274,14 +274,6 @@ ThreadedX64FFIPlugin >> ffiPushUnsignedShort: value in: calloutState [
 ]
 
 { #category : #marshalling }
-ThreadedX64FFIPlugin >> registerArgsSlop [
-	"Answer any space needed to prevent the alloca'ed outgoing arguments marshalling area from
-	 being overwritten by any register arguments during calls during marshalling.  On ARM we
-	 believe this is zero."
-	^0
-]
-
-{ #category : #marshalling }
 ThreadedX64FFIPlugin >> returnStructInRegisters: returnStructSize [
 	"Answer if a struct result of a given size is returned in memory or not."
 	self subclassResponsibility
