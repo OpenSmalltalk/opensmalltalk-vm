@@ -3455,7 +3455,7 @@ CogIA32Compiler >> genRemoveNArgsFromStack: n [
 
 { #category : #abi }
 CogIA32Compiler >> genRemoveNFloatArgsFromStack: n [ 
-	cogit AddCq: n * 8 R: ESP.
+	n > 0 ifTrue: [cogit AddCq: n * 8 R: ESP].
 	^0
 ]
 

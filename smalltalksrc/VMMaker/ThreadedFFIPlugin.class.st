@@ -156,19 +156,17 @@ ThreadedFFIPlugin class >> preambleCCode [
 #include "sqAssert.h" /* for assert */
 #define ThreadedFFIPlugin 1 /* to filter-out unwanted declarations from sqFFI.h */
 #include "sqFFI.h" /* for logging and surface functions */
+#include "sqCogStackAlignment.h" /* for STACK_ALIGN_BYTES and getsp() */
 
 #ifdef _MSC_VER
 # define alloca _alloca
 #endif
 #if defined(__GNUC__) && (defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__))
 # define setsp(sp) asm volatile ("movl %0,%%esp" : : "m"(sp))
-# define getsp() ({ void *esp; asm volatile ("movl %%esp,%0" : "=r"(esp) : ); esp;})
 # elif defined(__GNUC__) && (defined(__amd64__) || defined(__x86_64__) ||  defined(__amd64) || defined(__x86_64))
 # define setsp(sp) asm volatile ("movq %0,%%rsp" : : "m"(sp))
-# define getsp() ({ void *rsp; asm volatile ("movq %%rsp,%0" : "=r"(rsp) : ); rsp;})
 # elif defined(__GNUC__) && (defined(__arm__))
 # define setsp(sp) asm volatile ("ldr %%sp, %0" : : "m"(sp))
-# define getsp() ({ void *sp; asm volatile ("mov %0, %%sp" : "=r"(sp) : ); sp;})
 #endif
 #if !defined(getsp)
 # define getsp() 0
@@ -178,28 +176,11 @@ ThreadedFFIPlugin class >> preambleCCode [
 #endif 
 
 #if !defined(STACK_ALIGN_BYTES)
-# if __APPLE__ && __MACH__ && __i386__
-#  define STACK_ALIGN_BYTES 16
-# elif __linux__ && __i386__
-#  define STACK_ALIGN_BYTES 16
-# elif defined(__amd64__) || defined(__x86_64__) ||  defined(__amd64) || defined(__x86_64)
-#  define STACK_ALIGN_BYTES 16
-# elif defined(powerpc) || defined(__powerpc__) || defined(_POWER) || defined(__POWERPC__) || defined(__PPC__)
-#  define STACK_ALIGN_BYTES 16
-# elif defined(__sparc64__) || defined(__sparcv9__) || defined(__sparc_v9__) /* must precede 32-bit sparc defs */
-#  define STACK_ALIGN_BYTES 16
-# elif defined(sparc) || defined(__sparc__) || defined(__sparclite__)
-#  define STACK_ALIGN_BYTES 8
-# elif defined(__arm__) 
-#  define STACK_ALIGN_BYTES 8
-# else
 #  define STACK_ALIGN_BYTES 0
-# endif
 #endif /* !defined(STACK_ALIGN_BYTES) */
 
-#if !defined(STACK_OFFSET_BYTES)
-# define STACK_OFFSET_BYTES 0
-#endif
+/* For ABI that require stack alignment greater than natural word size */
+#define MUST_ALIGN_STACK (STACK_ALIGN_BYTES > sizeof(void*))
 
 #if defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__)
 /* Both Mac OS X x86 and Win32 x86 return structs of a power of two in size
@@ -219,18 +200,18 @@ ThreadedFFIPlugin class >> preambleCCode [
 # endif
 #endif /* defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__) */
 
-#if !defined(ALLOCA_LIES_SO_USE_GETSP)
-# if defined(__MINGW32__) && (__GNUC__ >= 3) && (defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__))
+#if !defined(ALLOCA_LIES_SO_SETSP_BEFORE_CALL)
+# if defined(__MINGW32__) && !defined(__clang__) && (__GNUC__ >= 3) && (defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__))
     /*
      * cygwin -mno-cygwin (MinGW) gcc 3.4.x''s alloca is a library routine that answers
-     * %esp + 4, so the outgoing stack is offset by one word if uncorrected.
+     * %esp + xx, so the outgoing stack is offset by one or more word if uncorrected.
      * Grab the actual stack pointer to correct.
      */
-#	define ALLOCA_LIES_SO_USE_GETSP 1
+#	define ALLOCA_LIES_SO_SETSP_BEFORE_CALL 1
 # else
-#	define ALLOCA_LIES_SO_USE_GETSP 0
+#	define ALLOCA_LIES_SO_SETSP_BEFORE_CALL 0
 # endif
-#endif /* !defined(ALLOCA_LIES_SO_USE_GETSP) */
+#endif /* !defined(ALLOCA_LIES_SO_SETSP_BEFORE_CALL) */
 
 #if !defined(PLATFORM_API_USES_CALLEE_POPS_CONVENTION)
 # define PLATFORM_API_USES_CALLEE_POPS_CONVENTION 0
@@ -275,10 +256,11 @@ ThreadedFFIPlugin class >> translateInDirectory: directory doInlining: inlineFla
 ]
 
 { #category : #marshalling }
-ThreadedFFIPlugin >> allocaLiesSoUseGetsp [
+ThreadedFFIPlugin >> allocaLiesSoSetSpBeforeCall [
 	"At least one alloca implementation does not answer the actual top of stack.
-	 If so we need to get the actual stack pointer.  Answer whether this is necessary."
-	<cmacro: '() ALLOCA_LIES_SO_USE_GETSP'>
+	 If so we need to reset the actual stack pointer just before the call.
+	Answer whether this is necessary."
+	<cmacro: '() ALLOCA_LIES_SO_SETSP_BEFORE_CALL'>
 	^false
 ]
 
@@ -651,17 +633,16 @@ ThreadedFFIPlugin >> ffiCall: externalFunction ArgArrayOrNil: argArrayOrNil NumA
 	argClass := interpreterProxy fetchPointer: 1 ofObject: argType.
 	(err := self ffiCheckReturn: argSpec With: argClass in: calloutState) ~= 0 ifTrue:
 		[^self ffiFail: err]. "cannot return"
-	"alloca the outgoing stack frame, leaving room for register args while marshalling, and including space for the return struct, if any."
-	allocation := self alloca: stackSize + calloutState structReturnSize + self registerArgsSlop + self cStackAlignment.
-	self allocaLiesSoUseGetsp ifTrue:
-		[allocation := self getsp].
-	self cStackAlignment ~= 0 ifTrue:
-		[allocation := self cCoerce: (allocation asUnsignedInteger bitClear: self cStackAlignment - 1)
+	"alloca the outgoing stack frame, leaving room for marshalling args, and including space for the return struct, if any.
+	Additional space reserved for saving register args like mandated by Win64 X64 or PPC ABI, will be managed by the call itself"
+	allocation := self alloca: stackSize + calloutState structReturnSize + self cStackAlignment.
+	self mustAlignStack ifTrue:
+		[allocation := self cCoerce: (allocation asUnsignedIntegerPtr bitClear: self cStackAlignment - 1)
 						to: #'char *'].
 	calloutState
 		argVector: allocation;
-		currentArg: allocation + self registerArgsSlop;
-		limit: allocation + stackSize + self registerArgsSlop.
+		currentArg: allocation;
+		limit: allocation + stackSize.
 	(calloutState structReturnSize > 0
 	 and: [self nonRegisterStructReturnIsViaImplicitFirstArgument
 	 and: [(self returnStructInRegisters: calloutState structReturnSize) not]]) ifTrue:
@@ -1410,6 +1391,14 @@ ThreadedFFIPlugin >> msg: s [
 ]
 
 { #category : #marshalling }
+ThreadedFFIPlugin >> mustAlignStack [
+	"Many ABIs mandate a particular stack alignment greater than the natural word size.
+	 If so, this macro will answer true.  See class-side preambleCCode."
+	<cmacro: '() MUST_ALIGN_STACK'>
+	^0
+]
+
+{ #category : #marshalling }
 ThreadedFFIPlugin >> nonRegisterStructReturnIsViaImplicitFirstArgument [
 	"Answer if a struct returned in memory is returned to the
 	 referent of a pointer passed as an implciit first argument.
@@ -1861,17 +1850,6 @@ ThreadedFFIPlugin >> primitiveSetManualSurfacePointer [
 	result = 0 ifTrue: [^interpreterProxy primitiveFail].
 	^interpreterProxy pop: 2
 	
-]
-
-{ #category : #marshalling }
-ThreadedFFIPlugin >> registerArgsSlop [
-	"Answer any space needed to prevent the alloca'ed outgoing arguments marshalling area from
-	 being overwritten by any register arguments during calls during marshalling.  For example, on
-	 PowerPC, which has 8 register arguments in the calling convention, register arguments are also
-	 written to the stack.  So unless space is left for them, calls during marshalling prior to the actual
-	 callout (e.g. to interpreterProxy object manipulation routines) can end up overwriting the
-	 marshalling stack as register arguments are written to the stack during calls."
-	self subclassResponsibility
 ]
 
 { #category : #marshalling }
