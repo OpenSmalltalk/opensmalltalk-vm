@@ -109,6 +109,14 @@
 	assert((getsp() & STACK_ALIGN_MASK) == 0);	\
 } while (0)
 #else /* defined(STACK_ALIGN_BYTES) */
-# define STACK_ALIGN_BYTES sizeof(void *)
-# define assertCStackWellAligned() 0
+#  if defined(powerpc) || defined(__powerpc__) || defined(_POWER) || defined(__POWERPC__) || defined(__PPC__)
+#    define STACK_ALIGN_BYTES 16
+#  elif defined(__sparc64__) || defined(__sparcv9__) || defined(__sparc_v9__) /* must precede 32-bit sparc defs */
+#    define STACK_ALIGN_BYTES 16
+#  elif defined(sparc) || defined(__sparc__) || defined(__sparclite__)
+#    define STACK_ALIGN_BYTES 8
+#  else
+#    define STACK_ALIGN_BYTES sizeof(void *)
+#  endif
+#  define assertCStackWellAligned() 0
 #endif /* defined(STACK_ALIGN_BYTES) */
