@@ -3341,6 +3341,13 @@ CogX64Compiler >> unalignedLongAt: byteAddress put: aWord [
 	^objectMemory unalignedLongAt: byteAddress put: aWord
 ]
 
+{ #category : #testing }
+CogX64Compiler >> usesTempRegForAbsoluteLoads [
+	"Answer if TempReg is used in absolute memory loads (as it is on x64).  By default answer false, allowing subclasses to override."
+	<inline: true>
+	^true
+]
+
 { #category : #simulation }
 CogX64Compiler >> wantsNearAddressFor: anObject [
 	"A hack hook to allow x64 to address CStackPointer and CFramePointer relative to VarBaseReg."
