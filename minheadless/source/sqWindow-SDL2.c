@@ -79,9 +79,9 @@ static int convertModifiers(int state)
     int result = 0;
     if(state & KMOD_SHIFT)
         result |= ShiftKeyBit;
-    if(state & KMOD_CTRL)
+    if(state & KMOD_CTRL) /* Alt-gr is received as RCtrl in some cases.*/
         result |= CtrlKeyBit;
-    if(state & KMOD_ALT)
+    if(state & KMOD_ALT) /* Right alt is used for grammar purposes. */
         result |= OptionKeyBit;
     if(state & KMOD_GUI)
         result |= CommandKeyBit;
@@ -283,7 +283,9 @@ static void handleKeyDown(const SDL_Event *rawEvent)
 {
     int character;
     int isSpecial;
+    int hasRightAlt;
 
+    hasRightAlt = (rawEvent->key.keysym.mod & KMOD_RALT) != 0;
     modifiersState = convertModifiers(rawEvent->key.keysym.mod);
     if(rawEvent->key.windowID != windowID)
     {
@@ -309,7 +311,7 @@ static void handleKeyDown(const SDL_Event *rawEvent)
     }
 
     /* We need to send a key stroke for some special circumstances. */
-    if(!isSpecial && (!modifiersState || modifiersState == ShiftKeyBit))
+    if(!isSpecial && (!modifiersState || modifiersState == ShiftKeyBit || hasRightAlt))
         return;
 
     if(character && character != 27)
