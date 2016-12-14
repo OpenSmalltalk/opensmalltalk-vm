@@ -580,12 +580,13 @@ ThreadedFFIPlugin >> ffiCall: externalFunction ArgArrayOrNil: argArrayOrNil NumA
 	"Generic callout. Does the actual work.  If argArrayOrNil is nil it takes args from the stack
 	 and the spec from the method.  If argArrayOrNil is not nil takes args from argArrayOrNil
 	 and the spec from the receiver."
-	| flags argTypeArray address argType oop argSpec argClass err theCalloutState calloutState requiredStackSize stackSize allocation result |
+	| flags argTypeArray address argType oop argSpec argClass err theCalloutState calloutState requiredStackSize stackSize allocation result primNumArgs |
 	<inline: true>
 	<var: #theCalloutState type: #'CalloutState'>
 	<var: #calloutState type: #'CalloutState *'>
 	<var: #allocation type: #'char *'>
 
+	primNumArgs := interpreterProxy methodArgumentCount.
 	(interpreterProxy is: externalFunction KindOfClass: interpreterProxy classExternalFunction) ifFalse:
 		[^self ffiFail: FFIErrorNotFunction].
 	"Load and check the values in the externalFunction before we call out"
@@ -637,8 +638,7 @@ ThreadedFFIPlugin >> ffiCall: externalFunction ArgArrayOrNil: argArrayOrNil NumA
 	Additional space reserved for saving register args like mandated by Win64 X64 or PPC ABI, will be managed by the call itself"
 	allocation := self alloca: stackSize + calloutState structReturnSize + self cStackAlignment.
 	self mustAlignStack ifTrue:
-		[allocation := self cCoerce: (allocation asUnsignedIntegerPtr bitClear: self cStackAlignment - 1)
-						to: #'char *'].
+		[allocation := self cCoerce: (allocation asUnsignedIntegerPtr bitClear: self cStackAlignment - 1) to: #'char *'].
 	calloutState
 		argVector: allocation;
 		currentArg: allocation;
@@ -679,6 +679,8 @@ ThreadedFFIPlugin >> ffiCall: externalFunction ArgArrayOrNil: argArrayOrNil NumA
 	"Go out and call this guy"
 	result := self ffiCalloutTo: address SpecOnStack: argArrayOrNil notNil in: calloutState.
 	self cleanupCalloutState: calloutState.
+	"Can not safely use argumentCount (via e.g. methodReturnValue:) since it may have been changed by a callback."
+	interpreterProxy pop: primNumArgs + 1 thenPush: result. 
 	^result
 ]
 
@@ -1222,17 +1224,16 @@ ThreadedFFIPlugin >> ffiReturnCStringFrom: cPointer [
 	| strLen strOop cString strPtr |
 	<var: #cString type: #'char *'>
 	<var: #strPtr type: #'char *'>
-	cPointer = nil ifTrue:[
-		^interpreterProxy methodReturnValue: interpreterProxy nilObject]. "nil always returns as nil"
-	cString := self cCoerce: cPointer to:'char *'.
+	cPointer ifNil: [^interpreterProxy nilObject]. "nil always returns as nil"
+	cString := self cCoerce: cPointer to: #'char *'.
 	strLen := 0.
 	[(cString at: strLen) = 0] whileFalse:[strLen := strLen+1].
 	strOop := interpreterProxy 
 				instantiateClass: interpreterProxy classString 
 				indexableSize: strLen.
 	strPtr := interpreterProxy firstIndexableField: strOop.
-	0 to: strLen-1 do:[:i| strPtr at: i put: (cString at: i)].
-	^interpreterProxy methodReturnValue: strOop
+	0 to: strLen-1 do: [:i| strPtr at: i put: (cString at: i)].
+	^strOop
 ]
 
 { #category : #'callout support' }
@@ -1247,7 +1248,8 @@ ThreadedFFIPlugin >> ffiReturnPointer: retVal ofType: retType in: calloutState [
 		["Create ExternalData upon return"
 		atomicType := self atomicTypeOf: calloutState ffiRetHeader.
 		(atomicType >> 1) = (FFITypeSignedChar >> 1) ifTrue: "String return"
-			[^self ffiReturnCStringFrom: (self cCoerceSimple: retVal to: #usqInt)].
+			[retOop := self ffiReturnCStringFrom: (self cCoerceSimple: retVal to: #usqInt).
+			 ^retOop].
 		"generate external data"
 		self remapOop: retType in:
 			[oop := interpreterProxy
@@ -1261,7 +1263,7 @@ ThreadedFFIPlugin >> ffiReturnPointer: retVal ofType: retType in: calloutState [
 								indexableSize: 0].
 			interpreterProxy storePointer: 0 ofObject: retOop withValue: oop].
 		interpreterProxy storePointer: 1 ofObject: retOop withValue: retType.
-		^interpreterProxy methodReturnValue: retOop].
+		^retOop].
 	"non-atomic pointer return"
 	classOop := (calloutState ffiRetHeader anyMask: FFIFlagStructure)
 					ifTrue:[interpreterProxy classByteArray]
@@ -1275,7 +1277,7 @@ ThreadedFFIPlugin >> ffiReturnPointer: retVal ofType: retType in: calloutState [
 	self remapOop: oop in:
 		[retOop := interpreterProxy instantiateClass: retClass indexableSize: 0].
 	interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
-	^interpreterProxy methodReturnValue: retOop
+	^retOop
 ]
 
 { #category : #'callout support' }
@@ -1382,6 +1384,25 @@ ThreadedFFIPlugin >> isDirectAlien: oop [
 	^(self sizeField: oop) > 0
 ]
 
+{ #category : #'primitive support' }
+ThreadedFFIPlugin >> maybeDisownVM: calloutState threadIndexInto: aBlock [
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: #always>
+	self cppIf: COGMTVM
+		ifTrue:
+			[(calloutState callFlags anyMask: FFICallFlagThreaded) ifTrue:
+				[aBlock value: (interpreterProxy disownVM: 0)]]
+]
+
+{ #category : #'primitive support' }
+ThreadedFFIPlugin >> maybeOwnVM: calloutState threadIndex: myThreadIndex [
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: #always>
+	self cppIf: COGMTVM ifTrue:
+	[(calloutState callFlags anyMask: FFICallFlagThreaded) ifTrue:
+		[interpreterProxy ownVM: myThreadIndex]]
+]
+
 { #category : #debugging }
 ThreadedFFIPlugin >> msg: s [
 	<var: #s type: 'char *'>
@@ -1395,7 +1416,7 @@ ThreadedFFIPlugin >> mustAlignStack [
 	"Many ABIs mandate a particular stack alignment greater than the natural word size.
 	 If so, this macro will answer true.  See class-side preambleCCode."
 	<cmacro: '() MUST_ALIGN_STACK'>
-	^0
+	^false
 ]
 
 { #category : #marshalling }
@@ -1784,9 +1805,8 @@ ThreadedFFIPlugin >> primitiveLoadSymbolFromModule [
 	module := interpreterProxy stackValue: 0.
 	symbol := interpreterProxy stackValue: 1.
 
-	module ~= interpreterProxy nilObject 
-		ifTrue: [ moduleHandle := self ffiLoadCalloutModule: module ]
-		ifFalse: [ moduleHandle := nil ].
+	moduleHandle := module ~= interpreterProxy nilObject ifTrue:
+						[self ffiLoadCalloutModule: module].
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNotFound].
 	address := interpreterProxy
