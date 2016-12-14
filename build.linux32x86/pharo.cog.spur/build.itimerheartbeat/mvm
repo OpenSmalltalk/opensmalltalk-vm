@@ -29,7 +29,7 @@ case $a in
 n|no|N|NO)	echo "ok but this isn't safe!!";;
 *)	test -f Makefile && make reallyclean
 #	for lib in ${THIRDPARTYLIBS}; do
-#		../../third-party/${lib}/mvm clean
+#		../../third-party/mvm ${lib} clean
 #	done
 esac
 test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -p ../../plugins.int .)
