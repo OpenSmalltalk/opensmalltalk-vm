@@ -9,6 +9,7 @@ CAIROLIBNAME:=$(cairo_spec_product_name_macOS)
 CAIRODIR:=$(THIRDPARTYDIR)/$(cairo_spec_unpack_dir_name)
 CAIROARCHIVE:=$(THIRDPARTYCACHEDIR)/$(cairo_spec_archive_name)
 CAIROLIB:=$(THIRDPARTYINSTALLDIR)/$(CAIROLIBNAME)
+CAIROSYMLINKS=$(cairo_spec_symlinks_macOS)
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
@@ -25,8 +26,8 @@ $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME): $(CAIROARCHIVE)
 			--prefix="$(THIRDPARTYOUTDIR)" \
 			PKG_CONFIG="$(PKG_CONFIG)" \
 			PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" \
-			CFLAGS='-arch i386' \
-			LDFLAGS='-arch i386' \
+			CFLAGS='-arch x86_64' \
+			LDFLAGS='-arch x86_64' \
 			--disable-silent-rules \
 			--disable-xlib \
 			--disable-dependency-tracking \
@@ -36,6 +37,12 @@ $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME): $(CAIROARCHIVE)
 $(CAIROLIB): pkgconfig libpng freetype2 pixman $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME)
 	cp -f $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME) $(THIRDPARTYINSTALLDIR)
 	install_name_tool -id "@executable_path/Plugins/$(CAIROLIBNAME)" $(CAIROLIB)
+	@echo "Installing links"
+	@for each in $(THIRDPARTYLIBDIR)/$(CAIROSYMLINKS); do \
+		if [ -L $$each ]; then \
+			cp -a $$each $(THIRDPARTYINSTALLDIR); \
+		fi \
+	done
 	@echo "Fixing dependency links"
 	@for each in $(PIXMANLIBNAME) $(FREETYPE2LIBNAME) $(LIBPNGLIBNAME); do \
 		install_name_tool -change "$(THIRDPARTYLIBDIR)/$$each" "@executable_path/Plugins/$$each" $(CAIROLIB); \

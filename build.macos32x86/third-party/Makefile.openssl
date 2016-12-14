@@ -10,6 +10,7 @@ OPENSSLALLLIBNAMES:=$(openssl_spec_product2_name_macOS) $(OPENSSLLIBNAME)
 OPENSSLDIR:=$(THIRDPARTYDIR)/$(openssl_spec_unpack_dir_name)
 OPENSSLARCHIVE:=$(THIRDPARTYCACHEDIR)/$(openssl_spec_archive_name)
 OPENSSLLIB:=$(THIRDPARTYINSTALLDIR)/$(OPENSSLLIBNAME)
+OPENSSLSYMLINKS:=$(openssl_spec_symlinks_macOS)
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
@@ -32,6 +33,12 @@ $(OPENSSLLIB): $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME)
 		cp -f $(THIRDPARTYLIBDIR)/$$each $(THIRDPARTYINSTALLDIR) \
 			&& chmod +w $(THIRDPARTYINSTALLDIR)/$$each \
 			&& install_name_tool -id "@executable_path/Plugins/$$each" $(THIRDPARTYINSTALLDIR)/$$each ; \
+	done
+	@echo "Installing links"
+	@for each in $(THIRDPARTYLIBDIR)/$(OPENSSLSYMLINKS); do \
+		if [ -L $$each ]; then \
+			cp -a $$each $(THIRDPARTYINSTALLDIR); \
+		fi \
 	done
 	@echo "Fixing dependency links"
 	# libssl has a dependency with libcrypto

@@ -9,6 +9,7 @@ PIXMANLIBNAME:=$(pixman_spec_product_name_macOS)
 PIXMANDIR:=$(THIRDPARTYDIR)/$(pixman_spec_unpack_dir_name)
 PIXMANARCHIVE:=$(THIRDPARTYCACHEDIR)/$(pixman_spec_archive_name)
 PIXMANLIB:=$(THIRDPARTYINSTALLDIR)/$(PIXMANLIBNAME)
+PIXMANSYMLINKS:=$(pixman_spec_symlinks_macOS)
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
@@ -33,5 +34,12 @@ $(THIRDPARTYLIBDIR)/$(PIXMANLIBNAME): $(PIXMANARCHIVE)
 $(PIXMANLIB): pkgconfig $(THIRDPARTYLIBDIR)/$(PIXMANLIBNAME)
 	cp -f $(THIRDPARTYLIBDIR)/$(PIXMANLIBNAME) $(THIRDPARTYINSTALLDIR)
 	install_name_tool -id "@executable_path/Plugins/$(PIXMANLIBNAME)" $(PIXMANLIB)
+	@echo "Installing links"
+	@for each in $(THIRDPARTYLIBDIR)/$(PIXMANSYMLINKS); do \
+		if [ -L $$each ]; then \
+			cp -a $$each $(THIRDPARTYINSTALLDIR); \
+		fi \
+	done
+	@echo "DONE"
 	
 pixman: $(PIXMANLIB)

@@ -9,6 +9,7 @@ LIBPNGLIBNAME:=$(libpng_spec_product_name_macOS)
 LIBPNGDIR:=$(THIRDPARTYDIR)/$(libpng_spec_unpack_dir_name)
 LIBPNGARCHIVE:=$(THIRDPARTYCACHEDIR)/$(libpng_spec_archive_name)
 LIBPNGLIB:=$(THIRDPARTYINSTALLDIR)/$(LIBPNGLIBNAME)
+LIBPNGSYMLINKS:=$(libpng_spec_symlinks_macOS)
 
 # ensure third-party library is built and recognised by plugins
 INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
@@ -21,12 +22,19 @@ $(LIBPNGARCHIVE):
 $(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME): $(LIBPNGARCHIVE)
 	tar x -f $(LIBPNGARCHIVE) -C $(THIRDPARTYDIR)
 	cd $(LIBPNGDIR) \
-		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch x86_64' LDFLAGS='-arch x86_64' \
+		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch i386' LDFLAGS='-arch i386' \
 		&& make \
 		&& make install
 
 $(LIBPNGLIB): $(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME)
 	cp -f $(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME) $(THIRDPARTYINSTALLDIR)
 	install_name_tool -id "@executable_path/Plugins/$(LIBPNGLIBNAME)" $(LIBPNGLIB)
+	@echo "Installing links"
+	@for each in $(THIRDPARTYLIBDIR)/$(LIBPNGSYMLINKS); do \
+		if [ -L $$each ]; then \
+			cp -a $$each $(THIRDPARTYINSTALLDIR); \
+		fi \
+	done
+	@echo "DONE"
 	
 libpng: $(LIBPNGLIB)
