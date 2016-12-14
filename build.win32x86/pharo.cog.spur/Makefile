@@ -14,7 +14,7 @@ VMSRCDIR:=../../spursrc/vm
 # For more information see this thread: http://forum.world.st/There-are-something-fishy-with-FFI-plugin-td4584226.html
 COGDEFS:= -DPharoVM=1 -DIMMUTABILITY=1 -DSTACK_ALIGN_BYTES=16 -DALLOCA_LIES_SO_USE_GETSP=0
 
-THIRDPARTYLIBS:=pkgconfig openssl libssh2 libgit2 libsdl2 zlib libpng freetype2 pixman cairo
+THIRDPARTYLIBS:=pkgconfig openssl libssh2 libgit2 libsdl2 zlib libpng freetype2 pixman cairo libgcc
 	
 include ../common/Makefile
 
@@ -30,6 +30,7 @@ include ../third-party/zlib/Makefile.lib
 include ../third-party/pixman/Makefile.lib
 include ../third-party/libpng/Makefile.lib
 include ../third-party/cairo/Makefile.lib
+include ../third-party/libgcc/Makefile.lib
 
 # Since SDLDisplayPlugin will be included as internal plugin, we need to add the library to the path
 # add to the end to allow thirdparty vars to be defined.
