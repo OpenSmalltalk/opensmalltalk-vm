@@ -30,7 +30,7 @@ test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -
 test -f plugins.ext || (test -f ../$EXTERNALPLUGINS && cp -p ../plugins.ext ./plugins.ext || cp -p ../../$EXTERNALPLUGINS ./plugins.ext)
 
 for lib in ${THIRDPARTYLIBS}; do
-	../../third-party/${lib}/mvm
+	../../third-party/mvm ${lib}
 done
 
 test -f config.h || ../../../platforms/unix/config/configure \
@@ -51,6 +51,6 @@ rm -rf ../../../products/$INSTALLDIR
 # but older linux readlinks lack the -f flag and Raspbian lacks `readlinks`
 make -j4 install-squeak install-plugins prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG
 for lib in ${THIRDPARTYLIBS}; do
-	../../third-party/${lib}/mvm install `find ../../../products/$INSTALLDIR -name "5.0*"`
+	../../third-party/mvm ${lib} install `find ../../../products/$INSTALLDIR -name "5.0*"`
 done
 ../../editpharoinstall.sh ../../../products/$INSTALLDIR "$@"

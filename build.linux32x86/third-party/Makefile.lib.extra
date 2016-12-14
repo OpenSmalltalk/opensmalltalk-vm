@@ -3,16 +3,12 @@
 # THIRDPARTYDIR				Where to build libraries
 # THIRDPARTYOUTDIR 			Where to first install libraries (output place)
 # THIRDPARTYCACHEDIR 		Where to download thirdparty libraries
-# 
-# REQUIRES: 
-#   USEPLUGINASDYLIB 		Used to define where to place built libraries (default is FALSE (or absent)). 
-# 
 
 THIRDPARTYDIR?=$(BLDDIR)
 THIRDPARTYLIBDIR?=$(THIRDPARTYOUTDIR)/lib
 THIRDPARTYINCLUDEDIR?=$(THIRDPARTYOUTDIR)/include
-THIRDPARTYCACHEDIR?=../../../.thirdparty-cache
-THIRDPARTYOUTDIR?=$(abspath ../../../.thirdparty-cache/linux/i386)
+THIRDPARTYCACHEDIR?=../../.thirdparty-cache
+THIRDPARTYOUTDIR?=$(abspath $(THIRDPARTYCACHEDIR)/linux/i386)
 
 $(THIRDPARTYDIR):
 	if [ ! -d $(THIRDPARTYDIR) ]; then mkdir -p $(THIRDPARTYDIR); fi

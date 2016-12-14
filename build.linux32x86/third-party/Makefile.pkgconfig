@@ -1,7 +1,7 @@
 ifndef THIRDPARTYDIR
-	include ../common/Makefile.lib.extra
+	include Makefile.lib.extra
 endif
-include ../../../third-party/pkgconfig.spec
+include ../../third-party/pkgconfig.spec
 
 # plugin definitions
 PKGCONFIGURL:=$(pkgconfig_spec_download_url)
