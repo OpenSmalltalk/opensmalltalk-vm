@@ -701,7 +701,7 @@ RegisterAllocatingCogit >> genSpecialSelectorClass [
 { #category : #'bytecode generators' }
 RegisterAllocatingCogit >> genSpecialSelectorComparison [
 	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor
-	  rcvrIsInt argIsInt argInt jumpNotSmallInts inlineCAB index rcvrReg argReg regMask |
+	  rcvrIsInt argIsInt argInt jumpNotSmallInts inlineCAB index rcvrReg argReg |
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
@@ -734,16 +734,14 @@ RegisterAllocatingCogit >> genSpecialSelectorComparison [
 		ifTrue:
 			[rcvrReg := self allocateRegForStackEntryAt: 1.
 			 (self ssValue: 1) popToReg: rcvrReg.
-			 self MoveR: rcvrReg R: TempReg.
-			 regMask := self registerMaskFor: rcvrReg]
+			 self MoveR: rcvrReg R: TempReg]
 		ifFalse:
 			[self allocateRegForStackTopTwoEntriesInto: [:rTop :rNext| argReg := rTop. rcvrReg := rNext].
 			 rcvrReg = Arg0Reg ifTrue:
 				[rcvrReg := argReg. argReg := Arg0Reg].
 			 self ssTop popToReg: argReg.
 			 (self ssValue: 1) popToReg: rcvrReg.
-			 self MoveR: argReg R: TempReg.
-			 regMask := self registerMaskFor: rcvrReg and: argReg].
+			 self MoveR: argReg R: TempReg].
 	self ssPop: 2.
 	jumpNotSmallInts := (argIsInt or: [rcvrIsInt])
 							ifTrue: [objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg]
@@ -766,8 +764,7 @@ RegisterAllocatingCogit >> genSpecialSelectorComparison [
 		ifFalse: [argReg ~= Arg0Reg ifTrue: [self MoveR: argReg R: Arg0Reg]].
 	rcvrReg ~= ReceiverResultReg ifTrue: [self MoveR: rcvrReg R: ReceiverResultReg].
 	index := byte0 - self firstSpecialSelectorBytecodeOffset.
-	self genMarshalledSend: index negated - 1 numArgs: 1 sendTable: ordinarySendTrampolines.
-	^0
+	^self genMarshalledSend: index negated - 1 numArgs: 1 sendTable: ordinarySendTrampolines
 ]
 
 { #category : #'bytecode generator support' }

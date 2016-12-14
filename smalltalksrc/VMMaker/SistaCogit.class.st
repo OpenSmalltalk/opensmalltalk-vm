@@ -467,10 +467,7 @@ SistaCogit >> genCounterTripOnlyJumpIf: boolean to: targetBytecodePC [
 	self MoveCq: 1 R: SendNumArgsReg.
 	
 	"The first time this is reached, it calls necessarily the counter trip for the trampoline because SendNumArgsReg is non zero"
-	mustBeBooleanTrampoline := self CallRT: (boolean == objectMemory falseObject
-						ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
-						ifFalse: [ceSendMustBeBooleanAddTrueTrampoline]).
-
+	mustBeBooleanTrampoline := self genCallMustBeBooleanFor: boolean.
 	self annotateBytecode: self Label.
 
 	"Cunning trick by LPD.  If true and false are contiguous subtract the smaller.
@@ -480,7 +477,7 @@ SistaCogit >> genCounterTripOnlyJumpIf: boolean to: targetBytecodePC [
 	self genSubConstant: boolean R: TempReg.
 	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
 
-	self CmpCq: (boolean == objectMemory falseObject
+	self CmpCq: (boolean = objectMemory falseObject
 					ifTrue: [objectMemory trueObject - objectMemory falseObject]
 					ifFalse: [objectMemory falseObject - objectMemory trueObject])
 		R: TempReg.
@@ -691,12 +688,12 @@ SistaCogit >> genJumpIf: boolean to: targetBytecodePC [
 		^ self genCounterTripOnlyJumpIf: boolean to: targetBytecodePC ].
 	
 	"We detect and: / or:, if found, we don't generate the counters to avoid pathological counter slow down"
-	boolean == objectMemory falseObject ifTrue:
+	boolean = objectMemory falseObject ifTrue:
 		[ nextPC := bytecodePC + (self generatorAt: byte0) numBytes.
 		  nextDescriptor := self generatorAt: (objectMemory fetchByte: nextPC ofObject: methodObj) + bytecodeSetOffset.
 		  nextDescriptor generator ==  #genPushConstantTrueBytecode ifTrue: [ ^ super genJumpIf: boolean to: targetBytecodePC ].
 		  nextDescriptor := self generatorAt: (objectMemory fetchByte: targetBytecodePC ofObject: methodObj) + bytecodeSetOffset.
-		  nextDescriptor generator ==  #genPushConstantFalseBytecode ifTrue: [ ^ super genJumpIf: boolean to: targetBytecodePC ].  ].
+		  nextDescriptor generator == #genPushConstantFalseBytecode ifTrue: [ ^ super genJumpIf: boolean to: targetBytecodePC ].  ].
 
 	extA := 0. "We ignore the noMustBeBoolean flag. It should not be present in methods with counters, and if it is we don't care."
 
@@ -742,7 +739,11 @@ SistaCogit >> genJumpIf: boolean to: targetBytecodePC [
 	"If we're in an image which hasn't got the Sista code loaded then the ceCounterTripped:
 	 trampoline will return directly to machine code, returning the boolean.  So the code should
 	 jump back to the retry point. The trampoline makes sure that TempReg has been reloaded."
-	self annotateBytecode: self Label. "For some reason if I write self annotateBytecode: (self Jump: retry) the annotation is not at the correct place."
+	
+	"Clément: For some reason if I write self annotateBytecode: (self Jump: retry) the annotation is not at the correct place."
+	"Eliot: Annotations apply the the address following an instruction, and the annotation must be for the return address
+	 of the call (since this is the address the run-time sees), so it must be on a label before the jump, not after the jump."
+	self annotateBytecode: self Label.
 	self Jump: retry.
 	
 	ok jmpTarget: self Label.

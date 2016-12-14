@@ -1554,6 +1554,13 @@ CogAbstractInstruction >> updateLabel: labelInstruction [
 	operands at: 0 put: labelInstruction address + labelInstruction labelOffset
 ]
 
+{ #category : #testing }
+CogAbstractInstruction >> usesTempRegForAbsoluteLoads [
+	"Answer if TempReg is used in absolute memory loads (as it is on x64).  By default answer false, allowing subclasses to override."
+	<inline: true>
+	^false
+]
+
 { #category : #simulation }
 CogAbstractInstruction >> wantsNearAddressFor: anObject [
 	"A hack hook to allow ARM to override the simulated address for the short-cut trampolines,
