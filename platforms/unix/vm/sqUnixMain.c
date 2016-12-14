@@ -666,7 +666,7 @@ sqInt ioProcessEvents(void)
 	 * ioProcessEvents is disabled.  If >= 0 inIOProcessEvents is incremented
 	 * to avoid reentrancy (i.e. for native GUIs).
 	 */
-	if (inIOProcessEvents) return;
+	if (inIOProcessEvents) return 0;
 	inIOProcessEvents += 1;
 
 	result = dpy->ioProcessEvents();
