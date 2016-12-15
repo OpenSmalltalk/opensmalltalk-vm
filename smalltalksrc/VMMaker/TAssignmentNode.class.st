@@ -38,13 +38,13 @@ TAssignmentNode >> bindVariablesIn: aDictionary [
 
 { #category : #'C code generation' }
 TAssignmentNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen [
-	aStream nextPut: $(.
-	self emitCCodeOn: aStream level: level generator: aCodeGen.
-	aStream nextPut: $)
+	^self emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen
 ]
 
 { #category : #'C code generation' }
 TAssignmentNode >> emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen [
+	(expression isStmtList and: [expression statements size > 1]) ifTrue:
+		[^self emitStatementListExpansionAsExpression: expression on: aStream level: level generator: aCodeGen].
 	aStream nextPut: $(.
 	self emitCCodeOn: aStream level: level generator: aCodeGen.
 	aStream nextPut: $)
@@ -103,6 +103,15 @@ TAssignmentNode >> emitStatementListExpansion: stmtList on: aStream level: level
 	stmtList copy
 		assignLastExpressionTo: variable;
 		emitCCodeOn: aStream level: level generator: aCodeGen
+]
+
+{ #category : #'C code generation' }
+TAssignmentNode >> emitStatementListExpansionAsExpression: stmtList on: aStream level: level generator: aCodeGen [
+	stmtList statements last = variable ifTrue:
+		[^expression emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen].
+	stmtList copy
+		assignLastExpressionTo: variable;
+		emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen
 ]
 
 { #category : #'C code generation' }
