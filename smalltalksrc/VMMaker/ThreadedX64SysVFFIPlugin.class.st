@@ -59,7 +59,7 @@ ThreadedX64SysVFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: 
 	 the alloca of the outgoing stack frame in ffiCall:WithFlags:NumArgs:Args:AndTypes:"
 	| myThreadIndex atomicType floatRet intRet loadFloatRegs |
 	<var: #floatRet type: #double>
-	<var: #intRet type: 'SixteenByteReturn'>
+	<var: #intRet type: #SixteenByteReturn>
 	<inline: true>
 	self cCode: '' inSmalltalk: [loadFloatRegs := #used. loadFloatRegs class].
 	self maybeDisownVM: calloutState threadIndexInto: [:threadIndex| myThreadIndex := threadIndex].
@@ -119,10 +119,10 @@ ThreadedX64SysVFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: 
 		["Note: Order is important here since FFIFlagPointer + FFIFlagStructure is used to represent
 		 'typedef void* VoidPointer' and VoidPointer must be returned as pointer *not* as struct."
 		 (calloutState ffiRetHeader anyMask: FFIFlagPointer) ifTrue:
-			[^self ffiReturnPointer: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState].
+			[^self ffiReturnPointer: intRet a ofType: (self ffiReturnType: specOnStack) in: calloutState].
 		 ^self ffiReturnStruct: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState].
 	
-	^self ffiCreateIntegralResultOop: intRet ofAtomicType: atomicType in: calloutState
+	^self ffiCreateIntegralResultOop: intRet a ofAtomicType: atomicType in: calloutState
 ]
 
 { #category : #marshalling }
@@ -180,7 +180,7 @@ ThreadedX64SysVFFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSpe
 
 { #category : #'callout support' }
 ThreadedX64SysVFFIPlugin >> ffiReturnStruct: sixteenByteRet ofType: ffiRetType in: calloutState [
-	<var: #sixteenByteRet type: 'SixteenByteReturn'>
+	<var: #sixteenByteRet type: #SixteenByteReturn>
 	<var: #calloutState type: #'CalloutState *'>
 	"Create a structure return value from an external function call.  The value has been stored in
 	 alloca'ed space pointed to by the calloutState or in the return value."
