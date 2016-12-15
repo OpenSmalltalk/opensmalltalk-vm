@@ -228,11 +228,6 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		as: #'StackPage *'
 		in: aCCodeGenerator.
 	aCCodeGenerator removeVariable: 'stackPages'.  "this is an implicit receiver in the translated code."
-	NewspeakVM ifFalse:
-		[aCCodeGenerator
-			removeVariable: 'localAbsentReceiver';
-			removeVariable: 'localAbsentReceiverOrZero';
-			removeVariable: 'nsMethodCache'].
 	"This defines bytecodeSetSelector as 0 if MULTIPLEBYTECODESETS
 	 is not defined, for the benefit of the interpreter on slow machines."
 	aCCodeGenerator addConstantForBinding: (self bindingOf: #MULTIPLEBYTECODESETS).
@@ -246,9 +241,15 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		var: #methodCache
 		declareC: 'sqIntptr_t methodCache[MethodCacheSize + 1 /* ', (MethodCacheSize + 1) printString, ' */]'.
-	aCCodeGenerator
-		var: #nsMethodCache
-		declareC: 'sqIntptr_t nsMethodCache[NSMethodCacheSize + 1 /* ', (NSMethodCacheSize + 1) printString, ' */]'.
+	NewspeakVM
+		ifTrue:
+			[aCCodeGenerator
+				var: #nsMethodCache
+				declareC: 'sqIntptr_t nsMethodCache[NSMethodCacheSize + 1 /* ', (NSMethodCacheSize + 1) printString, ' */]']
+		ifFalse:
+			[aCCodeGenerator
+				removeVariable: 'localAbsentReceiver';
+				removeVariable: 'localAbsentReceiverOrZero'].
 	AtCacheTotalSize isInteger ifTrue:
 		[aCCodeGenerator
 			var: #atCache
