@@ -120,24 +120,22 @@ MessageSetDifferencer >> contents [
 	| left right |
 	left := leftSet selection.
 	right := rightSet selection.
-	(left isNil and: [right isNil]) ifTrue:
-		[currentCompiledMethod := nil.
-		 ^''].
-	left isNil ifTrue:
-		[^rightSet contents].
-	right isNil ifTrue:
+	left ifNil:
+		[right ifNil:
+			[currentCompiledMethod := nil.
+			 ^''].
+		 ^rightSet contents].
+	right ifNil:
 		[^leftSet contents].
-	left := leftSet contents.
-	right := rightSet contents.
-	^leftSet selection isMethodReference
+	^left isMethodReference
 		ifTrue:
 			[CodeDiffBuilder
-				buildDisplayPatchFrom: right
-				to: left
-				inClass: (leftSet selection isMethodReference ifTrue: [leftSet selection actualClass])
+				buildDisplayPatchFrom: rightSet contents
+				to: leftSet contents
+				inClass: (left isMethodReference ifTrue: [left actualClass])
 				prettyDiffs: true]
 		ifFalse:
-			[CodeDiffBuilder buildDisplayPatchFrom: right to: left]
+			[CodeDiffBuilder buildDisplayPatchFrom: rightSet contents to: leftSet contents]
 ]
 
 { #category : #'initialize-release' }
@@ -185,7 +183,8 @@ MessageSetDifferencer >> messageListIndex: anInteger [
 { #category : #'message list' }
 MessageSetDifferencer >> messageListMenu: aMenu shifted: shifted [ 
 	"Answer the message-list menu"
-	(self menuHook: aMenu named: #messageListMenu shifted: shifted) ifTrue:[^aMenu].
+	| newMenu |
+	(newMenu := self menuHook: aMenu named: #messageListMenu shifted: shifted) ~~ aMenu ifTrue:[^newMenu].
 	shifted ifTrue: [^ self shiftedMessageListMenu: aMenu].
 	aMenu addList: #(
 			('browse full (b)' 			browseMethodFull)
