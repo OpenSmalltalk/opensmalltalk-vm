@@ -204,7 +204,7 @@ main(int _argc, char **_argv)
 	if (printit("VM_VERSION"))
 		printf("%s\n", vm_version);
 	if (printit("VM_MAJOR"))
-		printf("%.*s\n", strchr(vm_version,'.') - vm_version, vm_version);
+		printf("%.*s\n", (int)(strchr(vm_version,'.') - vm_version), vm_version);
 	if (printit("VM_MINOR"))
 		printf("%s\n", strchr(vm_version,'.') + 1);
 	if (printit("VM_RELEASE"))
