@@ -57,16 +57,12 @@ Spur64BitMMLECoSimulator >> byteSwapped64IfBigEndian: w [
 	^w bitAnd: 16rFFFFFFFFFFFFFFFF
 ]
 
-{ #category : #'debug support' }
-Spur64BitMMLECoSimulator >> classTableFirstPage [
-	^classTableFirstPage
-]
-
 { #category : #initialization }
 Spur64BitMMLECoSimulator >> coInterpreter: aCoInterpreter cogit: aCogit [
 	coInterpreter := aCoInterpreter.
 	cogit := aCogit.
-	scavenger coInterpreter: aCoInterpreter
+	scavenger coInterpreter: aCoInterpreter.
+	compactor coInterpreter: aCoInterpreter
 ]
 
 { #category : #'simulation only' }
