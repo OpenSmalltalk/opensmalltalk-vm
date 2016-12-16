@@ -11,12 +11,12 @@ MessageSetTextDifferencer >> contents [
 	| left right |
 	left := leftSet selection.
 	right := rightSet selection.
-	(left isNil and: [right isNil]) ifTrue:
-		[currentCompiledMethod := nil.
-		 ^''].
-	left isNil ifTrue:
-		[^rightSet contents].
+	left ifNil:
+		[right ifNil:
+			[currentCompiledMethod := nil.
+			 ^''].
+		 ^rightSet contents].
 	right isNil ifTrue:
 		[^leftSet contents].
-	^TextDiffBuilder buildDisplayPatchFrom: rightSet contents to: leftSet contents
+	^TextDiffBuilder buildDisplayPatchFrom: left source to: right source
 ]
