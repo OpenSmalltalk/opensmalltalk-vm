@@ -688,7 +688,7 @@ SpurMemoryManager class >> classTableBitmapBytes [
 { #category : #'accessing class hierarchy' }
 SpurMemoryManager class >> compactorClass [
 	"Answer the compaction algorithm to use."
-	^SpurPigCompactor
+	^Smalltalk classNamed: (initializationOptions at: #compactorClass ifAbsent: [#SpurPigCompactor])
 ]
 
 { #category : #translation }
@@ -5263,7 +5263,13 @@ SpurMemoryManager >> globalGarbageCollect [
 	self assert: (self isEmptyObjStack: markStack).
 	self assert: (self isEmptyObjStack: weaklingStack).
 
+	"Mark objects /before/ scavenging, to empty the rememberedTable of unmarked roots."
 	self markObjects: true.
+
+	scavenger forgetUnmarkedRememberedObjects.
+	self doScavenge: MarkOnTenure.
+	segmentManager prepareForGlobalSweep. "for notePinned:"
+
 	compactor freeUnmarkedObjectsAndPrepareFreeSpace.
 
 	"Mid-way the leak check must be more lenient.  Unmarked classes will have been

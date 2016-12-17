@@ -202,9 +202,6 @@ SpurPigCompactor >> freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact 
 	| prevPrevFree prevFree |
 	<inline: #never> "for profiling"
 	manager checkFreeSpace: GCModeFull.
-	scavenger forgetUnmarkedRememberedObjects.
-	manager doScavenge: MarkOnTenure.
-	manager segmentManager prepareForGlobalSweep."for notePinned:"
 	"throw away the list heads, including the tree."
 	manager resetFreeListHeads.
 	firstFreeChunk := prevPrevFree := prevFree := 0.
