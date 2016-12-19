@@ -119,8 +119,10 @@ We define the following inlined primitives:
 1011	fixed-sized new. (objects with 0 to n inst vars)
 	
 1020 	identityHash
-1021	immediateIdentityHash (SmallFloat64 and Character)
-1022	behaviorIdentityHash
+1021	identityHash (SmallInteger)
+1022	identityHash (Character)
+1023	identityHash (SmallFloat64)
+1024	identityHash (Behavior)
 
 2000	SmallInteger #+.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
 2001	SmallInteger #-.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
