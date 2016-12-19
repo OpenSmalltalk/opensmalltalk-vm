@@ -980,7 +980,15 @@ SistaCogit >> genUnaryInlinePrimitive: prim [
 						into: resultReg
 							initializingIf: self extBSpecifiesInitializeInstance) ~= 0 ifTrue:
 					[^ShouldNotJIT]. "e.g. bad class"
+				 self ssPop: 1] .
+			[20] ->	"20 	identityHash"
+				[self ssTop popToReg: rcvrReg.
+				 objectRepresentation genGetHashFieldNonImmOf: rcvrReg asSmallIntegerInto: resultReg.
 				 self ssPop: 1]
+					"21		identityHash (SmallInteger)"
+					"22		identityHash (Character)"
+					"23		identityHash (SmallFloat64)"
+					"24		identityHash (Behavior)"
 				  }
 		otherwise:
 			[^EncounteredUnknownBytecode].
