@@ -365,7 +365,7 @@ set(VM_WINDOW_SYSTEM)
 if(SUPPORT_TRADITIONAL_DISPLAY)
 	if(HAVE_SDL2)
 		set(VM_WINDOW_SYSTEM
-			minheadless/source/sqWindow-SDL2.c
+			platforms/minheadless/sdl2-window/sqWindow-SDL2.c
 		)
 		set(VM_DEPENDENCIES_LIBRARIES ${SDL2_LIBRARY} ${VM_DEPENDENCIES_LIBRARIES})
 	endif()
@@ -382,60 +382,60 @@ set(VM_COMMON_SOURCES
 	platforms/Cross/vm/sqMemoryAccess.h
 	platforms/Cross/vm/sqMemoryFence.h
 	platforms/Cross/vm/sqNamedPrims.c
+    platforms/Cross/vm/sqPath.h
+    platforms/Cross/vm/sqPath.c
 	platforms/Cross/vm/sqSCCSVersion.h
+    platforms/Cross/vm/sqTextEncoding.h
+    platforms/Cross/vm/sqTextEncoding.c
 	platforms/Cross/vm/sqTicker.c
 	platforms/Cross/vm/sqVirtualMachine.h
 	platforms/Cross/vm/sqVirtualMachine.c
 )
 
 include_directories(
-	minheadless/include
-	minheadless/source
+	platforms/minheadless/common
 )
 
-set(VM_PLATFORM_SOURCES
-    minheadless/include/sqConfig.h
-    minheadless/include/sqEventCommon.h
-    minheadless/include/sqNamedPrims.h
-    minheadless/include/sqPath.h
-    minheadless/include/sqPlatformSpecific.h
-    minheadless/include/sqPlatformSpecific-Common.h
-    minheadless/include/sqPlatformSpecific-Generic.h
-    minheadless/include/sqPlatformSpecific-Unix.h
-    minheadless/include/sqPlatformSpecific-Win32.h
-    minheadless/include/sqQueue.h
-    minheadless/include/sqTextEncoding.h
-    minheadless/include/sqWin32Alloc.h
-	minheadless/source/sqaio.h
-	minheadless/source/sqExternalPrimitives.c
-	minheadless/source/sqEventCommon.c
-    minheadless/source/sqPath.c
-    minheadless/source/sqPrinting.c
-    minheadless/source/sqTextEncoding.c
-	minheadless/source/sqWindow-Null.c
-	minheadless/source/sqWindow-Dispatch.c
-	minheadless/source/sqInternalPrimitives.c
-	minheadless/source/sqVirtualMachineInterface.c
+set(VM_PLATFORM_COMMON_SOURCES
+	platforms/minheadless/common/sqaio.h
+    platforms/minheadless/common/sqConfig.h
+    platforms/minheadless/common/sqEventCommon.h
+    platforms/minheadless/common/sqNamedPrims.h
+    platforms/minheadless/common/sqPlatformSpecific.h
+    platforms/minheadless/common/sqPlatformSpecificCommon.h
+	platforms/minheadless/common/sqInternalPrimitives.c
+    platforms/minheadless/common/sqQueue.h
+	platforms/minheadless/common/sqExternalPrimitives.c
+	platforms/minheadless/common/sqEventCommon.c
+    platforms/minheadless/common/sqPrinting.c
+	platforms/minheadless/common/sqWindow-Null.c
+	platforms/minheadless/common/sqWindow-Dispatch.c
+	platforms/minheadless/common/sqVirtualMachineInterface.c
 )
 
 if(UNIX)
+	include_directories(
+		platforms/minheadless/unix
+	)
+
 	set(VM_PLATFORM_SOURCES
-		minheadless/source/aioUnix.c
-		minheadless/source/sqPlatformSpecific-Unix.c
-		minheadless/source/sqUnixCharConv.c
-		minheadless/source/sqUnixThreads.c
-		minheadless/source/sqUnixHeartbeat.c
+		platforms/minheadless/unix/aioUnix.c
+	    platforms/minheadless/unix/sqPlatformSpecific-Unix.h
+		platforms/minheadless/unix/sqPlatformSpecific-Unix.c
+		platforms/minheadless/unix/sqUnixCharConv.c
+		platforms/minheadless/unix/sqUnixThreads.c
+		platforms/minheadless/unix/sqUnixHeartbeat.c
 		${VM_PLATFORM_SOURCES}
 	)
 
 	if(SPUR_OBJECT_MODEL)
 		set(VM_PLATFORM_SOURCES
-			minheadless/source/sqUnixSpurMemory.c
+			platforms/minheadless/unix/sqUnixSpurMemory.c
 			${VM_PLATFORM_SOURCES}
 		)
 	else()
 		set(VM_PLATFORM_SOURCES
-			minheadless/source/sqUnixMemory.c
+			platforms/minheadless/unix/sqUnixMemory.c
 			${VM_PLATFORM_SOURCES}
 		)
 	endif()
@@ -447,18 +447,23 @@ if(UNIX)
 		add_definitions(-D_GNU_SOURCE)
 	endif()
 elseif(WIN32)
+	include_directories(
+		platforms/minheadless/windows
+	)
+
 	set(VM_PLATFORM_SOURCES
-        minheadless/include/sqWin32Alloc.h
-        minheadless/include/sqWin32HandleTable.h
-		minheadless/source/sqPlatformSpecific-Win32.c
-        minheadless/source/sqWin32.h
-        minheadless/source/sqWin32Alloc.c
-    	minheadless/source/sqWin32SpurAlloc.c
-    	minheadless/source/sqWin32Common.c
-    	minheadless/source/sqWin32Directory.c
-    	minheadless/source/sqWin32Heartbeat.c
-    	minheadless/source/sqWin32Threads.c
-    	minheadless/source/sqWin32Time.c
+    	platforms/minheadless/windows/sqWin32Alloc.h
+        platforms/minheadless/windows/sqWin32HandleTable.h
+	    platforms/minheadless/windows/sqPlatformSpecific-Win32.h
+		platforms/minheadless/windows/sqPlatformSpecific-Win32.c
+        platforms/minheadless/windows/sqWin32.h
+        platforms/minheadless/windows/sqWin32Alloc.c
+    	platforms/minheadless/windows/sqWin32SpurAlloc.c
+    	platforms/minheadless/windows/sqWin32Common.c
+    	platforms/minheadless/windows/sqWin32Directory.c
+    	platforms/minheadless/windows/sqWin32Heartbeat.c
+    	platforms/minheadless/windows/sqWin32Threads.c
+    	platforms/minheadless/windows/sqWin32Time.c
 		${VM_PLATFORM_SOURCES}
 	)
     add_definitions(
@@ -489,7 +494,8 @@ elseif(WIN32)
     endif()
 else()
 	set(VM_PLATFORM_SOURCES
-		minheadless/source/sqPlatformSpecific-Generic.c
+    	platforms/minheadless/generic/sqPlatformSpecific-Generic.h
+		platforms/minheadless/generic/sqPlatformSpecific-Generic.c
 		${VM_PLATFORM_SOURCES}
 	)
 
@@ -498,17 +504,20 @@ endif()
 set(VM_SOURCES
 	${VM_COMMON_SOURCES}
 	${VM_FAVLOR_SOURCES}
+	${VM_PLATFORM_COMMON_SOURCES}
 	${VM_PLATFORM_SOURCES}
 	${VM_WINDOW_SYSTEM}
 )
+
 source_group("VM Common Sources" FILES ${VM_COMMON_SOURCES})
 source_group("VM Flavor Sources" FILES ${VM_FAVLOR_SOURCES})
+source_group("VM Platform Common Sources" FILES ${VM_PLATFORM_COMMON_SOURCES})
 source_group("VM Platform Sources" FILES ${VM_PLATFORM_SOURCES})
 source_group("VM Window System" FILES ${VM_WINDOW_SYSTEM})
 include("Plugins.cmake")
 
 # Generate the config dot h.
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/minheadless/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
 # Build the VM core library
 set(VM_CORE_LIBRARY_TYPE STATIC)
@@ -529,10 +538,10 @@ target_compile_definitions(${VM_LIBRARY_NAME} PRIVATE
 )
 
 # Build the VM executable(s)
-add_executable(${VM_EXECUTABLE_NAME} minheadless/source/sqMain.c)
+add_executable(${VM_EXECUTABLE_NAME} platforms/minheadless/common/sqMain.c)
 target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
 
 if(WIN32)
-    add_executable(${VM_EXECUTABLE_NAME}w WIN32 minheadless/source/sqWin32Main.c)
+    add_executable(${VM_EXECUTABLE_NAME}w WIN32 platforms/minheadless/windows/sqWin32Main.c)
     target_link_libraries(${VM_EXECUTABLE_NAME}w ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
 endif()

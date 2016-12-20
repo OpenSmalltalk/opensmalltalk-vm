@@ -1,3 +1,37 @@
+/* sqPlatformSpecific-Win32.c -- Platform specific interface implementation for Unix
+ *
+ *   Copyright (C) 2016 by Ronie Salgado
+ *   All rights reserved.
+ *
+ *   This file is part of Minimalistic Headless Squeak.
+ *
+ *   Permission is hereby granted, free of charge, to any person obtaining a
+ *   copy of this software and associated documentation files (the "Software"),
+ *   to deal in the Software without restriction, including without limitation
+ *   the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ *   and/or sell copies of the Software, and to permit persons to whom the
+ *   Software is furnished to do so, subject to the following conditions:
+ *
+ *   The above copyright notice and this permission notice shall be included in
+ *   all copies or substantial portions of the Software.
+ *
+ *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ *   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ *   DEALINGS IN THE SOFTWARE.
+ *
+ * Author: roniesalg@gmail.com
+ */
+/**
+ * Note: The code present in this file is a result of refactoring the code present
+ * in the old Squeak Win32 ports. For purpose of copyright, each one of the functions
+ * present in this file may have an actual author that is different to the author
+ * of this file.
+ */
+
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -248,7 +282,7 @@ void findExecutablePath(const char *localVmName, char *dest, size_t destSize)
 
     /* get canonical path to vm */
     if (realpath(localVmName, dest) == 0)
-        sqPathMakeAbsolute(dest, localVmName, destSize);
+        sqPathMakeAbsolute(dest, destSize, localVmName);
 
     /* truncate vmPath to dirname */
     {

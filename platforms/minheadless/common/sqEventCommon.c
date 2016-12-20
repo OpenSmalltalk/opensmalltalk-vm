@@ -1,9 +1,9 @@
-/* sqPlatformSpecific.h -- platform-specific modifications to sq.h
+/* sqEventCommon.h -- Common support functions used by legacy display API
  *
  *   Copyright (C) 2016 by Ronie Salgado
  *   All rights reserved.
  *
- *   This file is part of Minimalistic Headless Squeak.
+ *   This file is part of Squeak.
  *
  *   Permission is hereby granted, free of charge, to any person obtaining a
  *   copy of this software and associated documentation files (the "Software"),
@@ -25,19 +25,24 @@
  *
  * Author: roniesalg@gmail.com
  */
+ 
+#include "sq.h"
 
-#ifndef _SQ_PLATFORM_SPECIFIC_H
-#define _SQ_PLATFORM_SPECIFIC_H
+/*** event handling ***/
+static sqInt inputEventSemaIndex= 0;
 
-#include "sqMemoryAccess.h"
-#include "sqPlatformSpecific-Common.h"
+/* set asynchronous input event semaphore  */
+sqInt ioSetInputSemaphore(sqInt semaIndex)
+{
+    if (semaIndex == 0)
+        success(false);
+    else
+        inputEventSemaIndex= semaIndex;
+    return true;
+}
 
-#if defined(_WIN32)
-#include "sqPlatformSpecific-Win32.h"
-#elif defined(__linux__) || defined(__unix__) || defined(__APPLE__)
-#include "sqPlatformSpecific-Unix.h"
-#else
-#include "sqPlatformSpecific-Generic.h"
-#endif
-
-#endif /* _SQ_PLATFORM_SPECIFIC_H */
+void ioSignalInputEvent(void)
+{
+  if (inputEventSemaIndex > 0)
+    signalSemaphoreWithIndex(inputEventSemaIndex);
+}

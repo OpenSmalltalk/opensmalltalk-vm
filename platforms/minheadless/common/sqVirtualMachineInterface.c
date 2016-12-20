@@ -1,3 +1,31 @@
+/* sqVirtualMachineInterce.c -- implementation of the standard VM embedding interface
+ *
+ *   Copyright (C) 2016 by Ronie Salgado
+ *   All rights reserved.
+ *
+ *   This file is part of Minimalistic Headless Squeak.
+ *
+ *   Permission is hereby granted, free of charge, to any person obtaining a
+ *   copy of this software and associated documentation files (the "Software"),
+ *   to deal in the Software without restriction, including without limitation
+ *   the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ *   and/or sell copies of the Software, and to permit persons to whom the
+ *   Software is furnished to do so, subject to the following conditions:
+ *
+ *   The above copyright notice and this permission notice shall be included in
+ *   all copies or substantial portions of the Software.
+ *
+ *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ *   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ *   DEALINGS IN THE SOFTWARE.
+ *
+ * Author: roniesalg@gmail.com
+ */
+
 #ifndef _WIN32
 #include <unistd.h>
 #endif
@@ -11,6 +39,12 @@
 
 #define DefaultHeapSize		  20	     	/* megabytes BEYOND actual image size */
 #define DefaultMmapSize		1024     	/* megabytes of virtual memory */
+
+/**
+ * Some VM options
+ */
+extern int sqVMOptionTraceModuleLoading;
+
 
 char imageName[FILENAME_MAX];
 static char imagePath[FILENAME_MAX];
@@ -247,6 +281,36 @@ static void usage(void)
 {
 }
 
+static int parseVMArgument(char **argv)
+{
+#define IS_VM_OPTION(name) (!strcmp(*argv, "-" name) || !strcmp(*argv, "--" name))
+    if (IS_VM_OPTION("headless") || IS_VM_OPTION("no-interactive"))
+    {
+        headlessMode = 1;
+        return 1;
+    }
+    else if(IS_VM_OPTION("interactive") || IS_VM_OPTION("headfull"))
+    {
+        headlessMode = 0;
+        return 1;
+    }
+    else if(IS_VM_OPTION("trace-module-loads"))
+    {
+        sqVMOptionTraceModuleLoading = 1;
+        return 1;
+    }
+    else if(IS_VM_OPTION("full-trace"))
+    {
+        /* This should enable all of the tracing options that are available. */
+        sqVMOptionTraceModuleLoading = 1;
+        return 1;
+    }
+
+#undef IS_VM_OPTION
+
+    return 0;
+}
+
 static int parseArguments(int argc, char **argv)
 {
 # define skipArg()	(--argc, argv++)
@@ -260,16 +324,7 @@ static int parseArguments(int argc, char **argv)
         if (!strcmp(*argv, "--"))		/* escape from option processing */
             break;
 
-        if (!strcmp(*argv, "-headless") || !strcmp(*argv, "--headless"))
-        {
-            headlessMode = 1;
-            n = 1;
-        }
-        else if(!strcmp(*argv, "-interactive") || !strcmp(*argv, "--interactive"))
-        {
-            headlessMode = 0;
-            n = 1;
-        }
+        n = parseVMArgument(argv);
 
         if (n == 0)			/* option not recognised */
         {
