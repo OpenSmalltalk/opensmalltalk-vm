@@ -128,9 +128,20 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	/* flag prevents recursive error when trying to print a broken stack */
 	static sqInt printingStack = false;
 
+# if STACKVM
+	/* Testing stackLimit tells us whether the VM is initialized. */
+	extern usqInt stackLimitAddress(void);
+# endif
+
 	printf("\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
-# if COGVM
+# if STACKVM
     printf("%s\n\n", sourceVersionString('\n'));
+
+#	if COGVM
+	/* Do not attempt to report the stack until the VM is initialized!! */
+	if (!*(char **)stackLimitAddress())
+		return;
+#	endif
 # endif
 
 # if !defined(NOEXECINFO)

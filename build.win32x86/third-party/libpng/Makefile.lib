@@ -1,0 +1,34 @@
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
+include ../../third-party/libpng.spec.win
+
+# plugin definitions
+LIBPNGURL:=$(libpng_spec_download_url)
+LIBPNGLIBNAME:=$(libpng_spec_product_name_windows)
+LIBPNGDIR:=$(THIRDPARTYDIR)/$(libpng_spec_unpack_dir_name)
+LIBPNGARCHIVE:=$(THIRDPARTYCACHEDIR)/$(libpng_spec_archive_name)
+LIBPNGLIB:=$(THIRDPARTYINSTALLDIR)/$(LIBPNGLIBNAME)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(LIBPNGLIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+	
+$(LIBPNGARCHIVE): 
+	$(WGET) -O $(LIBPNGARCHIVE) $(LIBPNGURL) 
+
+$(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME): $(LIBPNGARCHIVE)
+	tar x -f $(LIBPNGARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(LIBPNGDIR) \
+		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' \
+			CFLAGS='$(THIRDPARTY_CFLAGS) -march=pentium4 -I$(THIRDPARTYINCLUDEDIR)' \
+			CPPFLAGS='$(THIRDPARTY_CFLAGS) -march=pentium4 -I$(THIRDPARTYINCLUDEDIR)' \
+			LDFLAGS='$(THIRDPARTY_LDFLAGS) -march=pentium4 -L$(THIRDPARTYLIBDIR)' \
+		&& make \
+		&& make install
+
+$(LIBPNGLIB): pkgconfig zlib $(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME)
+	cp -f $(THIRDPARTYLIBDIR)/$(LIBPNGLIBNAME) $(THIRDPARTYINSTALLDIR)
+	
+libpng: $(LIBPNGLIB)

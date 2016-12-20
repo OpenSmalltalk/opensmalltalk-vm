@@ -1,0 +1,31 @@
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
+include ../../third-party/pkgconfig.spec.win
+
+# plugin definitions
+PKGCONFIGURL:=$(pkgconfig_spec_download_url)
+PKGCONFIGDIR:=$(THIRDPARTYDIR)/$(pkgconfig_spec_unpack_dir_name)
+PKGCONFIGARCHIVE:=$(THIRDPARTYCACHEDIR)/$(pkgconfig_spec_archive_name)
+PKGCONFIGBIN:=$(THIRDPARTYOUTDIR)/bin/pkg-config.exe
+PKGCONFIGLIB:=$(THIRDPARTYOUTDIR)/lib/pkgconfig
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+	
+# export this values if pkg_config is included
+PKG_CONFIG:=$(PKGCONFIGBIN)
+PKG_CONFIG_PATH:=$(PKGCONFIGLIB)
+
+$(PKGCONFIGARCHIVE): 
+	$(WGET) -O $(PKGCONFIGARCHIVE) $(PKGCONFIGURL)
+
+$(PKGCONFIGBIN): $(PKGCONFIGARCHIVE)
+	tar x -f $(PKGCONFIGARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(PKGCONFIGDIR) \
+		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' --with-internal-glib \
+		&& make \
+		&& make install
+	
+pkgconfig: $(PKGCONFIGBIN)

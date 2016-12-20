@@ -3264,6 +3264,12 @@ void HideSplashScreen(void) {
 /*                      Usage of Squeak                                     */
 /****************************************************************************/
 
+#ifdef PharoVM
+# define VMOPTION(arg) "--"arg
+#else
+# define VMOPTION(arg) "-"arg
+#endif
+
 /* print usage with different output levels */
 int printUsage(int level)
 {
@@ -3276,40 +3282,40 @@ int printUsage(int level)
                    TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [vmOptions] imageFile [imageOptions]\n\n")
                    TEXT("vmOptions:")
 		   /* TEXT("\n\t-service: ServiceName \t(install Squeak as NT service)") */
-                   TEXT("\n\t-headless \t\t(force Squeak to run headless)")
-                   TEXT("\n\t-timephases (print start load and run times)")
-                   TEXT("\n\t-log: LogFile \t\t(use LogFile for VM messages)")
-                   TEXT("\n\t-memory: megaByte \t(set memory to megaByte MB)")
+                   TEXT("\n\t") TEXT(VMOPTION("headless")) TEXT(" \t\t(force Squeak to run headless)")
+                   TEXT("\n\t") TEXT(VMOPTION("timephases")) TEXT(" (print start load and run times)")
+                   TEXT("\n\t") TEXT(VMOPTION("log:")) TEXT(" LogFile \t\t(use LogFile for VM messages)")
+                   TEXT("\n\t") TEXT(VMOPTION("memory:")) TEXT(" megaByte \t(set memory to megaByte MB)")
 #if STACKVM || NewspeakVM
-                   TEXT("\n\t-breaksel: string \t(call warning on send of sel for debug)")
+                   TEXT("\n\t") TEXT(VMOPTION("breaksel:")) TEXT(" string \t(call warning on send of sel for debug)")
 #endif /* STACKVM || NewspeakVM */
 #if STACKVM
-                   TEXT("\n\t-breakmnu: string \t(call warning on MNU of sel for debug)")
-                   TEXT("\n\t-leakcheck: n \t(leak check on GC (1=full,2=incr,3=both))")
-                   TEXT("\n\t-eden: bytes \t(set eden memory size to bytes)")
-				   TEXT("\n\t-stackpages: n \t(use n stack pages)")
-                   TEXT("\n\t-numextsems: n \t(allow up to n external semaphores)")
-                   TEXT("\n\t-checkpluginwrites \t(check for writes past end of object in plugins")
-                   TEXT("\n\t-noheartbeat \t(no heartbeat for debug)")
+                   TEXT("\n\t") TEXT(VMOPTION("breakmnu:")) TEXT(" string \t(call warning on MNU of sel for debug)")
+                   TEXT("\n\t") TEXT(VMOPTION("leakcheck:")) TEXT(" n \t(leak check on GC (1=full,2=incr,3=both))")
+                   TEXT("\n\t") TEXT(VMOPTION("eden:")) TEXT(" bytes \t(set eden memory size to bytes)")
+				   TEXT("\n\t") TEXT(VMOPTION("stackpages:")) TEXT(" n \t(use n stack pages)")
+                   TEXT("\n\t") TEXT(VMOPTION("numextsems:")) TEXT(" n \t(allow up to n external semaphores)")
+                   TEXT("\n\t") TEXT(VMOPTION("checkpluginwrites")) TEXT(" \t(check for writes past end of object in plugins")
+                   TEXT("\n\t") TEXT(VMOPTION("noheartbeat")) TEXT(" \t(no heartbeat for debug)")
 #endif /* STACKVM */
 #if STACKVM || NewspeakVM
 # if COGVM
-					TEXT("\n\t-trace[=num]\tenable tracing (optionally to a specific value)\n")
+					TEXT("\n\t") TEXT(VMOPTION("trace")) TEXT("[=num]\tenable tracing (optionally to a specific value)\n")
 # else
-                   TEXT("\n\t-sendtrace \t(trace sends to stdout for debug)")
+                   TEXT("\n\t") TEXT(VMOPTION("sendtrace")) TEXT(" \t(trace sends to stdout for debug)")
 # endif
-                   TEXT("\n\t-warnpid   \t(print pid in warnings)")
+                   TEXT("\n\t") TEXT(VMOPTION("warnpid")) TEXT("   \t(print pid in warnings)")
 #endif
 #if COGVM
-                   TEXT("\n\t-codesize: bytes \t(set machine-code memory size to bytes)")
-                   TEXT("\n\t-cogmaxlits: n \t(set max number of literals for methods to be compiled to machine code)")
-                   TEXT("\n\t-cogminjumps: n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
-                   TEXT("\n\t-tracestores \t(assert-check stores for debug)")
-                   TEXT("\n\t-reportheadroom\t(report unused stack headroom on exit)")
-                   TEXT("\n\t-dpcso: bytes \t(stack offset for prim calls for debug)")
+                   TEXT("\n\t") TEXT(VMOPTION("codesize:")) TEXT(" bytes \t(set machine-code memory size to bytes)")
+                   TEXT("\n\t") TEXT(VMOPTION("cogmaxlits:")) TEXT(" n \t(set max number of literals for methods to be compiled to machine code)")
+                   TEXT("\n\t") TEXT(VMOPTION("cogminjumps:")) TEXT(" n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
+                   TEXT("\n\t") TEXT(VMOPTION("tracestores")) TEXT(" \t(assert-check stores for debug)")
+                   TEXT("\n\t") TEXT(VMOPTION("reportheadroom")) TEXT("\t(report unused stack headroom on exit)")
+                   TEXT("\n\t") TEXT(VMOPTION("dpcso:")) TEXT(" bytes \t(stack offset for prim calls for debug)")
 #endif /* COGVM */
 #if SPURVM
-                   TEXT("\n\t-maxoldspace: bytes \t(set max size of old space memory to bytes)")
+                   TEXT("\n\t") TEXT(VMOPTION("maxoldspace:")) TEXT(" bytes \t(set max size of old space memory to bytes)")
 #endif
                    );
       break;

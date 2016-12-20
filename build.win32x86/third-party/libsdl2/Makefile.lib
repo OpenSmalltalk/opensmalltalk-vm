@@ -1,0 +1,33 @@
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
+include ../../third-party/libsdl2.spec
+
+# plugin definitions
+LIBSDL2URL:=$(libsdl2_spec_download_url)
+LIBSDL2LIBNAME:=$(libsdl2_spec_product_name_windows)
+LIBSDL2DIR:=$(THIRDPARTYDIR)/$(libsdl2_spec_unpack_dir_name)
+LIBSDL2ARCHIVE:=$(THIRDPARTYCACHEDIR)/$(libsdl2_spec_archive_name)
+LIBSDL2LIB:=$(THIRDPARTYINSTALLDIR)/$(LIBSDL2LIBNAME)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(LIBSDL2LIB)
+PLUGINREQS:=$(PLUGINREQS) $(THIRDPARTYLIBS)
+
+$(LIBSDL2ARCHIVE): 
+	$(WGET) -O $(LIBSDL2ARCHIVE) $(LIBSDL2URL) 
+
+$(THIRDPARTYLIBDIR)/$(LIBSDL2LIBNAME): $(LIBSDL2ARCHIVE)
+	tar x -f $(LIBSDL2ARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(LIBSDL2DIR) \
+		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' \
+			CFLAGS='$(THIRDPARTY_CFLAGS)' \
+			LDFLAGS='$(THIRDPARTY_LDFLAGS)' \
+		&& make \
+		&& make install
+
+$(LIBSDL2LIB): $(THIRDPARTYLIBDIR)/$(LIBSDL2LIBNAME)
+	cp -f $(THIRDPARTYLIBDIR)/$(LIBSDL2LIBNAME) $(THIRDPARTYINSTALLDIR)
+
+libsdl2: $(LIBSDL2LIB)

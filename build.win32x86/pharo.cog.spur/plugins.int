@@ -36,4 +36,5 @@ SoundPlugin \
 StarSqueakPlugin \
 UUIDPlugin \
 Win32OSProcessPlugin \
-# Klatt \
+SDL2DisplayPlugin \
+EventsHandlerPlugin

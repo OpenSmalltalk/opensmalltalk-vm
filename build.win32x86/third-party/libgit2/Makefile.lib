@@ -1,0 +1,39 @@
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
+include ../../third-party/libgit2.spec
+
+# plugin definitions
+LIBGIT2URL:=$(libgit2_spec_download_url)
+LIBGIT2LIBNAME:=$(libgit2_spec_product_name_windows)
+LIBGIT2DIR:=$(THIRDPARTYDIR)/$(libgit2_spec_unpack_dir_name)
+LIBGIT2ARCHIVE:=$(THIRDPARTYCACHEDIR)/$(libgit2_spec_archive_name)
+LIBGIT2LIB:=$(THIRDPARTYINSTALLDIR)/$(LIBGIT2LIBNAME)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(LIBGIT2LIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+
+$(LIBGIT2ARCHIVE): 
+	$(WGET) -O $(LIBGIT2ARCHIVE) $(LIBGIT2URL) 
+
+$(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME): $(LIBGIT2ARCHIVE)
+	tar x -f $(LIBGIT2ARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(LIBGIT2DIR) \
+		&& cmake \
+			-DCMAKE_INSTALL_PREFIX=$(THIRDPARTYOUTDIR) \
+			-DUSE_SSH=ON \
+			-DBUILD_CLAR=OFF \
+			-DLIBSSH2_FOUND=ON \
+			-DLIBSSH2_INCLUDE_DIRS=$(THIRDPARTYINCLUDEDIR) \
+			-DLIBSSH2_LIBRARIES=$(THIRDPARTYLIBDIR)/libssh2-1.dll \
+			-G "MSYS Makefiles" \
+			-DCMAKE_C_FLAGS="$(THIRDPARTY_CFLAGS)" \
+		&& make \
+		&& make install
+
+$(LIBGIT2LIB): libssh2 $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME)
+	cp -f $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME) $(THIRDPARTYINSTALLDIR)
+	
+libgit2: $(LIBGIT2LIB)

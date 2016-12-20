@@ -11,6 +11,9 @@
 # CONFIGURATION configuration of VM to build from product, assert & debug
 # THREADING whether to build a multi-threaded FFI VM
 
+.PHONY: all
+all: default
+
 VM?=Squeak
 VM_NAME?=$(VM)
 CONFIGURATION=product
@@ -47,6 +50,7 @@ OBJDIR:= $(BUILD)/vm
 PLATDIR:=../../platforms
 CROSSDIR:=$(PLATDIR)/Cross/vm
 WIN32DIR:=$(PLATDIR)/win32/vm
+WIN32PLUGINSDIR:=$(PLATDIR)/win32/plugins
 WIN32MISCDIR:=$(PLATDIR)/win32/misc
 WIN32UTILDIR:=$(PLATDIR)/win32/util
 
@@ -69,6 +73,14 @@ include plugins.int
 
 LIBS:= $(addprefix $(OBJDIR)/, $(addsuffix .lib, $(INTERNAL_PLUGINS)))
 DLLS:= $(addprefix $(OBJDIR)/, $(addsuffix .dll, $(EXTERNAL_PLUGINS)))
+
+#############################################################################
+# The third-party libraries
+#
+ifneq ($(THIRDPARTYLIBS),)
+include ../common/Makefile.lib.extra
+THIRDPARTYPREREQS:=$(THIRDPARTYCACHEDIR) $(THIRDPARTYOUTDIR) 
+endif
 
 #############################################################################
 # Generic VM source file definitions
@@ -100,7 +112,6 @@ VMDEFIN:=$(VM).def.in
 BTOBJ:= $(OBJDIR)/btext.o
 ETOBJ:= $(OBJDIR)/etext.o
 
-
 .PRECIOUS: mkNamedPrims.exe
 
 #############################################################################
@@ -118,11 +129,10 @@ INCLUDES:= -I. -I$(VMSRCDIR) -I$(WIN32DIR) -I$(CROSSDIR) $(XINC)
 .SUFFIXES:
 .SUFFIXES:	.ccg .cc .c .o .s .i .rc .res .cg .hg .ccg .cpp
 
-
-
 #############################################################################
 # Common build rules
 #
+	
 default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE) nukelibs
 
 svnver:
@@ -147,7 +157,7 @@ debug:
 	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug THREADING=single $(@,debug=) default
 
 # Do make init to allow make -n to function.
-init:	$(OBJDIR) mkNamedPrims.exe
+init: $(THIRDPARTYPREREQS) $(OBJDIR) mkNamedPrims.exe
 
 cleanall:	clean cleanmt cleanast cleanmtast cleandbg cleanmtdbg
 
@@ -205,7 +215,7 @@ $(ETOBJ):	$(WIN32MISCDIR)/etext.c
 
 vm:	$(VMEXE)
 
-$(VMEXE): $(OBJDIR) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
+$(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
 	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -o $(VMEXE) \
 			$(BTOBJ) $(VMOBJ) $(VMEXP) $(OBJDIR)/resource.o $(LIBS) $(STDLIBS) $(ETOBJ)
@@ -250,25 +260,28 @@ $(VMDEF) $(VMEXP) $(VMLIB): $(VMOBJ)
 .PHONY: $(OBJDIR)/%.lib $(OBJDIR)/%.dll
 
 # Check for Makefile in win32 plugins directory otherwise use default Makefile
-plugin-makefile = $(firstword $(realpath \
-					$(PLATDIR)/win32/plugins/$(*F)/Makefile.plugin \
-					../common/Makefile.plugin))
+plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Makefile.plugin ../common/Makefile.plugin)))
 
 # Internal plugin.  Build as lib then link in lib
-$(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
-	@-mkdir $(BUILD)/$(*F)
-	$(MAKE) $(MFLAGS) CONFIGURATION=$(CONFIGURATION) BUILD=$(BUILD) \
+# $(call plugin-makefile,$(*F))
+$(OBJDIR)/%.lib: 
+	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
+		CONFIGURATION=$(CONFIGURATION) \
+		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
 		$(OBJDIR)/$(*F).lib
 
 # External plugin.  Build as dll and copy to vm dir ($(OBJDIR)).
-$(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
-	@-mkdir $(BUILD)/$(*F)
-	$(MAKE) $(MFLAGS) CONFIGURATION=$(CONFIGURATION) BUILD=$(BUILD) \
+# $(call plugin-makefile,$(*F))
+$(OBJDIR)/%.dll: 
+	@-mkdir -p $(BUILD)/$(*F)
+	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
+		CONFIGURATION=$(CONFIGURATION) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
+		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
 		COGDEFS="$(COGDEFS)" LIBNAME=$(*F) $(OBJDIR)/$(*F).dll
 
 #############################################################################

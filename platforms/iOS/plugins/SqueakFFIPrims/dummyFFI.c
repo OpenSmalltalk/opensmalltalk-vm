@@ -157,7 +157,7 @@ int ffiAlloc(int byteSize)
 
 /*  ffiFree:
 Free space from the external heap */
-int ffiFree(long pointer)
+int ffiFree(sqIntptr_t pointer)
 {
 return 1;
 }

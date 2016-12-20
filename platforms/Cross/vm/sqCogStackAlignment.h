@@ -9,27 +9,17 @@
  *			eem Wed Jul 14 2010 make 16 bytes the default alignment for all x86.
  */
  
-#if __i386__ || defined(X86)
-#   if __SSE2__ || (__APPLE__ && __MACH__) || __linux__
+#if __i386__ || _M_IX86
+# if __SSE2__ || (__APPLE__ && __MACH__) || __linux__ || _M_IX86_FP==2
 /* 16-byte stack alignment on x86 is required for SSE instructions which
  * require 16-byte aligned addresses to access 64 or 128 bit values in memory.
  */
-#	    define STACK_ALIGN_BYTES 16
-#	    define STACK_FP_ALIGNMENT 8 /* aligned sp - retpc - saved fp */
-#   else
-#       ifndef STACK_ALIGN_BYTES
-#	        define STACK_ALIGN_BYTES 4
-#	        define STACK_FP_ALIGNMENT 0
-#       elif !defined(STACK_FP_ALIGNMENT)
-#           if STACK_ALIGN_BYTES > 8
-#	            define STACK_FP_ALIGNMENT 8
-#           else
-#	            define STACK_FP_ALIGNMENT 0
-#           endif
-#       else
-#	        define STACK_FP_ALIGNMENT 0
-#       endif
-#   endif
+#	define STACK_ALIGN_BYTES 16
+#	define STACK_FP_ALIGNMENT 8 /* aligned sp - retpc - saved fp */
+# else
+#	define STACK_ALIGN_BYTES 4
+#	define STACK_FP_ALIGNMENT 0
+# endif
 #endif
 
 #if defined(__arm__) || defined(__arm32__) || defined(ARM32)
@@ -105,17 +95,12 @@
 # else /* !(__i386__ || __arm__ || __x86_64__) */
 #  error define code for your processor here
 # endif
-
 # if !defined(getfp)
-VM_EXPORT extern usqIntptr_t (*ceGetFP)(); /* provided by Cogit */
-# define getfp() ceGetFP()
+# define getfp() ceGetFP() /* provided by Cogit */
 # endif
-
 # if !defined(getsp)
-VM_EXPORT extern usqIntptr_t (*ceGetSP)(); /* provided by Cogit */
-# define getsp() ceGetSP()
+# define getsp() ceGetSP() /* provided by Cogit */
 # endif
-
 # define STACK_ALIGN_MASK (STACK_ALIGN_BYTES-1)
 #	define assertCStackWellAligned() do {									\
 	extern sqInt cFramePointerInUse;										\
@@ -124,6 +109,14 @@ VM_EXPORT extern usqIntptr_t (*ceGetSP)(); /* provided by Cogit */
 	assert((getsp() & STACK_ALIGN_MASK) == 0);	\
 } while (0)
 #else /* defined(STACK_ALIGN_BYTES) */
-# define STACK_ALIGN_BYTES sizeof(void *)
-# define assertCStackWellAligned() 0
+#  if defined(powerpc) || defined(__powerpc__) || defined(_POWER) || defined(__POWERPC__) || defined(__PPC__)
+#    define STACK_ALIGN_BYTES 16
+#  elif defined(__sparc64__) || defined(__sparcv9__) || defined(__sparc_v9__) /* must precede 32-bit sparc defs */
+#    define STACK_ALIGN_BYTES 16
+#  elif defined(sparc) || defined(__sparc__) || defined(__sparclite__)
+#    define STACK_ALIGN_BYTES 8
+#  else
+#    define STACK_ALIGN_BYTES sizeof(void *)
+#  endif
+#  define assertCStackWellAligned() 0
 #endif /* defined(STACK_ALIGN_BYTES) */
