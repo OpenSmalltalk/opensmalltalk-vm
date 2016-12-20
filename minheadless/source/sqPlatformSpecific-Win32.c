@@ -19,6 +19,8 @@
 
 typedef HRESULT WINAPI (*SetProcessDpiAwarenessFunctionPointer) (int awareness);
 
+HANDLE vmWakeUpEvent = 0;
+
 static void enableHighDPIAwareness()
 {
     SetProcessDpiAwarenessFunctionPointer setProcessDpiAwareness;
@@ -46,6 +48,9 @@ static void enableHighDPIAwareness()
 
 void ioInitPlatformSpecific(void)
 {
+    /* Create the wake up event. */
+    vmWakeUpEvent = CreateEvent(NULL, 1, 0, NULL);
+    
     /* Use UTF-8 for the console. */
     if (GetConsoleCP())
     {
@@ -93,7 +98,28 @@ sqInt ioExitWithErrorCode(int errorCode)
 
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
-    return 0;
+    /* wake us up if something happens */
+    ResetEvent(vmWakeUpEvent);
+    MsgWaitForMultipleObjects(1, &vmWakeUpEvent, FALSE,
+  			    microSeconds / 1000, QS_ALLINPUT);
+    ioProcessEvents(); /* keep up with mouse moves etc. */
+    return microSeconds;
+}
+
+/* NOTE: Why do we need this? When running multi-threaded code such as in
+the networking code and in midi primitives
+we will signal the interpreter several semaphores.
+(Predates the internal synchronization of signalSemaphoreWithIndex ()) */
+
+int synchronizedSignalSemaphoreWithIndex(int semaIndex)
+{
+    int result;
+
+    /* Do our job - this is now synchronized in signalSemaphoreWithIndex */
+    result = signalSemaphoreWithIndex(semaIndex);
+    /* wake up interpret() if sleeping */
+    SetEvent(vmWakeUpEvent);
+    return result;
 }
 
 void  ioProfileStatus(sqInt *running, void **exestartpc, void **exelimitpc,
