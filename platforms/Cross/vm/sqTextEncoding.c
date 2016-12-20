@@ -83,6 +83,8 @@ extern const unsigned short *sqUTF16ToUTF32Iterate(const unsigned short *string,
     unsigned int high;
     unsigned int low;
     *dest = 0;
+    if(!*string)
+        return string;
 
     while((high = *string) != 0)
     {
@@ -129,10 +131,13 @@ extern unsigned short *sqUTF8ToUTF16Copy(unsigned short *dest, size_t destSize, 
 
     /* Iterate through the code points present in the UTF-8 string */
     pos = src;
-    for(pos = sqUTF8ToUTF32Iterate(pos, &codePoint);
-        pos && (*pos != 0) && destSize > 1;
-        pos = sqUTF8ToUTF32Iterate(pos, &codePoint))
+    while(*pos)
     {
+        pos = sqUTF8ToUTF32Iterate(pos, &codePoint);
+        if(destSize <= 1 || !codePoint)
+            break;
+        
+        /* printf("CodePoint: %d\n", codePoint); */
         if(codePoint >= 0x10000)
         {
             /* Surrogate high - Surrogate low - Null terminator*/
@@ -141,17 +146,17 @@ extern unsigned short *sqUTF8ToUTF16Copy(unsigned short *dest, size_t destSize, 
 
             /* Surrogate high */
             *dest = (codePoint >> 10) + 0xD800;
-            ++dest;
+            ++dest; --destSize;
 
             /* Surrogate low */
             *dest = (codePoint & 1023) + 0xDC00;
-            ++dest;
+            ++dest; --destSize;
         }
         else
         {
             /* Just pass the code point. */
             *dest = codePoint;
-            ++dest;
+            ++dest; --destSize;
         }
     }
     *dest = 0;

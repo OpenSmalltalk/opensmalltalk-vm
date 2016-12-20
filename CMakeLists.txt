@@ -376,6 +376,7 @@ set(VM_COMMON_SOURCES
 	platforms/Cross/vm/sq.h
 	platforms/Cross/vm/sqAssert.h
 	platforms/Cross/vm/sqAtomicOps.h
+    platforms/Cross/vm/sqCircularQueue.h
 	platforms/Cross/vm/sqCogStackAlignment.h
 	platforms/Cross/vm/sqExternalSemaphores.c
 	platforms/Cross/vm/sqHeapMap.c
@@ -404,7 +405,6 @@ set(VM_PLATFORM_COMMON_SOURCES
     platforms/minheadless/common/sqPlatformSpecific.h
     platforms/minheadless/common/sqPlatformSpecificCommon.h
 	platforms/minheadless/common/sqInternalPrimitives.c
-    platforms/minheadless/common/sqQueue.h
 	platforms/minheadless/common/sqExternalPrimitives.c
 	platforms/minheadless/common/sqEventCommon.c
     platforms/minheadless/common/sqPrinting.c
@@ -481,12 +481,8 @@ elseif(WIN32)
     set(VM_DEPENDENCIES_LIBRARIES Winmm ${VM_DEPENDENCIES_LIBRARIES})
     if(SQUEAK_PLATFORM_X86_32)
         if(MSVC)
-            add_definitions(-DALLOCA_LIES_SO_USE_GETSP=0)
+#            add_definitions(-DALLOCA_LIES_SO_USE_GETSP=0)
         else()
-            add_definitions(
-                -DSTACK_ALIGN_BYTES=16
-                -DALLOCA_LIES_SO_USE_GETSP=0
-            )
         endif()
         add_definitions(
             -DX86
