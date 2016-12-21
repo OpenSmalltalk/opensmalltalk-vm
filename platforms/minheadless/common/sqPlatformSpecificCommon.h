@@ -60,4 +60,8 @@ extern int sqAskSecurityYesNoQuestion(const char *question);
 
 extern const char *sqGetCurrentImagePath(void);
 
+/* Stack trace dumping */
+typedef int (*sqFunctionThatCouldCrash)(void *userdata);
+extern int sqExecuteFunctionWithCrashExceptionCatching(sqFunctionThatCouldCrash function, void *userdata);
+
 #endif /* _SQ_PLATFORM_SPECIFIC_COMMON_H */

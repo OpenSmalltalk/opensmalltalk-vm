@@ -47,6 +47,21 @@
 #include <signal.h>
 #include <fcntl.h>
 
+#if !defined(NOEXECINFO)
+# include <execinfo.h>
+# define BACKTRACE_DEPTH 64
+#endif
+#if __OpenBSD__
+# include <sys/signal.h>
+#endif
+#if __FreeBSD__
+# include <sys/ucontext.h>
+#endif
+#if __sun__
+# include <sys/ucontext.h>
+# include <limits.h>
+#endif
+
 #include "sq.h"
 #include "sqaio.h"
 #include "sqMemoryAccess.h"
@@ -60,6 +75,41 @@
 #if !defined(min)
 # define min(x,y) (((x)>(y))?(y):(x))
 #endif
+
+extern int sqVMOptionInstallExceptionHandlers;
+extern int sqVMOptionBlockOnError;
+extern int sqVMOptionBlockOnWarn;
+extern char **argVec;
+
+static int inFault = 0;
+static char crashdump[FILENAME_MAX+1];
+
+extern char *GetAttributeString(sqInt id);
+extern const char *getVersionInfo(int verbose);
+extern void getCrashDumpFilenameInto(char *buf);
+
+extern void printAllStacks(void);
+extern void printCallStack(void);
+extern void dumpPrimTraceLog(void);
+extern void pushOutputFile(char *);
+extern void popOutputFile(void);
+extern void ifValidWriteBackStackPointersSaveTo(void*,void*,char**,char**);
+
+static void
+block()
+{
+    struct timespec while_away_the_hours;
+    char pwd[MAXPATHLEN+1];
+
+    printf("blocking e.g. to allow attaching debugger\n");
+    printf("pid: %d pwd: %s vm:%s\n",
+    		(int)getpid(), getcwd(pwd,MAXPATHLEN+1), argVec[0]);
+    while (1)
+    {
+    	while_away_the_hours.tv_sec = 3600;
+    	nanosleep(&while_away_the_hours, 0);
+    }
+}
 
 void ioInitPlatformSpecific(void)
 {
@@ -296,6 +346,260 @@ void findExecutablePath(const char *localVmName, char *dest, size_t destSize)
             }
         }
     }
+}
+
+
+/* Print an error message, possibly a stack trace, do /not/ exit.
+ * Allows e.g. writing to a log file and stderr.
+ */
+static void *printRegisterState(ucontext_t *uap);
+
+static void
+reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
+{
+#if !defined(NOEXECINFO)
+	void *addrs[BACKTRACE_DEPTH];
+	void *pc;
+	int depth;
+#endif
+	/* flag prevents recursive error when trying to print a broken stack */
+	static sqInt printingStack = false;
+
+#if COGVM
+	/* Testing stackLimit tells us whether the VM is initialized. */
+	extern usqInt stackLimitAddress(void);
+#endif
+
+	printf("\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
+	printf("%s\n%s\n\n", GetAttributeString(0), getVersionInfo(1));
+
+#if COGVM
+	/* Do not attempt to report the stack until the VM is initialized!! */
+	if (!*(char **)stackLimitAddress())
+		return;
+#endif
+
+#if !defined(NOEXECINFO)
+	printf("C stack backtrace & registers:\n");
+	if (uap) {
+		addrs[0] = printRegisterState(uap);
+		depth = 1 + backtrace(addrs + 1, BACKTRACE_DEPTH);
+	}
+	else
+		depth = backtrace(addrs, BACKTRACE_DEPTH);
+	putchar('*'); /* indicate where pc is */
+	fflush(stdout); /* backtrace_symbols_fd uses unbuffered i/o */
+	backtrace_symbols_fd(addrs, depth + 1, fileno(stdout));
+#endif
+
+	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
+		if (!printingStack) {
+#if COGVM
+			/* If we're in generated machine code then the only way the stack
+			 * dump machinery has of giving us an accurate report is if we set
+			 * stackPointer & framePointer to the native stack & frame pointers.
+			 */
+# if __APPLE__ && __MACH__ && __i386__
+			void *fp = (void *)(uap ? uap->uc_mcontext->ss.ebp: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext->ss.esp: 0);
+# elif __linux__ && __i386__
+			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_EBP]: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_ESP]: 0);
+#	elif __linux__ && __x86_64__
+			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_RBP]: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_RSP]: 0);
+# elif __FreeBSD__ && __i386__
+			void *fp = (void *)(uap ? uap->uc_mcontext.mc_ebp: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext.mc_esp: 0);
+# elif __OpenBSD__
+			void *fp = (void *)(uap ? uap->sc_rbp: 0);
+			void *sp = (void *)(uap ? uap->sc_rsp: 0);
+# elif __sun__ && __i386__
+      void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
+      void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);
+# elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
+			void *fp = (void *)(uap ? uap->uc_mcontext.arm_fp: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext.arm_sp: 0);
+# else
+#	error need to implement extracting pc from a ucontext_t on this system
+# endif
+			char *savedSP, *savedFP;
+
+			ifValidWriteBackStackPointersSaveTo(fp,sp,&savedFP,&savedSP);
+#endif /* COGVM */
+
+			printingStack = true;
+			if (printAll) {
+				printf("\n\nAll Smalltalk process stacks (active first):\n");
+				printAllStacks();
+			}
+			else {
+				printf("\n\nSmalltalk stack dump:\n");
+				printCallStack();
+			}
+			printingStack = false;
+#if COGVM
+			/* Now restore framePointer and stackPointer via same function */
+			ifValidWriteBackStackPointersSaveTo(savedFP,savedSP,0,0);
+#endif
+		}
+	}
+	else
+		printf("\nCan't dump Smalltalk stack(s). Not in VM thread\n");
+#if STACKVM
+	printf("\nMost recent primitives\n");
+	dumpPrimTraceLog();
+# if COGVM
+	printf("\n");
+	reportMinimumUnusedHeadroom();
+# endif
+#endif
+	printf("\n\t(%s)\n", msg);
+	fflush(stdout);
+}
+
+/* Attempt to dump the registers to stdout.  Only do so if we know how. */
+static void *
+printRegisterState(ucontext_t *uap)
+{
+#if __linux__ && __i386__
+	greg_t *regs = uap->uc_mcontext.gregs;
+	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
+			"\teip 0x%08x\n",
+			regs[REG_EAX], regs[REG_EBX], regs[REG_ECX], regs[REG_EDX],
+			regs[REG_EDI], regs[REG_EDI], regs[REG_EBP], regs[REG_ESP],
+			regs[REG_EIP]);
+	return (void *)regs[REG_EIP];
+#elif __FreeBSD__ && __i386__
+	struct mcontext *regs = &uap->uc_mcontext;
+	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
+			"\teip 0x%08x\n",
+			regs->mc_eax, regs->mc_ebx, regs->mc_ecx, regs->mc_edx,
+			regs->mc_edi, regs->mc_edi, regs->mc_ebp, regs->mc_esp,
+			regs->mc_eip);
+	return regs->mc_eip;
+#elif __linux__ && __x86_64__
+	greg_t *regs = uap->uc_mcontext.gregs;
+	printf(	"\trax 0x%08x rbx 0x%08x rcx 0x%08x rdx 0x%08x\n"
+			"\trdi 0x%08x rsi 0x%08x rbp 0x%08x rsp 0x%08x\n"
+			"\tr8  0x%08x r9  0x%08x r10 0x%08x r11 0x%08x\n"
+			"\tr12 0x%08x r13 0x%08x r14 0x%08x r15 0x%08x\n"
+			"\trip 0x%08x\n",
+			regs[REG_RAX], regs[REG_RBX], regs[REG_RCX], regs[REG_RDX],
+			regs[REG_RDI], regs[REG_RDI], regs[REG_RBP], regs[REG_RSP],
+			regs[REG_R8 ], regs[REG_R9 ], regs[REG_R10], regs[REG_R11],
+			regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15],
+			regs[REG_RIP]);
+	return regs[REG_RIP];
+# elif __linux__ && (defined(__arm__) || defined(__arm32__) || defined(ARM32))
+	struct sigcontext *regs = &uap->uc_mcontext;
+	printf(	"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
+	        "\t r4 0x%08x r5 0x%08x r6 0x%08x r7 0x%08x\n"
+	        "\t r8 0x%08x r9 0x%08x r10 0x%08x fp 0x%08x\n"
+	        "\t ip 0x%08x sp 0x%08x lr 0x%08x pc 0x%08x\n",
+	        regs->arm_r0,regs->arm_r1,regs->arm_r2,regs->arm_r3,
+	        regs->arm_r4,regs->arm_r5,regs->arm_r6,regs->arm_r7,
+	        regs->arm_r8,regs->arm_r9,regs->arm_r10,regs->arm_fp,
+	        regs->arm_ip, regs->arm_sp, regs->arm_lr, regs->arm_pc);
+#else
+	printf("don't know how to derive register state from a ucontext_t on this platform\n");
+	return 0;
+#endif
+}
+
+static void
+sigusr1(int sig, siginfo_t *info, void *uap)
+{
+	int saved_errno = errno;
+	time_t now = time(NULL);
+	char ctimebuf[32];
+	unsigned long pc;
+
+	if (!ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
+		pthread_kill(getVMOSThread(),sig);
+		errno = saved_errno;
+		return;
+	}
+
+	getCrashDumpFilenameInto(crashdump);
+	ctime_r(&now,ctimebuf);
+	pushOutputFile(crashdump);
+	reportStackState("SIGUSR1", ctimebuf, 1, uap);
+	popOutputFile();
+	reportStackState("SIGUSR1", ctimebuf, 1, uap);
+
+	errno = saved_errno;
+}
+
+static void
+sigsegv(int sig, siginfo_t *info, void *uap)
+{
+	time_t now = time(NULL);
+	char ctimebuf[32];
+    const char *fault;
+    switch(sig)
+    {
+    case SIGSEGV:
+        fault = "Segmentation fault";
+        break;
+    case SIGBUS:
+        fault = "Bus error";
+        break;
+    case SIGILL:
+        fault = "Illegal instruction";
+        break;
+    default:
+        fault = "Unknown signal";
+        break;
+    }
+
+	if (!inFault) {
+		getCrashDumpFilenameInto(crashdump);
+		ctime_r(&now,ctimebuf);
+		pushOutputFile(crashdump);
+		reportStackState(fault, ctimebuf, 0, uap);
+		popOutputFile();
+		reportStackState(fault, ctimebuf, 0, uap);
+	}
+	if (sqVMOptionBlockOnError) block();
+	abort();
+}
+
+#if defined(IMAGE_DUMP)
+static void
+sighup(int ignore) { dumpImageFile= 1; }
+
+static void
+sigquit(int ignore) { emergencyDump(1); }
+#endif
+
+int sqExecuteFunctionWithCrashExceptionCatching(sqFunctionThatCouldCrash function, void *userdata)
+{
+    if (sqVMOptionInstallExceptionHandlers)
+    {
+        struct sigaction sigusr1_handler_action, sigsegv_handler_action;
+
+        sigsegv_handler_action.sa_sigaction = sigsegv;
+        sigsegv_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+        sigemptyset(&sigsegv_handler_action.sa_mask);
+        (void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
+        (void)sigaction(SIGBUS, &sigsegv_handler_action, 0);
+        (void)sigaction(SIGILL, &sigsegv_handler_action, 0);
+
+        sigusr1_handler_action.sa_sigaction = sigusr1;
+        sigusr1_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+        sigemptyset(&sigusr1_handler_action.sa_mask);
+        (void)sigaction(SIGUSR1, &sigusr1_handler_action, 0);
+    }
+
+#if defined(IMAGE_DUMP)
+    signal(SIGHUP,  sighup);
+    signal(SIGQUIT, sigquit);
+#endif
+
+    return function(userdata);
 }
 
 /* OS Exports */

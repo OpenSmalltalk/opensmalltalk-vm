@@ -74,6 +74,10 @@ static char **squeakArgumentVector;
 static int vmArgumentCount;
 static char **vmArgumentVector;
 
+int sqVMOptionInstallExceptionHandlers = 1;
+int sqVMOptionBlockOnError = 0;
+int sqVMOptionBlockOnWarn = 0;
+
 extern void initGlobalStructure(void); // this is effectively null if a global register is not being used
 extern void findExecutablePath(const char *localVmName, char *dest, size_t destSize);
 
@@ -263,6 +267,20 @@ sqInt getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length)
     if (length > 0)
         strncpy(pointerForOop(byteArrayIndex), GetAttributeString(id), length);
     return 0;
+}
+
+const char *getVersionInfo(int verbose)
+{
+    return SOURCE_VERSION_STRING;
+}
+
+void getCrashDumpFilenameInto(char *buf)
+{
+	/*
+    strcpy(buf,vmLogDirA);
+	vmLogDirA[0] && strcat(buf, "/");
+    */
+	strcat(buf, "crash.dmp");
 }
 
 static void outOfMemory(void)
@@ -495,9 +513,16 @@ SQUEAK_VM_CORE_PUBLIC SqueakError squeak_passImageCommandLineArguments(int argc,
     return SQUEAK_ERROR_NOT_YET_IMPLEMENTED;
 }
 
+static int squeak_doRunInterpreter(void *userdata)
+{
+    (void)userdata;
+    interpret();
+    return SQUEAK_SUCCESS;
+}
+
 SQUEAK_VM_CORE_PUBLIC SqueakError squeak_run(void)
 {
-    interpret();
+    sqExecuteFunctionWithCrashExceptionCatching(&squeak_doRunInterpreter, NULL);
     return SQUEAK_SUCCESS;
 }
 

@@ -293,6 +293,11 @@ osCogStackPageHeadroom()
 }
 #endif /* COGVM */
 
+int sqExecuteFunctionWithCrashExceptionCatching(sqFunctionThatCouldCrash function, void *userdata)
+{
+    return function(userdata);
+}
+
 void *os_exports[][3] =
 {
     { 0, 0, 0 }

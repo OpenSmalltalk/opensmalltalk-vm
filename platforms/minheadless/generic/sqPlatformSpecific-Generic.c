@@ -219,6 +219,11 @@ void findExecutablePath(const char *localVmName, char *dest, size_t destSize)
         strncat(dest, localVmName, lastSeparator - localVmName + 1);
 }
 
+int sqExecuteFunctionWithCrashExceptionCatching(sqFunctionThatCouldCrash function, void *userdata)
+{
+    return function(userdata);
+}
+
 void *os_exports[][3]=
 {
     { 0, 0, 0 }
