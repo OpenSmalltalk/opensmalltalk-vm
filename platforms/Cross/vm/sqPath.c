@@ -29,11 +29,11 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#elif defined(__unix__) || defined(__MACHO__)
+#elif defined(__unix__) || defined(__MACH__) || defined(__APPLE__)
 #include <unistd.h>
 #else
 #include <string.h>
-#define getcwd(target, targetSize) strcpy(target, "")
+#define getcwd(target, targetSize) strcpy(target, ".")
 #endif
 
 #include "sqPath.h"
