@@ -1916,15 +1916,19 @@ SimpleStackBasedCogit >> genExtPushReceiverVariableBytecode [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtPushRemoteTempOrInstVarLongBytecode [
 	| index |
-	^ (byte2 noMask: 1 << 7)
+	^ (byte2 noMask: coInterpreter remoteIsInstVarAccess)
 		ifTrue: [ self genPushRemoteTempLongBytecode ]
 		ifFalse: 
 			[ index := byte1 + (extA << 8).
 			extA := 0.
 			extB := 0. "don't use flags in the simple cogit"
 			(coInterpreter isReadMediatedContextInstVarIndex: index)
-				ifTrue: [ self genPushMaybeContextRemoteInstVar: index inObjectAt: byte2 - (1 << 7) ]
-				ifFalse: [ self genPushRemoteInstVar: index inObjectAt: byte2 - (1 << 7) ] ]
+				ifTrue: [self 
+							genPushMaybeContextRemoteInstVar: index 
+							inObjectAt: byte2 - coInterpreter remoteIsInstVarAccess]
+				ifFalse: [self 
+							genPushRemoteInstVar: index 
+							inObjectAt: byte2 - coInterpreter remoteIsInstVarAccess]]
 ]
 
 { #category : #'bytecode generators' }
@@ -2049,7 +2053,7 @@ SimpleStackBasedCogit >> genExtStoreLiteralVariableBytecode [
 SimpleStackBasedCogit >> genExtStorePopRemoteTempOrInstVarLongBytecodePopBoolean: popBoolean [
 	| index |
 	extB := 0. "simple cogit don't use the extra flag"
-	(byte2 noMask: 1 << 7)
+	(byte2 noMask: coInterpreter remoteIsInstVarAccess)
 		ifTrue: 
 			[ self genStorePop: popBoolean RemoteTemp: byte1 At: byte2.
 			self cppIf: IMMUTABILITY ifTrue: [ self annotateBytecode: self Label ] ]
@@ -2060,11 +2064,11 @@ SimpleStackBasedCogit >> genExtStorePopRemoteTempOrInstVarLongBytecodePopBoolean
 				ifTrue: [ self 
 						genStorePop: popBoolean 
 						MaybeContextRemoteInstVar: index 
-						ofObjectAt: byte2 - (1 << 7) ]
+						ofObjectAt: byte2 - coInterpreter remoteIsInstVarAccess ]
 				ifFalse: [ self 
 						genStorePop: popBoolean 
 						RemoteInstVar: index 
-						ofObjectAt: byte2 - (1 << 7)  ] ].
+						ofObjectAt: byte2 - coInterpreter remoteIsInstVarAccess  ] ].
 	^ 0
 ]
 
