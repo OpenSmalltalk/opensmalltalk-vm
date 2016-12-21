@@ -164,9 +164,10 @@ sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
 void
 sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
+	unsigned long size = endAddr - startAddr;
 	unsigned long firstPage = roundDownToPage(startAddr);
 	if (mprotect((void *)firstPage,
-				 endAddr - firstPage + 1,
+				 size,
 				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE | PROT_EXEC)");
 }
@@ -174,17 +175,16 @@ sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 void
 sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
-#	if 0
+	unsigned long size = endAddr - startAddr;
 	unsigned long firstPage = roundDownToPage(startAddr);
 	/* Arguably this is pointless since allocated memory always includes write
 	 * permission by default.  Annoyingly the mprotect call fails on both linux
 	 * and mac os x.  So make the whole thing a nop.
 	 */
 	if (mprotect((void *)firstPage,
-				 endAddr - firstPage + 1,
+				 size,
 				 PROT_READ | PROT_WRITE) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE)");
-#	endif
 }
 # endif /* COGVM */
 
