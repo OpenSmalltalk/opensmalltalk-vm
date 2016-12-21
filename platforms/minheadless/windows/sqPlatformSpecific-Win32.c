@@ -34,6 +34,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <float.h>
 
 #include <stdlib.h>
 #include <time.h>
@@ -41,7 +42,32 @@
 #include "sq.h"
 #include "sqaio.h"
 #include "sqMemoryAccess.h"
+#include "sqWin32Backtrace.h"
 #include "config.h"
+
+# define fopen_for_append(filename) fopen(filename,"a+t")
+
+/* default fpu control word:
+   _RC_NEAR: round to nearest
+   _PC_53 :  double precision arithmetic (instead of extended)
+   _EM_XXX: silent operations (no signals please)
+*/
+#define FPU_DEFAULT (_RC_NEAR + _PC_53 + _EM_INVALID + _EM_ZERODIVIDE + _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
+
+#define MAXFRAMES 64
+
+/****************************************************************************/
+/*                     Exception handling                                   */
+/****************************************************************************/
+/* The following installs us a global exception filter for *all* exceptions */
+/* in Squeak. This is necessary since the C support of Mingw32 for SEH is   */
+/* not as sophisticated as MSVC's support. However, with this new handling  */
+/* scheme the entire thing becomes actually a lot simpler...                */
+/****************************************************************************/
+static LPTOP_LEVEL_EXCEPTION_FILTER TopLevelFilter = NULL;
+
+/* forwarded declaration */
+static void printCrashDebugInformation(LPEXCEPTION_POINTERS exp);
 
 #ifndef PROCESS_SYSTEM_DPI_AWARE
 #define PROCESS_SYSTEM_DPI_AWARE 1
@@ -52,6 +78,10 @@
 #endif
 
 typedef HRESULT WINAPI (*SetProcessDpiAwarenessFunctionPointer) (int awareness);
+
+extern int ioIsHeadless(void);
+extern const char *getVersionInfo(int verbose);
+extern LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp);
 
 HANDLE vmWakeUpEvent = 0;
 
@@ -82,6 +112,9 @@ static void enableHighDPIAwareness()
 
 void ioInitPlatformSpecific(void)
 {
+    /* Setup the FPU */
+    _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+
     /* Create the wake up event. */
     vmWakeUpEvent = CreateEvent(NULL, 1, 0, NULL);
 
@@ -293,10 +326,330 @@ osCogStackPageHeadroom()
 }
 #endif /* COGVM */
 
+static LONG CALLBACK squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
+{
+    DWORD result;
+
+    /* #1: Try to handle exception in the regular (memory access)
+     exception filter if virtual memory support is enabled */
+#ifndef NO_VIRTUAL_MEMORY
+    result = sqExceptionFilter(exp);
+#else
+    result = EXCEPTION_CONTINUE_SEARCH;
+#endif
+
+    /* #2: If that didn't work, try to handle any FP problems */
+    if(result != EXCEPTION_CONTINUE_EXECUTION)
+    {
+        DWORD code = exp->ExceptionRecord->ExceptionCode;
+        if((code >= EXCEPTION_FLT_DENORMAL_OPERAND) && (code <= EXCEPTION_FLT_UNDERFLOW))
+        {
+              /* turn on the default masking of exceptions in the FPU and proceed */
+              _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+              result = EXCEPTION_CONTINUE_EXECUTION;
+        }
+    }
+
+    /* #3: If that didn't work either try passing it on to the old
+     top-level filter */
+    if(result != EXCEPTION_CONTINUE_EXECUTION)
+    {
+        if(TopLevelFilter)
+            result = TopLevelFilter(exp);
+    }
+
+    /* #4: If that didn't work either give up and print a crash debug information */
+#if defined(NDEBUG) || defined(__MINGW32__)
+    if(result != EXCEPTION_CONTINUE_EXECUTION)
+    {
+        printCrashDebugInformation(exp);
+        result = EXCEPTION_EXECUTE_HANDLER;
+    }
+#endif
+
+    return result;
+}
+
+void InstallExceptionHandler(void)
+{
+    TopLevelFilter = SetUnhandledExceptionFilter(squeakExceptionHandler);
+}
+
+void UninstallExceptionHandler(void)
+{
+    SetUnhandledExceptionFilter(TopLevelFilter);
+    TopLevelFilter = NULL;
+}
+
 int sqExecuteFunctionWithCrashExceptionCatching(sqFunctionThatCouldCrash function, void *userdata)
 {
-    return function(userdata);
+    int result = 0;
+    
+#if !NO_FIRST_LEVEL_EXCEPTION_HANDLER
+#   ifndef _MSC_VER
+    /* Install our top-level exception handler */
+    InstallExceptionHandler();
+#   else
+    __try
+    {
+#   endif
+#endif /* !NO_FIRST_LEVEL_EXCEPTION_HANDLER */
+    
+        result = function(userdata);
+    
+#if !NO_FIRST_LEVEL_EXCEPTION_HANDLER
+#   ifdef _MSC_VER
+    } __except(squeakExceptionHandler(GetExceptionInformation())) {
+        /* Do nothing */
+    }
+#   else
+    /* remove the top-level exception handler */
+    UninstallExceptionHandler();
+#   endif
+#endif /* !NO_FIRST_LEVEL_EXCEPTION_HANDLER */
+    
+    return result;
 }
+
+static void dumpStackIfInMainThread(FILE *optionalFile)
+{
+	extern void printCallStack(void);
+
+	if (!optionalFile) {
+		if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
+			printf("\n\nSmalltalk stack dump:\n");
+			printCallStack();
+		}
+		else
+			printf("\nCan't dump Smalltalk stack. Not in VM thread\n");
+		return;
+	}
+	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
+		FILE tmpStdout = *stdout;
+		fprintf(optionalFile, "\n\nSmalltalk stack dump:\n");
+		*stdout = *optionalFile;
+		printCallStack();
+		*optionalFile = *stdout;
+		*stdout = tmpStdout;
+		fprintf(optionalFile,"\n");
+	}
+	else
+		fprintf(optionalFile,"\nCan't dump Smalltalk stack. Not in VM thread\n");
+}
+
+#if STACKVM
+static void dumpPrimTrace(FILE *optionalFile)
+{
+	extern void dumpPrimTraceLog(void);
+
+	if (optionalFile) {
+		FILE tmpStdout = *stdout;
+		*stdout = *optionalFile;
+		dumpPrimTrace(0);
+		*optionalFile = *stdout;
+		*stdout = tmpStdout;
+	}
+	else {
+		printf("\nPrimitive trace:\n");
+		dumpPrimTraceLog();
+		printf("\n");
+	}
+}
+#else
+# define dumpPrimTrace(f) 0
+#endif
+
+
+void printCommonCrashDumpInfo(FILE *f) {
+
+    /*fprintf(f,"\n\n%s", hwInfoString);
+    fprintf(f,"\n%s", osInfoString);
+    fprintf(f,"\n%s", gdInfoString);
+    */
+    
+    /* print VM version information */
+    fprintf(f,"%s\n", getVersionInfo(1));
+    fflush(f);
+    fprintf(f,"\n"
+	    "Current byte code: %d\n"
+	    "Primitive index: %" PRIdSQINT "\n",
+	    getCurrentBytecode(),
+	    methodPrimitiveIndex());
+    fflush(f);
+    /* print loaded plugins */
+    fprintf(f,"\nLoaded plugins:\n");
+    {
+      int index = 1;
+      char *pluginName;
+      while( (pluginName = ioListLoadedModule(index)) != NULL) {
+	fprintf(f,"\t%s\n", pluginName);
+	fflush(f);
+	index++;
+      }
+    }
+
+    printModuleInfo(f);
+	fflush(f);
+}
+
+static void
+printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
+{ 
+  void *callstack[MAXFRAMES];
+  symbolic_pc symbolic_pcs[MAXFRAMES];
+  int nframes, inVMThread;
+  char crashInfo[1024];
+  FILE *f;
+  int byteCode = -2;
+
+  UninstallExceptionHandler();
+
+  if ((inVMThread = ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())))
+    /* Retrieve current byte code.
+     If this fails the IP is probably wrong */
+    TRY {
+      byteCode = getCurrentBytecode();
+    } EXCEPT(EXCEPTION_EXECUTE_HANDLER) {
+      byteCode = -1;
+    }
+
+    TRY {
+#if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
+        if (inVMThread)
+            ifValidWriteBackStackPointersSaveTo((void *)exp->ContextRecord->Ebp,
+            									(void *)exp->ContextRecord->Esp,
+            									0,
+            									0);
+        callstack[0] = (void *)exp->ContextRecord->Eip;
+        nframes = backtrace_from_fp((void*)exp->ContextRecord->Ebp,
+        						callstack+1,
+        						MAXFRAMES-1);
+#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
+        if (inVMThread)
+            ifValidWriteBackStackPointersSaveTo((void *)exp->ContextRecord->Rbp,
+            									(void *)exp->ContextRecord->Rsp,
+            									0,
+            									0);
+        callstack[0] = (void *)exp->ContextRecord->Rip;
+        nframes = backtrace_from_fp((void*)exp->ContextRecord->Rbp,
+        						callstack+1,
+        						MAXFRAMES-1);
+#else
+#   error "unknown architecture, cannot dump stack"
+#endif
+        symbolic_backtrace(++nframes, callstack, symbolic_pcs);
+        sqFatalErrorPrintfNoExit(
+"Sorry but the VM has crashed.\n\n\
+Exception code: %08X\n\
+Exception address: %08X\n\
+Current byte code: %d\n\
+Primitive index: %d\n\n\
+Crashed in %s thread\n\n\
+This information will be stored in the file\n\
+%s\\%s\n\
+with a complete stack dump",
+             exp->ExceptionRecord->ExceptionCode,
+             exp->ExceptionRecord->ExceptionAddress,
+             byteCode,
+             methodPrimitiveIndex(),
+             inVMThread ? L"the VM" : L"some other",
+             "."/*vmLogDirA*/,
+             "crash.dmp");
+
+         /* TODO: prepend the log directory to the crash.dmp file. */
+        f = fopen_for_append("crash.dmp");
+        printf("File for crash.dmp: %p\n", f);
+        if(f)
+        {  
+            time_t crashTime = time(NULL);
+            fprintf(f,"---------------------------------------------------------------------\n");
+            fprintf(f,"%s\n", ctime(&crashTime));
+            /* Print the exception code */
+            fprintf(f,"Exception code: %08lX\nException addr: %0*" PRIXSQPTR "\n",
+                exp->ExceptionRecord->ExceptionCode,
+            	(int) sizeof(exp->ExceptionRecord->ExceptionAddress)*2,
+                (usqIntptr_t) exp->ExceptionRecord->ExceptionAddress);
+            if(exp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
+                /* For access violations print what actually happened */
+                fprintf(f,"Access violation (%s) at %0*" PRIXSQPTR "\n",
+                	(exp->ExceptionRecord->ExceptionInformation[0] ? "write access" : "read access"),
+                	(int) sizeof(exp->ExceptionRecord->ExceptionInformation[1])*2,
+                	exp->ExceptionRecord->ExceptionInformation[1]);
+            }
+#if defined(_M_IX86) || defined(_M_I386) || defined(_X86_) || defined(i386) || defined(__i386__)
+            fprintf(f,"EAX:%08lX\tEBX:%08lX\tECX:%08lX\tEDX:%08lX\n",
+                exp->ContextRecord->Eax,
+                exp->ContextRecord->Ebx,
+                exp->ContextRecord->Ecx,
+                exp->ContextRecord->Edx);
+            fprintf(f,"ESI:%08lX\tEDI:%08lX\tEBP:%08lX\tESP:%08lX\n",
+                exp->ContextRecord->Esi,
+                exp->ContextRecord->Edi,
+                exp->ContextRecord->Ebp,
+                exp->ContextRecord->Esp);
+            fprintf(f,"EIP:%08lX\tEFL:%08lX\n",
+                exp->ContextRecord->Eip,
+                exp->ContextRecord->EFlags);
+            fprintf(f,"FP Control: %08lX\nFP Status:  %08lX\nFP Tag:     %08lX\n",
+                exp->ContextRecord->FloatSave.ControlWord,
+                exp->ContextRecord->FloatSave.StatusWord,
+                exp->ContextRecord->FloatSave.TagWord);
+#elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
+            fprintf(f,"RAX:%016" PRIxSQPTR "\tRBX:%016" PRIxSQPTR "\tRCX:%016" PRIxSQPTR "\tRDX:%016" PRIxSQPTR "\n",
+                exp->ContextRecord->Rax,
+                exp->ContextRecord->Rbx,
+                exp->ContextRecord->Rcx,
+                exp->ContextRecord->Rdx);
+            fprintf(f,"RSI:%016" PRIxSQPTR "\tRDI:%016" PRIxSQPTR "\tRBP:%016" PRIxSQPTR "\tRSP:%016" PRIxSQPTR "\n",
+                exp->ContextRecord->Rsi,
+                exp->ContextRecord->Rdi,
+                exp->ContextRecord->Rbp,
+                exp->ContextRecord->Rsp);
+            fprintf(f,"R8 :%016" PRIxSQPTR "\tR9 :%016" PRIxSQPTR "\tR10:%016" PRIxSQPTR "\tR11:%016" PRIxSQPTR "\n",
+                exp->ContextRecord->R8,
+                exp->ContextRecord->R9,
+                exp->ContextRecord->R10,
+                exp->ContextRecord->R11);
+            fprintf(f,"R12:%016" PRIxSQPTR "\tR13:%016" PRIxSQPTR "\tR14:%016" PRIxSQPTR "\tR15:%016" PRIxSQPTR "\n",
+                exp->ContextRecord->R12,
+                exp->ContextRecord->R13,
+                exp->ContextRecord->R14,
+                exp->ContextRecord->R15);
+            fprintf(f,"RIP:%016" PRIxSQPTR "\tEFL:%08lx\n",
+                exp->ContextRecord->Rip,
+                exp->ContextRecord->EFlags);
+            fprintf(f,"FP Control: %08x\nFP Status:  %08x\nFP Tag:     %08x\n",
+                exp->ContextRecord->FltSave.ControlWord,
+                exp->ContextRecord->FltSave.StatusWord,
+                exp->ContextRecord->FltSave.TagWord);
+#else
+#error "unknown architecture, cannot pick dump registers"
+#endif
+
+            fprintf(f, "\n\nCrashed in %s thread\n\n",
+            		inVMThread ? "the VM" : "some other");
+
+            printCommonCrashDumpInfo(f);
+            dumpPrimTrace(f);
+            print_backtrace(f, nframes, MAXFRAMES, callstack, symbolic_pcs);
+            dumpStackIfInMainThread(f);
+            fclose(f);
+        }
+
+        /* print recently called prims to stdout */
+        dumpPrimTrace(0);
+        /* print C stack to stdout */
+        print_backtrace(stdout, nframes, MAXFRAMES, callstack, symbolic_pcs);
+        /* print the caller's stack to stdout */
+        dumpStackIfInMainThread(0);
+#if COGVM
+        reportMinimumUnusedHeadroom();
+#endif
+    } EXCEPT(EXCEPTION_EXECUTE_HANDLER) {
+        sqFatalErrorPrintf("The VM has crashed. Sorry");
+    }
+}
+
 
 void *os_exports[][3] =
 {

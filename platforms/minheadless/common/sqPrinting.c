@@ -112,6 +112,49 @@ void sqErrorPrintf(const char *format, ...)
     va_end (args);
 }
 
+void sqFatalErrorPrintf(const char *format, ...)
+{
+    va_list args;
+    char *buffer;
+
+    va_start (args, format);
+    if (!GetConsoleCP())
+    {
+        /*TODO: Display a message box in this case.*/
+        buffer = (char*)calloc(PRINTF_BUFFER_SIZE, sizeof(char));
+        vsnprintf(buffer, sizeof(buffer), format, args);
+        OutputDebugStringA(buffer);
+        free(buffer);
+    }
+    else
+    {
+        vfprintf(stderr, format, args);
+    }
+    va_end (args);
+    abort();
+}
+
+void sqFatalErrorPrintfNoExit(const char *format, ...)
+{
+    va_list args;
+    char *buffer;
+
+    va_start (args, format);
+    if (!GetConsoleCP())
+    {
+        /*TODO: Display a message box in this case.*/
+        buffer = (char*)calloc(PRINTF_BUFFER_SIZE, sizeof(char));
+        vsnprintf(buffer, sizeof(buffer), format, args);
+        OutputDebugStringA(buffer);
+        free(buffer);
+    }
+    else
+    {
+        vfprintf(stderr, format, args);
+    }
+    va_end (args);
+}
+
 extern int sqAskSecurityYesNoQuestion(const char *question)
 {
     if (!GetConsoleCP())
@@ -217,6 +260,25 @@ void sqWarnPrintf(const char *format, ...)
 }
 
 void sqErrorPrintf(const char *format, ...)
+{
+    va_list args;
+
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+}
+
+void sqFatalErrorPrintf(const char *format, ...)
+{
+    va_list args;
+
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+    abort();
+}
+
+void sqFatalErrorPrintfNoExit(const char *format, ...)
 {
     va_list args;
 

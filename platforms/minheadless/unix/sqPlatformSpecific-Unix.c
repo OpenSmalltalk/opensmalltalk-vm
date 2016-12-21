@@ -72,6 +72,28 @@
 #include "mac-alias.c"
 #endif
 
+#if defined(__GNUC__) && ( defined(i386) || defined(__i386) || defined(__i386__)  \
+			|| defined(i486) || defined(__i486) || defined (__i486__) \
+			|| defined(intel) || defined(x86) || defined(i86pc) )
+static void fldcw(unsigned int cw)
+{
+    __asm__("fldcw %0" :: "m"(cw));
+}
+#else
+#   define fldcw(cw)
+#endif
+
+#if defined(__GNUC__) && ( defined(ppc) || defined(__ppc) || defined(__ppc__)  \
+			|| defined(POWERPC) || defined(__POWERPC) || defined (__POWERPC__) )
+void mtfsfi(unsigned long long fpscr)
+{
+    __asm__("lfd   f0, %0" :: "m"(fpscr));
+    __asm__("mtfsf 0xff, f0");
+}
+#else
+#   define mtfsfi(fpscr)
+#endif
+
 #if !defined(min)
 # define min(x,y) (((x)>(y))?(y):(x))
 #endif
@@ -111,8 +133,11 @@ block()
     }
 }
 
+
 void ioInitPlatformSpecific(void)
 {
+    fldcw(0x12bf);	/* signed infinity, round to nearest, REAL8, disable intrs, disable signals */
+    mtfsfi(0);		/* disable signals, IEEE mode, round to nearest */
 }
 
 time_t convertToSqueakTime(time_t unixTime)

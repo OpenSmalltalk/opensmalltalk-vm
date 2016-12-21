@@ -459,6 +459,7 @@ elseif(WIN32)
         platforms/minheadless/windows/sqWin32.h
         platforms/minheadless/windows/sqWin32Alloc.c
     	platforms/minheadless/windows/sqWin32SpurAlloc.c
+        platforms/minheadless/windows/sqWin32Backtrace.c
     	platforms/minheadless/windows/sqWin32Common.c
     	platforms/minheadless/windows/sqWin32Directory.c
     	platforms/minheadless/windows/sqWin32Heartbeat.c

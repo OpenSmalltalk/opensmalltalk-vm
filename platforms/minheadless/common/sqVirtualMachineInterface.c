@@ -99,27 +99,10 @@ extern void ioInitializeInternalPluginPrimitives(void);
 static long   extraMemory=	0;
 int    useMmap=		DefaultMmapSize * 1024 * 1024;
 
-#if defined(__GNUC__) && ( defined(i386) || defined(__i386) || defined(__i386__)  \
-			|| defined(i486) || defined(__i486) || defined (__i486__) \
-			|| defined(intel) || defined(x86) || defined(i86pc) )
-  static void fldcw(unsigned int cw)
-  {
-    __asm__("fldcw %0" :: "m"(cw));
-  }
-#else
-# define fldcw(cw)
-#endif
-
-#if defined(__GNUC__) && ( defined(ppc) || defined(__ppc) || defined(__ppc__)  \
-			|| defined(POWERPC) || defined(__POWERPC) || defined (__POWERPC__) )
-  void mtfsfi(unsigned long long fpscr)
-  {
-    __asm__("lfd   f0, %0" :: "m"(fpscr));
-    __asm__("mtfsf 0xff, f0");
-  }
-#else
-# define mtfsfi(fpscr)
-#endif
+int ioIsHeadless(void)
+{
+    return headlessMode;
+}
 
 char *getImageName(void)
 {
@@ -448,9 +431,6 @@ SQUEAK_VM_CORE_PUBLIC SqueakError squeak_initialize(void)
     if (sizeof(int) != 4) error("This C compiler's integers are not 32 bits.");
     if (sizeof(double) != 8) error("This C compiler's floats are not 64 bits.");
     if (sizeof(sqLong) != 8) error("This C compiler's long longs are not 64 bits.");
-
-    fldcw(0x12bf);	/* signed infinity, round to nearest, REAL8, disable intrs, disable signals */
-    mtfsfi(0);		/* disable signals, IEEE mode, round to nearest */
 
     argCnt = 0;
     argVec = emptyArgumentVector;

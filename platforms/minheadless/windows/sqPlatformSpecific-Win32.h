@@ -172,3 +172,17 @@ extern const unsigned long tltiIndex;
 # undef VM_LABEL
 # define VM_LABEL(foo) 0
 #endif
+
+#ifdef _MSC_VER
+/* disable "function XXXX: no return value" */
+#pragma warning(disable:4035)
+/* optional C SEH macros */
+#define TRY __try
+#define EXCEPT(filter) __except(filter)
+#define FINALLY __finally
+#else
+/* optional C SEH macros */
+#define TRY
+#define EXCEPT(filter) if (0)
+#define FINALLY
+#endif

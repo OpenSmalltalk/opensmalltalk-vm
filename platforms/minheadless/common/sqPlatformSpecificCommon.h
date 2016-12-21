@@ -39,7 +39,11 @@
 extern void sqMessagePrintf(const char *format, ...);
 extern void sqWarnPrintf(const char *format, ...);
 extern void sqErrorPrintf(const char *format, ...);
+extern void sqFatalErrorPrintf(const char *format, ...);
+extern void sqFatalErrorPrintfNoExit(const char *format, ...);
 extern void sqError(char *errorMessage);
+
+
 
 /*
 #define messagePrintf sqMessagePrintf
