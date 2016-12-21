@@ -185,7 +185,7 @@ sqMakeMemoryExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 						endAddr - startAddr + 1,
 						PAGE_EXECUTE_READWRITE,
 						&previous))
-		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
+		sqWin32PrintLastError("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
 }
 
 void
@@ -197,7 +197,7 @@ sqMakeMemoryNotExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 						endAddr - startAddr + 1,
 						PAGE_READWRITE,
 						&previous))
-		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
+		sqWin32PrintLastError("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
 }
 # endif /* COGVM */
 #endif /* !defined(NO_VIRTUAL_MEMORY) && !SPURVM */

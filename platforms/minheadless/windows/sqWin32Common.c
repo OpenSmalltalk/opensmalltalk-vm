@@ -26,3 +26,13 @@ TCHAR *fromSqueak2(const char *sqPtr, int sqSize)
 {
     return fromSqueakInto(sqPtr, sqSize, w_buffer2);
 }
+
+void sqWin32PrintLastError(const char *message)
+{
+    char buffer[256];
+    DWORD errorCode;
+    
+    errorCode = GetLastError();
+    FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, NULL, errorCode, MAKELANGID(LANG_NEUTRAL, SUBLANG_SYS_DEFAULT), buffer, sizeof(buffer), 0);
+    sqWarnPrintf("%s: %s\n", message, buffer);
+}
