@@ -400,8 +400,13 @@ reportStackState(const char *msg, char *date, int printAll, ucontext_t *uap)
 			 * stackPointer & framePointer to the native stack & frame pointers.
 			 */
 # if __APPLE__ && __MACH__ && __i386__
+#	  if __GNUC__ && !__INTEL_COMPILER /* icc pretends to be gcc */
+			void *fp = (void *)(uap ? uap->uc_mcontext->__ss.__ebp: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext->__ss.__esp: 0);
+#	  else
 			void *fp = (void *)(uap ? uap->uc_mcontext->ss.ebp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext->ss.esp: 0);
+#	  endif
 # elif __linux__ && __i386__
 			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_EBP]: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_ESP]: 0);
@@ -471,6 +476,49 @@ printRegisterState(ucontext_t *uap)
 			regs[REG_EDI], regs[REG_EDI], regs[REG_EBP], regs[REG_ESP],
 			regs[REG_EIP]);
 	return (void *)regs[REG_EIP];
+#elif __APPLE__ && __DARWIN_UNIX03 && __i386__
+	_STRUCT_X86_THREAD_STATE32 *regs = &uap->uc_mcontext->__ss;
+	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
+			"\teip 0x%08x\n",
+			regs->__eax, regs->__ebx, regs->__ecx, regs->__edx,
+			regs->__edi, regs->__edi, regs->__ebp, regs->__esp,
+			regs->__eip);
+	return (void *)(regs->__eip);
+#elif __APPLE__ && __i386__
+	_STRUCT_X86_THREAD_STATE32 *regs = &uap->uc_mcontext->ss;
+	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
+			"\tedi 0x%08x esi 0x%08x ebp 0x%08x esp 0x%08x\n"
+			"\teip 0x%08x\n",
+			regs->eax, regs->ebx, regs->ecx, regs->edx,
+			regs->edi, regs->edi, regs->ebp, regs->esp,
+			regs->eip);
+	return (void *)(regs->eip);
+#elif __APPLE__ && __x86_64__
+	_STRUCT_X86_THREAD_STATE64 *regs = &uap->uc_mcontext->__ss;
+	printf(	"\trax 0x%016lx rbx 0x%016lx rcx 0x%016lx rdx 0x%016lx\n"
+			"\trdi 0x%016lx rsi 0x%016lx rbp 0x%016lx rsp 0x%016lx\n"
+			"\tr8  0x%016lx r9  0x%016lx r10 0x%016lx r11 0x%016lx\n"
+			"\tr12 0x%016lx r13 0x%016lx r14 0x%016lx r15 0x%016lx\n"
+			"\trip 0x%016lx\n",
+			regs->__rax, regs->__rbx, regs->__rcx, regs->__rdx,
+			regs->__rdi, regs->__rdi, regs->__rbp, regs->__rsp,
+			regs->__r8 , regs->__r9 , regs->__r10, regs->__r11,
+			regs->__r12, regs->__r13, regs->__r14, regs->__r15,
+			regs->__rip);
+	return (void *)(regs->__rip);
+# elif __APPLE__ && (defined(__arm__) || defined(__arm32__))
+	_STRUCT_ARM_THREAD_STATE *regs = &uap->uc_mcontext->ss;
+	printf(	"\t r0 0x%08x r1 0x%08x r2 0x%08x r3 0x%08x\n"
+	        "\t r4 0x%08x r5 0x%08x r6 0x%08x r7 0x%08x\n"
+	        "\t r8 0x%08x r9 0x%08x r10 0x%08x fp 0x%08x\n"
+	        "\t ip 0x%08x sp 0x%08x lr 0x%08x pc 0x%08x\n"
+			"\tcpsr 0x%08x\n",
+	        regs->r[0],regs->r[1],regs->r[2],regs->r[3],
+	        regs->r[4],regs->r[5],regs->r[6],regs->r[7],
+	        regs->r[8],regs->r[9],regs->r[10],regs->r[11],
+	        regs->r[12], regs->sp, regs->lr, regs->pc, regs->cpsr);
+	return (void *)(regs->pc);
 #elif __FreeBSD__ && __i386__
 	struct mcontext *regs = &uap->uc_mcontext;
 	printf(	"\teax 0x%08x ebx 0x%08x ecx 0x%08x edx 0x%08x\n"
