@@ -3119,6 +3119,25 @@ CoInterpreter >> ensureAllContextsWithMethodHaveBytecodePCs: methodObj [
 ]
 
 { #category : #'frame access' }
+CoInterpreter >> ensureBlockIsCogged: methodObj numCopied: numCopied [
+	<returnTypeC: #'CogMethod *'>
+	| rawHeader cogMethod |
+	<inline: true>
+	<var: #cogMethod type: #'CogMethod *'>
+	rawHeader := self rawHeaderOf: methodObj.
+	(self isCogMethodReference: rawHeader) ifTrue:
+		[^self cCoerceSimple: rawHeader to: #'CogMethod *'].
+	cogMethod := cogit cogFullBlockMethod: methodObj numCopied: numCopied.
+	(cogMethod = nil
+	 and: [cogCompiledCodeCompactionCalledFor]) ifTrue:
+		[self commenceCogCompiledCodeCompaction.
+		 cogMethod := cogMethod := cogit cogFullBlockMethod: methodObj numCopied: numCopied].
+	(self asserta: cogMethod ~= nil) ifFalse:
+		[self error: 'could not compile method that should have been compiled'].
+	^cogMethod
+]
+
+{ #category : #'frame access' }
 CoInterpreter >> ensureContextHasBytecodePC: aContext [
 	"Make sure the context has a byetcode pc.  Can only be used on single contexts."
 	| pc |
@@ -4951,7 +4970,9 @@ CoInterpreter >> makeBaseFrameFor: aContext [ "<Integer>"
 			[| cogMethod |
 			 "Since we would have to generate a machine-code method to be able to map
 			  the native pc anyway we should create a native method and native frame."
-			 cogMethod := self ensureMethodIsCogged: theMethod.
+			 (maybeClosure ~= objectMemory nilObject and: [(self isVanillaBlockClosure: maybeClosure) not])
+				ifTrue: [cogMethod := self ensureBlockIsCogged: theMethod numCopied: (self copiedValueCountOfFullClosure: maybeClosure)]
+				ifFalse: [cogMethod := self ensureMethodIsCogged: theMethod].
 			 theMethod := cogMethod asInteger.
 			 maybeClosure ~= objectMemory nilObject
 				ifTrue:
@@ -5820,7 +5841,9 @@ CoInterpreter >> mustMapMachineCodePC: theIP context: aOnceMarriedContext [
 				startBcpc := self startPCOfClosure: maybeClosure]
 		ifFalse: [self assert: (theIP signedBitShift: -16) = -1.
 				startBcpc := self startPCOfMethod: methodObj].
-	cogMethod := self ensureMethodIsCogged: methodObj.
+	(maybeClosure ~= objectMemory nilObject and: [(self isVanillaBlockClosure: maybeClosure) not])
+		ifTrue: [cogMethod := self ensureBlockIsCogged: methodObj numCopied: (self copiedValueCountOfFullClosure: maybeClosure)]
+		ifFalse: [cogMethod := self ensureMethodIsCogged: methodObj].
 	bcpc := self bytecodePCFor: theIP cogMethod: cogMethod startBcpc: startBcpc.
 	self assert: bcpc >= (self startPCOfMethod: methodObj).
 	"If there's a CallPrimitive we need to skip it."
