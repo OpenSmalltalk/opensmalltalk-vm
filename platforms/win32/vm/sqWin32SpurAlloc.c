@@ -199,9 +199,11 @@ void
 sqMakeMemoryExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 {
 	DWORD previous;
+    SIZE_T size;
 
+    size = endAddr - startAddr;
 	if (!VirtualProtect((void *)startAddr,
-						endAddr - startAddr + 1,
+						size,
 						PAGE_EXECUTE_READWRITE,
 						&previous))
 		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
@@ -211,9 +213,11 @@ void
 sqMakeMemoryNotExecutableFromTo(usqIntptr_t startAddr, usqIntptr_t endAddr)
 {
 	DWORD previous;
+    SIZE_T size;
 
+    size = endAddr - startAddr;
 	if (!VirtualProtect((void *)startAddr,
-						endAddr - startAddr + 1,
+						size,
 						PAGE_READWRITE,
 						&previous))
 		perror("VirtualProtect(x,y,PAGE_EXECUTE_READWRITE)");
