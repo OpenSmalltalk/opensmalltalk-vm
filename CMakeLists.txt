@@ -74,7 +74,6 @@ if(SQUEAK_PLATFORM_X86_64)
 		else()
 			set(FFI_VARIANT_X64_SYSV True)
 		endif()
-        set(COGIT_PLATFORM_SUFFIX "X64")
         set(VM_TARGET_CPU "x86_64")
 	endif()
 else()
@@ -90,7 +89,6 @@ if(SQUEAK_PLATFORM_X86_32)
         set(CMAKE_CXX_FLAGS "-m32 -msse2")
         set(CMAKE_C_FLAGS "-m32 -msse2")
     endif()
-    set(COGIT_PLATFORM_SUFFIX "IA32")
     set(FFI_VARIANT_IA32 True)
     set(VM_TARGET_CPU "i686")
 endif()
@@ -134,6 +132,16 @@ option(LOWCODE_EXTENSIONS "Lowcode Extensions" OFF)
 if(LOWCODE_EXTENSIONS)
 	add_definitions(-DLowcodeVM=1)
 	set(SourceFolderName "${SourceFolderName}lowcode")
+endif()
+
+# Stack interpreter
+if(NOT COG_JIT)
+    set(SourceFolderName "${SourceFolderName}stack")
+endif()
+
+# 64 bits VM
+if(VM_64BITS)
+	set(SourceFolderName "${SourceFolderName}64")
 endif()
 
 # Pharo branding
@@ -309,7 +317,7 @@ include_directories(
 if(COG_JIT)
 	set(InterpreterSource ${SourceFolderName}/vm/cointerp.c)
 	set(VM_FAVLOR_SOURCES
-		${SourceFolderName}/vm/cogit${COGIT_PLATFORM_SUFFIX}.c
+		${SourceFolderName}/vm/cogit.c
 		${InterpreterSource}
 	)
 else()
