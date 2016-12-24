@@ -156,7 +156,7 @@ if(PHARO_BRANDING)
 	set(VM_LIBRARY_NAME PharoVMCore)
     set(VM_NAME Pharo)
 endif()
-add_definitions(-DVM_NAME="${VM_NAME}" -DDEFAULT_IMAGE_NAME="${DEFAULT_IMAGE_NAME}")
+add_definitions(-DVM_NAME="${VM_NAME}")
 
 # Set output dir.
 # OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT can be used before including this

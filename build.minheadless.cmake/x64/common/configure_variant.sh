@@ -11,3 +11,8 @@ cd "./$VARIANT_FOLDER"
 if [ "$OS_NAME" = "Msys" ]; then
     GENERATOR_NAME="MSYS Makefiles"
 fi
+
+if [ "$OS_NAME" = "Cygwin" ]; then
+    export CC="x86_64-w64-mingw32-gcc"
+    export CXX="x86_64-w64-mingw32-g++"
+fi
