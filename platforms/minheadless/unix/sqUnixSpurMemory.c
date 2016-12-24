@@ -164,8 +164,8 @@ sqDeallocateMemorySegmentAtOfSize(void *addr, sqInt sz)
 void
 sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
-	unsigned long size = endAddr - startAddr;
 	unsigned long firstPage = roundDownToPage(startAddr);
+	unsigned long size = endAddr - firstPage;
 	if (mprotect((void *)firstPage,
 				 size,
 				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
@@ -175,8 +175,8 @@ sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 void
 sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
-	unsigned long size = endAddr - startAddr;
 	unsigned long firstPage = roundDownToPage(startAddr);
+	unsigned long size = endAddr - firstPage;
 	/* Arguably this is pointless since allocated memory always includes write
 	 * permission by default.  Annoyingly the mprotect call fails on both linux
 	 * and mac os x.  So make the whole thing a nop.
