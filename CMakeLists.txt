@@ -2,14 +2,6 @@
 cmake_minimum_required(VERSION 3.1)
 project(OpenSmalltalkVM)
 
-# Set output dir.
-# OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT can be used before including this
-# project using add_subdirectory()
-if(NOT OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT)
-	set(EXECUTABLE_OUTPUT_PATH "${OpenSmalltalkVM_BINARY_DIR}/dist")
-	set(LIBRARY_OUTPUT_PATH "${OpenSmalltalkVM_BINARY_DIR}/dist")
-endif()
-
 # Check the build type
 if (CMAKE_BUILD_TYPE STREQUAL "")
 	# CMake defaults to leaving CMAKE_BUILD_TYPE empty. This screws up
@@ -121,10 +113,6 @@ elseif(UNIX)
     endif()
 endif()
 
-# Output paths.
-set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/dist")
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/;${CMAKE_MODULE_PATH}")
-
 set(SourceFolderName "")
 
 # Spur object model
@@ -153,16 +141,22 @@ option(PHARO_BRANDING "Pharo Branding" ON)
 set(VM_EXECUTABLE_NAME squeak)
 set(VM_LIBRARY_NAME SqueakVMCore)
 set(VM_NAME Squeak)
-set(DEFAULT_IMAGE_NAME "Squeak.image")
 
 if(PHARO_BRANDING)
 	add_definitions(-DPharoVM=1)
 	set(VM_EXECUTABLE_NAME pharo)
 	set(VM_LIBRARY_NAME PharoVMCore)
     set(VM_NAME Pharo)
-	set(DEFAULT_IMAGE_NAME "Pharo.image")
 endif()
 add_definitions(-DVM_NAME="${VM_NAME}" -DDEFAULT_IMAGE_NAME="${DEFAULT_IMAGE_NAME}")
+
+# Set output dir.
+# OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT can be used before including this
+# project using add_subdirectory()
+if(NOT OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT)
+	set(EXECUTABLE_OUTPUT_PATH "${OpenSmalltalkVM_BINARY_DIR}/dist")
+	set(LIBRARY_OUTPUT_PATH "${OpenSmalltalkVM_BINARY_DIR}/dist")
+endif()
 
 # Cog JIT
 option(COG_JIT "Cog JIT" ON)

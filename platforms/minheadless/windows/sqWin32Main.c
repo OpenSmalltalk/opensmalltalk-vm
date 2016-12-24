@@ -45,5 +45,5 @@ int CALLBACK WinMain(
   int       nCmdShow
 )
 {
-    return squeak_main(__argc, __argv);
+    return squeak_main(__argc, (const char **)__argv);
 }

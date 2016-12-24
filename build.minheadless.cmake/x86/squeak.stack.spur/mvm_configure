@@ -1,0 +1,6 @@
+#!/bin/sh
+
+./mvm_configure_variant debug Debug
+./mvm_configure_variant assert Assert
+./mvm_configure_variant relwithdebinfo RelWithDebInfo
+./mvm_configure_variant release Release
