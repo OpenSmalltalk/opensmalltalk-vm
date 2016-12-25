@@ -959,6 +959,12 @@ SpurGenerationScavenger >> referenceCountRememberedReferents: population [
 					 population at: refCount put: (population at: refCount) + 1]]]].
 ]
 
+{ #category : #'remembered set' }
+SpurGenerationScavenger >> relocateRememberedSet [
+	"For SpurPanningCompactor"
+	rememberedSet := manager firstIndexableField: manager rememberedSetObj
+]
+
 { #category : #'store check' }
 SpurGenerationScavenger >> remember: objOop [
 	"Add the argument to the remembered set and set its isRemembered bit to true.

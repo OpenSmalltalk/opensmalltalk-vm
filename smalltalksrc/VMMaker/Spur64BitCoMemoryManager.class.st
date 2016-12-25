@@ -218,6 +218,16 @@ Spur64BitCoMemoryManager >> isReallyYoungObject: objOop [
 	  and: [self oop: objOop isGreaterThanOrEqualTo: newSpaceStart]
 ]
 
+{ #category : #compaction }
+Spur64BitCoMemoryManager >> methodHeaderFromSavedFirstField: field [
+	(self isIntegerObject: field) ifTrue:
+		[^field].
+	self assert: ((self isNonImmediate: field) and: [field < newSpaceStart]).
+	self assert: (coInterpreter cCoerceSimple: field to: #'CogMethod *') objectHeader
+				= self nullHeaderForMachineCodeMethod.
+	^(coInterpreter cCoerceSimple: field to: #'CogMethod *') methodHeader
+]
+
 { #category : #'growing/shrinking memory' }
 Spur64BitCoMemoryManager >> methodHeaderOf: methodObj [
 	"Answer the method header of a CompiledMethod object.

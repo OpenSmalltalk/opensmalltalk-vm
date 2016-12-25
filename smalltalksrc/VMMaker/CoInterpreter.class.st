@@ -5118,8 +5118,9 @@ CoInterpreter >> mapStackPages [
 					[stackPages
 						longAt: theFP + FoxThisContext
 						put: (objectMemory remapObj: (self frameContext: theFP))].
-				 "forwarding scheme in SqueakV3 obj rep makes this hard to check."
-				 objectMemory hasSpurMemoryManagerAPI ifTrue:
+				 "With SqueakV3 objectMemory or SpurPlanningCompactor can't assert since object body is yet to move."
+				 (objectMemory hasSpurMemoryManagerAPI
+				  and: [objectMemory slidingCompactionInProgress not]) ifTrue:
 					[self assert: ((self isMarriedOrWidowedContext: (self frameContext: theFP))
 								and: [(self frameOfMarriedContext: (self frameContext: theFP)) = theFP])]].
 			(self isMachineCodeFrame: theFP) ifFalse:
