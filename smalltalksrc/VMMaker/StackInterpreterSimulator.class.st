@@ -2224,7 +2224,7 @@ StackInterpreterSimulator >> printHex: anInteger [
 StackInterpreterSimulator >> printHexnp: anInteger [
 
 	traceOn ifTrue:
-		[transcript nextPutAll: (anInteger storeStringBase: 16)]
+		[transcript nextPutAll: ((anInteger ifNil: [0]) storeStringBase: 16)]
 ]
 
 { #category : #'debug printing' }
