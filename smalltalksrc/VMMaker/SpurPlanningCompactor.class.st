@@ -95,8 +95,8 @@ SpurPlanningCompactor >> compact [
 { #category : #compaction }
 SpurPlanningCompactor >> continueCopyAndUnmarkMobileObjectsFrom: anUnpinnedEntity [
 	"copyAndUnmarkMobileObjects has encountered a run of pinned objects around which
-	 it cannot compact, but savedFirstFieldsSpace is still not full.  Continue the pass with new
-	 firstFreeObject and firstMobileObject, resetting them before continuing.
+	 it cannot compact, but savedFirstFieldsSpace is still not full.  Continue the pass with a
+	 new firstFreeObject, resetting it before continuing.
 	 Answer if the end of the heap was reached (savedFirstFieldsSpace has not overflowed)."
 	| result savedFirstFreeObject savedFirstMobileObject nextFreeObject |
 	self assert: (self oop: anUnpinnedEntity isLessThan: manager endOfMemory).
@@ -104,20 +104,20 @@ SpurPlanningCompactor >> continueCopyAndUnmarkMobileObjectsFrom: anUnpinnedEntit
 	savedFirstFreeObject := firstFreeObject.
 	savedFirstMobileObject := firstMobileObject.
 	nextFreeObject := self scanForFirstFreeAndFirstMobileObjectFrom: anUnpinnedEntity.
+	firstMobileObject := savedFirstMobileObject.
 	nextFreeObject ifNil:
 		[^true].
 	firstFreeObject := nextFreeObject.
 	result := self copyAndUnmarkMobileObjects.
 	firstFreeObject := savedFirstFreeObject.
-	firstMobileObject := savedFirstMobileObject.
 	^result
 ]
 
 { #category : #compaction }
 SpurPlanningCompactor >> continuePlanCompactSavingForwardersFrom: anUnpinnedEntity [
 	"planCompactSavingForwarders has encountered a run of pinned objects around which
-	 it cannot compact, but savedFirstFieldsSpace is still not full.  Continue the pass with new
-	 firstFreeObject and firstMobileObject, resetting them before continuing.
+	 it cannot compact, but savedFirstFieldsSpace is still not full.  Continue the pass with a
+	 new firstFreeObject, resetting it before continuing.
 	 Answer if the end of the heap was reached (savedFirstFieldsSpace has not overflowed)."
 	| result savedFirstFreeObject savedFirstMobileObject nextFreeObject |
 	self assert: (self oop: anUnpinnedEntity isLessThan: manager endOfMemory).
@@ -125,11 +125,12 @@ SpurPlanningCompactor >> continuePlanCompactSavingForwardersFrom: anUnpinnedEnti
 	savedFirstFreeObject := firstFreeObject.
 	savedFirstMobileObject := firstMobileObject.
 	nextFreeObject := self scanForFirstFreeAndFirstMobileObjectFrom: anUnpinnedEntity.
+	firstMobileObject := savedFirstMobileObject.
 	nextFreeObject ifNil:
 		[^true].
+	firstFreeObject := nextFreeObject.
 	result := self planCompactSavingForwarders.
 	firstFreeObject := savedFirstFreeObject.
-	firstMobileObject := savedFirstMobileObject.
 	^result
 ]
 
@@ -137,7 +138,7 @@ SpurPlanningCompactor >> continuePlanCompactSavingForwardersFrom: anUnpinnedEnti
 SpurPlanningCompactor >> continueUpdatePointersInMobileObjectsFrom: anUnpinnedEntity [
 	"updatePointersInMobileObjects has encountered a run of pinned objects around which
 	 planCompactSavingForwarders cannot compact, but savedFirstFieldsSpace is still not full.
-	 Continue the pass with new firstFreeObject and firstMobileObject, resetting them before continuing.
+	 Continue the pass with a new firstFreeObject , resetting it before continuing.
 	 Answer if the end of the heap was reached (savedFirstFieldsSpace has not overflowed)."
 	| result savedFirstFreeObject savedFirstMobileObject nextFreeObject |
 	self assert: (self oop: anUnpinnedEntity isLessThan: manager endOfMemory).
@@ -145,11 +146,12 @@ SpurPlanningCompactor >> continueUpdatePointersInMobileObjectsFrom: anUnpinnedEn
 	savedFirstFreeObject := firstFreeObject.
 	savedFirstMobileObject := firstMobileObject.
 	nextFreeObject := self scanForFirstFreeAndFirstMobileObjectFrom: anUnpinnedEntity.
+	firstMobileObject := savedFirstMobileObject.
 	nextFreeObject ifNil:
 		[^true].
+	firstFreeObject := nextFreeObject.
 	result := self updatePointersInMobileObjects.
 	firstFreeObject := savedFirstFreeObject.
-	firstMobileObject := savedFirstMobileObject.
 	^result
 ]
 
@@ -159,6 +161,10 @@ SpurPlanningCompactor >> copyAndUnmark [
 	 restoring their savedFirstFields."
 	| onePass |
 	self unmarkInitialImmobileObjects.
+	"If savedFirstFieldsSpace is empty there is nothing to move, and no second pass."
+	savedFirstFieldsSpace top < savedFirstFieldsSpace start ifTrue:
+		[self assert: firstMobileObject >= manager endOfMemory.
+		 ^self].
 	onePass := self copyAndUnmarkMobileObjects.
 	onePass ifFalse:
 		[self unmarkObjectsOverflowingSavedFirstFieldsSpace]
@@ -174,7 +180,7 @@ SpurPlanningCompactor >> copyAndUnmarkMobileObjects [
 	toFinger := manager startOfObject: firstFreeObject.
 	top := savedFirstFieldsSpace start - manager bytesPerOop.
 	self deny: (manager isMarked: firstFreeObject).
-	manager allOldSpaceEntitiesForCompactingFrom: firstMobileObject do:
+	manager allOldSpaceEntitiesForCompactingFrom: firstFreeObject do:
 		[:o|
 		 self assert: (previousPin isNil or: [toFinger < previousPin]).
 		 (manager isMarked: o) ifTrue:
@@ -303,9 +309,7 @@ SpurPlanningCompactor >> initializeCompaction [
 { #category : #compaction }
 SpurPlanningCompactor >> initializeScan [
 	savedFirstFieldsSpace top: savedFirstFieldsSpace start - manager bytesPerOop.
-	firstFreeObject := self scanForFirstFreeAndFirstMobileObjectFrom: (manager objectAfter: manager hiddenRootsObject).
-	firstFreeObject ifNil:
-		[self error: 'uncompactable heap; no unmarked objects found']
+	self reinitializeScan
 ]
 
 { #category : #private }
@@ -376,7 +380,7 @@ SpurPlanningCompactor >> planCompactSavingForwarders [
 	toFinger := manager startOfObject: firstFreeObject.
 	top := savedFirstFieldsSpace top.
 	self deny: (manager isMarked: firstFreeObject).
-	manager allOldSpaceEntitiesFrom: firstMobileObject do:
+	manager allOldSpaceEntitiesFrom: firstFreeObject do:
 		[:o|
 		 self assert: (previousPin isNil or: [toFinger < previousPin]).
 		 (manager isMarked: o) ifTrue:
@@ -421,6 +425,7 @@ SpurPlanningCompactor >> planCompactSavingForwarders [
 
 { #category : #compaction }
 SpurPlanningCompactor >> reinitializeScan [
+	firstMobileObject := manager endOfMemory.
 	firstFreeObject := self scanForFirstFreeAndFirstMobileObjectFrom: firstFreeObject.
 	firstFreeObject ifNil:
 		[self error: 'uncompactable heap; no unmarked objects found']
@@ -557,6 +562,9 @@ SpurPlanningCompactor >> updatePointers [
 	"Sweep the heap, updating all objects to their eventual locations.
 	 Remember to update the savedFirstFields of pointer objects, as these have been forwarded."
 	| onePass |
+	"If savedFirstFieldsSpace is empty there is nothing to do."
+	savedFirstFieldsSpace top < savedFirstFieldsSpace start ifTrue:
+		[^self].
 	coInterpreter mapInterpreterOops.
 	self updatePointersInManagerHeapEntities.
 	self updatePointersInSurvivingObjects.
@@ -631,7 +639,7 @@ SpurPlanningCompactor >> updatePointersInMobileObjects [
 	toFinger := manager startOfObject: firstFreeObject.
 	top := savedFirstFieldsSpace start - manager bytesPerOop.
 	self deny: (manager isMarked: firstFreeObject).
-	manager allOldSpaceEntitiesFrom: firstMobileObject do:
+	manager allOldSpaceEntitiesFrom: firstFreeObject do:
 		[:o|
 		 self assert: (previousPin isNil or: [toFinger < previousPin]).
 		 (manager isMarked: o) ifTrue:
