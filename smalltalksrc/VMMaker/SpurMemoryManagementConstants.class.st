@@ -5,6 +5,8 @@ Class {
 		'DontTenure',
 		'MarkOnTenure',
 		'MaxRTRefCount',
+		'ScavengeInProgress',
+		'SlidingCompactionInProgress',
 		'TenureByAge',
 		'TenureByClass',
 		'TenureToShrinkRT'

@@ -334,13 +334,13 @@ Spur32BitMMLESimulator >> return: errCode restoringObjectsIn: firstArray savedHa
 ]
 
 { #category : #'debug support' }
-Spur32BitMMLESimulator >> runLeakCheckerFor: gcModes excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
+Spur32BitMMLESimulator >> runLeakCheckerFor: gcModes excludeUnmarkedObjs: excludeUnmarkedObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
 	(coInterpreter displayView isNil
 	 and: [gcModes anyMask: checkForLeaks]) ifTrue:
 		[coInterpreter transcript nextPutAll: 'leak-checking...'; flush].
 	^super
 		runLeakCheckerFor: gcModes
-		excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs
+		excludeUnmarkedObjs: excludeUnmarkedObjs
 		classIndicesShouldBeValid: classIndicesShouldBeValid
 ]
 

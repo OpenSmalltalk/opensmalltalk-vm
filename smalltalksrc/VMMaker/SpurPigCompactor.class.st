@@ -105,7 +105,7 @@ SpurPigCompactor >> checkTraversableSortedFreeList [
 		[:o| | objOop next limit |
 		(manager isFreeObject: o) ifTrue:
 			[self assert: o = freeChunk.
-			 next := manager nextInSortedFreeListLink: freeChunk given: prevFree.
+			 next := self nextInSortedFreeListLink: freeChunk given: prevFree.
 			 limit := next = 0 ifTrue: [manager endOfMemory] ifFalse: [next].
 			 "coInterpreter transcript cr; print: freeChunk; tab; print: o; tab; print: prevFree; nextPutAll: '<->'; print: next; flush."
 			 objOop := freeChunk.
@@ -115,7 +115,7 @@ SpurPigCompactor >> checkTraversableSortedFreeList [
 			 prevFree := freeChunk.
 			 freeChunk := next]].
 	self assert: prevFree = lastFreeChunk.
-	self assert: (manager nextInSortedFreeListLink: lastFreeChunk given: 0) = prevPrevFree.
+	self assert: (self nextInSortedFreeListLink: lastFreeChunk given: 0) = prevPrevFree.
 	self assert: freeChunk = 0.
 	^true
 ]
@@ -132,6 +132,7 @@ SpurPigCompactor >> compact [
 	 well enough in practice.  So use pig compact.  Fill large free objects starting
 	 from low memory with objects taken from the end of memory."
 	<inline: #never> "for profiling"
+	self freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact.
 	manager statCompactPassCount: manager statCompactPassCount + 1.
 	self assert: (firstFreeChunk = 0 or: [manager isFreeObject: firstFreeChunk]).
 	1 to: numCompactionPasses do:
@@ -162,7 +163,7 @@ SpurPigCompactor >> eliminateAndFreeForwardersForPigCompact [
 	manager followForwardedObjStacks.
 	coInterpreter mapInterpreterOops.
 	scavenger followRememberedForwardersAndForgetFreeObjectsForPigCompact.
-	self unmarkSurvivingObjectsForPigCompact.
+	manager unmarkSurvivingObjectsForCompact.
 	lowestForwarder := self sweepToFollowForwardersForPigCompact.
 	self sweepToCoallesceFreeSpaceForPigCompactFrom: lowestForwarder.
 	self assert: manager numberOfForwarders = 0
@@ -179,12 +180,6 @@ SpurPigCompactor >> findAPig [
 			[(pig isNil or: [pig > f]) ifTrue:
 				[pig := f]]].
 	^pig
-]
-
-{ #category : #'compaction - api' }
-SpurPigCompactor >> freeUnmarkedObjectsAndPrepareFreeSpace [
-	<inline: true>
-	self freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact
 ]
 
 { #category : #compaction }
@@ -298,7 +293,7 @@ SpurPigCompactor >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 		 "grab a free chunk, and the following one, because we want to overwrite this one."
 		 self assert: ((manager isFreeObject: firstFreeChunk) and: [manager isFreeObject: thisFreeChunk]).
 		 freeBytes		:= manager bytesInObject: thisFreeChunk.
-		 nextFree		:= manager nextInSortedFreeListLink: thisFreeChunk given: prevFreeChunk.
+		 nextFree		:= self nextInSortedFreeListLink: thisFreeChunk given: prevFreeChunk.
 		 destination	:= manager startOfObject: thisFreeChunk.
 		 endOfFree		:= destination + freeBytes.
 		 moved			:= false.
@@ -324,7 +319,7 @@ SpurPigCompactor >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 			ifTrue: "we did overwrite it; we need to repair the free list"
 				[| nextNextFree |
 				 nextFree ~= 0 ifTrue:
-					[nextNextFree  := manager nextInSortedFreeListLink: nextFree given: thisFreeChunk.
+					[nextNextFree  := self nextInSortedFreeListLink: nextFree given: thisFreeChunk.
 					 self assert: (manager isFreeObject: nextFree)].
 				 (destination > thisFreeChunk "if false couldn't move anything"
 				  and: [destination < endOfFree]) "if false, filled entire free chunk"
@@ -375,6 +370,15 @@ SpurPigCompactor >> moveARunOfObjectsStartingAt: startAddress upTo: limit [
 	^here
 ]
 
+{ #category : #compaction }
+SpurPigCompactor >> nextInSortedFreeListLink: freeChunk given: prevFree [
+	 "Answer the next free free chunk using the xor trick to use only one field, see e.g.
+		The Art of Computer Programming, Vol 1, D.E. Knuth, 3rd Ed, Sec 2.2.4 `Circular Lists', exercise. 18
+		http://en.wikipedia.org/wiki/XOR_linked_list."
+	<inline: true>
+	^((manager fetchPointer: manager freeChunkNextIndex ofFreeChunk: freeChunk) bitXor: prevFree) asUnsignedInteger
+]
+
 { #category : #'compaction - asserts' }
 SpurPigCompactor >> noForwardersBelowFirstFreeChunk [
 	manager allOldSpaceEntitiesDo:
@@ -390,7 +394,7 @@ SpurPigCompactor >> noForwardersBelowFirstFreeChunk [
 SpurPigCompactor >> pigCompact [
 	"Traverse the sorted free list, moving objects from the high-end of
 	 memory to the free objects in the low end of memory.  Return when
-	 the address at which objects are being copiecd to meets the address
+	 the address at which objects are being copied to meets the address
 	 from which objects are being copied from."
 	self cCode: '' inSmalltalk: [coInterpreter transcript nextPutAll: 'pig compacting...'; flush].
 	self sortedFreeListPairwiseReverseDo:
@@ -419,7 +423,7 @@ SpurPigCompactor >> printSortedFreeList [
 		 ^self].
 	 manager printFreeChunk: freeChunk printAsTreeNode: false.
 	 freeChunk ~= lastFreeChunk] whileTrue:
-		[nextFree := manager nextInSortedFreeListLink: freeChunk given: prevFree.
+		[nextFree := self nextInSortedFreeListLink: freeChunk given: prevFree.
 		 prevFree := freeChunk.
 		 freeChunk := nextFree]
 ]
@@ -438,6 +442,26 @@ SpurPigCompactor >> rebuildFreeListsForPigCompact [
 	manager checkFreeSpace: GCModeFull
 ]
 
+{ #category : #'gc - scavenge/compact' }
+SpurPigCompactor >> remapObj: objOop [
+	"Scavenge or simply follow objOop.  Answer the new location of objOop.
+	 The send should have been guarded by a send of shouldRemapOop:.
+	 The method is called remapObj: for compatibility with ObjectMemory."
+	<api>
+	<inline: false>
+	^manager vanillaRemapObj: objOop
+]
+
+{ #category : #'gc - scavenge/compact' }
+SpurPigCompactor >> shouldRemapObj: objOop [
+	<api>
+	"Answer if the obj should be scavenged (or simply followed). The method is called
+	 shouldRemapObj: for compatibility with ObjectMemory.  Defer to the compactor
+	 to choose the actual test, there being a difference between the vanilla test and
+	 that used with a sliding compactor where objects are not marked as forwarded."
+	^manager vanillaShouldRemapObj: objOop
+]
+
 { #category : #compaction }
 SpurPigCompactor >> sortedFreeListDo: aBlock [
 	"Evaluate aBlock with ascending entries in the free list"
@@ -450,7 +474,7 @@ SpurPigCompactor >> sortedFreeListDo: aBlock [
 	free := firstFreeChunk.
 	prevPrevFree := prevFree := 0.
 	[free ~= 0] whileTrue:
-		[nextFree := manager nextInSortedFreeListLink: free given: prevFree.
+		[nextFree := self nextInSortedFreeListLink: free given: prevFree.
 		 self assert: (manager isFreeObject: free).
 		 self assert: (nextFree = 0 or: [nextFree > free and: [manager isFreeObject: nextFree]]).
 		 self assert: (prevFree = 0 or: [prevFree < free]).
@@ -484,19 +508,19 @@ SpurPigCompactor >> sortedFreeListPairwiseReverseDo: aBinaryBlock [
 			ifTrue:
 				[self assert: free = lastFreeChunk.
 				 prevFree := lastFreeChunk.
-				 free := manager nextInSortedFreeListLink: lastFreeChunk given: 0]
+				 free := self nextInSortedFreeListLink: lastFreeChunk given: 0]
 			ifFalse:
 				[self assert: (manager isFreeObject: prevFree).
 				 prevPrevFree = 0
 					ifTrue:
 						[prevPrevFree := lastFreeChunk.
-						 prevFree := manager nextInSortedFreeListLink: lastFreeChunk given: 0]
+						 prevFree := self nextInSortedFreeListLink: lastFreeChunk given: 0]
 					ifFalse:
 						[self assert: (manager isFreeObject: prevPrevFree).
-						 free := manager nextInSortedFreeListLink: prevFree given: prevPrevFree.
+						 free := self nextInSortedFreeListLink: prevFree given: prevPrevFree.
 						 prevPrevFree := prevFree.
 						 prevFree := free].
-				 free := manager nextInSortedFreeListLink: prevFree given: prevPrevFree]]
+				 free := self nextInSortedFreeListLink: prevFree given: prevPrevFree]]
 ]
 
 { #category : #compaction }
@@ -587,7 +611,7 @@ SpurPigCompactor >> tryToMovePig: pigObj at: pigStart end: pigEnd [
 	pigBytes := pigEnd - pigStart.
 	[freeChunk ~= 0 and: [freeChunk < pigObj]] whileTrue:
 		[| next dest chunkBytes newChunk |
-		 next			:= manager nextInSortedFreeListLink: freeChunk given: prevFree.
+		 next			:= self nextInSortedFreeListLink: freeChunk given: prevFree.
 		 dest			:= manager startOfObject: freeChunk.
 		 chunkBytes	:= (manager addressAfter: freeChunk) - dest.
 		 "N.B. *must* add allocationUnit, not subtract, to avoid unsigned arithmetic issues when chunkBytes = 0"
@@ -596,7 +620,7 @@ SpurPigCompactor >> tryToMovePig: pigObj at: pigStart end: pigEnd [
 			[manager mem: dest asVoidPointer cp: pigStart asVoidPointer y: pigBytes.
 			 manager forwardUnchecked: pigObj to: dest + (pigObj - pigStart).
 			 next ~= 0 ifTrue:
-				[nextNext  := manager nextInSortedFreeListLink: next given: freeChunk].
+				[nextNext  := self nextInSortedFreeListLink: next given: freeChunk].
 			 "now either shorten the chunk, or remove it, adjusting the links to keep the list sorted."
 			 pigBytes < chunkBytes "if false, filled entire free chunk"
 				ifTrue:
@@ -615,12 +639,4 @@ SpurPigCompactor >> tryToMovePig: pigObj at: pigStart end: pigEnd [
 		 prevFree := freeChunk.
 		 freeChunk := next].
 	^0
-]
-
-{ #category : #compaction }
-SpurPigCompactor >> unmarkSurvivingObjectsForPigCompact [
-	manager allPastSpaceObjectsDo:
-		[:objOop|
-		(manager isMarked: objOop) ifTrue:
-			[manager setIsMarkedOf: objOop to: false]]
 ]
