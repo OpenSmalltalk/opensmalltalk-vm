@@ -428,12 +428,6 @@ ObjectMemory class >> objectRepresentationClass [
 	^self subclassResponsibility
 ]
 
-{ #category : #translation }
-ObjectMemory class >> requiredMethodNames: options [
-	"return the list of method names that should be retained for export or other support reasons"
-	^self exportAPISelectors: options
-]
-
 { #category : #accessing }
 ObjectMemory class >> wordSize [
 	"Answer the width of an object pointer, in bytes."

@@ -42,14 +42,6 @@ Spur32BitCoMemoryManager class >> defaultISA [
 	^#IA32
 ]
 
-{ #category : #translation }
-Spur32BitCoMemoryManager class >> exportAPISelectors: options [
-	^(Set withAll: (self exportAPISelectorsFor: self))
-		addAll: (SpurGenerationScavenger exportAPISelectors: options);
-		addAll: (self compactorClass exportAPISelectors: options);
-		yourself
-]
-
 { #category : #'accessing class hierarchy' }
 Spur32BitCoMemoryManager class >> objectRepresentationClass [
 	^CogObjectRepresentationFor32BitSpur

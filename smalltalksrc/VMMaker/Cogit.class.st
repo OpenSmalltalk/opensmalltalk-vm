@@ -634,12 +634,6 @@ Cogit class >> doInlining [
 	^#asSpecifiedOrQuick
 ]
 
-{ #category : #translation }
-Cogit class >> exportAPISelectors: options [
-	^((self withAllSuperclasses copyUpThrough: Cogit), (self ancilliaryClasses: options) collect:
-		[:c| self exportAPISelectorsFor: c]) fold: [:a :b| a, b]
-]
-
 { #category : #'in-image compilation' }
 Cogit class >> genAndDis: methodOrDoitString [
 	^self genAndDis: methodOrDoitString options: #()
@@ -1124,11 +1118,9 @@ Cogit class >> preGenerationHook: aCCodeGenerator [
 	"Perform any last-minute changes to the code generator immediately
 	 before it performs code analysis and generation.  In this case, make
 	 all non-exported methods private."
-	| exportAPISelectors |
-	exportAPISelectors := self exportAPISelectors: aCCodeGenerator options.
 	aCCodeGenerator selectorsAndMethodsDo:
 		[:s :m|
-		(exportAPISelectors includes: s)
+		m isAPIMethod
 			ifTrue: [m static: false]
 			ifFalse:
 				[m export ifFalse:
@@ -1148,9 +1140,7 @@ Cogit class >> processorSpecificSourceFileName [
 { #category : #translation }
 Cogit class >> requiredMethodNames: options [
 	"self requiredMethodNames"
-	^(self exportAPISelectors: options)
-		addAll: self tableFunctions;
-		yourself
+	^self tableFunctions
 ]
 
 { #category : #documentation }
