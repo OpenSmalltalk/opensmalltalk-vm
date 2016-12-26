@@ -9537,6 +9537,17 @@ SpurMemoryManager >> printMemoryFrom: start to: end [
 ]
 
 { #category : #'debug printing' }
+SpurMemoryManager >> printMethodImplementorsOf: anOop [
+	"Scan the heap printing the oops of any and all methods that implement anOop"
+	<api>
+	self allObjectsDo:
+		[:obj|
+		 ((self isCompiledMethod: obj)
+		  and: [(coInterpreter maybeSelectorOfMethod: obj) = anOop]) ifTrue:
+			[coInterpreter printHex: obj; space; printOopShort: obj; cr]]
+]
+
+{ #category : #'debug printing' }
 SpurMemoryManager >> printMethodReferencesTo: anOop [
 	"Scan the heap printing the oops of any and all methods that refer to anOop"
 	<api>
@@ -10672,7 +10683,7 @@ SpurMemoryManager >> slidingCompactionRemapObj: objOop [
 
 { #category : #'gc - scavenge/compact' }
 SpurMemoryManager >> slidingCompactionShouldRemapObj: objOop [
-	<inline: #always>
+	<inline: true>
 	"Answer if the obj should be scavenged, or simply followed. Sent via the compactor
 	 from shouldRemapObj:.  We test for being already scavenged because mapStackPages
 	 via mapInterpreterOops may be applied twice in the context of a global GC where a
@@ -11826,7 +11837,7 @@ SpurMemoryManager >> vanillaRemapObj: objOop [
 
 { #category : #'gc - scavenge/compact' }
 SpurMemoryManager >> vanillaShouldRemapObj: objOop [
-	<inline: #always>
+	<inline: true>
 	"Answer if the obj should be scavenged, or simply followed. Sent via the compactor
 	 from shouldRemapObj:.  We test for being already scavenged because mapStackPages
 	 via mapInterpreterOops may be applied twice in the context of a global GC where a

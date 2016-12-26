@@ -926,12 +926,15 @@ CCodeGenerator >> collectInlineList: inlineFlagOrSymbol [
 						[(#(asSpecified asSpecifiedOrQuick) includes: inlineFlagOrSymbol) ifTrue:
 							[selectorsOfMethodsNotToInline add: m selector]]]].
 
-	(#(asSpecified asSpecifiedOrQuick) includes: inlineFlagOrSymbol) ifFalse:
-		[callsOf associationsDo:
-			[:assoc|
-			(assoc value = 1
-			 and: [(selectorsOfMethodsNotToInline includes: assoc key) not]) ifTrue:
-				[inlineList add: assoc key]]]
+	(#(asSpecified asSpecifiedOrQuick) includes: inlineFlagOrSymbol)
+		ifTrue:
+			[methods do: [:m| m inline ifNil: [m inline: (inlineList includes: m selector)]]]
+		ifFalse:
+			[callsOf associationsDo:
+				[:assoc|
+				(assoc value = 1
+				 and: [(selectorsOfMethodsNotToInline includes: assoc key) not]) ifTrue:
+					[inlineList add: assoc key]]]
 ]
 
 { #category : #utilities }
@@ -3143,12 +3146,13 @@ CCodeGenerator >> generateTouch: msgNode on: aStream indent: level [
 CCodeGenerator >> generateTruncateTo: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	self assert: msgNode args first isConstant.
-	self assert: msgNode args first value isInteger.
-	self assert: msgNode args first value isPowerOfTwo.
+	| arg |
+	(self isConstantNode: msgNode args first valueInto: [:a| arg := a]) ifFalse:
+		[self error: 'can''t find method for inlining truncateTo:'].
+	self assert: (arg isInteger and: [arg isPowerOfTwo]).
 	aStream nextPut: $(.
 	self emitCExpression: msgNode receiver on: aStream.
-	aStream nextPutAll: ' & ~'; print: msgNode args first value - 1; nextPut: $)
+	aStream nextPutAll: ' & ~'; print: arg - 1; nextPut: $)
 ]
 
 { #category : #'C translation' }
@@ -3885,6 +3889,22 @@ CCodeGenerator >> maybeBreakForInlineOf: aNode in: aTMethod [
 ]
 
 { #category : #inlining }
+CCodeGenerator >> maybeBreakForTestOfInliningOf: aNodeOrSelector [
+	"convenient for debugging..."
+	| selector |
+	selector := aNodeOrSelector isSymbol
+					ifTrue: [aNodeOrSelector]
+					ifFalse:
+						[aNodeOrSelector isSend
+							ifTrue: [aNodeOrSelector selector]
+							ifFalse: [^self]].
+	((breakSrcInlineSelectors includes: selector)
+	 and: [breakDestInlineSelectors isEmpty
+	 and: [breakOnInline == true]]) ifTrue:
+		[self halt: selector]
+]
+
+{ #category : #inlining }
 CCodeGenerator >> maybeBreakForTestToInline: aNodeOrSelector in: aTMethod [
 	"convenient for debugging..."
 	| selector |
@@ -4520,6 +4540,8 @@ CCodeGenerator >> pruneUnreachableMethods [
 	neededSelectors := Set withAll: requiredSelectors.
 	methods do: [ :m |
 		m export ifTrue:
+			[neededSelectors add: m selector].
+		m isAPIMethod ifTrue:
 			[neededSelectors add: m selector].
 		m isRealMethod ifFalse:
 			[neededSelectors add: m selector]].

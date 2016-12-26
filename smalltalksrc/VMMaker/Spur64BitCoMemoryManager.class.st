@@ -46,6 +46,7 @@ Spur64BitCoMemoryManager class >> defaultISA [
 Spur64BitCoMemoryManager class >> exportAPISelectors: options [
 	^(Set withAll: (self exportAPISelectorsFor: self))
 		addAll: (SpurGenerationScavenger exportAPISelectors: options);
+		addAll: (self compactorClass exportAPISelectors: options);
 		yourself
 ]
 
