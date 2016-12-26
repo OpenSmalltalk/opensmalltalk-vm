@@ -108,6 +108,9 @@ CogVMSimulator class >> initializeWithOptions: optionsDictionaryOrArray objectMe
 							ifTrue: [Dictionary newFromPairs: optionsDictionaryOrArray]
 							ifFalse: [optionsDictionaryOrArray].
 
+	(self allSuperclasses copyUpThrough: InterpreterPrimitives) do:
+		[:sc| sc initializationOptions: initializationOptions].
+
 	(objectMemoryClassOrNil ifNil: [self objectMemoryClass])
 		initializeWithOptions: initializationOptions.
 
