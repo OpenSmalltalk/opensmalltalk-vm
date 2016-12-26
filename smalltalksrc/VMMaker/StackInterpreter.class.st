@@ -316,17 +316,6 @@ StackInterpreter class >> defaultObjectMemoryClass [
 ]
 
 { #category : #translation }
-StackInterpreter class >> exportAPISelectors: options [
-	| omExports |
-	omExports := (self objectMemoryClass withAllSuperclasses copyUpTo: VMClass)
-					inject: Set new
-					into: [:api :c| api addAll: (c exportAPISelectors: options); yourself].
-	^(self withAllSuperclasses copyUpTo: VMClass), (self ancilliaryClasses: options)
-		inject: omExports
-		into: [:set :class| set addAll: (self exportAPISelectorsFor: class); yourself]
-]
-
-{ #category : #translation }
 StackInterpreter class >> implicitReturnTypeFor: aSelector [
 	"Answer the return type for methods that don't have an explicit return."
 	^#void
@@ -1526,7 +1515,7 @@ StackInterpreter class >> preGenerationHook: aCCodeGen [
 														copyWithout: #primitiveFail).
 	aCCodeGen selectorsAndMethodsDo:
 		[:s :m|
-		(m export or: [publicMethodNames includes: s]) ifTrue:
+		(m export or: [m isAPIMethod or: [publicMethodNames includes: s]]) ifTrue:
 			[m static: false]]
 ]
 
@@ -1676,12 +1665,10 @@ StackInterpreter class >> reorganizeAsISeeFit [
 
 { #category : #translation }
 StackInterpreter class >> requiredMethodNames: options [
-	"return the list of method names that should be retained for export or other support reasons"
+	"Answer the list of method names that should be retained for export or other support reasons"
 	| requiredList |
-	requiredList := self exportAPISelectors: options.
-	requiredList addAll: (self objectMemoryClass requiredMethodNames: options).
-	"A number of methods required by VM support code, jitter, specific platforms etc"
-	requiredList addAll: #(
+	"A number of methods required by VM support code, specific platforms, etc"
+	requiredList := #(
 		assertValidExecutionPointe:r:s:
 		characterForAscii:
 		findClassOfMethod:forReceiver: findSelectorOfMethod:
@@ -1696,7 +1683,7 @@ StackInterpreter class >> requiredMethodNames: options [
 		readableFormat: readImageFromFile:HeapSize:StartingAt:
 		setFullScreenFlag: setInterruptKeycode: setInterruptPending: setInterruptCheckChain:
 			setSavedWindowSize: success:
-		validInstructionPointer:inMethod:framePointer:).
+		validInstructionPointer:inMethod:framePointer:) asSet.
 
 	"Nice to actually have all the primitives available"
 	requiredList addAll: (self primitiveTable select: [:each| each isSymbol]).
