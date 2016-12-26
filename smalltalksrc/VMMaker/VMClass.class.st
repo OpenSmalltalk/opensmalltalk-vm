@@ -133,18 +133,6 @@ VMClass class >> defaultObjectMemoryClass [
 ]
 
 { #category : #translation }
-VMClass class >> exportAPISelectors: options [
-	^self exportAPISelectorsFor: self
-]
-
-{ #category : #translation }
-VMClass class >> exportAPISelectorsFor: aClass [
-	^(aClass selectors select:
-		[:s| | m |
-		((m := aClass compiledMethodAt: s) pragmaAt: #api) notNil or: [(m pragmaAt: #api:) notNil]]) asSet
-]
-
-{ #category : #translation }
 VMClass class >> getVMMaker [
 	^Notification new tag: #getVMMaker; signal
 ]
