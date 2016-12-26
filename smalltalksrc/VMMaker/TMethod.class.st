@@ -297,30 +297,35 @@ TMethod >> buildSwitchStmt: aSendNode parent: parentNode [
 	^switch
 ]
 
-{ #category : #inlining }
-TMethod >> checkForCompleteness: stmtLists in: aCodeGen [
-	"Set the complete flag if none of the given statement list nodes contains further candidates for inlining."
+{ #category : #'inlining support' }
+TMethod >> checkForCompletenessIn: aCodeGen [
+	"Set the complete flag if the parse tree contains no further candidates for inlining."
+	| foundIncompleteSend incompleteSends |
+	aCodeGen maybeBreakForTestOfInliningOf: selector.
 
-	complete := true.
-	stmtLists do:
-		[:stmtList|
-		stmtList statements do:
-			[:node|
-			[(self inlineableSend: node in: aCodeGen) ifTrue:
-				[complete := false.  "more inlining to do"
-				^self]]]].
+	foundIncompleteSend := false.
+	incompleteSends := IdentitySet new.
 
 	parseTree
 		nodesDo:
 			[:node|
-			(self inlineableFunctionCall: node in: aCodeGen) ifTrue:
-				[complete := false.  "more inlining to do"
-				^self]]
+			 node isSend ifTrue:
+				[(self methodIsEffectivelyComplete: node selector in: aCodeGen)
+					ifTrue:
+						[(self inlineableFunctionCall: node in: aCodeGen) ifTrue:
+							[complete := false.  "more inlining to do"
+							^self]]
+					ifFalse:
+						[foundIncompleteSend := true.
+						 incompleteSends add: node]]]
 		unless:
 			[:node|
 			node isSend
 			and: [node selector == #cCode:inSmalltalk:
-				or: [aCodeGen isAssertSelector: node selector]]]
+				or: [aCodeGen isAssertSelector: node selector]]].
+
+	foundIncompleteSend ifFalse:
+		[complete := true]
 ]
 
 { #category : #testing }
@@ -1049,6 +1054,34 @@ TMethod >> hasUnrenamableCCode [
 		[:node| node isNonNullCCode]
 ]
 
+{ #category : #'inlining support' }
+TMethod >> incompleteSendsIn: aCodeGen [
+	"Debugging support; answer the incomplete and inlineable sends in the receiver."
+	| incompleteSends inlineableSends |
+	aCodeGen maybeBreakForTestOfInliningOf: selector.
+
+	incompleteSends := IdentitySet new.
+	inlineableSends := IdentitySet new.
+
+	parseTree
+		nodesDo:
+			[:node|
+			 node isSend ifTrue:
+				[(self methodIsEffectivelyComplete: node selector in: aCodeGen)
+					ifTrue:
+						[(self inlineableFunctionCall: node in: aCodeGen) ifTrue:
+							[inlineableSends add: node]]
+					ifFalse:
+						[incompleteSends add: node]]]
+		unless:
+			[:node|
+			node isSend
+			and: [node selector == #cCode:inSmalltalk:
+				or: [aCodeGen isAssertSelector: node selector]]].
+
+	^{incompleteSends. inlineableSends}
+]
+
 { #category : #'type inference' }
 TMethod >> inferReturnTypeFromReturnsIn: aCodeGen [
 	"Attempt to infer the return type of the receiver from returns in the parse tree."
@@ -1163,6 +1196,11 @@ TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 { #category : #accessing }
 TMethod >> inline [
 	^inline
+]
+
+{ #category : #accessing }
+TMethod >> inline: aBoolean [
+	inline := aBoolean
 ]
 
 { #category : #inlining }
@@ -1489,9 +1527,10 @@ TMethod >> inlineableFunctionCall: aNode in: aCodeGen [
 		ifNotNil:
 			[:m|
 			 (m ~~ self
-			  and: [(m isFunctionalIn: aCodeGen) 
+			  and: [(m isFunctionalIn: aCodeGen)
+			  and: [m mayBeInlined
 			  and: [(aCodeGen mayInline: m selector)
-			  and: [aNode args allSatisfy: [:a| self isSubstitutableNode: a intoMethod: m in: aCodeGen]]]])
+			  and: [aNode args allSatisfy: [:a| self isSubstitutableNode: a intoMethod: m in: aCodeGen]]]]])
 			 or: [m checkForRequiredInlinability]]
 ]
 
@@ -1505,8 +1544,9 @@ TMethod >> inlineableSend: aNode in: aCodeGen [
 	m := aCodeGen methodNamed: aNode selector.  "nil if builtin or external function"
 	^m ~= nil
 	 and: [m ~~ self
+	 and: [m mayBeInlined
 	 and: [(m isComplete and: [aCodeGen mayInline: m selector])
-		or: [m checkForRequiredInlinability]]]
+		or: [m checkForRequiredInlinability]]]]
 ]
 
 { #category : #'primitive compilation' }
@@ -1824,6 +1864,11 @@ TMethod >> mapSendsFromSelfToInterpreterProxy: selectors [
 			[node receiver: interpreterProxyNode]]
 ]
 
+{ #category : #accessing }
+TMethod >> mayBeInlined [
+	^inline == true or: [inline == nil or: [inline == #always]]
+]
+
 { #category : #'inlining support' }
 TMethod >> maySubstituteGlobal: globalVar in: aCodeGen [
 	"We can substitute globalVar into this method provided globalVar is only read, not written."
@@ -1844,6 +1889,25 @@ TMethod >> mergePropertiesOfSuperMethod: superTMethod [
 		[:aPragma|
 		(self shouldIncorporatePragmaFromSuperMethod: aPragma) ifTrue:
 			[properties := properties copyWith: aPragma]]
+]
+
+{ #category : #'inlining support' }
+TMethod >> methodIsEffectivelyComplete: selector in: aCodeGen [
+	"Answer if selector is effectively not inlineable in the receiver.
+	 This is tricky because block inlining requires that certain methods must be inlined, which
+	 can be at odds wuth the opportunistic strategy the inliner takes.  Since the inliner only
+	 inlines complete methods and certain methods may never be marked as complete (e.g.
+	 recursive methods) we have to short-cut certain kinds of send.  In particular, short-cut
+	 sends that turn into jumps in the interpret routine (sharedCase and sharedLabel below)."
+	^(aCodeGen methodNamed: selector)
+		ifNil: [true] "builtins or externals are not inlineable"
+		ifNotNil:
+			[:m|
+			 m isComplete
+			 "unlinable methods can't be inlined"
+			 or: [m mayBeInlined not
+			 "Methods which are inlined as jumps don't need inlining"
+			 or: [m sharedCase notNil or: [m sharedLabel notNil]]]]
 ]
 
 { #category : #initialization }
@@ -2568,7 +2632,7 @@ TMethod >> statementsListsForInliningIn: aCodeGen [
 			[node selector = #cCode:inSmalltalk: ifTrue:
 				[node nodesDo:
 					[:ccisNode| stmtLists remove: ccisNode ifAbsent: []]].
-			 node selector = #cppIf:ifTrue:ifFalse: ifTrue:
+			 (node selector = #cppIf:ifTrue:ifFalse: or: [node selector = #cppIf:ifTrue:]) ifTrue:
 				[node args first nodesDo:
 					[:inCondNode| stmtLists remove: inCondNode ifAbsent: []]].
 			((node selector = #and:) or: [node selector = #or:]) ifTrue:
@@ -2850,18 +2914,22 @@ TMethod >> tryToInlineMethodsIn: aCodeGen [
 	 Answer if something was inlined."
 
 	| didSomething statementLists |
+	"complete ifTrue:
+		[^false]."
+
 	self definedAsMacro ifTrue:
-		[complete := true.
-		 ^false].
+		[complete ifTrue:
+			[^false].
+		 ^complete := true].
+
 	didSomething := self tryToInlineMethodStatementsIn: aCodeGen statementListsInto: [:stmtLists| statementLists := stmtLists].
 	didSomething := (self tryToInlineMethodExpressionsIn: aCodeGen) or: [didSomething].
 
 	didSomething ifTrue:
-		[writtenToGlobalVarsCache := nil.
-		^didSomething].
+		[writtenToGlobalVarsCache := nil].
 
 	complete ifFalse:
-		[self checkForCompleteness: statementLists in: aCodeGen.
+		[self checkForCompletenessIn: aCodeGen.
 		 complete ifTrue: [didSomething := true]].  "marking a method complete is progress"
 	^didSomething
 ]

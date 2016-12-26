@@ -58,6 +58,17 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #translation }
+SpurPlanningCompactor class >> declareCVarsIn: aCCodeGenerator [
+	aCCodeGenerator var: 'savedFirstFieldsSpace' type: #SpurContiguousObjStack
+]
+
+{ #category : #translation }
+SpurPlanningCompactor class >> implicitReturnTypeFor: aSelector [
+	"Answer the return type for methods that don't have an explicit return."
+	^#void
+]
+
 { #category : #'compaction - api' }
 SpurPlanningCompactor >> biasForGC [
 	biasForGC := true
@@ -225,7 +236,7 @@ SpurPlanningCompactor >> copyAndUnmarkMobileObjects [
 SpurPlanningCompactor >> copyAndUnmarkObject: o to: toFinger firstField: firstField [
 	"Copy the object to toFinger, clearing its mark bit and restoring its firstField, which was overwritten with a forwarding pointer.
 	 Answer the number of bytes in the object, including overflow header."
-	<inline: #always>
+	<inline: true>
 	| bytes numSlots destObj start |
 	numSlots := manager rawNumSlotsOf: o.
 	 destObj := (manager objectWithRawSlotsHasOverflowHeader: numSlots)
@@ -314,7 +325,7 @@ SpurPlanningCompactor >> initializeScan [
 
 { #category : #private }
 SpurPlanningCompactor >> isMobile: obj [
-	<inline: #always>
+	<inline: true>
 	^(self oop: obj isGreaterThanOrEqualTo: firstMobileObject andLessThanOrEqualTo:  lastMobileObject)
 	 and: [(manager isPinned: obj) not]
 ]
@@ -526,12 +537,13 @@ SpurPlanningCompactor >> selectSavedFirstFieldsSpace [
 
 { #category : #'gc - scavenge/compact' }
 SpurPlanningCompactor >> shouldRemapObj: objOop [
-	<api>
 	"Answer if the obj should be scavenged, or simply followed. Sent via the compactor
 	 from shouldRemapObj:.  We test for being already scavenged because mapStackPages
 	 via mapInterpreterOops may be applied twice in the context of a global GC where a
 	 scavenge, followed by a scan-mark-free, and final compaction passes may result in
 	 scavenged fields being visited twice."
+	<api>
+	<inline: false>
 	^manager slidingCompactionShouldRemapObj: objOop
 ]
 
@@ -576,7 +588,7 @@ SpurPlanningCompactor >> updatePointers [
 
 { #category : #compaction }
 SpurPlanningCompactor >> updatePointersFrom: start to: finish in: obj [
-	<inline: #always>
+	<inline: true>
 	start to: finish do:
 		[:i| | oop fwd |
 		 oop := manager fetchPointer: i ofObject: obj.

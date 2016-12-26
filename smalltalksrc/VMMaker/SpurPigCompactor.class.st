@@ -41,6 +41,12 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
+{ #category : #translation }
+SpurPigCompactor class >> implicitReturnTypeFor: aSelector [
+	"Answer the return type for methods that don't have an explicit return."
+	^#void
+]
+
 { #category : #'class initialization' }
 SpurPigCompactor class >> initialize [
 	"Pig compact can be repeated to compact better.  Experience shows that 3 times
