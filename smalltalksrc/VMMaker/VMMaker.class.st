@@ -929,7 +929,7 @@ VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods:
 		[:vmClass| | theClass |
 		 theClass := vmClass.
 		 [theClass ~~ VMClass] whileTrue:
-			[theClass initializationOptions: optionsDictionary.
+			[theClass initializationOptions: interpreterClass initializationOptions.
 			 interpreterClasses addFirst: theClass.
 			 theClass := theClass superclass]].
 	interpreterClasses
@@ -940,7 +940,7 @@ VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods:
 		[interpreterClasses do:
 			[:ic|
 			(ic respondsTo: #initializeWithOptions:)
-				ifTrue: [ic initializeWithOptions: optionsDictionary]
+				ifTrue: [ic initializeWithOptions: interpreterClass initializationOptions]
 				ifFalse: [ic initialize]].
 		 (cg structClassesForTranslationClasses: interpreterClasses) do:
 			[:structClass| structClass initialize]].
