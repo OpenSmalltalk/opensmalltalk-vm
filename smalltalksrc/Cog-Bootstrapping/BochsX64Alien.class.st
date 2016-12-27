@@ -1326,7 +1326,9 @@ BochsX64Alien >> simulateReturnIn: aMemory [
 
 { #category : #'accessing-abstract' }
 BochsX64Alien >> smashCallerSavedRegistersWithValuesFrom: base by: step [
-	#(rax: rcx: rdx: rsi: rdi: r8: r9: r10: r11:)
+	(CogX64Compiler isSysV
+				ifTrue: [#(rax: rcx: rdx: rsi: rdi: r8: r9: r10: r11:)]
+				ifFalse: [#(rax: rcx: rdx: r8: r9: r10: r11:)])
 	   withIndexDo:
 		[:accessor :index|
 		self perform: accessor with: index - 1 * step + base]
