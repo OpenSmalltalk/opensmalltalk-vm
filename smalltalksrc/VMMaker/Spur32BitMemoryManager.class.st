@@ -104,11 +104,9 @@ Spur32BitMemoryManager >> allocateSlotsForPinningInOldSpace: numSlots bytes: tot
 				   suchThat: [:f| (segmentManager segmentContainingObj: f) containsPinned].
 	chunk ifNil:
 		[chunk := self allocateOldSpaceChunkOfBytes: totalBytes.
-		 chunk ifNotNil:
-			[(segmentManager segmentContainingObj: chunk) containsPinned: true]].
-	self checkFreeSpace: GCModeNewSpace.
-	chunk ifNil:
-		[^nil].
+		 chunk ifNil:
+			[^nil].
+		 (segmentManager segmentContainingObj: chunk) containsPinned: true].
 	numSlots >= self numSlotsMask ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
 		[self flag: #endianness.
 		 self longAt: chunk put: numSlots.
@@ -116,10 +114,12 @@ Spur32BitMemoryManager >> allocateSlotsForPinningInOldSpace: numSlots bytes: tot
 		 self long64At: chunk + self baseHeaderSize
 			 put: ((self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex)
 					bitOr: 1 << self pinnedBitShift).
+		 self checkFreeSpace: GCModeNewSpace.
 		 ^chunk + self baseHeaderSize].
 	self long64At: chunk
 		put: ((self headerForSlots: numSlots format: formatField classIndex: classIndex)
 					bitOr: 1 << self pinnedBitShift).
+	self checkFreeSpace: GCModeNewSpace.
 	^chunk
 ]
 
@@ -131,7 +131,6 @@ Spur32BitMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes fo
 	<inline: false>
 	| chunk |
 	chunk := self allocateOldSpaceChunkOfBytes: totalBytes.
-	self checkFreeSpace: GCModeNewSpace.
 	chunk ifNil:
 		[^nil].
 	numSlots >= self numSlotsMask ifTrue: "for header parsing we put a saturated slot count in the prepended overflow size word"
@@ -140,8 +139,10 @@ Spur32BitMemoryManager >> allocateSlotsInOldSpace: numSlots bytes: totalBytes fo
 		 self longAt: chunk + 4 put: self numSlotsMask << self numSlotsHalfShift.
 		 self long64At: chunk + self baseHeaderSize
 			put: (self headerForSlots: self numSlotsMask format: formatField classIndex: classIndex).
+		 self checkFreeSpace: GCModeNewSpace.
 		 ^chunk + self baseHeaderSize].
 	self long64At: chunk put: (self headerForSlots: numSlots format: formatField classIndex: classIndex).
+	self checkFreeSpace: GCModeNewSpace.
 	^chunk
 ]
 
