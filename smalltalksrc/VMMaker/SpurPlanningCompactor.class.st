@@ -91,8 +91,9 @@ SpurPlanningCompactor >> compact [
 	 Let the segmentManager mark which segments contain pinned objects via notePinned:."
 	| onePass |
 	<inline: #never> "for profiling"
-	self initializeCompaction;
-		initializeScan.
+	self initializeScanCheckingForFullyCompactedHeap ifTrue:
+		[^self unmarkObjectsInFullyCompactedHeap].
+	self initializeCompaction.
 	[onePass := self planCompactSavingForwarders.
 	 self updatePointers.
 	 self copyAndUnmark.
@@ -314,14 +315,17 @@ SpurPlanningCompactor >> initializeCompaction [
 	manager
 		resetFreeListHeads;
 		totalFreeOldSpace: 0;
-		beginSlidingCompaction
+		beginSlidingCompaction.
+	savedFirstFieldsSpace top: savedFirstFieldsSpace start - manager bytesPerOop
 ]
 
 { #category : #compaction }
-SpurPlanningCompactor >> initializeScan [
-	savedFirstFieldsSpace top: savedFirstFieldsSpace start - manager bytesPerOop.
+SpurPlanningCompactor >> initializeScanCheckingForFullyCompactedHeap [
+	"Scan for firstFreeObject and firstMobileObject from the start of memory.
+	 Answer if the heap is already fully compacted."
 	firstFreeObject := manager hiddenRootsObject.
-	self reinitializeScan
+	self reinitializeScan.
+	^firstMobileObject >= manager endOfMemory
 ]
 
 { #category : #private }
@@ -556,6 +560,12 @@ SpurPlanningCompactor >> unmarkInitialImmobileObjects [
 		o >= firstMobileObject ifTrue:
 			[^self].
 		manager setIsMarkedOf: o to: false]
+]
+
+{ #category : #compaction }
+SpurPlanningCompactor >> unmarkObjectsInFullyCompactedHeap [
+	self unmarkInitialImmobileObjects.
+	manager unmarkSurvivingObjectsForCompact
 ]
 
 { #category : #compaction }
