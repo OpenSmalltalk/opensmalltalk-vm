@@ -4934,6 +4934,7 @@ SpurMemoryManager >> followedKeyOfMaybeFiredEphemeron: objOop [
 
 { #category : #'header format' }
 SpurMemoryManager >> formatFieldWidthShift [
+	<cmacro>
 	"The format field contains 5 bits."
 	^5
 ]
@@ -5303,6 +5304,7 @@ SpurMemoryManager >> goodContextSize: oop [
 
 { #category : #'header format' }
 SpurMemoryManager >> greyBitShift [
+	<cmacro>
 	"bit 2 of 3-bit field above format (little endian)"
 	^31
 ]
@@ -5604,6 +5606,7 @@ SpurMemoryManager >> immutableBitMask [
 
 { #category : #'header format' }
 SpurMemoryManager >> immutableBitShift [
+	<cmacro>
 	"bit 1 of 2-bit field above classIndex (little endian)"
 	^23
 ]
@@ -7984,12 +7987,14 @@ SpurMemoryManager >> markWeaklingsAndMarkAndFireEphemerons [
 
 { #category : #'header format' }
 SpurMemoryManager >> markedBitFullShift [
+	<cmacro>
 	"bit 1 of 2-bit field above identityHash (little endian)"
 	^55
 ]
 
 { #category : #'header format' }
 SpurMemoryManager >> markedBitHalfShift [
+	<cmacro>
 	"bit 1 of 2-bit field above identityHash (little endian)"
 	^23
 ]
@@ -9039,6 +9044,7 @@ SpurMemoryManager >> pinObject: objOop [
 
 { #category : #'header format' }
 SpurMemoryManager >> pinnedBitShift [
+	<cmacro>
 	"bit 1 of 3-bit field above format (little endian)"
 	^30
 ]
@@ -9313,12 +9319,16 @@ SpurMemoryManager >> printContextReferencesTo: anOop [
 
 { #category : #'debug printing' }
 SpurMemoryManager >> printEntity: oop [
+	<api>
+	coInterpreter printHex: oop; space.
+	(self addressCouldBeObj: oop) ifFalse:
+		[^coInterpreter print: ((self isImmediate: oop) ifTrue: ['immediate'] ifFalse: ['unknown'])].
 	coInterpreter
-		printHex: oop; print: '/'; printNum: oop; space;
 		print: ((self isFreeObject: oop) ifTrue: ['free'] ifFalse:
 				[(self isSegmentBridge: oop) ifTrue: ['bridge'] ifFalse:
 				[(self isForwarded: oop) ifTrue: ['forwarder'] ifFalse:
-				['object']]]);
+				[(self classIndexOf: oop) <= self lastClassIndexPun ifTrue: ['pun/obj stack'] ifFalse:
+				['object']]]]);
 		space; printHex: (self bytesInObject: oop); print: '/'; printNum: (self bytesInObject: oop); cr
 ]
 
