@@ -171,11 +171,6 @@ FilePluginSimulator >> primitiveDirectoryLookup [
 ]
 
 { #category : #simulation }
-FilePluginSimulator >> primitiveFileRename [
-	^interpreterProxy primitiveFileRename
-]
-
-{ #category : #simulation }
 FilePluginSimulator >> recordStateOf: file [
 	([file position]
 			on: Error
