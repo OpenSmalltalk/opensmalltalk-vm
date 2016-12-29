@@ -588,9 +588,8 @@ CogVMSimulator >> cloneSimulationWindow [
 ]
 
 { #category : #initialization }
-CogVMSimulator >> close [  "close any files that ST may have opened"
-	(self loadNewPlugin: 'FilePlugin') ifNotNil:
-		[:filePlugin| filePlugin close]
+CogVMSimulator >> close [  "close any files that ST may have opened, etc"
+	pluginList do: [:plugin| (plugin ~~ self and: [plugin respondsTo: #close]) ifTrue: [plugin close]]
 ]
 
 { #category : #'primitive support' }
@@ -1444,7 +1443,7 @@ CogVMSimulator >> initialize [
 
 	"initialize InterpreterSimulator variables used for debugging"
 	byteCount := lastPollCount := sendCount := lookupCount := 0.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	traceOn := true.
 	printSends := printFrameAtEachStep := printBytecodeAtEachStep := false.
 	myBitBlt := BitBltSimulator new setInterpreter: self.
@@ -2004,7 +2003,7 @@ CogVMSimulator >> logOfBytesVerify: nBytes fromFileNamed: fileName fromStart: lo
 	logFile := (FileStream readOnlyFileNamed: fileName) binary.
 	transcript clear.
 	byteCount := 0.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -2045,7 +2044,7 @@ CogVMSimulator >> logOfBytesWrite: nBytes toFileNamed: fileName fromStart: loggi
 	logFile := (FileStream newFileNamed: fileName) binary.
 	transcript clear.
 	byteCount := 0.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -2070,7 +2069,7 @@ CogVMSimulator >> logOfSendsVerify: nSends fromFileNamed: fileName fromStart: lo
 	byteCount := 0.
 	sendCount := 0.
 	priorFrame := localFP.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -2117,7 +2116,7 @@ CogVMSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromStart: loggi
 	byteCount := 0.
 	sendCount := 0.
 	priorFrame := localFP.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -3377,7 +3376,7 @@ CogVMSimulator >> run [
 					((World submorphs includes: topWindow)
 					 and: [UIManager default confirm: 'close?']) ifTrue:
 						[topWindow delete]]].
-				  ^self].
+				  ^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self initialEnterSmalltalkExecutive
@@ -3392,7 +3391,7 @@ CogVMSimulator >> runWithBreakCount: theBreakCount [
 					((World submorphs includes: topWindow)
 					 and: [UIManager default confirm: 'close?']) ifTrue:
 						[topWindow delete]]].
-				  ^self].
+				  ^self close].
 	breakCount := theBreakCount.
 	self initStackPages.
 	self loadInitialContext.
@@ -3686,7 +3685,7 @@ CogVMSimulator >> testBreakCount: breakCount printSends: shouldPrintSends printF
 	self initStackPages.
 	self loadInitialContext.
 	transcript clear.
-	quitBlock := [^self].
+	quitBlock := [^self close].
 	printSends := true & shouldPrintSends. "true & foo allows evaluating printFoo := true in the debugger"
 	printFrameAtEachStep := true & shouldPrintFrames.
 	printBytecodeAtEachStep := true & shouldPrintBytecodes.
