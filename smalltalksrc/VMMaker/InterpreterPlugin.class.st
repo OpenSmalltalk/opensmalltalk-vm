@@ -335,6 +335,12 @@ InterpreterPlugin >> cCoerceSimple: value to: cType [
 ]
 
 { #category : #'simulation support' }
+InterpreterPlugin >> close [
+	"Simulation subclasses needing some specific close action override as required."
+	<doNotGenerate>
+]
+
+{ #category : #'simulation support' }
 InterpreterPlugin >> doesNotUnderstand: aMessage [
 	<doNotGenerate>
 	"Override doesNotUnderstand: to iuntercept sends of translated primitive selectors.
