@@ -69,6 +69,7 @@ Class {
 		'breakCount',
 		'atEachStepBlock',
 		'startMicroseconds',
+		'lastYieldMicroseconds',
 		'externalSemaphoreSignalRequests',
 		'externalSemaphoreSignalResponses',
 		'extSemTabSize',
@@ -589,7 +590,7 @@ CogVMSimulator >> cloneSimulationWindow [
 
 { #category : #initialization }
 CogVMSimulator >> close [  "close any files that ST may have opened, etc"
-	pluginList do: [:plugin| (plugin ~~ self and: [plugin respondsTo: #close]) ifTrue: [plugin close]]
+	pluginList do: [:plugin| plugin ~~ self ifTrue: [plugin close]]
 ]
 
 { #category : #'primitive support' }
@@ -743,8 +744,14 @@ CogVMSimulator >> displayView [
 { #category : #'process primitive support' }
 CogVMSimulator >> doSignalExternalSemaphores: minTableSize [
 	"This is a non-thread-safe simulation.  See platforms/Cross/vm/sqExternalSemaphores.c
-	 for the real code."
-	| switched |
+	 for the real code.  For the benefit of the SocketPluginSimulator, do a yield every 100
+	 virtual microseconds."
+	| now switched |
+	now := self ioUTCMicroseconds.
+	now - lastYieldMicroseconds >= 100 ifTrue:
+		[lastYieldMicroseconds := now.
+		 Processor yield].
+
 	switched := false.
 	1 to: (minTableSize min: externalSemaphoreSignalRequests size) do:
 		[:i| | responses |
@@ -1436,7 +1443,7 @@ CogVMSimulator >> initialize [
 	desiredNumStackPages := desiredEdenBytes := desiredCogCodeSize := 0.
 	"This is initialized on loading the image, but convenient for testing stack page values..."
 	numStackPages := self defaultNumStackPages. 
-	startMicroseconds := self ioUTCStartMicroseconds.
+	startMicroseconds := lastYieldMicroseconds := self ioUTCStartMicroseconds.
 	maxLiteralCountForCompile := MaxLiteralCountForCompile.
 	minBackwardJumpCountForCompile := MinBackwardJumpCountForCompile.
 	flagInterpretedMethods := false.

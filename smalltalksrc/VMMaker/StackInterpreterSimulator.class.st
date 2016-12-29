@@ -46,6 +46,7 @@ Class {
 		'printBytecodeAtEachStep',
 		'systemAttributes',
 		'startMicroseconds',
+		'lastYieldMicroseconds',
 		'externalSemaphoreSignalRequests',
 		'externalSemaphoreSignalResponses',
 		'extSemTabSize',
@@ -339,7 +340,7 @@ StackInterpreterSimulator >> cloneSimulationWindow [
 
 { #category : #initialization }
 StackInterpreterSimulator >> close [  "close any files that ST may have opened, etc"
-	pluginList do: [:plugin| (plugin ~~ self and: [plugin respondsTo: #close]) ifTrue: [plugin close]]
+	pluginList do: [:assoc| | plugin | plugin := assoc value. plugin ~~ self ifTrue: [plugin close]]
 ]
 
 { #category : #'simulation only' }
@@ -463,8 +464,14 @@ StackInterpreterSimulator >> divorceFramesIn: aStackPage [
 { #category : #'process primitive support' }
 StackInterpreterSimulator >> doSignalExternalSemaphores: minTableSize [
 	"This is a non-thread-safe simulation.  See platforms/Cross/vm/sqExternalSemaphores.c
-	 for the real code."
-	| switched |
+	 for the real code.  For the benefit of the SocketPluginSimulator, do a yield every 100
+	 virtual microseconds."
+	| now switched |
+	now := self ioUTCMicroseconds.
+	now - lastYieldMicroseconds >= 100 ifTrue:
+		[lastYieldMicroseconds := now.
+		 Processor yield].
+
 	switched := false.
 	1 to: (minTableSize min: externalSemaphoreSignalRequests size) do:
 		[:i| | responses |
@@ -837,7 +844,7 @@ StackInterpreterSimulator >> initialize [
 	desiredNumStackPages := desiredEdenBytes := 0.
 	"This is initialized on loading the image, but convenient for testing stack page values..."
 	numStackPages := self defaultNumStackPages. 
-	startMicroseconds := self ioUTCStartMicroseconds.
+	startMicroseconds := lastYieldMicroseconds := self ioUTCStartMicroseconds.
 
 	"initialize InterpreterSimulator variables used for debugging"
 	byteCount := sendCount := lookupCount := 0.
@@ -2898,6 +2905,16 @@ StackInterpreterSimulator >> warpBits [
 { #category : #UI }
 StackInterpreterSimulator >> windowColorToUse [
 	^Color lightBlue
+]
+
+{ #category : #'primitive support' }
+StackInterpreterSimulator >> windowIsClosing [
+	quitBlock ifNotNil:
+		[:effectiveQuitBlock|
+		quitBlock := nil. "stop recursion on explicit window close."
+		[effectiveQuitBlock value]
+			on: BlockCannotReturn
+			do: [:ex|]]	"Cause return from #test, et al"
 ]
 
 { #category : #'debug printing' }
