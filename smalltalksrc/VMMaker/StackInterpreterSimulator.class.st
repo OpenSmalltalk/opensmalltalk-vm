@@ -338,9 +338,8 @@ StackInterpreterSimulator >> cloneSimulationWindow [
 ]
 
 { #category : #initialization }
-StackInterpreterSimulator >> close [  "close any files that ST may have opened"
-	(self loadNewPlugin: 'FilePlugin') ifNotNil:
-		[:filePlugin| filePlugin close]
+StackInterpreterSimulator >> close [  "close any files that ST may have opened, etc"
+	pluginList do: [:plugin| (plugin ~~ self and: [plugin respondsTo: #close]) ifTrue: [plugin close]]
 ]
 
 { #category : #'simulation only' }
@@ -842,7 +841,7 @@ StackInterpreterSimulator >> initialize [
 
 	"initialize InterpreterSimulator variables used for debugging"
 	byteCount := sendCount := lookupCount := 0.
-	quitBlock := [^self].
+	quitBlock := [^self close].
 	traceOn := true.
 	printSends := printReturns := printFrameAtEachStep := printBytecodeAtEachStep := false.
 	myBitBlt := BitBltSimulator new setInterpreter: self.
@@ -1271,7 +1270,7 @@ StackInterpreterSimulator >> logOfBytesVerify: nBytes fromFileNamed: fileName fr
 	logFile := (FileStream readOnlyFileNamed: fileName) binary.
 	transcript clear.
 	byteCount := 0.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -1312,7 +1311,7 @@ StackInterpreterSimulator >> logOfBytesWrite: nBytes toFileNamed: fileName fromS
 	logFile := (FileStream newFileNamed: fileName) binary.
 	transcript clear.
 	byteCount := 0.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -1337,7 +1336,7 @@ StackInterpreterSimulator >> logOfSendsVerify: nSends fromFileNamed: fileName fr
 	byteCount := 0.
 	sendCount := 0.
 	priorFrame := localFP.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -1384,7 +1383,7 @@ StackInterpreterSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromS
 	byteCount := 0.
 	sendCount := 0.
 	priorFrame := localFP.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -2328,7 +2327,7 @@ StackInterpreterSimulator >> run [
 					((World submorphs includes: topWindow)
 					 and: [UIManager default confirm: 'close?']) ifTrue:
 						[topWindow delete]]].
-				  ^self].
+				  ^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -2405,7 +2404,7 @@ StackInterpreterSimulator >> runWithBreakCount: theBreakCount [
 					((World submorphs includes: topWindow)
 					 and: [UIManager default confirm: 'close?']) ifTrue:
 						[topWindow delete]]].
-				  ^self].
+				  ^self close].
 	breakCount := theBreakCount.
 	self initStackPages.
 	self loadInitialContext.
@@ -2613,7 +2612,7 @@ StackInterpreterSimulator >> test [
 	transcript clear.
 	byteCount := 0.
 	breakCount := -1.
-	quitBlock := [^self].
+	quitBlock := [^self close].
 	printSends := printReturns := true.
 	self internalizeIPandSP.
 	self fetchNextBytecode.
@@ -2640,7 +2639,7 @@ StackInterpreterSimulator >> test1 [
 	byteCount := 0.
 	breakCount := -1.
 	self setBreakSelector: #blockCopy:.
-	quitBlock := [^self].
+	quitBlock := [^self close].
 	printSends := printReturns := true.
 	self internalizeIPandSP.
 	self fetchNextBytecode.
@@ -2704,7 +2703,7 @@ StackInterpreterSimulator >> testBreakCount: breakCount printSends: shouldPrintS
 	self loadInitialContext.
 	transcript clear.
 	byteCount := 0.
-	quitBlock := [^self].
+	quitBlock := [^self close].
 	printSends := true & shouldPrintSends. "true & foo allows evaluating printFoo := true in the debugger"
 	printFrameAtEachStep := true & shouldPrintFrames.
 	printBytecodeAtEachStep := true & shouldPrintBytecodes.
