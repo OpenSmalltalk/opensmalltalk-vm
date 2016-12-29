@@ -42,12 +42,6 @@ Object >> asOop: aClass [
 ]
 
 { #category : #'*VMMaker-translation support' }
-Object >> asSmallIntegerObj [
-
-	^self
-]
-
-{ #category : #'*VMMaker-translation support' }
 Object >> asValue: aClass [
 
 	^self
@@ -113,11 +107,6 @@ Object >> isInterpreterPlugin [
 { #category : #'*VMMaker-translation support' }
 Object >> isTParseNode [
 	^false
-]
-
-{ #category : #'*VMMaker-translation support' }
-Object >> primitive: primName [
-	"For translation only; noop when running in Smalltalk."
 ]
 
 { #category : #'*VMMaker-translation support' }

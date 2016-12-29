@@ -63,6 +63,12 @@ SmartSyntaxInterpreterPlugin class >> translateDoInlining: inlineFlag locally: l
 ]
 
 { #category : #simulation }
+SmartSyntaxInterpreterPlugin >> primitive: primName [
+	<doNotGenerate>
+	^simulator primitive: primName
+]
+
+{ #category : #simulation }
 SmartSyntaxInterpreterPlugin >> primitive: primName parameters: parms [
 	<doNotGenerate>
 	^simulator primitive: primName parameters: parms

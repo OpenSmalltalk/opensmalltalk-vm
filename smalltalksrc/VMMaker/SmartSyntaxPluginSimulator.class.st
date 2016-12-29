@@ -4,15 +4,20 @@ Class {
 	#instVars : [
 		'actualPlugin',
 		'signatureMap',
-		'forMap'
+		'forMap',
+		'pluginClass'
 	],
 	#category : #'VMMaker-SmartSyntaxPlugins'
 }
 
 { #category : #simulation }
 SmartSyntaxPluginSimulator class >> newFor: anUnsimulatedInterpreterPluginClass [
+	| simulatorClass |
+	simulatorClass := anUnsimulatedInterpreterPluginClass subclasses
+						detect: [:sc| sc name endsWith: 'Simulator']
+						ifNone: [anUnsimulatedInterpreterPluginClass].
 	^self new
-		actualPlugin: anUnsimulatedInterpreterPluginClass new;
+		actualPlugin: simulatorClass new signatureClass: anUnsimulatedInterpreterPluginClass;
 		yourself
 ]
 
@@ -29,7 +34,8 @@ SmartSyntaxPluginSimulator >> actualPlugin [
 ]
 
 { #category : #accessing }
-SmartSyntaxPluginSimulator >> actualPlugin: aSmartSyntaxInterpreterPlugin [
+SmartSyntaxPluginSimulator >> actualPlugin: aSmartSyntaxInterpreterPlugin signatureClass: signatureClass [
+	pluginClass := signatureClass.
 	actualPlugin := aSmartSyntaxInterpreterPlugin.
 	actualPlugin simulator: self
 ]
@@ -37,6 +43,25 @@ SmartSyntaxPluginSimulator >> actualPlugin: aSmartSyntaxInterpreterPlugin [
 { #category : #simulation }
 SmartSyntaxPluginSimulator >> ccgLoad: forProlog expr: failBlock asBooleanValueFrom: anInteger [ 
 	^[:oop| interpreterProxy booleanValueOf: oop]
+]
+
+{ #category : #simulation }
+SmartSyntaxPluginSimulator >> ccgLoad: codeGen expr: exprBlock asCharPtrFrom: stackIndex andThen: validateBlock [
+	^[:oop|
+	   validateBlock value: oop.
+	   interpreterProxy cCoerce: (interpreterProxy firstIndexableField: oop) asInteger to: #'char *']
+]
+
+{ #category : #simulation }
+SmartSyntaxPluginSimulator >> ccgLoad: codeGen expr: exprBlock asFloatValueFrom: stackIndex [
+	self shouldBeImplemented
+]
+
+{ #category : #simulation }
+SmartSyntaxPluginSimulator >> ccgLoad: codeGen expr: exprBlock asIntPtrFrom: stackIndex andThen: validateBlock [
+	^[:oop|
+	   validateBlock value: oop.
+	   interpreterProxy cCoerce: (interpreterProxy firstIndexableField: oop) asInteger to: #'int *']
 ]
 
 { #category : #simulation }
@@ -73,8 +98,43 @@ SmartSyntaxPluginSimulator >> ccgLoad: forProlog expr: failBlock asMemberOfLarge
 ]
 
 { #category : #simulation }
+SmartSyntaxPluginSimulator >> ccgLoad: codeGen expr: exprBlock asOopPtrFrom: stackIndex andThen: validateBlock [
+	^[:oop|
+	   validateBlock value: oop.
+	   interpreterProxy cCoerce: (interpreterProxy firstIndexableField: oop) asInteger to: #'sqInt *']
+]
+
+{ #category : #simulation }
 SmartSyntaxPluginSimulator >> ccgLoad: forProlog expr: failBlock asRawOopFrom: anUndefinedObject [ 
 	^[:oop| oop]
+]
+
+{ #category : #simulation }
+SmartSyntaxPluginSimulator >> ccgLoad: codeGen expr: exprBlock asUnsignedPtrFrom: stackIndex andThen: validateBlock [
+	^[:oop|
+	   validateBlock value: oop.
+	   interpreterProxy cCoerce: (interpreterProxy firstIndexableField: oop) asInteger to: #'unsigned *']
+]
+
+{ #category : #simulation }
+SmartSyntaxPluginSimulator >> ccgLoad: codeGen expr: exprBlock asUnsignedValueFrom: stackIndex [
+	self shouldBeImplemented
+]
+
+{ #category : #simulation }
+SmartSyntaxPluginSimulator >> ccgLoad: codeGen expr: exprBlock asWBFloatPtrFrom: stackIndex [
+	self shouldBeImplemented
+]
+
+{ #category : #simulation }
+SmartSyntaxPluginSimulator >> ccgValBlock: aString [ 
+	^aString caseOf: {
+		['isBytes']			-> [	[:oop|
+								 interpreterProxy success: (interpreterProxy isBytes: oop).
+								 oop]].
+		['isWordsOrBytes']	-> [	[:oop|
+								 interpreterProxy success: (interpreterProxy isWordsOrBytes: oop).
+								 oop]] }
 ]
 
 { #category : #initialize }
@@ -115,9 +175,9 @@ SmartSyntaxPluginSimulator >> computeSignatureFor: selector from: tuple [
 SmartSyntaxPluginSimulator >> computeSignatureMap [
 	forMap := true. "true only while we compute the signatureMap"
 	signatureMap := Dictionary new.
-	actualPlugin class selectorsAndMethodsDo:
+	pluginClass selectorsAndMethodsDo:
 		[:s :m|
-		(m messages includesAnyOf: #(primitive:parameters: primitive:parameters:receiver:))
+		(m messages includesAnyOf: #(primitive: primitive:parameters: primitive:parameters:receiver:))
 			ifTrue: [self getPrimitiveSignatureFor: s]
 			ifFalse:
 				[(m pragmaAt: #export:) ifNotNil:
@@ -150,6 +210,9 @@ SmartSyntaxPluginSimulator >> doesNotUnderstand: aMessage [
 							ifFalse: [ex pass]].
 	interpreterProxy failed ifTrue:
 		[^nil].
+	result == actualPlugin ifTrue:
+		[interpreterProxy pop: interpreterProxy methodArgumentCount.
+		 ^nil].
 	interpreterProxy
 		pop: interpreterProxy methodArgumentCount + 1
 		thenPush: result.
@@ -200,6 +263,12 @@ SmartSyntaxPluginSimulator >> isPluginClass [
 SmartSyntaxPluginSimulator >> isSmartSyntaxPluginSimulator [
 	<doNotGenerate>
 	^true
+]
+
+{ #category : #simulation }
+SmartSyntaxPluginSimulator >> primitive: primNameString [
+	"If initializing, pass back the type signature.  If executing, answer nil."
+	^self primitive: primNameString parameters: #() receiver: nil
 ]
 
 { #category : #simulation }

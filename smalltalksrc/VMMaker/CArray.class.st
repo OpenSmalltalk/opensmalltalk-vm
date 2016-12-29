@@ -103,7 +103,8 @@ CArray >> at: offset put: val [
 
 { #category : #accessing }
 CArray >> cPtrAsOop [
-	^arrayBaseAddress + ptrOffset
+	ptrOffset = 0 ifFalse: [self error: 'offset must be zero'].
+	^arrayBaseAddress - interpreter baseHeaderSize
 ]
 
 { #category : #converting }
