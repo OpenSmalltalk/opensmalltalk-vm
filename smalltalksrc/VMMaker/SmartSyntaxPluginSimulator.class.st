@@ -5,7 +5,8 @@ Class {
 		'actualPlugin',
 		'signatureMap',
 		'forMap',
-		'pluginClass'
+		'pluginClass',
+		'logging'
 	],
 	#category : #'VMMaker-SmartSyntaxPlugins'
 }
@@ -193,11 +194,13 @@ SmartSyntaxPluginSimulator >> doesNotUnderstand: aMessage [
 	signature := signatureMap
 					at: aMessage selector
 					ifAbsent: [^super doesNotUnderstand: aMessage].
+	self log: [interpreterProxy coInterpreter printExternalHeadFrame; print: aMessage selector; cr].
 	selector := signature first.
 	parameters := signature second.
 	signature third "receiver block" value: (interpreterProxy stackValue: parameters size).
 	interpreterProxy failed ifTrue:
-		[^nil].
+		[self log: 'failed in marshalling'.
+		 ^nil].
 	result := [actualPlugin
 					perform: selector
 					withArguments: (parameters withIndexCollect:
@@ -205,14 +208,17 @@ SmartSyntaxPluginSimulator >> doesNotUnderstand: aMessage [
 										block value: (interpreterProxy stackValue: parameters size - index)])]
 					on: Notification
 					do: [:ex|
-						ex tag == #getSimulator
-							ifTrue: [ex resume: self]
-							ifFalse: [ex pass]].
+						ex tag == #getInterpreter ifTrue: [ex resume: interpreterProxy] ifFalse:
+						[ex tag == #getSimulator ifTrue: [ex resume: self]
+							ifFalse: [ex pass]]].
 	interpreterProxy failed ifTrue:
-		[^nil].
-	result == actualPlugin ifTrue:
-		[interpreterProxy pop: interpreterProxy methodArgumentCount.
+		[self log: 'failed in execution'.
 		 ^nil].
+	result == actualPlugin ifTrue:
+		[self log: '^self'.
+		 interpreterProxy pop: interpreterProxy methodArgumentCount.
+		 ^nil].
+	self log: [interpreterProxy coInterpreter print: '^'; shortPrintOop: result; flush].
 	interpreterProxy
 		pop: interpreterProxy methodArgumentCount + 1
 		thenPush: result.
@@ -265,6 +271,24 @@ SmartSyntaxPluginSimulator >> isSmartSyntaxPluginSimulator [
 	^true
 ]
 
+{ #category : #'simulation support' }
+SmartSyntaxPluginSimulator >> log: aBlockOrString [
+	logging ifTrue:
+		[aBlockOrString isBlock
+			ifTrue: [aBlockOrString value]
+			ifFalse: [interpreterProxy coInterpreter print: aBlockOrString; cr; flush]]
+]
+
+{ #category : #accessing }
+SmartSyntaxPluginSimulator >> logging [
+	^logging
+]
+
+{ #category : #accessing }
+SmartSyntaxPluginSimulator >> logging: anObject [
+	logging := anObject
+]
+
 { #category : #simulation }
 SmartSyntaxPluginSimulator >> primitive: primNameString [
 	"If initializing, pass back the type signature.  If executing, answer nil."
@@ -300,5 +324,6 @@ SmartSyntaxPluginSimulator >> respondsTo: aSelector [
 SmartSyntaxPluginSimulator >> setInterpreter: anInterpreterProxy [
 	interpreterProxy := anInterpreterProxy.
 	actualPlugin setInterpreter: anInterpreterProxy.
+	logging ifNil: [logging := false].
 	self computeSignatureMap
 ]

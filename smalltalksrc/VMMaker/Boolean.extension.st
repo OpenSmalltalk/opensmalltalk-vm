@@ -1,5 +1,12 @@
 Extension { #name : #Boolean }
 
+{ #category : #'*VMMaker-interpreter simulator' }
+Boolean >> asBooleanObj [
+	^(Notification new tag: #getInterpreter; signal)
+		ifNotNil: [:interpreter| interpreter booleanObjectOf: self]
+		ifNil: [self]
+]
+
 { #category : #'*VMMaker-plugin generation' }
 Boolean class >> ccg: cg generateCoerceToOopFrom: aNode on: aStream [
 	"N.B.  The is used both for generation and simulation so answer the result (for interpretation)"
