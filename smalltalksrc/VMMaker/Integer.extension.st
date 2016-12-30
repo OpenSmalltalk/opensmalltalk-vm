@@ -13,9 +13,8 @@ Integer >> addBreakpoint: address [
 
 { #category : #'*VMMaker-interpreter simulator' }
 Integer >> asCharPtr [
-	^(Notification new tag: #getSimulator; signal)
-		ifNotNil: [:simulator| | interpreter |
-				interpreter := simulator getInterpreter.
+	^(Notification new tag: #getInterpreter; signal)
+		ifNotNil: [:interpreter|
 				(interpreter firstIndexableField: self) asInteger
 					coerceTo: #'char *'
 					sim: interpreter]
@@ -49,8 +48,8 @@ Integer >> asPositiveIntegerObj [
 
 { #category : #'*VMMaker-interpreter simulator' }
 Integer >> asSmallIntegerObj [
-	^(Notification new tag: #getSimulator; signal)
-		ifNotNil: [:simulator| simulator getInterpreter integerObjectOf: self]
+	^(Notification new tag: #getInterpreter; signal)
+		ifNotNil: [:interpreter| interpreter integerObjectOf: self]
 		ifNil: [self]
 ]
 
