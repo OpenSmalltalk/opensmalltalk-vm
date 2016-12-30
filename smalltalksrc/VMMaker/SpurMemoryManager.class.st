@@ -10585,6 +10585,13 @@ SpurMemoryManager >> signalLowSpace: aValue [
 ]
 
 { #category : #'simulation only' }
+SpurMemoryManager >> signalSemaphoreWithIndex: index [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter signalSemaphoreWithIndex: index
+]
+
+{ #category : #'simulation only' }
 SpurMemoryManager >> signed32BitIntegerFor: integerValue [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>

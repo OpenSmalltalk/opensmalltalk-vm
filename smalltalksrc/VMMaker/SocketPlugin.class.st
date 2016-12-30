@@ -37,6 +37,11 @@ SocketPlugin class >> requiresPlatformFiles [
 	^true
 ]
 
+{ #category : #simulation }
+SocketPlugin class >> simulatorClass [
+	^SmartSyntaxPluginSimulator
+]
+
 { #category : #'initialize-release' }
 SocketPlugin >> initialiseModule [
 	<export: true>
@@ -45,7 +50,7 @@ SocketPlugin >> initialiseModule [
 	sCCTPfn := interpreterProxy ioLoadFunction: 'secCanConnectToPort' From: 'SecurityPlugin'.
 	sCCLOPfn := interpreterProxy ioLoadFunction: 'secCanListenOnPort' From: 'SecurityPlugin'.
 	sCCSOTfn := interpreterProxy ioLoadFunction: 'secCanCreateSocketOfType' From: 'SecurityPlugin'.
-	^self cCode: 'socketInit()' inSmalltalk:[true]
+	^self socketInit
 ]
 
 { #category : #primitives }
@@ -103,14 +108,11 @@ SocketPlugin >> primitiveDisableSocketAccess [
 
 { #category : #'security primitives' }
 SocketPlugin >> primitiveHasSocketAccess [
-	| hasAccess |
-	<export: true>
+	self primitive: 'primitiveHasSocketAccess'.
 	"If the security plugin can be loaded, use it to check . 
 	 If not, assume it's ok"
-	hasAccess :=	sHSAfn = 0
-					or: [self cCode: ' ((sqInt (*) (void)) sHSAfn)()' inSmalltalk:[true]].
-	interpreterProxy pop: 1.
-	interpreterProxy pushBool: hasAccess
+	^(sHSAfn = 0
+	  or: [self cCode: ' ((sqInt (*) (void)) sHSAfn)()' inSmalltalk: [true]]) asBooleanObj
 ]
 
 { #category : #primitives }

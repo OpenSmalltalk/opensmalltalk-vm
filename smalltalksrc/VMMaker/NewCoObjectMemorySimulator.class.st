@@ -493,6 +493,12 @@ NewCoObjectMemorySimulator >> signalFinalization: oop [
 ]
 
 { #category : #'simulation only' }
+NewCoObjectMemorySimulator >> signalSemaphoreWithIndex: index [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter signalSemaphoreWithIndex: index
+]
+
+{ #category : #'simulation only' }
 NewCoObjectMemorySimulator >> signed32BitIntegerFor: integerValue [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter signed32BitIntegerFor: integerValue
