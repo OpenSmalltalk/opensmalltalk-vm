@@ -106,7 +106,7 @@ SocketPluginSimulator >> simSocketHandleFrom: socketHandleCArray [
 { #category : #accessing }
 SocketPluginSimulator >> simulator: aSmartSyntaxPluginSimulator [
 	super simulator: aSmartSyntaxPluginSimulator.
-	aSmartSyntaxPluginSimulator logging: true
+	"aSmartSyntaxPluginSimulator logging: true"
 ]
 
 { #category : #'initialize-release' }
