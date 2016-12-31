@@ -29,16 +29,6 @@ SmartSyntaxPluginTMethod >> assign: variable expression: expression [
 		expression: expression
 ]
 
-{ #category : #private }
-SmartSyntaxPluginTMethod >> checkSuccessExpr [
-	"Return the parse tree for an expression that aborts the primitive if the successFlag is not true."
-
-	| expr |
-	expr := 'interpreterProxy failed ifTrue: [^nil]'.
-	^ self statementsFor: expr varName: ''
-
-]
-
 { #category : #'C code generation' }
 SmartSyntaxPluginTMethod >> emitCLocalsOn: aStream generator: aCodeGen [
 	"Emit a C function header for this method onto the given stream."
@@ -133,13 +123,17 @@ SmartSyntaxPluginTMethod >> fixUpReturnOneStmt: stmt on: sStream [
 		 sStream nextPut: (self pop: fullArgs size + 1 thenReturnExpr: stmt expression).
 		 sStream nextPut: self nullReturnExpr.
 		 ^nil].
-	"^ expr with guardchecking"
+	"^ expr with necessary guard checking"
 	self generateFailureGuardOn: sStream.
-	sStream nextPut: (self assign: (self oopVariable: '_return_value') expression: stmt expression).
-	self generateFailureGuardOn: sStream.
-	sStream nextPut: (self pop: fullArgs size + 1 thenReturnExpr: (self oopVariable: '_return_value')).
+	(self resultExpressionAlwaysFails: stmt expression)
+		ifTrue:
+			[sStream nextPut: stmt expression]
+		ifFalse:
+			[sStream nextPut: (self assign: (self oopVariable: '_return_value') expression: stmt expression).
+			 (self resultExpressionCanFail: stmt expression) ifTrue:
+				[self generateFailureGuardOn: sStream].
+			 sStream nextPut: (self pop: fullArgs size + 1 thenReturnExpr: (self oopVariable: '_return_value'))].
 	sStream nextPut: self nullReturnExpr
-
 ]
 
 { #category : #transforming }
@@ -247,24 +241,6 @@ SmartSyntaxPluginTMethod >> nullReturnExpr [
 
 	^ TReturnNode new
 		setExpression: (TVariableNode new setName: 'null')
-]
-
-{ #category : #private }
-SmartSyntaxPluginTMethod >> oldReplaceSizeMessages [
-	"Replace sends of the message 'size' with calls to sizeOfSTArrayFromCPrimitive."
-
-	| argExpr |
-	parseTree nodesDo: [:n |
-		(n isSend and: [n selector = #size]) ifTrue: [
-			argExpr := TSendNode new
-				setSelector: #+
-				receiver: n receiver
-				arguments: (Array with: (TConstantNode new setValue: 1)).
-			n
-				setSelector: #sizeOfSTArrayFromCPrimitive:
-				receiver: (TVariableNode new setName: 'interpreterProxy')
-				arguments: (Array with: argExpr)]].
-
 ]
 
 { #category : #accessing }
@@ -434,6 +410,19 @@ SmartSyntaxPluginTMethod >> replaceSizeMessages [
 				receiver: (TVariableNode new setName: 'interpreterProxy')
 				arguments: (Array with: n receiver)]].
 
+]
+
+{ #category : #private }
+SmartSyntaxPluginTMethod >> resultExpressionAlwaysFails: aTSendNode [
+	^aTSendNode selector == #success:
+	 and: [aTSendNode args first isConstant
+	 and: [aTSendNode args first value == false]]
+]
+
+{ #category : #private }
+SmartSyntaxPluginTMethod >> resultExpressionCanFail: aTSendNode [
+	"Neither asSmallIntegerObj nor asBooleanObj can fail."
+	^(#(asSmallIntegerObj asBooleanObj) includes: aTSendNode selector) not
 ]
 
 { #category : #initializing }
