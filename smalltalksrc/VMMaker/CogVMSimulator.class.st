@@ -590,7 +590,7 @@ CogVMSimulator >> cloneSimulationWindow [
 
 { #category : #initialization }
 CogVMSimulator >> close [  "close any files that ST may have opened, etc"
-	pluginList do: [:plugin| plugin ~~ self ifTrue: [plugin close]]
+	pluginList do: [:assoc| | plugin | plugin := assoc value. plugin ~~ self ifTrue: [plugin close]]
 ]
 
 { #category : #'primitive support' }
@@ -3217,6 +3217,13 @@ CogVMSimulator >> printHexnp: anInteger [
 
 	traceOn ifTrue:
 		[transcript nextPutAll: ((anInteger ifNil: [0]) asInteger storeStringBase: 16)]
+]
+
+{ #category : #'debug printing' }
+CogVMSimulator >> printHexnpnp: anInteger [
+	"Print n in hex, in the form '1234', unpadded"
+	traceOn ifTrue:
+		[transcript nextPutAll: ((anInteger ifNil: [0]) printStringBase: 16)]
 ]
 
 { #category : #'debug printing' }
