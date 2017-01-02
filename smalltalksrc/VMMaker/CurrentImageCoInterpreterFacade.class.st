@@ -941,6 +941,11 @@ CurrentImageCoInterpreterFacade >> printHexnp: anInteger [
 ]
 
 { #category : #printing }
+CurrentImageCoInterpreterFacade >> printHexnpnp: anInteger [
+	coInterpreter transcript nextPutAll: (anInteger printStringBase: 16)
+]
+
+{ #category : #printing }
 CurrentImageCoInterpreterFacade >> printNum: anInteger [
 	coInterpreter transcript print: anInteger
 ]
