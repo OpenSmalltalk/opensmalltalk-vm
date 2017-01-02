@@ -462,9 +462,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
 	self.lastSeenKeyBoardModifierDetails = aKeyBoardStrokeDetails;
-#if PharoVM
     [(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordKeyDownEvent: theEvent fromView: self];
-#endif
 }
 
 - (void)doCommandBySelector:(SEL)aSelector {
