@@ -2238,6 +2238,13 @@ StackInterpreterSimulator >> printHexnp: anInteger [
 ]
 
 { #category : #'debug printing' }
+StackInterpreterSimulator >> printHexnpnp: anInteger [
+	"Print n in hex, in the form '1234', unpadded"
+	traceOn ifTrue:
+		[transcript nextPutAll: ((anInteger ifNil: [0]) printStringBase: 16)]
+]
+
+{ #category : #'debug printing' }
 StackInterpreterSimulator >> printLCS [
 	self printCallStackFP: localFP
 ]

@@ -17198,6 +17198,12 @@ StackInterpreter >> printHexnp: n [
 ]
 
 { #category : #'debug printing' }
+StackInterpreter >> printHexnpnp: n [
+	"Print n in hex, in the form '1234', unpadded"
+	self print: '%lx' f: (self cCoerceSimple: n to: #'unsigned long')
+]
+
+{ #category : #'debug printing' }
 StackInterpreter >> printLikelyImplementorsOfSelector: selector [
 	"Print all methods whose penultimate literal is either selector,
 	 or an object whose first inst var is the method and whose
