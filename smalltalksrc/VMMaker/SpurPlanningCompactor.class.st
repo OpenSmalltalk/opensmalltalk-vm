@@ -50,7 +50,8 @@ Class {
 		'savedFirstFieldsSpaceWasAllocated',
 		'firstFieldOfRememberedSet',
 		'interestingObj',
-		'anomaly'
+		'anomaly',
+		'objectAfterLastMobileObject'
 	],
 	#pools : [
 		'SpurMemoryManagementConstants',
@@ -100,18 +101,21 @@ SpurPlanningCompactor >> coInterpreter: aVMSimulator [
 SpurPlanningCompactor >> compact [
 	"Sweep all of old space, sliding unpinned marked objects down over free and unmarked objects.
 	 Let the segmentManager mark which segments contain pinned objects via notePinned:."
-	| onePass |
+	| onePass firstPass |
 	<inline: #never> "for profiling"
 	self initializeScanCheckingForFullyCompactedHeap ifTrue:
 		[^self unmarkObjectsInFullyCompactedHeap].
 	self initializeCompaction.
+	firstPass := true.
 	[onePass := self planCompactSavingForwarders.
 	 self assert: (self validRelocationPlanInPass: onePass) = 0.
+	 objectAfterLastMobileObject := manager objectAfter: lastMobileObject.
 	 self updatePointers.
-	 self copyAndUnmark.
+	 self copyAndUnmark: firstPass.
 	 manager checkFreeSpace: GCModeFull.
 	 onePass or: [biasForGC]] whileFalse:
-		[self reinitializeScan;
+		[firstPass := false.
+		 self reinitializeScan;
 			updateSavedFirstFieldsSpaceIfNecessary].
 	self endCompaction
 ]
@@ -122,7 +126,9 @@ SpurPlanningCompactor >> continueCopyAndUnmarkMobileObjectsFrom: anUnpinnedEntit
 	 it cannot compact, but savedFirstFieldsSpace is still not full.  Continue the pass with a
 	 new firstFreeObject, resetting it before continuing.
 	 Answer if the end of the heap was reached (savedFirstFieldsSpace has not overflowed)."
+	<var: 'initialTop' type: #usqInt>
 	| result top savedFirstFreeObject savedFirstMobileObject nextFreeObject |
+	<var: 'top' type: #usqInt>
 	self assert: (self oop: anUnpinnedEntity isLessThan: manager endOfMemory).
 	self deny: (manager isPinned: anUnpinnedEntity).
 	savedFirstMobileObject := firstMobileObject.
@@ -131,7 +137,7 @@ SpurPlanningCompactor >> continueCopyAndUnmarkMobileObjectsFrom: anUnpinnedEntit
 	"Copy and unmark the run of immobile objects to match the enumeration in continuePlanCompactSavingForwardersFrom:toFinger:."
 	manager allOldSpaceEntitiesFrom: anUnpinnedEntity to: firstMobileObject do:
 		[:o|
-		 (o < firstMobileObject
+		 ((self oop: o isLessThan: firstMobileObject)
 		  and: [manager isMarked: o]) ifTrue:
 			[(manager isPinned: o)
 				ifTrue:
@@ -161,7 +167,9 @@ SpurPlanningCompactor >> continuePlanCompactSavingForwardersFrom: anUnpinnedEnti
 	 it cannot compact, but savedFirstFieldsSpace is still not full.  Continue the pass with a
 	 new firstFreeObject, resetting it before continuing.
 	 Answer if the end of the heap was reached (savedFirstFieldsSpace has not overflowed)."
+	<var: 'initialToFinger' type: #usqInt>
 	| result toFinger savedFirstMobileObject savedFirstFreeObject nextFreeObject |
+	<var: 'toFinger' type: #usqInt>
 	self assert: (self oop: anUnpinnedEntity isLessThan: manager endOfMemory).
 	self deny: (manager isPinned: anUnpinnedEntity).
 	toFinger := initialToFinger.
@@ -171,7 +179,7 @@ SpurPlanningCompactor >> continuePlanCompactSavingForwardersFrom: anUnpinnedEnti
 	 and lastMobileObject must be forwarded.  Return if savedFirstFieldsSpace fills up."
 	manager allOldSpaceEntitiesFrom: anUnpinnedEntity to: firstMobileObject do:
 		[:o| | newTop |
-		 (o < firstMobileObject
+		 ((self oop: o isLessThan: firstMobileObject)
 		  and: [manager isMarked: o]) ifTrue:
 			[(manager isPinned: o)
 				ifTrue: [self assert: (manager addressAfter: o) <= initialToFinger]
@@ -185,7 +193,7 @@ SpurPlanningCompactor >> continuePlanCompactSavingForwardersFrom: anUnpinnedEnti
 	firstMobileObject := savedFirstMobileObject.
 	nextFreeObject ifNil:
 		[^true].
-	self assert: nextFreeObject > lastMobileObject.
+	self assert: (self oop: nextFreeObject isGreaterThan: lastMobileObject).
 	manager allOldSpaceEntitiesFrom: (manager objectAfter: lastMobileObject) to: nextFreeObject do:
 		[:o|
 		 self deny: ((manager isMarked: o) and: [(manager isPinned: o) not])].
@@ -202,7 +210,9 @@ SpurPlanningCompactor >> continueUpdatePointersInMobileObjectsFrom: anUnpinnedEn
 	 planCompactSavingForwarders cannot compact, but savedFirstFieldsSpace is still not full.
 	 Continue the pass with a new firstFreeObject , resetting it before continuing.
 	 Answer if the end of the heap was reached (savedFirstFieldsSpace has not overflowed)."
+	<var: 'initialTop' type: #usqInt>
 	| result top savedFirstFreeObject savedFirstMobileObject nextFreeObject |
+	<var: 'top' type: #usqInt>
 	self assert: (self oop: anUnpinnedEntity isLessThan: manager endOfMemory).
 	self deny: (manager isPinned: anUnpinnedEntity).
 	savedFirstMobileObject := firstMobileObject.
@@ -211,7 +221,7 @@ SpurPlanningCompactor >> continueUpdatePointersInMobileObjectsFrom: anUnpinnedEn
 	"Update the run of immobile objects to match the enumeration in continuePlanCompactSavingForwardersFrom:toFinger:."
 	manager allOldSpaceEntitiesFrom: anUnpinnedEntity to: firstMobileObject do:
 		[:o|
-		 (o < firstMobileObject
+		 ((self oop: o isLessThan: firstMobileObject)
 		  and: [manager isMarked: o]) ifTrue:
 			[(manager isPinned: o)
 				ifTrue: [self updatePointersIn: o]
@@ -230,19 +240,20 @@ SpurPlanningCompactor >> continueUpdatePointersInMobileObjectsFrom: anUnpinnedEn
 ]
 
 { #category : #compaction }
-SpurPlanningCompactor >> copyAndUnmark [
+SpurPlanningCompactor >> copyAndUnmark: firstPass [
 	"Sweep the heap, unmarking all objects and moving mobile objects to their correct positions,
 	 restoring their savedFirstFields."
 	| onePass |
 	self logPhase: 'copying and unmarking...'.
-	self unmarkInitialImmobileObjects.
+	firstPass ifTrue:
+		[self unmarkInitialImmobileObjects].
 	"If savedFirstFieldsSpace is empty there is nothing to move, and no second pass."
 	savedFirstFieldsSpace top < savedFirstFieldsSpace start ifTrue:
-		[self assert: firstMobileObject >= manager endOfMemory.
+		[self assert: (self oop: firstMobileObject isGreaterThanOrEqualTo: manager endOfMemory).
 		 ^self].
 	onePass := self copyAndUnmarkMobileObjectsWithTop: savedFirstFieldsSpace start - manager bytesPerOop.
-	onePass ifFalse:
-		[self unmarkObjectsOverflowingSavedFirstFieldsSpace]
+	(onePass not and: [biasForGC]) ifTrue: "only ever one pass if biasForGC is true."
+		[self unmarkObjectsAfterLastMobileObject]
 ]
 
 { #category : #compaction }
@@ -250,8 +261,10 @@ SpurPlanningCompactor >> copyAndUnmarkMobileObjectsWithTop: initialTop [
 	"Sweep the mobile portion of the heap, moving objects to their eventual locations, and clearing their marked bits.
 	 Remember to update the savedFirstFields of pointer objects, as these have been forwarded.
 	 This enumeration matches those in planCompactSavingForwarders and updatePointersInMobileObjects."
-
+	<var: 'initialTop' type: #usqInt>
 	| toFinger top previousPin |
+	<var: 'top' type: #usqInt>
+	<var: 'toFinger' type: #usqInt>
 	toFinger := manager startOfObject: firstFreeObject.
 	top := initialTop.
 	self deny: (manager isMarked: firstFreeObject).
@@ -259,6 +272,9 @@ SpurPlanningCompactor >> copyAndUnmarkMobileObjectsWithTop: initialTop [
 		[:o|
 		 self check: o.
 		 self assert: (previousPin isNil or: [(manager isMarked: previousPin) and: [toFinger < previousPin]]).
+		 self assert: (savedFirstFieldsSpaceWasAllocated
+					or: [savedFirstFieldsSpace limit <= manager firstObject asUnsignedInteger
+					or: [toFinger < top]]).
 		 (manager isMarked: o) ifTrue:
 			[(manager isPinned: o)
 				ifTrue:
@@ -288,7 +304,7 @@ SpurPlanningCompactor >> copyAndUnmarkMobileObjectsWithTop: initialTop [
 							[manager addFreeChunkWithBytes: availableSpace at: toFinger].
 						 toFinger := manager addressAfter: previousPin.
 						 next := manager objectStartingAt: toFinger.
-						 next >= o ifTrue:
+						 (self oop: next isGreaterThanOrEqualTo: o) ifTrue:
 							[^self continueCopyAndUnmarkMobileObjectsFrom: o withTop: top - manager bytesPerOop].
 						 previousPin := ((manager isMarked: next) and: [manager isPinned: next]) ifTrue: [next]].
 					 toFinger := self copyAndUnmarkObject: o to: toFinger firstField: (manager longAt: top)]]].
@@ -401,9 +417,10 @@ SpurPlanningCompactor >> initializeCompaction [
 
 { #category : #compaction }
 SpurPlanningCompactor >> initializeScanCheckingForFullyCompactedHeap [
-	"Scan for firstFreeObject and firstMobileObject from the start of memory.
-	 Answer if the heap is already fully compacted."
-	firstFreeObject := manager hiddenRootsObject.
+	"Scan for firstFreeObject and firstMobileObject from the start of memory (actually
+	 from lastMobileObject so that reInitializeScan can work on subsequent passes).
+	 Answer if the heap is already fully compacted.  Set "
+	firstFreeObject := lastMobileObject := manager hiddenRootsObject.
 	self reinitializeScan.
 	^firstMobileObject >= manager endOfMemory
 ]
@@ -443,13 +460,14 @@ SpurPlanningCompactor >> manager: aSpurNBitMMXEndianSimulator [
 ]
 
 { #category : #private }
-SpurPlanningCompactor >> numPointerSlotsWhileCompactingOf: obj withFormat: fmt savedFirstFieldPointer: firstFieldPtrOrNil [
+SpurPlanningCompactor >> numPointerSlotsWhileCompactingOf: obj withFormat: fmt savedFirstFieldPointer: firstFieldPtr [
 	"This is a version of SpurMemoryManager>>numPointerSlotsOf: that deals with the
 	 possibility of obj being a CompiledMethod whose header is in savedFirstFieldsSpace.
 	 Answer the number of pointer fields in the given object.
 	 Works with CompiledMethods, as well as ordinary objects."
 	<inline: true>
 	| contextSize numLiterals header |
+	self assert: (firstFieldPtr notNil and: [self isMobile: obj]).
 	fmt <= manager lastPointerFormat ifTrue:
 		[(fmt = manager indexablePointersFormat
 		  and: [manager isContextNonImm: obj]) ifTrue:
@@ -461,10 +479,7 @@ SpurPlanningCompactor >> numPointerSlotsWhileCompactingOf: obj withFormat: fmt s
 	fmt < manager firstCompiledMethodFormat ifTrue: [^0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes"
-	self assert: firstFieldPtrOrNil notNil == (self isMobile: obj).
-	header := firstFieldPtrOrNil
-				ifNil: [manager methodHeaderOf: obj]
-				ifNotNil: [manager methodHeaderFromSavedFirstField: (manager longAt: firstFieldPtrOrNil)].
+	header := manager methodHeaderFromSavedFirstField: (manager longAt: firstFieldPtr).
 	numLiterals := manager literalCountOfMethodHeader: header.
 	^numLiterals + LiteralStart
 ]
@@ -483,6 +498,8 @@ SpurPlanningCompactor >> planCompactSavingForwarders [
 	 This enumeration matches those in updatePointersInMobileObjects and copyAndUnmarkMobileObjects."
 
 	| toFinger top previousPin |
+	<var: 'top' type: #usqInt>
+	<var: 'toFinger' type: #usqInt>
 	savedFirstFieldsSpace top < savedFirstFieldsSpace start ifTrue:
 		[self logPhase: 'planning...'].
 	toFinger := manager startOfObject: firstFreeObject.
@@ -492,6 +509,9 @@ SpurPlanningCompactor >> planCompactSavingForwarders [
 		[:o|
 		 self check: o.
 		 self assert: (previousPin isNil or: [(manager isMarked: previousPin) and: [toFinger < previousPin]]).
+		 self assert: (savedFirstFieldsSpaceWasAllocated
+					or: [savedFirstFieldsSpace limit <= manager firstObject asUnsignedInteger
+					or: [toFinger < top]]).
 		 (manager isMarked: o) ifTrue:
 			[(manager isPinned: o)
 				ifTrue: "The empty gaps between two adjacent pinned objects (when not filled below) are freed."
@@ -514,7 +534,7 @@ SpurPlanningCompactor >> planCompactSavingForwarders [
 						  Move toFinger beyond previousPin and update previousPin appropriately."
 						 toFinger := manager addressAfter: previousPin.
 						 next := manager objectStartingAt: toFinger.
-						 next >= o ifTrue:
+						 (self oop: next isGreaterThanOrEqualTo: o) ifTrue:
 							[savedFirstFieldsSpace top: top - manager bytesPerOop.
 							 ^self continuePlanCompactSavingForwardersFrom: o toFinger: toFinger].
 						 previousPin := ((manager isMarked: next) and: [manager isPinned: next]) ifTrue: [next]].
@@ -525,8 +545,10 @@ SpurPlanningCompactor >> planCompactSavingForwarders [
 
 { #category : #compaction }
 SpurPlanningCompactor >> reinitializeScan [
+	"Search for firstFreeObject and firstMobileObject from lastMobileObject (which is
+	 set to the hiddenRootsObject on the first pass)."
 	firstMobileObject := manager endOfMemory.
-	firstFreeObject := self scanForFirstFreeAndFirstMobileObjectFrom: firstFreeObject.
+	firstFreeObject := self scanForFirstFreeAndFirstMobileObjectFrom: lastMobileObject.
 	firstFreeObject ifNil:
 		[self error: 'uncompactable heap; no unmarked objects found'].
 	mobileStart := manager startOfObject: firstFreeObject
@@ -643,8 +665,17 @@ SpurPlanningCompactor >> unmarkInitialImmobileObjects [
 	manager allOldSpaceObjectsFrom: manager firstObject do:
 		[:o|
 		self check: o.
-		o >= firstMobileObject ifTrue:
+		(self oop: o isGreaterThanOrEqualTo: firstMobileObject) ifTrue:
 			[^self].
+		manager setIsMarkedOf: o to: false]
+]
+
+{ #category : #compaction }
+SpurPlanningCompactor >> unmarkObjectsAfterLastMobileObject [
+	"Sweep the final immobile heap, unmarking all objects up to the end of memory."
+	manager allOldSpaceObjectsFrom: objectAfterLastMobileObject do:
+		[:o|
+		self check: o.
 		manager setIsMarkedOf: o to: false]
 ]
 
@@ -652,11 +683,6 @@ SpurPlanningCompactor >> unmarkInitialImmobileObjects [
 SpurPlanningCompactor >> unmarkObjectsInFullyCompactedHeap [
 	self unmarkInitialImmobileObjects.
 	manager unmarkSurvivingObjectsForCompact
-]
-
-{ #category : #compaction }
-SpurPlanningCompactor >> unmarkObjectsOverflowingSavedFirstFieldsSpace [
-	self shouldBeImplemented
 ]
 
 { #category : #private }
@@ -702,28 +728,27 @@ SpurPlanningCompactor >> updatePointersIn: obj [
 ]
 
 { #category : #compaction }
-SpurPlanningCompactor >> updatePointersIn: obj savedFirstFieldPointer: firstFieldPtrOrNil [
+SpurPlanningCompactor >> updatePointersIn: obj savedFirstFieldPointer: firstFieldPtr [
 	"Sweep the pointer fields in obj, updating all references to mobile objects to their eventual locations.
-	 firstFieldPtrOrNil is supplied for mobile objects so that the saved first field can be updated, and so that
+	 firstFieldPtr is supplied for mobile objects so that the saved first field can be updated, and so that
 	 the first field of a compiled method (which is its header, or reference to a CogMethod holding its header)
 	 can be retrieved."
 	<inline: false>
-	| fmt numPointerSlots |
+	| fmt numPointerSlots oop fwd |
 	fmt := manager formatOf: obj.
-	numPointerSlots := self numPointerSlotsWhileCompactingOf: obj withFormat: fmt savedFirstFieldPointer: firstFieldPtrOrNil.
+	numPointerSlots := self numPointerSlotsWhileCompactingOf: obj withFormat: fmt savedFirstFieldPointer: firstFieldPtr.
 	(fmt <= manager lastPointerFormat "excludes CompiledMethod"
 	 and: [numPointerSlots > 0]) ifTrue:
-		[| oop fwd |
-		 "Relocate the saved first field; Note that CompiledMethods can be excluded since their
+		["Relocate the saved first field; Note that CompiledMethods can be excluded since their
 		  first field is either a SmallInteger or a reference to a CogMethod outside of oldSpace."
-		 oop := manager longAt: firstFieldPtrOrNil.
+		 oop := manager longAt: firstFieldPtr.
 		 ((manager isNonImmediate: oop) and: [self isMobile: oop]) ifTrue:
 			[self assert: (manager isMarked: oop).
 			 fwd := manager fetchPointer: 0 ofObject: oop.
 			 self assert: (self isPostMobile: fwd).
-			 manager longAt: firstFieldPtrOrNil put: fwd]].
+			 manager longAt: firstFieldPtr put: fwd]].
 	1 to: numPointerSlots - 1 do:
-		[:i| | oop fwd |
+		[:i|
 		 oop := manager fetchPointer: i ofObject: obj.
 		 ((manager isNonImmediate: oop) and: [self isMobile: oop]) ifTrue:
 			[self assert: ((manager isMarked: oop) or: [obj = manager hiddenRootsObject]).
@@ -764,8 +789,10 @@ SpurPlanningCompactor >> updatePointersInMobileObjectsWithTop: initialTop [
 	"Sweep the mobile portion of the heap, updating all references to objects to their eventual locations.
 	 Remember to update the savedFirstFields of pointer objects, as these have been forwarded.
 	 This enumeration matches that in planCompactSavingForwarders and copyAndUnmarkMobileObjects."
-
+	<var: 'initialTop' type: #usqInt>
 	| toFinger top previousPin |
+	<var: 'top' type: #usqInt>
+	<var: 'toFinger' type: #usqInt>
 	toFinger := manager startOfObject: firstFreeObject.
 	top := initialTop.
 	self deny: (manager isMarked: firstFreeObject).
@@ -793,7 +820,7 @@ SpurPlanningCompactor >> updatePointersInMobileObjectsWithTop: initialTop [
 						  Move toFinger beyond previousPin and update previousPin appropriately."
 						 toFinger := manager addressAfter: previousPin.
 						 next := manager objectStartingAt: toFinger.
-						 next >= o ifTrue:
+						 (self oop: next isGreaterThanOrEqualTo: o) ifTrue:
 							[^self continueUpdatePointersInMobileObjectsFrom: o withTop: top - manager bytesPerOop].
 						 previousPin := ((manager isMarked: next) and: [manager isPinned: next]) ifTrue: [next]].
 					 self updatePointersIn: o savedFirstFieldPointer: top.
@@ -879,6 +906,8 @@ SpurPlanningCompactor >> validRelocationPlanInPass: onePass [
 	 have sane forwarding addresses, and that savedFirstFieldsSpace is of
 	 matching capacity.  Otherwise answer an error code identifying the anomaly."
 	| nMobiles toFinger |
+	<var: 'toFinger' type: #usqInt>
+	<var: 'destination' type: #usqInt>
 	nMobiles := 0.
 	toFinger := mobileStart.
 	anomaly := nil.
@@ -892,7 +921,7 @@ SpurPlanningCompactor >> validRelocationPlanInPass: onePass [
 				 destination >= toFinger ifFalse:
 					[anomaly := o. ^1].
 				 toFinger := toFinger + (manager bytesInObject: o).
-				 o > lastMobileObject ifTrue:
+				 (self oop: o isGreaterThan: lastMobileObject) ifTrue:
 					[anomaly := o. ^2].
 				 o = lastMobileObject ifTrue:
 					[^savedFirstFieldsSpace top - savedFirstFieldsSpace start / manager bytesPerOop + 1
@@ -902,5 +931,5 @@ SpurPlanningCompactor >> validRelocationPlanInPass: onePass [
 	^savedFirstFieldsSpace top - savedFirstFieldsSpace start / manager bytesPerOop + 1
 	  = nMobiles
 		ifTrue: [0]
-		ifFalse: [3]
+		ifFalse: [4]
 ]
