@@ -88,7 +88,10 @@ SpurPlanningCompactor >> biasForSnapshot [
 { #category : #private }
 SpurPlanningCompactor >> check: obj [
 	<inline: true>
-	self cCode: '' inSmalltalk: [obj = interestingObj ifTrue: [self halt]]
+	self cCode: '' inSmalltalk: [obj = interestingObj ifTrue: [self halt]].
+	"this debugged the misuse of the largest free chunk:"
+	"(manager checkForLeaks bitAnd: GCModeFull+GCModeFreeSpace) = GCModeFull ifTrue:
+		[self deny: ((manager isEnumerableObject: obj) and: [(manager heapMapAtWord: obj) = 0])]"
 ]
 
 { #category : #'instance initialization' }
@@ -271,7 +274,7 @@ SpurPlanningCompactor >> copyAndUnmarkMobileObjectsWithTop: initialTop [
 	manager allOldSpaceEntitiesForCompactingFrom: firstFreeObject do:
 		[:o|
 		 self check: o.
-		 self assert: (previousPin isNil or: [(manager isMarked: previousPin) and: [toFinger < previousPin]]).
+		 self assert: (previousPin isNil or: [(manager isMarked: previousPin) and: [toFinger <= previousPin]]).
 		 self assert: (savedFirstFieldsSpaceWasAllocated
 					or: [savedFirstFieldsSpace limit <= manager firstObject asUnsignedInteger
 					or: [toFinger < top]]).
@@ -286,7 +289,7 @@ SpurPlanningCompactor >> copyAndUnmarkMobileObjectsWithTop: initialTop [
 						 limit := manager startOfObject: previousPin.
 						 manager addFreeChunkWithBytes: limit - toFinger at: toFinger.
 						 toFinger := manager addressAfter: previousPin.
-						 self assert: toFinger < (manager startOfObject: o)].
+						 self assert: toFinger <= (manager startOfObject: o)].
 					 previousPin := o]
 				ifFalse:
 					[| availableSpace bytes next |
@@ -508,7 +511,7 @@ SpurPlanningCompactor >> planCompactSavingForwarders [
 	manager allOldSpaceEntitiesFrom: firstFreeObject do:
 		[:o|
 		 self check: o.
-		 self assert: (previousPin isNil or: [(manager isMarked: previousPin) and: [toFinger < previousPin]]).
+		 self assert: (previousPin isNil or: [(manager isMarked: previousPin) and: [toFinger <= previousPin]]).
 		 self assert: (savedFirstFieldsSpaceWasAllocated
 					or: [savedFirstFieldsSpace limit <= manager firstObject asUnsignedInteger
 					or: [toFinger < top]]).
@@ -518,7 +521,7 @@ SpurPlanningCompactor >> planCompactSavingForwarders [
 					[previousPin ifNotNil:
 						[self assert: (manager startOfObject: previousPin) - toFinger >= (manager allocationUnit * 2).
 						 toFinger := manager addressAfter: previousPin.
-						 self assert: toFinger < (manager startOfObject: o)].
+						 self assert: toFinger <= (manager startOfObject: o)].
 					 previousPin := o]
 				ifFalse:
 					[| availableSpace bytes next |
@@ -799,7 +802,7 @@ SpurPlanningCompactor >> updatePointersInMobileObjectsWithTop: initialTop [
 	manager allOldSpaceEntitiesFrom: firstFreeObject do:
 		[:o|
 		 self check: o.
-		 self assert: (previousPin isNil or: [(manager isMarked: previousPin) and: [toFinger < previousPin]]).
+		 self assert: (previousPin isNil or: [(manager isMarked: previousPin) and: [toFinger <= previousPin]]).
 		 (manager isMarked: o) ifTrue:
 			[(manager isPinned: o)
 				ifTrue: "The empty gaps between two adjacent pinned objects (when not filled below) are freed."
@@ -872,11 +875,12 @@ SpurPlanningCompactor >> useEdenForSavedFirstFieldsSpace [
 
 { #category : #'space management' }
 SpurPlanningCompactor >> useFreeChunkForSavedFirstFieldsSpace: highestSuitableFreeBlock [
-	"Use the supplied free chunk to hold the savedFirstFieldsSpace.
-	 Invoked when eden is found not to be big enough for the job."
+	"Use the supplied free chunk to hold the savedFirstFieldsSpace. Invoked when
+	 eden is found not to be big enough for the job. Avoid the first few fields so as
+	 not to destroy the free chunk and there by confuse object enumeration."
 	<inline: true>
 	savedFirstFieldsSpace
-		start: highestSuitableFreeBlock;
+		start: highestSuitableFreeBlock + (manager freeChunkLargerIndex * manager bytesPerOop);
 		limit: (manager addressAfter: highestSuitableFreeBlock)
 ]
 
