@@ -603,8 +603,7 @@ StackInterpreterSimulator >> externalWriteBackHeadFramePointers [
 
 { #category : #'interpreter shell' }
 StackInterpreterSimulator >> fetchByte [
-
-	^ self byteAt: (localIP := localIP + 1).
+	^objectMemory byteAt: (localIP := localIP + 1).
 ]
 
 { #category : #'control primitives' }
