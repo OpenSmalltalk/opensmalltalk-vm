@@ -9355,7 +9355,7 @@ SpurMemoryManager >> printEntity: oop [
 		[coInterpreter
 			space;
 			print: ((self formatOf: oop) <= 16rF ifTrue: ['f:0'] ifFalse: ['f:']);
-			printHexnp: (self formatOf: oop);
+			printHexnpnp: (self formatOf: oop);
 			print: ((self isGrey: oop) ifTrue: [' g'] ifFalse: [' .']);
 			print: ((self isImmutable: oop) ifTrue: ['i'] ifFalse: ['.']);
 			print: ((self isMarked: oop) ifTrue: ['m'] ifFalse: ['.']);
