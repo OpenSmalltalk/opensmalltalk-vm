@@ -406,10 +406,8 @@ CogVMSimulator >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 	"self printOop: rcvr"
 	self logSend: selector.
 	cogit assertCStackWellAligned.
-	self maybeCheckStackDepth: (selector = (objectMemory splObj: SelectorAboutToReturn)
-										ifTrue: [numArgs]
-										ifFalse: [numArgs + 1])
-		sp: stackPointer + objectMemory wordSize
+	self maybeCheckStackDepth: numArgs + 1
+		sp: stackPointer
 		pc: (stackPages longAt: stackPointer).
 	^super ceSendAbort: selector to: rcvr numArgs: numArgs
 ]
@@ -614,7 +612,7 @@ CogVMSimulator >> collectSends [
 
 { #category : #'cog jit support' }
 CogVMSimulator >> commenceCogCompiledCodeCompaction [
-	self halt.
+	"self halt."
 	^super commenceCogCompiledCodeCompaction
 ]
 
@@ -964,6 +962,19 @@ CogVMSimulator >> extBBytecode [
 	^super extBBytecode
 ]
 
+{ #category : #'return bytecodes' }
+CogVMSimulator >> externalAboutToReturn: resultOop through: aContext [
+	self transcript ensureCr.
+	self print: 'externalAboutToReturn: '; printOopShortInner: resultOop;
+		print: ' through: '; printOopShortInner: aContext;
+		print: ' in '; printActivationNameFor: (self frameMethodObject: framePointer)
+					receiver: (self frameReceiver: framePointer)
+					isBlock: (self frameIsBlockActivation: framePointer)
+					firstTemporary: (self temporary: 0 in: framePointer);
+		cr.
+	^super externalAboutToReturn: resultOop through: aContext
+]
+
 { #category : #'debugging traps' }
 CogVMSimulator >> externalCannotReturn: resultOop from: aContext [
 	self halt.
@@ -1022,6 +1033,16 @@ CogVMSimulator >> externalInstVar: index ofContext: aContext put: anOop [
 	"(self stringOf: (self penultimateLiteralOf: (self fetchPointer: MethodIndex ofObject: aContext))) = #indexOf:startingAt:ifAbsent: ifTrue:
 		[self halt]."
 	^super externalInstVar: index ofContext: aContext put: anOop
+]
+
+{ #category : #'frame access' }
+CogVMSimulator >> externalSetStackPageAndPointersForSuspendedContextOfProcess: aProcess [
+	"Override to check stack depth (hence in the simulator only)."
+	super externalSetStackPageAndPointersForSuspendedContextOfProcess:  aProcess.
+	(self isMachineCodeFrame: framePointer) ifTrue:
+		[self maybeCheckStackDepth: 0
+			sp: stackPointer
+			pc: instructionPointer]
 ]
 
 { #category : #'interpreter shell' }
