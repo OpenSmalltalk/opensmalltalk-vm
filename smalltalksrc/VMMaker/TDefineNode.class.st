@@ -7,7 +7,7 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
-{ #category : #testing }
+{ #category : #accessing }
 TDefineNode >> constantNumbericValueOrNil [
 	"Override so that named constants don't get elided."
 	^nil
