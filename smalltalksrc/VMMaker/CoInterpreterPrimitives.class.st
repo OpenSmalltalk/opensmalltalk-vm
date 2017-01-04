@@ -950,14 +950,14 @@ CoInterpreterPrimitives >> unmarkAllFrames [
 		thePage := stackPages stackPageAt: i.
 		(stackPages isFree: thePage) ifFalse:
 			[theFP := thePage  headFP.
-			 [methodField := self longAt: theFP + FoxMethod.
+			 [methodField := stackPages longAt: theFP + FoxMethod.
 			 methodField asUnsignedInteger < objectMemory startOfMemory
 				ifTrue:
 					[(methodField bitAnd: 4) ~= 0 ifTrue:
 						[self longAt: theFP + FoxMethod put: methodField - 4]]
 				ifFalse:
-					[flags := self longAt: theFP + FoxIFrameFlags.
+					[flags := stackPages longAt: theFP + FoxIFrameFlags.
 					  (flags bitAnd: 2) ~= 0 ifTrue:
-						[self longAt: theFP + FoxIFrameFlags put: flags - 2]].
+						[stackPages longAt: theFP + FoxIFrameFlags put: flags - 2]].
 			  (theFP := self frameCallerFP: theFP) ~= 0] whileTrue]]
 ]

@@ -3893,7 +3893,7 @@ StackInterpreter >> checkForLastObjectOverwrite [
 	| freeStart |
 	checkAllocFiller ifTrue: 
 		[self assert: ((freeStart := objectMemory freeStart) >= objectMemory scavengeThreshold
-					  or: [(self longAt: freeStart) = freeStart])]
+					  or: [(objectMemory longAt: freeStart) = freeStart])]
 ]
 
 { #category : #'primitive support' }
@@ -4929,7 +4929,7 @@ StackInterpreter >> createActualMessageTo: lookupClass [
 	"Since the array is new can use unchecked stores."
 	(argumentCount - 1) * objectMemory bytesPerOop to: 0 by: objectMemory bytesPerOop negated do:
 		[:i|
-		self longAt:  argumentArray + objectMemory baseHeaderSize + i put: self popStack].
+		objectMemory longAt:  argumentArray + objectMemory baseHeaderSize + i put: self popStack].
 	"Since message is new can use unchecked stores."
 	objectMemory
 		storePointerUnchecked: MessageSelectorIndex ofObject: message withValue: messageSelector;
@@ -20342,7 +20342,7 @@ StackInterpreter >> stringOf: oop [
 		size := 128 min: (self stSizeOf: oop).
 		nLongs := size-1//objectMemory wordSize+1.
 		1 to: nLongs do:
-			[:i | long := self longAt: oop + objectMemory baseHeaderSize + (i-1*objectMemory wordSize).
+			[:i | long := objectMemory longAt: oop + objectMemory baseHeaderSize + (i-1*objectMemory wordSize).
 			chars := self charsOfLong: long.
 			strm nextPutAll: (i=nLongs
 							ifTrue: [chars copyFrom: 1 to: size-1\\objectMemory wordSize+1]
@@ -20811,16 +20811,16 @@ StackInterpreter >> updateObjectsPostByteSwap [
 		 fmt >= self firstByteFormat ifTrue: "oop contains bytes"
 			[wordAddr := oop + objectMemory baseHeaderSize.
 			fmt >= self firstCompiledMethodFormat ifTrue: "compiled method; start after methodHeader and literals"
-				[methodHeader := self longAt: oop + objectMemory baseHeaderSize.
+				[methodHeader := objectMemory longAt: oop + objectMemory baseHeaderSize.
 				 wordAddr := wordAddr + (((objectMemory literalCountOfMethodHeader: methodHeader) + LiteralStart) * objectMemory bytesPerOop)].
 			objectMemory reverseBytesFrom: wordAddr to: oop + (objectMemory sizeBitsOf: oop)].
 		 fmt = self firstLongFormat ifTrue: "Bitmap, Float etc"
 			[(swapFloatWords
 			  and: [(objectMemory compactClassIndexOf: oop) = ClassFloatCompactIndex])
 				ifTrue:
-					[temp := self longAt: oop + objectMemory baseHeaderSize.
-					 self longAt: oop + objectMemory baseHeaderSize put: (self longAt: oop + objectMemory baseHeaderSize + 4).
-					 self longAt: oop + objectMemory baseHeaderSize + 4 put: temp]
+					[temp := objectMemory longAt: oop + objectMemory baseHeaderSize.
+					 objectMemory longAt: oop + objectMemory baseHeaderSize put: (self longAt: oop + objectMemory baseHeaderSize + 4).
+					 objectMemory longAt: oop + objectMemory baseHeaderSize + 4 put: temp]
 				ifFalse:
 					[(objectMemory hasSpurMemoryManagerAPI not
 					  and: [objectMemory wordSize = 8]) ifTrue: "Object contains 32-bit half-words packed into 64-bit machine words."
