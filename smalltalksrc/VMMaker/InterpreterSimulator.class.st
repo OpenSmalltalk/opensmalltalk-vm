@@ -480,20 +480,6 @@ InterpreterSimulator >> insufficientMemorySpecifiedError [
 	self error: 'Insufficient memory for this image'
 ]
 
-{ #category : #'memory access' }
-InterpreterSimulator >> integerAt: byteAddress [
-	"Note: Adjusted for Smalltalk's 1-based array indexing."
-
-	^memory integerAt: (byteAddress // 4) + 1
-]
-
-{ #category : #'memory access' }
-InterpreterSimulator >> integerAt: byteAddress put: a32BitValue [
-	"Note: Adjusted for Smalltalk's 1-based array indexing."
-
-	^memory integerAt: (byteAddress // 4) + 1 put: a32BitValue
-]
-
 { #category : #'interpreter shell' }
 InterpreterSimulator >> internalExecuteNewMethod [
 "Override the Interpreter version to trap cached external prims.

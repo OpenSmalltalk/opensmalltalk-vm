@@ -543,7 +543,7 @@ CogVMSimulator >> clipboardRead: sz Into: actualAddress At: zeroBaseIndex [
 	| str |
 	str := Clipboard clipboardText.
 	1 to: sz do:
-		[:i | self byteAt: actualAddress + zeroBaseIndex + i - 1 put: (str at: i) asciiValue]
+		[:i | objectMemory byteAt: actualAddress + zeroBaseIndex + i - 1 put: (str at: i) asciiValue]
 ]
 
 { #category : #'I/O primitives' }
@@ -3255,7 +3255,7 @@ CogVMSimulator >> printRumpCStackTo: address [
 		by: objectMemory wordSize negated
 		do:
 			[:addr|
-			self printHex: addr; tab; printHex: (self longAt: addr); cr]
+			self printHex: addr; tab; printHex: (objectMemory longAt: addr); cr]
 ]
 
 { #category : #'debug printing' }
@@ -3952,18 +3952,6 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 			action: [self ensureDebugAtEachStepBlock.
 					printFrameAtEachStep := printFrameAtEachStep not].
 	^aMenuMorph
-]
-
-{ #category : #testing }
-CogVMSimulator >> validOop: oop [
-	" Return true if oop appears to be valid "
-	(oop bitAnd: 1) = 1 ifTrue: [^ true].  "Integer"
-	(oop bitAnd: 3) = 0 ifFalse: [^ false].  "Uneven address"
-	oop >= objectMemory endOfMemory ifTrue: [^ false].  "Out of range"
-	"could test if within the first large freeblock"
-	(self longAt: oop) = 4 ifTrue: [^ false].
-	(objectMemory headerType: oop) = 2 ifTrue: [^ false].	"Free object"
-	^ true
 ]
 
 { #category : #'debug support' }

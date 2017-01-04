@@ -973,7 +973,7 @@ StackInterpreterPrimitives >> primitiveObjectPointsTo [
 		to: numSlots - 1 * objectMemory bytesPerOop + objectMemory baseHeaderSize
 		by: objectMemory bytesPerOop
 		do: [:i|
-			(self longAt: rcvr + i) = thang ifTrue:
+			(objectMemory longAt: rcvr + i) = thang ifTrue:
 				[^self pop: 2 thenPushBool: true]].
 	self pop: 2 thenPushBool: false
 ]
@@ -1900,8 +1900,8 @@ StackInterpreterPrimitives >> unmarkAllFrames [
 		thePage := stackPages stackPageAt: i.
 		(stackPages isFree: thePage) ifFalse:
 			[theFP := thePage  headFP.
-			 [flags := self longAt: theFP + FoxFrameFlags.
+			 [flags := objectMemory longAt: theFP + FoxFrameFlags.
 			  (flags bitAnd: 2) ~= 0 ifTrue:
-				[self longAt: theFP + FoxFrameFlags put: flags - 2].
+				[objectMemory longAt: theFP + FoxFrameFlags put: flags - 2].
 			  (theFP := self frameCallerFP: theFP) ~= 0] whileTrue]]
 ]

@@ -291,7 +291,7 @@ StackInterpreterSimulator >> clipboardRead: sz Into: actualAddress At: zeroBaseI
 	| str |
 	str := Clipboard clipboardText.
 	1 to: sz do:
-		[:i | self byteAt: actualAddress + zeroBaseIndex + i - 1 put: (str at: i) asciiValue]
+		[:i | objectMemory byteAt: actualAddress + zeroBaseIndex + i - 1 put: (str at: i) asciiValue]
 ]
 
 { #category : #'I/O primitives' }
@@ -888,22 +888,6 @@ StackInterpreterSimulator >> insufficientMemoryAvailableError [
 { #category : #'interpreter shell' }
 StackInterpreterSimulator >> insufficientMemorySpecifiedError [
 	self error: 'Insufficient memory for this image'
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulator >> integerAt: byteAddress [
-	"Note: Adjusted for Smalltalk's 1-based array indexing."
-
-	self deprecated.
-	^objectMemory memory integerAt: (byteAddress // 4) + 1
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulator >> integerAt: byteAddress put: a32BitValue [
-	"Note: Adjusted for Smalltalk's 1-based array indexing."
-
-	self deprecated.
-	^objectMemory memory integerAt: (byteAddress // 4) + 1 put: a32BitValue
 ]
 
 { #category : #'debugging traps' }
@@ -2864,18 +2848,6 @@ StackInterpreterSimulator >> utilitiesMenu: aMenuMorph [
 			action: [self ensureDebugAtEachStepBlock.
 					printFrameAtEachStep := printFrameAtEachStep not].
 	^aMenuMorph
-]
-
-{ #category : #testing }
-StackInterpreterSimulator >> validOop: oop [
-	" Return true if oop appears to be valid "
-	(oop bitAnd: 1) = 1 ifTrue: [^ true].  "Integer"
-	(oop bitAnd: 3) = 0 ifFalse: [^ false].  "Uneven address"
-	oop >= objectMemory endOfMemory ifTrue: [^ false].  "Out of range"
-	"could test if within the first large freeblock"
-	(self longAt: oop) = 4 ifTrue: [^ false].
-	(objectMemory headerType: oop) = 2 ifTrue: [^ false].	"Free object"
-	^ true
 ]
 
 { #category : #'debug support' }

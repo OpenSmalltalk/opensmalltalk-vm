@@ -3166,9 +3166,9 @@ InterpreterPrimitives >> primitiveObjectPointsTo [
 		[^self pop: 2 thenPushBool: false].
 
 	lastField := self lastPointerOf: rcvr.
-	objectMemory baseHeaderSize to: lastField by: objectMemory wordSize do:
+	objectMemory baseHeaderSize to: lastField by: objectMemory bytesPerOop do:
 		[:i |
-		(self longAt: rcvr + i) = thang ifTrue:
+		(objectMemory longAt: rcvr + i) = thang ifTrue:
 			[^self pop: 2 thenPushBool: true]].
 	self pop: 2 thenPushBool: false
 ]
@@ -5029,7 +5029,7 @@ InterpreterPrimitives >> signedMachineIntegerValueOf: oop [
 InterpreterPrimitives >> sizeFieldOfAlien: alienObj [
 	"Answer the first field of alienObj which is assumed to be an Alien of at least 8 bytes"
 	<inline: true>
-	^self longAt: alienObj + objectMemory baseHeaderSize
+	^objectMemory longAt: alienObj + objectMemory baseHeaderSize
 ]
 
 { #category : #'primitive support' }
@@ -5055,7 +5055,7 @@ InterpreterPrimitives >> startOfAlienData: oop [
 		 ^0].
 	^self cCoerceSimple: ((self isDirectAlien: oop)
 						 	ifTrue: [oop + objectMemory baseHeaderSize + objectMemory bytesPerOop]
-							ifFalse: [self longAt: oop + objectMemory baseHeaderSize + objectMemory bytesPerOop])
+							ifFalse: [objectMemory longAt: oop + objectMemory baseHeaderSize + objectMemory bytesPerOop])
 			to: #'void *'
 ]
 
