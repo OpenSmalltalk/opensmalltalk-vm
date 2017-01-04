@@ -196,7 +196,7 @@ CogObjectRepresentation >> genDoubleArithmetic: arithmeticOperator preOpCheck: p
 { #category : #'primitive generators' }
 CogObjectRepresentation >> genDoubleComparison: jumpOpcodeGenerator invert: invertComparison [
 	<option: #DPFPReg0>
-	<var: #jumpOpcodeGenerator declareC: 'AbstractInstruction *(*jumpOpcodeGenerator)(void *)'>
+	<var: #jumpOpcodeGenerator declareC: 'AbstractInstruction * NoDbgRegParms (*jumpOpcodeGenerator)(void *)'>
 	| jumpFail jumpImmediate jumpNonInt jumpCond compare |
 	<var: #jumpImmediate type: #'AbstractInstruction *'>
 	<var: #jumpNonInt type: #'AbstractInstruction *'>
@@ -431,7 +431,7 @@ CogObjectRepresentation >> genJumpSmallInteger: aRegister scratchReg: scratch [
 CogObjectRepresentation >> genLcByteSizeOf: oop to: resultRegister [
 	<option: #LowcodeVM>
 	"TODO: Optimize this one avoiding the trampoline"
-	oop ~= ReceiverResultReg ifTrue: [cogit MoveR: oop R: ReceiverResultReg ].
+	oop ~= Arg0Reg ifTrue: [cogit MoveR: oop R: Arg0Reg ].
 	cogit CallRT: ceByteSizeOfTrampoline.
 
 	cogit MoveR: TempReg R: resultRegister.
@@ -471,8 +471,8 @@ CogObjectRepresentation >> genLcInstantiateOop: classOop [
 { #category : #'inline primitive support' }
 CogObjectRepresentation >> genLcInstantiateOop: classOop constantIndexableSize: indexableSize [
 	<option: #LowcodeVM>
-	classOop ~= ReceiverResultReg ifTrue: [cogit MoveR: classOop R: ReceiverResultReg].
-	cogit MoveCq: indexableSize R: Arg0Reg.
+	classOop ~= Arg0Reg ifTrue: [cogit MoveR: classOop R: Arg0Reg].
+	cogit MoveCq: indexableSize R: Arg1Reg.
 	cogit CallRT: ceInstantiateClassIndexableSizeTrampoline.
 
 	cogit MoveR: TempReg R: classOop.
@@ -482,18 +482,18 @@ CogObjectRepresentation >> genLcInstantiateOop: classOop constantIndexableSize: 
 { #category : #'inline primitive support' }
 CogObjectRepresentation >> genLcInstantiateOop: classOop indexableSize: indexableSize [
 	<option: #LowcodeVM>
-	classOop ~= ReceiverResultReg ifTrue: [
-		indexableSize = ReceiverResultReg ifTrue: [
+	classOop ~= Arg0Reg ifTrue: [
+		indexableSize = Arg0Reg ifTrue: [
 			cogit MoveR: indexableSize R: TempReg.
 		].
-		cogit MoveR: classOop R: ReceiverResultReg
+		cogit MoveR: classOop R: Arg0Reg
 	].
 
-	indexableSize ~= Arg0Reg ifTrue: [
-		indexableSize = ReceiverResultReg ifTrue: [
-			cogit MoveR: TempReg R: Arg0Reg.
+	indexableSize ~= Arg1Reg ifTrue: [
+		indexableSize = Arg0Reg ifTrue: [
+			cogit MoveR: TempReg R: Arg1Reg.
 		] ifFalse: [
-			cogit MoveR: indexableSize R: Arg0Reg.
+			cogit MoveR: indexableSize R: Arg1Reg.
 		]
 	].
 
@@ -615,8 +615,8 @@ CogObjectRepresentation >> genLcOopToUInt64: value [
 CogObjectRepresentation >> genLcPointerToOop: pointer class: pointerClass [
 	<option: #LowcodeVM>
 	cogit PushR: pointer.
-	cogit annotate: (cogit MoveCw: pointerClass R: ReceiverResultReg) objRef: pointerClass.
-	cogit MoveCq: BytesPerOop R: Arg0Reg.
+	cogit annotate: (cogit MoveCw: pointerClass R: Arg0Reg) objRef: pointerClass.
+	cogit MoveCq: BytesPerOop R: Arg1Reg.
 	cogit CallRT: ceInstantiateClassIndexableSizeTrampoline.
 
 	cogit PopR: pointer.
@@ -1399,7 +1399,7 @@ CogObjectRepresentation >> genSmallIntegerComparison: jumpOpcode orDoubleCompari
 	"Stack looks like
 		return address"
 	| jumpNonInt jumpFail jumpCond r |
-	<var: #jumpFPOpcodeGenerator declareC: 'AbstractInstruction *(*jumpFPOpcodeGenerator)(void *)'>
+	<var: #jumpFPOpcodeGenerator declareC: 'AbstractInstruction * NoDbgRegParms (*jumpFPOpcodeGenerator)(void *)'>
 	<var: #jumpNonInt type: #'AbstractInstruction *'>
 	<var: #jumpCond type: #'AbstractInstruction *'>
 	<var: #jumpFail type: #'AbstractInstruction *'>
@@ -1469,8 +1469,8 @@ CogObjectRepresentation >> generateLowcodeObjectTrampolines [
 												floatResult: DPFPReg0.
 	ceInstantiateClassIndexableSizeTrampoline := cogit genTrampolineFor: #instantiateClass:indexableSize:
 												called: 'ceInstantiateClassIndexableSizeTrampoline'
-												arg: ReceiverResultReg
 												arg: Arg0Reg
+												arg: Arg1Reg
 												result: TempReg.
 	ceInstantiateClassTrampoline := cogit genTrampolineFor: #instantiateClass:indexableSize:
 												called: 'ceInstantiateClassTrampoline'
@@ -1479,7 +1479,6 @@ CogObjectRepresentation >> generateLowcodeObjectTrampolines [
 												result: TempReg.
 	ceByteSizeOfTrampoline := cogit genTrampolineFor: #byteSizeOf:
 												called: 'ceByteSizeOfTrampoline'
-												arg: ReceiverResultReg
 												arg: Arg0Reg
 												result: TempReg.
 	BytesPerOop = 4 ifTrue: [
