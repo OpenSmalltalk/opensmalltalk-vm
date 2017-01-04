@@ -18,7 +18,7 @@ CogObjectRepresentationFor32BitSpur class >> defaultObjectMemoryClass [
 
 { #category : #accessing }
 CogObjectRepresentationFor32BitSpur class >> numTrampolines [
-	^ super numTrampolines + 4 "lowcode"
+	^ super numTrampolines + (LowcodeVM ifTrue: [4] ifFalse: [0])
 ]
 
 { #category : #'sista support' }

@@ -544,7 +544,8 @@ CogSimStackNativeEntry >> stackSpillSize [
 		[SSRegisterPair]			-> [ ^ 8 ].
 		[SSSpillFloat64]				-> [ ^ 8 ].
 		[SSSpillInt64]				-> [ ^ 8 ].
-	} otherwise: [^ BytesPerOop ]
+	} otherwise: [^ BytesPerOop ].
+	^ 0
 ]
 
 { #category : #accessing }

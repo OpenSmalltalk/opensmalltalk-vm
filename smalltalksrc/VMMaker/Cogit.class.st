@@ -1108,7 +1108,7 @@ Cogit class >> notesAndQueries [
 
 { #category : #accessing }
 Cogit class >> numTrampolines [
-	^38 "30 + 4 each for self and super sends"
+	^38 "30 + 4 each for self and super sends" + (LowcodeVM ifTrue: [1] ifFalse: [0])
 
 	"self withAllSubclasses collect: [:c| {c. (c instVarNames select: [:ea| ea beginsWith: 'ce']) size}]"
 ]
@@ -4402,7 +4402,10 @@ Cogit >> cogMNUPICSelector: selector receiver: rcvr methodOperand: methodOperand
 		 ^0].
 
 	"memcpy the prototype across to our allocated space; because anything else would be silly"
-	objectMemory mem: startAddress cp: cPICPrototype y: closedPICSize.
+	objectMemory
+		mem: (self cCoerceSimple: startAddress to: #'CogMethod *')
+		cp: (self cCoerceSimple: cPICPrototype to: #'CogMethod *')
+		y: closedPICSize.
 	
 	self configureMNUCPIC: (self cCoerceSimple: startAddress to: #'CogMethod *')
 		methodOperand: methodOperand
@@ -4558,7 +4561,10 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 		[^self cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
 
 	"memcpy the prototype across to our allocated space; because anything else would be silly"
-	objectMemory mem: startAddress cp: cPICPrototype y: closedPICSize.
+	objectMemory
+		mem: (self cCoerceSimple: startAddress to: #'CogMethod *')
+		cp: (self cCoerceSimple: cPICPrototype to: #'CogMethod *')
+		y: closedPICSize.
 	
 	self configureCPIC: (self cCoerceSimple: startAddress to: #'CogMethod *')
 		Case0: case0CogMethod
