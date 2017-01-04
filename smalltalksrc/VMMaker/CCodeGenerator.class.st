@@ -2841,9 +2841,9 @@ CCodeGenerator >> generateShiftLeft: msgNode on: aStream indent: level [
 	rcvr := msgNode receiver.
 	arg := msgNode args first.
 	castToLong := false.
-	rcvr constantNumbericValueOrNil ifNotNil:
+	(rcvr constantNumbericValueIfAtAllPossibleOrNilIn: self) ifNotNil:
 		[:rcvrVal |
-		 arg constantNumbericValueOrNil
+		 (arg constantNumbericValueIfAtAllPossibleOrNilIn: self)
 			ifNil: [castToLong := vmClass notNil and: [vmClass objectMemoryClass wordSize = 8]]
 			ifNotNil:
 				[:argVal |
