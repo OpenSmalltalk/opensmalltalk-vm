@@ -10,7 +10,7 @@ fi ;;
 esac
 
 THIRDPARTYLIBS="libsdl2 libssh2 libgit2"
-INSTALLDIR=phcogspurlinux
+INSTALLDIR=phstacklowcodelinuxht
 
 # Some gcc versions create a broken VM using -O2
 case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in

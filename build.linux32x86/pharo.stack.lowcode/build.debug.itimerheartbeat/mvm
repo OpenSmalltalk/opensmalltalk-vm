@@ -7,7 +7,7 @@ i*86) ;; # we're good
 fi ;;
 esac
 # debug Spur VM with VM profiler and itimer heartbeat
-INSTALLDIR=debug/phphcogspurlinux
+INSTALLDIR=debug/phstacklowcodelinuxht
 OPT="-g3 -O0 -fwrapv -DDEBUGVM=1"
 
 if [ $# -ge 1 ]; then
