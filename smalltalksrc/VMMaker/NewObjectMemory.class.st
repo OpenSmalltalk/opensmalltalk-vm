@@ -2587,7 +2587,7 @@ NewObjectMemory >> runLeakCheckerFor: gcModes [
 			ifFalse: [coInterpreter reverseDisplayFrom: 8 to: 15].
 		 self clearLeakMapAndMapAccessibleObjects.
 		 self assert: self checkHeapIntegrity.
-		 self assert: coInterpreter checkInterpreterIntegrity.
+		 self assert: coInterpreter checkInterpreterIntegrity = 0.
 		 self assert: coInterpreter checkStackIntegrity.
 		 self assert: (coInterpreter checkCodeIntegrity: gcModes).
 		 self validate "simulation only"]
