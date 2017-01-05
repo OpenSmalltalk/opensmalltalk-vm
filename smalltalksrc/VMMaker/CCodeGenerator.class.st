@@ -1184,9 +1184,12 @@ CCodeGenerator >> emitCConstants: constList on: aStream [
 		[:varName| | node default value conditional |
 		node := constants at: varName.
 		node name isEmpty ifFalse:
-			["If the definition includes a C comment, take it as is, otherwise convert the value from Smalltalk to C.
+			["If the definition includes a C comment, or looks like a conditional, take it as is, otherwise convert
+			  the value from Smalltalk to C.
 			  Allow the class to provide an alternative definition, either of just the value or the whole shebang."
-			default := (node value isString and: [node value includesSubString: '/*'])
+			default := (node value isString
+						and: [(node value includesSubString: '/*')
+								or: [(node value includesSubString: ' ? ') and: [node value includesSubString: ' : ']]])
 							ifTrue: [node value]
 							ifFalse: [self cLiteralFor: node value name: varName].
 			default = #undefined
