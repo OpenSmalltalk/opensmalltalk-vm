@@ -1619,7 +1619,7 @@ SpurMemoryManager >> allOldSpaceEntitiesForCompactingFrom: initialObject do: aBl
 	 self oop: objOop isLessThan: endOfMemory] whileTrue:
 		[self assert: (self long64At: objOop) ~= 0.
 		 nextObj := self objectAfter: objOop limit: endOfMemory.
-		 aBlock value: objOop.
+		 aBlock value: objOop value: nextObj.
 		 prevPrevObj := prevObj.
 		 prevObj := objOop.
 		 objOop := nextObj].
@@ -5668,7 +5668,7 @@ SpurMemoryManager >> inLineRunLeakCheckerFor: gcModes excludeUnmarkedObjs: exclu
 			ifFalse: [coInterpreter reverseDisplayFrom: 8 to: 15].
 		 self clearLeakMapAndMapAccessibleObjects.
 		 self asserta: (self checkHeapIntegrity: excludeUnmarkedObjs classIndicesShouldBeValid: classIndicesShouldBeValid).
-		 self asserta: coInterpreter checkInterpreterIntegrity.
+		 self asserta: coInterpreter checkInterpreterIntegrity = 0.
 		 self asserta: coInterpreter checkStackIntegrity.
 		 self asserta: (coInterpreter checkCodeIntegrity: gcModes)]
 ]
