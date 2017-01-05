@@ -1734,10 +1734,10 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAtPut [
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: byteSize.
 	interpreterProxy failed ifTrue:[^0].
 	isSigned 
-		ifTrue:[value := interpreterProxy signedMachineIntegerValueOf: valueOop]
-		ifFalse:[value := interpreterProxy positiveMachineIntegerValueOf: valueOop].
+		ifTrue:[value := interpreterProxy signed64BitValueOf: valueOop]
+		ifFalse:[value := interpreterProxy positive64BitValueOf: valueOop].
 	interpreterProxy failed ifTrue:[^0].
-	byteSize < BytesPerWord ifTrue:
+	byteSize < 8 ifTrue:
 		[isSigned
 			ifTrue:
 				[max := 1 asUnsignedLongLong << (8 * byteSize - 1).
