@@ -127,6 +127,7 @@ SpurPlanningCompactor >> compact [
 SpurPlanningCompactor >> copyAndUnmark: firstPass [
 	"Sweep the heap, unmarking all objects and moving mobile objects to their correct positions,
 	 restoring their savedFirstFields."
+	<inline: #never>
 	| onePass |
 	self logPhase: 'copying and unmarking...'.
 	firstPass ifTrue:
@@ -147,6 +148,7 @@ SpurPlanningCompactor >> copyAndUnmarkMobileObjects [
 	 Answer if the end of the heap was reached (savedFirstFieldsSpace has not overflowed).
 
 	 This enumeration matches those in planCompactSavingForwarders and updatePointersInMobileObjects."
+	<inline: #never>
 	| toFinger top previousPin |
 	<var: 'top' type: #usqInt>
 	<var: 'toFinger' type: #usqInt>
@@ -181,7 +183,7 @@ SpurPlanningCompactor >> copyAndUnmarkMobileObjects [
 					  and: [availableSpace := (manager startOfObject: previousPin) - toFinger.
 							bytes := manager bytesInObject: o.
 							bytes ~= availableSpace
-							 and: [bytes + (2 * manager allocationUnit) < availableSpace]]] whileTrue:
+							and: [bytes + (2 * manager allocationUnit) > availableSpace]]] whileTrue:
 						["The object does not fit in the space between toFinger and previousPin.
 						  Move toFinger beyond previousPin and update previousPin appropriately."
 						 availableSpace > 0 ifTrue:
@@ -241,7 +243,7 @@ SpurPlanningCompactor >> findHighestSuitableFreeBlock: spaceEstimate [
 	manager findLargestFreeChunk ifNotNil:
 		[:largestFreeChunk|
 		((manager bytesInObject: largestFreeChunk) >= spaceEstimate
-		 and: [largestFreeChunk asUnsignedInteger > (manager endOfMemory - manager totalFreeOldSpace) asUnsignedInteger]) ifTrue:
+		 and: [largestFreeChunk asUnsignedInteger > (manager endOfMemory - manager freeSize) asUnsignedInteger]) ifTrue:
 			[^largestFreeChunk]].
 	^nil
 ]
@@ -418,7 +420,7 @@ SpurPlanningCompactor >> planCompactSavingForwarders [
 	 Answer if the end of the heap was reached (savedFirstFieldsSpace has not overflowed).
 
 	 This enumeration matches those in updatePointersInMobileObjects and copyAndUnmarkMobileObjects."
-
+	<inline: #never>
 	| toFinger top previousPin |
 	<var: 'top' type: #usqInt>
 	<var: 'toFinger' type: #usqInt>
@@ -450,7 +452,7 @@ SpurPlanningCompactor >> planCompactSavingForwarders [
 					  and: [availableSpace := (manager startOfObject: previousPin) - toFinger.
 							bytes := manager bytesInObject: o.
 							bytes ~= availableSpace
-							 and: [bytes + (2 * manager allocationUnit) < availableSpace]]] whileTrue:
+							and: [bytes + (2 * manager allocationUnit) > availableSpace]]] whileTrue:
 						["The object does not fit in the space between toFinger and previousPin.
 						  Move toFinger beyond previousPin and update previousPin appropriately."
 						 toFinger := manager addressAfter: previousPin.
@@ -619,6 +621,7 @@ SpurPlanningCompactor >> unpinRememberedSet [
 SpurPlanningCompactor >> updatePointers [
 	"Sweep the heap, updating all objects to their eventual locations.
 	 Remember to update the savedFirstFields of pointer objects, as these have been forwarded."
+	<inline: #never>
 	| onePass |
 	self logPhase: 'updating pointers...'.
 	"If savedFirstFieldsSpace is empty there is nothing to do."
@@ -740,7 +743,7 @@ SpurPlanningCompactor >> updatePointersInMobileObjects [
 					  and: [availableSpace := (manager startOfObject: previousPin) - toFinger.
 							bytes := manager bytesInObject: o.
 							bytes ~= availableSpace
-							 and: [bytes + (2 * manager allocationUnit) < availableSpace]]] whileTrue:
+							and: [bytes + (2 * manager allocationUnit) > availableSpace]]] whileTrue:
 						["The object does not fit in the space between toFinger and previousPin.
 						  Move toFinger beyond previousPin and update previousPin appropriately."
 						 toFinger := manager addressAfter: previousPin.
