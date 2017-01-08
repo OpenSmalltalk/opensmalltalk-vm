@@ -1726,6 +1726,7 @@ SimpleStackBasedCogit >> genExtJumpIfFalse [
 								Branch: (extA ~= 0 ifTrue: [1] ifFalse: [0]) + (extB ~= 0 ifTrue: [1] ifFalse: [0])
 								Distance: methodObj).
 	extB := 0.
+	numExtB := 0.
 	target := distance + 2 + bytecodePC.
 	^self genJumpIf: objectMemory falseObject to: target
 ]
@@ -1748,6 +1749,7 @@ SimpleStackBasedCogit >> genExtJumpIfTrue [
 								Branch: (extA ~= 0 ifTrue: [1] ifFalse: [0]) + (extB ~= 0 ifTrue: [1] ifFalse: [0])
 								Distance: methodObj).
 	extB := 0.
+	numExtB := 0.
 	target := distance + 2 + bytecodePC.
 	^self genJumpIf: objectMemory trueObject to: target
 ]
@@ -1756,7 +1758,7 @@ SimpleStackBasedCogit >> genExtJumpIfTrue [
 SimpleStackBasedCogit >> genExtNopBytecode [
 	"NewspeakV4: 221		11011101		Nop"
 	"SistaV1:		 91		01011011'		Nop"
-	extA := extB := 0.
+	extA := numExtB := extB := 0.
 	^0
 ]
 
@@ -1766,6 +1768,7 @@ SimpleStackBasedCogit >> genExtPushCharacterBytecode [
 	| value |
 	value := byte1 + (extB << 8).
 	extB := 0.
+	numExtB := 0.
 	^self genPushLiteral: (objectMemory characterObjectOf: value)
 ]
 
@@ -1781,7 +1784,7 @@ SimpleStackBasedCogit >> genExtPushClosureBytecode [
 		numArgs: (numArgs := (byte1 bitAnd: 16r7) + (extA \\ 16 * 8))
 		numCopied: (numCopied := ((byte1 >> 3) bitAnd: 7) + (extA // 16 * 8))
 		span: byte2 + (extB << 8).
-	extA := extB := 0.
+	extA := numExtB := extB := 0.
 	objectRepresentation
 		genCreateClosureAt: bytecodePC + 4 "1 relative"
 		numArgs: numArgs
@@ -1838,6 +1841,7 @@ SimpleStackBasedCogit >> genExtPushIntegerBytecode [
 	| value |
 	value := byte1 + (extB << 8).
 	extB := 0.
+	numExtB := 0.
 	^self genPushLiteral: (objectMemory integerObjectOf: value)
 ]
 
@@ -1874,6 +1878,7 @@ SimpleStackBasedCogit >> genExtPushPseudoVariable [
 	| ext |
 	ext := extB.
 	extB := 0.
+	numExtB := 0.
 	ext caseOf: {
 		[0]	->	[^self genPushActiveContextBytecode].
 		}
@@ -1888,6 +1893,7 @@ SimpleStackBasedCogit >> genExtPushPseudoVariableOrOuterBytecode [
 	| ext |
 	ext := extB.
 	extB := 0.
+	numExtB := 0.
 	ext caseOf: {
 		[0]	->	[^self genPushLiteral: objectMemory falseObject].
 		[1]	->	[^self genPushLiteral: objectMemory trueObject].
@@ -1922,6 +1928,7 @@ SimpleStackBasedCogit >> genExtPushRemoteTempOrInstVarLongBytecode [
 			[ index := byte1 + (extA << 8).
 			extA := 0.
 			extB := 0. "don't use flags in the simple cogit"
+			numExtB := 0.
 			(coInterpreter isReadMediatedContextInstVarIndex: index)
 				ifTrue: [self 
 							genPushMaybeContextRemoteInstVar: index 
@@ -1951,6 +1958,7 @@ SimpleStackBasedCogit >> genExtSendAbsentDynamicSuperBytecode [
 	extA := 0.
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
+	numExtB := 0.
 	^self genSendAbsentDynamicSuper: litIndex numArgs: nArgs
 ]
 
@@ -1962,6 +1970,7 @@ SimpleStackBasedCogit >> genExtSendAbsentImplicitBytecode [
 	extA := 0.
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
+	numExtB := 0.
 	^self genSendAbsentImplicit: litIndex numArgs: nArgs
 ]
 
@@ -1973,6 +1982,7 @@ SimpleStackBasedCogit >> genExtSendAbsentOuterBytecode [
 	extA := 0.
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
+	numExtB := 0.
 	depth := byte2.
 	^self genSendAbsentOuter: litIndex numArgs: nArgs depth: depth
 
@@ -1986,6 +1996,7 @@ SimpleStackBasedCogit >> genExtSendAbsentSelfBytecode [
 	extA := 0.
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
+	numExtB := 0.
 	^self genSendAbsentSelf: litIndex numArgs: nArgs
 ]
 
@@ -1997,6 +2008,7 @@ SimpleStackBasedCogit >> genExtSendBytecode [
 	extA := 0.
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
+	numExtB := 0.
 	^self genSend: litIndex numArgs: nArgs
 ]
 
@@ -2010,6 +2022,7 @@ SimpleStackBasedCogit >> genExtSendSuperBytecode [
 	extA := 0.
 	nArgs := (byte1 bitAnd: 7) + (extB << 3).
 	extB := 0.
+	numExtB := 0.
 	^isDirected
 		ifTrue: [self genSendDirectedSuper: litIndex numArgs: nArgs]
 		ifFalse: [self genSendSuper: litIndex numArgs: nArgs]
@@ -2053,6 +2066,7 @@ SimpleStackBasedCogit >> genExtStoreLiteralVariableBytecode [
 SimpleStackBasedCogit >> genExtStorePopRemoteTempOrInstVarLongBytecodePopBoolean: popBoolean [
 	| index |
 	extB := 0. "simple cogit don't use the extra flag"
+	numExtB := 0.
 	(byte2 noMask: coInterpreter remoteIsInstVarAccess)
 		ifTrue: 
 			[ self genStorePop: popBoolean RemoteTemp: byte1 At: byte2.
@@ -2105,6 +2119,7 @@ SimpleStackBasedCogit >> genExtUnconditionalJump [
 								Branch: (extA ~= 0 ifTrue: [1] ifFalse: [0]) + (extB ~= 0 ifTrue: [1] ifFalse: [0])
 								Distance: methodObj).
 	extB := 0.
+	numExtB := 0.
 	target := distance + 2 + bytecodePC.
 	distance < 0 ifTrue:
 		[^self genJumpBackTo: target].
@@ -3217,6 +3232,7 @@ SimpleStackBasedCogit >> genSistaExtStoreAndPopReceiverVariableBytecode [
 SimpleStackBasedCogit >> genSistaExtStoreAndPopReceiverVariableBytecodePopBoolean: boolean [
 	| index |
 	extB := 0. "Simple cogit don't use the extra flags"
+	numExtB := 0.
 	index := byte1 + (extA << 8).
 	extA := 0.
 	^(coInterpreter isWriteMediatedContextInstVarIndex: index)
@@ -3233,6 +3249,7 @@ SimpleStackBasedCogit >> genSistaExtStoreLiteralVariableBytecode [
 SimpleStackBasedCogit >> genSistaExtStoreLiteralVariableBytecodePopBoolean: boolean [
 	| index |
 	extB := 0. "SimpleCogit don't use the extra flags"
+	numExtB := 0.
 	index := byte1 + (extA << 8).
 	extA := 0.
 	^ self genStorePop: boolean LiteralVariable: index
