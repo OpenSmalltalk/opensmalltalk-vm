@@ -1739,6 +1739,7 @@ StackToRegisterMappingCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode [
 	extA := 0.
 	distance := extB * 256 + byte2.
 	extB := 0.
+	numExtB := 0.
 	
 	targetFixUp := self cCoerceSimple: (self ensureFixupAt: bytecodePC + 3 + distance - initialPC) to: #'AbstractInstruction *'.
 		
@@ -1764,7 +1765,7 @@ StackToRegisterMappingCogit >> genExtPushClosureBytecode [
 		numArgs: (numArgs := (byte1 bitAnd: 16r7) + (extA \\ 16 * 8))
 		numCopied: (numCopied := ((byte1 >> 3) bitAnd: 7) + (extA // 16 * 8))
 		span: byte2 + (extB << 8).
-	extA := extB := 0.
+	extA := numExtB := extB := 0.
 
 	objectRepresentation createsClosuresInline
 		ifTrue: [ self genInlineClosure: startpc numArgs: numArgs numCopied: numCopied ]
@@ -1825,6 +1826,7 @@ StackToRegisterMappingCogit >> genExtPushRemoteTempOrInstVarLongBytecode [
 			index := byte1 + (extA << 8).
 			extA := 0.
 			extB := 0.
+			numExtB := 0.
 			((coInterpreter isReadMediatedContextInstVarIndex: index) and: [ maybeContext ])
 				ifTrue: [ self genPushMaybeContextRemoteInstVar: index inObjectAt: byte2 - coInterpreter remoteIsInstVarAccess ]
 				ifFalse: [ self genPushRemoteInstVar: index inObjectAt: byte2 - coInterpreter remoteIsInstVarAccess ] ]
@@ -1837,6 +1839,7 @@ StackToRegisterMappingCogit >> genExtStorePopRemoteTempOrInstVarLongBytecodePopB
 	maybeContext := self extBSpecifiesMaybeContext.
 	needsImmCheck := self extBSpecifiesImmCheck.
 	extB := 0.
+	numExtB := 0.
 	(byte2 noMask: coInterpreter remoteIsInstVarAccess)
 		ifTrue: 
 			[ self 
@@ -7691,6 +7694,7 @@ StackToRegisterMappingCogit >> genLowcodePerformCallStructure [
 	self ssPushNativeRegister: ReceiverResultReg.
 	extA := 0.
 	extB := 0.
+	numExtB := 0.
 
 	^ 0
 
@@ -7764,6 +7768,7 @@ StackToRegisterMappingCogit >> genLowcodePointerAddConstantOffset [
 	self ssPushNativeRegister: base.
 
 	extB := 0.
+	numExtB := 0.
 	^ 0
 
 
@@ -11224,6 +11229,7 @@ StackToRegisterMappingCogit >> genSistaExtStoreAndPopReceiverVariableBytecodePop
 	hence generate the context form if the flag is set or if this is a popInto."
 	maybeContext := popBoolean or: [self extBSpecifiesMaybeContext].
 	extB := 0.
+	numExtB := 0.
 	index := byte1 + (extA << 8).
 	extA := 0.
 	^((coInterpreter isWriteMediatedContextInstVarIndex: index) and: [maybeContext])
@@ -11246,7 +11252,7 @@ StackToRegisterMappingCogit >> genSistaExtStoreLiteralVariableBytecodePopBoolean
 	needsStoreCheck := self sistaNeedsStoreCheck.
 	needsImmCheck := self extBSpecifiesImmCheck.
 	index := byte1 + (extA << 8).
-	extA := extB := 0.
+	extA := numExtB := extB := 0.
 	^self 
 		genStorePop: boolean 
 		LiteralVariable: index 
@@ -12501,7 +12507,7 @@ StackToRegisterMappingCogit >> scanBlock: blockStart [
 	inBlock := InVanillaBlock.
 	pc := blockStart startpc.
 	end := blockStart startpc + blockStart span.
-	framelessStackDelta := nExts := extA := extB := 0.
+	framelessStackDelta := nExts := extA := numExtB := extB := 0.
 	pushingNils := true.
 	[pc < end] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
@@ -12539,7 +12545,7 @@ StackToRegisterMappingCogit >> scanBlock: blockStart [
 		 pc := self nextBytecodePCFor: descriptor at: pc exts: nExts in: methodObj.
 		 descriptor isExtension
 			ifTrue: [nExts := nExts + 1]
-			ifFalse: [nExts := extA := extB := 0].
+			ifFalse: [nExts := extA := numExtB := extB := 0].
 		 prevBCDescriptor := descriptor].
 	"It would be nice of this wasn't necessary but alas we need to do the eager
 	 scan for frameless methods so that we don't end up popping too much off
@@ -12571,7 +12577,7 @@ StackToRegisterMappingCogit >> scanMethod [
 	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
 		[^0].
 	pc := latestContinuation := initialPC.
-	numBlocks := framelessStackDelta := nExts := extA := extB := 0.
+	numBlocks := framelessStackDelta := nExts := extA := numExtB := extB := 0.
 	[pc <= endPC] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		 descriptor := self generatorAt: byte0.
@@ -12624,7 +12630,7 @@ StackToRegisterMappingCogit >> scanMethod [
 		 NewspeakVM ifTrue:
 			[descriptor hasIRC ifTrue: [numIRCs := numIRCs + 1]].
 		 pc := pc + descriptor numBytes.
-		 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [extA := extB := 0].
+		 nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [extA := numExtB := extB := 0].
 		 prevBCDescriptor := descriptor].
 	^numBlocks
 ]
