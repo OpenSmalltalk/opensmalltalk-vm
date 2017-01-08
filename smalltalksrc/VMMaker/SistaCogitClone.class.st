@@ -421,6 +421,7 @@ SistaCogitClone >> genExtJumpIfNotInstanceOfBehaviorsBytecode [
 		ifFalse: [inverse := false].
 	distance := extB * 256 + byte2.
 	extB := 0.
+	numExtB := 0.
 	
 	targetFixUp := self cCoerceSimple: (self ensureFixupAt: bytecodePC + 3 + distance - initialPC) to: #'AbstractInstruction *'.
 	inverse
@@ -708,6 +709,7 @@ SistaCogitClone >> genUnaryInlinePrimitive: prim [
 		otherwise:
 			[^EncounteredUnknownBytecode].
 	extB := 0.
+	numExtB := 0.
 	self ssPushRegister: resultReg.
 	^0
 ]

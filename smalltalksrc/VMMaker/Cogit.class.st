@@ -238,6 +238,7 @@ Class {
 		'ceUnlockVMOwner',
 		'extA',
 		'extB',
+		'numExtB',
 		'tempOop',
 		'numIRCs',
 		'indexOfIRC',
@@ -3071,7 +3072,7 @@ Cogit >> assertExtsAreConsumed: descriptor [
 	 "extended bytecodes must consume their extensions"
 	 <inline: true>
 	 descriptor isExtension ifFalse:
-		[self assert: (extA = 0 and: [extB = 0])].
+		[self assert: (extA = 0 and: [extB = 0 and: [numExtB = 0]])].
 ]
 
 { #category : #debugging }
@@ -5889,9 +5890,10 @@ Cogit >> extABytecode [
 { #category : #'bytecode generators' }
 Cogit >> extBBytecode [
 	"225		11100001	sbbbbbbb	Extend B (Ext B = Ext B prev * 256 + Ext B)"
-	extB := (extB = 0 and: [byte1 > 127])
+	extB := (numExtB = 0 and: [byte1 > 127])
 				ifTrue: [byte1 - 256]
 				ifFalse: [(extB bitShift: 8) + byte1].
+	numExtB := numExtB + 1.
 	^0
 ]
 
@@ -9775,11 +9777,11 @@ Cogit >> nextBytecodePCFor: descriptor exts: nExts [
 Cogit >> nextDescriptorAndExtensionsInto: aTrinaryBlock [
 	"Peek ahead and deliver the next descriptor plus extension bytes."
 	<inline: true>
-	| savedB0 savedB1 savedB2 savedB3 savedEA savedEB descriptor bcpc |
+	| savedB0 savedB1 savedB2 savedB3 savedEA savedEB savedNEB descriptor bcpc |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	descriptor := self generatorAt: byte0.
 	savedB0 := byte0. savedB1 := byte1. savedB2 := byte2. savedB3 := byte3.
-	savedEA := extA. savedEB := extB.
+	savedEA := extA. savedEB := extB. savedNEB := numExtB.
 	bcpc := bytecodePC + descriptor numBytes.
 	[bcpc > endPC ifTrue:
 		[^aTrinaryBlock value: nil value: 0 value: 0].
@@ -9789,7 +9791,7 @@ Cogit >> nextDescriptorAndExtensionsInto: aTrinaryBlock [
 	 descriptor isExtension ifFalse:
 		[| eA eB |
 		 eA := extA. eB := extB.
-		 extA := savedEA. extB := savedEB.
+		 extA := savedEA. extB := savedEB. numExtB := savedNEB.
 		 byte0 := savedB0. byte1 := savedB1. byte2 := savedB2. byte3 := savedB3.
 	 	 ^aTrinaryBlock value: descriptor value: eA value: eB].
 	 self perform: descriptor generator.
@@ -10970,7 +10972,7 @@ Cogit >> scanBlock: blockStart [
 	inBlock := InVanillaBlock.
 	pc := blockStart startpc.
 	end := blockStart startpc + blockStart span.
-	framelessStackDelta := nExts := extA := extB := 0.
+	framelessStackDelta := nExts := extA := numExtB := extB := 0.
 	[pc < end] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		 descriptor := self generatorAt: byte0.
@@ -10986,7 +10988,7 @@ Cogit >> scanBlock: blockStart [
 		 pc := self nextBytecodePCFor: descriptor at: pc exts: nExts in: methodObj.
 		 descriptor isExtension
 			ifTrue: [nExts := nExts + 1]
-			ifFalse: [nExts := extA := extB := 0]].
+			ifFalse: [nExts := extA := numExtB := 0. extB := 0]].
 	needsFrame ifFalse:
 		[framelessStackDelta < 0 ifTrue:
 			[self error: 'negative stack delta in block; block contains bogus code or internal error'].
@@ -11032,7 +11034,7 @@ Cogit >> scanMethod [
 	 and: [coInterpreter isQuickPrimitiveIndex: primitiveIndex]) ifTrue:
 		[^0].
 	pc := latestContinuation := initialPC.
-	numBlocks := framelessStackDelta := nExts := extA := extB := 0.
+	numBlocks := framelessStackDelta := nExts := extA := numExtB := extB := 0.
 	[pc <= endPC] whileTrue:
 		[byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		 descriptor := self generatorAt: byte0.
@@ -11066,7 +11068,7 @@ Cogit >> scanMethod [
 		 pc := pc + descriptor numBytes.
 		 descriptor isExtension
 			ifTrue: [nExts := nExts + 1]
-			ifFalse: [nExts := extA := extB := 0]].
+			ifFalse: [nExts := extA := numExtB := extB := 0]].
 	^numBlocks
 ]
 
@@ -11255,7 +11257,7 @@ Cogit >> setInterpreter: aCoInterpreter [
 	trampolineAddresses := CArrayAccessor on: (Array new: NumTrampolines * 2).
 	trampolineTableIndex := 0.
 
-	extA := extB := 0.
+	extA := numExtB := extB := 0.
 
 	compilationTrace ifNil: [compilationTrace := self class initializationOptions at: #compilationTrace ifAbsent: [0]].
 	debugOpcodeIndices := self class initializationOptions at: #debugOpcodeIndices ifAbsent: [Set new].

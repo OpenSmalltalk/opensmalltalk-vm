@@ -30,6 +30,7 @@ Class {
 		'localAbsentReceiverOrZero',
 		'extA',
 		'extB',
+		'numExtB',
 		'primitiveFunctionPointer',
 		'methodCache',
 		'nsMethodCache',
@@ -5434,9 +5435,10 @@ StackInterpreter >> extBBytecode [
 	| byte |
 	byte := self fetchByte.
 	self fetchNextBytecode.
-	extB := (extB = 0 and: [byte > 127])
+	extB := (numExtB = 0 and: [byte > 127])
 				ifTrue: [byte - 256]
-				ifFalse: [(extB bitShift: 8) + byte]
+				ifFalse: [(extB bitShift: 8) + byte].
+	numExtB := numExtB + 1
 ]
 
 { #category : #'jump bytecodes' }
@@ -5445,7 +5447,7 @@ StackInterpreter >> extJumpIfFalse [
 	| byte offset |
 	byte := self fetchByte.
 	offset := byte + (extB << 8).
-	extB := extA := 0.
+	numExtB := extB := extA := 0.
 	self jumplfFalseBy: offset
 ]
 
@@ -5462,6 +5464,7 @@ StackInterpreter >> extJumpIfNotInstanceOfBehaviorsBytecode [
 	distance := extB << 8 + self fetchByte.
 	extA := 0.
 	extB := 0.
+	numExtB := 0.
 	(objectMemory isArrayNonImm: literal)
 		ifTrue:
 			[0 to: (objectMemory numSlotsOf: literal) asInteger - 1 do: [:i |
@@ -5485,7 +5488,7 @@ StackInterpreter >> extJumpIfTrue [
 	| byte offset |
 	byte := self fetchByte.
 	offset := byte + (extB << 8).
-	extB := extA := 0.
+	numExtB := extB := extA := 0.
 	self jumplfTrueBy: offset
 ]
 
@@ -5494,7 +5497,7 @@ StackInterpreter >> extNopBytecode [
 	"SistaV1		94		01011111		Nop"
 	"NewspeakV4: 221		11011101		Nop"
 	self fetchNextBytecode.
-	extA := extB := 0
+	numExtB := extA := extB := 0
 ]
 
 { #category : #'stack bytecodes' }
@@ -5504,7 +5507,7 @@ StackInterpreter >> extPushCharacterBytecode [
 	value := self fetchByte + (extB << 8).
 	self fetchNextBytecode.
 	self internalPush: (objectMemory characterObjectOf: value).
-	extB := 0
+	numExtB := extB := 0
 ]
 
 { #category : #'stack bytecodes' }
@@ -5519,7 +5522,7 @@ StackInterpreter >> extPushClosureBytecode [
 	numCopied := ((byte >> 3) bitAnd: 7) + (extA // 16 * 8).
 	extA := 0.
 	blockSize := self fetchByte + (extB << 8).
-	extB := 0.
+	numExtB := extB := 0.
 	self pushClosureNumArgs: numArgs copiedValues: numCopied blockSize: blockSize
 ]
 
@@ -5553,6 +5556,7 @@ StackInterpreter >> extPushIntegerBytecode [
 	value := self fetchByte + (extB << 8).
 	self fetchNextBytecode.
 	extB := 0.
+	numExtB := 0.
 	self internalPush: (objectMemory integerObjectOf: value)
 ]
 
@@ -5588,7 +5592,8 @@ StackInterpreter >> extPushPseudoVariable [
 			[self respondToUnknownBytecode].
 	self fetchNextBytecode.
 	self internalPush: theThingToPush.
-	extB := 0
+	extB := 0.
+	numExtB := 0.
 ]
 
 { #category : #'stack bytecodes' }
@@ -5616,6 +5621,7 @@ StackInterpreter >> extPushPseudoVariableOrOuterBytecode [
 							[self error: 'undefined extension for extPushPseudoVariableOrOuter'.
 							 objectMemory nilObject]].
 	extB := 0.
+	numExtB := 0.
 	self internalPush: thing
 ]
 
@@ -5640,7 +5646,7 @@ StackInterpreter >> extPushRemoteTempOrInstVarLongBytecode [
 		ifFalse: 
 			[ slotIndex := slotIndex + (extA << 8).
 			tempIndex := tempIndex - self remoteIsInstVarAccess.
-			extA := extB := 0.
+			numExtB := extA := extB := 0.
 			object := self temporary: tempIndex in: localFP.
 			self pushMaybeContext: object receiverVariable: slotIndex ]
 ]
@@ -5666,6 +5672,7 @@ StackInterpreter >> extSendAbsentDynamicSuperBytecode [
 	extA := 0.
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
 	extB := 0.
+	numExtB := 0.
 	self commonSendDynamicSuper
 ]
 
@@ -5678,6 +5685,7 @@ StackInterpreter >> extSendAbsentImplicitBytecode [
 	extA := 0.
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
 	extB := 0.
+	numExtB := 0.
 	self commonSendImplicitReceiver.
 ]
 
@@ -5690,6 +5698,7 @@ StackInterpreter >> extSendAbsentOuterBytecode [
 	extA := 0.
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
 	extB := 0.
+	numExtB := 0.
 	depth := self fetchByte.
 	self commonSendOuter: depth
 ]
@@ -5703,6 +5712,7 @@ StackInterpreter >> extSendAbsentSelfBytecode [
 	extA := 0.
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
 	extB := 0.
+	numExtB := 0.
 	self commonSendOuter: 0
 ]
 
@@ -5715,6 +5725,7 @@ StackInterpreter >> extSendBytecode [
 	extA := 0.
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
 	extB := 0.
+	numExtB := 0.
 	rcvr := self internalStackValue: argumentCount.
 	lkupClassTag := objectMemory fetchClassTagOf: rcvr.
 	self commonSendOrdinary
@@ -5737,6 +5748,7 @@ StackInterpreter >> extSendSuperBytecode [
 			 ^self directedSuperclassSend]].
 	argumentCount := (byte bitAnd: 7) + (extB << 3).
 	extB := 0.
+	numExtB := 0.
 	self superclassSend
 ]
 
@@ -5748,7 +5760,7 @@ StackInterpreter >> extSistaStoreAndPopLiteralVariableBytecode [
 	variableIndex := self fetchByte + (extA << 8).
 	value := self internalStackTop.
 	self internalPop: 1.
-	extA := extB := 0..
+	extA := numExtB := extB := 0.
 	self storeLiteralVariable: variableIndex withValue: value.
 	self fetchNextBytecode.
 ]
@@ -5759,7 +5771,7 @@ StackInterpreter >> extSistaStoreAndPopReceiverVariableBytecode [
 	(3) ExtB lowest bit implies no store check is needed, ExtB next bit implies the object may be a context, other bits in the extension are unused."
 	| variableIndex value |
 	variableIndex := self fetchByte + (extA << 8).
-	extA := extB := 0.
+	extA := numExtB := extB := 0.
 	value := self internalStackTop.
 	self internalPop: 1.
 	self storeMaybeContextReceiverVariable: variableIndex withValue: value.
@@ -5772,7 +5784,7 @@ StackInterpreter >> extSistaStoreLiteralVariableBytecode [
 	(3) ExtB lowest bit implies no store check is needed, ExtB next bit implies the object may be a context, other bits in the extension are unused."
 	| variableIndex |
 	variableIndex := self fetchByte + (extA << 8).
-	extA := extB := 0.
+	extA := numExtB := extB := 0.
 	self storeLiteralVariable: variableIndex withValue: self internalStackTop.
 	self fetchNextBytecode.
 ]
@@ -5783,7 +5795,7 @@ StackInterpreter >> extSistaStoreReceiverVariableBytecode [
 	(3) ExtB lowest bit implies no store check is needed, ExtB next bit implies the object may be a context, other bits in the extension are unused."
 	| variableIndex |
 	variableIndex := self fetchByte + (extA << 8).
-	extA := extB := 0.
+	extA := numExtB := extB := 0.
 	self storeMaybeContextReceiverVariable: variableIndex withValue: self internalStackTop.
 	self fetchNextBytecode.
 ]
@@ -5850,7 +5862,7 @@ StackInterpreter >> extStoreRemoteTempOrInstVarLongBytecode [
 		ifFalse: 
 			[ slotIndex := slotIndex + (extA << 8).
 			tempIndex := tempIndex - self remoteIsInstVarAccess.
-			extA := extB := 0.
+			extA := numExtB := extB := 0.
 			object := self temporary: tempIndex in: localFP.
 			self storeMaybeContext: object receiverVariable: slotIndex withValue: self internalStackTop ]
 ]
@@ -5862,6 +5874,7 @@ StackInterpreter >> extUnconditionalJump [
 	byte := self fetchByte.
 	offset := byte + (extB << 8).
 	extB := 0.
+	numExtB := 0.
 	localIP := localIP + offset.
 	self ifBackwardsCheckForEvents: offset.
 	self fetchNextBytecode
@@ -7786,7 +7799,7 @@ StackInterpreter >> includesBehavior: aClass ThatOf: aSuperclass [
 { #category : #'simulation support' }
 StackInterpreter >> initExtensions [
 	<inline: true>
-	BytecodeSetHasExtensions ifTrue: [extA := extB := 0]
+	BytecodeSetHasExtensions ifTrue: [extA := numExtB := extB := 0]
 ]
 
 { #category : #'object memory support' }
@@ -13060,7 +13073,7 @@ StackInterpreter >> lowcodePrimitivePerformCallStructure [
 	self internalPushPointer: resultPointer.
 	extA := 0.
 	extB := 0.
-
+	numExtB := 0.
 
 ]
 
@@ -13116,6 +13129,7 @@ StackInterpreter >> lowcodePrimitivePointerAddConstantOffset [
 
 	self internalPushPointer: result.
 	extB := 0.
+	numExtB := 0.
 
 
 ]
@@ -20745,6 +20759,7 @@ StackInterpreter >> unaryInlinePrimitive: primIndex [
 					[0 to: numSlots - 1 do:
 						[:i| objectMemory storePointerUnchecked: i ofObject: result withValue: objectMemory nilObject]].
 				 extB := 0.
+				numExtB := 0.
 				 self internalStackTopPut: result].
 		"1020 	identityHash"
 		[20] ->	[result := objectMemory hashBitsOf: self internalStackTop.
