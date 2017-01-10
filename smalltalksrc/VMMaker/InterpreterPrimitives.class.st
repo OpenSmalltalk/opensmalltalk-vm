@@ -4381,6 +4381,7 @@ InterpreterPrimitives >> primitiveSpurStringReplace [
 	 and: [arrayFmt < objectMemory firstCompiledMethodFormat]) ifFalse:
 		[^self primitiveFailFor: PrimErrInappropriate].
 
+	"N.B. In the below start - 1 to: stop - 1 do:, Slang is intelligent enough to use < instead of <= so avoiding the stop - 1."
 	arrayFmt <= objectMemory lastPointerFormat
 		ifTrue:
 			[arrayInstSize := objectMemory fixedFieldsOf: array format: arrayFmt length: arrayLength.
@@ -4388,10 +4389,24 @@ InterpreterPrimitives >> primitiveSpurStringReplace [
 			 (start >= 1 and: [start - 1 <= stop and: [stop + arrayInstSize <= arrayLength
 			  and: [replStart >= 1 and: [stop - start + replStart + replInstSize <= replLength]]]]) ifFalse:
 				[^self primitiveFailFor: PrimErrBadIndex].
-			 srcDelta := (replStart + replInstSize) - (start + arrayInstSize).
-			 start + arrayInstSize - 1 to: stop + arrayInstSize - 1 do:
-				[:i |
-				objectMemory storePointer: i ofObject: array withValue: (objectMemory fetchPointer: srcDelta + i ofObject: repl)]]
+			 start := start + arrayInstSize.
+			 stop := stop + arrayInstSize.
+			 srcDelta := (replStart + replInstSize) - start.
+			 (objectMemory isOldObject: array)
+				ifTrue:
+					[| mustRemember oop |
+					 mustRemember := false.
+					 start - 1 to: stop - 1 do:
+						[:i |
+						oop := objectMemory fetchPointer: srcDelta + i ofObject: repl.
+						(objectMemory isYoung: oop) ifTrue:
+							[mustRemember := true].
+						objectMemory storePointerUnchecked: i ofObject: array withValue: oop].
+					 mustRemember ifTrue:
+						[objectMemory possibleRootStoreInto: array]]
+				ifFalse:
+					[start - 1 to: stop - 1 do:
+						[:i | objectMemory storePointerUnchecked: i ofObject: array withValue: (objectMemory fetchPointer: srcDelta + i ofObject: repl)]]]
 		ifFalse:
 			[(start >= 1 and: [start - 1 <= stop and: [stop <= arrayLength
 			  and: [replStart >= 1 and: [stop - start + replStart <= replLength]]]]) ifFalse:
