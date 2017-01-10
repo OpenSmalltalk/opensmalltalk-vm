@@ -3358,6 +3358,32 @@ SpurMemoryManager >> classFormatForInstanceFormat: aFormat [
 		ifFalse: [aFormat bitAnd: -2]
 ]
 
+{ #category : #'object access' }
+SpurMemoryManager >> classFormatFromInstFormat: instFormat [
+	"0 = 0 sized objects (UndefinedObject True False et al)
+	 1 = non-indexable objects with inst vars (Point et al)
+	 2 = indexable objects with no inst vars (Array et al)
+	 3 = indexable objects with inst vars (MethodContext AdditionalMethodState et al)
+	 4 = weak indexable objects with inst vars (WeakArray et al)
+	 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
+	 6 unused, reserved for exotic pointer objects?
+	 7 Forwarded Object, 1st field is pointer, rest of fields are ignored
+	 8 unused, reserved for exotic non-pointer objects?
+	 9 64-bit indexable
+	 10 - 11 32-bit indexable
+	 12 - 15 16-bit indexable
+	 16 - 23 byte indexable
+	 24 - 31 compiled method"
+	<inline: true>
+	instFormat >= self firstByteFormat ifTrue: "this is likely the common case"
+		[^instFormat bitAnd: -8].
+	instFormat <= self sixtyFourBitIndexableFormat ifTrue:
+		[^instFormat].
+	instFormat < self firstShortFormat ifTrue:
+		[^instFormat bitAnd: -2].
+	^instFormat bitAnd: -4
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> classIndexFieldWidth [
 	"22-bit class mask => ~ 4M classes"
@@ -4989,7 +5015,7 @@ SpurMemoryManager >> formatMask [
 	 4 = weak indexable objects with inst vars (WeakArray et al)
 	 5 = weak non-indexable objects with inst vars (ephemerons) (Ephemeron)
 	 6,7,8 unused
-	 9 (?) 64-bit indexable
+	 9 64-bit indexable
 	 10 - 11 32-bit indexable
 	 12 - 15 16-bit indexable
 	 16 - 23 byte indexable
@@ -5008,7 +5034,7 @@ SpurMemoryManager >> formatOf: objOop [
 	 6 unused, reserved for exotic pointer objects?
 	 7 Forwarded Object, 1st field is pointer, rest of fields are ignored
 	 8 unused, reserved for exotic non-pointer objects?
-	 9 (?) 64-bit indexable
+	 9 64-bit indexable
 	 10 - 11 32-bit indexable	(11 unused in 32 bits)
 	 12 - 15 16-bit indexable	(14 & 15 unused in 32-bits)
 	 16 - 23 byte indexable		(20-23 unused in 32-bits)
@@ -5039,7 +5065,7 @@ SpurMemoryManager >> formatOfHeader: header [
 	 6 unused, reserved for exotic pointer objects?
 	 7 Forwarded Object, 1st field is pointer, rest of fields are ignored
 	 8 unused, reserved for exotic non-pointer objects?
-	 9 (?) 64-bit indexable
+	 9 64-bit indexable
 	 10 - 11 32-bit indexable
 	 12 - 15 16-bit indexable
 	 16 - 23 byte indexable
@@ -10320,7 +10346,7 @@ SpurMemoryManager >> set: objOop classIndexTo: classIndex formatTo: format [
 	 6 unused, reserved for exotic pointer objects?
 	 7 Forwarded Object, 1st field is pointer, rest of fields are ignored
 	 8 unused, reserved for exotic non-pointer objects?
-	 9 (?) 64-bit indexable
+	 9 64-bit indexable
 	 10 - 11 32-bit indexable
 	 12 - 15 16-bit indexable
 	 16 - 23 byte indexable
@@ -10364,7 +10390,7 @@ SpurMemoryManager >> setFormatOf: objOop to: format [
 	 6 unused, reserved for exotic pointer objects?
 	 7 Forwarded Object, 1st field is pointer, rest of fields are ignored
 	 8 unused, reserved for exotic non-pointer objects?
-	 9 (?) 64-bit indexable
+	 9 64-bit indexable
 	 10 - 11 32-bit indexable
 	 12 - 15 16-bit indexable
 	 16 - 23 byte indexable
