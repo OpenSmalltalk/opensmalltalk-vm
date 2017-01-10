@@ -49,7 +49,8 @@ Class {
 		'oldInterpreter',
 		'newInterpreter',
 		'imageHeaderFlags',
-		'savedWindowSize'
+		'savedWindowSize',
+		'writeDefaultHeader'
 	],
 	#pools : [
 		'VMObjectIndices'
@@ -250,7 +251,7 @@ Spur32BitPreen >> on: imageName [
 		openOn: imageName extraMemory: 0.
 	oldHeap := oldInterpreter objectMemory.
 	imageHeaderFlags := oldInterpreter getImageHeaderFlags.
-	savedWindowSize := oldInterpreter savedWindowSize.
+	savedWindowSize ifNil: [savedWindowSize := oldInterpreter savedWindowSize].
 	newInterpreter := StackInterpreterSimulator newWithOptions: #(ObjectMemory Spur32BitMemoryManager).
 	newHeap := newInterpreter objectMemory.
 	newHeap
@@ -299,8 +300,12 @@ Spur32BitPreen >> preenImageUsingFileDirectory: imageName [
 	self writeSnapshot: (dir fullNameFor: baseName, '-preen.image')
 		headerFlags: imageHeaderFlags
 		screenSize: savedWindowSize.
-	dir deleteFileNamed: baseName, '-preen.changes';
-		copyFileNamed: baseName, '.changes' toFileNamed: baseName, '-preen.changes'
+	(dir fileExists: baseName, '.changes')
+		ifTrue:
+			[dir deleteFileNamed: baseName, '-preen.changes';
+				copyFileNamed: baseName, '.changes' toFileNamed: baseName, '-preen.changes']
+		ifFalse:
+			[Transcript cr; show: 'could not find ', baseName, '.changes']
 ]
 
 { #category : #'bootstrap image' }
@@ -325,9 +330,21 @@ Spur32BitPreen >> reportSizes [
 		flush
 ]
 
+{ #category : #'public access' }
+Spur32BitPreen >> savedWindowSize: aPointOrInteger [
+	savedWindowSize := aPointOrInteger isInteger
+							ifTrue: [aPointOrInteger]
+							ifFalse: [(aPointOrInteger x min: 65535) << 16 + (aPointOrInteger y min: 65535)]
+]
+
 { #category : #'bootstrap image' }
 Spur32BitPreen >> shouldClone: obj32 [
 	^(oldHeap isValidObjStackPage: obj32) not
+]
+
+{ #category : #'public access' }
+Spur32BitPreen >> writeDefaultHeader: aBoolean [
+	writeDefaultHeader := aBoolean
 ]
 
 { #category : #snapshot }
@@ -335,6 +352,12 @@ Spur32BitPreen >> writeSnapshot: imageFileName headerFlags: headerFlags screenSi
 	newHeap
 		checkFreeSpace;
 		runLeakCheckerForFullGC.
+	writeDefaultHeader == true ifTrue:
+		[newInterpreter
+			desiredEdenBytes: 0;
+			desiredNumStackPages: 0;
+			setDesiredCogCodeSize: 0;
+			setMaxExtSemSizeTo: 0].
 	newInterpreter
 		setImageHeaderFlagsFrom: headerFlags;
 		setDisplayForm: nil;
