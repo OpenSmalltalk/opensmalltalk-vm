@@ -19126,8 +19126,10 @@ StackInterpreter >> setCogVMFlags: flags [
 ]
 
 { #category : #'internal interpreter access' }
-StackInterpreter >> setDesiredCogCodeSize: iCouldCareLess [
-	"This is a no-op in the StackVM"
+StackInterpreter >> setDesiredCogCodeSize: dccs [
+	<inline: true>
+	"This should perhaps be a no-op in the StackVM, but we implement it for the convenience of bootstrap scripts etc."
+	theUnknownShort := dccs
 ]
 
 { #category : #'frame access' }
