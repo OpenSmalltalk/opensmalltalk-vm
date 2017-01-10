@@ -7176,7 +7176,7 @@ CoInterpreter >> setCogVMFlags: flags [
 
 { #category : #'internal interpreter access' }
 CoInterpreter >> setDesiredCogCodeSize: dccs [
-	<cmacro: '(dccs) (desiredCogCodeSize = (dccs))'>
+	<inline: true>
 	desiredCogCodeSize := dccs
 ]
 
