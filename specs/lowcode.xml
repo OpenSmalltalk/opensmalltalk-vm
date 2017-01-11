@@ -3076,7 +3076,7 @@
         </stack-arguments>
         <stack-results />
         <semantic language="Smalltalk/StackInterpreter">
-            self mem: dest cp: source y: size.
+            self lowcode_mem: dest cp: source y: size.
         </semantic>
         <semantic language="Smalltalk/Cog">
             self ssFlushAll.
@@ -3094,7 +3094,7 @@
         </stack-arguments>
         <stack-results />
         <semantic language="Smalltalk/StackInterpreter">
-            self mem: dest cp: source y: size.
+            self lowcode_mem: dest cp: source y: size.
         </semantic>
         <semantic language="Smalltalk/Cog">
             self ssFlushAll.
@@ -3113,7 +3113,7 @@
         </stack-arguments>
         <stack-results />
         <semantic language="Smalltalk/StackInterpreter">
-            self mem: dest cp: source y: size.
+            self lowcode_mem: dest cp: source y: size.
         </semantic>
         <semantic language="Smalltalk/Cog">
             size = BytesPerWord ifTrue: [
@@ -3693,6 +3693,7 @@
             self ssPushNativeRegister: ReceiverResultReg.
             extA := 0.
             extB := 0.
+            numExtB := 0.
         </semantic>
         <semantic language="Smalltalk/StackInterpreter">
             self internalPushShadowCallStackPointer: result.
