@@ -1957,7 +1957,7 @@
             self ssPushNativeRegister: value.
         </semantic>
         <semantic language="Smalltalk/StackInterpreter">
-            result := self cCoerce: value to: 'uintptr_t'.
+            result := self cCoerce: (self cCoerce: value to: 'uintptr_t') to: 'char*'.
         </semantic>
     </instruction>
     <instruction opcode="1078" mnemonic="int64Equal" kind="operation">
