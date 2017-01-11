@@ -31014,7 +31014,7 @@ primitiveFullClosureValue(void)
     CogMethod *cogMethod;
     CogMethod *cogMethod1;
     sqInt header;
-    sqInt i;
+    usqInt i;
     int inInterpreter;
     sqInt methodHeader;
     sqInt methodHeader1;
@@ -31224,7 +31224,7 @@ primitiveFullClosureValue(void)
 	GIV(stackPointer) = sp8;
 	for (i = 0; i < numCopied; i += 1) {
 		/* begin push: */
-		longAtput((sp = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + (((sqInt)((usqInt)((i + FullClosureFirstCopiedValueIndex)) << (shiftForWord()))))));
+		longAtput((sp = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + ((i + FullClosureFirstCopiedValueIndex) << (shiftForWord()))));
 		GIV(stackPointer) = sp;
 	}
 	assert(frameIsBlockActivation(GIV(framePointer)));
@@ -31279,7 +31279,7 @@ primitiveFullClosureValueNoContextSwitch(void)
     CogMethod *cogMethod;
     CogMethod *cogMethod1;
     sqInt header;
-    sqInt i;
+    usqInt i;
     int inInterpreter;
     sqInt methodHeader;
     sqInt methodHeader1;
@@ -31489,7 +31489,7 @@ primitiveFullClosureValueNoContextSwitch(void)
 	GIV(stackPointer) = sp8;
 	for (i = 0; i < numCopied; i += 1) {
 		/* begin push: */
-		longAtput((sp = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + (((sqInt)((usqInt)((i + FullClosureFirstCopiedValueIndex)) << (shiftForWord()))))));
+		longAtput((sp = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + ((i + FullClosureFirstCopiedValueIndex) << (shiftForWord()))));
 		GIV(stackPointer) = sp;
 	}
 	assert(frameIsBlockActivation(GIV(framePointer)));
@@ -31540,7 +31540,7 @@ primitiveFullClosureValueWithArgs(void)
     CogMethod *cogMethod;
     CogMethod *cogMethod1;
     sqInt header;
-    sqInt i;
+    usqInt i;
     sqInt index;
     int inInterpreter;
     sqInt methodHeader;
@@ -31786,7 +31786,7 @@ primitiveFullClosureValueWithArgs(void)
 	GIV(stackPointer) = sp8;
 	for (i = 0; i < numCopied; i += 1) {
 		/* begin push: */
-		longAtput((sp13 = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + (((sqInt)((usqInt)((i + FullClosureFirstCopiedValueIndex)) << (shiftForWord()))))));
+		longAtput((sp13 = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + ((i + FullClosureFirstCopiedValueIndex) << (shiftForWord()))));
 		GIV(stackPointer) = sp13;
 	}
 	assert(frameIsBlockActivation(GIV(framePointer)));
@@ -47691,19 +47691,6 @@ fireAllUnscannedEphemerons(void)
 	}
 }
 
-	/* SpurMemoryManager>>#fireAllUnscannedEphemerons */
-static void
-fireAllUnscannedEphemerons(void)
-{   DECL_MAYBE_SQ_GLOBAL_STRUCT
-    sqInt p;
-
-	assert(!(noUnscannedEphemerons()));
-	assert(allUnscannedEphemeronsAreActive());
-	for (p = ((GIV(unscannedEphemerons).start)); p <= (((GIV(unscannedEphemerons).top)) - BytesPerOop); p += BytesPerOop) {
-		fireEphemeron(longAt(p));
-	}
-}
-
 	/* SpurMemoryManager>>#firstAccessibleObject */
 static sqInt
 firstAccessibleObject(void)
@@ -58913,7 +58900,7 @@ freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact(void)
 static sqInt NoDbgRegParms
 moveARunOfObjectsStartingAtupTo(usqInt startAddress, usqInt limit)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
-    usqInt chunkBytes;
+    sqInt chunkBytes;
     sqInt classIndex;
     sqInt classIndex1;
     sqInt dest;
@@ -59621,7 +59608,7 @@ static void NoDbgRegParms
 bridgeFromto(SpurSegmentInfo *aSegment, SpurSegmentInfo *nextSegmentOrNil)
 {
     usqInt bridgeSpan;
-    usqInt clifton;
+    sqInt clifton;
     usqInt segEnd;
 
 	segEnd = ((aSegment->segSize)) + ((aSegment->segStart));
@@ -60222,8 +60209,8 @@ writeSegmentnextSegmenttoFile(SpurSegmentInfo *segment, SpurSegmentInfo *nextSeg
 {
     usqLong firstSavedBridgeWord;
     sqInt nWritten;
-    usqInt pier1;
-    usqInt pier2;
+    sqInt pier1;
+    sqInt pier2;
     usqLong secondSavedBridgeWord;
 
 	pier1 = (((segment->segSize)) + ((segment->segStart))) - (2 * BaseHeaderSize);

@@ -2865,7 +2865,7 @@ concretizeConditionalInstruction(AbstractInstruction * self_in_concretizeConditi
 {
     sqInt aWord;
     sqInt i;
-    sqInt instr;
+    usqInt instr;
     unsigned char savedCond;
 
 	assert(((self_in_concretizeConditionalInstruction->conditionOrNil)) != null);
@@ -7597,7 +7597,7 @@ static sqInt NoDbgRegParms
 blockDispatchTargetsForperformarg(CogMethod *cogMethod, usqInt (*binaryFunction)(sqInt mcpc, sqInt arg), sqInt arg)
 {
     sqInt blockEntry;
-    usqInt end;
+    sqInt end;
     sqInt pc;
     sqInt result;
     usqInt targetpc;

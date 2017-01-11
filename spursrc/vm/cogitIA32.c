@@ -10916,12 +10916,12 @@ static sqInt NoDbgRegParms
 generateMapAtstart(sqInt addressOrNull, sqInt startAddress)
 {
     unsigned char annotation;
-    sqInt delta;
+    usqIntptr_t delta;
     sqInt i;
     AbstractInstruction *instruction;
     sqInt length;
-    sqInt location;
-    sqInt mapEntry;
+    usqIntptr_t location;
+    usqIntptr_t mapEntry;
     sqInt maxDelta;
     usqIntptr_t mcpc;
 

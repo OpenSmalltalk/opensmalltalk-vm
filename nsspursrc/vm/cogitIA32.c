@@ -5515,28 +5515,6 @@ dispatchConcretize(AbstractInstruction * self_in_dispatchConcretize)
 		destReg21 = ((self_in_dispatchConcretize->operands))[1];
 		((self_in_dispatchConcretize->machineCode))[0] = 243;
 		((self_in_dispatchConcretize->machineCode))[1] = 15;
-		((self_in_dispatchConcretize->machineCode))[2] = 90;
-		((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModReg, srcReg17, destReg19));
-		(self_in_dispatchConcretize->machineCodeSize) = 4;
-		return;
-
-	case ConvertRsR:
-		/* begin concretizeConvertRsR */
-		srcReg18 = ((self_in_dispatchConcretize->operands))[0];
-		destReg20 = ((self_in_dispatchConcretize->operands))[1];
-		((self_in_dispatchConcretize->machineCode))[0] = 243;
-		((self_in_dispatchConcretize->machineCode))[1] = 15;
-		((self_in_dispatchConcretize->machineCode))[2] = 45;
-		((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModReg, srcReg18, destReg20));
-		(self_in_dispatchConcretize->machineCodeSize) = 4;
-		return;
-
-	case ConvertRRs:
-		/* begin concretizeConvertRRs */
-		srcReg19 = ((self_in_dispatchConcretize->operands))[0];
-		destReg21 = ((self_in_dispatchConcretize->operands))[1];
-		((self_in_dispatchConcretize->machineCode))[0] = 243;
-		((self_in_dispatchConcretize->machineCode))[1] = 15;
 		((self_in_dispatchConcretize->machineCode))[2] = 42;
 		((self_in_dispatchConcretize->machineCode))[3] = (modRMRO(self_in_dispatchConcretize, ModReg, srcReg19, destReg21));
 		(self_in_dispatchConcretize->machineCodeSize) = 4;
@@ -10907,12 +10885,12 @@ static sqInt NoDbgRegParms
 generateMapAtstart(sqInt addressOrNull, sqInt startAddress)
 {
     unsigned char annotation;
-    sqInt delta;
+    usqIntptr_t delta;
     sqInt i;
     AbstractInstruction *instruction;
     sqInt length;
-    sqInt location;
-    sqInt mapEntry;
+    usqIntptr_t location;
+    usqIntptr_t mapEntry;
     sqInt maxDelta;
     usqIntptr_t mcpc;
 

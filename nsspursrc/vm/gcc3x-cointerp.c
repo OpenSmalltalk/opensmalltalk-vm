@@ -60648,7 +60648,7 @@ nextNonEmptySegmentAfter(sqInt i)
 static void
 postSnapshot(void)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
-    sqInt address;
+    usqInt address;
     sqInt bytes;
     usqInt freeChunk;
     sqInt i;
@@ -61067,8 +61067,8 @@ writeSegmentnextSegmenttoFile(SpurSegmentInfo *segment, SpurSegmentInfo *nextSeg
 {
     usqLong firstSavedBridgeWord;
     sqInt nWritten;
-    sqInt pier1;
-    sqInt pier2;
+    usqInt pier1;
+    usqInt pier2;
     usqLong secondSavedBridgeWord;
 
 	pier1 = (((segment->segSize)) + ((segment->segStart))) - (2 * BaseHeaderSize);
@@ -72066,7 +72066,7 @@ removeFirstLinkOfList(sqInt aList)
 static sqInt
 retryPrimitiveOnFailure(void)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
-    sqInt accessorDepth;
+    signed char accessorDepth;
     sqInt canRetry;
     sqInt firstBytecode;
     sqInt followDone;

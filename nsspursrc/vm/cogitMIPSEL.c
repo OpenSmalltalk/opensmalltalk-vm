@@ -659,7 +659,7 @@ static AbstractInstruction * NoDbgRegParms gMoveCwR(sqInt wordConstant, sqInt re
 static AbstractInstruction * NoDbgRegParms gMoveMwrR(sqInt offset, sqInt baseReg, sqInt destReg);
 static AbstractInstruction * NoDbgRegParms gMoveRMwr(sqInt sourceReg, sqInt offset, sqInt baseReg);
 static AbstractInstruction * NoDbgRegParms gMoveRR(sqInt reg1, sqInt reg2);
-static sqInt NoDbgRegParms mapEndFor(CogMethod *cogMethod);
+static usqInt NoDbgRegParms mapEndFor(CogMethod *cogMethod);
 static sqInt NoDbgRegParms mapForperformUntilarg(CogMethod *cogMethod, sqInt (*functionSymbol)(sqInt annotation, char *mcpc, sqInt arg), sqInt arg);
 static sqInt NoDbgRegParms mapObjectReferencesInClosedPIC(CogMethod *cPIC);
 static void mapObjectReferencesInGeneratedRuntime(void);
@@ -3290,7 +3290,7 @@ checkIfValidOopRefAndTargetpccogMethod(sqInt annotation, char *mcpc, sqInt cogMe
     usqInt cacheTag1;
     sqInt classTag;
     sqInt enclosingObject;
-    usqInt entryPoint;
+    sqInt entryPoint;
     usqInt entryPoint1;
     usqInt entryPoint2;
     sqInt literal;
@@ -4945,7 +4945,7 @@ cPICHasForwardedClass(CogMethod *cPIC)
 static sqInt NoDbgRegParms
 cPICHasFreedTargets(CogMethod *cPIC)
 {
-    sqInt entryPoint;
+    usqInt entryPoint;
     sqInt i;
     sqInt pc;
     CogMethod *targetMethod;
@@ -7247,7 +7247,7 @@ gMoveRR(sqInt reg1, sqInt reg2)
 /*	Answer the address of the null byte at the end of the method map. */
 
 	/* Cogit>>#mapEndFor: */
-static sqInt NoDbgRegParms
+static usqInt NoDbgRegParms
 mapEndFor(CogMethod *cogMethod)
 {
     usqInt end;
@@ -8969,7 +8969,7 @@ static void NoDbgRegParms
 relocateCallsInClosedPIC(CogMethod *cPIC)
 {
     sqLong callDelta;
-    sqInt entryPoint;
+    usqInt entryPoint;
     sqInt i;
     sqInt pc;
     sqLong refDelta;
@@ -14979,7 +14979,7 @@ relocateCallBeforeReturnPCby(AbstractInstruction * self_in_relocateCallBeforeRet
 static AbstractInstruction * NoDbgRegParms
 relocateJumpLongBeforeFollowingAddressby(AbstractInstruction * self_in_relocateJumpLongBeforeFollowingAddressby, sqInt pc, sqInt delta)
 {
-    sqInt newTarget;
+    usqInt newTarget;
     usqInt oldTarget;
 
 	assert((delta % 4) == 0);
@@ -15032,7 +15032,7 @@ relocateJumpLongConditionalBeforeFollowingAddressby(AbstractInstruction * self_i
 static AbstractInstruction * NoDbgRegParms
 relocateMethodReferenceBeforeAddressby(AbstractInstruction * self_in_relocateMethodReferenceBeforeAddressby, sqInt pc, sqInt delta)
 {
-    sqInt newValue;
+    usqInt newValue;
     usqInt oldValue;
 
 	if (((opcodeAtAddress(self_in_relocateMethodReferenceBeforeAddressby, pc - 8)) == ADDIU)

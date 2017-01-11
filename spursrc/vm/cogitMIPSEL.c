@@ -652,7 +652,7 @@ static AbstractInstruction * NoDbgRegParms gMoveCwR(sqInt wordConstant, sqInt re
 static AbstractInstruction * NoDbgRegParms gMoveMwrR(sqInt offset, sqInt baseReg, sqInt destReg);
 static AbstractInstruction * NoDbgRegParms gMoveRMwr(sqInt sourceReg, sqInt offset, sqInt baseReg);
 static AbstractInstruction * NoDbgRegParms gMoveRR(sqInt reg1, sqInt reg2);
-static usqInt NoDbgRegParms mapEndFor(CogMethod *cogMethod);
+static sqInt NoDbgRegParms mapEndFor(CogMethod *cogMethod);
 static sqInt NoDbgRegParms mapForperformUntilarg(CogMethod *cogMethod, sqInt (*functionSymbol)(sqInt annotation, char *mcpc, sqInt arg), sqInt arg);
 static sqInt NoDbgRegParms mapObjectReferencesInClosedPIC(CogMethod *cPIC);
 static void mapObjectReferencesInGeneratedRuntime(void);
@@ -2754,7 +2754,7 @@ bytecodePCForstartBcpcin(sqInt mcpc, sqInt startbcpc, CogBlockMethod *cogMethod)
     sqInt byte;
     BytecodeDescriptor *descriptor;
     sqInt distance;
-    usqInt endbcpc;
+    sqInt endbcpc;
     CogMethod *homeMethod;
     sqInt isBackwardBranch;
     sqInt isInBlock;
@@ -7145,7 +7145,7 @@ gMoveRR(sqInt reg1, sqInt reg2)
 /*	Answer the address of the null byte at the end of the method map. */
 
 	/* Cogit>>#mapEndFor: */
-static usqInt NoDbgRegParms
+static sqInt NoDbgRegParms
 mapEndFor(CogMethod *cogMethod)
 {
     usqInt end;
@@ -8095,7 +8095,7 @@ mcPCForBackwardBranchstartBcpcin(sqInt bcpc, sqInt startbcpc, CogBlockMethod *co
     sqInt byte;
     BytecodeDescriptor *descriptor;
     sqInt distance;
-    usqInt endbcpc;
+    sqInt endbcpc;
     CogMethod *homeMethod;
     sqInt isBackwardBranch;
     sqInt isInBlock;
@@ -8758,7 +8758,7 @@ static void NoDbgRegParms
 relocateCallsInClosedPIC(CogMethod *cPIC)
 {
     sqLong callDelta;
-    sqInt entryPoint;
+    usqInt entryPoint;
     sqInt i;
     sqInt pc;
     sqLong refDelta;
@@ -14420,7 +14420,7 @@ relocateCallBeforeReturnPCby(AbstractInstruction * self_in_relocateCallBeforeRet
 static AbstractInstruction * NoDbgRegParms
 relocateJumpLongBeforeFollowingAddressby(AbstractInstruction * self_in_relocateJumpLongBeforeFollowingAddressby, sqInt pc, sqInt delta)
 {
-    sqInt newTarget;
+    usqInt newTarget;
     usqInt oldTarget;
 
 	assert((delta % 4) == 0);
@@ -21744,7 +21744,7 @@ mapPCDataForinto(CogMethod *cogMethod, sqInt arrayObj)
     CogBlockMethod *cogMethod1;
     BytecodeDescriptor *descriptor;
     sqInt distance;
-    usqInt endbcpc;
+    sqInt endbcpc;
     sqInt errCode;
     CogMethod *homeMethod;
     sqInt isBackwardBranch;
