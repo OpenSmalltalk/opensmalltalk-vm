@@ -101,6 +101,12 @@
 // 
 #undef	FULLSCREEN_FADE	 0.02
 
+#ifdef PharoVM
+# define VMOPTION(arg) "--"arg
+#else
+# define VMOPTION(arg) "-"arg
+#endif
+
 /// 
 /// No more user-serviceable parts in this file.  Stop Tweaking Now!
 /// 
@@ -1086,24 +1092,24 @@ static void  display_parseEnvironment(void) {}
 
 static int display_parseArgument(int argc, char **argv)
 {
-  if     (!strncmp(*argv, "-psn_", 5))		return fromFinder= 1;
-  else if (!strcmp(*argv, "-quartz"))		return 1;
-  else if (!strcmp(*argv, "-fullscreen"))	return fullscreen= 1;
-  else if (!strcmp(*argv, "-headless"))		return headless= 1;
-  else if (!strcmp(*argv, "-notitle"))		return noTitle= 1;
-  else if (!strcmp(*argv, "-nodock"))		return noDock= 1;
-  else if (!strcmp(*argv, "-swapbtn"))		return swapBtn= 1;
+  if     (!strncmp(*argv, VMOPTION("psn_"), strlen(VMOPTION("psn_"))))		return fromFinder= 1;
+  else if (!strcmp(*argv, VMOPTION("quartz")))		return 1;
+  else if (!strcmp(*argv, VMOPTION("fullscreen")))	return fullscreen= 1;
+  else if (!strcmp(*argv, VMOPTION("headless")))		return headless= 1;
+  else if (!strcmp(*argv, VMOPTION("notitle")))		return noTitle= 1;
+  else if (!strcmp(*argv, VMOPTION("nodock")))		return noDock= 1;
+  else if (!strcmp(*argv, VMOPTION("swapbtn")))		return swapBtn= 1;
   return 0;
 }
 
 static void display_printUsage(void)
 {
   printf("\nQuartz/Aqua <option>s:\n");
-  printf("  -fullscreen           occupy the entire screen\n");
-  printf("  -headless             run in headless (no window) mode\n");
-  printf("  -nodock               don't show Squeak in the dock\n");
-  printf("  -notitle              disable the Squeak window title bar\n");
-  printf("  -swapbtn              swap mouse buttons 2 (yellow) and 3 (blue)\n");
+  printf("  "VMOPTION("fullscreen")"           occupy the entire screen\n");
+  printf("  "VMOPTION("headless")"             run in headless (no window) mode\n");
+  printf("  "VMOPTION("nodock")"               don't show Squeak in the dock\n");
+  printf("  "VMOPTION("notitle")"              disable the Squeak window title bar\n");
+  printf("  "VMOPTION("swapbtn")"              swap mouse buttons 2 (yellow) and 3 (blue)\n");
 }
 
 static void display_printUsageNotes(void)
