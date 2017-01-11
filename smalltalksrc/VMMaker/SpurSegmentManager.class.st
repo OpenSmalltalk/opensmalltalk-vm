@@ -311,7 +311,7 @@ SpurSegmentManager >> initSegmentForInImageCompilationFrom: base to: limit [
 
 { #category : #initialization }
 SpurSegmentManager >> initialize [
-	numSegments := numSegInfos := 0.
+	numSegments := numSegInfos := sweepIndex := 0.
 	canSwizzle := false
 ]
 
