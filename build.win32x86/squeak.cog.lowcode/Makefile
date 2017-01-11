@@ -6,4 +6,6 @@
 VM:=Squeak
 VMSRCDIR:=../../spurlowcodesrc/vm
 
+COGDEFS:= -DSTACK_ALIGN_BYTES=16 -DALLOCA_LIES_SO_USE_GETSP=0
+	
 include ../common/Makefile
