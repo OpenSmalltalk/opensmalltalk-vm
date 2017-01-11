@@ -8574,7 +8574,7 @@ interpret(void)
 						case 5:
 							/* begin num32BitUnitsOf: */
 							objOop31 = longAtPointer(localSP);
-							result2 = ((usqInt) (numBytesOf(objOop31))) >> 2;
+							result2 = ((sqInt) (((usqInt) (numBytesOf(objOop31))) >> 2));
 							/* begin internalStackTopPut: */
 							longAtPointerput(localSP, ((result2 << 1) | 1));
 							break;
@@ -23892,7 +23892,7 @@ interpret(void)
 						case 5:
 							/* begin num32BitUnitsOf: */
 							objOop31 = longAtPointer(localSP);
-							result2 = ((usqInt) (numBytesOf(objOop31))) >> 2;
+							result2 = ((sqInt) (((usqInt) (numBytesOf(objOop31))) >> 2));
 							/* begin internalStackTopPut: */
 							longAtPointerput(localSP, ((result2 << 1) | 1));
 							break;
@@ -35064,7 +35064,7 @@ ceSendMustBeBooleanTointerpretingAtDelta(sqInt aNonBooleanObject, sqInt jumpSize
     sqInt oop;
     char *p;
     char *sp;
-    unsigned short startBcpc;
+    sqInt startBcpc;
     sqInt top;
 
 	assert(addressCouldBeOop(aNonBooleanObject));
@@ -35831,7 +35831,7 @@ checkStackIntegrity(void)
     sqInt i;
     sqInt methodField;
     sqInt ok;
-    usqInt oop;
+    sqInt oop;
     char *theFP;
     StackPage *thePage;
     char *theSP;
@@ -51941,7 +51941,7 @@ primitiveImmediateAsInteger(void)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
     sqInt oop;
     char *sp;
-    usqInt value;
+    sqInt value;
 
 	value = 0;
 	oop = longAt(GIV(stackPointer));
@@ -51960,7 +51960,7 @@ primitiveImmediateAsInteger(void)
 		}
 	}
 	/* begin pop:thenPushInteger: */
-	longAtput((sp = GIV(stackPointer) + (((GIV(argumentCount) + 1) - 1) * BytesPerWord)), ((value << 1) | 1));
+	longAtput((sp = GIV(stackPointer) + (((GIV(argumentCount) + 1) - 1) * BytesPerWord)), (((usqInt)value << 1) | 1));
 	GIV(stackPointer) = sp;
 }
 
@@ -78229,7 +78229,7 @@ freeUnmarkedObjectsAndSortAndCoalesceFreeSpaceForPigCompact(void)
 static sqInt NoDbgRegParms
 moveARunOfObjectsStartingAtupTo(usqInt startAddress, usqInt limit)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
-    sqInt chunkBytes;
+    usqInt chunkBytes;
     sqInt classIndex;
     sqInt classIndex1;
     sqInt dest;
@@ -78937,7 +78937,7 @@ static void NoDbgRegParms
 bridgeFromto(SpurSegmentInfo *aSegment, SpurSegmentInfo *nextSegmentOrNil)
 {
     usqInt bridgeSpan;
-    sqInt clifton;
+    usqInt clifton;
     usqInt segEnd;
 
 	segEnd = ((aSegment->segSize)) + ((aSegment->segStart));
@@ -85251,12 +85251,13 @@ lowcodeStoreLocalInt64Workaroundinsp(sqInt baseOffset, char*theFP, char*theSP)
 	In Windows memcpy is putting too much register pressure on GCC when used
 	by Lowcode instructions
  */
+/*	Using memmove instead of memcpy to avoid crashing GCC in Windows. */
 
 	/* StackInterpreter>>#lowcode_mem:cp:y: */
 static void NoDbgRegParms NeverInline
 lowcode_memcpy(void*destAddress, void*sourceAddress, sqInt bytes)
 {
-	memcpy(destAddress, sourceAddress, bytes);
+	memmove(destAddress, sourceAddress, bytes);
 }
 
 
@@ -89723,7 +89724,7 @@ removeFirstLinkOfList(sqInt aList)
 static sqInt
 retryPrimitiveOnFailure(void)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
-    signed char accessorDepth;
+    sqInt accessorDepth;
     sqInt canRetry;
     sqInt firstBytecode;
     sqInt followDone;
