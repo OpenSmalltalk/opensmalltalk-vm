@@ -14,7 +14,7 @@ typedef unsigned long ulong;
 #endif
 
 /*
- * Answer a polonger to a new Bochs IA32 CPU (an instance of C++ class bx_cpu_c)
+ * Answer a pointer to a new Bochs IA32 CPU (an instance of C++ class bx_cpu_c)
  */
 extern void *newCPU();
 /*
@@ -23,14 +23,14 @@ extern void *newCPU();
 extern long   resetCPU(void *cpu);
 /*
  * Single-step *cpu (a bx_cpu_c instance) using memory as its memory.
- * Answer 0 on success, or an longeger error code if something went awry.
+ * Answer 0 on success, or an integer error code if something went awry.
  */
 extern long  singleStepCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
 					ulong byteSize, ulong minReadAddr, ulong minWriteAddr);
 /*
  * Run *cpu (a bx_cpu_c instance) using memory as its memory.
- * Answer an longeger error code when the processor hits some exception.
- * Answer 0 when it is longerrupted.
+ * Answer an integer error code when the processor hits some exception.
+ * Answer 0 when it is interrupted.
  */
 extern long	runCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
 					ulong byteSize, ulong minReadAddr, ulong minWriteAddr);
@@ -39,11 +39,11 @@ extern long	runCPUInSizeMinAddressReadWrite(void *cpu, void *memory,
  */
 extern void	flushICacheFromTo(void *cpu, ulong strt, ulong nd);
 /*
- * force runCPUInSize to exit asap.  Used by longerrupts.
+ * force runCPUInSize to exit asap.  Used by interrupts.
  */
 extern void	forceStopRunning(void);
 /*
- * The previous entry in the longerruptCheckChain so forceStopRunning can chain.
+ * The previous entry in the interruptCheckChain so forceStopRunning can chain.
  */
 extern void (*prevInterruptCheckChain)();
 /*
