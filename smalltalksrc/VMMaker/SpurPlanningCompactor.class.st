@@ -47,7 +47,7 @@ Class {
 		'firstMobileObject',
 		'lastMobileObject',
 		'savedFirstFieldsSpace',
-		'savedFirstFieldsSpaceWasAllocated',
+		'savedFirstFieldsSpaceNotInOldSpace',
 		'firstFieldOfRememberedSet',
 		'interestingObj',
 		'anomaly',
@@ -161,20 +161,23 @@ SpurPlanningCompactor >> copyAndUnmarkMobileObjects [
 		 self assert: (previousPin
 						ifNil: [toFinger <= (manager startOfObject: o)]
 						ifNotNil: [(manager isMarked: previousPin) and: [toFinger <= (manager startOfObject: previousPin)]]).
-		 self assert: (savedFirstFieldsSpaceWasAllocated
-					or: [savedFirstFieldsSpace limit <= manager firstObject asUnsignedInteger
-					or: [toFinger < top]]).
+		 self assert: (savedFirstFieldsSpaceNotInOldSpace or: [toFinger < top]).
 		 (manager isMarked: o) ifTrue:
 			[(manager isPinned: o)
 				ifTrue:
 					[(manager isSegmentBridge: o) ifFalse:
 						[manager setIsMarkedOf: o to: false.
 						 manager segmentManager notePinned: o].
-					 previousPin ifNotNil:
+					 [previousPin notNil and: [previousPin ~= o]] whileTrue:
 						[| limit |
 						 limit := manager startOfObject: previousPin.
-						 manager addFreeChunkWithBytes: limit - toFinger at: toFinger.
+						 self assert: (limit - toFinger >= (manager allocationUnit * 2) or: [limit = toFinger]).
+						 limit > toFinger ifTrue:
+							[manager addFreeChunkWithBytes: limit - toFinger at: toFinger.].
 						 toFinger := manager addressAfter: previousPin.
+						 previousPin := manager objectStartingAt: toFinger.
+						 ((manager isPinned: previousPin) and: [manager isMarked: previousPin]) ifFalse:
+							[previousPin := nil].
 						 self assert: toFinger <= (manager startOfObject: o)].
 					 previousPin := o]
 				ifFalse:
@@ -318,7 +321,7 @@ SpurPlanningCompactor >> freeFrom: toFinger upTo: limit previousPin: previousPin
 SpurPlanningCompactor >> initialize [
 	biasForGC := true.
 	savedFirstFieldsSpace := SpurContiguousObjStack new.
-	savedFirstFieldsSpaceWasAllocated := false
+	savedFirstFieldsSpaceNotInOldSpace := true
 ]
 
 { #category : #compaction }
@@ -435,16 +438,18 @@ SpurPlanningCompactor >> planCompactSavingForwarders [
 		 self assert: (previousPin
 						ifNil: [toFinger <= (manager startOfObject: o)]
 						ifNotNil: [(manager isMarked: previousPin) and: [toFinger <= (manager startOfObject: previousPin)]]).
-		 self assert: (savedFirstFieldsSpaceWasAllocated
-					or: [savedFirstFieldsSpace limit <= manager firstObject asUnsignedInteger
-					or: [toFinger < top]]).
+		 self assert: (savedFirstFieldsSpaceNotInOldSpace or: [toFinger < top]).
 		 (manager isMarked: o) ifTrue:
 			[(manager isPinned: o)
 				ifTrue: "The empty gaps between two adjacent pinned objects (when not filled below) are freed."
-					[previousPin ifNotNil:
-						[self assert: (manager startOfObject: previousPin) - toFinger >= (manager allocationUnit * 2).
+					[[previousPin notNil and: [previousPin ~= o]] whileTrue:
+						[self assert: ((manager startOfObject: previousPin) - toFinger >= (manager allocationUnit * 2)
+									or: [(manager startOfObject: previousPin) = toFinger]).
 						 toFinger := manager addressAfter: previousPin.
-						 self assert: toFinger <= (manager startOfObject: o)].
+						 previousPin := manager objectStartingAt: toFinger.
+						 ((manager isPinned: previousPin) and: [manager isMarked: previousPin])
+							ifTrue: [toFinger := manager addressAfter: previousPin]
+							ifFalse: [previousPin := nil]].
 					 previousPin := o]
 				ifFalse:
 					[| availableSpace bytes next |
@@ -480,11 +485,10 @@ SpurPlanningCompactor >> reinitializeScan [
 { #category : #'space management' }
 SpurPlanningCompactor >> releaseSavedFirstFieldsSpace [
 	<inline: true>
-	savedFirstFieldsSpaceWasAllocated ifTrue:
+	self savedFirstFieldsSpaceWasAllocated ifTrue:
 		[manager
 			sqDeallocateMemorySegmentAt: savedFirstFieldsSpace start asVoidPointer
-			OfSize: savedFirstFieldsSpace limit - savedFirstFieldsSpace start.
-		 savedFirstFieldsSpaceWasAllocated := false]
+			OfSize: savedFirstFieldsSpace limit - savedFirstFieldsSpace start]
 ]
 
 { #category : #compaction }
@@ -523,6 +527,18 @@ SpurPlanningCompactor >> repinRememberedSet [
 		[manager storePointerUnchecked: 0 ofObject: manager rememberedSetObj withValue: firstFieldOfRememberedSet].
 	manager setIsPinnedOf: manager rememberedSetObj to: true.
 	scavenger relocateRememberedSet
+]
+
+{ #category : #'space management' }
+SpurPlanningCompactor >> savedFirstFieldsSpaceInFreeChunk [
+	<inline: true>
+	^savedFirstFieldsSpaceNotInOldSpace not and: [savedFirstFieldsSpace start >= manager nilObject]
+]
+
+{ #category : #'space management' }
+SpurPlanningCompactor >> savedFirstFieldsSpaceWasAllocated [
+	<inline: true>
+	^savedFirstFieldsSpaceNotInOldSpace and: [savedFirstFieldsSpace start >= manager nilObject]
 ]
 
 { #category : #compaction }
@@ -734,8 +750,14 @@ SpurPlanningCompactor >> updatePointersInMobileObjects [
 			[(manager isPinned: o)
 				ifTrue: "The empty gaps between two adjacent pinned objects (when not filled below) are freed."
 					[self updatePointersIn: o.
-					 previousPin ifNotNil:
-						[toFinger := manager addressAfter: previousPin].
+					 [previousPin notNil and: [previousPin ~= o]] whileTrue:
+						[self assert: ((manager startOfObject: previousPin) - toFinger >= (manager allocationUnit * 2)
+									or: [(manager startOfObject: previousPin) = toFinger]).
+						 toFinger := manager addressAfter: previousPin.
+						 previousPin := manager objectStartingAt: toFinger.
+						 ((manager isPinned: previousPin) and: [manager isMarked: previousPin]) ifFalse:
+							[previousPin := nil].
+						 self assert: toFinger <= (manager startOfObject: o)].
 					 previousPin := o]
 				ifFalse:
 					[| availableSpace bytes next |
@@ -782,9 +804,8 @@ SpurPlanningCompactor >> updatePointersInSurvivingObjects [
 { #category : #'space management' }
 SpurPlanningCompactor >> updateSavedFirstFieldsSpaceIfNecessary [
 	"If savedFirstFieldsSpace is a free chunk then it may need to be repositioned if there is more than one pass."
-
-	((manager isInOldSpace: savedFirstFieldsSpace start)
-	 and: [savedFirstFieldsSpaceWasAllocated not]) ifTrue:
+	<inline: true>
+	self savedFirstFieldsSpaceInFreeChunk ifTrue:
 		[self useFreeChunkForSavedFirstFieldsSpace: manager findLargestFreeChunk].
 
 	savedFirstFieldsSpace top: savedFirstFieldsSpace start - manager bytesPerOop.
@@ -797,7 +818,9 @@ SpurPlanningCompactor >> useEdenForSavedFirstFieldsSpace [
 	<inline: true>
 	savedFirstFieldsSpace
 		start: scavenger eden start;
-		limit: scavenger eden limit
+		limit: scavenger eden limit.
+	savedFirstFieldsSpaceNotInOldSpace := true.
+	self deny: self savedFirstFieldsSpaceWasAllocated
 ]
 
 { #category : #'space management' }
@@ -808,14 +831,15 @@ SpurPlanningCompactor >> useFreeChunkForSavedFirstFieldsSpace: highestSuitableFr
 	<inline: true>
 	savedFirstFieldsSpace
 		start: highestSuitableFreeBlock + (manager freeChunkLargerIndex * manager bytesPerOop);
-		limit: (manager addressAfter: highestSuitableFreeBlock)
+		limit: (manager addressAfter: highestSuitableFreeBlock).
+	savedFirstFieldsSpaceNotInOldSpace := false.
+	self deny: self savedFirstFieldsSpaceWasAllocated
 ]
 
 { #category : #'space management' }
 SpurPlanningCompactor >> useSegmentForSavedFirstFieldsSpace: spaceEstimate [
 	"Attempt to allocate a memory segment large enough to hold the savedFirstFieldsSpace.
-	 Invoked when neither eden nor a large free chunk are found to be big enough for the
-	 job."
+	 Invoked when neither eden nor a large free chunk are found to be big enough for the job."
 	| allocatedSize |
 	(manager "sent to the manager so that the simulator can increase memory to simulate a new segment"
 		sqAllocateMemorySegmentOfSize: spaceEstimate
@@ -823,10 +847,11 @@ SpurPlanningCompactor >> useSegmentForSavedFirstFieldsSpace: spaceEstimate [
 		AllocatedSizeInto: (self cCode: [self addressOf: allocatedSize]
 								inSmalltalk: [[:sz| allocatedSize := sz]])) ifNotNil:
 		[:segAddress|
-		 savedFirstFieldsSpaceWasAllocated := true.
 		 savedFirstFieldsSpace
 			start: segAddress;
 			limit: segAddress + allocatedSize.
+		 savedFirstFieldsSpaceNotInOldSpace := true.
+		 self assert: self savedFirstFieldsSpaceWasAllocated.
 		 ^true].
 	^false
 ]
