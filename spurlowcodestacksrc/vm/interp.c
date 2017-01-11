@@ -67842,12 +67842,13 @@ lowcodeStoreLocalInt64Workaroundinsp(sqInt baseOffset, char*theFP, char*theSP)
 	In Windows memcpy is putting too much register pressure on GCC when used
 	by Lowcode instructions
  */
+/*	Using memmove instead of memcpy to avoid crashing GCC in Windows. */
 
 	/* StackInterpreter>>#lowcode_mem:cp:y: */
 static void NoDbgRegParms NeverInline
 lowcode_memcpy(void*destAddress, void*sourceAddress, sqInt bytes)
 {
-	memcpy(destAddress, sourceAddress, bytes);
+	memmove(destAddress, sourceAddress, bytes);
 }
 
 

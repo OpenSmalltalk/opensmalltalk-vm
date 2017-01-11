@@ -730,7 +730,7 @@ static AbstractInstruction * NoDbgRegParms gMoveCwR(sqInt wordConstant, sqInt re
 static AbstractInstruction * NoDbgRegParms gMoveMwrR(sqInt offset, sqInt baseReg, sqInt destReg);
 static AbstractInstruction * NoDbgRegParms gMoveRMwr(sqInt sourceReg, sqInt offset, sqInt baseReg);
 static AbstractInstruction * NoDbgRegParms gMoveRR(sqInt reg1, sqInt reg2);
-static sqInt NoDbgRegParms mapEndFor(CogMethod *cogMethod);
+static usqInt NoDbgRegParms mapEndFor(CogMethod *cogMethod);
 static sqInt NoDbgRegParms mapForperformUntilarg(CogMethod *cogMethod, sqInt (*functionSymbol)(sqInt annotation, char *mcpc, sqInt arg), sqInt arg);
 static sqInt NoDbgRegParms mapObjectReferencesInClosedPIC(CogMethod *cPIC);
 static void mapObjectReferencesInGeneratedRuntime(void);
@@ -3223,7 +3223,7 @@ bytecodePCForstartBcpcin(sqInt mcpc, sqInt startbcpc, CogBlockMethod *cogMethod)
     sqInt byte;
     BytecodeDescriptor *descriptor;
     sqInt distance;
-    usqInt endbcpc;
+    sqInt endbcpc;
     CogMethod *homeMethod;
     sqInt isBackwardBranch;
     sqInt isInBlock;
@@ -5778,7 +5778,7 @@ cPICHasForwardedClass(CogMethod *cPIC)
 static sqInt NoDbgRegParms
 cPICHasFreedTargets(CogMethod *cPIC)
 {
-    sqInt entryPoint;
+    usqInt entryPoint;
     sqInt i;
     sqInt pc;
     CogMethod *targetMethod;
@@ -6911,12 +6911,12 @@ static sqInt NoDbgRegParms
 generateMapAtstart(sqInt addressOrNull, sqInt startAddress)
 {
     unsigned char annotation;
-    usqIntptr_t delta;
+    sqInt delta;
     sqInt i;
     AbstractInstruction *instruction;
     sqInt length;
-    usqIntptr_t location;
-    usqIntptr_t mapEntry;
+    sqInt location;
+    sqInt mapEntry;
     sqInt maxDelta;
     usqIntptr_t mcpc;
 
@@ -8165,7 +8165,7 @@ gMoveRR(sqInt reg1, sqInt reg2)
 /*	Answer the address of the null byte at the end of the method map. */
 
 	/* Cogit>>#mapEndFor: */
-static sqInt NoDbgRegParms
+static usqInt NoDbgRegParms
 mapEndFor(CogMethod *cogMethod)
 {
     usqInt end;
@@ -9115,7 +9115,7 @@ mcPCForBackwardBranchstartBcpcin(sqInt bcpc, sqInt startbcpc, CogBlockMethod *co
     sqInt byte;
     BytecodeDescriptor *descriptor;
     sqInt distance;
-    usqInt endbcpc;
+    sqInt endbcpc;
     CogMethod *homeMethod;
     sqInt isBackwardBranch;
     sqInt isInBlock;
@@ -15574,7 +15574,7 @@ relocateJumpLongConditionalBeforeFollowingAddressby(AbstractInstruction * self_i
 static AbstractInstruction * NoDbgRegParms
 relocateMethodReferenceBeforeAddressby(AbstractInstruction * self_in_relocateMethodReferenceBeforeAddressby, sqInt pc, sqInt delta)
 {
-    usqInt newValue;
+    sqInt newValue;
     usqInt oldValue;
 
 	if (((opcodeAtAddress(self_in_relocateMethodReferenceBeforeAddressby, pc - 8)) == ADDIU)
@@ -24229,7 +24229,7 @@ mapPCDataForinto(CogMethod *cogMethod, sqInt arrayObj)
     CogBlockMethod *cogMethod1;
     BytecodeDescriptor *descriptor;
     sqInt distance;
-    usqInt endbcpc;
+    sqInt endbcpc;
     sqInt errCode;
     CogMethod *homeMethod;
     sqInt isBackwardBranch;
