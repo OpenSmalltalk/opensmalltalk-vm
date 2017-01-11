@@ -3804,6 +3804,12 @@ SpurMemoryManager >> compactionIssues [
 	 low pig of 2061864 bytes."
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> compactor [
+	"This is really only for tests..."
+	^compactor
+]
+
 { #category : #'header format' }
 SpurMemoryManager >> compiledMethodFormatForNumBytes: numBytes [
 	^self firstCompiledMethodFormat + (8 - numBytes bitAnd: self wordSize - 1)
