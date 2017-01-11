@@ -8641,7 +8641,7 @@ StackInterpreter >> internalPushShadowCallStackSpace: spaceSize [
 StackInterpreter >> internalPushShadowCallStackStructure: structurePointer size: size [
 	<option: #LowcodeVM>
 	shadowCallStackPointer := shadowCallStackPointer - size.
-	self mem: shadowCallStackPointer cp: structurePointer y: size
+	self lowcode_mem: shadowCallStackPointer cp: structurePointer y: size
 ]
 
 { #category : #'primitive support' }
@@ -11464,7 +11464,7 @@ StackInterpreter >> lowcodePrimitiveInt32ToPointer [
 	<var: #result type: #'char*' >
 	value := self internalPopStackInt32.
 
-	result := self cCoerce: value to: 'uintptr_t'.
+	result := self cCoerce: (self cCoerce: value to: 'uintptr_t') to: 'char*'.
 
 	self internalPushPointer: result.
 
@@ -12418,7 +12418,7 @@ StackInterpreter >> lowcodePrimitiveMemcpy32 [
 	source := self internalPopStackPointer.
 	dest := self internalPopStackPointer.
 
-	self mem: dest cp: source y: size.
+	self lowcode_mem: dest cp: source y: size.
 
 
 
@@ -12435,7 +12435,7 @@ StackInterpreter >> lowcodePrimitiveMemcpy64 [
 	source := self internalPopStackPointer.
 	dest := self internalPopStackPointer.
 
-	self mem: dest cp: source y: size.
+	self lowcode_mem: dest cp: source y: size.
 
 
 
@@ -12451,7 +12451,7 @@ StackInterpreter >> lowcodePrimitiveMemcpyFixed [
 	source := self internalPopStackPointer.
 	dest := self internalPopStackPointer.
 
-	self mem: dest cp: source y: size.
+	self lowcode_mem: dest cp: source y: size.
 
 	extA := 0.
 
@@ -13074,6 +13074,7 @@ StackInterpreter >> lowcodePrimitivePerformCallStructure [
 	extA := 0.
 	extB := 0.
 	numExtB := 0.
+
 
 ]
 
@@ -14919,6 +14920,20 @@ StackInterpreter >> lowcodeUnaryInlinePrimitive: prim [
 	
 
 
+]
+
+{ #category : #'inline primitive support' }
+StackInterpreter >> lowcode_mem: destAddress cp: sourceAddress y: bytes [
+	"This method is a workaround a GCC bug.
+	In Windows memcpy is putting too much register pressure on GCC when used by Lowcode instructions"
+	<inline: #never>
+	<option: #LowcodeVM>
+	<var: #destAddress type: #'void*'>
+	<var: #sourceAddress type: #'void*'>
+	<var: #bytes type: #'sqInt'>
+	
+	"Using memmove instead of memcpy to avoid crashing GCC in Windows."
+	self mem: destAddress mo: sourceAddress ve: bytes
 ]
 
 { #category : #'frame access' }
