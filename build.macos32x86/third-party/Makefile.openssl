@@ -1,0 +1,50 @@
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
+include ../../third-party/openssl.spec
+
+# plugin definitions
+OPENSSLURL:=$(openssl_spec_download_url)
+OPENSSLLIBNAME:=$(openssl_spec_product1_name_macOS)
+OPENSSLALLLIBNAMES:=$(openssl_spec_product2_name_macOS) $(OPENSSLLIBNAME)
+OPENSSLDIR:=$(THIRDPARTYDIR)/$(openssl_spec_unpack_dir_name)
+OPENSSLARCHIVE:=$(THIRDPARTYCACHEDIR)/$(openssl_spec_archive_name)
+OPENSSLLIB:=$(THIRDPARTYINSTALLDIR)/$(OPENSSLLIBNAME)
+OPENSSLSYMLINKS:=$(openssl_spec_symlinks_macOS)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(OPENSSLLIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+
+$(OPENSSLARCHIVE): 
+	curl -o $(OPENSSLARCHIVE) -L $(OPENSSLURL) 
+
+$(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME): $(OPENSSLARCHIVE)
+	tar x -f $(OPENSSLARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(OPENSSLDIR) \
+		&& ./Configure darwin-i386-cc --prefix='$(THIRDPARTYOUTDIR)' shared \
+		&& LDFLAGS='-Wl,-rpath,@executable_path:@executable_path/Plugins' make \
+		&& make install
+
+# Assuming building libssl will also build libcrypto
+$(OPENSSLLIB): $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME)
+	@for each in $(OPENSSLALLLIBNAMES); do \
+		cp -f $(THIRDPARTYLIBDIR)/$$each $(THIRDPARTYINSTALLDIR) \
+			&& chmod +w $(THIRDPARTYINSTALLDIR)/$$each \
+			&& install_name_tool -id "@executable_path/Plugins/$$each" $(THIRDPARTYINSTALLDIR)/$$each ; \
+	done
+	@echo "Installing links"
+	@for each in $(THIRDPARTYLIBDIR)/$(OPENSSLSYMLINKS); do \
+		if [ -L $$each ]; then \
+			cp -a $$each $(THIRDPARTYINSTALLDIR); \
+		fi \
+	done
+	@echo "Fixing dependency links"
+	# libssl has a dependency with libcrypto
+	for each in $(OPENSSLALLLIBNAMES); do \
+		install_name_tool -change "$(THIRDPARTYLIBDIR)/$$each" "@executable_path/Plugins/$$each" $(OPENSSLLIB); \
+	done
+	@echo "DONE"
+
+openssl: $(OPENSSLLIB)

@@ -1,5 +1,5 @@
 THIRDPARTYLIBS:=pkgconfig libpng freetype2
-include ../third-party/pkgconfig/Makefile.lib
-include ../third-party/libpng/Makefile.lib
-include ../third-party/freetype2/Makefile.lib
+include ../third-party/Makefile.pkgconfig
+include ../third-party/Makefile.libpng
+include ../third-party/Makefile.freetype2
 include ../common/Makefile.plugin

@@ -1,0 +1,11 @@
+#!/bin/bash -e
+# mvm <libname> [operation] [path]
+
+pushd .
+cd `dirname $0`
+case $2 in 
+	install) 	make -f Makefile.$1 install THIRDPARTYINSTALLDIR=$3 ;;
+	clean) 		make -f Makefile.$1 clean ;;
+	*) 			make -f Makefile.$1 all ;;
+esac
+popd

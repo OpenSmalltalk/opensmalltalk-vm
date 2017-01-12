@@ -1,0 +1,46 @@
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
+include ../../third-party/freetype2.spec
+
+# plugin definitions
+FREETYPE2URL:=$(freetype2_spec_download_url)
+FREETYPE2DIR:=$(THIRDPARTYDIR)/$(freetype2_spec_unpack_dir_name)
+FREETYPE2LIBNAME:=$(freetype2_spec_product_name_macOS)
+FREETYPE2ARCHIVE:=$(THIRDPARTYCACHEDIR)/$(freetype2_spec_archive_name)
+FREETYPE2LIB:=$(THIRDPARTYINSTALLDIR)/$(FREETYPE2LIBNAME)
+FREETYPE2SYMLINKS:=$(freetype2_spec_symlinks_macOS)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR) $(THIRDPARTYINCLUDEDIR)/freetype2
+EXTRALIBS:=$(EXTRALIBS) $(FREETYPE2LIB)
+PLUGINREQS:=$(PLUGINREQS) $(THIRDPARTYLIBS)
+	
+$(FREETYPE2ARCHIVE): 
+	curl -o $(FREETYPE2ARCHIVE) -L $(FREETYPE2URL) 
+	
+$(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME): $(FREETYPE2ARCHIVE)
+	tar x -f $(FREETYPE2ARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(FREETYPE2DIR) \
+		&& ./configure \
+			--prefix='$(THIRDPARTYOUTDIR)' \
+			--without-png \
+			PKG_CONFIG='$(PKG_CONFIG)' \
+			PKG_CONFIG_PATH='$(PKG_CONFIG_PATH)' \
+			CFLAGS='-arch x86_64' \
+			LDFLAGS='-arch x86_64 ' \
+		&& make \
+		&& make install
+
+$(FREETYPE2LIB): pkgconfig libpng $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME)
+	cp -f $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME) $(THIRDPARTYINSTALLDIR)
+	install_name_tool -id "@executable_path/Plugins/$(FREETYPE2LIBNAME)" $(FREETYPE2LIB)
+	@echo "Installing links"
+	@for each in $(THIRDPARTYLIBDIR)/$(FREETYPE2SYMLINKS); do \
+		if [ -L $$each ]; then \
+			cp -a $$each $(THIRDPARTYINSTALLDIR); \
+		fi \
+	done
+	@echo "DONE"
+	
+freetype2: $(FREETYPE2LIB)

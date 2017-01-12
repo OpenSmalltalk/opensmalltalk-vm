@@ -1,0 +1,40 @@
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
+include ../../third-party/libsdl2.spec
+
+# plugin definitions
+LIBSDL2URL:=$(libsdl2_spec_download_url)
+LIBSDL2LIBNAME:=$(libsdl2_spec_product_name_macOS)
+LIBSDL2DIR:=$(THIRDPARTYDIR)/$(libsdl2_spec_unpack_dir_name)
+LIBSDL2ARCHIVE:=$(THIRDPARTYCACHEDIR)/$(libsdl2_spec_archive_name)
+LIBSDL2LIB:=$(THIRDPARTYINSTALLDIR)/$(LIBSDL2LIBNAME)
+LIBSDL2SYMLINKS:=$(libsdl2_spec_symlinks_macOS)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) -undefined dynamic_lookup $(LIBSDL2LIB)
+PLUGINREQS:=$(PLUGINREQS) $(THIRDPARTYLIBS)
+
+$(LIBSDL2ARCHIVE): 
+	curl -o $(LIBSDL2ARCHIVE) -L $(LIBSDL2URL) 
+
+$(THIRDPARTYLIBDIR)/$(LIBSDL2LIBNAME): $(LIBSDL2ARCHIVE)
+	tar x -f $(LIBSDL2ARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(LIBSDL2DIR) \
+		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' CFLAGS='-arch i386' LDFLAGS='-arch i386' \
+		&& make \
+		&& make install
+
+$(LIBSDL2LIB): $(THIRDPARTYLIBDIR)/$(LIBSDL2LIBNAME)
+	cp -f $(THIRDPARTYLIBDIR)/$(LIBSDL2LIBNAME) $(THIRDPARTYINSTALLDIR)
+	install_name_tool -id "@executable_path/Plugins/$(LIBSDL2LIBNAME)" $(LIBSDL2LIB)
+	@echo "Installing links"
+	@for each in $(THIRDPARTYLIBDIR)/$(LIBSDL2SYMLINKS); do \
+		if [ -L $$each ]; then \
+			cp -a $$each $(THIRDPARTYINSTALLDIR); \
+		fi \
+	done
+	@echo "DONE"
+
+libsdl2: $(LIBSDL2LIB)
