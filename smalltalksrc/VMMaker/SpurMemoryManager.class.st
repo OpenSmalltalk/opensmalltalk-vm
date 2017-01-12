@@ -9402,7 +9402,7 @@ SpurMemoryManager >> printEntity: oop [
 				[(self isForwarded: oop) ifTrue: ['forwarder'] ifFalse:
 				[(self classIndexOf: oop) <= self lastClassIndexPun ifTrue: ['pun/obj stack'] ifFalse:
 				[isObj := true. 'object']]]]);
-		space; printHex: (self bytesInObject: oop); print: '/'; printNum: (self bytesInObject: oop).
+		space; printHexnpnp: (self rawNumSlotsOf: oop); print: '/'; printHexnpnp: (self bytesInObject: oop); print: '/'; printNum: (self bytesInObject: oop).
 	isObj ifTrue:
 		[coInterpreter
 			space;
