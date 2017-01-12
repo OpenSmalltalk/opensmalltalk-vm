@@ -147,7 +147,10 @@ SpurPlanningCompactor >> copyAndUnmarkMobileObjects [
 	 Remember to update the savedFirstFields of pointer objects, as these have been forwarded.
 	 Answer if the end of the heap was reached (savedFirstFieldsSpace has not overflowed).
 
-	 This enumeration matches those in planCompactSavingForwarders and updatePointersInMobileObjects."
+	 The enumerations in planCompactSavingForwarders, updatePointersInMobileObjects and copyAndUnmarkMobileObjects
+	 match.  We could implement them as a single enumeration method taking several block arguments, but arguably that
+	 would make understanding an already tricky algorithm more difficult.  Instead we tolerate the duplication and encourage
+	 the reader to diff the three methods to see where they diverge (e.g. via Cmd-shift-C)."
 	<inline: #never>
 	| toFinger top previousPin |
 	<var: 'top' type: #usqInt>
@@ -165,36 +168,41 @@ SpurPlanningCompactor >> copyAndUnmarkMobileObjects [
 		 (manager isMarked: o) ifTrue:
 			[(manager isPinned: o)
 				ifTrue:
-					[(manager isSegmentBridge: o) ifFalse:
-						[manager setIsMarkedOf: o to: false.
-						 manager segmentManager notePinned: o].
-					 [previousPin notNil and: [previousPin ~= o]] whileTrue:
-						[| limit |
-						 limit := manager startOfObject: previousPin.
-						 self assert: (limit - toFinger >= (manager allocationUnit * 2) or: [limit = toFinger]).
-						 limit > toFinger ifTrue:
-							[manager addFreeChunkWithBytes: limit - toFinger at: toFinger.].
-						 toFinger := manager addressAfter: previousPin.
-						 previousPin := manager objectStartingAt: toFinger.
-						 ((manager isPinned: previousPin) and: [manager isMarked: previousPin]) ifFalse:
-							[previousPin := nil].
-						 self assert: toFinger <= (manager startOfObject: o)].
-					 previousPin := o]
+					[previousPin ifNil:
+						[previousPin := o]]
 				ifFalse:
-					[| availableSpace bytes next |
+					[| availableSpace bytes |
+					 bytes := manager bytesInObject: o.
 					 [previousPin notNil
 					  and: [availableSpace := (manager startOfObject: previousPin) - toFinger.
-							bytes := manager bytesInObject: o.
 							bytes ~= availableSpace
 							and: [bytes + (2 * manager allocationUnit) > availableSpace]]] whileTrue:
 						["The object does not fit in the space between toFinger and previousPin.
-						  Move toFinger beyond previousPin and update previousPin appropriately."
+						   Move toFinger up to point at the first unmarked or mobile object after
+						   previousPin, or, if previousPin is contiguous with o, to the start of this
+						   object.  Update previousPin to be the next pinned object above toFInger
+						   and below this object, or nil if no such pinned object exists.
+						   Any unfillable gaps between adjacent pinned objects will be freed."
 						 availableSpace > 0 ifTrue:
 							[manager addFreeChunkWithBytes: availableSpace at: toFinger].
-						 toFinger := manager addressAfter: previousPin.
-						 next := manager objectStartingAt: toFinger.
-						 previousPin := ((manager isMarked: next) and: [manager isPinned: next]) ifTrue: [next]].
-					 toFinger := self copyAndUnmarkObject: o to: toFinger firstField: (manager longAt: top).
+					 	 [self assert: ((manager isMarked: previousPin) and: [manager isPinned: previousPin]).
+						  self unmarkPinned: previousPin.
+						  toFinger := manager addressAfter: previousPin.
+						  previousPin := manager objectStartingAt: toFinger.
+						  (manager isMarked: previousPin)
+						   and: [(manager isPinned: previousPin)
+						   and: [previousPin < o]]]
+							whileTrue.
+						 "Now previousPin is either equal to o or mobile.
+						  Move it to the next pinned object below o"
+						 [previousPin >= o
+						  or: [(manager isMarked: previousPin)
+						  and: [manager isPinned: previousPin]]] whileFalse:
+							[previousPin := manager objectAfter: previousPin].
+						 previousPin >= o ifTrue:
+							[previousPin := nil]].
+					 self copyAndUnmarkObject: o to: toFinger bytes: bytes firstField: (manager longAt: top).
+					 toFinger := toFinger + bytes.
 					 (top := top + manager bytesPerOop) >= savedFirstFieldsSpace limit ifTrue:
 						[| done |
 						 self assert: savedFirstFieldsSpace top = (top - manager bytesPerOop).
@@ -208,22 +216,20 @@ SpurPlanningCompactor >> copyAndUnmarkMobileObjects [
 ]
 
 { #category : #compaction }
-SpurPlanningCompactor >> copyAndUnmarkObject: o to: toFinger firstField: firstField [
+SpurPlanningCompactor >> copyAndUnmarkObject: o to: toFinger bytes: bytes firstField: firstField [
 	"Copy the object to toFinger, clearing its mark bit and restoring its firstField, which was overwritten with a forwarding pointer.
 	 Answer the number of bytes in the object, including overflow header."
 	<inline: true>
-	| bytes numSlots destObj start |
+	| numSlots destObj start |
 	numSlots := manager rawNumSlotsOf: o.
 	destObj := (manager objectWithRawSlotsHasOverflowHeader: numSlots)
 					ifTrue: [toFinger + manager baseHeaderSize]
 					ifFalse: [toFinger].
-	bytes := manager bytesInObject: o given: numSlots.
 	start := manager startOfObject: o given: numSlots.
 	manager
 		mem: toFinger asVoidPointer cp: start asVoidPointer y: bytes;
 		setIsMarkedOf: destObj to: false;
-		storePointerUnchecked: 0 ofObject: destObj withValue: firstField.
-	^toFinger + bytes
+		storePointerUnchecked: 0 ofObject: destObj withValue: firstField
 ]
 
 { #category : #compaction }
@@ -252,18 +258,6 @@ SpurPlanningCompactor >> findHighestSuitableFreeBlock: spaceEstimate [
 ]
 
 { #category : #private }
-SpurPlanningCompactor >> firstUnpinnedObjectFollowing: pinnedObj [
-	| nextObj |
-	self assert: (manager isPinned: pinnedObj).
-	nextObj := pinnedObj.
-	[nextObj := manager objectAfter: nextObj limit: manager endOfMemory.
-	 nextObj >= manager endOfMemory ifTrue:
-		[^manager endOfMemory].
-	 manager isPinned: nextObj] whileTrue.
-	^nextObj
-]
-
-{ #category : #private }
 SpurPlanningCompactor >> forwardMobileObject: o to: toFinger savedFirstFieldPtr: savedFirstFieldPtr [
 	"Forward a mobile object to some new location, saving its first field through savedFirstFieldPtr.
 	 Don't use forward:to:; we dont want to alter the object in any way other than by setting the forwarding pointer."
@@ -282,7 +276,7 @@ SpurPlanningCompactor >> forwardMobileObject: o to: toFinger savedFirstFieldPtr:
 
 { #category : #private }
 SpurPlanningCompactor >> freeAllUnpinnedObjectsFromObject: nextObj toFinger: initialToFinger [
-	"Free all space from toFinger up, preserving only marked pinned objects."
+	"Free all space from toFinger up, preserving only marked pinned objects, clearning their marked bits."
 	| toFinger nextPinnedObj |
 	<var: 'toFinger' type: #usqInt>
 	<var: 'nextPinnedObj' type: #usqInt>
@@ -290,11 +284,12 @@ SpurPlanningCompactor >> freeAllUnpinnedObjectsFromObject: nextObj toFinger: ini
 	nextPinnedObj := nextObj.
 	[[nextPinnedObj >= manager endOfMemory
 	  or: [(manager isMarked: nextPinnedObj)
-		  and: [(manager isPinned: nextPinnedObj)]]] whileFalse:
+		  and: [manager isPinned: nextPinnedObj]]] whileFalse:
 		[nextPinnedObj := manager objectAfter: nextPinnedObj].
 	 nextPinnedObj < manager endOfMemory] whileTrue:
 		[toFinger < (manager startOfObject: nextPinnedObj) ifTrue:
 			[manager addFreeChunkWithBytes: (manager startOfObject: nextPinnedObj) - toFinger at: toFinger].
+		 self unmarkPinned: nextPinnedObj.
 		 toFinger := manager addressAfter: nextPinnedObj.
 		 nextPinnedObj := manager objectAfter: nextPinnedObj].
 	toFinger < manager endOfMemory ifTrue:
@@ -310,7 +305,7 @@ SpurPlanningCompactor >> freeFrom: toFinger upTo: limit previousPin: previousPin
 	effectiveToFinger := toFinger.
 	previousPinOrNil ifNotNil:
 		[manager addFreeChunkWithBytes: (manager startOfObject: previousPinOrNil) - toFinger at: toFinger.
-		 firstUnpinned := self firstUnpinnedObjectFollowing: previousPinOrNil.
+		 firstUnpinned := self unmarkPinnedObjectsAndFindFirstUnpinnedObjectFollowing: previousPinOrNil.
 		 firstUnpinned >= limit ifTrue:
 			[^self].
 		 effectiveToFinger := manager startOfObject: firstUnpinned].
@@ -422,7 +417,10 @@ SpurPlanningCompactor >> planCompactSavingForwarders [
 	 Continue until either the end of the heap is reached or savedFirstFieldsSpace is full.
 	 Answer if the end of the heap was reached (savedFirstFieldsSpace has not overflowed).
 
-	 This enumeration matches those in updatePointersInMobileObjects and copyAndUnmarkMobileObjects."
+	 The enumerations in planCompactSavingForwarders, updatePointersInMobileObjects and copyAndUnmarkMobileObjects
+	 match.  We could implement them as a single enumeration method taking several block arguments, but arguably that
+	 would make understanding an already tricky algorithm more difficult.  Instead we tolerate the duplication and encourage
+	 the reader to diff the three methods to see where they diverge (e.g. via Cmd-shift-C)."
 	<inline: #never>
 	| toFinger top previousPin |
 	<var: 'top' type: #usqInt>
@@ -441,29 +439,38 @@ SpurPlanningCompactor >> planCompactSavingForwarders [
 		 self assert: (savedFirstFieldsSpaceNotInOldSpace or: [toFinger < top]).
 		 (manager isMarked: o) ifTrue:
 			[(manager isPinned: o)
-				ifTrue: "The empty gaps between two adjacent pinned objects (when not filled below) are freed."
-					[[previousPin notNil and: [previousPin ~= o]] whileTrue:
-						[self assert: ((manager startOfObject: previousPin) - toFinger >= (manager allocationUnit * 2)
-									or: [(manager startOfObject: previousPin) = toFinger]).
-						 toFinger := manager addressAfter: previousPin.
-						 previousPin := manager objectStartingAt: toFinger.
-						 ((manager isPinned: previousPin) and: [manager isMarked: previousPin])
-							ifTrue: [toFinger := manager addressAfter: previousPin]
-							ifFalse: [previousPin := nil]].
-					 previousPin := o]
+				ifTrue:
+					[previousPin ifNil:
+						[previousPin := o]]
 				ifFalse:
-					[| availableSpace bytes next |
+					[| availableSpace bytes |
+					 bytes := manager bytesInObject: o.
 					 [previousPin notNil
 					  and: [availableSpace := (manager startOfObject: previousPin) - toFinger.
-							bytes := manager bytesInObject: o.
 							bytes ~= availableSpace
 							and: [bytes + (2 * manager allocationUnit) > availableSpace]]] whileTrue:
 						["The object does not fit in the space between toFinger and previousPin.
-						  Move toFinger beyond previousPin and update previousPin appropriately."
-						 toFinger := manager addressAfter: previousPin.
-						 next := manager objectStartingAt: toFinger.
-						 previousPin := ((manager isMarked: next) and: [manager isPinned: next]) ifTrue: [next]].
-					 toFinger := self forwardMobileObject: o to: toFinger savedFirstFieldPtr: top.
+						   Move toFinger up to point at the first unmarked or mobile object after
+						   previousPin, or, if previousPin is contiguous with o, to the start of this
+						   object.  Update previousPin to be the next pinned object above toFInger
+						   and below this object, or nil if no such pinned object exists.
+						   Any unfillable gaps between adjacent pinned objects will be freed."
+					 	 [toFinger := manager addressAfter: previousPin.
+						  previousPin := manager objectStartingAt: toFinger.
+						  (manager isMarked: previousPin)
+						   and: [(manager isPinned: previousPin)
+						   and: [previousPin < o]]]
+							whileTrue.
+						 "Now previousPin is either equal to o or mobile.
+						  Move it to the next pinned object below o"
+						 [previousPin >= o
+						  or: [(manager isMarked: previousPin)
+						  and: [manager isPinned: previousPin]]] whileFalse:
+							[previousPin := manager objectAfter: previousPin].
+						 previousPin >= o ifTrue:
+							[previousPin := nil]].
+					 self forwardMobileObject: o to: toFinger savedFirstFieldPtr: top.
+					 toFinger := toFinger + bytes.
 					 (top := top + manager bytesPerOop) >= savedFirstFieldsSpace limit ifTrue:
 						[savedFirstFieldsSpace top: top - manager bytesPerOop.
 						 ^self noMobileObjectsAfter: o]]]].
@@ -627,6 +634,27 @@ SpurPlanningCompactor >> unmarkObjectsInFullyCompactedHeap [
 ]
 
 { #category : #private }
+SpurPlanningCompactor >> unmarkPinned: pinnedObj [
+	<inline: true>
+	(manager isSegmentBridge: pinnedObj) ifFalse:
+		[manager setIsMarkedOf: pinnedObj to: false.
+		 manager segmentManager notePinned: pinnedObj]
+]
+
+{ #category : #private }
+SpurPlanningCompactor >> unmarkPinnedObjectsAndFindFirstUnpinnedObjectFollowing: pinnedObj [
+	| nextObj |
+	self assert: (manager isPinned: pinnedObj).
+	nextObj := pinnedObj.
+	[self unmarkPinned: nextObj.
+	 nextObj := manager objectAfter: nextObj limit: manager endOfMemory.
+	 nextObj >= manager endOfMemory ifTrue:
+		[^manager endOfMemory].
+	 manager isPinned: nextObj] whileTrue.
+	^nextObj
+]
+
+{ #category : #private }
 SpurPlanningCompactor >> unpinRememberedSet [
 	<inline: true>
 	firstFieldOfRememberedSet := manager fetchPointer: 0 ofObject: manager rememberedSetObj.
@@ -733,7 +761,10 @@ SpurPlanningCompactor >> updatePointersInMobileObjects [
 	 Remember to update the savedFirstFields of pointer objects, as these have been forwarded.
 	 Answer if the end of the heap was reached (savedFirstFieldsSpace has not overflowed).
 
-	 This enumeration matches that in planCompactSavingForwarders and copyAndUnmarkMobileObjects."
+	 The enumerations in planCompactSavingForwarders, updatePointersInMobileObjects and copyAndUnmarkMobileObjects
+	 match.  We could implement them as a single enumeration method taking several block arguments, but arguably that
+	 would make understanding an already tricky algorithm more difficult.  Instead we tolerate the duplication and encourage
+	 the reader to diff the three methods to see where they diverge (e.g. via Cmd-shift-C)."
 	| toFinger top previousPin |
 	<var: 'top' type: #usqInt>
 	<var: 'toFinger' type: #usqInt>
@@ -748,31 +779,39 @@ SpurPlanningCompactor >> updatePointersInMobileObjects [
 						ifNotNil: [(manager isMarked: previousPin) and: [toFinger <= (manager startOfObject: previousPin)]]).
 		 (manager isMarked: o) ifTrue:
 			[(manager isPinned: o)
-				ifTrue: "The empty gaps between two adjacent pinned objects (when not filled below) are freed."
-					[self updatePointersIn: o.
-					 [previousPin notNil and: [previousPin ~= o]] whileTrue:
-						[self assert: ((manager startOfObject: previousPin) - toFinger >= (manager allocationUnit * 2)
-									or: [(manager startOfObject: previousPin) = toFinger]).
-						 toFinger := manager addressAfter: previousPin.
-						 previousPin := manager objectStartingAt: toFinger.
-						 ((manager isPinned: previousPin) and: [manager isMarked: previousPin]) ifFalse:
-							[previousPin := nil].
-						 self assert: toFinger <= (manager startOfObject: o)].
-					 previousPin := o]
+				ifTrue:
+					[previousPin ifNil:
+						[previousPin := o].
+					 self updatePointersIn: o]
 				ifFalse:
-					[| availableSpace bytes next |
+					[| availableSpace bytes |
+					 bytes := manager bytesInObject: o.
 					 [previousPin notNil
 					  and: [availableSpace := (manager startOfObject: previousPin) - toFinger.
-							bytes := manager bytesInObject: o.
 							bytes ~= availableSpace
 							and: [bytes + (2 * manager allocationUnit) > availableSpace]]] whileTrue:
 						["The object does not fit in the space between toFinger and previousPin.
-						  Move toFinger beyond previousPin and update previousPin appropriately."
-						 toFinger := manager addressAfter: previousPin.
-						 next := manager objectStartingAt: toFinger.
-						 previousPin := ((manager isMarked: next) and: [manager isPinned: next]) ifTrue: [next]].
+						   Move toFinger up to point at the first unmarked or mobile object after
+						   previousPin, or, if previousPin is contiguous with o, to the start of this
+						   object.  Update previousPin to be the next pinned object above toFInger
+						   and below this object, or nil if no such pinned object exists.
+						   Any unfillable gaps between adjacent pinned objects will be freed."
+					 	 [toFinger := manager addressAfter: previousPin.
+						  previousPin := manager objectStartingAt: toFinger.
+						  (manager isMarked: previousPin)
+						   and: [(manager isPinned: previousPin)
+						   and: [previousPin < o]]]
+							whileTrue.
+						 "Now previousPin is either equal to o or mobile.
+						  Move it to the next pinned object below o"
+						 [previousPin >= o
+						  or: [(manager isMarked: previousPin)
+						  and: [manager isPinned: previousPin]]] whileFalse:
+							[previousPin := manager objectAfter: previousPin].
+						 previousPin >= o ifTrue:
+							[previousPin := nil]].
 					 self updatePointersIn: o savedFirstFieldPointer: top.
-					 toFinger := toFinger + (manager bytesInObject: o).
+					 toFinger := toFinger + bytes.
 					 (top := top + manager bytesPerOop) >= savedFirstFieldsSpace limit ifTrue:
 						[self assert: savedFirstFieldsSpace top = (top - manager bytesPerOop).
 						 ^self noMobileObjectsAfter: o]]]].
