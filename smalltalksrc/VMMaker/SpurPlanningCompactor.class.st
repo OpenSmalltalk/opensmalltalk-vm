@@ -165,6 +165,9 @@ SpurPlanningCompactor >> copyAndUnmarkMobileObjects [
 						ifNil: [toFinger <= (manager startOfObject: o)]
 						ifNotNil: [(manager isMarked: previousPin) and: [toFinger <= (manager startOfObject: previousPin)]]).
 		 self assert: (savedFirstFieldsSpaceNotInOldSpace or: [toFinger < top]).
+		 o > lastMobileObject ifTrue:
+			[self freeFrom: toFinger upTo: manager endOfMemory previousPin: previousPin.
+			 ^true].
 		 (manager isMarked: o) ifTrue:
 			[(manager isPinned: o)
 				ifTrue:
@@ -258,6 +261,19 @@ SpurPlanningCompactor >> findHighestSuitableFreeBlock: spaceEstimate [
 ]
 
 { #category : #private }
+SpurPlanningCompactor >> findNextMarkedPinnedAfter: unpinnedObj [
+	<inline: true>
+	| nextObj |
+	self deny: (manager isPinned: unpinnedObj).
+	nextObj := unpinnedObj.
+	[nextObj := manager objectAfter: nextObj limit: manager endOfMemory.
+	 nextObj >= manager endOfMemory ifTrue:
+		[^nil].
+	 (manager isPinned: nextObj) and: [manager isMarked: nextObj]] whileFalse.
+	^nextObj
+]
+
+{ #category : #private }
 SpurPlanningCompactor >> forwardMobileObject: o to: toFinger savedFirstFieldPtr: savedFirstFieldPtr [
 	"Forward a mobile object to some new location, saving its first field through savedFirstFieldPtr.
 	 Don't use forward:to:; we dont want to alter the object in any way other than by setting the forwarding pointer."
@@ -299,16 +315,20 @@ SpurPlanningCompactor >> freeAllUnpinnedObjectsFromObject: nextObj toFinger: ini
 { #category : #private }
 SpurPlanningCompactor >> freeFrom: toFinger upTo: limit previousPin: previousPinOrNil [
 	"Free from toFinger up to limit, dealing with a possible intervening run of pinned objects starting at previousPinOrNil."
-	| effectiveToFinger firstUnpinned |
+	<inline: false>
+	| effectiveToFinger pin nextUnpinned start |
 	self cCode: [] inSmalltalk:
 		[coInterpreter cr; cr; print: 'freeing at '; printHexnp: toFinger; print: ' up to '; printHexnp: limit; print: ' pin '; printHexnp: previousPinOrNil; cr].
 	effectiveToFinger := toFinger.
-	previousPinOrNil ifNotNil:
-		[manager addFreeChunkWithBytes: (manager startOfObject: previousPinOrNil) - toFinger at: toFinger.
-		 firstUnpinned := self unmarkPinnedObjectsAndFindFirstUnpinnedObjectFollowing: previousPinOrNil.
-		 firstUnpinned >= limit ifTrue:
+	pin := previousPinOrNil.
+	[pin notNil] whileTrue:
+		[(start := manager startOfObject: pin) > toFinger ifTrue:
+			[manager addFreeChunkWithBytes: start - effectiveToFinger at: effectiveToFinger].
+		 nextUnpinned := self unmarkPinnedObjectsAndFindFirstUnpinnedObjectFollowing: pin.
+		 nextUnpinned >= limit ifTrue:
 			[^self].
-		 effectiveToFinger := manager startOfObject: firstUnpinned].
+		 effectiveToFinger := manager startOfObject: nextUnpinned.
+		 pin := self findNextMarkedPinnedAfter: nextUnpinned].
 	manager addFreeChunkWithBytes: limit - effectiveToFinger at: effectiveToFinger
 ]
 
@@ -643,6 +663,7 @@ SpurPlanningCompactor >> unmarkPinned: pinnedObj [
 
 { #category : #private }
 SpurPlanningCompactor >> unmarkPinnedObjectsAndFindFirstUnpinnedObjectFollowing: pinnedObj [
+	<inline: true>
 	| nextObj |
 	self assert: (manager isPinned: pinnedObj).
 	nextObj := pinnedObj.
