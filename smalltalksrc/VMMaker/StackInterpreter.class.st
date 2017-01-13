@@ -2380,9 +2380,14 @@ StackInterpreter >> binaryInlinePrimitive: primIndex [
 		[18]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: (self internalStackValue: 1))
 															bitXor: (objectMemory integerValueOf: self internalStackTop)).
 					 self internalPop: 1; internalStackTopPut: result].
-		"2019	unchecked SmallInteger #bitShift:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
-		[19]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: (self internalStackValue: 1))
-															bitShift: (objectMemory integerValueOf: self internalStackTop)).
+		"2019	unchecked SmallInteger #bitShiftLeft:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
+		[19]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: (self internalStackValue: 1)) 
+															<< (objectMemory integerValueOf: self internalStackTop)).
+					 self internalPop: 1; internalStackTopPut: result].
+		"2019	unchecked SmallInteger #bitShiftRight:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
+		[20]	->	[result := objectMemory integerObjectOf: (objectMemory wordSize = 4
+						ifTrue: [ (objectMemory integerValueOf: (self internalStackValue: 1)) >> (objectMemory integerValueOf: self internalStackTop)]
+						ifFalse: [ (objectMemory integerValueOf: (self internalStackValue: 1)) >>> (objectMemory integerValueOf: self internalStackTop)]).
 					 self internalPop: 1; internalStackTopPut: result].
 
 		"2032	unchecked SmallInteger #>.  Both arguments are SmallIntegers"
