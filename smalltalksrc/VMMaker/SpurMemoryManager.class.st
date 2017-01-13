@@ -2452,11 +2452,13 @@ SpurMemoryManager >> atLeastClassIndexHalfHeader: obj [
 
 { #category : #'growing/shrinking memory' }
 SpurMemoryManager >> attemptToShrink [
-	"Attempt to shrink memory after successfully reclaiming lots of memory."
+	"Attempt to shrink memory after successfully reclaiming lots of memory.
+	 If there's enough memory to shrink then be sure to attept to shrink by
+	 at least growHeaqdroom because segments are typically of that size."
 	(totalFreeOldSpace > shrinkThreshold
-	 and: [totalFreeOldSpace > growHeadroom]) ifTrue:
-		[statShrinkMemory := statShrinkMemory + 1.
-		 segmentManager shrinkObjectMemory: totalFreeOldSpace - growHeadroom]
+	 and: [totalFreeOldSpace > growHeadroom
+	 and: [segmentManager shrinkObjectMemory: (totalFreeOldSpace - growHeadroom max: growHeadroom)]]) ifTrue:
+		[statShrinkMemory := statShrinkMemory + 1]
 ]
 
 { #category : #accessing }
@@ -5157,7 +5159,7 @@ SpurMemoryManager >> freeChunkWithBytes: bytes at: address [
 	| freeChunk |
 	self assert: (self isInOldSpace: address).
 	freeChunk := self initFreeChunkWithBytes: bytes at: address.
-	self assert: (self isInMemory: (self addressAfter: freeChunk)).
+	self assert: (segmentManager segmentContainingObj: freeChunk) = (segmentManager segmentContainingObj: (self addressAfter: freeChunk)).
 	self addToFreeList: freeChunk bytes: bytes.
 	self assert: freeChunk = (self objectStartingAt: address).
 	^freeChunk
@@ -11900,6 +11902,9 @@ SpurMemoryManager >> validFreeTreeChunk: chunk parent: parent [
 		[^'too small'].
 	parent ~= (self fetchPointer: self freeChunkParentIndex ofFreeChunk: chunk) ifTrue:
 		[^'bad parent'].
+
+	(segmentManager segmentContainingObj: chunk) ~~ (segmentManager segmentContainingObj: (self addressAfter: chunk)) ifTrue:
+		[^'not in one segment'].
 	(self validFreeTreeChunk: (self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: chunk) parent: chunk) ifNotNil:
 		[:reason| ^reason].
 	(self validFreeTreeChunk: (self fetchPointer: self freeChunkLargerIndex ofFreeChunk: chunk) parent: chunk) ifNotNil:

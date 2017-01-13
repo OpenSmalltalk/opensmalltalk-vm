@@ -264,7 +264,7 @@ SpurPlanningCompactor >> findHighestSuitableFreeBlock: spaceEstimate [
 SpurPlanningCompactor >> findNextMarkedPinnedAfter: unpinnedObj [
 	<inline: true>
 	| nextObj |
-	self deny: (manager isPinned: unpinnedObj).
+	self deny: ((manager isPinned: unpinnedObj) and: [manager isMarked: unpinnedObj]).
 	nextObj := unpinnedObj.
 	[nextObj := manager objectAfter: nextObj limit: manager endOfMemory.
 	 nextObj >= manager endOfMemory ifTrue:
@@ -324,7 +324,7 @@ SpurPlanningCompactor >> freeFrom: toFinger upTo: limit previousPin: previousPin
 	[pin notNil] whileTrue:
 		[(start := manager startOfObject: pin) > toFinger ifTrue:
 			[manager addFreeChunkWithBytes: start - effectiveToFinger at: effectiveToFinger].
-		 nextUnpinned := self unmarkPinnedObjectsAndFindFirstUnpinnedObjectFollowing: pin.
+		 nextUnpinned := self unmarkPinnedObjectsAndFindFirstUnpinnedOrFreeEntityFollowing: pin.
 		 nextUnpinned >= limit ifTrue:
 			[^self].
 		 effectiveToFinger := manager startOfObject: nextUnpinned.
@@ -662,16 +662,16 @@ SpurPlanningCompactor >> unmarkPinned: pinnedObj [
 ]
 
 { #category : #private }
-SpurPlanningCompactor >> unmarkPinnedObjectsAndFindFirstUnpinnedObjectFollowing: pinnedObj [
+SpurPlanningCompactor >> unmarkPinnedObjectsAndFindFirstUnpinnedOrFreeEntityFollowing: pinnedObj [
 	<inline: true>
 	| nextObj |
-	self assert: (manager isPinned: pinnedObj).
+	self assert: ((manager isPinned: pinnedObj) and: [manager isMarked: pinnedObj]).
 	nextObj := pinnedObj.
 	[self unmarkPinned: nextObj.
 	 nextObj := manager objectAfter: nextObj limit: manager endOfMemory.
 	 nextObj >= manager endOfMemory ifTrue:
 		[^manager endOfMemory].
-	 manager isPinned: nextObj] whileTrue.
+	 (manager isPinned: nextObj) and: [manager isMarked: nextObj]] whileTrue.
 	^nextObj
 ]
 
