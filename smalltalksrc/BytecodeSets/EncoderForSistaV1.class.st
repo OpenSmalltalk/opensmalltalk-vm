@@ -137,7 +137,8 @@ We define the following inlined primitives:
 2016	SmallInteger #bitAnd:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
 2017	SmallInteger #bitOr:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
 2018	SmallInteger #bitXor:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
-2019	SmallInteger #bitShift:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
+2019	SmallInteger #bitShiftLeft:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
+2020	SmallInteger #bitShiftRight:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
 
 2032	SmallInteger #>.  Both arguments are SmallIntegers
 2033	SmallInteger #<.  Both arguments are SmallIntegers
