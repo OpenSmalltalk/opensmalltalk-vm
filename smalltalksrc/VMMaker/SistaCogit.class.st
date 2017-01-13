@@ -226,10 +226,20 @@ SistaCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 				 self MulR: TempReg R: ra.
 				 objectRepresentation genSetSmallIntegerTagsIn: ra].
 
-		"2016 through 2019, bitAnd:, bitOr:, bitXor, bitShift:, SmallInteger op SmallInteger => SmallInteger, no overflow"
+		"2016 through 2020, bitAnd:, bitOr:, bitXor, bitShiftLeft:, bitShiftRight:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 		[16] -> [ self AndCq: val R: ra ].
 		[17] -> [ self OrCq: val R: ra ].
 		[18] -> [ self XorCw: untaggedVal R: ra. ].
+		[19] -> [ objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
+				 self MoveCq: untaggedVal R: TempReg.
+				 self LogicalShiftLeftR: ra R: TempReg.
+				 objectRepresentation genAddSmallIntegerTagsTo: TempReg.
+				 self MoveR: TempReg R: ra].
+		[20] ->	[objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
+				 self MoveCq: untaggedVal R: TempReg.
+				 self ArithmeticShiftRightR: ra R: TempReg.
+				 objectRepresentation genClearAndSetSmallIntegerTagsIn: TempReg.
+				 self MoveR: TempReg R: ra].
 
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
 		"CmpCqR is SubRCq so everything is reversed, but because no CmpRCq things are reversed again and we invert the sense of the jumps."
@@ -318,11 +328,16 @@ SistaCogit >> genBinaryVarOpConstInlinePrimitive: prim [
 				 self MulR: TempReg R: rr.
 				 objectRepresentation genSetSmallIntegerTagsIn: rr].
 
-		"2016 through 2019, bitAnd:, bitOr:, bitXor, bitShift:, SmallInteger op SmallInteger => SmallInteger, no overflow"
+		"2016 through 2020, bitAnd:, bitOr:, bitXor, bitShiftLeft:, bitShiftRight:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 		[16] -> [ self AndCq: val R: rr ].
 		[17] -> [ self OrCq: val R: rr ].
 		[18] -> [ self flag: 'could use XorCq:'.
 				self XorCw: untaggedVal R: rr. ].
+		[19] -> [ objectRepresentation genRemoveSmallIntegerTagsInScratchReg: rr.
+				 self LogicalShiftLeftCq: (objectMemory integerValueOf: val) R: rr.
+				 objectRepresentation genAddSmallIntegerTagsTo: rr ].
+		[20] ->	[self ArithmeticShiftRightCq: (objectMemory integerValueOf: val) R: rr.
+				 objectRepresentation genClearAndSetSmallIntegerTagsIn: rr].
 
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
 		"CmpCqR is SubRCq so everything is reversed."
@@ -374,11 +389,18 @@ SistaCogit >> genBinaryVarOpVarInlinePrimitive: prim [
 				 self MulR: ra R: rr.
 				 self genSetSmallIntegerTagsIn: rr].
 
-		"2016 through 2019, bitAnd:, bitOr:, bitXor, bitShift:, SmallInteger op SmallInteger => SmallInteger, no overflow"
+		"2016 through 2020, bitAnd:, bitOr:, bitXor, bitShiftLeft:, bitShiftRight:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 		[16] -> [ self AndR: ra R: rr ].
 		[17] -> [ self OrR: ra R: rr ].
 		[18] -> [objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ra. 
 				self XorR: ra R: rr. ].
+		[19] -> [ objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
+				 objectRepresentation genRemoveSmallIntegerTagsInScratchReg: rr.
+				 self LogicalShiftLeftR: ra R: rr.
+				 objectRepresentation genAddSmallIntegerTagsTo: rr].
+		[20] ->	[objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
+				 self ArithmeticShiftRightR: ra R: rr.
+				 objectRepresentation genClearAndSetSmallIntegerTagsIn: rr.].
 
 
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
