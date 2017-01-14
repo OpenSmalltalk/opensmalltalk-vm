@@ -67,21 +67,29 @@ tar_linux_product() {
 }
 
 build_linux() {
+	# build will include both, threaded and itimer version unless 
+	# HEARTBEAT variable is set, in which case just one of both 
+	# will be built.
+	# HEARTBEAT can be "threaded" or "itimer"
+	
     build_directory="./build.${ARCH}/${FLAVOR}/build"
     [[ ! -d "${build_directory}" ]] && exit 10
 
-    build_linux_in "${build_directory}" "build_vm"
-    tar_linux_product "${output_file}"
+	if [ -z "$HEARTBEAT" ] || [ "$HEARTBEAT" = "threaded" ]; then 
+    	build_linux_in "${build_directory}" "build_vm"
+    	tar_linux_product "${output_file}"
+	fi
 
     # Also build VM with itimerheartbeat if available
     if [[ ! -d "${build_directory}.itimerheartbeat" ]]; then
         return
     fi
 
-    rm -rf "./products" # Clear products directory
-
-    build_linux_in "${build_directory}.itimerheartbeat" "build_itimer_vm"
-    tar_linux_product "${output_file}_itimer"
+	if [ -z "$HEARTBEAT" ] || [ "$HEARTBEAT" = "itimer" ]; then 
+    	rm -rf "./products" # Clear products directory
+    	build_linux_in "${build_directory}.itimerheartbeat" "build_itimer_vm"
+    	tar_linux_product "${output_file}_itimer"
+	fi
 }
 
 build_osx() {
