@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'stackp',
 		'joins',
-		'encoderClass'
+		'encoderClass',
+		'deadCode'
 	],
 	#category : #'VMMaker-Support'
 }
@@ -99,6 +100,8 @@ StackDepthFinder >> doDup [
 
 { #category : #'stack depth' }
 StackDepthFinder >> doJump: delta [
+	deadCode ifTrue:
+		[^self].
 	delta < 0
 		ifTrue:
 			[(joins at: pc + delta) ~= stackp ifTrue: [(Notification new tag: #'bad join'; signal)]]
@@ -114,7 +117,8 @@ StackDepthFinder >> doNop [
 { #category : #'instruction decoding' }
 StackDepthFinder >> doPop [
 	"Remove Top Of Stack bytecode."
-	self drop
+	deadCode ifFalse:
+		[self drop]
 ]
 
 { #category : #'stack depth' }
@@ -141,6 +145,8 @@ StackDepthFinder >> encoderClass: anObject [
 
 { #category : #decoding }
 StackDepthFinder >> interpretNextInstructionFor: client [
+	(deadCode and: [(joins at: pc) notNil]) ifTrue:
+		[deadCode := false].
 	joins at: pc put: stackp.
 	^encoderClass
 		ifNil: [super interpretNextInstructionFor: client]
@@ -179,7 +185,8 @@ StackDepthFinder >> method: method pc: startpc [
 	"The + 1 is there for full blocks ending with non local return,
 	as the following pc is mapped and beyong endPC"
 	joins := Array new: method endPC + 1.
-	stackp := method numTemps
+	stackp := method numTemps.
+	deadCode := false
 ]
 
 { #category : #'instruction decoding' }
@@ -334,6 +341,7 @@ StackDepthFinder >> resetStackAfterBranchOrReturn [
 					ifTrue: [^self bar]
 					ifFalse: [^self baz].
 				^nil"
+				deadCode := true.
 				^self].
 		 stackp := joins at: pc]
 ]
