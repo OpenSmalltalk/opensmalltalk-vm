@@ -103,7 +103,7 @@ extern SqueakOSXAppDelegate *gDelegateApp;
         return nil;
     }
 	
-	if ((url = CFBridgingRelease((NSURL *)CFURLCreateFromFSRef(kCFAllocatorDefault, &aliasRef)))) {
+	if ((url = (NSURL *)CFBridgingRelease(CFURLCreateFromFSRef(kCFAllocatorDefault, &aliasRef)))) {
         outString = [url path];
 	}
     
