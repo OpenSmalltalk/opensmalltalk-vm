@@ -16968,7 +16968,12 @@ StackInterpreter >> printFrame: theFP [
 	<var: #frameAbove type: #'char *'>
 	<var: #thePage type: #'StackPage *'>
 	(stackPages couldBeFramePointer: theFP) ifFalse:
-		[self printHexPtr: theFP; print: ' is not in the stack zone?!'; cr.
+		[((objectMemory addressCouldBeObj: theFP asInteger)
+		  and: [(objectMemory isInMemory: theFP asInteger)
+		  and: [(objectMemory isContextNonImm: theFP asInteger)
+		  and: [(self checkIsStillMarriedContext: theFP asInteger currentFP: framePointer)]]]) ifTrue:
+			[^self printFrame: (self frameOfMarriedContext: theFP asInteger)].
+		self printHexPtr: theFP; print: ' is not in the stack zone?!'; cr.
 		 ^nil].
 	frameAbove := nil.
 	theFP = framePointer

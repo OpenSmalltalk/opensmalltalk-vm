@@ -8402,6 +8402,15 @@ Cogit >> isDirectedSuper: descriptor extA: exta extB: extb [
 	  and: [extb >= 64]]
 ]
 
+{ #category : #'jit - api' }
+Cogit >> isNonLocalReturnPC: retpc [
+	<doNotGenerate>
+	"Answer if the instruction preceding retpc is a call instruction."
+	(backEnd isCallPrecedingReturnPC: retpc) ifFalse:
+		[^false].
+	^(backEnd callTargetFromReturnAddress: retpc) = ceNonLocalReturnTrampoline
+]
+
 { #category : #'method map' }
 Cogit >> isPCMappedAnnotation: annotation [
 	"See Cogit class>>initializeAnnotationConstants"
