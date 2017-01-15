@@ -16,6 +16,10 @@
 
 #include "sq.h"
 #include "../plugins/FilePlugin/sqWin32File.h"
+#ifdef PharoVM
+# include <sys/types.h>
+# include <sys/stat.h>
+#endif
 
 extern struct VirtualMachine *interpreterProxy;
 
@@ -33,6 +37,54 @@ extern struct VirtualMachine *interpreterProxy;
 #define ENTRY_FOUND     0
 #define NO_MORE_ENTRIES 1
 #define BAD_PATH        2
+
+#ifdef PharoVM
+#define DEFAULT_DRIVE_PERMISSIONS (S_IRUSR | (S_IRUSR>>3) | (S_IRUSR>>6) | \
+                                   S_IWUSR | (S_IWUSR>>3) | (S_IWUSR>>6) | \
+                                   S_IXUSR | (S_IXUSR>>3) | (S_IXUSR>>6))
+  
+static void read_permissions(sqInt *posixPermissions, WCHAR* path, int pathLength, int attr)
+{
+  *posixPermissions |= S_IRUSR | (S_IRUSR>>3) | (S_IRUSR>>6);
+  if(!(attr & FILE_ATTRIBUTE_READONLY)) {
+    *posixPermissions |= S_IWUSR | (S_IWUSR>>3) | (S_IWUSR>>6);
+  }
+  if(attr & FILE_ATTRIBUTE_DIRECTORY) {
+    *posixPermissions |= S_IXUSR | (S_IXUSR>>3) | (S_IXUSR>>6);
+  }
+  else if (path && path[pathLength - 4] == L'.') {
+    WCHAR *ext = &path[pathLength - 3];
+    if (!_wcsicmp (ext, L"COM")) {
+      *posixPermissions |= S_IXUSR | (S_IXUSR>>3) | (S_IXUSR>>6);
+    }
+    else if (!_wcsicmp (ext, L"EXE")) {
+      *posixPermissions |= S_IXUSR | (S_IXUSR>>3) | (S_IXUSR>>6);
+    }
+    else if (!_wcsicmp (ext, L"BAT")) {
+      *posixPermissions |= S_IXUSR | (S_IXUSR>>3) | (S_IXUSR>>6);
+    }
+    else if (!_wcsicmp (ext, L"CMD")) { 
+      *posixPermissions |= S_IXUSR | (S_IXUSR>>3) | (S_IXUSR>>6);
+    }
+  }
+}
+
+static int findFileFallbackOnSharingViolation(WCHAR *win32Path, WIN32_FILE_ATTRIBUTE_DATA* winAttrs) {
+  WIN32_FIND_DATAW findData;
+  HANDLE findHandle = FindFirstFileW(win32Path,&findData);
+  if(findHandle == INVALID_HANDLE_VALUE) {
+    return 0;
+  }
+  winAttrs->ftCreationTime = findData.ftCreationTime;
+  winAttrs->ftLastWriteTime = findData.ftLastWriteTime;
+  winAttrs->dwFileAttributes = findData.dwFileAttributes;
+  winAttrs->nFileSizeLow = findData.nFileSizeLow;
+  winAttrs->nFileSizeHigh = findData.nFileSizeHigh;
+  FindClose(findHandle);
+  return 1;
+}
+#endif
+
 
 /* figure out if a case sensitive duplicate of the given path exists.
    useful for trying to stay in sync with case-sensitive platforms. */
@@ -133,9 +185,15 @@ int dir_Delimitor(void)
   return '\\';
 }
 
+#ifdef PharoVM
 int dir_Lookup(char *pathString, int pathLength, int index,
 /* outputs: */ char *name, int *nameLength, int *creationDate, int *modificationDate,
-	       int *isDirectory, squeakFileOffsetType *sizeIfFile)
+               int *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink)
+#else
+int dir_Lookup(char *pathString, int pathLength, int index,
+/* outputs: */ char *name, int *nameLength, int *creationDate, int *modificationDate,
+               int *isDirectory, squeakFileOffsetType *sizeIfFile)
+#endif
 {
   /* Lookup the index-th entry of the directory with the given path, starting
      at the root of the file system. Set the name, name length, creation date,
@@ -163,6 +221,10 @@ int dir_Lookup(char *pathString, int pathLength, int index,
   *modificationDate = 0;
   *isDirectory      = false;
   *sizeIfFile       = 0;
+#ifdef PharoVM
+  *posixPermissions = 0;
+  *isSymlink        = 0;
+#endif
 
   /* convert the path name into a null-terminated C string */
   ALLOC_WIN32_PATH(win32Path, pathString, pathLength);
@@ -206,6 +268,9 @@ int dir_Lookup(char *pathString, int pathLength, int index,
           *modificationDate = 0;
           *isDirectory      = true;
           *sizeIfFile       = 0;
+#ifdef PharoVM
+	  *posixPermissions |= DEFAULT_DRIVE_PERMISSIONS;
+#endif
           return ENTRY_FOUND;
         }
     return NO_MORE_ENTRIES;
@@ -242,7 +307,11 @@ int dir_Lookup(char *pathString, int pathLength, int index,
   if(findHandle == INVALID_HANDLE_VALUE) {
     /* Directory could be empty, so we must check for that */
     DWORD dwErr = GetLastError();
+#ifdef PharoVM
+    return (dwErr == ERROR_NO_MORE_FILES || dwErr == ERROR_ACCESS_DENIED) ? NO_MORE_ENTRIES : BAD_PATH;
+#else
     return (dwErr == ERROR_NO_MORE_FILES) ? NO_MORE_ENTRIES : BAD_PATH;
+#endif
   }
   while(1) {
     /* check for '.' or '..' directories */
@@ -272,6 +341,10 @@ int dir_Lookup(char *pathString, int pathLength, int index,
   FileTimeToSystemTime(&fileTime, &sysTime);
   *modificationDate = convertToSqueakTime(sysTime);
 
+#ifdef PharoVM
+  read_permissions(posixPermissions, findData.cFileName, sz, findData.dwFileAttributes); 
+#endif
+
   if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
     *isDirectory= true;
   else {
@@ -283,9 +356,15 @@ int dir_Lookup(char *pathString, int pathLength, int index,
   return ENTRY_FOUND;
 }
 
+#ifdef PharoVM
+int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int nameStringLength,
+/* outputs: */ char *name, int *nameLength, int *creationDate, int *modificationDate,
+                    int *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink)
+#else
 int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int nameStringLength,
 /* outputs: */ char *name, int *nameLength, int *creationDate, int *modificationDate,
 	       int *isDirectory, squeakFileOffsetType *sizeIfFile)
+#endif
 {
   /* Lookup a given file in a given named directory.
      Set the name, name length, creation date,
@@ -302,6 +381,10 @@ int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int name
   FILETIME fileTime;
   SYSTEMTIME sysTime;
   int sz, fsz;
+#ifdef PharoVM
+  HANDLE findHandle;
+  int i;
+#endif
 
   /* default return values */
   *name             = 0;
@@ -310,6 +393,10 @@ int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int name
   *modificationDate = 0;
   *isDirectory      = false;
   *sizeIfFile       = 0;
+#ifdef PharoVM
+  *posixPermissions = 0;
+  *isSymlink        = 0;
+#endif
 
   /* convert the path name into a null-terminated C string */
   ALLOC_WIN32_PATH(win32Path, pathString, pathLength);
@@ -336,6 +423,9 @@ int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int name
       *modificationDate = 0;
       *isDirectory      = true;
       *sizeIfFile       = 0;
+#ifdef PharoVM
+      *posixPermissions |= DEFAULT_DRIVE_PERMISSIONS;
+#endif
       return ENTRY_FOUND;
     }
     return NO_MORE_ENTRIES;
@@ -358,9 +448,17 @@ int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int name
   win32Path[win32PathLength] = 0; // Not needed. See REALLOC_WIN32_PATH.
 
   if(!GetFileAttributesExW(win32Path, 0, &winAttrs)) {
-  	return NO_MORE_ENTRIES;
+#ifdef PharoVM
+    if(GetLastError() == ERROR_SHARING_VIOLATION) {
+      if(!findFileFallbackOnSharingViolation(win32Path, &winAttrs)) return NO_MORE_ENTRIES;
+    } else {
+      return NO_MORE_ENTRIES;
+    }
+#else
+      return NO_MORE_ENTRIES;
+#endif
   }
- 
+
   memcpy(name, nameString, nameStringLength);
   *nameLength = nameStringLength;
 
@@ -380,6 +478,9 @@ int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int name
     *sizeIfFile = ofs.offset;
   }
 
+#ifdef PharoVM
+  read_permissions(posixPermissions, win32Path, win32PathLength, winAttrs.dwFileAttributes);
+#endif
   return ENTRY_FOUND;
 }
 
