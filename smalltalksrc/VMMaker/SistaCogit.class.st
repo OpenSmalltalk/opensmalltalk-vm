@@ -693,7 +693,7 @@ SistaCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 decrements the lower half.  N.B. We *do not* eliminate dead branches (true ifTrue:/true ifFalse:)
 	 so that scanning for send and branch data is simplified and that branch data is correct."
 	<inline: false>
-	| ok counterAddress countTripped retry nextPC nextDescriptor desc |
+	| ok counterAddress countTripped retry nextPC nextDescriptor desc eventualTarget |
 	<var: #ok type: #'AbstractInstruction *'>
 	<var: #desc type: #'CogSimStackEntry *'>
 	<var: #retry type: #'AbstractInstruction *'>
@@ -725,7 +725,9 @@ SistaCogit >> genJumpIf: boolean to: targetBytecodePC [
 	(desc type == SSConstant
 	 and: [desc constant = objectMemory trueObject or: [desc constant = objectMemory falseObject]]) ifTrue:
 		[ ^ super genJumpIf: boolean to: targetBytecodePC ].
-	
+
+	eventualTarget := self eventualTargetOf: targetBytecodePC.
+
 	self ssFlushTo: simStackPtr - 1.
 	desc popToReg: TempReg.
 	self ssPop: 1.
@@ -746,7 +748,7 @@ SistaCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 their distance send mustBeBoolean."
 	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
 	self genSubConstant: boolean R: TempReg.
-	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
+	self JumpZero: (self ensureFixupAt: eventualTarget - initialPC).
 
 	self genFallsThroughCountLogicCounterReg: SendNumArgsReg counterAddress: counterAddress.
 
