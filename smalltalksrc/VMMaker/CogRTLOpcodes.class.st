@@ -136,6 +136,7 @@ Class {
 		'RotateLeftCqR',
 		'RotateRightCqR',
 		'SignExtend16RR',
+		'SignExtend32RR',
 		'SignExtend8RR',
 		'SqrtRd',
 		'SqrtRs',
@@ -153,6 +154,7 @@ Class {
 		'XorRdRd',
 		'XorRsRs',
 		'ZeroExtend16RR',
+		'ZeroExtend32RR',
 		'ZeroExtend8RR'
 	],
 	#category : #'VMMaker-JIT'
@@ -311,8 +313,8 @@ CogRTLOpcodes class >> initialize [
 						ConvertRRd ConvertRdR
 						ConvertRsRd ConvertRdRs ConvertRsR ConvertRRs
 
-						SignExtend8RR SignExtend16RR
-						ZeroExtend8RR ZeroExtend16RR
+						SignExtend8RR SignExtend16RR SignExtend32RR
+						ZeroExtend8RR ZeroExtend16RR ZeroExtend32RR
 
 						LastRTLCode).
 
