@@ -15,6 +15,7 @@ Class {
 	#superclass : #CogAbstractInstruction,
 	#classVars : [
 		'CDQ',
+		'CLD',
 		'CMPXCHGAwR',
 		'CMPXCHGMwrR',
 		'CPUID',
@@ -23,6 +24,8 @@ Class {
 		'LFENCE',
 		'LOCK',
 		'MFENCE',
+		'MOVSB',
+		'MOVSQ',
 		'ModReg',
 		'ModRegInd',
 		'ModRegIndDisp32',
@@ -43,6 +46,7 @@ Class {
 		'RCX',
 		'RDI',
 		'RDX',
+		'REP',
 		'RSI',
 		'RSP',
 		'SFENCE',
@@ -160,7 +164,7 @@ CogX64Compiler class >> initialize [
 
 	"Specific instructions"
 	self
-		initializeSpecificOpcodes: #(CDQ IDIVR IMULRR CPUID LFENCE MFENCE SFENCE LOCK CMPXCHGAwR CMPXCHGMwrR XCHGAwR XCHGMwrR XCHGRR)
+		initializeSpecificOpcodes: #(CDQ IDIVR IMULRR CPUID LFENCE MFENCE SFENCE LOCK CMPXCHGAwR CMPXCHGMwrR XCHGAwR XCHGMwrR XCHGRR CLD REP MOVSB MOVSQ)
 		in: thisContext method
 ]
 
@@ -319,6 +323,20 @@ CogX64Compiler >> availableRegisterOrNoneFor: liveRegsMask [
 	^super availableRegisterOrNoneFor: liveRegsMask
 ]
 
+{ #category : #abi }
+CogX64Compiler >> cFloatResultToRd: reg [
+	XMM0L ~= reg ifTrue: [ 
+		cogit MoveRd: XMM0L Rd: reg
+	].
+]
+
+{ #category : #abi }
+CogX64Compiler >> cFloatResultToRs: reg [
+	XMM0L ~= reg ifTrue: [ 
+		cogit MoveRs: XMM0L Rs: reg
+	].
+]
+
 { #category : #accessing }
 CogX64Compiler >> cResultRegister [
 	"Answer the register through which C functions return integral results."
@@ -394,9 +412,14 @@ CogX64Compiler >> computeMaximumSize [
 									   or: [(operands at: 1) = RAX])
 											ifTrue: [2]
 											ifFalse: [3]].
+		[REP]					-> [^1].
+		[CLD]					-> [^1].
+		[MOVSB]				-> [^1].
+		[MOVSQ]				-> [^2].
 		"Control"
 		[CallFull]					-> [^12].
 		[Call]						-> [^5].
+		[CallR]						-> [^3].
 		[JumpR]						-> [^2].
 		[JumpFull]					-> [self resolveJumpTarget. ^12].
 		[JumpLong]					-> [self resolveJumpTarget. ^5].
@@ -470,12 +493,51 @@ CogX64Compiler >> computeMaximumSize [
 		[LogicalShiftLeftRR]			-> [^self computeShiftRRSize].
 		[LogicalShiftRightRR]		-> [^self computeShiftRRSize].
 		[ArithmeticShiftRightRR]		-> [^self computeShiftRRSize].
-		[AddRdRd]					-> [^4].
-		[CmpRdRd]					-> [^4].
-		[SubRdRd]					-> [^4].
-		[MulRdRd]					-> [^4].
-		[DivRdRd]					-> [^4].
-		[SqrtRd]					-> [^4].
+		[AddRdRd]					-> [^ 4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+											ifTrue: [1]
+											ifFalse: [0])].
+		[CmpRdRd]					-> [^ 4
+											+ ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+											ifTrue: [1]
+											ifFalse: [0])].
+		[SubRdRd]					-> [^ 4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+											ifTrue: [1]
+											ifFalse: [0])].
+		[MulRdRd]					-> [^ 4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+											ifTrue: [1]
+											ifFalse: [0])].
+		[DivRdRd]					-> [^ 4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+											ifTrue: [1]
+											ifFalse: [0])].
+		[SqrtRd]					-> [^ 4 + (((operands at: 0) > 7)
+											ifTrue: [1]
+											ifFalse: [0])].
+		[XorRdRd]					-> [^ 4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+											ifTrue: [1]
+											ifFalse: [0])].
+						
+		[AddRsRs]				-> [^ 4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+											ifTrue: [1]
+											ifFalse: [0])].
+		[CmpRsRs]				-> [^ 3 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+											ifTrue: [1]
+											ifFalse: [0])].
+		[SubRsRs]				-> [^ 4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+											ifTrue: [1]
+											ifFalse: [0])].
+		[MulRsRs]				-> [^ 4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+											ifTrue: [1]
+											ifFalse: [0])].
+		[DivRsRs]				-> [^ 4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+											ifTrue: [1]
+											ifFalse: [0])].
+		[SqrtRs]					-> [^ 4 + (((operands at: 0) > 7)
+											ifTrue: [1]
+											ifFalse: [0])].
+		[XorRsRs]					-> [^ 3 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+											ifTrue: [1]
+											ifFalse: [0])].
+						
 		"Data Movement"
 		[MoveCqR]		-> [^(operands at: 0) = 0
 								ifTrue: [3]
@@ -488,7 +550,14 @@ CogX64Compiler >> computeMaximumSize [
 								ifFalse: [self moveCwRByteSize]].
 		[MoveC32R]	-> [^7]. "N.B. Always inlined."
 		[MoveRR]		-> [^3].
-		[MoveRdRd]		-> [^4].
+		[MoveRdRd]		-> [^4 
+								+((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+											ifTrue: [1]
+											ifFalse: [0])].
+		[MoveRsRs]		-> [^4
+								 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+											ifTrue: [1]
+											ifFalse: [0])].
 		[MoveRRd]		-> [^5].
 		[MoveRdR]		-> [^5].
 		[MoveAwR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0))
@@ -515,6 +584,30 @@ CogX64Compiler >> computeMaximumSize [
 								+ (((operands at: 2) bitAnd: 7) = RSP
 									ifTrue: [1]
 									ifFalse: [0])].
+		[MoveRM32r]	-> [^((self isQuick: (operands at: 1))
+								ifTrue: [((operands at: 1) = 0
+										and: [((operands at: 2) bitAnd: 6) ~= RSP])
+											ifTrue: [2]
+											ifFalse: [3]]
+								ifFalse: [6])
+							+ ((((operands at: 2) bitAnd: 7) = RSP and: [(operands at: 1) ~= 0])
+								ifTrue: [1]
+								ifFalse: [0])
+							+ ((((operands at: 2) > 7) or: [(operands at: 0) > 7])
+								ifTrue: [1]
+								ifFalse: [0])].
+		[MoveRsM32r]	-> [^((self isQuick: (operands at: 1))
+								ifTrue: [((operands at: 1) = 0
+										and: [((operands at: 2) bitAnd: 6) ~= RSP])
+											ifTrue: [4]
+											ifFalse: [5]]
+								ifFalse: [8])
+							+ ((((operands at: 2) bitAnd: 7) = RSP and: [(operands at: 1) ~= 0])
+								ifTrue: [1]
+								ifFalse: [0])
+							+ ((((operands at: 2) > 7) or: [(operands at: 0) > 7])
+								ifTrue: [1]
+								ifFalse: [0])].
 		[MoveRdM64r]	-> [^((self isQuick: (operands at: 1))
 								ifTrue: [((operands at: 1) = 0
 										and: [((operands at: 2) bitAnd: 6) ~= RSP])
@@ -567,6 +660,30 @@ CogX64Compiler >> computeMaximumSize [
 								+ (((operands at: 0) > 7 or: [(operands at: 2) > 7])
 									ifTrue: [1]
 									ifFalse: [0])].
+		[MoveM32rR]	-> [^((self isQuick: (operands at: 0))
+								ifTrue: [((operands at: 0) = 0
+										and: [((operands at: 1) bitAnd: 6) ~= RSP])
+											ifTrue: [2]
+											ifFalse: [3]]
+								ifFalse: [6])
+							+ ((((operands at: 1) bitAnd: 7) = RSP and: [(operands at: 0) ~= 0])
+								ifTrue: [1]
+								ifFalse: [0])
+							+ ((((operands at: 1) > 7) or: [(operands at: 2) > 7])
+								ifTrue: [1]
+								ifFalse: [0])].
+		[MoveM32rRs]	-> [^((self isQuick: (operands at: 0))
+								ifTrue: [((operands at: 0) = 0
+										and: [((operands at: 1) bitAnd: 6) ~= RSP])
+											ifTrue: [4]
+											ifFalse: [5]]
+								ifFalse: [8])
+							+ ((((operands at: 1) bitAnd: 7) = RSP and: [(operands at: 0) ~= 0])
+								ifTrue: [1]
+								ifFalse: [0])
+							+ ((((operands at: 1) > 7) or: [(operands at: 2) > 7])
+								ifTrue: [1]
+								ifFalse: [0])].
 		[MoveM64rRd]	-> [^((self isQuick: (operands at: 0))
 								ifTrue: [((operands at: 0) = 0
 										and: [((operands at: 1) bitAnd: 6) ~= RSP])
@@ -643,7 +760,34 @@ CogX64Compiler >> computeMaximumSize [
 		[PushCw]		-> [^self computeSizeOfPushCw].
 		[PrefetchAw]	-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [7] ifFalse: [0]].
 		"Conversion"
-		[ConvertRRd]	-> [^5] }.
+		[ConvertRRd]		-> [^4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+									ifTrue: [1]
+									ifFalse: [0])].
+		[ConvertRdR]		-> [^4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+									ifTrue: [1]
+									ifFalse: [0])].
+		[ConvertRRs]		-> [^4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+									ifTrue: [1]
+									ifFalse: [0])].
+		[ConvertRsR]		-> [^4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+									ifTrue: [1]
+									ifFalse: [0])].
+		[ConvertRsRd]	-> [^4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+									ifTrue: [1]
+									ifFalse: [0])].
+		[ConvertRdRs]	-> [^4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+									ifTrue: [1]
+									ifFalse: [0])].
+
+		[SignExtend8RR] -> [^4].
+		[SignExtend16RR] -> [^4].
+		[SignExtend32RR] -> [^4].
+		[ZeroExtend8RR] -> [^4].
+		[ZeroExtend16RR] -> [^4].
+		[ZeroExtend32RR] -> [^2 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
+									ifTrue: [1]
+									ifFalse: [0])].
+		}.
 	^0 "to keep C compiler quiet"
 ]
 
@@ -735,6 +879,13 @@ CogX64Compiler >> concretizeCDQ [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeCLD [
+	<inline: true>
+	machineCode at: 0 put: 16rFC.
+	^machineCodeSize := 1
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeCall [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -775,6 +926,19 @@ CogX64Compiler >> concretizeCallFull [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeCallR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| reg |
+	reg := operands at: 0.
+	machineCode
+		at: 1 put: (self rexR: 0 x: 0 b: reg);
+		at: 1 put: 16rFF;
+		at: 2 put: (self mod: ModReg RM: reg RO: 2).
+	^machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeCmpC32R [
 	"Will get inlined into concretizeAt: switch."
 	"N.B. This use of 32-bit comparss allows us to squeak by and use a short jump
@@ -810,16 +974,43 @@ CogX64Compiler >> concretizeCmpRdRd [
 	"Will get inlined into concretizeAt: switch.
 	 We use UCOMISD (see p 4-260 [2])"
 	<inline: true>
-	| regLHS regRHS |
+	| regLHS regRHS skip |
 	"CmpRR RHS LHS computes LHS - RHS, i.e. apparently reversed.  You have to think subtract."
 	regRHS := operands at: 0.
 	regLHS := operands at: 1.
+	
 	machineCode
-		at: 0 put: 16r66;
-		at: 1 put: 16r0F;
-		at: 2 put: 16r2E;
-		at: 3 put: (self mod: ModReg RM: regRHS RO: regLHS).
-	^machineCodeSize := 4
+		at: 0 put: 16r66.
+	(regLHS <= 7 and: [regRHS <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: regLHS x: 0 b: regRHS)].	
+	
+	machineCode
+		at: skip + 1 put: 16r0F;
+		at: skip + 2 put: 16r2E;
+		at: skip + 3 put: (self mod: ModReg RM: regRHS RO: regLHS).
+	^machineCodeSize := skip + 4
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeCmpRsRs [
+	"Will get inlined into concretizeAt: switch.
+	 We use UCOMISS"
+	<inline: true>
+	| regLHS regRHS skip |
+	"CmpRR RHS LHS computes LHS - RHS, i.e. apparently reversed.  You have to think subtract."
+	regRHS := operands at: 0.
+	regLHS := operands at: 1.
+	
+	(regLHS <= 7 and: [regRHS <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: regLHS x: 0 b: regRHS)].
+		
+	machineCode
+		at: skip + 0 put: 16r0F;
+		at: skip + 1 put: 16r2E;
+		at: skip + 2 put: (self mod: ModReg RM: regRHS RO: regLHS).
+	^machineCodeSize := skip + 3
 ]
 
 { #category : #'generate machine code' }
@@ -866,16 +1057,125 @@ CogX64Compiler >> concretizeConditionalJumpLong: conditionCode [
 CogX64Compiler >> concretizeConvertRRd [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| srcReg destReg |
+	| srcReg destReg skip |
 	srcReg := operands at:0.
 	destReg := operands at: 1.
 	machineCode
-		at: 0 put: 16rF2;
-		at: 1 put: (self rexR: destReg x: 0 b: srcReg);
-		at: 2 put: 16r0F;
-		at: 3 put: 16r2A;
-		at: 4 put: (self mod: ModReg RM: srcReg RO: destReg).
-	 ^machineCodeSize := 5
+		at: 0 put: 16rF2.
+	(srcReg <= 7 and: [destReg <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: destReg x: 0 b: srcReg)].
+		
+	machineCode
+		at: skip + 1 put: 16r0F;
+		at: skip + 2 put: 16r2A;
+		at: skip + 3 put: (self mod: ModReg RM: srcReg RO: destReg).
+	 ^machineCodeSize := skip + 4
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeConvertRRs [
+	"Will get inlined into concretizeAt: switch."
+	"CVTSI2SS"
+	<inline: true>
+	| srcReg destReg skip |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16rF3.
+	(srcReg <= 7 and: [destReg <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: destReg x: 0 b: srcReg)].
+		
+	machineCode
+		at: skip + 1 put: 16r0F;
+		at: skip + 2 put: 16r2A;
+		at: skip + 3 put: (self mod: ModReg RM: srcReg RO: destReg).
+	 ^machineCodeSize := skip + 4
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeConvertRdR [
+	"Will get inlined into concretizeAt: switch."
+	"CVTSD2SI"
+	<inline: true>
+	| srcReg destReg skip |
+	srcReg := operands at:0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16rF2.
+	(srcReg <= 7 and: [destReg <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: destReg x: 0 b: srcReg)].
+	
+	machineCode
+		at: skip + 1 put: 16r0F;
+		at: skip + 2 put: 16r2D;
+		at: skip + 3 put: (self mod: ModReg RM: srcReg RO: destReg).
+	 ^machineCodeSize := skip + 4
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeConvertRdRs [
+	"Will get inlined into concretizeAt: switch."
+	"CVTSD2SS"
+	<inline: true>
+	| srcReg destReg skip |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16rF2.
+	(srcReg <= 7 and: [destReg <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: destReg x: 0 b: srcReg)].
+		
+	machineCode
+		at: skip + 1 put: 16r0F;
+		at: skip + 2 put: 16r5A;
+		at: skip + 3 put: (self mod: ModReg RM: srcReg RO: destReg).
+	 ^machineCodeSize := skip + 4
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeConvertRsR [
+	"Will get inlined into concretizeAt: switch."
+	"CVTSS2SI"
+	<inline: true>
+	| srcReg destReg skip |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16rF3.
+	(srcReg <= 7 and: [destReg <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: destReg x: 0 b: srcReg)].
+		
+	machineCode 
+		at: skip + 1 put: 16r0F;
+		at: skip + 2 put: 16r2D;
+		at: skip + 3 put: (self mod: ModReg RM: srcReg RO: destReg).
+	 ^machineCodeSize := skip + 4
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeConvertRsRd [
+	"Will get inlined into concretizeAt: switch."
+	"CVTSS2SD"
+	<inline: true>
+	| srcReg destReg skip |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16rF3.
+	(srcReg <= 7 and: [destReg <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: destReg x: 0 b: srcReg)].
+		
+	machineCode
+		at: skip + 1 put: 16r0F;
+		at: skip + 2 put: 16r5A;
+		at: skip + 3 put: (self mod: ModReg RM: srcReg RO: destReg).
+	 ^machineCodeSize := skip + 4
 ]
 
 { #category : #'generate machine code' }
@@ -1035,6 +1335,22 @@ CogX64Compiler >> concretizeLoadEffectiveAddressMwrR [
 		at: 6 put: (offset >> 16 bitAnd: 16rFF);
 		at: 7 put: (offset >> 24 bitAnd: 16rFF).
 	^machineCodeSize := 8
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMOVSB [
+	<inline: true>
+	machineCode at: 0 put: 16rA4.
+	^machineCodeSize := 1
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMOVSQ [
+	<inline: true>
+	machineCode
+		at: 0 put: (self rexw: true r: 0 x: 0 b: 0);
+		at: 1 put: 16rA5.
+	^machineCodeSize := 2
 ]
 
 { #category : #'generate machine code' }
@@ -1246,7 +1562,7 @@ CogX64Compiler >> concretizeMoveM16rR [
 		at: 1 put: 16r0f;
 		at: 2 put: 16rb7.
 	(srcReg ~= RSP and: [srcReg ~= R12]) ifTrue:
-		[(offset = 0 and: [destReg ~= RBP and: [destReg ~= R13]]) ifTrue:
+		[(offset = 0 and: [srcReg ~= RBP and: [srcReg ~= R13]]) ifTrue:
 			[machineCode
 				at: 3 put: (self mod: ModRegInd RM: srcReg RO: destReg).
 			 ^machineCodeSize := 4].
@@ -1263,7 +1579,7 @@ CogX64Compiler >> concretizeMoveM16rR [
 			at: 7 put: (offset >> 24 bitAnd: 16rFF).
 		^machineCodeSize := 8].
 	"RSP & R12:"
-	(offset = 0 and: [destReg ~= RBP and: [destReg ~= R13]]) ifTrue:
+	(offset = 0 and: [srcReg ~= RBP and: [srcReg ~= R13]]) ifTrue:
 		[machineCode
 			at: 3 put: (self mod: ModRegInd RM: srcReg RO: destReg);
 			at: 4 put: (self s: SIB1 i: 4 b: srcReg).
@@ -1282,6 +1598,98 @@ CogX64Compiler >> concretizeMoveM16rR [
 		at: 7 put: (offset >> 16 bitAnd: 16rFF);
 		at: 8 put: (offset >> 24 bitAnd: 16rFF).
 	^machineCodeSize := 9
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveM32rR [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| offset srcReg destReg skip |
+	offset := operands at: 0.
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
+	(srcReg <= 7 and: [destReg <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: destReg x: 0 b: srcReg)].
+	machineCode
+		at: skip + 0 put: 16r8b.
+	offset = 0 ifTrue:
+		[(srcReg bitAnd: 6) ~= RSP ifTrue:
+			[machineCode at: skip + 1 put: (self mod: ModRegInd RM: srcReg RO: destReg).
+			 ^machineCodeSize := skip + 2].
+		 (srcReg bitAnd: 7) = RSP ifTrue: "RBP & R13 fall through"
+			[machineCode
+				at: skip + 1 put: (self mod: ModRegInd RM: srcReg RO: destReg);
+				at: skip + 2 put: (self s: SIB1 i: 4 b: srcReg).
+			 ^machineCodeSize := skip + 3]].
+	(self isQuick: offset) ifTrue:
+		[(srcReg bitAnd: 7) ~= RSP ifTrue:
+			[machineCode
+				at: skip + 1 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
+				at: skip + 2 put: (offset bitAnd: 16rFF).
+			 ^machineCodeSize := skip + 3].
+		 machineCode
+			at: skip + 1 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
+			at: skip + 2 put: (self s: SIB1 i: 4 b: srcReg);
+			at: skip + 3 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := skip + 4].
+	machineCode at: skip + 1 put: (self mod: ModRegRegDisp32 RM: srcReg RO: destReg).
+	(srcReg bitAnd: 7) = RSP ifTrue:
+		[machineCode at: skip + 2 put: (self s: SIB1 i: 4 b: srcReg).
+		 skip := skip + 1].
+	machineCode
+		at: skip + 2 put: (offset bitAnd: 16rFF);
+		at: skip + 3 put: (offset >> 8 bitAnd: 16rFF);
+		at: skip + 4 put: (offset >> 16 bitAnd: 16rFF);
+		at: skip + 5 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := skip + 6
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveM32rRs [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| offset srcReg destReg skip |
+	offset := operands at: 0.
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
+	machineCode at: 0 put: 16r66.
+	(srcReg <= 7 and: [destReg <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: destReg x: 0 b: srcReg)].
+	machineCode
+		at: skip + 1 put: 16r0f;
+		at: skip + 2 put: 16r6e.
+	offset = 0 ifTrue:
+		[(srcReg bitAnd: 6) ~= RSP ifTrue:
+			[machineCode at: skip + 3 put: (self mod: ModRegInd RM: srcReg RO: destReg).
+			 ^machineCodeSize := skip + 4].
+		 (srcReg bitAnd: 7) = RSP ifTrue: "RBP & R13 fall through"
+			[machineCode
+				at: skip + 3 put: (self mod: ModRegInd RM: srcReg RO: destReg);
+				at: skip + 4 put: (self s: SIB1 i: 4 b: srcReg).
+			 ^machineCodeSize := skip + 5]].
+	(self isQuick: offset) ifTrue:
+		[(srcReg bitAnd: 7) ~= RSP ifTrue:
+			[machineCode
+				at: skip + 3 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
+				at: skip + 4 put: (offset bitAnd: 16rFF).
+			 ^machineCodeSize := skip + 5].
+		 machineCode
+			at: skip + 3 put: (self mod: ModRegRegDisp8 RM: srcReg RO: destReg);
+			at: skip + 4 put: (self s: SIB1 i: 4 b: srcReg);
+			at: skip + 5 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := skip + 6].
+	machineCode at: skip + 3 put: (self mod: ModRegRegDisp32 RM: srcReg RO: destReg).
+	(srcReg bitAnd: 7) = RSP ifTrue:
+		[machineCode at: skip + 4 put: (self s: SIB1 i: 4 b: srcReg).
+		 skip := skip + 1].
+	machineCode
+		at: skip + 4 put: (offset bitAnd: 16rFF);
+		at: skip + 5 put: (offset >> 8 bitAnd: 16rFF);
+		at: skip + 6 put: (offset >> 16 bitAnd: 16rFF);
+		at: skip + 7 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := skip + 8
 ]
 
 { #category : #'generate machine code' }
@@ -1607,6 +2015,51 @@ CogX64Compiler >> concretizeMoveRM16r [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveRM32r [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| offset srcReg destReg skip |
+	offset := operands at: 0.
+	srcReg := operands at: 1.
+	destReg := operands at: 2.
+	(srcReg <= 7 and: [destReg <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: srcReg x: 0 b: destReg)].
+	machineCode
+		at: skip + 0 put: 16r89.
+	offset = 0 ifTrue:
+		[(destReg bitAnd: 6) ~= RSP ifTrue:
+			[machineCode at: skip + 1 put: (self mod: ModRegInd RM: destReg RO: srcReg).
+			 ^machineCodeSize := skip + 2].
+		 (destReg bitAnd: 7) = RSP ifTrue: "RBP & R13 fall through"
+			[machineCode
+				at: skip + 1 put: (self mod: ModRegInd RM: destReg RO: srcReg);
+				at: skip + 2 put: (self s: SIB1 i: 4 b: destReg).
+			 ^machineCodeSize := skip + 3]].
+	(self isQuick: offset) ifTrue:
+		[(destReg bitAnd: 7) ~= RSP ifTrue:
+			[machineCode
+				at: skip + 1 put: (self mod: ModRegRegDisp8 RM: destReg RO: srcReg);
+				at: skip + 2 put: (offset bitAnd: 16rFF).
+			 ^machineCodeSize := skip + 3].
+		 machineCode
+			at: skip + 1 put: (self mod: ModRegRegDisp8 RM: destReg RO: srcReg);
+			at: skip + 2 put: (self s: SIB1 i: 4 b: destReg);
+			at: skip + 3 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := skip + 4].
+	machineCode at: skip + 1 put: (self mod: ModRegRegDisp32  RM: destReg RO: srcReg).
+	(destReg bitAnd: 7) = RSP ifTrue:
+		[machineCode at: skip + 2 put: (self s: SIB1 i: 4 b: destReg).
+		 skip := skip + 1].
+	machineCode
+		at: skip + 2 put: (offset bitAnd: 16rFF);
+		at: skip + 3 put: (offset >> 8 bitAnd: 16rFF);
+		at: skip + 4 put: (offset >> 16 bitAnd: 16rFF);
+		at: skip + 5 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := skip + 6
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeMoveRMbr [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -1858,6 +2311,92 @@ CogX64Compiler >> concretizeMoveRdR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveRdRd [
+	"Will get inlined into concretizeAt: switch."
+	"MOVSD"
+	<inline: true>
+	| srcReg destReg skip |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16rF2.
+	(srcReg <= 7 and: [destReg <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: srcReg x: 0 b: destReg)].
+	machineCode
+		at: skip + 1 put: 16r0F;
+		at: skip + 2 put: 16r11;
+		at: skip + 3 put: (self mod: ModReg RM: destReg RO: srcReg).
+	^machineCodeSize := skip + 4
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveRsM32r [
+	<inline: true>
+	| offset srcReg destReg skip |
+	srcReg := operands at: 0.
+	offset := operands at: 1.
+	destReg := operands at: 2.
+	machineCode at: 0 put: 16r66.
+	(srcReg <= 7 and: [destReg <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: srcReg x: 0 b: destReg)].
+	machineCode
+		at: skip + 1 put: 16r0f;
+		at: skip + 2 put: 16r7e.
+	offset = 0 ifTrue:
+		[(destReg bitAnd: 6) ~= RSP ifTrue:
+			[machineCode at: skip + 3 put: (self mod: ModRegInd RM: destReg RO: srcReg).
+			 ^machineCodeSize := skip + 4].
+		 (destReg bitAnd: 7) = RSP ifTrue: "RBP & R13 fall through"
+			[machineCode
+				at: skip + 3 put: (self mod: ModRegInd RM: destReg RO: srcReg);
+				at: skip + 4 put: (self s: SIB1 i: 4 b: destReg).
+			 ^machineCodeSize := skip + 5]].
+	(self isQuick: offset) ifTrue:
+		[(destReg bitAnd: 7) ~= RSP ifTrue:
+			[machineCode
+				at: skip + 3 put: (self mod: ModRegRegDisp8 RM: destReg RO: srcReg);
+				at: skip + 4 put: (offset bitAnd: 16rFF).
+			 ^machineCodeSize := skip + 5].
+		 machineCode
+			at: skip + 3 put: (self mod: ModRegRegDisp8 RM: destReg RO: srcReg);
+			at: skip + 4 put: (self s: SIB1 i: 4 b: destReg);
+			at: skip + 5 put: (offset bitAnd: 16rFF).
+		 ^machineCodeSize := skip + 6].
+	machineCode at: skip + 3 put: (self mod: ModRegRegDisp32 RM: destReg RO: srcReg).
+	(destReg bitAnd: 7) = RSP ifTrue:
+		[machineCode at: skip + 4 put: (self s: SIB1 i: 4 b: destReg).
+		 skip := skip + 1].
+	machineCode
+		at: skip + 4 put: (offset bitAnd: 16rFF);
+		at: skip + 5 put: (offset >> 8 bitAnd: 16rFF);
+		at: skip + 6 put: (offset >> 16 bitAnd: 16rFF);
+		at: skip + 7 put: (offset >> 24 bitAnd: 16rFF).
+	^machineCodeSize := skip + 8
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeMoveRsRs [
+	"Will get inlined into concretizeAt: switch."
+	"MOVSS"
+	<inline: true>
+	| srcReg destReg skip |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: 16rF3.
+	(srcReg <= 7 and: [destReg <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: srcReg x: 0 b: destReg)].
+	machineCode
+		at: skip + 1 put: 16r0F;
+		at: skip + 2 put: 16r11;
+		at: skip + 3 put: (self mod: ModReg RM: destReg RO: srcReg).
+	^machineCodeSize := skip + 4
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeMoveX32rRR [
 	"MoveX32rRR is expected to zero-extend, so explicitly zero the destination."
 	| index base dest offset |
@@ -2051,6 +2590,13 @@ CogX64Compiler >> concretizePushR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeREP [
+	<inline: true>
+	machineCode at: 0 put: 16rF3.
+	^machineCodeSize := 1
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeRetN [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
@@ -2083,15 +2629,38 @@ CogX64Compiler >> concretizeReverseOpRR: x64opcode [
 CogX64Compiler >> concretizeSEE2OpRdRd: x64opcode [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| regLHS regRHS |
+	| regLHS regRHS skip |
 	regRHS := operands at: 0.
 	regLHS := operands at: 1.
 	machineCode
-		at: 0 put: 16rF2;
-		at: 1 put: 16r0F;
-		at: 2 put: x64opcode;
-		at: 3 put: (self mod: ModReg RM: regRHS RO: regLHS).
-	^machineCodeSize := 4
+		at: 0 put: 16rF2.
+	(regLHS <= 7 and: [regRHS <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: regLHS x: 0 b: regRHS)].
+	machineCode 
+		at: skip + 1 put: 16r0F;
+		at: skip + 2 put: x64opcode;
+		at: skip + 3 put: (self mod: ModReg RM: regRHS RO: regLHS).
+	^machineCodeSize := skip + 4
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeSEEOpRsRs: x64opcode [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| regLHS regRHS skip |
+	regRHS := operands at: 0.
+	regLHS := operands at: 1.
+	machineCode
+		at: 0 put: 16rF3.
+	(regLHS <= 7 and: [regRHS <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: regLHS x: 0 b: regRHS)].
+	machineCode 
+		at: skip + 1 put: 16r0F;
+		at: skip + 2 put: x64opcode;
+		at: skip + 3 put: (self mod: ModReg RM: regRHS RO: regLHS).
+	^machineCodeSize := skip + 4
 ]
 
 { #category : #'generate machine code' }
@@ -2159,17 +2728,86 @@ CogX64Compiler >> concretizeShiftRegRegOpcode: regOpcode [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeSignExtend16RR [
+	"Will get inlined into concretizeAt: switch."
+	"movsxwq"
+	<inline: true>
+	| srcReg destReg |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: (self rexw: true r: destReg x: 0 b: srcReg);
+		at: 1 put: 16r0F;
+		at: 2 put: 16rBF;
+		at: 3 put: (self mod: ModReg RM: srcReg RO: destReg).
+	^ machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeSignExtend32RR [
+	"Will get inlined into concretizeAt: switch."
+	"movsxdq"
+	<inline: true>
+	| srcReg destReg |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: (self rexw: true r: destReg x: 0 b: srcReg);
+		at: 1 put: 16r63;
+		at: 2 put: (self mod: ModReg RM: srcReg RO: destReg).
+	^ machineCodeSize := 3
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeSignExtend8RR [
+	"Will get inlined into concretizeAt: switch."
+	"movsxbq"
+	<inline: true>
+	| srcReg destReg |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: (self rexw: true r: destReg x: 0 b: srcReg);
+		at: 1 put: 16r0F;
+		at: 2 put: 16rBE;
+		at: 3 put: (self mod: ModReg RM: srcReg RO: destReg).
+	^ machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> concretizeSqrtRd [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| reg |
+	| reg skip |
 	reg := operands at: 0.
 	machineCode
-		at: 0 put: 16rF2;
-		at: 1 put: 16r0F;
-		at: 2 put: 16r51;
-		at: 3 put: (self mod: ModReg RM: reg RO: reg).
-	^machineCodeSize := 4
+		at: 0 put: 16rF2.
+	(reg <= 7)
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: reg x: 0 b: reg)].
+	machineCode
+		at: skip + 1 put: 16r0F;
+		at: skip + 2 put: 16r51;
+		at: skip + 3 put: (self mod: ModReg RM: reg RO: reg).
+	^machineCodeSize := skip + 4
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeSqrtRs [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| reg skip |
+	reg := operands at: 0.
+	machineCode
+		at: 0 put: 16rF3.
+	(reg <= 7)
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: reg x: 0 b: reg)].
+	machineCode
+		at: skip + 1 put: 16r0F;
+		at: skip + 2 put: 16r51;
+		at: skip + 3 put: (self mod: ModReg RM: reg RO: reg).
+	^machineCodeSize := skip + 4
 ]
 
 { #category : #'generate machine code' }
@@ -2235,6 +2873,94 @@ CogX64Compiler >> concretizeXCHGRR [
 ]
 
 { #category : #'generate machine code' }
+CogX64Compiler >> concretizeXorRdRd [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| regLHS regRHS skip |
+	regRHS := self operands at: 0.
+	regLHS := self operands at: 1.
+	machineCode
+		at: 0 put: 16r66.
+	(regLHS <= 7 and: [regRHS <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: regLHS x: 0 b: regRHS)].
+	machineCode
+		at: skip + 1 put: 16r0f;
+		at: skip + 2 put: 16r57;
+		at: skip + 3 put: (self mod: ModReg RM: regRHS RO: regLHS).
+	^machineCodeSize := skip + 4
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeXorRsRs [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| regLHS regRHS skip |
+	regRHS := self operands at: 0.
+	regLHS := self operands at: 1.
+	machineCode
+		at: 0 put: 16r0F.
+	(regLHS <= 7 and: [regRHS <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: regLHS x: 0 b: regRHS)].
+	
+	machineCode	
+		at: skip + 1 put: 16r57;
+		at: skip + 2 put: (self mod: ModReg RM: regRHS RO: regLHS).
+	^machineCodeSize := skip + 3
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeZeroExtend16RR [
+	"Will get inlined into concretizeAt: switch."
+	"movzxwq"
+	<inline: true>
+	| srcReg destReg |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: (self rexw: true r: destReg x: 0 b: srcReg);
+		at: 1 put: 16r0F;
+		at: 2 put: 16rB7;
+		at: 3 put: (self mod: ModReg RM: srcReg RO: destReg).
+	^ machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeZeroExtend32RR [
+	"Will get inlined into concretizeAt: switch."
+	"movzxbq"
+	<inline: true>
+	| srcReg destReg skip |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	(srcReg <= 7 and: [destReg <= 7])
+		ifTrue: [skip := 0]
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: destReg x: 0 b: srcReg)].
+		
+	machineCode
+		at: skip + 0 put: 16r8b;
+		at: skip + 1 put: (self mod: ModReg RM: srcReg RO: destReg).
+	^ machineCodeSize := skip + 2
+]
+
+{ #category : #'generate machine code' }
+CogX64Compiler >> concretizeZeroExtend8RR [
+	"Will get inlined into concretizeAt: switch."
+	"movzxbq"
+	<inline: true>
+	| srcReg destReg |
+	srcReg := operands at: 0.
+	destReg := operands at: 1.
+	machineCode
+		at: 0 put: (self rexw: true r: destReg x: 0 b: srcReg);
+		at: 1 put: 16r0F;
+		at: 2 put: 16rB6;
+		at: 3 put: (self mod: ModReg RM: srcReg RO: destReg).
+	^ machineCodeSize := 4
+]
+
+{ #category : #'generate machine code' }
 CogX64Compiler >> dispatchConcretize [
 	"Attempt to generate concrete machine code for the instruction at address.
 	 This is the inner dispatch of concretizeAt: actualAddress which exists only
@@ -2261,8 +2987,13 @@ CogX64Compiler >> dispatchConcretize [
 		"[XCHGAwR]				-> [^self concretizeXCHGAwR]."
 		"[XCHGMwrR]			-> [^self concretizeXCHGMwrR]."
 		[XCHGRR]				-> [^self concretizeXCHGRR].
+		[REP]					-> [^self concretizeREP].
+		[CLD]					-> [^self concretizeCLD].
+		[MOVSB]				-> [^self concretizeMOVSB].
+		[MOVSQ]				-> [^self concretizeMOVSQ].
 		"Control"
 		[Call]					-> [^self concretizeCall].
+		[CallR]					-> [^self concretizeCallR].
 		[CallFull]				-> [^self concretizeCallFull].
 		[JumpR]					-> [^self concretizeJumpR].
 		[JumpFull]				-> [^self concretizeJumpFull].
@@ -2301,6 +3032,7 @@ CogX64Compiler >> dispatchConcretize [
 		[AddCqR]					-> [^self concretizeArithCqRWithRO: 0 raxOpcode: 15r05].
 		[AddCwR]					-> [^self concretizeArithCwR: 16r03].
 		[AddRR]						-> [^self concretizeOpRR: 16r03].
+		[AddRsRs]					-> [^self concretizeSEEOpRsRs: 16r58].
 		[AddRdRd]					-> [^self concretizeSEE2OpRdRd: 16r58].
 		[AndCqR]					-> [^self concretizeArithCqRWithRO: 4 raxOpcode: 16r25].
 		[AndCwR]					-> [^self concretizeArithCwR: 16r23].
@@ -2311,8 +3043,11 @@ CogX64Compiler >> dispatchConcretize [
 		[CmpC32R]					-> [^self concretizeCmpC32R].
 		[CmpRR]					-> [^self concretizeReverseOpRR: 16r39].
 		[CmpRdRd]					-> [^self concretizeCmpRdRd].
+		[CmpRsRs]					-> [^self concretizeCmpRsRs].
 		[DivRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5E].
+		[DivRsRs]					-> [^self concretizeSEEOpRsRs: 16r5E].
 		[MulRdRd]					-> [^self concretizeSEE2OpRdRd: 16r59].
+		[MulRsRs]					-> [^self concretizeSEEOpRsRs: 16r59].
 		[OrCqR]						-> [^self concretizeArithCqRWithRO: 1 raxOpcode: 16r0D].
 		[OrCwR]					-> [^self concretizeArithCwR: 16r0B].
 		[OrRR]						-> [^self concretizeOpRR: 16r0B].
@@ -2320,9 +3055,13 @@ CogX64Compiler >> dispatchConcretize [
 		[SubCwR]					-> [^self concretizeArithCwR: 16r2B].
 		[SubRR]						-> [^self concretizeOpRR: 16r2B].
 		[SubRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5C].
+		[SubRsRs]					-> [^self concretizeSEEOpRsRs: 16r5C].
 		[SqrtRd]					-> [^self concretizeSqrtRd].
+		[SqrtRs]					-> [^self concretizeSqrtRs].
 		[XorCwR]					-> [^self concretizeArithCwR: 16r33].
 		[XorRR]						-> [^self concretizeOpRR: 16r33].
+		[XorRdRd]						-> [^self concretizeXorRdRd].
+		[XorRsRs]						-> [^self concretizeXorRsRs].
 		[NegateR]					-> [^self concretizeNegateR].
 		[LoadEffectiveAddressMwrR]	-> [^self concretizeLoadEffectiveAddressMwrR].
 		[RotateLeftCqR]				-> [^self concretizeShiftCqRegOpcode: 0].
@@ -2347,6 +3086,8 @@ CogX64Compiler >> dispatchConcretize [
 		[MoveRMbr]			-> [^self concretizeMoveRMbr].
 		[MoveM16rR]		-> [^self concretizeMoveM16rR].
 		[MoveRM16r]		-> [^self concretizeMoveRM16r].
+		[MoveM32rR]		-> [^self concretizeMoveM32rR].
+		[MoveM32rRs]		-> [^self concretizeMoveM32rRs].
 		[MoveM64rRd]		-> [^self concretizeMoveM64rRd].
 		[MoveMwrR]		-> [^self concretizeMoveMwrR].
 		[MoveXbrRR]		-> [^self concretizeMoveXbrRR].
@@ -2356,16 +3097,34 @@ CogX64Compiler >> dispatchConcretize [
 		[MoveX32rRR]		-> [^self concretizeMoveX32rRR].
 		[MoveRX32rR]		-> [^self concretizeMoveRX32rR].
 		[MoveRMwr]		-> [^self concretizeMoveRMwr].
+		[MoveRM32r]		-> [^self concretizeMoveRM32r].
+		[MoveRsM32r]		-> [^self concretizeMoveRsM32r].
 		[MoveRdM64r]		-> [^self concretizeMoveRdM64r].
 		[MoveRdR]			-> [^self concretizeMoveRdR].
 		[MoveRRd]			-> [^self concretizeMoveRRd].
+		[MoveRdRd]		-> [^self concretizeMoveRdRd].
+		[MoveRsRs]		-> [^self concretizeMoveRsRs].
 		[PopR]				-> [^self concretizePopR].
 		[PushR]				-> [^self concretizePushR].
 		[PushCq]			-> [^self concretizePushCq].
 		[PushCw]			-> [^self concretizePushCw].
 		[PrefetchAw]		-> [^self concretizePrefetchAw].
 		"Conversion"
-		[ConvertRRd]		-> [^self concretizeConvertRRd] }
+		[ConvertRRd]		-> [^self concretizeConvertRRd].
+		[ConvertRdR]		-> [^self concretizeConvertRdR].
+		[ConvertRRs]		-> [^self concretizeConvertRRs].
+		[ConvertRsR]		-> [^self concretizeConvertRsR].
+		[ConvertRsRd]	-> [^self concretizeConvertRsRd].
+		[ConvertRdRs]	-> [^self concretizeConvertRdRs].
+			
+		[SignExtend8RR]		-> [^self concretizeSignExtend8RR].
+		[SignExtend16RR]	-> [^self concretizeSignExtend16RR].
+		[SignExtend32RR]	-> [^self concretizeSignExtend32RR].
+		
+		[ZeroExtend8RR]		-> [^self concretizeZeroExtend8RR].
+		[ZeroExtend16RR]	-> [^self concretizeZeroExtend16RR].
+		[ZeroExtend32RR]	-> [^self concretizeZeroExtend32RR].
+		}
 ]
 
 { #category : #'inline cacheing' }
@@ -2585,9 +3344,213 @@ CogX64Compiler >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 ar
 	self assert: numArgs <= 4
 ]
 
+{ #category : #abi }
+CogX64Compiler >> genMarshallNArgs: numArgs floatArg: regOrConst0 floatArg: regOrConst1 floatArg: regOrConst2 floatArg: regOrConst3 [
+	"Generate the code to pass up to four float arguments in a C run-time call.  Hack: each argument is
+	 either a negative number, which encodes a constant, or a non-negative number, that of a register.
+
+	 Run-time calls have no more than four arguments, so chosen so that on ARM, where in its C ABI the
+	 first four integer arguments are passed in registers, all arguments can be passed in registers.  We
+	 defer to the back end to generate this code not so much that the back end knows whether it uses
+	 the stack or registers to pass arguments (it does, but...). In fact we defer for an extremely evil reason.
+	 Doing so allows the x64 (where up to 6 args are passed) to assign the register arguments in an order
+	 that allows some of the argument registers to be used for specific abstract  registers, specifically
+	 ReceiverResultReg and ClassReg.  This is evil, evil, evil, but also it's really nice to keep using the old
+	 register assignments the original author has grown accustomed to."
+	<inline: true>
+	SysV ifFalse: "WIN64 ABI allways reserve shadow space on the stack for callee to save up to 4 register parameters"
+		[cogit SubCq: 32 R: RSP].
+	numArgs = 0 ifTrue: [^self].
+	
+	(cogit isTrampolineArgConstant: regOrConst0)
+		ifTrue: [cogit MoveCf64: (cogit trampolineArgValue: regOrConst0) Rd: XMM0L] "a.k.a. DPFPReg0"
+		ifFalse: [regOrConst0 ~= XMM0L ifTrue:
+						[cogit MoveR: regOrConst0 R: XMM0L]].
+	numArgs = 1 ifTrue: [^self].
+	
+	(cogit isTrampolineArgConstant: regOrConst1)
+		ifTrue: [cogit MoveCf64: (cogit trampolineArgValue: regOrConst1) Rd: XMM1L] "a.k.a. DPFPReg1"
+		ifFalse: [regOrConst1 ~= XMM1L ifTrue:
+						[cogit MoveR: regOrConst1 R: XMM1L]].
+	numArgs = 2 ifTrue: [^self].
+
+	(cogit isTrampolineArgConstant: regOrConst2)
+		ifTrue: [cogit MoveCf64: (cogit trampolineArgValue: regOrConst2) Rd: XMM2L] "a.k.a. DPFPReg0"
+		ifFalse: [regOrConst2 ~= XMM2L ifTrue:
+						[cogit MoveR: regOrConst2 R: XMM2L]].
+	numArgs = 3 ifTrue: [^self].
+
+	(cogit isTrampolineArgConstant: regOrConst3)
+		ifTrue: [cogit MoveCf64: (cogit trampolineArgValue: regOrConst3) Rd: XMM3L] "a.k.a. DPFPReg3"
+		ifFalse: [regOrConst3 ~= XMM3L ifTrue:
+						[cogit MoveR: regOrConst3 R: XMM3L]].
+
+	self assert: numArgs <= 4
+]
+
+{ #category : #'abstract instructions' }
+CogX64Compiler >> genMemCopy: originalSourceReg to: originalDestReg constantSize: size [
+	| numbytes numwords sourceReg destReg countReg inst |
+
+	"Get the abstract registers for ECX, EDI and ESI"
+	sourceReg := RSI.
+	destReg := RDI.
+	countReg := RCX.
+
+	"Put the source in ESI and the dest in EDI"
+	inst := cogit Label.
+	originalSourceReg ~= sourceReg ifTrue: [
+		originalDestReg = sourceReg ifTrue: [
+			cogit MoveR: originalDestReg R: TempReg.
+		].
+		cogit MoveR: originalSourceReg R: sourceReg.
+	].
+
+	originalDestReg ~= destReg ifTrue: [
+		originalDestReg = sourceReg ifTrue: [
+			cogit MoveR: TempReg R: destReg.
+		] ifFalse: [
+			cogit MoveR: originalDestReg R: destReg.
+		]
+	].
+
+	"Store the count and clear the direction"
+	cogit gen: CLD.
+
+	"First copy the bytes"
+	numbytes := size bitAnd: 16r07.
+	numbytes > 0 ifTrue: [
+		cogit MoveCq: numbytes R: countReg.
+		cogit gen: REP.
+		cogit gen: MOVSB.
+	].
+
+	"Now copy the qwords"
+	numwords := size // 8.
+	cogit MoveCq:  numwords R: countReg.
+	cogit gen: REP.
+	cogit gen: MOVSQ.
+
+
+]
+
+{ #category : #'abstract instructions' }
+CogX64Compiler >> genMemCopy: originalSourceReg to: originalDestReg size: originalSize [
+	| spilledSize size sourceReg destReg countReg inst |
+
+	"Get the abstract registers for ECX, EDI and ESI"
+	sourceReg := RSI.
+	destReg := RDI.
+	countReg := RCX.
+
+	"TODO: Avoid spilling"
+	spilledSize := false.
+	(originalSize = sourceReg or: [originalSize = destReg]) ifTrue: [
+		cogit PushR: originalSize.
+		spilledSize := true.
+	].
+
+	"Put the source in ESI and the dest in EDI"
+	inst := cogit Label.
+	originalSourceReg ~= sourceReg ifTrue: [
+		originalDestReg = sourceReg ifTrue: [
+			cogit MoveR: originalDestReg R: TempReg.
+		].
+		cogit MoveR: originalSourceReg R: sourceReg.
+	].
+
+	originalDestReg ~= destReg ifTrue: [
+		originalDestReg = sourceReg ifTrue: [
+			cogit MoveR: TempReg R: destReg.
+		] ifFalse: [
+			cogit MoveR: originalDestReg R: destReg.
+		]
+	].
+
+	"Put the original size register in somewhere different than ECX"
+	spilledSize ifTrue: [
+		cogit PopR: TempReg.
+		size := TempReg.
+	] ifFalse: [
+		originalSize = countReg ifTrue: [
+			cogit MoveR: originalSize R: TempReg.
+			size := TempReg.
+		] ifFalse: [
+			size := originalSize.
+		]
+	].
+
+	cogit gen: CLD.
+
+	"First copy the bytes"
+	cogit MoveR: size R: countReg.
+	cogit AndCq: 16r07 R: countReg.
+	cogit gen: REP.
+	cogit gen: MOVSB.
+
+	"Now copy the words"
+	cogit MoveR: size R: countReg.
+	cogit LogicalShiftRightCq: 3 R: countReg.
+	cogit gen: REP.
+	cogit gen: MOVSQ.
+
+]
+
+{ #category : #'abstract instructions' }
+CogX64Compiler >> genMoveCf32: constantFloat32 Rs: register [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #constantFloat32 type: #float>
+	| inst |
+	inst := cogit PushCw: constantFloat32 asIEEE32BitWord.
+	cogit PopRs: register.
+	^ inst
+]
+
+{ #category : #'abstract instructions' }
+CogX64Compiler >> genMoveCf64: constantFloat64 Rd: register [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #constantFloat64 type: #double>
+	| inst |
+	inst := cogit PushCw: constantFloat64 asIEEE64BitWord.
+	cogit PopRd: register.
+	^ inst
+]
+
 { #category : #'abstract instructions' }
 CogX64Compiler >> genMulR: regSource R: regDest [
 	^cogit gen: IMULRR operand: regSource operand: regDest
+]
+
+{ #category : #'abstract instructions' }
+CogX64Compiler >> genPopRd: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	| inst |
+	inst := cogit MoveM64: 0 r: SPReg Rd: reg .
+	cogit AddCq: 8 R: SPReg.
+	^ inst
+]
+
+{ #category : #'abstract instructions' }
+CogX64Compiler >> genPopRs: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	| inst |
+	inst := cogit MoveM32: 0 r: SPReg Rs: reg .
+	cogit AddCq: 8 R: SPReg.
+	^ inst
+]
+
+{ #category : #'abstract instructions' }
+CogX64Compiler >> genPushRd: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	| inst |
+	inst := cogit MoveRd: reg M64: -8 r: SPReg.
+	cogit SubCq: 8 R: SPReg.
+	^ inst
 ]
 
 { #category : #'smalltalk calling convention' }
@@ -2672,8 +3635,27 @@ CogX64Compiler >> genPushRegisterArgsForNumArgs: numArgs scratchReg: scratchReg 
 				 cogit PushR: scratchReg]] "Restore return address"
 ]
 
+{ #category : #'abstract instructions' }
+CogX64Compiler >> genPushRs: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	| inst |
+	inst := cogit MoveRs: reg M32: -8 r: SPReg.
+	cogit SubCq: 8 R: SPReg.
+	^ inst
+]
+
 { #category : #abi }
 CogX64Compiler >> genRemoveNArgsFromStack: n [
+	"This is a no-op on x64 SysV since the ABI passes up to 6 args in registers and trampolines currently observe a limit of 4.
+	But the WIN64 ABI allways reserve shadow space for saving up to 4 parameter registers (even if less than 4 args)."
+	self assert: n <= 4.
+	SysV ifFalse: [cogit AddCq: 32 R: RSP].
+	^0
+]
+
+{ #category : #abi }
+CogX64Compiler >> genRemoveNFloatArgsFromStack: n [
 	"This is a no-op on x64 SysV since the ABI passes up to 6 args in registers and trampolines currently observe a limit of 4.
 	But the WIN64 ABI allways reserve shadow space for saving up to 4 parameter registers (even if less than 4 args)."
 	self assert: n <= 4.

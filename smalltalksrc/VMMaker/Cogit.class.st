@@ -2166,6 +2166,15 @@ Cogit >> MoveM32: offset r: baseReg Rs: destDPReg [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> MoveM64: offset r: baseReg R: destReg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	self assert: BytesPerWord = 8.
+	^self MoveMw: offset r: baseReg R: destReg
+
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> MoveM64: offset r: baseReg Rd: destDPReg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2231,6 +2240,14 @@ Cogit >> MoveR: sourceReg M32: offset r: baseReg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: MoveRM32r operand: sourceReg quickConstant: offset operand: baseReg
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> MoveR: sourceReg M64: offset r: baseReg [ 
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	self assert: BytesPerWord = 8.
+	^self MoveR: sourceReg Mw: offset r: baseReg 
 ]
 
 { #category : #'abstract instructions' }
@@ -2539,6 +2556,13 @@ Cogit >> SignExtend16R: reg1 R: reg2 [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> SignExtend32R: reg1 R: reg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: SignExtend32RR operand: reg1 operand: reg2
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> SignExtend8R: reg1 R: reg2 [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2648,6 +2672,13 @@ Cogit >> ZeroExtend16R: reg1 R: reg2 [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: ZeroExtend16RR operand: reg1 operand: reg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> ZeroExtend32R: reg1 R: reg2 [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: ZeroExtend32RR operand: reg1 operand: reg2
 ]
 
 { #category : #'abstract instructions' }

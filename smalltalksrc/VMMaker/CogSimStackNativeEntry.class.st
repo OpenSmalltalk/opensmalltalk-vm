@@ -233,6 +233,8 @@ CogSimStackNativeEntry >> nativePopToReg: reg [
 
 		type caseOf: {
 			[SSSpillNative]	-> [cogit MoveMw: offset negated - 1 r: TempReg R: reg].
+			[SSSpillInt64]	-> [self assert: BytesPerWord = 8.
+				cogit MoveMw: offset negated - 1 r: TempReg R: reg].
 			[SSSpillFloat32]	-> [cogit MoveM32: offset negated - 1 r: TempReg Rs: reg.].
 			[SSSpillFloat64]	-> [cogit MoveM64: offset negated - 1 r: TempReg Rd: reg.].}
 	] ifFalse: [
@@ -313,6 +315,8 @@ CogSimStackNativeEntry >> nativeStackPopToReg: reg [
 
 		type caseOf: {
 			[SSSpillNative]	-> [cogit MoveMw: offset negated r: FPReg R: reg].
+			[SSSpillInt64]	-> [self assert: BytesPerWord = 8.
+				cogit MoveMw: offset negated r: FPReg R: reg].
 			[SSSpillFloat32]	-> [cogit MoveM32: offset negated r: FPReg Rs: reg.].
 			[SSSpillFloat64]	-> [cogit MoveM64: offset negated r: FPReg Rd: reg.].
 	}

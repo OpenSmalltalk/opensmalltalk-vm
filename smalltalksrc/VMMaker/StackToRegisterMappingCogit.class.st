@@ -231,7 +231,7 @@ StackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 			type: #'BytecodeDescriptor *'.
 	LowcodeVM ifTrue: [
 		aCodeGen var: 'simNativeStack'
-			declareC: 'CogSimStackNativeEntry simNativeStack[', ((CoInterpreter bindingOf: #LargeContextSlots) value * 5 / 4 // BytesPerWord) asString, ']'
+			declareC: 'CogSimStackNativeEntry simNativeStack[', self simNativeStackSlots asString, ']'
 	].
 
 	self numPushNilsFunction ifNotNil:
@@ -692,6 +692,11 @@ StackToRegisterMappingCogit class >> shouldGenerateTypedefFor: aStructClass [
 	"Hack to work-around mutliple definitions.  Sometimes a type has been defined in an include."
 	^aStructClass ~~ CogBytecodeFixup "overridden by CogSSBytecodeFixup"
 	  and: [super shouldGenerateTypedefFor: aStructClass]
+]
+
+{ #category : #translation }
+StackToRegisterMappingCogit class >> simNativeStackSlots [
+	^ self basicNew simNativeStackSlots
 ]
 
 { #category : #translation }
@@ -4933,12 +4938,13 @@ StackToRegisterMappingCogit >> genLowcodeInt64NotEqual [
 		self ssNativePop: 1.
 
 		self CmpR: second R: first.
-		falseJump := self JumpNonZero: 0.
+		falseJump := self JumpZero: 0.
 		"True result"
 		self MoveCq: 1 R: first.
 		contJump := self Jump: 0.
 		"False result"
-		falseJump jmpTarget: self self MoveCq: 0 R: first.
+		falseJump jmpTarget: self Label.
+		self MoveCq: 0 R: first.
 		contJump jmpTarget: self Label.
 		self ssPushNativeRegister: first.
 
@@ -6349,11 +6355,13 @@ StackToRegisterMappingCogit >> genLowcodeLoadUInt8FromMemory [
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLocalFrameSize [
 	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| size |
+	| size alignedSize |
 	size := extA.
 
 	self assert: needsFrame.
 	hasNativeFrame := true.
+	"Align the size to 16 bytes."
+	alignedSize := size + 15 bitAnd: -16.
 	"Mark the stack frame"
 	self annotate: (self MoveCw: (objectMemory splObj: LowcodeContextMark) R: TempReg) objRef: (objectMemory splObj: LowcodeContextMark).
 	self MoveR: TempReg Mw: self frameOffsetOfNativeFrameMark r: FPReg.
@@ -6362,7 +6370,7 @@ StackToRegisterMappingCogit >> genLowcodeLocalFrameSize [
 	self AddCq: 1 R: TempReg.
 	self MoveR: TempReg Mw: self frameOffsetOfPreviousNativeStackPointer r: FPReg.
 	"Store the frame pointer"
-	self SubCq: size R: TempReg.
+	self SubCq: alignedSize R: TempReg.
 	self MoveR: TempReg Mw: self frameOffsetOfNativeFramePointer r: FPReg.
 	"Store the new stack pointer"
 	self MoveR: TempReg Mw: self frameOffsetOfNativeStackPointer r: FPReg.
@@ -8710,8 +8718,7 @@ StackToRegisterMappingCogit >> genLowcodeSmallInt32ToOop [
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
-	self LogicalShiftLeftCq: 1 R: value.
-	self OrCq: 1 R: value.
+	objectRepresentation genConvertIntegerToSmallIntegerInReg: value.
 	self ssPushRegister: value.
 
 	^ 0
@@ -12648,7 +12655,7 @@ StackToRegisterMappingCogit >> setInterpreter: aCoInterpreter [
 	picMissTrampolines := CArrayAccessor on: (Array new: self numRegArgs + 2).
 
 	simStack := CArrayAccessor on: ((1 to: self class simStackSlots) collect: [:i| self simStackEntryClass new cogit: self]).
-	simNativeStack := CArrayAccessor on: ((1 to: self class simStackSlots) collect: [:i| self simStackNativeEntryClass new cogit: self]).
+	simNativeStack := CArrayAccessor on: ((1 to: self class simNativeStackSlots) collect: [:i| self simStackNativeEntryClass new cogit: self]).
 	simSelf := self simStackEntryClass new cogit: self.
 	optStatus := CogSSOptStatus new.
 
@@ -12663,6 +12670,15 @@ StackToRegisterMappingCogit >> simNativeStackAt: index [
 	<cmacro: '(index) (simNativeStack + (index))'>
 	<returnTypeC: #'CogSimStackNativeEntry *'>
 	^self addressOf: (simNativeStack at: index)
+]
+
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> simNativeStackSlots [
+	"Answer the number of slots toinclude in a simulated stack.
+	 This needs to be big enough to include all slots in a context
+	 plus some overflow for safety."
+	<inline: true>
+	^((LargeContextSlots - CtxtTempFrameStart max: 64) * 11 // 10)
 ]
 
 { #category : #'simulation stack' }

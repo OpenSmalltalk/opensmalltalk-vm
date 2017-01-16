@@ -8449,7 +8449,7 @@ StackInterpreter >> internalPopStackFloat32 [
 	| topSingle  |
 	nativeSP := self nativeStackPointerIn: localFP.
 	topSingle := stackPages singleFloatAtPointer: nativeSP - 1.
-	nativeSP := self nativeStackPointerIn: localFP put: nativeSP + 4.
+	nativeSP := self nativeStackPointerIn: localFP put: nativeSP + objectMemory bytesPerOop.
 	^topSingle
 ]
 
@@ -8473,7 +8473,7 @@ StackInterpreter >> internalPopStackInt32 [
 	| topInt32 |
 	nativeSP := self nativeStackPointerIn: localFP.
 	topInt32 := stackPages int32AtPointer: nativeSP - 1.
-	nativeSP := self nativeStackPointerIn: localFP put: nativeSP + BytesPerOop.
+	nativeSP := self nativeStackPointerIn: localFP put: nativeSP + objectMemory bytesPerOop.
 	^topInt32
 ]
 
@@ -8507,7 +8507,7 @@ StackInterpreter >> internalPopStackPointer [
 	| topPointer |
 	nativeSP := self nativeStackPointerIn: localFP.
 	topPointer := stackPages pointerAtPointer: nativeSP - 1.
-	nativeSP := self nativeStackPointerIn: localFP put: nativeSP + BytesPerOop.
+	nativeSP := self nativeStackPointerIn: localFP put: nativeSP + objectMemory bytesPerOop.
 	^topPointer
 ]
 
@@ -8522,7 +8522,7 @@ StackInterpreter >> internalPushFloat32: singleFloatValue [
 	<option: #LowcodeVM>
 	<var: #singleFloatValue type: #float >
 	"In the StackInterpreter stacks grow down."
-	nativeSP := (self nativeStackPointerIn: localFP) - 4.
+	nativeSP := (self nativeStackPointerIn: localFP) - objectMemory bytesPerOop.
 	self nativeStackPointerIn: localFP put: nativeSP.
 
 	"In the StackInterpreter stacks grow down."
@@ -8546,7 +8546,7 @@ StackInterpreter >> internalPushFloat64: floatValue [
 StackInterpreter >> internalPushInt32: int32Value [
 	<option: #LowcodeVM>
 	"In the StackInterpreter stacks grow down."
-	nativeSP := (self nativeStackPointerIn: localFP) - 4.
+	nativeSP := (self nativeStackPointerIn: localFP) - objectMemory bytesPerOop.
 	self nativeStackPointerIn: localFP put: nativeSP.
 
 	"In the StackInterpreter stacks grow down."
@@ -8572,7 +8572,7 @@ StackInterpreter >> internalPushPointer: pointerValue [
 	<option: #LowcodeVM>
 	<var: #pointerValue type: #'char*' >
 	"In the StackInterpreter stacks grow down."
-	nativeSP := (self nativeStackPointerIn: localFP) - BytesPerOop.
+	nativeSP := (self nativeStackPointerIn: localFP) - objectMemory bytesPerOop.
 	self nativeStackPointerIn: localFP put: nativeSP.
 
 	"In the StackInterpreter stacks grow down."
@@ -8585,7 +8585,7 @@ StackInterpreter >> internalPushShadowCallStackFloat32: singleFloatValue [
 	<option: #LowcodeVM>
 	<var: #singleFloatValue type: #float >
 	"In the StackInterpreter stacks grow down."
-	shadowCallStackPointer := shadowCallStackPointer - 4.
+	shadowCallStackPointer := shadowCallStackPointer - objectMemory bytesPerOop.
 
 	"In the StackInterpreter stacks grow down."
 	stackPages singleFloatAtPointer: shadowCallStackPointer put: singleFloatValue
@@ -8606,7 +8606,7 @@ StackInterpreter >> internalPushShadowCallStackFloat64: floatValue [
 StackInterpreter >> internalPushShadowCallStackInt32: int32Value [
 	<option: #LowcodeVM>
 	"In the StackInterpreter stacks grow down."
-	shadowCallStackPointer := shadowCallStackPointer - 4.
+	shadowCallStackPointer := shadowCallStackPointer - objectMemory bytesPerOop.
 
 	"In the StackInterpreter stacks grow down."
 	stackPages int32AtPointer: shadowCallStackPointer put: int32Value
@@ -12341,15 +12341,17 @@ StackInterpreter >> lowcodePrimitiveLoadUInt8FromMemory [
 { #category : #'inline primitive generated code' }
 StackInterpreter >> lowcodePrimitiveLocalFrameSize [
 	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| size |
+	| alignedSize size |
 	size := extA.
 
+	"Align the size to 16 bytes."
+	alignedSize := size + 15 bitAnd: -16.
 	"Mark the frame"
 	self setFrameHasNativeFrame: localFP.
 	"Store the previous stack pointer"
 	self nativePreviousStackPointerIn: localFP put: nativeStackPointer + 1.
 	"Make the frame pointer"
-	nativeStackPointer := nativeStackPointer - size.
+	nativeStackPointer := nativeStackPointer - alignedSize.
 	self nativeFramePointerIn: localFP put: nativeStackPointer + 1.
 	"Set the stack pointer"
 	nativeSP := nativeStackPointer + 1.
