@@ -1134,7 +1134,7 @@ CogObjectRepresentationForSpur >> genLcIsWords: objectReg to: valueReg [
 	
 	"Hack: consider a compiled method as bytes too."
 	BytesPerWord = 8 ifTrue: [
-		cogit CmpCq: objectMemory firstLongFormat firs R: valueReg.
+		cogit CmpCq: objectMemory firstLongFormat R: valueReg.
 		isBelowRange := cogit JumpLess: 0.
 		cogit CmpCq: objectMemory firstShortFormat R: valueReg.
 		isAboveRange := cogit JumpGreaterOrEqual: 0.
