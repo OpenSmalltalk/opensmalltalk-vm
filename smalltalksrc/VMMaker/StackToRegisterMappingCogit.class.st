@@ -1178,7 +1178,7 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 	nExts := result := 0.
 	descriptor := nil.
 	deadCode := false.
-	[self cCode: '' inSmalltalk: [self isDebugPC ifTrue: [self halt]].
+	[self maybeHaltIfDebugPC.
 	 fixup := self fixupAt: bytecodePC - initialPC.
 	 self mergeWithFixupIfRequired: fixup.
 	 self assertCorrectSimStackPtr.
@@ -1232,7 +1232,7 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 		   N.B.  No need to reinitialize the literalsManager because it answers existing literals."
 		  initialStackPtr = simStackPtr]
 			whileFalse:
-				[self assert: initialStackPtr > simStackPtr.
+				[self assert: (initialStackPtr > simStackPtr or: [deadCode]).
 				 blockPass := blockPass + 1. "for asserts :-("
 				 blockStart numInitialNils: blockStart numInitialNils + simStackPtr - initialStackPtr.
 				 blockStart fakeHeader dependent: nil.
@@ -1545,6 +1545,60 @@ StackToRegisterMappingCogit >> evaluate: descriptor at: pc [
 	self perform: descriptor generator
 ]
 
+{ #category : #'peephole optimizations' }
+StackToRegisterMappingCogit >> eventualTargetOf: targetBytecodePC [
+	"Attempt to follow a branch to a pc.  Handle branches to unconditional jumps
+	 and branches to push: aBoolean; conditional branch pairs.  If the branch cannot
+	 be followed answer targetBytecodePC."
+
+	| currentTarget nextPC nExts descriptor span cond |
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	nextPC := currentTarget := targetBytecodePC.
+	[[nExts := 0.
+	  descriptor := self generatorAt: bytecodeSetOffset
+								+ (objectMemory fetchByte: nextPC ofObject: methodObj).
+	  descriptor isReturn ifTrue: [^currentTarget]. "avoid stepping off the end of methods"
+	  descriptor isExtension]
+		whileTrue:
+			[nExts := nExts + 1.
+			 nextPC := nextPC + descriptor numBytes].
+	 descriptor isUnconditionalBranch
+		ifTrue:
+			[span := self spanFor: descriptor at: nextPC exts: nExts in: methodObj.
+			 span < 0 ifTrue: "Do *not* follow backward branches; these are interrupt points and should not be elided."
+				[^currentTarget].
+			 nextPC := nextPC + descriptor numBytes + span]
+		ifFalse:
+			[descriptor generator
+				caseOf: {
+				[#genPushConstantTrueBytecode] -> [cond := true].
+				[#genPushConstantFalseBytecode] -> [cond := false] }
+				otherwise: [^currentTarget].
+			 "Don't step into loops across a pushTrue; jump:if: boundary, so as not to confuse stack depth fixup."
+			 (fixups at: nextPC - initialPC) isBackwardBranchFixup ifTrue:
+				[^currentTarget].
+			 nextPC := self eventualTargetOf: nextPC + descriptor numBytes.
+			 nExts := 0.
+			 [descriptor := self generatorAt: bytecodeSetOffset
+								+ (objectMemory fetchByte: nextPC ofObject: methodObj).
+			  descriptor isReturn ifTrue: [^currentTarget]. "avoid stepping off the end of methods"
+			  descriptor isExtension]
+				whileTrue:
+					[nExts := nExts + 1.
+					 nextPC := nextPC + descriptor numBytes].
+			 descriptor isBranch ifFalse:
+				[^currentTarget].
+			 descriptor isUnconditionalBranch ifTrue:
+				[^currentTarget].
+			 nextPC := cond == descriptor isBranchTrue
+									ifTrue: [nextPC
+											+ descriptor numBytes
+											+ (self spanFor: descriptor at: nextPC exts: nExts in: methodObj)]
+									ifFalse: [nextPC + descriptor numBytes]].
+	 currentTarget := nextPC]
+		repeat
+]
+
 { #category : #testing }
 StackToRegisterMappingCogit >> extASpecifiesNoMustBeBoolean [
 	<inline: true>
@@ -1581,7 +1635,7 @@ StackToRegisterMappingCogit >> extBSpecifiesStoreCheck [
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> extractMaybeBranchDescriptorInto: fourArgBlock [
 	"Looks one instruction ahead of the current bytecodePC and answers its bytecode descriptor and its pc.
-	If the instruction found is a branch, also answers the pc after the branch and the pc targetted by the branch"
+	 If the instruction found is a branch, also answers the pc after the branch and the pc targeted by the branch."
 	| primDescriptor nextPC nExts branchDescriptor targetBytecodePC postBranchPC |
 	<inline: true>
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
@@ -1591,19 +1645,29 @@ StackToRegisterMappingCogit >> extractMaybeBranchDescriptorInto: fourArgBlock [
 
 	nextPC := bytecodePC + primDescriptor numBytes.
 	nExts := 0.
-	[branchDescriptor := self generatorAt: (objectMemory fetchByte: nextPC ofObject: methodObj) + bytecodeSetOffset.
-	 branchDescriptor isExtension] whileTrue:
+	[[branchDescriptor := self generatorAt: (objectMemory fetchByte: nextPC ofObject: methodObj) + bytecodeSetOffset.
+	  branchDescriptor isExtension] whileTrue:
 		[nExts := nExts + 1.
 		 nextPC := nextPC + branchDescriptor numBytes].
+	 branchDescriptor isUnconditionalBranch]
+		whileTrue:
+			[nextPC := self eventualTargetOf: nextPC
+											+ branchDescriptor numBytes
+											+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj)].
 
 	targetBytecodePC := postBranchPC := 0.
 
-	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifTrue: 
-		[ targetBytecodePC := nextPC
-							+ branchDescriptor numBytes
-							+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj).
-		postBranchPC := nextPC + branchDescriptor numBytes ].
-	
+	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse])
+		ifTrue: 
+			[targetBytecodePC := self eventualTargetOf: nextPC
+														+ branchDescriptor numBytes
+														+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj).
+			 postBranchPC := self eventualTargetOf: nextPC + branchDescriptor numBytes]
+		ifFalse:
+			[branchDescriptor isReturn ifFalse:
+				[postBranchPC := self eventualTargetOf: nextPC + branchDescriptor numBytes.
+				 nextPC := self eventualTargetOf: bytecodePC + primDescriptor numBytes]].
+
 	fourArgBlock value: branchDescriptor value: nextPC value: postBranchPC value: targetBytecodePC
 ]
 
@@ -2138,10 +2202,11 @@ StackToRegisterMappingCogit >> genJumpBackTo: targetBytecodePC [
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	<inline: false>
-	| desc fixup ok |
+	| desc fixup ok eventualTarget |
 	<var: #desc type: #'CogSimStackEntry *'>
 	<var: #fixup type: #'BytecodeFixup *'>
 	<var: #ok type: #'AbstractInstruction *'>
+	eventualTarget := self eventualTargetOf: targetBytecodePC.
 	self ssFlushTo: simStackPtr - 1.
 	desc := self ssTop.
 	self ssPop: 1.
@@ -2149,7 +2214,7 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 and: [desc constant = objectMemory trueObject or: [desc constant = objectMemory falseObject]]) ifTrue:
 		["Must arrange there's a fixup at the target whether it is jumped to or
 		  not so that the simStackPtr can be kept correct."
-		 fixup := self ensureFixupAt: targetBytecodePC - initialPC.
+		 fixup := self ensureFixupAt: eventualTarget - initialPC.
 		 "Must annotate the bytecode for correct pc mapping."
 		 self annotateBytecode: (desc constant = boolean
 									ifTrue: [self Jump: fixup]
@@ -2164,7 +2229,7 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 their distance send mustBeBoolean."
 	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
 	self genSubConstant: boolean R: TempReg.
-	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
+	self JumpZero: (self ensureFixupAt: eventualTarget - initialPC).
 	
 	self extASpecifiesNoMustBeBoolean ifTrue: 
 		[ extA := 0. 
@@ -2172,7 +2237,7 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 		^ 0].
 	extA := 0.
 	
-.	self CmpCq: (boolean = objectMemory falseObject
+	self CmpCq: (boolean = objectMemory falseObject
 					ifTrue: [objectMemory trueObject - objectMemory falseObject]
 					ifFalse: [objectMemory falseObject - objectMemory trueObject])
 		R: TempReg.
@@ -2186,7 +2251,8 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 StackToRegisterMappingCogit >> genJumpTo: targetBytecodePC [
 	self ssFlushTo: simStackPtr.
 	deadCode := true. "can't fall through"
-	^super genJumpTo: targetBytecodePC
+	self Jump: (self ensureFixupAt: (self eventualTargetOf: targetBytecodePC) - initialPC).
+	^0
 ]
 
 { #category : #'primitive generators' }
@@ -11771,6 +11837,53 @@ StackToRegisterMappingCogit >> generateEnilopmarts [
 			 self assert: self numRegArgs = 2]]
 ]
 
+{ #category : #'generate machine code' }
+StackToRegisterMappingCogit >> generateInstructionsAt: eventualAbsoluteAddress [
+	"Size pc-dependent instructions and assign eventual addresses to all instructions.
+	 Answer the size of the code.
+	 Compute forward branches based on virtual address (abstract code starts at 0),
+	 assuming that any branches branched over are long.
+	 Compute backward branches based on actual address.
+	 Reuse the fixups array to record the pc-dependent instructions that need to have
+	 their code generation postponed until after the others.
+
+	 Override to andd handling for null branches (branches to the immediately following
+	 instruction) occasioned by StackToRegisterMapping's following of jumps."
+	| absoluteAddress pcDependentIndex abstractInstruction fixup |
+	<var: #abstractInstruction type: #'AbstractInstruction *'>
+	<var: #fixup type: #'BytecodeFixup *'>
+	absoluteAddress := eventualAbsoluteAddress.
+	pcDependentIndex := 0.
+	0 to: opcodeIndex - 1 do:
+		[:i|
+		self maybeBreakGeneratingAt: absoluteAddress.
+		abstractInstruction := self abstractInstructionAt: i.
+		abstractInstruction isPCDependent
+			ifTrue:
+				[abstractInstruction sizePCDependentInstructionAt: absoluteAddress.
+				 (abstractInstruction isJump
+				  and: [i + 1 < opcodeIndex
+				  and: [abstractInstruction getJmpTarget == (self abstractInstructionAt: i + 1)]])
+					ifTrue:
+						[abstractInstruction
+							opcode: Nop;
+							concretizeAt: absoluteAddress]
+					ifFalse:
+						[fixup := self fixupAt: pcDependentIndex.
+						 pcDependentIndex := pcDependentIndex + 1.
+						 fixup instructionIndex: i].
+				 absoluteAddress := absoluteAddress + abstractInstruction machineCodeSize]
+			ifFalse:
+				[absoluteAddress := abstractInstruction concretizeAt: absoluteAddress]].
+	0 to: pcDependentIndex - 1 do:
+		[:j|
+		fixup := self fixupAt: j.
+		abstractInstruction := self abstractInstructionAt: fixup instructionIndex.
+		self maybeBreakGeneratingAt: abstractInstruction address.
+		abstractInstruction concretizeAt: abstractInstruction address].
+	^absoluteAddress - eventualAbsoluteAddress
+]
+
 { #category : #initialization }
 StackToRegisterMappingCogit >> generateMissAbortTrampolines [
 	"Generate the run-time entries for the various method and PIC entry misses and aborts.
@@ -12237,46 +12350,46 @@ StackToRegisterMappingCogit >> mergeWithFixupIfRequired: fixup [
 	
 	<var: #fixup type: #'BytecodeFixup *'>
 	"case 1"
-	fixup notAFixup ifTrue: [^ 0].
+	fixup notAFixup ifTrue:
+		[^0].
 
 	"case 2"
-	fixup isNonMergeFixup ifTrue: [deadCode := false. ^ 0 ].
+	fixup isNonMergeFixup ifTrue:
+		[deadCode := false. ^0].
 
 	"cases 3 and 4"
 	self assert: fixup isMergeFixup.
 	self traceMerge: fixup.
-	deadCode ifTrue: [
-		"case 3"
-		simStackPtr := fixup simStackPtr.
-		LowcodeVM ifTrue: [
-			simNativeStackPtr := fixup simNativeStackPtr.
-			simNativeStackSize := fixup simNativeStackSize.
-		] 
-	] ifFalse: [
-		"case 4"
-		self ssFlushTo: simStackPtr
-	].
+	deadCode
+		ifTrue: "case 3"
+			["Would like to assert fixup simStackPtr >= (methodOrBlockNumTemps - 1) but can't because
+			   a) the initialNils hack, b) deadCode removal allows arriving at an isBackwardBranchFixup."
+			 self assert: (fixup simStackPtr >= (methodOrBlockNumTemps - 1) or: [inBlock = InVanillaBlock or: [fixup isBackwardBranchFixup]]).
+			 fixup isBackwardBranchFixup ifFalse:
+				[simStackPtr := fixup simStackPtr].
+			 LowcodeVM ifTrue:
+				[simNativeStackPtr := fixup simNativeStackPtr.
+				simNativeStackSize := fixup simNativeStackSize]]
+		ifFalse: "case 4"
+			[self ssFlushTo: simStackPtr].
 
 	"cases 3 and 4"
 	deadCode := false.
-	fixup isBackwardBranchFixup ifTrue: [
-		fixup simStackPtr: simStackPtr.
-		LowcodeVM ifTrue: [
-			fixup simNativeStackPtr: simNativeStackPtr.
-			fixup simNativeStackSize: simNativeStackSize.
-		]
-	].
+	fixup isBackwardBranchFixup ifTrue:
+		[fixup simStackPtr: simStackPtr.
+		LowcodeVM ifTrue:
+			[fixup simNativeStackPtr: simNativeStackPtr.
+			 fixup simNativeStackSize: simNativeStackSize]].
 	fixup targetInstruction: self Label.
 	self assert: simStackPtr = fixup simStackPtr.
-	LowcodeVM ifTrue: [
-		self assert: simNativeStackPtr = fixup simNativeStackPtr.
-		self assert: simNativeStackSize = fixup simNativeStackSize.
-	].
+	LowcodeVM ifTrue:
+		[self assert: simNativeStackPtr = fixup simNativeStackPtr.
+		 self assert: simNativeStackSize = fixup simNativeStackSize].
 
 	self cCode: '' inSmalltalk:
 		[self assert: fixup simStackPtr = (self debugStackPointerFor: bytecodePC)].
 	self restoreSimStackAtMergePoint: fixup.
-	
+
 	^0
 ]
 

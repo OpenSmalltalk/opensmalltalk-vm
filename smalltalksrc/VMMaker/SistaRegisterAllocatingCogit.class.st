@@ -305,7 +305,7 @@ SistaRegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 decrements the lower half.  N.B. We *do not* eliminate dead branches (true ifTrue:/true ifFalse:)
 	 so that scanning for send and branch data is simplified and that branch data is correct."
 	<inline: false>
-	| ok counterAddress countTripped retry nextPC nextDescriptor desc reg |
+	| ok counterAddress countTripped retry nextPC nextDescriptor desc eventualTarget reg |
 	<var: #ok type: #'AbstractInstruction *'>
 	<var: #desc type: #'CogSimStackEntry *'>
 	<var: #retry type: #'AbstractInstruction *'>
@@ -339,6 +339,8 @@ SistaRegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 and: [desc constant = objectMemory trueObject or: [desc constant = objectMemory falseObject]]) ifTrue:
 		[ ^ super genJumpIf: boolean to: targetBytecodePC ].
 
+	eventualTarget := self eventualTargetOf: targetBytecodePC.
+
 	self flag: 'Because of the restriction on x64 that absolute loads must target %rax, it would perhaps be a better choice to use TempReg (%rax) for the counter reg and SendNumArgsReg for the boolean.'.
 	"try and use the top entry's register if ant, but only if it can be destroyed."
 	reg := (desc type ~= SSRegister
@@ -365,7 +367,7 @@ SistaRegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 their distance send mustBeBoolean."
 	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
 	self genSubConstant: boolean R: reg.
-	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
+	self JumpZero: (self ensureFixupAt: eventualTarget - initialPC).
 
 	self genFallsThroughCountLogicCounterReg: SendNumArgsReg counterAddress: counterAddress.
 

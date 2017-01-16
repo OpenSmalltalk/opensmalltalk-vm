@@ -1332,7 +1332,7 @@ Cogit class >> testPCMappingSelect: aBlock [
 { #category : #tests }
 Cogit class >> testPCMappingSelect: aBlock options: optionsDictionaryOrArray [
 	"Test pc mapping both ways using a selection of the methods in the current image."
-	| cogit coInterpreter |
+	| n cogit coInterpreter |
 	cogit := self instanceForTests: optionsDictionaryOrArray.
 	coInterpreter := CurrentImageCoInterpreterFacade forCogit: cogit.
 	[cogit
@@ -1343,11 +1343,12 @@ Cogit class >> testPCMappingSelect: aBlock options: optionsDictionaryOrArray [
 		do: [:ex|
 			(ex messageText beginsWith: 'cannot find receiver for') ifTrue:
 				[ex resume: coInterpreter]].
+	n := -1.
 	SystemNavigation new allSelect:
 		[:m| | cm |
 		(m isQuick not
 		 and: [aBlock value: m]) ifTrue:
-			[Transcript nextPut: $.; flush.
+			[(n := n + 1) \\ 10 = 0 ifTrue: [Transcript nextPut: $.; flush].
 			 cm := cogit
 						cog: (coInterpreter oopForObject: m)
 						selector: (coInterpreter oopForObject: m selector).
@@ -4733,7 +4734,7 @@ Cogit >> compileAbstractInstructionsFrom: start through: end [
 	bytecodePC := start.
 	nExts := result := 0.
 	descriptor := nil.
-	[self cCode: '' inSmalltalk: [self isDebugPC ifTrue: [self halt]].
+	[self maybeHaltIfDebugPC.
 	 descriptor := self loadBytesAndGetDescriptor.
 	 nextOpcodeIndex := opcodeIndex.
 	 result := self perform: descriptor generator.
@@ -7597,7 +7598,7 @@ Cogit >> generateInstructionsAt: eventualAbsoluteAddress [
 	pcDependentIndex := 0.
 	0 to: opcodeIndex - 1 do:
 		[:i|
-		self cCode: [] inSmalltalk: [self maybeBreakGeneratingAt: absoluteAddress].
+		self maybeBreakGeneratingAt: absoluteAddress.
 		abstractInstruction := self abstractInstructionAt: i.
 		abstractInstruction isPCDependent
 			ifTrue:
@@ -7612,7 +7613,7 @@ Cogit >> generateInstructionsAt: eventualAbsoluteAddress [
 		[:j|
 		fixup := self fixupAt: j.
 		abstractInstruction := self abstractInstructionAt: fixup instructionIndex.
-		self cCode: [] inSmalltalk: [self maybeBreakGeneratingAt: abstractInstruction address].
+		self maybeBreakGeneratingAt: abstractInstruction address.
 		abstractInstruction concretizeAt: abstractInstruction address].
 	^absoluteAddress - eventualAbsoluteAddress
 ]
@@ -8410,12 +8411,6 @@ Cogit >> isCFramePointerInUse [
 	<doNotGenerate>
 	"This should be implemented externally, e.g. in sqPlatMain.c."
 	^true
-]
-
-{ #category : #'compile abstract instructions' }
-Cogit >> isDebugPC [ 
-	<doNotGenerate>
-	^ debugBytecodePointers includes: bytecodePC
 ]
 
 { #category : #'bytecode generator support' }
@@ -9558,9 +9553,9 @@ Cogit >> maybeBreakAt: address [
 
 { #category : #'simulation only' }
 Cogit >> maybeBreakGeneratingAt: address [
-	"Variation on maybeBreakAt: that inly forks for integer breakPCs,
+	"Variation on maybeBreakAt: that only works for integer breakPCs,
 	 so we can have break blocks that stop at any pc, except when generating."
-	<doNotGenerate>
+	<cmacro: '(address) 0'> "Simulation only; void in C"
 	(breakPC = address
 	 and: [breakBlock shouldStopIfAtPC: address]) ifTrue:
 		[coInterpreter changed: #byteCountText.
@@ -9631,6 +9626,13 @@ Cogit >> maybeGenerateICacheFlush [
 		 self outputInstructionsForGeneratedRuntimeAt: startAddress.
 		 self recordGeneratedRunTime: 'ceFlushICache' address: startAddress.
 		 ceFlushICache := self cCoerceSimple: startAddress to: #'void (*)(usqIntptr_t,usqIntptr_t)']
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> maybeHaltIfDebugPC [ 
+	<cmacro: '0'> "Simulation only; void in C"
+	(debugBytecodePointers includes: bytecodePC) ifTrue:
+		[self halt]
 ]
 
 { #category : #'garbage collection' }
@@ -11301,7 +11303,8 @@ Cogit >> setInterpreter: aCoInterpreter [
 
 	compilationTrace ifNil: [compilationTrace := self class initializationOptions at: #compilationTrace ifAbsent: [0]].
 	debugOpcodeIndices := self class initializationOptions at: #debugOpcodeIndices ifAbsent: [Set new].
-	debugBytecodePointers := self class initializationOptions at: #debugBytecodePointers ifAbsent: [Set new]
+	debugBytecodePointers := self class initializationOptions at: #debugBytecodePointers ifAbsent: [Set new].
+	self class initializationOptions at: #breakPC ifPresent: [:pc| breakPC := pc]
 ]
 
 { #category : #'jit - api' }
