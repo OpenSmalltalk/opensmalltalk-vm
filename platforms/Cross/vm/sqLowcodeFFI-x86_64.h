@@ -54,6 +54,14 @@ typedef struct __attribute__((aligned(16))) _sqLowcodeCalloutState
 #define lowcodeCalloutStatefloat64Register(calloutState, registerId) ((calloutState)->vectorRegisters[registerId].doubleComponents[0])
 #define lowcodeCalloutStatefloat64Registervalue(calloutState, registerId, value) ((calloutState)->vectorRegisters[registerId].doubleComponents[0] = (value))
 
+#define lowcodeCalloutStateFetchResultInt32(calloutState) ((calloutState)->rax)
+#define lowcodeCalloutStateFetchResultInt64(calloutState) ((calloutState)->rax)
+#define lowcodeCalloutStateFetchResultPointer(calloutState) ((char*)(calloutState)->rax)
+
+#define lowcodeCalloutStateFetchResultFloat32(calloutState) ((calloutState)->xmm0.singleComponents[0])
+#define lowcodeCalloutStateFetchResultFloat64(calloutState) ((calloutState)->xmm0.doubleComponents[0])
+#define lowcodeCalloutStateFetchResultStructure(calloutState) ((char*)(calloutState)->rax)
+
 #ifdef _WIN32
 #define ARGUMENT_calloutState "104(%rbp)"        /* RCX */
 #define ARGUMENT_stackPointer "96(%rbp)"         /* RDX*/
@@ -66,9 +74,20 @@ typedef struct __attribute__((aligned(16))) _sqLowcodeCalloutState
 #define ARGUMENT_functionPointer  "104(%rbp)"    /* RCX */
 #endif
 
-__asm__ (
-".section .text                                                              \n\
-lowcodeCalloutStatestackPointerstackSizecallFunction:                        \n\
+#if defined(_WIN32)
+#define LOWCODE_FFI_PROGRAM_SECTION ".section .text"
+#define LOWCODE_FFI_SYMBOL_PREFIX ""
+#elif defined(__APPLE__)
+#define LOWCODE_FFI_PROGRAM_SECTION ".section __TEXT,__text"
+#define LOWCODE_FFI_SYMBOL_PREFIX "_"
+#else /* Linux */
+#define LOWCODE_FFI_PROGRAM_SECTION ".section .text"
+#define LOWCODE_FFI_SYMBOL_PREFIX
+#endif
+
+__asm__ ( "\n\
+" LOWCODE_FFI_PROGRAM_SECTION " \n\
+" LOWCODE_FFI_SYMBOL_PREFIX "lowcodeCalloutStatestackPointerstackSizecallFunction: \n\
     push %rax                                                                \n\
     push %rcx                                                                \n\
     push %rdx                                                                \n\
