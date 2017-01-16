@@ -437,17 +437,18 @@ RegisterAllocatingCogit >> genJumpBackTo: targetBytecodePC [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	<inline: false>
-	| desc reg fixup ok |
+	| eventualTarget desc reg fixup ok |
 	<var: #desc type: #'CogSimStackEntry *'>
 	<var: #fixup type: #'BytecodeFixup *'>
 	<var: #ok type: #'AbstractInstruction *'>
+	eventualTarget := self eventualTargetOf: targetBytecodePC.
 	desc := self ssTop.
 	self ssPop: 1.
 	(desc type == SSConstant
 	 and: [desc constant = objectMemory trueObject or: [desc constant = objectMemory falseObject]]) ifTrue:
 		["Must arrange there's a fixup at the target whether it is jumped to or
 		  not so that the simStackPtr can be kept correct."
-		 fixup := self ensureFixupAt: targetBytecodePC - initialPC.
+		 fixup := self ensureFixupAt: eventualTarget - initialPC.
 		 "Must annotate the bytecode for correct pc mapping."
 		 self annotateBytecode: (desc constant = boolean
 									ifTrue: [self Jump: fixup]
@@ -468,7 +469,7 @@ RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 their distance send mustBeBoolean."
 	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
 	self genSubConstant: boolean R: reg.
-	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
+	self JumpZero: (self ensureFixupAt: eventualTarget - initialPC).
 	
 	self extASpecifiesNoMustBeBoolean ifTrue: 
 		[extA := 0. 
@@ -496,7 +497,7 @@ RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 RegisterAllocatingCogit >> genJumpTo: targetBytecodePC [
 	"Overriden to avoid the flush because in this cogit stack state is merged at merge point."
 	deadCode := true. "can't fall through"
-	self Jump: (self ensureFixupAt: targetBytecodePC - initialPC).
+	self Jump: (self ensureFixupAt: (self eventualTargetOf: targetBytecodePC) - initialPC).
 	^ 0
 ]
 
