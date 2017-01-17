@@ -1230,20 +1230,6 @@ EncoderForNewsqueakV4 >> isSpecialLiteralForPush: literal [
 	  or: [literal isInteger and: [literal between: -32768 and: 32767]]]]
 ]
 
-{ #category : #encoding }
-EncoderForNewsqueakV4 >> litIndex: literal [
-	| p |
-	p := literalStream position.
-	p = 65536 ifTrue:
-		[self notify: 'More than 65536 literals referenced. 
-You must split or otherwise simplify this method.
-The 65537th literal is: ', literal printString. ^nil].
-		"Would like to show where it is in the source code, 
-		 but that info is hard to get."
-	literalStream nextPut: literal.
-	^ p
-]
-
 { #category : #accessing }
 EncoderForNewsqueakV4 >> maxIndexableLiterals [
 	"Answer the maximum number of literals supported by the receiver's
