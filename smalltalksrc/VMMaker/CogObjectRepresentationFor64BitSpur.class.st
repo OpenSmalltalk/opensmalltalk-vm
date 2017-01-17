@@ -737,8 +737,8 @@ CogObjectRepresentationFor64BitSpur >> genJumpSmallIntegerInScratchReg: aRegiste
 { #category : #'inline primitive support' }
 CogObjectRepresentationFor64BitSpur >> genLcInt32ToOop: value [
 	<option: #LowcodeVM>
-	self genConvertIntegerToSmallIntegerInReg: value.
 	cogit SignExtend32R: value R: value.
+	self genConvertIntegerToSmallIntegerInReg: value.
 	cogit ssPushRegister: value.
 	^ 0
 ]
@@ -747,7 +747,7 @@ CogObjectRepresentationFor64BitSpur >> genLcInt32ToOop: value [
 CogObjectRepresentationFor64BitSpur >> genLcOopToInt32: value [
 	<option: #LowcodeVM>
 	self genConvertSmallIntegerToIntegerInReg: value.
-	cogit ssPushRegister: value.
+	cogit ssPushNativeRegister: value.
 	^ 0
 ]
 
@@ -755,15 +755,15 @@ CogObjectRepresentationFor64BitSpur >> genLcOopToInt32: value [
 CogObjectRepresentationFor64BitSpur >> genLcOopToUInt32: value [
 	<option: #LowcodeVM>
 	self genConvertSmallIntegerToIntegerInReg: value.
-	cogit ssPushRegister: value.
+	cogit ssPushNativeRegister: value.
 	^ 0
 ]
 
 { #category : #'inline primitive support' }
 CogObjectRepresentationFor64BitSpur >> genLcUInt32ToOop: value [
 	<option: #LowcodeVM>
-	self genConvertIntegerToSmallIntegerInReg: value.
 	cogit ZeroExtend32R: value R: value.
+	self genConvertIntegerToSmallIntegerInReg: value.
 	cogit ssPushRegister: value.
 	^ 0
 ]
