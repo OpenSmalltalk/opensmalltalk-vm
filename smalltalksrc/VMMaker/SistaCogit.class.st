@@ -1009,12 +1009,19 @@ SistaCogit >> genUnaryInlinePrimitive: prim [
 			[20] ->	"20 	identityHash"
 				[self ssTop popToReg: rcvrReg.
 				 objectRepresentation genGetHashFieldNonImmOf: rcvrReg asSmallIntegerInto: resultReg.
-				 self ssPop: 1]
+				 self ssPop: 1] .
 					"21		identityHash (SmallInteger)"
 					"22		identityHash (Character)"
 					"23		identityHash (SmallFloat64)"
 					"24		identityHash (Behavior)"
+					"30 	immediateAsInteger (Character)
+					 31 	immediateAsInteger (SmallFloat64)"
+			[30] -> 
+				[self ssTop popToReg: rcvrReg.
+				 objectRepresentation genConvertCharacterToSmallIntegerInReg: rcvrReg.
+				 self ssPop: 1]
 				  }
+				
 		otherwise:
 			[^EncounteredUnknownBytecode].
 	extB := 0.
