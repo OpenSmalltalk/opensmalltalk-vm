@@ -504,7 +504,7 @@ CogSimStackNativeEntry >> registerSecond: anObject [
 
 { #category : #accessing }
 CogSimStackNativeEntry >> registerSecondOrNil [
-	^ type = SSRegisterPair ifTrue: [registerSecond]
+	^ type SSRegisterPair ifTrue: [registerSecond]
 ]
 
 { #category : #accessing }
