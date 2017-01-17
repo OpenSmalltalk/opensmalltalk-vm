@@ -3001,6 +3001,9 @@
         <arguments />
         <stack-arguments />
         <stack-results />
+        <semantic language="Smalltalk/StackInterpreter">
+            "Nop in the interpreter"
+        </semantic>
         <semantic language="Smalltalk/Cog">
             self ssFlushAll.
         </semantic>
@@ -3144,6 +3147,12 @@
         <semantic language="Smalltalk/StackInterpreter">
             self lowcodeCalloutState: lowcodeCalloutState float32Register: registerID value: value.
         </semantic>
+        <semantic language="Smalltalk/Cog/Raw">
+            self ssNativeTop nativeStackPopToReg: extA.
+            self ssNativePop: 1.
+	        currentCallCleanUpSize := currentCallCleanUpSize + BytesPerWord.
+            extA := 0.
+        </semantic>
     </instruction>
     <instruction opcode="1135" mnemonic="moveFloat64ToPhysical" kind="operation">
         <name>Move Float64 Register To Physical Register</name>
@@ -3157,6 +3166,12 @@
         <stack-results />
         <semantic language="Smalltalk/StackInterpreter">
             self lowcodeCalloutState: lowcodeCalloutState float64Register: registerID value: value.
+        </semantic>
+        <semantic language="Smalltalk/Cog/Raw">
+            self ssNativeTop nativeStackPopToReg: extA.
+            self ssNativePop: 1.
+	        currentCallCleanUpSize := currentCallCleanUpSize + 8.
+            extA := 0.
         </semantic>
     </instruction>
     <instruction opcode="1136" mnemonic="moveInt32ToPhysical" kind="operation">
@@ -3172,6 +3187,12 @@
         <semantic language="Smalltalk/StackInterpreter">
             self lowcodeCalloutState: lowcodeCalloutState int32Register: registerID value: value.
         </semantic>
+        <semantic language="Smalltalk/Cog/Raw">
+            self ssNativeTop nativeStackPopToReg: extA.
+            self ssNativePop: 1.
+	        currentCallCleanUpSize := currentCallCleanUpSize + BytesPerWord.
+            extA := 0.
+        </semantic>
     </instruction>
     <instruction opcode="1137" mnemonic="moveInt64ToPhysical" kind="operation">
         <name>Move Int64 To Physical Register</name>
@@ -3186,6 +3207,12 @@
         <semantic language="Smalltalk/StackInterpreter">
             self lowcodeCalloutState: lowcodeCalloutState int64Register: registerID value: value.
         </semantic>
+        <semantic language="Smalltalk/Cog/Raw">
+            self ssNativeTop nativeStackPopToReg: extA.
+            self ssNativePop: 1.
+	        currentCallCleanUpSize := currentCallCleanUpSize + 8.
+            extA := 0.
+        </semantic>
     </instruction>
     <instruction opcode="1138" mnemonic="movePointerToPhysical" kind="operation">
         <name>Move Pointer To Physical Register</name>
@@ -3199,6 +3226,12 @@
         <stack-results />
         <semantic language="Smalltalk/StackInterpreter">
             self lowcodeCalloutState: lowcodeCalloutState pointerRegister: registerID value: pointerValue.
+        </semantic>
+        <semantic language="Smalltalk/Cog/Raw">
+            self ssNativeTop nativeStackPopToReg: extA.
+            self ssNativePop: 1.
+	        currentCallCleanUpSize := currentCallCleanUpSize + BytesPerWord.
+            extA := 0.
         </semantic>
     </instruction>
     <instruction opcode="1139" mnemonic="mul32" kind="operation">
@@ -5187,6 +5220,9 @@
         <arguments />
         <stack-arguments />
         <stack-results />
+        <semantic language="Smalltalk/StackInterpreter">
+            "Nop in the interpreter"
+        </semantic>
         <semantic language="Smalltalk/Cog">
             "Do nothing for now"
         </semantic>
