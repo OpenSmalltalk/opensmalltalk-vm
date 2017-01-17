@@ -12368,7 +12368,7 @@ StackInterpreter >> lowcodePrimitiveLocalFrameSize [
 StackInterpreter >> lowcodePrimitiveLockRegisters [
 	<option: #LowcodeVM>	"Lowcode instruction generator"
 
-	self abort.
+	"Nop in the interpreter"
 
 
 
@@ -14405,7 +14405,7 @@ StackInterpreter >> lowcodePrimitiveUmul64 [
 StackInterpreter >> lowcodePrimitiveUnlockRegisters [
 	<option: #LowcodeVM>	"Lowcode instruction generator"
 
-	self abort.
+	"Nop in the interpreter"
 
 
 
