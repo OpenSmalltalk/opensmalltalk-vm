@@ -1634,7 +1634,8 @@ StackToRegisterMappingCogit >> extBSpecifiesStoreCheck [
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> extractMaybeBranchDescriptorInto: fourArgBlock [
 	"Looks one instruction ahead of the current bytecodePC and answers its bytecode descriptor and its pc.
-	 If the instruction found is a branch, also answers the pc after the branch and the pc targeted by the branch."
+	 If the instruction found is a branch, also answers the pc after the branch and the pc targeted by the branch.
+	 For convenience, avoiding duplication in the senders, it follows those two pcs to their eventual targets."
 	| primDescriptor nextPC nExts branchDescriptor targetBytecodePC postBranchPC |
 	<inline: true>
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
@@ -1663,9 +1664,7 @@ StackToRegisterMappingCogit >> extractMaybeBranchDescriptorInto: fourArgBlock [
 														+ (self spanFor: branchDescriptor at: nextPC exts: nExts in: methodObj).
 			 postBranchPC := self eventualTargetOf: nextPC + branchDescriptor numBytes]
 		ifFalse:
-			[branchDescriptor isReturn ifFalse:
-				[postBranchPC := self eventualTargetOf: nextPC + branchDescriptor numBytes.
-				 nextPC := self eventualTargetOf: bytecodePC + primDescriptor numBytes]].
+			[nextPC := bytecodePC + primDescriptor numBytes].
 
 	fourArgBlock value: branchDescriptor value: nextPC value: postBranchPC value: targetBytecodePC
 ]
@@ -1991,22 +1990,13 @@ StackToRegisterMappingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 			[self deny: deadCode]. "push dummy value below"
 
 	self assert: (unforwardArg or: [unforwardRcvr]).
-	"We could use (branchDescriptor isBranchTrue xor: orNot) to simplify this."
-	orNot 
-		ifFalse: [branchDescriptor isBranchTrue
-					ifTrue: 
-						[ fixup := (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
-						self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger ]
-					ifFalse: "branchDescriptor is branchFalse"
-						[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-						self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ]]
-		ifTrue: [branchDescriptor isBranchTrue
-					ifFalse: "branchDescriptor is branchFalse"
-						[ fixup := (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
-						self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger ]
-					ifTrue:
-						[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-						self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ]].
+	orNot == branchDescriptor isBranchTrue "orNot is true for ~~"
+		ifFalse:
+			[ fixup := (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
+			self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger ]
+		ifTrue:
+			[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
+			self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ].
 
 	deadCode ifFalse:
 		[self ssPushConstant: objectMemory trueObject]. "dummy value"
@@ -11738,10 +11728,7 @@ StackToRegisterMappingCogit >> genVanillaInlinedIdenticalOrNotIf: orNot [
 		ifFalse:
 			[self deny: deadCode]. "push dummy value below"
 		
-	"We could simplify this with a xor:"
-	self genConditionalBranch: (orNot 
-						ifFalse: [branchDescriptor isBranchTrue ifTrue: [JumpZero] ifFalse: [JumpNonZero]]
-						ifTrue: [branchDescriptor isBranchTrue ifTrue: [JumpNonZero] ifFalse: [JumpZero]])
+	self genConditionalBranch: (orNot == branchDescriptor isBranchTrue ifTrue: [JumpNonZero] ifFalse: [JumpZero])
 		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
 
 	"If the branch is dead, then we can just fall through postBranchPC (only a nop in-between), else 
