@@ -1117,6 +1117,8 @@ StackToRegisterMappingCogit >> callSwitchToCStack [
 StackToRegisterMappingCogit >> callSwitchToSmalltalkStack [
 	<option: #LowcodeVM>
 	"Restore the link register"
+	backEnd hasVarBaseRegister ifTrue:
+		[self MoveCq: self varBaseAddress R: VarBaseReg].
 	backEnd hasLinkRegister ifTrue: [
 		self MoveAw: coInterpreter instructionPointerAddress R: LinkReg
 	].
@@ -1569,11 +1571,8 @@ StackToRegisterMappingCogit >> eventualTargetOf: targetBytecodePC [
 				[^currentTarget].
 			 nextPC := nextPC + descriptor numBytes + span]
 		ifFalse:
-			[descriptor generator
-				caseOf: {
-				[#genPushConstantTrueBytecode] -> [cond := true].
-				[#genPushConstantFalseBytecode] -> [cond := false] }
-				otherwise: [^currentTarget].
+			[descriptor generator == #genPushConstantTrueBytecode ifTrue: [ cond := true ]
+			 ifFalse: [ descriptor generator == #genPushConstantFalseBytecode ifTrue: [ cond := false ] 							ifFalse: [ ^currentTarget ] ].
 			 "Don't step into loops across a pushTrue; jump:if: boundary, so as not to confuse stack depth fixup."
 			 (fixups at: nextPC - initialPC) isBackwardBranchFixup ifTrue:
 				[^currentTarget].
@@ -6660,17 +6659,12 @@ StackToRegisterMappingCogit >> genLowcodeMemcpyFixed [
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMoveFloat32ToPhysical [
 	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| registerID value |
-	registerID := extA.
 
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
-	self ssNativeTop nativePopToReg: value.
+	self ssNativeTop nativeStackPopToReg: extA.
 	self ssNativePop: 1.
-
-	self abort.
-
+	currentCallCleanUpSize := currentCallCleanUpSize + BytesPerWord.
 	extA := 0.
+
 	^ 0
 
 
@@ -6679,17 +6673,12 @@ StackToRegisterMappingCogit >> genLowcodeMoveFloat32ToPhysical [
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMoveFloat64ToPhysical [
 	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| registerID value |
-	registerID := extA.
 
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
-	self ssNativeTop nativePopToReg: value.
+	self ssNativeTop nativeStackPopToReg: extA.
 	self ssNativePop: 1.
-
-	self abort.
-
+	currentCallCleanUpSize := currentCallCleanUpSize + 8.
 	extA := 0.
+
 	^ 0
 
 
@@ -6698,22 +6687,12 @@ StackToRegisterMappingCogit >> genLowcodeMoveFloat64ToPhysical [
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMoveInt32ToPhysical [
 	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| registerID value |
-	registerID := extA.
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
-	self ssNativeTop nativePopToReg: value.
+	self ssNativeTop nativeStackPopToReg: extA.
 	self ssNativePop: 1.
-
-	self abort.
-
+	currentCallCleanUpSize := currentCallCleanUpSize + BytesPerWord.
 	extA := 0.
+
 	^ 0
 
 
@@ -6722,22 +6701,12 @@ StackToRegisterMappingCogit >> genLowcodeMoveInt32ToPhysical [
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMoveInt64ToPhysical [
 	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| registerID valueHigh value valueLow |
-	registerID := extA.
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
-	self ssNativeTop nativePopToReg: value.
+	self ssNativeTop nativeStackPopToReg: extA.
 	self ssNativePop: 1.
-
-	self abort.
-
+	currentCallCleanUpSize := currentCallCleanUpSize + 8.
 	extA := 0.
+
 	^ 0
 
 
@@ -6746,22 +6715,12 @@ StackToRegisterMappingCogit >> genLowcodeMoveInt64ToPhysical [
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMovePointerToPhysical [
 	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| registerID pointerValue |
-	registerID := extA.
 
-	(pointerValue := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointerValue := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	pointerValue = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
-	self ssNativeTop nativePopToReg: pointerValue.
+	self ssNativeTop nativeStackPopToReg: extA.
 	self ssNativePop: 1.
-
-	self abort.
-
+	currentCallCleanUpSize := currentCallCleanUpSize + BytesPerWord.
 	extA := 0.
+
 	^ 0
 
 
