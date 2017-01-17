@@ -135,7 +135,11 @@ We define the following inlined primitives:
 2005	SmallInteger #\\.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
 2006	SmallInteger #quo:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
 
-2011	Variable-sized new (new:). Array, ByteArray, etc.
+2011	Variable-sized pointers new (new:). Array, etc.
+2012	Variable-sized byte new (new:). ByteArray, ByteString, etc.
+2013	Variable-sized 16-bit new (new:). DoubleByteArray, etc.
+2014	Variable-sized 32-bit new (new:). Bitmap, FloatArray, etc.
+2015	Variable-sized 64-bit new (new:). DoubleWordArray, etc.
 
 2016	SmallInteger #bitAnd:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
 2017	SmallInteger #bitOr:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
