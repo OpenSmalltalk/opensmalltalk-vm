@@ -118,11 +118,11 @@ We define the following inlined primitives:
 1010	ensure number of bytes available.
 1011	fixed-sized new. (objects with 0 to n inst vars)
 	
-1020 	identityHash
+1020 	identityHash (non-immediate, non-Behavior, has hash)
 1021	identityHash (SmallInteger)
 1022	identityHash (Character)
 1023	identityHash (SmallFloat64)
-1024	identityHash (Behavior)
+1024	identityHash (Behavior, has hash?)
 
 1030 	immediateAsInteger (Character)
 1031 	immediateAsInteger (SmallFloat64)
