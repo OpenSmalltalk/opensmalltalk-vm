@@ -124,6 +124,9 @@ We define the following inlined primitives:
 1023	identityHash (SmallFloat64)
 1024	identityHash (Behavior)
 
+1030 	immediateAsInteger (Character)
+1031 	immediateAsInteger (SmallFloat64)
+	
 2000	SmallInteger #+.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
 2001	SmallInteger #-.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
 2002	SmallInteger #*.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
