@@ -419,7 +419,7 @@ CogX64Compiler >> computeMaximumSize [
 		"Control"
 		[CallFull]					-> [^12].
 		[Call]						-> [^5].
-		[CallR]						-> [^2 + ((operands at: 0) > 7 ifTrue: [ 1 ] ifFalse: [ 0 ]) ].
+		[CallR]						-> [^3].
 		[JumpR]						-> [^2].
 		[JumpFull]					-> [self resolveJumpTarget. ^12].
 		[JumpLong]					-> [self resolveJumpTarget. ^5].
@@ -631,36 +631,6 @@ CogX64Compiler >> computeMaximumSize [
 									ifTrue: [1]
 									ifFalse: [0])].
 		[MoveRMbr]		-> [self assert: (self is32BitSignedImmediate: (operands at: 1)).
-							^((self isQuick: (operands at: 1))
-									ifTrue: [((operands at: 1) = 0
-											and: [((operands at: 0) bitAnd: 7) ~= RBP])
-												ifTrue: [3]
-												ifFalse: [4]]
-									ifFalse: [7])
-								+ (((operands at: 2) bitAnd: 7) = RSP
-									ifTrue: [1]
-									ifFalse: [0])].
-		[MoveM8rR]		-> [self assert: (self is32BitSignedImmediate: (operands at: 0)).
-							^((self isQuick: (operands at: 0))
-									ifTrue: [((operands at: 0) = 0
-											and: [((operands at: 1) bitAnd: 7) ~= RBP])
-												ifTrue: [3]
-												ifFalse: [4]]
-									ifFalse: [7])
-								+ (((operands at: 1) bitAnd: 7) = RSP
-									ifTrue: [1]
-									ifFalse: [0])].
-		[MoveMs8rR]		-> [self assert: (self is32BitSignedImmediate: (operands at: 0)).
-							^((self isQuick: (operands at: 0))
-									ifTrue: [((operands at: 0) = 0
-											and: [((operands at: 1) bitAnd: 7) ~= RBP])
-												ifTrue: [3]
-												ifFalse: [4]]
-									ifFalse: [7])
-								+ (((operands at: 1) bitAnd: 7) = RSP
-									ifTrue: [1]
-									ifFalse: [0])].
-		[MoveRM8r]		-> [self assert: (self is32BitSignedImmediate: (operands at: 1)).
 							^((self isQuick: (operands at: 1))
 									ifTrue: [((operands at: 1) = 0
 											and: [((operands at: 0) bitAnd: 7) ~= RBP])
@@ -959,16 +929,13 @@ CogX64Compiler >> concretizeCallFull [
 CogX64Compiler >> concretizeCallR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| reg skip |
+	| reg |
 	reg := operands at: 0.
-	(reg <= 7)
-		ifTrue: [skip := 0]
-		ifFalse: [skip := 1. machineCode at: 0 put: (self rexw: false r: 0 x: 0 b: reg). (skip := 1)].
-			
 	machineCode
-		at: skip + 0 put: 16rFF;
-		at: skip + 1 put: (self mod: ModReg RM: reg RO: 2).
-	^machineCodeSize := 2
+		at: 1 put: (self rexR: 0 x: 0 b: reg);
+		at: 1 put: 16rFF;
+		at: 2 put: (self mod: ModReg RM: reg RO: 2).
+	^machineCodeSize := 3
 ]
 
 { #category : #'generate machine code' }
@@ -1643,7 +1610,7 @@ CogX64Compiler >> concretizeMoveM32rR [
 	destReg := operands at: 2.
 	(srcReg <= 7 and: [destReg <= 7])
 		ifTrue: [skip := 0]
-		ifFalse: [skip := 1. machineCode at: 0 put: (self rexw: false r: destReg x: 0 b: srcReg)].
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: destReg x: 0 b: srcReg)].
 	machineCode
 		at: skip + 0 put: 16r8b.
 	offset = 0 ifTrue:
@@ -2052,12 +2019,12 @@ CogX64Compiler >> concretizeMoveRM32r [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
 	| offset srcReg destReg skip |
-	srcReg := operands at: 0.
-	offset := operands at: 1.
+	offset := operands at: 0.
+	srcReg := operands at: 1.
 	destReg := operands at: 2.
 	(srcReg <= 7 and: [destReg <= 7])
 		ifTrue: [skip := 0]
-		ifFalse: [skip := 1. machineCode at: 0 put: (self rexw: false r: srcReg x: 0 b: destReg)].
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: srcReg x: 0 b: destReg)].
 	machineCode
 		at: skip + 0 put: 16r89.
 	offset = 0 ifTrue:
@@ -2969,7 +2936,7 @@ CogX64Compiler >> concretizeZeroExtend32RR [
 	destReg := operands at: 1.
 	(srcReg <= 7 and: [destReg <= 7])
 		ifTrue: [skip := 0]
-		ifFalse: [skip := 1. machineCode at: 0 put: (self rexw: false r: destReg x: 0 b: srcReg)].
+		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: destReg x: 0 b: srcReg)].
 		
 	machineCode
 		at: skip + 0 put: 16r8b;
@@ -3117,8 +3084,6 @@ CogX64Compiler >> dispatchConcretize [
 		[MoveRAb]			-> [^self concretizeMoveRAb].
 		[MoveMbrR]			-> [^self concretizeMoveMbrR].
 		[MoveRMbr]			-> [^self concretizeMoveRMbr].
-		[MoveM8rR]		-> [^self concretizeMoveMbrR].
-		[MoveRM8r]		-> [^self concretizeMoveRMbr].
 		[MoveM16rR]		-> [^self concretizeMoveM16rR].
 		[MoveRM16r]		-> [^self concretizeMoveRM16r].
 		[MoveM32rR]		-> [^self concretizeMoveM32rR].
