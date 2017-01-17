@@ -9630,7 +9630,7 @@ Cogit >> maybeGenerateICacheFlush [
 
 { #category : #'compile abstract instructions' }
 Cogit >> maybeHaltIfDebugPC [ 
-	<cmacro: '0'> "Simulation only; void in C"
+	<cmacro: '() 0'> "Simulation only; void in C"
 	(debugBytecodePointers includes: bytecodePC) ifTrue:
 		[self halt]
 ]
