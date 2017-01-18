@@ -192,6 +192,41 @@ SistaRegisterAllocatingCogit >> genCounterTripOnlyJumpIf: boolean to: targetByte
 ]
 
 { #category : #'bytecode generators' }
+SistaRegisterAllocatingCogit >> genExtJumpIfNotInstanceOfBehaviorsBytecode [
+	"SistaV1: *	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
+	| reg literal distance targetFixUp inverse |
+
+	"We lose the information of in which register is stack top 
+	 when jitting the branch target so we need to flush everything. 
+	 We could use a fixed register here...."
+	reg := self allocateRegForStackEntryAt: 0.
+	self ssTop popToReg: reg.
+	self ssPop: 1.
+
+	literal := self getLiteral: (extA * 256 + byte1).
+	(inverse := extB < 0) ifTrue:
+		[extB := extB + 128].
+	distance := extB * 256 + byte2.
+	extA := extB := numExtB := 0.
+
+	"For now just deny we're in the situation we have yet to implement ;-)"
+	self deny: (self mergeRequiredForJumpTo: bytecodePC + 3 + distance).
+
+	targetFixUp := self cCoerceSimple: (self ensureFixupAt: bytecodePC + 3 + distance - initialPC) to: #'AbstractInstruction *'.
+	inverse
+		ifFalse: 
+			[(objectMemory isArrayNonImm: literal)
+				ifTrue: [objectRepresentation branchIf: reg notInstanceOfBehaviors: literal target: targetFixUp]
+				ifFalse: [objectRepresentation branchIf: reg notInstanceOfBehavior: literal target: targetFixUp] ]
+		ifTrue:
+			[(objectMemory isArrayNonImm: literal)
+				ifTrue: [objectRepresentation branchIf: reg instanceOfBehaviors: literal target: targetFixUp]
+				ifFalse: [objectRepresentation branchIf: reg instanceOfBehavior: literal target: targetFixUp]].
+
+	^0
+]
+
+{ #category : #'bytecode generators' }
 SistaRegisterAllocatingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 	"Override to count inlined branches if followed by a conditional branch.
 	 We borrow the following conditional branch's counter and when about to
@@ -333,7 +368,7 @@ SistaRegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	eventualTarget := self eventualTargetOf: targetBytecodePC.
 
 	self flag: 'Because of the restriction on x64 that absolute loads must target %rax, it would perhaps be a better choice to use TempReg (%rax) for the counter reg and SendNumArgsReg for the boolean.'.
-	"try and use the top entry's register if ant, but only if it can be destroyed."
+	"try and use the top entry's register if any, but only if it can be destroyed."
 	reg := (desc type ~= SSRegister
 			or: [(self anyReferencesToRegister: desc register inAllButTopNItems: 0)
 			or: [(desc register = ReceiverResultReg and: [optStatus isReceiverResultRegLive])]])

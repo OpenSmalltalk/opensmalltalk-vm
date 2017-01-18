@@ -167,10 +167,20 @@ SistaCogitClone >> genBinaryConstOpVarInlinePrimitive: prim [
 				 self MulR: TempReg R: ra.
 				 objectRepresentation genSetSmallIntegerTagsIn: ra].
 
-		"2016 through 2019, bitAnd:, bitOr:, bitXor, bitShift:, SmallInteger op SmallInteger => SmallInteger, no overflow"
+		"2016 through 2020, bitAnd:, bitOr:, bitXor, bitShiftLeft:, bitShiftRight:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 		[16] -> [ self AndCq: val R: ra ].
 		[17] -> [ self OrCq: val R: ra ].
 		[18] -> [ self XorCw: untaggedVal R: ra. ].
+		[19] -> [ objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
+				 self MoveCq: untaggedVal R: TempReg.
+				 self LogicalShiftLeftR: ra R: TempReg.
+				 objectRepresentation genAddSmallIntegerTagsTo: TempReg.
+				 self MoveR: TempReg R: ra].
+		[20] ->	[objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
+				 self MoveCq: untaggedVal R: TempReg.
+				 self ArithmeticShiftRightR: ra R: TempReg.
+				 objectRepresentation genClearAndSetSmallIntegerTagsIn: TempReg.
+				 self MoveR: TempReg R: ra].
 
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
 		"CmpCqR is SubRCq so everything is reversed, but because no CmpRCq things are reversed again and we invert the sense of the jumps."
@@ -259,11 +269,16 @@ SistaCogitClone >> genBinaryVarOpConstInlinePrimitive: prim [
 				 self MulR: TempReg R: rr.
 				 objectRepresentation genSetSmallIntegerTagsIn: rr].
 
-		"2016 through 2019, bitAnd:, bitOr:, bitXor, bitShift:, SmallInteger op SmallInteger => SmallInteger, no overflow"
+		"2016 through 2020, bitAnd:, bitOr:, bitXor, bitShiftLeft:, bitShiftRight:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 		[16] -> [ self AndCq: val R: rr ].
 		[17] -> [ self OrCq: val R: rr ].
 		[18] -> [ self flag: 'could use XorCq:'.
 				self XorCw: untaggedVal R: rr. ].
+		[19] -> [ objectRepresentation genRemoveSmallIntegerTagsInScratchReg: rr.
+				 self LogicalShiftLeftCq: (objectMemory integerValueOf: val) R: rr.
+				 objectRepresentation genAddSmallIntegerTagsTo: rr ].
+		[20] ->	[self ArithmeticShiftRightCq: (objectMemory integerValueOf: val) R: rr.
+				 objectRepresentation genClearAndSetSmallIntegerTagsIn: rr].
 
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
 		"CmpCqR is SubRCq so everything is reversed."
@@ -315,11 +330,18 @@ SistaCogitClone >> genBinaryVarOpVarInlinePrimitive: prim [
 				 self MulR: ra R: rr.
 				 self genSetSmallIntegerTagsIn: rr].
 
-		"2016 through 2019, bitAnd:, bitOr:, bitXor, bitShift:, SmallInteger op SmallInteger => SmallInteger, no overflow"
+		"2016 through 2020, bitAnd:, bitOr:, bitXor, bitShiftLeft:, bitShiftRight:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 		[16] -> [ self AndR: ra R: rr ].
 		[17] -> [ self OrR: ra R: rr ].
 		[18] -> [objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ra. 
 				self XorR: ra R: rr. ].
+		[19] -> [ objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
+				 objectRepresentation genRemoveSmallIntegerTagsInScratchReg: rr.
+				 self LogicalShiftLeftR: ra R: rr.
+				 objectRepresentation genAddSmallIntegerTagsTo: rr].
+		[20] ->	[objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
+				 self ArithmeticShiftRightR: ra R: rr.
+				 objectRepresentation genClearAndSetSmallIntegerTagsIn: rr.].
 
 
 		"2032	through 2037, >, <, >=, <=. =, ~=, SmallInteger op SmallInteger => Boolean (flags?? then in jump bytecodes if ssTop is a flags value, just generate the instruction!!)"
@@ -402,27 +424,22 @@ SistaCogitClone >> genExecutionCountLogicInto: binaryBlock counterReg: counterRe
 { #category : #'bytecode generators' }
 SistaCogitClone >> genExtJumpIfNotInstanceOfBehaviorsBytecode [
 	"SistaV1: *	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
-								
 	| reg literal distance targetFixUp inverse |
-	
-	"We loose the information of in which register is stack top 
-	when jitting the branch target so we need to flush everything. 
-	We could use a fixed register here...."
+
+	"We lose the information of in which register is stack top 
+	 when jitting the branch target so we need to flush everything. 
+	 We could use a fixed register here...."
 	reg := self allocateRegForStackEntryAt: 0.
 	self ssTop popToReg: reg.
 	self ssFlushTo: simStackPtr. "flushed but the value is still in reg"
-	
-	self genPopStackBytecode.
-	
+	self ssPop: 1.
+
 	literal := self getLiteral: (extA * 256 + byte1).
-	extA := 0.
-	extB < 0 
-		ifTrue: [extB := extB + 128. inverse := true]
-		ifFalse: [inverse := false].
+	(inverse := extB < 0) ifTrue:
+		[extB := extB + 128].
 	distance := extB * 256 + byte2.
-	extB := 0.
-	numExtB := 0.
-	
+	extA := extB := numExtB := 0.
+
 	targetFixUp := self cCoerceSimple: (self ensureFixupAt: bytecodePC + 3 + distance - initialPC) to: #'AbstractInstruction *'.
 	inverse
 		ifFalse: 
@@ -434,8 +451,6 @@ SistaCogitClone >> genExtJumpIfNotInstanceOfBehaviorsBytecode [
 				ifTrue: [objectRepresentation branchIf: reg instanceOfBehaviors: literal target: targetFixUp]
 				ifFalse: [objectRepresentation branchIf: reg instanceOfBehavior: literal target: targetFixUp]].
 
-			
-	
 	^0
 ]
 
@@ -445,113 +460,6 @@ SistaCogitClone >> genFallsThroughCountLogicCounterReg: counterReg counterAddres
 	"Gen this when the branch has not been taken and forwarders have been followed."
 	self SubCq: 1 R: counterReg. "Count untaken"
 	self MoveR: counterReg A32: counterAddress. "write back"
-]
-
-{ #category : #'bytecode generators' }
-SistaCogitClone >> genForwardersInlinedIdenticalOrNotIf: orNot [
-	"Override to count inlined branches if followed by a conditional branch.
-	 We borrow the following conditional branch's counter and when about to
-	 inline the comparison we decrement the counter (without writing it back)
-	 and if it trips simply abort the inlining, falling back to the normal send which
-	 will then continue to the conditional branch which will trip and enter the abort."
-	| nextPC postBranchPC targetBytecodePC branchDescriptor counterReg fixup jumpEqual jumpNotEqual
-	  counterAddress countTripped unforwardArg unforwardRcvr argReg rcvrReg regMask |
-	<var: #fixup type: #'BytecodeFixup *'>
-	<var: #countTripped type: #'AbstractInstruction *'>
-	<var: #label type: #'AbstractInstruction *'>
-	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
-	<var: #jumpEqual type: #'AbstractInstruction *'>
-	<var: #jumpNotEqual type: #'AbstractInstruction *'>
-
-	((coInterpreter isOptimizedMethod: methodObj) or: [needsFrame not]) ifTrue:
-		[^super genForwardersInlinedIdenticalOrNotIf: orNot].
-
-	regMask := 0.
-	
-	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
-		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
-	
-	unforwardRcvr := (objectRepresentation isUnannotatableConstant: (self ssValue: 1)) not.
-	unforwardArg := (objectRepresentation isUnannotatableConstant: self ssTop) not.
-	
-	"If an operand is an annotable constant, it may be forwarded, so we need to store it into a 
-	register so the forwarder check can jump back to the comparison after unforwarding the constant.
-	However, if one of the operand is an unnanotable constant, does not allocate a register for it 
-	(machine code will use operations on constants)."
-	rcvrReg:= argReg := NoReg.
-	self 
-		allocateEqualsEqualsRegistersArgNeedsReg: unforwardArg 
-		rcvrNeedsReg: unforwardRcvr 
-		into: [ :rcvr :arg | rcvrReg:= rcvr. argReg := arg ].
-		
-	argReg ~= NoReg ifTrue: [ regMask := self registerMaskFor: argReg ].
-	rcvrReg ~= NoReg ifTrue: [ regMask := regMask bitOr: (self registerMaskFor: rcvrReg) ].
-	
-	"Only interested in inlining if followed by a conditional branch."
-	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse:
-		[^ self 
-			genIdenticalNoBranchArgIsConstant: unforwardArg not
-			rcvrIsConstant: unforwardRcvr not
-			argReg: argReg 
-			rcvrReg: rcvrReg 
-			orNotIf: orNot].
-	
-	"If branching the stack must be flushed for the merge"
-	self ssFlushTo: simStackPtr - 2.
-	
-	unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg ].
-	unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg ].
-	
-	counterReg := self allocateRegNotConflictingWith: regMask.
-	self 
-		genExecutionCountLogicInto: [ :cAddress :countTripBranch | 
-			counterAddress := cAddress. 
-			countTripped := countTripBranch ] 
-		counterReg: counterReg.
-	
-	self assert: (unforwardArg or: [ unforwardRcvr ]).
-	self genCmpArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
-	self ssPop: 2.
-	
-	"We could use (branchDescriptor isBranchTrue xor: orNot) to simplify this."
-	orNot 
-		ifFalse: [branchDescriptor isBranchTrue
-					ifTrue: 
-						[ fixup := (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
-						self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger ]
-					ifFalse: "branchDescriptor is branchFalse"
-						[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-						self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ]]
-		ifTrue: [branchDescriptor isBranchTrue
-					ifFalse: "branchDescriptor is branchFalse"
-						[ fixup := (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
-						self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger ]
-					ifTrue:
-						[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-						self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ]].
-	
-	self genFallsThroughCountLogicCounterReg: counterReg counterAddress: counterAddress.
-	self Jump: fixup.
-	
-	countTripped jmpTarget: self Label.
-	
-	"inlined version of #== ignoring the branchDescriptor if the counter trips to have normal state for the optimizer"
-	self ssPop: -2. 
-	self genCmpArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
-	self ssPop: 2. 
-	
-	"This code necessarily directly falls through the jumpIf: code which pops the top of the stack into TempReg. 
-	We therefore directly assign the result to TempReg to save one move instruction"
-	jumpEqual := orNot ifFalse: [self JumpZero: 0] ifTrue: [self JumpNonZero: 0].
-	self genMoveFalseR: TempReg.
-	jumpNotEqual := self Jump: 0.
-	jumpEqual jmpTarget: (self genMoveTrueR: TempReg).
-	jumpNotEqual jmpTarget: self Label.
-	self ssPushRegister: TempReg.
-	
-	(self fixupAt: nextPC - initialPC) notAFixup ifTrue: [ branchReachedOnlyForCounterTrip := true ].
-	
-	^ 0
 ]
 
 { #category : #initialization }
@@ -704,8 +612,23 @@ SistaCogitClone >> genUnaryInlinePrimitive: prim [
 						into: resultReg
 							initializingIf: self extBSpecifiesInitializeInstance) ~= 0 ifTrue:
 					[^ShouldNotJIT]. "e.g. bad class"
+				 self ssPop: 1] .
+			[20] ->	"20 	identityHash"
+				[self ssTop popToReg: rcvrReg.
+				 objectRepresentation genGetHashFieldNonImmOf: rcvrReg asSmallIntegerInto: resultReg.
+				 self ssPop: 1] .
+					"21		identityHash (SmallInteger)"
+					"22		identityHash (Character)"
+					"23		identityHash (SmallFloat64)"
+					"24		identityHash (Behavior)"
+					"30 	immediateAsInteger (Character)
+					 31 	immediateAsInteger (SmallFloat64)"
+			[30] -> 
+				[self ssTop popToReg: rcvrReg.
+				 objectRepresentation genConvertCharacterToSmallIntegerInReg: rcvrReg.
 				 self ssPop: 1]
 				  }
+				
 		otherwise:
 			[^EncounteredUnknownBytecode].
 	extB := 0.

@@ -48,6 +48,11 @@ CogRASSBytecodeFixup >> cogit: aCogit [
 	^self
 ]
 
+{ #category : #'debug printing' }
+CogRASSBytecodeFixup >> hasMergeSimStack [
+	^self needsFixup and: [mergeSimStack notNil]
+]
+
 { #category : #accessing }
 CogRASSBytecodeFixup >> isReceiverResultRegSelf [
 

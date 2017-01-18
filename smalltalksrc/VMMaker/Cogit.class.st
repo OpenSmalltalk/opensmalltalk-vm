@@ -2791,21 +2791,21 @@ Cogit >> addToMap: annotation instruction: instruction byte: byte at: address fo
 	objectMemory byteAt: address put: byte.
 	self cCode: [] inSmalltalk:
 		[| s bytecode |
-		(compilationTrace anyMask: 16) ifTrue:
+		(compilationTrace anyMask: 64) ifTrue:
 			[(s := coInterpreter transcript)
 				ensureCr;
 				print: annotation; nextPut: $/; nextPutAll: byte hex; space;
 				nextPutAll: address hex; space; nextPutAll: mcpc hex; space;
 				nextPutAll: (AnnotationConstantNames detect: [:name| (Cogit classPool at: name ifAbsent: []) = annotation]); cr; flush.
-			(instruction notNil
-			 and: [instruction bcpc isInteger]) ifTrue:
+			 (instruction notNil
+			  and: [instruction bcpc isInteger]) ifTrue:
 				[s tab; print: instruction bcpc; nextPut: $/.
 				 instruction bcpc printOn: s base: 16.
 				 s space.
 				 instruction printStateOn: s.
 				 s space.
 				 bytecode := objectMemory fetchByte: instruction bcpc ofObject: methodObj.
-				 bytecode := bytecode + (self bytecodeSetOffsetForHeader: (methodHeader)).
+				 bytecode := bytecode + (self bytecodeSetOffsetForHeader: methodHeader).
 				 (self generatorAt: bytecode) printStateOn: s.
 				 s cr; flush]]]
 ]
@@ -4698,7 +4698,8 @@ Cogit >> compilationTrace: anInteger [
 	   4 = simStack & optStatus
 	   8 = spill
 	 16 = merge
-	 32 = fixup"
+	 32 = fixup
+	 64 = map"
 	compilationTrace := anInteger
 ]
 
