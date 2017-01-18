@@ -157,6 +157,7 @@ RegisterAllocatingCogit >> deassignRegisterForTempVar: targetEntry in: mergeSimS
 	 the temp will acquire the merged value without an assignment.  The targetEntry
 	 must also be transmogrified into an SSRegister entry."
 	<var: #targetEntry type: #'SimStackEntry *'>
+	<var: #duplicateEntry type: #'SimStackEntry *'>
 	<var: #mergeSimStack type: #'SimStackEntry *'>
 	<inline: true>
 	| reg |
@@ -217,7 +218,7 @@ RegisterAllocatingCogit >> ensureReceiverResultRegContainsSelf [
 	super ensureReceiverResultRegContainsSelf.
 	methodOrBlockNumTemps to: simStackPtr do:
 		[:i|
-		(simSelf isSameEntryAs: (self simStackAt: i))
+		((self addressOf: simSelf) isSameEntryAs: (self simStackAt: i))
 			ifTrue: [(self simStackAt: i) liveRegister: ReceiverResultReg]
 			ifFalse:
 				[(self simStackAt: i) liveRegister = ReceiverResultReg ifTrue:
@@ -275,7 +276,7 @@ RegisterAllocatingCogit >> flushLiveRegistersForSend [
 					 and: [(self simStackAt: i) type = SSConstant
 						or: [((self simStackAt: i) type = SSBaseOffset
 							or: [i >= methodOrBlockNumTemps
-								and: (self simStackAt: i) type = SSSpill])
+								and: [(self simStackAt: i) type = SSSpill]])
 							 and: [(self simStackAt: i) register = FPReg
 							 and: [(self simStackAt: i) offset = (self frameOffsetOfTemporary: i)]]]]).
 		 (self simStackAt: i) liveRegister: NoReg]
@@ -1019,7 +1020,6 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup [
 	 The state of optStatus must agree."
 	<var: #targetEntry type: #'SimStackEntry *'>
 	<var: #currentEntry type: #'SimStackEntry *'>
-	<var: #duplicateEntry type: #'SimStackEntry *'>
 	(mergeSimStack := fixup mergeSimStack) ifNil: [^self].
 	"Assignments amongst the registers must be made in order to avoid overwriting.
 	 If necessary exchange registers amongst simStack's entries to resolve any conflicts."
@@ -1201,10 +1201,10 @@ RegisterAllocatingCogit >> receiverRefOnScratchSimStack [
 
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> reconcileRegisterStateForBackwardJoin: fixup [ 
-	<var: #fixup type: #'SSBytecodeFixup *'>
+	<var: #fixup type: #'BytecodeFixup *'>
 	| fixupSimStack |
 	<var: #fixupSimStack type: #'SimStackEntry *'>
-	self assert: (optStatus ssEntry isSameEntryAs: simSelf). 
+	self assert: (optStatus ssEntry isSameEntryAs: (self addressOf: simSelf)). 
 	fixup isReceiverResultRegSelf ifTrue:
 		[optStatus isReceiverResultRegLive ifFalse:
 			[optStatus ssEntry storeToReg: ReceiverResultReg]].
@@ -1212,7 +1212,7 @@ RegisterAllocatingCogit >> reconcileRegisterStateForBackwardJoin: fixup [
 	simStackPtr to: 0 by: -1 do:
 		[:i|
 		 self assert: (self simStackAt: i) spilled.
-		 (self simStackAt: i) reconcileBackwardsWith: (fixupSimStack at: i)]
+		 (self simStackAt: i) reconcileBackwardsWith: (self addressOf: (fixupSimStack at: i))]
 ]
 
 { #category : #'bytecode generator support' }
@@ -1335,8 +1335,8 @@ RegisterAllocatingCogit >> setMergeSimStackOf: fixup [
 			[self assert: fixup simStackPtr = simStackPtr.
 			 0 to: simStackPtr do:
 				[:i|
-				self assert: ((self simStackAt: i) isSameEntryAs: (fixup mergeSimStack at: i)).
-				(self simStackAt: i) liveRegister ~= (fixup mergeSimStack at: i) liveRegister ifTrue:
+				self assert: ((self simStackAt: i) isSameEntryAs: (self addressOf: (fixup mergeSimStack at: i))).
+				(self simStackAt: i) liveRegister ~= (self addressOf: (fixup mergeSimStack at: i)) liveRegister ifTrue:
 					[(self simStackAt: i) liveRegister: NoReg]]].
 	fixup
 		simStackPtr: simStackPtr;
@@ -1350,7 +1350,7 @@ RegisterAllocatingCogit >> simSelfOnStackInReceiverResultReg [
 	"For assert checking only."
 	methodOrBlockNumArgs to: simStackPtr do:
 		[:i|
-		 ((simSelf isSameEntryAs: (self simStackAt: i))
+		 (((self addressOf: simSelf) isSameEntryAs: (self simStackAt: i))
 		  and: [(self simStackAt: i) registerOrNone = ReceiverResultReg]) ifTrue:
 			[^true]].
 	^false
@@ -1517,7 +1517,7 @@ RegisterAllocatingCogit >> voidReceiverResultRegContainsSelf [
 	optStatus isReceiverResultRegLive: false.
 	methodOrBlockNumTemps to: simStackPtr do:
 		[:i|
-		(simSelf isSameEntryAs: (self simStackAt: i)) ifTrue:
+		((self addressOf: simSelf) isSameEntryAs: (self simStackAt: i)) ifTrue:
 			[(self simStackAt: i) liveRegister: NoReg]].
 	simSelf liveRegister: NoReg
 ]

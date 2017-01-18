@@ -50,6 +50,7 @@ CogRegisterAllocatingSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegi
 
 { #category : #comparing }
 CogRegisterAllocatingSimStackEntry >> isSameEntryAs: ssEntry [
+	<var: 'ssEntry' type: #'CogSimStackEntry *'>
 	^type = ssEntry type
 	  and: [((type = SSBaseOffset or: [type == SSSpill]) and: [offset = ssEntry offset and: [register = ssEntry register]])
 		or: [(type = SSRegister and: [register = ssEntry register])
@@ -77,7 +78,6 @@ CogRegisterAllocatingSimStackEntry >> offset [
 
 { #category : #'compile abstract instructions' }
 CogRegisterAllocatingSimStackEntry >> popToReg: reg [
-	<var: #inst type: #'AbstractInstruction *'>
 	liveRegister ~= NoReg
 		ifTrue: 
 			[self deny: (type = SSRegister and: [register ~= liveRegister and: [cogit needsFrame]]).
@@ -138,7 +138,7 @@ CogRegisterAllocatingSimStackEntry >> printStateOn: aStream [
 CogRegisterAllocatingSimStackEntry >> reconcileBackwardsWith: targetEntry [
 	"Make the state of the receiver, a stack entry at a backward jump,
 	 the same as the corresponding simStackEntry at the target of the jump"
-	<var: #targetEntry type: #'targetEntry *'>
+	<var: #targetEntry type: #'SimStackEntry *'>
 	| targetReg |
 	(targetReg := targetEntry registerOrNone) = NoReg ifTrue:
 		[^self].
@@ -169,7 +169,7 @@ CogRegisterAllocatingSimStackEntry >> reconcileForwardsWith: targetEntry [
 	 this is because if merging a non-temp with a temp that has a live register we
 	 can assign to the register, but must unassign the register from the temp,
 	 otherwise the temp will acquire the merged value without an assignment."
-	<var: #targetEntry type: #'targetEntry *'>
+	<var: #targetEntry type: #'SimStackEntry *'>
 	| targetReg |
 	(targetReg := targetEntry registerOrNone) = NoReg ifTrue:
 		[| reg |
@@ -220,7 +220,7 @@ CogRegisterAllocatingSimStackEntry >> reconcileForwardsWith: targetEntry [
 CogRegisterAllocatingSimStackEntry >> reconcilePoppingWith: targetEntry [
 	"Make the state of a targetEntry, a stack entry following a non-inlined special selector
 	 send, the same as the corresponding entry (the receiver) along the inlined path."
-	<var: #targetEntry type: #'targetEntry *'>
+	<var: #targetEntry type: #'SimStackEntry *'>
 	| targetReg |
 	targetEntry spilled ifTrue:
 		[self assert: (self isSameEntryAs: targetEntry).
