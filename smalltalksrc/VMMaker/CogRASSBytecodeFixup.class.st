@@ -67,8 +67,8 @@ CogRASSBytecodeFixup >> isReceiverResultRegSelf: anObject [
 
 { #category : #accessing }
 CogRASSBytecodeFixup >> mergeSimStack [
-
-	^ mergeSimStack
+	<returnTypeC: #'CogSimStackEntry *'>
+	^mergeSimStack
 ]
 
 { #category : #accessing }
