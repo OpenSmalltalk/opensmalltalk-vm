@@ -8,6 +8,12 @@ InstructionClient >> blockReturnConstant: value [
 ]
 
 { #category : #'*BytecodeSets-instruction decoding' }
+InstructionClient >> branchIfInstanceOf: literal distance: distance [
+	"If the object on top of stack has the type -or one of the type- present in the literal (the literal is a behavior or an array of behavior), then pop it. Else jumps by the distance."
+	
+]
+
+{ #category : #'*BytecodeSets-instruction decoding' }
 InstructionClient >> branchIfNotInstanceOf: literal distance: distance [
 	"If the object on top of stack has the type -or one of the type- present in the literal (the literal is a behavior or an array of behavior), then pop it. Else jumps by the distance."
 	

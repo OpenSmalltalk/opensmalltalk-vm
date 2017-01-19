@@ -8,6 +8,13 @@ InstructionPrinter >> blockReturnConstant: value [
 ]
 
 { #category : #'*BytecodeSets-SistaV1-decoding' }
+InstructionPrinter >> branchIfInstanceOf: behaviorOrArrayOfBehavior distance: distance [
+	"If the object on top of stack has the type -or one of the type- present in the literal
+	 (the literal is a behavior or an array of behavior), then pop it. Else jumps by the distance."
+	self print: 'branchIfInstanceOf: ', behaviorOrArrayOfBehavior printString, ' distance: ', distance printString
+]
+
+{ #category : #'*BytecodeSets-SistaV1-decoding' }
 InstructionPrinter >> branchIfNotInstanceOf: behaviorOrArrayOfBehavior distance: distance [
 	"If the object on top of stack has the type -or one of the type- present in the literal
 	 (the literal is a behavior or an array of behavior), then pop it. Else jumps by the distance."
