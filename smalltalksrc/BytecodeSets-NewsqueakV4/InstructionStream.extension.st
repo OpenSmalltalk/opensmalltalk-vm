@@ -356,8 +356,9 @@ InstructionStream >> interpretNext3ByteSistaV1Instruction: bytecode for: client 
 	bytecode = 253 ifTrue:
 		[^client popIntoRemoteTemp: byte2 inVectorAt: byte3].
 	"**	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
-	bytecode = 254 ifTrue: 
-		[^client branchIfNotInstanceOf: literal distance: ((extB < 0 ifTrue: [extB + 128] ifFalse: [extB]) bitShift: 8) + byte3].
+	bytecode = 254 ifTrue: "The sign bit of extB inverts the operation.  Would like to have extB < -128, but this is good enough for now."
+		[extB < 0 ifTrue: [^client branchIfInstanceOf: literal distance: (extB + 128 bitShift: 8) + byte3].
+		 ^client branchIfNotInstanceOf: literal distance: (extB bitShift: 8) + byte3].
 	^self unusedBytecode: client at: startPC
 ]
 
