@@ -1001,8 +1001,8 @@ SistaCogit >> genUnaryInlinePrimitive: prim [
 					"30 	immediateAsInteger (Character)
 					 31 	immediateAsInteger (SmallFloat64)"
 			[30] -> 
-				[self ssTop popToReg: rcvrReg.
-				 objectRepresentation genConvertCharacterToSmallIntegerInReg: rcvrReg.
+				[self ssTop popToReg: resultReg.
+				 objectRepresentation genConvertCharacterToSmallIntegerInReg: resultReg.
 				 self ssPop: 1]
 				  }
 				
