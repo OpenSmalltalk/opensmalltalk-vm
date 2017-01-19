@@ -1556,8 +1556,8 @@ StackToRegisterMappingCogit >> eventualTargetOf: targetBytecodePC [
 	| currentTarget nextPC nExts descriptor span cond |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	nextPC := currentTarget := targetBytecodePC.
-	[[nExts := 0.
-	  descriptor := self generatorAt: bytecodeSetOffset
+	[ nExts := 0.
+	 [descriptor := self generatorAt: bytecodeSetOffset
 								+ (objectMemory fetchByte: nextPC ofObject: methodObj).
 	  descriptor isReturn ifTrue: [^currentTarget]. "avoid stepping off the end of methods"
 	  descriptor isExtension]
