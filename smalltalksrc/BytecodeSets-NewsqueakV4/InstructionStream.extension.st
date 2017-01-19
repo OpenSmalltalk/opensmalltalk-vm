@@ -334,11 +334,25 @@ InstructionStream >> interpretNext3ByteSistaV1Instruction: bytecode for: client 
 	byte2 := method at: pc.
 	byte3 := method at: pc + 1.
 	pc := pc + 2.
-	"we search the bytecodes by what we expect to be the static frequency."
+
+	"**	248	(2)	11111000 	iiiiiiii		mssjjjjj		Call Primitive #iiiiiiii + (jjjjj * 256) 
+									m=1 means inlined primitive, no hard return after execution. 
+									ss defines the unsafe operation set used to encode the operations. 
+									(ss = 0 means sista unsafe operations, ss = 01 means lowcode operations, other numbers are not used)
+									Lowcode inlined primitives may have extensions."
 	bytecode = 248 ifTrue:
-		[byte3 >= 128 ifTrue:
+		[| primitiveSetSelector primitiveNumber |
+		 byte3 < 128 ifTrue:
+			[ "Maybe this should be restricted to the 13 bit primitiveNumber too..."
+			 ^client callPrimitive: byte2 + (byte3 bitShift: 8)].
+		 primitiveSetSelector := (byte3 bitShift: -5) bitAnd: 3.
+		 primitiveNumber := byte2 + ((byte3 bitAnd: 31) bitShift: 8).
+		 primitiveSetSelector = 0 ifTrue: "Sista inline primitives"
 			[^client callInlinePrimitive: byte2 + (byte3 - 128 bitShift: 8)].
-		 ^client callPrimitive: byte2 + (byte3 bitShift: 8)].
+		 primitiveSetSelector = 1 ifTrue: "Lowcode inline primitives"
+			[^client callLowcodeInlinePrimitive: byte2 + (byte3 - 128 bitShift: 8) extA: extA extB: extB].
+		 "fall through to ^self unusedBytecode: client at: startPC below"].
+
 	"*	249		11111001	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 ignoreOuterContext: i = 1"
 	bytecode = 249 ifTrue:
 		[literal := method literalAt: (extA bitShift: 8) + byte2 + 1.
