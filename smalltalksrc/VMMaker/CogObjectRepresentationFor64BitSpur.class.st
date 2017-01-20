@@ -134,30 +134,28 @@ CogObjectRepresentationFor64BitSpur >> branch2CasesIf: reg notInstanceOfBehavior
 { #category : #'sista support' }
 CogObjectRepresentationFor64BitSpur >> branchIf: reg hasImmediateTag: classIndex target: targetFixUp [
 	<var: #targetFixUp type: #'AbstractInstruction *'>
-	| jmpImmediate|
+	| jmpImmediate |
 	<inline: true>
-	cogit MoveR: reg R: TempReg.
 	classIndex = objectMemory smallIntegerTag ifTrue:
-		[jmpImmediate := self genJumpSmallIntegerInScratchReg: TempReg].
+		[jmpImmediate := self genJumpSmallInteger: reg].
 	classIndex = objectMemory characterTag ifTrue:
-		[jmpImmediate := self genJumpCharacterInScratchReg: TempReg].
+		[jmpImmediate := self genJumpCharacter: reg].
 	classIndex = objectMemory smallFloatTag ifTrue:
-		[jmpImmediate := self genJumpSmallFloatInScratchReg: TempReg].
+		[jmpImmediate := self genJumpSmallFloat: reg].
 	jmpImmediate jmpTarget: targetFixUp
 ]
 
 { #category : #'sista support' }
 CogObjectRepresentationFor64BitSpur >> branchIf: reg hasNotImmediateTag: classIndex target: targetFixUp [
 	<var: #targetFixUp type: #'AbstractInstruction *'>
-	| jmpImmediate|
+	| jmpImmediate |
 	<inline: true>
-	cogit MoveR: reg R: TempReg.
 	classIndex = objectMemory smallIntegerTag ifTrue:
-		[jmpImmediate := self genJumpNotSmallIntegerInScratchReg: TempReg].
+		[jmpImmediate := self genJumpNotSmallInteger: reg].
 	classIndex = objectMemory characterTag ifTrue:
-		[jmpImmediate := self genJumpNotCharacterInScratchReg: TempReg].
+		[jmpImmediate := self genJumpNotCharacter: reg].
 	classIndex = objectMemory smallFloatTag ifTrue:
-		[jmpImmediate := self genJumpNotSmallFloatInScratchReg: TempReg].
+		[jmpImmediate := self genJumpNotSmallFloat: reg].
 	jmpImmediate jmpTarget: targetFixUp
 ]
 

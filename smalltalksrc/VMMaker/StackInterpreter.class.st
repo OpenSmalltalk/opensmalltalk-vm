@@ -715,6 +715,7 @@ StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosuresNewspeak
 	AltBytecodeEncoderClassName := BytecodeEncoderClassName.
 	AltLongStoreBytecode := LongStoreBytecode.
 	self initializeBytecodeTableForSqueakV3PlusClosures.
+	BytecodeSetHasExtensions := true.
 	v3Table := BytecodeTable.
 	BytecodeTable := v3Table, v4Table
 ]
@@ -729,6 +730,7 @@ StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosuresSistaV1H
 	AltBytecodeEncoderClassName := BytecodeEncoderClassName.
 	AltLongStoreBytecode := LongStoreBytecode.
 	self initializeBytecodeTableForSqueakV3PlusClosures.
+	BytecodeSetHasExtensions := true.
 	v3Table := BytecodeTable.
 	BytecodeTable := v3Table, v1Table
 ]
@@ -16948,6 +16950,28 @@ StackInterpreter >> printContextCallStackOf: aContext [
 	^ctxt
 ]
 
+{ #category : #printing }
+StackInterpreter >> printDecodeMethodHeaderOop: methodHeaderOop [
+	self printOopShort: methodHeaderOop.
+	(self methodHeaderHasPrimitive: methodHeaderOop) ifTrue:
+		[self print: ' hasPrim'].
+	(self methodHeaderIndicatesLargeFrame: methodHeaderOop) ifTrue:
+		[self print: ' largeFrame'].
+	(SistaVM and: [self isOptimizedMethodHeader: methodHeaderOop]) ifTrue:
+		[self print: ' optimized'].
+	(MULTIPLEBYTECODESETS and: [self integerValueOf: methodHeaderOop]) < 0 ifTrue:
+		[self print: ' altSet'].
+	NewspeakVM ifTrue:
+		[self print: ((self accessModifierOfMethodHeader: methodHeaderOop) caseOf: {
+						[0] -> [' public'].
+						[1] -> [' private'].
+						[2] -> [' protected'].
+						[3] -> [' access undefined'] })].
+	self print: ' nLits '; printNum: (objectMemory literalCountOfMethodHeader: methodHeaderOop);
+		print: ' nArgs '; printNum: (self argumentCountOfMethodHeader: methodHeaderOop);
+		print: ' nTemps '; printNum: (self temporaryCountOfMethodHeader: methodHeaderOop)
+]
+
 { #category : #'debug printing' }
 StackInterpreter >> printExternalHeadFrame [
 	<inline: false>
@@ -17347,7 +17371,7 @@ StackInterpreter >> printMethodFieldForPrintContext: aContext [
 StackInterpreter >> printMethodHeaderOop: anOop [
 	"Override hook for CoInterpreter"
 	<inline: true>
-	^self printOopShort: anOop
+	^self printDecodeMethodHeaderOop: anOop
 ]
 
 { #category : #'debug printing' }
