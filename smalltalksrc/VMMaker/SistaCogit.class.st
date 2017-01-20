@@ -538,8 +538,8 @@ SistaCogit >> genExtJumpIfNotInstanceOfBehaviorsBytecode [
 	 We could use a fixed register here...."
 	reg := self allocateRegForStackEntryAt: 0.
 	self ssTop popToReg: reg.
-	self ssFlushTo: simStackPtr. "flushed but the value is still in reg"
 	self ssPop: 1.
+	self ssFlushTo: simStackPtr. "flushed but the value is still in reg"
 
 	literal := self getLiteral: (extA * 256 + byte1).
 	(inverse := extB < 0) ifTrue:

@@ -24,6 +24,12 @@ StackDepthFinder >> blockReturnTop [
 ]
 
 { #category : #'instruction decoding' }
+StackDepthFinder >> branchIfInstanceOf: behaviorOrArrayOfBehavior distance: delta [
+	self drop.
+	self doJump: delta
+]
+
+{ #category : #'instruction decoding' }
 StackDepthFinder >> callInlinePrimitive: primitiveIndex [
 	"The convention for inline primitives is that the argument count is primitiveIndex // 1000 - 1,
 	 so receiverless 0-arg prims are from 0 to 999 (does this even make sense?), 0-arg prims
