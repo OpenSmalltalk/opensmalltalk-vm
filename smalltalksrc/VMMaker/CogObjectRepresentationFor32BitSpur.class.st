@@ -72,7 +72,8 @@ CogObjectRepresentationFor32BitSpur >> branchIf: reg hasImmediateTag: classIndex
 	classIndex = objectMemory smallIntegerTag ifTrue:
 		[jmpImmediate := self genJumpSmallInteger: reg].
 	classIndex = objectMemory characterTag ifTrue:
-		[jmpImmediate := self genJumpCharacter: reg].
+		[cogit MoveR: reg R: TempReg.
+		 jmpImmediate := self genJumpCharacterInScratchReg: reg].
 	jmpImmediate jmpTarget: targetFixUp
 ]
 
@@ -84,7 +85,8 @@ CogObjectRepresentationFor32BitSpur >> branchIf: reg hasNotImmediateTag: classIn
 	classIndex = objectMemory smallIntegerTag ifTrue:
 		[jmpImmediate := self genJumpNotSmallInteger: reg].
 	classIndex = objectMemory characterTag ifTrue:
-		[jmpImmediate := self genJumpNotCharacter: reg].
+		[cogit MoveR: reg R: TempReg.
+		 jmpImmediate := self genJumpNotCharacterInScratchReg: reg].
 	jmpImmediate jmpTarget: targetFixUp
 ]
 
