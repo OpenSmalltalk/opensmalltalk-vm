@@ -9393,8 +9393,8 @@ SpurMemoryManager >> printContextReferencesTo: anOop [
 { #category : #'debug printing' }
 SpurMemoryManager >> printEntity: oop [
 	<api>
-	| isObj |
-	isObj := false.
+	| printFlags |
+	printFlags := false.
 	coInterpreter printHex: oop; space.
 	(self addressCouldBeObj: oop) ifFalse:
 		[^coInterpreter print: ((self isImmediate: oop) ifTrue: ['immediate'] ifFalse: ['unknown'])].
@@ -9402,10 +9402,10 @@ SpurMemoryManager >> printEntity: oop [
 		print: ((self isFreeObject: oop) ifTrue: ['free'] ifFalse:
 				[(self isSegmentBridge: oop) ifTrue: ['bridge'] ifFalse:
 				[(self isForwarded: oop) ifTrue: ['forwarder'] ifFalse:
-				[(self classIndexOf: oop) <= self lastClassIndexPun ifTrue: ['pun/obj stack'] ifFalse:
-				[isObj := true. 'object']]]]);
+				[(self classIndexOf: oop) <= self lastClassIndexPun ifTrue: [printFlags := true. 'pun/obj stack'] ifFalse:
+				[printFlags := true. 'object']]]]);
 		space; printHexnpnp: (self rawNumSlotsOf: oop); print: '/'; printHexnpnp: (self bytesInObject: oop); print: '/'; printNum: (self bytesInObject: oop).
-	isObj ifTrue:
+	printFlags ifTrue:
 		[coInterpreter
 			space;
 			print: ((self formatOf: oop) <= 16rF ifTrue: ['f:0'] ifFalse: ['f:']);

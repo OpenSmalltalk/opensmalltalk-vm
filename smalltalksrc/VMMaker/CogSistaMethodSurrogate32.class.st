@@ -25,6 +25,6 @@ CogSistaMethodSurrogate32 >> counters [
 { #category : #accessing }
 CogSistaMethodSurrogate32 >> counters: aValue [
 	^memory
-		unsignedLongAt: address + 21 + baseHeaderSize
+		unsignedLongAt: address + baseHeaderSize + 21
 		put: aValue
 ]
