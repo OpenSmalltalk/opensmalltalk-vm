@@ -19,12 +19,12 @@ CogSistaMethodSurrogate64 class >> offsetOf: aByteSymbol [
 
 { #category : #accessing }
 CogSistaMethodSurrogate64 >> counters [
-	^memory long64At: address + 33 + baseHeaderSize
+	^memory unsignedLong64At: address + 33 + baseHeaderSize
 ]
 
 { #category : #accessing }
 CogSistaMethodSurrogate64 >> counters: aValue [
 	^memory
-		long64At: address + 33 + baseHeaderSize
+		unsignedLong64At: address + baseHeaderSize + 33
 		put: aValue
 ]
