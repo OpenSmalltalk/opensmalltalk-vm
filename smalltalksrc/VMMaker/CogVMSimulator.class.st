@@ -209,6 +209,16 @@ CogVMSimulator >> assertSaneThreadAndProcess [
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
 ]
 
+{ #category : #accessing }
+CogVMSimulator >> atEachStepBlock [
+	^atEachStepBlock
+]
+
+{ #category : #accessing }
+CogVMSimulator >> atEachStepBlock: aBlock [
+	atEachStepBlock := aBlock
+]
+
 { #category : #'jump bytecodes' }
 CogVMSimulator >> attemptToSwitchToMachineCode: bcpc [
 	"method = 16r96A294 ifTrue: [self halt]."
@@ -2007,6 +2017,11 @@ CogVMSimulator >> loadNewPlugin: pluginString [
 		[:entry|
 		 pluginList := pluginList copyWith: entry.
 		 entry]
+]
+
+{ #category : #accessing }
+CogVMSimulator >> localIP [
+	^localIP
 ]
 
 { #category : #testing }

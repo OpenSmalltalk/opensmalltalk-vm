@@ -141,8 +141,7 @@ SistaCogit >> disassembleMethod: surrogateOrAddress on: aStream [
 	(cogMethod cmType = CMMethod
 	 and: [cogMethod counters ~= 0]) ifTrue:
 		[aStream nextPutAll: 'counters:'; cr.
-		 numCounters := objectRepresentation numCountersFor: counters.
-		 0 to: numCounters - 1 do:
+		 0 to: (objectRepresentation numCountersFor: cogMethod counters) - 1 do:
 			[:i| | addr |
 			 addr := i * CounterBytes + counters.
 			 addr printOn: aStream base: 16.
