@@ -192,16 +192,20 @@ TSendNode >> emitCCodeAsFieldReferenceOn: aStream level: level generator: aCodeG
 
 { #category : #'C code generation' }
 TSendNode >> emitCCodeAsFunctionCallOn: aStream level: level generator: aCodeGen [
-
 	"Translate this message send into a C function call"
+
+	selector == #break ifTrue:
+		[aStream nextPutAll: '/* send of break elided */'.
+		 ^self].
+
 	"Special case for pluggable modules. Replace messages to interpreterProxy
 	 by interpreterProxy->message(..) if the message is not builtin"
 	(aCodeGen shouldGenerateAsInterpreterProxySend: self) ifTrue:
 		[(aCodeGen noteUsedPluginFunction: selector) ifTrue:
 			[aStream nextPutAll: 'interpreterProxy->']].
 
-	"Translate this message send into a C function call."
 	aStream nextPutAll: (aCodeGen cFunctionNameFor: selector); nextPut: $(.
+
 	"Only include the receiver as the first argument in certain cases.
 	 The receiver is always included if it is an expression.
 	 If it is a variable:

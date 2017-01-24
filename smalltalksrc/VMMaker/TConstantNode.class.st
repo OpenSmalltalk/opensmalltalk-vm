@@ -108,6 +108,7 @@ TConstantNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
 					^#'long long']].
 	value isFloat ifTrue: [^#double].
 	(#(nil true false) includes: value) ifTrue: [^#int].
+	(value isString and: [value isSymbol not]) ifTrue: [^#'char *'].
 	^nil
 ]
 

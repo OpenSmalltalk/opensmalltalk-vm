@@ -166,8 +166,17 @@ TSwitchStmtNode >> emitCCodeOn: aStream addToEndOfCases: aNodeOrNil level: level
 		ifNotNil: [otherwiseOrNil emitCCodeOn: aStream prependToEnd: aNodeOrNil level: level + 1 generator: aCodeGen]
 		ifNil: [aStream nextPutAll: 'error("Case not found and no otherwise clause");'.
 			   aNodeOrNil ifNotNil:
-				[aStream crtab: level + 1.
-				 (aNodeOrNil copy setExpression: (TConstantNode new setValue: -1))
+				[| defaultExpr type |
+				 aStream crtab: level + 1.
+				 defaultExpr := TConstantNode new setValue: -1.
+				 (aNodeOrNil isAssignment
+				  and: [(type := aCodeGen typeFor: aNodeOrNil variable in: aCodeGen currentMethod) notNil
+				  and: [aCodeGen isPointerCType: type]]) ifTrue:
+					[defaultExpr := TSendNode new
+										setSelector: #cCoerceSimple:to:
+										receiver: (TVariableNode new setName: 'self')
+										arguments: {defaultExpr. TConstantNode new setValue: type}].
+				 (aNodeOrNil copy setExpression: defaultExpr)
 					emitCCodeOn: aStream level: level generator: aCodeGen.
 				 aStream nextPut: $;]].
 	aStream
