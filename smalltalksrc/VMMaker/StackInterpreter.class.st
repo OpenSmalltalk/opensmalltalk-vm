@@ -16961,11 +16961,13 @@ StackInterpreter >> printDecodeMethodHeaderOop: methodHeaderOop [
 	(MULTIPLEBYTECODESETS and: [objectMemory integerValueOf: methodHeaderOop]) < 0 ifTrue:
 		[self print: ' altSet'].
 	NewspeakVM ifTrue:
-		[self print: ((self accessModifierOfMethodHeader: methodHeaderOop) caseOf: {
+		[| s |
+		s := (self accessModifierOfMethodHeader: methodHeaderOop) caseOf: {
 						[0] -> [' public'].
 						[1] -> [' private'].
 						[2] -> [' protected'].
-						[3] -> [' access undefined'] })].
+						[3] -> [' access undefined'] }.
+		 self print: s].
 	self print: ' nLits '; printNum: (objectMemory literalCountOfMethodHeader: methodHeaderOop);
 		print: ' nArgs '; printNum: (self argumentCountOfMethodHeader: methodHeaderOop);
 		print: ' nTemps '; printNum: (self temporaryCountOfMethodHeader: methodHeaderOop)
