@@ -2707,9 +2707,7 @@ Cogit >> abstractInstruction: theAbstractInstruction follows: anAbstractInstruct
 { #category : #'compile abstract instructions' }
 Cogit >> abstractInstructionAt: index [
 	<cmacro: '(index) (&abstractOpcodes[index])'>
-	((debugOpcodeIndices includes: index)
-	 and: [breakMethod isNil or: [methodObj = breakMethod]]) ifTrue:
-		[self halt].
+	(debugOpcodeIndices includes: index) ifTrue: [self halt].
 	^abstractOpcodes at: index
 ]
 
@@ -8055,11 +8053,9 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 						primitivePerform primitivePerformWithArgs primitivePerformInSuperclass
 						primitiveTerminateTo primitiveStoreStackp primitiveDoPrimitiveWithArgs)
 							includes: function) ifFalse:
-						["This is a rare case (e.g. in Scorch where a married context's sender is set to nil on trapTrpped and hence the stack layout is altered."
-						 (function == #primitiveSlotAtPut and: [objectMemory isContext: (coInterpreter frameReceiver: coInterpreter framePointer)]) ifFalse:
-							[self assert: savedFramePointer = coInterpreter framePointer.
-							 self assert: savedStackPointer + (savedArgumentCount * objectMemory wordSize)
-									= coInterpreter stackPointer]]]
+						[self assert: savedFramePointer = coInterpreter framePointer.
+						 self assert: savedStackPointer + (savedArgumentCount * objectMemory wordSize)
+								= coInterpreter stackPointer]]
 			ifFalse:
 				[self assert: savedFramePointer = coInterpreter framePointer.
 				 self assert: savedStackPointer = coInterpreter stackPointer]].
@@ -8442,8 +8438,9 @@ Cogit >> isDirectedSuper: descriptor extA: exta extB: extb [
 Cogit >> isNonLocalReturnPC: retpc [
 	<doNotGenerate>
 	"Answer if the instruction preceding retpc is a call instruction."
-	^(backEnd isCallPrecedingReturnPC: retpc)
-	 and: [(backEnd callTargetFromReturnAddress: retpc) = ceNonLocalReturnTrampoline]
+	(backEnd isCallPrecedingReturnPC: retpc) ifFalse:
+		[^false].
+	^(backEnd callTargetFromReturnAddress: retpc) = ceNonLocalReturnTrampoline
 ]
 
 { #category : #'method map' }
@@ -9640,8 +9637,7 @@ Cogit >> maybeGenerateICacheFlush [
 { #category : #'compile abstract instructions' }
 Cogit >> maybeHaltIfDebugPC [ 
 	<cmacro: '() 0'> "Simulation only; void in C"
-	((debugBytecodePointers includes: bytecodePC)
-	 and: [breakMethod isNil or: [methodObj = breakMethod]]) ifTrue:
+	(debugBytecodePointers includes: bytecodePC) ifTrue:
 		[self halt]
 ]
 
@@ -9826,8 +9822,8 @@ Cogit >> nextBytecodePCFor: descriptor exts: nExts [
 ]
 
 { #category : #'bytecode generator support' }
-Cogit >> nextDescriptorExtensionsAndNextPCInto: aQuaternaryBlock [
-	"Peek ahead and deliver the next descriptor, extension bytes and next pc."
+Cogit >> nextDescriptorAndExtensionsInto: aTrinaryBlock [
+	"Peek ahead and deliver the next descriptor plus extension bytes."
 	<inline: true>
 	| savedB0 savedB1 savedB2 savedB3 savedEA savedEB savedNEB descriptor bcpc |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
@@ -9836,7 +9832,7 @@ Cogit >> nextDescriptorExtensionsAndNextPCInto: aQuaternaryBlock [
 	savedEA := extA. savedEB := extB. savedNEB := numExtB.
 	bcpc := bytecodePC + descriptor numBytes.
 	[bcpc > endPC ifTrue:
-		[^aQuaternaryBlock value: nil value: 0 value: 0 value: 0].
+		[^aTrinaryBlock value: nil value: 0 value: 0].
 	 byte0 := (objectMemory fetchByte: bcpc ofObject: methodObj)  + bytecodeSetOffset.
 	 descriptor := self generatorAt: byte0.
 	 self loadSubsequentBytesForDescriptor: descriptor at: bcpc.
@@ -9845,7 +9841,7 @@ Cogit >> nextDescriptorExtensionsAndNextPCInto: aQuaternaryBlock [
 		 eA := extA. eB := extB.
 		 extA := savedEA. extB := savedEB. numExtB := savedNEB.
 		 byte0 := savedB0. byte1 := savedB1. byte2 := savedB2. byte3 := savedB3.
-	 	 ^aQuaternaryBlock value: descriptor value: eA value: eB value: bcpc].
+	 	 ^aTrinaryBlock value: descriptor value: eA value: eB].
 	 self perform: descriptor generator.
 	 bcpc := bcpc + descriptor numBytes.
 	 true] whileTrue

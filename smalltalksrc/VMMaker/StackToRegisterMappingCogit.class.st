@@ -1673,8 +1673,7 @@ StackToRegisterMappingCogit >> extractMaybeBranchDescriptorInto: fourArgBlock [
 StackToRegisterMappingCogit >> fixupAt: index [
 	<cmacro: '(index) (&fixups[index])'>
 	<returnTypeC: #'BytecodeFixup *'>
-	((debugFixupBreaks includes: index)
-	 and: [breakMethod isNil or: [methodObj = breakMethod]]) ifTrue:
+	(debugFixupBreaks includes: index) ifTrue:
 		[self halt].
 	^self addressOf: (fixups at: index)
 ]
@@ -10983,8 +10982,8 @@ StackToRegisterMappingCogit >> genPushLiteralVariableGivenDirectedSuper: literal
 	"This is a version of genPushLiteralVariable: that looks ahead for a directed super send bytecode
 	 and does not generate any code for the dereference yet if followed by a directed super send."
 	<inline: false>
-	self nextDescriptorExtensionsAndNextPCInto:
-		[:descriptor :exta :extb :followingPC|
+	self nextDescriptorAndExtensionsInto:
+		[:descriptor :exta :extb|
 		(self isDirectedSuper: descriptor extA: exta extB: extb) ifTrue:
 			[self ssPushConstant: (self getLiteral: literalIndex).
 			 ^0]].

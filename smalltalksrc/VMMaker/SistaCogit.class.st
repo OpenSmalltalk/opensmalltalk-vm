@@ -281,7 +281,7 @@ SistaCogit >> genBinaryInlineComparison: opTrue opFalse: opFalse destReg: destRe
 		
 	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
 		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
-
+	
 	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse])
 		ifTrue: "This is the path where the inlined comparison is followed immediately by a branch"
 			[ (self fixupAt: nextPC - initialPC) notAFixup
@@ -292,13 +292,8 @@ SistaCogit >> genBinaryInlineComparison: opTrue opFalse: opFalse destReg: destRe
 				ifFalse:
 					[self ssPushConstant: objectMemory trueObject]. "dummy value"
 			self genConditionalBranch: (branchDescriptor isBranchTrue ifTrue: [opTrue] ifFalse: [opFalse])
-				operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-			"We can only elide the jump if the pc after nextPC is the same as postBranchPC.
-			 Branch following means it may not be."
-			self nextDescriptorExtensionsAndNextPCInto:
-				[:iguana1 :iguana2 :iguana3 :followingPC| nextPC := followingPC].
-			(deadCode and: [nextPC = postBranchPC]) ifFalse:
-				[ self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC) ] ]
+				operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger. 
+			deadCode ifFalse: [ self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC) ] ]
 		ifFalse: "This is the path where the inlined comparison is *not* followed immediately by a branch"
 			[| condJump jump |
 			condJump := self genConditionalBranch: opTrue operand: 0.
@@ -1059,14 +1054,6 @@ SistaCogit >> initialize [
 SistaCogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
 	initialCounterValue := MaxCounterValue.
 	super initializeCodeZoneFrom: startAddress upTo: endAddress
-]
-
-{ #category : #'simulation only' }
-SistaCogit >> isTrapAt: retpc [
-	"For stack depth checking."
-	<doNotGenerate>
-	^(backEnd isCallPrecedingReturnPC: retpc)
-	 and: [(backEnd callTargetFromReturnAddress: retpc) = ceTrapTrampoline]
 ]
 
 { #category : #'compile abstract instructions' }
