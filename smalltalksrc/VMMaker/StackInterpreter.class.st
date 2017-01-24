@@ -4971,26 +4971,23 @@ StackInterpreter >> defaultNumStackPages [
 { #category : #'debug support' }
 StackInterpreter >> detailedSymbolicMethod: aMethod [
 	<doNotGenerate>
-	 self transcript
-		ensureCr;
-		nextPutAll:
-			((String streamContents:
-				[:ts| | prim proxy |
-				(prim := self primitiveIndexOf: aMethod) > 0 ifTrue:
-					[ts nextPutAll: '<primitive: '; print: prim; nextPut: $>.
-					(self isQuickPrimitiveIndex: prim) ifTrue:
-						[ts nextPutAll: ' quick method'; cr; flush.
-						 ^self].
-					ts cr].
-				proxy := VMCompiledMethodProxy new
-								for: aMethod
-								coInterpreter: self
-								objectMemory: objectMemory.
-				(DetailedInstructionPrinter on: proxy)
-					stackHeightComputer: (StackDepthFinder on: proxy);
-					indent: 0;
-					printInstructionsOn: ts]) copyReplaceAll: 'a VMObjectProxy for ' with: '');
-		flush
+	| ts prim proxy |
+	(ts := self transcript) ensureCr.
+	(prim := self primitiveIndexOf: aMethod) > 0 ifTrue:
+		[ts nextPutAll: '<primitive: '; print: prim; nextPut: $>.
+		(self isQuickPrimitiveIndex: prim) ifTrue:
+			[ts nextPutAll: ' quick method'; cr; flush.
+			 ^self].
+		ts cr].
+	proxy := VMCompiledMethodProxy new
+					for: aMethod
+					coInterpreter: self
+					objectMemory: objectMemory.
+	(DetailedInstructionPrinter on: proxy)
+		stackHeightComputer: (StackDepthFinder on: proxy);
+		indent: 0;
+		printInstructionsOn: ts.
+	ts flush
 ]
 
 { #category : #'send bytecodes' }
@@ -19437,9 +19434,9 @@ StackInterpreter >> shortPrint: oop [
 			[^(objectMemory characterValueOf: oop) < 256
 				ifTrue:
 					['=$', (objectMemory characterValueOf: oop) printString,
-					' ($', (String with: (Character value: (objectMemory characterValueOf: oop))), ')']
+					' (', (String with: (Character value: (objectMemory characterValueOf: oop))), ')']
 				ifFalse:
-					['=$', (objectMemory characterValueOf: oop) printString, '($???)']].
+					['=$', (objectMemory characterValueOf: oop) printString, '(???)']].
 		(objectMemory isIntegerObject: oop) ifTrue:
 			[^'=', (objectMemory integerValueOf: oop) printString,
 			' (', (objectMemory integerValueOf: oop) hex, ')'].
@@ -20510,25 +20507,22 @@ StackInterpreter >> superclassSend [
 { #category : #'debug support' }
 StackInterpreter >> symbolicMethod: aMethod [
 	<doNotGenerate>
-	 self transcript
-		ensureCr;
-		nextPutAll:
-			((String streamContents:
-				[:ts| | prim |
-				(prim := self primitiveIndexOf: aMethod) > 0 ifTrue:
-					[ts nextPutAll: '<primitive: '; print: prim; nextPut: $>.
-					(self isQuickPrimitiveIndex: prim) ifTrue:
-						[ts nextPutAll: ' quick method'; cr; flush.
-						 ^self].
-					ts cr].
-				(InstructionPrinter
-						on: (VMCompiledMethodProxy new
-								for: aMethod
-								coInterpreter: self
-								objectMemory: objectMemory))
-					indent: 0;
-					printInstructionsOn: ts]) copyReplaceAll: 'a VMObjectProxy for ' with: '');
-		flush
+	| ts prim |
+	(ts := self transcript) ensureCr.
+	(prim := self primitiveIndexOf: aMethod) > 0 ifTrue:
+		[ts nextPutAll: '<primitive: '; print: prim; nextPut: $>.
+		(self isQuickPrimitiveIndex: prim) ifTrue:
+			[ts nextPutAll: ' quick method'; cr; flush.
+			 ^self].
+		ts cr].
+	(InstructionPrinter
+			on: (VMCompiledMethodProxy new
+					for: aMethod
+					coInterpreter: self
+					objectMemory: objectMemory))
+		indent: 0;
+		printInstructionsOn: ts.
+	ts flush
 ]
 
 { #category : #'process primitive support' }
