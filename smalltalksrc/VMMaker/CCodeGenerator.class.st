@@ -4864,7 +4864,8 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 				[#ifTrue:]				->	[self typeForConditional: sendNode in: aTMethod].
 				[#ifFalse:]				->	[self typeForConditional: sendNode in: aTMethod].
 				[#and:]					->	[#sqInt].
-				[#or:]					->	[#sqInt] }
+				[#or:]					->	[#sqInt].
+				[#caseOf:]				->	[self typeFor: sendNode args first in: aTMethod] }
 				otherwise: "If there /is/ a method for sel but its return type is as yet unknown it /mustn't/ be defaulted,
 							since on a subsequent pass its type may be computable.  Only default unbound selectors."
 					[methodOrNil ifNotNil: [nil] ifNil: [typeIfNil]]]
