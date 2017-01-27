@@ -5495,8 +5495,7 @@ SpurMemoryManager >> hashBitsOf: objOop [
 			self assert: (coInterpreter addressCouldBeClassObj: objOop) not
 		  but instance-specific behaviors that are instances of themselves may
 		  fail this test."
-		 hash := self newObjectHash bitAnd: self identityHashHalfWordMask.
-		 self setHashBitsOf: objOop to: hash].
+		 hash := self newHashBitsOf: objOop].
 	^hash
 ]
 
@@ -8254,6 +8253,14 @@ SpurMemoryManager >> naiveSwapHeaders: obj1 and: obj2 copyHashFlag: copyHashFlag
 { #category : #accessing }
 SpurMemoryManager >> needGCFlag [
 	^needGCFlag
+]
+
+{ #category : #'header access' }
+SpurMemoryManager >> newHashBitsOf: objOop [
+	| hash |
+	hash := self newObjectHash bitAnd: self identityHashHalfWordMask.
+	self setHashBitsOf: objOop to: hash.
+	^hash
 ]
 
 { #category : #accessing }
