@@ -1623,7 +1623,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory storePointerUnchecked: 61	ofObject: result withValue: self getCodeCompactionCount.
 		objectMemory storePointerUnchecked: 62	ofObject: result withValue: self getCodeCompactionMSecs.
 		objectMemory storePointerUnchecked: 63	ofObject: result withValue: self getCogMethodCount.
-		objectMemory storePointerUnchecked: 64	ofObject: result withValue: (objectMemory integerObjectOf: self getCogVMFeatureFlags).
+		objectMemory storePointerUnchecked: 64	ofObject: result withValue: self getCogVMFeatureFlags.
 		objectMemory storePointerUnchecked: 65	ofObject: result withValue: (objectMemory integerObjectOf: self stackPageByteSize).
 		objectMemory hasSpurMemoryManagerAPI ifTrue:
 			[objectMemory
@@ -1717,7 +1717,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg = 62	ifTrue: [result := self getCodeCompactionCount].
 		arg = 63	ifTrue: [result := self getCodeCompactionMSecs].
 		arg = 64	ifTrue: [result := self getCogMethodCount].
-		arg = 65	ifTrue: [result := objectMemory integerObjectOf: self getCogVMFeatureFlags].
+		arg = 65	ifTrue: [result := self getCogVMFeatureFlags].
 		arg = 66	ifTrue: [result := objectMemory integerObjectOf: self stackPageByteSize].
 		(arg = 67
 		 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:
