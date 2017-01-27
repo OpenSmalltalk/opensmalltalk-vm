@@ -432,7 +432,7 @@ SpurSegmentManager >> notePinned: objOop [
 		ifTrue:
 			[manager setIsMarkedOf: objOop to: true]
 		ifFalse:
-			[[(segments at: sweepIndex) segLimit < objOop] whileTrue:
+			[[self oop: (segments at: sweepIndex) segLimit isLessThan: objOop] whileTrue:
 				[sweepIndex := sweepIndex + 1].
 			 (segments at: sweepIndex) containsPinned: true]
 ]
