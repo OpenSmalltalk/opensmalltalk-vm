@@ -234,6 +234,11 @@ CogObjectRepresentationForSpur >> canPinObjects [
 ]
 
 { #category : #'debug support' }
+CogObjectRepresentationForSpur >> checkValidDerivedObjectReference: bodyAddress [
+	^(objectMemory heapMapAtWord: (self pointerForOop: bodyAddress - objectMemory baseHeaderSize)) ~= 0
+]
+
+{ #category : #'debug support' }
 CogObjectRepresentationForSpur >> checkValidOopReference: anOop [
 	^(objectMemory isImmediate: anOop)
 	   or: [(objectMemory heapMapAtWord: (self pointerForOop: anOop)) ~= 0]
@@ -242,6 +247,11 @@ CogObjectRepresentationForSpur >> checkValidOopReference: anOop [
 { #category : #'in-line cacheing' }
 CogObjectRepresentationForSpur >> classForInlineCacheTag: classIndex [
 	^objectMemory classOrNilAtIndex: classIndex
+]
+
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSpur >> couldBeDerivedObject: bodyAddress [
+	^self oop: bodyAddress - objectMemory baseHeaderSize isGreaterThanOrEqualTo: objectMemory startOfMemory
 ]
 
 { #category : #'garbage collection' }
@@ -1962,6 +1972,7 @@ CogObjectRepresentationForSpur >> markIfIRC: maybeIRCs [
 	 receiver caches for a method.  If so, map it back to an oop and mark it."
 	<var: #maybeIRCs type: #usqInt>
 	<option: #NewspeakVM>
+	<inline: true>
 	(self oop: maybeIRCs isGreaterThan: objectMemory nilObject) ifTrue:
 		[objectMemory markAndTrace: maybeIRCs - objectMemory baseHeaderSize]
 ]
