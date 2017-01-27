@@ -342,7 +342,7 @@ SpurPlanningCompactor >> forwardMobileObject: o to: toFinger savedFirstFieldPtr:
 				withValue: ((manager hasOverflowHeader: o)
 								ifTrue: [toFinger + manager baseHeaderSize]
 								ifFalse: [toFinger]).
-	self cCode: '' inSmalltalk: [relocationMap at: o put: savedFirstFieldPtr]
+	self cCode: '' inSmalltalk: [relocationMap ifNotNil: [:rm| rm at: o put: savedFirstFieldPtr]]
 ]
 
 { #category : #private }
@@ -414,8 +414,7 @@ SpurPlanningCompactor >> initializeCompaction [
 		resetFreeListHeads;
 		totalFreeOldSpace: 0;
 		beginSlidingCompaction.
-	savedFirstFieldsSpace top: savedFirstFieldsSpace start - manager bytesPerOop.
-	self cCode: '' inSmalltalk: [relocationMap := Dictionary new]
+	savedFirstFieldsSpace top: savedFirstFieldsSpace start - manager bytesPerOop
 ]
 
 { #category : #compaction }
@@ -565,6 +564,11 @@ SpurPlanningCompactor >> planCompactSavingForwarders [
 						 ^self noMobileObjectsAfter: o]]]].
 	savedFirstFieldsSpace top: top - manager bytesPerOop.
 	^true
+]
+
+{ #category : #compaction }
+SpurPlanningCompactor >> recordMovements [
+	relocationMap := Dictionary new
 ]
 
 { #category : #compaction }
