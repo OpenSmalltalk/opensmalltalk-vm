@@ -925,25 +925,31 @@ VMClass >> malloc: size [
 ]
 
 { #category : #'C library simulation' }
-VMClass >> mem: aString cp: bString y: n [
+VMClass >> mem: dString cp: sString y: bytes [
 	<doNotGenerate>
-	"implementation of memcpy(3)"
-	aString isString
+	"implementation of memcpy(3). N.B. If ranges overlap, must use memmove."
+	(dString isString or: [sString isString]) ifFalse:
+		[| destAddress sourceAddress |
+		 destAddress := dString asInteger.
+		 sourceAddress := sString asInteger.
+		 self deny: ((destAddress <= sourceAddress and: [destAddress + bytes > sourceAddress])
+					or: [sourceAddress <= destAddress and: [sourceAddress + bytes > destAddress]])].
+	dString isString
 		ifTrue:
-			[1 to: n do:
+			[1 to: bytes do:
 				[:i| | v |
-				v := bString isString
-						ifTrue: [bString at: i]
-						ifFalse: [Character value: (self byteAt: bString + i - 1)].
-				aString at: i put: v]]
+				v := sString isString
+						ifTrue: [sString at: i]
+						ifFalse: [Character value: (self byteAt: sString + i - 1)].
+				dString at: i put: v]]
 		ifFalse:
-			[1 to: n do:
+			[1 to: bytes do:
 				[:i| | v |
-				v := bString isString
-						ifTrue: [(bString at: i) asInteger]
-						ifFalse: [self byteAt: bString + i - 1].
-				self byteAt: aString + i - 1 put: v]].
-	^aString
+				v := sString isString
+						ifTrue: [(sString at: i) asInteger]
+						ifFalse: [self byteAt: sString + i - 1].
+				self byteAt: dString + i - 1 put: v]].
+	^dString
 ]
 
 { #category : #'C library simulation' }

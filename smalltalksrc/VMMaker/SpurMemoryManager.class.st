@@ -1294,7 +1294,7 @@ SpurMemoryManager >> adjustAllOopsBy: bytesToShift [
 				ifFalse:
 					[classIndex = self isFreeObjectClassIndexPun ifTrue:
 						[self swizzleFieldsOfFreeChunk: obj]].
-			 obj := self objectAfter: obj]]
+			 obj := self objectAfter: obj limit: endOfMemory]]
 ]
 
 { #category : #'object enumeration' }
@@ -5174,8 +5174,8 @@ SpurMemoryManager >> freeListHeadsEmpty [
 
 { #category : #'free space' }
 SpurMemoryManager >> freeListsObj [
-	self assert: (self firstIndexableField: (self objectAfter: trueObj)) = freeLists.
-	^self objectAfter: trueObj
+	self assert: (self firstIndexableField: (self oldSpaceObjectAfter: trueObj)) = freeLists.
+	^self oldSpaceObjectAfter: trueObj
 ]
 
 { #category : #'free space' }
@@ -5965,10 +5965,10 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	 conditional branch code as a result).  In addition, Spur places the free lists and
 	 class table root page immediately following them."
 	self assert: nilObj = oldSpaceStart.
-	self assert: falseObj = (self objectAfter: nilObj).
-	self assert: trueObj = (self objectAfter: falseObj).
-	freeListObj := self objectAfter: trueObj.
-	self setHiddenRootsObj: (self objectAfter: freeListObj).
+	self assert: falseObj = (self oldSpaceObjectAfter: nilObj).
+	self assert: trueObj = (self oldSpaceObjectAfter: falseObj).
+	freeListObj := self oldSpaceObjectAfter: trueObj.
+	self setHiddenRootsObj: (self oldSpaceObjectAfter: freeListObj).
 	markStack := self swizzleObjStackAt: MarkStackRootIndex.
 	weaklingStack := self swizzleObjStackAt: WeaklingStackRootIndex.
 	mournQueue := self swizzleObjStackAt: MournQueueRootIndex.
@@ -8117,8 +8117,10 @@ SpurMemoryManager >> maybeSplObj: index [
 
 { #category : #simulation }
 SpurMemoryManager >> mem: destAddress cp: sourceAddress y: bytes [
-	"For SpurGenerationScavenger>>copyToFutureSpace:bytes:"
+	"For SpurGenerationScavenger>>copyToFutureSpace:bytes:. N.B. If ranges overlap, must use memmove."
 	<doNotGenerate>
+	self deny: ((destAddress <= sourceAddress and: [destAddress + bytes > sourceAddress])
+				or: [sourceAddress <= destAddress and: [sourceAddress + bytes > destAddress]]).
 	^self mem: destAddress mo: sourceAddress ve: bytes
 ]
 
@@ -9051,6 +9053,18 @@ SpurMemoryManager >> oldRawNumSlotsOf: objOop [
 	^self subclassResponsibility
 ]
 
+{ #category : #'object enumeration' }
+SpurMemoryManager >> oldSpaceObjectAfter: objOop [
+	<api>
+	"Object parsing.
+	1. all objects have at least a word following the header, for a forwarding pointer.
+	2. objects with an overflow size have a preceeing word with a saturated slotSize.  If the word following
+	    an object doesn't have a saturated size field it must be a single-header object.  If the word following
+	   does have a saturated slotSize it must be the overflow size word."
+	<inline: false>
+	^self objectAfter: objOop limit: endOfMemory
+]
+
 { #category : #accessing }
 SpurMemoryManager >> oldSpaceSize [
 	^segmentManager totalBytesInSegments
@@ -9764,6 +9778,16 @@ SpurMemoryManager >> printOopsFrom: startAddress to: endAddress [
 	[self oop: oop isLessThan: limit] whileTrue:
 		[self printEntity: oop.
 		 oop := self objectAfter: oop]
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> printOopsSuchThat: function [
+	<api>
+	<var: #function declareC: 'sqInt (*function)(sqInt)'>
+	self allHeapEntitiesDo:
+		[:o|
+		(self perform: function with: o) ifTrue:
+			[self printEntity: o]]
 ]
 
 { #category : #'debug printing' }
@@ -11001,6 +11025,7 @@ SpurMemoryManager >> startOfObject: objOop [
 	"Answer the start of objOop, which is either the address of the overflow
 	 size word, or objOop itself, depending on the size of the object.  This may
 	 be applied to any kind of object, normal, forwarders or free chunks."
+	<returnTypeC: #usqInt>
 	^(self hasOverflowHeader: objOop)
 		ifTrue: [objOop - self baseHeaderSize]
 		ifFalse: [objOop]
@@ -11011,6 +11036,7 @@ SpurMemoryManager >> startOfObject: objOop given: rawNumSlots [
 	"Answer the start of objOop, which is either the address of the overflow
 	 size word, or objOop itself, depending on the size of the object.  This may
 	 be applied to any kind of object, normal, forwarders or free chunks."
+	<returnTypeC: #usqInt>
 	^(self objectWithRawSlotsHasOverflowHeader: rawNumSlots)
 		ifTrue: [objOop - self baseHeaderSize]
 		ifFalse: [objOop]
