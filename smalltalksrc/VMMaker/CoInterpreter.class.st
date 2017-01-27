@@ -1741,6 +1741,15 @@ CoInterpreter >> ceNewArraySlotSize: slotSize [
 ]
 
 { #category : #trampolines }
+CoInterpreter >> ceNewHashOf: anObject [
+	<api>
+	<option: #SistaVM>
+	"We know anObject has not a hash yet (or this trampoline would not be called.
+	 Sets the hash, then answers it as a smallinteger"
+	^ objectMemory integerObjectOf: (objectMemory newHashBitsOf: anObject)
+]
+
+{ #category : #trampolines }
 CoInterpreter >> ceNonLocalReturn: returnValue [
 	<api>
 	| closure home unwindContextOrNilOrZero ourContext frameToReturnTo contextToReturnTo theFP callerFP newPage |

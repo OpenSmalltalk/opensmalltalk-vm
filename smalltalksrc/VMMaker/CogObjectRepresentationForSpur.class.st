@@ -10,7 +10,8 @@ Class {
 		'ceLargeActiveContextInBlockTrampoline',
 		'ceLargeActiveContextInFullBlockTrampoline',
 		'ceStoreCheckContextReceiverTrampoline',
-		'ceStoreTrampolines'
+		'ceStoreTrampolines',
+		'ceNewHashTrampoline'
 	],
 	#classVars : [
 		'CheckRememberedInTrampoline',
@@ -65,10 +66,13 @@ CogObjectRepresentationForSpur class >> numTrampolines [
 	 + (SistaV1BytecodeSet
 		ifTrue: [8] "(small,large)x(method,block,fullBlock) context creation,
 					 ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline"
-		ifFalse: [6] "(small,large)x(method,block) context creation,
+		ifFalse: [6] "(small,large)x(method,block) context creation, 
 					 ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline")
 	 + ((initializationOptions at: #IMMUTABILITY ifAbsent: [false])
 		ifTrue: [NumStoreTrampolines]
+		ifFalse: [0])
+	 + ((initializationOptions at: #SistaVM ifAbsent: [false])
+		ifTrue: [1] "newHash"
 		ifFalse: [0])
 ]
 
@@ -98,6 +102,12 @@ CogObjectRepresentationForSpur >> branchIf: reg instanceOfBehavior: classObj tar
 	<var: #targetFixUp type: #'AbstractInstruction *'>
 	<var: #jmp type: #'AbstractInstruction *'>
 	classIndex := objectMemory classTagForClass: classObj.
+	classIndex = (objectMemory fetchClassTagOf: objectMemory falseObject)
+		ifTrue: [ self branchIf: reg isOop: objectMemory falseObject target: targetFixUp ].
+	classIndex = (objectMemory fetchClassTagOf: objectMemory trueObject)
+		ifTrue: [ self branchIf: reg isOop: objectMemory trueObject target: targetFixUp ].
+	classIndex = (objectMemory fetchClassTagOf: objectMemory nilObject)
+		ifTrue: [ self branchIf: reg isOop: objectMemory nilObject target: targetFixUp ].
 	(objectMemory isImmediateClass: classObj)
 		ifTrue:
 			[self branchIf: reg hasImmediateTag: classIndex target: targetFixUp ]
@@ -139,6 +149,24 @@ CogObjectRepresentationForSpur >> branchIf: reg instanceOfBehaviors: arrayObj ta
 ]
 
 { #category : #'sista support' }
+CogObjectRepresentationForSpur >> branchIf: reg isNotOop:  oop target: targetFixup [
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	<inline: true>
+	cogit CmpCq: oop R: reg.
+	cogit JumpNonZero: targetFixup.
+	^ 0
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> branchIf: reg isOop:  oop target: targetFixup [
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	<inline: true>
+	cogit CmpCq: oop R: reg.
+	cogit JumpZero: targetFixup.
+	^ 0
+]
+
+{ #category : #'sista support' }
 CogObjectRepresentationForSpur >> branchIf: reg notInstanceOfBehavior: classObj target: targetFixUp [
 	"Generate a branch if reg is an instance of classObj, otherwise fall-
 	 through. Cannot change the value of reg (may be used afterwards)."
@@ -146,6 +174,12 @@ CogObjectRepresentationForSpur >> branchIf: reg notInstanceOfBehavior: classObj 
 	<inline: true>
 	<var: #targetFixUp type: #'AbstractInstruction *'>
 	classIndex := objectMemory classTagForClass: classObj.
+	classIndex = (objectMemory fetchClassTagOf: objectMemory falseObject)
+		ifTrue: [ self branchIf: reg isNotOop: objectMemory falseObject target: targetFixUp ].
+	classIndex = (objectMemory fetchClassTagOf: objectMemory trueObject)
+		ifTrue: [ self branchIf: reg isNotOop:  objectMemory trueObject target: targetFixUp ].
+	classIndex = (objectMemory fetchClassTagOf: objectMemory nilObject)
+		ifTrue: [ self branchIf: reg isNotOop:  objectMemory nilObject target: targetFixUp ].
 	(objectMemory isImmediateClass: classObj)
 		ifTrue:
 			[self branchIf: reg hasNotImmediateTag: classIndex target: targetFixUp ]
@@ -840,6 +874,32 @@ CogObjectRepresentationForSpur >> genGetFormatOf: sourceReg into: destReg leastS
 	^0
 ]
 
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> genGetIdentityHash: rcvrReg resultReg: resultReg [
+	<var: #jumpSet type: #'AbstractInstruction *'>
+	| jumpSet |
+	"ReceiverResultReg is required for the trampoline. We force the allocation,
+	 and we have two path to avoid conflicts in ReceiverResultReg."
+	cogit voidReceiverResultRegContainsSelf. 
+	resultReg = ReceiverResultReg 
+		ifTrue: 
+			[cogit ssTop popToReg: rcvrReg.
+			 self genGetHashFieldNonImmOf: rcvrReg asSmallIntegerInto: resultReg.
+			 cogit CmpCq: ConstZero R: resultReg.
+			 jumpSet := cogit JumpNonZero: 0.
+			 cogit MoveR: rcvrReg R: resultReg.
+			 cogit CallRT: ceNewHashTrampoline.
+			 cogit annotateBytecode: cogit Label]
+		ifFalse: 
+			[cogit ssTop popToReg: ReceiverResultReg.
+		 	 self genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: resultReg.
+			 cogit CmpCq: ConstZero R: resultReg.
+			 jumpSet := cogit JumpNonZero: 0.
+			 cogit CallRT: ceNewHashTrampoline.
+			 cogit annotateBytecode: (cogit MoveR: ReceiverResultReg R: resultReg)].
+	jumpSet jmpTarget: cogit Label.
+]
+
 { #category : #'bytecode generator support' }
 CogObjectRepresentationForSpur >> genGetInstanceOf: classObj into: destReg initializingIf: initializeInstance [
 	"Create an instance of classObj and assign it to destReg, initializing the instance
@@ -1254,6 +1314,26 @@ CogObjectRepresentationForSpur >> genNewArrayOfSize: size initialized: initializ
 	cogit CallRT: ceScheduleScavengeTrampoline.
 	skip jmpTarget: cogit Label.
 	^0
+]
+
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> genNewHashTrampoline [
+	"In non sista VM this is used only from the identityHash primitive, hence only the result of the trampoline, the hash, should be in ReceiverResultReg, other registers can just be ignored.
+	In the sista VM, the inlined hash operation requires registers to be saved"
+	<inline: true>
+	<option: #SistaVM>
+	^ cogit
+		genTrampolineFor: 1
+		called: 'newHashTrampoline'
+		numArgs: 1
+		arg: ReceiverResultReg
+		arg: nil
+		arg: nil
+		arg: nil
+		regsToSave: (CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
+		pushLinkReg: true
+		resultReg: ReceiverResultReg
+		appendOpcodes: true
 ]
 
 { #category : #'bytecode generator support' }
@@ -1743,6 +1823,7 @@ CogObjectRepresentationForSpur >> generateObjectRepresentationTrampolines [
 															numArgs: instVarIndex 
 															limit: NumStoreTrampolines - 2) 
 							instVarIndex: instVarIndex)]].
+	SistaVM ifTrue: [ceNewHashTrampoline := self genNewHashTrampoline].
 	ceStoreCheckTrampoline := self genStoreCheckTrampoline.
 	ceStoreCheckContextReceiverTrampoline := self genStoreCheckContextReceiverTrampoline.
 	ceScheduleScavengeTrampoline := cogit
