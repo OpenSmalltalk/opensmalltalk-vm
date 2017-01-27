@@ -2919,6 +2919,15 @@ Cogit >> allMachineCodeObjectReferencesValid [
 								 performUntil: #checkIfValidOopRefAndTarget:pc:cogMethod:
 								 arg: cogMethod asInteger) = 0)) ifFalse:
 				[ok := false]].
+		(cogMethod cmType = CMMethod
+		 and: [(NewspeakVM or: [SistaVM])
+		 and: [objectRepresentation canPinObjects]]) ifTrue:
+			[(SistaVM and: [cogMethod counters ~= 0]) ifTrue:
+				[(self asserta: (objectRepresentation checkValidDerivedObjectReference: cogMethod counters)) ifFalse:
+					[ok := false]].
+			 (NewspeakVM and: [cogMethod nextMethodOrIRCs ~= 0]) ifTrue:
+				[(self asserta: (objectRepresentation checkValidDerivedObjectReference: cogMethod nextMethodOrIRCs)) ifFalse:
+					[ok := false]]].
 		cogMethod cmType = CMClosedPIC ifTrue:
 			[(self asserta: (self noTargetsFreeInClosedPIC: cogMethod)) ifFalse:
 				[ok := false]].
@@ -4477,8 +4486,18 @@ Cogit >> cogMethodDoesntLookKosher: cogMethod [
 		 (objectRepresentation couldBeObject: cogMethod methodObject) ifFalse:
 			[^12].
 		 (cogMethod stackCheckOffset > 0
-		 and: [cogMethod stackCheckOffset < cmNoCheckEntryOffset]) ifTrue:
+		  and: [cogMethod stackCheckOffset < cmNoCheckEntryOffset]) ifTrue:
 			[^13].
+		 (SistaVM
+		  and: [objectRepresentation canPinObjects
+		  and: [cogMethod counters ~= 0]]) ifTrue:
+			[(objectRepresentation couldBeDerivedObject: cogMethod counters) ifFalse:
+				[^14]].
+		 (NewspeakVM
+		  and: [objectRepresentation canPinObjects
+		  and: [cogMethod nextMethodOrIRCs ~= 0]]) ifTrue:
+			[(objectRepresentation couldBeDerivedObject: cogMethod nextMethodOrIRCs) ifFalse:
+				[^15]].
 		 ^0].
 
 	cogMethod cmType = CMOpenPIC ifTrue:
