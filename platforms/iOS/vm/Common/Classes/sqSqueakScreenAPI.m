@@ -62,7 +62,7 @@ sqSqueakNullScreenAndWindow *getMainWindowDelegate() {
 double ioScreenScaleFactor(void) {
 	//API Documented
 		 
-	return 1.0;
+	return [getMainWindowDelegate() ioScreenScaleFactor];
 }
 
 sqInt ioScreenSize(void) {

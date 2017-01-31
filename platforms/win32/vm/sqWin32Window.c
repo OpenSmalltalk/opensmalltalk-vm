@@ -1730,9 +1730,19 @@ ioDrainEventQueue(void)
 }
 #endif /* NewspeakVM */
 
+
 double ioScreenScaleFactor(void)
 {
-    return 1.0;
+  const double BASE_DPI = 96.0;
+  double factor = 1.0;
+
+  HDC dc = GetDC(stWindow);
+  if (dc) {
+    double physicalDpi = (double) GetDeviceCaps(dc, LOGPIXELSY);
+    factor = physicalDpi / BASE_DPI;
+    ReleaseDC(stWindow, dc);
+  }
+  return factor;
 }
 
 /* returns the size of the Squeak window */
