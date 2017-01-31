@@ -33,7 +33,7 @@ if test \! -f SqueakV50.sources ; then
 		if test \! -f SqueakV50.sources.gz; then
 			geturl http://files.squeak.org/sources_files/SqueakV50.sources.gz
 		fi
-		gunzip SqueakV50.sources.zip
+		gunzip SqueakV50.sources.gz
 	fi
 fi
 
