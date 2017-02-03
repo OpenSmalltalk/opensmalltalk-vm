@@ -12,10 +12,12 @@ if false; then
 	fi
 elif false; then
 	# New way; download the latest trunk from squeak.org/downloads
-	geturl http://build.squeak.org/job/Trunk/default/lastSuccessfulBuild/artifact/target/TrunkImage.zip
-	unzip -ou TrunkImage.zip
-	mv SpurTrunkImage.changes trunk50.changes
-	mv SpurTrunkImage.image trunk50.image
+	geturl http://files.squeak.org/base/Squeak-trunk/versions.txt
+	source versions.txt
+	geturl http://files.squeak.org/base/Squeak-trunk/base.zip
+	unzip -ou base.zip
+	mv "Squeak${VERSION_BASE_ZIP}.changes" trunk50.changes
+	mv "Squeak${VERSION_BASE_ZIP}.image" trunk50.image
 else
 	# New new way; download from http://files.squeak.org/6.0alpha/Squeak6.0alpha-16548-32bit/
 	geturl http://files.squeak.org/6.0alpha/Squeak6.0alpha-16548-32bit/Squeak6.0alpha-16548-32bit.zip
@@ -28,10 +30,10 @@ if test \! -f SqueakV50.sources ; then
 	if test -f ../sources/SqueakV50.sources; then
 		ln ../sources/SqueakV50.sources .
 	else
-		if test \! -f SqueakV50.sources.zip; then
-			geturl http://ftp.squeak.org/5.0/SqueakV50.sources.zip
+		if test \! -f SqueakV50.sources.gz; then
+			geturl http://files.squeak.org/sources_files/SqueakV50.sources.gz
 		fi
-		unzip SqueakV50.sources.zip
+		gunzip SqueakV50.sources.gz
 	fi
 fi
 
