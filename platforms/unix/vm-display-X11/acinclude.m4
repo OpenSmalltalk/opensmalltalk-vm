@@ -46,19 +46,19 @@ if test "$have_x" = "yes"; then
     X_INCLUDES="-I${x_includes}"
   fi
   AC_CHECK_LIB(X11, XOpenDisplay, [
-    AC_DEFINE(USE_X11, [1])
-    AC_DEFINE_UNQUOTED(VM_X11DIR, "${x_libraries}")
+    AC_DEFINE(USE_X11, [1], [Use X11])
+    AC_DEFINE_UNQUOTED(VM_X11DIR, "${x_libraries}", [X11 libraries])
     LIBS="${LIBS} -lX11"
     AC_CHECK_LIB(Xext, XShmAttach)
     if test "$have_gl" = ""; then have_gl="no"; fi
 	if test "$have_gl" = "yes"; then
 		AC_CHECK_HEADERS(GL/gl.h, [
 		  have_gl=yes
-		  AC_DEFINE(USE_X11_GLX, [1])
+		  AC_DEFINE(USE_X11_GLX, [1], [Use X11 GLX])
 		  AC_CHECK_LIB(GL,glIsEnabled)
 		])
 	else
-		AC_DEFINE(USE_X11_GLX, 0)
+		AC_DEFINE(USE_X11_GLX, 0, [Use X11 GLX])
 	fi
   ],[
     AC_PLUGIN_DISABLE

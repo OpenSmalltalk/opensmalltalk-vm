@@ -42,6 +42,6 @@ else
 fi
 
 AC_CHECK_FUNC(nanosleep, [
-  AC_DEFINE(HAVE_NANOSLEEP, 1)
+  AC_DEFINE(HAVE_NANOSLEEP, 1, [Is nanosleep available])
   AC_SUBST(HAVE_NANOSLEEP)
 ])
