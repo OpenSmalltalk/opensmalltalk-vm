@@ -2,9 +2,11 @@
 # I execute configure for linux platforms. 
 # I am called in .travis.yml, script section
 
-set -e
+set -ex
 
 if [ "$TRAVIS_OS_NAME" != "linux" ]; then 
 	exit
 fi
-cd ../opensmalltalk-vm/platforms/unix/config/ && $CHROOT make configure
+
+cd ../opensmalltalk-vm/platforms/unix/config
+$CHROOT make configure
