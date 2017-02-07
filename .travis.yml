@@ -90,6 +90,8 @@ matrix:
 install:
 - ./.travis_install.sh
 script:
+- cd platforms/unix/config/ && make configure
+- cd ../../../
 - $CHROOT ./.travis_build.sh
 - ./.travis_test.sh
 after_success:

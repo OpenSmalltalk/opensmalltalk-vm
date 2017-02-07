@@ -117,7 +117,7 @@ AC_SUBST(blddir)
 
 SQ_VERSION=${SQ_MAJOR}.${SQ_MINOR}-${SQ_UPDATE}
 
-AC_DEFINE_UNQUOTED(SQ_VERSION, "${SQ_VERSION}")
+AC_DEFINE_UNQUOTED(SQ_VERSION, "${SQ_VERSION}", [Squeak version])
 
 AC_SUBST(SQ_MAJOR)
 AC_SUBST(SQ_MINOR)
@@ -126,7 +126,7 @@ AC_SUBST(SQ_VERSION)
 
 #VM_VERSION=${VM_MAJOR}.${VM_MINOR}-${VM_RELEASE}
 
-#AC_DEFINE_UNQUOTED(VM_VERSION, "${VM_VERSION}")
+#AC_DEFINE_UNQUOTED(VM_VERSION, "${VM_VERSION}", [VM version])
 
 #AC_SUBST(VM_MAJOR)
 #AC_SUBST(VM_MINOR)
@@ -144,7 +144,7 @@ AC_SUBST(imgdir)
 AC_SUBST(expanded_relative_imgdir)
 AC_SUBST(plgdir)
 
-AC_DEFINE(OS_TYPE, "unix")
+AC_DEFINE(OS_TYPE, "unix", [OS type])
 
 AC_CANONICAL_HOST
 
@@ -156,9 +156,9 @@ AC_SUBST(host_cpu)
 AC_SUBST(host_vendor)
 AC_SUBST(host_os)
 
-AC_DEFINE_UNQUOTED(VM_HOST, "$host")
-AC_DEFINE_UNQUOTED(VM_HOST_OS, "$host_os")
-AC_DEFINE_UNQUOTED(VM_HOST_CPU, "$host_cpu")
+AC_DEFINE_UNQUOTED(VM_HOST, "$host", [host])
+AC_DEFINE_UNQUOTED(VM_HOST_OS, "$host_os", [host os])
+AC_DEFINE_UNQUOTED(VM_HOST_CPU, "$host_cpu", [host cpu])
 
 AC_CANONICAL_TARGET
 
@@ -170,9 +170,9 @@ AC_SUBST(target_cpu)
 AC_SUBST(target_vendor)
 AC_SUBST(target_os)
 
-AC_DEFINE_UNQUOTED(VM_TARGET, "$target")
-AC_DEFINE_UNQUOTED(VM_TARGET_OS, "$target_os")
-AC_DEFINE_UNQUOTED(VM_TARGET_CPU, "$target_cpu")
+AC_DEFINE_UNQUOTED(VM_TARGET, "$target", [target])
+AC_DEFINE_UNQUOTED(VM_TARGET_OS, "$target_os", [target os])
+AC_DEFINE_UNQUOTED(VM_TARGET_CPU, "$target_cpu", [target cpu])
 
 echo
 echo "Configuring Squeak ${VM_VERSION} (${SQ_VERSION}) for ${host}"
@@ -238,7 +238,7 @@ AC_HEADER_TIME
 AC_HEADER_DIRENT
 
 if test -f "${vmmdir}/vm/interp.h"; then
-  AC_DEFINE(HAVE_INTERP_H, 1)
+  AC_DEFINE(HAVE_INTERP_H, 1, [Interpreter header file present])
 fi
 AC_SUBST(HAVE_INTERP_H)
 
@@ -258,7 +258,7 @@ AC_ARG_WITH(rfb,
   [have_rfb="$withval"],
   [have_rfb="no"])
 
-test $have_rfb = "yes" && AC_DEFINE(USE_RFB,[1])
+test $have_rfb = "yes" && AC_DEFINE(USE_RFB,[1], [Use RFB])
 
 # Checks for libraries.
 
@@ -283,11 +283,11 @@ AC_CHECK_LIB(pthread, pthread_create)
 #])
 
 AC_CHECK_FUNC(_dyld_present, [
-  AC_DEFINE(HAVE_DYLD,[1])
+  AC_DEFINE(HAVE_DYLD,[1], [dyld linker present])
 ],[
   AC_HAVE_HEADERS(dlfcn.h)
   AC_CHECK_FUNC(dlopen, [
-    AC_DEFINE(HAVE_LIBDL,[1])
+    AC_DEFINE(HAVE_LIBDL,[1], [dl linker present])
   ],[
     AC_CHECK_LIB(dl, dlopen, [
       LIBS="-ldl $LIBS"
@@ -319,7 +319,7 @@ AC_C_DOUBLE_ALIGNMENT
 
 case $host_os in
   darwin*)
-    AC_DEFINE(DARWIN,[1])
+    AC_DEFINE([DARWIN],[1], [Defined when building on Darwin])
 #    CFLAGS="-no-cpp-precomp $CFLAGS"
     with_npsqueak=no
     VM_APP_ICONS="${imgdir}/SqueakVM.icns"
@@ -361,7 +361,7 @@ else
 fi
 
 AC_SUBST(SQ_LIBDIR)
-AC_DEFINE_UNQUOTED(SQ_LIBDIR,["${SQ_LIBDIR}"])
+AC_DEFINE_UNQUOTED(SQ_LIBDIR,["${SQ_LIBDIR}"], [Squeak libdir])
 
 # Configure files
 

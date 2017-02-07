@@ -103,12 +103,12 @@ AC_DEFUN([AC_CHECK_INT64_T],[
     AC_MSG_ERROR([could not find a 64-bit integer type])
   fi
   SQUEAK_INT64_T="$ac_cv_int64_t"
-  AC_DEFINE_UNQUOTED(squeakInt64, $ac_cv_int64_t)])
+  AC_DEFINE_UNQUOTED(squeakInt64, $ac_cv_int64_t, [64bit signed integer])])
   
 
 AC_DEFUN([AC_NEED_SUNOS_H],
 [case "$host" in
-  *-sunos*)	AC_DEFINE(NEED_SUNOS_H, 1)
+  *-sunos*)	AC_DEFINE(NEED_SUNOS_H, 1, [building on SunOS])
 esac])
 
 
@@ -130,11 +130,11 @@ if test "$GCC" = yes; then
     ac_optflags="-O3 -funroll-loops -mcpu=750 -mno-fused-madd"
     ;;
   esac
-  AC_DEFINE(VM_BUILD_STRING, ["Unix built on "__DATE__ " "__TIME__" Compiler: "__VERSION__])
+  AC_DEFINE(VM_BUILD_STRING, ["Unix built on "__DATE__ " "__TIME__" Compiler: "__VERSION__], [build string])
 else
   ac_optflags="-O"
   ac_vm_build_date="`date`"
-  AC_DEFINE(VM_BUILD_STRING, ["Unix built on ${ac_vm_build_date}"])
+  AC_DEFINE(VM_BUILD_STRING, ["Unix built on ${ac_vm_build_date}"], [build string])
 fi
 if test "$ac_optflags" = "no"; then
   AC_MSG_RESULT([(none)])
@@ -172,38 +172,38 @@ AC_DEFUN([AC_CHECK_ATEXIT],
   AC_TRY_COMPILE([#include <stdlib.h>],[on_exit(0);], ac_cv_atexit="on_exit",
   ac_cv_atexit="no")))
 if test "$ac_cv_atexit" != "no"; then
-  AC_DEFINE_UNQUOTED(AT_EXIT, $ac_cv_atexit)
+  AC_DEFINE_UNQUOTED([AT_EXIT], [$ac_cv_atexit], [Is atexit present])
 fi])
 
 AC_DEFUN([AC_CHECK_SOCKLEN_T],
 [AC_CACHE_CHECK([for socklen_t in sys/socket.h], ac_cv_socklen_t,
   AC_TRY_COMPILE([#include <sys/socket.h>],[sizeof(socklen_t);],
     ac_cv_socklen_t="yes", ac_cv_socklen_t="no"))
-test "$ac_cv_socklen_t" != "yes" && AC_DEFINE(socklen_t, int)])
+test "$ac_cv_socklen_t" != "yes" && AC_DEFINE(socklen_t, int, [socklen size])])
 
 AC_DEFUN([AC_CHECK_TZSET],
 [AC_CACHE_CHECK([for tzset], ac_cv_tzset,
   AC_TRY_COMPILE([#include <time.h>],[tzet();],
     ac_cv_tzset="yes", ac_cv_tzset="no"))
-test "$ac_cv_tzset" != "no" && AC_DEFINE(HAVE_TZSET)])
+test "$ac_cv_tzset" != "no" && AC_DEFINE(HAVE_TZSET, [], [tzset available])])
 
 AC_DEFUN([AC_CHECK_GMTOFF],
 [AC_CACHE_CHECK([for gmtoff in struct tm], ac_cv_tm_gmtoff,
   AC_TRY_COMPILE([#include <time.h>],[struct tm tm; tm.tm_gmtoff;],
     ac_cv_tm_gmtoff="yes", ac_cv_tm_gmtoff="no"))
-test "$ac_cv_tm_gmtoff" != "no" && AC_DEFINE(HAVE_TM_GMTOFF)])
+test "$ac_cv_tm_gmtoff" != "no" && AC_DEFINE(HAVE_TM_GMTOFF, [], [tm_gmtoff present])])
 
 AC_DEFUN([AC_CHECK_TIMEZONE],
 [AC_CACHE_CHECK([for timezone and daylight variables], ac_cv_timezone,
   AC_TRY_COMPILE([extern long timezone; extern int daylight;],[timezone;daylight;],
     ac_cv_timezone="yes", ac_cv_timezone="no"))
-test "$ac_cv_timezone" != "no" && AC_DEFINE(HAVE_TIMEZONE)])
+test "$ac_cv_timezone" != "no" && AC_DEFINE(HAVE_TIMEZONE, [], [timezone present])])
 
 AC_DEFUN([AC_CHECK_GETHOSTNAME],
 [AC_CACHE_CHECK([for gethostname in unistd.h], ac_cv_gethostname_p,
   AC_TRY_COMPILE([#include <unistd.h>],[return (int)gethostname;],
     ac_cv_gethostname_p="yes", ac_cv_gethostname_p="no"))
-test "$ac_cv_gethostname_p" = "no" && AC_DEFINE(NEED_GETHOSTNAME_P)])
+test "$ac_cv_gethostname_p" = "no" && AC_DEFINE(NEED_GETHOSTNAME_P, [], [gethostname_p])])
 
 
 if test -x /bin/test; then
@@ -229,7 +229,7 @@ AC_DEFUN([AC_C_DOUBLE_ALIGNMENT],
   AC_TRY_RUN([f(int i){*(double *)i=*(double *)(i+4);}
               int main(){char b[[12]];f(b);return 0;}],
     ac_cv_double_align="yes", ac_cv_double_align="no"))
-test "$ac_cv_double_align" = "no" && AC_DEFINE(DOUBLE_WORD_ALIGNMENT)])
+test "$ac_cv_double_align" = "no" && AC_DEFINE(DOUBLE_WORD_ALIGNMENT, [], [Unaligned double access])])
 
 # this assumes that libtool has already been configured and built --
 # if not then err on the side of conservatism.
@@ -240,7 +240,7 @@ if test -x ./libtool &&
 then ac_cv_module_prefix="(none)";
 else ac_cv_module_prefix="lib"
 fi)
-AC_DEFINE_UNQUOTED(VM_MODULE_PREFIX,"$mkfrags_lib_prefix")
+AC_DEFINE_UNQUOTED(VM_MODULE_PREFIX,"$mkfrags_lib_prefix", [VM module prefix])
 test "$ac_cv_module_prefix" = lib && mkfrags_lib_prefix=lib])
 
 AC_DEFUN([AC_64BIT_ARCH],
