@@ -13,3 +13,9 @@ SpurPlanningCompactorTestsImageResource >> emptyVM [
 		[emptyVM := StackInterpreterSimulator newWithOptions: #(ObjectMemory Spur32BitMemoryManager
 																	  compactorClass SpurPlanningCompactor)]
 ]
+
+{ #category : #accessing }
+SpurPlanningCompactorTestsImageResource >> reset [
+	"self current reset"
+	emptyVM := nil
+]

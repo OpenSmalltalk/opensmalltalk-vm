@@ -1492,7 +1492,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		9	incremental GCs (SqueakV3) or scavenges (Spur) since startup (read-only)
 		10	total milliseconds in incremental GCs (SqueakV3) or scavenges (Spur) since startup (read-only)
 		11	tenures of surving objects since startup (read-only)
-		12-20 were specific to ikp's JITTER VM, now 12-18 are open for use
+		12-20 were specific to ikp's JITTER VM, now 12-17 are open for use
+		18 total milliseconds in compaction phase of full GC since start-up (Spur only)
 		19	scavenge threshold, the effective size of eden.  When eden fills to the threshold a scavenge is scheduled. Newer Spur VMs only.
 		20	utc microseconds at VM start-up (actually at time initialization, which precedes image load).
 		21	root table size (read-only)
@@ -1573,10 +1574,12 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 															ifFalse: [objectMemory statIncrGCUsecs]) + 500 // 1000).
 		objectMemory storePointerUnchecked: 10	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statTenures).
 		"JITTER VM info"
-		11 to: 17 do:
+		11 to: 18 do:
 			[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: ConstZero].
 		objectMemory hasSpurMemoryManagerAPI ifTrue:
-			[objectMemory storePointerUnchecked: 18	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory scavengeThresholdAsExtent)].
+			[objectMemory
+				storePointerUnchecked: 17	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statCompactionUsecs + 500 // 1000);
+				storePointerUnchecked: 18	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory scavengeThresholdAsExtent)].
 		objectMemory storePointer:				19	ofObject: result withValue: (objectMemory positive64BitIntegerFor: self ioUTCStartMicroseconds).
 		objectMemory storePointerUnchecked: 20	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory rootTableCount).
 		objectMemory storePointerUnchecked: 21	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statRootTableOverflows).
@@ -1664,7 +1667,10 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 																		ifTrue: [objectMemory statScavengeGCUsecs]
 																		ifFalse: [objectMemory statIncrGCUsecs]) + 500 // 1000].
 		arg = 11	ifTrue: [result := objectMemory integerObjectOf: objectMemory statTenures].
-		(arg between: 12 and: 18) ifTrue: [result := ConstZero]. "Was JITTER VM info"
+		(arg between: 12 and: 17) ifTrue: [result := ConstZero]. "Was JITTER VM info"
+		arg = 18	ifTrue: [result := objectMemory hasSpurMemoryManagerAPI
+										ifTrue: [objectMemory integerObjectOf: objectMemory statCompactionUsecs + 500 // 1000]
+										ifFalse: [ConstZero]].
 		arg = 19	ifTrue: [result := objectMemory hasSpurMemoryManagerAPI
 										ifTrue: [objectMemory integerObjectOf: objectMemory scavengeThresholdAsExtent]
 										ifFalse: [ConstZero]].

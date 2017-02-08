@@ -55,6 +55,14 @@ TInlineNode >> nodesDo: aBlock [
 ]
 
 { #category : #enumerating }
+TInlineNode >> nodesDo: aBlock parent: parent [
+	"Apply aBlock to all nodes in the receiver with each node's parent.
+	 N.B. This is assumed to be bottom-up, leaves first."
+	method parseTree nodesDo: aBlock parent: self.
+	aBlock value: self value: parent
+]
+
+{ #category : #enumerating }
 TInlineNode >> nodesDo: aBlock parent: parent unless: cautionaryBlock [
 
 	(cautionaryBlock value: self value: parent) ifTrue: [^self].

@@ -187,10 +187,13 @@ RegisterAllocatingCogit >> directionForMergeWith: mergeSimStack [
 ]
 
 { #category : #'bytecode generator support' }
-RegisterAllocatingCogit >> ensureFixupAt: targetIndex [
+RegisterAllocatingCogit >> ensureFixupAt: targetPC [
+	"Make sure there's a flagged fixup at the target pc in fixups.
+	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction.
+	 Override to enerate stack merging code if required."
 	| fixup |	
 	<var: #fixup type: #'BytecodeFixup *'>
-	fixup := self fixupAt: targetIndex.
+	fixup := self fixupAt:  targetPC - initialPC.
 	fixup needsFixup 
 		ifTrue:
 			[fixup mergeSimStack
@@ -198,17 +201,18 @@ RegisterAllocatingCogit >> ensureFixupAt: targetIndex [
 				ifNotNil: [self mergeCurrentSimStackWith: fixup]]
 		ifFalse: 
 			[self assert: fixup mergeSimStack isNil.
-			self moveVolatileSimStackEntriesToRegisters.
-			self setMergeSimStackOf: fixup].
-	^super ensureFixupAt: targetIndex
+			 self moveVolatileSimStackEntriesToRegisters.
+			 self setMergeSimStackOf: fixup].
+	^super ensureFixupAt: targetPC
 ]
 
 { #category : #'compile abstract instructions' }
-RegisterAllocatingCogit >> ensureNonMergeFixupAt: targetIndex [
-	"Make sure there's a flagged fixup at the targetIndex (pc relative to first pc) in fixups.
-	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction."
+RegisterAllocatingCogit >> ensureNonMergeFixupAt: targetPC [
+	"Make sure there's a flagged fixup at the target pc in fixups.
+	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction.
+	 Override to remember the simStack state at tyeh target, if required."
 	| fixup |
-	fixup := super ensureNonMergeFixupAt: targetIndex.
+	fixup := super ensureNonMergeFixupAt: targetPC.
 	fixup mergeSimStack ifNil: [self setMergeSimStackOf: fixup].
 	^fixup
 ]
@@ -347,10 +351,10 @@ RegisterAllocatingCogit >> genExtJumpIfNotInstanceOfBehaviorsOrPopBytecode [
 	 instead of the incorrect
 			... merge code ...
 			jump cond Ltarget"
-	(self mergeRequiredForJumpTo: bytecodePC + 3 + distance - initialPC) ifTrue:
+	(self mergeRequiredForJumpTo: bytecodePC + 3 + distance) ifTrue:
 		[self shouldBeImplemented].
 
-	targetFixUp := self cCoerceSimple: (self ensureFixupAt: bytecodePC + 3 + distance - initialPC) to: #'AbstractInstruction *'.
+	targetFixUp := self cCoerceSimple: (self ensureFixupAt: bytecodePC + 3 + distance) to: #'AbstractInstruction *'.
 		
 	(objectMemory isArrayNonImm: literal)
 		ifTrue: [objectRepresentation branchIf: reg notInstanceOfBehaviors: literal target: targetFixUp]
@@ -396,7 +400,8 @@ RegisterAllocatingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 	self genCmpArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
 	self ssPop: 2.
 
-	"For now just deny we're in the situation we have yet to implement ;-)"
+	"For now just deny we're in the situation we have yet to implement ;-)
+	 self printSimStack; printSimStack: (self fixupAt: postBranchPC - initialPC) mergeSimStack"
 	self deny: (self mergeRequiredForJumpTo: targetBytecodePC).
 	self deny: (self mergeRequiredForJumpTo: postBranchPC).
 
@@ -405,19 +410,19 @@ RegisterAllocatingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 	(self fixupAt: nextPC - initialPC) notAFixup
 		ifTrue: "The next instruction is dead.  we can skip it."
 			[deadCode := true.
-		 	 self ensureFixupAt: targetBytecodePC - initialPC.
-			 self ensureFixupAt: postBranchPC - initialPC]
+		 	 self ensureFixupAt: targetBytecodePC.
+			 self ensureFixupAt: postBranchPC]
 		ifFalse:
 			[self deny: deadCode]. "push dummy value below"
 
 	self assert: (unforwardArg or: [unforwardRcvr]).
 	orNot == branchDescriptor isBranchTrue "orNot is true for ~~"
 		ifFalse: "branchDescriptor is branchFalse"
-			[ fixup := (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
-			self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger ]
+			[ fixup := (self ensureNonMergeFixupAt: postBranchPC) asUnsignedInteger.
+			self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC) asUnsignedInteger ]
 		ifTrue:
-			[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-			self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ].
+			[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC) asUnsignedInteger.
+			self JumpZero: (self ensureNonMergeFixupAt: postBranchPC) asUnsignedInteger ].
 
 	deadCode ifFalse:
 		[self ssPushConstant: objectMemory trueObject]. "dummy value"
@@ -490,7 +495,7 @@ RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 		 desc constant = boolean
 			ifTrue:
 				[deadCode := true. "Can't fall through."
-				 fixup := self ensureFixupAt: eventualTarget - initialPC.
+				 fixup := self ensureFixupAt: eventualTarget.
 				 self annotateBytecode: (self Jump: fixup)]
 		 	ifFalse:
 				[self annotateBytecode: (self prevInstIsPCAnnotated
@@ -523,15 +528,15 @@ RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 							ifFalse: [objectMemory falseObject - objectMemory trueObject])
 				R: reg.
 			 noMustBeBoolean ifTrue: 
-				[self JumpZero: (self ensureFixupAt: eventualTarget - initialPC). "generates merge code"
+				[self JumpZero: (self ensureFixupAt: eventualTarget). "generates merge code"
 				 ok jmpTarget: (self annotateBytecode: self lastOpcode).
 				 ^0].
 			 mbb := self JumpNonZero: 0.
-			 self Jump: (self ensureFixupAt: eventualTarget - initialPC). "generates merge code"
+			 self Jump: (self ensureFixupAt: eventualTarget). "generates merge code"
 			 mbb jmpTarget: self Label]
 		ifFalse:
 			[self genSubConstant: boolean R: reg.
-			 self JumpZero: (self ensureFixupAt: eventualTarget - initialPC).
+			 self JumpZero: (self ensureFixupAt: eventualTarget).
 			 noMustBeBoolean ifTrue: 
 				[self annotateBytecode: self lastOpcode.
 				 ^0].
@@ -556,7 +561,7 @@ RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 RegisterAllocatingCogit >> genJumpTo: targetBytecodePC [
 	"Overriden to avoid the flush because in this cogit stack state is merged at merge point."
 	deadCode := true. "can't fall through"
-	self Jump: (self ensureFixupAt: (self eventualTargetOf: targetBytecodePC) - initialPC).
+	self Jump: (self ensureFixupAt: (self eventualTargetOf: targetBytecodePC)).
 	^ 0
 ]
 
@@ -819,8 +824,8 @@ RegisterAllocatingCogit >> genSpecialSelectorComparison [
 	self genConditionalBranch: (branchDescriptor isBranchTrue
 				ifTrue: [primDescriptor opcode]
 				ifFalse: [self inverseBranchFor: primDescriptor opcode])
-		operand: (self ensureFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-	self Jump: (self ensureFixupAt: postBranchPC - initialPC).
+		operand: (self ensureFixupAt: targetBytecodePC) asUnsignedInteger.
+	self Jump: (self ensureFixupAt: postBranchPC).
 	jumpNotSmallInts jmpTarget: self Label.
 	self ssFlushTo: simStackPtr.
 	self deny: rcvrReg = Arg0Reg.
@@ -896,18 +901,18 @@ RegisterAllocatingCogit >> genVanillaInlinedIdenticalOrNotIf: orNot [
 	(self fixupAt: nextPC - initialPC) notAFixup
 		ifTrue: "The next instruction is dead.  we can skip it."
 			[deadCode := true.
-		 	 self ensureFixupAt: targetBytecodePC - initialPC.
-			 self ensureFixupAt: postBranchPC - initialPC]
+		 	 self ensureFixupAt: targetBytecodePC.
+			 self ensureFixupAt: postBranchPC]
 		ifFalse:
 			[self deny: deadCode]. "push dummy value below"
 		
 	self genConditionalBranch: (orNot == branchDescriptor isBranchTrue ifTrue: [JumpNonZero] ifFalse: [JumpZero])
-		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
+		operand: (self ensureNonMergeFixupAt: targetBytecodePC) asUnsignedInteger.
 
 	"If the branch is dead, then we can just fall through postBranchPC (only a nop in-between), else 
 	we need to jump over the code of the branch"
 	deadCode ifFalse:
-		[self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
+		[self Jump: (self ensureNonMergeFixupAt: postBranchPC).
 		 self ssPushConstant: objectMemory trueObject]. "dummy value"
 	^0
 ]
@@ -1069,7 +1074,7 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup [
 ]
 
 { #category : #'bytecode generator support' }
-RegisterAllocatingCogit >> mergeRequiredForJumpTo: target [
+RegisterAllocatingCogit >> mergeRequiredForJumpTo: targetPC [
 	"While this is a multi-pass compiler, no intermediate control-flow graph is built from bytecode and
 	 there is a monotonically increasing one-to-one relationship between bytecode pcs and machine
 	 code pcs that map to one another.  Therefore, when jumping forward, any required code to merge
@@ -1104,7 +1109,7 @@ RegisterAllocatingCogit >> mergeRequiredForJumpTo: target [
 	 provided that 1 and 2 are assigned to the same target register."
 
 	self flag: 'be lazy for now; this needs more work to ignore compatible sim stacks'.
-	^(self fixupAt: target - initialPC) hasMergeSimStack
+	^(self fixupAt: targetPC - initialPC) hasMergeSimStack
 ]
 
 { #category : #'simulation stack' }

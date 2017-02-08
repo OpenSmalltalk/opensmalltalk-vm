@@ -149,21 +149,21 @@ CogObjectRepresentationForSpur >> branchIf: reg instanceOfBehaviors: arrayObj ta
 ]
 
 { #category : #'sista support' }
-CogObjectRepresentationForSpur >> branchIf: reg isNotOop:  oop target: targetFixup [
+CogObjectRepresentationForSpur >> branchIf: reg isNotOop:  oop target: targetFixUp [
 	<var: #targetFixUp type: #'AbstractInstruction *'>
 	<inline: true>
 	cogit CmpCq: oop R: reg.
-	cogit JumpNonZero: targetFixup.
-	^ 0
+	cogit JumpNonZero: targetFixUp.
+	^0
 ]
 
 { #category : #'sista support' }
-CogObjectRepresentationForSpur >> branchIf: reg isOop:  oop target: targetFixup [
+CogObjectRepresentationForSpur >> branchIf: reg isOop:  oop target: targetFixUp [
 	<var: #targetFixUp type: #'AbstractInstruction *'>
 	<inline: true>
 	cogit CmpCq: oop R: reg.
-	cogit JumpZero: targetFixup.
-	^ 0
+	cogit JumpZero: targetFixUp.
+	^0
 ]
 
 { #category : #'sista support' }

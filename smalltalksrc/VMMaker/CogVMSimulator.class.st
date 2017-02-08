@@ -2876,7 +2876,7 @@ CogVMSimulator >> primitiveDirectoryEntry [
 	arrayNilOrSymbol isArray ifFalse:
 		["arrayNilOrSymbol ~~ #primFailed ifTrue:
 			[self halt]. "
-		Transcript show: name, ' NOT FOUND'.
+		self transcript show: name, ' NOT FOUND'.
 		 ^self primitiveFail].
 
 	result := PharoVM 

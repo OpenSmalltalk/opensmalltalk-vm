@@ -3909,8 +3909,9 @@ Cogit >> checkIfValidOopRefAndTarget: annotation pc: mcpc cogMethod: cogMethod [
 	(self isPureSendAnnotation: annotation) ifTrue:
 		[(self asserta: (self cCoerceSimple: cogMethod to: #'CogMethod *') cmType = CMMethod) ifFalse:
 			[^3].
-		 self offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
-			[:offset :cacheTag :tagCouldBeObject|
+		 self entryCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
+			[:entryPt :cacheTag :tagCouldBeObject|
+			entryPoint := entryPt.
 			tagCouldBeObject
 				ifTrue:
 					[(objectRepresentation couldBeObject: cacheTag)
@@ -3925,9 +3926,19 @@ Cogit >> checkIfValidOopRefAndTarget: annotation pc: mcpc cogMethod: cogMethod [
 						[(self asserta: (self cCoerceSimple: cogMethod to: #'CogMethod *') cmRefersToYoung) ifFalse:
 							[^6]]]
 				ifFalse:
-					[(self asserta: (objectRepresentation validInlineCacheTag: cacheTag)) ifFalse:
-						[^7]]].
-		entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+					[(self inlineCacheTagsAreIndexes
+					  and: [self self entryPointTagIsSelector: entryPoint])
+						ifTrue:
+							[cacheTag signedIntFromLong < 0
+								ifTrue:
+									[cacheTag signedIntFromLong negated > NumSpecialSelectors ifTrue:
+										[^7]]
+								ifFalse:
+									[cacheTag >= (objectMemory literalCountOf: enumeratingCogMethod methodObject) ifTrue:
+										[^8]]]
+						ifFalse:
+							[(self asserta: (objectRepresentation validInlineCacheTag: cacheTag)) ifFalse:
+								[^9]]]].
 		entryPoint > methodZoneBase ifTrue:
 			["It's a linked send; find which kind."
 			 self targetMethodAndSendTableFor: entryPoint annotation: annotation into:
@@ -3935,7 +3946,7 @@ Cogit >> checkIfValidOopRefAndTarget: annotation pc: mcpc cogMethod: cogMethod [
 					 (self asserta: (targetMethod cmType = CMMethod
 								   or: [targetMethod cmType = CMClosedPIC
 								   or: [targetMethod cmType = CMOpenPIC]])) ifFalse:
-						[^8]]]].
+						[^10]]]].
 	^0 "keep scanning"
 ]
 
@@ -5773,13 +5784,13 @@ Cogit >> endPCOf: aMethod [
 ]
 
 { #category : #'compile abstract instructions' }
-Cogit >> ensureFixupAt: targetIndex [
-	"Make sure there's a flagged fixup at the targetIndex (pc relative to first pc) in fixups.
+Cogit >> ensureFixupAt: targetPC [
+	"Make sure there's a flagged fixup at the target pc in fixups.
 	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction."
 	<returnTypeC: #'BytecodeFixup *'>
 	| fixup |
 	<var: #fixup type: #'BytecodeFixup *'>
-	fixup := self fixupAt: targetIndex.
+	fixup := self fixupAt: targetPC - initialPC.
 	fixup notAFixup ifTrue:
 		[fixup becomeFixup].
 	fixup recordBcpc: bytecodePC.
@@ -5799,11 +5810,43 @@ Cogit >> enterCogCodePopReceiver [
 	Debug ifFalse: [self error: 'what??']
 ]
 
+{ #category : #'in-line cacheing' }
+Cogit >> entryCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into: trinaryBlock [
+	"Evaluate trinaryBlock with the entryPoint, inline cache tag and whether the cache
+	 tag could be an object, for the send at mcpc with annotation annotation."
+	<inline: true>
+	| cacheTag entryPoint tagCouldBeObj |
+	cacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
+	entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+	"in-line cache tags are the selectors of sends if sends are unlinked,
+	 the selectors of super sends (entry offset = cmNoCheckEntryOffset),
+	 the selectors of open PIC sends (entry offset = cmEntryOffset, target is an Open PIC)
+	 or in-line cache tags (classes, class indices, immediate bit patterns, etc).
+	 Note that selectors can be immediate so there is no guarantee that they
+	 are markable/remappable objects."
+	tagCouldBeObj := self inlineCacheTagsAreIndexes not
+						and: [objectRepresentation inlineCacheTagsMayBeObjects
+							or: [self entryPointTagIsSelector: entryPoint]].
+	trinaryBlock
+		value: entryPoint
+		value: cacheTag
+		value: tagCouldBeObj
+]
+
 { #category : #accessing }
 Cogit >> entryOffset [
 	<api>
 	<cmacro>
 	^cmEntryOffset
+]
+
+{ #category : #'in-line cacheing' }
+Cogit >> entryPointTagIsSelector: entryPoint [
+	"Answer if the entryPoint's tag is expected to be a selector reference, as opposed to a class tag."
+	^entryPoint < methodZoneBase
+	 or: [(entryPoint bitAnd: entryPointMask) = uncheckedEntryAlignment
+	 or: [(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
+		and: [(self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *') cmType = CMOpenPIC]]]
 ]
 
 { #category : #accessing }
@@ -9381,7 +9424,7 @@ Cogit >> markLiterals: annotation pc: mcpc method: cogMethod [
 							self markAndTraceUpdatedLiteral: eo in: (self cCoerceSimple: cogMethod to: #'CogMethod *')]]]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
-		[self offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
+		[self entryCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
 			[:entryPoint :cacheTag :tagCouldBeObj |
 			 tagCouldBeObj ifTrue:
 				[(objectRepresentation
@@ -9432,7 +9475,7 @@ Cogit >> markLiteralsAndUnlinkIfUnmarkedSend: annotation pc: mcpc method: cogMet
 							self markAndTraceUpdatedLiteral: eo in: (self cCoerceSimple: cogMethod to: #'CogMethod *')]]]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
-		[self offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
+		[self entryCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
 			[:entryPoint :cacheTag :tagCouldBeObj | | cacheTagMarked |
 			 cacheTagMarked := tagCouldBeObj and: [objectRepresentation cacheTagIsMarked: cacheTag].
 			 entryPoint > methodZoneBase
@@ -9516,7 +9559,7 @@ Cogit >> markYoungObjects: annotation pc: mcpc method: cogMethod [
 			[objectRepresentation markAndTraceLiteralIfYoung: nsSendCache enclosingObject]]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
-		[self offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
+		[self entryCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
 			[:entryPoint :cacheTag :tagCouldBeObj |
 			 tagCouldBeObj ifTrue:
 				[objectRepresentation markAndTraceLiteralIfYoung: cacheTag]]].
@@ -10004,32 +10047,6 @@ Cogit >> offsetAndSendTableFor: entryPoint annotation: annotation into: binaryBl
 	binaryBlock
 		value: offset
 		value: sendTable
-]
-
-{ #category : #'in-line cacheing' }
-Cogit >> offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into: trinaryBlock [
-	"Evaluate trinaryBlock with the entry, inline cache tag and whether the cache
-	 tag could be an object, for the send at mcpc with annotation annotation."
-	<inline: true>
-	| cacheTag entryPoint tagCouldBeObj |
-	cacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
-	entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
-	"in-line cache tags are the selectors of sends if sends are unlinked,
-	 the selectors of super sends (entry offset = cmNoCheckEntryOffset),
-	 the selectors of open PIC sends (entry offset = cmEntryOffset, target is an Open PIC)
-	 or in-line cache tags (classes, class indices, immediate bit patterns, etc).
-	 Note that selectors can be immediate so there is no guarantee that they
-	 are markable/remappable objects."
-	tagCouldBeObj := self inlineCacheTagsAreIndexes not
-						and: [objectRepresentation inlineCacheTagsMayBeObjects
-							or: [entryPoint < methodZoneBase
-							or: [(entryPoint bitAnd: entryPointMask) = uncheckedEntryAlignment
-							or: [(entryPoint bitAnd: entryPointMask) = checkedEntryAlignment
-								and: [(self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *') cmType = CMOpenPIC]]]]].
-	trinaryBlock
-		value: entryPoint
-		value: cacheTag
-		value: tagCouldBeObj
 ]
 
 { #category : #'generate machine code' }
@@ -10910,7 +10927,7 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 		^0 "keep scanning"]].
 
 	(self isPureSendAnnotation: annotation) ifTrue:
-		[self offsetCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
+		[self entryCacheTagAndCouldBeObjectAt: mcpc annotation: annotation into:
 			[:entryPoint :cacheTag :tagCouldBeObj | | mappedCacheTag |
 			 (tagCouldBeObj
 			  and: [objectRepresentation couldBeObject: cacheTag]) ifTrue:
