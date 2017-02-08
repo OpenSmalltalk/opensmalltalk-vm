@@ -156,6 +156,11 @@ SpurGenerationScavenger class >> isNonArgumentImplicitReceiverVariableName: inst
 	^#('self' 'coInterpreter' 'manager') includes: instVarName
 ]
 
+{ #category : #simulation }
+SpurGenerationScavenger class >> simulatorClass [
+	^SpurGenerationScavengerSimulator
+]
+
 { #category : #'weakness and ephemerality' }
 SpurGenerationScavenger >> addToEphemeronList: ephemeronCorpse [
 	"ephemeronCorpse is the corpse of an ephemeron that was copied and forwarded.

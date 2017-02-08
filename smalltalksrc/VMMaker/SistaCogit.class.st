@@ -287,18 +287,18 @@ SistaCogit >> genBinaryInlineComparison: opTrue opFalse: opFalse destReg: destRe
 			[ (self fixupAt: nextPC - initialPC) notAFixup
 				ifTrue: "The next instruction is dead.  we can skip it."
 					[deadCode := true.
-				 	 self ensureFixupAt: targetBytecodePC - initialPC.
-					 self ensureFixupAt: postBranchPC - initialPC ]
+				 	 self ensureFixupAt: targetBytecodePC.
+					 self ensureFixupAt: postBranchPC ]
 				ifFalse:
 					[self ssPushConstant: objectMemory trueObject]. "dummy value"
 			self genConditionalBranch: (branchDescriptor isBranchTrue ifTrue: [opTrue] ifFalse: [opFalse])
-				operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
+				operand: (self ensureNonMergeFixupAt: targetBytecodePC) asUnsignedInteger.
 			"We can only elide the jump if the pc after nextPC is the same as postBranchPC.
 			 Branch following means it may not be."
 			self nextDescriptorExtensionsAndNextPCInto:
 				[:iguana1 :iguana2 :iguana3 :followingPC| nextPC := followingPC].
 			(deadCode and: [nextPC = postBranchPC]) ifFalse:
-				[ self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC) ] ]
+				[ self Jump: (self ensureNonMergeFixupAt: postBranchPC) ] ]
 		ifFalse: "This is the path where the inlined comparison is *not* followed immediately by a branch"
 			[| condJump jump |
 			condJump := self genConditionalBranch: opTrue operand: 0.
@@ -501,7 +501,7 @@ SistaCogit >> genCounterTripOnlyJumpIf: boolean to: targetBytecodePC [
 	 their distance send mustBeBoolean."
 	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
 	self genSubConstant: boolean R: TempReg.
-	self JumpZero: (self ensureFixupAt: targetBytecodePC - initialPC).
+	self JumpZero: (self ensureFixupAt: targetBytecodePC).
 
 	self CmpCq: (boolean = objectMemory falseObject
 					ifTrue: [objectMemory trueObject - objectMemory falseObject]
@@ -551,7 +551,7 @@ SistaCogit >> genExtJumpIfNotInstanceOfBehaviorsBytecode [
 	distance := extB * 256 + byte2.
 	extA := extB := numExtB := 0.
 
-	targetFixUp := self cCoerceSimple: (self ensureFixupAt: bytecodePC + 3 + distance - initialPC) to: #'AbstractInstruction *'.
+	targetFixUp := self cCoerceSimple: (self ensureFixupAt: bytecodePC + 3 + distance) to: #'AbstractInstruction *'.
 	inverse
 		ifFalse: 
 			[(objectMemory isArrayNonImm: literal)
@@ -641,11 +641,11 @@ SistaCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 	
 	orNot == branchDescriptor isBranchTrue "orNot is true for ~~"
 		ifFalse:
-			[ fixup := (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
-			self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger ]
+			[ fixup := (self ensureNonMergeFixupAt: postBranchPC) asUnsignedInteger.
+			self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC) asUnsignedInteger ]
 		ifTrue:
-			[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-			self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ].
+			[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC) asUnsignedInteger.
+			self JumpZero: (self ensureNonMergeFixupAt: postBranchPC) asUnsignedInteger ].
 	
 	self genFallsThroughCountLogicCounterReg: counterReg counterAddress: counterAddress.
 	self Jump: fixup.
@@ -736,7 +736,7 @@ SistaCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 their distance send mustBeBoolean."
 	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
 	self genSubConstant: boolean R: TempReg.
-	self JumpZero: (self ensureFixupAt: eventualTarget - initialPC).
+	self JumpZero: (self ensureFixupAt: eventualTarget).
 
 	self genFallsThroughCountLogicCounterReg: SendNumArgsReg counterAddress: counterAddress.
 
@@ -898,11 +898,11 @@ SistaCogit >> genSpecialSelectorComparison [
 	self genConditionalBranch: (branchDescriptor isBranchTrue
 				ifTrue: [primDescriptor opcode]
 				ifFalse: [self inverseBranchFor: primDescriptor opcode])
-		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
+		operand: (self ensureNonMergeFixupAt: targetBytecodePC) asUnsignedInteger.
 		
 	self genFallsThroughCountLogicCounterReg: counterReg counterAddress: counterAddress.
 	
-	self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
+	self Jump: (self ensureNonMergeFixupAt: postBranchPC).
 	countTripped jmpTarget: (jumpNotSmallInts jmpTarget: self Label).
 	
 	argIsInt ifTrue:

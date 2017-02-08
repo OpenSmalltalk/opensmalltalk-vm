@@ -1467,16 +1467,16 @@ StackToRegisterMappingCogit >> endHighLevelCallWithoutCleanup [
 ]
 
 { #category : #'compile abstract instructions' }
-StackToRegisterMappingCogit >> ensureFixupAt: targetIndex [
-	"Make sure there's a flagged fixup at the targetIndex (pc relative to first pc) in fixups.
+StackToRegisterMappingCogit >> ensureFixupAt: targetPC [
+	"Make sure there's a flagged fixup at the target pc in fixups.
 	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction."
 	<returnTypeC: #'BytecodeFixup *'>
 	| fixup |
 	<var: #fixup type: #'BytecodeFixup *'>
-	fixup := self fixupAt: targetIndex.
+	fixup := self fixupAt:  targetPC - initialPC.
 	self traceFixup: fixup.
 	self cCode: '' inSmalltalk:
-		[self assert: simStackPtr = (self debugStackPointerFor: targetIndex + initialPC).
+		[self assert: simStackPtr = (self debugStackPointerFor: targetPC).
 		 (fixup isMergeFixupOrIsFixedUp
 		  and: [fixup isBackwardBranchFixup not]) ifTrue: "ignore backward branch targets"
 			[self assert: fixup simStackPtr = simStackPtr]].
@@ -1505,20 +1505,20 @@ StackToRegisterMappingCogit >> ensureFixupAt: targetIndex [
 ]
 
 { #category : #'compile abstract instructions' }
-StackToRegisterMappingCogit >> ensureNonMergeFixupAt: targetIndex [
-	"Make sure there's a flagged fixup at the targetIndex (pc relative to first pc) in fixups.
+StackToRegisterMappingCogit >> ensureNonMergeFixupAt: targetPC [
+	"Make sure there's a flagged fixup at the target pc in fixups.
 	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction."
 	<returnTypeC: #'BytecodeFixup *'>
 	| fixup |
 	<var: #fixup type: #'BytecodeFixup *'>
-	fixup := self fixupAt: targetIndex.
+	fixup := self fixupAt:  targetPC - initialPC.
 	fixup notAFixup ifTrue:
 		[fixup becomeNonMergeFixup].
 	self cCode: '' inSmalltalk:
 		[fixup isMergeFixupOrIsFixedUp ifTrue:
 			[self assert:
 					(fixup isBackwardBranchFixup
-					 or: [fixup simStackPtr = (self debugStackPointerFor: targetIndex + initialPC)])]].
+					 or: [fixup simStackPtr = (self debugStackPointerFor: targetPC)])]].
 	fixup recordBcpc: bytecodePC.
 	^fixup
 ]
@@ -1955,19 +1955,19 @@ StackToRegisterMappingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 	(self fixupAt: nextPC - initialPC) notAFixup
 		ifTrue: "The next instruction is dead.  we can skip it."
 			[deadCode := true.
-		 	 self ensureFixupAt: targetBytecodePC - initialPC.
-			 self ensureFixupAt: postBranchPC - initialPC]
+		 	 self ensureFixupAt: targetBytecodePC.
+			 self ensureFixupAt: postBranchPC]
 		ifFalse:
 			[self deny: deadCode]. "push dummy value below"
 
 	self assert: (unforwardArg or: [unforwardRcvr]).
 	orNot == branchDescriptor isBranchTrue "orNot is true for ~~"
 		ifFalse:
-			[ fixup := (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger.
-			self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger ]
+			[ fixup := (self ensureNonMergeFixupAt: postBranchPC) asUnsignedInteger.
+			self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC) asUnsignedInteger ]
 		ifTrue:
-			[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-			self JumpZero: (self ensureNonMergeFixupAt: postBranchPC - initialPC) asUnsignedInteger ].
+			[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC) asUnsignedInteger.
+			self JumpZero: (self ensureNonMergeFixupAt: postBranchPC) asUnsignedInteger ].
 
 	deadCode ifFalse:
 		[self ssPushConstant: objectMemory trueObject]. "dummy value"
@@ -2174,7 +2174,7 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 and: [desc constant = objectMemory trueObject or: [desc constant = objectMemory falseObject]]) ifTrue:
 		["Must arrange there's a fixup at the target whether it is jumped to or
 		  not so that the simStackPtr can be kept correct."
-		 fixup := self ensureFixupAt: eventualTarget - initialPC.
+		 fixup := self ensureFixupAt: eventualTarget.
 		 "Must annotate the bytecode for correct pc mapping."
 		 self annotateBytecode: (desc constant = boolean
 									ifTrue: [self Jump: fixup]
@@ -2189,7 +2189,7 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 their distance send mustBeBoolean."
 	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
 	self genSubConstant: boolean R: TempReg.
-	self JumpZero: (self ensureFixupAt: eventualTarget - initialPC).
+	self JumpZero: (self ensureFixupAt: eventualTarget).
 	
 	self extASpecifiesNoMustBeBoolean ifTrue: 
 		[ extA := 0. 
@@ -2211,7 +2211,7 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 StackToRegisterMappingCogit >> genJumpTo: targetBytecodePC [
 	self ssFlushTo: simStackPtr.
 	deadCode := true. "can't fall through"
-	self Jump: (self ensureFixupAt: (self eventualTargetOf: targetBytecodePC) - initialPC).
+	self Jump: (self ensureFixupAt: (self eventualTargetOf: targetBytecodePC)).
 	^0
 ]
 
@@ -11414,8 +11414,8 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	self genConditionalBranch: (branchDescriptor isBranchTrue
 				ifTrue: [primDescriptor opcode]
 				ifFalse: [self inverseBranchFor: primDescriptor opcode])
-		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-	self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
+		operand: (self ensureNonMergeFixupAt: targetBytecodePC) asUnsignedInteger.
+	self Jump: (self ensureNonMergeFixupAt: postBranchPC).
 	jumpNotSmallInts jmpTarget: self Label.
 	argIsInt ifTrue:
 		[self MoveCq: argInt R: Arg0Reg].
@@ -11694,18 +11694,18 @@ StackToRegisterMappingCogit >> genVanillaInlinedIdenticalOrNotIf: orNot [
 	(self fixupAt: nextPC - initialPC) notAFixup
 		ifTrue: "The next instruction is dead.  we can skip it."
 			[deadCode := true.
-		 	 self ensureFixupAt: targetBytecodePC - initialPC.
-			 self ensureFixupAt: postBranchPC - initialPC]
+		 	 self ensureFixupAt: targetBytecodePC.
+			 self ensureFixupAt: postBranchPC]
 		ifFalse:
 			[self deny: deadCode]. "push dummy value below"
 		
 	self genConditionalBranch: (orNot == branchDescriptor isBranchTrue ifTrue: [JumpNonZero] ifFalse: [JumpZero])
-		operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
+		operand: (self ensureNonMergeFixupAt: targetBytecodePC) asUnsignedInteger.
 
 	"If the branch is dead, then we can just fall through postBranchPC (only a nop in-between), else 
 	we need to jump over the code of the branch"
 	deadCode ifFalse:
-		[self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC).
+		[self Jump: (self ensureNonMergeFixupAt: postBranchPC).
 		 self ssPushConstant: objectMemory trueObject]. "dummy value"
 	^0
 ]
