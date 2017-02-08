@@ -572,8 +572,6 @@ Class {
 		'heapSizeAtPreviousGC',
 		'growHeadroom',
 		'shrinkThreshold',
-		'gcStartUsecs',
-		'gcPhaseInProgress',
 		'marking',
 		'remapBuffer',
 		'remapBufferCount',
@@ -582,10 +580,14 @@ Class {
 		'lowSpaceThreshold',
 		'totalFreeOldSpace',
 		'maxOldSpaceSize',
+		'gcPhaseInProgress',
+		'gcStartUsecs',
+		'compactionStartUsecs',
 		'statCoalesces',
 		'statCompactPassCount',
 		'statFGCDeltaUsecs',
 		'statFullGCUsecs',
+		'statCompactionUsecs',
 		'statFullGCs',
 		'statGCEndUsecs',
 		'statGrowMemory',
@@ -1629,14 +1631,16 @@ SpurMemoryManager >> allOldSpaceEntitiesForCoalescingFrom: firstObj do: aBlock [
 ]
 
 { #category : #'object enumeration' }
-SpurMemoryManager >> allOldSpaceEntitiesForCompactingFrom: initialObject do: aBlock [
+SpurMemoryManager >> allOldSpaceEntitiesForCompactingFrom: initialObject to: finalObject do: aBlock [
 	<inline: true>
-	| prevObj prevPrevObj objOop nextObj |
+	| limit prevObj prevPrevObj objOop nextObj |
 	self assert: (self isOldObject: initialObject).
+	self assert: (self oop: finalObject isLessThanOrEqualTo: endOfMemory).
 	prevPrevObj := prevObj := nil.
 	objOop := initialObject.
+	limit := (self oop: finalObject isLessThan: endOfMemory) ifTrue: [self addressAfter: finalObject] ifFalse: [endOfMemory].
 	[self assert: objOop \\ self allocationUnit = 0.
-	 self oop: objOop isLessThan: endOfMemory] whileTrue:
+	 self oop: objOop isLessThan: limit] whileTrue:
 		[self assert: (self long64At: objOop) ~= 0.
 		 nextObj := self objectAfter: objOop limit: endOfMemory.
 		 aBlock value: objOop value: nextObj.
@@ -1807,12 +1811,12 @@ SpurMemoryManager >> allocateMemoryOfSize: memoryBytes newSpaceSize: newSpaceByt
 	freeStart := newSpaceBytes + newSpaceStart.
 	oldSpaceStart := newSpaceLimit := newSpaceBytes + newSpaceStart.
 	scavengeThreshold := memory size * memory bytesPerElement. "i.e. /don't/ scavenge."
-	scavenger := SpurGenerationScavengerSimulator new.
+	scavenger := SpurGenerationScavenger simulatorClass new.
 	scavenger manager: self.
 	scavenger newSpaceStart: newSpaceStart
 				newSpaceBytes: newSpaceBytes
 				survivorBytes: newSpaceBytes // self scavengerDenominator.
-	compactor := self class compactorClass new manager: self; yourself.
+	compactor := self class compactorClass simulatorClass new manager: self; yourself
 ]
 
 { #category : #allocation }
@@ -3264,8 +3268,9 @@ SpurMemoryManager >> classArray [
 { #category : #'class table' }
 SpurMemoryManager >> classAtIndex: classIndex [
 	<api>
+	<inline: true>
 	| classTablePage |
-	self assert: (classIndex <= self tagMask or: [classIndex >= self arrayClassIndexPun]).
+	self assert: (classIndex >= 0 and: [classIndex <= self tagMask or: [classIndex >= self arrayClassIndexPun and: [classIndex <= self classIndexMask]]]).
 	classTablePage := self fetchPointer: classIndex >> self classTableMajorIndexShift
 							ofObject: hiddenRootsObj.
 	classTablePage = nilObj ifTrue:
@@ -5289,14 +5294,15 @@ SpurMemoryManager >> fullGC [
 	<returnTypeC: #usqLong>
 	<inline: #never> "for profiling"
 	needGCFlag := false.
-	gcStartUsecs := self ioUTCMicrosecondsNow.
+	gcStartUsecs := coInterpreter ioUTCMicrosecondsNow.
 	statMarkCount := 0.
 	coInterpreter preGCAction: GCModeFull.
 	self globalGarbageCollect.
 	coInterpreter postGCAction: GCModeFull.
 	statFullGCs := statFullGCs + 1.
-	statGCEndUsecs := self ioUTCMicrosecondsNow.
+	statGCEndUsecs := coInterpreter ioUTCMicrosecondsNow.
 	statFullGCUsecs := statFullGCUsecs + (statGCEndUsecs - gcStartUsecs).
+	statCompactionUsecs := statCompactionUsecs + (statGCEndUsecs - compactionStartUsecs).
 	^(freeLists at: 0) ~= 0
 		ifTrue: [self bytesInObject: self findLargestFreeChunk]
 		ifFalse: [0]
@@ -5356,6 +5362,7 @@ SpurMemoryManager >> globalGarbageCollect [
 		excludeUnmarkedObjs: true
 		classIndicesShouldBeValid: true.
 
+	compactionStartUsecs := coInterpreter ioUTCMicrosecondsNow.
 	segmentManager prepareForGlobalSweep. "for notePinned:"
 	compactor compact.
 	self attemptToShrink.
@@ -5877,7 +5884,7 @@ SpurMemoryManager >> initialize [
 	needGCFlag := signalLowSpace := marking := false.
 	becomeEffectsFlags := gcPhaseInProgress := 0.
 	statScavenges := statIncrGCs := statFullGCs := 0.
-	statScavengeGCUsecs := statIncrGCUsecs := statFullGCUsecs := statGCEndUsecs := 0.
+	statScavengeGCUsecs := statIncrGCUsecs := statFullGCUsecs := statCompactionUsecs := statGCEndUsecs := 0.
 	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0.
 	statGrowMemory := statShrinkMemory := statRootTableCount := 0.
 	statRootTableOverflows := statMarkCount := statCompactPassCount := statCoalesces := 0.
@@ -5886,9 +5893,9 @@ SpurMemoryManager >> initialize [
 	unscannedEphemerons := SpurContiguousObjStack new.
 
 	"we can initialize things that are virtual in C."
-	scavenger := SpurGenerationScavengerSimulator new manager: self; yourself.
-	segmentManager := SpurSegmentManager new manager: self; yourself.
-	compactor := self class compactorClass new manager: self; yourself.
+	scavenger := SpurGenerationScavenger simulatorClass new manager: self; yourself.
+	segmentManager := SpurSegmentManager simulatorClass new manager: self; yourself.
+	compactor := self class compactorClass simulatorClass new manager: self; yourself.
 
 	"We can also initialize here anything that is only for simulation."
 	heapMap := CogCheck32BitHeapMap new.
@@ -9459,7 +9466,10 @@ SpurMemoryManager >> printFreeChunk: freeChunk printAsTreeNode: printAsTreeNode 
 	| numBytes |
 	numBytes := self bytesInObject: freeChunk.
 	coInterpreter
-		print: 'freeChunk '; printHexPtrnp: freeChunk;
+		print: 'freeChunk '; printHexPtrnp: freeChunk.
+	printAsTreeNode ifTrue:
+		[coInterpreter print: ' - '; printHexPtrnp:(self addressAfter: freeChunk)].
+	coInterpreter
 		print: ' bytes '; printNum: numBytes;
 		print: ' next '; printHexPtrnp: (self fetchPointer: self freeChunkNextIndex
 											ofFreeChunk: freeChunk).
@@ -9767,7 +9777,7 @@ SpurMemoryManager >> printObjectsWithHash: hash [
 { #category : #'debug printing' }
 SpurMemoryManager >> printOopsFrom: startAddress to: endAddress [
 	<api>
-	| oop limit |
+	| oop limit firstNonEntity inEmptySpace lastNonEntity |
 	oop := self objectBefore: startAddress.
 	limit := endAddress asUnsignedIntegerPtr min: endOfMemory.
 	oop := oop
@@ -9775,9 +9785,21 @@ SpurMemoryManager >> printOopsFrom: startAddress to: endAddress [
 				ifNotNil: [(self objectAfter: oop) = startAddress
 							ifTrue: [startAddress]
 							ifFalse: [oop]].
+	inEmptySpace := false.
 	[self oop: oop isLessThan: limit] whileTrue:
 		[self printEntity: oop.
-		 oop := self objectAfter: oop]
+		 [oop := self objectAfter: oop.
+		  (self long64At: oop) = 0] whileTrue:
+			[inEmptySpace ifFalse:
+				[inEmptySpace := true.
+				 firstNonEntity := oop].
+			 lastNonEntity := oop].
+		 inEmptySpace ifTrue:
+			[inEmptySpace := false.
+			 coInterpreter
+				print: 'skipped empty space from '; printHexPtrnp: firstNonEntity;
+				print:' to '; printHexPtrnp: lastNonEntity; cr.
+			 oop := self objectStartingAt: oop]]
 ]
 
 { #category : #'debug printing' }
@@ -10116,6 +10138,7 @@ SpurMemoryManager >> reorderReversedTreeList: treeNode [
 
 { #category : #'free space' }
 SpurMemoryManager >> resetFreeListHeads [
+	freeListsMask := 0.
 	0 to: self numFreeLists - 1 do:
 		[:i| freeLists at: i put: 0]
 ]
@@ -11059,6 +11082,11 @@ SpurMemoryManager >> statCompactPassCount: anInteger [
 ]
 
 { #category : #accessing }
+SpurMemoryManager >> statCompactionUsecs [
+	^statCompactionUsecs
+]
+
+{ #category : #accessing }
 SpurMemoryManager >> statFGCDeltaUsecs [
 	^statFGCDeltaUsecs
 ]
@@ -11725,6 +11753,65 @@ SpurMemoryManager >> uniqueIndex: classIndex allInstancesInto: start limit: limi
 							[self setIsMarkedOf: obj to: false]]]]].
 	binaryBlock value: count value: ptr
 
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> unlinkFreeChunk: freeChunk [
+	"Unlink a free object from the free lists. Do not alter totalFreeOldSpace. Used for coalescing."
+	| chunkBytes index node next prev child childBytes |
+	index := (chunkBytes := self bytesInObject: freeChunk) / self allocationUnit.
+	(index < self numFreeLists and: [1 << index <= freeListsMask]) ifTrue:
+		[self assert: ((freeListsMask anyMask: 1 << index) and: [(freeLists at: index) ~= 0]).
+		 node := freeLists at: index.
+		 prev := 0.
+		 [node ~= 0] whileTrue:
+			[self assert: node = (self startOfObject: node).
+			 self assert: (self isValidFreeObject: node).
+			 next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: node.
+			 node = freeChunk ifTrue:
+				[prev = 0
+					ifTrue: [freeLists at: index put: next]
+					ifFalse: [self storePointer: self freeChunkNextIndex ofFreeChunk: prev withValue: next].
+				 ^self].
+			 prev := node.
+			 node := next].
+		 self error: 'freeChunk not found in free lists'].
+
+	"Large chunk.  Search the large chunk tree."
+	child := freeLists at: 0.
+	node := 0.
+	[child ~= 0] whileTrue:
+		[self assert: (self isValidFreeObject: child).
+		 childBytes := self bytesInObject: child.
+		 childBytes = chunkBytes ifTrue: "size match; try to remove from list at node."
+			[node := child.
+			 [prev := node.
+			  node := self fetchPointer: self freeChunkNextIndex ofFreeChunk: node.
+			  node ~= 0] whileTrue:
+				[node = freeChunk ifTrue:
+					[self assert: (self isValidFreeObject: node).
+					 self storePointer: self freeChunkNextIndex
+						ofFreeChunk: prev
+						withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: node).
+					 ^self]].
+			 child = freeChunk ifTrue:
+				[next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: child.
+				 next = 0
+					ifTrue: "no list; remove the interior node"
+						[self unlinkSolitaryFreeTreeNode: child]
+					ifFalse: "list; replace node with it"
+						[self inFreeTreeReplace: child with: next].
+				 ^self]].
+		 child ~= 0 ifTrue:
+			[childBytes < chunkBytes
+				ifTrue: "node too small; walk down the larger size of the tree"
+					[child := self fetchPointer: self freeChunkLargerIndex ofFreeChunk: child]
+				ifFalse:
+					[node := child.
+					 child := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: node]]].
+
+	self error: 'freeChunk not found in free tree'
+	
 ]
 
 { #category : #'free space' }

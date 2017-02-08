@@ -509,6 +509,13 @@ VMClass class >> shouldIncludeMethodForSelector: selector [
 			 false]
 ]
 
+{ #category : #simulation }
+VMClass class >> simulatorClass [
+	"For running from Smalltalk - answer a class that can be used to simulate the receiver."
+
+	^self
+]
+
 { #category : #translation }
 VMClass class >> specialValueForConstant: constantName default: defaultValue [
 	^nil

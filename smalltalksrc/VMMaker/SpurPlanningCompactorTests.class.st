@@ -1,7 +1,8 @@
 Class {
 	#name : #SpurPlanningCompactorTests,
-	#superclass : #TestCase,
+	#superclass : #LongTestCase,
 	#pools : [
+		'VMBasicConstants',
 		'VMSqueakClassIndices'
 	],
 	#category : #'VMMaker-Tests'
@@ -43,6 +44,20 @@ SpurPlanningCompactorTests class >> resources [
 ]
 
 { #category : #private }
+SpurPlanningCompactorTests >> checkForLeaksIn: om [
+	om setCheckForLeaks: GCModeFreeSpace + GCModeFull;
+		runLeakCheckerFor: GCModeFull;
+		checkFreeSpace: GCModeFull
+]
+
+{ #category : #failures }
+SpurPlanningCompactorTests >> expectedFailures [
+	^(FileDirectory default fileExists: self class imageNameForTests)
+		ifTrue: [#()]
+		ifFalse: [self testSelectors]
+]
+
+{ #category : #private }
 SpurPlanningCompactorTests >> initializedVM [
 	| newVM |
 	newVM := self resources anyOne current emptyVM cloneSimulation.
@@ -53,6 +68,20 @@ SpurPlanningCompactorTests >> initializedVM [
 		initializeMarkStack; "The Pharo bootstrap has no mark or weakling stacks :-)"
 		initializeWeaklingStack.
 	^newVM
+]
+
+{ #category : #tests }
+SpurPlanningCompactorTests >> testCompactedHeap [
+	"First test for valid compactibility of an already compacted heap via fullGC"
+	| freeSpace om |
+	om := self initializedVM objectMemory.
+	freeSpace := om bytesLeftInOldSpace.
+	om fullGC.
+	self assert: freeSpace equals: om bytesLeftInOldSpace.
+	self checkForLeaksIn: om.
+	om fullGC.
+	self assert: freeSpace equals: om bytesLeftInOldSpace.
+	self checkForLeaksIn: om
 ]
 
 { #category : #tests }
@@ -84,12 +113,47 @@ SpurPlanningCompactorTests >> testIncompactibleHeap [
 	self assert: errored
 ]
 
+{ #category : #tests }
+SpurPlanningCompactorTests >> testInitializedVM [
+	self checkForLeaksIn: self initializedVM objectMemory
+]
+
+{ #category : #tests }
+SpurPlanningCompactorTests >> testMultiPassRandomAssortments [
+	"Test that the compactor can handle multi-pass compaction of some
+	 number of random assortments of live, pinned, dead, and free chunks."
+	<timeout: 60>
+	| random |
+	random := Random new.
+	10 timesRepeat:
+		[| theVM |
+		 theVM := self initializedVM.
+		 theVM objectMemory compactor forceMultiPass.
+		 self testRandomAssortment: (random next: 3000) readStream
+			with: theVM]
+]
+
+{ #category : #tests }
+SpurPlanningCompactorTests >> testMultiPassRandomAssortmentsWithNewSegment [
+	"Test that the compactor can handle multi-pass compaction of some number of
+	 random assortments of live, pinned, dead, and free chunks allocated in a new segment."
+	<timeout: 60>
+	| random |
+	random := Random new.
+	10 timesRepeat:
+		[| theVM |
+		 theVM := self initializedVM.
+		 theVM objectMemory compactor forceMultiPass.
+		 self testRandomAssortmentWithNewSegment: (random next: 5000) readStream
+			with: theVM]
+]
+
 { #category : #private }
-SpurPlanningCompactorTests >> testRandomAssortment: random [
+SpurPlanningCompactorTests >> testRandomAssortment: random with: theVM [
 	"Test that the compactor can handle a random assortment of live, pinned, dead, and free chunks."
 	| om lastObj obj expectedFreeSpace liveFill pinFill liveCount pinCount totalLive totalPinned pinned |
 	random reset. "random is a read stream on 3000 random numbers; for repeatability"
-	om := self initializedVM objectMemory.
+	om := theVM objectMemory.
 	om allOldSpaceObjectsDo: [:o| om setIsMarkedOf: o to: true. lastObj := o].
 	pinFill := 16r99999900.
 	liveFill := 16r55AA0000.
@@ -98,7 +162,7 @@ SpurPlanningCompactorTests >> testRandomAssortment: random [
 	1000 timesRepeat:
 		[| nSlots next newObj |
 		 nSlots := (random next * 300) rounded. "Make sure we stray into overflow size field territory."
-		 newObj := om allocateSlotsInOldSpace: nSlots format: om firstLongFormat classIndex: ClassBitmapCompactIndex.
+		 newObj := om allocateSlotsInOldSpace: nSlots format: om firstLongFormat classIndex: ClassByteArrayCompactIndex.
 		 (next := random next) > 0.95
 			ifTrue: "pinned"
 				[om
@@ -136,7 +200,11 @@ SpurPlanningCompactorTests >> testRandomAssortment: random [
 									ifFalse: [liveCount := liveCount + 1])
 								printPaddedWith: Character space to: 3 base: 10), ' '] 
 					ifFalse: ['     ']).
-			 om printEntity: o]].
+			 om printEntity: o].
+		 om allOldSpaceEntitiesFrom: (om objectAfter: lastObj) to: (om objectBefore: om endOfMemory) do:
+			[:o|
+			((om isMarked: o) and: [om isPinned: o]) ifTrue:
+				[om printEntity: o]]].
 
 	expectedFreeSpace := expectedFreeSpace + om bytesLeftInOldSpace.
 	om compactor compact.
@@ -155,7 +223,11 @@ SpurPlanningCompactorTests >> testRandomAssortment: random [
 									ifFalse: [liveCount := liveCount + 1])
 								printPaddedWith: Character space to: 3 base: 10), ' '] 
 					ifTrue: ['     ']).
-			 om printEntity: o]].
+			 om printEntity: o].
+		 om allOldSpaceEntitiesFrom: (om objectAfter: lastObj) to: (om objectBefore: om endOfMemory) do:
+			[:o|
+			(om isPinned: o) ifTrue:
+				[om printEntity: o]]].
 
 	"First check and/or count populations..."
 	liveCount := pinCount := 0.
@@ -182,17 +254,18 @@ SpurPlanningCompactorTests >> testRandomAssortment: random [
 			[:i| self assert: expectedFill equals: (actualFill := om fetchPointer: i - 1 ofObject: obj)]].
 	"They should be the last objects..."
 	self assert: (om isFreeObject: (om objectAfter: obj)).
-	self assert: om endOfMemory equals: (om addressAfter: (om objectAfter: obj))
+	self assert: om endOfMemory equals: (om addressAfter: (om objectAfter: obj)).
+	self checkForLeaksIn: om
 ]
 
 { #category : #private }
-SpurPlanningCompactorTests >> testRandomAssortmentWithNewSegment: random [
+SpurPlanningCompactorTests >> testRandomAssortmentWithNewSegment: random with: theVM [
 	"Test that the compactor can handle a random assortment of live, pinned, dead, and free chunks,
 	 with some allocation in a new segment.  No live pinned objects are created in the new segment
 	 to obtain the situation that the last segment is entirely empty after compaction.  This tests shrinkage."
 	| om pig lastObj obj expectedFreeSpace liveFill pinFill liveCount pinCount totalLive totalPinned pinned |
 	random reset. "random is a read stream on 3000 random numbers; for repeatability"
-	om := self initializedVM objectMemory.
+	om := theVM objectMemory.
 	om allOldSpaceObjectsDo: [:o| om setIsMarkedOf: o to: true. lastObj := o].
 
 	pinFill := 16r99999900.
@@ -203,7 +276,7 @@ SpurPlanningCompactorTests >> testRandomAssortmentWithNewSegment: random [
 	1000 timesRepeat:
 		[| nSlots next newObj |
 		 nSlots := (random next * 300) rounded. "Make sure we stray into overflow size field territory."
-		 newObj := om allocateSlotsInOldSpace: nSlots format: om firstLongFormat classIndex: ClassBitmapCompactIndex.
+		 newObj := om allocateSlotsInOldSpace: nSlots format: om firstLongFormat classIndex: ClassByteArrayCompactIndex.
 		 (next := random next) > 0.95
 			ifTrue: "pinned"
 				[om
@@ -226,7 +299,7 @@ SpurPlanningCompactorTests >> testRandomAssortmentWithNewSegment: random [
 					ifTrue: [om setIsMarkedOf: newObj to: false]
 					ifFalse: [om setObjectFree: newObj]]].
 
-	 pig := om allocateSlotsInOldSpace: (om numSlotsOfAny: om findLargestFreeChunk) format: om firstLongFormat classIndex: ClassBitmapCompactIndex.
+	 pig := om allocateSlotsInOldSpace: (om numSlotsOfAny: om findLargestFreeChunk) format: om firstLongFormat classIndex: ClassByteArrayCompactIndex.
 	 self deny: pig isNil.
 	 self assert: 0 equals: om bytesLeftInOldSpace.
 	 om growOldSpaceByAtLeast: om growHeadroom // 2.
@@ -236,7 +309,7 @@ SpurPlanningCompactorTests >> testRandomAssortmentWithNewSegment: random [
 	1000 timesRepeat:
 		[| nSlots next newObj |
 		 nSlots := (random next * 300) rounded. "Make sure we stray into overflow size field territory."
-		 newObj := om allocateSlotsInOldSpace: nSlots format: om firstLongFormat classIndex: ClassBitmapCompactIndex.
+		 newObj := om allocateSlotsInOldSpace: nSlots format: om firstLongFormat classIndex: ClassByteArrayCompactIndex.
 		 "No pinned objects in second segment."
 		 om fillObj: newObj numSlots: nSlots with: liveFill + (liveCount := liveCount + 1).
 		 (next := random next) >= 0.333
@@ -267,7 +340,11 @@ SpurPlanningCompactorTests >> testRandomAssortmentWithNewSegment: random [
 									ifFalse: [liveCount := liveCount + 1])
 								printPaddedWith: Character space to: 3 base: 10), ' '] 
 					ifFalse: ['     ']).
-			 om printEntity: o]].
+			 om printEntity: o].
+		 om allOldSpaceEntitiesFrom: (om objectAfter: lastObj) to: (om objectBefore: om endOfMemory) do:
+			[:o|
+			((om isMarked: o) and: [om isPinned: o]) ifTrue:
+				[om printEntity: o]]].
 
 	expectedFreeSpace := expectedFreeSpace + om bytesLeftInOldSpace.
 	om compactor compact.
@@ -286,7 +363,11 @@ SpurPlanningCompactorTests >> testRandomAssortmentWithNewSegment: random [
 									ifFalse: [liveCount := liveCount + 1])
 								printPaddedWith: Character space to: 3 base: 10), ' '] 
 					ifTrue: ['     ']).
-			 om printEntity: o]].
+			 om printEntity: o].
+		 om allOldSpaceEntitiesFrom: (om objectAfter: lastObj) to: (om objectBefore: om endOfMemory) do:
+			[:o|
+			(om isPinned: o) ifTrue:
+				[om printEntity: o]]].
 
 	"First check and/or count populations..."
 	liveCount := pinCount := 0.
@@ -322,7 +403,8 @@ SpurPlanningCompactorTests >> testRandomAssortmentWithNewSegment: random [
 	"And the memory should shrink if the shrinkThreshold is low enough"
 	om shrinkThreshold: om growHeadroom.
 	om attemptToShrink.
-	self assert: om segmentManager numSegments = 1
+	self assert: om segmentManager numSegments = 1.
+	self checkForLeaksIn: om
 ]
 
 { #category : #tests }
@@ -331,7 +413,9 @@ SpurPlanningCompactorTests >> testRandomAssortments [
 	<timeout: 60>
 	| random |
 	random := Random new.
-	10 timesRepeat: [self testRandomAssortment: (random next: 3000) readStream]
+	10 timesRepeat:
+		[self testRandomAssortment: (random next: 3000) readStream
+			with: self initializedVM]
 ]
 
 { #category : #tests }
@@ -341,7 +425,9 @@ SpurPlanningCompactorTests >> testRandomAssortmentsWithNewSegment [
 	<timeout: 60>
 	| random |
 	random := Random new.
-	10 timesRepeat: [self testRandomAssortmentWithNewSegment: (random next: 6000) readStream]
+	10 timesRepeat:
+		[self testRandomAssortmentWithNewSegment: (random next: 6000) readStream
+			with: self initializedVM]
 ]
 
 { #category : #tests }
