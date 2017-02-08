@@ -3825,8 +3825,13 @@ CCodeGenerator >> localizeGlobalVariables [
 
 	"find all globals used in only one method"
 	candidates := globalVariableUsage select: [:e | e size = 1].
-	(candidates keys select: [:k| vmClass mustBeGlobal: k]) do:
+	"Don't localize globals; nor those that are only assigned to; they're for debugging..."
+	(candidates keys select: [:k| (vmClass mustBeGlobal: k)
+								or: [(self methodNamed: (globalVariableUsage at: k) anyOne)
+										ifNil: [false]
+										ifNotNil: [:m| (m readsVariable: k) not]]]) do:
 		[:k| candidates removeKey: k].
+	
 	elected := Set new.
 	localized := Dictionary new. "for an ordered report"
 	"move any suitable global to be local to the single method using it"
