@@ -3927,7 +3927,7 @@ Cogit >> checkIfValidOopRefAndTarget: annotation pc: mcpc cogMethod: cogMethod [
 							[^6]]]
 				ifFalse:
 					[(self inlineCacheTagsAreIndexes
-					  and: [self self entryPointTagIsSelector: entryPoint])
+					  and: [self entryPointTagIsSelector: entryPoint])
 						ifTrue:
 							[cacheTag signedIntFromLong < 0
 								ifTrue:
@@ -6727,8 +6727,8 @@ Cogit >> genFFICalloutTrampoline [
 	backEnd hasLinkRegister ifTrue: [
 		self MoveR: LinkReg Aw: coInterpreter instructionPointerAddress
 	] ifFalse: [
-		self PopR: ClassReg.
-		self MoveR: ClassReg Aw: coInterpreter instructionPointerAddress
+		self PopR: backEnd registerToSaveIP.
+		self MoveR: backEnd registerToSaveIP Aw: coInterpreter instructionPointerAddress
 	].
 
 	self CallR: TempReg.
@@ -6736,8 +6736,8 @@ Cogit >> genFFICalloutTrampoline [
 	backEnd hasLinkRegister ifTrue: [
 		self MoveAw: coInterpreter instructionPointerAddress R: LinkReg 
 	] ifFalse: [
-		self MoveAw: coInterpreter instructionPointerAddress R: ClassReg.
-		self PushR: ClassReg.
+		self MoveAw: coInterpreter instructionPointerAddress R: backEnd registerToSaveIP.
+		self PushR: backEnd registerToSaveIP.
 	].
 
 	self RetN: 0.

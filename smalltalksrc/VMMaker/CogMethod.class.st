@@ -105,6 +105,11 @@ CogMethod >> containsAddress: anAddress [
 ]
 
 { #category : #accessing }
+CogMethod >> counters [
+	^ 0
+]
+
+{ #category : #accessing }
 CogMethod >> methodHeader [
 	"Answer the value of methodHeader"
 
