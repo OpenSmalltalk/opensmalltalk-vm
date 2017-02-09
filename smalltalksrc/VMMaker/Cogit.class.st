@@ -61,7 +61,7 @@ noCheckEntryOffset <Integer>
 noCheckEntry <CogAbstractOpcode>
 	label for the first instruction of start of a method proper
 fixups <Array of <AbstractOpcode Label | nil>>
-	the labels for forward jumps that will be fixed up when reaching the relevant bytecode.  fixup shas one element per byte in methodObj's bytecode
+	the labels for forward jumps that will be fixed up when reaching the relevant bytecode.  fixups has one element per byte in methodObj's bytecode; initialPC maps to fixups[0].
 abstractOpcodes <Array of <AbstractOpcode>>
 	the code generated when compiling methodObj
 byte0 byte1 byte2 byte3 <Integer>
@@ -4774,7 +4774,7 @@ Cogit >> compileAbstractInstructionsFrom: start through: end [
 	 nextOpcodeIndex := opcodeIndex.
 	 result := self perform: descriptor generator.
 	 self assertExtsAreConsumed: descriptor.
-	 fixup := self fixupAt: bytecodePC - initialPC.
+	 fixup := self fixupAt: bytecodePC.
 	 self patchFixupTargetIfNeeded: fixup nextOpcodeIndex: nextOpcodeIndex.
 	 self maybeDumpLiterals: descriptor.
 	 bytecodePC := self nextBytecodePCFor: descriptor exts: nExts.
@@ -5790,7 +5790,7 @@ Cogit >> ensureFixupAt: targetPC [
 	<returnTypeC: #'BytecodeFixup *'>
 	| fixup |
 	<var: #fixup type: #'BytecodeFixup *'>
-	fixup := self fixupAt: targetPC - initialPC.
+	fixup := self fixupAt: targetPC.
 	fixup notAFixup ifTrue:
 		[fixup becomeFixup].
 	fixup recordBcpc: bytecodePC.
@@ -6269,7 +6269,15 @@ Cogit >> firstPrototypeMethodOop [
 ]
 
 { #category : #'compile abstract instructions' }
-Cogit >> fixupAt: index [
+Cogit >> fixupAt: fixupPC [
+	<inline: true>
+	^self fixupAtIndex: fixupPC - initialPC
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> fixupAtIndex: index [
+	"The fixups Array maps to bytecode pcs such that initialPC maps to index 0.
+	 fixupAt: does the conversion."
 	<cmacro: '(index) (&fixups[index])'>
 	<returnTypeC: #'BytecodeFixup *'>
 	^self addressOf: (fixups at: index)
@@ -7670,7 +7678,7 @@ Cogit >> generateInstructionsAt: eventualAbsoluteAddress [
 		abstractInstruction isPCDependent
 			ifTrue:
 				[abstractInstruction sizePCDependentInstructionAt: absoluteAddress.
-				 fixup := self fixupAt: pcDependentIndex.
+				 fixup := self fixupAtIndex: pcDependentIndex.
 				 pcDependentIndex := pcDependentIndex + 1.
 				 fixup instructionIndex: i.
 				 absoluteAddress := absoluteAddress + abstractInstruction machineCodeSize]
@@ -7678,7 +7686,7 @@ Cogit >> generateInstructionsAt: eventualAbsoluteAddress [
 				[absoluteAddress := abstractInstruction concretizeAt: absoluteAddress]].
 	0 to: pcDependentIndex - 1 do:
 		[:j|
-		fixup := self fixupAt: j.
+		fixup := self fixupAtIndex: j.
 		abstractInstruction := self abstractInstructionAt: fixup instructionIndex.
 		self maybeBreakGeneratingAt: abstractInstruction address.
 		abstractInstruction concretizeAt: abstractInstruction address].
@@ -8331,11 +8339,11 @@ Cogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
 ]
 
 { #category : #'compile abstract instructions' }
-Cogit >> initializeFixupAt: targetIndex [
-	"Make sure there's a flagged fixup at the targetIndex (pc relative to first pc) in fixups.
+Cogit >> initializeFixupAt: targetPC [
+	"Make sure there's a flagged fixup at the targetPC in fixups.
 	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction."
 	<returnTypeC: #'BytecodeFixup *'>
-	(self fixupAt: targetIndex) becomeFixup
+	(self fixupAt: targetPC) becomeFixup
 ]
 
 { #category : #'newspeak support' }
@@ -11143,7 +11151,7 @@ Cogit >> scanMethod [
 			[distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 (self isBackwardBranch: descriptor at: pc exts: nExts in: methodObj)
-				ifTrue: [self initializeFixupAt: targetPC - initialPC]
+				ifTrue: [self initializeFixupAt: targetPC]
 				ifFalse: [latestContinuation := latestContinuation max: targetPC]].
 		 descriptor isBlockCreation ifTrue:
 			[numBlocks := numBlocks + 1.

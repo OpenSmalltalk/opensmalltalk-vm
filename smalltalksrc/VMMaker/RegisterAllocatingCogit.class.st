@@ -193,7 +193,7 @@ RegisterAllocatingCogit >> ensureFixupAt: targetPC [
 	 Override to enerate stack merging code if required."
 	| fixup |	
 	<var: #fixup type: #'BytecodeFixup *'>
-	fixup := self fixupAt:  targetPC - initialPC.
+	fixup := self fixupAt:  targetPC.
 	fixup needsFixup 
 		ifTrue:
 			[fixup mergeSimStack
@@ -401,13 +401,13 @@ RegisterAllocatingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 	self ssPop: 2.
 
 	"For now just deny we're in the situation we have yet to implement ;-)
-	 self printSimStack; printSimStack: (self fixupAt: postBranchPC - initialPC) mergeSimStack"
+	 self printSimStack; printSimStack: (self fixupAt: postBranchPC) mergeSimStack"
 	self deny: (self mergeRequiredForJumpTo: targetBytecodePC).
 	self deny: (self mergeRequiredForJumpTo: postBranchPC).
 
 	"Further since there is a following conditional jump bytecode, define
 	 non-merge fixups and leave the cond bytecode to set the mergeness."
-	(self fixupAt: nextPC - initialPC) notAFixup
+	(self fixupAt: nextPC) notAFixup
 		ifTrue: "The next instruction is dead.  we can skip it."
 			[deadCode := true.
 		 	 self ensureFixupAt: targetBytecodePC.
@@ -456,10 +456,10 @@ RegisterAllocatingCogit >> genJumpBackTo: targetBytecodePC [
 	 the check for interrups and we can avoid generating the register reload code twice."
 	(nothingToFlush := simStackPtr < 0 or: [self ssTop spilled]) ifTrue:
 		[label := self Label].
-	self reconcileRegisterStateForBackwardJoin: (self fixupAt: targetBytecodePC - initialPC).
+	self reconcileRegisterStateForBackwardJoin: (self fixupAt: targetBytecodePC).
 	self MoveAw: coInterpreter stackLimitAddress R: TempReg.
 	self CmpR: TempReg R: SPReg. "N.B. FLAGS := SPReg - TempReg"
-	self JumpAboveOrEqual: (self fixupAt: targetBytecodePC - initialPC).
+	self JumpAboveOrEqual: (self fixupAt: targetBytecodePC).
 
 	self ssFlushTo: simStackPtr.
 	self CallRT: ceCheckForInterruptTrampoline.
@@ -468,8 +468,8 @@ RegisterAllocatingCogit >> genJumpBackTo: targetBytecodePC [
 		ifTrue:
 			[self Jump: label]
 		ifFalse:
-			[self reconcileRegisterStateForBackwardJoin: (self fixupAt: targetBytecodePC - initialPC).
-			 self Jump: (self fixupAt: targetBytecodePC - initialPC)].
+			[self reconcileRegisterStateForBackwardJoin: (self fixupAt: targetBytecodePC).
+			 self Jump: (self fixupAt: targetBytecodePC)].
 	deadCode := true. "can't fall through"
 	^0
 ]
@@ -848,7 +848,8 @@ RegisterAllocatingCogit >> genStorePop: popBoolean TemporaryVariable: tempIndex 
 	 if, for example, the ssEntry to be popped is already in ReceiverResultReg (as the result of a send).
 	 ReceiverResultReg is not a good choice for a temporary variable; it has other uses.  So if the ssEntry
 	 at top of stack has ReceiverResultReg as its live variable, try and allocate an alternative."
-	((self ssTop registerMaskOrNone anyMask: self registerMaskUndesirableForTempVars)
+	((self ssTop type = SSConstant
+	  or: [self ssTop registerMaskOrNone anyMask: self registerMaskUndesirableForTempVars])
 	 and: [(destReg := self availableRegOrNoneNotConflictingWith: (self registerMaskUndesirableForTempVars bitOr: self liveRegisters)) ~= NoReg])
 		ifTrue: [self ssStorePop: popBoolean toReg: destReg]
 		ifFalse: [destReg := self ssStorePop: popBoolean toPreferredReg: TempReg].
@@ -898,7 +899,7 @@ RegisterAllocatingCogit >> genVanillaInlinedIdenticalOrNotIf: orNot [
 
 	"Further since there is a following conditional jump bytecode, define
 	 non-merge fixups and leave the cond bytecode to set the mergeness."
-	(self fixupAt: nextPC - initialPC) notAFixup
+	(self fixupAt: nextPC) notAFixup
 		ifTrue: "The next instruction is dead.  we can skip it."
 			[deadCode := true.
 		 	 self ensureFixupAt: targetBytecodePC.
@@ -1109,7 +1110,7 @@ RegisterAllocatingCogit >> mergeRequiredForJumpTo: targetPC [
 	 provided that 1 and 2 are assigned to the same target register."
 
 	self flag: 'be lazy for now; this needs more work to ignore compatible sim stacks'.
-	^(self fixupAt: targetPC - initialPC) hasMergeSimStack
+	^(self fixupAt: targetPC) hasMergeSimStack
 ]
 
 { #category : #'simulation stack' }

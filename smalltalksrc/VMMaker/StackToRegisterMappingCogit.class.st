@@ -1181,7 +1181,7 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 	descriptor := nil.
 	deadCode := false.
 	[self maybeHaltIfDebugPC.
-	 fixup := self fixupAt: bytecodePC - initialPC.
+	 fixup := self fixupAt: bytecodePC.
 	 self mergeWithFixupIfRequired: fixup.
 	 self assertCorrectSimStackPtr.
 	 descriptor := self loadBytesAndGetDescriptor.
@@ -1473,7 +1473,7 @@ StackToRegisterMappingCogit >> ensureFixupAt: targetPC [
 	<returnTypeC: #'BytecodeFixup *'>
 	| fixup |
 	<var: #fixup type: #'BytecodeFixup *'>
-	fixup := self fixupAt:  targetPC - initialPC.
+	fixup := self fixupAt:  targetPC.
 	self traceFixup: fixup.
 	self cCode: '' inSmalltalk:
 		[self assert: simStackPtr = (self debugStackPointerFor: targetPC).
@@ -1511,7 +1511,7 @@ StackToRegisterMappingCogit >> ensureNonMergeFixupAt: targetPC [
 	<returnTypeC: #'BytecodeFixup *'>
 	| fixup |
 	<var: #fixup type: #'BytecodeFixup *'>
-	fixup := self fixupAt:  targetPC - initialPC.
+	fixup := self fixupAt:  targetPC.
 	fixup notAFixup ifTrue:
 		[fixup becomeNonMergeFixup].
 	self cCode: '' inSmalltalk:
@@ -1572,9 +1572,10 @@ StackToRegisterMappingCogit >> eventualTargetOf: targetBytecodePC [
 			 nextPC := nextPC + descriptor numBytes + span]
 		ifFalse:
 			[descriptor generator == #genPushConstantTrueBytecode ifTrue: [ cond := true ]
-			 ifFalse: [ descriptor generator == #genPushConstantFalseBytecode ifTrue: [ cond := false ] 							ifFalse: [ ^currentTarget ] ].
+			 ifFalse: [ descriptor generator == #genPushConstantFalseBytecode ifTrue: [ cond := false ]
+			 ifFalse: [ ^currentTarget ] ].
 			 "Don't step into loops across a pushTrue; jump:if: boundary, so as not to confuse stack depth fixup."
-			 (fixups at: nextPC - initialPC) isBackwardBranchFixup ifTrue:
+			 (self fixupAt: nextPC) isBackwardBranchFixup ifTrue:
 				[^currentTarget].
 			 nextPC := self eventualTargetOf: nextPC + descriptor numBytes.
 			 nExts := 0.
@@ -1670,10 +1671,12 @@ StackToRegisterMappingCogit >> extractMaybeBranchDescriptorInto: fourArgBlock [
 ]
 
 { #category : #'compile abstract instructions' }
-StackToRegisterMappingCogit >> fixupAt: index [
+StackToRegisterMappingCogit >> fixupAtIndex: index [
+	"The fixups Array maps to bytecode pcs such that initialPC maps to index 0.
+	 fixupAt: does the conversion.  Override to add breakpointing for fixups of bytecode PCs."
 	<cmacro: '(index) (&fixups[index])'>
 	<returnTypeC: #'BytecodeFixup *'>
-	((debugFixupBreaks includes: index)
+	((debugFixupBreaks includes: index + initialPC)
 	 and: [breakMethod isNil or: [methodObj = breakMethod]]) ifTrue:
 		[self halt].
 	^self addressOf: (fixups at: index)
@@ -1952,7 +1955,7 @@ StackToRegisterMappingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 
 	"Further since there is a following conditional jump bytecode, define
 	 non-merge fixups and leave the cond bytecode to set the mergeness."
-	(self fixupAt: nextPC - initialPC) notAFixup
+	(self fixupAt: nextPC) notAFixup
 		ifTrue: "The next instruction is dead.  we can skip it."
 			[deadCode := true.
 		 	 self ensureFixupAt: targetBytecodePC.
@@ -11691,7 +11694,7 @@ StackToRegisterMappingCogit >> genVanillaInlinedIdenticalOrNotIf: orNot [
 
 	"Further since there is a following conditional jump bytecode, define
 	 non-merge fixups and leave the cond bytecode to set the mergeness."
-	(self fixupAt: nextPC - initialPC) notAFixup
+	(self fixupAt: nextPC) notAFixup
 		ifTrue: "The next instruction is dead.  we can skip it."
 			[deadCode := true.
 		 	 self ensureFixupAt: targetBytecodePC.
@@ -11786,7 +11789,7 @@ StackToRegisterMappingCogit >> generateInstructionsAt: eventualAbsoluteAddress [
 							opcode: Nop;
 							concretizeAt: absoluteAddress]
 					ifFalse:
-						[fixup := self fixupAt: pcDependentIndex.
+						[fixup := self fixupAtIndex: pcDependentIndex.
 						 pcDependentIndex := pcDependentIndex + 1.
 						 fixup instructionIndex: i].
 				 absoluteAddress := absoluteAddress + abstractInstruction machineCodeSize]
@@ -11794,7 +11797,7 @@ StackToRegisterMappingCogit >> generateInstructionsAt: eventualAbsoluteAddress [
 				[absoluteAddress := abstractInstruction concretizeAt: absoluteAddress]].
 	0 to: pcDependentIndex - 1 do:
 		[:j|
-		fixup := self fixupAt: j.
+		fixup := self fixupAtIndex: j.
 		abstractInstruction := self abstractInstructionAt: fixup instructionIndex.
 		self maybeBreakGeneratingAt: abstractInstruction address.
 		abstractInstruction concretizeAt: abstractInstruction address].
@@ -12018,15 +12021,15 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 ]
 
 { #category : #'compile abstract instructions' }
-StackToRegisterMappingCogit >> initializeFixupAt: targetIndex [
-	"Make sure there's a flagged fixup at the targetIndex (pc relative to first pc) in fixups.
+StackToRegisterMappingCogit >> initializeFixupAt: targetPC [
+	"Make sure there's a flagged fixup at the targetPC in fixups.
 	 These are the targets  of backward branches.  A backward branch fixup's simStackPtr
-	 needs to be set when generating the code for the bytecode at the targetIndex.
+	 needs to be set when generating the code for the bytecode at the targetPC.
 	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction."
 	<returnTypeC: #'BytecodeFixup *'>
 	| fixup |
 	<var: #fixup type: #'BytecodeFixup *'>
-	fixup := self fixupAt: targetIndex.
+	fixup := self fixupAt: targetPC.
 	fixup
 		becomeMergeFixup;
 		setIsBackwardBranchFixup.
@@ -12491,14 +12494,14 @@ StackToRegisterMappingCogit >> reinitializeFixupsFrom: start through: end [
 	pc := start.
 	nExts := 0.
 	[pc <= end] whileTrue:
-		[(self fixupAt: pc - initialPC) reinitialize.
+		[(self fixupAt: pc) reinitialize.
 		 byte0 := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
 		 descriptor := self generatorAt: byte0.
 		 (descriptor isBranch
 		  and: [self isBackwardBranch: descriptor at: pc exts: nExts in: methodObj]) ifTrue:
 			[distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
-			 self initializeFixupAt: targetPC - initialPC].
+			 self initializeFixupAt: targetPC].
 		 descriptor isBlockCreation
 			ifTrue:
 				[distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
@@ -12653,7 +12656,7 @@ StackToRegisterMappingCogit >> scanMethod [
 			 targetPC := pc + descriptor numBytes + distance.
 			 self maybeCountFixup: descriptor.
 			 (self isBackwardBranch: descriptor at: pc exts: nExts in: methodObj)
-				ifTrue: [self initializeFixupAt: targetPC - initialPC]
+				ifTrue: [self initializeFixupAt: targetPC]
 				ifFalse:
 					[latestContinuation := latestContinuation max: targetPC.
 					 self maybeCountCounter]].
