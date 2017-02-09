@@ -284,7 +284,7 @@ SistaCogit >> genBinaryInlineComparison: opTrue opFalse: opFalse destReg: destRe
 
 	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse])
 		ifTrue: "This is the path where the inlined comparison is followed immediately by a branch"
-			[ (self fixupAt: nextPC - initialPC) notAFixup
+			[ (self fixupAt: nextPC) notAFixup
 				ifTrue: "The next instruction is dead.  we can skip it."
 					[deadCode := true.
 				 	 self ensureFixupAt: targetBytecodePC.
@@ -666,7 +666,7 @@ SistaCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 	jumpNotEqual jmpTarget: self Label.
 	self ssPushRegister: TempReg.
 	
-	(self fixupAt: nextPC - initialPC) notAFixup ifTrue: [ branchReachedOnlyForCounterTrip := true ].
+	(self fixupAt: nextPC) notAFixup ifTrue: [ branchReachedOnlyForCounterTrip := true ].
 	
 	^ 0
 ]
