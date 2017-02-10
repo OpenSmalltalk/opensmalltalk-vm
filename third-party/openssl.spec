@@ -7,3 +7,4 @@ openssl_spec_product1_name_linux:=
 openssl_spec_product2_name_linux:=
 openssl_spec_product1_name_windows:=ssleay32.dll
 openssl_spec_product2_name_windows:=libeay32.dll
+openssl_spec_symlinks_macOS:=libssl*.dylib libcrypto*.dylib

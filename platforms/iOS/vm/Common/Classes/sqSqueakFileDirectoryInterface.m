@@ -61,12 +61,14 @@ such third-party acknowledgments.
 #define BAD_PATH        2
 
 - (sqInt)linkIsDirectory:(NSString *)filePath fileManager:(NSFileManager *)fileManager {
-    NSString *resolvedPath = [self resolvedAliasFiles: filePath];
+    NSString *resolvedPath;
 	NSDictionary *fileAttributes;
     NSError *error;
     
+    resolvedPath = [self resolvedAliasFiles: filePath];
 	fileAttributes = [fileManager attributesOfItemAtPath:resolvedPath error: &error];
-    return [[fileAttributes objectForKey: NSFileType] isEqualToString: NSFileTypeDirectory] ? 1 : 0;
+    
+    return [fileAttributes[NSFileType] isEqualToString: NSFileTypeDirectory] ? 1 : 0;
 }
 
 - (sqInt)attributesForPath:(NSString *)filePath 
@@ -368,11 +370,10 @@ such third-party acknowledgments.
 	
 	NSNumber *typeCode = [NSNumber numberWithUnsignedLong: CFSwapInt32HostToBig(*((uint32_t *) fType))];
 	NSNumber *creatorCode = [NSNumber numberWithUnsignedLong: CFSwapInt32HostToBig(*((uint32_t *) fCreator))];
-
-	
-    BOOL ok=[fileMgr  setAttributes:  @{ NSFileHFSTypeCode : typeCode, NSFileHFSCreatorCode: creatorCode} ofItemAtPath: filePath
-													 error: NULL];
-	return ok;
+    return [fileMgr
+             setAttributes: @{ NSFileHFSTypeCode: typeCode, NSFileHFSCreatorCode: creatorCode }
+             ofItemAtPath: filePath
+             error: NULL];
 }
 
 - (NSString *) resolvedAliasFiles: (NSString *) filePath {

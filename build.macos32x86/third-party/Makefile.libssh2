@@ -1,0 +1,48 @@
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
+include ../../third-party/libssh2.spec
+
+# plugin definitions
+LIBSSH2URL:=$(libssh2_spec_download_url)
+LIBSSH2LIBNAME:=$(libssh2_spec_product_name_macOS)
+LIBSSH2DIR:=$(THIRDPARTYDIR)/$(libssh2_spec_unpack_dir_name)
+LIBSSH2ARCHIVE:=$(THIRDPARTYCACHEDIR)/$(libssh2_spec_archive_name)
+LIBSSH2LIB:=$(THIRDPARTYINSTALLDIR)/$(LIBSSH2LIBNAME)
+LIBSSH2SYMLINKS:=$(libssh2_spec_symlinks_macOS)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(LIBSSH2LIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+
+$(LIBSSH2ARCHIVE): 
+	curl -o $(LIBSSH2ARCHIVE) -L $(LIBSSH2URL) 
+
+$(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME): $(LIBSSH2ARCHIVE)
+	tar x -f $(LIBSSH2ARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(LIBSSH2DIR) \
+		&& ./configure \
+			--prefix='$(THIRDPARTYOUTDIR)' \
+			CFLAGS='-arch i386' \
+			LDFLAGS='-arch i386' \
+		&& make \
+		&& make install
+
+$(LIBSSH2LIB): openssl $(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME)
+	cp -f $(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME) $(THIRDPARTYINSTALLDIR)
+	install_name_tool -id "@executable_path/Plugins/$(LIBSSH2LIBNAME)" $(LIBSSH2LIB)
+	@echo "Installing links"
+	@for each in $(THIRDPARTYLIBDIR)/$(LIBSSH2SYMLINKS); do \
+		if [ -L $$each ]; then \
+			cp -a $$each $(THIRDPARTYINSTALLDIR); \
+		fi \
+	done
+	@echo "Fixing dependency links"
+	# libssh2 has a dependency with openssl libraries (they come in OPENSSLALLLIBNAMES var)
+	@for each in $(OPENSSLALLLIBNAMES); do \
+		install_name_tool -change "$(THIRDPARTYLIBDIR)/$$each" "@executable_path/Plugins/$$each" $(LIBSSH2LIB); \
+	done
+	@echo "DONE"
+	
+libssh2: $(LIBSSH2LIB)

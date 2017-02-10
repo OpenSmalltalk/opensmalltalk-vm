@@ -6,10 +6,10 @@
 <assemblyIdentity
 	version="1.0.0.0"
 	processorArchitecture="*"
-	name="www.mirandabanda.org.Cog.Squeak"
+	name="www.mirandabanda.org.Cog.Pharo"
 	type="win32"
 />
-<description>Squeak Smalltalk Virtual Machine</description>
+<description>Pharo Smalltalk Virtual Machine</description>
 <asmv3:application>
 	<asmv3:windowsSettings xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">
 		<dpiAware>false</dpiAware>

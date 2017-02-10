@@ -4,3 +4,4 @@ libpng_spec_unpack_dir_name:=libpng-1.2.49
 libpng_spec_product_name_macOS:=libpng12.0.dylib
 libpng_spec_product_name_linux:=
 libpng_spec_product_name_windows:=libpng12-0.dll
+libpng_spec_symlinks_macOS:=libpng12*.dylib
