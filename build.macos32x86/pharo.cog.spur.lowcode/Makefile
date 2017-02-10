@@ -19,12 +19,12 @@ include ../common/Makefile.app
 
 # third-party libraries
 #
-include ../third-party/pkgconfig/Makefile.lib
-include ../third-party/freetype2/Makefile.lib
-include ../third-party/openssl/Makefile.lib
-include ../third-party/libssh2/Makefile.lib
-include ../third-party/libgit2/Makefile.lib
-include ../third-party/libsdl2/Makefile.lib
-include ../third-party/pixman/Makefile.lib
-include ../third-party/libpng/Makefile.lib
-include ../third-party/cairo/Makefile.lib
+include ../third-party/Makefile.pkgconfig
+include ../third-party/Makefile.freetype2
+include ../third-party/Makefile.openssl
+include ../third-party/Makefile.libssh2
+include ../third-party/Makefile.libgit2
+include ../third-party/Makefile.libsdl2
+include ../third-party/Makefile.pixman
+include ../third-party/Makefile.libpng
+include ../third-party/Makefile.cairo

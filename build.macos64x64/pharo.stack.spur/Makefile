@@ -3,7 +3,7 @@
 # Do make init to allow make -n to function.
 #
 
-VMSRCDIR:=../../spurlowcode64src/vm
+VMSRCDIR:=../../spurstack64src/vm
 VM:=Pharo
 COGDEFS:= -DPharoVM=1 -DIMMUTABILITY=1
 APPNAME:=Pharo
