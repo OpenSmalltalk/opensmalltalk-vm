@@ -56,7 +56,7 @@ void *getbaz() { return baz; }
 
 #ifdef SQUEAK_BUILTIN_PLUGIN
 extern
-#endif 
+#endif
 struct VirtualMachine* interpreterProxy;
 
 #if __GNUC__
@@ -217,28 +217,18 @@ thunkEntry(long a0, long a1, long a2, long a3, long a4, long a5,
 
 	switch (returnType) {
 
-	case retword:	return vmcc.rvs.valword;
-
-	case retword64: {
-		long vhigh = vmcc.rvs.valleint64.high;
-#if _MSC_VER
-				_asm mov edx, dword ptr vhigh;
-#elif __GNUC__
-				asm("mov %0,%%edx" : : "m"(vhigh));
-#else
-# error need to load edx with vmcc.rvs.valleint64.high on this compiler
-#endif
-				return vmcc.rvs.valleint64.low;
-	}
+	case retword:
+    case retword64:
+        return vmcc.rvs.valword;
 
 	case retdouble: {
 		double valflt64 = vmcc.rvs.valflt64;
 #if _MSC_VER
-				_asm fld qword ptr valflt64;
+				_asm mov qword ptr valflt64, xmm0;
 #elif __GNUC__
-				asm("fldl %0" : : "m"(valflt64));
+				asm("movq %0, %%xmm0" : : "m"(valflt64));
 #else
-# error need to load %f0 with vmcc.rvs.valflt64 on this compiler
+# error need to load %xmm0 with vmcc.rvs.valflt64 on this compiler
 #endif
 				return 0;
 	}
