@@ -7471,6 +7471,7 @@ StackToRegisterMappingCogit >> genLowcodePerformCallFloat32 [
 	self callSwitchToCStack.
 	self MoveCw: extA R: TempReg.
 	self CallRT: ceFFICalloutTrampoline.
+	self annotateBytecode: self Label.
 	backEnd cFloatResultToRs: DPFPReg0.
 	self ssPushNativeRegisterSingleFloat: DPFPReg0.
 	extA := 0.
@@ -7487,6 +7488,7 @@ StackToRegisterMappingCogit >> genLowcodePerformCallFloat64 [
 	self callSwitchToCStack.
 	self MoveCw: extA R: TempReg.
 	self CallRT: ceFFICalloutTrampoline.
+	self annotateBytecode: self Label.
 	backEnd cFloatResultToRd: DPFPReg0.
 	self ssPushNativeRegisterDoubleFloat: DPFPReg0.
 	extA := 0.
@@ -7504,6 +7506,7 @@ StackToRegisterMappingCogit >> genLowcodePerformCallIndirectFloat32 [
 	self ssNativePop: 1.
 	self callSwitchToCStack.
 	self CallRT: ceFFICalloutTrampoline.
+	self annotateBytecode: self Label.
 	backEnd cFloatResultToRs: DPFPReg0.
 	self ssPushNativeRegisterSingleFloat: DPFPReg0.
 
@@ -7520,6 +7523,7 @@ StackToRegisterMappingCogit >> genLowcodePerformCallIndirectFloat64 [
 	self ssNativePop: 1.
 	self callSwitchToCStack.
 	self CallRT: ceFFICalloutTrampoline.
+	self annotateBytecode: self Label.
 	backEnd cFloatResultToRd: DPFPReg0.
 	self ssPushNativeRegisterDoubleFloat: DPFPReg0.
 
@@ -7536,6 +7540,7 @@ StackToRegisterMappingCogit >> genLowcodePerformCallIndirectInt32 [
 	self ssNativePop: 1.
 	self callSwitchToCStack.
 	self CallRT: ceFFICalloutTrampoline.
+	self annotateBytecode: self Label.
 	self MoveR: backEnd cResultRegister R: ReceiverResultReg.
 	self ssPushNativeRegister: ReceiverResultReg.
 
@@ -7552,6 +7557,7 @@ StackToRegisterMappingCogit >> genLowcodePerformCallIndirectInt64 [
 	self ssNativePop: 1.
 	self callSwitchToCStack.
 	self CallRT: ceFFICalloutTrampoline.
+	self annotateBytecode: self Label.
 	BytesPerWord = 4 ifTrue: [
 	self MoveR: backEnd cResultRegisterLow R: ReceiverResultReg.
 	self MoveR: backEnd cResultRegisterHigh R: Arg0Reg.
@@ -7574,6 +7580,7 @@ StackToRegisterMappingCogit >> genLowcodePerformCallIndirectPointer [
 	self ssNativePop: 1.
 	self callSwitchToCStack.
 	self CallRT: ceFFICalloutTrampoline.
+	self annotateBytecode: self Label.
 	self MoveR: backEnd cResultRegister R: ReceiverResultReg.
 	self ssPushNativeRegister: ReceiverResultReg.
 
@@ -7596,6 +7603,7 @@ StackToRegisterMappingCogit >> genLowcodePerformCallIndirectStructure [
 	"Call the function"
 	self callSwitchToCStack.
 	self CallRT: ceFFICalloutTrampoline.
+	self annotateBytecode: self Label.
 	"Fetch the result"
 	self MoveR: backEnd cResultRegister R: ReceiverResultReg.
 	self ssPushNativeRegister: ReceiverResultReg.
@@ -7614,6 +7622,7 @@ StackToRegisterMappingCogit >> genLowcodePerformCallIndirectVoid [
 	self ssNativePop: 1.
 	self callSwitchToCStack.
 	self CallRT: ceFFICalloutTrampoline.
+	self annotateBytecode: self Label.
 
 	^ 0
 
@@ -7627,6 +7636,7 @@ StackToRegisterMappingCogit >> genLowcodePerformCallInt32 [
 	self callSwitchToCStack.
 	self MoveCw: extA R: TempReg.
 	self CallRT: ceFFICalloutTrampoline.
+	self annotateBytecode: self Label.
 	self MoveR: backEnd cResultRegister R: ReceiverResultReg.
 	self ssPushNativeRegister: ReceiverResultReg.
 	extA := 0.
@@ -7643,6 +7653,7 @@ StackToRegisterMappingCogit >> genLowcodePerformCallInt64 [
 	self callSwitchToCStack.
 	self MoveCw: extA R: TempReg.
 	self CallRT: ceFFICalloutTrampoline.
+	self annotateBytecode: self Label.
 	BytesPerWord = 4 ifTrue: [
 	self MoveR: backEnd cResultRegisterLow R: ReceiverResultReg.
 	self MoveR: backEnd cResultRegisterHigh R: Arg0Reg.
@@ -7665,6 +7676,7 @@ StackToRegisterMappingCogit >> genLowcodePerformCallPointer [
 	self callSwitchToCStack.
 	self MoveCw: extA R: TempReg.
 	self CallRT: ceFFICalloutTrampoline.
+	self annotateBytecode: self Label.
 	self MoveR: backEnd cResultRegister R: ReceiverResultReg.
 	self ssPushNativeRegister: ReceiverResultReg.
 	extA := 0.
@@ -7686,6 +7698,7 @@ StackToRegisterMappingCogit >> genLowcodePerformCallStructure [
 	self callSwitchToCStack.
 	self MoveCw: extA R: TempReg.
 	self CallRT: ceFFICalloutTrampoline.
+	self annotateBytecode: self Label.
 	"Fetch the result"
 	self MoveR: backEnd cResultRegister R: ReceiverResultReg.
 	self ssPushNativeRegister: ReceiverResultReg.
@@ -7705,7 +7718,38 @@ StackToRegisterMappingCogit >> genLowcodePerformCallVoid [
 	self callSwitchToCStack.
 	self MoveCw: extA R: TempReg.
 	self CallRT: ceFFICalloutTrampoline.
+	self annotateBytecode: self Label.
 	extA := 0.
+
+	^ 0
+
+
+]
+
+{ #category : #'inline primitive generators generated code' }
+StackToRegisterMappingCogit >> genLowcodePerformCallout [
+	<option: #LowcodeVM>	"Lowcode instruction generator"
+
+	self callSwitchToCStack.
+	self MoveCw: extA R: TempReg.
+	self CallRT: ceFFICalloutTrampoline.
+	self annotateBytecode: self Label.
+	extA := 0.
+
+	^ 0
+
+
+]
+
+{ #category : #'inline primitive generators generated code' }
+StackToRegisterMappingCogit >> genLowcodePerformCalloutIndirect [
+	<option: #LowcodeVM>	"Lowcode instruction generator"
+
+	self ssNativeTop nativeStackPopToReg: TempReg.
+	self ssNativePop: 1.
+	self callSwitchToCStack.
+	self CallRT: ceFFICalloutTrampoline.
+	self annotateBytecode: self Label.
 
 	^ 0
 
@@ -8145,6 +8189,72 @@ StackToRegisterMappingCogit >> genLowcodePopPointer [
 	self ssNativeTop nativePopToReg: pointerValue.
 	self ssNativePop: 1.
 
+
+	^ 0
+
+
+]
+
+{ #category : #'inline primitive generators generated code' }
+StackToRegisterMappingCogit >> genLowcodePushCalloutResultFloat32 [
+	<option: #LowcodeVM>	"Lowcode instruction generator"
+
+	backEnd cFloatResultToRs: DPFPReg0.
+	self ssPushNativeRegisterSingleFloat: DPFPReg0.
+
+	^ 0
+
+
+]
+
+{ #category : #'inline primitive generators generated code' }
+StackToRegisterMappingCogit >> genLowcodePushCalloutResultFloat64 [
+	<option: #LowcodeVM>	"Lowcode instruction generator"
+
+	backEnd cFloatResultToRd: DPFPReg0.
+	self ssPushNativeRegisterDoubleFloat: DPFPReg0.
+
+	^ 0
+
+
+]
+
+{ #category : #'inline primitive generators generated code' }
+StackToRegisterMappingCogit >> genLowcodePushCalloutResultInt32 [
+	<option: #LowcodeVM>	"Lowcode instruction generator"
+
+	self MoveR: backEnd cResultRegister R: ReceiverResultReg.
+	self ssPushNativeRegister: ReceiverResultReg.
+
+	^ 0
+
+
+]
+
+{ #category : #'inline primitive generators generated code' }
+StackToRegisterMappingCogit >> genLowcodePushCalloutResultInt64 [
+	<option: #LowcodeVM>	"Lowcode instruction generator"
+
+	BytesPerWord = 4 ifTrue: [
+	self MoveR: backEnd cResultRegisterLow R: ReceiverResultReg.
+	self MoveR: backEnd cResultRegisterHigh R: Arg0Reg.
+	self ssPushNativeRegister: ReceiverResultReg secondRegister: Arg0Reg.
+	] ifFalse: [
+	self MoveR: backEnd cResultRegister R: ReceiverResultReg.
+	self ssPushNativeRegister: ReceiverResultReg.
+	].
+
+	^ 0
+
+
+]
+
+{ #category : #'inline primitive generators generated code' }
+StackToRegisterMappingCogit >> genLowcodePushCalloutResultPointer [
+	<option: #LowcodeVM>	"Lowcode instruction generator"
+
+	self MoveR: backEnd cResultRegister R: ReceiverResultReg.
+	self ssPushNativeRegister: ReceiverResultReg.
 
 	^ 0
 
@@ -10118,20 +10228,13 @@ StackToRegisterMappingCogit >> genLowcodeUnaryInlinePrimitive3: prim [
 			[144]	-> [ ^ self genLowcodeNot64 ].
 			[145]	-> [ ^ self genLowcodeOr32 ].
 			[146]	-> [ ^ self genLowcodeOr64 ].
-			[147]	-> [ ^ self genLowcodePerformCallFloat32 ].
-			[148]	-> [ ^ self genLowcodePerformCallFloat64 ].
-			[149]	-> [ ^ self genLowcodePerformCallIndirectFloat32 ].
-			[150]	-> [ ^ self genLowcodePerformCallIndirectFloat64 ].
-			[151]	-> [ ^ self genLowcodePerformCallIndirectInt32 ].
-			[152]	-> [ ^ self genLowcodePerformCallIndirectInt64 ].
-			[153]	-> [ ^ self genLowcodePerformCallIndirectPointer ].
-			[154]	-> [ ^ self genLowcodePerformCallIndirectStructure ].
-			[155]	-> [ ^ self genLowcodePerformCallIndirectVoid ].
-			[156]	-> [ ^ self genLowcodePerformCallInt32 ].
-			[157]	-> [ ^ self genLowcodePerformCallInt64 ].
-			[158]	-> [ ^ self genLowcodePerformCallPointer ].
-			[159]	-> [ ^ self genLowcodePerformCallStructure ].
-			[160]	-> [ ^ self genLowcodePerformCallVoid ].
+			[147]	-> [ ^ self genLowcodePerformCallout ].
+			[148]	-> [ ^ self genLowcodePerformCalloutIndirect ].
+			[149]	-> [ ^ self genLowcodePushCalloutResultFloat32 ].
+			[150]	-> [ ^ self genLowcodePushCalloutResultFloat64 ].
+			[151]	-> [ ^ self genLowcodePushCalloutResultInt32 ].
+			[152]	-> [ ^ self genLowcodePushCalloutResultInt64 ].
+			[153]	-> [ ^ self genLowcodePushCalloutResultPointer ].
 			[161]	-> [ ^ self genLowcodePlaftormCode ].
 			[162]	-> [ ^ self genLowcodePointerAddConstantOffset ].
 			[163]	-> [ ^ self genLowcodePointerAddOffset32 ].
@@ -10151,6 +10254,13 @@ StackToRegisterMappingCogit >> genLowcodeUnaryInlinePrimitive3: prim [
 			[177]	-> [ ^ self genLowcodePushNullPointer ].
 			[178]	-> [ ^ self genLowcodePushOne32 ].
 			[179]	-> [ ^ self genLowcodePushOne64 ].
+			[180]	-> [ ^ self genLowcodePushOneFloat32 ].
+			[181]	-> [ ^ self genLowcodePushOneFloat64 ].
+			[182]	-> [ ^ self genLowcodePushPhysicalFloat32 ].
+			[183]	-> [ ^ self genLowcodePushPhysicalFloat64 ].
+			[184]	-> [ ^ self genLowcodePushPhysicalInt32 ].
+			[185]	-> [ ^ self genLowcodePushPhysicalInt64 ].
+			[186]	-> [ ^ self genLowcodePushPhysicalPointer ].
 		}
 		otherwise: [ ^ self genLowcodeUnaryInlinePrimitive4: prim ].
 	^ 0
@@ -10163,13 +10273,6 @@ StackToRegisterMappingCogit >> genLowcodeUnaryInlinePrimitive4: prim [
 	<option: #LowcodeVM>	"Lowcode instruction generator dispatch"
 	prim
 		caseOf: {
-			[180]	-> [ ^ self genLowcodePushOneFloat32 ].
-			[181]	-> [ ^ self genLowcodePushOneFloat64 ].
-			[182]	-> [ ^ self genLowcodePushPhysicalFloat32 ].
-			[183]	-> [ ^ self genLowcodePushPhysicalFloat64 ].
-			[184]	-> [ ^ self genLowcodePushPhysicalInt32 ].
-			[185]	-> [ ^ self genLowcodePushPhysicalInt64 ].
-			[186]	-> [ ^ self genLowcodePushPhysicalPointer ].
 			[187]	-> [ ^ self genLowcodePushSessionIdentifier ].
 			[188]	-> [ ^ self genLowcodePushZero32 ].
 			[189]	-> [ ^ self genLowcodePushZero64 ].
@@ -10223,6 +10326,13 @@ StackToRegisterMappingCogit >> genLowcodeUnaryInlinePrimitive4: prim [
 			[237]	-> [ ^ self genLowcodeUmul64 ].
 			[238]	-> [ ^ self genLowcodeUnlockRegisters ].
 			[239]	-> [ ^ self genLowcodeUnlockVM ].
+			[240]	-> [ ^ self genLowcodeUrem32 ].
+			[241]	-> [ ^ self genLowcodeUrem64 ].
+			[242]	-> [ ^ self genLowcodeXor32 ].
+			[243]	-> [ ^ self genLowcodeXor64 ].
+			[244]	-> [ ^ self genLowcodeZeroExtend32From16 ].
+			[245]	-> [ ^ self genLowcodeZeroExtend32From8 ].
+			[246]	-> [ ^ self genLowcodeZeroExtend64From16 ].
 		}
 		otherwise: [ ^ self genLowcodeUnaryInlinePrimitive5: prim ].
 	^ 0
@@ -10235,13 +10345,6 @@ StackToRegisterMappingCogit >> genLowcodeUnaryInlinePrimitive5: prim [
 	<option: #LowcodeVM>	"Lowcode instruction generator dispatch"
 	prim
 		caseOf: {
-			[240]	-> [ ^ self genLowcodeUrem32 ].
-			[241]	-> [ ^ self genLowcodeUrem64 ].
-			[242]	-> [ ^ self genLowcodeXor32 ].
-			[243]	-> [ ^ self genLowcodeXor64 ].
-			[244]	-> [ ^ self genLowcodeZeroExtend32From16 ].
-			[245]	-> [ ^ self genLowcodeZeroExtend32From8 ].
-			[246]	-> [ ^ self genLowcodeZeroExtend64From16 ].
 			[247]	-> [ ^ self genLowcodeZeroExtend64From32 ].
 			[248]	-> [ ^ self genLowcodeZeroExtend64From8 ].
 		}
