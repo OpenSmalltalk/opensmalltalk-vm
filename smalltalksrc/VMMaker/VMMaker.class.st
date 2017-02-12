@@ -362,6 +362,14 @@ VMMaker class >> generateAllSpurConfigurationsUnderVersionControl [
 ]
 
 { #category : #configurations }
+VMMaker class >> generateAllSpurLowcodeConfigurations [
+	self generateSqueakSpurLowcodeCogVM;
+		generateSqueakSpurLowcodeStackVM;
+		generateSqueakSpurLowcodeCog64VM;
+		generateSqueakSpurLowcodeStack64VM
+]
+
+{ #category : #configurations }
 VMMaker class >> generateAllSqueakConfigurationsUnderVersionControl [
 	self generateSqueakStackVM;
 		generateSqueakCogVM;
@@ -563,6 +571,22 @@ VMMaker class >> generateSqueakSpurCogVM [
 ]
 
 { #category : #configurations }
+VMMaker class >> generateSqueakSpurLowcodeCog64VM [
+	"No primitives since we can use those for the Cog VM"
+	^VMMaker
+		generate: CoInterpreter
+		and: StackToRegisterMappingCogit
+		with: #(ObjectMemory Spur64BitCoMemoryManager
+				SistaVM true
+        			LowcodeVM true
+				MULTIPLEBYTECODESETS true
+				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
+		to: (FileDirectory default pathFromURI: self sourceTree, '/spurlowcode64src')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		including:#()
+]
+
+{ #category : #configurations }
 VMMaker class >> generateSqueakSpurLowcodeCogVM [
 	"No primitives since we can use those for the Cog VM"
 	^VMMaker
@@ -576,6 +600,22 @@ VMMaker class >> generateSqueakSpurLowcodeCogVM [
 		to: (FileDirectory default pathFromURI: self sourceTree, '/spurlowcodesrc')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#()
+]
+
+{ #category : #configurations }
+VMMaker class >> generateSqueakSpurLowcodeStack64VM [
+	"No primitives since we can use those from the Cog VM"
+	^VMMaker
+		generate: StackInterpreter
+		with: #(ObjectMemory Spur64BitMemoryManager
+				SistaVM true
+        			LowcodeVM true
+				FailImbalancedPrimitives false
+				MULTIPLEBYTECODESETS true
+				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
+		to: (FileDirectory default pathFromURI: self sourceTree, '/spurlowcodestack64src')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		including: #()
 ]
 
 { #category : #configurations }

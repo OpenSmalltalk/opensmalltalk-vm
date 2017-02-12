@@ -9883,74 +9883,6 @@ StackInterpreter >> lowcodeBinaryInlinePrimitive: prim [
 ]
 
 { #category : #'inline primitive ffi abi' }
-StackInterpreter >> lowcodeCallout: functionPointer structureResult: resultPointer [
-	<option: #LowcodeVM>
-	<var: #functionPointer type: #'char*' >
-	<var: #resultPointer type: #'char*' >
-	self internalPushShadowCallStackPointer: resultPointer.
-	self externalizeIPandSP.
-   self lowcodeCalloutState: lowcodeCalloutState callFunction: functionPointer.
-   self internalizeIPandSP.
-	self reloadLowcodeStateAfterCallout.
-	^ self lowcodeCalloutStateFetchResultStructure: lowcodeCalloutState
-]
-
-{ #category : #'inline primitive ffi abi' }
-StackInterpreter >> lowcodeCalloutFloat32Result: functionPointer [
-	<option: #LowcodeVM>
-	<var: #functionPointer type: #'char*' >
-	self externalizeIPandSP.
-   self lowcodeCalloutState: lowcodeCalloutState callFunction: functionPointer.
-   self internalizeIPandSP.
-	self reloadLowcodeStateAfterCallout.
-	^ self lowcodeCalloutStateFetchResultFloat32: lowcodeCalloutState
-]
-
-{ #category : #'inline primitive ffi abi' }
-StackInterpreter >> lowcodeCalloutFloat64Result: functionPointer [
-	<option: #LowcodeVM>
-	<var: #functionPointer type: #'char*' >
-	self externalizeIPandSP.
-   self lowcodeCalloutState: lowcodeCalloutState callFunction: functionPointer.
-   self internalizeIPandSP.
-	self reloadLowcodeStateAfterCallout.
-	^ self lowcodeCalloutStateFetchResultFloat64: lowcodeCalloutState
-]
-
-{ #category : #'inline primitive ffi abi' }
-StackInterpreter >> lowcodeCalloutInt32Result: functionPointer [
-	<option: #LowcodeVM>
-	<var: #functionPointer type: #'char*' >
-	self externalizeIPandSP.
-   self lowcodeCalloutState: lowcodeCalloutState callFunction: functionPointer.
-   self internalizeIPandSP.
-	self reloadLowcodeStateAfterCallout.
-	^ self lowcodeCalloutStateFetchResultInt32: lowcodeCalloutState
-]
-
-{ #category : #'inline primitive ffi abi' }
-StackInterpreter >> lowcodeCalloutInt64Result: functionPointer [
-	<option: #LowcodeVM>
-	<var: #functionPointer type: #'char*' >
-	self externalizeIPandSP.
-   self lowcodeCalloutState: lowcodeCalloutState callFunction: functionPointer.
-   self internalizeIPandSP.
-	self reloadLowcodeStateAfterCallout.
-	^ self lowcodeCalloutStateFetchResultInt64: lowcodeCalloutState
-]
-
-{ #category : #'inline primitive ffi abi' }
-StackInterpreter >> lowcodeCalloutPointerResult: functionPointer [
-	<option: #LowcodeVM>
-	<var: #functionPointer type: #'char*' >
-	self externalizeIPandSP.
-   self lowcodeCalloutState: lowcodeCalloutState callFunction: functionPointer.
-   self internalizeIPandSP.
-	self reloadLowcodeStateAfterCallout.
-	^ self lowcodeCalloutStateFetchResultPointer: lowcodeCalloutState
-]
-
-{ #category : #'inline primitive ffi abi' }
 StackInterpreter >> lowcodeCalloutState: calloutState callFunction: functionPointer [
 	<option: #LowcodeVM>
 	self lowcodeCalloutState: calloutState stackPointer: shadowCallStackPointer stackSize: (self cCoerce: lowcodeCalloutState to: #'char*') - shadowCallStackPointer callFunction: functionPointer
@@ -10076,6 +10008,19 @@ StackInterpreter >> lowcodeCalloutStateFetchResultStructure: calloutState [
 	"This is implemented as C macros in platform specific headers"
 	<doNotGenerate>
 
+]
+
+{ #category : #'inline primitive ffi abi' }
+StackInterpreter >> lowcodeDoCallout: functionPointer [
+	<option: #LowcodeVM>
+	<var: #functionPointer type: #'char*' >
+	self undoFetchNextBytecode.
+	self externalizeIPandSP.
+	self lowcodeCalloutState: lowcodeCalloutState callFunction: functionPointer.
+	self internalizeIPandSP.
+	self reloadLowcodeStateAfterCallout.
+	self fetchNextBytecode.
+	^ self lowcodeCalloutStateFetchResultFloat32: lowcodeCalloutState
 ]
 
 { #category : #'inline primitive dispatch generated code' }
@@ -12885,217 +12830,27 @@ StackInterpreter >> lowcodePrimitiveOr64 [
 ]
 
 { #category : #'inline primitive generated code' }
-StackInterpreter >> lowcodePrimitivePerformCallFloat32 [
+StackInterpreter >> lowcodePrimitivePerformCallout [
 	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| result function |
-	<var: #result type: #'float' >
+	| function |
 	function := extA.
 
-	result := self lowcodeCalloutFloat32Result: (self cCoerce: function to: #'char*').
+	self lowcodeDoCallout: (self cCoerce: function to: #'char*').
 
-	self internalPushFloat32: result.
 	extA := 0.
 
 
 ]
 
 { #category : #'inline primitive generated code' }
-StackInterpreter >> lowcodePrimitivePerformCallFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| result function |
-	<var: #result type: #'double' >
-	function := extA.
-
-	result := self lowcodeCalloutFloat64Result: (self cCoerce: function to: #'char*').
-
-	self internalPushFloat64: result.
-	extA := 0.
-
-
-]
-
-{ #category : #'inline primitive generated code' }
-StackInterpreter >> lowcodePrimitivePerformCallIndirectFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| result function |
-	<var: #result type: #'float' >
-	<var: #function type: #'char*' >
-	function := self internalPopStackPointer.
-
-	result := self lowcodeCalloutFloat32Result: function.
-
-	self internalPushFloat32: result.
-
-
-]
-
-{ #category : #'inline primitive generated code' }
-StackInterpreter >> lowcodePrimitivePerformCallIndirectFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| result function |
-	<var: #result type: #'double' >
-	<var: #function type: #'char*' >
-	function := self internalPopStackPointer.
-
-	result := self lowcodeCalloutFloat64Result: function.
-
-	self internalPushFloat64: result.
-
-
-]
-
-{ #category : #'inline primitive generated code' }
-StackInterpreter >> lowcodePrimitivePerformCallIndirectInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| result function |
-	<var: #result type: #'sqInt' >
-	<var: #function type: #'char*' >
-	function := self internalPopStackPointer.
-
-	result := self lowcodeCalloutInt32Result: function.
-
-	self internalPushInt32: result.
-
-
-]
-
-{ #category : #'inline primitive generated code' }
-StackInterpreter >> lowcodePrimitivePerformCallIndirectInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| result function |
-	<var: #result type: #'sqLong' >
-	<var: #function type: #'char*' >
-	function := self internalPopStackPointer.
-
-	result := self lowcodeCalloutInt64Result: function.
-
-	self internalPushInt64: result.
-
-
-]
-
-{ #category : #'inline primitive generated code' }
-StackInterpreter >> lowcodePrimitivePerformCallIndirectPointer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| result function |
-	<var: #result type: #'char*' >
-	<var: #function type: #'char*' >
-	function := self internalPopStackPointer.
-
-	result := self lowcodeCalloutPointerResult: function.
-
-	self internalPushPointer: result.
-
-
-]
-
-{ #category : #'inline primitive generated code' }
-StackInterpreter >> lowcodePrimitivePerformCallIndirectStructure [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| resultPointer result function structureSize |
-	<var: #resultPointer type: #'char*' >
-	<var: #result type: #'char*' >
-	<var: #function type: #'char*' >
-	structureSize := extA.
-	result := self internalPopStackPointer.
-	function := self internalPopStackPointer.
-
-	resultPointer := self lowcodeCallout: function structureResult: result.
-
-	self internalPushPointer: resultPointer.
-	extA := 0.
-
-
-]
-
-{ #category : #'inline primitive generated code' }
-StackInterpreter >> lowcodePrimitivePerformCallIndirectVoid [
+StackInterpreter >> lowcodePrimitivePerformCalloutIndirect [
 	<option: #LowcodeVM>	"Lowcode instruction generator"
 	| function |
 	<var: #function type: #'char*' >
 	function := self internalPopStackPointer.
 
-	self lowcodeCalloutInt32Result: function.
+	self lowcodeDoCallout: function.
 
-
-
-]
-
-{ #category : #'inline primitive generated code' }
-StackInterpreter >> lowcodePrimitivePerformCallInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| result function |
-	<var: #result type: #'sqInt' >
-	function := extA.
-
-	result := self lowcodeCalloutInt32Result: (self cCoerce: function to: #'char*').
-
-	self internalPushInt32: result.
-	extA := 0.
-
-
-]
-
-{ #category : #'inline primitive generated code' }
-StackInterpreter >> lowcodePrimitivePerformCallInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| result function |
-	<var: #result type: #'sqLong' >
-	function := extA.
-
-	result := self lowcodeCalloutInt64Result: (self cCoerce: function to: #'char*').
-
-	self internalPushInt64: result.
-	extA := 0.
-
-
-]
-
-{ #category : #'inline primitive generated code' }
-StackInterpreter >> lowcodePrimitivePerformCallPointer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| result function |
-	<var: #result type: #'char*' >
-	function := extA.
-
-	result := self lowcodeCalloutPointerResult: (self cCoerce: function to: #'char*').
-
-	self internalPushPointer: result.
-	extA := 0.
-
-
-]
-
-{ #category : #'inline primitive generated code' }
-StackInterpreter >> lowcodePrimitivePerformCallStructure [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| resultPointer result function structureSize |
-	<var: #resultPointer type: #'char*' >
-	<var: #result type: #'char*' >
-	function := extA.
-	structureSize := extB.
-	result := self internalPopStackPointer.
-
-	self internalPushShadowCallStackPointer: result.
-	resultPointer := self lowcodeCalloutPointerResult: (self cCoerce: function to: #'char*').
-
-	self internalPushPointer: resultPointer.
-	extA := 0.
-	extB := 0.
-	numExtB := 0.
-
-
-]
-
-{ #category : #'inline primitive generated code' }
-StackInterpreter >> lowcodePrimitivePerformCallVoid [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| function |
-	function := extA.
-
-	self lowcodeCalloutInt32Result: (self cCoerce: function to: #'char*').
-
-	extA := 0.
 
 
 ]
@@ -13344,6 +13099,71 @@ StackInterpreter >> lowcodePrimitivePopPointer [
 	pointerValue := self internalPopStackPointer.
 
 
+
+
+]
+
+{ #category : #'inline primitive generated code' }
+StackInterpreter >> lowcodePrimitivePushCalloutResultFloat32 [
+	<option: #LowcodeVM>	"Lowcode instruction generator"
+	| result |
+	<var: #result type: #'float' >
+
+	result := self lowcodeCalloutStateFetchResultFloat32: lowcodeCalloutState.
+
+	self internalPushFloat32: result.
+
+
+]
+
+{ #category : #'inline primitive generated code' }
+StackInterpreter >> lowcodePrimitivePushCalloutResultFloat64 [
+	<option: #LowcodeVM>	"Lowcode instruction generator"
+	| result |
+	<var: #result type: #'double' >
+
+	result := self lowcodeCalloutStateFetchResultFloat64: lowcodeCalloutState.
+
+	self internalPushFloat64: result.
+
+
+]
+
+{ #category : #'inline primitive generated code' }
+StackInterpreter >> lowcodePrimitivePushCalloutResultInt32 [
+	<option: #LowcodeVM>	"Lowcode instruction generator"
+	| result |
+	<var: #result type: #'sqInt' >
+
+	result := self lowcodeCalloutStateFetchResultInt32: lowcodeCalloutState.
+
+	self internalPushInt32: result.
+
+
+]
+
+{ #category : #'inline primitive generated code' }
+StackInterpreter >> lowcodePrimitivePushCalloutResultInt64 [
+	<option: #LowcodeVM>	"Lowcode instruction generator"
+	| result |
+	<var: #result type: #'sqLong' >
+
+	result := self lowcodeCalloutStateFetchResultInt64: lowcodeCalloutState.
+
+	self internalPushInt64: result.
+
+
+]
+
+{ #category : #'inline primitive generated code' }
+StackInterpreter >> lowcodePrimitivePushCalloutResultPointer [
+	<option: #LowcodeVM>	"Lowcode instruction generator"
+	| result |
+	<var: #result type: #'char*' >
+
+	result := self lowcodeCalloutStateFetchResultPointer: lowcodeCalloutState.
+
+	self internalPushPointer: result.
 
 
 ]
@@ -14723,20 +14543,13 @@ StackInterpreter >> lowcodeUnaryInlinePrimitive3: prim [
 			[144]	-> [ ^ self lowcodePrimitiveNot64 ].
 			[145]	-> [ ^ self lowcodePrimitiveOr32 ].
 			[146]	-> [ ^ self lowcodePrimitiveOr64 ].
-			[147]	-> [ ^ self lowcodePrimitivePerformCallFloat32 ].
-			[148]	-> [ ^ self lowcodePrimitivePerformCallFloat64 ].
-			[149]	-> [ ^ self lowcodePrimitivePerformCallIndirectFloat32 ].
-			[150]	-> [ ^ self lowcodePrimitivePerformCallIndirectFloat64 ].
-			[151]	-> [ ^ self lowcodePrimitivePerformCallIndirectInt32 ].
-			[152]	-> [ ^ self lowcodePrimitivePerformCallIndirectInt64 ].
-			[153]	-> [ ^ self lowcodePrimitivePerformCallIndirectPointer ].
-			[154]	-> [ ^ self lowcodePrimitivePerformCallIndirectStructure ].
-			[155]	-> [ ^ self lowcodePrimitivePerformCallIndirectVoid ].
-			[156]	-> [ ^ self lowcodePrimitivePerformCallInt32 ].
-			[157]	-> [ ^ self lowcodePrimitivePerformCallInt64 ].
-			[158]	-> [ ^ self lowcodePrimitivePerformCallPointer ].
-			[159]	-> [ ^ self lowcodePrimitivePerformCallStructure ].
-			[160]	-> [ ^ self lowcodePrimitivePerformCallVoid ].
+			[147]	-> [ ^ self lowcodePrimitivePerformCallout ].
+			[148]	-> [ ^ self lowcodePrimitivePerformCalloutIndirect ].
+			[149]	-> [ ^ self lowcodePrimitivePushCalloutResultFloat32 ].
+			[150]	-> [ ^ self lowcodePrimitivePushCalloutResultFloat64 ].
+			[151]	-> [ ^ self lowcodePrimitivePushCalloutResultInt32 ].
+			[152]	-> [ ^ self lowcodePrimitivePushCalloutResultInt64 ].
+			[153]	-> [ ^ self lowcodePrimitivePushCalloutResultPointer ].
 			[161]	-> [ ^ self lowcodePrimitivePlaftormCode ].
 			[162]	-> [ ^ self lowcodePrimitivePointerAddConstantOffset ].
 			[163]	-> [ ^ self lowcodePrimitivePointerAddOffset32 ].
@@ -14756,6 +14569,13 @@ StackInterpreter >> lowcodeUnaryInlinePrimitive3: prim [
 			[177]	-> [ ^ self lowcodePrimitivePushNullPointer ].
 			[178]	-> [ ^ self lowcodePrimitivePushOne32 ].
 			[179]	-> [ ^ self lowcodePrimitivePushOne64 ].
+			[180]	-> [ ^ self lowcodePrimitivePushOneFloat32 ].
+			[181]	-> [ ^ self lowcodePrimitivePushOneFloat64 ].
+			[182]	-> [ ^ self lowcodePrimitivePushPhysicalFloat32 ].
+			[183]	-> [ ^ self lowcodePrimitivePushPhysicalFloat64 ].
+			[184]	-> [ ^ self lowcodePrimitivePushPhysicalInt32 ].
+			[185]	-> [ ^ self lowcodePrimitivePushPhysicalInt64 ].
+			[186]	-> [ ^ self lowcodePrimitivePushPhysicalPointer ].
 		}
 		otherwise: [ ^ self lowcodeUnaryInlinePrimitive4: prim ].
 	
@@ -14768,13 +14588,6 @@ StackInterpreter >> lowcodeUnaryInlinePrimitive4: prim [
 	<option: #LowcodeVM>	"Lowcode instruction interpreter dispatch"
 	prim
 		caseOf: {
-			[180]	-> [ ^ self lowcodePrimitivePushOneFloat32 ].
-			[181]	-> [ ^ self lowcodePrimitivePushOneFloat64 ].
-			[182]	-> [ ^ self lowcodePrimitivePushPhysicalFloat32 ].
-			[183]	-> [ ^ self lowcodePrimitivePushPhysicalFloat64 ].
-			[184]	-> [ ^ self lowcodePrimitivePushPhysicalInt32 ].
-			[185]	-> [ ^ self lowcodePrimitivePushPhysicalInt64 ].
-			[186]	-> [ ^ self lowcodePrimitivePushPhysicalPointer ].
 			[187]	-> [ ^ self lowcodePrimitivePushSessionIdentifier ].
 			[188]	-> [ ^ self lowcodePrimitivePushZero32 ].
 			[189]	-> [ ^ self lowcodePrimitivePushZero64 ].
@@ -14828,6 +14641,13 @@ StackInterpreter >> lowcodeUnaryInlinePrimitive4: prim [
 			[237]	-> [ ^ self lowcodePrimitiveUmul64 ].
 			[238]	-> [ ^ self lowcodePrimitiveUnlockRegisters ].
 			[239]	-> [ ^ self lowcodePrimitiveUnlockVM ].
+			[240]	-> [ ^ self lowcodePrimitiveUrem32 ].
+			[241]	-> [ ^ self lowcodePrimitiveUrem64 ].
+			[242]	-> [ ^ self lowcodePrimitiveXor32 ].
+			[243]	-> [ ^ self lowcodePrimitiveXor64 ].
+			[244]	-> [ ^ self lowcodePrimitiveZeroExtend32From16 ].
+			[245]	-> [ ^ self lowcodePrimitiveZeroExtend32From8 ].
+			[246]	-> [ ^ self lowcodePrimitiveZeroExtend64From16 ].
 		}
 		otherwise: [ ^ self lowcodeUnaryInlinePrimitive5: prim ].
 	
@@ -14840,13 +14660,6 @@ StackInterpreter >> lowcodeUnaryInlinePrimitive5: prim [
 	<option: #LowcodeVM>	"Lowcode instruction interpreter dispatch"
 	prim
 		caseOf: {
-			[240]	-> [ ^ self lowcodePrimitiveUrem32 ].
-			[241]	-> [ ^ self lowcodePrimitiveUrem64 ].
-			[242]	-> [ ^ self lowcodePrimitiveXor32 ].
-			[243]	-> [ ^ self lowcodePrimitiveXor64 ].
-			[244]	-> [ ^ self lowcodePrimitiveZeroExtend32From16 ].
-			[245]	-> [ ^ self lowcodePrimitiveZeroExtend32From8 ].
-			[246]	-> [ ^ self lowcodePrimitiveZeroExtend64From16 ].
 			[247]	-> [ ^ self lowcodePrimitiveZeroExtend64From32 ].
 			[248]	-> [ ^ self lowcodePrimitiveZeroExtend64From8 ].
 		}
