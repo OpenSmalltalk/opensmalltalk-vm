@@ -705,7 +705,7 @@ static AbstractInstruction * NoDbgRegParms gMoveCqR(sqInt quickConstant, sqInt r
 static AbstractInstruction * NoDbgRegParms gMoveCwR(sqInt wordConstant, sqInt reg);
 static AbstractInstruction * NoDbgRegParms gMoveRMwr(sqInt sourceReg, sqInt offset, sqInt baseReg);
 static AbstractInstruction * NoDbgRegParms gMoveRR(sqInt reg1, sqInt reg2);
-static usqInt NoDbgRegParms mapEndFor(CogMethod *cogMethod);
+static sqInt NoDbgRegParms mapEndFor(CogMethod *cogMethod);
 static sqInt NoDbgRegParms mapForperformUntilarg(CogMethod *cogMethod, sqInt (*functionSymbol)(sqInt annotation, char *mcpc, sqInt arg), sqInt arg);
 static sqInt NoDbgRegParms mapObjectReferencesInClosedPIC(CogMethod *cPIC);
 static void mapObjectReferencesInGeneratedRuntime(void);
@@ -1460,20 +1460,8 @@ static sqInt genLowcodeOopToUInt32(void);
 static sqInt genLowcodeOopToUInt64(void);
 static sqInt genLowcodeOr32(void);
 static sqInt genLowcodeOr64(void);
-static sqInt genLowcodePerformCallFloat32(void);
-static sqInt genLowcodePerformCallFloat64(void);
-static sqInt genLowcodePerformCallIndirectFloat32(void);
-static sqInt genLowcodePerformCallIndirectFloat64(void);
-static sqInt genLowcodePerformCallIndirectInt32(void);
-static sqInt genLowcodePerformCallIndirectInt64(void);
-static sqInt genLowcodePerformCallIndirectPointer(void);
-static sqInt genLowcodePerformCallIndirectStructure(void);
-static sqInt genLowcodePerformCallIndirectVoid(void);
-static sqInt genLowcodePerformCallInt32(void);
-static sqInt genLowcodePerformCallInt64(void);
-static sqInt genLowcodePerformCallPointer(void);
-static sqInt genLowcodePerformCallStructure(void);
-static sqInt genLowcodePerformCallVoid(void);
+static sqInt genLowcodePerformCallout(void);
+static sqInt genLowcodePerformCalloutIndirect(void);
 static sqInt genLowcodePin(void);
 static sqInt genLowcodePlaftormCode(void);
 static sqInt genLowcodePointerAddConstantOffset(void);
@@ -1491,6 +1479,11 @@ static sqInt genLowcodePopInt32(void);
 static sqInt genLowcodePopInt64(void);
 static sqInt genLowcodePopMultipleNative(void);
 static sqInt genLowcodePopPointer(void);
+static sqInt genLowcodePushCalloutResultFloat32(void);
+static sqInt genLowcodePushCalloutResultFloat64(void);
+static sqInt genLowcodePushCalloutResultInt32(void);
+static sqInt genLowcodePushCalloutResultInt64(void);
+static sqInt genLowcodePushCalloutResultPointer(void);
 static sqInt genLowcodePushConstantUInt32(void);
 static sqInt genLowcodePushConstantUInt64(void);
 static sqInt genLowcodePushNullPointer(void);
@@ -3319,7 +3312,7 @@ static sqInt NoDbgRegParms
 blockDispatchTargetsForperformarg(CogMethod *cogMethod, usqInt (*binaryFunction)(sqInt mcpc, sqInt arg), sqInt arg)
 {
     sqInt blockEntry;
-    usqInt end;
+    sqInt end;
     sqInt pc;
     sqInt result;
     usqInt targetpc;
@@ -8425,7 +8418,7 @@ gMoveRR(sqInt reg1, sqInt reg2)
 /*	Answer the address of the null byte at the end of the method map. */
 
 	/* Cogit>>#mapEndFor: */
-static usqInt NoDbgRegParms
+static sqInt NoDbgRegParms
 mapEndFor(CogMethod *cogMethod)
 {
     usqInt end;
@@ -35756,21 +35749,23 @@ genLowcodeOr64(void)
 
 /*	Lowcode instruction generator */
 
-	/* StackToRegisterMappingCogit>>#genLowcodePerformCallFloat32 */
+	/* StackToRegisterMappingCogit>>#genLowcodePerformCallout */
 static sqInt
-genLowcodePerformCallFloat32(void)
+genLowcodePerformCallout(void)
 {
     AbstractInstruction *abstractInstruction;
+    AbstractInstruction *abstractInstruction1;
     AbstractInstruction *anInstruction;
 
 	callSwitchToCStack();
 	/* begin MoveCw:R: */
 	anInstruction = genoperandoperand(MoveCwR, extA, TempReg);
 	/* begin CallRT: */
-	abstractInstruction = genoperand(Call, ceFFICalloutTrampoline);
-	(abstractInstruction->annotation = IsRelativeCall);
-	cFloatResultToRs(backEnd, DPFPReg0);
-	ssPushNativeRegisterSingleFloat(DPFPReg0);
+	abstractInstruction1 = genoperand(Call, ceFFICalloutTrampoline);
+	(abstractInstruction1->annotation = IsRelativeCall);
+	/* begin annotateBytecode: */
+	abstractInstruction = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
+	(abstractInstruction->annotation = HasBytecodePC);
 	extA = 0;
 	return 0;
 }
@@ -35778,307 +35773,22 @@ genLowcodePerformCallFloat32(void)
 
 /*	Lowcode instruction generator */
 
-	/* StackToRegisterMappingCogit>>#genLowcodePerformCallFloat64 */
+	/* StackToRegisterMappingCogit>>#genLowcodePerformCalloutIndirect */
 static sqInt
-genLowcodePerformCallFloat64(void)
+genLowcodePerformCalloutIndirect(void)
 {
     AbstractInstruction *abstractInstruction;
-    AbstractInstruction *anInstruction;
-
-	callSwitchToCStack();
-	/* begin MoveCw:R: */
-	anInstruction = genoperandoperand(MoveCwR, extA, TempReg);
-	/* begin CallRT: */
-	abstractInstruction = genoperand(Call, ceFFICalloutTrampoline);
-	(abstractInstruction->annotation = IsRelativeCall);
-	cFloatResultToRd(backEnd, DPFPReg0);
-	ssPushNativeRegisterDoubleFloat(DPFPReg0);
-	extA = 0;
-	return 0;
-}
-
-
-/*	Lowcode instruction generator */
-
-	/* StackToRegisterMappingCogit>>#genLowcodePerformCallIndirectFloat32 */
-static sqInt
-genLowcodePerformCallIndirectFloat32(void)
-{
-    AbstractInstruction *abstractInstruction;
+    AbstractInstruction *abstractInstruction1;
 
 	nativeStackPopToReg(ssNativeTop(), TempReg);
 	ssNativePop(1);
 	callSwitchToCStack();
 	/* begin CallRT: */
-	abstractInstruction = genoperand(Call, ceFFICalloutTrampoline);
-	(abstractInstruction->annotation = IsRelativeCall);
-	cFloatResultToRs(backEnd, DPFPReg0);
-	ssPushNativeRegisterSingleFloat(DPFPReg0);
-	return 0;
-}
-
-
-/*	Lowcode instruction generator */
-
-	/* StackToRegisterMappingCogit>>#genLowcodePerformCallIndirectFloat64 */
-static sqInt
-genLowcodePerformCallIndirectFloat64(void)
-{
-    AbstractInstruction *abstractInstruction;
-
-	nativeStackPopToReg(ssNativeTop(), TempReg);
-	ssNativePop(1);
-	callSwitchToCStack();
-	/* begin CallRT: */
-	abstractInstruction = genoperand(Call, ceFFICalloutTrampoline);
-	(abstractInstruction->annotation = IsRelativeCall);
-	cFloatResultToRd(backEnd, DPFPReg0);
-	ssPushNativeRegisterDoubleFloat(DPFPReg0);
-	return 0;
-}
-
-
-/*	Lowcode instruction generator */
-
-	/* StackToRegisterMappingCogit>>#genLowcodePerformCallIndirectInt32 */
-static sqInt
-genLowcodePerformCallIndirectInt32(void)
-{
-    AbstractInstruction *abstractInstruction;
-    sqInt reg1;
-
-	nativeStackPopToReg(ssNativeTop(), TempReg);
-	ssNativePop(1);
-	callSwitchToCStack();
-	/* begin CallRT: */
-	abstractInstruction = genoperand(Call, ceFFICalloutTrampoline);
-	(abstractInstruction->annotation = IsRelativeCall);
-	/* begin MoveR:R: */
-	reg1 = RAX;
-	genoperandoperand(MoveRR, reg1, ReceiverResultReg);
-	ssPushNativeRegister(ReceiverResultReg);
-	return 0;
-}
-
-
-/*	Lowcode instruction generator */
-
-	/* StackToRegisterMappingCogit>>#genLowcodePerformCallIndirectInt64 */
-static sqInt
-genLowcodePerformCallIndirectInt64(void)
-{
-    AbstractInstruction *abstractInstruction;
-    sqInt reg12;
-
-	nativeStackPopToReg(ssNativeTop(), TempReg);
-	ssNativePop(1);
-	callSwitchToCStack();
-	/* begin CallRT: */
-	abstractInstruction = genoperand(Call, ceFFICalloutTrampoline);
-	(abstractInstruction->annotation = IsRelativeCall);
-	/* begin MoveR:R: */
-	reg12 = RAX;
-	genoperandoperand(MoveRR, reg12, ReceiverResultReg);
-	ssPushNativeRegister(ReceiverResultReg);
-
-	return 0;
-}
-
-
-/*	Lowcode instruction generator */
-
-	/* StackToRegisterMappingCogit>>#genLowcodePerformCallIndirectPointer */
-static sqInt
-genLowcodePerformCallIndirectPointer(void)
-{
-    AbstractInstruction *abstractInstruction;
-    sqInt reg1;
-
-	nativeStackPopToReg(ssNativeTop(), TempReg);
-	ssNativePop(1);
-	callSwitchToCStack();
-	/* begin CallRT: */
-	abstractInstruction = genoperand(Call, ceFFICalloutTrampoline);
-	(abstractInstruction->annotation = IsRelativeCall);
-	/* begin MoveR:R: */
-	reg1 = RAX;
-	genoperandoperand(MoveRR, reg1, ReceiverResultReg);
-	ssPushNativeRegister(ReceiverResultReg);
-	return 0;
-}
-
-
-/*	Lowcode instruction generator */
-/*	Push the result space */
-
-	/* StackToRegisterMappingCogit>>#genLowcodePerformCallIndirectStructure */
-static sqInt
-genLowcodePerformCallIndirectStructure(void)
-{
-    AbstractInstruction *abstractInstruction;
-    sqInt reg1;
-
-	nativeStackPopToReg(ssNativeTop(), TempReg);
-	ssNativePop(1);
-	/* begin PushR: */
-	genoperand(PushR, TempReg);
-	nativeStackPopToReg(ssNativeTop(), TempReg);
-	ssNativePop(1);
-	callSwitchToCStack();
-	/* begin CallRT: */
-	abstractInstruction = genoperand(Call, ceFFICalloutTrampoline);
-	(abstractInstruction->annotation = IsRelativeCall);
-	/* begin MoveR:R: */
-	reg1 = RAX;
-	genoperandoperand(MoveRR, reg1, ReceiverResultReg);
-	ssPushNativeRegister(ReceiverResultReg);
-	extA = 0;
-	return 0;
-}
-
-
-/*	Lowcode instruction generator */
-
-	/* StackToRegisterMappingCogit>>#genLowcodePerformCallIndirectVoid */
-static sqInt
-genLowcodePerformCallIndirectVoid(void)
-{
-    AbstractInstruction *abstractInstruction;
-
-	nativeStackPopToReg(ssNativeTop(), TempReg);
-	ssNativePop(1);
-	callSwitchToCStack();
-	/* begin CallRT: */
-	abstractInstruction = genoperand(Call, ceFFICalloutTrampoline);
-	(abstractInstruction->annotation = IsRelativeCall);
-	return 0;
-}
-
-
-/*	Lowcode instruction generator */
-
-	/* StackToRegisterMappingCogit>>#genLowcodePerformCallInt32 */
-static sqInt
-genLowcodePerformCallInt32(void)
-{
-    AbstractInstruction *abstractInstruction;
-    AbstractInstruction *anInstruction;
-    sqInt reg1;
-
-	callSwitchToCStack();
-	/* begin MoveCw:R: */
-	anInstruction = genoperandoperand(MoveCwR, extA, TempReg);
-	/* begin CallRT: */
-	abstractInstruction = genoperand(Call, ceFFICalloutTrampoline);
-	(abstractInstruction->annotation = IsRelativeCall);
-	/* begin MoveR:R: */
-	reg1 = RAX;
-	genoperandoperand(MoveRR, reg1, ReceiverResultReg);
-	ssPushNativeRegister(ReceiverResultReg);
-	extA = 0;
-	return 0;
-}
-
-
-/*	Lowcode instruction generator */
-
-	/* StackToRegisterMappingCogit>>#genLowcodePerformCallInt64 */
-static sqInt
-genLowcodePerformCallInt64(void)
-{
-    AbstractInstruction *abstractInstruction;
-    AbstractInstruction *anInstruction;
-    sqInt reg12;
-
-	callSwitchToCStack();
-	/* begin MoveCw:R: */
-	anInstruction = genoperandoperand(MoveCwR, extA, TempReg);
-	/* begin CallRT: */
-	abstractInstruction = genoperand(Call, ceFFICalloutTrampoline);
-	(abstractInstruction->annotation = IsRelativeCall);
-	/* begin MoveR:R: */
-	reg12 = RAX;
-	genoperandoperand(MoveRR, reg12, ReceiverResultReg);
-	ssPushNativeRegister(ReceiverResultReg);
-
-	extA = 0;
-	return 0;
-}
-
-
-/*	Lowcode instruction generator */
-
-	/* StackToRegisterMappingCogit>>#genLowcodePerformCallPointer */
-static sqInt
-genLowcodePerformCallPointer(void)
-{
-    AbstractInstruction *abstractInstruction;
-    AbstractInstruction *anInstruction;
-    sqInt reg1;
-
-	callSwitchToCStack();
-	/* begin MoveCw:R: */
-	anInstruction = genoperandoperand(MoveCwR, extA, TempReg);
-	/* begin CallRT: */
-	abstractInstruction = genoperand(Call, ceFFICalloutTrampoline);
-	(abstractInstruction->annotation = IsRelativeCall);
-	/* begin MoveR:R: */
-	reg1 = RAX;
-	genoperandoperand(MoveRR, reg1, ReceiverResultReg);
-	ssPushNativeRegister(ReceiverResultReg);
-	extA = 0;
-	return 0;
-}
-
-
-/*	Lowcode instruction generator */
-/*	Push the result space */
-
-	/* StackToRegisterMappingCogit>>#genLowcodePerformCallStructure */
-static sqInt
-genLowcodePerformCallStructure(void)
-{
-    AbstractInstruction *abstractInstruction;
-    AbstractInstruction *anInstruction;
-    sqInt reg1;
-
-	nativeStackPopToReg(ssNativeTop(), TempReg);
-	ssNativePop(1);
-	/* begin PushR: */
-	genoperand(PushR, TempReg);
-	callSwitchToCStack();
-	/* begin MoveCw:R: */
-	anInstruction = genoperandoperand(MoveCwR, extA, TempReg);
-	/* begin CallRT: */
-	abstractInstruction = genoperand(Call, ceFFICalloutTrampoline);
-	(abstractInstruction->annotation = IsRelativeCall);
-	/* begin MoveR:R: */
-	reg1 = RAX;
-	genoperandoperand(MoveRR, reg1, ReceiverResultReg);
-	ssPushNativeRegister(ReceiverResultReg);
-	extA = 0;
-	extB = 0;
-	numExtB = 0;
-	return 0;
-}
-
-
-/*	Lowcode instruction generator */
-
-	/* StackToRegisterMappingCogit>>#genLowcodePerformCallVoid */
-static sqInt
-genLowcodePerformCallVoid(void)
-{
-    AbstractInstruction *abstractInstruction;
-    AbstractInstruction *anInstruction;
-
-	callSwitchToCStack();
-	/* begin MoveCw:R: */
-	anInstruction = genoperandoperand(MoveCwR, extA, TempReg);
-	/* begin CallRT: */
-	abstractInstruction = genoperand(Call, ceFFICalloutTrampoline);
-	(abstractInstruction->annotation = IsRelativeCall);
-	extA = 0;
+	abstractInstruction1 = genoperand(Call, ceFFICalloutTrampoline);
+	(abstractInstruction1->annotation = IsRelativeCall);
+	/* begin annotateBytecode: */
+	abstractInstruction = genoperandoperand(Label, (labelCounter += 1), bytecodePC);
+	(abstractInstruction->annotation = HasBytecodePC);
 	return 0;
 }
 
@@ -36514,6 +36224,79 @@ genLowcodePopPointer(void)
 	}
 	nativePopToReg(ssNativeTop(), pointerValue);
 	ssNativePop(1);
+	return 0;
+}
+
+
+/*	Lowcode instruction generator */
+
+	/* StackToRegisterMappingCogit>>#genLowcodePushCalloutResultFloat32 */
+static sqInt
+genLowcodePushCalloutResultFloat32(void)
+{
+	cFloatResultToRs(backEnd, DPFPReg0);
+	ssPushNativeRegisterSingleFloat(DPFPReg0);
+	return 0;
+}
+
+
+/*	Lowcode instruction generator */
+
+	/* StackToRegisterMappingCogit>>#genLowcodePushCalloutResultFloat64 */
+static sqInt
+genLowcodePushCalloutResultFloat64(void)
+{
+	cFloatResultToRd(backEnd, DPFPReg0);
+	ssPushNativeRegisterDoubleFloat(DPFPReg0);
+	return 0;
+}
+
+
+/*	Lowcode instruction generator */
+
+	/* StackToRegisterMappingCogit>>#genLowcodePushCalloutResultInt32 */
+static sqInt
+genLowcodePushCalloutResultInt32(void)
+{
+    sqInt reg1;
+
+	/* begin MoveR:R: */
+	reg1 = RAX;
+	genoperandoperand(MoveRR, reg1, ReceiverResultReg);
+	ssPushNativeRegister(ReceiverResultReg);
+	return 0;
+}
+
+
+/*	Lowcode instruction generator */
+
+	/* StackToRegisterMappingCogit>>#genLowcodePushCalloutResultInt64 */
+static sqInt
+genLowcodePushCalloutResultInt64(void)
+{
+    sqInt reg12;
+
+	/* begin MoveR:R: */
+	reg12 = RAX;
+	genoperandoperand(MoveRR, reg12, ReceiverResultReg);
+	ssPushNativeRegister(ReceiverResultReg);
+
+	return 0;
+}
+
+
+/*	Lowcode instruction generator */
+
+	/* StackToRegisterMappingCogit>>#genLowcodePushCalloutResultPointer */
+static sqInt
+genLowcodePushCalloutResultPointer(void)
+{
+    sqInt reg1;
+
+	/* begin MoveR:R: */
+	reg1 = RAX;
+	genoperandoperand(MoveRR, reg1, ReceiverResultReg);
+	ssPushNativeRegister(ReceiverResultReg);
 	return 0;
 }
 
@@ -38666,46 +38449,25 @@ genLowcodeUnaryInlinePrimitive3(sqInt prim)
 		return genLowcodeOr64();
 
 	case 147:
-		return genLowcodePerformCallFloat32();
+		return genLowcodePerformCallout();
 
 	case 148:
-		return genLowcodePerformCallFloat64();
+		return genLowcodePerformCalloutIndirect();
 
 	case 149:
-		return genLowcodePerformCallIndirectFloat32();
+		return genLowcodePushCalloutResultFloat32();
 
 	case 150:
-		return genLowcodePerformCallIndirectFloat64();
+		return genLowcodePushCalloutResultFloat64();
 
 	case 151:
-		return genLowcodePerformCallIndirectInt32();
+		return genLowcodePushCalloutResultInt32();
 
 	case 152:
-		return genLowcodePerformCallIndirectInt64();
+		return genLowcodePushCalloutResultInt64();
 
 	case 153:
-		return genLowcodePerformCallIndirectPointer();
-
-	case 154:
-		return genLowcodePerformCallIndirectStructure();
-
-	case 155:
-		return genLowcodePerformCallIndirectVoid();
-
-	case 156:
-		return genLowcodePerformCallInt32();
-
-	case 157:
-		return genLowcodePerformCallInt64();
-
-	case 158:
-		return genLowcodePerformCallPointer();
-
-	case 159:
-		return genLowcodePerformCallStructure();
-
-	case 160:
-		return genLowcodePerformCallVoid();
+		return genLowcodePushCalloutResultPointer();
 
 	case 161:
 		return genLowcodePlaftormCode();
@@ -38764,22 +38526,6 @@ genLowcodeUnaryInlinePrimitive3(sqInt prim)
 	case 179:
 		return genLowcodePushOne64();
 
-	default:
-		return genLowcodeUnaryInlinePrimitive4(prim);
-
-	}
-	return 0;
-}
-
-
-/*	Lowcode instruction generator dispatch */
-
-	/* StackToRegisterMappingCogit>>#genLowcodeUnaryInlinePrimitive4: */
-static sqInt NoDbgRegParms
-genLowcodeUnaryInlinePrimitive4(sqInt prim)
-{
-	
-	switch (prim) {
 	case 180:
 		return genLowcodePushOneFloat32();
 
@@ -38801,6 +38547,22 @@ genLowcodeUnaryInlinePrimitive4(sqInt prim)
 	case 186:
 		return genLowcodePushPhysicalPointer();
 
+	default:
+		return genLowcodeUnaryInlinePrimitive4(prim);
+
+	}
+	return 0;
+}
+
+
+/*	Lowcode instruction generator dispatch */
+
+	/* StackToRegisterMappingCogit>>#genLowcodeUnaryInlinePrimitive4: */
+static sqInt NoDbgRegParms
+genLowcodeUnaryInlinePrimitive4(sqInt prim)
+{
+	
+	switch (prim) {
 	case 187:
 		return genLowcodePushSessionIdentifier();
 
@@ -38960,22 +38722,6 @@ genLowcodeUnaryInlinePrimitive4(sqInt prim)
 	case 239:
 		return genLowcodeUnlockVM();
 
-	default:
-		return genLowcodeUnaryInlinePrimitive5(prim);
-
-	}
-	return 0;
-}
-
-
-/*	Lowcode instruction generator dispatch */
-
-	/* StackToRegisterMappingCogit>>#genLowcodeUnaryInlinePrimitive5: */
-static sqInt NoDbgRegParms
-genLowcodeUnaryInlinePrimitive5(sqInt prim)
-{
-	
-	switch (prim) {
 	case 240:
 		return genLowcodeUrem32();
 
@@ -38997,6 +38743,22 @@ genLowcodeUnaryInlinePrimitive5(sqInt prim)
 	case 246:
 		return genLowcodeZeroExtend64From16();
 
+	default:
+		return genLowcodeUnaryInlinePrimitive5(prim);
+
+	}
+	return 0;
+}
+
+
+/*	Lowcode instruction generator dispatch */
+
+	/* StackToRegisterMappingCogit>>#genLowcodeUnaryInlinePrimitive5: */
+static sqInt NoDbgRegParms
+genLowcodeUnaryInlinePrimitive5(sqInt prim)
+{
+	
+	switch (prim) {
 	case 247:
 		return genLowcodeZeroExtend64From32();
 

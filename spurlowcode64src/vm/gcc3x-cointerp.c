@@ -929,8 +929,8 @@ static void NoDbgRegParms NeverInline addToWeakList(sqInt weakCorpse);
 static sqInt allNewSpaceObjectsHaveZeroRTRefCount(void);
 static sqInt allWeakSurvivorsOnWeakList(void);
 static void NeverInline computeRefCountToShrinkRT(void);
-static sqInt NoDbgRegParms copyAndForwardMourner(sqInt mourner);
-static sqInt NoDbgRegParms copyAndForward(sqInt survivor);
+static usqInt NoDbgRegParms copyAndForwardMourner(sqInt mourner);
+static usqInt NoDbgRegParms copyAndForward(sqInt survivor);
 static usqInt NoDbgRegParms NeverInline copyToOldSpacebytesformat(sqInt survivor, sqInt bytesInObject, sqInt formatOfSurvivor);
 static void fireEphemeronsInRememberedSet(void);
 static void fireEphemeronsOnEphemeronList(void);
@@ -1651,8 +1651,8 @@ _iss char * framePointer;
 _iss usqInt method;
 _iss StackPage * stackPage;
 _iss sqInt nilObj;
-_iss usqInt instructionPointer;
 _iss sqInt bytecodeSetSelector;
+_iss usqInt instructionPointer;
 _iss sqInt argumentCount;
 _iss sqInt specialObjectsOop;
 _iss usqInt freeStart;
@@ -1663,7 +1663,6 @@ _iss usqInt endOfMemory;
 _iss StackPage * pages;
 _iss usqInt oldSpaceStart;
 _iss char * stackBasePlus1;
-_iss char* shadowCallStackPointer;
 _iss sqInt trueObj;
 _iss sqInt falseObj;
 _iss usqInt newSpaceStart;
@@ -1674,6 +1673,7 @@ _iss usqInt pastSpaceStart;
 _iss sqInt needGCFlag;
 _iss sqInt bytesPerPage;
 _iss sqInt numSegments;
+_iss char* shadowCallStackPointer;
 _iss sqInt traceLogIndex;
 _iss sqInt * freeLists;
 _iss usqInt scavengeThreshold;
@@ -5101,7 +5101,7 @@ interpret(void)
 				frameToReturnTo = 0;
 				if (!((byteAt((localFP + FoxIFrameFlags) + 3)) != 0)) {
 					goto commonCallerReturn;
-					goto l3206;
+					goto l3128;
 				}
 				closure = longAt(localFP + (frameStackedReceiverOffset(localFP)));
 
@@ -5149,10 +5149,10 @@ interpret(void)
 						: (byteAt((localFP + FoxIFrameFlags) + 2)) != 0)) {
 						assert(isContext(frameContext(localFP)));
 						ourContext = longAt(localFP + FoxThisContext);
-						goto l3233;
+						goto l3155;
 					}
 					ourContext = marryFrameSP(localFP, localSP);
-				l3233:	/* end ensureFrameIsMarried:SP: */;
+				l3155:	/* end ensureFrameIsMarried:SP: */;
 					/* begin internalPush: */
 					longAtPointerput((localSP -= BytesPerOop), ourContext);
 					/* begin internalPush: */
@@ -5161,7 +5161,7 @@ interpret(void)
 					GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorCannotReturn) << (shiftForWord())))));
 					GIV(argumentCount) = 1;
 					goto normalSend;
-					goto l3206;
+					goto l3128;
 				}
 				if (unwindContextOrNilOrZero != 0) {
 					/* begin internalAboutToReturn:through: */
@@ -5170,10 +5170,10 @@ interpret(void)
 						: (byteAt((localFP + FoxIFrameFlags) + 2)) != 0)) {
 						assert(isContext(frameContext(localFP)));
 						ourContext1 = longAt(localFP + FoxThisContext);
-						goto l3226;
+						goto l3148;
 					}
 					ourContext1 = marryFrameSP(localFP, localSP);
-				l3226:	/* end ensureFrameIsMarried:SP: */;
+				l3148:	/* end ensureFrameIsMarried:SP: */;
 					/* begin internalPush: */
 					longAtPointerput((localSP -= BytesPerOop), ourContext1);
 					/* begin internalPush: */
@@ -5184,7 +5184,7 @@ interpret(void)
 					GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorAboutToReturn) << (shiftForWord())))));
 					GIV(argumentCount) = 2;
 					goto normalSend;
-					goto l3206;
+					goto l3128;
 				}
 				contextToReturnTo = null;
 				if (((((longAt((home + BaseHeaderSize) + (((sqInt)((usqInt)(SenderIndex) << (shiftForWord()))))))) & 7) == 1)) {
@@ -5236,10 +5236,10 @@ interpret(void)
 							: (byteAt((localFP + FoxIFrameFlags) + 2)) != 0)) {
 							assert(isContext(frameContext(localFP)));
 							ourContext2 = longAt(localFP + FoxThisContext);
-							goto l3219;
+							goto l3141;
 						}
 						ourContext2 = marryFrameSP(localFP, localSP);
-					l3219:	/* end ensureFrameIsMarried:SP: */;
+					l3141:	/* end ensureFrameIsMarried:SP: */;
 						/* begin internalPush: */
 						longAtPointerput((localSP -= BytesPerOop), ourContext2);
 						/* begin internalPush: */
@@ -5248,7 +5248,7 @@ interpret(void)
 						GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorCannotReturn) << (shiftForWord())))));
 						GIV(argumentCount) = 1;
 						goto normalSend;
-						goto l3206;
+						goto l3128;
 					}
 				}
 				assert(pageListIsWellFormed());
@@ -5353,11 +5353,11 @@ interpret(void)
 						GIV(stackPointer) = localSP;
 						GIV(framePointer) = localFP;
 						ceEnterCogCodePopReceiverReg();
-						goto l3216;
+						goto l3138;
 					}
 					localIP = pointerForOop(longAt(localFP + FoxIFSavedIP));
 				}
-			l3216:	/* end maybeReturnToMachineCodeFrame */;
+			l3138:	/* end maybeReturnToMachineCodeFrame */;
 				/* begin setMethod: */
 				aMethodObj = longAt(localFP + FoxMethod);
 				assert((((usqInt)aMethodObj)) >= (startOfMemory()));
@@ -5372,7 +5372,7 @@ interpret(void)
 
 				longAtPointerput(localSP, localReturnValue);
 			}
-		l3206:	/* end case */;
+		l3128:	/* end case */;
 			BREAK;
 		CASE(121)
 		CASE(345) /*89*/
@@ -5534,27 +5534,27 @@ interpret(void)
 							fp = (thePage->headFP);
 							if (fp == theFP) {
 								frameAbove = 0;
-								goto l3239;
+								goto l3161;
 							}
 							while (((callerFP = pointerForOop(longAt(fp + FoxSavedFP)))) != 0) {
 								if (callerFP == theFP) {
 									frameAbove = fp;
-									goto l3239;
+									goto l3161;
 								}
 								fp = callerFP;
 							}
 							error("did not find theFP in stack page");
 							frameAbove = 0;
-						l3239:	/* end findFrameAbove:inPage: */;
+						l3161:	/* end findFrameAbove:inPage: */;
 							/* begin newStackPage */
 							lruOrFree = (GIV(mostRecentlyUsedPage)->nextPage);
 							if (((lruOrFree->baseFP)) == 0) {
 								newPage = lruOrFree;
-								goto l3247;
+								goto l3169;
 							}
 							divorceFramesIn(lruOrFree);
 							newPage = lruOrFree;
-						l3247:	/* end newStackPage */;
+						l3169:	/* end newStackPage */;
 							assert(newPage == GIV(stackPage));
 							moveFramesInthroughtoPage(thePage, frameAbove, newPage);
 							markStackPageMostRecentlyUsed(newPage);
@@ -5577,7 +5577,7 @@ interpret(void)
 							longAtput((sp2 = GIV(stackPointer) - BytesPerWord), GIV(instructionPointer));
 							GIV(stackPointer) = sp2;
 							ceSendAborttonumArgs(longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorCannotReturn) << (shiftForWord()))))), contextToReturnFrom, 1);
-							goto l3235;
+							goto l3157;
 						}
 						GIV(instructionPointer) = 0;
 						thePage = makeBaseFrameFor(contextToReturnTo);
@@ -5613,7 +5613,7 @@ interpret(void)
 							GIV(stackPointer) = localSP;
 							GIV(framePointer) = localFP;
 							ceEnterCogCodePopReceiverReg();
-							goto l3235;
+							goto l3157;
 						}
 						localIP = pointerForOop(longAt(localFP + FoxIFSavedIP));
 					}
@@ -5631,7 +5631,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l3235;
+					goto l3157;
 				}
 				localIP = pointerForOop(longAt(localFP + FoxCallerSavedIP));
 				localSP = localFP + (frameStackedReceiverOffsetNumArgs(((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -5656,7 +5656,7 @@ interpret(void)
 						GIV(stackPointer) = localSP;
 						GIV(framePointer) = localFP;
 						ceEnterCogCodePopReceiverReg();
-						goto l3235;
+						goto l3157;
 					}
 					localIP = pointerForOop(longAt(localFP + FoxIFSavedIP));
 				}
@@ -5674,7 +5674,7 @@ interpret(void)
 
 				longAtPointerput(localSP, localReturnValue);
 			}
-		l3235:	/* end case */;
+		l3157:	/* end case */;
 			BREAK;
 		CASE(126)
 		CASE(127)
@@ -5708,10 +5708,10 @@ interpret(void)
 					: (byteAt((theFP + FoxIFrameFlags) + 2)) != 0)) {
 					assert(isContext(frameContext(theFP)));
 					ourContext = longAt(theFP + FoxThisContext);
-					goto l3248;
+					goto l3170;
 				}
 				ourContext = marryFrameSP(theFP, theSP);
-			l3248:	/* end ensureFrameIsMarried:SP: */;
+			l3170:	/* end ensureFrameIsMarried:SP: */;
 				localIP -= 1;
 				/* begin internalPush: */
 				longAtPointerput((localSP -= BytesPerOop), ourContext);
@@ -6153,12 +6153,12 @@ interpret(void)
 						classTablePage = longAt((GIV(hiddenRootsObj) + BaseHeaderSize) + (((sqInt)((usqInt)(fieldIndex) << (shiftForWord())))));
 						if (classTablePage == GIV(nilObj)) {
 							classOrInteger = null;
-							goto l3266;
+							goto l3188;
 						}
 						/* begin fetchPointer:ofObject: */
 						fieldIndex1 = lkupClassTag & ((1U << (classTableMajorIndexShift())) - 1);
 						classOrInteger = longAt((classTablePage + BaseHeaderSize) + (((sqInt)((usqInt)(fieldIndex1) << (shiftForWord())))));
-					l3266:	/* end classAtIndex: */;
+					l3188:	/* end classAtIndex: */;
 						GIV(traceLog)[GIV(traceLogIndex)] = classOrInteger;
 						GIV(traceLog)[GIV(traceLogIndex) + 1] = GIV(messageSelector);
 						GIV(traceLog)[GIV(traceLogIndex) + 2] = TraceIsFromInterpreter;
@@ -6179,7 +6179,7 @@ interpret(void)
 						GIV(newMethod) = GIV(methodCache)[probe + MethodCacheMethod];
 						primitiveFunctionPointer = ((void (*)()) (GIV(methodCache)[probe + MethodCachePrimFunction]));
 						ok = 1;
-						goto l3250;
+						goto l3172;
 					}
 
 					/* second probe */
@@ -6189,7 +6189,7 @@ interpret(void)
 						GIV(newMethod) = GIV(methodCache)[probe + MethodCacheMethod];
 						primitiveFunctionPointer = ((void (*)()) (GIV(methodCache)[probe + MethodCachePrimFunction]));
 						ok = 1;
-						goto l3250;
+						goto l3172;
 					}
 					probe = (((usqInt) hash) >> 2) & MethodCacheMask;
 					if (((GIV(methodCache)[probe + MethodCacheSelector]) == GIV(messageSelector))
@@ -6197,10 +6197,10 @@ interpret(void)
 						GIV(newMethod) = GIV(methodCache)[probe + MethodCacheMethod];
 						primitiveFunctionPointer = ((void (*)()) (GIV(methodCache)[probe + MethodCachePrimFunction]));
 						ok = 1;
-						goto l3250;
+						goto l3172;
 					}
 					ok = 0;
-				l3250:	/* end inlineLookupInMethodCacheSel:classTag: */;
+				l3172:	/* end inlineLookupInMethodCacheSel:classTag: */;
 					if (ok) {
 						/* begin ifAppropriateCompileToNativeCode:selector: */
 						aMethodObj = GIV(newMethod);
@@ -6272,7 +6272,7 @@ interpret(void)
 										maybeFlagMethodAsInterpreted(aMethodObj1);
 									}
 								}
-								goto l3267;
+								goto l3189;
 							}
 						}
 						/* begin classAtIndex: */
@@ -6285,12 +6285,12 @@ interpret(void)
 						classTablePage1 = longAt((GIV(hiddenRootsObj) + BaseHeaderSize) + (((sqInt)((usqInt)(fieldIndex2) << (shiftForWord())))));
 						if (classTablePage1 == GIV(nilObj)) {
 							GIV(lkupClass) = null;
-							goto l3263;
+							goto l3185;
 						}
 						/* begin fetchPointer:ofObject: */
 						fieldIndex11 = lkupClassTag & ((1U << (classTableMajorIndexShift())) - 1);
 						GIV(lkupClass) = longAt((classTablePage1 + BaseHeaderSize) + (((sqInt)((usqInt)(fieldIndex11) << (shiftForWord())))));
-					l3263:	/* end classAtIndex: */;
+					l3185:	/* end classAtIndex: */;
 						lookupMethodInClass(GIV(lkupClass));
 
 						/* begin internalizeIPandSP */
@@ -6302,7 +6302,7 @@ interpret(void)
 
 						addNewMethodToCache(GIV(lkupClass));
 					}
-				l3267:	/* end internalFindNewMethodOrdinary */;
+				l3189:	/* end internalFindNewMethodOrdinary */;
 					/* begin internalExecuteNewMethod */
 					if (primitiveFunctionPointer != 0) {
 						if ((((usqIntptr_t) primitiveFunctionPointer)) <= MaxQuickPrimitiveIndex) {
@@ -6315,28 +6315,28 @@ interpret(void)
 								/* begin internalStackTopPut: */
 								aValue = longAt(((longAtPointer(localSP)) + BaseHeaderSize) + (((sqInt)((usqInt)((localPrimIndex - 264)) << (shiftForWord())))));
 								longAtPointerput(localSP, aValue);
-								goto l3271;
+								goto l3193;
 							}
 							if (localPrimIndex == 256) {
-								goto l3271;
+								goto l3193;
 							}
 							if (localPrimIndex == 257) {
 								/* begin internalStackTopPut: */
 								longAtPointerput(localSP, GIV(trueObj));
-								goto l3271;
+								goto l3193;
 							}
 							if (localPrimIndex == 258) {
 								/* begin internalStackTopPut: */
 								longAtPointerput(localSP, GIV(falseObj));
-								goto l3271;
+								goto l3193;
 							}
 							if (localPrimIndex == 259) {
 								/* begin internalStackTopPut: */
 								longAtPointerput(localSP, GIV(nilObj));
-								goto l3271;
+								goto l3193;
 							}
 							longAtPointerput(localSP, (((usqInt)(localPrimIndex - 261) << 3) | 1));
-							goto l3271;
+							goto l3193;
 						}
 						/* begin externalizeIPandSP */
 						assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
@@ -6400,7 +6400,7 @@ interpret(void)
 						if (succeeded) {
 							returntoExecutive(popStack(), 1);
 							browserPluginReturnIfNeeded();
-							goto l3271;
+							goto l3193;
 						}
 					}
 					if ((assert(isNonImmediate(GIV(newMethod))),
@@ -6482,11 +6482,11 @@ interpret(void)
 										if (GIV(primFailCode) <= (numSlotsOf(table))) {
 											/* begin fetchPointer:ofObject: */
 											errorCode = longAt((table + BaseHeaderSize) + (((sqInt)((usqInt)((GIV(primFailCode) - 1)) << (shiftForWord())))));
-											goto l3265;
+											goto l3187;
 										}
 									}
 									errorCode = (((usqInt)GIV(primFailCode) << 3) | 1);
-								l3265:	/* end getErrorObjectFromPrimFailCode */;
+								l3187:	/* end getErrorObjectFromPrimFailCode */;
 									longAtPointerput(localSP, errorCode);
 								}
 								GIV(primFailCode) = 0;
@@ -6512,7 +6512,7 @@ interpret(void)
 
 						}
 					}
-				l3271:	/* end internalExecuteNewMethod */;
+				l3193:	/* end internalExecuteNewMethod */;
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
@@ -7197,19 +7197,7 @@ interpret(void)
 				sqInt byteIndex1;
 				usqIntptr_t calloutStateSize;
 				usqIntptr_t calloutStateSize1;
-				usqIntptr_t calloutStateSize10;
-				usqIntptr_t calloutStateSize11;
-				usqIntptr_t calloutStateSize12;
-				usqIntptr_t calloutStateSize13;
-				usqIntptr_t calloutStateSize14;
 				usqIntptr_t calloutStateSize2;
-				usqIntptr_t calloutStateSize3;
-				usqIntptr_t calloutStateSize4;
-				usqIntptr_t calloutStateSize5;
-				usqIntptr_t calloutStateSize6;
-				usqIntptr_t calloutStateSize7;
-				usqIntptr_t calloutStateSize8;
-				usqIntptr_t calloutStateSize9;
 				char*check;
 				sqInt classObj;
 				sqInt classOop;
@@ -7254,8 +7242,9 @@ interpret(void)
 				sqLong first110;
 				sqLong first111;
 				sqLong first112;
-				sqInt first113;
-				sqLong first114;
+				sqLong first113;
+				sqInt first114;
+				sqLong first115;
 				float first12;
 				sqLong first121;
 				float first13;
@@ -7265,9 +7254,9 @@ interpret(void)
 				float first15;
 				sqLong first151;
 				double first16;
-				sqLong first161;
+				sqInt first161;
 				double first17;
-				sqInt first171;
+				sqLong first171;
 				double first18;
 				sqInt first181;
 				double first19;
@@ -7289,8 +7278,7 @@ interpret(void)
 				sqLong first3;
 				sqLong first31;
 				sqLong first32;
-				sqLong first33;
-				sqInt first34;
+				sqInt first33;
 				sqInt first4;
 				sqInt first41;
 				char*first42;
@@ -7325,20 +7313,8 @@ interpret(void)
 				sqInt frameNumArgs;
 				sqInt frameNumArgs1;
 				sqInt function;
-				sqInt function1;
-				sqInt function10;
-				sqInt function11;
-				sqInt function12;
-				sqInt function13;
-				sqInt function14;
-				char*function2;
-				char*function3;
-				char*function4;
-				char*function5;
-				char*function6;
-				char*function7;
-				char*function8;
-				sqInt function9;
+				char*function1;
+				sqInt function2;
 				sqInt hash;
 				sqInt hash1;
 				sqInt header;
@@ -7350,18 +7326,6 @@ interpret(void)
 				sqInt indexableSize1;
 				char*initialShadowCallStackPointer;
 				char*initialShadowCallStackPointer1;
-				char*initialShadowCallStackPointer10;
-				char*initialShadowCallStackPointer11;
-				char*initialShadowCallStackPointer12;
-				char*initialShadowCallStackPointer13;
-				char*initialShadowCallStackPointer2;
-				char*initialShadowCallStackPointer3;
-				char*initialShadowCallStackPointer4;
-				char*initialShadowCallStackPointer5;
-				char*initialShadowCallStackPointer6;
-				char*initialShadowCallStackPointer7;
-				char*initialShadowCallStackPointer8;
-				char*initialShadowCallStackPointer9;
 				sqInt int32Result;
 				sqLong int64Result;
 				sqInt int64Result1;
@@ -7495,124 +7459,115 @@ interpret(void)
 				sqInt rcvr;
 				sqInt registerID;
 				sqInt registerID1;
-				sqInt registerID11;
+				sqInt registerID10;
 				sqInt registerID2;
-				sqInt registerID21;
 				sqInt registerID3;
-				sqInt registerID31;
 				sqInt registerID4;
-				sqInt registerID41;
 				sqInt registerID5;
 				sqInt registerID6;
+				sqInt registerID7;
+				sqInt registerID8;
+				sqInt registerID9;
 				sqInt result;
 				sqInt result1;
 				float result10;
-				sqInt result101;
-				char*result102;
+				sqLong result101;
+				sqInt result102;
 				float result11;
 				sqLong result110;
-				sqInt result111;
-				double result112;
+				sqLong result111;
+				sqLong result112;
 				sqLong result113;
-				sqInt result114;
+				sqLong result114;
 				double result115;
 				sqLong result116;
 				float result12;
 				sqLong result121;
-				sqLong result122;
+				char*result122;
 				float result13;
-				sqLong result131;
-				sqInt result132;
+				sqInt result131;
+				char*result132;
 				float result14;
 				sqLong result141;
-				sqLong result142;
+				char*result142;
 				float result15;
 				sqInt result151;
 				char*result152;
 				sqInt result16;
-				sqLong result161;
+				sqInt result161;
 				sqInt result162;
 				sqLong result17;
 				sqInt result171;
 				sqLong result172;
 				sqInt result18;
 				sqInt result181;
-				float result182;
+				sqInt result182;
 				sqLong result19;
 				sqInt result191;
-				double result192;
+				sqLong result192;
 				usqInt result2;
 				double result20;
 				sqInt result201;
-				float result202;
+				char*result202;
 				double result21;
-				sqInt result210;
-				sqInt result211;
+				float result210;
+				sqLong result211;
 				sqInt result212;
 				sqInt result213;
-				double result214;
-				char*result215;
-				sqInt result216;
+				char*result214;
+				sqInt result215;
 				double result22;
-				sqInt result221;
-				sqInt result222;
+				float result221;
+				sqLong result222;
 				double result23;
-				sqLong result231;
-				sqLong result232;
+				double result231;
+				float result232;
 				double result24;
 				float result241;
-				char*result242;
+				double result242;
 				double result25;
 				double result251;
-				char*result252;
 				sqInt result26;
-				float result261;
 				sqLong result27;
-				double result271;
-				char*result28;
-				sqInt result281;
-				char*result29;
-				sqLong result291;
+				sqInt result28;
+				sqLong result29;
 				sqLong result3;
 				sqInt result30;
 				sqLong result31;
-				float result32;
-				sqLong result33;
+				double result310;
+				sqInt result32;
+				sqInt result33;
 				sqLong result34;
-				sqInt result35;
-				double result36;
-				float result37;
-				sqInt result38;
+				sqLong result35;
+				sqInt result36;
+				double result37;
+				sqLong result38;
+				sqInt result39;
 				sqInt result4;
+				float result40;
 				sqInt result41;
-				float result42;
-				sqInt result43;
-				double result44;
+				sqInt result42;
+				double result43;
+				sqInt result44;
 				sqLong result5;
-				sqInt result51;
-				double result52;
-				sqLong result53;
-				char*result54;
+				sqLong result51;
+				sqLong result52;
+				char*result53;
 				sqInt result6;
-				sqLong result61;
+				sqInt result61;
 				sqInt result62;
 				sqInt result63;
 				sqLong result64;
-				sqInt result641;
 				sqLong result7;
 				sqLong result71;
 				sqLong result72;
 				sqLong result73;
-				sqLong result74;
 				char*result8;
-				sqLong result81;
-				sqInt result82;
-				char*result83;
+				sqInt result81;
+				float result82;
 				char*result9;
-				sqLong result91;
-				char*result92;
-				char*resultPointer;
-				char*resultPointer1;
+				sqInt result91;
+				double result92;
 				sqInt scale;
 				sqLong scale1;
 				sqInt second;
@@ -7623,9 +7578,10 @@ interpret(void)
 				float second11;
 				sqLong second110;
 				sqLong second111;
-				sqInt second112;
-				sqLong second113;
+				sqLong second112;
+				sqInt second113;
 				sqLong second114;
+				sqLong second115;
 				float second12;
 				sqLong second121;
 				float second13;
@@ -7659,8 +7615,7 @@ interpret(void)
 				sqLong second3;
 				sqLong second31;
 				sqLong second32;
-				sqLong second33;
-				sqInt second34;
+				sqInt second33;
 				sqInt second4;
 				sqInt second41;
 				char*second42;
@@ -7706,8 +7661,6 @@ interpret(void)
 				sqInt spaceSize;
 				char*structurePointer;
 				sqInt structureSize;
-				sqInt structureSize1;
-				sqInt structureSize2;
 				sqInt tagBits;
 				sqInt tagBits1;
 				sqInt top;
@@ -7827,6 +7780,7 @@ interpret(void)
 				sqInt topInt32211;
 				sqInt topInt32212;
 				sqInt topInt32213;
+				sqInt topInt32214;
 				sqInt topInt3222;
 				sqInt topInt3223;
 				sqInt topInt3224;
@@ -7844,17 +7798,16 @@ interpret(void)
 				sqInt topInt3235;
 				sqInt topInt3236;
 				sqInt topInt3237;
+				sqInt topInt3238;
 				sqInt topInt324;
 				sqInt topInt3241;
 				sqInt topInt3242;
 				sqInt topInt3243;
 				sqInt topInt3244;
-				sqInt topInt3245;
 				sqInt topInt325;
 				sqInt topInt3251;
 				sqInt topInt3252;
 				sqInt topInt3253;
-				sqInt topInt3254;
 				sqInt topInt326;
 				sqInt topInt3261;
 				sqInt topInt3262;
@@ -7910,6 +7863,7 @@ interpret(void)
 				sqLong topInt64210;
 				sqLong topInt64211;
 				sqLong topInt64212;
+				sqLong topInt64213;
 				sqLong topInt6422;
 				sqLong topInt6423;
 				sqLong topInt6424;
@@ -7929,7 +7883,6 @@ interpret(void)
 				sqLong topInt6441;
 				sqLong topInt6442;
 				sqLong topInt6443;
-				sqLong topInt6444;
 				sqLong topInt645;
 				sqLong topInt6451;
 				sqLong topInt6452;
@@ -7957,7 +7910,6 @@ interpret(void)
 				char*topPointer112;
 				char*topPointer113;
 				char*topPointer114;
-				char*topPointer115;
 				char*topPointer12;
 				char*topPointer13;
 				char*topPointer14;
@@ -7969,9 +7921,6 @@ interpret(void)
 				char*topPointer2;
 				char*topPointer20;
 				char*topPointer21;
-				char*topPointer210;
-				char*topPointer211;
-				char*topPointer212;
 				char*topPointer22;
 				char*topPointer23;
 				char*topPointer24;
@@ -7981,13 +7930,9 @@ interpret(void)
 				char*topPointer28;
 				char*topPointer29;
 				char*topPointer3;
-				char*topPointer30;
 				char*topPointer31;
 				char*topPointer32;
 				char*topPointer33;
-				char*topPointer34;
-				char*topPointer35;
-				char*topPointer36;
 				char*topPointer4;
 				char*topPointer41;
 				char*topPointer42;
@@ -8040,15 +7985,15 @@ interpret(void)
 				sqInt value;
 				sqInt value1;
 				sqLong value10;
-				sqInt value101;
+				sqLong value101;
 				sqInt value102;
 				sqInt value103;
 				sqInt value104;
 				sqLong value11;
-				sqInt value110;
+				sqLong value110;
 				sqLong value111;
-				double value1111;
-				sqLong value112;
+				sqInt value1111;
+				sqInt value112;
 				sqLong value113;
 				sqInt value114;
 				sqInt value115;
@@ -8056,17 +8001,17 @@ interpret(void)
 				sqInt value117;
 				sqLong value118;
 				sqInt value12;
-				sqInt value121;
+				float value121;
 				sqInt value122;
 				sqInt value123;
 				sqInt value124;
 				float value13;
-				sqInt value131;
+				double value131;
 				sqInt value132;
 				sqInt value133;
 				sqInt value134;
 				double value14;
-				sqLong value141;
+				sqInt value141;
 				float value142;
 				sqInt value143;
 				sqInt value144;
@@ -8076,32 +8021,35 @@ interpret(void)
 				sqLong value153;
 				float value154;
 				sqInt value16;
-				float value161;
+				sqInt value161;
 				sqInt value162;
 				sqLong value163;
 				sqInt value164;
 				sqLong value17;
-				double value171;
+				sqInt value171;
 				sqLong value172;
 				sqLong value173;
 				float value174;
 				sqInt value18;
 				sqInt value181;
-				sqInt value182;
-				float value183;
+				float value182;
+				sqInt value183;
+				float value184;
 				sqInt value19;
-				sqInt value191;
-				sqLong value192;
-				float value193;
+				sqLong value191;
+				double value192;
+				sqLong value193;
+				float value194;
 				sqInt value2;
 				float value20;
-				sqInt value201;
+				sqLong value201;
 				sqInt value202;
+				sqInt value203;
 				sqLong value21;
 				sqLong value210;
-				sqInt value211;
+				sqLong value211;
 				sqLong value212;
-				sqInt value213;
+				sqLong value213;
 				sqInt value214;
 				sqInt value215;
 				sqInt value216;
@@ -8111,13 +8059,13 @@ interpret(void)
 				sqLong value222;
 				sqInt value223;
 				sqInt value23;
-				sqLong value231;
+				sqInt value231;
 				sqInt value232;
 				sqInt value24;
-				sqLong value241;
+				sqInt value241;
 				sqInt value242;
 				sqInt value25;
-				sqLong value251;
+				sqInt value251;
 				sqInt value252;
 				sqInt value26;
 				sqInt value261;
@@ -8135,17 +8083,16 @@ interpret(void)
 				sqInt value30;
 				sqInt value301;
 				sqInt value31;
-				sqLong value310;
+				sqInt value310;
 				sqInt value311;
 				sqInt value312;
-				sqInt value313;
-				sqLong value314;
-				sqInt value315;
+				sqLong value313;
+				sqInt value314;
 				sqInt value32;
-				sqInt value321;
+				sqLong value321;
 				sqLong value322;
 				sqInt value33;
-				sqInt value331;
+				sqLong value331;
 				sqInt value34;
 				sqInt value341;
 				sqInt value35;
@@ -8153,39 +8100,37 @@ interpret(void)
 				sqLong value36;
 				sqLong value361;
 				sqInt value37;
-				sqLong value371;
+				sqInt value371;
 				sqInt value38;
 				sqInt value381;
 				sqInt value39;
 				sqInt value391;
 				sqInt value4;
 				sqLong value40;
-				float value401;
 				sqInt value41;
-				sqLong value411;
+				sqInt value411;
 				sqInt value412;
-				sqInt value42;
-				float value43;
+				float value42;
+				sqInt value43;
 				sqInt value44;
 				sqInt value45;
 				sqInt value46;
 				sqInt value47;
-				sqInt value48;
 				sqInt value5;
 				sqInt value51;
-				sqInt value511;
+				sqLong value511;
 				double value52;
 				sqInt value53;
 				sqInt value54;
 				sqLong value6;
 				sqInt value61;
-				sqLong value611;
+				sqInt value611;
 				sqInt value62;
 				sqInt value63;
 				float value64;
 				sqInt value7;
 				sqInt value71;
-				sqInt value711;
+				sqLong value711;
 				sqLong value72;
 				sqInt value73;
 				double value74;
@@ -8195,7 +8140,7 @@ interpret(void)
 				sqInt value83;
 				sqInt value84;
 				sqInt value9;
-				sqLong value91;
+				sqInt value91;
 				sqLong value92;
 				sqInt value93;
 				sqLong value94;
@@ -8221,7 +8166,6 @@ interpret(void)
 				char *valueOopPointer1114;
 				char *valueOopPointer1115;
 				char *valueOopPointer1116;
-				char *valueOopPointer1117;
 				char *valueOopPointer112;
 				char *valueOopPointer1121;
 				char *valueOopPointer1122;
@@ -8245,7 +8189,6 @@ interpret(void)
 				char *valueOopPointer117;
 				char *valueOopPointer1171;
 				char *valueOopPointer1172;
-				char *valueOopPointer1173;
 				char *valueOopPointer118;
 				char *valueOopPointer1181;
 				char *valueOopPointer119;
@@ -8284,9 +8227,11 @@ interpret(void)
 				char *valueOopPointer133;
 				char *valueOopPointer1331;
 				char *valueOopPointer134;
+				char *valueOopPointer1341;
 				char *valueOopPointer135;
 				char *valueOopPointer136;
 				char *valueOopPointer137;
+				char *valueOopPointer138;
 				char *valueOopPointer14;
 				char *valueOopPointer141;
 				char *valueOopPointer142;
@@ -8326,7 +8271,6 @@ interpret(void)
 				char *valueOopPointer214;
 				char *valueOopPointer215;
 				char *valueOopPointer216;
-				char *valueOopPointer217;
 				char *valueOopPointer22;
 				char *valueOopPointer221;
 				char *valueOopPointer222;
@@ -8372,7 +8316,6 @@ interpret(void)
 				char *valueOopPointer314;
 				char *valueOopPointer315;
 				char *valueOopPointer316;
-				char *valueOopPointer317;
 				char *valueOopPointer32;
 				char *valueOopPointer321;
 				char *valueOopPointer322;
@@ -8416,7 +8359,6 @@ interpret(void)
 				char *valueOopPointer413;
 				char *valueOopPointer414;
 				char *valueOopPointer415;
-				char *valueOopPointer416;
 				char *valueOopPointer42;
 				char *valueOopPointer421;
 				char*valueOopPointer422;
@@ -8425,30 +8367,25 @@ interpret(void)
 				char *valueOopPointer432;
 				char *valueOopPointer44;
 				char *valueOopPointer441;
-				char *valueOopPointer442;
 				char *valueOopPointer45;
 				char *valueOopPointer451;
-				char *valueOopPointer452;
 				char *valueOopPointer46;
 				char *valueOopPointer461;
-				char *valueOopPointer462;
 				char *valueOopPointer47;
 				char *valueOopPointer471;
-				char *valueOopPointer472;
 				char *valueOopPointer48;
 				char *valueOopPointer481;
-				char *valueOopPointer482;
 				char *valueOopPointer49;
 				char *valueOopPointer491;
-				char *valueOopPointer492;
 				char *valueOopPointer5;
 				char *valueOopPointer50;
 				char *valueOopPointer501;
-				char *valueOopPointer502;
 				char *valueOopPointer51;
 				char *valueOopPointer510;
 				char *valueOopPointer511;
 				char *valueOopPointer512;
+				char *valueOopPointer513;
+				char *valueOopPointer514;
 				char *valueOopPointer52;
 				char *valueOopPointer521;
 				char *valueOopPointer53;
@@ -8467,6 +8404,7 @@ interpret(void)
 				char *valueOopPointer591;
 				char *valueOopPointer6;
 				char *valueOopPointer60;
+				char *valueOopPointer601;
 				char *valueOopPointer61;
 				char *valueOopPointer611;
 				char *valueOopPointer62;
@@ -8474,28 +8412,27 @@ interpret(void)
 				char *valueOopPointer63;
 				char *valueOopPointer631;
 				char *valueOopPointer64;
+				char *valueOopPointer641;
 				char *valueOopPointer65;
 				char *valueOopPointer66;
 				char *valueOopPointer67;
 				char *valueOopPointer68;
+				char *valueOopPointer69;
 				char *valueOopPointer7;
 				char *valueOopPointer71;
 				char *valueOopPointer72;
 				char *valueOopPointer73;
 				char *valueOopPointer74;
-				char *valueOopPointer75;
 				char *valueOopPointer8;
 				char *valueOopPointer81;
 				char *valueOopPointer82;
 				char *valueOopPointer83;
 				char *valueOopPointer84;
-				char *valueOopPointer85;
 				char *valueOopPointer9;
 				char *valueOopPointer91;
 				char *valueOopPointer92;
 				char *valueOopPointer93;
 				char *valueOopPointer94;
-				char *valueOopPointer95;
 				sqInt valuePointer;
 
 				VM_LABEL(callPrimitiveBytecode);
@@ -8522,11 +8459,11 @@ interpret(void)
 					header & AlternateHeaderHasPrimFlag))
 					 && (((((usqInt)localIP)) == ((GIV(method) + ((LiteralStart + ((assert((((header) & 7) == 1)),
 ((header >> 3)) & AlternateHeaderNumLiteralsMask))) * BytesPerOop)) + BaseHeaderSize)) + (3))) {
-						goto l1243;
+						goto l1204;
 					}
 					localIP -= 3;
 					goto respondToUnknownBytecode;
-					goto l1243;
+					goto l1204;
 				}
 				prim = (((sqInt)((usqInt)((byte2 - 128)) << 8))) + byte1;
 				primSet = (((usqInt) prim) >> 13) & 3;
@@ -8536,7 +8473,7 @@ interpret(void)
 						/* begin nullaryInlinePrimitive: */
 						localIP -= 3;
 						goto respondToUnknownBytecode;
-						goto l1243;
+						goto l1204;
 					}
 					if (prim < 2000) {
 						/* begin unaryInlinePrimitive: */
@@ -8582,25 +8519,25 @@ interpret(void)
 
 								/* bytes (the common case), including CompiledMethod */
 								result2 = numBytes - (fmt & 7);
-								goto l1336;
+								goto l1297;
 							}
 							if (fmt <= (sixtyFourBitIndexableFormat())) {
 								result2 = numBytes;
-								goto l1336;
+								goto l1297;
 							}
 							if (fmt >= (firstShortFormat())) {
 								result2 = numBytes - (((sqInt)((usqInt)((fmt & 3)) << 1)));
-								goto l1336;
+								goto l1297;
 							}
 							result2 = numBytes - (((sqInt)((usqInt)((fmt & 1)) << 2)));
-						l1336:	/* end numBytesOf: */;
+						l1297:	/* end numBytesOf: */;
 							/* begin internalStackTopPut: */
 							longAtPointerput(localSP, ((result2 << 3) | 1));
 							break;
 						case 4:
 							/* begin num16BitUnitsOf: */
 							objOop22 = longAtPointer(localSP);
-							result2 = ((sqInt) (((usqInt) (numBytesOf(objOop22))) >> 1));
+							result2 = ((usqInt) (numBytesOf(objOop22))) >> 1;
 							/* begin internalStackTopPut: */
 							longAtPointerput(localSP, ((result2 << 3) | 1));
 							break;
@@ -8614,7 +8551,7 @@ interpret(void)
 						case 6:
 							/* begin num64BitUnitsOf: */
 							objOop41 = longAtPointer(localSP);
-							result2 = ((sqInt) (((usqInt) (numBytesOf(objOop41))) >> 3));
+							result2 = ((usqInt) (numBytesOf(objOop41))) >> 3;
 							/* begin internalStackTopPut: */
 							longAtPointerput(localSP, ((result2 << 3) | 1));
 							break;
@@ -8650,13 +8587,13 @@ interpret(void)
 								}
 								if ((GIV(freeStart) + numBytes1) > (((eden()).limit))) {
 									error("no room in eden for allocateSmallNewSpaceSlots:format:classIndex:");
-									goto l1279;
+									goto l1240;
 								}
 							}
 							long64Atput(newObj, (((((usqLong) numSlots)) << (numSlotsFullShift())) + (((sqInt)((usqInt)(objFormat) << (formatShift()))))) + knownClassIndex);
 							GIV(freeStart) += numBytes1;
 							result2 = newObj;
-						l1279:	/* end eeInstantiateSmallClassIndex:format:numSlots: */;
+						l1240:	/* end eeInstantiateSmallClassIndex:format:numSlots: */;
 
 							if ((extB & 1) == 0) {
 								for (i = 0; i < numSlots; i += 1) {
@@ -8703,7 +8640,7 @@ interpret(void)
 							goto respondToUnknownBytecode;
 
 						}
-						goto l1243;
+						goto l1204;
 					}
 					if (prim < 3000) {
 						/* begin binaryInlinePrimitive: */
@@ -8904,7 +8841,7 @@ interpret(void)
 							goto respondToUnknownBytecode;
 
 						}
-						goto l1243;
+						goto l1204;
 					}
 					if (prim < 4000) {
 						/* begin trinaryInlinePrimitive: */
@@ -8987,7 +8924,7 @@ interpret(void)
 							goto respondToUnknownBytecode;
 
 						}
-						goto l1243;
+						goto l1204;
 					}
 				}
 				if (primSet == 1) {
@@ -9091,9 +9028,9 @@ interpret(void)
 							value4 = topInt322;
 							/* begin signed32BitIntegerFor: */
 							object7 = (((usqInt)(((int) value4)) << 3) | 1);
-							goto l1292;
+							goto l1253;
 
-						l1292:	/* end signed32BitIntegerFor: */;
+						l1253:	/* end signed32BitIntegerFor: */;
 							/* begin internalPush: */
 							longAtPointerput((localSP -= BytesPerOop), object7);
 							goto l118;
@@ -9187,9 +9124,9 @@ interpret(void)
 							value5 = topInt323;
 							/* begin positive32BitIntegerFor: */
 							object9 = ((((((usqInt)(((unsigned int) value5)))) & 0xFFFFFFFFU) << 3) | 1);
-							goto l1301;
+							goto l1262;
 
-						l1301:	/* end positive32BitIntegerFor: */;
+						l1262:	/* end positive32BitIntegerFor: */;
 							/* begin internalPush: */
 							longAtPointerput((localSP -= BytesPerOop), object9);
 							goto l118;
@@ -9218,7 +9155,7 @@ interpret(void)
 
 						}
 					l118:	/* end lowcodeNullaryInlinePrimitive: */;
-						goto l1243;
+						goto l1204;
 					}
 					if (prim < 2000) {
 						/* begin lowcodeUnaryInlinePrimitive: */
@@ -9229,25 +9166,25 @@ interpret(void)
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-							topInt3236 = int32AtPointer(nativeSP - 1);
+							topInt3237 = int32AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer67 = nativeSP + BytesPerOop;
+							valueOopPointer68 = nativeSP + BytesPerOop;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer67)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer67))));
-							second28 = topInt3236;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer68)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer68))));
+							second28 = topInt3237;
 							/* begin internalPopStackInt32 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 							topInt32124 = int32AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer137 = nativeSP + BytesPerOop;
+							valueOopPointer138 = nativeSP + BytesPerOop;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer137)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer137))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer138)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer138))));
 							first28 = topInt32124;
-							result38 = first28 + second28;
+							result44 = first28 + second28;
 							/* begin internalPushInt32: */
 							nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 							/* begin nativeStackPointerIn:put: */
@@ -9257,8 +9194,8 @@ interpret(void)
 							else {
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
-							int32AtPointerput(nativeSP - 1, result38);
-							goto l1242;
+							int32AtPointerput(nativeSP - 1, result44);
+							goto l1203;
 							break;
 						case 1:
 							/* begin lowcodePrimitiveAdd64 */
@@ -9267,23 +9204,23 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 							topInt6435 = long64AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer217 = nativeSP + 8;
+							valueOopPointer216 = nativeSP + 8;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer217)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer217))));
-							second114 = topInt6435;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer216)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer216))));
+							second115 = topInt6435;
 							/* begin internalPopStackInt64 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 							topInt64124 = long64AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer1117 = nativeSP + 8;
+							valueOopPointer1116 = nativeSP + 8;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1117)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1117))));
-							first114 = topInt64124;
-							result116 = first114 + second114;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1116)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1116))));
+							first115 = topInt64124;
+							result116 = first115 + second115;
 							/* begin internalPushInt64: */
 							nativeSP = (nativeStackPointerIn(localFP)) - 8;
 							/* begin nativeStackPointerIn:put: */
@@ -9294,20 +9231,20 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, result116);
-							goto l1242;
+							goto l1203;
 							break;
 						case 2:
 							/* begin lowcodePrimitiveAlloca32 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-							topInt32213 = int32AtPointer(nativeSP - 1);
+							topInt32214 = int32AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer317 = nativeSP + BytesPerOop;
+							valueOopPointer316 = nativeSP + BytesPerOop;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer317)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer317))));
-							size = topInt32213;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer316)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer316))));
+							size = topInt32214;
 							GIV(nativeStackPointer) = ((char*) ((((size_t) (GIV(nativeStackPointer) - size))) & -16));
 							pointer15 = GIV(nativeStackPointer);
 							/* begin internalPushPointer: */
@@ -9320,20 +9257,20 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							pointerAtPointerput(nativeSP - 1, pointer15);
-							goto l1242;
+							goto l1203;
 							break;
 						case 3:
 							/* begin lowcodePrimitiveAlloca64 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-							topInt64212 = long64AtPointer(nativeSP - 1);
+							topInt64213 = long64AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer416 = nativeSP + 8;
+							valueOopPointer415 = nativeSP + 8;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer416)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer416))));
-							size1 = topInt64212;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer415)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer415))));
+							size1 = topInt64213;
 							GIV(nativeStackPointer) -= size1;
 							pointer16 = GIV(nativeStackPointer);
 							/* begin internalPushPointer: */
@@ -9346,20 +9283,20 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							pointerAtPointerput(nativeSP - 1, pointer16);
-							goto l1242;
+							goto l1203;
 							break;
 						case 4:
 							/* begin lowcodePrimitiveAnd32 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-							topInt3237 = int32AtPointer(nativeSP - 1);
+							topInt3238 = int32AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer512 = nativeSP + BytesPerOop;
+							valueOopPointer514 = nativeSP + BytesPerOop;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer512)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer512))));
-							second2 = topInt3237;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer514)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer514))));
+							second2 = topInt3238;
 							/* begin internalPopStackInt32 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -9371,7 +9308,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer12)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer12))));
 							first2 = topInt3211;
-							result216 = first2 & second2;
+							result215 = first2 & second2;
 							/* begin internalPushInt32: */
 							nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 							/* begin nativeStackPointerIn:put: */
@@ -9381,8 +9318,8 @@ interpret(void)
 							else {
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
-							int32AtPointerput(nativeSP - 1, result216);
-							goto l1242;
+							int32AtPointerput(nativeSP - 1, result215);
+							goto l1203;
 							break;
 						case 5:
 							/* begin lowcodePrimitiveAnd64 */
@@ -9391,10 +9328,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 							topInt643 = long64AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer68 = nativeSP + 8;
+							valueOopPointer69 = nativeSP + 8;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer68)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer68))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer69)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer69))));
 							second3 = topInt643;
 							/* begin internalPopStackInt64 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -9418,20 +9355,20 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, result3);
-							goto l1242;
+							goto l1203;
 							break;
 						case 6:
 							/* begin lowcodePrimitiveArithmeticRightShift32 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-							topInt3245 = int32AtPointer(nativeSP - 1);
+							topInt3244 = int32AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer75 = nativeSP + BytesPerOop;
+							valueOopPointer74 = nativeSP + BytesPerOop;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer75)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer75))));
-							shiftAmount = topInt3245;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer74)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer74))));
+							shiftAmount = topInt3244;
 							/* begin internalPopStackInt32 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -9442,8 +9379,8 @@ interpret(void)
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer14)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer14))));
-							value48 = topInt3212;
-							result4 = ((usqInt) value48) >> shiftAmount;
+							value47 = topInt3212;
+							result4 = ((usqInt) value47) >> shiftAmount;
 							/* begin internalPushInt32: */
 							nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 							/* begin nativeStackPointerIn:put: */
@@ -9454,7 +9391,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, result4);
-							goto l1242;
+							goto l1203;
 							break;
 						case 7:
 							/* begin lowcodePrimitiveArithmeticRightShift64 */
@@ -9463,10 +9400,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 							topInt644 = long64AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer85 = nativeSP + 8;
+							valueOopPointer84 = nativeSP + 8;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer85)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer85))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer84)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer84))));
 							shiftAmount1 = topInt644;
 							/* begin internalPopStackInt64 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -9490,26 +9427,26 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, result5);
-							goto l1242;
+							goto l1203;
 							break;
 						case 8:
 							/* begin lowcodePrimitiveBeginCall */
 
 							/* Store the shadow stack pointer */
 							alignment = extA;
-							valueOopPointer95 = ((char *) (GIV(shadowCallStackPointer) + 1));
+							valueOopPointer94 = ((char *) (GIV(shadowCallStackPointer) + 1));
 							if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-								pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 5), valueOopPointer95);
+								pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 5), valueOopPointer94);
 							}
 							else {
-								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 5), valueOopPointer95);
+								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 5), valueOopPointer94);
 							}
 							/* begin allocateLowcodeCalloutState */
 							calloutStateSize = sizeof(sqLowcodeCalloutState);
 							GIV(shadowCallStackPointer) = ((char*) ((((size_t) (GIV(shadowCallStackPointer) - calloutStateSize))) & -16));
 							lowcodeCalloutState = ((sqLowcodeCalloutState*) GIV(shadowCallStackPointer));
 							extA = 0;
-							goto l1242;
+							goto l1203;
 							break;
 						case 9:
 							/* begin lowcodePrimitiveCallArgumentFloat32 */
@@ -9528,7 +9465,7 @@ interpret(void)
 							/* In the StackInterpreter stacks grow down. */
 							GIV(shadowCallStackPointer) -= BytesPerOop;
 							singleFloatAtPointerput(GIV(shadowCallStackPointer), argumentValue);
-							goto l1242;
+							goto l1203;
 							break;
 						case 10:
 							/* begin lowcodePrimitiveCallArgumentFloat64 */
@@ -9547,7 +9484,7 @@ interpret(void)
 							/* In the StackInterpreter stacks grow down. */
 							GIV(shadowCallStackPointer) -= 8;
 							singleFloatAtPointerput(GIV(shadowCallStackPointer), argumentValue1);
-							goto l1242;
+							goto l1203;
 							break;
 						case 11:
 							/* begin lowcodePrimitiveCallArgumentInt32 */
@@ -9566,7 +9503,7 @@ interpret(void)
 							/* In the StackInterpreter stacks grow down. */
 							GIV(shadowCallStackPointer) -= BytesPerOop;
 							int32AtPointerput(GIV(shadowCallStackPointer), value216);
-							goto l1242;
+							goto l1203;
 							break;
 						case 12:
 							/* begin lowcodePrimitiveCallArgumentInt64 */
@@ -9579,32 +9516,32 @@ interpret(void)
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer18)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer18))));
-							value314 = topInt645;
+							value313 = topInt645;
 							/* begin internalPushShadowCallStackInt64: */
 
 							/* In the StackInterpreter stacks grow down. */
 							GIV(shadowCallStackPointer) -= 8;
-							int64AtPointerput(GIV(shadowCallStackPointer), value314);
-							goto l1242;
+							int64AtPointerput(GIV(shadowCallStackPointer), value313);
+							goto l1203;
 							break;
 						case 13:
 							/* begin lowcodePrimitiveCallArgumentPointer */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-							topPointer36 = pointerAtPointer(nativeSP - 1);
+							topPointer29 = pointerAtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
 							valueOopPointer19 = nativeSP + BytesPerOop;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer19)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer19))));
-							pointerValue = topPointer36;
+							pointerValue = topPointer29;
 							/* begin internalPushShadowCallStackPointer: */
 
 							/* In the StackInterpreter stacks grow down. */
 							GIV(shadowCallStackPointer) -= BytesPerOop;
 							pointerAtPointerput(GIV(shadowCallStackPointer), pointerValue);
-							goto l1242;
+							goto l1203;
 							break;
 						case 14:
 							/* begin lowcodePrimitiveCallArgumentSpace */
@@ -9612,7 +9549,7 @@ interpret(void)
 							/* begin internalPushShadowCallStackSpace: */
 							GIV(shadowCallStackPointer) -= spaceSize;
 							extA = 0;
-							goto l1242;
+							goto l1203;
 							break;
 						case 15:
 							/* begin lowcodePrimitiveCallArgumentStructure */
@@ -9621,37 +9558,37 @@ interpret(void)
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-							topPointer115 = pointerAtPointer(nativeSP - 1);
+							topPointer114 = pointerAtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
 							valueOopPointer20 = nativeSP + BytesPerOop;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer20)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer20))));
-							structurePointer = topPointer115;
+							structurePointer = topPointer114;
 							/* begin internalPushShadowCallStackStructure:size: */
 							GIV(shadowCallStackPointer) -= structureSize;
 							lowcode_memcpy(GIV(shadowCallStackPointer), structurePointer, structureSize);
 							extA = 0;
-							goto l1242;
+							goto l1203;
 							break;
 						case 16:
 							/* begin lowcodePrimitiveCallInstruction */
 							function = extA;
 							abort();
 							extA = 0;
-							goto l1242;
+							goto l1203;
 							break;
 						case 17:
 							/* begin lowcodePrimitiveCallPhysical */
 							registerID = extA;
 							abort();
 							extA = 0;
-							goto l1242;
+							goto l1203;
 							break;
 						case 18:
 							/* begin lowcodePrimitiveCheckSessionIdentifier */
 							expectedSession = extA;
-							value47 = (expectedSession == (getThisSessionID())
+							value46 = (expectedSession == (getThisSessionID())
 								? 1
 								: 0);
 							/* begin internalPushInt32: */
@@ -9663,9 +9600,9 @@ interpret(void)
 							else {
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
-							int32AtPointerput(nativeSP - 1, value47);
+							int32AtPointerput(nativeSP - 1, value46);
 							extA = 0;
-							goto l1242;
+							goto l1203;
 							break;
 						case 19:
 							/* begin lowcodePrimitiveCompareAndSwap32 */
@@ -9712,7 +9649,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value54);
-							goto l1242;
+							goto l1203;
 							break;
 						case 20:
 							/* begin lowcodePrimitiveDiv32 */
@@ -9748,7 +9685,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, result6);
-							goto l1242;
+							goto l1203;
 							break;
 						case 21:
 							/* begin lowcodePrimitiveDiv64 */
@@ -9784,7 +9721,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, result7);
-							goto l1242;
+							goto l1203;
 							break;
 						case 22:
 							/* begin lowcodePrimitiveDuplicateFloat32 */
@@ -9820,7 +9757,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							singleFloatAtPointerput(nativeSP - 1, dup2);
-							goto l1242;
+							goto l1203;
 							break;
 						case 23:
 							/* begin lowcodePrimitiveDuplicateFloat64 */
@@ -9856,7 +9793,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, dup21);
-							goto l1242;
+							goto l1203;
 							break;
 						case 24:
 							/* begin lowcodePrimitiveDuplicateInt32 */
@@ -9892,7 +9829,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, dup22);
-							goto l1242;
+							goto l1203;
 							break;
 						case 25:
 							/* begin lowcodePrimitiveDuplicateInt64 */
@@ -9928,7 +9865,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, dup23);
-							goto l1242;
+							goto l1203;
 							break;
 						case 26:
 							/* begin lowcodePrimitiveDuplicatePointer */
@@ -9964,7 +9901,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							pointerAtPointerput(nativeSP - 1, dup24);
-							goto l1242;
+							goto l1203;
 							break;
 						case 27:
 							/* begin lowcodePrimitiveEffectiveAddress32 */
@@ -10022,7 +9959,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							pointerAtPointerput(nativeSP - 1, result8);
-							goto l1242;
+							goto l1203;
 							break;
 						case 28:
 							/* begin lowcodePrimitiveEffectiveAddress64 */
@@ -10080,7 +10017,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							pointerAtPointerput(nativeSP - 1, result9);
-							goto l1242;
+							goto l1203;
 							break;
 						case 29:
 							/* begin lowcodePrimitiveEndCall */
@@ -10093,7 +10030,7 @@ interpret(void)
 							else {
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 5), valueOopPointer34);
 							}
-							goto l1242;
+							goto l1203;
 							break;
 						case 30:
 							/* begin lowcodePrimitiveEndCallNoCleanup */
@@ -10106,7 +10043,7 @@ interpret(void)
 							else {
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 5), valueOopPointer35);
 							}
-							goto l1242;
+							goto l1203;
 							break;
 						case 0x1F:
 							/* begin lowcodePrimitiveFloat32Add */
@@ -10142,7 +10079,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							singleFloatAtPointerput(nativeSP - 1, result10);
-							goto l1242;
+							goto l1203;
 							break;
 						case 32:
 							/* begin lowcodePrimitiveFloat32Div */
@@ -10178,7 +10115,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							singleFloatAtPointerput(nativeSP - 1, result11);
-							goto l1242;
+							goto l1203;
 							break;
 						case 33:
 							/* begin lowcodePrimitiveFloat32Equal */
@@ -10216,7 +10153,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value104);
-							goto l1242;
+							goto l1203;
 							break;
 						case 34:
 							/* begin lowcodePrimitiveFloat32Great */
@@ -10254,7 +10191,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value117);
-							goto l1242;
+							goto l1203;
 							break;
 						case 35:
 							/* begin lowcodePrimitiveFloat32GreatEqual */
@@ -10292,7 +10229,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value124);
-							goto l1242;
+							goto l1203;
 							break;
 						case 36:
 							/* begin lowcodePrimitiveFloat32Less */
@@ -10330,7 +10267,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value134);
-							goto l1242;
+							goto l1203;
 							break;
 						case 37:
 							/* begin lowcodePrimitiveFloat32LessEqual */
@@ -10368,7 +10305,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value144);
-							goto l1242;
+							goto l1203;
 							break;
 						case 38:
 							/* begin lowcodePrimitiveFloat32Mul */
@@ -10404,7 +10341,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							singleFloatAtPointerput(nativeSP - 1, result12);
-							goto l1242;
+							goto l1203;
 							break;
 						case 39:
 							/* begin lowcodePrimitiveFloat32Neg */
@@ -10429,7 +10366,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							singleFloatAtPointerput(nativeSP - 1, result13);
-							goto l1242;
+							goto l1203;
 							break;
 						case 40:
 							/* begin lowcodePrimitiveFloat32NotEqual */
@@ -10467,7 +10404,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value164);
-							goto l1242;
+							goto l1203;
 							break;
 						case 41:
 							/* begin lowcodePrimitiveFloat32Sqrt */
@@ -10492,7 +10429,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							singleFloatAtPointerput(nativeSP - 1, result14);
-							goto l1242;
+							goto l1203;
 							break;
 						case 42:
 							/* begin lowcodePrimitiveFloat32Sub */
@@ -10528,7 +10465,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							singleFloatAtPointerput(nativeSP - 1, result15);
-							goto l1242;
+							goto l1203;
 							break;
 						case 43:
 							/* begin lowcodePrimitiveFloat32ToFloat64 */
@@ -10553,7 +10490,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, doubleResult);
-							goto l1242;
+							goto l1203;
 							break;
 						case 44:
 							/* begin lowcodePrimitiveFloat32ToInt32 */
@@ -10566,8 +10503,8 @@ interpret(void)
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer49)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer49))));
-							value183 = topSingle23;
-							result16 = ((sqInt) value183);
+							value184 = topSingle23;
+							result16 = ((sqInt) value184);
 							/* begin internalPushInt32: */
 							nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 							/* begin nativeStackPointerIn:put: */
@@ -10578,7 +10515,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, result16);
-							goto l1242;
+							goto l1203;
 							break;
 						case 45:
 							/* begin lowcodePrimitiveFloat32ToInt64 */
@@ -10591,8 +10528,8 @@ interpret(void)
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer50)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer50))));
-							value193 = topSingle24;
-							result17 = ((sqLong) value193);
+							value194 = topSingle24;
+							result17 = ((sqLong) value194);
 							/* begin internalPushInt64: */
 							nativeSP = (nativeStackPointerIn(localFP)) - 8;
 							/* begin nativeStackPointerIn:put: */
@@ -10603,7 +10540,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, result17);
-							goto l1242;
+							goto l1203;
 							break;
 						case 46:
 							/* begin lowcodePrimitiveFloat32ToUInt32 */
@@ -10628,7 +10565,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, result18);
-							goto l1242;
+							goto l1203;
 							break;
 						case 47:
 							/* begin lowcodePrimitiveFloat32ToUInt64 */
@@ -10653,7 +10590,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, result19);
-							goto l1242;
+							goto l1203;
 							break;
 						case 48:
 							/* begin lowcodePrimitiveFloat64Add */
@@ -10689,7 +10626,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, result20);
-							goto l1242;
+							goto l1203;
 							break;
 						case 49:
 							/* begin lowcodePrimitiveFloat64Div */
@@ -10725,7 +10662,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, result21);
-							goto l1242;
+							goto l1203;
 							break;
 						case 50:
 							/* begin lowcodePrimitiveFloat64Equal */
@@ -10763,7 +10700,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value223);
-							goto l1242;
+							goto l1203;
 							break;
 						case 51:
 							/* begin lowcodePrimitiveFloat64Great */
@@ -10801,7 +10738,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value23);
-							goto l1242;
+							goto l1203;
 							break;
 						case 52:
 							/* begin lowcodePrimitiveFloat64GreatEqual */
@@ -10839,7 +10776,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value24);
-							goto l1242;
+							goto l1203;
 							break;
 						case 53:
 							/* begin lowcodePrimitiveFloat64Less */
@@ -10877,7 +10814,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value25);
-							goto l1242;
+							goto l1203;
 							break;
 						case 54:
 							/* begin lowcodePrimitiveFloat64LessEqual */
@@ -10915,7 +10852,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value26);
-							goto l1242;
+							goto l1203;
 							break;
 						case 55:
 							/* begin lowcodePrimitiveFloat64Mul */
@@ -10951,7 +10888,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, result22);
-							goto l1242;
+							goto l1203;
 							break;
 						case 56:
 							/* begin lowcodePrimitiveFloat64Neg */
@@ -10976,7 +10913,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, result23);
-							goto l1242;
+							goto l1203;
 							break;
 						case 57:
 							/* begin lowcodePrimitiveFloat64NotEqual */
@@ -11014,7 +10951,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value28);
-							goto l1242;
+							goto l1203;
 							break;
 						case 58:
 							/* begin lowcodePrimitiveFloat64Sqrt */
@@ -11039,7 +10976,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, result24);
-							goto l1242;
+							goto l1203;
 							break;
 						case 59:
 							/* begin lowcodePrimitiveFloat64Sub */
@@ -11075,7 +11012,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, result25);
-							goto l1242;
+							goto l1203;
 							break;
 						default:
 							/* begin lowcodeUnaryInlinePrimitive2: */
@@ -11088,10 +11025,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topDouble24 = floatAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer65 = nativeSP + 8;
+								valueOopPointer66 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer65)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer65))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer66)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer66))));
 								floatValue8 = topDouble24;
 								singleFloatResult = ((float) floatValue8);
 								/* begin internalPushFloat32: */
@@ -11104,7 +11041,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								singleFloatAtPointerput(nativeSP - 1, singleFloatResult);
-								goto l1070;
+								goto l1031;
 								break;
 							case 61:
 								/* begin lowcodePrimitiveFloat64ToInt32 */
@@ -11113,10 +11050,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topDouble112 = floatAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer136 = nativeSP + 8;
+								valueOopPointer137 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer136)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer136))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer137)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer137))));
 								floatValue1 = topDouble112;
 								int32Result = ((sqInt) floatValue1);
 								/* begin internalPushInt32: */
@@ -11129,7 +11066,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, int32Result);
-								goto l1070;
+								goto l1031;
 								break;
 							case 0x3E:
 								/* begin lowcodePrimitiveFloat64ToInt64 */
@@ -11138,10 +11075,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topDouble23 = floatAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer215 = nativeSP + 8;
+								valueOopPointer214 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer215)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer215))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer214)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer214))));
 								floatValue2 = topDouble23;
 								int64Result = ((sqLong) floatValue2);
 								/* begin internalPushInt64: */
@@ -11154,7 +11091,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								long64AtPointerput(nativeSP - 1, int64Result);
-								goto l1070;
+								goto l1031;
 								break;
 							case 0x3F:
 								/* begin lowcodePrimitiveFloat64ToUInt32 */
@@ -11163,10 +11100,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topDouble31 = floatAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer316 = nativeSP + 8;
+								valueOopPointer315 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer316)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer316))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer315)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer315))));
 								floatValue3 = topDouble31;
 								int64Result1 = ((uint32_t) floatValue3);
 								/* begin internalPushInt32: */
@@ -11179,7 +11116,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, int64Result1);
-								goto l1070;
+								goto l1031;
 								break;
 							case 64:
 								/* begin lowcodePrimitiveFloat64ToUInt64 */
@@ -11188,10 +11125,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topDouble41 = floatAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer414 = nativeSP + 8;
+								valueOopPointer413 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer414)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer414))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer413)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer413))));
 								floatValue4 = topDouble41;
 								int64Result2 = ((uint64_t) floatValue4);
 								/* begin internalPushInt64: */
@@ -11204,22 +11141,22 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								long64AtPointerput(nativeSP - 1, int64Result2);
-								goto l1070;
+								goto l1031;
 								break;
 							case 65:
 								/* begin lowcodePrimitiveFree */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topPointer34 = pointerAtPointer(nativeSP - 1);
+								topPointer28 = pointerAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer510 = nativeSP + BytesPerOop;
+								valueOopPointer513 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer510)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer510))));
-								pointer13 = topPointer34;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer513)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer513))));
+								pointer13 = topPointer28;
 								free(pointer13);
-								goto l1070;
+								goto l1031;
 								break;
 							case 66:
 								/* begin lowcodePrimitiveInstantiateIndexable32Oop */
@@ -11240,7 +11177,7 @@ interpret(void)
 								object112 = instantiateClassindexableSize(classOop, indexableSize);
 								/* begin internalPush: */
 								longAtPointerput((localSP -= BytesPerOop), object112);
-								goto l1070;
+								goto l1031;
 								break;
 							case 67:
 								/* begin lowcodePrimitiveInstantiateIndexableOop */
@@ -11253,7 +11190,7 @@ interpret(void)
 								/* begin internalPush: */
 								longAtPointerput((localSP -= BytesPerOop), object27);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 68:
 								/* begin lowcodePrimitiveInstantiateOop */
@@ -11263,32 +11200,32 @@ interpret(void)
 								object32 = instantiateClassindexableSize(classOop2, 0);
 								/* begin internalPush: */
 								longAtPointerput((localSP -= BytesPerOop), object32);
-								goto l1070;
+								goto l1031;
 								break;
 							case 69:
 								/* begin lowcodePrimitiveInt32Equal */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topInt3234 = int32AtPointer(nativeSP - 1);
+								topInt3235 = int32AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer66 = nativeSP + BytesPerOop;
+								valueOopPointer67 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer66)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer66))));
-								second26 = topInt3234;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer67)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer67))));
+								second26 = topInt3235;
 								/* begin internalPopStackInt32 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topInt32120 = int32AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer1116 = nativeSP + BytesPerOop;
+								valueOopPointer1115 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1116)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1116))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1115)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1115))));
 								first27 = topInt32120;
-								value46 = (first27 == second26
+								value45 = (first27 == second26
 									? 1
 									: 0);
 								/* begin internalPushInt32: */
@@ -11300,21 +11237,21 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								int32AtPointerput(nativeSP - 1, value46);
-								goto l1070;
+								int32AtPointerput(nativeSP - 1, value45);
+								goto l1031;
 								break;
 							case 70:
 								/* begin lowcodePrimitiveInt32Great */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topInt32211 = int32AtPointer(nativeSP - 1);
+								topInt32212 = int32AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer74 = nativeSP + BytesPerOop;
+								valueOopPointer73 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer74)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer74))));
-								second112 = topInt32211;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer73)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer73))));
+								second113 = topInt32212;
 								/* begin internalPopStackInt32 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -11325,8 +11262,8 @@ interpret(void)
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1212)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1212))));
-								first113 = topInt321111;
-								value116 = (first113 > second112
+								first114 = topInt321111;
+								value116 = (first114 > second113
 									? 1
 									: 0);
 								/* begin internalPushInt32: */
@@ -11339,30 +11276,30 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value116);
-								goto l1070;
+								goto l1031;
 								break;
 							case 71:
 								/* begin lowcodePrimitiveInt32GreatEqual */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topInt3235 = int32AtPointer(nativeSP - 1);
+								topInt3236 = int32AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer84 = nativeSP + BytesPerOop;
+								valueOopPointer83 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer84)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer84))));
-								second27 = topInt3235;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer83)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer83))));
+								second27 = topInt3236;
 								/* begin internalPopStackInt32 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topInt32123 = int32AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer135 = nativeSP + BytesPerOop;
+								valueOopPointer136 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer135)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer135))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer136)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer136))));
 								first26 = topInt32123;
 								value214 = (first26 >= second27
 									? 1
@@ -11377,20 +11314,20 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value214);
-								goto l1070;
+								goto l1031;
 								break;
 							case 72:
 								/* begin lowcodePrimitiveInt32Less */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topInt3244 = int32AtPointer(nativeSP - 1);
+								topInt3243 = int32AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer94 = nativeSP + BytesPerOop;
+								valueOopPointer93 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer94)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer94))));
-								second34 = topInt3244;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer93)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer93))));
+								second33 = topInt3243;
 								/* begin internalPopStackInt32 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -11401,8 +11338,8 @@ interpret(void)
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer143)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer143))));
-								first34 = topInt32132;
-								value313 = (first34 < second34
+								first33 = topInt32132;
+								value312 = (first33 < second33
 									? 1
 									: 0);
 								/* begin internalPushInt32: */
@@ -11414,21 +11351,21 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								int32AtPointerput(nativeSP - 1, value313);
-								goto l1070;
+								int32AtPointerput(nativeSP - 1, value312);
+								goto l1031;
 								break;
 							case 73:
 								/* begin lowcodePrimitiveInt32LessEqual */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topInt3254 = int32AtPointer(nativeSP - 1);
+								topInt3253 = int32AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
 								valueOopPointer103 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer103)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer103))));
-								second43 = topInt3254;
+								second43 = topInt3253;
 								/* begin internalPopStackInt32 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -11440,7 +11377,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer153)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer153))));
 								first43 = topInt32142;
-								value45 = (first43 <= second43
+								value44 = (first43 <= second43
 									? 1
 									: 0);
 								/* begin internalPushInt32: */
@@ -11452,8 +11389,8 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								int32AtPointerput(nativeSP - 1, value45);
-								goto l1070;
+								int32AtPointerput(nativeSP - 1, value44);
+								goto l1031;
 								break;
 							case 74:
 								/* begin lowcodePrimitiveInt32NotEqual */
@@ -11491,7 +11428,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value53);
-								goto l1070;
+								goto l1031;
 								break;
 							case 75:
 								/* begin lowcodePrimitiveInt32ToFloat32 */
@@ -11505,7 +11442,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer183)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer183))));
 								value63 = topInt3273;
-								result37 = ((float) value63);
+								result40 = ((float) value63);
 								/* begin internalPushFloat32: */
 								nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 								/* begin nativeStackPointerIn:put: */
@@ -11515,8 +11452,8 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								singleFloatAtPointerput(nativeSP - 1, result37);
-								goto l1070;
+								singleFloatAtPointerput(nativeSP - 1, result40);
+								goto l1031;
 								break;
 							case 76:
 								/* begin lowcodePrimitiveInt32ToFloat64 */
@@ -11541,7 +11478,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								floatAtPointerput(nativeSP - 1, result115);
-								goto l1070;
+								goto l1031;
 								break;
 							case 77:
 								/* begin lowcodePrimitiveInt32ToPointer */
@@ -11555,7 +11492,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer203)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer203))));
 								value83 = topInt3292;
-								result215 = ((char*) (((uintptr_t) value83)));
+								result214 = ((char*) (((uintptr_t) value83)));
 								/* begin internalPushPointer: */
 								nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 								/* begin nativeStackPointerIn:put: */
@@ -11565,21 +11502,21 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								pointerAtPointerput(nativeSP - 1, result215);
-								goto l1070;
+								pointerAtPointerput(nativeSP - 1, result214);
+								goto l1031;
 								break;
 							case 78:
 								/* begin lowcodePrimitiveInt64Equal */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topInt6430 = long64AtPointer(nativeSP - 1);
+								topInt6433 = long64AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer216 = nativeSP + 8;
+								valueOopPointer215 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer216)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer216))));
-								second62 = topInt6430;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer215)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer215))));
+								second62 = topInt6433;
 								/* begin internalPopStackInt64 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -11604,30 +11541,30 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value93);
-								goto l1070;
+								goto l1031;
 								break;
 							case 79:
 								/* begin lowcodePrimitiveInt64Great */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topInt64210 = long64AtPointer(nativeSP - 1);
+								topInt64211 = long64AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
 								valueOopPointer223 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer223)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer223))));
-								second72 = topInt64210;
+								second72 = topInt64211;
 								/* begin internalPopStackInt64 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topInt64119 = long64AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer1115 = nativeSP + 8;
+								valueOopPointer1114 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1115)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1115))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1114)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1114))));
 								first72 = topInt64119;
 								value103 = (first72 > second72
 									? 1
@@ -11642,7 +11579,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value103);
-								goto l1070;
+								goto l1031;
 								break;
 							case 80:
 								/* begin lowcodePrimitiveInt64GreatEqual */
@@ -11680,20 +11617,20 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value115);
-								goto l1070;
+								goto l1031;
 								break;
 							case 81:
 								/* begin lowcodePrimitiveInt64Less */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topInt6444 = long64AtPointer(nativeSP - 1);
+								topInt6443 = long64AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
 								valueOopPointer243 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer243)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer243))));
-								second92 = topInt6444;
+								second92 = topInt6443;
 								/* begin internalPopStackInt64 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -11718,7 +11655,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value123);
-								goto l1070;
+								goto l1031;
 								break;
 							case 82:
 								/* begin lowcodePrimitiveInt64LessEqual */
@@ -11756,7 +11693,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value133);
-								goto l1070;
+								goto l1031;
 								break;
 							case 83:
 								/* begin lowcodePrimitiveInt64NotEqual */
@@ -11769,7 +11706,7 @@ interpret(void)
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer263)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer263))));
-								second113 = topInt6463;
+								second114 = topInt6463;
 								/* begin internalPopStackInt64 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -11780,8 +11717,8 @@ interpret(void)
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1153)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1153))));
-								first112 = topInt6415;
-								value143 = (first112 != second113
+								first113 = topInt6415;
+								value143 = (first113 != second114
 									? 1
 									: 0);
 								/* begin internalPushInt32: */
@@ -11794,7 +11731,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value143);
-								goto l1070;
+								goto l1031;
 								break;
 							case 84:
 								/* begin lowcodePrimitiveInt64ToFloat32 */
@@ -11808,7 +11745,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer273)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer273))));
 								value153 = topInt6473;
-								result36 = ((float) value153);
+								result310 = ((float) value153);
 								/* begin internalPushFloat64: */
 								nativeSP = (nativeStackPointerIn(localFP)) - 8;
 								/* begin nativeStackPointerIn:put: */
@@ -11818,8 +11755,8 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								floatAtPointerput(nativeSP - 1, result36);
-								goto l1070;
+								floatAtPointerput(nativeSP - 1, result310);
+								goto l1031;
 								break;
 							case 85:
 								/* begin lowcodePrimitiveInt64ToFloat64 */
@@ -11833,7 +11770,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer283)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer283))));
 								value163 = topInt6483;
-								result44 = ((double) value163);
+								result43 = ((double) value163);
 								/* begin internalPushFloat64: */
 								nativeSP = (nativeStackPointerIn(localFP)) - 8;
 								/* begin nativeStackPointerIn:put: */
@@ -11843,8 +11780,8 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								floatAtPointerput(nativeSP - 1, result44);
-								goto l1070;
+								floatAtPointerput(nativeSP - 1, result43);
+								goto l1031;
 								break;
 							case 86:
 								/* begin lowcodePrimitiveInt64ToPointer */
@@ -11858,7 +11795,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer293)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer293))));
 								value173 = topInt649;
-								result54 = ((char*) (((intptr_t) value173)));
+								result53 = ((char*) (((intptr_t) value173)));
 								/* begin internalPushPointer: */
 								nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 								/* begin nativeStackPointerIn:put: */
@@ -11868,8 +11805,8 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								pointerAtPointerput(nativeSP - 1, result54);
-								goto l1070;
+								pointerAtPointerput(nativeSP - 1, result53);
+								goto l1031;
 								break;
 							case 87:
 								/* begin lowcodePrimitiveLeftShift32 */
@@ -11893,8 +11830,8 @@ interpret(void)
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1163)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1163))));
-								value182 = topInt3216;
-								result641 = ((sqInt)((usqInt)(value182) << shiftAmount3));
+								value183 = topInt3216;
+								result63 = ((sqInt)((usqInt)(value183) << shiftAmount3));
 								/* begin internalPushInt32: */
 								nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 								/* begin nativeStackPointerIn:put: */
@@ -11904,8 +11841,8 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								int32AtPointerput(nativeSP - 1, result641);
-								goto l1070;
+								int32AtPointerput(nativeSP - 1, result63);
+								goto l1031;
 								break;
 							case 88:
 								/* begin lowcodePrimitiveLeftShift64 */
@@ -11914,10 +11851,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topInt6410 = long64AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer315 = nativeSP + 8;
+								valueOopPointer314 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer315)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer315))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer314)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer314))));
 								shiftAmount12 = topInt6410;
 								/* begin internalPopStackInt64 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -11925,12 +11862,12 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topInt6416 = long64AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer1173 = nativeSP + 8;
+								valueOopPointer1172 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1173)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1173))));
-								value192 = topInt6416;
-								result74 = ((sqLong)((usqLong)(value192) << shiftAmount12));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1172)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1172))));
+								value193 = topInt6416;
+								result73 = ((sqLong)((usqLong)(value193) << shiftAmount12));
 								/* begin internalPushInt64: */
 								nativeSP = (nativeStackPointerIn(localFP)) - 8;
 								/* begin nativeStackPointerIn:put: */
@@ -11940,8 +11877,8 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								long64AtPointerput(nativeSP - 1, result74);
-								goto l1070;
+								long64AtPointerput(nativeSP - 1, result73);
+								goto l1031;
 								break;
 							case 89:
 								/* begin lowcodePrimitiveLoadArgumentAddress */
@@ -11958,7 +11895,7 @@ interpret(void)
 								}
 								pointerAtPointerput(nativeSP - 1, pointer14);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 90:
 								/* begin lowcodePrimitiveLoadArgumentFloat32 */
@@ -11975,7 +11912,7 @@ interpret(void)
 								}
 								singleFloatAtPointerput(nativeSP - 1, floatValue5);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 91:
 								/* begin lowcodePrimitiveLoadArgumentFloat64 */
@@ -11992,12 +11929,12 @@ interpret(void)
 								}
 								floatAtPointerput(nativeSP - 1, doubleValue);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 92:
 								/* begin lowcodePrimitiveLoadArgumentInt16 */
 								baseOffset3 = extA;
-								value202 = int16AtPointer(framePointerOfNativeArgumentin(baseOffset3, localFP));
+								value203 = int16AtPointer(framePointerOfNativeArgumentin(baseOffset3, localFP));
 								/* begin internalPushInt32: */
 								nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 								/* begin nativeStackPointerIn:put: */
@@ -12007,9 +11944,9 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								int32AtPointerput(nativeSP - 1, value202);
+								int32AtPointerput(nativeSP - 1, value203);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 93:
 								/* begin lowcodePrimitiveLoadArgumentInt32 */
@@ -12026,7 +11963,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value215);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 94:
 								/* begin lowcodePrimitiveLoadArgumentInt64 */
@@ -12043,7 +11980,7 @@ interpret(void)
 								}
 								long64AtPointerput(nativeSP - 1, value222);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 95:
 								/* begin lowcodePrimitiveLoadArgumentInt8 */
@@ -12060,7 +11997,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value232);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 96:
 								/* begin lowcodePrimitiveLoadArgumentPointer */
@@ -12077,7 +12014,7 @@ interpret(void)
 								}
 								pointerAtPointerput(nativeSP - 1, pointerResult);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 97:
 								/* begin lowcodePrimitiveLoadArgumentUInt16 */
@@ -12094,7 +12031,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value242);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 98:
 								/* begin lowcodePrimitiveLoadArgumentUInt32 */
@@ -12111,7 +12048,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value252);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 99:
 								/* begin lowcodePrimitiveLoadArgumentUInt64 */
@@ -12128,7 +12065,7 @@ interpret(void)
 								}
 								long64AtPointerput(nativeSP - 1, value262);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 100:
 								/* begin lowcodePrimitiveLoadArgumentUInt8 */
@@ -12145,20 +12082,20 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value272);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 101:
 								/* begin lowcodePrimitiveLoadFloat32FromMemory */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topPointer114 = pointerAtPointer(nativeSP - 1);
+								topPointer113 = pointerAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
 								valueOopPointer323 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer323)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer323))));
-								pointer23 = topPointer114;
+								pointer23 = topPointer113;
 								value282 = singleFloatAtPointer(pointer23);
 								/* begin internalPushFloat32: */
 								nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
@@ -12170,20 +12107,20 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								singleFloatAtPointerput(nativeSP - 1, value282);
-								goto l1070;
+								goto l1031;
 								break;
 							case 102:
 								/* begin lowcodePrimitiveLoadFloat64FromMemory */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topPointer212 = pointerAtPointer(nativeSP - 1);
+								topPointer27 = pointerAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
 								valueOopPointer333 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer333)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer333))));
-								pointer33 = topPointer212;
+								pointer33 = topPointer27;
 								value292 = floatAtPointer(pointer33);
 								/* begin internalPushFloat64: */
 								nativeSP = (nativeStackPointerIn(localFP)) - 8;
@@ -12195,20 +12132,20 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								floatAtPointerput(nativeSP - 1, value292);
-								goto l1070;
+								goto l1031;
 								break;
 							case 103:
 								/* begin lowcodePrimitiveLoadInt16FromMemory */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topPointer35 = pointerAtPointer(nativeSP - 1);
+								topPointer33 = pointerAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
 								valueOopPointer343 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer343)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer343))));
-								pointer43 = topPointer35;
+								pointer43 = topPointer33;
 								value30 = int16AtPointer(pointer43);
 								/* begin internalPushInt32: */
 								nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
@@ -12220,7 +12157,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value30);
-								goto l1070;
+								goto l1031;
 								break;
 							case 104:
 								/* begin lowcodePrimitiveLoadInt32FromMemory */
@@ -12234,7 +12171,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer353)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer353))));
 								pointer5 = topPointer43;
-								value315 = int32AtPointer(pointer5);
+								value314 = int32AtPointer(pointer5);
 								/* begin internalPushInt32: */
 								nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 								/* begin nativeStackPointerIn:put: */
@@ -12244,8 +12181,8 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								int32AtPointerput(nativeSP - 1, value315);
-								goto l1070;
+								int32AtPointerput(nativeSP - 1, value314);
+								goto l1031;
 								break;
 							case 105:
 								/* begin lowcodePrimitiveLoadInt64FromMemory */
@@ -12270,7 +12207,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								long64AtPointerput(nativeSP - 1, value322);
-								goto l1070;
+								goto l1031;
 								break;
 							case 106:
 								/* begin lowcodePrimitiveLoadInt8FromMemory */
@@ -12295,7 +12232,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value33);
-								goto l1070;
+								goto l1031;
 								break;
 							case 107:
 								/* begin lowcodePrimitiveLoadLocalAddress */
@@ -12312,7 +12249,7 @@ interpret(void)
 								}
 								pointerAtPointerput(nativeSP - 1, pointer8);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 108:
 								/* begin lowcodePrimitiveLoadLocalFloat32 */
@@ -12329,7 +12266,7 @@ interpret(void)
 								}
 								singleFloatAtPointerput(nativeSP - 1, floatValue6);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 109:
 								/* begin lowcodePrimitiveLoadLocalFloat64 */
@@ -12346,7 +12283,7 @@ interpret(void)
 								}
 								floatAtPointerput(nativeSP - 1, doubleValue1);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 110:
 								/* begin lowcodePrimitiveLoadLocalInt16 */
@@ -12363,7 +12300,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value34);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 111:
 								/* begin lowcodePrimitiveLoadLocalInt32 */
@@ -12380,7 +12317,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value35);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 112:
 								/* begin lowcodePrimitiveLoadLocalInt64 */
@@ -12397,7 +12334,7 @@ interpret(void)
 								}
 								long64AtPointerput(nativeSP - 1, value36);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 113:
 								/* begin lowcodePrimitiveLoadLocalInt8 */
@@ -12414,7 +12351,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value37);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 114:
 								/* begin lowcodePrimitiveLoadLocalPointer */
@@ -12431,7 +12368,7 @@ interpret(void)
 								}
 								pointerAtPointerput(nativeSP - 1, pointerResult1);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 115:
 								/* begin lowcodePrimitiveLoadLocalUInt16 */
@@ -12448,7 +12385,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value38);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 116:
 								/* begin lowcodePrimitiveLoadLocalUInt32 */
@@ -12465,7 +12402,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value39);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 117:
 								/* begin lowcodePrimitiveLoadLocalUInt64 */
@@ -12482,7 +12419,7 @@ interpret(void)
 								}
 								long64AtPointerput(nativeSP - 1, value40);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 118:
 								/* begin lowcodePrimitiveLoadLocalUInt8 */
@@ -12499,7 +12436,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value412);
 								extA = 0;
-								goto l1070;
+								goto l1031;
 								break;
 							case 119:
 								/* begin lowcodePrimitiveLoadObjectAt */
@@ -12521,7 +12458,7 @@ interpret(void)
 								fieldValue = longAt((object26 + BaseHeaderSize) + (((sqInt)((usqInt)(fieldIndex4) << (shiftForWord())))));
 								/* begin internalPush: */
 								longAtPointerput((localSP -= BytesPerOop), fieldValue);
-								goto l1070;
+								goto l1031;
 								break;
 							default:
 								/* begin lowcodeUnaryInlinePrimitive3: */
@@ -12539,20 +12476,20 @@ interpret(void)
 									/* begin internalPush: */
 									longAtPointerput((localSP -= BytesPerOop), fieldValue1);
 									extA = 0;
-									goto l746;
+									goto l707;
 									break;
 								case 121:
 									/* begin lowcodePrimitiveLoadPointerFromMemory */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer32 = pointerAtPointer(nativeSP - 1);
+									topPointer26 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer591 = nativeSP + BytesPerOop;
+									valueOopPointer65 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer591)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer591))));
-									pointer10 = topPointer32;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer65)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer65))));
+									pointer10 = topPointer26;
 									pointerResult2 = pointerAtPointer(pointer10);
 									/* begin internalPushPointer: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
@@ -12564,21 +12501,21 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									pointerAtPointerput(nativeSP - 1, pointerResult2);
-									goto l746;
+									goto l707;
 									break;
 								case 122:
 									/* begin lowcodePrimitiveLoadUInt16FromMemory */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer113 = pointerAtPointer(nativeSP - 1);
+									topPointer112 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer1301 = nativeSP + BytesPerOop;
+									valueOopPointer1341 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1301)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1301))));
-									pointer12 = topPointer113;
-									value44 = uint16AtPointer(pointer12);
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1341)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1341))));
+									pointer12 = topPointer112;
+									value43 = uint16AtPointer(pointer12);
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -12588,21 +12525,21 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, value44);
-									goto l746;
+									int32AtPointerput(nativeSP - 1, value43);
+									goto l707;
 									break;
 								case 123:
 									/* begin lowcodePrimitiveLoadUInt32FromMemory */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer211 = pointerAtPointer(nativeSP - 1);
+									topPointer25 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer213 = nativeSP + BytesPerOop;
+									valueOopPointer212 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer213)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer213))));
-									pointer22 = topPointer211;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer212)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer212))));
+									pointer22 = topPointer25;
 									value114 = uint32AtPointer(pointer22);
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
@@ -12614,20 +12551,20 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									int32AtPointerput(nativeSP - 1, value114);
-									goto l746;
+									goto l707;
 									break;
 								case 0x7C:
 									/* begin lowcodePrimitiveLoadUInt64FromMemory */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer33 = pointerAtPointer(nativeSP - 1);
+									topPointer32 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer314 = nativeSP + BytesPerOop;
+									valueOopPointer313 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer314)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer314))));
-									pointer32 = topPointer33;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer313)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer313))));
+									pointer32 = topPointer32;
 									value212 = uint64AtPointer(pointer32);
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
@@ -12639,7 +12576,7 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									long64AtPointerput(nativeSP - 1, value212);
-									goto l746;
+									goto l707;
 									break;
 								case 125:
 									/* begin lowcodePrimitiveLoadUInt8FromMemory */
@@ -12648,12 +12585,12 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topPointer42 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer413 = nativeSP + BytesPerOop;
+									valueOopPointer412 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer413)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer413))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer412)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer412))));
 									pointer42 = topPointer42;
-									value312 = uint8AtPointer(pointer42);
+									value310 = uint8AtPointer(pointer42);
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -12663,8 +12600,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, value312);
-									goto l746;
+									int32AtPointerput(nativeSP - 1, value310);
+									goto l707;
 									break;
 								case 0x7E:
 									/* begin lowcodePrimitiveLocalFrameSize */
@@ -12718,28 +12655,28 @@ interpret(void)
 									}
 									GIV(nativeStackPointer) -= 256;
 									extA = 0;
-									goto l746;
+									goto l707;
 									break;
 								case 0x7F:
-									goto l746;
+									goto l707;
 									break;
 								case 128:
 									/* begin lowcodePrimitiveLockVM */
 									abort();
-									goto l746;
+									goto l707;
 									break;
 								case 129:
 									/* begin lowcodePrimitiveMalloc32 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt3230 = int32AtPointer(nativeSP - 1);
+									topInt3233 = int32AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer581 = nativeSP + BytesPerOop;
+									valueOopPointer511 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer581)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer581))));
-									size6 = topInt3230;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer511)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer511))));
+									size6 = topInt3233;
 									pointer52 = malloc(size6);
 									/* begin internalPushPointer: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
@@ -12751,20 +12688,20 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									pointerAtPointerput(nativeSP - 1, pointer52);
-									goto l746;
+									goto l707;
 									break;
 								case 130:
 									/* begin lowcodePrimitiveMalloc64 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt6429 = long64AtPointer(nativeSP - 1);
+									topInt6430 = long64AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer631 = nativeSP + 8;
+									valueOopPointer641 = nativeSP + 8;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer631)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer631))));
-									size11 = topInt6429;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer641)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer641))));
+									size11 = topInt6430;
 									pointer61 = malloc(size11);
 									/* begin internalPushPointer: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
@@ -12776,7 +12713,7 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									pointerAtPointerput(nativeSP - 1, pointer61);
-									goto l746;
+									goto l707;
 									break;
 								case 131:
 									/* begin lowcodePrimitiveMemcpy32 */
@@ -12785,10 +12722,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topInt32119 = int32AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer73 = nativeSP + BytesPerOop;
+									valueOopPointer72 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer73)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer73))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer72)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer72))));
 									size2 = topInt32119;
 									/* begin internalPopStackPointer */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -12796,10 +12733,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topPointer52 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer1113 = nativeSP + BytesPerOop;
+									valueOopPointer1112 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1113)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1113))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1112)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1112))));
 									source = topPointer52;
 									/* begin internalPopStackPointer */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -12807,13 +12744,13 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topPointer11 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer214 = nativeSP + BytesPerOop;
+									valueOopPointer213 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer214)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer214))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer213)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer213))));
 									dest = topPointer11;
 									lowcode_memcpy(dest, source, size2);
-									goto l746;
+									goto l707;
 									break;
 								case 132:
 									/* begin lowcodePrimitiveMemcpy64 */
@@ -12822,10 +12759,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topInt64117 = long64AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer83 = nativeSP + 8;
+									valueOopPointer82 = nativeSP + 8;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer83)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer83))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer82)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer82))));
 									size3 = topInt64117;
 									/* begin internalPopStackPointer */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -12850,7 +12787,7 @@ interpret(void)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer222))));
 									dest1 = topPointer12;
 									lowcode_memcpy(dest1, source1, size3);
-									goto l746;
+									goto l707;
 									break;
 								case 133:
 									/* begin lowcodePrimitiveMemcpyFixed */
@@ -12861,10 +12798,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topPointer7 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer93 = nativeSP + BytesPerOop;
+									valueOopPointer92 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer93)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer93))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer92)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer92))));
 									source2 = topPointer7;
 									/* begin internalPopStackPointer */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -12872,18 +12809,18 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topPointer13 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer1331 = nativeSP + BytesPerOop;
+									valueOopPointer135 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1331)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1331))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer135)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer135))));
 									dest2 = topPointer13;
 									lowcode_memcpy(dest2, source2, size4);
 									extA = 0;
-									goto l746;
+									goto l707;
 									break;
 								case 134:
 									/* begin lowcodePrimitiveMoveFloat32ToPhysical */
-									registerID6 = extA;
+									registerID10 = extA;
 									/* begin internalPopStackFloat32 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -12894,10 +12831,10 @@ interpret(void)
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer102)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer102))));
-									value43 = topSingle28;
-									lowcodeCalloutStatefloat32Registervalue(lowcodeCalloutState, registerID6, value43);
+									value42 = topSingle28;
+									lowcodeCalloutStatefloat32Registervalue(lowcodeCalloutState, registerID10, value42);
 									extA = 0;
-									goto l746;
+									goto l707;
 									break;
 								case 135:
 									/* begin lowcodePrimitiveMoveFloat64ToPhysical */
@@ -12915,7 +12852,7 @@ interpret(void)
 									value52 = topDouble51;
 									lowcodeCalloutStatefloat64Registervalue(lowcodeCalloutState, registerID1, value52);
 									extA = 0;
-									goto l746;
+									goto l707;
 									break;
 								case 136:
 									/* begin lowcodePrimitiveMoveInt32ToPhysical */
@@ -12924,16 +12861,16 @@ interpret(void)
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt32210 = int32AtPointer(nativeSP - 1);
+									topInt32211 = int32AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
 									valueOopPointer152 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer152)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer152))));
-									value62 = topInt32210;
+									value62 = topInt32211;
 									lowcodeCalloutStateint32Registervalue(lowcodeCalloutState, registerID2, value62);
 									extA = 0;
-									goto l746;
+									goto l707;
 									break;
 								case 137:
 									/* begin lowcodePrimitiveMoveInt64ToPhysical */
@@ -12942,16 +12879,16 @@ interpret(void)
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt6428 = long64AtPointer(nativeSP - 1);
+									topInt64210 = long64AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
 									valueOopPointer162 = nativeSP + 8;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer162)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer162))));
-									value72 = topInt6428;
+									value72 = topInt64210;
 									lowcodeCalloutStateint64Registervalue(lowcodeCalloutState, registerID3, value72);
 									extA = 0;
-									goto l746;
+									goto l707;
 									break;
 								case 138:
 									/* begin lowcodePrimitiveMovePointerToPhysical */
@@ -12969,20 +12906,20 @@ interpret(void)
 									pointerValue4 = topPointer8;
 									lowcodeCalloutStatepointerRegistervalue(lowcodeCalloutState, registerID4, pointerValue4);
 									extA = 0;
-									goto l746;
+									goto l707;
 									break;
 								case 139:
 									/* begin lowcodePrimitiveMul32 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt3233 = int32AtPointer(nativeSP - 1);
+									topInt3234 = int32AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
 									valueOopPointer192 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer192)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer192))));
-									second201 = topInt3233;
+									second231 = topInt3234;
 									/* begin internalPopStackInt32 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -12993,8 +12930,8 @@ interpret(void)
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer182)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer182))));
-									first201 = topInt321110;
-									result35 = first201 * second201;
+									first221 = topInt321110;
+									result39 = first221 * second231;
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -13004,21 +12941,21 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, result35);
-									goto l746;
+									int32AtPointerput(nativeSP - 1, result39);
+									goto l707;
 									break;
 								case 140:
 									/* begin lowcodePrimitiveMul64 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt6433 = long64AtPointer(nativeSP - 1);
+									topInt6432 = long64AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
 									valueOopPointer202 = nativeSP + 8;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer202)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer202))));
-									second110 = topInt6433;
+									second112 = topInt6432;
 									/* begin internalPopStackInt64 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -13029,8 +12966,8 @@ interpret(void)
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1102)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1102))));
-									first110 = topInt64118;
-									result113 = first110 * second110;
+									first112 = topInt64118;
+									result113 = first112 * second112;
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -13041,21 +12978,21 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									long64AtPointerput(nativeSP - 1, result113);
-									goto l746;
+									goto l707;
 									break;
 								case 141:
 									/* begin lowcodePrimitiveNeg32 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt3243 = int32AtPointer(nativeSP - 1);
+									topInt3242 = int32AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
 									valueOopPointer232 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer232)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer232))));
-									value82 = topInt3243;
-									result213 = -value82;
+									value82 = topInt3242;
+									result212 = -value82;
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -13065,22 +13002,22 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, result213);
-									goto l746;
+									int32AtPointerput(nativeSP - 1, result212);
+									goto l707;
 									break;
 								case 142:
 									/* begin lowcodePrimitiveNeg64 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt6443 = long64AtPointer(nativeSP - 1);
+									topInt6442 = long64AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
 									valueOopPointer242 = nativeSP + 8;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer242)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer242))));
-									value92 = topInt6443;
-									result34 = -value92;
+									value92 = topInt6442;
+									result38 = -value92;
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -13090,22 +13027,22 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									long64AtPointerput(nativeSP - 1, result34);
-									goto l746;
+									long64AtPointerput(nativeSP - 1, result38);
+									goto l707;
 									break;
 								case 143:
 									/* begin lowcodePrimitiveNot32 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt3253 = int32AtPointer(nativeSP - 1);
+									topInt3252 = int32AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
 									valueOopPointer252 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer252)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer252))));
-									value102 = topInt3253;
-									result43 = value102 ^ -1;
+									value102 = topInt3252;
+									result42 = value102 ^ -1;
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -13115,8 +13052,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, result43);
-									goto l746;
+									int32AtPointerput(nativeSP - 1, result42);
+									goto l707;
 									break;
 								case 144:
 									/* begin lowcodePrimitiveNot64 */
@@ -13130,7 +13067,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer262)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer262))));
 									value113 = topInt6452;
-									result53 = value113 ^ -1;
+									result52 = value113 ^ -1;
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -13140,8 +13077,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									long64AtPointerput(nativeSP - 1, result53);
-									goto l746;
+									long64AtPointerput(nativeSP - 1, result52);
+									goto l707;
 									break;
 								case 145:
 									/* begin lowcodePrimitiveOr32 */
@@ -13154,19 +13091,19 @@ interpret(void)
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer272)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer272))));
-									second231 = topInt3262;
+									second221 = topInt3262;
 									/* begin internalPopStackInt32 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topInt32122 = int32AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer1114 = nativeSP + BytesPerOop;
+									valueOopPointer1113 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1114)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1114))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1113)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1113))));
 									first231 = topInt32122;
-									result63 = first231 | second231;
+									result62 = first231 | second221;
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -13176,8 +13113,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, result63);
-									goto l746;
+									int32AtPointerput(nativeSP - 1, result62);
+									goto l707;
 									break;
 								case 146:
 									/* begin lowcodePrimitiveOr64 */
@@ -13190,7 +13127,7 @@ interpret(void)
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer282)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer282))));
-									second33 = topInt6462;
+									second32 = topInt6462;
 									/* begin internalPopStackInt64 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -13201,8 +13138,8 @@ interpret(void)
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1122)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1122))));
-									first33 = topInt64122;
-									result73 = first33 | second33;
+									first32 = topInt64122;
+									result72 = first32 | second32;
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -13212,19 +13149,25 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									long64AtPointerput(nativeSP - 1, result73);
-									goto l746;
+									long64AtPointerput(nativeSP - 1, result72);
+									goto l707;
 									break;
 								case 147:
-									/* begin lowcodePrimitivePerformCallFloat32 */
-									function14 = extA;
-									/* begin lowcodeCalloutFloat32Result: */
+									/* begin lowcodePrimitivePerformCallout */
+									function2 = extA;
+									/* begin lowcodeDoCallout: */
+									localIP -= 1;
+									/* begin externalizeIPandSP */
 									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
 									GIV(instructionPointer) = oopForPointer(localIP);
 									GIV(stackPointer) = localSP;
 									GIV(framePointer) = localFP;
 									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), ((char*) function14));
+									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), ((char*) function2));
+									if (GIV(instructionPointer) == (ceReturnToInterpreterPC())) {
+										/* begin iframeSavedIP: */
+										GIV(instructionPointer) = longAt(GIV(framePointer) + FoxIFSavedIP);
+									}
 									/* begin internalizeIPandSP */
 									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
 									localIP = pointerForOop(GIV(instructionPointer));
@@ -13233,34 +13176,42 @@ interpret(void)
 									nativeSP = 0;
 
 									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize14 = sizeof(sqLowcodeCalloutState);
+									calloutStateSize2 = sizeof(sqLowcodeCalloutState);
 									initialShadowCallStackPointer = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer = ((char*) ((((size_t) (initialShadowCallStackPointer - calloutStateSize14))) & -16));
+									initialShadowCallStackPointer = ((char*) ((((size_t) (initialShadowCallStackPointer - calloutStateSize2))) & -16));
 									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer);
-									result182 = lowcodeCalloutStateFetchResultFloat32(lowcodeCalloutState);
-									/* begin internalPushFloat32: */
-									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-									/* begin nativeStackPointerIn:put: */
-									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									else {
-										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									singleFloatAtPointerput(nativeSP - 1, result182);
+									/* begin fetchNextBytecode */
+									currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
+
+									lowcodeCalloutStateFetchResultFloat32(lowcodeCalloutState);
 									extA = 0;
-									goto l746;
+									goto l707;
 									break;
 								case 148:
-									/* begin lowcodePrimitivePerformCallFloat64 */
-									function1 = extA;
-									/* begin lowcodeCalloutFloat64Result: */
+									/* begin lowcodePrimitivePerformCalloutIndirect */
+									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+									topPointer22 = pointerAtPointer(nativeSP - 1);
+									/* begin nativeStackPointerIn:put: */
+									valueOopPointer432 = nativeSP + BytesPerOop;
+									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer432)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer432))));
+									function1 = topPointer22;
+									/* begin lowcodeDoCallout: */
+									localIP -= 1;
+									/* begin externalizeIPandSP */
 									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
 									GIV(instructionPointer) = oopForPointer(localIP);
 									GIV(stackPointer) = localSP;
 									GIV(framePointer) = localFP;
 									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), ((char*) function1));
+									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), function1);
+									if (GIV(instructionPointer) == (ceReturnToInterpreterPC())) {
+										/* begin iframeSavedIP: */
+										GIV(instructionPointer) = longAt(GIV(framePointer) + FoxIFSavedIP);
+									}
 									/* begin internalizeIPandSP */
 									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
 									localIP = pointerForOop(GIV(instructionPointer));
@@ -13273,52 +13224,15 @@ interpret(void)
 									initialShadowCallStackPointer1 = (shadowCallStackPointerIn(localFP)) - 1;
 									initialShadowCallStackPointer1 = ((char*) ((((size_t) (initialShadowCallStackPointer1 - calloutStateSize1))) & -16));
 									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer1);
-									result192 = lowcodeCalloutStateFetchResultFloat64(lowcodeCalloutState);
-									/* begin internalPushFloat64: */
-									nativeSP = (nativeStackPointerIn(localFP)) - 8;
-									/* begin nativeStackPointerIn:put: */
-									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									else {
-										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									floatAtPointerput(nativeSP - 1, result192);
-									extA = 0;
-									goto l746;
+									/* begin fetchNextBytecode */
+									currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
+
+									lowcodeCalloutStateFetchResultFloat32(lowcodeCalloutState);
+									goto l707;
 									break;
 								case 149:
-									/* begin lowcodePrimitivePerformCallIndirectFloat32 */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer22 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer432 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer432)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer432))));
-									function2 = topPointer22;
-									/* begin lowcodeCalloutFloat32Result: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), function2);
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize2 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer2 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer2 = ((char*) ((((size_t) (initialShadowCallStackPointer2 - calloutStateSize2))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer2);
-									result202 = lowcodeCalloutStateFetchResultFloat32(lowcodeCalloutState);
+									/* begin lowcodePrimitivePushCalloutResultFloat32 */
+									result82 = lowcodeCalloutStateFetchResultFloat32(lowcodeCalloutState);
 									/* begin internalPushFloat32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -13328,41 +13242,12 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									singleFloatAtPointerput(nativeSP - 1, result202);
-									goto l746;
+									singleFloatAtPointerput(nativeSP - 1, result82);
+									goto l707;
 									break;
 								case 150:
-									/* begin lowcodePrimitivePerformCallIndirectFloat64 */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer23 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer442 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer442)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer442))));
-									function3 = topPointer23;
-									/* begin lowcodeCalloutFloat64Result: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), function3);
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize3 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer3 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer3 = ((char*) ((((size_t) (initialShadowCallStackPointer3 - calloutStateSize3))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer3);
-									result214 = lowcodeCalloutStateFetchResultFloat64(lowcodeCalloutState);
+									/* begin lowcodePrimitivePushCalloutResultFloat64 */
+									result92 = lowcodeCalloutStateFetchResultFloat64(lowcodeCalloutState);
 									/* begin internalPushFloat64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -13372,41 +13257,12 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									floatAtPointerput(nativeSP - 1, result214);
-									goto l746;
+									floatAtPointerput(nativeSP - 1, result92);
+									goto l707;
 									break;
 								case 151:
-									/* begin lowcodePrimitivePerformCallIndirectInt32 */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer24 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer452 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer452)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer452))));
-									function4 = topPointer24;
-									/* begin lowcodeCalloutInt32Result: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), function4);
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize4 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer4 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer4 = ((char*) ((((size_t) (initialShadowCallStackPointer4 - calloutStateSize4))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer4);
-									result222 = lowcodeCalloutStateFetchResultInt32(lowcodeCalloutState);
+									/* begin lowcodePrimitivePushCalloutResultInt32 */
+									result102 = lowcodeCalloutStateFetchResultInt32(lowcodeCalloutState);
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -13416,41 +13272,12 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, result222);
-									goto l746;
+									int32AtPointerput(nativeSP - 1, result102);
+									goto l707;
 									break;
 								case 152:
-									/* begin lowcodePrimitivePerformCallIndirectInt64 */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer25 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer462 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer462)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer462))));
-									function5 = topPointer25;
-									/* begin lowcodeCalloutInt64Result: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), function5);
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize5 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer5 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer5 = ((char*) ((((size_t) (initialShadowCallStackPointer5 - calloutStateSize5))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer5);
-									result232 = lowcodeCalloutStateFetchResultInt64(lowcodeCalloutState);
+									/* begin lowcodePrimitivePushCalloutResultInt64 */
+									result114 = lowcodeCalloutStateFetchResultInt64(lowcodeCalloutState);
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -13460,41 +13287,12 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									long64AtPointerput(nativeSP - 1, result232);
-									goto l746;
+									long64AtPointerput(nativeSP - 1, result114);
+									goto l707;
 									break;
 								case 153:
-									/* begin lowcodePrimitivePerformCallIndirectPointer */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer26 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer472 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer472)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer472))));
-									function6 = topPointer26;
-									/* begin lowcodeCalloutPointerResult: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), function6);
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize6 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer6 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer6 = ((char*) ((((size_t) (initialShadowCallStackPointer6 - calloutStateSize6))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer6);
-									result242 = lowcodeCalloutStateFetchResultPointer(lowcodeCalloutState);
+									/* begin lowcodePrimitivePushCalloutResultPointer */
+									result122 = lowcodeCalloutStateFetchResultPointer(lowcodeCalloutState);
 									/* begin internalPushPointer: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -13504,294 +13302,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									pointerAtPointerput(nativeSP - 1, result242);
-									goto l746;
-									break;
-								case 154:
-									/* begin lowcodePrimitivePerformCallIndirectStructure */
-									structureSize2 = extA;
-									/* begin internalPopStackPointer */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer27 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer482 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer482)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer482))));
-									result252 = topPointer27;
-									/* begin internalPopStackPointer */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer110 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer1172 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1172)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1172))));
-									function7 = topPointer110;
-									/* begin lowcodeCallout:structureResult: */
-									
-									/* In the StackInterpreter stacks grow down. */
-									GIV(shadowCallStackPointer) -= BytesPerOop;
-									pointerAtPointerput(GIV(shadowCallStackPointer), result252);
-									/* begin externalizeIPandSP */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), function7);
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize7 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer7 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer7 = ((char*) ((((size_t) (initialShadowCallStackPointer7 - calloutStateSize7))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer7);
-									resultPointer = lowcodeCalloutStateFetchResultStructure(lowcodeCalloutState);
-									/* begin internalPushPointer: */
-									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-									/* begin nativeStackPointerIn:put: */
-									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									else {
-										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									pointerAtPointerput(nativeSP - 1, resultPointer);
-									extA = 0;
-									goto l746;
-									break;
-								case 155:
-									/* begin lowcodePrimitivePerformCallIndirectVoid */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer28 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer492 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer492)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer492))));
-									function8 = topPointer28;
-									/* begin lowcodeCalloutInt32Result: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), function8);
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize8 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer8 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer8 = ((char*) ((((size_t) (initialShadowCallStackPointer8 - calloutStateSize8))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer8);
-									lowcodeCalloutStateFetchResultInt32(lowcodeCalloutState);
-									goto l746;
-									break;
-								case 156:
-									/* begin lowcodePrimitivePerformCallInt32 */
-									function9 = extA;
-									/* begin lowcodeCalloutInt32Result: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), ((char*) function9));
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize9 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer9 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer9 = ((char*) ((((size_t) (initialShadowCallStackPointer9 - calloutStateSize9))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer9);
-									result26 = lowcodeCalloutStateFetchResultInt32(lowcodeCalloutState);
-									/* begin internalPushInt32: */
-									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-									/* begin nativeStackPointerIn:put: */
-									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									else {
-										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									int32AtPointerput(nativeSP - 1, result26);
-									extA = 0;
-									goto l746;
-									break;
-								case 157:
-									/* begin lowcodePrimitivePerformCallInt64 */
-									function10 = extA;
-									/* begin lowcodeCalloutInt64Result: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), ((char*) function10));
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize10 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer10 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer10 = ((char*) ((((size_t) (initialShadowCallStackPointer10 - calloutStateSize10))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer10);
-									result27 = lowcodeCalloutStateFetchResultInt64(lowcodeCalloutState);
-									/* begin internalPushInt64: */
-									nativeSP = (nativeStackPointerIn(localFP)) - 8;
-									/* begin nativeStackPointerIn:put: */
-									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									else {
-										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									long64AtPointerput(nativeSP - 1, result27);
-									extA = 0;
-									goto l746;
-									break;
-								case 158:
-									/* begin lowcodePrimitivePerformCallPointer */
-									function11 = extA;
-									/* begin lowcodeCalloutPointerResult: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), ((char*) function11));
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize11 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer11 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer11 = ((char*) ((((size_t) (initialShadowCallStackPointer11 - calloutStateSize11))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer11);
-									result28 = lowcodeCalloutStateFetchResultPointer(lowcodeCalloutState);
-									/* begin internalPushPointer: */
-									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-									/* begin nativeStackPointerIn:put: */
-									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									else {
-										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									pointerAtPointerput(nativeSP - 1, result28);
-									extA = 0;
-									goto l746;
-									break;
-								case 159:
-									/* begin lowcodePrimitivePerformCallStructure */
-									function12 = extA;
-									structureSize1 = extB;
-									/* begin internalPopStackPointer */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer29 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer502 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer502)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer502))));
-									result29 = topPointer29;
-									/* begin internalPushShadowCallStackPointer: */
-
-									/* In the StackInterpreter stacks grow down. */
-									GIV(shadowCallStackPointer) -= BytesPerOop;
-									pointerAtPointerput(GIV(shadowCallStackPointer), result29);
-									/* begin lowcodeCalloutPointerResult: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), ((char*) function12));
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize12 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer12 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer12 = ((char*) ((((size_t) (initialShadowCallStackPointer12 - calloutStateSize12))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer12);
-									resultPointer1 = lowcodeCalloutStateFetchResultPointer(lowcodeCalloutState);
-									/* begin internalPushPointer: */
-									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-									/* begin nativeStackPointerIn:put: */
-									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									else {
-										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									pointerAtPointerput(nativeSP - 1, resultPointer1);
-									extA = 0;
-									extB = 0;
-									numExtB = 0;
-									goto l746;
-									break;
-								case 160:
-									/* begin lowcodePrimitivePerformCallVoid */
-									function13 = extA;
-									/* begin lowcodeCalloutInt32Result: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), ((char*) function13));
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize13 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer13 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer13 = ((char*) ((((size_t) (initialShadowCallStackPointer13 - calloutStateSize13))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer13);
-									lowcodeCalloutStateFetchResultInt32(lowcodeCalloutState);
-									extA = 0;
-									goto l746;
+									pointerAtPointerput(nativeSP - 1, result122);
+									goto l707;
 									break;
 								case 161:
 									/* begin lowcodePrimitivePlaftormCode */
@@ -13806,7 +13318,7 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									int32AtPointerput(nativeSP - 1, code);
-									goto l746;
+									goto l707;
 									break;
 								case 162:
 									/* begin lowcodePrimitivePointerAddConstantOffset */
@@ -13822,7 +13334,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer292)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer292))));
 									base3 = topPointer9;
-									result83 = base3 + offset4;
+									result132 = base3 + offset4;
 									/* begin internalPushPointer: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -13832,10 +13344,10 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									pointerAtPointerput(nativeSP - 1, result83);
+									pointerAtPointerput(nativeSP - 1, result132);
 									extB = 0;
 									numExtB = 0;
-									goto l746;
+									goto l707;
 									break;
 								case 163:
 									/* begin lowcodePrimitivePointerAddOffset32 */
@@ -13860,7 +13372,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1132)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1132))));
 									base11 = topPointer10;
-									result92 = base11 + offset11;
+									result142 = base11 + offset11;
 									/* begin internalPushPointer: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -13870,8 +13382,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									pointerAtPointerput(nativeSP - 1, result92);
-									goto l746;
+									pointerAtPointerput(nativeSP - 1, result142);
+									goto l707;
 									break;
 								case 164:
 									/* begin lowcodePrimitivePointerAddOffset64 */
@@ -13880,10 +13392,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topInt6472 = long64AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer313 = nativeSP + 8;
+									valueOopPointer312 = nativeSP + 8;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer313)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer313))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer312)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer312))));
 									offset2 = topInt6472;
 									/* begin internalPopStackPointer */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -13896,7 +13408,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1142)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1142))));
 									base2 = topPointer14;
-									result102 = base2 + offset2;
+									result152 = base2 + offset2;
 									/* begin internalPushPointer: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -13906,8 +13418,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									pointerAtPointerput(nativeSP - 1, result102);
-									goto l746;
+									pointerAtPointerput(nativeSP - 1, result152);
+									goto l707;
 									break;
 								case 165:
 									/* begin lowcodePrimitivePointerEqual */
@@ -13945,7 +13457,7 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									int32AtPointerput(nativeSP - 1, value122);
-									goto l746;
+									goto l707;
 									break;
 								case 166:
 									/* begin lowcodePrimitivePointerNotEqual */
@@ -13983,7 +13495,7 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									int32AtPointerput(nativeSP - 1, value132);
-									goto l746;
+									goto l707;
 									break;
 								case 167:
 									/* begin lowcodePrimitivePointerToInt32 */
@@ -13997,7 +13509,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer342)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer342))));
 									pointer71 = topPointer19;
-									result114 = ((uintptr_t) pointer71);
+									result162 = ((uintptr_t) pointer71);
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -14007,8 +13519,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, result114);
-									goto l746;
+									int32AtPointerput(nativeSP - 1, result162);
+									goto l707;
 									break;
 								case 168:
 									/* begin lowcodePrimitivePointerToInt64 */
@@ -14022,7 +13534,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer352)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer352))));
 									pointer81 = topPointer20;
-									result122 = ((uintptr_t) pointer81);
+									result172 = ((uintptr_t) pointer81);
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -14032,8 +13544,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									long64AtPointerput(nativeSP - 1, result122);
-									goto l746;
+									long64AtPointerput(nativeSP - 1, result172);
+									goto l707;
 									break;
 								case 169:
 									/* begin lowcodePrimitivePopFloat32 */
@@ -14047,7 +13559,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer362)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer362))));
 									value142 = topSingle112;
-									goto l746;
+									goto l707;
 									break;
 								case 170:
 									/* begin lowcodePrimitivePopFloat64 */
@@ -14061,7 +13573,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer372)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer372))));
 									value152 = topDouble121;
-									goto l746;
+									goto l707;
 									break;
 								case 171:
 									/* begin lowcodePrimitivePopInt32 */
@@ -14075,7 +13587,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer382)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer382))));
 									value162 = topInt3282;
-									goto l746;
+									goto l707;
 									break;
 								case 172:
 									/* begin lowcodePrimitivePopInt64 */
@@ -14089,7 +13601,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer392)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer392))));
 									value172 = topInt6482;
-									goto l746;
+									goto l707;
 									break;
 								case 173:
 									/* begin lowcodePrimitivePopMultipleNative */
@@ -14104,7 +13616,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer402)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer402))));
 									extA = 0;
-									goto l746;
+									goto l707;
 									break;
 								case 174:
 									/* begin lowcodePrimitivePopPointer */
@@ -14113,17 +13625,17 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topPointer21 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer415 = nativeSP + BytesPerOop;
+									valueOopPointer414 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer415)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer415))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer414)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer414))));
 									pointerValue12 = topPointer21;
-									goto l746;
+									goto l707;
 									break;
 								case 175:
 									/* begin lowcodePrimitivePushConstantUInt32 */
 									constant = extA;
-									result132 = constant;
+									result182 = constant;
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -14133,14 +13645,14 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, result132);
+									int32AtPointerput(nativeSP - 1, result182);
 									extA = 0;
-									goto l746;
+									goto l707;
 									break;
 								case 176:
 									/* begin lowcodePrimitivePushConstantUInt64 */
 									constant1 = extA;
-									result142 = constant1;
+									result192 = constant1;
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -14150,13 +13662,13 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									long64AtPointerput(nativeSP - 1, result142);
+									long64AtPointerput(nativeSP - 1, result192);
 									extA = 0;
-									goto l746;
+									goto l707;
 									break;
 								case 177:
 									/* begin lowcodePrimitivePushNullPointer */
-									result152 = 0;
+									result202 = 0;
 									/* begin internalPushPointer: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -14166,12 +13678,12 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									pointerAtPointerput(nativeSP - 1, result152);
-									goto l746;
+									pointerAtPointerput(nativeSP - 1, result202);
+									goto l707;
 									break;
 								case 178:
 									/* begin lowcodePrimitivePushOne32 */
-									result162 = 1;
+									result213 = 1;
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -14181,12 +13693,12 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, result162);
-									goto l746;
+									int32AtPointerput(nativeSP - 1, result213);
+									goto l707;
 									break;
 								case 179:
 									/* begin lowcodePrimitivePushOne64 */
-									result172 = 1;
+									result222 = 1;
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -14196,131 +13708,131 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									long64AtPointerput(nativeSP - 1, result172);
-									goto l746;
+									long64AtPointerput(nativeSP - 1, result222);
+									goto l707;
+									break;
+								case 180:
+									/* begin lowcodePrimitivePushOneFloat32 */
+									result232 = 1.0;
+									/* begin internalPushFloat32: */
+									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+									/* begin nativeStackPointerIn:put: */
+									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									else {
+										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									singleFloatAtPointerput(nativeSP - 1, result232);
+									goto l707;
+									break;
+								case 181:
+									/* begin lowcodePrimitivePushOneFloat64 */
+									result242 = 1.0;
+									/* begin internalPushFloat64: */
+									nativeSP = (nativeStackPointerIn(localFP)) - 8;
+									/* begin nativeStackPointerIn:put: */
+									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									else {
+										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									floatAtPointerput(nativeSP - 1, result242);
+									goto l707;
+									break;
+								case 182:
+									/* begin lowcodePrimitivePushPhysicalFloat32 */
+									registerID5 = extA;
+									value182 = lowcodeCalloutStatefloat32Register(lowcodeCalloutState, registerID5);
+									/* begin internalPushFloat32: */
+									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+									/* begin nativeStackPointerIn:put: */
+									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									else {
+										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									singleFloatAtPointerput(nativeSP - 1, value182);
+									extA = 0;
+									goto l707;
+									break;
+								case 183:
+									/* begin lowcodePrimitivePushPhysicalFloat64 */
+									registerID6 = extA;
+									value192 = lowcodeCalloutStatefloat64Register(lowcodeCalloutState, registerID6);
+									/* begin internalPushFloat64: */
+									nativeSP = (nativeStackPointerIn(localFP)) - 8;
+									/* begin nativeStackPointerIn:put: */
+									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									else {
+										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									floatAtPointerput(nativeSP - 1, value192);
+									extA = 0;
+									goto l707;
+									break;
+								case 184:
+									/* begin lowcodePrimitivePushPhysicalInt32 */
+									registerID7 = extA;
+									value202 = lowcodeCalloutStateint32Register(lowcodeCalloutState, registerID7);
+									/* begin internalPushInt32: */
+									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+									/* begin nativeStackPointerIn:put: */
+									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									else {
+										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									int32AtPointerput(nativeSP - 1, value202);
+									extA = 0;
+									goto l707;
+									break;
+								case 185:
+									/* begin lowcodePrimitivePushPhysicalInt64 */
+									registerID8 = extA;
+									value213 = lowcodeCalloutStateint64Register(lowcodeCalloutState, registerID8);
+									/* begin internalPushInt64: */
+									nativeSP = (nativeStackPointerIn(localFP)) - 8;
+									/* begin nativeStackPointerIn:put: */
+									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									else {
+										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									long64AtPointerput(nativeSP - 1, value213);
+									extA = 0;
+									goto l707;
+									break;
+								case 186:
+									/* begin lowcodePrimitivePushPhysicalPointer */
+									registerID9 = extA;
+									pointerValue2 = lowcodeCalloutStatepointerRegister(lowcodeCalloutState, registerID9);
+									/* begin internalPushPointer: */
+									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+									/* begin nativeStackPointerIn:put: */
+									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									else {
+										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									pointerAtPointerput(nativeSP - 1, pointerValue2);
+									extA = 0;
+									goto l707;
 									break;
 								default:
 									/* begin lowcodeUnaryInlinePrimitive4: */
 									
 									switch (prim - 1000) {
-									case 180:
-										/* begin lowcodePrimitivePushOneFloat32 */
-										result32 = 1.0;
-										/* begin internalPushFloat32: */
-										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										singleFloatAtPointerput(nativeSP - 1, result32);
-										goto l541;
-										break;
-									case 181:
-										/* begin lowcodePrimitivePushOneFloat64 */
-										result112 = 1.0;
-										/* begin internalPushFloat64: */
-										nativeSP = (nativeStackPointerIn(localFP)) - 8;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										floatAtPointerput(nativeSP - 1, result112);
-										goto l541;
-										break;
-									case 182:
-										/* begin lowcodePrimitivePushPhysicalFloat32 */
-										registerID5 = extA;
-										value401 = lowcodeCalloutStatefloat32Register(lowcodeCalloutState, registerID5);
-										/* begin internalPushFloat32: */
-										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										singleFloatAtPointerput(nativeSP - 1, value401);
-										extA = 0;
-										goto l541;
-										break;
-									case 183:
-										/* begin lowcodePrimitivePushPhysicalFloat64 */
-										registerID11 = extA;
-										value1111 = lowcodeCalloutStatefloat64Register(lowcodeCalloutState, registerID11);
-										/* begin internalPushFloat64: */
-										nativeSP = (nativeStackPointerIn(localFP)) - 8;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										floatAtPointerput(nativeSP - 1, value1111);
-										extA = 0;
-										goto l541;
-										break;
-									case 184:
-										/* begin lowcodePrimitivePushPhysicalInt32 */
-										registerID21 = extA;
-										value211 = lowcodeCalloutStateint32Register(lowcodeCalloutState, registerID21);
-										/* begin internalPushInt32: */
-										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										int32AtPointerput(nativeSP - 1, value211);
-										extA = 0;
-										goto l541;
-										break;
-									case 185:
-										/* begin lowcodePrimitivePushPhysicalInt64 */
-										registerID31 = extA;
-										value310 = lowcodeCalloutStateint64Register(lowcodeCalloutState, registerID31);
-										/* begin internalPushInt64: */
-										nativeSP = (nativeStackPointerIn(localFP)) - 8;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										long64AtPointerput(nativeSP - 1, value310);
-										extA = 0;
-										goto l541;
-										break;
-									case 186:
-										/* begin lowcodePrimitivePushPhysicalPointer */
-										registerID41 = extA;
-										pointerValue3 = lowcodeCalloutStatepointerRegister(lowcodeCalloutState, registerID41);
-										/* begin internalPushPointer: */
-										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										pointerAtPointerput(nativeSP - 1, pointerValue3);
-										extA = 0;
-										goto l541;
-										break;
 									case 187:
 										/* begin lowcodePrimitivePushSessionIdentifier */
-										value42 = getThisSessionID();
+										value391 = getThisSessionID();
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -14330,12 +13842,12 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value42);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, value391);
+										goto l502;
 										break;
 									case 188:
 										/* begin lowcodePrimitivePushZero32 */
-										result212 = 0;
+										result36 = 0;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -14345,12 +13857,12 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result212);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, result36);
+										goto l502;
 										break;
 									case 189:
 										/* begin lowcodePrimitivePushZero64 */
-										result33 = 0;
+										result112 = 0;
 										/* begin internalPushInt64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -14360,12 +13872,12 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										long64AtPointerput(nativeSP - 1, result33);
-										goto l541;
+										long64AtPointerput(nativeSP - 1, result112);
+										goto l502;
 										break;
 									case 190:
 										/* begin lowcodePrimitivePushZeroFloat32 */
-										result42 = 0.0;
+										result210 = 0.0;
 										/* begin internalPushFloat32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -14375,12 +13887,12 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										singleFloatAtPointerput(nativeSP - 1, result42);
-										goto l541;
+										singleFloatAtPointerput(nativeSP - 1, result210);
+										goto l502;
 										break;
 									case 191:
 										/* begin lowcodePrimitivePushZeroFloat64 */
-										result52 = 0.0;
+										result37 = 0.0;
 										/* begin internalPushFloat64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -14390,33 +13902,33 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										floatAtPointerput(nativeSP - 1, result52);
-										goto l541;
+										floatAtPointerput(nativeSP - 1, result37);
+										goto l502;
 										break;
 									case 192:
 										/* begin lowcodePrimitiveRem32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt3229 = int32AtPointer(nativeSP - 1);
+										topInt3232 = int32AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer571 = nativeSP + BytesPerOop;
+										valueOopPointer631 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer571)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer571))));
-										second181 = topInt3229;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer631)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer631))));
+										second201 = topInt3232;
 										/* begin internalPopStackInt32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 										topInt32117 = int32AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer1291 = nativeSP + BytesPerOop;
+										valueOopPointer1321 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1291)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1291))));
-										first181 = topInt32117;
-										result62 = first181 % second181;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1321)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1321))));
+										first201 = topInt32117;
+										result41 = first201 % second201;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -14426,33 +13938,33 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result62);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, result41);
+										goto l502;
 										break;
 									case 193:
 										/* begin lowcodePrimitiveRem64 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt6426 = long64AtPointer(nativeSP - 1);
+										topInt6428 = long64AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer2111 = nativeSP + 8;
+										valueOopPointer2101 = nativeSP + 8;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer2111)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer2111))));
-										second191 = topInt6426;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer2101)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer2101))));
+										second110 = topInt6428;
 										/* begin internalPopStackInt64 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 										topInt64116 = long64AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer1112 = nativeSP + 8;
+										valueOopPointer1110 = nativeSP + 8;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1112)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1112))));
-										first191 = topInt64116;
-										result72 = first191 % second191;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1110)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1110))));
+										first110 = topInt64116;
+										result51 = first110 % second110;
 										/* begin internalPushInt64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -14462,21 +13974,21 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										long64AtPointerput(nativeSP - 1, result72);
-										goto l541;
+										long64AtPointerput(nativeSP - 1, result51);
+										goto l502;
 										break;
 									case 194:
 										/* begin lowcodePrimitiveRightShift32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt3228 = int32AtPointer(nativeSP - 1);
+										topInt32210 = int32AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer311 = nativeSP + BytesPerOop;
+										valueOopPointer310 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer311)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer311))));
-										shiftAmount2 = topInt3228;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer310)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer310))));
+										shiftAmount2 = topInt32210;
 										/* begin internalPopStackInt32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -14487,8 +13999,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1210)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1210))));
-										value511 = topInt32118;
-										result82 = ((usqInt) value511) >> shiftAmount2;
+										value1111 = topInt32118;
+										result61 = ((usqInt) value1111) >> shiftAmount2;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -14498,33 +14010,33 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result82);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, result61);
+										goto l502;
 										break;
 									case 195:
 										/* begin lowcodePrimitiveRightShift64 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt6427 = long64AtPointer(nativeSP - 1);
+										topInt6429 = long64AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer411 = nativeSP + 8;
+										valueOopPointer410 = nativeSP + 8;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer411)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer411))));
-										shiftAmount11 = topInt6427;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer410)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer410))));
+										shiftAmount11 = topInt6429;
 										/* begin internalPopStackInt64 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 										topInt64115 = long64AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer1321 = nativeSP + 8;
+										valueOopPointer1331 = nativeSP + 8;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1321)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1321))));
-										value611 = topInt64115;
-										result91 = ((unsigned sqLong)value611) >> shiftAmount11;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1331)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1331))));
+										value210 = topInt64115;
+										result71 = ((unsigned sqLong)value210) >> shiftAmount11;
 										/* begin internalPushInt64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -14534,22 +14046,22 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										long64AtPointerput(nativeSP - 1, result91);
-										goto l541;
+										long64AtPointerput(nativeSP - 1, result71);
+										goto l502;
 										break;
 									case 196:
 										/* begin lowcodePrimitiveSignExtend32From16 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt3232 = int32AtPointer(nativeSP - 1);
+										topInt3231 = int32AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer561 = nativeSP + BytesPerOop;
+										valueOopPointer510 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer561)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer561))));
-										value711 = topInt3232;
-										result101 = ((signed short) value711);
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer510)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer510))));
+										value381 = topInt3231;
+										result81 = ((signed short) value381);
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -14559,22 +14071,22 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result101);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, result81);
+										goto l502;
 										break;
 									case 197:
 										/* begin lowcodePrimitiveSignExtend32From8 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt3242 = int32AtPointer(nativeSP - 1);
+										topInt3241 = int32AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
 										valueOopPointer621 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer621)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer621))));
-										value81 = topInt3242;
-										result111 = ((signed char) value81);
+										value411 = topInt3241;
+										result91 = ((signed char) value411);
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -14584,22 +14096,72 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result111);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, result91);
+										goto l502;
 										break;
 									case 198:
 										/* begin lowcodePrimitiveSignExtend64From16 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt6432 = long64AtPointer(nativeSP - 1);
+										topInt6431 = long64AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer72 = nativeSP + 8;
+										valueOopPointer71 = nativeSP + 8;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer72)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer72))));
-										value91 = topInt6432;
-										result121 = ((int16_t) value91);
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer71)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer71))));
+										value511 = topInt6431;
+										result101 = ((int16_t) value511);
+										/* begin internalPushInt64: */
+										nativeSP = (nativeStackPointerIn(localFP)) - 8;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										long64AtPointerput(nativeSP - 1, result101);
+										goto l502;
+										break;
+									case 199:
+										/* begin lowcodePrimitiveSignExtend64From32 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt3251 = int32AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer81 = nativeSP + BytesPerOop;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer81)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer81))));
+										value611 = topInt3251;
+										result111 = ((int32_t) value611);
+										/* begin internalPushInt64: */
+										nativeSP = (nativeStackPointerIn(localFP)) - 8;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										long64AtPointerput(nativeSP - 1, result111);
+										goto l502;
+										break;
+									case 200:
+										/* begin lowcodePrimitiveSignExtend64From8 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt6441 = long64AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer91 = nativeSP + 8;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer91)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer91))));
+										value711 = topInt6441;
+										result121 = ((signed char) value711);
 										/* begin internalPushInt64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -14610,70 +14172,20 @@ interpret(void)
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
 										long64AtPointerput(nativeSP - 1, result121);
-										goto l541;
-										break;
-									case 199:
-										/* begin lowcodePrimitiveSignExtend64From32 */
-										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt3252 = int32AtPointer(nativeSP - 1);
-										/* begin nativeStackPointerIn:put: */
-										valueOopPointer82 = nativeSP + BytesPerOop;
-										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer82)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer82))));
-										value101 = topInt3252;
-										result131 = ((int32_t) value101);
-										/* begin internalPushInt64: */
-										nativeSP = (nativeStackPointerIn(localFP)) - 8;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										long64AtPointerput(nativeSP - 1, result131);
-										goto l541;
-										break;
-									case 200:
-										/* begin lowcodePrimitiveSignExtend64From8 */
-										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt6442 = long64AtPointer(nativeSP - 1);
-										/* begin nativeStackPointerIn:put: */
-										valueOopPointer92 = nativeSP + 8;
-										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer92)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer92))));
-										value112 = topInt6442;
-										result141 = ((signed char) value112);
-										/* begin internalPushInt64: */
-										nativeSP = (nativeStackPointerIn(localFP)) - 8;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										long64AtPointerput(nativeSP - 1, result141);
-										goto l541;
+										goto l502;
 										break;
 									case 201:
 										/* begin lowcodePrimitiveStoreFloat32ToMemory */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topPointer30 = pointerAtPointer(nativeSP - 1);
+										topPointer23 = pointerAtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
 										valueOopPointer101 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer101)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer101))));
-										pointer9 = topPointer30;
+										pointer9 = topPointer23;
 										/* begin internalPopStackFloat32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -14686,20 +14198,20 @@ interpret(void)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer141))));
 										floatValue7 = topSingle27;
 										singleFloatAtPointerput(pointer9, floatValue7);
-										goto l541;
+										goto l502;
 										break;
 									case 202:
 										/* begin lowcodePrimitiveStoreFloat64ToMemory */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topPointer112 = pointerAtPointer(nativeSP - 1);
+										topPointer110 = pointerAtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
 										valueOopPointer161 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer161)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer161))));
-										pointer111 = topPointer112;
+										pointer111 = topPointer110;
 										/* begin internalPopStackFloat64 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -14712,20 +14224,20 @@ interpret(void)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer151))));
 										doubleValue2 = topDouble211;
 										floatAtPointerput(pointer111, doubleValue2);
-										goto l541;
+										goto l502;
 										break;
 									case 203:
 										/* begin lowcodePrimitiveStoreInt16ToMemory */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topPointer210 = pointerAtPointer(nativeSP - 1);
+										topPointer24 = pointerAtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
 										valueOopPointer181 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer181)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer181))));
-										pointer21 = topPointer210;
+										pointer21 = topPointer24;
 										/* begin internalPopStackInt32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -14736,9 +14248,9 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer171)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer171))));
-										value121 = topInt3261;
-										int16AtPointerput(pointer21, value121);
-										goto l541;
+										value81 = topInt3261;
+										int16AtPointerput(pointer21, value81);
+										goto l502;
 										break;
 									case 204:
 										/* begin lowcodePrimitiveStoreInt32ToMemory */
@@ -14762,9 +14274,9 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer191)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer191))));
-										value131 = topInt3271;
-										int32AtPointerput(pointer31, value131);
-										goto l541;
+										value91 = topInt3271;
+										int32AtPointerput(pointer31, value91);
+										goto l502;
 										break;
 									case 205:
 										/* begin lowcodePrimitiveStoreInt64ToMemory */
@@ -14773,10 +14285,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 										topPointer41 = pointerAtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer212 = nativeSP + BytesPerOop;
+										valueOopPointer2111 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer212)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer212))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer2111)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer2111))));
 										pointer41 = topPointer41;
 										/* begin internalPopStackInt64 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -14788,9 +14300,9 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1101)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1101))));
-										value141 = topInt6451;
-										int64AtPointerput(pointer41, value141);
-										goto l541;
+										value101 = topInt6451;
+										int64AtPointerput(pointer41, value101);
+										goto l502;
 										break;
 									case 206:
 										/* begin lowcodePrimitiveStoreInt8ToMemory */
@@ -14814,9 +14326,9 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1111)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1111))));
-										value151 = topInt3281;
-										int8AtPointerput(pointer51, value151);
-										goto l541;
+										value112 = topInt3281;
+										int8AtPointerput(pointer51, value112);
+										goto l502;
 										break;
 									case 207:
 										/* begin lowcodePrimitiveStoreLocalFloat32 */
@@ -14831,10 +14343,10 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer231)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer231))));
-										value161 = topSingle113;
-										singleFloatAtPointerput(framePointerOfNativeLocalin(baseOffset25, localFP), value161);
+										value121 = topSingle113;
+										singleFloatAtPointerput(framePointerOfNativeLocalin(baseOffset25, localFP), value121);
 										extA = 0;
-										goto l541;
+										goto l502;
 										break;
 									case 208:
 										/* begin lowcodePrimitiveStoreLocalFloat64 */
@@ -14849,10 +14361,10 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer241)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer241))));
-										value171 = topDouble111;
-										floatAtPointerput(framePointerOfNativeLocalin(baseOffset110, localFP), value171);
+										value131 = topDouble111;
+										floatAtPointerput(framePointerOfNativeLocalin(baseOffset110, localFP), value131);
 										extA = 0;
-										goto l541;
+										goto l502;
 										break;
 									case 209:
 										/* begin lowcodePrimitiveStoreLocalInt16 */
@@ -14867,10 +14379,10 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer251)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer251))));
-										value181 = topInt3291;
-										int16AtPointerput(framePointerOfNativeLocalin(baseOffset24, localFP), value181);
+										value141 = topInt3291;
+										int16AtPointerput(framePointerOfNativeLocalin(baseOffset24, localFP), value141);
 										extA = 0;
-										goto l541;
+										goto l502;
 										break;
 									case 210:
 										/* begin lowcodePrimitiveStoreLocalInt32 */
@@ -14885,10 +14397,10 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer261)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer261))));
-										value191 = topInt32101;
-										int32AtPointerput(framePointerOfNativeLocalin(baseOffset31, localFP), value191);
+										value151 = topInt32101;
+										int32AtPointerput(framePointerOfNativeLocalin(baseOffset31, localFP), value151);
 										extA = 0;
-										goto l541;
+										goto l502;
 										break;
 									case 211:
 										/* begin lowcodePrimitiveStoreLocalInt64 */
@@ -14906,7 +14418,7 @@ interpret(void)
 										int64AtPointerput(framePointerOfNativeLocalin(extA, localFP), valueInt64);
 
 										extA = 0;
-										goto l541;
+										goto l502;
 										break;
 									case 212:
 										/* begin lowcodePrimitiveStoreLocalInt8 */
@@ -14921,10 +14433,10 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer281)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer281))));
-										value201 = topInt32121;
-										int8AtPointerput(framePointerOfNativeLocalin(baseOffset41, localFP), value201);
+										value161 = topInt32121;
+										int8AtPointerput(framePointerOfNativeLocalin(baseOffset41, localFP), value161);
 										extA = 0;
-										goto l541;
+										goto l502;
 										break;
 									case 213:
 										/* begin lowcodePrimitiveStoreLocalPointer */
@@ -14939,10 +14451,10 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer291)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer291))));
-										pointerValue11 = topPointer61;
-										pointerAtPointerput(framePointerOfNativeLocalin(baseOffset51, localFP), pointerValue11);
+										pointerValue3 = topPointer61;
+										pointerAtPointerput(framePointerOfNativeLocalin(baseOffset51, localFP), pointerValue3);
 										extA = 0;
-										goto l541;
+										goto l502;
 										break;
 									case 214:
 										/* begin lowcodePrimitiveStorePointerToMemory */
@@ -14966,9 +14478,9 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1121)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1121))));
-										pointerValue2 = topPointer111;
-										pointerAtPointerput(memoryPointer, pointerValue2);
-										goto l541;
+										pointerValue11 = topPointer111;
+										pointerAtPointerput(memoryPointer, pointerValue11);
+										goto l502;
 										break;
 									case 215:
 										/* begin lowcodePrimitiveSub32 */
@@ -14977,11 +14489,11 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 										topInt32131 = int32AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer312 = nativeSP + BytesPerOop;
+										valueOopPointer311 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer312)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer312))));
-										second221 = topInt32131;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer311)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer311))));
+										second211 = topInt32131;
 										/* begin internalPopStackInt32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -14992,8 +14504,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1131)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1131))));
-										first221 = topInt32141;
-										result151 = first221 - second221;
+										first211 = topInt32141;
+										result131 = first211 - second211;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -15003,8 +14515,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result151);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, result131);
+										goto l502;
 										break;
 									case 216:
 										/* begin lowcodePrimitiveSub64 */
@@ -15017,7 +14529,7 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer321)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer321))));
-										second32 = topInt6471;
+										second31 = topInt6471;
 										/* begin internalPopStackInt64 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -15028,8 +14540,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1141)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1141))));
-										first32 = topInt64121;
-										result161 = first32 - second32;
+										first31 = topInt64121;
+										result141 = first31 - second31;
 										/* begin internalPushInt64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -15039,8 +14551,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										long64AtPointerput(nativeSP - 1, result161);
-										goto l541;
+										long64AtPointerput(nativeSP - 1, result141);
+										goto l502;
 										break;
 									case 217:
 										/* begin lowcodePrimitiveTruncate32To16 */
@@ -15053,8 +14565,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer331)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer331))));
-										value213 = topInt32151;
-										result171 = value213 & 0xFFFF;
+										value171 = topInt32151;
+										result151 = value171 & 0xFFFF;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -15064,8 +14576,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result171);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, result151);
+										goto l502;
 										break;
 									case 218:
 										/* begin lowcodePrimitiveTruncate32To8 */
@@ -15078,8 +14590,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer341)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer341))));
-										value221 = topInt32161;
-										result181 = value221 & 0xFF;
+										value181 = topInt32161;
+										result161 = value181 & 0xFF;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -15089,8 +14601,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result181);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, result161);
+										goto l502;
 										break;
 									case 219:
 										/* begin lowcodePrimitiveTruncate64To16 */
@@ -15103,8 +14615,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer351)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer351))));
-										value231 = topInt6481;
-										result191 = value231 & 0xFFFF;
+										value191 = topInt6481;
+										result171 = value191 & 0xFFFF;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -15114,8 +14626,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result191);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, result171);
+										goto l502;
 										break;
 									case 220:
 										/* begin lowcodePrimitiveTruncate64To32 */
@@ -15128,8 +14640,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer361)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer361))));
-										value241 = topInt6491;
-										result201 = value241 & 0xFFFFFFFFU;
+										value201 = topInt6491;
+										result181 = value201 & 0xFFFFFFFFU;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -15139,8 +14651,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result201);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, result181);
+										goto l502;
 										break;
 									case 221:
 										/* begin lowcodePrimitiveTruncate64To8 */
@@ -15153,8 +14665,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer371)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer371))));
-										value251 = topInt64101;
-										result211 = value251 & 0xFF;
+										value211 = topInt64101;
+										result191 = value211 & 0xFF;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -15164,8 +14676,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result211);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, result191);
+										goto l502;
 										break;
 									case 222:
 										/* begin lowcodePrimitiveUdiv32 */
@@ -15190,7 +14702,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1151)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1151))));
 										first41 = topInt32181;
-										result221 = (((unsigned int) first41)) / (((unsigned int) second41));
+										result201 = (((unsigned int) first41)) / (((unsigned int) second41));
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -15200,8 +14712,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result221);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, result201);
+										goto l502;
 										break;
 									case 223:
 										/* begin lowcodePrimitiveUdiv64 */
@@ -15226,7 +14738,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1161)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1161))));
 										first51 = topInt64141;
-										result231 = (((uint64_t) first51)) / (((uint64_t) second51));
+										result211 = (((uint64_t) first51)) / (((uint64_t) second51));
 										/* begin internalPushInt64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -15236,8 +14748,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										long64AtPointerput(nativeSP - 1, result231);
-										goto l541;
+										long64AtPointerput(nativeSP - 1, result211);
+										goto l502;
 										break;
 									case 224:
 										/* begin lowcodePrimitiveUint32Great */
@@ -15262,7 +14774,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1171)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1171))));
 										first61 = topInt32110;
-										value261 = ((((unsigned int) first61)) > (((unsigned int) second61))
+										value221 = ((((unsigned int) first61)) > (((unsigned int) second61))
 											? 1
 											: 0);
 										/* begin internalPushInt32: */
@@ -15274,8 +14786,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value261);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, value221);
+										goto l502;
 										break;
 									case 225:
 										/* begin lowcodePrimitiveUint32GreatEqual */
@@ -15284,10 +14796,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 										topInt3220 = int32AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer412 = nativeSP + BytesPerOop;
+										valueOopPointer411 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer412)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer412))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer411)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer411))));
 										second71 = topInt3220;
 										/* begin internalPopStackInt32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -15300,7 +14812,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1181)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1181))));
 										first71 = topInt32111;
-										value271 = ((((unsigned int) first71)) >= (((unsigned int) second71))
+										value231 = ((((unsigned int) first71)) >= (((unsigned int) second71))
 											? 1
 											: 0);
 										/* begin internalPushInt32: */
@@ -15312,21 +14824,21 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value271);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, value231);
+										goto l502;
 										break;
 									case 226:
 										/* begin lowcodePrimitiveUint32Less */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt32212 = int32AtPointer(nativeSP - 1);
+										topInt32213 = int32AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
 										valueOopPointer421 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer421)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer421))));
-										second81 = topInt32212;
+										second81 = topInt32213;
 										/* begin internalPopStackInt32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -15338,7 +14850,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1191)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1191))));
 										first81 = topInt32112;
-										value281 = ((((unsigned int) first81)) < (((unsigned int) second81))
+										value241 = ((((unsigned int) first81)) < (((unsigned int) second81))
 											? 1
 											: 0);
 										/* begin internalPushInt32: */
@@ -15350,8 +14862,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value281);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, value241);
+										goto l502;
 										break;
 									case 227:
 										/* begin lowcodePrimitiveUint32LessEqual */
@@ -15376,7 +14888,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1201)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1201))));
 										first91 = topInt32113;
-										value291 = ((((unsigned int) first91)) <= (((unsigned int) second91))
+										value251 = ((((unsigned int) first91)) <= (((unsigned int) second91))
 											? 1
 											: 0);
 										/* begin internalPushInt32: */
@@ -15388,8 +14900,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value291);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, value251);
+										goto l502;
 										break;
 									case 228:
 										/* begin lowcodePrimitiveUint32ToFloat32 */
@@ -15402,8 +14914,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer441)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer441))));
-										value301 = topInt3223;
-										result241 = ((float) (((unsigned int) value301)));
+										value261 = topInt3223;
+										result221 = ((float) (((unsigned int) value261)));
 										/* begin internalPushFloat32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -15413,8 +14925,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										singleFloatAtPointerput(nativeSP - 1, result241);
-										goto l541;
+										singleFloatAtPointerput(nativeSP - 1, result221);
+										goto l502;
 										break;
 									case 229:
 										/* begin lowcodePrimitiveUint32ToFloat64 */
@@ -15427,8 +14939,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer451)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer451))));
-										value311 = topInt3224;
-										result251 = ((double) (((unsigned int) value311)));
+										value271 = topInt3224;
+										result231 = ((double) (((unsigned int) value271)));
 										/* begin internalPushFloat64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -15438,8 +14950,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										floatAtPointerput(nativeSP - 1, result251);
-										goto l541;
+										floatAtPointerput(nativeSP - 1, result231);
+										goto l502;
 										break;
 									case 230:
 										/* begin lowcodePrimitiveUint64Great */
@@ -15464,7 +14976,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1213)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1213))));
 										first101 = topInt64161;
-										value321 = ((((uint64_t) first101)) > (((uint64_t) second101))
+										value281 = ((((uint64_t) first101)) > (((uint64_t) second101))
 											? 1
 											: 0);
 										/* begin internalPushInt32: */
@@ -15476,8 +14988,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value321);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, value281);
+										goto l502;
 										break;
 									case 231:
 										/* begin lowcodePrimitiveUint64GreatEqual */
@@ -15502,7 +15014,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1221)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1221))));
 										first111 = topInt6418;
-										value331 = ((((uint64_t) first111)) >= (((uint64_t) second111))
+										value291 = ((((uint64_t) first111)) >= (((uint64_t) second111))
 											? 1
 											: 0);
 										/* begin internalPushInt32: */
@@ -15514,8 +15026,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value331);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, value291);
+										goto l502;
 										break;
 									case 232:
 										/* begin lowcodePrimitiveUint64Less */
@@ -15540,7 +15052,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1231)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1231))));
 										first121 = topInt64110;
-										value341 = ((((uint64_t) first121)) < (((uint64_t) second121))
+										value301 = ((((uint64_t) first121)) < (((uint64_t) second121))
 											? 1
 											: 0);
 										/* begin internalPushInt32: */
@@ -15552,8 +15064,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value341);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, value301);
+										goto l502;
 										break;
 									case 233:
 										/* begin lowcodePrimitiveUint64LessEqual */
@@ -15578,7 +15090,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1241)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1241))));
 										first131 = topInt64111;
-										value351 = ((((uint64_t) first131)) <= (((uint64_t) second131))
+										value311 = ((((uint64_t) first131)) <= (((uint64_t) second131))
 											? 1
 											: 0);
 										/* begin internalPushInt32: */
@@ -15590,22 +15102,22 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value351);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, value311);
+										goto l502;
 										break;
 									case 234:
 										/* begin lowcodePrimitiveUint64ToFloat32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt64211 = long64AtPointer(nativeSP - 1);
+										topInt64212 = long64AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
 										valueOopPointer501 = nativeSP + 8;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer501)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer501))));
-										value361 = topInt64211;
-										result261 = ((float) (((uint64_t) value361)));
+										value321 = topInt64212;
+										result241 = ((float) (((uint64_t) value321)));
 										/* begin internalPushFloat32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -15615,8 +15127,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										singleFloatAtPointerput(nativeSP - 1, result261);
-										goto l541;
+										singleFloatAtPointerput(nativeSP - 1, result241);
+										goto l502;
 										break;
 									case 235:
 										/* begin lowcodePrimitiveUint64ToFloat64 */
@@ -15625,12 +15137,12 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 										topInt6422 = long64AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer511 = nativeSP + 8;
+										valueOopPointer512 = nativeSP + 8;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer511)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer511))));
-										value371 = topInt6422;
-										result271 = ((double) (((uint64_t) value371)));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer512)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer512))));
+										value331 = topInt6422;
+										result251 = ((double) (((uint64_t) value331)));
 										/* begin internalPushFloat64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -15640,8 +15152,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										floatAtPointerput(nativeSP - 1, result271);
-										goto l541;
+										floatAtPointerput(nativeSP - 1, result251);
+										goto l502;
 										break;
 									case 236:
 										/* begin lowcodePrimitiveUmul32 */
@@ -15666,7 +15178,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1251)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1251))));
 										first141 = topInt32114;
-										result281 = (((unsigned int) first141)) * (((unsigned int) second141));
+										result26 = (((unsigned int) first141)) * (((unsigned int) second141));
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -15676,8 +15188,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result281);
-										goto l541;
+										int32AtPointerput(nativeSP - 1, result26);
+										goto l502;
 										break;
 									case 237:
 										/* begin lowcodePrimitiveUmul64 */
@@ -15702,7 +15214,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1261)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1261))));
 										first151 = topInt64112;
-										result291 = (((uint64_t) first151)) * (((uint64_t) second151));
+										result27 = (((uint64_t) first151)) * (((uint64_t) second151));
 										/* begin internalPushInt64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -15712,47 +15224,255 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										long64AtPointerput(nativeSP - 1, result291);
-										goto l541;
+										long64AtPointerput(nativeSP - 1, result27);
+										goto l502;
 										break;
 									case 238:
-										goto l541;
+										goto l502;
 										break;
 									case 239:
 										/* begin lowcodePrimitiveUnlockVM */
 										abort();
-										goto l541;
+										goto l502;
+										break;
+									case 240:
+										/* begin lowcodePrimitiveUrem32 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt3226 = int32AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer541 = nativeSP + BytesPerOop;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer541)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer541))));
+										second161 = topInt3226;
+										/* begin internalPopStackInt32 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt32115 = int32AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer1271 = nativeSP + BytesPerOop;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1271)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1271))));
+										first161 = topInt32115;
+										result28 = (((unsigned int) first161)) % (((unsigned int) second161));
+										/* begin internalPushInt32: */
+										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										int32AtPointerput(nativeSP - 1, result28);
+										goto l502;
+										break;
+									case 241:
+										/* begin lowcodePrimitiveUrem64 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt6424 = long64AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer551 = nativeSP + 8;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer551)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer551))));
+										second171 = topInt6424;
+										/* begin internalPopStackInt64 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt64113 = long64AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer1281 = nativeSP + 8;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1281)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1281))));
+										first171 = topInt64113;
+										result29 = (((unsigned int) first171)) % (((unsigned int) second171));
+										/* begin internalPushInt64: */
+										nativeSP = (nativeStackPointerIn(localFP)) - 8;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										long64AtPointerput(nativeSP - 1, result29);
+										goto l502;
+										break;
+									case 242:
+										/* begin lowcodePrimitiveXor32 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt3227 = int32AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer561 = nativeSP + BytesPerOop;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer561)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer561))));
+										second181 = topInt3227;
+										/* begin internalPopStackInt32 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt32116 = int32AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer1291 = nativeSP + BytesPerOop;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1291)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1291))));
+										first181 = topInt32116;
+										result30 = first181 ^ second181;
+										/* begin internalPushInt32: */
+										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										int32AtPointerput(nativeSP - 1, result30);
+										goto l502;
+										break;
+									case 243:
+										/* begin lowcodePrimitiveXor64 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt6425 = long64AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer571 = nativeSP + 8;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer571)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer571))));
+										second191 = topInt6425;
+										/* begin internalPopStackInt64 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt64114 = long64AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer1301 = nativeSP + 8;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1301)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1301))));
+										first191 = topInt64114;
+										result31 = first191 ^ second191;
+										/* begin internalPushInt64: */
+										nativeSP = (nativeStackPointerIn(localFP)) - 8;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										long64AtPointerput(nativeSP - 1, result31);
+										goto l502;
+										break;
+									case 244:
+										/* begin lowcodePrimitiveZeroExtend32From16 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt3228 = int32AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer581 = nativeSP + BytesPerOop;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer581)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer581))));
+										value341 = topInt3228;
+										result32 = ((uint16_t) value341);
+										/* begin internalPushInt32: */
+										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										int32AtPointerput(nativeSP - 1, result32);
+										goto l502;
+										break;
+									case 245:
+										/* begin lowcodePrimitiveZeroExtend32From8 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt3229 = int32AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer591 = nativeSP + BytesPerOop;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer591)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer591))));
+										value351 = topInt3229;
+										result33 = ((uint8_t) value351);
+										/* begin internalPushInt32: */
+										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										int32AtPointerput(nativeSP - 1, result33);
+										goto l502;
+										break;
+									case 246:
+										/* begin lowcodePrimitiveZeroExtend64From16 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt6426 = long64AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer601 = nativeSP + 8;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer601)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer601))));
+										value361 = topInt6426;
+										result34 = ((uint16_t) value361);
+										/* begin internalPushInt64: */
+										nativeSP = (nativeStackPointerIn(localFP)) - 8;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										long64AtPointerput(nativeSP - 1, result34);
+										goto l502;
 										break;
 									default:
 										/* begin lowcodeUnaryInlinePrimitive5: */
 										
 										switch (prim - 1000) {
-										case 240:
-											/* begin lowcodePrimitiveUrem32 */
+										case 247:
+											/* begin lowcodePrimitiveZeroExtend64From32 */
 											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt3227 = int32AtPointer(nativeSP - 1);
+											topInt3230 = int32AtPointer(nativeSP - 1);
 											/* begin nativeStackPointerIn:put: */
-											valueOopPointer541 = nativeSP + BytesPerOop;
+											valueOopPointer611 = nativeSP + BytesPerOop;
 											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer541)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer541))));
-											second161 = topInt3227;
-											/* begin internalPopStackInt32 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt32115 = int32AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer1271 = nativeSP + BytesPerOop;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1271)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1271))));
-											first171 = topInt32115;
-											result30 = (((unsigned int) first171)) % (((unsigned int) second161));
-											/* begin internalPushInt32: */
-											nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer611)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer611))));
+											value371 = topInt3230;
+											result35 = ((uint32_t) value371);
+											/* begin internalPushInt64: */
+											nativeSP = (nativeStackPointerIn(localFP)) - 8;
 											/* begin nativeStackPointerIn:put: */
 											if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
 												pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
@@ -15760,33 +15480,22 @@ interpret(void)
 											else {
 												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 											}
-											int32AtPointerput(nativeSP - 1, result30);
-											goto l953;
+											long64AtPointerput(nativeSP - 1, result35);
+											goto l855;
 											break;
-										case 241:
-											/* begin lowcodePrimitiveUrem64 */
+										case 0xF8:
+											/* begin lowcodePrimitiveZeroExtend64From8 */
 											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt6425 = long64AtPointer(nativeSP - 1);
+											topInt6427 = long64AtPointer(nativeSP - 1);
 											/* begin nativeStackPointerIn:put: */
-											valueOopPointer2101 = nativeSP + 8;
+											valueOopPointer1311 = nativeSP + 8;
 											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer2101)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer2101))));
-											second171 = topInt6425;
-											/* begin internalPopStackInt64 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt64113 = long64AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer1110 = nativeSP + 8;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1110)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1110))));
-											first161 = topInt64113;
-											result110 = (((unsigned int) first161)) % (((unsigned int) second171));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1311)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1311))));
+											value110 = topInt6427;
+											result110 = ((uint8_t) value110);
 											/* begin internalPushInt64: */
 											nativeSP = (nativeStackPointerIn(localFP)) - 8;
 											/* begin nativeStackPointerIn:put: */
@@ -15797,229 +15506,32 @@ interpret(void)
 												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 											}
 											long64AtPointerput(nativeSP - 1, result110);
-											goto l953;
-											break;
-										case 242:
-											/* begin lowcodePrimitiveXor32 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt3226 = int32AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer310 = nativeSP + BytesPerOop;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer310)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer310))));
-											second211 = topInt3226;
-											/* begin internalPopStackInt32 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt32116 = int32AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer1281 = nativeSP + BytesPerOop;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1281)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1281))));
-											first211 = topInt32116;
-											result210 = first211 ^ second211;
-											/* begin internalPushInt32: */
-											nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-											/* begin nativeStackPointerIn:put: */
-											if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-												pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											else {
-												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											int32AtPointerput(nativeSP - 1, result210);
-											goto l953;
-											break;
-										case 243:
-											/* begin lowcodePrimitiveXor64 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt6424 = long64AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer410 = nativeSP + 8;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer410)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer410))));
-											second31 = topInt6424;
-											/* begin internalPopStackInt64 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt64114 = long64AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer1311 = nativeSP + 8;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1311)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1311))));
-											first31 = topInt64114;
-											result31 = first31 ^ second31;
-											/* begin internalPushInt64: */
-											nativeSP = (nativeStackPointerIn(localFP)) - 8;
-											/* begin nativeStackPointerIn:put: */
-											if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-												pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											else {
-												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											long64AtPointerput(nativeSP - 1, result31);
-											goto l953;
-											break;
-										case 244:
-											/* begin lowcodePrimitiveZeroExtend32From16 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt3231 = int32AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer551 = nativeSP + BytesPerOop;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer551)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer551))));
-											value391 = topInt3231;
-											result41 = ((uint16_t) value391);
-											/* begin internalPushInt32: */
-											nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-											/* begin nativeStackPointerIn:put: */
-											if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-												pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											else {
-												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											int32AtPointerput(nativeSP - 1, result41);
-											goto l953;
-											break;
-										case 245:
-											/* begin lowcodePrimitiveZeroExtend32From8 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt3241 = int32AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer611 = nativeSP + BytesPerOop;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer611)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer611))));
-											value110 = topInt3241;
-											result51 = ((uint8_t) value110);
-											/* begin internalPushInt32: */
-											nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-											/* begin nativeStackPointerIn:put: */
-											if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-												pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											else {
-												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											int32AtPointerput(nativeSP - 1, result51);
-											goto l953;
-											break;
-										case 246:
-											/* begin lowcodePrimitiveZeroExtend64From16 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt6431 = long64AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer71 = nativeSP + 8;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer71)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer71))));
-											value210 = topInt6431;
-											result61 = ((uint16_t) value210);
-											/* begin internalPushInt64: */
-											nativeSP = (nativeStackPointerIn(localFP)) - 8;
-											/* begin nativeStackPointerIn:put: */
-											if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-												pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											else {
-												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											long64AtPointerput(nativeSP - 1, result61);
-											goto l953;
-											break;
-										case 247:
-											/* begin lowcodePrimitiveZeroExtend64From32 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt3251 = int32AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer81 = nativeSP + BytesPerOop;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer81)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer81))));
-											value381 = topInt3251;
-											result71 = ((uint32_t) value381);
-											/* begin internalPushInt64: */
-											nativeSP = (nativeStackPointerIn(localFP)) - 8;
-											/* begin nativeStackPointerIn:put: */
-											if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-												pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											else {
-												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											long64AtPointerput(nativeSP - 1, result71);
-											goto l953;
-											break;
-										case 0xF8:
-											/* begin lowcodePrimitiveZeroExtend64From8 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt6441 = long64AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer91 = nativeSP + 8;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer91)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer91))));
-											value411 = topInt6441;
-											result81 = ((uint8_t) value411);
-											/* begin internalPushInt64: */
-											nativeSP = (nativeStackPointerIn(localFP)) - 8;
-											/* begin nativeStackPointerIn:put: */
-											if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-												pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											else {
-												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											long64AtPointerput(nativeSP - 1, result81);
-											goto l953;
+											goto l855;
 											break;
 										default:
 											localIP -= 3;
 											goto respondToUnknownBytecode;
-											goto l953;
+											goto l855;
 
 										}
-									l953:	/* end lowcodeUnaryInlinePrimitive5: */;
-										goto l541;
+									l855:	/* end lowcodeUnaryInlinePrimitive5: */;
+										goto l502;
 
 									}
-								l541:	/* end lowcodeUnaryInlinePrimitive4: */;
-									goto l746;
+								l502:	/* end lowcodeUnaryInlinePrimitive4: */;
+									goto l707;
 
 								}
-							l746:	/* end lowcodeUnaryInlinePrimitive3: */;
-								goto l1070;
+							l707:	/* end lowcodeUnaryInlinePrimitive3: */;
+								goto l1031;
 
 							}
-						l1070:	/* end lowcodeUnaryInlinePrimitive2: */;
-							goto l1242;
+						l1031:	/* end lowcodeUnaryInlinePrimitive2: */;
+							goto l1203;
 
 						}
-					l1242:	/* end lowcodeUnaryInlinePrimitive: */;
-						goto l1243;
+					l1203:	/* end lowcodeUnaryInlinePrimitive: */;
+						goto l1204;
 					}
 					if (prim < 3000) {
 						/* begin lowcodeBinaryInlinePrimitive: */
@@ -16531,7 +16043,7 @@ interpret(void)
 
 						}
 					l171:	/* end lowcodeBinaryInlinePrimitive: */;
-						goto l1243;
+						goto l1204;
 					}
 					if (prim < 4000) {
 						/* begin lowcodeTrinaryInlinePrimitive: */
@@ -16559,7 +16071,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value);
-							goto l1276;
+							goto l1237;
 							break;
 						case 1:
 							/* begin lowcodePrimitiveOopNotEqual */
@@ -16583,7 +16095,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value1);
-							goto l1276;
+							goto l1237;
 							break;
 						case 2:
 							/* begin lowcodePrimitiveStoreObjectField */
@@ -16612,7 +16124,7 @@ interpret(void)
 							}
 							longAtput((object + BaseHeaderSize) + (((sqInt)((usqInt)(fieldIndex3) << (shiftForWord())))), value2);
 							extA = 0;
-							goto l1276;
+							goto l1237;
 							break;
 						case 3:
 							/* begin lowcodePrimitiveStoreObjectFieldAt */
@@ -16649,25 +16161,25 @@ interpret(void)
 								}
 							}
 							longAtput((object1 + BaseHeaderSize) + (((sqInt)((usqInt)(fieldIndex11) << (shiftForWord())))), value3);
-							goto l1276;
+							goto l1237;
 							break;
 						default:
 							localIP -= 3;
 							goto respondToUnknownBytecode;
-							goto l1276;
+							goto l1237;
 
 						}
-					l1276:	/* end lowcodeTrinaryInlinePrimitive: */;
-						goto l1243;
+					l1237:	/* end lowcodeTrinaryInlinePrimitive: */;
+						goto l1204;
 					}
 				}
 
 				localIP -= 3;
 				goto respondToUnknownBytecode;
-				goto l1243;
+				goto l1204;
 
 			}
-		l1243:	/* end case */;
+		l1204:	/* end case */;
 			BREAK;
 		CASE(140)
 			/* pushRemoteTempLongBytecode */
@@ -16805,10 +16317,10 @@ interpret(void)
 					: (byteAt((theFP + FoxIFrameFlags) + 2)) != 0)) {
 					assert(isContext(frameContext(theFP)));
 					context = longAt(theFP + FoxThisContext);
-					goto l1371;
+					goto l1332;
 				}
 				context = marryFrameSP(theFP, theSP);
-			l1371:	/* end ensureFrameIsMarried:SP: */;
+			l1332:	/* end ensureFrameIsMarried:SP: */;
 				/* begin closureIn:numArgs:instructionPointer:numCopiedValues: */
 				initialIP = ((oopForPointer(localIP)) + 2) - (GIV(method) + BaseHeaderSize);
 				/* begin eeInstantiateSmallClassIndex:format:numSlots: */
@@ -16836,13 +16348,13 @@ interpret(void)
 					if ((GIV(freeStart) + numBytes) > (((eden()).limit))) {
 						error("no room in eden for allocateSmallNewSpaceSlots:format:classIndex:");
 						newClosure1 = 0;
-						goto l1366;
+						goto l1327;
 					}
 				}
 				long64Atput(newObj, (((((usqLong) numSlots)) << (numSlotsFullShift())) + (((sqInt)((usqInt)(objFormat) << (formatShift()))))) + ClassBlockClosureCompactIndex);
 				GIV(freeStart) += numBytes;
 				newClosure1 = newObj;
-			l1366:	/* end eeInstantiateSmallClassIndex:format:numSlots: */;
+			l1327:	/* end eeInstantiateSmallClassIndex:format:numSlots: */;
 
 				/* begin storePointerUnchecked:ofObject:withValue: */
 				assert(!(isOopForwarded(newClosure1)));
@@ -17023,7 +16535,7 @@ interpret(void)
 						GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorMustBeBoolean) << (shiftForWord())))));
 						GIV(argumentCount) = 0;
 						goto normalSend;
-						goto l1379;
+						goto l1340;
 					}
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
@@ -17031,7 +16543,7 @@ interpret(void)
 				}
 				/* begin internalPop: */
 				localSP += 1 * BytesPerOop;
-			l1379:	/* end jumplfFalseBy: */;
+			l1340:	/* end jumplfFalseBy: */;
 			}
 			BREAK;
 		CASE(160)
@@ -17053,7 +16565,7 @@ interpret(void)
 				localIP += offset;
 				/* begin ifBackwardsCheckForEvents: */
 				if (offset >= 0) {
-					goto l1382;
+					goto l1343;
 				}
 				if (localSP < GIV(stackLimit)) {
 					/* begin externalizeIPandSP */
@@ -17072,7 +16584,7 @@ interpret(void)
 					nativeSP = 0;
 
 					if (switched) {
-						goto l1382;
+						goto l1343;
 					}
 				}
 				backwardJumpCountByte = byteAt(localFP + ((VMBIGENDIAN
@@ -17101,7 +16613,7 @@ interpret(void)
 				byteAtput(localFP + ((VMBIGENDIAN
 	? (FoxIFrameFlags + BytesPerWord) - 1
 	: FoxIFrameFlags)), backwardJumpCountByte);
-			l1382:	/* end ifBackwardsCheckForEvents: */;
+			l1343:	/* end ifBackwardsCheckForEvents: */;
 				/* begin fetchNextBytecode */
 				currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
@@ -17133,7 +16645,7 @@ interpret(void)
 						GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorMustBeBoolean) << (shiftForWord())))));
 						GIV(argumentCount) = 0;
 						goto normalSend;
-						goto l1385;
+						goto l1346;
 					}
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
@@ -17141,7 +16653,7 @@ interpret(void)
 				}
 				/* begin internalPop: */
 				localSP += 1 * BytesPerOop;
-			l1385:	/* end jumplfTrueBy: */;
+			l1346:	/* end jumplfTrueBy: */;
 			}
 			BREAK;
 		CASE(172)
@@ -17170,7 +16682,7 @@ interpret(void)
 						GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorMustBeBoolean) << (shiftForWord())))));
 						GIV(argumentCount) = 0;
 						goto normalSend;
-						goto l1389;
+						goto l1350;
 					}
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
@@ -17178,7 +16690,7 @@ interpret(void)
 				}
 				/* begin internalPop: */
 				localSP += 1 * BytesPerOop;
-			l1389:	/* end jumplfFalseBy: */;
+			l1350:	/* end jumplfFalseBy: */;
 			}
 			BREAK;
 		CASE(176)
@@ -17216,7 +16728,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1391;
+						goto l1352;
 					}
 				}
 				else {
@@ -17243,20 +16755,20 @@ interpret(void)
 							bits = rot;
 							memcpy((&value), (&bits), sizeof(value));
 							rcvr1 = value;
-							goto l1392;
+							goto l1353;
 						}
 						if ((tagBits == (smallIntegerTag()))
 						 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 						(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 							rcvr1 = ((double) ((rcvr >> 3)) );
-							goto l1392;
+							goto l1353;
 						}
 					}
 					else {
 						if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 							fetchFloatAtinto(rcvr + BaseHeaderSize, result2);
 							rcvr1 = result2;
-							goto l1392;
+							goto l1353;
 						}
 					}
 					/* begin primitiveFail */
@@ -17264,7 +16776,7 @@ interpret(void)
 						GIV(primFailCode) = 1;
 					}
 					rcvr1 = 0.0;
-				l1392:	/* end loadFloatOrIntFrom: */;
+				l1353:	/* end loadFloatOrIntFrom: */;
 					/* begin loadFloatOrIntFrom: */
 					if (((tagBits1 = arg & (tagMask()))) != 0) {
 						if (tagBits1 == (smallFloatTag())) {
@@ -17281,20 +16793,20 @@ interpret(void)
 							bits1 = rot1;
 							memcpy((&value1), (&bits1), sizeof(value1));
 							arg1 = value1;
-							goto l1396;
+							goto l1357;
 						}
 						if ((tagBits1 == (smallIntegerTag()))
 						 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 						(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 							arg1 = ((double) ((arg >> 3)) );
-							goto l1396;
+							goto l1357;
 						}
 					}
 					else {
 						if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 							fetchFloatAtinto(arg + BaseHeaderSize, result1);
 							arg1 = result1;
-							goto l1396;
+							goto l1357;
 						}
 					}
 					/* begin primitiveFail */
@@ -17302,7 +16814,7 @@ interpret(void)
 						GIV(primFailCode) = 1;
 					}
 					arg1 = 0.0;
-				l1396:	/* end loadFloatOrIntFrom: */;
+				l1357:	/* end loadFloatOrIntFrom: */;
 					if (!GIV(primFailCode)) {
 						/* begin pop:thenPushFloat: */
 						longAtput((sp = GIV(stackPointer) + ((2 - 1) * BytesPerWord)), floatObjectOf(rcvr1 + arg1));
@@ -17319,7 +16831,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1391;
+						goto l1352;
 					}
 				}
 				/* begin fetchPointer:ofObject: */
@@ -17328,7 +16840,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1391:	/* end case */;
+		l1352:	/* end case */;
 			BREAK;
 		CASE(177)
 			/* bytecodePrimSubtract */
@@ -17365,7 +16877,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1402;
+						goto l1363;
 					}
 				}
 				else {
@@ -17392,20 +16904,20 @@ interpret(void)
 							bits = rot;
 							memcpy((&value), (&bits), sizeof(value));
 							rcvr1 = value;
-							goto l1403;
+							goto l1364;
 						}
 						if ((tagBits == (smallIntegerTag()))
 						 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 						(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 							rcvr1 = ((double) ((rcvr >> 3)) );
-							goto l1403;
+							goto l1364;
 						}
 					}
 					else {
 						if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 							fetchFloatAtinto(rcvr + BaseHeaderSize, result2);
 							rcvr1 = result2;
-							goto l1403;
+							goto l1364;
 						}
 					}
 					/* begin primitiveFail */
@@ -17413,7 +16925,7 @@ interpret(void)
 						GIV(primFailCode) = 1;
 					}
 					rcvr1 = 0.0;
-				l1403:	/* end loadFloatOrIntFrom: */;
+				l1364:	/* end loadFloatOrIntFrom: */;
 					/* begin loadFloatOrIntFrom: */
 					if (((tagBits1 = arg & (tagMask()))) != 0) {
 						if (tagBits1 == (smallFloatTag())) {
@@ -17430,20 +16942,20 @@ interpret(void)
 							bits1 = rot1;
 							memcpy((&value1), (&bits1), sizeof(value1));
 							arg1 = value1;
-							goto l1407;
+							goto l1368;
 						}
 						if ((tagBits1 == (smallIntegerTag()))
 						 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 						(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 							arg1 = ((double) ((arg >> 3)) );
-							goto l1407;
+							goto l1368;
 						}
 					}
 					else {
 						if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 							fetchFloatAtinto(arg + BaseHeaderSize, result1);
 							arg1 = result1;
-							goto l1407;
+							goto l1368;
 						}
 					}
 					/* begin primitiveFail */
@@ -17451,7 +16963,7 @@ interpret(void)
 						GIV(primFailCode) = 1;
 					}
 					arg1 = 0.0;
-				l1407:	/* end loadFloatOrIntFrom: */;
+				l1368:	/* end loadFloatOrIntFrom: */;
 					if (!GIV(primFailCode)) {
 						/* begin pop:thenPushFloat: */
 						longAtput((sp = GIV(stackPointer) + ((2 - 1) * BytesPerWord)), floatObjectOf(rcvr1 - arg1));
@@ -17468,7 +16980,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1402;
+						goto l1363;
 					}
 				}
 				/* begin fetchPointer:ofObject: */
@@ -17477,7 +16989,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1402:	/* end case */;
+		l1363:	/* end case */;
 			BREAK;
 		CASE(178)
 			/* bytecodePrimLessThan */
@@ -17516,7 +17028,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalse;
 					}
-					goto l1413;
+					goto l1374;
 				}
 				/* begin initPrimCall */
 				GIV(primFailCode) = 0;
@@ -17536,20 +17048,20 @@ interpret(void)
 						bits = rot;
 						memcpy((&value), (&bits), sizeof(value));
 						rcvr1 = value;
-						goto l1419;
+						goto l1380;
 					}
 					if ((tagBits == (smallIntegerTag()))
 					 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 						rcvr1 = ((double) ((rcvr >> 3)) );
-						goto l1419;
+						goto l1380;
 					}
 				}
 				else {
 					if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(rcvr + BaseHeaderSize, result);
 						rcvr1 = result;
-						goto l1419;
+						goto l1380;
 					}
 				}
 				/* begin primitiveFail */
@@ -17557,7 +17069,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				rcvr1 = 0.0;
-			l1419:	/* end loadFloatOrIntFrom: */;
+			l1380:	/* end loadFloatOrIntFrom: */;
 				/* begin loadFloatOrIntFrom: */
 				if (((tagBits1 = arg & (tagMask()))) != 0) {
 					if (tagBits1 == (smallFloatTag())) {
@@ -17574,20 +17086,20 @@ interpret(void)
 						bits1 = rot1;
 						memcpy((&value1), (&bits1), sizeof(value1));
 						arg1 = value1;
-						goto l1418;
+						goto l1379;
 					}
 					if ((tagBits1 == (smallIntegerTag()))
 					 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 						arg1 = ((double) ((arg >> 3)) );
-						goto l1418;
+						goto l1379;
 					}
 				}
 				else {
 					if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(arg + BaseHeaderSize, result1);
 						arg1 = result1;
-						goto l1418;
+						goto l1379;
 					}
 				}
 				/* begin primitiveFail */
@@ -17595,7 +17107,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				arg1 = 0.0;
-			l1418:	/* end loadFloatOrIntFrom: */;
+			l1379:	/* end loadFloatOrIntFrom: */;
 				aBool = rcvr1 < arg1;
 				if (!GIV(primFailCode)) {
 					/* begin booleanCheat: */
@@ -17605,7 +17117,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalse;
 					}
-					goto l1413;
+					goto l1374;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -17613,7 +17125,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1413:	/* end case */;
+		l1374:	/* end case */;
 			
 		booleanCheatTrue:
 			/* booleanCheatTrue */
@@ -17635,7 +17147,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l3280;
+						goto l3202;
 					}
 					if (bytecode == 172) {
 
@@ -17644,7 +17156,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l3280;
+						goto l3202;
 					}
 					if (bytecode > 167) {
 
@@ -17654,7 +17166,7 @@ interpret(void)
 						localIP = (localIP + offset) + 1;
 						currentBytecode = (byteAtPointer(localIP)) + GIV(bytecodeSetSelector);
 
-						goto l3280;
+						goto l3202;
 					}
 				}
 				currentBytecode = bytecode + GIV(bytecodeSetSelector);
@@ -17662,7 +17174,7 @@ interpret(void)
 				/* begin internalPush: */
 				longAtPointerput((localSP -= BytesPerOop), GIV(trueObj));
 			}
-		l3280:	/* end case */;
+		l3202:	/* end case */;
 			BREAK;
 		CASE(179)
 			/* bytecodePrimGreaterThan */
@@ -17701,7 +17213,7 @@ interpret(void)
 					else {
 						/* goto booleanCheatFalse */
 					}
-					goto l1423;
+					goto l1384;
 				}
 				/* begin initPrimCall */
 				GIV(primFailCode) = 0;
@@ -17721,20 +17233,20 @@ interpret(void)
 						bits = rot;
 						memcpy((&value), (&bits), sizeof(value));
 						rcvr1 = value;
-						goto l1429;
+						goto l1390;
 					}
 					if ((tagBits == (smallIntegerTag()))
 					 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 						rcvr1 = ((double) ((rcvr >> 3)) );
-						goto l1429;
+						goto l1390;
 					}
 				}
 				else {
 					if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(rcvr + BaseHeaderSize, result);
 						rcvr1 = result;
-						goto l1429;
+						goto l1390;
 					}
 				}
 				/* begin primitiveFail */
@@ -17742,7 +17254,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				rcvr1 = 0.0;
-			l1429:	/* end loadFloatOrIntFrom: */;
+			l1390:	/* end loadFloatOrIntFrom: */;
 				/* begin loadFloatOrIntFrom: */
 				if (((tagBits1 = arg & (tagMask()))) != 0) {
 					if (tagBits1 == (smallFloatTag())) {
@@ -17759,20 +17271,20 @@ interpret(void)
 						bits1 = rot1;
 						memcpy((&value1), (&bits1), sizeof(value1));
 						arg1 = value1;
-						goto l1428;
+						goto l1389;
 					}
 					if ((tagBits1 == (smallIntegerTag()))
 					 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 						arg1 = ((double) ((arg >> 3)) );
-						goto l1428;
+						goto l1389;
 					}
 				}
 				else {
 					if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(arg + BaseHeaderSize, result1);
 						arg1 = result1;
-						goto l1428;
+						goto l1389;
 					}
 				}
 				/* begin primitiveFail */
@@ -17780,7 +17292,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				arg1 = 0.0;
-			l1428:	/* end loadFloatOrIntFrom: */;
+			l1389:	/* end loadFloatOrIntFrom: */;
 				aBool = rcvr1 > arg1;
 				if (!GIV(primFailCode)) {
 					/* begin booleanCheat: */
@@ -17790,7 +17302,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalse;
 					}
-					goto l1423;
+					goto l1384;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -17798,7 +17310,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1423:	/* end case */;
+		l1384:	/* end case */;
 			
 		booleanCheatFalse:
 			/* booleanCheatFalse */
@@ -17820,7 +17332,7 @@ interpret(void)
 					localIP = (localIP + (bytecode - 151)) + 1;
 					currentBytecode = (byteAtPointer(localIP)) + GIV(bytecodeSetSelector);
 
-					goto l3283;
+					goto l3205;
 				}
 				if (bytecode == 172) {
 
@@ -17830,14 +17342,14 @@ interpret(void)
 					localIP = (localIP + offset) + 1;
 					currentBytecode = (byteAtPointer(localIP)) + GIV(bytecodeSetSelector);
 
-					goto l3283;
+					goto l3205;
 				}
 				currentBytecode = bytecode + GIV(bytecodeSetSelector);
 
 				/* begin internalPush: */
 				longAtPointerput((localSP -= BytesPerOop), GIV(falseObj));
 			}
-		l3283:	/* end case */;
+		l3205:	/* end case */;
 			BREAK;
 		CASE(180)
 			/* bytecodePrimLessOrEqual */
@@ -17876,7 +17388,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalse;
 					}
-					goto l1433;
+					goto l1394;
 				}
 				/* begin initPrimCall */
 				GIV(primFailCode) = 0;
@@ -17896,20 +17408,20 @@ interpret(void)
 						bits = rot;
 						memcpy((&value), (&bits), sizeof(value));
 						rcvr1 = value;
-						goto l1439;
+						goto l1400;
 					}
 					if ((tagBits == (smallIntegerTag()))
 					 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 						rcvr1 = ((double) ((rcvr >> 3)) );
-						goto l1439;
+						goto l1400;
 					}
 				}
 				else {
 					if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(rcvr + BaseHeaderSize, result);
 						rcvr1 = result;
-						goto l1439;
+						goto l1400;
 					}
 				}
 				/* begin primitiveFail */
@@ -17917,7 +17429,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				rcvr1 = 0.0;
-			l1439:	/* end loadFloatOrIntFrom: */;
+			l1400:	/* end loadFloatOrIntFrom: */;
 				/* begin loadFloatOrIntFrom: */
 				if (((tagBits1 = arg & (tagMask()))) != 0) {
 					if (tagBits1 == (smallFloatTag())) {
@@ -17934,20 +17446,20 @@ interpret(void)
 						bits1 = rot1;
 						memcpy((&value1), (&bits1), sizeof(value1));
 						arg1 = value1;
-						goto l1438;
+						goto l1399;
 					}
 					if ((tagBits1 == (smallIntegerTag()))
 					 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 						arg1 = ((double) ((arg >> 3)) );
-						goto l1438;
+						goto l1399;
 					}
 				}
 				else {
 					if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(arg + BaseHeaderSize, result1);
 						arg1 = result1;
-						goto l1438;
+						goto l1399;
 					}
 				}
 				/* begin primitiveFail */
@@ -17955,7 +17467,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				arg1 = 0.0;
-			l1438:	/* end loadFloatOrIntFrom: */;
+			l1399:	/* end loadFloatOrIntFrom: */;
 				aBool = rcvr1 <= arg1;
 				if (!GIV(primFailCode)) {
 					/* begin booleanCheat: */
@@ -17965,7 +17477,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalse;
 					}
-					goto l1433;
+					goto l1394;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -17973,7 +17485,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1433:	/* end case */;
+		l1394:	/* end case */;
 			BREAK;
 		CASE(181)
 			/* bytecodePrimGreaterOrEqual */
@@ -18012,7 +17524,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalse;
 					}
-					goto l1443;
+					goto l1404;
 				}
 				/* begin initPrimCall */
 				GIV(primFailCode) = 0;
@@ -18032,20 +17544,20 @@ interpret(void)
 						bits = rot;
 						memcpy((&value), (&bits), sizeof(value));
 						rcvr1 = value;
-						goto l1449;
+						goto l1410;
 					}
 					if ((tagBits == (smallIntegerTag()))
 					 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 						rcvr1 = ((double) ((rcvr >> 3)) );
-						goto l1449;
+						goto l1410;
 					}
 				}
 				else {
 					if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(rcvr + BaseHeaderSize, result);
 						rcvr1 = result;
-						goto l1449;
+						goto l1410;
 					}
 				}
 				/* begin primitiveFail */
@@ -18053,7 +17565,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				rcvr1 = 0.0;
-			l1449:	/* end loadFloatOrIntFrom: */;
+			l1410:	/* end loadFloatOrIntFrom: */;
 				/* begin loadFloatOrIntFrom: */
 				if (((tagBits1 = arg & (tagMask()))) != 0) {
 					if (tagBits1 == (smallFloatTag())) {
@@ -18070,20 +17582,20 @@ interpret(void)
 						bits1 = rot1;
 						memcpy((&value1), (&bits1), sizeof(value1));
 						arg1 = value1;
-						goto l1448;
+						goto l1409;
 					}
 					if ((tagBits1 == (smallIntegerTag()))
 					 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 						arg1 = ((double) ((arg >> 3)) );
-						goto l1448;
+						goto l1409;
 					}
 				}
 				else {
 					if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(arg + BaseHeaderSize, result1);
 						arg1 = result1;
-						goto l1448;
+						goto l1409;
 					}
 				}
 				/* begin primitiveFail */
@@ -18091,7 +17603,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				arg1 = 0.0;
-			l1448:	/* end loadFloatOrIntFrom: */;
+			l1409:	/* end loadFloatOrIntFrom: */;
 				aBool = rcvr1 >= arg1;
 				if (!GIV(primFailCode)) {
 					/* begin booleanCheat: */
@@ -18101,7 +17613,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalse;
 					}
-					goto l1443;
+					goto l1404;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -18109,7 +17621,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1443:	/* end case */;
+		l1404:	/* end case */;
 			BREAK;
 		CASE(182)
 			/* bytecodePrimEqual */
@@ -18145,7 +17657,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalse;
 					}
-					goto l1453;
+					goto l1414;
 				}
 				/* begin initPrimCall */
 				GIV(primFailCode) = 0;
@@ -18165,20 +17677,20 @@ interpret(void)
 						bits = rot;
 						memcpy((&value), (&bits), sizeof(value));
 						rcvr1 = value;
-						goto l1459;
+						goto l1420;
 					}
 					if ((tagBits == (smallIntegerTag()))
 					 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 						rcvr1 = ((double) ((rcvr >> 3)) );
-						goto l1459;
+						goto l1420;
 					}
 				}
 				else {
 					if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(rcvr + BaseHeaderSize, result);
 						rcvr1 = result;
-						goto l1459;
+						goto l1420;
 					}
 				}
 				/* begin primitiveFail */
@@ -18186,7 +17698,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				rcvr1 = 0.0;
-			l1459:	/* end loadFloatOrIntFrom: */;
+			l1420:	/* end loadFloatOrIntFrom: */;
 				/* begin loadFloatOrIntFrom: */
 				if (((tagBits1 = arg & (tagMask()))) != 0) {
 					if (tagBits1 == (smallFloatTag())) {
@@ -18203,20 +17715,20 @@ interpret(void)
 						bits1 = rot1;
 						memcpy((&value1), (&bits1), sizeof(value1));
 						arg1 = value1;
-						goto l1458;
+						goto l1419;
 					}
 					if ((tagBits1 == (smallIntegerTag()))
 					 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 						arg1 = ((double) ((arg >> 3)) );
-						goto l1458;
+						goto l1419;
 					}
 				}
 				else {
 					if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(arg + BaseHeaderSize, result1);
 						arg1 = result1;
-						goto l1458;
+						goto l1419;
 					}
 				}
 				/* begin primitiveFail */
@@ -18224,7 +17736,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				arg1 = 0.0;
-			l1458:	/* end loadFloatOrIntFrom: */;
+			l1419:	/* end loadFloatOrIntFrom: */;
 				aBool = rcvr1 == arg1;
 				if (!GIV(primFailCode)) {
 					/* begin booleanCheat: */
@@ -18234,7 +17746,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalse;
 					}
-					goto l1453;
+					goto l1414;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -18242,7 +17754,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1453:	/* end case */;
+		l1414:	/* end case */;
 			BREAK;
 		CASE(183)
 			/* bytecodePrimNotEqual */
@@ -18278,7 +17790,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalse;
 					}
-					goto l1463;
+					goto l1424;
 				}
 				/* begin initPrimCall */
 				GIV(primFailCode) = 0;
@@ -18298,20 +17810,20 @@ interpret(void)
 						bits = rot;
 						memcpy((&value), (&bits), sizeof(value));
 						rcvr1 = value;
-						goto l1469;
+						goto l1430;
 					}
 					if ((tagBits == (smallIntegerTag()))
 					 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 						rcvr1 = ((double) ((rcvr >> 3)) );
-						goto l1469;
+						goto l1430;
 					}
 				}
 				else {
 					if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(rcvr + BaseHeaderSize, result);
 						rcvr1 = result;
-						goto l1469;
+						goto l1430;
 					}
 				}
 				/* begin primitiveFail */
@@ -18319,7 +17831,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				rcvr1 = 0.0;
-			l1469:	/* end loadFloatOrIntFrom: */;
+			l1430:	/* end loadFloatOrIntFrom: */;
 				/* begin loadFloatOrIntFrom: */
 				if (((tagBits1 = arg & (tagMask()))) != 0) {
 					if (tagBits1 == (smallFloatTag())) {
@@ -18336,20 +17848,20 @@ interpret(void)
 						bits1 = rot1;
 						memcpy((&value1), (&bits1), sizeof(value1));
 						arg1 = value1;
-						goto l1468;
+						goto l1429;
 					}
 					if ((tagBits1 == (smallIntegerTag()))
 					 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 						arg1 = ((double) ((arg >> 3)) );
-						goto l1468;
+						goto l1429;
 					}
 				}
 				else {
 					if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(arg + BaseHeaderSize, result1);
 						arg1 = result1;
-						goto l1468;
+						goto l1429;
 					}
 				}
 				/* begin primitiveFail */
@@ -18357,7 +17869,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				arg1 = 0.0;
-			l1468:	/* end loadFloatOrIntFrom: */;
+			l1429:	/* end loadFloatOrIntFrom: */;
 				aBool = rcvr1 == arg1;
 				if (!GIV(primFailCode)) {
 					/* begin booleanCheat: */
@@ -18367,7 +17879,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalse;
 					}
-					goto l1463;
+					goto l1424;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -18375,7 +17887,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1463:	/* end case */;
+		l1424:	/* end case */;
 			BREAK;
 		CASE(184)
 			/* bytecodePrimMultiply */
@@ -18425,7 +17937,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1473;
+						goto l1434;
 					}
 				}
 				else {
@@ -18452,20 +17964,20 @@ interpret(void)
 							bits = rot;
 							memcpy((&value), (&bits), sizeof(value));
 							rcvr1 = value;
-							goto l1474;
+							goto l1435;
 						}
 						if ((tagBits == (smallIntegerTag()))
 						 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 						(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 							rcvr1 = ((double) ((rcvr >> 3)) );
-							goto l1474;
+							goto l1435;
 						}
 					}
 					else {
 						if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 							fetchFloatAtinto(rcvr + BaseHeaderSize, result2);
 							rcvr1 = result2;
-							goto l1474;
+							goto l1435;
 						}
 					}
 					/* begin primitiveFail */
@@ -18473,7 +17985,7 @@ interpret(void)
 						GIV(primFailCode) = 1;
 					}
 					rcvr1 = 0.0;
-				l1474:	/* end loadFloatOrIntFrom: */;
+				l1435:	/* end loadFloatOrIntFrom: */;
 					/* begin loadFloatOrIntFrom: */
 					if (((tagBits1 = arg & (tagMask()))) != 0) {
 						if (tagBits1 == (smallFloatTag())) {
@@ -18490,20 +18002,20 @@ interpret(void)
 							bits1 = rot1;
 							memcpy((&value1), (&bits1), sizeof(value1));
 							arg1 = value1;
-							goto l1478;
+							goto l1439;
 						}
 						if ((tagBits1 == (smallIntegerTag()))
 						 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 						(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 							arg1 = ((double) ((arg >> 3)) );
-							goto l1478;
+							goto l1439;
 						}
 					}
 					else {
 						if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 							fetchFloatAtinto(arg + BaseHeaderSize, result1);
 							arg1 = result1;
-							goto l1478;
+							goto l1439;
 						}
 					}
 					/* begin primitiveFail */
@@ -18511,7 +18023,7 @@ interpret(void)
 						GIV(primFailCode) = 1;
 					}
 					arg1 = 0.0;
-				l1478:	/* end loadFloatOrIntFrom: */;
+				l1439:	/* end loadFloatOrIntFrom: */;
 					if (!GIV(primFailCode)) {
 						/* begin pop:thenPushFloat: */
 						longAtput((sp = GIV(stackPointer) + ((2 - 1) * BytesPerWord)), floatObjectOf(rcvr1 * arg1));
@@ -18528,7 +18040,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1473;
+						goto l1434;
 					}
 				}
 				/* begin fetchPointer:ofObject: */
@@ -18537,7 +18049,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1473:	/* end case */;
+		l1434:	/* end case */;
 			BREAK;
 		CASE(185)
 			/* bytecodePrimDivide */
@@ -18580,7 +18092,7 @@ interpret(void)
 							/* begin fetchNextBytecode */
 							currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-							goto l1484;
+							goto l1445;
 						}
 					}
 				}
@@ -18608,20 +18120,20 @@ interpret(void)
 							bits = rot;
 							memcpy((&value), (&bits), sizeof(value));
 							rcvr1 = value;
-							goto l1485;
+							goto l1446;
 						}
 						if ((tagBits == (smallIntegerTag()))
 						 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 						(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 							rcvr1 = ((double) ((rcvr >> 3)) );
-							goto l1485;
+							goto l1446;
 						}
 					}
 					else {
 						if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 							fetchFloatAtinto(rcvr + BaseHeaderSize, result2);
 							rcvr1 = result2;
-							goto l1485;
+							goto l1446;
 						}
 					}
 					/* begin primitiveFail */
@@ -18629,7 +18141,7 @@ interpret(void)
 						GIV(primFailCode) = 1;
 					}
 					rcvr1 = 0.0;
-				l1485:	/* end loadFloatOrIntFrom: */;
+				l1446:	/* end loadFloatOrIntFrom: */;
 					/* begin loadFloatOrIntFrom: */
 					if (((tagBits1 = arg & (tagMask()))) != 0) {
 						if (tagBits1 == (smallFloatTag())) {
@@ -18646,20 +18158,20 @@ interpret(void)
 							bits1 = rot1;
 							memcpy((&value1), (&bits1), sizeof(value1));
 							arg1 = value1;
-							goto l1489;
+							goto l1450;
 						}
 						if ((tagBits1 == (smallIntegerTag()))
 						 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 						(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 							arg1 = ((double) ((arg >> 3)) );
-							goto l1489;
+							goto l1450;
 						}
 					}
 					else {
 						if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 							fetchFloatAtinto(arg + BaseHeaderSize, result1);
 							arg1 = result1;
-							goto l1489;
+							goto l1450;
 						}
 					}
 					/* begin primitiveFail */
@@ -18667,7 +18179,7 @@ interpret(void)
 						GIV(primFailCode) = 1;
 					}
 					arg1 = 0.0;
-				l1489:	/* end loadFloatOrIntFrom: */;
+				l1450:	/* end loadFloatOrIntFrom: */;
 					/* begin success: */
 					if (!(arg1 != 0.0)) {
 
@@ -18692,7 +18204,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1484;
+						goto l1445;
 					}
 				}
 				/* begin fetchPointer:ofObject: */
@@ -18701,7 +18213,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1484:	/* end case */;
+		l1445:	/* end case */;
 			BREAK;
 		CASE(186)
 			/* bytecodePrimMod */
@@ -18719,7 +18231,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1495;
+					goto l1456;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -18727,7 +18239,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1495:	/* end case */;
+		l1456:	/* end case */;
 			BREAK;
 		CASE(187)
 			/* bytecodePrimMakePoint */
@@ -18754,7 +18266,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1499;
+					goto l1460;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -18762,7 +18274,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1499:	/* end case */;
+		l1460:	/* end case */;
 			BREAK;
 		CASE(188)
 			/* bytecodePrimBitShift */
@@ -18788,7 +18300,7 @@ interpret(void)
 					if (!GIV(primFailCode)) {
 						GIV(primFailCode) = 1;
 					}
-					goto l1507;
+					goto l1468;
 				}
 				integerReceiver = longAt(GIV(stackPointer) + (1 * BytesPerWord));
 				integerReceiver = signed64BitValueOf(integerReceiver);
@@ -18802,7 +18314,7 @@ interpret(void)
 							if (!GIV(primFailCode)) {
 								GIV(primFailCode) = 1;
 							}
-							goto l1507;
+							goto l1468;
 						}
 						shifted = ((sqInt)((usqInt)(integerReceiver) << integerArgument));
 						if (!(integerReceiver == (((sqInt) shifted) >> integerArgument))) {
@@ -18810,7 +18322,7 @@ interpret(void)
 							if (!GIV(primFailCode)) {
 								GIV(primFailCode) = 1;
 							}
-							goto l1507;
+							goto l1468;
 						}
 					}
 					else {
@@ -18821,7 +18333,7 @@ interpret(void)
 							if (!GIV(primFailCode)) {
 								GIV(primFailCode) = 1;
 							}
-							goto l1507;
+							goto l1468;
 						}
 						shifted = ((sqInt) integerReceiver) >> (0 - integerArgument);
 					}
@@ -18833,7 +18345,7 @@ interpret(void)
 					longAtput((sp = GIV(stackPointer) + ((2 - 1) * BytesPerWord)), shifted);
 					GIV(stackPointer) = sp;
 				}
-			l1507:	/* end primitiveBitShift */;
+			l1468:	/* end primitiveBitShift */;
 				/* begin internalizeIPandSP */
 				assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
 				localIP = pointerForOop(GIV(instructionPointer));
@@ -18845,7 +18357,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1503;
+					goto l1464;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -18853,7 +18365,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1503:	/* end case */;
+		l1464:	/* end case */;
 			BREAK;
 		CASE(189)
 			/* bytecodePrimDiv */
@@ -18871,7 +18383,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1509;
+					goto l1470;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -18879,7 +18391,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1509:	/* end case */;
+		l1470:	/* end case */;
 			BREAK;
 		CASE(190)
 			/* bytecodePrimBitAnd */
@@ -18898,7 +18410,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1513;
+					goto l1474;
 				}
 				/* begin initPrimCall */
 				GIV(primFailCode) = 0;
@@ -18919,7 +18431,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1513;
+					goto l1474;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -18927,7 +18439,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1513:	/* end case */;
+		l1474:	/* end case */;
 			BREAK;
 		CASE(191)
 			/* bytecodePrimBitOr */
@@ -18946,7 +18458,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1518;
+					goto l1479;
 				}
 				/* begin initPrimCall */
 				GIV(primFailCode) = 0;
@@ -18967,7 +18479,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1518;
+					goto l1479;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -18975,7 +18487,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1518:	/* end case */;
+		l1479:	/* end case */;
 			BREAK;
 		CASE(192)
 		CASE(368) /*112*/
@@ -19035,16 +18547,16 @@ interpret(void)
 				classOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(ClassByteString) << (shiftForWord())))));
 				if (rcvr & (tagMask())) {
 					isString = 0;
-					goto l1536;
+					goto l1497;
 				}
 				/* begin isClassOfNonImm:equalTo:compactClassIndex: */
 				assert(!(isImmediate(rcvr)));
 				/* begin classIndexOf: */
 				ccIndex = (longAt(rcvr)) & (classIndexMask());
 				isString = ClassByteStringCompactIndex == ccIndex;
-				goto l1536;
+				goto l1497;
 
-			l1536:	/* end is:instanceOf:compactClassIndex: */;
+			l1497:	/* end is:instanceOf:compactClassIndex: */;
 				if (isString) {
 					/* begin lengthOf:format: */
 					fmt = (((usqInt) (longAt(rcvr))) >> (formatShift())) & (formatMask());
@@ -19055,48 +18567,48 @@ interpret(void)
 						: numSlots1);
 					if (fmt <= 5) {
 						sz = numSlots;
-						goto l1538;
+						goto l1499;
 					}
 					if (fmt >= (firstByteFormat())) {
 
 						/* bytes, including CompiledMethod */
 						sz = (numSlots << (shiftForWord())) - (fmt & 7);
-						goto l1538;
+						goto l1499;
 					}
 					if (fmt >= (firstShortFormat())) {
 						sz = (numSlots << ((shiftForWord()) - 1)) - (fmt & 3);
-						goto l1538;
+						goto l1499;
 					}
 					if (fmt >= (firstLongFormat())) {
 						sz = (numSlots << ((shiftForWord()) - 2)) - (fmt & 1);
-						goto l1538;
+						goto l1499;
 					}
 					if (fmt == (sixtyFourBitIndexableFormat())) {
 						sz = numSlots;
-						goto l1538;
+						goto l1499;
 					}
 					sz = 0;
-				l1538:	/* end lengthOf:format: */;
+				l1499:	/* end lengthOf:format: */;
 					longAtPointerput(localSP, (((usqInt)sz << 3) | 1));
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1527;
+					goto l1488;
 				}
 				/* begin is:instanceOf:compactClassIndex: */
 				classOop1 = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(ClassArray) << (shiftForWord())))));
 				if (rcvr & (tagMask())) {
 					isArray = 0;
-					goto l1539;
+					goto l1500;
 				}
 				/* begin isClassOfNonImm:equalTo:compactClassIndex: */
 				assert(!(isImmediate(rcvr)));
 				/* begin classIndexOf: */
 				ccIndex1 = (longAt(rcvr)) & (classIndexMask());
 				isArray = ClassArrayCompactIndex == ccIndex1;
-				goto l1539;
+				goto l1500;
 
-			l1539:	/* end is:instanceOf:compactClassIndex: */;
+			l1500:	/* end is:instanceOf:compactClassIndex: */;
 				if (isArray) {
 					/* begin lengthOf:format: */
 					fmt1 = (((usqInt) (longAt(rcvr))) >> (formatShift())) & (formatMask());
@@ -19107,33 +18619,33 @@ interpret(void)
 						: numSlots11);
 					if (fmt1 <= 5) {
 						sz = numSlots2;
-						goto l1537;
+						goto l1498;
 					}
 					if (fmt1 >= (firstByteFormat())) {
 
 						/* bytes, including CompiledMethod */
 						sz = (numSlots2 << (shiftForWord())) - (fmt1 & 7);
-						goto l1537;
+						goto l1498;
 					}
 					if (fmt1 >= (firstShortFormat())) {
 						sz = (numSlots2 << ((shiftForWord()) - 1)) - (fmt1 & 3);
-						goto l1537;
+						goto l1498;
 					}
 					if (fmt1 >= (firstLongFormat())) {
 						sz = (numSlots2 << ((shiftForWord()) - 2)) - (fmt1 & 1);
-						goto l1537;
+						goto l1498;
 					}
 					if (fmt1 == (sixtyFourBitIndexableFormat())) {
 						sz = numSlots2;
-						goto l1537;
+						goto l1498;
 					}
 					sz = 0;
-				l1537:	/* end lengthOf:format: */;
+				l1498:	/* end lengthOf:format: */;
 					longAtPointerput(localSP, (((usqInt)sz << 3) | 1));
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1527;
+					goto l1488;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -19141,7 +18653,7 @@ interpret(void)
 				GIV(argumentCount) = 0;
 				goto normalSend;
 			}
-		l1527:	/* end case */;
+		l1488:	/* end case */;
 			BREAK;
 		CASE(195)
 		CASE(371) /*115*/
@@ -19277,16 +18789,16 @@ interpret(void)
 				classOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(ClassBlockClosure) << (shiftForWord())))));
 				if (rcvr & (tagMask())) {
 					isBlock = 0;
-					goto l1550;
+					goto l1511;
 				}
 				/* begin isClassOfNonImm:equalTo:compactClassIndex: */
 				assert(!(isImmediate(rcvr)));
 				/* begin classIndexOf: */
 				ccIndex = (longAt(rcvr)) & (classIndexMask());
 				isBlock = ClassBlockClosureCompactIndex == ccIndex;
-				goto l1550;
+				goto l1511;
 
-			l1550:	/* end is:instanceOf:compactClassIndex: */;
+			l1511:	/* end is:instanceOf:compactClassIndex: */;
 				if (isBlock) {
 					/* begin externalizeIPandSP */
 					assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
@@ -19307,7 +18819,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1548;
+						goto l1509;
 					}
 					GIV(primFailCode) = 0;
 				}
@@ -19316,7 +18828,7 @@ interpret(void)
 				GIV(messageSelector) = longAt((objOop + BaseHeaderSize) + (((sqInt)((usqInt)((25 * 2)) << (shiftForWord())))));
 				goto normalSend;
 			}
-		l1548:	/* end case */;
+		l1509:	/* end case */;
 			BREAK;
 		CASE(202)
 			/* bytecodePrimValueWithArg */
@@ -19334,16 +18846,16 @@ interpret(void)
 				classOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(ClassBlockClosure) << (shiftForWord())))));
 				if (rcvr & (tagMask())) {
 					isBlock = 0;
-					goto l1556;
+					goto l1517;
 				}
 				/* begin isClassOfNonImm:equalTo:compactClassIndex: */
 				assert(!(isImmediate(rcvr)));
 				/* begin classIndexOf: */
 				ccIndex = (longAt(rcvr)) & (classIndexMask());
 				isBlock = ClassBlockClosureCompactIndex == ccIndex;
-				goto l1556;
+				goto l1517;
 
-			l1556:	/* end is:instanceOf:compactClassIndex: */;
+			l1517:	/* end is:instanceOf:compactClassIndex: */;
 				if (isBlock) {
 					/* begin externalizeIPandSP */
 					assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
@@ -19364,7 +18876,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1554;
+						goto l1515;
 					}
 					GIV(primFailCode) = 0;
 				}
@@ -19373,7 +18885,7 @@ interpret(void)
 				GIV(messageSelector) = longAt((objOop + BaseHeaderSize) + (((sqInt)((usqInt)((26 * 2)) << (shiftForWord())))));
 				goto normalSend;
 			}
-		l1554:	/* end case */;
+		l1515:	/* end case */;
 			BREAK;
 		CASE(203)
 		CASE(379) /*123*/
@@ -19452,7 +18964,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1566;
+					goto l1527;
 				}
 				GIV(primFailCode) = 0;
 				/* begin fetchPointer:ofObject: */
@@ -19461,7 +18973,7 @@ interpret(void)
 				GIV(argumentCount) = 0;
 				goto normalSend;
 			}
-		l1566:	/* end case */;
+		l1527:	/* end case */;
 			BREAK;
 		CASE(207)
 			/* bytecodePrimPointY */
@@ -19498,7 +19010,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1574;
+					goto l1535;
 				}
 				GIV(primFailCode) = 0;
 				/* begin fetchPointer:ofObject: */
@@ -19507,7 +19019,7 @@ interpret(void)
 				GIV(argumentCount) = 0;
 				goto normalSend;
 			}
-		l1574:	/* end case */;
+		l1535:	/* end case */;
 			BREAK;
 		CASE(208)
 		CASE(209)
@@ -19682,10 +19194,10 @@ interpret(void)
 						: (byteAt((localFP + FoxIFrameFlags) + 2)) != 0)) {
 						assert(isContext(frameContext(localFP)));
 						theThingToPush = longAt(localFP + FoxThisContext);
-						goto l1607;
+						goto l1568;
 					}
 					theThingToPush = marryFrameSP(localFP, localSP);
-				l1607:	/* end ensureFrameIsMarried:SP: */;
+				l1568:	/* end ensureFrameIsMarried:SP: */;
 					break;
 				case 1:
 					/* begin activeProcess */
@@ -19799,7 +19311,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1617;
+						goto l1578;
 					}
 				}
 				else {
@@ -19826,20 +19338,20 @@ interpret(void)
 							bits = rot;
 							memcpy((&value), (&bits), sizeof(value));
 							rcvr1 = value;
-							goto l1618;
+							goto l1579;
 						}
 						if ((tagBits == (smallIntegerTag()))
 						 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 						(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 							rcvr1 = ((double) ((rcvr >> 3)) );
-							goto l1618;
+							goto l1579;
 						}
 					}
 					else {
 						if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 							fetchFloatAtinto(rcvr + BaseHeaderSize, result2);
 							rcvr1 = result2;
-							goto l1618;
+							goto l1579;
 						}
 					}
 					/* begin primitiveFail */
@@ -19847,7 +19359,7 @@ interpret(void)
 						GIV(primFailCode) = 1;
 					}
 					rcvr1 = 0.0;
-				l1618:	/* end loadFloatOrIntFrom: */;
+				l1579:	/* end loadFloatOrIntFrom: */;
 					/* begin loadFloatOrIntFrom: */
 					if (((tagBits1 = arg & (tagMask()))) != 0) {
 						if (tagBits1 == (smallFloatTag())) {
@@ -19864,20 +19376,20 @@ interpret(void)
 							bits1 = rot1;
 							memcpy((&value1), (&bits1), sizeof(value1));
 							arg1 = value1;
-							goto l1622;
+							goto l1583;
 						}
 						if ((tagBits1 == (smallIntegerTag()))
 						 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 						(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 							arg1 = ((double) ((arg >> 3)) );
-							goto l1622;
+							goto l1583;
 						}
 					}
 					else {
 						if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 							fetchFloatAtinto(arg + BaseHeaderSize, result1);
 							arg1 = result1;
-							goto l1622;
+							goto l1583;
 						}
 					}
 					/* begin primitiveFail */
@@ -19885,7 +19397,7 @@ interpret(void)
 						GIV(primFailCode) = 1;
 					}
 					arg1 = 0.0;
-				l1622:	/* end loadFloatOrIntFrom: */;
+				l1583:	/* end loadFloatOrIntFrom: */;
 					if (!GIV(primFailCode)) {
 						/* begin pop:thenPushFloat: */
 						longAtput((sp = GIV(stackPointer) + ((2 - 1) * BytesPerWord)), floatObjectOf(rcvr1 + arg1));
@@ -19902,7 +19414,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1617;
+						goto l1578;
 					}
 				}
 				/* begin fetchPointer:ofObject: */
@@ -19911,7 +19423,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1617:	/* end case */;
+		l1578:	/* end case */;
 			BREAK;
 		CASE(353) /*97*/
 			/* bytecodePrimSubtract */
@@ -19948,7 +19460,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1628;
+						goto l1589;
 					}
 				}
 				else {
@@ -19975,20 +19487,20 @@ interpret(void)
 							bits = rot;
 							memcpy((&value), (&bits), sizeof(value));
 							rcvr1 = value;
-							goto l1629;
+							goto l1590;
 						}
 						if ((tagBits == (smallIntegerTag()))
 						 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 						(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 							rcvr1 = ((double) ((rcvr >> 3)) );
-							goto l1629;
+							goto l1590;
 						}
 					}
 					else {
 						if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 							fetchFloatAtinto(rcvr + BaseHeaderSize, result2);
 							rcvr1 = result2;
-							goto l1629;
+							goto l1590;
 						}
 					}
 					/* begin primitiveFail */
@@ -19996,7 +19508,7 @@ interpret(void)
 						GIV(primFailCode) = 1;
 					}
 					rcvr1 = 0.0;
-				l1629:	/* end loadFloatOrIntFrom: */;
+				l1590:	/* end loadFloatOrIntFrom: */;
 					/* begin loadFloatOrIntFrom: */
 					if (((tagBits1 = arg & (tagMask()))) != 0) {
 						if (tagBits1 == (smallFloatTag())) {
@@ -20013,20 +19525,20 @@ interpret(void)
 							bits1 = rot1;
 							memcpy((&value1), (&bits1), sizeof(value1));
 							arg1 = value1;
-							goto l1633;
+							goto l1594;
 						}
 						if ((tagBits1 == (smallIntegerTag()))
 						 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 						(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 							arg1 = ((double) ((arg >> 3)) );
-							goto l1633;
+							goto l1594;
 						}
 					}
 					else {
 						if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 							fetchFloatAtinto(arg + BaseHeaderSize, result1);
 							arg1 = result1;
-							goto l1633;
+							goto l1594;
 						}
 					}
 					/* begin primitiveFail */
@@ -20034,7 +19546,7 @@ interpret(void)
 						GIV(primFailCode) = 1;
 					}
 					arg1 = 0.0;
-				l1633:	/* end loadFloatOrIntFrom: */;
+				l1594:	/* end loadFloatOrIntFrom: */;
 					if (!GIV(primFailCode)) {
 						/* begin pop:thenPushFloat: */
 						longAtput((sp = GIV(stackPointer) + ((2 - 1) * BytesPerWord)), floatObjectOf(rcvr1 - arg1));
@@ -20051,7 +19563,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1628;
+						goto l1589;
 					}
 				}
 				/* begin fetchPointer:ofObject: */
@@ -20060,7 +19572,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1628:	/* end case */;
+		l1589:	/* end case */;
 			BREAK;
 		CASE(354) /*98*/
 			/* bytecodePrimLessThanSistaV1 */
@@ -20099,7 +19611,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalseSistaV1;
 					}
-					goto l1639;
+					goto l1600;
 				}
 				/* begin initPrimCall */
 				GIV(primFailCode) = 0;
@@ -20119,20 +19631,20 @@ interpret(void)
 						bits = rot;
 						memcpy((&value), (&bits), sizeof(value));
 						rcvr1 = value;
-						goto l1645;
+						goto l1606;
 					}
 					if ((tagBits == (smallIntegerTag()))
 					 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 						rcvr1 = ((double) ((rcvr >> 3)) );
-						goto l1645;
+						goto l1606;
 					}
 				}
 				else {
 					if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(rcvr + BaseHeaderSize, result);
 						rcvr1 = result;
-						goto l1645;
+						goto l1606;
 					}
 				}
 				/* begin primitiveFail */
@@ -20140,7 +19652,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				rcvr1 = 0.0;
-			l1645:	/* end loadFloatOrIntFrom: */;
+			l1606:	/* end loadFloatOrIntFrom: */;
 				/* begin loadFloatOrIntFrom: */
 				if (((tagBits1 = arg & (tagMask()))) != 0) {
 					if (tagBits1 == (smallFloatTag())) {
@@ -20157,20 +19669,20 @@ interpret(void)
 						bits1 = rot1;
 						memcpy((&value1), (&bits1), sizeof(value1));
 						arg1 = value1;
-						goto l1644;
+						goto l1605;
 					}
 					if ((tagBits1 == (smallIntegerTag()))
 					 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 						arg1 = ((double) ((arg >> 3)) );
-						goto l1644;
+						goto l1605;
 					}
 				}
 				else {
 					if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(arg + BaseHeaderSize, result1);
 						arg1 = result1;
-						goto l1644;
+						goto l1605;
 					}
 				}
 				/* begin primitiveFail */
@@ -20178,7 +19690,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				arg1 = 0.0;
-			l1644:	/* end loadFloatOrIntFrom: */;
+			l1605:	/* end loadFloatOrIntFrom: */;
 				aBool = rcvr1 < arg1;
 				if (!GIV(primFailCode)) {
 					/* begin booleanCheatSistaV1: */
@@ -20188,7 +19700,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalseSistaV1;
 					}
-					goto l1639;
+					goto l1600;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -20196,7 +19708,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1639:	/* end case */;
+		l1600:	/* end case */;
 			
 		booleanCheatTrueSistaV1:
 			/* booleanCheatTrueSistaV1 */
@@ -20217,7 +19729,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l3284;
+						goto l3206;
 					}
 					if (bytecode == 239) {
 
@@ -20226,7 +19738,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l3284;
+						goto l3206;
 					}
 					if (bytecode == 238) {
 
@@ -20236,7 +19748,7 @@ interpret(void)
 						localIP = (localIP + offset) + 1;
 						currentBytecode = (byteAtPointer(localIP)) + GIV(bytecodeSetSelector);
 
-						goto l3284;
+						goto l3206;
 					}
 				}
 				currentBytecode = bytecode + GIV(bytecodeSetSelector);
@@ -20244,7 +19756,7 @@ interpret(void)
 				/* begin internalPush: */
 				longAtPointerput((localSP -= BytesPerOop), GIV(trueObj));
 			}
-		l3284:	/* end case */;
+		l3206:	/* end case */;
 			BREAK;
 		CASE(355) /*99*/
 			/* bytecodePrimGreaterThanSistaV1 */
@@ -20283,7 +19795,7 @@ interpret(void)
 					else {
 						/* goto booleanCheatFalseSistaV1 */
 					}
-					goto l1649;
+					goto l1610;
 				}
 				/* begin initPrimCall */
 				GIV(primFailCode) = 0;
@@ -20303,20 +19815,20 @@ interpret(void)
 						bits = rot;
 						memcpy((&value), (&bits), sizeof(value));
 						rcvr1 = value;
-						goto l1655;
+						goto l1616;
 					}
 					if ((tagBits == (smallIntegerTag()))
 					 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 						rcvr1 = ((double) ((rcvr >> 3)) );
-						goto l1655;
+						goto l1616;
 					}
 				}
 				else {
 					if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(rcvr + BaseHeaderSize, result);
 						rcvr1 = result;
-						goto l1655;
+						goto l1616;
 					}
 				}
 				/* begin primitiveFail */
@@ -20324,7 +19836,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				rcvr1 = 0.0;
-			l1655:	/* end loadFloatOrIntFrom: */;
+			l1616:	/* end loadFloatOrIntFrom: */;
 				/* begin loadFloatOrIntFrom: */
 				if (((tagBits1 = arg & (tagMask()))) != 0) {
 					if (tagBits1 == (smallFloatTag())) {
@@ -20341,20 +19853,20 @@ interpret(void)
 						bits1 = rot1;
 						memcpy((&value1), (&bits1), sizeof(value1));
 						arg1 = value1;
-						goto l1654;
+						goto l1615;
 					}
 					if ((tagBits1 == (smallIntegerTag()))
 					 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 						arg1 = ((double) ((arg >> 3)) );
-						goto l1654;
+						goto l1615;
 					}
 				}
 				else {
 					if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(arg + BaseHeaderSize, result1);
 						arg1 = result1;
-						goto l1654;
+						goto l1615;
 					}
 				}
 				/* begin primitiveFail */
@@ -20362,7 +19874,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				arg1 = 0.0;
-			l1654:	/* end loadFloatOrIntFrom: */;
+			l1615:	/* end loadFloatOrIntFrom: */;
 				aBool = rcvr1 > arg1;
 				if (!GIV(primFailCode)) {
 					/* begin booleanCheatSistaV1: */
@@ -20372,7 +19884,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalseSistaV1;
 					}
-					goto l1649;
+					goto l1610;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -20380,7 +19892,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1649:	/* end case */;
+		l1610:	/* end case */;
 			
 		booleanCheatFalseSistaV1:
 			/* booleanCheatFalseSistaV1 */
@@ -20402,7 +19914,7 @@ interpret(void)
 					localIP = (localIP + (bytecode - 191)) + 1;
 					currentBytecode = (byteAtPointer(localIP)) + GIV(bytecodeSetSelector);
 
-					goto l3287;
+					goto l3209;
 				}
 				if (bytecode == 239) {
 
@@ -20412,14 +19924,14 @@ interpret(void)
 					localIP = (localIP + offset) + 1;
 					currentBytecode = (byteAtPointer(localIP)) + GIV(bytecodeSetSelector);
 
-					goto l3287;
+					goto l3209;
 				}
 				currentBytecode = bytecode + GIV(bytecodeSetSelector);
 
 				/* begin internalPush: */
 				longAtPointerput((localSP -= BytesPerOop), GIV(falseObj));
 			}
-		l3287:	/* end case */;
+		l3209:	/* end case */;
 			BREAK;
 		CASE(356) /*100*/
 			/* bytecodePrimLessOrEqualSistaV1 */
@@ -20458,7 +19970,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalseSistaV1;
 					}
-					goto l1659;
+					goto l1620;
 				}
 				/* begin initPrimCall */
 				GIV(primFailCode) = 0;
@@ -20478,20 +19990,20 @@ interpret(void)
 						bits = rot;
 						memcpy((&value), (&bits), sizeof(value));
 						rcvr1 = value;
-						goto l1665;
+						goto l1626;
 					}
 					if ((tagBits == (smallIntegerTag()))
 					 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 						rcvr1 = ((double) ((rcvr >> 3)) );
-						goto l1665;
+						goto l1626;
 					}
 				}
 				else {
 					if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(rcvr + BaseHeaderSize, result);
 						rcvr1 = result;
-						goto l1665;
+						goto l1626;
 					}
 				}
 				/* begin primitiveFail */
@@ -20499,7 +20011,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				rcvr1 = 0.0;
-			l1665:	/* end loadFloatOrIntFrom: */;
+			l1626:	/* end loadFloatOrIntFrom: */;
 				/* begin loadFloatOrIntFrom: */
 				if (((tagBits1 = arg & (tagMask()))) != 0) {
 					if (tagBits1 == (smallFloatTag())) {
@@ -20516,20 +20028,20 @@ interpret(void)
 						bits1 = rot1;
 						memcpy((&value1), (&bits1), sizeof(value1));
 						arg1 = value1;
-						goto l1664;
+						goto l1625;
 					}
 					if ((tagBits1 == (smallIntegerTag()))
 					 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 						arg1 = ((double) ((arg >> 3)) );
-						goto l1664;
+						goto l1625;
 					}
 				}
 				else {
 					if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(arg + BaseHeaderSize, result1);
 						arg1 = result1;
-						goto l1664;
+						goto l1625;
 					}
 				}
 				/* begin primitiveFail */
@@ -20537,7 +20049,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				arg1 = 0.0;
-			l1664:	/* end loadFloatOrIntFrom: */;
+			l1625:	/* end loadFloatOrIntFrom: */;
 				aBool = rcvr1 <= arg1;
 				if (!GIV(primFailCode)) {
 					/* begin booleanCheatSistaV1: */
@@ -20547,7 +20059,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalseSistaV1;
 					}
-					goto l1659;
+					goto l1620;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -20555,7 +20067,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1659:	/* end case */;
+		l1620:	/* end case */;
 			BREAK;
 		CASE(357) /*101*/
 			/* bytecodePrimGreaterOrEqualSistaV1 */
@@ -20594,7 +20106,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalseSistaV1;
 					}
-					goto l1669;
+					goto l1630;
 				}
 				/* begin initPrimCall */
 				GIV(primFailCode) = 0;
@@ -20614,20 +20126,20 @@ interpret(void)
 						bits = rot;
 						memcpy((&value), (&bits), sizeof(value));
 						rcvr1 = value;
-						goto l1675;
+						goto l1636;
 					}
 					if ((tagBits == (smallIntegerTag()))
 					 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 						rcvr1 = ((double) ((rcvr >> 3)) );
-						goto l1675;
+						goto l1636;
 					}
 				}
 				else {
 					if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(rcvr + BaseHeaderSize, result);
 						rcvr1 = result;
-						goto l1675;
+						goto l1636;
 					}
 				}
 				/* begin primitiveFail */
@@ -20635,7 +20147,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				rcvr1 = 0.0;
-			l1675:	/* end loadFloatOrIntFrom: */;
+			l1636:	/* end loadFloatOrIntFrom: */;
 				/* begin loadFloatOrIntFrom: */
 				if (((tagBits1 = arg & (tagMask()))) != 0) {
 					if (tagBits1 == (smallFloatTag())) {
@@ -20652,20 +20164,20 @@ interpret(void)
 						bits1 = rot1;
 						memcpy((&value1), (&bits1), sizeof(value1));
 						arg1 = value1;
-						goto l1674;
+						goto l1635;
 					}
 					if ((tagBits1 == (smallIntegerTag()))
 					 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 						arg1 = ((double) ((arg >> 3)) );
-						goto l1674;
+						goto l1635;
 					}
 				}
 				else {
 					if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(arg + BaseHeaderSize, result1);
 						arg1 = result1;
-						goto l1674;
+						goto l1635;
 					}
 				}
 				/* begin primitiveFail */
@@ -20673,7 +20185,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				arg1 = 0.0;
-			l1674:	/* end loadFloatOrIntFrom: */;
+			l1635:	/* end loadFloatOrIntFrom: */;
 				aBool = rcvr1 >= arg1;
 				if (!GIV(primFailCode)) {
 					/* begin booleanCheatSistaV1: */
@@ -20683,7 +20195,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalseSistaV1;
 					}
-					goto l1669;
+					goto l1630;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -20691,7 +20203,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1669:	/* end case */;
+		l1630:	/* end case */;
 			BREAK;
 		CASE(358) /*102*/
 			/* bytecodePrimEqualSistaV1 */
@@ -20727,7 +20239,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalseSistaV1;
 					}
-					goto l1679;
+					goto l1640;
 				}
 				/* begin initPrimCall */
 				GIV(primFailCode) = 0;
@@ -20747,20 +20259,20 @@ interpret(void)
 						bits = rot;
 						memcpy((&value), (&bits), sizeof(value));
 						rcvr1 = value;
-						goto l1685;
+						goto l1646;
 					}
 					if ((tagBits == (smallIntegerTag()))
 					 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 						rcvr1 = ((double) ((rcvr >> 3)) );
-						goto l1685;
+						goto l1646;
 					}
 				}
 				else {
 					if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(rcvr + BaseHeaderSize, result);
 						rcvr1 = result;
-						goto l1685;
+						goto l1646;
 					}
 				}
 				/* begin primitiveFail */
@@ -20768,7 +20280,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				rcvr1 = 0.0;
-			l1685:	/* end loadFloatOrIntFrom: */;
+			l1646:	/* end loadFloatOrIntFrom: */;
 				/* begin loadFloatOrIntFrom: */
 				if (((tagBits1 = arg & (tagMask()))) != 0) {
 					if (tagBits1 == (smallFloatTag())) {
@@ -20785,20 +20297,20 @@ interpret(void)
 						bits1 = rot1;
 						memcpy((&value1), (&bits1), sizeof(value1));
 						arg1 = value1;
-						goto l1684;
+						goto l1645;
 					}
 					if ((tagBits1 == (smallIntegerTag()))
 					 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 						arg1 = ((double) ((arg >> 3)) );
-						goto l1684;
+						goto l1645;
 					}
 				}
 				else {
 					if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(arg + BaseHeaderSize, result1);
 						arg1 = result1;
-						goto l1684;
+						goto l1645;
 					}
 				}
 				/* begin primitiveFail */
@@ -20806,7 +20318,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				arg1 = 0.0;
-			l1684:	/* end loadFloatOrIntFrom: */;
+			l1645:	/* end loadFloatOrIntFrom: */;
 				aBool = rcvr1 == arg1;
 				if (!GIV(primFailCode)) {
 					/* begin booleanCheatSistaV1: */
@@ -20816,7 +20328,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalseSistaV1;
 					}
-					goto l1679;
+					goto l1640;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -20824,7 +20336,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1679:	/* end case */;
+		l1640:	/* end case */;
 			BREAK;
 		CASE(359) /*103*/
 			/* bytecodePrimNotEqualSistaV1 */
@@ -20860,7 +20372,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalseSistaV1;
 					}
-					goto l1689;
+					goto l1650;
 				}
 				/* begin initPrimCall */
 				GIV(primFailCode) = 0;
@@ -20880,20 +20392,20 @@ interpret(void)
 						bits = rot;
 						memcpy((&value), (&bits), sizeof(value));
 						rcvr1 = value;
-						goto l1695;
+						goto l1656;
 					}
 					if ((tagBits == (smallIntegerTag()))
 					 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 						rcvr1 = ((double) ((rcvr >> 3)) );
-						goto l1695;
+						goto l1656;
 					}
 				}
 				else {
 					if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(rcvr + BaseHeaderSize, result);
 						rcvr1 = result;
-						goto l1695;
+						goto l1656;
 					}
 				}
 				/* begin primitiveFail */
@@ -20901,7 +20413,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				rcvr1 = 0.0;
-			l1695:	/* end loadFloatOrIntFrom: */;
+			l1656:	/* end loadFloatOrIntFrom: */;
 				/* begin loadFloatOrIntFrom: */
 				if (((tagBits1 = arg & (tagMask()))) != 0) {
 					if (tagBits1 == (smallFloatTag())) {
@@ -20918,20 +20430,20 @@ interpret(void)
 						bits1 = rot1;
 						memcpy((&value1), (&bits1), sizeof(value1));
 						arg1 = value1;
-						goto l1694;
+						goto l1655;
 					}
 					if ((tagBits1 == (smallIntegerTag()))
 					 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 					(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 						arg1 = ((double) ((arg >> 3)) );
-						goto l1694;
+						goto l1655;
 					}
 				}
 				else {
 					if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 						fetchFloatAtinto(arg + BaseHeaderSize, result1);
 						arg1 = result1;
-						goto l1694;
+						goto l1655;
 					}
 				}
 				/* begin primitiveFail */
@@ -20939,7 +20451,7 @@ interpret(void)
 					GIV(primFailCode) = 1;
 				}
 				arg1 = 0.0;
-			l1694:	/* end loadFloatOrIntFrom: */;
+			l1655:	/* end loadFloatOrIntFrom: */;
 				aBool = rcvr1 == arg1;
 				if (!GIV(primFailCode)) {
 					/* begin booleanCheatSistaV1: */
@@ -20949,7 +20461,7 @@ interpret(void)
 					else {
 						goto booleanCheatFalseSistaV1;
 					}
-					goto l1689;
+					goto l1650;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -20957,7 +20469,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1689:	/* end case */;
+		l1650:	/* end case */;
 			BREAK;
 		CASE(360) /*104*/
 			/* bytecodePrimMultiply */
@@ -21007,7 +20519,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1699;
+						goto l1660;
 					}
 				}
 				else {
@@ -21034,20 +20546,20 @@ interpret(void)
 							bits = rot;
 							memcpy((&value), (&bits), sizeof(value));
 							rcvr1 = value;
-							goto l1700;
+							goto l1661;
 						}
 						if ((tagBits == (smallIntegerTag()))
 						 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 						(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 							rcvr1 = ((double) ((rcvr >> 3)) );
-							goto l1700;
+							goto l1661;
 						}
 					}
 					else {
 						if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 							fetchFloatAtinto(rcvr + BaseHeaderSize, result2);
 							rcvr1 = result2;
-							goto l1700;
+							goto l1661;
 						}
 					}
 					/* begin primitiveFail */
@@ -21055,7 +20567,7 @@ interpret(void)
 						GIV(primFailCode) = 1;
 					}
 					rcvr1 = 0.0;
-				l1700:	/* end loadFloatOrIntFrom: */;
+				l1661:	/* end loadFloatOrIntFrom: */;
 					/* begin loadFloatOrIntFrom: */
 					if (((tagBits1 = arg & (tagMask()))) != 0) {
 						if (tagBits1 == (smallFloatTag())) {
@@ -21072,20 +20584,20 @@ interpret(void)
 							bits1 = rot1;
 							memcpy((&value1), (&bits1), sizeof(value1));
 							arg1 = value1;
-							goto l1704;
+							goto l1665;
 						}
 						if ((tagBits1 == (smallIntegerTag()))
 						 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 						(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 							arg1 = ((double) ((arg >> 3)) );
-							goto l1704;
+							goto l1665;
 						}
 					}
 					else {
 						if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 							fetchFloatAtinto(arg + BaseHeaderSize, result1);
 							arg1 = result1;
-							goto l1704;
+							goto l1665;
 						}
 					}
 					/* begin primitiveFail */
@@ -21093,7 +20605,7 @@ interpret(void)
 						GIV(primFailCode) = 1;
 					}
 					arg1 = 0.0;
-				l1704:	/* end loadFloatOrIntFrom: */;
+				l1665:	/* end loadFloatOrIntFrom: */;
 					if (!GIV(primFailCode)) {
 						/* begin pop:thenPushFloat: */
 						longAtput((sp = GIV(stackPointer) + ((2 - 1) * BytesPerWord)), floatObjectOf(rcvr1 * arg1));
@@ -21110,7 +20622,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1699;
+						goto l1660;
 					}
 				}
 				/* begin fetchPointer:ofObject: */
@@ -21119,7 +20631,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1699:	/* end case */;
+		l1660:	/* end case */;
 			BREAK;
 		CASE(361) /*105*/
 			/* bytecodePrimDivide */
@@ -21162,7 +20674,7 @@ interpret(void)
 							/* begin fetchNextBytecode */
 							currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-							goto l1710;
+							goto l1671;
 						}
 					}
 				}
@@ -21190,20 +20702,20 @@ interpret(void)
 							bits = rot;
 							memcpy((&value), (&bits), sizeof(value));
 							rcvr1 = value;
-							goto l1711;
+							goto l1672;
 						}
 						if ((tagBits == (smallIntegerTag()))
 						 && (((shift = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 						(((sqInt) (((sqInt)((usqInt)(rcvr) << shift)))) >> shift) == rcvr))) {
 							rcvr1 = ((double) ((rcvr >> 3)) );
-							goto l1711;
+							goto l1672;
 						}
 					}
 					else {
 						if (((longAt(rcvr)) & (classIndexMask())) == ClassFloatCompactIndex) {
 							fetchFloatAtinto(rcvr + BaseHeaderSize, result2);
 							rcvr1 = result2;
-							goto l1711;
+							goto l1672;
 						}
 					}
 					/* begin primitiveFail */
@@ -21211,7 +20723,7 @@ interpret(void)
 						GIV(primFailCode) = 1;
 					}
 					rcvr1 = 0.0;
-				l1711:	/* end loadFloatOrIntFrom: */;
+				l1672:	/* end loadFloatOrIntFrom: */;
 					/* begin loadFloatOrIntFrom: */
 					if (((tagBits1 = arg & (tagMask()))) != 0) {
 						if (tagBits1 == (smallFloatTag())) {
@@ -21228,20 +20740,20 @@ interpret(void)
 							bits1 = rot1;
 							memcpy((&value1), (&bits1), sizeof(value1));
 							arg1 = value1;
-							goto l1715;
+							goto l1676;
 						}
 						if ((tagBits1 == (smallIntegerTag()))
 						 && (((shift1 = (64 - (numTagBits())) - (smallFloatMantissaBits())),
 						(((sqInt) (((sqInt)((usqInt)(arg) << shift1)))) >> shift1) == arg))) {
 							arg1 = ((double) ((arg >> 3)) );
-							goto l1715;
+							goto l1676;
 						}
 					}
 					else {
 						if (((longAt(arg)) & (classIndexMask())) == ClassFloatCompactIndex) {
 							fetchFloatAtinto(arg + BaseHeaderSize, result1);
 							arg1 = result1;
-							goto l1715;
+							goto l1676;
 						}
 					}
 					/* begin primitiveFail */
@@ -21249,7 +20761,7 @@ interpret(void)
 						GIV(primFailCode) = 1;
 					}
 					arg1 = 0.0;
-				l1715:	/* end loadFloatOrIntFrom: */;
+				l1676:	/* end loadFloatOrIntFrom: */;
 					/* begin success: */
 					if (!(arg1 != 0.0)) {
 
@@ -21274,7 +20786,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1710;
+						goto l1671;
 					}
 				}
 				/* begin fetchPointer:ofObject: */
@@ -21283,7 +20795,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1710:	/* end case */;
+		l1671:	/* end case */;
 			BREAK;
 		CASE(362) /*106*/
 			/* bytecodePrimMod */
@@ -21301,7 +20813,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1721;
+					goto l1682;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -21309,7 +20821,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1721:	/* end case */;
+		l1682:	/* end case */;
 			BREAK;
 		CASE(363) /*107*/
 			/* bytecodePrimMakePoint */
@@ -21336,7 +20848,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1725;
+					goto l1686;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -21344,7 +20856,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1725:	/* end case */;
+		l1686:	/* end case */;
 			BREAK;
 		CASE(364) /*108*/
 			/* bytecodePrimBitShift */
@@ -21370,7 +20882,7 @@ interpret(void)
 					if (!GIV(primFailCode)) {
 						GIV(primFailCode) = 1;
 					}
-					goto l1733;
+					goto l1694;
 				}
 				integerReceiver = longAt(GIV(stackPointer) + (1 * BytesPerWord));
 				integerReceiver = signed64BitValueOf(integerReceiver);
@@ -21384,7 +20896,7 @@ interpret(void)
 							if (!GIV(primFailCode)) {
 								GIV(primFailCode) = 1;
 							}
-							goto l1733;
+							goto l1694;
 						}
 						shifted = ((sqInt)((usqInt)(integerReceiver) << integerArgument));
 						if (!(integerReceiver == (((sqInt) shifted) >> integerArgument))) {
@@ -21392,7 +20904,7 @@ interpret(void)
 							if (!GIV(primFailCode)) {
 								GIV(primFailCode) = 1;
 							}
-							goto l1733;
+							goto l1694;
 						}
 					}
 					else {
@@ -21403,7 +20915,7 @@ interpret(void)
 							if (!GIV(primFailCode)) {
 								GIV(primFailCode) = 1;
 							}
-							goto l1733;
+							goto l1694;
 						}
 						shifted = ((sqInt) integerReceiver) >> (0 - integerArgument);
 					}
@@ -21415,7 +20927,7 @@ interpret(void)
 					longAtput((sp = GIV(stackPointer) + ((2 - 1) * BytesPerWord)), shifted);
 					GIV(stackPointer) = sp;
 				}
-			l1733:	/* end primitiveBitShift */;
+			l1694:	/* end primitiveBitShift */;
 				/* begin internalizeIPandSP */
 				assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
 				localIP = pointerForOop(GIV(instructionPointer));
@@ -21427,7 +20939,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1729;
+					goto l1690;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -21435,7 +20947,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1729:	/* end case */;
+		l1690:	/* end case */;
 			BREAK;
 		CASE(365) /*109*/
 			/* bytecodePrimDiv */
@@ -21453,7 +20965,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1735;
+					goto l1696;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -21461,7 +20973,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1735:	/* end case */;
+		l1696:	/* end case */;
 			BREAK;
 		CASE(366) /*110*/
 			/* bytecodePrimBitAnd */
@@ -21480,7 +20992,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1739;
+					goto l1700;
 				}
 				/* begin initPrimCall */
 				GIV(primFailCode) = 0;
@@ -21501,7 +21013,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1739;
+					goto l1700;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -21509,7 +21021,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1739:	/* end case */;
+		l1700:	/* end case */;
 			BREAK;
 		CASE(367) /*111*/
 			/* bytecodePrimBitOr */
@@ -21528,7 +21040,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1744;
+					goto l1705;
 				}
 				/* begin initPrimCall */
 				GIV(primFailCode) = 0;
@@ -21549,7 +21061,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1744;
+					goto l1705;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -21557,7 +21069,7 @@ interpret(void)
 				GIV(argumentCount) = 1;
 				goto normalSend;
 			}
-		l1744:	/* end case */;
+		l1705:	/* end case */;
 			BREAK;
 		CASE(370) /*114*/
 			/* bytecodePrimSize */
@@ -21589,16 +21101,16 @@ interpret(void)
 				classOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(ClassByteString) << (shiftForWord())))));
 				if (rcvr & (tagMask())) {
 					isString = 0;
-					goto l1762;
+					goto l1723;
 				}
 				/* begin isClassOfNonImm:equalTo:compactClassIndex: */
 				assert(!(isImmediate(rcvr)));
 				/* begin classIndexOf: */
 				ccIndex = (longAt(rcvr)) & (classIndexMask());
 				isString = ClassByteStringCompactIndex == ccIndex;
-				goto l1762;
+				goto l1723;
 
-			l1762:	/* end is:instanceOf:compactClassIndex: */;
+			l1723:	/* end is:instanceOf:compactClassIndex: */;
 				if (isString) {
 					/* begin lengthOf:format: */
 					fmt = (((usqInt) (longAt(rcvr))) >> (formatShift())) & (formatMask());
@@ -21609,48 +21121,48 @@ interpret(void)
 						: numSlots1);
 					if (fmt <= 5) {
 						sz = numSlots;
-						goto l1764;
+						goto l1725;
 					}
 					if (fmt >= (firstByteFormat())) {
 
 						/* bytes, including CompiledMethod */
 						sz = (numSlots << (shiftForWord())) - (fmt & 7);
-						goto l1764;
+						goto l1725;
 					}
 					if (fmt >= (firstShortFormat())) {
 						sz = (numSlots << ((shiftForWord()) - 1)) - (fmt & 3);
-						goto l1764;
+						goto l1725;
 					}
 					if (fmt >= (firstLongFormat())) {
 						sz = (numSlots << ((shiftForWord()) - 2)) - (fmt & 1);
-						goto l1764;
+						goto l1725;
 					}
 					if (fmt == (sixtyFourBitIndexableFormat())) {
 						sz = numSlots;
-						goto l1764;
+						goto l1725;
 					}
 					sz = 0;
-				l1764:	/* end lengthOf:format: */;
+				l1725:	/* end lengthOf:format: */;
 					longAtPointerput(localSP, (((usqInt)sz << 3) | 1));
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1753;
+					goto l1714;
 				}
 				/* begin is:instanceOf:compactClassIndex: */
 				classOop1 = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(ClassArray) << (shiftForWord())))));
 				if (rcvr & (tagMask())) {
 					isArray = 0;
-					goto l1765;
+					goto l1726;
 				}
 				/* begin isClassOfNonImm:equalTo:compactClassIndex: */
 				assert(!(isImmediate(rcvr)));
 				/* begin classIndexOf: */
 				ccIndex1 = (longAt(rcvr)) & (classIndexMask());
 				isArray = ClassArrayCompactIndex == ccIndex1;
-				goto l1765;
+				goto l1726;
 
-			l1765:	/* end is:instanceOf:compactClassIndex: */;
+			l1726:	/* end is:instanceOf:compactClassIndex: */;
 				if (isArray) {
 					/* begin lengthOf:format: */
 					fmt1 = (((usqInt) (longAt(rcvr))) >> (formatShift())) & (formatMask());
@@ -21661,33 +21173,33 @@ interpret(void)
 						: numSlots11);
 					if (fmt1 <= 5) {
 						sz = numSlots2;
-						goto l1763;
+						goto l1724;
 					}
 					if (fmt1 >= (firstByteFormat())) {
 
 						/* bytes, including CompiledMethod */
 						sz = (numSlots2 << (shiftForWord())) - (fmt1 & 7);
-						goto l1763;
+						goto l1724;
 					}
 					if (fmt1 >= (firstShortFormat())) {
 						sz = (numSlots2 << ((shiftForWord()) - 1)) - (fmt1 & 3);
-						goto l1763;
+						goto l1724;
 					}
 					if (fmt1 >= (firstLongFormat())) {
 						sz = (numSlots2 << ((shiftForWord()) - 2)) - (fmt1 & 1);
-						goto l1763;
+						goto l1724;
 					}
 					if (fmt1 == (sixtyFourBitIndexableFormat())) {
 						sz = numSlots2;
-						goto l1763;
+						goto l1724;
 					}
 					sz = 0;
-				l1763:	/* end lengthOf:format: */;
+				l1724:	/* end lengthOf:format: */;
 					longAtPointerput(localSP, (((usqInt)sz << 3) | 1));
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1753;
+					goto l1714;
 				}
 				/* begin fetchPointer:ofObject: */
 				objOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SpecialSelectors) << (shiftForWord())))));
@@ -21695,7 +21207,7 @@ interpret(void)
 				GIV(argumentCount) = 0;
 				goto normalSend;
 			}
-		l1753:	/* end case */;
+		l1714:	/* end case */;
 			BREAK;
 		CASE(374) /*118*/
 			/* bytecodePrimIdenticalSistaV1 */
@@ -21765,16 +21277,16 @@ interpret(void)
 				classOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(ClassBlockClosure) << (shiftForWord())))));
 				if (rcvr & (tagMask())) {
 					isBlock = 0;
-					goto l1776;
+					goto l1737;
 				}
 				/* begin isClassOfNonImm:equalTo:compactClassIndex: */
 				assert(!(isImmediate(rcvr)));
 				/* begin classIndexOf: */
 				ccIndex = (longAt(rcvr)) & (classIndexMask());
 				isBlock = ClassBlockClosureCompactIndex == ccIndex;
-				goto l1776;
+				goto l1737;
 
-			l1776:	/* end is:instanceOf:compactClassIndex: */;
+			l1737:	/* end is:instanceOf:compactClassIndex: */;
 				if (isBlock) {
 					/* begin externalizeIPandSP */
 					assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
@@ -21795,7 +21307,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1774;
+						goto l1735;
 					}
 					GIV(primFailCode) = 0;
 				}
@@ -21804,7 +21316,7 @@ interpret(void)
 				GIV(messageSelector) = longAt((objOop + BaseHeaderSize) + (((sqInt)((usqInt)((25 * 2)) << (shiftForWord())))));
 				goto normalSend;
 			}
-		l1774:	/* end case */;
+		l1735:	/* end case */;
 			BREAK;
 		CASE(378) /*122*/
 			/* bytecodePrimValueWithArg */
@@ -21822,16 +21334,16 @@ interpret(void)
 				classOop = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(ClassBlockClosure) << (shiftForWord())))));
 				if (rcvr & (tagMask())) {
 					isBlock = 0;
-					goto l1782;
+					goto l1743;
 				}
 				/* begin isClassOfNonImm:equalTo:compactClassIndex: */
 				assert(!(isImmediate(rcvr)));
 				/* begin classIndexOf: */
 				ccIndex = (longAt(rcvr)) & (classIndexMask());
 				isBlock = ClassBlockClosureCompactIndex == ccIndex;
-				goto l1782;
+				goto l1743;
 
-			l1782:	/* end is:instanceOf:compactClassIndex: */;
+			l1743:	/* end is:instanceOf:compactClassIndex: */;
 				if (isBlock) {
 					/* begin externalizeIPandSP */
 					assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
@@ -21852,7 +21364,7 @@ interpret(void)
 						/* begin fetchNextBytecode */
 						currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-						goto l1780;
+						goto l1741;
 					}
 					GIV(primFailCode) = 0;
 				}
@@ -21861,7 +21373,7 @@ interpret(void)
 				GIV(messageSelector) = longAt((objOop + BaseHeaderSize) + (((sqInt)((usqInt)((26 * 2)) << (shiftForWord())))));
 				goto normalSend;
 			}
-		l1780:	/* end case */;
+		l1741:	/* end case */;
 			BREAK;
 		CASE(382) /*126*/
 			/* bytecodePrimPointX */
@@ -21898,7 +21410,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1792;
+					goto l1753;
 				}
 				GIV(primFailCode) = 0;
 				/* begin fetchPointer:ofObject: */
@@ -21907,7 +21419,7 @@ interpret(void)
 				GIV(argumentCount) = 0;
 				goto normalSend;
 			}
-		l1792:	/* end case */;
+		l1753:	/* end case */;
 			BREAK;
 		CASE(383) /*127*/
 			/* bytecodePrimPointY */
@@ -21944,7 +21456,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l1800;
+					goto l1761;
 				}
 				GIV(primFailCode) = 0;
 				/* begin fetchPointer:ofObject: */
@@ -21953,7 +21465,7 @@ interpret(void)
 				GIV(argumentCount) = 0;
 				goto normalSend;
 			}
-		l1800:	/* end case */;
+		l1761:	/* end case */;
 			BREAK;
 		CASE(440) /*184*/
 		CASE(441) /*185*/
@@ -21985,7 +21497,7 @@ interpret(void)
 						GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorMustBeBoolean) << (shiftForWord())))));
 						GIV(argumentCount) = 0;
 						goto normalSend;
-						goto l1816;
+						goto l1777;
 					}
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
@@ -21993,7 +21505,7 @@ interpret(void)
 				}
 				/* begin internalPop: */
 				localSP += 1 * BytesPerOop;
-			l1816:	/* end jumplfTrueBy: */;
+			l1777:	/* end jumplfTrueBy: */;
 			}
 			BREAK;
 		CASE(448) /*192*/
@@ -22026,7 +21538,7 @@ interpret(void)
 						GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorMustBeBoolean) << (shiftForWord())))));
 						GIV(argumentCount) = 0;
 						goto normalSend;
-						goto l1820;
+						goto l1781;
 					}
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
@@ -22034,7 +21546,7 @@ interpret(void)
 				}
 				/* begin internalPop: */
 				localSP += 1 * BytesPerOop;
-			l1820:	/* end jumplfFalseBy: */;
+			l1781:	/* end jumplfFalseBy: */;
 			}
 			BREAK;
 		CASE(456) /*200*/
@@ -22074,7 +21586,7 @@ interpret(void)
 					GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorAttemptToAssign) << (shiftForWord())))));
 					GIV(argumentCount) = 2;
 					goto normalSend;
-					goto l1822;
+					goto l1783;
 				}
 
 #        endif /* IMMUTABILITY */
@@ -22094,7 +21606,7 @@ interpret(void)
 					}
 				}
 				longAtput((rcvr + BaseHeaderSize) + (((sqInt)((usqInt)(instVarIndex) << (shiftForWord())))), top);
-			l1822:	/* end storePointerImmutabilityCheck:ofObject:withValue: */;
+			l1783:	/* end storePointerImmutabilityCheck:ofObject:withValue: */;
 				/* begin fetchNextBytecode */
 				currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
@@ -22123,19 +21635,19 @@ interpret(void)
 						: (byteAt((theFP + FoxIFrameFlags) + 2)) != 0)) {
 						assert(isContext(frameContext(theFP)));
 						ourContext = longAt(theFP + FoxThisContext);
-						goto l3289;
+						goto l3211;
 					}
 					ourContext = marryFrameSP(theFP, theSP);
-				l3289:	/* end ensureFrameIsMarried:SP: */;
+				l3211:	/* end ensureFrameIsMarried:SP: */;
 					/* begin internalPush: */
 					longAtPointerput((localSP -= BytesPerOop), ourContext);
 					GIV(argumentCount) = 0;
 					goto normalSend;
 				}
-				goto l1830;
+				goto l1791;
 
 			}
-		l1830:	/* end case */;
+		l1791:	/* end case */;
 			BREAK;
 		CASE(480) /*224*/
 			/* extABytecode */
@@ -22224,11 +21736,11 @@ interpret(void)
 							value = result;
 						}
 						object = value;
-						goto l1833;
+						goto l1794;
 					}
 					if (isWidowedContext(obj)) {
 						object = longAt((obj + BaseHeaderSize) + (((sqInt)((usqInt)(index) << (shiftForWord())))));
-						goto l1833;
+						goto l1794;
 					}
 					/* begin frameOfMarriedContext: */
 					senderOop = longAt((obj + BaseHeaderSize) + (((sqInt)((usqInt)(SenderIndex) << (shiftForWord())))));
@@ -22251,7 +21763,7 @@ interpret(void)
 							assert((callerContextOrNil == (nilObject()))
 							 || (isContext(callerContextOrNil)));
 							object = callerContextOrNil;
-							goto l1833;
+							goto l1794;
 						}
 						/* begin ensureFrameIsMarried:SP: */
 						if (((((usqInt)(longAt(callerFP + FoxMethod)))) < (startOfMemory())
@@ -22259,24 +21771,24 @@ interpret(void)
 							: (byteAt((callerFP + FoxIFrameFlags) + 2)) != 0)) {
 							assert(isContext(frameContext(callerFP)));
 							object = longAt(callerFP + FoxThisContext);
-							goto l1833;
+							goto l1794;
 						}
 						object = marryFrameSP(callerFP, (assert(!(isBaseFrame(spouseFP))),
 						(spouseFP + (frameStackedReceiverOffset(spouseFP))) + BytesPerWord));
-						goto l1833;
+						goto l1794;
 					}
 					if (index == StackPointerIndex) {
 						assert((ReceiverIndex + (stackPointerIndexForFrame(spouseFP))) < (lengthOf(obj)));
 						object = (((usqInt)(stackPointerIndexForFrame(spouseFP)) << 3) | 1);
-						goto l1833;
+						goto l1794;
 					}
 					if (index == InstructionPointerIndex) {
 						object = instructionPointerForFramecurrentFPcurrentIP(spouseFP, localFP, oopForPointer(localIP));
-						goto l1833;
+						goto l1794;
 					}
 					error("bad index");
 					object = 0;
-				l1833:	/* end instVar:ofContext: */;
+				l1794:	/* end instVar:ofContext: */;
 					longAtPointerput((localSP -= BytesPerOop), object);
 				}
 				else {
@@ -22403,13 +21915,13 @@ interpret(void)
 					if ((GIV(freeStart) + numBytes) > (((eden()).limit))) {
 						error("no room in eden for allocateSmallNewSpaceSlots:format:classIndex:");
 						array = 0;
-						goto l1846;
+						goto l1807;
 					}
 				}
 				long64Atput(newObj, (((((usqLong) size)) << (numSlotsFullShift())) + (2U << (formatShift()))) + ClassArrayCompactIndex);
 				GIV(freeStart) += numBytes;
 				array = newObj;
-			l1846:	/* end eeInstantiateSmallClassIndex:format:numSlots: */;
+			l1807:	/* end eeInstantiateSmallClassIndex:format:numSlots: */;
 
 				if (popValues) {
 					for (i = 0; i < size; i += 1) {
@@ -22508,7 +22020,7 @@ interpret(void)
 					GIV(argumentCount) = (byte & 7) + (((sqInt)((usqInt)((extB - 64)) << 3)));
 					extB = 0;
 					/* goto directedSuperclassSend */
-					goto l1855;
+					goto l1816;
 				}
 
 				GIV(argumentCount) = (byte & 7) + (((sqInt)((usqInt)(extB) << 3)));
@@ -22516,7 +22028,7 @@ interpret(void)
 				numExtB = 0;
 				goto superclassSend;
 			}
-		l1855:	/* end case */;
+		l1816:	/* end case */;
 			
 		directedSuperclassSend:
 			/* directedSuperclassSend */
@@ -22607,7 +22119,7 @@ interpret(void)
 				localIP += offset;
 				/* begin ifBackwardsCheckForEvents: */
 				if (offset >= 0) {
-					goto l1858;
+					goto l1819;
 				}
 				if (localSP < GIV(stackLimit)) {
 					/* begin externalizeIPandSP */
@@ -22626,7 +22138,7 @@ interpret(void)
 					nativeSP = 0;
 
 					if (switched) {
-						goto l1858;
+						goto l1819;
 					}
 				}
 				backwardJumpCountByte = byteAt(localFP + ((VMBIGENDIAN
@@ -22655,7 +22167,7 @@ interpret(void)
 				byteAtput(localFP + ((VMBIGENDIAN
 	? (FoxIFrameFlags + BytesPerWord) - 1
 	: FoxIFrameFlags)), backwardJumpCountByte);
-			l1858:	/* end ifBackwardsCheckForEvents: */;
+			l1819:	/* end ifBackwardsCheckForEvents: */;
 				/* begin fetchNextBytecode */
 				currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
@@ -22686,7 +22198,7 @@ interpret(void)
 						GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorMustBeBoolean) << (shiftForWord())))));
 						GIV(argumentCount) = 0;
 						goto normalSend;
-						goto l1861;
+						goto l1822;
 					}
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
@@ -22694,7 +22206,7 @@ interpret(void)
 				}
 				/* begin internalPop: */
 				localSP += 1 * BytesPerOop;
-			l1861:	/* end jumplfTrueBy: */;
+			l1822:	/* end jumplfTrueBy: */;
 			}
 			BREAK;
 		CASE(495) /*239*/
@@ -22722,7 +22234,7 @@ interpret(void)
 						GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorMustBeBoolean) << (shiftForWord())))));
 						GIV(argumentCount) = 0;
 						goto normalSend;
-						goto l1865;
+						goto l1826;
 					}
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
@@ -22730,7 +22242,7 @@ interpret(void)
 				}
 				/* begin internalPop: */
 				localSP += 1 * BytesPerOop;
-			l1865:	/* end jumplfFalseBy: */;
+			l1826:	/* end jumplfFalseBy: */;
 			}
 			BREAK;
 		CASE(496) /*240*/
@@ -22789,7 +22301,7 @@ interpret(void)
 						if (variableIndex == StackPointerIndex) {
 							ensureContextIsExecutionSafeAfterAssignToStackPointer(obj);
 						}
-						goto l1873;
+						goto l1834;
 					}
 					/* begin frameOfMarriedContext: */
 					senderOop = longAt((obj + BaseHeaderSize) + (((sqInt)((usqInt)(SenderIndex) << (shiftForWord())))));
@@ -22810,7 +22322,7 @@ interpret(void)
 						else {
 							markStackPageMostRecentlyUsed(GIV(stackPage));
 						}
-						goto l1873;
+						goto l1834;
 					}
 					/* begin externalizeIPandSP */
 					assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
@@ -22845,7 +22357,7 @@ interpret(void)
 
 					markStackPageMostRecentlyUsed(GIV(stackPage));
 					assertValidExecutionPointersimbarline(((usqInt)localIP), localFP, localSP, 1, __LINE__);
-				l1873:	/* end instVar:ofContext:put: */;
+				l1834:	/* end instVar:ofContext:put: */;
 				}
 				else {
 					/* begin storePointerImmutabilityCheck:ofObject:withValue: */
@@ -22863,7 +22375,7 @@ interpret(void)
 						GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorAttemptToAssign) << (shiftForWord())))));
 						GIV(argumentCount) = 2;
 						goto normalSend;
-						goto l1875;
+						goto l1836;
 					}
 
 #          endif /* IMMUTABILITY */
@@ -22883,7 +22395,7 @@ interpret(void)
 						}
 					}
 					longAtput((obj + BaseHeaderSize) + (((sqInt)((usqInt)(variableIndex) << (shiftForWord())))), value);
-				l1875:	/* end storePointerImmutabilityCheck:ofObject:withValue: */;
+				l1836:	/* end storePointerImmutabilityCheck:ofObject:withValue: */;
 				}
 				/* begin fetchNextBytecode */
 				currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
@@ -22941,7 +22453,7 @@ interpret(void)
 					GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorAttemptToAssign) << (shiftForWord())))));
 					GIV(argumentCount) = 2;
 					goto normalSend;
-					goto l1876;
+					goto l1837;
 				}
 
 #        endif /* IMMUTABILITY */
@@ -22961,7 +22473,7 @@ interpret(void)
 					}
 				}
 				longAtput((litVar + BaseHeaderSize) + (((sqInt)((usqInt)(ValueIndex) << (shiftForWord())))), value);
-			l1876:	/* end storeLiteralVariable:withValue: */;
+			l1837:	/* end storeLiteralVariable:withValue: */;
 				/* begin fetchNextBytecode */
 				currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
@@ -23045,7 +22557,7 @@ interpret(void)
 						if (variableIndex == StackPointerIndex) {
 							ensureContextIsExecutionSafeAfterAssignToStackPointer(obj);
 						}
-						goto l1891;
+						goto l1852;
 					}
 					/* begin frameOfMarriedContext: */
 					senderOop = longAt((obj + BaseHeaderSize) + (((sqInt)((usqInt)(SenderIndex) << (shiftForWord())))));
@@ -23066,7 +22578,7 @@ interpret(void)
 						else {
 							markStackPageMostRecentlyUsed(GIV(stackPage));
 						}
-						goto l1891;
+						goto l1852;
 					}
 					/* begin externalizeIPandSP */
 					assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
@@ -23101,7 +22613,7 @@ interpret(void)
 
 					markStackPageMostRecentlyUsed(GIV(stackPage));
 					assertValidExecutionPointersimbarline(((usqInt)localIP), localFP, localSP, 1, __LINE__);
-				l1891:	/* end instVar:ofContext:put: */;
+				l1852:	/* end instVar:ofContext:put: */;
 				}
 				else {
 					/* begin storePointerImmutabilityCheck:ofObject:withValue: */
@@ -23119,7 +22631,7 @@ interpret(void)
 						GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorAttemptToAssign) << (shiftForWord())))));
 						GIV(argumentCount) = 2;
 						goto normalSend;
-						goto l1893;
+						goto l1854;
 					}
 
 #          endif /* IMMUTABILITY */
@@ -23139,7 +22651,7 @@ interpret(void)
 						}
 					}
 					longAtput((obj + BaseHeaderSize) + (((sqInt)((usqInt)(variableIndex) << (shiftForWord())))), anObject);
-				l1893:	/* end storePointerImmutabilityCheck:ofObject:withValue: */;
+				l1854:	/* end storePointerImmutabilityCheck:ofObject:withValue: */;
 				}
 				/* begin fetchNextBytecode */
 				currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
@@ -23195,7 +22707,7 @@ interpret(void)
 					GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorAttemptToAssign) << (shiftForWord())))));
 					GIV(argumentCount) = 2;
 					goto normalSend;
-					goto l1894;
+					goto l1855;
 				}
 
 #        endif /* IMMUTABILITY */
@@ -23215,7 +22727,7 @@ interpret(void)
 					}
 				}
 				longAtput((litVar + BaseHeaderSize) + (((sqInt)((usqInt)(ValueIndex) << (shiftForWord())))), anObject);
-			l1894:	/* end storeLiteralVariable:withValue: */;
+			l1855:	/* end storeLiteralVariable:withValue: */;
 				/* begin fetchNextBytecode */
 				currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
@@ -23298,19 +22810,7 @@ interpret(void)
 				sqInt byteIndex1;
 				usqIntptr_t calloutStateSize;
 				usqIntptr_t calloutStateSize1;
-				usqIntptr_t calloutStateSize10;
-				usqIntptr_t calloutStateSize11;
-				usqIntptr_t calloutStateSize12;
-				usqIntptr_t calloutStateSize13;
-				usqIntptr_t calloutStateSize14;
 				usqIntptr_t calloutStateSize2;
-				usqIntptr_t calloutStateSize3;
-				usqIntptr_t calloutStateSize4;
-				usqIntptr_t calloutStateSize5;
-				usqIntptr_t calloutStateSize6;
-				usqIntptr_t calloutStateSize7;
-				usqIntptr_t calloutStateSize8;
-				usqIntptr_t calloutStateSize9;
 				char*check;
 				sqInt classObj;
 				sqInt classOop;
@@ -23355,8 +22855,9 @@ interpret(void)
 				sqLong first110;
 				sqLong first111;
 				sqLong first112;
-				sqInt first113;
-				sqLong first114;
+				sqLong first113;
+				sqInt first114;
+				sqLong first115;
 				float first12;
 				sqLong first121;
 				float first13;
@@ -23366,9 +22867,9 @@ interpret(void)
 				float first15;
 				sqLong first151;
 				double first16;
-				sqLong first161;
+				sqInt first161;
 				double first17;
-				sqInt first171;
+				sqLong first171;
 				double first18;
 				sqInt first181;
 				double first19;
@@ -23390,8 +22891,7 @@ interpret(void)
 				sqLong first3;
 				sqLong first31;
 				sqLong first32;
-				sqLong first33;
-				sqInt first34;
+				sqInt first33;
 				sqInt first4;
 				sqInt first41;
 				char*first42;
@@ -23426,20 +22926,8 @@ interpret(void)
 				sqInt frameNumArgs;
 				sqInt frameNumArgs1;
 				sqInt function;
-				sqInt function1;
-				sqInt function10;
-				sqInt function11;
-				sqInt function12;
-				sqInt function13;
-				sqInt function14;
-				char*function2;
-				char*function3;
-				char*function4;
-				char*function5;
-				char*function6;
-				char*function7;
-				char*function8;
-				sqInt function9;
+				char*function1;
+				sqInt function2;
 				sqInt hash;
 				sqInt hash1;
 				sqInt header;
@@ -23451,18 +22939,6 @@ interpret(void)
 				sqInt indexableSize1;
 				char*initialShadowCallStackPointer;
 				char*initialShadowCallStackPointer1;
-				char*initialShadowCallStackPointer10;
-				char*initialShadowCallStackPointer11;
-				char*initialShadowCallStackPointer12;
-				char*initialShadowCallStackPointer13;
-				char*initialShadowCallStackPointer2;
-				char*initialShadowCallStackPointer3;
-				char*initialShadowCallStackPointer4;
-				char*initialShadowCallStackPointer5;
-				char*initialShadowCallStackPointer6;
-				char*initialShadowCallStackPointer7;
-				char*initialShadowCallStackPointer8;
-				char*initialShadowCallStackPointer9;
 				sqInt int32Result;
 				sqLong int64Result;
 				sqInt int64Result1;
@@ -23596,124 +23072,115 @@ interpret(void)
 				sqInt rcvr;
 				sqInt registerID;
 				sqInt registerID1;
-				sqInt registerID11;
+				sqInt registerID10;
 				sqInt registerID2;
-				sqInt registerID21;
 				sqInt registerID3;
-				sqInt registerID31;
 				sqInt registerID4;
-				sqInt registerID41;
 				sqInt registerID5;
 				sqInt registerID6;
+				sqInt registerID7;
+				sqInt registerID8;
+				sqInt registerID9;
 				sqInt result;
 				sqInt result1;
 				float result10;
-				sqInt result101;
-				char*result102;
+				sqLong result101;
+				sqInt result102;
 				float result11;
 				sqLong result110;
-				sqInt result111;
-				double result112;
+				sqLong result111;
+				sqLong result112;
 				sqLong result113;
-				sqInt result114;
+				sqLong result114;
 				double result115;
 				sqLong result116;
 				float result12;
 				sqLong result121;
-				sqLong result122;
+				char*result122;
 				float result13;
-				sqLong result131;
-				sqInt result132;
+				sqInt result131;
+				char*result132;
 				float result14;
 				sqLong result141;
-				sqLong result142;
+				char*result142;
 				float result15;
 				sqInt result151;
 				char*result152;
 				sqInt result16;
-				sqLong result161;
+				sqInt result161;
 				sqInt result162;
 				sqLong result17;
 				sqInt result171;
 				sqLong result172;
 				sqInt result18;
 				sqInt result181;
-				float result182;
+				sqInt result182;
 				sqLong result19;
 				sqInt result191;
-				double result192;
+				sqLong result192;
 				usqInt result2;
 				double result20;
 				sqInt result201;
-				float result202;
+				char*result202;
 				double result21;
-				sqInt result210;
-				sqInt result211;
+				float result210;
+				sqLong result211;
 				sqInt result212;
 				sqInt result213;
-				double result214;
-				char*result215;
-				sqInt result216;
+				char*result214;
+				sqInt result215;
 				double result22;
-				sqInt result221;
-				sqInt result222;
+				float result221;
+				sqLong result222;
 				double result23;
-				sqLong result231;
-				sqLong result232;
+				double result231;
+				float result232;
 				double result24;
 				float result241;
-				char*result242;
+				double result242;
 				double result25;
 				double result251;
-				char*result252;
 				sqInt result26;
-				float result261;
 				sqLong result27;
-				double result271;
-				char*result28;
-				sqInt result281;
-				char*result29;
-				sqLong result291;
+				sqInt result28;
+				sqLong result29;
 				sqLong result3;
 				sqInt result30;
 				sqLong result31;
-				float result32;
-				sqLong result33;
+				double result310;
+				sqInt result32;
+				sqInt result33;
 				sqLong result34;
-				sqInt result35;
-				double result36;
-				float result37;
-				sqInt result38;
+				sqLong result35;
+				sqInt result36;
+				double result37;
+				sqLong result38;
+				sqInt result39;
 				sqInt result4;
+				float result40;
 				sqInt result41;
-				float result42;
-				sqInt result43;
-				double result44;
+				sqInt result42;
+				double result43;
+				sqInt result44;
 				sqLong result5;
-				sqInt result51;
-				double result52;
-				sqLong result53;
-				char*result54;
+				sqLong result51;
+				sqLong result52;
+				char*result53;
 				sqInt result6;
-				sqLong result61;
+				sqInt result61;
 				sqInt result62;
 				sqInt result63;
 				sqLong result64;
-				sqInt result641;
 				sqLong result7;
 				sqLong result71;
 				sqLong result72;
 				sqLong result73;
-				sqLong result74;
 				char*result8;
-				sqLong result81;
-				sqInt result82;
-				char*result83;
+				sqInt result81;
+				float result82;
 				char*result9;
-				sqLong result91;
-				char*result92;
-				char*resultPointer;
-				char*resultPointer1;
+				sqInt result91;
+				double result92;
 				sqInt scale;
 				sqLong scale1;
 				sqInt second;
@@ -23724,9 +23191,10 @@ interpret(void)
 				float second11;
 				sqLong second110;
 				sqLong second111;
-				sqInt second112;
-				sqLong second113;
+				sqLong second112;
+				sqInt second113;
 				sqLong second114;
+				sqLong second115;
 				float second12;
 				sqLong second121;
 				float second13;
@@ -23760,8 +23228,7 @@ interpret(void)
 				sqLong second3;
 				sqLong second31;
 				sqLong second32;
-				sqLong second33;
-				sqInt second34;
+				sqInt second33;
 				sqInt second4;
 				sqInt second41;
 				char*second42;
@@ -23807,8 +23274,6 @@ interpret(void)
 				sqInt spaceSize;
 				char*structurePointer;
 				sqInt structureSize;
-				sqInt structureSize1;
-				sqInt structureSize2;
 				sqInt tagBits;
 				sqInt tagBits1;
 				sqInt top;
@@ -23928,6 +23393,7 @@ interpret(void)
 				sqInt topInt32211;
 				sqInt topInt32212;
 				sqInt topInt32213;
+				sqInt topInt32214;
 				sqInt topInt3222;
 				sqInt topInt3223;
 				sqInt topInt3224;
@@ -23945,17 +23411,16 @@ interpret(void)
 				sqInt topInt3235;
 				sqInt topInt3236;
 				sqInt topInt3237;
+				sqInt topInt3238;
 				sqInt topInt324;
 				sqInt topInt3241;
 				sqInt topInt3242;
 				sqInt topInt3243;
 				sqInt topInt3244;
-				sqInt topInt3245;
 				sqInt topInt325;
 				sqInt topInt3251;
 				sqInt topInt3252;
 				sqInt topInt3253;
-				sqInt topInt3254;
 				sqInt topInt326;
 				sqInt topInt3261;
 				sqInt topInt3262;
@@ -24011,6 +23476,7 @@ interpret(void)
 				sqLong topInt64210;
 				sqLong topInt64211;
 				sqLong topInt64212;
+				sqLong topInt64213;
 				sqLong topInt6422;
 				sqLong topInt6423;
 				sqLong topInt6424;
@@ -24030,7 +23496,6 @@ interpret(void)
 				sqLong topInt6441;
 				sqLong topInt6442;
 				sqLong topInt6443;
-				sqLong topInt6444;
 				sqLong topInt645;
 				sqLong topInt6451;
 				sqLong topInt6452;
@@ -24058,7 +23523,6 @@ interpret(void)
 				char*topPointer112;
 				char*topPointer113;
 				char*topPointer114;
-				char*topPointer115;
 				char*topPointer12;
 				char*topPointer13;
 				char*topPointer14;
@@ -24070,9 +23534,6 @@ interpret(void)
 				char*topPointer2;
 				char*topPointer20;
 				char*topPointer21;
-				char*topPointer210;
-				char*topPointer211;
-				char*topPointer212;
 				char*topPointer22;
 				char*topPointer23;
 				char*topPointer24;
@@ -24082,13 +23543,9 @@ interpret(void)
 				char*topPointer28;
 				char*topPointer29;
 				char*topPointer3;
-				char*topPointer30;
 				char*topPointer31;
 				char*topPointer32;
 				char*topPointer33;
-				char*topPointer34;
-				char*topPointer35;
-				char*topPointer36;
 				char*topPointer4;
 				char*topPointer41;
 				char*topPointer42;
@@ -24141,15 +23598,15 @@ interpret(void)
 				sqInt value;
 				sqInt value1;
 				sqLong value10;
-				sqInt value101;
+				sqLong value101;
 				sqInt value102;
 				sqInt value103;
 				sqInt value104;
 				sqLong value11;
-				sqInt value110;
+				sqLong value110;
 				sqLong value111;
-				double value1111;
-				sqLong value112;
+				sqInt value1111;
+				sqInt value112;
 				sqLong value113;
 				sqInt value114;
 				sqInt value115;
@@ -24157,17 +23614,17 @@ interpret(void)
 				sqInt value117;
 				sqLong value118;
 				sqInt value12;
-				sqInt value121;
+				float value121;
 				sqInt value122;
 				sqInt value123;
 				sqInt value124;
 				float value13;
-				sqInt value131;
+				double value131;
 				sqInt value132;
 				sqInt value133;
 				sqInt value134;
 				double value14;
-				sqLong value141;
+				sqInt value141;
 				float value142;
 				sqInt value143;
 				sqInt value144;
@@ -24177,32 +23634,35 @@ interpret(void)
 				sqLong value153;
 				float value154;
 				sqInt value16;
-				float value161;
+				sqInt value161;
 				sqInt value162;
 				sqLong value163;
 				sqInt value164;
 				sqLong value17;
-				double value171;
+				sqInt value171;
 				sqLong value172;
 				sqLong value173;
 				float value174;
 				sqInt value18;
 				sqInt value181;
-				sqInt value182;
-				float value183;
+				float value182;
+				sqInt value183;
+				float value184;
 				sqInt value19;
-				sqInt value191;
-				sqLong value192;
-				float value193;
+				sqLong value191;
+				double value192;
+				sqLong value193;
+				float value194;
 				sqInt value2;
 				float value20;
-				sqInt value201;
+				sqLong value201;
 				sqInt value202;
+				sqInt value203;
 				sqLong value21;
 				sqLong value210;
-				sqInt value211;
+				sqLong value211;
 				sqLong value212;
-				sqInt value213;
+				sqLong value213;
 				sqInt value214;
 				sqInt value215;
 				sqInt value216;
@@ -24212,13 +23672,13 @@ interpret(void)
 				sqLong value222;
 				sqInt value223;
 				sqInt value23;
-				sqLong value231;
+				sqInt value231;
 				sqInt value232;
 				sqInt value24;
-				sqLong value241;
+				sqInt value241;
 				sqInt value242;
 				sqInt value25;
-				sqLong value251;
+				sqInt value251;
 				sqInt value252;
 				sqInt value26;
 				sqInt value261;
@@ -24236,17 +23696,16 @@ interpret(void)
 				sqInt value30;
 				sqInt value301;
 				sqInt value31;
-				sqLong value310;
+				sqInt value310;
 				sqInt value311;
 				sqInt value312;
-				sqInt value313;
-				sqLong value314;
-				sqInt value315;
+				sqLong value313;
+				sqInt value314;
 				sqInt value32;
-				sqInt value321;
+				sqLong value321;
 				sqLong value322;
 				sqInt value33;
-				sqInt value331;
+				sqLong value331;
 				sqInt value34;
 				sqInt value341;
 				sqInt value35;
@@ -24254,39 +23713,37 @@ interpret(void)
 				sqLong value36;
 				sqLong value361;
 				sqInt value37;
-				sqLong value371;
+				sqInt value371;
 				sqInt value38;
 				sqInt value381;
 				sqInt value39;
 				sqInt value391;
 				sqInt value4;
 				sqLong value40;
-				float value401;
 				sqInt value41;
-				sqLong value411;
+				sqInt value411;
 				sqInt value412;
-				sqInt value42;
-				float value43;
+				float value42;
+				sqInt value43;
 				sqInt value44;
 				sqInt value45;
 				sqInt value46;
 				sqInt value47;
-				sqInt value48;
 				sqInt value5;
 				sqInt value51;
-				sqInt value511;
+				sqLong value511;
 				double value52;
 				sqInt value53;
 				sqInt value54;
 				sqLong value6;
 				sqInt value61;
-				sqLong value611;
+				sqInt value611;
 				sqInt value62;
 				sqInt value63;
 				float value64;
 				sqInt value7;
 				sqInt value71;
-				sqInt value711;
+				sqLong value711;
 				sqLong value72;
 				sqInt value73;
 				double value74;
@@ -24296,7 +23753,7 @@ interpret(void)
 				sqInt value83;
 				sqInt value84;
 				sqInt value9;
-				sqLong value91;
+				sqInt value91;
 				sqLong value92;
 				sqInt value93;
 				sqLong value94;
@@ -24322,7 +23779,6 @@ interpret(void)
 				char *valueOopPointer1114;
 				char *valueOopPointer1115;
 				char *valueOopPointer1116;
-				char *valueOopPointer1117;
 				char *valueOopPointer112;
 				char *valueOopPointer1121;
 				char *valueOopPointer1122;
@@ -24346,7 +23802,6 @@ interpret(void)
 				char *valueOopPointer117;
 				char *valueOopPointer1171;
 				char *valueOopPointer1172;
-				char *valueOopPointer1173;
 				char *valueOopPointer118;
 				char *valueOopPointer1181;
 				char *valueOopPointer119;
@@ -24385,9 +23840,11 @@ interpret(void)
 				char *valueOopPointer133;
 				char *valueOopPointer1331;
 				char *valueOopPointer134;
+				char *valueOopPointer1341;
 				char *valueOopPointer135;
 				char *valueOopPointer136;
 				char *valueOopPointer137;
+				char *valueOopPointer138;
 				char *valueOopPointer14;
 				char *valueOopPointer141;
 				char *valueOopPointer142;
@@ -24427,7 +23884,6 @@ interpret(void)
 				char *valueOopPointer214;
 				char *valueOopPointer215;
 				char *valueOopPointer216;
-				char *valueOopPointer217;
 				char *valueOopPointer22;
 				char *valueOopPointer221;
 				char *valueOopPointer222;
@@ -24473,7 +23929,6 @@ interpret(void)
 				char *valueOopPointer314;
 				char *valueOopPointer315;
 				char *valueOopPointer316;
-				char *valueOopPointer317;
 				char *valueOopPointer32;
 				char *valueOopPointer321;
 				char *valueOopPointer322;
@@ -24517,7 +23972,6 @@ interpret(void)
 				char *valueOopPointer413;
 				char *valueOopPointer414;
 				char *valueOopPointer415;
-				char *valueOopPointer416;
 				char *valueOopPointer42;
 				char *valueOopPointer421;
 				char*valueOopPointer422;
@@ -24526,30 +23980,25 @@ interpret(void)
 				char *valueOopPointer432;
 				char *valueOopPointer44;
 				char *valueOopPointer441;
-				char *valueOopPointer442;
 				char *valueOopPointer45;
 				char *valueOopPointer451;
-				char *valueOopPointer452;
 				char *valueOopPointer46;
 				char *valueOopPointer461;
-				char *valueOopPointer462;
 				char *valueOopPointer47;
 				char *valueOopPointer471;
-				char *valueOopPointer472;
 				char *valueOopPointer48;
 				char *valueOopPointer481;
-				char *valueOopPointer482;
 				char *valueOopPointer49;
 				char *valueOopPointer491;
-				char *valueOopPointer492;
 				char *valueOopPointer5;
 				char *valueOopPointer50;
 				char *valueOopPointer501;
-				char *valueOopPointer502;
 				char *valueOopPointer51;
 				char *valueOopPointer510;
 				char *valueOopPointer511;
 				char *valueOopPointer512;
+				char *valueOopPointer513;
+				char *valueOopPointer514;
 				char *valueOopPointer52;
 				char *valueOopPointer521;
 				char *valueOopPointer53;
@@ -24568,6 +24017,7 @@ interpret(void)
 				char *valueOopPointer591;
 				char *valueOopPointer6;
 				char *valueOopPointer60;
+				char *valueOopPointer601;
 				char *valueOopPointer61;
 				char *valueOopPointer611;
 				char *valueOopPointer62;
@@ -24575,28 +24025,27 @@ interpret(void)
 				char *valueOopPointer63;
 				char *valueOopPointer631;
 				char *valueOopPointer64;
+				char *valueOopPointer641;
 				char *valueOopPointer65;
 				char *valueOopPointer66;
 				char *valueOopPointer67;
 				char *valueOopPointer68;
+				char *valueOopPointer69;
 				char *valueOopPointer7;
 				char *valueOopPointer71;
 				char *valueOopPointer72;
 				char *valueOopPointer73;
 				char *valueOopPointer74;
-				char *valueOopPointer75;
 				char *valueOopPointer8;
 				char *valueOopPointer81;
 				char *valueOopPointer82;
 				char *valueOopPointer83;
 				char *valueOopPointer84;
-				char *valueOopPointer85;
 				char *valueOopPointer9;
 				char *valueOopPointer91;
 				char *valueOopPointer92;
 				char *valueOopPointer93;
 				char *valueOopPointer94;
-				char *valueOopPointer95;
 				sqInt valuePointer;
 
 				VM_LABEL(callPrimitiveBytecode1);
@@ -24623,11 +24072,11 @@ interpret(void)
 					header & AlternateHeaderHasPrimFlag))
 					 && (((((usqInt)localIP)) == ((GIV(method) + ((LiteralStart + ((assert((((header) & 7) == 1)),
 ((header >> 3)) & AlternateHeaderNumLiteralsMask))) * BytesPerOop)) + BaseHeaderSize)) + (3))) {
-						goto l1903;
+						goto l1864;
 					}
 					localIP -= 3;
 					goto respondToUnknownBytecode;
-					goto l1903;
+					goto l1864;
 				}
 				prim = (((sqInt)((usqInt)((byte2 - 128)) << 8))) + byte1;
 				primSet = (((usqInt) prim) >> 13) & 3;
@@ -24637,7 +24086,7 @@ interpret(void)
 						/* begin nullaryInlinePrimitive: */
 						localIP -= 3;
 						goto respondToUnknownBytecode;
-						goto l1903;
+						goto l1864;
 					}
 					if (prim < 2000) {
 						/* begin unaryInlinePrimitive: */
@@ -24683,25 +24132,25 @@ interpret(void)
 
 								/* bytes (the common case), including CompiledMethod */
 								result2 = numBytes - (fmt & 7);
-								goto l2830;
+								goto l2762;
 							}
 							if (fmt <= (sixtyFourBitIndexableFormat())) {
 								result2 = numBytes;
-								goto l2830;
+								goto l2762;
 							}
 							if (fmt >= (firstShortFormat())) {
 								result2 = numBytes - (((sqInt)((usqInt)((fmt & 3)) << 1)));
-								goto l2830;
+								goto l2762;
 							}
 							result2 = numBytes - (((sqInt)((usqInt)((fmt & 1)) << 2)));
-						l2830:	/* end numBytesOf: */;
+						l2762:	/* end numBytesOf: */;
 							/* begin internalStackTopPut: */
 							longAtPointerput(localSP, ((result2 << 3) | 1));
 							break;
 						case 4:
 							/* begin num16BitUnitsOf: */
 							objOop22 = longAtPointer(localSP);
-							result2 = ((sqInt) (((usqInt) (numBytesOf(objOop22))) >> 1));
+							result2 = ((usqInt) (numBytesOf(objOop22))) >> 1;
 							/* begin internalStackTopPut: */
 							longAtPointerput(localSP, ((result2 << 3) | 1));
 							break;
@@ -24715,7 +24164,7 @@ interpret(void)
 						case 6:
 							/* begin num64BitUnitsOf: */
 							objOop41 = longAtPointer(localSP);
-							result2 = ((sqInt) (((usqInt) (numBytesOf(objOop41))) >> 3));
+							result2 = ((usqInt) (numBytesOf(objOop41))) >> 3;
 							/* begin internalStackTopPut: */
 							longAtPointerput(localSP, ((result2 << 3) | 1));
 							break;
@@ -24751,13 +24200,13 @@ interpret(void)
 								}
 								if ((GIV(freeStart) + numBytes1) > (((eden()).limit))) {
 									error("no room in eden for allocateSmallNewSpaceSlots:format:classIndex:");
-									goto l2206;
+									goto l2156;
 								}
 							}
 							long64Atput(newObj, (((((usqLong) numSlots)) << (numSlotsFullShift())) + (((sqInt)((usqInt)(objFormat) << (formatShift()))))) + knownClassIndex);
 							GIV(freeStart) += numBytes1;
 							result2 = newObj;
-						l2206:	/* end eeInstantiateSmallClassIndex:format:numSlots: */;
+						l2156:	/* end eeInstantiateSmallClassIndex:format:numSlots: */;
 
 							if ((extB & 1) == 0) {
 								for (i = 0; i < numSlots; i += 1) {
@@ -24804,7 +24253,7 @@ interpret(void)
 							goto respondToUnknownBytecode;
 
 						}
-						goto l1903;
+						goto l1864;
 					}
 					if (prim < 3000) {
 						/* begin binaryInlinePrimitive: */
@@ -25005,7 +24454,7 @@ interpret(void)
 							goto respondToUnknownBytecode;
 
 						}
-						goto l1903;
+						goto l1864;
 					}
 					if (prim < 4000) {
 						/* begin trinaryInlinePrimitive: */
@@ -25088,7 +24537,7 @@ interpret(void)
 							goto respondToUnknownBytecode;
 
 						}
-						goto l1903;
+						goto l1864;
 					}
 				}
 				if (primSet == 1) {
@@ -25118,7 +24567,7 @@ interpret(void)
 							}
 							/* begin internalPush: */
 							longAtPointerput((localSP -= BytesPerOop), object12);
-							goto l2194;
+							goto l2144;
 							break;
 						case 1:
 							/* begin lowcodePrimitiveBoolean64ToOop */
@@ -25142,7 +24591,7 @@ interpret(void)
 							}
 							/* begin internalPush: */
 							longAtPointerput((localSP -= BytesPerOop), object11);
-							goto l2194;
+							goto l2144;
 							break;
 						case 2:
 							/* begin lowcodePrimitiveFloat32ToOop */
@@ -25159,7 +24608,7 @@ interpret(void)
 							object2 = floatObjectOf(singleFloatValue);
 							/* begin internalPush: */
 							longAtPointerput((localSP -= BytesPerOop), object2);
-							goto l2194;
+							goto l2144;
 							break;
 						case 3:
 							/* begin lowcodePrimitiveFloat64ToOop */
@@ -25176,7 +24625,7 @@ interpret(void)
 							object3 = floatObjectOf(floatValue);
 							/* begin internalPush: */
 							longAtPointerput((localSP -= BytesPerOop), object3);
-							goto l2194;
+							goto l2144;
 							break;
 						case 4:
 							/* begin lowcodePrimitiveInt32ToOop */
@@ -25192,12 +24641,12 @@ interpret(void)
 							value4 = topInt322;
 							/* begin signed32BitIntegerFor: */
 							object7 = (((usqInt)(((int) value4)) << 3) | 1);
-							goto l2288;
+							goto l2236;
 
-						l2288:	/* end signed32BitIntegerFor: */;
+						l2236:	/* end signed32BitIntegerFor: */;
 							/* begin internalPush: */
 							longAtPointerput((localSP -= BytesPerOop), object7);
-							goto l2194;
+							goto l2144;
 							break;
 						case 5:
 							/* begin lowcodePrimitiveInt64ToOop */
@@ -25214,7 +24663,7 @@ interpret(void)
 							object4 = signed64BitIntegerFor(value21);
 							/* begin internalPush: */
 							longAtPointerput((localSP -= BytesPerOop), object4);
-							goto l2194;
+							goto l2144;
 							break;
 						case 6:
 							/* begin lowcodePrimitivePointerToOop */
@@ -25238,7 +24687,7 @@ interpret(void)
 							/* begin internalPush: */
 							longAtPointerput((localSP -= BytesPerOop), object8);
 							extA = 0;
-							goto l2194;
+							goto l2144;
 							break;
 						case 7:
 							/* begin lowcodePrimitivePointerToOopReinterprer */
@@ -25255,7 +24704,7 @@ interpret(void)
 							object5 = ((sqInt) pointer);
 							/* begin internalPush: */
 							longAtPointerput((localSP -= BytesPerOop), object5);
-							goto l2194;
+							goto l2144;
 							break;
 						case 8:
 							/* begin lowcodePrimitiveSmallInt32ToOop */
@@ -25272,7 +24721,7 @@ interpret(void)
 							object6 = (((usqInt)value31 << 3) | 1);
 							/* begin internalPush: */
 							longAtPointerput((localSP -= BytesPerOop), object6);
-							goto l2194;
+							goto l2144;
 							break;
 						case 9:
 							/* begin lowcodePrimitiveUint32ToOop */
@@ -25288,12 +24737,12 @@ interpret(void)
 							value5 = topInt323;
 							/* begin positive32BitIntegerFor: */
 							object9 = ((((((usqInt)(((unsigned int) value5)))) & 0xFFFFFFFFU) << 3) | 1);
-							goto l2407;
+							goto l2352;
 
-						l2407:	/* end positive32BitIntegerFor: */;
+						l2352:	/* end positive32BitIntegerFor: */;
 							/* begin internalPush: */
 							longAtPointerput((localSP -= BytesPerOop), object9);
-							goto l2194;
+							goto l2144;
 							break;
 						case 10:
 							/* begin lowcodePrimitiveUint64ToOop */
@@ -25310,16 +24759,16 @@ interpret(void)
 							object10 = positive64BitIntegerFor(value6);
 							/* begin internalPush: */
 							longAtPointerput((localSP -= BytesPerOop), object10);
-							goto l2194;
+							goto l2144;
 							break;
 						default:
 							localIP -= 3;
 							goto respondToUnknownBytecode;
-							goto l2194;
+							goto l2144;
 
 						}
-					l2194:	/* end lowcodeNullaryInlinePrimitive: */;
-						goto l1903;
+					l2144:	/* end lowcodeNullaryInlinePrimitive: */;
+						goto l1864;
 					}
 					if (prim < 2000) {
 						/* begin lowcodeUnaryInlinePrimitive: */
@@ -25330,25 +24779,25 @@ interpret(void)
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-							topInt3236 = int32AtPointer(nativeSP - 1);
+							topInt3237 = int32AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer67 = nativeSP + BytesPerOop;
+							valueOopPointer68 = nativeSP + BytesPerOop;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer67)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer67))));
-							second28 = topInt3236;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer68)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer68))));
+							second28 = topInt3237;
 							/* begin internalPopStackInt32 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 							topInt32124 = int32AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer137 = nativeSP + BytesPerOop;
+							valueOopPointer138 = nativeSP + BytesPerOop;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer137)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer137))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer138)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer138))));
 							first28 = topInt32124;
-							result38 = first28 + second28;
+							result44 = first28 + second28;
 							/* begin internalPushInt32: */
 							nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 							/* begin nativeStackPointerIn:put: */
@@ -25358,8 +24807,8 @@ interpret(void)
 							else {
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
-							int32AtPointerput(nativeSP - 1, result38);
-							goto l2311;
+							int32AtPointerput(nativeSP - 1, result44);
+							goto l1981;
 							break;
 						case 1:
 							/* begin lowcodePrimitiveAdd64 */
@@ -25368,23 +24817,23 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 							topInt6435 = long64AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer217 = nativeSP + 8;
+							valueOopPointer216 = nativeSP + 8;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer217)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer217))));
-							second114 = topInt6435;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer216)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer216))));
+							second115 = topInt6435;
 							/* begin internalPopStackInt64 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 							topInt64124 = long64AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer1117 = nativeSP + 8;
+							valueOopPointer1116 = nativeSP + 8;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1117)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1117))));
-							first114 = topInt64124;
-							result116 = first114 + second114;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1116)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1116))));
+							first115 = topInt64124;
+							result116 = first115 + second115;
 							/* begin internalPushInt64: */
 							nativeSP = (nativeStackPointerIn(localFP)) - 8;
 							/* begin nativeStackPointerIn:put: */
@@ -25395,20 +24844,20 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, result116);
-							goto l2311;
+							goto l1981;
 							break;
 						case 2:
 							/* begin lowcodePrimitiveAlloca32 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-							topInt32213 = int32AtPointer(nativeSP - 1);
+							topInt32214 = int32AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer317 = nativeSP + BytesPerOop;
+							valueOopPointer316 = nativeSP + BytesPerOop;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer317)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer317))));
-							size = topInt32213;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer316)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer316))));
+							size = topInt32214;
 							GIV(nativeStackPointer) = ((char*) ((((size_t) (GIV(nativeStackPointer) - size))) & -16));
 							pointer15 = GIV(nativeStackPointer);
 							/* begin internalPushPointer: */
@@ -25421,20 +24870,20 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							pointerAtPointerput(nativeSP - 1, pointer15);
-							goto l2311;
+							goto l1981;
 							break;
 						case 3:
 							/* begin lowcodePrimitiveAlloca64 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-							topInt64212 = long64AtPointer(nativeSP - 1);
+							topInt64213 = long64AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer416 = nativeSP + 8;
+							valueOopPointer415 = nativeSP + 8;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer416)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer416))));
-							size1 = topInt64212;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer415)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer415))));
+							size1 = topInt64213;
 							GIV(nativeStackPointer) -= size1;
 							pointer16 = GIV(nativeStackPointer);
 							/* begin internalPushPointer: */
@@ -25447,20 +24896,20 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							pointerAtPointerput(nativeSP - 1, pointer16);
-							goto l2311;
+							goto l1981;
 							break;
 						case 4:
 							/* begin lowcodePrimitiveAnd32 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-							topInt3237 = int32AtPointer(nativeSP - 1);
+							topInt3238 = int32AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer512 = nativeSP + BytesPerOop;
+							valueOopPointer514 = nativeSP + BytesPerOop;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer512)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer512))));
-							second2 = topInt3237;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer514)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer514))));
+							second2 = topInt3238;
 							/* begin internalPopStackInt32 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -25472,7 +24921,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer12)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer12))));
 							first2 = topInt3211;
-							result216 = first2 & second2;
+							result215 = first2 & second2;
 							/* begin internalPushInt32: */
 							nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 							/* begin nativeStackPointerIn:put: */
@@ -25482,8 +24931,8 @@ interpret(void)
 							else {
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
-							int32AtPointerput(nativeSP - 1, result216);
-							goto l2311;
+							int32AtPointerput(nativeSP - 1, result215);
+							goto l1981;
 							break;
 						case 5:
 							/* begin lowcodePrimitiveAnd64 */
@@ -25492,10 +24941,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 							topInt643 = long64AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer68 = nativeSP + 8;
+							valueOopPointer69 = nativeSP + 8;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer68)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer68))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer69)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer69))));
 							second3 = topInt643;
 							/* begin internalPopStackInt64 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -25519,20 +24968,20 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, result3);
-							goto l2311;
+							goto l1981;
 							break;
 						case 6:
 							/* begin lowcodePrimitiveArithmeticRightShift32 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-							topInt3245 = int32AtPointer(nativeSP - 1);
+							topInt3244 = int32AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer75 = nativeSP + BytesPerOop;
+							valueOopPointer74 = nativeSP + BytesPerOop;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer75)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer75))));
-							shiftAmount = topInt3245;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer74)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer74))));
+							shiftAmount = topInt3244;
 							/* begin internalPopStackInt32 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -25543,8 +24992,8 @@ interpret(void)
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer14)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer14))));
-							value48 = topInt3212;
-							result4 = ((usqInt) value48) >> shiftAmount;
+							value47 = topInt3212;
+							result4 = ((usqInt) value47) >> shiftAmount;
 							/* begin internalPushInt32: */
 							nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 							/* begin nativeStackPointerIn:put: */
@@ -25555,7 +25004,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, result4);
-							goto l2311;
+							goto l1981;
 							break;
 						case 7:
 							/* begin lowcodePrimitiveArithmeticRightShift64 */
@@ -25564,10 +25013,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 							topInt644 = long64AtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
-							valueOopPointer85 = nativeSP + 8;
+							valueOopPointer84 = nativeSP + 8;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer85)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer85))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer84)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer84))));
 							shiftAmount1 = topInt644;
 							/* begin internalPopStackInt64 */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -25591,26 +25040,26 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, result5);
-							goto l2311;
+							goto l1981;
 							break;
 						case 8:
 							/* begin lowcodePrimitiveBeginCall */
 
 							/* Store the shadow stack pointer */
 							alignment = extA;
-							valueOopPointer95 = ((char *) (GIV(shadowCallStackPointer) + 1));
+							valueOopPointer94 = ((char *) (GIV(shadowCallStackPointer) + 1));
 							if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-								pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 5), valueOopPointer95);
+								pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 5), valueOopPointer94);
 							}
 							else {
-								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 5), valueOopPointer95);
+								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 5), valueOopPointer94);
 							}
 							/* begin allocateLowcodeCalloutState */
 							calloutStateSize = sizeof(sqLowcodeCalloutState);
 							GIV(shadowCallStackPointer) = ((char*) ((((size_t) (GIV(shadowCallStackPointer) - calloutStateSize))) & -16));
 							lowcodeCalloutState = ((sqLowcodeCalloutState*) GIV(shadowCallStackPointer));
 							extA = 0;
-							goto l2311;
+							goto l1981;
 							break;
 						case 9:
 							/* begin lowcodePrimitiveCallArgumentFloat32 */
@@ -25629,7 +25078,7 @@ interpret(void)
 							/* In the StackInterpreter stacks grow down. */
 							GIV(shadowCallStackPointer) -= BytesPerOop;
 							singleFloatAtPointerput(GIV(shadowCallStackPointer), argumentValue);
-							goto l2311;
+							goto l1981;
 							break;
 						case 10:
 							/* begin lowcodePrimitiveCallArgumentFloat64 */
@@ -25648,7 +25097,7 @@ interpret(void)
 							/* In the StackInterpreter stacks grow down. */
 							GIV(shadowCallStackPointer) -= 8;
 							singleFloatAtPointerput(GIV(shadowCallStackPointer), argumentValue1);
-							goto l2311;
+							goto l1981;
 							break;
 						case 11:
 							/* begin lowcodePrimitiveCallArgumentInt32 */
@@ -25667,7 +25116,7 @@ interpret(void)
 							/* In the StackInterpreter stacks grow down. */
 							GIV(shadowCallStackPointer) -= BytesPerOop;
 							int32AtPointerput(GIV(shadowCallStackPointer), value216);
-							goto l2311;
+							goto l1981;
 							break;
 						case 12:
 							/* begin lowcodePrimitiveCallArgumentInt64 */
@@ -25680,32 +25129,32 @@ interpret(void)
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer18)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer18))));
-							value314 = topInt645;
+							value313 = topInt645;
 							/* begin internalPushShadowCallStackInt64: */
 
 							/* In the StackInterpreter stacks grow down. */
 							GIV(shadowCallStackPointer) -= 8;
-							int64AtPointerput(GIV(shadowCallStackPointer), value314);
-							goto l2311;
+							int64AtPointerput(GIV(shadowCallStackPointer), value313);
+							goto l1981;
 							break;
 						case 13:
 							/* begin lowcodePrimitiveCallArgumentPointer */
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-							topPointer36 = pointerAtPointer(nativeSP - 1);
+							topPointer29 = pointerAtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
 							valueOopPointer19 = nativeSP + BytesPerOop;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer19)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer19))));
-							pointerValue = topPointer36;
+							pointerValue = topPointer29;
 							/* begin internalPushShadowCallStackPointer: */
 
 							/* In the StackInterpreter stacks grow down. */
 							GIV(shadowCallStackPointer) -= BytesPerOop;
 							pointerAtPointerput(GIV(shadowCallStackPointer), pointerValue);
-							goto l2311;
+							goto l1981;
 							break;
 						case 14:
 							/* begin lowcodePrimitiveCallArgumentSpace */
@@ -25713,7 +25162,7 @@ interpret(void)
 							/* begin internalPushShadowCallStackSpace: */
 							GIV(shadowCallStackPointer) -= spaceSize;
 							extA = 0;
-							goto l2311;
+							goto l1981;
 							break;
 						case 15:
 							/* begin lowcodePrimitiveCallArgumentStructure */
@@ -25722,37 +25171,37 @@ interpret(void)
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-							topPointer115 = pointerAtPointer(nativeSP - 1);
+							topPointer114 = pointerAtPointer(nativeSP - 1);
 							/* begin nativeStackPointerIn:put: */
 							valueOopPointer20 = nativeSP + BytesPerOop;
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer20)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer20))));
-							structurePointer = topPointer115;
+							structurePointer = topPointer114;
 							/* begin internalPushShadowCallStackStructure:size: */
 							GIV(shadowCallStackPointer) -= structureSize;
 							lowcode_memcpy(GIV(shadowCallStackPointer), structurePointer, structureSize);
 							extA = 0;
-							goto l2311;
+							goto l1981;
 							break;
 						case 16:
 							/* begin lowcodePrimitiveCallInstruction */
 							function = extA;
 							abort();
 							extA = 0;
-							goto l2311;
+							goto l1981;
 							break;
 						case 17:
 							/* begin lowcodePrimitiveCallPhysical */
 							registerID = extA;
 							abort();
 							extA = 0;
-							goto l2311;
+							goto l1981;
 							break;
 						case 18:
 							/* begin lowcodePrimitiveCheckSessionIdentifier */
 							expectedSession = extA;
-							value47 = (expectedSession == (getThisSessionID())
+							value46 = (expectedSession == (getThisSessionID())
 								? 1
 								: 0);
 							/* begin internalPushInt32: */
@@ -25764,9 +25213,9 @@ interpret(void)
 							else {
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
-							int32AtPointerput(nativeSP - 1, value47);
+							int32AtPointerput(nativeSP - 1, value46);
 							extA = 0;
-							goto l2311;
+							goto l1981;
 							break;
 						case 19:
 							/* begin lowcodePrimitiveCompareAndSwap32 */
@@ -25813,7 +25262,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value54);
-							goto l2311;
+							goto l1981;
 							break;
 						case 20:
 							/* begin lowcodePrimitiveDiv32 */
@@ -25849,7 +25298,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, result6);
-							goto l2311;
+							goto l1981;
 							break;
 						case 21:
 							/* begin lowcodePrimitiveDiv64 */
@@ -25885,7 +25334,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, result7);
-							goto l2311;
+							goto l1981;
 							break;
 						case 22:
 							/* begin lowcodePrimitiveDuplicateFloat32 */
@@ -25921,7 +25370,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							singleFloatAtPointerput(nativeSP - 1, dup2);
-							goto l2311;
+							goto l1981;
 							break;
 						case 23:
 							/* begin lowcodePrimitiveDuplicateFloat64 */
@@ -25957,7 +25406,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, dup21);
-							goto l2311;
+							goto l1981;
 							break;
 						case 24:
 							/* begin lowcodePrimitiveDuplicateInt32 */
@@ -25993,7 +25442,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, dup22);
-							goto l2311;
+							goto l1981;
 							break;
 						case 25:
 							/* begin lowcodePrimitiveDuplicateInt64 */
@@ -26029,7 +25478,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, dup23);
-							goto l2311;
+							goto l1981;
 							break;
 						case 26:
 							/* begin lowcodePrimitiveDuplicatePointer */
@@ -26065,7 +25514,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							pointerAtPointerput(nativeSP - 1, dup24);
-							goto l2311;
+							goto l1981;
 							break;
 						case 27:
 							/* begin lowcodePrimitiveEffectiveAddress32 */
@@ -26123,7 +25572,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							pointerAtPointerput(nativeSP - 1, result8);
-							goto l2311;
+							goto l1981;
 							break;
 						case 28:
 							/* begin lowcodePrimitiveEffectiveAddress64 */
@@ -26181,7 +25630,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							pointerAtPointerput(nativeSP - 1, result9);
-							goto l2311;
+							goto l1981;
 							break;
 						case 29:
 							/* begin lowcodePrimitiveEndCall */
@@ -26194,7 +25643,7 @@ interpret(void)
 							else {
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 5), valueOopPointer34);
 							}
-							goto l2311;
+							goto l1981;
 							break;
 						case 30:
 							/* begin lowcodePrimitiveEndCallNoCleanup */
@@ -26207,7 +25656,7 @@ interpret(void)
 							else {
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 5), valueOopPointer35);
 							}
-							goto l2311;
+							goto l1981;
 							break;
 						case 0x1F:
 							/* begin lowcodePrimitiveFloat32Add */
@@ -26243,7 +25692,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							singleFloatAtPointerput(nativeSP - 1, result10);
-							goto l2311;
+							goto l1981;
 							break;
 						case 32:
 							/* begin lowcodePrimitiveFloat32Div */
@@ -26279,7 +25728,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							singleFloatAtPointerput(nativeSP - 1, result11);
-							goto l2311;
+							goto l1981;
 							break;
 						case 33:
 							/* begin lowcodePrimitiveFloat32Equal */
@@ -26317,7 +25766,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value104);
-							goto l2311;
+							goto l1981;
 							break;
 						case 34:
 							/* begin lowcodePrimitiveFloat32Great */
@@ -26355,7 +25804,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value117);
-							goto l2311;
+							goto l1981;
 							break;
 						case 35:
 							/* begin lowcodePrimitiveFloat32GreatEqual */
@@ -26393,7 +25842,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value124);
-							goto l2311;
+							goto l1981;
 							break;
 						case 36:
 							/* begin lowcodePrimitiveFloat32Less */
@@ -26431,7 +25880,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value134);
-							goto l2311;
+							goto l1981;
 							break;
 						case 37:
 							/* begin lowcodePrimitiveFloat32LessEqual */
@@ -26469,7 +25918,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value144);
-							goto l2311;
+							goto l1981;
 							break;
 						case 38:
 							/* begin lowcodePrimitiveFloat32Mul */
@@ -26505,7 +25954,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							singleFloatAtPointerput(nativeSP - 1, result12);
-							goto l2311;
+							goto l1981;
 							break;
 						case 39:
 							/* begin lowcodePrimitiveFloat32Neg */
@@ -26530,7 +25979,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							singleFloatAtPointerput(nativeSP - 1, result13);
-							goto l2311;
+							goto l1981;
 							break;
 						case 40:
 							/* begin lowcodePrimitiveFloat32NotEqual */
@@ -26568,7 +26017,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value164);
-							goto l2311;
+							goto l1981;
 							break;
 						case 41:
 							/* begin lowcodePrimitiveFloat32Sqrt */
@@ -26593,7 +26042,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							singleFloatAtPointerput(nativeSP - 1, result14);
-							goto l2311;
+							goto l1981;
 							break;
 						case 42:
 							/* begin lowcodePrimitiveFloat32Sub */
@@ -26629,7 +26078,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							singleFloatAtPointerput(nativeSP - 1, result15);
-							goto l2311;
+							goto l1981;
 							break;
 						case 43:
 							/* begin lowcodePrimitiveFloat32ToFloat64 */
@@ -26654,7 +26103,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, doubleResult);
-							goto l2311;
+							goto l1981;
 							break;
 						case 44:
 							/* begin lowcodePrimitiveFloat32ToInt32 */
@@ -26667,8 +26116,8 @@ interpret(void)
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer49)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer49))));
-							value183 = topSingle23;
-							result16 = ((sqInt) value183);
+							value184 = topSingle23;
+							result16 = ((sqInt) value184);
 							/* begin internalPushInt32: */
 							nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 							/* begin nativeStackPointerIn:put: */
@@ -26679,7 +26128,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, result16);
-							goto l2311;
+							goto l1981;
 							break;
 						case 45:
 							/* begin lowcodePrimitiveFloat32ToInt64 */
@@ -26692,8 +26141,8 @@ interpret(void)
 							nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer50)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer50))));
-							value193 = topSingle24;
-							result17 = ((sqLong) value193);
+							value194 = topSingle24;
+							result17 = ((sqLong) value194);
 							/* begin internalPushInt64: */
 							nativeSP = (nativeStackPointerIn(localFP)) - 8;
 							/* begin nativeStackPointerIn:put: */
@@ -26704,7 +26153,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, result17);
-							goto l2311;
+							goto l1981;
 							break;
 						case 46:
 							/* begin lowcodePrimitiveFloat32ToUInt32 */
@@ -26729,7 +26178,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, result18);
-							goto l2311;
+							goto l1981;
 							break;
 						case 47:
 							/* begin lowcodePrimitiveFloat32ToUInt64 */
@@ -26754,7 +26203,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, result19);
-							goto l2311;
+							goto l1981;
 							break;
 						case 48:
 							/* begin lowcodePrimitiveFloat64Add */
@@ -26790,7 +26239,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, result20);
-							goto l2311;
+							goto l1981;
 							break;
 						case 49:
 							/* begin lowcodePrimitiveFloat64Div */
@@ -26826,7 +26275,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, result21);
-							goto l2311;
+							goto l1981;
 							break;
 						case 50:
 							/* begin lowcodePrimitiveFloat64Equal */
@@ -26864,7 +26313,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value223);
-							goto l2311;
+							goto l1981;
 							break;
 						case 51:
 							/* begin lowcodePrimitiveFloat64Great */
@@ -26902,7 +26351,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value23);
-							goto l2311;
+							goto l1981;
 							break;
 						case 52:
 							/* begin lowcodePrimitiveFloat64GreatEqual */
@@ -26940,7 +26389,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value24);
-							goto l2311;
+							goto l1981;
 							break;
 						case 53:
 							/* begin lowcodePrimitiveFloat64Less */
@@ -26978,7 +26427,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value25);
-							goto l2311;
+							goto l1981;
 							break;
 						case 54:
 							/* begin lowcodePrimitiveFloat64LessEqual */
@@ -27016,7 +26465,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value26);
-							goto l2311;
+							goto l1981;
 							break;
 						case 55:
 							/* begin lowcodePrimitiveFloat64Mul */
@@ -27052,7 +26501,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, result22);
-							goto l2311;
+							goto l1981;
 							break;
 						case 56:
 							/* begin lowcodePrimitiveFloat64Neg */
@@ -27077,7 +26526,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, result23);
-							goto l2311;
+							goto l1981;
 							break;
 						case 57:
 							/* begin lowcodePrimitiveFloat64NotEqual */
@@ -27115,7 +26564,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value28);
-							goto l2311;
+							goto l1981;
 							break;
 						case 58:
 							/* begin lowcodePrimitiveFloat64Sqrt */
@@ -27140,7 +26589,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, result24);
-							goto l2311;
+							goto l1981;
 							break;
 						case 59:
 							/* begin lowcodePrimitiveFloat64Sub */
@@ -27176,7 +26625,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, result25);
-							goto l2311;
+							goto l1981;
 							break;
 						default:
 							/* begin lowcodeUnaryInlinePrimitive2: */
@@ -27189,10 +26638,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topDouble24 = floatAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer65 = nativeSP + 8;
+								valueOopPointer66 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer65)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer65))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer66)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer66))));
 								floatValue8 = topDouble24;
 								singleFloatResult = ((float) floatValue8);
 								/* begin internalPushFloat32: */
@@ -27205,7 +26654,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								singleFloatAtPointerput(nativeSP - 1, singleFloatResult);
-								goto l2172;
+								goto l3058;
 								break;
 							case 61:
 								/* begin lowcodePrimitiveFloat64ToInt32 */
@@ -27214,10 +26663,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topDouble112 = floatAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer136 = nativeSP + 8;
+								valueOopPointer137 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer136)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer136))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer137)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer137))));
 								floatValue1 = topDouble112;
 								int32Result = ((sqInt) floatValue1);
 								/* begin internalPushInt32: */
@@ -27230,7 +26679,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, int32Result);
-								goto l2172;
+								goto l3058;
 								break;
 							case 0x3E:
 								/* begin lowcodePrimitiveFloat64ToInt64 */
@@ -27239,10 +26688,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topDouble23 = floatAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer215 = nativeSP + 8;
+								valueOopPointer214 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer215)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer215))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer214)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer214))));
 								floatValue2 = topDouble23;
 								int64Result = ((sqLong) floatValue2);
 								/* begin internalPushInt64: */
@@ -27255,7 +26704,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								long64AtPointerput(nativeSP - 1, int64Result);
-								goto l2172;
+								goto l3058;
 								break;
 							case 0x3F:
 								/* begin lowcodePrimitiveFloat64ToUInt32 */
@@ -27264,10 +26713,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topDouble31 = floatAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer316 = nativeSP + 8;
+								valueOopPointer315 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer316)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer316))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer315)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer315))));
 								floatValue3 = topDouble31;
 								int64Result1 = ((uint32_t) floatValue3);
 								/* begin internalPushInt32: */
@@ -27280,7 +26729,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, int64Result1);
-								goto l2172;
+								goto l3058;
 								break;
 							case 64:
 								/* begin lowcodePrimitiveFloat64ToUInt64 */
@@ -27289,10 +26738,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topDouble41 = floatAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer414 = nativeSP + 8;
+								valueOopPointer413 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer414)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer414))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer413)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer413))));
 								floatValue4 = topDouble41;
 								int64Result2 = ((uint64_t) floatValue4);
 								/* begin internalPushInt64: */
@@ -27305,22 +26754,22 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								long64AtPointerput(nativeSP - 1, int64Result2);
-								goto l2172;
+								goto l3058;
 								break;
 							case 65:
 								/* begin lowcodePrimitiveFree */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topPointer34 = pointerAtPointer(nativeSP - 1);
+								topPointer28 = pointerAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer510 = nativeSP + BytesPerOop;
+								valueOopPointer513 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer510)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer510))));
-								pointer13 = topPointer34;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer513)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer513))));
+								pointer13 = topPointer28;
 								free(pointer13);
-								goto l2172;
+								goto l3058;
 								break;
 							case 66:
 								/* begin lowcodePrimitiveInstantiateIndexable32Oop */
@@ -27341,7 +26790,7 @@ interpret(void)
 								object112 = instantiateClassindexableSize(classOop, indexableSize);
 								/* begin internalPush: */
 								longAtPointerput((localSP -= BytesPerOop), object112);
-								goto l2172;
+								goto l3058;
 								break;
 							case 67:
 								/* begin lowcodePrimitiveInstantiateIndexableOop */
@@ -27354,7 +26803,7 @@ interpret(void)
 								/* begin internalPush: */
 								longAtPointerput((localSP -= BytesPerOop), object27);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 68:
 								/* begin lowcodePrimitiveInstantiateOop */
@@ -27364,32 +26813,32 @@ interpret(void)
 								object32 = instantiateClassindexableSize(classOop2, 0);
 								/* begin internalPush: */
 								longAtPointerput((localSP -= BytesPerOop), object32);
-								goto l2172;
+								goto l3058;
 								break;
 							case 69:
 								/* begin lowcodePrimitiveInt32Equal */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topInt3234 = int32AtPointer(nativeSP - 1);
+								topInt3235 = int32AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer66 = nativeSP + BytesPerOop;
+								valueOopPointer67 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer66)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer66))));
-								second26 = topInt3234;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer67)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer67))));
+								second26 = topInt3235;
 								/* begin internalPopStackInt32 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topInt32120 = int32AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer1116 = nativeSP + BytesPerOop;
+								valueOopPointer1115 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1116)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1116))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1115)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1115))));
 								first27 = topInt32120;
-								value46 = (first27 == second26
+								value45 = (first27 == second26
 									? 1
 									: 0);
 								/* begin internalPushInt32: */
@@ -27401,21 +26850,21 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								int32AtPointerput(nativeSP - 1, value46);
-								goto l2172;
+								int32AtPointerput(nativeSP - 1, value45);
+								goto l3058;
 								break;
 							case 70:
 								/* begin lowcodePrimitiveInt32Great */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topInt32211 = int32AtPointer(nativeSP - 1);
+								topInt32212 = int32AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer74 = nativeSP + BytesPerOop;
+								valueOopPointer73 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer74)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer74))));
-								second112 = topInt32211;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer73)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer73))));
+								second113 = topInt32212;
 								/* begin internalPopStackInt32 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -27426,8 +26875,8 @@ interpret(void)
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1212)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1212))));
-								first113 = topInt321111;
-								value116 = (first113 > second112
+								first114 = topInt321111;
+								value116 = (first114 > second113
 									? 1
 									: 0);
 								/* begin internalPushInt32: */
@@ -27440,30 +26889,30 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value116);
-								goto l2172;
+								goto l3058;
 								break;
 							case 71:
 								/* begin lowcodePrimitiveInt32GreatEqual */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topInt3235 = int32AtPointer(nativeSP - 1);
+								topInt3236 = int32AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer84 = nativeSP + BytesPerOop;
+								valueOopPointer83 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer84)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer84))));
-								second27 = topInt3235;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer83)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer83))));
+								second27 = topInt3236;
 								/* begin internalPopStackInt32 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topInt32123 = int32AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer135 = nativeSP + BytesPerOop;
+								valueOopPointer136 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer135)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer135))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer136)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer136))));
 								first26 = topInt32123;
 								value214 = (first26 >= second27
 									? 1
@@ -27478,20 +26927,20 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value214);
-								goto l2172;
+								goto l3058;
 								break;
 							case 72:
 								/* begin lowcodePrimitiveInt32Less */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topInt3244 = int32AtPointer(nativeSP - 1);
+								topInt3243 = int32AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer94 = nativeSP + BytesPerOop;
+								valueOopPointer93 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer94)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer94))));
-								second34 = topInt3244;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer93)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer93))));
+								second33 = topInt3243;
 								/* begin internalPopStackInt32 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -27502,8 +26951,8 @@ interpret(void)
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer143)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer143))));
-								first34 = topInt32132;
-								value313 = (first34 < second34
+								first33 = topInt32132;
+								value312 = (first33 < second33
 									? 1
 									: 0);
 								/* begin internalPushInt32: */
@@ -27515,21 +26964,21 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								int32AtPointerput(nativeSP - 1, value313);
-								goto l2172;
+								int32AtPointerput(nativeSP - 1, value312);
+								goto l3058;
 								break;
 							case 73:
 								/* begin lowcodePrimitiveInt32LessEqual */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topInt3254 = int32AtPointer(nativeSP - 1);
+								topInt3253 = int32AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
 								valueOopPointer103 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer103)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer103))));
-								second43 = topInt3254;
+								second43 = topInt3253;
 								/* begin internalPopStackInt32 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -27541,7 +26990,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer153)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer153))));
 								first43 = topInt32142;
-								value45 = (first43 <= second43
+								value44 = (first43 <= second43
 									? 1
 									: 0);
 								/* begin internalPushInt32: */
@@ -27553,8 +27002,8 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								int32AtPointerput(nativeSP - 1, value45);
-								goto l2172;
+								int32AtPointerput(nativeSP - 1, value44);
+								goto l3058;
 								break;
 							case 74:
 								/* begin lowcodePrimitiveInt32NotEqual */
@@ -27592,7 +27041,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value53);
-								goto l2172;
+								goto l3058;
 								break;
 							case 75:
 								/* begin lowcodePrimitiveInt32ToFloat32 */
@@ -27606,7 +27055,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer183)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer183))));
 								value63 = topInt3273;
-								result37 = ((float) value63);
+								result40 = ((float) value63);
 								/* begin internalPushFloat32: */
 								nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 								/* begin nativeStackPointerIn:put: */
@@ -27616,8 +27065,8 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								singleFloatAtPointerput(nativeSP - 1, result37);
-								goto l2172;
+								singleFloatAtPointerput(nativeSP - 1, result40);
+								goto l3058;
 								break;
 							case 76:
 								/* begin lowcodePrimitiveInt32ToFloat64 */
@@ -27642,7 +27091,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								floatAtPointerput(nativeSP - 1, result115);
-								goto l2172;
+								goto l3058;
 								break;
 							case 77:
 								/* begin lowcodePrimitiveInt32ToPointer */
@@ -27656,7 +27105,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer203)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer203))));
 								value83 = topInt3292;
-								result215 = ((char*) (((uintptr_t) value83)));
+								result214 = ((char*) (((uintptr_t) value83)));
 								/* begin internalPushPointer: */
 								nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 								/* begin nativeStackPointerIn:put: */
@@ -27666,21 +27115,21 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								pointerAtPointerput(nativeSP - 1, result215);
-								goto l2172;
+								pointerAtPointerput(nativeSP - 1, result214);
+								goto l3058;
 								break;
 							case 78:
 								/* begin lowcodePrimitiveInt64Equal */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topInt6430 = long64AtPointer(nativeSP - 1);
+								topInt6433 = long64AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer216 = nativeSP + 8;
+								valueOopPointer215 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer216)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer216))));
-								second62 = topInt6430;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer215)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer215))));
+								second62 = topInt6433;
 								/* begin internalPopStackInt64 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -27705,30 +27154,30 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value93);
-								goto l2172;
+								goto l3058;
 								break;
 							case 79:
 								/* begin lowcodePrimitiveInt64Great */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topInt64210 = long64AtPointer(nativeSP - 1);
+								topInt64211 = long64AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
 								valueOopPointer223 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer223)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer223))));
-								second72 = topInt64210;
+								second72 = topInt64211;
 								/* begin internalPopStackInt64 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topInt64119 = long64AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer1115 = nativeSP + 8;
+								valueOopPointer1114 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1115)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1115))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1114)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1114))));
 								first72 = topInt64119;
 								value103 = (first72 > second72
 									? 1
@@ -27743,7 +27192,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value103);
-								goto l2172;
+								goto l3058;
 								break;
 							case 80:
 								/* begin lowcodePrimitiveInt64GreatEqual */
@@ -27781,20 +27230,20 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value115);
-								goto l2172;
+								goto l3058;
 								break;
 							case 81:
 								/* begin lowcodePrimitiveInt64Less */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topInt6444 = long64AtPointer(nativeSP - 1);
+								topInt6443 = long64AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
 								valueOopPointer243 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer243)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer243))));
-								second92 = topInt6444;
+								second92 = topInt6443;
 								/* begin internalPopStackInt64 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -27819,7 +27268,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value123);
-								goto l2172;
+								goto l3058;
 								break;
 							case 82:
 								/* begin lowcodePrimitiveInt64LessEqual */
@@ -27857,7 +27306,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value133);
-								goto l2172;
+								goto l3058;
 								break;
 							case 83:
 								/* begin lowcodePrimitiveInt64NotEqual */
@@ -27870,7 +27319,7 @@ interpret(void)
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer263)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer263))));
-								second113 = topInt6463;
+								second114 = topInt6463;
 								/* begin internalPopStackInt64 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -27881,8 +27330,8 @@ interpret(void)
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1153)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1153))));
-								first112 = topInt6415;
-								value143 = (first112 != second113
+								first113 = topInt6415;
+								value143 = (first113 != second114
 									? 1
 									: 0);
 								/* begin internalPushInt32: */
@@ -27895,7 +27344,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value143);
-								goto l2172;
+								goto l3058;
 								break;
 							case 84:
 								/* begin lowcodePrimitiveInt64ToFloat32 */
@@ -27909,7 +27358,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer273)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer273))));
 								value153 = topInt6473;
-								result36 = ((float) value153);
+								result310 = ((float) value153);
 								/* begin internalPushFloat64: */
 								nativeSP = (nativeStackPointerIn(localFP)) - 8;
 								/* begin nativeStackPointerIn:put: */
@@ -27919,8 +27368,8 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								floatAtPointerput(nativeSP - 1, result36);
-								goto l2172;
+								floatAtPointerput(nativeSP - 1, result310);
+								goto l3058;
 								break;
 							case 85:
 								/* begin lowcodePrimitiveInt64ToFloat64 */
@@ -27934,7 +27383,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer283)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer283))));
 								value163 = topInt6483;
-								result44 = ((double) value163);
+								result43 = ((double) value163);
 								/* begin internalPushFloat64: */
 								nativeSP = (nativeStackPointerIn(localFP)) - 8;
 								/* begin nativeStackPointerIn:put: */
@@ -27944,8 +27393,8 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								floatAtPointerput(nativeSP - 1, result44);
-								goto l2172;
+								floatAtPointerput(nativeSP - 1, result43);
+								goto l3058;
 								break;
 							case 86:
 								/* begin lowcodePrimitiveInt64ToPointer */
@@ -27959,7 +27408,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer293)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer293))));
 								value173 = topInt649;
-								result54 = ((char*) (((intptr_t) value173)));
+								result53 = ((char*) (((intptr_t) value173)));
 								/* begin internalPushPointer: */
 								nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 								/* begin nativeStackPointerIn:put: */
@@ -27969,8 +27418,8 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								pointerAtPointerput(nativeSP - 1, result54);
-								goto l2172;
+								pointerAtPointerput(nativeSP - 1, result53);
+								goto l3058;
 								break;
 							case 87:
 								/* begin lowcodePrimitiveLeftShift32 */
@@ -27994,8 +27443,8 @@ interpret(void)
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1163)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1163))));
-								value182 = topInt3216;
-								result641 = ((sqInt)((usqInt)(value182) << shiftAmount3));
+								value183 = topInt3216;
+								result63 = ((sqInt)((usqInt)(value183) << shiftAmount3));
 								/* begin internalPushInt32: */
 								nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 								/* begin nativeStackPointerIn:put: */
@@ -28005,8 +27454,8 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								int32AtPointerput(nativeSP - 1, result641);
-								goto l2172;
+								int32AtPointerput(nativeSP - 1, result63);
+								goto l3058;
 								break;
 							case 88:
 								/* begin lowcodePrimitiveLeftShift64 */
@@ -28015,10 +27464,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topInt6410 = long64AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer315 = nativeSP + 8;
+								valueOopPointer314 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer315)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer315))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer314)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer314))));
 								shiftAmount12 = topInt6410;
 								/* begin internalPopStackInt64 */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -28026,12 +27475,12 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 								topInt6416 = long64AtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
-								valueOopPointer1173 = nativeSP + 8;
+								valueOopPointer1172 = nativeSP + 8;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1173)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1173))));
-								value192 = topInt6416;
-								result74 = ((sqLong)((usqLong)(value192) << shiftAmount12));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1172)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1172))));
+								value193 = topInt6416;
+								result73 = ((sqLong)((usqLong)(value193) << shiftAmount12));
 								/* begin internalPushInt64: */
 								nativeSP = (nativeStackPointerIn(localFP)) - 8;
 								/* begin nativeStackPointerIn:put: */
@@ -28041,8 +27490,8 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								long64AtPointerput(nativeSP - 1, result74);
-								goto l2172;
+								long64AtPointerput(nativeSP - 1, result73);
+								goto l3058;
 								break;
 							case 89:
 								/* begin lowcodePrimitiveLoadArgumentAddress */
@@ -28059,7 +27508,7 @@ interpret(void)
 								}
 								pointerAtPointerput(nativeSP - 1, pointer14);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 90:
 								/* begin lowcodePrimitiveLoadArgumentFloat32 */
@@ -28076,7 +27525,7 @@ interpret(void)
 								}
 								singleFloatAtPointerput(nativeSP - 1, floatValue5);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 91:
 								/* begin lowcodePrimitiveLoadArgumentFloat64 */
@@ -28093,12 +27542,12 @@ interpret(void)
 								}
 								floatAtPointerput(nativeSP - 1, doubleValue);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 92:
 								/* begin lowcodePrimitiveLoadArgumentInt16 */
 								baseOffset3 = extA;
-								value202 = int16AtPointer(framePointerOfNativeArgumentin(baseOffset3, localFP));
+								value203 = int16AtPointer(framePointerOfNativeArgumentin(baseOffset3, localFP));
 								/* begin internalPushInt32: */
 								nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 								/* begin nativeStackPointerIn:put: */
@@ -28108,9 +27557,9 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								int32AtPointerput(nativeSP - 1, value202);
+								int32AtPointerput(nativeSP - 1, value203);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 93:
 								/* begin lowcodePrimitiveLoadArgumentInt32 */
@@ -28127,7 +27576,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value215);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 94:
 								/* begin lowcodePrimitiveLoadArgumentInt64 */
@@ -28144,7 +27593,7 @@ interpret(void)
 								}
 								long64AtPointerput(nativeSP - 1, value222);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 95:
 								/* begin lowcodePrimitiveLoadArgumentInt8 */
@@ -28161,7 +27610,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value232);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 96:
 								/* begin lowcodePrimitiveLoadArgumentPointer */
@@ -28178,7 +27627,7 @@ interpret(void)
 								}
 								pointerAtPointerput(nativeSP - 1, pointerResult);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 97:
 								/* begin lowcodePrimitiveLoadArgumentUInt16 */
@@ -28195,7 +27644,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value242);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 98:
 								/* begin lowcodePrimitiveLoadArgumentUInt32 */
@@ -28212,7 +27661,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value252);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 99:
 								/* begin lowcodePrimitiveLoadArgumentUInt64 */
@@ -28229,7 +27678,7 @@ interpret(void)
 								}
 								long64AtPointerput(nativeSP - 1, value262);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 100:
 								/* begin lowcodePrimitiveLoadArgumentUInt8 */
@@ -28246,20 +27695,20 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value272);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 101:
 								/* begin lowcodePrimitiveLoadFloat32FromMemory */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topPointer114 = pointerAtPointer(nativeSP - 1);
+								topPointer113 = pointerAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
 								valueOopPointer323 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer323)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer323))));
-								pointer23 = topPointer114;
+								pointer23 = topPointer113;
 								value282 = singleFloatAtPointer(pointer23);
 								/* begin internalPushFloat32: */
 								nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
@@ -28271,20 +27720,20 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								singleFloatAtPointerput(nativeSP - 1, value282);
-								goto l2172;
+								goto l3058;
 								break;
 							case 102:
 								/* begin lowcodePrimitiveLoadFloat64FromMemory */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topPointer212 = pointerAtPointer(nativeSP - 1);
+								topPointer27 = pointerAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
 								valueOopPointer333 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer333)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer333))));
-								pointer33 = topPointer212;
+								pointer33 = topPointer27;
 								value292 = floatAtPointer(pointer33);
 								/* begin internalPushFloat64: */
 								nativeSP = (nativeStackPointerIn(localFP)) - 8;
@@ -28296,20 +27745,20 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								floatAtPointerput(nativeSP - 1, value292);
-								goto l2172;
+								goto l3058;
 								break;
 							case 103:
 								/* begin lowcodePrimitiveLoadInt16FromMemory */
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-								topPointer35 = pointerAtPointer(nativeSP - 1);
+								topPointer33 = pointerAtPointer(nativeSP - 1);
 								/* begin nativeStackPointerIn:put: */
 								valueOopPointer343 = nativeSP + BytesPerOop;
 								nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer343)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer343))));
-								pointer43 = topPointer35;
+								pointer43 = topPointer33;
 								value30 = int16AtPointer(pointer43);
 								/* begin internalPushInt32: */
 								nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
@@ -28321,7 +27770,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value30);
-								goto l2172;
+								goto l3058;
 								break;
 							case 104:
 								/* begin lowcodePrimitiveLoadInt32FromMemory */
@@ -28335,7 +27784,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer353)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer353))));
 								pointer5 = topPointer43;
-								value315 = int32AtPointer(pointer5);
+								value314 = int32AtPointer(pointer5);
 								/* begin internalPushInt32: */
 								nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 								/* begin nativeStackPointerIn:put: */
@@ -28345,8 +27794,8 @@ interpret(void)
 								else {
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
-								int32AtPointerput(nativeSP - 1, value315);
-								goto l2172;
+								int32AtPointerput(nativeSP - 1, value314);
+								goto l3058;
 								break;
 							case 105:
 								/* begin lowcodePrimitiveLoadInt64FromMemory */
@@ -28371,7 +27820,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								long64AtPointerput(nativeSP - 1, value322);
-								goto l2172;
+								goto l3058;
 								break;
 							case 106:
 								/* begin lowcodePrimitiveLoadInt8FromMemory */
@@ -28396,7 +27845,7 @@ interpret(void)
 									pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 								}
 								int32AtPointerput(nativeSP - 1, value33);
-								goto l2172;
+								goto l3058;
 								break;
 							case 107:
 								/* begin lowcodePrimitiveLoadLocalAddress */
@@ -28413,7 +27862,7 @@ interpret(void)
 								}
 								pointerAtPointerput(nativeSP - 1, pointer8);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 108:
 								/* begin lowcodePrimitiveLoadLocalFloat32 */
@@ -28430,7 +27879,7 @@ interpret(void)
 								}
 								singleFloatAtPointerput(nativeSP - 1, floatValue6);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 109:
 								/* begin lowcodePrimitiveLoadLocalFloat64 */
@@ -28447,7 +27896,7 @@ interpret(void)
 								}
 								floatAtPointerput(nativeSP - 1, doubleValue1);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 110:
 								/* begin lowcodePrimitiveLoadLocalInt16 */
@@ -28464,7 +27913,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value34);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 111:
 								/* begin lowcodePrimitiveLoadLocalInt32 */
@@ -28481,7 +27930,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value35);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 112:
 								/* begin lowcodePrimitiveLoadLocalInt64 */
@@ -28498,7 +27947,7 @@ interpret(void)
 								}
 								long64AtPointerput(nativeSP - 1, value36);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 113:
 								/* begin lowcodePrimitiveLoadLocalInt8 */
@@ -28515,7 +27964,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value37);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 114:
 								/* begin lowcodePrimitiveLoadLocalPointer */
@@ -28532,7 +27981,7 @@ interpret(void)
 								}
 								pointerAtPointerput(nativeSP - 1, pointerResult1);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 115:
 								/* begin lowcodePrimitiveLoadLocalUInt16 */
@@ -28549,7 +27998,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value38);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 116:
 								/* begin lowcodePrimitiveLoadLocalUInt32 */
@@ -28566,7 +28015,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value39);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 117:
 								/* begin lowcodePrimitiveLoadLocalUInt64 */
@@ -28583,7 +28032,7 @@ interpret(void)
 								}
 								long64AtPointerput(nativeSP - 1, value40);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 118:
 								/* begin lowcodePrimitiveLoadLocalUInt8 */
@@ -28600,7 +28049,7 @@ interpret(void)
 								}
 								int32AtPointerput(nativeSP - 1, value412);
 								extA = 0;
-								goto l2172;
+								goto l3058;
 								break;
 							case 119:
 								/* begin lowcodePrimitiveLoadObjectAt */
@@ -28622,7 +28071,7 @@ interpret(void)
 								fieldValue = longAt((object26 + BaseHeaderSize) + (((sqInt)((usqInt)(fieldIndex4) << (shiftForWord())))));
 								/* begin internalPush: */
 								longAtPointerput((localSP -= BytesPerOop), fieldValue);
-								goto l2172;
+								goto l3058;
 								break;
 							default:
 								/* begin lowcodeUnaryInlinePrimitive3: */
@@ -28640,20 +28089,20 @@ interpret(void)
 									/* begin internalPush: */
 									longAtPointerput((localSP -= BytesPerOop), fieldValue1);
 									extA = 0;
-									goto l3124;
+									goto l2782;
 									break;
 								case 121:
 									/* begin lowcodePrimitiveLoadPointerFromMemory */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer32 = pointerAtPointer(nativeSP - 1);
+									topPointer26 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer591 = nativeSP + BytesPerOop;
+									valueOopPointer65 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer591)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer591))));
-									pointer10 = topPointer32;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer65)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer65))));
+									pointer10 = topPointer26;
 									pointerResult2 = pointerAtPointer(pointer10);
 									/* begin internalPushPointer: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
@@ -28665,21 +28114,21 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									pointerAtPointerput(nativeSP - 1, pointerResult2);
-									goto l3124;
+									goto l2782;
 									break;
 								case 122:
 									/* begin lowcodePrimitiveLoadUInt16FromMemory */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer113 = pointerAtPointer(nativeSP - 1);
+									topPointer112 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer1301 = nativeSP + BytesPerOop;
+									valueOopPointer1341 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1301)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1301))));
-									pointer12 = topPointer113;
-									value44 = uint16AtPointer(pointer12);
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1341)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1341))));
+									pointer12 = topPointer112;
+									value43 = uint16AtPointer(pointer12);
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -28689,21 +28138,21 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, value44);
-									goto l3124;
+									int32AtPointerput(nativeSP - 1, value43);
+									goto l2782;
 									break;
 								case 123:
 									/* begin lowcodePrimitiveLoadUInt32FromMemory */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer211 = pointerAtPointer(nativeSP - 1);
+									topPointer25 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer213 = nativeSP + BytesPerOop;
+									valueOopPointer212 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer213)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer213))));
-									pointer22 = topPointer211;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer212)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer212))));
+									pointer22 = topPointer25;
 									value114 = uint32AtPointer(pointer22);
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
@@ -28715,20 +28164,20 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									int32AtPointerput(nativeSP - 1, value114);
-									goto l3124;
+									goto l2782;
 									break;
 								case 0x7C:
 									/* begin lowcodePrimitiveLoadUInt64FromMemory */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer33 = pointerAtPointer(nativeSP - 1);
+									topPointer32 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer314 = nativeSP + BytesPerOop;
+									valueOopPointer313 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer314)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer314))));
-									pointer32 = topPointer33;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer313)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer313))));
+									pointer32 = topPointer32;
 									value212 = uint64AtPointer(pointer32);
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
@@ -28740,7 +28189,7 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									long64AtPointerput(nativeSP - 1, value212);
-									goto l3124;
+									goto l2782;
 									break;
 								case 125:
 									/* begin lowcodePrimitiveLoadUInt8FromMemory */
@@ -28749,12 +28198,12 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topPointer42 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer413 = nativeSP + BytesPerOop;
+									valueOopPointer412 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer413)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer413))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer412)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer412))));
 									pointer42 = topPointer42;
-									value312 = uint8AtPointer(pointer42);
+									value310 = uint8AtPointer(pointer42);
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -28764,8 +28213,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, value312);
-									goto l3124;
+									int32AtPointerput(nativeSP - 1, value310);
+									goto l2782;
 									break;
 								case 0x7E:
 									/* begin lowcodePrimitiveLocalFrameSize */
@@ -28819,28 +28268,28 @@ interpret(void)
 									}
 									GIV(nativeStackPointer) -= 256;
 									extA = 0;
-									goto l3124;
+									goto l2782;
 									break;
 								case 0x7F:
-									goto l3124;
+									goto l2782;
 									break;
 								case 128:
 									/* begin lowcodePrimitiveLockVM */
 									abort();
-									goto l3124;
+									goto l2782;
 									break;
 								case 129:
 									/* begin lowcodePrimitiveMalloc32 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt3230 = int32AtPointer(nativeSP - 1);
+									topInt3233 = int32AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer581 = nativeSP + BytesPerOop;
+									valueOopPointer511 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer581)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer581))));
-									size6 = topInt3230;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer511)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer511))));
+									size6 = topInt3233;
 									pointer52 = malloc(size6);
 									/* begin internalPushPointer: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
@@ -28852,20 +28301,20 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									pointerAtPointerput(nativeSP - 1, pointer52);
-									goto l3124;
+									goto l2782;
 									break;
 								case 130:
 									/* begin lowcodePrimitiveMalloc64 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt6429 = long64AtPointer(nativeSP - 1);
+									topInt6430 = long64AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer631 = nativeSP + 8;
+									valueOopPointer641 = nativeSP + 8;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer631)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer631))));
-									size11 = topInt6429;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer641)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer641))));
+									size11 = topInt6430;
 									pointer61 = malloc(size11);
 									/* begin internalPushPointer: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
@@ -28877,7 +28326,7 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									pointerAtPointerput(nativeSP - 1, pointer61);
-									goto l3124;
+									goto l2782;
 									break;
 								case 131:
 									/* begin lowcodePrimitiveMemcpy32 */
@@ -28886,10 +28335,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topInt32119 = int32AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer73 = nativeSP + BytesPerOop;
+									valueOopPointer72 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer73)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer73))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer72)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer72))));
 									size2 = topInt32119;
 									/* begin internalPopStackPointer */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -28897,10 +28346,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topPointer52 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer1113 = nativeSP + BytesPerOop;
+									valueOopPointer1112 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1113)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1113))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1112)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1112))));
 									source = topPointer52;
 									/* begin internalPopStackPointer */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -28908,13 +28357,13 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topPointer11 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer214 = nativeSP + BytesPerOop;
+									valueOopPointer213 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer214)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer214))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer213)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer213))));
 									dest = topPointer11;
 									lowcode_memcpy(dest, source, size2);
-									goto l3124;
+									goto l2782;
 									break;
 								case 132:
 									/* begin lowcodePrimitiveMemcpy64 */
@@ -28923,10 +28372,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topInt64117 = long64AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer83 = nativeSP + 8;
+									valueOopPointer82 = nativeSP + 8;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer83)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer83))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer82)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer82))));
 									size3 = topInt64117;
 									/* begin internalPopStackPointer */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -28951,7 +28400,7 @@ interpret(void)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer222))));
 									dest1 = topPointer12;
 									lowcode_memcpy(dest1, source1, size3);
-									goto l3124;
+									goto l2782;
 									break;
 								case 133:
 									/* begin lowcodePrimitiveMemcpyFixed */
@@ -28962,10 +28411,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topPointer7 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer93 = nativeSP + BytesPerOop;
+									valueOopPointer92 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer93)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer93))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer92)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer92))));
 									source2 = topPointer7;
 									/* begin internalPopStackPointer */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -28973,18 +28422,18 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topPointer13 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer1331 = nativeSP + BytesPerOop;
+									valueOopPointer135 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1331)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1331))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer135)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer135))));
 									dest2 = topPointer13;
 									lowcode_memcpy(dest2, source2, size4);
 									extA = 0;
-									goto l3124;
+									goto l2782;
 									break;
 								case 134:
 									/* begin lowcodePrimitiveMoveFloat32ToPhysical */
-									registerID6 = extA;
+									registerID10 = extA;
 									/* begin internalPopStackFloat32 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -28995,10 +28444,10 @@ interpret(void)
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer102)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer102))));
-									value43 = topSingle28;
-									lowcodeCalloutStatefloat32Registervalue(lowcodeCalloutState, registerID6, value43);
+									value42 = topSingle28;
+									lowcodeCalloutStatefloat32Registervalue(lowcodeCalloutState, registerID10, value42);
 									extA = 0;
-									goto l3124;
+									goto l2782;
 									break;
 								case 135:
 									/* begin lowcodePrimitiveMoveFloat64ToPhysical */
@@ -29016,7 +28465,7 @@ interpret(void)
 									value52 = topDouble51;
 									lowcodeCalloutStatefloat64Registervalue(lowcodeCalloutState, registerID1, value52);
 									extA = 0;
-									goto l3124;
+									goto l2782;
 									break;
 								case 136:
 									/* begin lowcodePrimitiveMoveInt32ToPhysical */
@@ -29025,16 +28474,16 @@ interpret(void)
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt32210 = int32AtPointer(nativeSP - 1);
+									topInt32211 = int32AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
 									valueOopPointer152 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer152)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer152))));
-									value62 = topInt32210;
+									value62 = topInt32211;
 									lowcodeCalloutStateint32Registervalue(lowcodeCalloutState, registerID2, value62);
 									extA = 0;
-									goto l3124;
+									goto l2782;
 									break;
 								case 137:
 									/* begin lowcodePrimitiveMoveInt64ToPhysical */
@@ -29043,16 +28492,16 @@ interpret(void)
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt6428 = long64AtPointer(nativeSP - 1);
+									topInt64210 = long64AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
 									valueOopPointer162 = nativeSP + 8;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer162)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer162))));
-									value72 = topInt6428;
+									value72 = topInt64210;
 									lowcodeCalloutStateint64Registervalue(lowcodeCalloutState, registerID3, value72);
 									extA = 0;
-									goto l3124;
+									goto l2782;
 									break;
 								case 138:
 									/* begin lowcodePrimitiveMovePointerToPhysical */
@@ -29070,20 +28519,20 @@ interpret(void)
 									pointerValue4 = topPointer8;
 									lowcodeCalloutStatepointerRegistervalue(lowcodeCalloutState, registerID4, pointerValue4);
 									extA = 0;
-									goto l3124;
+									goto l2782;
 									break;
 								case 139:
 									/* begin lowcodePrimitiveMul32 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt3233 = int32AtPointer(nativeSP - 1);
+									topInt3234 = int32AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
 									valueOopPointer192 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer192)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer192))));
-									second201 = topInt3233;
+									second231 = topInt3234;
 									/* begin internalPopStackInt32 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -29094,8 +28543,8 @@ interpret(void)
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer182)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer182))));
-									first201 = topInt321110;
-									result35 = first201 * second201;
+									first221 = topInt321110;
+									result39 = first221 * second231;
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -29105,21 +28554,21 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, result35);
-									goto l3124;
+									int32AtPointerput(nativeSP - 1, result39);
+									goto l2782;
 									break;
 								case 140:
 									/* begin lowcodePrimitiveMul64 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt6433 = long64AtPointer(nativeSP - 1);
+									topInt6432 = long64AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
 									valueOopPointer202 = nativeSP + 8;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer202)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer202))));
-									second110 = topInt6433;
+									second112 = topInt6432;
 									/* begin internalPopStackInt64 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -29130,8 +28579,8 @@ interpret(void)
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1102)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1102))));
-									first110 = topInt64118;
-									result113 = first110 * second110;
+									first112 = topInt64118;
+									result113 = first112 * second112;
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -29142,21 +28591,21 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									long64AtPointerput(nativeSP - 1, result113);
-									goto l3124;
+									goto l2782;
 									break;
 								case 141:
 									/* begin lowcodePrimitiveNeg32 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt3243 = int32AtPointer(nativeSP - 1);
+									topInt3242 = int32AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
 									valueOopPointer232 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer232)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer232))));
-									value82 = topInt3243;
-									result213 = -value82;
+									value82 = topInt3242;
+									result212 = -value82;
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -29166,22 +28615,22 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, result213);
-									goto l3124;
+									int32AtPointerput(nativeSP - 1, result212);
+									goto l2782;
 									break;
 								case 142:
 									/* begin lowcodePrimitiveNeg64 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt6443 = long64AtPointer(nativeSP - 1);
+									topInt6442 = long64AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
 									valueOopPointer242 = nativeSP + 8;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer242)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer242))));
-									value92 = topInt6443;
-									result34 = -value92;
+									value92 = topInt6442;
+									result38 = -value92;
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -29191,22 +28640,22 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									long64AtPointerput(nativeSP - 1, result34);
-									goto l3124;
+									long64AtPointerput(nativeSP - 1, result38);
+									goto l2782;
 									break;
 								case 143:
 									/* begin lowcodePrimitiveNot32 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topInt3253 = int32AtPointer(nativeSP - 1);
+									topInt3252 = int32AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
 									valueOopPointer252 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer252)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer252))));
-									value102 = topInt3253;
-									result43 = value102 ^ -1;
+									value102 = topInt3252;
+									result42 = value102 ^ -1;
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -29216,8 +28665,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, result43);
-									goto l3124;
+									int32AtPointerput(nativeSP - 1, result42);
+									goto l2782;
 									break;
 								case 144:
 									/* begin lowcodePrimitiveNot64 */
@@ -29231,7 +28680,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer262)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer262))));
 									value113 = topInt6452;
-									result53 = value113 ^ -1;
+									result52 = value113 ^ -1;
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -29241,8 +28690,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									long64AtPointerput(nativeSP - 1, result53);
-									goto l3124;
+									long64AtPointerput(nativeSP - 1, result52);
+									goto l2782;
 									break;
 								case 145:
 									/* begin lowcodePrimitiveOr32 */
@@ -29255,19 +28704,19 @@ interpret(void)
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer272)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer272))));
-									second231 = topInt3262;
+									second221 = topInt3262;
 									/* begin internalPopStackInt32 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topInt32122 = int32AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer1114 = nativeSP + BytesPerOop;
+									valueOopPointer1113 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1114)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1114))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1113)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1113))));
 									first231 = topInt32122;
-									result63 = first231 | second231;
+									result62 = first231 | second221;
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -29277,8 +28726,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, result63);
-									goto l3124;
+									int32AtPointerput(nativeSP - 1, result62);
+									goto l2782;
 									break;
 								case 146:
 									/* begin lowcodePrimitiveOr64 */
@@ -29291,7 +28740,7 @@ interpret(void)
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer282)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer282))));
-									second33 = topInt6462;
+									second32 = topInt6462;
 									/* begin internalPopStackInt64 */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -29302,8 +28751,8 @@ interpret(void)
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1122)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1122))));
-									first33 = topInt64122;
-									result73 = first33 | second33;
+									first32 = topInt64122;
+									result72 = first32 | second32;
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -29313,19 +28762,25 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									long64AtPointerput(nativeSP - 1, result73);
-									goto l3124;
+									long64AtPointerput(nativeSP - 1, result72);
+									goto l2782;
 									break;
 								case 147:
-									/* begin lowcodePrimitivePerformCallFloat32 */
-									function14 = extA;
-									/* begin lowcodeCalloutFloat32Result: */
+									/* begin lowcodePrimitivePerformCallout */
+									function2 = extA;
+									/* begin lowcodeDoCallout: */
+									localIP -= 1;
+									/* begin externalizeIPandSP */
 									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
 									GIV(instructionPointer) = oopForPointer(localIP);
 									GIV(stackPointer) = localSP;
 									GIV(framePointer) = localFP;
 									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), ((char*) function14));
+									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), ((char*) function2));
+									if (GIV(instructionPointer) == (ceReturnToInterpreterPC())) {
+										/* begin iframeSavedIP: */
+										GIV(instructionPointer) = longAt(GIV(framePointer) + FoxIFSavedIP);
+									}
 									/* begin internalizeIPandSP */
 									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
 									localIP = pointerForOop(GIV(instructionPointer));
@@ -29334,34 +28789,42 @@ interpret(void)
 									nativeSP = 0;
 
 									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize14 = sizeof(sqLowcodeCalloutState);
+									calloutStateSize2 = sizeof(sqLowcodeCalloutState);
 									initialShadowCallStackPointer = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer = ((char*) ((((size_t) (initialShadowCallStackPointer - calloutStateSize14))) & -16));
+									initialShadowCallStackPointer = ((char*) ((((size_t) (initialShadowCallStackPointer - calloutStateSize2))) & -16));
 									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer);
-									result182 = lowcodeCalloutStateFetchResultFloat32(lowcodeCalloutState);
-									/* begin internalPushFloat32: */
-									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-									/* begin nativeStackPointerIn:put: */
-									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									else {
-										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									singleFloatAtPointerput(nativeSP - 1, result182);
+									/* begin fetchNextBytecode */
+									currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
+
+									lowcodeCalloutStateFetchResultFloat32(lowcodeCalloutState);
 									extA = 0;
-									goto l3124;
+									goto l2782;
 									break;
 								case 148:
-									/* begin lowcodePrimitivePerformCallFloat64 */
-									function1 = extA;
-									/* begin lowcodeCalloutFloat64Result: */
+									/* begin lowcodePrimitivePerformCalloutIndirect */
+									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+									topPointer22 = pointerAtPointer(nativeSP - 1);
+									/* begin nativeStackPointerIn:put: */
+									valueOopPointer432 = nativeSP + BytesPerOop;
+									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer432)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer432))));
+									function1 = topPointer22;
+									/* begin lowcodeDoCallout: */
+									localIP -= 1;
+									/* begin externalizeIPandSP */
 									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
 									GIV(instructionPointer) = oopForPointer(localIP);
 									GIV(stackPointer) = localSP;
 									GIV(framePointer) = localFP;
 									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), ((char*) function1));
+									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), function1);
+									if (GIV(instructionPointer) == (ceReturnToInterpreterPC())) {
+										/* begin iframeSavedIP: */
+										GIV(instructionPointer) = longAt(GIV(framePointer) + FoxIFSavedIP);
+									}
 									/* begin internalizeIPandSP */
 									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
 									localIP = pointerForOop(GIV(instructionPointer));
@@ -29374,52 +28837,15 @@ interpret(void)
 									initialShadowCallStackPointer1 = (shadowCallStackPointerIn(localFP)) - 1;
 									initialShadowCallStackPointer1 = ((char*) ((((size_t) (initialShadowCallStackPointer1 - calloutStateSize1))) & -16));
 									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer1);
-									result192 = lowcodeCalloutStateFetchResultFloat64(lowcodeCalloutState);
-									/* begin internalPushFloat64: */
-									nativeSP = (nativeStackPointerIn(localFP)) - 8;
-									/* begin nativeStackPointerIn:put: */
-									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									else {
-										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									floatAtPointerput(nativeSP - 1, result192);
-									extA = 0;
-									goto l3124;
+									/* begin fetchNextBytecode */
+									currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
+
+									lowcodeCalloutStateFetchResultFloat32(lowcodeCalloutState);
+									goto l2782;
 									break;
 								case 149:
-									/* begin lowcodePrimitivePerformCallIndirectFloat32 */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer22 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer432 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer432)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer432))));
-									function2 = topPointer22;
-									/* begin lowcodeCalloutFloat32Result: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), function2);
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize2 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer2 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer2 = ((char*) ((((size_t) (initialShadowCallStackPointer2 - calloutStateSize2))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer2);
-									result202 = lowcodeCalloutStateFetchResultFloat32(lowcodeCalloutState);
+									/* begin lowcodePrimitivePushCalloutResultFloat32 */
+									result82 = lowcodeCalloutStateFetchResultFloat32(lowcodeCalloutState);
 									/* begin internalPushFloat32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -29429,41 +28855,12 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									singleFloatAtPointerput(nativeSP - 1, result202);
-									goto l3124;
+									singleFloatAtPointerput(nativeSP - 1, result82);
+									goto l2782;
 									break;
 								case 150:
-									/* begin lowcodePrimitivePerformCallIndirectFloat64 */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer23 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer442 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer442)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer442))));
-									function3 = topPointer23;
-									/* begin lowcodeCalloutFloat64Result: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), function3);
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize3 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer3 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer3 = ((char*) ((((size_t) (initialShadowCallStackPointer3 - calloutStateSize3))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer3);
-									result214 = lowcodeCalloutStateFetchResultFloat64(lowcodeCalloutState);
+									/* begin lowcodePrimitivePushCalloutResultFloat64 */
+									result92 = lowcodeCalloutStateFetchResultFloat64(lowcodeCalloutState);
 									/* begin internalPushFloat64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -29473,41 +28870,12 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									floatAtPointerput(nativeSP - 1, result214);
-									goto l3124;
+									floatAtPointerput(nativeSP - 1, result92);
+									goto l2782;
 									break;
 								case 151:
-									/* begin lowcodePrimitivePerformCallIndirectInt32 */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer24 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer452 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer452)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer452))));
-									function4 = topPointer24;
-									/* begin lowcodeCalloutInt32Result: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), function4);
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize4 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer4 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer4 = ((char*) ((((size_t) (initialShadowCallStackPointer4 - calloutStateSize4))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer4);
-									result222 = lowcodeCalloutStateFetchResultInt32(lowcodeCalloutState);
+									/* begin lowcodePrimitivePushCalloutResultInt32 */
+									result102 = lowcodeCalloutStateFetchResultInt32(lowcodeCalloutState);
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -29517,41 +28885,12 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, result222);
-									goto l3124;
+									int32AtPointerput(nativeSP - 1, result102);
+									goto l2782;
 									break;
 								case 152:
-									/* begin lowcodePrimitivePerformCallIndirectInt64 */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer25 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer462 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer462)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer462))));
-									function5 = topPointer25;
-									/* begin lowcodeCalloutInt64Result: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), function5);
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize5 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer5 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer5 = ((char*) ((((size_t) (initialShadowCallStackPointer5 - calloutStateSize5))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer5);
-									result232 = lowcodeCalloutStateFetchResultInt64(lowcodeCalloutState);
+									/* begin lowcodePrimitivePushCalloutResultInt64 */
+									result114 = lowcodeCalloutStateFetchResultInt64(lowcodeCalloutState);
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -29561,41 +28900,12 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									long64AtPointerput(nativeSP - 1, result232);
-									goto l3124;
+									long64AtPointerput(nativeSP - 1, result114);
+									goto l2782;
 									break;
 								case 153:
-									/* begin lowcodePrimitivePerformCallIndirectPointer */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer26 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer472 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer472)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer472))));
-									function6 = topPointer26;
-									/* begin lowcodeCalloutPointerResult: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), function6);
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize6 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer6 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer6 = ((char*) ((((size_t) (initialShadowCallStackPointer6 - calloutStateSize6))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer6);
-									result242 = lowcodeCalloutStateFetchResultPointer(lowcodeCalloutState);
+									/* begin lowcodePrimitivePushCalloutResultPointer */
+									result122 = lowcodeCalloutStateFetchResultPointer(lowcodeCalloutState);
 									/* begin internalPushPointer: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -29605,294 +28915,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									pointerAtPointerput(nativeSP - 1, result242);
-									goto l3124;
-									break;
-								case 154:
-									/* begin lowcodePrimitivePerformCallIndirectStructure */
-									structureSize2 = extA;
-									/* begin internalPopStackPointer */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer27 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer482 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer482)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer482))));
-									result252 = topPointer27;
-									/* begin internalPopStackPointer */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer110 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer1172 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1172)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1172))));
-									function7 = topPointer110;
-									/* begin lowcodeCallout:structureResult: */
-									
-									/* In the StackInterpreter stacks grow down. */
-									GIV(shadowCallStackPointer) -= BytesPerOop;
-									pointerAtPointerput(GIV(shadowCallStackPointer), result252);
-									/* begin externalizeIPandSP */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), function7);
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize7 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer7 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer7 = ((char*) ((((size_t) (initialShadowCallStackPointer7 - calloutStateSize7))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer7);
-									resultPointer = lowcodeCalloutStateFetchResultStructure(lowcodeCalloutState);
-									/* begin internalPushPointer: */
-									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-									/* begin nativeStackPointerIn:put: */
-									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									else {
-										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									pointerAtPointerput(nativeSP - 1, resultPointer);
-									extA = 0;
-									goto l3124;
-									break;
-								case 155:
-									/* begin lowcodePrimitivePerformCallIndirectVoid */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer28 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer492 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer492)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer492))));
-									function8 = topPointer28;
-									/* begin lowcodeCalloutInt32Result: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), function8);
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize8 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer8 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer8 = ((char*) ((((size_t) (initialShadowCallStackPointer8 - calloutStateSize8))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer8);
-									lowcodeCalloutStateFetchResultInt32(lowcodeCalloutState);
-									goto l3124;
-									break;
-								case 156:
-									/* begin lowcodePrimitivePerformCallInt32 */
-									function9 = extA;
-									/* begin lowcodeCalloutInt32Result: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), ((char*) function9));
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize9 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer9 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer9 = ((char*) ((((size_t) (initialShadowCallStackPointer9 - calloutStateSize9))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer9);
-									result26 = lowcodeCalloutStateFetchResultInt32(lowcodeCalloutState);
-									/* begin internalPushInt32: */
-									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-									/* begin nativeStackPointerIn:put: */
-									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									else {
-										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									int32AtPointerput(nativeSP - 1, result26);
-									extA = 0;
-									goto l3124;
-									break;
-								case 157:
-									/* begin lowcodePrimitivePerformCallInt64 */
-									function10 = extA;
-									/* begin lowcodeCalloutInt64Result: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), ((char*) function10));
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize10 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer10 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer10 = ((char*) ((((size_t) (initialShadowCallStackPointer10 - calloutStateSize10))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer10);
-									result27 = lowcodeCalloutStateFetchResultInt64(lowcodeCalloutState);
-									/* begin internalPushInt64: */
-									nativeSP = (nativeStackPointerIn(localFP)) - 8;
-									/* begin nativeStackPointerIn:put: */
-									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									else {
-										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									long64AtPointerput(nativeSP - 1, result27);
-									extA = 0;
-									goto l3124;
-									break;
-								case 158:
-									/* begin lowcodePrimitivePerformCallPointer */
-									function11 = extA;
-									/* begin lowcodeCalloutPointerResult: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), ((char*) function11));
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize11 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer11 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer11 = ((char*) ((((size_t) (initialShadowCallStackPointer11 - calloutStateSize11))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer11);
-									result28 = lowcodeCalloutStateFetchResultPointer(lowcodeCalloutState);
-									/* begin internalPushPointer: */
-									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-									/* begin nativeStackPointerIn:put: */
-									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									else {
-										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									pointerAtPointerput(nativeSP - 1, result28);
-									extA = 0;
-									goto l3124;
-									break;
-								case 159:
-									/* begin lowcodePrimitivePerformCallStructure */
-									function12 = extA;
-									structureSize1 = extB;
-									/* begin internalPopStackPointer */
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-									topPointer29 = pointerAtPointer(nativeSP - 1);
-									/* begin nativeStackPointerIn:put: */
-									valueOopPointer502 = nativeSP + BytesPerOop;
-									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer502)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer502))));
-									result29 = topPointer29;
-									/* begin internalPushShadowCallStackPointer: */
-
-									/* In the StackInterpreter stacks grow down. */
-									GIV(shadowCallStackPointer) -= BytesPerOop;
-									pointerAtPointerput(GIV(shadowCallStackPointer), result29);
-									/* begin lowcodeCalloutPointerResult: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), ((char*) function12));
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize12 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer12 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer12 = ((char*) ((((size_t) (initialShadowCallStackPointer12 - calloutStateSize12))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer12);
-									resultPointer1 = lowcodeCalloutStateFetchResultPointer(lowcodeCalloutState);
-									/* begin internalPushPointer: */
-									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-									/* begin nativeStackPointerIn:put: */
-									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									else {
-										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-									}
-									pointerAtPointerput(nativeSP - 1, resultPointer1);
-									extA = 0;
-									extB = 0;
-									numExtB = 0;
-									goto l3124;
-									break;
-								case 160:
-									/* begin lowcodePrimitivePerformCallVoid */
-									function13 = extA;
-									/* begin lowcodeCalloutInt32Result: */
-									assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
-									GIV(instructionPointer) = oopForPointer(localIP);
-									GIV(stackPointer) = localSP;
-									GIV(framePointer) = localFP;
-									/* begin lowcodeCalloutState:callFunction: */
-									lowcodeCalloutStatestackPointerstackSizecallFunction(lowcodeCalloutState, GIV(shadowCallStackPointer), (((char*) lowcodeCalloutState)) - GIV(shadowCallStackPointer), ((char*) function13));
-									/* begin internalizeIPandSP */
-									assert(GIV(instructionPointer) != (ceReturnToInterpreterPC()));
-									localIP = pointerForOop(GIV(instructionPointer));
-									localSP = pointerForOop(GIV(stackPointer));
-									localFP = pointerForOop(GIV(framePointer));
-									nativeSP = 0;
-
-									/* begin reloadLowcodeStateAfterCallout */
-									calloutStateSize13 = sizeof(sqLowcodeCalloutState);
-									initialShadowCallStackPointer13 = (shadowCallStackPointerIn(localFP)) - 1;
-									initialShadowCallStackPointer13 = ((char*) ((((size_t) (initialShadowCallStackPointer13 - calloutStateSize13))) & -16));
-									lowcodeCalloutState = ((sqLowcodeCalloutState*) initialShadowCallStackPointer13);
-									lowcodeCalloutStateFetchResultInt32(lowcodeCalloutState);
-									extA = 0;
-									goto l3124;
+									pointerAtPointerput(nativeSP - 1, result122);
+									goto l2782;
 									break;
 								case 161:
 									/* begin lowcodePrimitivePlaftormCode */
@@ -29907,7 +28931,7 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									int32AtPointerput(nativeSP - 1, code);
-									goto l3124;
+									goto l2782;
 									break;
 								case 162:
 									/* begin lowcodePrimitivePointerAddConstantOffset */
@@ -29923,7 +28947,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer292)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer292))));
 									base3 = topPointer9;
-									result83 = base3 + offset4;
+									result132 = base3 + offset4;
 									/* begin internalPushPointer: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -29933,10 +28957,10 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									pointerAtPointerput(nativeSP - 1, result83);
+									pointerAtPointerput(nativeSP - 1, result132);
 									extB = 0;
 									numExtB = 0;
-									goto l3124;
+									goto l2782;
 									break;
 								case 163:
 									/* begin lowcodePrimitivePointerAddOffset32 */
@@ -29961,7 +28985,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1132)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1132))));
 									base11 = topPointer10;
-									result92 = base11 + offset11;
+									result142 = base11 + offset11;
 									/* begin internalPushPointer: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -29971,8 +28995,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									pointerAtPointerput(nativeSP - 1, result92);
-									goto l3124;
+									pointerAtPointerput(nativeSP - 1, result142);
+									goto l2782;
 									break;
 								case 164:
 									/* begin lowcodePrimitivePointerAddOffset64 */
@@ -29981,10 +29005,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topInt6472 = long64AtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer313 = nativeSP + 8;
+									valueOopPointer312 = nativeSP + 8;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer313)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer313))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer312)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer312))));
 									offset2 = topInt6472;
 									/* begin internalPopStackPointer */
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -29997,7 +29021,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1142)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1142))));
 									base2 = topPointer14;
-									result102 = base2 + offset2;
+									result152 = base2 + offset2;
 									/* begin internalPushPointer: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -30007,8 +29031,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									pointerAtPointerput(nativeSP - 1, result102);
-									goto l3124;
+									pointerAtPointerput(nativeSP - 1, result152);
+									goto l2782;
 									break;
 								case 165:
 									/* begin lowcodePrimitivePointerEqual */
@@ -30046,7 +29070,7 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									int32AtPointerput(nativeSP - 1, value122);
-									goto l3124;
+									goto l2782;
 									break;
 								case 166:
 									/* begin lowcodePrimitivePointerNotEqual */
@@ -30084,7 +29108,7 @@ interpret(void)
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
 									int32AtPointerput(nativeSP - 1, value132);
-									goto l3124;
+									goto l2782;
 									break;
 								case 167:
 									/* begin lowcodePrimitivePointerToInt32 */
@@ -30098,7 +29122,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer342)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer342))));
 									pointer71 = topPointer19;
-									result114 = ((uintptr_t) pointer71);
+									result162 = ((uintptr_t) pointer71);
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -30108,8 +29132,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, result114);
-									goto l3124;
+									int32AtPointerput(nativeSP - 1, result162);
+									goto l2782;
 									break;
 								case 168:
 									/* begin lowcodePrimitivePointerToInt64 */
@@ -30123,7 +29147,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer352)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer352))));
 									pointer81 = topPointer20;
-									result122 = ((uintptr_t) pointer81);
+									result172 = ((uintptr_t) pointer81);
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -30133,8 +29157,8 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									long64AtPointerput(nativeSP - 1, result122);
-									goto l3124;
+									long64AtPointerput(nativeSP - 1, result172);
+									goto l2782;
 									break;
 								case 169:
 									/* begin lowcodePrimitivePopFloat32 */
@@ -30148,7 +29172,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer362)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer362))));
 									value142 = topSingle112;
-									goto l3124;
+									goto l2782;
 									break;
 								case 170:
 									/* begin lowcodePrimitivePopFloat64 */
@@ -30162,7 +29186,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer372)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer372))));
 									value152 = topDouble121;
-									goto l3124;
+									goto l2782;
 									break;
 								case 171:
 									/* begin lowcodePrimitivePopInt32 */
@@ -30176,7 +29200,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer382)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer382))));
 									value162 = topInt3282;
-									goto l3124;
+									goto l2782;
 									break;
 								case 172:
 									/* begin lowcodePrimitivePopInt64 */
@@ -30190,7 +29214,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer392)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer392))));
 									value172 = topInt6482;
-									goto l3124;
+									goto l2782;
 									break;
 								case 173:
 									/* begin lowcodePrimitivePopMultipleNative */
@@ -30205,7 +29229,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer402)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer402))));
 									extA = 0;
-									goto l3124;
+									goto l2782;
 									break;
 								case 174:
 									/* begin lowcodePrimitivePopPointer */
@@ -30214,17 +29238,17 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 									topPointer21 = pointerAtPointer(nativeSP - 1);
 									/* begin nativeStackPointerIn:put: */
-									valueOopPointer415 = nativeSP + BytesPerOop;
+									valueOopPointer414 = nativeSP + BytesPerOop;
 									nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer415)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer415))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer414)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer414))));
 									pointerValue12 = topPointer21;
-									goto l3124;
+									goto l2782;
 									break;
 								case 175:
 									/* begin lowcodePrimitivePushConstantUInt32 */
 									constant = extA;
-									result132 = constant;
+									result182 = constant;
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -30234,14 +29258,14 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, result132);
+									int32AtPointerput(nativeSP - 1, result182);
 									extA = 0;
-									goto l3124;
+									goto l2782;
 									break;
 								case 176:
 									/* begin lowcodePrimitivePushConstantUInt64 */
 									constant1 = extA;
-									result142 = constant1;
+									result192 = constant1;
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -30251,13 +29275,13 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									long64AtPointerput(nativeSP - 1, result142);
+									long64AtPointerput(nativeSP - 1, result192);
 									extA = 0;
-									goto l3124;
+									goto l2782;
 									break;
 								case 177:
 									/* begin lowcodePrimitivePushNullPointer */
-									result152 = 0;
+									result202 = 0;
 									/* begin internalPushPointer: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -30267,12 +29291,12 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									pointerAtPointerput(nativeSP - 1, result152);
-									goto l3124;
+									pointerAtPointerput(nativeSP - 1, result202);
+									goto l2782;
 									break;
 								case 178:
 									/* begin lowcodePrimitivePushOne32 */
-									result162 = 1;
+									result213 = 1;
 									/* begin internalPushInt32: */
 									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 									/* begin nativeStackPointerIn:put: */
@@ -30282,12 +29306,12 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									int32AtPointerput(nativeSP - 1, result162);
-									goto l3124;
+									int32AtPointerput(nativeSP - 1, result213);
+									goto l2782;
 									break;
 								case 179:
 									/* begin lowcodePrimitivePushOne64 */
-									result172 = 1;
+									result222 = 1;
 									/* begin internalPushInt64: */
 									nativeSP = (nativeStackPointerIn(localFP)) - 8;
 									/* begin nativeStackPointerIn:put: */
@@ -30297,131 +29321,131 @@ interpret(void)
 									else {
 										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 									}
-									long64AtPointerput(nativeSP - 1, result172);
-									goto l3124;
+									long64AtPointerput(nativeSP - 1, result222);
+									goto l2782;
+									break;
+								case 180:
+									/* begin lowcodePrimitivePushOneFloat32 */
+									result232 = 1.0;
+									/* begin internalPushFloat32: */
+									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+									/* begin nativeStackPointerIn:put: */
+									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									else {
+										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									singleFloatAtPointerput(nativeSP - 1, result232);
+									goto l2782;
+									break;
+								case 181:
+									/* begin lowcodePrimitivePushOneFloat64 */
+									result242 = 1.0;
+									/* begin internalPushFloat64: */
+									nativeSP = (nativeStackPointerIn(localFP)) - 8;
+									/* begin nativeStackPointerIn:put: */
+									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									else {
+										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									floatAtPointerput(nativeSP - 1, result242);
+									goto l2782;
+									break;
+								case 182:
+									/* begin lowcodePrimitivePushPhysicalFloat32 */
+									registerID5 = extA;
+									value182 = lowcodeCalloutStatefloat32Register(lowcodeCalloutState, registerID5);
+									/* begin internalPushFloat32: */
+									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+									/* begin nativeStackPointerIn:put: */
+									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									else {
+										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									singleFloatAtPointerput(nativeSP - 1, value182);
+									extA = 0;
+									goto l2782;
+									break;
+								case 183:
+									/* begin lowcodePrimitivePushPhysicalFloat64 */
+									registerID6 = extA;
+									value192 = lowcodeCalloutStatefloat64Register(lowcodeCalloutState, registerID6);
+									/* begin internalPushFloat64: */
+									nativeSP = (nativeStackPointerIn(localFP)) - 8;
+									/* begin nativeStackPointerIn:put: */
+									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									else {
+										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									floatAtPointerput(nativeSP - 1, value192);
+									extA = 0;
+									goto l2782;
+									break;
+								case 184:
+									/* begin lowcodePrimitivePushPhysicalInt32 */
+									registerID7 = extA;
+									value202 = lowcodeCalloutStateint32Register(lowcodeCalloutState, registerID7);
+									/* begin internalPushInt32: */
+									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+									/* begin nativeStackPointerIn:put: */
+									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									else {
+										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									int32AtPointerput(nativeSP - 1, value202);
+									extA = 0;
+									goto l2782;
+									break;
+								case 185:
+									/* begin lowcodePrimitivePushPhysicalInt64 */
+									registerID8 = extA;
+									value213 = lowcodeCalloutStateint64Register(lowcodeCalloutState, registerID8);
+									/* begin internalPushInt64: */
+									nativeSP = (nativeStackPointerIn(localFP)) - 8;
+									/* begin nativeStackPointerIn:put: */
+									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									else {
+										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									long64AtPointerput(nativeSP - 1, value213);
+									extA = 0;
+									goto l2782;
+									break;
+								case 186:
+									/* begin lowcodePrimitivePushPhysicalPointer */
+									registerID9 = extA;
+									pointerValue2 = lowcodeCalloutStatepointerRegister(lowcodeCalloutState, registerID9);
+									/* begin internalPushPointer: */
+									nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+									/* begin nativeStackPointerIn:put: */
+									if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+										pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									else {
+										pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+									}
+									pointerAtPointerput(nativeSP - 1, pointerValue2);
+									extA = 0;
+									goto l2782;
 									break;
 								default:
 									/* begin lowcodeUnaryInlinePrimitive4: */
 									
 									switch (prim - 1000) {
-									case 180:
-										/* begin lowcodePrimitivePushOneFloat32 */
-										result32 = 1.0;
-										/* begin internalPushFloat32: */
-										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										singleFloatAtPointerput(nativeSP - 1, result32);
-										goto l2249;
-										break;
-									case 181:
-										/* begin lowcodePrimitivePushOneFloat64 */
-										result112 = 1.0;
-										/* begin internalPushFloat64: */
-										nativeSP = (nativeStackPointerIn(localFP)) - 8;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										floatAtPointerput(nativeSP - 1, result112);
-										goto l2249;
-										break;
-									case 182:
-										/* begin lowcodePrimitivePushPhysicalFloat32 */
-										registerID5 = extA;
-										value401 = lowcodeCalloutStatefloat32Register(lowcodeCalloutState, registerID5);
-										/* begin internalPushFloat32: */
-										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										singleFloatAtPointerput(nativeSP - 1, value401);
-										extA = 0;
-										goto l2249;
-										break;
-									case 183:
-										/* begin lowcodePrimitivePushPhysicalFloat64 */
-										registerID11 = extA;
-										value1111 = lowcodeCalloutStatefloat64Register(lowcodeCalloutState, registerID11);
-										/* begin internalPushFloat64: */
-										nativeSP = (nativeStackPointerIn(localFP)) - 8;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										floatAtPointerput(nativeSP - 1, value1111);
-										extA = 0;
-										goto l2249;
-										break;
-									case 184:
-										/* begin lowcodePrimitivePushPhysicalInt32 */
-										registerID21 = extA;
-										value211 = lowcodeCalloutStateint32Register(lowcodeCalloutState, registerID21);
-										/* begin internalPushInt32: */
-										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										int32AtPointerput(nativeSP - 1, value211);
-										extA = 0;
-										goto l2249;
-										break;
-									case 185:
-										/* begin lowcodePrimitivePushPhysicalInt64 */
-										registerID31 = extA;
-										value310 = lowcodeCalloutStateint64Register(lowcodeCalloutState, registerID31);
-										/* begin internalPushInt64: */
-										nativeSP = (nativeStackPointerIn(localFP)) - 8;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										long64AtPointerput(nativeSP - 1, value310);
-										extA = 0;
-										goto l2249;
-										break;
-									case 186:
-										/* begin lowcodePrimitivePushPhysicalPointer */
-										registerID41 = extA;
-										pointerValue3 = lowcodeCalloutStatepointerRegister(lowcodeCalloutState, registerID41);
-										/* begin internalPushPointer: */
-										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										pointerAtPointerput(nativeSP - 1, pointerValue3);
-										extA = 0;
-										goto l2249;
-										break;
 									case 187:
 										/* begin lowcodePrimitivePushSessionIdentifier */
-										value42 = getThisSessionID();
+										value391 = getThisSessionID();
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -30431,12 +29455,12 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value42);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, value391);
+										goto l1934;
 										break;
 									case 188:
 										/* begin lowcodePrimitivePushZero32 */
-										result212 = 0;
+										result36 = 0;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -30446,12 +29470,12 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result212);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, result36);
+										goto l1934;
 										break;
 									case 189:
 										/* begin lowcodePrimitivePushZero64 */
-										result33 = 0;
+										result112 = 0;
 										/* begin internalPushInt64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -30461,12 +29485,12 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										long64AtPointerput(nativeSP - 1, result33);
-										goto l2249;
+										long64AtPointerput(nativeSP - 1, result112);
+										goto l1934;
 										break;
 									case 190:
 										/* begin lowcodePrimitivePushZeroFloat32 */
-										result42 = 0.0;
+										result210 = 0.0;
 										/* begin internalPushFloat32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -30476,12 +29500,12 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										singleFloatAtPointerput(nativeSP - 1, result42);
-										goto l2249;
+										singleFloatAtPointerput(nativeSP - 1, result210);
+										goto l1934;
 										break;
 									case 191:
 										/* begin lowcodePrimitivePushZeroFloat64 */
-										result52 = 0.0;
+										result37 = 0.0;
 										/* begin internalPushFloat64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -30491,33 +29515,33 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										floatAtPointerput(nativeSP - 1, result52);
-										goto l2249;
+										floatAtPointerput(nativeSP - 1, result37);
+										goto l1934;
 										break;
 									case 192:
 										/* begin lowcodePrimitiveRem32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt3229 = int32AtPointer(nativeSP - 1);
+										topInt3232 = int32AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer571 = nativeSP + BytesPerOop;
+										valueOopPointer631 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer571)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer571))));
-										second181 = topInt3229;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer631)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer631))));
+										second201 = topInt3232;
 										/* begin internalPopStackInt32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 										topInt32117 = int32AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer1291 = nativeSP + BytesPerOop;
+										valueOopPointer1321 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1291)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1291))));
-										first181 = topInt32117;
-										result62 = first181 % second181;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1321)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1321))));
+										first201 = topInt32117;
+										result41 = first201 % second201;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -30527,33 +29551,33 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result62);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, result41);
+										goto l1934;
 										break;
 									case 193:
 										/* begin lowcodePrimitiveRem64 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt6426 = long64AtPointer(nativeSP - 1);
+										topInt6428 = long64AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer2111 = nativeSP + 8;
+										valueOopPointer2101 = nativeSP + 8;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer2111)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer2111))));
-										second191 = topInt6426;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer2101)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer2101))));
+										second110 = topInt6428;
 										/* begin internalPopStackInt64 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 										topInt64116 = long64AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer1112 = nativeSP + 8;
+										valueOopPointer1110 = nativeSP + 8;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1112)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1112))));
-										first191 = topInt64116;
-										result72 = first191 % second191;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1110)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1110))));
+										first110 = topInt64116;
+										result51 = first110 % second110;
 										/* begin internalPushInt64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -30563,21 +29587,21 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										long64AtPointerput(nativeSP - 1, result72);
-										goto l2249;
+										long64AtPointerput(nativeSP - 1, result51);
+										goto l1934;
 										break;
 									case 194:
 										/* begin lowcodePrimitiveRightShift32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt3228 = int32AtPointer(nativeSP - 1);
+										topInt32210 = int32AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer311 = nativeSP + BytesPerOop;
+										valueOopPointer310 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer311)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer311))));
-										shiftAmount2 = topInt3228;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer310)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer310))));
+										shiftAmount2 = topInt32210;
 										/* begin internalPopStackInt32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -30588,8 +29612,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1210)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1210))));
-										value511 = topInt32118;
-										result82 = ((usqInt) value511) >> shiftAmount2;
+										value1111 = topInt32118;
+										result61 = ((usqInt) value1111) >> shiftAmount2;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -30599,33 +29623,33 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result82);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, result61);
+										goto l1934;
 										break;
 									case 195:
 										/* begin lowcodePrimitiveRightShift64 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt6427 = long64AtPointer(nativeSP - 1);
+										topInt6429 = long64AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer411 = nativeSP + 8;
+										valueOopPointer410 = nativeSP + 8;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer411)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer411))));
-										shiftAmount11 = topInt6427;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer410)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer410))));
+										shiftAmount11 = topInt6429;
 										/* begin internalPopStackInt64 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 										topInt64115 = long64AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer1321 = nativeSP + 8;
+										valueOopPointer1331 = nativeSP + 8;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1321)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1321))));
-										value611 = topInt64115;
-										result91 = ((unsigned sqLong)value611) >> shiftAmount11;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1331)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1331))));
+										value210 = topInt64115;
+										result71 = ((unsigned sqLong)value210) >> shiftAmount11;
 										/* begin internalPushInt64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -30635,22 +29659,22 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										long64AtPointerput(nativeSP - 1, result91);
-										goto l2249;
+										long64AtPointerput(nativeSP - 1, result71);
+										goto l1934;
 										break;
 									case 196:
 										/* begin lowcodePrimitiveSignExtend32From16 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt3232 = int32AtPointer(nativeSP - 1);
+										topInt3231 = int32AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer561 = nativeSP + BytesPerOop;
+										valueOopPointer510 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer561)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer561))));
-										value711 = topInt3232;
-										result101 = ((signed short) value711);
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer510)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer510))));
+										value381 = topInt3231;
+										result81 = ((signed short) value381);
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -30660,22 +29684,22 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result101);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, result81);
+										goto l1934;
 										break;
 									case 197:
 										/* begin lowcodePrimitiveSignExtend32From8 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt3242 = int32AtPointer(nativeSP - 1);
+										topInt3241 = int32AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
 										valueOopPointer621 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer621)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer621))));
-										value81 = topInt3242;
-										result111 = ((signed char) value81);
+										value411 = topInt3241;
+										result91 = ((signed char) value411);
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -30685,22 +29709,72 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result111);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, result91);
+										goto l1934;
 										break;
 									case 198:
 										/* begin lowcodePrimitiveSignExtend64From16 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt6432 = long64AtPointer(nativeSP - 1);
+										topInt6431 = long64AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer72 = nativeSP + 8;
+										valueOopPointer71 = nativeSP + 8;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer72)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer72))));
-										value91 = topInt6432;
-										result121 = ((int16_t) value91);
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer71)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer71))));
+										value511 = topInt6431;
+										result101 = ((int16_t) value511);
+										/* begin internalPushInt64: */
+										nativeSP = (nativeStackPointerIn(localFP)) - 8;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										long64AtPointerput(nativeSP - 1, result101);
+										goto l1934;
+										break;
+									case 199:
+										/* begin lowcodePrimitiveSignExtend64From32 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt3251 = int32AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer81 = nativeSP + BytesPerOop;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer81)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer81))));
+										value611 = topInt3251;
+										result111 = ((int32_t) value611);
+										/* begin internalPushInt64: */
+										nativeSP = (nativeStackPointerIn(localFP)) - 8;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										long64AtPointerput(nativeSP - 1, result111);
+										goto l1934;
+										break;
+									case 200:
+										/* begin lowcodePrimitiveSignExtend64From8 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt6441 = long64AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer91 = nativeSP + 8;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer91)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer91))));
+										value711 = topInt6441;
+										result121 = ((signed char) value711);
 										/* begin internalPushInt64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -30711,70 +29785,20 @@ interpret(void)
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
 										long64AtPointerput(nativeSP - 1, result121);
-										goto l2249;
-										break;
-									case 199:
-										/* begin lowcodePrimitiveSignExtend64From32 */
-										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt3252 = int32AtPointer(nativeSP - 1);
-										/* begin nativeStackPointerIn:put: */
-										valueOopPointer82 = nativeSP + BytesPerOop;
-										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer82)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer82))));
-										value101 = topInt3252;
-										result131 = ((int32_t) value101);
-										/* begin internalPushInt64: */
-										nativeSP = (nativeStackPointerIn(localFP)) - 8;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										long64AtPointerput(nativeSP - 1, result131);
-										goto l2249;
-										break;
-									case 200:
-										/* begin lowcodePrimitiveSignExtend64From8 */
-										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt6442 = long64AtPointer(nativeSP - 1);
-										/* begin nativeStackPointerIn:put: */
-										valueOopPointer92 = nativeSP + 8;
-										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer92)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer92))));
-										value112 = topInt6442;
-										result141 = ((signed char) value112);
-										/* begin internalPushInt64: */
-										nativeSP = (nativeStackPointerIn(localFP)) - 8;
-										/* begin nativeStackPointerIn:put: */
-										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										else {
-											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-										}
-										long64AtPointerput(nativeSP - 1, result141);
-										goto l2249;
+										goto l1934;
 										break;
 									case 201:
 										/* begin lowcodePrimitiveStoreFloat32ToMemory */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topPointer30 = pointerAtPointer(nativeSP - 1);
+										topPointer23 = pointerAtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
 										valueOopPointer101 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer101)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer101))));
-										pointer9 = topPointer30;
+										pointer9 = topPointer23;
 										/* begin internalPopStackFloat32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -30787,20 +29811,20 @@ interpret(void)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer141))));
 										floatValue7 = topSingle27;
 										singleFloatAtPointerput(pointer9, floatValue7);
-										goto l2249;
+										goto l1934;
 										break;
 									case 202:
 										/* begin lowcodePrimitiveStoreFloat64ToMemory */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topPointer112 = pointerAtPointer(nativeSP - 1);
+										topPointer110 = pointerAtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
 										valueOopPointer161 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer161)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer161))));
-										pointer111 = topPointer112;
+										pointer111 = topPointer110;
 										/* begin internalPopStackFloat64 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -30813,20 +29837,20 @@ interpret(void)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer151))));
 										doubleValue2 = topDouble211;
 										floatAtPointerput(pointer111, doubleValue2);
-										goto l2249;
+										goto l1934;
 										break;
 									case 203:
 										/* begin lowcodePrimitiveStoreInt16ToMemory */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topPointer210 = pointerAtPointer(nativeSP - 1);
+										topPointer24 = pointerAtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
 										valueOopPointer181 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer181)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer181))));
-										pointer21 = topPointer210;
+										pointer21 = topPointer24;
 										/* begin internalPopStackInt32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -30837,9 +29861,9 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer171)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer171))));
-										value121 = topInt3261;
-										int16AtPointerput(pointer21, value121);
-										goto l2249;
+										value81 = topInt3261;
+										int16AtPointerput(pointer21, value81);
+										goto l1934;
 										break;
 									case 204:
 										/* begin lowcodePrimitiveStoreInt32ToMemory */
@@ -30863,9 +29887,9 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer191)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer191))));
-										value131 = topInt3271;
-										int32AtPointerput(pointer31, value131);
-										goto l2249;
+										value91 = topInt3271;
+										int32AtPointerput(pointer31, value91);
+										goto l1934;
 										break;
 									case 205:
 										/* begin lowcodePrimitiveStoreInt64ToMemory */
@@ -30874,10 +29898,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 										topPointer41 = pointerAtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer212 = nativeSP + BytesPerOop;
+										valueOopPointer2111 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer212)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer212))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer2111)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer2111))));
 										pointer41 = topPointer41;
 										/* begin internalPopStackInt64 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -30889,9 +29913,9 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1101)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1101))));
-										value141 = topInt6451;
-										int64AtPointerput(pointer41, value141);
-										goto l2249;
+										value101 = topInt6451;
+										int64AtPointerput(pointer41, value101);
+										goto l1934;
 										break;
 									case 206:
 										/* begin lowcodePrimitiveStoreInt8ToMemory */
@@ -30915,9 +29939,9 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1111)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1111))));
-										value151 = topInt3281;
-										int8AtPointerput(pointer51, value151);
-										goto l2249;
+										value112 = topInt3281;
+										int8AtPointerput(pointer51, value112);
+										goto l1934;
 										break;
 									case 207:
 										/* begin lowcodePrimitiveStoreLocalFloat32 */
@@ -30932,10 +29956,10 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer231)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer231))));
-										value161 = topSingle113;
-										singleFloatAtPointerput(framePointerOfNativeLocalin(baseOffset25, localFP), value161);
+										value121 = topSingle113;
+										singleFloatAtPointerput(framePointerOfNativeLocalin(baseOffset25, localFP), value121);
 										extA = 0;
-										goto l2249;
+										goto l1934;
 										break;
 									case 208:
 										/* begin lowcodePrimitiveStoreLocalFloat64 */
@@ -30950,10 +29974,10 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer241)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer241))));
-										value171 = topDouble111;
-										floatAtPointerput(framePointerOfNativeLocalin(baseOffset110, localFP), value171);
+										value131 = topDouble111;
+										floatAtPointerput(framePointerOfNativeLocalin(baseOffset110, localFP), value131);
 										extA = 0;
-										goto l2249;
+										goto l1934;
 										break;
 									case 209:
 										/* begin lowcodePrimitiveStoreLocalInt16 */
@@ -30968,10 +29992,10 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer251)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer251))));
-										value181 = topInt3291;
-										int16AtPointerput(framePointerOfNativeLocalin(baseOffset24, localFP), value181);
+										value141 = topInt3291;
+										int16AtPointerput(framePointerOfNativeLocalin(baseOffset24, localFP), value141);
 										extA = 0;
-										goto l2249;
+										goto l1934;
 										break;
 									case 210:
 										/* begin lowcodePrimitiveStoreLocalInt32 */
@@ -30986,10 +30010,10 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer261)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer261))));
-										value191 = topInt32101;
-										int32AtPointerput(framePointerOfNativeLocalin(baseOffset31, localFP), value191);
+										value151 = topInt32101;
+										int32AtPointerput(framePointerOfNativeLocalin(baseOffset31, localFP), value151);
 										extA = 0;
-										goto l2249;
+										goto l1934;
 										break;
 									case 211:
 										/* begin lowcodePrimitiveStoreLocalInt64 */
@@ -31007,7 +30031,7 @@ interpret(void)
 										int64AtPointerput(framePointerOfNativeLocalin(extA, localFP), valueInt64);
 
 										extA = 0;
-										goto l2249;
+										goto l1934;
 										break;
 									case 212:
 										/* begin lowcodePrimitiveStoreLocalInt8 */
@@ -31022,10 +30046,10 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer281)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer281))));
-										value201 = topInt32121;
-										int8AtPointerput(framePointerOfNativeLocalin(baseOffset41, localFP), value201);
+										value161 = topInt32121;
+										int8AtPointerput(framePointerOfNativeLocalin(baseOffset41, localFP), value161);
 										extA = 0;
-										goto l2249;
+										goto l1934;
 										break;
 									case 213:
 										/* begin lowcodePrimitiveStoreLocalPointer */
@@ -31040,10 +30064,10 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer291)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer291))));
-										pointerValue11 = topPointer61;
-										pointerAtPointerput(framePointerOfNativeLocalin(baseOffset51, localFP), pointerValue11);
+										pointerValue3 = topPointer61;
+										pointerAtPointerput(framePointerOfNativeLocalin(baseOffset51, localFP), pointerValue3);
 										extA = 0;
-										goto l2249;
+										goto l1934;
 										break;
 									case 214:
 										/* begin lowcodePrimitiveStorePointerToMemory */
@@ -31067,9 +30091,9 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1121)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1121))));
-										pointerValue2 = topPointer111;
-										pointerAtPointerput(memoryPointer, pointerValue2);
-										goto l2249;
+										pointerValue11 = topPointer111;
+										pointerAtPointerput(memoryPointer, pointerValue11);
+										goto l1934;
 										break;
 									case 215:
 										/* begin lowcodePrimitiveSub32 */
@@ -31078,11 +30102,11 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 										topInt32131 = int32AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer312 = nativeSP + BytesPerOop;
+										valueOopPointer311 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer312)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer312))));
-										second221 = topInt32131;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer311)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer311))));
+										second211 = topInt32131;
 										/* begin internalPopStackInt32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -31093,8 +30117,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1131)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1131))));
-										first221 = topInt32141;
-										result151 = first221 - second221;
+										first211 = topInt32141;
+										result131 = first211 - second211;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -31104,8 +30128,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result151);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, result131);
+										goto l1934;
 										break;
 									case 216:
 										/* begin lowcodePrimitiveSub64 */
@@ -31118,7 +30142,7 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer321)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer321))));
-										second32 = topInt6471;
+										second31 = topInt6471;
 										/* begin internalPopStackInt64 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -31129,8 +30153,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1141)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1141))));
-										first32 = topInt64121;
-										result161 = first32 - second32;
+										first31 = topInt64121;
+										result141 = first31 - second31;
 										/* begin internalPushInt64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -31140,8 +30164,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										long64AtPointerput(nativeSP - 1, result161);
-										goto l2249;
+										long64AtPointerput(nativeSP - 1, result141);
+										goto l1934;
 										break;
 									case 217:
 										/* begin lowcodePrimitiveTruncate32To16 */
@@ -31154,8 +30178,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer331)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer331))));
-										value213 = topInt32151;
-										result171 = value213 & 0xFFFF;
+										value171 = topInt32151;
+										result151 = value171 & 0xFFFF;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -31165,8 +30189,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result171);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, result151);
+										goto l1934;
 										break;
 									case 218:
 										/* begin lowcodePrimitiveTruncate32To8 */
@@ -31179,8 +30203,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer341)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer341))));
-										value221 = topInt32161;
-										result181 = value221 & 0xFF;
+										value181 = topInt32161;
+										result161 = value181 & 0xFF;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -31190,8 +30214,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result181);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, result161);
+										goto l1934;
 										break;
 									case 219:
 										/* begin lowcodePrimitiveTruncate64To16 */
@@ -31204,8 +30228,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer351)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer351))));
-										value231 = topInt6481;
-										result191 = value231 & 0xFFFF;
+										value191 = topInt6481;
+										result171 = value191 & 0xFFFF;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -31215,8 +30239,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result191);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, result171);
+										goto l1934;
 										break;
 									case 220:
 										/* begin lowcodePrimitiveTruncate64To32 */
@@ -31229,8 +30253,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer361)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer361))));
-										value241 = topInt6491;
-										result201 = value241 & 0xFFFFFFFFU;
+										value201 = topInt6491;
+										result181 = value201 & 0xFFFFFFFFU;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -31240,8 +30264,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result201);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, result181);
+										goto l1934;
 										break;
 									case 221:
 										/* begin lowcodePrimitiveTruncate64To8 */
@@ -31254,8 +30278,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer371)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer371))));
-										value251 = topInt64101;
-										result211 = value251 & 0xFF;
+										value211 = topInt64101;
+										result191 = value211 & 0xFF;
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -31265,8 +30289,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result211);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, result191);
+										goto l1934;
 										break;
 									case 222:
 										/* begin lowcodePrimitiveUdiv32 */
@@ -31291,7 +30315,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1151)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1151))));
 										first41 = topInt32181;
-										result221 = (((unsigned int) first41)) / (((unsigned int) second41));
+										result201 = (((unsigned int) first41)) / (((unsigned int) second41));
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -31301,8 +30325,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result221);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, result201);
+										goto l1934;
 										break;
 									case 223:
 										/* begin lowcodePrimitiveUdiv64 */
@@ -31327,7 +30351,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1161)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1161))));
 										first51 = topInt64141;
-										result231 = (((uint64_t) first51)) / (((uint64_t) second51));
+										result211 = (((uint64_t) first51)) / (((uint64_t) second51));
 										/* begin internalPushInt64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -31337,8 +30361,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										long64AtPointerput(nativeSP - 1, result231);
-										goto l2249;
+										long64AtPointerput(nativeSP - 1, result211);
+										goto l1934;
 										break;
 									case 224:
 										/* begin lowcodePrimitiveUint32Great */
@@ -31363,7 +30387,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1171)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1171))));
 										first61 = topInt32110;
-										value261 = ((((unsigned int) first61)) > (((unsigned int) second61))
+										value221 = ((((unsigned int) first61)) > (((unsigned int) second61))
 											? 1
 											: 0);
 										/* begin internalPushInt32: */
@@ -31375,8 +30399,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value261);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, value221);
+										goto l1934;
 										break;
 									case 225:
 										/* begin lowcodePrimitiveUint32GreatEqual */
@@ -31385,10 +30409,10 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 										topInt3220 = int32AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer412 = nativeSP + BytesPerOop;
+										valueOopPointer411 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer412)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer412))));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer411)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer411))));
 										second71 = topInt3220;
 										/* begin internalPopStackInt32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
@@ -31401,7 +30425,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1181)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1181))));
 										first71 = topInt32111;
-										value271 = ((((unsigned int) first71)) >= (((unsigned int) second71))
+										value231 = ((((unsigned int) first71)) >= (((unsigned int) second71))
 											? 1
 											: 0);
 										/* begin internalPushInt32: */
@@ -31413,21 +30437,21 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value271);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, value231);
+										goto l1934;
 										break;
 									case 226:
 										/* begin lowcodePrimitiveUint32Less */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt32212 = int32AtPointer(nativeSP - 1);
+										topInt32213 = int32AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
 										valueOopPointer421 = nativeSP + BytesPerOop;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer421)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer421))));
-										second81 = topInt32212;
+										second81 = topInt32213;
 										/* begin internalPopStackInt32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
@@ -31439,7 +30463,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1191)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1191))));
 										first81 = topInt32112;
-										value281 = ((((unsigned int) first81)) < (((unsigned int) second81))
+										value241 = ((((unsigned int) first81)) < (((unsigned int) second81))
 											? 1
 											: 0);
 										/* begin internalPushInt32: */
@@ -31451,8 +30475,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value281);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, value241);
+										goto l1934;
 										break;
 									case 227:
 										/* begin lowcodePrimitiveUint32LessEqual */
@@ -31477,7 +30501,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1201)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1201))));
 										first91 = topInt32113;
-										value291 = ((((unsigned int) first91)) <= (((unsigned int) second91))
+										value251 = ((((unsigned int) first91)) <= (((unsigned int) second91))
 											? 1
 											: 0);
 										/* begin internalPushInt32: */
@@ -31489,8 +30513,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value291);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, value251);
+										goto l1934;
 										break;
 									case 228:
 										/* begin lowcodePrimitiveUint32ToFloat32 */
@@ -31503,8 +30527,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer441)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer441))));
-										value301 = topInt3223;
-										result241 = ((float) (((unsigned int) value301)));
+										value261 = topInt3223;
+										result221 = ((float) (((unsigned int) value261)));
 										/* begin internalPushFloat32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -31514,8 +30538,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										singleFloatAtPointerput(nativeSP - 1, result241);
-										goto l2249;
+										singleFloatAtPointerput(nativeSP - 1, result221);
+										goto l1934;
 										break;
 									case 229:
 										/* begin lowcodePrimitiveUint32ToFloat64 */
@@ -31528,8 +30552,8 @@ interpret(void)
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer451)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer451))));
-										value311 = topInt3224;
-										result251 = ((double) (((unsigned int) value311)));
+										value271 = topInt3224;
+										result231 = ((double) (((unsigned int) value271)));
 										/* begin internalPushFloat64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -31539,8 +30563,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										floatAtPointerput(nativeSP - 1, result251);
-										goto l2249;
+										floatAtPointerput(nativeSP - 1, result231);
+										goto l1934;
 										break;
 									case 230:
 										/* begin lowcodePrimitiveUint64Great */
@@ -31565,7 +30589,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1213)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1213))));
 										first101 = topInt64161;
-										value321 = ((((uint64_t) first101)) > (((uint64_t) second101))
+										value281 = ((((uint64_t) first101)) > (((uint64_t) second101))
 											? 1
 											: 0);
 										/* begin internalPushInt32: */
@@ -31577,8 +30601,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value321);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, value281);
+										goto l1934;
 										break;
 									case 231:
 										/* begin lowcodePrimitiveUint64GreatEqual */
@@ -31603,7 +30627,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1221)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1221))));
 										first111 = topInt6418;
-										value331 = ((((uint64_t) first111)) >= (((uint64_t) second111))
+										value291 = ((((uint64_t) first111)) >= (((uint64_t) second111))
 											? 1
 											: 0);
 										/* begin internalPushInt32: */
@@ -31615,8 +30639,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value331);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, value291);
+										goto l1934;
 										break;
 									case 232:
 										/* begin lowcodePrimitiveUint64Less */
@@ -31641,7 +30665,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1231)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1231))));
 										first121 = topInt64110;
-										value341 = ((((uint64_t) first121)) < (((uint64_t) second121))
+										value301 = ((((uint64_t) first121)) < (((uint64_t) second121))
 											? 1
 											: 0);
 										/* begin internalPushInt32: */
@@ -31653,8 +30677,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value341);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, value301);
+										goto l1934;
 										break;
 									case 233:
 										/* begin lowcodePrimitiveUint64LessEqual */
@@ -31679,7 +30703,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1241)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1241))));
 										first131 = topInt64111;
-										value351 = ((((uint64_t) first131)) <= (((uint64_t) second131))
+										value311 = ((((uint64_t) first131)) <= (((uint64_t) second131))
 											? 1
 											: 0);
 										/* begin internalPushInt32: */
@@ -31691,22 +30715,22 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, value351);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, value311);
+										goto l1934;
 										break;
 									case 234:
 										/* begin lowcodePrimitiveUint64ToFloat32 */
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-										topInt64211 = long64AtPointer(nativeSP - 1);
+										topInt64212 = long64AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
 										valueOopPointer501 = nativeSP + 8;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer501)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer501))));
-										value361 = topInt64211;
-										result261 = ((float) (((uint64_t) value361)));
+										value321 = topInt64212;
+										result241 = ((float) (((uint64_t) value321)));
 										/* begin internalPushFloat32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -31716,8 +30740,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										singleFloatAtPointerput(nativeSP - 1, result261);
-										goto l2249;
+										singleFloatAtPointerput(nativeSP - 1, result241);
+										goto l1934;
 										break;
 									case 235:
 										/* begin lowcodePrimitiveUint64ToFloat64 */
@@ -31726,12 +30750,12 @@ interpret(void)
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
 										topInt6422 = long64AtPointer(nativeSP - 1);
 										/* begin nativeStackPointerIn:put: */
-										valueOopPointer511 = nativeSP + 8;
+										valueOopPointer512 = nativeSP + 8;
 										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer511)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer511))));
-										value371 = topInt6422;
-										result271 = ((double) (((uint64_t) value371)));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer512)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer512))));
+										value331 = topInt6422;
+										result251 = ((double) (((uint64_t) value331)));
 										/* begin internalPushFloat64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -31741,8 +30765,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										floatAtPointerput(nativeSP - 1, result271);
-										goto l2249;
+										floatAtPointerput(nativeSP - 1, result251);
+										goto l1934;
 										break;
 									case 236:
 										/* begin lowcodePrimitiveUmul32 */
@@ -31767,7 +30791,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1251)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1251))));
 										first141 = topInt32114;
-										result281 = (((unsigned int) first141)) * (((unsigned int) second141));
+										result26 = (((unsigned int) first141)) * (((unsigned int) second141));
 										/* begin internalPushInt32: */
 										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 										/* begin nativeStackPointerIn:put: */
@@ -31777,8 +30801,8 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										int32AtPointerput(nativeSP - 1, result281);
-										goto l2249;
+										int32AtPointerput(nativeSP - 1, result26);
+										goto l1934;
 										break;
 									case 237:
 										/* begin lowcodePrimitiveUmul64 */
@@ -31803,7 +30827,7 @@ interpret(void)
 	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1261)
 	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1261))));
 										first151 = topInt64112;
-										result291 = (((uint64_t) first151)) * (((uint64_t) second151));
+										result27 = (((uint64_t) first151)) * (((uint64_t) second151));
 										/* begin internalPushInt64: */
 										nativeSP = (nativeStackPointerIn(localFP)) - 8;
 										/* begin nativeStackPointerIn:put: */
@@ -31813,47 +30837,255 @@ interpret(void)
 										else {
 											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 										}
-										long64AtPointerput(nativeSP - 1, result291);
-										goto l2249;
+										long64AtPointerput(nativeSP - 1, result27);
+										goto l1934;
 										break;
 									case 238:
-										goto l2249;
+										goto l1934;
 										break;
 									case 239:
 										/* begin lowcodePrimitiveUnlockVM */
 										abort();
-										goto l2249;
+										goto l1934;
+										break;
+									case 240:
+										/* begin lowcodePrimitiveUrem32 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt3226 = int32AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer541 = nativeSP + BytesPerOop;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer541)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer541))));
+										second161 = topInt3226;
+										/* begin internalPopStackInt32 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt32115 = int32AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer1271 = nativeSP + BytesPerOop;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1271)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1271))));
+										first161 = topInt32115;
+										result28 = (((unsigned int) first161)) % (((unsigned int) second161));
+										/* begin internalPushInt32: */
+										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										int32AtPointerput(nativeSP - 1, result28);
+										goto l1934;
+										break;
+									case 241:
+										/* begin lowcodePrimitiveUrem64 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt6424 = long64AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer551 = nativeSP + 8;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer551)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer551))));
+										second171 = topInt6424;
+										/* begin internalPopStackInt64 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt64113 = long64AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer1281 = nativeSP + 8;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1281)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1281))));
+										first171 = topInt64113;
+										result29 = (((unsigned int) first171)) % (((unsigned int) second171));
+										/* begin internalPushInt64: */
+										nativeSP = (nativeStackPointerIn(localFP)) - 8;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										long64AtPointerput(nativeSP - 1, result29);
+										goto l1934;
+										break;
+									case 242:
+										/* begin lowcodePrimitiveXor32 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt3227 = int32AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer561 = nativeSP + BytesPerOop;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer561)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer561))));
+										second181 = topInt3227;
+										/* begin internalPopStackInt32 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt32116 = int32AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer1291 = nativeSP + BytesPerOop;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1291)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1291))));
+										first181 = topInt32116;
+										result30 = first181 ^ second181;
+										/* begin internalPushInt32: */
+										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										int32AtPointerput(nativeSP - 1, result30);
+										goto l1934;
+										break;
+									case 243:
+										/* begin lowcodePrimitiveXor64 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt6425 = long64AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer571 = nativeSP + 8;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer571)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer571))));
+										second191 = topInt6425;
+										/* begin internalPopStackInt64 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt64114 = long64AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer1301 = nativeSP + 8;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1301)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1301))));
+										first191 = topInt64114;
+										result31 = first191 ^ second191;
+										/* begin internalPushInt64: */
+										nativeSP = (nativeStackPointerIn(localFP)) - 8;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										long64AtPointerput(nativeSP - 1, result31);
+										goto l1934;
+										break;
+									case 244:
+										/* begin lowcodePrimitiveZeroExtend32From16 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt3228 = int32AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer581 = nativeSP + BytesPerOop;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer581)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer581))));
+										value341 = topInt3228;
+										result32 = ((uint16_t) value341);
+										/* begin internalPushInt32: */
+										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										int32AtPointerput(nativeSP - 1, result32);
+										goto l1934;
+										break;
+									case 245:
+										/* begin lowcodePrimitiveZeroExtend32From8 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt3229 = int32AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer591 = nativeSP + BytesPerOop;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer591)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer591))));
+										value351 = topInt3229;
+										result33 = ((uint8_t) value351);
+										/* begin internalPushInt32: */
+										nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										int32AtPointerput(nativeSP - 1, result33);
+										goto l1934;
+										break;
+									case 246:
+										/* begin lowcodePrimitiveZeroExtend64From16 */
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
+	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
+										topInt6426 = long64AtPointer(nativeSP - 1);
+										/* begin nativeStackPointerIn:put: */
+										valueOopPointer601 = nativeSP + 8;
+										nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer601)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer601))));
+										value361 = topInt6426;
+										result34 = ((uint16_t) value361);
+										/* begin internalPushInt64: */
+										nativeSP = (nativeStackPointerIn(localFP)) - 8;
+										/* begin nativeStackPointerIn:put: */
+										if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
+											pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										else {
+											pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
+										}
+										long64AtPointerput(nativeSP - 1, result34);
+										goto l1934;
 										break;
 									default:
 										/* begin lowcodeUnaryInlinePrimitive5: */
 										
 										switch (prim - 1000) {
-										case 240:
-											/* begin lowcodePrimitiveUrem32 */
+										case 247:
+											/* begin lowcodePrimitiveZeroExtend64From32 */
 											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt3227 = int32AtPointer(nativeSP - 1);
+											topInt3230 = int32AtPointer(nativeSP - 1);
 											/* begin nativeStackPointerIn:put: */
-											valueOopPointer541 = nativeSP + BytesPerOop;
+											valueOopPointer611 = nativeSP + BytesPerOop;
 											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer541)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer541))));
-											second161 = topInt3227;
-											/* begin internalPopStackInt32 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt32115 = int32AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer1271 = nativeSP + BytesPerOop;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1271)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1271))));
-											first171 = topInt32115;
-											result30 = (((unsigned int) first171)) % (((unsigned int) second161));
-											/* begin internalPushInt32: */
-											nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer611)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer611))));
+											value371 = topInt3230;
+											result35 = ((uint32_t) value371);
+											/* begin internalPushInt64: */
+											nativeSP = (nativeStackPointerIn(localFP)) - 8;
 											/* begin nativeStackPointerIn:put: */
 											if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
 												pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
@@ -31861,33 +31093,22 @@ interpret(void)
 											else {
 												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 											}
-											int32AtPointerput(nativeSP - 1, result30);
-											goto l2455;
+											long64AtPointerput(nativeSP - 1, result35);
+											goto l3002;
 											break;
-										case 241:
-											/* begin lowcodePrimitiveUrem64 */
+										case 0xF8:
+											/* begin lowcodePrimitiveZeroExtend64From8 */
 											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
 	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
 	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt6425 = long64AtPointer(nativeSP - 1);
+											topInt6427 = long64AtPointer(nativeSP - 1);
 											/* begin nativeStackPointerIn:put: */
-											valueOopPointer2101 = nativeSP + 8;
+											valueOopPointer1311 = nativeSP + 8;
 											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer2101)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer2101))));
-											second171 = topInt6425;
-											/* begin internalPopStackInt64 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt64113 = long64AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer1110 = nativeSP + 8;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1110)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1110))));
-											first161 = topInt64113;
-											result110 = (((unsigned int) first161)) % (((unsigned int) second171));
+	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1311)
+	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1311))));
+											value110 = topInt6427;
+											result110 = ((uint8_t) value110);
 											/* begin internalPushInt64: */
 											nativeSP = (nativeStackPointerIn(localFP)) - 8;
 											/* begin nativeStackPointerIn:put: */
@@ -31898,229 +31119,32 @@ interpret(void)
 												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 											}
 											long64AtPointerput(nativeSP - 1, result110);
-											goto l2455;
-											break;
-										case 242:
-											/* begin lowcodePrimitiveXor32 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt3226 = int32AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer310 = nativeSP + BytesPerOop;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer310)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer310))));
-											second211 = topInt3226;
-											/* begin internalPopStackInt32 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt32116 = int32AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer1281 = nativeSP + BytesPerOop;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1281)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1281))));
-											first211 = topInt32116;
-											result210 = first211 ^ second211;
-											/* begin internalPushInt32: */
-											nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-											/* begin nativeStackPointerIn:put: */
-											if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-												pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											else {
-												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											int32AtPointerput(nativeSP - 1, result210);
-											goto l2455;
-											break;
-										case 243:
-											/* begin lowcodePrimitiveXor64 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt6424 = long64AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer410 = nativeSP + 8;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer410)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer410))));
-											second31 = topInt6424;
-											/* begin internalPopStackInt64 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt64114 = long64AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer1311 = nativeSP + 8;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer1311)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer1311))));
-											first31 = topInt64114;
-											result31 = first31 ^ second31;
-											/* begin internalPushInt64: */
-											nativeSP = (nativeStackPointerIn(localFP)) - 8;
-											/* begin nativeStackPointerIn:put: */
-											if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-												pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											else {
-												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											long64AtPointerput(nativeSP - 1, result31);
-											goto l2455;
-											break;
-										case 244:
-											/* begin lowcodePrimitiveZeroExtend32From16 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt3231 = int32AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer551 = nativeSP + BytesPerOop;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer551)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer551))));
-											value391 = topInt3231;
-											result41 = ((uint16_t) value391);
-											/* begin internalPushInt32: */
-											nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-											/* begin nativeStackPointerIn:put: */
-											if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-												pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											else {
-												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											int32AtPointerput(nativeSP - 1, result41);
-											goto l2455;
-											break;
-										case 245:
-											/* begin lowcodePrimitiveZeroExtend32From8 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt3241 = int32AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer611 = nativeSP + BytesPerOop;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer611)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer611))));
-											value110 = topInt3241;
-											result51 = ((uint8_t) value110);
-											/* begin internalPushInt32: */
-											nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
-											/* begin nativeStackPointerIn:put: */
-											if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-												pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											else {
-												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											int32AtPointerput(nativeSP - 1, result51);
-											goto l2455;
-											break;
-										case 246:
-											/* begin lowcodePrimitiveZeroExtend64From16 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt6431 = long64AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer71 = nativeSP + 8;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer71)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer71))));
-											value210 = topInt6431;
-											result61 = ((uint16_t) value210);
-											/* begin internalPushInt64: */
-											nativeSP = (nativeStackPointerIn(localFP)) - 8;
-											/* begin nativeStackPointerIn:put: */
-											if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-												pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											else {
-												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											long64AtPointerput(nativeSP - 1, result61);
-											goto l2455;
-											break;
-										case 247:
-											/* begin lowcodePrimitiveZeroExtend64From32 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt3251 = int32AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer81 = nativeSP + BytesPerOop;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer81)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer81))));
-											value381 = topInt3251;
-											result71 = ((uint32_t) value381);
-											/* begin internalPushInt64: */
-											nativeSP = (nativeStackPointerIn(localFP)) - 8;
-											/* begin nativeStackPointerIn:put: */
-											if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-												pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											else {
-												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											long64AtPointerput(nativeSP - 1, result71);
-											goto l2455;
-											break;
-										case 0xF8:
-											/* begin lowcodePrimitiveZeroExtend64From8 */
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointer((localFP + FoxMFReceiver) - (BytesPerWord * 4))
-	: pointerAtPointer((localFP + FoxIFReceiver) - (BytesPerWord * 4)))));
-											topInt6441 = long64AtPointer(nativeSP - 1);
-											/* begin nativeStackPointerIn:put: */
-											valueOopPointer91 = nativeSP + 8;
-											nativeSP = ((char*) (((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())
-	? pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), valueOopPointer91)
-	: pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), valueOopPointer91))));
-											value411 = topInt6441;
-											result81 = ((uint8_t) value411);
-											/* begin internalPushInt64: */
-											nativeSP = (nativeStackPointerIn(localFP)) - 8;
-											/* begin nativeStackPointerIn:put: */
-											if ((((usqInt)(longAt(localFP + FoxMethod)))) < (startOfMemory())) {
-												pointerAtPointerput((localFP + FoxMFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											else {
-												pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
-											}
-											long64AtPointerput(nativeSP - 1, result81);
-											goto l2455;
+											goto l3002;
 											break;
 										default:
 											localIP -= 3;
 											goto respondToUnknownBytecode;
-											goto l2455;
+											goto l3002;
 
 										}
-									l2455:	/* end lowcodeUnaryInlinePrimitive5: */;
-										goto l2249;
+									l3002:	/* end lowcodeUnaryInlinePrimitive5: */;
+										goto l1934;
 
 									}
-								l2249:	/* end lowcodeUnaryInlinePrimitive4: */;
-									goto l3124;
+								l1934:	/* end lowcodeUnaryInlinePrimitive4: */;
+									goto l2782;
 
 								}
-							l3124:	/* end lowcodeUnaryInlinePrimitive3: */;
-								goto l2172;
+							l2782:	/* end lowcodeUnaryInlinePrimitive3: */;
+								goto l3058;
 
 							}
-						l2172:	/* end lowcodeUnaryInlinePrimitive2: */;
-							goto l2311;
+						l3058:	/* end lowcodeUnaryInlinePrimitive2: */;
+							goto l1981;
 
 						}
-					l2311:	/* end lowcodeUnaryInlinePrimitive: */;
-						goto l1903;
+					l1981:	/* end lowcodeUnaryInlinePrimitive: */;
+						goto l1864;
 					}
 					if (prim < 3000) {
 						/* begin lowcodeBinaryInlinePrimitive: */
@@ -32134,7 +31158,7 @@ interpret(void)
 							/* begin byteSizeOf: */
 							if (object16 & (tagMask())) {
 								value12 = 0;
-								goto l3050;
+								goto l2975;
 							}
 							/* begin numBytesOf: */
 							fmt1 = (((usqInt) (longAt(object16))) >> (formatShift())) & (formatMask());
@@ -32149,18 +31173,18 @@ interpret(void)
 
 								/* bytes (the common case), including CompiledMethod */
 								value12 = numBytes2 - (fmt1 & 7);
-								goto l3050;
+								goto l2975;
 							}
 							if (fmt1 <= (sixtyFourBitIndexableFormat())) {
 								value12 = numBytes2;
-								goto l3050;
+								goto l2975;
 							}
 							if (fmt1 >= (firstShortFormat())) {
 								value12 = numBytes2 - (((sqInt)((usqInt)((fmt1 & 3)) << 1)));
-								goto l3050;
+								goto l2975;
 							}
 							value12 = numBytes2 - (((sqInt)((usqInt)((fmt1 & 1)) << 2)));
-						l3050:	/* end byteSizeOf: */;
+						l2975:	/* end byteSizeOf: */;
 							/* begin internalPushInt32: */
 							nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 							/* begin nativeStackPointerIn:put: */
@@ -32171,7 +31195,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value12);
-							goto l2701;
+							goto l2639;
 							break;
 						case 1:
 							/* begin lowcodePrimitiveFirstFieldPointer */
@@ -32190,7 +31214,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							pointerAtPointerput(nativeSP - 1, pointer4);
-							goto l2701;
+							goto l2639;
 							break;
 						case 2:
 							/* begin lowcodePrimitiveFirstIndexableFieldPointer */
@@ -32208,7 +31232,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							pointerAtPointerput(nativeSP - 1, pointer2);
-							goto l2701;
+							goto l2639;
 							break;
 						case 3:
 							/* begin lowcodePrimitiveIsBytes */
@@ -32229,7 +31253,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value18);
-							goto l2701;
+							goto l2639;
 							break;
 						case 4:
 							/* begin lowcodePrimitiveIsFloatObject */
@@ -32251,7 +31275,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value19);
-							goto l2701;
+							goto l2639;
 							break;
 						case 5:
 							/* begin lowcodePrimitiveIsIndexable */
@@ -32271,7 +31295,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value22);
-							goto l2701;
+							goto l2639;
 							break;
 						case 6:
 							/* begin lowcodePrimitiveIsIntegerObject */
@@ -32291,7 +31315,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value32);
-							goto l2701;
+							goto l2639;
 							break;
 						case 7:
 							/* begin lowcodePrimitiveIsPointers */
@@ -32312,7 +31336,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value41);
-							goto l2701;
+							goto l2639;
 							break;
 						case 8:
 							/* begin lowcodePrimitiveIsWords */
@@ -32333,7 +31357,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value51);
-							goto l2701;
+							goto l2639;
 							break;
 						case 9:
 							/* begin lowcodePrimitiveIsWordsOrBytes */
@@ -32354,7 +31378,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value61);
-							goto l2701;
+							goto l2639;
 							break;
 						case 10:
 							/* begin lowcodePrimitiveOopSmallIntegerToInt32 */
@@ -32372,7 +31396,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value71);
-							goto l2701;
+							goto l2639;
 							break;
 						case 11:
 							/* begin lowcodePrimitiveOopSmallIntegerToInt64 */
@@ -32390,7 +31414,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, value8);
-							goto l2701;
+							goto l2639;
 							break;
 						case 12:
 							/* begin lowcodePrimitiveOopToBoolean32 */
@@ -32400,11 +31424,11 @@ interpret(void)
 							/* begin booleanValueOf: */
 							if (object111 == GIV(trueObj)) {
 								value9 = 1;
-								goto l2433;
+								goto l2378;
 							}
 							if (object111 == GIV(falseObj)) {
 								value9 = 0;
-								goto l2433;
+								goto l2378;
 							}
 							/* begin success: */
 							
@@ -32414,7 +31438,7 @@ interpret(void)
 							}
 
 							value9 = null;
-						l2433:	/* end booleanValueOf: */;
+						l2378:	/* end booleanValueOf: */;
 							/* begin internalPushInt32: */
 							nativeSP = (nativeStackPointerIn(localFP)) - BytesPerOop;
 							/* begin nativeStackPointerIn:put: */
@@ -32425,7 +31449,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value9);
-							goto l2701;
+							goto l2639;
 							break;
 						case 13:
 							/* begin lowcodePrimitiveOopToBoolean64 */
@@ -32435,11 +31459,11 @@ interpret(void)
 							/* begin booleanValueOf: */
 							if (object121 == GIV(trueObj)) {
 								value10 = ((sqInt) 1);
-								goto l2467;
+								goto l2412;
 							}
 							if (object121 == GIV(falseObj)) {
 								value10 = ((sqInt) 0);
-								goto l2467;
+								goto l2412;
 							}
 							/* begin success: */
 							
@@ -32449,7 +31473,7 @@ interpret(void)
 							}
 
 							value10 = null;
-						l2467:	/* end booleanValueOf: */;
+						l2412:	/* end booleanValueOf: */;
 							/* begin internalPushInt64: */
 							nativeSP = (nativeStackPointerIn(localFP)) - 8;
 							/* begin nativeStackPointerIn:put: */
@@ -32460,7 +31484,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, value10);
-							goto l2701;
+							goto l2639;
 							break;
 						case 14:
 							/* begin lowcodePrimitiveOopToFloat32 */
@@ -32478,7 +31502,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							singleFloatAtPointerput(nativeSP - 1, value13);
-							goto l2701;
+							goto l2639;
 							break;
 						case 15:
 							/* begin lowcodePrimitiveOopToFloat64 */
@@ -32496,7 +31520,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							floatAtPointerput(nativeSP - 1, value14);
-							goto l2701;
+							goto l2639;
 							break;
 						case 16:
 							/* begin lowcodePrimitiveOopToInt32 */
@@ -32514,7 +31538,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value15);
-							goto l2701;
+							goto l2639;
 							break;
 						case 17:
 							/* begin lowcodePrimitiveOopToInt64 */
@@ -32532,7 +31556,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, value111);
-							goto l2701;
+							goto l2639;
 							break;
 						case 18:
 							/* begin lowcodePrimitiveOopToPointer */
@@ -32550,7 +31574,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							pointerAtPointerput(nativeSP - 1, pointer3);
-							goto l2701;
+							goto l2639;
 							break;
 						case 19:
 							/* begin lowcodePrimitiveOopToPointerReinterpret */
@@ -32568,7 +31592,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							pointerAtPointerput(nativeSP - 1, pointer11);
-							goto l2701;
+							goto l2639;
 							break;
 						case 20:
 							/* begin lowcodePrimitiveOopToUInt32 */
@@ -32586,7 +31610,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value16);
-							goto l2701;
+							goto l2639;
 							break;
 						case 21:
 							/* begin lowcodePrimitiveOopToUInt64 */
@@ -32604,7 +31628,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							long64AtPointerput(nativeSP - 1, value17);
-							goto l2701;
+							goto l2639;
 							break;
 						case 22:
 							/* begin lowcodePrimitivePin */
@@ -32612,7 +31636,7 @@ interpret(void)
 							localSP += BytesPerOop;
 							object24 = top24;
 							pinObject(object24);
-							goto l2701;
+							goto l2639;
 							break;
 						case 23:
 							/* begin lowcodePrimitiveUnpin */
@@ -32623,16 +31647,16 @@ interpret(void)
 							assert(isNonImmediate(object15));
 							/* begin setIsPinnedOf:to: */
 							longAtput(object15, (longAt(object15)) & (~(usqIntptr_t)(1U << (pinnedBitShift()))));
-							goto l2701;
+							goto l2639;
 							break;
 						default:
 							localIP -= 3;
 							goto respondToUnknownBytecode;
-							goto l2701;
+							goto l2639;
 
 						}
-					l2701:	/* end lowcodeBinaryInlinePrimitive: */;
-						goto l1903;
+					l2639:	/* end lowcodeBinaryInlinePrimitive: */;
+						goto l1864;
 					}
 					if (prim < 4000) {
 						/* begin lowcodeTrinaryInlinePrimitive: */
@@ -32660,7 +31684,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value);
-							goto l2170;
+							goto l2121;
 							break;
 						case 1:
 							/* begin lowcodePrimitiveOopNotEqual */
@@ -32684,7 +31708,7 @@ interpret(void)
 								pointerAtPointerput((localFP + FoxIFReceiver) - (BytesPerWord * 4), nativeSP);
 							}
 							int32AtPointerput(nativeSP - 1, value1);
-							goto l2170;
+							goto l2121;
 							break;
 						case 2:
 							/* begin lowcodePrimitiveStoreObjectField */
@@ -32713,7 +31737,7 @@ interpret(void)
 							}
 							longAtput((object + BaseHeaderSize) + (((sqInt)((usqInt)(fieldIndex3) << (shiftForWord())))), value2);
 							extA = 0;
-							goto l2170;
+							goto l2121;
 							break;
 						case 3:
 							/* begin lowcodePrimitiveStoreObjectFieldAt */
@@ -32750,25 +31774,25 @@ interpret(void)
 								}
 							}
 							longAtput((object1 + BaseHeaderSize) + (((sqInt)((usqInt)(fieldIndex11) << (shiftForWord())))), value3);
-							goto l2170;
+							goto l2121;
 							break;
 						default:
 							localIP -= 3;
 							goto respondToUnknownBytecode;
-							goto l2170;
+							goto l2121;
 
 						}
-					l2170:	/* end lowcodeTrinaryInlinePrimitive: */;
-						goto l1903;
+					l2121:	/* end lowcodeTrinaryInlinePrimitive: */;
+						goto l1864;
 					}
 				}
 
 				localIP -= 3;
 				goto respondToUnknownBytecode;
-				goto l1903;
+				goto l1864;
 
 			}
-		l1903:	/* end case */;
+		l1864:	/* end case */;
 			BREAK;
 		CASE(505) /*249*/
 			/* extPushFullClosureBytecode */
@@ -32833,10 +31857,10 @@ interpret(void)
 						: (byteAt((theFP + FoxIFrameFlags) + 2)) != 0)) {
 						assert(isContext(frameContext(theFP)));
 						context = longAt(theFP + FoxThisContext);
-						goto l3157;
+						goto l3079;
 					}
 					context = marryFrameSP(theFP, theSP);
-				l3157:	/* end ensureFrameIsMarried:SP: */;
+				l3079:	/* end ensureFrameIsMarried:SP: */;
 				}
 				/* begin fullClosureIn:numArgs:numCopiedValues:compiledBlock: */
 				/* begin eeInstantiateSmallClassIndex:format:numSlots: */
@@ -32864,13 +31888,13 @@ interpret(void)
 					if ((GIV(freeStart) + numBytes) > (((eden()).limit))) {
 						error("no room in eden for allocateSmallNewSpaceSlots:format:classIndex:");
 						newClosure1 = 0;
-						goto l3151;
+						goto l3073;
 					}
 				}
 				long64Atput(newObj, (((((usqLong) numSlots)) << (numSlotsFullShift())) + (((sqInt)((usqInt)(objFormat) << (formatShift()))))) + ClassFullBlockClosureCompactIndex);
 				GIV(freeStart) += numBytes;
 				newClosure1 = newObj;
-			l3151:	/* end eeInstantiateSmallClassIndex:format:numSlots: */;
+			l3073:	/* end eeInstantiateSmallClassIndex:format:numSlots: */;
 
 				/* begin storePointerUnchecked:ofObject:withValue: */
 				assert(!(isOopForwarded(newClosure1)));
@@ -32953,10 +31977,10 @@ interpret(void)
 					: (byteAt((theFP + FoxIFrameFlags) + 2)) != 0)) {
 					assert(isContext(frameContext(theFP)));
 					context = longAt(theFP + FoxThisContext);
-					goto l3167;
+					goto l3089;
 				}
 				context = marryFrameSP(theFP, theSP);
-			l3167:	/* end ensureFrameIsMarried:SP: */;
+			l3089:	/* end ensureFrameIsMarried:SP: */;
 				/* begin closureIn:numArgs:instructionPointer:numCopiedValues: */
 				initialIP = ((oopForPointer(localIP)) + 2) - (GIV(method) + BaseHeaderSize);
 				/* begin eeInstantiateSmallClassIndex:format:numSlots: */
@@ -32984,13 +32008,13 @@ interpret(void)
 					if ((GIV(freeStart) + numBytes) > (((eden()).limit))) {
 						error("no room in eden for allocateSmallNewSpaceSlots:format:classIndex:");
 						newClosure1 = 0;
-						goto l3163;
+						goto l3085;
 					}
 				}
 				long64Atput(newObj, (((((usqLong) numSlots)) << (numSlotsFullShift())) + (((sqInt)((usqInt)(objFormat) << (formatShift()))))) + ClassBlockClosureCompactIndex);
 				GIV(freeStart) += numBytes;
 				newClosure1 = newObj;
-			l3163:	/* end eeInstantiateSmallClassIndex:format:numSlots: */;
+			l3085:	/* end eeInstantiateSmallClassIndex:format:numSlots: */;
 
 				/* begin storePointerUnchecked:ofObject:withValue: */
 				assert(!(isOopForwarded(newClosure1)));
@@ -33112,11 +32136,11 @@ interpret(void)
 								value = result;
 							}
 							object2 = value;
-							goto l3173;
+							goto l3095;
 						}
 						if (isWidowedContext(object)) {
 							object2 = longAt((object + BaseHeaderSize) + (((sqInt)((usqInt)(slotIndex) << (shiftForWord())))));
-							goto l3173;
+							goto l3095;
 						}
 						/* begin frameOfMarriedContext: */
 						senderOop = longAt((object + BaseHeaderSize) + (((sqInt)((usqInt)(SenderIndex) << (shiftForWord())))));
@@ -33139,7 +32163,7 @@ interpret(void)
 								assert((callerContextOrNil == (nilObject()))
 								 || (isContext(callerContextOrNil)));
 								object2 = callerContextOrNil;
-								goto l3173;
+								goto l3095;
 							}
 							/* begin ensureFrameIsMarried:SP: */
 							if (((((usqInt)(longAt(callerFP + FoxMethod)))) < (startOfMemory())
@@ -33147,24 +32171,24 @@ interpret(void)
 								: (byteAt((callerFP + FoxIFrameFlags) + 2)) != 0)) {
 								assert(isContext(frameContext(callerFP)));
 								object2 = longAt(callerFP + FoxThisContext);
-								goto l3173;
+								goto l3095;
 							}
 							object2 = marryFrameSP(callerFP, (assert(!(isBaseFrame(spouseFP))),
 							(spouseFP + (frameStackedReceiverOffset(spouseFP))) + BytesPerWord));
-							goto l3173;
+							goto l3095;
 						}
 						if (slotIndex == StackPointerIndex) {
 							assert((ReceiverIndex + (stackPointerIndexForFrame(spouseFP))) < (lengthOf(object)));
 							object2 = (((usqInt)(stackPointerIndexForFrame(spouseFP)) << 3) | 1);
-							goto l3173;
+							goto l3095;
 						}
 						if (slotIndex == InstructionPointerIndex) {
 							object2 = instructionPointerForFramecurrentFPcurrentIP(spouseFP, localFP, oopForPointer(localIP));
-							goto l3173;
+							goto l3095;
 						}
 						error("bad index");
 						object2 = 0;
-					l3173:	/* end instVar:ofContext: */;
+					l3095:	/* end instVar:ofContext: */;
 						longAtPointerput((localSP -= BytesPerOop), object2);
 					}
 					else {
@@ -33268,7 +32292,7 @@ interpret(void)
 							if (slotIndex == StackPointerIndex) {
 								ensureContextIsExecutionSafeAfterAssignToStackPointer(object);
 							}
-							goto l3185;
+							goto l3107;
 						}
 						/* begin frameOfMarriedContext: */
 						senderOop = longAt((object + BaseHeaderSize) + (((sqInt)((usqInt)(SenderIndex) << (shiftForWord())))));
@@ -33289,7 +32313,7 @@ interpret(void)
 							else {
 								markStackPageMostRecentlyUsed(GIV(stackPage));
 							}
-							goto l3185;
+							goto l3107;
 						}
 						/* begin externalizeIPandSP */
 						assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
@@ -33324,7 +32348,7 @@ interpret(void)
 
 						markStackPageMostRecentlyUsed(GIV(stackPage));
 						assertValidExecutionPointersimbarline(((usqInt)localIP), localFP, localSP, 1, __LINE__);
-					l3185:	/* end instVar:ofContext:put: */;
+					l3107:	/* end instVar:ofContext:put: */;
 					}
 					else {
 						/* begin storePointerImmutabilityCheck:ofObject:withValue: */
@@ -33342,7 +32366,7 @@ interpret(void)
 							GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorAttemptToAssign) << (shiftForWord())))));
 							GIV(argumentCount) = 2;
 							goto normalSend;
-							goto l3188;
+							goto l3110;
 						}
 
 #            endif /* IMMUTABILITY */
@@ -33362,7 +32386,7 @@ interpret(void)
 							}
 						}
 						longAtput((object + BaseHeaderSize) + (((sqInt)((usqInt)(slotIndex) << (shiftForWord())))), anOop);
-					l3188:	/* end storePointerImmutabilityCheck:ofObject:withValue: */;
+					l3110:	/* end storePointerImmutabilityCheck:ofObject:withValue: */;
 					}
 				}
 			}
@@ -33461,7 +32485,7 @@ interpret(void)
 							if (slotIndex == StackPointerIndex) {
 								ensureContextIsExecutionSafeAfterAssignToStackPointer(object);
 							}
-							goto l3195;
+							goto l3117;
 						}
 						/* begin frameOfMarriedContext: */
 						senderOop = longAt((object + BaseHeaderSize) + (((sqInt)((usqInt)(SenderIndex) << (shiftForWord())))));
@@ -33482,7 +32506,7 @@ interpret(void)
 							else {
 								markStackPageMostRecentlyUsed(GIV(stackPage));
 							}
-							goto l3195;
+							goto l3117;
 						}
 						/* begin externalizeIPandSP */
 						assert((((usqInt)localIP)) != (ceReturnToInterpreterPC()));
@@ -33517,7 +32541,7 @@ interpret(void)
 
 						markStackPageMostRecentlyUsed(GIV(stackPage));
 						assertValidExecutionPointersimbarline(((usqInt)localIP), localFP, localSP, 1, __LINE__);
-					l3195:	/* end instVar:ofContext:put: */;
+					l3117:	/* end instVar:ofContext:put: */;
 					}
 					else {
 						/* begin storePointerImmutabilityCheck:ofObject:withValue: */
@@ -33535,7 +32559,7 @@ interpret(void)
 							GIV(messageSelector) = longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(SelectorAttemptToAssign) << (shiftForWord())))));
 							GIV(argumentCount) = 2;
 							goto normalSend;
-							goto l3198;
+							goto l3120;
 						}
 
 #            endif /* IMMUTABILITY */
@@ -33555,7 +32579,7 @@ interpret(void)
 							}
 						}
 						longAtput((object + BaseHeaderSize) + (((sqInt)((usqInt)(slotIndex) << (shiftForWord())))), anOop);
-					l3198:	/* end storePointerImmutabilityCheck:ofObject:withValue: */;
+					l3120:	/* end storePointerImmutabilityCheck:ofObject:withValue: */;
 					}
 				}
 				/* begin internalPop: */
@@ -33603,7 +32627,7 @@ interpret(void)
 							/* begin fetchNextBytecode */
 							currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-							goto l3199;
+							goto l3121;
 						}
 					}
 					if (!inverse) {
@@ -33612,7 +32636,7 @@ interpret(void)
 					/* begin fetchNextBytecode */
 					currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
-					goto l3199;
+					goto l3121;
 				}
 				if ((tosClassTag == ((long32At(literal + 4)) & (identityHashHalfWordMask()))) == inverse) {
 					localIP += distance;
@@ -33621,7 +32645,7 @@ interpret(void)
 				currentBytecode = (byteAtPointer(++localIP)) + GIV(bytecodeSetSelector);
 
 			}
-		l3199:	/* end case */;
+		l3121:	/* end case */;
 			BREAK;
 		}
 	}
@@ -40288,11 +39312,11 @@ printFrameWithSP(char *theFP, char *theSP)
     usqInt index;
     sqInt methodField;
     usqInt numArgs;
-    sqInt numTemps;
+    usqInt numTemps;
     char *rcvrAddress;
     sqInt rcvrOrClosure;
     sqInt theMethod;
-    sqInt theMethodEnd;
+    usqInt theMethodEnd;
     sqInt topThing;
 
 	if (!((((((usqInt)theFP)) & (BytesPerWord - 1)) == 0)
@@ -50982,7 +50006,7 @@ primitiveFullClosureValue(void)
     CogMethod *cogMethod;
     CogMethod *cogMethod1;
     sqInt header;
-    usqInt i;
+    sqInt i;
     int inInterpreter;
     sqInt methodHeader;
     sqInt methodHeader1;
@@ -51193,7 +50217,7 @@ primitiveFullClosureValue(void)
 	GIV(stackPointer) = sp8;
 	for (i = 0; i < numCopied; i += 1) {
 		/* begin push: */
-		longAtput((sp = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + ((i + FullClosureFirstCopiedValueIndex) << (shiftForWord()))));
+		longAtput((sp = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + (((sqInt)((usqInt)((i + FullClosureFirstCopiedValueIndex)) << (shiftForWord()))))));
 		GIV(stackPointer) = sp;
 	}
 	assert(frameIsBlockActivation(GIV(framePointer)));
@@ -51248,7 +50272,7 @@ primitiveFullClosureValueNoContextSwitch(void)
     CogMethod *cogMethod;
     CogMethod *cogMethod1;
     sqInt header;
-    usqInt i;
+    sqInt i;
     int inInterpreter;
     sqInt methodHeader;
     sqInt methodHeader1;
@@ -51459,7 +50483,7 @@ primitiveFullClosureValueNoContextSwitch(void)
 	GIV(stackPointer) = sp8;
 	for (i = 0; i < numCopied; i += 1) {
 		/* begin push: */
-		longAtput((sp = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + ((i + FullClosureFirstCopiedValueIndex) << (shiftForWord()))));
+		longAtput((sp = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + (((sqInt)((usqInt)((i + FullClosureFirstCopiedValueIndex)) << (shiftForWord()))))));
 		GIV(stackPointer) = sp;
 	}
 	assert(frameIsBlockActivation(GIV(framePointer)));
@@ -51510,7 +50534,7 @@ primitiveFullClosureValueWithArgs(void)
     CogMethod *cogMethod;
     CogMethod *cogMethod1;
     sqInt header;
-    usqInt i;
+    sqInt i;
     sqInt index;
     int inInterpreter;
     sqInt methodHeader;
@@ -51757,7 +50781,7 @@ primitiveFullClosureValueWithArgs(void)
 	GIV(stackPointer) = sp8;
 	for (i = 0; i < numCopied; i += 1) {
 		/* begin push: */
-		longAtput((sp13 = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + ((i + FullClosureFirstCopiedValueIndex) << (shiftForWord()))));
+		longAtput((sp13 = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + (((sqInt)((usqInt)((i + FullClosureFirstCopiedValueIndex)) << (shiftForWord()))))));
 		GIV(stackPointer) = sp13;
 	}
 	assert(frameIsBlockActivation(GIV(framePointer)));
@@ -61619,14 +60643,14 @@ computeRefCountToShrinkRT(void)
 	Also, don't repeat any of the ephemeron processing. */
 
 	/* SpurGenerationScavenger>>#copyAndForwardMourner: */
-static sqInt NoDbgRegParms
+static usqInt NoDbgRegParms
 copyAndForwardMourner(sqInt mourner)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
     usqInt bytesInObj;
     sqInt classIndex;
     sqInt format;
     sqInt header;
-    sqInt newLocation;
+    usqInt newLocation;
     sqInt newStart;
     sqInt obj;
     usqInt startOfSurvivor;
@@ -61692,14 +60716,14 @@ copyAndForwardMourner(sqInt mourner)
 	then corpse is threaded onto the weakList for later treatment. */
 
 	/* SpurGenerationScavenger>>#copyAndForward: */
-static sqInt NoDbgRegParms
+static usqInt NoDbgRegParms
 copyAndForward(sqInt survivor)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
     usqInt bytesInObj;
     sqInt classIndex;
     sqInt format;
     sqInt header;
-    sqInt newLocation;
+    usqInt newLocation;
     sqInt newStart;
     sqInt obj;
     usqInt startOfSurvivor;
@@ -62671,7 +61695,7 @@ scavengeReferentsOf(sqInt referrer)
     sqInt header;
     sqInt header1;
     sqInt i;
-    sqInt newLocation;
+    usqInt newLocation;
     sqInt numLiterals;
     sqInt numSlots;
     usqInt numSlots1;
