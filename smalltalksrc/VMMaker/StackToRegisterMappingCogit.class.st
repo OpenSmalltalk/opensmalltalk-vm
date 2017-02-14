@@ -35,7 +35,7 @@ ceEnter0ArgsPIC ceEnter1ArgsPIC ceEnter2ArgsPIC
 	- the trampoline for entering an N-arg PIC
 
 ceEnterCogCodePopReceiverArg0Regs ceEnterCogCodePopReceiverArg1Arg0Regs
-	- teh trampoline for entering a method with N register args
+	- the trampoline for entering a method with N register args
 	
 debugBytecodePointers
 	- a Set of bytecode pcs for setting breakpoints (simulation only)
@@ -1474,7 +1474,7 @@ StackToRegisterMappingCogit >> ensureFixupAt: targetPC [
 	| fixup |
 	<var: #fixup type: #'BytecodeFixup *'>
 	fixup := self fixupAt:  targetPC.
-	self traceFixup: fixup.
+	self traceFixup: fixup merge: true.
 	self cCode: '' inSmalltalk:
 		[self assert: simStackPtr = (self debugStackPointerFor: targetPC).
 		 (fixup isMergeFixupOrIsFixedUp
@@ -1512,6 +1512,7 @@ StackToRegisterMappingCogit >> ensureNonMergeFixupAt: targetPC [
 	| fixup |
 	<var: #fixup type: #'BytecodeFixup *'>
 	fixup := self fixupAt:  targetPC.
+	self traceFixup: fixup merge: true.
 	fixup notAFixup ifTrue:
 		[fixup becomeNonMergeFixup].
 	self cCode: '' inSmalltalk:
@@ -1918,7 +1919,7 @@ StackToRegisterMappingCogit >> genExternalizePointersForPrimitiveCall [
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 	| nextPC branchDescriptor unforwardRcvr argReg targetBytecodePC
-	unforwardArg  rcvrReg postBranchPC label fixup |
+	  unforwardArg  rcvrReg postBranchPC label fixup |
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 	<var: #label type: #'AbstractInstruction *'>
 	
@@ -1953,8 +1954,8 @@ StackToRegisterMappingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 	self genCmpArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
 	self ssPop: 2.
 
-	"Further since there is a following conditional jump bytecode, define
-	 non-merge fixups and leave the cond bytecode to set the mergeness."
+	"Since there is a following conditional jump bytecode (unless there is deadCode),
+	 define non-merge fixups and leave the cond bytecode to set the mergeness."
 	(self fixupAt: nextPC) notAFixup
 		ifTrue: "The next instruction is dead.  we can skip it."
 			[deadCode := true.
@@ -1965,35 +1966,26 @@ StackToRegisterMappingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 
 	self assert: (unforwardArg or: [unforwardRcvr]).
 	orNot == branchDescriptor isBranchTrue "orNot is true for ~~"
-		ifFalse:
-			[ fixup := (self ensureNonMergeFixupAt: postBranchPC) asUnsignedInteger.
-			self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC) asUnsignedInteger ]
-		ifTrue:
-			[ fixup := (self ensureNonMergeFixupAt: targetBytecodePC) asUnsignedInteger.
-			self JumpZero: (self ensureNonMergeFixupAt: postBranchPC) asUnsignedInteger ].
-
-	deadCode ifFalse:
-		[self ssPushConstant: objectMemory trueObject]. "dummy value"
+		ifFalse: "a == b ifTrue: ... or a ~~ b ifFalse: ... jump on equal to target pc"
+			[fixup := self ensureNonMergeFixupAt: postBranchPC.
+			 self JumpZero:  (self ensureNonMergeFixupAt: targetBytecodePC)]
+		ifTrue: "a == b ifFalse: ... or a ~~ b ifTrue: ... jump on equal to post-branch pc"
+			[fixup := self ensureNonMergeFixupAt: targetBytecodePC.
+			 self JumpZero: (self ensureNonMergeFixupAt: postBranchPC)].
 		
 	"The forwarders checks need to jump back to the comparison (label) if a forwarder is found, else 
-	jump forward either to the next forwarder check or to the postBranch or branch target (fixup)."
-	unforwardArg ifTrue: 
-		[ unforwardRcvr
-			ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label ]
-			ifFalse: [ objectRepresentation 
-				genEnsureOopInRegNotForwarded: argReg 
-				scratchReg: TempReg 
-				ifForwarder: label
-				ifNotForwarder: fixup ] ].
-	unforwardRcvr ifTrue: 
-		[ objectRepresentation 
-			genEnsureOopInRegNotForwarded: rcvrReg 
-			scratchReg: TempReg 
-			ifForwarder: label
-			ifNotForwarder: fixup ].
+	 jump forward either to the next forwarder check or to the postBranch or branch target (fixup)."
+	(unforwardArg and: [unforwardRcvr]) ifTrue:
+		[objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg jumpBackTo: label].
+	objectRepresentation 
+		genEnsureOopInRegNotForwarded: (unforwardRcvr ifTrue: [rcvrReg] ifFalse: [argReg]) 
+		scratchReg: TempReg 
+		ifForwarder: label
+		ifNotForwarder: fixup.
 		
-	"Not reached, execution flow have jumped to fixup"
-	
+	"Not reached, execution flow has jumped to fixup"
+	deadCode ifFalse:
+		[self ssPushConstant: objectMemory trueObject]. "dummy value"
 	^0
 ]
 
@@ -11504,14 +11496,16 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	argIsInt
 		ifTrue:
 			[(self ssValue: 1) popToReg: ReceiverResultReg.
-			 self ssPop: 2.
-			 self MoveR: ReceiverResultReg R: TempReg]
+			 self ssPop: 2]
 		ifFalse:
 			[self marshallSendArguments: 1.
-			 self MoveR: Arg0Reg R: TempReg].
+			 rcvrIsInt ifFalse:
+				[self MoveR: Arg0Reg R: TempReg]].
 	jumpNotSmallInts := (argIsInt or: [rcvrIsInt])
-							ifTrue: [objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg]
-							ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: ReceiverResultReg andScratch: TempReg scratch: ClassReg].
+							ifFalse: "Neither known to be ints; and them together for the test..."
+								[objectRepresentation genJumpNotSmallIntegersIn: ReceiverResultReg andScratch: TempReg scratch: ClassReg]
+							ifTrue: "One known; in-place single-bit test for the other"
+								[objectRepresentation genJumpNotSmallInteger: (rcvrIsInt ifTrue: [Arg0Reg] ifFalse: [ReceiverResultReg])].
 	argIsInt
 		ifTrue: [self CmpCq: argInt R: ReceiverResultReg]
 		ifFalse: [self CmpR: Arg0Reg R: ReceiverResultReg].
@@ -11885,8 +11879,11 @@ StackToRegisterMappingCogit >> generateInstructionsAt: eventualAbsoluteAddress [
 			ifTrue:
 				[abstractInstruction sizePCDependentInstructionAt: absoluteAddress.
 				 (abstractInstruction isJump
-				  and: [i + 1 < opcodeIndex
-				  and: [abstractInstruction getJmpTarget == (self abstractInstructionAt: i + 1)]])
+				  and: [(i + 1 < opcodeIndex
+				  		and: [abstractInstruction getJmpTarget == (self abstractInstructionAt: i + 1)])
+					or: [i + 2 < opcodeIndex
+						and: [abstractInstruction getJmpTarget == (self abstractInstructionAt: i + 2)
+						and: [(self abstractInstructionAt: i + 1) opcode = Nop]]]])
 					ifTrue:
 						[abstractInstruction
 							opcode: Nop;
@@ -12536,22 +12533,24 @@ StackToRegisterMappingCogit >> printSimStack: aSimStack [
 { #category : #'simulation only' }
 StackToRegisterMappingCogit >> printSimStack: aSimStack toDepth: limit spillBase: spillBase on: aStream [
 	<doNotGenerate>
-	| tempNamesOrNil width tabWidth |
+	| tempNames width tabWidth |
 	aStream ensureCr.
 	limit < 0 ifTrue:
 		[^aStream nextPutAll: 'simStackEmpty'; cr; flush].
-	inBlock ~~ true ifTrue:
-		[(tempNamesOrNil := self class initializationOptions at: #tempNames ifAbsent: [#()]) isEmpty ifFalse:
-			[| tab longest |
-			 longest := tempNamesOrNil inject: '' into: [:m :t| m size >= t size ifTrue: [m] ifFalse: [t]].
-			 tabWidth := self widthInDefaultFontOf: (tab := String with: Character tab).
-			 width := self widthInDefaultFontOf: longest, tab.
-			 width <= ((self widthInDefaultFontOf: longest, (String with: Character space)) + 4) ifTrue:
-				[width := width + tabWidth]]].
+	aSimStack ifNil:
+		[^aStream nextPutAll: 'nil simStack'; cr; flush].
+	(self class initializationOptions at: #tempNames ifAbsent: nil) ifNotNil:
+		[:tempNamesDictOrNil |	 | tab longest |
+		 tempNames := tempNamesDictOrNil at: (self class initializationOptions at: #startpc ifAbsent: [initialPC]) + 1.
+		 longest := tempNames inject: '' into: [:m :t| m size >= t size ifTrue: [m] ifFalse: [t]].
+		 tabWidth := self widthInDefaultFontOf: (tab := String with: Character tab).
+		 width := self widthInDefaultFontOf: longest, tab.
+		 width <= ((self widthInDefaultFontOf: longest, (String with: Character space)) + 4) ifTrue:
+			[width := width + tabWidth]].
 	0 to: limit do:
 		[:i|
 		width ifNotNil:
-			[self put: (tempNamesOrNil at: i + 1 ifAbsent: ['']) paddedTo: width tabWidth: tabWidth on: aStream].
+			[self put: (tempNames at: i + 1 ifAbsent: ['']) paddedTo: width tabWidth: tabWidth on: aStream].
 		aStream print: i.
 		i = spillBase
 			ifTrue: [aStream nextPutAll: ' sb'; tab]
@@ -13479,8 +13478,8 @@ StackToRegisterMappingCogit >> traceDescriptor: descriptor [
 ]
 
 { #category : #'simulation only' }
-StackToRegisterMappingCogit >> traceFixup: fixup [
-	<cmacro: '(ign) 0'>
+StackToRegisterMappingCogit >> traceFixup: fixup merge: isMerge [
+	<cmacro: '(igu,ana) 0'>
 	| index |
 	(compilationTrace anyMask: 32) ifTrue:
 		[index := (fixups object identityIndexOf: fixup) - 1.
@@ -13488,8 +13487,10 @@ StackToRegisterMappingCogit >> traceFixup: fixup [
 			ensureCr;
 			print: bytecodePC; nextPutAll: ' -> '; print: index; nextPut: $/; print: index + initialPC;
 			nextPut: $:; space.
-			fixup printStateOn: coInterpreter transcript.
-			coInterpreter transcript cr; flush]
+		 isMerge
+			ifTrue: [fixup printStateOn: coInterpreter transcript]
+			ifFalse: [coInterpreter transcript nextPutAll: 'non-merge'].
+		 coInterpreter transcript cr; flush]
 ]
 
 { #category : #'simulation only' }
@@ -13608,6 +13609,7 @@ StackToRegisterMappingCogit >> tryCollapseTempVectorInitializationOfSize: slots 
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> updateSimSpillBase [
+	<inline: true>
 	simSpillBase > simStackPtr ifTrue:
 		[simSpillBase := simStackPtr max: 0].
 ]
