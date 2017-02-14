@@ -19247,7 +19247,7 @@ StackInterpreter >> shortConditionalJumpTrue [
 { #category : #simulation }
 StackInterpreter >> shortPrint: oop [
 	<doNotGenerate>
-	| name classOop |
+	| name classOop key |
 	(objectMemory isImmediate: oop) ifTrue:
 		[(objectMemory isImmediateCharacter: oop) ifTrue:
 			[^(objectMemory characterValueOf: oop) < 256
@@ -19301,13 +19301,16 @@ StackInterpreter >> shortPrint: oop [
 	((objectMemory isPointersNonImm: oop)
 	 and: [classOop ~= objectMemory nilObject
 	 and: [((objectMemory instanceSizeOf: classOop) between: ValueIndex + 1 and: ValueIndex + 2)
-	 and: [(objectMemory addressCouldBeObj: (objectMemory fetchPointer: KeyIndex ofObject: oop))]
-	 and: [(objectMemory isBytesNonImm: (objectMemory fetchPointer: KeyIndex ofObject: oop))]]]) ifTrue:
+	 and: [(objectMemory addressCouldBeObj: (key := objectMemory fetchPointer: KeyIndex ofObject: oop))
+	 and: [(key = objectMemory nilObject and: [self addressCouldBeClassObj: (objectMemory fetchPointer: ValueIndex ofObject: oop)])
+		or: [objectMemory isBytesNonImm: key]]]]]) ifTrue:
 		[| classLookupKey |
 		 classLookupKey := objectMemory fetchClassOfNonImm: (objectMemory splObj: SchedulerAssociation).
 		 [classLookupKey = objectMemory nilObject ifTrue:
 			[^(('AEIOU' includes: name first) ifTrue: ['an '] ifFalse: ['a ']), name].
 		  (objectMemory instanceSizeOf: classLookupKey) = (KeyIndex + 1)] whileFalse:
+			[classLookupKey := self superclassOf: classLookupKey].
+		[(objectMemory instanceSizeOf: (self superclassOf: classLookupKey)) = (KeyIndex + 1)] whileTrue:
 			[classLookupKey := self superclassOf: classLookupKey].
 		 (self includesBehavior: classOop ThatOf: classLookupKey) ifTrue:
 			[^(('AEIOU' includes: name first) ifTrue: ['an '] ifFalse: ['a ']), name,
