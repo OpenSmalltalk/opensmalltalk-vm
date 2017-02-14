@@ -419,7 +419,7 @@ CogX64Compiler >> computeMaximumSize [
 		"Control"
 		[CallFull]					-> [^12].
 		[Call]						-> [^5].
-		[CallR]						-> [^2 + ((operands at: 0) > 7 ifTrue: [ 1 ] ifFalse: [ 0 ]) ].
+		[CallR]						-> [^3].
 		[JumpR]						-> [^2].
 		[JumpFull]					-> [self resolveJumpTarget. ^12].
 		[JumpLong]					-> [self resolveJumpTarget. ^5].
@@ -790,12 +790,8 @@ CogX64Compiler >> computeMaximumSize [
 		[PushCw]		-> [^self computeSizeOfPushCw].
 		[PrefetchAw]	-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [7] ifFalse: [0]].
 		"Conversion"
-		[ConvertRRd]		-> [^4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
-									ifTrue: [1]
-									ifFalse: [0])].
-		[ConvertRdR]		-> [^4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
-									ifTrue: [1]
-									ifFalse: [0])].
+		[ConvertRRd]		-> [^5].
+		[ConvertRdR]		-> [^5].
 		[ConvertRRs]		-> [^4 + ((((operands at: 1) > 7) or: [(operands at: 0) > 7])
 									ifTrue: [1]
 									ifFalse: [0])].
@@ -959,16 +955,13 @@ CogX64Compiler >> concretizeCallFull [
 CogX64Compiler >> concretizeCallR [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| reg skip |
+	| reg |
 	reg := operands at: 0.
-	(reg <= 7)
-		ifTrue: [skip := 0]
-		ifFalse: [skip := 1. machineCode at: 0 put: (self rexw: false r: 0 x: 0 b: reg). (skip := 1)].
-			
 	machineCode
-		at: skip + 0 put: 16rFF;
-		at: skip + 1 put: (self mod: ModReg RM: reg RO: 2).
-	^machineCodeSize := 2
+		at: 0 put: (self rexR: 0 x: 0 b: reg);
+		at: 1 put: 16rFF;
+		at: 2 put: (self mod: ModReg RM: reg RO: 2).
+	^machineCodeSize := 3
 ]
 
 { #category : #'generate machine code' }
@@ -1090,20 +1083,16 @@ CogX64Compiler >> concretizeConditionalJumpLong: conditionCode [
 CogX64Compiler >> concretizeConvertRRd [
 	"Will get inlined into concretizeAt: switch."
 	<inline: true>
-	| srcReg destReg skip |
+	| srcReg destReg |
 	srcReg := operands at:0.
 	destReg := operands at: 1.
 	machineCode
-		at: 0 put: 16rF2.
-	(srcReg <= 7 and: [destReg <= 7])
-		ifTrue: [skip := 0]
-		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: destReg x: 0 b: srcReg)].
-		
-	machineCode
-		at: skip + 1 put: 16r0F;
-		at: skip + 2 put: 16r2A;
-		at: skip + 3 put: (self mod: ModReg RM: srcReg RO: destReg).
-	 ^machineCodeSize := skip + 4
+		at: 0 put: 16rF2;
+		at: 1 put: (self rexR: destReg x: 0 b: srcReg);
+		at: 2 put: 16r0F;
+		at: 3 put: 16r2A;
+		at: 4 put: (self mod: ModReg RM: srcReg RO: destReg).
+	 ^machineCodeSize := 5
 ]
 
 { #category : #'generate machine code' }
@@ -1132,20 +1121,16 @@ CogX64Compiler >> concretizeConvertRdR [
 	"Will get inlined into concretizeAt: switch."
 	"CVTSD2SI"
 	<inline: true>
-	| srcReg destReg skip |
+	| srcReg destReg |
 	srcReg := operands at:0.
 	destReg := operands at: 1.
 	machineCode
-		at: 0 put: 16rF2.
-	(srcReg <= 7 and: [destReg <= 7])
-		ifTrue: [skip := 0]
-		ifFalse: [machineCode at: (skip := 1) put: (self rexw: false r: destReg x: 0 b: srcReg)].
-	
-	machineCode
-		at: skip + 1 put: 16r0F;
-		at: skip + 2 put: 16r2D;
-		at: skip + 3 put: (self mod: ModReg RM: srcReg RO: destReg).
-	 ^machineCodeSize := skip + 4
+		at: 0 put: 16rF2;
+		at: 1 put: (self rexR: destReg x: 0 b: srcReg);
+		at: 2 put: 16r0F;
+		at: 3 put: 16r2D;
+		at: 4 put: (self mod: ModReg RM: srcReg RO: destReg).
+	 ^machineCodeSize := 5
 ]
 
 { #category : #'generate machine code' }

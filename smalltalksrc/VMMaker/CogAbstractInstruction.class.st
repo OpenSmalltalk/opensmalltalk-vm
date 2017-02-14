@@ -894,6 +894,7 @@ CogAbstractInstruction >> getDefaultCogCodeSize [
 { #category : #accessing }
 CogAbstractInstruction >> getJmpTarget [
 	"Get the target of a jump instruction.  Jumps have the target in the first operand."
+	<inline: true>
 	^cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *'
 ]
 
@@ -994,6 +995,7 @@ CogAbstractInstruction >> instructionSizeAt: pc [
 { #category : #testing }
 CogAbstractInstruction >> isAFixup: fixupOrAddress [
 	<var: #fixupOrAddress type: #'void *'>
+	<inline: true>
 	^cogit addressIsInFixups: fixupOrAddress
 ]
 
@@ -1101,6 +1103,7 @@ CogAbstractInstruction >> labelOffset [
 	 its MFMethodFlagIsBlockFlag bit set we provide labels with an offset.  The
 	 offset for the fakeHeader reference is MFMethodFlagIsBlockFlag.  See
 	 compileBlockFrameBuild:"
+	<inline: true>
 	^operands at: 1
 ]
 
@@ -1550,6 +1553,7 @@ CogAbstractInstruction >> updateLabel: labelInstruction [
 	"Update an instruction that depends on a label outside
 	 of generated code (e.g. a method or block header)."
 	<var: #labelInstruction type: #'AbstractInstruction *'>
+	<inline: true>
 	self assert: (opcode = MoveCwR or: [opcode = PushCw]).
 	operands at: 0 put: labelInstruction address + labelInstruction labelOffset
 ]

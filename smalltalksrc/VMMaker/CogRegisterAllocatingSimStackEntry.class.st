@@ -49,6 +49,38 @@ CogRegisterAllocatingSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegi
 ]
 
 { #category : #comparing }
+CogRegisterAllocatingSimStackEntry >> isIdenticalEntryAs: ssEntry [
+	<var: 'ssEntry' type: #'CogSimStackEntry *'>
+	^type = ssEntry type
+	  and: [liveRegister = ssEntry liveRegister
+	  and: [((type = SSBaseOffset or: [type == SSSpill]) and: [offset = ssEntry offset and: [register = ssEntry register]])
+		or: [(type = SSRegister and: [register = ssEntry register])
+		or: [(type = SSConstant and: [constant = ssEntry constant])]]]]
+]
+
+{ #category : #comparing }
+CogRegisterAllocatingSimStackEntry >> isMergedWithTargetEntry: targetEntry [
+	"The receiver is a simStackEntry at a jump to the corresponding simStackEntry at the jump's target.
+	 Answer if no merge is required for the jump."
+	<var: 'ssEntry' type: #'CogSimStackEntry *'>
+	spilled ~= targetEntry spilled ifTrue: "push or pop required"
+		[^false].
+	(liveRegister = NoReg and: [targetEntry liveRegister ~= NoReg]) ifTrue: "register load required"
+		[^false].
+	(liveRegister ~= NoReg
+	 and: [liveRegister = targetEntry liveRegister
+	 and: [type = targetEntry type
+	 and: [type = SSConstant or: [type = SSRegister and: [register = targetEntry register]]]]]) ifTrue:
+		[^true].
+	((type = SSBaseOffset or: [type == SSSpill])
+	 and: [(targetEntry type = SSBaseOffset or: [targetEntry type == SSSpill])
+	 and: [offset = targetEntry offset and: [register = targetEntry register]]]) ifTrue:
+		[^true].
+	self halt: 'comment the incompatible pair please'.
+	^false
+]
+
+{ #category : #comparing }
 CogRegisterAllocatingSimStackEntry >> isSameEntryAs: ssEntry [
 	<var: 'ssEntry' type: #'CogSimStackEntry *'>
 	^type = ssEntry type
@@ -98,7 +130,7 @@ CogRegisterAllocatingSimStackEntry >> popToReg: reg [
 												ifTrue: [cogit MoveR: register R: reg]
 												ifFalse: [cogit Label]] }]].
 
-	(reg ~= TempReg and: [reg ~= liveRegister and: [type ~= SSRegister]]) ifTrue:
+	(reg ~= TempReg and: [liveRegister = NoReg and: [type ~= SSRegister]]) ifTrue:
 		[liveRegister := reg.
 		 cogit copyLiveRegisterToCopiesOf: self]
 ]
@@ -285,7 +317,7 @@ CogRegisterAllocatingSimStackEntry >> storeToReg: reg [
 											ifTrue: [cogit MoveR: register R: reg]
 											ifFalse: [cogit Label]] }].
 
-	(reg ~= TempReg and: [reg ~= liveRegister and: [type ~= SSRegister]]) ifTrue:
+	(reg ~= TempReg and: [liveRegister = NoReg and: [type ~= SSRegister]]) ifTrue:
 		[liveRegister := reg.
 		 cogit copyLiveRegisterToCopiesOf: self]
 ]

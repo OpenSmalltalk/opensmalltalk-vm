@@ -426,6 +426,23 @@ Cogit class >> assumptions [
 	 64k of code per method more than enough"
 ]
 
+{ #category : #'in-image compilation' }
+Cogit class >> attemptToComputeTempNamesFor: aCompiledMethod [
+	(aCompiledMethod respondsTo: #tempNames) ifTrue:
+		[| blocks |
+		 blocks := aCompiledMethod embeddedBlockClosures.
+		 initializationOptions
+			at: #tempNames
+			put: (Dictionary withAll: {aCompiledMethod initialPC -> aCompiledMethod tempNames},
+				(blocks
+					ifEmpty: [#()]
+					ifNotEmpty:
+						[aCompiledMethod embeddedBlockClosures
+							with: ((aCompiledMethod methodNode schematicTempNamesString allButFirst:
+									(aCompiledMethod methodNode schematicTempNamesString indexOf: $[)) piecesCutWhere: [:a :b| b = $[])
+							collect: [:c :s| c startpc -> s substrings]]))]
+]
+
 { #category : #'accessing class hierarchy' }
 Cogit class >> chooseCogitClass [
 	^Smalltalk at: ([:choices| choices at: (UIManager default chooseFrom: choices) ifAbsent: [^nil]]
@@ -452,8 +469,7 @@ Cogit class >> cog: aCompiledMethod selectorOrNumCopied: selectorOrNumCopied opt
 	"StackToRegisterMappingCogit cog: (Integer >> #benchFib) selector: #benchFib options: #(COGMTVM false)"
 	| cogit coInterpreter |
 	cogit := self instanceForTests: optionsDictionaryOrArray.
-	(aCompiledMethod respondsTo: #tempNames) ifTrue:
-		[initializationOptions at: #tempNames put: aCompiledMethod tempNames].
+	self attemptToComputeTempNamesFor: aCompiledMethod.
 	coInterpreter := CurrentImageCoInterpreterFacade forCogit: cogit.
 	[cogit
 		setInterpreter: coInterpreter;
@@ -2707,6 +2723,7 @@ Cogit >> abstractInstruction: theAbstractInstruction follows: anAbstractInstruct
 { #category : #'compile abstract instructions' }
 Cogit >> abstractInstructionAt: index [
 	<cmacro: '(index) (&abstractOpcodes[index])'>
+	<returnTypeC: #'AbstractInstruction *'>
 	((debugOpcodeIndices includes: index)
 	 and: [breakMethod isNil or: [methodObj = breakMethod]]) ifTrue:
 		[self halt].
@@ -2830,10 +2847,11 @@ Cogit >> addressIsInCurrentCompilation: address [
 
 { #category : #testing }
 Cogit >> addressIsInFixups: address [
-	<var: #address type: #'AbstractInstruction *'>
-	^self cCode: 'address >= (AbstractInstruction *)&fixups[0] && address < (AbstractInstruction *)&fixups[numAbstractOpcodes]'
-		inSmalltalk: [fixups notNil
-					and: [(fixups object identityIndexOf: address) between: 1 and: numAbstractOpcodes]]
+	<var: #address type: #'BytecodeFixup *'>
+	^self cCode: '(AbstractInstruction *)address >= fixups && (AbstractInstruction *)address < (fixups + numAbstractOpcodes)'
+		inSmalltalk:
+			[fixups notNil
+			 and: [(fixups object identityIndexOf: address) between: 1 and: numAbstractOpcodes]]
 ]
 
 { #category : #testing }
@@ -3257,6 +3275,9 @@ Cogit >> blockDispatchTargetsFor: cogMethod perform: binaryFunction arg: arg [
 { #category : #'compile abstract instructions' }
 Cogit >> blockStartAt: index [
 	<cmacro: '(index) (&blockStarts[index])'>
+	"hack set startpc for printSimStack:toDepth:spillBase:on:"
+	(self class initializationOptions at: #tempNames ifAbsent: nil) ifNotNil:
+		[self class initializationOptions at: #startpc put: (blockStarts at: index) startpc].
 	^blockStarts at: index
 ]
 
@@ -8280,6 +8301,7 @@ Cogit >> initialOpenPICUsageCount [
 { #category : #initialization }
 Cogit >> initialize [
 	| wordSize |
+	initialPC := 0.
 	wordSize := self class objectMemoryClass wordSize.
 	cogMethodSurrogateClass := NewspeakVM
 									ifTrue:

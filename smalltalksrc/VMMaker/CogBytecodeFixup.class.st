@@ -132,9 +132,9 @@ CogBytecodeFixup >> printStateOn: aStream [
 CogBytecodeFixup >> recordBcpc: theBytecodePC [
 	<inline: true>
 	self cCode: '' inSmalltalk:
-		[bcpc
-			ifNil: [bcpc := theBytecodePC]
-			ifNotNil:
+		[(bcpc isNil or: [bcpc = theBytecodePC])
+			ifTrue: [bcpc := theBytecodePC]
+			ifFalse:
 				[bcpc := bcpc isInteger
 							ifTrue: [{bcpc. theBytecodePC}]
 							ifFalse: [bcpc, {theBytecodePC}]]]
