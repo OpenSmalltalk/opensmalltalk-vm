@@ -1651,7 +1651,8 @@ TMethod >> isFunctionalIn: aCodeGen [
 		[ :n | n isReturn ifTrue: [^false]].
 	^#(int #'unsigned int' #long #'unsigned long' #'long long' #'unsigned long long'
 		sqInt usqInt #'sqIntptr_t' #'usqIntptr_t' sqLong usqLong
-		#'int *' #'unsigned int *' #'sqInt *' #'usqInt *' #'sqLong *' #'usqLong *' #'CogMethod *' #'char *') includes: returnType
+		#'int *' #'unsigned int *' #'sqInt *' #'usqInt *' #'sqLong *' #'usqLong *' #'char *'
+		#'CogMethod *' #'AbstractInstruction *') includes: returnType
 ]
 
 { #category : #inlining }
