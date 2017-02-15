@@ -15,10 +15,10 @@
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -27,11 +27,11 @@
  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
- 
- The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
- "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
- and its contributors", in the same place and form as other third-party acknowledgments. 
- Alternately, this acknowledgment may appear in the software itself, in the same form and location as other 
+
+ The end-user documentation included with the redistribution, if any, must include the following acknowledgment:
+ "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com)
+ and its contributors", in the same place and form as other third-party acknowledgments.
+ Alternately, this acknowledgment may appear in the software itself, in the same form and location as other
  such third-party acknowledgments.
  */
 
@@ -39,19 +39,19 @@
 
 #import "sqSqueakMainApplication+attributes.h"
 #import "sqSqueakMainApplication+vmAndImagePath.h"
-#if COGVM
+#if STACKVM
 #include "sqSCCSVersion.h"
 #endif
 
 extern struct VirtualMachine* interpreterProxy;
 
-@implementation sqSqueakMainApplication (attributes) 
+@implementation sqSqueakMainApplication (attributes)
 
 - (void) getAttribute:(sqInt)indexNumber into:(char *) byteArrayIndex length:(sqInt)length {
 	//indexNumber is a postive/negative number
 	//byteArrayIndex is actually the address of where to put the data
 	//length is how many bytes the target can hold
-	if(!byteArrayIndex) 
+	if(!byteArrayIndex)
 		return;
 	*byteArrayIndex = 0x00;
 	if (length > 0)
@@ -64,21 +64,21 @@ extern struct VirtualMachine* interpreterProxy;
 	strlcat(data,interpreterVersion,sizeof(data));
 	strlcat(data," ",sizeof(data));
 	NSString *versionString =[[NSBundle mainBundle] objectForInfoDictionaryKey: @"CFBundleVersion"];
-	
+
 	if (versionString == nil)
 		return data;
 	const char *versonStringAsCString =  [versionString cStringUsingEncoding: [self currentVMEncoding]];
-	
+
 	if (versonStringAsCString == nil)
 		return data;
-	
+
 	strlcat(data,versonStringAsCString,sizeof(data));
-	
+
 	return data;
 }
 
 - (const char *) getAttribute:(sqInt)indexNumber {
-	//indexNumber is a postive/negative number	
+	//indexNumber is a postive/negative number
 	if (indexNumber < 0) /* VM argument */ {
         if (-indexNumber <= numVMArgs)
 			return (char *) [[self.commandLineArguments objectAtIndex: -indexNumber] cStringUsingEncoding:[self currentVMEncoding]];
@@ -91,7 +91,7 @@ extern struct VirtualMachine* interpreterProxy;
 #endif
 	else {
 		switch (indexNumber) {
-			case 0: 
+			case 0:
                 return [[[[NSBundle mainBundle] executablePath] precomposedStringWithCanonicalMapping] UTF8String];
 
 			case 1:
@@ -99,9 +99,9 @@ extern struct VirtualMachine* interpreterProxy;
 
             case 1004:  /* Interpreter version string */
 				return [self interpreterVersionString];
-			
+
             case 1009: {/* source tree version info */
-#if COGVM
+#if STACKVM
 				return sourceVersionString(' ');
 #else
                 static char data[255];
@@ -123,11 +123,11 @@ extern struct VirtualMachine* interpreterProxy;
 
 			case 1202: /* macintosh file error peek */
 				return "0";
-			
+
 			default: {
 				int indexOfArg = indexNumber - 1;
 				if (indexOfArg < [self.argsArguments count]) {
-					return (char *) [[self.argsArguments objectAtIndex: (NSUInteger) indexOfArg] cStringUsingEncoding:[self currentVMEncoding]];			
+					return (char *) [[self.argsArguments objectAtIndex: (NSUInteger) indexOfArg] cStringUsingEncoding:[self currentVMEncoding]];
 				}
 			}
 		}
