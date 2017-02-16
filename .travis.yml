@@ -38,6 +38,12 @@ matrix:
   - os: osx
     env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
   - os: osx
+    env: ARCH="macos64x64" FLAVOR="pharo.stack.spur"
+  - os: osx
+    env: ARCH="macos64x64" FLAVOR="pharo.cog.spur.lowcode"
+  - os: osx
+    env: ARCH="macos64x64" FLAVOR="pharo.stack.spur.lowcode"
+  - os: osx
     env: ARCH="macos64x64" FLAVOR="squeak.cog.spur"
   - os: osx
     env: ARCH="macos64x64" FLAVOR="squeak.stack.spur"
@@ -47,6 +53,12 @@ matrix:
     env: ARCH="macos32x86" FLAVOR="newspeak.stack.spur"
   - os: osx
     env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
+  - os: osx
+    env: ARCH="macos32x86" FLAVOR="pharo.stack.spur"
+  - os: osx
+    env: ARCH="macos32x86" FLAVOR="pharo.cog.spur.lowcode"
+  - os: osx
+    env: ARCH="macos32x86" FLAVOR="pharo.stack.spur.lowcode"
   - os: osx
     env: ARCH="macos32x86" FLAVOR="squeak.cog.spur"
   - os: osx

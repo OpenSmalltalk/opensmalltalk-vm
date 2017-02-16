@@ -1,0 +1,58 @@
+#!/bin/bash -e
+# PharoVM with VM profiler and itimer heartbeat
+
+case "`uname -m`" in # ensure we see x86 as machine type
+i*86) ;; # we're good
+*) if type i386 2>&1 >/dev/null; then
+	echo "Re-exec as x86"
+	exec i386 "$0" "$@"
+fi ;;
+esac
+
+THIRDPARTYLIBS="libsdl2 libssh2 libgit2"
+INSTALLDIR=phstacklowcodelinuxht
+
+# Some gcc versions create a broken VM using -O2
+case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in
+3.4.*)	OPT="-g -O1 -fwrapv -DNDEBUG -DDEBUGVM=0";;
+*)	OPT="-g -O2 -DNDEBUG -DDEBUGVM=0";;
+esac
+OPT="$OPT -DPharoVM -DIMMUTABILITY=1"
+
+if [ $# -ge 1 ]; then
+	INSTALLDIR="$1"; shift
+fi
+
+echo -n "clean? "
+read a
+case $a in
+n|no|N|NO)	echo "ok but this isn't safe!!";;
+*)	test -f Makefile && make reallyclean
+#	for lib in ${THIRDPARTYLIBS}; do
+#		../../third-party/${lib}/mvm clean
+#	done
+esac
+test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -p ../../plugins.int .)
+test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
+
+for lib in ${THIRDPARTYLIBS}; do
+	../../third-party/${lib}/mvm
+done
+
+test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak \
+		--with-vmversion=5.0 \
+		--with-src=spurlowcodestacksrc --disable-cogit \
+	CC="gcc -m32" \
+	CXX="g++ -m32" \
+	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DITIMER_HEARTBEAT=1" \
+	LIBS="-lpthread -luuid" \
+	LDFLAGS=-Wl,-z,now
+rm -f vm/sqUnixMain.o # nuke version info
+rm -rf ../../../products/$INSTALLDIR
+# prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
+# but older linux readlinks lack the -f flag
+make install-squeak install-plugins prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG
+for lib in ${THIRDPARTYLIBS}; do
+	../../third-party/${lib}/mvm install `find ../../../products/$INSTALLDIR -name "5.0*"`
+done
+../../editpharoinstall.sh ../../../products/$INSTALLDIR "$@"
