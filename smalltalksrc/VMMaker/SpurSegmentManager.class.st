@@ -641,15 +641,16 @@ SpurSegmentManager >> shrinkObjectMemory: delta [
 	| shrinkage emptySeg |
 	<var: #shrinkage type: #usqInt>
 	<var: #emptySeg type: #'SpurSegmentInfo *'>
+	manager checkFreeSpace: GCModeFreeSpace.
 	shrinkage := delta.
 	[emptySeg := self findEmptySegNearestInSizeTo: shrinkage.
-	 emptySeg notNil] whileTrue:
-		[emptySeg segSize > shrinkage ifTrue:
-			[^shrinkage < delta].
-		 shrinkage := shrinkage - emptySeg segSize.
-		 manager detachFreeObject: (manager objectStartingAt: emptySeg segStart).
-		 self removeSegment: emptySeg].
-	^shrinkage < delta
+	 (emptySeg isNil
+	  or: [emptySeg segSize > shrinkage]) ifTrue:
+		[manager checkFreeSpace: GCModeFreeSpace.
+		 ^shrinkage < delta].
+	 shrinkage := shrinkage - emptySeg segSize.
+	 manager detachFreeObject: (manager objectStartingAt: emptySeg segStart).
+	 self removeSegment: emptySeg] repeat
 ]
 
 { #category : #pinning }
