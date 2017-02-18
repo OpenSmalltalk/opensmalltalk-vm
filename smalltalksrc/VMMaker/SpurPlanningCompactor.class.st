@@ -211,7 +211,7 @@ SpurPlanningCompactor >> copyAndUnmark: firstPass [
 	(self thereAreObjectsToMove
 	 and: [finalPass not
 	 and: [biasForGC]]) ifTrue: "only ever one pass if biasForGC is true."
-		[self unmarkObjectsAfterLastMobileObject]
+		[self unmarkObjectsFromFirstFreeObject]
 ]
 
 { #category : #compaction }
@@ -341,19 +341,6 @@ SpurPlanningCompactor >> findHighestSuitableFreeBlock: spaceEstimate [
 ]
 
 { #category : #private }
-SpurPlanningCompactor >> findNextMarkedPinnedAfter: unpinnedObj [
-	<inline: true>
-	| nextObj |
-	self deny: ((manager isPinned: unpinnedObj) and: [manager isMarked: unpinnedObj]).
-	nextObj := unpinnedObj.
-	[nextObj := manager oldSpaceObjectAfter: nextObj.
-	 (self oop: nextObj isGreaterThanOrEqualTo: manager endOfMemory) ifTrue:
-		[^nil].
-	 (manager isPinned: nextObj) and: [manager isMarked: nextObj]] whileFalse.
-	^nextObj
-]
-
-{ #category : #private }
 SpurPlanningCompactor >> forwardMobileObject: o to: toFinger savedFirstFieldPtr: savedFirstFieldPtr [
 	"Forward a mobile object to some new location, saving its first field through savedFirstFieldPtr.
 	 Don't use forward:to:; we dont want to alter the object in any way other than by setting the forwarding pointer."
@@ -368,28 +355,6 @@ SpurPlanningCompactor >> forwardMobileObject: o to: toFinger savedFirstFieldPtr:
 								ifTrue: [toFinger + manager baseHeaderSize]
 								ifFalse: [toFinger]).
 	self recordMovementOf: o to: toFinger savedFirstFieldPtr: savedFirstFieldPtr
-]
-
-{ #category : #private }
-SpurPlanningCompactor >> freeAllUnpinnedObjectsFromObject: nextObj toFinger: initialToFinger [
-	"Free all space from toFinger up, preserving only marked pinned objects, clearning their marked bits."
-	| toFinger nextPinnedObj |
-	<var: 'toFinger' type: #usqInt>
-	<var: 'nextPinnedObj' type: #usqInt>
-	toFinger := initialToFinger.
-	nextPinnedObj := nextObj.
-	[[nextPinnedObj >= manager endOfMemory
-	  or: [(manager isMarked: nextPinnedObj)
-		  and: [manager isPinned: nextPinnedObj]]] whileFalse:
-		[nextPinnedObj := manager objectAfter: nextPinnedObj limit: manager endOfMemory].
-	 nextPinnedObj < manager endOfMemory] whileTrue:
-		[toFinger < (manager startOfObject: nextPinnedObj) ifTrue:
-			[manager addFreeChunkWithBytes: (manager startOfObject: nextPinnedObj) - toFinger at: toFinger].
-		 self unmarkPinned: nextPinnedObj.
-		 toFinger := manager addressAfter: nextPinnedObj.
-		 nextPinnedObj := manager oldSpaceObjectAfter: nextPinnedObj].
-	toFinger < manager endOfMemory ifTrue:
-		[manager addFreeChunkWithBytes: manager endOfMemory - toFinger at: toFinger]
 ]
 
 { #category : #private }
@@ -582,6 +547,14 @@ SpurPlanningCompactor >> planCompactSavingForwarders [
 	^true
 ]
 
+{ #category : #'debug support' }
+SpurPlanningCompactor >> printTheBogons: aBogon [
+	<inline: true>
+	coInterpreter
+		print: 'bogon '; printHexnp: aBogon; cr;
+		print: 'anomaly '; printHexnp: anomaly; cr
+]
+
 { #category : #private }
 SpurPlanningCompactor >> recordMovementOf: o to: toFinger savedFirstFieldPtr: savedFirstFieldPtr [
 	"No-op in the real class."
@@ -734,17 +707,6 @@ SpurPlanningCompactor >> thereAreObjectsToMove [
 ]
 
 { #category : #compaction }
-SpurPlanningCompactor >> unmarkAndScanForFirstUnpinnedObjectFrom: initialObject [
-	"Scan from initialObject, unmarking any marked pinned objects, and answering the first mobile or freeable object found, or nil if none."
-	manager allOldSpaceEntitiesFrom: initialObject do:
-		[:o|
-		((manager isMarked: o) and: [manager isPinned: o]) ifFalse:
-			[^o].
-		self unmarkPinned: o].
-	^nil
-]
-
-{ #category : #compaction }
 SpurPlanningCompactor >> unmarkInitialImmobileObjects [
 	"Sweep the initial immobile heap, unmarking all objects up to the first mobile object."
 	manager allOldSpaceObjectsFrom: manager firstObject do:
@@ -756,12 +718,12 @@ SpurPlanningCompactor >> unmarkInitialImmobileObjects [
 ]
 
 { #category : #compaction }
-SpurPlanningCompactor >> unmarkObjectsAfterLastMobileObject [
+SpurPlanningCompactor >> unmarkObjectsFromFirstFreeObject [
 	"Sweep the final immobile heap, freeing and coalescing unmarked and free objects,
 	 and unmarking all marked objects up to the end of memory."
 	| startOfFree freeBytes |
 	freeBytes := 0.
-	manager allOldSpaceEntitiesFrom: objectAfterLastMobileObject do:
+	manager allOldSpaceEntitiesFrom: firstFreeObject do:
 		[:o|
 		self check: o.
 		(manager isMarked: o)
@@ -775,7 +737,9 @@ SpurPlanningCompactor >> unmarkObjectsAfterLastMobileObject [
 					 freeBytes := 0].
 				 (manager isPinned: o)
 					ifTrue: [self unmarkPinned: o]
-					ifFalse: [manager setIsMarkedOf: o to: false]]]
+					ifFalse: [manager setIsMarkedOf: o to: false]]].
+	startOfFree ifNotNil:
+		[manager addFreeChunkWithBytes: freeBytes at: startOfFree].
 ]
 
 { #category : #compaction }
@@ -790,20 +754,6 @@ SpurPlanningCompactor >> unmarkPinned: pinnedObj [
 	(manager isSegmentBridge: pinnedObj) ifFalse:
 		[manager setIsMarkedOf: pinnedObj to: false.
 		 manager segmentManager notePinned: pinnedObj]
-]
-
-{ #category : #private }
-SpurPlanningCompactor >> unmarkPinnedObjectsAndFindFirstUnpinnedOrFreeEntityFollowing: pinnedObj [
-	<inline: true>
-	| nextObj |
-	self assert: ((manager isPinned: pinnedObj) and: [manager isMarked: pinnedObj]).
-	nextObj := pinnedObj.
-	[self unmarkPinned: nextObj.
-	 nextObj := manager oldSpaceObjectAfter: nextObj.
-	 (self oop: nextObj isGreaterThanOrEqualTo: manager endOfMemory) ifTrue:
-		[^manager endOfMemory].
-	 (manager isPinned: nextObj) and: [manager isMarked: nextObj]] whileTrue.
-	^nextObj
 ]
 
 { #category : #private }

@@ -155,13 +155,13 @@ CogBlockMethod class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 								['cmUsesPenultimateLit']	-> [#(unsigned #Boolean ' : 1')].
 								['cbUsesInstVars']			-> [#(unsigned #Boolean ' : 1')].
 								['cmUnusedFlags']			-> [#(unsigned ' : 2')].
-								['stackCheckOffset']		-> [#(unsigned ' : 12')].		"See MaxStackCheckOffset in initialize. a.k.a. cPICNumCases"
+								['stackCheckOffset']		-> [#(unsigned ' : 12')].	"See MaxStackCheckOffset in initialize. a.k.a. cPICNumCases"
 								['blockSize']				-> [#'unsigned short'].		"See MaxMethodSize in initialize"
 								['blockEntryOffset']			-> [#'unsigned short'].
 								['homeOffset']				-> [#'unsigned short'].
 								['startpc']					-> [#'unsigned short'].
 								['padToWord']				-> [#(#BaseHeaderSize 8 'unsigned int')].
-								['nextMethod']				-> ['struct _CogMethod *'].	"See NewspeakCogMethod"
+								['nextMethodOrIRCs']		-> [#usqInt].				"See NewspeakCogMethod"
 								['counters']					-> [#usqInt]}				"See SistaCogMethod"
 							otherwise:
 								[#sqInt])]]

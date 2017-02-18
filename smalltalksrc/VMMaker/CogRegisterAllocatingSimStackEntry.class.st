@@ -76,7 +76,11 @@ CogRegisterAllocatingSimStackEntry >> isMergedWithTargetEntry: targetEntry [
 	 and: [(targetEntry type = SSBaseOffset or: [targetEntry type == SSSpill])
 	 and: [offset = targetEntry offset and: [register = targetEntry register]]]) ifTrue:
 		[^true].
-	self halt: 'comment the incompatible pair please'.
+	"self: const =1 (16r1) (live: Extra4Reg) {172} vs reg ReceiverResultReg {127}"
+	"self: reg ReceiverResultReg {95} vs reg Extra5Reg {85}"
+	((type = SSConstant and: [targetEntry type = SSRegister and: [liveRegister ~= targetEntry registerOrNone]])
+	 or: [type = SSRegister and: [targetEntry type = SSRegister and: [register ~= targetEntry registerOrNone]]]) ifFalse:
+		[self halt: 'comment the incompatible pair please'].
 	^false
 ]
 
@@ -240,12 +244,14 @@ CogRegisterAllocatingSimStackEntry >> reconcileForwardsWith: targetEntry [
 		[targetEntry
 			register: targetReg;
 			type: SSRegister].
+	"If merging a constant with a constant assigned to a register, then the register must be deassigned from any temps."
+	^targetEntry type = SSConstant
 	"If merging a non-temp with a temp that has a live register we can assign
 	 to the register, but must unassign the register from the temp, otherwise
 	 the temp will acquire the merged value without an assignment."
-	^targetEntry type = SSBaseOffset
-	  and: [targetEntry register = FPReg
-	  and: [(self isSameEntryAs: targetEntry) not]]
+	 or: [targetEntry type = SSBaseOffset
+		  and: [targetEntry register = FPReg
+		  and: [(self isSameEntryAs: targetEntry) not]]]
 ]
 
 { #category : #'compile abstract instructions' }

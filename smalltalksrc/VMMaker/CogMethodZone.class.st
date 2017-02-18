@@ -57,17 +57,18 @@ Class {
 	#superclass : #CogClass,
 	#instVars : [
 		'youngReferrers',
+		'unpairedMethodList',
 		'methodCount',
 		'openPICList',
 		'mzFreeStart',
 		'baseAddress',
 		'limitAddress',
 		'methodBytesFreedSinceLastCompaction',
+		'compactionInProgress',
 		'coInterpreter',
 		'objectRepresentation',
 		'cogit',
-		'objectMemory',
-		'unpairedMethodList'
+		'objectMemory'
 	],
 	#pools : [
 		'CogMethodConstants',
@@ -227,6 +228,7 @@ CogMethodZone >> compactCompiledCode [
 	| objectHeaderValue source dest bytes |
 	<var: #source type: #'CogMethod *'>
 	<var: #dest type: #'CogMethod *'>
+	compactionInProgress := true.
 	objectHeaderValue := objectMemory nullHeaderForMachineCodeMethod.
 	source := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
 	openPICList := nil.
@@ -288,7 +290,13 @@ CogMethodZone >> compactCompiledCode [
 							cCoerceSimple: source asUnsignedInteger + bytes
 							to: #'CogMethod *'].
 	mzFreeStart := dest asUnsignedInteger.
-	methodBytesFreedSinceLastCompaction := 0
+	methodBytesFreedSinceLastCompaction := 0.
+	compactionInProgress := false
+]
+
+{ #category : #accessing }
+CogMethodZone >> compactionInProgress [
+	^compactionInProgress
 ]
 
 { #category : #'young referers' }
@@ -345,9 +353,7 @@ CogMethodZone >> freeMethod: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
 	<inline: false>
 	self assert: cogMethod cmType ~= CMFree.
-	self assert: ((cogit cogMethodDoesntLookKosher: cogMethod) = 0
-				 or: [(cogit cogMethodDoesntLookKosher: cogMethod) = 23
-					 and: [(cogit cCoerceSimple: cogMethod methodObject to: #'CogMethod *') cmType = CMFree]]).
+	self assert: (cogit cogMethodDoesntLookKosher: cogMethod) = 0.
 	cogMethod cmType = CMMethod ifTrue:
 		["For non-Newspeak there should ne a one-to-one mapping between bytecoded and
 		  cog methods.  For Newspeak not necessarily, but only for anonymous accessors."
@@ -356,7 +362,7 @@ CogMethodZone >> freeMethod: cogMethod [
 			ifTrue:
 				[coInterpreter rawHeaderOf: cogMethod methodObject put: cogMethod methodHeader.
 				 NewspeakVM ifTrue:
-					[(objectRepresentation canPinObjects and: [cogMethod nextMethodOrIRCs ~= 0]) ifTrue:
+					[(objectRepresentation canPinObjects and: [cogMethod nextMethodOrIRCs > self zoneEnd]) ifTrue:
 						[objectRepresentation freeIRCs: cogMethod nextMethodOrIRCs]]]
 			ifFalse:
 				[self cCode: [self assert: (cogit noAssertMethodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject]
@@ -419,7 +425,8 @@ CogMethodZone >> freeStart: zoneLimit [
 { #category : #initialization }
 CogMethodZone >> initialize [
 	"Make youngReferrers arithmetic for addressIsInCodeZone:"
-	youngReferrers := 0
+	youngReferrers := methodCount := methodBytesFreedSinceLastCompaction := 0.
+	compactionInProgress := false
 ]
 
 { #category : #'young referers' }
@@ -623,12 +630,24 @@ CogMethodZone >> planCompaction [
 CogMethodZone >> printCogMethods [
 	<api>
 	<returnTypeC: #void>
-	| cogMethod |
+	| cogMethod nm nc no nf nu |
 	<var: #cogMethod type: #'CogMethod *'>
+	nm := nc := no := nf := nu := 0.
 	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
 	[cogMethod < self limitZony] whileTrue:
 		[coInterpreter printCogMethod: cogMethod.
-		 cogMethod := self methodAfter: cogMethod]
+		 cogMethod cmType
+			caseOf: {
+			[CMFree]		->	[nf := nf + 1].
+			[CMMethod]	->	[nm := nm + 1].
+			[CMClosedPIC]	->	[nc := nc + 1].
+			[CMOpenPIC]	->	[no:= no+ 1] }
+			otherwise: [nu := nu + 1].
+		 cogMethod := self methodAfter: cogMethod].
+	coInterpreter print: 'CMMethod '; printNum: nm;  print: ' CMClosedPIC '; printNum: nc;  print: ' CMOpenPIC '; printNum: no;  print: ' CMFree '; printNum: nf.
+	nu > 0 ifTrue:
+		[coInterpreter print: ' UNKNOWN '; printNum: nu].
+	coInterpreter print: ' total '; printNum: nm+nc+no+nf+nu; cr
 ]
 
 { #category : #printing }
@@ -664,7 +683,7 @@ CogMethodZone >> printCogMethodsWithPrimitive: primIdx [
 	<var: #cogMethod type: #'CogMethod *'>
 	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
 	[cogMethod < self limitZony] whileTrue:
-		[(cogMethod cmType ~= CMFree
+		[(cogMethod cmType = CMMethod
 		  and: [primIdx = (coInterpreter primitiveIndexOfMethod: cogMethod methodObject
 							header: cogMethod methodHeader)]) ifTrue:
 			[coInterpreter printCogMethod: cogMethod].

@@ -3927,11 +3927,11 @@ StackInterpreter >> checkForLongRunningPrimitive [
 
 { #category : #'message sending' }
 StackInterpreter >> checkForStackOverflow [
-	"Check for stack overflow, moving frames to another stack if so."
+	"Check for stack overflow, moving frames to another stack if so.  Since event checking
+	 piggy-backs off the stackLimit by setting it to all ones, the check for overflow must be
+	 against the real stack limit to find out if overflow has actually occurred."
 	<inline: true>
-	"After checkForInterrupts another event check may have been forced, setting both
-	 stackLimit and stackPage stackLimit to all ones.  So here we must check against
-	 the real stackLimit, not the effective stackLimit."
+	self externalWriteBackHeadFramePointers.
 	stackPointer < stackPage realStackLimit ifTrue:
 		[self handleStackOverflow]
 ]
@@ -7610,20 +7610,15 @@ StackInterpreter >> handleStackOverflow [
 StackInterpreter >> handleStackOverflowOrEventAllowContextSwitch: mayContextSwitch [
 	"The stackPointer is below the stackLimit.  This is either because of a
 	 stack overflow or the setting of stackLimit to indicate a possible interrupt.
-	 Check for interrupts and stackOverflow and deal with each appropriately.
+	 Check for stackOverflow and  interrupts anddeal with each appropriately.
 	 Answer if a context switch occurred."
-	| switched |
 	<inline: false>
+	self checkForStackOverflow.
 	"If the stackLimit differs from the realStackLimit then the stackLimit
 	 has been set to indicate an event or interrupt that needs servicing."
-	stackLimit = stackPage realStackLimit
-		ifTrue:
-			[self externalWriteBackHeadFramePointers.
-			 switched := false]
-		ifFalse: [switched := self checkForEventsMayContextSwitch: mayContextSwitch].
-
-	self checkForStackOverflow.
-	^switched
+	stackLimit = stackPage realStackLimit ifTrue:
+		[^false].
+	^self checkForEventsMayContextSwitch: mayContextSwitch
 ]
 
 { #category : #'stack pages' }
@@ -16480,6 +16475,12 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 		 self assert:  argumentCount = arraySize.
 		 self pop: arraySize + 1.
 		 newMethod := self popStack.
+		 "Must reset primitiveFunctionPointer for checkForAndFollowForwardedPrimitiveState"
+		 objectMemory hasSpurMemoryManagerAPI ifTrue:
+			[argumentCount := performArgCount.
+			 primitiveFunctionPointer := lookupClassOrNil
+												ifNil: [#primitivePerformWithArgs]
+												ifNotNil: [#primitivePerformInSuperclass]].
 		 ^self primitiveFailFor: PrimErrBadNumArgs].
 
 	"Cannot fail this primitive from here-on.  Slide the actual receiver and arguments down
@@ -18874,7 +18875,6 @@ StackInterpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regs
 	self justActivateNewMethod.
 	(self isMachineCodeFrame: framePointer) ifFalse:
 		[self maybeFlagMethodAsInterpreted: newMethod].
-	self externalWriteBackHeadFramePointers.
 	self checkForStackOverflow.
 	self enterSmalltalkExecutiveFromCallback.
 	"not reached"
@@ -18910,7 +18910,6 @@ StackInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 	self justActivateNewMethod.
 	(self isMachineCodeFrame: framePointer) ifFalse:
 		[self maybeFlagMethodAsInterpreted: newMethod].
-	self externalWriteBackHeadFramePointers.
 	self checkForStackOverflow.
 	self enterSmalltalkExecutiveFromCallback.
 	"not reached"
