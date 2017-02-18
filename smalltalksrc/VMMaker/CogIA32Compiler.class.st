@@ -3525,6 +3525,11 @@ CogIA32Compiler >> genSubstituteReturnAddress: retpc [
 	^cogit PushCw: retpc
 ]
 
+{ #category : #'abstract instructions' }
+CogIA32Compiler >> genSwapR: regA R: regB Scratch: regTmp [
+	^cogit gen: XCHGRR operand: regA operand: regB
+]
+
 { #category : #disassembly }
 CogIA32Compiler >> generalPurposeRegisterMap [
 	<doNotGenerate>

@@ -2885,8 +2885,8 @@ CogX64Compiler >> concretizeXCHGRR [
 		 ^machineCodeSize := 2].
 	machineCode
 		at: 0 put: (self rexR: r1 x: 0 b: r2);
-		at: 1 put: 87;
-		at: 2 put: (self mod: r2 RM: 0 RO: r1).
+		at: 1 put: 16r87;
+		at: 2 put: (self mod: ModReg RM: r2 RO: r1).
 	^machineCodeSize := 3
 ]
 
@@ -3747,6 +3747,11 @@ CogX64Compiler >> genSubstituteReturnAddress: retpc [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^cogit PushCw: retpc
+]
+
+{ #category : #'abstract instructions' }
+CogX64Compiler >> genSwapR: regA R: regB Scratch: regTmp [
+	^cogit gen: XCHGRR operand: regA operand: regB
 ]
 
 { #category : #disassembly }
