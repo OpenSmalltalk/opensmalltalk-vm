@@ -583,6 +583,7 @@ Class {
 		'gcPhaseInProgress',
 		'gcStartUsecs',
 		'compactionStartUsecs',
+		'bogon',
 		'statCoalesces',
 		'statCompactPassCount',
 		'statFGCDeltaUsecs',
@@ -690,7 +691,7 @@ SpurMemoryManager class >> classTableBitmapBytes [
 { #category : #'accessing class hierarchy' }
 SpurMemoryManager class >> compactorClass [
 	"Answer the compaction algorithm to use."
-	^Smalltalk classNamed: (initializationOptions at: #compactorClass ifAbsent: [#SpurPigCompactor])
+	^Smalltalk classNamed: (initializationOptions at: #compactorClass ifAbsent: [#SpurPlanningCompactor])
 ]
 
 { #category : #translation }
@@ -1583,7 +1584,7 @@ SpurMemoryManager >> allObjectsInFreeTreeDo: aBlock [
 { #category : #'gc - global' }
 SpurMemoryManager >> allObjectsUnmarked [
 	self allObjectsDo:
-		[:o| (self isMarked: o) ifTrue: [^false]].
+		[:o| (self isMarked: o) ifTrue: [bogon := o. ^false]].
 	^true
 ]
 
@@ -6928,6 +6929,13 @@ SpurMemoryManager >> isUnambiguouslyForwarder: objOop [
 	^(self classIndexOf: objOop) = self isForwardedObjectClassIndexPun
 ]
 
+{ #category : #'header access' }
+SpurMemoryManager >> isUnmarked: objOop [
+	"For debugging using printOopsSuchThat:"
+	<api>
+	^(self isMarked: objOop) not
+]
+
 { #category : #'class table' }
 SpurMemoryManager >> isValidClassIndex: classIndex [
 	| classTablePage |
@@ -9400,6 +9408,12 @@ SpurMemoryManager >> printAdjacentFreeChunks [
 		[:f|
 		self printFreeChunk: f. coInterpreter printHexnp: (self objectAfter: f limit: endOfMemory); cr] 
 
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> printBogons [
+	<api>
+	compactor printTheBogons: bogon
 ]
 
 { #category : #'debug printing' }

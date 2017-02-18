@@ -2652,6 +2652,12 @@ Cogit >> SubbR: reg1 R: reg2 [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> SwapR: regA R: regB Scratch: regTmp [
+	<returnTypeC: #'AbstractInstruction *'>
+	^backEnd genSwapR: regA R: regB Scratch: regTmp
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> TstCq: quickConstant R: reg [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -2848,7 +2854,7 @@ Cogit >> addressIsInCurrentCompilation: address [
 { #category : #testing }
 Cogit >> addressIsInFixups: address [
 	<var: #address type: #'BytecodeFixup *'>
-	^self cCode: '(AbstractInstruction *)address >= fixups && (AbstractInstruction *)address < (fixups + numAbstractOpcodes)'
+	^self cCode: '(BytecodeFixup *)address >= fixups && (BytecodeFixup *)address < (fixups + numAbstractOpcodes)'
 		inSmalltalk:
 			[fixups notNil
 			 and: [(fixups object identityIndexOf: address) between: 1 and: numAbstractOpcodes]]
@@ -2944,8 +2950,9 @@ Cogit >> allMachineCodeObjectReferencesValid [
 				[(self asserta: (objectRepresentation checkValidDerivedObjectReference: cogMethod counters)) ifFalse:
 					[ok := false]].
 			 (NewspeakVM and: [cogMethod nextMethodOrIRCs ~= 0]) ifTrue:
-				[(self asserta: (objectRepresentation checkValidDerivedObjectReference: cogMethod nextMethodOrIRCs)) ifFalse:
-					[ok := false]]].
+				[(cogMethod nextMethodOrIRCs > methodZone zoneEnd) ifTrue:
+					[(self asserta: (objectRepresentation checkValidDerivedObjectReference: cogMethod nextMethodOrIRCs)) ifFalse:
+						[ok := false]]]].
 		cogMethod cmType = CMClosedPIC ifTrue:
 			[(self asserta: (self noTargetsFreeInClosedPIC: cogMethod)) ifFalse:
 				[ok := false]].
@@ -4528,8 +4535,14 @@ Cogit >> cogMethodDoesntLookKosher: cogMethod [
 		 (NewspeakVM
 		  and: [objectRepresentation canPinObjects
 		  and: [cogMethod nextMethodOrIRCs ~= 0]]) ifTrue:
-			[(objectRepresentation couldBeDerivedObject: cogMethod nextMethodOrIRCs) ifFalse:
-				[^15]].
+			[(cogMethod nextMethodOrIRCs < methodZone zoneEnd)
+				ifTrue: "check the nextMethod (unpairedMethodList) unless we're compacting."
+					[(methodZone compactionInProgress
+					  or: [cogMethod nextMethodOrIRCs = (methodZone methodFor: cogMethod nextMethodOrIRCs) asUnsignedInteger]) ifFalse:
+						[^15]]
+				ifFalse:
+					[(objectRepresentation couldBeDerivedObject: cogMethod nextMethodOrIRCs) ifFalse:
+						[^16]]].
 		 ^0].
 
 	cogMethod cmType = CMOpenPIC ifTrue:
@@ -4537,15 +4550,11 @@ Cogit >> cogMethodDoesntLookKosher: cogMethod [
 			[^21].
 		 cogMethod methodHeader ~= 0 ifTrue:
 			[^22].
-		
 		 "Check the nextOpenPIC link unless we're compacting"
 		 cogMethod objectHeader >= 0 ifTrue:
-			[(cogMethod methodObject ~= 0
-			 and: [cogMethod methodObject < methodZoneBase
-				   or: [cogMethod methodObject > (methodZone freeStart - openPICSize)
-				   or: [(cogMethod methodObject bitAnd: objectMemory wordSize - 1) ~= 0
-				   or: [(self cCoerceSimple: cogMethod methodObject
-							to: #'CogMethod *') cmType ~= CMOpenPIC]]]]) ifTrue:
+			[(cogMethod methodObject = 0
+			  or: [methodZone compactionInProgress
+			  or: [cogMethod methodObject = (methodZone methodFor: cogMethod methodObject) asUnsignedInteger]]) ifFalse:
 				[^23]].
 		 cogMethod stackCheckOffset ~= 0 ifTrue:
 			[^24].
@@ -12373,7 +12382,7 @@ Cogit >> warnMultiple: cogMethod selectors: aSelectorOop [
 				r: 'Warning, attempt to use method with selector %.*s and selector %.*s\n'
 				i: (self cCoerceSimple: (objectMemory numBytesOf: cogMethod selector) to: #int)
 				n: (self cCoerceSimple: (objectMemory firstIndexableField: cogMethod selector) to: #'char *')
-				t: (objectMemory numBytesOf: aSelectorOop)
+				t: (self cCoerceSimple: (objectMemory numBytesOf: aSelectorOop) to: #int)
 				f: (self cCoerceSimple: (objectMemory firstIndexableField: aSelectorOop) to: #'char *')]
 		inSmalltalk:
 			[self warn: 'Warning, attempt to use method with selector ',

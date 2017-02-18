@@ -195,12 +195,22 @@ RegisterAllocatingCogit >> deassignRegisterForTempVar: targetEntry in: mergeSimS
 	<inline: true>
 	| reg |
 	reg := targetEntry liveRegister.
-	self assert: (targetEntry type = SSBaseOffset and: [targetEntry register = FPReg]).
-	simStackPtr to: 0 by: -1 do:
-		[:j| | duplicateEntry |
-		 duplicateEntry := self simStack: mergeSimStack at: j.
-		 (targetEntry isSameEntryAs: duplicateEntry) ifTrue:
-			[duplicateEntry liveRegister: NoReg]].
+	self assert: ((targetEntry type = SSConstant and: [reg ~= NoReg])
+				or: [targetEntry type = SSBaseOffset and: [targetEntry register = FPReg]]).
+	targetEntry type = SSConstant
+		ifTrue:
+			[simStackPtr to: 0 by: -1 do:
+				[:j| | duplicateEntry |
+				 duplicateEntry := self simStack: mergeSimStack at: j.
+				 (duplicateEntry registerOrNone = reg
+				  and: [duplicateEntry type = SSBaseOffset or: [duplicateEntry type = SSSpill]]) ifTrue:
+					[duplicateEntry liveRegister: NoReg]]]
+		ifFalse:
+			[simStackPtr to: 0 by: -1 do:
+				[:j| | duplicateEntry |
+				 duplicateEntry := self simStack: mergeSimStack at: j.
+				 (targetEntry isSameEntryAs: duplicateEntry) ifTrue:
+					[duplicateEntry liveRegister: NoReg]]].
 	targetEntry
 		type: SSRegister;
 		register: reg
@@ -224,17 +234,14 @@ RegisterAllocatingCogit >> ensureFixupAt: targetPC [
 	"Make sure there's a flagged fixup at the target pc in fixups.
 	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction.
 	 Override to enerate stack merging code if required."
-	| fixup startOpcodeIndex |	
+	| fixup |	
 	<var: #fixup type: #'BytecodeFixup *'>
 	fixup := self fixupAt:  targetPC.
 	fixup needsFixup 
 		ifTrue:
 			[fixup mergeSimStack
 				ifNil: [self setMergeSimStackOf: fixup]
-				ifNotNil:
-					[startOpcodeIndex := opcodeIndex.
-					 self mergeCurrentSimStackWith: fixup.
-					 self deny: (startOpcodeIndex = opcodeIndex and: [thisContext sender method sendsSelector: #mergeRequiredForJumpTo:])]]
+				ifNotNil: [self mergeCurrentSimStackWith: fixup]]
 		ifFalse: 
 			[self assert: fixup mergeSimStack isNil.
 			 self moveVolatileSimStackEntriesToRegisters.
@@ -347,9 +354,9 @@ RegisterAllocatingCogit >> flushLiveRegistersForSuspensionPoint [
 		 flushed := true].
 	0 to: simStackPtr do:
 		[:i|
-		 self assert: (self simStackAt: i) type = (i < methodOrBlockNumTemps
-													ifTrue: [SSBaseOffset]
-													ifFalse: [SSSpill]).
+		 self assert: (i < methodOrBlockNumTemps
+						ifTrue: [(self simStackAt: i) type = SSBaseOffset]
+						ifFalse: [(self simStackAt: i)  spilled]).
 		 (self simStackAt: i) liveRegister ~= NoReg ifTrue:
 			[(self simStackAt: i) liveRegister: NoReg.
 			 flushed := true]].
@@ -508,17 +515,17 @@ RegisterAllocatingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 		ifFalse: "a == b ifTrue: ... or a ~~ b ifFalse: ... jump on equal to target pc"
 			[fixup := needMergeToContinue
 						ifTrue: [0] "jumps will fall-through to to-continue merge code"
-						ifFalse: [self ensureNonMergeFixupAt: postBranchPC].
+						ifFalse: [self ensureFixupAt: postBranchPC].
 			 comparison := self JumpZero: (needMergeToTarget
 												ifTrue: [0] "comparison will be fixed up to to-target merge code"
-												ifFalse: [self ensureNonMergeFixupAt: targetPC])]
+												ifFalse: [self ensureFixupAt: targetPC])]
 		ifTrue: "a == b ifFalse: ... or a ~~ b ifTrue: ... jump on equal to post-branch pc"
 			[fixup := needMergeToTarget
 						ifTrue: [0] "jumps will fall-through to to-target merge code"
-						ifFalse: [(self ensureNonMergeFixupAt: targetPC)].
+						ifFalse: [self ensureFixupAt: targetPC].
 			 comparison := self JumpZero: (needMergeToContinue
 												ifTrue: [0] "comparison will be fixed up to to-continue merge code"
-												ifFalse: [self ensureNonMergeFixupAt: postBranchPC])].
+												ifFalse: [self ensureFixupAt: postBranchPC])].
 
 	"The forwarders check(s) need(s) to jump back to the comparison (retry) if a forwarder is found,
 	 else jump forward either to the next forwarder check or to the postBranch or branch target (fixup).
@@ -641,7 +648,7 @@ RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 			 mbb jmpTarget: self Label]
 		ifFalse:
 			[self genSubConstant: boolean R: reg.
-			 self JumpZero: (self ensureNonMergeFixupAt: eventualTarget).
+			 self JumpZero: (self ensureFixupAt: eventualTarget).
 			 noMustBeBoolean ifTrue: 
 				[self annotateBytecode: self lastOpcode.
 				 ^0].
@@ -940,20 +947,20 @@ RegisterAllocatingCogit >> genSpecialSelectorComparison [
 		[self genConditionalBranch: (branchDescriptor isBranchFalse
 										ifTrue: [primDescriptor opcode]
 										ifFalse: [self inverseBranchFor: primDescriptor opcode])
-			operand: (self ensureNonMergeFixupAt: postBranchPC) asUnsignedInteger.
+			operand: (self ensureFixupAt: postBranchPC) asUnsignedInteger.
 		 self Jump: (self ensureFixupAt: targetPC)].
 	(needMergeToTarget not and: [needMergeToContinue]) ifTrue:
 		[self genConditionalBranch: (branchDescriptor isBranchTrue
 										ifTrue: [primDescriptor opcode]
 										ifFalse: [self inverseBranchFor: primDescriptor opcode])
-			operand: (self ensureNonMergeFixupAt: targetPC) asUnsignedInteger.
+			operand: (self ensureFixupAt: targetPC) asUnsignedInteger.
 		 self Jump: (self ensureFixupAt: postBranchPC)].
 	(needMergeToTarget or: [needMergeToContinue]) ifFalse:
 		[self genConditionalBranch: (branchDescriptor isBranchTrue
 										ifTrue: [primDescriptor opcode]
 										ifFalse: [self inverseBranchFor: primDescriptor opcode])
-			operand: (self ensureNonMergeFixupAt: targetPC) asUnsignedInteger.
-		 self Jump: (self ensureNonMergeFixupAt: postBranchPC)].
+			operand: (self ensureFixupAt: targetPC) asUnsignedInteger.
+		 self Jump: (self ensureFixupAt: postBranchPC)].
 	jumpNotSmallInts jmpTarget: self Label.
 	self ssFlushTo: simStackPtr.
 	self deny: rcvrReg = Arg0Reg.
@@ -1649,17 +1656,15 @@ RegisterAllocatingCogit >> swapCurrentRegistersInMask: conflictingRegsMask accor
 		(ssEntry registerMaskOrNone anyMask: visitedMask) ifTrue:
 			[order at: ssEntry registerOrNone put: (n := n + 1).
 			 visitedMask := visitedMask - ssEntry registerMaskOrNone]].
-	self assert: n > 1.
-	n = 2 ifTrue: "simple case; here to show me what I have to do in addition to the sort"
+	self assert: n >= 1.
+	n <= 2 ifTrue: "simple case; here to show me what I have to do in addition to the sort"
 		[regA := conflictingRegsMask highBit - 1.
 		 regB := (conflictingRegsMask - (1 << regA)) highBit - 1.
-		 self MoveR: regA R: TempReg.
-		 self MoveR: regB R: regA.
-		 self MoveR: TempReg R: regB.
-		0 to: simStackPtr do:
+		 self SwapR: regA R: regB Scratch: TempReg.
+		 0 to: simStackPtr do:
 			[:i|
-			 ssEntry := self simStackAt: i.
-			(ssEntry registerMaskOrNone anyMask: conflictingRegsMask) ifTrue:
+			 ssEntry := self simStack: simStack at: i.
+			 (ssEntry registerMaskOrNone anyMask: conflictingRegsMask) ifTrue:
 				[| reg |
 				 reg := ssEntry registerOrNone = regA ifTrue: [regB] ifFalse: [regA].
 				 ssEntry type = SSRegister ifTrue:
