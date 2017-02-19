@@ -2,9 +2,18 @@
 # because 1.6.26 fails on macOS.
 # this cannot be good and eventually it will be a source of problems... so we need to reunite 
 # versions as soon as possible.
-libpng_spec_download_url:=ftp://ftp.simplesystems.org/pub/libpng/png/src/libpng16/libpng-1.6.26.tar.gz
-libpng_spec_archive_name:=libpng-1.6.26.tar.gz
-libpng_spec_unpack_dir_name:=libpng-1.6.26
-libpng_spec_product_name_macOS:=libpng16.16.dylib
+# 1.6.26 does not exists anymore due to CVE issue
+# libpng_spec_download_url:=ftp://ftp.simplesystems.org/pub/libpng/png/src/libpng16/libpng-1.6.26.tar.gz
+# libpng_spec_archive_name:=libpng-1.6.26.tar.gz
+# libpng_spec_unpack_dir_name:=libpng-1.6.26
+# libpng_spec_product_name_macOS:=libpng16.16.dylib
+# libpng_spec_product_name_linux:=
+# libpng_spec_product_name_windows:=libpng16-16.dll
+
+libpng_spec_download_url:=ftp://ftp.simplesystems.org/pub/libpng/png/src/libpng16/libpng-1.6.28.tar.gz
+libpng_spec_archive_name:=libpng-1.6.28.tar.gz
+libpng_spec_unpack_dir_name:=libpng-1.6.28
+libpng_spec_product_name_macOS:=libpng16.28.dylib
 libpng_spec_product_name_linux:=
+# Yes, 16-16 for some weird reason
 libpng_spec_product_name_windows:=libpng16-16.dll
