@@ -1,6 +1,6 @@
 #!/bin/bash -e
 # assert PharoVM with VM profiler and threaded heartbeat
-INSTALLDIR=assert/phcogspurlowcode64linuxht
+INSTALLDIR=assert/phcoglowcode64linuxht
 OPT="-g3 -O1 -fwrapv -fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -DDEBUGVM=0 -DPharoVM -DIMMUTABILITY=1"
 
 if [ $# -ge 1 ]; then
