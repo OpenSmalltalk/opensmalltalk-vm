@@ -54,7 +54,7 @@ primJPEGWriteImageonByteArrayformqualityprogressiveJPEGerrorMgrWriteScanlines(
 	error_ptr2 pjerr = (error_ptr2)jpegErrorMgr2Struct;
 
 	pcinfo->err = jpeg_std_error(&pjerr->pub);
-    pjerr->setjmp_buffer = (jmp_buf *) malloc(sizeof(jmp_buf));
+	pjerr->setjmp_buffer = (jmp_buf *) malloc(sizeof(jmp_buf));
 	pjerr->pub.error_exit = error_exit;
 
 	if (setjmp(*pjerr->setjmp_buffer)) {
@@ -134,7 +134,7 @@ primJPEGWriteImageonByteArrayformqualityprogressiveJPEGerrorMgrWriteScanlines(
 		jpeg_finish_compress(pcinfo);
 		jpeg_destroy_compress(pcinfo);
 	}
-    free(pjerr->setjmp_buffer);
+	free(pjerr->setjmp_buffer);
 }
 
 void
@@ -154,7 +154,7 @@ primJPEGReadImagefromByteArrayonFormdoDitheringerrorMgrReadScanlines(
 
 	int ok = 1;
 	pcinfo->err = jpeg_std_error(&pjerr->pub);
-    pjerr->setjmp_buffer = (jmp_buf *) malloc(sizeof(jmp_buf));
+	pjerr->setjmp_buffer = (jmp_buf *) malloc(sizeof(jmp_buf));
 	pjerr->pub.error_exit = error_exit;
 
 	if (setjmp(*pjerr->setjmp_buffer)) {
@@ -283,7 +283,7 @@ primJPEGReadImagefromByteArrayonFormdoDitheringerrorMgrReadScanlines(
 		jpeg_finish_decompress(pcinfo);
 		jpeg_destroy_decompress(pcinfo);
 	}
-    free(pjerr->setjmp_buffer);
+	free(pjerr->setjmp_buffer);
 }
 
 void
@@ -297,7 +297,7 @@ primJPEGReadHeaderfromByteArraysizeerrorMgrReadHeader(
 	error_ptr2 pjerr = (error_ptr2)jpegErrorMgr2Struct;
 
 	pcinfo->err = jpeg_std_error(&pjerr->pub);
-    pjerr->setjmp_buffer = (jmp_buf *) malloc(sizeof(jmp_buf));
+	pjerr->setjmp_buffer = (jmp_buf *) malloc(sizeof(jmp_buf));
 	pjerr->pub.error_exit = error_exit;
 
 	if (setjmp(*pjerr->setjmp_buffer)) {
@@ -310,5 +310,5 @@ primJPEGReadHeaderfromByteArraysizeerrorMgrReadHeader(
 		jpeg_mem_src(pcinfo, source, sourceSize);
 		jpeg_read_header(pcinfo, TRUE);
 	}
-    free(pjerr->setjmp_buffer);
+	free(pjerr->setjmp_buffer);
 }
