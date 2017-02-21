@@ -344,6 +344,13 @@ CogX64Compiler >> cResultRegister [
 	^RAX
 ]
 
+{ #category : #accessing }
+CogX64Compiler >> cResultRegisterHigh [
+	"Answer the register through which C functions return the high part of big integral results."
+	<inline: true>
+	^ RDX
+]
+
 { #category : #'full transfer run-time support' }
 CogX64Compiler >> callFullTargetFromReturnAddress: callSiteReturnAddress [
 	"Answer the address the full call immediately preceding callSiteReturnAddress will jump to."
