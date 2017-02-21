@@ -16346,18 +16346,18 @@ interpret(void)
 				if (isFloat) {
 					fetchFloatAtinto(rcvr + BaseHeaderSize, result);
 					rcvr1 = result;
-					goto l854;
+					goto l872;
 				}
 				/* begin primitiveFail */
 				if (!GIV(primFailCode)) {
 					GIV(primFailCode) = 1;
 				}
 				rcvr1 = 0.0;
-			l854:	/* end loadFloatOrIntFrom: */;
+			l872:	/* end loadFloatOrIntFrom: */;
 				/* begin loadFloatOrIntFrom: */
 				if ((arg & 1)) {
 					arg1 = ((double) ((arg >> 1)) );
-					goto l857;
+					goto l875;
 				}
 				/* begin floatValueOf: */
 				isFloat1 = ((arg & (tagMask())) == 0)
@@ -16365,7 +16365,7 @@ interpret(void)
 				if (isFloat1) {
 					fetchFloatAtinto(arg + BaseHeaderSize, result1);
 					arg1 = result1;
-					goto l857;
+					goto l875;
 				}
 				/* begin primitiveFail */
 				if (!GIV(primFailCode)) {

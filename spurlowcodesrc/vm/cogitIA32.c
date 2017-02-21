@@ -8034,7 +8034,7 @@ bytecodePCForstartBcpcin(sqInt mcpc, sqInt startbcpc, CogBlockMethod *cogMethod)
     sqInt byte;
     BytecodeDescriptor *descriptor;
     sqInt distance;
-    sqInt endbcpc;
+    usqInt endbcpc;
     CogMethod *homeMethod;
     sqInt isBackwardBranch;
     sqInt isInBlock;
@@ -11658,12 +11658,12 @@ static sqInt NoDbgRegParms
 generateMapAtstart(sqInt addressOrNull, sqInt startAddress)
 {
     unsigned char annotation;
-    sqInt delta;
+    usqIntptr_t delta;
     sqInt i;
     AbstractInstruction *instruction;
     sqInt length;
-    sqInt location;
-    sqInt mapEntry;
+    usqIntptr_t location;
+    usqIntptr_t mapEntry;
     sqInt maxDelta;
     usqIntptr_t mcpc;
 
@@ -12895,7 +12895,7 @@ gMoveCwR(sqInt wordConstant, sqInt reg)
 /*	Answer the address of the null byte at the end of the method map. */
 
 	/* Cogit>>#mapEndFor: */
-static sqInt NoDbgRegParms
+static usqInt NoDbgRegParms
 mapEndFor(CogMethod *cogMethod)
 {
     usqInt end;
@@ -13839,7 +13839,7 @@ mcPCForBackwardBranchstartBcpcin(sqInt bcpc, sqInt startbcpc, CogBlockMethod *co
     sqInt byte;
     BytecodeDescriptor *descriptor;
     sqInt distance;
-    sqInt endbcpc;
+    usqInt endbcpc;
     CogMethod *homeMethod;
     sqInt isBackwardBranch;
     sqInt isInBlock;
@@ -25070,7 +25070,7 @@ mapPCDataForinto(CogMethod *cogMethod, sqInt arrayObj)
     CogBlockMethod *cogMethod1;
     BytecodeDescriptor *descriptor;
     sqInt distance;
-    sqInt endbcpc;
+    usqInt endbcpc;
     sqInt errCode;
     CogMethod *homeMethod;
     sqInt isBackwardBranch;

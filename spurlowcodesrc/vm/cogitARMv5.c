@@ -8033,7 +8033,7 @@ static sqInt NoDbgRegParms
 blockDispatchTargetsForperformarg(CogMethod *cogMethod, usqInt (*binaryFunction)(sqInt mcpc, sqInt arg), sqInt arg)
 {
     sqInt blockEntry;
-    usqInt end;
+    sqInt end;
     sqInt pc;
     sqInt result;
     usqInt targetpc;
@@ -13064,7 +13064,7 @@ gMoveCwR(sqInt wordConstant, sqInt reg)
 /*	Answer the address of the null byte at the end of the method map. */
 
 	/* Cogit>>#mapEndFor: */
-static usqInt NoDbgRegParms
+static sqInt NoDbgRegParms
 mapEndFor(CogMethod *cogMethod)
 {
     usqInt end;

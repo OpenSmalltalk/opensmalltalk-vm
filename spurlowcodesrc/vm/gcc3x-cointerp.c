@@ -8542,7 +8542,7 @@ interpret(void)
 						case 5:
 							/* begin num32BitUnitsOf: */
 							objOop31 = longAtPointer(localSP);
-							result2 = ((usqInt) (numBytesOf(objOop31))) >> 2;
+							result2 = ((sqInt) (((usqInt) (numBytesOf(objOop31))) >> 2));
 							/* begin internalStackTopPut: */
 							longAtPointerput(localSP, ((result2 << 1) | 1));
 							break;
@@ -23389,7 +23389,7 @@ interpret(void)
 						case 5:
 							/* begin num32BitUnitsOf: */
 							objOop31 = longAtPointer(localSP);
-							result2 = ((usqInt) (numBytesOf(objOop31))) >> 2;
+							result2 = ((sqInt) (((usqInt) (numBytesOf(objOop31))) >> 2));
 							/* begin internalStackTopPut: */
 							longAtPointerput(localSP, ((result2 << 1) | 1));
 							break;
@@ -59139,14 +59139,14 @@ copyAndForwardMourner(sqInt mourner)
 	then corpse is threaded onto the weakList for later treatment. */
 
 	/* SpurGenerationScavenger>>#copyAndForward: */
-static sqInt NoDbgRegParms
+static usqInt NoDbgRegParms
 copyAndForward(sqInt survivor)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
     usqInt bytesInObj;
     sqInt classIndex;
     sqInt format;
     unsigned int header;
-    sqInt newLocation;
+    usqInt newLocation;
     sqInt newStart;
     sqInt obj;
     usqInt startOfSurvivor;
@@ -60096,7 +60096,7 @@ scavengeReferentsOf(sqInt referrer)
     sqInt header;
     sqInt header1;
     sqInt i;
-    sqInt newLocation;
+    usqInt newLocation;
     sqInt numLiterals;
     sqInt numSlots;
     usqInt numSlots1;

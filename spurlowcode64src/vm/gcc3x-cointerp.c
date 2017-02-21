@@ -8552,7 +8552,7 @@ interpret(void)
 						case 4:
 							/* begin num16BitUnitsOf: */
 							objOop22 = longAtPointer(localSP);
-							result2 = ((usqInt) (numBytesOf(objOop22))) >> 1;
+							result2 = ((sqInt) (((usqInt) (numBytesOf(objOop22))) >> 1));
 							/* begin internalStackTopPut: */
 							longAtPointerput(localSP, ((result2 << 3) | 1));
 							break;
@@ -8566,7 +8566,7 @@ interpret(void)
 						case 6:
 							/* begin num64BitUnitsOf: */
 							objOop41 = longAtPointer(localSP);
-							result2 = ((usqInt) (numBytesOf(objOop41))) >> 3;
+							result2 = ((sqInt) (((usqInt) (numBytesOf(objOop41))) >> 3));
 							/* begin internalStackTopPut: */
 							longAtPointerput(localSP, ((result2 << 3) | 1));
 							break;
@@ -24165,7 +24165,7 @@ interpret(void)
 						case 4:
 							/* begin num16BitUnitsOf: */
 							objOop22 = longAtPointer(localSP);
-							result2 = ((usqInt) (numBytesOf(objOop22))) >> 1;
+							result2 = ((sqInt) (((usqInt) (numBytesOf(objOop22))) >> 1));
 							/* begin internalStackTopPut: */
 							longAtPointerput(localSP, ((result2 << 3) | 1));
 							break;
@@ -24179,7 +24179,7 @@ interpret(void)
 						case 6:
 							/* begin num64BitUnitsOf: */
 							objOop41 = longAtPointer(localSP);
-							result2 = ((usqInt) (numBytesOf(objOop41))) >> 3;
+							result2 = ((sqInt) (((usqInt) (numBytesOf(objOop41))) >> 3));
 							/* begin internalStackTopPut: */
 							longAtPointerput(localSP, ((result2 << 3) | 1));
 							break;
@@ -39299,7 +39299,7 @@ printFrameWithSP(char *theFP, char *theSP)
     char *rcvrAddress;
     sqInt rcvrOrClosure;
     sqInt theMethod;
-    usqInt theMethodEnd;
+    sqInt theMethodEnd;
     sqInt topThing;
 
 	if (!((((((usqInt)theFP)) & (BytesPerWord - 1)) == 0)
@@ -49968,7 +49968,7 @@ primitiveFullClosureValue(void)
     CogMethod *cogMethod;
     CogMethod *cogMethod1;
     sqInt header;
-    sqInt i;
+    usqInt i;
     int inInterpreter;
     sqInt methodHeader;
     sqInt methodHeader1;
@@ -50179,7 +50179,7 @@ primitiveFullClosureValue(void)
 	GIV(stackPointer) = sp8;
 	for (i = 0; i < numCopied; i += 1) {
 		/* begin push: */
-		longAtput((sp = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + (((sqInt)((usqInt)((i + FullClosureFirstCopiedValueIndex)) << (shiftForWord()))))));
+		longAtput((sp = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + ((i + FullClosureFirstCopiedValueIndex) << (shiftForWord()))));
 		GIV(stackPointer) = sp;
 	}
 	assert(frameIsBlockActivation(GIV(framePointer)));
@@ -50234,7 +50234,7 @@ primitiveFullClosureValueNoContextSwitch(void)
     CogMethod *cogMethod;
     CogMethod *cogMethod1;
     sqInt header;
-    sqInt i;
+    usqInt i;
     int inInterpreter;
     sqInt methodHeader;
     sqInt methodHeader1;
@@ -50445,7 +50445,7 @@ primitiveFullClosureValueNoContextSwitch(void)
 	GIV(stackPointer) = sp8;
 	for (i = 0; i < numCopied; i += 1) {
 		/* begin push: */
-		longAtput((sp = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + (((sqInt)((usqInt)((i + FullClosureFirstCopiedValueIndex)) << (shiftForWord()))))));
+		longAtput((sp = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + ((i + FullClosureFirstCopiedValueIndex) << (shiftForWord()))));
 		GIV(stackPointer) = sp;
 	}
 	assert(frameIsBlockActivation(GIV(framePointer)));
@@ -50496,7 +50496,7 @@ primitiveFullClosureValueWithArgs(void)
     CogMethod *cogMethod;
     CogMethod *cogMethod1;
     sqInt header;
-    sqInt i;
+    usqInt i;
     sqInt index;
     int inInterpreter;
     sqInt methodHeader;
@@ -50743,7 +50743,7 @@ primitiveFullClosureValueWithArgs(void)
 	GIV(stackPointer) = sp8;
 	for (i = 0; i < numCopied; i += 1) {
 		/* begin push: */
-		longAtput((sp13 = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + (((sqInt)((usqInt)((i + FullClosureFirstCopiedValueIndex)) << (shiftForWord()))))));
+		longAtput((sp13 = GIV(stackPointer) - BytesPerWord), longAt((blockClosure + BaseHeaderSize) + ((i + FullClosureFirstCopiedValueIndex) << (shiftForWord()))));
 		GIV(stackPointer) = sp13;
 	}
 	assert(frameIsBlockActivation(GIV(framePointer)));
@@ -60565,14 +60565,14 @@ computeRefCountToShrinkRT(void)
 	Also, don't repeat any of the ephemeron processing. */
 
 	/* SpurGenerationScavenger>>#copyAndForwardMourner: */
-static usqInt NoDbgRegParms
+static sqInt NoDbgRegParms
 copyAndForwardMourner(sqInt mourner)
 {   DECL_MAYBE_SQ_GLOBAL_STRUCT
     usqInt bytesInObj;
     sqInt classIndex;
     sqInt format;
     sqInt header;
-    usqInt newLocation;
+    sqInt newLocation;
     sqInt newStart;
     sqInt obj;
     usqInt startOfSurvivor;

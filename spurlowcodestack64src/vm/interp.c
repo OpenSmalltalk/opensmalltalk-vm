@@ -1452,7 +1452,6 @@ _iss usqInt pastSpaceStart;
 _iss StackPage * pages;
 _iss char* shadowCallStackPointer;
 _iss sqInt numSegments;
-_iss char* shadowCallStackPointer;
 _iss usqInt scavengeThreshold;
 _iss sqInt * freeLists;
 _iss char * stackMemory;
