@@ -3283,8 +3283,7 @@ Cogit >> blockDispatchTargetsFor: cogMethod perform: binaryFunction arg: arg [
 Cogit >> blockStartAt: index [
 	<cmacro: '(index) (&blockStarts[index])'>
 	"hack set startpc for printSimStack:toDepth:spillBase:on:"
-	(self class initializationOptions at: #tempNames ifAbsent: nil) ifNotNil:
-		[self class initializationOptions at: #startpc put: (blockStarts at: index) startpc].
+	self maybeNoteStartpcFor: (blockStarts at: index).
 	^blockStarts at: index
 ]
 
@@ -5721,6 +5720,7 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 				[range first > (cogMethod address + cmNoCheckEntryOffset) ifTrue:
 					[self printMethodHeader: range cogMethod
 						on: aStream].
+				self maybeNoteStartpcFor: range.
 				self disassembleFrom: range first to: range last labels: mapEntries on: aStream]].
 	aStream nextPutAll: 'startpc: '; print: codeRanges first startpc; cr.
 	(cogMethod cmType = CMMethod
@@ -8814,6 +8814,24 @@ Cogit >> lookupCHexString: aCHexString [
 		ifNil: [shortened]
 ]
 
+{ #category : #disassembly }
+Cogit >> lookupFrameOffset: anInteger [
+	(self class initializationOptions at: #tempNames ifAbsent: nil) ifNotNil:
+		[:dict|
+		 (self class initializationOptions at: #startpc ifAbsent: nil) ifNotNil:
+			[:startpc|
+			 (dict at: startpc + 1 ifAbsent: nil) ifNotNil:
+				[:tempNames| | numArgs |
+				 anInteger = FoxMFReceiver ifTrue:
+					[^'self'].
+				numArgs := self class initializationOptions at: #numArgs.
+				1 to: tempNames size do:
+					[:i|
+					anInteger = (self frameOffsetOfTemporary: i - 1 numArgs: numArgs) ifTrue:
+						[^tempNames at: i]]]]].
+	^nil
+]
+
 { #category : #'method map' }
 Cogit >> mapEndFor: cogMethod [
 	"Answer the address of the null byte at the end of the method map."
@@ -9761,6 +9779,17 @@ Cogit >> maybeMarkIRCsIn: cogMethod [
 			[objectRepresentation markIfIRC: cogMethod nextMethodOrIRCs]]
 ]
 
+{ #category : #disassembly }
+Cogit >> maybeNoteStartpcFor: thing [ "<CogBlockStart|CogCodeRange>"
+	<doNotGenerate>
+	(self class initializationOptions at: #tempNames ifAbsent: nil) ifNotNil:
+		[self class initializationOptions
+			at: #startpc put: thing startpc;
+			at: #numArgs put: ([thing cogMethod ifNil: [-1] ifNotNil: [:cm| cm cmNumArgs]] "CogCodeRange"
+									on: MessageNotUnderstood
+									do: [:ex| thing numArgs])] "CogBlockStart"
+]
+
 { #category : #'method map' }
 Cogit >> mcPCFor: bcpc startBcpc: startbcpc in: cogMethod [
 	"Answer the absolute machine code pc matching the zero-relative bytecode pc argument
@@ -10341,6 +10370,8 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 		cogMethod selector printOn: aStream base: 16.
 		(coInterpreter lookupAddress: cogMethod selector) ifNotNil:
 			[:string| aStream nextPut: $=; nextPutAll: string].
+		cogMethod selector = objectMemory nilObject ifTrue:
+			[aStream space; nextPut: $(; nextPutAll: (coInterpreter stringOf: (coInterpreter maybeSelectorOfMethod: cogMethod methodObject)); nextPut: $)]. 
 		cogMethod cmType = CMMethod ifTrue:
 			[aStream crtab; nextPutAll: 'blkentry: '.
 			 cogMethod blockEntryOffset printOn: aStream base: 16.
