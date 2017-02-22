@@ -6,6 +6,8 @@ Class {
 	#superclass : #Alien,
 	#type : #bytes,
 	#classVars : [
+		'PrintCodeBytes',
+		'PrintTempNames',
 		'SavedState'
 	],
 	#category : #'Cog-Processors'
@@ -18,6 +20,8 @@ CogProcessorAlien class >> defaultIntegerBaseInDebugger [
 
 { #category : #'class initialization' }
 CogProcessorAlien class >> initialize [
+	PrintCodeBytes ifNil: [PrintCodeBytes := true].  "Does disassembly include code bytes?"
+	PrintTempNames ifNil: [PrintTempNames := false].  "Does disassembly include temp names?"
 	SavedState := WeakIdentityKeyDictionary new.
 	Smalltalk
 		addToStartUpList: self;
@@ -27,6 +31,34 @@ CogProcessorAlien class >> initialize [
 { #category : #'instance creation' }
 CogProcessorAlien class >> new [
 	^(self atAddress: self primitiveNewCPU) reset
+]
+
+{ #category : #accessing }
+CogProcessorAlien class >> printCodeBytes [
+	<preference: 'Does disassembly include code bytes'
+	  category: 'Cogit'
+	  description: 'If true, assembly will include machine code bytes..'
+	  type: #Boolean>
+	^PrintCodeBytes ifNil: [true]
+]
+
+{ #category : #accessing }
+CogProcessorAlien class >> printCodeBytes: aBoolean [
+	PrintCodeBytes := aBoolean
+]
+
+{ #category : #accessing }
+CogProcessorAlien class >> printTempNames [
+	<preference: 'Does disassembly include temp names?'
+	  category: 'Cogit'
+	  description: 'If true, assembly will try and associate frame-relative offsets as temp names.'
+	  type: #Boolean>
+	^PrintTempNames ifNil: [false]
+]
+
+{ #category : #accessing }
+CogProcessorAlien class >> printTempNames: aBoolean [
+	PrintTempNames := aBoolean
 ]
 
 { #category : #'system startup' }

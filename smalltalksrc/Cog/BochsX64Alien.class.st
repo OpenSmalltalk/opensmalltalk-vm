@@ -176,7 +176,9 @@ BochsX64Alien >> cr4: anUnsignedInteger [
 { #category : #disassembly }
 BochsX64Alien >> decorateDisassembly: anInstructionString for: aSymbolManager "<Cogit>" fromAddress: address [
 	| string i1 i2 v extra |
-	string := anInstructionString.
+	string := PrintCodeBytes
+				ifTrue: [anInstructionString]
+				ifFalse: [anInstructionString copyFrom: 1 to: (anInstructionString lastIndexOf: $:) - 1]. "trailing space useful for parsing numbers"
 	aSymbolManager relativeBaseForDisassemblyInto:
 		[:baseAddress :baseName|
 		string := baseName, '+', (address - baseAddress printStringBase: 16 length: 4 padded: true), (string copyFrom: (string indexOf: $:) + 1 to: string size)].
@@ -191,7 +193,7 @@ BochsX64Alien >> decorateDisassembly: anInstructionString for: aSymbolManager "<
 		 	 (aSymbolManager lookupAddress: aSymbolManager varBaseAddress + v) ifNotNil:
 				[:varName| extra := ' = ', varName]].
 		 v = '(%rip)' ifTrue:
-			[v := string size - (string indexOf: $: startingAt: i2 + 5) - 1 / 3. "Count number of instruction bytes to find size of instruction"
+			[v := anInstructionString size - (anInstructionString lastIndexOf: $:) - 1 / 3. "Count number of instruction bytes to find size of instruction"
 			 v := v + address. "Add address of instruction"
 			 v := v + (Integer readFrom: (ReadStream on: string from: i1 + 6 to: i2 - 1) base: 16) signedIntFromLong64. "Add offset to yield pc-relative address"
 		 	 (aSymbolManager lookupAddress: v) ifNotNil:
@@ -204,12 +206,13 @@ BochsX64Alien >> decorateDisassembly: anInstructionString for: aSymbolManager "<
 		[i2 := i1 + 6.
 		 ['0123456789abcdef' includes: (string at: i2)] whileTrue: [i2 := i2 + 1].
 		 ((string at: i2) = $(
-		 and: [(string at: i2 + 1) = $%]) ifTrue:
+		  and: [(string at: i2 + 1) = $%]) ifTrue:
 			[v := Integer readFrom: (ReadStream on: string from: i1 + 6 to: i2 - 1) base: 16.
-			string := string
-						copyReplaceFrom: i1
-						to: i2 - 1
-						with: ((v bitAnd: (1 bitShift: 31) - 1) - (v bitAnd: (1 bitShift: 31))) printString]].
+			 v := (v bitAnd: (1 bitShift: 31) - 1) - (v bitAnd: (1 bitShift: 31)).
+			 ((string copyFrom: i2 to: (i2 + 5 min: string size)) = '(%rbp)' and: [PrintTempNames]) ifTrue:
+				[(aSymbolManager lookupFrameOffset: v) ifNotNil:
+					[:varName| string := string copyReplaceFrom: i1 to: i2 - 1 with: varName. i2 := 0].
+			i2 ~= 0 ifTrue: [string := string copyReplaceFrom: i1 to: i2 - 1 with: v printString]]]].
 	(i1 := string indexOfSubCollection: '$0x') > 0 ifTrue:
 		[i2 := i1 + 3.
 		 ['0123456789abcdef' includes: (string at: i2)] whileTrue: [i2 := i2 + 1].
@@ -234,7 +237,11 @@ BochsX64Alien >> decorateDisassembly: anInstructionString for: aSymbolManager "<
 			 string := string copyReplaceFrom: i1 to: i2 position with: v]].
 	^extra
 		ifNil: [string]
-		ifNotNil: [i1 := string lastIndexOf: $:. string copyReplaceFrom: i1 - 1 to: i1 - 2 with: extra]
+		ifNotNil:
+			[PrintCodeBytes
+				ifTrue: [i1 := string lastIndexOf: $:.
+						string copyReplaceFrom: i1 - 1 to: i1 - 2 with: extra]
+				ifFalse: [string, ';', extra]]
 ]
 
 { #category : #accessing }

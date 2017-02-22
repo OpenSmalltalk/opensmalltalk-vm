@@ -255,6 +255,8 @@ BochsIA32Alien >> decorateDisassembly: anInstructionString for: aSymbolManager "
 					copyReplaceFrom: i1 + 1
 					to: i2 - 1
 					with: (aSymbolManager lookupCHexString: (string copyFrom: i1 + 1 to: i2 - 1))].
+	PrintCodeBytes ifFalse:
+		[string := string copyFrom: 1 to: (string lastIndexOf: $:) - 2].
 	^string
 ]
 
