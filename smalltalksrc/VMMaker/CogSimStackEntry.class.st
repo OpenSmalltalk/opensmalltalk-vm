@@ -122,6 +122,14 @@ CogSimStackEntry >> floatRegisterMask [
 	^ 0
 ]
 
+{ #category : #comparing }
+CogSimStackEntry >> isFrameTempVar [
+	"Answer if the receiver is a temporary variable.  This
+	 only works in a frameful method, hence the weird name."
+	<inline: true>
+	^type = SSBaseOffset and: [register = FPReg]
+]
+
 { #category : #accessing }
 CogSimStackEntry >> maybeConstant [
 	"Answer the value of constant, no assert check."
