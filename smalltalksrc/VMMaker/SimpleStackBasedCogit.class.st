@@ -1653,9 +1653,15 @@ SimpleStackBasedCogit >> frameOffsetOfPreviousNativeStackPointer [
 
 { #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> frameOffsetOfTemporary: index [
-	^index < methodOrBlockNumArgs
-		ifTrue: [FoxCallerSavedIP + ((methodOrBlockNumArgs - index) * objectMemory wordSize)]
-		ifFalse: [FoxMFReceiver - objectMemory wordSize + ((methodOrBlockNumArgs - index) * objectMemory wordSize)]
+	^self frameOffsetOfTemporary: index numArgs: methodOrBlockNumArgs
+]
+
+{ #category : #'bytecode generator support' }
+SimpleStackBasedCogit >> frameOffsetOfTemporary: index numArgs: numArgs [
+	<inline: true>
+	^index < numArgs
+		ifTrue: [FoxCallerSavedIP + ((numArgs - index) * objectMemory wordSize)]
+		ifFalse: [FoxMFReceiver - objectMemory wordSize + ((numArgs - index) * objectMemory wordSize)]
 ]
 
 { #category : #accessing }
@@ -3924,6 +3930,19 @@ SimpleStackBasedCogit >> setInterpreter: aCoInterpreter [
 	externalPrimJumpOffsets := CArrayAccessor on: (Array new: MaxNumArgs + 1).
 	externalPrimCallOffsets := CArrayAccessor on: (Array new: MaxNumArgs + 1).
 	externalSetPrimOffsets := CArrayAccessor on: (Array new: MaxNumArgs + 1)
+]
+
+{ #category : #'bytecode generator support' }
+SimpleStackBasedCogit >> temporaryIndexOfFrameOffset: offset [
+	^self temporaryIndexOfFrameOffset: offset numArgs: methodOrBlockNumArgs
+]
+
+{ #category : #'bytecode generator support' }
+SimpleStackBasedCogit >> temporaryIndexOfFrameOffset: offset numArgs: numArgs [
+	"For assert checking..."
+	^numArgs - ((offset < 0 "args are > 0"
+					ifTrue: [offset - FoxMFReceiver + objectMemory wordSize]
+					ifFalse: [offset - FoxCallerSavedIP]) / objectMemory wordSize)
 ]
 
 { #category : #'span functions' }
