@@ -10,5 +10,5 @@ SurfacePlugin \
 EventsHandlerPlugin \
 SqueakSSL \
 AioPlugin \
-#SDL2DisplayPlugin \
+# SDL2DisplayPlugin \
 
