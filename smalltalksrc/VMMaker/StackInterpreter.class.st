@@ -9823,7 +9823,8 @@ StackInterpreter >> lookupProtected: selector startingAt: mixinApplication rule:
 
 { #category : #'debug support' }
 StackInterpreter >> lookupSelector: selector inClass: class [
-	"Lookup selector in class.  Answer the method or nil.  This is a debugging routine."
+	"Lookup selector in class.  Answer the method or nil.  This is a debugging routine.
+	 It does /not/ side-effect lookupClass or newMethod."
 	| currentClass dictionary |
 	<api>
 
