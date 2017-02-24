@@ -213,6 +213,15 @@ NewCoObjectMemory >> nullHeaderForMachineCodeMethod [
 	^(1 << 12 "CompactClassIndex 1") + HeaderTypeShort
 ]
 
+{ #category : #'cog jit support' }
+NewCoObjectMemory >> receiverTagBitsForMethod: aMethodObj [
+	"Answer the tag bits for the receiver based on the method's methodClass, if any."
+	<api>
+	^(coInterpreter methodClassOf: aMethodObj) = self classSmallInteger
+		ifTrue: [self smallIntegerTag]
+		ifFalse: [0]
+]
+
 { #category : #become }
 NewCoObjectMemory >> restoreHeaderOf: obj to: objHeader [
 	super restoreHeaderOf: obj to: objHeader.

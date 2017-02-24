@@ -11361,10 +11361,11 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 	primDescriptor := self generatorAt: byte0.
 	argIsInt := (argIsConst := self ssTop type = SSConstant)
 				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)].
-	rcvrIsInt := (rcvrIsConst := (self ssValue: 1) type = SSConstant)
-				 and: [objectMemory isIntegerObject: (rcvrInt := (self ssValue: 1) constant)].
+	rcvrIsInt := ((rcvrIsConst := (self ssValue: 1) type = SSConstant)
+				  and: [objectMemory isIntegerObject: (rcvrInt := (self ssValue: 1) constant)])
+				or: [self mclassIsSmallInteger and: [(self ssValue: 1) isSameEntryAs: (self addressOf: simSelf)]].
 
-	(argIsInt and: [rcvrIsInt]) ifTrue:
+	(argIsInt and: [rcvrIsInt and: [rcvrIsConst]]) ifTrue:
 		[rcvrInt := objectMemory integerValueOf: rcvrInt.
 		 argInt := objectMemory integerValueOf: argInt.
 		 primDescriptor opcode caseOf: {
@@ -11391,14 +11392,16 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 		ifTrue:
 			[self ssFlushTo: simStackPtr - 2.
 			 (self ssValue: 1) popToReg: ReceiverResultReg.
-			 self ssPop: 2.
-			 self MoveR: ReceiverResultReg R: TempReg]
+			 self ssPop: 2]
 		ifFalse:
-			[self marshallSendArguments: 1.
-			 self MoveR: Arg0Reg R: TempReg].
-	jumpNotSmallInts := (argIsInt or: [rcvrIsInt])
-							ifTrue: [objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg]
-							ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: ReceiverResultReg andScratch: TempReg scratch: ClassReg].
+			[self marshallSendArguments: 1].
+	jumpNotSmallInts := (rcvrIsInt and: [argIsInt]) ifFalse:
+							[argIsInt
+								ifTrue: [objectRepresentation genJumpNotSmallInteger: ReceiverResultReg]
+								ifFalse:
+									[rcvrIsInt
+										ifTrue: [objectRepresentation genJumpNotSmallInteger: Arg0Reg]
+										ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: ReceiverResultReg and: Arg0Reg scratch: TempReg]]].
 	primDescriptor opcode caseOf: {
 		[AddRR] -> [argIsInt
 						ifTrue:
@@ -11411,7 +11414,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 							 self AddR: Arg0Reg R: ReceiverResultReg.
 							jumpContinue := self JumpNoOverflow: 0.
 							"overflow; must undo the damage before continuing"
-							 rcvrIsInt
+							 (rcvrIsInt and: [rcvrIsConst])
 								ifTrue: [self MoveCq: rcvrInt R: ReceiverResultReg]
 								ifFalse:
 									[self SubR: Arg0Reg R: ReceiverResultReg.
@@ -11432,12 +11435,18 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 		[AndRR] -> [argIsInt
 						ifTrue: [self AndCq: argInt R: ReceiverResultReg]
 						ifFalse: [self AndR: Arg0Reg R: ReceiverResultReg].
-					jumpContinue := self Jump: 0].
+					jumpContinue := jumpNotSmallInts ifNotNil: [self Jump: 0]].
 		[OrRR]	-> [argIsInt
 						ifTrue: [self OrCq: argInt R: ReceiverResultReg]
 						ifFalse: [self OrR: Arg0Reg R: ReceiverResultReg].
-					jumpContinue := self Jump: 0] }.
-	jumpNotSmallInts jmpTarget: self Label.
+					jumpContinue := jumpNotSmallInts ifNotNil: [self Jump: 0]] }.
+	jumpNotSmallInts
+		ifNil: [jumpContinue ifNil: "overflow cannot happen"
+				[self annotateInstructionForBytecode.
+				 self ssPushRegister: ReceiverResultReg.
+				 ^0]]
+		ifNotNil:
+			[jumpNotSmallInts jmpTarget: self Label].
 	argIsInt ifTrue:
 		[self MoveCq: argInt R: Arg0Reg].
 	index := byte0 - self firstSpecialSelectorBytecodeOffset.
@@ -11466,47 +11475,48 @@ StackToRegisterMappingCogit >> genSpecialSelectorClass [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSpecialSelectorComparison [
-	| nextPC postBranchPC targetBytecodePC primDescriptor branchDescriptor
-	  rcvrIsInt argIsInt argInt jumpNotSmallInts inlineCAB index |
+	| nextPC postBranchPC targetPC primDescriptor branchDescriptor
+	  rcvrIsInt rcvrIsConst argIsIntConst argInt jumpNotSmallInts inlineCAB index |
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
 	self ssFlushTo: simStackPtr - 2.
 	primDescriptor := self generatorAt: byte0.
-	argIsInt := self ssTop type = SSConstant
+	argIsIntConst := self ssTop type = SSConstant
 				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)].
-	rcvrIsInt := (self ssValue: 1) type = SSConstant
-				 and: [objectMemory isIntegerObject: (self ssValue: 1) constant].
+	rcvrIsInt := ((rcvrIsConst := (self ssValue: 1) type = SSConstant)
+				  and: [objectMemory isIntegerObject: (self ssValue: 1) constant])
+				or: [self mclassIsSmallInteger and: [(self ssValue: 1) isSameEntryAs: (self addressOf: simSelf)]].
 
-	(argIsInt and: [rcvrIsInt]) ifTrue:
+	(argIsIntConst and: [rcvrIsInt and: [rcvrIsConst]]) ifTrue:
 		[^ self genStaticallyResolvedSpecialSelectorComparison].
 
 	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
-		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
+		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetPC := target ].
 
 	"Only interested in inlining if followed by a conditional branch."
 	inlineCAB := branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse].
 	"Further, only interested in inlining = and ~= if there's a SmallInteger constant involved.
 	 The relational operators successfully statically predict SmallIntegers; the equality operators do not."
 	(inlineCAB and: [primDescriptor opcode = JumpZero or: [primDescriptor opcode = JumpNonZero]]) ifTrue:
-		[inlineCAB := argIsInt or: [rcvrIsInt]].
+		[inlineCAB := argIsIntConst or: [rcvrIsInt]].
 	inlineCAB ifFalse:
 		[^self genSpecialSelectorSend].
 
-	argIsInt
+	argIsIntConst
 		ifTrue:
 			[(self ssValue: 1) popToReg: ReceiverResultReg.
 			 self ssPop: 2]
 		ifFalse:
-			[self marshallSendArguments: 1.
-			 rcvrIsInt ifFalse:
-				[self MoveR: Arg0Reg R: TempReg]].
-	jumpNotSmallInts := (argIsInt or: [rcvrIsInt])
-							ifFalse: "Neither known to be ints; and them together for the test..."
-								[objectRepresentation genJumpNotSmallIntegersIn: ReceiverResultReg andScratch: TempReg scratch: ClassReg]
-							ifTrue: "One known; in-place single-bit test for the other"
-								[objectRepresentation genJumpNotSmallInteger: (rcvrIsInt ifTrue: [Arg0Reg] ifFalse: [ReceiverResultReg])].
-	argIsInt
+			[self marshallSendArguments: 1].
+	jumpNotSmallInts := (rcvrIsInt and: [argIsIntConst]) ifFalse:
+							[argIsIntConst
+								ifTrue: [objectRepresentation genJumpNotSmallInteger: ReceiverResultReg]
+								ifFalse:
+									[rcvrIsInt
+										ifTrue: [objectRepresentation genJumpNotSmallInteger: Arg0Reg]
+										ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: ReceiverResultReg and: Arg0Reg scratch: TempReg]]].
+	argIsIntConst
 		ifTrue: [self CmpCq: argInt R: ReceiverResultReg]
 		ifFalse: [self CmpR: Arg0Reg R: ReceiverResultReg].
 	"Cmp is weird/backwards so invert the comparison.  Further since there is a following conditional
@@ -11514,10 +11524,16 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	self genConditionalBranch: (branchDescriptor isBranchTrue
 				ifTrue: [primDescriptor opcode]
 				ifFalse: [self inverseBranchFor: primDescriptor opcode])
-		operand: (self ensureNonMergeFixupAt: targetBytecodePC) asUnsignedInteger.
+		operand: (self ensureNonMergeFixupAt: targetPC) asUnsignedInteger.
 	self Jump: (self ensureNonMergeFixupAt: postBranchPC).
+	jumpNotSmallInts ifNil:
+		[self annotateInstructionForBytecode.
+		 self ensureFixupAt: postBranchPC.
+		 self ensureFixupAt: targetPC.
+		 deadCode := true.
+		 ^0].
 	jumpNotSmallInts jmpTarget: self Label.
-	argIsInt ifTrue:
+	argIsIntConst ifTrue:
 		[self MoveCq: argInt R: Arg0Reg].
 	index := byte0 - self firstSpecialSelectorBytecodeOffset.
 	^self genMarshalledSend: index negated - 1 numArgs: 1 sendTable: ordinarySendTrampolines
@@ -12816,6 +12832,11 @@ StackToRegisterMappingCogit >> simNativeStackSlots [
 	^((LargeContextSlots - CtxtTempFrameStart max: 64) * 11 // 10)
 ]
 
+{ #category : #accessing }
+StackToRegisterMappingCogit >> simSelf [
+	^simSelf
+]
+
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> simStackAt: index [
 	<cmacro: '(index) (simStack + (index))'>
@@ -13003,17 +13024,15 @@ StackToRegisterMappingCogit >> ssAllocateRequiredRegMask: requiredRegsMask upThr
 		liveRegs := liveRegs bitOr: (self simStackAt: i) registerMask.
 		((self simStackAt: i) registerMask bitAnd: requiredRegsMask) ~= 0 ifTrue:
 			[lastRequired := i]].
-	LowcodeVM ifTrue: [
-		(simNativeSpillBase max: 0) to: nativeStackPtr do:
+	LowcodeVM ifTrue:
+		[(simNativeSpillBase max: 0) to: nativeStackPtr do:
 			[:i|
 			liveRegs := liveRegs bitOr: (self simNativeStackAt: i) nativeRegisterMask.
-			((self simNativeStackAt: i) nativeRegisterMask bitAnd: requiredRegsMask) ~= 0 ifTrue:
-				[lastRequiredNative := i]].
-	].
+			((self simNativeStackAt: i) nativeRegisterMask anyMask: requiredRegsMask) ifTrue:
+				[lastRequiredNative := i]]].
 	"If any of requiredRegsMask are live we must spill."
-	(liveRegs bitAnd: requiredRegsMask) = 0 ifFalse:
-		["Some live, must spill"
-		self ssFlushTo: lastRequired nativeFlushTo: lastRequiredNative.
+	(liveRegs anyMask: requiredRegsMask) ifTrue:
+		[self ssFlushTo: lastRequired nativeFlushTo: lastRequiredNative.
 		self assert: (self liveRegisters bitAnd: requiredRegsMask) = 0]
 ]
 

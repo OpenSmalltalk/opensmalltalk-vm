@@ -17,7 +17,7 @@ CurrentImageCoInterpreterFacadeFor64BitSpurObjectRepresentation class >> objectR
 { #category : #'private-cacheing' }
 CurrentImageCoInterpreterFacadeFor64BitSpurObjectRepresentation >> objectForOop: anOop [
 	"This is a keyAtValue: search and so needs speeding up either by a reverse map or a simple cache."
-	^(anOop bitAnd: 3) caseOf: {
+	^(anOop bitAnd: 7) caseOf: {
 		[0] -> [anOop = cachedOop
 				ifTrue: [cachedObject]
 				ifFalse: [cachedObject := objectMap keyAtValue: anOop. "may raise Error"
@@ -25,7 +25,7 @@ CurrentImageCoInterpreterFacadeFor64BitSpurObjectRepresentation >> objectForOop:
 						cachedObject]].
 		[1] -> [anOop signedIntFromLong64 >> 3].
 		[2] -> [Character value: anOop >> 3].
-		[3] -> [objectMemory smallFloatValueOf: anOop] }
+		[4] -> [objectMemory smallFloatValueOf: anOop] }
 ]
 
 { #category : #'object map' }

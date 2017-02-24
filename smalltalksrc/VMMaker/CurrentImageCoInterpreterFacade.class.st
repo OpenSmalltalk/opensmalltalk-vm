@@ -205,6 +205,11 @@ CurrentImageCoInterpreterFacade >> characterTable [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> classCharacter [
+	^self oopForObject: Character
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> classFieldOffset [
 	^objectMemory classFieldOffset
 ]
@@ -651,9 +656,25 @@ CurrentImageCoInterpreterFacade >> lookupAddress: address [
 		ifFalse: [thing asString]) contractTo: 64
 ]
 
+{ #category : #'cog jit support' }
+CurrentImageCoInterpreterFacade >> lookupOrdinary: selectorOop receiver: receiverOop [
+	| rcvr selector |
+	rcvr := self objectForOop: receiverOop.
+	selector := self objectForOop: selectorOop.
+	(rcvr class canUnderstand: selector) ifTrue:
+		[^self oopForObject: ((rcvr class whichClassIncludesSelector: selector)
+									compiledMethodAt: selector)].
+	^SelectorDoesNotUnderstand
+]
+
 { #category : #'frame access' }
 CurrentImageCoInterpreterFacade >> marryFrameCopiesTemps [
 	^ false
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> maxLookupNoMNUErrorCode [
+	^coInterpreter maxLookupNoMNUErrorCode
 ]
 
 { #category : #accessing }
@@ -802,14 +823,7 @@ CurrentImageCoInterpreterFacade >> objectAfter: anOop [
 { #category : #'private-cacheing' }
 CurrentImageCoInterpreterFacade >> objectForOop: anOop [
 	"This is a keyAtValue: search and so needs speeding up either by a reverse map or a simple cache."
-	^(anOop bitAnd: 3) caseOf: {
-		[0] -> [anOop = cachedOop
-				ifTrue: [cachedObject]
-				ifFalse: [cachedObject := objectMap keyAtValue: anOop. "may raise Error"
-						cachedOop := anOop. "Dom't assign until accessed without error"
-						cachedObject]].
-		[1] -> [anOop signedIntFromLong >> 1].
-		[3] -> [anOop signedIntFromLong >> 1] }
+	self subclassResponsibility
 ]
 
 { #category : #accessing }
@@ -1124,7 +1138,16 @@ CurrentImageCoInterpreterFacade >> storePointerUnchecked: zeroRelativeIndex ofOb
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> stringOf: anOop [
-	^(self lookupAddress: anOop) asString
+	| thing |
+	thing := objectMap
+				keyAtValue: anOop
+				ifAbsent:
+					[variables
+						keyAtValue: anOop
+						ifAbsent: [^nil]].
+	^((thing isLiteral and: [thing isSymbol not])
+		ifTrue: [thing storeString]
+		ifFalse: [thing asString]) contractTo: 64
 ]
 
 { #category : #testing }
