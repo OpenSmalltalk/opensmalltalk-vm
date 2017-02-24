@@ -2281,14 +2281,13 @@ SimpleStackBasedCogit >> genLongStoreTemporaryVariableBytecode [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genLongUnconditionalBackwardJump [
-	| distance targetpc |
+	| distance |
 	distance := self v3: (self generatorAt: byte0)
 					Long: bytecodePC
 					Branch: 0
 					Distance: methodObj.
 	self assert: distance < 0.
-	targetpc := distance + 2 + bytecodePC.
-	^self genJumpBackTo: targetpc
+	^self genJumpBackTo: distance + 2 + bytecodePC
 ]
 
 { #category : #'bytecode generators' }

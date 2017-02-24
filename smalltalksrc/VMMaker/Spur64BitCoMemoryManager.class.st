@@ -95,6 +95,12 @@ Spur64BitCoMemoryManager >> checkMemoryMap [
 	self assert: (self isOldObject: cogit maxCogMethodAddress) not
 ]
 
+{ #category : #accessing }
+Spur64BitCoMemoryManager >> classSmallFloat [
+	<api>
+	^self fetchPointer: self smallFloatTag ofObject: classTableFirstPage
+]
+
 { #category : #'debug support' }
 Spur64BitCoMemoryManager >> clearLeakMapAndMapAccessibleObjects [
 	"Perform an integrity/leak check using the heapMap.  Set a bit at each object's header.
@@ -250,6 +256,22 @@ Spur64BitCoMemoryManager >> nullHeaderForMachineCodeMethod [
 ]
 
 { #category : #'cog jit support' }
+Spur64BitCoMemoryManager >> receiverTagBitsForMethod: aMethodObj [
+	"Answer the tag bits for the receiver based on the method's methodClass, if any."
+	<api>
+	| methodClass |
+	methodClass := coInterpreter methodClassOf: aMethodObj.
+	(self instSpecOfClass: methodClass) ~= self forwardedFormat ifTrue:
+		[^0].
+	methodClass = (self fetchPointer: self smallIntegerTag ofObject: classTableFirstPage) ifTrue:
+		[^self smallIntegerTag].
+	methodClass = (self fetchPointer: self characterTag ofObject: classTableFirstPage) ifTrue:
+		[^self characterTag].
+	self assert: methodClass = (self fetchPointer: self smallFloatTag ofObject: classTableFirstPage).
+	^self smallFloatTag
+]
+
+{ #category : #'cog jit support' }
 Spur64BitCoMemoryManager >> remember: objOop [
 	<doNotGenerate>
 	^scavenger remember: objOop
@@ -272,13 +294,6 @@ Spur64BitCoMemoryManager >> setUpForUseByFacade: aCurrentImageCoInterpreterFacad
 	self setHeapBase: self freeStart
 		memoryLimit: self endOfMemory
 		endOfMemory: self endOfMemory
-]
-
-{ #category : #'cog jit support' }
-Spur64BitCoMemoryManager >> smallIntegerTag [
-	<api>
-	<cmacro>
-	^1
 ]
 
 { #category : #'trampoline support' }

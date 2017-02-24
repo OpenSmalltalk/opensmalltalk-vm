@@ -749,10 +749,11 @@ RegisterAllocatingCogit >> genSpecialSelectorArithmetic [
 	primDescriptor := self generatorAt: byte0.
 	argIsInt := (argIsConst := self ssTop type = SSConstant)
 				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)].
-	rcvrIsInt := (rcvrIsConst := (self ssValue: 1) type = SSConstant)
-				 and: [objectMemory isIntegerObject: (rcvrInt := (self ssValue: 1) constant)].
+	rcvrIsInt := ((rcvrIsConst := (self ssValue: 1) type = SSConstant)
+				  and: [objectMemory isIntegerObject: (rcvrInt := (self ssValue: 1) constant)])
+				or: [self mclassIsSmallInteger and: [(self ssValue: 1) isSameEntryAs: (self addressOf: simSelf)]].
 
-	(argIsInt and: [rcvrIsInt]) ifTrue:
+	(argIsInt and: [rcvrIsInt and: [rcvrIsConst]]) ifTrue:
 		[| result |
 		 rcvrInt := objectMemory integerValueOf: rcvrInt.
 		 argInt := objectMemory integerValueOf: argInt.
@@ -785,25 +786,27 @@ RegisterAllocatingCogit >> genSpecialSelectorArithmetic [
 		ifTrue:
 			[rcvrReg := self allocateRegForStackEntryAt: 1.
 			 (self ssValue: 1) popToReg: rcvrReg.
-			 self MoveR: rcvrReg R: TempReg.
 			 regMask := self registerMaskFor: rcvrReg]
 		ifFalse:
 			[self allocateRegForStackTopTwoEntriesInto: [:rTop :rNext| argReg := rTop. rcvrReg := rNext].
 			 self ssTop popToReg: argReg.
 			 (self ssValue: 1) popToReg: rcvrReg.
-			 self MoveR: argReg R: TempReg.
 			 regMask := self registerMaskFor: rcvrReg and: argReg].
 
 	"rcvrReg can be reused for the result iff the receiver is a constant or is an SSRegister that is not used elsewhere."
-	destReg := (rcvrIsInt
+	destReg := ((rcvrIsInt and: [rcvrIsConst])
 				 or: [(self ssValue: 1) type = SSRegister
 					 and: [(self anyReferencesToRegister: rcvrReg inAllButTopNItems: 2) not]])
 					ifTrue: [rcvrReg]
 					ifFalse: [self allocateRegNotConflictingWith: regMask].
 	self ssPop: 2.
-	jumpNotSmallInts := (argIsInt or: [rcvrIsInt])
-							ifTrue: [objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg]
-							ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: rcvrReg andScratch: TempReg scratch: ClassReg].
+	jumpNotSmallInts := (rcvrIsInt and: [argIsInt]) ifFalse:
+							[argIsInt
+								ifTrue: [objectRepresentation genJumpNotSmallInteger: rcvrReg]
+								ifFalse:
+									[rcvrIsInt
+										ifTrue: [objectRepresentation genJumpNotSmallInteger: argReg]
+										ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: rcvrReg and: argReg scratch: TempReg]]].
 	rcvrReg ~= destReg ifTrue:
 		[self MoveR: rcvrReg R: destReg].
 	primDescriptor opcode caseOf: {
@@ -820,7 +823,7 @@ RegisterAllocatingCogit >> genSpecialSelectorArithmetic [
 							 jumpContinue := self JumpNoOverflow: 0.
 							"overflow; must undo the damage before doing send"
 							 destReg = rcvrReg ifTrue:
-								[rcvrIsInt
+								[(rcvrIsInt and: [rcvrIsConst])
 									ifTrue: [self MoveCq: rcvrInt R: rcvrReg]
 									ifFalse:
 										[self SubR: argReg R: rcvrReg.
@@ -843,7 +846,7 @@ RegisterAllocatingCogit >> genSpecialSelectorArithmetic [
 									 jumpContinue := self Jump: 0.
 									 jumpOverflow jmpTarget: self Label.
 									 "overflow; must undo the damage before doing send"
-									 (rcvrIsInt or: [destReg ~= rcvrReg]) ifFalse:
+									 ((rcvrIsInt and: [rcvrIsConst]) or: [destReg ~= rcvrReg]) ifFalse:
 										[self AddR: argReg R: destReg].
 									 objectRepresentation genSetSmallIntegerTagsIn: argReg]
 								ifFalse:
@@ -851,7 +854,7 @@ RegisterAllocatingCogit >> genSpecialSelectorArithmetic [
 									 self SubR: argReg R: destReg.
 									 jumpContinue := self JumpNoOverflow: 0.
 									 "overflow; must undo the damage before doing send"
-									 (rcvrIsInt or: [destReg ~= rcvrReg]) ifFalse:
+									 ((rcvrIsInt and: [rcvrIsConst]) or: [destReg ~= rcvrReg]) ifFalse:
 										[self AddR: argReg R: rcvrReg].
 									 objectRepresentation genSetSmallIntegerTagsIn: argReg]]].
 		[AndRR] -> [argIsInt
@@ -867,7 +870,12 @@ RegisterAllocatingCogit >> genSpecialSelectorArithmetic [
 	self copySimStackToScratch: (simSpillBase min: simStackPtr - 1).
 	self ssPop: 1.
 	self ssFlushTo: simStackPtr.
-	self deny: rcvrReg = Arg0Reg.
+	rcvrReg = Arg0Reg
+		ifTrue:
+			[argReg = ReceiverResultReg
+				ifTrue: [self SwapR: Arg0Reg R: Arg0Reg Scratch: TempReg. argReg := Arg0Reg]
+				ifFalse: [self MoveR: rcvrReg R: ReceiverResultReg].
+			 rcvrReg := ReceiverResultReg].
 	argIsInt
 		ifTrue: [self MoveCq: argInt R: Arg0Reg]
 		ifFalse: [argReg ~= Arg0Reg ifTrue: [self MoveR: argReg R: Arg0Reg]].
@@ -898,17 +906,18 @@ RegisterAllocatingCogit >> genSpecialSelectorClass [
 { #category : #'bytecode generators' }
 RegisterAllocatingCogit >> genSpecialSelectorComparison [
 	| nextPC postBranchPC targetPC primDescriptor branchDescriptor
-	  rcvrIsInt argIsInt argInt jumpNotSmallInts inlineCAB index rcvrReg argReg branchToTarget needMergeToContinue needMergeToTarget |
+	  rcvrIsInt rcvrIsConst argIsIntConst argInt jumpNotSmallInts inlineCAB index rcvrReg argReg branchToTarget needMergeToContinue needMergeToTarget |
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
 	primDescriptor := self generatorAt: byte0.
-	argIsInt := self ssTop type = SSConstant
+	argIsIntConst := self ssTop type = SSConstant
 				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)].
-	rcvrIsInt := (self ssValue: 1) type = SSConstant
-				 and: [objectMemory isIntegerObject: (self ssValue: 1) constant].
+	rcvrIsInt := ((rcvrIsConst := (self ssValue: 1) type = SSConstant)
+				  and: [objectMemory isIntegerObject: (self ssValue: 1) constant])
+				or: [self mclassIsSmallInteger and: [(self ssValue: 1) isSameEntryAs: (self addressOf: simSelf)]].
 
-	(argIsInt and: [rcvrIsInt]) ifTrue:
+	(argIsIntConst and: [rcvrIsInt and: [rcvrIsConst]]) ifTrue:
 		[^self genStaticallyResolvedSpecialSelectorComparison].
 
 	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
@@ -919,7 +928,7 @@ RegisterAllocatingCogit >> genSpecialSelectorComparison [
 	"Further, only interested in inlining = and ~= if there's a SmallInteger constant involved.
 	 The relational operators successfully statically predict SmallIntegers; the equality operators do not."
 	(inlineCAB and: [primDescriptor opcode = JumpZero or: [primDescriptor opcode = JumpNonZero]]) ifTrue:
-		[inlineCAB := argIsInt or: [rcvrIsInt]].
+		[inlineCAB := argIsIntConst or: [rcvrIsInt]].
 	inlineCAB ifFalse:
 		[^self genSpecialSelectorSend].
 
@@ -927,25 +936,26 @@ RegisterAllocatingCogit >> genSpecialSelectorComparison [
 	 to do a send and fall through to the following conditional branch.  Since we're allocating values
 	 in registers we would like to keep those registers live on the inlined path and reload registers
 	 along the non-inlined send path.  The merge logic at the branch destinations handles this."
-	argIsInt
+	argIsIntConst
 		ifTrue:
 			[rcvrReg := self allocateRegForStackEntryAt: 1.
-			 (self ssValue: 1) popToReg: rcvrReg]
+			 (self ssValue: 1) popToReg: rcvrReg.
+			 argReg := NoReg]
 		ifFalse:
 			[self allocateRegForStackTopTwoEntriesInto: [:rTop :rNext| argReg := rTop. rcvrReg := rNext].
 			 rcvrReg = Arg0Reg ifTrue:
 				[rcvrReg := argReg. argReg := Arg0Reg].
 			 self ssTop popToReg: argReg.
-			 (self ssValue: 1) popToReg: rcvrReg.
-			 rcvrIsInt ifFalse:
-				[self MoveR: argReg R: TempReg]].
+			 (self ssValue: 1) popToReg: rcvrReg].
 	self ssPop: 2.
-	jumpNotSmallInts := (argIsInt or: [rcvrIsInt])
-							ifFalse: "Neither known to be ints; and them together for the test..."
-								[objectRepresentation genJumpNotSmallIntegersIn: rcvrReg andScratch: TempReg scratch: ClassReg]
-							ifTrue: "One known; in-place single-bit test for the other"
-								[objectRepresentation genJumpNotSmallInteger: (rcvrIsInt ifTrue: [argReg] ifFalse: [rcvrReg])].
-	argIsInt
+	jumpNotSmallInts := (rcvrIsInt and: [argIsIntConst]) ifFalse:
+							[argIsIntConst
+								ifTrue: [objectRepresentation genJumpNotSmallInteger: rcvrReg]
+								ifFalse:
+									[rcvrIsInt
+										ifTrue: [objectRepresentation genJumpNotSmallInteger: argReg]
+										ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: rcvrReg and: argReg scratch: TempReg]]].
+	argIsIntConst
 		ifTrue: [self CmpCq: argInt R: rcvrReg]
 		ifFalse: [self CmpR: argReg R: rcvrReg].
 
@@ -981,10 +991,19 @@ RegisterAllocatingCogit >> genSpecialSelectorComparison [
 										ifFalse: [self inverseBranchFor: primDescriptor opcode])
 			operand: (self ensureFixupAt: targetPC) asUnsignedInteger.
 		 self Jump: (self ensureFixupAt: postBranchPC)].
+	jumpNotSmallInts ifNil:
+		[self annotateInstructionForBytecode.
+		 deadCode := true.
+		 ^0].
 	jumpNotSmallInts jmpTarget: self Label.
 	self ssFlushTo: simStackPtr.
-	self deny: rcvrReg = Arg0Reg.
-	argIsInt
+	rcvrReg = Arg0Reg
+		ifTrue:
+			[argReg = ReceiverResultReg
+				ifTrue: [self SwapR: Arg0Reg R: Arg0Reg Scratch: TempReg. argReg := Arg0Reg]
+				ifFalse: [self MoveR: rcvrReg R: ReceiverResultReg].
+			 rcvrReg := ReceiverResultReg].
+	argIsIntConst
 		ifTrue: [self MoveCq: argInt R: Arg0Reg]
 		ifFalse: [argReg ~= Arg0Reg ifTrue: [self MoveR: argReg R: Arg0Reg]].
 	rcvrReg ~= ReceiverResultReg ifTrue: [self MoveR: rcvrReg R: ReceiverResultReg].
@@ -1255,6 +1274,7 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup forwards: forwards [
 	 registers can be deassigned (since registers are always written to temp vars).
 	 But if backwards, nothing can be deassigned, and the state /must/ reflect the target."
 	"self printSimStack; printSimStack: fixup mergeSimStack"
+	"abstractOpcodes object copyFrom: startIndex to: opcodeIndex"
 	<var: #fixup type: #'BytecodeFixup *'>
 	| startIndex mergeSimStack currentEntry targetEntry writtenToRegisters |
 	<var: #mergeSimStack type: #'SimStackEntry *'>
@@ -1651,6 +1671,19 @@ RegisterAllocatingCogit >> simStack: aSimStack isIdenticalTo: bSimStack [
 RegisterAllocatingCogit >> simStackEntryClass [
 	<doNotGenerate>
 	^CogRegisterAllocatingSimStackEntry
+]
+
+{ #category : #'simulation stack' }
+RegisterAllocatingCogit >> ssAllocateRequiredRegMask: requiredRegsMask upThrough: stackPtr upThroughNative: nativeStackPtr [
+	"Override to void any required registers in temp vars."
+	(requiredRegsMask anyMask: (self registerMaskFor: ReceiverResultReg)) ifTrue:
+		[optStatus isReceiverResultRegLive: false.
+		 optStatus ssEntry liveRegister: NoReg].
+	0 to: methodOrBlockNumTemps - 1 do:
+		[:i|
+		((self simStackAt: i) registerMask anyMask: requiredRegsMask) ifTrue:
+			[(self simStackAt: i) liveRegister: 0]].
+	super ssAllocateRequiredRegMask: requiredRegsMask upThrough: stackPtr upThroughNative: nativeStackPtr
 ]
 
 { #category : #'simulation stack' }

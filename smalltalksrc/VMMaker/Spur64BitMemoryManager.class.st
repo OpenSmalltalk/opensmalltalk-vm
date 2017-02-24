@@ -1257,12 +1257,6 @@ Spur64BitMemoryManager >> smallFloatValueOf: oop [
 				* 1.0 "reduce to SmallFloat64 if possible"]
 ]
 
-{ #category : #'cog jit support' }
-Spur64BitMemoryManager >> smallIntegerTag [
-	<cmacro>
-	^1
-]
-
 { #category : #allocation }
 Spur64BitMemoryManager >> smallObjectBytesForSlots: numSlots [
 	"Answer the total number of bytes in an object without an overflow header, including header bytes."

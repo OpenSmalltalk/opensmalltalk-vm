@@ -401,10 +401,10 @@ CogObjectRepresentation >> genJumpNotSmallIntegerValue: aRegister scratch: scrat
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentation >> genJumpNotSmallIntegersIn: aRegister andScratch: scratchA scratch: scratchB [
-	"Generate a compare and branch to test if aRegister and scratchA contains other than SmallIntegers,
-	 i.e. don't branch if both aRegister and scratchA contain SmallIntegers.
-	 Answer the jump.  Destroy scratchA and scratchB if required."
+CogObjectRepresentation >> genJumpNotSmallIntegersIn: aRegister and: bRegister scratch: scratchRegister [
+	"Generate a compare and branch to test if aRegister and bRegister contains other than SmallIntegers,
+	 i.e. don't branch if both aRegister and bRegister contain SmallIntegers.
+	 Answer the jump.  Destroy scratchRegister if required."
 	<returnTypeC: #'AbstractInstruction *'>
 	^self subclassResponsibility
 ]
