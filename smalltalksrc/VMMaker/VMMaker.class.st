@@ -311,6 +311,7 @@ VMMaker class >> generateAllCogConfigurationsUnderVersionControl [
 VMMaker class >> generateAllConfigurationsUnderVersionControl [
 	self generateAllNewspeakConfigurationsUnderVersionControl;
 		generateAllSqueakConfigurationsUnderVersionControl;
+		generateAllSpurLowcodeConfigurations;
 		generateVMPlugins
 ]
 
