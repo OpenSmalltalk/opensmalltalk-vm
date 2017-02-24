@@ -10880,7 +10880,9 @@ SpurMemoryManager >> slotSizeOf: oop [
 
 { #category : #'cog jit support' }
 SpurMemoryManager >> smallIntegerTag [
-	^self subclassResponsibility
+	<api>
+	<cmacro>
+	^1
 ]
 
 { #category : #allocation }
