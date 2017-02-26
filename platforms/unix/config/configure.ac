@@ -298,7 +298,7 @@ AC_CHECK_FUNC(_dyld_present, [
 
 AC_CHECK_FUNCS(snprintf __snprintf,[break])
 
-AC_FUNC_MMAP
+AC_CHECK_FUNCS([mmap])
 AC_FUNC_ALLOCA
 AX_HAVE_EPOLL
 AX_HAVE_EPOLL_PWAIT
