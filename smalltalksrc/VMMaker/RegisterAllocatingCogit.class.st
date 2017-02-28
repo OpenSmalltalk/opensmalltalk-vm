@@ -1048,6 +1048,7 @@ RegisterAllocatingCogit >> genStorePop: popBoolean TemporaryVariable: tempIndex 
 	self MoveR: (srcRegOrNone ~= NoReg ifTrue: [srcRegOrNone] ifFalse: [destReg])
 		Mw: (self frameOffsetOfTemporary: tempIndex)
 		r: FPReg.
+	(self simStackAt: tempIndex) bcptr: bytecodePC. "for debugging"
 	self deny: self duplicateRegisterAssignmentsInTemporaries.
 	^0
 ]
