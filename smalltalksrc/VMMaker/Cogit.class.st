@@ -260,13 +260,12 @@ Class {
 		'cPICPrototype',
 		'cPICEndOfCodeOffset',
 		'cPICEndOfCodeLabel',
-		'maxCPICCases',
-		'debugBytecodePointers',
-		'debugOpcodeIndices',
-		'disassemblingMethod',
 		'ceMallocTrampoline',
 		'ceFreeTrampoline',
-		'ceFFICalloutTrampoline'
+		'ceFFICalloutTrampoline',
+		'debugBytecodePointers',
+		'debugOpcodeIndices',
+		'disassemblingMethod'
 	],
 	#classVars : [
 		'AltBlockCreationBytecodeSize',
