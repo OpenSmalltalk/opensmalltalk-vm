@@ -9,8 +9,15 @@ I have concrete subclasses that implement different levels of optimization:
 	StackToRegisterMappingCogit is the current production code generator  It defers pushing operands
 	to the stack until necessary and implements a register-based calling convention for low-arity sends.
 
-	StackToRegisterMappingCogit is an experimental code generator with support for counting
+	SistaCogit is an experimental code generator with support for counting
 	conditional branches, intended to support adaptive optimization.
+
+	RegisterAllocatingCogit is an experimental code generator with support for allocating temporary variables
+	to registers. It is inended to serve as the superclass to SistaCogit once it is working.
+
+	SistaRegisterAllocatingCogit and SistaCogitClone are temporary classes that allow testing a clone of
+	SistaCogit that inherits from RegisterAllocatingCogit.  Once things work these will be merged and
+	will replace SistaCogit.
 
 coInterpreter <CoInterpreterSimulator>
 	the VM's interpreter with which I cooperate

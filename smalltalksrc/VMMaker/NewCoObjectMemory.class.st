@@ -151,6 +151,12 @@ NewCoObjectMemory >> initializeFreeSpaceForFacadeFrom: base to: limit [
 	endOfMemory := scavengeThreshold := limit
 ]
 
+{ #category : #'debug support' }
+NewCoObjectMemory >> isCompactInstance: oop [
+	"For assert checking"
+	^(self isNonImmediate: oop) and: [((self baseHeader: oop) bitAnd: CompactClassMask) ~= 0]
+]
+
 { #category : #'cog jit support' }
 NewCoObjectMemory >> isReallyYoungObject: obj [
 	<api>

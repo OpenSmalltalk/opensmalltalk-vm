@@ -1,9 +1,6 @@
 Class {
 	#name : #CogRegisterAllocatingSimStackEntry,
 	#superclass : #CogSimStackEntry,
-	#instVars : [
-		'liveRegister'
-	],
 	#category : #'VMMaker-JIT'
 }
 
