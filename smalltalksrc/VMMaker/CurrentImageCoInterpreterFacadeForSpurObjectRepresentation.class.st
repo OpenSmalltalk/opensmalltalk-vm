@@ -212,6 +212,16 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> rawHashBitsOf: obj
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> receiverTagBitsForMethod: methodOop [
+	^(self objectForOop: methodOop) methodClass
+		caseOf: {
+			[SmallInteger]	-> [objectMemory smallIntegerTag].
+			[Character]		-> [objectMemory characterTag].
+			[SmallFloat64]	-> [objectMemory smallFloatTag] }
+		otherwise: [0]
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> rememberedBitShift [
 	^objectMemory rememberedBitShift
 ]

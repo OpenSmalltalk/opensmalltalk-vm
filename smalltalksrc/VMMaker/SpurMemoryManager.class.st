@@ -6380,6 +6380,12 @@ SpurMemoryManager >> isClassOfNonImm: oop equalTo: classOop compactClassIndex: k
 			[^classOop = (self classAtIndex: ccIndex)]
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> isCompactInstance: oop [
+	"For assert checking"
+	^false
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isCompiledMethod: objOop [
     "Answer whether the argument object is of compiled method format"

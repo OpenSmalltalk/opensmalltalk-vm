@@ -43,6 +43,13 @@ CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation >> objectForOop: 
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation >> receiverTagBitsForMethod: methodOop [
+	^(self objectForOop: methodOop) methodClass =SmallInteger
+		ifTrue: [1]
+		ifFalse: [0]
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeForSqueakV3ObjectRepresentation >> youngStartAddress [
 	^16r4E5E400
 ]
