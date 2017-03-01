@@ -1,6 +1,6 @@
 #!/bin/bash -e
 # PharoVM with VM profiler and threaded heartbeat
-THIRDPARTYLIBS="libsdl2 libssh2 libgit2"
+THIRDPARTYLIBS="libsdl2 openssl libssh2 libgit2"
 
 case "`uname -m`" in # ensure we see x86 as machine type
 i*86) ;; # we're good

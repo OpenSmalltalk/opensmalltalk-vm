@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 # PharoVM with VM profiler and threaded heartbeat
-THIRDPARTYLIBS="libsdl2 libssh2 libgit2"
+THIRDPARTYLIBS="libsdl2 openssl libssh2 libgit2"
 INSTALLDIR=cogspur64linuxht
 
 # Some gcc versions create a broken VM using -O2
