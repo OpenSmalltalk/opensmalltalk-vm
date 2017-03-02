@@ -15540,17 +15540,15 @@ StackInterpreter >> methodClassAssociationOf: methodPointer [
 { #category : #'compiled methods' }
 StackInterpreter >> methodClassOf: methodPointer [
 	<api>
-	"Using a read barrier here simplifies the become implementation and costs very little
+	"Answer the method class of a method which is the value of an Association in the last literal,
+	 or answer nil if there isn't one.
+	 Using a read barrier here simplifies the become implementation and costs very little
 	 because the class index and ValueIndex of the association almost certainly share a cache line."
 	| literal |
 	literal := self followLiteral: (objectMemory literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
-	NewspeakVM
-		ifTrue:
-			[literal ~= objectMemory nilObject ifTrue:
-				[literal := objectMemory followField: ValueIndex ofObject: literal]]
-		ifFalse:
-			[self assert: ((objectMemory isPointers: literal) and: [(objectMemory numSlotsOf: literal) > ValueIndex]).
-			 literal := objectMemory followField: ValueIndex ofObject: literal].
+	literal ~= objectMemory nilObject ifTrue:
+		[self assert: ((objectMemory isPointers: literal) and: [(objectMemory numSlotsOf: literal) > ValueIndex]).
+		 literal := objectMemory followField: ValueIndex ofObject: literal].
 	^literal
 ]
 
