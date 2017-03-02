@@ -186,6 +186,9 @@ do
     prev=execute_dlfiles
     ;;
 
+  --preserve-dup-deps)
+    ;;
+
   -*)
     $echo "$modename: unrecognized option \`$arg'" 1>&2
     $echo "$help" 1>&2
