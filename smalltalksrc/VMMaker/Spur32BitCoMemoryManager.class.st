@@ -253,13 +253,14 @@ Spur32BitCoMemoryManager >> nullHeaderForMachineCodeMethod [
 Spur32BitCoMemoryManager >> receiverTagBitsForMethod: aMethodObj [
 	"Answer the tag bits for the receiver based on the method's methodClass, if any."
 	<api>
-	| methodClass |
-	methodClass := coInterpreter methodClassOf: aMethodObj.
-	(self instSpecOfClass: methodClass) ~= self forwardedFormat ifTrue:
+	| methodClassOrNil |
+	methodClassOrNil := coInterpreter methodClassOf: aMethodObj.
+	(methodClassOrNil = nilObj
+	 or: [(self instSpecOfClass: methodClassOrNil) ~= self forwardedFormat]) ifTrue:
 		[^0].
-	^methodClass = (self fetchPointer: self smallIntegerTag ofObject: classTableFirstPage)
+	^methodClassOrNil = (self fetchPointer: self smallIntegerTag ofObject: classTableFirstPage)
 		ifTrue: [self smallIntegerTag]
-		ifFalse: [self assert: methodClass = (self fetchPointer: self characterTag ofObject: classTableFirstPage).
+		ifFalse: [self assert: methodClassOrNil = (self fetchPointer: self characterTag ofObject: classTableFirstPage).
 				self characterTag]
 ]
 
