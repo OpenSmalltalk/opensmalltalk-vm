@@ -760,7 +760,6 @@ Cogit class >> generatorTableFrom: anArray [
 						isExtension: (tuple includes: #extension);
 						isInstVarRef: (tuple includes: #isInstVarRef);	"for Spur"
 						is1ByteInstVarStore: (tuple includes: #is1ByteInstVarStore);	"for Spur"
-						isCallPrimitive: (tuple includes: #callPrimitive);
 						hasIRC: (tuple includes: #hasIRC);			"for Newspeak"
 						yourself.
 		"As a hack to cut down on descriptor flags, use opcode to tag unusedBytecode for scanning.

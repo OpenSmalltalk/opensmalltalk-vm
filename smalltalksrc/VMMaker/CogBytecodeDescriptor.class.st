@@ -20,8 +20,7 @@ Class {
 		'isExtension',
 		'isInstVarRef',
 		'is1ByteInstVarStore',
-		'hasIRC',
-		'isCallPrimitive'
+		'hasIRC'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -143,16 +142,8 @@ CogBytecodeDescriptor >> isBranchTrue: anObject [
 
 { #category : #accessing }
 CogBytecodeDescriptor >> isCallPrimitive [
-	"Answer the value of isCallPrimitive"
 
-	^ isCallPrimitive
-]
-
-{ #category : #accessing }
-CogBytecodeDescriptor >> isCallPrimitive: anObject [
-	"Set the value of isCallPrimitive"
-
-	^isCallPrimitive := anObject
+	^generator == #genCallPrimitiveBytecode
 ]
 
 { #category : #accessing }
