@@ -24,6 +24,8 @@ $(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME): $(LIBSSH2ARCHIVE)
 	cd $(LIBSSH2DIR) \
 		&& ./configure \
 			--prefix='$(THIRDPARTYOUTDIR)' \
+			--with-openssl \
+			--with-libssl-prefix=$(THIRDPARTYLIBDIR) \
 			CFLAGS='-m32' \
 			LDFLAGS='-m32' \
 		&& make \
