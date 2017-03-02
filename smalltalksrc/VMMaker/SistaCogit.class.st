@@ -854,7 +854,7 @@ SistaCogit >> genSpecialSelectorComparison [
 				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)].
 	rcvrIsInt := ((rcvrIsConst := (self ssValue: 1) type = SSConstant)
 				  and: [objectMemory isIntegerObject:(self ssValue: 1) constant])
-				or: [self mclassIsSmallInteger and: [(self ssValue: 1) isSameEntryAs: simSelf]].
+				or: [self mclassIsSmallInteger and: [(self ssValue: 1) isSameEntryAs: (self addressOf: simSelf)]].
 
 	"short-cut the jump if operands are SmallInteger constants."
 	(argIsIntConst and: [rcvrIsInt and: [rcvrIsConst]]) ifTrue:
