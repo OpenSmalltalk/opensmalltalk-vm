@@ -22,6 +22,8 @@ $(LIBGIT2ARCHIVE):
 # NOTE: I'm adding this ugly hack of "sed..." because CMake does not find properly libssl and libcrypto 
 # on 64bits envirenments (it always find the 64bits version, regardless the architecture).
 # this is ugly, but the only way I fond :( 
+# NOTE: We also need to edit the RPATH as CMAKE likes (because it ignores the -Wl line), that's why we
+# need to add special flags as you can see here: https://cmake.org/Wiki/CMake_RPATH_handling
 $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME): $(LIBGIT2ARCHIVE)
 	tar x -f $(LIBGIT2ARCHIVE) -C $(THIRDPARTYDIR)
 	cd $(LIBGIT2DIR) \
@@ -38,7 +40,9 @@ $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME): $(LIBGIT2ARCHIVE)
 			-DLIBSSH2_INCLUDE_DIRS=$(THIRDPARTYINCLUDEDIR) \
 			-DLIBSSH2_LIBRARY_DIRS=$(THIRDPARTYLIBDIR) \
 			-DLIBSSH2_LIBRARIES=$(THIRDPARTYLIBDIR)/libssh2.so.1.0.1 \
-			-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-rpath=$(THIRDPARTYLIBDIR) \
+			-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-rpath,$$ORIGIN \
+			-DCMAKE_SKIP_BUILD_RPATH=FALSE \
+			-DCMAKE_INSTALL_RPATH="$$ORIGIN" \
 		&& sed -i.bak 's/x86_64-linux-gnu/i386-linux-gnu/g' CMakeCache.txt \
 		&& make \
 		&& make install
