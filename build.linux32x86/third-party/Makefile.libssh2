@@ -26,8 +26,8 @@ $(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME): $(LIBSSH2ARCHIVE)
 			--prefix='$(THIRDPARTYOUTDIR)' \
 			--with-openssl \
 			--with-libssl-prefix=$(THIRDPARTYLIBDIR) \
-			CFLAGS='-m32' \
-			LDFLAGS='-m32' \
+			CFLAGS='-m32 -L$(THIRDPARTYLIBDIR)' \
+			LDFLAGS='-m32 -L$(THIRDPARTYLIBDIR)' \
 		&& make \
 		&& make install
 
