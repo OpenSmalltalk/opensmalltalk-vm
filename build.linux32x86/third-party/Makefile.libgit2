@@ -42,7 +42,7 @@ $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME): $(LIBGIT2ARCHIVE)
 			-DLIBSSH2_LIBRARIES=$(THIRDPARTYLIBDIR)/libssh2.so.1.0.1 \
 			-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-rpath,$$ORIGIN \
 			-DCMAKE_SKIP_BUILD_RPATH=FALSE \
-			-DCMAKE_INSTALL_RPATH="$$ORIGIN" \
+			-DCMAKE_INSTALL_RPATH="." \
 		&& sed -i.bak 's/x86_64-linux-gnu/i386-linux-gnu/g' CMakeCache.txt \
 		&& make \
 		&& make install
