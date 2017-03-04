@@ -403,6 +403,7 @@ Spur64BitMemoryManager >> exponentOfSmallFloat: oop [
 
 { #category : #'interpreter access' }
 Spur64BitMemoryManager >> fetchClassTagOf: oop [
+	<api>
 	| tagBits |
 	^(tagBits := oop bitAnd: self tagMask) ~= 0
 		ifTrue: [tagBits]

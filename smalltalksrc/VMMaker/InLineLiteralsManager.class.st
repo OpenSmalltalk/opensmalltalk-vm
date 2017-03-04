@@ -90,7 +90,7 @@ InLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 ]
 
 { #category : #'compile abstract instructions' }
-InLineLiteralsManager >> resetForBlockCompile [
+InLineLiteralsManager >> resetForRecompile [
 ]
 
 { #category : #initialization }
@@ -98,7 +98,7 @@ InLineLiteralsManager >> resetLiterals [
 ]
 
 { #category : #'compile abstract instructions' }
-InLineLiteralsManager >> saveForBlockCompile [
+InLineLiteralsManager >> saveForRecompile [
 ]
 
 { #category : #'garbage collection' }

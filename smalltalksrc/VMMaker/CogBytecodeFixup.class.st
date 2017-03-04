@@ -22,6 +22,12 @@ CogBytecodeFixup class >> byteSizeForSimulator: aVMClass [
 	^self instSize * (aVMClass sizeof: #'void *')
 ]
 
+{ #category : #translation }
+CogBytecodeFixup class >> filteredInstVarNames [
+	"Override to eliminate bcpc,"
+	^super filteredInstVarNames copyWithout: 'bcpc'
+]
+
 { #category : #'instance creation' }
 CogBytecodeFixup class >> for: aCogit [
 	^self new
@@ -43,15 +49,14 @@ CogBytecodeFixup class >> initialize [
 CogBytecodeFixup class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a BytecodeFixup struct."
 
-	self allInstVarNames do:
+	self filteredInstVarNames do:
 		[:ivn|
-		ivn ~= 'bcpc' ifTrue:
-			[aBinaryBlock
-				value: ivn
-				value: (ivn = 'targetInstruction'
-						ifTrue: [#'AbstractInstruction *']
-						ifFalse:
-							[#sqInt])]]
+		 aBinaryBlock
+			value: ivn
+			value: (ivn = 'targetInstruction'
+					ifTrue: [#'AbstractInstruction *']
+					ifFalse:
+						[#sqInt])]
 ]
 
 { #category : #translation }
@@ -137,7 +142,9 @@ CogBytecodeFixup >> recordBcpc: theBytecodePC [
 			ifFalse:
 				[bcpc := bcpc isInteger
 							ifTrue: [{bcpc. theBytecodePC}]
-							ifFalse: [bcpc, {theBytecodePC}]]]
+							ifFalse:
+								[(bcpc includes: theBytecodePC) ifTrue: [^self].
+								 bcpc, {theBytecodePC}]]]
 ]
 
 { #category : #accessing }

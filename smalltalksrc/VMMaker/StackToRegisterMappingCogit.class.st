@@ -4,23 +4,32 @@ StackToRegisterMappingCogit is an optimizing code generator that eliminates a lo
 See methods in the class-side documentation protocol for more detail.
 
 Instance Variables
-	callerSavedRegMask:							<Integer>
-	ceEnter0ArgsPIC:								<Integer>
-	ceEnter1ArgsPIC:								<Integer>
-	ceEnter2ArgsPIC:								<Integer>
-	ceEnterCogCodePopReceiverArg0Regs:		<Integer>
-	ceEnterCogCodePopReceiverArg1Arg0Regs:	<Integer>
+	compilationPass:								<Integer>
+	currentCallCleanUpSize:						<Integer>
+	ceCall0ArgsPIC:									<Integer>
+	ceCall1ArgsPIC:									<Integer>
+	ceCall2ArgsPIC:									<Integer>
+	ceCallCogCodePopReceiverArg0Regs:			<Integer>
+	ceCallCogCodePopReceiverArg1Arg0Regs:		<Integer>
+	deadCode										<Boolean>
 	debugBytecodePointers:						<Set of Integer>
 	debugFixupBreaks:								<Set of Integer>
 	debugStackPointers:							<CArrayAccessor of (Integer|nil)>
+	hasNativeFrame								<Boolean>
 	methodAbortTrampolines:						<CArrayAccessor of Integer>
 	methodOrBlockNumTemps:						<Integer>
+	numPushNilsFunction:							<Symbol>
 	optStatus:										<Integer>
 	picAbortTrampolines:							<CArrayAccessor of Integer>
 	picMissTrampolines:							<CArrayAccessor of Integer>
-	realCEEnterCogCodePopReceiverArg0Regs:		<Integer>
-	realCEEnterCogCodePopReceiverArg1Arg0Regs:	<Integer>
+	pushNilSizeFunction:							<Symbol>
+	realCECallCogCodePopReceiverArg0Regs:		<Integer>
+	realCECallCogCodePopReceiverArg1Arg0Regs:	<Integer>
 	regArgsHaveBeenPushed:						<Boolean>
+	simNativeSpillBase:								<Integer>
+	simNativeStack:								<CArrayAccessor of CogSimStackNativeEntry>
+	simNativeStackPtr:								<Integer>
+	simNativeStackSize:							<Integer>
 	simSelf:											<CogSimStackEntry>
 	simSpillBase:									<Integer>
 	simStack:										<CArrayAccessor of CogSimStackEntry>
@@ -28,23 +37,32 @@ Instance Variables
 	traceSimStack:									<Integer>
 	useTwoPaths									<Boolean>
 
-callerSavedRegMask
-	- the bitmask of the ABI's caller-saved registers
+compilationPass
+	- counter indicating whether on the first pass through bytecodes in a V3-style embedded block or not.  The V3 closure implementation uses pushNil to initialize temporary variables and this makes an initial pushNil ambiguous.  With the V3 bytecode set, the JIT must compile to the end of the block to discover if a pushNil is for initializing a temp or to produce an operand.
 
-ceEnter0ArgsPIC ceEnter1ArgsPIC ceEnter2ArgsPIC
+currentCallCleanUpSize
+	- the number of bytes to remove from the stack in a Lowcode call.
+
+ceCall0ArgsPIC ceCall1ArgsPIC ceCall2ArgsPIC
 	- the trampoline for entering an N-arg PIC
 
-ceEnterCogCodePopReceiverArg0Regs ceEnterCogCodePopReceiverArg1Arg0Regs
-	- the trampoline for entering a method with N register args
+ceCallCogCodePopReceiverArg0Regs ceCallCogCodePopReceiverArg1Arg0Regs
+	- the trampoline for invokinging a method with N register args
 	
 debugBytecodePointers
 	- a Set of bytecode pcs for setting breakpoints (simulation only)
+
+deadCode
+	- set to true to indicate that the next bytecode (up to the next fixup) is not reachable.  Used to avoid generating dead code.
 
 debugFixupBreaks
 	- a Set of fixup indices for setting breakpoints (simulation only)
 
 debugStackPointers
 	- an Array of stack depths for each bytecode for code verification
+
+hasNativeFrame
+	- set to true when Lowcode creates a native stack frame for Lowcode callouts.
 
 methodAbortTrampolines
 	- a CArrayAccessor of abort trampolines for 0, 1, 2 and N args
@@ -55,17 +73,35 @@ methodOrBlockNumTemps
 optStatus
 	- the variable used to track the status of ReceiverResultReg for avoiding reloading that register with self between adjacent inst var accesses
 
+numPushNilsFunction
+	- the function used to determine the number of push nils at the beginning of a block.  This abstracts away from the specific bytecode set(s).
+
 picAbortTrampolines
 	- a CArrayAccessor of abort trampolines for 0, 1, 2 and N args
 
 picMissTrampolines
 	- a CArrayAccessor of abort trampolines for 0, 1, 2 and N args
 
-realCEEnterCogCodePopReceiverArg0Regs realCEEnterCogCodePopReceiverArg1Arg0Regs
-	- the real trampolines for ebtering machine code with N reg args when in the Debug regime
+pushNilSizeFunction
+	- the function used to determine the number of bytes in the push nils bytecode(s) at the beginning of a block.  This abstracts away from the specific bytecode set(s).
+
+realCECallCogCodePopReceiverArg0Regs realCECallCogCodePopReceiverArg1Arg0Regs
+	- the real trampolines for invoking machine code with N reg args when in the Debug regime
 
 regArgsHaveBeenPushed
 	- whether the register args have been pushed before frame build (e.g. when an interpreter primitive is called)
+
+simNativeSpillBase
+	- the variable tracking how much of the Lowcode simulation stack has been spilled to the real stack
+
+simNativeStack
+	- the Lowcode simulation stack itself
+
+simNativeStackPtr
+	- the pointer to the top of the Lowcode simulation stack
+
+simNativeStackSize
+	- the size of the Lowcode stack so far
 
 simSelf
 	- the simulation stack entry representing self in the current compilation unit
@@ -117,7 +153,7 @@ Class {
 		'simNativeSpillBase',
 		'simNativeStackSize',
 		'hasNativeFrame',
-		'blockPass'
+		'compilationPass'
 	],
 	#classVars : [
 		'NeedsMergeFixupFlag',
@@ -1214,12 +1250,12 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 	inBlock := InVanillaBlock.
 	compiledBlocksCount := 0.
 	[compiledBlocksCount < blockCount] whileTrue:
-		[blockPass := 1.
+		[compilationPass := 1.
 		 blockStart := self blockStartAt: compiledBlocksCount.
 		 (result := self scanBlock: blockStart) < 0 ifTrue: [^result].
 		 initialOpcodeIndex := opcodeIndex.
 		 initialCounterIndex := self maybeCounterIndex."for SistaCogit"
-		 literalsManager saveForBlockCompile.
+		 literalsManager saveForRecompile.
 		 NewspeakVM ifTrue:
 			[initialIndexOfIRC := indexOfIRC].
 		 [self compileBlockEntry: blockStart.
@@ -1235,7 +1271,7 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 		  initialStackPtr = simStackPtr]
 			whileFalse:
 				[self assert: (initialStackPtr > simStackPtr or: [deadCode]).
-				 blockPass := blockPass + 1. "for asserts :-("
+				 compilationPass := compilationPass + 1. "for asserts"
 				 blockStart numInitialNils: blockStart numInitialNils + simStackPtr - initialStackPtr.
 				 blockStart fakeHeader dependent: nil.
 				 self reinitializeFixupsFrom: blockStart startpc + blockStart numInitialNils
@@ -1246,7 +1282,7 @@ StackToRegisterMappingCogit >> compileBlockBodies [
 									[:i| abstractOpcodes at: i put: (CogCompilerClass for: self)]].
 				 opcodeIndex := initialOpcodeIndex.
 				 self maybeSetCounterIndex: initialCounterIndex. "For SistaCogit"
-				 literalsManager resetForBlockCompile.
+				 literalsManager resetForRecompile.
 				 NewspeakVM ifTrue:
 					[indexOfIRC := initialIndexOfIRC]].
 		compiledBlocksCount := compiledBlocksCount + 1].
@@ -12143,19 +12179,26 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 ]
 
 { #category : #'compile abstract instructions' }
-StackToRegisterMappingCogit >> initializeFixupAt: targetPC [
-	"Make sure there's a flagged fixup at the targetPC in fixups.
-	 These are the targets  of backward branches.  A backward branch fixup's simStackPtr
-	 needs to be set when generating the code for the bytecode at the targetPC.
+StackToRegisterMappingCogit >> initializeFixup: fixup [
+	"Initialize a fixup.  These are the targets of backward branches.  A backward branch fixup's
+	 simStackPtr needs to be set when generating the code for the bytecode at the targetPC.
 	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction."
-	<returnTypeC: #'BytecodeFixup *'>
-	| fixup |
 	<var: #fixup type: #'BytecodeFixup *'>
-	fixup := self fixupAt: targetPC.
+	<inline: true>
 	fixup
 		becomeMergeFixup;
-		setIsBackwardBranchFixup.
-	^fixup
+		setIsBackwardBranchFixup
+]
+
+{ #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> initializeFixupAt: targetPC [
+	"Make sure there's a flagged fixup at the targetPC in fixups.
+	 These are the targets of backward branches.  A backward branch fixup's simStackPtr
+	 needs to be set when generating the code for the bytecode at the targetPC.
+	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction."
+	| fixup |
+	fixup := self fixupAt: targetPC.
+	self initializeFixup: fixup
 ]
 
 { #category : #'span functions' }
@@ -12327,7 +12370,7 @@ StackToRegisterMappingCogit >> marshallSendArguments: numArgs [
 { #category : #debugging }
 StackToRegisterMappingCogit >> maybeCompilingFirstPassOfBlockWithInitialPushNil [
 	"For assert checking; or rather for avoiding assert fails when dealing with the hack for block temps in the SqueakV3PlusClosures bytecode set."
-	^inBlock = InVanillaBlock and: [methodOrBlockNumTemps > methodOrBlockNumArgs and: [blockPass = 1]]
+	^inBlock = InVanillaBlock and: [methodOrBlockNumTemps > methodOrBlockNumArgs and: [compilationPass = 1]]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -13044,11 +13087,13 @@ StackToRegisterMappingCogit >> ssAllocateRequiredRegMask: requiredRegsMask upThr
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssFlushAll [
+	<inline: true>
 	self ssFlushTo: simStackPtr nativeFlushTo: simNativeStackPtr
 ]
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssFlushTo: index [
+	<inline: true>
 	self ssFlushTo: index nativeFlushTo: simNativeStackPtr.
 ]
 
@@ -13521,15 +13566,19 @@ StackToRegisterMappingCogit >> traceFixup: fixup merge: isMerge [
 { #category : #'simulation only' }
 StackToRegisterMappingCogit >> traceMerge: fixup [
 	<cmacro: '(ign) 0'>
-	| index |
+	| index original |
 	(compilationTrace anyMask: 16) ifTrue:
 		[index := (fixups object identityIndexOf: fixup) - 1.
-		 coInterpreter transcript
-			ensureCr;
-			print: index; nextPut: $/; print: index + initialPC;
-			nextPut: $:; space.
-			fixup printStateOn: coInterpreter transcript.
-			coInterpreter transcript cr; flush]
+		 (fixup isBackwardBranchFixup and: [compilationPass > 1 and: [(original := fixup simStackPtr) < 0]]) ifTrue:
+			[fixup simStackPtr: simStackPtr].
+
+		 [coInterpreter transcript
+				ensureCr;
+				print: index; nextPut: $/; print: index + initialPC;
+				nextPut: $:; space.
+				fixup printStateOn: coInterpreter transcript.
+				coInterpreter transcript cr; flush]
+			ensure: [original ifNotNil: [fixup simStackPtr: original]]]
 ]
 
 { #category : #'simulation only' }

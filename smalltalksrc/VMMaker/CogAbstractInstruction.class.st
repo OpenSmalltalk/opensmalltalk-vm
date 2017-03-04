@@ -1379,6 +1379,13 @@ CogAbstractInstruction >> printStateOn: aStream [
 	aStream nextPut: $)
 ]
 
+{ #category : #initialization }
+CogAbstractInstruction >> reinitialize [
+	annotation := nil.
+	dependent := nil.
+	operands at: 0 put: (operands at: 1 put: (operands at: 2 put: 0))
+]
+
 { #category : #'inline cacheing' }
 CogAbstractInstruction >> relocateCallBeforeReturnPC: retpc by: delta [
 	^self subclassResponsibility
