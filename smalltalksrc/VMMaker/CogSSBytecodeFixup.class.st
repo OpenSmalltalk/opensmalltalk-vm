@@ -23,6 +23,15 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #translation }
+CogSSBytecodeFixup class >> filteredInstVarNames [
+	"Override to add ifdef LowcodeVM around the native stack info.
+	 self typedef"
+	^super filteredInstVarNames
+		copyReplaceAll: #('simNativeStackPtr' 'simNativeStackSize')
+		with: #('#if LowcodeVM' 'simNativeStackPtr' 'simNativeStackSize' '#endif')
+]
+
 { #category : #'class initialization' }
 CogSSBytecodeFixup class >> initialize [
 	"Initialize the fixup flags.  In this class we have two states.  A fixup is a bytecode
@@ -138,11 +147,9 @@ CogSSBytecodeFixup >> printStateOn: aStream [
 { #category : #accessing }
 CogSSBytecodeFixup >> reinitialize [
 	<inline: true>
-	targetInstruction := 0.
-	simStackPtr := 0.
-	LowcodeVM ifTrue: [
-		simNativeStackPtr := 0.
-	]
+	targetInstruction := simStackPtr := 0.
+	LowcodeVM ifTrue:
+		[simNativeStackPtr := simNativeStackSize := 0]
 ]
 
 { #category : #accessing }

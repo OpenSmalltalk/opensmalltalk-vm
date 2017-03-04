@@ -220,7 +220,8 @@ OutOfLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 ]
 
 { #category : #initialization }
-OutOfLineLiteralsManager >> resetForBlockCompile [
+OutOfLineLiteralsManager >> resetForRecompile [
+	<inline: true>
 	firstOpcodeIndex := savedFirstOpcodeIndex.
 	nextLiteralIndex := savedNextLiteralIndex.
 	lastDumpedLiteralIndex := savedLastDumpedLiteralIndex
@@ -234,7 +235,9 @@ OutOfLineLiteralsManager >> resetLiterals [
 ]
 
 { #category : #initialization }
-OutOfLineLiteralsManager >> saveForBlockCompile [
+OutOfLineLiteralsManager >> saveForRecompile [
+
+	<inline: true>
 	savedFirstOpcodeIndex := firstOpcodeIndex.
 	savedNextLiteralIndex := nextLiteralIndex.
 	savedLastDumpedLiteralIndex := lastDumpedLiteralIndex
