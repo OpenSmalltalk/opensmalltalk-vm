@@ -306,7 +306,6 @@ Class {
 		'NSCSelectorIndex',
 		'NSCTargetIndex',
 		'NSSendIsPCAnnotated',
-		'NeedsFixupFlag',
 		'NumObjRefsInRuntime',
 		'NumOopsPerNSC',
 		'NumSpecialSelectors',
