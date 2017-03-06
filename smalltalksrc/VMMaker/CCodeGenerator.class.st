@@ -3534,6 +3534,8 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#value:value:						#generateValue:on:indent:
 	#value:value:value:					#generateValue:on:indent:
 	#value:value:value:value:			#generateValue:on:indent:
+	#value:value:value:value:value:			#generateValue:on:indent:
+	#value:value:value:value:value:value:	#generateValue:on:indent:
 
 	#deny:								#generateDeny:on:indent:
 

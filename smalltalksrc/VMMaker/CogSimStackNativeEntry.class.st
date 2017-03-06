@@ -309,6 +309,13 @@ CogSimStackNativeEntry >> nativeRegisterOrNone [
 		 ifFalse: [NoReg]
 ]
 
+{ #category : #accessing }
+CogSimStackNativeEntry >> nativeRegisterSecondOrNone [
+	^type = SSRegisterPair
+		 ifTrue: [registerSecond]
+		 ifFalse: [NoReg]
+]
+
 { #category : #'compile abstract instructions' }
 CogSimStackNativeEntry >> nativeStackPopToReg: reg [
 	self assert: spilled.
