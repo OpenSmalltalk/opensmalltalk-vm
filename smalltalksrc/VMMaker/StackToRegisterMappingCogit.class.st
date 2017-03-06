@@ -933,6 +933,16 @@ StackToRegisterMappingCogit >> allocateEqualsEqualsRegistersArgNeedsReg: argNeed
 ]
 
 { #category : #'simulation stack' }
+StackToRegisterMappingCogit >> allocateFloatRegNotConflictingWith: regMask [
+	| reg |
+	"if there's a free register, use it"
+	reg := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: regMask).
+	reg = NoReg ifTrue: "No free register, choose one that does not conflict with regMask"
+		[reg := self freeAnyFloatRegNotConflictingWith: regMask].
+	^ reg
+]
+
+{ #category : #'simulation stack' }
 StackToRegisterMappingCogit >> allocateRegForStackEntryAt: index [
 	"If the stack entry is already in a register, answers it,
 	else allocate a new register for it"
@@ -1029,6 +1039,1192 @@ StackToRegisterMappingCogit >> allocateRegNotConflictingWith: regMask [
 	reg = ReceiverResultReg ifTrue: "If we've allocated RcvrResultReg, it's not live anymore"
 		[self voidReceiverResultRegContainsSelf].
 	^ reg
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeFloat2: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+
+	| rNext rTop topRegistersMask |
+	topRegistersMask := 0.
+	rTop := rNext := NoReg.
+
+	self ssNativeTop  nativeFloatRegisterOrNone ~= NoReg ifTrue: 
+		[ rTop := self ssNativeTop nativeFloatRegisterOrNone].
+	(self ssNativeValue: 1)  nativeFloatRegisterOrNone ~= NoReg ifTrue: 
+		[ topRegistersMask := self registerMaskFor: (rNext := (self ssNativeValue: 1) nativeFloatRegisterOrNone)].
+	
+	rTop = NoReg ifTrue:
+		[ rTop := self allocateFloatRegNotConflictingWith: topRegistersMask ].
+	
+	rNext = NoReg ifTrue:
+		[ rNext := self allocateFloatRegNotConflictingWith: (self registerMaskFor: rTop) ].
+	self deny: (rTop = NoReg or: [rNext = NoReg]).
+
+	^ aBlock value: rTop value: rNext
+
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeFloat2ResultInteger: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+
+	| frNext frTop topRegistersMask rResult |
+	topRegistersMask := 0.
+	frTop := frNext := NoReg.
+	rResult := NoReg.
+
+	self ssNativeTop  nativeFloatRegisterOrNone ~= NoReg ifTrue: 
+		[ frTop := self ssNativeTop nativeFloatRegisterOrNone].
+	(self ssNativeValue: 1)  nativeFloatRegisterOrNone ~= NoReg ifTrue: 
+		[ topRegistersMask := self registerMaskFor: (frNext := (self ssNativeValue: 1) nativeFloatRegisterOrNone)].
+	
+	frTop = NoReg ifTrue:
+		[ frTop := self allocateFloatRegNotConflictingWith: topRegistersMask ].
+	
+	frNext = NoReg ifTrue:
+		[ frNext := self allocateFloatRegNotConflictingWith: (self registerMaskFor: frTop) ].
+	
+	"Result"
+	rResult := self allocateRegNotConflictingWith: 0.
+
+	self deny: (frTop = NoReg or: [frNext = NoReg or: [rResult]]).
+
+	^ aBlock value: frTop value: frNext value: rResult
+
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeFloat: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+
+	| frTop topRegistersMask |
+	topRegistersMask := 0.
+	frTop := NoReg.
+
+	self ssNativeTop nativeFloatRegisterOrNone ~= NoReg ifTrue: 
+		[ frTop := self ssNativeTop nativeFloatRegisterOrNone].
+	
+	frTop = NoReg ifTrue:
+		[ frTop := self allocateFloatRegNotConflictingWith: topRegistersMask ].
+	self deny: (frTop = NoReg).
+
+	^ aBlock value: frTop
+
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeFloatInteger: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	"Used by storeFloat32ToMemory and storeFloat64ToMemory"
+	| frTop rTop |
+	frTop := rTop := NoReg.
+
+	"Integer registers"
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue: 
+		[ rTop := self ssNativeTop nativeRegisterOrNone].
+
+	rTop = NoReg ifTrue:
+		[ rTop := self allocateRegNotConflictingWith: 0 ].
+
+	"Float registers"
+	(self ssNativeValue: 1) nativeFloatRegisterOrNone ~= NoReg ifTrue: 
+		[ frTop := (self ssNativeValue: 1) nativeFloatRegisterOrNone].
+	
+	frTop = NoReg ifTrue:
+		[ frTop := self allocateFloatRegNotConflictingWith: 0 ].
+	
+	self deny: (frTop = NoReg or: [rTop = NoReg]).
+
+	^ aBlock value: frTop value: rTop
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeFloatResultFloat: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+
+	| frTop frResult |
+	frTop := NoReg.
+	frResult := NoReg.
+
+	"Float argument"
+	self ssNativeTop nativeFloatRegisterOrNone ~= NoReg ifTrue: 
+		[ frTop := self ssNativeTop nativeFloatRegisterOrNone].
+	
+	frTop = NoReg ifTrue:
+		[ frTop := self allocateFloatRegNotConflictingWith: self emptyRegisterMask ].
+	
+	"Float result".
+	frResult := self allocateFloatRegNotConflictingWith: (self registerMaskFor: frTop).
+	self deny: (frTop = NoReg or: [frResult = NoReg]).
+
+	^ aBlock value: frTop value: frResult
+
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeFloatResultInteger2: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+
+	| frTop rResult rResult2 |
+	frTop := NoReg.
+	rResult2 := rResult := NoReg.
+
+	"Float argument"
+	self ssNativeTop nativeFloatRegisterOrNone ~= NoReg ifTrue: 
+		[ frTop := self ssNativeTop nativeFloatRegisterOrNone].
+	
+	frTop = NoReg ifTrue:
+		[ frTop := self allocateFloatRegNotConflictingWith: self emptyRegisterMask ].
+	
+	"Integer result".
+	rResult := self allocateRegNotConflictingWith: (self emptyRegisterMask).
+	rResult2 := self allocateRegNotConflictingWith: (self registerMaskFor: rResult).
+	
+	self deny: (frTop = NoReg or: [rResult = NoReg or: [rResult2 = NoReg]]).
+
+	^ aBlock value: frTop value: rResult value: rResult2
+
+
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeFloatResultInteger: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+
+	| frTop rResult |
+	frTop := NoReg.
+	rResult := NoReg.
+
+	"Float argument"
+	self ssNativeTop nativeFloatRegisterOrNone ~= NoReg ifTrue: 
+		[ frTop := self ssNativeTop nativeFloatRegisterOrNone].
+	
+	frTop = NoReg ifTrue:
+		[ frTop := self allocateFloatRegNotConflictingWith: self emptyRegisterMask ].
+	
+	"Integer result".
+	rResult := self allocateRegNotConflictingWith: (self emptyRegisterMask).
+	
+	self deny: (frTop = NoReg or: [rResult = NoReg]).
+
+	^ aBlock value: frTop value: rResult
+
+
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeFloatResultOop: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+
+	| frTop rResult |
+	frTop := NoReg.
+	rResult := NoReg.
+
+	"Float argument"
+	self ssNativeTop  nativeFloatRegisterOrNone ~= NoReg ifTrue: 
+		[ frTop := self ssNativeTop nativeFloatRegisterOrNone].
+	
+	frTop = NoReg ifTrue:
+		[ frTop := self allocateFloatRegNotConflictingWith: self emptyRegisterMask ].
+	
+	"Integer result".
+	rResult := self allocateRegNotConflictingWith: (self emptyRegisterMask).
+	
+	self deny: (frTop = NoReg or: [rResult = NoReg]).
+
+	^ aBlock value: frTop value: rResult
+
+
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeInteger2: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rNext rTop topRegistersMask |
+	topRegistersMask := 0.
+	rTop := rNext := NoReg.
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+		self ssNativeTop nativeRegisterSecondOrNone ~= NoReg ifTrue:
+			[ rNext := self ssNativeTop nativeRegisterSecondOrNone]
+	].
+
+	rNext = NoReg ifTrue: [
+		(self ssNativeValue: 1)  nativeRegisterOrNone ~= NoReg ifTrue: 
+			[ topRegistersMask := self registerMaskFor: (rNext := (self ssNativeValue: 1) nativeRegisterOrNone)].
+	].
+
+	rTop = NoReg ifTrue:
+		[ rTop := self allocateRegNotConflictingWith: topRegistersMask ].
+	
+	rNext = NoReg ifTrue:
+		[ rNext := self allocateRegNotConflictingWith: (self registerMaskFor: rTop) ].
+
+	self deny: (rTop = NoReg or: [rNext = NoReg]).
+	^ aBlock value: rTop value: rNext
+	
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeInteger2ResultFloat: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rNext rTop topRegistersMask frResult |
+	topRegistersMask := 0.
+	rTop := rNext := NoReg.
+	frResult := NoReg
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+		self ssNativeTop nativeRegisterSecondOrNone ~= NoReg ifTrue:
+			[ rNext := self ssNativeTop nativeRegisterSecondOrNone]
+	].
+
+	rNext = NoReg ifTrue: [
+		(self ssNativeValue: 1)  nativeRegisterOrNone ~= NoReg ifTrue: 
+			[ topRegistersMask := self registerMaskFor: (rNext := (self ssNativeValue: 1) nativeRegisterOrNone)].
+	].
+
+	rTop = NoReg ifTrue:
+		[ rTop := self allocateRegNotConflictingWith: topRegistersMask ].
+	
+	rNext = NoReg ifTrue:
+		[ rNext := self allocateRegNotConflictingWith: (self registerMaskFor: rTop) ].
+
+	"Results"
+	frResult := self allocateFloatRegNotConflictingWith: self emptyRegisterMask.
+	
+	self deny: (rTop = NoReg or: [rNext = NoReg or: [frResult = NoReg]]).
+	
+	^ aBlock value: rTop value: rNext value: frResult
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeInteger2ResultInteger2: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rNext rTop topRegistersMask rResult rResult2 |
+	topRegistersMask := 0.
+	rTop := rNext := NoReg.
+	rResult := rResult2 := NoReg
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+		self ssNativeTop nativeRegisterSecondOrNone ~= NoReg ifTrue:
+			[ rNext := self ssNativeTop nativeRegisterSecondOrNone]
+	].
+
+	rNext = NoReg ifTrue: [
+		(self ssNativeValue: 1)  nativeRegisterOrNone ~= NoReg ifTrue: 
+			[ topRegistersMask := self registerMaskFor: (rNext := (self ssNativeValue: 1) nativeRegisterOrNone)].
+	].
+
+	rTop = NoReg ifTrue:
+		[ rTop := self allocateRegNotConflictingWith: topRegistersMask ].
+	
+	rNext = NoReg ifTrue:
+		[ rNext := self allocateRegNotConflictingWith: (self registerMaskFor: rTop) ].
+
+	self deny: (rTop = NoReg or: [rNext = NoReg]).
+
+	"Results"
+	rResult := self allocateFloatRegNotConflictingWith: (self registerMaskFor: rTop and: rNext).
+	rResult2 := self allocateFloatRegNotConflictingWith: (self registerMaskFor: rTop and: rNext and: rResult).
+	self deny: (rResult = NoReg or: [rResult2 = NoReg]).
+	
+	^ aBlock value: rTop value: rNext value: rResult value: rResult2
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeInteger2ResultInteger: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rNext rTop topRegistersMask rResult |
+	topRegistersMask := 0.
+	rTop := rNext := NoReg.
+	rResult := NoReg
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+		self ssNativeTop nativeRegisterSecondOrNone ~= NoReg ifTrue:
+			[ rNext := self ssNativeTop nativeRegisterSecondOrNone]
+	].
+
+	rNext = NoReg ifTrue: [
+		(self ssNativeValue: 1)  nativeRegisterOrNone ~= NoReg ifTrue: 
+			[ topRegistersMask := self registerMaskFor: (rNext := (self ssNativeValue: 1) nativeRegisterOrNone)].
+	].
+
+	rTop = NoReg ifTrue:
+		[ rTop := self allocateRegNotConflictingWith: topRegistersMask ].
+	
+	rNext = NoReg ifTrue:
+		[ rNext := self allocateRegNotConflictingWith: (self registerMaskFor: rTop) ].
+
+	self deny: (rTop = NoReg or: [rNext = NoReg]).
+
+	"Results"
+	rResult := self allocateFloatRegNotConflictingWith: (self registerMaskFor: rTop and: rNext).
+	self deny: (rResult = NoReg).
+	
+	^ aBlock value: rTop value: rNext value: rResult
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeInteger2ResultOop: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rNext rTop topRegistersMask rResult |
+	topRegistersMask := 0.
+	rTop := rNext := NoReg.
+	rResult := NoReg
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+		self ssNativeTop nativeRegisterSecondOrNone ~= NoReg ifTrue:
+			[ rNext := self ssNativeTop nativeRegisterSecondOrNone]
+	].
+
+	rNext = NoReg ifTrue: [
+		(self ssNativeValue: 1)  nativeRegisterOrNone ~= NoReg ifTrue: 
+			[ topRegistersMask := self registerMaskFor: (rNext := (self ssNativeValue: 1) nativeRegisterOrNone)].
+	].
+
+	rTop = NoReg ifTrue:
+		[ rTop := self allocateRegNotConflictingWith: topRegistersMask ].
+	
+	rNext = NoReg ifTrue:
+		[ rNext := self allocateRegNotConflictingWith: (self registerMaskFor: rTop) ].
+
+	self deny: (rTop = NoReg or: [rNext = NoReg]).
+
+	"Results"
+	rResult := self allocateFloatRegNotConflictingWith: (self registerMaskFor: rTop and: rNext).
+	self deny: (rResult = NoReg).
+	
+	^ aBlock value: rTop value: rNext value: rResult
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeInteger3: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rNext rNextNext nativeValueIndex rTop registerMask |
+	rTop := rNext := rNextNext := NoReg.
+	nativeValueIndex := 1.
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+		self ssNativeTop nativeRegisterSecondOrNone ~= NoReg ifTrue:
+			[ rNext := self ssNativeTop nativeRegisterSecondOrNone]
+	].
+
+	rNext = NoReg ifTrue: [
+		(self ssNativeValue: nativeValueIndex)  nativeRegisterOrNone ~= NoReg ifTrue:  [
+			rNext := (self ssNativeValue: nativeValueIndex) nativeRegisterOrNone.
+			(self ssNativeValue: nativeValueIndex) nativeRegisterSecondOrNone ~= NoReg ifTrue: [
+				rNextNext := (self ssNativeValue: nativeValueIndex) nativeRegisterSecondOrNone.
+			].
+			nativeValueIndex := nativeValueIndex + 1
+		].
+	].
+
+	rNextNext = NoReg ifTrue: [
+		(self ssNativeValue: nativeValueIndex)  nativeRegisterOrNone ~= NoReg ifTrue:  [
+			rNextNext := (self ssNativeValue: nativeValueIndex) nativeRegisterOrNone.
+		].
+	].
+
+	rTop = NoReg ifTrue: [
+		registerMask := 0.
+		rNext ~= NoReg ifTrue: [ registerMask := self registerMaskFor: rNext].
+		rNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNext)].
+		rTop := self allocateRegNotConflictingWith: registerMask
+	].
+	
+	rNext = NoReg ifTrue: [
+		registerMask := self registerMaskFor: rTop.
+		rNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNext)].
+		rNext := self allocateRegNotConflictingWith: registerMask
+	].
+
+	rNextNext = NoReg ifTrue: [
+		registerMask := self registerMaskFor: rTop and: rNext.
+		rNextNext := self allocateRegNotConflictingWith: registerMask
+	].
+
+	self deny: (rTop = NoReg or: [rNext = NoReg or: [rNextNext = NoReg]]).
+	^ aBlock value: rTop value: rNext value: rNextNext
+	
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeInteger3ResultInteger: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rNext rNextNext rResult nativeValueIndex rTop registerMask |
+	rTop := rNext := rNextNext := NoReg.
+	nativeValueIndex := 1.
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+		self ssNativeTop nativeRegisterSecondOrNone ~= NoReg ifTrue:
+			[ rNext := self ssNativeTop nativeRegisterSecondOrNone]
+	].
+
+	rNext = NoReg ifTrue: [
+		(self ssNativeValue: nativeValueIndex)  nativeRegisterOrNone ~= NoReg ifTrue:  [
+			rNext := (self ssNativeValue: nativeValueIndex) nativeRegisterOrNone.
+			(self ssNativeValue: nativeValueIndex) nativeRegisterSecondOrNone ~= NoReg ifTrue: [
+				rNextNext := (self ssNativeValue: nativeValueIndex) nativeRegisterSecondOrNone.
+			].
+			nativeValueIndex := nativeValueIndex + 1
+		].
+	].
+
+	rNextNext = NoReg ifTrue: [
+		(self ssNativeValue: nativeValueIndex)  nativeRegisterOrNone ~= NoReg ifTrue:  [
+			rNextNext := (self ssNativeValue: nativeValueIndex) nativeRegisterOrNone.
+		].
+	].
+
+	rTop = NoReg ifTrue: [
+		registerMask := 0.
+		rNext ~= NoReg ifTrue: [ registerMask := self registerMaskFor: rNext].
+		rNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNext)].
+		rTop := self allocateRegNotConflictingWith: registerMask
+	].
+	
+	rNext = NoReg ifTrue: [
+		registerMask := self registerMaskFor: rTop.
+		rNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNext)].
+		rNext := self allocateRegNotConflictingWith: registerMask
+	].
+
+	rNextNext = NoReg ifTrue: [
+		registerMask := self registerMaskFor: rTop and: rNext.
+		rNextNext := self allocateRegNotConflictingWith: registerMask
+	].
+
+	self deny: (rTop = NoReg or: [rNext = NoReg or: [rNextNext = NoReg]]).
+	
+	"Allocate the result"
+	rResult := self allocateRegNotConflictingWith: (self registerMaskFor: rTop and: rNext and: rNextNext).
+	self deny: (rResult = NoReg).
+	
+	^ aBlock value: rTop value: rNext value: rNextNext value: rResult
+
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeInteger4: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rNext rNextNext rNextNextNext nativeValueIndex rTop registerMask |
+	rTop := rNext := rNextNext := rNextNextNext := NoReg.
+	nativeValueIndex := 1.
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+		self ssNativeTop nativeRegisterSecondOrNone ~= NoReg ifTrue:
+			[ rNext := self ssNativeTop nativeRegisterSecondOrNone]
+	].
+
+	rNext = NoReg ifTrue: [
+		(self ssNativeValue: nativeValueIndex)  nativeRegisterOrNone ~= NoReg ifTrue:  [
+			rNext := (self ssNativeValue: nativeValueIndex) nativeRegisterOrNone.
+			(self ssNativeValue: nativeValueIndex) nativeRegisterSecondOrNone ~= NoReg ifTrue: [
+				rNextNext := (self ssNativeValue: nativeValueIndex) nativeRegisterOrNone.
+			].
+			nativeValueIndex := nativeValueIndex + 1
+		].
+	].
+
+	rNextNext = NoReg ifTrue: [
+		(self ssNativeValue: nativeValueIndex)  nativeRegisterOrNone ~= NoReg ifTrue:  [
+			rNextNext := (self ssNativeValue: nativeValueIndex) nativeRegisterOrNone.
+			(self ssNativeValue: nativeValueIndex) nativeRegisterSecondOrNone ~= NoReg ifTrue: [
+				rNextNextNext := (self ssNativeValue: nativeValueIndex) nativeRegisterSecondOrNone.
+			].
+			nativeValueIndex := nativeValueIndex + 1
+		].
+	].
+
+	rNextNextNext = NoReg ifTrue: [
+		(self ssNativeValue: nativeValueIndex)  nativeRegisterOrNone ~= NoReg ifTrue:  [
+			rNextNextNext := (self ssNativeValue: nativeValueIndex) nativeRegisterOrNone.
+			nativeValueIndex := nativeValueIndex + 1
+		].
+	].
+
+	rTop = NoReg ifTrue: [
+		registerMask := 0.
+		rNext ~= NoReg ifTrue: [ registerMask := self registerMaskFor: rNext].
+		rNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNext)].
+		rNextNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNextNext)].
+		rTop := self allocateRegNotConflictingWith: registerMask
+	].
+	
+	rNext = NoReg ifTrue: [
+		registerMask := self registerMaskFor: rTop.
+		rNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNext)].
+		rNextNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNextNext)].
+		rNext := self allocateRegNotConflictingWith: registerMask
+	].
+
+	rNextNext = NoReg ifTrue: [
+		registerMask := self registerMaskFor: rTop and: rNext.
+		rNextNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNextNext)].
+		rNextNext := self allocateRegNotConflictingWith: registerMask
+	].
+
+	rNextNextNext = NoReg ifTrue: [
+		registerMask := self registerMaskFor: rTop and: rNext and: rNextNext.
+		rNextNextNext := self allocateRegNotConflictingWith: registerMask
+	].
+
+	self deny: (rTop = NoReg or: [rNext = NoReg or: [rNextNext = NoReg or: [rNextNextNext = NoReg]]]).
+	^ aBlock value: rTop value: rNext value: rNextNext value: rNextNextNext
+	
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeInteger4ResultInteger2: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rNext rNextNext rNextNextNext nativeValueIndex rTop registerMask rResult rResult2 |
+	rTop := rNext := rNextNext := rNextNextNext := NoReg.
+	rResult := rResult2 := NoReg.
+	nativeValueIndex := 1.
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+		self ssNativeTop nativeRegisterSecondOrNone ~= NoReg ifTrue:
+			[ rNext := self ssNativeTop nativeRegisterSecondOrNone]
+	].
+
+	rNext = NoReg ifTrue: [
+		(self ssNativeValue: nativeValueIndex)  nativeRegisterOrNone ~= NoReg ifTrue:  [
+			rNext := (self ssNativeValue: nativeValueIndex) nativeRegisterOrNone.
+			(self ssNativeValue: nativeValueIndex) nativeRegisterSecondOrNone ~= NoReg ifTrue: [
+				rNextNext := (self ssNativeValue: nativeValueIndex) nativeRegisterOrNone.
+			].
+			nativeValueIndex := nativeValueIndex + 1
+		].
+	].
+
+	rNextNext = NoReg ifTrue: [
+		(self ssNativeValue: nativeValueIndex)  nativeRegisterOrNone ~= NoReg ifTrue:  [
+			rNextNext := (self ssNativeValue: nativeValueIndex) nativeRegisterOrNone.
+			(self ssNativeValue: nativeValueIndex) nativeRegisterSecondOrNone ~= NoReg ifTrue: [
+				rNextNextNext := (self ssNativeValue: nativeValueIndex) nativeRegisterSecondOrNone.
+			].
+			nativeValueIndex := nativeValueIndex + 1
+		].
+	].
+
+	rNextNextNext = NoReg ifTrue: [
+		(self ssNativeValue: nativeValueIndex)  nativeRegisterOrNone ~= NoReg ifTrue:  [
+			rNextNextNext := (self ssNativeValue: nativeValueIndex) nativeRegisterOrNone.
+			nativeValueIndex := nativeValueIndex + 1
+		].
+	].
+
+	rTop = NoReg ifTrue: [
+		registerMask := 0.
+		rNext ~= NoReg ifTrue: [ registerMask := self registerMaskFor: rNext].
+		rNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNext)].
+		rNextNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNextNext)].
+		rTop := self allocateRegNotConflictingWith: registerMask
+	].
+	
+	rNext = NoReg ifTrue: [
+		registerMask := self registerMaskFor: rTop.
+		rNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNext)].
+		rNextNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNextNext)].
+		rNext := self allocateRegNotConflictingWith: registerMask
+	].
+
+	rNextNext = NoReg ifTrue: [
+		registerMask := self registerMaskFor: rTop and: rNext.
+		rNextNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNextNext)].
+		rNextNext := self allocateRegNotConflictingWith: registerMask
+	].
+
+	rNextNextNext = NoReg ifTrue: [
+		registerMask := self registerMaskFor: rTop and: rNext and: rNextNext.
+		rNextNextNext := self allocateRegNotConflictingWith: registerMask
+	].
+
+	self deny: (rTop = NoReg or: [rNext = NoReg or: [rNextNext = NoReg or: [rNextNextNext = NoReg]]]).
+	
+	"Result registers"
+	rResult := self allocateRegNotConflictingWith: (self registerMaskFor: rTop and: rNext and: rNextNext and: rNextNextNext).
+	rResult2 := self allocateRegNotConflictingWith: (self registerMaskFor: rTop and: rNext and: rNextNext and: rNextNextNext and: rResult).
+	
+	^ aBlock value: rTop value: rNext value: rNextNext value: rNextNextNext value: rResult value: rResult2
+
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeInteger4ResultInteger: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rNext rNextNext rNextNextNext nativeValueIndex rTop registerMask rResult |
+	rTop := rNext := rNextNext := rNextNextNext := NoReg.
+	rResult := NoReg.
+	nativeValueIndex := 1.
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+		self ssNativeTop nativeRegisterSecondOrNone ~= NoReg ifTrue:
+			[ rNext := self ssNativeTop nativeRegisterSecondOrNone]
+	].
+
+	rNext = NoReg ifTrue: [
+		(self ssNativeValue: nativeValueIndex)  nativeRegisterOrNone ~= NoReg ifTrue:  [
+			rNext := (self ssNativeValue: nativeValueIndex) nativeRegisterOrNone.
+			(self ssNativeValue: nativeValueIndex) nativeRegisterSecondOrNone ~= NoReg ifTrue: [
+				rNextNext := (self ssNativeValue: nativeValueIndex) nativeRegisterOrNone.
+			].
+			nativeValueIndex := nativeValueIndex + 1
+		].
+	].
+
+	rNextNext = NoReg ifTrue: [
+		(self ssNativeValue: nativeValueIndex)  nativeRegisterOrNone ~= NoReg ifTrue:  [
+			rNextNext := (self ssNativeValue: nativeValueIndex) nativeRegisterOrNone.
+			(self ssNativeValue: nativeValueIndex) nativeRegisterSecondOrNone ~= NoReg ifTrue: [
+				rNextNextNext := (self ssNativeValue: nativeValueIndex) nativeRegisterSecondOrNone.
+			].
+			nativeValueIndex := nativeValueIndex + 1
+		].
+	].
+
+	rNextNextNext = NoReg ifTrue: [
+		(self ssNativeValue: nativeValueIndex)  nativeRegisterOrNone ~= NoReg ifTrue:  [
+			rNextNextNext := (self ssNativeValue: nativeValueIndex) nativeRegisterOrNone.
+			nativeValueIndex := nativeValueIndex + 1
+		].
+	].
+
+	rTop = NoReg ifTrue: [
+		registerMask := 0.
+		rNext ~= NoReg ifTrue: [ registerMask := self registerMaskFor: rNext].
+		rNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNext)].
+		rNextNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNextNext)].
+		rTop := self allocateRegNotConflictingWith: registerMask
+	].
+	
+	rNext = NoReg ifTrue: [
+		registerMask := self registerMaskFor: rTop.
+		rNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNext)].
+		rNextNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNextNext)].
+		rNext := self allocateRegNotConflictingWith: registerMask
+	].
+
+	rNextNext = NoReg ifTrue: [
+		registerMask := self registerMaskFor: rTop and: rNext.
+		rNextNextNext ~= NoReg ifTrue: [ registerMask := registerMask bitOr: (self registerMaskFor: rNextNextNext)].
+		rNextNext := self allocateRegNotConflictingWith: registerMask
+	].
+
+	rNextNextNext = NoReg ifTrue: [
+		registerMask := self registerMaskFor: rTop and: rNext and: rNextNext.
+		rNextNextNext := self allocateRegNotConflictingWith: registerMask
+	].
+
+	self deny: (rTop = NoReg or: [rNext = NoReg or: [rNextNext = NoReg or: [rNextNextNext = NoReg]]]).
+	
+	"Result registers"
+	rResult := self allocateRegNotConflictingWith: (self registerMaskFor: rTop and: rNext and: rNextNext and: rNextNextNext).
+	
+	^ aBlock value: rTop value: rNext value: rNextNext value: rNextNextNext value: rResult
+
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeInteger7ResultInteger: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	"Effective address 64. This instruction should not be generated on 32-bits mode"
+	self abort
+
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeInteger: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rTop |
+	rTop := NoReg.
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+	].
+
+	rTop = NoReg ifTrue:
+		[ rTop := self allocateRegNotConflictingWith: self emptyRegisterMask].
+
+	self deny: (rTop = NoReg).
+	^ aBlock value: rTop
+	
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeIntegerOop2: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rTop rOopTop rOopNext topRegisterMask oopTopRegisterMask |
+	rTop := rOopTop := rOopNext := NoReg.
+	oopTopRegisterMask := topRegisterMask := 0.
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+		oopTopRegisterMask := self registerMaskFor: rTop.
+	].
+
+	self ssTop registerOrNone ~= NoReg ifTrue:  [
+		rOopTop := self ssTop registerOrNone.
+		topRegisterMask := self registerMaskFor: rOopTop.
+	].
+
+	(self ssValue: 1) registerOrNone ~= NoReg ifTrue: [
+		rOopNext := (self ssValue: 1) registerOrNone.
+		topRegisterMask := topRegisterMask bitOr: (self registerMaskFor: rOopNext).
+		oopTopRegisterMask := oopTopRegisterMask bitOr: (self registerMaskFor: rOopNext).
+	].
+
+	rTop = NoReg ifTrue: [
+		rTop := self allocateRegNotConflictingWith: topRegisterMask
+	].
+
+	rOopTop = NoReg ifTrue: [
+		rOopTop := self allocateRegNotConflictingWith: oopTopRegisterMask
+	].
+
+	rOopNext = NoReg ifTrue: [
+		rOopNext := self allocateRegNotConflictingWith: (self registerMaskFor: rTop and: rOopTop)
+	].
+
+	self deny: (rTop = NoReg or: [rOopTop = NoReg or: [rOopNext = NoReg]]).
+	^ aBlock value: rTop value: rOopTop value: rOopNext
+	
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeIntegerOop: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rTop rOopTop topRegisterMask |
+	rTop := rOopTop := NoReg.
+	topRegisterMask := 0.
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+	].
+
+	self ssTop registerOrNone ~= NoReg ifTrue:  [
+		rOopTop := self ssTop registerOrNone.
+		topRegisterMask := self registerMaskFor: rOopTop.
+	].
+
+	rTop = NoReg ifTrue: [
+		rTop := self allocateRegNotConflictingWith: topRegisterMask
+	].
+
+	rOopTop = NoReg ifTrue: [
+		rOopTop := self allocateRegNotConflictingWith: (self registerMaskFor: rTop)
+	].
+
+	self deny: (rTop = NoReg or: [rOopTop = NoReg]).
+	^ aBlock value: rTop value: rOopTop
+
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeIntegerOopResultOop: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rTop rOopTop rOopResult topRegisterMask |
+	rTop := rOopTop:= NoReg.
+	rOopResult := NoReg.
+	topRegisterMask := 0.
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+	].
+
+	self ssTop registerOrNone ~= NoReg ifTrue:  [
+		rOopTop := self ssTop registerOrNone.
+		topRegisterMask := self registerMaskFor: rOopTop.
+	].
+
+	rTop = NoReg ifTrue: [
+		rTop := self allocateRegNotConflictingWith: topRegisterMask
+	].
+
+	rOopTop = NoReg ifTrue: [
+		rOopTop := self allocateRegNotConflictingWith: (self registerMaskFor: rTop)
+	].
+
+	rOopResult := self allocateRegNotConflictingWith: (self registerMaskFor: rTop and: rOopTop).
+
+	self deny: (rTop = NoReg or: [rOopTop = NoReg or: [rOopResult = NoReg]]).
+	
+	^ aBlock value: rTop value: rOopTop value: rOopResult
+
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeIntegerResultFloat: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rTop frResult|
+	rTop := NoReg.
+	frResult := NoReg
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+	].
+
+	rTop = NoReg ifTrue:
+		[ rTop := self allocateRegNotConflictingWith: self emptyRegisterMask].
+	
+	frResult := self allocateFloatRegNotConflictingWith: self emptyRegisterMask.
+
+	self deny: (rTop = NoReg or: [frResult = NoReg]).
+	^ aBlock value: rTop value: frResult
+	
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeIntegerResultInteger2: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rTop rResult rResult2 |
+	rTop := NoReg.
+	rResult := rResult := NoReg
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+	].
+
+	rTop = NoReg ifTrue:
+		[ rTop := self allocateRegNotConflictingWith: self emptyRegisterMask].
+	
+	rResult := self allocateRegNotConflictingWith: (self registerMaskFor: rTop).
+	rResult2 := self allocateRegNotConflictingWith: (self registerMaskFor: rTop and: rResult).
+
+	self deny: (rTop = NoReg or: [rResult = NoReg or: [rResult2 = NoReg]]).
+	^ aBlock value: rTop value: rResult value: rResult2
+	
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeIntegerResultInteger: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rTop rResult|
+	rTop := NoReg.
+	rResult := NoReg
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+	].
+
+	rTop = NoReg ifTrue:
+		[ rTop := self allocateRegNotConflictingWith: self emptyRegisterMask].
+	
+	rResult := self allocateRegNotConflictingWith: (self registerMaskFor: rTop).
+
+	self deny: (rTop = NoReg or: [rResult = NoReg]).
+	^ aBlock value: rTop value: rResult
+	
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeIntegerResultOop: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rTop rResult|
+	rTop := NoReg.
+	rResult := NoReg
+
+	self ssNativeTop nativeRegisterOrNone ~= NoReg ifTrue:  [
+		rTop := self ssNativeTop nativeRegisterOrNone.
+	].
+
+	rTop = NoReg ifTrue:
+		[ rTop := self allocateRegNotConflictingWith: self emptyRegisterMask].
+	
+	rResult := self allocateRegNotConflictingWith: (self registerMaskFor: rTop).
+
+	self deny: (rTop = NoReg or: [rResult = NoReg]).
+	^ aBlock value: rTop value: rResult
+	
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeOop2: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rOopTop rOopNext oopTopRegisterMask |
+	rOopTop := rOopNext := NoReg.
+	oopTopRegisterMask := 0.
+
+	self ssTop registerOrNone ~= NoReg ifTrue:  [
+		rOopTop := self ssTop registerOrNone.
+	].
+
+	(self ssValue: 1) registerOrNone ~= NoReg ifTrue: [
+		rOopNext := (self ssValue: 1) registerOrNone.
+		oopTopRegisterMask := self registerMaskFor: rOopNext.
+	].
+
+	rOopTop = NoReg ifTrue: [
+		rOopTop := self allocateRegNotConflictingWith: oopTopRegisterMask
+	].
+
+	rOopNext = NoReg ifTrue: [
+		rOopNext := self allocateRegNotConflictingWith: (self registerMaskFor: rOopTop)
+	].
+
+	self deny: (rOopTop = NoReg or: [rOopNext = NoReg ]).
+	^ aBlock value: rOopTop value: rOopNext
+	
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeOop2ResultInteger: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rOopTop rOopNext rResult oopTopRegisterMask |
+	rOopTop := rOopNext := NoReg.
+	rResult := NoReg.
+	oopTopRegisterMask := 0.
+
+	self ssTop registerOrNone ~= NoReg ifTrue:  [
+		rOopTop := self ssTop registerOrNone.
+	].
+
+	(self ssValue: 1) registerOrNone ~= NoReg ifTrue: [
+		rOopNext := (self ssValue: 1) registerOrNone.
+		oopTopRegisterMask := self registerMaskFor: rOopNext.
+	].
+
+	rOopTop = NoReg ifTrue: [
+		rOopTop := self allocateRegNotConflictingWith: oopTopRegisterMask
+	].
+
+	rOopNext = NoReg ifTrue: [
+		rOopNext := self allocateRegNotConflictingWith: (self registerMaskFor: rOopTop)
+	].
+
+	rResult := self allocateRegNotConflictingWith: (self registerMaskFor: rOopTop and: rOopNext).
+	
+	self deny: (rOopTop = NoReg or: [rOopNext = NoReg or: [rResult = NoReg]]).
+	^ aBlock value: rOopTop value: rOopNext value: rResult
+	
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeOop: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rOopTop  |
+	rOopTop := NoReg.
+
+	self ssTop registerOrNone ~= NoReg ifTrue:  [
+		rOopTop := self ssTop registerOrNone.
+	].
+
+	rOopTop = NoReg ifTrue: [
+		rOopTop := self allocateRegNotConflictingWith: (self emptyRegisterMask)
+	].
+
+	self deny: (rOopTop = NoReg).
+	^ aBlock value: rOopTop
+	
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeOopResultFloat: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rOopTop  frResult |
+	rOopTop := NoReg.
+	frResult := NoReg.
+
+	self ssTop registerOrNone ~= NoReg ifTrue:  [
+		rOopTop := self ssTop registerOrNone.
+	].
+
+	rOopTop = NoReg ifTrue: [
+		rOopTop := self allocateRegNotConflictingWith: (self emptyRegisterMask)
+	].
+
+	frResult := self allocateFloatRegNotConflictingWith: (self emptyRegisterMask).
+
+	self deny: (rOopTop = NoReg or: [frResult = NoReg]).
+	^ aBlock value: rOopTop value: frResult
+	
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeOopResultInteger2: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rOopTop rResult rResult2 |
+	rOopTop := NoReg.
+	rResult := rResult2 := NoReg.
+
+	self ssTop registerOrNone ~= NoReg ifTrue:  [
+		rOopTop := self ssTop registerOrNone.
+	].
+
+	rOopTop = NoReg ifTrue: [
+		rOopTop := self allocateRegNotConflictingWith: (self emptyRegisterMask)
+	].
+
+	rResult := self allocateRegNotConflictingWith: (self registerMaskFor: rOopTop).
+	rResult2 := self allocateRegNotConflictingWith: (self registerMaskFor: rOopTop and: rResult).
+
+	self deny: (rOopTop = NoReg or: [rResult = NoReg]).
+	^ aBlock value: rOopTop value: rResult value: rResult2
+	
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeOopResultInteger: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rOopTop rResult |
+	rOopTop := NoReg.
+	rResult := NoReg.
+
+	self ssTop registerOrNone ~= NoReg ifTrue:  [
+		rOopTop := self ssTop registerOrNone.
+	].
+
+	rOopTop = NoReg ifTrue: [
+		rOopTop := self allocateRegNotConflictingWith: (self emptyRegisterMask)
+	].
+
+	rResult := self allocateRegNotConflictingWith: (self registerMaskFor: rOopTop).
+
+	self deny: (rOopTop = NoReg or: [rResult = NoReg]).
+	^ aBlock value: rOopTop value: rResult
+	
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeOopResultOop: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+	
+	| rOopTop rResult |
+	rOopTop := NoReg.
+	rResult := NoReg.
+
+	self ssTop registerOrNone ~= NoReg ifTrue:  [
+		rOopTop := self ssTop registerOrNone.
+	].
+
+	rOopTop = NoReg ifTrue: [
+		rOopTop := self allocateRegNotConflictingWith: (self emptyRegisterMask)
+	].
+
+	rResult := self allocateRegNotConflictingWith: (self registerMaskFor: rOopTop).
+
+	self deny: (rOopTop = NoReg or: [rResult = NoReg]).
+	^ aBlock value: rOopTop value: rResult
+	
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeResultFloat: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+
+	| frResult |
+	frResult := NoReg.
+
+	"Float result".
+	frResult := self allocateFloatRegNotConflictingWith: (self emptyRegisterMask).
+	self deny: (frResult = NoReg).
+
+	^ aBlock value: frResult
+
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeResultInteger2: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+
+	| rResult rResult2 |
+	rResult := rResult2 := NoReg.
+
+	"Float result".
+	rResult := self allocateRegNotConflictingWith: (self emptyRegisterMask).
+	rResult2 := self allocateRegNotConflictingWith: (self registerMaskFor: rResult).
+	self deny: (rResult = NoReg or: [rResult2 = NoReg]).
+
+	^ aBlock value: rResult value: rResult2
+
+]
+
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> allocateRegistersForLowcodeResultInteger: aBlock [
+	<option: #LowcodeVM>
+	<inline: true>
+
+	| rResult |
+	rResult := NoReg.
+
+	"Float result".
+	rResult := self allocateRegNotConflictingWith: (self emptyRegisterMask).
+	self deny: (rResult = NoReg).
+
+	^ aBlock value: rResult
+
 ]
 
 { #category : #'bytecode generator support' }
@@ -1720,6 +2916,30 @@ StackToRegisterMappingCogit >> fixupAtIndex: index [
 ]
 
 { #category : #'simulation stack' }
+StackToRegisterMappingCogit >> freeAnyFloatRegNotConflictingWith: regMask [
+	"Spill the closest register on stack not conflicting with regMask. 
+	Assertion Failure if regMask has already all the registers"
+	<var: #desc type: #'CogSimStackEntry *'>
+	| reg index |
+	self assert: needsFrame.
+	reg := NoReg.
+	index := simSpillBase max: 0.
+	LowcodeVM ifTrue: [
+		index := simNativeSpillBase max: 0.
+		[reg = NoReg and: [index < simNativeStackPtr]] whileTrue: 
+			[ | desc |
+			 desc := self simNativeStackAt: index.
+			(desc type = SSRegisterSingleFloat or: [desc type = SSRegisterDoubleFloat]) ifTrue:
+				[(regMask anyMask: (self registerMaskFor: desc register)) ifFalse: 
+					[reg := desc register]].
+			 index := index + 1].
+	].
+	self deny: reg = NoReg.
+	self ssAllocateRequiredFloatReg: reg.
+	^reg
+]
+
+{ #category : #'simulation stack' }
 StackToRegisterMappingCogit >> freeAnyRegNotConflictingWith: regMask [
 	"Spill the closest register on stack not conflicting with regMask. 
 	Assertion Failure if regMask has already all the registers"
@@ -2274,19 +3494,15 @@ StackToRegisterMappingCogit >> genLoadTemp: objectIndex in: destReg [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeAdd32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -2302,26 +3518,18 @@ StackToRegisterMappingCogit >> genLowcodeAdd32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeAdd64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh first second firstLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger4: [:secondLowValue :secondHighValue :firstLowValue :firstHighValue |
+			secondLow := secondLowValue.
+			secondHigh := secondHighValue.
+			firstLow := firstLowValue.
+			firstHigh := firstHighValue.
+		].
 
-		(secondLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(secondLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(secondHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: secondLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (secondHigh := Arg1Reg)].
-
-		(firstLow := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: secondLow)) bitOr: (self registerMaskFor: secondHigh))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (firstLow := SendNumArgsReg)].
-
-		(firstHigh := backEnd availableRegisterOrNoneFor: (((self liveRegisters bitOr: (self registerMaskFor: secondLow)) bitOr: (self registerMaskFor: secondHigh)) bitOr: (self registerMaskFor: firstLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (firstHigh := ClassReg)].
-		(((secondLow = ReceiverResultReg or: [secondHigh = ReceiverResultReg]) or: [firstLow = ReceiverResultReg]) or: [firstHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: secondLow secondReg: secondHigh.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: firstLow secondReg: firstHigh.
@@ -2332,17 +3540,11 @@ StackToRegisterMappingCogit >> genLowcodeAdd64 [
 		self ssPushNativeRegister: firstLow secondRegister: firstHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+			second := secondValue.
+			first := firstValue.
+		].
 
-		(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(second := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (first := Arg1Reg)].
-		(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: second.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: first.
@@ -2359,16 +3561,14 @@ StackToRegisterMappingCogit >> genLowcodeAdd64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeAlloca32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| size |
+	self allocateRegistersForLowcodeInteger: [:sizeValue |
+		size := sizeValue.
+	].
 
-	(size := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(size := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	size = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: size.
 	self ssNativePop: 1.
 
@@ -2386,20 +3586,16 @@ StackToRegisterMappingCogit >> genLowcodeAlloca32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeAlloca64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| sizeHigh size sizeLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2: [:sizeLowValue :sizeHighValue |
+			sizeLow := sizeLowValue.
+			sizeHigh := sizeHighValue.
+		].
 
-		(sizeLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(sizeLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(sizeHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: sizeLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (sizeHigh := Arg1Reg)].
-		(sizeLow = ReceiverResultReg or: [sizeHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: sizeLow secondReg: sizeHigh.
 		self ssNativePop: 1.
 
@@ -2408,14 +3604,10 @@ StackToRegisterMappingCogit >> genLowcodeAlloca64 [
 		self ssPushNativeRegister: sizeLow.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger: [:sizeValue |
+			size := sizeValue.
+		].
 
-		(size := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(size := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-		size = ReceiverResultReg ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: size.
 		self ssNativePop: 1.
 
@@ -2431,19 +3623,15 @@ StackToRegisterMappingCogit >> genLowcodeAlloca64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeAnd32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -2459,26 +3647,18 @@ StackToRegisterMappingCogit >> genLowcodeAnd32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeAnd64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh first second firstLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger4: [:secondLowValue :secondHighValue :firstLowValue :firstHighValue |
+			secondLow := secondLowValue.
+			secondHigh := secondHighValue.
+			firstLow := firstLowValue.
+			firstHigh := firstHighValue.
+		].
 
-		(secondLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(secondLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(secondHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: secondLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (secondHigh := Arg1Reg)].
-
-		(firstLow := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: secondLow)) bitOr: (self registerMaskFor: secondHigh))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (firstLow := SendNumArgsReg)].
-
-		(firstHigh := backEnd availableRegisterOrNoneFor: (((self liveRegisters bitOr: (self registerMaskFor: secondLow)) bitOr: (self registerMaskFor: secondHigh)) bitOr: (self registerMaskFor: firstLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (firstHigh := ClassReg)].
-		(((secondLow = ReceiverResultReg or: [secondHigh = ReceiverResultReg]) or: [firstLow = ReceiverResultReg]) or: [firstHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: secondLow secondReg: secondHigh.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: firstLow secondReg: firstHigh.
@@ -2489,17 +3669,11 @@ StackToRegisterMappingCogit >> genLowcodeAnd64 [
 		self ssPushNativeRegister: firstLow secondRegister: firstHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+			second := secondValue.
+			first := firstValue.
+		].
 
-		(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(second := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (first := Arg1Reg)].
-		(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: second.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: first.
@@ -2516,19 +3690,15 @@ StackToRegisterMappingCogit >> genLowcodeAnd64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeArithmeticRightShift32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value shiftAmount |
+	self allocateRegistersForLowcodeInteger2: [:shiftAmountValue :valueValue |
+		shiftAmount := shiftAmountValue.
+		value := valueValue.
+	].
 
-	(shiftAmount := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(shiftAmount := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: shiftAmount))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(shiftAmount = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: shiftAmount.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: value.
@@ -2544,22 +3714,16 @@ StackToRegisterMappingCogit >> genLowcodeArithmeticRightShift32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeArithmeticRightShift64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| value result shiftAmount shiftAmountHigh resultLow valueLow resultHigh shiftAmountLow valueHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| value result shiftAmountHigh shiftAmount resultLow valueLow resultHigh shiftAmountLow valueHigh |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:shiftAmountValue :valueValue :resultValue |
+		shiftAmount := shiftAmountValue.
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(shiftAmount := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(shiftAmount := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: shiftAmount))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-
-	(result := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: shiftAmount)) bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (result := SendNumArgsReg)].
-	((shiftAmount = ReceiverResultReg or: [value = ReceiverResultReg]) or: [result = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: shiftAmount.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: value.
@@ -2574,7 +3738,9 @@ StackToRegisterMappingCogit >> genLowcodeArithmeticRightShift64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeBeginCall [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| alignment |
 	alignment := extA.
 
@@ -2624,19 +3790,15 @@ StackToRegisterMappingCogit >> genLowcodeBinaryInlinePrimitive: prim [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeBoolean32ToOop [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value inst cont object trueJump |
+	self allocateRegistersForLowcodeIntegerResultOop: [:valueValue :objectValue |
+		value := valueValue.
+		object := objectValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(object := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (object := Arg1Reg)].
-	(value = ReceiverResultReg or: [object = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -2659,23 +3821,17 @@ StackToRegisterMappingCogit >> genLowcodeBoolean32ToOop [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeBoolean64ToOop [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value inst trueJump2 cont valueLow object trueJump valueHigh |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2ResultOop: [:valueLowValue :valueHighValue :objectValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+			object := objectValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-
-		(object := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: valueLow)) bitOr: (self registerMaskFor: valueHigh))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (object := SendNumArgsReg)].
-		((valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) or: [object = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: valueLow secondReg: valueHigh.
 		self ssNativePop: 1.
 
@@ -2692,17 +3848,11 @@ StackToRegisterMappingCogit >> genLowcodeBoolean64ToOop [
 		self ssPushRegister: valueLow.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeIntegerResultOop: [:valueValue :objectValue |
+			value := valueValue.
+			object := objectValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(object := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (object := Arg1Reg)].
-		(value = ReceiverResultReg or: [object = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -2726,19 +3876,15 @@ StackToRegisterMappingCogit >> genLowcodeBoolean64ToOop [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeByteSizeOf [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object value |
+	self allocateRegistersForLowcodeOopResultInteger: [:objectValue :valueValue |
+		object := objectValue.
+		value := valueValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(object = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -2752,7 +3898,9 @@ StackToRegisterMappingCogit >> genLowcodeByteSizeOf [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeCallArgumentFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssNativeTop nativeStackPopToReg: DPFPReg0.
 	self ssNativePop: 1.
@@ -2767,7 +3915,9 @@ StackToRegisterMappingCogit >> genLowcodeCallArgumentFloat32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeCallArgumentFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssNativeTop nativeStackPopToReg: DPFPReg0.
 	self ssNativePop: 1.
@@ -2782,7 +3932,9 @@ StackToRegisterMappingCogit >> genLowcodeCallArgumentFloat64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeCallArgumentInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssNativeTop nativeStackPopToReg: TempReg.
 	self ssNativePop: 1.
@@ -2796,7 +3948,9 @@ StackToRegisterMappingCogit >> genLowcodeCallArgumentInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeCallArgumentInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	BytesPerWord = 4 ifTrue: [
 	self ssNativeTop nativeStackPopToReg: TempReg secondReg: ReceiverResultReg.
@@ -2818,7 +3972,9 @@ StackToRegisterMappingCogit >> genLowcodeCallArgumentInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeCallArgumentPointer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssNativeTop nativeStackPopToReg: TempReg.
 	self ssNativePop: 1.
@@ -2832,7 +3988,9 @@ StackToRegisterMappingCogit >> genLowcodeCallArgumentPointer [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeCallArgumentSpace [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	"Allocate space"
 	self SubCq: extA R: SPReg.
@@ -2846,7 +4004,9 @@ StackToRegisterMappingCogit >> genLowcodeCallArgumentSpace [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeCallArgumentStructure [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	"Fetch the pointer"
 	self ssNativeTop nativeStackPopToReg: TempReg.
@@ -2865,7 +4025,9 @@ StackToRegisterMappingCogit >> genLowcodeCallArgumentStructure [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeCallInstruction [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| function |
 	function := extA.
 
@@ -2879,7 +4041,9 @@ StackToRegisterMappingCogit >> genLowcodeCallInstruction [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeCallPhysical [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| registerID |
 	registerID := extA.
 
@@ -2893,7 +4057,9 @@ StackToRegisterMappingCogit >> genLowcodeCallPhysical [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeCheckSessionIdentifier [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| expectedSession |
 	expectedSession := extA.
 
@@ -2907,25 +4073,17 @@ StackToRegisterMappingCogit >> genLowcodeCheckSessionIdentifier [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeCompareAndSwap32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| newValue check oldValue value |
+	self allocateRegistersForLowcodeInteger3ResultInteger: [:newValueValue :oldValueValue :checkValue :valueValue |
+		newValue := newValueValue.
+		oldValue := oldValueValue.
+		check := checkValue.
+		value := valueValue.
+	].
 
-	(newValue := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(newValue := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(oldValue := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: newValue))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (oldValue := Arg1Reg)].
-
-	(check := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: newValue)) bitOr: (self registerMaskFor: oldValue))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (check := SendNumArgsReg)].
-
-	(value := backEnd availableRegisterOrNoneFor: (((self liveRegisters bitOr: (self registerMaskFor: newValue)) bitOr: (self registerMaskFor: oldValue)) bitOr: (self registerMaskFor: check))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := ClassReg)].
-	(((newValue = ReceiverResultReg or: [oldValue = ReceiverResultReg]) or: [check = ReceiverResultReg]) or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: newValue.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: oldValue.
@@ -2942,19 +4100,15 @@ StackToRegisterMappingCogit >> genLowcodeCompareAndSwap32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeDiv32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -2970,22 +4124,16 @@ StackToRegisterMappingCogit >> genLowcodeDiv32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeDiv64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh result resultLow resultHigh first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh result resultLow resultHigh first second firstLow |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:secondValue :firstValue :resultValue |
+		second := secondValue.
+		first := firstValue.
+		result := resultValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-
-	(result := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: second)) bitOr: (self registerMaskFor: first))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (result := SendNumArgsReg)].
-	((second = ReceiverResultReg or: [first = ReceiverResultReg]) or: [result = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -3000,14 +4148,15 @@ StackToRegisterMappingCogit >> genLowcodeDiv64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeDuplicateFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value dup2 |
+	self allocateRegistersForLowcodeFloatResultFloat: [:valueValue :dup2Value |
+		value := valueValue.
+		dup2 := dup2Value.
+	].
 
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
-
-	(dup2 := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (dup2 := DPFPReg1)].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -3022,14 +4171,15 @@ StackToRegisterMappingCogit >> genLowcodeDuplicateFloat32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeDuplicateFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value dup2 |
+	self allocateRegistersForLowcodeFloatResultFloat: [:valueValue :dup2Value |
+		value := valueValue.
+		dup2 := dup2Value.
+	].
 
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
-
-	(dup2 := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (dup2 := DPFPReg1)].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -3044,19 +4194,15 @@ StackToRegisterMappingCogit >> genLowcodeDuplicateFloat64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeDuplicateInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value dup2 |
+	self allocateRegistersForLowcodeIntegerResultInteger: [:valueValue :dup2Value |
+		value := valueValue.
+		dup2 := dup2Value.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(dup2 := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (dup2 := Arg1Reg)].
-	(value = ReceiverResultReg or: [dup2 = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -3071,26 +4217,18 @@ StackToRegisterMappingCogit >> genLowcodeDuplicateInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeDuplicateInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value dup2Low dup2 valueLow dup2High valueHigh |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2ResultInteger2: [:valueLowValue :valueHighValue :dup2LowValue :dup2HighValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+			dup2Low := dup2LowValue.
+			dup2High := dup2HighValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-
-		(dup2Low := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: valueLow)) bitOr: (self registerMaskFor: valueHigh))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (dup2Low := SendNumArgsReg)].
-
-		(dup2High := backEnd availableRegisterOrNoneFor: (((self liveRegisters bitOr: (self registerMaskFor: valueLow)) bitOr: (self registerMaskFor: valueHigh)) bitOr: (self registerMaskFor: dup2Low))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (dup2High := ClassReg)].
-		(((valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) or: [dup2Low = ReceiverResultReg]) or: [dup2High = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: valueLow secondReg: valueHigh.
 		self ssNativePop: 1.
 
@@ -3100,17 +4238,11 @@ StackToRegisterMappingCogit >> genLowcodeDuplicateInt64 [
 		self ssPushNativeRegister: dup2Low secondRegister: dup2High.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeIntegerResultInteger: [:valueValue :dup2Value |
+			value := valueValue.
+			dup2 := dup2Value.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(dup2 := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (dup2 := Arg1Reg)].
-		(value = ReceiverResultReg or: [dup2 = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -3126,19 +4258,15 @@ StackToRegisterMappingCogit >> genLowcodeDuplicateInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeDuplicatePointer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| dup2 pointerValue |
+	self allocateRegistersForLowcodeIntegerResultInteger: [:pointerValueValue :dup2Value |
+		pointerValue := pointerValueValue.
+		dup2 := dup2Value.
+	].
 
-	(pointerValue := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointerValue := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(dup2 := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointerValue))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (dup2 := Arg1Reg)].
-	(pointerValue = ReceiverResultReg or: [dup2 = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointerValue.
 	self ssNativePop: 1.
 
@@ -3153,25 +4281,17 @@ StackToRegisterMappingCogit >> genLowcodeDuplicatePointer [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeEffectiveAddress32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| offset base index scale |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| index base offset scale |
+	self allocateRegistersForLowcodeInteger4: [:offsetValue :scaleValue :indexValue :baseValue |
+		offset := offsetValue.
+		scale := scaleValue.
+		index := indexValue.
+		base := baseValue.
+	].
 
-	(offset := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(offset := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(scale := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: offset))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (scale := Arg1Reg)].
-
-	(index := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: offset)) bitOr: (self registerMaskFor: scale))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (index := SendNumArgsReg)].
-
-	(base := backEnd availableRegisterOrNoneFor: (((self liveRegisters bitOr: (self registerMaskFor: offset)) bitOr: (self registerMaskFor: scale)) bitOr: (self registerMaskFor: index))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (base := ClassReg)].
-	(((offset = ReceiverResultReg or: [scale = ReceiverResultReg]) or: [index = ReceiverResultReg]) or: [base = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: offset.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: scale.
@@ -3193,28 +4313,18 @@ StackToRegisterMappingCogit >> genLowcodeEffectiveAddress32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeEffectiveAddress64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| base index indexLow indexHigh scaleHigh offsetLow scaleLow offset offsetHigh result scale |
+	self allocateRegistersForLowcodeInteger4ResultInteger: [:offsetValue :scaleValue :indexValue :baseValue :resultValue |
+		offset := offsetValue.
+		scale := scaleValue.
+		index := indexValue.
+		base := baseValue.
+		result := resultValue.
+	].
 
-	(offset := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(offset := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(scale := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: offset))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (scale := Arg1Reg)].
-
-	(index := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: offset)) bitOr: (self registerMaskFor: scale))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (index := SendNumArgsReg)].
-
-	(base := backEnd availableRegisterOrNoneFor: (((self liveRegisters bitOr: (self registerMaskFor: offset)) bitOr: (self registerMaskFor: scale)) bitOr: (self registerMaskFor: index))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (base := ClassReg)].
-
-	(result := backEnd availableRegisterOrNoneFor: ((((self liveRegisters bitOr: (self registerMaskFor: offset)) bitOr: (self registerMaskFor: scale)) bitOr: (self registerMaskFor: index)) bitOr: (self registerMaskFor: base))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (result := ReceiverResultReg)].
-	((((offset = ReceiverResultReg or: [scale = ReceiverResultReg]) or: [index = ReceiverResultReg]) or: [base = ReceiverResultReg]) or: [result = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: offset.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: scale.
@@ -3233,7 +4343,9 @@ StackToRegisterMappingCogit >> genLowcodeEffectiveAddress64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeEndCall [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self endHighLevelCallWithCleanup.
 
@@ -3244,7 +4356,9 @@ StackToRegisterMappingCogit >> genLowcodeEndCall [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeEndCallNoCleanup [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self endHighLevelCallWithoutCleanup.
 
@@ -3255,16 +4369,14 @@ StackToRegisterMappingCogit >> genLowcodeEndCallNoCleanup [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFirstFieldPointer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object |
+	self allocateRegistersForLowcodeOop: [:objectValue |
+		object := objectValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	object = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -3277,16 +4389,14 @@ StackToRegisterMappingCogit >> genLowcodeFirstFieldPointer [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFirstIndexableFieldPointer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object |
+	self allocateRegistersForLowcodeOop: [:objectValue |
+		object := objectValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	object = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -3299,14 +4409,15 @@ StackToRegisterMappingCogit >> genLowcodeFirstIndexableFieldPointer [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32Add [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeFloat2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -3322,14 +4433,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat32Add [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32Div [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeFloat2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -3345,22 +4457,16 @@ StackToRegisterMappingCogit >> genLowcodeFloat32Div [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32Equal [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value contJump falseJump first second |
+	self allocateRegistersForLowcodeFloat2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
-
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -3384,22 +4490,16 @@ StackToRegisterMappingCogit >> genLowcodeFloat32Equal [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32Great [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value contJump falseJump first second |
+	self allocateRegistersForLowcodeFloat2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
-
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -3423,22 +4523,16 @@ StackToRegisterMappingCogit >> genLowcodeFloat32Great [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32GreatEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value contJump falseJump first second |
+	self allocateRegistersForLowcodeFloat2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
-
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -3462,22 +4556,16 @@ StackToRegisterMappingCogit >> genLowcodeFloat32GreatEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32Less [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value contJump falseJump first second |
+	self allocateRegistersForLowcodeFloat2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
-
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -3501,22 +4589,16 @@ StackToRegisterMappingCogit >> genLowcodeFloat32Less [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32LessEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value contJump falseJump first second |
+	self allocateRegistersForLowcodeFloat2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
-
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -3540,14 +4622,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat32LessEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32Mul [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeFloat2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -3563,14 +4646,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat32Mul [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32Neg [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value result |
+	self allocateRegistersForLowcodeFloatResultFloat: [:valueValue :resultValue |
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
-
-	(result := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (result := DPFPReg1)].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -3585,22 +4669,16 @@ StackToRegisterMappingCogit >> genLowcodeFloat32Neg [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32NotEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value contJump falseJump first second |
+	self allocateRegistersForLowcodeFloat2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
-
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -3624,11 +4702,14 @@ StackToRegisterMappingCogit >> genLowcodeFloat32NotEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32Sqrt [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeFloat: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -3642,14 +4723,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat32Sqrt [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32Sub [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeFloat2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -3665,11 +4747,14 @@ StackToRegisterMappingCogit >> genLowcodeFloat32Sub [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32ToFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| singleFloatValue |
+	self allocateRegistersForLowcodeFloat: [:singleFloatValueValue |
+		singleFloatValue := singleFloatValueValue.
+	].
 
-	(singleFloatValue := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (singleFloatValue := DPFPReg0)].
 	self ssNativeTop nativePopToReg: singleFloatValue.
 	self ssNativePop: 1.
 
@@ -3683,19 +4768,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat32ToFloat64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32ToInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value result |
+	self allocateRegistersForLowcodeFloatResultInteger: [:valueValue :resultValue |
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
-
-	(result := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(result := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	result = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -3709,19 +4790,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat32ToInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32ToInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| resultLow resultHigh value result |
+	self allocateRegistersForLowcodeFloatResultInteger: [:valueValue :resultValue |
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
-
-	(result := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(result := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	result = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -3734,19 +4811,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat32ToInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32ToOop [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| singleFloatValue object |
+	self allocateRegistersForLowcodeFloatResultOop: [:singleFloatValueValue :objectValue |
+		singleFloatValue := singleFloatValueValue.
+		object := objectValue.
+	].
 
-	(singleFloatValue := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (singleFloatValue := DPFPReg0)].
-
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	object = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: singleFloatValue.
 	self ssNativePop: 1.
 
@@ -3760,19 +4833,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat32ToOop [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32ToUInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value result |
+	self allocateRegistersForLowcodeFloatResultInteger: [:valueValue :resultValue |
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
-
-	(result := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(result := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	result = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -3786,19 +4855,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat32ToUInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat32ToUInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| resultLow resultHigh value result |
+	self allocateRegistersForLowcodeFloatResultInteger: [:valueValue :resultValue |
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
-
-	(result := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(result := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	result = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -3811,14 +4876,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat32ToUInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64Add [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeFloat2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -3834,14 +4900,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat64Add [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64Div [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeFloat2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -3857,22 +4924,16 @@ StackToRegisterMappingCogit >> genLowcodeFloat64Div [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64Equal [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value contJump falseJump first second |
+	self allocateRegistersForLowcodeFloat2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
-
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -3896,22 +4957,16 @@ StackToRegisterMappingCogit >> genLowcodeFloat64Equal [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64Great [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value contJump falseJump first second |
+	self allocateRegistersForLowcodeFloat2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
-
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -3935,22 +4990,16 @@ StackToRegisterMappingCogit >> genLowcodeFloat64Great [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64GreatEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value contJump falseJump first second |
+	self allocateRegistersForLowcodeFloat2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
-
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -3974,22 +5023,16 @@ StackToRegisterMappingCogit >> genLowcodeFloat64GreatEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64Less [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value contJump falseJump first second |
+	self allocateRegistersForLowcodeFloat2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
-
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -4013,22 +5056,16 @@ StackToRegisterMappingCogit >> genLowcodeFloat64Less [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64LessEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value contJump falseJump first second |
+	self allocateRegistersForLowcodeFloat2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
-
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -4052,14 +5089,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat64LessEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64Mul [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeFloat2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -4075,14 +5113,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat64Mul [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64Neg [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value result |
+	self allocateRegistersForLowcodeFloatResultFloat: [:valueValue :resultValue |
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
-
-	(result := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (result := DPFPReg1)].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -4097,22 +5136,16 @@ StackToRegisterMappingCogit >> genLowcodeFloat64Neg [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64NotEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value contJump falseJump first second |
+	self allocateRegistersForLowcodeFloat2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
-
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -4136,11 +5169,14 @@ StackToRegisterMappingCogit >> genLowcodeFloat64NotEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64Sqrt [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeFloat: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -4154,14 +5190,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat64Sqrt [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64Sub [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeFloat2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (second := DPFPReg0)].
-
-	(first := backEnd availableFloatRegisterOrNoneFor: (self liveFloatRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (first := DPFPReg1)].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -4177,11 +5214,14 @@ StackToRegisterMappingCogit >> genLowcodeFloat64Sub [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64ToFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| floatValue |
+	self allocateRegistersForLowcodeFloat: [:floatValueValue |
+		floatValue := floatValueValue.
+	].
 
-	(floatValue := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (floatValue := DPFPReg0)].
 	self ssNativeTop nativePopToReg: floatValue.
 	self ssNativePop: 1.
 
@@ -4195,19 +5235,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat64ToFloat32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64ToInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| floatValue int32Result |
+	self allocateRegistersForLowcodeFloatResultInteger: [:floatValueValue :int32ResultValue |
+		floatValue := floatValueValue.
+		int32Result := int32ResultValue.
+	].
 
-	(floatValue := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (floatValue := DPFPReg0)].
-
-	(int32Result := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(int32Result := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	int32Result = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: floatValue.
 	self ssNativePop: 1.
 
@@ -4221,19 +5257,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat64ToInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64ToInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| floatValue int64ResultLow int64Result int64ResultHigh |
+	self allocateRegistersForLowcodeFloatResultInteger: [:floatValueValue :int64ResultValue |
+		floatValue := floatValueValue.
+		int64Result := int64ResultValue.
+	].
 
-	(floatValue := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (floatValue := DPFPReg0)].
-
-	(int64Result := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(int64Result := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	int64Result = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: floatValue.
 	self ssNativePop: 1.
 
@@ -4246,19 +5278,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat64ToInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64ToOop [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| floatValue object |
+	self allocateRegistersForLowcodeFloatResultOop: [:floatValueValue :objectValue |
+		floatValue := floatValueValue.
+		object := objectValue.
+	].
 
-	(floatValue := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (floatValue := DPFPReg0)].
-
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	object = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: floatValue.
 	self ssNativePop: 1.
 
@@ -4272,19 +5300,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat64ToOop [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64ToUInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| floatValue int64Result |
+	self allocateRegistersForLowcodeFloatResultInteger: [:floatValueValue :int64ResultValue |
+		floatValue := floatValueValue.
+		int64Result := int64ResultValue.
+	].
 
-	(floatValue := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (floatValue := DPFPReg0)].
-
-	(int64Result := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(int64Result := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	int64Result = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: floatValue.
 	self ssNativePop: 1.
 
@@ -4298,19 +5322,15 @@ StackToRegisterMappingCogit >> genLowcodeFloat64ToUInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFloat64ToUInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| floatValue int64ResultLow int64Result int64ResultHigh |
+	self allocateRegistersForLowcodeFloatResultInteger: [:floatValueValue :int64ResultValue |
+		floatValue := floatValueValue.
+		int64Result := int64ResultValue.
+	].
 
-	(floatValue := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (floatValue := DPFPReg0)].
-
-	(int64Result := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(int64Result := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	int64Result = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: floatValue.
 	self ssNativePop: 1.
 
@@ -4323,16 +5343,14 @@ StackToRegisterMappingCogit >> genLowcodeFloat64ToUInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeFree [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointer |
+	self allocateRegistersForLowcodeInteger: [:pointerValue |
+		pointer := pointerValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	pointer = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 
@@ -4347,22 +5365,16 @@ StackToRegisterMappingCogit >> genLowcodeFree [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInstantiateIndexable32Oop [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| indexableSize object classOop |
+	self allocateRegistersForLowcodeIntegerOopResultOop: [:indexableSizeValue :classOopValue :objectValue |
+		indexableSize := indexableSizeValue.
+		classOop := classOopValue.
+		object := objectValue.
+	].
 
-	(indexableSize := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(indexableSize := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(classOop := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: indexableSize))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (classOop := Arg1Reg)].
-
-	(object := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: indexableSize)) bitOr: (self registerMaskFor: classOop))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (object := SendNumArgsReg)].
-	((indexableSize = ReceiverResultReg or: [classOop = ReceiverResultReg]) or: [object = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: indexableSize.
 	self ssNativePop: 1.
 	self ssTop popToReg: classOop.
@@ -4378,20 +5390,16 @@ StackToRegisterMappingCogit >> genLowcodeInstantiateIndexable32Oop [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInstantiateIndexableOop [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| indexableSize object classOop |
 	indexableSize := extA.
+	self allocateRegistersForLowcodeOopResultOop: [:classOopValue :objectValue |
+		classOop := classOopValue.
+		object := objectValue.
+	].
 
-	(classOop := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(classOop := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(object := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: classOop))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (object := Arg1Reg)].
-	(classOop = ReceiverResultReg or: [object = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: classOop.
 	self ssPop: 1.
 
@@ -4406,16 +5414,14 @@ StackToRegisterMappingCogit >> genLowcodeInstantiateIndexableOop [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInstantiateOop [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| classOop |
+	self allocateRegistersForLowcodeOop: [:classOopValue |
+		classOop := classOopValue.
+	].
 
-	(classOop := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(classOop := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	classOop = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: classOop.
 	self ssPop: 1.
 
@@ -4429,19 +5435,15 @@ StackToRegisterMappingCogit >> genLowcodeInstantiateOop [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt32Equal [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second falseJump contJump first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -4465,19 +5467,15 @@ StackToRegisterMappingCogit >> genLowcodeInt32Equal [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt32Great [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second falseJump contJump first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -4501,19 +5499,15 @@ StackToRegisterMappingCogit >> genLowcodeInt32Great [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt32GreatEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second falseJump contJump first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -4537,19 +5531,15 @@ StackToRegisterMappingCogit >> genLowcodeInt32GreatEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt32Less [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second falseJump contJump first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -4573,19 +5563,15 @@ StackToRegisterMappingCogit >> genLowcodeInt32Less [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt32LessEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second falseJump contJump first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -4609,19 +5595,15 @@ StackToRegisterMappingCogit >> genLowcodeInt32LessEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt32NotEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second falseJump contJump first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -4645,19 +5627,15 @@ StackToRegisterMappingCogit >> genLowcodeInt32NotEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt32ToFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value result |
+	self allocateRegistersForLowcodeIntegerResultFloat: [:valueValue :resultValue |
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(result := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (result := DPFPReg0)].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -4671,19 +5649,15 @@ StackToRegisterMappingCogit >> genLowcodeInt32ToFloat32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt32ToFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value result |
+	self allocateRegistersForLowcodeIntegerResultFloat: [:valueValue :resultValue |
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(result := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (result := DPFPReg0)].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -4697,16 +5671,14 @@ StackToRegisterMappingCogit >> genLowcodeInt32ToFloat64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt32ToOop [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -4720,16 +5692,14 @@ StackToRegisterMappingCogit >> genLowcodeInt32ToOop [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt32ToPointer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -4743,26 +5713,18 @@ StackToRegisterMappingCogit >> genLowcodeInt32ToPointer [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt64Equal [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| falseLabel first contJump falseJump secondLow secondHigh second falseJump2 firstHigh firstLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger4: [:secondLowValue :secondHighValue :firstLowValue :firstHighValue |
+			secondLow := secondLowValue.
+			secondHigh := secondHighValue.
+			firstLow := firstLowValue.
+			firstHigh := firstHighValue.
+		].
 
-		(secondLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(secondLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(secondHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: secondLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (secondHigh := Arg1Reg)].
-
-		(firstLow := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: secondLow)) bitOr: (self registerMaskFor: secondHigh))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (firstLow := SendNumArgsReg)].
-
-		(firstHigh := backEnd availableRegisterOrNoneFor: (((self liveRegisters bitOr: (self registerMaskFor: secondLow)) bitOr: (self registerMaskFor: secondHigh)) bitOr: (self registerMaskFor: firstLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (firstHigh := ClassReg)].
-		(((secondLow = ReceiverResultReg or: [secondHigh = ReceiverResultReg]) or: [firstLow = ReceiverResultReg]) or: [firstHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: secondLow secondReg: secondHigh.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: firstLow secondReg: firstHigh.
@@ -4783,17 +5745,11 @@ StackToRegisterMappingCogit >> genLowcodeInt64Equal [
 		self ssPushNativeRegister: firstLow.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+			second := secondValue.
+			first := firstValue.
+		].
 
-		(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(second := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (first := Arg1Reg)].
-		(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: second.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: first.
@@ -4818,22 +5774,16 @@ StackToRegisterMappingCogit >> genLowcodeInt64Equal [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt64Great [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh value first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh value first second firstLow |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-
-	(value := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: second)) bitOr: (self registerMaskFor: first))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := SendNumArgsReg)].
-	((second = ReceiverResultReg or: [first = ReceiverResultReg]) or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -4848,22 +5798,16 @@ StackToRegisterMappingCogit >> genLowcodeInt64Great [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt64GreatEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh value first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh value first second firstLow |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-
-	(value := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: second)) bitOr: (self registerMaskFor: first))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := SendNumArgsReg)].
-	((second = ReceiverResultReg or: [first = ReceiverResultReg]) or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -4878,22 +5822,16 @@ StackToRegisterMappingCogit >> genLowcodeInt64GreatEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt64Less [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh value first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh value first second firstLow |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-
-	(value := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: second)) bitOr: (self registerMaskFor: first))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := SendNumArgsReg)].
-	((second = ReceiverResultReg or: [first = ReceiverResultReg]) or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -4908,22 +5846,16 @@ StackToRegisterMappingCogit >> genLowcodeInt64Less [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt64LessEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh value first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh value first second firstLow |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-
-	(value := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: second)) bitOr: (self registerMaskFor: first))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := SendNumArgsReg)].
-	((second = ReceiverResultReg or: [first = ReceiverResultReg]) or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -4938,26 +5870,18 @@ StackToRegisterMappingCogit >> genLowcodeInt64LessEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt64NotEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| falseLabel first contJump falseJump secondLow secondHigh second falseJump2 firstHigh firstLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger4: [:secondLowValue :secondHighValue :firstLowValue :firstHighValue |
+			secondLow := secondLowValue.
+			secondHigh := secondHighValue.
+			firstLow := firstLowValue.
+			firstHigh := firstHighValue.
+		].
 
-		(secondLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(secondLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(secondHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: secondLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (secondHigh := Arg1Reg)].
-
-		(firstLow := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: secondLow)) bitOr: (self registerMaskFor: secondHigh))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (firstLow := SendNumArgsReg)].
-
-		(firstHigh := backEnd availableRegisterOrNoneFor: (((self liveRegisters bitOr: (self registerMaskFor: secondLow)) bitOr: (self registerMaskFor: secondHigh)) bitOr: (self registerMaskFor: firstLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (firstHigh := ClassReg)].
-		(((secondLow = ReceiverResultReg or: [secondHigh = ReceiverResultReg]) or: [firstLow = ReceiverResultReg]) or: [firstHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: secondLow secondReg: secondHigh.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: firstLow secondReg: firstHigh.
@@ -4978,17 +5902,11 @@ StackToRegisterMappingCogit >> genLowcodeInt64NotEqual [
 		self ssPushNativeRegister: firstLow.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+			second := secondValue.
+			first := firstValue.
+		].
 
-		(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(second := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (first := Arg1Reg)].
-		(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: second.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: first.
@@ -5013,19 +5931,15 @@ StackToRegisterMappingCogit >> genLowcodeInt64NotEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt64ToFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh value valueLow result |
+	self allocateRegistersForLowcodeIntegerResultFloat: [:valueValue :resultValue |
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(result := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (result := DPFPReg0)].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -5038,19 +5952,15 @@ StackToRegisterMappingCogit >> genLowcodeInt64ToFloat32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt64ToFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh value valueLow result |
+	self allocateRegistersForLowcodeIntegerResultFloat: [:valueValue :resultValue |
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(result := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (result := DPFPReg0)].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -5063,20 +5973,16 @@ StackToRegisterMappingCogit >> genLowcodeInt64ToFloat64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt64ToOop [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh value valueLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2: [:valueLowValue :valueHighValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-		(valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: valueLow secondReg: valueHigh.
 		self ssNativePop: 1.
 
@@ -5084,14 +5990,10 @@ StackToRegisterMappingCogit >> genLowcodeInt64ToOop [
 		objectRepresentation genLcInt64ToOop: valueLow highPart: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger: [:valueValue |
+			value := valueValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-		value = ReceiverResultReg ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -5106,34 +6008,26 @@ StackToRegisterMappingCogit >> genLowcodeInt64ToOop [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeInt64ToPointer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh value valueLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2: [:valueLowValue :valueHighValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-		(valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: valueLow secondReg: valueHigh.
 		self ssNativePop: 1.
 
 		self ssPushNativeRegister: valueLow.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger: [:valueValue |
+			value := valueValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-		value = ReceiverResultReg ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -5147,19 +6041,15 @@ StackToRegisterMappingCogit >> genLowcodeInt64ToPointer [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeIsBytes [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object value |
+	self allocateRegistersForLowcodeOopResultInteger: [:objectValue :valueValue |
+		object := objectValue.
+		value := valueValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(object = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -5172,19 +6062,15 @@ StackToRegisterMappingCogit >> genLowcodeIsBytes [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeIsFloatObject [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object value |
+	self allocateRegistersForLowcodeOopResultInteger: [:objectValue :valueValue |
+		object := objectValue.
+		value := valueValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(object = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -5197,19 +6083,15 @@ StackToRegisterMappingCogit >> genLowcodeIsFloatObject [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeIsIndexable [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object value |
+	self allocateRegistersForLowcodeOopResultInteger: [:objectValue :valueValue |
+		object := objectValue.
+		value := valueValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(object = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -5222,19 +6104,15 @@ StackToRegisterMappingCogit >> genLowcodeIsIndexable [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeIsIntegerObject [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object value |
+	self allocateRegistersForLowcodeOopResultInteger: [:objectValue :valueValue |
+		object := objectValue.
+		value := valueValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(object = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -5247,19 +6125,15 @@ StackToRegisterMappingCogit >> genLowcodeIsIntegerObject [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeIsPointers [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object value |
+	self allocateRegistersForLowcodeOopResultInteger: [:objectValue :valueValue |
+		object := objectValue.
+		value := valueValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(object = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -5272,19 +6146,15 @@ StackToRegisterMappingCogit >> genLowcodeIsPointers [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeIsWords [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object value |
+	self allocateRegistersForLowcodeOopResultInteger: [:objectValue :valueValue |
+		object := objectValue.
+		value := valueValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(object = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -5297,19 +6167,15 @@ StackToRegisterMappingCogit >> genLowcodeIsWords [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeIsWordsOrBytes [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object value |
+	self allocateRegistersForLowcodeOopResultInteger: [:objectValue :valueValue |
+		object := objectValue.
+		value := valueValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(object = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -5322,19 +6188,15 @@ StackToRegisterMappingCogit >> genLowcodeIsWordsOrBytes [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLeftShift32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value shiftAmount |
+	self allocateRegistersForLowcodeInteger2: [:shiftAmountValue :valueValue |
+		shiftAmount := shiftAmountValue.
+		value := valueValue.
+	].
 
-	(shiftAmount := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(shiftAmount := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: shiftAmount))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(shiftAmount = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: shiftAmount.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: value.
@@ -5350,22 +6212,16 @@ StackToRegisterMappingCogit >> genLowcodeLeftShift32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLeftShift64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| value result shiftAmount shiftAmountHigh resultLow valueLow resultHigh shiftAmountLow valueHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| value result shiftAmountHigh shiftAmount resultLow valueLow resultHigh shiftAmountLow valueHigh |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:shiftAmountValue :valueValue :resultValue |
+		shiftAmount := shiftAmountValue.
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(shiftAmount := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(shiftAmount := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: shiftAmount))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-
-	(result := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: shiftAmount)) bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (result := SendNumArgsReg)].
-	((shiftAmount = ReceiverResultReg or: [value = ReceiverResultReg]) or: [result = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: shiftAmount.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: value.
@@ -5380,17 +6236,15 @@ StackToRegisterMappingCogit >> genLowcodeLeftShift64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadArgumentAddress [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset pointer |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| pointer baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultInteger: [:pointerValue |
+		pointer := pointerValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	pointer = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 
 	self loadNativeArgumentAddress: baseOffset to: pointer.
 	self ssPushNativeRegister: pointer.
@@ -5403,12 +6257,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadArgumentAddress [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadArgumentFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset floatValue |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| floatValue baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultFloat: [:floatValueValue |
+		floatValue := floatValueValue.
+	].
 
-	(floatValue := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (floatValue := DPFPReg0)].
 
 	self loadNativeArgumentAddress: baseOffset to: TempReg.
 	self MoveM32: 0 r: TempReg Rs: floatValue.
@@ -5422,12 +6279,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadArgumentFloat32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadArgumentFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset doubleValue |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| doubleValue baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultFloat: [:doubleValueValue |
+		doubleValue := doubleValueValue.
+	].
 
-	(doubleValue := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (doubleValue := DPFPReg0)].
 
 	self loadNativeArgumentAddress: baseOffset to: TempReg.
 	self MoveM64: 0 r: TempReg Rd: doubleValue.
@@ -5441,17 +6301,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadArgumentFloat64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadArgumentInt16 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset value |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 
 	self loadNativeArgumentAddress: baseOffset to: TempReg.
 	self MoveM16: 0 r: TempReg R: value.
@@ -5466,17 +6324,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadArgumentInt16 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadArgumentInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset value |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 
 	self loadNativeArgumentAddress: baseOffset to: TempReg.
 	self MoveM32: 0 r: TempReg R: value.
@@ -5490,21 +6346,17 @@ StackToRegisterMappingCogit >> genLowcodeLoadArgumentInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadArgumentInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset value valueLow valueHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| valueHigh value valueLow baseOffset |
 	baseOffset := extA.
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeResultInteger2: [:valueLowValue :valueHighValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-		(valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 
 		"TODO: Check the endianness"
 		self loadNativeArgumentAddress: baseOffset to: TempReg.
@@ -5513,14 +6365,10 @@ StackToRegisterMappingCogit >> genLowcodeLoadArgumentInt64 [
 		self ssPushNativeRegister: valueLow secondRegister: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeResultInteger: [:valueValue |
+			value := valueValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-		value = ReceiverResultReg ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 
 		self loadNativeArgumentAddress: baseOffset to: TempReg.
 		self MoveM64: 0 r: TempReg R: value.
@@ -5535,17 +6383,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadArgumentInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadArgumentInt8 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset value |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 
 	self loadNativeArgumentAddress: baseOffset to: TempReg.
 	self MoveM8: 0 r: TempReg R: value.
@@ -5560,17 +6406,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadArgumentInt8 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadArgumentPointer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset pointerResult |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| pointerResult baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultInteger: [:pointerResultValue |
+		pointerResult := pointerResultValue.
+	].
 
-	(pointerResult := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointerResult := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	pointerResult = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 
 	self loadNativeArgumentAddress: baseOffset to: TempReg.
 	self MoveMw: 0 r: TempReg R: pointerResult.
@@ -5584,17 +6428,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadArgumentPointer [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadArgumentUInt16 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset value |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 
 	self loadNativeArgumentAddress: baseOffset to: TempReg.
 	self MoveM16: 0 r: TempReg R: value.
@@ -5608,17 +6450,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadArgumentUInt16 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadArgumentUInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset value |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 
 	self loadNativeArgumentAddress: baseOffset to: TempReg.
 	self MoveM32: 0 r: TempReg R: value.
@@ -5632,21 +6472,17 @@ StackToRegisterMappingCogit >> genLowcodeLoadArgumentUInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadArgumentUInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset value valueLow valueHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| valueHigh value valueLow baseOffset |
 	baseOffset := extA.
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeResultInteger2: [:valueLowValue :valueHighValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-		(valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 
 		"TODO: Check the endianness"
 		self loadNativeArgumentAddress: baseOffset to: TempReg.
@@ -5655,14 +6491,10 @@ StackToRegisterMappingCogit >> genLowcodeLoadArgumentUInt64 [
 		self ssPushNativeRegister: valueLow secondRegister: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeResultInteger: [:valueValue |
+			value := valueValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-		value = ReceiverResultReg ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 
 		self loadNativeArgumentAddress: baseOffset to: TempReg.
 		self MoveM64: 0 r: TempReg R: value.
@@ -5677,17 +6509,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadArgumentUInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadArgumentUInt8 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset value |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 
 	self loadNativeArgumentAddress: baseOffset to: TempReg.
 	self MoveM8: 0 r: TempReg R: value.
@@ -5701,19 +6531,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadArgumentUInt8 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadFloat32FromMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointer value |
+	self allocateRegistersForLowcodeIntegerResultFloat: [:pointerValue :valueValue |
+		pointer := pointerValue.
+		value := valueValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
-	pointer = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 
@@ -5727,19 +6553,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadFloat32FromMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadFloat64FromMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointer value |
+	self allocateRegistersForLowcodeIntegerResultFloat: [:pointerValue :valueValue |
+		pointer := pointerValue.
+		value := valueValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
-	pointer = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 
@@ -5753,19 +6575,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadFloat64FromMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadInt16FromMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointer value |
+	self allocateRegistersForLowcodeIntegerResultInteger: [:pointerValue :valueValue |
+		pointer := pointerValue.
+		value := valueValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(pointer = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 
@@ -5780,19 +6598,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadInt16FromMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadInt32FromMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointer value |
+	self allocateRegistersForLowcodeIntegerResultInteger: [:pointerValue :valueValue |
+		pointer := pointerValue.
+		value := valueValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(pointer = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 
@@ -5806,23 +6620,17 @@ StackToRegisterMappingCogit >> genLowcodeLoadInt32FromMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadInt64FromMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh pointer value valueLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeIntegerResultInteger2: [:pointerValue :valueLowValue :valueHighValue |
+			pointer := pointerValue.
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(pointer := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueLow := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueLow := Arg1Reg)].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: pointer)) bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := SendNumArgsReg)].
-		((pointer = ReceiverResultReg or: [valueLow = ReceiverResultReg]) or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: pointer.
 		self ssNativePop: 1.
 
@@ -5832,17 +6640,11 @@ StackToRegisterMappingCogit >> genLowcodeLoadInt64FromMemory [
 		self ssPushNativeRegister: valueLow secondRegister: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeIntegerResultInteger: [:pointerValue :valueValue |
+			pointer := pointerValue.
+			value := valueValue.
+		].
 
-		(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(pointer := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (value := Arg1Reg)].
-		(pointer = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: pointer.
 		self ssNativePop: 1.
 
@@ -5857,19 +6659,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadInt64FromMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadInt8FromMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointer value |
+	self allocateRegistersForLowcodeIntegerResultInteger: [:pointerValue :valueValue |
+		pointer := pointerValue.
+		value := valueValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(pointer = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 
@@ -5884,17 +6682,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadInt8FromMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadLocalAddress [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset pointer |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| pointer baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultInteger: [:pointerValue |
+		pointer := pointerValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	pointer = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 
 	self loadNativeLocalAddress: baseOffset to: pointer.
 	self ssPushNativeRegister: pointer.
@@ -5907,12 +6703,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadLocalAddress [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadLocalFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset floatValue |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| floatValue baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultFloat: [:floatValueValue |
+		floatValue := floatValueValue.
+	].
 
-	(floatValue := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (floatValue := DPFPReg0)].
 
 	self loadNativeLocalAddress: baseOffset to: TempReg.
 	self MoveM32: 0 r: TempReg Rs: floatValue.
@@ -5926,12 +6725,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadLocalFloat32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadLocalFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset doubleValue |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| doubleValue baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultFloat: [:doubleValueValue |
+		doubleValue := doubleValueValue.
+	].
 
-	(doubleValue := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (doubleValue := DPFPReg0)].
 
 	self loadNativeLocalAddress: baseOffset to: TempReg.
 	self MoveM64: 0 r: TempReg Rd: doubleValue.
@@ -5945,17 +6747,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadLocalFloat64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadLocalInt16 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset value |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 
 	self loadNativeLocalAddress: baseOffset to: TempReg.
 	self MoveM16: 0 r: TempReg R: value.
@@ -5970,17 +6770,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadLocalInt16 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadLocalInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset value |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 
 	self loadNativeLocalAddress: baseOffset to: TempReg.
 	self MoveM32: 0 r: TempReg R: value.
@@ -5994,21 +6792,17 @@ StackToRegisterMappingCogit >> genLowcodeLoadLocalInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadLocalInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset value valueLow valueHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| valueHigh value valueLow baseOffset |
 	baseOffset := extA.
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeResultInteger2: [:valueLowValue :valueHighValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-		(valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 
 		"TODO: Check the endianness"
 		self loadNativeLocalAddress: baseOffset to: TempReg.
@@ -6017,14 +6811,10 @@ StackToRegisterMappingCogit >> genLowcodeLoadLocalInt64 [
 		self ssPushNativeRegister: valueLow secondRegister: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeResultInteger: [:valueValue |
+			value := valueValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-		value = ReceiverResultReg ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 
 		self loadNativeLocalAddress: baseOffset to: TempReg.
 		self MoveM64: 0 r: TempReg R: value.
@@ -6039,17 +6829,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadLocalInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadLocalInt8 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset value |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 
 	self loadNativeLocalAddress: baseOffset to: TempReg.
 	self MoveM8: 0 r: TempReg R: value.
@@ -6064,17 +6852,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadLocalInt8 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadLocalPointer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset pointerResult |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| pointerResult baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultInteger: [:pointerResultValue |
+		pointerResult := pointerResultValue.
+	].
 
-	(pointerResult := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointerResult := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	pointerResult = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 
 	self loadNativeLocalAddress: baseOffset to: TempReg.
 	self MoveMw: 0 r: TempReg R: pointerResult.
@@ -6088,17 +6874,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadLocalPointer [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadLocalUInt16 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset value |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 
 	self loadNativeLocalAddress: baseOffset to: TempReg.
 	self MoveM16: 0 r: TempReg R: value.
@@ -6112,17 +6896,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadLocalUInt16 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadLocalUInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset value |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 
 	self loadNativeLocalAddress: baseOffset to: TempReg.
 	self MoveM32: 0 r: TempReg R: value.
@@ -6136,21 +6918,17 @@ StackToRegisterMappingCogit >> genLowcodeLoadLocalUInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadLocalUInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset value valueLow valueHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| valueHigh value valueLow baseOffset |
 	baseOffset := extA.
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeResultInteger2: [:valueLowValue :valueHighValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-		(valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 
 		"TODO: Check the endianness"
 		self loadNativeLocalAddress: baseOffset to: TempReg.
@@ -6159,14 +6937,10 @@ StackToRegisterMappingCogit >> genLowcodeLoadLocalUInt64 [
 		self ssPushNativeRegister: valueLow secondRegister: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeResultInteger: [:valueValue |
+			value := valueValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-		value = ReceiverResultReg ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 
 		self loadNativeLocalAddress: baseOffset to: TempReg.
 		self MoveM64: 0 r: TempReg R: value.
@@ -6181,17 +6955,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadLocalUInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadLocalUInt8 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| baseOffset value |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeResultInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 
 	self loadNativeLocalAddress: baseOffset to: TempReg.
 	self MoveM8: 0 r: TempReg R: value.
@@ -6205,19 +6977,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadLocalUInt8 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadObjectAt [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| fieldIndex object |
+	self allocateRegistersForLowcodeIntegerOop: [:fieldIndexValue :objectValue |
+		fieldIndex := fieldIndexValue.
+		object := objectValue.
+	].
 
-	(fieldIndex := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(fieldIndex := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(object := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: fieldIndex))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (object := Arg1Reg)].
-	(fieldIndex = ReceiverResultReg or: [object = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: fieldIndex.
 	self ssNativePop: 1.
 	self ssTop popToReg: object.
@@ -6232,17 +7000,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadObjectAt [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadObjectField [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| fieldIndex object |
 	fieldIndex := extA.
+	self allocateRegistersForLowcodeOop: [:objectValue |
+		object := objectValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	object = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -6256,19 +7022,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadObjectField [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadPointerFromMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointerResult pointer |
+	self allocateRegistersForLowcodeIntegerResultInteger: [:pointerValue :pointerResultValue |
+		pointer := pointerValue.
+		pointerResult := pointerResultValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(pointerResult := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (pointerResult := Arg1Reg)].
-	(pointer = ReceiverResultReg or: [pointerResult = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 
@@ -6282,19 +7044,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadPointerFromMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadUInt16FromMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointer value |
+	self allocateRegistersForLowcodeIntegerResultInteger: [:pointerValue :valueValue |
+		pointer := pointerValue.
+		value := valueValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(pointer = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 
@@ -6308,19 +7066,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadUInt16FromMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadUInt32FromMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointer value |
+	self allocateRegistersForLowcodeIntegerResultInteger: [:pointerValue :valueValue |
+		pointer := pointerValue.
+		value := valueValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(pointer = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 
@@ -6334,23 +7088,17 @@ StackToRegisterMappingCogit >> genLowcodeLoadUInt32FromMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadUInt64FromMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh pointer value valueLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeIntegerResultInteger2: [:pointerValue :valueLowValue :valueHighValue |
+			pointer := pointerValue.
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(pointer := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueLow := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueLow := Arg1Reg)].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: pointer)) bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := SendNumArgsReg)].
-		((pointer = ReceiverResultReg or: [valueLow = ReceiverResultReg]) or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: pointer.
 		self ssNativePop: 1.
 
@@ -6360,17 +7108,11 @@ StackToRegisterMappingCogit >> genLowcodeLoadUInt64FromMemory [
 		self ssPushNativeRegister: valueLow secondRegister: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeIntegerResultInteger: [:pointerValue :valueValue |
+			pointer := pointerValue.
+			value := valueValue.
+		].
 
-		(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(pointer := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (value := Arg1Reg)].
-		(pointer = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: pointer.
 		self ssNativePop: 1.
 
@@ -6385,19 +7127,15 @@ StackToRegisterMappingCogit >> genLowcodeLoadUInt64FromMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLoadUInt8FromMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointer value |
+	self allocateRegistersForLowcodeIntegerResultInteger: [:pointerValue :valueValue |
+		pointer := pointerValue.
+		value := valueValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(pointer = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 
@@ -6411,8 +7149,10 @@ StackToRegisterMappingCogit >> genLowcodeLoadUInt8FromMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLocalFrameSize [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| size alignedSize |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| alignedSize size |
 	size := extA.
 
 	self assert: needsFrame.
@@ -6443,7 +7183,9 @@ StackToRegisterMappingCogit >> genLowcodeLocalFrameSize [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLockRegisters [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssFlushAll.
 
@@ -6454,7 +7196,9 @@ StackToRegisterMappingCogit >> genLowcodeLockRegisters [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeLockVM [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self abort.
 
@@ -6465,19 +7209,15 @@ StackToRegisterMappingCogit >> genLowcodeLockVM [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMalloc32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointer size |
+	self allocateRegistersForLowcodeIntegerResultInteger: [:sizeValue :pointerValue |
+		size := sizeValue.
+		pointer := pointerValue.
+	].
 
-	(size := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(size := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(pointer := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: size))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (pointer := Arg1Reg)].
-	(size = ReceiverResultReg or: [pointer = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: size.
 	self ssNativePop: 1.
 
@@ -6494,23 +7234,17 @@ StackToRegisterMappingCogit >> genLowcodeMalloc32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMalloc64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| sizeHigh size sizeLow pointer |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2ResultInteger: [:sizeLowValue :sizeHighValue :pointerValue |
+			sizeLow := sizeLowValue.
+			sizeHigh := sizeHighValue.
+			pointer := pointerValue.
+		].
 
-		(sizeLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(sizeLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(sizeHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: sizeLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (sizeHigh := Arg1Reg)].
-
-		(pointer := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: sizeLow)) bitOr: (self registerMaskFor: sizeHigh))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (pointer := SendNumArgsReg)].
-		((sizeLow = ReceiverResultReg or: [sizeHigh = ReceiverResultReg]) or: [pointer = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: sizeLow secondReg: sizeHigh.
 		self ssNativePop: 1.
 
@@ -6521,17 +7255,11 @@ StackToRegisterMappingCogit >> genLowcodeMalloc64 [
 		self ssPushNativeRegister: pointer.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeIntegerResultInteger: [:sizeValue :pointerValue |
+			size := sizeValue.
+			pointer := pointerValue.
+		].
 
-		(size := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(size := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(pointer := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: size))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (pointer := Arg1Reg)].
-		(size = ReceiverResultReg or: [pointer = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: size.
 		self ssNativePop: 1.
 
@@ -6549,22 +7277,16 @@ StackToRegisterMappingCogit >> genLowcodeMalloc64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMemcpy32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| source dest size |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| source size dest |
+	self allocateRegistersForLowcodeInteger3: [:sizeValue :sourceValue :destValue |
+		size := sizeValue.
+		source := sourceValue.
+		dest := destValue.
+	].
 
-	(size := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(size := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(source := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: size))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (source := Arg1Reg)].
-
-	(dest := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: size)) bitOr: (self registerMaskFor: source))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (dest := SendNumArgsReg)].
-	((size = ReceiverResultReg or: [source = ReceiverResultReg]) or: [dest = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: size.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: source.
@@ -6582,22 +7304,16 @@ StackToRegisterMappingCogit >> genLowcodeMemcpy32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMemcpy64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| source sizeLow sizeHigh dest size |
+	self allocateRegistersForLowcodeInteger3: [:sizeValue :sourceValue :destValue |
+		size := sizeValue.
+		source := sourceValue.
+		dest := destValue.
+	].
 
-	(size := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(size := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(source := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: size))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (source := Arg1Reg)].
-
-	(dest := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: size)) bitOr: (self registerMaskFor: source))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (dest := SendNumArgsReg)].
-	((size = ReceiverResultReg or: [source = ReceiverResultReg]) or: [dest = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: size.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: source.
@@ -6615,20 +7331,16 @@ StackToRegisterMappingCogit >> genLowcodeMemcpy64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMemcpyFixed [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| source size dest |
 	size := extA.
+	self allocateRegistersForLowcodeInteger2: [:sourceValue :destValue |
+		source := sourceValue.
+		dest := destValue.
+	].
 
-	(source := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(source := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(dest := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: source))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (dest := Arg1Reg)].
-	(source = ReceiverResultReg or: [dest = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: source.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: dest.
@@ -6650,7 +7362,9 @@ StackToRegisterMappingCogit >> genLowcodeMemcpyFixed [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMoveFloat32ToPhysical [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssNativeTop nativeStackPopToReg: extA.
 	self ssNativePop: 1.
@@ -6664,7 +7378,9 @@ StackToRegisterMappingCogit >> genLowcodeMoveFloat32ToPhysical [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMoveFloat64ToPhysical [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssNativeTop nativeStackPopToReg: extA.
 	self ssNativePop: 1.
@@ -6678,7 +7394,9 @@ StackToRegisterMappingCogit >> genLowcodeMoveFloat64ToPhysical [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMoveInt32ToPhysical [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssNativeTop nativeStackPopToReg: extA.
 	self ssNativePop: 1.
@@ -6692,7 +7410,9 @@ StackToRegisterMappingCogit >> genLowcodeMoveInt32ToPhysical [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMoveInt64ToPhysical [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssNativeTop nativeStackPopToReg: extA.
 	self ssNativePop: 1.
@@ -6706,7 +7426,9 @@ StackToRegisterMappingCogit >> genLowcodeMoveInt64ToPhysical [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMovePointerToPhysical [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssNativeTop nativeStackPopToReg: extA.
 	self ssNativePop: 1.
@@ -6720,19 +7442,15 @@ StackToRegisterMappingCogit >> genLowcodeMovePointerToPhysical [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMul32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -6748,22 +7466,16 @@ StackToRegisterMappingCogit >> genLowcodeMul32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeMul64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh result resultLow resultHigh first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh result resultLow resultHigh first second firstLow |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:secondValue :firstValue :resultValue |
+		second := secondValue.
+		first := firstValue.
+		result := resultValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-
-	(result := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: second)) bitOr: (self registerMaskFor: first))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (result := SendNumArgsReg)].
-	((second = ReceiverResultReg or: [first = ReceiverResultReg]) or: [result = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -6778,16 +7490,14 @@ StackToRegisterMappingCogit >> genLowcodeMul64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeNeg32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -6801,20 +7511,16 @@ StackToRegisterMappingCogit >> genLowcodeNeg32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeNeg64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh value valueLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2: [:valueLowValue :valueHighValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-		(valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: valueLow secondReg: valueHigh.
 		self ssNativePop: 1.
 
@@ -6826,14 +7532,10 @@ StackToRegisterMappingCogit >> genLowcodeNeg64 [
 		self ssPushNativeRegister: valueLow secondRegister: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger: [:valueValue |
+			value := valueValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-		value = ReceiverResultReg ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -6848,16 +7550,14 @@ StackToRegisterMappingCogit >> genLowcodeNeg64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeNot32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -6871,20 +7571,16 @@ StackToRegisterMappingCogit >> genLowcodeNot32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeNot64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh value valueLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2: [:valueLowValue :valueHighValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-		(valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: valueLow secondReg: valueHigh.
 		self ssNativePop: 1.
 
@@ -6893,14 +7589,10 @@ StackToRegisterMappingCogit >> genLowcodeNot64 [
 		self ssPushNativeRegister: valueLow secondRegister: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger: [:valueValue |
+			value := valueValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-		value = ReceiverResultReg ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -6938,22 +7630,16 @@ StackToRegisterMappingCogit >> genLowcodeNullaryInlinePrimitive: prim [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeOopEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value contJump falseJump first second |
+	self allocateRegistersForLowcodeOop2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-
-	(value := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: second)) bitOr: (self registerMaskFor: first))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := SendNumArgsReg)].
-	((second = ReceiverResultReg or: [first = ReceiverResultReg]) or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: second.
 	self ssPop: 1.
 	self ssTop popToReg: first.
@@ -6977,19 +7663,15 @@ StackToRegisterMappingCogit >> genLowcodeOopEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeOopNotEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second falseJump contJump first |
+	self allocateRegistersForLowcodeOop2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: second.
 	self ssPop: 1.
 	self ssTop popToReg: first.
@@ -7013,16 +7695,14 @@ StackToRegisterMappingCogit >> genLowcodeOopNotEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeOopSmallIntegerToInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object |
+	self allocateRegistersForLowcodeOop: [:objectValue |
+		object := objectValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	object = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -7036,23 +7716,17 @@ StackToRegisterMappingCogit >> genLowcodeOopSmallIntegerToInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeOopSmallIntegerToInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh object value valueLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeOopResultInteger2: [:objectValue :valueLowValue :valueHighValue |
+			object := objectValue.
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(object := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueLow := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueLow := Arg1Reg)].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: object)) bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := SendNumArgsReg)].
-		((object = ReceiverResultReg or: [valueLow = ReceiverResultReg]) or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssTop popToReg: object.
 		self ssPop: 1.
 
@@ -7061,17 +7735,11 @@ StackToRegisterMappingCogit >> genLowcodeOopSmallIntegerToInt64 [
 		self ssPushNativeRegister: object secondRegister: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeOopResultInteger: [:objectValue :valueValue |
+			object := objectValue.
+			value := valueValue.
+		].
 
-		(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(object := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (value := Arg1Reg)].
-		(object = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssTop popToReg: object.
 		self ssPop: 1.
 
@@ -7086,16 +7754,14 @@ StackToRegisterMappingCogit >> genLowcodeOopSmallIntegerToInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeOopToBoolean32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object |
+	self allocateRegistersForLowcodeOop: [:objectValue |
+		object := objectValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	object = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -7109,23 +7775,17 @@ StackToRegisterMappingCogit >> genLowcodeOopToBoolean32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeOopToBoolean64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh object value valueLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeOopResultInteger2: [:objectValue :valueLowValue :valueHighValue |
+			object := objectValue.
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(object := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueLow := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueLow := Arg1Reg)].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: object)) bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := SendNumArgsReg)].
-		((object = ReceiverResultReg or: [valueLow = ReceiverResultReg]) or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssTop popToReg: object.
 		self ssPop: 1.
 
@@ -7134,17 +7794,11 @@ StackToRegisterMappingCogit >> genLowcodeOopToBoolean64 [
 		self ssPushNativeRegister: object secondRegister: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeOopResultInteger: [:objectValue :valueValue |
+			object := objectValue.
+			value := valueValue.
+		].
 
-		(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(object := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (value := Arg1Reg)].
-		(object = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssTop popToReg: object.
 		self ssPop: 1.
 
@@ -7159,19 +7813,15 @@ StackToRegisterMappingCogit >> genLowcodeOopToBoolean64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeOopToFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object value |
+	self allocateRegistersForLowcodeOopResultFloat: [:objectValue :valueValue |
+		object := objectValue.
+		value := valueValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
-	object = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -7185,19 +7835,15 @@ StackToRegisterMappingCogit >> genLowcodeOopToFloat32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeOopToFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object value |
+	self allocateRegistersForLowcodeOopResultFloat: [:objectValue :valueValue |
+		object := objectValue.
+		value := valueValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
-	object = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -7211,16 +7857,14 @@ StackToRegisterMappingCogit >> genLowcodeOopToFloat64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeOopToInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object |
+	self allocateRegistersForLowcodeOop: [:objectValue |
+		object := objectValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	object = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -7234,23 +7878,17 @@ StackToRegisterMappingCogit >> genLowcodeOopToInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeOopToInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh object value valueLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeOopResultInteger2: [:objectValue :valueLowValue :valueHighValue |
+			object := objectValue.
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(object := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueLow := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueLow := Arg1Reg)].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: object)) bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := SendNumArgsReg)].
-		((object = ReceiverResultReg or: [valueLow = ReceiverResultReg]) or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssTop popToReg: object.
 		self ssPop: 1.
 
@@ -7258,17 +7896,11 @@ StackToRegisterMappingCogit >> genLowcodeOopToInt64 [
 		objectRepresentation genLcOop: object toInt64: valueLow highPart: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeOopResultInteger: [:objectValue :valueValue |
+			object := objectValue.
+			value := valueValue.
+		].
 
-		(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(object := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (value := Arg1Reg)].
-		(object = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssTop popToReg: object.
 		self ssPop: 1.
 
@@ -7283,16 +7915,14 @@ StackToRegisterMappingCogit >> genLowcodeOopToInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeOopToPointer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object |
+	self allocateRegistersForLowcodeOop: [:objectValue |
+		object := objectValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	object = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -7305,19 +7935,15 @@ StackToRegisterMappingCogit >> genLowcodeOopToPointer [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeOopToPointerReinterpret [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object pointer |
+	self allocateRegistersForLowcodeOopResultInteger: [:objectValue :pointerValue |
+		object := objectValue.
+		pointer := pointerValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(pointer := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (pointer := Arg1Reg)].
-	(object = ReceiverResultReg or: [pointer = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -7331,19 +7957,15 @@ StackToRegisterMappingCogit >> genLowcodeOopToPointerReinterpret [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeOopToUInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object value |
+	self allocateRegistersForLowcodeOopResultInteger: [:objectValue :valueValue |
+		object := objectValue.
+		value := valueValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(object = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -7357,23 +7979,17 @@ StackToRegisterMappingCogit >> genLowcodeOopToUInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeOopToUInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh object value valueLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeOopResultInteger2: [:objectValue :valueLowValue :valueHighValue |
+			object := objectValue.
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(object := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueLow := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueLow := Arg1Reg)].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: object)) bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := SendNumArgsReg)].
-		((object = ReceiverResultReg or: [valueLow = ReceiverResultReg]) or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssTop popToReg: object.
 		self ssPop: 1.
 
@@ -7381,17 +7997,11 @@ StackToRegisterMappingCogit >> genLowcodeOopToUInt64 [
 		objectRepresentation genLcOop: object toUInt64: valueLow highPart: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeOopResultInteger: [:objectValue :valueValue |
+			object := objectValue.
+			value := valueValue.
+		].
 
-		(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(object := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: object))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (value := Arg1Reg)].
-		(object = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssTop popToReg: object.
 		self ssPop: 1.
 
@@ -7406,22 +8016,16 @@ StackToRegisterMappingCogit >> genLowcodeOopToUInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeOr32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second result first |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:secondValue :firstValue :resultValue |
+		second := secondValue.
+		first := firstValue.
+		result := resultValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-
-	(result := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: second)) bitOr: (self registerMaskFor: first))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (result := SendNumArgsReg)].
-	((second = ReceiverResultReg or: [first = ReceiverResultReg]) or: [result = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -7437,26 +8041,18 @@ StackToRegisterMappingCogit >> genLowcodeOr32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeOr64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh first second firstLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger4: [:secondLowValue :secondHighValue :firstLowValue :firstHighValue |
+			secondLow := secondLowValue.
+			secondHigh := secondHighValue.
+			firstLow := firstLowValue.
+			firstHigh := firstHighValue.
+		].
 
-		(secondLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(secondLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(secondHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: secondLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (secondHigh := Arg1Reg)].
-
-		(firstLow := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: secondLow)) bitOr: (self registerMaskFor: secondHigh))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (firstLow := SendNumArgsReg)].
-
-		(firstHigh := backEnd availableRegisterOrNoneFor: (((self liveRegisters bitOr: (self registerMaskFor: secondLow)) bitOr: (self registerMaskFor: secondHigh)) bitOr: (self registerMaskFor: firstLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (firstHigh := ClassReg)].
-		(((secondLow = ReceiverResultReg or: [secondHigh = ReceiverResultReg]) or: [firstLow = ReceiverResultReg]) or: [firstHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: secondLow secondReg: secondHigh.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: firstLow secondReg: firstHigh.
@@ -7467,17 +8063,11 @@ StackToRegisterMappingCogit >> genLowcodeOr64 [
 		self ssPushNativeRegister: firstLow secondRegister: firstHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+			second := secondValue.
+			first := firstValue.
+		].
 
-		(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(second := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (first := Arg1Reg)].
-		(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: second.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: first.
@@ -7756,7 +8346,9 @@ StackToRegisterMappingCogit >> genLowcodePerformCallVoid [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePerformCallout [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self callSwitchToCStack.
 	self MoveCw: extA R: TempReg.
@@ -7771,7 +8363,9 @@ StackToRegisterMappingCogit >> genLowcodePerformCallout [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePerformCalloutIndirect [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssNativeTop nativeStackPopToReg: TempReg.
 	self ssNativePop: 1.
@@ -7786,16 +8380,14 @@ StackToRegisterMappingCogit >> genLowcodePerformCalloutIndirect [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePin [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object |
+	self allocateRegistersForLowcodeOop: [:objectValue |
+		object := objectValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	object = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -7808,7 +8400,9 @@ StackToRegisterMappingCogit >> genLowcodePin [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePlaftormCode [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self abort.
 
@@ -7819,17 +8413,15 @@ StackToRegisterMappingCogit >> genLowcodePlaftormCode [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePointerAddConstantOffset [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| base offset |
 	offset := extB.
+	self allocateRegistersForLowcodeInteger: [:baseValue |
+		base := baseValue.
+	].
 
-	(base := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(base := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	base = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: base.
 	self ssNativePop: 1.
 
@@ -7845,19 +8437,15 @@ StackToRegisterMappingCogit >> genLowcodePointerAddConstantOffset [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePointerAddOffset32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| base offset |
+	self allocateRegistersForLowcodeInteger2: [:offsetValue :baseValue |
+		offset := offsetValue.
+		base := baseValue.
+	].
 
-	(offset := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(offset := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(base := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: offset))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (base := Arg1Reg)].
-	(offset = ReceiverResultReg or: [base = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: offset.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: base.
@@ -7873,23 +8461,17 @@ StackToRegisterMappingCogit >> genLowcodePointerAddOffset32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePointerAddOffset64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| offsetHigh base offset offsetLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger3: [:offsetLowValue :offsetHighValue :baseValue |
+			offsetLow := offsetLowValue.
+			offsetHigh := offsetHighValue.
+			base := baseValue.
+		].
 
-		(offsetLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(offsetLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(offsetHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: offsetLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (offsetHigh := Arg1Reg)].
-
-		(base := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: offsetLow)) bitOr: (self registerMaskFor: offsetHigh))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (base := SendNumArgsReg)].
-		((offsetLow = ReceiverResultReg or: [offsetHigh = ReceiverResultReg]) or: [base = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: offsetLow secondReg: offsetHigh.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: base.
@@ -7899,17 +8481,11 @@ StackToRegisterMappingCogit >> genLowcodePointerAddOffset64 [
 		self ssPushNativeRegister: base.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger2: [:offsetValue :baseValue |
+			offset := offsetValue.
+			base := baseValue.
+		].
 
-		(offset := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(offset := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(base := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: offset))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (base := Arg1Reg)].
-		(offset = ReceiverResultReg or: [base = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: offset.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: base.
@@ -7926,19 +8502,15 @@ StackToRegisterMappingCogit >> genLowcodePointerAddOffset64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePointerEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second falseJump contJump first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -7962,19 +8534,15 @@ StackToRegisterMappingCogit >> genLowcodePointerEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePointerNotEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second falseJump contJump first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -7998,16 +8566,14 @@ StackToRegisterMappingCogit >> genLowcodePointerNotEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePointerToInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointer |
+	self allocateRegistersForLowcodeInteger: [:pointerValue |
+		pointer := pointerValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	pointer = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 
@@ -8021,23 +8587,17 @@ StackToRegisterMappingCogit >> genLowcodePointerToInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePointerToInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| resultLow pointer result resultHigh |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeIntegerResultInteger2: [:pointerValue :resultLowValue :resultHighValue |
+			pointer := pointerValue.
+			resultLow := resultLowValue.
+			resultHigh := resultHighValue.
+		].
 
-		(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(pointer := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(resultLow := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (resultLow := Arg1Reg)].
-
-		(resultHigh := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: pointer)) bitOr: (self registerMaskFor: resultLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (resultHigh := SendNumArgsReg)].
-		((pointer = ReceiverResultReg or: [resultLow = ReceiverResultReg]) or: [resultHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: pointer.
 		self ssNativePop: 1.
 
@@ -8046,17 +8606,11 @@ StackToRegisterMappingCogit >> genLowcodePointerToInt64 [
 		self ssPushNativeRegister: resultLow secondRegister: resultHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeIntegerResultInteger: [:pointerValue :resultValue |
+			pointer := pointerValue.
+			result := resultValue.
+		].
 
-		(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(pointer := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(result := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (result := Arg1Reg)].
-		(pointer = ReceiverResultReg or: [result = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: pointer.
 		self ssNativePop: 1.
 
@@ -8070,17 +8624,15 @@ StackToRegisterMappingCogit >> genLowcodePointerToInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePointerToOop [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointer pointerClassLiteral |
 	pointerClassLiteral := self getLiteral: extA.
+	self allocateRegistersForLowcodeInteger: [:pointerValue |
+		pointer := pointerValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	pointer = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 
@@ -8095,16 +8647,14 @@ StackToRegisterMappingCogit >> genLowcodePointerToOop [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePointerToOopReinterprer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointer |
+	self allocateRegistersForLowcodeInteger: [:pointerValue |
+		pointer := pointerValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	pointer = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 
@@ -8118,11 +8668,14 @@ StackToRegisterMappingCogit >> genLowcodePointerToOopReinterprer [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePopFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeFloat: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -8134,11 +8687,14 @@ StackToRegisterMappingCogit >> genLowcodePopFloat32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePopFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeFloat: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -8150,16 +8706,14 @@ StackToRegisterMappingCogit >> genLowcodePopFloat64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePopInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -8171,16 +8725,14 @@ StackToRegisterMappingCogit >> genLowcodePopInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePopInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh value valueLow |
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -8192,7 +8744,9 @@ StackToRegisterMappingCogit >> genLowcodePopInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePopMultipleNative [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssPopNativeSize: extA.
 	extA := 0.
@@ -8204,16 +8758,14 @@ StackToRegisterMappingCogit >> genLowcodePopMultipleNative [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePopPointer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointerValue |
+	self allocateRegistersForLowcodeInteger: [:pointerValueValue |
+		pointerValue := pointerValueValue.
+	].
 
-	(pointerValue := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointerValue := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	pointerValue = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointerValue.
 	self ssNativePop: 1.
 
@@ -8225,7 +8777,9 @@ StackToRegisterMappingCogit >> genLowcodePopPointer [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushCalloutResultFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	backEnd cFloatResultToRs: DPFPReg0.
 	self ssPushNativeRegisterSingleFloat: DPFPReg0.
@@ -8237,7 +8791,9 @@ StackToRegisterMappingCogit >> genLowcodePushCalloutResultFloat32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushCalloutResultFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	backEnd cFloatResultToRd: DPFPReg0.
 	self ssPushNativeRegisterDoubleFloat: DPFPReg0.
@@ -8249,7 +8805,9 @@ StackToRegisterMappingCogit >> genLowcodePushCalloutResultFloat64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushCalloutResultInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self MoveR: backEnd cResultRegister R: ReceiverResultReg.
 	self ssPushNativeRegister: ReceiverResultReg.
@@ -8261,7 +8819,9 @@ StackToRegisterMappingCogit >> genLowcodePushCalloutResultInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushCalloutResultInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	BytesPerWord = 4 ifTrue: [
 	self MoveR: backEnd cResultRegisterLow R: ReceiverResultReg.
@@ -8279,7 +8839,9 @@ StackToRegisterMappingCogit >> genLowcodePushCalloutResultInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushCalloutResultPointer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self MoveR: backEnd cResultRegister R: ReceiverResultReg.
 	self ssPushNativeRegister: ReceiverResultReg.
@@ -8291,7 +8853,9 @@ StackToRegisterMappingCogit >> genLowcodePushCalloutResultPointer [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushConstantUInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| constant |
 	constant := extA.
 
@@ -8305,7 +8869,9 @@ StackToRegisterMappingCogit >> genLowcodePushConstantUInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushConstantUInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| constant |
 	constant := extA.
 
@@ -8319,7 +8885,9 @@ StackToRegisterMappingCogit >> genLowcodePushConstantUInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushNullPointer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssPushNativeConstantPointer: 0.
 
@@ -8330,7 +8898,9 @@ StackToRegisterMappingCogit >> genLowcodePushNullPointer [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushOne32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssPushNativeConstantInt32: 1.
 
@@ -8341,7 +8911,9 @@ StackToRegisterMappingCogit >> genLowcodePushOne32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushOne64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssPushNativeConstantInt64: 1.
 
@@ -8352,7 +8924,9 @@ StackToRegisterMappingCogit >> genLowcodePushOne64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushOneFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssPushNativeConstantFloat32: 1.0.
 
@@ -8363,7 +8937,9 @@ StackToRegisterMappingCogit >> genLowcodePushOneFloat32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushOneFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssPushNativeConstantFloat64: 1.0.
 
@@ -8374,7 +8950,9 @@ StackToRegisterMappingCogit >> genLowcodePushOneFloat64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushPhysicalFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| registerID |
 	registerID := extA.
 
@@ -8388,7 +8966,9 @@ StackToRegisterMappingCogit >> genLowcodePushPhysicalFloat32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushPhysicalFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| registerID |
 	registerID := extA.
 
@@ -8402,7 +8982,9 @@ StackToRegisterMappingCogit >> genLowcodePushPhysicalFloat64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushPhysicalInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| registerID |
 	registerID := extA.
 
@@ -8416,7 +8998,9 @@ StackToRegisterMappingCogit >> genLowcodePushPhysicalInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushPhysicalInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| registerID |
 	registerID := extA.
 
@@ -8430,7 +9014,9 @@ StackToRegisterMappingCogit >> genLowcodePushPhysicalInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushPhysicalPointer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| registerID |
 	registerID := extA.
 
@@ -8444,7 +9030,9 @@ StackToRegisterMappingCogit >> genLowcodePushPhysicalPointer [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushSessionIdentifier [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssPushNativeConstantInt32: coInterpreter getThisSessionID.
 
@@ -8455,7 +9043,9 @@ StackToRegisterMappingCogit >> genLowcodePushSessionIdentifier [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushZero32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssPushNativeConstantInt32: 0.
 
@@ -8466,7 +9056,9 @@ StackToRegisterMappingCogit >> genLowcodePushZero32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushZero64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssPushNativeConstantInt64: 0.
 
@@ -8477,7 +9069,9 @@ StackToRegisterMappingCogit >> genLowcodePushZero64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushZeroFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssPushNativeConstantFloat32: 0.0.
 
@@ -8488,7 +9082,9 @@ StackToRegisterMappingCogit >> genLowcodePushZeroFloat32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodePushZeroFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self ssPushNativeConstantFloat64: 0.0.
 
@@ -8499,19 +9095,15 @@ StackToRegisterMappingCogit >> genLowcodePushZeroFloat64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeRem32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -8527,22 +9119,16 @@ StackToRegisterMappingCogit >> genLowcodeRem32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeRem64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh result resultLow resultHigh first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh result resultLow resultHigh first second firstLow |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:secondValue :firstValue :resultValue |
+		second := secondValue.
+		first := firstValue.
+		result := resultValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-
-	(result := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: second)) bitOr: (self registerMaskFor: first))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (result := SendNumArgsReg)].
-	((second = ReceiverResultReg or: [first = ReceiverResultReg]) or: [result = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -8557,19 +9143,15 @@ StackToRegisterMappingCogit >> genLowcodeRem64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeRightShift32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value shiftAmount |
+	self allocateRegistersForLowcodeInteger2: [:shiftAmountValue :valueValue |
+		shiftAmount := shiftAmountValue.
+		value := valueValue.
+	].
 
-	(shiftAmount := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(shiftAmount := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: shiftAmount))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(shiftAmount = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: shiftAmount.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: value.
@@ -8585,22 +9167,16 @@ StackToRegisterMappingCogit >> genLowcodeRightShift32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeRightShift64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| value result shiftAmount shiftAmountHigh resultLow valueLow resultHigh shiftAmountLow valueHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| value result shiftAmountHigh shiftAmount resultLow valueLow resultHigh shiftAmountLow valueHigh |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:shiftAmountValue :valueValue :resultValue |
+		shiftAmount := shiftAmountValue.
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(shiftAmount := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(shiftAmount := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: shiftAmount))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-
-	(result := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: shiftAmount)) bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (result := SendNumArgsReg)].
-	((shiftAmount = ReceiverResultReg or: [value = ReceiverResultReg]) or: [result = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: shiftAmount.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: value.
@@ -8615,16 +9191,14 @@ StackToRegisterMappingCogit >> genLowcodeRightShift64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeSignExtend32From16 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -8638,16 +9212,14 @@ StackToRegisterMappingCogit >> genLowcodeSignExtend32From16 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeSignExtend32From8 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -8661,20 +9233,16 @@ StackToRegisterMappingCogit >> genLowcodeSignExtend32From8 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeSignExtend64From16 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value isNegative cont valueLow valueHigh |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2: [:valueLowValue :valueHighValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-		(valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: valueLow secondReg: valueHigh.
 		self ssNativePop: 1.
 
@@ -8691,14 +9259,10 @@ StackToRegisterMappingCogit >> genLowcodeSignExtend64From16 [
 		self ssPushNativeRegister: valueLow secondRegister: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger: [:valueValue |
+			value := valueValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-		value = ReceiverResultReg ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -8713,23 +9277,17 @@ StackToRegisterMappingCogit >> genLowcodeSignExtend64From16 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeSignExtend64From32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value result resultLow resultHigh isNegative cont |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeIntegerResultInteger2: [:valueValue :resultLowValue :resultHighValue |
+			value := valueValue.
+			resultLow := resultLowValue.
+			resultHigh := resultHighValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(resultLow := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (resultLow := Arg1Reg)].
-
-		(resultHigh := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: value)) bitOr: (self registerMaskFor: resultLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (resultHigh := SendNumArgsReg)].
-		((value = ReceiverResultReg or: [resultLow = ReceiverResultReg]) or: [resultHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -8746,17 +9304,11 @@ StackToRegisterMappingCogit >> genLowcodeSignExtend64From32 [
 		self ssPushNativeRegister: resultLow secondRegister: resultHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeIntegerResultInteger: [:valueValue :resultValue |
+			value := valueValue.
+			result := resultValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(result := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (result := Arg1Reg)].
-		(value = ReceiverResultReg or: [result = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -8771,26 +9323,18 @@ StackToRegisterMappingCogit >> genLowcodeSignExtend64From32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeSignExtend64From8 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value result resultLow resultHigh isNegative valueLow cont valueHigh |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2ResultInteger2: [:valueLowValue :valueHighValue :resultLowValue :resultHighValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+			resultLow := resultLowValue.
+			resultHigh := resultHighValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-
-		(resultLow := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: valueLow)) bitOr: (self registerMaskFor: valueHigh))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (resultLow := SendNumArgsReg)].
-
-		(resultHigh := backEnd availableRegisterOrNoneFor: (((self liveRegisters bitOr: (self registerMaskFor: valueLow)) bitOr: (self registerMaskFor: valueHigh)) bitOr: (self registerMaskFor: resultLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (resultHigh := ClassReg)].
-		(((valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) or: [resultLow = ReceiverResultReg]) or: [resultHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: valueLow secondReg: valueHigh.
 		self ssNativePop: 1.
 
@@ -8807,17 +9351,11 @@ StackToRegisterMappingCogit >> genLowcodeSignExtend64From8 [
 		self ssPushNativeRegister: valueLow secondRegister: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeIntegerResultInteger: [:valueValue :resultValue |
+			value := valueValue.
+			result := resultValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(result := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (result := Arg1Reg)].
-		(value = ReceiverResultReg or: [result = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -8832,16 +9370,14 @@ StackToRegisterMappingCogit >> genLowcodeSignExtend64From8 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeSmallInt32ToOop [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -8855,19 +9391,15 @@ StackToRegisterMappingCogit >> genLowcodeSmallInt32ToOop [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeStoreFloat32ToMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| floatValue pointer |
+	self allocateRegistersForLowcodeFloatInteger: [:floatValueValue :pointerValue |
+		floatValue := floatValueValue.
+		pointer := pointerValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(floatValue := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (floatValue := DPFPReg0)].
-	pointer = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: floatValue.
@@ -8882,19 +9414,15 @@ StackToRegisterMappingCogit >> genLowcodeStoreFloat32ToMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeStoreFloat64ToMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| doubleValue pointer |
+	self allocateRegistersForLowcodeFloatInteger: [:doubleValueValue :pointerValue |
+		doubleValue := doubleValueValue.
+		pointer := pointerValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(doubleValue := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (doubleValue := DPFPReg0)].
-	pointer = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: doubleValue.
@@ -8909,19 +9437,15 @@ StackToRegisterMappingCogit >> genLowcodeStoreFloat64ToMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeStoreInt16ToMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointer value |
+	self allocateRegistersForLowcodeInteger2: [:pointerValue :valueValue |
+		pointer := pointerValue.
+		value := valueValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(pointer = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: value.
@@ -8937,19 +9461,15 @@ StackToRegisterMappingCogit >> genLowcodeStoreInt16ToMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeStoreInt32ToMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointer value |
+	self allocateRegistersForLowcodeInteger2: [:pointerValue :valueValue |
+		pointer := pointerValue.
+		value := valueValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(pointer = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: value.
@@ -8964,23 +9484,17 @@ StackToRegisterMappingCogit >> genLowcodeStoreInt32ToMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeStoreInt64ToMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh pointer value valueLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger3: [:pointerValue :valueLowValue :valueHighValue |
+			pointer := pointerValue.
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(pointer := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueLow := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueLow := Arg1Reg)].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: pointer)) bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := SendNumArgsReg)].
-		((pointer = ReceiverResultReg or: [valueLow = ReceiverResultReg]) or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: pointer.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: valueLow secondReg: valueHigh.
@@ -8990,17 +9504,11 @@ StackToRegisterMappingCogit >> genLowcodeStoreInt64ToMemory [
 		self MoveR: valueHigh M32: 4 r: pointer.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger2: [:pointerValue :valueValue |
+			pointer := pointerValue.
+			value := valueValue.
+		].
 
-		(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(pointer := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (value := Arg1Reg)].
-		(pointer = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: pointer.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: value.
@@ -9016,19 +9524,15 @@ StackToRegisterMappingCogit >> genLowcodeStoreInt64ToMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeStoreInt8ToMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointer value |
+	self allocateRegistersForLowcodeInteger2: [:pointerValue :valueValue |
+		pointer := pointerValue.
+		value := valueValue.
+	].
 
-	(pointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(value := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: pointer))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := Arg1Reg)].
-	(pointer = ReceiverResultReg or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointer.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: value.
@@ -9044,12 +9548,15 @@ StackToRegisterMappingCogit >> genLowcodeStoreInt8ToMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeStoreLocalFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeFloat: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -9064,12 +9571,15 @@ StackToRegisterMappingCogit >> genLowcodeStoreLocalFloat32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeStoreLocalFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeFloat: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (value := DPFPReg0)].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -9084,17 +9594,15 @@ StackToRegisterMappingCogit >> genLowcodeStoreLocalFloat64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeStoreLocalInt16 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -9110,17 +9618,15 @@ StackToRegisterMappingCogit >> genLowcodeStoreLocalInt16 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeStoreLocalInt32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -9135,21 +9641,17 @@ StackToRegisterMappingCogit >> genLowcodeStoreLocalInt32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeStoreLocalInt64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh value valueLow baseOffset |
 	baseOffset := extA.
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2: [:valueLowValue :valueHighValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-		(valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: valueLow secondReg: valueHigh.
 		self ssNativePop: 1.
 
@@ -9158,14 +9660,10 @@ StackToRegisterMappingCogit >> genLowcodeStoreLocalInt64 [
 		self MoveR: valueHigh M32: 4 r: TempReg.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger: [:valueValue |
+			value := valueValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-		value = ReceiverResultReg ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -9180,17 +9678,15 @@ StackToRegisterMappingCogit >> genLowcodeStoreLocalInt64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeStoreLocalInt8 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -9206,17 +9702,15 @@ StackToRegisterMappingCogit >> genLowcodeStoreLocalInt8 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeStoreLocalPointer [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| pointerValue baseOffset |
 	baseOffset := extA.
+	self allocateRegistersForLowcodeInteger: [:pointerValueValue |
+		pointerValue := pointerValueValue.
+	].
 
-	(pointerValue := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(pointerValue := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	pointerValue = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: pointerValue.
 	self ssNativePop: 1.
 
@@ -9231,20 +9725,16 @@ StackToRegisterMappingCogit >> genLowcodeStoreLocalPointer [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeStoreObjectField [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| fieldIndex object value |
 	fieldIndex := extA.
+	self allocateRegistersForLowcodeOop2: [:valueValue :objectValue |
+		value := valueValue.
+		object := objectValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(object := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (object := Arg1Reg)].
-	(value = ReceiverResultReg or: [object = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: value.
 	self ssPop: 1.
 	self ssTop popToReg: object.
@@ -9260,22 +9750,16 @@ StackToRegisterMappingCogit >> genLowcodeStoreObjectField [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeStoreObjectFieldAt [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| fieldIndex object value |
+	self allocateRegistersForLowcodeIntegerOop2: [:fieldIndexValue :valueValue :objectValue |
+		fieldIndex := fieldIndexValue.
+		value := valueValue.
+		object := objectValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(fieldIndex := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (fieldIndex := Arg1Reg)].
-
-	(object := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: value)) bitOr: (self registerMaskFor: fieldIndex))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (object := SendNumArgsReg)].
-	((value = ReceiverResultReg or: [fieldIndex = ReceiverResultReg]) or: [object = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: value.
 	self ssPop: 1.
 	self ssNativeTop nativePopToReg: fieldIndex.
@@ -9292,19 +9776,15 @@ StackToRegisterMappingCogit >> genLowcodeStoreObjectFieldAt [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeStorePointerToMemory [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| memoryPointer pointerValue |
+	self allocateRegistersForLowcodeInteger2: [:memoryPointerValue :pointerValueValue |
+		memoryPointer := memoryPointerValue.
+		pointerValue := pointerValueValue.
+	].
 
-	(memoryPointer := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(memoryPointer := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(pointerValue := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: memoryPointer))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (pointerValue := Arg1Reg)].
-	(memoryPointer = ReceiverResultReg or: [pointerValue = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: memoryPointer.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: pointerValue.
@@ -9319,19 +9799,15 @@ StackToRegisterMappingCogit >> genLowcodeStorePointerToMemory [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeSub32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -9347,26 +9823,18 @@ StackToRegisterMappingCogit >> genLowcodeSub32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeSub64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh first second firstLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger4: [:secondLowValue :secondHighValue :firstLowValue :firstHighValue |
+			secondLow := secondLowValue.
+			secondHigh := secondHighValue.
+			firstLow := firstLowValue.
+			firstHigh := firstHighValue.
+		].
 
-		(secondLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(secondLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(secondHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: secondLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (secondHigh := Arg1Reg)].
-
-		(firstLow := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: secondLow)) bitOr: (self registerMaskFor: secondHigh))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (firstLow := SendNumArgsReg)].
-
-		(firstHigh := backEnd availableRegisterOrNoneFor: (((self liveRegisters bitOr: (self registerMaskFor: secondLow)) bitOr: (self registerMaskFor: secondHigh)) bitOr: (self registerMaskFor: firstLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (firstHigh := ClassReg)].
-		(((secondLow = ReceiverResultReg or: [secondHigh = ReceiverResultReg]) or: [firstLow = ReceiverResultReg]) or: [firstHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: secondLow secondReg: secondHigh.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: firstLow secondReg: firstHigh.
@@ -9377,17 +9845,11 @@ StackToRegisterMappingCogit >> genLowcodeSub64 [
 		self ssPushNativeRegister: firstLow secondRegister: firstHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+			second := secondValue.
+			first := firstValue.
+		].
 
-		(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(second := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (first := Arg1Reg)].
-		(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: second.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: first.
@@ -9420,16 +9882,14 @@ StackToRegisterMappingCogit >> genLowcodeTrinaryInlinePrimitive: prim [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeTruncate32To16 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -9443,16 +9903,14 @@ StackToRegisterMappingCogit >> genLowcodeTruncate32To16 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeTruncate32To8 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -9466,20 +9924,16 @@ StackToRegisterMappingCogit >> genLowcodeTruncate32To8 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeTruncate64To16 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh value valueLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2: [:valueLowValue :valueHighValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-		(valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: valueLow secondReg: valueHigh.
 		self ssNativePop: 1.
 
@@ -9487,14 +9941,10 @@ StackToRegisterMappingCogit >> genLowcodeTruncate64To16 [
 		self ssPushNativeRegister: valueLow.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger: [:valueValue |
+			value := valueValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-		value = ReceiverResultReg ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -9509,34 +9959,26 @@ StackToRegisterMappingCogit >> genLowcodeTruncate64To16 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeTruncate64To32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh value valueLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2: [:valueLowValue :valueHighValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-		(valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: valueLow secondReg: valueHigh.
 		self ssNativePop: 1.
 
 		self ssPushNativeRegister: valueLow.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger: [:valueValue |
+			value := valueValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-		value = ReceiverResultReg ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -9551,23 +9993,17 @@ StackToRegisterMappingCogit >> genLowcodeTruncate64To32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeTruncate64To8 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh value valueLow result |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2ResultInteger: [:valueLowValue :valueHighValue :resultValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+			result := resultValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-
-		(result := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: valueLow)) bitOr: (self registerMaskFor: valueHigh))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (result := SendNumArgsReg)].
-		((valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) or: [result = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: valueLow secondReg: valueHigh.
 		self ssNativePop: 1.
 
@@ -9575,17 +10011,11 @@ StackToRegisterMappingCogit >> genLowcodeTruncate64To8 [
 		self ssPushNativeRegister: valueLow.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeIntegerResultInteger: [:valueValue :resultValue |
+			value := valueValue.
+			result := resultValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(result := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (result := Arg1Reg)].
-		(value = ReceiverResultReg or: [result = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -9600,19 +10030,15 @@ StackToRegisterMappingCogit >> genLowcodeTruncate64To8 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUdiv32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -9628,22 +10054,16 @@ StackToRegisterMappingCogit >> genLowcodeUdiv32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUdiv64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh result resultLow resultHigh first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh result resultLow resultHigh first second firstLow |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:secondValue :firstValue :resultValue |
+		second := secondValue.
+		first := firstValue.
+		result := resultValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-
-	(result := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: second)) bitOr: (self registerMaskFor: first))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (result := SendNumArgsReg)].
-	((second = ReceiverResultReg or: [first = ReceiverResultReg]) or: [result = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -9658,19 +10078,15 @@ StackToRegisterMappingCogit >> genLowcodeUdiv64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUint32Great [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second falseJump contJump first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -9694,19 +10110,15 @@ StackToRegisterMappingCogit >> genLowcodeUint32Great [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUint32GreatEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second falseJump contJump first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -9730,19 +10142,15 @@ StackToRegisterMappingCogit >> genLowcodeUint32GreatEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUint32Less [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second falseJump contJump first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -9766,19 +10174,15 @@ StackToRegisterMappingCogit >> genLowcodeUint32Less [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUint32LessEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second falseJump contJump first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -9802,19 +10206,15 @@ StackToRegisterMappingCogit >> genLowcodeUint32LessEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUint32ToFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value result |
+	self allocateRegistersForLowcodeIntegerResultFloat: [:valueValue :resultValue |
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(result := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (result := DPFPReg0)].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -9828,19 +10228,15 @@ StackToRegisterMappingCogit >> genLowcodeUint32ToFloat32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUint32ToFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value result |
+	self allocateRegistersForLowcodeIntegerResultFloat: [:valueValue :resultValue |
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(result := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (result := DPFPReg0)].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -9854,16 +10250,14 @@ StackToRegisterMappingCogit >> genLowcodeUint32ToFloat64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUint32ToOop [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -9877,22 +10271,16 @@ StackToRegisterMappingCogit >> genLowcodeUint32ToOop [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUint64Great [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh value first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh value first second firstLow |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-
-	(value := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: second)) bitOr: (self registerMaskFor: first))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := SendNumArgsReg)].
-	((second = ReceiverResultReg or: [first = ReceiverResultReg]) or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -9907,22 +10295,16 @@ StackToRegisterMappingCogit >> genLowcodeUint64Great [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUint64GreatEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh value first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh value first second firstLow |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-
-	(value := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: second)) bitOr: (self registerMaskFor: first))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := SendNumArgsReg)].
-	((second = ReceiverResultReg or: [first = ReceiverResultReg]) or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -9937,22 +10319,16 @@ StackToRegisterMappingCogit >> genLowcodeUint64GreatEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUint64Less [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh value first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh value first second firstLow |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-
-	(value := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: second)) bitOr: (self registerMaskFor: first))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := SendNumArgsReg)].
-	((second = ReceiverResultReg or: [first = ReceiverResultReg]) or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -9967,22 +10343,16 @@ StackToRegisterMappingCogit >> genLowcodeUint64Less [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUint64LessEqual [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh value first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh value first second firstLow |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:secondValue :firstValue :valueValue |
+		second := secondValue.
+		first := firstValue.
+		value := valueValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-
-	(value := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: second)) bitOr: (self registerMaskFor: first))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (value := SendNumArgsReg)].
-	((second = ReceiverResultReg or: [first = ReceiverResultReg]) or: [value = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -9997,19 +10367,15 @@ StackToRegisterMappingCogit >> genLowcodeUint64LessEqual [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUint64ToFloat32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh value valueLow result |
+	self allocateRegistersForLowcodeIntegerResultFloat: [:valueValue :resultValue |
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(result := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (result := DPFPReg0)].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -10022,19 +10388,15 @@ StackToRegisterMappingCogit >> genLowcodeUint64ToFloat32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUint64ToFloat64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh value valueLow result |
+	self allocateRegistersForLowcodeIntegerResultFloat: [:valueValue :resultValue |
+		value := valueValue.
+		result := resultValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(result := backEnd availableFloatRegisterOrNoneFor: self liveFloatRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredFloatReg: (result := DPFPReg0)].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -10047,23 +10409,17 @@ StackToRegisterMappingCogit >> genLowcodeUint64ToFloat64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUint64ToOop [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh object value valueLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2ResultOop: [:valueLowValue :valueHighValue :objectValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+			object := objectValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-
-		(object := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: valueLow)) bitOr: (self registerMaskFor: valueHigh))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (object := SendNumArgsReg)].
-		((valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) or: [object = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: valueLow secondReg: valueHigh.
 		self ssNativePop: 1.
 
@@ -10071,17 +10427,11 @@ StackToRegisterMappingCogit >> genLowcodeUint64ToOop [
 		objectRepresentation genLcUInt64ToOop: valueLow highPart: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeIntegerResultOop: [:valueValue :objectValue |
+			value := valueValue.
+			object := objectValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(object := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (object := Arg1Reg)].
-		(value = ReceiverResultReg or: [object = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -10096,19 +10446,15 @@ StackToRegisterMappingCogit >> genLowcodeUint64ToOop [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUmul32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -10124,22 +10470,16 @@ StackToRegisterMappingCogit >> genLowcodeUmul32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUmul64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh result resultLow resultHigh first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh result resultLow resultHigh first second firstLow |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:secondValue :firstValue :resultValue |
+		second := secondValue.
+		first := firstValue.
+		result := resultValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-
-	(result := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: second)) bitOr: (self registerMaskFor: first))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (result := SendNumArgsReg)].
-	((second = ReceiverResultReg or: [first = ReceiverResultReg]) or: [result = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -10456,7 +10796,9 @@ StackToRegisterMappingCogit >> genLowcodeUnaryInlinePrimitive: prim [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUnlockRegisters [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	"Do nothing for now"
 
@@ -10467,7 +10809,9 @@ StackToRegisterMappingCogit >> genLowcodeUnlockRegisters [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUnlockVM [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 
 	self abort.
 
@@ -10478,16 +10822,14 @@ StackToRegisterMappingCogit >> genLowcodeUnlockVM [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUnpin [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| object |
+	self allocateRegistersForLowcodeOop: [:objectValue |
+		object := objectValue.
+	].
 
-	(object := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(object := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	object = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssTop popToReg: object.
 	self ssPop: 1.
 
@@ -10500,19 +10842,15 @@ StackToRegisterMappingCogit >> genLowcodeUnpin [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUrem32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -10528,22 +10866,16 @@ StackToRegisterMappingCogit >> genLowcodeUrem32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeUrem64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh result resultLow resultHigh first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh result resultLow resultHigh first second firstLow |
+	self allocateRegistersForLowcodeInteger2ResultInteger: [:secondValue :firstValue :resultValue |
+		second := secondValue.
+		first := firstValue.
+		result := resultValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-
-	(result := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: second)) bitOr: (self registerMaskFor: first))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (result := SendNumArgsReg)].
-	((second = ReceiverResultReg or: [first = ReceiverResultReg]) or: [result = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -10558,19 +10890,15 @@ StackToRegisterMappingCogit >> genLowcodeUrem64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeXor32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| second first |
+	self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+		second := secondValue.
+		first := firstValue.
+	].
 
-	(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(second := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-
-	(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-		[self ssAllocateRequiredReg: (first := Arg1Reg)].
-	(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: second.
 	self ssNativePop: 1.
 	self ssNativeTop nativePopToReg: first.
@@ -10586,26 +10914,18 @@ StackToRegisterMappingCogit >> genLowcodeXor32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeXor64 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
-	| secondLow firstLow secondHigh first second firstHigh |
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
+	| secondLow secondHigh firstHigh first second firstLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger4: [:secondLowValue :secondHighValue :firstLowValue :firstHighValue |
+			secondLow := secondLowValue.
+			secondHigh := secondHighValue.
+			firstLow := firstLowValue.
+			firstHigh := firstHighValue.
+		].
 
-		(secondLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(secondLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(secondHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: secondLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (secondHigh := Arg1Reg)].
-
-		(firstLow := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: secondLow)) bitOr: (self registerMaskFor: secondHigh))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (firstLow := SendNumArgsReg)].
-
-		(firstHigh := backEnd availableRegisterOrNoneFor: (((self liveRegisters bitOr: (self registerMaskFor: secondLow)) bitOr: (self registerMaskFor: secondHigh)) bitOr: (self registerMaskFor: firstLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (firstHigh := ClassReg)].
-		(((secondLow = ReceiverResultReg or: [secondHigh = ReceiverResultReg]) or: [firstLow = ReceiverResultReg]) or: [firstHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: secondLow secondReg: secondHigh.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: firstLow secondReg: firstHigh.
@@ -10616,17 +10936,11 @@ StackToRegisterMappingCogit >> genLowcodeXor64 [
 		self ssPushNativeRegister: firstLow secondRegister: firstHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger2: [:secondValue :firstValue |
+			second := secondValue.
+			first := firstValue.
+		].
 
-		(second := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(second := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(first := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: second))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (first := Arg1Reg)].
-		(second = ReceiverResultReg or: [first = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: second.
 		self ssNativePop: 1.
 		self ssNativeTop nativePopToReg: first.
@@ -10643,16 +10957,14 @@ StackToRegisterMappingCogit >> genLowcodeXor64 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeZeroExtend32From16 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -10666,16 +10978,14 @@ StackToRegisterMappingCogit >> genLowcodeZeroExtend32From16 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeZeroExtend32From8 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| value |
+	self allocateRegistersForLowcodeInteger: [:valueValue |
+		value := valueValue.
+	].
 
-	(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-		[self ssAllocateRequiredReg:
-			(value := optStatus isReceiverResultRegLive
-				ifTrue: [Arg0Reg]
-				ifFalse: [ReceiverResultReg])].
-	value = ReceiverResultReg ifTrue:
-		[ optStatus isReceiverResultRegLive: false ].
 	self ssNativeTop nativePopToReg: value.
 	self ssNativePop: 1.
 
@@ -10689,20 +10999,16 @@ StackToRegisterMappingCogit >> genLowcodeZeroExtend32From8 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeZeroExtend64From16 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh value valueLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2: [:valueLowValue :valueHighValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-		(valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: valueLow secondReg: valueHigh.
 		self ssNativePop: 1.
 
@@ -10711,14 +11017,10 @@ StackToRegisterMappingCogit >> genLowcodeZeroExtend64From16 [
 		self ssPushNativeRegister: valueLow secondRegister: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger: [:valueValue |
+			value := valueValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-		value = ReceiverResultReg ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -10733,23 +11035,17 @@ StackToRegisterMappingCogit >> genLowcodeZeroExtend64From16 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeZeroExtend64From32 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| resultLow resultHigh value result |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeIntegerResultInteger2: [:valueValue :resultLowValue :resultHighValue |
+			value := valueValue.
+			resultLow := resultLowValue.
+			resultHigh := resultHighValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(resultLow := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (resultLow := Arg1Reg)].
-
-		(resultHigh := backEnd availableRegisterOrNoneFor: ((self liveRegisters bitOr: (self registerMaskFor: value)) bitOr: (self registerMaskFor: resultLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (resultHigh := SendNumArgsReg)].
-		((value = ReceiverResultReg or: [resultLow = ReceiverResultReg]) or: [resultHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -10758,17 +11054,11 @@ StackToRegisterMappingCogit >> genLowcodeZeroExtend64From32 [
 		self ssPushNativeRegister: resultLow secondRegister: resultHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeIntegerResultInteger: [:valueValue :resultValue |
+			value := valueValue.
+			result := resultValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(result := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: value))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (result := Arg1Reg)].
-		(value = ReceiverResultReg or: [result = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -10783,20 +11073,16 @@ StackToRegisterMappingCogit >> genLowcodeZeroExtend64From32 [
 
 { #category : #'inline primitive generators generated code' }
 StackToRegisterMappingCogit >> genLowcodeZeroExtend64From8 [
-	<option: #LowcodeVM>	"Lowcode instruction generator"
+	<option: #LowcodeVM>
+	<inline: true>
+	"Generated by the Lowcode instruction generator."
 	| valueHigh value valueLow |
 	BytesPerWord = 4 ifTrue: [
+		self allocateRegistersForLowcodeInteger2: [:valueLowValue :valueHighValue |
+			valueLow := valueLowValue.
+			valueHigh := valueHighValue.
+		].
 
-		(valueLow := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(valueLow := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-
-		(valueHigh := backEnd availableRegisterOrNoneFor: (self liveRegisters bitOr: (self registerMaskFor: valueLow))) = NoReg ifTrue:
-			[self ssAllocateRequiredReg: (valueHigh := Arg1Reg)].
-		(valueLow = ReceiverResultReg or: [valueHigh = ReceiverResultReg]) ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: valueLow secondReg: valueHigh.
 		self ssNativePop: 1.
 
@@ -10805,14 +11091,10 @@ StackToRegisterMappingCogit >> genLowcodeZeroExtend64From8 [
 		self ssPushNativeRegister: valueLow secondRegister: valueHigh.
 
 	] ifFalse: [
+		self allocateRegistersForLowcodeInteger: [:valueValue |
+			value := valueValue.
+		].
 
-		(value := backEnd availableRegisterOrNoneFor: self liveRegisters) = NoReg ifTrue:
-			[self ssAllocateRequiredReg:
-				(value := optStatus isReceiverResultRegLive
-					ifTrue: [Arg0Reg]
-					ifFalse: [ReceiverResultReg])].
-		value = ReceiverResultReg ifTrue:
-			[ optStatus isReceiverResultRegLive: false ].
 		self ssNativeTop nativePopToReg: value.
 		self ssNativePop: 1.
 
@@ -13221,6 +13503,13 @@ StackToRegisterMappingCogit >> ssNativeTop [
 	<returnTypeC: #'CogSimStackNativeEntry *'>
 	self assert: simNativeStackPtr >= 0.
 	^self simNativeStackAt: simNativeStackPtr
+]
+
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> ssNativeValue: n [
+	<returnTypeC: #'CogSimStackNativeEntry *'>
+	<option: #LowcodeVM>
+	^self simNativeStackAt: simStackPtr - n
 ]
 
 { #category : #'simulation stack' }
