@@ -45,7 +45,7 @@ test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak 
 	CC="gcc -m32" \
 	CXX="g++ -m32" \
 	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1" \
-	LIBS="-lpthread -luuid" \
+	LIBS="-lpthread -luuid -Wl,-rpath,'\$\$ORIGIN' " \
 	LDFLAGS=-Wl,-z,now
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
