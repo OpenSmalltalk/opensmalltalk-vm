@@ -1577,7 +1577,7 @@ RegisterAllocatingCogit >> reinitializeOpcodesFrom: start to: end [
 	<inline: true>
 	start to: end do:
 		[:i|
-		(self abstractInstructionAt: i) reinitialize]
+		(self abstractInstructionAt: i) reinitializeOpcode]
 ]
 
 { #category : #'bytecode generator support' }
