@@ -24,8 +24,8 @@ $(PKGCONFIGARCHIVE):
 $(PKGCONFIGBIN): $(PKGCONFIGARCHIVE)
 	tar x -f $(PKGCONFIGARCHIVE) -C $(THIRDPARTYDIR)
 	cd $(PKGCONFIGDIR) \
-		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' --with-internal-glib \
-		&& make \
-		&& make install
+		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' \
+		&& make LN=cp \
+		&& make LN=cp install
 	
 pkgconfig: $(PKGCONFIGBIN)
