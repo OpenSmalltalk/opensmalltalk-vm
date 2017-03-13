@@ -5968,8 +5968,7 @@ StackInterpreter >> externalDivorceFrame: theFP andContext: ctxt [
 			 onCurrent
 				ifTrue:
 					[self setStackPageAndLimit: newPage.
-					 framePointer := stackPage headFP.
-					 stackPointer := stackPage headSP]
+					 self setStackPointersFromPage: newPage]
 				ifFalse:
 					[stackPages markStackPageMostRecentlyUsed: newPage].
 			 self assert: (self frameCallerContext: frameAbove) = ctxt].
@@ -6012,8 +6011,7 @@ StackInterpreter >> externalEnsureIsBaseFrame: aFramePtr [
 	onCurrent
 		ifTrue:
 			[self assert: stackPage ~~ thePage. "stackPage has moved to a new page"
-			 framePointer := stackPage headFP.
-			 stackPointer := stackPage headSP]
+			 self setStackPointersFromPage: stackPage]
 		ifFalse:
 			[stackPages markStackPageMostRecentlyUsed: stackPage].
 	self assert: stackPages pageListIsWellFormed.
@@ -6068,8 +6066,7 @@ StackInterpreter >> externalInstVar: index ofContext: maybeMarriedContext put: a
 				[self ensureContextIsExecutionSafeAfterAssignToStackPointer: maybeMarriedContext]].
 	onCurrentPage
 		ifTrue:
-			[framePointer := stackPage headFP.
-			 stackPointer := stackPage headSP]
+			[self setStackPointersFromPage: stackPage]
 		ifFalse:
 			[stackPages markStackPageMostRecentlyUsed: stackPage].
 	stackPages assert: stackPage = stackPages mostRecentlyUsedPage.
@@ -6134,8 +6131,7 @@ StackInterpreter >> externalSetStackPageAndPointersForSuspendedContextOfProcess:
 			[thePage := self makeBaseFrameFor: newContext.
 			 theFrame := thePage baseFP].
 	self setStackPageAndLimit: thePage.
-	stackPointer := thePage headSP.
-	framePointer := thePage headFP.
+	self setStackPointersFromPage: thePage.
 	(self isMachineCodeFrame: framePointer) ifFalse:
 		[self setMethod: (self iframeMethod: framePointer)].
 	instructionPointer := self popStack.
@@ -7591,8 +7587,7 @@ StackInterpreter >> handleStackOverflow [
 	newPage := stackPages newStackPage.
 	self moveFramesIn: stackPage through: theFP toPage: newPage.
 	self setStackPageAndLimit: newPage.
-	framePointer := stackPage headFP.
-	stackPointer := stackPage headSP.
+	self setStackPointersFromPage: newPage.
 	self isCog
 		ifFalse: "To overflow the stack this must be a new frame, but in Cog base frames are married."
 			[self assert: (self frameHasContext: framePointer) not.
@@ -8487,7 +8482,7 @@ StackInterpreter >> internalPopStackInt64 [
 	^topInt64
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'internal interpreter access' }
 StackInterpreter >> internalPopStackNativeSize: popSize [
 	<option: #LowcodeVM>
 	"In the StackInterpreter stacks grow down."
@@ -15268,8 +15263,7 @@ StackInterpreter >> marryContextInNewStackPageAndInitializeInterpreterRegisters:
 	self assert: stackPage = 0.
 	newPage := self makeBaseFrameFor: aContext.
 	self setStackPageAndLimit: newPage.
-	framePointer := stackPage headFP.
-	stackPointer := stackPage headSP.
+	self setStackPointersFromPage: newPage.
 	self setMethod: (self iframeMethod: stackPage headFP).
 	instructionPointer := self popStack
 ]
@@ -18315,11 +18309,11 @@ StackInterpreter >> reestablishContextPriorToCallback: callbackContext [
 			  there is no instructionPointer on the top frame of the current page."
 			 self assert: thePage ~= stackPage.
 			 stackPointer := (self findSPOf: theFP on: thePage) - objectMemory wordSize.
-			 framePointer := theFP]
+			 framePointer := theFP.
+			 self assert: stackPointer < framePointer]
 		ifFalse:
 			[thePage := self makeBaseFrameFor: calloutContext.
-			 framePointer := thePage headFP.
-			 stackPointer := thePage headSP].
+			 self setStackPointersFromPage: thePage].
 	instructionPointer := self popStack.
 	self setStackPageAndLimit: thePage.
 	^true
@@ -19168,6 +19162,14 @@ StackInterpreter >> setStackPageAndLimit: thePage [
 	stackLimit ~= self allOnesAsCharStar ifTrue:
 		[stackLimit := stackPage stackLimit].
 	stackPages markStackPageMostRecentlyUsed: thePage
+]
+
+{ #category : #'stack pages' }
+StackInterpreter >> setStackPointersFromPage: thePage [
+	<var: #thePage type: #'StackPage *'>
+	<inline: true>
+	stackPointer := thePage headSP.
+	framePointer := thePage headFP
 ]
 
 { #category : #'object memory support' }

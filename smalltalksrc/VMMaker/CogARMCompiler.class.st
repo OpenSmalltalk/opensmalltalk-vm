@@ -268,8 +268,9 @@ CogARMCompiler class >> isRISCTempRegister: reg [
 
 { #category : #translation }
 CogARMCompiler class >> machineCodeDeclaration [
-	"Answer the declaration for the machineCode array."
-	^{#'usqIntptr_t'. '[', self basicNew machineCodeWords printString, ']'}
+	"Answer the declaration for the machineCode array.
+	 ARM instructions are 32-bits in length."
+	^{#'unsigned int'. '[', self basicNew machineCodeWords printString, ']'}
 ]
 
 { #category : #accessing }
@@ -3027,14 +3028,14 @@ CogARMCompiler >> relocateCallBeforeReturnPC: retpc by: delta [
 ]
 
 { #category : #'inline cacheing' }
-CogARMCompiler >> rewriteCPICJumpAt: addressFollowingJump target: jumpTargetAddress [
+CogARMCompiler >> rewriteCPICJumpAt: addressFollowingJump target: jumpTargetAddr [
 	"Rewrite a jump instruction to call a different target.  This variant is used to reset the 
 	jumps in the prototype CPIC to suit each use,.   
 	Answer the extent of the code change which is used to compute the range of the icache to flush."
 	<var: #addressFollowingJump type: #usqInt>
-	<var: #jumpTargetAddress type: #usqInt>
+	<var: #jumpTargetAddr type: #usqInt>
 	<inline: true>
-	^self rewriteTransferAt: addressFollowingJump target: jumpTargetAddress
+	^self rewriteTransferAt: addressFollowingJump target: jumpTargetAddr
 ]
 
 { #category : #'inline cacheing' }
