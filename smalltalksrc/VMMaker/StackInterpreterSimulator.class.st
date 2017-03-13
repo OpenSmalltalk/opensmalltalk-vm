@@ -594,13 +594,6 @@ StackInterpreterSimulator >> externalInstVar: index ofContext: aMarriedContext p
 	^result
 ]
 
-{ #category : #'stack pages' }
-StackInterpreterSimulator >> externalWriteBackHeadFramePointers [
-	self assert: (localFP = framePointer
-				or: [localFP = (self frameCallerFP: framePointer)]).
-	super externalWriteBackHeadFramePointers
-]
-
 { #category : #'interpreter shell' }
 StackInterpreterSimulator >> fetchByte [
 	^objectMemory byteAt: (localIP := localIP + 1).
@@ -715,7 +708,7 @@ StackInterpreterSimulator >> functionPointerFor: primIndex inClass: lookupClass 
 
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> getErrorObjectFromPrimFailCode [
-	primFailCode > 1 ifTrue: [self halt].
+	(primFailCode > 1 and: [(#(primitiveNew primitiveFetchNextMourner) includes: primitiveFunctionPointer) not]) ifTrue: [self halt].
 	^super getErrorObjectFromPrimFailCode
 ]
 
@@ -1841,9 +1834,6 @@ StackInterpreterSimulator >> primitiveDirectoryEntry [
 	name := self stringOf: self stackTop.
 	pathName := self stringOf: (self stackValue: 1).
 	
-	"temporary work-around to make it work in Pharo..."
-	self cppIf: PharoVM ifTrue: [ pathName := Smalltalk imagePath ].
-	
 	self successful ifFalse:
 		[^self primitiveFail].
 
@@ -1862,7 +1852,7 @@ StackInterpreterSimulator >> primitiveDirectoryEntry [
 			[self makeDirEntryName: (arrayNilOrSymbol at: 1) size: (arrayNilOrSymbol at: 1) size
 				createDate: (arrayNilOrSymbol at: 2) modDate: (arrayNilOrSymbol at: 3)
 				isDir: (arrayNilOrSymbol at: 4) fileSize: (arrayNilOrSymbol at: 5)
-				posixPermissions: (arrayNilOrSymbol at: 6) isSymlink: (arrayNilOrSymbol at: 7) ]
+				posixPermissions: (arrayNilOrSymbol at: 6 ifAbsent: [8r644]) isSymlink: (arrayNilOrSymbol at: 7 ifAbsent: [false]) ]
 		ifFalse:
 			[self makeDirEntryName: (arrayNilOrSymbol at: 1) size: (arrayNilOrSymbol at: 1) size
 				createDate: (arrayNilOrSymbol at: 2) modDate: (arrayNilOrSymbol at: 3)
