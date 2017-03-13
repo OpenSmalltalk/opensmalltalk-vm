@@ -3041,7 +3041,11 @@ Cogit >> allocateOpcodes: numberOfAbstractOpcodes bytecodes: numberOfBytecodes i
 	opcodeBytes := (self sizeof: CogAbstractInstruction) * numAbstractOpcodes.
 	fixupBytes := (self sizeof: CogBytecodeFixup) * numAbstractOpcodes.
 	allocBytes := opcodeBytes + fixupBytes.
-	allocBytes > MaxStackAllocSize ifTrue: [^failBlock value].
+	"Document the fact that the MaxStackAllocSize ensures that the number of abstract
+	 opcodes fits in a 16 bit integer (e.g. CogBytecodeFixup's instructionIndex)."
+	self assert: (self sizeof: CogAbstractInstruction) + (self sizeof: CogBytecodeFixup) * 32768 > MaxStackAllocSize.
+	allocBytes > MaxStackAllocSize ifTrue:
+		[^failBlock value].
 	self
 		cCode:
 			[abstractOpcodes := self alloca: allocBytes.
@@ -3577,7 +3581,8 @@ Cogit >> cPICPrototype [
 { #category : #'in-line cacheing' }
 Cogit >> cPICPrototypeCaseOffset [
 	"Whimsey; we want 16rCA5E10 + cPICPrototypeCaseOffset to be somewhere in the middle of the zone."
-	^methodZoneBase + methodZone youngReferrers / 2 -  16rCA5E10
+	<inline: true>
+	^methodZoneBase + methodZone youngReferrers / 2 - 16rCA5E10
 ]
 
 { #category : #'trampoline support' }
@@ -6244,6 +6249,7 @@ Cogit >> findBlockMethodWithEntry: blockEntryMcpc startBcpc: startBcpc [
 
 { #category : #'method map' }
 Cogit >> findMapLocationForMcpc: targetMcpc inMethod: cogMethod [
+	<var: #targetMcpc type: #usqInt>
 	<var: #cogMethod type: #'CogMethod *'>
 	| mcpc map mapByte annotation |
 	mcpc := self firstMappedPCFor: cogMethod.
@@ -7738,6 +7744,8 @@ Cogit >> generateMapAt: addressOrNull start: startAddress [
 	 unless it is an IsAnnotationExtension byte, in which case those bits are the extension.
 	 In the most signficant bits are the type of annotation at the point reached.  A null
 	 byte ends the map."
+	<var: 'addressOrNull' type: #usqInt>
+	<var: 'startAddress' type: #usqInt>
 	| length location |
 	<var: #instruction type: #'AbstractInstruction *'>
 	length := 0.
@@ -8823,6 +8831,7 @@ Cogit >> lookupCHexString: aCHexString [
 
 { #category : #disassembly }
 Cogit >> lookupFrameOffset: anInteger [
+	<doNotGenerate>
 	(self class initializationOptions at: #tempNames ifAbsent: nil) ifNotNil:
 		[:dict|
 		 (self class initializationOptions at: #startpc ifAbsent: nil) ifNotNil:

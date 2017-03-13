@@ -3348,14 +3348,11 @@ CogIA32Compiler >> genPushC64: constant64Bits [
 	<var: #constant64Bits type: #sqLong>
 	<returnTypeC: #'AbstractInstruction *'>
 	| inst highPart |
-	BytesPerWord == 4 ifTrue: [
-		highPart := self cCode: '(constant64Bits >> 32ll)' inSmalltalk: [ constant64Bits bitShift: -32 ].
-		inst :=cogit PushCw: highPart.
-		cogit PushCw: (constant64Bits bitAnd: 16rFFFFFFFF).
-		^ inst
-	] ifFalse: [
-		^ cogit PushCw: constant64Bits.
-	]
+	self assert: BytesPerWord = 4.
+	highPart := self cCode: '(constant64Bits >> 32LL)' inSmalltalk: [ constant64Bits bitShift: -32 ].
+	inst :=cogit PushCw: highPart.
+	cogit PushCw: (constant64Bits bitAnd: 16rFFFFFFFF).
+	^inst
 ]
 
 { #category : #'abstract instructions' }
@@ -3902,20 +3899,19 @@ CogIA32Compiler >> relocateMethodReferenceBeforeAddress: pc by: delta [
 ]
 
 { #category : #'inline cacheing' }
-CogIA32Compiler >> rewriteCPICJumpAt: addressFollowingJump target: jumpTargetAddress [
+CogIA32Compiler >> rewriteCPICJumpAt: addressFollowingJump target: jumpTargetAddr [
 	"Rewrite the short jump instruction to jump to a new cpic case target. "
 	<var: #addressFollowingJump type: #usqInt>
-	<var: #jumpTargetAddress type: #usqInt>
+	<var: #jumpTargetAddr type: #usqInt>
 	<var: #callDistance type: #sqInt> "prevent type inference for avoiding warning on abs"
 	| callDistance |
-	callDistance := jumpTargetAddress - addressFollowingJump.
+	callDistance := jumpTargetAddr - addressFollowingJump.
 	self assert: callDistance abs < 128.
 	objectMemory
 		byteAt: addressFollowingJump - 1
 		put:  (callDistance bitAnd: 16rFF).
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: addressFollowingJump - 10 to: addressFollowingJump - 1]."
-	^2
 ]
 
 { #category : #'inline cacheing' }

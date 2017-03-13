@@ -25,11 +25,17 @@ Class {
 
 { #category : #translation }
 CogSSBytecodeFixup class >> filteredInstVarNames [
-	"Override to add ifdef LowcodeVM around the native stack info.
+	"Override to add ifdef LowcodeVM around the native stack info, and to put
+	 char vars before short vars.
 	 self typedef"
-	^super filteredInstVarNames
-		copyReplaceAll: #('simNativeStackPtr' 'simNativeStackSize')
-		with: #('#if LowcodeVM' 'simNativeStackPtr' 'simNativeStackSize' '#endif')
+	| vars |
+	vars := super filteredInstVarNames asOrderedCollection.
+	vars
+		remove: 'instructionIndex';
+		add: 'instructionIndex' afterIndex: (vars indexOf: 'simStackPtr');
+		add: '#if LowcodeVM' beforeIndex: (vars indexOf: 'simNativeStackPtr');
+		add: '#endif' afterIndex: (vars indexOf: 'simNativeStackSize').
+	^vars
 ]
 
 { #category : #'class initialization' }

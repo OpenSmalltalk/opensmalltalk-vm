@@ -22,23 +22,23 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #translation }
+CogRASSBytecodeFixup class >> filteredInstVarNames [
+	"Override to group char and short vars together for compactness.
+	 self typedef"
+	| vars |
+	vars := super filteredInstVarNames asOrderedCollection.
+	vars
+		remove: 'mergeSimStack';
+		add: 'mergeSimStack' afterIndex: (vars indexOf: 'targetInstruction');
+		remove: 'isReceiverResultRegSelf';
+		add: 'isReceiverResultRegSelf' afterIndex: (vars indexOf: 'simStackPtr').
+	^vars
+]
+
 { #category : #'instance creation' }
 CogRASSBytecodeFixup class >> for: aCogit [
 	^self new cogit: aCogit
-]
-
-{ #category : #translation }
-CogRASSBytecodeFixup class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
-	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a CogRASSBytecodeFixup struct."
-
-	(self allInstVarNames copyWithout: 'cogit') do:
-		[:ivn|
-		aBinaryBlock
-			value: ivn
-			value: (ivn caseOf: {
-					['targetInstruction']	-> [#'AbstractInstruction *'].
-					['mergeSimStack']	-> [#'CogSimStackEntry *'] }
-					otherwise: [#sqInt])]
 ]
 
 { #category : #'initialize-release' }

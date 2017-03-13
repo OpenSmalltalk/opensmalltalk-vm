@@ -92,6 +92,12 @@ CogAbstractInstruction class >> defaultCompilerClass [
 	^self
 ]
 
+{ #category : #translation }
+CogAbstractInstruction class >> filteredInstVarNames [
+	"Eliminate bcpc, which is development-time only."
+	^super filteredInstVarNames copyWithout: 'bcpc'
+]
+
 { #category : #'instance creation' }
 CogAbstractInstruction class >> for: aCogit [
 	^self new cogit: aCogit
@@ -147,21 +153,20 @@ CogAbstractInstruction class >> initializeSpecificOpcodes: opcodeSymbolSequence 
 
 { #category : #translation }
 CogAbstractInstruction class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
-	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in an AbstractInstruction struct."
-	"{CogAbstractInstruction. CogIA32Compiler. CogARMCompiler} do:
+	"Enumerate aBinaryBlock with the names and C type strings for the inst vars to include in an AbstractInstruction struct."
+	"(CogAbstractInstruction withAllSubclasses reject: [:c| c name includesSubString: 'ForTests']) do:
 		[:c| Transcript print: c; cr. c printTypedefOn: Transcript]"
 	(self filteredInstVarNames copyWithout: 'machineCode'), #('machineCode') do:
 		[:ivn|
-		ivn ~= 'bcpc' ifTrue:
-			[aBinaryBlock
-				value: ivn
-				value: (ivn caseOf: {
-							['address']			-> [#'usqIntptr_t'].
-							['machineCode']	-> [self machineCodeDeclaration].
-							['operands']		-> [{#'usqIntptr_t'. '[', NumOperands, ']'}].
-							['dependent']		-> ['struct _AbstractInstruction *']}
-						otherwise:
-							[#'unsigned char'])]]
+		 aBinaryBlock
+			value: ivn
+			value: (ivn caseOf: {
+						['address']			-> [#usqInt]. "usqInt is always large enough to contain a pointer; we do not need to use usqIntptr_t"
+						['machineCode']	-> [self machineCodeDeclaration].
+						['operands']		-> [{#usqInt. '[', NumOperands, ']'}].
+						['dependent']		-> ['struct _AbstractInstruction *']}
+					otherwise:
+						[#'unsigned char'])]
 ]
 
 { #category : #testing }
@@ -199,7 +204,7 @@ CogAbstractInstruction class >> localNameForOpcode: opcode [
 
 { #category : #translation }
 CogAbstractInstruction class >> machineCodeDeclaration [
-	"Answer a dummy declaration.  Subclasses will override to provgide the real one."
+	"Answer a dummy declaration.  Subclasses will override to provide the real one."
 	^#(#'unsigned char' '[4]')
 ]
 
