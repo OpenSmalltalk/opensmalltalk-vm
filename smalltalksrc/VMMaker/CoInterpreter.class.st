@@ -1304,8 +1304,7 @@ CoInterpreter >> ceBaseFrameReturn: returnValue [
 					 self assert: newPage = stackPage.
 					 self moveFramesIn: thePage through: frameAbove toPage: newPage.
 					 stackPages markStackPageMostRecentlyUsed: newPage.
-					 framePointer := thePage headFP.
-					 stackPointer := thePage headSP]]
+					 self setStackPointersFromPage: thePage]]
 		ifFalse:
 			[(isAContext
 			  and: [objectMemory isIntegerObject: (objectMemory fetchPointer: InstructionPointerIndex ofObject: contextToReturnTo)]) ifFalse:
@@ -1318,8 +1317,7 @@ CoInterpreter >> ceBaseFrameReturn: returnValue [
 			 compaction in makeBaseFrameFor:."
 			 instructionPointer := 0.
 			 thePage := self makeBaseFrameFor: contextToReturnTo.
-			 framePointer := thePage headFP.
-			 stackPointer := thePage headSP].
+			 self setStackPointersFromPage: thePage].
 	self setStackPageAndLimit: thePage.
 	self assert: (stackPages stackPageFor: framePointer) = stackPage.
 	(self isMachineCodeFrame: framePointer) ifTrue:
@@ -1471,8 +1469,7 @@ CoInterpreter >> ceCounterTripped: condition [
 		 classObj := objectMemory classForClassTag: classTag.
 		 (self lookupOrdinaryNoMNUEtcInClass: classObj) ~= 0 ifTrue:
 			[cogit resetCountersIn: (self mframeHomeMethod: framePointer).
-			 ^condition].
-		 self addNewMethodToCache: classObj].
+			 ^condition]].
 
 	(primitiveFunctionPointer ~= 0
 	or: [(self argumentCountOf: newMethod) ~= 1]) ifTrue:
@@ -1842,8 +1839,7 @@ CoInterpreter >> ceNonLocalReturn: returnValue [
 					 self markContextAsDead: currentCtx.
 					 currentCtx := nextCntx]].
 		 self setStackPageAndLimit: newPage.
-		 stackPointer := stackPage headSP.
-		 framePointer := stackPage headFP].
+		 self setStackPointersFromPage: newPage].
 
 	"Two cases.  Returning to the top frame or an interior frame.  The
 	 top frame has its instruction pointer on top of stack.  An interior
@@ -2103,8 +2099,7 @@ CoInterpreter >> ceSend: selector above: startAssociationArg to: rcvr numArgs: n
 				self handleMNU: errSelIdx
 					InMachineCodeTo: rcvr
 					classForMessage: classObj.
-				self assert: false "NOTREACHED"].
-			 self addNewMethodToCache: classObj].
+				self assert: false "NOTREACHED"]].
 	"Method found and has a cog method.  Attempt to link to it.  The receiver's class may be young.
 	 If the Cogit can't store young classes in inline caches we can link to an open PIC instead."
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
@@ -2203,8 +2198,7 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 									ifFalse: [cogit noCheckEntryOffset])
 							receiver: rcvr].
 				self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: classObj.
-				self assert: false "NOTREACHED"].
-			 self addNewMethodToCache: classObj].
+				self assert: false "NOTREACHED"]].
 	"Method found and has a cog method.  Attempt to link to it.  The receiver's class may be young.
 	 If the Cogit can't store young classes in inline caches we can link to an open PIC instead."
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
@@ -2269,8 +2263,7 @@ CoInterpreter >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 			 (errSelIdx := self lookupOrdinaryNoMNUEtcInClass: classObj) ~= 0 ifTrue:
 				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: classObj.
 				"NOTREACHED"
-				self assert: false].
-			 self addNewMethodToCache: classObj].
+				self assert: false]].
 	instructionPointer := self popStack.
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
 		[self executeNewMethod.
@@ -2315,8 +2308,7 @@ CoInterpreter >> ceSendFromInLineCacheMiss: cogMethodOrPIC [
 			 (errSelIdx := self lookupOrdinaryNoMNUEtcInClass: classObj) ~= 0 ifTrue:
 				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: classObj.
 				"NOTREACHED"
-				self assert: false].
-			 self addNewMethodToCache: classObj].
+				self assert: false]].
 	instructionPointer := self popStack.
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
 		[self executeNewMethod.
@@ -7554,8 +7546,7 @@ CoInterpreter >> tearDownAndRebuildFrameForCannotReturnBaseFrameReturnFrom: cont
 	newPage := self makeBaseFrameFor: contextToReturnFrom.
 	self assert: stackPage = newPage.
 	self setStackPageAndLimit: newPage.
-	framePointer := stackPage headFP.
-	stackPointer := stackPage headSP.
+	self setStackPointersFromPage: newPage.
 	self assert: self stackTop = cogit ceCannotResumePC.
 	"overwrite the ceSendCannotResumePC on the stack.  If ever re-executed
 	 the returnValue will be taken from top-of-stack by ceCannotResume."

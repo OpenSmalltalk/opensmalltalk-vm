@@ -154,11 +154,6 @@ CogMethodZone >> addToYoungReferrers: cogMethod [
 	objectMemory longAt: youngReferrers put: cogMethod asUnsignedInteger
 ]
 
-{ #category : #accessing }
-CogMethodZone >> alignment [
-	^8
-]
-
 { #category : #allocating }
 CogMethodZone >> allocate: numBytes [
 	| roundedBytes allocation |
@@ -978,6 +973,11 @@ CogMethodZone >> whereIsMaybeCodeThing: anOop [
 CogMethodZone >> youngReferrers [
 	<cmacro: '() youngReferrers'>
 	^youngReferrers
+]
+
+{ #category : #accessing }
+CogMethodZone >> zoneAlignment [
+	^8
 ]
 
 { #category : #accessing }
