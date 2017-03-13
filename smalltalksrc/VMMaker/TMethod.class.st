@@ -95,8 +95,11 @@ TMethod >> addTypesFor: node to: typeSet in: aCodeGen [
 										ifTrue: [#void]
 										ifFalse: [#sqInt])]].
 	expr isConstant ifTrue:
-		[(expr typeOrNilFrom: aCodeGen in: self) ifNotNil:
-			[:type | typeSet add: type]]..
+		[(expr value isInteger and: [expr value >= 0]) "cannot determine if signed or unsigned yet..."
+			ifTrue: [typeSet add: expr value]
+			ifFalse:
+				[(expr typeOrNilFrom: aCodeGen in: self) ifNotNil:
+					[:type | typeSet add: type]]].
 	^false
 ]
 
@@ -668,6 +671,33 @@ TMethod >> endsWithReturn [
 	^parseTree endsWithReturn
 ]
 
+{ #category : #inlining }
+TMethod >> ensureConditionalAssignmentsAreTransformedIn: aCodeGen [
+	"Make passes transforming
+		foo := expr ifTrue: [a] ifFalse: [b]
+	 into
+		expr ifTrue: [foo := a] ifFalse: [foo := b]
+	 until no such instances exist in the tree.  This is needed for correct inlining
+	 given the limitations of inlineCodeOrNilForStatement:returningNodes:in:"
+	| transformedAssignments |
+	[transformedAssignments := Dictionary new.
+	 parseTree
+		nodesDo:
+			[:node|
+			(self transformConditionalAssignment: node in: aCodeGen) ifNotNil:
+				[:replacement|
+				 transformedAssignments at: node put: replacement]]
+		unless: "Don't inline the arguments to asserts to keep the asserts readable"
+			[:node|
+			node isSend
+			and: [node selector == #cCode:inSmalltalk:
+				or: [aCodeGen isAssertSelector: node selector]]].
+	 transformedAssignments notEmpty
+	 and: [self replaceNodesIn: transformedAssignments.
+		  true]] whileTrue
+		
+]
+
 { #category : #transformations }
 TMethod >> ensureToByDoLoopLimitIsSafeAndEfficient: node in: aCodeGen [
 	"For both safety and efficiency, make sure that to:[by:]do: loops
@@ -1159,9 +1189,10 @@ TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 	 For debugging answer a Dictionary from var to the nodes that determined types
 	 This for debugging:
 		(self copy inferTypesForImplicitlyTypedVariablesIn: aCodeGen)"
-	| alreadyExplicitlyTypedOrNotToBeTyped effectiveNodes |
+	| alreadyExplicitlyTypedOrNotToBeTyped asYetUntyped effectiveNodes |
 	aCodeGen maybeBreakForTestToInline: selector in: self.
 	alreadyExplicitlyTypedOrNotToBeTyped := declarations keys asSet.
+	asYetUntyped := locals copyWithoutAll: alreadyExplicitlyTypedOrNotToBeTyped.
 	effectiveNodes := Dictionary new. "this for debugging"
 	parseTree nodesDo:
 		[:node| | type var |
@@ -1186,9 +1217,12 @@ TMethod >> inferTypesForImplicitlyTypedVariablesIn: aCodeGen [
 						ifFalse: [self typeFor: node expression in: aCodeGen].
 			 type "If untyped, then cannot type the variable yet. A subsequent assignment may assign a subtype of what this type ends up being"
 				ifNil: [alreadyExplicitlyTypedOrNotToBeTyped add: var] 
-				ifNotNil: "Merge simple types; complex types must be defined by the programmer."
+				ifNotNil: "Merge simple types (but *don't* merge untyped vars); complex types must be defined by the programmer."
 					[(aCodeGen isSimpleType: type) ifTrue:
-						[aCodeGen mergeTypeOf: var in: declarations with: type method: self.
+						[(asYetUntyped includes: var)
+							ifTrue: [declarations at: var put: type, ' ', var. asYetUntyped remove: var]
+							ifFalse:
+								[aCodeGen mergeTypeOf: var in: declarations with: type method: self].
 						 effectiveNodes at: var put: { declarations at: var. node }, (effectiveNodes at: var ifAbsent: [#()])]]]].
 	^effectiveNodes
 ]
@@ -2843,7 +2877,7 @@ TMethod >> transformToStructClassMethodFor: aCCodeGenerator [
 							receiver: selfNode
 							arguments: #())]]].
 	replacements notEmpty ifTrue:
-		[parseTree := parseTree replaceNodesIn: replacements].
+		[self replaceNodesIn: replacements].
 	typeForSelf := self typeForSelf.
 	self assert: (typeForSelf notNil and: [typeForSelf ~~ #implicit]).
 	self declarationAt: (args addFirst: selfNode name)
@@ -2860,9 +2894,6 @@ TMethod >> tryToInlineMethodExpressionsIn: aCodeGen [
 	parseTree
 		nodesDo:
 			[:node|
-			(self transformConditionalAssignment: node in: aCodeGen) ifNotNil:
-				[:replacement|
-				 sendsToInline at: node put: replacement].
 			(self inlineableFunctionCall: node in: aCodeGen) ifTrue:
 				[(self inlineFunctionCall: node in: aCodeGen) ifNotNil:
 					[:replacement|
@@ -2875,7 +2906,7 @@ TMethod >> tryToInlineMethodExpressionsIn: aCodeGen [
 
 	sendsToInline isEmpty ifTrue:
 		[^false].
-	parseTree := parseTree replaceNodesIn: sendsToInline.
+	self replaceNodesIn: sendsToInline.
 	^true
 ]
 
@@ -2937,6 +2968,7 @@ TMethod >> tryToInlineMethodsIn: aCodeGen [
 			[^false].
 		 ^complete := true].
 
+	self ensureConditionalAssignmentsAreTransformedIn: aCodeGen.
 	didSomething := self tryToInlineMethodStatementsIn: aCodeGen statementListsInto: [:stmtLists| statementLists := stmtLists].
 	didSomething := (self tryToInlineMethodExpressionsIn: aCodeGen) or: [didSomething].
 
