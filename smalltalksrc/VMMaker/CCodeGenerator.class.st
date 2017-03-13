@@ -3282,10 +3282,14 @@ CCodeGenerator >> globalsAsSet [
 
 { #category : #'type inference' }
 CCodeGenerator >> harmonizeReturnTypesIn: aSetOfTypes [
-	"Eliminate signed/unsigned conflicts in aSetOfTypes"
-	| sqs usqs |
-	#(char short int #'unsigned char' #'unsigned short' #'unsigned int' #'unsigned long')
-		with: #(sqInt sqInt sqInt #usqInt #usqInt #usqInt #usqInt)
+	"Eliminate signed/unsigned conflicts in aSetOfTypes. Non-negative integers can be either
+	 signed or unsigned. Ignore them unless there are no types, in which case default to sqInt."
+	| constantIntegers sqs usqs |
+	constantIntegers := aSetOfTypes select: [:element| element isInteger].
+	aSetOfTypes removeAll: constantIntegers.
+	"N.B. Because of LP64 vs LLP64 issues do *not* rename #long to #sqInt or #'unsigned long' to #usqInt"
+	#(char short int #'long long' #'unsigned char' #'unsigned short' #'unsigned int' #'unsigned long long')
+		with: #(sqInt sqInt sqInt sqLong usqInt usqInt usqInt usqLong)
 		do: [:type :replacement|
 			(aSetOfTypes includes: type) ifTrue:
 				[aSetOfTypes remove: type; add: replacement]].
@@ -3295,7 +3299,9 @@ CCodeGenerator >> harmonizeReturnTypesIn: aSetOfTypes [
 	   and: [sqs notEmpty
 	   and: [sqs allSatisfy: [:t| usqs includes: 'u', t]]])
 		ifTrue: [sqs]
-		ifFalse: [aSetOfTypes]
+		ifFalse: [(aSetOfTypes isEmpty and: [constantIntegers notEmpty])
+					ifTrue: [Set with: #sqInt]
+					ifFalse: [aSetOfTypes]]
 ]
 
 { #category : #'type inference' }
@@ -5202,21 +5208,26 @@ CCodeGenerator >> typeForArithmetic: sendNode in: aTMethod [
 	"Answer the return type for an arithmetic sendThis is so that the inliner can still
 	 inline simple expressions.  Deal with pointer arithmetic, floating point arithmetic
 	 and promotion."
-	| rcvrType argType |
+	| rcvrType argType arg promotedType |
 	rcvrType := self typeFor: sendNode receiver in: aTMethod.
-	argType := self typeFor: sendNode args first in: aTMethod.
+	argType := self typeFor: (arg := sendNode args first) in: aTMethod.
 	"deal with pointer arithmetic"
-	((rcvrType notNil and: [rcvrType last = $*]) or: [argType notNil and: [argType last = $*]]) ifTrue:
+	((rcvrType notNil and: [rcvrType last == $*]) or: [argType notNil and: [argType last == $*]]) ifTrue:
 		[(rcvrType isNil or: [argType isNil]) ifTrue:
 			[^nil].
-		 (rcvrType last = $* and: [argType last = $*]) ifTrue:
+		 (rcvrType last == $* and: [argType last == $*]) ifTrue:
 			[sendNode selector == #- ifTrue:
 				[^#int].
 			 self error: 'invalid pointer arithmetic'].
-		 ^rcvrType last = $*
+		 ^rcvrType last == $*
 			ifTrue: [rcvrType]
 			ifFalse: [argType]].
-	^self promoteArithmeticTypes: rcvrType and: argType
+	promotedType := self promoteArithmeticTypes: rcvrType and: argType.
+	"We have to be very careful with subtraction.  The difference between two unsigned types is signed.
+	 But we don't want unsigned - constant to be signed.  We almost always want this to stay unsigned."
+	^(sendNode selector == #- and: [promotedType first == $u and: [(arg isConstant and: [arg value isInteger]) not]])
+		ifTrue: [promotedType allButFirst: ((promotedType beginsWith: 'unsigned') ifTrue: [9] ifFalse: [1])]
+		ifFalse: [promotedType]
 ]
 
 { #category : #'type inference' }
