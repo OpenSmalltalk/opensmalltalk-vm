@@ -23,6 +23,7 @@ $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME): $(FREETYPE2ARCHIVE)
 	cd $(FREETYPE2DIR) \
 		&& ./configure \
 			--prefix='$(THIRDPARTYOUTDIR)' \
+			--host=i686-w64-mingw32 \
 			--without-png \
 			PKG_CONFIG='$(PKG_CONFIG)' \
 			PKG_CONFIG_PATH='$(PKG_CONFIG_PATH)' \
