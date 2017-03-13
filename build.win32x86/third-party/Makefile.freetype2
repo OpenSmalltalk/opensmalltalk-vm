@@ -20,15 +20,16 @@ $(FREETYPE2ARCHIVE):
 	
 $(THIRDPARTYLIBDIR)/$(FREETYPE2LIBNAME): $(FREETYPE2ARCHIVE)
 	tar x -f $(FREETYPE2ARCHIVE) -C $(THIRDPARTYDIR)
-	cd $(FREETYPE2DIR) \
-		&& ./configure \
-			--prefix='$(THIRDPARTYOUTDIR)' \
-			--host=i686-w64-mingw32 \
-			--without-png \
-			PKG_CONFIG='$(PKG_CONFIG)' \
-			PKG_CONFIG_PATH='$(PKG_CONFIG_PATH)' \
-			CFLAGS='$(THIRDPARTY_CFLAGS)' \
-			LDFLAGS='$(THIRDPARTY_LDFLAGS)' \
+	cp ../third-party/Toolchain-cross-mingw32-cygwin.cmake $(FREETYPE2DIR)
+	test -d $(FREETYPE2DIR)/build || mkdir $(FREETYPE2DIR)/build
+	cd $(FREETYPE2DIR)/build \
+		&& cmake ..\
+			-DCMAKE_TOOLCHAIN_FILE=../Toolchain-cross-mingw32-cygwin.cmake \
+			-DCMAKE_INSTALL_PREFIX=$(THIRDPARTYOUTDIR) \
+			-DWITH_PNG=OFF \
+			-DBUILD_SHARED_LIBS=ON \
+			-DCMAKE_C_FLAGS="$(THIRDPARTY_CFLAGS)" \
+			-DCMAKE_LD_FLAGS="$(THIRDPARTY_LDFLAGS)" \
 		&& make \
 		&& make install
 
