@@ -47,6 +47,8 @@ Class {
 		'PrimErrNotFound',
 		'PrimErrObjectIsPinned',
 		'PrimErrObjectMayMove',
+		'PrimErrObjectMoved',
+		'PrimErrObjectNotPinned',
 		'PrimErrUnsupported',
 		'PrimErrWritePastObject',
 		'PrimNoErr',
