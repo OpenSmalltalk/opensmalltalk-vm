@@ -6,6 +6,7 @@
 #include <setjmp.h>
 
 #include "sqVirtualMachine.h"
+#include "sqAssert.h"
 
 
 /*** Function prototypes ***/
@@ -242,17 +243,8 @@ void (*setInterruptCheckChain(void (*aFunction)(void)))() { return 0; }
 #endif
 
 #if VM_PROXY_MINOR > 10
-# if COGMTVM
-sqInt disownVM(sqInt flags);
-sqInt ownVM(sqInt threadIdAndFlags);
-# else
-sqInt disownVM(sqInt flags) { return 1; }
-sqInt ownVM(sqInt threadIdAndFlags)
-{
-	extern sqInt amInVMThread(void);
-	return amInVMThread() ? 0 : -1;
-}
-# endif
+extern sqInt disownVM(sqInt flags);
+extern sqInt ownVM(sqInt threadIdAndFlags);
 #endif /* VM_PROXY_MINOR > 10 */
 extern sqInt isYoung(sqInt);
 
