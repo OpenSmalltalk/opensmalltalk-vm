@@ -87,6 +87,11 @@ CogObjectRepresentation >> checkValidObjectReference: anOop [
 	   and: [(objectMemory heapMapAtWord: (self pointerForOop: anOop)) ~= 0]
 ]
 
+{ #category : #'in-line cacheing' }
+CogObjectRepresentation >> classForInlineCacheTag: classIndex [
+	^self subclassResponsibility
+]
+
 { #category : #'bytecode generator support' }
 CogObjectRepresentation >> createsArraysInline [
 	"Answer if the object representation allocates arrays inline.  By

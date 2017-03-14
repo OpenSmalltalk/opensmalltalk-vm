@@ -159,6 +159,11 @@ CogObjectRepresentationFor64BitSpur >> branchIf: reg hasNotImmediateTag: classIn
 	jmpImmediate jmpTarget: targetFixUp
 ]
 
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationFor64BitSpur >> classForInlineCacheTag: classIndex [
+	^objectMemory classOrNilAtIndex: classIndex
+]
+
 { #category : #'sista support' }
 CogObjectRepresentationFor64BitSpur >> fetchImmediateTagOtherThanTag1: tag1 tag2: tag2 [
 	"Answers the immediate tag which is not tag1 nor tag2, usually Character."

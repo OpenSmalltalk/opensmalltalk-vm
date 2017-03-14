@@ -90,6 +90,14 @@ CogObjectRepresentationFor32BitSpur >> branchIf: reg hasNotImmediateTag: classIn
 	jmpImmediate jmpTarget: targetFixUp
 ]
 
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationFor32BitSpur >> classForInlineCacheTag: inlineCacheTag [
+	"Character gets mapped to zero.  See inlineCacheTagForInstance:."
+	^objectMemory classOrNilAtIndex: (inlineCacheTag = 0
+											ifTrue: [objectMemory characterTag]
+											ifFalse: [inlineCacheTag])
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationFor32BitSpur >> genAddSmallIntegerTagsTo: aRegister [
 	cogit AddCq: 1 R: aRegister.
