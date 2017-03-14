@@ -241,7 +241,9 @@ VMClass class >> initializePrimitiveErrorCodes [
 	PrimErrObjectMayMove		:= pet indexOf: #'object may move' ifAbsent: 14.
 	PrimErrLimitExceeded		:= pet indexOf: #'resource limit exceeded' ifAbsent: 15.
 	PrimErrObjectIsPinned		:= pet indexOf: #'object is pinned' ifAbsent: 16.
-	PrimErrWritePastObject	:= pet indexOf: #'primitive write beyond end of object' ifAbsent: 17
+	PrimErrWritePastObject		:= pet indexOf: #'primitive write beyond end of object' ifAbsent: 17.
+	PrimErrObjectMoved		:= pet indexOf: #'object moved' ifAbsent: 18.
+	PrimErrObjectNotPinned	:= pet indexOf: #'object not pinned' ifAbsent: 19
 ]
 
 { #category : #initialization }
