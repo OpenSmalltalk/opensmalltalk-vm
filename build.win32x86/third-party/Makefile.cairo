@@ -36,7 +36,6 @@ $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME): $(CAIROARCHIVE)
 			--disable-silent-rules \
 			--disable-xlib \
 			--disable-dependency-tracking \
-		&& echo "#define _SSIZE_T_DEFINED 1" >> config.h \
 		&& make \
 		&& make install
 
