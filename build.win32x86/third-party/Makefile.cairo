@@ -28,6 +28,7 @@ $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME): $(CAIROARCHIVE)
 	cd $(CAIRODIR) \
 		&& ./configure \
 			--prefix="$(THIRDPARTYOUTDIR)" \
+			--host=i686-w64-mingw32 \
 			PKG_CONFIG="$(PKG_CONFIG)" \
 			PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" \
 			CFLAGS='$(THIRDPARTY_CFLAGS) -I$(THIRDPARTYINCLUDEDIR) -march=pentium4' \
