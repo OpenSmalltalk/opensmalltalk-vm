@@ -15567,10 +15567,12 @@ StackInterpreter >> methodClassOf: methodPointer [
 	 because the class index and ValueIndex of the association almost certainly share a cache line."
 	| literal |
 	literal := self followLiteral: (objectMemory literalCountOf: methodPointer) - 1 ofMethod: methodPointer.
-	literal ~= objectMemory nilObject ifTrue:
-		[self assert: ((objectMemory isPointers: literal) and: [(objectMemory numSlotsOf: literal) > ValueIndex]).
-		 literal := objectMemory followField: ValueIndex ofObject: literal].
-	^literal
+	^ (literal ~= objectMemory nilObject 
+		and: [objectMemory isPointers: literal]) "filters out fullBlock last literal"
+			ifTrue: 
+				[self assert: (objectMemory numSlotsOf: literal) > ValueIndex.
+			 	objectMemory followField: ValueIndex ofObject: literal]
+			ifFalse: [objectMemory nilObject]
 ]
 
 { #category : #'compiled methods' }
