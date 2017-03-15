@@ -8,14 +8,14 @@
 #if i386|i486|i586|i686
 # include "ia32abicc.c"
 #elif powerpc|ppc
-# include "ppcia32abicc.c"
+# include "ppc32abicc.c"
 #elif x86_64|x64|__x86_64|__x86_64__|_M_AMD64|_M_X64
 # if WIN64
-#	include "x64win64ia32abicc.c"
+#	include "x64win64abicc.c"
 # else
-#	include "x64ia32abicc.c"
+#	include "x64sysvabicc.c"
 # endif
 #elif __ARM_ARCH__|__arm__|__arm32__|ARM32
-# include "arm32ia32abicc.c"
+# include "arm32abicc.c"
 #endif
 	
