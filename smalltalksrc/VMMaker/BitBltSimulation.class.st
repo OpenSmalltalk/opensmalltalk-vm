@@ -130,7 +130,9 @@ Class {
 		'componentAlphaModeColor',
 		'componentAlphaModeAlpha',
 		'ungammaLookupTable',
-		'gammaLookupTable'
+		'gammaLookupTable',
+		'numGCsOnInvocation',
+		'bitBltIsReceiver'
 	],
 	#classVars : [
 		'AllOnes',
@@ -153,6 +155,7 @@ Class {
 		'BBWarpBase',
 		'BBWidthIndex',
 		'BBXTableIndex',
+		'BEBitBltIndex',
 		'BinaryPoint',
 		'BlueIndex',
 		'ColorMapFixedPart',
@@ -167,7 +170,6 @@ Class {
 		'FormHeightIndex',
 		'FormWidthIndex',
 		'GreenIndex',
-		'JitBltHookSize',
 		'OpTable',
 		'OpTableSize',
 		'RedIndex'
@@ -194,6 +196,7 @@ BitBltSimulation class >> declareCVarsIn: aCCodeGenerator [
 
 	"add option of  fast path BitBLT code header"
 	aCCodeGenerator
+		addHeaderFile:'"sqAssert.h"';
 		addHeaderFile:'#ifdef ENABLE_FAST_BLT
 #include "BitBltDispatch.h"
 #else
@@ -247,7 +250,7 @@ BitBltSimulation class >> declareCVarsIn: aCCodeGenerator [
 	
 	#(sourcePitch sourceWidth sourceHeight sourceDepth sourceMSB sx sy
 		destPitch destWidth destHeight destDepth destMSB dx dy bbW bbH)
-		do: [:ivar | aCCodeGenerator var: ivar type: 'int'.]
+		do: [:ivar | aCCodeGenerator var: ivar type: 'int']
 ]
 
 { #category : #initialization }
@@ -290,6 +293,11 @@ BitBltSimulation class >> initialize [
 	BBWarpBase := 15.
 	BBLastIndex := 15.
 	BBXTableIndex := 16.
+
+	"BalloonEngineFields"
+	BEBitBltIndex := (Smalltalk classNamed: #BalloonEngine)
+						ifNil: [2]
+						ifNotNil: [:be| (be allInstVarNames indexOf: 'bitBlt') - 1].
 
 	"RGBA indexes"
 	RedIndex := 0.
@@ -1881,6 +1889,14 @@ BitBltSimulation >> dstLongAt: idx put: srcValue mask: dstMask [
 	self dstLongAt: idx put: dstValue.
 ]
 
+{ #category : #setup }
+BitBltSimulation >> ensureDestAndSourceFormsAreValid [
+	"If a GC has occurred, update destForm and sourceForm from the stack."
+	<inline: #always>
+	numGCsOnInvocation ~= interpreterProxy statNumGCs ifTrue:
+		[self reloadDestAndSourceForms]
+]
+
 { #category : #'pixel mapping' }
 BitBltSimulation >> expensiveDither32To16: srcWord threshold: ditherValue [
 	"Dither the given 32bit word to 16 bit. Ignore alpha."
@@ -2086,7 +2102,9 @@ BitBltSimulation >> loadBitBltDestForm [
 	(interpreterProxy isIntegerObject: destBits) ifTrue:[
 		"Query for actual surface dimensions"
 		(self queryDestSurface: (interpreterProxy integerValueOf: destBits))
-			ifFalse:[^false].
+			ifFalse:
+				[interpreterProxy primitiveFailFor: PrimErrCallbackError.
+				 ^false].
 		destPPW := 32 // destDepth.
 		destBits := destPitch := 0.
 	] ifFalse:[
@@ -2119,6 +2137,8 @@ BitBltSimulation >> loadBitBltFrom: bbObj warping: aBool [
 	<inline: false>
 	bitBltOop := bbObj.
 	isWarping := aBool.
+	bitBltIsReceiver := bbObj = (interpreterProxy stackValue: interpreterProxy methodArgumentCount).
+	numGCsOnInvocation := interpreterProxy statNumGCs.
 	combinationRule := interpreterProxy fetchInteger: BBRuleIndex ofObject: bitBltOop.
 	(interpreterProxy failed
 		or: [combinationRule < 0 or: [combinationRule > (OpTableSize - 2)]])
@@ -2167,6 +2187,10 @@ BitBltSimulation >> loadBitBltFrom: bbObj warping: aBool [
 	clipY < 0 ifTrue: [clipHeight := clipHeight + clipY.  clipY := 0].
 	clipX+clipWidth > destWidth ifTrue: [clipWidth := destWidth - clipX].
 	clipY+clipHeight > destHeight ifTrue: [clipHeight := destHeight - clipY].
+
+	numGCsOnInvocation ~= interpreterProxy statNumGCs ifTrue: "querySurface could be a callback in loadSourceFor: and loadDestForm:"
+		[interpreterProxy primitiveFailFor: PrimErrObjectMoved.
+		 ^false].
 	^ true
 ]
 
@@ -2188,7 +2212,9 @@ BitBltSimulation >> loadBitBltSourceForm [
 	(interpreterProxy isIntegerObject: sourceBits) ifTrue:[
 		"Query for actual surface dimensions"
 		(self querySourceSurface: (interpreterProxy integerValueOf: sourceBits))
-			ifFalse:[^false].
+			ifFalse:
+				[interpreterProxy primitiveFailFor: PrimErrCallbackError.
+				 ^false].
 		sourcePPW := 32 // sourceDepth.
 		sourceBits := sourcePitch := 0.
 	] ifFalse:[
@@ -2342,13 +2368,16 @@ BitBltSimulation >> lockSurfaces [
 	* Warping always requires the entire source surface to be locked because
 	there is no beforehand knowledge about what area will actually be traversed.
 
+	* Fail if a GC has occurred since the primitive started (presumably in the lockSurface
+	   function), because one or more of the primitives' parameters may have been moved.
 	"
 	| sourceHandle destHandle l r t b fn |
 	<inline: true>
 	<var: #fn declareC:'sqIntptr_t (*fn)(sqIntptr_t, int*, int, int, int, int)'>
+	self assert: numGCsOnInvocation = interpreterProxy statNumGCs.
 	hasSurfaceLock := false.
 	destBits = 0 ifTrue:["Blitting *to* OS surface"
-		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
+		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^false]].
 		fn := self cCoerce: lockSurfaceFn to: 'sqIntptr_t (*)(sqIntptr_t, int*, int, int, int, int)'.
 		destHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: destForm.
 		(sourceBits = 0 and:[noSource not]) ifTrue:[
@@ -2369,17 +2398,25 @@ BitBltSimulation >> lockSurfaces [
 				destBits := sourceBits.
 				destPitch := sourcePitch.
 				hasSurfaceLock := true.
-				^destBits ~~ 0
+				numGCsOnInvocation ~= interpreterProxy statNumGCs ifTrue:
+					[interpreterProxy primitiveFailFor: PrimErrObjectMoved.
+					 ^false].
+				destBits = 0 ifTrue:
+					[interpreterProxy primitiveFailFor: PrimErrCallbackError].
+				^destBits ~= 0
 			].
 			"Fall through - if not equal it'll be handled below"
 		].
 		destBits := self cCode:'fn(destHandle, &destPitch, dx, dy, bbW, bbH)'.
 		hasSurfaceLock := true.
+		numGCsOnInvocation ~= interpreterProxy statNumGCs ifTrue:
+			[interpreterProxy primitiveFailFor: PrimErrObjectMoved.
+			 ^false].
 	].
-	(sourceBits == 0 and:[noSource not]) ifTrue:["Blitting *from* OS surface"
+	(sourceBits = 0 and:[noSource not]) ifTrue:["Blitting *from* OS surface"
 		sourceHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: sourceForm.
 		interpreterProxy failed ifTrue:[^nil]. "fetch sourceHandle could fail"
-		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
+		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^false]].
 		fn := self cCoerce: lockSurfaceFn to: 'sqIntptr_t (*)(sqIntptr_t, int*, int, int, int, int)'.
 		"Warping requiring the entire surface"
 		isWarping ifTrue:[
@@ -2388,8 +2425,13 @@ BitBltSimulation >> lockSurfaces [
 			sourceBits := self cCode:'fn(sourceHandle, &sourcePitch, sx, sy, bbW, bbH)'.
 		].
 		hasSurfaceLock := true.
+		numGCsOnInvocation ~= interpreterProxy statNumGCs ifTrue:
+			[interpreterProxy primitiveFailFor: PrimErrObjectMoved.
+			 ^false].
+		sourceBits = 0 ifTrue:
+			[interpreterProxy primitiveFailFor: PrimErrCallbackError].
 	].
-	^destBits ~~ 0 and:[sourceBits ~~ 0 or:[noSource]].
+	^destBits ~= 0 and: [sourceBits ~= 0 or:[noSource]]
 ]
 
 { #category : #'color mapping' }
@@ -3038,6 +3080,20 @@ BitBltSimulation >> querySourceSurface: handle [
 	^(self cCode:' ((int (*) (sqIntptr_t, int*, int*, int*, int*))querySurfaceFn)
 		(handle, &sourceWidth, &sourceHeight, &sourceDepth, &sourceMSB)'
 			inSmalltalk:[false])
+]
+
+{ #category : #setup }
+BitBltSimulation >> reloadDestAndSourceForms [
+	"A GC has occurred.  The destForm must be updated.  But where to derive it from?
+	  For copyBits and warpBits it is derived from the receiver.  But for a BalloonEnginePlugin
+	  it should be obtained from (interpreterProxy fetchPointer: BEBitBltIndex ofObject: engine).
+	  For the moment implement something that works for these two cases."
+	<inline: false>
+	| receiver |
+	receiver := interpreterProxy stackValue: interpreterProxy methodArgumentCount.
+	bitBltIsReceiver ifFalse: [receiver := interpreterProxy fetchPointer: BEBitBltIndex ofObject: receiver].
+	destForm := interpreterProxy fetchPointer: BBDestFormIndex ofObject: receiver.
+	sourceForm := interpreterProxy fetchPointer: BBSourceFormIndex ofObject: receiver
 ]
 
 { #category : #'combination rules' }
@@ -3689,6 +3745,7 @@ BitBltSimulation >> setupColorMasksFrom: srcBits to: targetBits [
 
 { #category : #'interpreter interface' }
 BitBltSimulation >> showDisplayBits [
+	self ensureDestAndSourceFormsAreValid.
 	interpreterProxy 
 		showDisplayBits: destForm
 		Left: affectedL
@@ -3873,6 +3930,7 @@ BitBltSimulation >> unlockSurfaces [
 	<var: #fn declareC:'int (*fn)(sqIntptr_t, int, int, int, int)'>
 	hasSurfaceLock ifTrue:[
 		unlockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
+		self ensureDestAndSourceFormsAreValid.
 		fn := self cCoerce: unlockSurfaceFn to: 'int (*)(sqIntptr_t, int, int, int, int)'.
 		destLocked := false.
 		destHandle := interpreterProxy fetchPointer: FormBitsIndex ofObject: destForm.
@@ -3884,6 +3942,7 @@ BitBltSimulation >> unlockSurfaces [
 			destLocked := true.
 		].
 		noSource ifFalse:[
+			self ensureDestAndSourceFormsAreValid.
 			sourceHandle := interpreterProxy fetchPointer: FormBitsIndex ofObject: sourceForm.
 			(interpreterProxy isIntegerObject: sourceHandle) ifTrue:[
 				sourceHandle := interpreterProxy integerValueOf: sourceHandle.
