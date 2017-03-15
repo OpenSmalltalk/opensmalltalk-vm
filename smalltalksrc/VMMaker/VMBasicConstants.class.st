@@ -37,6 +37,7 @@ Class {
 		'PrimErrBadMethod',
 		'PrimErrBadNumArgs',
 		'PrimErrBadReceiver',
+		'PrimErrCallbackError',
 		'PrimErrGenericFailure',
 		'PrimErrInappropriate',
 		'PrimErrLimitExceeded',
