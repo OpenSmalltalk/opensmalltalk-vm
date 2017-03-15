@@ -18,11 +18,15 @@ PLUGINREQS:=$(THIRDPARTYLIBS)
 $(CAIROARCHIVE): 
 	$(WGET) -O $(CAIROARCHIVE) $(CAIROURL) 
 
-# IMPORTANT: This hack of "echo..." is needed to properly compile cairo. 
-# this is a long time error reported by Igor a lot of time ago: 
-# https://lists.cairographics.org/archives/cairo/2012-October/023675.html
-# nobody answered his concern at the time and today (version 1.14.6), 
-# this is still not solved. 
+# IMPORTANT: The hack for editing test/Makefile after ./configure
+# is required on cygwin because it fails to truncate the file
+#       test/cairo-test-constructors.c
+# when it overwrites it, causing compilation to fail on trailing lines
+# We thus add a rule for removing the file before generating it if it exists
+# sed '/pattern/i newLine'
+# This works in version 1.14.28 but somehow fragile.
+# If this cygwin bug is confirmed, the line should be added to Makefile.am
+# and any other relevant file, and the change pushed back to cairo repository.
 $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME): $(CAIROARCHIVE)
 	tar x -f $(CAIROARCHIVE) -C $(THIRDPARTYDIR)
 	cd $(CAIRODIR) \
@@ -36,6 +40,7 @@ $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME): $(CAIROARCHIVE)
 			--disable-silent-rules \
 			--disable-xlib \
 			--disable-dependency-tracking \
+		&& sed -i '/.* sh .\/make-/i\\ttest -e \$$\@ \&\& rm \$$\@' test/Makefile \
 		&& make \
 		&& make install
 
