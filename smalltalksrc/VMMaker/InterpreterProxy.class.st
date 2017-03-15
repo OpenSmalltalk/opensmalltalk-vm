@@ -1071,6 +1071,11 @@ InterpreterProxy >> stackValue: offset [
 	^stack at: stack size - offset.
 ]
 
+{ #category : #other }
+InterpreterProxy >> statNumGCs [
+	^(Smalltalk vmParameterAt: 7 "statFullGCs") + (Smalltalk vmParameterAt: 9 "statScavenges/statIncrGCs")
+]
+
 { #category : #'object access' }
 InterpreterProxy >> storeInteger: index ofObject: oop withValue: integer [
 	(self isIntegerValue: integer) 
