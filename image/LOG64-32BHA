@@ -1,0 +1,16 @@
+McStalker.image$ cat TEST;for e in 3 4 5 6 7 8 9 10 11 12 13 14 15 16; do spur64cfvm -eden "$e"m spurreader-64.; done
+FileStream stdout print: (Smalltalk getSystemAttribute: -2); space; print: (Smalltalk vmParameterAt: 44); space; print: [SMarkBinaryTreeBenchmark new binarytrees: 16] timeToRun; nl. Smalltalk quit!
+'3m' 5931520 5598
+'4m' 6680512 1963
+'5m' 7429488 1560
+'6m' 8178480 1564
+'7m' 8927456 1370
+'8m' 9676448 1357
+'9m' 10425424 1332
+'10m' 11174400 1317
+'11m' 11923392 1334
+'12m' 12672368 1313
+'13m' 13421360 1286
+'14m' 14170336 1298
+'15m' 14919328 1277
+'16m' 15668304 1265

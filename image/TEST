@@ -1,0 +1,1 @@
+FileStream stdout print: (Smalltalk getSystemAttribute: -2); space; print: (Smalltalk vmParameterAt: 19); space; nextPutAll: (Smalltalk vmParameterAt: 19) hex; space; print: (Smalltalk vmParameterAt: 44);  space; print: [SMarkBinaryTreeBenchmark new binarytrees: 16] timeToRun; nl. Smalltalk quit!
