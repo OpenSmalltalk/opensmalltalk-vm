@@ -244,13 +244,14 @@ BitBltSimulation class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator var:'gammaLookupTable' 
 		type: 'unsigned char *'.
 
-	aCCodeGenerator var: 'querySurfaceFn' type: 'void *'.
-	aCCodeGenerator var: 'lockSurfaceFn' type: 'void *'.
-	aCCodeGenerator var: 'unlockSurfaceFn' type: 'void *'.
+	aCCodeGenerator
+		var: 'querySurfaceFn' declareC: 'int (*querySurfaceFn)(sqIntptr_t, int*, int*, int*, int*)';
+		var: 'lockSurfaceFn' declareC: 'sqIntptr_t (*lockSurfaceFn)(sqIntptr_t, int*, int, int, int, int)';
+		var: 'unlockSurfaceFn' declareC: 'int (*unlockSurfaceFn)(sqIntptr_t, int, int, int, int)'.
 	
 	#(sourcePitch sourceWidth sourceHeight sourceDepth sourceMSB sx sy
 		destPitch destWidth destHeight destDepth destMSB dx dy bbW bbH)
-		do: [:ivar | aCCodeGenerator var: ivar type: 'int']
+		do: [:ivar | aCCodeGenerator var: ivar type: #int]
 ]
 
 { #category : #initialization }
@@ -2085,38 +2086,42 @@ BitBltSimulation >> isIdentityMap: shifts with: masks [
 
 { #category : #'interpreter interface' }
 BitBltSimulation >> loadBitBltDestForm [
-	"Load the dest form for BitBlt. Return false if anything is wrong, true otherwise."
+	"Load the dest form for BitBlt. Answer false if anything is wrong, true otherwise."
 
 	| destBitsSize |
 	<inline: true>
 	destBits := interpreterProxy fetchPointer: FormBitsIndex ofObject: destForm.
 	destWidth := interpreterProxy fetchInteger: FormWidthIndex ofObject: destForm.
 	destHeight := interpreterProxy fetchInteger: FormHeightIndex ofObject: destForm.
-	(destWidth >= 0 and: [destHeight >= 0])
-		ifFalse: [^ false].
+	(destWidth >= 0 and: [destHeight >= 0]) ifFalse:
+		[^false].
 	destDepth := interpreterProxy fetchInteger: FormDepthIndex ofObject: destForm.
 	destMSB := destDepth > 0.
-	destDepth < 0 ifTrue:[destDepth := 0 - destDepth].
+	destDepth < 0 ifTrue:
+		[destDepth := 0 - destDepth].
 	"Ignore an integer bits handle for Display in which case 
 	the appropriate values will be obtained by calling ioLockSurfaceBits()."
-	(interpreterProxy isIntegerObject: destBits) ifTrue:[
-		"Query for actual surface dimensions"
-		(self queryDestSurface: (interpreterProxy integerValueOf: destBits))
-			ifFalse:
-				[interpreterProxy primitiveFailFor: PrimErrCallbackError.
-				 ^false].
-		destPPW := 32 // destDepth.
-		destBits := destPitch := 0.
-	] ifFalse:[
-		destPPW := 32 // destDepth.
-		destPitch := destWidth + (destPPW-1) // destPPW * 4.
-		destBitsSize := interpreterProxy byteSizeOf: destBits.
-		((interpreterProxy isWordsOrBytes: destBits)
-			and: [destBitsSize >= (destPitch * destHeight)])
-			ifFalse: [^ false].
-		"Skip header since external bits don't have one"
-		destBits := self oopForPointer: (interpreterProxy firstIndexableField: destBits).
-	].
+	(interpreterProxy isIntegerObject: destBits)
+		ifTrue: "Query for actual surface dimensions"
+			[querySurfaceFn = 0 ifTrue: [self loadSurfacePlugin ifFalse: [^false]].
+			 (self query: (interpreterProxy integerValueOf: destBits)
+				Sur: (self addressOf: destWidth)
+				fa: (self addressOf: destHeight)
+				ce: (self addressOf: destDepth)
+				Fn: (self addressOf: destMSB)) ifFalse:
+					[interpreterProxy primitiveFailFor: PrimErrCallbackError.
+					 ^false].
+			destPPW := 32 // destDepth.
+			destBits := destPitch := 0]
+		ifFalse:
+			[destPPW := 32 // destDepth.
+			destPitch := destWidth + (destPPW-1) // destPPW * 4.
+			destBitsSize := interpreterProxy byteSizeOf: destBits.
+			((interpreterProxy isWordsOrBytes: destBits)
+			 and: [destBitsSize >= (destPitch * destHeight)]) ifFalse:
+				[^false].
+			"Skip header since external bits don't have one"
+			destBits := self oopForPointer: (interpreterProxy firstIndexableField: destBits)].
 	^true
 ]
 
@@ -2142,9 +2147,9 @@ BitBltSimulation >> loadBitBltFrom: bbObj warping: aBool [
 	combinationRule := interpreterProxy fetchInteger: BBRuleIndex ofObject: bitBltOop.
 	(interpreterProxy failed
 		or: [combinationRule < 0 or: [combinationRule > (OpTableSize - 2)]])
-		 ifTrue: [^ false  "operation out of range"].
+		 ifTrue: [^false  "operation out of range"].
 	(combinationRule >= 16 and: [combinationRule <= 17])
-		 ifTrue: [^ false  "fail for old simulated paint, erase modes"].
+		 ifTrue: [^false  "fail for old simulated paint, erase modes"].
 	sourceForm := interpreterProxy fetchPointer: BBSourceFormIndex ofObject: bitBltOop.
 	noSource := self ignoreSourceOrHalftone: sourceForm.
 	halftoneForm := interpreterProxy fetchPointer: BBHalftoneFormIndex ofObject: bitBltOop.
@@ -2152,7 +2157,7 @@ BitBltSimulation >> loadBitBltFrom: bbObj warping: aBool [
 
 	destForm := interpreterProxy fetchPointer: BBDestFormIndex ofObject: bbObj.
 	((interpreterProxy isPointers: destForm) and: [(interpreterProxy slotSizeOf: destForm) >= 4])
-		ifFalse: [^ false].
+		ifFalse: [^false].
 	ok := self loadBitBltDestForm.
 	ok ifFalse:[^false].
 
@@ -2160,21 +2165,22 @@ BitBltSimulation >> loadBitBltFrom: bbObj warping: aBool [
 	destY := self fetchIntOrFloat: BBDestYIndex ofObject: bitBltOop ifNil: 0.
 	width := self fetchIntOrFloat: BBWidthIndex ofObject: bitBltOop ifNil: destWidth.
 	height := self fetchIntOrFloat: BBHeightIndex ofObject: bitBltOop ifNil: destHeight.
-		interpreterProxy failed ifTrue: [^ false  "non-integer value"].
+	interpreterProxy failed ifTrue: [^false].
 
-	noSource ifTrue:
-		[sourceX := sourceY := 0]
+	noSource
+		ifTrue:
+			[sourceX := sourceY := 0]
 		ifFalse: 
-		[((interpreterProxy isPointers: sourceForm) and: [(interpreterProxy slotSizeOf: sourceForm) >= 4])
-			ifFalse: [^ false].
-		ok := self loadBitBltSourceForm.
-		ok ifFalse:[^false].
-		ok := self loadColorMap.
-		ok ifFalse:[^false].
-		"Need the implicit setup here in case of 16<->32 bit conversions"
-		(cmFlags bitAnd: ColorMapNewStyle) = 0 ifTrue:[self setupColorMasks].
-		sourceX := self fetchIntOrFloat: BBSourceXIndex ofObject: bitBltOop ifNil: 0.
-		sourceY := self fetchIntOrFloat: BBSourceYIndex ofObject: bitBltOop ifNil: 0].
+			[((interpreterProxy isPointers: sourceForm) and: [(interpreterProxy slotSizeOf: sourceForm) >= 4])
+				ifFalse: [^false].
+			ok := self loadBitBltSourceForm.
+			ok ifFalse:[^false].
+			ok := self loadColorMap.
+			ok ifFalse:[^false].
+			"Need the implicit setup here in case of 16<->32 bit conversions"
+			(cmFlags bitAnd: ColorMapNewStyle) = 0 ifTrue:[self setupColorMasks].
+			sourceX := self fetchIntOrFloat: BBSourceXIndex ofObject: bitBltOop ifNil: 0.
+			sourceY := self fetchIntOrFloat: BBSourceYIndex ofObject: bitBltOop ifNil: 0].
 
 	ok := self loadHalftoneForm.
 	ok ifFalse:[^false].
@@ -2182,16 +2188,15 @@ BitBltSimulation >> loadBitBltFrom: bbObj warping: aBool [
 	clipY := self fetchIntOrFloat: BBClipYIndex ofObject: bitBltOop ifNil: 0.
 	clipWidth := self fetchIntOrFloat: BBClipWidthIndex ofObject: bitBltOop ifNil: destWidth.
 	clipHeight := self fetchIntOrFloat: BBClipHeightIndex ofObject: bitBltOop ifNil: destHeight.
-		interpreterProxy failed ifTrue: [^ false  "non-integer value"].
+	interpreterProxy failed ifTrue: [^ false  "non-integer value"].
 	clipX < 0 ifTrue: [clipWidth := clipWidth + clipX.  clipX := 0].
 	clipY < 0 ifTrue: [clipHeight := clipHeight + clipY.  clipY := 0].
 	clipX+clipWidth > destWidth ifTrue: [clipWidth := destWidth - clipX].
 	clipY+clipHeight > destHeight ifTrue: [clipHeight := destHeight - clipY].
-
 	numGCsOnInvocation ~= interpreterProxy statNumGCs ifTrue: "querySurface could be a callback in loadSourceFor: and loadDestForm:"
 		[interpreterProxy primitiveFailFor: PrimErrObjectMoved.
 		 ^false].
-	^ true
+	^true
 ]
 
 { #category : #'interpreter interface' }
@@ -2202,31 +2207,35 @@ BitBltSimulation >> loadBitBltSourceForm [
 	sourceBits := interpreterProxy fetchPointer: FormBitsIndex ofObject: sourceForm.
 	sourceWidth := self fetchIntOrFloat: FormWidthIndex ofObject: sourceForm.
 	sourceHeight := self fetchIntOrFloat: FormHeightIndex ofObject: sourceForm.
-	(sourceWidth >= 0 and: [sourceHeight >= 0])
-		ifFalse: [^ false].
+	(sourceWidth >= 0 and: [sourceHeight >= 0]) ifFalse:
+		[^false].
 	sourceDepth := interpreterProxy fetchInteger: FormDepthIndex ofObject: sourceForm.
 	sourceMSB := sourceDepth > 0.
-	sourceDepth < 0 ifTrue:[sourceDepth := 0 - sourceDepth].
+	sourceDepth < 0 ifTrue:
+		[sourceDepth := 0 - sourceDepth].
 	"Ignore an integer bits handle for Display in which case 
-	the appropriate values will be obtained by calling ioLockSurfaceBits()."
-	(interpreterProxy isIntegerObject: sourceBits) ifTrue:[
-		"Query for actual surface dimensions"
-		(self querySourceSurface: (interpreterProxy integerValueOf: sourceBits))
-			ifFalse:
-				[interpreterProxy primitiveFailFor: PrimErrCallbackError.
-				 ^false].
-		sourcePPW := 32 // sourceDepth.
-		sourceBits := sourcePitch := 0.
-	] ifFalse:[
-		sourcePPW := 32 // sourceDepth.
-		sourcePitch := sourceWidth + (sourcePPW-1) // sourcePPW * 4.
-		sourceBitsSize := interpreterProxy byteSizeOf: sourceBits.
-		((interpreterProxy isWordsOrBytes: sourceBits)
-			and: [sourceBitsSize >= (sourcePitch * sourceHeight)])
-			ifFalse: [^ false].
-		"Skip header since external bits don't have one"
-		sourceBits := self oopForPointer: (interpreterProxy firstIndexableField: sourceBits).
-	].
+	 the appropriate values will be obtained by calling ioLockSurfaceBits()."
+	(interpreterProxy isIntegerObject: sourceBits)
+		ifTrue: "Query for actual surface dimensions"
+			[querySurfaceFn = 0 ifTrue: [self loadSurfacePlugin ifFalse:[^false]].
+			 (self query: (interpreterProxy integerValueOf: sourceBits)
+				Sur: (self addressOf: sourceWidth)
+				fa: (self addressOf: sourceHeight)
+				ce: (self addressOf: sourceDepth)
+				Fn: (self addressOf: sourceMSB)) ifFalse:
+					[interpreterProxy primitiveFailFor: PrimErrCallbackError.
+					 ^false].
+			sourcePPW := 32 // sourceDepth.
+			sourceBits := sourcePitch := 0]
+		ifFalse:
+			[sourcePPW := 32 // sourceDepth.
+			sourcePitch := sourceWidth + (sourcePPW-1) // sourcePPW * 4.
+			sourceBitsSize := interpreterProxy byteSizeOf: sourceBits.
+			((interpreterProxy isWordsOrBytes: sourceBits)
+			 and: [sourceBitsSize >= (sourcePitch * sourceHeight)]) ifFalse:
+				[^false].
+			"Skip header since external bits don't have one"
+			sourceBits := self oopForPointer: (interpreterProxy firstIndexableField: sourceBits)].
 	^true
 ]
 
@@ -2337,6 +2346,13 @@ BitBltSimulation >> loadWarpBltFrom: bbObj [
 ]
 
 { #category : #'surface support' }
+BitBltSimulation >> lock: sourceHandle Su: pitchPtr rf: x ac: y eF: w n: h [
+	"Simulate the lockSurfaceFn function call as a failure to load the surface."
+	<doNotGenerate>
+	^0
+]
+
+{ #category : #'surface support' }
 BitBltSimulation >> lockSurfaces [
 	"Get a pointer to the bits of any OS surfaces."
 	"Notes: 
@@ -2371,67 +2387,91 @@ BitBltSimulation >> lockSurfaces [
 	* Fail if a GC has occurred since the primitive started (presumably in the lockSurface
 	   function), because one or more of the primitives' parameters may have been moved.
 	"
-	| sourceHandle destHandle l r t b fn |
+	| sourceHandle destHandle l r t b |
 	<inline: true>
-	<var: #fn declareC:'sqIntptr_t (*fn)(sqIntptr_t, int*, int, int, int, int)'>
 	self assert: numGCsOnInvocation = interpreterProxy statNumGCs.
 	hasSurfaceLock := false.
-	destBits = 0 ifTrue:["Blitting *to* OS surface"
-		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^false]].
-		fn := self cCoerce: lockSurfaceFn to: 'sqIntptr_t (*)(sqIntptr_t, int*, int, int, int, int)'.
-		destHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: destForm.
-		(sourceBits = 0 and:[noSource not]) ifTrue:[
-			sourceHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: sourceForm.
-			"Handle the special case of equal source and dest handles"
-			(sourceHandle = destHandle) ifTrue:[
+	destBits = 0 ifTrue: "Blitting *to* OS surface"
+		[lockSurfaceFn = 0 ifTrue: [self loadSurfacePlugin ifFalse: [^false]].
+		 destHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: destForm.
+		 (sourceBits ~= 0 or: [noSource]) ifFalse:
+			[sourceHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: sourceForm.
+			 "Handle the special case of equal source and dest handles"
+			 sourceHandle = destHandle ifTrue:
 				"If we have overlapping source/dest we lock the entire area
 				so that there is only one area transmitted"
-				isWarping ifFalse:[
-					"When warping we always need the entire surface for the source"
-					sourceBits := self cCode:'fn(sourceHandle, &sourcePitch, 0,0, sourceWidth, sourceHeight)'.
-				] ifTrue:[
-					"Otherwise use overlapping area"
-					l := sx min: dx. r := (sx max: dx) + bbW.
-					t := sy min: dy. b := (sy max: dy) + bbH.
-					sourceBits := self cCode:'fn(sourceHandle, &sourcePitch, l, t, r-l, b-t)'.
-				].
+				[isWarping
+					ifFalse: "When warping we always need the entire surface for the source"
+						[sourceBits := self lock: sourceHandle
+											Su: (self addressOf: sourcePitch)
+											rf: 0
+											ac: 0
+											eF: sourceWidth
+											n: sourceHeight]
+					ifTrue: "Otherwise use overlapping area"
+						[l := sx min: dx. r := (sx max: dx) + bbW.
+						t := sy min: dy. b := (sy max: dy) + bbH.
+						sourceBits := self lock: sourceHandle
+											Su: (self addressOf: sourcePitch)
+											rf: l
+											ac: t
+											eF: r - l
+											n: b - t].
 				destBits := sourceBits.
 				destPitch := sourcePitch.
 				hasSurfaceLock := true.
 				numGCsOnInvocation ~= interpreterProxy statNumGCs ifTrue:
-					[interpreterProxy primitiveFailFor: PrimErrObjectMoved.
+					[self unlockSurfaces.
+					 interpreterProxy primitiveFailFor: PrimErrObjectMoved.
 					 ^false].
 				destBits = 0 ifTrue:
-					[interpreterProxy primitiveFailFor: PrimErrCallbackError].
-				^destBits ~= 0
-			].
-			"Fall through - if not equal it'll be handled below"
-		].
-		destBits := self cCode:'fn(destHandle, &destPitch, dx, dy, bbW, bbH)'.
+					[self unlockSurfaces.
+					 interpreterProxy primitiveFailFor: PrimErrCallbackError.
+					 ^false].
+				^true]].
+		"Fall through - if not equal it'll be handled below"
+		destBits := self lock: destHandle
+						Su: (self addressOf: destPitch)
+						rf: dx
+						ac: dy
+						eF: bbW
+						n: bbH.
 		hasSurfaceLock := true.
 		numGCsOnInvocation ~= interpreterProxy statNumGCs ifTrue:
-			[interpreterProxy primitiveFailFor: PrimErrObjectMoved.
+			[self unlockSurfaces.
+			 interpreterProxy primitiveFailFor: PrimErrObjectMoved.
 			 ^false].
-	].
-	(sourceBits = 0 and:[noSource not]) ifTrue:["Blitting *from* OS surface"
-		sourceHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: sourceForm.
-		interpreterProxy failed ifTrue:[^nil]. "fetch sourceHandle could fail"
+		destBits = 0 ifTrue:
+			[interpreterProxy primitiveFailFor: PrimErrCallbackError]].
+
+	(sourceBits ~= 0 or: [noSource]) ifFalse: "Blitting *from* OS surface"
+		[sourceHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: sourceForm.
+		 interpreterProxy failed ifTrue: [^false]. "fetch sourceHandle could fail"
 		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^false]].
-		fn := self cCoerce: lockSurfaceFn to: 'sqIntptr_t (*)(sqIntptr_t, int*, int, int, int, int)'.
 		"Warping requiring the entire surface"
-		isWarping ifTrue:[
-			sourceBits := self cCode:'fn(sourceHandle, &sourcePitch, 0, 0, sourceWidth, sourceHeight)'.
-		] ifFalse:[
-			sourceBits := self cCode:'fn(sourceHandle, &sourcePitch, sx, sy, bbW, bbH)'.
-		].
+		isWarping
+			ifTrue:
+				[sourceBits := self lock: sourceHandle
+												Su: (self addressOf: sourcePitch)
+												rf: 0
+												ac: 0
+												eF: sourceWidth
+												n: sourceHeight]
+			ifFalse:
+				[sourceBits := self lock: sourceHandle
+									Su: (self addressOf: sourcePitch)
+									rf: sx
+									ac: sy
+									eF: bbW
+									n: bbH].
 		hasSurfaceLock := true.
 		numGCsOnInvocation ~= interpreterProxy statNumGCs ifTrue:
-			[interpreterProxy primitiveFailFor: PrimErrObjectMoved.
+			[self unlockSurfaces.
+			 interpreterProxy primitiveFailFor: PrimErrObjectMoved.
 			 ^false].
 		sourceBits = 0 ifTrue:
-			[interpreterProxy primitiveFailFor: PrimErrCallbackError].
-	].
-	^destBits ~= 0 and: [sourceBits ~= 0 or:[noSource]]
+			[interpreterProxy primitiveFailFor: PrimErrCallbackError]].
+	^destBits ~= 0 and: [sourceBits ~= 0 or: [noSource]]
 ]
 
 { #category : #'color mapping' }
@@ -2468,13 +2508,13 @@ BitBltSimulation >> merge: sourceWord with: destinationWord [
 { #category : #'initialize-release' }
 BitBltSimulation >> moduleUnloaded: aModuleName [
 	"The module with the given name was just unloaded.
-	Make sure we have no dangling references."
+	 Make sure we have no dangling references."
 	<export: true>
 	<var: #aModuleName type: 'char *'>
-	(aModuleName strcmp: 'SurfacePlugin') = 0 ifTrue:[
-		"The surface plugin just shut down. How nasty."
-		querySurfaceFn := lockSurfaceFn := unlockSurfaceFn := 0.
-	].
+	(aModuleName strcmp: 'SurfacePlugin') = 0 ifTrue: "The surface plugin just shut down. How nasty."
+		[querySurfaceFn := 0.
+		 lockSurfaceFn := 0.
+		 unlockSurfaceFn := 0]
 ]
 
 { #category : #'combination rules' }
@@ -3055,31 +3095,15 @@ BitBltSimulation >> primitiveWarpBits [
 ]
 
 { #category : #'surface support' }
-BitBltSimulation >> queryDestSurface: handle [
+BitBltSimulation >> query: handle Sur: widthPtr fa: heightPtr ce: depthPtr Fn: endianPtr [
 	"Query the dimension of an OS surface.
 	This method is provided so that in case the inst vars of the
 	source form are broken, *actual* values of the OS surface
 	can be obtained. This might, for instance, happen if the user
 	resizes the main window.
-	Note: Moved to a separate function for better inlining of the caller."
-	querySurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^false]].
-	^(self cCode:' ((int (*) (sqIntptr_t, int*, int*, int*, int*))querySurfaceFn)
-		(handle, &destWidth, &destHeight, &destDepth, &destMSB)'
-			 inSmalltalk:[false])
-]
-
-{ #category : #'surface support' }
-BitBltSimulation >> querySourceSurface: handle [
-	"Query the dimension of an OS surface.
-	This method is provided so that in case the inst vars of the
-	source form are broken, *actual* values of the OS surface
-	can be obtained. This might, for instance, happen if the user
-	resizes the main window.
-	Note: Moved to a separate function for better inlining of the caller."
-	querySurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^false]].
-	^(self cCode:' ((int (*) (sqIntptr_t, int*, int*, int*, int*))querySurfaceFn)
-		(handle, &sourceWidth, &sourceHeight, &sourceDepth, &sourceMSB)'
-			inSmalltalk:[false])
+	This is a simulation of the querySurfaceFn function call; simulate as a failure."
+	<doNotGenerate>
+	^false
 ]
 
 { #category : #setup }
@@ -3923,45 +3947,48 @@ BitBltSimulation >> tryCopyingBitsQuickly [
 ]
 
 { #category : #'surface support' }
+BitBltSimulation >> unlock: handle Sur: x fa: y ce: w Fn: h [
+	"Simulate the unlockSurfaceFn function call."
+	<doNotGenerate>
+	^self
+]
+
+{ #category : #'surface support' }
 BitBltSimulation >> unlockSurfaces [
 	"Unlock the bits of any OS surfaces."
-	"See the comment in lockSurfaces. Similar rules apply. That is, the area provided in ioUnlockSurface can be used to determine the dirty region after drawing. If a source is unlocked, then the area will be (0,0,0,0) to indicate that no portion is dirty."
-	| sourceHandle destHandle destLocked fn |
-	<var: #fn declareC:'int (*fn)(sqIntptr_t, int, int, int, int)'>
-	hasSurfaceLock ifTrue:[
-		unlockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
-		self ensureDestAndSourceFormsAreValid.
-		fn := self cCoerce: unlockSurfaceFn to: 'int (*)(sqIntptr_t, int, int, int, int)'.
-		destLocked := false.
-		destHandle := interpreterProxy fetchPointer: FormBitsIndex ofObject: destForm.
-		(interpreterProxy isIntegerObject: destHandle) ifTrue:[
-			destHandle := interpreterProxy integerValueOf: destHandle.
-			"The destBits are always assumed to be dirty"
-			self cCode:'fn(destHandle, affectedL, affectedT, affectedR-affectedL, affectedB-affectedT)'.
-			destBits := destPitch := 0.
-			destLocked := true.
-		].
-		noSource ifFalse:[
-			self ensureDestAndSourceFormsAreValid.
-			sourceHandle := interpreterProxy fetchPointer: FormBitsIndex ofObject: sourceForm.
-			(interpreterProxy isIntegerObject: sourceHandle) ifTrue:[
-				sourceHandle := interpreterProxy integerValueOf: sourceHandle.
-				"Only unlock sourceHandle if different from destHandle"
-				(destLocked and:[sourceHandle = destHandle]) 
-					ifFalse:[self cCode: 'fn(sourceHandle, 0, 0, 0, 0)'].
-				sourceBits := sourcePitch := 0.
-			].
-		].
-		hasSurfaceLock := false.
-		self cCode: [] inSmalltalk:
-			[self touch: fn.
-			 interpreterProxy displayObject = destForm ifTrue:
-				[interpreterProxy getDeferDisplayUpdates "for some reason this is true..."
-					ifTrue:
-						[interpreterProxy fullDisplayUpdate]
-					ifFalse:
-						[interpreterProxy fullDisplayUpdate]]].
-	].
+	"See the comment in lockSurfaces. Similar rules apply. That is, the area provided in ioUnlockSurface
+	 can be used to determine the dirty region after drawing. If a source is unlocked, then the area will
+	 be (0,0,0,0) to indicate that no portion is dirty.  Note that if a GC happens during unlockSourceFn
+	 (if it is effectively a callback) no matter.  No bits are touched after unlock."
+	| sourceHandle destHandle destLocked |
+	hasSurfaceLock ifFalse: [^self].
+	unlockSurfaceFn = 0 ifTrue:
+		[self loadSurfacePlugin ifFalse:
+			[^self]].
+	self ensureDestAndSourceFormsAreValid.
+	destLocked := false.
+	destHandle := interpreterProxy fetchPointer: FormBitsIndex ofObject: destForm.
+	(interpreterProxy isIntegerObject: destHandle) ifTrue: "The destBits are always assumed to be dirty"
+		[self unlock: (interpreterProxy integerValueOf: destHandle)
+			Sur: affectedL
+			fa: affectedT
+			ce: affectedR - affectedL
+			Fn: affectedB - affectedT.
+		 destBits := destPitch := 0.
+		 destLocked := true].
+	noSource ifFalse:
+		[self ensureDestAndSourceFormsAreValid.
+		 sourceHandle := interpreterProxy fetchPointer: FormBitsIndex ofObject: sourceForm.
+		 (interpreterProxy isIntegerObject: sourceHandle) ifTrue:
+			["Only unlock sourceHandle if different from destHandle"
+			 (destLocked and: [sourceHandle = destHandle]) ifFalse:
+				[self unlock: (interpreterProxy integerValueOf: sourceHandle) Sur: 0 fa: 0 ce: 0 Fn: 0].
+			sourceBits := sourcePitch := 0]].
+	hasSurfaceLock := false.
+	self cCode: [] inSmalltalk:
+		[interpreterProxy displayObject = destForm ifTrue:
+			[interpreterProxy getDeferDisplayUpdates ifFalse:
+				[interpreterProxy fullDisplayUpdate]]]
 ]
 
 { #category : #setup }
