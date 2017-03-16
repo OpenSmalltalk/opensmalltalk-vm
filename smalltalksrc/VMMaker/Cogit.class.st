@@ -380,6 +380,9 @@ Cogit class >> ancilliaryClasses: options [
 		self activeCompilerClass literalsManagerClass},
 	((options at: #NewspeakVM ifAbsent: [false])
 		ifTrue: [{NewspeakCogMethod. NSSendCache}]
+		ifFalse: [#()]),
+	((options at: #SistaVM ifAbsent: [false])
+		ifTrue: [{SistaMethodZone}]
 		ifFalse: [#()])
 ]
 
@@ -1087,6 +1090,11 @@ Cogit class >> isNonArgumentImplicitReceiverVariableName: aString [
 { #category : #accessing }
 Cogit class >> maxNegativeErrorCode [
 	^MaxNegativeErrorCode
+]
+
+{ #category : #'accessing class hierarchy' }
+Cogit class >> methodZoneClass [
+	^CogMethodZone
 ]
 
 { #category : #translation }
@@ -9701,6 +9709,15 @@ Cogit >> markYoungObjectsIn: cogMethod [
 		 arg: cogMethod asInteger
 ]
 
+{ #category : #accessing }
+Cogit >> maxCogCodeSize [
+	"We restrict the maximum size of the code zone to 16Mb to allow inter-method
+	 calls and jumps to use small offset call and jump instructions if appropriate."
+	<api>
+	<cmacro: '() (16*1024*1024)'>
+	^16*1024*1024
+]
+
 { #category : #debugging }
 Cogit >> maxCogMethodAddress [
 	<api>
@@ -11452,7 +11469,7 @@ Cogit >> setInterpreter: aCoInterpreter [
 	coInterpreter := aCoInterpreter.
 	objectMemory := aCoInterpreter objectMemory.
 	threadManager := aCoInterpreter threadManager. "N.B. may be nil"
-	methodZone := CogMethodZone new.
+	methodZone := self class methodZoneClass new.
 	objectRepresentation := objectMemory objectRepresentationClass
 								forCogit: self methodZone: methodZone.
 	methodZone setInterpreter: aCoInterpreter

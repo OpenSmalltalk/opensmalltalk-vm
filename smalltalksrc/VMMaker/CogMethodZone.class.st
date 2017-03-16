@@ -158,7 +158,7 @@ CogMethodZone >> addToYoungReferrers: cogMethod [
 CogMethodZone >> allocate: numBytes [
 	| roundedBytes allocation |
 	roundedBytes := numBytes + 7 bitAnd: -8.
-	mzFreeStart + roundedBytes >= (limitAddress - (methodCount * objectMemory wordSize)) ifTrue:
+	mzFreeStart + roundedBytes >= self allocationLimit ifTrue:
 		[^0].
 	allocation := mzFreeStart.
 	mzFreeStart := mzFreeStart + roundedBytes.
@@ -168,6 +168,12 @@ CogMethodZone >> allocate: numBytes [
 		   and: [cogit breakPC between: allocation and: mzFreeStart]) ifTrue:
 			[cogit singleStep: true]].
 	^allocation
+]
+
+{ #category : #allocating }
+CogMethodZone >> allocationLimit [
+	<inline: true>
+	^limitAddress - (methodCount * objectMemory wordSize)
 ]
 
 { #category : #'jit - api' }
