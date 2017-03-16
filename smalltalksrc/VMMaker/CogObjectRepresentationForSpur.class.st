@@ -11,7 +11,8 @@ Class {
 		'ceLargeActiveContextInFullBlockTrampoline',
 		'ceStoreCheckContextReceiverTrampoline',
 		'ceStoreTrampolines',
-		'ceNewHashTrampoline'
+		'ceNewHashTrampoline',
+		'ceInlineNewHashTrampoline'
 	],
 	#classVars : [
 		'CheckRememberedInTrampoline',
@@ -64,15 +65,15 @@ CogObjectRepresentationForSpur class >> initializeMiscConstants [
 CogObjectRepresentationForSpur class >> numTrampolines [
 	^super numTrampolines
 	 + (SistaV1BytecodeSet
-		ifTrue: [8] "(small,large)x(method,block,fullBlock) context creation,
-					 ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline"
-		ifFalse: [6] "(small,large)x(method,block) context creation, 
-					 ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline")
+		ifTrue: [9] "(small,large)x(method,block,fullBlock) context creation,
+					 ceNewHashTrampoline, ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline"
+		ifFalse: [7] "(small,large)x(method,block) context creation, 
+					 ceNewHashTrampoline, ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline")
 	 + ((initializationOptions at: #IMMUTABILITY ifAbsent: [false])
 		ifTrue: [NumStoreTrampolines]
 		ifFalse: [0])
 	 + ((initializationOptions at: #SistaVM ifAbsent: [false])
-		ifTrue: [1] "newHash"
+		ifTrue: [1] "inline newHash"
 		ifFalse: [0])
 ]
 
@@ -890,16 +891,16 @@ CogObjectRepresentationForSpur >> genGetIdentityHash: rcvrReg resultReg: resultR
 			 cogit CmpCq: ConstZero R: resultReg.
 			 jumpSet := cogit JumpNonZero: 0.
 			 cogit MoveR: rcvrReg R: resultReg.
-			 cogit CallRT: ceNewHashTrampoline.
+			 cogit CallRT: ceInlineNewHashTrampoline.
 			 cogit annotateBytecode: cogit Label]
 		ifFalse: 
 			[cogit ssTop popToReg: ReceiverResultReg.
 		 	 self genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: resultReg.
 			 cogit CmpCq: ConstZero R: resultReg.
 			 jumpSet := cogit JumpNonZero: 0.
-			 cogit CallRT: ceNewHashTrampoline.
+			 cogit CallRT: ceInlineNewHashTrampoline.
 			 cogit annotateBytecode: (cogit MoveR: ReceiverResultReg R: resultReg)].
-	jumpSet jmpTarget: cogit Label.
+	jumpSet jmpTarget: cogit Label
 ]
 
 { #category : #'bytecode generator support' }
@@ -1319,23 +1320,24 @@ CogObjectRepresentationForSpur >> genNewArrayOfSize: size initialized: initializ
 ]
 
 { #category : #initialization }
-CogObjectRepresentationForSpur >> genNewHashTrampoline [
+CogObjectRepresentationForSpur >> genNewHashTrampoline: saveRegs called: name [
 	"In non sista VM this is used only from the identityHash primitive, hence only the result of the trampoline, the hash, should be in ReceiverResultReg, other registers can just be ignored.
 	In the sista VM, the inlined hash operation requires registers to be saved"
 	<inline: true>
-	<option: #SistaVM>
-	^ cogit
+	^cogit
 		genTrampolineFor: #ceNewHashOf:
-		called: 'newHashTrampoline'
+		called: name
 		numArgs: 1
 		arg: ReceiverResultReg
 		arg: nil
 		arg: nil
 		arg: nil
-		regsToSave: (CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
+		regsToSave: (saveRegs
+						ifTrue: [CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg)]
+						ifFalse: [cogit emptyRegisterMask])
 		pushLinkReg: true
 		resultReg: ReceiverResultReg
-		appendOpcodes: true
+		appendOpcodes: false
 ]
 
 { #category : #'bytecode generator support' }
@@ -1825,7 +1827,8 @@ CogObjectRepresentationForSpur >> generateObjectRepresentationTrampolines [
 															numArgs: instVarIndex 
 															limit: NumStoreTrampolines - 2) 
 							instVarIndex: instVarIndex)]].
-	SistaVM ifTrue: [ceNewHashTrampoline := self genNewHashTrampoline].
+	ceNewHashTrampoline := self genNewHashTrampoline: false called: 'ceNewHash'.
+	SistaVM ifTrue: [ceInlineNewHashTrampoline := self genNewHashTrampoline: true  called: 'ceInlineNewHash'].
 	ceStoreCheckTrampoline := self genStoreCheckTrampoline.
 	ceStoreCheckContextReceiverTrampoline := self genStoreCheckContextReceiverTrampoline.
 	ceScheduleScavengeTrampoline := cogit
