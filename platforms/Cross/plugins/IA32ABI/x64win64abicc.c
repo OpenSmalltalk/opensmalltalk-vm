@@ -250,7 +250,7 @@ extern void saveFloatRegsWin64(long long xmm0,long long xmm1,long long xmm2, lon
 }
 
 /*
- * Thunk allocation support.  Since thunks must be exectuable and some OSs
+ * Thunk allocation support.  Since thunks must be executable and some OSs
  * may not provide default execute permission on memory returned by malloc
  * we must provide memory that is guaranteed to be executable.  The abstraction
  * is to answer an Alien that references an executable piece of memory that

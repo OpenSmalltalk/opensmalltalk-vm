@@ -193,6 +193,9 @@ sqInt isPinned(sqInt objOop);
 sqInt pinObject(sqInt objOop);
 sqInt unpinObject(sqInt objOop);
 #endif
+#if VM_PROXY_MINOR > 13 /* More Spur */
+sqInt statNumGCs(void);
+#endif
 char *cStringOrNullFor(sqInt);
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
@@ -377,8 +380,12 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->success = success;
 	VM->superclassOf = superclassOf;
 
+#if VM_PROXY_MINOR <= 13 /* reused in 14 and above */
+
 	VM->compilerHookVector= 0;
 	VM->setCompilerInitialized= 0;
+
+#endif
 
 #if VM_PROXY_MINOR > 1
 
@@ -500,6 +507,11 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->isPinned = isPinned;
 	VM->pinObject = pinObject;
 	VM->unpinObject = unpinObject;
+#endif
+
+#if VM_PROXY_MINOR > 13 /* More Spur */
+	VM->statNumGCs = statNumGCs;
+	VM->AS_YET_UNUSED = 0;
 #endif
 
 	return VM;
