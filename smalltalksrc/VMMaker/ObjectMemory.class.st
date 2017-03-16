@@ -5806,7 +5806,8 @@ ObjectMemory >> tenuringThreshold [
 
 { #category : #accessing }
 ObjectMemory >> tenuringThreshold: aValue [
-	^tenuringThreshold := aValue
+	tenuringThreshold := aValue.
+	^0
 ]
 
 { #category : #'interpreter access' }

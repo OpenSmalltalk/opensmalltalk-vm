@@ -11623,9 +11623,12 @@ SpurMemoryManager >> tenuringThreshold [
 { #category : #accessing }
 SpurMemoryManager >> tenuringThreshold: threshold [
 	"c.f. tenuringThreshold"
+	threshold < 0 ifTrue:
+		[^PrimErrBadArgument].
 	scavenger scavengerTenuringThreshold:
 		(threshold * self averageObjectSizeInBytes) asFloat
-		/ scavenger pastSpaceBytes asFloat
+		/ scavenger pastSpaceBytes asFloat.
+	^0
 ]
 
 { #category : #'class table puns' }

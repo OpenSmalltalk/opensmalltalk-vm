@@ -90,6 +90,11 @@ SistaCogit class >> initializeWithOptions: optionsDictionary [
 	MaxCounterValue := (1 << 16) - 1
 ]
 
+{ #category : #'accessing class hierarchy' }
+SistaCogit class >> methodZoneClass [
+	^SistaMethodZone
+]
+
 { #category : #accessing }
 SistaCogit class >> numTrampolines [
 	^super numTrampolines + 1
@@ -131,6 +136,14 @@ SistaCogit >> compileFullBlockMethodFrameBuild: numCopied [
 	super compileFullBlockMethodFrameBuild: numCopied.
 	counters ~= 0 ifTrue:
 		[self PrefetchAw: counters]
+]
+
+{ #category : #accessing }
+SistaCogit >> defaultCogCodeSize [
+	"Return the default number of bytes to allocate for native code at startup.
+	 The actual value can be set via vmParameterAt: and/or a preference in the ini file."
+	<api>
+	^2 * backEnd getDefaultCogCodeSize
 ]
 
 { #category : #disassembly }
@@ -1349,4 +1362,10 @@ SistaCogit >> printPICDataForMethods [
 SistaCogit >> resetCountersIn: cogMethod [
 	<doNotGenerate>
 	objectRepresentation resetCountersIn: cogMethod
+]
+
+{ #category : #accessing }
+SistaCogit >> setCogCodeZoneThreshold: threshold [
+	<doNotGenerate>
+	^methodZone setCogCodeZoneThreshold: threshold
 ]
