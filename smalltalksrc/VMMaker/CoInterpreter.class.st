@@ -1476,6 +1476,7 @@ CoInterpreter >> ceCounterTripped: condition [
 		[cogit resetCountersIn: (self mframeHomeMethod: framePointer).
 		 ^condition].
 
+	cogit setCogCodeZoneThreshold: 1.0.
 	objectMemory splObj: SelectorCounterTripped put: objectMemory nilObject.
 	instructionPointer := self popStack.
 	context := self ensureFrameIsMarried: framePointer SP: stackPointer.
@@ -3916,6 +3917,13 @@ CoInterpreter >> getCodeCompactionMSecs [
 CoInterpreter >> getCogCodeSize [
 	<cmacro: '() integerObjectOf(GIV(cogCodeSize))'>
 	^objectMemory integerObjectOf: cogCodeSize
+]
+
+{ #category : #'internal interpreter access' }
+CoInterpreter >> getCogCodeZoneThreshold [
+	<doNotGenerate>
+	<returnTypeC: #double>
+	^cogit getCogCodeZoneThreshold
 ]
 
 { #category : #'internal interpreter access' }
@@ -6813,6 +6821,8 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 							[hdrCogCodeSize = 0
 									ifTrue: [cogit defaultCogCodeSize]
 									ifFalse: [hdrCogCodeSize]].
+	cogCodeSize > cogit maxCogCodeSize ifTrue:
+		[cogCodeSize := cogit maxCogCodeSize].
 	hdrEdenBytes		:= self getWord32FromFile: f swap: swapBytes.
 	objectMemory edenBytes: (desiredEdenBytes ~= 0
 						ifTrue: [desiredEdenBytes]
@@ -7178,6 +7188,13 @@ CoInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 	cogit recordPrimTrace ifTrue:
 		[self fastLogPrim: (self splObj: SelectorInvokeCallback)].
 	^super sendInvokeCallbackContext: vmCallbackContext
+]
+
+{ #category : #'internal interpreter access' }
+CoInterpreter >> setCogCodeZoneThreshold: threshold [
+	<doNotGenerate>
+	<var: 'threshold' type: #double>
+	^cogit setCogCodeZoneThreshold: threshold
 ]
 
 { #category : #'internal interpreter access' }

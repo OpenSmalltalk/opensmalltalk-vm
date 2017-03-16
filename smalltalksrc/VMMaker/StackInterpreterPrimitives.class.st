@@ -1495,8 +1495,9 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		9	incremental GCs (SqueakV3) or scavenges (Spur) since startup (read-only)
 		10	total milliseconds in incremental GCs (SqueakV3) or scavenges (Spur) since startup (read-only)
 		11	tenures of surving objects since startup (read-only)
-		12-20 were specific to ikp's JITTER VM, now 12-17 are open for use
-		18 total milliseconds in compaction phase of full GC since start-up (Spur only)
+		12-20 were specific to ikp's JITTER VM, now 12-16 are open for use
+		17	fraction of the code zone to use (Sista only; used to control code zone use to preserve sendAndBranchData on counter tripped callback)
+		18	total milliseconds in compaction phase of full GC since start-up (Spur only)
 		19	scavenge threshold, the effective size of eden.  When eden fills to the threshold a scavenge is scheduled. Newer Spur VMs only.
 		20	utc microseconds at VM start-up (actually at time initialization, which precedes image load).
 		21	root table size (read-only)
@@ -1555,9 +1556,9 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 	paramsArraySize := 71.
 	argumentCount = 0 ifTrue:
 		[result := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: paramsArraySize.
-		objectMemory storePointer:				0	ofObject: result withValue: (self positiveMachineIntegerFor: objectMemory oldSpaceSize).
+		objectMemory storePointerUnchecked: 0	ofObject: result withValue: (self positiveMachineIntegerFor: objectMemory oldSpaceSize).
 		objectMemory storePointerUnchecked: 1	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory newSpaceSize).
-		objectMemory storePointer:				2	ofObject: result withValue: (self positiveMachineIntegerFor: objectMemory totalMemorySize).
+		objectMemory storePointerUnchecked: 2	ofObject: result withValue: (self positiveMachineIntegerFor: objectMemory totalMemorySize).
 		"objectMemory storePointerUnchecked: 3	ofObject: result withValue: objectMemory nilObject was allocationCount".
 		"objectMemory storePointerUnchecked: 4	ofObject: result withValue: objectMemory nilObject allocationsBetweenGCs".
 		objectMemory storePointerUnchecked: 5	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory tenuringThreshold).
@@ -1576,14 +1577,16 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 															ifTrue: [objectMemory statScavengeGCUsecs]
 															ifFalse: [objectMemory statIncrGCUsecs]) + 500 // 1000).
 		objectMemory storePointerUnchecked: 10	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statTenures).
-		"JITTER VM info"
+		"JITTER VM info unused; 11 - 16/12 - 17 available for reuse"
 		11 to: 18 do:
 			[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: ConstZero].
+		(SistaVM and: [self isCog]) ifTrue:
+			[objectMemory storePointerUnchecked: 16 ofObject: result withValue: (objectMemory floatObjectOf: self getCogCodeZoneThreshold)].
 		objectMemory hasSpurMemoryManagerAPI ifTrue:
 			[objectMemory
 				storePointerUnchecked: 17	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statCompactionUsecs + 500 // 1000);
 				storePointerUnchecked: 18	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory scavengeThresholdAsExtent)].
-		objectMemory storePointer:				19	ofObject: result withValue: (objectMemory positive64BitIntegerFor: self ioUTCStartMicroseconds).
+		objectMemory storePointerUnchecked: 19	ofObject: result withValue: (objectMemory positive64BitIntegerFor: self ioUTCStartMicroseconds).
 		objectMemory storePointerUnchecked: 20	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory rootTableCount).
 		objectMemory storePointerUnchecked: 21	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statRootTableOverflows).
 		objectMemory storePointerUnchecked: 22	ofObject: result withValue: (objectMemory integerObjectOf: extraVMMemory).
@@ -1619,13 +1622,13 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 			[objectMemory
 				storePointerUnchecked: 52 ofObject: result withValue: (objectMemory integerObjectOf: objectMemory numSegments);
 				storePointerUnchecked: 53 ofObject: result withValue: (objectMemory integerObjectOf: objectMemory freeSize);
-				storePointer: 54 ofObject: result withValue: (objectMemory floatObjectOf: objectMemory getHeapGrowthToSizeGCRatio)].
-		objectMemory storePointer: 55	ofObject: result withValue: (self positive64BitIntegerFor: statProcessSwitch).
-		objectMemory storePointer: 56	ofObject: result withValue: (self positive64BitIntegerFor: statIOProcessEvents).
-		objectMemory storePointer: 57	ofObject: result withValue: (self positive64BitIntegerFor: statForceInterruptCheck).
-		objectMemory storePointer: 58	ofObject: result withValue: (self positive64BitIntegerFor: statCheckForEvents).
-		objectMemory storePointer: 59	ofObject: result withValue: (self positive64BitIntegerFor: statStackOverflow).
-		objectMemory storePointer: 60	ofObject: result withValue: (self positive64BitIntegerFor: statStackPageDivorce).
+				storePointerUnchecked: 54 ofObject: result withValue: (objectMemory floatObjectOf: objectMemory getHeapGrowthToSizeGCRatio)].
+		objectMemory storePointerUnchecked: 55	ofObject: result withValue: (self positive64BitIntegerFor: statProcessSwitch).
+		objectMemory storePointerUnchecked: 56	ofObject: result withValue: (self positive64BitIntegerFor: statIOProcessEvents).
+		objectMemory storePointerUnchecked: 57	ofObject: result withValue: (self positive64BitIntegerFor: statForceInterruptCheck).
+		objectMemory storePointerUnchecked: 58	ofObject: result withValue: (self positive64BitIntegerFor: statCheckForEvents).
+		objectMemory storePointerUnchecked: 59	ofObject: result withValue: (self positive64BitIntegerFor: statStackOverflow).
+		objectMemory storePointerUnchecked: 60	ofObject: result withValue: (self positive64BitIntegerFor: statStackPageDivorce).
 		objectMemory storePointerUnchecked: 61	ofObject: result withValue: self getCodeCompactionCount.
 		objectMemory storePointerUnchecked: 62	ofObject: result withValue: self getCodeCompactionMSecs.
 		objectMemory storePointerUnchecked: 63	ofObject: result withValue: self getCogMethodCount.
@@ -1634,7 +1637,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory hasSpurMemoryManagerAPI ifTrue:
 			[objectMemory
 				storePointerUnchecked: 66 ofObject: result withValue: (objectMemory integerObjectOf: objectMemory maxOldSpaceSize)].
-		objectMemory storePointer: 67 ofObject: result withValue: (objectMemory floatObjectOf: stackPages statAverageLivePagesWhenMapping).
+		objectMemory storePointerUnchecked: 67 ofObject: result withValue: (objectMemory floatObjectOf: stackPages statAverageLivePagesWhenMapping).
 		objectMemory storePointerUnchecked: 68 ofObject: result withValue: (objectMemory integerObjectOf: stackPages statMaxPageCountWhenMapping).
 		objectMemory
 			storePointerUnchecked: 69
@@ -1645,6 +1648,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 			ofObject: result
 			withValue: (self integerObjectOf: (self cCode: 'VM_PROXY_MINOR' inSmalltalk: [self class vmProxyMinorVersion])).
 		self assert: paramsArraySize = 71.
+		objectMemory beRootIfOld: result.
 		self pop: 1 thenPush: result.
 		^nil].
 
@@ -1670,7 +1674,11 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 																		ifTrue: [objectMemory statScavengeGCUsecs]
 																		ifFalse: [objectMemory statIncrGCUsecs]) + 500 // 1000].
 		arg = 11	ifTrue: [result := objectMemory integerObjectOf: objectMemory statTenures].
-		(arg between: 12 and: 17) ifTrue: [result := ConstZero]. "Was JITTER VM info"
+		(arg between: 12 and: 16) ifTrue: [result := ConstZero]. "Was JITTER VM info"
+		
+		arg = 17	ifTrue: [result := (SistaVM and: [self isCog])
+										ifTrue: [objectMemory floatObjectOf: self getCogCodeZoneThreshold]
+										ifFalse: [ConstZero]].
 		arg = 18	ifTrue: [result := objectMemory hasSpurMemoryManagerAPI
 										ifTrue: [objectMemory integerObjectOf: objectMemory statCompactionUsecs + 500 // 1000]
 										ifFalse: [ConstZero]].
@@ -1745,25 +1753,31 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 	(objectMemory isIntegerObject: index) ifFalse: [^self primitiveFailFor: PrimErrBadArgument].
 	index := objectMemory integerValueOf: index.
 	(index < 1 or: [index > paramsArraySize]) ifTrue: [^self primitiveFailFor: PrimErrBadIndex].
-	(objectMemory isIntegerObject: arg)
-		ifTrue: [arg := objectMemory integerValueOf: arg]
+	(index = 17 or: [index = 55])
+		ifTrue:
+			[(objectMemory isFloatInstance: arg) ifFalse:
+				[^self primitiveFailFor: PrimErrBadArgument]]
 		ifFalse:
-			[(index = 55 and: [objectMemory isFloatInstance: arg]) ifFalse:
-				[^self primitiveFailFor: PrimErrBadArgument]].
+			[(objectMemory isIntegerObject: arg) ifTrue:
+				[arg := objectMemory integerValueOf: arg]].
 
 	"assume failure, then set success for handled indices"
-	self success: false.
-	index = 5 ifTrue: "Was:
+	self primitiveFailFor: PrimErrBadArgument.
+	objectMemory hasSpurMemoryManagerAPI ifFalse:
+		[index = 5 ifTrue: "Was:
 						result := allocationsBetweenGCs.
 						allocationsBetweenGCs := arg."
-		"Ignore for now, because old images won't start up otherwise.
-		 See 44 & 45 for eden size setting."
-		[result := objectMemory nilObject.
-		self initPrimCall].
+			"Ignore for now, because old images won't start up otherwise.
+			 See 44 & 45 for eden size setting."
+			[result := objectMemory nilObject.
+			self initPrimCall]].
 	index = 6 ifTrue:
 		[result := objectMemory integerObjectOf: objectMemory tenuringThreshold.
-		objectMemory tenuringThreshold: arg.
-		self initPrimCall].
+		 primFailCode := objectMemory tenuringThreshold: arg].
+	
+	(SistaVM and: [index = 17]) ifTrue:
+		[result := objectMemory floatObjectOf: self getCogCodeZoneThreshold.
+		 primFailCode := self setCogCodeZoneThreshold: (objectMemory floatValueOf: arg)].
 	index = 23 ifTrue:
 		[result := objectMemory integerObjectOf: extraVMMemory.
 		extraVMMemory := arg.
@@ -1794,7 +1808,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 			desiredEdenBytes := arg.
 			self initPrimCall]].
 	(index = 47 and: [self isCog]) ifTrue:
-		[(arg >= 0) ifTrue:
+		[(arg >= 0 and: [arg <= self maxCogCodeSize]) ifTrue:
 			[result := objectMemory integerObjectOf: self getDesiredCogCodeSize.
 			self setDesiredCogCodeSize: arg.
 			self initPrimCall]].
