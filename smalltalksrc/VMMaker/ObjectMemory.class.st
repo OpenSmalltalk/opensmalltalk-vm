@@ -129,12 +129,6 @@ Class {
 	#category : #'VMMaker-Interpreter'
 }
 
-{ #category : #translation }
-ObjectMemory class >> additionalHeadersDo: aBinaryBlock [
-	"Evaluate aBinaryBlock with the names and contents of
-	 any additional header files that need to be generated."
-]
-
 { #category : #accessing }
 ObjectMemory class >> baseHeaderSize [
 "To support SmartSyntaxPluginCodeGenerator"
