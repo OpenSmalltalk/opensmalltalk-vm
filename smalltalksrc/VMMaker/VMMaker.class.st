@@ -1483,6 +1483,13 @@ VMMaker >> generateInterpreterFile [
 								ifTrue: [ex rearmHandlerDuring: [ex pass]]
 								ifFalse: [ex pass]]].
 	self reinitializeWordSizeFrom: cg.
+
+	self interpreterClass additionalHeadersDo:
+		[:headerName :headerContents| | filePath |
+		 filePath := self coreVMDirectory fullNameFor: headerName.
+		 (cg needToGenerateHeader: headerName file: filePath contents: headerContents) ifTrue:
+			 [cg storeHeaderOnFile: filePath contents: headerContents]].
+
 	self needsToRegenerateInterpreterFile ifFalse: [^nil].
 
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
@@ -1492,11 +1499,6 @@ VMMaker >> generateInterpreterFile [
 	(cg needToGenerateHeader: self interpreterHeaderName file: self interpreterHeaderPath contents: vmHeaderContents) ifTrue:
 		[cg storeHeaderOnFile: self interpreterHeaderPath contents: vmHeaderContents].
 	cg storeCodeOnFile: (self sourceFilePathFor: self interpreterClass sourceFileName) doInlining: self doInlining.
-	self interpreterClass additionalHeadersDo:
-		[:headerName :headerContents| | filePath |
-		 filePath := self coreVMDirectory fullNameFor: headerName.
-		 (cg needToGenerateHeader: headerName file: filePath contents: headerContents) ifTrue:
-			 [cg storeHeaderOnFile: filePath contents: headerContents]].
 	self interpreterClass apiExportHeaderName ifNotNil:
 		[cg storeAPIExportHeader: self interpreterClass apiExportHeaderName
 			OnFile: (self sourceFilePathFor: self interpreterClass apiExportHeaderName)].
@@ -1513,7 +1515,6 @@ VMMaker >> generateMainVM [
 	self logDateAndTime;
 		generateInterpreterFile;
 		generateCogitFiles;
-		processFilesForCoreVM;
 		generateInternalPlugins;
 		generateExportsFile;
 		logDateAndTime
@@ -2022,11 +2023,6 @@ VMMaker >> privateGenerateInternalPlugin: pluginName [
 				ifFalse: [ex pass]].
 	logger show: 'internal plugin ' , plugin name , ' generated as ' , plugin moduleName; cr.
 	self processFilesForInternalPlugin: plugin
-]
-
-{ #category : #'processing external files' }
-VMMaker >> processFilesForCoreVM [
-
 ]
 
 { #category : #'processing external files' }
