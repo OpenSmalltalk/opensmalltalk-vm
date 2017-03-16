@@ -5,6 +5,13 @@ Float >> asIEEE64BitWord [
 	^((self basicAt: 1) bitShift: 32) + (self basicAt: 2)
 ]
 
+{ #category : #'*VMMaker-interpreter simulator' }
+Float >> asUnsignedInteger [
+	self assert: self >= 0.
+	"C conversion from float/double to integer is by dropping the fractional part"
+	^self truncated
+]
+
 { #category : #'*VMMaker-plugin generation' }
 Float class >> ccg: cg generateCoerceToOopFrom: aNode on: aStream [
 	"N.B.  The is used both for generation and simulation so answer the result (for interpretation)"
