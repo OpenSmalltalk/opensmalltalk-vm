@@ -831,7 +831,10 @@ CogObjectRepresentationFor32BitSpur >> genPrimitiveIdentityHash [
 	self genConvertCharacterToSmallIntegerInReg: ReceiverResultReg.
 	cogit Jump: ret.
 	jumpNotSet jmpTarget: cogit Label.
-	^0
+	cogit
+		CallRT: ceNewHashTrampoline;
+		genPrimReturn.
+	^UnfailingPrimitive
 ]
 
 { #category : #'primitive generators' }
