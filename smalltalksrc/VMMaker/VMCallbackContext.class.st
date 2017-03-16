@@ -8,8 +8,8 @@ Class {
 		'floatregargsp',
 		'savedCStackPointer',
 		'savedCFramePointer',
-		'savedPrimFunctionPointer',
 		'rvs',
+		'savedPrimFunctionPointer',
 		'trampoline',
 		'savedReenterInterpreter'
 	],
