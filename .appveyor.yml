@@ -28,6 +28,11 @@ environment:
       CYG_ROOT: C:\cygwin
       CYG_SETUP: setup-x86.exe
       MINGW_ARCH: i686
+    - FLAVOR: pharo.cog.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
     - FLAVOR: newspeak.cog.spur
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
