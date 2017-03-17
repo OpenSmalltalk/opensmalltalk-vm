@@ -27,6 +27,12 @@ SistaMethodZone >> computeAllocationThreshold [
 	allocationThreshold := ((limitAddress - baseAddress * thresholdRatio) asUnsignedInteger + (self zoneAlignment - 1) truncateTo: self zoneAlignment) + baseAddress
 ]
 
+{ #category : #allocating }
+SistaMethodZone >> effectiveLimit [
+	<inline: true>
+	^super effectiveLimit min: allocationThreshold
+]
+
 { #category : #accessing }
 SistaMethodZone >> getCogCodeZoneThreshold [
 	<api>
