@@ -173,7 +173,7 @@ SecurityPlugin >> secCanRenameFile: fileName OfSize: fileNameSize [
 { #category : #'exported functions' }
 SecurityPlugin >> secCanRenameImage [
 	<export: true>
-	^self cCode: [self ioCanRenameImage] inSmalltalk: [true]
+	^self ioCanRenameImage
 ]
 
 { #category : #'exported functions' }
@@ -186,29 +186,35 @@ SecurityPlugin >> secCanSetFileType: fileName OfSize: fileNameSize [
 { #category : #'exported functions' }
 SecurityPlugin >> secCanWriteImage [
 	<export: true>
-	^self cCode: 'ioCanWriteImage()'
+	^self ioCanWriteImage
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secDisableFileAccess [
 	<export: true>
-	^self cCode: 'ioDisableFileAccess()'
+	^self ioDisableFileAccess
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secDisableSocketAccess [
 	<export: true>
-	^self cCode: 'ioDisableSocketAccess()'
+	^self ioDisableSocketAccess
+]
+
+{ #category : #'exported functions' }
+SecurityPlugin >> secHasEnvironmentAccess [
+	<export: true>
+	^self ioHasEnvironmentAccess
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secHasFileAccess [
 	<export: true>
-	^self cCode: 'ioHasFileAccess()'
+	^self ioHasFileAccess
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secHasSocketAccess [
 	<export: true>
-	^self cCode: 'ioHasSocketAccess()'
+	^self ioHasSocketAccess
 ]

@@ -2235,6 +2235,37 @@ CogVMSimulator >> makeDirEntryName: entryName size: entryNameSize
 	^ results
 ]
 
+{ #category : #'as yet unclassified' }
+CogVMSimulator >> makeDirEntryName: entryName size: entryNameSize createDate: createDate modDate: modifiedDate isDir: dirFlag fileSize: fileSize posixPermissions: posixPermissions isSymlink: symlinkFlag [
+	<option: #PharoVM>
+	<var: 'entryName' type: 'char *'>
+
+	| modDateOop createDateOop nameString results |
+
+	results			:= objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 7.
+	nameString		:= objectMemory instantiateClass: (objectMemory splObj: ClassString) indexableSize: entryNameSize.
+	createDateOop	:= self positive32BitIntegerFor: createDate.
+	modDateOop	:= self positive32BitIntegerFor: modifiedDate.
+
+	1 to: entryNameSize do:
+		[ :i |
+		objectMemory storeByte: i-1 ofObject: nameString withValue: (entryName at: i) asciiValue].
+
+	objectMemory storePointerUnchecked: 0 ofObject: results withValue: nameString.
+	objectMemory storePointerUnchecked: 1 ofObject: results withValue: createDateOop.
+	objectMemory storePointerUnchecked: 2 ofObject: results withValue: modDateOop.
+	dirFlag
+		ifTrue: [ objectMemory storePointerUnchecked: 3 ofObject: results withValue: objectMemory trueObject ]
+		ifFalse: [ objectMemory storePointerUnchecked: 3 ofObject: results withValue: objectMemory falseObject ].
+	objectMemory storePointerUnchecked: 4 ofObject: results withValue: (objectMemory integerObjectOf: fileSize).
+	objectMemory storePointerUnchecked: 5 ofObject: results withValue: (objectMemory integerObjectOf: posixPermissions).
+	symlinkFlag
+		ifTrue: [ objectMemory storePointerUnchecked: 6 ofObject: results withValue: objectMemory trueObject ]
+		ifFalse: [ objectMemory storePointerUnchecked: 6 ofObject: results withValue: objectMemory falseObject ].
+
+	^ results
+]
+
 { #category : #'cog jit support' }
 CogVMSimulator >> mapFunctionToAddress: aSymbolOrIndexOrBlock [
 	"Hackery to deal with the plugin primitive simulation hoops.
@@ -2863,9 +2894,6 @@ CogVMSimulator >> primitiveDirectoryEntry [
 	name := self stringOf: self stackTop.
 	pathName := self stringOf: (self stackValue: 1).
 	
-	"temporary work-around to make it work in Pharo..."
-	self cppIf: PharoVM ifTrue: [ pathName := Smalltalk imagePath ].
-	
 	self successful ifFalse:
 		[^self primitiveFail].
 
@@ -2884,7 +2912,7 @@ CogVMSimulator >> primitiveDirectoryEntry [
 			[self makeDirEntryName: (arrayNilOrSymbol at: 1) size: (arrayNilOrSymbol at: 1) size
 				createDate: (arrayNilOrSymbol at: 2) modDate: (arrayNilOrSymbol at: 3)
 				isDir: (arrayNilOrSymbol at: 4) fileSize: (arrayNilOrSymbol at: 5)
-				posixPermissions: (arrayNilOrSymbol at: 6) isSymlink: (arrayNilOrSymbol at: 7) ]
+				posixPermissions: (arrayNilOrSymbol at: 6 ifAbsent: [8r644]) isSymlink: (arrayNilOrSymbol at: 7 ifAbsent: [false])]
 		ifFalse:
 			[self makeDirEntryName: (arrayNilOrSymbol at: 1) size: (arrayNilOrSymbol at: 1) size
 				createDate: (arrayNilOrSymbol at: 2) modDate: (arrayNilOrSymbol at: 3)
