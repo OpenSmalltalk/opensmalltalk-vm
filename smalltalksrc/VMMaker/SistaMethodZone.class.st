@@ -36,6 +36,7 @@ SistaMethodZone >> getCogCodeZoneThreshold [
 
 { #category : #initialization }
 SistaMethodZone >> initialize [
+	super initialize.
 	thresholdRatio := 0.5
 ]
 
