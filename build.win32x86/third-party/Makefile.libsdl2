@@ -23,7 +23,6 @@ $(THIRDPARTYLIBDIR)/$(LIBSDL2LIBNAME): $(LIBSDL2ARCHIVE)
 	cd $(LIBSDL2DIR) \
 		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' \
 			--host=i686-w64-mingw32 \
-			--disable-render-d3d \
 			CFLAGS='$(THIRDPARTY_CFLAGS)' \
 			LDFLAGS='$(THIRDPARTY_LDFLAGS)' \
 		&& make \
