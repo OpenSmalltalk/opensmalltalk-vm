@@ -940,6 +940,10 @@ VMClass >> mem: dString cp: sString y: bytes [
 	"implementation of memcpy(3). N.B. If ranges overlap, must use memmove."
 	(dString isString or: [sString isString]) ifFalse:
 		[| destAddress sourceAddress |
+		 dString class == ByteArray ifTrue:
+			[ByteString adoptInstance: dString.
+			 ^[self mem: dString cp: sString y: bytes] ensure:
+				[ByteArray adoptInstance: dString]].
 		 destAddress := dString asInteger.
 		 sourceAddress := sString asInteger.
 		 self deny: ((destAddress <= sourceAddress and: [destAddress + bytes > sourceAddress])
