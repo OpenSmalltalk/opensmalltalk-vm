@@ -58,7 +58,7 @@ platform:
 clone_depth: 5
 
 cache:
-  - .thirdparty-cache
+  - .thirdparty-cache -> appveyorcleancache.txt
 
 install:
   - ps: 'Start-FileDownload "http://cygwin.com/setup-x86.exe" -FileName "setup-x86.exe"'
