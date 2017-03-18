@@ -1,2 +1,0 @@
-Edit this file when you want to clean the appveyor cache
-See https://www.appveyor.com/docs/build-cache/#cleaning-up-cache
