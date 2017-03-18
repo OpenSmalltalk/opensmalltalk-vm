@@ -8134,6 +8134,12 @@ Cogit >> getOpcodeIndex [
 	^opcodeIndex
 ]
 
+{ #category : #accessing }
+Cogit >> getPrimitiveIndex [
+	"Access for the object representation primitive generation routines."
+	^primitiveIndex
+]
+
 { #category : #'translation support' }
 Cogit >> halt [
 	<cmacro: '() warning("halt")'>
