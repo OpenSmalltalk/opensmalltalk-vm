@@ -75,6 +75,14 @@ LIBS:= $(addprefix $(OBJDIR)/, $(addsuffix .lib, $(INTERNAL_PLUGINS)))
 DLLS:= $(addprefix $(OBJDIR)/, $(addsuffix .dll, $(EXTERNAL_PLUGINS)))
 
 #############################################################################
+# The third-party libraries
+#
+ifneq ($(THIRDPARTYLIBS),)
+include ../common/Makefile.lib.extra
+THIRDPARTYPREREQS:=$(THIRDPARTYCACHEDIR) $(THIRDPARTYOUTDIR) 
+endif
+
+#############################################################################
 # Generic VM source file definitions
 #
 VMOBJ:=	$(VMSRC:.c=.o)
@@ -151,7 +159,7 @@ debug:
 	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug THREADING=single $(@,debug=) default
 
 # Do make init to allow make -n to function.
-init:	$(OBJDIR) mkNamedPrims.exe
+init: $(THIRDPARTYPREREQS) $(OBJDIR) mkNamedPrims.exe
 
 cleanall:	clean cleanmt cleanast cleanmtast cleandbg cleanmtdbg
 
@@ -209,7 +217,7 @@ $(ETOBJ):	$(WIN32MISCDIR)/etext.c
 
 vm:	$(VMEXE)
 
-$(VMEXE): $(OBJDIR) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
+$(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
 	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -o $(VMEXE) \
 			$(BTOBJ) $(VMOBJ) $(VMEXP) $(OBJDIR)/resource.o $(LIBS) $(STDLIBS) $(ETOBJ)
@@ -262,6 +270,7 @@ $(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
 		CONFIGURATION=$(CONFIGURATION) TOOLPREFIX=$(TOOLPREFIX) \
+		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
 		$(OBJDIR)/$(*F).lib
@@ -273,6 +282,7 @@ $(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 		-f $(call plugin-makefile,$(*F)) \
 		CONFIGURATION=$(CONFIGURATION) TOOLPREFIX=$(TOOLPREFIX) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
+		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
 		COGDEFS="$(COGDEFS)" LIBNAME=$(*F) $(OBJDIR)/$(*F).dll
 
 #############################################################################

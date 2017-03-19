@@ -8,9 +8,9 @@ ifndef THIRDPARTYDIR
 	include ../common/Makefile.lib.extra
 endif
 
-LIBGCCLIBNAME:=libgcc_s_sjlj-1.dll
+LIBGCCLIBNAME:=libgcc_s_seh-1.dll
 LIBGCCLIB:=$(THIRDPARTYINSTALLDIR)/$(LIBGCCLIBNAME)
-MINGWLIBDIR:=/usr/i686-w64-mingw32/sys-root/mingw/bin
+MINGWLIBDIR:=/usr/x86_64-w64-mingw32/sys-root/mingw/bin
 
 LIBPTHREADLIBNAME:=libwinpthread-1.dll
 LIBPTHREADLIB:=$(THIRDPARTYINSTALLDIR)/$(LIBPTHREADLIBNAME)

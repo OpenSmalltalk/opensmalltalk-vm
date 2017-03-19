@@ -32,11 +32,11 @@ $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME): $(CAIROARCHIVE)
 	cd $(CAIRODIR) \
 		&& ./configure \
 			--prefix="$(THIRDPARTYOUTDIR)" \
-			--host=i686-w64-mingw32 \
+			--host=x86_64-w64-mingw32 \
 			PKG_CONFIG="$(PKG_CONFIG)" \
 			PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" \
-			CFLAGS='$(THIRDPARTY_CFLAGS) -I$(THIRDPARTYINCLUDEDIR) -march=pentium4' \
-			LDFLAGS='$(THIRDPARTY_LDFLAGS) -L$(THIRDPARTYLIBDIR) -march=pentium4' \
+			CFLAGS='$(THIRDPARTY_CFLAGS) -I$(THIRDPARTYINCLUDEDIR) ' \
+			LDFLAGS='$(THIRDPARTY_LDFLAGS) -L$(THIRDPARTYLIBDIR) ' \
 			--disable-silent-rules \
 			--disable-xlib \
 			--disable-dependency-tracking \

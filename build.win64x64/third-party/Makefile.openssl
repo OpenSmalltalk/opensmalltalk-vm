@@ -22,8 +22,9 @@ $(OPENSSLARCHIVE):
 $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME): $(OPENSSLARCHIVE)
 	tar x -f $(OPENSSLARCHIVE) -C $(THIRDPARTYDIR)
 	sed -i 's/symlink/copy/g'  $(OPENSSLDIR)/util/mklink.pl
+	sed -i 's/ln -s/cp/g'  $(OPENSSLDIR)/util/point.sh
 	cd $(OPENSSLDIR) \
-		&& CC='$(CC)' LD='$(LD)' NM='$(NM)' RC='$(RC)' DLLTOOL='$(DLLTOOL)' DLLWRAP='$(DLLWRAP)' ./Configure mingw --prefix='$(THIRDPARTYOUTDIR)' shared $(THIRDPARTY_CFLAGS) \
+		&& CC=x86_64-w64-mingw32-gcc LD='$(LD)' NM='$(NM)' RC='$(RC)' DLLTOOL='$(DLLTOOL)' DLLWRAP='$(DLLWRAP)' ./Configure mingw64 --prefix='$(THIRDPARTYOUTDIR)' shared $(THIRDPARTY_CFLAGS) \
 		&& make \
 		&& make install
 

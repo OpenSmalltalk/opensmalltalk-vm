@@ -1,22 +1,16 @@
 #############################################################################
-# Makefile for Win32 Cog Spur PharoVM using gcc and cygwin
+# Makefile for Win32 Stack Spur PharoVM using cygwin
 # Do make init to allow make -n to function.
 #############################################################################
 
 VM:=Pharo
 VM_NAME:=Pharo Virtual Machine
 
-VMSRCDIR:=../../spurlowcodesrc/vm
-# NOTES: 
-# STACK_ALIGN_BYTES=16 is needed in mingw and FFI (and I suppose on other modules too).
-# ALLOCA_LIES_SO_USE_GETSP=0 Some compilers return the stack address+4 on alloca function, 
-# then FFI module needs to adjust that. It is NOT the case of mingw.
-# For more information see this thread: http://forum.world.st/There-are-something-fishy-with-FFI-plugin-td4584226.html
-#COGDEFS:= -DPharoVM=1 -DIMMUTABILITY=1 -DSTACK_ALIGN_BYTES=16 -DALLOCA_LIES_SO_USE_GETSP=0
+VMSRCDIR:=../../spurstack64src/vm
 COGDEFS:= -DPharoVM=1 -DIMMUTABILITY=1
 
 THIRDPARTYLIBS:=pkgconfig openssl libssh2 libgit2 libsdl2 zlib libpng freetype2 pixman cairo libgcc
-	
+
 include ../common/Makefile
 
 # third-party libraries

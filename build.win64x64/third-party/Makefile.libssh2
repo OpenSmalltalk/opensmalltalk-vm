@@ -23,7 +23,7 @@ $(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME): $(LIBSSH2ARCHIVE)
 	cd $(LIBSSH2DIR) \
 		&& ./configure \
 			--build=x86_64-w64-cygwin \
-			--host=i686-w64-mingw32 \
+			--host=x86_64-w64-mingw32 \
 			--prefix='$(THIRDPARTYOUTDIR)' \
 			CFLAGS='$(THIRDPARTY_CFLAGS)' \
 			LDFLAGS='$(THIRDPARTY_LDFLAGS)' \

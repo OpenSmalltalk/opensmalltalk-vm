@@ -10,10 +10,10 @@ THIRDPARTYDIR?=$(BUILD)/third-party
 THIRDPARTYLIBDIR?=$(THIRDPARTYOUTDIR)/bin
 THIRDPARTYINCLUDEDIR?=$(THIRDPARTYOUTDIR)/include
 THIRDPARTYCACHEDIR?=../../.thirdparty-cache
-THIRDPARTYOUTDIR?=$(abspath $(THIRDPARTYCACHEDIR)/windows/i386)
+THIRDPARTYOUTDIR?=$(abspath $(THIRDPARTYCACHEDIR)/windows/x86_64)
 THIRDPARTYINSTALLDIR?=$(BUILD)/vm
-THIRDPARTY_CFLAGS?=-m32 -static-libgcc -static-libstdc++
-THIRDPARTY_LDFLAGS?=-m32 -static-libgcc -static-libstdc++
+THIRDPARTY_CFLAGS?=-m64 -static-libgcc -static-libstdc++
+THIRDPARTY_LDFLAGS?=-m64 -static-libgcc -static-libstdc++
 WGET?=wget -q --no-check-certificate 
 
 
