@@ -262,6 +262,8 @@ aioPoll(long microSeconds)
 		if (n > 0)
 			break;
 		if (n == 0) {
+			extern void addIdleUsecs(long idleUsecs);
+
 			if (microSeconds)
 				addIdleUsecs(microSeconds);
 			return 0;
