@@ -1,5 +1,5 @@
 #############################################################################
-# Makefile for Win32 Cog Spur PharoVM using gcc-3.4.x and cygwin
+# Makefile for Win32 Cog Spur PharoVM using gcc and cygwin
 # Do make init to allow make -n to function.
 #############################################################################
 
@@ -12,24 +12,26 @@ VMSRCDIR:=../../spurlowcodesrc/vm
 # ALLOCA_LIES_SO_USE_GETSP=0 Some compilers return the stack address+4 on alloca function, 
 # then FFI module needs to adjust that. It is NOT the case of mingw.
 # For more information see this thread: http://forum.world.st/There-are-something-fishy-with-FFI-plugin-td4584226.html
-COGDEFS:= -DPharoVM=1 -DIMMUTABILITY=1 -DSTACK_ALIGN_BYTES=16 -DALLOCA_LIES_SO_USE_GETSP=0
+#COGDEFS:= -DPharoVM=1 -DIMMUTABILITY=1 -DSTACK_ALIGN_BYTES=16 -DALLOCA_LIES_SO_USE_GETSP=0
+COGDEFS:= -DPharoVM=1 -DIMMUTABILITY=1
 
-THIRDPARTYLIBS:=pkgconfig openssl libssh2 libgit2 libsdl2 zlib libpng freetype2 pixman cairo
+THIRDPARTYLIBS:=pkgconfig openssl libssh2 libgit2 libsdl2 zlib libpng freetype2 pixman cairo libgcc
 	
 include ../common/Makefile
 
 # third-party libraries
 #
-include ../third-party/pkgconfig/Makefile.lib
-include ../third-party/freetype2/Makefile.lib
-include ../third-party/openssl/Makefile.lib
-include ../third-party/libssh2/Makefile.lib
-include ../third-party/libgit2/Makefile.lib
-include ../third-party/libsdl2/Makefile.lib
-include ../third-party/zlib/Makefile.lib
-include ../third-party/pixman/Makefile.lib
-include ../third-party/libpng/Makefile.lib
-include ../third-party/cairo/Makefile.lib
+include ../third-party/Makefile.pkgconfig
+include ../third-party/Makefile.freetype2
+include ../third-party/Makefile.openssl
+include ../third-party/Makefile.libssh2
+include ../third-party/Makefile.libgit2
+include ../third-party/Makefile.libsdl2
+include ../third-party/Makefile.zlib
+include ../third-party/Makefile.pixman
+include ../third-party/Makefile.libpng
+include ../third-party/Makefile.cairo
+include ../third-party/Makefile.libgcc
 
 # Since SDLDisplayPlugin will be included as internal plugin, we need to add the library to the path
 # add to the end to allow thirdparty vars to be defined.

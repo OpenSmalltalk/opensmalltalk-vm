@@ -108,17 +108,30 @@ build_osx() {
 }
 
 build_windows() {
+    echo "Building for Windows"
+
+    echo $ARCH
+    echo $FLAVOR
+
     build_directory="./build.${ARCH}/${FLAVOR}/"
 
+    echo "${build_directory}"
+    
     [[ ! -d "${build_directory}" ]] && exit 100
 
     pushd "${build_directory}"
-    # remove bochs plugins
+    echo "remove bochs plugins"
     sed -i 's/Bochs.* //g' plugins.ext
+
+    echo "Let's build"
+    # We cannot zip dbg and ast if we pass -f to just to the full thing...
+    # Once this builds, let's pass -A instead of -f and put the full zip (but we should do several zips in the future)
     bash -e ./mvm -f || exit 1
-    zip -r "${output_file}.zip" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
+    zip -r "${output_file}.zip" "./build/vm/"
+    # zip -r "${output_file}.zip" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
     popd
 }
+
 
 if [[ ! $(type -t build_$PLATFORM) ]]; then
     echo "Unsupported platform '$(uname -s)'." 1>&2
