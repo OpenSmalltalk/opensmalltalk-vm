@@ -175,7 +175,7 @@ typedef struct VirtualMachine {
 # if VM_PROXY_MINOR > 13
 	/* Reuse these now that Cog provides a production JIT. */
 	sqInt (*statNumGCs)(void);
-	sqInt (*AS_YET_UNUSED)(void);
+	sqInt (*stringForCString)(char *nullTerminatedCString);
 # else
 	/* InterpreterProxy methodsFor: 'compiler' */
 

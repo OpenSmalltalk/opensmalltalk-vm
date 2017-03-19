@@ -192,11 +192,12 @@ sqInt characterValueOf(sqInt oop);
 sqInt isPinned(sqInt objOop);
 sqInt pinObject(sqInt objOop);
 sqInt unpinObject(sqInt objOop);
+char *cStringOrNullFor(sqInt);
 #endif
 #if VM_PROXY_MINOR > 13 /* More Spur */
 sqInt statNumGCs(void);
+sqInt stringForCString(char *);
 #endif
-char *cStringOrNullFor(sqInt);
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
 
@@ -511,7 +512,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 
 #if VM_PROXY_MINOR > 13 /* More Spur */
 	VM->statNumGCs = statNumGCs;
-	VM->AS_YET_UNUSED = 0;
+	VM->stringForCString = stringForCString;
 #endif
 
 	return VM;
