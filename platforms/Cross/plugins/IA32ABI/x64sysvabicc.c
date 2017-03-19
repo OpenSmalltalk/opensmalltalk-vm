@@ -243,7 +243,7 @@ thunkEntry(long a0, long a1, long a2, long a3, long a4, long a5,
 }
 
 /*
- * Thunk allocation support.  Since thunks must be exectuable and some OSs
+ * Thunk allocation support.  Since thunks must be executable and some OSs
  * may not provide default execute permission on memory returned by malloc
  * we must provide memory that is guaranteed to be executable.  The abstraction
  * is to answer an Alien that references an executable piece of memory that

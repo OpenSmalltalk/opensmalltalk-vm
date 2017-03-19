@@ -1,0 +1,48 @@
+ifndef THIRDPARTYDIR
+	include Makefile.lib.extra
+endif
+include ../../third-party/openssl.spec
+
+# plugin definitions
+OPENSSLURL:=$(openssl_spec_download_url)
+OPENSSLLIBNAME:=$(openssl_spec_product1_name_linux)
+OPENSSLALLLIBNAMES:=$(openssl_spec_product2_name_linux) $(OPENSSLLIBNAME)
+OPENSSLDIR:=$(THIRDPARTYDIR)/$(openssl_spec_unpack_dir_name)
+OPENSSLARCHIVE:=$(THIRDPARTYCACHEDIR)/$(openssl_spec_archive_name)
+OPENSSLLIB:=$(THIRDPARTYINSTALLDIR)/$(OPENSSLLIBNAME)
+OPENSSLSYMLINKS:=$(openssl_spec_symlinks_linux)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(OPENSSLLIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+
+$(OPENSSLARCHIVE): 
+	curl -o $(OPENSSLARCHIVE) -L $(OPENSSLURL) 
+
+$(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME): $(OPENSSLARCHIVE)
+	tar x -f $(OPENSSLARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(OPENSSLDIR) \
+		&& ./Configure linux-generic32 --prefix='$(THIRDPARTYOUTDIR)' shared \
+		&& make install
+
+# Assuming building libssl will also build libcrypto
+$(OPENSSLLIB): $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME)
+
+openssl: $(OPENSSLLIB)
+
+install: 
+	@for each in $(OPENSSLALLLIBNAMES); do \
+		cp -f $(THIRDPARTYLIBDIR)/$$each $(THIRDPARTYINSTALLDIR); \
+	done
+	@echo "Installing links"
+	@for each in $(THIRDPARTYLIBDIR)/$(OPENSSLSYMLINKS); do \
+		if [ -L $$each ]; then \
+			cp -a $$each $(THIRDPARTYINSTALLDIR); \
+		fi \
+	done
+
+all: $(THIRDPARTYOUTDIR) $(THIRDPARTYINSTALLDIR) $(THIRDPARTYCACHEDIR) openssl
+
+clean: 
+	rm -Rf $(OPENSSLDIR)

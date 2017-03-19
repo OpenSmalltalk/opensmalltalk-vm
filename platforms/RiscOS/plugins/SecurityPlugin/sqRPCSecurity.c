@@ -39,9 +39,13 @@ static char untrustedUserDirectory[MAXDIRNAMELENGTH]; /* imagepath/untrusted/ */
 static int  untrustedUserDirectoryLen;
 char name[MAXDIRNAMELENGTH];
 
+/* environment security *******************************************************/
+static int allowEnvironmentAccess = 1; /* full access to C environment */
+
+sqInt ioDisableEnvironmentAccess(void) { return allowEnvironmentAccess = 0; }
+sqInt ioHasEnvironmentAccess(void) { return allowEnvironmentAccess; }
+
 /* file security ***********************************************************/
-
-
 static int allowFileAccess= 1;  /* full access to files */
 
 
@@ -128,17 +132,8 @@ int ioCanSetFileTypeOfSize(char* pathString, int pathStringLength) {
 
 
 /* disabling/querying */
-
-
-int ioDisableFileAccess(void) {
-	allowFileAccess= 0;
-	return 1;
-}
-
-
-int ioHasFileAccess(void) {
-	return allowFileAccess;
-}
+int ioDisableFileAccess(void) { return allowFileAccess = 0; }
+int ioHasFileAccess(void) { return allowFileAccess; }
 
 
 /* image security **********************************************************/
@@ -151,51 +146,22 @@ int ioCanRenameImage(void) {
 	return allowImageWrite; /* only when we're allowed to save the image */
 }
 
-int ioCanWriteImage(void) {
-	return allowImageWrite;
-}
-
-int ioDisableImageWrite(void) {
-	allowImageWrite= 0;
-	return 1;
-}
+int ioCanWriteImage(void) { return allowImageWrite; }
+int ioDisableImageWrite(void) { return allowImageWrite = 0; }
 
 
 /* socket security - for now it's all or nothing ***************************/
-
-
 static int allowSocketAccess= 1; /* allow access to sockets */
-
-
 int ioCanCreateSocketOfType(int netType, int socketType) {
 	return allowSocketAccess;
 }
-
-
-int ioCanConnectToPort(int netAddr, int port) {
-	return allowSocketAccess;
-}
-
-
-int ioCanListenOnPort(int s, int port) {
-	return allowSocketAccess;
-}
-
-
-int ioDisableSocketAccess() {
-	allowSocketAccess= 0;
-	return 1;
-}
-
-
-int ioHasSocketAccess() {
-	return allowSocketAccess;
-}
+int ioCanConnectToPort(int netAddr, int port) { return allowSocketAccess; }
+int ioCanListenOnPort(int s, int port) { return allowSocketAccess; }
+int ioDisableSocketAccess() { return allowSocketAccess = 0; }
+int ioHasSocketAccess() { return allowSocketAccess; }
 
 
 /* SecurityPlugin primitive support ****************************************/
-
-
 char *ioGetSecureUserDirectory(void) {
 	PRINTF(("\\t sec: getSecureUserDir - %s\n", secureUserDirectory));
 	return secureUserDirectory;
