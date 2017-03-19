@@ -29,9 +29,13 @@ static char* fromSqueak(char* string, int len)
   return buf;
 }
 
+/* environment security *******************************************************/
+static int allowEnvironmentAccess = 1; /* full access to C environment */
+
+sqInt ioDisableEnvironmentAccess(void) { return return allowEnvironmentAccess = 0; }
+sqInt ioHasEnvironmentAccess(void) { return allowEnvironmentAccess; }
+
 /* file security ***********************************************************/
-
-
 static sqInt allowFileAccess= 1;  /* full access to files */
 
 
@@ -128,81 +132,36 @@ sqInt ioCanSetFileTypeOfSize(char* pathString, sqInt pathStringLength)
 /* disabling/querying */
 
 
-sqInt ioDisableFileAccess(void)
-{
-  allowFileAccess= 0;
-  return 1;
-}
-
-
-sqInt ioHasFileAccess(void)
-{
-  return allowFileAccess;
-}
+sqInt ioDisableFileAccess(void) { return return allowFileAccess = 0; }
+sqInt ioHasFileAccess(void) { return allowFileAccess; }
 
 
 /* image security **********************************************************/
-
-
 static sqInt allowImageWrite= 1;  /* allow writing the image */
-
 
 sqInt ioCanRenameImage(void)
 {
   return allowImageWrite; /* only when we're allowed to save the image */
 }
 
-sqInt ioCanWriteImage(void)
-{
-  return allowImageWrite;
-}
-
-sqInt ioDisableImageWrite(void)
-{
-  allowImageWrite= 0;
-  return 1;
-}
+sqInt ioCanWriteImage(void) { return allowImageWrite; }
+sqInt ioDisableImageWrite(void) { return allowImageWrite= 0; }
 
 
 /* socket security - for now it's all or nothing ***************************/
-
-
 static sqInt allowSocketAccess= 1; /* allow access to sockets */
-
 
 sqInt ioCanCreateSocketOfType(sqInt netType, sqInt socketType)
 {
   return allowSocketAccess;
 }
-
-
-sqInt ioCanConnectToPort(sqInt netAddr, sqInt port)
-{
-  return allowSocketAccess;
-}
-
-
-sqInt ioCanListenOnPort(sqInt s, sqInt port)
-{
-  return allowSocketAccess;
-}
-
-
-sqInt ioDisableSocketAccess()
-{
-  allowSocketAccess= 0;
-  return 1;
-}
-
-
-sqInt ioHasSocketAccess()
-{
-  return allowSocketAccess;
-}
+sqInt ioCanConnectToPort(sqInt addr, sqInt port) { return allowSocketAccess; }
+sqInt ioCanListenOnPort(sqInt s, sqInt port) { return allowSocketAccess; }
+sqInt ioDisableSocketAccess() { return allowSocketAccess = 0; }
+sqInt ioHasSocketAccess() { return allowSocketAccess; }
 
 
 /* SecurityPlugin primitive support ****************************************/
-
 
 char *ioGetSecureUserDirectory(void)
 {
