@@ -261,8 +261,11 @@ aioPoll(long microSeconds)
 		n = select(maxFd, &rd, &wr, &ex, &tv);
 		if (n > 0)
 			break;
-		if (n == 0)
+		if (n == 0) {
+			if (microSeconds)
+				addIdleUsecs(microSeconds);
 			return 0;
+		}
 		if (errno && (EINTR != errno)) {
 			fprintf(stderr, "errno %d\n", errno);
 			perror("select");
@@ -305,6 +308,7 @@ aioSleepForUsecs(long microSeconds)
 			struct timespec rmtp;
 
 			nanosleep(&rqtp, &rmtp);
+			addIdleUsecs((rqtp.tv_nanoseconds - rmtp.tv_nanoseconds) / 1000);
 			microSeconds = 0;	/* poll but don't block */
 		}
 	}
