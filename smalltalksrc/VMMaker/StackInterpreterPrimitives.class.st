@@ -1495,12 +1495,13 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		9	incremental GCs (SqueakV3) or scavenges (Spur) since startup (read-only)
 		10	total milliseconds in incremental GCs (SqueakV3) or scavenges (Spur) since startup (read-only)
 		11	tenures of surving objects since startup (read-only)
-		12-20 were specific to ikp's JITTER VM, now 12-16 are open for use
+		12-20 were specific to ikp's JITTER VM, now 12-15 are open for use
+		16	total microseconds at idle since start-up (if non-zero)
 		17	fraction of the code zone to use (Sista only; used to control code zone use to preserve sendAndBranchData on counter tripped callback)
 		18	total milliseconds in compaction phase of full GC since start-up (Spur only)
 		19	scavenge threshold, the effective size of eden.  When eden fills to the threshold a scavenge is scheduled. Newer Spur VMs only.
 		20	utc microseconds at VM start-up (actually at time initialization, which precedes image load).
-		21	root table size (read-only)
+		21	root/remembered table size (occupancy) (read-only)
 		22	root table overflows since startup (read-only)
 		23	bytes of extra memory to reserve for VM buffers, plugins, etc (stored in image file header).
 		24	memory threshold above which shrinking object memory (rw)
@@ -1530,7 +1531,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		48	various header flags.  See getCogVMFlags.
 		49	max size the image promises to grow the external semaphore table to (0 sets to default, which is 256 as of writing)
 		50-51 nil; reserved for VM parameters that persist in the image (such as eden above)
-		52	root table capacity
+		52	root/remembered table capacity
 		53	number of segments (Spur only; otherwise nil)
 		54	total size of free old space (Spur only, otherwise nil)
 		55	ratio of growth and image size at or above which a GC will be performed post scavenge
@@ -1577,9 +1578,10 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 															ifTrue: [objectMemory statScavengeGCUsecs]
 															ifFalse: [objectMemory statIncrGCUsecs]) + 500 // 1000).
 		objectMemory storePointerUnchecked: 10	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statTenures).
-		"JITTER VM info unused; 11 - 16/12 - 17 available for reuse"
+		"JITTER VM info unused; 11 - 14/12 - 15 available for reuse"
 		11 to: 18 do:
 			[:i | objectMemory storePointerUnchecked: i ofObject: result withValue: ConstZero].
+		objectMemory storePointerUnchecked: 15 ofObject: result withValue: (objectMemory positive64BitIntegerFor: statIdleUsecs).
 		(SistaVM and: [self isCog]) ifTrue:
 			[objectMemory storePointerUnchecked: 16 ofObject: result withValue: (objectMemory floatObjectOf: self getCogCodeZoneThreshold)].
 		objectMemory hasSpurMemoryManagerAPI ifTrue:
@@ -1674,8 +1676,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 																		ifTrue: [objectMemory statScavengeGCUsecs]
 																		ifFalse: [objectMemory statIncrGCUsecs]) + 500 // 1000].
 		arg = 11	ifTrue: [result := objectMemory integerObjectOf: objectMemory statTenures].
-		(arg between: 12 and: 16) ifTrue: [result := ConstZero]. "Was JITTER VM info"
-		
+		(arg between: 12 and: 15) ifTrue: [result := ConstZero]. "Was JITTER VM info"
+		arg = 16	ifTrue: [result := self positive64BitIntegerFor: statIdleUsecs].
 		arg = 17	ifTrue: [result := (SistaVM and: [self isCog])
 										ifTrue: [objectMemory floatObjectOf: self getCogCodeZoneThreshold]
 										ifFalse: [ConstZero]].
