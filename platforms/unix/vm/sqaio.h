@@ -97,7 +97,7 @@ extern long aioSleepForUsecs(long microSeconds);
 extern unsigned volatile long long ioUTCMicroseconds(void);
 extern unsigned volatile long long ioUTCMicrosecondsNow(void);
 
-extern void addIdleUsecs(sqInt);
+extern void addIdleUsecs(long idleUsecs);
 
 /* debugging stuff. */
 #ifdef AIO_DEBUG
