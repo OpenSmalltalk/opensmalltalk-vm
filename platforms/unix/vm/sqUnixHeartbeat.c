@@ -313,8 +313,22 @@ beatStateMachine(void *careLess)
 		extern char *revisionAsString();
 		errno = er;
 		perror("pthread_setschedparam failed");
-		fprintf(stderr,
-				"Read e.g. https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/r3732#linux\n");
+#if PharoVM
+# define VMNAME "pharo"
+#elif NewspeakVM
+# define VMNAME "nsvm"
+#else
+# define VMNAME "squeak"
+#endif
+        fprintf(stderr, "This VM uses a thread heartbeat who requires a special configuration to work.\n");
+        fprintf(stderr, "You need to allow it to run higher priority threads (real time), to allow clock to work properly\n");
+        fprintf(stderr, "You need to add a conf file to /etc/security/limits.d, executing this:\n\n");
+        fprintf(stderr, "sudo cat >/etc/security/limits.d/%s.conf <<END\n", VMNAME);
+        fprintf(stderr, "*       hard    rtprio  2\n");
+        fprintf(stderr, "*       soft    rtprio  2\n");
+        fprintf(stderr, "END\n");
+        fprintf(stderr, "\nYou need to log out and log back in for the limits to take effect.\n");
+        fprintf(stderr, "For more information read https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/r3732#linux\n");
 		exit(errno);
 	}
 	beatState = active;

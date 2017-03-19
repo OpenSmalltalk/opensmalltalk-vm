@@ -32,7 +32,7 @@ static char* fromSqueak(char* string, int len)
 /* environment security *******************************************************/
 static int allowEnvironmentAccess = 1; /* full access to C environment */
 
-sqInt ioDisableEnvironmentAccess(void) { return return allowEnvironmentAccess = 0; }
+sqInt ioDisableEnvironmentAccess(void) { return allowEnvironmentAccess = 0; }
 sqInt ioHasEnvironmentAccess(void) { return allowEnvironmentAccess; }
 
 /* file security ***********************************************************/
@@ -132,7 +132,7 @@ sqInt ioCanSetFileTypeOfSize(char* pathString, sqInt pathStringLength)
 /* disabling/querying */
 
 
-sqInt ioDisableFileAccess(void) { return return allowFileAccess = 0; }
+sqInt ioDisableFileAccess(void) { return allowFileAccess = 0; }
 sqInt ioHasFileAccess(void) { return allowFileAccess; }
 
 
