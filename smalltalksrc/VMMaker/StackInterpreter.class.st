@@ -92,6 +92,10 @@ Class {
 		'gcSemaphoreIndex',
 		'classByteArrayCompactIndex',
 		'checkedPluginName',
+		'nativeSP',
+		'nativeStackPointer',
+		'lowcodeCalloutState',
+		'shadowCallStackPointer',
 		'statForceInterruptCheck',
 		'statStackOverflow',
 		'statStackPageDivorce',
@@ -99,10 +103,7 @@ Class {
 		'statProcessSwitch',
 		'statIOProcessEvents',
 		'statPendingFinalizationSignals',
-		'nativeSP',
-		'nativeStackPointer',
-		'lowcodeCalloutState',
-		'shadowCallStackPointer',
+		'statIdleUsecs',
 		'debugCallbackPath',
 		'debugCallbackReturns',
 		'debugCallbackInvokes'
@@ -299,18 +300,18 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 								longRunningPrimitiveStartUsecs longRunningPrimitiveStopUsecs
 								"these are high-frequency enough that they're overflowing quite quickly on modern hardware"
 								statProcessSwitch statIOProcessEvents statForceInterruptCheck
-								statCheckForEvents statStackOverflow statStackPageDivorce)
+								statCheckForEvents statStackOverflow statStackPageDivorce
+								statIdleUsecs)
 		in: aCCodeGenerator.
 	aCCodeGenerator var: #nextProfileTick type: #sqLong.
 	
-	LowcodeVM ifTrue: [
-		aCCodeGenerator
+	LowcodeVM ifTrue:
+		[aCCodeGenerator
 			var: #shadowCallStackPointer
-			type: #'char*'.
+			type: #'char *'.
 		aCCodeGenerator
 			var: #lowcodeCalloutState
-			type: #'sqLowcodeCalloutState*'
-	].
+			type: #'sqLowcodeCalloutState*']
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -1952,6 +1953,14 @@ StackInterpreter >> addFirstLink: proc toList: aList [
 		ifTrue: [objectMemory storePointer: LastLinkIndex ofObject: aList withValue: proc]
 		ifFalse: [objectMemory storePointer: NextLinkIndex ofObject: proc withValue: firstLink].
 	objectMemory storePointer: MyListIndex ofObject: proc withValue: aList
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> addIdleUsecs: idleUsecs [
+	"The various poll/select calls in the VM should attempt to tally the ammount
+	 of time spent at idle here, so as to render the uptime value meaningful."
+	<export: true>
+	statIdleUsecs := statIdleUsecs + idleUsecs
 ]
 
 { #category : #'process primitive support' }
@@ -7937,7 +7946,8 @@ StackInterpreter >> initialize [
 	maxExtSemTabSizeSet := false.
 	debugCallbackInvokes := debugCallbackPath := debugCallbackReturns := 0.
 	statForceInterruptCheck := statStackOverflow := statCheckForEvents :=
-	statProcessSwitch := statIOProcessEvents := statStackPageDivorce := 0
+	statProcessSwitch := statIOProcessEvents := statStackPageDivorce :=
+	statIdleUsecs := 0
 ]
 
 { #category : #initialization }
