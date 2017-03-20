@@ -723,7 +723,7 @@ Cogit class >> generateCodeStringForCogitDotC [
 		 self translateableInstructionSubclassesAndInstalledOptionsDo:
 			[:class | | abi |
 			 s nextPutAll: 'if '.
-			 (abi := initializationOptions at: #ABI) ifNotNil:
+			 (abi := initializationOptions at: #ABI ifAbsent: []) ifNotNil:
 				[s nextPutAll: 'defined('; nextPutAll: abi; nextPutAll: ') && ('].
 			 class identifyingPredefinedMacros
 				do: [:predefinedMacro| s nextPutAll: 'defined('; nextPutAll: predefinedMacro; nextPut: $)]
