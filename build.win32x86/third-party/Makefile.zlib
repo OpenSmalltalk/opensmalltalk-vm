@@ -24,6 +24,7 @@ $(THIRDPARTYLIBDIR)/$(ZLIBLIBNAME): $(ZLIBARCHIVE)
 	tar x -f $(ZLIBARCHIVE) -C $(THIRDPARTYDIR)
 	cd $(ZLIBDIR) \
 		&& make -fwin32/Makefile.gcc \
+			PREFIX=i686-w64-mingw32- \
 			CFLAGS='$(THIRDPARTY_CFLAGS)' \
 			LDFLAGS='$(THIRDPARTY_LDFLAGS)' \
 		&& make install -fwin32/Makefile.gcc \
