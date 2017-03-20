@@ -99,6 +99,16 @@ CogX64Compiler class >> identifyingPredefinedMacros [
 	^#('x86_64' '__amd64' '__x86_64' '__amd64__' '__x86_64__' '_M_AMD64' '_M_X64')
 ]
 
+{ #category : #translation }
+CogX64Compiler class >> ifTranslateableAddWithOptionsTo: aCollection [
+	"Override to create cogitX64.c and cogitX64Win64.c"
+	(self wordSize = Cogit objectMemoryClass wordSize
+	 and: [self identifyingPredefinedMacros notNil]) ifTrue:
+		[aCollection
+			add: {self. {#ISA. self ISA. #ABI. #SysV}};
+			add: {self. {#ISA. self ISA. #ABI. #WIN64}}]
+]
+
 { #category : #'class initialization' }
 CogX64Compiler class >> initialize [
 	"Initialize various x64 instruction-related constants.
@@ -294,6 +304,12 @@ CogX64Compiler class >> isSysV [
 CogX64Compiler class >> machineCodeDeclaration [
 	"Answer the declaration for the machineCode array."
 	^{#'unsigned char'. '[', self basicNew machineCodeBytes printString, ']'}
+]
+
+{ #category : #translation }
+CogX64Compiler class >> moduleName [
+	"CogAbstractInstruction subclasses collect: [:ea| ea moduleName]"
+	^'cogit', self ISA, (initializationOptions at: #ABI ifAbsent: [''])
 ]
 
 { #category : #translation }
