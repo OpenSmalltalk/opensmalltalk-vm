@@ -720,7 +720,7 @@ Cogit class >> generateCodeStringForCogitDotC [
 		 s nextPutAll: (CCodeGenerator monticelloDescriptionFor: self).
 		 s cr; nextPutAll: ' */'.
 		 s cr; cr; nextPut: $#.
-		 (CogAbstractInstruction translateableSubclasses sort: [:a :b| a name < b name]) do:
+		 self translateableInstructionSubclassesAndInstalledOptionsDo:
 			[:class |
 			 s nextPutAll: 'if '.
 			 class identifyingPredefinedMacros
@@ -1473,6 +1473,23 @@ ceTraceBlockActivationTrampoline
 
 ceTraceStoreTrampoline
 	return pc left on stack because ceTraceStore always returns directly"
+]
+
+{ #category : #translation }
+Cogit class >> translateableInstructionSubclassesAndInstalledOptionsDo: aBlock [
+	"Evaluate aBlock with the translateable subclass and its options installed, being careful to clean-up afterwards."
+	CogAbstractInstruction translateableSubclassesAndOptions do:
+		[:pair|
+		[:class :options| | toRemove |
+		 toRemove := Set new.
+		 options pairsDo:
+			[:key :value|
+			 (initializationOptions includesKey: key) ifFalse:
+				[toRemove add: key].
+			 initializationOptions at: key put: value].
+		 aBlock value: class.
+		 toRemove do: [:key| initializationOptions removeKey: key]]
+			valueWithArguments: pair]
 ]
 
 { #category : #translation }

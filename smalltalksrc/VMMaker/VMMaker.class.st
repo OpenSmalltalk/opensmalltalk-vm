@@ -1315,14 +1315,12 @@ VMMaker >> generateCogitFileFor: cogitClass [
 
 { #category : #'generate sources' }
 VMMaker >> generateCogitFiles [
-	"Translate the Smalltalk description of the virtual machine into C.  If 'self doInlining' is true, small method bodies are inlined to reduce procedure call overhead.  On the PPC, this results in a factor of three speedup with only 30% increase in code size.  Subclasses can use specialised versions of CCodeGenerator and interpreterClass."
-
+	"Translate the Smalltalk description of the virtual machine's JITs into C."
 	| cogitClass cg |
 	(cogitClass := self interpreterClass cogitClass) ifNil: [^nil].
 	self generateCogitIncludeFileFor: cogitClass.
-	CogAbstractInstruction translateableSubclasses do:
+	cogitClass translateableInstructionSubclassesAndInstalledOptionsDo:
 		[:compilerClass|
-		optionsDictionary at: #ISA put: compilerClass ISA.
 		cg := self generateCogitFileFor: cogitClass].
 	cg vmClass additionalHeadersDo:
 		[:headerName :headerContents| | filePath |
@@ -1835,16 +1833,20 @@ VMMaker >> needsToRegenerateCogitFile [
 	cogitClasses addAllLast: (cogitClass ancilliaryClasses: self options).
 	tStamp := cogitClasses inject: 0 into: [:tS :cl| tS max: cl timeStamp].
 
-	"don't translate if the file is newer than my timeStamp"
-	(self coreVMDirectory entryAt: cogitClass processorSpecificSourceFileName ifAbsent: [nil]) ifNotNil:
-		[:fstat| | mTime |
-		mTime := fstat modificationTime.
-		mTime isInteger ifFalse: [mTime := mTime asSeconds].
-		tStamp < mTime ifTrue:
-			[^self confirm: ('The ', self configurationNameIfAny, cogitClass printString,
-							', ', cogitClass activeCompilerClass, '\classes have not been modified since the ',
-							cogitClass processorSpecificSourceFileName,
-							' source file\was last generated.  Do you still want to regenerate it?') withCRs]].
+	"don't translate if the file(s) is newer than my timeStamp"
+	((self coreVMDirectory fileNamesMatching: cogitClass activeCompilerClass moduleName, '*') allSatisfy:
+		[:fileName|
+		(self coreVMDirectory entryAt: fileName ifAbsent: [nil])
+			ifNil: [false]
+			ifNotNil:
+				[:fstat| | mTime |
+				mTime := fstat modificationTime.
+				mTime isInteger ifFalse: [mTime := mTime asSeconds].
+				tStamp > mTime]]) ifTrue:
+		[^self confirm: ('The ', self configurationNameIfAny, cogitClass printString,
+			', ', cogitClass activeCompilerClass, '\classes have not been modified since the ',
+			cogitClass processorSpecificSourceFileName,
+			' source file\was last generated.  Do you still want to regenerate it?') withCRs].
 	^true
 ]
 

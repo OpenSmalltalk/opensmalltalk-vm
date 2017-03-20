@@ -114,6 +114,13 @@ CogAbstractInstruction class >> identifyingPredefinedMacros [
 	^nil
 ]
 
+{ #category : #translation }
+CogAbstractInstruction class >> ifTranslateableAddWithOptionsTo: aCollection [
+	(self wordSize = Cogit objectMemoryClass wordSize
+	 and: [self identifyingPredefinedMacros notNil]) ifTrue:
+		[aCollection add: {self. {#ISA. self ISA}}]
+]
+
 { #category : #'class initialization' }
 CogAbstractInstruction class >> initialize [
 	NumOperands := 3
@@ -306,12 +313,18 @@ CogAbstractInstruction class >> structTypeName [
 ]
 
 { #category : #translation }
-CogAbstractInstruction class >> translateableSubclasses [
-	"CogAbstractInstruction translateableSubclasses"
-	^self subclasses select:
-		[:compilerClass|
-		 compilerClass wordSize = Cogit objectMemoryClass wordSize
-		 and: [compilerClass identifyingPredefinedMacros notNil]]
+CogAbstractInstruction class >> translateableSubclassesAndOptions [
+	"CogAbstractInstruction translateableSubclassesAndOptions"
+	| translateableSubclassesAndOptions |
+	translateableSubclassesAndOptions := OrderedCollection new.
+	self subclasses do:
+		[:subclass|
+		subclass ifTranslateableAddWithOptionsTo: translateableSubclassesAndOptions].
+	^translateableSubclassesAndOptions sort:
+		[:a :b|
+		a first name < b first name
+		or: [a first name = b first name "If equal, sort on the ABI"
+			and: [a last last < b last last]]]
 ]
 
 { #category : #translation }
