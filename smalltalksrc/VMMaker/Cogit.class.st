@@ -721,11 +721,14 @@ Cogit class >> generateCodeStringForCogitDotC [
 		 s cr; nextPutAll: ' */'.
 		 s cr; cr; nextPut: $#.
 		 self translateableInstructionSubclassesAndInstalledOptionsDo:
-			[:class |
+			[:class | | abi |
 			 s nextPutAll: 'if '.
+			 (abi := initializationOptions at: #ABI) ifNotNil:
+				[s nextPutAll: 'defined('; nextPutAll: abi; nextPutAll: ') && ('].
 			 class identifyingPredefinedMacros
 				do: [:predefinedMacro| s nextPutAll: 'defined('; nextPutAll: predefinedMacro; nextPut: $)]
 				separatedBy: [s nextPutAll: ' || '].
+			 abi ifNotNil: [s nextPut: $)].
 			 s cr; cr; nextPutAll: '#	include "'; nextPutAll: class moduleName; nextPutAll: '.c"'.
 			 s cr; cr; nextPutAll: '#el'].
 		 s nextPutAll: 'se'.
