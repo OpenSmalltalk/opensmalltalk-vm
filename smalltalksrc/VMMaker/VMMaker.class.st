@@ -1845,7 +1845,7 @@ VMMaker >> needsToRegenerateCogitFile [
 				[:fstat| | mTime |
 				mTime := fstat modificationTime.
 				mTime isInteger ifFalse: [mTime := mTime asSeconds].
-				tStamp > mTime]]) ifTrue:
+				tStamp < mTime]]) ifTrue:
 		[^self confirm: ('The ', self configurationNameIfAny, cogitClass printString,
 			', ', cogitClass activeCompilerClass, '\classes have not been modified since the ',
 			cogitClass processorSpecificSourceFileName,
