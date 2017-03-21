@@ -6085,11 +6085,13 @@ StackInterpreter >> externalInstVar: index ofContext: maybeMarriedContext put: a
 	thePage := stackPages stackPageFor: theFP.
 	self assert: stackPage = stackPages mostRecentlyUsedPage.
 	onCurrentPage := thePage = stackPage.
-	index == SenderIndex
+	index = SenderIndex
 		ifTrue:
 			[self storeSenderOfFrame: theFP withValue: anOop]
 		ifFalse:
 			[self externalDivorceFrame: theFP andContext: maybeMarriedContext.
+			 (self is: index methodAssignmentToContextWithMachineCodePC: maybeMarriedContext) ifTrue:
+				[self ensureContextHasBytecodePC: maybeMarriedContext].
 			 objectMemory storePointer: index ofObject: maybeMarriedContext withValue: anOop.
 			 index = StackPointerIndex ifTrue:
 				[self ensureContextIsExecutionSafeAfterAssignToStackPointer: maybeMarriedContext]].
@@ -8138,7 +8140,7 @@ StackInterpreter >> instVar: index ofContext: aMarriedContext put: anOop [
 			[self ensureContextIsExecutionSafeAfterAssignToStackPointer: aMarriedContext].
 		 ^nil].
 	theFP := self frameOfMarriedContext: aMarriedContext.
-	index == SenderIndex ifTrue:
+	index = SenderIndex ifTrue:
 		[| thePage onCurrentPage |
 		 thePage := stackPages stackPageFor: theFP.
 		 self assert: stackPage = stackPages mostRecentlyUsedPage.
@@ -8153,6 +8155,8 @@ StackInterpreter >> instVar: index ofContext: aMarriedContext put: anOop [
 		 ^nil].
 	self externalizeIPandSP.
 	self externalDivorceFrame: theFP andContext: aMarriedContext.
+	(self is: index methodAssignmentToContextWithMachineCodePC: aMarriedContext) ifTrue:
+		[self ensureContextHasBytecodePC: aMarriedContext].
 	objectMemory storePointer: index ofObject: aMarriedContext withValue: anOop.
 	index = StackPointerIndex ifTrue:
 		[self ensureContextIsExecutionSafeAfterAssignToStackPointer: aMarriedContext].
@@ -8889,6 +8893,13 @@ StackInterpreter >> is: oop MemberOf: className [
 	<var: #className type:#'char *'>
 	oopClass := objectMemory fetchClassOf: oop.
 	^(self classNameOf: oopClass Is: className)
+]
+
+{ #category : #'internal interpreter access' }
+StackInterpreter >> is: fieldIndex methodAssignmentToContextWithMachineCodePC: anOop [
+	"This is a hook for the CoInterpreter.  It is a noop in the StackInterpreter."
+	<inline: true>
+	^false
 ]
 
 { #category : #'frame access' }
@@ -20234,7 +20245,8 @@ StackInterpreter >> storeMaybeContext: obj receiverVariable: fieldIndex withValu
 	<inline: true>
 	((self isWriteMediatedContextInstVarIndex: fieldIndex)
 	and: [(objectMemory isContextNonImm: obj)
-	and: [self isMarriedOrWidowedContext: obj]])
+	and: [(self isMarriedOrWidowedContext: obj)
+		or: [self is: fieldIndex methodAssignmentToContextWithMachineCodePC: anOop]]])
 		ifTrue:
 			[self instVar: fieldIndex ofContext: obj put: anOop]
 		ifFalse:

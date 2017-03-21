@@ -1070,12 +1070,17 @@ CurrentImageCoInterpreterFacade >> space [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> specialSelector: index [ 
-	^self oopForObject: (Smalltalk specialSelectors at: index * 2 + 1)
+	^self oopForObject: (self specialSelectors at: index * 2 + 1)
 ]
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> specialSelectorNumArgs: index [ 
-	^Smalltalk specialSelectors at: index * 2 + 2
+	^self specialSelectors at: index * 2 + 2
+]
+
+{ #category : #private }
+CurrentImageCoInterpreterFacade >> specialSelectors [
+	^Smalltalk specialObjectsArray at: 24
 ]
 
 { #category : #accessing }
