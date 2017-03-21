@@ -98,6 +98,8 @@
 
 #endif /* !HAVE_CONFIG_H */
 
+/* function to inform the VM about idle time */
+extern void addIdleUsecs(long idleUsecs);
 
 #if defined(AIO_DEBUG)
 long	aioLastTick = 0;
@@ -262,8 +264,6 @@ aioPoll(long microSeconds)
 		if (n > 0)
 			break;
 		if (n == 0) {
-			extern void addIdleUsecs(long idleUsecs);
-
 			if (microSeconds)
 				addIdleUsecs(microSeconds);
 			return 0;
@@ -310,7 +310,7 @@ aioSleepForUsecs(long microSeconds)
 			struct timespec rmtp;
 
 			nanosleep(&rqtp, &rmtp);
-			addIdleUsecs((rqtp.tv_nanoseconds - rmtp.tv_nanoseconds) / 1000);
+			addIdleUsecs((rqtp.tv_nsec - rmtp.tv_nsec) / 1000);
 			microSeconds = 0;	/* poll but don't block */
 		}
 	}
