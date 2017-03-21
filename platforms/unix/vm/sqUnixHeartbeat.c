@@ -320,16 +320,19 @@ beatStateMachine(void *careLess)
 #else
 # define VMNAME "squeak"
 #endif
-        fprintf(stderr, "This VM uses a thread heartbeat who requires a special configuration to work.\n");
-        fprintf(stderr, "You need to allow it to run higher priority threads (real time), to allow clock to work properly\n");
-        fprintf(stderr, "You need to add a conf file to /etc/security/limits.d, executing this:\n\n");
-        fprintf(stderr, "sudo cat >/etc/security/limits.d/%s.conf <<END\n", VMNAME);
-        fprintf(stderr, "*       hard    rtprio  2\n");
-        fprintf(stderr, "*       soft    rtprio  2\n");
-        fprintf(stderr, "END\n");
-        fprintf(stderr, "\nYou need to log out and log back in for the limits to take effect.\n");
-        fprintf(stderr, "For more information read https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/r3732#linux\n");
-		exit(errno);
+		fprintf(stderr, "This VM uses a thread heartbeat who requires a special configuration to work.\n");
+		fprintf(stderr, "You need to allow it to run higher priority threads (real time), to allow clock to work properly\n");
+		fprintf(stderr, "You need to add a conf file to /etc/security/limits.d, executing this:\n\n");
+		fprintf(stderr, "sudo cat >/etc/security/limits.d/%s.conf <<END\n", VMNAME);
+		fprintf(stderr, "*       hard    rtprio  2\n");
+		fprintf(stderr, "*       soft    rtprio  2\n");
+		fprintf(stderr, "END\n");
+		fprintf(stderr, "\nYou need to log out and log back in for the limits to take effect.\n");
+		fprintf(stderr, "For more information read https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/r3732#linux\n");
+		// The VM may have issues with clock jitter due to the heartbeat thread
+		// not running at elevated priority. An exit may be appropriate in some
+		// cases, but for most users the above warning is sufficient.
+		// exit(errno);
 	}
 	beatState = active;
 	while (beatState != condemned) {
