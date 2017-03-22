@@ -297,6 +297,10 @@ static volatile machine_state beatState = nascent;
 static int beatMilliseconds = DEFAULT_BEAT_MS;
 static struct timespec beatperiod = { 0, DEFAULT_BEAT_MS * 1000 * 1000 };
 
+#if __linux__
+# include "sqUnixMain.h"
+#endif
+
 static void *
 beatStateMachine(void *careLess)
 {
@@ -304,32 +308,34 @@ beatStateMachine(void *careLess)
 	if ((er = pthread_setschedparam(pthread_self(),
 									stateMachinePolicy,
 									&stateMachinePriority))) {
+		extern char *revisionAsString();
+		errno = er;
+		perror("pthread_setschedparam failed");
+#if __linux__
 		/* Linux pthreads as of 2009 does not support setting the priority of
 		 * threads other than with real-time scheduling policies.  But such
 		 * policies are only available to processes with superuser privileges.
 		 * Linux kernels >= 2.6.13 support different thread priorities, but
 		 * require a suitable /etc/security/limits.d/VMNAME.conf.
 		 */
-		extern char *revisionAsString();
-		errno = er;
-		perror("pthread_setschedparam failed");
-#if PharoVM
-# define VMNAME "pharo"
-#elif NewspeakVM
-# define VMNAME "nsvm"
+		fprintf(stderr, "This VM uses a heartbeat thread which requires a special configuration to work.\n");
+		fprintf(stderr, "It must be allowed to run higher priority threads for the clock and interrupts\n");
+		fprintf(stderr, "to work properly. To do this, add a conf file to /etc/security/limits.d by\n");
+		fprintf(stderr,"executing this:\n\n");
+		fprintf(stderr, "sudo cat >/etc/security/limits.d/%s.conf <<END\n", exeName);
+		fprintf(stderr, "*       hard    rtprio  2\n");
+		fprintf(stderr, "*       soft    rtprio  2\n");
+		fprintf(stderr, "END\n");
+		fprintf(stderr, "\nLog out and back in for the limits to take effect. For more information read\n");
+		fprintf(stderr, "  https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/r3732#linux\n");
+		fprintf(stderr, "  http://forum.world.st/Unix-heartbeat-thread-vs-itimer-td4928943.html\n");
+		// The VM may have issues with clock jitter due to the heartbeat thread
+		// not running at elevated priority. An exit may be appropriate in some
+		// cases, but for most users the above warning is sufficient.
+		// exit(errno);
 #else
-# define VMNAME "squeak"
-#endif
-        fprintf(stderr, "This VM uses a thread heartbeat who requires a special configuration to work.\n");
-        fprintf(stderr, "You need to allow it to run higher priority threads (real time), to allow clock to work properly\n");
-        fprintf(stderr, "You need to add a conf file to /etc/security/limits.d, executing this:\n\n");
-        fprintf(stderr, "sudo cat >/etc/security/limits.d/%s.conf <<END\n", VMNAME);
-        fprintf(stderr, "*       hard    rtprio  2\n");
-        fprintf(stderr, "*       soft    rtprio  2\n");
-        fprintf(stderr, "END\n");
-        fprintf(stderr, "\nYou need to log out and log back in for the limits to take effect.\n");
-        fprintf(stderr, "For more information read https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/r3732#linux\n");
 		exit(errno);
+#endif
 	}
 	beatState = active;
 	while (beatState != condemned) {
