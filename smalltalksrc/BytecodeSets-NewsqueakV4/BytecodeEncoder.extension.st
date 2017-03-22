@@ -18,6 +18,11 @@ BytecodeEncoder >> sizeCallInlinePrimitive: primitiveIndex [
 ]
 
 { #category : #'*BytecodeSets-opcode sizing' }
+BytecodeEncoder >> sizePushFullClosure: compiledBlockLiteralIndex numCopied: numCopied [
+	^self sizeOpcodeSelector: #genPushFullClosure:numCopied: withArguments: {compiledBlockLiteralIndex.numCopied}
+]
+
+{ #category : #'*BytecodeSets-opcode sizing' }
 BytecodeEncoder >> sizePushRemoteInstanceVariable: tempIndex inObjectAt: InstVarIndex [
 	^self sizeOpcodeSelector: #genPushRemoteInstanceVariable:inObjectAt:
 			withArguments: {tempIndex. InstVarIndex}
