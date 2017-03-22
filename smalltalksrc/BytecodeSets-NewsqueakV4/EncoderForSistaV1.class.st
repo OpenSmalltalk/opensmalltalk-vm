@@ -1232,6 +1232,24 @@ EncoderForSistaV1 >> genSend: selectorLiteralIndex numArgs: nArgs [
 		nextPut: extendedNArgs + (extendedIndex * 8)
 ]
 
+{ #category : #'extended bytecode generation' }
+EncoderForSistaV1 >> genSendDirectedSuper: selectorLiteralIndex numArgs: nArgs [
+	| extendedIndex |
+	(selectorLiteralIndex < 0 or: [selectorLiteralIndex > 65535]) ifTrue:
+		[^self outOfRangeError: 'selectorLiteralIndex' index: selectorLiteralIndex range: 0 to: 65535].
+	(nArgs < 0 or: [nArgs > 31]) ifTrue:
+		[^self outOfRangeError: 'numArgs' index: nArgs range: 0 to: 31 "!!"].
+	(extendedIndex := selectorLiteralIndex) > 31 ifTrue:
+		[self genUnsignedSingleExtendA: extendedIndex // 32.
+		 extendedIndex := extendedIndex \\ 32].
+	"Bit 6 of the ExtB byte is the directed send flag.  Bit 6 allows for future expansion to up to 255 args."
+	self genUnsignedSingleExtendB: nArgs // 8 + 64.
+	"235		11101011	iiiiijjj		Send To Superclass Literal Selector #iiiii (+ Extend A * 32) with jjj (+ Extend B * 8) Arguments"
+	stream
+		nextPut: 235;
+		nextPut: nArgs \\ 8 + (extendedIndex * 8)
+]
+
 { #category : #'bytecode generation' }
 EncoderForSistaV1 >> genSendSpecial: specialSelectorIndex numArgs: nArgs [
 	self assert: (specialSelectorIndex between: 1 and: Smalltalk specialSelectorSize).
@@ -1496,21 +1514,6 @@ EncoderForSistaV1 >> maxIndexableLiterals [
 	"Answer the maximum number of literals supported by the receiver's
 	 bytecode set."
 	^65536
-]
-
-{ #category : #'special literal encodings' }
-EncoderForSistaV1 >> sizeBranchIfInstanceOf: literalIndex distance: distance orNot: boolean [
-	^self sizeOpcodeSelector: #genBranchIfInstanceOf:distance:orNot: withArguments: {literalIndex.distance.boolean}
-]
-
-{ #category : #'special literal encodings' }
-EncoderForSistaV1 >> sizePushFullClosure: compiledBlockLiteralIndex numCopied: numCopied [
-	^self sizeOpcodeSelector: #genPushFullClosure:numCopied: withArguments: {compiledBlockLiteralIndex.numCopied}
-]
-
-{ #category : #'special literal encodings' }
-EncoderForSistaV1 >> sizeTrap [
-	^self sizeOpcodeSelector: #genTrap withArguments: #()
 ]
 
 { #category : #'bytecode generation' }

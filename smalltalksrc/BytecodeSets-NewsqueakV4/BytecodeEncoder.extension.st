@@ -1,6 +1,12 @@
 Extension { #name : #BytecodeEncoder }
 
 { #category : #'*BytecodeSets-opcode sizing' }
+BytecodeEncoder >> sizeBranchIfInstanceOf: behaviorOrArrayOfBehaviorLiteralIndex distance: jumpDistance [
+	^self sizeOpcodeSelector: #genBranchIfInstanceOf:distance:
+			withArguments: {behaviorOrArrayOfBehaviorLiteralIndex. jumpDistance}
+]
+
+{ #category : #'*BytecodeSets-opcode sizing' }
 BytecodeEncoder >> sizeBranchIfNotInstanceOf: behaviorOrArrayOfBehaviorLiteralIndex distance: jumpDistance [
 	^self sizeOpcodeSelector: #genBranchIfNotInstanceOf:distance:
 			withArguments: {behaviorOrArrayOfBehaviorLiteralIndex. jumpDistance}
@@ -9,6 +15,12 @@ BytecodeEncoder >> sizeBranchIfNotInstanceOf: behaviorOrArrayOfBehaviorLiteralIn
 { #category : #'*BytecodeSets-opcode sizing' }
 BytecodeEncoder >> sizeCallInlinePrimitive: primitiveIndex [
 	^self sizeOpcodeSelector: #genCallInlinePrimitive: withArguments: {primitiveIndex}
+]
+
+{ #category : #'*BytecodeSets-opcode sizing' }
+BytecodeEncoder >> sizePushRemoteInstanceVariable: tempIndex inObjectAt: InstVarIndex [
+	^self sizeOpcodeSelector: #genPushRemoteInstanceVariable:inObjectAt:
+			withArguments: {tempIndex. InstVarIndex}
 ]
 
 { #category : #'*BytecodeSets-opcode sizing' }
@@ -29,6 +41,18 @@ BytecodeEncoder >> sizeSendDirectedSuper: selectorLiteralIndex numArgs: numArgs 
 { #category : #'*BytecodeSets-opcode sizing' }
 BytecodeEncoder >> sizeSendImplicit: selectorLiteralIndex numArgs: numArgs [
 	^self sizeOpcodeSelector: #genSendImplicit:numArgs: withArguments: {selectorLiteralIndex. numArgs}
+]
+
+{ #category : #'*BytecodeSets-opcode sizing' }
+BytecodeEncoder >> sizeStorePopRemoteInstanceVariable: tempIndex inObjectAt: InstVarIndex [
+	^self sizeOpcodeSelector: #genStorePopRemoteInstanceVariable:inObjectAt:
+			withArguments: {tempIndex. InstVarIndex}
+]
+
+{ #category : #'*BytecodeSets-opcode sizing' }
+BytecodeEncoder >> sizeStoreRemoteInstanceVariable: tempIndex inObjectAt: InstVarIndex [
+	^self sizeOpcodeSelector: #genStoreRemoteInstanceVariable:inObjectAt:
+			withArguments: {tempIndex. InstVarIndex}
 ]
 
 { #category : #'*BytecodeSets-opcode sizing' }
