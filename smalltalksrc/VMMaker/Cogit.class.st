@@ -397,7 +397,7 @@ Cogit class >> apiExportHeaderName [
 	^'cogit.h'
 ]
 
-{ #category : #'in-image compilation' }
+{ #category : #'in-image compilation support' }
 Cogit class >> asOptionsDictionary: optionsDictionaryOrArray [
 	optionsDictionaryOrArray isArray ifTrue:
 		[| dict |
@@ -435,14 +435,19 @@ Cogit class >> assumptions [
 	 64k of code per method more than enough"
 ]
 
-{ #category : #'in-image compilation' }
+{ #category : #'in-image compilation support' }
 Cogit class >> attemptToComputeTempNamesFor: aCompiledMethod [
 	(aCompiledMethod respondsTo: #tempNames) ifTrue:
 		[| blocks |
 		 blocks := aCompiledMethod embeddedBlockClosures.
 		 initializationOptions
 			at: #tempNames
-			put: (Dictionary withAll: {aCompiledMethod initialPC -> aCompiledMethod tempNames},
+			put: (Dictionary withAll: {aCompiledMethod initialPC -> ([aCompiledMethod tempNames]
+																		on: MessageNotUnderstood
+																		do: [:ex|
+																			(self isSistaMessage: ex message unimplementedIn: Decompiler) ifTrue:
+																				[^self].
+																			 ex pass])},
 				(blocks
 					ifEmpty: [#()]
 					ifNotEmpty:
@@ -1075,7 +1080,7 @@ Cogit class >> initializeWithOptions: optionsDictionary [
 	self initializePrimitiveTable
 ]
 
-{ #category : #'in-image compilation' }
+{ #category : #'in-image compilation support' }
 Cogit class >> instanceForTests: optionsDictionaryOrArray [
 	"Initialize all the relevant classes from the options and answer a new instance of me."
 	| initOptions |
@@ -1101,6 +1106,14 @@ Cogit class >> isNonArgumentImplicitReceiverVariableName: aString [
 	^#('cogit' 'coInterpreter'
 		'methodZone' 'literalsManager'
 		'objectMemory' 'objectRepresentation' 'manager') includes: aString
+]
+
+{ #category : #'in-image compilation support' }
+Cogit class >> isSistaMessage: aMessageOrSelector unimplementedIn: aClass [
+	| selector |
+	selector := aMessageOrSelector selector.
+	^(InstructionClient includesSelector: selector)
+	   and: [(aClass includesSelector: selector) not]
 ]
 
 { #category : #accessing }
