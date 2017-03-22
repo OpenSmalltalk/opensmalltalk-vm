@@ -6,6 +6,7 @@
 #include <setjmp.h>
 
 #include "sqVirtualMachine.h"
+#include "sqAssert.h"
 
 
 /*** Function prototypes ***/
@@ -191,8 +192,12 @@ sqInt characterValueOf(sqInt oop);
 sqInt isPinned(sqInt objOop);
 sqInt pinObject(sqInt objOop);
 sqInt unpinObject(sqInt objOop);
-#endif
 char *cStringOrNullFor(sqInt);
+#endif
+#if VM_PROXY_MINOR > 13 /* More Spur */
+sqInt statNumGCs(void);
+sqInt stringForCString(char *);
+#endif
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
 
@@ -242,17 +247,8 @@ void (*setInterruptCheckChain(void (*aFunction)(void)))() { return 0; }
 #endif
 
 #if VM_PROXY_MINOR > 10
-# if COGMTVM
-sqInt disownVM(sqInt flags);
-sqInt ownVM(sqInt threadIdAndFlags);
-# else
-sqInt disownVM(sqInt flags) { return 1; }
-sqInt ownVM(sqInt threadIdAndFlags)
-{
-	extern sqInt amInVMThread(void);
-	return amInVMThread() ? 0 : -1;
-}
-# endif
+extern sqInt disownVM(sqInt flags);
+extern sqInt ownVM(sqInt threadIdAndFlags);
 #endif /* VM_PROXY_MINOR > 10 */
 extern sqInt isYoung(sqInt);
 
@@ -385,8 +381,12 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->success = success;
 	VM->superclassOf = superclassOf;
 
+#if VM_PROXY_MINOR <= 13 /* reused in 14 and above */
+
 	VM->compilerHookVector= 0;
 	VM->setCompilerInitialized= 0;
+
+#endif
 
 #if VM_PROXY_MINOR > 1
 
@@ -508,6 +508,11 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->isPinned = isPinned;
 	VM->pinObject = pinObject;
 	VM->unpinObject = unpinObject;
+#endif
+
+#if VM_PROXY_MINOR > 13 /* More Spur */
+	VM->statNumGCs = statNumGCs;
+	VM->stringForCString = stringForCString;
 #endif
 
 	return VM;

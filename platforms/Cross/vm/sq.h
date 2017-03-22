@@ -173,6 +173,7 @@ void	checkHighPriorityTickees(usqLong);
 extern int numAsyncTickees; /* prodHighPriorityThread unless necessary */
 # endif						/* see platforms/unix/vm/sqUnixHeartbeat.c */
 void	ioGetClockLogSizeUsecsIdxMsecsIdx(sqInt*,void**,sqInt*,void**,sqInt*);
+void	addIdleUsecs(sqInt);
 #endif
 
 /* this function should return the value of the high performance

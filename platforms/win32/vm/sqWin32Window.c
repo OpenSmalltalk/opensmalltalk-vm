@@ -1580,13 +1580,15 @@ sqInt ioBeep(void)
  */
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
-  /* wake us up if something happens */
-  ResetEvent(vmWakeUpEvent);
-  MsgWaitForMultipleObjects(1, &vmWakeUpEvent, FALSE,
-			    microSeconds / 1000, QS_ALLINPUT);
-  ioProcessEvents(); /* keep up with mouse moves etc. */
-  return microSeconds;
-}
+	/* wake us up if something happens */
+	ResetEvent(vmWakeUpEvent);
+	if (WAIT_TIMEOUT ==
+		MsgWaitForMultipleObjects(1, &vmWakeUpEvent, FALSE,
+			    microSeconds / 1000, QS_ALLINPUT))
+		addIdleUsecs(microSeconds);
+	ioProcessEvents(); /* keep up with mouse moves etc. */
+	return microSeconds;
+	}
 
 sqInt ioProcessEvents(void)
 {	static MSG msg;

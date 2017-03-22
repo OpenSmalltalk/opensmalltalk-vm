@@ -1,6 +1,6 @@
 #!/bin/bash -e
 # PharoVM with VM profiler and threaded heartbeat
-THIRDPARTYLIBS="libsdl2 libssh2 libgit2"
+THIRDPARTYLIBS="libsdl2 openssl libssh2 libgit2"
 
 case "`uname -m`" in # ensure we see x86 as machine type
 i*86) ;; # we're good
@@ -47,7 +47,7 @@ test -f config.h || ../../../platforms/unix/config/configure \
 	CC="gcc -m32" \
 	CXX="g++ -m32" \
 	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0" \
-	LIBS="-lpthread -luuid" \
+	LIBS="-lpthread -luuid -Wl,-rpath,'\$\$ORIGIN' " \
 	LDFLAGS=-Wl,-z,now
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
