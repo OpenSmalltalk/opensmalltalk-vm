@@ -1491,8 +1491,18 @@ EncoderForSistaV1 >> maxIndexableLiterals [
 ]
 
 { #category : #'special literal encodings' }
+EncoderForSistaV1 >> sizeBranchIfInstanceOf: literalIndex distance: distance orNot: boolean [
+	^self sizeOpcodeSelector: #genBranchIfInstanceOf:distance:orNot: withArguments: {literalIndex.distance.boolean}
+]
+
+{ #category : #'special literal encodings' }
 EncoderForSistaV1 >> sizePushFullClosure: compiledBlockLiteralIndex numCopied: numCopied [
 	^self sizeOpcodeSelector: #genPushFullClosure:numCopied: withArguments: {compiledBlockLiteralIndex.numCopied}
+]
+
+{ #category : #'special literal encodings' }
+EncoderForSistaV1 >> sizeTrap [
+	^self sizeOpcodeSelector: #genTrap withArguments: #()
 ]
 
 { #category : #'bytecode generation' }
