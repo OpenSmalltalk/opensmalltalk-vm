@@ -95,6 +95,16 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> eeInstantiateClass
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> fetchClassTagOf: anOop [
+	| class |
+	self assert: SmalltalkImage current isRunningSpur.
+	class := (self objectForOop: anOop) class.
+	^SystemVersion current isPharo
+		ifTrue: [class basicIdentityHash]
+		ifFalse: [class identityHash]
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> firstShortFormat [
 	^objectMemory firstShortFormat
 ]
@@ -189,7 +199,7 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> objectForOop: anOo
 		[0] -> [anOop = cachedOop
 				ifTrue: [cachedObject]
 				ifFalse: [cachedObject := objectMap keyAtValue: anOop. "may raise Error"
-						cachedOop := anOop. "Dom't assign until accessed without error"
+						cachedOop := anOop. "Don't assign until accessed without error"
 						cachedObject]].
 		[1] -> [anOop signedIntFromLong >> 1].
 		[2] -> [Character value: anOop >> 2].
