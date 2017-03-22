@@ -119,7 +119,7 @@ We define the following inlined primitives:
 1010	ensure number of bytes available.
 1011	fixed-sized new. (objects with 0 to n inst vars)
 	
-1020 	identityHash (non-immediate, non-Behavior, has hash)
+1020 	identityHash (non-immediate, non-Behavior)
 1021	identityHash (SmallInteger)
 1022	identityHash (Character)
 1023	identityHash (SmallFloat64)
@@ -127,6 +127,7 @@ We define the following inlined primitives:
 
 1030 	immediateAsInteger (Character)
 1031 	immediateAsInteger (SmallFloat64)
+1035 	immediateAsFloat 	(Smallinteger)
 	
 2000	SmallInteger #+.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
 2001	SmallInteger #-.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)
@@ -168,6 +169,13 @@ The following instructions can have the ExtB check flag (See (3)).
 3002	Word Object>>at:put:.			The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 16 bits.
 3003	DoubleWord Object>>at:put:.	The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 32 bits.
 3004	QuadWord Object>>at:put:.		The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 64 bits.
+			
+3021	Byte Object >> equals:length:	The receiver and the arguments are both byte objects and have both the same size (length). The length argument is a smallinteger. Answers true if all fields are equal, false if not. Comparison is bulked to word comparison.
+
+4000	Pointer Object>> fillFrom:to:with: The receiver is a Pointer object. the middle two arguments are smallintegers. Last argument is any object. Fills the object in between the two indexes with last argument. Receiver is guaranteed to be mutable. The pointer accesses are raw (no inst var check). If ExtB is set to 1, no store check is present. Else a single store check is done for the bulk operation. Answers the receiver.
+	
+5000	Pointer Object>> replaceFrom:to:with:startingAt: Src and dest are pointer objects. ScrPos, scrLast and destLast are smallintegers. Receiver is guaranteed to be mutable.  Both ranges are in-bounds. The pointer accesses are raw (no inst var check). As for the normal primitive, the copy is linear. Answers the receiver.
+	
 "
 Class {
 	#name : #EncoderForSistaV1,
