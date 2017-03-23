@@ -521,7 +521,7 @@ SistaCogit >> genByteEqualsInlinePrimitive: prim [
 	3.	We ignore the case where all operands are constants 
 		(We assume Scorch simplifies it, it works but it is not optimised)"
 		
-	| str1Reg str2Reg lenReg extraReg jmp jmp2 adjust needjmpZeroSize needLoop unroll jmpZeroSize instr lenCst mask |
+	| str1Reg str2Reg lenReg extraReg jmp jmp2 needjmpZeroSize needLoop unroll jmpZeroSize instr lenCst mask |
 	<var: #jmp type: #'AbstractInstruction *'>
 	<var: #instr type: #'AbstractInstruction *'>
 	<var: #jmp2 type: #'AbstractInstruction *'>
@@ -541,9 +541,9 @@ SistaCogit >> genByteEqualsInlinePrimitive: prim [
 		ifTrue: 
 			[ str1Reg := self allocateRegForStackEntryAt: 1 notConflictingWith: self emptyRegisterMask.
 			  str2Reg := self allocateRegForStackEntryAt: 2 notConflictingWith: (self registerMaskFor: str1Reg).
+			  lenReg := self allocateRegForStackEntryAt: 0 notConflictingWith: (self registerMaskFor:str1Reg and: str2Reg).
 			  (self ssValue: 1) popToReg: str1Reg.
 			  (self ssValue: 2) popToReg: str2Reg.
-			  lenReg := self allocateRegForStackEntryAt: 0 notConflictingWith: (self registerMaskFor:str1Reg and: str2Reg).
 			  extraReg := self allocateRegNotConflictingWith: (self registerMaskFor: str1Reg and: str2Reg and: lenReg)]
 		ifFalse: 
 			[ mask := self emptyRegisterMask.
@@ -556,7 +556,6 @@ SistaCogit >> genByteEqualsInlinePrimitive: prim [
 				  (self ssValue: 2) popToReg: str2Reg.
 				  mask := mask bitOr: (self registerMaskFor: str2Reg) ].
 			  extraReg := self allocateRegNotConflictingWith: mask].
-	adjust := objectMemory baseHeaderSize >> objectMemory shiftForWord.
 	
 	"--- Loading LenReg (or statically resolving it) --- "
 	"LenReg is loaded with (lenInBytes + objectMemory baseHeaderSize - 1 >> shiftForWord)
@@ -568,7 +567,8 @@ SistaCogit >> genByteEqualsInlinePrimitive: prim [
 			  needLoop ifTrue: [self MoveCq: lenCst R: lenReg ].
 			  needjmpZeroSize := false] 
 		ifFalse: "uncommon case, str = str2. lenReg in word computed at runtime."
-			[ objectRepresentation genConvertSmallIntegerToIntegerInReg: lenReg.
+			[ self ssTop popToReg: lenReg.
+			  objectRepresentation genConvertSmallIntegerToIntegerInReg: lenReg.
 			  self CmpCq: 0 R: lenReg.
 			  jmpZeroSize := self JumpZero: 0.
 			  needjmpZeroSize := true.
@@ -585,7 +585,7 @@ SistaCogit >> genByteEqualsInlinePrimitive: prim [
 			self CmpR: extraReg R: TempReg.
 			jmp := self JumpNonZero: 0. "then string are not equal (jmp target)"
 			self AddCq: -1 R: lenReg.
-			self CmpCq: adjust-1 R: lenReg. "first word of ByteObj, stop looping - in 64 bits adjust - 1 is 0, quicker."
+			self CmpCq: (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1 R: lenReg. "first word of ByteObj, stop looping."
 			self JumpNonZero: instr]
 		ifFalse: "Common case, only 1 or 2 word to check: no lenReg allocation, cst micro optimisations"
 			[self genByteEqualsInlinePrimitiveCmp: str1Reg with: str2Reg scratch1: extraReg scratch2: TempReg field: 0.
