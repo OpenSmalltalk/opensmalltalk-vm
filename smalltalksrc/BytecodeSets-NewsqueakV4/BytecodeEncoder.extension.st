@@ -23,6 +23,13 @@ BytecodeEncoder >> sizePushFullClosure: compiledBlockLiteralIndex numCopied: num
 ]
 
 { #category : #'*BytecodeSets-opcode sizing' }
+BytecodeEncoder >> sizePushFullClosure: compiledBlockLiteralIndex numCopied: numCopied receiverOnStack: rcvrOnStack ignoreOuterContext: ignoreOuterContext [
+	^self
+		sizeOpcodeSelector: #genPushFullClosure:numCopied:receiverOnStack:ignoreOuterContext:
+		withArguments: {compiledBlockLiteralIndex.numCopied. rcvrOnStack. ignoreOuterContext}
+]
+
+{ #category : #'*BytecodeSets-opcode sizing' }
 BytecodeEncoder >> sizePushRemoteInstanceVariable: tempIndex inObjectAt: InstVarIndex [
 	^self sizeOpcodeSelector: #genPushRemoteInstanceVariable:inObjectAt:
 			withArguments: {tempIndex. InstVarIndex}
