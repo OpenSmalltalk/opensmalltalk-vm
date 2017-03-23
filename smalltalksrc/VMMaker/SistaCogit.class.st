@@ -526,14 +526,14 @@ SistaCogit >> genByteEqualsInlinePrimitive: prim [
 	<var: #instr type: #'AbstractInstruction *'>
 	<var: #jmp2 type: #'AbstractInstruction *'>
 	<var: #jmpZeroSize type: #'AbstractInstruction *'>
-1halt.
+
 	"--- quick path for empty string---"
 	"This path does not allocate registers and right shift on negative int later in the code.
 	 Normally this is resolved by Scorch but we keep it for correctness and consistency"
 	self ssTop type = SSConstant ifTrue: 
 		[ lenCst := objectMemory integerValueOf: self ssTop constant.
 		  lenCst = 0 ifTrue: [ self ssPop: 3. self ssPushConstant: objectMemory trueObject. ^ 0 ] ].
-	lenCst := 7.
+
 	"--- Allocating & loading registers --- "
 	needLoop := (self ssTop type = SSConstant and: [ lenCst <= (objectMemory wordSize * 2) ]) not.
 	unroll := needLoop not and: [lenCst > objectMemory wordSize ].
