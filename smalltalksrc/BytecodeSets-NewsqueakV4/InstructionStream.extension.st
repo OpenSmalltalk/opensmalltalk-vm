@@ -356,7 +356,13 @@ InstructionStream >> interpretNext3ByteSistaV1Instruction: bytecode for: client 
 	"*	249		11111001	xxxxxxxx	siyyyyyy	push Closure Compiled block literal index xxxxxxxx (+ Extend A * 256) numCopied yyyyyy receiverOnStack: s = 1 ignoreOuterContext: i = 1"
 	bytecode = 249 ifTrue:
 		[literal := method literalAt: (extA bitShift: 8) + byte2 + 1.
-		 ^client pushFullClosure: literal numCopied: (byte3 bitAnd: 16r3F)].
+		 (byte3 noMask: 16rC0) ifTrue:
+			[^client pushFullClosure: literal numCopied: byte3].
+		 ^client
+			pushFullClosure: literal
+			numCopied: (byte3 bitAnd: 16r3F)
+			receiverOnStack: (byte3 anyMask: 16r80)
+			ignoreOuterContext: (byte3 anyMask: 16r40)].
 	bytecode = 250 ifTrue:
 		["**	250  11111010  eeiiikkk  jjjjjjjj  Push Closure Num Copied iii (+ExtA//16*8) Num Args kkk (+ ExtA\\16*8) BlockSize jjjjjjjj (+ExtB*256). ee = num extensions"
 		 ^client

@@ -50,6 +50,12 @@ InstructionClient >> pushFullClosure: compiledBlock numCopied: numCopied [
 	"Creates and push a fullBlockClosure"
 ]
 
+{ #category : #'*BytecodeSets-instruction decoding' }
+InstructionClient >> pushFullClosure: compiledBlockLiteralIndex numCopied: numCopied receiverOnStack: rcvrOnStack ignoreOuterContext: ignoreOuterContext [
+	"Creates and oushes a FullBlockClosure with variations."
+	
+]
+
 { #category : #'*BytecodeSets-NewsqueakV4-decoding' }
 InstructionClient >> sendToAbsentDynamicSuperclass: selector "<Symbol>" numArgs: arity [ "<SmallInteger>"
 	"Send Message With Selector, selector to the dynamic superclass.
