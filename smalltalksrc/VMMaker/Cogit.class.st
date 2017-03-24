@@ -9079,7 +9079,7 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 									with: descriptor
 									with: (isBackwardBranch ifTrue: [annotation << 1 + 1] ifFalse: [annotation << 1])
 									with: (self cCoerceSimple: mcpc to: #'char *')
-									with: bcpc
+									with: (isBackwardBranch ifTrue: [bcpc - (2 * nExts)] ifFalse: [bcpc])
 									with: arg.
 					 result ~= 0 ifTrue:
 						[^result].

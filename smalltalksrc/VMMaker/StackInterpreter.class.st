@@ -5906,13 +5906,14 @@ StackInterpreter >> extStoreRemoteTempOrInstVarLongBytecode [
 { #category : #'jump bytecodes' }
 StackInterpreter >> extUnconditionalJump [
 	"242		11110010	i i i i i i i i	Jump i i i i i i i i (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)"
-	| byte offset |
+	| byte offset bcpcDelta |
 	byte := self fetchByte.
 	offset := byte + (extB << 8).
+	bcpcDelta := offset < 0 ifTrue: [numExtB * 2] ifFalse: [0].
 	extB := 0.
 	numExtB := 0.
 	localIP := localIP + offset.
-	self ifBackwardsCheckForEvents: offset.
+	self ifBackwardsCheckForEvents: offset + bcpcDelta.
 	self fetchNextBytecode
 ]
 
@@ -20880,6 +20881,17 @@ StackInterpreter >> updateStateOfSpouseContextForFrame: theFP WithSP: theSP [
 	objectMemory storePointerUnchecked: StackPointerIndex
 		ofObject: theContext
 		withValue: (objectMemory integerObjectOf: tempIndex)
+]
+
+{ #category : #'debug support' }
+StackInterpreter >> validBCPC: thePC inMethod: aMethod [
+	<var: #aMethod type: #usqInt>
+	"Note that we accept anInstrPointer pointing to a callPrimitiveBytecode
+	 at the start of a method that contains a primitive.  This because methods like
+	 Context(Part)>>reset have to be updated to skip the callPrimtiive bytecode otherwise."
+	"-1 for pre-increment in fetchNextBytecode"
+	^thePC >= (objectMemory lastPointerOf: aMethod)
+	  and: [thePC < (objectMemory numBytesOfBytes: aMethod)]
 ]
 
 { #category : #'debug support' }
