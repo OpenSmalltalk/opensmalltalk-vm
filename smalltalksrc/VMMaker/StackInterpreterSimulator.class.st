@@ -522,9 +522,7 @@ StackInterpreterSimulator >> elementsPerPrintOopLine [
 
 { #category : #'compiled methods' }
 StackInterpreterSimulator >> endPCOf: aMethod [
-	"Determine the endPC of a method in the heap using interpretation that looks for returns."
-	
-	<var: #descriptor type: #'BytecodeDescriptor *'>
+	"Determine the endPC of a method in the heap using interpretation that looks for returns and uses branches to skip intervening bytecodes."
 	| pc end farthestContinuation prim encoderClass inst is |
 	(prim := self primitiveIndexOf: aMethod) > 0 ifTrue:
 		[(self isQuickPrimitiveIndex: prim) ifTrue:
@@ -553,7 +551,11 @@ StackInterpreterSimulator >> endPCOf: aMethod [
 				"This is for CompiledBlock/FullBlockClosure.  Since the response to pushClosure... above
 				 skips over all block bytecoes, we will only see a blockReturnTop if it is at the top level,
 				 and so it must be a blockReturnTop in a CompiledBlock for a FullBlockClosure."
-				 [#blockReturnTop]			->	[pc >= farthestContinuation ifTrue: [end := pc]] }
+				 [#blockReturnTop]			->	[pc >= farthestContinuation ifTrue: [end := pc]].
+				 [#branchIfInstanceOf:distance:]
+											->	[farthestContinuation := farthestContinuation max: pc + inst arguments last].
+				 [#branchIfNotInstanceOf:distance:]
+											->	[farthestContinuation := farthestContinuation max: pc + inst arguments last] }
 			otherwise: [].
 		 pc := is pc - 1].
 	^end
