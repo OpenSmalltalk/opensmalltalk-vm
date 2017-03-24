@@ -3120,6 +3120,7 @@ CoInterpreter >> ensureContextHasBytecodePC: aContext [
 	((objectMemory isIntegerObject: pc)
 	 and: [(pc := objectMemory integerValueOf: pc) < 0]) ifTrue:
 		[pc := self mustMapMachineCodePC: pc context: aContext.
+		 self assert: (self validBCPC: (objectMemory integerValueOf: pc) inMethod: (objectMemory fetchPointer: MethodIndex ofObject: aContext)).
 		 objectMemory storePointerUnchecked: InstructionPointerIndex ofObject: aContext withValue: pc]
 ]
 
@@ -4068,13 +4069,13 @@ CoInterpreter >> ifAppropriateCompileToNativeCode: aMethodObj selector: selector
 ]
 
 { #category : #'jump bytecodes' }
-CoInterpreter >> ifBackwardsCheckForEvents: offset [
+CoInterpreter >> ifBackwardsCheckForEvents: offsetToJumpBytecode [
 	"Backward jump means we're in a loop.
 		- check for possible interrupts.
 		- check for long-running loops and JIT if appropriate."
 	| switched backwardJumpCountByte |
 	<inline: true>
-	offset >= 0 ifTrue:
+	offsetToJumpBytecode >= 0 ifTrue:
 		[^self].
 
 	localSP < stackLimit ifTrue:
@@ -4094,7 +4095,7 @@ CoInterpreter >> ifBackwardsCheckForEvents: offset [
 		ifTrue:
 			[(self methodWithHeaderShouldBeCogged: (objectMemory methodHeaderOf: method)) ifTrue:
 				[self externalizeIPandSP.
-				 self attemptToSwitchToMachineCode: (self oopForPointer: localIP) - offset - method - objectMemory baseHeaderSize - 1
+				 self attemptToSwitchToMachineCode: (self oopForPointer: localIP) - offsetToJumpBytecode - method - objectMemory baseHeaderSize - 1
 				 "If attemptToSwitchToMachineCode: returns the method could not be cogged, hence..."].
 			 "can't cog method; avoid asking to cog it again for the longest possible time."
 			 backwardJumpCountByte := 16r7F]
@@ -6578,9 +6579,15 @@ CoInterpreter >> printMethodFieldForPrintContext: aContext [
 	<inline: true>
 	| meth |
 	meth := objectMemory fetchPointer: MethodIndex ofObject: aContext.
-	(self methodHasCogMethod: meth) ifTrue:
-		[self printHexnp: (self cogMethodOf: meth); space].
-	self shortPrintOop: meth.
+	(self isMarriedOrWidowedContext: aContext)
+		ifFalse:
+			[self shortPrintOop: meth.
+			(self methodHasCogMethod: meth) ifTrue:
+				[self space; printHexnp: (self cogMethodOf: meth)]]
+		ifTrue:
+			[(self methodHasCogMethod: meth) ifTrue:
+				[self printHexnp: (self cogMethodOf: meth); space].
+			 self shortPrintOop: meth]
 ]
 
 { #category : #'debug printing' }
