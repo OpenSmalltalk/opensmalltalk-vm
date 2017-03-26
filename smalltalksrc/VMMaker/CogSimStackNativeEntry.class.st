@@ -304,7 +304,7 @@ CogSimStackNativeEntry >> nativeRegisterMask [
 
 { #category : #accessing }
 CogSimStackNativeEntry >> nativeRegisterOrNone [
-	^(type = SSRegister or: [type = SSRegisterPair])
+	^(type = SSNativeRegister or: [type = SSRegisterPair])
 		 ifTrue: [register]
 		 ifFalse: [NoReg]
 ]
