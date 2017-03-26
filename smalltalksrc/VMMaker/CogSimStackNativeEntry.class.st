@@ -221,7 +221,7 @@ CogSimStackNativeEntry >> nativeFloatRegisterMask [
 
 { #category : #accessing }
 CogSimStackNativeEntry >> nativeFloatRegisterOrNone [
-	^ ([type = SSRegisterSingleFloat] or: [type = SSRegisterDoubleFloat])
+	^ (type = SSRegisterSingleFloat or: [type = SSRegisterDoubleFloat])
 		 ifTrue: [register]
 		 ifFalse: [NoReg]
 ]

@@ -2006,11 +2006,21 @@ StackToRegisterMappingCogit >> allocateRegistersForLowcodeOop2: aBlock [
 
 	self ssTop registerOrNone ~= NoReg ifTrue:  [
 		rOopTop := self ssTop registerOrNone.
+		"Ensure we are not using a duplicated register."
+		(self isOopRegister: rOopTop usedBefore: 0) ifTrue: [
+			rOopTop := NoReg
+		]
 	].
 
 	(self ssValue: 1) registerOrNone ~= NoReg ifTrue: [
 		rOopNext := (self ssValue: 1) registerOrNone.
-		oopTopRegisterMask := self registerMaskFor: rOopNext.
+		"Ensure we are not using a duplicated register."
+		(self isOopRegister: rOopNext usedBefore: 1) ifTrue: [
+			rOopNext := NoReg
+		].
+		rOopNext ~= NoReg ifTrue: [ 
+			oopTopRegisterMask := self registerMaskFor: rOopNext.
+		].
 	].
 
 	rOopTop = NoReg ifTrue: [
@@ -2038,11 +2048,21 @@ StackToRegisterMappingCogit >> allocateRegistersForLowcodeOop2ResultInteger: aBl
 
 	self ssTop registerOrNone ~= NoReg ifTrue:  [
 		rOopTop := self ssTop registerOrNone.
+		"Ensure we are not using a duplicated register."
+		(self isOopRegister: rOopTop usedBefore: 0) ifTrue: [
+			rOopTop := NoReg
+		]
 	].
 
 	(self ssValue: 1) registerOrNone ~= NoReg ifTrue: [
 		rOopNext := (self ssValue: 1) registerOrNone.
-		oopTopRegisterMask := self registerMaskFor: rOopNext.
+		"Ensure we are not using a duplicated register."
+		(self isOopRegister: rOopNext usedBefore: 1) ifTrue: [
+			rOopNext := NoReg
+		].
+		rOopNext ~= NoReg ifTrue: [ 
+			oopTopRegisterMask := self registerMaskFor: rOopNext.
+		].
 	].
 
 	rOopTop = NoReg ifTrue: [
@@ -2050,7 +2070,7 @@ StackToRegisterMappingCogit >> allocateRegistersForLowcodeOop2ResultInteger: aBl
 	].
 
 	rOopNext = NoReg ifTrue: [
-		rOopNext := self allocateRegNotConflictingWith: (self registerMaskFor: rOopTop)
+		rOopNext := self allocateRegNotConflictingWith: (self registerMaskFor: rOopTop).
 	].
 
 	rResult := self allocateRegNotConflictingWith: (self registerMaskFor: rOopTop and: rOopNext).
@@ -2070,6 +2090,10 @@ StackToRegisterMappingCogit >> allocateRegistersForLowcodeOop: aBlock [
 
 	self ssTop registerOrNone ~= NoReg ifTrue:  [
 		rOopTop := self ssTop registerOrNone.
+		"Ensure we are not using a duplicated register."
+		(self isOopRegister: rOopTop usedBefore: 0) ifTrue: [
+			rOopTop := NoReg
+		]
 	].
 
 	rOopTop = NoReg ifTrue: [
@@ -2092,6 +2116,10 @@ StackToRegisterMappingCogit >> allocateRegistersForLowcodeOopResultFloat: aBlock
 
 	self ssTop registerOrNone ~= NoReg ifTrue:  [
 		rOopTop := self ssTop registerOrNone.
+		"Ensure we are not using a duplicated register."
+		(self isOopRegister: rOopTop usedBefore: 0) ifTrue: [
+			rOopTop := NoReg
+		]
 	].
 
 	rOopTop = NoReg ifTrue: [
@@ -2116,6 +2144,10 @@ StackToRegisterMappingCogit >> allocateRegistersForLowcodeOopResultInteger2: aBl
 
 	self ssTop registerOrNone ~= NoReg ifTrue:  [
 		rOopTop := self ssTop registerOrNone.
+		"Ensure we are not using a duplicated register."
+		(self isOopRegister: rOopTop usedBefore: 0) ifTrue: [
+			rOopTop := NoReg
+		]
 	].
 
 	rOopTop = NoReg ifTrue: [
@@ -2141,6 +2173,10 @@ StackToRegisterMappingCogit >> allocateRegistersForLowcodeOopResultInteger: aBlo
 
 	self ssTop registerOrNone ~= NoReg ifTrue:  [
 		rOopTop := self ssTop registerOrNone.
+		"Ensure we are not using a duplicated register."
+		(self isOopRegister: rOopTop usedBefore: 0) ifTrue: [
+			rOopTop := NoReg
+		]
 	].
 
 	rOopTop = NoReg ifTrue: [
@@ -2165,6 +2201,10 @@ StackToRegisterMappingCogit >> allocateRegistersForLowcodeOopResultOop: aBlock [
 
 	self ssTop registerOrNone ~= NoReg ifTrue:  [
 		rOopTop := self ssTop registerOrNone.
+		"Ensure we are not using a duplicated register."
+		(self isOopRegister: rOopTop usedBefore: 0) ifTrue: [
+			rOopTop := NoReg
+		]
 	].
 
 	rOopTop = NoReg ifTrue: [
@@ -12483,6 +12523,21 @@ StackToRegisterMappingCogit >> initializeFixupAt: targetPC [
 	self initializeFixup: fixup
 ]
 
+{ #category : #'inline primitive register allocation' }
+StackToRegisterMappingCogit >> isOopRegister: register usedBefore: stackIndex [
+	<option: #LowcodeVM>
+	<inline: true>
+	| index |
+	index := simSpillBase max: 0.
+	index to: simStackPtr - stackIndex do: [ :i |
+		(self simStackAt: index) registerOrNone = register ifTrue: [ 
+			^ true
+		]
+	].
+
+	^ false
+]
+
 { #category : #'span functions' }
 StackToRegisterMappingCogit >> isPushNil: descriptor pc: pc nExts: nExts method: aMethodObj [
 	<inline: true>
@@ -13370,7 +13425,8 @@ StackToRegisterMappingCogit >> ssAllocateRequiredRegMask: requiredRegsMask upThr
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssFlushAll [
 	<inline: true>
-	self ssFlushTo: simStackPtr nativeFlushTo: simNativeStackPtr
+	self ssFlushTo: simStackPtr nativeFlushTo: simNativeStackPtr.
+	self voidReceiverResultRegContainsSelf.
 ]
 
 { #category : #'simulation stack' }
