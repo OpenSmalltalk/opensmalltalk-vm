@@ -453,8 +453,8 @@ CogObjectRepresentation >> genLcFloat32: value toOop: object [
 	cogit ConvertRs: value Rd: DPFPReg0.
 	cogit CallRT: ceFloatObjectOfTrampoline.
 
-	cogit MoveR: TempReg R: ReceiverResultReg.
-	cogit ssPushRegister: ReceiverResultReg.
+	cogit MoveR: TempReg R: object.
+	cogit ssPushRegister: object.
 ]
 
 { #category : #'inline primitive support' }
@@ -463,8 +463,8 @@ CogObjectRepresentation >> genLcFloat64: value toOop: object [
 	value ~= DPFPReg0 ifTrue: [ cogit MoveRd: value Rd: DPFPReg0].
 	cogit CallRT: ceFloatObjectOfTrampoline.
 
-	cogit MoveR: TempReg R: ReceiverResultReg.
-	cogit ssPushRegister: ReceiverResultReg.
+	cogit MoveR: TempReg R: object.
+	cogit ssPushRegister: object.
 ]
 
 { #category : #'inline primitive support' }
