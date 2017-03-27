@@ -12032,6 +12032,14 @@ SpurMemoryManager >> validFreeTree [
 ]
 
 { #category : #'free space' }
+SpurMemoryManager >> validFreeTreeChunk: chunk [
+	<inline: false>
+	(segmentManager segmentContainingObj: chunk) ifNil:
+		[^false].
+	^(self validFreeTreeChunk: chunk parent: (self fetchPointer: self freeChunkParentIndex ofFreeChunk: chunk)) isNil
+]
+
+{ #category : #'free space' }
 SpurMemoryManager >> validFreeTreeChunk: chunk parent: parent [
 	<var: 'reason' type: #'const char *'>
 	<returnTypeC: #'const char *'>
