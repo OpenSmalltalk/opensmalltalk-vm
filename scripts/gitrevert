@@ -9,6 +9,7 @@ do
 		if git checkout -- "$f"; then
 			changed="`git log --format=%ad --date="format:%Y%m%d%H%M.%S" -1 -- \"$f\"`"
 			touch -t $changed "$f"
+			echo reverted $f to $changed
 		fi
 	fi
 done
