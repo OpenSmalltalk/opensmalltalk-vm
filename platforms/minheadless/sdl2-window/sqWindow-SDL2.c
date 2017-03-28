@@ -74,6 +74,34 @@ static int mousePositionY = 0;
 static sqInt sdl2InputEventSemaIndex = 0;
 static char droppedFileName[FILENAME_MAX];
 
+static SDL_GLContext currentOpenGLContext = 0;
+static SDL_Window *currentOpenGLWindow = 0;
+static int openglStoreCount = 0;
+
+static void storeOpenGLState(void)
+{
+    if(openglStoreCount == 0)
+    {
+        currentOpenGLContext = SDL_GL_GetCurrentContext();
+        currentOpenGLWindow = SDL_GL_GetCurrentWindow();
+    }
+    ++openglStoreCount;
+}
+
+static void restoreOpenGLState(void)
+{
+    --openglStoreCount;
+    if(openglStoreCount == 0)
+    {
+        SDL_GL_MakeCurrent(currentOpenGLWindow, currentOpenGLContext);
+        currentOpenGLContext = 0;
+        currentOpenGLWindow = 0;
+    }
+
+    if(openglStoreCount < 0)
+        abort();
+}
+
 static sqInt setSDL2InputSemaphoreIndex(sqInt semaIndex)
 {
     if (semaIndex == 0)
@@ -91,6 +119,16 @@ static void sdl2SignalInputEvent(void)
 
 static int convertButton(int button)
 {
+#ifdef __APPLE__
+    // On OS X, swap the middle and right buttons.
+    switch(button)
+    {
+    case SDL_BUTTON_LEFT: return RedButtonBit;
+    case SDL_BUTTON_RIGHT: return BlueButtonBit;
+    case SDL_BUTTON_MIDDLE: return YellowButtonBit;
+    default: return 0;
+    }
+#else
     switch(button)
     {
     case SDL_BUTTON_LEFT: return RedButtonBit;
@@ -98,7 +136,7 @@ static int convertButton(int button)
     case SDL_BUTTON_RIGHT: return YellowButtonBit;
     default: return 0;
     }
-
+#endif
     return 0;
 }
 
@@ -169,6 +207,7 @@ static void createWindow(sqInt width, sqInt height, sqInt fullscreenFlag)
     if(window)
         return;
 
+    storeOpenGLState();
     flags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
     if(fullscreenFlag)
         flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
@@ -176,7 +215,10 @@ static void createWindow(sqInt width, sqInt height, sqInt fullscreenFlag)
     modifiersState = convertModifiers(SDL_GetModState());
     window = SDL_CreateWindow("", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, flags);
     if(!window)
+    {
+        restoreOpenGLState();
         return;
+    }
 
     if(!fullscreenFlag)
     {
@@ -193,6 +235,7 @@ static void createWindow(sqInt width, sqInt height, sqInt fullscreenFlag)
 
     windowID = SDL_GetWindowID(window);
     windowRenderer = SDL_CreateRenderer(window, 0, 0);
+    restoreOpenGLState();
 }
 
 static int ensureTextureOfSize(sqInt width, sqInt height)
@@ -200,12 +243,14 @@ static int ensureTextureOfSize(sqInt width, sqInt height)
     if(windowTexture && windowTextureWidth == width && windowTextureHeight == height)
         return 0;
 
+    storeOpenGLState();
     if(windowTexture)
         SDL_DestroyTexture(windowTexture);
 
     windowTexture = SDL_CreateTexture(windowRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, height);
     windowTextureWidth = width;
     windowTextureHeight = height;
+    restoreOpenGLState();
     return 1;
 }
 
@@ -214,6 +259,7 @@ static void presentWindow()
     if(!window || !windowRenderer)
         return;
 
+    storeOpenGLState();
     SDL_SetRenderDrawColor(windowRenderer, 0, 0, 0, 0);
     SDL_RenderClear(windowRenderer);
 
@@ -221,6 +267,7 @@ static void presentWindow()
         SDL_RenderCopy(windowRenderer, windowTexture, NULL, NULL);
 
     SDL_RenderPresent(windowRenderer);
+    restoreOpenGLState();
 }
 
 static void recordSDLEvent(const SDL_Event *rawEvent)
@@ -686,6 +733,7 @@ static void blitRect32(
 static sqInt sqSDL2_showDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
 		    sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB)
 {
+    storeOpenGLState();
     if(!window)
         createWindow(width, height, 0);
 
@@ -706,12 +754,18 @@ static sqInt sqSDL2_showDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, 
     }
 
     if(!windowTexture)
+    {
+        restoreOpenGLState();
         return 0;
+    }
 
     uint8_t *pixels;
     int pitch;
     if(SDL_LockTexture(windowTexture, NULL, (void**)&pixels, &pitch))
+    {
+        restoreOpenGLState();
         return 0;
+    }
 
     int sourcePitch = windowTextureWidth*4;
     blitRect32(windowTextureWidth, windowTextureHeight,
@@ -722,6 +776,7 @@ static sqInt sqSDL2_showDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, 
 
     SDL_UnlockTexture(windowTexture);
     presentWindow();
+    restoreOpenGLState();
     return 0;
 }
 
@@ -734,12 +789,16 @@ static sqInt sqSDL2_setDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt
 {
     if(window)
     {
+        storeOpenGLState();
         ioSetWindowWidthHeight(width, height);
         ioSetFullScreen(fullscreenFlag);
+        restoreOpenGLState();
         return 0;
     }
 
+    storeOpenGLState();
     createWindow(width, height, fullscreenFlag);
+    restoreOpenGLState();
     return 0;
 }
 
