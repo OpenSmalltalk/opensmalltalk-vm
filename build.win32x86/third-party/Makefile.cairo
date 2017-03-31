@@ -30,7 +30,7 @@ $(CAIROARCHIVE):
 $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME): $(CAIROARCHIVE)
 	tar x -f $(CAIROARCHIVE) -C $(THIRDPARTYDIR)
 	cd $(CAIRODIR) \
-		&& ./configure \
+		&& FREETYPE_CONFIG=$(THIRDPARTYLIBDIR) ./configure \
 			--prefix="$(THIRDPARTYOUTDIR)" \
 			--host=i686-w64-mingw32 \
 			PKG_CONFIG="$(PKG_CONFIG)" \
