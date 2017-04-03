@@ -37,11 +37,12 @@ $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME): $(CAIROARCHIVE)
 			PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" \
 			CFLAGS='$(THIRDPARTY_CFLAGS) -I$(THIRDPARTYINCLUDEDIR) -march=pentium4' \
 			LDFLAGS='$(THIRDPARTY_LDFLAGS) -L$(THIRDPARTYLIBDIR) -march=pentium4' \
+			FREETYPE_LIBS="$(THIRDPARTYLIBDIR)" \
 			--disable-silent-rules \
 			--disable-xlib \
 			--disable-dependency-tracking \
 		&& sed -i '/.* sh .\/make-/i\\ttest -e \$$\@ \&\& rm \$$\@' test/Makefile \
-		&& make -f Makefile.win32 "CFG=release" \
+		&& make \
 		&& make install
 
 $(CAIROLIB): pkgconfig libpng freetype2 pixman $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME)
