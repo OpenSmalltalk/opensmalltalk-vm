@@ -229,7 +229,7 @@ ETC >> sends [
 ETC >> setMethod: aCompiledMethod [
 	scanner := InstructionStream new method: aCompiledMethod pc: aCompiledMethod initialPC.
 	contextStack := OrderedCollection new.
-	currentContext := MethodContext
+	currentContext := Context
 						sender: nil
 						receiver: nil
 						method: aCompiledMethod
