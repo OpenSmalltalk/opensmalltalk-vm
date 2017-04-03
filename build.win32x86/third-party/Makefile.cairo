@@ -30,7 +30,7 @@ $(CAIROARCHIVE):
 $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME): $(CAIROARCHIVE)
 	tar x -f $(CAIROARCHIVE) -C $(THIRDPARTYDIR)
 	cd $(CAIRODIR) \
-		&& FREETYPE_CONFIG=$(THIRDPARTYLIBDIR) ./configure \
+		&& ./configure \
 			--prefix="$(THIRDPARTYOUTDIR)" \
 			--host=i686-w64-mingw32 \
 			PKG_CONFIG="$(PKG_CONFIG)" \
@@ -41,7 +41,7 @@ $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME): $(CAIROARCHIVE)
 			--disable-xlib \
 			--disable-dependency-tracking \
 		&& sed -i '/.* sh .\/make-/i\\ttest -e \$$\@ \&\& rm \$$\@' test/Makefile \
-		&& make \
+		&& make -f Makefile.win32 "CFG=release" \
 		&& make install
 
 $(CAIROLIB): pkgconfig libpng freetype2 pixman $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME)
