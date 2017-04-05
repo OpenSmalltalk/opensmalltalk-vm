@@ -24,7 +24,7 @@ if [ -z "${BUILD_ID}" ]; then
 	BUILD_ID="NOSHA" 
 fi
 
-do_pack_vm_real() {
+do_pack_vm() {
 	# function arguments 
 	local os=$1
 	local productArch=$2
