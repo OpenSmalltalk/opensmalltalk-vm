@@ -436,7 +436,8 @@ SistaRegisterAllocatingCogit >> genSpecialSelectorComparison [
 	 will then continue to the conditional branch which will trip and enter the abort."
 	| nextPC postBranchPC targetPC primDescriptor branchDescriptor
 	  rcvrIsInt rcvrIsConst argIsIntConst argInt jumpNotSmallInts inlineCAB
-	  counterAddress countTripped counterReg index rcvrReg argReg |
+	  counterAddress countTripped counterReg index rcvrReg argReg
+	   branchToTarget needMergeToContinue needMergeToTarget |
 	<var: #countTripped type: #'AbstractInstruction *'>
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
@@ -458,7 +459,7 @@ SistaRegisterAllocatingCogit >> genSpecialSelectorComparison [
 
 	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
 		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetPC := target ].
-	
+
 	"Only interested in inlining if followed by a conditional branch."
 	inlineCAB := branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse].
 	"Further, only interested in inlining = and ~= if there's a SmallInteger constant involved.
@@ -476,21 +477,21 @@ SistaRegisterAllocatingCogit >> genSpecialSelectorComparison [
 		ifTrue:
 			[rcvrReg := self allocateRegForStackEntryAt: 1.
 			 (self ssValue: 1) popToReg: rcvrReg.
-			 counterReg := self allocateRegNotConflictingWith: (self registerMaskFor: rcvrReg)]
+			 counterReg := self allocateRegNotConflictingWith: (self registerMaskFor: rcvrReg).
+			 argReg := NoReg]
 		ifFalse:
 			[self allocateRegForStackTopTwoEntriesInto: [:rTop :rNext| argReg := rTop. rcvrReg := rNext].
-			 rcvrReg = Arg0Reg ifTrue:
-				[rcvrReg := argReg. argReg := Arg0Reg].
 			 self ssTop popToReg: argReg.
 			 (self ssValue: 1) popToReg: rcvrReg.
 			 counterReg := self allocateRegNotConflictingWith: (self registerMaskFor: rcvrReg and: argReg)].
+	self ssPop: 2.
 	jumpNotSmallInts := (rcvrIsInt and: [argIsIntConst]) ifFalse:
 							[argIsIntConst
-								ifTrue: [objectRepresentation genJumpNotSmallInteger: ReceiverResultReg]
+								ifTrue: [objectRepresentation genJumpNotSmallInteger: rcvrReg]
 								ifFalse:
 									[rcvrIsInt
-										ifTrue: [objectRepresentation genJumpNotSmallInteger: Arg0Reg]
-										ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: ReceiverResultReg and: Arg0Reg scratch: TempReg]]].
+										ifTrue: [objectRepresentation genJumpNotSmallInteger: argReg]
+										ifFalse: [objectRepresentation genJumpNotSmallIntegersIn: rcvrReg and: argReg scratch: TempReg]]].
 
 	self
 		genExecutionCountLogicInto: [ :cAddress :countTripBranch | 
@@ -501,16 +502,39 @@ SistaRegisterAllocatingCogit >> genSpecialSelectorComparison [
 	argIsIntConst
 		ifTrue: [self CmpCq: argInt R: rcvrReg]
 		ifFalse: [self CmpR: argReg R: rcvrReg].
-	"Cmp is weird/backwards so invert the comparison.  Further since there is a following conditional
-	 jump bytecode define non-merge fixups and leave the cond bytecode to set the mergeness."
-	self genConditionalBranch: (branchDescriptor isBranchTrue
-				ifTrue: [primDescriptor opcode]
-				ifFalse: [self inverseBranchFor: primDescriptor opcode])
-		operand: (self ensureFixupAt: targetPC) asUnsignedInteger.
-		
-	self genFallsThroughCountLogicCounterReg: counterReg counterAddress: counterAddress.
-	
-	self Jump: (self ensureFixupAt: postBranchPC).
+	"self printSimStack; printSimStack: (self fixupAt: postBranchPC) mergeSimStack; printSimStack: (self fixupAt: targetPC) mergeSimStack"
+	"If there are merges to be performed on the forward branches we have to execute
+	 the merge code only along the path requiring that merge, and exactly once."
+	needMergeToTarget := self mergeRequiredForJumpTo: targetPC.
+	needMergeToContinue := self mergeRequiredForJumpTo: postBranchPC.
+	"Cmp is weird/backwards so invert the comparison."
+	(needMergeToTarget and: [needMergeToContinue]) ifTrue:
+		[branchToTarget := self genConditionalBranch: (branchDescriptor isBranchTrue
+										ifTrue: [primDescriptor opcode]
+										ifFalse: [self inverseBranchFor: primDescriptor opcode])
+								operand: 0.
+		 self Jump: (self ensureFixupAt: postBranchPC).
+		 branchToTarget jmpTarget: self Label.
+		 self Jump: (self ensureFixupAt: targetPC)].
+	(needMergeToTarget and: [needMergeToContinue not]) ifTrue:
+		[self genConditionalBranch: (branchDescriptor isBranchFalse
+										ifTrue: [primDescriptor opcode]
+										ifFalse: [self inverseBranchFor: primDescriptor opcode])
+			operand: (self ensureFixupAt: postBranchPC) asUnsignedInteger.
+		 self Jump: (self ensureFixupAt: targetPC)].
+	(needMergeToTarget not and: [needMergeToContinue]) ifTrue:
+		[self genConditionalBranch: (branchDescriptor isBranchTrue
+										ifTrue: [primDescriptor opcode]
+										ifFalse: [self inverseBranchFor: primDescriptor opcode])
+			operand: (self ensureFixupAt: targetPC) asUnsignedInteger.
+		 self Jump: (self ensureFixupAt: postBranchPC)].
+	(needMergeToTarget or: [needMergeToContinue]) ifFalse:
+		[self genConditionalBranch: (branchDescriptor isBranchTrue
+										ifTrue: [primDescriptor opcode]
+										ifFalse: [self inverseBranchFor: primDescriptor opcode])
+			operand: (self ensureFixupAt: targetPC) asUnsignedInteger.
+		 self Jump: (self ensureFixupAt: postBranchPC)].
+
 	countTripped jmpTarget: self Label.
 	jumpNotSmallInts ifNil:
 		[self annotateInstructionForBytecode.
@@ -519,7 +543,12 @@ SistaRegisterAllocatingCogit >> genSpecialSelectorComparison [
 	jumpNotSmallInts jmpTarget: countTripped getJmpTarget.
 	
 	self ssFlushTo: simStackPtr.
-	self deny: rcvrReg = Arg0Reg.
+	rcvrReg = Arg0Reg
+		ifTrue:
+			[argReg = ReceiverResultReg
+				ifTrue: [self SwapR: Arg0Reg R: Arg0Reg Scratch: TempReg. argReg := Arg0Reg]
+				ifFalse: [self MoveR: rcvrReg R: ReceiverResultReg].
+			 rcvrReg := ReceiverResultReg].
 	argIsIntConst
 		ifTrue: [self MoveCq: argInt R: Arg0Reg]
 		ifFalse: [argReg ~= Arg0Reg ifTrue: [self MoveR: argReg R: Arg0Reg]].
