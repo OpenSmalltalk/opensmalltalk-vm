@@ -6,8 +6,8 @@ set -ex
 # 
 # ARCH		- macos32x86, linux64x64, win32x86, etc.
 
-# ROOT_DIR this file is in "./deploy/pharo, I need to reach root :)"
-ROOT_DIR="../.."
+# ROOT_DIR this file is in "./deploy.pharo, I need to reach root :)"
+ROOT_DIR=".."
 # revision date
 BUILD_DATE="`grep -m1 "SvnRawRevisionString" $ROOT_DIR/platforms/Cross/vm/sqSCCSVersion.h | sed 's/[^0-9.]*\([0-9.]*\).*/\1/'`"
 if [ -z "${BUILD_DATE}" ]; then 
