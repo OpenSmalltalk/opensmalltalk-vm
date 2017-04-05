@@ -44,7 +44,7 @@ matrix:
     env: ARCH="linux32x86" FLAVOR="squeak.stack.v3"
   - os: linux
     env: ARCH="linux32x86" FLAVOR="pharo.cog.spur"
-    before_deploy: (cd deploy.pharo && ./pack-vm.sh && && ./deploy-key.sh)
+    before_deploy: (cd deploy.pharo && ./pack-vm.sh && ./deploy-key.sh)
     deploy:
       - provider: script
         skip_cleanup: true
