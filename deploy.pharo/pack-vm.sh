@@ -39,7 +39,7 @@ do_pack_vm() {
 		exit 1
 	fi
 		
-	zipFileName="$ROOT_DIR/pharo-${os}-${productArch}${suffix}-${BUILD_DATE}-${BUILD_ID}.zip"
+	zipFileName="`pwd`/../pharo-${os}-${productArch}${suffix}-${BUILD_DATE}-${BUILD_ID}.zip"
 	pushd .
 	cd ${productDir}
 	zip -y -r ${zipFileName} ${pattern}
