@@ -103,6 +103,17 @@ RegisterAllocatingCogit >> allocateRegForStackEntryAt: index [
 	^self allocateRegForStackEntryAt: index notConflictingWith: (self liveRegisters bitOr: (self registerMaskFor: FPReg and: SPReg and: TempReg))
 ]
 
+{ #category : #'simulation stack' }
+RegisterAllocatingCogit >> allocatedRegisters [
+	| regsSet |
+	self assert: needsFrame.
+	regsSet := 0.
+	0 to: methodOrBlockNumTemps do:
+		[:i|
+		regsSet := regsSet bitOr: (self simStackAt: i) registerMask].
+	^regsSet
+]
+
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> assignToTempRegConflictingRegisterIn: conflictingRegisterMask [
 	"Find the stackEntry in simStack whose liveRegister matches conflictingRegisterMask
@@ -143,7 +154,8 @@ RegisterAllocatingCogit >> compileAbstractInstructionsFrom: start through: end [
 	    result := super compileAbstractInstructionsFrom: start through: end.
 	    result = 0 and: [recompileForLoopRegisterAssignments]]
 		whileTrue:
-			[self reinitializeAllButBackwardFixupsFrom: start through: end.
+			[self assert: compilationPass <= 2.
+			 self reinitializeAllButBackwardFixupsFrom: start through: end.
 			 self resetSimStack: start.
 			 self reinitializeOpcodesFrom: initialOpcodeIndex to: opcodeIndex - 1.
 			 compilationPass := compilationPass + 1.
@@ -980,8 +992,6 @@ RegisterAllocatingCogit >> genSpecialSelectorComparison [
 			 argReg := NoReg]
 		ifFalse:
 			[self allocateRegForStackTopTwoEntriesInto: [:rTop :rNext| argReg := rTop. rcvrReg := rNext].
-			 rcvrReg = Arg0Reg ifTrue:
-				[rcvrReg := argReg. argReg := Arg0Reg].
 			 self ssTop popToReg: argReg.
 			 (self ssValue: 1) popToReg: rcvrReg].
 	self ssPop: 2.
@@ -1201,6 +1211,7 @@ RegisterAllocatingCogit >> isAPowerOfTwo: anInteger [
 { #category : #'simulation stack' }
 RegisterAllocatingCogit >> liveRegisters [
 	| regsSet |
+	self assert: needsFrame.
 	regsSet := 0.
 	0 to: simStackPtr do:
 		[:i|
@@ -1269,18 +1280,18 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup forwards: forwards [
 	self resolveRegisterOrderConflictsBetweenCurrentSimStackAnd: mergeSimStack.
 	(self asserta: (self conflictsResolvedBetweenSimStackAnd: mergeSimStack)) ifFalse:
 		[Notification new tag: #failedMerge; signal].
-	"Compute written to registers.  Perhaps we should use 0 in place of methodOrBlockNumArgs
+	"Compute written to registers.  Perhaps we should use 0 in place of methodOrBlockNumTemps
 	 but Smalltalk does not assign to arguments."
 	writtenToRegisters := 0.
 	(self pushForMergeWith: mergeSimStack)
 		ifTrue:
-			[methodOrBlockNumArgs to: simStackPtr do:
+			[methodOrBlockNumTemps to: simStackPtr do:
 				[:i|
 				 currentEntry := self simStack: simStack at: i.
 				 targetEntry := self simStack: mergeSimStack at: i.
 				 writtenToRegisters := writtenToRegisters bitOr: targetEntry registerMask.
 				 (currentEntry reconcileForwardsWith: targetEntry) ifTrue:
-					[self assert: i >= methodOrBlockNumArgs.
+					[self assert: i >= methodOrBlockNumTemps.
 					 self deassignRegisterForTempVar: targetEntry in: mergeSimStack.
 					 targetEntry
 						type: SSRegister;
@@ -1294,13 +1305,13 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup forwards: forwards [
 							cCode: [mergeSimStack at: i]
 							inSmalltalk: [(mergeSimStack at: i) copy])"]]
 		ifFalse:
-			[simStackPtr to: methodOrBlockNumArgs by: -1 do:
+			[simStackPtr to: methodOrBlockNumTemps by: -1 do:
 				[:i|
 				 currentEntry := self simStack: simStack at: i.
 				 targetEntry := self simStack: mergeSimStack at: i.
 				 writtenToRegisters := writtenToRegisters bitOr: targetEntry registerMask.
 				 (currentEntry reconcileForwardsWith: targetEntry) ifTrue:
-					[self assert: i >= methodOrBlockNumArgs.
+					[self assert: i >= methodOrBlockNumTemps.
 					 self deassignRegisterForTempVar: targetEntry in: mergeSimStack.
 					 targetEntry
 						type: SSRegister;
@@ -1410,6 +1421,8 @@ RegisterAllocatingCogit >> mergeWithFixupIfRequired: fixup [
 	for later assertions. self printSimStack: fixup mergeSimStack"
 
 	<var: #fixup type: #'BytecodeFixup *'>
+	self deny: self duplicateRegisterAssignmentsInTemporaries.
+
 	"case 1"
 	fixup notAFixup ifTrue: [^0].
 
@@ -1459,7 +1472,9 @@ RegisterAllocatingCogit >> moveVolatileSimStackEntriesToRegisters [
 						 The second one has 1 on both paths, but we're not clever enough to spot this case yet.]
 	 Volatile contents are anything not spilled to the stack, because as yet we can only merge registers."
 	<inline: true>
+	| allocatedRegs |
 	<var: #desc type: #'SimStackEntry *'>
+	allocatedRegs := self allocatedRegisters.
 	(simSpillBase max: 0) to: simStackPtr do: 
 		[:i| | desc reg |
 		 desc := self simStackAt: i.
@@ -1467,10 +1482,13 @@ RegisterAllocatingCogit >> moveVolatileSimStackEntriesToRegisters [
 			ifTrue: [simSpillBase := i]
 			ifFalse:
 				[desc registerOrNone = NoReg ifTrue:
-					[reg := self allocateRegNotConflictingWith: 0.
+					[reg := self allocateRegNotConflictingWith: allocatedRegs.
 					 reg = NoReg
 						ifTrue: [self halt] "have to spill"
-						ifFalse: [desc storeToReg: reg]]]]
+						ifFalse:
+							[desc storeToReg: reg.
+							 allocatedRegs := allocatedRegs bitOr: (self registerMaskFor: reg)]]]].
+	self deny: self duplicateRegisterAssignmentsInTemporaries
 ]
 
 { #category : #accessing }
@@ -1585,7 +1603,7 @@ RegisterAllocatingCogit >> resetSimStack: startPC [
 	<inline: true>
 	simSpillBase := methodOrBlockNumTemps.
 	simStackPtr := methodOrBlockNumTemps - 1.
-	self voidReceiverResultRegContainsSelf.
+	optStatus isReceiverResultRegLive: false.
 	self flushLiveRegistersForSend.
 	self cCode: '' inSmalltalk:
 		[0 to: methodOrBlockNumTemps - 1 do:
