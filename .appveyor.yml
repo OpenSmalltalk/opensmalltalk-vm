@@ -3,51 +3,11 @@ environment:
   BINTRAYAPIKEY:
     secure: uknPzww818XWJiLecwur9p1MfrkACOyx9d3iNrw/TuD89EoPSc8zLqKdPZjWdcQd
   matrix:
-    - FLAVOR: squeak.sista.spur
-      ARCH: win32x86
-      CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
-      MINGW_ARCH: i686
-    - FLAVOR: squeak.cog.spur
-      ARCH: win32x86
-      CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
-      MINGW_ARCH: i686
-    - FLAVOR: squeak.cog.v3
-      ARCH: win32x86
-      CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
-      MINGW_ARCH: i686
-    - FLAVOR: squeak.stack.spur
-      ARCH: win32x86
-      CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
-      MINGW_ARCH: i686
-    - FLAVOR: squeak.stack.v3
-      ARCH: win32x86
-      CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
-      MINGW_ARCH: i686
     - FLAVOR: pharo.cog.spur
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
       CYG_SETUP: setup-x86.exe
       MINGW_ARCH: i686
-    - FLAVOR: newspeak.cog.spur
-      ARCH: win32x86
-      CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
-      MINGW_ARCH: i686
-    - FLAVOR: newspeak.stack.spur
-      ARCH: win32x86
-      CYG_ROOT: C:\cygwin
-      CYG_SETUP: setup-x86.exe
-      MINGW_ARCH: i686
-    - FLAVOR: squeak.stack.spur
-      ARCH: win64x64
-      CYG_ROOT: C:\cygwin64
-      CYG_SETUP: setup-x86_64.exe
-      MINGW_ARCH: x86_64
     - FLAVOR: pharo.stack.spur
       ARCH: win64x64
       CYG_ROOT: C:\cygwin64
