@@ -58,10 +58,10 @@ case "${ARCH}" in
 		do_pack_vm "mac" "x86_64" "${ROOT_DIR}/build.${ARCH}/pharo.cog.spur" "*.app"
 		;;
 	linux32x86) 
-		do_pack_vm "linux" "i386" "`ls -d $productDir/products/*`" "*" "${HEARTBEAT}"
+		do_pack_vm "linux" "i386" "`ls -d ${ROOT_DIR}/products/*`" "*" "${HEARTBEAT}"
 		;;
 	linux64x64) 
-		do_pack_vm "linux" "x86_64" "`ls -d $productDir/products/*`" "*" "${HEARTBEAT}"
+		do_pack_vm "linux" "x86_64" "`ls -d ${ROOT_DIR}/products/*`" "*" "${HEARTBEAT}"
 		;;
 	linux32ARMv6) 
 		do_pack_vm "linux" "ARMv6" "${ROOT_DIR}/products/phcogspurlinux" "*" "itimer"
