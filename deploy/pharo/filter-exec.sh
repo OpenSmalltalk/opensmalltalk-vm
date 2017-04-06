@@ -8,7 +8,7 @@ if [[ "$FLAVOR" != *pharo* ]]; then
 	exit 
 fi
 
-if [ "$APPVEYOR_REPO_NAME" != "estebanlm/opensmalltalk-vm" ]; then
+if [ "$APPVEYOR_REPO_NAME" != "OpenSmalltalk/opensmalltalk-vm" ]; then
 	echo "Trying to deploy in repository: $APPVEYOR_REPO_NAME. Skipping."
 	exit 
 fi

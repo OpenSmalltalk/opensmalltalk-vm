@@ -3,11 +3,51 @@ environment:
   BINTRAYAPIKEY:
     secure: uknPzww818XWJiLecwur9p1MfrkACOyx9d3iNrw/TuD89EoPSc8zLqKdPZjWdcQd
   matrix:
+    - FLAVOR: squeak.sista.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
+    - FLAVOR: squeak.cog.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
+    - FLAVOR: squeak.cog.v3
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
+    - FLAVOR: squeak.stack.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
+    - FLAVOR: squeak.stack.v3
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
     - FLAVOR: pharo.cog.spur
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
       CYG_SETUP: setup-x86.exe
       MINGW_ARCH: i686
+    - FLAVOR: newspeak.cog.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
+    - FLAVOR: newspeak.stack.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
+    - FLAVOR: squeak.stack.spur
+      ARCH: win64x64
+      CYG_ROOT: C:\cygwin64
+      CYG_SETUP: setup-x86_64.exe
+      MINGW_ARCH: x86_64
     - FLAVOR: pharo.stack.spur
       ARCH: win64x64
       CYG_ROOT: C:\cygwin64
@@ -41,8 +81,8 @@ build: false
 # default file handles. Ensure a dummy file descriptor is opened with 'exec'.
 test_script:
   - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./.travis_build.sh"'
-#on_success:
-#  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./.travis_deploy.sh"'
+on_success:
+  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./.travis_deploy.sh"'
 before_deploy:
   - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy/pharo; exec 0</dev/null; exec ./filter-exec.sh pack-vm.sh; exec filter-exec.sh deploy-key.sh"'
 deploy_script:
