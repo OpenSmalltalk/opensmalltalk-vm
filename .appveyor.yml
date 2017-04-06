@@ -41,9 +41,9 @@ build: false
 # default file handles. Ensure a dummy file descriptor is opened with 'exec'.
 test_script:
   - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./.travis_build.sh"'
-on_success:
-  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./.travis_deploy.sh"'
-before_deploy:
-  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy/pharo; exec 0</dev/null; exec ./filter-exec.sh pack-vm.sh; exec filter-exec.sh deploy-key.sh"'
-deploy_script:
-  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./deploy/pharo/filter-exec.sh deploy-files.pharo.org.sh"'
+#on_success:
+#  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./.travis_deploy.sh"'
+#before_deploy:
+#  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy/pharo; exec 0</dev/null; exec ./filter-exec.sh pack-vm.sh; exec filter-exec.sh deploy-key.sh"'
+#deploy_script:
+#  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./deploy/pharo/filter-exec.sh deploy-files.pharo.org.sh"'
