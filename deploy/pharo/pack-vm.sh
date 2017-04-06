@@ -43,7 +43,7 @@ do_pack_vm() {
 	zipFileName="${ROOT_DIR}/pharo-${os}-${productArch}${suffix}-${BUILD_DATE}-${BUILD_ID}.zip"
 	pushd .
 	echo "`pwd`"
-	ls ../../products
+	find ../../products -name "*"
 	cd ${productDir}
 	zip -y -r ${zipFileName} ${pattern}
 	popd
