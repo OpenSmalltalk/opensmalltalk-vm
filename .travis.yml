@@ -21,22 +21,22 @@ matrix:
     env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
     before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
     deploy:
-      - provider: script
-        skip_cleanup: true
-        script: ./deploy/pharo/deploy-files.pharo.org.sh
-        on:
-          branch: Cog
-          repo: OpenSmalltalk/opensmalltalk-vm
+    - provider: script
+      skip_cleanup: true
+      script: ./deploy/pharo/deploy-files.pharo.org.sh
+      on:
+        branch: Cog
+        repo: estebanlm/opensmalltalk-vm
   - os: linux
     env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
     before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
     deploy:
-      - provider: script
-        skip_cleanup: true
-        script: ./deploy/pharo/deploy-files.pharo.org.sh
-        on:
-          branch: Cog
-          repo: OpenSmalltalk/opensmalltalk-vm
+    - provider: script
+      skip_cleanup: true
+      script: ./deploy/pharo/deploy-files.pharo.org.sh
+      on:
+        branch: Cog
+        repo: estebanlm/opensmalltalk-vm
   - os: linux
     env: ARCH="linux32x86" FLAVOR="newspeak.cog.spur"
   - os: linux
@@ -55,22 +55,22 @@ matrix:
     env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
     before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
     deploy:
-      - provider: script
-        skip_cleanup: true
-        script: ./deploy/pharo/deploy-files.pharo.org.sh
-        on:
-          branch: Cog
-          repo: estebanlm/opensmalltalk-vm
+    - provider: script
+      skip_cleanup: true
+      script: ./deploy/pharo/deploy-files.pharo.org.sh
+      on:
+        branch: Cog
+        repo: estebanlm/opensmalltalk-vm
   - os: linux
     env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
     before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
     deploy:
-      - provider: script
-        skip_cleanup: true
-        script: ./deploy/pharo/deploy-files.pharo.org.sh
-        on:
-          branch: Cog
-          repo: estebanlm/opensmalltalk-vm
+    - provider: script
+      skip_cleanup: true
+      script: ./deploy/pharo/deploy-files.pharo.org.sh
+      on:
+        branch: Cog
+        repo: estebanlm/opensmalltalk-vm
   - os: osx
     env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
   - os: osx
@@ -79,12 +79,12 @@ matrix:
     env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
     before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
     deploy:
-      - provider: script
-        skip_cleanup: true
-        script: ./deploy/pharo/deploy-files.pharo.org.sh
-        on:
-          branch: Cog
-          repo: OpenSmalltalk/opensmalltalk-vm
+    - provider: script
+      skip_cleanup: true
+      script: ./deploy/pharo/deploy-files.pharo.org.sh
+      on:
+        branch: Cog
+        repo: estebanlm/opensmalltalk-vm
   - os: osx
     env: ARCH="macos64x64" FLAVOR="pharo.stack.spur"
   - os: osx
@@ -103,12 +103,12 @@ matrix:
     env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
     before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
     deploy:
-      - provider: script
-        skip_cleanup: true
-        script: ./deploy/pharo/deploy-files.pharo.org.sh
-        on:
-          branch: Cog
-          repo: OpenSmalltalk/opensmalltalk-vm
+    - provider: script
+      skip_cleanup: true
+      script: ./deploy/pharo/deploy-files.pharo.org.sh
+      on:
+        branch: Cog
+        repo: estebanlm/opensmalltalk-vm
   - os: osx
     env: ARCH="macos32x86" FLAVOR="pharo.stack.spur"
   - os: osx
@@ -141,18 +141,18 @@ matrix:
     dist: trusty
     group: edge
   - os: linux
-    env: ARCH="linux32ARMv6" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded" CHROOT="schroot -p -c rpi --
+    env: ARCH="linux32ARMv6" FLAVOR="pharo.cog.spur" CHROOT="schroot -p -c rpi --
       bash -c "
     dist: trusty
     group: edge
     before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
     deploy:
-      - provider: script
-        skip_cleanup: true
-        script: ./deploy/pharo/deploy-files.pharo.org.sh
-        on:
-          branch: Cog
-          repo: OpenSmalltalk/opensmalltalk-vm
+    - provider: script
+      skip_cleanup: true
+      script: ./deploy/pharo/deploy-files.pharo.org.sh
+      on:
+        branch: Cog
+        repo: estebanlm/opensmalltalk-vm
   - os: linux
     env: ARCH="linux32ARMv6" FLAVOR="squeak.stack.spur" CHROOT="schroot -p -c rpi
       -- bash -c "
