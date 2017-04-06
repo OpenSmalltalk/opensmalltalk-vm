@@ -1,10 +1,14 @@
-# deploy if repository is OpenSmalltalk/opensmalltalk-vm
+# Filter for Pharo (appveyor cannot filter in appveyor.yml file).
+#
+# execute script if: 
+#   - FLAVOR=*pharo*
+#   - REPOSITORY=OpenSmalltalk/opensmalltalk-vm
 
 if [[ "$FLAVOR" != *pharo* ]]; then
 	exit 
 fi
 
-if [ "$APPVEYOR_REPO_NAME" != "OpenSmalltalk/opensmalltalk-vm" ]; then
+if [ "$APPVEYOR_REPO_NAME" != "estebanlm/opensmalltalk-vm" ]; then
 	echo "Trying to deploy in repository: $APPVEYOR_REPO_NAME. Skipping."
 	exit 
 fi
@@ -15,4 +19,4 @@ if [ "$APPVEYOR_REPO_BRANCH" != "Cog" ]; then
 	exit 
 fi
 
-sh `dirname $0`/deploy-files.pharo.org.sh
+sh `dirname $0`/$1
