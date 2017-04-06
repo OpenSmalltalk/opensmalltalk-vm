@@ -43,7 +43,17 @@ matrix:
   - os: linux
     env: ARCH="linux32x86" FLAVOR="squeak.stack.v3"
   - os: linux
-    env: ARCH="linux32x86" FLAVOR="pharo.cog.spur"
+    env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
+    before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
+    deploy:
+      - provider: script
+        skip_cleanup: true
+        script: ./deploy/pharo/deploy-files.pharo.org.sh
+        on:
+          branch: Cog
+          repo: estebanlm/opensmalltalk-vm
+  - os: linux
+    env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
     before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
     deploy:
       - provider: script

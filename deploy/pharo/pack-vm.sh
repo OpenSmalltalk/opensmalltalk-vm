@@ -4,7 +4,8 @@ set -ex
 
 # This are defined elsewhere (usually in travis):
 # 
-# ARCH		- macos32x86, linux64x64, win32x86, etc.
+# ARCH			- macos32x86, linux64x64, win32x86, etc.
+# HEARTBEAT		- in case of linux vms (threaded, itimer)
 
 # ROOT_DIR this file is in "./deploy/pharo, I need to reach root. I could use env vars of travos and 
 # appvetor, but that would mean deal with Windows paths :)"
@@ -57,12 +58,10 @@ case "${ARCH}" in
 		do_pack_vm "mac" "x86_64" "${ROOT_DIR}/build.${ARCH}/pharo.cog.spur" "*.app"
 		;;
 	linux32x86) 
-		do_pack_vm "linux" "i386" "${ROOT_DIR}/products/phcogspurlinuxht" "*" "threaded"
-		do_pack_vm "linux" "i386" "${ROOT_DIR}/products/phcogspurlinux" "*" "itimer"
+		do_pack_vm "linux" "i386" "`ls -d $productDir/products/*`" "*" "${HEARTBEAT}"
 		;;
 	linux64x64) 
-		do_pack_vm "linux" "x86_64" "${ROOT_DIR}/products/phcogspurlinuxht" "*" "threaded"
-		do_pack_vm "linux" "x86_64" "${ROOT_DIR}/products/phcogspurlinux" "*" "itimer"
+		do_pack_vm "linux" "x86_64" "`ls -d $productDir/products/*`" "*" "${HEARTBEAT}"
 		;;
 	linux32ARMv6) 
 		do_pack_vm "linux" "ARMv6" "${ROOT_DIR}/products/phcogspurlinux" "*" "itimer"
