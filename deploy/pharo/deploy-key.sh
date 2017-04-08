@@ -6,7 +6,7 @@
 # 	PHARO_DEPLOY_KEY_IV   	- The -iv key (a phrase on hex)
 # 	PHARO_DEPLOY_USER		- The username for deploying
 
-set -ex
+set -e
 
 if [ ! -e ~/.shh ]; then
 	mkdir -p ~/.ssh
