@@ -2,21 +2,21 @@
 # This script will add a deploy key to the CI;
 # Required environment variables:
 # 
-#	DEPLOY_KEY   	- The -K key (a phrase on hex)
-# 	DEPLOY_KEY_IV   - The -iv key (a phrase on hex)
-# 	DEPLOY_USER		- The username for deploying
+#	PHARO_DEPLOY_KEY   		- The -K key (a phrase on hex)
+# 	PHARO_DEPLOY_KEY_IV   	- The -iv key (a phrase on hex)
+# 	PHARO_DEPLOY_USER		- The username for deploying
 
-set -ex
+set -e
 
 if [ ! -e ~/.shh ]; then
 	mkdir -p ~/.ssh
 fi
-openssl aes-256-cbc -K $DEPLOY_KEY -iv $DEPLOY_KEY_IV -in deploy_key.enc -out ~/.ssh/id_rsa -d
+openssl aes-256-cbc -K $PHARO_DEPLOY_KEY -iv $PHARO_DEPLOY_KEY_IV -in deploy_key.enc -out ~/.ssh/id_rsa -d
 chmod 600 ~/.ssh/id_rsa
 
 echo "Host files.pharo.org
-	User $DEPLOY_USER
-	ProxyCommand ssh $DEPLOY_USER@sesi-ssh.inria.fr \"nc file-pharo.inria.fr %p 2> /dev/null\"
+	User $PHARO_DEPLOY_USER
+	ProxyCommand ssh $PHARO_DEPLOY_USER@sesi-ssh.inria.fr \"nc file-pharo.inria.fr %p 2> /dev/null\"
 " >> ~/.ssh/config
 
 echo "files.pharo.org ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCeVezoVox1IBcyqhPZbWaHoJR1R8iYZwZuqYDCjmmp1+bXxdPwI4FNbulc8CvGS+pvmJbWe6ypIksT1BNHOySZ574+mNq73YvgXuyl8FO45D7y22l7tjdQPR3b3XZ6gcTFoW+MTSMmipujN8D71vcbyhT7xQlgnP681LGRhTKbPZBOL84w2iPWc71l7keen/LMW4ifdJR46MdrOyXFNN2pxF3o42wItAv5Koae3ydD6UBw58xQlDsJpr1XVVpxVAEW1vonMs0IYJWKBRxvJVh1k/Nx8GwqlUHxQvjiHFlCheQ6ebuARwCH7ccJETKPxbkkVH1TESzOxjZH5W/miFGD
