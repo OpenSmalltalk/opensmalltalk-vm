@@ -363,6 +363,40 @@ ImageFormat class >> thisImageFileFormat [
 
 ]
 
+{ #category : #'unix magic file entries' }
+ImageFormat class >> unixMagicFileEntries [
+	"Answer a string that can be appended to /etc/magic on a Unix system to support the file(1) utility"
+
+	"ImageFormat unixMagicFileEntries"
+
+	" | fs |
+	fs := FileStream newFileNamed: 'magic'.
+	[ fs nextPutAll: ImageFormat unixMagicFileEntries ]
+		ensure: [ fs close ] "
+
+	^String streamContents: [:s |
+		s nextPutAll: '# Smalltalk image file formats'; lf.
+		KnownVersionNumbers do: [ :num | | fmt |
+			#( 'le' 'be' ) do: [ :endian |
+				fmt := self fromInteger: num.
+				(fmt is64Bit and: [ endian = 'be' ])
+					ifTrue: [ s nextPut: $4 ]
+					ifFalse: [ s nextPut: $0 ].
+				s tab;
+				nextPutAll: endian;
+				nextPutAll: 'long';
+				tab;
+				nextPutAll: num asString;
+				tab;
+				nextPutAll: 'Smalltalk '.
+				fmt printTerseDescriptionOn: s.
+				s lf
+			]
+		].
+		s lf.
+	]
+]
+
 { #category : #utility }
 ImageFormat class >> versionDescriptions [
 
@@ -549,22 +583,26 @@ ImageFormat >> isValidVersionNumber [
 { #category : #printing }
 ImageFormat >> printDescriptionOn: stream [
 
-		stream nextPutAll: 'a ';
-			nextPutAll: (wordSize * 8) asString;
-			nextPutAll: '-bit image with '.
-		self requiresClosureSupport ifFalse: [stream nextPutAll: 'no '].
-		stream nextPutAll: 'closure support and '.
-		self requiresNativeFloatWordOrder
-			ifTrue: [stream nextPutAll: 'float words stored in native platform order']
-			ifFalse: [stream nextPutAll: 'no native platform float word order requirement'].
-		self requiresSpurSupport
-			ifTrue: [stream nextPutAll: ' using Spur object format'.
-				(self is64Bit and: [self requiresNewSpur64TagAssignment not])
-					ifTrue: [stream nextPutAll: ' (obsolete)']].
-		stream nextPutAll: ' (';
-			nextPutAll: self asInteger asString;
-			nextPut: $).
-		^ stream
+	stream nextPutAll: 'a ';
+		nextPutAll: (wordSize * 8) asString;
+		nextPutAll: '-bit ';
+		nextPutAll: (self requiresSpurSupport
+			ifTrue: [ 'Spur' ]
+			ifFalse: [ 'V3' ]);
+		nextPutAll: ' image with '.
+	self requiresClosureSupport ifFalse: [stream nextPutAll: 'no '].
+	stream nextPutAll: 'closure support and '.
+	self requiresNativeFloatWordOrder
+		ifTrue: [stream nextPutAll: 'float words stored in native platform order']
+		ifFalse: [stream nextPutAll: 'no native platform float word order requirement'].
+	self requiresSpurSupport
+		ifTrue: [stream nextPutAll: ' using Spur object format'.
+			(self is64Bit and: [self requiresNewSpur64TagAssignment not])
+				ifTrue: [stream nextPutAll: ' (obsolete)']].
+	stream nextPutAll: ' (';
+		nextPutAll: self asInteger asString;
+		nextPut: $).
+	^ stream
 
 ]
 
@@ -572,6 +610,29 @@ ImageFormat >> printDescriptionOn: stream [
 ImageFormat >> printOn: aStream [
 
 	aStream nextPutAll: 'ImageFormat fromInteger: ', self asInteger asString
+
+]
+
+{ #category : #printing }
+ImageFormat >> printTerseDescriptionOn: stream [
+	"Shortened description as may be required for unix magic file entries"
+
+	stream 
+		nextPutAll: 'image ';
+		nextPutAll: (self requiresSpurSupport
+			ifTrue: [ 'Spur ' ]
+			ifFalse: [ 'V3 ' ]);
+		nextPutAll: (wordSize * 8) asString;
+		nextPutAll: '-bit '.
+	self requiresClosureSupport ifFalse: [stream nextPutAll: 'no '].
+	stream nextPutAll: 'closure '.
+	self requiresNativeFloatWordOrder
+		ifTrue: [stream nextPutAll: 'native float']
+		ifFalse: [stream nextPutAll: 'no native float'].
+	stream nextPutAll: ' (';
+		nextPutAll: self asInteger asString;
+		nextPut: $).
+	^ stream
 
 ]
 
