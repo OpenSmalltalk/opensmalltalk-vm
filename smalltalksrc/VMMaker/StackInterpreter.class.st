@@ -571,7 +571,7 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 		(234		extSendBytecode)
 		(235		extSendSuperBytecode)
 
-		(236		unknownBytecode)
+		(236		extEnsureAllocatableSlots)
 
 		(237		extUnconditionalJump)
 		(238		extJumpIfTrue)
@@ -5478,6 +5478,21 @@ StackInterpreter >> extBBytecode [
 				ifTrue: [byte - 256]
 				ifFalse: [(extB bitShift: 8) + byte].
 	numExtB := numExtB + 1
+]
+
+{ #category : #'miscellaneous bytecodes' }
+StackInterpreter >> extEnsureAllocatableSlots [
+	"SistaV1		*	236		11101100	iiiiiiii		Ensure Allocatable Slots (+ Extend A * 256)"
+	| slots ok |
+	slots := (extA bitShift: 8) + self fetchByte.
+	self fetchNextBytecode.
+	extA := 0.
+	ok := objectMemory checkForAvailableSlots: slots.
+	ok ifFalse:
+		[self externalizeIPandSP.
+		 self checkForEventsMayContextSwitch: true.
+		 self browserPluginReturnIfNeeded.
+		 self internalizeIPandSP]
 ]
 
 { #category : #'jump bytecodes' }
