@@ -1723,6 +1723,23 @@ SimpleStackBasedCogit >> genDoubleFailIfZeroArgRcvr: rcvrReg arg: argReg [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genExtEnsureAllocatableSlots [
+	"SistaV1	*	236	11101100	iiiiiiii	Ensure Allocatable Slots (+ Extend A * 256)"
+	| slots skip |
+	slots := (extA bitShift: 8) + byte1.
+	extA := 0.
+	self
+		MoveAw: objectMemory freeStartAddress R: TempReg;
+		CmpCq: objectMemory getScavengeThreshold - (objectMemory bytesPerOop * slots) R: TempReg.
+	skip := self JumpAboveOrEqual: 0.
+	objectRepresentation genSetGCNeeded.
+	self CallRT: ceCheckForInterruptTrampoline.
+	skip jmpTarget: self Label.
+	self annotateBytecode: skip getJmpTarget.
+	^0
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtJumpIfFalse [
 	"244		11110100	i i i i i i i i	Pop and Jump 0n False i i i i i i i i (+ Extend B * 256, where Extend B >= 0)"
 	| distance target |

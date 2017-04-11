@@ -178,6 +178,11 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> isImmediateClass: 
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> needGCFlagAddress [
+	^self addressForLabel: #needGCFlag
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> numSlotsFullShift [
 	^objectMemory numSlotsFullShift
 ]
@@ -239,6 +244,11 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> rememberedBitShift
 { #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> remoteIsInstVarAccess [
 	^ 128
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> scavengeThreshold [
+	^objectMemory scavengeThreshold
 ]
 
 { #category : #accessing }
