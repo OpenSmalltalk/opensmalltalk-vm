@@ -5015,7 +5015,6 @@ InterpreterPrimitives >> quot: integerRcvr ient: integerArg [
 { #category : #'simulation support' }
 InterpreterPrimitives >> sHEAFn [
 	<doNotGenerate>
-	self break.
 	^true
 ]
 
