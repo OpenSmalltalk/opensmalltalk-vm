@@ -114,6 +114,17 @@ RegisterAllocatingCogit >> allocatedRegisters [
 	^regsSet
 ]
 
+{ #category : #'compile abstract instructions' }
+RegisterAllocatingCogit >> assertCorrectSimStackPtr [
+	<inline: true> "generates nothing anyway"
+	 self cCode: '' inSmalltalk:
+		[deadCode ifFalse:
+			[self assert: simStackPtr + (needsFrame ifTrue: [0] ifFalse: [1])
+						= (self debugStackPointerFor: bytecodePC)].
+		 self deny: self duplicateRegisterAssignmentsInTemporaries].
+	
+]
+
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> assignToTempRegConflictingRegisterIn: conflictingRegisterMask [
 	"Find the stackEntry in simStack whose liveRegister matches conflictingRegisterMask
@@ -1211,8 +1222,17 @@ RegisterAllocatingCogit >> isAPowerOfTwo: anInteger [
 { #category : #'simulation stack' }
 RegisterAllocatingCogit >> liveRegisters [
 	| regsSet |
-	self assert: needsFrame.
-	regsSet := 0.
+	needsFrame
+		ifTrue: [regsSet := 0]
+		ifFalse:
+			[regsSet := (methodOrBlockNumArgs > self numRegArgs
+						  or: [methodOrBlockNumArgs = 0])
+							ifTrue:
+								[self registerMaskFor: ReceiverResultReg]
+							ifFalse:
+								[(self numRegArgs > 1 and: [methodOrBlockNumArgs > 1])
+									ifFalse: [self registerMaskFor: ReceiverResultReg and: Arg0Reg]
+									ifTrue: [self registerMaskFor: ReceiverResultReg and: Arg0Reg and: Arg1Reg]]].
 	0 to: simStackPtr do:
 		[:i|
 		regsSet := regsSet bitOr: (self simStackAt: i) registerMask].
@@ -1332,7 +1352,7 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup forwards: forwards [
 			[currentEntry := self simStack: simStack at: i.
 			 writtenToRegisters := writtenToRegisters bitOr: targetEntry registerMask.
 			 (currentEntry reconcileForwardsWith: targetEntry) ifTrue:
-				[self assert: i >= methodOrBlockNumArgs.
+				[self assert: i >= methodOrBlockNumTemps.
 				 self deassignRegisterForTempVar: targetEntry in: mergeSimStack]]].
 	optStatus isReceiverResultRegLive ifFalse:
 		[forwards

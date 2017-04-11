@@ -246,6 +246,14 @@ Spur64BitCoMemoryManager >> methodHeaderOf: methodObj [
 			(coInterpreter cCoerceSimple: header to: #'CogMethod *') methodHeader]
 ]
 
+{ #category : #'trampoline support' }
+Spur64BitCoMemoryManager >> needGCFlagAddress [
+	<api>
+	<returnTypeC: #usqInt>
+	^self cCode: [(self addressOf: needGCFlag) asUnsignedInteger]
+		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #needGCFlag in: self]
+]
+
 { #category : #'garbage collection' }
 Spur64BitCoMemoryManager >> nullHeaderForMachineCodeMethod [
 	<api>

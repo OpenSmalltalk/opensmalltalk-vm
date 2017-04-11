@@ -917,6 +917,8 @@ CogObjectRepresentationForSpur >> genGetInstanceOf: classObj into: destReg initi
 	 and: [(slots := objectMemory fixedFieldsOfClassFormat: classFormat) < objectMemory numSlotsMask]]]]) ifFalse:
 		[^UnimplementedOperation].
 
+	self deny: destReg = TempReg.
+
 	header := objectMemory
 					headerForSlots: slots
 					format: (objectMemory instSpecOfClassFormat: classFormat)
@@ -1504,6 +1506,14 @@ CogObjectRepresentationForSpur >> genRemoveSmallIntegerTagsInScratchReg: scratch
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genSetCharacterTagsIn: reg [
 	cogit OrCq: objectMemory characterTag R: reg
+]
+
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationForSpur >> genSetGCNeeded [
+	<inline: true>
+	cogit
+		MoveCq: 1 R: TempReg;
+		MoveR: TempReg Aw: coInterpreter needGCFlagAddress
 ]
 
 { #category : #'compile abstract instructions' }

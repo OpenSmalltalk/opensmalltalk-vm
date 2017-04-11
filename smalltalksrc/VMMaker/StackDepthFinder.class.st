@@ -149,6 +149,11 @@ StackDepthFinder >> encoderClass: anObject [
 	encoderClass := anObject
 ]
 
+{ #category : #'as yet unclassified' }
+StackDepthFinder >> ensureAllocateableSlots: numSlots [
+	"nothing to do here..."
+]
+
 { #category : #decoding }
 StackDepthFinder >> interpretNextInstructionFor: client [
 	(deadCode and: [(joins at: pc) notNil]) ifTrue:
