@@ -281,6 +281,11 @@ Spur64BitMMLECoSimulator >> memoryBaseForImageRead [
 		ifFalse: [super memoryBaseForImageRead]
 ]
 
+{ #category : #accessing }
+Spur64BitMMLECoSimulator >> needGCFlag: anInteger [
+	needGCFlag := anInteger ~= 0
+]
+
 { #category : #initialization }
 Spur64BitMMLECoSimulator >> nextLongFrom: aStream [
 	"Read a 32- or 64-bit quantity from the given (binary) stream."
