@@ -1644,11 +1644,11 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory
 			storePointerUnchecked: 69
 			ofObject: result
-			withValue: (self integerObjectOf: (self cCode: 'VM_PROXY_MAJOR' inSmalltalk: [self class vmProxyMajorVersion])).
+			withValue: (objectMemory integerObjectOf: (self cCode: 'VM_PROXY_MAJOR' inSmalltalk: [self class vmProxyMajorVersion])).
 		objectMemory
 			storePointerUnchecked: 70
 			ofObject: result
-			withValue: (self integerObjectOf: (self cCode: 'VM_PROXY_MINOR' inSmalltalk: [self class vmProxyMinorVersion])).
+			withValue: (objectMemory integerObjectOf: (self cCode: 'VM_PROXY_MINOR' inSmalltalk: [self class vmProxyMinorVersion])).
 		self assert: paramsArraySize = 71.
 		objectMemory beRootIfOld: result.
 		self pop: 1 thenPush: result.
