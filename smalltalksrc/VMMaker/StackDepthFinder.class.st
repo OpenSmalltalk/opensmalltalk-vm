@@ -30,6 +30,12 @@ StackDepthFinder >> branchIfInstanceOf: behaviorOrArrayOfBehavior distance: delt
 ]
 
 { #category : #'instruction decoding' }
+StackDepthFinder >> branchIfNotInstanceOf: behaviorOrArrayOfBehavior distance: delta [ 
+	self drop.
+	self doJump: delta
+]
+
+{ #category : #'instruction decoding' }
 StackDepthFinder >> callInlinePrimitive: primitiveIndex [
 	"The convention for inline primitives is that the argument count is primitiveIndex // 1000 - 1,
 	 so receiverless 0-arg prims are from 0 to 999 (does this even make sense?), 0-arg prims
@@ -149,7 +155,7 @@ StackDepthFinder >> encoderClass: anObject [
 	encoderClass := anObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'instruction decoding' }
 StackDepthFinder >> ensureAllocateableSlots: numSlots [
 	"nothing to do here..."
 ]
