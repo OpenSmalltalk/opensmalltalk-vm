@@ -1354,6 +1354,12 @@ SistaCogit >> generateSistaRuntime [
 	ceTrapTrampoline := self genTrampolineFor: #ceSistaTrap called: 'ceSistaTrapTrampoline'
 ]
 
+{ #category : #accessing }
+SistaCogit >> getCogCodeZoneThreshold [
+	<doNotGenerate>
+	^methodZone getCogCodeZoneThreshold
+]
+
 { #category : #'method introspection' }
 SistaCogit >> getJumpTargetPCAt: pc [
 	<api>
