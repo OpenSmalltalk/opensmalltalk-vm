@@ -2350,7 +2350,7 @@ CogVMSimulator >> maybeCheckStackDepth: delta sp: sp pc: mcpc [
 		 lastbcpc := cogBlockMethod cmIsFullBlock
 						ifTrue: [cogit endPCOf: cogHomeMethod methodObject]
 						ifFalse: [cogit lastBytecodePCForBlockAt: startbcpc in: cogHomeMethod methodObject].
-		 bcpc := bcpc > lastbcpc ifTrue: [lastbcpc] ifFalse: [bcpc - 1]].
+		 bcpc > lastbcpc ifTrue: [bcpc := lastbcpc]].
 	asp := self stackPointerIndexForFrame: framePointer WithSP: sp + objectMemory wordSize.
 	csp := debugStackPointers at: bcpc ifAbsent: [-1].
 	"Compensate for some edge cases"

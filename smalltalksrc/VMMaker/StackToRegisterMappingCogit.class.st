@@ -12110,21 +12110,16 @@ StackToRegisterMappingCogit >> genUpArrowReturn [
 				ret pc in LR.
 	 A fully framed activation is described in CoInterpreter class>initializeFrameIndices.
 	 Return pops receiver and arguments off the stack.  Callee pushes the result."
-	| framelessReturn |
 	deadCode := true. "can't fall through"
 	inBlock > 0 ifTrue:
-		[self assert: needsFrame. 
+		[self assert: needsFrame.
+		 self ssFlushTo: simStackPtr.
 		 self CallRT: ceNonLocalReturnTrampoline.
 		 self annotateBytecode: self Label.
 		 ^0].
-	self 
-		cppIf: IMMUTABILITY
-		ifTrue: [framelessReturn := needsFrame and: [useTwoPaths not]]
-		ifFalse: [framelessReturn := needsFrame].
-	framelessReturn
+	(self cppIf: IMMUTABILITY ifTrue: [needsFrame and: [useTwoPaths not]] ifFalse: [needsFrame])
 		ifTrue:
-			[
-			 LowcodeVM ifTrue: [ hasNativeFrame ifTrue: [ self leaveNativeFrame ] ].
+			[LowcodeVM ifTrue: [ hasNativeFrame ifTrue: [ self leaveNativeFrame ] ].
 			 self MoveR: FPReg R: SPReg.
 			 self PopR: FPReg.
 			 backEnd hasLinkRegister ifTrue:
