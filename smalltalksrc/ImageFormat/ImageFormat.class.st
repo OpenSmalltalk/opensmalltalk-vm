@@ -390,6 +390,14 @@ ImageFormat class >> unixMagicFileEntries [
 				tab;
 				nextPutAll: 'Smalltalk '.
 				fmt printTerseDescriptionOn: s.
+				s lf.
+				s nextPutAll: '!:mime application/'.
+				fmt requiresSpurSupport
+					ifTrue: [ s nextPutAll: 'spur']
+					ifFalse: [fmt requiresClosureSupport ifTrue: [ s nextPutAll: 'cog']
+								ifFalse: [s nextPutAll: 'squeak']].
+				fmt is64Bit ifTrue: [ s nextPutAll: '64'].
+				s nextPutAll: '-image'.
 				s lf
 			]
 		].
@@ -623,15 +631,11 @@ ImageFormat >> printTerseDescriptionOn: stream [
 			ifTrue: [ 'Spur ' ]
 			ifFalse: [ 'V3 ' ]);
 		nextPutAll: (wordSize * 8) asString;
-		nextPutAll: '-bit '.
-	self requiresClosureSupport ifFalse: [stream nextPutAll: 'no '].
-	stream nextPutAll: 'closure '.
-	self requiresNativeFloatWordOrder
-		ifTrue: [stream nextPutAll: 'native float']
-		ifFalse: [stream nextPutAll: 'no native float'].
-	stream nextPutAll: ' (';
-		nextPutAll: self asInteger asString;
-		nextPut: $).
+		nextPutAll: 'b '.
+	self requiresClosureSupport ifTrue: [stream nextPutAll: '+C'].
+	self requiresNativeFloatWordOrder ifTrue: [stream nextPutAll: '+NF'].
+	self requiresNewSpur64TagAssignment ifTrue: [stream nextPutAll: '+Tag' ].
+	stream nextPutAll: ' (%d)'.
 	^ stream
 
 ]
