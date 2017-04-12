@@ -300,7 +300,7 @@ static struct timespec beatperiod = { 0, DEFAULT_BEAT_MS * 1000 * 1000 };
 static void *
 beatStateMachine(void *careLess)
 {
-	int er;
+    int er;
 	if ((er = pthread_setschedparam(pthread_self(),
 									stateMachinePolicy,
 									&stateMachinePriority))) {
@@ -311,20 +311,26 @@ beatStateMachine(void *careLess)
 		 * require a suitable /etc/security/limits.d/VMNAME.conf.
 		 */
 		extern char *revisionAsString();
-        extern char  *exeName;
 		errno = er;
 		perror("pthread_setschedparam failed");
+#if PharoVM
+# define VMNAME "pharo"
+#elif NewspeakVM
+# define VMNAME "nsvm"
+#else
+# define VMNAME "squeak"
+#endif
         fprintf(stderr, "This VM uses a separate heartbeat thread to update its internal clock\n");
         fprintf(stderr, "and handle events.  For best operation, this thread should run at a\n");
         fprintf(stderr, "higher priority, however the VM was unable to change the priority.  The\n");
         fprintf(stderr, "effect is that heavily loaded systems may experience some latency\n");
         fprintf(stderr, "issues.  If this occurs, please create the appropriate configuration\n");
         fprintf(stderr, "file in /etc/security/limits.d/ as shown below:\n\n");
-        fprintf(stderr, "cat <<END | sudo tee /etc/security/limits.d/%s.conf\n", exeName);
+        fprintf(stderr, "cat <<END | sudo tee /etc/security/limits.d/%s.conf\n", VMNAME);
         fprintf(stderr, "*      hard    rtprio  2\n");
         fprintf(stderr, "*      soft    rtprio  2\n");
         fprintf(stderr, "END\n");
-        fprintf(stderr, "\nand report to the %s mailing list whether this improves behaviour.\n", exeName);
+        fprintf(stderr, "\nand report to the %s mailing list whether this improves behaviour.\n", VMNAME);
         fprintf(stderr, "\nYou will need to log out and log back in for the limits to take effect.\n");
         fprintf(stderr, "For more information please see\n");
         fprintf(stderr, "https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/r3732#linux\n");
