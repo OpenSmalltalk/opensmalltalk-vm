@@ -64,6 +64,13 @@ VMObjectProxy >> printOn: aStream [
 	aStream nextPutAll: ' for '; nextPutAll: shortPrint
 ]
 
+{ #category : #accessing }
+VMObjectProxy >> selector [
+	| selector |
+	selector := coInterpreter maybeSelectorOfMethod: oop.
+	^coInterpreter stringOf: selector
+]
+
 { #category : #printing }
 VMObjectProxy >> storeOn: aStream [
 	"We don't care about storing these things properly.  Doing so involves printing an entire VM.
