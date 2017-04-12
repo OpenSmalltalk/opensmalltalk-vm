@@ -5959,6 +5959,12 @@ CoInterpreter >> nativeStackPointerIn: theFP put: valueOopPointer [
 			[stackPages pointerAtPointer: theFP + FoxIFReceiver - (BytesPerWord*4) put: valueOopPointer]
 ]
 
+{ #category : #accessing }
+CoInterpreter >> needGCFlagAddress [
+	<doNotGenerate>
+		^objectMemory needGCFlagAddress
+]
+
 { #category : #'cog jit support' }
 CoInterpreter >> newMethod [
 	<doNotGenerate>

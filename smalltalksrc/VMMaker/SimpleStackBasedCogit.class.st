@@ -1731,7 +1731,7 @@ SimpleStackBasedCogit >> genExtEnsureAllocatableSlots [
 	self
 		MoveAw: objectMemory freeStartAddress R: TempReg;
 		CmpCq: objectMemory getScavengeThreshold - (objectMemory bytesPerOop * slots) R: TempReg.
-	skip := self JumpAboveOrEqual: 0.
+	skip := self JumpBelow: 0.
 	objectRepresentation genSetGCNeeded.
 	self CallRT: ceCheckForInterruptTrampoline.
 	skip jmpTarget: self Label.
