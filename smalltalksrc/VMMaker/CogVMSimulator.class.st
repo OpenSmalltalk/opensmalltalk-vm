@@ -3968,6 +3968,7 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self printOop: oop]];
 		add: 'long print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self longPrintOop: oop]];
 		add: 'print context...' action: [(self promptHex: 'print context') ifNotNil: [:oop| self printContext: oop]];
+		add: 'symbolic method...' action: [(self promptHex: 'method bytecodes') ifNotNil: [:oop| self symbolicMethod: oop]];
 		addLine;
 		add: 'inspect object memory' target: objectMemory action: #inspect;
 		add: 'run leak checker' action: [Cursor execute showWhile: [self runLeakChecker]];
