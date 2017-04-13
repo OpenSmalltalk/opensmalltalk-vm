@@ -156,7 +156,7 @@ StackDepthFinder >> encoderClass: anObject [
 ]
 
 { #category : #'instruction decoding' }
-StackDepthFinder >> ensureAllocateableSlots: numSlots [
+StackDepthFinder >> ensureAllocableSlots: numSlots [
 	"nothing to do here..."
 ]
 
