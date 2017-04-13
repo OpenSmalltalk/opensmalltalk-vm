@@ -391,14 +391,10 @@ ImageFormat class >> unixMagicFileEntries [
 				nextPutAll: 'Smalltalk '.
 				fmt printTerseDescriptionOn: s.
 				s lf.
-				s nextPutAll: '!:mime application/'.
-				fmt requiresSpurSupport
-					ifTrue: [ s nextPutAll: 'spur']
-					ifFalse: [fmt requiresClosureSupport ifTrue: [ s nextPutAll: 'cog']
-								ifFalse: [s nextPutAll: 'squeak']].
-				fmt is64Bit ifTrue: [ s nextPutAll: '64'].
-				s nextPutAll: '-image'.
-				s lf
+				s nextPutAll: '!:mime application/';
+					nextPutAll: fmt simpleName;
+					nextPutAll: '-image';
+					lf
 			]
 		].
 		s lf.
@@ -625,13 +621,9 @@ ImageFormat >> printOn: aStream [
 ImageFormat >> printTerseDescriptionOn: stream [
 	"Shortened description as may be required for unix magic file entries"
 
-	stream 
-		nextPutAll: 'image ';
-		nextPutAll: (self requiresSpurSupport
-			ifTrue: [ 'Spur ' ]
-			ifFalse: [ 'V3 ' ]);
-		nextPutAll: (wordSize * 8) asString;
-		nextPutAll: 'b '.
+	stream
+		nextPutAll: self simpleName;
+		nextPutAll: ' image '.
 	self requiresClosureSupport ifTrue: [stream nextPutAll: '+C'].
 	self requiresNativeFloatWordOrder ifTrue: [stream nextPutAll: '+NF'].
 	self requiresNewSpur64TagAssignment ifTrue: [stream nextPutAll: '+Tag' ].
@@ -718,6 +710,22 @@ ImageFormat >> setSpurSupportRequirement: aBoolean [
 	although the virtual machine is free to provide it."
 
 	requiresSpurSupport := aBoolean
+
+]
+
+{ #category : #printing }
+ImageFormat >> simpleName [
+
+	"Return a simple name for the format, suitable for use as filename or mimetype.
+	 (ImageFormat fromInteger: 6500) simpleName."
+
+	^String streamContents: [:s |
+			self requiresSpurSupport
+				ifTrue: [ s nextPutAll: 'spur']
+				ifFalse: [self requiresClosureSupport
+								ifTrue: [ s nextPutAll: 'cog']
+								ifFalse: [s nextPutAll: 'squeak']].
+			self is64Bit ifTrue: [ s nextPutAll: '64']].
 
 ]
 
