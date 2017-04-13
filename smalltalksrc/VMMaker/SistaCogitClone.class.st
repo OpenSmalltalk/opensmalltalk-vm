@@ -220,6 +220,8 @@ SistaCogitClone >> genBinaryConstOpVarInlinePrimitive: prim [
 				 self MulR: TempReg R: ra.
 				 objectRepresentation genSetSmallIntegerTagsIn: ra].
 
+		"2011 through 2015	Variable-sized pointers new, byte new, 16-bit new, 32-bit new, 64-bit new"
+
 		"2016 through 2020, bitAnd:, bitOr:, bitXor, bitShiftLeft:, bitShiftRight:, SmallInteger op SmallInteger => SmallInteger, no overflow"
 		[16] -> [ self AndCq: val R: ra ].
 		[17] -> [ self OrCq: val R: ra ].
@@ -930,6 +932,12 @@ SistaCogitClone >> genUnoptimizedSpecialSelectorComparison [
 SistaCogitClone >> generateSistaRuntime [
 	"Trap sends Sista trap message to context with top of stack, so we don't need any arguments..."
 	ceTrapTrampoline := self genTrampolineFor: #ceSistaTrap called: 'ceSistaTrapTrampoline'
+]
+
+{ #category : #accessing }
+SistaCogitClone >> getCogCodeZoneThreshold [
+	<doNotGenerate>
+	^methodZone getCogCodeZoneThreshold
 ]
 
 { #category : #'method introspection' }

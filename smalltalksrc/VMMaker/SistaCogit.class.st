@@ -1230,13 +1230,10 @@ SistaCogit >> genSpecialSelectorComparison [
 	
 	self Jump: (self ensureNonMergeFixupAt: postBranchPC).
 	countTripped jmpTarget: self Label.
-	jumpNotSmallInts ifNil:
-		[self annotateInstructionForBytecode.
-		 self ensureFixupAt: postBranchPC.
-		 self ensureFixupAt: targetPC.
-		 deadCode := true.
-		 ^0].
-	jumpNotSmallInts jmpTarget: countTripped getJmpTarget.
+	jumpNotSmallInts
+		ifNil: [(self fixupAt: nextPC) notAFixup ifTrue:
+				[branchReachedOnlyForCounterTrip := true]]
+		ifNotNil: [jumpNotSmallInts jmpTarget: countTripped getJmpTarget].
 	
 	argIsIntConst ifTrue:
 		[self MoveCq: argInt R: Arg0Reg].

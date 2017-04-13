@@ -688,6 +688,11 @@ CurrentImageCoInterpreterFacade >> maxLookupNoMNUErrorCode [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> maybeSelectorOfMethod: methodOop [
+	^self oopForObject: (self objectForOop: methodOop) selector
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> memory [
 	^memory
 ]
