@@ -506,22 +506,26 @@ RegisterAllocatingCogit >> flushRegistersOnlyLiveOnFallThrough: fixup [
 { #category : #'simulation stack' }
 RegisterAllocatingCogit >> freeAnyRegNotConflictingWith: regMask [
 	"Spill the closest register on stack not conflicting with regMask. 
-	 Override so no assertion failure if no register can be allocated."
+	 Override to unassign assigned temp regs if necessary."
 	<var: #desc type: #'CogSimStackEntry *'>
-	| reg index |
+	| index desc |
 	self assert: needsFrame.
-	reg := NoReg.
 	index := simSpillBase max: 0.
-	[reg = NoReg and: [index < simStackPtr]] whileTrue: 
-		[ | desc |
-		 desc := self simStackAt: index.
+	[index < simStackPtr] whileTrue: 
+		[desc := self simStackAt: index.
 		 desc type = SSRegister ifTrue:
 			[(regMask anyMask: (self registerMaskFor: desc register)) ifFalse: 
-				[reg := desc register]].
+				[self ssAllocateRequiredReg: desc register.
+				 ^desc register]].
 		 index := index + 1].
-	reg ~= NoReg ifTrue:
-		[self ssAllocateRequiredReg: reg].
-	^reg
+	0 to: methodOrBlockNumTemps - 1 do:
+		[:i|
+		 desc := self simStackAt: i.
+		 (desc liveRegister = NoReg
+		 or: [self register: desc liveRegister isInMask: regMask]) ifFalse:
+			[self ssAllocateRequiredReg: desc liveRegister.
+			 ^desc liveRegister]].
+	^NoReg
 ]
 
 { #category : #'trampoline support' }

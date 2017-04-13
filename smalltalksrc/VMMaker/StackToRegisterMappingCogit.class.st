@@ -492,7 +492,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		(2 235 235 genExtSendSuperBytecode isMapped)
 
 		"sista bytecodes"
-		(2 236 236 genExtEnsureAllocatableSlots isMapped)
+		(2 236 236 genExtEnsureAllocableSlots isMapped)
 
 		"jumps"
 		(2 237 237 genExtUnconditionalJump	branch isMapped "because of interrupt check" v4:Long:Branch:Distance:)
@@ -2461,7 +2461,7 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 	 result := deadCode
 				ifTrue: [self mapDeadDescriptorIfNeeded: descriptor]
 				ifFalse: [self perform: descriptor generator].
-	 self assertExtsAreConsumed: descriptor.
+	 result = 0 ifTrue: [self assertExtsAreConsumed: descriptor].
 	 self traceDescriptor: descriptor; traceSimStack.
 	 self patchFixupTargetIfNeeded: fixup nextOpcodeIndex: nextOpcodeIndex.
 	 self maybeDumpLiterals: descriptor.
@@ -3091,10 +3091,10 @@ StackToRegisterMappingCogit >> genCmpArgIsConstant: argIsConstant rcvrIsConstant
 ]
 
 { #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genExtEnsureAllocatableSlots [
-	"SistaV1	*	236	11101100	iiiiiiii	Ensure Allocatable Slots (+ Extend A * 256)"
+StackToRegisterMappingCogit >> genExtEnsureAllocableSlots [
+	"SistaV1	*	236	11101100	iiiiiiii	Ensure Allocable Slots (+ Extend A * 256)"
 	self ssFlushTo: simStackPtr.
-	^super genExtEnsureAllocatableSlots
+	^super genExtEnsureAllocableSlots
 ]
 
 { #category : #'bytecode generators' }
