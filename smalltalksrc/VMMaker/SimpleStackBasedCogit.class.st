@@ -1723,8 +1723,8 @@ SimpleStackBasedCogit >> genDoubleFailIfZeroArgRcvr: rcvrReg arg: argReg [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genExtEnsureAllocatableSlots [
-	"SistaV1	*	236	11101100	iiiiiiii	Ensure Allocatable Slots (+ Extend A * 256)"
+SimpleStackBasedCogit >> genExtEnsureAllocableSlots [
+	"SistaV1	*	236	11101100	iiiiiiii	Ensure Allocable Slots (+ Extend A * 256)"
 	| slots skip |
 	slots := (extA bitShift: 8) + byte1.
 	extA := 0.
