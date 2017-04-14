@@ -72,7 +72,7 @@ GdbARMAlien >> byteSwappedNopOpcode [
 
 { #category : #'accessing-abstract' }
 GdbARMAlien >> cResultRegister [
-	self r0
+	^self r0
 ]
 
 { #category : #'accessing-abstract' }
