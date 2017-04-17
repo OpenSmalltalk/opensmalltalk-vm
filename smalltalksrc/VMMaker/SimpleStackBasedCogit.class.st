@@ -2767,7 +2767,7 @@ SimpleStackBasedCogit >> genPrimitiveHashMultiply [
 	self RetN: 0.
 	jmpNotSmallInt jmpTarget: self Label.
 	jmpFailImm := objectRepresentation genJumpImmediate: ReceiverResultReg.
-	objectRepresentation genGetClassIndexOfNonImm: ReceiverResultReg into: ClassReg.
+	objectRepresentation genGetCompactClassIndexNonImmOf: ReceiverResultReg into: ClassReg.
 	self CmpCq: ClassLargePositiveIntegerCompactIndex R: ClassReg.
 	jmpFailNonImm := self JumpNonZero: 0.
 	objectRepresentation genLoadSlot: 0 sourceReg: ReceiverResultReg destReg: ReceiverResultReg.
