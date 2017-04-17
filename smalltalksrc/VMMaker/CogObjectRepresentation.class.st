@@ -1088,6 +1088,12 @@ CogObjectRepresentation >> genPrimitiveGreaterThan [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveHashMultiply [
+	<doNotGenerate>
+	^cogit genPrimitiveHashMultiply
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentation >> genPrimitiveIdentical [
 	^self genPrimitiveIdenticalOrNotIf: false
 ]

@@ -1289,7 +1289,7 @@ SistaCogit >> genUnaryInlinePrimitive: prim [
 				[self ssTop type ~= SSConstant ifTrue:
 					[^EncounteredUnknownBytecode].
 				 (objectRepresentation
-					genGetInstanceOf: self ssTop constant
+					genGetInstanceOfFixedClass: self ssTop constant
 						into: resultReg
 							initializingIf: self extBSpecifiesInitializeInstance) ~= 0 ifTrue:
 					[^ShouldNotJIT]. "e.g. bad class"
