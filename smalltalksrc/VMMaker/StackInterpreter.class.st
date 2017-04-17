@@ -147,7 +147,6 @@ Class {
 		'PrimNumberDoExternalCall',
 		'PrimNumberExternalCall',
 		'PrimNumberFFICall',
-		'PrimitiveExternalCallIndex',
 		'PrimitiveTable',
 		'StackPageReachedButUntraced',
 		'StackPageTraceInvalid',
@@ -974,7 +973,6 @@ StackInterpreter class >> initializeMiscConstants [
 	StackPageTraced := 2.
 
 	DumpStackOnLowSpace := 0.
-	PrimitiveExternalCallIndex := 117. "Primitive index for #primitiveExternalCall"
 	MillisecondClockMask := 16r1FFFFFFF.
 	"Note: The external primitive table should actually be dynamically sized but for the sake of inferior platforms (e.g., Mac :-) who cannot allocate memory in any reasonable way, we keep it static (and cross our fingers...)"
 	MaxExternalPrimitiveTableSize := 4096. "entries"
@@ -1181,7 +1179,8 @@ StackInterpreter class >> initializePrimitiveTable [
 		(149 primitiveGetAttribute)
 
 		"Were File Primitives (150-169) - NO LONGER INDEXED"
-		(150 159 primitiveFail)
+		(150 158 primitiveFail)
+		(159 primitiveHashMultiply)
 		(160 primitiveAdoptInstance)
 		(161 primitiveSetOrHasIdentityHash)
 		(162 primitiveFail)			"reserved for immutablity primitives"
@@ -5507,7 +5506,8 @@ StackInterpreter >> extJumpIfFalse [
 
 { #category : #'sista bytecodes' }
 StackInterpreter >> extJumpIfNotInstanceOfBehaviorsBytecode [
-	"254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
+	"254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B between: 0 and: 127)
+	 254		11111110	kkkkkkkk	jjjjjjjj		branch If Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B - 128 * 256, where Extend B between: 128 and: 255)"
 	| tosClassTag literal distance inverse |
 	SistaVM ifFalse: [^self respondToUnknownBytecode].
 	self assert: ((extB bitAnd: 128) = 0 or: [extB < 0]).
@@ -6748,7 +6748,7 @@ StackInterpreter >> flushExternalPrimitiveOf: methodObj [
 	| header primIdx lit |
 	header := objectMemory methodHeaderOf: methodObj.
 	primIdx := self primitiveIndexOfMethod: methodObj header: header.
-	(primIdx = PrimitiveExternalCallIndex
+	(primIdx = PrimNumberExternalCall
 	 and: [(objectMemory literalCountOfMethodHeader: header) > 0]) ifTrue: "If not, something's broken"
 		[lit := self literal: 0 ofMethod: methodObj.
 		((objectMemory isArray: lit) and: [(objectMemory numSlotsOf: lit) = 4]) ifTrue: "If not, something's broken"

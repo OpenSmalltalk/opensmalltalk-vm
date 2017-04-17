@@ -1127,16 +1127,16 @@ CCodeGenerator >> emitBuiltinConstructFor: msgNode on: aStream level: level [
 
 { #category : #'C code generator' }
 CCodeGenerator >> emitCAPIExportHeaderOn: aStream [ 
-	"Store prototype declarations for all non-inlined methods on the given stream."
-	| apiMethods usedConstants |
-	apiMethods := self sortMethods: (methods select: [:m| m isAPIMethod]).
-	apiMethods do:
+	"Store prototype declarations for all API methods on the given stream."
+	| exportedAPIMethods usedConstants |
+	exportedAPIMethods := self sortMethods: (methods select: [:m| m isAPIMethod]).
+	exportedAPIMethods do:
 		[:m|
 		m static ifTrue:
 			[logger ensureCr; show: m selector, ' excluded from export API because it is static'; cr]].
-	self emitCFunctionPrototypes: apiMethods on: aStream.
+	self emitCFunctionPrototypes: exportedAPIMethods on: aStream.
 	self emitGlobalCVariablesOn: aStream.
-	usedConstants := self emitCMacros: apiMethods on: aStream.
+	usedConstants := self emitCMacros: exportedAPIMethods on: aStream.
 	self emitCConstants: usedConstants on: aStream
 ]
 

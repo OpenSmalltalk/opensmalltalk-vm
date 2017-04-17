@@ -24,6 +24,7 @@ Class {
 		'PrimCallMayCallBack',
 		'PrimCallNeedsNewMethod',
 		'PrimCallNeedsPrimitiveFunction',
+		'PrimCallOnSmalltalkStack',
 		'ShouldNotJIT',
 		'UnfailingPrimitive',
 		'UnimplementedPrimitive',
