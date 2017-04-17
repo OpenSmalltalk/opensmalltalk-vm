@@ -2398,6 +2398,11 @@ CogVMSimulator >> maybeMapPrimitiveFunctionPointerBackToSomethingEvaluable [
 	^super maybeMapPrimitiveFunctionPointerBackToSomethingEvaluable
 ]
 
+{ #category : #'cog jit support' }
+CogVMSimulator >> mcprimFunctionForPrimitiveIndex: primIndex [
+	^self mapFunctionToAddress: (super mcprimFunctionForPrimitiveIndex: primIndex)
+]
+
 { #category : #accessing }
 CogVMSimulator >> memory [
 	^objectMemory memory

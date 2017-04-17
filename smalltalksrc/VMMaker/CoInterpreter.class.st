@@ -47,6 +47,7 @@ Class {
 		'HasBeenReturnedFromMCPCOop',
 		'MFMethodFlagFrameIsMarkedFlag',
 		'MinBackwardJumpCountForCompile',
+		'PrimNumberHashMultiply',
 		'PrimTraceLogSize',
 		'ReturnToInterpreter',
 		'RumpCStackSize',
@@ -245,9 +246,10 @@ CoInterpreter class >> initializeMiscConstants [
 	PrimCallNeedsNewMethod := 1.
 	PrimCallNeedsPrimitiveFunction := 2.
 	PrimCallMayCallBack := 4.
-	PrimCallCollectsProfileSamples := 8.
-	CheckAllocationFillerAfterPrimCall := 16.
-	PrimCallDoNotJIT := 32.
+	PrimCallOnSmalltalkStack := 8.
+	PrimCallCollectsProfileSamples := 16.
+	CheckAllocationFillerAfterPrimCall := 32.
+	PrimCallDoNotJIT := 64.
 
 	ReturnToInterpreter := 1. "setjmp/longjmp code."
 
@@ -295,6 +297,9 @@ CoInterpreter class >> initializeMiscConstants [
 { #category : #initialization }
 CoInterpreter class >> initializePrimitiveTable [
 	super initializePrimitiveTable.
+	PrimNumberHashMultiply := 159.
+	self assert: (PrimitiveTable at: PrimNumberHashMultiply + 1) = #primitiveHashMultiply.
+
 	#(216 253) do:
 		[:pidx| self assert: (PrimitiveTable at: pidx + 1) = #primitiveFail].
 	self assert: (PrimitiveTable at: 215 + 1) = #primitiveFlushCacheByMethod.
@@ -3567,7 +3572,7 @@ CoInterpreter >> flushExternalPrimitiveOf: methodObj [
 	<api>
 	| primIdx |
 	primIdx := super flushExternalPrimitiveOf: methodObj.
-	(primIdx = PrimitiveExternalCallIndex
+	(primIdx = PrimNumberExternalCall
 	 and: [self methodHasCogMethod: methodObj]) ifTrue:
 		[cogit
 			rewritePrimInvocationIn: (self cogMethodOf: methodObj)
@@ -5561,6 +5566,15 @@ CoInterpreter >> maybeTraceStackOverflow [
 ]
 
 { #category : #'cog jit support' }
+CoInterpreter >> mcprimFunctionForPrimitiveIndex: primIndex [
+	<api>
+	primIndex = PrimNumberHashMultiply ifTrue:
+		[^#mcprimHashMultiply:].
+	self error: 'unknown mcprim'.
+	^nil
+]
+
+{ #category : #'cog jit support' }
 CoInterpreter >> methodCacheAddress [
 	<api>
 	<returnTypeC: #'void *'>
@@ -6232,11 +6246,13 @@ CoInterpreter >> primitivePropertyFlagsForSpur: primIndex [
 	"Answer any special requirements of the given primitive.  Spur always needs to set
 	 primitiveFunctionPointer and newMethod so primitives can retry on failure due to forwarders."
 	| baseFlags |
+	self cCode: [] inSmalltalk: [#(mcprimHashMultiply: primitiveExternalCall primitiveCalloutToFFI)]. "For senders..."
+	primIndex = PrimNumberHashMultiply ifTrue:
+		[^PrimCallOnSmalltalkStack].
 	baseFlags := PrimCallNeedsPrimitiveFunction + PrimCallNeedsNewMethod.
 	profileSemaphore ~= objectMemory nilObject ifTrue:
 		[baseFlags := baseFlags bitOr: PrimCallCollectsProfileSamples].
 
-	self cCode: [] inSmalltalk: [#(primitiveExternalCall primitiveCalloutToFFI)]. "For senders..."
 		(primIndex = PrimNumberExternalCall "#primitiveExternalCall"
 	 or: [primIndex = PrimNumberFFICall "#primitiveCalloutToFFI"]) ifTrue: "For callbacks"
 		[baseFlags := baseFlags bitOr: PrimCallMayCallBack.
