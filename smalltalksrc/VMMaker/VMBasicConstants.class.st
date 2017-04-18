@@ -27,6 +27,8 @@ Class {
 		'GCModeImageSegment',
 		'GCModeIncremental',
 		'GCModeNewSpace',
+		'HashMultiplyConstant',
+		'HashMultiplyMask',
 		'IMMUTABILITY',
 		'LowcodeVM',
 		'MULTIPLEBYTECODESETS',
