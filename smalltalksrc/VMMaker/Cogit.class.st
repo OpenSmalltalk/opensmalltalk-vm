@@ -327,7 +327,7 @@ Class {
 		'generatorTable',
 		'primitiveTable'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -2705,6 +2705,13 @@ Cogit >> SubRs: dpreg1 Rs: dpreg2 [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
 	^self gen: SubRsRs operand: dpreg1 operand: dpreg2
+]
+
+{ #category : #'abstract instructions' }
+Cogit >> SubbCq: quickConstant R: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: SubbCqR quickConstant: quickConstant operand: reg
 ]
 
 { #category : #'abstract instructions' }
