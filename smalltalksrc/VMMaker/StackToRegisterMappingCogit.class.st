@@ -169,7 +169,7 @@ Class {
 		'numPushNilsFunction',
 		'pushNilSizeFunction'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -12917,6 +12917,24 @@ StackToRegisterMappingCogit >> printOptStatus [
 	coInterpreter transcript cr; flush
 ]
 
+{ #category : #'debug printing' }
+StackToRegisterMappingCogit >> printRegisterMask: registerMask on: aStream [
+	| first |
+	aStream nextPut: ${.
+	registerMask = 0
+		ifTrue:
+			[aStream nextPutAll: 'NoReg']
+		ifFalse:
+			[first := true.
+			 0 to: 31 do:
+				[:reg|
+				(registerMask anyMask: 1 << reg) ifTrue:
+					[first ifFalse: [aStream space].
+					 first := false.
+					 aStream nextPutAll: (backEnd nameForRegister: reg)]]].
+	aStream nextPut: $}; flush
+]
+
 { #category : #'simulation only' }
 StackToRegisterMappingCogit >> printSimSelf [
 	<doNotGenerate>
@@ -13424,7 +13442,7 @@ StackToRegisterMappingCogit >> ssAllocateRequiredRegMask: requiredRegsMask upThr
 	"If any of requiredRegsMask are live we must spill."
 	(liveRegs anyMask: requiredRegsMask) ifTrue:
 		[self ssFlushTo: lastRequired nativeFlushTo: lastRequiredNative.
-		self assert: (self liveRegisters bitAnd: requiredRegsMask) = 0]
+		 self deny: (self liveRegisters anyMask: requiredRegsMask)]
 ]
 
 { #category : #'simulation stack' }

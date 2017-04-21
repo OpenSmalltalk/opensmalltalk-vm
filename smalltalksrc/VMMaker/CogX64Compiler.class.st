@@ -75,7 +75,7 @@ Class {
 		'XMM8L',
 		'XMM9L'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -478,10 +478,12 @@ CogX64Compiler >> computeMaximumSize [
 
 		"Arithmetic"
 		[AddCqR]		-> [^self computeSizeOfArithCqR].
+		[AddcCqR]		-> [^self computeSizeOfArithCqR].
 		[AndCqR]		-> [^self computeSizeOfArithCqR].
 		[CmpCqR]		-> [^self computeSizeOfArithCqR].
-		[OrCqR]			-> [^self computeSizeOfArithCqR].
+		[OrCqR]		-> [^self computeSizeOfArithCqR].
 		[SubCqR]		-> [^self computeSizeOfArithCqR].
+		[SubbCqR]		-> [^self computeSizeOfArithCqR].
 		[TstCqR]		-> [^self computeSizeOfArithCqR].
 		[AddCwR]		-> [^self computeSizeOfArithCwR].
 		[AndCwR]		-> [^self computeSizeOfArithCwR].
@@ -494,12 +496,14 @@ CogX64Compiler >> computeMaximumSize [
 		[OrCwR]		-> [^self computeSizeOfArithCwR].
 		[SubCwR]		-> [^self computeSizeOfArithCwR].
 		[XorCwR]		-> [^self computeSizeOfArithCwR].
-		[AddRR]			-> [^3].
-		[AndRR]			-> [^3].
+		[AddRR]		-> [^3].
+		[AddcRR]		-> [^3].
+		[AndRR]		-> [^3].
 		[CmpRR]		-> [^3].
 		[OrRR]			-> [^3].
 		[XorRR]			-> [^3].
-		[SubRR]			-> [^3].
+		[SubRR]		-> [^3].
+		[SubbRR]		-> [^3].
 		[NegateR]		-> [^3].
 		[LoadEffectiveAddressMwrR]
 						-> [^((self isQuick: (operands at: 0))
@@ -3055,6 +3059,7 @@ CogX64Compiler >> dispatchConcretize [
 		[Stop]						-> [^self concretizeStop].
 		"Arithmetic"
 		[AddCqR]					-> [^self concretizeArithCqRWithRO: 0 raxOpcode: 15r05].
+		[AddcCqR]					-> [^self concretizeArithCqRWithRO: 2 raxOpcode: 15r15].
 		[AddCwR]					-> [^self concretizeArithCwR: 16r03].
 		[AddRR]						-> [^self concretizeOpRR: 16r03].
 		[AddRsRs]					-> [^self concretizeSEEOpRsRs: 16r58].
@@ -3077,6 +3082,7 @@ CogX64Compiler >> dispatchConcretize [
 		[OrCwR]					-> [^self concretizeArithCwR: 16r0B].
 		[OrRR]						-> [^self concretizeOpRR: 16r0B].
 		[SubCqR]					-> [^self concretizeArithCqRWithRO: 5 raxOpcode: 16r2D].
+		[SubbCqR]					-> [^self concretizeArithCqRWithRO: 3 raxOpcode: 16r1D].
 		[SubCwR]					-> [^self concretizeArithCwR: 16r2B].
 		[SubRR]						-> [^self concretizeOpRR: 16r2B].
 		[SubRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5C].

@@ -31,6 +31,11 @@ SistaCogitClone class >> initializeWithOptions: optionsDictionary [
 	MaxCounterValue := (1 << 16) - 1
 ]
 
+{ #category : #'accessing class hierarchy' }
+SistaCogitClone class >> methodZoneClass [
+	^SistaMethodZone
+]
+
 { #category : #accessing }
 SistaCogitClone class >> numTrampolines [
 	^super numTrampolines + 1
@@ -72,6 +77,14 @@ SistaCogitClone >> compileFullBlockMethodFrameBuild: numCopied [
 	super compileFullBlockMethodFrameBuild: numCopied.
 	counters ~= 0 ifTrue:
 		[self PrefetchAw: counters]
+]
+
+{ #category : #accessing }
+SistaCogitClone >> defaultCogCodeSize [
+	"Return the default number of bytes to allocate for native code at startup.
+	 The actual value can be set via vmParameterAt: and/or a preference in the ini file."
+	<api>
+	^2 * backEnd getDefaultCogCodeSize
 ]
 
 { #category : #disassembly }
@@ -139,6 +152,47 @@ SistaCogitClone >> fillInMethodHeader: method size: size selector: selector [
 SistaCogitClone >> fillInOPICHeader: pic numArgs: numArgs selector: selector [
 	pic counters: 0.
 	^super fillInOPICHeader: pic numArgs: numArgs selector: selector
+]
+
+{ #category : #'inline primitive generators' }
+SistaCogitClone >> genAtPutInlinePrimitive: prim [
+	"Unary inline primitives."
+	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
+	 See EncoderForSistaV1's class comment and StackInterpreter>>#trinaryInlinePrimitive:"
+	| ra1 ra2 rr adjust needsStoreCheck |
+	"The store check requires rr to be ReceiverResultReg"
+	needsStoreCheck := (objectRepresentation isUnannotatableConstant: self ssTop) not.
+	self 
+		allocateRegForStackTopThreeEntriesInto: [:rTop :rNext :rThird | ra2 := rTop. ra1 := rNext. rr := rThird ] 
+		thirdIsReceiver: (prim = 0 and: [ needsStoreCheck ]).
+	self assert: (rr ~= ra1 and: [rr ~= ra2 and: [ra1 ~= ra2]]).
+	self ssTop popToReg: ra2.
+	self ssPop: 1.
+	self ssTop popToReg: ra1.
+	self ssPop: 1.
+	self ssTop popToReg: rr.
+	self ssPop: 1.
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: ra1.
+	"Now: ra is the variable object, rr is long, TempReg holds the value to store."
+	self flag: #TODO. "This is not really working as the immutability and store check needs to be present. "
+	prim caseOf: {
+		"0 - 1 pointerAt:put: and byteAt:Put:"
+		[0] ->	[ adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
+				adjust ~= 0 ifTrue: [ self AddCq: adjust R: ra1. ]. 
+				self MoveR: ra2 Xwr: ra1 R: rr.
+				"I added needsStoreCheck so if you initialize an array with a Smi such as 0 or a boolean you don't need the store check"
+				needsStoreCheck ifTrue: 
+					[ self assert: needsFrame. 
+					objectRepresentation genStoreCheckReceiverReg: rr valueReg: ra2 scratchReg: TempReg inFrame: true] ].
+		[1] ->	[ objectRepresentation genConvertSmallIntegerToIntegerInReg: ra2.
+				adjust := objectMemory baseHeaderSize - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
+				self AddCq: adjust R: ra1.
+				self MoveR: ra2 Xbr: ra1 R: rr.
+				objectRepresentation genConvertIntegerToSmallIntegerInReg: ra2. ].
+	}
+	otherwise: [^EncounteredUnknownBytecode].
+	self ssPushRegister: ra2.
+	^0
 ]
 
 { #category : #'inline primitive generators' }
@@ -385,6 +439,173 @@ SistaCogitClone >> genBinaryVarOpVarInlinePrimitive: prim [
 	^0
 ]
 
+{ #category : #'inline primitive generators' }
+SistaCogitClone >> genByteEqualsInlinePrimitive: prim [
+
+	"3021	Byte Object >> equals:length:	
+	The receiver and the arguments are both byte objects and have both the same size (length in bytes). 
+	The length argument is a smallinteger. 
+	Answers true if all fields are equal, false if not. 
+	Comparison is bulked to word comparison."
+	
+	"Overview: 
+	 1.	The primitive is called like that: [byteObj1 equals: byteObj2 length: length].
+	  	In the worst case we use 5 registers including TempReg 
+		and we produce a loop bulk comparing words.
+	 2.	The common case is a comparison against a cst: [byteString = 'foo'].
+		which produces in Scorch [byteString equals: 'foo' length: 3].
+		We try to generate fast code for this case with 3 heuristics:
+		- specific fast code if len is a constant
+		- unroll the loop if len < 2 * wordSize
+		- compile-time reads if str1 or str2 is a constant and loop is unrolled.
+		We use 3 registers including TempReg in the common case. 
+		We could use 1 less reg if the loop is unrolled, the instr is followed by a branch
+		AND one operand is a constant, but this is complicated enough.
+	3.	We ignore the case where all operands are constants 
+		(We assume Scorch simplifies it, it works but it is not optimised)"
+		
+	| str1Reg str2Reg lenReg extraReg jmp jmp2 needjmpZeroSize needLoop unroll jmpZeroSize instr lenCst mask |
+	<var: #jmp type: #'AbstractInstruction *'>
+	<var: #instr type: #'AbstractInstruction *'>
+	<var: #jmp2 type: #'AbstractInstruction *'>
+	<var: #jmpZeroSize type: #'AbstractInstruction *'>
+
+	"--- quick path for empty string---"
+	"This path does not allocate registers and right shift on negative int later in the code.
+	 Normally this is resolved by Scorch but we keep it for correctness and consistency"
+	self ssTop type = SSConstant ifTrue: 
+		[ lenCst := objectMemory integerValueOf: self ssTop constant.
+		  lenCst = 0 ifTrue: [ self ssPop: 3. self ssPushConstant: objectMemory trueObject. ^ 0 ] ].
+
+	"--- Allocating & loading registers --- "
+	needLoop := (self ssTop type = SSConstant and: [ lenCst <= (objectMemory wordSize * 2) ]) not.
+	unroll := needLoop not and: [lenCst > objectMemory wordSize ].
+	needLoop 
+		ifTrue: 
+			[ str1Reg := self allocateRegForStackEntryAt: 1 notConflictingWith: self emptyRegisterMask.
+			  str2Reg := self allocateRegForStackEntryAt: 2 notConflictingWith: (self registerMaskFor: str1Reg).
+			  lenReg := self allocateRegForStackEntryAt: 0 notConflictingWith: (self registerMaskFor:str1Reg and: str2Reg).
+			  (self ssValue: 1) popToReg: str1Reg.
+			  (self ssValue: 2) popToReg: str2Reg.
+			  extraReg := self allocateRegNotConflictingWith: (self registerMaskFor: str1Reg and: str2Reg and: lenReg)]
+		ifFalse: 
+			[ mask := self emptyRegisterMask.
+			  (self ssValue: 1) type = SSConstant ifFalse: 
+				[ str1Reg := self allocateRegForStackEntryAt: 1 notConflictingWith: mask.
+				  (self ssValue: 1) popToReg: str1Reg.
+				  mask := mask bitOr: (self registerMaskFor: str1Reg) ].
+			  (self ssValue: 2) type = SSConstant ifFalse: 
+				[ str2Reg := self allocateRegForStackEntryAt: 2 notConflictingWith: mask.
+				  (self ssValue: 2) popToReg: str2Reg.
+				  mask := mask bitOr: (self registerMaskFor: str2Reg) ].
+			  extraReg := self allocateRegNotConflictingWith: mask].
+	
+	"--- Loading LenReg (or statically resolving it) --- "
+	"LenReg is loaded with (lenInBytes + objectMemory baseHeaderSize - 1 >> shiftForWord)
+	 LenReg is the index for the last word to compare with MoveXwr:r:R:.
+	 The loop iterates from LenReg to first word of ByteObj"
+	self ssTop type = SSConstant 
+		ifTrue: "common case, str = 'foo'. We can precompute lenReg."
+			[ lenCst := lenCst + objectMemory baseHeaderSize - 1 >> objectMemory shiftForWord.
+			  needLoop ifTrue: [self MoveCq: lenCst R: lenReg ].
+			  needjmpZeroSize := false] 
+		ifFalse: "uncommon case, str = str2. lenReg in word computed at runtime."
+			[ self ssTop popToReg: lenReg.
+			  objectRepresentation genConvertSmallIntegerToIntegerInReg: lenReg.
+			  self CmpCq: 0 R: lenReg.
+			  jmpZeroSize := self JumpZero: 0.
+			  needjmpZeroSize := true.
+			  self AddCq: objectMemory baseHeaderSize - 1 R: lenReg.
+			  self ArithmeticShiftRightCq: objectMemory shiftForWord R: lenReg ].
+	
+	"--- Comparing the strings --- "
+	"LenReg has the index of the last word to read (unless no loop). 
+	 We decrement it to adjust -1 (0 in 64 bits) while comparing"
+	needLoop 
+		ifTrue:
+			[instr := self MoveXwr: lenReg R: str1Reg R: extraReg.
+			self MoveXwr: lenReg R: str2Reg R: TempReg.
+			self CmpR: extraReg R: TempReg.
+			jmp := self JumpNonZero: 0. "then string are not equal (jmp target)"
+			self AddCq: -1 R: lenReg.
+			self CmpCq: (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1 R: lenReg. "first word of ByteObj, stop looping."
+			self JumpNonZero: instr]
+		ifFalse: "Common case, only 1 or 2 word to check: no lenReg allocation, cst micro optimisations"
+			[self genByteEqualsInlinePrimitiveCmp: str1Reg with: str2Reg scratch1: extraReg scratch2: TempReg field: 0.
+			jmp := self JumpNonZero: 0. "then string are not equal (jmp target)"
+			unroll ifTrue: "unrolling more than twice generate more instructions than the loop so we don't do it"
+				[self genByteEqualsInlinePrimitiveCmp: str1Reg with: str2Reg scratch1: extraReg scratch2: TempReg field: 1.
+				jmp2 := self JumpNonZero: 0. "then string are not equal (jmp target)"]].
+	needjmpZeroSize ifTrue: [ jmpZeroSize jmpTarget: self Label ].
+	"fall through, strings are equal"
+	
+	"--- Pushing the result or pipelining a branch --- "	
+	self ssPop: 3.
+	self genByteEqualsInlinePrimitiveResult: jmp returnReg: extraReg.
+	unroll ifTrue: [jmp2 jmpTarget: jmp getJmpTarget].
+	^0
+]
+
+{ #category : #'inline primitive generators' }
+SistaCogitClone >> genByteEqualsInlinePrimitiveCmp: str1Reg with: str2Reg scratch1: scratch1Reg scratch2: scratch2Reg field: index [
+	| shift |
+	<inline: true>
+	shift := objectMemory baseHeaderSize + (index * objectMemory wordSize).
+	(self ssValue: 1) type = SSConstant 
+		ifTrue: [self MoveCq: (objectMemory fetchPointer: index ofObject: (self ssValue: 1) constant) R: scratch1Reg]
+		ifFalse: [self MoveMw: shift r: str1Reg R: scratch1Reg].
+	 (self ssValue: 2) type = SSConstant 
+		ifTrue: [self MoveCq: (objectMemory fetchPointer: index ofObject: (self ssValue: 2) constant) R: scratch2Reg]
+		ifFalse: [self MoveMw: shift r: str2Reg R: scratch2Reg].
+	self CmpR: scratch1Reg R: scratch2Reg.
+]
+
+{ #category : #'inline primitive generators' }
+SistaCogitClone >> genByteEqualsInlinePrimitiveResult: jmp returnReg: reg [
+	"Byte equal is falling through if the result is true, or jumping using jmp if the result is false.
+	 The method is required to set the jump target of jmp.
+	 We look ahead for a branch and pipeline the jumps if possible..
+	 ReturnReg is used only if not followed immediately by a branch."
+	| branchDescriptor nextPC postBranchPC targetBytecodePC localJump canElide |
+	<var: #localJump type: #'AbstractInstruction *'>
+	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
+	self extractMaybeBranchDescriptorInto: [ :descr :next :postBranch :target | 
+		branchDescriptor := descr. nextPC := next. postBranchPC := postBranch. targetBytecodePC := target ].
+	
+	"Case 1 - not followed by a branch"
+	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse])
+		ifFalse: 
+			[self genMoveTrueR: reg.
+			 localJump := self Jump: 0.
+			 jmp jmpTarget: (self genMoveFalseR: reg).
+			 localJump jmpTarget: self Label.
+			 self ssPushRegister: reg.
+			^ 0].
+
+	"Case 2 - followed by a branch"
+	(self fixupAt: nextPC) notAFixup
+		ifTrue: "The next instruction is dead.  we can skip it."
+			[deadCode := true.
+		 	 self ensureFixupAt: targetBytecodePC.
+			 self ensureFixupAt: postBranchPC ]
+		ifFalse:
+			[self ssPushConstant: objectMemory trueObject]. "dummy value"
+	"We can only elide the jump if the pc after nextPC is the same as postBranchPC.
+	 Branch following means it may not be."
+	self nextDescriptorExtensionsAndNextPCInto:
+		[:iguana1 :iguana2 :iguana3 :followingPC| nextPC := followingPC].
+	canElide := deadCode and: [nextPC = postBranchPC].
+	 branchDescriptor isBranchTrue
+		ifTrue: 
+			[ self Jump: (self ensureNonMergeFixupAt: targetBytecodePC).
+			  canElide 
+					ifFalse: [ jmp jmpTarget: (self ensureNonMergeFixupAt: postBranchPC) ]
+					ifTrue: [ jmp jmpTarget: self Label ] ]
+		ifFalse: [ canElide ifFalse: [ self Jump: (self ensureNonMergeFixupAt: postBranchPC).
+				 jmp jmpTarget: (self ensureNonMergeFixupAt: targetBytecodePC) ] ].
+	^0
+]
+
 { #category : #'bytecode generators' }
 SistaCogitClone >> genCallPrimitiveBytecode [
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
@@ -533,6 +754,76 @@ SistaCogitClone >> genNullaryInlinePrimitive: prim [
 	^EncounteredUnknownBytecode
 ]
 
+{ #category : #'inline primitive generators' }
+SistaCogitClone >> genQuaternaryInlinePrimitive: prim [
+	"Quaternary inline primitives."
+	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
+	 See EncoderForSistaV1's class comment and StackInterpreter>>#quaternaryInlinePrimitive:"
+	| needStoreCheck sourceReg stopReg objReg adjust jmp cmp isStartCst isStopCst startCst stopCst iteratorReg |
+	<var: #jmp type: #'AbstractInstruction *'>
+	<var: #cmp type: #'AbstractInstruction *'>
+	prim = 0 ifFalse: [^EncounteredUnknownBytecode].
+	
+	"4000	Pointer Object>> fillFrom:to:with: The receiver is a Pointer object. the middle two arguments are smallintegers. Last argument is any object. Fills the object in between the two indexes with last argument. Receiver is guaranteed to be mutable. The pointer accesses are raw (no inst var check). If ExtB is set to 1, no store check is present. Else a single store check is done for the bulk operation. Answers the receiver."
+	needStoreCheck := self sistaNeedsStoreCheck.
+	extB := numExtB := 0.
+	
+	"Allocate reg for src, objToStore, iterator and stop."
+	sourceReg := needStoreCheck 
+		ifTrue: [	self ssAllocateRequiredReg: ReceiverResultReg.
+				self voidReceiverResultRegContainsSelf.
+				ReceiverResultReg ]
+		ifFalse: [ self allocateRegForStackEntryAt: 3 notConflictingWith: self emptyRegisterMask ].
+	(self ssValue: 3) popToReg: sourceReg.
+	objReg := self allocateRegForStackEntryAt: 0 notConflictingWith: (self registerMaskFor: sourceReg).
+	self ssTop popToReg: objReg.
+	
+	"Set up iterator to first index to write and stop to last index to write"
+	adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
+	isStartCst := (self ssValue: 2) type = SSConstant.
+	isStopCst := (self ssValue: 1) type = SSConstant.
+	isStartCst ifTrue: [startCst := adjust + (objectMemory integerValueOf: (self ssValue: 2) constant)].
+	isStopCst ifTrue: [stopCst := adjust + (objectMemory integerValueOf: (self ssValue: 1) constant)].
+	
+	(isStartCst
+	and: [isStopCst
+	and: [stopCst - startCst < 7 ]]) "The other path generates at least 7 instructions"
+		ifTrue: ["unroll"
+				startCst
+					to: stopCst
+					do: [ :i | self MoveMw: i r: sourceReg R: objReg ] ]
+		ifFalse: ["loop"
+				stopReg := self allocateRegNotConflictingWith: (self registerMaskFor: sourceReg and: objReg).
+				iteratorReg := self allocateRegNotConflictingWith: (self registerMaskFor: sourceReg and: objReg and: stopReg).
+				isStartCst 
+					ifTrue: [ self MoveCq: startCst R: iteratorReg ]
+					ifFalse: [ (self ssValue: 2) popToReg: iteratorReg. 
+							 adjust ~= 0 ifTrue: [ self AddCq: adjust R: iteratorReg ] ].
+				isStopCst 
+					ifTrue: [ self MoveCq: stopCst R: stopReg ]
+					ifFalse: [ (self ssValue: 1) popToReg: stopReg. 
+							 adjust ~= 0 ifTrue: [ self AddCq: adjust R: stopReg ] ].
+				cmp := self CmpR: stopReg R: iteratorReg.
+				jmp := self JumpAbove: 0.
+				self MoveR: objReg Xwr: iteratorReg R: sourceReg.
+				self AddCq: 1 R: iteratorReg.
+				self Jump: cmp.
+				jmp jmpTarget: self Label].
+			
+	needStoreCheck ifTrue: [objectRepresentation genStoreCheckReceiverReg: sourceReg valueReg: objReg scratchReg: TempReg inFrame: true].
+	
+	self ssPop: 4.
+	self ssPushRegister: sourceReg.
+	 ^0
+]
+
+{ #category : #'inline primitive generators' }
+SistaCogitClone >> genQuinaryInlinePrimitive: prim [
+	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
+	 See EncoderForSistaV1's class comment and StackInterpreter>>#quaternaryInlinePrimitive:"
+	^EncounteredUnknownBytecode
+]
+
 { #category : #'bytecode generators' }
 SistaCogitClone >> genSpecialSelectorComparisonWithoutCounters [
 	"This method is there because if I put directly the super send in genSpecialSelectorComparison Slang does not correctly translte the code to C, it does not correctly type one of the branchDescriptor to BytecodeDescriptor"
@@ -581,7 +872,7 @@ SistaCogitClone >> genUnaryInlinePrimitive: prim [
 				[self ssTop type ~= SSConstant ifTrue:
 					[^EncounteredUnknownBytecode].
 				 (objectRepresentation
-					genGetInstanceOf: self ssTop constant
+					genGetInstanceOfFixedClass: self ssTop constant
 						into: resultReg
 							initializingIf: self extBSpecifiesInitializeInstance) ~= 0 ifTrue:
 					[^ShouldNotJIT]. "e.g. bad class"
@@ -668,6 +959,14 @@ SistaCogitClone >> initialize [
 SistaCogitClone >> initializeCodeZoneFrom: startAddress upTo: endAddress [
 	initialCounterValue := MaxCounterValue.
 	super initializeCodeZoneFrom: startAddress upTo: endAddress
+]
+
+{ #category : #'simulation only' }
+SistaCogitClone >> isTrapAt: retpc [
+	"For stack depth checking."
+	<doNotGenerate>
+	^(backEnd isCallPrecedingReturnPC: retpc)
+	 and: [(backEnd callTargetFromReturnAddress: retpc) = ceTrapTrampoline]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -941,4 +1240,10 @@ SistaCogitClone >> printPICDataForMethods [
 SistaCogitClone >> resetCountersIn: cogMethod [
 	<doNotGenerate>
 	objectRepresentation resetCountersIn: cogMethod
+]
+
+{ #category : #accessing }
+SistaCogitClone >> setCogCodeZoneThreshold: threshold [
+	<doNotGenerate>
+	^methodZone setCogCodeZoneThreshold: threshold
 ]
