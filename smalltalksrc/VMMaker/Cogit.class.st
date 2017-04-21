@@ -2708,6 +2708,13 @@ Cogit >> SubRs: dpreg1 Rs: dpreg2 [
 ]
 
 { #category : #'abstract instructions' }
+Cogit >> SubbCq: quickConstant R: reg [
+	<inline: true>
+	<returnTypeC: #'AbstractInstruction *'>
+	^self gen: SubbCqR quickConstant: quickConstant operand: reg
+]
+
+{ #category : #'abstract instructions' }
 Cogit >> SubbR: reg1 R: reg2 [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
