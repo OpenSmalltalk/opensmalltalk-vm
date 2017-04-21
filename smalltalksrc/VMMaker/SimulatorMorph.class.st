@@ -44,7 +44,7 @@ Class {
 		'forceInterruptCheckButton',
 		'hackButton'
 	],
-	#category : #'VMMaker-InterpreterSimulation-Morphic'
+	#category : 'VMMaker-InterpreterSimulation-Morphic'
 }
 
 { #category : #documentation }
