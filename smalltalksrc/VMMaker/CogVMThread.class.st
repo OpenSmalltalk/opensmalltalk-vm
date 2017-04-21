@@ -25,7 +25,7 @@ Class {
 	#pools : [
 		'VMThreadingConstants'
 	],
-	#category : #'VMMaker-Multithreading'
+	#category : 'VMMaker-Multithreading'
 }
 
 { #category : #simulation }
