@@ -2800,7 +2800,7 @@ StackToRegisterMappingCogit >> ensureNonMergeFixupAt: targetPC [
 StackToRegisterMappingCogit >> ensureReceiverResultRegContainsSelf [
 	needsFrame
 		ifTrue:
-			[optStatus isReceiverResultRegLive ifFalse:
+			[self receiverIsInReceiverResultReg ifFalse:
 				[self ssAllocateRequiredReg: ReceiverResultReg.
 				self putSelfInReceiverResultReg ].
 			optStatus isReceiverResultRegLive: true]
@@ -11532,7 +11532,7 @@ StackToRegisterMappingCogit >> genPushNewArrayBytecode [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genPushReceiverBytecode [
-	optStatus isReceiverResultRegLive ifTrue:
+	self receiverIsInReceiverResultReg ifTrue:
 		[^self ssPushRegister: ReceiverResultReg].
 	self assert: simSelf registerOrNone = NoReg.
 	^self ssPushDesc: simSelf
@@ -11601,7 +11601,7 @@ StackToRegisterMappingCogit >> genReturnReceiver [
 	"In a frameless method ReceiverResultReg already contains self.
 	 In a frameful method, ReceiverResultReg /may/ contain self."
 	needsFrame ifTrue:
-		[ optStatus isReceiverResultRegLive ifFalse:
+		[self receiverIsInReceiverResultReg ifFalse:
 			[self putSelfInReceiverResultReg]].
 	^self genUpArrowReturn
 ]
@@ -12387,6 +12387,14 @@ StackToRegisterMappingCogit >> generateTracingTrampolines [
 ]
 
 { #category : #'simulation stack' }
+StackToRegisterMappingCogit >> initOptStatus: receiverResultRegLive [
+	<inline: true>
+	optStatus 
+		isReceiverResultRegLive: receiverResultRegLive;
+		ssEntry: (self addressOf: simSelf)
+]
+
+{ #category : #'simulation stack' }
 StackToRegisterMappingCogit >> initSimStackForFramefulMethod: startpc [
 	<var: #desc type: #'CogSimStackEntry *'>
 	simSelf
@@ -12394,9 +12402,7 @@ StackToRegisterMappingCogit >> initSimStackForFramefulMethod: startpc [
 		spilled: true;
 		register: FPReg;
 		offset: FoxMFReceiver.
-	optStatus 
-		isReceiverResultRegLive: false;
-		ssEntry: (self addressOf: simSelf).
+	self initOptStatus: false.
 	simSpillBase := methodOrBlockNumTemps. "N.B. Includes num args"
 	simStackPtr := simSpillBase - 1.
 	LowcodeVM ifTrue: [
@@ -12436,9 +12442,7 @@ StackToRegisterMappingCogit >> initSimStackForFramelessBlock: startpc [
 		type: SSRegister;
 		spilled: false;
 		register: ReceiverResultReg.
-	optStatus
-		isReceiverResultRegLive: true;
-		ssEntry: (self addressOf: simSelf).
+	self initOptStatus: true.
 	self assert: methodOrBlockNumTemps >= methodOrBlockNumArgs.
 	0 to: methodOrBlockNumTemps - 1 do:
 		[:i|
@@ -12466,9 +12470,7 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 		type: SSRegister;
 		spilled: false;
 		register: ReceiverResultReg.
-	optStatus
-		isReceiverResultRegLive: true;
-		ssEntry: (self addressOf: simSelf).
+	self initOptStatus: true.
 	self assert: methodOrBlockNumTemps = methodOrBlockNumArgs.
 	self assert: self numRegArgs <= 2.
 	(methodOrBlockNumArgs between: 1 and: self numRegArgs)
@@ -13009,6 +13011,14 @@ StackToRegisterMappingCogit >> putSelfInReceiverResultReg [
 	<inline: true>
 	 (self addressOf: simSelf) storeToReg: ReceiverResultReg
 		
+]
+
+{ #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> receiverIsInReceiverResultReg [
+	"Used to mark ReceiverResultReg as dead or not containing simSelf.
+	 Used when the simStack has already been flushed, e.g. for sends."
+	<inline: true>
+	^optStatus isReceiverResultRegLive
 ]
 
 { #category : #'compile abstract instructions' }
@@ -14121,7 +14131,7 @@ StackToRegisterMappingCogit >> voidReceiverResultRegContainsSelf [
 	"Used when ReceiverResultReg is allocated for other than simSelf, and
 	 there may be references to ReceiverResultReg which need to be spilled."
 	| spillIndex |
-	optStatus isReceiverResultRegLive: false.
+	self voidReceiverOptStatus.
 	spillIndex := -1.
 	(methodOrBlockNumTemps max: simSpillBase) to: simStackPtr do:
 		[:i|
