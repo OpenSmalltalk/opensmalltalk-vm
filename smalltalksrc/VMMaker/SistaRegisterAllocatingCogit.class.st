@@ -371,7 +371,7 @@ SistaRegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	"try and use the top entry's register if any, but only if it can be destroyed."
 	reg := (desc type ~= SSRegister
 			or: [(self anyReferencesToRegister: desc register inAllButTopNItems: 0)
-			or: [(desc register = ReceiverResultReg and: [optStatus isReceiverResultRegLive])]])
+			or: [(desc register = ReceiverResultReg and: [self receiverIsInReceiverResultReg])]])
 				ifTrue: [TempReg]
 				ifFalse: [desc register].
 	desc popToReg: reg.
