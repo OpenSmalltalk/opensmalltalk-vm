@@ -248,7 +248,6 @@ and then retry.
 
 
 Ubuntu
-	sudo apt-get install libcairo2-dev   
-	sudo apt-get install libpango1.0-dev
+	sudo apt-get install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx
 
 More advice and examples for other distros gratefully received.
