@@ -44,7 +44,7 @@ Class {
 		'TempReg',
 		'VarBaseReg'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'class initialization' }

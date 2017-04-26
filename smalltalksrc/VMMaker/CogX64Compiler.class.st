@@ -75,7 +75,7 @@ Class {
 		'XMM8L',
 		'XMM9L'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }

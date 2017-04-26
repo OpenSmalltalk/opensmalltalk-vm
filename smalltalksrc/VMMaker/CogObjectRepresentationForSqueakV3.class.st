@@ -20,7 +20,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMSqueakV3ObjectRepresentationConstants'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'accessing class hierarchy' }
