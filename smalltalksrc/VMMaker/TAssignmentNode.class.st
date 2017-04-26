@@ -5,7 +5,7 @@ Class {
 		'variable',
 		'expression'
 	],
-	#category : 'VMMaker-Translation to C'
+	#category : #'VMMaker-Translation to C'
 }
 
 { #category : #transformations }

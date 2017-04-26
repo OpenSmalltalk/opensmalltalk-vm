@@ -10,7 +10,7 @@ Class {
 		'resolverSemaphoreIndex',
 		'ipv6support'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'initialize-release' }
