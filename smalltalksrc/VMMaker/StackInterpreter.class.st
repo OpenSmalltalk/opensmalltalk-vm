@@ -3526,9 +3526,16 @@ StackInterpreter >> callPrimitiveBytecode [
 				
 				 prim < 3000 ifTrue:
 					[^self binaryInlinePrimitive: prim - 2000].
-
+				
 				 prim < 4000 ifTrue:
 					[^self trinaryInlinePrimitive: prim - 3000].
+
+				 prim < 5000 ifTrue:
+					[^self quaternaryInlinePrimitive: prim - 4000].
+
+				 prim < 6000 ifTrue:
+					[^self quinaryInlinePrimitive: prim - 5000].
+				
 			 ].
 		
 			LowcodeVM ifTrue: [
@@ -18187,6 +18194,13 @@ StackInterpreter >> putWord32: aWord32 toFile: aFile [
 	self success: objectsWritten = 1
 ]
 
+{ #category : #'miscellaneous bytecodes' }
+StackInterpreter >> quaternaryInlinePrimitive: primIndex [
+	"SistaV1:	248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution."
+	<option: #SistaVM>
+	self respondToUnknownBytecode
+]
+
 { #category : #utilities }
 StackInterpreter >> quickFetchInteger: fieldIndex ofObject: objectPointer [
 	"Return the integer value of the field without verifying that it is an integer value! For use in time-critical places where the integer-ness of the field can be guaranteed."
@@ -18195,6 +18209,26 @@ StackInterpreter >> quickFetchInteger: fieldIndex ofObject: objectPointer [
 	oop := objectMemory fetchPointer: fieldIndex ofObject: objectPointer.
 	self assert: (objectMemory isIntegerObject: oop).
 	^objectMemory integerValueOf: oop
+]
+
+{ #category : #'miscellaneous bytecodes' }
+StackInterpreter >> quinaryInlinePrimitive: primIndex [
+	"SistaV1:	248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution."
+	| src srcIndex dest destIndex destLimit oop |
+	<option: #SistaVM>
+	primIndex = 0 ifFalse: [self respondToUnknownBytecode].
+	dest := self internalStackValue: 4.
+	destIndex := (objectMemory integerValueOf: (self internalStackValue: 3)) - 1.
+	destLimit := (objectMemory integerValueOf: (self internalStackValue: 2)) - 1.
+	src := self internalStackValue: 1.
+	srcIndex := (objectMemory integerValueOf: (self internalStackValue: 0)) - 1.
+	self internalPop: 4.
+	destLimit < destIndex ifTrue: [^self].
+	(objectMemory isYoung: dest) ifFalse: [objectMemory possibleRootStoreInto: dest].
+	0 to: destLimit - destIndex do: [:i |
+		oop := objectMemory fetchPointer: srcIndex + i ofObject: src.
+		objectMemory storePointerUnchecked: destIndex + i ofObject: dest withValue: oop ].
+	
 ]
 
 { #category : #'image save/restore' }
