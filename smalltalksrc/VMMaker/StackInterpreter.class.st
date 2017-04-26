@@ -163,7 +163,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMStackFrameOffsets'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #translation }
@@ -1836,16 +1836,15 @@ StackInterpreter >> accessModifierOfMethodHeader: header [
 ]
 
 { #category : #'control primitives' }
-StackInterpreter >> activateNewClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: mayContextSwitch [
+StackInterpreter >> activateNewClosure: blockClosure outer: outerContext method: theMethod  numArgs: numArgs mayContextSwitch: mayContextSwitch [
 	"Similar to activateNewMethod but for Closure and newMethod."
-	| numCopied outerContext theMethod closureIP |
+	| numCopied closureIP |
 	<inline: true>
-	outerContext := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
 	self assert: (objectMemory isContext: outerContext).
 	numCopied := self copiedValueCountOfClosure: blockClosure.
-
-	theMethod := objectMemory fetchPointer: MethodIndex ofObject: outerContext.
+	self assert: theMethod = (objectMemory fetchPointer: MethodIndex ofObject: outerContext).
 	self assert: (objectMemory isOopCompiledMethod: theMethod).
+
 	self push: instructionPointer.
 	self push: framePointer.
 	framePointer := stackPointer.
@@ -1881,13 +1880,12 @@ StackInterpreter >> activateNewClosureMethod: blockClosure numArgs: numArgs mayC
 ]
 
 { #category : #'control primitives' }
-StackInterpreter >> activateNewFullClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: mayContextSwitch [
+StackInterpreter >> activateNewFullClosure: blockClosure method: theMethod numArgs: numArgs mayContextSwitch: mayContextSwitch [
 	"Similar to activateNewMethod but for Closure and newMethod."
-	| numCopied theMethod methodHeader numTemps |
+	| numCopied methodHeader numTemps |
 	<inline: true>
+	self assert: theMethod = (objectMemory fetchPointer: FullClosureCompiledBlockIndex ofObject: blockClosure).
 	numCopied := self copiedValueCountOfFullClosure: blockClosure.
-	theMethod := objectMemory fetchPointer: FullClosureCompiledBlockIndex ofObject: blockClosure.
-	self assert: (objectMemory isOopCompiledMethod: theMethod).
 	self push: instructionPointer.
 	self push: framePointer.
 	framePointer := stackPointer.

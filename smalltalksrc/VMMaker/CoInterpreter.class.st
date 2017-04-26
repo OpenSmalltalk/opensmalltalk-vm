@@ -75,7 +75,7 @@ Class {
 		'CogMethodConstants',
 		'VMStackFrameOffsets'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -510,17 +510,15 @@ CoInterpreter >> activateCoggedNewMethod: inInterpreter [
 ]
 
 { #category : #'control primitives' }
-CoInterpreter >> activateNewClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: mayContextSwitch [
+CoInterpreter >> activateNewClosure: blockClosure outer: outerContext method: theMethod  numArgs: numArgs mayContextSwitch: mayContextSwitch [
 	"Similar to activateNewMethod but for Closure and newMethod.
 	 Override to handle the various interpreter/machine code transitions
 	 and to create an appropriate frame layout."
-	| numCopied outerContext theMethod methodHeader inInterpreter closureIP switched |
+	| numCopied methodHeader inInterpreter closureIP switched |
 	<inline: true>
-	outerContext := objectMemory fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
 	self assert: (objectMemory isContext: outerContext).
-	self assert: outerContext ~= blockClosure.
 	numCopied := self copiedValueCountOfClosure: blockClosure.
-	theMethod := objectMemory fetchPointer: MethodIndex ofObject: outerContext.
+	self assert: theMethod = (objectMemory fetchPointer: MethodIndex ofObject: outerContext).
 	self assert: (objectMemory isOopCompiledMethod: theMethod).
 	methodHeader := self rawHeaderOf: theMethod.
 	(self isCogMethodReference: methodHeader) ifTrue:
@@ -603,19 +601,18 @@ CoInterpreter >> activateNewClosureMethod: blockClosure numArgs: numArgs mayCont
 ]
 
 { #category : #'control primitives' }
-CoInterpreter >> activateNewFullClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: mayContextSwitch [
+CoInterpreter >> activateNewFullClosure: blockClosure method: theMethod numArgs: numArgs mayContextSwitch: mayContextSwitch [
 	"Similar to activateNewMethod but for Closure and newMethod."
-	| numCopied theMethod methodHeader numTemps inInterpreter switched |
+	| numCopied methodHeader numTemps inInterpreter switched |
 	<inline: true>
-	numCopied := self copiedValueCountOfFullClosure: blockClosure.
-	theMethod := objectMemory fetchPointer: FullClosureCompiledBlockIndex ofObject: blockClosure.
-	self assert: (objectMemory isOopCompiledMethod: theMethod).
+	self assert: theMethod = (objectMemory fetchPointer: FullClosureCompiledBlockIndex ofObject: blockClosure).
 	methodHeader := self rawHeaderOf: theMethod.
 	(self isCogMethodReference: methodHeader) ifTrue:
 		[^self
 			executeFullCogBlock: (self cogMethodOf: theMethod)
 			closure: blockClosure
 			mayContextSwitch: mayContextSwitch].
+	numCopied := self copiedValueCountOfFullClosure: blockClosure.
 	"How do we know when to compile a block method?
 	 One simple criterion is to check if the block is running within its inner context,
 	 i.e. if the outerContext is married.

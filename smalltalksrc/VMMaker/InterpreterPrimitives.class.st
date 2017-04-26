@@ -74,7 +74,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMStackFrameOffsets'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #'C translation' }
@@ -1271,7 +1271,7 @@ InterpreterPrimitives >> primitiveClosureValue [
 	(objectMemory isOopCompiledMethod: closureMethod) ifFalse:
 		[^self primitiveFail].
 
-	self activateNewClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: true
+	self activateNewClosure: blockClosure outer: outerContext method: closureMethod numArgs: numArgs mayContextSwitch: true
 ]
 
 { #category : #'control primitives' }
@@ -1297,7 +1297,7 @@ InterpreterPrimitives >> primitiveClosureValueNoContextSwitch [
 	(objectMemory isOopCompiledMethod: closureMethod) ifFalse:
 		[^self primitiveFail].
 
-	self activateNewClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: false
+	self activateNewClosure: blockClosure outer: outerContext method: closureMethod numArgs: numArgs mayContextSwitch: false
 ]
 
 { #category : #'control primitives' }
@@ -1335,7 +1335,7 @@ InterpreterPrimitives >> primitiveClosureValueWithArgs [
 		[self push: (objectMemory fetchPointer: index - 1 ofObject: argumentArray).
 		index := index + 1].
 
-	self activateNewClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: true
+	self activateNewClosure: blockClosure outer: outerContext method: closureMethod numArgs: numArgs mayContextSwitch: true
 ]
 
 { #category : #'indexing primitives' }
@@ -2017,7 +2017,7 @@ InterpreterPrimitives >> primitiveFullClosureValue [
 	(objectMemory isOopCompiledMethod: closureMethod) ifFalse:
 		[^self primitiveFail].
 
-	self activateNewFullClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: true
+	self activateNewFullClosure: blockClosure method: closureMethod numArgs: numArgs mayContextSwitch: true
 ]
 
 { #category : #'control primitives' }
@@ -2037,7 +2037,7 @@ InterpreterPrimitives >> primitiveFullClosureValueNoContextSwitch [
 	(objectMemory isOopCompiledMethod: closureMethod) ifFalse:
 		[^self primitiveFail].
 
-	self activateNewFullClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: false
+	self activateNewFullClosure: blockClosure method: closureMethod numArgs: numArgs mayContextSwitch: false
 ]
 
 { #category : #'control primitives' }
@@ -2058,7 +2058,6 @@ InterpreterPrimitives >> primitiveFullClosureValueWithArgs [
 	arraySize = numArgs ifFalse:
 		[^self primitiveFail].
 
-
 	closureMethod := objectMemory fetchPointer: FullClosureCompiledBlockIndex ofObject: blockClosure.
 	(objectMemory isOopCompiledMethod: closureMethod) ifFalse:
 		[^self primitiveFail].
@@ -2071,7 +2070,7 @@ InterpreterPrimitives >> primitiveFullClosureValueWithArgs [
 		[self push: (objectMemory fetchPointer: index - 1 ofObject: argumentArray).
 		index := index + 1].
 
-	self activateNewFullClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: true
+	self activateNewFullClosure: blockClosure method: closureMethod numArgs: numArgs mayContextSwitch: true
 ]
 
 { #category : #'memory space primitives' }
