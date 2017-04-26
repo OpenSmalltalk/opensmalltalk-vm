@@ -22,7 +22,7 @@ Class {
 		'VMBytecodeConstants',
 		'VMSqueakClassIndices'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -902,15 +902,14 @@ CogObjectRepresentationForSpur >> genGetIdentityHash: rcvrReg resultReg: resultR
 			 cogit CmpCq: ConstZero R: resultReg.
 			 jumpSet := cogit JumpNonZero: 0.
 			 cogit MoveR: rcvrReg R: resultReg.
-			 cogit CallRT: ceInlineNewHashTrampoline.
-			 cogit annotateBytecode: cogit Label]
+			 cogit CallRT: ceInlineNewHashTrampoline]
 		ifFalse: 
 			[cogit ssTop popToReg: ReceiverResultReg.
 		 	 self genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: resultReg.
 			 cogit CmpCq: ConstZero R: resultReg.
 			 jumpSet := cogit JumpNonZero: 0.
 			 cogit CallRT: ceInlineNewHashTrampoline.
-			 cogit annotateBytecode: (cogit MoveR: ReceiverResultReg R: resultReg)].
+			 cogit MoveR: ReceiverResultReg R: resultReg].
 	jumpSet jmpTarget: cogit Label
 ]
 

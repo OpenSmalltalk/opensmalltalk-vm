@@ -52,7 +52,7 @@ Class {
 		'recompileForLoopRegisterAssignments',
 		'scratchBytecodePC'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'C translation' }
