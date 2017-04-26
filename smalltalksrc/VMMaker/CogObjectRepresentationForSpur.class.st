@@ -228,10 +228,21 @@ CogObjectRepresentationForSpur >> cacheTagIsMarked: cacheTag [
 	^true
 ]
 
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> callStoreCheckTrampoline [
+	cogit CallRT: ceStoreCheckTrampoline
+]
+
 { #category : #testing }
 CogObjectRepresentationForSpur >> canPinObjects [
 	"Answer if the memory manager supports pinned objects."
 	^true
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> checkRememberedInTrampoline [
+	<inline: true>
+	^ CheckRememberedInTrampoline
 ]
 
 { #category : #'debug support' }
