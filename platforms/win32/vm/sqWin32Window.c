@@ -1733,16 +1733,101 @@ ioDrainEventQueue(void)
 #endif /* NewspeakVM */
 
 
+/////////////////////////////////
+
+/*
+ * The "correct" way to identify a windows-version, apparently
+ */
+static BOOL IsWindowsVersionOrGreater(WORD wMajorVersion, WORD wMinorVersion, WORD wServicePackMajor)
+{
+  OSVERSIONINFOEXW osvi = { 0 };
+  DWORDLONG  dwlConditionMask = 0;
+  const int op = VER_GREATER_EQUAL;
+  osvi.dwOSVersionInfoSize = sizeof(osvi);
+  osvi.dwMajorVersion = wMajorVersion;
+  osvi.dwMinorVersion = wMinorVersion;
+  osvi.wServicePackMajor = wServicePackMajor;
+  VER_SET_CONDITION( dwlConditionMask, VER_MAJORVERSION, op );
+  VER_SET_CONDITION( dwlConditionMask, VER_MINORVERSION, op );
+  VER_SET_CONDITION( dwlConditionMask, VER_SERVICEPACKMAJOR, op );
+  VER_SET_CONDITION( dwlConditionMask, VER_SERVICEPACKMINOR, op );
+  return VerifyVersionInfoW(&osvi, VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR, dwlConditionMask) != FALSE;
+}
+
+inline BOOL IsWindows_8_1(void)
+{
+  return IsWindowsVersionOrGreater(HIBYTE(_WIN32_WINNT_WINBLUE), LOBYTE(_WIN32_WINNT_WINBLUE), 0);
+}
+
+
+/*
+ * Lazy-loaded GetDpiForMonitor, which is not on Windows7 and Windows8
+ */
+typedef HRESULT (*thisGetDpiForMonitor_t)(HMONITOR,UINT,UINT *,UINT *);
+static thisGetDpiForMonitor_t thisGetDpiForMonitor = NULL;
+
+/*
+ * Expected to be called only once.
+ * But I'm just a function, not a cop.
+ */
+getDpi_t determineGetDpiFunction(void)
+{
+  static BOOL hasGetDpiForMonitor = IsWindows_8_1();
+  HMODULE shcore = NULL;
+  if (hasGetDpiForMonitor) {
+    if (thisGetDpiForMonitor) {
+      return getDpiMonitor;
+    } else {
+      // Ensure GetDpiForMonitor (And shcore.dll) is there, else use fallback.
+      if ((shcore = LoadLibrary("Shcore.dll"))) {
+        if ((thisGetDpiForMonitor = (thisGetDpiForMonitor_t)GetProcAddress(shcore, "GetDpiForMonitor"))) {
+          return getDpiMonitor;
+        }
+      }
+    }
+  }
+  return getDpiSystem;
+}
+
+/*
+ * Load-time determined available dpi-getter
+ */
+typedef double (*getDpi_t)(void);
+
+/*
+ * Per-system DPI (for Windows < 8.1)
+ */
+static double getDpiSystem(void)
+{
+  return (double) GetDeviceCaps(GetWindowDC(stWindow), LOGPIXELSY);
+}
+
+
+static double getDpiMonitor(void)
+{
+  UINT hdpi = 0, vdpi = 0;
+  HMONITOR hMonitor = NULL;
+
+  if (!thisGetDpiForMonitor) { return result; }
+
+  if ((hMonitor = MonitorFromWindow(stWindow, MONITOR_DEFAULTTONULL))) {
+    if (thisGetDpiForMonitor(hMonitor, 0, &hdpi, &vdpi) == S_OK && hdpi > 0 && vdpi > 0) {
+      return (double) vdpi;
+    }
+  }
+  return 0.0;
+}
+
+
+const double BASE_DPI = 96.0;
+
 double ioScreenScaleFactor(void)
 {
-  const double BASE_DPI = 96.0;
+  static getDpi_t getDpi = determineGetDpiFunction();
   double factor = 1.0;
-
-  HDC dc = GetDC(stWindow);
-  if (dc) {
-    double physicalDpi = (double) GetDeviceCaps(dc, LOGPIXELSY);
+  double physicalDpi = getDPI();
+  if (fabs(BASE_DPI - physicalDpi) > DBL_EPSILON) {
     factor = physicalDpi / BASE_DPI;
-    ReleaseDC(stWindow, dc);
   }
   return factor;
 }
