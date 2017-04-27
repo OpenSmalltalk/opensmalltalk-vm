@@ -504,7 +504,7 @@ GdbARMAlien >> disassembleFrom: startAddress to: endAddress in: memory for: aSym
 				 size := label third]].
 		string ifNotNil:
 			[aStream nextPutAll: (self decorateDisassembly: string for: aSymbolManager fromAddress: address).
-			 (string includesSubString: ': ldr	') ifTrue:"i.e. colon space 'ldr' tab" 
+			 (string includesSubstring: ': ldr	') ifTrue:"i.e. colon space 'ldr' tab" 
 				[(index := string indexOfSubCollection: ' [pc, #' startingAt: 1) > 0
 					ifTrue:
 						[offset := Integer readFrom: (ReadStream on: string from: index + 7 to: (string indexOf: $] startingAt: index + 7) - 1)]
