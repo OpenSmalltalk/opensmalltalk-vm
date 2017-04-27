@@ -63,7 +63,7 @@ CrashReportsMailer >> addReportFor: lines [
 		crtab: 2;
 		nextPutAll: (lines detect: [:l| l beginsWith: 'Date:']);
 		cr.
-	((lines anySatisfy: [:l| (l beginsWith: 'OS Version') and: [l includesSubString: 'Mac OS X']])
+	((lines anySatisfy: [:l| (l beginsWith: 'OS Version') and: [l includesSubstring: 'Mac OS X']])
 		ifTrue: [self reportForMacOS: lines]
 		ifFalse: [(lines anySatisfy: [:l| l beginsWith: 'Module:'])
 					ifTrue: [self reportForOldWin32: lines]
@@ -156,12 +156,12 @@ CrashReportsMailer >> ifCrashReport: fileName do: aBlock [
 					^nil].
 	lines := self breakIntoLines: lines.
 	subject := lines detect: [:l| l beginsWith: 'Subject:'] ifNone: [^nil].
-	(subject includesSubString: 'Teleplace Bug Report: ') ifFalse: [^nil].
+	(subject includesSubstring: 'Teleplace Bug Report: ') ifFalse: [^nil].
 	#('@qwaq.com' '@teleplace.com' '@chonkaa.com' 'craig@netjam.org' 'skysound@mac.com') do:
 		[:localEmail| (subject includesSubstring: localEmail caseSensitive: false) ifTrue: [^nil]].
 	(lines anySatisfy:
 		[:l|
-		((l beginsWith: 'OS Version') and: [l includesSubString: 'Mac OS X'])
+		((l beginsWith: 'OS Version') and: [l includesSubstring: 'Mac OS X'])
 		or: [l beginsWith: 'Operating System:']]) ifFalse: [^nil].
 	^aBlock value: lines
 ]
@@ -266,9 +266,9 @@ CrashReportsMailer >> reportForMacOS: lines [
 			[cStackTop := lines at: (cstIdx := i + 1)]].
 	[cstIdx <= lines size
 	 and: [(lines at: cstIdx) notEmpty]] whileTrue:
-		[(((lines at: cstIdx) includesSubString: ' _sigtramp ')
-		 and: [((lines at: cstIdx + 1) includesSubString: ' ??? ')
-		 and: [((lines at: cstIdx + 1) includesSubString: '0xffffffff 0 + 4294967295')]]) ifTrue:
+		[(((lines at: cstIdx) includesSubstring: ' _sigtramp ')
+		 and: [((lines at: cstIdx + 1) includesSubstring: ' ??? ')
+		 and: [((lines at: cstIdx + 1) includesSubstring: '0xffffffff 0 + 4294967295')]]) ifTrue:
 			[cStackTop := lines at: cstIdx + 2.
 			 cstIdx := lines size].
 		 cstIdx := cstIdx + 1].
