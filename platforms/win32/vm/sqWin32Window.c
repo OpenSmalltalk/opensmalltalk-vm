@@ -1787,7 +1787,7 @@ static double getDpiMonitor(void)
   UINT hdpi = 0, vdpi = 0;
   HMONITOR hMonitor = NULL;
 
-  if (!thisGetDpiForMonitor) { return result; }
+  if (!thisGetDpiForMonitor) { return 0.0; }
 
   if ((hMonitor = MonitorFromWindow(stWindow, MONITOR_DEFAULTTONULL))) {
     if (thisGetDpiForMonitor(hMonitor, 0, &hdpi, &vdpi) == S_OK && hdpi > 0 && vdpi > 0) {
@@ -1823,13 +1823,16 @@ const double BASE_DPI = 96.0;
 
 double ioScreenScaleFactor(void)
 {
-  static getDpi_t getDpi = determineGetDpiFunction();
-  double factor = 1.0;
-  double physicalDpi = getDpi();
+  static getDpi_t getDpi = NULL;
+  double physicalDpi = 0.0;
+
+  if (!getDpi) { getDpi = determineGetDpiFunction(); }
+
+  physicalDpi = getDpi();
   if (fabs(BASE_DPI - physicalDpi) > DBL_EPSILON) {
-    factor = physicalDpi / BASE_DPI;
+    return physicalDpi / BASE_DPI;
   }
-  return factor;
+  return 1.0 ;
 }
 
 /* returns the size of the Squeak window */
