@@ -33,8 +33,8 @@ else
 COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
 endif
 
-# Set minimum version to WindowsXP (see /cygwin/usr/include//w32api/w32api.h)
-WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
+# Set minimum version to Windows7
+WINVER:=-D_WIN32_WINNT=0x0601 -DWINVER=0x0601
 
 # define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
 NOBUILTIN:= -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
