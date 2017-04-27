@@ -1195,8 +1195,8 @@ CCodeGenerator >> emitCConstants: constList on: aStream [
 			  the value from Smalltalk to C.
 			  Allow the class to provide an alternative definition, either of just the value or the whole shebang."
 			default := (node value isString
-						and: [(node value includesSubString: '/*')
-								or: [(node value includesSubString: ' ? ') and: [node value includesSubString: ' : ']]])
+						and: [(node value includesSubstring: '/*')
+								or: [(node value includesSubstring: ' ? ') and: [node value includesSubstring: ' : ']]])
 							ifTrue: [node value]
 							ifFalse: [self cLiteralFor: node value name: varName].
 			default = #undefined
@@ -1241,7 +1241,7 @@ CCodeGenerator >> emitCConstantsOn: aStream [
 			[:n| n isConstant ifTrue: [unused remove: n name ifAbsent: []]]].
 	unused copy do:
 		[:const|
-		(variableDeclarations anySatisfy: [:value| value includesSubString: const]) ifTrue:
+		(variableDeclarations anySatisfy: [:value| value includesSubstring: const]) ifTrue:
 			[unused remove: const ifAbsent: []]].
 	"and VMBasicConstants mostBasicConstantNames *must* be taken from interp.h"
 	unused addAll: VMBasicConstants mostBasicConstantNames.
@@ -1340,7 +1340,7 @@ CCodeGenerator >> emitCMacros: methodList on: aStream [
 				nextPutAll: (macros at: m selector); cr.
 			 m compiledMethod literalsDo:
 				[:lit|
-				(lit isVariableBinding and: [(macros at: m selector) includesSubString: lit key]) ifTrue:
+				(lit isVariableBinding and: [(macros at: m selector) includesSubstring: lit key]) ifTrue:
 					[usedConstants add: lit key]]]].
 	aStream cr.
 	^usedConstants
@@ -1471,7 +1471,7 @@ CCodeGenerator >> emitGlobalCVariablesOn: aStream [
 			ifTrue:
 				[aStream nextPutAll: decl; cr]
 			ifFalse:
-				[(decl includesSubString: ' private ') ifFalse: "work-around hack to prevent localization of variables only referenced once."
+				[(decl includesSubstring: ' private ') ifFalse: "work-around hack to prevent localization of variables only referenced once."
 					[(decl beginsWith: 'static') ifFalse: [aStream nextPutAll: 'VM_EXPORT '].
 					(decl includes: $=) ifTrue:
 						[decl := decl copyFrom: 1 to: (decl indexOf: $=) - 1].
@@ -4899,7 +4899,7 @@ CCodeGenerator >> selectAPIMethods [
 
 { #category : #accessing }
 CCodeGenerator >> selectAPIVariables [
-	^variableDeclarations reject: [:decl| decl includesSubString: 'static ']
+	^variableDeclarations reject: [:decl| decl includesSubstring: 'static ']
 ]
 
 { #category : #'C code generator' }
@@ -5335,7 +5335,7 @@ CCodeGenerator >> useSymbolicConstants: aBool [
 CCodeGenerator >> var: varName declareC: declarationString [
 	"Record the given C declaration for a global variable."
 
-	(declarationString includesSubString: varName) ifFalse:
+	(declarationString includesSubstring: varName) ifFalse:
 		[self error: 'declaration omits variable name.  probably an error.  use e.g. var:type:'].
 	variableDeclarations at: varName asString put: declarationString.
 ]

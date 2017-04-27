@@ -1655,13 +1655,13 @@ StackInterpreter class >> reorganizeAsISeeFit [
 	remainder := OrderedCollection new.
 	self organization categories do:
 		[:cat|
-		((cat includesSubString: 'initializ')
+		((cat includesSubstring: 'initializ')
 			ifTrue: [initializations]
 			ifFalse:
-				[((cat endsWith: 'bytecodes') or: [cat includesSubString: 'selector sends'])
+				[((cat endsWith: 'bytecodes') or: [cat includesSubstring: 'selector sends'])
 					ifTrue: [bytecodes]
 					ifFalse:
-						[(cat includesSubString: 'private')
+						[(cat includesSubstring: 'private')
 							ifTrue: [privates]
 							ifFalse: [remainder]]])
 			add: cat].

@@ -204,7 +204,7 @@ TMethod >> argConversionExprFor: varName stackIndex: stackIndex [
 	 and: ['int' ~= (type := (decl copyReplaceAll: varName with: '') withBlanksTrimmed)])
 		ifTrue:
 			[(decl includes: $*) ifTrue: "array"
-				[(decl includesSubString: 'char')
+				[(decl includesSubstring: 'char')
 					ifTrue:
 						[| expr |
 						expr := '(interpreterProxy isBytes: (interpreterProxy stackValue: (stackIndex))) ifFalse: [^interpreterProxy primitiveFail]'.
@@ -557,7 +557,7 @@ TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: isPr
 		[self outputConditionalDefineFor: compileTimeOptionPragmas on: aStream].
 	returnTypeIsFunctionPointer := returnType notNil
 									and: [returnType last = $)
-									and: [returnType includesSubString: (aCodeGen cFunctionNameFor: selector)]].
+									and: [returnType includesSubstring: (aCodeGen cFunctionNameFor: selector)]].
 	export 
 		ifTrue:
 			[aStream nextPutAll: 'EXPORT('; nextPutAll: returnType; nextPut: $)]
@@ -2408,8 +2408,8 @@ TMethod >> removeUnusedTempsIn: aCodeGen [
 	locals do:
 		[:local|
 		 ((usedVariables includes: local) not
-		  and: [((declarations at: local ifAbsent: ['']) includesSubString: 'static') not
-		  and: [((declarations at: local ifAbsent: ['']) includesSubString: 'extern') not]]) ifTrue:
+		  and: [((declarations at: local ifAbsent: ['']) includesSubstring: 'static') not
+		  and: [((declarations at: local ifAbsent: ['']) includesSubstring: 'extern') not]]) ifTrue:
 			[locals remove: local.
 			 declarations removeKey: local ifAbsent: []]].
 	^usedVariables

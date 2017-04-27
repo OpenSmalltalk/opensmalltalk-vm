@@ -268,7 +268,7 @@ VMStructType class >> needsTypeTag [
 		((type isArray ifTrue: [type] ifFalse: [{type}]) anySatisfy:
 			[:str|
 			str isString
-			and: [str includesSubString: self structTagName]]) ifTrue:
+			and: [str includesSubstring: self structTagName]]) ifTrue:
 				[^true]].
 	^false
 
