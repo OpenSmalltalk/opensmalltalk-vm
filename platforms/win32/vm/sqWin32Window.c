@@ -24,6 +24,7 @@
 #include <shellapi.h>
 #include <commdlg.h>
 #include <excpt.h>
+#include <float.h>
 
 #if defined(__MINGW32_VERSION) && (__MINGW32_MAJOR_VERSION < 3)
 /** Kludge to get multimonitor API's to compile in the mingw/directx7 mix. **/
@@ -1761,38 +1762,16 @@ inline BOOL IsWindows_8_1(void)
 
 
 /*
+ * Load-time determined available dpi-getter
+ */
+typedef double (*getDpi_t)(void);
+
+
+/*
  * Lazy-loaded GetDpiForMonitor, which is not on Windows7 and Windows8
  */
 typedef HRESULT (*thisGetDpiForMonitor_t)(HMONITOR,UINT,UINT *,UINT *);
 static thisGetDpiForMonitor_t thisGetDpiForMonitor = NULL;
-
-/*
- * Expected to be called only once.
- * But I'm just a function, not a cop.
- */
-getDpi_t determineGetDpiFunction(void)
-{
-  static BOOL hasGetDpiForMonitor = IsWindows_8_1();
-  HMODULE shcore = NULL;
-  if (hasGetDpiForMonitor) {
-    if (thisGetDpiForMonitor) {
-      return getDpiMonitor;
-    } else {
-      // Ensure GetDpiForMonitor (And shcore.dll) is there, else use fallback.
-      if ((shcore = LoadLibrary("Shcore.dll"))) {
-        if ((thisGetDpiForMonitor = (thisGetDpiForMonitor_t)GetProcAddress(shcore, "GetDpiForMonitor"))) {
-          return getDpiMonitor;
-        }
-      }
-    }
-  }
-  return getDpiSystem;
-}
-
-/*
- * Load-time determined available dpi-getter
- */
-typedef double (*getDpi_t)(void);
 
 /*
  * Per-system DPI (for Windows < 8.1)
@@ -1818,6 +1797,27 @@ static double getDpiMonitor(void)
   return 0.0;
 }
 
+/*
+ * Expected to be called only once.
+ * But I'm just a function, not a cop.
+ */
+getDpi_t determineGetDpiFunction(void)
+{
+  HMODULE shcore = NULL;
+  if (IsWindows_8_1()) {
+    if (thisGetDpiForMonitor) {
+      return getDpiMonitor;
+    } else {
+      // Ensure GetDpiForMonitor (And shcore.dll) is there, else use fallback.
+      if ((shcore = LoadLibrary("Shcore.dll"))) {
+        if ((thisGetDpiForMonitor = (thisGetDpiForMonitor_t)GetProcAddress(shcore, "GetDpiForMonitor"))) {
+          return getDpiMonitor;
+        }
+      }
+    }
+  }
+  return getDpiSystem;
+}
 
 const double BASE_DPI = 96.0;
 
@@ -1825,7 +1825,7 @@ double ioScreenScaleFactor(void)
 {
   static getDpi_t getDpi = determineGetDpiFunction();
   double factor = 1.0;
-  double physicalDpi = getDPI();
+  double physicalDpi = getDpi();
   if (fabs(BASE_DPI - physicalDpi) > DBL_EPSILON) {
     factor = physicalDpi / BASE_DPI;
   }
