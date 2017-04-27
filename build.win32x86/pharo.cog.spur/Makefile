@@ -1,5 +1,5 @@
 #############################################################################
-# Makefile for Win32 Cog Spur PharoVM using gcc-3.4.x and cygwin
+# Makefile for Win32 Cog Spur PharoVM using gcc and cygwin
 # Do make init to allow make -n to function.
 #############################################################################
 

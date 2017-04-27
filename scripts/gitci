@@ -43,8 +43,8 @@ else
 fi
 
 git add $GIT_ARGS
-git reset HEAD -- platforms/Cross/plugins/*
-git reset HEAD -- platforms/win32/plugins/*
+# git reset HEAD -- platforms/Cross/plugins/*
+# git reset HEAD -- platforms/win32/plugins/*
 git commit
 
 `dirname $0`/updateSCCSVersions

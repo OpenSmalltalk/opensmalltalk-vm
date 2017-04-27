@@ -1,4 +1,4 @@
-libssh2_spec_download_url:=https://www.libssh2.org/download/libssh2-1.7.0.tar.gz
+libssh2_spec_download_url:=https://www.libssh2.org/download/libssh2-1.7.0.tar.gz		 
 libssh2_spec_archive_name:=libssh2-1.7.0.tar.gz
 libssh2_spec_unpack_dir_name:=libssh2-1.7.0
 libssh2_spec_product_name_macOS:=libssh2.1.dylib

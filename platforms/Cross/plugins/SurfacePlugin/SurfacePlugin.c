@@ -9,6 +9,14 @@
 	additional support code, querying the surface handle
 	from ioFindSurface but the functions provided below
 	are critical for any BitBlt operations.
+
+Change History:
+eem 3/15/2017	Allow functions registered with ioGetSurfaceFormat,
+				ioUnlockSurface and ioShowSurface to be omitted (defaulted to
+				0) and have ioGetSurfaceFormat, ioUnlockSurface & ioShowSurface
+				return -1 in this case (the BitBlt primitives expect 0 for
+				failure).  This allows e.g. Pharo's AthensCairoSurface to
+				avoid installing two null callbacks for unlock & show.
 */
 
 #include <math.h>
@@ -79,7 +87,9 @@ EXPORT(int) ioGetSurfaceFormat (int surfaceID, int* width, int* height, int* dep
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) FAIL;
 	surface = surfaceArray + surfaceID;
 	if(surface->dispatch == NULL) FAIL;
-	if(!surface->dispatch->getSurfaceFormat) FAIL;
+	/* Allow getSurfaceFormat to be defaulted to 0 */
+	if(!surface->dispatch->getSurfaceFormat)
+		return -1;
 	return surface->dispatch->getSurfaceFormat(surface->handle, width, height, depth, isMSB);
 }
 
@@ -106,7 +116,9 @@ EXPORT(int) ioUnlockSurface(int surfaceID, int x, int y, int w, int h)
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) FAIL;
 	surface = surfaceArray + surfaceID;
 	if(surface->dispatch == NULL) FAIL;
-	if(!surface->dispatch->unlockSurface) FAIL;
+	/* Allow unlockSurface to be defaulted to 0 */
+	if(!surface->dispatch->unlockSurface)
+		return -1;
 	return surface->dispatch->unlockSurface(surface->handle, x, y, w, h);
 }
 
@@ -118,7 +130,9 @@ EXPORT(int) ioShowSurface(int surfaceID, int x, int y, int w, int h)
 	if(surfaceID < 0 || surfaceID >= maxSurfaces) FAIL;
 	surface = surfaceArray + surfaceID;
 	if(surface->dispatch == NULL) FAIL;
-	if(!surface->dispatch->showSurface) FAIL;
+	/* Allow showSurface to be defaulted to 0 */
+	if(!surface->dispatch->showSurface)
+		-1;
 	return surface->dispatch->showSurface(surface->handle, x, y, w, h);
 }
 
