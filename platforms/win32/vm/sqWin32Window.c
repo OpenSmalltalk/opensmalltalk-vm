@@ -1771,11 +1771,11 @@ typedef double (*getDpi_t)(void);
  * Lazy-loaded GetDpiForMonitor, which is not on Windows7 and Windows8
  */
 // enum duplicated from ShellScalingApi.
-typedef enum this_MONITOR_DPI_TYPE { 
+typedef enum this_MONITOR_DPI_TYPE {
   thisMDT_EFFECTIVE_DPI  = 0,
   thisMDT_ANGULAR_DPI    = 1,
   thisMDT_RAW_DPI        = 2,
-  thisMDT_DEFAULT        = MDT_EFFECTIVE_DPI
+  thisMDT_DEFAULT        = thisMDT_EFFECTIVE_DPI
 } thisMONITOR_DPI_TYPE;
 
 typedef HRESULT (*thisGetDpiForMonitor_t)(HMONITOR,thisMONITOR_DPI_TYPE,UINT *,UINT *);
