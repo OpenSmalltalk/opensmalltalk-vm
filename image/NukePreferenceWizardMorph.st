@@ -1,4 +1,6 @@
 World submorphs do:
 	[:morph|
 	morph class == PreferenceWizardMorph ifTrue:
-		[morph delete]]
+		[morph delete]].
+
+Smalltalk snapshot: true andQuit: true
