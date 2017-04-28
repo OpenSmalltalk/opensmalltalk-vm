@@ -1778,7 +1778,7 @@ typedef enum this_MONITOR_DPI_TYPE {
   thisMDT_DEFAULT        = thisMDT_EFFECTIVE_DPI
 } thisMONITOR_DPI_TYPE;
 
-typedef HRESULT (*thisGetDpiForMonitor_t)(HMONITOR,thisMONITOR_DPI_TYPE,UINT *,UINT *);
+typedef HRESULT __stdcall (*thisGetDpiForMonitor_t)(HMONITOR,thisMONITOR_DPI_TYPE,UINT *,UINT *);
 static thisGetDpiForMonitor_t thisGetDpiForMonitor = NULL;
 
 /*
