@@ -1,10 +1,10 @@
 #!/bin/bash -e
 . ./envvars.sh
 
-./updatespurimage.sh
+./updatespurimage.sh "$@"
 
-cp -p trunk50.image SpurVMMaker.image
-cp -p trunk50.changes SpurVMMaker.changes
+cp -p $BASE.image SpurVMMaker.image
+cp -p $BASE.changes SpurVMMaker.changes
 
 . ./getGoodSpurVM.sh
 
