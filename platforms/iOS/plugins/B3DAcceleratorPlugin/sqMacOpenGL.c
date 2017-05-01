@@ -266,7 +266,53 @@ static int glHasARBMultisampling () {
 }
 
 
-int glCreateRendererFlags(int x, int y, int w, int h, int flags)
+#if !defined(SQUEAK_BUILTIN_PLUGIN)
+/* This beauty is taken from the sqMacSSL plugin.
+ * It should be a platform-wide facility.
+ */
+static int
+printf_status(OSStatus status, const char* restrict format, ...)
+{
+    int ret = 0;
+    va_list args;
+    va_start(args, format);
+    CFErrorRef _e = CFErrorCreate(NULL, kCFErrorDomainOSStatus, status, NULL);
+    CFStringRef _sdesc = CFErrorCopyDescription(_e);
+    CFStringRef _sreas = CFErrorCopyFailureReason(_e);
+    CFStringRef _sreco = CFErrorCopyRecoverySuggestion(_e);
+    ret += vprintf(format, args);
+    ret += printf("Status (%d): %s (%s): %s\n",
+                  (int)status,
+                  CFStringGetCStringPtr(_sdesc, kCFStringEncodingUTF8),
+                  CFStringGetCStringPtr(_sreas, kCFStringEncodingUTF8),
+                  CFStringGetCStringPtr(_sreco, kCFStringEncodingUTF8));
+    CFRelease(_sreco);
+    CFRelease(_sreas);
+    CFRelease(_sdesc);
+    CFRelease(_e);
+    va_end(args);
+    return ret;
+}
+
+/* See https://lists.apple.com/archives/mac-opengl/2006/Jun/msg00021.html */
+static GDHandle
+GetMainDevice()
+{	CGDirectDisplayID mainID = CGMainDisplayID();
+	GDHandle mainDevice;
+
+	OSErr err = DMGetGDeviceByDisplayID (mainID, &mainDevice, true);
+
+	if (err != noErr) {
+		printf_status(err, "DMGetGDeviceByDisplayID(...)\n");
+		exit(0);
+	}
+	return mainDevice;
+}
+#endif /* SQUEAK_BUILTIN_PLUGIN */
+
+
+int
+glCreateRendererFlags(int x, int y, int w, int h, int flags)
 {
  	int index, i, allowSoftware, allowHardware;
  	GLint          hwAttrib[] = { AGL_STENCIL_SIZE, 0, AGL_RGBA, AGL_DOUBLEBUFFER, AGL_ACCELERATED, AGL_DEPTH_SIZE, 16, 
