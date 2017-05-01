@@ -6,16 +6,17 @@
 # platforms/iOS/plugins/AioPlugin/Makefile.  Look at
 # platforms/iOS/plugins/*/Makefile for examples.
 #
-# CFLAGS     		adds additional compilation flags to source file compilation
-# XCFLAGS    		adds additional compilation flags after all other flags
-# EXCLUDESRC 		defines patterns of source files to not compile, e.g. %/dump.c
-# EXTRALIBS  		defines additional libraries to link into an external plugin bundle
-# INCDIRS    		defines additonal directories in which to search for includes
-# LIBSRC     		overrides the set of files to compile (if EXCLUDESRC inconvenient)
-# LINK_WITH_CPP 	set to non-empty to link external plugin bundle with c++ runtime
-# SRCDIRS    		supplies additional directories containing files to compile.
-# PREREQUISITES 	supplies names of files that must exist to make lib or bundle
-# THIRDPARTYLIBS 	supplies names for third-party libraries that needs to be built
+# CFLAGS     	 adds additional compilation flags to source file compilation
+# CARBON		 links against the Carbon framework instead of the default Cocoa
+# XCFLAGS    	 adds additional compilation flags after all other flags
+# EXCLUDESRC 	 defines patterns of source files to not compile, e.g. %/dump.c
+# EXTRALIBS  	 defines additional libraries to link into an external plugin bundle
+# INCDIRS    	 defines additonal directories in which to search for includes
+# LIBSRC     	 overrides the set of files to compile (if EXCLUDESRC inconvenient)
+# LINK_WITH_CPP  set to non-empty to link external plugin bundle with c++ runtime
+# SRCDIRS    	 supplies additional directories containing files to compile.
+# PREREQUISITES  supplies names of files that must exist to make lib or bundle
+# THIRDPARTYLIBS supplies names for third-party libraries that needs to be built
 
 $(info $$(LIBNAME): $(LIBNAME))
 

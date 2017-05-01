@@ -1,8 +1,8 @@
 # Copied, perhaps edited, from ../src/examplePlugins.ext
+# N.B. B3DAcceleratorPlugin needs QuickTime which is 32-bits only.
 EXTERNAL_PLUGINS = \
-BochsIA32Plugin \
-BochsX64Plugin \
-GdbARMPlugin \
+B3DAcceleratorPlugin \
+CameraPlugin \
 CroquetPlugin \
 Mpeg3Plugin \
 SqueakFFIPrims \

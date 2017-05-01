@@ -21,6 +21,8 @@
 #include <stdlib.h>
 
 #include <Carbon/Carbon.h>
+#include <QuickTime/QTML.h> /* unavailable in 64-bit apps :-( */
+#include <QuickTime/QuickTimeComponents.h> /* unavailable in 64-bit apps :-( */
 #include <unistd.h>
 #include <AGL/agl.h>
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
@@ -84,17 +86,12 @@ eventMessageHook setMessageHook = 0;
    10 - print information about each vertex and face
 */
 extern int verboseLevel;
-/* define forceFlush if we should fflush() before closing file */
-#define forceFlush 1
+extern int print3Dlog(char *fmt, ...);
 
-/* Note: Print this stuff into a file in case we lock up*/
+/* Note: Print this stuff into a file in case we lock up */
 #undef DPRINTF3D
-# define DPRINTF3D(vLevel, args) if(vLevel <= verboseLevel) {\
-	char fileName[DOCUMENT_NAME_SIZE+1]; \
-	sqFilenameFromStringOpen(fileName,(sqInt) &"Squeak3D.log", strlen("Squeak3D.log")); \
-	FILE *fp = fopen(fileName, "at");\
-	if(fp) { fprintf args; if(forceFlush) fflush(fp); fclose(fp); }}
-        
+#define DPRINTF3D(vLevel, args) if (vLevel <= verboseLevel) { print3Dlog args; }
+ 
 /* Plugin refs */
 extern struct VirtualMachine *interpreterProxy;
 static float blackLight[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -125,23 +122,23 @@ static int macEventHook(EventRecord *event) {
 	switch(event->what) {
 		case osEvt:
 			if (((event->message>>24)& 0xFF) != suspendResumeMessage) return 0;
-			DPRINTF3D(5, (fp, "<Mac event: suspendResumeMessage>\n"));
+			DPRINTF3D(5, ("<Mac event: suspendResumeMessage>\n"));
 			break;
 		case activateEvt:
-			DPRINTF3D(5, (fp, "<Mac event: activateEvt>\n"));
+			DPRINTF3D(5, ("<Mac event: activateEvt>\n"));
 			break;
 		case updateEvt:
-			DPRINTF3D(5, (fp, "<Mac event: updateEvt>\n"));
+			DPRINTF3D(5, ("<Mac event: updateEvt>\n"));
 			break;
 		case mouseDown:
-			DPRINTF3D(5, (fp, "<Mac event: mouseDown>\n"));
+			DPRINTF3D(5, ("<Mac event: mouseDown>\n"));
 			windowCode = FindWindow(event->where, &checkMouseDown);
 			if (windowCode == inContent)
 				return 0;
 
 			break;
 		case mouseUp:
-			DPRINTF3D(5, (fp, "<Mac event: mouseUp>\n"));
+			DPRINTF3D(5, ("<Mac event: mouseUp>\n"));
 			windowCode = FindWindow(event->where, &checkMouseUp);
 			if (windowCode == inContent)
 				return 0;
@@ -286,28 +283,28 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 	glRenderer     *renderer;
 	char *string;
 	GDHandle tempGDH;
-        Rect ignore;
+	Rect ignore;
  	long swapInterval = 0;
 
  #define SUPPORTED_FLAGS (B3D_HARDWARE_RENDERER | B3D_SOFTWARE_RENDERER | B3D_STENCIL_BUFFER | B3D_ANTIALIASING | B3D_STEREO | B3D_SYNCVBL)
-         if(flags & ~SUPPORTED_FLAGS) {
-             DPRINTF3D(1, (fp, "ERROR: Unsupported renderer flags (%d)\n", flags));
-             return -1;
-         }
- #undef SUPPORTED_FLAGS
- 
-         /* interpret renderer flags */
-         allowSoftware = (flags & B3D_SOFTWARE_RENDERER) != 0;
-         allowHardware = (flags & B3D_HARDWARE_RENDERER) != 0;
-         if(flags & B3D_STENCIL_BUFFER) {
-             hwAttrib[1] = 1;
-             swAttrib[1] = 1;
-         }
+	if(flags & ~SUPPORTED_FLAGS) {
+		DPRINTF3D(1, ("ERROR: Unsupported renderer flags (%d)\n", flags));
+		return -1;
+	}
+	#undef SUPPORTED_FLAGS
 
-	 /* enable/disable stereo requests */
-	 if(flags & B3D_STEREO) {
-	   return -1; /* not supported for now */
-	 }
+	/* interpret renderer flags */
+	allowSoftware = (flags & B3D_SOFTWARE_RENDERER) != 0;
+	allowHardware = (flags & B3D_HARDWARE_RENDERER) != 0;
+	if(flags & B3D_STENCIL_BUFFER) {
+		hwAttrib[1] = 1;
+		swAttrib[1] = 1;
+	}
+
+	/* enable/disable stereo requests */
+	if(flags & B3D_STEREO) {
+		return -1; /* not supported for now */
+	}
 
 	/* Suppress the multisampling flags if antialiasing is not requested (or not supported.) */
 	if (! ((flags & B3D_ANTIALIASING) && glHasARBMultisampling())) {
@@ -318,7 +315,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 		if(allRenderer[index].used == 0) break;
 	}
 	if(index >= MAX_RENDERER) {
-		DPRINTF3D(1, (fp, "ERROR: Maximum number of renderers (%d) exceeded\n", MAX_RENDERER));
+		DPRINTF3D(1, ("ERROR: Maximum number of renderers (%d) exceeded\n", MAX_RENDERER));
 		return 0;
 	}
 	renderer = allRenderer+index;
@@ -332,9 +329,9 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 	if (! getSTWindow()) {
 		return 0;
 	}
-        GetWindowGreatestAreaDevice(getSTWindow(),kWindowContentRgn,&tempGDH,&ignore); 
-        if (tempGDH == nil) 
-            return -1;
+	GetWindowGreatestAreaDevice(getSTWindow(),kWindowContentRgn,&tempGDH,&ignore); 
+	if (tempGDH == nil) 
+		return -1;
 	swAttrib[2] = (*(*tempGDH)->gdPMap)->pixelSize;
 #else
 	swAttrib[2] = (*(*GetMainDevice())->gdPMap)->pixelSize;
@@ -347,23 +344,23 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 		if( (i == 1) && !allowSoftware) continue;
 		ctx = 0;
 		if(i == 0) {
-			DPRINTF3D(3, (fp, "### Attempting to find hardware renderer\n"));
+			DPRINTF3D(3, ("### Attempting to find hardware renderer\n"));
 			win = (AGLDrawable) getSTWindow();
 			if(!win) {
-				DPRINTF3D(1, (fp, "ERROR: stWindow is invalid (NULL)\n"));
+				DPRINTF3D(1, ("ERROR: stWindow is invalid (NULL)\n"));
 				goto FAILED;
 			}
 			fmt = aglChoosePixelFormat(NULL, 0, hwAttrib);
 		} else {
-			DPRINTF3D(3, (fp, "### Attempting to find software renderer\n"));
+			DPRINTF3D(3, ("### Attempting to find software renderer\n"));
 			win = NULL;
 			fmt = aglChoosePixelFormat(NULL, 0, swAttrib);
 		}
-		DPRINTF3D(3, (fp,"\tx: %d\n\ty: %d\n\tw: %d\n\th: %d\n", x, y, w, h));
+		DPRINTF3D(3, ("\tx: %d\n\ty: %d\n\tw: %d\n\th: %d\n", x, y, w, h));
 
-		if((err = aglGetError()) != AGL_NO_ERROR) DPRINTF3D(3,(fp,"aglGetError - %s\n", aglErrorString(err)));
+		if((err = aglGetError()) != AGL_NO_ERROR) DPRINTF3D(3,("aglGetError - %s\n", aglErrorString(err)));
 		if(fmt == NULL) {
-			DPRINTF3D(1, (fp, "ERROR: aglChoosePixelFormat failed\n"));
+			DPRINTF3D(1, ("ERROR: aglChoosePixelFormat failed\n"));
 			goto FAILED;
 		}
 
@@ -371,11 +368,11 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 
 		/* Create an AGL context */
 		ctx = aglCreateContext(fmt, NULL);
-		if((err = aglGetError()) != AGL_NO_ERROR) DPRINTF3D(3,(fp,"aglGetError - %s\n", aglErrorString(err)));
+		if((err = aglGetError()) != AGL_NO_ERROR) DPRINTF3D(3,("aglGetError - %s\n", aglErrorString(err)));
 		/* The pixel format is no longer needed */
 		aglDestroyPixelFormat(fmt);
 		if(ctx == NULL) {
-			DPRINTF3D(1, (fp, "ERROR: aglCreateContext failed\n"));
+			DPRINTF3D(1, ("ERROR: aglCreateContext failed\n"));
 			goto FAILED;
 		}
 
@@ -408,16 +405,16 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 			/* hardware renderer; attach buffer rect and window */
 			ok = aglEnable(ctx, AGL_BUFFER_RECT);
 			if((err = aglGetError()) != AGL_NO_ERROR) 
-				DPRINTF3D(3,(fp,"aglEnable(AGL_BUFFER_RECT) failed: aglGetError - %s\n", aglErrorString(err)));
+				DPRINTF3D(3,("aglEnable(AGL_BUFFER_RECT) failed: aglGetError - %s\n", aglErrorString(err)));
 			if(!ok) goto FAILED;
 			ok = aglSetInteger(ctx, AGL_BUFFER_RECT, bufferRect);
 			if((err = aglGetError()) != AGL_NO_ERROR) 
-				DPRINTF3D(3,(fp,"aglSetInteger(AGL_BUFFER_RECT) failed: aglGetError - %s\n", aglErrorString(err)));
+				DPRINTF3D(3,("aglSetInteger(AGL_BUFFER_RECT) failed: aglGetError - %s\n", aglErrorString(err)));
 			if(!ok) goto FAILED;
 			/* Attach the context to the target */
 			ok = aglSetDrawable(ctx,GetWindowPort( (WindowPtr)win));
 			if((err = aglGetError()) != AGL_NO_ERROR) 
-				DPRINTF3D(3,(fp,"aglSetDrawable() failed: aglGetError - %s\n", aglErrorString(err)));
+				DPRINTF3D(3,("aglSetDrawable() failed: aglGetError - %s\n", aglErrorString(err)));
 			if(!ok) goto FAILED;
 			renderer->drawable = (AGLDrawable) win;
 
@@ -435,7 +432,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 			SetRect(&rect, 0, 0, w, h);
 			qdErr = NewGWorld(&renderer->gWorld, (short) renderer->depth, &rect, NULL, NULL, useTempMem);
 			if(qdErr || !renderer->gWorld) {
-				DPRINTF3D(1,(fp,"ERROR: Failed to create new GWorld\n"));
+				DPRINTF3D(1,("ERROR: Failed to create new GWorld\n"));
 				renderer->gWorld = NULL;
 				goto FAILED;
 			}
@@ -444,9 +441,9 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 			renderer->pitch = (**(renderer->pixMap)).rowBytes & 0x7FFF;
 			renderer->bits = (unsigned char*) GetPixBaseAddr(renderer->pixMap);
 			ok = aglSetOffScreen(ctx, w, h, renderer->pitch, renderer->bits);
-			if((err = aglGetError()) != AGL_NO_ERROR) DPRINTF3D(3,(fp,"aglGetError - %s\n", aglErrorString(err)));
+			if((err = aglGetError()) != AGL_NO_ERROR) DPRINTF3D(3,("aglGetError - %s\n", aglErrorString(err)));
 			if(!ok) {
-				DPRINTF3D(1, (fp, "ERROR: aglSetOffScreen failed\n"));
+				DPRINTF3D(1, ("ERROR: aglSetOffScreen failed\n"));
 				goto FAILED;
 			}
 		}
@@ -467,23 +464,23 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 			CGLContextObj cglContext = CGLGetCurrentContext();
 			CGLError cglErr =  CGLEnable( cglContext, kCGLCEMPEngine);
 			if (cglErr != kCGLNoError ) {
-				DPRINTF3D(3,(fp,"CGLEnable(kCGLCEMPEngine) failed: cannot set multithreaded OpenGL\n"));
+				DPRINTF3D(3,("CGLEnable(kCGLCEMPEngine) failed: cannot set multithreaded OpenGL\n"));
 				exit(0);
 			}
 		}
 
 		/* print some information about the context */
 		string = (char*) glGetString(GL_VENDOR);
-		DPRINTF3D(3,(fp, "\nOpenGL vendor: %s\n", string));
+		DPRINTF3D(3,("\nOpenGL vendor: %s\n", string));
 		string = (char*) glGetString(GL_RENDERER);
-		DPRINTF3D(3,(fp, "OpenGL renderer: %s\n", string));
+		DPRINTF3D(3,("OpenGL renderer: %s\n", string));
 		string = (char*) glGetString(GL_VERSION);
-		DPRINTF3D(3,(fp, "OpenGL version: %s\n", string));
+		DPRINTF3D(3,("OpenGL version: %s\n", string));
 		string = (char*) glGetString(GL_EXTENSIONS);
-		DPRINTF3D(3,(fp, "OpenGL extensions: %s\n", string));
+		DPRINTF3D(3,("OpenGL extensions: %s\n", string));
 		ERROR_CHECK;
 
-		DPRINTF3D(3, (fp,"### Renderer created! (id = %d)\n", index));
+		DPRINTF3D(3, ("### Renderer created! (id = %d)\n", index));
 		/* setup user context */
 		glDisable(GL_LIGHTING);
 		glDisable(GL_COLOR_MATERIAL);
@@ -539,7 +536,7 @@ int glSetIntPropertyOS(int handle, int prop, int value)
 
 
 glRenderer *glRendererFromHandle(int handle) {
-	DPRINTF3D(7, (fp, "Looking for renderer id: %d\n", handle));
+	DPRINTF3D(7, ("Looking for renderer id: %d\n", handle));
 	if(handle < 0 || handle >= MAX_RENDERER) return NULL;
 	if(allRenderer[handle].used) return allRenderer+handle;
 	return NULL;
@@ -560,7 +557,7 @@ int glSwapBuffers(glRenderer *renderer) {
 		}
 #endif
 		aglSwapBuffers(renderer->context);
-		if((err = aglGetError()) != AGL_NO_ERROR) DPRINTF3D(3,(fp,"ERROR (glSwapBuffers): aglGetError - %s\n", aglErrorString(err)));
+		if((err = aglGetError()) != AGL_NO_ERROR) DPRINTF3D(3,("ERROR (glSwapBuffers): aglGetError - %s\n", aglErrorString(err)));
 		ERROR_CHECK;
 	} else {
 		WindowPtr win;
@@ -610,9 +607,9 @@ int glMakeCurrentRenderer(glRenderer *renderer) {
 		if(!renderer->used || !renderer->context) return 0;
 	// ERROR_CHECK;
 	ok = aglSetCurrentContext(renderer ? renderer->context : NULL);
-	if((err = aglGetError()) != AGL_NO_ERROR) DPRINTF3D(3,(fp,"ERROR (glMakeCurrentRenderer): aglGetError - %s\n", aglErrorString(err)));
+	if((err = aglGetError()) != AGL_NO_ERROR) DPRINTF3D(3,("ERROR (glMakeCurrentRenderer): aglGetError - %s\n", aglErrorString(err)));
 	if(!ok) {
-		DPRINTF3D(1, (fp, "ERROR (glMakeCurrentRenderer): aglSetCurrentContext failed\n"));
+		DPRINTF3D(1, ("ERROR (glMakeCurrentRenderer): aglSetCurrentContext failed\n"));
 		return 0;
 	}
 	// ERROR_CHECK;
@@ -654,7 +651,7 @@ int glSetBufferRect(int handle, int x, int y, int w, int h) {
 #endif
 		ok = aglSetInteger(renderer->context, AGL_BUFFER_RECT, bufferRect);
 		if((err = aglGetError()) != AGL_NO_ERROR) 
-			DPRINTF3D(3,(fp,"aglSetInteger(AGL_BUFFER_RECT) failed: aglGetError - %s\n", aglErrorString(err)));
+			DPRINTF3D(3,("aglSetInteger(AGL_BUFFER_RECT) failed: aglGetError - %s\n", aglErrorString(err)));
 		if(!ok) return 0;
 	} else {
 		/* software renderer */
@@ -698,12 +695,12 @@ int glInitialize(void)
 #else
 	getSTWindow = (getSTWindowFn) interpreterProxy->ioLoadFunctionFrom("getSTWindow", "");
 	if(!getSTWindow) {
-		DPRINTF3D(1,(fp,"ERROR: Failed to look up getSTWindow()\n"));
+		DPRINTF3D(1,("ERROR: Failed to look up getSTWindow()\n"));
 		return 0;
 	}
 	setMessageHook = (eventMessageHook) interpreterProxy->ioLoadFunctionFrom("setPostMessageHook", "");
 	if(!setMessageHook) {
-		DPRINTF3D(1, (fp, "ERROR: Failed to look up setMessageHook()\n"));
+		DPRINTF3D(1, ("ERROR: Failed to look up setMessageHook()\n"));
 		return 0;
 	}
 	((void (*)(void*))setMessageHook)(macEventHook);

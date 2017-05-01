@@ -9,6 +9,7 @@
 *****************************************************************************/
 #include <windows.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <GL/gl.h>
 
 #include "sqVirtualMachine.h"
@@ -71,14 +72,6 @@ typedef int (__stdcall * PFN_WGLCHOOSEPIXELFORMAT) (
  
 typedef int (__stdcall * PFN_WGLSWAPINTERVALEXT) (int interval);
 
-/* define forceFlush if we should fflush() before closing file */
-#define forceFlush 1
-
-/* Note: Print this stuff into a file in case we lock up*/
-# define DPRINTF3D(vLevel, args) if(vLevel <= verboseLevel) {\
-	FILE *fp = fopen("Squeak3D.log", "at");\
-	if(fp) { fprintf args; if(forceFlush) fflush(fp); fclose(fp); }}
-
 /* Plugin refs */
 extern struct VirtualMachine *interpreterProxy;
 
@@ -100,6 +93,45 @@ static float blackLight[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
    10 - print information about each vertex and face
 */
 int verboseLevel = 1;
+/* define forceFlush if we should fflush() before closing file */
+#define forceFlush 1
+static FILE *logfile = 0;
+
+/* Note: Print this stuff into a file in case we lock up */
+
+static void
+closelog(void)
+{ if (logfile) (void)fclose(logfile); }
+
+int
+print3Dlog(char *fmt, ...)
+{
+	va_list args;
+
+	if (!logfile) {
+		char *slash;
+		char fileName[PATH_MAX+1];
+
+		strcpy(fileName,imageName);
+		slash = strrchr(fileName,'/');
+		strcpy(slash ? slash + 1 : fileName, "Squeak3D.log");
+		logfile = fopen(fileName, "at");
+		if (!logfile) {
+			perror("fopen Squeak3D.log");
+			return 0;
+		}
+		atexit(closelog);
+	}
+	va_start(args,fmt);
+	fprintf(logfile, fmt, args);
+	va_end(args);
+	if (forceFlush)
+		fflush(logfile);
+}
+
+#undef DPRINTF3D
+#define DPRINTF3D(vLevel, args) if (vLevel <= verboseLevel) { print3Dlog args; }
+
 
 #define ENABLE_FORCED_PFD
 
@@ -172,54 +204,54 @@ static HWND glCreateClientWindow(HWND parentWindow, int x, int y, int w, int h)
 static void printPFD(PIXELFORMATDESCRIPTOR *pfd, int lvl)
 {
   /* Print the pixel format for information purposes */
-  DPRINTF3D(lvl,(fp,"flags (%lu): ", pfd->dwFlags));
+  DPRINTF3D(lvl,("flags (%lu): ", pfd->dwFlags));
   if(pfd->dwFlags & PFD_DRAW_TO_WINDOW) 
-    DPRINTF3D(lvl, (fp, "PFD_DRAW_TO_WINDOW "));
+    DPRINTF3D(lvl, ("PFD_DRAW_TO_WINDOW "));
   if(pfd->dwFlags & PFD_DRAW_TO_BITMAP) 
-    DPRINTF3D(lvl, (fp, "PFD_DRAW_TO_BITMAP "));
+    DPRINTF3D(lvl, ("PFD_DRAW_TO_BITMAP "));
   if(pfd->dwFlags & PFD_SUPPORT_GDI) 
-    DPRINTF3D(lvl, (fp, "PFD_SUPPORT_GDI "));
+    DPRINTF3D(lvl, ("PFD_SUPPORT_GDI "));
   if(pfd->dwFlags & PFD_SUPPORT_OPENGL) 
-    DPRINTF3D(lvl, (fp, "PFD_SUPPORT_OPENGL "));
+    DPRINTF3D(lvl, ("PFD_SUPPORT_OPENGL "));
   if(pfd->dwFlags & PFD_GENERIC_ACCELERATED) 
-    DPRINTF3D(lvl, (fp, "PFD_GENERIC_ACCELERATED "));
+    DPRINTF3D(lvl, ("PFD_GENERIC_ACCELERATED "));
   if(pfd->dwFlags & PFD_GENERIC_FORMAT) 
-    DPRINTF3D(lvl, (fp, "PFD_GENERIC_FORMAT "));
+    DPRINTF3D(lvl, ("PFD_GENERIC_FORMAT "));
   if(pfd->dwFlags & PFD_NEED_PALETTE) 
-    DPRINTF3D(lvl, (fp, "PFD_NEED_PALETTE "));
+    DPRINTF3D(lvl, ("PFD_NEED_PALETTE "));
   if(pfd->dwFlags & PFD_NEED_SYSTEM_PALETTE) 
-    DPRINTF3D(lvl, (fp, "PFD_NEED_SYSTEM_PALETTE "));
+    DPRINTF3D(lvl, ("PFD_NEED_SYSTEM_PALETTE "));
   if(pfd->dwFlags & PFD_DOUBLEBUFFER) 
-    DPRINTF3D(lvl, (fp, "PFD_DOUBLEBUFFER "));
+    DPRINTF3D(lvl, ("PFD_DOUBLEBUFFER "));
   if(pfd->dwFlags & PFD_SWAP_LAYER_BUFFERS) 
-    DPRINTF3D(lvl, (fp, "PFD_SWAP_LAYER_BUFFERS "));
+    DPRINTF3D(lvl, ("PFD_SWAP_LAYER_BUFFERS "));
   if(pfd->dwFlags & PFD_SWAP_COPY) 
-    DPRINTF3D(lvl, (fp, "PFD_SWAP_COPY "));
+    DPRINTF3D(lvl, ("PFD_SWAP_COPY "));
   if(pfd->dwFlags & PFD_SWAP_EXCHANGE) 
-    DPRINTF3D(lvl, (fp, "PFD_SWAP_EXCHANGE "));
-  DPRINTF3D(lvl,(fp,"\n"));
+    DPRINTF3D(lvl, ("PFD_SWAP_EXCHANGE "));
+  DPRINTF3D(lvl,("\n"));
 
-  DPRINTF3D(lvl,(fp,"pixelType = %s\n",(pfd->iPixelType == PFD_TYPE_RGBA ? "PFD_TYPE_RGBA" : "PFD_TYPE_COLORINDEX")));
-  DPRINTF3D(lvl,(fp,"colorBits = %d\n",pfd->cColorBits));
-  DPRINTF3D(lvl,(fp,"depthBits = %d\n",pfd->cDepthBits));
-  DPRINTF3D(lvl,(fp,"stencilBits = %d\n",pfd->cStencilBits));
-  DPRINTF3D(lvl,(fp,"accumBits = %d\n",pfd->cAccumBits));
-  DPRINTF3D(lvl,(fp,"auxBuffers = %d\n",pfd->cAuxBuffers));
-  DPRINTF3D(lvl,(fp,"layerType = %d\n",pfd->iLayerType));
+  DPRINTF3D(lvl,("pixelType = %s\n",(pfd->iPixelType == PFD_TYPE_RGBA ? "PFD_TYPE_RGBA" : "PFD_TYPE_COLORINDEX")));
+  DPRINTF3D(lvl,("colorBits = %d\n",pfd->cColorBits));
+  DPRINTF3D(lvl,("depthBits = %d\n",pfd->cDepthBits));
+  DPRINTF3D(lvl,("stencilBits = %d\n",pfd->cStencilBits));
+  DPRINTF3D(lvl,("accumBits = %d\n",pfd->cAccumBits));
+  DPRINTF3D(lvl,("auxBuffers = %d\n",pfd->cAuxBuffers));
+  DPRINTF3D(lvl,("layerType = %d\n",pfd->iLayerType));
 
-  DPRINTF3D(lvl,(fp,"redBits = %d\n",pfd->cRedBits));
-  DPRINTF3D(lvl,(fp,"redShift = %d\n",pfd->cRedShift));
-  DPRINTF3D(lvl,(fp,"greenBits = %d\n",pfd->cGreenBits));
-  DPRINTF3D(lvl,(fp,"greenShift = %d\n",pfd->cGreenShift));
-  DPRINTF3D(lvl,(fp,"blueBits = %d\n",pfd->cBlueBits));
-  DPRINTF3D(lvl,(fp,"blueShift = %d\n",pfd->cBlueShift));
-  DPRINTF3D(lvl,(fp,"alphaBits = %d\n",pfd->cAlphaBits));
-  DPRINTF3D(lvl,(fp,"alphaShift = %d\n",pfd->cAlphaShift));
+  DPRINTF3D(lvl,("redBits = %d\n",pfd->cRedBits));
+  DPRINTF3D(lvl,("redShift = %d\n",pfd->cRedShift));
+  DPRINTF3D(lvl,("greenBits = %d\n",pfd->cGreenBits));
+  DPRINTF3D(lvl,("greenShift = %d\n",pfd->cGreenShift));
+  DPRINTF3D(lvl,("blueBits = %d\n",pfd->cBlueBits));
+  DPRINTF3D(lvl,("blueShift = %d\n",pfd->cBlueShift));
+  DPRINTF3D(lvl,("alphaBits = %d\n",pfd->cAlphaBits));
+  DPRINTF3D(lvl,("alphaShift = %d\n",pfd->cAlphaShift));
   
-  DPRINTF3D(lvl,(fp,"accumRedBits = %d\n",pfd->cAccumRedBits));
-  DPRINTF3D(lvl,(fp,"accumGreenBits = %d\n",pfd->cAccumGreenBits));
-  DPRINTF3D(lvl,(fp,"accumBlueBits = %d\n",pfd->cAccumBlueBits));
-  DPRINTF3D(lvl,(fp,"accumAlphaBits = %d\n",pfd->cAccumAlphaBits));
+  DPRINTF3D(lvl,("accumRedBits = %d\n",pfd->cAccumRedBits));
+  DPRINTF3D(lvl,("accumGreenBits = %d\n",pfd->cAccumGreenBits));
+  DPRINTF3D(lvl,("accumBlueBits = %d\n",pfd->cAccumBlueBits));
+  DPRINTF3D(lvl,("accumAlphaBits = %d\n",pfd->cAccumAlphaBits));
 }
 
 int glDestroyRenderer(int handle) {
@@ -272,13 +304,13 @@ static int findAAPixelFormat (HDC hdc)
        wglGetProcAddress("wglChoosePixelFormatARB");
 
   if (!wglChoosePixelFormatARB) {
-    DPRINTF3D(3, (fp, "Cannot find function wglChoosePixelFormatARB"));
+    DPRINTF3D(3, ("Cannot find function wglChoosePixelFormatARB"));
     return -1;
   }
 
   /* Make sure the basic extension is also supported. */
   if (!glExtensionExists("GL_ARB_multisample")) {
-    DPRINTF3D(3, (fp, "Cannot find extension GL_ARB_multisample"));
+    DPRINTF3D(3, ("Cannot find extension GL_ARB_multisample"));
     return -1;
   }
 
@@ -286,7 +318,7 @@ static int findAAPixelFormat (HDC hdc)
               fAttributes, 1, &pixelFormat, &numFormats);
   if ((bStatus == GL_TRUE) && (numFormats > 0))
   {
-    DPRINTF3D(3, (fp, "Found 4-sample pixel format %d", pixelFormat));
+    DPRINTF3D(3, ("Found 4-sample pixel format %d", pixelFormat));
     return pixelFormat;   
   }
 
@@ -296,11 +328,11 @@ static int findAAPixelFormat (HDC hdc)
               fAttributes, 1, &pixelFormat, &numFormats);
   if ((bStatus == GL_TRUE) && (numFormats > 0))
   {
-    DPRINTF3D(3, (fp, "Found 2-sample pixel format %d", pixelFormat));
+    DPRINTF3D(3, ("Found 2-sample pixel format %d", pixelFormat));
     return pixelFormat;
   }
 
-  DPRINTF3D(3, (fp, "Cannot find a multisample pixel format."));
+  DPRINTF3D(3, ("Cannot find a multisample pixel format."));
   return -1;
 }
 
@@ -309,12 +341,12 @@ static int enableVSync(int value) {
     (PFN_WGLSWAPINTERVALEXT) wglGetProcAddress("wglSwapIntervalEXT");
 
   if(!glExtensionExists("WGL_EXT_swap_control")){
-    DPRINTF3D(3, (fp, "WGL_EXT_swap_control not found"));
+    DPRINTF3D(3, ("WGL_EXT_swap_control not found"));
     return -1;
   }
 
   if(!wglSwapIntervalEXT) {
-    DPRINTF3D(3, (fp, "wglSwapIntervalEXT not found"));
+    DPRINTF3D(3, ("wglSwapIntervalEXT not found"));
     return -1;
   }
   wglSwapIntervalEXT(value);
@@ -325,14 +357,14 @@ static int enableVSync(int value) {
 static int setupWindow(glRenderer * renderer, int x, int y, int w, int h) {
   renderer->hWnd = glCreateClientWindow(*theSTWindow, x, y, w, h);
   if(renderer->hWnd == NULL) {
-    DPRINTF3D(1, (fp, "Failed to create client window\n"));
+    DPRINTF3D(1, ("Failed to create client window\n"));
     return 0;
   }
   ShowWindow(renderer->hWnd, SW_SHOW);
   UpdateWindow(renderer->hWnd);
   renderer->hDC = GetDC(renderer->hWnd);
   if(!renderer->hDC) {
-    DPRINTF3D(1, (fp, "Failed to obtain client hdc\n"));
+    DPRINTF3D(1, ("Failed to obtain client hdc\n"));
     return 0;
   }
   return 1;
@@ -356,7 +388,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
   glRenderer *renderer;
 
   if(flags & ~SUPPORTED_FLAGS) {
-    DPRINTF3D(1, (fp, "ERROR: Unsupported flags requested( %d)\n", flags));
+    DPRINTF3D(1, ("ERROR: Unsupported flags requested( %d)\n", flags));
     return -1;
   }
 
@@ -364,13 +396,13 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
     if(allRenderer[i].used == 0) break;
   }
   if(i >= MAX_RENDERER) {
-    DPRINTF3D(1, (fp, "ERROR: Maximum number of renderers (%d) exceeded\n", MAX_RENDERER));
+    DPRINTF3D(1, ("ERROR: Maximum number of renderers (%d) exceeded\n", MAX_RENDERER));
     return -1;
   }
   index = i;
   renderer = allRenderer+index;
   memset(renderer, 0, sizeof(glRenderer));
-  DPRINTF3D(3,(fp,"---- Initializing OpenGL ----\n\n"));
+  DPRINTF3D(3,("---- Initializing OpenGL ----\n\n"));
   if (! setupWindow(renderer, x, y, w, h)) {
     goto FAILED;
   }
@@ -393,7 +425,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 
   for(i=1; i<= max; i++) {
     DescribePixelFormat(renderer->hDC, i, sizeof(pfd), &pfd);
-    DPRINTF3D(3,(fp, "\n#### Checking pixel format %d:\n", i));
+    DPRINTF3D(3,("\n#### Checking pixel format %d:\n", i));
     printPFD(&pfd, 3);
 
     if((pfd.dwFlags & matchPFD.dwFlags) != matchPFD.dwFlags)
@@ -419,7 +451,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
     if((pfd.dwFlags & PFD_GENERIC_FORMAT) == 0) {
       /* This indicates an accellerated driver */
       if((flags & B3D_HARDWARE_RENDERER) == 0) continue;
-      DPRINTF3D(3,(fp,"===> This is an accelerated driver\n"));
+      DPRINTF3D(3,("===> This is an accelerated driver\n"));
       if(goodPFD.nSize == 0) {
         goodPFD = pfd; goodIndex = i;
       } else if(goodPFD.cColorBits == depth) {
@@ -428,7 +460,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
     } else if(pfd.dwFlags & PFD_GENERIC_ACCELERATED) {
       /* This indicates an accellerated mini-driver */
       if((flags & B3D_HARDWARE_RENDERER) == 0) continue;
-      DPRINTF3D(3,(fp,"===> This is an accelerated mini-driver\n"));
+      DPRINTF3D(3,("===> This is an accelerated mini-driver\n"));
 
       if(goodPFD.nSize == 0) {
         goodPFD = pfd; goodIndex = i;
@@ -448,7 +480,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
   }
   if(goodPFD.nSize == 0) {
     /* We didn't find an accellerated driver. */
-    DPRINTF3D(3,(fp,"#### WARNING: No accelerated driver found; bailing out\n"));
+    DPRINTF3D(3,("#### WARNING: No accelerated driver found; bailing out\n"));
     goto FAILED;
   }
 
@@ -461,11 +493,11 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
   goodIndex = GetPixelFormat(renderer->hDC);
   DescribePixelFormat(renderer->hDC, goodIndex, sizeof(pfd), &pfd);
 
-  DPRINTF3D(3,(fp,"\n#### Selected pixel format (%d) ####\n", goodIndex));
+  DPRINTF3D(3,("\n#### Selected pixel format (%d) ####\n", goodIndex));
   printPFD(&pfd, 3);
   renderer->context = wglCreateContext(renderer->hDC);
   if(!renderer->context) {
-    DPRINTF3D(1, (fp,"Failed to create opengl context\n"));
+    DPRINTF3D(1, ("Failed to create opengl context\n"));
     goto FAILED;
   }
   /* Make the context current */
@@ -493,7 +525,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
   	SetPixelFormat(renderer->hDC, aaIndex, &pfd);
   	goodIndex = GetPixelFormat(renderer->hDC);
   	DescribePixelFormat(renderer->hDC, goodIndex, sizeof(pfd), &pfd);
-	DPRINTF3D(3,(fp,"\n#### AA pixel format (%d) ####\n", goodIndex));
+	DPRINTF3D(3,("\n#### AA pixel format (%d) ####\n", goodIndex));
   	printPFD(&pfd, 3);
   	renderer->context = wglCreateContext(renderer->hDC);
 	if (!wglMakeCurrent(renderer->hDC, renderer->context)) goto FAILED;
@@ -505,13 +537,13 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 
   /* print some information about the context */
   string = (char*) glGetString(GL_VENDOR);
-  DPRINTF3D(3,(fp, "\nOpenGL vendor: %s\n", string));
+  DPRINTF3D(3,("\nOpenGL vendor: %s\n", string));
   string = (char*) glGetString(GL_RENDERER);
-  DPRINTF3D(3,(fp, "OpenGL renderer: %s\n", string));
+  DPRINTF3D(3,("OpenGL renderer: %s\n", string));
   string = (char*) glGetString(GL_VERSION);
-  DPRINTF3D(3,(fp, "OpenGL version: %s\n", string));
+  DPRINTF3D(3,("OpenGL version: %s\n", string));
   string = (char*) glGetString(GL_EXTENSIONS);
-  DPRINTF3D(3,(fp, "OpenGL extensions: %s\n", string));
+  DPRINTF3D(3,("OpenGL extensions: %s\n", string));
   
   renderer->used = 1;
   renderer->bufferRect[0] = x;
@@ -519,7 +551,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
   renderer->bufferRect[2] = w;
   renderer->bufferRect[3] = h;
 
-  DPRINTF3D(3, (fp,"### Renderer created!\n"));
+  DPRINTF3D(3, ("### Renderer created!\n"));
   /* setup user context */
   glDisable(GL_LIGHTING);
   glDisable(GL_COLOR_MATERIAL);
@@ -537,7 +569,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
   return index;
 FAILED:
   /* do necessary cleanup */
-  DPRINTF3D(1,(fp, "OpenGL initialization failed\n"));
+  DPRINTF3D(1,("OpenGL initialization failed\n"));
   if(renderer->context) wglDeleteContext(renderer->context);
   if(renderer->hDC) ReleaseDC(renderer->hWnd, renderer->hDC);
   if(renderer->hWnd) DestroyWindow(renderer->hWnd);
@@ -563,7 +595,7 @@ int glSetIntPropertyOS(int handle, int prop, int value)
 /*****************************************************************************/
 
 glRenderer *glRendererFromHandle(int handle) {
-  DPRINTF3D(7, (fp, "Looking for renderer id: %d\n", handle));
+  DPRINTF3D(7, ("Looking for renderer id: %d\n", handle));
   if(handle < 0 || handle >= MAX_RENDERER) return NULL;
   if(allRenderer[handle].used) return allRenderer+handle;
   return NULL;
@@ -624,7 +656,7 @@ int glInitialize(void)
   int i;
   theSTWindow = (HWND*) interpreterProxy->ioLoadFunctionFrom("stWindow","");
   if(!theSTWindow) {
-    DPRINTF3D(1,(fp,"ERROR: Failed to look up stWindow\n"));
+    DPRINTF3D(1,("ERROR: Failed to look up stWindow\n"));
     return 0;
   }
   for(i = 0; i < MAX_RENDERER; i++) {

@@ -26,5 +26,4 @@ SqueakFFIPrims \
 StarSqueakPlugin \
 UnixOSProcessPlugin \
 ZipPlugin \
-# IA32FFIPlugin \
-# Klatt \
+# Klatt
