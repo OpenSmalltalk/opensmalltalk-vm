@@ -523,6 +523,7 @@ int glSwapBuffers(glRenderer *renderer) {
 	GLint err;
 
 	assert(!glErr);
+	ERROR_CHECK_1("glErr already set on calling glSwapBuffers");
 	if(!renderer) return 0;
 	if(!renderer->used || !renderer->context) return 0;
 	if(renderer->drawable) {
@@ -536,7 +537,7 @@ int glSwapBuffers(glRenderer *renderer) {
 #endif
 		aglSwapBuffers(renderer->context);
 		if((err = aglGetError()) != AGL_NO_ERROR) DPRINTF3D(3,("ERROR (aglSwapBuffers): aglGetError - %s\n", aglErrorString(err)));
-		//ERROR_CHECK;
+		ERROR_CHECK_1("aglSwapBuffers");
 	}
 	else {
 #if 0	/* No CopyBits or QDSwapPort in the Mac OS X 10.9 SDK */

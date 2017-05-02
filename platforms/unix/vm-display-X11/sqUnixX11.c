@@ -7083,9 +7083,9 @@ static void printVisual(XVisualInfo* visinfo)
       glXGetConfig(stDisplay, visinfo, GLX_DEPTH_SIZE,    &depth);
 
       if (slow != GLX_SLOW_CONFIG)
-        { DPRINTF3D(3, ("===> OpenGL visual\r")) }
+        DPRINTF3D(3, ("===> OpenGL visual\r"));
       else
-        { DPRINTF3D(3, ("---> slow OpenGL visual\r")) }
+        DPRINTF3D(3, ("---> slow OpenGL visual\r"));
 
       DPRINTF3D(3, ("rgbaBits = %i+%i+%i+%i\r", red, green, blue, alpha));
       DPRINTF3D(3, ("stencilBits = %i\r", stencil));

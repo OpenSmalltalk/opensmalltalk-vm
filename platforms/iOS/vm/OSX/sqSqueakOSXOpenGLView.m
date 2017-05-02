@@ -17,10 +17,10 @@
  copies of the Software, and to permit persons to whom the
  Software is furnished to do so, subject to the following
  conditions:
- 
+
  The above copyright notice and this permission notice shall be
  included in all copies or substantial portions of the Software.
- 
+
  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
  OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -29,7 +29,7 @@
  WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
- 
+
  The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
  "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
  and its contributors", in the same place and form as other third-party acknowledgments. 
@@ -144,7 +144,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 - (void)viewDidMoveToWindow {
 	if (self.squeakTrackingRectForCursor)
 		[self removeTrackingRect: self.squeakTrackingRectForCursor];
-	
+
 	self.squeakTrackingRectForCursor = [self addTrackingRect: [self bounds] owner: self userData:NULL assumeInside: NO];
 }
 
@@ -169,7 +169,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (void) drawImageUsingClip: (CGRect) clip {
-	
+
 	if (clippyIsEmpty){
 		clippy = clip;
 		clippyIsEmpty = NO;
@@ -210,7 +210,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glClearColor(1.0, 1.0, 1.0, 1.0);
 	glColor4f(1.0, 1.0, 1.0, 1.0);
-	
+
 	glDisable(GL_DITHER);
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_BLEND);
@@ -222,7 +222,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
     glDisable (GL_CULL_FACE);
 	glStencilMask(0);
 	glPixelZoom(1.0,1.0);
-	
+
 	glEnable(GL_TEXTURE_RECTANGLE_ARB);
  	glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_PRIORITY, 0.0);
 	glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
@@ -241,16 +241,16 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 - (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (NSRect) subRect { 
 //	CGL_MACRO_DECLARE_VARIABLES();
 	static void *previousLastBitsIndex=null;
-    
+
     NSRect r = self.frame;
-    
+
     if (!NSEqualRects(lastFrameSize,r)) {
         //NSLog(@"old %f %f %f %f new %f %f %f %f",lastFrameSize.origin.x,lastFrameSize.origin.y,lastFrameSize.size.width,lastFrameSize.size.height,self.frame.origin.x,r.origin.y,r.size.width,r.size.height);
         lastFrameSize = r;
         glPixelStorei( GL_UNPACK_ROW_LENGTH, r.size.width );
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
-        
+
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
         [[self openGLContext] update];
@@ -261,7 +261,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		previousLastBitsIndex = lastBitsIndex;
 		glTextureRangeAPPLE(GL_TEXTURE_RECTANGLE_ARB, r.size.width*r.size.height*4,lastBitsIndex);		
 	}
-		
+
 	glViewport( subRect.origin.x,subRect.origin.y, subRect.size.width,subRect.size.height );
 	char *subimg = ((char*)lastBitsIndex) + (unsigned int)(subRect.origin.x + (r.size.height-subRect.origin.y-subRect.size.height)*r.size.width)*4;
 	glTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, subRect.size.width, subRect.size.height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, subimg );
@@ -299,12 +299,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
         }
         self.fullScreenInProgress = NO;
     }
-    
+
 	//NSLog(@" draw %f %f %f %f",rect.origin.x,rect.origin.y,rect.size.width,rect.size.height);
 	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
-	
+
     [self setupFullScreendispBitsIndex];
-    
+
     if ( fullScreendispBitsIndex ) {
 		[[self openGLContext] makeCurrentContext];
         static dispatch_once_t once;
@@ -314,7 +314,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		[self loadTexturesFrom:fullScreendispBitsIndex subRectangle: rect];
 		[self defineQuad:rect];
     }
-    
+
     if (oldContext != nil) {
         [oldContext makeCurrentContext];
     }
@@ -370,16 +370,16 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 - (void)otherMouseDown:(NSEvent *)theEvent {
 	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseEvent: theEvent fromView: self];
 }
- 
+
 - (NSString *) dealWithOpenStepChars: (NSString *) openStep {
-	
+
 	unichar keyChar; 
 	static unichar combiningHelpChar[] = {0x003F, 0x20DD};
-	
+
 	keyChar = [openStep characterAtIndex: 0]; 
-	
+
 //http://unicode.org/Public/MAPPINGS/VENDORS/APPLE/KEYBOARD.TXT
-	
+
 	switch (keyChar) { 
 		case NSUpArrowFunctionKey: keyChar = 30; break; 
 		case NSDownArrowFunctionKey: keyChar = 31; break; 
@@ -406,19 +406,19 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 
 -(void)  fakeKeyDownUp: (NSEvent*) theEvent {
-	
+
 	//http://www.unicode.org/Public/MAPPINGS/VENDORS/APPLE/CORPCHAR.TXT
 	//http://www.internet4classrooms.com/mac_ext.gif
 	//http://developer.apple.com/legacy/mac/library/documentation/mac/Text/Text-571.html
-	
+
 	keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
-	
+
 	@synchronized(self) {
 		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
 		NSString *possibleConversion = [theEvent characters];
-		
+
 		if ([possibleConversion length] > 0) {
 			NSString *c = [self dealWithOpenStepChars: possibleConversion];
 			[self insertText: c replacementRange: NSMakeRange(NSNotFound, 0)];
@@ -432,7 +432,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
-	
+
 	NSArray *down = @[theEvent];
 	@synchronized(self) {
 		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
@@ -470,14 +470,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	unsigned short keyCode;
 	NSString *unicodeString;
 	BOOL isFunctionKey = NO;
-	
+
 	if (self.lastSeenKeyBoardModifierDetails) {
 		isFunctionKey = (self.lastSeenKeyBoardModifierDetails.modifierFlags & NSFunctionKeyMask) == NSFunctionKeyMask;
 	}
-	
+
 #define encode(c, k,  s) 		 if (aSelector == @selector(s)) { unicode = c; keyCode = k; unicodeString = [NSString stringWithCharacters: &unicode length: 1]; } 
 //http://developer.apple.com/documentation/mac/Text/Text-571.html
-	
+
 	encode(  8, 51,         deleteBackward:)
 	else encode( 8, 51,     deleteWordBackward:)
 	else encode(127, 51,    deleteForward:)
@@ -526,13 +526,13 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	else encode( 27, 53,    complete:)
 	else encode( 27, 71,    delete:)
 	else return;
-	
+
 	@synchronized(self) {
 		keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
 		aKeyBoardStrokeDetails.keyCode = keyCode;
 		aKeyBoardStrokeDetails.modifierFlags = self.lastSeenKeyBoardModifierDetails.modifierFlags;
 		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
-			
+
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordCharEvent: unicodeString fromView: self];
 		self.lastSeenKeyBoardStrokeDetails = NULL;
 	}
@@ -625,10 +625,10 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		return NSDragOperationNone;
 	dragInProgress = YES;
 	self.dragCount = (int) [self countNumberOfNoneSqueakImageFilesInDraggedFiles: info];
-	
+
 	if (self.dragCount)
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragEnter numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view: self];
-	
+
 	return NSDragOperationGeneric;
 }
 
@@ -656,7 +656,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		self.dragItems = [self filterOutSqueakImageFilesFromDraggedFiles: info];
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view: self];
 	} 
-	
+
 	NSArray *images = [self filterSqueakImageFilesFromDraggedFiles: info];
 	if ([images count] > 0) {
 		for (NSString *item in images ){
@@ -667,14 +667,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 			launchSpec.itemURLs = (__bridge CFArrayRef) @[[NSURL fileURLWithPath: item]];
 			launchSpec.launchFlags = kLSLaunchDefaults | kLSLaunchNewInstance;
 			launchSpec.asyncRefCon = NULL;
-			
+
 			OSErr err = LSOpenFromURLSpec(&launchSpec, NULL);
 #pragma unused(err)
 		}
 	}
-		
 
-	
+
+
 	dragInProgress = NO;
 	return YES;
 }
@@ -705,12 +705,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (void)  ioSetFullScreen: (sqInt) fullScreen {
-	
+
 	if ([self isInFullScreenMode] == YES && (fullScreen == 1)) 
 		return;
 	if ([self isInFullScreenMode] == NO && (fullScreen == 0))
 		return;
-	
+
 	if ([self isInFullScreenMode] == NO && (fullScreen == 1)) {
        self.fullScreenInProgress = YES;
 		NSDictionary* options = [NSDictionary dictionaryWithObjectsAndKeys:
@@ -720,7 +720,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 			NSFullScreenModeApplicationPresentationOptions, nil];
 		[self enterFullScreenMode:[NSScreen mainScreen] withOptions:options];
 	}
-	
+
 	if ([self isInFullScreenMode] == YES && (fullScreen == 0)) {
         self.fullScreenInProgress = YES;
 		[self exitFullScreenModeWithOptions: NULL];
