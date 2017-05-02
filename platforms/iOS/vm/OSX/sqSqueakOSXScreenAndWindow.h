@@ -36,6 +36,8 @@
  */
 //
 
+#if !FOR_OS_EXPORTS
+
 #import "sqSqueakScreenAndWindow.h"
 #import "sqSqueakOSXOpenGLView.h"
 
@@ -48,3 +50,16 @@
 - (void) mainViewOnWindow: (sqSqueakOSXOpenGLView *) aView;
 
 @end
+
+#endif /* FOR_OS_EXPORTS */
+
+void *getSTWindow(void);
+
+/* A "chain" of windowChangedHooks, using the Unix signal convention; it is the
+ * responsibility of the caller to remember any previous hook and chain it from
+ * their own windowChangedHook.  Hence setWindowChangedHook answers the previous
+ * windowChangedHook.
+ */
+typedef void (*windowChangedHook)();
+extern windowChangedHook getWindowChangedHook(void);
+extern windowChangedHook setWindowChangedHook(windowChangedHook hook);

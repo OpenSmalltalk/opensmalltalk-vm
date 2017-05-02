@@ -7,7 +7,7 @@
  *
  */
 
-#include "macintoshosxextra.h"
+#include "sq.h"
 
 #include <sys/syslimits.h>
 
