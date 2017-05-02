@@ -61,6 +61,7 @@
  
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <sys/errno.h>
 
 /* get a value for RTLD_NOW, with increasing levels of desperation... */
 
@@ -226,12 +227,20 @@ tryLoading(char *dirName, char *moduleName)
   static char *suffixes[]= { "", ".so", ".dylib", 0 };
   void        *handle= 0;
   char	     **prefix= 0, **suffix= 0;
+  struct stat  buf;
 
   DPRINTF((stderr, __FILE__ " %d tryLoadModule(%s,%s)\n", __LINE__, dirName, moduleName));
+  /* If dirName does not exist it is pointless searching for libraries in it. */
+  if (stat(dirName,&buf)) {
+	if (errno != ENOENT)
+		fprintf(stderr,
+				"tryLoading(%s,%s): stat(%s) %s\n",
+				dirName, moduleName, dirName, strerror(errno));
+	return 0;
+  }
   for (prefix= prefixes;  *prefix;  ++prefix)
 	for (suffix= suffixes;  *suffix;  ++suffix) {
 		char        libName[NAME_MAX + 32];	/* headroom for prefix/suffix */
-		struct stat buf;
 		int         n;
 		n = snprintf(libName, sizeof(libName), "%s%s%s%s",dirName,*prefix,moduleName,*suffix);
 		assert(n >= 0 && n < NAME_MAX + 32);
@@ -239,11 +248,21 @@ tryLoading(char *dirName, char *moduleName)
 			if (S_ISDIR(buf.st_mode))
 				DPRINTF((stderr, __FILE__ " %d ignoring directory: %s\n", __LINE__, libName));
 			else {
-				handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
+				char *why;
+				handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
+				if (!handle) {
+					why = dlerror();
+					if (strstr(why,"undefined symbol")) {
+						fprintf(stderr,
+								"tryLoading(%s,%s): dlopen: %s\n",
+								dirName, moduleName, why);
+						continue;
+					}
+				}
 				DPRINTF((stderr, __FILE__ " %d tryLoading dlopen(%s) = %p\n", __LINE__, libName, handle));
 				if (handle == 0) {
 					if (!sqIgnorePluginErrors)
-						fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, dlerror());
+						fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, why);
 				}
 				else {
 # if DEBUG

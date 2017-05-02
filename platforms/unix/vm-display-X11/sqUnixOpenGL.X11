@@ -113,7 +113,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 
   /* choose visual and create context */
 
-  if (glVerbosityLevel >= 3)
+  if (verboseLevel >= 3)
     listVisuals();
 
   {
@@ -138,7 +138,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 
     DPRINTF3D(3, ("\r#### Selected GLX visual ID 0x%lx ####\r", 
 		visinfo->visualid));
-    if (glVerbosityLevel >= 3)
+    if (verboseLevel >= 3)
       printVisual(visinfo);
 
     renderer->context= glXCreateContext(stDisplay, visinfo, 0, GL_TRUE);
@@ -462,7 +462,7 @@ int glInitialize(void)
   int i, p;
   int fn;
 
-  glVerbosityLevel = 1;
+  verboseLevel = 1;
 
   fn= interpreterProxy->ioLoadFunctionFrom("ioGetDisplay", NULL);
   stDisplay= (fn ? ((Display *(*)(void))fn)() : 0);

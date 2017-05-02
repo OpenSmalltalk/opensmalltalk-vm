@@ -6897,6 +6897,50 @@ static void display_ioGLsetBufferRect(glRenderer *r, sqInt x, sqInt y, sqInt w, 
 # include "B3DAcceleratorPlugin.h"
 # include "sqOpenGLRenderer.h"
 
+/* Local copy of code in sqOpenGLRenderer.c/.h so as not to conflict with
+ * B3DAcceleratorPlugin.
+ */
+#undef DPRINTF3D
+#define DPRINTF3D(v,a) do { if ((v) <= verboseLevel) myPrint3Dlog a; } while (0)
+
+static FILE *logfile = 0;
+static void
+closelog(void)
+{ if (logfile) (void)fclose(logfile); }
+
+static int
+myPrint3Dlog(char *fmt, ...)
+{	va_list args;
+
+	if (!logfile) {
+		char *slash;
+		char fileName[PATH_MAX+1];
+#if !defined(SQUEAK_BUILTIN_PLUGIN)
+		char *(*getImageName)();
+		extern struct VirtualMachine *interpreterProxy;
+
+		getImageName = interpreterProxy->ioLoadFunctionFrom("getImageName", "");
+		if (!getImageName)
+			strcpy(fileName,"./");
+		else
+#endif
+		strcpy(fileName,getImageName());
+		slash = strrchr(fileName,'/');
+		strcpy(slash ? slash + 1 : fileName, "Squeak3D.log");
+		logfile = fopen(fileName, "at");
+		if (!logfile) {
+			perror("fopen Squeak3D.log");
+			return 0;
+		}
+		atexit(closelog);
+	}
+	va_start(args,fmt);
+	vfprintf(logfile, fmt, args);
+	va_end(args);
+	if (forceFlush) /* from sqOpenGLRenderer.h */
+		fflush(logfile);
+}
+
 # include <GL/gl.h>
 # include <GL/glx.h>
 
