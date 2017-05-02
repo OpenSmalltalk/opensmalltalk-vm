@@ -72,23 +72,6 @@ static void * (*getSTWindow)();
 windowChangedHook existingHook = 0;
 
 
-/* Verbose level for debugging purposes:
-	0 - print NO information ever
-	1 - print critical debug errors
-	2 - print debug warnings
-	3 - print extra information
-	4 - print extra warnings
-	5 - print information about primitive execution
-
-   10 - print information about each vertex and face
-*/
-extern int verboseLevel;
-extern int print3Dlog(char *fmt, ...);
-
-/* Note: Print this stuff into a file in case we lock up */
-#undef DPRINTF3D
-#define DPRINTF3D(vLevel, args) if (vLevel <= verboseLevel) { print3Dlog args; }
-
 /* Plugin refs */
 extern struct VirtualMachine *interpreterProxy;
 static float blackLight[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -553,7 +536,7 @@ int glSwapBuffers(glRenderer *renderer) {
 #endif
 		aglSwapBuffers(renderer->context);
 		if((err = aglGetError()) != AGL_NO_ERROR) DPRINTF3D(3,("ERROR (glSwapBuffers): aglGetError - %s\n", aglErrorString(err)));
-		ERROR_CHECK;
+		//ERROR_CHECK;
 	}
 	else {
 #if 0	/* No CopyBits or QDSwapPort in the Mac OS X 10.9 SDK */
@@ -668,10 +651,6 @@ int glSetBufferRect(int handle, int x, int y, int w, int h) {
 	return 1;
 }
 
-int glSetVerboseLevel(int level) {
-	verboseLevel = level;
-	return 1;
-}
 
 int glIsOverlayRenderer(int handle) {
 #pragma unused(handle)

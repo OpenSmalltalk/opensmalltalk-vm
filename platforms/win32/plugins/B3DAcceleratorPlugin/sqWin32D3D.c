@@ -30,73 +30,10 @@
 
 #if defined(B3DX_D3D)
 
-/* define forceFlush if we should fflush() before closing file */
-#define forceFlush 1
-
-/* Note: Print this stuff into a file in case we lock up*/
-# define DPRINTF3D(vLevel, args) if(vLevel <= verboseLevel) {\
-	FILE *fp = fopen("Squeak3D.log", "at");\
-	if(fp) { fprintf args; if(forceFlush) fflush(fp); fclose(fp); }}
-
 /* Plugin refs */
 extern struct VirtualMachine *interpreterProxy;
 
-/* Verbose level for debugging purposes:
-	0 - print NO information ever
-	1 - print critical debug errors
-	2 - print debug warnings
-	3 - print extra information
-	4 - print extra warnings
-	5 - print information about primitive execution
-
-   10 - print information about each vertex and face
-*/
-#ifndef B3DX_GL
-int verboseLevel = 1;
-/* define forceFlush if we should fflush() before closing file */
-#define forceFlush 1
-static FILE *logfile = 0;
-
-/* Note: Print this stuff into a file in case we lock up */
-
-static void
-closelog(void)
-{ if (logfile) (void)fclose(logfile); }
-
-int
-print3Dlog(char *fmt, ...)
-{
-	va_list args;
-
-	if (!logfile) {
-		char *slash;
-		char fileName[PATH_MAX+1];
-
-		strcpy(fileName,imageName);
-		slash = strrchr(fileName,'/');
-		strcpy(slash ? slash + 1 : fileName, "Squeak3D.log");
-		logfile = fopen(fileName, "at");
-		if (!logfile) {
-			perror("fopen Squeak3D.log");
-			return 0;
-		}
-		atexit(closelog);
-	}
-	va_start(args,fmt);
-	fprintf(logfile, fmt, args);
-	va_end(args);
-	if (forceFlush)
-		fflush(logfile);
-}
-
-#else
-extern int verboseLevel;
-extern int print3Dlog(char *fmt, ...);
-#endif
-
-#undef DPRINTF3D
-#define DPRINTF3D(vLevel, args) if (vLevel <= verboseLevel) { print3Dlog args; }
-
+#undef ERROR_CHECK
 #define ERROR_CHECK if(FAILED(hRes)) { DPRINTF3D(2, ("Error (%lx) in %s, line %d\n", hRes, __FILE__, __LINE__))}
 
 /*****************************************************************************/
