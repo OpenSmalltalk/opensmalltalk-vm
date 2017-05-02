@@ -102,7 +102,7 @@ print3Dlog(char *fmt, ...)
 		atexit(closelog);
 	}
 	va_start(args,fmt);
-	fprintf(logfile, fmt, args);
+	vfprintf(logfile, fmt, args);
 	va_end(args);
 	if (forceFlush) /* from sqOpenGLRenderer.h */
 		fflush(logfile);

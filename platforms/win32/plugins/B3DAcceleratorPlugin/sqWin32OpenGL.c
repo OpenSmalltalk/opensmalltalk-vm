@@ -601,14 +601,16 @@ int glSetBufferRect(int handle, int x, int y, int w, int h) {
 int glInitialize(void)
 {
   int i;
+
+  glVerbosityLevel = 1;
+
   theSTWindow = (HWND*) interpreterProxy->ioLoadFunctionFrom("stWindow","");
   if(!theSTWindow) {
     DPRINTF3D(1,("ERROR: Failed to look up stWindow\n"));
     return 0;
   }
-  for(i = 0; i < MAX_RENDERER; i++) {
+  for(i = 0; i < MAX_RENDERER; i++)
     allRenderer[i].used = 0;
-  }
   return 1;
 }
 

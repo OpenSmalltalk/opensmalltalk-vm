@@ -48,6 +48,7 @@ int glSwapBuffers(struct glRenderer *renderer);
 */
 extern int glVerbosityLevel;
 extern int glErr;
+extern char *glErrString(void);
 
 /* Note: Print this stuff into a file in case we lock up */
 extern int print3Dlog(char *fmt, ...);

@@ -2132,9 +2132,10 @@ int d3dInitialize(void)
   int i;
   HRESULT hRes;
 
-  for(i=0; i<MAX_RENDERER; i++) {
+  for(i=0; i<MAX_RENDERER; i++)
     allRenderer[i].fUsed = 0;
-  }
+
+  glVerbosityLevel = 1;
 
   hRes = CoInitialize(NULL);
   if(FAILED(hRes)) {
@@ -2193,6 +2194,5 @@ int d3dShutdown(void)
   CoUninitialize();
   return 1;
 }
-
 
 #endif /* defined(B3DX_D3D) */

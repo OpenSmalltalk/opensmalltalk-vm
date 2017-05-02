@@ -462,6 +462,8 @@ int glInitialize(void)
   int i, p;
   int fn;
 
+  glVerbosityLevel = 1;
+
   fn= interpreterProxy->ioLoadFunctionFrom("ioGetDisplay", NULL);
   stDisplay= (fn ? ((Display *(*)(void))fn)() : 0);
   if (!stDisplay)
