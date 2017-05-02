@@ -45,6 +45,8 @@
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 
+static void dispatchWindowChangedHook(void);
+
 @interface sqSqueakOSXScreenAndWindow()
     @property (nonatomic,strong) sqSqueakOSXOpenGLView *mainViewOnWindow;
 @end
@@ -77,4 +79,55 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordWindowEvent: WindowEventClose window: window];
 	return NO;
 }
+
+#if DEBUG_WINDOW_CHANGED_HOOK
+# define windowResizeMethod(msg) - (void)msg (NSNotification *)notification { \
+	printf( #msg "\n"); \
+}
+#else
+# define windowResizeMethod(msg) - (void)msg (NSNotification *)notification { \
+	dispatchWindowChangedHook(); \
+}
+#endif
+
+windowResizeMethod(windowDidResize:)
+windowResizeMethod(windowDidMiniaturize:)
+windowResizeMethod(windowDidDeminiaturize:)
+//These two not needed since windowDidResize: is also dispatched
+//windowResizeMethod(windowDidEnterFullScreen:)
+//windowResizeMethod(windowDidExitFullScreen:)
+//This one is dispatched when entering/exiting true full screen mode
+windowResizeMethod(windowDidChangeScreen:)
+
 @end
+
+void *
+getSTWindow(void)
+{
+	extern BOOL gSqueakHeadless;
+
+	return (gSqueakHeadless && !browserActiveAndDrawingContextOk())
+			? 0
+			: windowHandleFromIndex(1);
+}
+
+/* A "chain" of windowChangedHooks, using the Unix signal convention; it is the
+ * responsibility of the caller to remember any previous hook and chain it from
+ * their own windowChangedHook.  Hence setWindowChangedHook answers the previous
+ * windowChangedHook.
+ */
+static windowChangedHook hookLine = 0;
+
+static void
+dispatchWindowChangedHook()
+{	if (hookLine) hookLine(); }
+
+windowChangedHook
+getWindowChangedHook() { return hookLine; }
+
+windowChangedHook
+setWindowChangedHook(windowChangedHook hook)
+{	windowChangedHook prevHook = hookLine;
+	hookLine = hook;
+	return prevHook;
+}

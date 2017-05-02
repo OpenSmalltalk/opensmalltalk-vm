@@ -1,1 +1,2 @@
-Spur32to64BitBootstrap new bootstrapImage: 'spurreader'.Smalltalk snapshot: false andQuit: true
+Spur32to64BitBootstrap new bootstrapImage: 'spurreader'.
+Smalltalk snapshot: false andQuit: true

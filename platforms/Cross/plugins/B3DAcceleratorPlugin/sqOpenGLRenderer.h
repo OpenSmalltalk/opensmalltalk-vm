@@ -43,10 +43,10 @@ static char *glErrString(void) {
 }
 
 #define ERROR_CHECK_2(glFn, sqFn) \
-	{ if( (glErr = glGetError()) != GL_NO_ERROR) DPRINTF3D(1, (fp,"ERROR (%s): %s failed -- %s\n", sqFn, glFn, glErrString())); }
+	{ if( (glErr = glGetError()) != GL_NO_ERROR) DPRINTF3D(1, ("ERROR (%s): %s failed -- %s\n", sqFn, glFn, glErrString())); }
 
 #define ERROR_CHECK_1(glFn) \
-	{ if( (glErr = glGetError()) != GL_NO_ERROR) DPRINTF3D(1, (fp,"ERROR (file %s, line %d): %s failed -- %s\n", __FILE__, __LINE__, glFn, glErrString())); }
+	{ if( (glErr = glGetError()) != GL_NO_ERROR) DPRINTF3D(1, ("ERROR (file %s, line %d): %s failed -- %s\n", __FILE__, __LINE__, glFn, glErrString())); }
 
 #define ERROR_CHECK ERROR_CHECK_1("a GL function")
 
@@ -63,14 +63,12 @@ static char *glErrString(void) {
 */
 extern int verboseLevel;
 
-/* define forceFlush if we should fflush() before closing file */
+/* Note: Print this stuff into a file in case we lock up */
+extern int print3Dlog(char *fmt, ...);
+/* define forceFlush if we should fflush() after each write */
 #define forceFlush 1
 
-/* Note: Print this stuff into a file in case we lock up*/
 #undef DPRINTF3D
-# define DPRINTF3D(vLevel, args) if(vLevel <= verboseLevel) {\
-	FILE *fp = fopen("Squeak3D.log", "at");\
-	if(fp) { fprintf args; if(forceFlush) fflush(fp); fclose(fp); }}
-
+#define DPRINTF3D(vLevel, args) if (vLevel <= verboseLevel) { print3Dlog args; }
 
 #endif /* sqOpenGLRenderer.h */

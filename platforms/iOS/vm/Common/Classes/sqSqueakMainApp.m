@@ -299,7 +299,7 @@ sigusr1(int sig, siginfo_t *info, void *uap)
 	int saved_errno = errno;
 	time_t now = time(NULL);
 	char ctimebuf[32];
-	char crashdump[imageNameSize()+1];
+	char crashdump[PATH_MAX+1];
 
 	if (!ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 		pthread_kill(getVMOSThread(),sig);
@@ -322,7 +322,7 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 {
 	time_t now = time(NULL);
 	char ctimebuf[32];
-	char crashdump[imageNameSize()+1];
+	char crashdump[PATH_MAX+1];
 
 	getCrashDumpFilenameInto(crashdump);
 	ctime_r(&now,ctimebuf);

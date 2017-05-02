@@ -13,17 +13,16 @@
 
 #include <stdio.h>
 
-
-/* duh ... this is ugly */
+#define FOR_OS_EXPORTS 1
+#include "sqSqueakOSXScreenAndWindow.h"
 
 #define XFN(export) {"", #export, (void*)export},
-
 #define XFN2(plugin, export) {#plugin, #export, (void*)plugin##_##export}
 
-
-
 void *os_exports[][3] = {
-
+	XFN(getSTWindow)
+	XFN(getWindowChangedHook)
+	XFN(setWindowChangedHook)
 
 	{NULL, NULL, NULL}
 
