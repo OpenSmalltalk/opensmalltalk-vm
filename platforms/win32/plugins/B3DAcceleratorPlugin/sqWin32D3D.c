@@ -12,7 +12,9 @@
 #include <windows.h>
 #include <ole2.h>
 #ifdef __MINGW32__
+#ifndef HMONITOR_DECLARED
 #define HMONITOR_DECLARED
+#endif
 #undef WINNT
 #endif
 
@@ -33,8 +35,36 @@
 /* Plugin refs */
 extern struct VirtualMachine *interpreterProxy;
 
+
+/*
+ * This stuff is already present when we also have opengl,
+ * otherwise we have to care manually.
+ */
+#ifndef B3DX_GL
+int verboseLevel = 1;
+#define glVerbosityLevel verboseLevel
+int
+print3DLog(char *fmt, ...) {
+  FILE *fp = fopen("Squeak3D.log", "at");
+  va_start(args,fmt);
+  vfprintf(fp, fmt, args);
+  va_end(args);
+  fflush(fp);
+  fclose(fp);
+}
+#else
+extern int glVerbosityLevel;
+#define verboseLevel glVerbosityLevel
+extern int print3Dlog(char *fmt, ...);
+#define forceFlush 1
+#endif
+
+#ifndef DPRINTF3D
+#define DPRINTF3D(v,a) do { if ((v) <= verboseLevel) print3Dlog a; } while (0)
+#endif
+
 #undef ERROR_CHECK
-#define ERROR_CHECK if(FAILED(hRes)) { DPRINTF3D(2, ("Error (%lx) in %s, line %d\n", hRes, __FILE__, __LINE__))}
+#define ERROR_CHECK if(FAILED(hRes)) { DPRINTF3D(2, ("Error (%lx) in %s, line %d\n", hRes, __FILE__, __LINE__)); }
 
 /*****************************************************************************/
 /*****************************************************************************/
