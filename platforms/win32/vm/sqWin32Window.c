@@ -2749,6 +2749,11 @@ sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
   return count;
 }
 
+char* getImageName(void)
+{
+  return imageName;
+}
+
 sqInt imageNameSize(void)
 {
   return strlen(imageName);
