@@ -1289,6 +1289,7 @@ int recordKeyboardEvent(MSG *msg) {
   /* clean up reserved */
   evt->reserved1 = 0;
 
+#ifdef PharoVM
   /* so the image can distinguish between control sequence
      like SOH and characters with modifier like ctrl+a */
   if(pressCode == EventKeyChar && ctrl)
@@ -1296,6 +1297,7 @@ int recordKeyboardEvent(MSG *msg) {
     evt->utf32Code = MapVirtualKey(LOBYTE(HIWORD(msg->lParam)), 1);
     return 1;
   }
+#endif
 
   /* note: several keys are not reported as character events;
      most noticably the mapped virtual keys. For those we
