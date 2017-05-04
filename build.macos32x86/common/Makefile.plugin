@@ -7,7 +7,6 @@
 # platforms/iOS/plugins/*/Makefile for examples.
 #
 # CFLAGS     	 adds additional compilation flags to source file compilation
-# CARBON		 links against the Carbon framework instead of the default Cocoa
 # XCFLAGS    	 adds additional compilation flags after all other flags
 # EXCLUDESRC 	 defines patterns of source files to not compile, e.g. %/dump.c
 # EXTRALIBS  	 defines additional libraries to link into an external plugin bundle
@@ -53,7 +52,7 @@ CFLAGS:= $(CFLAGS) $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(XDEFS)
 #   BUILDDIR: The location where the plugin is built
 #
 #PLUGINSRCDIR:=	../../src/plugins
-	
+
 ifeq ($(USEPLUGINASDYLIB),TRUE)
 # I do not like to use lib "as is" because that will strip all "lib" occurences, but I do not 
 # find any better solution :(
@@ -107,9 +106,9 @@ VMDIR:=     $(BUILD)/vm
 PLUGINLIB:= $(VMDIR)/$(LIBNAME).lib
 PLUGINBUNDLE:= $(VMDIR)/$(LIBNAME).bundle
 PLUGINEXE:= $(PLUGINBUNDLE)/Contents/MacOS/$(LIBNAME)
-	
+
 PLUGINDYLIB:= $(VMDIR)/$(LIBNAME).dylib
-	
+
 # https://developer.apple.com/library/ios/documentation/General/Reference/InfoPlistKeyReference/Introduction/Introduction.html
 PLUGINPLIST:= $(PLUGINBUNDLE)/Contents/Info.plist
 PLUGINICONS:= $(PLUGINBUNDLE)/Contents/Resources/SqueakPlugin.icns
@@ -180,11 +179,13 @@ $(PLUGINEXE): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ)
 ifneq ($(LINK_WITH_CPP),)
 	$(LDCXX) \
 	$(BFLAGS) \
+	-Wl,-bundle_loader,$(VMDIR)/$(VM) \
 	$(LIBOBJ) $(EXTRALIBS) \
 	-o $(PLUGINBUNDLE)/Contents/MacOS/$(LIBNAME)
 else
 	$(LD) \
 	$(BFLAGS) \
+	-Wl,-bundle_loader,$(VMDIR)/$(VM) \
 	$(LIBOBJ) $(EXTRALIBS) \
 	-o $(PLUGINBUNDLE)/Contents/MacOS/$(LIBNAME)
 endif
@@ -212,7 +213,7 @@ else
 	$(LIBOBJ) $(EXTRALIBS) \
 	-o $(VMDIR)/$(LIBNAME).dylib
 endif
-	
+
 getversion:
 	make -f ../common/Makefile.vm getversion
 
