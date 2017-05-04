@@ -19,7 +19,7 @@ Class {
 		'mergeSimStack',
 		'isReceiverResultRegSelf'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }

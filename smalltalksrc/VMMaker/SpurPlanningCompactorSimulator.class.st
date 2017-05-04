@@ -6,7 +6,7 @@ Class {
 		'relocationMap',
 		'sffsMode'
 	],
-	#category : #'VMMaker-SpurMemoryManagerSimulation'
+	#category : 'VMMaker-SpurMemoryManagerSimulation'
 }
 
 { #category : #private }

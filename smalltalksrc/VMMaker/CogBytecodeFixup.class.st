@@ -12,7 +12,7 @@ Class {
 	#classVars : [
 		'NeedsFixupFlag'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'simulation only' }
@@ -59,7 +59,7 @@ CogBytecodeFixup class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 							['targetInstruction']			-> [#'AbstractInstruction *'].
 							['mergeSimStack']			-> [#'SimStackEntry *'].
 							['instructionIndex']			-> [#'unsigned short'].
-							['simStackPtr']				-> [#char].
+							['simStackPtr']				-> [#'signed char'].
 							['simNativeStackPtr']		-> [#'short'].
 							['simNativeStackSize']		-> [#'unsigned short'].
 							['isReceiverResultRegSelf']	-> [#char] }])]

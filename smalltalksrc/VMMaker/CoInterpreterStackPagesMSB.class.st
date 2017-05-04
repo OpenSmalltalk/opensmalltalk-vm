@@ -1,7 +1,7 @@
 Class {
 	#name : #CoInterpreterStackPagesMSB,
 	#superclass : #CoInterpreterStackPages,
-	#category : #'VMMaker-JITSimulation'
+	#category : 'VMMaker-JITSimulation'
 }
 
 { #category : #'memory access' }

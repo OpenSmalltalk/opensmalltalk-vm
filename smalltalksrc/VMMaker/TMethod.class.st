@@ -30,7 +30,7 @@ Class {
 	#classVars : [
 		'CaseStatements'
 	],
-	#category : #'VMMaker-Translation to C'
+	#category : 'VMMaker-Translation to C'
 }
 
 { #category : #'class initialization' }
@@ -169,7 +169,7 @@ TMethod >> argAssignmentsFor: meth send: aSendNode in: aCodeGen [
 	stmtList := OrderedCollection new: argList size.
 	substitutionDict := Dictionary new: argList size.
 	meth args with: argList do:
-		[:argName :exprNode |
+		[:argName :exprNode | | varNode |
 		(self isNode: exprNode substitutableFor: argName inMethod: meth in: aCodeGen)
 			ifTrue:
 				[substitutionDict
@@ -179,17 +179,20 @@ TMethod >> argAssignmentsFor: meth send: aSendNode in: aCodeGen [
 							typeCompatibleWith: argName
 							inliningInto: meth
 							in: self).
-				 locals remove: argName.
-				declarations removeKey: argName ifAbsent: nil]
-			ifFalse:
-				[stmtList addLast:
-					(TAssignmentNode new
-						setVariable: (TVariableNode new setName: argName)
-						expression: (aCodeGen
-										node: exprNode copy
-										typeCompatibleWith: argName
-										inliningInto: meth
-										in: self))]].
+				 locals remove: argName ifAbsent: [self assert: (argName beginsWith: 'self_in_')].
+				 declarations removeKey: argName ifAbsent: nil]
+			ifFalse: "Add an assignment for anything except an unused self_in_foo argument"
+				[varNode := TVariableNode new setName: argName.
+				 ((argName beginsWith: 'self_in_')
+				  and: [meth parseTree noneSatisfy: [:node| varNode isSameAs: node]]) ifFalse:
+					[stmtList addLast:
+						(TAssignmentNode new
+							setVariable: varNode
+							expression: (aCodeGen
+											node: exprNode copy
+											typeCompatibleWith: argName
+											inliningInto: meth
+											in: self))]]].
 	meth parseTree: (meth parseTree bindVariablesIn: substitutionDict).
 	^stmtList
 ]
@@ -1479,14 +1482,18 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 	 otherwise the assignee variable type must match the return type of the inlinee.  Return
 	 types are not propagated."
 
-	| sel meth methArgs exitLabel inlineStmts label exitType |
+	| sel meth methArgs exitLabel inlineStmts label exitType notToBeRenamed |
 	sel := aSendNode selector.
 	meth := aCodeGen methodNamed: sel.
 	methArgs := meth args.
 	"convenient for debugging..."
 	aCodeGen maybeBreakForInlineOf: aSendNode in: self.
-	(methArgs notEmpty and: [methArgs first beginsWith: 'self_in_']) ifTrue:
-		[methArgs := methArgs allButFirst].
+	(methArgs notEmpty and: [methArgs first beginsWith: 'self_in_'])
+		ifTrue:
+			[notToBeRenamed := {methArgs first}.
+			 methArgs := methArgs allButFirst]
+		ifFalse:
+			[notToBeRenamed := #()].
 	methArgs size = aSendNode args size ifFalse:
 		[^nil].
 	meth := meth copy.
@@ -1514,9 +1521,9 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 					type ~= #sqInt ifTrue:
 						[meth declarationAt: formal put: (type last = $* ifTrue: [type, formal] ifFalse: [type, ' ', formal])]]]].
 
-	meth renameVarsForInliningInto: self except: #() in: aCodeGen.
+	meth renameVarsForInliningInto: self except: notToBeRenamed in: aCodeGen.
 	meth renameLabelsForInliningInto: self.
-	self addVarsDeclarationsAndLabelsOf: meth except: #().
+	self addVarsDeclarationsAndLabelsOf: meth except: notToBeRenamed.
 	meth hasReturn ifTrue:
 		[directReturn ifFalse:
 			[exitLabel := self unusedLabelForInliningInto: self.

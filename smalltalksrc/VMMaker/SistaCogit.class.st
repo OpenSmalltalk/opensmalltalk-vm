@@ -60,7 +60,7 @@ Class {
 	#pools : [
 		'VMSqueakClassIndices'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }

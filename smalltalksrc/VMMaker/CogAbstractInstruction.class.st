@@ -67,7 +67,7 @@ Class {
 		'CogCompilationConstants',
 		'CogRTLOpcodes'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -682,11 +682,11 @@ CogAbstractInstruction >> fullCallsAreRelative [
 ]
 
 { #category : #abi }
-CogAbstractInstruction >> genAlignCStackSavingRegisters: registerMask numArgs: numArgs wordAlignment: alignment [
+CogAbstractInstruction >> genAlignCStackSavingRegisters: regMask numArgs: numArgs wordAlignment: alignment [
 	<inline: true>
 	| regMaskCopy numRegsPushed wordsPushedModAlignment delta |
 	<var: 'regMaskCopy' type: #usqInt>
-	regMaskCopy := registerMask asUnsignedInteger.
+	regMaskCopy := regMask asUnsignedInteger.
 	numRegsPushed := 0.
 	[regMaskCopy ~= 0] whileTrue:
 		[numRegsPushed := numRegsPushed + (regMaskCopy bitAnd: 1).
