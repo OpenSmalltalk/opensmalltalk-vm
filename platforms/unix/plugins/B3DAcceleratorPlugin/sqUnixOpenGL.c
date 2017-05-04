@@ -1,5 +1,5 @@
 /* sqUnixOpenGL.c -- support for accelerated 3D rendering
- * 
+ *
  * Author: Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>
  *
  * Modified to work with both GLX and Quartz by: Ian.Piumarta@INRIA.Fr
@@ -55,8 +55,13 @@ int glInitialize(void)
   int i;
   for (i= 0;  i < MAX_RENDERER;  ++i)
     renderers[i].used= 0;
-  if (!(dpy= ioGetDisplayModule()))
+
+  glVerbosityLevel = 3;
+
+  if (!(dpy= ioGetDisplayModule())) {
+	DPRINTF3D(1, ("ioGetDisplayModule failed\n"));
     return 0;
+  }
   dpy->ioGLinitialise();
   return 1;
 }
