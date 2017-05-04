@@ -79,3 +79,17 @@
 - (NSInteger) getSqueakBrowserMouseMappingsAt: (NSInteger) i by: (NSInteger) j;
   
 @end
+
+typedef enum {
+    kSqNoButton     = 0,
+    kSqRedButton    = 1,
+    kSqYellowButton = 2,
+    kSqBlueButton   = 3,
+    kSqButtonMax    = kSqBlueButton
+} sqButton;
+typedef enum {
+    kSqModifierNone = 0,
+    kSqModifierCmd  = 1,
+    kSqModifierOpt  = 2,
+    kSqModifierCtrl = 3
+} sqModifier;

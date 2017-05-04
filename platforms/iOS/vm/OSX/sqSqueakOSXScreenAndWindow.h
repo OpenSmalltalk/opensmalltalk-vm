@@ -51,6 +51,33 @@
 
 @end
 
+#if NSAppKitVersionNumber <= NSAppKitVersionNumber10_11
+enum {
+    NSEventTypeKeyDown        = NSKeyDown,
+    NSEventTypeKeyUp          = NSKeyUp,
+    NSEventTypeFlagsChanged   = NSFlagsChanged,
+    NSEventTypeLeftMouseDown  = NSLeftMouseDown, 
+    NSEventTypeLeftMouseUp    = NSLeftMouseUp,
+    NSEventTypeRightMouseDown = NSRightMouseDown,
+    NSEventTypeRightMouseUp   = NSRightMouseUp,
+    NSEventTypeMouseMoved     = NSMouseMoved,
+    NSEventTypeScrollWheel    = NSScrollWheel,
+    NSEventTypeOtherMouseDown = NSOtherMouseDown,
+    NSEventTypeOtherMouseUp   = NSOtherMouseUp
+};
+enum {
+    NSEventModifierFlagCapsLock = NSAlphaShiftKeyMask,
+    NSEventModifierFlagShift    = NSShiftKeyMask,
+    NSEventModifierFlagControl  = NSControlKeyMask,
+    NSEventModifierFlagOption   = NSAlternateKeyMask,
+    NSEventModifierFlagCommand  = NSCommandKeyMask,
+    NSEventModifierFlagFunction = NSFunctionKeyMask,
+    NSEventModifierFlagDeviceIndependentFlagsMask = NSDeviceIndependentModifierFlagsMask,
+    NSEventMaskAny              = NSAnyEventMask
+};
+#endif
+
+
 #endif /* FOR_OS_EXPORTS */
 
 void *getSTWindow(void);
