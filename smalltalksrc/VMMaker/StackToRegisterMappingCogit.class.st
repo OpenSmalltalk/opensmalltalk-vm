@@ -12936,6 +12936,7 @@ StackToRegisterMappingCogit >> printOptStatus [
 
 { #category : #'debug printing' }
 StackToRegisterMappingCogit >> printRegisterMask: registerMask on: aStream [
+	<doNotGenerate>
 	| first |
 	aStream nextPut: ${.
 	registerMask = 0
