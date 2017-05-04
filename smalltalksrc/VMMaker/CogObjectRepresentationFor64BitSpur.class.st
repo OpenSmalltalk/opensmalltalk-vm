@@ -1134,9 +1134,9 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveIdentityHash [
 	 For behaviors we must fail into the interpreter primitive to enter the receiver into the class table."
 	cogit getPrimitiveIndex = 75 ifFalse:
 		[^0].
-	cogit
-		CallRT: ceNewHashTrampoline;
-		genPrimReturn.
+	cogit backEnd saveAndRestoreLinkRegAround:
+		[cogit CallRT: ceNewHashTrampoline].
+	cogit genPrimReturn.
 	^UnfailingPrimitive
 ]
 
