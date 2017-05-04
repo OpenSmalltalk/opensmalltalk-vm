@@ -169,7 +169,7 @@ Class {
 		'numPushNilsFunction',
 		'pushNilSizeFunction'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -12936,6 +12936,7 @@ StackToRegisterMappingCogit >> printOptStatus [
 
 { #category : #'debug printing' }
 StackToRegisterMappingCogit >> printRegisterMask: registerMask on: aStream [
+	<doNotGenerate>
 	| first |
 	aStream nextPut: ${.
 	registerMask = 0

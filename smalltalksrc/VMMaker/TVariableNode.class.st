@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'name'
 	],
-	#category : #'VMMaker-Translation to C'
+	#category : 'VMMaker-Translation to C'
 }
 
 { #category : #transformations }
@@ -32,7 +32,7 @@ TVariableNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 						ifFalse: [ aCodeGen returnPrefixFromVariable: name ])
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TVariableNode >> hasSideEffect [
 	"Answer if the parse tree rooted at this node has a side-effect or not."
 	^false
