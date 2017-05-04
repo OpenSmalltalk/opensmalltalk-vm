@@ -33,6 +33,13 @@ B3DAcceleratorPlugin class >> requiresPlatformFiles [
 	^true
 ]
 
+{ #category : #testing }
+B3DAcceleratorPlugin class >> testLoadPlugin [
+	"B3DAcceleratorPlugin testLoadPlugin"
+	<primitive: 'primitiveRendererVersion' module: 'B3DAcceleratorPlugin' error: ec>
+	self primitiveFailed
+]
+
 { #category : #'primitives-qwaq' }
 B3DAcceleratorPlugin >> checkBoundsRange: vertices faces: facePtr count: faceCount [
 	"Verify the bounds condition on the entire faces array"
