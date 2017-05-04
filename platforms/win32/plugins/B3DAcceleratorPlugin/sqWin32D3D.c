@@ -12,7 +12,9 @@
 #include <windows.h>
 #include <ole2.h>
 #ifdef __MINGW32__
+#ifndef HMONITOR_DECLARED
 #define HMONITOR_DECLARED
+#endif
 #undef WINNT
 #endif
 
@@ -30,74 +32,39 @@
 
 #if defined(B3DX_D3D)
 
-/* define forceFlush if we should fflush() before closing file */
-#define forceFlush 1
-
-/* Note: Print this stuff into a file in case we lock up*/
-# define DPRINTF3D(vLevel, args) if(vLevel <= verboseLevel) {\
-	FILE *fp = fopen("Squeak3D.log", "at");\
-	if(fp) { fprintf args; if(forceFlush) fflush(fp); fclose(fp); }}
-
 /* Plugin refs */
 extern struct VirtualMachine *interpreterProxy;
 
-/* Verbose level for debugging purposes:
-	0 - print NO information ever
-	1 - print critical debug errors
-	2 - print debug warnings
-	3 - print extra information
-	4 - print extra warnings
-	5 - print information about primitive execution
 
-   10 - print information about each vertex and face
-*/
+/*
+ * This stuff is already present when we also have opengl,
+ * otherwise we have to care manually.
+ */
 #ifndef B3DX_GL
 int verboseLevel = 1;
-/* define forceFlush if we should fflush() before closing file */
-#define forceFlush 1
-static FILE *logfile = 0;
-
-/* Note: Print this stuff into a file in case we lock up */
-
-static void
-closelog(void)
-{ if (logfile) (void)fclose(logfile); }
-
+#define glVerbosityLevel verboseLevel
 int
-print3Dlog(char *fmt, ...)
-{
-	va_list args;
-
-	if (!logfile) {
-		char *slash;
-		char fileName[PATH_MAX+1];
-
-		strcpy(fileName,imageName);
-		slash = strrchr(fileName,'/');
-		strcpy(slash ? slash + 1 : fileName, "Squeak3D.log");
-		logfile = fopen(fileName, "at");
-		if (!logfile) {
-			perror("fopen Squeak3D.log");
-			return 0;
-		}
-		atexit(closelog);
-	}
-	va_start(args,fmt);
-	fprintf(logfile, fmt, args);
-	va_end(args);
-	if (forceFlush)
-		fflush(logfile);
+print3DLog(char *fmt, ...) {
+  FILE *fp = fopen("Squeak3D.log", "at");
+  va_start(args,fmt);
+  vfprintf(fp, fmt, args);
+  va_end(args);
+  fflush(fp);
+  fclose(fp);
 }
-
 #else
-extern int verboseLevel;
+extern int glVerbosityLevel;
+#define verboseLevel glVerbosityLevel
 extern int print3Dlog(char *fmt, ...);
+#define forceFlush 1
 #endif
 
-#undef DPRINTF3D
-#define DPRINTF3D(vLevel, args) if (vLevel <= verboseLevel) { print3Dlog args; }
+#ifndef DPRINTF3D
+#define DPRINTF3D(v,a) do { if ((v) <= verboseLevel) print3Dlog a; } while (0)
+#endif
 
-#define ERROR_CHECK if(FAILED(hRes)) { DPRINTF3D(2, ("Error (%lx) in %s, line %d\n", hRes, __FILE__, __LINE__))}
+#undef ERROR_CHECK
+#define ERROR_CHECK if(FAILED(hRes)) { DPRINTF3D(2, ("Error (%lx) in %s, line %d\n", hRes, __FILE__, __LINE__)); }
 
 /*****************************************************************************/
 /*****************************************************************************/
@@ -2195,9 +2162,10 @@ int d3dInitialize(void)
   int i;
   HRESULT hRes;
 
-  for(i=0; i<MAX_RENDERER; i++) {
+  for(i=0; i<MAX_RENDERER; i++)
     allRenderer[i].fUsed = 0;
-  }
+
+  glVerbosityLevel = 1;
 
   hRes = CoInitialize(NULL);
   if(FAILED(hRes)) {
@@ -2256,6 +2224,5 @@ int d3dShutdown(void)
   CoUninitialize();
   return 1;
 }
-
 
 #endif /* defined(B3DX_D3D) */

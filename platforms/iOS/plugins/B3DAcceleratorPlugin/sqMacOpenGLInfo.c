@@ -34,53 +34,6 @@
 int printRendererInfo(void);
 int printFormatInfo(AGLPixelFormat info);
 
-/* Verbose level for debugging purposes:
-	0 - print NO information ever
-	1 - print critical debug errors
-	2 - print debug warnings
-	3 - print extra information
-	4 - print extra warnings
-	5 - print information about primitive execution
-
-   10 - print information about each vertex and face
-*/
-int verboseLevel = 1;
-
-/* Note: Print this stuff into a file in case we lock up */
-static FILE *logfile = 0;
-static void
-closelog(void)
-{ if (logfile) (void)fclose(logfile); }
-
-int
-print3Dlog(char *fmt, ...)
-{
-	va_list args;
-
-	if (!logfile) {
-		char *slash;
-		char fileName[PATH_MAX+1];
-
-		strcpy(fileName,imageName);
-		slash = strrchr(fileName,'/');
-		strcpy(slash ? slash + 1 : fileName, "Squeak3D.log");
-		logfile = fopen(fileName, "at");
-		if (!logfile) {
-			perror("fopen Squeak3D.log");
-			return 0;
-		}
-		atexit(closelog);
-	}
-	va_start(args,fmt);
-	fprintf(logfile, fmt, args);
-	va_end(args);
-	if (forceFlush) /* from sqOpenGLRenderer.h */
-		fflush(logfile);
-}
-
-#undef DPRINTF3D
-#define DPRINTF3D(vLevel, args) if (vLevel <= verboseLevel) { print3Dlog args; }
-
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/

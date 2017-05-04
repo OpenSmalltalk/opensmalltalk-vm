@@ -35,6 +35,7 @@
 /* Do not include the entire sq.h file but just those parts needed. */
 /*  The virtual machine proxy definition */
 #include "sqVirtualMachine.h"
+#include "sqAssert.h"
 /* Configuration options */
 #include "sqConfig.h"
 /* Platform specific definitions */
@@ -54,48 +55,27 @@ int printFormatInfo(AGLPixelFormat info);
 static glRenderer *current = NULL;
 static glRenderer allRenderer[MAX_RENDERER];
 
-typedef void (*windowChangedHook)();
-#ifdef SQUEAK_BUILTIN_PLUGIN
-# ifdef BROWSERPLUGIN
+#ifdef BROWSERPLUGIN
 int gPortX,gPortY;
 extern NP_Port *getNP_Port(void);
-# endif
-# ifdef BROWSERPLUGIN
 void StartDraw(void);
 void EndDraw(void);
-# endif
+#endif
+/* N.B. Whether this is built as an internal (SQUEAK_BUILTIN_PLUGIN) or
+ * external plugin, we still directly access symbols from the VM.  See the
+ * Makefile in this directory and its use of -bundle_loader to check for
+ * available exports from the main VM.
+ */
+typedef void (*windowChangedHook)();
 extern windowChangedHook setWindowChangedHook(windowChangedHook hook);
-#else /* SQUEAK_BUILTIN_PLUGIN */
-static windowChangedHook (*setWindowChangedHook)(windowChangedHook hook);
-static void * (*getSTWindow)();
-#endif /* SQUEAK_BUILTIN_PLUGIN */
 windowChangedHook existingHook = 0;
 
 
-/* Verbose level for debugging purposes:
-	0 - print NO information ever
-	1 - print critical debug errors
-	2 - print debug warnings
-	3 - print extra information
-	4 - print extra warnings
-	5 - print information about primitive execution
-
-   10 - print information about each vertex and face
-*/
-extern int verboseLevel;
-extern int print3Dlog(char *fmt, ...);
-
-/* Note: Print this stuff into a file in case we lock up */
-#undef DPRINTF3D
-#define DPRINTF3D(vLevel, args) if (vLevel <= verboseLevel) { print3Dlog args; }
-
-/* Plugin refs */
-extern struct VirtualMachine *interpreterProxy;
 static float blackLight[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 /*****************************************************************************/
 /*****************************************************************************/
-/*                      Mac event hook                                       */
+/*                      Mac window changed hook                              */
 /*****************************************************************************/
 /*****************************************************************************/
 
@@ -487,9 +467,11 @@ glCreateRendererFlags(int x, int y, int w, int h, int flags)
 		glDepthFunc(GL_LEQUAL);
 		glClearDepth(1.0);
 		glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-		glShadeModel(GL_SMOOTH);
-		glLightModelfv(GL_LIGHT_MODEL_AMBIENT, blackLight);
 		ERROR_CHECK;
+		glShadeModel(GL_SMOOTH);
+		ERROR_CHECK_1("glShadeModel");
+		glLightModelfv(GL_LIGHT_MODEL_AMBIENT, blackLight);
+		ERROR_CHECK_1("glLightModelfv");
 
 		return index;
 FAILED:
@@ -540,6 +522,8 @@ glRenderer *glRendererFromHandle(int handle) {
 int glSwapBuffers(glRenderer *renderer) {
 	GLint err;
 
+	assert(!glErr);
+	ERROR_CHECK_1("glErr already set on calling glSwapBuffers");
 	if(!renderer) return 0;
 	if(!renderer->used || !renderer->context) return 0;
 	if(renderer->drawable) {
@@ -552,8 +536,8 @@ int glSwapBuffers(glRenderer *renderer) {
 		}
 #endif
 		aglSwapBuffers(renderer->context);
-		if((err = aglGetError()) != AGL_NO_ERROR) DPRINTF3D(3,("ERROR (glSwapBuffers): aglGetError - %s\n", aglErrorString(err)));
-		ERROR_CHECK;
+		if((err = aglGetError()) != AGL_NO_ERROR) DPRINTF3D(3,("ERROR (aglSwapBuffers): aglGetError - %s\n", aglErrorString(err)));
+		ERROR_CHECK_1("aglSwapBuffers");
 	}
 	else {
 #if 0	/* No CopyBits or QDSwapPort in the Mac OS X 10.9 SDK */
@@ -668,10 +652,6 @@ int glSetBufferRect(int handle, int x, int y, int w, int h) {
 	return 1;
 }
 
-int glSetVerboseLevel(int level) {
-	verboseLevel = level;
-	return 1;
-}
 
 int glIsOverlayRenderer(int handle) {
 #pragma unused(handle)
@@ -691,16 +671,9 @@ glInitialize(void)
 	int i;
 	for (i = 0; i < MAX_RENDERER; i++)
 		allRenderer[i].used = 0;
-#if !defined(SQUEAK_BUILTIN_PLUGIN)
-	setWindowChangedHook = interpreterProxy->ioLoadFunctionFrom("setWindowChangedHook", "");
-	if (!setWindowChangedHook)
-		DPRINTF3D(1, ("ERROR: Failed to look up setWindowChangedHook\n"));
-	getSTWindow = interpreterProxy->ioLoadFunctionFrom("getSTWindow", "");
-	if (!getSTWindow)
-		DPRINTF3D(1,("ERROR: Failed to look up getSTWindow\n"));
-	if (!setWindowChangedHook || !getSTWindow)
-		return 0;
-#endif
+
+	glVerbosityLevel = 5;
+
 	existingHook = setWindowChangedHook(windowChangedProc);
 	return 1;
 }
@@ -710,7 +683,7 @@ glShutdown(void)
 {
 	int i;
 	for (i = 0; i < MAX_RENDERER; i++)
-		if(allRenderer[i].used)
+		if (allRenderer[i].used)
 			glDestroyRenderer(i);
 	setWindowChangedHook(existingHook);
 	return 1;

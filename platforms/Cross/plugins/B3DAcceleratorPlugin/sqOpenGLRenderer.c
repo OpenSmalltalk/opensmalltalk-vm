@@ -18,27 +18,109 @@
 #endif
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
+#include <limits.h>
 
 #include "sqVirtualMachine.h"
 #include "sqConfig.h"
 #include "sqPlatformSpecific.h"
 #include "B3DAcceleratorPlugin.h"
 
-#if defined (B3DX_GL)
-
 #include "sqOpenGLRenderer.h"
+
+/***************************************************************************/
+/***************************************************************************/
+/* Debug Logging/Error Reporting to Squeak3D.log in the image's directory. */
+/***************************************************************************/
+/***************************************************************************/
+
+/* Verbose level for debugging purposes:
+	0 - print NO information ever
+	1 - print critical debug errors
+	2 - print debug warnings
+	3 - print extra information
+	4 - print extra warnings
+	5 - print information about primitive execution
+
+   10 - print information about each vertex and face
+*/
+int glVerbosityLevel = 0; /* platform plugins up this on init if wanted. */
+int glSetVerboseLevel(int level) {
+	glVerbosityLevel = level;
+	return 1;
+}
+
+int glErr = GL_NO_ERROR; /* this is only for debug purposes */
+
+char *
+glErrString(void)
+{	static char errString[50];
+
+	switch(glErr) {
+		case 0x0500: return "GL_INVALID_ENUM";
+		case 0x0501: return "GL_INVALID_VALUE";
+		case 0x0502: return "GL_INVALID_OPERATION";
+		case 0x0503: return "GL_STACK_OVERFLOW";
+		case 0x0504: return "GL_STACK_UNDERFLOW";
+		case 0x0505: return "GL_OUT_OF_MEMORY";
+		case 0x0506: return "GL_INVALID_FRAMEBUFFER_OPERATION";
+	}
+	sprintf(errString, "error code %d", glErr);
+	return errString;
+}
+
+/* Note: Print this stuff into a file in case we lock up */
+static FILE *logfile = 0;
+static void
+closelog(void)
+{ if (logfile) (void)fclose(logfile); }
+
+int
+print3Dlog(char *fmt, ...)
+{	va_list args;
+
+	if (!logfile) {
+		char *slash;
+		char fileName[PATH_MAX+1];
+#if !defined(SQUEAK_BUILTIN_PLUGIN)
+		char *(*getImageName)();
+		extern struct VirtualMachine *interpreterProxy;
+
+		getImageName = interpreterProxy->ioLoadFunctionFrom("getImageName", "");
+		if (!getImageName)
+			strcpy(fileName,"./");
+		else
+#endif
+		strcpy(fileName,getImageName());
+		slash = strrchr(fileName,'/');
+		strcpy(slash ? slash + 1 : fileName, "Squeak3D.log");
+		logfile = fopen(fileName, "at");
+		if (!logfile) {
+			perror("fopen Squeak3D.log");
+			return 0;
+		}
+		atexit(closelog);
+	}
+	va_start(args,fmt);
+	vfprintf(logfile, fmt, args);
+	va_end(args);
+	if (forceFlush) /* from sqOpenGLRenderer.h */
+		fflush(logfile);
+}
+
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
+
+#if defined (B3DX_GL)
 
 #if !defined(GL_VERSION_1_1)
 #warning "This system does not support OpenGL 1.1"
 #endif
 
 static float blackLight[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
 
 int glGetRendererSurfaceHandle(int handle) {
   /* If we were to use p-buffers, this would be the place to 
@@ -1064,6 +1146,4 @@ int b3dDrawArrays(int handle, int mode, int minIdx, int maxIdx) {
   glDrawArrays(mode, minIdx, maxIdx);
   return 1;
 }
-
-
 #endif /* defined B3DX_GL */

@@ -10,8 +10,8 @@ INCDIRS:=../../platforms/unix/vm
 
 # These three are imported from the VM.  Use this explicit list instead of
 # -undefined dynamic_lookup to get errors for any other missing imports.
-EXTRABFLAGS=-Wl,-U,_imageName,-U,_getSTWindow,-U,_setPostMessageHook
-EXTRADYFLAGS=-Wl,-U,_imageName,-U,_getSTWindow,-U,_setPostMessageHook
+EXTRABFLAGS=-Wl,-bundle_loader,$(VMDIR)/$(VM)
+EXTRADYFLAGS=-Wl,-bundle_loader,$(VMDIR)/$(VM)
 EXTRALIBS:= -framework CoreFoundation -framework Carbon -framework OpenGL -framework AGL
 
 include ../common/Makefile.plugin

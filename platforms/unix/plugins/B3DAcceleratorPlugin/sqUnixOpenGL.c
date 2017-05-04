@@ -84,7 +84,7 @@ int glMakeCurrentRenderer(glRenderer *renderer)
 	return 0;
       if (!dpy->ioGLmakeCurrentRenderer(renderer))
 	{
-	  DPRINTF3D(1, (fp, "glMakeCurrentRenderer failed\n"));
+	  DPRINTF3D(1, ("glMakeCurrentRenderer failed\n"));
 	  return 0;
 	}
     }
@@ -103,7 +103,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 
   if (flags & ~(B3D_HARDWARE_RENDERER | B3D_SOFTWARE_RENDERER | B3D_STENCIL_BUFFER))
     {
-      DPRINTF3D(1, (fp, "ERROR: Unsupported renderer flags (%d)\r", flags));
+      DPRINTF3D(1, ("ERROR: Unsupported renderer flags (%d)\r", flags));
       return -1;
     }
 
@@ -113,7 +113,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 
   if (index == MAX_RENDERER)
     {
-      DPRINTF3D(1, (fp, "ERROR: Maximum number of renderers (%d) exceeded\r", MAX_RENDERER));
+      DPRINTF3D(1, ("ERROR: Maximum number of renderers (%d) exceeded\r", MAX_RENDERER));
       return -1;
     }
 
@@ -121,11 +121,11 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
   renderer->drawable= 0;
   renderer->context=  0;
   
-  DPRINTF3D(3, (fp, "---- Creating new renderer ----\r\r"));
+  DPRINTF3D(3, ("---- Creating new renderer ----\r\r"));
 
   if ((w < 0) || (h < 0))
     {
-      DPRINTF3D(1, (fp, "Negative extent (%i@%i)!\r", w, h));
+      DPRINTF3D(1, ("Negative extent (%i@%i)!\r", w, h));
       goto fail;
     }
   else
@@ -138,11 +138,11 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 	renderer->bufferRect[3] = h;
 	if (!glMakeCurrentRenderer(renderer))
 	  {
-	    DPRINTF3D(1, (fp, "Failed to make context current\r"));
+	    DPRINTF3D(1, ("Failed to make context current\r"));
 	    glDestroyRenderer(index);
 	    return -1;
 	  }
-	DPRINTF3D(3, (fp, "\r### Renderer created! ###\r"));
+	DPRINTF3D(3, ("\r### Renderer created! ###\r"));
 	glDisable(GL_LIGHTING);
 	glDisable(GL_COLOR_MATERIAL);
 	glDisable(GL_BLEND);
@@ -161,14 +161,14 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
       }
 
  fail:
-  DPRINTF3D(1, (fp, "OpenGL initialization failed\r"));
+  DPRINTF3D(1, ("OpenGL initialization failed\r"));
   return -1;
 }
 
 
 glRenderer *glRendererFromHandle(int handle)
 {
-  DPRINTF3D(7, (fp, "Looking for renderer id: %i\r", handle));
+  DPRINTF3D(7, ("Looking for renderer id: %i\r", handle));
   if ((handle >= 0) && (handle < MAX_RENDERER) && renderers[handle].used)
     return renderers + handle;
   return 0;
@@ -178,7 +178,7 @@ glRenderer *glRendererFromHandle(int handle)
 int glDestroyRenderer(int handle)
 {
   glRenderer *renderer= glRendererFromHandle(handle);
-  DPRINTF3D(3, (fp, "\r--- Destroying renderer ---\r"));
+  DPRINTF3D(3, ("\r--- Destroying renderer ---\r"));
   if (renderer)
     {
       if (!glMakeCurrentRenderer(0))
@@ -220,23 +220,6 @@ int glSetBufferRect(int handle, int x, int y, int w, int h)
       return 1;
     }
   return 0;
-}
-
-
-/* Verbose level for debugging purposes:
-   0 - print NO information ever
-   1 - print critical debug errors
-   2 - print debug warnings
-   3 - print extra information
-   4 - print extra warnings
-   5 - print information about primitive execution
-   ...
-   10 - print information about each vertex and face
-*/
-int glSetVerboseLevel(int level)
-{
-  verboseLevel= level;
-  return 1;
 }
 
 
