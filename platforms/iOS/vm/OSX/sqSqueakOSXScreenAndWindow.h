@@ -53,7 +53,7 @@
 
 @end
 
-#if NSAppKitVersionNumber <= NSAppKitVersionNumber10_11
+#if __MAC_OS_X_VERSION_MAX_ALLOWED < 1012
 enum {
     NSEventTypeKeyDown        = NSKeyDown,
     NSEventTypeKeyUp          = NSKeyUp,
@@ -78,7 +78,7 @@ enum {
     NSEventMaskAny              = NSAnyEventMask
 };
 #endif
-#if NSAppKitVersionNumber <= NSAppKitVersionNumber10_9
+#if __MAC_OS_X_VERSION_MAX_ALLOWED < 1010
 typedef NSUInteger NSEventModifierFlags;
 #endif
 
