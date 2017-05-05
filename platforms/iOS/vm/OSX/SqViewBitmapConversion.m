@@ -31,7 +31,17 @@
 #import "SqViewBitmapConversion.h"
 
 
-@implementation sqSqueakOSXOpenGLView(BitmapConversion)
+#ifndef USE_CORE_GRAPHICS
+#  import "sqSqueakOSXOpenGLView.h"
+#  define ContentViewClass sqSqueakOSXOpenGLView
+#else
+#  import "sqSqueakOSXCGView.h"
+#  define ContentViewClass sqSqueakOSXCGView
+#endif
+
+
+
+@implementation ContentViewClass (SqViewBitmapConversion)
 
 #define debug(a)
 

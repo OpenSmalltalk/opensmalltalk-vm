@@ -47,74 +47,33 @@
 extern struct	VirtualMachine* interpreterProxy;
 extern SqueakOSXAppDelegate *gDelegateApp;
 
-/* This table maps the 5 Macintosh modifier key bits to 4 Squeak modifier
- bits. (The Mac shift and caps lock keys are both mapped to the single
- Squeak shift bit).  This was true for squeak upto 3.0.7. Then in 3.0.8 we 
- decided to not map the cap lock key to shift
- 
- Mac bits: <control><option><caps lock><shift><command>
- ST bits:  <command><option><control><shift>
- */
-char modifierMap[256] = {	
-	0, 8, 1, 9, 0, 8, 1, 9, 4, 12, 5, 13, 4, 12, 5, 13, //Track left and right shift keys
-	2, 10, 3, 11, 2, 10, 3, 11, 6, 14, 7, 15, 6, 14, 7, 
-	15, 1, 9, 1, 9, 1, 9, 1, 9, 5, 13, 5, 13, 5, 13, 5, 
-	13, 3, 11, 3, 11, 3, 11, 3, 11, 7, 15, 7, 15, 7, 15,
-	7, 15, 4, 12, 5, 13, 4, 12, 5, 13, 4, 12, 5, 13, 4,
-	12, 5, 13, 6, 14, 7, 15, 6, 14, 7, 15, 6, 14, 7, 15, 
-	6, 14, 7, 15, 5, 13, 5, 13, 5, 13, 5, 13, 5, 13, 5,
-	13, 5, 13, 5, 13, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 
-	7, 15, 7, 15, 7, 15, 2, 10, 3, 11, 2, 10, 3, 11, 6, 
-	14, 7, 15, 6, 14, 7, 15, 2, 10, 3, 11, 2, 10, 3, 11, 
-	6, 14, 7, 15, 6, 14, 7, 15, 3, 11, 3, 11, 3, 11, 3, 
-	11, 7, 15, 7, 15, 7, 15, 7, 15, 3, 11, 3, 11, 3, 11, 
-	3, 11, 7, 15, 7, 15, 7, 15, 7, 15, 6, 14, 7, 15, 6, 
-	14, 7, 15, 6, 14, 7, 15, 6, 14, 7, 15, 6, 14, 7, 15, 
-	6, 14, 7, 15, 6, 14, 7, 15, 6, 14, 7, 15, 7, 15, 7, 
-	15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 
-	7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15 };
-
-
-enum {
-	/* modifiers */
-	activeFlagBit                 = 0,    /* activate? (activateEvt and mouseDown)*/
-	btnStateBit                   = 7,    /* state of button?*/
-	cmdKeyBit                     = 8,    /* command key down?*/
-	shiftKeyBit                   = 9,    /* shift key down?*/
-	alphaLockBit                  = 10,   /* alpha lock down?*/
-	optionKeyBit                  = 11,   /* option key down?*/
-	controlKeyBit                 = 12,   /* control key down?*/
-	rightShiftKeyBit              = 13,   /* right shift key down? Not supported on Mac OS X.*/
-	rightOptionKeyBit             = 14,   /* right Option key down? Not supported on Mac OS X.*/
-	rightControlKeyBit            = 15    /* right Control key down? Not supported on Mac OS X.*/
-};
-
-enum {
-	activeFlag                    = 1 << activeFlagBit,
-	btnState                      = 1 << btnStateBit,
-	cmdKey                        = 1 << cmdKeyBit,
-	shiftKey                      = 1 << shiftKeyBit,
-	alphaLock                     = 1 << alphaLockBit,
-	optionKey                     = 1 << optionKeyBit,
-	controlKey                    = 1 << controlKeyBit,
-	rightShiftKey                 = 1 << rightShiftKeyBit, /* Not supported on Mac OS X.*/
-	rightOptionKey                = 1 << rightOptionKeyBit, /* Not supported on Mac OS X.*/
-	rightControlKey               = 1 << rightControlKeyBit /* Not supported on Mac OS X.*/
-};
-
 static int buttonState=0;
 
-@implementation sqSqueakOSXApplication (events) 
+@interface sqSqueakOSXApplication (eventsPrivate)
+
+- (sqButton) resolveModifier:(sqModifier)modifier forMouseButton:(sqButton)mouseButton;
+
+@end
+
+@implementation sqSqueakOSXApplication (eventsPrivate)
+
+- (sqButton) resolveModifier:(sqModifier)modifier forMouseButton:(sqButton)mouseButton {
+    return (browserActiveAndDrawingContextOkAndNOTInFullScreenMode())
+    ? [(sqSqueakOSXInfoPlistInterface *) self.infoPlistInterfaceLogic getSqueakBrowserMouseMappingsAt: modifier by: mouseButton]
+    : [(sqSqueakOSXInfoPlistInterface *) self.infoPlistInterfaceLogic getSqueakMouseMappingsAt: modifier by: mouseButton];
+}
+
+@end
+
+@implementation sqSqueakOSXApplication (events)
 
 - (void) pumpRunLoopEventSendAndSignal:(BOOL)signal {
     NSEvent *event;
     
-    while ((event = [NSApp
-                        nextEventMatchingMask:NSAnyEventMask
-                        untilDate:nil 
-                        inMode:NSEventTrackingRunLoopMode 
-                        dequeue:YES])) {
-
+    while ((event = [NSApp nextEventMatchingMask:NSEventMaskAny
+                                       untilDate:nil
+                                          inMode:NSEventTrackingRunLoopMode
+                                         dequeue:YES])) {
         [NSApp sendEvent: event];
         if (signal) {
             interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
@@ -155,11 +114,11 @@ static int buttonState=0;
 	}
 }
 
-- (void) pushEventToQueue: (sqInputEvent *) evt {	
+- (void) pushEventToQueue: (sqInputEvent *) evt {
 	[eventQueue addItem: @[@1,[NSData  dataWithBytes:(const void *) evt length: sizeof(sqInputEvent)]]];
 }
 
-- (void) recordCharEvent:(NSString *) unicodeString fromView: (sqSqueakOSXOpenGLView *) mainView {
+- (void) recordCharEvent:(NSString *) unicodeString fromView: (NSView <sqSqueakOSXView> *) mainView {
 	sqKeyboardEvent evt;
 	unichar unicode;
 	unsigned char macRomanCharacter;
@@ -172,6 +131,7 @@ static int buttonState=0;
 	picker.location = 0;
 	picker.length = 1;
 	totaLength = [unicodeString length];
+
 	for (i=0;i < totaLength;i++) {
 		
 		
@@ -184,12 +144,12 @@ static int buttonState=0;
 			evt.modifiers = 0;
 			evt.charCode = 0;
 		}
-		
+
 		if ((evt.modifiers & CommandKeyBit) && (evt.modifiers & ShiftKeyBit)) {  /* command and shift */
-            if ((unicode >= 97) && (unicode <= 122)) {
+			if ((unicode >= 97) && (unicode <= 122)) {
 				/* convert ascii code of command-shift-letter to upper case */
 				unicode = unicode - 32;
-            }
+			}
 		}
 		
 		NSString *lookupString = AUTORELEASEOBJ([[NSString alloc] initWithCharacters: &unicode length: 1]);
@@ -222,9 +182,9 @@ static int buttonState=0;
 
 }
 
-- (void) recordKeyDownEvent:(NSEvent *)theEvent fromView: (sqSqueakOSXOpenGLView *) aView {
+- (void) recordKeyDownEvent:(NSEvent *)theEvent fromView: (NSView <sqSqueakOSXView> *) aView {
 	sqKeyboardEvent evt;
-	
+
 	evt.type = EventTypeKeyboard;
 	evt.timeStamp =  ioMSecs();
 	evt.charCode =	[theEvent keyCode];
@@ -238,9 +198,9 @@ static int buttonState=0;
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
-- (void) recordKeyUpEvent:(NSEvent *)theEvent fromView: (sqSqueakOSXOpenGLView *) aView {
+- (void) recordKeyUpEvent:(NSEvent *)theEvent fromView: (NSView <sqSqueakOSXView> *) aView {
 	sqKeyboardEvent evt;
-	
+
 	evt.type = EventTypeKeyboard;
 	evt.timeStamp =  ioMSecs();
 	evt.charCode =	[theEvent keyCode];
@@ -254,9 +214,9 @@ static int buttonState=0;
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
-- (void) recordMouseEvent:(NSEvent *)theEvent fromView: (sqSqueakOSXOpenGLView *) aView{
+- (void) recordMouseEvent:(NSEvent *)theEvent fromView: (NSView <sqSqueakOSXView> *) aView{
 	sqMouseEvent evt;
-	
+
 	evt.type = EventTypeMouse;
 	evt.timeStamp = ioMSecs();
 	
@@ -280,7 +240,7 @@ static int buttonState=0;
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 						   
-- (void) recordWheelEvent:(NSEvent *) theEvent fromView: (sqSqueakOSXOpenGLView *) aView{
+- (void) recordWheelEvent:(NSEvent *) theEvent fromView: (NSView <sqSqueakOSXView> *) aView{
 		
 	[self recordMouseEvent: theEvent fromView: aView];
 	CGFloat x = [theEvent deltaX];
@@ -303,7 +263,7 @@ static int buttonState=0;
 	evt.charCode = keyCode;
 	evt.utf32Code = 0;
 	evt.reserved1 = 0;
-	evt.modifiers = modifierMap[((controlKey | optionKey | cmdKey | shiftKey) >> 8)];
+    evt.modifiers = (CtrlKeyBit | OptionKeyBit | CommandKeyBit | ShiftKeyBit);
 	evt.windowIndex = windowIndex;
 	[self pushEventToQueue:(sqInputEvent *) &evt];
 
@@ -319,29 +279,51 @@ static int buttonState=0;
 	
 }
 
+/*
+ * Mapping Cocoa Modifiers to Squeak modifiers.
+ *
+ * Cocoa has the modifiers in its -[NSEvent modifiers] flags. However, those
+ * are somewhere withing the flags, masked by NSEventModifierFlagDeviceIndependentFlagsMask,
+ * end enumerated by (10.12+ terms):
+ *      NSEventModifierFlagCapsLock
+ *      NSEventModifierFlagShift
+ *      NSEventModifierFlagControl
+ *      NSEventModifierFlagOption
+ *      NSEventModifierFlagCommand
+ *
+ * As of 10.1 this means:
+ * modifiers= 2r00000000000000000000000000000000
+ * ---------------------------------------------
+ * mask     = 2r11111111111111110000000000000000
+ *(Caps     = 2r00000000000000010000000000000000)
+ * Shift    = 2r00000000000000100000000000000000
+ * Control  = 2r00000000000001000000000000000000
+ * Option   = 2r00000000000010000000000000000000
+ * Command  = 2r00000000000100000000000000000000
+ *
+ * and Squeak knows
+ *
+ * modifiers= 2r0000
+ * -----------------
+ * Shfit    = 2r0001
+ * Control  = 2r0010
+ * Option   = 2r0100
+ * Comand   = 2r1000
+ *
+ * While we could just shift and mask, let's be clean an just check.
+ */
 - (int) translateCocoaModifiersToSqueakModifiers: (NSUInteger) modifiers {
-	NSUInteger keyBoardModifiers = [self translateCocoaModifiersToCarbonModifiers: modifiers];
-	return ((modifierMap[((keyBoardModifiers & 0xFFFF) >> 8)]));
+    return
+        (modifiers & NSEventModifierFlagShift   ? ShiftKeyBit   : 0) |
+        (modifiers & NSEventModifierFlagControl ? CtrlKeyBit    : 0) |
+        (modifiers & NSEventModifierFlagOption  ? OptionKeyBit  : 0) |
+        (modifiers & NSEventModifierFlagCommand ? CommandKeyBit : 0);
+
 }
 
-- (NSUInteger) translateCocoaModifiersToCarbonModifiers: (NSUInteger) modifiers {
-	NSUInteger keyBoardModifiers=0;
-	if (modifiers & NSAlphaShiftKeyMask) 
-		keyBoardModifiers |= alphaLock;
-	if (modifiers & NSShiftKeyMask)
-		keyBoardModifiers |= shiftKey;
-	if (modifiers & NSControlKeyMask)
-		keyBoardModifiers |= controlKey;
-	if (modifiers & NSAlternateKeyMask)
-		keyBoardModifiers |= optionKey;
-	if (modifiers & NSCommandKeyMask)
-		keyBoardModifiers |= cmdKey;
-	return keyBoardModifiers;
-		
-}
-		
+
 - (int) mapMouseAndModifierStateToSqueakBits: (NSEvent *) event {
-	/* On a two- or three-button mouse, the left button is normally considered primary and the 
+	/* On a two- or three-button mouse, the left button is normally considered primary and the
 	 right button secondary, 
 	 but left-handed users can reverse these settings as a matter of preference. 
 	 The middle button on a three-button mouse is always the tertiary button. '
@@ -349,50 +331,57 @@ static int buttonState=0;
 	 But mapping assumes 1,2,3  red, yellow, blue
 	 */
 	
-	NSInteger stButtons,modifier,mappedButton;
-	NSInteger mouseButton=0;
-	
+    sqModifier modifier = kSqModifierNone;
+    sqButton mappedButton = kSqNoButton;
+	sqButton mouseButton = kSqNoButton;
+    NSInteger stButtons = 0;
 	static NSInteger buttonStateBits[4] = {0,0,0,0};
-	
-	stButtons = buttonState;
-	NSUInteger keyBoardCarbonModifiers = [self translateCocoaModifiersToCarbonModifiers: [event modifierFlags]];
-	NSInteger whatHappened = [event type];
-  	if (whatHappened != NSMouseMoved  && whatHappened != NSScrollWheel) {
-		stButtons = 0;
-		mouseButton = 0;
-		if (whatHappened == NSLeftMouseUp || whatHappened == NSLeftMouseDown)
-			mouseButton = 1;
-		if (whatHappened == NSRightMouseUp || whatHappened == NSRightMouseDown)
-			mouseButton = 2;
-		if (!mouseButton)
-			mouseButton = [event buttonNumber] + 1; //buttonNumber seems to count from 0.
-		
-		if (mouseButton > 0 && mouseButton < 4) {
-			
-			modifier = 0;
-			if (keyBoardCarbonModifiers & cmdKey  )
-				modifier = 1;
-			if (keyBoardCarbonModifiers & optionKey)
-				modifier = 2;
-			if (keyBoardCarbonModifiers & controlKey)
-				modifier = 3;
-			
-			if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode())
-				mappedButton = [(sqSqueakOSXInfoPlistInterface *) self.infoPlistInterfaceLogic getSqueakBrowserMouseMappingsAt: modifier by: mouseButton];
-			else
-				mappedButton = [(sqSqueakOSXInfoPlistInterface *) self.infoPlistInterfaceLogic getSqueakMouseMappingsAt: modifier by: mouseButton];
-			buttonStateBits[mappedButton] = 
-				(whatHappened == NSLeftMouseUp || 
-				 whatHappened == NSRightMouseUp || 
-				 whatHappened == NSOtherMouseUp) ? 0 : 1;
-			stButtons |= mappedButton == 1 ? (buttonStateBits[mappedButton] ? RedButtonBit : 0) : 0;
-			stButtons |= mappedButton == 2 ? (buttonStateBits[mappedButton] ? YellowButtonBit : 0) : 0;
-			stButtons |= mappedButton == 3 ? (buttonStateBits[mappedButton] ? BlueButtonBit : 0)  : 0;
-		}
-	}
-	
+
+    NSEventModifierFlags flags = [event modifierFlags];
+	NSEventType whatHappened = [event type];
+
+    switch ([event type]) {
+        case NSEventTypeMouseMoved:
+        case NSEventTypeScrollWheel:
+            // retain old state;
+            stButtons = buttonState;
+            mouseButton = kSqNoButton;
+            break;
+        case NSEventTypeLeftMouseUp:
+        case NSEventTypeLeftMouseDown:
+            mouseButton = kSqRedButton;
+            break;
+        case NSEventTypeRightMouseUp:
+        case NSEventTypeRightMouseDown:
+            mouseButton = kSqYellowButton;
+            break;
+        default:
+            //buttonNumber seems to count from 0.
+            mouseButton = [event buttonNumber] + 1;
+            break;
+    }
+
+    if (mouseButton != kSqNoButton && mouseButton <= kSqButtonMax) {
+        // ctrl trumps opt trumps cmd trumps no modifier.
+        if (flags & NSEventModifierFlagCommand) modifier = kSqModifierCmd;
+        if (flags & NSEventModifierFlagOption)  modifier = kSqModifierOpt;
+        if (flags & NSEventModifierFlagControl) modifier = kSqModifierCtrl;
+
+        mappedButton = [self resolveModifier: modifier forMouseButton: mouseButton];
+        NSInteger buttonIsDown =
+            (whatHappened == NSEventTypeLeftMouseUp ||
+             whatHappened == NSEventTypeRightMouseUp ||
+             whatHappened == NSEventTypeOtherMouseUp) ? 0 : 1;
+        buttonStateBits[mappedButton] = buttonIsDown;
+        if (buttonIsDown) {
+            stButtons |= (mappedButton == kSqRedButton    ? RedButtonBit    : 0);
+            stButtons |= (mappedButton == kSqYellowButton ? YellowButtonBit : 0);
+            stButtons |= (mappedButton == kSqBlueButton   ? BlueButtonBit   : 0);
+        }
+    }
+
 	// button state: low three bits are mouse buttons; next 8 bits are modifier bits
-	buttonState =  (modifierMap[((keyBoardCarbonModifiers & 0xFFFF) >> 8)] << 3) | (stButtons & 0x7);
+    buttonState = ([self translateCocoaModifiersToSqueakModifiers: flags] << 3) | (stButtons & 0x7);
 	return buttonState;
 }
 

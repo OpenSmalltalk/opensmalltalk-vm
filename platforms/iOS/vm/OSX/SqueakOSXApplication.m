@@ -43,19 +43,11 @@
 
 -(void)sendEvent:(NSEvent*)anEvent
 {
-    if ( [anEvent type] == NSKeyDown &&
- 		([anEvent modifierFlags] & NSCommandKeyMask) != 0 ) {
-
-		NSWindow *who = [anEvent window];
-		sqSqueakOSXScreenAndWindow *squeakScreenWindow = (sqSqueakOSXScreenAndWindow *) who.delegate;
-		sqSqueakOSXOpenGLView *view;
-		if (squeakScreenWindow)
-			view = [squeakScreenWindow getMainViewOnWindow];
-		else
-			view = [who contentView];
-	   [view fakeKeyDownUp: anEvent];
-   } else {
+    // https://lists.apple.com/archives/cocoa-dev/2003/Oct/msg00442.html
+    if ([anEvent type] == NSEventTypeKeyUp) {
+        [[[anEvent window] firstResponder] tryToPerform:@selector(keyUp:) with:anEvent];
+    } else {
        [super sendEvent:anEvent];
-    }
+   }
 }   
 @end

@@ -100,6 +100,3 @@ extern sqSqueakAppDelegate *gDelegateApp;
 	}
 }
 @end
-
-
-

@@ -37,20 +37,19 @@
 //
 #import "sqSqueakOSXApplication.h"
 #import "sqSqueakMainApplication+events.h"
-#import "sqSqueakOSXOpenGLView.h"
+#import "sqSqueakOSXView.h"
 
 @class NSWIndow;
 @interface sqSqueakOSXApplication (events) 
 
-- (void) recordCharEvent:(NSString *) unicodeString fromView: (sqSqueakOSXOpenGLView *) mainView;
-- (void) recordKeyDownEvent:(NSEvent *)theEvent fromView: (sqSqueakOSXOpenGLView *) aView ;
-- (void) recordKeyUpEvent:(NSEvent *)theEvent fromView: (sqSqueakOSXOpenGLView *) aView ;
-- (void) recordMouseEvent: (NSEvent*) theEvent fromView: (sqSqueakOSXOpenGLView *) aView;
-- (void) recordWheelEvent: (NSEvent*) theEvent  fromView: (sqSqueakOSXOpenGLView *) aView;
+- (void) recordCharEvent:(NSString *) unicodeString fromView: (NSView <sqSqueakOSXView>*) mainView;
+- (void) recordKeyDownEvent:(NSEvent *)theEvent fromView: (NSView <sqSqueakOSXView> *) aView ;
+- (void) recordKeyUpEvent:(NSEvent *)theEvent fromView: (NSView <sqSqueakOSXView> *) aView ;
+- (void) recordMouseEvent: (NSEvent*) theEvent fromView: (NSView <sqSqueakOSXView> *) aView;
+- (void) recordWheelEvent: (NSEvent*) theEvent  fromView: (NSView <sqSqueakOSXView> *) aView;
 - (void) pushEventToQueue: (sqInputEvent *) evt;
 - (void) fakeMouseWheelKeyboardEventsKeyCode: (int) keyCode ascii: (int) ascii windowIndex: (int) windowIndex;
 - (int) mapMouseAndModifierStateToSqueakBits: (NSEvent *) event;
-- (NSUInteger) translateCocoaModifiersToCarbonModifiers: (NSUInteger) modifiers;
 - (int) translateCocoaModifiersToSqueakModifiers: (NSUInteger) modifiers;
 - (void) recordDragEvent: (int) dragType numberOfFiles: (int) numFiles where: (NSPoint) local_point windowIndex: (sqInt) windowIndex view:(NSView *)aView;
 - (void) recordWindowEvent: (int) type window: (NSWIndow *) window;
