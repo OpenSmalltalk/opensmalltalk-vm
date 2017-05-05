@@ -419,29 +419,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 
--(void)  fakeKeyDownUp: (NSEvent*) theEvent {
-
-	//http://www.unicode.org/Public/MAPPINGS/VENDORS/APPLE/CORPCHAR.TXT
-	//http://www.internet4classrooms.com/mac_ext.gif
-	//http://developer.apple.com/legacy/mac/library/documentation/mac/Text/Text-571.html
-
-	keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
-	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
-	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
-
-	@synchronized(self) {
-		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
-		NSString *possibleConversion = [theEvent characters];
-
-		if ([possibleConversion length] > 0) {
-			NSString *c = [self dealWithOpenStepChars: possibleConversion];
-			[self insertText: c replacementRange: NSMakeRange(NSNotFound, 0)];
-		}
-		self.lastSeenKeyBoardStrokeDetails = NULL;
-		[self keyUp: theEvent]; 
-	}
-}
-
 -(void)keyDown:(NSEvent*)theEvent {
 	keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
@@ -471,12 +448,38 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordCharEvent: aString fromView: self];
 }
 
+/*
+ * React to changes in modifiers. We have to maintain states ourselves for
+ * rising and falling edges. But then, we can generate up/down events from that.
+ */
 - (void)flagsChanged:(NSEvent *)theEvent {
-	keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
+    NSEventModifierFlags oldFlags = self.lastSeenKeyBoardModifierDetails.modifierFlags;
+    // Detects rising edge.
+    BOOL isUp = (oldFlags & NSDeviceIndependentModifierFlagsMask)
+                > ([theEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask);
+
+    keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
 	self.lastSeenKeyBoardModifierDetails = aKeyBoardStrokeDetails;
-    [(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordKeyDownEvent: theEvent fromView: self];
+
+    @synchronized(self) {
+        NSEvent* syntheticEvent = AUTORELEASEOBJ([NSEvent keyEventWithType:(isUp ? NSEventTypeKeyUp : NSEventTypeKeyDown)
+                                                                  location:[theEvent locationInWindow]
+                                                             modifierFlags:(isUp ? oldFlags : [theEvent modifierFlags])
+                                                                 timestamp:[theEvent timestamp]
+                                                              windowNumber:[theEvent windowNumber]
+                                                                   context:nil
+                                                                characters:@""
+                                               charactersIgnoringModifiers:@""
+                                                                 isARepeat:NO
+                                                                   keyCode:[theEvent keyCode]]);
+        if (isUp) {
+            [(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordKeyUpEvent: syntheticEvent fromView: self];
+        } else {
+            [(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordKeyDownEvent: syntheticEvent fromView: self];
+        }
+    }
 }
 
 - (void)doCommandBySelector:(SEL)aSelector {
@@ -556,6 +559,34 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		self.lastSeenKeyBoardStrokeDetails = NULL;
 	}
 }
+
+- (BOOL)performKeyEquivalent:(NSEvent *)theEvent {
+    if ([theEvent type] != NSEventTypeKeyDown /* don't handle Up here */
+        || ([theEvent modifierFlags] & NSEventModifierFlagFunction) /* Better handled in doCommandBySelector: */
+        ) {
+        return NO;
+    }
+
+    // FIXME: Maybe #charactersIgnoringModifiers: ?
+    NSString* unicodeString = [theEvent characters];
+    if ([unicodeString length] > 0) {
+        unicodeString = [self dealWithOpenStepChars: unicodeString];
+    }
+
+    @synchronized(self) {
+        keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
+        aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
+        aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
+        lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
+
+        [(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordCharEvent: unicodeString fromView: self];
+        self.lastSeenKeyBoardStrokeDetails = NULL;
+    }
+    return YES;
+}
+
+
+#pragma mark Events - Keyboard - NSTextInputClient
 
 
 - (void)setMarkedText:(id)aString selectedRange:(NSRange)selectedRange replacementRange:(NSRange)replacementRange {
