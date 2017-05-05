@@ -6,7 +6,7 @@ INCDIRS:=../../platforms/Cross/plugins/FilePlugin \
          ../../platforms/unix/vm
 INCDIRS:=../../platforms/unix/vm
 
-
+EXTRADYFLAGS=-Wl,-U,_getImageName,-U,_getSTWindow,-U,_setWindowChangedHook,-U,_warning
 EXTRALIBS:= -framework CoreFoundation -framework Carbon -framework OpenGL -framework AGL
 #EXTRALIBS:= -framework OpenGL -framework AGL
 
