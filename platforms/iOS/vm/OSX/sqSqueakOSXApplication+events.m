@@ -114,11 +114,11 @@ static int buttonState=0;
 	}
 }
 
-- (void) pushEventToQueue: (sqInputEvent *) evt {	
+- (void) pushEventToQueue: (sqInputEvent *) evt {
 	[eventQueue addItem: @[@1,[NSData  dataWithBytes:(const void *) evt length: sizeof(sqInputEvent)]]];
 }
 
-- (void) recordCharEvent:(NSString *) unicodeString fromView: (sqSqueakOSXOpenGLView *) mainView {
+- (void) recordCharEvent:(NSString *) unicodeString fromView: (NSView <sqSqueakOSXView> *) mainView {
 	sqKeyboardEvent evt;
 	unichar unicode;
 	unsigned char macRomanCharacter;
@@ -131,6 +131,7 @@ static int buttonState=0;
 	picker.location = 0;
 	picker.length = 1;
 	totaLength = [unicodeString length];
+
 	for (i=0;i < totaLength;i++) {
 		
 		
@@ -144,11 +145,11 @@ static int buttonState=0;
 			evt.charCode = 0;
 		}
 
-        if ((evt.modifiers & CommandKeyBit) && (evt.modifiers & ShiftKeyBit)) {  /* command and shift */
-            if ((unicode >= 97) && (unicode <= 122)) {
+		if ((evt.modifiers & CommandKeyBit) && (evt.modifiers & ShiftKeyBit)) {  /* command and shift */
+			if ((unicode >= 97) && (unicode <= 122)) {
 				/* convert ascii code of command-shift-letter to upper case */
 				unicode = unicode - 32;
-            }
+			}
 		}
 		
 		NSString *lookupString = AUTORELEASEOBJ([[NSString alloc] initWithCharacters: &unicode length: 1]);
@@ -181,9 +182,9 @@ static int buttonState=0;
 
 }
 
-- (void) recordKeyDownEvent:(NSEvent *)theEvent fromView: (sqSqueakOSXOpenGLView *) aView {
+- (void) recordKeyDownEvent:(NSEvent *)theEvent fromView: (NSView <sqSqueakOSXView> *) aView {
 	sqKeyboardEvent evt;
-	
+
 	evt.type = EventTypeKeyboard;
 	evt.timeStamp =  ioMSecs();
 	evt.charCode =	[theEvent keyCode];
@@ -197,9 +198,9 @@ static int buttonState=0;
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
-- (void) recordKeyUpEvent:(NSEvent *)theEvent fromView: (sqSqueakOSXOpenGLView *) aView {
+- (void) recordKeyUpEvent:(NSEvent *)theEvent fromView: (NSView <sqSqueakOSXView> *) aView {
 	sqKeyboardEvent evt;
-	
+
 	evt.type = EventTypeKeyboard;
 	evt.timeStamp =  ioMSecs();
 	evt.charCode =	[theEvent keyCode];
@@ -213,9 +214,9 @@ static int buttonState=0;
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 
-- (void) recordMouseEvent:(NSEvent *)theEvent fromView: (sqSqueakOSXOpenGLView *) aView{
+- (void) recordMouseEvent:(NSEvent *)theEvent fromView: (NSView <sqSqueakOSXView> *) aView{
 	sqMouseEvent evt;
-	
+
 	evt.type = EventTypeMouse;
 	evt.timeStamp = ioMSecs();
 	
@@ -239,7 +240,7 @@ static int buttonState=0;
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
 }
 						   
-- (void) recordWheelEvent:(NSEvent *) theEvent fromView: (sqSqueakOSXOpenGLView *) aView{
+- (void) recordWheelEvent:(NSEvent *) theEvent fromView: (NSView <sqSqueakOSXView> *) aView{
 		
 	[self recordMouseEvent: theEvent fromView: aView];
 	CGFloat x = [theEvent deltaX];

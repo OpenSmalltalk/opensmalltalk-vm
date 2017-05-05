@@ -39,11 +39,12 @@
 #import <Cocoa/Cocoa.h>
 #include <ApplicationServices/ApplicationServices.h>
 #import "keyBoardStrokeDetails.h"
+#import "sqSqueakOSXView.h"
 
 @class sqSqueakOSXScreenAndWindow;
 #import "sq.h"
 
-@interface sqSqueakOSXOpenGLView : NSOpenGLView <NSTextInputClient> {
+@interface sqSqueakOSXOpenGLView : NSOpenGLView <sqSqueakOSXView, NSTextInputClient> {
 	sqSqueakOSXScreenAndWindow *__weak windowLogic;
 	NSTrackingRectTag squeakTrackingRectForCursor;
 	NSRange inputMark;
@@ -64,25 +65,8 @@
     BOOL fullScreenInProgress;
     void* fullScreendispBitsIndex;
 }
-@property (nonatomic,assign) NSTrackingRectTag squeakTrackingRectForCursor;
-@property (nonatomic,strong) keyBoardStrokeDetails* lastSeenKeyBoardStrokeDetails;
-@property (nonatomic,strong) keyBoardStrokeDetails* lastSeenKeyBoardModifierDetails;
-@property (nonatomic,assign) BOOL dragInProgress;
-@property (nonatomic,assign) int dragCount;
-@property (nonatomic,strong) NSMutableArray* dragItems;
-@property (nonatomic,weak) sqSqueakOSXScreenAndWindow *windowLogic;
 
-
-- (void) initializeVariables;
-- (void) fakeKeyDownUp: (NSEvent*) theEvent;
-- (NSString*) dragFileNameStringAtIndex:(sqInt) index;
-- (void)  ioSetFullScreen: (sqInt) fullScreen;
-- (void) drawImageUsingClip: (CGRect) clip;
-- (NSUInteger) countNumberOfNoneSqueakImageFilesInDraggedFiles: (id<NSDraggingInfo>)info;
-- (NSMutableArray *) filterOutSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info;
-- (NSMutableArray *) filterSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info;
--(void)setupOpenGL;
-- (void) drawThelayers;
+- (void) setupOpenGL;
 - (void) preDrawThelayers;
 @end
 

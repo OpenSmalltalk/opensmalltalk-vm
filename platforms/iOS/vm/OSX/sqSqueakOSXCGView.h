@@ -63,28 +63,9 @@
 	BOOL clippyIsEmpty;
 	CGRect clippy;
 }
-@property (nonatomic,assign) NSTrackingRectTag squeakTrackingRectForCursor;
-@property (nonatomic,retain) keyBoardStrokeDetails* lastSeenKeyBoardStrokeDetails;
-@property (nonatomic,retain) keyBoardStrokeDetails* lastSeenKeyBoardModifierDetails;
-@property (nonatomic,assign) BOOL dragInProgress;
-@property (nonatomic,assign) int dragCount;
-@property (nonatomic,retain) NSMutableArray* dragItems;
-@property (nonatomic,weak) sqSqueakOSXScreenAndWindow *windowLogic;
+
 @property (nonatomic,assign) NSRect	savedScreenBoundsAtTimeOfFullScreen;
 
-//Initialization
--(void)initialize;
--(void)initializeVariables;
-//Events
--(void)fakeKeyDownUp: (NSEvent*) theEvent;
-//Accessing
--(NSString*)dragFileNameStringAtIndex:(sqInt) index;
--(void) ioSetFullScreen: (sqInt) fullScreen;
--(void) drawImageUsingClip: (CGRect) clip;
--(NSUInteger)countNumberOfNoneSqueakImageFilesInDraggedFiles: (id<NSDraggingInfo>)info;
--(NSMutableArray *)filterOutSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info;
--(NSMutableArray *)filterSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info;
--(void) drawThelayers;
 @end
 
 #import	"SqViewClut.h"

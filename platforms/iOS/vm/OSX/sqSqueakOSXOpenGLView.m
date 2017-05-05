@@ -30,10 +30,10 @@
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
 
- The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
- "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
- and its contributors", in the same place and form as other third-party acknowledgments. 
- Alternately, this acknowledgment may appear in the software itself, in the same form and location as other 
+ The end-user documentation included with the redistribution, if any, must include the following acknowledgment:
+ "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com)
+ and its contributors", in the same place and form as other third-party acknowledgments.
+ Alternately, this acknowledgment may appear in the software itself, in the same form and location as other
  such third-party acknowledgments.
  */
 //
@@ -84,6 +84,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
     return AUTORELEASEOBJ([[NSOpenGLPixelFormat alloc] initWithAttributes:attrs]);
 }
 
+#pragma mark Initialization / Release
+
 - (id)initWithFrame:(NSRect)frameRect {
     self = [self initWithFrame:frameRect pixelFormat:[[self class] defaultPixelFormat]];
     [self initialize];
@@ -129,6 +131,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
     SUPERDEALLOC
 }
 
+#pragma mark Testing
+
 - (BOOL) acceptsFirstResponder {
 	return YES;
 }
@@ -140,6 +144,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 - (BOOL)isOpaque {
 	return YES;
 }
+
+#pragma mark Updating callbacks
 
 - (void)viewDidMoveToWindow {
 	if (self.squeakTrackingRectForCursor)
@@ -168,6 +174,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 }
 
+#pragma mark Drawing
+
+
 - (void) drawImageUsingClip: (CGRect) clip {
 
 	if (clippyIsEmpty){
@@ -186,7 +195,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		clippyIsEmpty = YES;
 //		CGL_MACRO_DECLARE_VARIABLES();
 		glFlush();
-		[[self openGLContext] flushBuffer];  
+		[[self openGLContext] flushBuffer];
 	}
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
@@ -238,7 +247,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	syncNeeded = NO;
 }
 
-- (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (NSRect) subRect { 
+- (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (NSRect) subRect {
 //	CGL_MACRO_DECLARE_VARIABLES();
 	static void *previousLastBitsIndex=null;
 
@@ -320,6 +329,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
     }
 }
 
+#pragma mark Events - Mouse
+
 - (void)mouseEntered:(NSEvent *)theEvent {
 	[((sqSqueakOSXApplication*) gDelegateApp.squeakApplication).squeakCursor set];
 }
@@ -371,34 +382,37 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseEvent: theEvent fromView: self];
 }
 
+#pragma mark Events - Keyboard
+
+
 - (NSString *) dealWithOpenStepChars: (NSString *) openStep {
 
-	unichar keyChar; 
+	unichar keyChar;
 	static unichar combiningHelpChar[] = {0x003F, 0x20DD};
 
-	keyChar = [openStep characterAtIndex: 0]; 
+	keyChar = [openStep characterAtIndex: 0];
 
 //http://unicode.org/Public/MAPPINGS/VENDORS/APPLE/KEYBOARD.TXT
 
-	switch (keyChar) { 
-		case NSUpArrowFunctionKey: keyChar = 30; break; 
-		case NSDownArrowFunctionKey: keyChar = 31; break; 
-		case NSLeftArrowFunctionKey: keyChar = 28; break; 
-		case NSRightArrowFunctionKey: keyChar = 29; break; 
-		case NSInsertFunctionKey: 
+	switch (keyChar) {
+		case NSUpArrowFunctionKey: keyChar = 30; break;
+		case NSDownArrowFunctionKey: keyChar = 31; break;
+		case NSLeftArrowFunctionKey: keyChar = 28; break;
+		case NSRightArrowFunctionKey: keyChar = 29; break;
+		case NSInsertFunctionKey:
 		  	return [NSString stringWithCharacters: combiningHelpChar length: 2];
-		case NSDeleteFunctionKey: keyChar = 0x2326; break; 
-		case NSHomeFunctionKey: keyChar = 1; break; 
+		case NSDeleteFunctionKey: keyChar = 0x2326; break;
+		case NSHomeFunctionKey: keyChar = 1; break;
 		case NSEndFunctionKey: keyChar = 4; break;
-		case NSPageUpFunctionKey: 
+		case NSPageUpFunctionKey:
 			keyChar = 0x21DE; break;
-		case NSPageDownFunctionKey: 
+		case NSPageDownFunctionKey:
 			keyChar = 0x21DF; break;
 		case NSClearLineFunctionKey: keyChar = 0x2327; break;
 		case 127: keyChar = 8; break;
-		default: 
-			if (keyChar >= NSF1FunctionKey && keyChar <= NSF35FunctionKey) { 
-				keyChar = 0; 
+		default:
+			if (keyChar >= NSF1FunctionKey && keyChar <= NSF35FunctionKey) {
+				keyChar = 0;
 			}
 	}
 	return stringWithCharacter(keyChar);
@@ -472,20 +486,20 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	BOOL isFunctionKey = NO;
 
 	if (self.lastSeenKeyBoardModifierDetails) {
-		isFunctionKey = (self.lastSeenKeyBoardModifierDetails.modifierFlags & NSFunctionKeyMask) == NSFunctionKeyMask;
+		isFunctionKey = (self.lastSeenKeyBoardModifierDetails.modifierFlags & NSEventModifierFlagFunction) == NSEventModifierFlagFunction;
 	}
 
-#define encode(c, k,  s) 		 if (aSelector == @selector(s)) { unicode = c; keyCode = k; unicodeString = [NSString stringWithCharacters: &unicode length: 1]; } 
+#define encode(c, k,  s) 		 if (aSelector == @selector(s)) { unicode = c; keyCode = k; unicodeString = [NSString stringWithCharacters: &unicode length: 1]; }
 //http://developer.apple.com/documentation/mac/Text/Text-571.html
 
 	encode(  8, 51,         deleteBackward:)
 	else encode( 8, 51,     deleteWordBackward:)
 	else encode(127, 51,    deleteForward:)
 	else encode(127, 51,    deleteWordForward:)
-	else encode( 8, 51,     deleteBackwardByDecomposingPreviousCharacter:) 
-	else encode( (isFunctionKey ? 3: 13), (isFunctionKey ? 76: 36), insertNewline:) 
-	else encode( 13, 36,    insertLineBreak:) 
-	else encode( 13, 36,    insertNewlineIgnoringFieldEditor:) 
+	else encode( 8, 51,     deleteBackwardByDecomposingPreviousCharacter:)
+	else encode( (isFunctionKey ? 3: 13), (isFunctionKey ? 76: 36), insertNewline:)
+	else encode( 13, 36,    insertLineBreak:)
+	else encode( 13, 36,    insertNewlineIgnoringFieldEditor:)
 	else encode(  9, 48,    insertTab:)
 	else encode(  9, 48,    insertBacktab:)
 	else encode(  9, 48,    insertTabIgnoringFieldEditor:)
@@ -504,7 +518,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	else encode( 28, 123,   moveWordLeft:)
 	else encode( 29, 124,   moveWordRight:)
 	else encode( 30, 126,   moveParagraphBackwardAndModifySelection:)
-	else encode( 31, 125,   moveParagraphForwardAndModifySelection:)																										
+	else encode( 31, 125,   moveParagraphForwardAndModifySelection:)
 	else encode( 11, 116,   pageUp:)
 	else encode( 12, 121,   pageDown:)
 	else encode( 11, 116,   pageUpAndModifySelection:)
@@ -525,6 +539,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	else encode( 27, 53,    cancel:)
 	else encode( 27, 53,    complete:)
 	else encode( 27, 71,    delete:)
+
+	else encode(  1, 115,   moveToBeginningOfLine:)
+	else encode(  1, 115,   moveToBeginningOfLineAndModifySelection:)
+	else encode(  4, 119,   moveToEndOfLine:)
+	else encode(  4, 119,   moveToEndOfLineAndModifySelection:)
 	else return;
 
 	@synchronized(self) {
@@ -545,44 +564,46 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (void)		 unmarkText {
-	inputMark= NSMakeRange(NSNotFound, 0); 
+	inputMark= NSMakeRange(NSNotFound, 0);
 }
 
-- (BOOL)		 hasMarkedText { 
-	return inputMark.location != NSNotFound; 
+- (BOOL)		 hasMarkedText {
+	return inputMark.location != NSNotFound;
 }
 
-- (NSInteger)		 conversationIdentifier	{ 
-	return (NSInteger )self; 
+- (NSInteger)		 conversationIdentifier	{
+	return (NSInteger )self;
 }
 
-- (NSAttributedString *)attributedSubstringForProposedRange:(NSRange)aRange actualRange:(NSRangePointer)actualRange { 
-	return nil; 
+- (NSAttributedString *)attributedSubstringForProposedRange:(NSRange)aRange actualRange:(NSRangePointer)actualRange {
+	return nil;
 }
 
-- (NSRange)		 markedRange { 
-	return inputMark; 
+- (NSRange)		 markedRange {
+	return inputMark;
 }
 
-- (NSRange)		 selectedRange { 
-	return inputSelection; 
+- (NSRange)		 selectedRange {
+	return inputSelection;
 }
 
 - (NSRect)firstRectForCharacterRange:(NSRange)aRange actualRange:(NSRangePointer)actualRange {
-	return NSMakeRect(0,0, 0,0); 
+	return NSMakeRect(0,0, 0,0);
 }
 
 - (NSUInteger) characterIndexForPoint: (NSPoint)thePoint {
-	return 0; 
+	return 0;
 }
 
-- (NSArray *) validAttributesForMarkedText { 
+- (NSArray *) validAttributesForMarkedText {
 	return nil;
 }
 
 - (BOOL)drawsVerticallyForCharacterAtIndex:(NSUInteger)charIndex {
 	return NO;
 }
+
+#pragma mark Events - Dragging
 
 - (NSMutableArray *) filterSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info {
 	NSPasteboard *pboard= [info draggingPasteboard];
@@ -621,7 +642,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 - (NSDragOperation)draggingEntered:(id < NSDraggingInfo >)info {
 //    NSLog(@"draggingEntered %@",info);
 
-	if (self.dragInProgress) 
+	if (self.dragInProgress)
 		return NSDragOperationNone;
 	dragInProgress = YES;
 	self.dragCount = (int) [self countNumberOfNoneSqueakImageFilesInDraggedFiles: info];
@@ -655,7 +676,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	if (self.dragCount) {
 		self.dragItems = [self filterOutSqueakImageFilesFromDraggedFiles: info];
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view: self];
-	} 
+	}
 
 	NSArray *images = [self filterSqueakImageFilesFromDraggedFiles: info];
 	if ([images count] > 0) {
@@ -680,7 +701,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (NSString*) dragFileNameStringAtIndex: (sqInt) index {
-	if (!self.dragItems) 
+	if (!self.dragItems)
 		return NULL;
 	if (index < 1 || index > [self.dragItems count])
 		return NULL;
@@ -692,6 +713,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 - (BOOL)ignoreModifierKeysWhileDragging {
 	return YES;
 }
+
+#pragma mark Fullscreen
+
 
 - (void) clearScreen {
     NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
@@ -706,7 +730,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 - (void)  ioSetFullScreen: (sqInt) fullScreen {
 
-	if ([self isInFullScreenMode] == YES && (fullScreen == 1)) 
+	if ([self isInFullScreenMode] == YES && (fullScreen == 1))
 		return;
 	if ([self isInFullScreenMode] == NO && (fullScreen == 0))
 		return;

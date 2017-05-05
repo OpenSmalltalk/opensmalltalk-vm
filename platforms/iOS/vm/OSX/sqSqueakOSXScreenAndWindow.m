@@ -48,7 +48,7 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 static void dispatchWindowChangedHook(void);
 
 @interface sqSqueakOSXScreenAndWindow()
-    @property (nonatomic,strong) sqSqueakOSXOpenGLView *mainViewOnWindow;
+    @property (nonatomic,strong) NSView <sqSqueakOSXView> * mainViewOnWindow;
 @end
 
 @implementation sqSqueakOSXScreenAndWindow
@@ -58,11 +58,11 @@ static void dispatchWindowChangedHook(void);
 	return self.mainViewOnWindow;
 }
 
-- (void) mainViewOnWindow: (id) aView {
+- (void) mainViewOnWindow: (NSView <sqSqueakOSXView> *) aView {
     self.mainViewOnWindow = aView;
 }
 
-- (sqSqueakOSXOpenGLView *) getMainViewOnWindow {
+- (NSView <sqSqueakOSXView> *) getMainViewOnWindow {
     return self.mainViewOnWindow;
 }
 
