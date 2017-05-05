@@ -78,6 +78,9 @@ enum {
     NSEventMaskAny              = NSAnyEventMask
 };
 #endif
+#if NSAppKitVersionNumber <= NSAppKitVersionNumber10_9
+typedef NSUInteger NSEventModifierFlags;
+#endif
 
 
 #endif /* FOR_OS_EXPORTS */
