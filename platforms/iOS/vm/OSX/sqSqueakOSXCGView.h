@@ -40,11 +40,12 @@
 #include <ApplicationServices/ApplicationServices.h>
 #import "keyBoardStrokeDetails.h"
 #import "sqSqueakOSXView.h"
+#import	"SqViewClut.h"
 
 @class sqSqueakOSXScreenAndWindow;
 #import "sq.h"
 
-@interface sqSqueakOSXCGView : NSView <sqSqueakOSXView, NSTextInputClient> {
+@interface sqSqueakOSXCGView : NSView <sqSqueakOSXView, sqViewClut, NSTextInputClient> {
 	sqSqueakOSXScreenAndWindow *__weak windowLogic;
 	NSTrackingRectTag squeakTrackingRectForCursor;
 	NSRange inputMark;
@@ -68,4 +69,6 @@
 
 @end
 
-#import	"SqViewClut.h"
+#ifndef ContentViewClass
+#  define ContentViewClass sqSqueakOSXCGView
+#endif

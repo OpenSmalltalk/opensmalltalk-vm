@@ -40,11 +40,12 @@
 #include <ApplicationServices/ApplicationServices.h>
 #import "keyBoardStrokeDetails.h"
 #import "sqSqueakOSXView.h"
+#import	"SqViewClut.h"
 
 @class sqSqueakOSXScreenAndWindow;
 #import "sq.h"
 
-@interface sqSqueakOSXOpenGLView : NSOpenGLView <sqSqueakOSXView, NSTextInputClient> {
+@interface sqSqueakOSXOpenGLView : NSOpenGLView <sqSqueakOSXView, sqViewClut, NSTextInputClient> {
 	sqSqueakOSXScreenAndWindow *__weak windowLogic;
 	NSTrackingRectTag squeakTrackingRectForCursor;
 	NSRange inputMark;
@@ -70,4 +71,3 @@
 - (void) preDrawThelayers;
 @end
 
-#import	"SqViewClut.h"
