@@ -54,7 +54,7 @@ MAKERSRC:=$(wildcard $(VMSRCDIR)/gcc3x-*interp.c $(VMSRCDIR)/cogit.c)
 CROSSSRC:= $(wildcard $(CROSSDIR)/*.c)
 #XEX:= ... %/sqMacV2Browser.m ...
 XEX:=%/sqSqueakMainApplication+screen.m %/sqMacV2Window.m \
-	 %/SqViewBitmapConversion.m %/sqSqueakOSXCGView.m
+	 %/SqViewBitmapConversion.m
 OSXSRC=$(wildcard $(OSXDIR)/*.c) $(wildcard $(OSXDIR)/*.m) \
 		$(wildcard $(OSXCOMMONDIR)/*.c) $(wildcard $(OSXCOMMONDIR)/*.m) \
 		$(wildcard $(OSXCLASSESDIR)/*.c) $(wildcard $(OSXCLASSESDIR)/*.m)
@@ -107,6 +107,12 @@ TZ:=$(shell date +%Z)
 DEFS:=	$(COGDEFS) -DUSE_GLOBAL_STRUCT=0 -DNO_ISNAN=1 \
 		-DUSE_INLINE_MEMORY_ACCESSORS -D'TZ="$(TZ)"' \
 		$(INTERPFLAGS)
+
+# DEFS:=	$(COGDEFS) -DUSE_GLOBAL_STRUCT=0 -DNO_ISNAN=1 \
+# 		-DUSE_CORE_GRAPHICS=1 \
+# 		-DUSE_INLINE_MEMORY_ACCESSORS -D'TZ="$(TZ)"' \
+# 		$(INTERPFLAGS)
+
 XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN
 CFLAGS:= $(OFLAGS) $(COGDEFS) $(DEBUGVM) $(DEFS) $(XDEFS)
 INCLUDES:= $(addprefix -I,. $(SRCDIRS))

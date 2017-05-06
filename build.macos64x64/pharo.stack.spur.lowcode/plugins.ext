@@ -18,9 +18,9 @@ SDL2DisplayPlugin \
 EventsHandlerPlugin \
 # Not working in 64bits (weird)
 # MIDIPlugin \
-# could work, but I don't know if relevant:
+# could work, but I don't know if relevant: \
 # TestOSAPlugin \
-# not working (because of Cocoa vs Carbon):
-# QuicktimePlugin \
-# JoystickTabletPlugin \
+# not working (because of Cocoa vs Carbon): \
 # B3DAcceleratorPlugin \
+# QuicktimePlugin \
+# JoystickTabletPlugin

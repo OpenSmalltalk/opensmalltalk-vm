@@ -5,6 +5,10 @@
 # The caller should set VMSRCDIR to point to the relevant VM source
 # e.g. VMSRCDIR:= ../../spursrc/vm
 
+# Produce Squeak.app, SqueakAssert.app & SqueakDebug.app
+APPNAME:=Squeak
+APPNAMEDEF:=$(APPNAME)
+
 APPPOST:=overwriteSqueakIcon
 
 # Now include the Makefile proper, which is common to all Mac OS builds.

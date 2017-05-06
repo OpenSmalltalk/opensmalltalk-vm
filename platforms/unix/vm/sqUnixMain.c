@@ -1026,7 +1026,7 @@ sigusr1(int sig, siginfo_t *info, void *uap)
 	int saved_errno = errno;
 	time_t now = time(NULL);
 	char ctimebuf[32];
-	char crashdump[IMAGE_NAME_SIZE+1];
+	char crashdump[MAXPATHLEN+1];
 	unsigned long pc;
 
 	if (!ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
@@ -1052,7 +1052,7 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 {
 	time_t now = time(NULL);
 	char ctimebuf[32];
-	char crashdump[IMAGE_NAME_SIZE+1];
+	char crashdump[MAXPATHLEN+1];
 	char *fault = sig == SIGSEGV
 					? "Segmentation fault"
 					: (sig == SIGBUS
