@@ -1310,9 +1310,6 @@ static void loadModules(void)
   checkModuleVersion(soundModule,   SqSoundVersion,   snd->version);
 }
 
-/* built-in main vm module */
-
-
 static long
 strtobkm(const char *str)
 {
@@ -1345,6 +1342,7 @@ static int jitArgs(char *str)
 }
 #endif /* !STACKVM && !COGVM */
 
+/* ----------------- built-in main vm module */
 
 # include <locale.h>
 static void vm_parseEnvironment(void)
@@ -1380,7 +1378,7 @@ static void vm_parseEnvironment(void)
 }
 
 
-static void usage(void);
+static void usage(int exitValue);
 static void versionInfo(void);
 
 
@@ -1398,7 +1396,11 @@ static int parseModuleArgument(int argc, char **argv, struct SqModule **addr, ch
 
 static int vm_parseArgument(int argc, char **argv)
 {
-  /* deal with arguments that implicitly load modules */
+  // parse arguments for main vm module including those that
+  // implicitly load modules.
+
+  if (argv[0][0] == '-' && argv[0][1] == '-')
+	argv[0]++;	/* skip one dash in double dash options */
 
   if (!strncmp(argv[0], "-psn_", 5))
     {
@@ -1418,13 +1420,8 @@ static int vm_parseArgument(int argc, char **argv)
       return 1;
     }
 
-  /* legacy compatibility */		/*** XXX to be removed at some time ***/
 
-#ifdef PharoVM
-# define VMOPTION(arg) "--"arg
-#else
 # define VMOPTION(arg) "-"arg
-#endif
 
 # define moduleArg(arg, type, name)						\
     if (!strcmp(argv[0], VMOPTION(arg)))							\
@@ -1467,7 +1464,8 @@ static int vm_parseArgument(int argc, char **argv)
 
   /* vm arguments */
 
-  if      (!strcmp(argv[0], VMOPTION("help")))		{ usage();		return 1; }
+  if      (!strcmp(argv[0], VMOPTION("help")))		{ usage(0);         /*NOTREACHED*/}
+  else if (!strcmp(argv[0], VMOPTION("version")))	{ versionInfo();	return 0; }
   else if (!strcmp(argv[0], VMOPTION("noevents")))	{ noEvents	= 1;	return 1; }
   else if (!strcmp(argv[0], VMOPTION("nomixer")))	{ noSoundMixer	= 1;	return 1; }
   else if (!strcmp(argv[0], VMOPTION("notimer")))	{ useItimer	= 0;	return 1; }
@@ -1481,7 +1479,6 @@ static int vm_parseArgument(int argc, char **argv)
   else if (!strcmp(argv[0], VMOPTION("nojit")))		{ useJit	= 0;	return 1; }
   else if (!strcmp(argv[0], VMOPTION("spy")))		{ withSpy	= 1;	return 1; }
 #endif /* !STACKVM && !COGVM */
-  else if (!strcmp(argv[0], VMOPTION("version")))	{ versionInfo();	return 1; }
   else if (!strcmp(argv[0], VMOPTION("single")))	{ runAsSingleInstance=1; return 1; }
   /* option requires an argument */
   else if (argc > 1)
@@ -1692,11 +1689,12 @@ SqModuleDefine(vm, Module);
 /*** options processing ***/
 
 
-static void usage(void)
+static void usage(int exitValue)
 {
   struct SqModule *m= 0;
   printf("Usage: %s [<option>...] [<imageName> [<argument>...]]\n", argVec[0]);
   printf("       %s [<option>...] -- [<argument>...]\n", argVec[0]);
+  printf("options begin with single -, but -- prefix is silently accepted\n");
   sqIgnorePluginErrors= 1;
   {
     struct moduleDescription *md;
@@ -1721,7 +1719,7 @@ static void usage(void)
   printf("\nAvailable drivers:\n");
   for (m= modules;  m->next;  m= m->next)
     printf("  %s\n", m->name);
-  exit(1);
+  exit(exitValue);
 }
 
 
@@ -1819,7 +1817,8 @@ static void parseArguments(int argc, char **argv)
       if (n == 0)			/* option not recognised */
 	{
 	  fprintf(stderr, "unknown option: %s\n", argv[0]);
-	  usage();
+	  usage(1);
+	  /*NOTREACHED*/
 	}
       while (n--)
 	saveArg();
