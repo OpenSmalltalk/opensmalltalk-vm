@@ -1378,7 +1378,7 @@ static void vm_parseEnvironment(void)
 }
 
 
-static void usage(int exitValue);
+static void usage();
 static void versionInfo(void);
 
 
@@ -1464,7 +1464,7 @@ static int vm_parseArgument(int argc, char **argv)
 
   /* vm arguments */
 
-  if      (!strcmp(argv[0], VMOPTION("help")))		{ usage(0);         /*NOTREACHED*/}
+  if      (!strcmp(argv[0], VMOPTION("help")))		{ usage();         	exit(0); }
   else if (!strcmp(argv[0], VMOPTION("version")))	{ versionInfo();	return 0; }
   else if (!strcmp(argv[0], VMOPTION("noevents")))	{ noEvents	= 1;	return 1; }
   else if (!strcmp(argv[0], VMOPTION("nomixer")))	{ noSoundMixer	= 1;	return 1; }
@@ -1689,7 +1689,7 @@ SqModuleDefine(vm, Module);
 /*** options processing ***/
 
 
-static void usage(int exitValue)
+static void usage()
 {
   struct SqModule *m= 0;
   printf("Usage: %s [<option>...] [<imageName> [<argument>...]]\n", argVec[0]);
@@ -1719,7 +1719,6 @@ static void usage(int exitValue)
   printf("\nAvailable drivers:\n");
   for (m= modules;  m->next;  m= m->next)
     printf("  %s\n", m->name);
-  exit(exitValue);
 }
 
 
@@ -1817,8 +1816,8 @@ static void parseArguments(int argc, char **argv)
       if (n == 0)			/* option not recognised */
 	{
 	  fprintf(stderr, "unknown option: %s\n", argv[0]);
-	  usage(1);
-	  /*NOTREACHED*/
+	  usage();
+	  exit(1);
 	}
       while (n--)
 	saveArg();
