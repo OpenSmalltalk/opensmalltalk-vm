@@ -1399,9 +1399,6 @@ static int vm_parseArgument(int argc, char **argv)
   // parse arguments for main vm module including those that
   // implicitly load modules.
 
-  if (argv[0][0] == '-' && argv[0][1] == '-')
-	argv[0]++;	/* skip one dash in double dash options */
-
   if (!strncmp(argv[0], "-psn_", 5))
     {
       displayModule= requireModule("display", "Quartz");
@@ -1805,11 +1802,17 @@ static void parseArguments(int argc, char **argv)
     {
       struct SqModule *m= 0;
       int n= 0;
+      int ddash=0;
       if (!strcmp(*argv, "--"))		/* escape from option processing */
 	break;
+      ddash = (argv[0][1] == '-');
+      if (ddash)
+	argv[0]++;	/* skip one dash in double dash options */
       modulesDo (m)
 	if ((n= m->parseArgument(argc, argv)))
 	  break;
+      if (ddash)
+	argv[0]--;
 #    ifdef DEBUG_IMAGE
       printf("parseArgument n = %d\n", n);
 #    endif
