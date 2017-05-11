@@ -86,24 +86,27 @@ extern void setIoProcessEventsHandler(void * handler) {
 
 sqInt ioProcessEvents(void) {
     aioPoll(0);
-    if(ioProcessEventsHandler)
-	{
-		// We need to restore the opengl context to whatever the image was
-		// already using. This is required by SDL2 in Pharo.
-		NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
 
+	// We need to restore the opengl context to whatever the image was
+	// already using. This is required by SDL2 in Pharo.
+	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
+	
+	// We need to run the nativeIoProcessEvents even if we are using SDL2,
+	// otherwise we end with some double free errors in an autorelease pool.
+	nativeIoProcessEvents();
+    if(ioProcessEventsHandler && ioProcessEventsHandler != nativeIoProcessEvents)
         ioProcessEventsHandler();
 
-		NSOpenGLContext *newContext = [NSOpenGLContext currentContext];
-		if(oldContext != newContext)
-		{
-			if (oldContext != nil) {
-				[oldContext makeCurrentContext];
-			} else {
-				[NSOpenGLContext clearCurrentContext];
-			}
+	NSOpenGLContext *newContext = [NSOpenGLContext currentContext];
+	if(oldContext != newContext)
+	{
+		if (oldContext != nil) {
+			[oldContext makeCurrentContext];
+		} else {
+			[NSOpenGLContext clearCurrentContext];
 		}
 	}
+
     return 0;
 }
 
