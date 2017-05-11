@@ -69,5 +69,6 @@
 
 - (void) setupOpenGL;
 - (void) preDrawThelayers;
-@end
+-(void)drawRect:(NSRect)rect flush:(BOOL)flush;
 
+@end

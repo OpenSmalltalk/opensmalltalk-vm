@@ -190,12 +190,19 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 - (void) drawThelayers {
     if (syncNeeded) {
-		[self drawRect: NSRectFromCGRect(clippy)];
+		[self drawRect: NSRectFromCGRect(clippy) flush: FALSE];
 		syncNeeded = NO;
 		clippyIsEmpty = YES;
 //		CGL_MACRO_DECLARE_VARIABLES();
+		NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
+		[[self openGLContext] makeCurrentContext];
 		glFlush();
 		[[self openGLContext] flushBuffer];
+		if (oldContext != nil) {
+			[oldContext makeCurrentContext];
+		} else {
+			[NSOpenGLContext clearCurrentContext];
+		}
 	}
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
@@ -279,7 +286,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 -(void)defineQuad:(NSRect)r
 {
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
 
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	
 //	CGL_MACRO_DECLARE_VARIABLES();
 	 glBegin(GL_QUADS);
 	 glTexCoord2f(0.0f, 0.0f);					glVertex2f(-1.0f, 1.0f);
@@ -296,6 +308,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 -(void)drawRect:(NSRect)rect
+{
+	// Called by Cocoa. We need to flush.
+	[self drawRect: rect flush: TRUE];
+}
+
+-(void)drawRect:(NSRect)rect flush:(BOOL)flush
 {
     if (self.fullScreenInProgress) {
         sqInt formObj = interpreterProxy->displayObject();
@@ -324,9 +342,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		[self defineQuad:rect];
     }
 
+	if(flush)
+		glFlush();
+		
     if (oldContext != nil) {
         [oldContext makeCurrentContext];
-    }
+    } else {
+		[NSOpenGLContext clearCurrentContext];
+	}
 }
 
 #pragma mark Events - Mouse
@@ -755,8 +778,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
     glFlush();
     if (oldContext != nil) {
         [oldContext makeCurrentContext];
-    }
-
+    } else {
+		[NSOpenGLContext clearCurrentContext];
+	}
 }
 
 - (void)  ioSetFullScreen: (sqInt) fullScreen {

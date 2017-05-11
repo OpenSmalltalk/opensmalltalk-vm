@@ -43,13 +43,19 @@
 #import "sqSqueakNullScreenAndWindow.h"
 #import "sqaio.h"
 
+# import <OpenGL/gl.h>
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
+# import <OpenGL/OpenGL.h>
+#else
+# import <OpenGL/Opengl.h>
+#endif
+
 extern sqSqueakAppDelegate *gDelegateApp;
 extern struct	VirtualMachine* interpreterProxy;
 extern BOOL gQuitNowRightNow;
 extern sqSqueakNullScreenAndWindow *getMainWindowDelegate();
 
 void nativeIoProcessEvents(void) {
-
 	//API Documented
 		
     if ([[NSThread currentThread] isCancelled]) {
@@ -81,7 +87,23 @@ extern void setIoProcessEventsHandler(void * handler) {
 sqInt ioProcessEvents(void) {
     aioPoll(0);
     if(ioProcessEventsHandler)
+	{
+		// We need to restore the opengl context to whatever the image was
+		// already using. This is required by SDL2 in Pharo.
+		NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
+
         ioProcessEventsHandler();
+
+		NSOpenGLContext *newContext = [NSOpenGLContext currentContext];
+		if(oldContext != newContext)
+		{
+			if (oldContext != nil) {
+				[oldContext makeCurrentContext];
+			} else {
+				[NSOpenGLContext clearCurrentContext];
+			}
+		}
+	}
     return 0;
 }
 
@@ -94,7 +116,6 @@ sqInt ioSetInputSemaphore(sqInt semaIndex) {
 
 sqInt ioGetNextEvent( sqInputEvent *evt) {
 	//API Documented
-	
 	[gDelegateApp.squeakApplication ioGetNextEvent: evt];
 /*	if (evt->type != 0) {
 		NSLog(@"evt.type %i keyboard pc %i cc %i uc %i m %i",evt->type,((sqKeyboardEvent *)evt)->pressCode,((sqKeyboardEvent *) evt)->charCode,((sqKeyboardEvent *) evt)->utf32Code,((sqKeyboardEvent *) evt)->modifiers);
