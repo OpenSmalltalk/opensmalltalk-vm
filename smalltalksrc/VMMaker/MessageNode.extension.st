@@ -4,9 +4,12 @@ Extension { #name : #MessageNode }
 MessageNode >> asTranslatorNodeIn: aTMethod [
 	"make a CCodeGenerator equivalent of me"
 	"selector is sometimes a Symbol, sometimes a SelectorNode!
-	On top of this, numArgs is needed due to the (truly grody) use of
-	arguments as a place to store the extra expressions needed to generate
-	code for in-line to:by:do:, etc.  see below, where it is used."
+	 On top of this, numArgs is needed due to the (truly grody) use of
+	 arguments as a place to store the extra expressions needed to generate
+	 code for in-line to:by:do:, etc.  see below, where it is used.
+
+	 Expand super nodes in place. Elide sends of halt so that halts can be
+	 sprinkled through the simulator but will be eliminated from the generated C."
 	| rcvrOrNil sel args ifNotNilBlock |
 	rcvrOrNil := receiver ifNotNil: [receiver asTranslatorNodeIn: aTMethod].
 	(rcvrOrNil notNil
@@ -14,6 +17,7 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 	and: [rcvrOrNil name = 'super']]) ifTrue:
 		[^aTMethod superExpansionNodeFor: selector key args: arguments].
 	sel := selector isSymbol ifTrue: [selector] ifFalse: [selector key].
+	sel == #halt ifTrue: [^receiver].
 	(sel == #cCode:inSmalltalk: "extracting here rather than in translation allows inlining in the block."
 	  or: [sel == #cCode:]) ifTrue:
 		[arguments first isBlockNode ifTrue:
