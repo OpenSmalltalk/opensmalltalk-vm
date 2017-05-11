@@ -56,6 +56,7 @@ static sqInt handleMax = 0;
 
 static int printf_status(OSStatus status, const char* restrict format, ...);
 static OSStatus sqExtractPeerName(sqSSL* ssl);
+static OSStatus sqGetPeerCertificates(sqSSL* ssl);
 static sqSSL* sqSSLFromHandle(sqInt handle);
 OSStatus sqSetupSSL(sqSSL* ssl, int isServer);
 
@@ -86,10 +87,10 @@ static int printf_status(OSStatus status, const char* restrict format, ...)
                   CFStringGetCStringPtr(_sdesc, kCFStringEncodingUTF8),
                   CFStringGetCStringPtr(_sreas, kCFStringEncodingUTF8),
                   CFStringGetCStringPtr(_sreco, kCFStringEncodingUTF8));
-    CFRelease(_sreco);
-    CFRelease(_sreas);
-    CFRelease(_sdesc);
-    CFRelease(_e);
+    if (_sreco) CFRelease(_sreco);
+    if (_sreas) CFRelease(_sreas);
+    if (_sdesc) CFRelease(_sdesc);
+    if (_e)     CFRelease(_e);
     va_end(args);
     return ret;
 }
@@ -150,11 +151,31 @@ OSStatus sqSetupSSL(sqSSL* ssl, int isServer)
     }
 
 
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
+    /* Disable cert verification since we do that ourselves */
+    status = SSLSetSessionOption(ssl->ctx,
+                                 isServer
+                                    ? kSSLSessionOptionBreakOnClientAuth
+                                    : kSSLSessionOptionBreakOnServerAuth,
+                                 true);
+    if (status != noErr) {
+        logprintf_status(status, "kSSLSessionOptionBreakOn*Auth failed");
+        return status;
+    }
+#else
     /* Disable cert verification since we do that ourselves */
     status = SSLSetEnableCertVerify(ssl->ctx, false);
     if (status != noErr) {
         logprintf_status(status, "SSLSetEnableCertVerify failed");
         return status;
+    }
+#endif // MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
+    if (&SSLSetSessionOption != NULL) {
+        status = SSLSetSessionOption(ssl->ctx, kSSLSessionOptionSendOneByteRecord,true);
+        if (status != noErr) {
+            logprintf_status(status, "kSSLSessionOptionSendOneByteRecord*Auth failed");
+            return status;
+        }
     }
 
     if (ssl->serverName) {
@@ -202,6 +223,95 @@ static OSStatus sqExtractPeerName(sqSSL* ssl)
     return status;
 }
 
+/* sqGetPeerCertificates: Copy certificates sent for subsequent processing.
+ */
+static OSStatus sqGetPeerCertificates(sqSSL* ssl)
+{
+    OSStatus status = noErr;
+    SecTrustRef trust = {0};
+    CFIndex certCount = 0;
+    status = SSLCopyPeerTrust(ssl->ctx, &trust);
+    if (status != noErr) {
+        return status;
+    }
+    if (trust == NULL) {
+        return -1;
+    }
+    certCount = SecTrustGetCertificateCount(trust);
+    CFMutableArrayRef ca = CFArrayCreateMutable(kCFAllocatorDefault,
+                                                certCount,
+                                                &kCFTypeArrayCallBacks);
+    if (ca == NULL) {
+        return errSecAllocate;
+    } else {
+        for (CFIndex i = 0; i < certCount; i++) {
+            CFArrayAppendValue(ca, SecTrustGetCertificateAtIndex(trust, i));
+        }
+        ssl->certs = ca;
+    }
+    CFRelease(trust);
+    return status;
+}
+
+
+/* sqVerifyCert: Verify the validity of the remote certificate */
+static OSStatus sqVerifyCert(sqSSL *ssl, int isServer)
+{
+
+    OSStatus status = noErr;
+    SecTrustRef trust = {0};
+    SecTrustResultType trust_eval = 0;
+
+    ssl->certFlags = SQSSL_NO_CERTIFICATE;
+    status = SSLCopyPeerTrust(ssl->ctx, &trust);
+    if (trust == NULL || status != noErr){
+        logprintf_status(status, "sqConnectSSL: SSLCopyPeerTrust");
+        return SQSSL_GENERIC_ERROR;
+    }
+    /* <rant>
+     * Apple can't be bothered to return something more detailed than
+     * 'maaaybe that worked', although their own api would like more detailed
+     * results (sslCrypto.c:tls_verify_peer_cert). But noooooo, sslVerifyCertChain
+     * also just calls SecTrustEvaluate() and meaningfully asks (in the 10.12 version)
+       "
+             Do we really need to return things like:
+                     errSSLNoRootCert
+                     errSSLUnknownRootCert
+                     errSSLCertExpired
+                     errSSLCertNotYetValid
+                     errSSLHostNameMismatch
+             for our client to see what went wrong, or should we just always
+             return
+                     errSSLXCertChainInvalid
+             when something is wrong?
+       "
+     * Yes, Apple, that would be _extremely_ helpful >:(.
+     * </rant>
+     *
+     * Since we only have yes/no/maybe, we cannot return specific reasons here.
+     */
+    status = SecTrustEvaluate(trust, &trust_eval);
+    CFRelease(trust);
+    if(status != noErr) {
+        logprintf_status(status, "sqConnectSSL: SecTrustEvaluate");
+        return status;
+    }
+    switch (trust_eval) {
+        case kSecTrustResultUnspecified:
+        case kSecTrustResultProceed:
+            ssl->certFlags = 0; // OK
+            break;
+        case kSecTrustResultRecoverableTrustFailure:
+            // Maybe: Expired, untrusted root, ... but we don't know
+            ssl->certFlags = SQSSL_OTHER_ISSUE;
+            break;
+        default:
+            // Fatal
+            ssl->certFlags = SQSSL_NO_CERTIFICATE;
+            break;
+    }
+    return status;
+}
 
 #pragma mark -
 #pragma mark Callbacks
@@ -387,21 +497,30 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
     }
 
     status = SSLHandshake(ssl->ctx);
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
+    if (status == errSSLServerAuthCompleted) {
+        OSStatus secStatus = sqVerifyCert(ssl, true);
+        if(secStatus != noErr) {
+            logprintf_status(secStatus, "sqConnectSSL: sqVerifyCert");
+            // we should but currently _cannot_ return here.
+            // return SQSSL_GENERIC_ERROR;
+        }
+        // Continue Handshake
+        status = SSLHandshake(ssl->ctx);
+    }
+#endif // MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
     if (status == errSSLWouldBlock) {
         /* Return token to caller */
         logprintf("sqConnectSSL: Produced %d token bytes\n", ssl->outLen);
         return ssl->outLen ? ssl->outLen : SQSSL_NEED_MORE_DATA;
-    }
-    if (status != noErr) {
+    } else if (status != noErr) {
         logprintf_status(status, "sqConnectSSL: SSLHandshake");
         return SQSSL_GENERIC_ERROR;
     }
-    /* We are connected. Verify the cert. */
     ssl->state = SQSSL_CONNECTED;
-    ssl->certFlags = -1;
 
     /* Extract the peer name from the cert */
-    status = SSLCopyPeerCertificates(ssl->ctx, &ssl->certs);
+    status = sqGetPeerCertificates(ssl);
     if (status == noErr) {
         sqExtractPeerName(ssl);
     }
