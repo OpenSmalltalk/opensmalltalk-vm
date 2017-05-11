@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'emptyVM'
 	],
-	#category : 'VMMaker-Tests'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #accessing }

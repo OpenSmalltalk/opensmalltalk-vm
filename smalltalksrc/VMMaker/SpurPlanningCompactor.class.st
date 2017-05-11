@@ -58,7 +58,7 @@ Class {
 		'VMBytecodeConstants',
 		'VMSpurObjectRepresentationConstants'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }

@@ -163,7 +163,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMStackFrameOffsets'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #translation }
@@ -4005,8 +4005,11 @@ StackInterpreter >> checkInterpreterIntegrity [
 	(objectMemory isNonImmediate: messageSelector) ifTrue:
 		[(objectMemory checkOopIntegrity: messageSelector named: 'messageSelector')ifFalse:
 			[ok := false]]."
-	(objectMemory checkOopIntegrity: newMethod named: 'newMethod')ifFalse:
-		[flags := flags + 2].
+	"Work around the primitiveDoPrimitiveWithArgs hack"
+	(objectMemory hasSpurMemoryManagerAPI
+	and: [objectMemory isIntegerObject: newMethod]) ifFalse:
+		[(objectMemory checkOopIntegrity: newMethod named: 'newMethod')ifFalse:
+			[flags := flags + 2]].
 	"No longer check lkupClass; it is ephemeral, not living beyond message lookup.
 	(objectMemory checkOopIntegrity: lkupClass named: 'lkupClass')ifFalse:
 		[ok := false]."
@@ -20281,8 +20284,9 @@ StackInterpreter >> storeLiteralVariable: literalIndex withValue: anObject [
 	 rare; in my work image 8.7% of literals are globals)."
 
 	(objectMemory isForwarded: litVar) ifTrue:
-		[litVar := objectMemory followForwarded: litVar].
-	^objectMemory storePointerImmutabilityCheck: ValueIndex ofObject: litVar withValue: anObject
+		[litVar := objectMemory followForwarded: litVar.
+		 self literal: literalIndex ofMethod: method put: litVar].
+	objectMemory storePointerImmutabilityCheck: ValueIndex ofObject: litVar withValue: anObject
 ]
 
 { #category : #'stack bytecodes' }

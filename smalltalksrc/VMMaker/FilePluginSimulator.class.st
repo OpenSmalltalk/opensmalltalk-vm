@@ -9,7 +9,7 @@ Class {
 		'states',
 		'maxOpenFiles'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #translation }
@@ -131,33 +131,6 @@ FilePluginSimulator >> ioCanRenameFile: oldNameIndex OfSize: oldNameSize [
 FilePluginSimulator >> ioCanSetFileType: fileNameIndex OfSize: fileNameSize [
 	"Return true if we're allowed to set the (mac) file type and creator on the given file"
 	^true
-]
-
-{ #category : #simulation }
-FilePluginSimulator >> makeDirEntryName: entryName size: entryNameSize
-	createDate: createDate modDate: modifiedDate
-	isDir: dirFlag fileSize: fileSize [
-
-	^interpreterProxy
-		makeDirEntryName: entryName size: entryNameSize
-		createDate: createDate modDate: modifiedDate
-		isDir: dirFlag fileSize: fileSize
-
-]
-
-{ #category : #'file primitives' }
-FilePluginSimulator >> makeDirEntryName: entryName size: entryNameSize createDate: createDate modDate: modifiedDate isDir: dirFlag fileSize: fileSize posixPermissions: posixPermissions isSymlink: symlinkFlag [
-	"This is used just by the PharoVM, at the moment"
-	
-	^interpreterProxy
-		makeDirEntryName: entryName 
-		size: entryNameSize
-		createDate: createDate 
-		modDate: modifiedDate
-		isDir: dirFlag 
-		fileSize: fileSize
-		posixPermissions: posixPermissions
-		isSymlink: symlinkFlag
 ]
 
 { #category : #simulation }

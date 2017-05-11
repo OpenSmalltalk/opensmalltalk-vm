@@ -1,7 +1,7 @@
 Class {
 	#name : #Spur32BitMemoryManager,
 	#superclass : #SpurMemoryManager,
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'class initialization' }
@@ -48,12 +48,13 @@ Spur32BitMemoryManager class >> wordSize [
 { #category : #'object enumeration' }
 Spur32BitMemoryManager >> addressAfter: objOop [
 	"Answer the address immediately following an object."
-	| numSlots slotBytes |
-	numSlots := self numSlotsOfAny: objOop.
-	slotBytes := numSlots = 0
-					ifTrue: [self allocationUnit]
-					ifFalse: [numSlots + (numSlots bitAnd: 1) << self shiftForWord].
-	^objOop + self baseHeaderSize + slotBytes
+	<returnTypeC: #usqInt>
+	| numSlots |
+	numSlots := self rawNumSlotsOf: objOop.
+	numSlots = 0 ifTrue: [^objOop + self allocationUnit + self baseHeaderSize].
+	numSlots = self numSlotsMask ifTrue:
+		[numSlots := self rawOverflowSlotsOf: objOop].
+	^objOop + self baseHeaderSize + (numSlots + (numSlots bitAnd: 1) << self shiftForWord)
 ]
 
 { #category : #allocation }
@@ -828,12 +829,13 @@ Spur32BitMemoryManager >> objectBytesForSlots: numSlots [
 	"Answer the total number of bytes in an object with the given
 	 number of slots, including header and possible overflow size header."
 	<returnTypeC: #usqInt>
-	^(numSlots = 0
-		ifTrue: [self allocationUnit] "always at least one slot for forwarding pointer"
-		ifFalse: [numSlots + (numSlots bitAnd: 1) << self shiftForWord])
-	+ (numSlots >= self numSlotsMask
-		ifTrue: [self baseHeaderSize + self baseHeaderSize]
-		ifFalse: [self baseHeaderSize])
+	^numSlots = 0
+		ifTrue: [self allocationUnit + self baseHeaderSize] "always at least one slot for forwarding pointer"
+		ifFalse:
+			[numSlots + (numSlots bitAnd: 1) << self shiftForWord
+			 + (numSlots >= self numSlotsMask
+					ifTrue: [self baseHeaderSize + self baseHeaderSize]
+					ifFalse: [self baseHeaderSize])]
 ]
 
 { #category : #'object access' }
@@ -870,6 +872,12 @@ Spur32BitMemoryManager >> rtRefCountOf: obj put: refCount [
 	header := header bitAnd: (7 << self rememberedBitShift) bitInvert32.
 	header := header + (refCount << self rememberedBitShift).
 	self longAt: obj put: header
+]
+
+{ #category : #'image segment in/out' }
+Spur32BitMemoryManager >> savedOutHashFillValue [
+	<inline: true>
+	^self maxIdentityHash + 1
 ]
 
 { #category : #'header access' }
@@ -981,6 +989,66 @@ Spur32BitMemoryManager >> shiftForWord [
 	<api>
 	<cmacro>
 	^2
+]
+
+{ #category : #allocation }
+Spur32BitMemoryManager >> shorten: objOop toIndexableSize: indexableSize [
+	"Reduce the number of indexable fields in objOop, a pointer object, to nSlots. Convert the
+	 unused residual to a free chunk. Without changes to numSlotsForShortening:toIndexableSize:
+	 this only works for arrayFormat and longFormat objects.
+	 Answer the number of bytes returned to free memory, which may be zero if no change
+	 was possible."
+	<inline: false>
+	| numSlots bytesBefore delta copy freeChunk |
+	self assert: (self oop: (self addressAfter: objOop) isLessThanOrEqualTo: endOfMemory).
+	numSlots := self numSlotsForShortening: objOop toIndexableSize: indexableSize.
+	numSlots = (self numSlotsOf: objOop) ifTrue:
+		[^0].
+	bytesBefore := self bytesInObject: objOop.
+	delta := bytesBefore - (self objectBytesForSlots: numSlots).
+
+	(delta > 0
+	 and: [delta <= self allocationUnit]) ifTrue:
+		[copy := self allocateSlots: numSlots
+					format: (self formatOf: objOop)
+					classIndex: (self classIndexOf: objOop).
+		 copy ifNil: [self error: 'shorten:toIndexableSize: attempted to shorten to allocationUnit!'].
+		 0 to: numSlots - 1 do:
+			[:i|
+			self storePointerUnchecked: i
+				ofObject: copy
+				withValue: (self fetchPointer: i ofObject: objOop)].
+		 (self isRemembered: objOop) ifTrue:
+			[scavenger remember: copy].
+		 self forward: objOop to: copy.
+		 ^0].
+
+	(self hasOverflowHeader: objOop)
+		ifTrue:
+			[self rawOverflowSlotsOf: objOop put: numSlots.
+			 numSlots < self numSlotsMask ifTrue:
+				[delta := delta - self allocationUnit]]
+		ifFalse:
+			[self assert: numSlots < self numSlotsMask.
+			 self rawNumSlotsOf: objOop put: numSlots].
+
+	self assert: (self oop: (self addressAfter: objOop) + delta isLessThanOrEqualTo: endOfMemory).
+	"Since the 32-bit system rounds objects up to 64-bits, loosing
+	 a slot may not actually change the bytes occupied by the object."
+	delta = 0 ifTrue:
+		[^0].
+
+	freeChunk := self initFreeChunkWithBytes: delta at: (self addressAfter: objOop).
+	self assert: (self addressAfter: freeChunk) <= endOfMemory.
+	(self isInOldSpace: objOop)
+		ifTrue:
+			[totalFreeOldSpace := totalFreeOldSpace + delta.
+			 self addToFreeList: freeChunk bytes: delta]
+		ifFalse:
+			[self
+				setClassIndexOf: freeChunk to: self wordSizeClassIndexPun;
+				setFormatOf: freeChunk to: self firstLongFormat].
+	^delta
 ]
 
 { #category : #'cog jit support' }

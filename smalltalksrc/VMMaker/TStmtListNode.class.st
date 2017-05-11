@@ -5,7 +5,7 @@ Class {
 		'arguments',
 		'statements'
 	],
-	#category : 'VMMaker-Translation to C'
+	#category : #'VMMaker-Translation to C'
 }
 
 { #category : #utilities }
