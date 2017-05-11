@@ -74,7 +74,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMStackFrameOffsets'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #'C translation' }
@@ -2215,7 +2215,7 @@ InterpreterPrimitives >> primitiveGetenv [
 	var = 0 ifTrue:
 		[self successful ifTrue:
 			[^self primitiveFailFor: PrimErrBadArgument].
-		 ^self].
+		 ^self primitiveFailFor: primFailCode].
 	result := self getenv: (self cCode: [var] inSmalltalk: [var allButLast]).
 	self free: var.
 	result ~= 0 ifTrue:
@@ -2792,15 +2792,19 @@ InterpreterPrimitives >> primitiveListExternalModule [
 
 { #category : #'image segment in/out' }
 InterpreterPrimitives >> primitiveLoadImageSegment [
-	"This primitive is called from Squeak as...
-		<imageSegment> loadSegmentFrom: aWordArray outPointers: anArray."
+	"This primitive is called from Smalltalk as...
+		<imageSegment> loadSegmentFrom: aWordArray outPointers: anArray.
 
-	"This primitive will load a binary image segment created by primitiveStoreImageSegment.
+	 This primitive will load a binary image segment created by primitiveStoreImageSegment.
 	 It expects the outPointer array to be of the proper size, and the wordArray to be well
 	 formed.  It will return as its value the original array of roots, and the erstwhile
 	 segmentWordArray will have been truncated to a size of one word, i.e. retaining the version
 	 stamp.  If this primitive should fail, the segmentWordArray will, sadly, have been reduced to
-	 an unrecognizable and unusable jumble.  But what more could you have done with it anyway?"
+	 an unrecognizable and unusable jumble.  But what more could you have done with it anyway?
+	 [How about saving it so the system functions as primtiives are intended?  eem 5/9/2017 16:31]
+
+	 In Spur, if the primitive succeeds, the segmentWordArray is also becomed into the array of loaded
+	 objects, to allow fixing up of loaded objects directly without nextObject, which Spur doesn't support."
 
 	| outPointerArray segmentWordArray result |
 

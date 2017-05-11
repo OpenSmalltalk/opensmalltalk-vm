@@ -5,7 +5,7 @@ Class {
 		'parent',
 		'bootstrapping'
 	],
-	#category : 'VMMaker-SpurMemoryManagerSimulation'
+	#category : #'VMMaker-SpurMemoryManagerSimulation'
 }
 
 { #category : #accessing }
@@ -267,6 +267,13 @@ Spur32BitMMLESimulator >> longAt: byteAddress put: a32BitValue [
 	^memory at: byteAddress // 4 + 1 put: a32BitValue
 ]
 
+{ #category : #'image segment in/out' }
+Spur32BitMMLESimulator >> mapOopsFrom: segStart to: segAddr outPointers: outPointerArray outHashes: savedOutHashes [
+	self leakCheckImageSegments ifTrue:
+		[self halt].
+	^super mapOopsFrom: segStart to: segAddr outPointers: outPointerArray outHashes: savedOutHashes
+]
+
 { #category : #'gc - global' }
 Spur32BitMMLESimulator >> markAndTrace: objOop [
 	"objOop = 16rB26020 ifTrue: [self halt].
@@ -325,10 +332,10 @@ Spur32BitMMLESimulator >> parent: anObject [
 ]
 
 { #category : #'image segment in/out' }
-Spur32BitMMLESimulator >> return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes [
+Spur32BitMMLESimulator >> return: errCode restoringObjectsIn: firstArray upTo: limitOrTag savedFirstFields: savedFirstFields and: secondArray savedHashes: savedHashes [
 	self leakCheckImageSegments ifTrue:
 		[self halt: errCode printString].
-	^super return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes
+	^super return: errCode restoringObjectsIn: firstArray upTo: limitOrTag savedFirstFields: savedFirstFields and: secondArray savedHashes: savedHashes
 ]
 
 { #category : #'debug support' }

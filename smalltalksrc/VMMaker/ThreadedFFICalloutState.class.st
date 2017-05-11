@@ -26,7 +26,7 @@ Class {
 		'stringArgIndex',
 		'stringArgs'
 	],
-	#category : 'VMMaker-Plugins-FFI'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }

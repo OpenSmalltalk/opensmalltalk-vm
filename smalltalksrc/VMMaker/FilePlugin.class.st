@@ -21,7 +21,7 @@ Class {
 		'DirEntryFound',
 		'DirNoMoreEntries'
 	],
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }
@@ -150,8 +150,6 @@ FilePlugin >> makeDirEntryName: entryName size: entryNameSize
 	"allocate storage for results, remapping newly allocated
 	 oops in case GC happens during allocation"
 	interpreterProxy pushRemappableOop:
-		(interpreterProxy instantiateClass: (interpreterProxy classArray) indexableSize: 5).
-	interpreterProxy pushRemappableOop:
 		(interpreterProxy instantiateClass: (interpreterProxy classString) indexableSize: entryNameSize).
 	interpreterProxy pushRemappableOop: 
 		(interpreterProxy positive32BitIntegerFor: createDate).
@@ -160,26 +158,29 @@ FilePlugin >> makeDirEntryName: entryName size: entryNameSize
 	interpreterProxy pushRemappableOop:
 		(interpreterProxy positive64BitIntegerFor: fileSize).
 
-	fileSizeOop   := interpreterProxy popRemappableOop.
-	modDateOop   := interpreterProxy popRemappableOop.
-	createDateOop := interpreterProxy popRemappableOop.
-	nameString    := interpreterProxy popRemappableOop.
-	results         := interpreterProxy popRemappableOop.
+	results := interpreterProxy instantiateClass: (interpreterProxy classArray) indexableSize: 5.
+
+	fileSizeOop		:= interpreterProxy popRemappableOop.
+	modDateOop	:= interpreterProxy popRemappableOop.
+	createDateOop	:= interpreterProxy popRemappableOop.
+	nameString		:= interpreterProxy popRemappableOop.
 
 	"copy name into Smalltalk string"
 	stringPtr := interpreterProxy firstIndexableField: nameString.
-	0 to: entryNameSize - 1 do: [ :i |
-		stringPtr at: i put: (entryName at: i).
-	].
+	0 to: entryNameSize - 1 do:
+		[ :i |
+		self cCode: [stringPtr at: i put: (entryName at: i)]
+			inSmalltalk: [interpreterProxy storeByte: i ofObject: nameString withValue: (entryName at: i+1) asciiValue]].
 
-	interpreterProxy storePointer: 0 ofObject: results withValue: nameString.
-	interpreterProxy storePointer: 1 ofObject: results withValue: createDateOop.
-	interpreterProxy storePointer: 2 ofObject: results withValue: modDateOop.
-	dirFlag
-		ifTrue: [ interpreterProxy storePointer: 3 ofObject: results withValue: interpreterProxy trueObject ]
-		ifFalse: [ interpreterProxy storePointer: 3 ofObject: results withValue: interpreterProxy falseObject ].
-	interpreterProxy storePointer: 4 ofObject: results withValue: fileSizeOop.
-	^ results
+	interpreterProxy
+		storePointer: 0 ofObject: results withValue: nameString;
+		storePointer: 1 ofObject: results withValue: createDateOop;
+		storePointer: 2 ofObject: results withValue: modDateOop;
+		storePointer: 3 ofObject: results withValue: (dirFlag
+														ifTrue: [interpreterProxy trueObject]
+														ifFalse: [interpreterProxy falseObject]);
+		storePointer: 4 ofObject: results withValue: fileSizeOop.
+	^results
 ]
 
 { #category : #'directory primitives' }

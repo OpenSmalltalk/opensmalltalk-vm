@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'ceDereferenceSelectorIndex'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #'accessing class hierarchy' }

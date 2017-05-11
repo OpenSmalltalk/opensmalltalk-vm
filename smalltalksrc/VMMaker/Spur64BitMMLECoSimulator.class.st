@@ -5,7 +5,7 @@ Class {
 		'parent',
 		'bootstrapping'
 	],
-	#category : 'VMMaker-SpurMemoryManagerSimulation'
+	#category : #'VMMaker-SpurMemoryManagerSimulation'
 }
 
 { #category : #accessing }
@@ -313,10 +313,10 @@ Spur64BitMMLECoSimulator >> parent: anObject [
 ]
 
 { #category : #'image segment in/out' }
-Spur64BitMMLECoSimulator >> return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes [
+Spur64BitMMLECoSimulator >> return: errCode restoringObjectsIn: firstArray upTo: limitOrTag savedFirstFields: savedFirstFields and: secondArray savedHashes: savedHashes [
 	self leakCheckImageSegments ifTrue:
 		[self halt: errCode printString].
-	^super return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes
+	^super return: errCode restoringObjectsIn: firstArray upTo: limitOrTag savedFirstFields: savedFirstFields and: secondArray savedHashes: savedHashes
 ]
 
 { #category : #'debug support' }

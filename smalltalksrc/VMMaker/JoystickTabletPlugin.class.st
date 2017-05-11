@@ -4,7 +4,7 @@ This plugin implements the interface to the joystick and tablet input devices, i
 Class {
 	#name : #JoystickTabletPlugin,
 	#superclass : #SmartSyntaxInterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }
