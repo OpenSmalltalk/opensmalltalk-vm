@@ -96,6 +96,10 @@ Class {
 		'nativeStackPointer',
 		'lowcodeCalloutState',
 		'shadowCallStackPointer',
+		'displayBits',
+		'displayWidth',
+		'displayHeight',
+		'displayDepth',
 		'statForceInterruptCheck',
 		'statStackOverflow',
 		'statStackPageDivorce',
@@ -209,7 +213,7 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		addHeaderFile:'"sqMemoryFence.h"';
 		addHeaderFile:'"dispdbg.h"'.
 	LowcodeVM ifTrue: [ aCCodeGenerator addHeaderFile:'"sqLowcodeFFI.h"'].
-	
+
 	vmClass declareInterpreterVersionIn: aCCodeGenerator defaultName: 'Stack'.
 	aCCodeGenerator
 		var: #interpreterProxy  type: #'struct VirtualMachine*'.
@@ -276,24 +280,23 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		ifFalse:
 			[aCCodeGenerator removeVariable: #primitiveAccessorDepthTable].
 	aCCodeGenerator
+		var: #displayBits type: #'void *'.
+	self declareC: #(displayWidth displayHeight displayDepth) as: #int in: aCCodeGenerator.
+	aCCodeGenerator
 		var: #primitiveFunctionPointer
-		declareC: 'void (*primitiveFunctionPointer)()'.
-	aCCodeGenerator
+			declareC: 'void (*primitiveFunctionPointer)()';
 		var: #externalPrimitiveTable
-		declareC: 'void (*externalPrimitiveTable[MaxExternalPrimitiveTableSize + 1 /* ', (MaxExternalPrimitiveTableSize + 1) printString, ' */])(void)'.
-	aCCodeGenerator var: #showSurfaceFn type: #'void *'.
-	aCCodeGenerator
-		var: #jmpBuf
-		declareC: 'jmp_buf jmpBuf[MaxJumpBuf + 1 /* ', (MaxJumpBuf + 1) printString, ' */]'.
-	aCCodeGenerator
-		var: #suspendedCallbacks
-		declareC: 'usqInt suspendedCallbacks[MaxJumpBuf + 1 /* ', (MaxJumpBuf + 1) printString, ' */]'.
-	aCCodeGenerator
-		var: #suspendedMethods
-		declareC: 'usqInt suspendedMethods[MaxJumpBuf + 1 /* ', (MaxJumpBuf + 1) printString, ' */]'.
-	aCCodeGenerator
+			declareC: 'void (*externalPrimitiveTable[MaxExternalPrimitiveTableSize + 1 /* ', (MaxExternalPrimitiveTableSize + 1) printString, ' */])(void)';
 		var: #interruptCheckChain
-		declareC: 'void (*interruptCheckChain)(void) = 0'.
+			declareC: 'void (*interruptCheckChain)(void) = 0';
+		var: #showSurfaceFn
+			declareC: 'int (*showSurfaceFn)(sqIntptr_t, int, int, int, int)';
+		var: #jmpBuf
+			declareC: 'jmp_buf jmpBuf[MaxJumpBuf + 1 /* ', (MaxJumpBuf + 1) printString, ' */]';
+		var: #suspendedCallbacks
+			declareC: 'usqInt suspendedCallbacks[MaxJumpBuf + 1 /* ', (MaxJumpBuf + 1) printString, ' */]';
+		var: #suspendedMethods
+			declareC: 'usqInt suspendedMethods[MaxJumpBuf + 1 /* ', (MaxJumpBuf + 1) printString, ' */]'.
 
 	self declareCAsUSqLong: #(nextPollUsecs nextWakeupUsecs longRunningPrimitiveGCUsecs
 								longRunningPrimitiveStartUsecs longRunningPrimitiveStopUsecs
@@ -306,11 +309,8 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	
 	LowcodeVM ifTrue:
 		[aCCodeGenerator
-			var: #shadowCallStackPointer
-			type: #'char *'.
-		aCCodeGenerator
-			var: #lowcodeCalloutState
-			type: #'sqLowcodeCalloutState*']
+			var: #shadowCallStackPointer type: #'char *';
+			var: #lowcodeCalloutState type: #'sqLowcodeCalloutState*']
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -1458,7 +1458,8 @@ StackInterpreter class >> mustBeGlobal: var [
 	^(super mustBeGlobal: var)
 	   or: [(self objectMemoryClass mustBeGlobal: var)
 	   or: [(#('interpreterProxy' 'interpreterVersion' 'inIOProcessEvents'
-			'deferDisplayUpdates' 'extraVMMemory' 'showSurfaceFn'
+			'deferDisplayUpdates' 'extraVMMemory'
+			'showSurfaceFn' 'displayBits' 'displayWidth' 'displayHeight' 'displayDepth'
 			'desiredNumStackPages' 'desiredEdenBytes'
 			'breakSelector' 'breakSelectorLength' 'sendTrace' 'checkAllocFiller' 'checkedPluginName'
 			'suppressHeartbeatFlag' 'debugCallbackInvokes' 'debugCallbackPath' 'debugCallbackReturns') includes: var)
@@ -5065,43 +5066,6 @@ StackInterpreter >> dispatchFunctionPointer: aFunctionPointer [
 		ifFalse: [self perform: aFunctionPointer]
 ]
 
-{ #category : #'I/O primitives' }
-StackInterpreter >> displayBitsOf: aForm Left: l Top: t Right: r Bottom: b [
-	"Repaint the portion of the Smalltalk screen bounded by the affected rectangle. Used to synchronize the screen after a Bitblt to the Smalltalk Display object."
-
-	| displayObj dispBits w h dispBitsIndex d left right top bottom surfaceHandle |
-	displayObj := objectMemory splObj: TheDisplay.
-	aForm = displayObj ifFalse: [^ nil].
-	self success: ((objectMemory isPointers: displayObj) and: [(objectMemory lengthOf: displayObj) >= 4]).
-	self successful ifTrue: [
-		dispBits := objectMemory fetchPointer: 0 ofObject: displayObj.
-		w := self fetchInteger: 1 ofObject: displayObj.
-		h := self fetchInteger: 2 ofObject: displayObj.
-		d := self fetchInteger: 3 ofObject: displayObj.
-	].
-	l < 0 ifTrue:[left := 0] ifFalse: [left := l].
-	r > w ifTrue: [right := w] ifFalse: [right := r].
-	t < 0 ifTrue: [top := 0] ifFalse: [top := t].
-	b > h ifTrue: [bottom := h] ifFalse: [bottom := b].
-	((left <= right) and: [top <= bottom]) ifFalse: [^nil].
-	self successful ifTrue: [
-		(objectMemory isIntegerObject: dispBits) ifTrue: [
-			surfaceHandle := objectMemory integerValueOf: dispBits.
-			showSurfaceFn = 0 ifTrue: [
-				showSurfaceFn := self ioLoadFunction: 'ioShowSurface' From: 'SurfacePlugin'.
-				showSurfaceFn = 0 ifTrue: [^self success: false]].
-			self cCode:'((int (*)(sqIntptr_t, int, int, int, int))showSurfaceFn)(surfaceHandle, left, top, right-left, bottom-top)'.
-		] ifFalse: [
-			self assert: (objectMemory isNonImmediate: dispBits).
-			dispBitsIndex := dispBits + objectMemory baseHeaderSize.  "index in memory byte array"
-			self cCode: 'ioShowDisplay(dispBitsIndex, w, h, d, left, right, top, bottom)'
-				inSmalltalk: [self showDisplayBits: dispBitsIndex 
-								w: w h: h d: d
-								left: left right: right top: top bottom: bottom]
-		].
-	]
-]
-
 { #category : #'frame access' }
 StackInterpreter >> divorceAllFrames [
 	| activeContext |
@@ -7311,15 +7275,9 @@ StackInterpreter >> fullClosureIn: context numArgs: numArgs numCopiedValues: num
 { #category : #'I/O primitive support' }
 StackInterpreter >> fullDisplayUpdate [
 	"Repaint the entire smalltalk screen, ignoring the affected rectangle. Used in some platform's code when the Smalltalk window is brought to the front or uncovered."
-
-	| displayObj w h |
-	displayObj := objectMemory splObj: TheDisplay.
-	((objectMemory isPointers: displayObj) and: [(objectMemory lengthOf: displayObj) >= 4]) ifTrue: [
-		w := self fetchInteger: 1 ofObject: displayObj.
-		h := self fetchInteger: 2 ofObject: displayObj.
-		self displayBitsOf: displayObj Left: 0 Top: 0 Right: w Bottom: h.
-		self ioForceDisplayUpdate].
-	^nil
+	<returnTypeC: #sqInt>
+	self updateDisplayLeft: 0 Top: 0 Right: displayWidth Bottom: displayHeight.
+	self ioForceDisplayUpdate
 ]
 
 { #category : #'plugin primitive support' }
@@ -7965,6 +7923,7 @@ StackInterpreter >> initialize [
 	inIOProcessEvents := 0.
 	fullScreenFlag := 0.
 	deferDisplayUpdates := false.
+	displayBits := displayWidth := displayHeight := displayDepth := 0.
 	pendingFinalizationSignals := statPendingFinalizationSignals := 0.
 	globalSessionID := 0.
 	jmpDepth := 0.
@@ -8791,6 +8750,20 @@ StackInterpreter >> interpreterAllocationReserveBytes [
 	^maxFramesPerPage * LargeContextSlots * objectMemory bytesPerOop * numStackPages
 ]
 
+{ #category : #'I/O primitive support' }
+StackInterpreter >> ioBeDisplay: bitsOrHandle width: width height: height depth: depth [
+	"Record the position and dimensions of the display bitmap, and inform
+	 the display subsystem of the installation of a new display bitmap."
+	<var: #bitsOrHandle type: #'void *'>
+	| changed |
+	changed := displayBits ~= bitsOrHandle.
+	displayBits := bitsOrHandle.
+	displayWidth := width.
+	displayHeight := height.
+	displayDepth := depth.
+	self ioNoteDisplayChanged: bitsOrHandle width: width height: height depth: depth
+]
+
 { #category : #'plugin support' }
 StackInterpreter >> ioFilename: aCharBuffer fromString: aFilenameString ofLength: filenameLength resolveAliases: aBoolean [
 "the vm has to convert aFilenameString via any canonicalization and char-mapping and put the result in aCharBuffer.
@@ -8851,6 +8824,13 @@ StackInterpreter >> ioLocalSecondsOffset [
 	"simulation-only implementation"
 	<doNotGenerate>
 	^DateAndTime localOffset asSeconds
+]
+
+{ #category : #'I/O primitive support' }
+StackInterpreter >> ioNoteDisplayChanged: bitsOrHandle width: width height: height depth: depth [
+	"The real platform may want to note the location of the display and respond to the fact of
+	 its installation."
+	<doNotGenerate>
 ]
 
 { #category : #'primitive support' }
@@ -16299,9 +16279,20 @@ StackInterpreter >> postBecomeAction: theBecomeEffectsFlags [
 
 { #category : #'object memory support' }
 StackInterpreter >> postGCAction: gcModeArg [
-	"Signal the gc semaphore"
+	"Signal the gc semaphore, and inform the display subsystem if the display bitmap has moved."
 
-	self signalSemaphoreWithIndex: gcSemaphoreIndex
+	self signalSemaphoreWithIndex: gcSemaphoreIndex.
+	objectMemory hasSpurMemoryManagerAPI ifFalse:
+		[| displayObj bitsOop bitsNow |
+		 displayObj := objectMemory splObj: TheDisplay.
+		 ((objectMemory isPointers: displayObj)
+		  and: [(objectMemory lengthOf: displayObj) >= 4
+		  and: [objectMemory isWordsOrBytes: (bitsOop := objectMemory fetchPointer: 0 ofObject: displayObj)]]) ifTrue:
+			[bitsNow := self cCode: [objectMemory firstIndexableField: bitsOop]
+							inSmalltalk: [(objectMemory firstIndexableField: bitsOop) asInteger].
+			 displayBits ~= bitsNow ifTrue:
+				[displayBits := bitsNow.
+				 self ioNoteDisplayChanged: displayBits width: displayWidth height: displayHeight depth: displayDepth]]]
 ]
 
 { #category : #'object memory support' }
@@ -18788,29 +18779,20 @@ StackInterpreter >> reverseBytesInImage [
 
 { #category : #'I/O primitive support' }
 StackInterpreter >> reverseDisplayFrom: startIndex to: endIndex [ 
-	"Reverse the given range of Display words (at different bit 
-	depths, this will reverse different numbers of pixels). Used to 
-	give feedback during VM activities such as garbage 
-	collection when debugging. It is assumed that the given 
-	word range falls entirely within the first line of the Display."
-	| displayObj displayBits w wordStartIndex wordEndIndex primFailCodeValue |
-	displayObj := objectMemory splObj: TheDisplay.
-	((objectMemory isPointers: displayObj) and: [(objectMemory lengthOf: displayObj) >= 4]) ifFalse: [^ nil].
-	w := objectMemory fetchPointer: 1 ofObject: displayObj.
-	displayBits := objectMemory fetchPointer: 0 ofObject: displayObj.
-	((objectMemory isImmediate: displayBits)
-	or: [(objectMemory isNonIntegerObject: w)
-	or: [objectMemory isPointersNonImm: displayBits]]) ifTrue: [^ nil].
-	wordStartIndex := startIndex * 4.
-	wordEndIndex := endIndex * 4 min: (objectMemory sizeBitsOf: displayBits).
-	displayBits := displayBits + objectMemory baseHeaderSize.
+	"Reverse the given range of Display words (at different bit depths, this will reverse different numbers
+	 of pixels). Used to give feedback during VM activities such as garbage collection when debugging.
+	 It is assumed that the given word range falls entirely within the first line of the Display."
+	| wordStartIndex wordEndIndex primFailCodeValue |
+	(displayBits = 0 or: [(objectMemory isImmediate: displayBits asInteger) or: [displayDepth = 0]]) ifTrue: [^nil].
+	wordStartIndex := startIndex * (displayDepth // 8).
+	wordEndIndex := endIndex * (displayDepth // 8) min: displayWidth * (displayDepth // 8).
 	displayBits + wordStartIndex to: displayBits + wordEndIndex by: 4 do:
-		[:ptr | | reversed  |
+		[:ptr | | reversed |
 		reversed := (objectMemory long32At: ptr) bitXor: 16rFFFFFFFF.
 		objectMemory long32At: ptr put: reversed].
 	primFailCodeValue := primFailCode.
 	self initPrimCall.
-	self displayBitsOf: displayObj Left: 0 Top: 0 Right: (objectMemory integerValueOf: w) Bottom: 1.
+	self updateDisplayLeft: 0 Top: 0 Right: displayWidth Bottom: 1.
 	self ioForceDisplayUpdate.
 	primFailCode := primFailCodeValue
 ]
@@ -19632,10 +19614,18 @@ StackInterpreter >> shortUnconditionalJump [
 ]
 
 { #category : #'I/O primitive support' }
+StackInterpreter >> show: surfaceHandle Sur: left fa: top ce: width Fn: height [
+	"Simulate the showSurfaceFn function call as a failure to load the surface."
+	<doNotGenerate>
+	^0
+]
+
+{ #category : #'I/O primitive support' }
 StackInterpreter >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
 	"Repaint the portion of the Smalltalk screen bounded by the affected rectangle. Used to synchronize the screen after a Bitblt to the Smalltalk Display object."
-	deferDisplayUpdates ifTrue: [^ nil].
-	self displayBitsOf: aForm Left: l Top: t Right: r Bottom: b
+	(deferDisplayUpdates
+	 or: [aForm ~= (objectMemory splObj: TheDisplay)]) ifTrue: [^nil].
+	self updateDisplayLeft: l Top: t Right: r Bottom: b
 ]
 
 { #category : #'send bytecodes' }
@@ -20857,6 +20847,30 @@ StackInterpreter >> unknownBytecode [
 StackInterpreter >> unknownShortOrCodeSizeInKs [
 	"preserve whatever this value was (for images run on Cog)"
 	^theUnknownShort
+]
+
+{ #category : #'I/O primitive support' }
+StackInterpreter >> updateDisplayLeft: l Top: t Right: r Bottom: b [
+	"Repaint the portion of the Smalltalk screen bounded by the affected rectangle.
+	 Used to synchronize the screen after a Bitblt to the Smalltalk Display object."
+	| left right top bottom surfaceHandle |
+	left := l max: 0.
+	right := r min: displayWidth.
+	top := t max: 0.
+	bottom := b min: displayHeight.
+	(left <= right and: [top <= bottom]) ifFalse: [^nil].
+	(objectMemory isIntegerObject: displayBits asInteger)
+		ifTrue:
+			[surfaceHandle := objectMemory integerValueOf: displayBits asInteger.
+			 showSurfaceFn = 0 ifTrue:
+				[showSurfaceFn := self ioLoadFunction: 'ioShowSurface' From: 'SurfacePlugin'.
+				 showSurfaceFn = 0 ifTrue: [^self primitiveFailFor: PrimErrNotFound]].
+			 self show: surfaceHandle Sur: left fa: top ce: right - left Fn: bottom - top]
+		ifFalse:
+			[self assert: (objectMemory isNonImmediate: displayBits asInteger).
+			 self ioShow: displayBits asInteger
+				D: displayWidth i: displayHeight s: displayDepth
+				p: left l: right a: top y: bottom]
 ]
 
 { #category : #'image save/restore' }
