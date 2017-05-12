@@ -1169,10 +1169,10 @@ CogVMSimulator >> framePointer [
 { #category : #'I/O primitives' }
 CogVMSimulator >> fullDisplay [
 	| primFailCodeValue |
-	displayForm == nil ifTrue: [^ self].
+	displayForm ifNil: [^self].
 	primFailCodeValue := primFailCode.
 	self initPrimCall.
-	self displayBitsOf: (objectMemory splObj: TheDisplay) Left: 0 Top: 0 Right: displayForm width Bottom: displayForm height.
+	self updateDisplayLeft: 0 Top: 0 Right: displayWidth Bottom: displayHeight.
 	primFailCode := primFailCodeValue
 ]
 
@@ -1655,6 +1655,15 @@ CogVMSimulator >> invalidCompactClassError: name [
 	self error: 'Class ', name, ' does not have the required compact class index'
 ]
 
+{ #category : #'I/O primitives' }
+CogVMSimulator >> ioBeDisplay: bitsOrHandleCArray width: width height: height depth: depth [
+	"The real platform may want to note the location of the display and respond to the fact of
+	 its installation.  Here merely create a scratch form the same size as Smalltalk displayObj"
+	super ioBeDisplay: bitsOrHandleCArray asInteger width: width height: height depth: depth.
+	displayForm := Form extent: width @ height depth: depth.
+	displayView ifNotNil: [displayView image: displayForm]
+]
+
 { #category : #security }
 CogVMSimulator >> ioCanRenameImage [
 	^true
@@ -1885,6 +1894,33 @@ CogVMSimulator >> ioSetMaxExtSemTableSize: anInteger [
 	"Inform the VM of the maximum size the image will grow the exernal semaphore table (specialObjectsArray at: 39) to.
 	 This allows the VM to allocate storage such that external semaphores can be signalled without locking."
 	extSemTabSize := anInteger
+]
+
+{ #category : #'I/O primitives' }
+CogVMSimulator >> ioShow: destBits D: w i: h s: d p: left l: right a: top y: bottom [
+	"This is the simulator's implementation of ioShowDisplay."
+	| raster pixPerWord simDisp realDisp rect |
+	displayForm ifNil: [^self].
+	displayBits = 0 ifTrue: [^self].
+	pixPerWord := 32 // d.
+	raster := displayForm width + (pixPerWord - 1) // pixPerWord.
+	simDisp := Form new hackBits: objectMemory memory.
+	displayForm unhibernate.
+	realDisp := Form new hackBits: displayForm bits.
+	realDisp
+		copy: (0 @ (top * raster) extent: 4 @ (bottom - top * raster))
+		from: 0 @ (destBits // 4 + (top * raster))
+		in: simDisp
+		rule: Form over.
+	displayView ifNotNil: [^displayView changed].
+	
+	"If running without a view, just blat the bits onto the screen..."
+	rect := 0 @ top corner: displayForm width @ bottom.
+	Display
+		copy: (rect translateBy: self displayLocation)
+		from: rect topLeft
+		in: displayForm
+		rule: Form over
 ]
 
 { #category : #'process primitive support' }
@@ -2814,27 +2850,6 @@ CogVMSimulator >> primTraceLogSize [
 	^PrimTraceLogSize * objectMemory wordSize
 ]
 
-{ #category : #'I/O primitives' }
-CogVMSimulator >> primitiveBeDisplay [
-	"Extended to create a scratch Form for use by showDisplayBits."
-
-	| rcvr destWidth destHeight destDepth |
-	rcvr := self stackTop.
-	self success: ((objectMemory isPointers: rcvr) and: [(objectMemory lengthOf: rcvr) >= 4]).
-	self successful ifTrue: [
-		destWidth := self fetchInteger: 1 ofObject: rcvr.
-		destHeight := self fetchInteger: 2 ofObject: rcvr.
-		destDepth := self fetchInteger: 3 ofObject: rcvr.
-	].
-	self successful ifTrue: [
-		"create a scratch form the same size as Smalltalk displayObj"
-		displayForm := Form extent: destWidth @ destHeight
-							depth: destDepth.
-		displayView ifNotNil: [displayView image: displayForm].
-	].
-	super primitiveBeDisplay
-]
-
 { #category : #'other primitives' }
 CogVMSimulator >> primitiveBeep [
 
@@ -3547,31 +3562,6 @@ CogVMSimulator >> shortPrintContext: aContext [
 CogVMSimulator >> shortPrintFrame: theFP [
 	self transcript ensureCr.
 	^super shortPrintFrame: theFP
-]
-
-{ #category : #'I/O primitives' }
-CogVMSimulator >> showDisplayBits: destBits w: w h: h d: d left: left right: right top: top bottom: bottom [
-	| raster pixPerWord simDisp realDisp rect |
-	displayForm ifNil: [^self].
-	pixPerWord := 32 // d.
-	raster := displayForm width + (pixPerWord - 1) // pixPerWord.
-	simDisp := Form new hackBits: objectMemory memory.
-	displayForm unhibernate.
-	realDisp := Form new hackBits: displayForm bits.
-	realDisp
-		copy: (0 @ (top * raster) extent: 4 @ (bottom - top * raster))
-		from: 0 @ (destBits // 4 + (top * raster))
-		in: simDisp
-		rule: Form over.
-	displayView ifNotNil: [^ displayView changed].
-	
-	"If running without a view, just blat the bits onto the screen..."
-	rect := 0 @ top corner: displayForm width @ bottom.
-	Display
-		copy: (rect translateBy: self displayLocation)
-		from: rect topLeft
-		in: displayForm
-		rule: Form over
 ]
 
 { #category : #'process primitive support' }
