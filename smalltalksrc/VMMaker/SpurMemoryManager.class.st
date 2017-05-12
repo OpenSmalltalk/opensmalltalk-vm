@@ -3698,6 +3698,8 @@ SpurMemoryManager >> cloneInOldSpaceForPinning: objOop [
 					bytes: (self objectBytesForSlots: numSlots)
 					format: fmt
 					classIndex: (self classIndexOf: objOop).
+	newObj ifNil:
+		[^0].
 	(self isPointersFormat: fmt)
 		ifTrue:
 			[| hasYoung |
@@ -3714,8 +3716,7 @@ SpurMemoryManager >> cloneInOldSpaceForPinning: objOop [
 				self storePointerUnchecked: i
 					ofObject: newObj
 					withValue: oop].
-			(hasYoung
-			 and: [(self isYoungObject: newObj) not]) ifTrue:
+			hasYoung ifTrue:
 				[scavenger remember: newObj]]
 		ifFalse:
 			[0 to: numSlots - 1 do:
@@ -3725,8 +3726,7 @@ SpurMemoryManager >> cloneInOldSpaceForPinning: objOop [
 					withValue: (self fetchPointer: i ofObject: objOop)].
 			 fmt >= self firstCompiledMethodFormat ifTrue:
 				[coInterpreter maybeFixClonedCompiledMethod: newObj.
-				 ((self isOldObject: newObj)
-				  and: [(self isYoungObject: objOop) or: [self isRemembered: objOop]]) ifTrue:
+				 ((self isYoungObject: objOop) or: [self isRemembered: objOop]) ifTrue:
 					[scavenger remember: newObj]]].
 	^newObj
 ]
@@ -9161,16 +9161,20 @@ SpurMemoryManager >> outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag
 SpurMemoryManager >> pinObject: objOop [
 	"Attempt to pin objOop, which must not be immediate.
 	 If the attempt succeeds answer objOop's (possibly moved) oop.
-	 If the attept fails, which can only occur if there is no memory, answer 0."
+	 If the attempt fails, which can only occur if there is no memory, answer 0."
 	<inline: false>
 	| oldClone seg |
 	<var: #seg type: #'SpurSegmentInfo *'>
 	self assert: (self isNonImmediate: objOop).
 	self flag: 'policy decision here. if already old, do we clone in a segment containing pinned objects or merely pin?'.
 	"We choose to clone to keep pinned objects together to reduce fragmentation,
-	 assuming that pinning is rare and that fragmentation is a bad thing."
+	 if the object is not too large, assuming that pinning is rare and that fragmentation is a bad thing.
+	 Too large is defined as over 1mb.  The size of a 640x480x4 bitmap is 1228800."
 	(self isOldObject: objOop) ifTrue:
-		[seg := segmentManager segmentContainingObj: objOop.
+		[(self numBytesOf: objOop) > (1024 * 1024) ifTrue:
+			[self setIsPinnedOf: objOop to: true.
+			 ^objOop].
+		 seg := segmentManager segmentContainingObj: objOop.
 		 seg containsPinned ifTrue:
 			[self setIsPinnedOf: objOop to: true.
 			 ^objOop].
