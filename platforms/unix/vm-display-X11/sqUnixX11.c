@@ -7505,7 +7505,7 @@ static int display_parseArgument(int argc, char **argv)
   else if (!strcmp(arg, VMOPTION("xshm")))	useXshm= 1;
   else if (!strcmp(arg, VMOPTION("xasync")))	asyncUpdate= 1;
 #else
-  else if (!strcmp(arg, VMOPTION("xshm"))) ||
+  else if (!strcmp(arg, VMOPTION("xshm")) ||
            !strcmp(arg, VMOPTION("xasync")))	fprintf(stderr, "ignoring %s (not supported by this VM)\n", arg);
 #endif
   else if (!strcmp(arg, VMOPTION("lazy")))	sleepWhenUnmapped= 1;
