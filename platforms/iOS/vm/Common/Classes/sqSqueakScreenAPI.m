@@ -129,29 +129,17 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBitsIndex, sqInt width,
 }
 
 
-char *ioGetWindowLabel(void) {
-	return nil;
-}
+char *ioGetWindowLabel(void) { return nil; }
 
-sqInt ioSetWindowLabelOfSize(void *lblIndex, sqInt sz) {
-	return 0;
-}
+sqInt ioSetWindowLabelOfSize(void *lblIndex, sqInt sz) { return 0; }
 
+sqInt ioGetWindowWidth(void) { return 0; }
 
-sqInt ioGetWindowWidth(void) {
-	return 0;
-}
+sqInt ioGetWindowHeight(void) { return 0; }
 
-sqInt ioGetWindowHeight(void) {
-	return 0;
-}
+sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) { return 0; }
 
-sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
-	return 0;
-}
+sqInt ioIsWindowObscured(void) { return 0; }
 
-sqInt ioIsWindowObscured(void) {
-	return 0;
-}
-
-
+/* This is invoked when the GC moves the display bitmap.  For now do nothing. */
+void  ioNoteDisplayChangedwidthheightdepth(void *bits, int w, int h, int d) {};

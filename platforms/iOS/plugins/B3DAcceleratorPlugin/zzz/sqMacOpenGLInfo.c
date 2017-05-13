@@ -16,8 +16,8 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <Carbon/Carbon.h>
-#include <QuickTime/QTML.h> /* unavailable in 64-bit apps :-( */
-#include <QuickTime/QuickTimeComponents.h> /* unavailable in 64-bit apps :-( */
+//#include <QuickTime/QTML.h> /* unavailable in 64-bit apps :-( */
+//#include <QuickTime/QuickTimeComponents.h> /* unavailable in 64-bit apps :-( */
 #include <OpenGL/gl.h>
 #ifdef MAC_OS_X_VERSION_10_7
 # include <OpenGL/gl.h>

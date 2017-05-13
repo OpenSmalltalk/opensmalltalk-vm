@@ -93,8 +93,10 @@ platforms/unix/config/autom4te.cache/
 /image/cogwin
 /image/Cog.app
 /image/cogspurlinux*
+/image/sqlinux*
 /image/cogspurwin
 /image/CogSpur.app
+/image/Squeak.*app
 /image/Squeak-*-All-in-One.*
 /image/SqueakDebug.log
 /image/Squeak3D.log

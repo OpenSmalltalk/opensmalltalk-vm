@@ -241,14 +241,13 @@ CentOS
 	sudo yum install pango-devel
 	sudo yum install libuuid-devel
 	sudo yum install libX11-devel
-	sudo yum install mesa-libGL-devel 
+	sudo yum install mesa-libGL mesa-libGL-devel 
 N.B. if you get failures due to version conflicts try
 	sudo yum update
 and then retry.
 
 
 Ubuntu
-	sudo apt-get install libcairo2-dev   
-	sudo apt-get install libpango1.0-dev
+	sudo apt-get install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx
 
 More advice and examples for other distros gratefully received.

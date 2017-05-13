@@ -5,6 +5,9 @@
 //  Created by John M McIntosh on 09-11-14.
 //  Some code sqUnixQuartz.m -- display via native windows on Mac OS X	-*- ObjC -*-
 //  Author: Ian Piumarta <ian.piumarta@squeakland.org>
+// Changes: 2017-05-13 Ronie Salgado. Refactored to remove the fixed function pipeline.
+// Implemented a layering system to be used in cooperation by the B3DAccelerationPlugin.
+// Fixing some graphical glitches that appeared when enabling the double buffering.
 /*
  Some of this code was funded via a grant from the European Smalltalk User Group (ESUG)
  Copyright 2009 Corporate Smalltalk Consulting Ltd. All rights reserved.
@@ -30,10 +33,10 @@
  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  OTHER DEALINGS IN THE SOFTWARE.
 
- The end-user documentation included with the redistribution, if any, must include the following acknowledgment: 
- "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com) 
- and its contributors", in the same place and form as other third-party acknowledgments. 
- Alternately, this acknowledgment may appear in the software itself, in the same form and location as other 
+ The end-user documentation included with the redistribution, if any, must include the following acknowledgment:
+ "This product includes software developed by Corporate Smalltalk Consulting Ltd (http://www.smalltalkconsulting.com)
+ and its contributors", in the same place and form as other third-party acknowledgments.
+ Alternately, this acknowledgment may appear in the software itself, in the same form and location as other
  such third-party acknowledgments.
  */
 //
@@ -58,6 +61,78 @@
 extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct	VirtualMachine* interpreterProxy;
 
+struct Vertex2D {
+	float x, y;
+	float u, v;
+};
+
+static struct Vertex2D screenQuadVertices[] = {
+	{-1.0f, 1.0f, 0.0f, 0.0f}, // Top left
+	{1.0f, 1.0f, 1.0f, 0.0f}, // Top right
+	{-1.0f, -1.0f, 0.0f, 1.0f}, // Bottom left
+	{1.0f, -1.0f, 1.0f, 1.0f}, // Bottom right
+};
+
+static const char *vertexShaderSource = "\
+#version 120\n\
+uniform vec2 screenSize;\n\
+\n\
+attribute vec2 vPosition;\n\
+attribute vec2 vTexcoord;\n\
+\n\
+varying vec2 fTexcoord;\n\
+\n\
+void main() {\n\
+	fTexcoord = vTexcoord*screenSize;\n\
+	gl_Position = vec4(vPosition, 0.0, 1.0);\n\
+}\n";
+
+static const char *flippedVertexShaderSource = "\
+#version 120\n\
+uniform vec4 layerScaleAndTranslation;\n\
+\n\
+attribute vec2 vPosition;\n\
+attribute vec2 vTexcoord;\n\
+\n\
+varying vec2 fTexcoord;\n\
+\n\
+void main() {\n\
+	fTexcoord = vec2(vTexcoord.x, 1.0 - vTexcoord.y);\n\
+	gl_Position = vec4(vPosition*layerScaleAndTranslation.xy + layerScaleAndTranslation.zw, 0.0, 1.0);\n\
+}\n";
+
+static const char *textureFragmentShaderSource = "\
+#version 120\n\
+uniform sampler2D screen;\n\
+varying vec2 fTexcoord;\n\
+\n\
+void main() {\n\
+	gl_FragColor = texture2D(screen, fTexcoord);\n\
+}\n";
+
+static const char *rectangleTextureFragmentShaderSource = "\
+#version 120\n\
+uniform sampler2DRect screen;\n\
+varying vec2 fTexcoord;\n\
+\n\
+void main() {\n\
+	gl_FragColor = texture2DRect(screen, fTexcoord);\n\
+}\n";
+
+#define MAX_NUMBER_OF_EXTRA_LAYERS 16
+
+typedef struct ExtraLayer
+{
+	GLuint texture;
+	int x, y;
+	int w, h;
+} ExtraLayer;
+
+static NSOpenGLContext *mainOpenGLContext;
+static sqSqueakOSXOpenGLView *mainOpenGLView;
+static ExtraLayer extraLayers[MAX_NUMBER_OF_EXTRA_LAYERS];
+static unsigned int allocatedExtraLayers = 0;
+
 static NSString *stringWithCharacter(unichar character) {
 	return [NSString stringWithCharacters: &character length: 1];
 }
@@ -78,11 +153,16 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		NSOpenGLPFAAccelerated,
 		NSOpenGLPFANoRecovery,
 		NSOpenGLPFABackingStore,
+		NSOpenGLPFADoubleBuffer,
 		NSOpenGLPFAAllowOfflineRenderers, // Enables automatic graphics card switching
+		NSOpenGLPFADepthSize, 0,
+		NSOpenGLPFAStencilSize, 0,
 		0
     };
     return AUTORELEASEOBJ([[NSOpenGLPixelFormat alloc] initWithAttributes:attrs]);
 }
+
+#pragma mark Initialization / Release
 
 - (id)initWithFrame:(NSRect)frameRect {
     self = [self initWithFrame:frameRect pixelFormat:[[self class] defaultPixelFormat]];
@@ -102,11 +182,21 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	inputSelection = NSMakeRange(0, 0);
     [self registerForDraggedTypes: [NSArray arrayWithObjects: NSFilenamesPboardType, nil]];
 	//NSLog(@"registerForDraggedTypes %@",self);
+	openglInitialized = NO;
 	dragInProgress = NO;
 	dragCount = 0;
 	dragItems = NULL;
 	clippyIsEmpty = YES;
     fullScreenInProgress = NO;
+	currentDisplayStorage = NULL;
+	textureProgram = 0;
+	rectangleTextureProgram = 0;
+	screenSizeUniformLocation = -1;
+	screenQuadVertexBuffer = 0;
+	displayTexture = 0;
+	displayTextureWidth = 0;
+	displayTextureHeight = 0;
+	
 	colorspace = CGColorSpaceCreateDeviceRGB();
 	[self initializeSqueakColorMap];
     [[NSNotificationCenter defaultCenter] addObserver:self selector: @selector(didEnterFullScreen:) name:@"NSWindowDidEnterFullScreenNotification" object:nil];
@@ -129,6 +219,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
     SUPERDEALLOC
 }
 
+#pragma mark Testing
+
 - (BOOL) acceptsFirstResponder {
 	return YES;
 }
@@ -140,6 +232,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 - (BOOL)isOpaque {
 	return YES;
 }
+
+#pragma mark Updating callbacks
 
 - (void)viewDidMoveToWindow {
 	if (self.squeakTrackingRectForCursor)
@@ -168,6 +262,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 }
 
+#pragma mark Drawing
+
+
 - (void) drawImageUsingClip: (CGRect) clip {
 
 	if (clippyIsEmpty){
@@ -181,12 +278,19 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 - (void) drawThelayers {
     if (syncNeeded) {
-		[self drawRect: NSRectFromCGRect(clippy)];
+		[self drawRect: NSRectFromCGRect(clippy) flush: NO];
 		syncNeeded = NO;
 		clippyIsEmpty = YES;
 //		CGL_MACRO_DECLARE_VARIABLES();
+		NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
+		[[self openGLContext] makeCurrentContext];
 		glFlush();
-		[[self openGLContext] flushBuffer];  
+		[[self openGLContext] flushBuffer];
+		if (oldContext != nil) {
+			[oldContext makeCurrentContext];
+		} else {
+			[NSOpenGLContext clearCurrentContext];
+		}
 	}
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
@@ -197,21 +301,36 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	}
 }
 
--(void)setupOpenGL {	
+-(void)setupOpenGL {
+	if(openglInitialized)
+		return;
+	openglInitialized = YES;
+	
 //	CGL_MACRO_DECLARE_VARIABLES();
 // Enable the multithreading
     //NSLog(@"setupOpenGL runs");
+	
+	// Store the OpenGL context for creating a shared context with the B3D plugin.
+	mainOpenGLContext = [self openGLContext];
+	mainOpenGLView = self;
+	
 	CGLContextObj ctx = [[self openGLContext] CGLContextObj];
 	CGLEnable( ctx, kCGLCEMPEngine);
+	
+	const char *extensions = (const char*)glGetString(GL_EXTENSIONS);
+	hasVertexArrayObject = strstr(extensions, "GL_APPLE_vertex_array_object") != NULL;
+	
+	//printf("Opengl version: %s\n", glGetString(GL_VERSION));
+	//printf("Opengl extensions: %s\n", glGetString(GL_EXTENSIONS));
+	
+	[self buildGPUPrograms];
+	[self buildScreenQuad];
+	
+	glClearColor(1, 1, 1, 1);
 
 //	GLint newSwapInterval = 1;
 //	CGLSetParameter(cgl_ctx, kCGLCPSwapInterval, &newSwapInterval);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-	glClearColor(1.0, 1.0, 1.0, 1.0);
-	glColor4f(1.0, 1.0, 1.0, 1.0);
-
-	glDisable(GL_DITHER);
+	/*glDisable(GL_DITHER);
 	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_BLEND);
 	glDisable(GL_STENCIL_TEST);
@@ -235,64 +354,177 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	GLuint dt = 1;
 	glDeleteTextures(1, &dt);
 	glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 1);
+	*/
 	syncNeeded = NO;
 }
 
-- (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (NSRect) subRect { 
+- (GLuint) compileShader: (const char*)shaderSource type: (GLenum) type {
+	GLint status;
+	GLuint handle;
+	
+	handle = glCreateShader(type);
+	glShaderSource(handle, 1, &shaderSource, NULL);
+	glCompileShader(handle);
+	
+	// This should never fail.
+	glGetShaderiv(handle, GL_COMPILE_STATUS, &status);
+	if(status != GL_TRUE) {
+		fprintf(stderr, "Failed to compile shader with source: %s\n", shaderSource);
+		abort();
+	}
+	
+	return handle;
+}
+
+- (GLuint) buildProgramVertexShader: (const char *)vertexShaderSource  fragmentShader: (const char *)fragmentShaderSource {
+	GLint status;
+	GLuint program;
+	
+	// Create the shaders.
+	GLuint vertexShader = [self compileShader: vertexShaderSource type: GL_VERTEX_SHADER];
+	GLuint fragmentShader = [self compileShader: fragmentShaderSource type: GL_FRAGMENT_SHADER];
+	
+	// Create the GPU program.
+	program = glCreateProgram();
+	glAttachShader(program, vertexShader);
+	glAttachShader(program, fragmentShader);	
+	glBindAttribLocation(program, 0, "vPosition");
+	glBindAttribLocation(program, 1, "vTexcoord");
+	glLinkProgram(program);
+	
+	// This should never fail.
+	glGetProgramiv(program, GL_LINK_STATUS, &status);
+	if(status != GL_TRUE) {
+		fprintf(stderr, "Failed to link the screen quad shader.\n");
+		abort();
+	}
+	
+	// Bind the screen texture to the first texture binding point.
+	glUseProgram(program);
+	glUniform1i(glGetUniformLocation(program, "screen"), 0);
+	
+	return program;
+}
+
+- (void) buildGPUPrograms {
+	textureProgram = [self buildProgramVertexShader: flippedVertexShaderSource  fragmentShader: textureFragmentShaderSource];
+	layerScaleAndTranslationUniformLocation = glGetUniformLocation(textureProgram, "layerScaleAndTranslation");
+	rectangleTextureProgram = [self buildProgramVertexShader: vertexShaderSource  fragmentShader: rectangleTextureFragmentShaderSource];
+	screenSizeUniformLocation = glGetUniformLocation(rectangleTextureProgram, "screenSize");
+}
+
+- (void) bindScreenQuadBuffer {
+	glBindBuffer(GL_ARRAY_BUFFER, screenQuadVertexBuffer);
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(struct Vertex2D), (const GLvoid*)offsetof(struct Vertex2D, x));
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(struct Vertex2D), (const GLvoid*)offsetof(struct Vertex2D, u));
+}
+
+- (void) buildScreenQuad {
+	glGenBuffers(1, &screenQuadVertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, screenQuadVertexBuffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(screenQuadVertices), screenQuadVertices, GL_STATIC_DRAW);
+	
+	// Try to use a vertex array object, if available.
+	if(hasVertexArrayObject) {
+		glGenVertexArraysAPPLE(1, &screenQuadVertexArray);
+		glBindVertexArrayAPPLE(screenQuadVertexArray);
+		[self bindScreenQuadBuffer];
+		glBindVertexArrayAPPLE(0);
+	}
+}
+
+- (void) drawScreenQuad {
+	if(hasVertexArrayObject) {
+		glBindVertexArrayAPPLE(screenQuadVertexArray);
+	} else {
+		[self bindScreenQuadBuffer];
+	}
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+}
+
+- (void) drawDisplayTexture {
+	glUseProgram(rectangleTextureProgram);
+	glUniform2f(screenSizeUniformLocation, (int)displayTextureWidth, (int)displayTextureHeight);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_RECTANGLE_ARB, displayTexture);
+	[self drawScreenQuad];
+}
+
+-(void) updateDisplayTextureStorage {
+	NSRect rectangle = self.frame;
+	displayTextureWidth = rectangle.size.width;
+	displayTextureHeight = rectangle.size.height;
+
+	glActiveTexture(GL_TEXTURE0);
+	if(!displayTexture) {
+		glGenTextures(1, &displayTexture);
+
+		// We use GL_TEXTURE_RECTANGLE_ARB to avoid some temporary buffer copies
+		// according to the following document: https://developer.apple.com/library/content/documentation/GraphicsImaging/Conceptual/OpenGL-MacProgGuide/opengl_texturedata/opengl_texturedata.html
+		glBindTexture(GL_TEXTURE_RECTANGLE_ARB, displayTexture);
+		//glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_STORAGE_HINT_APPLE, GL_STORAGE_SHARED_APPLE);
+		
+		// Prefer copying into VRAM. Shared storage introduce some graphics
+		// glitches. They could be removed calling glFinish instead of glFlush,
+		// however glFinish stalls the CPU and kills the asynchronous rendering
+		// with the GPU.
+		glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_STORAGE_HINT_APPLE, GL_STORAGE_PRIVATE_APPLE);
+		glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	} else {
+		glBindTexture(GL_TEXTURE_RECTANGLE_ARB, displayTexture);		
+	}
+	
+	//printf("updateDisplayTextureStorage %d %d %p\n", displayTextureWidth, displayTextureHeight, currentDisplayStorage);
+	glTextureRangeAPPLE(GL_TEXTURE_RECTANGLE_ARB, displayTextureWidth*displayTextureHeight*4, currentDisplayStorage);
+	
+	glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
+ 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, displayTextureWidth);
+	glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, displayTextureWidth, displayTextureHeight, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, currentDisplayStorage);
+}
+
+- (void)loadTexturesFrom: (void*) displayStorage subRectangle: (NSRect) subRect {
 //	CGL_MACRO_DECLARE_VARIABLES();
-	static void *previousLastBitsIndex=null;
-
     NSRect r = self.frame;
-
-    if (!NSEqualRects(lastFrameSize,r)) {
-        //NSLog(@"old %f %f %f %f new %f %f %f %f",lastFrameSize.origin.x,lastFrameSize.origin.y,lastFrameSize.size.width,lastFrameSize.size.height,self.frame.origin.x,r.origin.y,r.size.width,r.size.height);
+    if (!NSEqualRects(lastFrameSize,r) || !displayTexture ||
+		currentDisplayStorage != displayStorage) {
+		//NSLog(@"old %f %f %f %f new %f %f %f %f",lastFrameSize.origin.x,lastFrameSize.origin.y,lastFrameSize.size.width,lastFrameSize.size.height,self.frame.origin.x,r.origin.y,r.size.width,r.size.height);
         lastFrameSize = r;
-        glPixelStorei( GL_UNPACK_ROW_LENGTH, r.size.width );
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
+		currentDisplayStorage = displayStorage;
+		[self updateDisplayTextureStorage];
         [[self openGLContext] update];
     }
 
-    if (!(previousLastBitsIndex == lastBitsIndex)) {
-        //NSLog(@"previousLastBitsIndex %#010x changed to %#010x",previousLastBitsIndex,lastBitsIndex);
-		previousLastBitsIndex = lastBitsIndex;
-		glTextureRangeAPPLE(GL_TEXTURE_RECTANGLE_ARB, r.size.width*r.size.height*4,lastBitsIndex);		
-	}
+	char *subimg = ((char*)displayStorage) + (unsigned int)(subRect.origin.x + (displayTextureHeight-subRect.origin.y-subRect.size.height)*displayTextureWidth)*4;
 
-	glViewport( subRect.origin.x,subRect.origin.y, subRect.size.width,subRect.size.height );
-	char *subimg = ((char*)lastBitsIndex) + (unsigned int)(subRect.origin.x + (r.size.height-subRect.origin.y-subRect.size.height)*r.size.width)*4;
-	glTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, subRect.size.width, subRect.size.height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, subimg );
-		//NSLog(@" glTexImage2D %f %f %f %f",subRect.origin.x,subRect.origin.y,subRect.size.width,subRect.size.height);
-}
-
--(void)defineQuad:(NSRect)r
-{
-
-//	CGL_MACRO_DECLARE_VARIABLES();
-	 glBegin(GL_QUADS);
-	 glTexCoord2f(0.0f, 0.0f);					glVertex2f(-1.0f, 1.0f);
-	 glTexCoord2f(0.0f, r.size.height);			glVertex2f(-1.0f, -1.0f);
-	 glTexCoord2f(r.size.width, r.size.height);  glVertex2f(1.0f, -1.0f);
-	 glTexCoord2f(r.size.width, 0.0f);			glVertex2f(1.0f, 1.0f);
-	 glEnd();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_RECTANGLE_ARB, displayTexture);
+	glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
+ 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, displayTextureWidth);
+	glTexSubImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, subRect.origin.x, displayTextureHeight - subRect.origin.y - subRect.size.height, subRect.size.width, subRect.size.height, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, subimg);
+	//NSLog(@" glTexImage2D %f %f %f %f",subRect.origin.x,subRect.origin.y,subRect.size.width,subRect.size.height);
 }
 
 - (void) setupFullScreendispBitsIndex {
-    sqInt formObj = interpreterProxy->displayObject();
-    sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);
-    self.fullScreendispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
+    self.fullScreendispBitsIndex = displayBits;
 }
 
 -(void)drawRect:(NSRect)rect
 {
+	// Called by Cocoa. We need to flush.
+	[self drawRect: rect flush: YES];
+}
+
+-(void)drawRect:(NSRect)rect flush:(BOOL)flush
+{
     if (self.fullScreenInProgress) {
-        sqInt formObj = interpreterProxy->displayObject();
-        sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);
-        void* dispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
-        if (self.fullScreendispBitsIndex == dispBitsIndex) {
+        if (self.fullScreendispBitsIndex == displayBits) {
             [self clearScreen];
             //NSLog(@"drawRect but fullScreenInProgress %f %f %f %f",rect.origin.x,rect.origin.y,rect.size.width,rect.size.height);
             return;
@@ -302,23 +534,129 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 	//NSLog(@" draw %f %f %f %f",rect.origin.x,rect.origin.y,rect.size.width,rect.size.height);
 	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
+	[[self openGLContext] makeCurrentContext];
 
+	[self setupOpenGL];
     [self setupFullScreendispBitsIndex];
 
     if ( fullScreendispBitsIndex ) {
-		[[self openGLContext] makeCurrentContext];
-        static dispatch_once_t once;
-        dispatch_once(&once, ^{
-            [self setupOpenGL];
-        });
 		[self loadTexturesFrom:fullScreendispBitsIndex subRectangle: rect];
-		[self defineQuad:rect];
-    }
+	}
 
+	[self drawScreenRect: rect];
+
+	if(flush) {
+		glFlush();
+		[[self openGLContext] flushBuffer];
+	}
+	
     if (oldContext != nil) {
         [oldContext makeCurrentContext];
-    }
+    } else {
+		[NSOpenGLContext clearCurrentContext];
+	}
 }
+
+-(void)drawScreenRect:(NSRect)rect
+{	
+	unsigned int drawnExtraLayerMask;
+	unsigned int i;
+	
+	glEnable(GL_SCISSOR_TEST);
+	
+	glViewport(0, 0, displayTextureWidth, displayTextureHeight);
+	glScissor(rect.origin.x, rect.origin.y, rect.size.width, rect.size.height);
+	if(!displayTexture) {
+		glClearColor(1, 1, 1, 1);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+	
+	[self drawDisplayTexture];
+	
+	drawnExtraLayerMask = 0;
+	for(i = 0; i < MAX_NUMBER_OF_EXTRA_LAYERS && drawnExtraLayerMask != allocatedExtraLayers; ++i) {
+		if(allocatedExtraLayers & (1 << i)) {
+			[self drawExtraLayer: i];
+			drawnExtraLayerMask |= 1 << i;
+		}
+	}
+	
+	if(hasVertexArrayObject) {
+		glBindVertexArrayAPPLE(0);
+	}
+	
+	//[self dumpDisplayTexture];
+}
+
+- (void) drawExtraLayer: (unsigned int) extraLayerIndex {
+	ExtraLayer *layer = &extraLayers[extraLayerIndex];
+	if(!layer->texture)
+		return;
+		
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, layer->texture);
+	glUseProgram(textureProgram);
+	
+	NSRect screenRect = self.frame;
+	float scaleX = (float)layer->w / screenRect.size.width;
+	float scaleY = (float)layer->h / screenRect.size.height;
+ 	float offsetX = (2.0f*layer->x + layer->w) / screenRect.size.width - 1.0f;
+	float offsetY = 1.0f - (2.0f*layer->y + layer->h) / screenRect.size.height;
+	
+	glUniform4f(layerScaleAndTranslationUniformLocation, scaleX, scaleY, offsetX, offsetY);
+	[self drawScreenQuad];
+}
+
+// Function for debugging purposes.
+-(void)dumpDisplayTexture
+{
+	static int dumpCount = 0;
+	static char *dumpBuffer = NULL;
+	char dumpName[64];
+	
+	struct __attribute__((packed)) TGAHeader
+	{
+		char idLength;
+		char colorMapType;
+		char imageType;
+		char colorMapSpec[5];
+		short xOrigin;
+		short yOrigin;
+		short width;
+		short height;
+		char depth;
+		char descriptor;
+	};
+	
+	if(!displayTexture)
+		return;
+		
+	sprintf(dumpName, "frame_%04d.tga", dumpCount++);
+	
+	struct TGAHeader header;
+	memset(&header, 0, sizeof(header));
+	header.imageType = 2;
+	header.depth = 32;
+	header.width = displayTextureWidth;
+	header.height = displayTextureHeight;
+	
+	dumpBuffer = malloc(displayTextureWidth*displayTextureHeight*4);
+	
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+	glPixelStorei(GL_PACK_ROW_LENGTH, displayTextureWidth);
+	//glBindTexture(GL_TEXTURE_RECTANGLE_ARB, displayTexture);
+	//glGetTexImage(GL_TEXTURE_RECTANGLE_ARB, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, dumpBuffer);
+	//glReadPixels(0, 0, displayTextureWidth, displayTextureHeight, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, dumpBuffer);
+	
+	FILE *f = fopen(dumpName, "wb");
+	fwrite(&header, sizeof(header), 1, f);
+	fwrite(dumpBuffer, displayTextureWidth*displayTextureHeight*4, 1, f);
+	fclose(f);
+	
+	free(dumpBuffer);
+}
+
+#pragma mark Events - Mouse
 
 - (void)mouseEntered:(NSEvent *)theEvent {
 	[((sqSqueakOSXApplication*) gDelegateApp.squeakApplication).squeakCursor set];
@@ -371,62 +709,42 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordMouseEvent: theEvent fromView: self];
 }
 
+#pragma mark Events - Keyboard
+
+
 - (NSString *) dealWithOpenStepChars: (NSString *) openStep {
 
-	unichar keyChar; 
+	unichar keyChar;
 	static unichar combiningHelpChar[] = {0x003F, 0x20DD};
 
-	keyChar = [openStep characterAtIndex: 0]; 
+	keyChar = [openStep characterAtIndex: 0];
 
 //http://unicode.org/Public/MAPPINGS/VENDORS/APPLE/KEYBOARD.TXT
 
-	switch (keyChar) { 
-		case NSUpArrowFunctionKey: keyChar = 30; break; 
-		case NSDownArrowFunctionKey: keyChar = 31; break; 
-		case NSLeftArrowFunctionKey: keyChar = 28; break; 
-		case NSRightArrowFunctionKey: keyChar = 29; break; 
-		case NSInsertFunctionKey: 
+	switch (keyChar) {
+		case NSUpArrowFunctionKey: keyChar = 30; break;
+		case NSDownArrowFunctionKey: keyChar = 31; break;
+		case NSLeftArrowFunctionKey: keyChar = 28; break;
+		case NSRightArrowFunctionKey: keyChar = 29; break;
+		case NSInsertFunctionKey:
 		  	return [NSString stringWithCharacters: combiningHelpChar length: 2];
-		case NSDeleteFunctionKey: keyChar = 0x2326; break; 
-		case NSHomeFunctionKey: keyChar = 1; break; 
+		case NSDeleteFunctionKey: keyChar = 0x2326; break;
+		case NSHomeFunctionKey: keyChar = 1; break;
 		case NSEndFunctionKey: keyChar = 4; break;
-		case NSPageUpFunctionKey: 
+		case NSPageUpFunctionKey:
 			keyChar = 0x21DE; break;
-		case NSPageDownFunctionKey: 
+		case NSPageDownFunctionKey:
 			keyChar = 0x21DF; break;
 		case NSClearLineFunctionKey: keyChar = 0x2327; break;
 		case 127: keyChar = 8; break;
-		default: 
-			if (keyChar >= NSF1FunctionKey && keyChar <= NSF35FunctionKey) { 
-				keyChar = 0; 
+		default:
+			if (keyChar >= NSF1FunctionKey && keyChar <= NSF35FunctionKey) {
+				keyChar = 0;
 			}
 	}
 	return stringWithCharacter(keyChar);
 }
 
-
--(void)  fakeKeyDownUp: (NSEvent*) theEvent {
-
-	//http://www.unicode.org/Public/MAPPINGS/VENDORS/APPLE/CORPCHAR.TXT
-	//http://www.internet4classrooms.com/mac_ext.gif
-	//http://developer.apple.com/legacy/mac/library/documentation/mac/Text/Text-571.html
-
-	keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
-	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
-	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
-
-	@synchronized(self) {
-		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
-		NSString *possibleConversion = [theEvent characters];
-
-		if ([possibleConversion length] > 0) {
-			NSString *c = [self dealWithOpenStepChars: possibleConversion];
-			[self insertText: c replacementRange: NSMakeRange(NSNotFound, 0)];
-		}
-		self.lastSeenKeyBoardStrokeDetails = NULL;
-		[self keyUp: theEvent]; 
-	}
-}
 
 -(void)keyDown:(NSEvent*)theEvent {
 	keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
@@ -457,12 +775,38 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordCharEvent: aString fromView: self];
 }
 
+/*
+ * React to changes in modifiers. We have to maintain states ourselves for
+ * rising and falling edges. But then, we can generate up/down events from that.
+ */
 - (void)flagsChanged:(NSEvent *)theEvent {
-	keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
+    NSEventModifierFlags oldFlags = self.lastSeenKeyBoardModifierDetails.modifierFlags;
+    // Detects rising edge.
+    BOOL isUp = (oldFlags & NSDeviceIndependentModifierFlagsMask)
+                > ([theEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask);
+
+    keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
 	aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
 	aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
 	self.lastSeenKeyBoardModifierDetails = aKeyBoardStrokeDetails;
-    [(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordKeyDownEvent: theEvent fromView: self];
+
+    @synchronized(self) {
+        NSEvent* syntheticEvent = AUTORELEASEOBJ([NSEvent keyEventWithType:(isUp ? NSEventTypeKeyUp : NSEventTypeKeyDown)
+                                                                  location:[theEvent locationInWindow]
+                                                             modifierFlags:(isUp ? oldFlags : [theEvent modifierFlags])
+                                                                 timestamp:[theEvent timestamp]
+                                                              windowNumber:[theEvent windowNumber]
+                                                                   context:nil
+                                                                characters:@""
+                                               charactersIgnoringModifiers:@""
+                                                                 isARepeat:NO
+                                                                   keyCode:[theEvent keyCode]]);
+        if (isUp) {
+            [(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordKeyUpEvent: syntheticEvent fromView: self];
+        } else {
+            [(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordKeyDownEvent: syntheticEvent fromView: self];
+        }
+    }
 }
 
 - (void)doCommandBySelector:(SEL)aSelector {
@@ -472,20 +816,20 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	BOOL isFunctionKey = NO;
 
 	if (self.lastSeenKeyBoardModifierDetails) {
-		isFunctionKey = (self.lastSeenKeyBoardModifierDetails.modifierFlags & NSFunctionKeyMask) == NSFunctionKeyMask;
+		isFunctionKey = (self.lastSeenKeyBoardModifierDetails.modifierFlags & NSEventModifierFlagFunction) == NSEventModifierFlagFunction;
 	}
 
-#define encode(c, k,  s) 		 if (aSelector == @selector(s)) { unicode = c; keyCode = k; unicodeString = [NSString stringWithCharacters: &unicode length: 1]; } 
+#define encode(c, k,  s) 		 if (aSelector == @selector(s)) { unicode = c; keyCode = k; unicodeString = [NSString stringWithCharacters: &unicode length: 1]; }
 //http://developer.apple.com/documentation/mac/Text/Text-571.html
 
 	encode(  8, 51,         deleteBackward:)
 	else encode( 8, 51,     deleteWordBackward:)
 	else encode(127, 51,    deleteForward:)
 	else encode(127, 51,    deleteWordForward:)
-	else encode( 8, 51,     deleteBackwardByDecomposingPreviousCharacter:) 
-	else encode( (isFunctionKey ? 3: 13), (isFunctionKey ? 76: 36), insertNewline:) 
-	else encode( 13, 36,    insertLineBreak:) 
-	else encode( 13, 36,    insertNewlineIgnoringFieldEditor:) 
+	else encode( 8, 51,     deleteBackwardByDecomposingPreviousCharacter:)
+	else encode( (isFunctionKey ? 3: 13), (isFunctionKey ? 76: 36), insertNewline:)
+	else encode( 13, 36,    insertLineBreak:)
+	else encode( 13, 36,    insertNewlineIgnoringFieldEditor:)
 	else encode(  9, 48,    insertTab:)
 	else encode(  9, 48,    insertBacktab:)
 	else encode(  9, 48,    insertTabIgnoringFieldEditor:)
@@ -504,7 +848,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	else encode( 28, 123,   moveWordLeft:)
 	else encode( 29, 124,   moveWordRight:)
 	else encode( 30, 126,   moveParagraphBackwardAndModifySelection:)
-	else encode( 31, 125,   moveParagraphForwardAndModifySelection:)																										
+	else encode( 31, 125,   moveParagraphForwardAndModifySelection:)
 	else encode( 11, 116,   pageUp:)
 	else encode( 12, 121,   pageDown:)
 	else encode( 11, 116,   pageUpAndModifySelection:)
@@ -525,6 +869,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	else encode( 27, 53,    cancel:)
 	else encode( 27, 53,    complete:)
 	else encode( 27, 71,    delete:)
+
+	else encode(  1, 115,   moveToBeginningOfLine:)
+	else encode(  1, 115,   moveToBeginningOfLineAndModifySelection:)
+	else encode(  4, 119,   moveToEndOfLine:)
+	else encode(  4, 119,   moveToEndOfLineAndModifySelection:)
 	else return;
 
 	@synchronized(self) {
@@ -538,6 +887,34 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	}
 }
 
+- (BOOL)performKeyEquivalent:(NSEvent *)theEvent {
+    if ([theEvent type] != NSEventTypeKeyDown /* don't handle Up here */
+        || ([theEvent modifierFlags] & NSEventModifierFlagFunction) /* Better handled in doCommandBySelector: */
+        ) {
+        return NO;
+    }
+
+    // FIXME: Maybe #charactersIgnoringModifiers: ?
+    NSString* unicodeString = [theEvent characters];
+    if ([unicodeString length] > 0) {
+        unicodeString = [self dealWithOpenStepChars: unicodeString];
+    }
+
+    @synchronized(self) {
+        keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
+        aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
+        aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
+        lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
+
+        [(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordCharEvent: unicodeString fromView: self];
+        self.lastSeenKeyBoardStrokeDetails = NULL;
+    }
+    return YES;
+}
+
+
+#pragma mark Events - Keyboard - NSTextInputClient
+
 
 - (void)setMarkedText:(id)aString selectedRange:(NSRange)selectedRange replacementRange:(NSRange)replacementRange {
 	inputMark= NSMakeRange(0, 1);
@@ -545,44 +922,46 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (void)		 unmarkText {
-	inputMark= NSMakeRange(NSNotFound, 0); 
+	inputMark= NSMakeRange(NSNotFound, 0);
 }
 
-- (BOOL)		 hasMarkedText { 
-	return inputMark.location != NSNotFound; 
+- (BOOL)		 hasMarkedText {
+	return inputMark.location != NSNotFound;
 }
 
-- (NSInteger)		 conversationIdentifier	{ 
-	return (NSInteger )self; 
+- (NSInteger)		 conversationIdentifier	{
+	return (NSInteger )self;
 }
 
-- (NSAttributedString *)attributedSubstringForProposedRange:(NSRange)aRange actualRange:(NSRangePointer)actualRange { 
-	return nil; 
+- (NSAttributedString *)attributedSubstringForProposedRange:(NSRange)aRange actualRange:(NSRangePointer)actualRange {
+	return nil;
 }
 
-- (NSRange)		 markedRange { 
-	return inputMark; 
+- (NSRange)		 markedRange {
+	return inputMark;
 }
 
-- (NSRange)		 selectedRange { 
-	return inputSelection; 
+- (NSRange)		 selectedRange {
+	return inputSelection;
 }
 
 - (NSRect)firstRectForCharacterRange:(NSRange)aRange actualRange:(NSRangePointer)actualRange {
-	return NSMakeRect(0,0, 0,0); 
+	return NSMakeRect(0,0, 0,0);
 }
 
 - (NSUInteger) characterIndexForPoint: (NSPoint)thePoint {
-	return 0; 
+	return 0;
 }
 
-- (NSArray *) validAttributesForMarkedText { 
+- (NSArray *) validAttributesForMarkedText {
 	return nil;
 }
 
 - (BOOL)drawsVerticallyForCharacterAtIndex:(NSUInteger)charIndex {
 	return NO;
 }
+
+#pragma mark Events - Dragging
 
 - (NSMutableArray *) filterSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info {
 	NSPasteboard *pboard= [info draggingPasteboard];
@@ -621,7 +1000,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 - (NSDragOperation)draggingEntered:(id < NSDraggingInfo >)info {
 //    NSLog(@"draggingEntered %@",info);
 
-	if (self.dragInProgress) 
+	if (self.dragInProgress)
 		return NSDragOperationNone;
 	dragInProgress = YES;
 	self.dragCount = (int) [self countNumberOfNoneSqueakImageFilesInDraggedFiles: info];
@@ -655,7 +1034,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	if (self.dragCount) {
 		self.dragItems = [self filterOutSqueakImageFilesFromDraggedFiles: info];
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: SQDragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex view: self];
-	} 
+	}
 
 	NSArray *images = [self filterSqueakImageFilesFromDraggedFiles: info];
 	if ([images count] > 0) {
@@ -680,7 +1059,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (NSString*) dragFileNameStringAtIndex: (sqInt) index {
-	if (!self.dragItems) 
+	if (!self.dragItems)
 		return NULL;
 	if (index < 1 || index > [self.dragItems count])
 		return NULL;
@@ -693,20 +1072,29 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	return YES;
 }
 
+#pragma mark Fullscreen
+
+
 - (void) clearScreen {
     NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
     [self.openGLContext makeCurrentContext];
-    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    
+	glDisable( GL_SCISSOR_TEST);
+	glClear( GL_COLOR_BUFFER_BIT);
+	
+	[self drawScreenRect: self.frame];
     glFlush();
+	[self.openGLContext flushBuffer];
     if (oldContext != nil) {
         [oldContext makeCurrentContext];
-    }
-
+    } else {
+		[NSOpenGLContext clearCurrentContext];
+	}
 }
 
 - (void)  ioSetFullScreen: (sqInt) fullScreen {
 
-	if ([self isInFullScreenMode] == YES && (fullScreen == 1)) 
+	if ([self isInFullScreenMode] == YES && (fullScreen == 1))
 		return;
 	if ([self isInFullScreenMode] == NO && (fullScreen == 0))
 		return;
@@ -733,5 +1121,53 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 - (void) preDrawThelayers {
 }
 
-
 @end
+
+NSOpenGLContext *
+getMainWindowOpenGLContext(void) {
+	return mainOpenGLContext;
+}
+
+unsigned int
+createOpenGLTextureLayerHandle(void) {
+	unsigned int i;
+	unsigned int bit;
+	for(i = 0; i < MAX_NUMBER_OF_EXTRA_LAYERS; ++i) {
+		bit = 1<<i;
+		if(!(allocatedExtraLayers & bit)) {
+			allocatedExtraLayers |= bit;
+			return i + 1;
+		}
+	}
+	return 0;
+}
+
+void
+destroyOpenGLTextureLayerHandle(unsigned int handle) {
+	unsigned int bit = 1 << (handle - 1);
+	if(allocatedExtraLayers & bit) {
+		extraLayers[handle - 1].texture = 0;
+		allocatedExtraLayers &= ~bit;
+		
+		// Redraw the screen.
+		if(mainOpenGLView)
+			[mainOpenGLView clearScreen];
+	}
+}
+
+void
+setOpenGLTextureLayerContent(unsigned int handle, GLuint texture, int x, int y, int w, int h) {
+	unsigned int bit = 1 << (handle - 1);
+	if(allocatedExtraLayers & bit) {
+		ExtraLayer *layer = &extraLayers[handle - 1];
+		layer->texture = texture;
+		layer->x = x;
+		layer->y = y;
+		layer->w = w;
+		layer->h = h;
+		
+		// Swap the buffers
+		if(mainOpenGLView)
+			[mainOpenGLView clearScreen];
+	}
+}

@@ -1332,32 +1332,16 @@ static sqInt display_clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqIn
   return clipSize;
 }
 
-/* a modified copy of fullDisplayUpdate() that redraws
-   only the damaged parts of the window according to each
-   expose event on the queue.
-   Note: if the format of Form or Bitmap changes, or if
-   the special object index of Display is changed, this
-   version of the code WILL FAIL!  Otherwise it is to be
-   preferred.
+/* A modified copy of fullDisplayUpdate() that redraws only the damaged
+ * parts of the window according to each expose event on the queue.
+ * Note: if the format of Form or Bitmap changes, this version of the
+ * code WILL FAIL!  Otherwise it is to be preferred.
 */
 static void redrawDisplay(int l, int r, int t, int b)
 {
-  extern sqInt displayObject(void);
-  extern sqInt isPointers(sqInt);
-  extern sqInt lengthOf(sqInt);
-  extern sqInt fetchPointerofObject(sqInt, sqInt);
-
-  sqInt displayObj= displayObject();
-
-  if (isPointers(displayObj) && lengthOf(displayObj) >= 4)
-    {
-      sqInt dispBits= fetchPointerofObject(0, displayObj);
-      sqInt w= fetchIntegerofObject(1, displayObj);
-      sqInt h= fetchIntegerofObject(2, displayObj);
-      sqInt d= fetchIntegerofObject(3, displayObj);
-      sqInt dispBitsIndex= dispBits + BaseHeaderSize;
-      ioShowDisplay(dispBitsIndex, w, h, d, (sqInt)l, (sqInt)r, (sqInt)t, (sqInt)b);
-    }
+  if (displayBits)
+      ioShowDisplay((sqInt)displayBits, displayWidth, displayHeight, displayDepth,
+					(sqInt)l, (sqInt)r, (sqInt)t, (sqInt)b);
 }
 
 
@@ -7521,7 +7505,7 @@ static int display_parseArgument(int argc, char **argv)
   else if (!strcmp(arg, VMOPTION("xshm")))	useXshm= 1;
   else if (!strcmp(arg, VMOPTION("xasync")))	asyncUpdate= 1;
 #else
-  else if (!strcmp(arg, VMOPTION("xshm"))) ||
+  else if (!strcmp(arg, VMOPTION("xshm")) ||
            !strcmp(arg, VMOPTION("xasync")))	fprintf(stderr, "ignoring %s (not supported by this VM)\n", arg);
 #endif
   else if (!strcmp(arg, VMOPTION("lazy")))	sleepWhenUnmapped= 1;

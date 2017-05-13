@@ -36,20 +36,52 @@
  */
 //
 
+
+
 #if !FOR_OS_EXPORTS
 
 #import "sqSqueakScreenAndWindow.h"
-#import "sqSqueakOSXOpenGLView.h"
+#import "sqSqueakOSXView.h"
 
 
 @interface sqSqueakOSXScreenAndWindow : sqSqueakScreenAndWindow  <NSWindowDelegate>{
-    sqSqueakOSXOpenGLView	*mainViewOnWindow;
+    NSView <sqSqueakOSXView>	*mainViewOnWindow;
 }
 
-- (sqSqueakOSXOpenGLView *) getMainViewOnWindow;
-- (void) mainViewOnWindow: (sqSqueakOSXOpenGLView *) aView;
+- (NSView <sqSqueakOSXView> *) getMainViewOnWindow;
+- (void) mainViewOnWindow: (NSView <sqSqueakOSXView> *) aView;
 
 @end
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED < 101200
+enum {
+    NSEventTypeKeyDown        = NSKeyDown,
+    NSEventTypeKeyUp          = NSKeyUp,
+    NSEventTypeFlagsChanged   = NSFlagsChanged,
+    NSEventTypeLeftMouseDown  = NSLeftMouseDown, 
+    NSEventTypeLeftMouseUp    = NSLeftMouseUp,
+    NSEventTypeRightMouseDown = NSRightMouseDown,
+    NSEventTypeRightMouseUp   = NSRightMouseUp,
+    NSEventTypeMouseMoved     = NSMouseMoved,
+    NSEventTypeScrollWheel    = NSScrollWheel,
+    NSEventTypeOtherMouseDown = NSOtherMouseDown,
+    NSEventTypeOtherMouseUp   = NSOtherMouseUp
+};
+enum {
+    NSEventModifierFlagCapsLock = NSAlphaShiftKeyMask,
+    NSEventModifierFlagShift    = NSShiftKeyMask,
+    NSEventModifierFlagControl  = NSControlKeyMask,
+    NSEventModifierFlagOption   = NSAlternateKeyMask,
+    NSEventModifierFlagCommand  = NSCommandKeyMask,
+    NSEventModifierFlagFunction = NSFunctionKeyMask,
+    NSEventModifierFlagDeviceIndependentFlagsMask = NSDeviceIndependentModifierFlagsMask,
+    NSEventMaskAny              = NSAnyEventMask
+};
+#endif
+#if MAC_OS_X_VERSION_MAX_ALLOWED < 101000
+typedef NSUInteger NSEventModifierFlags;
+#endif
+
 
 #endif /* FOR_OS_EXPORTS */
 

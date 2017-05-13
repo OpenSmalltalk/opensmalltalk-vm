@@ -16,7 +16,7 @@ case "${FLAVOR}" in
       SMALLTALK_VERSION="Squeak-4.6"
     fi
     LINUX_BINARY="squeak"
-    MACOS_BUNDLE="CocoaFast"
+    MACOS_BUNDLE="Squeak"
     MACOS_BINARY="Squeak"
     ;;
   "Xpharo"*) # disabled until pharo-vm is merged
