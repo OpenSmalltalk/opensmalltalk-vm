@@ -196,7 +196,13 @@ ImageFileHeader >> readImageVersionFrom: aStream startingAt: imageOffset [
 			[ 16rA2090100 "68002" ] -> [ imageFormat := ImageFormat fromInteger: 68002. aStream next: 4. ^true ] .
 			[ 16rA3090100 "68003" ] -> [ imageFormat := ImageFormat fromInteger: 68003. aStream next: 4. ^true ] .
 			[ 16rB3090100 "68019" ] -> [ imageFormat := ImageFormat fromInteger: 68019. aStream next: 4. ^true ] .
+			[ 16r000109B3 "68019" ] -> [ imageFormat := ImageFormat fromInteger: 68019. aStream next: 4. ^false ] .
+			[ 16rB5090100 "68021" ] -> [ imageFormat := ImageFormat fromInteger: 68021. aStream next: 4. ^true ] .
+			[ 16r000109B5 "68021" ] -> [ imageFormat := ImageFormat fromInteger: 68021. aStream next: 4. ^false ] .
 			[ 16r00000000 ] -> [
+				"Standard interpreter VM puts the format number in the first 64 bits for a 64 bit image, so
+				the leading 4 bytes are zero in this case. Cog/Spur VMs put the format number in the first
+				32 bits for both 32 and 64 bit images."
 				(aStream nextNumber: 4) caseOf: {
 					[ 16r000109A0 "68000" ] -> [ imageFormat := ImageFormat fromInteger: 68000. ^false ] .
 					[ 16r000109A2 "68002" ] -> [ imageFormat := ImageFormat fromInteger: 68002. ^false ] .
@@ -209,19 +215,24 @@ ImageFileHeader >> readImageVersionFrom: aStream startingAt: imageOffset [
 	"ImageFormat versionNumberByteArrays do: [:e |
 		Transcript cr; show: e printString , ': ', (ImageFormat fromBytes: e) description]
 	
-#[0 0 25 102]: A 32-bit image with no closure support and no native platform float word order requirement (6502)
-#[102 25 0 0]: A 32-bit image with no closure support and no native platform float word order requirement (6502)
-#[0 0 25 104]: A 32-bit image with closure support and no native platform float word order requirement (6504)
-#[104 25 0 0]: A 32-bit image with closure support and no native platform float word order requirement (6504)
-#[0 0 0 0 0 1 9 160]: A 64-bit image with no closure support and no native platform float word order requirement (68000)
-#[160 9 1 0 0 0 0 0]: A 64-bit image with no closure support and no native platform float word order requirement (68000)
-#[0 0 0 0 0 1 9 162]: A 64-bit image with closure support and no native platform float word order requirement (68002)
-#[162 9 1 0 0 0 0 0]: A 64-bit image with closure support and no native platform float word order requirement (68002)
-#[0 0 25 105]: A 32-bit image with closure support and float words stored in native platform order (6505)
-#[105 25 0 0]: A 32-bit image with closure support and float words stored in native platform order (6505)
-#[0 0 0 0 0 1 9 163]: A 64-bit mage with closure support and float words stored in native platform order (68003)
-#[163 9 1 0 0 0 0 0]: A 64-bit image with closure support and float words stored in native platform order (68003)
-	
+#[0 0 25 102]: a 32-bit image with no closure support and no native platform float word order requirement (6502)
+#[102 25 0 0]: a 32-bit image with no closure support and no native platform float word order requirement (6502)
+#[0 0 25 104]: a 32-bit image with closure support and no native platform float word order requirement (6504)
+#[104 25 0 0]: a 32-bit image with closure support and no native platform float word order requirement (6504)
+#[0 0 0 0 0 1 9 160]: a 64-bit image with no closure support and no native platform float word order requirement (68000)
+#[160 9 1 0 0 0 0 0]: a 64-bit image with no closure support and no native platform float word order requirement (68000)
+#[0 0 0 0 0 1 9 162]: a 64-bit image with closure support and no native platform float word order requirement (68002)
+#[162 9 1 0 0 0 0 0]: a 64-bit image with closure support and no native platform float word order requirement (68002)
+#[0 0 25 105]: a 32-bit image with closure support and float words stored in native platform order (6505)
+#[105 25 0 0]: a 32-bit image with closure support and float words stored in native platform order (6505)
+#[0 0 0 0 0 1 9 163]: a 64-bit image with closure support and float words stored in native platform order (68003)
+#[163 9 1 0 0 0 0 0]: a 64-bit image with closure support and float words stored in native platform order (68003)
+#[0 0 25 121]: a 32-bit image with closure support and float words stored in native platform order using Spur object format (6521)
+#[121 25 0 0]: a 32-bit image with closure support and float words stored in native platform order using Spur object format (6521)
+#[0 0 0 0 0 1 9 179]: a 64-bit image with closure support and float words stored in native platform order using Spur object format (obsolete) (68019)
+#[179 9 1 0 0 0 0 0]: a 64-bit image with closure support and float words stored in native platform order using Spur object format (obsolete) (68019)
+#[0 0 0 0 0 1 9 181]: a 64-bit image with closure support and float words stored in native platform order using Spur object format (68021)
+#[181 9 1 0 0 0 0 0]: a 64-bit image with closure support and float words stored in native platform order using Spur object format (68021)
 	"
 	
 ]
