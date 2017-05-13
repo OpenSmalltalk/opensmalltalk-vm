@@ -44,6 +44,7 @@
 
 @class sqSqueakOSXScreenAndWindow;
 #import "sq.h"
+#import <OpenGL/gl.h>
 
 @interface sqSqueakOSXOpenGLView : NSOpenGLView <sqSqueakOSXView, sqViewClut, NSTextInputClient> {
 	sqSqueakOSXScreenAndWindow *__weak windowLogic;
@@ -65,6 +66,21 @@
     NSRect lastFrameSize;
     BOOL fullScreenInProgress;
     void* fullScreendispBitsIndex;
+	void* currentDisplayStorage;
+	
+	BOOL openglInitialized;
+	BOOL hasVertexArrayObject;
+	GLuint textureProgram;
+	GLuint rectangleTextureProgram;
+	GLint screenSizeUniformLocation;
+	GLint layerScaleAndTranslationUniformLocation;
+	
+	GLuint screenQuadVertexBuffer;
+	GLuint screenQuadVertexArray;
+	
+	GLuint displayTexture;
+	int displayTextureWidth;
+	int displayTextureHeight;
 }
 
 - (void) setupOpenGL;
