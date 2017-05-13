@@ -183,51 +183,55 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
     }
 }
 
+/* Now the displayBits is known and likely pinned, couldn't we cache the bitmap
+ * that this method creates?  Yes its contents need to be updated, but it
+ * doesn't need to be created all the time does it?  Or is the object created
+ * by CGImageCreate merely a wrapper around the bits?
+ * eem 2017/05/12
+ */
+
 - (void) performDraw: (CGRect)rect {
-	sqInt form = interpreterProxy->displayObject(); // Form
 
     CGContextRef context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
     CGContextSaveGState(context);
 
-    int width = interpreterProxy->positive32BitValueOf(interpreterProxy->fetchPointerofObject(1, form));
-    int height = interpreterProxy->positive32BitValueOf(interpreterProxy->fetchPointerofObject(2, form));
-	sqInt formBits = interpreterProxy->fetchPointerofObject(0, form);	// bits
-	void* bits = (void*)interpreterProxy->firstIndexableField(formBits); // bits
-    int bitSize = interpreterProxy->byteSizeOf(formBits);
-    int bytePerRow = 4*width;
+    int bitSize = interpreterProxy->byteSizeOf(displayBits - BaseHeaderSize);
+    int bytePerRow = displayWidth * 8 / displayDepth;
 
     CGRect r = NSRectToCGRect([self frame]);
     int y2 = MAX(r.size.height - (rect.origin.y), 0);
     int y1 = MAX(y2 - rect.size.height, 0);
 
-    CGRect swapRect = CGRectIntersection(CGRectMake(0, 0, width, height), CGRectMake(rect.origin.x, y1, rect.size.width, y2));
-    if ((swapRect.origin.x == INFINITY) || (swapRect.origin.y == INFINITY)) {
+    CGRect swapRect = CGRectIntersection(
+							CGRectMake(0, 0, displayWidth, displayHeight),
+							CGRectMake(rect.origin.x, y1, rect.size.width, y2));
+    if (swapRect.origin.x == INFINITY || swapRect.origin.y == INFINITY) {
         return;
     }
-    [self swapColors: bits imageWidth:width clipRect: swapRect];
+    [self swapColors: displayBits imageWidth: displayWidth clipRect: swapRect];
 
-    CGDataProviderRef pref = CGDataProviderCreateWithData (NULL, bits, bitSize, NULL);
-    CGContextTranslateCTM(context, 0, height);
+    CGDataProviderRef pRef = CGDataProviderCreateWithData (NULL, displayBits, bitSize, NULL);
+    CGContextTranslateCTM(context, 0, displayHeight);
     CGContextScaleCTM(context, 1, -1);
-    CGImageRef image = CGImageCreate(width,
-                                     height,
+    CGImageRef image = CGImageCreate(displayWidth,
+                                     displayHeight,
                                      8,
                                      32,
                                      bytePerRow,
                                      colorspace,
                                      kCGBitmapByteOrder32Big | kCGImageAlphaLast,
-                                     pref,
+                                     pRef,
                                      NULL,
                                      NO,
                                      kCGRenderingIntentDefault);
 
     CGContextClipToRect(context,rect);
-    CGContextDrawImage(context, CGRectMake(0, 0, width, height), image);
+    CGContextDrawImage(context, CGRectMake(0, 0, displayWidth, displayHeight), image);
 
-    [self swapColors:bits imageWidth:width clipRect: swapRect];
+    [self swapColors: displayBits imageWidth: displayWidth clipRect: swapRect];
 
     CGImageRelease(image);
-    CGDataProviderRelease(pref);
+    CGDataProviderRelease(pRef);
 
     CGContextRestoreGState(context);
 }

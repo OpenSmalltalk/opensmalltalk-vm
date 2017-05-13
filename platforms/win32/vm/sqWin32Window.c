@@ -1577,6 +1577,8 @@ sqInt ioBeep(void)
   return 1;
 }
 
+void  ioNoteDisplayChangedwidthheightdepth(void *b, int w, int h, int d) {}
+
 /*
  * In the Cog VMs time management is in platforms/win32/vm/sqin32Heartbeat.c.
  */

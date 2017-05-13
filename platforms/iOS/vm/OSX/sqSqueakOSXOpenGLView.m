@@ -290,18 +290,13 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 }
 
 - (void) setupFullScreendispBitsIndex {
-    sqInt formObj = interpreterProxy->displayObject();
-    sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);
-    self.fullScreendispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
+    self.fullScreendispBitsIndex = displayBits;
 }
 
 -(void)drawRect:(NSRect)rect
 {
     if (self.fullScreenInProgress) {
-        sqInt formObj = interpreterProxy->displayObject();
-        sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);
-        void* dispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
-        if (self.fullScreendispBitsIndex == dispBitsIndex) {
+        if (self.fullScreendispBitsIndex == displayBits) {
             [self clearScreen];
             //NSLog(@"drawRect but fullScreenInProgress %f %f %f %f",rect.origin.x,rect.origin.y,rect.size.width,rect.size.height);
             return;
