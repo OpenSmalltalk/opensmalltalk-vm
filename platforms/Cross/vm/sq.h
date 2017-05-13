@@ -217,7 +217,6 @@ sqInt checkedByteAt(sqInt byteAddress);
 sqInt checkedByteAtput(sqInt byteAddress, sqInt byte);
 sqInt checkedLongAt(sqInt byteAddress);
 sqInt checkedLongAtput(sqInt byteAddress, sqInt a32BitInteger);
-sqInt fullDisplayUpdate(void);
 sqInt interpret(void);
 sqInt primitiveFail(void);
 sqInt signalSemaphoreWithIndex(sqInt semaIndex);
@@ -226,15 +225,19 @@ sqInt success(sqInt);
 
 /* Display, mouse, keyboard, time. */
 
+extern void *displayBits;
+extern int displayWidth, displayHeight, displayDepth;
+
 sqInt ioBeep(void);
 sqInt ioExit(void);
 sqInt ioExitWithErrorCode(int);
 sqInt crashInThisOrAnotherThread(sqInt flags);
+sqInt fullDisplayUpdate(void);
+void  ioNoteDisplayChangedwidthheightdepth(void *bitsOrHandle, int w, int h, int d);
 sqInt ioForceDisplayUpdate(void);
 sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth,
 		  double hScale, double vScale, sqInt landscapeFlag);
 sqInt ioSetFullScreen(sqInt fullScreen);
-sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds);
 double ioScreenScaleFactor(void);
 sqInt ioScreenSize(void);
 sqInt ioScreenDepth(void);
@@ -255,6 +258,7 @@ sqInt ioGetWindowHeight(void);
 sqInt ioSetWindowWidthHeight(sqInt w, sqInt h);
 sqInt ioIsWindowObscured(void);
 
+sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds);
 #if STACKVM || NewspeakVM
 /* thread subsystem support for e.g. sqExternalSemaphores.c */
 void ioInitThreads();

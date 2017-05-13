@@ -76,6 +76,14 @@ static void
 closelog(void)
 { if (logfile) (void)fclose(logfile); }
 
+#if !defined(PATH_MAX)
+# if defined(_XOPEN_PATH_MAX)
+#	define PATH_MAX _XOPEN_PATH_MAX
+# else
+#	define PATH_MAX 2048
+# endif
+#endif
+
 int
 print3Dlog(char *fmt, ...)
 {	va_list args;

@@ -46,13 +46,11 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
 @interface SqueakUIView : UIView  {
 #endif
 	CGColorSpaceRef colorspace;
-	void	*squeakTheDisplayBits;
 	}
 	
 	- (void) recordCharEvent:(NSString *) unicodeString;
     - (void) preDrawThelayers;
 	- (void) drawThelayers;
 	- (void) drawImageUsingClip: (CGRect) clip;
-	@property (nonatomic,assign) void *squeakTheDisplayBits;
     @property (nonatomic,strong) NSArray *arrowsNames;  // jdr
 @end

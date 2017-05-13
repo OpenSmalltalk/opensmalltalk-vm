@@ -568,6 +568,12 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt us)
 
 sqInt ioBeep(void)				 { return dpy->ioBeep(); }
 
+/* Right now this funciton isn't responded to so we simply provide a dummy
+ * definition here.  If any of the display subsystems do need it then it will
+ * have to be reimplemented as per the functions above.
+ */
+void  ioNoteDisplayChangedwidthheightdepth(void *b, int w, int h, int d) {}
+
 #if defined(IMAGE_DUMP)
 
 static void emergencyDump(int quit)
