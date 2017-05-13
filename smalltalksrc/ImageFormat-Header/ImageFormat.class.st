@@ -586,7 +586,22 @@ ImageFormat >> isValidVersionNumber [
 
 { #category : #printing }
 ImageFormat >> printDescriptionOn: stream [
+"
+The classic squeak image, aka V3, is 32-bit with magic 6502. The first 64-bit
+Squeak image was generated from V3 image made by Dan Ingalls and Ian Piumarta
+in 2005. Later, the magic code was changed to 68000.
 
+After full closure support came to Squeak, the magic code changed to 6504 for
+32-bit and 68002 for 64-bit images by setting a capability bit.
+
+Cog VM introduced a native order for floats under 6505 magic code.  Its
+corresponding 64b code would have been 68003 but no such image was produced.
+Older Interpreter VMs would simply load 6505 by flipping word order back.
+
+Cog VM also introduced a new object layout for 64-bit images called Spur layout
+under a new magic code - 68021. A few images were also generated with 68019,
+but this magic is now considered obsolete and deprecated.
+"
 	stream nextPutAll: 'a ';
 		nextPutAll: (wordSize * 8) asString;
 		nextPutAll: '-bit ';
@@ -717,16 +732,13 @@ ImageFormat >> setSpurSupportRequirement: aBoolean [
 ImageFormat >> simpleName [
 
 	"Return a simple name for the format, suitable for use as filename or mimetype.
-	 (ImageFormat fromInteger: 6500) simpleName."
+	 (ImageFormat fromInteger: 6505) simpleName."
 
 	^String streamContents: [:s |
 			self requiresSpurSupport
 				ifTrue: [ s nextPutAll: 'spur']
-				ifFalse: [self requiresClosureSupport
-								ifTrue: [ s nextPutAll: 'cog']
-								ifFalse: [s nextPutAll: 'squeak']].
-			self is64Bit ifTrue: [ s nextPutAll: '64']].
-
+				ifFalse: [s nextPutAll: 'squeak'].
+			self is64Bit ifTrue: [ s nextPutAll: '64']]
 ]
 
 { #category : #printing }
