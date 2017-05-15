@@ -55,9 +55,9 @@ extern struct	VirtualMachine* interpreterProxy;
 extern BOOL gQuitNowRightNow;
 extern sqSqueakNullScreenAndWindow *getMainWindowDelegate();
 
-void nativeIoProcessEvents(void) {
+void vmIOProcessEvents(void) {
 	//API Documented
-		
+
     if ([[NSThread currentThread] isCancelled]) {
         gQuitNowRightNow = YES;
         ioExit();  //This might not return, might call exittoshell
@@ -67,18 +67,25 @@ void nativeIoProcessEvents(void) {
 		[getMainWindowDelegate() ioForceDisplayUpdate];
 	}
 
+	/* THIS SHOULD BE COMMENTED TO EXPLAIN WHAT ARE THE TWO CONTEXTS IN WHICH
+	 * THIS IS INVOKED.  THIS SEEMS SUPER DANGEROUS BECAUSE WHETHER THERE IS
+	 * A PRIMITIVE INDEX OR NOT DEPENDS ON WHETHER THIS IS INVOKED WITHIN A
+	 * PRIMITIVE OR NOT.  IF INVOKED IN PARALLEL TO THE VM IT IS ARBITRARY.
+	 * SO PLEASE, WHOEVER UNDERATANDS WHAT'S GOING ON, REPLACE MY CAPS WITH
+	 * A COGENT EXPLANATION ASAP.
+	 */
 	if (interpreterProxy->methodPrimitiveIndex() == 0) {
 		[gDelegateApp.squeakApplication pumpRunLoopEventSendAndSignal:YES];
     } else {
 		[gDelegateApp.squeakApplication pumpRunLoop];
 	}
-	
+
 	if (gQuitNowRightNow) {
 		ioExit();  //This might not return, might call exittoshell
 	}
 }
 
-void (*ioProcessEventsHandler) (void) = nativeIoProcessEvents;
+void (*ioProcessEventsHandler) (void) = vmIOProcessEvents;
 
 extern void setIoProcessEventsHandler(void * handler) {
     ioProcessEventsHandler = (void(*)()) handler;
@@ -90,16 +97,15 @@ sqInt ioProcessEvents(void) {
 	// We need to restore the opengl context to whatever the image was
 	// already using. This is required by SDL2 in Pharo.
 	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
-	
-	// We need to run the nativeIoProcessEvents even if we are using SDL2,
+
+	// We need to run the vmIOProcessEvents even if we are using SDL2,
 	// otherwise we end with some double free errors in an autorelease pool.
-	nativeIoProcessEvents();
-    if(ioProcessEventsHandler && ioProcessEventsHandler != nativeIoProcessEvents)
+	vmIOProcessEvents();
+    if(ioProcessEventsHandler && ioProcessEventsHandler != vmIOProcessEvents)
         ioProcessEventsHandler();
 
 	NSOpenGLContext *newContext = [NSOpenGLContext currentContext];
-	if(oldContext != newContext)
-	{
+	if(oldContext != newContext) {
 		if (oldContext != nil) {
 			[oldContext makeCurrentContext];
 		} else {
