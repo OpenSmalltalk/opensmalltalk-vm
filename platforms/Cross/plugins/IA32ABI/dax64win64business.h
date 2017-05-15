@@ -127,7 +127,7 @@
 				if ((size = sizeField(arg)) == 0) /* Pointer Alien. */
 					size = argByteSize = sizeof(void *);
 				else /* Direct or indirect Alien. */
-					argByteSize = labs(size);
+					argByteSize = llabs(size);
 				if ((argByteSize <= sizeof(long long)) && (nextReg < NUM_REG_ARGS)) {
 					regs[nextReg++].i = *(long long*)startOfDataWithSize(arg, size);
 				}
