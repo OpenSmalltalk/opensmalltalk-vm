@@ -46,9 +46,11 @@ VMProfilerLinuxSymbolsManager class >> shutDown: quitting [
 			[tempDir recursiveDelete]]
 ]
 
-{ #category : #accessing }
+{ #category : #'as yet unclassified' }
 VMProfilerLinuxSymbolsManager class >> tempDirectory [
-	^FileDirectory on: '/tmp/vmsyms', OSProcess thisOSProcess pid printString
+
+	^ fileSystem nameFordirPath:'/tmp/vmsyms'  plus:OSProcess thisOSProcess pid printString 
+
 ]
 
 { #category : #parsing }
@@ -78,18 +80,19 @@ VMProfilerLinuxSymbolsManager >> initializeMost [
 	modulesByName := Dictionary new.
 	symbolsByModule := Dictionary new.
 	shortNames := Set new.
-	(tempDir := self class tempDirectory) assureExistence.
+	tempDir := self class tempDirectory.
+	self fileSystem ensureExistenceOfDirectory:  tempDir. 
 	modules := self primitiveExecutableModules.
 	modules := (1 to: modules size by: 2) collect:
 					[:i| | fileName shortName counter longName |
 					fileName := modules at: i.
 					(fileName beginsWith: '/dgagent') ifTrue:
 						[fileName := fileName allButFirst: 8].
-					shortName := tempDir localNameFor: fileName.
+					shortName := fileSystem nameOfFile: fileName in: tempDir.  
 					counter := 0.
 					[shortNames includes: shortName] whileTrue:
 						[counter := counter + 1.
-						 shortName := (tempDir localNameFor: fileName), counter printString].
+						 shortName := (fileSystem nameOfFile: fileName  in: tempDir), counter printString].
 					shortNames add: shortName.
 					longName := (modules at: i + 1)
 									ifNil: [fileName]
@@ -97,9 +100,9 @@ VMProfilerLinuxSymbolsManager >> initializeMost [
 										[:symlink|
 										symlink first = $/
 											ifTrue: [symlink]
-											ifFalse: [(FileDirectory dirPathFor: fileName), '/', symlink]].
+											ifFalse: [( fileSystem parentPathOfFile: fileName ), '/', symlink]].
 					"some files are off limits (e.g. /dgagent/lib/preload.so)"
-					(FileDirectory default fileExists: longName) ifTrue:
+					(fileSystem exists: longName) ifTrue:
 						[(modulesByName
 							at: longName
 							put: VMPExecutableModuleSymbol new)
@@ -143,14 +146,14 @@ VMProfilerLinuxSymbolsManager >> parseAsynchronously [
 { #category : #parsing }
 VMProfilerLinuxSymbolsManager >> parseSymbolsFor: module [
 	| proc symtab symStream |
-	(tempDir fileExists: module shortName) ifFalse:
+	(fileSystem exists: tempDir fullName, '/', module shortName)  ifFalse:
 		[proc := OSProcess thisOSProcess command:
 						'objdump -j .text -tT "', module name, '" | fgrep .text | sort >"', tempDir fullName, '/', module shortName, '"'].
 	symStream := (Array new: 1000) writeStream.
 	symStream nextPut: module.
 	proc ifNotNil:
 		[[proc isComplete] whileFalse: [(Delay forMilliseconds: 25) wait]].
-	symtab := [StandardFileStream readOnlyFileNamed: (tempDir fullNameFor: module shortName)]
+	symtab := [StandardFileStream readOnlyFileNamed: (tempDir fullName,'/',module shortName) ]
 					on: Error
 					do: [:ex| "Handle flaky OSProcess stuff by reporting error and failing to parse"
 						Transcript print: ex; flush.

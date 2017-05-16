@@ -50,7 +50,9 @@ Class {
 		'clearPriorToProfile',
 		'gcPriorToProfile',
 		'forkProfile',
-		'cogCodeConstituents'
+		'cogCodeConstituents',
+		'version',
+		'fileSystem'
 	],
 	#classVars : [
 		'CannedBenchmarkStrings'
@@ -74,19 +76,9 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.'
 ]
 
-{ #category : #reports }
-VMProfiler class >> amOnSpur [
-	^(Smalltalk vmParameterAt: 41) anyMask: 16
-]
-
 { #category : #'class initialization' }
 VMProfiler class >> canBenchmark: aByteString [ 
 	CannedBenchmarkStrings addLast: aByteString
-]
-
-{ #category : #'instance creation' }
-VMProfiler class >> default [
-	^self openInstance
 ]
 
 { #category : #'class initialization' }
@@ -107,38 +99,28 @@ VMProfiler class >> fixTabs [
 		 TextConstants at: #DefaultMarginTabsArray put: tempArray]
 ]
 
+{ #category : #'as yet unclassified' }
+VMProfiler class >> headlessSpyOn: aBlock reportOn: aStream [ 
+	"initialize the profiler version (squeak or pharo) and profile headless, writing the results on a given stream"
+
+	(VMProfiler new) version new
+		headlessSpyOn: aBlock;
+		report: aStream.
+		 
+]
+
 { #category : #'class initialization' }
 VMProfiler class >> initialize [
 
 	CannedBenchmarkStrings := OrderedCollection new.
-	(TheWorldMenu respondsTo: #registerOpenCommand:) ifTrue:
+	"(TheWorldMenu respondsTo: #registerOpenCommand:) ifTrue:
 		[TheWorldMenu registerOpenCommand: {'VM Profiler'. {self. #open}. 'A VM profiler'}].
 	Preferences
 		addBooleanPreference: #vmProfilerFillInIntegral 
 		category: #vmProfiler 
 		default: false
 		balloonHelp: 'If enabled, the profiler will fill in the area under the integral.'.
-	self fixTabs
-]
-
-{ #category : #'instance creation' }
-VMProfiler class >> open [
-	^self new openInWindow
-]
-
-{ #category : #'instance creation' }
-VMProfiler class >> openInstance [
-	| window |
-	window := World submorphs
-					detect: [:sm| sm isSystemWindow and: [sm label = 'VMProfiler']]
-					ifNone: [self open].
-	^window model
-]
-
-{ #category : #spying }
-VMProfiler class >> report: aStream [
-	"Compatibility with MessageTally and AndreasSystemProfiler instance side spyOn: & report:"
-	^self openInstance report: aStream
+	self fixTabs"
 ]
 
 { #category : #reports }
@@ -178,17 +160,17 @@ VMProfiler class >> reportGCStats: gcStatsArray upTime: elapsedMilliseconds on: 
 	str	nextPutAll: '**GCs**'; cr.
 	str	nextPutAll: '	full			';
 		print: fullGCs; nextPutAll: ' totalling '; nextPutAll: fullGCTime asStringWithCommas; nextPutAll: 'ms (';
-		print: fullGCTime / elapsedMilliseconds * 100 maxDecimalPlaces: 3;
+		print: ((fullGCTime / elapsedMilliseconds * 100) rounded);
 		nextPutAll: '% elapsed time)'.
 	fullGCs = 0 ifFalse:
-		[str	nextPutAll: ', avg '; print: fullGCTime / fullGCs maxDecimalPlaces: 3; nextPutAll: 'ms'].
+		[str	nextPutAll: ', avg '; print: (fullGCTime / fullGCs roundTo: 0.1); nextPutAll: 'ms'].
 	str	cr.
 	str	nextPutAll: (self amOnSpur ifTrue: ['	scavenges	'] ifFalse: ['	incr			']);
 		print: incrGCs; nextPutAll: ' totalling '; nextPutAll: incrGCTime asStringWithCommas; nextPutAll: 'ms (';
-		print: incrGCTime / elapsedMilliseconds * 100 maxDecimalPlaces: 3;
+		print: ((incrGCTime / elapsedMilliseconds * 100) roundTo: 0.1);
 		nextPutAll: '% elapsed time)'.
 	incrGCs = 0 ifFalse:
-		[str nextPutAll:', avg '; print: incrGCTime / incrGCs maxDecimalPlaces: 3; nextPutAll: 'ms'].
+		[str nextPutAll:', avg '; print: (incrGCTime / incrGCs roundTo: 0.01); nextPutAll: 'ms'].
 	str cr.
 	str	nextPutAll: '	tenures		';
 		nextPutAll: tenureCount asStringWithCommas.
@@ -207,10 +189,10 @@ VMProfiler class >> reportGCStats: gcStatsArray upTime: elapsedMilliseconds on: 
 		str	tab;
 			print: numCompactions; nextPutAll: ' totalling ';
 			nextPutAll: compactionMsecs asStringWithCommas; nextPutAll: 'ms (';
-			print: compactionMsecs / elapsedMilliseconds * 100 maxDecimalPlaces: 3;
+			print: ((compactionMsecs / elapsedMilliseconds * 100) rounded);
 			nextPutAll: '% elapsed time)'.
 		numCompactions = 0 ifFalse:
-			[str	nextPutAll: ', avg '; print: compactionMsecs / numCompactions maxDecimalPlaces: 3; nextPutAll: 'ms'].
+			[str	nextPutAll: ', avg '; print: (compactionMsecs / numCompactions roundTo: 0.1); nextPutAll: 'ms'].
 		str	cr].
 
 	gcStatsArray size >= 61 ifTrue:
@@ -226,9 +208,11 @@ VMProfiler class >> reportGCStats: gcStatsArray upTime: elapsedMilliseconds on: 
 
 { #category : #spying }
 VMProfiler class >> spyOn: aBlock [
-	"Compatibility with MessageTally and AndreasSystemProfiler instance side spyOn: & report:"
-	^Cursor execute showWhile:
-		[self openInstance spyOn: aBlock]
+	
+	(VMProfiler new) version default
+		spyOn: aBlock.
+
+	
 ]
 
 { #category : #'class initialization' }
@@ -239,94 +223,10 @@ VMProfiler class >> unload [
 	TheWorldMenu unregisterOpenCommand: 'VM Profiler'
 ]
 
-{ #category : #selecting }
-VMProfiler >> addToHistory [
-	historyIndex < history size ifTrue:
-		[history := history copyFrom: 1 to: historyIndex].
-	(history isEmpty or: [history last ~= (lowAddress to: highAddress)]) ifTrue:
-		[history addLast: (lowAddress to: highAddress).
-		 historyIndex := history size].
-
-]
-
-{ #category : #opening }
-VMProfiler >> addressTextMorph: help get: getter set: setter [
-	| ptm |
-	ptm := PluggableTextMorph
-			on: self
-			text: getter accept: setter
-			readSelection: nil menu: nil.
-	ptm setProperty: #alwaysAccept toValue: true;
-		askBeforeDiscardingEdits: false;
-		acceptOnCR: true;
-		setBalloonText: help;
-		retractableOrNot;
-		hideOrShowScrollBars;
-		setProperty: #noScrollBarPlease toValue: true;
-		setProperty: #noVScrollBarPlease toValue: true.
-	^ptm
-]
-
-{ #category : #opening }
-VMProfiler >> backwardsButton [
-	^ImageMorph new image: ((ScriptingSystem formAtKey: #playMPEG) flipBy: #horizontal centerAt: 0@0)
-]
-
-{ #category : #opening }
-VMProfiler >> buttonMorph: getLabelMessage help: help set: setter enable: enabler color: colorGetter [
-	| pbm |
-	pbm := PluggableButtonMorphPlus on: self getState: nil action: setter label: getLabelMessage.
-	pbm
-		useRoundedCorners;
-		getEnabledSelector: enabler;
-		setBalloonText: help;
-		getColorSelector: colorGetter;
-		offColor: Color transparent.
-	^pbm
-]
-
-{ #category : #opening }
-VMProfiler >> checkMorph: help get: getter set: setter [
-	| checkBoxButton |
-	checkBoxButton := UpdatingThreePhaseButtonMorph checkBox.
-	#(onImage pressedImage offImage)
-		with: #(onImage: pressedImage: offImage:)
-		do: [:get :set| | form |
-			((form := checkBoxButton perform: get) isColorForm
-			 and: [form colors last = Color white]) ifTrue:
-				[checkBoxButton
-					perform: set
-					with: ((checkBoxButton perform: get) copy
-							colors: {Color transparent. Color black};
-							yourself)]].
-	^checkBoxButton
-		target: self;
-		actionSelector: setter;
-		getSelector: getter;
-		setBalloonText: help;
-		yourself
-]
-
-{ #category : #buttons }
-VMProfiler >> clearButton [
-	"just weird..."
-	^'clear'
-]
-
-{ #category : #buttons }
-VMProfiler >> clearColor [
-	^Color lightBlue
-]
-
 { #category : #initialization }
 VMProfiler >> clearHistory [
 	history := OrderedCollection new.
 	historyIndex := 0
-]
-
-{ #category : #buttons }
-VMProfiler >> clearPriorToProfile [
-	^clearPriorToProfile
 ]
 
 { #category : #profiling }
@@ -340,7 +240,7 @@ VMProfiler >> clearProfile [
 	elapsedStats := nil.
 
 	self clearHistory.
-	self updateButtons
+
 ]
 
 { #category : #primitives }
@@ -398,124 +298,16 @@ VMProfiler >> computeStats: stopStats [
 				[elapsedStats at: i put: (stopStats at: i) - (startStats at: i)]]]
 ]
 
-{ #category : #buttons }
-VMProfiler >> drawButton [
-	"just weird..."
-	^'plot'
+{ #category : #'as yet unclassified' }
+VMProfiler >> createParagraph [
+	
+	self subclassResponsibility 
 ]
 
-{ #category : #menus }
-VMProfiler >> expressionTextMenu: aMenuMorph [
-	| expression |
-	expression := self trimmedExpressionText.
-	(expression isEmpty
-	or: [CannedBenchmarkStrings includes: expression]) ifFalse:
-		[aMenuMorph add: 'add text to benchmarks' target: self class selector: #canBenchmark: argument: expression].
-	aMenuMorph add: 'inspect canned benchmarks' target: ToolSet selector: #inspect: argument: CannedBenchmarkStrings.
-	CannedBenchmarkStrings isEmpty ifTrue:
-		[^aMenuMorph].
-	aMenuMorph addLine.
-	CannedBenchmarkStrings do:
-		[:benchmark|
-		 aMenuMorph add: (benchmark contractTo: 60) target: self selector: #selectBenchmark: argument: benchmark].
-	^aMenuMorph
-]
+{ #category : #'as yet unclassified' }
+VMProfiler >> getVMParameters [
 
-{ #category : #menus }
-VMProfiler >> findSymbol: typeOrNil event: event [
-	| pattern matches selection anIndex |
-	previousPattern ifNil:
-		[previousPattern := '*'].
-	pattern := UIManager default
-					request: 'Symbol or pattern to find'
-					initialAnswer: previousPattern.
-	pattern isEmpty ifTrue: [^self].
-	previousPattern := pattern.
-	matches := symbolManager symbolsSelect:
-					(typeOrNil
-						ifNotNil:
-							[(pattern includesAnyOf: '#*')
-								ifTrue: [[:sym|
-										 sym type == typeOrNil
-										 and: [sym nameMatches: pattern]]]
-								ifFalse: [[:sym|
-										 sym type == typeOrNil
-										 and: [sym name
-												includesSubstring: pattern
-												caseSensitive: false]]]]
-						ifNil:
-							[(pattern includesAnyOf: '#*')
-								ifTrue: [[:sym| sym nameMatches: pattern]]
-								ifFalse: [[:sym| sym name
-												includesSubstring: pattern
-												caseSensitive: false]]]).
-	matches isEmpty ifTrue:
-		[^UIManager inform: 'No symbols match your query'].
-	matches size = 1
-		ifTrue: [selection := matches first]
-		ifFalse:
-			[matches := matches asSortedCollection:
-					[:s1 :s2| | sd1 sd2 |
-					(sd1 := s1 displayText) asString < (sd2 := s2 displayText) asString
-					or: [sd1 = sd2 and: [s1 address <= s2 address]]].
-			 selection := (SelectionMenu
-							labelList: {'Choose symbol'},
-									  (matches collect:
-										[:ea|
-										ea type == #module
-											ifTrue: [ea displayText]
-											ifFalse: [ea displayText, ' @', (ea address printStringRadix: 16),
-													' in ', (symbolManager moduleFor: ea) displayText]])
-							lines: {1}
-							selections: {nil}, matches) startUp.
-			selection ifNil: [^self]].
-	(symbolTypes includes: selection type) ifFalse:
-		[self toggleShowing: selection type].
-	minSelectionIndex := 0.
-	1 to: symbolList size do:
-		[:i|
-		selections
-			at: i
-			put: (((symbolList at: i) address >= selection address
-				  and: [(symbolList at: i) limit <= selection limit])
-					ifTrue: [minSelectionIndex = 0 ifTrue: [minSelectionIndex := i].
-							maxSelectionIndex := i.
-							1]
-					ifFalse: [0])].
-	self changed: #symbolList.
-	self addToHistory.
-	"If selecting a label make sure there's not a zero address range so
-	 select from the previous non-label symbol to the following non-label symbol"
-	selection address = selection limit
-		ifTrue: [anIndex := minSelectionIndex.
-				[(symbolList at: anIndex) type == #label
-				and: [anIndex > 1]] whileTrue: [anIndex := anIndex - 1].
-				lowAddress := (symbolList at: anIndex) address.
-				anIndex := maxSelectionIndex.
-				[(symbolList at: anIndex) type == #label
-				and: [anIndex < symbolList size]] whileTrue: [anIndex := anIndex + 1].
-				highAddress := (symbolList at: anIndex) address]
-		ifFalse:
-			[lowAddress := selection address.
-			 highAddress := selection limit]. 
-	self updateAddressDependents;
-		updateButtons;
-		plotGraph
-]
-
-{ #category : #buttons }
-VMProfiler >> forkProfile [
-	^forkProfile
-]
-
-{ #category : #opening }
-VMProfiler >> forwardsButton [
-	^ImageMorph new image: (ScriptingSystem formAtKey: #playMPEG)
-]
-
-{ #category : #buttons }
-VMProfiler >> gcPriorToProfile [
-	^gcPriorToProfile
+	self subclassResponsibility 
 ]
 
 { #category : #primitives }
@@ -527,59 +319,24 @@ VMProfiler >> getVMProfileSamplesInto: sampleBuffer [
 	^self primitiveFailed
 ]
 
-{ #category : #accessing }
-VMProfiler >> graphMargin [
-	^graph margin
-]
+{ #category : #spying }
+VMProfiler >> headlessSpyOn: aBlock [
+	| blockToProfile r |
+	blockToProfile := forkProfile 
+						ifTrue:
+							[| sem fr |
+							 sem := Semaphore new.
+							 [[fr := aBlock value. sem signal] fork.
+							   sem wait.
+							   fr]]
+						ifFalse: [aBlock].
+	[self selectBenchmark: aBlock sourceString]
+		on: Error
+		do: [:ex|].
+	self startProfiling.
+	r := blockToProfile ensure: [self stopProfiling].
+	^r
 
-{ #category : #selecting }
-VMProfiler >> hasFuture [
-	^historyIndex < history size
-]
-
-{ #category : #buttons }
-VMProfiler >> hasFutureColor [
-	^self hasFuture ifTrue: [Color transparent] ifFalse: [Color darkGray]
-]
-
-{ #category : #selecting }
-VMProfiler >> hasHistory [
-	^historyIndex >= 1
-]
-
-{ #category : #buttons }
-VMProfiler >> hasHistoryColor [
-	^self hasHistory ifTrue: [Color transparent] ifFalse: [Color darkGray]
-]
-
-{ #category : #accessing }
-VMProfiler >> highAddressText [
-	^((highAddress printStringRadix: 16) allButFirst: 3) asText
-]
-
-{ #category : #accessing }
-VMProfiler >> highAddressText: aText [
-	highAddress := ((Integer readFrom: aText asString asUppercase readStream base: 16) max: 0) min: self highestAddress.
-	self selectSymbolsInRange
-]
-
-{ #category : #sorting }
-VMProfiler >> highestAddress [
-	^(sortedSamples isEmpty
-		ifTrue: [symbolManager modules last limit]
-		ifFalse: [symbolManager modules last limit max: sortedSamples last key]) asPowerOfTwo - 1
-]
-
-{ #category : #opening }
-VMProfiler >> historyButtonMorph: getLabelMessage help: help set: setter enable: enabler color: colorGetter [
-	| pbm |
-	pbm := PluggableButtonMorphPlus on: self getState: nil action: setter label: getLabelMessage.
-	pbm
-		getEnabledSelector: enabler;
-		setBalloonText: help;
-		getColorSelector: colorGetter;
-		offColor: Color transparent.
-	^pbm
 ]
 
 { #category : #opening }
@@ -590,6 +347,7 @@ VMProfiler >> initialExtent [
 { #category : #initialization }
 VMProfiler >> initialize [
 	self initializeSamples.
+	self initializeVersion. 
 	self initializeSymbols.
 	self clearHistory.
 	symbolsMode := #byAddress.
@@ -614,10 +372,21 @@ VMProfiler >> initializeSymbols [
 	Smalltalk platformName
 		caseOf: {
 				['Mac OS'] -> [Cursor wait showWhile:
-								[symbolManager := VMProfilerMacSymbolsManager new]].
+								[ symbolManager := VMProfilerMacSymbolsManager using: fileSystem ]].
 				['unix'] -> [Cursor wait showWhile:
-								[symbolManager := VMProfilerLinuxSymbolsManager new]] }
+								[symbolManager := VMProfilerLinuxSymbolsManager using: fileSystem]] }
 		otherwise: [self error: 'not yet supported on ', Smalltalk platformName]
+]
+
+{ #category : #initialization }
+VMProfiler >> initializeVersion [
+	
+	('Pharo*' match: Smalltalk version) ifTrue: [ version := PharoVMProfiler.
+												fileSystem := PharoVMFileSystem new].
+	('Squeak*' match: Smalltalk version) ifTrue: [ version := SqueakVMProfiler.
+												   fileSystem := SqueakVMFileSystem new].
+
+	
 ]
 
 { #category : #reports }
@@ -660,13 +429,6 @@ VMProfiler >> interpreterReport: justWeird [
 		label: 'Interpreter Labels by Cost'
 ]
 
-{ #category : #opening }
-VMProfiler >> labelFont [
-	"Answer the font in which to draw the graph labels.
-	 N.B. the labelling morph shrinks this font by half when displaying."
-	^(TextStyle named: 'BitstreamVeraSans') fontOfPointSize: 16
-]
-
 { #category : #accessing }
 VMProfiler >> listEntryForIndex: index [
 	^(symbolList at: index ifAbsent: [^nil]) displayText
@@ -679,291 +441,6 @@ VMProfiler >> longestWidthIn: aCollectionOfAssociations [
 		len max: (self widthInDefaultFontOf: (assoc key isString
 												ifTrue: [assoc key]
 												ifFalse: [assoc key name]))]
-]
-
-{ #category : #accessing }
-VMProfiler >> lowAddressText [
-	^((lowAddress printStringRadix: 16) allButFirst: 3) asText
-]
-
-{ #category : #accessing }
-VMProfiler >> lowAddressText: aText [
-	lowAddress := ((Integer readFrom: aText asString asUppercase readStream base: 16) max: 0) min: 16rFFFFFFFF.
-	self selectSymbolsInRange
-]
-
-{ #category : #profiling }
-VMProfiler >> notProfiling [
-	^self profiling not
-]
-
-{ #category : #profiling }
-VMProfiler >> notProfilingAndData [
-	^sampleBuffer notNil and: [self notProfiling]
-]
-
-{ #category : #opening }
-VMProfiler >> openInWindow [
-	"VMProfiler open"
-	| window symbolListMorph labelsMorph buttons |
-	(window := SystemWindow new)
-		setProperty: #allowPaneSplitters toValue: false;
-		model: self;
-		setLabel: self class name;
-		fillStyle: Color white;
-		paneColor: Color white;
-		color: Color white.
-	(window respondsTo: #allowPaneSplitters:) ifTrue:
-		[window allowPaneSplitters: false].
-	"Cope with Squeak 4.1 SystemWindow background color changes"
-	window addMorph: (AlignmentMorph new color: Color white; yourself) frame: (0@0 corner: 1@1).
-	symbolListMorph := PluggableListMorphOfManyAlt
-						on: self
-						list: #symbolList
-						primarySelection: #symbolIndex
-						changePrimarySelection: #toggleListIndex:
-						listSelection: #symbolSelectionAt:
-						changeListSelection: #symbolSelectionAt:put:
-						getListElement: #listEntryForIndex:
-						menu: #symbolListMenu:.
-	symbolListMorph showHScrollBarOnlyWhenNeeded: false. "buggy misnamed selector :)"
-	labelsMorph := VMProfileGraphLabelMorph model: self font: self labelFont getLabels: #positionedLabels.
-	expressionTextMorph := PluggableTextMorph
-								on: self
-								text: nil accept: nil
-								readSelection: #selectionRange
-								menu: #expressionTextMenu:.
-	expressionTextMorph
-		setProperty: #alwaysAccept toValue: true;
-		askBeforeDiscardingEdits: false;
-		setBalloonText: 'type an expression to profile here'.
-	buttons := OrderedCollection new.
-	window
-		addMorph: symbolListMorph frame: (0@0 corner: 0.15@1);
-		addMorph: (graph := VMProfilePlotMorph model: self) frame: (0.15@0 corner: 1.0@0.7);
-		addMorph: labelsMorph frame: (0.15@0.7 corner: 1.0@0.85);
-		"address boxes"
-		addMorph: (self addressTextMorph:'Type the low address of the histogram here'
-						get: #lowAddressText
-						set: #lowAddressText:)
-			frame: (0.16@0.86 corner: 0.27@0.91);
-		addMorph: (self addressTextMorph:'Type the high address of the histogram here'
-						get: #highAddressText
-						set: #highAddressText:)
-			frame: (0.88@0.86 corner: 0.99@0.91);
-		addMorph: (self totalTextMorph: 'Shows the total number of samples' get: #totalText)
-			frame: (0.88@0.92 corner: 0.99@0.98);
-		"symbol list check-box filters"
-		addMorph: (self checkMorph: 'show module symbols'
-						get: #showingModules
-						set: #toggleShowModules)
-			frame: (0.16@0.915 corner: 0.175@0.93);
-		addMorph: (buttons addLast: (StringMorph contents: 'modules'))
-			frame: (0.19@0.915 corner: 0.27@0.93);
-		addMorph: (self checkMorph: 'show extern symbols'
-						get: #showingPublicFunctions
-						set: #toggleShowPublicFunctions)
-			frame: (0.16@0.935 corner: 0.175@0.95);
-		addMorph: (buttons addLast: (StringMorph contents: 'externs'))
-			frame: (0.19@0.935 corner: 0.27@0.95);
-		addMorph: (self checkMorph: 'show static symbols'
-						get: #showingPrivateFunctions
-						set: #toggleShowPrivateFunctions)
-			frame: (0.16@0.955 corner: 0.175@0.97);
-		addMorph: (buttons addLast: (StringMorph contents: 'statics'))
-			frame: (0.19@0.955 corner: 0.27@0.97);
-		addMorph: (self checkMorph: 'show static symbols'
-						get: #showingLabels
-						set: #toggleShowLabels)
-			frame: (0.16@0.975 corner: 0.175@0.99);
-		addMorph: (buttons addLast: (StringMorph contents: 'labels'))
-			frame: (0.19@0.975 corner: 0.27@0.99);
-		"history buttons"
-		addMorph: (self historyButtonMorph: #backwardsButton help: 'go back to previous selection'
-						set: #regress enable: #hasHistory color: #hasHistoryColor)
-			frame: (0.28@0.86 corner: 0.315@0.90);
-		addMorph: (self historyButtonMorph: #forwardsButton help: 'go forward to next selection'
-						set: #progress enable: #hasFuture color: #hasFutureColor)
-			frame: (0.32@0.86 corner: 0.355@0.90);
-		"profiling buttons"
-		addMorph: (self buttonMorph: #drawButton help: 'plot the graph'
-						set: #plotGraph enable: #notProfilingAndData color: #clearColor)
-			frame: (0.37@0.86 corner: 0.45@0.91);
-		addMorph: (self buttonMorph: #clearButton help: 'clear the histogram data'
-						set: #clearProfile enable: #notProfiling color: #clearColor)
-			frame: (0.46@0.86 corner: 0.54@0.91);
-		addMorph: (self buttonMorph: #startButton help: 'start the profiler'
-						set: #startProfiling enable: #notProfiling color: #profileColor)
-			frame: (0.28@0.915 corner: 0.36@0.96);
-		addMorph: (self buttonMorph: #stopButton help: 'stop the profiler'
-						set: #stopProfiling enable: #profiling color: #stopColor)
-			frame: (0.37@0.915 corner: 0.45@0.96);
-		addMorph: (self buttonMorph: #profileExpressionButton help: 'compile and profile the expression to the right'
-						set: #profileExpression enable: #notProfiling color: #profileColor)
-			frame: (0.46@0.915 corner: 0.54@0.96);
-		addMorph: expressionTextMorph
-			frame: (0.55@0.86 corner: 0.87@0.98);
-		addMorph: (self checkMorph: 'Run the full garbage collector prior to profiling'
-						get: #gcPriorToProfile
-						set: #toggleGcPriorToProfile)
-			frame: (0.28@0.97 corner: 0.295@0.985);
-		addMorph: (buttons addLast: (StringMorph contents: 'gc prior'))
-			frame: (0.30@0.97 corner: 0.365@0.995);
-		addMorph: (self checkMorph: 'Clear the profile prior to profiling'
-						get: #clearPriorToProfile
-						set: #toggleClearPriorToProfile)
-			frame: (0.37@0.97 corner: 0.385@0.985);
-		addMorph: (buttons addLast: (StringMorph contents: 'clear prior'))
-			frame: (0.39@0.97 corner: 0.455@0.995);
-		addMorph: (self checkMorph: 'Run the profiled expression in its own process'
-						get: #forkProfile
-						set: #toggleForkProfile)
-			frame: (0.46@0.97 corner: 0.475@0.985);
-		addMorph: (buttons addLast: (StringMorph contents: 'fork profile'))
-			frame: (0.48@0.97 corner: 0.545@0.995).
-.
-	"A Color transparent fillStyle used to be the default.  What a
-	 pain that things change so radically from release to release!"
-	graph fillStyle: Color transparent.
-
-	self updateButtons. "weird!"
-	buttons do: [:buttonMorph| buttonMorph color: Color black]. "otherwise labels don't show :("
-	window openInWorld.
-	self toggleShowing: #module.
-	^window
-]
-
-{ #category : #graph }
-VMProfiler >> plotGraph [
-	sortedSamples isEmpty ifTrue: [^self].
-	highAddress = 0 ifTrue:
-		[highAddress := self highestAddress.
-		 self updateAddressDependents].
-	self plotSamplesFrom: lowAddress to: highAddress.
-	graph fullDrawOn: Display getCanvas
-]
-
-{ #category : #graph }
-VMProfiler >> plotSamplesFrom: startAddress to: endAddress [
-	| histSeries intSeries integral range |
-	graph clear.
-	histSeries := graph series: #histogram.
-	intSeries := graph alternateSeries: #integral.
-	intSeries color: Color magenta; type: #stepped; drawArea: Preferences vmProfilerFillInIntegral.
-	range := self plotSamplesFrom: startAddress to: endAddress intoHistogram: histSeries andIntegral: intSeries.
-	histSeries addPoint: range last @ 0.
-	intSeries addPoint: range last @ (integral := intSeries points isEmpty ifTrue: [0] ifFalse: [intSeries points last y]).
-	(integral ~= 0 and: [Preferences vmProfilerFillInIntegral]) ifTrue:
-		[intSeries addPoint: range last @ 0].
-	self assert: histSeries points isEmpty = intSeries points isEmpty.
-	histSeries points notEmpty ifTrue:
-		[self assert: histSeries points first x = intSeries points first x.
-		 self assert: histSeries points last x = intSeries points last x].
-	rangeTotal := integral.
-	graph xAxisFormatter:
-		[:n|
-		((range first + (n asFloat - range first)) rounded asInteger printStringRadix: 16) allButFirst: 3].
-	graph yAxisFormatter:
-		[:n|
-		(n rounded = n
-			ifTrue: [n]
-			ifFalse:
-				[n >= 100
-					ifTrue: [n rounded]
-					ifFalse: [(n * 10) rounded / 10]]) printString].
-	graph limitMinX: range first limitMaxX: range last.
-	self changed: #positionedLabels; changed: #totalText
-]
-
-{ #category : #graph }
-VMProfiler >> plotSamplesFrom: startAddress to: endAddress intoHistogram: histogramSeries andIntegral: integralSeries [
-	"Plot the samples in the range startAddress to: endAddress, inclusive.  Answer the range actually
-	 plotted, which may be larger due to rounding when putting multiple addresses in the same bin."
-	| resolution sampleIndex numSamples nextSample plotter |
-	resolution := graph drawBounds width.
-	numSamples := sortedSamples size.
-	sampleIndex := sortedSamples findBinaryIndex: [:sample| startAddress - sample key] ifNone: [:lowIdx :highIdx| highIdx].
-	sampleIndex > numSamples ifTrue:
-		[^startAddress to: endAddress].
-	plotter := VMGraphPlotter new histogram: histogramSeries integral: integralSeries startAddress: startAddress.
-	nextSample := sortedSamples at: sampleIndex.
-	endAddress - startAddress + 1 > (resolution * 1.5) ifTrue:
-		[| binsPerPoint range sum |
-		 binsPerPoint := (endAddress - startAddress + 1 / resolution) ceiling.
-		 range := startAddress to: endAddress + binsPerPoint - 1 by: binsPerPoint.
-		 range do:
-			[:address| | next |
-			 next := address + binsPerPoint.
-			 sum := 0.
-			 [nextSample key < next] whileTrue:
-				[self assert: nextSample key >= address.
-				 sum := sum + nextSample value.
-				 (sampleIndex := sampleIndex + 1) > numSamples ifTrue:
-					[plotter addPlotFor: sum at: address.
-					 ^range].
-				nextSample := sortedSamples at: sampleIndex].
-			 plotter addPlotFor: sum at: address].
-			 ^range].
-		plotter plotAsBars: true.
-	startAddress to: endAddress do:
-		[:address|
-		 nextSample key <= address
-			ifTrue:
-				[self assert: nextSample key >= address.
-				 plotter addPlotFor: nextSample value at: address.
-				 (sampleIndex := sampleIndex + 1) > numSamples ifTrue:
-					[^startAddress to: endAddress].
-				 nextSample := sortedSamples at: sampleIndex]
-			ifFalse:
-				[plotter addPlotFor: 0 at: address]].
-	^startAddress to: endAddress
-]
-
-{ #category : #accessing }
-VMProfiler >> positionedLabels [
-	"Compute the set of labels to be displayed for the given address range.
-	 Try and display no more than maxLabels labels.  The result is a dictionary
-	 of fractional position in the range to string.  If there are lots of labels, try
-	 and favour those that have samples."
-	| maxLabels counts types symbolsInRange positionedLabels index count range significantSymbolsInRange |
-	maxLabels := 50.
-	minSelectionIndex isZero ifTrue:
-		[^Dictionary new].
-	"count how many labels of each type there are in the range."
-	counts := Dictionary new.
-	(types := #(module objectFile publicFunction privateFunction label)) do:
-		[:type| counts at: type put: 0].
-	types := types select: [:type| symbolTypes includes: type].
-	symbolsInRange := symbolManager symbolsSelect: [:sym| sym address <= highAddress and: [sym limit >= lowAddress and: [(symbolTypes includes: sym type)]]].
-	"If there are lots of labels then choose to display only those with samples"
-	symbolsInRange size > (maxLabels / 2) ifTrue:
-		[significantSymbolsInRange := symbolsInRange select: [:s| (self samplesForSymbol: s) > 0]].
-	(symbolsInRange size > maxLabels
-	 and: [significantSymbolsInRange size >= (maxLabels / 2)]) ifTrue:
-		[symbolsInRange := significantSymbolsInRange].
-	symbolsInRange do:
-		[:s| counts at: s type put: (counts at: s type) + 1].
-	"Find out what types give us at least one label but no more
-	 than maxLabels unless necessary to have at least one."
-	index := 1.
-	count := counts at: (types at: index).
-	[index <= types size
-	 and: [count + (counts at: (types at: index)) < maxLabels]] whileTrue:
-		[count := count + (counts at: (types at: index)).
-		 index := index + 1].
-	"add labels to positionedLabels indexed by their fractional position in the range, filtering by type."
-	types := types copyFrom: 1 to: (index min: types size).
-	positionedLabels := Dictionary new: count.
-	range := (highAddress - lowAddress) asFloat.
-	symbolsInRange do:
-		[:s |
-		(types includes: s type) ifTrue:
-			[positionedLabels
-				at: ([s address - lowAddress / range]
-						on: ZeroDivide
-						do: [:ex| 0])
-				put: s displayText]].
-	^positionedLabels
 ]
 
 { #category : #primitives }
@@ -1046,43 +523,6 @@ VMProfiler >> printSymbolTotals: totals labelled: label on: aStream sumTotal: su
 	aStream cr; cr
 ]
 
-{ #category : #buttons }
-VMProfiler >> profileColor [
-	^self profiling ifTrue: [Color darkGray] ifFalse: [Color lightGreen]
-]
-
-{ #category : #profiling }
-VMProfiler >> profileExpression [
-	| expressionText logExpression block |
-	expressionText := expressionTextMorph text.
-	expressionText isEmpty ifTrue:
-		[^self changed: #flash].
-	(expressionText first = $[
-	and: [expressionText last = $] ]) ifFalse:
-		[expressionText := '[' asText, expressionText, ']' asText.
-		 expressionTextMorph setText: expressionText].
-	self changed: #selectionRange with: (1 to: expressionText size).
-	logExpression := true.  "This could be a preference but for now allows both versions to live here."
-	block := logExpression
-				ifTrue: [expressionTextMorph doIt]
-				ifFalse:
-					[Compiler
-						evaluate: expressionText
-						for: nil
-						notifying: (expressionTextMorph instVarNamed: 'textMorph') editor
-						logged: false].
-	block == expressionTextMorph ifTrue:
-		[self error: expressionTextMorph class name, '>>doit does not answer the result'].
-	block isBlock ifTrue:
-		[self spyOn: block]
-]
-
-{ #category : #buttons }
-VMProfiler >> profileExpressionButton [
-	"Just weird!"
-	^'profile:'
-]
-
 { #category : #profiling }
 VMProfiler >> profileSize [
 	"Answer the number of pc samples to allocate space for in the VM.
@@ -1091,23 +531,6 @@ VMProfiler >> profileSize [
 	 answers the last profileSize samples.
 	 256 * 1024 / (1000000 / 666.0) = 174.6 seconds =  2.9 minutes"
 	^256 * 1024
-]
-
-{ #category : #profiling }
-VMProfiler >> profiling [
-	^aboutToProfile or: [self statusOfVMProfile]
-]
-
-{ #category : #selecting }
-VMProfiler >> progress [
-	| range |
-	range := history at: (historyIndex := historyIndex + 1).
-	lowAddress := range first.
-	highAddress := range last.
-	self updateAddressDependents.
-	self updateButtons.
-	self selectSymbolsInRange.
-	self plotGraph
 ]
 
 { #category : #reports }
@@ -1174,7 +597,7 @@ VMProfiler >> report: s [
 	self totalsDo:
 		[:vmTotals :cogTotals :nonVMTotals
 		 :samplesInVM :samplesInCog :samplesInNonVMModules :samplesInNonVM |
-		self putReportPreambleOn: s.
+		"self putReportPreambleOn: s."
 		s print: samplesInVM + samplesInCog; nextPutAll: ' samples in the VM'; tab; nextPut: $(;
 		   print: total; nextPutAll: ' samples in the entire program)  '.
 		self printPercentage: samplesInVM + samplesInCog total: total on: s.
@@ -1220,11 +643,6 @@ VMProfiler >> samplesForSymbol: sym [
 	^self samplesForRange: sym address to: sym limit
 ]
 
-{ #category : #menus }
-VMProfiler >> selectBenchmark: expressionString [ 
-	expressionTextMorph setText: expressionString asText
-]
-
 { #category : #selecting }
 VMProfiler >> selectProportionFrom: low to: high [
 	| range |
@@ -1253,33 +671,6 @@ VMProfiler >> selectSymbolsInRange [
 								ifFalse: [0])].
 	self changed: #allSelections.
 	self changed: #symbolIndex
-]
-
-{ #category : #profiling }
-VMProfiler >> selectionRange [
-	^expressionTextMorph
-		ifNotNil: [1 to: expressionTextMorph text size]
-		ifNil: [0 to: 0]
-]
-
-{ #category : #buttons }
-VMProfiler >> showingLabels [
-	^symbolTypes includes: #label
-]
-
-{ #category : #buttons }
-VMProfiler >> showingModules [
-	^symbolTypes includes: #module
-]
-
-{ #category : #buttons }
-VMProfiler >> showingPrivateFunctions [
-	^symbolTypes includes: #privateFunction
-]
-
-{ #category : #buttons }
-VMProfiler >> showingPublicFunctions [
-	^symbolTypes includes: #publicFunction
 ]
 
 { #category : #sorting }
@@ -1314,41 +705,21 @@ VMProfiler >> sortedSymbolsBeforeCogCode [
 
 { #category : #spying }
 VMProfiler >> spyOn: aBlock [
-	| blockToProfile r |
-	blockToProfile := forkProfile
-						ifTrue:
-							[| sem fr |
-							 sem := Semaphore new.
-							 [[fr := aBlock value. sem signal] fork.
-							   sem wait.
-							   fr]]
-						ifFalse: [aBlock].
-	[self selectBenchmark: aBlock sourceString]
-		on: Error
-		do: [:ex|].
-	self startProfiling.
-	r := blockToProfile ensure: [self stopProfiling].
-	WorldState addDeferredUIMessage:
-		[self plotGraph].
-	^r
-]
-
-{ #category : #buttons }
-VMProfiler >> startButton [
-	"just weird..."
-	^'start'
+	^ self headlessSpyOn: aBlock
+	
 ]
 
 { #category : #profiling }
 VMProfiler >> startProfiling [
+	"still UI-dependent"
 	"Use aboutToProfile to allow us to change the button colors without including the change in the profile."
 	aboutToProfile := true.
 	self clearHistory.
-	self updateButtons.
+	"self updateButtons."
 	World doOneCycleNow.
 	clearPriorToProfile ifTrue: [self clearProfile].
 	gcPriorToProfile ifTrue: [Smalltalk garbageCollect].
-	startStats := Smalltalk getVMParameters.
+	startStats := self getVMParameters. 
 	startTime := Time millisecondClockValue.
 	self startVMProfile.
 	aboutToProfile := false
@@ -1360,37 +731,21 @@ VMProfiler >> startVMProfile [
 	self primitiveControlVMProfile: true size: self profileSize
 ]
 
-{ #category : #primitives }
-VMProfiler >> statusOfVMProfile [
-	<primitive: 252>
-	^self primitiveFailed
-]
-
-{ #category : #buttons }
-VMProfiler >> stopButton [
-	"just weird..."
-	^'stop'
-]
-
-{ #category : #buttons }
-VMProfiler >> stopColor [
-	^self profiling ifTrue: [Color red] ifFalse: [Color darkGray]
-]
-
 { #category : #profiling }
 VMProfiler >> stopProfiling [
+	"still UI-dependent"
 	| numSamples now vmParameters |
 	numSamples := self stopVMProfile.
 	now := Time millisecondClockValue.
-	vmParameters := Smalltalk getVMParameters.
+	vmParameters := self getVMParameters. 
 	cogCodeConstituents := self primitiveCollectCogCodeConstituents.
 	elapsedTime := now - startTime + elapsedTime.
 	self computeStats: vmParameters.
 	self computeHistograms: numSamples.
 	self computeCogCodeModule.
-	self computeSortedSymbols.
+	"self computeSortedSymbols." "makes the profiling crash"
 	self clearHistory.
-	self updateButtons
+	"self updateButtons"
 ]
 
 { #category : #primitives }
@@ -1415,84 +770,9 @@ VMProfiler >> symbolList [
 	^symbolList
 ]
 
-{ #category : #menus }
-VMProfiler >> symbolListMenu: aMenuMorph [
-	aMenuMorph
-		add: 'find...' target: self selector: #findSymbol:event: argument: nil;
-		add: 'find module...' target: self selector: #findSymbol:event: argument: #module;
-		add: 'find extern...' target: self selector: #findSymbol:event: argument: #publicFunction;
-		add: 'find static...' target: self selector: #findSymbol:event: argument: #privateFunction;
-		add: 'find label...' target: self selector: #findSymbol:event: argument: #label.
-	sampleBuffer ifNotNil:
-		[aMenuMorph
-			addLine;
-			add: 'vm report' target: self selector: #vmReport: argument: #justWeird;
-			add: 'interpreter report' target: self selector: #interpreterReport: argument: #justWeird].
-	^aMenuMorph
-]
-
 { #category : #accessing }
 VMProfiler >> symbolSelectionAt: index [ 
 	^(selections at: index ifAbsent: [0]) ~= 0
-]
-
-{ #category : #accessing }
-VMProfiler >> symbolSelectionAt: index put: aBoolean [
-	Transcript cr; nextPutAll: #symbolSelectionAt:; space; print: index; nextPutAll: ' put: '; print: aBoolean; flush.
-	minSelectionIndex := maxSelectionIndex := index.
-	(index between: 1 and: selections size) ifTrue:
-		[selections at: index put: (aBoolean ifTrue: [1] ifFalse: [0])].
-	1 to: minSelectionIndex - 1 do:
-		[:i| selections at: i put: 0].
-	maxSelectionIndex + 1 to: selections size do:
-		[:i| selections at: i put: 0].
-	self changed: #symbolList.
-	self updateAddressSelection
-]
-
-{ #category : #buttons }
-VMProfiler >> toggleClearPriorToProfile [
-	clearPriorToProfile := clearPriorToProfile not.
-	self changed: #clearPriorToProfile
-]
-
-{ #category : #buttons }
-VMProfiler >> toggleForkProfile [
-	forkProfile := forkProfile not.
-	self changed: #forkProfile
-]
-
-{ #category : #buttons }
-VMProfiler >> toggleGcPriorToProfile [
-	gcPriorToProfile := gcPriorToProfile not.
-	self changed: #gcPriorToProfile
-]
-
-{ #category : #accessing }
-VMProfiler >> toggleListIndex: index [
-	Transcript cr; nextPutAll: #toggleListIndex:; space; print: index; flush.
-	selections at: index put: ((selections at: index ifAbsent: [^self]) bitXor: 1).
-	self updateAddressSelection
-]
-
-{ #category : #buttons }
-VMProfiler >> toggleShowLabels [
-	self toggleShowing: #label
-]
-
-{ #category : #buttons }
-VMProfiler >> toggleShowModules [
-	self toggleShowing: #module
-]
-
-{ #category : #buttons }
-VMProfiler >> toggleShowPrivateFunctions [
-	self toggleShowing: #privateFunction
-]
-
-{ #category : #buttons }
-VMProfiler >> toggleShowPublicFunctions [
-	self toggleShowing: #publicFunction
 ]
 
 { #category : #buttons }
@@ -1514,33 +794,6 @@ VMProfiler >> toggleShowing: aSymbol [
 	self selectSymbolsInRange.
 	self changed: #symbolList;
 		changed: #positionedLabels
-]
-
-{ #category : #accessing }
-VMProfiler >> totalText [
-	^(String streamContents:
-		[:s|
-		total > 0 ifTrue:
-			[s	print: (rangeTotal * 10000 / total) rounded / 100.0;
-				nextPutAll: '% of';
-				cr].
-		s print: total]) asText
-]
-
-{ #category : #opening }
-VMProfiler >> totalTextMorph: help get: getter [
-	| ptm |
-	ptm := PluggableTextMorph
-			on: self
-			text: getter accept: nil
-			readSelection: nil menu: nil.
-	ptm askBeforeDiscardingEdits: false;
-		setBalloonText: help;
-		retractableOrNot;
-		hideOrShowScrollBars;
-		setProperty: #noScrollBarPlease toValue: true;
-		setProperty: #noVScrollBarPlease toValue: true.
-	^ptm
 ]
 
 { #category : #reports }
@@ -1596,54 +849,9 @@ VMProfiler >> totalsDo: septuaryBlock [
 		 samplesInNonVM}
 ]
 
-{ #category : #menus }
-VMProfiler >> trimmedExpressionText [
-	| expression |
-	^((expression := expressionTextMorph text asString) notEmpty
-	   and: [expression first = $[
-	   and: [expression last = $] ]])
-		ifTrue: [expression copyFrom: 2 to: expression size - 1]
-		ifFalse: [expression]
-]
-
 { #category : #accessing }
-VMProfiler >> updateAddressDependents [
-	self changed: #lowAddressText; changed: #highAddressText; changed: #symbolIndex.
-	self dependents do:
-		[:dep|
-		 (dep class == PluggableTextMorph
-		  and: [dep getTextSelector == #highAddressText]) ifTrue:
-			[(dep instVarNamed: 'textMorph') editor setAlignment: #rightFlush]]
-]
-
-{ #category : #accessing }
-VMProfiler >> updateAddressSelection [
-	| min max |
-	1 to: selections size do:
-		[:i|
-		(selections at: i) > 0 ifTrue:
-			[min ifNil: [min :=i].
-			 max := i]].
-	min
-		ifNil: [lowAddress := 0.
-			   highAddress := self highestAddress.
-			   minSelectionIndex := maxSelectionIndex := 0]
-		ifNotNil:
-			[minSelectionIndex := min. maxSelectionIndex := max.
-			 minSelectionIndex + 1 to: maxSelectionIndex - 1 do:
-				[:i| selections at: i put: 1].
-			 lowAddress := (symbolList at: minSelectionIndex) address.
-			 highAddress := (symbolList at: maxSelectionIndex) limit].
-	self updateAddressDependents
-]
-
-{ #category : #buttons }
-VMProfiler >> updateButtons [
-	WorldState addDeferredUIMessage:
-		[self changed: #profileColor; changed: #clearColor; changed: #stopColor.
-		 self changed: #profiling; changed: #notProfiling; changed: #notProfilingAndData.
-		 self changed: #hasHistoryColor; changed: #hasFutureColor.
-		 self changed: #hasHistory; changed: #hasFuture]
+VMProfiler >> version [
+	^ version 
 ]
 
 { #category : #reports }
@@ -1655,7 +863,7 @@ VMProfiler >> vmReport: justWeird [
 
 { #category : #reports }
 VMProfiler >> widthInDefaultFontOf: aString [
-	^(NewParagraph new
+	^(self createParagraph 
 		compose: aString asText
 		style: TextStyle default
 		from: 1
