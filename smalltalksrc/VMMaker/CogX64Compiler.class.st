@@ -105,8 +105,9 @@ CogX64Compiler class >> ifTranslateableAddWithOptionsTo: aCollection [
 	(self wordSize = Cogit objectMemoryClass wordSize
 	 and: [self identifyingPredefinedMacros notNil]) ifTrue:
 		[aCollection
-			add: {self. {#ISA. self ISA. #ABI. #SysV}};
-			add: {self. {#ISA. self ISA. #ABI. #WIN64}}]
+			"SysV must preceed _WIN64; see Cogit class>>#generateCodeStringForCogitDotC"
+			add: {self. {#ISA. self ISA. #ABI. #SysV}}; 
+			add: {self. {#ISA. self ISA. #ABI. #'_WIN64'}}]
 ]
 
 { #category : #'class initialization' }
@@ -121,8 +122,8 @@ CogX64Compiler class >> initialize [
 	initializationOptions ifNil: [ initializationOptions := Dictionary new ].
 	initializationOptions
 		at: #ABI
-		ifPresent: [:abi| SysV := abi asUppercase ~= #WIN64]
-		ifAbsent: [SysV := true]. "Default ABI; set to true for SysV, false for WIN64"
+		ifPresent: [:abi| SysV := abi asUppercase ~= #WIN64 and: [abi asUppercase ~= #'_WIN64']]
+		ifAbsent: [SysV := true]. "Default ABI; set to true for SysV, false for WIN64/_WIN64"
 
 	RAX := 0.
 	RCX := 1.  "Were they completely mad or simply sadistic?"
@@ -309,7 +310,7 @@ CogX64Compiler class >> machineCodeDeclaration [
 { #category : #translation }
 CogX64Compiler class >> moduleName [
 	"CogAbstractInstruction subclasses collect: [:ea| ea moduleName]"
-	^'cogit', self ISA, (initializationOptions at: #ABI ifAbsent: [''])
+	^'cogit', self ISA, ((initializationOptions at: #ABI ifAbsent: ['']) copyWithout: $_)
 ]
 
 { #category : #translation }
