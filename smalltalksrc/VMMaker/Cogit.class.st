@@ -737,7 +737,7 @@ Cogit class >> generateCodeStringForCogitDotC [
 			[:class | | abi |
 			 s nextPutAll: 'if '.
 			 (abi := initializationOptions at: #ABI ifAbsent: []) ifNotNil:
-				[s nextPutAll: (abis addLast: abi, 'ABI'); nextPutAll: ' && ('].
+				[s nextPutAll: (abis addLast: abi); nextPutAll: ' && ('].
 			 class identifyingPredefinedMacros
 				do: [:predefinedMacro| s nextPutAll: 'defined('; nextPutAll: predefinedMacro; nextPut: $)]
 				separatedBy: [s nextPutAll: ' || '].
