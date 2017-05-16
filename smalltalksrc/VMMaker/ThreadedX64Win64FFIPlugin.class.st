@@ -27,7 +27,7 @@ ThreadedX64Win64FFIPlugin class >> includingPredefinedMacros [
 	 These are anded together and with excludingPredefinedMacros, whereas
 	 identifyingPredefinedMacros are ored together.
 	 This can be used to differentiate e.g. x64 Sys V from x64 Win64."
-	^#('WIN64')
+	^#('_WIN64')
 ]
 
 { #category : #'class initialization' }
