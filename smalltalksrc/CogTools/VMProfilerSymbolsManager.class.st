@@ -8,6 +8,9 @@ Class {
 		'vmModule',
 		'cogModule'
 	],
+	#classVars : [
+		'fileSystem'
+	],
 	#category : #'CogTools-VMProfiler'
 }
 
@@ -27,12 +30,18 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.'
 ]
 
+{ #category : #'as yet unclassified' }
+VMProfilerSymbolsManager class >> using: aFileSystem [
+
+	fileSystem := aFileSystem.
+	^ self new 
+	
+]
+
 { #category : #'Cog compiled code' }
 VMProfilerSymbolsManager >> addCogModuleSymbols: symbols [
 	self initialized ifFalse:
-		[Cursor wait showWhile:
-			[[self initialized] whileFalse:
-				[(Delay forMilliseconds: 100) wait]]].
+		[(Delay forMilliseconds: 1000) wait].
 	modules
 		removeAllSuchThat: [:existingModule| cogModule name = existingModule name];
 		add: cogModule.
@@ -70,6 +79,18 @@ VMProfilerSymbolsManager >> computeCogCodeModule: cogCodeConstituents [
 							address: (cogCodeConstituents at: i + 1);
 							limit: (cogCodeConstituents at: i + 3 ifAbsent: [cogCodeConstituents last])].
 	self addCogModuleSymbols: symbols
+]
+
+{ #category : #accessing }
+VMProfilerSymbolsManager >> fileSystem [
+
+	^fileSystem 
+]
+
+{ #category : #accessing }
+VMProfilerSymbolsManager >> fileSystem: aVMFileSystem [
+	
+	fileSystem := aVMFileSystem. 
 ]
 
 { #category : #accessing }
