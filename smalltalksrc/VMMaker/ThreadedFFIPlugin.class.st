@@ -191,11 +191,11 @@ ThreadedFFIPlugin class >> preambleCCode [
 # else
 #	define WIN32_X86_STRUCT_RETURN 1
 # endif
-# if WIN32
+# if _WIN32
 #	define PLATFORM_API_USES_CALLEE_POPS_CONVENTION 1
 # endif
 # elif defined(__amd64__) || defined(__x86_64__) ||  defined(__amd64) || defined(__x86_64)
-# if WIN32 | WIN64
+# if _WIN32 | _WIN64
 #	define PLATFORM_API_USES_CALLEE_POPS_CONVENTION 1
 # endif
 #endif /* defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__) */
