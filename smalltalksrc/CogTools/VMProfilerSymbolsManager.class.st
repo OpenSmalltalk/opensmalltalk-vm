@@ -9,7 +9,7 @@ Class {
 		'cogModule'
 	],
 	#classVars : [
-		'fileSystem'
+		'VMFileSystem'
 	],
 	#category : #'CogTools-VMProfiler'
 }
@@ -33,7 +33,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 { #category : #'as yet unclassified' }
 VMProfilerSymbolsManager class >> using: aFileSystem [
 
-	fileSystem := aFileSystem.
+	VMFileSystem := aFileSystem.
 	^ self new 
 	
 ]
@@ -84,13 +84,13 @@ VMProfilerSymbolsManager >> computeCogCodeModule: cogCodeConstituents [
 { #category : #accessing }
 VMProfilerSymbolsManager >> fileSystem [
 
-	^fileSystem 
+	^VMFileSystem 
 ]
 
 { #category : #accessing }
 VMProfilerSymbolsManager >> fileSystem: aVMFileSystem [
 	
-	fileSystem := aVMFileSystem. 
+	VMFileSystem := aVMFileSystem. 
 ]
 
 { #category : #accessing }

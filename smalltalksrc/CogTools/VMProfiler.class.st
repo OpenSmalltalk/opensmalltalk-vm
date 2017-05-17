@@ -113,14 +113,7 @@ VMProfiler class >> headlessSpyOn: aBlock reportOn: aStream [
 VMProfiler class >> initialize [
 
 	CannedBenchmarkStrings := OrderedCollection new.
-	"(TheWorldMenu respondsTo: #registerOpenCommand:) ifTrue:
-		[TheWorldMenu registerOpenCommand: {'VM Profiler'. {self. #open}. 'A VM profiler'}].
-	Preferences
-		addBooleanPreference: #vmProfilerFillInIntegral 
-		category: #vmProfiler 
-		default: false
-		balloonHelp: 'If enabled, the profiler will fill in the area under the integral.'.
-	self fixTabs"
+	
 ]
 
 { #category : #reports }
