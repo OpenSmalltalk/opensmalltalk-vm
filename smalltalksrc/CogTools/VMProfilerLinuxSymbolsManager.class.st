@@ -39,11 +39,11 @@ VMProfilerLinuxSymbolsManager class >> initialize [
 
 { #category : #'shut down' }
 VMProfilerLinuxSymbolsManager class >> shutDown: quitting [
-	(quitting
+	"(quitting
 	 and: [#('Mac OS' 'unix') includes: Smalltalk platformName]) ifTrue:
 		[| tempDir |
 		 (tempDir := self tempDirectory) exists ifTrue:
-			[tempDir recursiveDelete]]
+			[tempDir recursiveDelete]]" "error on Pharo as recursiveDelete is from FileDirectory. Have to find something similar with FileSystem"
 ]
 
 { #category : #'as yet unclassified' }

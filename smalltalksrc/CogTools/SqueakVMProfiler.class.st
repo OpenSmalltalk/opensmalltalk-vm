@@ -18,14 +18,14 @@ SqueakVMProfiler class >> default [
 SqueakVMProfiler class >> initialize [
 
 	super initialize.
-	(TheWorldMenu respondsTo: #registerOpenCommand:) ifTrue:
+	"(TheWorldMenu respondsTo: #registerOpenCommand:) ifTrue:
 		[TheWorldMenu registerOpenCommand: {'VM Profiler'. {self. #open}. 'A VM profiler'}].
 	Preferences
 		addBooleanPreference: #vmProfilerFillInIntegral 
 		category: #vmProfiler 
 		default: false
 		balloonHelp: 'If enabled, the profiler will fill in the area under the integral.'.
-	self fixTabs
+	self fixTabs" "makes the import fail on Pharo. Have to find a workaround"
 ]
 
 { #category : #'instance creation' }
@@ -742,6 +742,13 @@ SqueakVMProfiler >> stopButton [
 { #category : #buttons }
 SqueakVMProfiler >> stopColor [
 	^self profiling ifTrue: [Color red] ifFalse: [Color darkGray]
+]
+
+{ #category : #'as yet unclassified' }
+SqueakVMProfiler >> stopProfiling [
+	
+	super stopProfiling.
+	self updateButtons
 ]
 
 { #category : #menus }
