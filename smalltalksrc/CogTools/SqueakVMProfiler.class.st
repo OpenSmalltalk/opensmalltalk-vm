@@ -14,6 +14,20 @@ SqueakVMProfiler class >> default [
 	^self openInstance
 ]
 
+{ #category : #'as yet unclassified' }
+SqueakVMProfiler class >> initialize [
+
+	super initialize.
+	(TheWorldMenu respondsTo: #registerOpenCommand:) ifTrue:
+		[TheWorldMenu registerOpenCommand: {'VM Profiler'. {self. #open}. 'A VM profiler'}].
+	Preferences
+		addBooleanPreference: #vmProfilerFillInIntegral 
+		category: #vmProfiler 
+		default: false
+		balloonHelp: 'If enabled, the profiler will fill in the area under the integral.'.
+	self fixTabs
+]
+
 { #category : #'instance creation' }
 SqueakVMProfiler class >> open [
 	^self new openInWindow

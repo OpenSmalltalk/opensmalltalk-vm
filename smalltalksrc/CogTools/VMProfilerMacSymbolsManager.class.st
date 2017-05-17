@@ -39,17 +39,17 @@ VMProfilerMacSymbolsManager class >> initialize [
 
 { #category : #'shut down' }
 VMProfilerMacSymbolsManager class >> shutDown: quitting [
-	(quitting
+	"(quitting
 	 and: [Smalltalk platformName= 'Mac OS']) ifTrue:
 		[| tempDir |
 		 (tempDir := self tempDirectory) exists ifTrue:
-			[tempDir recursiveDelete]]
+			[tempDir recursiveDelete]]"
 ]
 
 { #category : #'as yet unclassified' }
 VMProfilerMacSymbolsManager class >> tempDirectory [
 
-	^ fileSystem nameFordirPath:'private/tmp/vmsyms'  plus:OSProcess thisOSProcess pid printString 
+	^ VMFileSystem nameFordirPath:'private/tmp/vmsyms'  plus:OSProcess thisOSProcess pid printString 
 
 ]
 
@@ -66,13 +66,13 @@ VMProfilerMacSymbolsManager >> computeLimitFor: module initialShift: initialShif
 	"If we can't find a non-text symbol following the last text symbol, compute the ernd of text using the size command."
 	| sizeFileName proc text size |
 	sizeFileName := module shortName, '.size'.
-	(fileSystem exists: tempDir, '/', sizeFileName) ifFalse: 
+	(VMFileSystem exists: tempDir fullName, '/', sizeFileName) ifFalse: 
 		["N.B. Don't use the -f option (which meant flat symbols) as in El Capitan it is misinterpreted to mean -format."
 		 proc := OSProcess thisOSProcess command:
 						'cd ', tempDir fullName,
 						';size -arch ', self archName, " -f" ' "', module name, '" >"', sizeFileName, '"'.
 		 [proc isComplete] whileFalse: [(Delay forMilliseconds: 25) wait]].
-	text := (StandardFileStream readOnlyFileNamed: (tempDir fullNameFor: sizeFileName)) contentsOfEntireFile.
+	text := (StandardFileStream readOnlyFileNamed: (tempDir fullName, '/', sizeFileName)) contentsOfEntireFile.
 	size := Integer readFrom: (text copyAfter: Character lf) readStream.
 	^size + initialShift
 ]
@@ -115,11 +115,11 @@ VMProfilerMacSymbolsManager >> initializeMost [
 	self fileSystem ensureExistenceOfDirectory:  tempDir. 
 	modules := (1 to: modules size by: 4) collect:
 					[:i| | shortName counter |
-					shortName := fileSystem nameOfFile: (modules at: i) in: tempDir. 
+					shortName := VMFileSystem nameOfFile: (modules at: i) in: tempDir. 
 					counter := 0.
 					[shortNames includes: shortName] whileTrue:
 						[counter := counter + 1.
-						shortName := (fileSystem nameOfFile: (modules at: i) in: tempDir), counter printString].  
+						shortName := (VMFileSystem nameOfFile: (modules at: i) in: tempDir), counter printString].  
 					shortNames add: shortName.
 					(modulesByName
 						at: (modules at: i)
@@ -166,7 +166,7 @@ VMProfilerMacSymbolsManager >> parseAsynchronously [
 { #category : #parsing }
 VMProfilerMacSymbolsManager >> parseSymbolsFor: module [
 	| proc symtab symStream |
-	(fileSystem exists: tempDir fullName, '/', module shortName) ifFalse: 
+	(VMFileSystem exists: tempDir fullName, '/', module shortName) ifFalse: 
 	"(tempDir fileExists: module shortName) ifFalse:"
 		["N.B. Don't use the -f option (which meant flat symbols) as in El Capitan it is misinterpreted to mean -format."
 		 proc := OSProcess thisOSProcess command:
@@ -174,8 +174,8 @@ VMProfilerMacSymbolsManager >> parseSymbolsFor: module [
 						';nm -n -arch ', self archName, " -f" ' "', module name, '" | grep -v " [aAU] " >"', module shortName, '"'].
 	symStream := (Array new: 1000) writeStream.
 	symStream nextPut: module.
-	proc ifNotNil:
-		[[proc isComplete] whileFalse: [(Delay forMilliseconds: 25) wait]].
+	proc ifNotNil:[(Delay forMilliseconds: 25) wait].
+		"[[proc isComplete] whileFalse: [(Delay forMilliseconds: 25) wait]]." "infinite loop"
 	symtab := [StandardFileStream readOnlyFileNamed: (tempDir fullName, '/', module shortName)]
 					on: Error
 					do: [:ex| "Handle flaky OSProcess stuff by reporting error and failing to parse"
