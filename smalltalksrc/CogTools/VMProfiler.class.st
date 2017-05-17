@@ -738,7 +738,7 @@ VMProfiler >> stopProfiling [
 	self computeCogCodeModule.
 	"self computeSortedSymbols." "makes the profiling crash"
 	self clearHistory.
-	"self updateButtons"
+	
 ]
 
 { #category : #primitives }
