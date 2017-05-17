@@ -49,7 +49,7 @@ VMProfilerLinuxSymbolsManager class >> shutDown: quitting [
 { #category : #'as yet unclassified' }
 VMProfilerLinuxSymbolsManager class >> tempDirectory [
 
-	^ fileSystem nameFordirPath:'/tmp/vmsyms'  plus:OSProcess thisOSProcess pid printString 
+	^ VMFileSystem nameFordirPath:'/tmp/vmsyms'  plus:OSProcess thisOSProcess pid printString 
 
 ]
 
@@ -88,11 +88,11 @@ VMProfilerLinuxSymbolsManager >> initializeMost [
 					fileName := modules at: i.
 					(fileName beginsWith: '/dgagent') ifTrue:
 						[fileName := fileName allButFirst: 8].
-					shortName := fileSystem nameOfFile: fileName in: tempDir.  
+					shortName := VMFileSystem nameOfFile: fileName in: tempDir.  
 					counter := 0.
 					[shortNames includes: shortName] whileTrue:
 						[counter := counter + 1.
-						 shortName := (fileSystem nameOfFile: fileName  in: tempDir), counter printString].
+						 shortName := (VMFileSystem nameOfFile: fileName  in: tempDir), counter printString].
 					shortNames add: shortName.
 					longName := (modules at: i + 1)
 									ifNil: [fileName]
@@ -100,9 +100,9 @@ VMProfilerLinuxSymbolsManager >> initializeMost [
 										[:symlink|
 										symlink first = $/
 											ifTrue: [symlink]
-											ifFalse: [( fileSystem parentPathOfFile: fileName ), '/', symlink]].
+											ifFalse: [( VMFileSystem parentPathOfFile: fileName ), '/', symlink]].
 					"some files are off limits (e.g. /dgagent/lib/preload.so)"
-					(fileSystem exists: longName) ifTrue:
+					(VMFileSystem exists: longName) ifTrue:
 						[(modulesByName
 							at: longName
 							put: VMPExecutableModuleSymbol new)
@@ -146,7 +146,7 @@ VMProfilerLinuxSymbolsManager >> parseAsynchronously [
 { #category : #parsing }
 VMProfilerLinuxSymbolsManager >> parseSymbolsFor: module [
 	| proc symtab symStream |
-	(fileSystem exists: tempDir fullName, '/', module shortName)  ifFalse:
+	(VMFileSystem exists: tempDir fullName, '/', module shortName)  ifFalse:
 		[proc := OSProcess thisOSProcess command:
 						'objdump -j .text -tT "', module name, '" | fgrep .text | sort >"', tempDir fullName, '/', module shortName, '"'].
 	symStream := (Array new: 1000) writeStream.
