@@ -1560,10 +1560,14 @@ invalidCompactClassError(char *s) { /* Print a (compact) class index error messa
 
 /*
  * Define sigsetjmp and siglongjmp to be the most minimal setjmp/longjmp available on the platform.
+ * Note: on windows 64 via mingw-w64, the 2nd argument NULL to _setjmp prevents stack unwinding
  */
 #undef sigsetjmp
 #undef siglongjmp
-#if _WIN32
+#if _WIN64
+# define sigsetjmp(jb,ssmf) _setjmp(jb,NULL)
+# define siglongjmp(jb,v) longjmp(jb,v)
+#elif _WIN32
 # define sigsetjmp(jb,ssmf) setjmp(jb)
 # define siglongjmp(jb,v) longjmp(jb,v)
 #else
