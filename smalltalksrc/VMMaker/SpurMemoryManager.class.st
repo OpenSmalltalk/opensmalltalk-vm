@@ -8964,6 +8964,7 @@ SpurMemoryManager >> objectsReachableFromRoots: arrayOfRoots [
 	 Thanks to Igor Stasenko for this idea."
 
 	| freeChunk ptr start limit count oop objOop |
+	<inline: #never>
 	self assert: (self isArray: arrayOfRoots).
 	"Mark all objects except those only reachable from the arrayOfRoots by marking
 	 each object in arrayOfRoots and then marking all reachable objects (from the
@@ -11295,7 +11296,7 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArrayArg outPointers: out
 
 	self runLeakCheckerFor: GCModeImageSegment.
 
-	"First scavenge to coillect any new space garbage that refers to the graph."
+	"First scavenge to collect any new space garbage that refers to the graph."
 	self scavengingGC.
 	segmentWordArray := self updatePostScavenge: segmentWordArrayArg.
 	outPointerArray := self updatePostScavenge: outPointerArrayArg.
