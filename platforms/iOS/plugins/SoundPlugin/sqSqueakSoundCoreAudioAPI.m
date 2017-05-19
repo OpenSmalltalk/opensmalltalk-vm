@@ -40,50 +40,112 @@ such third-party acknowledgments.
 
 extern sqSqueakAppDelegate *gDelegateApp;
 
-sqInt soundInit(void){
-	return [gDelegateApp.squeakApplication.soundInterfaceLogic soundInit];
-}
+sqInt
+soundInit(void)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic soundInit]; }
 
-sqInt soundShutdown(void){
-	return [gDelegateApp.squeakApplication.soundInterfaceLogic soundShutdown];
-}
+sqInt
+soundShutdown(void)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic soundShutdown]; }
 
 /* sound output */
-sqInt snd_AvailableSpace(void){
-	return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_AvailableSpace];
-}
-sqInt snd_InsertSamplesFromLeadTime(sqInt frameCount, void * srcBufPtr, sqInt samplesOfLeadTime){
-	return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_InsertSamplesFromLeadTime: frameCount srcBufPtr: (char *)srcBufPtr samplesOfLeadTime: samplesOfLeadTime];
-}
-sqInt snd_PlaySamplesFromAtLength(sqInt frameCount, void * arrayIndex, sqInt startIndex){
-	return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_PlaySamplesFromAtLength: frameCount arrayIndex: (char*) arrayIndex startIndex: (usqInt) startIndex];
-}
-sqInt snd_PlaySilence(void){
-	return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_PlaySilence];
-}
-sqInt snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex){
-	return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_Start: frameCount samplesPerSec: samplesPerSec stereo: stereo semaIndex: semaIndex];
-}
-sqInt snd_Stop(void){
-	return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_Stop];
-}
+sqInt
+snd_AvailableSpace(void)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_AvailableSpace]; }
+
+sqInt
+snd_InsertSamplesFromLeadTime(sqInt frameCount, void * srcBufPtr, sqInt samplesOfLeadTime)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_InsertSamplesFromLeadTime: frameCount srcBufPtr: (char *)srcBufPtr samplesOfLeadTime: samplesOfLeadTime]; }
+
+sqInt
+snd_PlaySamplesFromAtLength(sqInt frameCount, void * arrayIndex, sqInt startIndex)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_PlaySamplesFromAtLength: frameCount arrayIndex: (char*) arrayIndex startIndex: (usqInt) startIndex]; }
+
+sqInt
+snd_PlaySilence(void)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_PlaySilence]; }
+
+sqInt
+snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_Start: frameCount samplesPerSec: samplesPerSec stereo: stereo semaIndex: semaIndex]; }
+
+sqInt
+snd_Stop(void)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_Stop]; }
 
 /* sound input */
-void snd_SetRecordLevel(sqInt level){}
+void
+snd_SetRecordLevel(sqInt level){}
 
-sqInt snd_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex){
-	return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_StartRecording:desiredSamplesPerSec stereo: stereo semaIndex: semaIndex ];
-}
-sqInt snd_StopRecording(void){
-	return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_StopRecording];
-}
-double snd_GetRecordingSampleRate(void){
-	return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_GetRecordingSampleRate];
-}
-sqInt snd_RecordSamplesIntoAtLength(void * buf, sqInt startSliceIndex, sqInt bufferSizeInBytes){
-	return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_RecordSamplesIntoAtLength:(char *) buf startSliceIndex: (usqInt) startSliceIndex bufferSizeInBytes: (usqInt) bufferSizeInBytes];
-}
+sqInt
+snd_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_StartRecording:desiredSamplesPerSec stereo: stereo semaIndex: semaIndex ]; }
+
+sqInt
+snd_StopRecording(void)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_StopRecording]; }
+
+double
+snd_GetRecordingSampleRate(void)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_GetRecordingSampleRate]; }
+
+sqInt
+snd_RecordSamplesIntoAtLength(void * buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_RecordSamplesIntoAtLength:(char *) buf startSliceIndex: (usqInt) startSliceIndex bufferSizeInBytes: (usqInt) bufferSizeInBytes]; }
+
+void
+snd_Volume(double *left, double *right) {} 
+
+void
+snd_SetVolume(double left, double right) {}
+
+/* Terf SqSoundVersion 1.2 improvements */
+sqInt
+snd_SetRecordBufferFrameCount(sqInt frameCount)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_SetRecordBufferFrameCount: frameCount]; }
+
+int
+snd_GetRecordLevel(void)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_GetRecordLevel]; }
+
+sqInt
+getNumberOfSoundPlayerDevices(void)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic getNumberOfSoundPlayerDevices]; }
+
+sqInt
+getNumberOfSoundRecorderDevices(void)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic getNumberOfSoundRecorderDevices]; }
+
+char *
+getDefaultSoundPlayer(void)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic getDefaultSoundPlayer]; }
+
+char *
+getDefaultSoundRecorder(void)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic getDefaultSoundRecorder]; }
+
+char *
+getSoundPlayerDeviceName(sqInt i)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic getSoundPlayerDeviceName: i]; }
+
+char *
+getSoundRecorderDeviceName(sqInt i)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic getSoundRecorderDeviceName: i]; }
+
+void
+setDefaultSoundPlayer(char *deviceName)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic setDefaultSoundPlayer: deviceName]; }
+
+void
+setDefaultSoundRecorder(char *deviceName)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic setDefaultSoundRecorder: deviceName]; }
 
 
-void snd_Volume(double *left, double *right){} 
-void snd_SetVolume(double left, double right){}
+/* Terf SqSoundVersion 1.3 improvements */
+sqInt
+snd_SupportsAEC(void)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_SupportsAEC]; }
+
+sqInt
+snd_EnableAEC(sqInt flag)
+{ return [gDelegateApp.squeakApplication.soundInterfaceLogic snd_EnableAEC: flag]; }

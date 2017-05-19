@@ -26,3 +26,18 @@ sqInt snd_GetSwitch(sqInt identifier, sqInt captureFlag, sqInt channel);
 sqInt snd_SetSwitch(sqInt identifier, sqInt captureFlag, sqInt parameter);
 sqInt snd_SetDevice(sqInt identifier, char *name);
 
+/* Terf SqSoundVersion 1.2 improvements */
+sqInt snd_SetRecordBufferFrameCount(sqInt frameCount);
+int   snd_GetRecordLevel(void); /* Result in the range 0-1000 */
+sqInt getNumberOfSoundPlayerDevices(void);
+sqInt getNumberOfSoundRecorderDevices(void);
+char *getDefaultSoundPlayer(void);
+char *getDefaultSoundRecorder(void);
+char *getSoundPlayerDeviceName(sqInt i);
+char *getSoundRecorderDeviceName(sqInt i);
+void setDefaultSoundPlayer(char *deviceName);
+void setDefaultSoundRecorder(char *deviceName);
+
+/* Terf SqSoundVersion 1.3 improvements */
+sqInt snd_SupportsAEC(void);
+sqInt snd_EnableAEC(sqInt flag);
