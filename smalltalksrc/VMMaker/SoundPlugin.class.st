@@ -32,6 +32,249 @@ SoundPlugin >> initialiseModule [
 ]
 
 { #category : #primitives }
+SoundPlugin >> primitiveGetDefaultSoundPlayer [
+	"Answer a String with the operating system name of the default output device, or nil"
+	"no arguments"
+	| cDeviceName sz newString newStringPtr |
+	<export: true>
+	<var: #cDeviceName type: 'char*'>
+	<var: #newStringPtr type: 'char*'>
+
+	"Parse arguments"
+	interpreterProxy methodArgumentCount = 0 
+		ifFalse:[^interpreterProxy primitiveFail].
+	
+	"Get the answer."
+	cDeviceName := self cCode: 'getDefaultSoundPlayer()'.
+	cDeviceName == 0 ifTrue: [
+		^interpreterProxy pop: 1 thenPush: interpreterProxy nilObject
+		].
+
+	"Copy the answer to a Squeak String."
+	sz :=  self cCode: 'strlen(cDeviceName)'.
+	newString := interpreterProxy 
+								instantiateClass: interpreterProxy classString
+								indexableSize: sz.
+	newStringPtr := interpreterProxy firstIndexableField: newString.
+	self cCode: 'strncpy(newStringPtr, cDeviceName, sz)'.
+
+	self touch: newStringPtr.
+	self touch: cDeviceName.
+	"Pop the receiver, and answer the new string."
+	^interpreterProxy pop: 1 thenPush: newString
+]
+
+{ #category : #primitives }
+SoundPlugin >> primitiveGetDefaultSoundRecorder [
+	"Answer a String with the operating system name of the default input device, or nil"
+	"no arguments"
+	| cDeviceName sz newString newStringPtr |
+	<export: true>
+	<var: #cDeviceName type: 'char*'>
+	<var: #newStringPtr type: 'char*'>
+
+	"Parse arguments"
+	interpreterProxy methodArgumentCount = 0 
+		ifFalse:[^interpreterProxy primitiveFail].
+
+	"Get the answer."
+	cDeviceName := self cCode: 'getDefaultSoundRecorder()'.
+	cDeviceName == 0 ifTrue: [
+		^interpreterProxy pop: 1 thenPush: interpreterProxy nilObject
+		].
+
+	"Copy the answer to a Squeak String."
+	sz :=  self cCode: 'strlen(cDeviceName)'.
+	newString := interpreterProxy 
+								instantiateClass: interpreterProxy classString
+								indexableSize: sz.
+	newStringPtr := interpreterProxy firstIndexableField: newString.
+	self cCode: 'strncpy(newStringPtr, cDeviceName, sz)'.
+
+	self touch: newStringPtr.
+	self touch: cDeviceName.
+	"Pop the receiver, and answer the new string."
+	^interpreterProxy pop: 1 thenPush: newString
+]
+
+{ #category : #primitives }
+SoundPlugin >> primitiveGetNumberOfSoundPlayerDevices [
+	"arguments: name(type, stack offset)
+		dialString(String, 0)"
+	"answers an Integer"
+	| result |
+	<export: true>
+
+	"Parse arguments"
+	interpreterProxy methodArgumentCount = 0 
+		ifFalse:[^interpreterProxy primitiveFail].
+	
+	"get result"
+	result := self cCode: 'getNumberOfSoundPlayerDevices()'.
+
+	"answer it"
+	result := interpreterProxy signed32BitIntegerFor: result.
+	^interpreterProxy pop: 1 thenPush: result. "pop receiver, return result"
+]
+
+{ #category : #primitives }
+SoundPlugin >> primitiveGetNumberOfSoundRecorderDevices [
+	"arguments: name(type, stack offset)
+		dialString(String, 0)"
+	"answers an Integer"
+	| result |
+	<export: true>
+
+	"Parse arguments"
+	interpreterProxy methodArgumentCount = 0 
+		ifFalse:[^interpreterProxy primitiveFail].
+	
+	"get result"
+	result := self cCode: 'getNumberOfSoundRecorderDevices()'.
+
+	"answer it"
+	result := interpreterProxy signed32BitIntegerFor: result.
+	^interpreterProxy pop: 1 thenPush: result. "pop receiver, return result"
+]
+
+{ #category : #primitives }
+SoundPlugin >> primitiveGetSoundPlayerDeviceName [
+	"arguments: name(type, stack offset)
+		deviceNumber(Integer, 0)"
+	"answers a string or nil"
+	| deviceNumber sz cDeviceName newString newStringPtr |
+	<export: true>
+	<var: #cDeviceName type: 'char*'>
+	<var: #newStringPtr type: 'char*'>
+
+	"Parse arguments" 
+	interpreterProxy methodArgumentCount = 1 
+		ifFalse:[^interpreterProxy primitiveFail].
+
+	deviceNumber := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
+	interpreterProxy failed ifTrue: [^nil].
+	
+	"Get the answer."
+	cDeviceName := self cCode: 'getSoundPlayerDeviceName(deviceNumber - 1)'.
+	cDeviceName == 0 ifTrue: [
+		^interpreterProxy pop: 2 thenPush: interpreterProxy nilObject
+		].
+
+	"Copy the answer to a Squeak String."
+	sz :=  self cCode: 'strlen(cDeviceName)'.
+	newString := interpreterProxy 
+								instantiateClass: interpreterProxy classString
+								indexableSize: sz.
+	newStringPtr := interpreterProxy firstIndexableField: newString.
+	self cCode: 'strncpy(newStringPtr, cDeviceName, sz)'.
+
+	self touch: deviceNumber.
+	self touch: newStringPtr.
+	self touch: cDeviceName.
+	"Pop the receiver and arg, and answer the new string."
+	^interpreterProxy pop: 2 thenPush: newString
+]
+
+{ #category : #primitives }
+SoundPlugin >> primitiveGetSoundRecorderDeviceName [
+	"arguments: name(type, stack offset)
+		deviceNumber(Integer, 0)"
+	"answers a string or nil"
+	| deviceNumber sz cDeviceName newString newStringPtr |
+	<export: true>
+	<var: #cDeviceName type: 'char*'>
+	<var: #newStringPtr type: 'char*'>
+
+	"Parse arguments" 
+	interpreterProxy methodArgumentCount = 1 
+		ifFalse:[^interpreterProxy primitiveFail].
+
+
+	deviceNumber := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
+	interpreterProxy failed ifTrue: [^nil].
+	
+	"Get the answer."
+	cDeviceName := self cCode: 'getSoundRecorderDeviceName(deviceNumber - 1)'.
+	cDeviceName == 0 ifTrue: [
+		^interpreterProxy pop: 2 thenPush: interpreterProxy nilObject
+		].
+
+	"Copy the answer to a Squeak String."
+	sz :=  self cCode: 'strlen(cDeviceName)'.
+	newString := interpreterProxy 
+								instantiateClass: interpreterProxy classString
+								indexableSize: sz.
+	newStringPtr := interpreterProxy firstIndexableField: newString.
+	self cCode: 'strncpy(newStringPtr, cDeviceName, sz)'.
+
+	self touch: deviceNumber.
+	self touch: newStringPtr.
+	self touch: cDeviceName.
+	"Pop the receiver and arg, and answer the new string."
+	^interpreterProxy pop: 2 thenPush: newString
+]
+
+{ #category : #primitives }
+SoundPlugin >> primitiveSetDefaultSoundPlayer [
+	"Tell the operating system to use the specified device name as the output device for sound."
+	"arg at top of stack is the String"
+	| deviceName obj srcPtr sz |
+	<export: true>
+	<var: 'deviceName' declareC: 'char deviceName[257]'>
+	<var: 'srcPtr' type: #'char *'>
+
+	"Parse arguments"
+	interpreterProxy methodArgumentCount = 1 ifFalse:
+		[^interpreterProxy primitiveFail].
+	obj := interpreterProxy stackValue: 0.
+	(interpreterProxy isBytes: obj) ifFalse:
+		[^interpreterProxy primitiveFail].
+	(sz := interpreterProxy byteSizeOf: obj) <= 256 ifFalse:
+		[^interpreterProxy primitiveFail].
+	srcPtr := interpreterProxy firstIndexableField: obj.
+	self touch: srcPtr.
+	self touch: deviceName.
+	self touch: sz.
+	self cCode: 'strncpy(deviceName, srcPtr, sz)'.
+	self cCode: 'deviceName[sz] = NULL'.
+	
+	"do the work"
+	self cCode: 'setDefaultSoundPlayer(deviceName)'.
+	self success ifTrue: "pop arg, leave receiver"
+		[interpreterProxy pop: 1]
+]
+
+{ #category : #primitives }
+SoundPlugin >> primitiveSetDefaultSoundRecorder [
+	"Tell the operating system to use the specified device name as the input device for sound."
+	"arg at top of stack is the String"
+	| deviceName obj srcPtr sz |
+	<export: true>
+	<var: 'deviceName' declareC: 'char deviceName[257]'>
+	<var: 'srcPtr' type: #'char *'>
+
+	"Parse arguments"
+	interpreterProxy methodArgumentCount = 1 ifFalse:
+		[^interpreterProxy primitiveFail].
+	obj := interpreterProxy stackValue: 0.
+	(interpreterProxy isBytes: obj) ifFalse:
+		[^interpreterProxy primitiveFail].
+	(sz := interpreterProxy byteSizeOf: obj) <= 256 ifFalse:
+		[^interpreterProxy primitiveFail].
+	srcPtr := interpreterProxy firstIndexableField: obj.
+	self touch: srcPtr.
+	self touch: deviceName.
+	self touch: sz.
+	self cCode: 'strncpy(deviceName, srcPtr, sz)'.
+	self cCode: 'deviceName[sz] = NULL'.
+	
+	"do the work"
+	self cCode: 'setDefaultSoundRecorder(deviceName)'.
+	self success ifTrue: "pop arg, leave receiver"
+		[interpreterProxy pop: 1]
+]
+
+{ #category : #primitives }
 SoundPlugin >> primitiveSoundAvailableSpace [
 	"Returns the number of bytes of available sound output buffer space.  This should be (frames*4) if the device is in stereo mode, or (frames*2) otherwise"
 
@@ -40,6 +283,28 @@ SoundPlugin >> primitiveSoundAvailableSpace [
 	frames := self cCode: 'snd_AvailableSpace()'.  "-1 if sound output not started"
 	interpreterProxy success: frames >= 0.
 	^frames asPositiveIntegerObj
+]
+
+{ #category : #primitives }
+SoundPlugin >> primitiveSoundEnableAEC: trueOrFalse [ 
+	"Enable or disable acoustic echo-cancellation (AEC).  trueOrFalse should be 0 for false, and 1 for true."
+	| result |
+	self primitive: 'primitiveSoundEnableAEC' parameters: #(SmallInteger ).
+	interpreterProxy failed ifFalse: [
+		result := self cCode: 'snd_EnableAEC(trueOrFalse)'.
+		result == 0 ifFalse: [interpreterProxy primitiveFailFor: result].
+	].
+]
+
+{ #category : #primitives }
+SoundPlugin >> primitiveSoundGetRecordLevel [
+	"Get the sound input recording level  in the range 0-1000."
+	| level |
+	<var: 'level' type: #int>
+	self primitive: 'primitiveSoundGetRecordLevel'.
+	level := self cCode: 'snd_GetRecordLevel()'.
+	^level asPositiveIntegerObj
+
 ]
 
 { #category : #primitives }
@@ -55,7 +320,7 @@ SoundPlugin >> primitiveSoundGetRecordingSampleRate [
 
 { #category : #primitives }
 SoundPlugin >> primitiveSoundGetVolume [
-	"Set the sound input recording level."
+	"Get the sound input recording level."
 	| left right results |
 	<var: #left type: #double>
 	<var: #right type: #double>
@@ -66,11 +331,10 @@ SoundPlugin >> primitiveSoundGetVolume [
 	self cCode: 'snd_Volume((double *) &left,(double *) &right)'.
 	interpreterProxy pushRemappableOop: (right asOop: Float).
 	interpreterProxy pushRemappableOop: (left asOop: Float).
-	interpreterProxy pushRemappableOop: (interpreterProxy instantiateClass: (interpreterProxy classArray) indexableSize: 2).
-	results := interpreterProxy popRemappableOop.
+	results := interpreterProxy instantiateClass: (interpreterProxy classArray) indexableSize: 2.
 	interpreterProxy storePointer: 0 ofObject: results withValue: interpreterProxy popRemappableOop.
 	interpreterProxy storePointer: 1 ofObject: results withValue: interpreterProxy popRemappableOop.
-	^ results
+	^results
 ]
 
 { #category : #primitives }
@@ -201,6 +465,18 @@ SoundPlugin >> primitiveSoundStopRecording [
 
 	self primitive: 'primitiveSoundStopRecording'.
 	self cCode: 'snd_StopRecording()'.  "leave rcvr on stack"
+]
+
+{ #category : #primitives }
+SoundPlugin >> primitiveSoundSupportsAEC [
+	"Answer true if the OS/hardware supports echo-cancellation, and false otherwise."
+	| result |
+	self primitive: 'primitiveSoundSupportsAEC'.
+	interpreterProxy failed ifFalse: [
+		result := self cCode: 'snd_SupportsAEC()'.
+		result == 0 ifTrue: [^interpreterProxy falseObject] ifFalse: [^interpreterProxy trueObject]
+	].
+
 ]
 
 { #category : #'initialize-release' }
