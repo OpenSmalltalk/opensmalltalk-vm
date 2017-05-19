@@ -1686,10 +1686,10 @@ Cogit >> CallFullRT: callTarget registersToBeSavedMask: registersToBeSaved [
 	backEnd canPushPopMultipleRegisters
 		ifTrue: [^backEnd genPopRegisterMask: callerSavedRegsToBeSaved]
 		ifFalse:
-			[[reg >= 0] whileTrue:
-				[(callerSavedRegsToBeSaved anyMask: 1 << reg) ifTrue:
-					[lastInst := self PopR: reg].
-				 reg := reg - 1].
+			[[reg > 0] whileTrue:
+				[reg := reg - 1.
+				(callerSavedRegsToBeSaved anyMask: 1 << reg) ifTrue:
+					[lastInst := self PopR: reg]].
 
 			 ^lastInst]
 ]
@@ -1739,10 +1739,10 @@ Cogit >> CallRT: callTarget registersToBeSavedMask: registersToBeSaved [
 	backEnd canPushPopMultipleRegisters
 		ifTrue: [^backEnd genPopRegisterMask: callerSavedRegsToBeSaved]
 		ifFalse:
-			[[reg >= 0] whileTrue:
-				[(callerSavedRegsToBeSaved anyMask: 1 << reg) ifTrue:
-					[lastInst := self PopR: reg].
-				 reg := reg - 1].
+			[[reg > 0] whileTrue:
+				[reg := reg - 1.
+				(callerSavedRegsToBeSaved anyMask: 1 << reg) ifTrue:
+					[lastInst := self PopR: reg]].
 
 			 ^lastInst]
 ]
