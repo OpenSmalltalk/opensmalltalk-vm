@@ -240,7 +240,7 @@ SoundPlugin >> primitiveSetDefaultSoundPlayer [
 	
 	"do the work"
 	self cCode: 'setDefaultSoundPlayer(deviceName)'.
-	self success ifTrue: "pop arg, leave receiver"
+	interpreterProxy failed ifFalse: "pop arg, leave receiver"
 		[interpreterProxy pop: 1]
 ]
 
@@ -270,7 +270,7 @@ SoundPlugin >> primitiveSetDefaultSoundRecorder [
 	
 	"do the work"
 	self cCode: 'setDefaultSoundRecorder(deviceName)'.
-	self success ifTrue: "pop arg, leave receiver"
+	interpreterProxy failed ifFalse: "pop arg, leave receiver"
 		[interpreterProxy pop: 1]
 ]
 
