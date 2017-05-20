@@ -46,8 +46,8 @@ extern struct VirtualMachine* interpreterProxy;
 
 void
 MyAudioQueueOutputCallback (sqSqueakSoundCoreAudio *myInstance,
-							 AudioQueueRef        inAQ,
-							 AudioQueueBufferRef  inBuffer) {
+							AudioQueueRef           inAQ,
+							AudioQueueBufferRef     inBuffer) {
 
 	soundAtom	*atom = [myInstance.soundOutQueue returnOldest];
 
@@ -92,11 +92,11 @@ MyAudioQueuePropertyListener (void *              inUserData,
 }
 
 void
-MyAudioQueueInputCallback ( void                                *inUserData,
-							AudioQueueRef                       inAQ,
-							AudioQueueBufferRef                 inBuffer,
-							const AudioTimeStamp                *inStartTime,
-							UInt32                              inNumberPacketDescriptions,
+MyAudioQueueInputCallback ( void                  *inUserData,
+							AudioQueueRef          inAQ,
+							AudioQueueBufferRef    inBuffer,
+							const AudioTimeStamp  *inStartTime,
+							UInt32                 inNumberPacketDescriptions,
 							const AudioStreamPacketDescription  *inPacketDescs) {
 
 	sqSqueakSoundCoreAudio * myInstance = (__bridge  sqSqueakSoundCoreAudio *)inUserData;
@@ -143,7 +143,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	return self;
 }
 
-- (void)dealloc {
+- (void) dealloc {
 	if (data) free(data);
 	data = 0;
 	byteCount = 0;
@@ -204,8 +204,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 
 - (sqInt)	snd_Start: (sqInt) frameCount samplesPerSec: (sqInt) samplesPerSec stereo: (sqInt) stereo semaIndex: (sqInt) semaIndex {
 	//NSLog(@"%i sound start playing frame count %i samples %i",ioMSecs(),frameCount,samplesPerSec);
-	OSStatus result;
-	int nChannels= 1 + (int)stereo;
+	int nChannels = 1 + (int)stereo;
 
 	if (frameCount <= 0 || samplesPerSec <= 0 || stereo < 0 || stereo > 1) 
 		return 0; /* Causes primitive failure in primitiveSoundStart[WithSemaphore] */
@@ -224,36 +223,34 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	check.mBitsPerChannel   = 16;
 
 	/* we want to create a new audio queue only if we have to */
-	if (self.outputAudioQueue == nil
-	 || memcmp(&check,self.outputFormat,sizeof(AudioStreamBasicDescription)) != 0) {	
-		AudioQueueRef newQueue;
-		//NSLog(@"%i create new audioqueue",ioMSecs());
-		if (self.outputAudioQueue) 
-			[self snd_StopAndDispose];
-		*self.outputFormat = check;
-		result =  AudioQueueNewOutput (self.outputFormat, (void*) &MyAudioQueueOutputCallback,
-								   (__bridge void*) self,
-								   NULL,
-								   NULL,
-								   0,
-								   &newQueue);
-
-		if (result) 
-			return 0; /* Causes primitive failure in primitiveSoundStart[WithSemaphore] */
-		self.outputAudioQueue = newQueue;
-
-		AudioQueueAddPropertyListener (self.outputAudioQueue, kAudioQueueProperty_IsRunning, MyAudioQueuePropertyListener, (__bridge void *)(self));
-
-		self.bufferSizeForOutput = (unsigned) (SqueakFrameSize * nChannels * frameCount * 2);
-		int i;
-		for (i = 0; i < kNumberOfBuffers; ++i) {
-			result = AudioQueueAllocateBuffer(self.outputAudioQueue, self.bufferSizeForOutput/16, &self.outputBuffers[i]);
-			if (result) 
-				return 0; /* Causes primitive failure in primitiveSoundStart[WithSemaphore] */
-		}
-	} else {
+	if (self.outputAudioQueue != nil
+	 && !memcmp(&check,self.outputFormat,sizeof(AudioStreamBasicDescription))) {
 		//NSLog(@"%i reuse audioqueue",ioMSecs());
+		return 1;
 	}
+	//NSLog(@"%i create new audioqueue",ioMSecs());
+	AudioQueueRef newQueue;
+	if (self.outputAudioQueue) 
+		[self snd_StopAndDispose];
+	*self.outputFormat = check;
+	if (AudioQueueNewOutput(self.outputFormat,
+							(AudioQueueOutputCallback)&MyAudioQueueOutputCallback,
+							(__bridge void*)self, NULL, NULL, 0, &newQueue))
+
+		return 0; /* Causes primitive failure in primitiveSoundStart[WithSemaphore] */
+	self.outputAudioQueue = newQueue;
+
+	AudioQueueAddPropertyListener(self.outputAudioQueue,
+								  kAudioQueueProperty_IsRunning,
+								  MyAudioQueuePropertyListener,
+								  (__bridge void *)self);
+
+	self.bufferSizeForOutput = (unsigned) (SqueakFrameSize * nChannels * frameCount * 2);
+	for (int i = 0; i < kNumberOfBuffers; ++i)
+		if (AudioQueueAllocateBuffer(self.outputAudioQueue,
+									 self.bufferSizeForOutput/16,
+									 &self.outputBuffers[i]))
+			return 0; /* Causes primitive failure in primitiveSoundStart[WithSemaphore] */
 
 	return 1;
 }
@@ -294,7 +291,7 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 }
 
 - (sqInt)	snd_PlaySilence {
-	return -1; /* Causes primtiive failure in primitiveSoundPlaySilence */
+	return -1; /* Causes primitive failure in primitiveSoundPlaySilence */
 
 }
 
@@ -316,10 +313,8 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	[self.soundOutQueue addItem: atom];
 
 	if (!self.outputIsRunning) {
-		int i;
-		for (i = 0; i < kNumberOfBuffers; ++i) {
-			MyAudioQueueOutputCallback (self,self.outputAudioQueue,self.outputBuffers[i]);
-		}
+		for (int i = 0; i < kNumberOfBuffers; ++i)
+			MyAudioQueueOutputCallback(self,self.outputAudioQueue,self.outputBuffers[i]);
 		UInt32 outNumberOfFramesPrepared;
 		AudioQueuePrime(self.outputAudioQueue,0,&outNumberOfFramesPrepared);
 		result = AudioQueueStart (self.outputAudioQueue,NULL);
@@ -359,33 +354,25 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 	self.inputFormat->mBitsPerChannel   = 16;
 
 	self.bufferSizeForInput = (unsigned) (SqueakFrameSize * self.inputChannels * frameCount * 2/4);   
-	//Currently squeak does this thing where it stops yet leaves data in queue, this causes us to lose dota if the buffer is too big
+	//Currently squeak does this thing where it stops yet leaves data in queue, this causes us to loose data if the buffer is too big
 
 	AudioQueueRef newQueue;
 
-	OSStatus result =  AudioQueueNewInput (self.inputFormat, &MyAudioQueueInputCallback,
-								   (__bridge void*) self,
-								   NULL,
-								   NULL,
-								   0,
-								   &newQueue);
-
-	if (result) 
+	if (AudioQueueNewInput(self.inputFormat, &MyAudioQueueInputCallback,
+						   (__bridge void*)self, NULL, NULL, 0, &newQueue))
 		return interpreterProxy->primitiveFail();
 
 	self.inputAudioQueue = newQueue;
 
-	int i;
-	for (i = 0; i < kNumberOfBuffers; ++i) {
+	for (int i = 0; i < kNumberOfBuffers; ++i) {
 		if (AudioQueueAllocateBuffer(self.inputAudioQueue, self.bufferSizeForInput, &self.inputBuffers[i])
 		 || AudioQueueEnqueueBuffer(self.inputAudioQueue,self.inputBuffers[i],0,NULL))
 			return interpreterProxy->primitiveFail();
 	}
 	inputIsRunning = 1;
-	result = AudioQueueStart (self.inputAudioQueue,NULL);
-	if (result) 
-		return interpreterProxy->primitiveFail();	
-	return 1;
+	return AudioQueueStart(self.inputAudioQueue,NULL)
+			? interpreterProxy->primitiveFail()
+			: 1;
 }
 
 - (sqInt)	snd_StopRecording {
@@ -452,13 +439,13 @@ MyAudioDevicesListener(	AudioObjectID inObjectID,
 
 /* Apple supports a default input device and both a default and a system
  * output device.  [More logical would be to have both default and system input
- * and output devices, no?).  This routine answers the default input device
+ * and output devices, no?].  This routine answers the default input device
  * and either the default or the system output device, depending on the define.
  *
  * In our experiments the system output device doesn't seem to be meaningful.
  * When we plugged in a headphone set but selected Display Audio for both input
  * and output, the headset remained identified as the System output define.
- * Go figure.  So we default to identifuying the default output device.
+ * Go figure.  So we default to identifying the default output device.
  */
 #if !defined(DeriveDefaultFromSystemOutput)
 # define DeriveDefaultFromSystemOutput 0
@@ -491,8 +478,6 @@ getDefaultDevice(int which)
 AudioDeviceID
 setDefaultDevice(AudioDeviceID deviceID, int which)
 {
-	UInt32	size = sizeof(deviceID);
-
 	AudioObjectPropertyAddress
 		setDefault = {	which == IsInput
 							? kAudioHardwarePropertyDefaultInputDevice
@@ -501,7 +486,7 @@ setDefaultDevice(AudioDeviceID deviceID, int which)
 						kAudioObjectPropertyElementMaster };
 	return
 		AudioObjectSetPropertyData(kAudioObjectSystemObject, &setDefault,
-									0, nil, size, &deviceID)
+									0, nil, sizeof(deviceID), &deviceID)
 		? (AudioDeviceID)-1
 		: deviceID;
 }
@@ -565,10 +550,7 @@ getVolumeOf(AudioDeviceID deviceID, char which)
 			return volume1;
 	}
 
-	if (!err)
-		return volume0;
-
-	return -1.0f;
+	return err ? -1.0f : volume0;
 }
 
 
@@ -577,9 +559,9 @@ getVolumeOf(AudioDeviceID deviceID, char which)
 // See http://stackoverflow.com/questions/11041335/how-do-you-set-the-input-level-gain-on-the-built-in-input-osx-core-audio-au
 
 // SoundPlugin expects a result in the range 0-1000.
-// getVolumeOf answers -1 for devices that don't have a volume.
+// getVolumeOf answers 0..1 for devices with a volume & -1 for those without.
 // So fail the primitive for both no default input device and for a device that
-// has no input.
+// has no input volume.
 - (int)	snd_GetRecordLevel {
 	AudioDeviceID	deviceID = defaultInputDevice();
 	Float32			volume;
@@ -768,8 +750,6 @@ getVolumeOf(AudioDeviceID deviceID, char which)
 				interpreterProxy->primitiveFail();
 			return;
 		}
-
-	return;
 }
 
 - (void) setDefaultSoundRecorder: (char *) deviceName {
@@ -782,8 +762,6 @@ getVolumeOf(AudioDeviceID deviceID, char which)
 				interpreterProxy->primitiveFail();
 			return;
 		}
-
-	return;
 }
 
 // For now simply don't attempt AEC. The web discussion is spotty and confusing.
