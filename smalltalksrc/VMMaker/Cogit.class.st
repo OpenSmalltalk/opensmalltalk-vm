@@ -265,7 +265,8 @@ Class {
 		'ceFFICalloutTrampoline',
 		'debugBytecodePointers',
 		'debugOpcodeIndices',
-		'disassemblingMethod'
+		'disassemblingMethod',
+		'cogConstituentIndex'
 	],
 	#classVars : [
 		'AltBlockCreationBytecodeSize',
@@ -4425,7 +4426,7 @@ Cogit >> cogCodeBase [
 ]
 
 { #category : #'profiling primitives' }
-Cogit >> cogCodeConstituents [
+Cogit >> cogCodeConstituents: withDetails [
 	"Answer the contents of the code zone as an array of pair-wise element, address in ascending address order.
 	 Answer a string for a runtime routine or abstract label (beginning, end, etc), a CompiledMethod for a CMMethod,
 	 or a selector (presumably a Symbol) for a PIC."
@@ -4467,13 +4468,14 @@ Cogit >> cogCodeConstituents [
 				withValue: (cogMethod cmType = CMMethod
 								ifTrue: [cogMethod methodObject]
 								ifFalse: [cogMethod selector]).
-			 (value := self positiveMachineIntegerFor: cogMethod asUnsignedInteger) ifNil:
-				[coInterpreter popRemappableOop.
-				 ^nil].
-			 coInterpreter
-				storePointerUnchecked: count + 1
-				ofObject: coInterpreter topRemappableOop
-				withValue: value.
+			value := withDetails
+				ifFalse: [self positiveMachineIntegerFor: cogMethod asUnsignedInteger]
+				ifTrue: [self collectCogMethodConstituent: cogMethod].
+			value ifNil: [coInterpreter popRemappableOop. ^nil].
+			coInterpreter
+						storePointerUnchecked: count + 1
+						ofObject: coInterpreter topRemappableOop
+						withValue: value.
 			 count := count + 2].
 		cogMethod := methodZone methodAfter: cogMethod].
 	((label := objectMemory stringForCString: 'CCFree') isNil
@@ -4820,6 +4822,66 @@ Cogit >> cogitPostGCAction: gcMode [
 	"The youngReferrers should be correct after a GC since that is the point at which it is
 	 pruned.  But at other times false positives or free methods on the list are acceptable."
 	self assert: ((gcMode noMask: GCModeFull+GCModeNewSpace) or: [methodZone kosherYoungReferrers])
+]
+
+{ #category : #'profiling primitives' }
+Cogit >> collectCogConstituentFor: descriptor Annotation: isBackwardBranchAndAnnotation Mcpc: mcpc Bcpc: bcpc Method: cogMethodArg [
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	<var: #mcpc type: #'char *'>
+	<var: #cogMethodArg type: #'void *'>
+	| address |
+	descriptor ifNil: [^0].
+	descriptor isMapped ifFalse: [^0].
+	address := self positiveMachineIntegerFor: mcpc.
+	address ifNil: [^InsufficientCodeSpace]. "We should have a dedicated error code... This cannot trigger a GC but fails if not enough space in Eden,"
+	"Assumes we write the values into topRemappableOop"
+	coInterpreter
+		storePointerUnchecked: cogConstituentIndex
+		ofObject: coInterpreter topRemappableOop
+		withValue: address.
+	coInterpreter
+		storePointerUnchecked: cogConstituentIndex + 1
+		ofObject: coInterpreter topRemappableOop
+		withValue: (objectMemory integerObjectOf: bcpc)..
+	cogConstituentIndex := cogConstituentIndex + 2.
+	^ 0
+]
+
+{ #category : #'profiling primitives' }
+Cogit >> collectCogMethodConstituent: cogMethod [
+	"Answer a description of the mapping between machine code pointers and bytecode pointers for the Cog Method.
+	 First value is the address of the cog method.
+	 Following values are pairs of machine code pc and bytecode pc"
+	<var: #cogMethod type: #'CogMethod *'>
+	<var: #cogBlockMethod type: #'CogBlockMethod *'>
+	| cm nSlots errCode cogBlockMethod address data |
+	(cogMethod cmType = CMMethod) 
+		ifFalse: [^self positiveMachineIntegerFor: cogMethod asUnsignedInteger ].
+	cogBlockMethod := self cCoerceSimple: cogMethod to: #'CogBlockMethod *'.
+	cogBlockMethod stackCheckOffset = 0 "isFrameless ?"
+		ifTrue: [^self positiveMachineIntegerFor: cogMethod asUnsignedInteger].
+	cm := cogMethod methodObject.
+	nSlots := ((objectMemory byteSizeOf: cm) - (coInterpreter startPCOfMethod: cm)) * 2 + objectMemory minSlotsForShortening + 1."+1 for first address"
+	data := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: nSlots.
+	data ifNil: [^nil].
+	coInterpreter pushRemappableOop: data.
+	"The iteration assumes the object is the top remappable oop"
+	address := (self positiveMachineIntegerFor: cogMethod asUnsignedInteger).
+	address ifNil: [coInterpreter popRemappableOop. ^nil].
+	coInterpreter
+		storePointerUnchecked: 0
+		ofObject: coInterpreter topRemappableOop
+		withValue: address.
+	cogConstituentIndex := 1.
+	errCode := self
+		mapFor: cogBlockMethod
+		bcpc: (coInterpreter startPCOfMethod: cogMethod methodObject)
+		performUntil: #collectCogConstituentFor:Annotation:Mcpc:Bcpc:Method:
+		arg: cogMethod asVoidPointer.
+	errCode ~= 0 ifTrue: [coInterpreter popRemappableOop. ^nil].
+	cogConstituentIndex < nSlots ifTrue:
+		[objectMemory shorten: coInterpreter topRemappableOop toIndexableSize: cogConstituentIndex].
+	^coInterpreter popRemappableOop.
 ]
 
 { #category : #disassembly }

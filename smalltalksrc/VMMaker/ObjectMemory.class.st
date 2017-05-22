@@ -4002,6 +4002,7 @@ ObjectMemory >> methodHeaderOf: methodObj [
 { #category : #allocation }
 ObjectMemory >> minSlotsForShortening [
 	"HeaderTypeFree free chunks require 1 word of header"
+	<api>
 	^1
 ]
 
@@ -5070,6 +5071,7 @@ ObjectMemory >> shorten: obj toIndexableSize: nSlots [
 	was possible."
 	| deltaBytes desiredLength fixedFields fmt hdr totalLength
 	 indexableFields |
+	<api>
 	(self isPointersNonImm: obj) ifFalse: [^0].
 	nSlots >  0
 		ifFalse: [^0]. "no change if nSlots is zero, error if nSlots is negative"
