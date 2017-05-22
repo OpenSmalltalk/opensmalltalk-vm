@@ -2667,6 +2667,7 @@ NewObjectMemory >> shorten: obj toIndexableSize: nSlots [
 	was possible."
 	| deltaBytes desiredLength fixedFields fmt hdr totalLength
 	 indexableFields |
+	<api>
 	(self isPointersNonImm: obj) ifFalse: [^0].
 	nSlots >  0
 		ifFalse: [^0]. "no change if nSlots is zero, error if nSlots is negative"

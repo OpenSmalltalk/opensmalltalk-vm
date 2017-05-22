@@ -999,6 +999,7 @@ Spur32BitMemoryManager >> shorten: objOop toIndexableSize: indexableSize [
 	 Answer the number of bytes returned to free memory, which may be zero if no change
 	 was possible."
 	<inline: false>
+	<api>
 	| numSlots bytesBefore delta copy freeChunk |
 	self assert: (self oop: (self addressAfter: objOop) isLessThanOrEqualTo: endOfMemory).
 	numSlots := self numSlotsForShortening: objOop toIndexableSize: indexableSize.
