@@ -85,8 +85,9 @@ CogObjectRepresentationFor32BitSpur >> branchIf: reg hasNotImmediateTag: classIn
 	classIndex = objectMemory smallIntegerTag ifTrue:
 		[jmpImmediate := self genJumpNotSmallInteger: reg].
 	classIndex = objectMemory characterTag ifTrue:
-		[cogit MoveR: reg R: TempReg.
-		 jmpImmediate := self genJumpNotCharacterInScratchReg: reg].
+		["Character test destroy register value in Spur"
+		 cogit MoveR: reg R: TempReg.
+		 jmpImmediate := self genJumpNotCharacterInScratchReg: TempReg].
 	jmpImmediate jmpTarget: targetFixUp
 ]
 
