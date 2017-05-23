@@ -622,11 +622,11 @@ getSoundRecorderDeviceName(sqInt i)
 
 void
 setDefaultSoundPlayer(char *deviceName)
-{ interpreterProxy->primitiveFail(); return -1; }
+{ interpreterProxy->primitiveFail(); }
 
 void
 setDefaultSoundRecorder(char *deviceName)
-{ interpreterProxy->primitiveFail(); return -1; }
+{ interpreterProxy->primitiveFail(); }
 
 
 /* Terf SqSoundVersion 1.3 improvements */
