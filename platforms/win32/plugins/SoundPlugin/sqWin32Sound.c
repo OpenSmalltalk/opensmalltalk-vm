@@ -16,6 +16,8 @@
 #include "sq.h"
 #include "SoundPlugin.h"
 
+extern struct VirtualMachine * interpreterProxy;
+
 #ifdef DEBUG
 #warning "DEBUG printing enabled"
 #define DPRINTF(x) warnPrintf x
