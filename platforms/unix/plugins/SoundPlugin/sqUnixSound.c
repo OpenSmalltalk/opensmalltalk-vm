@@ -157,7 +157,7 @@ snd_SetDevice(sqInt id, char *name)      { return snd->snd_SetDevice(id, name); 
 
 #if SqSoundVersionMajor > 1 || SqSoundVersionMinor >= 2
 sqInt
-snd_SetRecordBufferFrameCount(int frameCount) { return snd->snd_SetRecordBufferFrameCount(frameCount); }
+snd_SetRecordBufferFrameCount(sqInt frameCount) { return snd->snd_SetRecordBufferFrameCount(frameCount); }
 
 int
 snd_GetRecordLevel(void)                   { return snd->snd_GetRecordLevel(); }
@@ -187,7 +187,7 @@ void
 setDefaultSoundRecorder(char *deviceName) { snd->snd_SetDefaultSoundRecorder(deviceName); }
 
 #else
-sqInt snd_SetRecordBufferFrameCount(int frameCount) { return -1; }
+sqInt snd_SetRecordBufferFrameCount(sqInt frameCount) { return -1; }
 int   snd_GetRecordLevel(void)                      { return -1; }
 sqInt getNumberOfSoundPlayerDevices(void)           { return -1; }
 sqInt getNumberOfSoundRecorderDevices(void)         { return -1; }

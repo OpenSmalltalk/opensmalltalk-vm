@@ -31,7 +31,7 @@ struct SqSound
   sqInt  (*snd_SetDevice)(int id, char *name);
 
 #if SqSoundVersionMajor > 1 || SqSoundVersionMinor >= 2
-  sqInt  (*snd_SetRecordBufferFrameCount)(int frameCount);
+  sqInt  (*snd_SetRecordBufferFrameCount)(sqInt frameCount);
   int    (*snd_GetRecordLevel)(void);
   sqInt  (*getNumberOfSoundPlayerDevices)(void);
   sqInt  (*getNumberOfSoundRecorderDevices)(void);
