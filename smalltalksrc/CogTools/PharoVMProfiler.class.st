@@ -11,7 +11,7 @@ PharoVMProfiler class >> amOnSpur [
 
 { #category : #accessing }
 PharoVMProfiler class >> default [
-	"will do something when I take care of the UI"
+	"will do something when a UI will be added for Pharo"
 	^self new. 
 ]
 

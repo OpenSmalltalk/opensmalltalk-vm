@@ -81,24 +81,6 @@ VMProfiler class >> canBenchmark: aByteString [
 	CannedBenchmarkStrings addLast: aByteString
 ]
 
-{ #category : #'class initialization' }
-VMProfiler class >> fixTabs [
-	"Make sure the DefaultTabsArray and DefaultMarginTabsArray are adequately sized for modern displays."
-	| defaultTab tempArray width |
-	(Smalltalk bindingOf: #TextConstants) ifNil: [^self].
-	width := 2000.
-	(TextConstants at: #DefaultTabsArray) last < width ifTrue:
-		[defaultTab := TextConstants at: #DefaultTab.
-		 tempArray := Array new: 2000 // defaultTab.
-		 1 to: tempArray size do:
-			[:i | tempArray at: i put: defaultTab * i].
-		 TextConstants at: #defaultTabsArray put: tempArray.
-		 tempArray := Array new: (width // defaultTab) // 2.
-		 1 to: tempArray size do:
-			[:i | tempArray at: i put: (Array with: (defaultTab*i) with: (defaultTab*i))].
-		 TextConstants at: #DefaultMarginTabsArray put: tempArray]
-]
-
 { #category : #'as yet unclassified' }
 VMProfiler class >> headlessSpyOn: aBlock reportOn: aStream [ 
 	"initialize the profiler version (squeak or pharo) and profile headless, writing the results on a given stream"
@@ -153,17 +135,17 @@ VMProfiler class >> reportGCStats: gcStatsArray upTime: elapsedMilliseconds on: 
 	str	nextPutAll: '**GCs**'; cr.
 	str	nextPutAll: '	full			';
 		print: fullGCs; nextPutAll: ' totalling '; nextPutAll: fullGCTime asStringWithCommas; nextPutAll: 'ms (';
-		print: ((fullGCTime / elapsedMilliseconds * 100) rounded);
+		print: ((fullGCTime / elapsedMilliseconds * 100) roundTo: 0.001);
 		nextPutAll: '% elapsed time)'.
 	fullGCs = 0 ifFalse:
-		[str	nextPutAll: ', avg '; print: (fullGCTime / fullGCs roundTo: 0.1); nextPutAll: 'ms'].
+		[str	nextPutAll: ', avg '; print: (fullGCTime / fullGCs roundTo: 0.001); nextPutAll: 'ms'].
 	str	cr.
 	str	nextPutAll: (self amOnSpur ifTrue: ['	scavenges	'] ifFalse: ['	incr			']);
 		print: incrGCs; nextPutAll: ' totalling '; nextPutAll: incrGCTime asStringWithCommas; nextPutAll: 'ms (';
-		print: ((incrGCTime / elapsedMilliseconds * 100) roundTo: 0.1);
+		print: ((incrGCTime / elapsedMilliseconds * 100) roundTo: 0.001);
 		nextPutAll: '% elapsed time)'.
 	incrGCs = 0 ifFalse:
-		[str nextPutAll:', avg '; print: (incrGCTime / incrGCs roundTo: 0.01); nextPutAll: 'ms'].
+		[str nextPutAll:', avg '; print: (incrGCTime / incrGCs roundTo: 0.001); nextPutAll: 'ms'].
 	str cr.
 	str	nextPutAll: '	tenures		';
 		nextPutAll: tenureCount asStringWithCommas.
@@ -182,10 +164,10 @@ VMProfiler class >> reportGCStats: gcStatsArray upTime: elapsedMilliseconds on: 
 		str	tab;
 			print: numCompactions; nextPutAll: ' totalling ';
 			nextPutAll: compactionMsecs asStringWithCommas; nextPutAll: 'ms (';
-			print: ((compactionMsecs / elapsedMilliseconds * 100) rounded);
+			print: ((compactionMsecs / elapsedMilliseconds * 100) roundTo: 0.001);
 			nextPutAll: '% elapsed time)'.
 		numCompactions = 0 ifFalse:
-			[str	nextPutAll: ', avg '; print: (compactionMsecs / numCompactions roundTo: 0.1); nextPutAll: 'ms'].
+			[str	nextPutAll: ', avg '; print: (compactionMsecs / numCompactions roundTo: 0.001); nextPutAll: 'ms'].
 		str	cr].
 
 	gcStatsArray size >= 61 ifTrue:
@@ -295,6 +277,11 @@ VMProfiler >> computeStats: stopStats [
 VMProfiler >> createParagraph [
 	
 	self subclassResponsibility 
+]
+
+{ #category : #'as yet unclassified' }
+VMProfiler >> gcPriorToProfile [
+	^gcPriorToProfile
 ]
 
 { #category : #'as yet unclassified' }
@@ -436,6 +423,53 @@ VMProfiler >> longestWidthIn: aCollectionOfAssociations [
 												ifFalse: [assoc key name]))]
 ]
 
+{ #category : #accessing }
+VMProfiler >> positionedLabels [
+	"Compute the set of labels to be displayed for the given address range.
+	 Try and display no more than maxLabels labels.  The result is a dictionary
+	 of fractional position in the range to string.  If there are lots of labels, try
+	 and favour those that have samples."
+	| maxLabels counts types symbolsInRange positionedLabels index count range significantSymbolsInRange |
+	maxLabels := 50.
+	minSelectionIndex isZero ifTrue:
+		[^Dictionary new].
+	"count how many labels of each type there are in the range."
+	counts := Dictionary new.
+	(types := #(module objectFile publicFunction privateFunction label)) do:
+		[:type| counts at: type put: 0].
+	types := types select: [:type| symbolTypes includes: type].
+	symbolsInRange := symbolManager symbolsSelect: [:sym| sym address <= highAddress and: [sym limit >= lowAddress and: [(symbolTypes includes: sym type)]]].
+	"If there are lots of labels then choose to display only those with samples"
+	symbolsInRange size > (maxLabels / 2) ifTrue:
+		[significantSymbolsInRange := symbolsInRange select: [:s| (self samplesForSymbol: s) > 0]].
+	(symbolsInRange size > maxLabels
+	 and: [significantSymbolsInRange size >= (maxLabels / 2)]) ifTrue:
+		[symbolsInRange := significantSymbolsInRange].
+	symbolsInRange do:
+		[:s| counts at: s type put: (counts at: s type) + 1].
+	"Find out what types give us at least one label but no more
+	 than maxLabels unless necessary to have at least one."
+	index := 1.
+	count := counts at: (types at: index).
+	[index <= types size
+	 and: [count + (counts at: (types at: index)) < maxLabels]] whileTrue:
+		[count := count + (counts at: (types at: index)).
+		 index := index + 1].
+	"add labels to positionedLabels indexed by their fractional position in the range, filtering by type."
+	types := types copyFrom: 1 to: (index min: types size).
+	positionedLabels := Dictionary new: count.
+	range := (highAddress - lowAddress) asFloat.
+	symbolsInRange do:
+		[:s |
+		(types includes: s type) ifTrue:
+			[positionedLabels
+				at: ([s address - lowAddress / range]
+						on: ZeroDivide
+						do: [:ex| 0])
+				put: s displayText]].
+	^positionedLabels
+]
+
 { #category : #primitives }
 VMProfiler >> primitiveCollectCogCodeConstituents [
 	"Answer the contents of the code zone as an array of pair-wise element, address
@@ -567,30 +601,12 @@ VMProfiler >> putReportPreambleOn: s [
 			print: (total * 1000 / elapsedTime) rounded; nextPutAll: ' hz'; cr]
 ]
 
-{ #category : #selecting }
-VMProfiler >> regress [
-	| range |
-	range := history at: historyIndex.
-	range = (lowAddress to: highAddress)
-		ifTrue:
-			[(historyIndex := historyIndex - 1) > 0 ifTrue:
-				[range := history at: historyIndex]]
-		ifFalse:
-			[history addLast: (lowAddress to: highAddress)].
-	lowAddress := range first.
-	highAddress := range last.
-	self updateAddressDependents.
-	self updateButtons.
-	self selectSymbolsInRange.
-	self plotGraph
-]
-
 { #category : #reports }
 VMProfiler >> report: s [
 	self totalsDo:
 		[:vmTotals :cogTotals :nonVMTotals
 		 :samplesInVM :samplesInCog :samplesInNonVMModules :samplesInNonVM |
-		"self putReportPreambleOn: s."
+		self putReportPreambleOn: s.
 		s print: samplesInVM + samplesInCog; nextPutAll: ' samples in the VM'; tab; nextPut: $(;
 		   print: total; nextPutAll: ' samples in the entire program)  '.
 		self printPercentage: samplesInVM + samplesInCog total: total on: s.
@@ -636,17 +652,9 @@ VMProfiler >> samplesForSymbol: sym [
 	^self samplesForRange: sym address to: sym limit
 ]
 
-{ #category : #selecting }
-VMProfiler >> selectProportionFrom: low to: high [
-	| range |
-	self addToHistory.
-	range := highAddress - lowAddress.
-	highAddress := lowAddress + (range * high) rounded.
-	lowAddress := lowAddress + (range * low) rounded.
-	self selectSymbolsInRange.
-	self updateAddressDependents.
-	self updateButtons.
-	self plotGraph
+{ #category : #menus }
+VMProfiler >> selectBenchmark: expressionString [ 
+	expressionTextMorph setText: expressionString asText
 ]
 
 { #category : #selecting }
@@ -708,7 +716,7 @@ VMProfiler >> startProfiling [
 	"Use aboutToProfile to allow us to change the button colors without including the change in the profile."
 	aboutToProfile := true.
 	self clearHistory.
-	"self updateButtons."
+	self updateButtons.
 	World doOneCycleNow.
 	clearPriorToProfile ifTrue: [self clearProfile].
 	gcPriorToProfile ifTrue: [Smalltalk garbageCollect].
@@ -736,7 +744,7 @@ VMProfiler >> stopProfiling [
 	self computeStats: vmParameters.
 	self computeHistograms: numSamples.
 	self computeCogCodeModule.
-	"self computeSortedSymbols." "makes the profiling crash"
+	('Mac OS' match: Smalltalk platformName) ifTrue: [self computeSortedSymbols]. "workaround. sometimes fails on linux"
 	self clearHistory.
 	
 ]
@@ -768,7 +776,7 @@ VMProfiler >> symbolSelectionAt: index [
 	^(selections at: index ifAbsent: [0]) ~= 0
 ]
 
-{ #category : #buttons }
+{ #category : #'as yet unclassified' }
 VMProfiler >> toggleShowing: aSymbol [
 	(symbolTypes includes: aSymbol)
 		ifTrue: [symbolTypes remove: aSymbol]
@@ -840,6 +848,27 @@ VMProfiler >> totalsDo: septuaryBlock [
 		 samplesInCog.
 		 samplesInNonVMModules.
 		 samplesInNonVM}
+]
+
+{ #category : #menus }
+VMProfiler >> trimmedExpressionText [
+	| expression |
+	expressionTextMorph ifNil: [expressionTextMorph := PluggableTextMorph new
+																setText: '' asText].
+	^((expression := expressionTextMorph text asString) notEmpty
+	   and: [expression first = $[
+	   and: [expression last = $] ]])
+		ifTrue: [expression copyFrom: 2 to: expression size - 1]
+		ifFalse: [expression]
+]
+
+{ #category : #'as yet unclassified' }
+VMProfiler >> updateButtons [
+	WorldState addDeferredUIMessage:
+		[self changed: #profileColor; changed: #clearColor; changed: #stopColor.
+		 self changed: #profiling; changed: #notProfiling; changed: #notProfilingAndData.
+		 self changed: #hasHistoryColor; changed: #hasFutureColor.
+		 self changed: #hasHistory; changed: #hasFuture]
 ]
 
 { #category : #accessing }

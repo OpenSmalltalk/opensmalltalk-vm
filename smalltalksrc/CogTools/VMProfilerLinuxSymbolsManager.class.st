@@ -31,25 +31,20 @@ VMProfilerLinuxSymbolsManager class >> defaultIntegerBaseInDebugger [
 	^16
 ]
 
-{ #category : #'class initialization' }
-VMProfilerLinuxSymbolsManager class >> initialize [
-	"Add to the shut down list to delete the temp directory and contents."
-	Smalltalk addToShutDownList: self
-]
-
 { #category : #'shut down' }
 VMProfilerLinuxSymbolsManager class >> shutDown: quitting [
-	"(quitting
+	(quitting
 	 and: [#('Mac OS' 'unix') includes: Smalltalk platformName]) ifTrue:
 		[| tempDir |
-		 (tempDir := self tempDirectory) exists ifTrue:
-			[tempDir recursiveDelete]]" "error on Pharo as recursiveDelete is from FileDirectory. Have to find something similar with FileSystem"
+		(tempDir := self tempDirectory) notNil ifTrue:
+			 [tempDir exists ifTrue:
+				[VMFileSystem deleteContentsOf: tempDir]]]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 VMProfilerLinuxSymbolsManager class >> tempDirectory [
 
-	^ VMFileSystem nameFordirPath:'/tmp/vmsyms'  plus:OSProcess thisOSProcess pid printString 
+	^ VMFileSystem ifNotNil: [VMFileSystem nameFordirPath:'/tmp/vmsyms'  plus:OSProcess thisOSProcess pid printString] 
 
 ]
 
@@ -63,13 +58,6 @@ VMProfilerLinuxSymbolsManager >> hexFromStream: aStream [
 	^value
 
 	"(self basicNew hexFromStream: '91a45000' readStream) hex"
-]
-
-{ #category : #'initialize-release' }
-VMProfilerLinuxSymbolsManager >> initialize [
-	"Initialize the receiver, parsing the symbols in the background for faster startup."
-	self initializeMost.
-	self parseAsynchronously
 ]
 
 { #category : #'initialize-release' }

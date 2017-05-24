@@ -4,6 +4,12 @@ Class {
 	#category : #'CogTools-VMProfiler'
 }
 
+{ #category : #'as yet unclassified' }
+PharoVMFileSystem >> deleteContentsOf: aDirectory [
+
+	"have to find something similar"
+]
+
 { #category : #public }
 PharoVMFileSystem >> ensureExistenceOfDirectory: aDirName [
 	^ aDirName ensureCreateDirectory 
