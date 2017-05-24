@@ -31,6 +31,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 ]
 
 { #category : #'as yet unclassified' }
+VMProfilerSymbolsManager class >> initialize [
+	"Add to the shut down list to delete the temp directory and contents."
+	Smalltalk addToShutDownList: self
+]
+
+{ #category : #'as yet unclassified' }
 VMProfilerSymbolsManager class >> using: aFileSystem [
 
 	VMFileSystem := aFileSystem.
@@ -91,6 +97,13 @@ VMProfilerSymbolsManager >> fileSystem [
 VMProfilerSymbolsManager >> fileSystem: aVMFileSystem [
 	
 	VMFileSystem := aVMFileSystem. 
+]
+
+{ #category : #'as yet unclassified' }
+VMProfilerSymbolsManager >> initialize [
+	"Initialize the receiver, parsing the symbols in the background for faster startup."
+	self initializeMost.
+	self parseAsynchronously
 ]
 
 { #category : #accessing }

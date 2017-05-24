@@ -4,6 +4,12 @@ Class {
 	#category : #'CogTools-VMProfiler'
 }
 
+{ #category : #'as yet unclassified' }
+SqueakVMFileSystem >> deleteContentsOf: aDirectory [
+
+	aDirectory recursiveDelete
+]
+
 { #category : #public }
 SqueakVMFileSystem >> ensureExistenceOfDirectory: aDirName [
 	
