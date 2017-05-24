@@ -31,24 +31,21 @@ VMProfilerLinuxSymbolsManager class >> defaultIntegerBaseInDebugger [
 	^16
 ]
 
-{ #category : #'class initialization' }
-VMProfilerLinuxSymbolsManager class >> initialize [
-	"Add to the shut down list to delete the temp directory and contents."
-	Smalltalk addToShutDownList: self
-]
-
 { #category : #'shut down' }
 VMProfilerLinuxSymbolsManager class >> shutDown: quitting [
 	(quitting
 	 and: [#('Mac OS' 'unix') includes: Smalltalk platformName]) ifTrue:
 		[| tempDir |
-		 (tempDir := self tempDirectory) exists ifTrue:
-			[tempDir recursiveDelete]]
+		(tempDir := self tempDirectory) notNil ifTrue:
+			 [tempDir exists ifTrue:
+				[VMFileSystem deleteContentsOf: tempDir]]]
 ]
 
 { #category : #accessing }
 VMProfilerLinuxSymbolsManager class >> tempDirectory [
-	^FileDirectory on: '/tmp/vmsyms', OSProcess thisOSProcess pid printString
+
+	^ VMFileSystem ifNotNil: [VMFileSystem nameFordirPath:'/tmp/vmsyms'  plus:OSProcess thisOSProcess pid printString] 
+
 ]
 
 { #category : #parsing }
@@ -64,13 +61,6 @@ VMProfilerLinuxSymbolsManager >> hexFromStream: aStream [
 ]
 
 { #category : #'initialize-release' }
-VMProfilerLinuxSymbolsManager >> initialize [
-	"Initialize the receiver, parsing the symbols in the background for faster startup."
-	self initializeMost.
-	self parseAsynchronously
-]
-
-{ #category : #'initialize-release' }
 VMProfilerLinuxSymbolsManager >> initializeMost [
 	| shortNames |
 	initialized := false.
@@ -78,18 +68,19 @@ VMProfilerLinuxSymbolsManager >> initializeMost [
 	modulesByName := Dictionary new.
 	symbolsByModule := Dictionary new.
 	shortNames := Set new.
-	(tempDir := self class tempDirectory) assureExistence.
+	tempDir := self class tempDirectory.
+	self fileSystem ensureExistenceOfDirectory:  tempDir. 
 	modules := self primitiveExecutableModules.
 	modules := (1 to: modules size by: 2) collect:
 					[:i| | fileName shortName counter longName |
 					fileName := modules at: i.
 					(fileName beginsWith: '/dgagent') ifTrue:
 						[fileName := fileName allButFirst: 8].
-					shortName := tempDir localNameFor: fileName.
+					shortName := VMFileSystem nameOfFile: fileName in: tempDir.  
 					counter := 0.
 					[shortNames includes: shortName] whileTrue:
 						[counter := counter + 1.
-						 shortName := (tempDir localNameFor: fileName), counter printString].
+						 shortName := (VMFileSystem nameOfFile: fileName  in: tempDir), counter printString].
 					shortNames add: shortName.
 					longName := (modules at: i + 1)
 									ifNil: [fileName]
@@ -97,9 +88,9 @@ VMProfilerLinuxSymbolsManager >> initializeMost [
 										[:symlink|
 										symlink first = $/
 											ifTrue: [symlink]
-											ifFalse: [(FileDirectory dirPathFor: fileName), '/', symlink]].
+											ifFalse: [( VMFileSystem parentPathOfFile: fileName ), '/', symlink]].
 					"some files are off limits (e.g. /dgagent/lib/preload.so)"
-					(FileDirectory default fileExists: longName) ifTrue:
+					(VMFileSystem exists: longName) ifTrue:
 						[(modulesByName
 							at: longName
 							put: VMPExecutableModuleSymbol new)
@@ -143,14 +134,14 @@ VMProfilerLinuxSymbolsManager >> parseAsynchronously [
 { #category : #parsing }
 VMProfilerLinuxSymbolsManager >> parseSymbolsFor: module [
 	| proc symtab symStream |
-	(tempDir fileExists: module shortName) ifFalse:
+	(VMFileSystem exists: tempDir fullName, '/', module shortName)  ifFalse:
 		[proc := OSProcess thisOSProcess command:
 						'objdump -j .text -tT "', module name, '" | fgrep .text | sort >"', tempDir fullName, '/', module shortName, '"'].
 	symStream := (Array new: 1000) writeStream.
 	symStream nextPut: module.
 	proc ifNotNil:
 		[[proc isComplete] whileFalse: [(Delay forMilliseconds: 25) wait]].
-	symtab := [StandardFileStream readOnlyFileNamed: (tempDir fullNameFor: module shortName)]
+	symtab := [StandardFileStream readOnlyFileNamed: (tempDir fullName,'/',module shortName) ]
 					on: Error
 					do: [:ex| "Handle flaky OSProcess stuff by reporting error and failing to parse"
 						Transcript print: ex; flush.

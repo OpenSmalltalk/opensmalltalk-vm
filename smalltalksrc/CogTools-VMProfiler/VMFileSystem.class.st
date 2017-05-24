@@ -8,6 +8,12 @@ Class {
 	#category : #'CogTools-VMProfiler'
 }
 
+{ #category : #'as yet unclassified' }
+VMFileSystem >> deleteContentsOf: aDirectory [
+
+	self subclassResponsability
+]
+
 { #category : #public }
 VMFileSystem >> ensureExistenceOfDirectory: aDirName [
 	self subclassResponsibility 
