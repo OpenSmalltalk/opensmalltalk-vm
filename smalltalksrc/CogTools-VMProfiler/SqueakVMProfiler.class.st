@@ -15,17 +15,34 @@ SqueakVMProfiler class >> default [
 ]
 
 { #category : #'as yet unclassified' }
+SqueakVMProfiler class >> fixTabs [
+	"Make sure the DefaultTabsArray and DefaultMarginTabsArray are adequately sized for modern displays."
+	| defaultTab tempArray width |
+	(Smalltalk bindingOf: #TextConstants) ifNil: [^self].
+	width := 2000.
+	(TextConstants at: #DefaultTabsArray) last < width ifTrue:
+		[defaultTab := TextConstants at: #DefaultTab.
+		 tempArray := Array new: 2000 // defaultTab.
+		 1 to: tempArray size do:
+			[:i | tempArray at: i put: defaultTab * i].
+		 TextConstants at: #DefaultTabsArray put: tempArray.
+		 tempArray := Array new: (width // defaultTab) // 2.
+		 1 to: tempArray size do:
+			[:i | tempArray at: i put: (Array with: (defaultTab*i) with: (defaultTab*i))].
+		 TextConstants at: #DefaultMarginTabsArray put: tempArray]
+]
+
+{ #category : #'as yet unclassified' }
 SqueakVMProfiler class >> initialize [
 
 	super initialize.
-	"(TheWorldMenu respondsTo: #registerOpenCommand:) ifTrue:
+	(TheWorldMenu respondsTo: #registerOpenCommand:) ifTrue:
 		[TheWorldMenu registerOpenCommand: {'VM Profiler'. {self. #open}. 'A VM profiler'}].
-	Preferences
-		addBooleanPreference: #vmProfilerFillInIntegral 
-		category: #vmProfiler 
-		default: false
-		balloonHelp: 'If enabled, the profiler will fill in the area under the integral.'.
-	self fixTabs" "makes the import fail on Pharo. Have to find a workaround"
+	Preferences ifNotNil: [Preferences addBooleanPreference: #vmProfilerFillInIntegral 
+									   category: #vmProfiler 
+									   default: false
+									   balloonHelp: 'If enabled, the profiler will fill in the area under the integral.'].
+	('Squeak*' match: Smalltalk version) ifTrue: [self fixTabs] "ugly fix for configuration. temporary"
 ]
 
 { #category : #'instance creation' }
@@ -137,13 +154,6 @@ SqueakVMProfiler >> clearColor [
 { #category : #buttons }
 SqueakVMProfiler >> clearPriorToProfile [
 	^clearPriorToProfile
-]
-
-{ #category : #profiling }
-SqueakVMProfiler >> clearProfile [
-
-	super clearProfile.
-	self updateButtons.  
 ]
 
 { #category : #'as yet unclassified' }
@@ -265,11 +275,6 @@ SqueakVMProfiler >> forkProfile [
 { #category : #opening }
 SqueakVMProfiler >> forwardsButton [
 	^ImageMorph new image: (ScriptingSystem formAtKey: #playMPEG)
-]
-
-{ #category : #buttons }
-SqueakVMProfiler >> gcPriorToProfile [
-	^gcPriorToProfile
 ]
 
 { #category : #'as yet unclassified' }
@@ -578,53 +583,6 @@ SqueakVMProfiler >> plotSamplesFrom: startAddress to: endAddress intoHistogram: 
 	^startAddress to: endAddress
 ]
 
-{ #category : #accessing }
-SqueakVMProfiler >> positionedLabels [
-	"Compute the set of labels to be displayed for the given address range.
-	 Try and display no more than maxLabels labels.  The result is a dictionary
-	 of fractional position in the range to string.  If there are lots of labels, try
-	 and favour those that have samples."
-	| maxLabels counts types symbolsInRange positionedLabels index count range significantSymbolsInRange |
-	maxLabels := 50.
-	minSelectionIndex isZero ifTrue:
-		[^Dictionary new].
-	"count how many labels of each type there are in the range."
-	counts := Dictionary new.
-	(types := #(module objectFile publicFunction privateFunction label)) do:
-		[:type| counts at: type put: 0].
-	types := types select: [:type| symbolTypes includes: type].
-	symbolsInRange := symbolManager symbolsSelect: [:sym| sym address <= highAddress and: [sym limit >= lowAddress and: [(symbolTypes includes: sym type)]]].
-	"If there are lots of labels then choose to display only those with samples"
-	symbolsInRange size > (maxLabels / 2) ifTrue:
-		[significantSymbolsInRange := symbolsInRange select: [:s| (self samplesForSymbol: s) > 0]].
-	(symbolsInRange size > maxLabels
-	 and: [significantSymbolsInRange size >= (maxLabels / 2)]) ifTrue:
-		[symbolsInRange := significantSymbolsInRange].
-	symbolsInRange do:
-		[:s| counts at: s type put: (counts at: s type) + 1].
-	"Find out what types give us at least one label but no more
-	 than maxLabels unless necessary to have at least one."
-	index := 1.
-	count := counts at: (types at: index).
-	[index <= types size
-	 and: [count + (counts at: (types at: index)) < maxLabels]] whileTrue:
-		[count := count + (counts at: (types at: index)).
-		 index := index + 1].
-	"add labels to positionedLabels indexed by their fractional position in the range, filtering by type."
-	types := types copyFrom: 1 to: (index min: types size).
-	positionedLabels := Dictionary new: count.
-	range := (highAddress - lowAddress) asFloat.
-	symbolsInRange do:
-		[:s |
-		(types includes: s type) ifTrue:
-			[positionedLabels
-				at: ([s address - lowAddress / range]
-						on: ZeroDivide
-						do: [:ex| 0])
-				put: s displayText]].
-	^positionedLabels
-]
-
 { #category : #buttons }
 SqueakVMProfiler >> profileColor [
 	^self profiling ifTrue: [Color darkGray] ifFalse: [Color lightGreen]
@@ -679,9 +637,35 @@ SqueakVMProfiler >> progress [
 	self plotGraph
 ]
 
-{ #category : #menus }
-SqueakVMProfiler >> selectBenchmark: expressionString [ 
-	expressionTextMorph setText: expressionString asText
+{ #category : #'as yet unclassified' }
+SqueakVMProfiler >> regress [
+	| range |
+	range := history at: historyIndex.
+	range = (lowAddress to: highAddress)
+		ifTrue:
+			[(historyIndex := historyIndex - 1) > 0 ifTrue:
+				[range := history at: historyIndex]]
+		ifFalse:
+			[history addLast: (lowAddress to: highAddress)].
+	lowAddress := range first.
+	highAddress := range last.
+	self updateAddressDependents.
+	self updateButtons.
+	self selectSymbolsInRange.
+	self plotGraph
+]
+
+{ #category : #'as yet unclassified' }
+SqueakVMProfiler >> selectProportionFrom: low to: high [
+	| range |
+	self addToHistory.
+	range := highAddress - lowAddress.
+	highAddress := lowAddress + (range * high) rounded.
+	lowAddress := lowAddress + (range * low) rounded.
+	self selectSymbolsInRange.
+	self updateAddressDependents.
+	self updateButtons.
+	self plotGraph
 ]
 
 { #category : #profiling }
@@ -826,27 +810,6 @@ SqueakVMProfiler >> toggleShowPublicFunctions [
 	self toggleShowing: #publicFunction
 ]
 
-{ #category : #buttons }
-SqueakVMProfiler >> toggleShowing: aSymbol [
-	(symbolTypes includes: aSymbol)
-		ifTrue: [symbolTypes remove: aSymbol]
-		ifFalse: [symbolTypes add: aSymbol].
-	symbolTypes isEmpty ifTrue:
-		[symbolTypes add: #module.
-		 self changed: #showingModules.
-		 aSymbol == #module ifTrue:
-			[^self]].
-	self changed: #showingModules;
-		changed: #showingPublicFunctions;
-		changed: #showingPrivateFunctions;
-		changed: #showingLabels.
-	symbolList := symbolManager symbolsWithTypes: symbolTypes.
-	selections := ByteArray new: symbolList size.
-	self selectSymbolsInRange.
-	self changed: #symbolList;
-		changed: #positionedLabels
-]
-
 { #category : #accessing }
 SqueakVMProfiler >> totalText [
 	^(String streamContents:
@@ -872,16 +835,6 @@ SqueakVMProfiler >> totalTextMorph: help get: getter [
 		setProperty: #noScrollBarPlease toValue: true;
 		setProperty: #noVScrollBarPlease toValue: true.
 	^ptm
-]
-
-{ #category : #menus }
-SqueakVMProfiler >> trimmedExpressionText [
-	| expression |
-	^((expression := expressionTextMorph text asString) notEmpty
-	   and: [expression first = $[
-	   and: [expression last = $] ]])
-		ifTrue: [expression copyFrom: 2 to: expression size - 1]
-		ifFalse: [expression]
 ]
 
 { #category : #accessing }
@@ -913,13 +866,4 @@ SqueakVMProfiler >> updateAddressSelection [
 			 lowAddress := (symbolList at: minSelectionIndex) address.
 			 highAddress := (symbolList at: maxSelectionIndex) limit].
 	self updateAddressDependents
-]
-
-{ #category : #buttons }
-SqueakVMProfiler >> updateButtons [
-	WorldState addDeferredUIMessage:
-		[self changed: #profileColor; changed: #clearColor; changed: #stopColor.
-		 self changed: #profiling; changed: #notProfiling; changed: #notProfilingAndData.
-		 self changed: #hasHistoryColor; changed: #hasFutureColor.
-		 self changed: #hasHistory; changed: #hasFuture]
 ]
