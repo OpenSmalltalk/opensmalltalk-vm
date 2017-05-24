@@ -354,6 +354,7 @@ int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, v
 #endif
 
 
+
 static inline void sq2uxLines(char *string, int n)
 {
   while (n--)
@@ -373,27 +374,66 @@ static inline void ux2sqLines(char *string, int n)
 }
 
 
-#define Convert(sq,ux, type, F, T, N, L)					\
-  int sq##2##ux##type(char *from, int fromLen, char *to, int toLen, int term)	\
-  {										\
-    int n= convertChars(from, fromLen, F, to, toLen, T, N, term);		\
-    if (L) sq##2##ux##Lines(to, n);						\
-    return n;									\
-  }
 
-Convert(sq,ux, Text, sqTextEncoding, uxTextEncoding, 0, 1);
-Convert(ux,sq, Text, uxTextEncoding, sqTextEncoding, 0, 1);
+int sq2uxText(char *from, int fromLen, char *to, int toLen, int term)
+{
+	int n = convertChars(from, fromLen, sqTextEncoding, to, toLen,
+				 uxTextEncoding, 0, term);
+	sq2uxLines(to, n);
+	return n;
+};
+
+int ux2sqText(char *from, int fromLen, char *to, int toLen, int term)
+{
+	int n = convertChars(from, fromLen, uxTextEncoding, to, toLen,
+				 sqTextEncoding, 0, term);
+	ux2sqLines(to, n);
+	return n;
+};
+
 #if defined(__MACH__)
-Convert(sq,ux, Path, sqTextEncoding, uxPathEncoding, 1, 0);	// normalised paths for HFS+
+int sq2uxPath(char *from, int fromLen, char *to, int toLen, int term)
+{
+	return convertChars(from, fromLen, sqTextEncoding, to, toLen,
+				 uxPathEncoding, 1, term); // normalised paths for HFS+
+};
 #else
-Convert(sq,ux, Path, sqTextEncoding, uxPathEncoding, 0, 0);	// composed paths for others
+int sq2uxPath(char *from, int fromLen, char *to, int toLen, int term)
+{
+	return convertChars(from, fromLen, sqTextEncoding, to, toLen,
+				 uxPathEncoding, 0, term); // composed paths for others
+};
 #endif
-Convert(ux,sq, Path, uxPathEncoding, sqTextEncoding, 0, 0);
-Convert(sq,ux, UTF8, sqTextEncoding, uxUTF8Encoding, 0, 1);
-Convert(ux,sq, UTF8, uxUTF8Encoding, sqTextEncoding, 0, 1);
-Convert(ux,sq, XWin, uxXWinEncoding, sqTextEncoding, 0, 1);
 
-#undef Convert
+int ux2sqPath(char *from, int fromLen, char *to, int toLen, int term)
+{
+	return convertChars(from, fromLen, uxPathEncoding, to, toLen,
+				 sqTextEncoding, 0, term);
+};
+
+int sq2uxUTF8(char *from, int fromLen, char *to, int toLen, int term)
+{
+	int n = convertChars(from, fromLen, sqTextEncoding, to, toLen,
+				 uxUTF8Encoding, 0, term);
+	sq2uxLines(to, n);
+	return n;
+};
+
+int ux2sqUTF8(char *from, int fromLen, char *to, int toLen, int term)
+{
+	int n = convertChars(from, fromLen, uxUTF8Encoding, to, toLen,
+				 sqTextEncoding, 0, term);
+	ux2sqLines(to, n);
+	return n;
+};
+
+int ux2sqXWin(char *from, int fromLen, char *to, int toLen, int term)
+{
+	int n = convertChars(from, fromLen, uxXWinEncoding, to, toLen,
+				 sqTextEncoding, 0, term);
+	ux2sqLines(to, n);
+	return n;
+};
 
 
 
