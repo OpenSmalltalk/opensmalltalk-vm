@@ -154,7 +154,7 @@ sqFileClose(SQFile *f) {
 		return interpreterProxy->success(false);
 
 	result = fclose(getFile(f));
-	setFile(f, 0);
+	setFile(f, NULL);
 	f->sessionID = 0;
 	f->writable = false;
 	setSize(f, 0);
@@ -162,7 +162,7 @@ sqFileClose(SQFile *f) {
 
 	/*
 	 * fclose() can fail for the same reasons fflush() or write() can so
-	 * errors must be checked
+	 * errors must be checked, but it must NEVER be retried
 	 */
 	if (result != 0)
 		return interpreterProxy->success(false);
@@ -171,7 +171,7 @@ sqFileClose(SQFile *f) {
 }
 
 sqInt
-sqFileDeleteNameSize(char* sqFileName, sqInt sqFileNameSize) {
+sqFileDeleteNameSize(char *sqFileName, sqInt sqFileNameSize) {
 	char cFileName[PATH_MAX];
 	int err;
 
@@ -220,7 +220,7 @@ sqInt
 sqFileShutdown(void) { return 1; }
 
 sqInt
-sqFileOpen(SQFile *f, char* sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
+sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 	/* Opens the given file using the supplied sqFile structure
 	   to record its state. Fails with no side effects if f is
 	   already open. Files are always opened in binary mode;
@@ -314,11 +314,7 @@ sqFileStdioHandlesInto(SQFile files[])
 	files[0].fileSize = 0;
 	files[0].writable = false;
 	files[0].lastOp = READ_OP;
-#if 0
-	files[0].isStdioStream = true;
-#else
 	files[0].isStdioStream = isatty(fileno(stdin));
-#endif
 	files[0].lastChar = EOF;
 
 	files[1].sessionID = thisSession;
@@ -341,7 +337,7 @@ sqFileStdioHandlesInto(SQFile files[])
 }
 
 size_t
-sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
+sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex) {
 	/* Read count bytes from the given file into byteArray starting at
 	   startIndex. byteArray is the address of the first byte of a
 	   Squeak bytes object (e.g. String or ByteArray). startIndex
@@ -427,16 +423,16 @@ sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startInde
 }
 
 sqInt
-sqFileRenameOldSizeNewSize(char* oldNameIndex, sqInt oldNameSize, char* newNameIndex, sqInt newNameSize) {
+sqFileRenameOldSizeNewSize(char *sqOldName, sqInt sqOldNameSize, char *sqNewName, sqInt sqNewNameSize) {
 	char cOldName[PATH_MAX], cNewName[PATH_MAX];
 	int err;
 
-	if ((oldNameSize >= sizeof(cOldName)) || (newNameSize >= sizeof(cNewName)))
+	if ((sqOldNameSize >= sizeof(cOldName)) || (sqNewNameSize >= sizeof(cNewName)))
 		return interpreterProxy->success(false);
 
 	/* copy the file names into null-terminated C strings */
-	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cOldName, oldNameIndex, oldNameSize, false);
-	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cNewName, newNameIndex, newNameSize, false);
+	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cOldName, sqOldName, sqOldNameSize, false);
+	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cNewName, sqNewName, sqNewNameSize, false);
 
 	err = rename(cOldName, cNewName);
 	if (err)
@@ -516,7 +512,7 @@ sqFileSync(SQFile *f) {
 }
 
 sqInt
-sqFileTruncate(SQFile *f,squeakFileOffsetType offset) {
+sqFileTruncate(SQFile *f, squeakFileOffsetType offset) {
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
  	if (sqFTruncate(getFile(f), offset))
@@ -534,7 +530,7 @@ sqFileValid(SQFile *f) {
 }
 
 size_t
-sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
+sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex) {
 	/* Write count bytes to the given writable file starting at startIndex
 	   in the given byteArray. (See comment in sqFileReadIntoAt for interpretation
 	   of byteArray and startIndex).
