@@ -193,16 +193,23 @@ CoInterpreterPrimitives >> primitiveClosureCopyWithCopiedValues [
 
 { #category : #'process primitives' }
 CoInterpreterPrimitives >> primitiveCollectCogCodeConstituents [
-	"Answer the contents of the code zone as an array of pair-wise element, address in ascending address order.
-	 Answer a string for a runtime routine or abstract label (beginning, end, etc), a CompiledMethod for a CMMethod,
-	 or a selector (presumably a Symbol) for a PIC.
-	 If the last argument (or the receiver if no arguments) is true, then collect inner information about the CogMethod."
+	"Answer the contents of the code zone as an array of pair-wise element, address in ascending
+	 address order. Answer a string for a runtime routine or abstract label (beginning, end, etc),
+	 a CompiledMethod for a CMMethod, or a selector (presumably a Symbol) for a PIC.
+	 If there is an argument and it is true, then collect inner information about the CogMethod."
 	| constituents withDetails |
-	withDetails := self stackTop.
-	constituents := cogit cogCodeConstituents: (withDetails = objectMemory trueObject).
+	argumentCount = 0
+		ifTrue: [withDetails := false]
+		ifFalse:
+			[withDetails := self stackTop.
+			 (withDetails = objectMemory trueObject
+			  or: [withDetails = objectMemory falseObject]) ifFalse:
+				[^self primitiveFailFor: PrimErrBadArgument].
+			  withDetails := withDetails = objectMemory trueObject].
+	constituents := cogit cogCodeConstituents: withDetails = objectMemory trueObject.
 	constituents ifNil:
 		[^self primitiveFailFor: PrimErrNoMemory].
-	self pop: 1 thenPush: constituents
+	self pop: argumentCount + 1 thenPush: constituents
 ]
 
 { #category : #'indexing primitives' }
