@@ -1272,8 +1272,8 @@ StackInterpreter class >> initializePrimitiveTable [
 		(242 primitiveSignalAtUTCMicroseconds)
 		(243 primitiveUpdateTimezone) "primStringtranslatefromtotable"
 		(244 primitiveUtcAndTimezoneOffset)
-		(245 primitiveFail) "primStringindexOfAsciiinStringstartingAt"
-		(246 primitiveFail) "primStringfindSubstringinstartingAtmatchTable"
+		(245 primitiveCoarseUTCMicrosecondClock) "primStringindexOfAsciiinStringstartingAt"
+		(246 primitiveCoarseLocalMicrosecondClock) "primStringfindSubstringinstartingAtmatchTable"
 		(247 primitiveSnapshotEmbedded)
 		(248 primitiveFail) "primitiveInvokeObjectAsMethod"
 		(249 primitiveArrayBecomeOneWayCopyHash)
@@ -1961,7 +1961,7 @@ StackInterpreter >> addFirstLink: proc toList: aList [
 StackInterpreter >> addIdleUsecs: idleUsecs [
 	"The various poll/select calls in the VM should attempt to tally the ammount
 	 of time spent at idle here, so as to render the uptime value meaningful."
-	<export: true>
+	<api>
 	statIdleUsecs := statIdleUsecs + idleUsecs
 ]
 
@@ -18790,13 +18790,13 @@ StackInterpreter >> reverseDisplayFrom: startIndex to: endIndex [
 	 It is assumed that the given word range falls entirely within the first line of the Display."
 	
 	| wordStartIndex wordEndIndex primFailCodeValue |
-	(displayBits = 0 or: [(objectMemory isImmediate: displayBits asInteger) or: [displayDepth = 0]]) ifTrue: [^nil].
+	(displayBits = 0 or: [(objectMemory isImmediate: displayBits asInteger) or: [displayDepth <= 0]]) ifTrue: [^nil].
 	wordStartIndex := (startIndex max: 0) * displayDepth // 32.
 	wordEndIndex := (endIndex min: displayWidth) * displayDepth // 32.
-	wordStartIndex * 4 to: wordEndIndex * 4 do:
-		[:byteOffset | | reversed |
-		reversed := (objectMemory long32At: displayBits asInteger + byteOffset) bitXor: 16rFFFFFFFF.
-		objectMemory long32At: displayBits asInteger + byteOffset put: reversed].
+	displayBits asInteger + (wordStartIndex * 4) to: displayBits asInteger + (wordEndIndex * 4) by: 4 do:
+		[:ptr | | reversed |
+		reversed := (objectMemory long32At: ptr) bitXor: 16rFFFFFFFF.
+		objectMemory long32At: ptr put: reversed].
 	primFailCodeValue := primFailCode.
 	self initPrimCall.
 	self updateDisplayLeft: 0 Top: 0 Right: displayWidth Bottom: 1.
