@@ -1357,6 +1357,30 @@ InterpreterPrimitives >> primitiveClosureValueWithArgs [
 	self activateNewClosure: blockClosure outer: outerContext method: closureMethod numArgs: numArgs mayContextSwitch: true
 ]
 
+{ #category : #'system control primitives' }
+InterpreterPrimitives >> primitiveCoarseLocalMicrosecondClock [
+	"Return the value of the microsecond clock in the local timezone, as updated by the heartbeat, as an integer.
+	 This is the number of microseconds since the Smalltalk epoch, 1901/1/1 12:00am.
+	 The microsecond clock is at least 60 bits wide which means it'll get to around August
+	 38435 before it wraps around.  Be sure to put it on your calendar.  The coarse clock is
+	 updated by the heartbeat thread and as such is much cheaper than
+	 primitiveUTCMicrosecondClock, which always entails a system call."
+
+	self pop: 1 thenPush: (self positive64BitIntegerFor: self ioLocalMicroseconds)
+]
+
+{ #category : #'system control primitives' }
+InterpreterPrimitives >> primitiveCoarseUTCMicrosecondClock [
+	"Return the value of the microsecond clock as updated by the heartbeat as an integer.
+	 This is the number of microseconds since the Smalltalk epoch, 1901/1/1 12:00am.
+	 The microsecond clock is at least 60 bits wide which means it'll get to around August
+	 38435 before it wraps around.  Be sure to put it on your calendar.  The coarse clock is
+	 updated by the heartbeat thread and as such is much cheaper than
+	 primitiveUTCMicrosecondClock, which always entails a system call."
+
+	self pop: 1 thenPush: (self positive64BitIntegerFor: self ioUTCMicroseconds)
+]
+
 { #category : #'indexing primitives' }
 InterpreterPrimitives >> primitiveCompareBytes [
 	"Primitive. Compare two byte-indexed objects for equality"
@@ -2844,8 +2868,11 @@ InterpreterPrimitives >> primitiveLoadImageSegment [
 
 { #category : #'system control primitives' }
 InterpreterPrimitives >> primitiveLocalMicrosecondClock [
-	"Return the value of the microsecond clock as an integer.  The microsecond clock is at
-	 least 60 bits wide which means it'll get to around August 38435 before it wraps around."
+	"Return the value of the microsecond clock in the local timezone as an integer.
+	 This is the number of microseconds since the Smalltalk epoch, 1901/1/1 12:00am.
+	 The microsecond clock is at least 60 bits wide which means it'll get to around August
+	 38435 before it wraps around.  Be sure to put it on your calendar.  This primitive
+	 accesses the time as answered by the OS."
 
 	self pop: 1 thenPush: (self positive64BitIntegerFor: self ioLocalMicrosecondsNow)
 ]
@@ -2883,14 +2910,15 @@ InterpreterPrimitives >> primitiveLowSpaceSemaphore [
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveMakePoint [
 	<inline: false>
-	| rcvr pt |
+	| rcvr arg pt |
 	rcvr := self stackValue: 1.
-	((objectMemory isIntegerObject: rcvr) or: [objectMemory isFloatObject: rcvr]) ifFalse:
-		[^self primitiveFail].
+	arg := self stackTop.
+	((objectMemory isIntegerObject: arg) or: [objectMemory isFloatObject: arg]) ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
 	pt := objectMemory eeInstantiateSmallClass: (objectMemory splObj: ClassPoint) numSlots: YIndex + 1.
-	objectMemory
+	objectMemory "No need to check since new object is always new."
 		storePointerUnchecked: XIndex ofObject: pt withValue: rcvr;
-		storePointerUnchecked: YIndex ofObject: pt withValue: self stackTop.
+		storePointerUnchecked: YIndex ofObject: pt withValue: arg.
 	self pop: 2 thenPush: pt
 ]
 
@@ -4786,8 +4814,11 @@ InterpreterPrimitives >> primitiveTruncated [
 
 { #category : #'system control primitives' }
 InterpreterPrimitives >> primitiveUTCMicrosecondClock [
-	"Return the value of the microsecond clock as an integer.  The microsecond clock is at
-	 least 60 bits wide which means it'll get to around August 38435 before it wraps around."
+	"Return the value of the microsecond clock in UTC as an integer.
+	 This is the number of microseconds since the Smalltalk epoch, 1901/1/1 12:00am.
+	 The microsecond clock is at least 60 bits wide which means it'll get to around August
+	 38435 before it wraps around.  Be sure to put it on your calendar.  This primitive
+	 accesses the time as answered by the OS."
 
 	self pop: 1 thenPush: (self positive64BitIntegerFor: self ioUTCMicrosecondsNow)
 ]

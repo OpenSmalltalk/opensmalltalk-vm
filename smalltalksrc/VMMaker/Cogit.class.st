@@ -11500,7 +11500,7 @@ Cogit >> sendTrace: aBooleanOrInteger [
 	 32 => trace stack overflow
 	 64 => send breakpoint on implicit receiver (Newspeak VM only)
 	128 => check stack depth on send (simulation only)
-	256 => count sends (simulation only)"
+	256 => trace linked sends "
 	traceFlags := aBooleanOrInteger isInteger
 							ifTrue: [aBooleanOrInteger]
 							ifFalse: [aBooleanOrInteger ifTrue: [6] ifFalse: [0]]
