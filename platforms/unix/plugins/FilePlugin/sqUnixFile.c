@@ -228,7 +228,7 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   {
     char terminatedName[MAXPATHLEN+1];
     if(nameLen > MAXPATHLEN)
-      return BAD_PATH
+      return BAD_PATH;
     strncpy(terminatedName, dirEntry->d_name, nameLen);
     terminatedName[nameLen]= '\0';
     if(strlen(unixPath) + 1 + nameLen > MAXPATHLEN)
@@ -302,7 +302,7 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString
 
   char terminatedName[MAXPATHLEN+1];
   if(nameStringLength > MAXPATHLEN)
-    return BAD_PATH
+    return BAD_PATH;
   strncpy(terminatedName, nameString, nameStringLength);
   terminatedName[nameStringLength]= '\0';
   if(strlen(unixPath) + 1 + nameStringLength > MAXPATHLEN)
