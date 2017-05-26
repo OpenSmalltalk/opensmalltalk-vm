@@ -32,9 +32,15 @@
 
 #ifndef NO_STD_FILE_SUPPORT
 
-#include "FilePlugin.h"
-#include <limits.h> /* for PATH_MAX */
+#include <sys/stat.h>
+#include <sys/types.h>
 
+#include <fcntl.h>
+#include <limits.h>
+#include <stdio.h>
+
+#include "sqMemoryAccess.h"
+#include "FilePlugin.h" /* must be included after sq.h */
 
 /***
 	The state of a file is kept in the following structure,
@@ -154,7 +160,7 @@ sqFileClose(SQFile *f) {
 		return interpreterProxy->success(false);
 
 	result = fclose(getFile(f));
-	setFile(f, 0);
+	setFile(f, NULL);
 	f->sessionID = 0;
 	f->writable = false;
 	setSize(f, 0);
@@ -162,7 +168,7 @@ sqFileClose(SQFile *f) {
 
 	/*
 	 * fclose() can fail for the same reasons fflush() or write() can so
-	 * errors must be checked
+	 * errors must be checked, but it must NEVER be retried
 	 */
 	if (result != 0)
 		return interpreterProxy->success(false);
@@ -171,7 +177,7 @@ sqFileClose(SQFile *f) {
 }
 
 sqInt
-sqFileDeleteNameSize(char* sqFileName, sqInt sqFileNameSize) {
+sqFileDeleteNameSize(char *sqFileName, sqInt sqFileNameSize) {
 	char cFileName[PATH_MAX];
 	int err;
 
@@ -219,8 +225,61 @@ sqFileInit(void) {
 sqInt
 sqFileShutdown(void) { return 1; }
 
+/* These functions use the open() sys call directly, retrying on EINTR, and
+   return a file descriptor on success and a negative integer on failure.
+   They're needed because fopen() doesn't give enough control over file
+   creation and truncation, for example to only create a file if it doesn't
+   already exist or to open a file for just writing but not truncation.
+*/
+static int openFileWithFlags(const char *path, int flags)
+{
+	int fd;
+
+	do {
+		fd = open(path, flags);
+	} while (fd < 0 && errno == EINTR);
+
+	return fd;
+}
+static int openFileWithFlagsInMode(const char *path, int flags, mode_t mode)
+{
+	int fd;
+
+	do {
+		fd = open(path, flags, mode);
+	} while (fd < 0 && errno == EINTR);
+
+	return fd;
+}
+
+static FILE *openFileDescriptor(int fd, const char *mode)
+{
+	/* This must be implemented separately from openFileWithFlags()
+	   and openFileWithFlagsInMode() so error checking can be done
+	   by the caller for both open() and fdopen() failure conditions.
+	 */
+	FILE *file;
+
+	do {
+		file = fdopen(fd, mode);
+	} while (file == NULL && errno == EINTR);
+
+	return file;
+}
+
+static void setNewFileMacTypeAndCreator(char *sqFileName, sqInt sqFileNameSize)
+{
+	char type[4], creator[4];
+
+	dir_GetMacFileTypeAndCreator(sqFileName, sqFileNameSize, type, creator);
+	if (strncmp(type, "BINA", 4) == 0
+		|| strncmp(type, "????", 4) == 0
+		|| strncmp(type, "", 1) == 0)
+		dir_SetMacFileTypeAndCreator(sqFileName, sqFileNameSize, "TEXT", "R*ch");
+}
+
 sqInt
-sqFileOpen(SQFile *f, char* sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
+sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 	/* Opens the given file using the supplied sqFile structure
 	   to record its state. Fails with no side effects if f is
 	   already open. Files are always opened in binary mode;
@@ -228,6 +287,8 @@ sqFileOpen(SQFile *f, char* sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 	*/
 
 	char cFileName[PATH_MAX];
+	int fd;
+	const char *mode;
 
 	/* don't open an already open file */
 	if (sqFileValid(f))
@@ -241,56 +302,156 @@ sqFileOpen(SQFile *f, char* sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 		return interpreterProxy->success(false);
 
 	if (writeFlag) {
-		/* First try to open an existing file read/write: */
-		setFile(f, fopen(cFileName, "r+b"));
-		if (getFile(f) == NULL) {
-			/* Previous call fails if file does not exist. In that case,
-			   try opening it in write mode to create a new, empty file.
-			*/
-			setFile(f, fopen(cFileName, "w+b"));
-			/* and if w+b fails, try ab to open a write-only file in append mode,
-			   not wb which opens a write-only file but overwrites its contents.
-			 */
-			if (getFile(f) == NULL)
-				setFile(f, fopen(cFileName, "ab"));
-			if (getFile(f) != NULL) {
-			    /* New file created, set Mac file characteristics */
-			    char type[4],creator[4];
-				dir_GetMacFileTypeAndCreator(sqFileName, sqFileNameSize, type, creator);
-				if (strncmp(type,"BINA",4) == 0 || strncmp(type,"????",4) == 0 || *(int *)type == 0 ) 
-				    dir_SetMacFileTypeAndCreator(sqFileName, sqFileNameSize,"TEXT","R*ch");	
-			} else {
-				/* If the file could not be opened read/write and if a new file
-				   could not be created, then it may be that the file exists but
-				   does not permit read access. Try opening as a write only file,
-				   opened for append to preserve existing file contents.
-				*/
-				setFile(f, fopen(cFileName, "ab"));
-				if (getFile(f) == NULL) {
-					return interpreterProxy->success(false);
+		int retried = 0;
+		do {
+			mode = "r+b";
+			fd = openFileWithFlags(cFileName, O_RDWR);
+			/* could have failed if we lack read permission or it didn't exist */
+			if (fd < 0) {
+				if (errno == EACCES) {
+					/* this does no truncation, unlike the
+					   equivalent with fopen()
+					 */
+					mode = "wb";
+					fd = openFileWithFlags(cFileName, O_WRONLY);
+				} else if (errno == ENOENT) {
+					mode = "r+b";
+					fd = openFileWithFlagsInMode(
+						cFileName,
+						O_CREAT|O_EXCL|O_RDWR,
+						/* the mode fopen() uses when creating files;
+						   will likely be rw-r--r-- after being modified
+						   by the process's umask
+						 */
+						S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+
+					/* could have failed if we lack read permission
+					   or it already exists
+					 */
+					if (fd < 0 && errno == EACCES) {
+						mode = "wb";
+						fd = openFileWithFlagsInMode(
+							cFileName,
+							O_CREAT|O_EXCL|O_WRONLY,
+							/* write-only version of the above mode;
+							   will likely be -w------- after being
+							   modified by the process's umask
+							 */
+							S_IWUSR|S_IWGRP|S_IWOTH);
+					}
+
+					if (fd >= 0)
+						setNewFileMacTypeAndCreator(sqFileName, sqFileNameSize);
 				}
 			}
-		}
-		f->writable = true;
+		/* We retry this only once if it failed because we attempted to create
+		   a new file that already existed (EEXIST when O_EXCL is used).
+		   This should only occur if the file was created after we tried to
+		   read an existing file but before we could create it.
+		 */
+		} while (fd < 0 && errno == EEXIST && ++retried <= 1);
 	} else {
-		setFile(f, fopen(cFileName, "rb"));
-		f->writable = false;
+		mode = "rb";
+		fd = openFileWithFlags(cFileName, O_RDONLY);
 	}
 
-	if (getFile(f) == NULL) {
-		f->sessionID = 0;
-		setSize(f, 0);
-		return interpreterProxy->success(false);
-	} else {
-		FILE *file= getFile(f);
-		f->sessionID = thisSession;
-		/* compute and cache file size */
-		fseek(file, 0, SEEK_END);
-		setSize(f, ftell(file));
-		fseek(file, 0, SEEK_SET);
+	if (fd >= 0) {
+		FILE *file = openFileDescriptor(fd, mode);
+		if (file != NULL) {
+			f->sessionID = thisSession;
+			setFile(f, file);
+
+			/* compute and cache file size */
+			fseek(file, 0, SEEK_END);
+			setSize(f, ftell(file));
+			fseek(file, 0, SEEK_SET);
+
+			f->writable = writeFlag ? true : false;
+			f->lastOp = UNCOMMITTED;
+			return 1;
+		}
+
+		/* close() the bad fd to avoid leaking file descriptors;
+		   NEVER reattempt close() if it fails, even on EINTR
+		 */
+		close(fd);
 	}
-	f->lastOp = UNCOMMITTED;
-	return 1;
+
+	f->sessionID = 0;
+	setSize(f, 0);
+	f->writable = false;
+	return interpreterProxy->success(false);
+}
+
+sqInt
+sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize) {
+	/* Opens the given file for writing and if possible reading
+	   if it does not already exist using the supplied sqFile
+	   structure to record its state.
+	   Fails with no side effects if f is already open. Files are
+	   always opened in binary mode; Squeak must take care of any
+	   line-end character mapping.
+	*/
+
+	char cFileName[PATH_MAX];
+	int fd;
+	const char *mode;
+
+	/* don't open an already open file */
+	if (sqFileValid(f))
+		return interpreterProxy->success(false);
+
+	/* copy the file name into a null-terminated C string */
+	if (sqFileNameSize >= sizeof(cFileName))
+		return interpreterProxy->success(false);
+	/* can fail when alias resolution is enabled */
+	if (interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cFileName, sqFileName, sqFileNameSize, true) != 0)
+		return interpreterProxy->success(false);
+
+	mode = "r+b";
+	fd = openFileWithFlagsInMode(
+		cFileName,
+		O_CREAT|O_EXCL|O_RDWR,
+		/* the mode fopen() uses when creating files; will likely
+		   be rw-r--r-- after being modified by the process's umask
+		 */
+		S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+	/* could have failed if we lack read permission or it already exists */
+	if (fd < 0 && errno == EACCES) {
+		mode = "wb";
+		fd = openFileWithFlagsInMode(
+			cFileName,
+			O_CREAT|O_EXCL|O_WRONLY,
+			/* write-only version of the above mode; will likely
+			   be -w------- after being modified by the process's umask
+			 */
+			S_IWUSR|S_IWGRP|S_IWOTH);
+	}
+
+	if (fd >= 0) {
+		FILE *file;
+
+		setNewFileMacTypeAndCreator(sqFileName, sqFileNameSize);
+		file = openFileDescriptor(fd, mode);
+		if (file != NULL) {
+			f->sessionID = thisSession;
+			setFile(f, file);
+			setSize(f, 0);
+			f->writable = true;
+			f->lastOp = UNCOMMITTED;
+			return 1;
+		}
+
+		/* close() the bad fd to avoid leaking file descriptors;
+		   NEVER reattempt close() if it fails, even on EINTR
+		 */
+		close(fd);
+	}
+
+	f->sessionID = 0;
+	setSize(f, 0);
+	f->writable = false;
+	return interpreterProxy->success(false);
 }
 
 /*
@@ -314,11 +475,7 @@ sqFileStdioHandlesInto(SQFile files[])
 	files[0].fileSize = 0;
 	files[0].writable = false;
 	files[0].lastOp = READ_OP;
-#if 0
-	files[0].isStdioStream = true;
-#else
 	files[0].isStdioStream = isatty(fileno(stdin));
-#endif
 	files[0].lastChar = EOF;
 
 	files[1].sessionID = thisSession;
@@ -341,7 +498,7 @@ sqFileStdioHandlesInto(SQFile files[])
 }
 
 size_t
-sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
+sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex) {
 	/* Read count bytes from the given file into byteArray starting at
 	   startIndex. byteArray is the address of the first byte of a
 	   Squeak bytes object (e.g. String or ByteArray). startIndex
@@ -427,16 +584,16 @@ sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startInde
 }
 
 sqInt
-sqFileRenameOldSizeNewSize(char* oldNameIndex, sqInt oldNameSize, char* newNameIndex, sqInt newNameSize) {
+sqFileRenameOldSizeNewSize(char *sqOldName, sqInt sqOldNameSize, char *sqNewName, sqInt sqNewNameSize) {
 	char cOldName[PATH_MAX], cNewName[PATH_MAX];
 	int err;
 
-	if ((oldNameSize >= sizeof(cOldName)) || (newNameSize >= sizeof(cNewName)))
+	if ((sqOldNameSize >= sizeof(cOldName)) || (sqNewNameSize >= sizeof(cNewName)))
 		return interpreterProxy->success(false);
 
 	/* copy the file names into null-terminated C strings */
-	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cOldName, oldNameIndex, oldNameSize, false);
-	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cNewName, newNameIndex, newNameSize, false);
+	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cOldName, sqOldName, sqOldNameSize, false);
+	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cNewName, sqNewName, sqNewNameSize, false);
 
 	err = rename(cOldName, cNewName);
 	if (err)
@@ -516,7 +673,7 @@ sqFileSync(SQFile *f) {
 }
 
 sqInt
-sqFileTruncate(SQFile *f,squeakFileOffsetType offset) {
+sqFileTruncate(SQFile *f, squeakFileOffsetType offset) {
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
  	if (sqFTruncate(getFile(f), offset))
@@ -534,7 +691,7 @@ sqFileValid(SQFile *f) {
 }
 
 size_t
-sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
+sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex) {
 	/* Write count bytes to the given writable file starting at startIndex
 	   in the given byteArray. (See comment in sqFileReadIntoAt for interpretation
 	   of byteArray and startIndex).
