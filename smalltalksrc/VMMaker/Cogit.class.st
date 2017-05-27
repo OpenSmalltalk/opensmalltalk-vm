@@ -328,7 +328,7 @@ Class {
 		'generatorTable',
 		'primitiveTable'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -8296,7 +8296,7 @@ Cogit >> handleABICallOrJumpSimulationTrap: aProcessorSimulationTrap evaluable: 
 { #category : #'simulation only' }
 Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 	<doNotGenerate>
-	| evaluable function result savedFramePointer savedStackPointer savedArgumentCount rpc |
+	| evaluable function memory result savedFramePointer savedStackPointer savedArgumentCount rpc |
 	evaluable := simulatedTrampolines at: aProcessorSimulationTrap address.
 	function := evaluable isBlock
 					ifTrue: ['aBlock; probably some plugin primitive']
@@ -8308,17 +8308,17 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 		[coInterpreter assertValidExternalStackPointers].
 	(function beginsWith: 'ceShort') ifTrue:
 		[^self perform: function with: aProcessorSimulationTrap].
-	aProcessorSimulationTrap type = #call
+	aProcessorSimulationTrap type == #call
 		ifTrue:
 			[processor
 				simulateCallOf: aProcessorSimulationTrap address
 				nextpc: aProcessorSimulationTrap nextpc
-				memory: coInterpreter memory.
-			self recordInstruction: {'(simulated call of '. aProcessorSimulationTrap address. '/'. function. ')'}]
+				memory: (memory := coInterpreter memory).
+			 self recordInstruction: {'(simulated call of '. aProcessorSimulationTrap address. '/'. function. ')'}]
 		ifFalse:
 			[processor
 				simulateJumpCallOf: aProcessorSimulationTrap address
-				memory: coInterpreter memory.
+				memory: (memory := coInterpreter memory).
 			 self recordInstruction: {'(simulated jump to '. aProcessorSimulationTrap address. '/'. function. ')'}].
 	savedFramePointer := coInterpreter framePointer.
 	savedStackPointer := coInterpreter stackPointer.
@@ -8329,7 +8329,7 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 					[clickConfirm := false. self halt]].
 			   evaluable valueWithArguments: (processor
 												postCallArgumentsNumArgs: evaluable numArgs
-												in: coInterpreter memory)]
+												in: memory)]
 				on: ReenterMachineCode
 				do: [:ex| ex return: ex returnValue].
 			
@@ -8356,12 +8356,12 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 				[self assert: savedFramePointer = coInterpreter framePointer.
 				 self assert: savedStackPointer = coInterpreter stackPointer]].
 	result ~~ #continueNoReturn ifTrue:
-		[self recordInstruction: {'(simulated return to '. processor retpcIn: coInterpreter memory. ')'}.
-		 rpc := processor retpcIn: coInterpreter memory.
+		[self recordInstruction: {'(simulated return to '. processor retpcIn: memory. ')'}.
+		 rpc := processor retpcIn: memory.
 		 self assert: (rpc >= codeBase and: [rpc < methodZone freeStart]).
 		 processor
-			smashCallerSavedRegistersWithValuesFrom: 16r80000000 by: objectMemory wordSize;
-			simulateReturnIn: coInterpreter memory].
+			smashCallerSavedRegistersWithValuesFrom: 16r80000000 by: objectMemory wordSize in: memory;
+			simulateReturnIn: memory].
 	self assert: (result isInteger "an oop result"
 			or: [result == coInterpreter
 			or: [result == objectMemory

@@ -57,7 +57,7 @@ Class {
 		'XMM6L',
 		'XMM7L'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -3481,18 +3481,6 @@ CogIA32Compiler >> genRestoreRegs: regMask [
 ]
 
 { #category : #abi }
-CogIA32Compiler >> genRestoreRegsExcept: preservedReg [
-	self assert: (EDI > EAX and: [EDI - EAX + 1 = 6]).
-	EAX to: EDI do:
-		[:reg|
-		(reg between: ESP and: EBP) ifFalse:
-			[preservedReg = reg
-				ifTrue: [cogit AddCq: 4 R: ESP]
-				ifFalse: [cogit PopR: reg]]].
-	^0
-]
-
-{ #category : #abi }
 CogIA32Compiler >> genSaveRegs: regMask [
 	"Save the registers in regMask for a call into the C run-time from a trampoline."
 
@@ -3853,14 +3841,6 @@ CogIA32Compiler >> numLowLevelLockOpcodes [
 	 movl 0, $eax
 	 ret"
 	^14
-]
-
-{ #category : #abi }
-CogIA32Compiler >> numberOfSaveableRegisters [
-	"Answer the number of registers to be saved in a trampoline call that saves registers.
-	 See genSaveRegisters"
-	<cmacro: '(self) 6'>
-	^6
 ]
 
 { #category : #'generate machine code' }
