@@ -1790,7 +1790,7 @@ GdbARMAlien >> smashABICallerSavedRegistersWithValuesFrom: base by: step [
 ]
 
 { #category : #'accessing-abstract' }
-GdbARMAlien >> smashCallerSavedRegistersWithValuesFrom: base by: step [
+GdbARMAlien >> smashCallerSavedRegistersWithValuesFrom: base by: step in: aMemory [
 	#(r0: r1: r2: r3: r9: r12: lr:) withIndexDo:
 		[:accessor :index|
 		self perform: accessor with: index - 1 * step + base]

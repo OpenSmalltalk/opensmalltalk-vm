@@ -1332,13 +1332,21 @@ BochsX64Alien >> simulateReturnIn: aMemory [
 ]
 
 { #category : #'accessing-abstract' }
-BochsX64Alien >> smashCallerSavedRegistersWithValuesFrom: base by: step [
-	(CogX64Compiler isSysV
-				ifTrue: [#(rax: rcx: rdx: rsi: rdi: r8: r9: r10: r11:)]
-				ifFalse: [#(rax: rcx: rdx: r8: r9: r10: r11:)])
-	   withIndexDo:
-		[:accessor :index|
-		self perform: accessor with: index - 1 * step + base]
+BochsX64Alien >> smashCallerSavedRegistersWithValuesFrom: base by: step in: aMemory [
+	| volatileRegisters |
+	CogX64Compiler isSysV
+		ifTrue:
+			[volatileRegisters := #(rax: rcx: rdx: rsi: rdi: r8: r9: r10: r11:)]
+		ifFalse: "We should also save the registers to the shadow parameter space."
+			[volatileRegisters := #(rax: rcx: rdx: r8: r9: r10: r11:).
+			 #(rcx rdx r8 r9) withIndexDo:
+				[:getter :index|
+				 aMemory
+					unsignedLong64At: self rbp + 8 + (index * 8) "skip saved fp and retpc"
+					put: (self perform: getter)]].
+	volatileRegisters withIndexDo:
+		[:setter :index|
+		self perform: setter with: index - 1 * step + base]
 ]
 
 { #category : #'accessing-abstract' }
