@@ -58,18 +58,17 @@ OFLAGS:= -O1 -fno-omit-frame-pointer
 DEBUGVM=0
 NDEBUG:=
 else
-OFLAGS:=  
+OFLAGS:= -O0 -fno-omit-frame-pointer
 DEBUGVM=1
 NDEBUG:=
 endif
 
 XDEFS:=	
-DEFS:=	$(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
+DEFS:=	$(WINVER) -DWIN64=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
 		-DNO_SERVICE -DNO_STD_FILE_SUPPORT \
 		$(NDEBUG) -DLSB_FIRST -DVM_NAME=\"$(VM)\" $(XDEFS)
 
-	
-CFLAGS:= -msse2 -ggdb2 -m64 -mdll \
+CFLAGS:= -fdeclspec -msse2 -ggdb2 -m64 -mdll \
 	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS)
 
 
