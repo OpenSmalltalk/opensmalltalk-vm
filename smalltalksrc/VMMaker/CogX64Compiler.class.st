@@ -75,7 +75,7 @@ Class {
 		'XMM8L',
 		'XMM9L'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -3744,18 +3744,6 @@ CogX64Compiler >> genRestoreRegs: regMask [
 ]
 
 { #category : #abi }
-CogX64Compiler >> genRestoreRegsExcept: preservedReg [
-	self assert: (R15 > RAX and: [R15 - RAX + 1 = 16]).
-	RAX to: R15 do:
-		[:reg|
-		(reg between: RSP and: RBP) ifFalse:
-			[preservedReg = reg
-				ifTrue: [cogit AddCq: 8 R: RSP]
-				ifFalse: [cogit PopR: reg]]].
-	^0
-]
-
-{ #category : #abi }
 CogX64Compiler >> genSaveRegs: regMask [
 	"Save the registers in regMask for a call into the C run-time from a trampoline."
 
@@ -4081,14 +4069,6 @@ CogX64Compiler >> nsSendCacheAt: callSiteReturnAddress [
 { #category : #accessing }
 CogX64Compiler >> numIntRegArgs [
 	^SysV ifTrue: [6] ifFalse: [4]
-]
-
-{ #category : #abi }
-CogX64Compiler >> numberOfSaveableRegisters [
-	"Answer the number of registers to be saved in a trampoline call that saves registers.
-	 See genSaveRegisters"
-	<cmacro: '(self) 14'>
-	^14
 ]
 
 { #category : #'generate machine code' }

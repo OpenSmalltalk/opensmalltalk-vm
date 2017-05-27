@@ -83,7 +83,7 @@ Class {
 		'VS',
 		'XorOpcode'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #accessing }
@@ -2313,13 +2313,6 @@ CogARMCompiler >> genRestoreRegs: regMask [
 ]
 
 { #category : #abi }
-CogARMCompiler >> genRestoreRegsExcept: abstractReg [
-	"Restore the general purpose registers except for abstractReg for a trampoline call."
-	"Restore none, because the ARM ABI only defines callee saved registers, no caller-saved regs."
-
-]
-
-{ #category : #abi }
 CogARMCompiler >> genSaveRegForCCall [
 	"Save the general purpose registers for a call into the C run-time from a trampoline."
 	"Save none, because the ARM ABI only defines callee saved registers, no caller-saved regs."
@@ -2953,14 +2946,6 @@ CogARMCompiler >> numICacheFlushOpcodes [
 { #category : #accessing }
 CogARMCompiler >> numIntRegArgs [
 	^4
-]
-
-{ #category : #abi }
-CogARMCompiler >> numberOfSaveableRegisters [
-	"Answer the number of registers to be saved in a trampoline call that saves registers.
-	 None, See genSaveRegisters."
-	<cmacro: '(self) 0'>
-	^0
 ]
 
 { #category : #'ARM convenience instructions' }

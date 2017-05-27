@@ -37,7 +37,7 @@ Class {
 	#pools : [
 		'MIPSConstants'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'class initialization' }
@@ -1796,12 +1796,6 @@ CogMIPSELCompiler >> genRestoreRegs: regMask [
 ]
 
 { #category : #abi }
-CogMIPSELCompiler >> genRestoreRegsExcept: abstractReg [
-	"Restore the general purpose registers except for abstractReg for a trampoline call."
-	self flag: #bogus.
-]
-
-{ #category : #abi }
 CogMIPSELCompiler >> genSaveRegs: regMask [
 	"Save the registers in regMask for a call into the C run-time from a trampoline.
 	 We don't need to do anything because all of the abstract registers are
@@ -2429,14 +2423,6 @@ CogMIPSELCompiler >> nsSendCacheAt: callSiteReturnAddress [
 CogMIPSELCompiler >> numIntRegArgs [
 	self flag: #OABI.
 	^4
-]
-
-{ #category : #abi }
-CogMIPSELCompiler >> numberOfSaveableRegisters [
-	"Answer the number of registers to be saved in a trampoline call that saves registers.
-	 None, See genSaveRegisters."
-	<cmacro: '(self) 0'>
-	^0
 ]
 
 { #category : #'inline cacheing' }
