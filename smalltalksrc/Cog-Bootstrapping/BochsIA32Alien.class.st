@@ -1101,7 +1101,7 @@ BochsIA32Alien >> simulateReturnIn: aMemory [
 ]
 
 { #category : #'accessing-abstract' }
-BochsIA32Alien >> smashCallerSavedRegistersWithValuesFrom: base by: step [
+BochsIA32Alien >> smashCallerSavedRegistersWithValuesFrom: base by: step in: aMemory [
 	#(eax: ecx: edx:)
 	   withIndexDo:
 		[:accessor :index|
