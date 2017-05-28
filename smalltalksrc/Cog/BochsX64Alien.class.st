@@ -1342,7 +1342,7 @@ BochsX64Alien >> smashCallerSavedRegistersWithValuesFrom: base by: step in: aMem
 			 #(rcx rdx r8 r9) withIndexDo:
 				[:getter :index|
 				 aMemory
-					unsignedLong64At: self rbp + 8 + (index * 8) "skip saved fp and retpc"
+					unsignedLong64At: self rbp + PostBuildStackDelta + 8 + (index * 8) "skip saved fp and retpc"
 					put: (self perform: getter)]].
 	volatileRegisters withIndexDo:
 		[:setter :index|
