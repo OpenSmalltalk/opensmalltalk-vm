@@ -1914,7 +1914,7 @@ static sqInt needsFrame;
 static AbstractInstruction * noCheckEntry;
 static sqInt numAbstractOpcodes;
 static sqInt numExtB;
-static usqInt objectReferencesInRuntime[NumObjRefsInRuntime];
+static usqInt objectReferencesInRuntime[NumObjRefsInRuntime+1];
 static sqInt opcodeIndex;
 static CogMethod *openPICList = 0;
 static sqInt openPICSize;
