@@ -1,12 +1,18 @@
 #############################################################################
-# Generic Makefile for plugins
+# Generic Makefile for plugins on Win64
 #############################################################################
+#
+# The following variables can be overridden in the platform Makefile, e.g.
+# platforms/win32/plugins/BochsIA32Plugin/Makefile.  Look at
+# platforms/win32/plugins/*/Makefile for examples.
+#
+# PREREQUISITES  supplies names of files that must exist to make lib or bundle
 
 # The following are the four key locations (set via invocation):
 # PLUGINSRCDIR: Where is the root of the src plugins source tree?
 # VMSRCDIR: Where is the src/vm source directory?
 # PLATDIR: Where is the root of the platforms tree?
-# BUILDDIR: Which irectory should objects be compiled into?
+# BUILDDIR: Which directory should objects be compiled into?
 
 #############################################################################
 # Standard directory locations:
@@ -126,6 +132,9 @@ $(OBJDIR):
 $(VMDIR):
 	mkdir $(VMDIR)
 
+# If any prerequisites are declared all must exist to continue
+ifeq ($(realpath $(PREREQUISITES)),$(abspath $(PREREQUISITES)))
+
 $(PLUGINLIB): $(VMDIR) $(OBJDIR) $(LIBOBJ)
 	-$(RM) $(PLUGINLIB)
 	$(AR) $(PLUGINLIB) $(LIBOBJ)
@@ -166,3 +175,18 @@ endif
 # Rules for automated builds
 #
 include ../common/Makefile.rules
+
+else # ifeq ($(realpath $(PREREQUISITES)),$(PREREQUISITES))
+# If any prerequisites are missing simply create a .ignore file
+
+$(PLUGINLIB): FORCE
+	$(warning $(PLUGINLIB) has missing prerequisites. Not building.)
+	echo >$(basename $(PLUGINLIB)).ignore
+
+$(PLUGINDLL):	FORCE
+	$(warning $(PLUGINDLL) has missing prerequisites. Not building.)
+	echo >$(basename $(PLUGINDLL)).ignore
+
+FORCE:
+
+endif # ifeq ($(realpath $(PREREQUISITES)),$(PREREQUISITES))

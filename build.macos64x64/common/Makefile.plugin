@@ -231,6 +231,10 @@ $(PLUGINBUNDLE):	FORCE
 	$(warning $(PLUGINBUNDLE) has missing prerequisites. Not building.)
 	echo >$(basename $(PLUGINBUNDLE)).ignore
 
+$(PLUGINDYLIB):	FORCE
+	$(warning $(PLUGINDYLIB) has missing prerequisites. Not building.)
+	echo >$(basename $(PLUGINDYLIB)).ignore
+
 FORCE:
 
 endif
