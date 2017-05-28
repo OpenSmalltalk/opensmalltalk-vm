@@ -17,6 +17,10 @@
 
 #include <sys/types.h>
 
+#ifdef _MSC_VER
+typedef int mode_t;
+#endif
+
 #include "sqMemoryAccess.h"
 
 /* squeak file record; see sqFilePrims.c for details */

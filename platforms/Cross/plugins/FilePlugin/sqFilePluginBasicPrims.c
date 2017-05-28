@@ -318,12 +318,16 @@ sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 					mode = "r+b";
 					fd = openFileWithFlagsInMode(
 						cFileName,
-						O_CREAT|O_EXCL|O_RDWR,
+						O_CREAT | O_EXCL | O_RDWR,
 						/* the mode fopen() uses when creating files;
 						   will likely be rw-r--r-- after being modified
 						   by the process's umask
 						 */
+#ifdef _MSC_VER
+						_S_IREAD | _S_IWRITE);
+#else
 						S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+#endif
 
 					/* could have failed if we lack read permission
 					   or it already exists
@@ -337,7 +341,11 @@ sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 							   will likely be -w------- after being
 							   modified by the process's umask
 							 */
+#ifdef _MSC_VER
+							_S_IWRITE);
+#else
 							S_IWUSR|S_IWGRP|S_IWOTH);
+#endif
 					}
 
 					if (fd >= 0)
@@ -415,7 +423,11 @@ sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize) {
 		/* the mode fopen() uses when creating files; will likely
 		   be rw-r--r-- after being modified by the process's umask
 		 */
+#ifdef _MSC_VER
+		_S_IREAD | _S_IWRITE);
+#else
 		S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH);
+#endif
 	/* could have failed if we lack read permission or it already exists */
 	if (fd < 0 && errno == EACCES) {
 		mode = "wb";
@@ -425,7 +437,11 @@ sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize) {
 			/* write-only version of the above mode; will likely
 			   be -w------- after being modified by the process's umask
 			 */
+#ifdef _MSC_VER
+			_S_IWRITE);
+#else
 			S_IWUSR|S_IWGRP|S_IWOTH);
+#endif
 	}
 
 	if (fd >= 0) {
