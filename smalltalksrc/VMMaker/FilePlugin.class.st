@@ -97,6 +97,28 @@ FilePlugin >> fileOpenName: nameIndex size: nameSize write: writeFlag secure: se
 ]
 
 { #category : #'file primitives' }
+FilePlugin >> fileOpenNewName: nameIndex size: nameSize secure: secureFlag [ 
+	"Open the new named file, possibly checking security. Answer the file oop."
+	| file fileOop okToOpen |
+	<var: #file type: 'SQFile *'>
+	<var: 'nameIndex' type: 'char *'>
+	<export: true>
+	fileOop := interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: self fileRecordSize.
+	file := self fileValueOf: fileOop.
+	interpreterProxy failed
+		ifFalse: [ secureFlag ifTrue: [
+				"If the security plugin can be loaded, use it to check for permission.
+				If not, assume it's ok"
+				sCOFfn ~= 0 
+					ifTrue: [okToOpen := self cCode: '((sqInt (*) (char *, sqInt, sqInt)) sCOFfn)(nameIndex, nameSize, true)' inSmalltalk:[true].
+						okToOpen
+							ifFalse: [interpreterProxy primitiveFail]]]].
+	interpreterProxy failed
+		ifFalse: [self cCode: 'sqFileOpenNew(file, nameIndex, nameSize)' inSmalltalk: [file]].
+	^ fileOop
+]
+
+{ #category : #'file primitives' }
 FilePlugin >> fileRecordSize [
 	"Return the size of a Smalltalk file record in bytes."
 	<static: false>
@@ -631,6 +653,25 @@ FilePlugin >> primitiveFileOpen [
 	interpreterProxy failed
 		ifFalse: [interpreterProxy pop: 3 "rcvr, name, writeFlag"
 			thenPush: filePointer]
+
+]
+
+{ #category : #'file primitives' }
+FilePlugin >> primitiveFileOpenNew [
+	| namePointer filePointer nameIndex nameSize |
+	<var: 'nameIndex' type: 'char *'>
+	<export: true>
+	namePointer := interpreterProxy stackValue: 0.
+	(interpreterProxy isBytes: namePointer)
+		ifFalse: [^ interpreterProxy primitiveFail].
+	nameIndex := interpreterProxy firstIndexableField: namePointer.
+	nameSize := interpreterProxy byteSizeOf: namePointer.
+	filePointer := self fileOpenNewName: nameIndex size: nameSize secure: true.
+	interpreterProxy failed
+		ifFalse: [
+			interpreterProxy
+				pop: 2 "rcvr, name"
+				thenPush: filePointer]
 
 ]
 
