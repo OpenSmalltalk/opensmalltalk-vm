@@ -1,0 +1,358 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{3C34CB12-5195-4297-977B-871E1C46D2A1}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141_xp</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IntDir>$(Platform)\$(ProjectName)\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IntDir>$(Platform)\$(ProjectName)\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;VM_NAME="SqueakStackSpur32";IMMUTABILITY=1;SQUEAK_BUILTIN_PLUGIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../platforms/Cross/vm;../platforms/win32/vm;../platforms/Cross/plugins/AsynchFilePlugin;../platforms/win32/plugins/AsynchFilePlugin;../platforms/Cross/plugins/B3DAcceleratorPlugin;../platforms/win32/plugins/B3DAcceleratorPlugin;../platforms/win32/thirdParty/dx9sdk;../platforms/Cross/plugins/BitBltPlugin;../platforms/win32/plugins/BitBltPlugin;../platforms/Cross/plugins/CroquetPlugin;../platforms/win32/plugins/CroquetPlugin;../platforms/Cross/plugins/DropPlugin;../platforms/win32/plugins/DropPlugin;../platforms/Cross/plugins/FilePlugin;../platforms/win32/plugins/FilePlugin;../platforms/Cross/plugins/FloatMathPlugin;../platforms/win32/plugins/FloatMathPlugin;../platforms/Cross/plugins/HostWindowPlugin;../platforms/win32/plugins/HostWindowPlugin;../platforms/Cross/plugins/JoystickTabletPlugin;../platforms/win32/plugins/JoystickTabletPlugin;../platforms/Cross/plugins/JPEGReadWriter2Plugin;../platforms/win32/plugins/JPEGReadWriter2Plugin;../platforms/Cross/plugins/LocalePlugin;../platforms/win32/plugins/LocalePlugin;../platforms/Cross/plugins/MIDIPlugin;../platforms/win32/plugins/MIDIPlugin;../platforms/Cross/plugins/RePlugin;../platforms/Cross/plugins/SecurityPlugin;../platforms/win32/plugins/SecurityPlugin;../platforms/Cross/plugins/SerialPlugin;../platforms/win32/plugins/SerialPlugin;../platforms/Cross/plugins/SocketPlugin;../platforms/win32/plugins/SocketPlugin;../platforms/Cross/plugins/SoundCodecPrims;../platforms/Cross/plugins/SoundGenerationPlugin;../platforms/Cross/plugins/SoundPlugin;../platforms/win32/plugins/SoundPlugin;../platforms/Cross/plugins/SqueakFFIPrims;../platforms/win32/plugins/SqueakFFIPrims;../spurstacksrc/vm;.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+      <FloatingPointModel>Strict</FloatingPointModel>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+    </ClCompile>
+    <Link>
+      <TargetMachine>MachineX86</TargetMachine>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalDependencies>ws2_32.lib;dinput.lib;ddraw.lib;opengl32.lib;comdlg32.lib;winmm.lib;ole32.lib;version.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../platforms/win32/third-party/dx9sdk/Lib/</AdditionalLibraryDirectories>
+      <StackReserveSize>0x400000</StackReserveSize>
+      <LargeAddressAware>true</LargeAddressAware>
+      <StackCommitSize>0x10000</StackCommitSize>
+    </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>FILEVERSIONVALUES=2016,7,22,2322;FILEVERSIONSTRING="2016.7.22.2322\\0"</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;VM_NAME="SqueakStackSpur32";IMMUTABILITY=1;SQUEAK_BUILTIN_PLUGIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../platforms/Cross/vm;../platforms/win32/vm;../platforms/Cross/plugins/AsynchFilePlugin;../platforms/win32/plugins/AsynchFilePlugin;../platforms/Cross/plugins/B3DAcceleratorPlugin;../platforms/win32/plugins/B3DAcceleratorPlugin;../platforms/win32/thirdParty/dx9sdk;../platforms/Cross/plugins/BitBltPlugin;../platforms/win32/plugins/BitBltPlugin;../platforms/Cross/plugins/CroquetPlugin;../platforms/win32/plugins/CroquetPlugin;../platforms/Cross/plugins/DropPlugin;../platforms/win32/plugins/DropPlugin;../platforms/Cross/plugins/FilePlugin;../platforms/win32/plugins/FilePlugin;../platforms/Cross/plugins/FloatMathPlugin;../platforms/win32/plugins/FloatMathPlugin;../platforms/Cross/plugins/HostWindowPlugin;../platforms/win32/plugins/HostWindowPlugin;../platforms/Cross/plugins/JoystickTabletPlugin;../platforms/win32/plugins/JoystickTabletPlugin;../platforms/Cross/plugins/JPEGReadWriter2Plugin;../platforms/win32/plugins/JPEGReadWriter2Plugin;../platforms/Cross/plugins/LocalePlugin;../platforms/win32/plugins/LocalePlugin;../platforms/Cross/plugins/MIDIPlugin;../platforms/win32/plugins/MIDIPlugin;../platforms/Cross/plugins/RePlugin;../platforms/Cross/plugins/SecurityPlugin;../platforms/win32/plugins/SecurityPlugin;../platforms/Cross/plugins/SerialPlugin;../platforms/win32/plugins/SerialPlugin;../platforms/Cross/plugins/SocketPlugin;../platforms/win32/plugins/SocketPlugin;../platforms/Cross/plugins/SoundCodecPrims;../platforms/Cross/plugins/SoundGenerationPlugin;../platforms/Cross/plugins/SoundPlugin;../platforms/win32/plugins/SoundPlugin;../platforms/Cross/plugins/SqueakFFIPrims;../platforms/win32/plugins/SqueakFFIPrims;../spurstacksrc/vm;.;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <FloatingPointModel>Strict</FloatingPointModel>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+    </ClCompile>
+    <Link>
+      <TargetMachine>MachineX86</TargetMachine>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>ws2_32.lib;dinput.lib;ddraw.lib;opengl32.lib;comdlg32.lib;winmm.lib;ole32.lib;version.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>../platforms/win32/third-party/dx9sdk/Lib/</AdditionalLibraryDirectories>
+      <StackReserveSize>0x400000</StackReserveSize>
+      <LargeAddressAware>true</LargeAddressAware>
+      <StackCommitSize>0x10000</StackCommitSize>
+    </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>FILEVERSIONVALUES=2016,7,22,2322;FILEVERSIONSTRING="2016.7.22.2322\\0"</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\platforms\Cross\plugins\B3DAcceleratorPlugin\sqOpenGLRenderer.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\BitBltPlugin\BitBltDispatch.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\BitBltPlugin\BitBltGeneric.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\CroquetPlugin\TriBoxStub.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FilePlugin\sqFilePluginBasicPrims.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\acos.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\acosh.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\asin.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\asinh.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\atan.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\atan2.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\atanh.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\copysign.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\cos.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\cosh.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\exp.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\expm1.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\finite.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\fmod.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\hypot.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\isnan.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\k_cos.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\k_rem_pio2.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\k_sin.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\k_tan.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\ldexp.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\log.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\log10.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\log1p.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\modf.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\pow.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\rem_pio2.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\rint.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\scalb.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\scalbn.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\sin.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\sinh.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\sqrt.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\tan.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\tanh.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\Error.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcapimin.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcapistd.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jccoefct.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jccolor.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcdctmgr.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jchuff.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcinit.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcmainct.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcmarker.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcmaster.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcomapi.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcparam.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcphuff.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcprepct.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcsample.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jctrans.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdapimin.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdapistd.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdatadst.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdatasrc.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdcoefct.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdcolor.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jddctmgr.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdhuff.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdinput.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdmainct.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdmarker.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdmaster.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdmerge.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdphuff.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdpostct.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdsample.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdtrans.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jerror.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jfdctflt.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jfdctfst.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jfdctint.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jidctflt.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jidctfst.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jidctint.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jidctred.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jmemdatadst.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jmemdatasrc.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jmemmgr.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jmemnobs.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jquant1.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jquant2.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jutils.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\sqJPEGReadWriter2Plugin.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\RePlugin\chartables.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\RePlugin\get.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\RePlugin\pcre.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\RePlugin\study.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\SoundCodecPrims\sqSoundCodecPluginBasicPrims.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\SoundGenerationPlugin\sqOldSoundPrims.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\SqueakFFIPrims\sqFFIPlugin.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\SqueakFFIPrims\sqFFITestFuncs.c" />
+    <ClCompile Include="..\platforms\Cross\plugins\SqueakFFIPrims\sqManualSurface.c" />
+    <ClCompile Include="..\platforms\Cross\vm\sqExternalSemaphores.c" />
+    <ClCompile Include="..\platforms\Cross\vm\sqHeapMap.c" />
+    <ClCompile Include="..\platforms\Cross\vm\sqNamedPrims.c" />
+    <ClCompile Include="..\platforms\Cross\vm\sqTicker.c" />
+    <ClCompile Include="..\platforms\Cross\vm\sqVirtualMachine.c" />
+    <ClCompile Include="..\platforms\win32\plugins\AsynchFilePlugin\sqWin32AsyncFilePrims.c" />
+    <ClCompile Include="..\platforms\win32\plugins\B3DAcceleratorPlugin\sqWin32D3D.c" />
+    <ClCompile Include="..\platforms\win32\plugins\B3DAcceleratorPlugin\sqWin32DualB3DX.c" />
+    <ClCompile Include="..\platforms\win32\plugins\B3DAcceleratorPlugin\sqWin32OpenGL.c" />
+    <ClCompile Include="..\platforms\win32\plugins\CroquetPlugin\sqWin32CroquetPlugin.c" />
+    <ClCompile Include="..\platforms\win32\plugins\DropPlugin\sqWin32Drop.c" />
+    <ClCompile Include="..\platforms\win32\plugins\FilePlugin\sqWin32FilePrims.c" />
+    <ClCompile Include="..\platforms\win32\plugins\HostWindowPlugin\sqWin32HostWindowPlugin.c" />
+    <ClCompile Include="..\platforms\win32\plugins\JoystickTabletPlugin\sqWin32Joystick.c" />
+    <ClCompile Include="..\platforms\win32\plugins\LocalePlugin\sqWin32Locale.c" />
+    <ClCompile Include="..\platforms\win32\plugins\MIDIPlugin\sqWin32MIDI.c" />
+    <ClCompile Include="..\platforms\win32\plugins\SecurityPlugin\sqWin32Security.c" />
+    <ClCompile Include="..\platforms\win32\plugins\SerialPlugin\sqWin32SerialPort.c" />
+    <ClCompile Include="..\platforms\win32\plugins\SocketPlugin\sqWin32NewNet.c" />
+    <ClCompile Include="..\platforms\win32\plugins\SoundPlugin\sqWin32Sound.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Alloc.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Backtrace.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32DirectInput.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Directory.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32DnsInfo.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Exports.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32ExternalPrims.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32GUID.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Heartbeat.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Main.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32PluginSupport.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Prefs.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Service.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32SpurAlloc.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Stubs.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Threads.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Time.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Utils.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32VMProfile.c" />
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Window.c" />
+    <ClCompile Include="..\platforms\win32\vm\version.c" />
+    <ClCompile Include="..\spurstacksrc\vm\interp.c" />
+    <ClCompile Include="..\src\plugins\ADPCMCodecPlugin\ADPCMCodecPlugin.c" />
+    <ClCompile Include="..\src\plugins\AsynchFilePlugin\AsynchFilePlugin.c" />
+    <ClCompile Include="..\src\plugins\B2DPlugin\B2DPlugin.c" />
+    <ClCompile Include="..\src\plugins\B3DAcceleratorPlugin\B3DAcceleratorPlugin.c" />
+    <ClCompile Include="..\src\plugins\BitBltPlugin\BitBltPlugin.c" />
+    <ClCompile Include="..\src\plugins\BMPReadWriterPlugin\BMPReadWriterPlugin.c" />
+    <ClCompile Include="..\src\plugins\CroquetPlugin\CroquetPlugin.c" />
+    <ClCompile Include="..\src\plugins\DropPlugin\DropPlugin.c" />
+    <ClCompile Include="..\src\plugins\DSAPrims\DSAPrims.c" />
+    <ClCompile Include="..\src\plugins\FFTPlugin\FFTPlugin.c" />
+    <ClCompile Include="..\src\plugins\FilePlugin\FilePlugin.c" />
+    <ClCompile Include="..\src\plugins\FloatArrayPlugin\FloatArrayPlugin.c" />
+    <ClCompile Include="..\src\plugins\FloatMathPlugin\FloatMathPlugin.c" />
+    <ClCompile Include="..\src\plugins\HostWindowPlugin\HostWindowPlugin.c" />
+    <ClCompile Include="..\src\plugins\JoystickTabletPlugin\JoystickTabletPlugin.c" />
+    <ClCompile Include="..\src\plugins\JPEGReaderPlugin\JPEGReaderPlugin.c" />
+    <ClCompile Include="..\src\plugins\JPEGReadWriter2Plugin\JPEGReadWriter2Plugin.c" />
+    <ClCompile Include="..\src\plugins\Klatt\Klatt.c" />
+    <ClCompile Include="..\src\plugins\LargeIntegers\LargeIntegers.c" />
+    <ClCompile Include="..\src\plugins\LocalePlugin\LocalePlugin.c" />
+    <ClCompile Include="..\src\plugins\Matrix2x3Plugin\Matrix2x3Plugin.c" />
+    <ClCompile Include="..\src\plugins\MIDIPlugin\MIDIPlugin.c" />
+    <ClCompile Include="..\src\plugins\MiscPrimitivePlugin\MiscPrimitivePlugin.c" />
+    <ClCompile Include="..\src\plugins\RePlugin\RePlugin.c" />
+    <ClCompile Include="..\src\plugins\SecurityPlugin\SecurityPlugin.c" />
+    <ClCompile Include="..\src\plugins\SerialPlugin\SerialPlugin.c" />
+    <ClCompile Include="..\src\plugins\SocketPlugin\SocketPlugin.c" />
+    <ClCompile Include="..\src\plugins\SoundCodecPrims\SoundCodecPrims.c" />
+    <ClCompile Include="..\src\plugins\SoundGenerationPlugin\SoundGenerationPlugin.c" />
+    <ClCompile Include="..\src\plugins\SoundPlugin\SoundPlugin.c" />
+    <ClCompile Include="..\src\plugins\SqueakFFIPrims\IA32FFIPlugin.c" />
+    <ClCompile Include="..\src\plugins\StarSqueakPlugin\StarSqueakPlugin.c" />
+    <ClCompile Include="..\src\plugins\ZipPlugin\ZipPlugin.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\platforms\Cross\plugins\AsynchFilePlugin\AsynchFilePlugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\B3DAcceleratorPlugin\B3DAcceleratorPlugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\B3DAcceleratorPlugin\sqOpenGLRenderer.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\BitBltPlugin\BitBltDispatch.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\BitBltPlugin\BitBltGeneric.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\BitBltPlugin\BitBltInternal.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\CroquetPlugin\CroquetPlugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\CroquetPlugin\md5.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\DropPlugin\DropPlugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\FilePlugin\FilePlugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\FloatMathPlugin\FloatMathPlugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\FloatMathPlugin\ieee754names.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\HostWindowPlugin\HostWindowPlugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\JoystickTabletPlugin\JoystickTabletPlugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jchuff.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jconfig.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdct.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdhuff.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jerror.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jinclude.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jmemsys.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jmorecfg.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jpegint.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jpeglib.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\JPEGReadWriter2Plugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jversion.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\LocalePlugin\LocalePlugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\MIDIPlugin\MIDIPlugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\RePlugin\internal.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\RePlugin\oldInternal.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\RePlugin\pcre.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\RePlugin\reConfig.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\RePlugin\rePlugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\SecurityPlugin\SecurityPlugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\SerialPlugin\SerialPlugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\SocketPlugin\SocketPlugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\SoundCodecPrims\SoundCodecPrims.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\SoundGenerationPlugin\SoundGenerationPlugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\SoundPlugin\SoundPlugin.h" />
+    <ClInclude Include="..\platforms\Cross\plugins\SqueakFFIPrims\sqFFI.h" />
+    <ClInclude Include="..\platforms\Cross\vm\dispdbg.h" />
+    <ClInclude Include="..\platforms\Cross\vm\sq.h" />
+    <ClInclude Include="..\platforms\Cross\vm\sqAssert.h" />
+    <ClInclude Include="..\platforms\Cross\vm\sqAtomicOps.h" />
+    <ClInclude Include="..\platforms\Cross\vm\sqCogStackAlignment.h" />
+    <ClInclude Include="..\platforms\Cross\vm\sqMemoryAccess.h" />
+    <ClInclude Include="..\platforms\Cross\vm\sqMemoryFence.h" />
+    <ClInclude Include="..\platforms\Cross\vm\sqSCCSVersion.h" />
+    <ClInclude Include="..\platforms\Cross\vm\sqVirtualMachine.h" />
+    <ClInclude Include="..\platforms\win32\plugins\B3DAcceleratorPlugin\sqWin32OpenGL.h" />
+    <ClInclude Include="..\platforms\win32\plugins\FilePlugin\sqWin32File.h" />
+    <ClInclude Include="..\platforms\win32\vm\config.h" />
+    <ClInclude Include="..\platforms\win32\vm\sqConfig.h" />
+    <ClInclude Include="..\platforms\win32\vm\sqGnu.h" />
+    <ClInclude Include="..\platforms\win32\vm\sqPlatformSpecific.h" />
+    <ClInclude Include="..\platforms\win32\vm\sqWin32.h" />
+    <ClInclude Include="..\platforms\win32\vm\sqWin32Alloc.h" />
+    <ClInclude Include="..\platforms\win32\vm\sqWin32Backtrace.h" />
+    <ClInclude Include="..\platforms\win32\vm\sqWin32HandleTable.h" />
+    <ClInclude Include="..\platforms\win32\vm\sqWin32Prefs.h" />
+    <ClInclude Include="..\spurstacksrc\vm\exampleSqNamedPrims.h" />
+    <ClInclude Include="..\spurstacksrc\vm\interp.h" />
+    <ClInclude Include="..\spurstacksrc\vm\vmCallback.h" />
+    <ClInclude Include="sqNamedPrims.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\build.win64x64\squeak.cog.spur\GreenCogSqueak.ico" />
+    <Image Include="..\build.win64x64\squeak.cog.spur\squeak.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="..\build.win64x64\squeak.cog.spur\Squeak.exe.manifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\build.win64x64\squeak.cog.spur\Squeak.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

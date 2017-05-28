@@ -1,0 +1,855 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
+    </Filter>
+    <Filter Include="Plugins">
+      <UniqueIdentifier>{a8e2b14e-1ce0-4bd0-888d-90d56c999812}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\FilePlugin">
+      <UniqueIdentifier>{a588304f-53d1-454e-bf6c-4d9e23910877}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\SocketPlugin">
+      <UniqueIdentifier>{f165cbff-f30d-4654-b9b8-fd69270bb8b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\LargeIntegerPlugin">
+      <UniqueIdentifier>{971059b8-79a8-4976-b812-813b4f15ef53}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\DropPlugin">
+      <UniqueIdentifier>{8279feb0-e246-4079-b189-256879a92e80}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\ADPCMCodecPlugin">
+      <UniqueIdentifier>{6ad95ba9-aac2-4d85-abf3-2641ad5f19f5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\AsynchFilePlugin">
+      <UniqueIdentifier>{59c85ee9-ef9b-4546-be7c-a67355869115}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\B3DAcceleratorPlugin">
+      <UniqueIdentifier>{ae3722b2-6264-41b4-a08d-219831f38567}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\B2DPlugin">
+      <UniqueIdentifier>{ff4c466e-dcc3-4aa7-97a5-251d3631148d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\BitBltPlugin">
+      <UniqueIdentifier>{62cebe13-f1ad-462e-89dc-acb693e0f30c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\BMPReadWriterPlugin">
+      <UniqueIdentifier>{37ee2423-be02-4870-974b-b0454022c461}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\CroquetPlugin">
+      <UniqueIdentifier>{72df47ba-7922-4cd1-beeb-5597de195efd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\ZipPlugin">
+      <UniqueIdentifier>{ba28ecab-ae88-4a51-bbd3-083f63c34342}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\DSAPrims">
+      <UniqueIdentifier>{da8d7a6e-9b39-4362-a51a-89f878ae1be6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\FFTPlugin">
+      <UniqueIdentifier>{6a5cabda-61e4-4abb-ae89-6ee0d6d9fd47}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\FloatArrayPlugin">
+      <UniqueIdentifier>{ee2c14ad-2693-4fed-a7ec-f837772df0a0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\FloatMathPlugin">
+      <UniqueIdentifier>{73f7b6f3-d0fc-404f-96a0-e1f89c1bdde7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\HostWindowPlugin">
+      <UniqueIdentifier>{2862e97f-53c4-4dc4-928f-b798b3ea7c68}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\JoystickTabletPlugin">
+      <UniqueIdentifier>{6793175b-4aaf-474d-be6c-191d775cee79}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\JPEGReaderPlugin">
+      <UniqueIdentifier>{ed730a48-272c-4683-b8ea-3495007540f1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\JPEGReadWriter2Plugin">
+      <UniqueIdentifier>{06fb616f-0b58-4dd5-802d-cf929c9bfde3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\KlattPlugin">
+      <UniqueIdentifier>{df9c0f2b-4c64-46bf-a625-f6e513efedbe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\LocalePlugin">
+      <UniqueIdentifier>{38f0d96e-977e-42a5-8fa7-a6589f4081e1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\Matrix2x3Plugin">
+      <UniqueIdentifier>{d25af570-548a-437a-b2c0-7f71e2652df8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\MIDIPlugin">
+      <UniqueIdentifier>{9b4e24af-488b-4d9a-aeb9-dcb3baf88e76}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\MiscPrimitivePlugin">
+      <UniqueIdentifier>{47f9fba8-d754-4ac9-a680-6afe3e67bdee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\RePlugin">
+      <UniqueIdentifier>{1b78da69-d36b-47bc-9bba-708a273af854}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\SecurityPlugin">
+      <UniqueIdentifier>{9661ec76-491b-409a-a4fd-09a6033d3872}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\SerialPlugin">
+      <UniqueIdentifier>{06ba9063-f18b-43c6-b81d-1a471d1e31a3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\SoundCodecPrimsPlugin">
+      <UniqueIdentifier>{c50a9a17-1c92-4e53-aa1e-7acdbca20848}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\SoundGenerationPlugin">
+      <UniqueIdentifier>{acda8022-f523-4610-94c3-e2577f759d88}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\SoundPlugin">
+      <UniqueIdentifier>{50485586-f22f-4de3-841f-f1bdd5818a1b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\StarSqueakPlugin">
+      <UniqueIdentifier>{1a9bf0d4-88b8-4322-9575-a8803a6c07c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\SurfacePlugin">
+      <UniqueIdentifier>{b017ef24-1263-46c4-8219-e96f289167ef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\SqueakFFIPlugin">
+      <UniqueIdentifier>{be1f2911-11a3-4032-8fb7-903c354334ed}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\spursrc\vm\cointerp.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\vm\sqExternalSemaphores.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\vm\sqHeapMap.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\vm\sqNamedPrims.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\vm\sqTicker.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\vm\sqVirtualMachine.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Alloc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Backtrace.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32DirectInput.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Directory.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32DnsInfo.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Exports.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32ExternalPrims.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32GUID.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Heartbeat.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Main.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32PluginSupport.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Prefs.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Service.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32SpurAlloc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Stubs.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Threads.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Time.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Utils.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32VMProfile.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\sqWin32Window.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\vm\version.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FilePlugin\sqFilePluginBasicPrims.c">
+      <Filter>Plugins\FilePlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\plugins\SocketPlugin\sqWin32NewNet.c">
+      <Filter>Plugins\SocketPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\plugins\FilePlugin\sqWin32FilePrims.c">
+      <Filter>Plugins\FilePlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\LargeIntegers\LargeIntegers.c">
+      <Filter>Plugins\LargeIntegerPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\SocketPlugin\SocketPlugin.c">
+      <Filter>Plugins\SocketPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\FilePlugin\FilePlugin.c">
+      <Filter>Plugins\FilePlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\plugins\DropPlugin\sqWin32Drop.c">
+      <Filter>Plugins\DropPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\DropPlugin\DropPlugin.c">
+      <Filter>Plugins\DropPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\ADPCMCodecPlugin\ADPCMCodecPlugin.c">
+      <Filter>Plugins\ADPCMCodecPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\AsynchFilePlugin\AsynchFilePlugin.c">
+      <Filter>Plugins\AsynchFilePlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\plugins\AsynchFilePlugin\sqWin32AsyncFilePrims.c">
+      <Filter>Plugins\AsynchFilePlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\plugins\B3DAcceleratorPlugin\sqWin32D3D.c">
+      <Filter>Plugins\B3DAcceleratorPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\plugins\B3DAcceleratorPlugin\sqWin32DualB3DX.c">
+      <Filter>Plugins\B3DAcceleratorPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\plugins\B3DAcceleratorPlugin\sqWin32OpenGL.c">
+      <Filter>Plugins\B3DAcceleratorPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\B3DAcceleratorPlugin\sqOpenGLRenderer.c">
+      <Filter>Plugins\B3DAcceleratorPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\B3DAcceleratorPlugin\B3DAcceleratorPlugin.c">
+      <Filter>Plugins\B3DAcceleratorPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\B2DPlugin\B2DPlugin.c">
+      <Filter>Plugins\B2DPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\BitBltPlugin\BitBltDispatch.c">
+      <Filter>Plugins\BitBltPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\BitBltPlugin\BitBltGeneric.c">
+      <Filter>Plugins\BitBltPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\BitBltPlugin\BitBltPlugin.c">
+      <Filter>Plugins\BitBltPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\BMPReadWriterPlugin\BMPReadWriterPlugin.c">
+      <Filter>Plugins\BMPReadWriterPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\CroquetPlugin\CroquetPlugin.c">
+      <Filter>Plugins\CroquetPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\CroquetPlugin\TriBoxStub.c">
+      <Filter>Plugins\CroquetPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\plugins\CroquetPlugin\sqWin32CroquetPlugin.c">
+      <Filter>Plugins\CroquetPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\ZipPlugin\ZipPlugin.c">
+      <Filter>Plugins\ZipPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\DSAPrims\DSAPrims.c">
+      <Filter>Plugins\DSAPrims</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\FFTPlugin\FFTPlugin.c">
+      <Filter>Plugins\FFTPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\FloatArrayPlugin\FloatArrayPlugin.c">
+      <Filter>Plugins\FloatArrayPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\FloatMathPlugin\FloatMathPlugin.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\acos.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\acosh.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\asin.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\asinh.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\atan.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\atan2.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\atanh.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\copysign.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\cos.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\cosh.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\exp.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\expm1.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\finite.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\fmod.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\hypot.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\isnan.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\k_cos.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\k_rem_pio2.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\k_sin.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\k_tan.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\ldexp.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\log.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\log1p.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\log10.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\modf.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\pow.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\rem_pio2.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\rint.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\scalb.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\scalbn.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\sin.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\sinh.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\sqrt.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\tan.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\FloatMathPlugin\tanh.c">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\plugins\HostWindowPlugin\sqWin32HostWindowPlugin.c">
+      <Filter>Plugins\HostWindowPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\HostWindowPlugin\HostWindowPlugin.c">
+      <Filter>Plugins\HostWindowPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\JoystickTabletPlugin\JoystickTabletPlugin.c">
+      <Filter>Plugins\JoystickTabletPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\plugins\JoystickTabletPlugin\sqWin32Joystick.c">
+      <Filter>Plugins\JoystickTabletPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\JPEGReaderPlugin\JPEGReaderPlugin.c">
+      <Filter>Plugins\JPEGReaderPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\JPEGReadWriter2Plugin\JPEGReadWriter2Plugin.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\Error.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcapimin.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcapistd.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jccoefct.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jccolor.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcdctmgr.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jchuff.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcinit.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcmainct.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcmarker.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcmaster.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcomapi.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcparam.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcphuff.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcprepct.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jcsample.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jctrans.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdapimin.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdapistd.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdatadst.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdatasrc.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdcoefct.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdcolor.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jddctmgr.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdhuff.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdinput.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdmainct.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdmarker.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdmaster.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdmerge.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdphuff.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdpostct.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdsample.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdtrans.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jerror.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jfdctflt.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jfdctfst.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jfdctint.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jidctflt.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jidctfst.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jidctint.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jidctred.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jmemdatadst.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jmemdatasrc.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jmemmgr.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jmemnobs.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jquant1.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jquant2.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jutils.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\sqJPEGReadWriter2Plugin.c">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\Klatt\Klatt.c">
+      <Filter>Plugins\KlattPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\LocalePlugin\LocalePlugin.c">
+      <Filter>Plugins\LocalePlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\plugins\LocalePlugin\sqWin32Locale.c">
+      <Filter>Plugins\LocalePlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\Matrix2x3Plugin\Matrix2x3Plugin.c">
+      <Filter>Plugins\Matrix2x3Plugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\MIDIPlugin\MIDIPlugin.c">
+      <Filter>Plugins\MIDIPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\plugins\MIDIPlugin\sqWin32MIDI.c">
+      <Filter>Plugins\MIDIPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\MiscPrimitivePlugin\MiscPrimitivePlugin.c">
+      <Filter>Plugins\MiscPrimitivePlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\RePlugin\chartables.c">
+      <Filter>Plugins\RePlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\RePlugin\get.c">
+      <Filter>Plugins\RePlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\RePlugin\pcre.c">
+      <Filter>Plugins\RePlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\RePlugin\study.c">
+      <Filter>Plugins\RePlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\RePlugin\RePlugin.c">
+      <Filter>Plugins\RePlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\SecurityPlugin\SecurityPlugin.c">
+      <Filter>Plugins\SecurityPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\SerialPlugin\SerialPlugin.c">
+      <Filter>Plugins\SerialPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\SoundCodecPrims\SoundCodecPrims.c">
+      <Filter>Plugins\SoundCodecPrimsPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\SoundCodecPrims\sqSoundCodecPluginBasicPrims.c">
+      <Filter>Plugins\SoundCodecPrimsPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\plugins\SecurityPlugin\sqWin32Security.c">
+      <Filter>Plugins\SecurityPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\plugins\SerialPlugin\sqWin32SerialPort.c">
+      <Filter>Plugins\SerialPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\Cross\plugins\SoundGenerationPlugin\sqOldSoundPrims.c">
+      <Filter>Plugins\SoundGenerationPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\SoundGenerationPlugin\SoundGenerationPlugin.c">
+      <Filter>Plugins\SoundGenerationPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\SoundPlugin\SoundPlugin.c">
+      <Filter>Plugins\SoundPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\platforms\win32\plugins\SoundPlugin\sqWin32Sound.c">
+      <Filter>Plugins\SoundPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\plugins\StarSqueakPlugin\StarSqueakPlugin.c">
+      <Filter>Plugins\StarSqueakPlugin</Filter>
+    </ClCompile>
+    <ClCompile Include="..\spursrc\vm\cogitIA32.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\spursrc\vm\cogit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\spursrc\vm\cogmethod.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\spursrc\vm\cointerp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\spursrc\vm\exampleSqNamedPrims.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\spursrc\vm\interp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\spursrc\vm\vmCallback.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\vm\dispdbg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\vm\sq.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\vm\sqAssert.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\vm\sqAtomicOps.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\vm\sqCogStackAlignment.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\vm\sqSCCSVersion.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\vm\sqMemoryAccess.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\vm\sqMemoryFence.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\vm\sqVirtualMachine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\win32\vm\config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\win32\vm\sqConfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\win32\vm\sqGnu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\win32\vm\sqWin32.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\win32\vm\sqWin32Alloc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\win32\vm\sqWin32Backtrace.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\win32\vm\sqWin32HandleTable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\win32\vm\sqWin32Prefs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\FilePlugin\FilePlugin.h">
+      <Filter>Plugins\FilePlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\SocketPlugin\SocketPlugin.h">
+      <Filter>Plugins\SocketPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\win32\plugins\FilePlugin\sqWin32File.h">
+      <Filter>Plugins\FilePlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\DropPlugin\DropPlugin.h">
+      <Filter>Plugins\DropPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="sqNamedPrims.h">
+      <Filter>Plugins</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\AsynchFilePlugin\AsynchFilePlugin.h">
+      <Filter>Plugins\AsynchFilePlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\win32\plugins\B3DAcceleratorPlugin\sqWin32OpenGL.h">
+      <Filter>Plugins\B3DAcceleratorPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\B3DAcceleratorPlugin\B3DAcceleratorPlugin.h">
+      <Filter>Plugins\B3DAcceleratorPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\B3DAcceleratorPlugin\sqOpenGLRenderer.h">
+      <Filter>Plugins\B3DAcceleratorPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\BitBltPlugin\BitBltDispatch.h">
+      <Filter>Plugins\BitBltPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\BitBltPlugin\BitBltGeneric.h">
+      <Filter>Plugins\BitBltPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\BitBltPlugin\BitBltInternal.h">
+      <Filter>Plugins\BitBltPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\CroquetPlugin\CroquetPlugin.h">
+      <Filter>Plugins\CroquetPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\CroquetPlugin\md5.h">
+      <Filter>Plugins\CroquetPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\FloatMathPlugin\FloatMathPlugin.h">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\FloatMathPlugin\ieee754names.h">
+      <Filter>Plugins\FloatMathPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\HostWindowPlugin\HostWindowPlugin.h">
+      <Filter>Plugins\HostWindowPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\JoystickTabletPlugin\JoystickTabletPlugin.h">
+      <Filter>Plugins\JoystickTabletPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jchuff.h">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jconfig.h">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdct.h">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jdhuff.h">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jerror.h">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jinclude.h">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jmemsys.h">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jmorecfg.h">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jpegint.h">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jpeglib.h">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\JPEGReadWriter2Plugin.h">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\JPEGReadWriter2Plugin\jversion.h">
+      <Filter>Plugins\JPEGReadWriter2Plugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\LocalePlugin\LocalePlugin.h">
+      <Filter>Plugins\LocalePlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\MIDIPlugin\MIDIPlugin.h">
+      <Filter>Plugins\MIDIPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\RePlugin\internal.h">
+      <Filter>Plugins\RePlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\RePlugin\oldInternal.h">
+      <Filter>Plugins\RePlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\RePlugin\pcre.h">
+      <Filter>Plugins\RePlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\RePlugin\reConfig.h">
+      <Filter>Plugins\RePlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\RePlugin\rePlugin.h">
+      <Filter>Plugins\RePlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\SoundCodecPrims\SoundCodecPrims.h">
+      <Filter>Plugins\SoundCodecPrimsPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\SecurityPlugin\SecurityPlugin.h">
+      <Filter>Plugins\SecurityPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\SerialPlugin\SerialPlugin.h">
+      <Filter>Plugins\SerialPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\SoundGenerationPlugin\SoundGenerationPlugin.h">
+      <Filter>Plugins\SoundGenerationPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\Cross\plugins\SoundPlugin\SoundPlugin.h">
+      <Filter>Plugins\SoundPlugin</Filter>
+    </ClInclude>
+    <ClInclude Include="..\platforms\win32\vm\sqPlatformSpecific.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\build.win64x64\squeak.cog.spur\GreenCogSqueak.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\build.win64x64\squeak.cog.spur\squeak.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="..\build.win64x64\squeak.cog.spur\Squeak.exe.manifest">
+      <Filter>Resource Files</Filter>
+    </Manifest>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\build.win64x64\squeak.cog.spur\Squeak.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>
