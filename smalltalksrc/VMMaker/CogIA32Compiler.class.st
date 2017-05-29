@@ -3458,13 +3458,15 @@ CogIA32Compiler >> genPushRs: reg [
 ]
 
 { #category : #abi }
-CogIA32Compiler >> genRemoveNArgsFromStack: n [ 
+CogIA32Compiler >> genRemoveNArgsFromStack: n [
+	<inline: true>
 	n = 0 ifFalse: [cogit AddCq: n * 4 R: ESP].
 	^0
 ]
 
 { #category : #abi }
-CogIA32Compiler >> genRemoveNFloatArgsFromStack: n [ 
+CogIA32Compiler >> genRemoveNFloatArgsFromStack: n [
+	<inline: true>
 	n > 0 ifTrue: [cogit AddCq: n * 8 R: ESP].
 	^0
 ]
