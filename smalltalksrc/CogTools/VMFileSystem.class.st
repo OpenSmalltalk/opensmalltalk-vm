@@ -1,6 +1,5 @@
 "
-I am a bridge between the file systems of Pharo and Squeak.
-I am used in the VMProfiler to keep it generic.
+I dispatch between the file systems of Pharo (FileSystem) and Squeak (FileDirectory)
 "
 Class {
 	#name : #VMFileSystem,
@@ -26,6 +25,7 @@ VMFileSystem >> exists: aFilename [
 
 { #category : #'as yet unclassified' }
 VMFileSystem >> nameFordirPath: aDirPath plus: aProcessId [
+"answers a FileSystem/Directory object representing a directory. The name of this directory is its path+the name of a process id"
 	
 	self subclassResponsibility 
 ]
