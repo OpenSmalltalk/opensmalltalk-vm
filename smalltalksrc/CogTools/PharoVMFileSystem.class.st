@@ -7,7 +7,8 @@ Class {
 { #category : #'as yet unclassified' }
 PharoVMFileSystem >> deleteContentsOf: aDirectory [
 
-	"have to find something similar"
+	"not yet implemented. The temp directory created during the profiling will not be deleted when quitting the image"
+	
 ]
 
 { #category : #public }
