@@ -83,7 +83,7 @@ Class {
 		'VS',
 		'XorOpcode'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #accessing }

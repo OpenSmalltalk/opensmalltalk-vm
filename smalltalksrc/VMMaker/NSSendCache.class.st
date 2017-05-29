@@ -59,7 +59,7 @@ Class {
 		'CogMethodConstants',
 		'VMBasicConstants'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #'class initialization' }

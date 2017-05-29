@@ -83,7 +83,7 @@ Class {
 		'ByteCountsPerMicrosecond',
 		'ExpectedSends'
 	],
-	#category : 'VMMaker-JITSimulation'
+	#category : #'VMMaker-JITSimulation'
 }
 
 { #category : #'debug support' }
@@ -3326,7 +3326,14 @@ CogVMSimulator >> printRumpCStackTo: address [
 		by: objectMemory wordSize negated
 		do:
 			[:addr|
-			self printHex: addr; tab; printHex: (objectMemory longAt: addr); cr]
+			self printHex: addr.
+			addr = cogit processor sp
+				ifTrue: [self print: ' sp->']
+				ifFalse:
+					[addr = cogit processor fp
+						ifTrue: [self print: ' fp->']
+						ifFalse: [self tab]].
+			self tab; printHex: (objectMemory longAt: addr); cr]
 ]
 
 { #category : #'debug printing' }
