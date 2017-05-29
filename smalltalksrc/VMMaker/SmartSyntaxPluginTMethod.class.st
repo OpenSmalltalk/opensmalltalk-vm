@@ -12,7 +12,7 @@ Class {
 		'parmSpecs',
 		'rcvrSpec'
 	],
-	#category : 'VMMaker-SmartSyntaxPlugins'
+	#category : #'VMMaker-SmartSyntaxPlugins'
 }
 
 { #category : #accessing }

@@ -1,7 +1,7 @@
 Class {
 	#name : #CCodeGeneratorTests,
 	#superclass : #TestCase,
-	#category : 'VMMaker-Tests'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #private }

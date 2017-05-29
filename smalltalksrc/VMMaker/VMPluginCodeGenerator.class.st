@@ -10,7 +10,7 @@ Class {
 		'inProgressSelectors',
 		'inliningDone'
 	],
-	#category : 'VMMaker-Translation to C'
+	#category : #'VMMaker-Translation to C'
 }
 
 { #category : #'spur primitive compilation' }

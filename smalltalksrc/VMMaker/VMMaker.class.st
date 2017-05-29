@@ -104,7 +104,7 @@ Class {
 	#classVars : [
 		'DirNames'
 	],
-	#category : 'VMMaker-Building'
+	#category : #'VMMaker-Building'
 }
 
 { #category : #initialisation }

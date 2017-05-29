@@ -5,7 +5,7 @@ Various classes in the image contain methods intended for translation to C for e
 Class {
 	#name : #MiscPrimitivePluginTest,
 	#superclass : #TestCase,
-	#category : 'VMMaker-Tests'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #primitives }

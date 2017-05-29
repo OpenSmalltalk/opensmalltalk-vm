@@ -19,7 +19,7 @@ Class {
 		'VMObjectIndices',
 		'VMSqueakClassIndices'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -1249,15 +1249,19 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine flags: fl
 			["On Spur ceActivateFailingPrimitiveMethod: would like to retry if forwarders
 			  are found. So insist on PrimCallNeedsPrimitiveFunction being set too."
 			 self assert: (flags anyMask: PrimCallNeedsPrimitiveFunction).
-			 backEnd genSubstituteReturnAddress:
-				((flags anyMask: PrimCallCollectsProfileSamples)
-					ifTrue: [cePrimReturnEnterCogCodeProfiling]
-					ifFalse: [cePrimReturnEnterCogCode]).
+			 backEnd
+				genMarshallNArgs: 0 arg: 0 arg: 0 arg: 0 arg: 0;
+				genSubstituteReturnAddress:
+					((flags anyMask: PrimCallCollectsProfileSamples)
+						ifTrue: [cePrimReturnEnterCogCodeProfiling]
+						ifFalse: [cePrimReturnEnterCogCode]).
 			 primInvokeInstruction := self JumpFullRT: primitiveRoutine asInteger.
 			 jmp := jmpSamplePrim := continuePostSamplePrim := nil]
 		ifFalse:
 			["Call the C primitive routine."
+			backEnd genMarshallNArgs: 0 arg: 0 arg: 0 arg: 0 arg: 0.
 			primInvokeInstruction := self CallFullRT: primitiveRoutine asInteger.
+			backEnd genRemoveNArgsFromStack: 0.
 			(flags anyMask: PrimCallCollectsProfileSamples) ifTrue:
 				[self assert: (flags anyMask: PrimCallNeedsNewMethod).
 				"Test nextProfileTick for being non-zero and call checkProfileTick if so"

@@ -75,7 +75,7 @@ Class {
 		'XMM8L',
 		'XMM9L'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -444,7 +444,7 @@ CogX64Compiler >> computeMaximumSize [
 		[CallFull]					-> [^12].
 		[Call]						-> [^5].
 		[CallR]						-> [^3].
-		[JumpR]						-> [^2].
+		[JumpR]					-> [^3].
 		[JumpFull]					-> [self resolveJumpTarget. ^12].
 		[JumpLong]					-> [self resolveJumpTarget. ^5].
 		[Jump]						-> [self resolveJumpTarget. ^5].
@@ -1337,9 +1337,10 @@ CogX64Compiler >> concretizeJumpR [
 	| reg |
 	reg := operands at: 0.
 	machineCode
-		at: 0 put: 16rFF;
-		at: 1 put: (self mod: ModReg RM: reg RO: 4).
-	^machineCodeSize := 2
+		at: 0 put: (self rexR: 0 x: 0 b: reg);
+		at: 1 put: 16rFF;
+		at: 2 put: (self mod: ModReg RM: reg RO: 4).
+	^machineCodeSize := 3
 ]
 
 { #category : #'generate machine code' }
