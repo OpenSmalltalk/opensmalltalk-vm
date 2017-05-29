@@ -1,3 +1,11 @@
+"
+I am the VMProfiler called when using a Squeak image.
+
+I can be used 
+- headful (WorldMenu>open>VMProfiler)
+- or headless : for instance, inspect on : String streamContents: [ :s | VMProfiler headlessSpyOn: [ 1 to: 10000000 do: [ :i | Object new ] ] reportOn: s ]
+
+"
 Class {
 	#name : #SqueakVMProfiler,
 	#superclass : #VMProfiler,

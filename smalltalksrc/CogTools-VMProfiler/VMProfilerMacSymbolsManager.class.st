@@ -155,15 +155,13 @@ VMProfilerMacSymbolsManager >> parseAsynchronously [
 VMProfilerMacSymbolsManager >> parseSymbolsFor: module [
 	| proc symtab symStream |
 	(VMFileSystem exists: tempDir fullName, '/', module shortName) ifFalse: 
-	"(tempDir fileExists: module shortName) ifFalse:"
 		["N.B. Don't use the -f option (which meant flat symbols) as in El Capitan it is misinterpreted to mean -format."
 		 proc := OSProcess thisOSProcess command:
 						'cd ', tempDir fullName,
 						';nm -n -arch ', self archName, " -f" ' "', module name, '" | grep -v " [aAU] " >"', module shortName, '"'].
 	symStream := (Array new: 1000) writeStream.
 	symStream nextPut: module.
-	proc ifNotNil:[(Delay forMilliseconds: 25) wait].
-		"[[proc isComplete] whileFalse: [(Delay forMilliseconds: 25) wait]]." "infinite loop"
+	proc ifNotNil: [[proc isComplete] whileFalse: [(Delay forMilliseconds: 25) wait]].
 	symtab := [StandardFileStream readOnlyFileNamed: (tempDir fullName, '/', module shortName)]
 					on: Error
 					do: [:ex| "Handle flaky OSProcess stuff by reporting error and failing to parse"
