@@ -106,6 +106,7 @@ platforms/unix/config/autom4te.cache/
 /image/prefs
 /image/special-dirs
 /image/*.zip
+/image/.*history
 
 # /sources/
 /sources/*.sources
