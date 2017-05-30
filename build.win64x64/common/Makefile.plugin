@@ -1,12 +1,18 @@
 #############################################################################
-# Generic Makefile for plugins
+# Generic Makefile for plugins on Win64
 #############################################################################
+#
+# The following variables can be overridden in the platform Makefile, e.g.
+# platforms/win32/plugins/BochsIA32Plugin/Makefile.  Look at
+# platforms/win32/plugins/*/Makefile for examples.
+#
+# PREREQUISITES  supplies names of files that must exist to make lib or bundle
 
 # The following are the four key locations (set via invocation):
 # PLUGINSRCDIR: Where is the root of the src plugins source tree?
 # VMSRCDIR: Where is the src/vm source directory?
 # PLATDIR: Where is the root of the platforms tree?
-# BUILDDIR: Which irectory should objects be compiled into?
+# BUILDDIR: Which directory should objects be compiled into?
 
 #############################################################################
 # Standard directory locations:
@@ -58,18 +64,17 @@ OFLAGS:= -O1 -fno-omit-frame-pointer
 DEBUGVM=0
 NDEBUG:=
 else
-OFLAGS:=  
+OFLAGS:= -O0 -fno-omit-frame-pointer
 DEBUGVM=1
 NDEBUG:=
 endif
 
 XDEFS:=	
-DEFS:=	$(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
+DEFS:=	$(WINVER) -DWIN64=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
 		-DNO_SERVICE -DNO_STD_FILE_SUPPORT \
 		$(NDEBUG) -DLSB_FIRST -DVM_NAME=\"$(VM)\" $(XDEFS)
 
-	
-CFLAGS:= -msse2 -ggdb2 -m64 -mdll \
+CFLAGS:= -fdeclspec -msse2 -ggdb2 -m64 -mdll \
 	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS)
 
 
@@ -127,6 +132,9 @@ $(OBJDIR):
 $(VMDIR):
 	mkdir $(VMDIR)
 
+# If any prerequisites are declared all must exist to continue
+ifeq ($(realpath $(PREREQUISITES)),$(abspath $(PREREQUISITES)))
+
 $(PLUGINLIB): $(VMDIR) $(OBJDIR) $(LIBOBJ)
 	-$(RM) $(PLUGINLIB)
 	$(AR) $(PLUGINLIB) $(LIBOBJ)
@@ -167,3 +175,18 @@ endif
 # Rules for automated builds
 #
 include ../common/Makefile.rules
+
+else # ifeq ($(realpath $(PREREQUISITES)),$(PREREQUISITES))
+# If any prerequisites are missing simply create a .ignore file
+
+$(PLUGINLIB): FORCE
+	$(warning $(PLUGINLIB) has missing prerequisites. Not building.)
+	echo >$(basename $(PLUGINLIB)).ignore
+
+$(PLUGINDLL):	FORCE
+	$(warning $(PLUGINDLL) has missing prerequisites. Not building.)
+	echo >$(basename $(PLUGINDLL)).ignore
+
+FORCE:
+
+endif # ifeq ($(realpath $(PREREQUISITES)),$(PREREQUISITES))

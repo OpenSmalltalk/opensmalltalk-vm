@@ -2854,7 +2854,14 @@ char * GetAttributeString(sqInt id) {
     case 1004:
       return (char*) interpreterVersion;
     case 1005: /* window system name */
+	/* An attempt to eliminate one absurdity.  If this breaks too many things
+	 * we'll have to change it back.  But Win32 is not a good name.
+	 */
+#if 0
       return "Win32";
+#else
+      return "Windows";
+#endif
     case 1006: /* VM build ID */
       return vmBuildString;
 #if STACKVM

@@ -212,6 +212,41 @@ sqInt sqFileOpen(SQFile *f, char* fileNameIndex, sqInt fileNameSize, sqInt write
   return 1;
 }
 
+sqInt sqFileOpenNew(SQFile *f, char* fileNameIndex, sqInt fileNameSize) {
+  HANDLE h;
+  WCHAR *win32Path = NULL;
+
+  /* convert the file name into a null-terminated C string */
+  ALLOC_WIN32_PATH(win32Path, fileNameIndex, fileNameSize);
+
+  /* test for case duplicates using hasCaseSensitiveDuplicate(), even though
+     CreateFileW() with CREATE_NEW should fail if any exist, so if
+     hasCaseSensitiveDuplicate() treats some paths as duplicates that
+     CreateFileW() doesn't, sqFileOpenNew() will fail like sqFileOpen() would
+   */
+  if(hasCaseSensitiveDuplicate(win32Path)) {
+    f->sessionID = 0;
+    FAIL();
+  }
+  h = CreateFileW(win32Path,
+		  (GENERIC_READ | GENERIC_WRITE),
+		  FILE_SHARE_READ,
+		  NULL, /* No security descriptor */
+		  CREATE_NEW, /* Only create and open if it doesn't exist */
+		  FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+		  NULL /* No template */);
+  if(h == INVALID_HANDLE_VALUE) {
+    f->sessionID = 0;
+    FAIL();
+  } else {
+    f->sessionID = thisSession;
+    f->file = (HANDLE)h;
+    f->writable = true;
+    AddHandleToTable(win32Files, h);
+  }
+  return 1;
+}
+
 /*
  * Fill-in files with handles for stdin, stdout and seterr as available and
  * answer a bit-mask of the availability, 1 corresponding to stdin, 2 to stdout

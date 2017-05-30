@@ -225,8 +225,8 @@ sqInt success(sqInt);
 
 /* Display, mouse, keyboard, time. */
 
-extern void *displayBits;
-extern int displayWidth, displayHeight, displayDepth;
+extern VM_EXPORT void *displayBits;
+extern VM_EXPORT int displayWidth, displayHeight, displayDepth;
 
 sqInt ioBeep(void);
 sqInt ioExit(void);

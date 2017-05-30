@@ -266,6 +266,9 @@ compiling the Newspeak VM with either of
 using -O2 results in a VM that segfaults early in startup.  For these compilers
 it is probably wise to use -O1, even though -O3 seems to work.
 
+People have reported that the OSProcessPlugin is broken on gcc versions > 4.8
+on Debian.
+
 
 Installing support libraries
 ----------------------------

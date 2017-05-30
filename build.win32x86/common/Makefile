@@ -201,6 +201,8 @@ print-objects:
 	@echo VMOBJ=$(VMOBJ)
 	@echo -----------------------------------------------------
 
+ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
+
 mingw32ver.exe: $(WIN32UTILDIR)/mingw32ver.c
 	$(CC) -o $@ -O1 -mconsole -m32 $<
 
@@ -218,13 +220,13 @@ vm:	$(VMEXE)
 $(VMEXE): $(OBJDIR) $(THIRDPARTYLIBS) $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
 	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
 	$(LD) $(LDFLAGS) -o $(VMEXE) \
-			$(BTOBJ) $(VMOBJ) $(VMEXP) $(OBJDIR)/resource.o $(LIBS) $(STDLIBS) $(ETOBJ)
+			$(BTOBJ) $(VMOBJ) $(VMEXP) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 	$(NM) --numeric-sort --defined-only -f bsd $(VMEXE) >$(VMMAP)
 
 $(CONSOLEVMEXE): $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
 	$(CC) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(WIN32DIR)/version.c
 	$(LD) $(CONSOLELDFLAGS) -o $(CONSOLEVMEXE) \
-			$(BTOBJ) $(VMOBJ) $(VMEXP) $(OBJDIR)/resource.o $(LIBS) $(STDLIBS) $(ETOBJ)
+			$(BTOBJ) $(VMOBJ) $(VMEXP) $(OBJDIR)/resource.o $(filter-out $(call ignore), $(LIBS)) $(STDLIBS) $(ETOBJ)
 	$(NM) --numeric-sort --defined-only -f bsd $(CONSOLEVMEXE) >$(CONSOLEVMMAP)
 
 ifneq ($STRIPEXE,)
@@ -263,23 +265,24 @@ $(VMDEF) $(VMEXP) $(VMLIB): $(VMOBJ)
 plugin-makefile = $(realpath $(firstword $(wildcard $(WIN32PLUGINSDIR)/$(1)/Makefile.plugin ../common/Makefile.plugin)))
 
 # Internal plugin.  Build as lib then link in lib
-# $(call plugin-makefile,$(*F))
-$(OBJDIR)/%.lib: 
+$(OBJDIR)/%.lib: $(call plugin-makefile,$(*F))
+	@-mkdir -p $(BUILD)/$(*F)
+	rm -f $(BUILD)/vm/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
-		CONFIGURATION=$(CONFIGURATION) \
+		CONFIGURATION=$(CONFIGURATION) TOOLPREFIX=$(TOOLPREFIX) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		LIBNAME=$(*F) COGDEFS="$(COGDEFS)" XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
 		$(OBJDIR)/$(*F).lib
 
 # External plugin.  Build as dll and copy to vm dir ($(OBJDIR)).
-# $(call plugin-makefile,$(*F))
-$(OBJDIR)/%.dll: 
+$(OBJDIR)/%.dll: $(call plugin-makefile,$(*F))
 	@-mkdir -p $(BUILD)/$(*F)
+	rm -f $(BUILD)/$(*F).ignore
 	$(MAKE) $(MFLAGS) BUILD=$(BUILD) \
 		-f $(call plugin-makefile,$(*F)) \
-		CONFIGURATION=$(CONFIGURATION) \
+		CONFIGURATION=$(CONFIGURATION) TOOLPREFIX=$(TOOLPREFIX) \
 		PLATDIR=$(PLATDIR) PLUGINSRCDIR=$(PLUGINSRCDIR) VMSRCDIR=$(VMSRCDIR) \
 		THIRDPARTYOUTDIR=$(THIRDPARTYOUTDIR) \
 		COGDEFS="$(COGDEFS)" LIBNAME=$(*F) $(OBJDIR)/$(*F).dll

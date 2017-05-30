@@ -380,16 +380,16 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	self.lastSeenKeyBoardModifierDetails = aKeyBoardStrokeDetails;
 
     @synchronized(self) {
-        NSEvent* syntheticEvent = AUTORELEASEOBJ([NSEvent keyEventWithType:(isUp ? NSEventTypeKeyUp : NSEventTypeKeyDown)
-                                                                  location:[theEvent locationInWindow]
-                                                             modifierFlags:(isUp ? oldFlags : [theEvent modifierFlags])
-                                                                 timestamp:[theEvent timestamp]
-                                                              windowNumber:[theEvent windowNumber]
-                                                                   context:nil
-                                                                characters:@""
-                                               charactersIgnoringModifiers:@""
-                                                                 isARepeat:NO
-                                                                   keyCode:[theEvent keyCode]]);
+        NSEvent* syntheticEvent = [NSEvent keyEventWithType:(isUp ? NSEventTypeKeyUp : NSEventTypeKeyDown)
+                                                   location:[theEvent locationInWindow]
+                                              modifierFlags:(isUp ? oldFlags : [theEvent modifierFlags])
+                                                  timestamp:[theEvent timestamp]
+                                               windowNumber:[theEvent windowNumber]
+                                                    context:nil
+                                                 characters:@""
+                                charactersIgnoringModifiers:@""
+                                                  isARepeat:NO
+                                                    keyCode:[theEvent keyCode]];
         if (isUp) {
             [(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordKeyUpEvent: syntheticEvent fromView: self];
         } else {

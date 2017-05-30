@@ -12,7 +12,7 @@
 *
 *
 *****************************************************************************/
-#ifdef WIN32
+#ifdef _WIN32
 # include <windows.h>
 # include <winerror.h>
 #endif
@@ -1119,7 +1119,7 @@ int b3dDrawRangeElements(int handle, int mode, int minIdx, int maxIdx, int nFace
   glRenderer *renderer = glRendererFromHandle(handle);
   if(!renderer || !glMakeCurrentRenderer(renderer)) return 0;
 
-#ifdef WIN32
+#ifdef _WIN32
   if(!renderer->glDrawRangeElements) {
     void *fn;
     fn = wglGetProcAddress("glDrawRangeElements");

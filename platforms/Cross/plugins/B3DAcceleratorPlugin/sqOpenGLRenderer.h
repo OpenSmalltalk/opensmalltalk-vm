@@ -3,7 +3,7 @@
 
 #if defined(macintoshSqueak)
 # include "sqMacOpenGL.h"
-#elif defined(WIN32)
+#elif defined(_WIN32)
 # include "sqWin32OpenGL.h"
 #elif defined(UNIX)
 # include "sqUnixOpenGL.h"

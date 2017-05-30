@@ -10,7 +10,7 @@
 
 
 
-#ifdef WIN32
+#if _WIN32 || _WIN64
 /* Override necessary definitions */
 #undef putchar
 #include "sqWin32Alloc.h"
@@ -95,8 +95,8 @@ size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
 #endif
 
 #else 
-error "Not Win32!"
-#endif /* WIN32 */
+error "Not Win32 or Win64!"
+#endif /* _WIN32 || _WIN64 */
 
 int ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y);
 

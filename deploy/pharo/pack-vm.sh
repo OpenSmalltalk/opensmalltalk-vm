@@ -68,7 +68,7 @@ case "${ARCH}" in
 		do_pack_vm "win" "i386" "${ROOT_DIR}/build.${ARCH}/pharo.cog.spur/build/vm" "Pharo.exe PharoConsole.exe *.dll"
 		;;
 	win64x64)
-		do_pack_vm "win" "x86_64" "${ROOT_DIR}/build.${ARCH}/pharo.cog.spur/build/vm" "Pharo.exe PharoConsole.exe *.dll" "stack"
+		do_pack_vm "win" "x86_64" "${ROOT_DIR}/build.${ARCH}/pharo.stack.spur/build/vm" "Pharo.exe PharoConsole.exe *.dll" "stack"
 		;;
 	*) 
 		echo "Undefined platform!"
