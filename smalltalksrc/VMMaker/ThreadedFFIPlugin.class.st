@@ -349,7 +349,7 @@ ThreadedFFIPlugin >> ffiAddressOf: rcvr startingAt: byteOffset size: byteSize [
 				[^interpreterProxy primitiveFail].
 			addr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: #'sqIntptr_t'].
 	addr := addr + byteOffset - 1.
-	^addr
+	^addr asVoidPointer
 ]
 
 { #category : #'primitive support' }
