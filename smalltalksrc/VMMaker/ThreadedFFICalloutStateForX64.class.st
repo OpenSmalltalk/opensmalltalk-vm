@@ -16,9 +16,9 @@ Class {
 { #category : #translation }
 ThreadedFFICalloutStateForX64 class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a ThreadedFFICalloutState struct."
-
+	"self subclasses collect: [:ea| ea -> ea typdef]"
 	ThreadedFFICalloutState instVarNamesAndTypesForTranslationDo: aBinaryBlock.
-	ThreadedFFICalloutStateForX64 instVarNames do:
+	self instVarNames, ThreadedFFICalloutStateForX64 instVarNames do:
 		[:ivn|
 		aBinaryBlock
 			value: ivn
@@ -26,7 +26,7 @@ ThreadedFFICalloutStateForX64 class >> instVarNamesAndTypesForTranslationDo: aBi
 						['integerRegisters']	-> [{#sqInt. '[NumIntRegArgs]'}].
 						['floatRegisters']	-> [{#double. '[NumFloatRegArgs]'}] }
 					otherwise:
-						[#sqInt])]
+						[#char])]
 ]
 
 { #category : #translation }
