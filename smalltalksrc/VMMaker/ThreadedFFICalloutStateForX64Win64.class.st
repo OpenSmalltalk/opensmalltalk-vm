@@ -1,3 +1,6 @@
+"
+A ThreadedFFICalloutStateForX64Win64 is a holder for the callout state maintained while marshalling an FFI call on an X64 (x86-64) system using the _WIN64 ABI.
+"
 Class {
 	#name : #ThreadedFFICalloutStateForX64Win64,
 	#superclass : #ThreadedFFICalloutStateForX64,
