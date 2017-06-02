@@ -766,7 +766,7 @@ primitivePluginRequestFileHandle(void) {
 	   folder will be--it's folder might even be user-name dependent. sqFileOpen() will
 	   only allow opening files within the sandbox, which would be better. Here's the
 	   sandbox-safe alternative:
-		  sqFileOpen(filePtr, (int) fileName, strlen(fileName), false);
+		  sqFileOpen(filePtr, fileName, strlen(fileName), false);
 	*/
 	OpenFileReadOnly(filePtr, fileName);
 

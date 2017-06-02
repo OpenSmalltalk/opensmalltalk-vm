@@ -43,7 +43,7 @@ extern struct VirtualMachine *interpreterProxy;
                                    S_IWUSR | (S_IWUSR>>3) | (S_IWUSR>>6) | \
                                    S_IXUSR | (S_IXUSR>>3) | (S_IXUSR>>6))
   
-static void read_permissions(sqInt *posixPermissions, WCHAR* path, int pathLength, int attr)
+static void read_permissions(sqInt *posixPermissions, WCHAR* path, sqInt pathLength, sqInt attr)
 {
   *posixPermissions |= S_IRUSR | (S_IRUSR>>3) | (S_IRUSR>>6);
   if(!(attr & FILE_ATTRIBUTE_READONLY)) {
@@ -170,7 +170,7 @@ DWORD convertToSqueakTime(SYSTEMTIME st)
   return secs;
 }
 
-int dir_Create(char *pathString, int pathLength)
+sqInt dir_Create(char *pathString, sqInt pathLength)
 {
   WCHAR *win32Path = NULL;
 
@@ -180,19 +180,19 @@ int dir_Create(char *pathString, int pathLength)
   return CreateDirectoryW(win32Path,NULL);
 }
 
-int dir_Delimitor(void)
+sqInt dir_Delimitor(void)
 {
   return '\\';
 }
 
 #ifdef PharoVM
-int dir_Lookup(char *pathString, int pathLength, int index,
-/* outputs: */ char *name, int *nameLength, int *creationDate, int *modificationDate,
-               int *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink)
+sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
+/* outputs: */ char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+               sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink)
 #else
-int dir_Lookup(char *pathString, int pathLength, int index,
-/* outputs: */ char *name, int *nameLength, int *creationDate, int *modificationDate,
-               int *isDirectory, squeakFileOffsetType *sizeIfFile)
+sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
+/* outputs: */ char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+               sqInt *isDirectory, squeakFileOffsetType *sizeIfFile)
 #endif
 {
   /* Lookup the index-th entry of the directory with the given path, starting
@@ -205,14 +205,14 @@ int dir_Lookup(char *pathString, int pathLength, int index,
   */
   static WIN32_FIND_DATAW findData; /* cached find data */
   static HANDLE findHandle = 0; /* cached find handle */
-  static int lastIndex = 0; /* cached last index */
+  static sqInt lastIndex = 0; /* cached last index */
   static WCHAR *lastString = NULL; /* cached last path */
-  static int lastStringLength = 0; /* cached length of last path */
+  static sqInt lastStringLength = 0; /* cached length of last path */
   WCHAR *win32Path = NULL;
-  int win32PathLength = 0;
+  sqInt win32PathLength = 0;
   FILETIME fileTime;
   SYSTEMTIME sysTime;
-  int i, sz;
+  sqInt i, sz;
 
   /* default return values */
   *name             = 0;
@@ -357,13 +357,13 @@ int dir_Lookup(char *pathString, int pathLength, int index,
 }
 
 #ifdef PharoVM
-int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int nameStringLength,
-/* outputs: */ char *name, int *nameLength, int *creationDate, int *modificationDate,
-                    int *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink)
+sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqInt nameStringLength,
+/* outputs: */ char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+                    sqInt *isDirectory, squeakFileOffsetType *sizeIfFile, sqInt *posixPermissions, sqInt *isSymlink)
 #else
-int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int nameStringLength,
-/* outputs: */ char *name, int *nameLength, int *creationDate, int *modificationDate,
-	       int *isDirectory, squeakFileOffsetType *sizeIfFile)
+sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqInt nameStringLength,
+/* outputs: */ char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+	       sqInt *isDirectory, squeakFileOffsetType *sizeIfFile)
 #endif
 {
   /* Lookup a given file in a given named directory.
@@ -377,13 +377,13 @@ int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int name
 
   WIN32_FILE_ATTRIBUTE_DATA winAttrs;
   WCHAR *win32Path = NULL;
-  int win32PathLength = 0;
+  sqInt win32PathLength = 0;
   FILETIME fileTime;
   SYSTEMTIME sysTime;
-  int sz, fsz;
+  sqInt sz, fsz;
 #ifdef PharoVM
   HANDLE findHandle;
-  int i;
+  sqInt i;
 #endif
 
   /* default return values */
@@ -485,21 +485,21 @@ int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int name
 }
 
 
-int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize,
+sqInt dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize,
 			     char *fType, char *fCreator)
 {
   /* Win32 files are untyped, and the creator is correct by default */
   return true;
 }
 
-int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize,
+sqInt dir_GetMacFileTypeAndCreator(char *filename, sqInt filenameSize,
 			     char *fType, char *fCreator)
 {
   /* Win32 files are untyped, and the creator is correct by default */
   FAIL();
 }
 
-int dir_Delete(char *pathString, int pathLength) {
+sqInt dir_Delete(char *pathString, sqInt pathLength) {
   /* Delete the existing directory with the given path. */
   WCHAR *win32Path = NULL;
 
