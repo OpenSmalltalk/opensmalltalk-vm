@@ -392,19 +392,22 @@ sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 }
 
 sqInt
-sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize) {
+sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists) {
 	/* Opens the given file for writing and if possible reading
 	   if it does not already exist using the supplied sqFile
 	   structure to record its state.
-	   Fails with no side effects if f is already open. Files are
-	   always opened in binary mode; Squeak must take care of any
-	   line-end character mapping.
+	   When failing, it sets 'exists' to true if the failure was
+	   caused by the named file already existing. Fails with no
+	   side effects (besides resetting 'exists') if f is already
+	   open. Files are always opened in binary mode; Squeak must
+	   take care of any line-end character mapping.
 	*/
 
 	char cFileName[PATH_MAX];
 	int fd;
 	const char *mode;
 
+	*exists = false;
 	/* don't open an already open file */
 	if (sqFileValid(f))
 		return interpreterProxy->success(false);
@@ -462,6 +465,8 @@ sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize) {
 		   NEVER reattempt close() if it fails, even on EINTR
 		 */
 		close(fd);
+	} else if (errno == EEXIST) {
+		*exists = true;
 	}
 
 	f->sessionID = 0;

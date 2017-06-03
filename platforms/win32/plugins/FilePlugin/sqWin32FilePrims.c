@@ -212,10 +212,11 @@ sqInt sqFileOpen(SQFile *f, char* fileNameIndex, sqInt fileNameSize, sqInt write
   return 1;
 }
 
-sqInt sqFileOpenNew(SQFile *f, char* fileNameIndex, sqInt fileNameSize) {
+sqInt sqFileOpenNew(SQFile *f, char* fileNameIndex, sqInt fileNameSize, sqInt* exists) {
   HANDLE h;
   WCHAR *win32Path = NULL;
 
+  *exists = false;
   /* convert the file name into a null-terminated C string */
   ALLOC_WIN32_PATH(win32Path, fileNameIndex, fileNameSize);
 
@@ -237,6 +238,8 @@ sqInt sqFileOpenNew(SQFile *f, char* fileNameIndex, sqInt fileNameSize) {
 		  NULL /* No template */);
   if(h == INVALID_HANDLE_VALUE) {
     f->sessionID = 0;
+    if (GetLastError() == ERROR_FILE_EXISTS)
+      *exists = true;
     FAIL();
   } else {
     f->sessionID = thisSession;
