@@ -630,6 +630,16 @@ Spur32BitMemoryManager >> isFloatInstance: oop [
 	  and: [(self classIndexOf: oop) = ClassFloatCompactIndex]
 ]
 
+{ #category : #'interpreter access' }
+Spur32BitMemoryManager >> isFloatOrInt: anOop [
+	"Answer if anOop is either a SmallInteger or a Float."
+
+	<inline: true>
+	^(self isImmediate: anOop)
+		ifTrue: [self isIntegerObject: anOop]
+		ifFalse: [(self classIndexOf: anOop) = ClassFloatCompactIndex]
+]
+
 { #category : #'object testing' }
 Spur32BitMemoryManager >> isImmediateCharacter: oop [
 	<inline: true>
