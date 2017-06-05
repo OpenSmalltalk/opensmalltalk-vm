@@ -10,7 +10,7 @@ Squeak uses 16-bit signed samples encoded in the host's endian order.  A sound b
 Class {
 	#name : #SoundPlugin,
 	#superclass : #SmartSyntaxInterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }

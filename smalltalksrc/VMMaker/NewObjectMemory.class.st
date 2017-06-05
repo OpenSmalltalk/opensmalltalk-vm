@@ -16,7 +16,7 @@ Class {
 		'statGCEndUsecs',
 		'heapMap'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #translation }
@@ -1688,6 +1688,16 @@ NewObjectMemory >> isContextHeader: aHeader [
 	<inline: true>
 	"c.f. {BlockContext. MethodContext. PseudoContext} collect: [:class| class -> class indexIfCompact]"
 	^(self compactClassIndexOfHeader: aHeader) = ClassMethodContextCompactIndex
+]
+
+{ #category : #'interpreter access' }
+NewObjectMemory >> isFloatOrInt: anOop [
+	"Answer if anOop is either a SmallInteger or a Float."
+
+	<inline: true>
+
+	^(self isIntegerObject: anOop)
+	  or: [(self compactClassIndexOf: anOop) = ClassFloatCompactIndex]
 ]
 
 { #category : #'image segment in/out' }

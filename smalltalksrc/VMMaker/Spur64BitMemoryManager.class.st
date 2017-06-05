@@ -1,7 +1,7 @@
 Class {
 	#name : #Spur64BitMemoryManager,
 	#superclass : #SpurMemoryManager,
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'class initialization' }
@@ -673,6 +673,16 @@ Spur64BitMemoryManager >> isFloatInstance: oop [
 	^(tagBits := oop bitAnd: self tagMask) ~= 0
 		ifTrue: [tagBits = self smallFloatTag]
 		ifFalse: [(self classIndexOf: oop) = ClassFloatCompactIndex]
+]
+
+{ #category : #'interpreter access' }
+Spur64BitMemoryManager >> isFloatOrInt: anOop [
+	"Answer if anOop is either a SmallInteger or a Float."
+
+	<inline: true>
+	^(self isImmediate: anOop)
+		ifTrue: [(self isCharacterObject: anOop) not]
+		ifFalse: [(self classIndexOf: anOop) = ClassFloatCompactIndex]
 ]
 
 { #category : #'object testing' }

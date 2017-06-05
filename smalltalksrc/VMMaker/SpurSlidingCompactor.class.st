@@ -24,7 +24,7 @@ Class {
 		'VMBasicConstants',
 		'VMSpurObjectRepresentationConstants'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'compaction - api' }

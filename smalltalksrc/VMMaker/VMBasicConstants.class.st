@@ -60,7 +60,7 @@ Class {
 		'SistaVM',
 		'VMBIGENDIAN'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #'C translation' }
@@ -95,7 +95,8 @@ VMBasicConstants class >> namesDefinedAtCompileTime [
 		STACKVM COGVM COGMTVM SPURVM
 		PharoVM								"Pharo vs Squeak"
 		EnforceAccessControl					"Newspeak"
-		CheckRememberedInTrampoline)		"IMMUTABILITY"
+		CheckRememberedInTrampoline		"IMMUTABILITY"
+		LLDB)									"As of lldb-370.0.42 Swift-3.1, passing funciton parameters to printOopsSuchThat fails with Internal error [IRForTarget]: Couldn't rewrite one of the arguments of a function call.  Turning off link time optimization with -fno0lto has no effect.  hence we define some debugging functions as being <option: LLDB>"
 ]
 
 { #category : #'C translation' }

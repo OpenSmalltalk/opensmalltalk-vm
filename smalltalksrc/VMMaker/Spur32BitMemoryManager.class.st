@@ -1,7 +1,7 @@
 Class {
 	#name : #Spur32BitMemoryManager,
 	#superclass : #SpurMemoryManager,
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'class initialization' }
@@ -628,6 +628,16 @@ Spur32BitMemoryManager >> isFloatInstance: oop [
 	<inline: true>
 	^(self isNonImmediate: oop)
 	  and: [(self classIndexOf: oop) = ClassFloatCompactIndex]
+]
+
+{ #category : #'interpreter access' }
+Spur32BitMemoryManager >> isFloatOrInt: anOop [
+	"Answer if anOop is either a SmallInteger or a Float."
+
+	<inline: true>
+	^(self isImmediate: anOop)
+		ifTrue: [self isIntegerObject: anOop]
+		ifFalse: [(self classIndexOf: anOop) = ClassFloatCompactIndex]
 ]
 
 { #category : #'object testing' }
