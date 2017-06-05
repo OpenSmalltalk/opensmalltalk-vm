@@ -1564,7 +1564,10 @@ invalidCompactClassError(char *s) { /* Print a (compact) class index error messa
  */
 #undef sigsetjmp
 #undef siglongjmp
-#if _WIN64
+#if _MSC_VER
+# define sigsetjmp(jb,ssmf) _setjmp(jb)
+# define siglongjmp(jb,v) longjmp(jb,v)
+#elif _WIN64 && __GNUC__
 # define sigsetjmp(jb,ssmf) _setjmp(jb,NULL)
 # define siglongjmp(jb,v) longjmp(jb,v)
 #elif _WIN32

@@ -619,7 +619,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		var: #trampolineAddresses
 			declareC: 'static char *trampolineAddresses[NumTrampolines*2]';
 		var: #objectReferencesInRuntime
-			declareC: 'static usqInt objectReferencesInRuntime[NumObjRefsInRuntime]';
+			declareC: 'static usqInt objectReferencesInRuntime[NumObjRefsInRuntime+1]';
 		var: #labelCounter
 			type: #int;
 		var: #traceFlags
