@@ -24,5 +24,5 @@ Class {
 		'MFMethodMask',
 		'MFrameSlots'
 	],
-	#category : #'VMMaker-Interpreter'
+	#category : 'VMMaker-Interpreter'
 }
