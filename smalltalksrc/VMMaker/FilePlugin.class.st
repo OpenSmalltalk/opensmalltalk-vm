@@ -110,11 +110,17 @@ FilePlugin >> fileOpenNewName: nameIndex size: nameSize secure: secureFlag [
 				"If the security plugin can be loaded, use it to check for permission.
 				If not, assume it's ok"
 				sCOFfn ~= 0 
-					ifTrue: [okToOpen := self cCode: '((sqInt (*) (char *, sqInt, sqInt)) sCOFfn)(nameIndex, nameSize, true)' inSmalltalk:[true].
+					ifTrue: [
+						okToOpen := self cCode: '((sqInt (*) (char *, sqInt, sqInt)) sCOFfn)(nameIndex, nameSize, true)' inSmalltalk:[true].
 						okToOpen
 							ifFalse: [interpreterProxy primitiveFail]]]].
 	interpreterProxy failed
-		ifFalse: [self cCode: 'sqFileOpenNew(file, nameIndex, nameSize)' inSmalltalk: [file]].
+		ifFalse: [| exists |
+			exists := false.
+			self cCode: 'sqFileOpenNew(file, nameIndex, nameSize, &exists)' inSmalltalk: [file].
+			(interpreterProxy failed
+				and: [exists])
+				ifTrue: [interpreterProxy primitiveFailFor: PrimErrInappropriate]].
 	^ fileOop
 ]
 
