@@ -22,7 +22,7 @@ Class {
 		'is1ByteInstVarStore',
 		'hasIRC'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }

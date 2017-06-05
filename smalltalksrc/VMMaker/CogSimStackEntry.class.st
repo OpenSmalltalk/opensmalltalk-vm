@@ -58,7 +58,7 @@ Class {
 		'CogCompilationConstants',
 		'CogRTLOpcodes'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #'simulation only' }

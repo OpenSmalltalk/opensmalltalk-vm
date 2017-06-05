@@ -7,7 +7,7 @@ Class {
 	#classVars : [
 		'NumRegArgs'
 	],
-	#category : 'VMMaker-Plugins-FFI'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }

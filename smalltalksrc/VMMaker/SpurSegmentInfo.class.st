@@ -9,7 +9,7 @@ Class {
 		'savedSegSize',
 		'lastFreeObject'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }

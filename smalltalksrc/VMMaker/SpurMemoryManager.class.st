@@ -632,7 +632,7 @@ Class {
 		'VMSpurObjectRepresentationConstants',
 		'VMSqueakClassIndices'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
@@ -6490,6 +6490,13 @@ SpurMemoryManager >> isFloatObject: oop [
 	^coInterpreter isFloatObject: oop
 ]
 
+{ #category : #'interpreter access' }
+SpurMemoryManager >> isFloatOrInt: anOop [
+	"Answer if anOop is either a SmallInteger or a Float."
+
+	self subclassResponsibility
+]
+
 { #category : #'object testing' }
 SpurMemoryManager >> isForwarded: objOop [
 	"Answer if objOop is that if a forwarder.  Take advantage of isForwardedObjectClassIndexPun
@@ -9712,6 +9719,13 @@ SpurMemoryManager >> printInvalidClassTableHashes [
 ]
 
 { #category : #'debug printing' }
+SpurMemoryManager >> printMarkedOops [
+	<api>
+	<option: #LLDB>
+	self printOopsSuchThat: #isMarked
+]
+
+{ #category : #'debug printing' }
 SpurMemoryManager >> printMemoryFrom: start to: end [
 	<doNotGenerate>
 	| address |
@@ -9834,6 +9848,22 @@ SpurMemoryManager >> printObjectsWithHash: hash [
 ]
 
 { #category : #'debug printing' }
+SpurMemoryManager >> printOopsExcept: function [
+	<api>
+	<var: #function declareC: 'sqInt (*function)(sqInt)'>
+	<inline: #never>
+	| n |
+	n := 0.
+	self allHeapEntitiesDo:
+		[:o|
+		(self perform: function with: o) ifFalse:
+			[n := n + 1.
+			 self printEntity: o]].
+	n > 4 ifTrue: "rabbits"
+		[self printNum: n; print: ' objects'; cr]
+]
+
+{ #category : #'debug printing' }
 SpurMemoryManager >> printOopsFrom: startAddress to: endAddress [
 	<api>
 	| oop limit firstNonEntity inEmptySpace lastNonEntity |
@@ -9865,10 +9895,16 @@ SpurMemoryManager >> printOopsFrom: startAddress to: endAddress [
 SpurMemoryManager >> printOopsSuchThat: function [
 	<api>
 	<var: #function declareC: 'sqInt (*function)(sqInt)'>
+	<inline: #never>
+	| n |
+	n := 0.
 	self allHeapEntitiesDo:
 		[:o|
 		(self perform: function with: o) ifTrue:
-			[self printEntity: o]]
+			[n := n + 1.
+			 self printEntity: o]].
+	n > 4 ifTrue: "rabbits"
+		[self printNum: n; print: ' objects'; cr]
 ]
 
 { #category : #'debug printing' }
@@ -9882,6 +9918,13 @@ SpurMemoryManager >> printReferencesTo: anOop [
 			[anOop = (self fetchPointer: i ofMaybeForwardedObject: obj) ifTrue:
 				[coInterpreter printHex: obj; print: ' @ '; printNum: i; space; printOopShort: obj; cr.
 				 i := 0]]]
+]
+
+{ #category : #'debug printing' }
+SpurMemoryManager >> printUnmarkedOops [
+	<api>
+	<option: #LLDB>
+	self printOopsExcept: #isMarked
 ]
 
 { #category : #'class table' }

@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'returnValue'
 	],
-	#category : 'VMMaker-JITSimulation'
+	#category : #'VMMaker-JITSimulation'
 }
 
 { #category : #accessing }

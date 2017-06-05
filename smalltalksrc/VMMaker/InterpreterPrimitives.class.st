@@ -74,7 +74,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMStackFrameOffsets'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #'C translation' }
@@ -2913,7 +2913,7 @@ InterpreterPrimitives >> primitiveMakePoint [
 	| rcvr arg pt |
 	rcvr := self stackValue: 1.
 	arg := self stackTop.
-	((objectMemory isIntegerObject: arg) or: [objectMemory isFloatObject: arg]) ifFalse:
+	(objectMemory isFloatOrInt: arg) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	pt := objectMemory eeInstantiateSmallClass: (objectMemory splObj: ClassPoint) numSlots: YIndex + 1.
 	objectMemory "No need to check since new object is always new."

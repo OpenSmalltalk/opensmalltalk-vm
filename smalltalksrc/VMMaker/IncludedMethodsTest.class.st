@@ -5,7 +5,7 @@ Various classes in the image contain methods that are intended to be translated 
 Class {
 	#name : #IncludedMethodsTest,
 	#superclass : #TestCase,
-	#category : 'VMMaker-Tests'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #primitives }
