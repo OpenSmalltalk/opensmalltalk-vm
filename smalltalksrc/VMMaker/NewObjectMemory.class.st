@@ -1690,6 +1690,16 @@ NewObjectMemory >> isContextHeader: aHeader [
 	^(self compactClassIndexOfHeader: aHeader) = ClassMethodContextCompactIndex
 ]
 
+{ #category : #'interpreter access' }
+NewObjectMemory >> isFloatOrInt: anOop [
+	"Answer if anOop is either a SmallInteger or a Float."
+
+	<inline: true>
+
+	^(self isIntegerObject: anOop)
+	  or: [(self compactClassIndexOf: anOop) = ClassFloatCompactIndex]
+]
+
 { #category : #'image segment in/out' }
 NewObjectMemory >> isPlatformFloatOrderVersion: imageVersion [
 	"Answer if floats are stored in the platform's float order for the given imageVersion.
