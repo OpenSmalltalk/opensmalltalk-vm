@@ -135,17 +135,17 @@ static int maybeOpenDir(char *unixPath)
      open the new one, and save its name.  Return true if the operation
      was successful, false if not. */
   if (!lastPathValid || strcmp(lastPath, unixPath))
-    {
-      /* invalidate the old, open the new */
-      if (lastPathValid)
-	closedir(openDir);
-      lastPathValid= false;
-      strcpy(lastPath, unixPath);
-      if ((openDir= opendir(unixPath)) == 0)
-	return false;
-      lastPathValid= true;
-      lastIndex= 0;	/* first entry is index 1 */
-    }
+  {
+    /* invalidate the old, open the new */
+    if (lastPathValid)
+      closedir(openDir);
+    lastPathValid= false;
+    strncpy(lastPath, unixPath, MAXPATHLEN);
+    if ((openDir= opendir(unixPath)) == 0)
+      return false;
+    lastPathValid= true;
+    lastIndex= 0;	/* first entry is index 1 */
+  }
   return true;
 }
 
