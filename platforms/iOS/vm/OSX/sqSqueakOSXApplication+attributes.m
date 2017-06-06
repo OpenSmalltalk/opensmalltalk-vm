@@ -77,6 +77,9 @@ extern struct VirtualMachine* interpreterProxy;
 		result = result + 1;
 		if ((end = strchr(result, ' ')))
 			*end = 0;
+		/* The image expects things like 1095, so convert 10.10.5 into 1010.5 */
+		if ((end = strchr(result, '.')))
+			strcpy(end, end + 1);
 		return result;
 #endif
 	}
