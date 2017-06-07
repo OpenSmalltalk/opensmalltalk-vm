@@ -768,7 +768,7 @@ Spur32BitMemoryManager >> methodDictionaryHash: oop mask: mask [
 						ifTrue: [(self isIntegerObject: oop)
 									ifTrue: [self integerValueOf: oop]
 									ifFalse: [self characterValueOf: oop]]
-						ifFalse: [self hashBitsOf: oop])
+						ifFalse: [self rawHashBitsOf: oop]) "If no hash then it isn't in the dictionary..."
 ]
 
 { #category : #'interpreter access' }
