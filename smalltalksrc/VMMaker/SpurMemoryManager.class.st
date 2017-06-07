@@ -570,6 +570,7 @@ Class {
 		'pastSpaceStart',
 		'heapGrowthToSizeGCRatio',
 		'heapSizeAtPreviousGC',
+		'oldSpaceUsePriorToScavenge',
 		'growHeadroom',
 		'shrinkThreshold',
 		'marking',
@@ -601,7 +602,8 @@ Class {
 		'statSGCDeltaUsecs',
 		'statScavengeGCUsecs',
 		'statScavenges',
-		'statShrinkMemory'
+		'statShrinkMemory',
+		'statAllocatedBytes'
 	],
 	#classVars : [
 		'BitsPerByte',
@@ -694,7 +696,7 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 	self declareCAsOop: #(	memory freeStart scavengeThreshold newSpaceStart newSpaceLimit pastSpaceStart
 							lowSpaceThreshold freeOldSpaceStart oldSpaceStart endOfMemory firstFreeChunk lastFreeChunk)
 		in: aCCodeGenerator.
-	self declareCAsUSqLong: (self allInstVarNames select: [:ivn| ivn endsWith: 'Usecs'])
+	self declareCAsUSqLong: (self allInstVarNames select: [:ivn| ivn endsWith: 'Usecs']), #(statAllocatedBytes)
 		in: aCCodeGenerator.
 	aCCodeGenerator
 		var: #freeListsMask type: #usqInt;
@@ -704,7 +706,8 @@ SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 		var: #heapGrowthToSizeGCRatio type: #float;
 		var: #heapSizeAtPreviousGC type: #usqInt;
 		var: #totalFreeOldSpace type: #usqInt;
-		var: #maxOldSpaceSize type: #usqInt.
+		var: #maxOldSpaceSize type: #usqInt;
+		var: #oldSpaceUsePriorToScavenge type: #usqInt.
 	aCCodeGenerator
 		var: #remapBuffer
 		declareC: 'sqInt remapBuffer[RemapBufferSize + 1 /* ', (RemapBufferSize + 1) printString, ' */]'.
@@ -3975,6 +3978,17 @@ SpurMemoryManager >> countNumClassPagesPreSwizzle: bytesToShift [
 	
 ]
 
+{ #category : #'allocation accounting' }
+SpurMemoryManager >> currentAllocatedBytes [
+	"Compute the current allocated bytes since last set.
+	 This is the cumulative total in statAllocatedBytes plus the allocation since the last scavenge."
+	| use |
+	use := segmentManager totalOldSpaceCapacity - totalFreeOldSpace.
+	^statAllocatedBytes
+	 + (freeStart - scavenger eden start)
+	 + (use - oldSpaceUsePriorToScavenge)
+]
+
 { #category : #'interpreter access' }
 SpurMemoryManager >> dbgFloatValueOf: oop [
 	"Answer the C double precision floating point value of the argument,
@@ -4038,6 +4052,12 @@ SpurMemoryManager >> detachFreeObject: freeChunk [
 { #category : #accessing }
 SpurMemoryManager >> displayObject [
 	^self splObj: TheDisplay
+]
+
+{ #category : #'allocation accounting' }
+SpurMemoryManager >> doAllocationAccountingForScavenge [
+	<inline: true>
+	statAllocatedBytes := self currentAllocatedBytes
 ]
 
 { #category : #'become implementation' }
@@ -4109,6 +4129,7 @@ SpurMemoryManager >> doBecome: obj1 to: obj2 copyHash: copyHashFlag [
 SpurMemoryManager >> doScavenge: tenuringCriterion [
 	"The inner shell for scavenge, abstrascted out so globalGarbageCollect can use it."
 	<inline: false>
+	self doAllocationAccountingForScavenge.
 	gcPhaseInProgress := ScavengeInProgress.
 	pastSpaceStart := scavenger scavenge: tenuringCriterion.
 	self assert: (self
@@ -4117,7 +4138,8 @@ SpurMemoryManager >> doScavenge: tenuringCriterion [
 					andLessThanOrEqualTo: scavenger pastSpace limit).
 	freeStart := scavenger eden start.
 	self initSpaceForAllocationCheck: (self addressOf: scavenger eden) limit: scavengeThreshold.
-	gcPhaseInProgress := 0
+	gcPhaseInProgress := 0.
+	self resetAllocationAccountingAfterGC
 ]
 
 { #category : #accessing }
@@ -5893,7 +5915,7 @@ SpurMemoryManager >> initialize [
 	statScavenges := statIncrGCs := statFullGCs := 0.
 	statScavengeGCUsecs := statIncrGCUsecs := statFullGCUsecs := statCompactionUsecs := statGCEndUsecs := 0.
 	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0.
-	statGrowMemory := statShrinkMemory := statRootTableCount := 0.
+	statGrowMemory := statShrinkMemory := statRootTableCount := statAllocatedBytes := 0.
 	statRootTableOverflows := statMarkCount := statCompactPassCount := statCoalesces := 0.
 
 	"We can initialize things that are allocated but are lazily initialized."
@@ -10240,6 +10262,17 @@ SpurMemoryManager >> reorderReversedTreeList: treeNode [
 	^first
 ]
 
+{ #category : #'allocation accounting' }
+SpurMemoryManager >> resetAllocationAccountingAfterGC [
+	"oldSpaceUsePriorToScavenge is used to maintain an accurate allocation count.
+	 Since scavenging may tenure objects and tenuring does not count as allocation (that
+	 would count twice) we must compute heapSizeAtPreviousGC after any tenuring.
+	 fullGC reclaims space which does not count as deallocation (that would not count
+	 allocations at all), so we must reset heapSizeAtPreviousGC after GC also."
+	<inline: true>
+	oldSpaceUsePriorToScavenge := segmentManager totalOldSpaceCapacity - totalFreeOldSpace
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> resetFreeListHeads [
 	freeListsMask := 0.
@@ -10554,6 +10587,18 @@ SpurMemoryManager >> setClassIndexOf: objOop to: classIndex [
 	self subclassResponsibility
 ]
 
+{ #category : #'allocation accounting' }
+SpurMemoryManager >> setCurrentAllocatedBytesTo: n [
+	"Reset the allocation count to n (n will typically be zero).  Since we wish to
+	 discount the current use we must set statAllocatedBytes to n and update
+	 oldSpaceUsePriorToScavenge to discount the current allocated bytes."
+	| delta |
+	delta := self currentAllocatedBytes - statAllocatedBytes.
+	statAllocatedBytes := n.
+	oldSpaceUsePriorToScavenge := oldSpaceUsePriorToScavenge + delta.
+	self assert: self currentAllocatedBytes = n
+]
+
 { #category : #snapshot }
 SpurMemoryManager >> setEndOfMemory: newEndOfMemory [
 	"Set by the segment manager after swizzling the image,
@@ -10639,9 +10684,13 @@ SpurMemoryManager >> setHeapGrowthToSizeGCRatio: aDouble [
 	^0
 ]
 
-{ #category : #'gc - global' }
+{ #category : #'allocation accounting' }
 SpurMemoryManager >> setHeapSizeAtPreviousGC [
-	heapSizeAtPreviousGC := endOfMemory - nilObj - totalFreeOldSpace
+	"heapSizeAtPreviousGC is used to invoke full GC when lots of oldSpace objects are created.
+	 Also reset oldSpaceUsePriorToScavenge."
+	<inline: true>
+	heapSizeAtPreviousGC := segmentManager totalOldSpaceCapacity - totalFreeOldSpace.
+	self resetAllocationAccountingAfterGC
 ]
 
 { #category : #'class table' }
@@ -10761,6 +10810,14 @@ SpurMemoryManager >> shorten: objOop toIndexableSize: indexableSize [
 	 this only works for arrayFormat and longFormat objects.
 	 Answer the number of bytes returned to free memory, which may be zero if no change was possible."
 	self subclassResponsibility
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> shouldBreakForLookupIn: lookupClass given: breakClassTag [
+	<inline: true>
+	^breakClassTag notNil
+	  and: [lookupClass == breakClassTag
+			or: [(self rawHashBitsOf: lookupClass) == breakClassTag]]
 ]
 
 { #category : #'gc - scavenge/compact' }

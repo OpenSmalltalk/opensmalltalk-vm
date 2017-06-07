@@ -73,6 +73,7 @@ Class {
 		'suppressHeartbeatFlag',
 		'breakSelector',
 		'breakSelectorLength',
+		'breakLookupClassTag',
 		'longRunningPrimitiveCheckMethod',
 		'longRunningPrimitiveCheckSemaphore',
 		'longRunningPrimitiveStartUsecs',
@@ -1462,7 +1463,7 @@ StackInterpreter class >> mustBeGlobal: var [
 			'deferDisplayUpdates' 'extraVMMemory'
 			'showSurfaceFn' 'displayBits' 'displayWidth' 'displayHeight' 'displayDepth'
 			'desiredNumStackPages' 'desiredEdenBytes'
-			'breakSelector' 'breakSelectorLength' 'sendTrace' 'checkAllocFiller' 'checkedPluginName'
+			'breakLookupClassTag' 'breakSelector' 'breakSelectorLength' 'sendTrace' 'checkAllocFiller' 'checkedPluginName'
 			'suppressHeartbeatFlag' 'debugCallbackInvokes' 'debugCallbackPath' 'debugCallbackReturns') includes: var)
 	   or: [ "This allows slow machines to define bytecodeSetSelector as 0
 			to avoid the interpretation overhead."
@@ -9527,6 +9528,15 @@ StackInterpreter >> longUnconditionalJump [
 	self fetchNextBytecode
 ]
 
+{ #category : #'debug support' }
+StackInterpreter >> lookupBreakFor: lookupClass [
+	<inline: true>
+	(objectMemory shouldBreakForLookupIn: lookupClass given: breakLookupClassTag) ifTrue:
+		[self
+			cCode: [self warning: 'lookup class send break (heartbeat suppressed)']
+			inSmalltalk: [self halt: 'Lookup in class ', lookupClass hex]]
+]
+
 { #category : #'message sending' }
 StackInterpreter >> lookupDynamicSuperSend [
 	"Do the full lookup for a Newspeak super send.
@@ -9607,6 +9617,7 @@ StackInterpreter >> lookupLexical: selector from: mixin rule: rule [
 	method, and self and outer sends."
 	| receiverClass mixinApplication dictionary found |
 	receiverClass := objectMemory fetchClassOf: localAbsentReceiver.
+	self lookupBreakFor: receiverClass.
 	lkupClass := receiverClass. "MNU lookup starts here."
 	mixinApplication := self findApplicationOfTargetMixin: mixin startingAtBehavior: receiverClass.
 	dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: mixinApplication.
@@ -9631,6 +9642,7 @@ StackInterpreter >> lookupMNU [
 	RESULT: LookupRuleMNU"
 
 	| currentClass dictionary found |
+	self lookupBreakFor: lkupClass.
 	self createActualMessageTo: lkupClass.
 	messageSelector := objectMemory splObj: SelectorDoesNotUnderstand.
 	currentClass := lkupClass.
@@ -9650,6 +9662,7 @@ StackInterpreter >> lookupMNUInClass: class [
 	 for the error selector to use on failure rather than performing MNU processing etc."
 	| currentClass dictionary found |
 	<inline: false>
+	self lookupBreakFor: class.
 	currentClass := class.
 	[currentClass ~= objectMemory nilObject] whileTrue:
 		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
@@ -9706,6 +9719,7 @@ StackInterpreter >> lookupMethodInClass: class [
 	| currentClass dictionary found |
 	<inline: false>
 	self assert: (self addressCouldBeClassObj: class).
+	self lookupBreakFor: class.
 	currentClass := class.
 	[currentClass ~= objectMemory nilObject] whileTrue:
 		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
@@ -9793,6 +9807,7 @@ StackInterpreter >> lookupOrdinaryNoMNUEtcInClass: class [
 	 for the error selector to use on failure rather than performing MNU processing etc."
 	| currentClass dictionary found |
 	<inline: false>
+	self lookupBreakFor: class.
 	currentClass := class.
 	[currentClass ~= objectMemory nilObject] whileTrue:
 		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
@@ -9827,6 +9842,7 @@ StackInterpreter >> lookupOrdinarySend [
 	<option: #NewspeakVM>
 	| currentClass dictionary found |
 	self assert: (self addressCouldBeClassObj: lkupClass).
+	self lookupBreakFor: lkupClass.
 	currentClass := lkupClass.
 	[currentClass ~= objectMemory nilObject] whileTrue:
 		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.
@@ -9871,6 +9887,7 @@ StackInterpreter >> lookupProtected: selector startingAt: mixinApplication rule:
 	"A shared part of the lookup for self, outer or implicit receiver sends that did not find a
 	private lexically visible method, and (Newspeak) super sends."
 	| currentClass dictionary found |
+	self lookupBreakFor: mixinApplication.
 	currentClass := mixinApplication.
 	[currentClass = objectMemory nilObject] whileFalse:
 		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.

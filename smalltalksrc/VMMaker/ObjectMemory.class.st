@@ -5096,6 +5096,12 @@ ObjectMemory >> shorten: obj toIndexableSize: nSlots [
 	^deltaBytes
 ]
 
+{ #category : #'debug support' }
+ObjectMemory >> shouldBreakForLookupIn: lookupClass given: breakClassTag [
+	<inline: true>
+	^lookupClass == breakClassTag
+]
+
 { #category : #'gc -- compaction' }
 ObjectMemory >> shouldRemapObj: oop [
 	<api>
