@@ -6,14 +6,15 @@ When an image is written to a snapshot file the second word of the header of the
 On load all segments are read into one single segment, eliminating the bridge objects, and computing the swizzle distance for each segment, based on where the segments were in memory when the image file was written, and where the coalesced segment ends up on load.  Then the segment is traversed, swizzling pointers by selecting the relevant swizzle for each oop's segment.
 
 Instance Variables
-	manager:					<SpurMemoryManager>
-	numSegments:				<Integer>
-	numSegInfos:				<Integer>
-	segments:					<Array of SpurSegmentInfo>
-	firstSegmentSize:			<Integer>
-	canSwizzle:					<Boolean>
-	sweepIndex:				<Integer>
-	preferredPinningSegment:	<SpurSegmentInfo>
+	manager						<SpurMemoryManager>
+	numSegments					<Integer>
+	numSegInfos					<Integer>
+	segments						<Array of SpurSegmentInfo>
+	firstSegmentSize				<Integer>
+	canSwizzle						<Boolean>
+	sweepIndex					<Integer>
+	preferredPinningSegment		<SpurSegmentInfo>
+	totalHeapSizeIncludingBridges	<integer>
 
 canSwizzle
 	- a flag set and cleared during initialization to validate that swizzling is only performed at the right time
@@ -38,6 +39,9 @@ segments
 
 sweepIndex
 	- a segment index used to optimize setting the containsPinned flag on segments during freeUnmarkedObjectsAndSortAndCoalesceFreeSpace
+
+totalHeapSizeIncludingBridges
+	- the total size of all segments, used to compute heap usage
 "
 Class {
 	#name : #SpurSegmentManager,
@@ -50,14 +54,17 @@ Class {
 		'firstSegmentSize',
 		'canSwizzle',
 		'sweepIndex',
-		'preferredPinningSegment'
+		'preferredPinningSegment',
+		'totalHeapSizeIncludingBridges'
 	],
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
 SpurSegmentManager class >> declareCVarsIn: aCCodeGenerator [
-	aCCodeGenerator var: #segments type: #'SpurSegmentInfo *'
+	aCCodeGenerator
+		var: #segments type: #'SpurSegmentInfo *';
+		var: #totalHeapSizeIncludingBridges type: #usqInt
 ]
 
 { #category : #translation }
@@ -94,6 +101,7 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 		 self bridgeFrom: (self addressOf: (segments at: newSegIndex - 1)) to: newSeg.
 		 self bridgeFrom: newSeg to: (newSegIndex = (numSegments - 1) ifFalse:
 										[self addressOf: (segments at: newSegIndex + 1)]).
+		 totalHeapSizeIncludingBridges := totalHeapSizeIncludingBridges + allocatedSize.
 		 "test isInMemory:"
 		 0 to: numSegments - 1 do:
 			[:i|
@@ -225,7 +233,7 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 	numSegments := 1.
 	(segments at: 0)
 		segStart: manager oldSpaceStart;
-		segSize: manager endOfMemory - manager oldSpaceStart.
+		segSize: (totalHeapSizeIncludingBridges := manager endOfMemory - manager oldSpaceStart).
 	manager bootstrapping ifTrue:
 		["finally plant a bridge at the end of the coalesced segment and cut back the
 		  manager's notion of the end of memory to immediately before the bridge."
@@ -311,7 +319,7 @@ SpurSegmentManager >> initSegmentForInImageCompilationFrom: base to: limit [
 
 { #category : #initialization }
 SpurSegmentManager >> initialize [
-	numSegments := numSegInfos := sweepIndex := 0.
+	numSegments := numSegInfos := sweepIndex := totalHeapSizeIncludingBridges := 0.
 	canSwizzle := false
 ]
 
@@ -604,6 +612,7 @@ SpurSegmentManager >> removeSegment: emptySeg [
 	i := self indexOfSegment: emptySeg.
 	self assert: i > 0.
 
+	totalHeapSizeIncludingBridges := totalHeapSizeIncludingBridges - emptySeg segSize.
 	manager sqDeallocateMemorySegmentAt: emptySeg segStart asVoidPointer OfSize: emptySeg segSize.
 
 	i to: numSegments - 1 do:
@@ -682,7 +691,7 @@ SpurSegmentManager >> totalBytesInNonEmptySegments [
 	^total
 ]
 
-{ #category : #snapshot }
+{ #category : #accessing }
 SpurSegmentManager >> totalBytesInSegments [
 	| total |
 	<var: #total type: #usqInt>
@@ -690,7 +699,13 @@ SpurSegmentManager >> totalBytesInSegments [
 	0 to: numSegments - 1 do:
 		[:i|
 		total := total + (segments at: i) segSize].
+	self assert: totalHeapSizeIncludingBridges = total.
 	^total
+]
+
+{ #category : #accessing }
+SpurSegmentManager >> totalOldSpaceCapacity [
+	^totalHeapSizeIncludingBridges - (numSegments * manager bridgeSize)
 ]
 
 { #category : #snapshot }
