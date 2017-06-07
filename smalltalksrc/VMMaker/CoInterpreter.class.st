@@ -4787,6 +4787,7 @@ CoInterpreter >> lookupLexicalNoMNU: selector from: mixin rule: rule [
 	| receiverClass mixinApplication dictionary found |
 	receiverClass := objectMemory fetchClassOf: localAbsentReceiver.
 	lkupClass := receiverClass. "MNU lookup starts here."
+	self lookupBreakFor: lkupClass.
 	mixinApplication := self findApplicationOfTargetMixin: mixin startingAtBehavior: receiverClass.
 	dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: mixinApplication.
 	found := self lookupMethodInDictionary: dictionary.
@@ -4870,6 +4871,7 @@ CoInterpreter >> lookupProtectedNoMNU: selector startingAt: mixinApplication rul
 	"A shared part of the lookup for self, outer or implicit receiver sends that did not find a
 	private lexically visible method, and (Newspeak) super sends."
 	| currentClass dictionary found |
+	self lookupBreakFor: mixinApplication.
 	currentClass := mixinApplication.
 	[currentClass = objectMemory nilObject] whileFalse:
 		[dictionary := objectMemory followObjField: MethodDictionaryIndex ofObject: currentClass.

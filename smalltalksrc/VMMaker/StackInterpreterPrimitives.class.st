@@ -1514,7 +1514,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		31	number of grow memory requests (read-only)
 		32	number of shrink memory requests (read-only)
 		33	number of root table entries used for current IGC/FGC (read-only)
-		34	number of allocations done before current IGC/FGC (read-only)
+		34	Spur: bytes allocated in eden (read-write) (Used to be number of allocations done before current IGC/FGC (read-only))
 		35	number of survivor objects after current IGC/FGC (read-only)
 		36	millisecond clock when current IGC/FGC completed (read-only)
 		37	number of marked objects for Roots of the world, not including Root Table entries for current IGC/FGC (read-only)
@@ -1602,7 +1602,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory storePointerUnchecked: 30	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statGrowMemory).
 		objectMemory storePointerUnchecked: 31	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statShrinkMemory).
 		objectMemory storePointerUnchecked: 32	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statRootTableCount).
-		"objectMemory storePointerUnchecked: 33	ofObject: result withValue: objectMemory nilObject was statAllocationCount".
+		objectMemory hasSpurMemoryManagerAPI ifTrue: "was statAllocationCount"
+			[objectMemory storePointerUnchecked: 33	ofObject: result withValue: (objectMemory positive64BitIntegerFor: objectMemory currentAllocatedBytes)].
 		objectMemory storePointerUnchecked: 34	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statSurvivorCount).
 		objectMemory storePointerUnchecked: 35	ofObject: result withValue: (objectMemory integerObjectOf: (self microsecondsToMilliseconds: objectMemory statGCEndUsecs)).
 		objectMemory storePointerUnchecked: 36	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statSpecialMarkCount).
@@ -1701,7 +1702,9 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg = 31	ifTrue: [result := objectMemory integerObjectOf: objectMemory statGrowMemory].
 		arg = 32	ifTrue: [result := objectMemory integerObjectOf: objectMemory statShrinkMemory].
 		arg = 33	ifTrue: [result := objectMemory integerObjectOf: objectMemory statRootTableCount].
-		arg = 34	ifTrue: [result := objectMemory nilObject "was statAllocationCount"].
+		arg = 34	ifTrue: [result := objectMemory hasSpurMemoryManagerAPI "was statAllocationCount"
+										ifTrue: [objectMemory positive64BitIntegerFor: objectMemory currentAllocatedBytes]
+										ifFalse: [objectMemory nilObject]].
 		arg = 35	ifTrue: [result := objectMemory integerObjectOf: objectMemory statSurvivorCount].
 		arg = 36	ifTrue: [result := objectMemory integerObjectOf: (self microsecondsToMilliseconds: objectMemory statGCEndUsecs)].
 		arg = 37	ifTrue: [result := objectMemory integerObjectOf: objectMemory statSpecialMarkCount].
@@ -1760,8 +1763,9 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 			[(objectMemory isFloatInstance: arg) ifFalse:
 				[^self primitiveFailFor: PrimErrBadArgument]]
 		ifFalse:
-			[(objectMemory isIntegerObject: arg) ifTrue:
-				[arg := objectMemory integerValueOf: arg]].
+			[(objectMemory isIntegerObject: arg) ifFalse:
+				[^self primitiveFailFor: PrimErrBadArgument].
+			 arg := objectMemory integerValueOf: arg].
 
 	"assume failure, then set success for handled indices"
 	self primitiveFailFor: PrimErrBadArgument.
@@ -1795,9 +1799,14 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 			[objectMemory growHeadroom: arg.
 			self initPrimCall]].
 	index = 26 ifTrue:
-		[arg >= 0 ifTrue:[ "0 turns off the heartbeat"
-			result := objectMemory integerObjectOf: self ioHeartbeatMilliseconds.
+		[arg >= 0 ifTrue: "0 turns off the heartbeat"
+			[result := objectMemory integerObjectOf: self ioHeartbeatMilliseconds.
 			self ioSetHeartbeatMilliseconds: arg.
+			self initPrimCall]].
+	(index = 34 and: [objectMemory hasSpurMemoryManagerAPI]) ifTrue:"was statAllocationCount; now statAllocatedBytes"
+		[arg >= 0 ifTrue:
+			[result := objectMemory positive64BitIntegerFor: objectMemory currentAllocatedBytes.
+			objectMemory setCurrentAllocatedBytesTo: arg.
 			self initPrimCall]].
 	index = 43 ifTrue:
 		[(arg >= 0 and: [arg <= 65535]) ifTrue:
