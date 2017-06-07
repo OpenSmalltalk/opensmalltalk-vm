@@ -38,7 +38,7 @@ FilePluginSimulator >> fileOpenName: nameIndex size: nameSize write: writeFlag s
 	| path f index |
 	openFiles size >= maxOpenFiles ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrLimitExceeded].
-	path := interpreterProxy interpreter asString: nameIndex size: nameSize.
+	path := interpreterProxy asString: nameIndex size: nameSize.
 	f := writeFlag
 			ifTrue: [FileStream fileNamed: path]
 			ifFalse:
@@ -173,15 +173,14 @@ FilePluginSimulator >> recordStateOf: file [
 
 { #category : #simulation }
 FilePluginSimulator >> sqFile: file Read: count Into: byteArrayIndexArg At: startIndex [
-	| interpreter byteArrayIndex |
-	interpreter := interpreterProxy interpreter.
+	| byteArrayIndex |
 	byteArrayIndex := byteArrayIndexArg asInteger. "Coerces CArray et al correctly"
 	[[startIndex to: startIndex + count - 1 do:
 		[ :i |
 		file atEnd ifTrue:
 			[(file isKindOf: FakeStdinStream) ifTrue: [file atEnd: false].
 			 ^i - startIndex].
-		interpreter
+		interpreterProxy
 			byteAt: byteArrayIndex + i
 			put: (file next ifNil: [(file isKindOf: FakeStdinStream) ifTrue: [^0]] ifNotNil: [:c| c asInteger])]]
 			on: Error
@@ -206,17 +205,16 @@ FilePluginSimulator >> sqFile: file Truncate: truncatePosition [
 
 { #category : #simulation }
 FilePluginSimulator >> sqFile: file Write: count From: byteArrayIndexArg At: startIndex [
-	| interpreter byteArrayIndex |
-	interpreter := interpreterProxy interpreter.
+	| byteArrayIndex |
 	byteArrayIndex := byteArrayIndexArg asInteger. "Coerces CArray et al correctly"
 	file isBinary
 		ifTrue:
 			[startIndex to: startIndex + count - 1 do:
-				[ :i | file nextPut: (interpreter byteAt: byteArrayIndex + i)]]
+				[ :i | file nextPut: (interpreterProxy byteAt: byteArrayIndex + i)]]
 		ifFalse:
 			[startIndex to: startIndex + count - 1 do:
 				[ :i | | byte |
-				byte := interpreter byteAt: byteArrayIndex + i.
+				byte := interpreterProxy byteAt: byteArrayIndex + i.
 				file nextPut: (Character value: (byte == 12 "lf" ifTrue: [15"cr"] ifFalse: [byte]))]].
 	self recordStateOf: file.
 	^count
