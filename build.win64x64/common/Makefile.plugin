@@ -75,7 +75,7 @@ DEFS:=	$(WINVER) -DWIN64=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
 		$(NDEBUG) -DLSB_FIRST -DVM_NAME=\"$(VM)\" $(XDEFS)
 
 CFLAGS:= -fdeclspec -msse2 -ggdb2 -m64 -mdll \
-	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS)
+	-mno-rtd -mms-bitfields $(OFLAGS) $(NOBUILTIN) $(WARNINGS) $(COGDEFS)
 
 
 #############################################################################

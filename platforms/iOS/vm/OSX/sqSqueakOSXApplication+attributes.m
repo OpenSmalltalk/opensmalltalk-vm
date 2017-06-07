@@ -40,24 +40,48 @@
 #import "sqSqueakMainApplication+attributes.h"
 #import "sqSqueakMainApplication+vmAndImagePath.h"
 
+#import <Foundation/NSProcessInfo.h>
+
 extern struct VirtualMachine* interpreterProxy;
 
 @implementation sqSqueakOSXApplication (attributes) 
 
 - (char *) getAttribute:(sqInt)indexNumber {
 	//indexNumber is a postive/negative number
-#warning to test
+
 	switch (indexNumber) {
 	case 1001: /* OS type: "unix", "win32", "mac", ... */
 		return "Mac OS";
 
 	case 1002:  { /* OS name: "solaris2.5" on unix, "win95" on win32, ... */
-		SInt32 myattr;
+#if 0
 		static char data[32];
+		SInt32 myattr;
 
 		Gestalt(gestaltSystemVersion, &myattr);
 		sprintf(data,"%X",(unsigned int) myattr);
+
 		return data;
+#elif 1
+		static char data[128];
+		char *result, *end;
+		memset(data,0,sizeof(data));
+		/* Returns things like "Version 10.10.5 (Build 14F2411)" */
+		[[[NSProcessInfo processInfo] operatingSystemVersionString] 
+			getCString: data
+			maxLength: sizeof(data) - 1
+			encoding: NSUTF8StringEncoding];
+		/* Hence attempt to answer something like "10.10.5" */
+		if (!(result = strchr(data,' ')))
+			return data;
+		result = result + 1;
+		if ((end = strchr(result, ' ')))
+			*end = 0;
+		/* The image expects things like 1095, so convert 10.10.5 into 1010.5 */
+		if ((end = strchr(result, '.')))
+			strcpy(end, end + 1);
+		return result;
+#endif
 	}
 	case 1003: { /* processor architecture: "68k", "x86", "PowerPC", ...  */
 		SInt32 myattr;

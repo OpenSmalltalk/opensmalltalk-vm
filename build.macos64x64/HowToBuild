@@ -84,8 +84,12 @@ export SIGNING_IDENTITY="Developer ID Application: Eliot Miranda"
 1a. If you're doing a build in a headless context, e.g. logged in via ssh, then
 codesign may fail as it cannot ask for permission.  In this case you'll need to
 manually grant permission via
-	security -v unlock-keychain -p <PASSWORD> /Users/ME/Library/Keychains/login.keychain
+	security -v unlock-keychain [-p <PASSWORD>] /Users/$USER/Library/Keychains/login.keychain
 where PASSWORD and ME are replaced by suitable values.
+Similarly one may be denied access to an executable when debugging with the lldb
+symptom "attach failed: lost connection" or some such.  Use
+	/usr/sbin/DevToolsSecurity --enable
+to fix this.
 
 2. cd to the VM configuration of your choice and run the mvm script, e.g.
 	cd buiild.macos64x64/squeak.cog.spur
