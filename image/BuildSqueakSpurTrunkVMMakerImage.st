@@ -10,7 +10,7 @@ manifest := #(	('http://source.squeak.org/FFI'					1	('FFI-Pools' 'FFI-Kernel'))
 				('http://www.squeaksource.com/OSProcessPlugin'	9	('VMConstruction-Plugins-OSProcessPlugin.oscog'))
 				('http://www.squeaksource.com/rb'				5	('AST-Core' 'AST-Semantic' 'AST-Tests-Core' 'AST-Tests-Semantic' 'Refactoring-Changes' 'Refactoring-Core' 'Refactoring-Environment' 'Refactoring-Tests-Changes' 'Refactoring-Tests-Core' 'Refactoring-Tests-Environment' 'Refactoring-Squeak-Platform'))
 				"This for the Klatt speech synthesiser, but seems to be AWOL"
-				"('http://www.squeaksource.com/Speech'			2	('SharedPool-Speech' ))"
+				('http://www.squeaksource.com/Speech'			2	('SharedPool-Speech' ))
 				('http://www.squeaksource.com/XDCP'				9	('VMConstruction-Plugins-XDisplayControlPlugin' ))
 				('http://www.squeaksource.com/Balloon3D'		9	('Balloon3D-Constants' 'Balloon3D-Plugins'  ))
 				('http://www.squeaksource.com/Cryptography'		9	('CryptographyPlugins'  ))
@@ -82,7 +82,7 @@ CodeHolder useMultiWindowBrowsers: true.
 		[:c|
 		c organization sortCategories.
 		c class organization sortCategories]].
-(Smalltalk classnamed: #StackInterpreter) withAllSubclasses do:
+(Smalltalk classNamed: #StackInterpreter) withAllSubclasses do:
 	[:sic| sic reorganizeAsISeeFit].
 
 Smalltalk snapshot: true andQuit: true
