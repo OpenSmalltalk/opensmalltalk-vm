@@ -913,7 +913,7 @@ CogObjectRepresentationForSpur >> genGetIdentityHash: rcvrReg resultReg: resultR
 	jumpSet jmpTarget: cogit Label
 ]
 
-{ #category : #'bytecode generator support' }
+{ #category : #'inline primitive support' }
 CogObjectRepresentationForSpur >> genGetInstanceOf: classObj into: destReg initializingIf: initializeInstance [
 	"Create an instance of classObj and assign it to destReg, initializing the instance
 	 if initializeInstance is true with nil or 0 as appropriate This is for inline primitives.
@@ -948,7 +948,7 @@ CogObjectRepresentationForSpur >> genGetInstanceOf: classObj into: destReg initi
 	^0
 ]
 
-{ #category : #'bytecode generator support' }
+{ #category : #'inline primitive support' }
 CogObjectRepresentationForSpur >> genGetInstanceOfFixedClass: classObj into: destReg initializingIf: initializeInstance [
 	"Create an instance of classObj and assign it to destReg, initializing the instance
 	 if initializeInstance is true with nil or 0 as appropriate This is for inline primitives.
@@ -974,25 +974,32 @@ CogObjectRepresentationForSpur >> genGetInstanceOfFixedClass: classObj into: des
 		MoveR: TempReg Aw: objectMemory freeStartAddress.
 	(initializeInstance and: [slots > 0]) ifFalse:
 		[^0].
-	slots <= (slotsPerIteration := 8) ifTrue: "slotsPerIteration must be a power of two. see bitAnd: below"
+	slots <= (slotsPerIteration := 8) ifTrue: "slotsPerIteration must be even; see cogit SubCq: objectMemory bytesPerOop R: TempReg below"
 		[cogit genMoveConstant: objectMemory nilObject R: TempReg.
 		 0 to: slots - 1 do:
 			[:i| cogit MoveR: TempReg
 					Mw: i * objectMemory wordSize + objectMemory baseHeaderSize
 					r: destReg].
 		^0].
+	"self halt: 'genGetInstanceOfFixedClass:... ', slots asInteger."
 	constReg := cogit allocateRegNotConflictingWith: destReg.
 	cogit genMoveConstant: objectMemory nilObject R: constReg.
 	
 	slots \\ slotsPerIteration ~= 0
-		ifTrue:
-			[delta := objectMemory baseHeaderSize - ((slotsPerIteration - (slots \\ slotsPerIteration) bitAnd: slotsPerIteration - 1) * objectMemory bytesPerOop).
-			 delta ~= 0 ifTrue:
-				[cogit AddCq: delta R: destReg].
+		ifTrue: "delta maps the offset at the loop entryPoint onto destReg + objectMemory baseHeaderSize"
+			[delta := (slotsPerIteration - (slots \\ slotsPerIteration) * objectMemory bytesPerOop) - objectMemory baseHeaderSize.
+			 delta > 0 ifTrue: [cogit SubCq: delta R: destReg].
+			 delta < 0 ifTrue: [cogit AddCq: delta negated R: destReg].
+			 "now delta maps (loopCount * slotsPerIteration * objectMemory bytesPerOop) + objectMemory baseHeaderSize - delta to the start of the object"
+			 delta := delta + objectMemory baseHeaderSize.
+			 (objectMemory bytesPerOop < objectMemory baseHeaderSize
+			  and: [slots \\ 2 = 1]) ifTrue: "if end of loop is not at start of next object, adjust loop limit in TempReg to point to last field filled."
+				[cogit SubCq: objectMemory bytesPerOop R: TempReg].
 			 branch := cogit Jump: 0]
 		ifFalse:
-			[delta := objectMemory baseHeaderSize.
+			[delta := 0.
 			 cogit AddCq: objectMemory baseHeaderSize R: destReg].
+	"loopCount is number of times through the increment of destReg."
 	loopCount := slots + slotsPerIteration - 1 // slotsPerIteration.
 	self assert: loopCount > 1.
 	loop := cogit Label.
@@ -1001,15 +1008,11 @@ CogObjectRepresentationForSpur >> genGetInstanceOfFixedClass: classObj into: des
 		inst := cogit MoveR: constReg Mw: i * objectMemory bytesPerOop r: destReg.
 		slotsPerIteration - (slots \\ slotsPerIteration) = i ifTrue:
 			[branch jmpTarget: inst]].
-	"N.B. We get away with comparing against TempReg, which points to the start of the next
-	 object, not necessarily immediately after the last slot, because if the size is a multiple of 8,
-	 TempReg will point after the last slot, and if the size is not a multiple of 8 then the add of
-	 slotsPerIteration * objectMemory bytesPerOop will put destReg beyond TempReg any way."
 	cogit
 		AddCq: slotsPerIteration * objectMemory bytesPerOop R: destReg;
 		CmpR: TempReg R: destReg;
 		JumpBelow: loop;
-		SubCq: delta + (loopCount * slotsPerIteration * objectMemory bytesPerOop) R: destReg.
+		SubCq: (loopCount * slotsPerIteration * objectMemory bytesPerOop) + objectMemory baseHeaderSize - delta R: destReg.
 	^0
 ]
 
@@ -1583,7 +1586,7 @@ CogObjectRepresentationForSpur >> genSetCharacterTagsIn: reg [
 	cogit OrCq: objectMemory characterTag R: reg
 ]
 
-{ #category : #'bytecode generator support' }
+{ #category : #'inline primitive support' }
 CogObjectRepresentationForSpur >> genSetGCNeeded [
 	<inline: true>
 	cogit
