@@ -55,6 +55,11 @@ SpurGenerationScavengerSimulator >> recordMovements [
 	cameFrom := Dictionary new
 ]
 
+{ #category : #accessing }
+SpurGenerationScavengerSimulator >> rememberedSet [
+	^rememberedSet
+]
+
 { #category : #scavenger }
 SpurGenerationScavengerSimulator >> scavenge: tenuringCriterion [
 	manager bootstrapping ifFalse:

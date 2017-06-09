@@ -643,6 +643,16 @@ SpurGenerationScavenger >> growRememberedSet [
 	self setRememberedSetRedZone
 ]
 
+{ #category : #'store check' }
+SpurGenerationScavenger >> indexInRememberedSet: objOop [
+	<doNotGenerate>
+	0 to: rememberedSetSize - 1 do:
+		[:i|
+		(rememberedSet at: i) = objOop ifTrue:
+			[^i]].
+	^nil
+]
+
 { #category : #initialization }
 SpurGenerationScavenger >> initFutureSpaceStart [
 	| oldStart |
@@ -665,9 +675,16 @@ SpurGenerationScavenger >> initialize [
 SpurGenerationScavenger >> initializeRememberedSet [
 	| obj |
 	obj := manager rememberedSetObj.
-	obj = manager nilObject ifTrue:
-		[obj := manager allocatePinnedSlots: 1024.
-		 manager rememberedSetObj: obj].
+	obj = manager nilObject
+		ifTrue:
+			[obj := manager allocatePinnedSlots: 1024.
+			 manager rememberedSetObj: obj]
+		ifFalse: "The Spur32to64BitBootstrap failed to set the type of rememberedSetObj to 64-bit indexability.
+				 This is unimportant except for simulation; rememberedSet is declared as sqInt *, but in to have
+				 firstIndexableField: below answer a suitable type the format must be wordIndexableFormat."
+			[manager setFormatOf: obj to: manager wordIndexableFormat].
+	self assert: (manager formatOf: obj) = manager wordIndexableFormat.
+	self assert: (manager isPinned: obj).
 	rememberedSet := manager firstIndexableField: obj.
 	rememberedSetSize := 0.
 	rememberedSetLimit := manager numSlotsOf: obj.
@@ -966,7 +983,7 @@ SpurGenerationScavenger >> referenceCountRememberedReferents: population [
 
 { #category : #'remembered set' }
 SpurGenerationScavenger >> relocateRememberedSet [
-	"For SpurPanningCompactor"
+	"For SpurPlanningCompactor"
 	rememberedSet := manager firstIndexableField: manager rememberedSetObj
 ]
 
