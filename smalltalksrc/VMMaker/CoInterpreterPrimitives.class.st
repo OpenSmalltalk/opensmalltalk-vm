@@ -206,7 +206,7 @@ CoInterpreterPrimitives >> primitiveCollectCogCodeConstituents [
 			  or: [withDetails = objectMemory falseObject]) ifFalse:
 				[^self primitiveFailFor: PrimErrBadArgument].
 			  withDetails := withDetails = objectMemory trueObject].
-	constituents := cogit cogCodeConstituents: withDetails = objectMemory trueObject.
+	constituents := cogit cogCodeConstituents: withDetails.
 	constituents ifNil:
 		[^self primitiveFailFor: PrimErrNoMemory].
 	self pop: argumentCount + 1 thenPush: constituents

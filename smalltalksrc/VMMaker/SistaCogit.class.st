@@ -1363,9 +1363,9 @@ SistaCogit >> genUnaryInlinePrimitive: prim [
 				[self ssTop type ~= SSConstant ifTrue:
 					[^EncounteredUnknownBytecode].
 				 (objectRepresentation
-					genGetInstanceOfFixedClass: self ssTop constant
+					genGetInstanceOf: self ssTop constant
 						into: resultReg
-							initializingIf: self extBSpecifiesInitializeInstance) ~= 0 ifTrue:
+						initializingIf: self extBSpecifiesInitializeInstance) ~= 0 ifTrue:
 					[^ShouldNotJIT]. "e.g. bad class"
 				 self ssPop: 1] .
 			[20] ->	"20 	identityHash"
