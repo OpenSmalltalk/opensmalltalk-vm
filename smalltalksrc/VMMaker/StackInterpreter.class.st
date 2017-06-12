@@ -4340,6 +4340,7 @@ StackInterpreter >> checkStackPointerIndexForFrame: theFP [
 	theSP := self findSPOrNilOf: theFP
 				on: thePage
 				startingFrom: (thePage = stackPage ifTrue: [framePointer] ifFalse: [thePage headFP]).
+	theSP ifNil: [^-1].
 	^self stackPointerIndexForFrame: theFP WithSP: theSP
 ]
 
@@ -6535,8 +6536,9 @@ StackInterpreter >> findSPOf: theFP on: thePage [
 	| theSP |
 	<inline: false>
 	<var: #theSP type: #'char *'>
+	self deny: (stackPages isFree: thePage).
 	theSP := self findSPOrNilOf: theFP on: thePage startingFrom: thePage headFP.
-	theSP notNil ifTrue:
+	theSP ifNotNil:
 		[^theSP].
 	self error: 'did not find theFP in stack page'.
 	^0
@@ -6554,7 +6556,6 @@ StackInterpreter >> findSPOrNilOf: theFP on: thePage startingFrom: startFrame [
 	<inline: true>
 	<var: #aFrame type: #'char *'>
 	<var: #prevFrame type: #'char *'>
-	self assert: (stackPages isFree: thePage) not.
 	startFrame = theFP ifTrue:
 		[thePage headSP >= startFrame ifTrue:
 			["If the SP is invalid return the pointer to the receiver field."
