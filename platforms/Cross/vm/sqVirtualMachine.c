@@ -542,7 +542,7 @@ fopen_for_append(char *filename)
 		fseek(f,0,SEEK_END);
 	return f;
 }
-#elif defined(WIN32)
+#elif defined(_WIN32)
 # define fopen_for_append(filename) fopen(filename,"a+t")
 #else
 # define fopen_for_append(filename) fopen(filename,"a+")

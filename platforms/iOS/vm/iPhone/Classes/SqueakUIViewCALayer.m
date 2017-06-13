@@ -100,12 +100,7 @@ static void MyProviderReleaseData (
 }
 
 
-- (void) preDrawThelayers{
-    sqInt formObj = interpreterProxy->displayObject();
-	sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);
-	void* dispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
-	squeakTheDisplayBits = (void*) dispBitsIndex;
-}
+- (void) preDrawThelayers { }
 
 
 - (void) drawThelayers {
@@ -115,7 +110,7 @@ static void MyProviderReleaseData (
 		for (int h=0;h<4;h++) {
 			if (dirty[v][h]) {
 				CGRect rect = myLayer[v][h].frame;
-				CGImageRef x= [self allocImageFrom: squeakTheDisplayBits
+				CGImageRef x= [self allocImageFrom: displayBits
 										  affectedT: rect.origin.y 
 										  affectedB: rect.origin.y+rect.size.height 
 										  affectedL: rect.origin.x 

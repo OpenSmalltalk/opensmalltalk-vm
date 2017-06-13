@@ -60,7 +60,7 @@ struct VirtualMachine* interpreterProxy;
 # define STACK_ALIGN_BYTES 16
 #elif __linux__ && __i386__
 # define STACK_ALIGN_BYTES 16
-#elif defined(WIN32) && __SSE2__
+#elif defined(_WIN32) && __SSE2__
 /* using sse2 instructions requires 16-byte stack alignment but on win32 there's
  * no guarantee that libraries preserve alignment so compensate on callback.
  */

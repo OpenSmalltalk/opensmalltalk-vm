@@ -10,7 +10,7 @@
 #elif powerpc|ppc
 # include "ppc32abicc.c"
 #elif x86_64|x64|__x86_64|__x86_64__|_M_AMD64|_M_X64
-# if WIN64
+# if _WIN64
 #	include "x64win64abicc.c"
 # else
 #	include "x64sysvabicc.c"

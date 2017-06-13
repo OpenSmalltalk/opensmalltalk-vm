@@ -21,8 +21,8 @@
 #include <stdlib.h>
 
 #include <Carbon/Carbon.h>
-#include <QuickTime/QTML.h> /* unavailable in 64-bit apps :-( */
-#include <QuickTime/QuickTimeComponents.h> /* unavailable in 64-bit apps :-( */
+//#include <QuickTime/QTML.h> /* unavailable in 64-bit apps :-( */
+//#include <QuickTime/QuickTimeComponents.h> /* unavailable in 64-bit apps :-( */
 #include <unistd.h>
 #include <AGL/agl.h>
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070

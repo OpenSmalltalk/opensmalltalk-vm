@@ -15,6 +15,7 @@ FilePlugin \
 FloatArrayPlugin \
 FloatMathPlugin \
 HostWindowPlugin \
+IA32ABI \
 JoystickTabletPlugin \
 JPEGReaderPlugin \
 JPEGReadWriter2Plugin \
@@ -34,4 +35,3 @@ SoundGenerationPlugin \
 SoundPlugin \
 StarSqueakPlugin \
 SurfacePlugin
-# IA32ABI \

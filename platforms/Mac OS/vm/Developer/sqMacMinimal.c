@@ -854,34 +854,34 @@ int ioSetFullScreen(int fullScreen) 										DO_NOTHING
 
 /*** File I/0 Stubs ***/
 
-int sqFileAtEnd(SQFile *f)													STUBBED_OUT
-int sqFileClose(SQFile *f)													STUBBED_OUT
-int sqFileDeleteNameSize(int sqFileNameIndex, int sqFileNameSize)			STUBBED_OUT
-int sqFileGetPosition(SQFile *f)											STUBBED_OUT
-int sqFileInit(void)														{ return true; }
-int sqFileOpen(
-  SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag)		STUBBED_OUT
-int sqFileReadIntoAt(
-  SQFile *f, int count, int byteArrayIndex, int startIndex)					STUBBED_OUT
-int sqFileRenameOldSizeNewSize(
-  int oldNameIndex, int oldNameSize, int newNameIndex, int newNameSize)		STUBBED_OUT
-int sqFileSetPosition(SQFile *f, int position)								STUBBED_OUT
-int sqFileSize(SQFile *f) { return 0; }
-int sqFileShutdown(void)													{ return 0; }
-int sqFileValid(SQFile *f)													STUBBED_OUT
-int sqFileWriteFromAt(
-  SQFile *f, int count, int byteArrayIndex, int startIndex)					STUBBED_OUT
+sqInt sqFileAtEnd(SQFile *f)												STUBBED_OUT
+sqInt sqFileClose(SQFile *f)												STUBBED_OUT
+sqInt sqFileDeleteNameSize(char *sqFileName, sqInt sqFileNameSize)			STUBBED_OUT
+squeakFileOffsetType sqFileGetPosition(SQFile *f)							STUBBED_OUT
+sqInt sqFileInit(void)														{ return true; }
+sqInt sqFileOpen(
+  SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag)		STUBBED_OUT
+size_t sqFileReadIntoAt(
+  SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex)			STUBBED_OUT
+sqInt sqFileRenameOldSizeNewSize(
+  char *sqOldName, sqInt sqOldNameSize, char *sqNewName, sqInt sqNewNameSize)		STUBBED_OUT
+sqInt sqFileSetPosition(SQFile *f, squeakFileOffsetType position)			STUBBED_OUT
+squeakFileOffsetType sqFileSize(SQFile *f) { return 0; }
+sqInt sqFileShutdown(void)													{ return 0; }
+sqInt sqFileValid(SQFile *f)												STUBBED_OUT
+size_t sqFileWriteFromAt(
+  SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex)			STUBBED_OUT
 
 /*** Directory Stubs ***/
 
-int dir_Create(char *pathString, int pathStringLength)						STUBBED_OUT
-int dir_Delimitor(void)														{ return ':'; }
-int dir_Lookup(char *pathString, int pathStringLength, int index,
-  char *name, int *nameLength, int *creationDate, int *modificationDate,
-  int *isDirectory, int *sizeIfFile)										STUBBED_OUT
-dir_SetMacFileTypeAndCreator(char *filename, int filenameSize,
+sqInt dir_Create(char *pathString, sqInt pathStringLength)					STUBBED_OUT
+sqInt dir_Delimitor(void)														{ return ':'; }
+sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
+  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+  sqInt *isDirectory, sqInt *sizeIfFile)									STUBBED_OUT
+sqInt dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize,
   char *fType, char *fCreator)												DO_NOTHING
-int dir_Delete(char *pathString, int pathStringLength)						STUBBED_OUT
+sqInt dir_Delete(char *pathString, sqInt pathStringLength)					STUBBED_OUT
 
 /*** External Primitive Support (No-ops) ***/
 

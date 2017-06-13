@@ -553,8 +553,8 @@ compute_dll_symbols(dll_exports *exports)
     printf("  # of Names:      %08X\n", pExportDir->NumberOfNames);
 #endif
 
-    ordinals =	(PWORD)	(dllbase + (DWORD)pExportDir->AddressOfNameOrdinals);
-    functions =	(PDWORD)(dllbase + (DWORD)pExportDir->AddressOfFunctions);
+    ordinals =	(PWORD)	(dllbase + pExportDir->AddressOfNameOrdinals);
+    functions =	(ulong *)(dllbase + pExportDir->AddressOfFunctions);
 
     if (!(exports->sorted_ordinals = calloc(pExportDir->NumberOfNames, sizeof(int)))) {
 		printLastError("compute_dll_symbols calloc");

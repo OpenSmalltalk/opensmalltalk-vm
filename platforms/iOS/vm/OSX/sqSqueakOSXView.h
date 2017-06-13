@@ -58,6 +58,7 @@
 - (NSString*) dragFileNameStringAtIndex:(sqInt) index;
 
 - (void) drawThelayers;
+- (void) preDrawThelayers;
 - (void) drawImageUsingClip: (CGRect) clip;
 
 - (NSRect) sqScreenSize;

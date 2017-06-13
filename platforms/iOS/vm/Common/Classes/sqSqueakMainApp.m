@@ -317,26 +317,38 @@ sigusr1(int sig, siginfo_t *info, void *uap)
 	errno = saved_errno;
 }
 
+static int inFault = 0;
+
 void
 sigsegv(int sig, siginfo_t *info, void *uap)
 {
 	time_t now = time(NULL);
 	char ctimebuf[32];
 	char crashdump[PATH_MAX+1];
+	char *fault = sig == SIGSEGV
+					? "Segmentation fault"
+					: (sig == SIGBUS
+						? "Bus error"
+						: (sig == SIGILL
+							? "Illegal instruction"
+							: "Unknown signal"));
 
-	getCrashDumpFilenameInto(crashdump);
-	ctime_r(&now,ctimebuf);
-	pushOutputFile(crashdump);
-	reportStackState("Segmentation fault", ctimebuf, 0, uap);
-	popOutputFile();
-	reportStackState("Segmentation fault", ctimebuf, 0, uap);
+	if (!inFault) {
+		inFault = 1;
+		getCrashDumpFilenameInto(crashdump);
+		ctime_r(&now,ctimebuf);
+		pushOutputFile(crashdump);
+		reportStackState(fault, ctimebuf, 0, uap);
+		popOutputFile();
+		reportStackState(fault, ctimebuf, 0, uap);
+	}
+	if (blockOnError) block();
 	abort();
 }
 #else /* COGVM || STACKVM */
 void
 sigsegv(int sig, siginfo_t *info, void *uap)
 {
-
     /* error("Segmentation fault"); */
     static int printingStack= 0;
 
@@ -364,6 +376,8 @@ attachToSignals() {
     sigsegv_handler_action.sa_sigaction = sigsegv;
     sigsegv_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
     sigemptyset(&sigsegv_handler_action.sa_mask);
+    (void)sigaction(SIGBUS, &sigsegv_handler_action, 0);
+    (void)sigaction(SIGILL, &sigsegv_handler_action, 0);
     (void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
 
     sigusr1_handler_action.sa_sigaction = sigusr1;

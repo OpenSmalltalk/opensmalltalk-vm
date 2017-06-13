@@ -12,7 +12,7 @@
 *
 *
 *****************************************************************************/
-#ifdef WIN32
+#ifdef _WIN32
 # include <windows.h>
 # include <winerror.h>
 #endif
@@ -75,6 +75,14 @@ static FILE *logfile = 0;
 static void
 closelog(void)
 { if (logfile) (void)fclose(logfile); }
+
+#if !defined(PATH_MAX)
+# if defined(_XOPEN_PATH_MAX)
+#	define PATH_MAX _XOPEN_PATH_MAX
+# else
+#	define PATH_MAX 2048
+# endif
+#endif
 
 int
 print3Dlog(char *fmt, ...)
@@ -1111,7 +1119,7 @@ int b3dDrawRangeElements(int handle, int mode, int minIdx, int maxIdx, int nFace
   glRenderer *renderer = glRendererFromHandle(handle);
   if(!renderer || !glMakeCurrentRenderer(renderer)) return 0;
 
-#ifdef WIN32
+#ifdef _WIN32
   if(!renderer->glDrawRangeElements) {
     void *fn;
     fn = wglGetProcAddress("glDrawRangeElements");

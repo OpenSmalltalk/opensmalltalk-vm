@@ -1,3 +1,6 @@
+/* Generic OS identifying and sub-system selecting include for _WIN32, _WIN64
+ * and _WINCE
+ */
 #ifndef SQ_WIN_32_H
 #define SQ_WIN_32_H
 
@@ -10,14 +13,14 @@
 /* disable "function XXXX: no return value" */
 #pragma warning(disable:4035)
 /* optional C SEH macros */
-#define TRY __try
-#define EXCEPT(filter) __except(filter)
-#define FINALLY __finally
+# define TRY __try
+# define EXCEPT(filter) __except(filter)
+# define FINALLY __finally
 #else
 /* optional C SEH macros */
-#define TRY
-#define EXCEPT(filter) if (0)
-#define FINALLY
+# define TRY
+# define EXCEPT(filter) if (0)
+# define FINALLY
 #endif
 
 #define NO_TABLET
@@ -28,7 +31,7 @@
 /*                          Windows CE                       */
 /*************************************************************/
 #ifndef WIN32_FILE_SUPPORT
-#error "You must define WIN32_FILE_SUPPORT for compiling on WCE"
+# error "You must define WIN32_FILE_SUPPORT for compiling on WINCE"
 #endif
 
 /* OS/Processor definitions */
@@ -90,7 +93,6 @@
 #define timeGetTime() 0 // no multimedia timers
 
 
-
 #else /* !(_WIN32_WCE) */
 /*************************************************************/
 /*                      Windows 95/98/NT/Blablabla           */
@@ -107,8 +109,8 @@
 
 # if defined(X86)
 #  undef X86
+#  define X86 i386
 # endif
-# define X86    i386
 
   /* Use console for warnings if possible */
 # ifndef UNICODE
@@ -116,53 +118,62 @@
 # endif
 #endif /* _M_IX86 */
 
+/* We are stuck with Win32 as a misnomer for the Windows operating system for
+ * historical reasons.  Images up to and including Squeak 5/Pharo 6 expect
+ * getSystemAttribute: 1001 ("platform name") to answer 'Win32' on Windows.
+ * Yes, this is regrettable.  No, it's not easy to fix without breaking existing
+ * images :-(.  The NT vs CE distinction isn't particularly meaningful either.
+ * Further (see sqWin32Window.c) parameter 1005 (the windoing sytsem name) also
+ * answers Win32.  Perhaps this could be changed to "Windows", because at least
+ * in a base Squeak 5.1 image as of mid 2017 there is no use of windowSystemName
+ * that depends on its result being 'Win32' (see e.g. HandMorph class>>
+ * #compositionWindowManager).
+ * eem 2017/05/16
+ */
 #if defined(__amd64__) || defined(__amd64) || defined(x86_64) || defined(__x86_64__) || defined(__x86_64) || defined(x64) || defined(_M_X64)
-  #define WIN32_NAME "Win32"
-  #define WIN32_OS_NAME "NT"
-  #define WIN32_PROCESSOR_NAME "X64"
+#	define WIN32_NAME "Win32"
+#	define WIN32_OS_NAME "NT"
+#	define WIN32_PROCESSOR_NAME "X64"
 
   /* Use console for warnings if possible */
-  #ifndef UNICODE
-    #define warnPrintf printf
-  #endif
+#	ifndef UNICODE
+#		define warnPrintf printf
+#	endif
 #endif /* _M_X64 & al */
 
 #endif /* (_WIN32_WCE) */
 
+/* THE FOLLOWING IS WRONG (& HENCE I'VE IF 0'ed IT OUT.  WE CAN'T MERELY DEFINE
+ * WIN32 BECAUSE WE MAY BE ON WIN64. eem 2017/05/16
+ */
+#if 0
 /* due to weird include orders, make sure WIN32 is defined */
 # if !defined(WIN32)
 #  define WIN32 1
 # endif
+#endif
 
 /* Experimental */
 #ifdef MINIMAL
   /* The hardcoded defs:
-     No virtual memory support; no service support; no preferences; no printing */
-  #define NO_VIRTUAL_MEMORY
-  #define NO_SERVICE
-  #define NO_PREFERENCES
-  #define NO_PRINTER
-  #define NO_WHEEL_MOUSE
+   * No virtual memory support; no service support; no preferences; no printing
+   */
+#	define NO_VIRTUAL_MEMORY
+#	define NO_SERVICE
+#	define NO_PREFERENCES
+#	define NO_PRINTER
+#	define NO_WHEEL_MOUSE
   /* Use stub definitions from sqWin32Stubs.c */
-  #define NO_SOUND
-  #define NO_SERIAL_PORT
-  #define NO_NETWORK
-  #define NO_JOYSTICK
-  #define NO_MIDI
-  #define NO_ASYNC_FILES
+#	define NO_SOUND
+#	define NO_SERIAL_PORT
+#	define NO_NETWORK
+#	define NO_JOYSTICK
+#	define NO_MIDI
+#	define NO_ASYNC_FILES
   /* Do not rely on stdio functions but rather pure Win32 stuff */
-  #define WIN32_FILE_SUPPORT
+#	define WIN32_FILE_SUPPORT
   /* Take out the static strings */
-  #define NO_WARNINGS
-#if 0
-  /* Finally, override the warning functions containing static strings */
-  #undef warnPrintf
-  #define warnPrintf
-  #undef printLastError
-  #define printLastError
-  #undef vprintLastError
-  #define vprintLastError
-#endif /* 0 */
+#	define NO_WARNINGS
 #endif /* MINIMAL */
 
 /********************************************************/

@@ -197,8 +197,14 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
     }
 }
 
+/* Now the displayBits is known and likely pinned, couldn't we cache the bitmap
+ * that this method creates?  Yes its contents need to be updated, but it
+ * doesn't need to be created all the time does it?  Or is the object created
+ * by CGImageCreate merely a wrapper around the bits?
+ * eem 2017/05/12
+ */
+
 - (void) performDraw: (CGRect)rect {
-	sqInt form = interpreterProxy->displayObject(); // Form
 
 	CGContextRef context;
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1010 && defined(NSFoundationVersionNumber10_10)
@@ -211,32 +217,28 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
 #endif
 	CGContextSaveGState(context);
-
-	int width = interpreterProxy->positive32BitValueOf(interpreterProxy->fetchPointerofObject(1, form));
-	int height = interpreterProxy->positive32BitValueOf(interpreterProxy->fetchPointerofObject(2, form));
-	sqInt formBits = interpreterProxy->fetchPointerofObject(0, form);	// bits
-	void* bits = (void*)interpreterProxy->firstIndexableField(formBits); // bits
-	int bitSize = interpreterProxy->byteSizeOf(formBits);
-	int bytePerRow = 4*width;
-	CGAffineTransform  deviceTransform = CGContextGetUserSpaceToDeviceSpaceTransform(context);
+    CGAffineTransform  deviceTransform = CGContextGetUserSpaceToDeviceSpaceTransform(context);
+    int bitSize = interpreterProxy->byteSizeOf(displayBits - BaseHeaderSize);
+    int bytePerRow = displayWidth * 8 / displayDepth;
 
 	CGFloat frameHeight = [self frame].size.height * deviceTransform.d;
 	CGFloat y2 = MAX(frameHeight - rect.origin.y, 0);
 	CGFloat y1 = MAX(y2 - rect.size.height, 0);
 
-	CGRect swapRect = CGRectIntersection(CGRectMake(0, 0, width, height), CGRectMake(rect.origin.x, y1, rect.size.width, y2));
+	CGRect swapRect = CGRectIntersection(CGRectMake(0, 0, displayWidth, displayHeight),
+                                         CGRectMake(rect.origin.x, y1, rect.size.width, y2));
 	if (!CGRectIsNull(swapRect)) {
-		[self swapColors: bits imageWidth:width clipRect: swapRect];
+        [self swapColors: displayBits imageWidth: displayWidth clipRect: swapRect];
 
-		CGDataProviderRef pref = CGDataProviderCreateWithData (NULL, bits, bitSize, NULL);
-		CGImageRef image = CGImageCreate(width,
-										 height,
+		CGDataProviderRef pRef = CGDataProviderCreateWithData(NULL, displayBits, bitSize, NULL);
+		CGImageRef image = CGImageCreate(displayWidth,
+										 displayHeight,
 										 8,
 										 32,
 										 bytePerRow,
 										 colorspace,
 										 kCGBitmapByteOrder32Big | kCGImageAlphaLast,
-										 pref,
+										 pRef,
 										 NULL,
 										 NO,
 										 kCGRenderingIntentDefault);
@@ -247,20 +249,22 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 										 rect.size.height / deviceTransform.d);
 
 
-		CGContextTranslateCTM(context, 0, height / deviceTransform.d);
+		CGContextTranslateCTM(context, 0, displayHeight / deviceTransform.d);
 		CGContextScaleCTM(context, 1 , -1);
-
 
 		CGContextClipToRect(context, userClipRect);
 
-		CGRect imageBounds = CGContextConvertRectToUserSpace(context, CGRectMake(deviceTransform.tx, deviceTransform.ty, width, height));
+		CGRect imageBounds = CGContextConvertRectToUserSpace(context, CGRectMake(deviceTransform.tx,
+                                                                                 deviceTransform.ty,
+                                                                                 displayWidth,
+                                                                                 displayHeight));
 
 		CGContextDrawImage(context, imageBounds, image);
 
-		[self swapColors:bits imageWidth:width clipRect: swapRect];
+		[self swapColors:displayBits imageWidth:displayWidth clipRect: swapRect];
 
 		CGImageRelease(image);
-		CGDataProviderRelease(pref);
+		CGDataProviderRelease(pRef);
 	}
 	CGContextRestoreGState(context);
 }
@@ -416,16 +420,16 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	self.lastSeenKeyBoardModifierDetails = aKeyBoardStrokeDetails;
 
     @synchronized(self) {
-        NSEvent* syntheticEvent = AUTORELEASEOBJ([NSEvent keyEventWithType:(isUp ? NSEventTypeKeyUp : NSEventTypeKeyDown)
-                                                                  location:[theEvent locationInWindow]
-                                                             modifierFlags:(isUp ? oldFlags : [theEvent modifierFlags])
-                                                                 timestamp:[theEvent timestamp]
-                                                              windowNumber:[theEvent windowNumber]
-                                                                   context:nil
-                                                                characters:@""
-                                               charactersIgnoringModifiers:@""
-                                                                 isARepeat:NO
-                                                                   keyCode:[theEvent keyCode]]);
+        NSEvent* syntheticEvent = [NSEvent keyEventWithType:(isUp ? NSEventTypeKeyUp : NSEventTypeKeyDown)
+                                                   location:[theEvent locationInWindow]
+                                              modifierFlags:(isUp ? oldFlags : [theEvent modifierFlags])
+                                                  timestamp:[theEvent timestamp]
+                                               windowNumber:[theEvent windowNumber]
+                                                    context:nil
+                                                 characters:@""
+                                charactersIgnoringModifiers:@""
+                                                  isARepeat:NO
+                                                    keyCode:[theEvent keyCode]];
         if (isUp) {
             [(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordKeyUpEvent: syntheticEvent fromView: self];
         } else {

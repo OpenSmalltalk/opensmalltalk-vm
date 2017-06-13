@@ -313,7 +313,7 @@ typedef struct VirtualMachine {
   sqInt	(*ownVM)   (sqInt threadIdAndFlags);
   void  (*addHighPriorityTickee)(void (*ticker)(void), unsigned periodms);
   void  (*addSynchronousTickee)(void (*ticker)(void), unsigned periodms, unsigned roundms);
-  usqLong (*utcMicroseconds)(void);
+  volatile usqLong (*utcMicroseconds)(void);
   void (*tenuringIncrementalGC)(void);
   sqInt (*isYoung) (sqInt anOop);
   sqInt (*isKindOfClass)(sqInt oop, sqInt aClass);

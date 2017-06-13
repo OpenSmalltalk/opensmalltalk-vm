@@ -568,6 +568,12 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt us)
 
 sqInt ioBeep(void)				 { return dpy->ioBeep(); }
 
+/* Right now this funciton isn't responded to so we simply provide a dummy
+ * definition here.  If any of the display subsystems do need it then it will
+ * have to be reimplemented as per the functions above.
+ */
+void  ioNoteDisplayChangedwidthheightdepth(void *b, int w, int h, int d) {}
+
 #if defined(IMAGE_DUMP)
 
 static void emergencyDump(int quit)
@@ -1062,6 +1068,7 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 							: "Unknown signal"));
 
 	if (!inFault) {
+		inFault = 1;
 		getCrashDumpFilenameInto(crashdump);
 		ctime_r(&now,ctimebuf);
 		pushOutputFile(crashdump);
@@ -2061,9 +2068,9 @@ main(int argc, char **argv, char **envp)
 	sigsegv_handler_action.sa_sigaction = sigsegv;
 	sigsegv_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
 	sigemptyset(&sigsegv_handler_action.sa_mask);
-    (void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
     (void)sigaction(SIGBUS, &sigsegv_handler_action, 0);
     (void)sigaction(SIGILL, &sigsegv_handler_action, 0);
+    (void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
 
 	sigusr1_handler_action.sa_sigaction = sigusr1;
 	sigusr1_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;

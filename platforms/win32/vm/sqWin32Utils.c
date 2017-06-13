@@ -182,7 +182,7 @@ void printLastError(TCHAR *prefix)
   FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                 NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                 (LPTSTR) &lpMsgBuf, 0, NULL );
-  warnPrintf(TEXT("%s (%ld) -- %s\n"), prefix, lastError, lpMsgBuf);
+  warnPrintf(TEXT("%s (%ld) -- %s\n"), prefix, lastError, (char *)lpMsgBuf);
   LocalFree( lpMsgBuf );
 }
 #endif
@@ -202,7 +202,7 @@ void vprintLastError(TCHAR *fmt, ...)
   FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                 NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                 (LPTSTR) &lpMsgBuf, 0, NULL );
-  warnPrintf(TEXT("%s (%ld: %s)\n"), buf, lastError, lpMsgBuf);
+  warnPrintf(TEXT("%s (%ld: %s)\n"), buf, lastError, (char *)lpMsgBuf);
   LocalFree( lpMsgBuf );
   free(buf);
 }
