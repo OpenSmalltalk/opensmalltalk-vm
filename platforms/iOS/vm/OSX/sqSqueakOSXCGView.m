@@ -196,7 +196,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
     CGContextSaveGState(context);
 
     int bitSize = interpreterProxy->byteSizeOf(displayBits - BaseHeaderSize);
-    int bytePerRow = displayWidth * 8 / displayDepth;
+    int bytePerRow = displayWidth * displayDepth / 8;
 
     CGRect r = NSRectToCGRect([self frame]);
     int y2 = MAX(r.size.height - (rect.origin.y), 0);
