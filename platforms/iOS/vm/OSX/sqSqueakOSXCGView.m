@@ -219,7 +219,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	CGContextSaveGState(context);
     CGAffineTransform  deviceTransform = CGContextGetUserSpaceToDeviceSpaceTransform(context);
     int bitSize = interpreterProxy->byteSizeOf(displayBits - BaseHeaderSize);
-    int bytePerRow = displayWidth * 8 / displayDepth;
+    int bytePerRow = displayWidth * displayDepth / 8;
 
 	CGFloat frameHeight = [self frame].size.height * deviceTransform.d;
 	CGFloat y2 = MAX(frameHeight - rect.origin.y, 0);
