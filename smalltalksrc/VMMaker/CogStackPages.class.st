@@ -390,13 +390,28 @@ CogStackPages >> stackPageFor: pointer [ "<Integer>"
 { #category : #statistics }
 CogStackPages >> statAverageLivePagesWhenMapping [
 	<returnTypeC: #double>
-	^statPageCountWhenMappingSum asFloat / statNumMaps
+	^statNumMaps = 0
+		ifTrue: [0.0]
+		ifFalse: [statPageCountWhenMappingSum asFloat / statNumMaps]
+]
+
+{ #category : #statistics }
+CogStackPages >> statAverageLivePagesWhenMapping: aFloat [
+	<var: #aFloat type: #double>
+	aFloat == 0.0
+		ifTrue: [statPageCountWhenMappingSum := statNumMaps := 0]
+		ifFalse: [coInterpreter primitiveFailFor: PrimErrBadArgument]
 ]
 
 { #category : #statistics }
 CogStackPages >> statMaxPageCountWhenMapping [
 	<cmacro: '() GIV(statMaxPageCountWhenMapping)'>
 	^statMaxPageCountWhenMapping
+]
+
+{ #category : #statistics }
+CogStackPages >> statMaxPageCountWhenMapping: num [
+	statMaxPageCountWhenMapping := num
 ]
 
 { #category : #'debug printing' }
