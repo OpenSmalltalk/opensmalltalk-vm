@@ -44,7 +44,7 @@
 
 extern struct VirtualMachine* interpreterProxy;
 
-#if __MAC_OS_X_VERSION_MAX_ALLOWED < 1010
+#if __MAC_OS_X_VERSION_MAX_ALLOWED <= 1090
 typedef struct {
     NSInteger majorVersion;
     NSInteger minorVersion;
