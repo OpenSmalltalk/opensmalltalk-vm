@@ -11349,6 +11349,12 @@ SpurMemoryManager >> statTenures [
 	^scavenger statTenures
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> statTenures: aValue [
+	<doNotGenerate>
+	scavenger statTenures: aValue
+]
+
 { #category : #'object access' }
 SpurMemoryManager >> storeByte: byteIndex ofObject: oop withValue: valueByte [
 	^self byteAt: oop + self baseHeaderSize + byteIndex put: valueByte

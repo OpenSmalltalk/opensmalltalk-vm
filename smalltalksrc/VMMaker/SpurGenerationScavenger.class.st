@@ -1387,6 +1387,11 @@ SpurGenerationScavenger >> statTenures [
 	^statTenures
 ]
 
+{ #category : #accessing }
+SpurGenerationScavenger >> statTenures: aValue [
+	statTenures := aValue
+]
+
 { #category : #'remembered set' }
 SpurGenerationScavenger >> strategizeToLimitRememberedTable [
 	<inline: true>

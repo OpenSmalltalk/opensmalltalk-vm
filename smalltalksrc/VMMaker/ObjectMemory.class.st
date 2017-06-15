@@ -5384,6 +5384,11 @@ ObjectMemory >> statTenures [
 	^statTenures
 ]
 
+{ #category : #accessing }
+ObjectMemory >> statTenures: aValue [
+	statTenures := aValue
+]
+
 { #category : #'object access' }
 ObjectMemory >> storeByte: byteIndex ofObject: oop withValue: valueByte [
 
