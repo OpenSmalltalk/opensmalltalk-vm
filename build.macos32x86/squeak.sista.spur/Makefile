@@ -11,7 +11,7 @@ APPPOST:=overwriteSqueakIcon
 
 # Now include the Makefile proper, which is common to all Mac OS builds.
 #
-include ../common/Makefile.app
+include ../common/Makefile.app.squeak
 
 # Replace the standard yellow VM icon with the blue one used for Sista VMs
 

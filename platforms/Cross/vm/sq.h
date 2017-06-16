@@ -394,7 +394,10 @@ sqInt ioProcessEvents(void);
 #define EventTypeDragDropFiles	3
 #define EventTypeMenu		4
 #define EventTypeWindow		5
-#define	EventTypeComplex	6
+#define EventTypeComplex	6 /* For iPhone apps */
+#define EventTypeMouseWheel	7 /* defunct; platforms map to EventTypeKeyboard */
+#define EventTypePlugin		8 /* Terf: events from ActiveX Controls */
+
 
 /* Keypress state for keyboard events. */
 #define EventKeyChar	0
