@@ -49,7 +49,7 @@ $(LIBGIT2LIB): libssh2 $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME)
 	@echo "Fixing dependency links"
 	install_name_tool -change "$(THIRDPARTYLIBDIR)/" "@executable_path/Plugins/$(LIBSSH2LIBNAME)" $(LIBGIT2LIB)
 	# libssh2 has a dependency with openssl libraries (they come in OPENSSLALLLIBNAMES var)
-	@for each in $(OPENSSLALLLIBNAMES); do \
+	@for each in $(OPENSSLALLLIBNAMES) $(LIBSSH2LIBNAME); do \
 		install_name_tool -change "$(THIRDPARTYLIBDIR)/$$each" "@executable_path/Plugins/$$each" $(LIBGIT2LIB); \
 	done
 	@echo "DONE"
