@@ -6782,6 +6782,20 @@ StackInterpreter >> flushMethodCache [
 ]
 
 { #category : #'method lookup cache' }
+StackInterpreter >> flushMethodCacheForMethod: oldMethod [
+	"Flush the method caches of references to oldMethod."
+	| probe |
+	probe := 0.
+	1 to: MethodCacheEntries do:
+		[:i |
+		(methodCache at: probe + MethodCacheMethod) = oldMethod ifTrue:
+			[methodCache at: probe + MethodCacheSelector put: 0].
+		probe := probe + MethodCacheEntrySize].
+	self flushExternalPrimitiveOf: oldMethod.
+	self flushAtCache
+]
+
+{ #category : #'method lookup cache' }
 StackInterpreter >> flushMethodCacheFrom: memStart to: memEnd [ 
 	"Flush entries in the method cache only if the oop address is within the given memory range. 
 	This reduces over-aggressive cache clearing. Note the AtCache is fully flushed, 70% of the time 
