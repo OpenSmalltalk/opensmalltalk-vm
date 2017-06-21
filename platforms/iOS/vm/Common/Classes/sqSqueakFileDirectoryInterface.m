@@ -180,7 +180,7 @@ such third-party acknowledgments.
 	NSString*	directoryPath = NULL;
 	NSString*	filePath;
 	NSString*	fileName;
-	BOOL		readDirectory = false;
+	BOOL		readDirectory;
 	
 	
 	/* default return values */
@@ -203,8 +203,7 @@ such third-party acknowledgments.
     }
 	
 	if ([self.lastPathForDirLookup isEqualToString: directoryPath]) {
-		if (lastIndexForDirLookup >= index)
-			readDirectory = true;
+		readDirectory = lastIndexForDirLookup >= index;
 	} else {
 		readDirectory = true;
 	}
@@ -225,12 +224,21 @@ such third-party acknowledgments.
 		}
 	}
 		
-	lastIndexForDirLookup = index;  //Note index is 1 based, but objc is 0 based
+	do {
+		lastIndexForDirLookup = index;  //Note index is 1 based, but objc is 0 based
 	
-	if (index < 1 || (NSUInteger) index > [directoryContentsForDirLookup count])
-		return NO_MORE_ENTRIES;
-	
-	filePath = directoryContentsForDirLookup[(NSUInteger) (index-1)];
+		if (index < 1 || (NSUInteger) index > [directoryContentsForDirLookup count])
+			return NO_MORE_ENTRIES;
+
+		filePath = directoryContentsForDirLookup[(NSUInteger) (index-1)];
+		index++;
+		/* N.B.  attributesOfItemAtPath:error: in attributesForPath:..isSymLink:
+		 * below will answer null for .afpDeleted files and hence cause the
+		 * primitive to terminate early.
+		 */
+	}
+	while ([filePath hasPrefix: @".afpDeleted"]);
+
 	filePath = [[ lastPathForDirLookup stringByAppendingString: @"/"] stringByAppendingString: filePath] ;
 	fileName = [[filePath lastPathComponent] precomposedStringWithCanonicalMapping];
 	strlcpy(name,[fileName UTF8String], 256);
