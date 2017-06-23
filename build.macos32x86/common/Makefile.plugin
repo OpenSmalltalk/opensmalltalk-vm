@@ -195,9 +195,12 @@ $(PLUGINICONS): $(OSXDIR)/SqueakPlugin.icns
 	cp -p $< $@
 
 $(PLUGINPLIST): $(PLATDIR)/iOS/plugins/Info.plist getversion
-	mkdir -p $(PLUGINBUNDLE)/Contents
-	sed "s/\$$(VERSION)/`./getversion VERSION_TAG`/" $< | \
-	sed "s/\$(LIBNAME)/$(LIBNAME)/" > $(PLUGINPLIST)
+	-mkdir -p $(PLUGINBUNDLE)/Contents
+	cp -p $< $@
+	sed -i '' '\
+		s!$$(VERSION)!$(shell ./getversion VERSION_TAG)!g;\
+		s!$$(LIBNAME)!$(LIBNAME)!g;\
+	' $@
 
 $(PLUGINDYLIB): $(PLUGINREQS) $(VMDIR) $(OBJDIR) $(LIBOBJ)
 ifneq ($(LINK_WITH_CPP),)
