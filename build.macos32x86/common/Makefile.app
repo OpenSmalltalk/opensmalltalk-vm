@@ -29,16 +29,22 @@ endif
 ifeq ($(APPNAMEDEF),)
 APPNAMEDEF:=$(APPNAME)Fast
 endif
+ifeq ($(APPIDENTIFIER),)
+APPIDENTIFIER:=org.opensmalltalk.$(APPNAME)
+endif
 ifeq ($(USEPLUGINASDYLIB),)
 USEPLUGINASDYLIB:=FALSE
 endif
 
 ifeq ($(CONFIGURATION),debug)
 	APP:=$(APPNAME)Debug.app
+	VM_IDENTIFIER:=$(APPIDENTIFIER)Debug
 else ifeq ($(CONFIGURATION),assert)
 	APP:=$(APPNAME)Assert.app
+	VM_IDENTIFIER:=$(APPIDENTIFIER)Assert
 else # default CONFIGURATION=product => $(APPNAMEDEF).app
 	APP:=$(APPNAMEDEF).app
+	VM_IDENTIFIER:=$(APPIDENTIFIER)
 endif
 
 default:	$(APP)

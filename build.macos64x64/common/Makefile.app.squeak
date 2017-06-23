@@ -7,6 +7,7 @@
 
 # Produce Squeak.app, SqueakAssert.app & SqueakDebug.app
 APPNAME:=Squeak
+APPIDENTIFIER:=org.squeak.$(APPNAME)
 APPNAMEDEF:=$(APPNAME)
 
 APPPOST:=overwriteSqueakIcon

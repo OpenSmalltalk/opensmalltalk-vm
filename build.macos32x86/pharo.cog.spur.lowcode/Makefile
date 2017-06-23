@@ -8,6 +8,7 @@ VM:=Pharo
 COGDEFS:= -DPharoVM=1 -DIMMUTABILITY=1
 APPNAME:=Pharo
 APPNAMEDEF:=$(APPNAME)
+APPIDENTIFIER:=org.pharo.$(APPNAME)
 USEPLUGINASDYLIB:=TRUE
 THIRDPARTYLIBS:=pkgconfig freetype2 openssl libssh2 libgit2 libsdl2 pixman libpng cairo
 
