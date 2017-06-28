@@ -173,6 +173,8 @@ pcbufferSIGPROFhandler(int sig, siginfo_t *info, ucontext_t *uap)
 # define _PC_IN_UCONTEXT uc_mcontext.arm_pc
 #elif __FreeBSD__ && __i386__
 # define _PC_IN_UCONTEXT uc_mcontext.mc_eip
+#elif __FreeBSD__ && __amd64__
+# define _PC_IN_UCONTEXT uc_mcontext.mc_rip
 #elif __OpenBSD__
 # define _PC_IN_UCONTEXT sc_rip
 #else

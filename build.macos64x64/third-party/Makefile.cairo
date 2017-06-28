@@ -31,6 +31,7 @@ $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME): $(CAIROARCHIVE)
 			--disable-silent-rules \
 			--disable-xlib \
 			--disable-dependency-tracking \
+			--disable-interpreter \
 		&& make \
 		&& make install
 
