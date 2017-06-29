@@ -2417,10 +2417,11 @@ SpurMemoryManager >> assignClassIndicesAndPinFrom: segmentStart to: segmentLimit
 		 self storePointerUnchecked: fillIdx ofObject: loadedObjectsArray withValue: objOop.
 		 fillIdx := fillIdx + 1.
 		 "In the segment, class indices are offset indexes into the segment data,
-		  or into outPointers.  See mapOopsFrom:to:outPointers:outHashes:."
+		  or into outPointers.  See mapOopsFrom:to:outPointers:outHashes: and
+		  newOutPointer:at:in:hashes:."
 		 classRef := self classIndexOf: objOop.
 		 classOop := (classRef anyMask: TopHashBit)
-						ifTrue: [self fetchPointer: classRef - TopHashBit - self firstClassIndexPun ofObject: outPointerArray]
+						ifTrue: [self fetchPointer: classRef - TopHashBit ofObject: outPointerArray]
 						ifFalse: [classRef - self firstClassIndexPun * self allocationUnit + segmentStart].
 		 classIndex := self rawHashBitsOf: classOop.
 		 self assert: (classIndex > self lastClassIndexPun
@@ -3902,7 +3903,7 @@ SpurMemoryManager >> copyObj: objOop toAddr: segAddr startAt: segStart stopAt: e
 	<inline: false>
 	bodySize := self bytesInObject: objOop.
 	(self oop: segAddr + bodySize isGreaterThanOrEqualTo: endSeg) ifTrue:
-		[^PrimErrWritePastObject].
+		[^PrimErrWritePastObject halt].
 	self mem: segAddr asVoidPointer cp: (self startOfObject: objOop) asVoidPointer y: bodySize.
 	copy := self objectStartingAt: segAddr.
 
@@ -6321,6 +6322,14 @@ SpurMemoryManager >> is: oop onObjStack: objStack [
 	^false
 ]
 
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> is: hash outPointerClassHashFor: oop in: outPointerArray limit: outIndex [
+	"suspect; what about false positives?"
+	^(hash anyMask: TopHashBit)
+	  and: [hash - TopHashBit <= outIndex
+	  and: [oop = (self fetchPointer: hash - TopHashBit ofObject: outPointerArray)]]
+]
+
 { #category : #'header formats' }
 SpurMemoryManager >> isAnyPointerFormat: format [
 	"the inverse of isPureBitsFormat:"
@@ -7673,7 +7682,7 @@ SpurMemoryManager >> mapOopsAndValidateClassRefsFrom: segmentStart to: segmentLi
 		 "validate the class ref, but don't update it until any internal classes have been added to the class table."
 		 (classIndex anyMask: TopHashBit)
 			ifTrue:
-				[classIndex := classIndex - TopHashBit - self firstClassIndexPun.
+				[classIndex := classIndex - TopHashBit.
 				 classIndex >= numOutPointers ifTrue:
 					[^PrimErrBadIndex halt].
 				 mappedOop := self fetchPointer: classIndex ofObject: outPointerArray.
@@ -7730,21 +7739,20 @@ SpurMemoryManager >> mapOopsFrom: segStart to: segAddr outPointers: outPointerAr
 			ifTrue: "oop is a class in the segment; storeImageSegmentInto:outPointers:roots: established offset is within range."
 				[oop := self fetchPointer: 0 ofObject: oop.
 				 self assert: (self oop: oop isGreaterThanOrEqualTo: segStart andLessThan: segAddr).
-				 segIndex := oop - segStart / self allocationUnit.
-				 self deny: (segIndex + self firstClassIndexPun anyMask: TopHashBit)]
+				 segIndex := oop - segStart / self allocationUnit + self firstClassIndexPun.
+				 (segIndex anyMask: TopHashBit) ifTrue: "Too many classes in the segment"
+					[^-1 halt]]
 			ifFalse: "oop is an outPointer; locate or allocate its oop"
 				[hash := self rawHashBitsOf: oop.
-				((hash anyMask: TopHashBit)
-				 and: [hash - TopHashBit <= outIndex
-				 and: [oop = (self fetchPointer: hash - TopHashBit ofObject: outPointerArray)]])
+				 (self is: hash outPointerClassHashFor: oop in: outPointerArray limit: outIndex)
 					ifTrue: [segIndex := hash]
 					ifFalse: "oop is a new outPointer; allocate its oop"
 						[outIndex := self newOutPointer: oop at: outIndex in: outPointerArray hashes: savedOutHashes.
 						 outIndex = 0 ifTrue: "no room in outPointers; fail"
-							[^-1].
-						 self assert: ((self rawHashBitsOf: oop) anyMask: TopHashBit).
-						 segIndex := self rawHashBitsOf: oop]].
-		 self setClassIndexOf: objOop to: segIndex + self firstClassIndexPun.
+							[^-1 halt].
+						 segIndex := self rawHashBitsOf: oop].
+				 self assert: (segIndex anyMask: TopHashBit)].
+		 self setClassIndexOf: objOop to: segIndex.
 		 0 to: (self numPointerSlotsOf: objOop) - 1 do:
 			[:i|
 			 oop := self fetchPointer: i ofObject: objOop.
@@ -7756,14 +7764,12 @@ SpurMemoryManager >> mapOopsFrom: segStart to: segAddr outPointers: outPointerAr
 						 oop := oop - segStart]
 					ifFalse: "oop is an outPointer; locate or allocate its oop"
 						[hash := self rawHashBitsOf: oop.
-						((hash anyMask: TopHashBit)
-						 and: [(hash := hash - TopHashBit) <= outIndex
-						 and: [oop = (self fetchPointer: hash ofObject: outPointerArray)]])
+						(self is: hash outPointerClassHashFor: oop in: outPointerArray limit: outIndex)
 							ifTrue: [oop := hash * self bytesPerOop + TopOopBit]
 							ifFalse: "oop is a new outPointer; allocate its oop"
 								[outIndex := self newOutPointer: oop at: outIndex in: outPointerArray hashes: savedOutHashes.
 								 outIndex = 0 ifTrue: "no room in outPointers; fail"
-									[^-1].
+									[^-1 halt].
 								 self assert: ((self rawHashBitsOf: oop) anyMask: TopHashBit).
 								 oop := (self rawHashBitsOf: objOop) - TopHashBit * self bytesPerOop + TopOopBit]].
 				 self storePointerUnchecked: i ofObject: objOop withValue: oop]].
@@ -10320,10 +10326,21 @@ SpurMemoryManager >> restoreObjectsIn: objArray upTo: limitOrTag savedFirstField
 ]
 
 { #category : #'image segment in/out' }
-SpurMemoryManager >> return: errCode restoringObjectsIn: firstArray upTo: limitOrTag savedFirstFields: savedFirstFields and: secondArray savedHashes: secondSavedHashes [
+SpurMemoryManager >> return: errCode restoringObjectsIn: firstArray savedFirstFields: savedFirstFields and: secondArray savedHashes: savedHashes [
+	<inline: false>
+	"This is part of storeImageSegmentInto:outPointers:roots:."
+	self restoreObjectsIn: firstArray upTo: -1 savedFirstFields: savedFirstFields.
+	self restoreObjectsIn: secondArray savedHashes: savedHashes.
+	self runLeakCheckerFor: GCModeImageSegment.
+	self assert: self allObjectsUnmarked.
+	^errCode
+]
+
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> return: errCode restoringObjectsIn: firstArray upTo: limitOrTag savedFirstFields: savedFirstFields [
+	<inline: false>
 	"This is part of storeImageSegmentInto:outPointers:roots:."
 	self restoreObjectsIn: firstArray upTo: limitOrTag savedFirstFields: savedFirstFields.
-	self restoreObjectsIn: secondArray savedHashes: secondSavedHashes.
 	self runLeakCheckerFor: GCModeImageSegment.
 	self assert: self allObjectsUnmarked.
 	^errCode
@@ -10578,8 +10595,8 @@ SpurMemoryManager >> setCheckForLeaks: integerFlags [
 	  1 = check for leaks on fullGC (GCModeFull).
 	  2 = check for leaks on scavenger (GCModeNewSpace).
 	  4 = check for leaks on incremental (GCModeIncremental)
-	  8 = check for leaks on become
-	 16 = check for leaks on image segments"
+	  8 = check for leaks on become (GCModeBecome)
+	 16 = check for leaks on image segments (GCModeImageSegment)"
 	checkForLeaks := integerFlags
 ]
 
@@ -11485,23 +11502,25 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArrayArg outPointers: out
 		(i = numClassesInSegment
 		 and: [segAddr - segStart / self allocationUnit + self lastClassIndexPun >= TopHashBit]) ifTrue:
 			[^self return: PrimErrLimitExceeded
-					restoringObjectsIn: arrayOfObjects upTo: i savedFirstFields: savedFirstFields
-					and: outPointerArray savedHashes: savedOutHashes].
+					restoringObjectsIn: arrayOfObjects upTo: i savedFirstFields: savedFirstFields].
 		objOop := self fetchPointer: i ofObject: arrayOfObjects.
 		self deny: ((self isImmediate: objOop) or: [self isForwarded: objOop]).
-		newSegAddrOrError := self copyObj: objOop toAddr: segAddr startAt: segStart stopAt: endSeg savedFirstFields: savedFirstFields index: i.
+		newSegAddrOrError := self copyObj: objOop
+									toAddr: segAddr
+									startAt: segStart 
+									stopAt: endSeg
+									savedFirstFields: savedFirstFields
+									index: i.
 		newSegAddrOrError < segStart ifTrue:
 			[^self return: newSegAddrOrError
-					restoringObjectsIn: arrayOfObjects upTo: i savedFirstFields: savedFirstFields
-					and: outPointerArray savedHashes: savedOutHashes].
+					restoringObjectsIn: arrayOfObjects upTo: i savedFirstFields: savedFirstFields].
 		 segAddr := newSegAddrOrError].
 
 	"Check that it can be safely shortened."
 	(endSeg ~= segAddr
 	 and: [endSeg - segAddr < (self baseHeaderSize + self bytesPerOop)]) ifTrue:
 		[^self return: PrimErrWritePastObject
-				restoringObjectsIn: arrayOfObjects upTo: -1 savedFirstFields: savedFirstFields
-				and: outPointerArray savedHashes: savedOutHashes].
+				restoringObjectsIn: arrayOfObjects upTo: -1 savedFirstFields: savedFirstFields].
 
 	"Now scan, adding out pointers to the outPointersArray; all objects in arrayOfObjects
 	 have their first field pointing to the corresponding copy in segmentWordArray."
@@ -11510,14 +11529,14 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArrayArg outPointers: out
 					outPointers: outPointerArray
 					outHashes: savedOutHashes) < 0 ifTrue: "no room in outPointers; fail"
 		[^self return: PrimErrBadIndex
-				restoringObjectsIn: arrayOfObjects upTo: -1 savedFirstFields: savedFirstFields
+				restoringObjectsIn: arrayOfObjects savedFirstFields: savedFirstFields
 				and: outPointerArray savedHashes: savedOutHashes].
 
 	"We're done.  Shorten the results, restore hashes and return."
 	self shorten: segmentWordArray toIndexableSize: segAddr - (segmentWordArray + self baseHeaderSize) / 4.
 	self shorten: outPointerArray toIndexableSize: outIndex.
 	^self return: PrimNoErr
-		restoringObjectsIn: arrayOfObjects upTo: -1 savedFirstFields: savedFirstFields
+		restoringObjectsIn: arrayOfObjects savedFirstFields: savedFirstFields
 		and: outPointerArray savedHashes: savedOutHashes
 ]
 
