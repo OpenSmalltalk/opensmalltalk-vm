@@ -13,24 +13,12 @@ SpurPlanningCompactorTests class >> defaultIntegerBaseInDebugger [
 	^VMClass defaultIntegerBaseInDebugger
 ]
 
-{ #category : #accessing }
-SpurPlanningCompactorTests class >> imageNameForTests [
-	"self imageNameForTests"
-	| baseImageName |
-	baseImageName := 'core32-preen.image'.
-	#('.' 'oscogvm/image' '../oscogvm/image') do:
-		[:dirName|
-		 ((FileDirectory default directoryExists: dirName)
-		  and: [(FileDirectory on: dirName) fileExists: baseImageName]) ifTrue:
-			[^dirName, '/', baseImageName]].
-	self error: 'cannot find ', baseImageName
-]
-
 { #category : #utilities }
 SpurPlanningCompactorTests class >> preenImage [
 	"Assume there's a Pharo bootstrap core32.image in ../oscogvm/image/core32.image.
 	 We should find out where the image directory is and write a download script to get it.
-	 But for now assume it's there."
+	 But for now assume it's there.  See e.g.
+		https://bintray.com/pharo-project/pharo/Pharo/201701061402-32bit#files"
 	"[SpurPlanningCompactorTests preenImage] timeToRun"
 	Spur32BitPreen new
 		writeDefaultHeader: true;
@@ -40,7 +28,7 @@ SpurPlanningCompactorTests class >> preenImage [
 
 { #category : #accessing }
 SpurPlanningCompactorTests class >> resources [
-	^{SpurPlanningCompactorTestsImageResource}
+	^{SpurImageTestResource}
 ]
 
 { #category : #private }
@@ -52,7 +40,7 @@ SpurPlanningCompactorTests >> checkForLeaksIn: om [
 
 { #category : #failures }
 SpurPlanningCompactorTests >> expectedFailures [
-	^(FileDirectory default fileExists: self class imageNameForTests)
+	^(FileDirectory default fileExists: SpurImageTestResource imageNameForTests)
 		ifTrue: [#()]
 		ifFalse: [self testSelectors]
 ]
@@ -62,7 +50,7 @@ SpurPlanningCompactorTests >> initializedVM [
 	| newVM |
 	newVM := self resources anyOne current emptyVM cloneSimulation.
 	newVM
-		openOn: self class imageNameForTests extraMemory: 0;
+		openOn: SpurImageTestResource imageNameForTests extraMemory: 0;
 		initStackPages.
 	newVM objectMemory
 		initializeMarkStack; "The Pharo bootstrap has no mark or weakling stacks :-)"
