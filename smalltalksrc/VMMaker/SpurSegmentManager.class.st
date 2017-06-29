@@ -245,6 +245,11 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 	self assert: (manager numSlotsOfAny: (self bridgeAt: 0)) = 0
 ]
 
+{ #category : #'simulation only' }
+SpurSegmentManager >> computeTotalHeapSizeIncludingBridges [
+	totalHeapSizeIncludingBridges := manager endOfMemory - manager oldSpaceStart
+]
+
 { #category : #'growing/shrinking memory' }
 SpurSegmentManager >> findEmptySegNearestInSizeTo: size [
 	| seg best delta |
