@@ -2692,8 +2692,8 @@ SpurMemoryManager >> bytesInObject: objOop [
 SpurMemoryManager >> bytesLeft: includeSwapSpace [
 	"Answer the amount of available free space. If includeSwapSpace is true, include
 	 possibly available swap space. If includeSwapSpace is false, include possibly available
-	 physical memory. For a report on the largest free block currently availabe within
-	 Squeak memory but not counting extra memory use #primBytesLeft."
+	 physical memory.  N.B. includeSwapSpace is ignored; answer total heap free space
+	 minus the reserve available for flushing the tsack zone."
 	^totalFreeOldSpace
 	+ (scavenger eden limit - freeStart)
 	+ (scavenger pastSpace limit - pastSpaceStart)
@@ -10942,6 +10942,20 @@ SpurMemoryManager >> sizeOfFree: objOop [
 	 Do *not* use internally."
 	self assert: (self isFreeObject: objOop).
 	^self bytesInObject: objOop
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> sizeOfLargestFreeChunk [
+	"Answer the size of largest free chunk in oldSpace."
+	| freeChunk |
+	freeChunk := self findLargestFreeChunk.
+	freeChunk ifNil:
+		[63 to: 1 by: -1 do:
+			[:i|
+			(freeLists at: i) ifNotNil:
+				[:chunk| ^self bytesInObject: chunk]].
+		 ^0].
+	^self bytesInObject: freeChunk
 ]
 
 { #category : #'obj stacks' }
