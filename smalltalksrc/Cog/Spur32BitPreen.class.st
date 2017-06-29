@@ -312,6 +312,7 @@ Spur32BitPreen >> preenImageUsingFileDirectory: imageName [
 Spur32BitPreen >> reportSizes [
 	| change oldHeapSize newHeapSize |
 	oldHeapSize := oldHeap oldSpaceSize.
+	newHeap segmentManager computeTotalHeapSizeIncludingBridges. "To avoid assert fail"
 	newHeapSize := newHeap oldSpaceSize.
 	change := newHeapSize - oldHeapSize / oldHeapSize.
 	Transcript
