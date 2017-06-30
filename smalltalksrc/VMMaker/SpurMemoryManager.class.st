@@ -7765,13 +7765,13 @@ SpurMemoryManager >> mapOopsFrom: segStart to: segAddr outPointers: outPointerAr
 					ifFalse: "oop is an outPointer; locate or allocate its oop"
 						[hash := self rawHashBitsOf: oop.
 						(self is: hash outPointerClassHashFor: oop in: outPointerArray limit: outIndex)
-							ifTrue: [oop := hash * self bytesPerOop + TopOopBit]
+							ifTrue: [oop := hash - TopHashBit * self bytesPerOop + TopOopBit]
 							ifFalse: "oop is a new outPointer; allocate its oop"
 								[outIndex := self newOutPointer: oop at: outIndex in: outPointerArray hashes: savedOutHashes.
 								 outIndex = 0 ifTrue: "no room in outPointers; fail"
 									[^-1 halt].
 								 self assert: ((self rawHashBitsOf: oop) anyMask: TopHashBit).
-								 oop := (self rawHashBitsOf: objOop) - TopHashBit * self bytesPerOop + TopOopBit]].
+								 oop := (self rawHashBitsOf: oop) - TopHashBit * self bytesPerOop + TopOopBit]].
 				 self storePointerUnchecked: i ofObject: objOop withValue: oop]].
 		 objOop := self objectAfter: objOop limit: segAddr].
 	^outIndex
@@ -11460,14 +11460,17 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArrayArg outPointers: out
 	 be able to undo any side-effects if the primitive fails because either segmentWordArray or outPointerArray
 	 is too small.  The mapping is done by having the objects to be stored in arrayOfObjects refer to their mapped
 	 locations through their first field, just like a forwarding pointer, but without becoming a forwarder, saving their
-	 first field in savedFirstFields, and the objects in outPointerArray pointing to tehir locations in the outPointerArray
+	 first field in savedFirstFields, and the objects in outPointerArray pointing to their locations in the outPointerArray
 	 through their identityHashes, saved in savedOutHashes.
 	 Since arrayOfObjects and its savedFirstFields, and outPointerArray and its saved hashes, can be enumerated
-	 side-by-side, the hashes can be restored to the originals.  So the hash of an object in arrayOfObjects
-	 is set to its offset in segmentWordArray / self allocationUnit, and the hash of an object in outPointerArray
-	 is set to its index in outPointerArray plus the top hash bit.  Oops in segmentWordArray are therefore
-	 mapped by accessing the original oop's identityHash, testing the bottom bit to distinguish between internal
-	 and external oops.  The saved hash arrays are initialized with an out-of-range hash value so that the first
+	 side-by-side, the hashes can be restored to the originals.  So the first field of the heap object corresponding to
+	 an object in arrayOfObjects is set to its location in segmentWordArray, and the hash of an object in outPointerArray
+	 is set to its index in outPointerArray plus the top hash bit.  Classes in arrayOfObjects have their marked bit set.
+	 Oops in objects in segmentWordArray are therefore mapped by accessing the original oop, and following its first
+	 field. Class indices in segmentWordArray are mapped by fetching the original class, and testing its marked bit.
+	 If marked, the first field is followed to access the class copy in the segment.  Out pointers (objects and classes,
+	 which are unmarked), the object's identityHash is set (eek!!) to its index in the outPointerArray. So savedOutHashes
+	 parallels the outPointerArray. The saved hash array is initialized with an out-of-range hash value so that the first
 	 unused entry can be identified."
 
 	savedFirstFields := self allocateSlots: (self numSlotsOf: arrayOfObjects)
