@@ -41,13 +41,6 @@ VMProfilerMacSymbolsManager class >> shutDown: quitting [
 				[VMFileSystem deleteContentsOf: tempDir]]]
 ]
 
-{ #category : #accessing }
-VMProfilerMacSymbolsManager class >> tempDirectory [
-
-	^ VMFileSystem ifNotNil: [VMFileSystem nameFordirPath:'private/tmp/vmsyms'  plus:OSProcess thisOSProcess pid printString] 
-
-]
-
 { #category : #parsing }
 VMProfilerMacSymbolsManager >> archName [
 	"Answer the architecture name for use with nm, size et al."
