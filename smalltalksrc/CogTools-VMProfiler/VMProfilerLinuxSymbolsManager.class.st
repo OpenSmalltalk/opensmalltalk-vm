@@ -41,13 +41,6 @@ VMProfilerLinuxSymbolsManager class >> shutDown: quitting [
 				[VMFileSystem deleteContentsOf: tempDir]]]
 ]
 
-{ #category : #accessing }
-VMProfilerLinuxSymbolsManager class >> tempDirectory [
-
-	^ VMFileSystem ifNotNil: [VMFileSystem nameFordirPath:'/tmp/vmsyms'  plus:OSProcess thisOSProcess pid printString] 
-
-]
-
 { #category : #parsing }
 VMProfilerLinuxSymbolsManager >> hexFromStream: aStream [
 	"Fast reading of lower-case hexadecimal."
