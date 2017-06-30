@@ -37,6 +37,13 @@ VMProfilerSymbolsManager class >> initialize [
 ]
 
 { #category : #'as yet unclassified' }
+VMProfilerSymbolsManager class >> tempDirectory [
+
+	^ VMFileSystem ifNotNil: [VMFileSystem nameFordirPath:'/tmp/vmsyms'  plus:OSProcess thisOSProcess pid printString] 
+
+]
+
+{ #category : #'as yet unclassified' }
 VMProfilerSymbolsManager class >> using: aFileSystem [
 
 	VMFileSystem := aFileSystem.

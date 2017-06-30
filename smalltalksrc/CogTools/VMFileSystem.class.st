@@ -9,7 +9,6 @@ Class {
 
 { #category : #'as yet unclassified' }
 VMFileSystem >> deleteContentsOf: aDirectory [
-
 	self subclassResponsability
 ]
 
