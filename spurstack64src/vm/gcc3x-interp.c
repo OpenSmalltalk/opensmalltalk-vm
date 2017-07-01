@@ -2249,7 +2249,7 @@ static void (*primitiveTable[MaxPrimitiveIndex + 2 /* 577 */])(void) = {
  0 };
 sqInt checkedPluginName;
 char expensiveAsserts = 0;
-const char interpreterVersion = "Croquet Closure Stack VM [StackInterpreterPrimitives VMMaker.oscog-eem.2250]";
+const char *interpreterVersion = "Croquet Closure Stack VM [StackInterpreterPrimitives VMMaker.oscog-eem.2250]";
 volatile int sendTrace;
 sqInt suppressHeartbeatFlag;
 

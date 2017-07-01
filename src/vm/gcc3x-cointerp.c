@@ -2189,7 +2189,7 @@ static void (*primitiveTable[MaxPrimitiveIndex + 2 /* 577 */])(void) = {
  0 };
 sqInt checkedPluginName;
 char expensiveAsserts = 0;
-const char interpreterVersion = "Croquet Closure Cog[SqueakV3] VM [CoInterpreterPrimitives VMMaker.oscog-eem.2250]";
+const char *interpreterVersion = "Croquet Closure Cog[SqueakV3] VM [CoInterpreterPrimitives VMMaker.oscog-eem.2250]";
 sqInt minBackwardJumpCountForCompile = MinBackwardJumpCountForCompile /* 40 */;
 volatile int sendTrace;
 
