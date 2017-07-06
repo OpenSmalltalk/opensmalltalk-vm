@@ -34,3 +34,13 @@ PharoVMProfiler >> getVMParameters [
 
 	^Smalltalk vm getParameters 
 ]
+
+{ #category : #initialization }
+PharoVMProfiler >> initialize [
+
+	super initializeMost.
+	self withDetails: false.
+	CompatibilityClass := PharoVMMethodConverter new.
+	expressionTextMorph := PluggableTextMorph new.
+	self initializeSymbols.
+]

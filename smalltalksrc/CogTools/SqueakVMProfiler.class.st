@@ -346,6 +346,16 @@ SqueakVMProfiler >> historyButtonMorph: getLabelMessage help: help set: setter e
 	^pbm
 ]
 
+{ #category : #initialization }
+SqueakVMProfiler >> initialize [
+	super initializeMost.
+	self withDetails: false.
+	CompatibilityClass := SqueakVMMethodConverter new.
+	expressionTextMorph := PluggableTextMorph new.
+	super initializeSymbols.
+	self toggleShowing: #module.
+]
+
 { #category : #opening }
 SqueakVMProfiler >> labelFont [
 	"Answer the font in which to draw the graph labels.
@@ -736,7 +746,7 @@ SqueakVMProfiler >> stopColor [
 	^self profiling ifTrue: [Color red] ifFalse: [Color darkGray]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #profiling }
 SqueakVMProfiler >> stopProfiling [
 	
 	super stopProfiling.

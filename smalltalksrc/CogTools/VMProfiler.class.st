@@ -51,11 +51,11 @@ Class {
 		'gcPriorToProfile',
 		'forkProfile',
 		'cogCodeConstituents',
-		'version',
-		'fileSystem'
+		'withDetails'
 	],
 	#classVars : [
-		'CannedBenchmarkStrings'
+		'CannedBenchmarkStrings',
+		'CompatibilityClass'
 	],
 	#category : #'CogTools-VMProfiler'
 }
@@ -85,7 +85,20 @@ VMProfiler class >> canBenchmark: aByteString [
 VMProfiler class >> headlessSpyOn: aBlock reportOn: aStream [ 
 	"initialize the profiler version (squeak or pharo) and profile headless, writing the results on a given stream"
 
-	(VMProfiler new) version new
+	VMProfiler new
+		selectBenchmark: (CompatibilityClass convertAsString: aBlock);
+		headlessSpyOn: aBlock;
+		report: aStream.
+		 
+]
+
+{ #category : #'as yet unclassified' }
+VMProfiler class >> headlessSpyOn: aBlock reportOn: aStream withDetails: aBoolean [
+	"initialize the profiler version (squeak or pharo) and profile headless, writing the results on a given stream"
+
+	VMProfiler new
+		withDetails: aBoolean;
+		selectBenchmark: (CompatibilityClass convertAsString: aBlock);
 		headlessSpyOn: aBlock;
 		report: aStream.
 		 
@@ -135,17 +148,17 @@ VMProfiler class >> reportGCStats: gcStatsArray upTime: elapsedMilliseconds on: 
 	str	nextPutAll: '**GCs**'; cr.
 	str	nextPutAll: '	full			';
 		print: fullGCs; nextPutAll: ' totalling '; nextPutAll: fullGCTime asStringWithCommas; nextPutAll: 'ms (';
-		print: ((fullGCTime / elapsedMilliseconds * 100) roundTo: 0.001);
+		nextPutAll: (CompatibilityClass print:(fullGCTime / elapsedMilliseconds * 100) showingDecimalPlaces: 3 );
 		nextPutAll: '% elapsed time)'.
 	fullGCs = 0 ifFalse:
-		[str	nextPutAll: ', avg '; print: (fullGCTime / fullGCs roundTo: 0.001); nextPutAll: 'ms'].
+		[str	nextPutAll: ', avg '; nextPutAll: (CompatibilityClass print:(fullGCTime / fullGCs) showingDecimalPlaces: 3); nextPutAll: 'ms'].
 	str	cr.
 	str	nextPutAll: (self amOnSpur ifTrue: ['	scavenges	'] ifFalse: ['	incr			']);
 		print: incrGCs; nextPutAll: ' totalling '; nextPutAll: incrGCTime asStringWithCommas; nextPutAll: 'ms (';
-		print: ((incrGCTime / elapsedMilliseconds * 100) roundTo: 0.001);
+		nextPutAll: (CompatibilityClass print:incrGCTime / elapsedMilliseconds * 100 showingDecimalPlaces: 3);
 		nextPutAll: '% elapsed time)'.
 	incrGCs = 0 ifFalse:
-		[str nextPutAll:', avg '; print: (incrGCTime / incrGCs roundTo: 0.001); nextPutAll: 'ms'].
+		[str nextPutAll:', avg '; nextPutAll: (CompatibilityClass print:incrGCTime / incrGCs showingDecimalPlaces:3); nextPutAll: 'ms'].
 	str cr.
 	str	nextPutAll: '	tenures		';
 		nextPutAll: tenureCount asStringWithCommas.
@@ -164,10 +177,10 @@ VMProfiler class >> reportGCStats: gcStatsArray upTime: elapsedMilliseconds on: 
 		str	tab;
 			print: numCompactions; nextPutAll: ' totalling ';
 			nextPutAll: compactionMsecs asStringWithCommas; nextPutAll: 'ms (';
-			print: ((compactionMsecs / elapsedMilliseconds * 100) roundTo: 0.001);
+			nextPutAll: (CompatibilityClass print:compactionMsecs / elapsedMilliseconds * 100 showingDecimalPlaces: 3);
 			nextPutAll: '% elapsed time)'.
 		numCompactions = 0 ifFalse:
-			[str	nextPutAll: ', avg '; print: (compactionMsecs / numCompactions roundTo: 0.001); nextPutAll: 'ms'].
+			[str	nextPutAll: ', avg '; nextPutAll: (CompatibilityClass print:compactionMsecs / numCompactions showingDecimalPlaces:3); nextPutAll: 'ms'].
 		str	cr].
 
 	gcStatsArray size >= 61 ifTrue:
@@ -273,6 +286,37 @@ VMProfiler >> computeStats: stopStats [
 				[elapsedStats at: i put: (stopStats at: i) - (startStats at: i)]]]
 ]
 
+{ #category : #reports }
+VMProfiler >> countSymbols: symbols totals: totals [
+	| totalSamples |
+	totalSamples := 0.
+	symbols do:
+		[:sym| | samples |
+		((#(publicFunction privateFunction) includes: sym type)
+		 and: [(samples := self samplesForSymbol: sym) > 0]) ifTrue:
+			[totals at: sym put: samples.
+			 totalSamples := totalSamples + samples]].
+	^ totalSamples
+	
+]
+
+{ #category : #'Cog compiled code' }
+VMProfiler >> createMcpcBcpcMapFor: functionSymbol [
+	| map minBCRange minMCRange |
+	map := VMMcpcBcpcMap new.
+	functionSymbol mcpcbcpcmap isArray ifFalse: 
+		[ map addRange: (0->6666) numSamples: (self samplesForSymbol: functionSymbol).
+		^ map ].
+	minBCRange := 0.
+	minMCRange := functionSymbol address.
+	functionSymbol mcpcbcpcmapDo: [ :mcpc :bcpc |
+		 map addRange: (minBCRange -> bcpc) numSamples: (self samplesForRange: minMCRange to: mcpc).
+		 minBCRange := bcpc.
+		 minMCRange := mcpc ].
+	map addRange: (minBCRange -> 6666) numSamples: (self samplesForRange: minMCRange to: functionSymbol limit).
+	^ map
+]
+
 { #category : #'as yet unclassified' }
 VMProfiler >> createParagraph [
 	
@@ -326,15 +370,35 @@ VMProfiler >> initialExtent [
 
 { #category : #initialization }
 VMProfiler >> initialize [
+
+	('Pharo*' match: Smalltalk version) ifTrue: [ ^PharoVMProfiler new].
+	('Squeak*' match: Smalltalk version) ifTrue: [ ^SqueakVMProfiler new].
+	
+	
+]
+
+{ #category : #initialization }
+VMProfiler >> initializeInstance [
 	self initializeSamples.
-	self initializeVersion. 
-	self initializeSymbols.
 	self clearHistory.
 	symbolsMode := #byAddress.
 	symbolTypes := IdentitySet new.
 	selections := ByteArray new.
 	highAddress := lowAddress := minSelectionIndex := maxSelectionIndex := 0.
-	self toggleShowing: #module.
+	aboutToProfile := false.
+	total := rangeTotal := startTime := elapsedTime := 0.
+	gcPriorToProfile := clearPriorToProfile := true.
+	forkProfile := false
+]
+
+{ #category : #initialization }
+VMProfiler >> initializeMost [
+	self initializeSamples.
+	self clearHistory.
+	symbolsMode := #byAddress.
+	symbolTypes := IdentitySet new.
+	selections := ByteArray new.
+	highAddress := lowAddress := minSelectionIndex := maxSelectionIndex := 0.
 	aboutToProfile := false.
 	total := rangeTotal := startTime := elapsedTime := 0.
 	gcPriorToProfile := clearPriorToProfile := true.
@@ -352,21 +416,10 @@ VMProfiler >> initializeSymbols [
 	Smalltalk platformName
 		caseOf: {
 				['Mac OS'] -> [Cursor wait showWhile:
-								[ symbolManager := VMProfilerMacSymbolsManager using: fileSystem ]].
+								[ symbolManager := VMProfilerMacSymbolsManager using: CompatibilityClass ]].
 				['unix'] -> [Cursor wait showWhile:
-								[symbolManager := VMProfilerLinuxSymbolsManager using: fileSystem]] }
+								[symbolManager := VMProfilerLinuxSymbolsManager using: CompatibilityClass ]] }
 		otherwise: [self error: 'not yet supported on ', Smalltalk platformName]
-]
-
-{ #category : #initialization }
-VMProfiler >> initializeVersion [
-	
-	('Pharo*' match: Smalltalk version) ifTrue: [ version := PharoVMProfiler.
-												fileSystem := PharoVMFileSystem new].
-	('Squeak*' match: Smalltalk version) ifTrue: [ version := SqueakVMProfiler.
-												   fileSystem := SqueakVMFileSystem new].
-
-	
 ]
 
 { #category : #reports }
@@ -472,11 +525,20 @@ VMProfiler >> positionedLabels [
 
 { #category : #primitives }
 VMProfiler >> primitiveCollectCogCodeConstituents [
+	^ self primitiveCollectCogCodeConstituents: self withDetails
+]
+
+{ #category : #primitives }
+VMProfiler >> primitiveCollectCogCodeConstituents: withDetails [
 	"Answer the contents of the code zone as an array of pair-wise element, address
 	 in ascending address order.  Answer a string for a runtime routine or abstract label
 	 (beginning, end, etc), a CompiledMethod for a cog machine-code method,
 	 or a selector (presumably a Symbol) for a cog machine-code open or closed PIC.
-	 Fail if this isn't a Cog VM or if out of memory.  If this isn't a Cog VM answer nil."
+	 Fail if this isn't a Cog VM or if out of memory.  If this isn't a Cog VM answer nil.
+	
+	If the parameter is true, answers the mapping between machine code pc and 
+	bytecode pc in relevant methods instead of just the start address.
+	"
 	<primitive: 253 error: ec>
 	^ec ifNotNil: [self primitiveFailed]
 
@@ -494,6 +556,29 @@ VMProfiler >> primitiveControlVMProfile: startStopBar size: bufferSizeOrNil [
 	^self primitiveFailed
 ]
 
+{ #category : #reports }
+VMProfiler >> printInnerDetails: assoc with: cogMethodMaps on: aStream [
+	| functionSymbol totalSamples map cumulative n |
+	functionSymbol := assoc key.
+	totalSamples := assoc value.
+	cumulative := 0.
+	map := cogMethodMaps at: functionSymbol.
+	map bcRangeAndNumSamplesDo: [ :bcRange :numSamples |
+		numSamples > 0 ifTrue:
+			[ aStream tab.
+			  self printPercentage: numSamples total: totalSamples on: aStream.
+			  aStream tab:2.
+			  aStream << bcRange printString.
+			  n := 10 - bcRange printString size // 4 + 1.
+			  aStream tab:n.
+			  aStream nextPut: $(; print: numSamples; nextPut: $); tab: (numSamples < 100 ifTrue: [1] ifFalse: [1]); nextPut: $(.
+			  cumulative := cumulative + numSamples.
+			  self printPercentage: cumulative total: totalSamples on: aStream.
+			  aStream nextPut: $); cr. ]]
+	
+	
+]
+
 { #category : #menus }
 VMProfiler >> printPercentage: value total: total on: aStream [
 	"Print percentage as NN.FF% (or 100.0%) on aStream"
@@ -509,6 +594,16 @@ VMProfiler >> printPercentage: value total: total on: aStream [
 
 { #category : #reports }
 VMProfiler >> printSymbolTotals: totals labelled: label on: aStream sumTotal: sumTotal [
+	^ self 
+		printSymbolTotals: totals 
+		labelled: label 
+		on: aStream 
+		sumTotal: sumTotal 
+		cogMethodMaps: Dictionary new
+]
+
+{ #category : #reports }
+VMProfiler >> printSymbolTotals: totals labelled: label on: aStream sumTotal: sumTotal cogMethodMaps: cogMethodMaps [
 	"Print sorted totals for all symbols with a total greater than 0.01% of the grand total."
 	| substantial insubstantial cut cumulative heading percentageWidth compositionWidth tabWidth labelWidthCut labelledInFull |
 	cut := total / 10000.0.
@@ -546,7 +641,8 @@ VMProfiler >> printSymbolTotals: totals labelled: label on: aStream sumTotal: su
 		aStream nextPut: $(; print: assoc value; nextPut: $); tab: (assoc value < 100 ifTrue: [2] ifFalse: [1]); nextPut: $(.
 		cumulative := cumulative + assoc value.
 		self printPercentage: cumulative total: sumTotal on: aStream.
-		aStream nextPut: $); cr].
+		aStream nextPut: $); cr.
+		self withDetails ifTrue: [cogMethodMaps at: assoc key ifPresent: [ :i | self printInnerDetails: assoc with: cogMethodMaps on: aStream ]. ].].
 	aStream cr; cr
 ]
 
@@ -605,7 +701,8 @@ VMProfiler >> putReportPreambleOn: s [
 VMProfiler >> report: s [
 	self totalsDo:
 		[:vmTotals :cogTotals :nonVMTotals
-		 :samplesInVM :samplesInCog :samplesInNonVMModules :samplesInNonVM |
+		 :samplesInVM :samplesInCog :samplesInNonVMModules :samplesInNonVM 
+		 :cogMethodMaps |
 		self putReportPreambleOn: s.
 		s print: samplesInVM + samplesInCog; nextPutAll: ' samples in the VM'; tab; nextPut: $(;
 		   print: total; nextPutAll: ' samples in the entire program)  '.
@@ -622,7 +719,7 @@ VMProfiler >> report: s [
 			 s nextPutAll: ' of entire vm ('.
 			 self printPercentage: samplesInVM total: total on: s.
 			 s nextPutAll: ' of total)'; cr; cr.
-			 self printSymbolTotals: cogTotals labelled: 'generated vm code' on: s sumTotal: samplesInCog].
+			 self printSymbolTotals: cogTotals labelled: 'generated vm code' on: s sumTotal: samplesInCog cogMethodMaps: cogMethodMaps].
 		vmTotals isEmpty ifFalse:
 			[self printSymbolTotals: vmTotals labelled: 'vanilla vm code' on: s sumTotal: samplesInVM].
 		(samplesInNonVM * 100 >= total
@@ -776,6 +873,13 @@ VMProfiler >> symbolSelectionAt: index [
 	^(selections at: index ifAbsent: [0]) ~= 0
 ]
 
+{ #category : #reports }
+VMProfiler >> symbolsInNonVMModule [ 
+	^ (symbolManager modules
+			copyWithout: symbolManager vmModule)
+				copyWithout: symbolManager cogModule
+]
+
 { #category : #'as yet unclassified' }
 VMProfiler >> toggleShowing: aSymbol [
 	(symbolTypes includes: aSymbol)
@@ -798,7 +902,7 @@ VMProfiler >> toggleShowing: aSymbol [
 ]
 
 { #category : #reports }
-VMProfiler >> totalsDo: septuaryBlock [
+VMProfiler >> totalsDo: octuaryBlock [
 	"Evaluate aBlock with 
 		a Dictionary of symbol -> total for the functions in the VM (excluding generated code)
 		a Dictionary of symbol -> total for the generated code in the VM
@@ -809,52 +913,35 @@ VMProfiler >> totalsDo: septuaryBlock [
 		total number of samples in functions in other code
 		total number of samples not in VM or VM-generated code (incudes code not in any function)"
 	| vmTotals cogTotals nonVMTotals
-	  samplesInVM samplesInCog samplesInNonVMModules samplesInNonVM |
+	  samplesInVM samplesInCog samplesInNonVMModules samplesInNonVM cogMethodMaps |
 	vmTotals := Dictionary new.
 	cogTotals := Dictionary new.
 	nonVMTotals := Dictionary new.
-	samplesInVM := samplesInCog := samplesInNonVMModules := 0.
-	(symbolManager symbolsInModule: symbolManager vmModule) do:
-		[:sym| | samples |
-		((#(publicFunction privateFunction) includes: sym type)
-		 and: [(samples := self samplesForSymbol: sym) > 0]) ifTrue:
-			[vmTotals at: sym put: samples.
-			 samplesInVM := samplesInVM + samples]].
-	 (symbolManager symbolsInModule: symbolManager cogModule) do:
-		[:sym| | samples |
-		((#(publicFunction privateFunction) includes: sym type)
-		 and: [(samples := self samplesForSymbol: sym) > 0]) ifTrue:
-			[cogTotals at: sym put: samples.
-			 samplesInCog := samplesInCog + samples]].
-	 ((symbolManager modules
-			copyWithout: symbolManager vmModule)
-				copyWithout: symbolManager cogModule) do:
-		[:module|
-		(symbolManager symbolsInModule: module) do:
-			[:sym| | samples |
-			((#(publicFunction privateFunction) includes: sym type)
-			and: [(samples := self samplesForSymbol: sym) > 0]) ifTrue:
-				[nonVMTotals at: sym put: samples.
-				 samplesInNonVMModules := samplesInNonVMModules + samples]]].
+	cogMethodMaps := Dictionary new.
+	samplesInVM := self countSymbols: (symbolManager symbolsInModule: symbolManager vmModule) totals: vmTotals.
+	samplesInCog := self countSymbols: (symbolManager symbolsInModule: symbolManager cogModule) totals: cogTotals.
+	samplesInNonVMModules := self countSymbols: self symbolsInNonVMModule totals: nonVMTotals.
 	samplesInNonVM := total - samplesInVM - samplesInCog.
+	cogTotals keysAndValuesDo: 
+		[ :key :value |
+		value > 10 ifTrue: [ cogMethodMaps at: key put: (self createMcpcBcpcMapFor: key) ] ].
 	nonVMTotals
 		at: 'Samples Not In Any Function'
 		put: samplesInNonVM - samplesInNonVMModules.
-	septuaryBlock valueWithArguments:
+	octuaryBlock valueWithArguments:
 		{vmTotals.
 		 cogTotals.
 		 nonVMTotals.
 		 samplesInVM.
 		 samplesInCog.
 		 samplesInNonVMModules.
-		 samplesInNonVM}
+		 samplesInNonVM.
+		 cogMethodMaps}
 ]
 
 { #category : #menus }
 VMProfiler >> trimmedExpressionText [
 	| expression |
-	expressionTextMorph ifNil: [expressionTextMorph := PluggableTextMorph new
-																setText: '' asText].
 	^((expression := expressionTextMorph text asString) notEmpty
 	   and: [expression first = $[
 	   and: [expression last = $] ]])
@@ -892,4 +979,17 @@ VMProfiler >> widthInDefaultFontOf: aString [
 		in: Display boundingBox;
 		adjustRightX)
 		extent x
+]
+
+{ #category : #'as yet unclassified' }
+VMProfiler >> withDetails [
+
+	^ withDetails
+]
+
+{ #category : #'as yet unclassified' }
+VMProfiler >> withDetails: aBoolean [
+"is the boolean is set to true, then the profiler will provide a detailed report (with bytecode ranges within a function)"
+
+	withDetails:= aBoolean
 ]

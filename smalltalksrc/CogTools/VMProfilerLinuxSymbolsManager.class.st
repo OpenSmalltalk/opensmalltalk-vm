@@ -41,6 +41,13 @@ VMProfilerLinuxSymbolsManager class >> shutDown: quitting [
 				[VMFileSystem deleteContentsOf: tempDir]]]
 ]
 
+{ #category : #accessing }
+VMProfilerLinuxSymbolsManager class >> tempDirectory [
+
+	^ VMFileSystem ifNotNil: [VMFileSystem nameFordirPath:'/tmp/vmsyms'  plus:OSProcess thisOSProcess pid printString] 
+
+]
+
 { #category : #parsing }
 VMProfilerLinuxSymbolsManager >> hexFromStream: aStream [
 	"Fast reading of lower-case hexadecimal."
@@ -62,7 +69,7 @@ VMProfilerLinuxSymbolsManager >> initializeMost [
 	symbolsByModule := Dictionary new.
 	shortNames := Set new.
 	tempDir := self class tempDirectory.
-	self fileSystem ensureExistenceOfDirectory:  tempDir. 
+	VMFileSystem ensureExistenceOfDirectory:  tempDir. 
 	modules := self primitiveExecutableModules.
 	modules := (1 to: modules size by: 2) collect:
 					[:i| | fileName shortName counter longName |
@@ -92,7 +99,7 @@ VMProfilerLinuxSymbolsManager >> initializeMost [
 	"The primitive always answers the VM info in the first entry."
 	vmModule := modules first.
 	"now filter out the files we can't read..."
-	modules := modules select: [:m| modulesByName includesKey: m name]
+	modules := modules select: [:m| m notNil and: [modulesByName includesKey: m name]]
 ]
 
 { #category : #'initialize-release' }
