@@ -40,3 +40,9 @@ VMFileSystem >> parentPathOfFile: aFilename [
 
 	self subclassResponsibility 
 ]
+
+{ #category : #'as yet unclassified' }
+VMFileSystem >> round: anInteger downTo: decimalPlaces [
+
+	self subclassResponsability
+]

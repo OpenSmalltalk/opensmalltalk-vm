@@ -39,3 +39,9 @@ SqueakVMFileSystem >> parentPathOfFile: aFilename [
 
 	^ FileDirectory dirPathFor: aFilename 
 ]
+
+{ #category : #'as yet unclassified' }
+SqueakVMFileSystem >> round: anInteger downTo: decimalPlaces [
+
+	^ anInteger printShowingMaxDecimalPlaces: decimalPlaces
+]
