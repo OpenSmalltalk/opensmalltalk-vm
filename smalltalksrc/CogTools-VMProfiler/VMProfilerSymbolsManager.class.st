@@ -54,7 +54,9 @@ VMProfilerSymbolsManager class >> using: aFileSystem [
 { #category : #'Cog compiled code' }
 VMProfilerSymbolsManager >> addCogModuleSymbols: symbols [
 	self initialized ifFalse:
-		[(Delay forMilliseconds: 1000) wait].
+		[Cursor wait showWhile:
+			[[self initialized] whileFalse:
+				[(Delay forMilliseconds: 100) wait]]].
 	modules
 		removeAllSuchThat: [:existingModule| cogModule name = existingModule name];
 		add: cogModule.
@@ -89,21 +91,15 @@ VMProfilerSymbolsManager >> computeCogCodeModule: cogCodeConstituents [
 													ifFalse: ['PIC ', (thing isString
 																	ifTrue: [thing]
 																	ifFalse: [thing printString])]]);
-							address: (cogCodeConstituents at: i + 1);
-							limit: (cogCodeConstituents at: i + 3 ifAbsent: [cogCodeConstituents last])].
+							address: (self extractAddress: (cogCodeConstituents at: i + 1));
+							mcpcbcpcmap: (cogCodeConstituents at: i + 1);
+							limit: (self extractAddress: (cogCodeConstituents at: i + 3 ifAbsent: [cogCodeConstituents last]))].
 	self addCogModuleSymbols: symbols
 ]
 
-{ #category : #accessing }
-VMProfilerSymbolsManager >> fileSystem [
-
-	^VMFileSystem 
-]
-
-{ #category : #accessing }
-VMProfilerSymbolsManager >> fileSystem: aVMFileSystem [
-	
-	VMFileSystem := aVMFileSystem. 
+{ #category : #'Cog compiled code' }
+VMProfilerSymbolsManager >> extractAddress: thing [
+	^ thing isArray ifTrue: [ thing first ] ifFalse: [ thing ]
 ]
 
 { #category : #'as yet unclassified' }

@@ -41,6 +41,13 @@ VMProfilerMacSymbolsManager class >> shutDown: quitting [
 				[VMFileSystem deleteContentsOf: tempDir]]]
 ]
 
+{ #category : #accessing }
+VMProfilerMacSymbolsManager class >> tempDirectory [
+
+	^ VMFileSystem ifNotNil: [VMFileSystem nameFordirPath:'private/tmp/vmsyms'  plus:OSProcess thisOSProcess pid printString] 
+
+]
+
 { #category : #parsing }
 VMProfilerMacSymbolsManager >> archName [
 	"Answer the architecture name for use with nm, size et al."
@@ -93,7 +100,7 @@ VMProfilerMacSymbolsManager >> initializeMost [
 	shortNames := Set new.
 	modules := self primitiveExecutableModulesAndOffsets.
 	tempDir := self class tempDirectory.
-	self fileSystem ensureExistenceOfDirectory:  tempDir. 
+	VMFileSystem ensureExistenceOfDirectory:  tempDir. 
 	modules := (1 to: modules size by: 4) collect:
 					[:i| | shortName counter |
 					shortName := VMFileSystem nameOfFile: (modules at: i) in: tempDir. 
