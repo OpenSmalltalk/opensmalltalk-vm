@@ -39,3 +39,9 @@ PharoVMFileSystem >> parentPathOfFile: aFilename [
 
 	^ (aFilename asFileReference) parent pathString  
 ]
+
+{ #category : #'as yet unclassified' }
+PharoVMFileSystem >> round: anInteger downTo: decimalPlaces [
+
+	^ anInteger printShowingDecimalPlaces: decimalPlaces
+]
