@@ -722,6 +722,93 @@ SpurMemoryManager class >> hasSpurMemoryManagerAPI [
 	^true
 ]
 
+{ #category : #analysis }
+SpurMemoryManager class >> identify32BitSignedComparisonsInSegmentIO [
+	"self identify32BitSignedComparisonsInSegmentIO"
+	self identifySignedComparisonsFor: #(ObjectMemory Spur32BitMemoryManager)
+		in:	(self organization listAtCategoryNamed: #'image segment in/out')
+		noise: #(	'classIndex* >= numOutPointers'
+					'count > ptr - start / self bytesPerOop'
+					'endSeg - segAddr < self baseHeaderSize + self bytesPerOop'
+					'errorCode* > 0'
+					'GCModeImageSegment > 0'
+					'hash - TopHashBit <= outIndex'
+					'limit - ptr <= 8'
+					'num* >= self numSlotsMask'
+					'num* <= 1'
+					'outIndex >= (self numSlotsOf: outPointerArray)'
+					'outIndex := self mapOopsFrom: * < 0'
+					'segAddr - segStart / 8 + self lastClassIndexPun >= TopHashBit'
+					'there > 0'
+					'* > self identityHashHalfWordMask'
+					'*segmentLimit >= self numSlotsMask*'
+					'* > self isForwardedObjectClassIndexPun'
+					'* > self lastClassIndexPun')
+]
+
+{ #category : #analysis }
+SpurMemoryManager class >> identify64BitSignedComparisonsInSegmentIO [
+	"self identify64BitSignedComparisonsInSegmentIO"
+	self identifySignedComparisonsFor: #(ObjectMemory Spur64BitMemoryManager)
+		in:	(self organization listAtCategoryNamed: #'image segment in/out')
+		noise: #(	'classIndex* >= numOutPointers'
+					'count > ptr - start / self bytesPerOop'
+					'endSeg - segAddr < self baseHeaderSize + self bytesPerOop'
+					'errorCode* > 0'
+					'GCModeImageSegment > 0'
+					'hash - TopHashBit <= outIndex'
+					'limit - ptr <= 8'
+					'num* >= self numSlotsMask'
+					'num* <= 1'
+					'num* > 0'
+					'num* < 1'
+					'outIndex >= (self numSlotsOf: outPointerArray)'
+					'outIndex := self mapOopsFrom: * < 0'
+					'segAddr - segStart / 8 + self lastClassIndexPun >= TopHashBit'
+					'there > 0'
+					'* > self identityHashHalfWordMask'
+					'*segmentLimit >= self numSlotsMask*'
+					'* > self isForwardedObjectClassIndexPun'
+					'* > self lastClassIndexPun')
+]
+
+{ #category : #analysis }
+SpurMemoryManager class >> identifySignedComparisonsFor: options in: selectors noise: noise [
+	"self identify32BitSignedComparisonsInSegmentIO"
+	"self identify64BitSignedComparisonsInSegmentIO"
+	| vmm cg halt |
+	halt := false.
+	vmm := (VMMaker forPlatform: 'Cross')
+				interpreterClass: StackInterpreter;
+				options: options.
+	cg := [vmm buildCodeGeneratorForInterpreter]
+			on: Notification
+			do: [:ex|
+				ex tag == #getVMMaker
+					ifTrue: [ex resume: vmm]
+					ifFalse: [ex pass]].
+	cg vmClass preGenerationHook: cg.
+	cg inferTypesForImplicitlyTypedVariablesAndMethods.
+	cg retainMethods: self selectors.
+	cg prepareMethods.
+	cg doInlining: true.
+	selectors sort do:
+		[:sel|
+		(cg methodNamed: sel) ifNotNil:
+			[:m|
+			m parseTree nodesDo:
+				[:node|
+				(node isSend
+				 and: [(#(< > <= >=) includes: node selector)
+				 and: [({node receiver. node args first } anySatisfy:
+						[:o| (cg typeFor: o in: m)
+								ifNil: [true]
+								ifNotNil: [:t| (cg isIntegralCType: t) and: [t first ~= $u]]])
+				 and: [noise noneSatisfy: [:n| n match: node printString]]]]) ifTrue:
+					[halt ifTrue: [self halt: node printString].
+					 Transcript ensureCr; nextPutAll: sel; space; print: node; flush]]]]
+]
+
 { #category : #translation }
 SpurMemoryManager class >> implicitReturnTypeFor: aSelector [
 	"Answer the return type for methods that don't have an explicit return."
@@ -7731,7 +7818,9 @@ SpurMemoryManager >> mapOopsAndValidateClassRefsFrom: segmentStart to: segmentLi
 	 Scan through mapping oops and validating class references.  Defer
 	 entering any class objects into the class table and/or pinning objects
 	 until the second pass in assignClassIndicesAndPinFrom:to:outPointers:."
+	<var: 'segmentLimit' type: #usqInt>
 	| numOutPointers numSegObjs objOop |
+	<var: #oop type: #usqInt>
 	numOutPointers := self numSlotsOf: outPointerArray.
 	numSegObjs := 0.
 	objOop := self objectStartingAt: segmentStart.
