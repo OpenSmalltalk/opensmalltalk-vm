@@ -35,7 +35,7 @@ SpurImageSegmentTests >> testSaveHashedCollectionAndAllSubclasses [
 				object: (harness findClassNamed: 'Compiler')
 				perform: (harness findSymbol: #evaluate:)
 				withArguments: {vm objectMemory stringForCString:
-					'[| seg out result |
+					'[| seg out roots result |
 					 seg := WordArray new: 1024 * 1024.
 					 out := Array new: 512.
 					 roots := HashedCollection withAllSubclasses asArray.
@@ -65,7 +65,7 @@ SpurImageSegmentTests >> testSaveHashedCollectionSubclasses [
 				object: (harness findClassNamed: 'Compiler')
 				perform: (harness findSymbol: #evaluate:)
 				withArguments: {vm objectMemory stringForCString:
-					'[| seg out result |
+					'[| seg out roots result |
 					 seg := WordArray new: 1024 * 1024.
 					 out := Array new: 256.
 					 roots := HashedCollection subclasses asArray.

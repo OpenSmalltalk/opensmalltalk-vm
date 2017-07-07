@@ -1399,7 +1399,7 @@ SpurMemoryManager >> allInstancesOf: aClass [
 		 ^freeChunk].
 	MarkObjectsForEnumerationPrimitives ifTrue:
 		[self markObjects: true]. "may not want to revive objects unnecessarily; but marking is sloooow."
-	freeChunk := self allocateLargestFreeChunk.
+	freeChunk := self allocateLargestFreeChunk. "N.B. Does /not/ update totalFreeOldSpace"
 	start := freeChunk + self baseHeaderSize.
 	limit := self addressAfter: freeChunk.
 	(self isClassAtUniqueIndex: aClass)
@@ -1488,7 +1488,7 @@ SpurMemoryManager >> allObjects [
 	| freeChunk ptr start limit count bytes |
 	MarkObjectsForEnumerationPrimitives ifTrue:
 		[self markObjects: true]. "may not want to revive objects unnecessarily; but marking is sloooow."
-	freeChunk := self allocateLargestFreeChunk.
+	freeChunk := self allocateLargestFreeChunk. "N.B. Does /not/ update totalFreeOldSpace"
 	ptr := start := freeChunk + self baseHeaderSize.
 	limit := self addressAfter: freeChunk.
 	count := 0.
@@ -2412,7 +2412,7 @@ SpurMemoryManager >> assignClassIndicesAndPinFrom: segmentStart to: segmentLimit
 	| fillIdx objOop |
 	objOop := self objectStartingAt: segmentStart.
 	fillIdx := 0.
-	[objOop < segmentLimit] whileTrue:
+	[self oop: objOop isLessThan: segmentLimit] whileTrue:
 		[| classRef classOop classIndex |
 		 self storePointerUnchecked: fillIdx ofObject: loadedObjectsArray withValue: objOop.
 		 fillIdx := fillIdx + 1.
@@ -3901,6 +3901,7 @@ SpurMemoryManager >> copyObj: objOop toAddr: segAddr startAt: segStart stopAt: e
 	"Copy the object..."
 	| bodySize copy hash |
 	<inline: false>
+	self deny: (self isCopiedIntoSegment: objOop).
 	bodySize := self bytesInObject: objOop.
 	(self oop: segAddr + bodySize isGreaterThanOrEqualTo: endSeg) ifTrue:
 		[^PrimErrWritePastObject halt].
@@ -3925,7 +3926,7 @@ SpurMemoryManager >> copyObj: objOop toAddr: segAddr startAt: segStart stopAt: e
 	"Now forward the object to its copy in the segment."
 	self storePointerUnchecked: i ofObject: savedFirstFields withValue: (self fetchPointer: 0 ofObject: objOop);
 		storePointerUnchecked: 0 ofObject: objOop withValue: copy;
-		setIsMarkedOf: objOop to: true.
+		markAsCopiedIntoSegment: objOop.
 
 	"Answer the new end of segment"
 	^segAddr + bodySize
@@ -4359,14 +4360,14 @@ SpurMemoryManager >> enterClassesIntoClassTableFrom: segmentStart to: segmentLim
 	 otherwise remove all entered entries and answer an error code."
 	| objOop errorCode|
 	objOop := self objectAfter: (self objectStartingAt: segmentStart).
-	[objOop < segmentLimit
+	[(self oop: objOop isLessThan: segmentLimit)
 	 and: [self isRemembered: objOop]] whileTrue:
 		[self setIsRememberedOf: objOop to: false.
 		 (errorCode := self enterIntoClassTable: objOop) ~= 0 ifTrue:
 			[| oop |
 			 oop := objOop.
 			 objOop := self objectAfter: (self objectStartingAt: segmentStart).
-			 [objOop < oop] whileTrue:
+			 [self oop: objOop isLessThan: oop] whileTrue:
 				[self expungeFromClassTable: objOop.
 				 objOop := self objectAfter: objOop limit: segmentLimit].
 			 ^errorCode].
@@ -5158,6 +5159,20 @@ SpurMemoryManager >> forwardedFormat [
 	^7
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> forwardersIn: anObject [
+	"Answer if anObject is itself forwarded, or is a pointer object containing any references to forwarded objects."
+	(self isForwarded: anObject) ifTrue:
+		[^true].
+	0 to: (self numPointerSlotsOf: anObject) - 1 do:
+		[:i| | oop |
+		 oop := self fetchPointer: i ofMaybeForwardedObject: anObject.
+		 ((self isNonImmediate: oop)
+		  and: [self isForwarded: oop]) ifTrue:
+			[^true]].
+	^false
+]
+
 { #category : #'free space' }
 SpurMemoryManager >> freeChunkLargerIndex [
 	"for organizing the tree of large free chunks."
@@ -5835,6 +5850,47 @@ SpurMemoryManager >> incrementalGC [
 	self shouldNotImplement
 ]
 
+{ #category : #'debug support' }
+SpurMemoryManager >> indexOf: anElement in: anObject [
+	<api>
+	| fmt numSlots |
+	fmt := self formatOf: anObject.
+
+	fmt <= self lastPointerFormat ifTrue:
+		[numSlots := self numSlotsOf: anObject.
+		 0 to: numSlots do:
+			[:i| anElement = (self fetchPointer: i ofMaybeForwardedObject: anObject) ifTrue: [^i]].
+		-1].
+
+	fmt >= self firstByteFormat ifTrue:
+		[fmt >= self firstCompiledMethodFormat ifTrue:
+			[^self primitiveFailFor: PrimErrUnsupported].
+		 numSlots := self numBytesOfBytes: anObject.
+		 0 to: numSlots do:
+			[:i| (self fetchByte: i ofObject: anObject) ifTrue: [^i]].
+		-1].
+
+	fmt >= self firstShortFormat ifTrue:
+		[numSlots := self num16BitUnitsOf: anObject.
+		 0 to: numSlots do:
+			[:i| anElement = (self fetchUnsignedShort16: i ofObject: anObject) ifTrue: [^i]].
+		-1].
+
+	fmt = self sixtyFourBitIndexableFormat ifTrue:
+		[numSlots := self num64BitUnitsOf: anObject.
+		 0 to: numSlots do:
+			[:i| anElement = (self fetchLong64: i ofObject: anObject) ifTrue: [^i]].
+		-1].
+
+	fmt >= self firstLongFormat ifTrue:
+		[numSlots := self num32BitUnitsOf: anObject.
+		 0 to: numSlots do:
+			[:i| anElement = (self fetchLong32: i ofObject: anObject) ifTrue: [^i]].
+		-1].
+
+	^-1
+]
+
 { #category : #'header formats' }
 SpurMemoryManager >> indexablePointersFormat [
 	<api>
@@ -6459,6 +6515,12 @@ SpurMemoryManager >> isContextHeader: aHeader [
 SpurMemoryManager >> isContextNonImm: oop [
 	<inline: true>
 	^(self classIndexOf: oop) = ClassMethodContextCompactIndex
+]
+
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> isCopiedIntoSegment: anObjectInTheHeap [
+	<inline: true>
+	^self isMarked: anObjectInTheHeap
 ]
 
 { #category : #'obj stacks' }
@@ -7673,9 +7735,10 @@ SpurMemoryManager >> mapOopsAndValidateClassRefsFrom: segmentStart to: segmentLi
 	numOutPointers := self numSlotsOf: outPointerArray.
 	numSegObjs := 0.
 	objOop := self objectStartingAt: segmentStart.
-	[objOop < segmentLimit] whileTrue:
+	[self oop: objOop isLessThan: segmentLimit] whileTrue:
 		[| classIndex hash oop mappedOop |
 		 numSegObjs := numSegObjs + 1.
+		 "No object in the segment should be marked.  If is is something is wrong."
 		 (self isMarked: objOop) ifTrue:
 			[^PrimErrInappropriate].
 		 classIndex := self classIndexOf: objOop.
@@ -7730,48 +7793,48 @@ SpurMemoryManager >> mapOopsFrom: segStart to: segAddr outPointers: outPointerAr
 	outIndex := 0.
 	self fillObj: outPointerArray numSlots: (self numSlotsOf: outPointerArray) with: nilObj.
 	objOop := self objectStartingAt: segStart.
-	[objOop < segAddr] whileTrue:
-		[| oop hash segIndex |
-		 oop := self fetchClassOfNonImm: objOop.
+	[self oop: objOop isLessThan: segAddr] whileTrue:
+		[| heapOop oop hash segIndex |
+		 heapOop := self fetchClassOfNonImm: objOop.
 		 "Set the classIndex of the instance.  This is a segment offset (segAddr - segStart / allocatiopnUnit) for instances of
 		  classes within the segment, and an outPointer index (index in outPointers + TopHashBit) for classes outside the segment."
-		 (self isMarked: oop)
+		 (self isCopiedIntoSegment: heapOop)
 			ifTrue: "oop is a class in the segment; storeImageSegmentInto:outPointers:roots: established offset is within range."
-				[oop := self fetchPointer: 0 ofObject: oop.
+				[oop := self fetchPointer: 0 ofObject: heapOop.
 				 self assert: (self oop: oop isGreaterThanOrEqualTo: segStart andLessThan: segAddr).
 				 segIndex := oop - segStart / self allocationUnit + self firstClassIndexPun.
 				 (segIndex anyMask: TopHashBit) ifTrue: "Too many classes in the segment"
 					[^-1 halt]]
 			ifFalse: "oop is an outPointer; locate or allocate its oop"
-				[hash := self rawHashBitsOf: oop.
-				 (self is: hash outPointerClassHashFor: oop in: outPointerArray limit: outIndex)
+				[hash := self rawHashBitsOf: heapOop.
+				 (self is: hash outPointerClassHashFor: heapOop in: outPointerArray limit: outIndex)
 					ifTrue: [segIndex := hash]
 					ifFalse: "oop is a new outPointer; allocate its oop"
-						[outIndex := self newOutPointer: oop at: outIndex in: outPointerArray hashes: savedOutHashes.
+						[outIndex := self newOutPointer: heapOop at: outIndex in: outPointerArray hashes: savedOutHashes.
 						 outIndex = 0 ifTrue: "no room in outPointers; fail"
 							[^-1 halt].
-						 segIndex := self rawHashBitsOf: oop].
+						 segIndex := self rawHashBitsOf: heapOop].
 				 self assert: (segIndex anyMask: TopHashBit)].
 		 self setClassIndexOf: objOop to: segIndex.
 		 0 to: (self numPointerSlotsOf: objOop) - 1 do:
 			[:i|
-			 oop := self fetchPointer: i ofObject: objOop.
-			 (self isNonImmediate: oop) ifTrue:
-				[(self isMarked: oop)
+			 heapOop := self fetchPointer: i ofObject: objOop.
+			 (self isNonImmediate: heapOop) ifTrue:
+				[(self isCopiedIntoSegment: heapOop)
 					ifTrue: "oop is an object in the segment."
-						[oop := self fetchPointer: 0 ofObject: oop.
+						[oop := self fetchPointer: 0 ofObject: heapOop.
 						 self assert: (self oop: oop isGreaterThanOrEqualTo: segStart andLessThan: segAddr).
 						 oop := oop - segStart]
 					ifFalse: "oop is an outPointer; locate or allocate its oop"
-						[hash := self rawHashBitsOf: oop.
-						(self is: hash outPointerClassHashFor: oop in: outPointerArray limit: outIndex)
+						[hash := self rawHashBitsOf: heapOop.
+						(self is: hash outPointerClassHashFor: heapOop in: outPointerArray limit: outIndex)
 							ifTrue: [oop := hash - TopHashBit * self bytesPerOop + TopOopBit]
 							ifFalse: "oop is a new outPointer; allocate its oop"
-								[outIndex := self newOutPointer: oop at: outIndex in: outPointerArray hashes: savedOutHashes.
+								[outIndex := self newOutPointer: heapOop at: outIndex in: outPointerArray hashes: savedOutHashes.
 								 outIndex = 0 ifTrue: "no room in outPointers; fail"
 									[^-1 halt].
-								 self assert: ((self rawHashBitsOf: oop) anyMask: TopHashBit).
-								 oop := (self rawHashBitsOf: oop) - TopHashBit * self bytesPerOop + TopOopBit]].
+								 self assert: ((self rawHashBitsOf: heapOop) anyMask: TopHashBit).
+								 oop := (self rawHashBitsOf: heapOop) - TopHashBit * self bytesPerOop + TopOopBit]].
 				 self storePointerUnchecked: i ofObject: objOop withValue: oop]].
 		 objOop := self objectAfter: objOop limit: segAddr].
 	^outIndex
@@ -7989,6 +8052,12 @@ SpurMemoryManager >> markAndTraceWeaklingsFrom: startIndex [
 			field := self followOopField: i ofObject: weakling.
 			((self isImmediate: field) or: [self isMarked: field]) ifFalse:
 				[self markAndTrace: field]]]
+]
+
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> markAsCopiedIntoSegment: anObjectInTheHeap [
+	<inline: true>
+	self setIsMarkedOf: anObjectInTheHeap to: true
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -9002,6 +9071,7 @@ SpurMemoryManager >> objectsReachableFromRoots: arrayOfRoots [
 	 Thanks to Igor Stasenko for this idea."
 
 	| freeChunk ptr start limit count oop objOop |
+	<var: #freeChunk type: #usqInt> "& hence start & ptr are too; limit is also because of addressAfter:"
 	<inline: #never>
 	self assert: (self isArray: arrayOfRoots).
 	"Mark all objects except those only reachable from the arrayOfRoots by marking
@@ -9019,7 +9089,8 @@ SpurMemoryManager >> objectsReachableFromRoots: arrayOfRoots [
 	self assert: self noUnscannedEphemerons.
 
 	"Use the largest free chunk to answer the result."
-	freeChunk := self allocateLargestFreeChunk.
+	freeChunk := self allocateLargestFreeChunk. "N.B. Does /not/ update totalFreeOldSpace"
+	totalFreeOldSpace := totalFreeOldSpace - (self bytesInObject: freeChunk). "but must update so that growth in the markStack does not cause assert fails."
 	ptr := start := freeChunk + self baseHeaderSize.
 	limit := self addressAfter: freeChunk.
 	count := 0.
@@ -9030,49 +9101,50 @@ SpurMemoryManager >> objectsReachableFromRoots: arrayOfRoots [
 		[self longAt: ptr put: arrayOfRoots.
 		 ptr := ptr + self bytesPerOop].
 
+	"Now collect the roots and the transitive closure of unmarked objects from them."
 	0 to: (self numSlotsOf: arrayOfRoots) - 1 do:
-		[:i|
-		 oop := self fetchPointer: i ofObject: arrayOfRoots.
+		[:rx|
+		 oop := self fetchPointer: rx ofObject: arrayOfRoots.
 		 (self isNonImmediate: oop) ifTrue:
-			[self noCheckPush: oop onObjStack: markStack]].
+			[self deny: (self isForwarded: oop).
+			 self noCheckPush: oop onObjStack: markStack.
 
-	"Now collect the unmarked objects reachable from the roots."
-	[self isEmptyObjStack: markStack] whileFalse:
-		[objOop := self popObjStack: markStack.
-		 count := count + 1.
-		 ptr < limit ifTrue:
-			[self longAt: ptr put: objOop.
-			 ptr := ptr + self bytesPerOop].
-		 oop := self fetchClassOfNonImm: objOop.
-		 (self isMarked: oop) ifFalse:
-			[self setIsMarkedOf: objOop to: true.
-			 self noCheckPush: oop onObjStack: markStack].
-		 ((self isContextNonImm: objOop)
-		  and: [coInterpreter isStillMarriedContext: objOop]) "widow now, before the loop"
-			ifTrue:
-				[0 to: (coInterpreter numSlotsOfMarriedContext: objOop) - 1 do:
-					[:i|
-					 oop := coInterpreter fetchPointer: i ofMarriedContext: objOop.
-					 ((self isImmediate: oop)
-					  or: [self isMarked: oop]) ifFalse:
-						[self setIsMarkedOf: objOop to: true.
-						 self noCheckPush: oop onObjStack: markStack]]]
-			ifFalse:
-				[0 to: (self numPointerSlotsOf: objOop) - 1 do:
-					[:i|
-					 oop := self fetchPointer: i ofObject: objOop.
-					 ((self isImmediate: oop)
-					  or: [self isMarked: oop]) ifFalse:
-						[self setIsMarkedOf: objOop to: true.
-						 self noCheckPush: oop onObjStack: markStack]]]].
+			 "Collect the unmarked objects reachable from this root."
+			 [self isEmptyObjStack: markStack] whileFalse:
+				[objOop := self popObjStack: markStack.
+				 count := count + 1.
+				 ptr < limit ifTrue:
+					[self longAt: ptr put: objOop.
+					 ptr := ptr + self bytesPerOop].
+				 oop := self fetchClassOfNonImm: objOop.
+				 (self isMarked: oop) ifFalse:
+					[self setIsMarkedOf: oop to: true.
+					 self noCheckPush: oop onObjStack: markStack].
+				 ((self isContextNonImm: objOop)
+				  and: [coInterpreter isStillMarriedContext: objOop]) "widow now, before the loop"
+					ifTrue:
+						[0 to: (coInterpreter numSlotsOfMarriedContext: objOop) - 1 do:
+							[:i|
+							 oop := coInterpreter fetchPointer: i ofMarriedContext: objOop.
+							 ((self isImmediate: oop)
+							  or: [self isMarked: oop]) ifFalse:
+								[self setIsMarkedOf: oop to: true.
+								 self noCheckPush: oop onObjStack: markStack]]]
+					ifFalse:
+						[0 to: (self numPointerSlotsOf: objOop) - 1 do:
+							[:i|
+							 oop := self fetchPointer: i ofObject: objOop.
+							 ((self isImmediate: oop)
+							  or: [self isMarked: oop]) ifFalse:
+								[self setIsMarkedOf: oop to: true.
+								 self noCheckPush: oop onObjStack: markStack]]]]]].
 
 	self unmarkAllObjects.
 
-	totalFreeOldSpace := totalFreeOldSpace - (self bytesInObject: freeChunk).
 	"Now try and allocate the result"
 	(count > (ptr - start / self bytesPerOop) "not enough room"
 	 or: [limit ~= ptr and: [limit - ptr <= self allocationUnit]]) ifTrue: "can't split a single word"
-		[self freeChunkWithBytes: (self bytesInObject: freeChunk) at: (self startOfObject: freeChunk).
+		[self freeObject: freeChunk.
 		 self checkFreeSpace: GCModeImageSegment.
 		 ^self integerObjectOf: count].
 	"There's room; set the format, & classIndex and shorten."
@@ -10329,6 +10401,7 @@ SpurMemoryManager >> restoreObjectsIn: objArray upTo: limitOrTag savedFirstField
 SpurMemoryManager >> return: errCode restoringObjectsIn: firstArray savedFirstFields: savedFirstFields and: secondArray savedHashes: savedHashes [
 	<inline: false>
 	"This is part of storeImageSegmentInto:outPointers:roots:."
+	self cCode: [] inSmalltalk: [errCode ~= 0 ifTrue: [self halt]].
 	self restoreObjectsIn: firstArray upTo: -1 savedFirstFields: savedFirstFields.
 	self restoreObjectsIn: secondArray savedHashes: savedHashes.
 	self runLeakCheckerFor: GCModeImageSegment.
@@ -10340,6 +10413,7 @@ SpurMemoryManager >> return: errCode restoringObjectsIn: firstArray savedFirstFi
 SpurMemoryManager >> return: errCode restoringObjectsIn: firstArray upTo: limitOrTag savedFirstFields: savedFirstFields [
 	<inline: false>
 	"This is part of storeImageSegmentInto:outPointers:roots:."
+	self cCode: [] inSmalltalk: [errCode ~= 0 ifTrue: [self halt]].
 	self restoreObjectsIn: firstArray upTo: limitOrTag savedFirstFields: savedFirstFields.
 	self runLeakCheckerFor: GCModeImageSegment.
 	self assert: self allObjectsUnmarked.
@@ -11424,6 +11498,7 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArrayArg outPointers: out
 	<inline: false>
 	| segmentWordArray outPointerArray arrayOfRoots
 	  arrayOfObjects savedFirstFields savedOutHashes segStart segAddr endSeg outIndex numClassesInSegment |
+	<var: 'segAddr' type: #usqInt>
 	((self isObjImmutable: segmentWordArrayArg)
 	 or: [self isObjImmutable: outPointerArrayArg]) ifTrue:
 		[^PrimErrNoModification].
@@ -11441,6 +11516,8 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArrayArg outPointers: out
 	segmentWordArray := self updatePostScavenge: segmentWordArrayArg.
 	outPointerArray := self updatePostScavenge: outPointerArrayArg.
 	arrayOfRoots := self updatePostScavenge: arrayOfRootsArg.
+	self deny: (self forwardersIn: outPointerArray).
+	self deny: (self forwardersIn: arrayOfRoots).
 	
 	"Now compute the transitive closure, collecting the sequence of objects to be stored in the arrayOfObjects array.
 	 Included in arrayOfObjects are the arrayOfRoots and all its contents.  All objects have been unmarked."
@@ -11449,6 +11526,7 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArrayArg outPointers: out
 		[^PrimErrNoMemory].
 
 	self assert: self allObjectsUnmarked. "work to be done when the incremental GC is written"
+	self deny: (self forwardersIn: arrayOfObjects).
 
 	"Both to expand the max size of segment and to reduce the length of the
 	 load-time pass that adds classes to the class table, move classes to the
@@ -11514,7 +11592,7 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArrayArg outPointers: out
 									stopAt: endSeg
 									savedFirstFields: savedFirstFields
 									index: i.
-		newSegAddrOrError < segStart ifTrue:
+		(self oop: newSegAddrOrError isLessThan: segStart) ifTrue:
 			[^self return: newSegAddrOrError
 					restoringObjectsIn: arrayOfObjects upTo: i savedFirstFields: savedFirstFields].
 		 segAddr := newSegAddrOrError].
