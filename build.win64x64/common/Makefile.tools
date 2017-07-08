@@ -1,5 +1,5 @@
 #############################################################################
-# Compilation rules for Cygwin/mingw compiler on Microsoft Windows
+# Compilation rules for 64-bit Cygwin/mingw compiler on Microsoft Windows
 #
 
 TOOLPREFIX:=x86_64-w64-mingw32-
@@ -7,8 +7,17 @@ TOOLPREFIX:=x86_64-w64-mingw32-
 #############################################################################
 # C compiler settings (Use clang for having a working FFI)
 #
+ifeq ($(COMPILER_TO_USE),)
+COMPILER_TO_USE:=clang
+endif
+
+ifeq ($(COMPILER_TO_USE),clang)
 CC:= $(TOOLPREFIX)clang
 CXX:= $(TOOLPREFIX)clang++
+else
+CC:= $(TOOLPREFIX)gcc
+CXX:= $(TOOLPREFIX)g++
+endif
 
 WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-label -Wno-unused-function 
 
@@ -58,7 +67,7 @@ LD:=	 $(CC)
 LDCXX := $(TOOLPREFIX)clang++ # For linking c++ bundles
 
 EXPORT:=--export-all-symbols
-BASELDFLAGS:=-m64 -mthreads -Wl,$(EXPORT)
+BASELDFLAGS:=-m64 -mno-cygwin -mthreads -Wl,$(EXPORT)
 LDFLAGS:= -mwindows $(BASELDFLAGS)
 CONSOLELDFLAGS:= -mconsole $(BASELDFLAGS)
 STDLIBS:= -lddraw -ldinput -lopengl32 -lws2_32 -lcomdlg32 -lole32 -lwinmm \

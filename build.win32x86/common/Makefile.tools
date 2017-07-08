@@ -1,5 +1,5 @@
 #############################################################################
-# Compilation rules for Cygwin/mingw compiler on Microsoft Windows
+# Compilation rules for 32-bit Cygwin/mingw compiler on Microsoft Windows
 #
 
 TOOLPREFIX:=i686-w64-mingw32-
@@ -7,8 +7,17 @@ TOOLPREFIX:=i686-w64-mingw32-
 #############################################################################
 # C compiler settings (gcc 4.x)
 #
+ifeq ($(COMPILER_TO_USE),)
+COMPILER_TO_USE:=gcc
+endif
+
+ifeq ($(COMPILER_TO_USE),clang)
+CC:= $(TOOLPREFIX)clang
+CXX:= $(TOOLPREFIX)clang++
+else
 CC:= $(TOOLPREFIX)gcc
 CXX:= $(TOOLPREFIX)g++
+endif
 
 WARNINGS:= -Wall -Wno-unused-variable -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-function -Wno-unused-but-set-variable
 
@@ -43,7 +52,7 @@ CFLAGS:= -msse2 -ggdb2 -m32 \
 
 TZ:=$(shell date +%Z)
 XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN
-DEFS:=	$(COGDEFS) $(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
+DEFS:=	$(COGDEFS) $(WINVER) -DWIN32=1 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
 		-DNO_SERVICE -DNO_STD_FILE_SUPPORT -D'TZ="$(TZ)"' \
 		$(NDEBUG) -DLSB_FIRST -D'VM_NAME="$(VM_NAME)"' $(XDEFS) $(CROQUET)
 

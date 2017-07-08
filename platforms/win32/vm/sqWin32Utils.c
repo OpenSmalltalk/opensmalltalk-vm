@@ -142,14 +142,24 @@ int __cdecl abortMessage(const TCHAR* fmt, ...)
 { TCHAR *buf;
 	va_list args;
 
-  buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
+	if (fIsConsole) {
+#if 0
+		vfwprintf(stderr, fmt, args);
+#else
+		vwprintf(fmt, args);
+		fflush(stdout);
+#endif
+		exit(-1);
+	}
+	buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
 	va_start(args, fmt);
 	wvsprintf(buf, fmt, args);
 	va_end(args);
 
 	MessageBox(NULL,buf,TEXT(VM_NAME) TEXT("!"),MB_OK | MB_TASKMODAL | MB_SETFOREGROUND);
-  free(buf);
-  exit(-1);
+	free(buf);
+	exit(-1);
+	return 0;
 }
 #endif
 
@@ -161,12 +171,20 @@ int __cdecl warnPrintf(const TCHAR *fmt, ...)
 { TCHAR *buf;
 	va_list args;
 
-  buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
+	if (fIsConsole)
+#if 0
+		return vfwprintf(stderr, fmt, args);
+#else
+		return vwprintf(fmt, args);
+#endif
+
+	buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
 	va_start(args, fmt);
 	wvsprintf(buf, fmt, args);
 	va_end(args);
-  MessageBox(stWindow, buf, TEXT(VM_NAME) TEXT(" Warning!"), MB_OK | MB_ICONSTOP | MB_SETFOREGROUND);
-  free(buf);
+	MessageBox(stWindow, buf, TEXT(VM_NAME) TEXT(" Warning!"), MB_OK | MB_ICONSTOP | MB_SETFOREGROUND);
+	free(buf);
+	return 0;
 }
 #endif
 

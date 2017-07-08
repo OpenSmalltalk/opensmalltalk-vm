@@ -1601,7 +1601,28 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
    * allocation failures unless running as a console app because doing so
    * via a MessageBox will make the system unusable.
    */
-  fIsConsole = GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &mode);
+#if 0
+  fIsConsole = GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &mode);
+#elif 1 /* This way works */
+  { CONSOLE_SCREEN_BUFFER_INFO csbi;
+
+    GetConsoleScreenBufferInfo( GetStdHandle( STD_OUTPUT_HANDLE), &csbi);
+
+	fIsConsole = csbi.dwCursorPosition.X || csbi.dwCursorPosition.Y;
+  }
+#elif 1 /* This way works */
+  mode = 0;
+  GetConsoleMode(hInst, &mode);
+  printf("mode = %lx\n", mode);
+  fIsConsole = (mode & ENABLE_WINDOW_INPUT) == 0;
+#else
+  GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &mode);
+  fIsConsole = (mode & ENABLE_WINDOW_INPUT) == 0;
+#endif
+#if 0
+  printf("fIsConsole = %d\n", fIsConsole);
+  exit(0);
+#endif
 
   /* fetch us a copy of the command line */
   initialCmdLine = _strdup(lpCmdLine);

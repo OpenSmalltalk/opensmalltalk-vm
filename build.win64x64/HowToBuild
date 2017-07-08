@@ -159,3 +159,8 @@ unstripped VM to provide symbols, e.g.
 	(no debugging symbols found)
 	(gdb) file SqueakUnstripped.exe
 	(gdb) run trunk.image
+
+Note that on Cygwin, while cross-compilation works well, cross debugging does
+not work at all.  One has to debug 32-bit executables on a 32-bit installation
+with a 32-bit gdb, and 64-bit executables on a 64-bit installation with a 64-bit
+gdb.
