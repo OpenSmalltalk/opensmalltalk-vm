@@ -67,7 +67,7 @@ LD:=	 $(CC)
 LDCXX := $(TOOLPREFIX)clang++ # For linking c++ bundles
 
 EXPORT:=--export-all-symbols
-BASELDFLAGS:=-m64 -mno-cygwin -mthreads -Wl,$(EXPORT)
+BASELDFLAGS:=-m64 -mthreads -Wl,$(EXPORT)
 LDFLAGS:= -mwindows $(BASELDFLAGS)
 CONSOLELDFLAGS:= -mconsole $(BASELDFLAGS)
 STDLIBS:= -lddraw -ldinput -lopengl32 -lws2_32 -lcomdlg32 -lole32 -lwinmm \

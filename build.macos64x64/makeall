@@ -1,6 +1,6 @@
 #!/bin/bash -e
 trap 'exit 2' HUP INT PIPE TERM
-for d in *.spur* *.v3; do
+for d in *.spur*; do
 	if test -d "$d"; then
 		(cd ./$d;./mvm -A)
 	else
@@ -8,4 +8,4 @@ for d in *.spur* *.v3; do
 	fi
 done
 echo no news is good news...
-grep -w error: *.spur/LOG* *.v3/LOG*
+grep -w error: *.spur/LOG*

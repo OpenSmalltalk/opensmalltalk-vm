@@ -1,5 +1,5 @@
 #############################################################################
-# COmmon Makefile for Win32 VM using gcc, cygwin and gnu make
+# Common Makefile for Win32 VM using gcc, cygwin and gnu make
 # Do make init to allow make -n to function.
 #############################################################################
 
