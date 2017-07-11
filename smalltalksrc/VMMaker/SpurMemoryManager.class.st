@@ -2517,7 +2517,7 @@ SpurMemoryManager >> assignClassIndicesAndPinFrom: segmentStart to: segmentLimit
 		 ((self isInNewSpace: objOop)
 		  and: [self isPinned: objOop]) ifTrue:
 			[| oldClone |
-			 oldClone := self cloneInOldSpaceForPinning: objOop.
+			 oldClone := self cloneInOldSpace: objOop forPinning: true.
 			 oldClone ~= 0 ifTrue:
 				[self setIsPinnedOf: oldClone to: true.
 				 self forward: objOop to: oldClone]].
@@ -3782,15 +3782,23 @@ SpurMemoryManager >> clone: objOop [
 ]
 
 { #category : #allocation }
-SpurMemoryManager >> cloneInOldSpaceForPinning: objOop [
-	| numSlots fmt newObj |
+SpurMemoryManager >> cloneInOldSpace: objOop forPinning: forPinning [
+	<inline: false>
+	| numSlots fmt newObj hash |
 	numSlots := self numSlotsOf: objOop.
 	fmt := self formatOf: objOop.
 	
-	newObj := self allocateSlotsForPinningInOldSpace: numSlots
-					bytes: (self objectBytesForSlots: numSlots)
-					format: fmt
-					classIndex: (self classIndexOf: objOop).
+	forPinning
+		ifTrue:
+			[newObj := self allocateSlotsForPinningInOldSpace: numSlots
+							bytes: (self objectBytesForSlots: numSlots)
+							format: fmt
+							classIndex: (self classIndexOf: objOop)]
+		ifFalse:
+			[newObj := self allocateSlotsInOldSpace: numSlots
+							bytes: (self objectBytesForSlots: numSlots)
+							format: fmt
+							classIndex: (self classIndexOf: objOop)].
 	newObj ifNil:
 		[^0].
 	(self isPointersFormat: fmt)
@@ -3821,6 +3829,8 @@ SpurMemoryManager >> cloneInOldSpaceForPinning: objOop [
 				[coInterpreter maybeFixClonedCompiledMethod: newObj.
 				 ((self isYoungObject: objOop) or: [self isRemembered: objOop]) ifTrue:
 					[scavenger remember: newObj]]].
+	(hash := self rawHashBitsOf: objOop) ~= 0 ifTrue:
+		[self setHashBitsOf: newObj to: hash].
 	^newObj
 ]
 
@@ -4384,6 +4394,33 @@ SpurMemoryManager >> ensureHasOverflowHeader: arrayArg forwardIfCloned: forwardI
 			 clonedArray]
 ]
 
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> ensureNoNewObjectsIn: outPointerArray [
+	"This is part of loadImageSegmentFrom:outPointers:.
+	 Since the reembered bit is currently used to identify classes in the segment, setting remembered bits
+	 in new objects in the segment is difficult.  Instead simply arrange that there are no new objects in
+	 outPointerArray, obviating the need to remember any of the loaded objects in the segment."
+	| scanClassTable |
+	(self isRemembered: outPointerArray) ifFalse: [^0].
+	scanClassTable := false.
+	0 to: (self numSlotsOf: outPointerArray) - 1 do:
+		[:i| | oop clone hash |
+		 oop := self fetchPointer: i ofObject: outPointerArray.
+		 (self isYoung: oop) ifTrue:
+			[clone := self cloneInOldSpace: oop forPinning: false.
+			 clone = 0 ifTrue:
+				[^PrimErrNoMemory halt].
+			 ((hash := self rawHashBitsOf: oop) ~= 0
+			  and: [(self classOrNilAtIndex: hash) = oop]) ifTrue:
+				[scanClassTable := true].
+			 self forward: oop to: clone.
+			 self storePointerUnchecked: i ofObject: outPointerArray withValue: clone]].
+	scavenger forgetObject: outPointerArray.
+	scanClassTable ifTrue:
+		[self postBecomeScanClassTable: BecamePointerObjectFlag].
+	^0
+]
+
 { #category : #'obj stacks' }
 SpurMemoryManager >> ensureRoomOnObjStackAt: objStackRootIndex [
 	"An obj stack is a stack of objects stored in a hidden root slot, such as
@@ -4457,7 +4494,7 @@ SpurMemoryManager >> enterClassesIntoClassTableFrom: segmentStart to: segmentLim
 			 [self oop: objOop isLessThan: oop] whileTrue:
 				[self expungeFromClassTable: objOop.
 				 objOop := self objectAfter: objOop limit: segmentLimit].
-			 ^errorCode].
+			 ^errorCode halt].
 		 objOop := self objectAfter: objOop limit: segmentLimit].
 	^0
 ]
@@ -6467,7 +6504,8 @@ SpurMemoryManager >> is: oop onObjStack: objStack [
 
 { #category : #'image segment in/out' }
 SpurMemoryManager >> is: hash outPointerClassHashFor: oop in: outPointerArray limit: outIndex [
-	"suspect; what about false positives?"
+	"This is part of storeImageSegmentInto:outPointers:roots:.
+	 suspect; what about false positives?"
 	^(hash anyMask: TopHashBit)
 	  and: [hash - TopHashBit <= outIndex
 	  and: [oop = (self fetchPointer: hash - TopHashBit ofObject: outPointerArray)]]
@@ -6606,6 +6644,7 @@ SpurMemoryManager >> isContextNonImm: oop [
 
 { #category : #'image segment in/out' }
 SpurMemoryManager >> isCopiedIntoSegment: anObjectInTheHeap [
+	"This is part of storeImageSegmentInto:outPointers:roots:."
 	<inline: true>
 	^self isMarked: anObjectInTheHeap
 ]
@@ -7596,7 +7635,7 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 
 	segmentLimit := self numSlotsOf: segmentWordArray.
 	(self objectBytesForSlots: segmentLimit) < (self allocationUnit "version info" + self baseHeaderSize "one object header") ifTrue:
-		[^PrimErrBadArgument].
+		[^PrimErrBadArgument halt].
 
 	"Verify format.  If the format is wrong, word-swap (since ImageSegment data are 32-bit longs).
 	 If it is still wrong, undo the damage and fail."
@@ -7608,7 +7647,7 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 		 (coInterpreter readableFormat: (segVersion bitAnd: 16rFFFFFF "low 3 bytes")) ifFalse:
 			[self reverseBytesIn32BitWordsFrom: segmentWordArray + self baseHeaderSize
 				to: (self addressAfter: segmentWordArray).
-			 ^PrimErrBadArgument]].
+			 ^PrimErrBadArgument halt]].
 
 	segmentStart := segmentWordArray + self baseHeaderSize + self allocationUnit.
 	segmentLimit := segmentLimit * self bytesPerOop + segmentWordArray + self baseHeaderSize.
@@ -7621,11 +7660,17 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 	(segVersion >> 24 bitAnd: 16rFF) ~= (self imageSegmentVersion >> 24 bitAnd: 16rFF) ifTrue:
 		"Reverse the byte-type objects once"
 		[true
-			ifTrue: [^PrimErrBadArgument]
+			ifTrue: [^PrimErrBadArgument halt]
 			ifFalse:
 				[self byteSwapByteObjectsFrom: (self objectStartingAt: segmentStart)
 					to: segmentLimit
 					flipFloatsIf: false]].
+
+	"Avoid having to remember by arranging that there are no young outPointers if segment is in old space."
+	(self isOldObject: segmentWordArray) ifTrue:
+		[errorCode := self ensureNoNewObjectsIn: outPointerArray.
+		 errorCode ~= 0 ifTrue:
+			[^errorCode]].
 
 	"scan through mapping oops and validating class references. Defer entering any
 	 class objects into the class table and/or pinning objects until a second pass."
@@ -7635,7 +7680,7 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 	numLoadedObjects := errorCode negated.
 	loadedObjectsArray := self allocateSlots: numLoadedObjects format: self arrayFormat classIndex: ClassArrayCompactIndex.
 	loadedObjectsArray ifNil:
-		[^PrimErrNoMemory].
+		[^PrimErrNoMemory halt].
 
 	"Scan for classes contained in the segment, entering them into the class table.
 	 Classes are at the front, after the root array and have the remembered bit set."
@@ -8145,6 +8190,7 @@ SpurMemoryManager >> markAndTraceWeaklingsFrom: startIndex [
 
 { #category : #'image segment in/out' }
 SpurMemoryManager >> markAsCopiedIntoSegment: anObjectInTheHeap [
+	"This is part of storeImageSegmentInto:outPointers:roots:."
 	<inline: true>
 	self setIsMarkedOf: anObjectInTheHeap to: true
 ]
@@ -9382,7 +9428,7 @@ SpurMemoryManager >> pinObject: objOop [
 			[self setIsPinnedOf: objOop to: true.
 			 seg containsPinned: true.
 			 ^objOop]].
-	oldClone := self cloneInOldSpaceForPinning: objOop.
+	oldClone := self cloneInOldSpace: objOop forPinning: true.
 	oldClone ~= 0 ifTrue:
 		[becomeEffectsFlags := self becomeEffectFlagsFor: objOop.
 		 self setIsPinnedOf: oldClone to: true.
@@ -11661,6 +11707,8 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArrayArg outPointers: out
 	self long32At: segAddr put: self imageSegmentVersion.
 	self long32At: segAddr + 4 put: self imageSegmentVersion.
 	segStart := segAddr := segAddr + self allocationUnit.
+
+	self assert: arrayOfRoots = (self fetchPointer: 0 ofObject: arrayOfObjects).
 
 	"Copy all reachable objects to the segment, setting the marked bit for all objects (clones) in the segment,
 	 and the remembered bit for all classes (clones) in the segment."
