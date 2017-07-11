@@ -210,7 +210,11 @@ Spur32BitMMLESimulator >> intAt: byteAddress put: a32BitValue [
 { #category : #'image segment in/out' }
 Spur32BitMMLESimulator >> loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray [
 	self leakCheckImageSegments ifTrue:
-		[self halt].
+		[parent ifNil:
+			[| result |
+			 self halt.
+			 result := coInterpreter cloneSimulation objectMemory loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray.
+			 Smalltalk garbageCollect]].
 	^super loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray
 ]
 
