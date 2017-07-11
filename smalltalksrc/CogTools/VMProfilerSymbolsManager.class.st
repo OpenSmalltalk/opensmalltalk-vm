@@ -9,7 +9,7 @@ Class {
 		'cogModule'
 	],
 	#classVars : [
-		'VMFileSystem'
+		'CompatibilityClass'
 	],
 	#category : #'CogTools-VMProfiler'
 }
@@ -39,14 +39,14 @@ VMProfilerSymbolsManager class >> initialize [
 { #category : #'as yet unclassified' }
 VMProfilerSymbolsManager class >> tempDirectory [
 
-	^ VMFileSystem ifNotNil: [VMFileSystem nameFordirPath:'/tmp/vmsyms'  plus:OSProcess thisOSProcess pid printString] 
+	^ CompatibilityClass ifNotNil: [CompatibilityClass nameFordirPath:'/tmp/vmsyms'  plus:OSProcess thisOSProcess pid printString] 
 
 ]
 
 { #category : #'as yet unclassified' }
-VMProfilerSymbolsManager class >> using: aFileSystem [
+VMProfilerSymbolsManager class >> using: aCompatibilityClass [
 
-	VMFileSystem := aFileSystem.
+	CompatibilityClass := aCompatibilityClass.
 	^ self new 
 	
 ]

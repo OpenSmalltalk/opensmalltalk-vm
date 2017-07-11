@@ -38,7 +38,7 @@ PharoVMProfiler >> getVMParameters [
 { #category : #initialization }
 PharoVMProfiler >> initialize [
 
-	super initializeMost.
+	self initializeMost.
 	self withDetails: false.
 	CompatibilityClass := PharoVMMethodConverter new.
 	expressionTextMorph := PluggableTextMorph new.
