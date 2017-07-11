@@ -62,7 +62,7 @@ sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 	maxAppAddr = sysInfo.lpMaximumApplicationAddress;
 
 	/* choose a suitable starting point. In MinGW the malloc heap is below the
-	 * program, so take the max of a malloc and something form uninitialized
+	 * program, so take the max of a malloc and something from uninitialized
 	 * data.
 	 */
 	hint = malloc(1);

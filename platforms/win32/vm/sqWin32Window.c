@@ -156,10 +156,13 @@ static int printerSetup = FALSE;
 UINT g_WM_MOUSEWHEEL = 0;	/* RvL: 1999-04-19 The message we receive from wheel mices */
 #endif
 
-/* misc declarations */
+/* misc forward declarations */
 int recordMouseEvent(MSG *msg, UINT nrClicks);
 int recordKeyboardEvent(MSG *msg);
 int recordWindowEvent(int action, RECT *r);
+#if NewspeakVM
+int ioDrainEventQueue(void);
+#endif
 
 extern sqInt byteSwapped(sqInt);
 extern int convertToSqueakTime(SYSTEMTIME);
@@ -1679,7 +1682,7 @@ sqInt ioProcessEvents(void)
 }
 
 #if NewspeakVM
-sqInt
+int
 ioDrainEventQueue(void)
 { static MSG msg;
   POINT mousePt;
