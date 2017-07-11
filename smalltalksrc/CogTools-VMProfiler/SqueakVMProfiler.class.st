@@ -348,7 +348,7 @@ SqueakVMProfiler >> historyButtonMorph: getLabelMessage help: help set: setter e
 
 { #category : #initialization }
 SqueakVMProfiler >> initialize [
-	super initializeMost.
+	self initializeMost.
 	self withDetails: false.
 	CompatibilityClass := SqueakVMMethodConverter new.
 	expressionTextMorph := PluggableTextMorph new.
