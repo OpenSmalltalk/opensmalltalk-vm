@@ -197,8 +197,8 @@ VMProfiler class >> reportGCStats: gcStatsArray upTime: elapsedMilliseconds on: 
 { #category : #spying }
 VMProfiler class >> spyOn: aBlock [
 	
-	(VMProfiler new) version default
-		spyOn: aBlock.
+	VMProfiler new
+		class spyOn: aBlock.
 
 	
 ]
@@ -378,26 +378,14 @@ VMProfiler >> initialize [
 ]
 
 { #category : #initialization }
-VMProfiler >> initializeInstance [
-	self initializeSamples.
-	self clearHistory.
-	symbolsMode := #byAddress.
-	symbolTypes := IdentitySet new.
-	selections := ByteArray new.
-	highAddress := lowAddress := minSelectionIndex := maxSelectionIndex := 0.
-	aboutToProfile := false.
-	total := rangeTotal := startTime := elapsedTime := 0.
-	gcPriorToProfile := clearPriorToProfile := true.
-	forkProfile := false
-]
-
-{ #category : #initialization }
 VMProfiler >> initializeMost [
 	self initializeSamples.
 	self clearHistory.
 	symbolsMode := #byAddress.
 	symbolTypes := IdentitySet new.
 	selections := ByteArray new.
+	withDetails := false.
+	expressionTextMorph := PluggableTextMorph new.
 	highAddress := lowAddress := minSelectionIndex := maxSelectionIndex := 0.
 	aboutToProfile := false.
 	total := rangeTotal := startTime := elapsedTime := 0.
@@ -956,11 +944,6 @@ VMProfiler >> updateButtons [
 		 self changed: #profiling; changed: #notProfiling; changed: #notProfilingAndData.
 		 self changed: #hasHistoryColor; changed: #hasFutureColor.
 		 self changed: #hasHistory; changed: #hasFuture]
-]
-
-{ #category : #accessing }
-VMProfiler >> version [
-	^ version 
 ]
 
 { #category : #reports }

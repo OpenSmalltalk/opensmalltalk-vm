@@ -24,6 +24,12 @@ PharoVMProfiler class >> default [
 ]
 
 { #category : #'as yet unclassified' }
+PharoVMProfiler class >> spyOn: aBlock [
+
+	self shouldBeImplemented
+]
+
+{ #category : #'as yet unclassified' }
 PharoVMProfiler >> createParagraph [
 	
 	^Paragraph new
@@ -39,8 +45,6 @@ PharoVMProfiler >> getVMParameters [
 PharoVMProfiler >> initialize [
 
 	self initializeMost.
-	self withDetails: false.
 	CompatibilityClass := PharoVMMethodConverter new.
-	expressionTextMorph := PluggableTextMorph new.
 	self initializeSymbols.
 ]
