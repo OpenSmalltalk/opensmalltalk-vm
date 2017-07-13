@@ -33,6 +33,12 @@ static TCHAR w_buffer1[MAX_BUFFER]; /* wide buffer 1 */
 static TCHAR w_buffer2[MAX_BUFFER]; /* wide buffer 2 */
 static char  a_buffer1[MAX_BUFFER]; /* ansi buffer 1 */
 
+#if _UNICODE /* How to measure the length of a TCHAR string? */
+#	define tcstrlen wcslen
+#else
+#	define tcstrlen strlen
+#endif
+
 static TCHAR *fromSqueakInto(const char *sqPtr, int sqSize, TCHAR* buffer)
 {
   int i;
@@ -138,22 +144,28 @@ int __cdecl sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const char* fm
 /* Print out a message and abort execution                                  */
 /****************************************************************************/
 #ifndef abortMessage
-int __cdecl abortMessage(const TCHAR* fmt, ...)
+int __cdecl
+abortMessage(TCHAR *fmt, ...)
 { TCHAR *buf;
 	va_list args;
 
+	va_start(args, fmt);
 	if (fIsConsole) {
-#if 0
+#if _UNICODE
 		vfwprintf(stderr, fmt, args);
 #else
-		vwprintf(fmt, args);
-		fflush(stdout);
+		vfprintf(stderr, fmt, args);
 #endif
 		exit(-1);
 	}
 	buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
-	va_start(args, fmt);
+	if (fmt[tcstrlen(fmt)-1] == '\n')
+		fmt[tcstrlen(fmt)-1] = 0;
+#if _UNICODE
 	wvsprintf(buf, fmt, args);
+#else
+	vsprintf(buf, fmt, args);
+#endif
 	va_end(args);
 
 	MessageBox(NULL,buf,TEXT(VM_NAME) TEXT("!"),MB_OK | MB_TASKMODAL | MB_SETFOREGROUND);
@@ -167,20 +179,27 @@ int __cdecl abortMessage(const TCHAR* fmt, ...)
 /* Print out a warning message                                              */
 /****************************************************************************/
 #ifndef warnPrintf
-int __cdecl warnPrintf(const TCHAR *fmt, ...)
+int __cdecl
+warnPrintf(TCHAR *fmt, ...)
 { TCHAR *buf;
 	va_list args;
 
+	va_start(args, fmt);
 	if (fIsConsole)
-#if 0
-		return vfwprintf(stderr, fmt, args);
+#if _UNICODE
+		vfwprintf(stderr, fmt, args);
 #else
-		return vwprintf(fmt, args);
+		vfprintf(stderr, fmt, args);
 #endif
 
 	buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
-	va_start(args, fmt);
+	if (fmt[tcstrlen(fmt)-1] == '\n')
+		fmt[tcstrlen(fmt)-1] = 0;
+#if _UNICODE
 	wvsprintf(buf, fmt, args);
+#else
+	vsprintf(buf, fmt, args);
+#endif
 	va_end(args);
 	MessageBox(stWindow, buf, TEXT(VM_NAME) TEXT(" Warning!"), MB_OK | MB_ICONSTOP | MB_SETFOREGROUND);
 	free(buf);

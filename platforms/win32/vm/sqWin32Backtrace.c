@@ -403,6 +403,8 @@ compute_exe_symbols(dll_exports *exports)
 {
 #if defined(_MSV_VER)
 # error parse of MSVC .map file as yet unimplemented
+# error Let me (eliot) suggest you get the Makefile to generate a BSD-style
+# error format from the MSVC /map file instead of writing the parser here.
 /* Create the file using "cl .... /link /map"
  * Parse it by looking for lines beginning with " 0001:" where 0001 is the
  * segment number of the .text segment.  Representative lines look like

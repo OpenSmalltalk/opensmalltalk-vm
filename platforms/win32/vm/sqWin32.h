@@ -361,11 +361,11 @@ int __cdecl sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const char* fm
 #endif
 
 #ifndef warnPrintf
-int __cdecl warnPrintf(const TCHAR *fmt, ...);
+int __cdecl warnPrintf(TCHAR *fmt, ...);
 #endif
 
 #ifndef abortMessage
-int __cdecl abortMessage(const TCHAR *fmt,...);
+int __cdecl abortMessage(TCHAR *fmt, ...);
 #endif
 
 /* neat little helpers - print prefix and the GetLastError() meaning */
