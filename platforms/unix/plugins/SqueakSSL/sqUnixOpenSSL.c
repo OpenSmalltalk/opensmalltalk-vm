@@ -87,7 +87,7 @@ enum sqMatchResult sqVerifyIP(sqSSL* ssl, X509* cert, const char* serverName, co
 	strToAddrWorked = inet_pton(af, serverName, &addr);
 	if (strToAddrWorked != 1) { return INVALID_IP_STRING; }
 
-	return sqVerifyNameInner(ssl, cert, addr, addrSize, GEN_IPADD);
+	return sqVerifyNameInner(ssl, cert, &addr, addrSize, GEN_IPADD);
 }
 
 
@@ -172,8 +172,8 @@ sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, void* data, const size_t 
 	if (sANData[sANDataSize - 1] == '.') { sANDataSize--; }
 	if (((char*)data)[dataSize - 1] == '.') { dataSize--; }
 
-#define NOPE(x) do { if ((x)) {return 0;} } while (0)
-#define YEAH(x) do { if ((x)) {return 1}; } while (0)
+#define NOPE(x) do { if ((x)) return 0; } while (0)
+#define YEAH(x) do { if ((x)) return 1; } while (0)
 
 	// Exact match always wins
 	YEAH((sANDataSize == dataSize) && (0 == strncasecmp(sANData, data, sANDataSize)));
