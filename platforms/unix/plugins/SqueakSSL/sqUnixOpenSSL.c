@@ -5,6 +5,7 @@
 #include "openssl/err.h"
 #include "openssl/x509v3.h"
 
+#include <strings.h>
 #include <string.h>
 #include <stddef.h>
 
@@ -65,20 +66,26 @@ sqInt sqCopyBioSSL(sqSSL *ssl, BIO *bio, char *dstBuf, sqInt dstLen) {
 
 
 #ifndef X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS
+enum sqMatchResult sqVerifyIP(sqSSL* ssl, X509* cert, const char* serverName, const size_t serverNameLength);
+enum sqMatchResult sqVerifyDNS(sqSSL* ssl, X509* cert, const char* serverName, const size_t serverNameLength);
+enum sqMatchResult sqVerifyNameInner(sqSSL* ssl, X509* cert, void* serverName, const size_t serverNameLength, const int matchType);
+char* sqVerifyFindStar(char* sANData, size_t sANDataSize);
+sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, void* data, const size_t dataSizeIn, const int matchType);
+
 enum sqMatchResult sqVerifyIP(sqSSL* ssl, X509* cert, const char* serverName, const size_t serverNameLength) {
 	struct in6_addr addr = { 0 }; // placeholder, longest of in_addr and in6_addr
 	int af = AF_INET6;
 	size_t addrSize = sizeof(struct in6_addr);
 	int strToAddrWorked = 0;
 
-	if (serverName == NULL) return INVALID_IP_STRING;
-	if (memchr(serverName, '.', MIN(INET_ADDRSTRLEN,  serverNameLength))) {
-		// there's a dot somewithere in the first bytes, look for IPV4
+	if (serverName == NULL) { return INVALID_IP_STRING; }
+	if (memchr(serverName, '.', MIN(INET_ADDRSTRLEN, serverNameLength))) {
+		// there's a dot somewhere in the first bytes, look for IPV4
 		af = AF_INET;
 		addrSize = sizeof(struct in_addr);
 	}
 	strToAddrWorked = inet_pton(af, serverName, &addr);
-	if (strToAddrWorked != 1) return INVALID_IP_STRING;
+	if (strToAddrWorked != 1) { return INVALID_IP_STRING; }
 
 	return sqVerifyNameInner(ssl, cert, addr, addrSize, GEN_IPADD);
 }
@@ -117,16 +124,16 @@ char* sqVerifyFindStar(char* sANData, size_t sANDataSize) {
 	char* label = NULL;
 	int starFound = 0;
 	size_t labelCount = 0;
-	char ptr[MAX_HOSTNAME_LENGTH] = {0};
-	memcpy(ptr, sANData, MIN(MAX_HOSTNAME_LENGTH, sANDataSize));
+	char ptr[MAX_HOSTNAME_LENGTH + 1] = {0};
+	memcpy(ptr, sANData, MIN(MAX_HOSTNAME_LENGTH + 1, sANDataSize));
 
 #define FAIL_STAR(x) do { if (x) { return NULL; } } while (0)
 
 	for (label = strtok_r(ptr, ".", &safeptr);
 	     label != NULL;
 	     label = strtok_r(NULL, ".", &safeptr), labelCount++) {
-		char* currentStar = strchr(label, '*'); // \0-temination is guaranteed by strtok_r
-		size_t labelLength = strlen(label);  // \0-temination is guaranteed by strtok_r
+		char* currentStar = strchr(label, '*'); // \0-termination is guaranteed by strtok_r
+		size_t labelLength = strlen(label);  // \0-termination is guaranteed by strtok_r
 		if (currentStar != NULL) {
 			// only one star per label
 			FAIL_STAR(labelLength > 1 && (NULL != strchr(currentStar + 1, '*')));
@@ -155,18 +162,18 @@ sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, void* data, const size_t 
 	size_t sANDataSize = (size_t)ASN1_STRING_length(sAN->d.ia5);
 	size_t dataSize = dataSizeIn;
 
-	if (ssl->loglevel) printf("sqVerifyNameInner: checking sAN %.*s\n", matchType == GEN_DNS ? sANDataSize : 5 , matchType == GEN_DNS ? sANData : "an IP");
+	if (ssl->loglevel) printf("sqVerifyNameInner: checking sAN %.*s\n", matchType == GEN_DNS ? (int) sANDataSize : 5 , matchType == GEN_DNS ? sANData : "an IP");
 	// For IPs, exact match only.
 	if (matchType == GEN_IPADD) {
 		return (sANDataSize == dataSize) && !memcmp(sANData, data, sANDataSize);
 	}
 
 	// Normalize dns names by dropping traling dots if any
-	if (sANData[sANDataSize - 1] == '.') sANDataSize--;
-	if (((char*)data)[dataSize - 1] == '.') dataSize--;
+	if (sANData[sANDataSize - 1] == '.') { sANDataSize--; }
+	if (((char*)data)[dataSize - 1] == '.') { dataSize--; }
 
-#define NOPE(x) do { if (x) return 0; } while (0)
-#define YEAH(x) do { if (x) return 1; } while (0)
+#define NOPE(x) do { if ((x)) {return 0;} } while (0)
+#define YEAH(x) do { if ((x)) {return 1}; } while (0)
 
 	// Exact match always wins
 	YEAH((sANDataSize == dataSize) && (0 == strncasecmp(sANData, data, sANDataSize)));
@@ -332,7 +339,7 @@ sqInt sqDestroySSL(sqInt handle) {
 */
 sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt dstLen) {
 	int result, n;
-	char peerName[MAX_HOSTNAME_LENGTH];
+	char peerName[MAX_HOSTNAME_LENGTH + 1];
 	X509 *cert;
 	sqSSL *ssl = sslFromHandle(handle);
 
@@ -378,7 +385,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		if(error != SSL_ERROR_WANT_READ) {
 			if(ssl->loglevel) printf("sqConnectSSL: SSL_connect failed\n");
 			ERR_print_errors_fp(stdout);
-			return -1;
+			return SQSSL_GENERIC_ERROR;
 		}
 		if(ssl->loglevel) printf("sqConnectSSL: sqCopyBioSSL\n");
 		return sqCopyBioSSL(ssl, ssl->bioWrite, dstBuf, dstLen);
@@ -474,7 +481,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 */
 sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt dstLen) {
 	int result, n;
-	char peerName[MAX_HOSTNAME_LENGTH];
+	char peerName[MAX_HOSTNAME_LENGTH + 1];
 	X509 *cert;
 	sqSSL *ssl = sslFromHandle(handle);
 
