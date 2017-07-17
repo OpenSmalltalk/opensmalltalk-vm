@@ -46,8 +46,10 @@ typedef struct sqSSL {
 static sqSSL** handleBuf = NULL;
 static sqInt handleMax = 0;
 
+static char* emptyString = "";
+
 // Max lengh of a Certificate common name or DNS Host name
-#define CN_MAX 255
+#define MAX_HOSTNAME_LENGTH 255
 
 
 /********************************************************************/
@@ -185,7 +187,7 @@ OSStatus sqSetupSSL(sqSSL* ssl, int isServer)
                                       strlen(ssl->serverName));
 #else
         status = SSLSetPeerDomainName(ssl->ctx, ssl->serverName,
-                                      strnlen(ssl->serverName, CN_MAX - 1));
+                                      strnlen(ssl->serverName, MAX_HOSTNAME_LENGTH - 1));
 #endif // MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
         if (status != noErr) {
             logprintf_status(status, "SSLSetPeerDomainName failed");
@@ -207,18 +209,41 @@ static OSStatus sqExtractPeerName(sqSSL* ssl)
         return status;
     }
 
-    char peerName[CN_MAX + 1];
-    CFStringRef cfName = NULL;
-    SecCertificateRef cert = (SecCertificateRef)CFArrayGetValueAtIndex(ssl->certs, 0);
-    status = SecCertificateCopyCommonName(cert, &cfName);
-    if (status == noErr) {
-        CFStringGetCString(cfName, peerName, sizeof(peerName), kCFStringEncodingUTF8);
+    if (ssl->peerName) {
+        free(ssl->peerName);
+        ssl->peerName = NULL;
+    }
+
+    if (ssl->certFlags == SQSSL_OK && ssl->serverName != NULL) {
+        // The certificate was already deemed OK by the trust evaulation.
+        // This includes matching anything like CN, sAN, or wildcard certs.
+        // Therefore, we _copy_ the server name to the peer name such
+        // that a match or equality comparison on the Smalltalk side wont
+        // fail, which is correct.
 #if !(MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
-        ssl->peerName = strdup(peerName);
+        ssl->peerName = strdup(ssl->serverName);
 #else
-        ssl->peerName = strndup(peerName, CN_MAX);
+        ssl->peerName = strndup(ssl->serverName, MAX_HOSTNAME_LENGTH);
 #endif
-        CFRelease(cfName);
+    } else {
+        // Either the cert was not ok OR we weren't given a server name.
+        // In the former case, the Smalltalk code typically bails early but
+        // copying over the CN does not hurt. In the latter case, we can just
+        // guess the users' intention and fall back to the legacy behavior:
+        // copying the peername no matter wat.
+        char peerName[MAX_HOSTNAME_LENGTH + 1];
+        CFStringRef cfName = NULL;
+        SecCertificateRef cert = (SecCertificateRef)CFArrayGetValueAtIndex(ssl->certs, 0);
+        status = SecCertificateCopyCommonName(cert, &cfName);
+        if (status == noErr) {
+            CFStringGetCString(cfName, peerName, sizeof(peerName), kCFStringEncodingUTF8);
+#if !(MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+            ssl->peerName = strdup(peerName);
+#else
+            ssl->peerName = strndup(peerName, MAX_HOSTNAME_LENGTH);
+#endif
+            CFRelease(cfName);
+        }
     }
     return status;
 }
@@ -433,12 +458,15 @@ sqInt sqDestroySSL(sqInt handle)
 
     if (ssl->certName) {
         free(ssl->certName);
+        ssl->certName = NULL;
     }
     if (ssl->peerName) {
         free(ssl->peerName);
+        ssl->peerName = NULL;
     }
     if (ssl->serverName) {
         free(ssl->serverName);
+        ssl->serverName = NULL;
     }
 
     free(ssl);
@@ -687,7 +715,7 @@ char* sqGetStringPropertySSL(sqInt handle, int propID)
     }
 
     switch (propID) {
-    case SQSSL_PROP_PEERNAME:   return ssl->peerName;
+    case SQSSL_PROP_PEERNAME:	return ssl->peerName ? ssl->peerName : emptyString;
     case SQSSL_PROP_CERTNAME:   return ssl->certName;
     case SQSSL_PROP_SERVERNAME: return ssl->serverName;
     default:
