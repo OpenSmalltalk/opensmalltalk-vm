@@ -85,7 +85,7 @@ export SIGNING_IDENTITY="Developer ID Application: Eliot Miranda"
 codesign may fail as it cannot ask for permission.  In this case you'll need to
 manually grant permission via
 	security -v unlock-keychain [-p <PASSWORD>] /Users/$USER/Library/Keychains/login.keychain
-where PASSWORD and ME are replaced by suitable values.
+where PASSWORD is to be replaced by suitable value.
 Similarly one may be denied access to an executable when debugging with the lldb
 symptom "attach failed: lost connection" or some such.  Use
 	/usr/sbin/DevToolsSecurity --enable
