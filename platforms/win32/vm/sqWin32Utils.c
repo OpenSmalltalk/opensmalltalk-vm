@@ -33,12 +33,6 @@ static TCHAR w_buffer1[MAX_BUFFER]; /* wide buffer 1 */
 static TCHAR w_buffer2[MAX_BUFFER]; /* wide buffer 2 */
 static char  a_buffer1[MAX_BUFFER]; /* ansi buffer 1 */
 
-#if _UNICODE /* How to measure the length of a TCHAR string? */
-#	define tcstrlen wcslen
-#else
-#	define tcstrlen strlen
-#endif
-
 static TCHAR *fromSqueakInto(const char *sqPtr, int sqSize, TCHAR* buffer)
 {
   int i;
@@ -159,8 +153,8 @@ abortMessage(TCHAR *fmt, ...)
 		exit(-1);
 	}
 	buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
-	if (fmt[tcstrlen(fmt)-1] == '\n')
-		fmt[tcstrlen(fmt)-1] = 0;
+	if (fmt[_tcslen(fmt)-1] == '\n')
+		fmt[_tcslen(fmt)-1] = 0;
 #if _UNICODE
 	wvsprintf(buf, fmt, args);
 #else
@@ -193,8 +187,8 @@ warnPrintf(TCHAR *fmt, ...)
 #endif
 
 	buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
-	if (fmt[tcstrlen(fmt)-1] == '\n')
-		fmt[tcstrlen(fmt)-1] = 0;
+	if (fmt[_tcslen(fmt)-1] == '\n')
+		fmt[_tcslen(fmt)-1] = 0;
 #if _UNICODE
 	wvsprintf(buf, fmt, args);
 #else
