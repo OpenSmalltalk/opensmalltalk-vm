@@ -3968,7 +3968,7 @@ SpurMemoryManager >> containsOnlyValidBecomeObjects: array1 and: array2 twoWay: 
 				 size := size + (self bytesInObject: oop1) + (self bytesInObject: oop2).
 				 effectsFlags := effectsFlags bitOr: (self becomeEffectFlagsFor: oop2)]
 			ifFalse:
-				[(copyHash and: [self isImmediate: oop2]) ifTrue:
+				[(copyHash and: [(self isImmediate: oop2) or: [self isImmutable: oop2]]) ifTrue:
 					[^PrimErrInappropriate]].
 		 fieldOffset := fieldOffset - self bytesPerOop].
 	size >= (totalFreeOldSpace + (scavengeThreshold - freeStart)) ifTrue:
