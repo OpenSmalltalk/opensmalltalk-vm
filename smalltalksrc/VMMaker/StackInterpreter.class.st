@@ -1277,7 +1277,7 @@ StackInterpreter class >> initializePrimitiveTable [
 		(245 primitiveCoarseUTCMicrosecondClock) "primStringindexOfAsciiinStringstartingAt"
 		(246 primitiveCoarseLocalMicrosecondClock) "primStringfindSubstringinstartingAtmatchTable"
 		(247 primitiveSnapshotEmbedded)
-		(248 primitiveFail) "primitiveInvokeObjectAsMethod"
+		(248 primitiveArrayBecomeOneWayNoCopyHash) "was primitiveInvokeObjectAsMethod"
 		(249 primitiveArrayBecomeOneWayCopyHash)
 
 		"VM Implementor Primitives (250-255)"

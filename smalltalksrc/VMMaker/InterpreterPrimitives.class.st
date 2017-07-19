@@ -761,7 +761,7 @@ InterpreterPrimitives >> primitiveArrayBecomeOneWay [
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveArrayBecomeOneWayCopyHash [
 	"Similar to primitiveArrayBecomeOneWay but accepts a third argument deciding whether to
-	 copy the receiver's element's identity hash over the argument's elementy's identity hash."
+	 copy the receiver's elements identity hashes over the argument's elements identity hashes."
 
 	| copyHashFlag ec |
 	self stackTop = objectMemory trueObject
@@ -779,6 +779,20 @@ InterpreterPrimitives >> primitiveArrayBecomeOneWayCopyHash [
 			copyHash: copyHashFlag.
 	ec = PrimNoErr
 		ifTrue: [self pop: argumentCount]
+		ifFalse: [self primitiveFailFor: ec]
+]
+
+{ #category : #'object access primitives' }
+InterpreterPrimitives >> primitiveArrayBecomeOneWayNoCopyHash [
+	"Similar to primitiveArrayBecomeOneWay but does /not/ copy the receiver's
+	 elements identity hashes over the argument's elements identity hashes."
+
+	| arg rcvr ec |
+	arg := self stackTop.
+	rcvr := self stackValue: 1.
+	ec := objectMemory become: rcvr with: arg twoWay: false copyHash: false.
+	ec = PrimNoErr
+		ifTrue: [self pop: 1]
 		ifFalse: [self primitiveFailFor: ec]
 ]
 
