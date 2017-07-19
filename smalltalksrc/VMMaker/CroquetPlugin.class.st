@@ -556,14 +556,14 @@ CroquetPlugin >> primitiveOptimizeVertexIndicesForCacheLocality [
 CroquetPlugin >> primitiveOrthoNormInverseMatrix [
 	| srcOop dstOop src dst x y z rx ry rz |
 	<export: true>
-	<var: #src declareC:'float *src'>
-	<var: #dst declareC:'float *dst'>
-	<var: #x declareC:'double x'>
-	<var: #y declareC:'double y'>
-	<var: #z declareC:'double z'>
-	<var: #rx declareC:'double rx'>
-	<var: #ry declareC:'double ry'>
-	<var: #rz declareC:'double rz'>
+	<var: #src type: #'float *'>
+	<var: #dst type: #'float *'>
+	<var: #x type: #double>
+	<var: #y type: #double>
+	<var: #z type: #double>
+	<var: #rx type: #double>
+	<var: #ry type: #double>
+	<var: #rz type: #double>
 
 	interpreterProxy methodArgumentCount = 0
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -590,13 +590,11 @@ CroquetPlugin >> primitiveOrthoNormInverseMatrix [
 	ry := (x * (dst at: 4)) + (y * (dst at: 5)) + (z * (dst at: 6)).
 	rz := (x * (dst at: 8)) + (y * (dst at: 9)) + (z * (dst at: 10)).
 
-	dst at: 3 put: (self cCoerce: 0.0-rx to: 'float').
-	dst at: 7 put: (self cCoerce: 0.0-ry to: 'float').
-	dst at: 11 put: (self cCoerce: 0.0-rz to: 'float').
+	dst at: 3 put: (self cCoerce: 0.0-rx to: #float).
+	dst at: 7 put: (self cCoerce: 0.0-ry to: #float).
+	dst at: 11 put: (self cCoerce: 0.0-rz to: #float).
 
-	interpreterProxy pop: 1.
-	^interpreterProxy push: dstOop.
-
+	interpreterProxy pop: 1 thenPush: dstOop
 ]
 
 { #category : #transforms }

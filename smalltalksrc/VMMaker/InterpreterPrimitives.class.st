@@ -2175,8 +2175,7 @@ InterpreterPrimitives >> primitiveGetLogDirectory [
 	sz := self strlen: ptr.
 	stringOop := objectMemory instantiateClass: objectMemory classString indexableSize: sz.
 	0 to: sz-1 do:[:i| objectMemory storeByte: i ofObject: stringOop withValue: (ptr at: i)].
-	self pop: self methodArgumentCount+1.
-	self push: stringOop.
+	self pop: argumentCount+1 thenPush: stringOop
 ]
 
 { #category : #'I/O primitives' }
@@ -2233,8 +2232,7 @@ InterpreterPrimitives >> primitiveGetWindowLabel [
 	sz := self strlen: ptr.
 	labelOop := objectMemory instantiateClass: objectMemory classString indexableSize: sz.
 	0 to: sz-1 do:[:i| objectMemory storeByte: i ofObject: labelOop withValue: (ptr at: i)].
-	self pop: self methodArgumentCount+1.
-	self push: labelOop.
+	self pop: argumentCount+1 thenPush: labelOop
 ]
 
 { #category : #'I/O primitives' }
@@ -2442,8 +2440,7 @@ InterpreterPrimitives >> primitiveImageName [
 		sz := self imageNameSize.
 		s := objectMemory instantiateClass: (objectMemory splObj: ClassByteString) indexableSize: sz.
 		self imageNameGet: (s + objectMemory baseHeaderSize) Length: sz.
-		self pop: 1.  "rcvr"
-		self push: s.
+		self pop: 1 thenPush: s
 	]
 ]
 
@@ -3620,7 +3617,7 @@ InterpreterPrimitives >> primitiveScanCharacters [
 	((objectMemory isArray: scanXTable)
 	 and: [(objectMemory isArray: scanMap)
 	 and: [(objectMemory slotSizeOf: scanMap) = 256
-	 and: [self successful "for the fetchInteger:ofObject:'s abobve"]]]) ifFalse:
+	 and: [self successful "for the fetchInteger:ofObject:'s above"]]]) ifFalse:
 		[^ self primitiveFail].
 	maxGlyph := (objectMemory slotSizeOf: scanXTable) - 2.
 
@@ -3638,8 +3635,8 @@ InterpreterPrimitives >> primitiveScanCharacters [
 					(objectMemory isIntegerValue: scanDestX) ifFalse: [^ self primitiveFail].
 					self storeInteger: 0 ofObject: rcvr withValue: scanDestX.
 					self storeInteger: 1 ofObject: rcvr withValue: scanLastIndex.
-					self pop: 7. "args+rcvr"
-					^ self push: stopReason].
+					self pop: 7 "args+rcvr" thenPush: stopReason.
+					^nil].
 			"Known to be okay since scanMap size = 256"
 			glyphIndex := self fetchInteger: ascii ofObject: scanMap.
 			"fail if the glyphIndex is out of range"
