@@ -9,6 +9,7 @@
 *
 *****************************************************************************/
 #include <windows.h>
+#include <tchar.h>
 #include <math.h>
 #include "sq.h"
 

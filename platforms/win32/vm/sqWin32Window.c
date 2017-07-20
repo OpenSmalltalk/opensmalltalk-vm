@@ -3092,7 +3092,7 @@ DWORD SqueakImageLengthFromHandle(HANDLE hFile) {
   return 0;
 }
 
-DWORD SqueakImageLength(char *fileName) {
+DWORD SqueakImageLength(TCHAR *fileName) {
   DWORD dwSize;
   WCHAR wideName[MAX_PATH];
   HANDLE hFile;
