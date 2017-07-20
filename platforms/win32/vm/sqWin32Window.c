@@ -3094,14 +3094,19 @@ DWORD SqueakImageLengthFromHandle(HANDLE hFile) {
 
 DWORD SqueakImageLength(TCHAR *fileName) {
   DWORD dwSize;
-  WCHAR wideName[MAX_PATH];
   HANDLE hFile;
 
   /* open image file */
+#ifdef UNICODE
+  hFile = CreateFileW(fileName, GENERIC_READ, FILE_SHARE_READ,
+		      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+#else
+  WCHAR wideName[MAX_PATH];
   MultiByteToWideChar(CP_UTF8, 0, fileName, -1, wideName, MAX_PATH);
   hFile = CreateFileW(wideName, GENERIC_READ, FILE_SHARE_READ,
 		      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-  if(hFile == INVALID_HANDLE_VALUE) return 0;
+#endif
+  if (hFile == INVALID_HANDLE_VALUE) return 0;
   dwSize = SqueakImageLengthFromHandle(hFile);
   CloseHandle(hFile);
   return dwSize;
