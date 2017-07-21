@@ -516,7 +516,7 @@ InterpreterPlugin >> msg: s [
 { #category : #'API access' }
 InterpreterPlugin >> positiveMachineIntegerFor: value [
 	<var: #value type: #'usqIntptr_t'>
-	<inline: true>
+	<inline: #always>
 	^interpreterProxy wordSize = 8
 		ifTrue: [interpreterProxy positive64BitIntegerFor: value]
 		ifFalse: [interpreterProxy positive32BitIntegerFor: value]
@@ -570,7 +570,7 @@ InterpreterPlugin >> setInterpreter: anInterpreter [
 { #category : #'API access' }
 InterpreterPlugin >> signedMachineIntegerFor: value [
 	<var: #value type: #'sqIntptr_t'>
-	<inline: true>
+	<inline: #always>
 	^interpreterProxy wordSize = 8
 		ifTrue: [interpreterProxy signed64BitIntegerFor: value]
 		ifFalse: [interpreterProxy signed32BitIntegerFor: value]
