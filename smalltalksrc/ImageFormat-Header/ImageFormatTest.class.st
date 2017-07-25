@@ -16,6 +16,7 @@ ImageFormatTest >> testAsInteger [
 	self assert: (ImageFormat fromInteger: 68002) asInteger = 68002.
 	self assert: (ImageFormat fromInteger: 6521) asInteger = 6521.
 	self assert: (ImageFormat fromInteger: 68019) asInteger = 68019.
+	self assert: (ImageFormat fromInteger: 68021) asInteger = 68021.
 	
 ]
 
@@ -27,6 +28,18 @@ ImageFormatTest >> testBaseVersionBits [
 	self assert: (ImageFormat new fromInteger: 6504) baseVersionBits = 6504.
 	self assert: (ImageFormat wordSize: 8) baseVersionBits = 68000.
 	self assert: (ImageFormat new fromInteger: 68002) baseVersionBits = 68002.
+
+]
+
+{ #category : #testing }
+ImageFormatTest >> testBit17AsTestFor64BitImages [
+	"If bit 17 of the version number is 1, then the image is a 64-bit image."
+
+	ImageFormat knownVersionNumbers do: [ :versionNumber | | is64 bit17 |
+		is64 := (ImageFormat fromInteger: versionNumber) is64Bit.
+		bit17 := versionNumber bitAt: 17.
+		self assert: bit17 = 1 equals:is64
+	].
 
 ]
 
@@ -214,6 +227,7 @@ ImageFormatTest >> testIs32Bit [
 	self deny: (ImageFormat new fromInteger: 68002) is32Bit.
 	self deny: (ImageFormat fromInteger: 6521) is64Bit.
 	self assert: (ImageFormat new fromInteger: 68019) is64Bit.
+	self assert: (ImageFormat new fromInteger: 68021) is64Bit.
 
 ]
 
@@ -226,6 +240,7 @@ ImageFormatTest >> testIs64Bit [
 	self assert: (ImageFormat new fromInteger: 68002) is64Bit.
 	self deny: (ImageFormat fromInteger: 6521) is64Bit.
 	self assert: (ImageFormat new fromInteger: 68019) is64Bit.
+	self assert: (ImageFormat new fromInteger: 68021) is64Bit.
 
 ]
 
@@ -248,7 +263,12 @@ ImageFormatTest >> testIsValidVersionNumber [
 	self assert: (ImageFormat fromInteger: 6502) isValidVersionNumber.
 	self assert: (ImageFormat fromInteger: (6502 bitAt: 31 put: 0)) isValidVersionNumber.
 	self assert: (ImageFormat fromInteger: 6521) isValidVersionNumber.
+	self assert: (ImageFormat fromInteger:68000) isValidVersionNumber.
+	self assert: (ImageFormat fromInteger:68002) isValidVersionNumber.
+	self assert: (ImageFormat fromInteger:68004) isValidVersionNumber.
+	self assert: (ImageFormat fromInteger:68003) isValidVersionNumber. "valid but unused, as with 68019"
 	self assert: (ImageFormat fromInteger: 68019) isValidVersionNumber.
+	self assert: (ImageFormat fromInteger: 68021) isValidVersionNumber.
 
 
 ]
@@ -321,5 +341,8 @@ ImageFormatTest >> testRequiresNativeFloatWordOrder [
 	self assert: (ImageFormat fromInteger: 6521) requiresClosureSupport.
 	self assert: (ImageFormat fromInteger: 68019) requiresNativeFloatWordOrder.
 	self assert: (ImageFormat fromInteger: 68019) requiresClosureSupport.
+	self assert: (ImageFormat fromInteger: 68021) requiresNativeFloatWordOrder.
+	self assert: (ImageFormat fromInteger: 68021) requiresClosureSupport.
+
 
 ]
