@@ -1430,21 +1430,21 @@ CCodeGenerator >> emitExportsNamed: exportsNamePrefix pluginName: pluginName on:
 					  and: [vmClass objectMemoryClass hasSpurMemoryManagerAPI not]].
 	aStream cr; cr; nextPutAll: 'static char _m[] = "'; nextPutAll: pluginName; nextPutAll: '";'.
 	aStream cr; nextPutAll: 'void* '; nextPutAll: exportsNamePrefix; nextPutAll: '_exports[][3] = {'; cr.
-	((methods select: [:m| m export]) asSortedCollection: [:a :b| a selector caseSensitiveLessOrEqual: b selector]) do:
-		[:method| | compileTimeOptionPragmas primName |
-		(compileTimeOptionPragmas := method compileTimeOptionPragmas) notEmpty ifTrue:
-			[method outputConditionalDefineFor: compileTimeOptionPragmas on: aStream].
-		 primName := self cFunctionNameFor: method selector.
-		 aStream tab; nextPutAll: '{(void*)_m, "'; nextPutAll: primName.
-		 excludeDepth ifFalse:
-			[(self accessorDepthForSelector: primName asSymbol) ifNotNil:
-				[:depth| "store the accessor depth in a hidden byte immediately after the primName"
-				self assert: depth < 128.
-				aStream
-					nextPutAll: '\000\';
-					nextPutAll: ((depth bitAnd: 255) printStringBase: 8 nDigits: 3)]].
-		 aStream nextPutAll: '", (void*)'; nextPutAll: primName; nextPutAll: '},'; cr.
-		 method terminateConditionalDefineFor: compileTimeOptionPragmas on: aStream].
+	self sortedExportMethods do:
+		[:method|
+		self withOptionalConditionalDefineFor: method
+			on: aStream
+			do: [| primName |
+				 primName := self cFunctionNameFor: method selector.
+				 aStream tab; nextPutAll: '{(void*)_m, "'; nextPutAll: primName.
+				 excludeDepth ifFalse:
+					[(self accessorDepthForSelector: primName asSymbol) ifNotNil:
+						[:depth| "store the accessor depth in a hidden byte immediately after the primName"
+						self assert: depth < 128.
+						aStream
+							nextPutAll: '\000\';
+							nextPutAll: ((depth bitAnd: 255) printStringBase: 8 nDigits: 3)]].
+				 aStream nextPutAll: '", (void*)'; nextPutAll: primName; nextPutAll: '},'; cr]].
 	aStream tab; nextPutAll: '{NULL, NULL, NULL}'; cr; nextPutAll: '};'; cr.
 	nilVMClass ifTrue:
 		[vmClass := nil]
@@ -4523,7 +4523,7 @@ CCodeGenerator >> promoteIntegerArithmeticTypes: firstType and: secondType [
 	6.3.1.1 ...snip...
 		If an int can represent all values of the original type, the value is converted to an int;
 		otherwise, it is converted to an unsigned int. These are called the integer promotions.
-		All other types are unchanged by the inte ger promotions
+		All other types are unchanged by the integer promotions
 
 	6.3.1.8 ...snip...
 		Otherwise, the integer promotions are performed on both operands
@@ -4546,7 +4546,7 @@ CCodeGenerator >> promoteIntegerArithmeticTypes: firstType and: secondType [
 			Otherwise, both operands are converted to the unsigned integer type corresponding to
 			the type of the operand with signed integer type.
 
-	This is so that the generated code behaviour is unsensitive to inlining."
+	This is so that the generated code behaviour is insensitive to inlining."
 	| length1 length2 intSize |
 	length1 := self sizeOfIntegralCType: firstType.
 	length2 := self sizeOfIntegralCType: secondType.
@@ -5043,6 +5043,12 @@ CCodeGenerator >> sortStrings: aStringOrSymbolCollection [
 	^aStringOrSymbolCollection asSortedCollection: [:a :b| a caseSensitiveLessOrEqual: b]
 ]
 
+{ #category : #public }
+CCodeGenerator >> sortedExportMethods [
+	"Answer a suitably-sorted array of all exported TMethods"
+	^(methods select: [:m| m export]) asSortedCollection: [:a :b| a selector caseSensitiveLessOrEqual: b selector]
+]
+
 { #category : #'C translation support' }
 CCodeGenerator >> stepExpressionIsNegative: aNode [
 	"Answer if the step expression (the by: argument in a to:by:do:) is negative."
@@ -5439,4 +5445,14 @@ CCodeGenerator >> with: aNode ifAppropriateSetTo: aBoolean do: aBlock [
 							ifNotNil: [savedOptions copy].
 	optionsDictionary at: aNode name put: aBoolean.
 	^aBlock ensure: [optionsDictionary := savedOptions]
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> withOptionalConditionalDefineFor: aTMethod on: aStream do: aBlock [
+	"Evaluate aBlock, surrounded by an appropriate conditional define added to the stream if required."
+	| compileTimeOptionPragmas |
+	(compileTimeOptionPragmas := aTMethod compileTimeOptionPragmas) notEmpty ifTrue:
+		[aTMethod outputConditionalDefineFor: compileTimeOptionPragmas on: aStream].
+	aBlock value.
+	aTMethod terminateConditionalDefineFor: compileTimeOptionPragmas on: aStream
 ]
