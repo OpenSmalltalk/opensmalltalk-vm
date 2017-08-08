@@ -808,8 +808,8 @@ VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil with: optionsPa
 	maker platformRootDirectoryName: platDirName.
 	maker interpreterClass: interpreterClass.
 	optionsPairsArray := (cogitClassOrNil isNil or: [optionsPairsArrayArg includes: #Cogit])
-							ifNil: [optionsPairsArrayArg]
-							ifNotNil: [optionsPairsArrayArg, { #Cogit. cogitClassOrNil name }].
+							ifTrue: [optionsPairsArrayArg]
+							ifFalse: [optionsPairsArrayArg, { #Cogit. cogitClassOrNil name }].
 	maker options: optionsPairsArray.
 	^maker
 

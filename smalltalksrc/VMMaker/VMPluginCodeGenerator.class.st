@@ -93,21 +93,24 @@ VMPluginCodeGenerator >> doInlining: inlineFlag [
 VMPluginCodeGenerator >> emitAccessorDepthsOn: aStream [ 
 	"Output accessor depth bytes for all primitives in the plugin.
 	 This is for external primitives in Spur."
-	(self sortStrings: self exportedPrimitiveNames) do:
-		[:primName|
+	self sortedExportMethods do:
+		[:method| | primName |
+		 primName := self cFunctionNameFor: method selector.
 		 (self accessorDepthForSelector: primName asSymbol) ifNotNil:
 			[:depth|
 			 "store the accessor depth in a byte variable; save a little space
 			  by omitting depths < 0; support code supplies the default."
 			 self assert: depth < 128.
 			 depth >= 0 ifTrue:
-				[aStream
-					nextPutAll: 'signed char ';
-					nextPutAll: primName;
-					nextPutAll: 'AccessorDepth = ';
-					nextPutAll: (self cLiteralFor: depth);
-					nextPut: $;;
-					cr]]]
+				[self withOptionalConditionalDefineFor: method
+					on: aStream
+					do: [aStream
+							nextPutAll: 'signed char ';
+							nextPutAll: primName;
+							nextPutAll: 'AccessorDepth = ';
+							nextPutAll: (self cLiteralFor: depth);
+							nextPut: $;;
+							cr]]]]
 ]
 
 { #category : #'C code generator' }
@@ -174,13 +177,18 @@ VMPluginCodeGenerator >> emitCTypesOn: aStream [
 { #category : #'C code generator' }
 VMPluginCodeGenerator >> emitExportsOn: aStream [
 	"Store all the exported primitives in the form used by the internal named prim system."
+	| nilVMClass |
+	(nilVMClass := vmClass isNil) ifTrue: "We need a vmClass temporarily to compute accessor depths."
+		[vmClass := StackInterpreter].
 	aStream cr; cr; nextPutAll:'#ifdef SQUEAK_BUILTIN_PLUGIN'.
 	self emitExportsNamed: pluginClass moduleName
 		pluginName: pluginClass moduleExportsName
 		on: aStream.
 	aStream cr; nextPutAll: '#else /* ifdef SQ_BUILTIN_PLUGIN */'; cr; cr.
 	self emitAccessorDepthsOn: aStream.
-	aStream cr; nextPutAll: '#endif /* ifdef SQ_BUILTIN_PLUGIN */'; cr
+	aStream cr; nextPutAll: '#endif /* ifdef SQ_BUILTIN_PLUGIN */'; cr.
+	nilVMClass ifTrue:
+		[vmClass := nil]
 ]
 
 { #category : #'C translation' }
@@ -559,6 +567,45 @@ VMPluginCodeGenerator >> selectorsThatMayBeGeneratedAsMacros [
 	"Answer a list of selectors that maybe generated as a C macro rather than as an interpreterProxy function call."
 	
 	^self selectorsThatAreGeneratedAsMacros, #(isIntegerObject: isImmediate:)
+]
+
+{ #category : #inlining }
+VMPluginCodeGenerator >> sizeOfIntegralCType: anIntegralCType [ "<String>"
+	"Hack; because the plugin sources are compiled either as 32 or 64 bit
+	 size those types which are either 32 or 64 bits in size as 48 bits.
+	 This happens to produce sane results for integer promotion."
+	"N.B. Only works for values for which isIntegralCType: answers true."
+	| prunedCType index |
+	(anIntegralCType beginsWith: 'register ') ifTrue:
+		[^self sizeOfIntegralCType: (anIntegralCType allButFirst: 9)].
+	prunedCType := (anIntegralCType beginsWith: 'unsigned ')
+						ifTrue: [(anIntegralCType allButFirst: 9) withBlanksTrimmed]
+						ifFalse: [(anIntegralCType beginsWith: 'signed ')
+									ifTrue: [(anIntegralCType allButFirst: 7) withBlanksTrimmed]
+									ifFalse: [anIntegralCType]].
+	
+	^prunedCType asString caseOf: {
+		['sqLong']		->	[8].
+		['usqLong']		->	[8].
+		['long long']	->	[8].
+		['sqInt']			->	[6].
+		['usqInt']		->	[6].
+		['sqIntptr_t']	->	[6].
+		['usqIntptr_t']	->	[6].
+		['int']			->	[4].
+		['short']			->	[2].
+		['short int']		->	[2].
+		['char']			->	[1].
+		['long']			->	[BytesPerWord]. "It's ambiguous on LLP64 and we'll later remove it"
+		['size_t']		->	[6].
+		['pid_t']			->	[6].
+	}
+	otherwise:
+		[((anIntegralCType beginsWith: 'unsigned') "e.g. 'unsigned  : 8'"
+		  and: [(anIntegralCType includesAnyOf: '[*]') not
+		  and: [(index := anIntegralCType indexOf: $:) > 0]])
+			ifTrue: [(Integer readFrom: (anIntegralCType copyFrom: index + 1 to: anIntegralCType size) withBlanksTrimmed readStream) + 7 // 8]
+			ifFalse: [self error: 'unrecognized integral type']]
 ]
 
 { #category : #private }
