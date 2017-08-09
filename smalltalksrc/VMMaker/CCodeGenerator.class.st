@@ -2447,7 +2447,7 @@ CCodeGenerator >> generateInlineCppIfElse: msgNode asArgument: asArgument on: aS
 				[expansion := expansion allButFirst: (expansion findFirst: [:c| c ~~ Character tab]) - 1].
 			 aStream nextPutAll: expansion]].
 
-	(self nilOrBooleanConditionFor: msgNode) ifNotNil:
+	(self nilOrBooleanConditionFor: msgNode args first) ifNotNil:
 		[:condition|
 		 condition
 			ifTrue:
@@ -4177,14 +4177,14 @@ CCodeGenerator >> nilOrBooleanConstantReceiverOf: aNode [
 				(self nilOrBooleanConstantReceiverOf: aNode args last statements first) ifNotNil:
 					[:arg|
 					^rcvr perform: aNode selector with: [arg]]].
-			 "We can also eliminate expr and: [false], but only if expr is side-effect free.
+			 "We can also eliminate expr and: [false], expr or: [true], but only if expr is side-effect free.
 			  This is a weak test; we don't traverse calls.  Caveat emptor!"
-			 (aNode selector == #and:
-			  and: [(aNode receiver noneSatisfy: [:node| node isAssignment]) "No side-effects in the elided expression"
-			  and: [aNode args last statements size = 1]]) ifTrue:
+			 ((aNode receiver noneSatisfy: [:node| node isAssignment]) "No side-effects in the elided expression"
+			  and: [aNode args last statements size = 1]) ifTrue:
 				[(self nilOrBooleanConstantReceiverOf: aNode args last statements first) ifNotNil:
 					[:arg|
-					arg ifFalse:
+					((arg == false and: [aNode selector == #and:])
+					 or: [arg == true and: [aNode selector == #or:]]) ifTrue:
 						[^arg]]]].
 		"Look for Const ifTrue: [self foo] ifFalse: [false] => false"
 		 ((#(ifTrue:ifFalse: ifFalse:ifTrue:) includes: aNode selector)
