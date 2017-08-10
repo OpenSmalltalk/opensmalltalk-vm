@@ -207,6 +207,7 @@ LargeIntegersPlugin >> byteSizeOfCSI: csi [
 LargeIntegersPlugin >> byteSizeOfLargeInt: bytesOop [ 
 	"Answer the number of bytes required to represent a LargeInteger.
 	Precondition: bytesOop is not a small integer."
+	<inline: #always>
 	^ interpreterProxy slotSizeOf: bytesOop
 ]
 
@@ -714,7 +715,7 @@ LargeIntegersPlugin >> createLargeFromSmallInteger: anOop [
 
 { #category : #util }
 LargeIntegersPlugin >> createLargeIntegerNeg: neg byteLength: byteLength [
-	<inline: true>
+	<inline: #always>
 	^interpreterProxy
 		instantiateClass: (neg
 				ifTrue: [interpreterProxy classLargeNegativeInteger]
@@ -724,9 +725,8 @@ LargeIntegersPlugin >> createLargeIntegerNeg: neg byteLength: byteLength [
 
 { #category : #util }
 LargeIntegersPlugin >> createLargeIntegerNeg: neg digitLength: digitLength [
-	<inline: true>
-	^self
-		createLargeIntegerNeg: neg byteLength: digitLength * 4
+	<inline: #always>
+	^self createLargeIntegerNeg: neg byteLength: digitLength * 4
 ]
 
 { #category : #'oop functions' }
@@ -742,7 +742,9 @@ LargeIntegersPlugin >> digit: anOop Lshift: shiftCount [
 		[newOop := interpreterProxy
 						instantiateClass: (interpreterProxy fetchClassOf: anOop)
 						indexableSize: newByteLen].
-	newOop ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
+	newOop ifNil:
+		[interpreterProxy primitiveFailFor: PrimErrNoMemory.
+		 ^nil].
 	newDigitLen := newByteLen + 3 // 4.
 	self
 		cDigitLshift: shiftCount
@@ -910,25 +912,27 @@ LargeIntegersPlugin >> digitDivLarge: firstInteger with: secondInteger negative:
 	quoDigitLen <= 0
 		ifTrue: 
 			[self remapOop: firstInteger in: [result := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: 2].
-			interpreterProxy stObject: result at: 1 put: (0 asOop: SmallInteger).
-			interpreterProxy stObject: result at: 2 put: firstInteger.
+			 result ifNotNil:
+				[interpreterProxy stObject: result at: 1 put: (0 asOop: SmallInteger).
+				 interpreterProxy stObject: result at: 2 put: firstInteger].
 			^ result].
 	"set rem and div to copies of firstInteger and secondInteger, respectively. 
-	  However,  
-	 to facilitate use of Knuth's algorithm, multiply rem and div by 2 (that 
-	 is, shift)   
-	 until the high word of div is >=16r80000000"
+	 However,  to facilitate use of Knuth's algorithm, multiply rem and div by 2
+	 (that is, shift) until the high word of div is >=16r80000000"
 	d := 32 - (self cHighBit32: (self unsafeDigitOfLargeInt: secondInteger at: secondDigitLen)).
 	self remapOop: firstInteger
-		in: 
-			[div := self digit: secondInteger Lshift: d.
-			div := self largeInt: div growTo: (self digitSizeOfLargeInt: div) + 1 * 4].
+		in:	[div := self digit: secondInteger Lshift: d.
+			 div ifNotNil:
+				[div := self largeInt: div growTo: (self digitSizeOfLargeInt: div) + 1 * 4].
+			 div ifNil: [^div]].
 	self remapOop: div
-		in: 
-			[rem := self digit: firstInteger Lshift: d.
-			(self digitSizeOfLargeInt: rem) = firstDigitLen
-				ifTrue: [rem := self largeInt: rem growTo: firstDigitLen + 1 * 4]].
-	self remapOop: #(div rem ) in: [quo := self createLargeIntegerNeg: neg digitLength: quoDigitLen].
+		in:	[rem := self digit: firstInteger Lshift: d.
+			 rem ifNotNil:
+				[(self digitSizeOfLargeInt: rem) = firstDigitLen ifTrue:
+					[rem := self largeInt: rem growTo: firstDigitLen + 1 * 4]].
+			 rem ifNil: [^rem]].
+	self remapOop: #(div rem)
+		in: [quo := self createLargeIntegerNeg: neg digitLength: quoDigitLen].
 	self
 		cDigitDiv: (self pointerToFirstDigitOfLargeInt: div)
 		len: (self digitSizeOfLargeInt: div)
@@ -936,16 +940,15 @@ LargeIntegersPlugin >> digitDivLarge: firstInteger with: secondInteger negative:
 		len: (self digitSizeOfLargeInt: rem)
 		quo: (self pointerToFirstDigitOfLargeInt: quo)
 		len: (self digitSizeOfLargeInt: quo).
-	self remapOop: #(quo ) in: [rem := self
-					digit: rem
-					Rshift: d
-					lookfirst: (self digitSizeOfLargeInt: div)
-							- 1].
+	self remapOop: quo
+		in: [rem := self digit: rem Rshift: d lookfirst: (self digitSizeOfLargeInt: div) - 1].
 	"^ Array with: quo with: rem"
-	self remapOop: #(quo rem ) in: [result := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: 2].
-	interpreterProxy stObject: result at: 1 put: quo.
-	interpreterProxy stObject: result at: 2 put: rem.
-	^ result
+	self remapOop: #(quo rem)
+		in: [result := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: 2].
+	result ifNotNil:
+		[interpreterProxy stObject: result at: 1 put: quo.
+		 interpreterProxy stObject: result at: 2 put: rem].
+	^result
 ]
 
 { #category : #'oop functions' }
@@ -1121,8 +1124,9 @@ LargeIntegersPlugin >> largeInt: aBytesObject growTo: newByteLen [
 	self remapOop: aBytesObject in:
 		[newBytes := interpreterProxy
 						instantiateClass: (interpreterProxy fetchClassOf: aBytesObject)
-						indexableSize: newByteLen].
-	newBytes ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
+						indexableSize: newByteLen.
+		 newBytes ifNil:
+			[interpreterProxy primitiveFailFor: PrimErrNoMemory. ^nil]].
 	newDigitLen := newByteLen + 3 // 4.
 	oldDigitLen := self digitSizeOfLargeInt: aBytesObject.
 	copyLen := oldDigitLen < newDigitLen
@@ -1223,7 +1227,7 @@ LargeIntegersPlugin >> normalizePositive: aLargePositiveInteger [
 
 { #category : #util }
 LargeIntegersPlugin >> pointerToFirstDigitOfLargeInt: bytesObject [
-	<inline: true>
+	<inline: #always>
 	<returnTypeC: #'unsigned int *'>
 	^interpreterProxy cCoerce: (interpreterProxy firstIndexableField: bytesObject) to: #'unsigned int *'
 ]
@@ -1548,7 +1552,7 @@ LargeIntegersPlugin >> unsafeByteOfLargeInt: bytesObj at: ix [
 { #category : #util }
 LargeIntegersPlugin >> unsafeDigitOfLargeInt: anOop at: ix [
 	"Argument must not be aSmallInteger!"
-	<inline: true>
+	<inline: #always>
 	<returnTypeC: #'unsigned int'>
 	^self cDigitOf: (self pointerToFirstDigitOfLargeInt: anOop) at: ix - 1
 ]
