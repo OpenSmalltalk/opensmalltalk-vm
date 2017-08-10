@@ -64,6 +64,16 @@ VMProfilerSymbolsManager >> addCogModuleSymbols: symbols [
 	symbolsByModule at: cogModule put: symbols
 ]
 
+{ #category : #'Constituents naming' }
+VMProfilerSymbolsManager >> analyzeClosedPIC: aClosedPIC [
+
+	^ Dictionary new
+		at: 'selector' put: aClosedPIC first;
+		at: 'nbOfCases' put: aClosedPIC size -1;
+		at: 'listOfCases' put: ((aClosedPIC allButFirst collect: [ :each | each methodClass name ]) asSet);
+		yourself.
+]
+
 { #category : #accessing }
 VMProfilerSymbolsManager >> cogModule [
 	^cogModule
@@ -84,13 +94,7 @@ VMProfilerSymbolsManager >> computeCogCodeModule: cogCodeConstituents [
 					((thing := cogCodeConstituents at: i) isCompiledMethod
 						ifTrue: [VMPPublicFunctionSymbol]
 						ifFalse: [VMPPrivateFunctionSymbol]) new
-							name: (thing isCompiledMethod
-										ifTrue: [thing methodClass name, '>>', thing selector]
-										ifFalse: [thing class == cogCodeConstituents first class
-													ifTrue: [thing]
-													ifFalse: ['PIC ', (thing isString
-																	ifTrue: [thing]
-																	ifFalse: [thing printString])]]);
+							name: (self nameOf: thing cogCodeModule: cogCodeConstituents);
 							address: (self extractAddress: (cogCodeConstituents at: i + 1));
 							mcpcbcpcmap: (cogCodeConstituents at: i + 1);
 							limit: (self extractAddress: (cogCodeConstituents at: i + 3 ifAbsent: [cogCodeConstituents last]))].
@@ -102,7 +106,16 @@ VMProfilerSymbolsManager >> extractAddress: thing [
 	^ thing isArray ifTrue: [ thing first ] ifFalse: [ thing ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'Constituents naming' }
+VMProfilerSymbolsManager >> getClosedPICLabel: aThing [
+"(= assoc key name )aThing could be either a selector, a trampoline/enilopmart, or a VMPSymbol"
+
+	|list|
+	list := String streamContents: [ :s |(aThing at: 'listOfCases') asStringOn: s delimiter: ', '].
+	^ String streamContents: [ :s | s nextPutAll: 'cPIC', ' ', (aThing at: 'selector'), ' - ', (aThing at: 'nbOfCases') asString, ' (', list, ')' ]
+]
+
+{ #category : #'initialize-release' }
 VMProfilerSymbolsManager >> initialize [
 	"Initialize the receiver, parsing the symbols in the background for faster startup."
 	self initializeMost.
@@ -130,6 +143,18 @@ VMProfilerSymbolsManager >> moduleForAddress: address [
 { #category : #accessing }
 VMProfilerSymbolsManager >> modules [
 	^modules
+]
+
+{ #category : #'Constituents naming' }
+VMProfilerSymbolsManager >> nameOf: thing cogCodeModule: cogCodeConstituents [
+
+	thing isCompiledMethod ifTrue: [ ^ thing methodClass name , '>>' , thing selector ].
+	thing class == cogCodeConstituents first class ifTrue: [ ^thing ].				
+ 	^ thing isArray  
+		ifTrue: [self getClosedPICLabel: (self analyzeClosedPIC: thing)]
+		ifFalse: ['OpenPIC ',(thing isString
+										ifTrue: [ thing ]
+										ifFalse: [ thing printString ])] 
 ]
 
 { #category : #accessing }

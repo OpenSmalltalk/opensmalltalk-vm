@@ -526,9 +526,14 @@ VMProfiler >> primitiveCollectCogCodeConstituents: withDetails [
 	
 	If the parameter is true, answers the mapping between machine code pc and 
 	bytecode pc in relevant methods instead of just the start address.
+	
+	If the primitive fails because space is low then the scavenger will run
+	before trying to send the primitive again.
 	"
 	<primitive: 253 error: ec>
-	^ec ifNotNil: [self primitiveFailed]
+	ec == #'insufficient object memory' ifTrue:
+		[^self retryPrimitiveCollectCogCodeConstituents: withDetails].
+	self primitiveFailed
 
 	"self basicNew primitiveCollectCogCodeConstituents"
 ]
@@ -717,6 +722,16 @@ VMProfiler >> report: s [
 			 s nextPutAll: ' of total'; cr; cr.
 			 self printSymbolTotals: nonVMTotals labelled: 'rest' on: s sumTotal: samplesInNonVM].
 		self class reportGCStats: elapsedStats upTime: elapsedTime on: s]
+]
+
+{ #category : #primitives }
+VMProfiler >> retryPrimitiveCollectCogCodeConstituents: withDetails [
+	"retryPrimitiveCollectCogCodeConstituents: gets sent after primitiveCollectCogCodeConstituents: has failed and allowed
+	 a scavenging garbage collection to occur.  The scavenging collection will have happened as the VM is activating the (failing) primitiveCollectCogCodeConstituents.  If
+	 retryPrimitiveCollectCogCodeConstituents: fails, then we consider the primitive has failed"
+	
+	<primitive: 253>
+	self primitiveFailed
 ]
 
 { #category : #accessing }
