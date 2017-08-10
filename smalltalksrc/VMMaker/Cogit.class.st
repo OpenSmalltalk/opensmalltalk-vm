@@ -4465,9 +4465,7 @@ Cogit >> cogCodeConstituents: withDetails [
 			[coInterpreter
 				storePointerUnchecked: count
 				ofObject: coInterpreter topRemappableOop
-				withValue: (cogMethod cmType = CMMethod
-								ifTrue: [cogMethod methodObject]
-								ifFalse: [cogMethod selector]).
+				withValue: (self valueOf: cogMethod).
 			value := withDetails
 				ifFalse: [self positiveMachineIntegerFor: cogMethod asUnsignedInteger]
 				ifTrue: [self collectCogMethodConstituent: cogMethod].
@@ -5747,6 +5745,32 @@ Cogit >> configureMNUCPIC: cPIC methodOperand: methodOperand numArgs: numArgs de
 Cogit >> cr [
 	<cmacro: '() putchar(''\n'')'>
 	coInterpreter transcript cr; flush
+]
+
+{ #category : #'profiling primitives' }
+Cogit >> createCPICData: cPIC [
+	<var: #cPIC type: #'CogMethod *'>
+	| pc entryPoint targetMethod value array |
+	<var: #targetMethod type: #'CogMethod *'>
+	array := 1.
+	array := objectMemory instantiateClass: objectMemory classArray indexableSize: 1 + cPIC cPICNumCases.
+      objectMemory storePointerUnchecked: 0 ofObject: array withValue: cPIC selector.
+	1 to: cPIC cPICNumCases do:
+		[:i|
+		pc := self addressOfEndOfCase: i inCPIC: cPIC.
+		entryPoint := i = 1
+						ifTrue: [backEnd jumpLongTargetBeforeFollowingAddress: pc]
+						ifFalse: [backEnd jumpLongConditionalTargetBeforeFollowingAddress: pc].
+		"Find target from jump.  A jump to the MNU entry-point should collect #doesNotUnderstand:"
+		(cPIC containsAddress: entryPoint)
+			ifTrue:
+				[value := objectMemory splObj: SelectorDoesNotUnderstand]
+			ifFalse:
+				[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
+				 self assert: targetMethod cmType = CMMethod.
+				 value := targetMethod methodObject].
+		objectMemory storePointer: i ofObject: array withValue: value].
+	^ array
 ]
 
 { #category : #accessing }
@@ -12588,6 +12612,19 @@ Cogit >> unlockVMOwner [
 	<api>
 	<cmacro: '() ceUnlockVMOwner()'>
 	^self simulateLeafCallOf: ceUnlockVMOwner
+]
+
+{ #category : #'profiling primitives' }
+Cogit >> valueOf: cogMethod [
+	"gives the type of the cogMethod and returns a CompiledMethod for a compiled method, a selector for an openPIC or an array containing a selector followed by the methods present in the closedPIC for a closedPIC"
+	
+	<var: #cogMethod type: #'CogMethod *'>
+	^cogMethod cmType = CMMethod 
+							ifTrue: [cogMethod methodObject]
+							ifFalse: [cogMethod cmType = CMClosedPIC 
+																ifTrue: [self createCPICData: cogMethod.]
+																ifFalse: [cogMethod selector]]
+                     
 ]
 
 { #category : #accessing }
