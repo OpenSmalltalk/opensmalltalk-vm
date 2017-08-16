@@ -2921,30 +2921,27 @@ CogVMSimulator >> primitiveDirectoryEntry [
 CogVMSimulator >> primitiveDirectoryLookup [
 	| index pathName array result |
 	index := self stackIntegerValue: 0.
-	pathName := (self stringOf: (self stackValue: 1)).
+	pathName := self stringOf: (self stackValue: 1).
 	
 	self successful ifFalse:
 		[^self primitiveFail].
 
 	array := FileDirectory default primLookupEntryIn: pathName index: index.
 
-	array == nil ifTrue:
+	array ifNil:
 		[self pop: 3 thenPush: objectMemory nilObject.
-		^array].
+		 ^array].
 	array == #badDirectoryPath ifTrue:
-		["self halt."
-		^self primitiveFail].
+		[^self "halt" primitiveFail].
 
-	PharoVM
-		ifTrue: [  
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
+	result := PharoVM
+		ifTrue: [self makeDirEntryName: (array at: 1) size: (array at: 1) size
 				createDate: (array at: 2) modDate: (array at: 3)
 				isDir: (array at: 4) fileSize: (array at: 5)
-				posixPermissions: (array at: 6) isSymlink: (array at: 7) ]
-		ifFalse: [ 
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
+				posixPermissions: (array at: 6 ifAbsent: 8r664) isSymlink: (array at: 7 ifAbsent: [false]) ]
+		ifFalse: [self makeDirEntryName: (array at: 1) size: (array at: 1) size
 				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4) fileSize: (array at: 5) ].
+				isDir: (array at: 4) fileSize: (array at: 5)].
 			
 	self pop: 3 thenPush: result
 ]
