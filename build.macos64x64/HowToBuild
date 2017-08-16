@@ -12,6 +12,8 @@ Contents:
 	- The Structure of the Makefiles
 	- Building the VM Simulator Support Libraries
 	- Using Different Compilers
+	- Installing third-party libraries
+	- Debugging with lldb
 
 
 Overview
@@ -95,10 +97,12 @@ to fix this.
 	cd buiild.macos64x64/squeak.cog.spur
 	./mvm -A
 This will build CocoaFast.app, CocoaDebug.app and CocoaAssert.app applications
-containing the three basic VM configurations.  If the configuration includes the
-multi-threaded VM you can use mvm -S to make the single-threaded VMs, mvm -T
-to make the multi-threadeds in FastMT.app et al, and mvm -A to make them all.
-mvm -d will make the Debug.app VM, etc.  mvm -? provides the gory details.
+(or maybe Squeak.app, SqueakAssert.app, SqueakDebug.app, Pharo.app,
+ PharoAssert.app, PharoDebug.app, etc) containing the three VM configurations.
+If the configuration includes the multi-threaded VM you can use mvm -S to make
+the single-threaded VMs, mvm -T to make the multi-threadeds in FastMT.app et al,
+and mvm -A to make them all.  mvm -d will make the Debug.app VM, etc.  mvm -?
+provides the gory details.
 
 Each build directory contains three files
 	plugins.int
@@ -162,7 +166,7 @@ The files in build.macos64x64/common are
 
 
 SDKs and Problems
--------------------------------------------
+-----------------
 The makefiles will use the oldest available SDK that is installed that is new
 enough to build the system.  The 64-bit build requires at least the 10.10 SDK.
 To obtain SDKs it is best to web search for "obtaining older sdks for Xcode",
@@ -188,7 +192,7 @@ build.
 
 
 Signing Problems
--------------------------------------------
+----------------
 The makefiles will attempt to sign the VM .app bundles that are built iff the
 environment variable SIGNING_IDENTITY is set (see "Building out of the box"
 above).  codesign, the Xcode utility for signing, may fail if Keychain Access
@@ -217,7 +221,7 @@ libraries have been provided.
 
 
 Using Different Compilers
------------------------------------------
+-------------------------
 The build system uses Xcode's default compiler, clang by default.
 You may want to use a different compiler.  Users claim this is possible.
 For example, to install gcc 5.2 see
@@ -227,12 +231,24 @@ best pointer I've found.
 
 
 Installing third-party libraries
------------------------------------------
+--------------------------------
 The Pharo VM depends on a number of third-party libraries.  cmake is needed to
 build the libraries.  Pre-compiled binaries for cmake can be downloaded from
 https://cmake.org/download.  Once e.g. /Applications/CMake.app is installed,
 ensure /Applications/CMake.app/Contents/bin is in PATH.
 
 
+Debugging with lldb
+-------------------
+As described in "Building out of the box" above, there are three kinds of VM
+built, the production one with full optimization, the assert VM with -O1, and
+the debug one with -O0.  All are debuggable, including ful symbols, but the
+production one is less debuggable because of optimization.  To debug via lldb
+simply run lldb on the executable in the MacOS directory in the .app bundle,
+e.g. if in the image directory you might do
+	lldb ../build.macos64x64/pharo.cog.spur/PharoAssert.app/Contents/MacOS/Pharo
+The VM includes many functions intended for VM debugging.  See e.g. functions
+beginning with print in the main VM source (e.g. spursrc/vm/gcc3x-cointerp.c).
+
 Eliot Miranda
-October 2016
+August 2017
