@@ -2873,14 +2873,13 @@ ObjectMemory >> instantiateClass: classPointer indexableSize: size [
 	class format word. The sizeHiBits will go away and other shifts change by 2 
 	when the split fields get merged in an (incompatible) image change."
 	<api>
-	| hash header1 header2 cClass byteSize format binc header3 hdrSize sizeHiBits bm1 classFormat |
+	| hash header1 cClass byteSize format binc header3 hdrSize sizeHiBits bm1 classFormat |
 	<inline: false>
 	self assert: size >= 0. "'cannot have a negative indexable field count"
 	hash := self newObjectHash.
 	classFormat := self formatOfClass: classPointer.
 	"Low 2 bits are 0"
 	header1 := (classFormat bitAnd: 16r1FF00) bitOr: (hash bitAnd: HashMaskUnshifted) << HashBitsOffset.
-	header2 := classPointer.
 	sizeHiBits := (classFormat bitAnd: 16r60000) >> 9.
 	cClass := header1 bitAnd: CompactClassMask. "compact class field from format word"
 	byteSize := (classFormat bitAnd: SizeMask + Size4Bit) + sizeHiBits.
@@ -2913,7 +2912,7 @@ ObjectMemory >> instantiateClass: classPointer indexableSize: size [
 	byteSize > 255 "requires size header word/full header"
 		ifTrue: [header3 := byteSize. hdrSize := 3]
 		ifFalse: [header1 := header1 bitOr: byteSize. hdrSize := cClass = 0 ifTrue: [2] ifFalse: [1]].
-	^self allocate: byteSize headerSize: hdrSize h1: header1 h2: header2 h3: header3 doFill: true format: format
+	^self allocate: byteSize headerSize: hdrSize h1: header1 h2: classPointer h3: header3 doFill: true format: format
 ]
 
 { #category : #'interpreter access' }
@@ -2922,10 +2921,9 @@ ObjectMemory >> instantiateContext: classPointer sizeInBytes: sizeInBytes [
 	size is under 256 bytes, the limit for objects with only one or 
 	two header words. Note that the size is specified in bytes 
 	and should include four bytes for the base header word."
-	| hash header1 header2 hdrSize |
+	| hash header1 hdrSize |
 	hash := self newObjectHash.
 	header1 := (hash bitAnd: HashMaskUnshifted) << HashBitsOffset bitOr: (self formatOfClass: classPointer).
-	header2 := classPointer.
 	(header1 bitAnd: CompactClassMask) > 0 "are contexts compact?"
 		ifTrue: [hdrSize := 1]
 		ifFalse: [hdrSize := 2].
@@ -2935,8 +2933,7 @@ ObjectMemory >> instantiateContext: classPointer sizeInBytes: sizeInBytes [
 		ifFalse: [hdrSize := 3.
 				"Zero the size field of header1 if large"
 				header1 := header1 - (header1 bitAnd: SizeMask)].
-self flag: #Dan.  "Check details of context sizes"
-	^ self allocate: sizeInBytes headerSize: hdrSize h1: header1 h2: header2 h3: LargeContextSize doFill: false format: 0
+	^self allocate: sizeInBytes headerSize: hdrSize h1: header1 h2: classPointer h3: LargeContextSize doFill: false format: 0 "ignored cuz doFill: is false"
 ]
 
 { #category : #'interpreter access' }
@@ -2948,19 +2945,20 @@ ObjectMemory >> instantiateSmallClass: classPointer sizeInBytes: sizeInBytes [
 	NOTE this code will only work for sizes that are an integral number of words
 		(like not a 32-bit LargeInteger in a 64-bit system). 
 	May cause a GC.
-	Note that the created small object IS NOT FILLED and must be completed before returning it to Squeak. Since this call is used in routines that do jsut that we are safe. Break this rule and die."
+	Note that the created small object IS NOT FILLED and must be completed before
+	returning it to Squeak. Since this call is used in routines that do just that we are safe.
+	Break this rule and die."
 
-	| hash header1 header2 hdrSize |
+	| hash header1 hdrSize |
 	(sizeInBytes bitAnd: (self wordSize-1)) = 0 ifFalse:
 		[self error: 'size must be integral number of words'].
 	hash := self newObjectHash.
 	header1 := (hash bitAnd: HashMaskUnshifted) << HashBitsOffset bitOr: (self formatOfClass: classPointer).
-	header2 := classPointer.
 	hdrSize := (header1 bitAnd: CompactClassMask) > 0 "is this a compact class"
 				ifTrue: [1]
 				ifFalse: [2].
 	header1 := header1 + (sizeInBytes - (header1 bitAnd: SizeMask+Size4Bit)).
-	^ self allocate: sizeInBytes headerSize: hdrSize h1: header1 h2: header2 h3: 0 doFill: false format: 0
+	^self allocate: sizeInBytes headerSize: hdrSize h1: header1 h2: classPointer h3: 0 doFill: false format: 0 "ignored cuz doFill: is false"
 ]
 
 { #category : #'interpreter access' }
