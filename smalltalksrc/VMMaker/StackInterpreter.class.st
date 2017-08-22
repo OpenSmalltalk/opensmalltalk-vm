@@ -21217,7 +21217,7 @@ StackInterpreter >> writeImageFileIO [
 	self putLong: objectMemory baseAddressOfImage toFile: f.
 	self putLong: objectMemory specialObjectsOop toFile: f.
 	self putLong: objectMemory newObjectHash toFile: f.
-	self putLong: self ioScreenSize toFile: f.
+	self putLong: self getSnapshotScreenSize toFile: f.
 	self putLong: self getImageHeaderFlags toFile: f.
 	self putWord32: extraVMMemory toFile: f.
 	self putShort: desiredNumStackPages toFile: f.
