@@ -7497,6 +7497,18 @@ StackInterpreter >> getShortFromFile: aFile swap: swapFlag [
 		ifFalse: [w]
 ]
 
+{ #category : #'internal interpreter access' }
+StackInterpreter >> getSnapshotScreenSize [
+	"Answer the screen size to write to the snapshot.
+	 If the actual screen size is zero then write the savedWindowSize instead."
+	| screenSize |
+	screenSize := self ioScreenSize.
+	((screenSize bitAnd: 16rFFFF) = 0
+	 or: [screenSize >> 16 = 0]) ifTrue:
+		[screenSize := savedWindowSize].
+	^screenSize
+]
+
 { #category : #'primitive support' }
 StackInterpreter >> getStackPointer [
 	"For Alien FFI"

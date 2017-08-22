@@ -543,17 +543,15 @@ Spur32BitMemoryManager >> instantiateClass: classObj indexableSize: nElements [
 			[numSlots := nElements + 3 // 4.
 			 instSpec := instSpec + (4 - nElements bitAnd: 3)] }
 		otherwise: "non-indexable"
-			[self cppIf: (PharoVM or: [true]) "Leave the old code but ignore it completely unless someone complains."
-				ifTrue:
-					[^nil]
-				ifFalse:
-					["some Squeak images include funky fixed subclasses of abstract variable
-					  superclasses. e.g. DirectoryEntry as a subclass of ArrayedCollection.
-					  Allow fixed classes to be instantiated here iff nElements = 0."
-					 (nElements ~= 0 or: [instSpec > self lastPointerFormat]) ifTrue:
-						[^nil].
-					 numSlots := self fixedFieldsOfClassFormat: classFormat.
-					 fillValue := nilObj]].
+			["Some Squeak images include funky fixed subclasses of abstract variable
+			  superclasses. e.g. DirectoryEntry as a subclass of ArrayedCollection.
+			  The (Threaded)FFIPlugin expects to be able to instantiate ExternalData via
+			  this method.
+			  Hence allow fixed classes to be instantiated here iff nElements = 0."
+			 (nElements ~= 0 or: [instSpec > self lastPointerFormat]) ifTrue:
+				[^nil].
+			 numSlots := self fixedFieldsOfClassFormat: classFormat.
+			 fillValue := nilObj].
 	classIndex = 0 ifTrue:
 		[classIndex := self ensureBehaviorHash: classObj.
 		 classIndex < 0 ifTrue:
