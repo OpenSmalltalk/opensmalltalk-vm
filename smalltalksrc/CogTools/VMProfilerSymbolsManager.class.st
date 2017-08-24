@@ -96,6 +96,7 @@ VMProfilerSymbolsManager >> computeCogCodeModule: cogCodeConstituents [
 						ifFalse: [VMPPrivateFunctionSymbol]) new
 							name: (self nameOf: thing cogCodeModule: cogCodeConstituents);
 							address: (self extractAddress: (cogCodeConstituents at: i + 1));
+							cm: thing ;
 							mcpcbcpcmap: (cogCodeConstituents at: i + 1);
 							limit: (self extractAddress: (cogCodeConstituents at: i + 3 ifAbsent: [cogCodeConstituents last]))].
 	self addCogModuleSymbols: symbols
@@ -108,11 +109,11 @@ VMProfilerSymbolsManager >> extractAddress: thing [
 
 { #category : #'Constituents naming' }
 VMProfilerSymbolsManager >> getClosedPICLabel: aThing [
-"(= assoc key name )aThing could be either a selector, a trampoline/enilopmart, or a VMPSymbol"
+"return a label for the considered closed PIC, listing its selector, its total number of cases, and the concrete classes present in the PIC. The duplicates (if any) among these classes have been deleted in #analyzeClosedPIC: "
 
 	|list|
 	list := String streamContents: [ :s |(aThing at: 'listOfCases') asStringOn: s delimiter: ', '].
-	^ String streamContents: [ :s | s nextPutAll: 'cPIC', ' ', (aThing at: 'selector'), ' - ', (aThing at: 'nbOfCases') asString, ' (', list, ')' ]
+	^ String streamContents: [ :s | s nextPutAll: 'cPIC ', (aThing at: 'selector'), ' - ', (aThing at: 'nbOfCases') asString, ' (', list, ')' ]
 ]
 
 { #category : #'initialize-release' }
