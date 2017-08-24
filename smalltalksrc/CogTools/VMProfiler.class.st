@@ -85,7 +85,7 @@ VMProfiler class >> canBenchmark: aByteString [
 VMProfiler class >> headlessSpyOn: aBlock reportOn: aStream [ 
 	"initialize the profiler version (squeak or pharo) and profile headless, writing the results on a given stream"
 
-	VMProfiler new
+	^VMProfiler new
 		selectBenchmark: (CompatibilityClass convertAsString: aBlock);
 		headlessSpyOn: aBlock;
 		report: aStream.
@@ -96,7 +96,7 @@ VMProfiler class >> headlessSpyOn: aBlock reportOn: aStream [
 VMProfiler class >> headlessSpyOn: aBlock reportOn: aStream withDetails: aBoolean [
 	"initialize the profiler version (squeak or pharo) and profile headless, writing the results on a given stream"
 
-	VMProfiler new
+	^VMProfiler new
 		withDetails: aBoolean;
 		selectBenchmark: (CompatibilityClass convertAsString: aBlock);
 		headlessSpyOn: aBlock;
@@ -197,7 +197,7 @@ VMProfiler class >> reportGCStats: gcStatsArray upTime: elapsedMilliseconds on: 
 { #category : #spying }
 VMProfiler class >> spyOn: aBlock [
 	
-	VMProfiler new
+	^VMProfiler new
 		class spyOn: aBlock.
 
 	
@@ -321,6 +321,29 @@ VMProfiler >> createMcpcBcpcMapFor: functionSymbol [
 VMProfiler >> createParagraph [
 	
 	self subclassResponsibility 
+]
+
+{ #category : #'as yet unclassified' }
+VMProfiler >> filterSamples: totals [	
+	
+	"Print sorted totals for all symbols with a total greater than 0.01% of the grand total."
+	| substantial insubstantial cut labelWidthCut labelledInFull |
+	cut := total / 10000.0.
+	substantial := totals associations select: [:assoc| assoc value > cut].
+	labelWidthCut := total / 1000.0.
+	labelledInFull := totals associations select: [:assoc| assoc value > labelWidthCut].
+	insubstantial := totals associations
+						inject: 0
+						into: [:sum :assoc|
+							  (assoc value <= cut ifTrue: [assoc value] ifFalse: [0]) + sum].
+	substantial := substantial asSortedCollection:
+						[:a1 :a2|
+						 a1 value > a2 value
+						 or: [a1 value = a2 value and: [a1 name < a2 name]]].
+	insubstantial > 0 ifTrue:
+		[substantial := substantial asArray, {'...others...'->insubstantial}].
+	^  {substantial. insubstantial. labelledInFull }
+	
 ]
 
 { #category : #'as yet unclassified' }
@@ -526,14 +549,9 @@ VMProfiler >> primitiveCollectCogCodeConstituents: withDetails [
 	
 	If the parameter is true, answers the mapping between machine code pc and 
 	bytecode pc in relevant methods instead of just the start address.
-	
-	If the primitive fails because space is low then the scavenger will run
-	before trying to send the primitive again.
 	"
 	<primitive: 253 error: ec>
-	ec == #'insufficient object memory' ifTrue:
-		[^self retryPrimitiveCollectCogCodeConstituents: withDetails].
-	self primitiveFailed
+	^ec ifNotNil: [self primitiveFailed]
 
 	"self basicNew primitiveCollectCogCodeConstituents"
 ]
@@ -595,24 +613,14 @@ VMProfiler >> printSymbolTotals: totals labelled: label on: aStream sumTotal: su
 		cogMethodMaps: Dictionary new
 ]
 
-{ #category : #reports }
+{ #category : #printing }
 VMProfiler >> printSymbolTotals: totals labelled: label on: aStream sumTotal: sumTotal cogMethodMaps: cogMethodMaps [
 	"Print sorted totals for all symbols with a total greater than 0.01% of the grand total."
-	| substantial insubstantial cut cumulative heading percentageWidth compositionWidth tabWidth labelWidthCut labelledInFull |
-	cut := total / 10000.0.
-	substantial := totals associations select: [:assoc| assoc value > cut].
-	labelWidthCut := total / 1000.0.
-	labelledInFull := totals associations select: [:assoc| assoc value > labelWidthCut].
-	insubstantial := totals associations
-						inject: 0
-						into: [:sum :assoc|
-							  (assoc value <= cut ifTrue: [assoc value] ifFalse: [0]) + sum].
-	substantial := substantial asSortedCollection:
-						[:a1 :a2|
-						 a1 value > a2 value
-						 or: [a1 value = a2 value and: [a1 name < a2 name]]].
-	insubstantial > 0 ifTrue:
-		[substantial := substantial asArray, {'...others...'->insubstantial}].
+	| substantial insubstantial cumulative heading percentageWidth compositionWidth tabWidth labelledInFull filteredSamples |
+	filteredSamples := self filterSamples: totals.
+	substantial := filteredSamples at: 1.
+	insubstantial := filteredSamples at:2.
+	labelledInFull := filteredSamples at: 3.
 	cumulative := 0.
 	heading := '% of ', label, ' (% of total)'.
 	tabWidth := self widthInDefaultFontOf: (String with: Character tab).
@@ -726,12 +734,12 @@ VMProfiler >> report: s [
 
 { #category : #primitives }
 VMProfiler >> retryPrimitiveCollectCogCodeConstituents: withDetails [
-	"retryPrimitiveCollectCogCodeConstituents: gets sent after primitiveCollectCogCodeConstituents: has failed and allowed
-	 a scavenging garbage collection to occur.  The scavenging collection will have happened as the VM is activating the (failing) primitiveCollectCogCodeConstituents.  If
-	 retryPrimitiveCollectCogCodeConstituents: fails, then we consider the primitive has failed"
-	
-	<primitive: 253>
+	"if the primitive has failed because of a lack of space, retry (the send of this new message will trigger a gc if needed)
+	"
+	<primitive: 253 error: ec>
 	self primitiveFailed
+
+
 ]
 
 { #category : #accessing }
