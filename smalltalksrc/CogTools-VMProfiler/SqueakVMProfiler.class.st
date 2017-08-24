@@ -3,9 +3,9 @@ I am the VMProfiler called when using a Squeak image.
 
 I can be used 
 1) headful : for instance, either via WorldMenu>open>VMProfiler, or by typing : VMProfiler spyOn: [1 to: 10000000 do: [ :i | Object new ]].
-2) headless : 
-* for instance, inspect on : String streamContents: [ :s | VMProfiler headlessSpyOn: [ 1 to: 10000000 do: [ :i | Object new ] ] reportOn: s ]
-* If you want to get a profiling report providing detailed data about the time spent in a function, inspect on : String streamContents: [ :s | VMProfiler headlessSpyOn: [ 1 to: 10000000 do: [ :i | Object new ] ] reportOn: s withDetails: true]. 
+2) headless : for instance, inspect on : String streamContents: [ :s | VMProfiler headlessSpyOn: [ 1 to: 10000000 do: [ :i | Object new ] ] reportOn: s ]
+
+If you want to get a profiling report providing detailed data about the time spent in a function, inspect on : String streamContents: [ :s | VMProfiler headlessSpyOn: [ 1 to: 10000000 do: [ :i | Object new ] ] reportOn: s withDetails: true]. 
 
 "
 Class {
