@@ -51,6 +51,11 @@ typedef struct sqSSL {
 static sqSSL **handleBuf = NULL;
 static sqInt handleMax = 0;
 
+static char* emptyString = "";
+
+// Max lengh of a Certificate common name or DNS Host name
+#define MAX_HOSTNAME_LENGTH 253
+
 
 /********************************************************************/
 /********************************************************************/
@@ -228,22 +233,35 @@ static int sqExtractPeerName(sqSSL *ssl) {
 		if(ssl->loglevel) printf("sqExtractPeerName: QueryContextAttributes failed (code = %x)\n", ret);
 		return 0;
 	}
-
-	/* Extract CN from certificate */
-	cchTmpBuf = CertGetNameString(certHandle, CERT_NAME_ATTR_TYPE, 0, szOID_COMMON_NAME, NULL, 0);
-	tmpBuf = (LPTSTR)alloca(cchTmpBuf * sizeof(TCHAR));
-	CertGetNameString(certHandle, CERT_NAME_ATTR_TYPE, 0, szOID_COMMON_NAME, tmpBuf, cchTmpBuf);
+	if (ssl->certFlags == SQSSL_OK && ssl->serverName != NULL) {
+		// The certificate was already deemed OK by the trust evaulation.
+		// This includes matching anything like CN, sAN, or wildcard certs.
+		// Therefore, we _copy_ the server name to the peer name such
+		// that a match or equality comparison on the Smalltalk side wont
+		// fail, which is correct.
+		ssl->peerName = _strdup(ssl->serverName);
+	} else {
+		// Either the cert was not ok OR we weren't given a server name.
+		// In the former case, the Smalltalk code typically bails early but
+		// copying over the CN does not hurt. In the latter case, we can just
+		// guess the users' intention and fall back to the legacy behavior:
+		// copying the peername no matter what.
+		/* Extract CN from certificate */
+		cchTmpBuf = CertGetNameString(certHandle, CERT_NAME_ATTR_TYPE, 0, szOID_COMMON_NAME, NULL, 0);
+		tmpBuf = (LPTSTR)alloca(cchTmpBuf * sizeof(TCHAR));
+		CertGetNameString(certHandle, CERT_NAME_ATTR_TYPE, 0, szOID_COMMON_NAME, tmpBuf, cchTmpBuf);
 
 #ifdef _UNICODE
-	/* Convert wide to UTF8 */
-	cbPeerName = WideCharToMultiByte(CP_UTF8, 0, tmpBuf, -1, NULL, 0, NULL, NULL);
-	if (cbPeerName == 0) return 0;
-	ssl->peerName = calloc(1, cbPeerName);
-	WideCharToMultiByte(CP_UTF8, 0, tmpBuf, -1, ssl->peerName, cbPeerName, NULL, NULL);
+		/* Convert wide to UTF8 */
+		cbPeerName = WideCharToMultiByte(CP_UTF8, 0, tmpBuf, -1, NULL, 0, NULL, NULL);
+		if (cbPeerName == 0) return 0;
+		ssl->peerName = calloc(1, cbPeerName);
+		WideCharToMultiByte(CP_UTF8, 0, tmpBuf, -1, ssl->peerName, cbPeerName, NULL, NULL);
 #else
-	ssl->peerName = _strdup(tmpBuf);
+		ssl->peerName = _strdup(tmpBuf);
 #endif
-	
+	}
+
 	if(ssl->loglevel) printf("sqExtractPeerName: Peer name is %s\n", ssl->peerName);
 
 	CertFreeCertificateContext(certHandle);
@@ -404,10 +422,22 @@ sqInt sqDestroySSL(sqInt handle) {
 	FreeCredentialsHandle(&ssl->sslCred);
 	DeleteSecurityContext(&ssl->sslCtxt);
 
-	if(ssl->certName) free(ssl->certName);
-	if(ssl->peerName) free(ssl->peerName);
-	if(ssl->serverName) free(ssl->serverName);
-	if(ssl->dataBuf) free(ssl->dataBuf);
+	if(ssl->certName) {
+		free(ssl->certName);
+		ssl->certName = NULL;
+	}
+	if(ssl->peerName) {
+		free(ssl->peerName);
+		ssl->peerName = NULL;
+	}
+	if(ssl->serverName) {
+		free(ssl->serverName);
+		ssl->serverName = NULL;
+	}
+	if(ssl->dataBuf) {
+		free(ssl->dataBuf);
+		ssl->dataBuf = NULL;
+	}
 
 	free(ssl);
 	handleBuf[handle] = NULL;
@@ -559,14 +589,14 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 	} else {
 		sqCopyExtraData(ssl, ssl->sbdOut);
 	}
-    ret = QueryContextAttributes(&ssl->sslCtxt, SECPKG_ATTR_STREAM_SIZES, &ssl->sslSizes);
+	ret = QueryContextAttributes(&ssl->sslCtxt, SECPKG_ATTR_STREAM_SIZES, &ssl->sslSizes);
 	if(ssl->loglevel) printf("sqConnectSSL: Maximum message size is %d bytes\n", ssl->sslSizes.cbMaximumMessage);
-
-	/* Extract the peer name */
-	sqExtractPeerName(ssl);
 
 	/* Verify the certificate (sets certFlags) */
 	sqVerifyCert(ssl, false);
+
+	/* Extract the peer name */
+	sqExtractPeerName(ssl);
 
 	return SQSSL_OK;
 }
@@ -648,14 +678,14 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt 
 
 	/* TODO: Look at retFlags */
 	ssl->state = SQSSL_CONNECTED;
-    ret = QueryContextAttributes(&ssl->sslCtxt, SECPKG_ATTR_STREAM_SIZES, &ssl->sslSizes);
+	ret = QueryContextAttributes(&ssl->sslCtxt, SECPKG_ATTR_STREAM_SIZES, &ssl->sslSizes);
 	if(ssl->loglevel) printf("sqAcceptSSL: Maximum message size is %d bytes\n", ssl->sslSizes.cbMaximumMessage);
-
-	/* Extract the peer name */
-	sqExtractPeerName(ssl);
 
 	/* Verify the certificate (sets certFlags) */
 	sqVerifyCert(ssl, true);
+
+	/* Extract the peer name */
+	sqExtractPeerName(ssl);
 
 	return sqCopyDescToken(ssl, ssl->sbdOut, dstBuf, dstLen);
 }
