@@ -49,7 +49,7 @@ static sqInt handleMax = 0;
 static char* emptyString = "";
 
 // Max lengh of a Certificate common name or DNS Host name
-#define MAX_HOSTNAME_LENGTH 255
+#define MAX_HOSTNAME_LENGTH 253
 
 
 /********************************************************************/
@@ -230,7 +230,7 @@ static OSStatus sqExtractPeerName(sqSSL* ssl)
         // In the former case, the Smalltalk code typically bails early but
         // copying over the CN does not hurt. In the latter case, we can just
         // guess the users' intention and fall back to the legacy behavior:
-        // copying the peername no matter wat.
+        // copying the peername no matter what.
         char peerName[MAX_HOSTNAME_LENGTH + 1];
         CFStringRef cfName = NULL;
         SecCertificateRef cert = (SecCertificateRef)CFArrayGetValueAtIndex(ssl->certs, 0);
