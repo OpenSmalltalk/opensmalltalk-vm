@@ -142,7 +142,7 @@ sqInt sqSetStringPropertySSL(sqInt handle, int propID, char *propName, sqInt pro
 		propID - the property id to retrieve
 	Returns: The integer value of the property.
 */
-int sqGetIntPropertySSL(sqInt handle, int propID);
+sqInt sqGetIntPropertySSL(sqInt handle, sqInt propID);
 
 /* sqSetIntPropertySSL: Set an integer property in SSL.
 	Arguments:
