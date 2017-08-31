@@ -4817,7 +4817,7 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 				caseOf: {
 				[#integerValueOf:]		->	[#sqInt].
 				[#isIntegerObject:]		->	[#int].
-				[#negated]				->	[self promoteArithmeticTypes: (self typeFor: sendNode receiver in: aTMethod) and: #int].
+				[#negated]				->	[self promoteArithmeticTypes: (sendNode receiver typeFrom: self in: aTMethod) and: #int].
 				[#+]					->	[self typeForArithmetic: sendNode in: aTMethod].
 				[#-]						->	[self typeForArithmetic: sendNode in: aTMethod].
 				[#*]					->	[self typeForArithmetic: sendNode in: aTMethod].
@@ -4828,9 +4828,9 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 				[#quo:]					->	[self typeForArithmetic: sendNode in: aTMethod].
 				"C99 Sec Bitwise shift operators ... 3 Sematics ...
 				 The integer promotions are performed on each of the operands. The type of the result is that of the promoted left operand..."
-				[#>>]					->	[self typeFor: sendNode receiver in: aTMethod].
-				[#<<]					->	[self typeFor: sendNode receiver in: aTMethod].
-				[#addressOf:]			->	[(self typeFor: sendNode receiver in: aTMethod)
+				[#>>]					->	[sendNode receiver typeFrom: self in: aTMethod].
+				[#<<]					->	[sendNode receiver typeFrom: self in: aTMethod].
+				[#addressOf:]			->	[(sendNode receiver typeFrom: self in: aTMethod)
 												ifNil: [#sqInt]
 												ifNotNil: [:type| type, (type last isLetter ifTrue: [' *'] ifFalse: ['*'])]].
 				[#at:]					->	[self typeForDereference: sendNode in: aTMethod].
@@ -4839,7 +4839,7 @@ CCodeGenerator >> returnTypeForSend: sendNode in: aTMethod ifNil: typeIfNil [
 				[#bitXor:]				->	[self typeForArithmetic: sendNode in: aTMethod].
 				[#bitClear:]				->	[self typeForArithmetic: sendNode in: aTMethod].
 				[#bitInvert32]			->	[#'unsigned int'].
-				[#bitInvert64]			->	[self promoteArithmeticTypes: (self typeFor: sendNode receiver in: aTMethod) and: #int].
+				[#bitInvert64]			->	[self promoteArithmeticTypes: (sendNode receiver typeFrom: self in: aTMethod) and: #int].
 				[#byteSwap32]			->	[#'unsigned int'].
 				[#byteSwap64]			->	[#'unsigned long long'].
 				[#byteSwapped32IfBigEndian:]	->	[#'unsigned int'].
@@ -5214,9 +5214,9 @@ CCodeGenerator >> typeForArithmetic: sendNode in: aTMethod [
 	"Answer the return type for an arithmetic sendThis is so that the inliner can still
 	 inline simple expressions.  Deal with pointer arithmetic, floating point arithmetic
 	 and promotion."
-	| rcvrType argType arg promotedType |
-	rcvrType := self typeFor: sendNode receiver in: aTMethod.
-	argType := self typeFor: (arg := sendNode args first) in: aTMethod.
+	| rcvrType argType arg |
+	rcvrType := sendNode receiver typeOrNilFrom: self in: aTMethod.
+	argType := (arg := sendNode args first) typeOrNilFrom: self in: aTMethod.
 	"deal with pointer arithmetic"
 	((rcvrType notNil and: [rcvrType last == $*]) or: [argType notNil and: [argType last == $*]]) ifTrue:
 		[(rcvrType isNil or: [argType isNil]) ifTrue:
@@ -5228,12 +5228,13 @@ CCodeGenerator >> typeForArithmetic: sendNode in: aTMethod [
 		 ^rcvrType last == $*
 			ifTrue: [rcvrType]
 			ifFalse: [argType]].
-	promotedType := self promoteArithmeticTypes: rcvrType and: argType.
-	"We have to be very careful with subtraction.  The difference between two unsigned types is signed.
-	 But we don't want unsigned - constant to be signed.  We almost always want this to stay unsigned."
-	^(sendNode selector == #- and: [promotedType first == $u and: [(arg isConstant and: [arg value isInteger]) not]])
-		ifTrue: [promotedType allButFirst: ((promotedType beginsWith: 'unsigned') ifTrue: [9] ifFalse: [1])]
-		ifFalse: [promotedType]
+	^(self promoteArithmeticTypes: rcvrType and: argType) ifNotNil:
+		[:promotedType|
+		 "We have to be very careful with subtraction.  The difference between two unsigned types is signed.
+		  But we don't want unsigned - constant to be signed.  We almost always want this to stay unsigned."
+		 (sendNode selector == #- and: [promotedType first == $u and: [(arg isConstant and: [arg value isInteger]) not]])
+			ifTrue: [promotedType allButFirst: ((promotedType beginsWith: 'unsigned') ifTrue: [9] ifFalse: [1])]
+			ifFalse: [promotedType]]
 ]
 
 { #category : #'type inference' }
