@@ -236,7 +236,7 @@ SoundPlugin >> primitiveSetDefaultSoundPlayer [
 	self touch: deviceName.
 	self touch: sz.
 	self cCode: 'strncpy(deviceName, srcPtr, sz)'.
-	self cCode: 'deviceName[sz] = NULL'.
+	self cCode: 'deviceName[sz] = 0'.
 	
 	"do the work"
 	self cCode: 'setDefaultSoundPlayer(deviceName)'.
@@ -266,7 +266,7 @@ SoundPlugin >> primitiveSetDefaultSoundRecorder [
 	self touch: deviceName.
 	self touch: sz.
 	self cCode: 'strncpy(deviceName, srcPtr, sz)'.
-	self cCode: 'deviceName[sz] = NULL'.
+	self cCode: 'deviceName[sz] = 0'.
 	
 	"do the work"
 	self cCode: 'setDefaultSoundRecorder(deviceName)'.
