@@ -574,12 +574,8 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInde
 		bytesRead = 0;
 		do {
 			clearerr(file);
-			if (fread(dst, 1, 1, file) == 1) {
+			if (fread(dst, 1, 1, file) == 1)
 				bytesRead += 1;
-				if (dst[bytesRead-1] == '\n'
-				 || dst[bytesRead-1] == '\r')
-					break;
-			}
 		}
 		while (bytesRead <= 0 && ferror(file) && errno == EINTR);
 #if COGMTVM
