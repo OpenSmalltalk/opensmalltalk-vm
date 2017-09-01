@@ -137,6 +137,12 @@ InterpreterPlugin class >> isPluginClass [
 	^true
 ]
 
+{ #category : #translation }
+InterpreterPlugin class >> isStructType: typeName [ "<String>"
+	"Subclasses should override to answer trye for struct types they use."
+	^false
+]
+
 { #category : #'translated primitives' }
 InterpreterPlugin class >> methodForTranslatedPrimitiveTuple: tuple [
 	| class |

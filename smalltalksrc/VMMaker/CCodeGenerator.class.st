@@ -2201,7 +2201,7 @@ CCodeGenerator >> generateIfNilAsArgument: msgNode on: aStream indent: level [
 			 msgNode receiver emitCCodeAsArgumentOn: aStream level: 0 generator: self.
 			 (msgNode receiver isLeaf
 			  or: [msgNode receiver isSend
-				  and: [(msgNode receiver isStructSendIn: self)
+				  and: [(self isStructSend: msgNode receiver)
 				  and: [msgNode receiver receiver isLeaf]]]) ifFalse:
 				[logger cr; nextPutAll: 'sending ifNil: to non-leaf in '; nextPutAll: currentMethod selector].
 			 aStream nextPut: $)]
@@ -3829,6 +3829,25 @@ CCodeGenerator >> isStackAccessor: selector given: interpreterClass [
 	^interpreterClass isStackAccessor: selector
 ]
 
+{ #category : #utilities }
+CCodeGenerator >> isStructSend: aTSendNode [
+	"Answer if the argument aTSendNode is a send of a structure accessor.
+	 This is tricky.  We want
+		foo bar => foo->bar
+		foo bar => foo.bar
+		foo bar: expr => foo->bar = expr
+		foo bar: expr => foo.bar = expr
+	 depending on whether foo is a struct or a pointer to a struct,
+	 but only if both foo is a struct type and bar is a field accessor.
+	 The tricky cases are self-sends within struct class methods.  Here we need to
+	 distinguish between self-sends of ordinary methods from self sends of accessors."
+	^aTSendNode numArgs <= 1
+	   and: [(aTSendNode receiver structTargetKindIn: self) notNil
+	   and: [(self methodNamed: aTSendNode selector)
+				ifNil: [false]
+				ifNotNil: [:method| method isStructAccessor]]]
+]
+
 { #category : #inlining }
 CCodeGenerator >> isVoidPointer: aCType [ "<String>"
 	"sigh..."
@@ -5132,8 +5151,15 @@ CCodeGenerator >> structClassesForTranslationClasses: classes [
 ]
 
 { #category : #'C code generator' }
+CCodeGenerator >> structTargetKindForDeclaration: typeName [ "<String>"
+	^VMStructType structTargetKindForDeclaration: typeName
+]
+
+{ #category : #'C code generator' }
 CCodeGenerator >> structTargetKindForVariableName: varName [ "<String>"
-	^VMStructType structTargetKindForDeclaration: (self typeOfVariable: varName)
+	^(self typeOfVariable: varName) ifNotNil:
+		[:declaration|
+		 self structTargetKindForDeclaration: declaration]
 ]
 
 { #category : #accessing }
