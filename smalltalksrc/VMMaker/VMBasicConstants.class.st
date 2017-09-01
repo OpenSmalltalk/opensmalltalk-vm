@@ -97,7 +97,8 @@ VMBasicConstants class >> namesDefinedAtCompileTime [
 		TerfVM									"Terf vs Squeak"
 		EnforceAccessControl					"Newspeak"
 		CheckRememberedInTrampoline		"IMMUTABILITY"
-		LLDB)									"As of lldb-370.0.42 Swift-3.1, passing funciton parameters to printOopsSuchThat fails with Internal error [IRForTarget]: Couldn't rewrite one of the arguments of a function call.  Turning off link time optimization with -fno-lto has no effect.  hence we define some debugging functions as being <option: LLDB>"
+		LLDB									"As of lldb-370.0.42 Swift-3.1, passing funciton parameters to printOopsSuchThat fails with Internal error [IRForTarget]: Couldn't rewrite one of the arguments of a function call.  Turning off link time optimization with -fno-lto has no effect.  hence we define some debugging functions as being <option: LLDB>"
+		WIN32)
 ]
 
 { #category : #'C translation' }

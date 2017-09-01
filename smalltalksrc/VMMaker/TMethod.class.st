@@ -413,7 +413,7 @@ TMethod >> computePossibleSideEffectsInto: writtenToVars visited: visitedSelecto
 					[writtenToVars add: node variable name].
 			(node isSend
 			 and: [node isBuiltinOperator not
-			 and: [(node isStructSendIn: aCodeGen) not]]) ifTrue:
+			 and: [(aCodeGen isStructSend: node) not]]) ifTrue:
 				[(aCodeGen methodNamed: node selector) ifNotNil:
 					[:method|
 					 method
@@ -711,7 +711,7 @@ TMethod >> ensureToByDoLoopLimitIsSafeAndEfficient: node in: aCodeGen [
 						[:subNode|
 						subNode isSend
 						and: [(aCodeGen isBuiltinSelector: subNode selector) not
-						and: [(subNode isStructSendIn: aCodeGen) not]]].
+						and: [(aCodeGen isStructSend: subNode) not]]].
 	 node args size = 4
 		ifTrue:
 			[hasSideEffects
@@ -1859,7 +1859,7 @@ TMethod >> isSubstitutableNode: aNode intoMethod: targetMeth in: aCodeGen [
 
 	(aNode isSend
 	 and: [aNode numArgs = 0
-	 and: [aNode isStructSendIn: aCodeGen]]) ifTrue:
+	 and: [aCodeGen isStructSend: aNode]]) ifTrue:
 		[^true].
 
 	"scan expression tree; must contain only constants, builtin ops, and inlineable vars"
@@ -1867,7 +1867,7 @@ TMethod >> isSubstitutableNode: aNode intoMethod: targetMeth in: aCodeGen [
 		node isSend ifTrue: [
 			(node isBuiltinOperator
 			 or: [node numArgs = 0
-				 and: [node isStructSendIn: aCodeGen]]) ifFalse: [ ^false ].
+				 and: [aCodeGen isStructSend: node]]) ifFalse: [ ^false ].
 		].
 		node isVariable ifTrue: [
 			var := node name.
@@ -2911,18 +2911,20 @@ TMethod >> tryToInlineMethodExpressionsIn: aCodeGen [
 
 	| sendsToInline |
 	sendsToInline := Dictionary new: 100.
-	parseTree
-		nodesDo:
-			[:node|
-			(self inlineableFunctionCall: node in: aCodeGen) ifTrue:
-				[(self inlineFunctionCall: node in: aCodeGen) ifNotNil:
-					[:replacement|
-					 sendsToInline at: node put: replacement]]]
-		unless: "Don't inline the arguments to asserts to keep the asserts readable"
-			[:node|
-			node isSend
-			and: [node selector == #cCode:inSmalltalk:
-				or: [aCodeGen isAssertSelector: node selector]]].
+	aCodeGen
+		pushScope: declarations
+		while: [parseTree
+					nodesDo:
+						[:node|
+						(self inlineableFunctionCall: node in: aCodeGen) ifTrue:
+							[(self inlineFunctionCall: node in: aCodeGen) ifNotNil:
+								[:replacement|
+								 sendsToInline at: node put: replacement]]]
+					unless: "Don't inline the arguments to asserts to keep the asserts readable"
+						[:node|
+						node isSend
+						and: [node selector == #cCode:inSmalltalk:
+							or: [aCodeGen isAssertSelector: node selector]]]].
 
 	sendsToInline isEmpty ifTrue:
 		[^false].
