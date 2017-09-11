@@ -35,7 +35,7 @@
 
 #include "SqueakVirtualMachine.h"
 #include "sq.h"
-#include "sqGitVersionString.h"
+#include "sqSCCSVersion.h"
 
 #define DefaultHeapSize		  20	     	/* megabytes BEYOND actual image size */
 #define DefaultMmapSize		1024     	/* megabytes of virtual memory */
@@ -99,22 +99,26 @@ extern void ioInitializeInternalPluginPrimitives(void);
 static long   extraMemory=	0;
 int    useMmap=		DefaultMmapSize * 1024 * 1024;
 
-int ioIsHeadless(void)
+int
+ioIsHeadless(void)
 {
     return headlessMode;
 }
 
-char *getImageName(void)
+char*
+getImageName(void)
 {
     return imageName;
 }
 
-const char *sqGetCurrentImagePath()
+const char*
+sqGetCurrentImagePath()
 {
     return imagePath;
 }
 
-sqInt imageNameGetLength(sqInt sqImageNameIndex, sqInt length)
+sqInt
+imageNameGetLength(sqInt sqImageNameIndex, sqInt length)
 {
     char *sqImageName = pointerForOop(sqImageNameIndex);
     int count;
@@ -128,7 +132,8 @@ sqInt imageNameGetLength(sqInt sqImageNameIndex, sqInt length)
     return count;
 }
 
-sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
+sqInt
+imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
 {
     char *sqImageName= pointerForOop(sqImageNameIndex);
     int count;
@@ -142,17 +147,20 @@ sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
     return count;
 }
 
-sqInt imageNameSize(void)
+sqInt
+imageNameSize(void)
 {
     return strlen(imageName);
 }
 
-sqInt vmPathSize(void)
+sqInt
+vmPathSize(void)
 {
     return strlen(vmPath);
 }
 
-sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
+sqInt
+vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
 {
     char *stVMPath= pointerForOop(sqVMPathIndex);
     int count;
@@ -166,12 +174,14 @@ sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
     return count;
 }
 
-char* ioGetLogDirectory(void)
+char*
+ioGetLogDirectory(void)
 {
     return "";
 }
 
-sqInt ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz)
+sqInt
+ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz)
 {
     return 1;
 }
@@ -230,7 +240,7 @@ GetAttributeString(sqInt id)
 #endif
 
     case 1009: /* source tree version info */
-        return SOURCE_VERSION_STRING;
+        return sourceVersionString(' ');
 
     default:
         if ((id - 2) < squeakArgumentCount)
@@ -240,24 +250,85 @@ GetAttributeString(sqInt id)
     return "";
 }
 
-sqInt attributeSize(sqInt id)
+sqInt
+attributeSize(sqInt id)
 {
     return strlen(GetAttributeString(id));
 }
 
-sqInt getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length)
+sqInt
+getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length)
 {
     if (length > 0)
         strncpy(pointerForOop(byteArrayIndex), GetAttributeString(id), length);
     return 0;
 }
 
-const char *getVersionInfo(int verbose)
+/**
+ * FIXME: Check this malloc for memory leaks.
+ */
+char *getVersionInfo(int verbose)
 {
-    return SOURCE_VERSION_STRING;
+#if STACKVM
+  extern char *__interpBuildInfo;
+# define INTERP_BUILD __interpBuildInfo
+# if COGVM
+  extern char *__cogitBuildInfo;
+# endif
+#else
+# define INTERP_BUILD interpreterVersion
+#endif
+  extern char *revisionAsString();
+  char *info= (char *)malloc(4096);
+  info[0]= '\0';
+
+#if SPURVM
+# if BytesPerOop == 8
+#	define ObjectMemory " Spur 64-bit"
+# else
+#	define ObjectMemory " Spur"
+# endif
+#else
+# define ObjectMemory
+#endif
+#if defined(NDEBUG)
+# define BuildVariant "Production" ObjectMemory
+#elif DEBUGVM
+# define BuildVariant "Debug" ObjectMemory
+# else
+# define BuildVariant "Assert" ObjectMemory
+#endif
+
+#if ITIMER_HEARTBEAT
+# define HBID " ITHB"
+#else
+# define HBID
+#endif
+
+  if (verbose)
+    sprintf(info+strlen(info), IMAGE_DIALECT_NAME " VM version: ");
+  sprintf(info+strlen(info), "%s-%s ", VM_VERSION, revisionAsString());
+#if defined(USE_XSHM)
+  sprintf(info+strlen(info), " XShm");
+#endif
+  sprintf(info+strlen(info), " [" BuildVariant HBID " VM]\n");
+  if (verbose)
+    sprintf(info+strlen(info), "Built from: ");
+  sprintf(info+strlen(info), "%s\n", INTERP_BUILD);
+#if COGVM
+  if (verbose)
+    sprintf(info+strlen(info), "With: ");
+  sprintf(info+strlen(info), "%s\n", GetAttributeString(1008)); /* __cogitBuildInfo */
+#endif
+  if (verbose)
+    sprintf(info+strlen(info), "Revision: ");
+  sprintf(info+strlen(info), "%s\n", sourceVersionString('\n'));
+  sprintf(info+strlen(info), "plugin path: %s [default: %s]\n", squeakPlugins, vmPath);
+  return info;
 }
 
-void getCrashDumpFilenameInto(char *buf)
+void
+getCrashDumpFilenameInto(char *buf)
 {
 	/*
     strcpy(buf,vmLogDirA);
@@ -266,23 +337,27 @@ void getCrashDumpFilenameInto(char *buf)
 	strcat(buf, "crash.dmp");
 }
 
-static void outOfMemory(void)
+static void
+outOfMemory(void)
 {
   /* pushing stderr outputs the error report on stderr instead of stdout */
   /* pushOutputFile((char *)STDERR_FILENO); */
   error("out of memory\n");
 }
 
-static void recordPathsForVMName(const char *localVmName)
+static void
+recordPathsForVMName(const char *localVmName)
 {
     findExecutablePath(localVmName, vmPath, sizeof(vmPath));
 }
 
-static void usage(void)
+static void
+usage(void)
 {
 }
 
-static int parseVMArgument(char **argv)
+static int
+parseVMArgument(char **argv)
 {
 #define IS_VM_OPTION(name) (!strcmp(*argv, "-" name) || !strcmp(*argv, "--" name))
     if (IS_VM_OPTION("headless") || IS_VM_OPTION("no-interactive"))
@@ -312,7 +387,8 @@ static int parseVMArgument(char **argv)
     return 0;
 }
 
-static int parseArguments(int argc, char **argv)
+static int
+parseArguments(int argc, char **argv)
 {
 # define skipArg()	(--argc, argv++)
 # define saveArg()	(vmArgumentVector[vmArgumentCount++]= *skipArg())
@@ -359,12 +435,14 @@ static int parseArguments(int argc, char **argv)
     return SQUEAK_SUCCESS;
 }
 
-SQUEAK_VM_CORE_PUBLIC int squeak_getInterfaceVersion()
+SQUEAK_VM_CORE_PUBLIC int
+squeak_getInterfaceVersion()
 {
     return SQUEAK_VM_CORE_COMPILED_VERSION;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError squeak_loadImage(const char *fileName)
+SQUEAK_VM_CORE_PUBLIC SqueakError
+squeak_loadImage(const char *fileName)
 {
     size_t imageSize = 0;
     sqImageFile imageFile = 0;
@@ -401,7 +479,8 @@ SQUEAK_VM_CORE_PUBLIC SqueakError squeak_loadImage(const char *fileName)
 }
 
 static char tempImageNameAttempt[FILENAME_MAX];
-SQUEAK_VM_CORE_PUBLIC SqueakError squeak_loadDefaultImage(void)
+SQUEAK_VM_CORE_PUBLIC SqueakError
+squeak_loadDefaultImage(void)
 {
     SqueakError error;
 
@@ -425,7 +504,8 @@ SQUEAK_VM_CORE_PUBLIC SqueakError squeak_loadDefaultImage(void)
     return SQUEAK_ERROR_FAILED_TO_OPEN_FILE;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError squeak_initialize(void)
+SQUEAK_VM_CORE_PUBLIC SqueakError
+squeak_initialize(void)
 {
     /* check the interpreter's size assumptions for basic data types */
     if (sizeof(int) != 4) error("This C compiler's integers are not 32 bits.");
@@ -447,13 +527,15 @@ SQUEAK_VM_CORE_PUBLIC SqueakError squeak_initialize(void)
     return SQUEAK_SUCCESS;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError squeak_shutdown(void)
+SQUEAK_VM_CORE_PUBLIC SqueakError
+squeak_shutdown(void)
 {
     /* Nothing required yet. */
     return SQUEAK_SUCCESS;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError squeak_parseCommandLineArguments(int argc, const char **argv)
+SQUEAK_VM_CORE_PUBLIC SqueakError
+squeak_parseCommandLineArguments(int argc, const char **argv)
 {
     /* Make parameters global for access from plugins */
     argCnt = argc;
@@ -473,40 +555,47 @@ SQUEAK_VM_CORE_PUBLIC SqueakError squeak_parseCommandLineArguments(int argc, con
     return parseArguments(argc, (char**)argv);
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError squeak_parseVMCommandLineArguments(int argc, const char **argv)
+SQUEAK_VM_CORE_PUBLIC SqueakError
+squeak_parseVMCommandLineArguments(int argc, const char **argv)
 {
     return SQUEAK_ERROR_NOT_YET_IMPLEMENTED;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError squeak_setVMStringParameter(const char *name, const char *value)
+SQUEAK_VM_CORE_PUBLIC SqueakError
+squeak_setVMStringParameter(const char *name, const char *value)
 {
     return SQUEAK_ERROR_UNSUPPORTED_PARAMETER;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError squeak_setVMIntegerParameter(const char *name, const char *value)
+SQUEAK_VM_CORE_PUBLIC SqueakError
+squeak_setVMIntegerParameter(const char *name, const char *value)
 {
     return SQUEAK_ERROR_UNSUPPORTED_PARAMETER;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError squeak_passImageCommandLineArguments(int argc, const char **argv)
+SQUEAK_VM_CORE_PUBLIC SqueakError
+squeak_passImageCommandLineArguments(int argc, const char **argv)
 {
     return SQUEAK_ERROR_NOT_YET_IMPLEMENTED;
 }
 
-static int squeak_doRunInterpreter(void *userdata)
+static int
+squeak_doRunInterpreter(void *userdata)
 {
     (void)userdata;
     interpret();
     return SQUEAK_SUCCESS;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError squeak_run(void)
+SQUEAK_VM_CORE_PUBLIC SqueakError
+squeak_run(void)
 {
     sqExecuteFunctionWithCrashExceptionCatching(&squeak_doRunInterpreter, NULL);
     return SQUEAK_SUCCESS;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError squeak_initializeVM(void)
+SQUEAK_VM_CORE_PUBLIC SqueakError
+squeak_initializeVM(void)
 {
     ioInitWindowSystem(headlessMode);
     ioInitTime();
@@ -517,12 +606,14 @@ SQUEAK_VM_CORE_PUBLIC SqueakError squeak_initializeVM(void)
     return SQUEAK_SUCCESS;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError squeak_shutdownVM(void)
+SQUEAK_VM_CORE_PUBLIC SqueakError
+squeak_shutdownVM(void)
 {
     return SQUEAK_SUCCESS;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError squeak_main(int argc, const char **argv)
+SQUEAK_VM_CORE_PUBLIC SqueakError
+squeak_main(int argc, const char **argv)
 {
     SqueakError error;
 

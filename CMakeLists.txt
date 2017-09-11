@@ -172,8 +172,6 @@ if(COG_JIT)
 	#add_definitions(CogVM=1)
 endif()
 
-# Get the version string
-include(GetGitVersion.cmake)
 
 set(SourceFolderName "${SourceFolderName}src")
 set(PluginsSourceFolderName "src/plugins")
@@ -310,6 +308,7 @@ include_directories(
 	.
 	"${PROJECT_SOURCE_DIR}/include"
 	"${PROJECT_SOURCE_DIR}/platforms/Cross/vm"
+	"${PROJECT_SOURCE_DIR}/platforms/Cross/plugins"
 	"${SourceFolderName}/vm"
 )
 
@@ -517,6 +516,7 @@ include("Plugins.cmake")
 
 # Generate the config dot h.
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+include_directories(${CMAKE_BINARY_DIR})
 
 # Build the VM core library
 set(VM_CORE_LIBRARY_TYPE STATIC)
@@ -529,7 +529,6 @@ if("${VM_CORE_LIBRARY_TYPE}" STREQUAL "STATIC")
 endif()
 
 add_library(${VM_LIBRARY_NAME} ${VM_CORE_LIBRARY_TYPE} ${VM_SOURCES} ${VM_INTERNAL_PLUGIN_SOURCES})
-add_dependencies(${VM_LIBRARY_NAME} sqGitVersionString)
 
 target_compile_definitions(${VM_LIBRARY_NAME} PRIVATE
 	-DSQUEAK_BUILTIN_PLUGIN
