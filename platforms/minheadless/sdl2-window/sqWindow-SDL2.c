@@ -78,7 +78,8 @@ static SDL_GLContext currentOpenGLContext = 0;
 static SDL_Window *currentOpenGLWindow = 0;
 static int openglStoreCount = 0;
 
-static void storeOpenGLState(void)
+static void
+storeOpenGLState(void)
 {
     if(openglStoreCount == 0)
     {
@@ -88,7 +89,8 @@ static void storeOpenGLState(void)
     ++openglStoreCount;
 }
 
-static void restoreOpenGLState(void)
+static void
+restoreOpenGLState(void)
 {
     --openglStoreCount;
     if(openglStoreCount == 0)
@@ -102,7 +104,8 @@ static void restoreOpenGLState(void)
         abort();
 }
 
-static sqInt setSDL2InputSemaphoreIndex(sqInt semaIndex)
+static sqInt
+setSDL2InputSemaphoreIndex(sqInt semaIndex)
 {
     if (semaIndex == 0)
         success(false);
@@ -111,13 +114,15 @@ static sqInt setSDL2InputSemaphoreIndex(sqInt semaIndex)
     return true;
 }
 
-static void sdl2SignalInputEvent(void)
+static void
+sdl2SignalInputEvent(void)
 {
     if (sdl2InputEventSemaIndex > 0)
         signalSemaphoreWithIndex(sdl2InputEventSemaIndex);
 }
 
-static int convertButton(int button)
+static int
+convertButton(int button)
 {
 #ifdef __APPLE__
     // On OS X, swap the middle and right buttons.
@@ -140,7 +145,8 @@ static int convertButton(int button)
     return 0;
 }
 
-static int convertModifiers(int state)
+static int
+convertModifiers(int state)
 {
     int result = 0;
     if(state & KMOD_SHIFT)
@@ -154,7 +160,8 @@ static int convertModifiers(int state)
     return result;
 }
 
-static int convertSpecialKeySymToCharacter(int symbol)
+static int
+convertSpecialKeySymToCharacter(int symbol)
 {
     switch(symbol)
     {
@@ -177,7 +184,8 @@ static int convertSpecialKeySymToCharacter(int symbol)
 
 }
 
-static int convertKeySymToCharacter(int symbol)
+static int
+convertKeySymToCharacter(int symbol)
 {
     if(symbol >= 0x400000)
         return 0;
@@ -185,19 +193,22 @@ static int convertKeySymToCharacter(int symbol)
         return symbol;
 }
 
-static void sqSDL2_initialize(void)
+static void
+sqSDL2_initialize(void)
 {
     SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1");
 
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_NOPARACHUTE);
 }
 
-static void sqSDL2_shutdown(void)
+static void
+sqSDL2_shutdown(void)
 {
     SDL_Quit();
 }
 
-static void createWindow(sqInt width, sqInt height, sqInt fullscreenFlag)
+static void
+createWindow(sqInt width, sqInt height, sqInt fullscreenFlag)
 {
     int flags;
     int actualWindowX, actualWindowY;
@@ -238,7 +249,8 @@ static void createWindow(sqInt width, sqInt height, sqInt fullscreenFlag)
     restoreOpenGLState();
 }
 
-static int ensureTextureOfSize(sqInt width, sqInt height)
+static int
+ensureTextureOfSize(sqInt width, sqInt height)
 {
     if(windowTexture && windowTextureWidth == width && windowTextureHeight == height)
         return 0;
@@ -254,7 +266,8 @@ static int ensureTextureOfSize(sqInt width, sqInt height)
     return 1;
 }
 
-static void presentWindow()
+static void
+presentWindow()
 {
     if(!window || !windowRenderer)
         return;
@@ -270,19 +283,22 @@ static void presentWindow()
     restoreOpenGLState();
 }
 
-static void recordSDLEvent(const SDL_Event *rawEvent)
+static void
+recordSDLEvent(const SDL_Event *rawEvent)
 {
     newSDLEvent = 1;
     sqSDLEventQueuePush(sdlEventQueue, *rawEvent);
 }
 
-static void recordEvent(sqEventUnion *event)
+static void
+recordEvent(sqEventUnion *event)
 {
     newDisplayEvent = 1;
     sqEventQueuePush(eventQueue, *event);
 }
 
-static void recordLowImportanceEvent(sqEventUnion *event)
+static void
+recordLowImportanceEvent(sqEventUnion *event)
 {
     if(sqEventQueueIsFull(eventQueue))
         return;
@@ -290,7 +306,8 @@ static void recordLowImportanceEvent(sqEventUnion *event)
     recordEvent(event);
 }
 
-static void recordMouseWheel(int keyCode)
+static void
+recordMouseWheel(int keyCode)
 {
     int modifiers = modifiersState ^ CtrlKeyBit;
 
@@ -328,7 +345,8 @@ static void recordMouseWheel(int keyCode)
     }
 }
 
-static void handleMouseWheel(const SDL_Event *rawEvent)
+static void
+handleMouseWheel(const SDL_Event *rawEvent)
 {
     if(rawEvent->wheel.windowID != windowID)
     {
@@ -354,7 +372,9 @@ static void handleMouseWheel(const SDL_Event *rawEvent)
         recordMouseWheel(31);
     }
 }
-static void handleKeyDown(const SDL_Event *rawEvent)
+
+static void
+handleKeyDown(const SDL_Event *rawEvent)
 {
     int character;
     int isSpecial;
@@ -403,7 +423,8 @@ static void handleKeyDown(const SDL_Event *rawEvent)
     }
 }
 
-static void handleKeyUp(const SDL_Event *rawEvent)
+static void
+handleKeyUp(const SDL_Event *rawEvent)
 {
     modifiersState = convertModifiers(rawEvent->key.keysym.mod);
     if(rawEvent->key.windowID != windowID)
@@ -423,7 +444,8 @@ static void handleKeyUp(const SDL_Event *rawEvent)
     recordEvent(&event);
 }
 
-static void handleTextInput(const SDL_Event *rawEvent)
+static void
+handleTextInput(const SDL_Event *rawEvent)
 {
     int utf32;
     const char *position;
@@ -454,7 +476,8 @@ static void handleTextInput(const SDL_Event *rawEvent)
     }
 }
 
-static void handleMouseButtonDown(const SDL_Event *rawEvent)
+static void
+handleMouseButtonDown(const SDL_Event *rawEvent)
 {
     if(rawEvent->button.windowID != windowID)
     {
@@ -476,7 +499,8 @@ static void handleMouseButtonDown(const SDL_Event *rawEvent)
     recordEvent(&event);
 }
 
-static void handleMouseButtonUp(const SDL_Event *rawEvent)
+static void
+handleMouseButtonUp(const SDL_Event *rawEvent)
 {
     if(rawEvent->button.windowID != windowID)
     {
@@ -498,7 +522,8 @@ static void handleMouseButtonUp(const SDL_Event *rawEvent)
     recordEvent(&event);
 }
 
-static void handleMouseMotion(const SDL_Event *rawEvent)
+static void
+handleMouseMotion(const SDL_Event *rawEvent)
 {
     if(rawEvent->motion.windowID != windowID)
     {
@@ -517,7 +542,8 @@ static void handleMouseMotion(const SDL_Event *rawEvent)
     recordLowImportanceEvent(&event);
 }
 
-static void handleWindowEvent(const SDL_Event *rawEvent)
+static void
+handleWindowEvent(const SDL_Event *rawEvent)
 {
     if(rawEvent->window.windowID != windowID)
     {
@@ -559,7 +585,8 @@ static void handleWindowEvent(const SDL_Event *rawEvent)
     }
 }
 
-static void handleDropFileEvent(const SDL_Event *rawEvent)
+static void
+handleDropFileEvent(const SDL_Event *rawEvent)
 {
     sqEventUnion event;
     strcpy(droppedFileName, rawEvent->drop.file);
@@ -578,7 +605,8 @@ static void handleDropFileEvent(const SDL_Event *rawEvent)
     }
 }
 
-static void handleEvent(const SDL_Event *event)
+static void
+handleEvent(const SDL_Event *event)
 {
     switch(event->type)
     {
@@ -616,7 +644,8 @@ static void handleEvent(const SDL_Event *event)
     }
 }
 
-static void handleEvents()
+static void
+handleEvents()
 {
     SDL_Event event;
     while(SDL_PollEvent(&event))
@@ -631,34 +660,45 @@ static void handleEvents()
     newSDLEvent = 0;
 }
 
-static sqInt sqSDL2_setCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
+static sqInt
+sqSDL2_setCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
 {
     return false;
 }
 
-static sqInt sqSDL2_forceDisplayUpdate(void)
+static sqInt
+sqSDL2_forceDisplayUpdate(void)
 {
     presentWindow();
     return 0;
 }
 
-static sqInt sqSDL2_formPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth,
+static sqInt
+sqSDL2_formPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth,
 		  double hScale, double vScale, sqInt landscapeFlag)
 {
     return 0;
 }
 
-static sqInt sqSDL2_setFullScreen(sqInt fullScreen)
+static void
+sqSDL2_noteDisplayChangedWidthHeightDepth(void *b, int w, int h, int d)
+{
+}
+
+static sqInt
+sqSDL2_setFullScreen(sqInt fullScreen)
 {
     return 0;
 }
 
-static sqInt sqSDL2_setCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY)
+static sqInt
+sqSDL2_setCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY)
 {
     return 0;
 }
 
-static sqInt sqSDL2_setCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
+static sqInt
+sqSDL2_setCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
     SDL_Cursor *newCursor;
     Uint8 convertedCursorBits[32];
@@ -693,7 +733,8 @@ static sqInt sqSDL2_setCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskInd
     return 0;
 }
 
-static void blitRect32(
+static void
+blitRect32(
     int surfaceWidth, int surfaceHeight,
     uint8_t *sourcePixels, int sourcePitch,
     uint8_t *destPixels, int destPitch,
@@ -730,7 +771,8 @@ static void blitRect32(
     }
 }
 
-static sqInt sqSDL2_showDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
+static sqInt
+sqSDL2_showDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
 		    sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB)
 {
     storeOpenGLState();
@@ -780,12 +822,14 @@ static sqInt sqSDL2_showDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, 
     return 0;
 }
 
-static sqInt sqSDL2_hasDisplayDepth(sqInt depth)
+static sqInt
+sqSDL2_hasDisplayDepth(sqInt depth)
 {
     return depth == 32;
 }
 
-static sqInt sqSDL2_setDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
+static sqInt
+sqSDL2_setDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
 {
     if(window)
     {
@@ -802,12 +846,14 @@ static sqInt sqSDL2_setDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt
     return 0;
 }
 
-static char* sqSDL2_getWindowLabel(void)
+static char*
+sqSDL2_getWindowLabel(void)
 {
     return (char*)SDL_GetWindowTitle(window);
 }
 
-static sqInt sqSDL2_setWindowLabelOfSize(void *lblIndex, sqInt size)
+static sqInt
+sqSDL2_setWindowLabelOfSize(void *lblIndex, sqInt size)
 {
     char *buffer;
 
@@ -821,7 +867,8 @@ static sqInt sqSDL2_setWindowLabelOfSize(void *lblIndex, sqInt size)
     return 0;
 }
 
-static sqInt sqSDL2_getWindowWidth(void)
+static sqInt
+sqSDL2_getWindowWidth(void)
 {
     int width = 0;
     int height = 0;
@@ -830,7 +877,8 @@ static sqInt sqSDL2_getWindowWidth(void)
     return width;
 }
 
-static sqInt sqSDL2_getWindowHeight(void)
+static sqInt
+sqSDL2_getWindowHeight(void)
 {
     int width = 0;
     int height = 0;
@@ -839,20 +887,23 @@ static sqInt sqSDL2_getWindowHeight(void)
     return height;
 }
 
-static sqInt sqSDL2_setWindowWidthHeight(sqInt w, sqInt h)
+static sqInt
+sqSDL2_setWindowWidthHeight(sqInt w, sqInt h)
 {
     if(window)
         SDL_SetWindowSize(window, w, h);
     return 0;
 }
 
-static sqInt sqSDL2_isWindowObscured(void)
+static sqInt
+sqSDL2_isWindowObscured(void)
 {
     return false;
 }
 
 /* Events */
-static sqInt sqSDL2_getNextEvent(sqInputEvent *evt)
+static sqInt
+sqSDL2_getNextEvent(sqInputEvent *evt)
 {
     if(sqEventQueueIsEmpty(eventQueue))
     {
@@ -866,7 +917,8 @@ static sqInt sqSDL2_getNextEvent(sqInputEvent *evt)
     return 0;
 }
 
-static sqInt sqSDL2_getNextSDL2Event(void *buffer, size_t bufferSize)
+static sqInt
+sqSDL2_getNextSDL2Event(void *buffer, size_t bufferSize)
 {
     SDL_Event event;
     size_t copySize;
@@ -886,40 +938,47 @@ static sqInt sqSDL2_getNextSDL2Event(void *buffer, size_t bufferSize)
     return true;
 }
 
-static sqInt sqSDL2_getButtonState(void)
+static sqInt
+sqSDL2_getButtonState(void)
 {
     ioProcessEvents();
     return buttonState | (modifiersState << 3);
 }
 
-static sqInt sqSDL2_getKeystroke(void)
+static sqInt
+sqSDL2_getKeystroke(void)
 {
     return 0;
 }
 
-static sqInt sqSDL2_mousePoint(void)
+static sqInt
+sqSDL2_mousePoint(void)
 {
     ioProcessEvents();
     return (mousePositionX<<16) | mousePositionY;
 }
 
-static sqInt sqSDL2_peekKeystroke(void)
+static sqInt
+sqSDL2_peekKeystroke(void)
 {
     return 0;
 }
 
-static sqInt sqSDL2_processEvents(void)
+static sqInt
+sqSDL2_processEvents(void)
 {
     handleEvents();
     return 0;
 }
 
-static double sqSDL2_screenScaleFactor(void)
+static double
+sqSDL2_screenScaleFactor(void)
 {
     return 1.0;
 }
 
-static sqInt sqSDL2_screenSize(void)
+static sqInt
+sqSDL2_screenSize(void)
 {
     int width;
     int height;
@@ -930,13 +989,15 @@ static sqInt sqSDL2_screenSize(void)
     return height | (width << 16);
 }
 
-static sqInt sqSDL2_screenDepth(void)
+static sqInt
+sqSDL2_screenDepth(void)
 {
     return 32;
 }
 
 /* Clipboard */
-static sqInt sqSDL2_clipboardSize(void)
+static sqInt
+sqSDL2_clipboardSize(void)
 {
     if(!SDL_HasClipboardText())
         return 0;
@@ -944,7 +1005,8 @@ static sqInt sqSDL2_clipboardSize(void)
     return strlen(SDL_GetClipboardText());
 }
 
-static sqInt sqSDL2_clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
+static sqInt
+sqSDL2_clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
     sqInt clipSize;
     char *clipboardText;
@@ -961,7 +1023,8 @@ static sqInt sqSDL2_clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt
     return clipSize;
 }
 
-static sqInt sqSDL2_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
+static sqInt
+sqSDL2_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
     char *buffer;
 
@@ -982,29 +1045,34 @@ extern sqInt classByteArray(void);
 extern sqInt instantiateClassindexableSize(sqInt classPointer, sqInt size);
 extern sqInt nilObject(void);
 
-static usqIntptr_t fileRecordSize(void)
+static usqIntptr_t
+fileRecordSize(void)
 {
 	return sizeof(SQFile);
 }
 
-static sqInt sqSDL2_dropInit (void)
+static sqInt
+sqSDL2_dropInit (void)
 {
     return 1;
 }
 
-static sqInt sqSDL2_dropShutdown (void)
+static sqInt
+sqSDL2_dropShutdown (void)
 {
     return 1;
 }
 
-static char* sqSDL2_dropRequestFileName(sqInt dropIndex)
+static char*
+sqSDL2_dropRequestFileName(sqInt dropIndex)
 {
     if(dropIndex == 1)
         return droppedFileName;
     return NULL;
 }
 
-static sqInt sqSDL2_dropRequestFileHandle(sqInt dropIndex)
+static sqInt
+sqSDL2_dropRequestFileHandle(sqInt dropIndex)
 {
     if(droppedFileName[0] && dropIndex == 1)
     {
@@ -1029,13 +1097,15 @@ extern sqInt trueObject(void);
 extern sqInt falseObject(void);
 extern void *firstIndexableField(sqInt oop);
 
-sqInt primitiveIsVMDisplayUsingSDL2()
+static sqInt
+primitiveIsVMDisplayUsingSDL2()
 {
     popthenPush(1 + (argumentCountOf(primitiveMethod())), trueObject());
     return 0;
 }
 
-sqInt primitivePollVMSDL2Event()
+static sqInt
+primitivePollVMSDL2Event()
 {
     sqInt bufferOop;
     sqInt size;
@@ -1050,7 +1120,8 @@ sqInt primitivePollVMSDL2Event()
     return 0;
 }
 
-sqInt primitiveSetVMSDL2Input()
+static sqInt
+primitiveSetVMSDL2Input()
 {
     sqInt sema;
 
@@ -1083,6 +1154,7 @@ sqWindowSystem sqSDL2WindowSystem = {
     .setCursorARGB = sqSDL2_setCursorARGB,
     .forceDisplayUpdate = sqSDL2_forceDisplayUpdate,
     .formPrint = sqSDL2_formPrint,
+    .noteDisplayChangedWidthHeightDepth = sqSDL2_noteDisplayChangedWidthHeightDepth,
     .setFullScreen = sqSDL2_setFullScreen,
     .setCursor = sqSDL2_setCursor,
     .setCursorWithMask = sqSDL2_setCursorWithMask,

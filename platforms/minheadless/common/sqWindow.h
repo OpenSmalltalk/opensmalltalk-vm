@@ -20,6 +20,8 @@ typedef struct
     sqInt (*formPrint)(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth,
     		  double hScale, double vScale, sqInt landscapeFlag);
 
+    void (*noteDisplayChangedWidthHeightDepth)(void *b, int w, int h, int d);
+
     sqInt (*setFullScreen)(sqInt fullScreen);
 
     sqInt (*setCursor)(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY);

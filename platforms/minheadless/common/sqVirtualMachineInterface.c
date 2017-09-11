@@ -452,6 +452,10 @@ squeak_loadImage(const char *fileName)
     if(!imageFile)
         return SQUEAK_ERROR_FAILED_TO_OPEN_FILE;
 
+    /* The security plugin requires an absolute path of the image.*/
+    sqPathMakeAbsolute(imageName, sizeof(imageName), fileName);
+    sqPathExtractDirname(imagePath, sizeof(imagePath), imageName);
+
     /* Get the size of the image file*/
     sqImageFileSeekEnd(imageFile, 0);
     imageSize = sqImageFilePosition(imageFile);
@@ -473,8 +477,6 @@ squeak_loadImage(const char *fileName)
 #endif
     sqImageFileClose(imageFile);
 
-    sqPathMakeAbsolute(imageName, sizeof(imageName), fileName);
-    sqPathExtractDirname(imagePath, sizeof(imagePath), imageName);
     return SQUEAK_SUCCESS;
 }
 
