@@ -1,14 +1,14 @@
 /* Automatically generated from Squeak on (29 April 2009 6:59:14 am) */
 
-#if defined(WIN32) || defined(_WIN32) || defined(Win32)
- #ifdef __cplusplus
-  #define DLLEXPORT extern "C" __declspec(dllexport)
- #else
-  #define DLLEXPORT __declspec(dllexport)
- #endif /* C++ */
+#if _WIN32) || _WIN64
+# ifdef __cplusplus
+#	define DLLEXPORT extern "C" __declspec(dllexport)
+# else
+#	define DLLEXPORT __declspec(dllexport)
+# endif /* C++ */
 #else
- #define DLLEXPORT
-#endif /* WIN32 */
+# define DLLEXPORT
+#endif /* _WIN32 || _WIN64 */
 
 #include "sqVirtualMachine.h"
 

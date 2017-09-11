@@ -156,10 +156,13 @@ static int printerSetup = FALSE;
 UINT g_WM_MOUSEWHEEL = 0;	/* RvL: 1999-04-19 The message we receive from wheel mices */
 #endif
 
-/* misc declarations */
+/* misc forward declarations */
 int recordMouseEvent(MSG *msg, UINT nrClicks);
 int recordKeyboardEvent(MSG *msg);
 int recordWindowEvent(int action, RECT *r);
+#if NewspeakVM
+int ioDrainEventQueue(void);
+#endif
 
 extern sqInt byteSwapped(sqInt);
 extern int convertToSqueakTime(SYSTEMTIME);
@@ -1299,6 +1302,7 @@ int recordKeyboardEvent(MSG *msg) {
   /* clean up reserved */
   evt->reserved1 = 0;
 
+#ifdef PharoVM
   /* so the image can distinguish between control sequence
      like SOH and characters with modifier like ctrl+a */
   if(pressCode == EventKeyChar && ctrl)
@@ -1306,6 +1310,7 @@ int recordKeyboardEvent(MSG *msg) {
     evt->utf32Code = MapVirtualKey(LOBYTE(HIWORD(msg->lParam)), 1);
     return 1;
   }
+#endif
 
   /* note: several keys are not reported as character events;
      most noticably the mapped virtual keys. For those we
@@ -1585,18 +1590,22 @@ sqInt ioBeep(void)
   return 1;
 }
 
+void  ioNoteDisplayChangedwidthheightdepth(void *b, int w, int h, int d) {}
+
 /*
  * In the Cog VMs time management is in platforms/win32/vm/sqin32Heartbeat.c.
  */
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
-  /* wake us up if something happens */
-  ResetEvent(vmWakeUpEvent);
-  MsgWaitForMultipleObjects(1, &vmWakeUpEvent, FALSE,
-			    microSeconds / 1000, QS_ALLINPUT);
-  ioProcessEvents(); /* keep up with mouse moves etc. */
-  return microSeconds;
-}
+	/* wake us up if something happens */
+	ResetEvent(vmWakeUpEvent);
+	if (WAIT_TIMEOUT ==
+		MsgWaitForMultipleObjects(1, &vmWakeUpEvent, FALSE,
+			    microSeconds / 1000, QS_ALLINPUT))
+		addIdleUsecs(microSeconds);
+	ioProcessEvents(); /* keep up with mouse moves etc. */
+	return microSeconds;
+	}
 
 sqInt ioProcessEvents(void)
 {	static MSG msg;
@@ -1683,7 +1692,7 @@ sqInt ioProcessEvents(void)
 }
 
 #if NewspeakVM
-sqInt
+int
 ioDrainEventQueue(void)
 { static MSG msg;
   POINT mousePt;
@@ -2755,6 +2764,11 @@ sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
   return count;
 }
 
+char* getImageName(void)
+{
+  return imageName;
+}
+
 sqInt imageNameSize(void)
 {
   return strlen(imageName);
@@ -2853,7 +2867,14 @@ char * GetAttributeString(sqInt id) {
     case 1004:
       return (char*) interpreterVersion;
     case 1005: /* window system name */
+	/* An attempt to eliminate one absurdity.  If this breaks too many things
+	 * we'll have to change it back.  But Win32 is not a good name.
+	 */
+#if 0
       return "Win32";
+#else
+      return "Windows";
+#endif
     case 1006: /* VM build ID */
       return vmBuildString;
 #if STACKVM
@@ -3081,16 +3102,21 @@ DWORD SqueakImageLengthFromHandle(HANDLE hFile) {
   return 0;
 }
 
-DWORD SqueakImageLength(char *fileName) {
+DWORD SqueakImageLength(TCHAR *fileName) {
   DWORD dwSize;
-  WCHAR wideName[MAX_PATH];
   HANDLE hFile;
 
   /* open image file */
+#ifdef UNICODE
+  hFile = CreateFileW(fileName, GENERIC_READ, FILE_SHARE_READ,
+		      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+#else
+  WCHAR wideName[MAX_PATH];
   MultiByteToWideChar(CP_UTF8, 0, fileName, -1, wideName, MAX_PATH);
   hFile = CreateFileW(wideName, GENERIC_READ, FILE_SHARE_READ,
 		      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-  if(hFile == INVALID_HANDLE_VALUE) return 0;
+#endif
+  if (hFile == INVALID_HANDLE_VALUE) return 0;
   dwSize = SqueakImageLengthFromHandle(hFile);
   CloseHandle(hFile);
   return dwSize;
@@ -3285,10 +3311,10 @@ int printUsage(int level)
 {
   switch(level) {
     case 0: /* No command line given */
-      abortMessage(TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [options] <imageFile>"));
+      abortMessage(TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [options] <imageFile>\n"));
       break;
     case 1: /* full usage */
-      abortMessage(TEXT("%s"),
+      abortMessage(TEXT("%s\n"),
                    TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [vmOptions] imageFile [imageOptions]\n\n")
                    TEXT("vmOptions:")
 		   /* TEXT("\n\t-service: ServiceName \t(install Squeak as NT service)") */
@@ -3340,4 +3366,3 @@ int printUsage(int level)
   }
   return -1;
 }
-

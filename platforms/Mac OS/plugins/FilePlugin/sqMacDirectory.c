@@ -79,7 +79,7 @@ int convertToSqueakTime(int macTime) {
 	return macTime + (3 * 365 * 24 * 60 * 60);
 }
 #if TARGET_API_MAC_CARBON
-int dir_Create(char *pathString, int pathStringLength) {
+sqInt dir_Create(char *pathString, sqInt pathStringLength) {
 	/* Create a new directory with the given path. By default, this
 	   directory is created in the current directory. Use
 	   a full path name such as "MyDisk:Working:New Folder" to
@@ -133,7 +133,7 @@ int dir_Create(char *pathString, int pathStringLength) {
 #endif
 }
  
-int dir_Delete(char *pathString, int pathStringLength) {
+sqInt dir_Delete(char *pathString, sqInt pathStringLength) {
 	/* Delete the existing directory with the given path. */
     char cFileName[1000];
 
@@ -163,7 +163,7 @@ int dir_Delete(char *pathString, int pathStringLength) {
 }
 
 #else
-int dir_Create(char *pathString, int pathStringLength) {
+sqInt dir_Create(char *pathString, sqInt pathStringLength) {
     FSSpec spec;
     OSErr  err;
     long  createdDirID;
@@ -174,7 +174,7 @@ int dir_Create(char *pathString, int pathStringLength) {
    	return FSpDirCreate(&spec,smSystemScript,&createdDirID) == noErr;
 }
 
-int dir_Delete(char *pathString, int pathStringLength) {
+sqInt dir_Delete(char *pathString, sqInt pathStringLength) {
 	/* Delete the existing directory with the given path. */
     FSSpec spec;
     OSErr  err;
@@ -186,16 +186,16 @@ int dir_Delete(char *pathString, int pathStringLength) {
 }
 #endif
 
-int dir_Delimitor(void) {
+sqInt dir_Delimitor(void) {
 	return DELIMITOR;
 }
 
 #if TARGET_API_MAC_CARBON
 
-int dir_Lookup(char *pathString, int pathStringLength, int index,
+sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   /* outputs: */
-  char *name, int *nameLength, int *creationDate, int *modificationDate,
-  int *isDirectory, squeakFileOffsetType *sizeIfFile) {
+  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+  sqInt *isDirectory, squeakFileOffsetType *sizeIfFile) {
 	/* Lookup the index-th entry of the directory with the given path, starting
 	   at the root of the file system. Set the name, name length, creation date,
 	   creation time, directory flag, and file size (if the entry is a file).
@@ -204,7 +204,7 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 	   			2	if the given path has bad syntax or does not reach a directory
 	*/
 
-	int okay;
+	sqInt okay;
     FSSpec      spec;
     long        parentDirectory;
     OSErr       err;
@@ -307,10 +307,10 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 
 #else 
 
-int dir_Lookup(char *pathString, int pathStringLength, int index,
+sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   /* outputs: */
-  char *name, int *nameLength, int *creationDate, int *modificationDate,
-  int *isDirectory, squeakFileOffsetType *sizeIfFile) {
+  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+  sqInt *isDirectory, squeakFileOffsetType *sizeIfFile) {
 	/* Lookup the index-th entry of the directory with the given path, starting
 	   at the root of the file system. Set the name, name length, creation date,
 	   creation time, directory flag, and file size (if the entry is a file).
@@ -319,7 +319,7 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 	   			2	if the given path has bad syntax or does not reach a directory
 	*/
 
-	int okay;
+	sqInt okay;
 	HVolumeParam volumeParams;
     FSSpec      spec;
     long        parentDirectory;
@@ -387,7 +387,7 @@ OSErr getSpecAndFInfo(char *filename, int filenameSize,FSSpec *spec,FInfo *finde
     return noErr;
 }
 
-int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, char *fCreator) {
+sqInt dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator) {
 	/* Set the Macintosh type and creator of the given file. */
 	/* Note: On other platforms, this is just a noop. */
 
@@ -403,7 +403,7 @@ int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, 
     return FSpSetFInfo(&spec,&finderInfo) == noErr;
 }
 
-int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, char *fCreator) {
+sqInt dir_GetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator) {
 	/* Get the Macintosh type and creator of the given file. */
 	/* Note: On other platforms, this is just a noop. */
 

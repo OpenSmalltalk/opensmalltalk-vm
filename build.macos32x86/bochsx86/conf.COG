@@ -8,14 +8,26 @@
 # $ ./conf.COG
 # $ ../../processors/IA32/bochs/makeem
 
+# Find the oldest appropriate SDK...
+XCODE=/Applications/Xcode.app/Contents/Developer
+SDKsDIR=$XCODE/Platforms/MacOSX.platform/Developer/SDKs
+SDK=
+for d in MacOSX10.9.sdk MacOSX10.10.sdk MacOSX10.11.sdk MacOSX10.12.sdk; do
+	if [ -z "$SDK" -a -d "$SDKsDIR/$d" ]; then
+		SDK="$SDKsDIR/$d"
+	fi
+done
+
 set echo
 # CFLAGS="-pipe -O3 -fomit-frame-pointer -finline-functions -falign-loops=16 -falign-jumps=16 -falign-functions=16 -falign-labels=16 -falign-loops-max-skip=15 -falign-jumps-max-skip=15 -fprefetch-loop-arrays $CFLAGS"
 CFLAGS="-m32 $CFLAGS"
 CFLAGS="-Dlongjmp=_longjmp -Dsetjmp=_setjmp $CFLAGS"
-CFLAGS="-pipe -O3 -fomit-frame-pointer -finline-functions $CFLAGS"
+CFLAGS="-pipe -O3 -fomit-frame-pointer $CFLAGS"
 CFLAGS="-g $CFLAGS"
+CFLAGS="$CFLAGS -isysroot $SDK"
 CPPFLAGS=""
 CXXFLAGS="$CFLAGS"
+LDFLAGS="-isysroot $SDK"
 
 export CFLAGS
 export CPATH
@@ -53,4 +65,4 @@ export LDFLAGS
 echo cp config.h bochsconfig.h
 cp config.h bochsconfig.h
 
-echo "and don't forget to run ../../processors/IA32/bochs/makeem"
+echo "and don't forget to run ./makeem"

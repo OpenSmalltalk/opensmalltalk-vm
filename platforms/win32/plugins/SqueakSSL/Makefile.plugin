@@ -19,7 +19,7 @@ OPENSSL:=/usr/local/openssl-1.0.1e
 else
 OPENSSL:=$(THIRDPARTYOUTDIR)/lib
 endif 
-EXTRALIBS:= -L$(OPENSSL) -lssl -lcrypto -L/usr/lib/w32api -lcrypt32 -lsecur32
+EXTRALIBS:= -L$(OPENSSL) -lssl -lcrypto -lcrypt32 -lsecur32
 
 # You may need the following to make an internal plugin
 DLLTOOLEXTRA := $(OPENSSL)/libssl.a $(OPENSSL)/libcrypto.a

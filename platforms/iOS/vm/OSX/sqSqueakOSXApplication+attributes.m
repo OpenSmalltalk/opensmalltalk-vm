@@ -40,23 +40,34 @@
 #import "sqSqueakMainApplication+attributes.h"
 #import "sqSqueakMainApplication+vmAndImagePath.h"
 
+#import <Foundation/NSProcessInfo.h>
+
 extern struct VirtualMachine* interpreterProxy;
 
-@implementation sqSqueakOSXApplication (attributes) 
+#if __MAC_OS_X_VERSION_MAX_ALLOWED <= 1090
+typedef struct {
+    NSInteger majorVersion;
+    NSInteger minorVersion;
+    NSInteger patchVersion;
+} NSOperatingSystemVersion;
+#endif
+
+@implementation sqSqueakOSXApplication (attributes)
 
 - (char *) getAttribute:(sqInt)indexNumber {
 	//indexNumber is a postive/negative number
-#warning to test
+
 	switch (indexNumber) {
 	case 1001: /* OS type: "unix", "win32", "mac", ... */
 		return "Mac OS";
 
 	case 1002:  { /* OS name: "solaris2.5" on unix, "win95" on win32, ... */
-		SInt32 myattr;
-		static char data[32];
-
-		Gestalt(gestaltSystemVersion, &myattr);
-		sprintf(data,"%X",(unsigned int) myattr);
+        static char data[32] = { 0 };
+        NSOperatingSystemVersion version = [self getOperatingSystemVersion];
+        sprintf(data,"%ld%ld.%ld",
+                (long)version.majorVersion,
+                (long)version.minorVersion,
+                (long)version.patchVersion);
 		return data;
 	}
 	case 1003: { /* processor architecture: "68k", "x86", "PowerPC", ...  */
@@ -121,4 +132,42 @@ extern struct VirtualMachine* interpreterProxy;
 	}
 	return (char *) [super getAttribute: indexNumber];
 }
+
+- (NSOperatingSystemVersion) getOperatingSystemVersion
+{
+    static NSOperatingSystemVersion osv = { 0 };
+    if (osv.majorVersion != 0) {
+        // fast path
+        return osv;
+    }
+
+    // This is officially true since 10.10 but inofficially since 10.9, hence the invocation
+    if ([[NSProcessInfo processInfo] respondsToSelector: @selector(operatingSystemVersion)]) {
+        osv = [self getNSOperatingSystemVersion];
+    } else {
+        SInt32 versionMajor=0, versionMinor=0, versionBugFix=0;
+        Gestalt(gestaltSystemVersionMajor, &versionMajor);
+        Gestalt(gestaltSystemVersionMinor, &versionMinor);
+        Gestalt(gestaltSystemVersionBugFix, &versionBugFix);
+        osv.majorVersion = versionMajor;
+        osv.minorVersion = versionMinor;
+        osv.patchVersion = versionBugFix;
+    }
+    return osv;
+}
+
+- (NSOperatingSystemVersion) getNSOperatingSystemVersion
+{
+    static NSOperatingSystemVersion osv = { 0 };
+    SEL _osv = @selector(operatingSystemVersion);
+
+    NSMethodSignature* osvSignature = [NSProcessInfo instanceMethodSignatureForSelector: _osv];
+    NSInvocation* osvInvocation = [NSInvocation invocationWithMethodSignature: osvSignature];
+    [osvInvocation setTarget: [NSProcessInfo processInfo]];
+    [osvInvocation setSelector: _osv];
+    [osvInvocation invoke];
+    [osvInvocation getReturnValue: &osv];
+    return osv;
+}
+
 @end

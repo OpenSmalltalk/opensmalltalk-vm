@@ -16,6 +16,8 @@
 #include "sq.h"
 #include "SoundPlugin.h"
 
+extern struct VirtualMachine * interpreterProxy;
+
 #ifdef DEBUG
 #warning "DEBUG printing enabled"
 #define DPRINTF(x) warnPrintf x
@@ -61,13 +63,15 @@ sqInt snd_StopPlaying(void);
 sqInt snd_StopRecording(void);
 
 /* module initialization/shutdown */
-sqInt soundInit(void) {
+sqInt
+soundInit(void) {
   hRecEvent = CreateEvent( NULL, FALSE, FALSE, NULL );
   hPlayEvent = CreateEvent( NULL, FALSE, FALSE, NULL );
   return 1;
 }
 
-sqInt soundShutdown(void) {
+sqInt
+soundShutdown(void) {
   DPRINTF(("soundShutDown\n"));
   snd_StopPlaying();
   snd_StopRecording();
@@ -76,7 +80,8 @@ sqInt soundShutdown(void) {
   return 1;
 }
 
-sqInt snd_StopPlaying(void) {
+sqInt
+snd_StopPlaying(void) {
   playTerminate = 0;
   if(lpdPlayBuffer) {
     DPRINTF(("Shutting down DSound\n"));
@@ -104,7 +109,8 @@ sqInt snd_StopPlaying(void) {
   return 1;
 }
 
-DWORD WINAPI playCallback( LPVOID ignored ) {
+DWORD WINAPI
+playCallback( LPVOID ignored ) {
   while(1) {
     if(WaitForSingleObject(hPlayEvent, INFINITE) == WAIT_OBJECT_0) {
       if(playTerminate) {
@@ -120,7 +126,8 @@ DWORD WINAPI playCallback( LPVOID ignored ) {
   }
 }
 
-DWORD WINAPI recCallback( LPVOID ignored ) {
+DWORD WINAPI
+recCallback( LPVOID ignored ) {
   while(1) {
     if(WaitForSingleObject(hRecEvent, INFINITE) == WAIT_OBJECT_0) {
       if(recTerminate) return 0; /* done playing */
@@ -132,21 +139,24 @@ DWORD WINAPI recCallback( LPVOID ignored ) {
 }
 
 /* sound output */
-sqInt snd_AvailableSpace(void) {
+sqInt
+snd_AvailableSpace(void) {
   if(playBufferAvailable) {
     return playBufferSize;
   }
   return 0;
 }
 
-sqInt snd_InsertSamplesFromLeadTime(sqInt frameCount, void* srcBufPtr, 
-				    sqInt samplesOfLeadTime) {
+sqInt
+snd_InsertSamplesFromLeadTime(sqInt frameCount, void* srcBufPtr, 
+							  sqInt samplesOfLeadTime) {
   /* currently not supported */
   return 0;
 }
 
-sqInt snd_PlaySamplesFromAtLength(sqInt frameCount,  void* srcBufPtr, 
-				  sqInt startIndex) {
+sqInt
+snd_PlaySamplesFromAtLength(sqInt frameCount, void* srcBufPtr,
+							sqInt startIndex) {
   HRESULT hRes;
   int bytesWritten;
   DWORD dstLen;
@@ -189,13 +199,12 @@ sqInt snd_PlaySamplesFromAtLength(sqInt frameCount,  void* srcBufPtr,
   return bytesWritten / waveOutFormat.nBlockAlign;
 }
 
-sqInt snd_PlaySilence(void) {
-  /* no longer supported */
-  return -1;
-}
+sqInt
+snd_PlaySilence(void) { /* no longer supported */ return -1; }
 
-sqInt snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, 
-		sqInt semaIndex) {
+sqInt
+snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
+{
   DSBUFFERDESC dsbd;
   DSBPOSITIONNOTIFY  posNotify[2];
   LPDIRECTSOUNDNOTIFY lpdNotify = NULL;
@@ -351,18 +360,21 @@ sqInt snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo,
   return 1;
 }
 
-sqInt snd_Stop(void) {
+sqInt
+snd_Stop(void) {
   snd_StopPlaying();
   return 1;
 }
 
 /* sound input */
-void snd_SetRecordLevel(sqInt level) {
+void
+snd_SetRecordLevel(sqInt level) {
   /* not supported */
   return;
 }
 
-sqInt snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex) {
+sqInt
+snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex) {
   DSCBUFFERDESC dscb;
   DSBPOSITIONNOTIFY  posNotify[2];
   LPDIRECTSOUNDNOTIFY lpdNotify = NULL;
@@ -456,7 +468,8 @@ sqInt snd_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex) {
   return 0;
 }
 
-sqInt snd_StopRecording(void) {
+sqInt
+snd_StopRecording(void) {
   if(lpdRecBuffer) {
     IDirectSoundCaptureBuffer_Stop(lpdRecBuffer);
     IDirectSoundCaptureBuffer_Release(lpdRecBuffer);
@@ -478,13 +491,15 @@ sqInt snd_StopRecording(void) {
   return 0;
 }
 
-double snd_GetRecordingSampleRate(void) {
+double
+snd_GetRecordingSampleRate(void) {
   if(!lpdRecBuffer) return 0.0;
   return (double) waveInFormat.nSamplesPerSec;
 }
 
-sqInt snd_RecordSamplesIntoAtLength(void* buf, sqInt startSliceIndex, 
-				       sqInt bufferSizeInBytes) {
+sqInt
+snd_RecordSamplesIntoAtLength(void* buf, sqInt startSliceIndex, 
+								sqInt bufferSizeInBytes) {
   /* if data is available, copy as many sample slices as possible into the
      given buffer starting at the given slice index. do not write past the
      end of the buffer, which is buf + bufferSizeInBytes. return the number
@@ -537,7 +552,8 @@ sqInt snd_RecordSamplesIntoAtLength(void* buf, sqInt startSliceIndex,
 
 
 /* NOTE: Both of the below functions use the default wave out device */
-void snd_Volume(double *left, double *right) {
+void
+snd_Volume(double *left, double *right) {
   DWORD volume = (DWORD)-1;
 
   waveOutGetVolume((HWAVEOUT)0, &volume);
@@ -545,7 +561,8 @@ void snd_Volume(double *left, double *right) {
   *right = (volume >> 16) / 65535.0;
 }
 
-void snd_SetVolume(double left, double right) {
+void
+snd_SetVolume(double left, double right) {
   DWORD volume;
 
   if(left < 0.0) left = 0.0;
@@ -557,5 +574,66 @@ void snd_SetVolume(double left, double right) {
 
   waveOutSetVolume((HWAVEOUT) 0, volume);
 }
+
+
+/* For now simply stub out the "new" Terf SoundPlugin facilities.
+ * Josh's win32 code is written in C++ files, but only uses one bit of C++ (a
+ * QAudio ring buffer) and so is easy to rewrite in pure C.  But time is
+ * pressing, so for now leave that task undone.  Anyone who is itching to work
+ * on this can contact me (Eliot Miranda) on vm-dev and I can furnish the files.
+ *
+ * The point being that the base internal plugins in the VM are all pure C and
+ * I think we should adhere to that; hence Josh's code really should be
+ * rewritten in C before it is integrated into opensmalltalk/vm,
+ */
+
+/* Terf SqSoundVersion 1.2 improvements */
+sqInt
+snd_SetRecordBufferFrameCount(sqInt frameCount)
+{ interpreterProxy->primitiveFail(); return -1; }
+
+int
+snd_GetRecordLevel(void)
+{ interpreterProxy->primitiveFail(); return -1; }
+
+sqInt
+getNumberOfSoundPlayerDevices(void)
+{ interpreterProxy->primitiveFail(); return 1; }
+
+sqInt
+getNumberOfSoundRecorderDevices(void)
+{ interpreterProxy->primitiveFail(); return 0; }
+
+char *
+getDefaultSoundPlayer(void)
+{ interpreterProxy->primitiveFail(); return (char *)0; }
+
+char *
+getDefaultSoundRecorder(void)
+{ interpreterProxy->primitiveFail(); return (char *)0; }
+
+char *
+getSoundPlayerDeviceName(sqInt i)
+{ interpreterProxy->primitiveFail(); return (char *)0; }
+
+char *
+getSoundRecorderDeviceName(sqInt i)
+{ interpreterProxy->primitiveFail(); return (char *)0; }
+
+void
+setDefaultSoundPlayer(char *deviceName)
+{ interpreterProxy->primitiveFail(); }
+
+void
+setDefaultSoundRecorder(char *deviceName)
+{ interpreterProxy->primitiveFail(); }
+
+
+/* Terf SqSoundVersion 1.3 improvements */
+sqInt
+snd_SupportsAEC(void) { return 0; }
+
+sqInt
+snd_EnableAEC(sqInt flag) { return -1; }
 
 #endif /* NO_SOUND */

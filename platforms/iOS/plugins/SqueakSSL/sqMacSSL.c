@@ -46,8 +46,10 @@ typedef struct sqSSL {
 static sqSSL** handleBuf = NULL;
 static sqInt handleMax = 0;
 
+static char* emptyString = "";
+
 // Max lengh of a Certificate common name or DNS Host name
-#define CN_MAX 255
+#define MAX_HOSTNAME_LENGTH 253
 
 
 /********************************************************************/
@@ -56,6 +58,7 @@ static sqInt handleMax = 0;
 
 static int printf_status(OSStatus status, const char* restrict format, ...);
 static OSStatus sqExtractPeerName(sqSSL* ssl);
+static OSStatus sqGetPeerCertificates(sqSSL* ssl);
 static sqSSL* sqSSLFromHandle(sqInt handle);
 OSStatus sqSetupSSL(sqSSL* ssl, int isServer);
 
@@ -86,10 +89,10 @@ static int printf_status(OSStatus status, const char* restrict format, ...)
                   CFStringGetCStringPtr(_sdesc, kCFStringEncodingUTF8),
                   CFStringGetCStringPtr(_sreas, kCFStringEncodingUTF8),
                   CFStringGetCStringPtr(_sreco, kCFStringEncodingUTF8));
-    CFRelease(_sreco);
-    CFRelease(_sreas);
-    CFRelease(_sdesc);
-    CFRelease(_e);
+    if (_sreco) CFRelease(_sreco);
+    if (_sreas) CFRelease(_sreas);
+    if (_sdesc) CFRelease(_sdesc);
+    if (_e)     CFRelease(_e);
     va_end(args);
     return ret;
 }
@@ -150,11 +153,31 @@ OSStatus sqSetupSSL(sqSSL* ssl, int isServer)
     }
 
 
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
+    /* Disable cert verification since we do that ourselves */
+    status = SSLSetSessionOption(ssl->ctx,
+                                 isServer
+                                    ? kSSLSessionOptionBreakOnClientAuth
+                                    : kSSLSessionOptionBreakOnServerAuth,
+                                 true);
+    if (status != noErr) {
+        logprintf_status(status, "kSSLSessionOptionBreakOn*Auth failed");
+        return status;
+    }
+#else
     /* Disable cert verification since we do that ourselves */
     status = SSLSetEnableCertVerify(ssl->ctx, false);
     if (status != noErr) {
         logprintf_status(status, "SSLSetEnableCertVerify failed");
         return status;
+    }
+#endif // MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
+    if (&SSLSetSessionOption != NULL) {
+        status = SSLSetSessionOption(ssl->ctx, kSSLSessionOptionSendOneByteRecord,true);
+        if (status != noErr) {
+            logprintf_status(status, "kSSLSessionOptionSendOneByteRecord*Auth failed");
+            return status;
+        }
     }
 
     if (ssl->serverName) {
@@ -164,7 +187,7 @@ OSStatus sqSetupSSL(sqSSL* ssl, int isServer)
                                       strlen(ssl->serverName));
 #else
         status = SSLSetPeerDomainName(ssl->ctx, ssl->serverName,
-                                      strnlen(ssl->serverName, CN_MAX - 1));
+                                      strnlen(ssl->serverName, MAX_HOSTNAME_LENGTH - 1));
 #endif // MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
         if (status != noErr) {
             logprintf_status(status, "SSLSetPeerDomainName failed");
@@ -186,22 +209,134 @@ static OSStatus sqExtractPeerName(sqSSL* ssl)
         return status;
     }
 
-    char peerName[CN_MAX + 1];
-    CFStringRef cfName = NULL;
-    SecCertificateRef cert = (SecCertificateRef)CFArrayGetValueAtIndex(ssl->certs, 0);
-    status = SecCertificateCopyCommonName(cert, &cfName);
-    if (status == noErr) {
-        CFStringGetCString(cfName, peerName, sizeof(peerName), kCFStringEncodingUTF8);
+    if (ssl->peerName) {
+        free(ssl->peerName);
+        ssl->peerName = NULL;
+    }
+
+    if (ssl->certFlags == SQSSL_OK && ssl->serverName != NULL) {
+        // The certificate was already deemed OK by the trust evaulation.
+        // This includes matching anything like CN, sAN, or wildcard certs.
+        // Therefore, we _copy_ the server name to the peer name such
+        // that a match or equality comparison on the Smalltalk side wont
+        // fail, which is correct.
 #if !(MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
-        ssl->peerName = strdup(peerName);
+        ssl->peerName = strdup(ssl->serverName);
 #else
-        ssl->peerName = strndup(peerName, CN_MAX);
+        ssl->peerName = strndup(ssl->serverName, MAX_HOSTNAME_LENGTH);
 #endif
-        CFRelease(cfName);
+    } else {
+        // Either the cert was not ok OR we weren't given a server name.
+        // In the former case, the Smalltalk code typically bails early but
+        // copying over the CN does not hurt. In the latter case, we can just
+        // guess the users' intention and fall back to the legacy behavior:
+        // copying the peername no matter what.
+        char peerName[MAX_HOSTNAME_LENGTH + 1];
+        CFStringRef cfName = NULL;
+        SecCertificateRef cert = (SecCertificateRef)CFArrayGetValueAtIndex(ssl->certs, 0);
+        status = SecCertificateCopyCommonName(cert, &cfName);
+        if (status == noErr) {
+            CFStringGetCString(cfName, peerName, sizeof(peerName), kCFStringEncodingUTF8);
+#if !(MAC_OS_X_VERSION_MAX_ALLOWED >= 1070)
+            ssl->peerName = strdup(peerName);
+#else
+            ssl->peerName = strndup(peerName, MAX_HOSTNAME_LENGTH);
+#endif
+            CFRelease(cfName);
+        }
     }
     return status;
 }
 
+/* sqGetPeerCertificates: Copy certificates sent for subsequent processing.
+ */
+static OSStatus sqGetPeerCertificates(sqSSL* ssl)
+{
+    OSStatus status = noErr;
+    SecTrustRef trust = {0};
+    CFIndex certCount = 0;
+    status = SSLCopyPeerTrust(ssl->ctx, &trust);
+    if (status != noErr) {
+        return status;
+    }
+    if (trust == NULL) {
+        return -1;
+    }
+    certCount = SecTrustGetCertificateCount(trust);
+    CFMutableArrayRef ca = CFArrayCreateMutable(kCFAllocatorDefault,
+                                                certCount,
+                                                &kCFTypeArrayCallBacks);
+    if (ca == NULL) {
+        return errSecAllocate;
+    } else {
+        for (CFIndex i = 0; i < certCount; i++) {
+            CFArrayAppendValue(ca, SecTrustGetCertificateAtIndex(trust, i));
+        }
+        ssl->certs = ca;
+    }
+    CFRelease(trust);
+    return status;
+}
+
+
+/* sqVerifyCert: Verify the validity of the remote certificate */
+static OSStatus sqVerifyCert(sqSSL *ssl, int isServer)
+{
+
+    OSStatus status = noErr;
+    SecTrustRef trust = {0};
+    SecTrustResultType trust_eval = 0;
+
+    ssl->certFlags = SQSSL_NO_CERTIFICATE;
+    status = SSLCopyPeerTrust(ssl->ctx, &trust);
+    if (trust == NULL || status != noErr){
+        logprintf_status(status, "sqConnectSSL: SSLCopyPeerTrust");
+        return SQSSL_GENERIC_ERROR;
+    }
+    /* <rant>
+     * Apple can't be bothered to return something more detailed than
+     * 'maaaybe that worked', although their own api would like more detailed
+     * results (sslCrypto.c:tls_verify_peer_cert). But noooooo, sslVerifyCertChain
+     * also just calls SecTrustEvaluate() and meaningfully asks (in the 10.12 version)
+       "
+             Do we really need to return things like:
+                     errSSLNoRootCert
+                     errSSLUnknownRootCert
+                     errSSLCertExpired
+                     errSSLCertNotYetValid
+                     errSSLHostNameMismatch
+             for our client to see what went wrong, or should we just always
+             return
+                     errSSLXCertChainInvalid
+             when something is wrong?
+       "
+     * Yes, Apple, that would be _extremely_ helpful >:(.
+     * </rant>
+     *
+     * Since we only have yes/no/maybe, we cannot return specific reasons here.
+     */
+    status = SecTrustEvaluate(trust, &trust_eval);
+    CFRelease(trust);
+    if(status != noErr) {
+        logprintf_status(status, "sqConnectSSL: SecTrustEvaluate");
+        return status;
+    }
+    switch (trust_eval) {
+        case kSecTrustResultUnspecified:
+        case kSecTrustResultProceed:
+            ssl->certFlags = 0; // OK
+            break;
+        case kSecTrustResultRecoverableTrustFailure:
+            // Maybe: Expired, untrusted root, ... but we don't know
+            ssl->certFlags = SQSSL_OTHER_ISSUE;
+            break;
+        default:
+            // Fatal
+            ssl->certFlags = SQSSL_NO_CERTIFICATE;
+            break;
+    }
+    return status;
+}
 
 #pragma mark -
 #pragma mark Callbacks
@@ -323,12 +458,15 @@ sqInt sqDestroySSL(sqInt handle)
 
     if (ssl->certName) {
         free(ssl->certName);
+        ssl->certName = NULL;
     }
     if (ssl->peerName) {
         free(ssl->peerName);
+        ssl->peerName = NULL;
     }
     if (ssl->serverName) {
         free(ssl->serverName);
+        ssl->serverName = NULL;
     }
 
     free(ssl);
@@ -387,21 +525,30 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char* dstBuf,
     }
 
     status = SSLHandshake(ssl->ctx);
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
+    if (status == errSSLServerAuthCompleted) {
+        OSStatus secStatus = sqVerifyCert(ssl, true);
+        if(secStatus != noErr) {
+            logprintf_status(secStatus, "sqConnectSSL: sqVerifyCert");
+            // we should but currently _cannot_ return here.
+            // return SQSSL_GENERIC_ERROR;
+        }
+        // Continue Handshake
+        status = SSLHandshake(ssl->ctx);
+    }
+#endif // MAC_OS_X_VERSION_MAX_ALLOWED >= 1080
     if (status == errSSLWouldBlock) {
         /* Return token to caller */
         logprintf("sqConnectSSL: Produced %d token bytes\n", ssl->outLen);
         return ssl->outLen ? ssl->outLen : SQSSL_NEED_MORE_DATA;
-    }
-    if (status != noErr) {
+    } else if (status != noErr) {
         logprintf_status(status, "sqConnectSSL: SSLHandshake");
         return SQSSL_GENERIC_ERROR;
     }
-    /* We are connected. Verify the cert. */
     ssl->state = SQSSL_CONNECTED;
-    ssl->certFlags = -1;
 
     /* Extract the peer name from the cert */
-    status = SSLCopyPeerCertificates(ssl->ctx, &ssl->certs);
+    status = sqGetPeerCertificates(ssl);
     if (status == noErr) {
         sqExtractPeerName(ssl);
     }
@@ -568,7 +715,7 @@ char* sqGetStringPropertySSL(sqInt handle, int propID)
     }
 
     switch (propID) {
-    case SQSSL_PROP_PEERNAME:   return ssl->peerName;
+    case SQSSL_PROP_PEERNAME:	return ssl->peerName ? ssl->peerName : emptyString;
     case SQSSL_PROP_CERTNAME:   return ssl->certName;
     case SQSSL_PROP_SERVERNAME: return ssl->serverName;
     default:

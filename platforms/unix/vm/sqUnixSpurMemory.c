@@ -1,19 +1,19 @@
 /* sqUnixSpurMemory.c -- dynamic memory management for Spur on unix & Mac OS X.
- * 
+ *
  * Author: eliot.miranda@gmail.com
- * 
+ *
  *   This file is part of Unix Squeak.
- * 
+ *
  *   Permission is hereby granted, free of charge, to any person obtaining a
  *   copy of this software and associated documentation files (the "Software"),
  *   to deal in the Software without restriction, including without limitation
  *   the rights to use, copy, modify, merge, publish, distribute, sublicense,
  *   and/or sell copies of the Software, and to permit persons to whom the
  *   Software is furnished to do so, subject to the following conditions:
- * 
+ *
  *   The above copyright notice and this permission notice shall be included in
  *   all copies or substantial portions of the Software.
- * 
+ *
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -165,8 +165,9 @@ void
 sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
 	unsigned long firstPage = roundDownToPage(startAddr);
+	unsigned long size = endAddr - firstPage;
 	if (mprotect((void *)firstPage,
-				 endAddr - firstPage + 1,
+				 size,
 				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE | PROT_EXEC)");
 }
@@ -174,17 +175,16 @@ sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 void
 sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
-#	if 0
 	unsigned long firstPage = roundDownToPage(startAddr);
+	unsigned long size = endAddr - firstPage;
 	/* Arguably this is pointless since allocated memory always includes write
 	 * permission by default.  Annoyingly the mprotect call fails on both linux
 	 * and mac os x.  So make the whole thing a nop.
 	 */
 	if (mprotect((void *)firstPage,
-				 endAddr - firstPage + 1,
+				 size,
 				 PROT_READ | PROT_WRITE) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE)");
-#	endif
 }
 # endif /* COGVM */
 

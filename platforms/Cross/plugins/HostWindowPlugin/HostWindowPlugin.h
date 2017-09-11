@@ -29,6 +29,19 @@ sqInt windowIndex);
  * I hope is unlikely for some time to come */
 extern sqInt ioSizeOfWindow(sqInt windowIndex);
 
+/* ioSizeOfNativeWindow: arg is void* windowHandle, defined as unsigned long
+ * for convenience. Return the size of the specified native window in
+ * (width<<16 || height) format like ioScreenSize.
+ * Return -1 for failure - typically invalid windowHandle
+ * -1 is chosen since it would correspond to a window size of +/-32k@+/-32k
+ * which it is hoped is unlikely for some time to come */
+extern sqInt ioSizeOfNativeWindow(unsigned long windowHandle);
+
+/* as per ioSizeOfNativeWindow, but answers the size of the drawing
+ * surface (the inside) of the window.
+ */
+extern sqInt ioSizeOfNativeDisplay(unsigned long windowHandle);
+
 /* ioSizeOfWindowSetxy: args are sqInt windowIndex, sqInt w & h for the
  * width / height to make the window. Return the actual size the OS
  * produced in (width<<16 || height) format or -1 for failure as above. */
@@ -36,8 +49,19 @@ extern sqInt ioSizeOfWindowSetxy(sqInt windowIndex, sqInt w, sqInt h);
 
 /* ioPositionOfWindow: arg is sqInt windowIndex. Return the pos of the specified
  * window in (left<<16 || top) format like ioScreenSize.
- * Return -1 (as above) for failure - tpyically invalid windowIndex */
+ * Return -1 (as above) for failure - typically invalid windowIndex */
 extern sqInt ioPositionOfWindow(sqInt windowIndex);
+
+/* ioPositionOfNativeWindow: arg is void* windowHandle, defined as unsigned long
+ * for convenience. Return the pos of the specified native window in
+ * (left<<16 || top) format like ioScreenSize.
+ * Return -1 (as above) for failure - typically invalid windowHandle */
+extern sqInt ioPositionOfNativeWindow(unsigned long windowHandle);
+
+/* as per ioPositionOfNativeWindow, but answers the position of the drawing
+ * surface (the inside) of the window.
+ */
+extern sqInt ioPositionOfNativeDisplay(unsigned long windowHandle);
 
 /* ioPositionOfWindowSetxy: args are sqInt windowIndex, sqInt x & y for the
  * origin x/y for the window. Return the actual origin the OS
@@ -49,7 +73,7 @@ extern sqInt ioPositionOfWindowSetxy(sqInt windowIndex, sqInt x, sqInt y);
 long for platform etc. Leave previous title in place on failure */
 sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle);
 
-/* ioCloseAllWindows: sqIntended for VM shutdown.
+/* ioCloseAllWindows: intended for VM shutdown.
  * Close all the windows that appear to be open.
  * No useful return value since we're getting out of Dodge anyway.
  */

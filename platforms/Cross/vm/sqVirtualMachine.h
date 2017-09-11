@@ -172,10 +172,16 @@ typedef struct VirtualMachine {
 	sqInt (*success)(sqInt aBoolean);
 	sqInt (*superclassOf)(sqInt classPointer);
 
+# if VM_PROXY_MINOR > 13
+	/* Reuse these now that Cog provides a production JIT. */
+	sqInt (*statNumGCs)(void);
+	sqInt (*stringForCString)(char *nullTerminatedCString);
+# else
 	/* InterpreterProxy methodsFor: 'compiler' */
 
 	CompilerHook *(*compilerHookVector)(void);
 	sqInt          (*setCompilerInitialized)(sqInt initFlag);
+# endif
 
 #if VM_PROXY_MINOR > 1
 
@@ -307,7 +313,7 @@ typedef struct VirtualMachine {
   sqInt	(*ownVM)   (sqInt threadIdAndFlags);
   void  (*addHighPriorityTickee)(void (*ticker)(void), unsigned periodms);
   void  (*addSynchronousTickee)(void (*ticker)(void), unsigned periodms, unsigned roundms);
-  usqLong (*utcMicroseconds)(void);
+  volatile usqLong (*utcMicroseconds)(void);
   void (*tenuringIncrementalGC)(void);
   sqInt (*isYoung) (sqInt anOop);
   sqInt (*isKindOfClass)(sqInt oop, sqInt aClass);
@@ -341,6 +347,7 @@ typedef struct VirtualMachine {
   sqInt (*pinObject)(sqInt objOop);
   sqInt (*unpinObject)(sqInt objOop);
 #endif
+
 } VirtualMachine;
 
 #endif /* _SqueakVM_H */

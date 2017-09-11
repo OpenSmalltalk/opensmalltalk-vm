@@ -28,9 +28,9 @@ LIBDIR="`echo lib/nsvm/[0-9.-]*`"
 if [ "$1" = -copysource ]; then
 	cp $SOURCE $LIBDIR
 elif [ -h $SOURCE ]; then
-	ln "`readlink $SOURCE`" $LIBDIR
+	ln "`readlink $SOURCE`" $LIBDIR || (echo "can't hard link $SOURCE. Using symbolic link." 1>&2; ln -s $SOURCE $LIBDIR)
 elif [ -f $SOURCE ]; then
-	ln $SOURCE $LIBDIR
+	ln $SOURCE $LIBDIR || (echo "can't hard link $SOURCE. Using symbolic link." 1>&2; ln -s $SOURCE $LIBDIR)
 else
 	echo "can't find `basename $SOURCE`" 1>&2
 fi

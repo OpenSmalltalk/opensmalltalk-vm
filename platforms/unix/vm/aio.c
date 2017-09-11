@@ -98,6 +98,8 @@
 
 #endif /* !HAVE_CONFIG_H */
 
+/* function to inform the VM about idle time */
+extern void addIdleUsecs(long idleUsecs);
 
 #if defined(AIO_DEBUG)
 long	aioLastTick = 0;
@@ -261,8 +263,11 @@ aioPoll(long microSeconds)
 		n = select(maxFd, &rd, &wr, &ex, &tv);
 		if (n > 0)
 			break;
-		if (n == 0)
+		if (n == 0) {
+			if (microSeconds)
+				addIdleUsecs(microSeconds);
 			return 0;
+		}
 		if (errno && (EINTR != errno)) {
 			fprintf(stderr, "errno %d\n", errno);
 			perror("select");
@@ -298,17 +303,26 @@ aioPoll(long microSeconds)
 long 
 aioSleepForUsecs(long microSeconds)
 {
-#if defined(HAVE_NANOSLEEP)
+	/* This makes no sense at all.  This simply increases latency.  It calls
+	 * aioPoll and then immediately enters a nonasleep for the requested time.
+	 * Hence if there is pending i/o it will prevent responding to that i/o for
+	 * the requested sleep.  Not a good idea. eem May 2017.
+	 */
+#if defined(HAVE_NANOSLEEP) && 0
 	if (microSeconds < (1000000 / 60)) {	/* < 1 timeslice? */
 		if (!aioPoll(0)) {
 			struct timespec rqtp = {0, microSeconds * 1000};
-			struct timespec rmtp;
+			struct timespec rmtp = {0, 0};
 
 			nanosleep(&rqtp, &rmtp);
+			addIdleUsecs((rqtp.tv_nsec - rmtp.tv_nsec) / 1000);
 			microSeconds = 0;	/* poll but don't block */
 		}
 	}
 #endif
+	/* This makes perfect sense.  Poll with a timeout of microSeconds, returning
+	 * when the timeout has elapsed or i/o is possible, whichever is sooner.
+	 */
 	return aioPoll(microSeconds);
 }
 

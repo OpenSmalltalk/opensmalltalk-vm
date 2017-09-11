@@ -38,7 +38,7 @@ extern sqInt callIA32DoubleReturn  (SIGNATURE);
 #if defined(i386) || defined(__i386) || defined(__i386__) || (defined(_WIN32) && !defined(_WIN64)) || defined(_M_IX86)
 # define INT_REG_ARGS /* none */
 # define DBL_REG_ARGS /* none */
-#elif WIN64 || defined(_M_X64) || defined(_M_AMD64) || defined(_WIN64)
+#elif _WIN64 || defined(_M_X64) || defined(_M_AMD64) || defined(_WIN64)
 # undef thunkEntryType
 # define thunkEntryType long long
 # define INT_REG_ARGS long long,long long,long long,long long,
@@ -63,7 +63,7 @@ extern VMCallbackContext *getMostRecentCallbackContext(void);
 /* Use the most minimal setjmp/longjmp pair available; no signal handling
  * wanted or necessary.
  */
-#if !defined(WIN32)
+#if !defined(_WIN32)
 # undef setjmp
 # undef longjmp
 # define setjmp _setjmp

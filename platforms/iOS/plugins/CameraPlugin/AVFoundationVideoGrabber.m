@@ -4,6 +4,9 @@
  *  Most of code was taken from OpenFrameworks at
  *  https://github.com/openframeworks/openFrameworks/blob/master/addons/ofxiOS/src/video/AVFoundationVideoGrabber.mm
  *  which is released under the MIT license.  Subsequently, this code is also under the MIT license.
+ *
+ * Implementaion node:
+ * variable cameraNum is 1-based in following code in order to fit Smalltalk expectations
  */
 
 #include <TargetConditionals.h>
@@ -81,6 +84,8 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
 
   if (deviceNum > [devices count] - 1) {
     deviceID = [devices count] - 1;
+  } else {
+    deviceID = deviceNum;
   } 
   device = [devices objectAtIndex: deviceID];
 
@@ -159,7 +164,7 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
 
 -(void)startCapture: (int)cameraNum {
   if (!bInitCalled) {
-    [self initCapture: cameraNum desiredWidth: 640 desiredHeight: 480];
+    [self initCapture: cameraNum-1 desiredWidth: 640 desiredHeight: 480];
   }
   [captureSession startRunning];
   [captureInput.device lockForConfiguration: nil];
@@ -193,7 +198,7 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
     captureSession = NULL;
     captureOutput = NULL;
     captureInput = NULL;
-    grabbers[cameraNum] = NULL;
+    grabbers[cameraNum-1] = NULL;
   }
 }
 
@@ -202,7 +207,7 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
 SqueakVideoGrabber *
 init(int cameraNum, int desiredWidth, int desiredHeight) {
   SqueakVideoGrabber *this = [SqueakVideoGrabber alloc];
-  return [this initCapture: cameraNum
+  return [this initCapture: cameraNum-1
                desiredWidth: desiredWidth
                desiredHeight: desiredHeight];
 }
@@ -220,15 +225,16 @@ printDevices() {
 char*
 getDeviceName(int cameraNum) {
   NSArray * devices = [AVCaptureDevice devicesWithMediaType: AVMediaTypeVideo];
-  if (cameraNum > [devices count]) {
+  if (cameraNum < 1 || cameraNum > [devices count]) {
     return "";
   }
-  return (char*)[((AVCaptureDevice*)[devices objectAtIndex: cameraNum]).localizedName UTF8String];
+  return (char*)[((AVCaptureDevice*)[devices objectAtIndex: cameraNum-1]).localizedName UTF8String];
 }
 
 int
 CameraOpen(int cameraNum, int desiredWidth, int desiredHeight) {
-  SqueakVideoGrabber *this = grabbers[cameraNum];
+  if(cameraNum<1 || cameraNum>8) {return false;}
+  SqueakVideoGrabber *this = grabbers[cameraNum-1];
 
   if (this) {return true;}
 
@@ -240,21 +246,24 @@ CameraOpen(int cameraNum, int desiredWidth, int desiredHeight) {
 
 void 
 CameraClose(int cameraNum) {
-  SqueakVideoGrabber *this = grabbers[cameraNum];
+  if(cameraNum<1 || cameraNum>8) {return;}
+  SqueakVideoGrabber *this = grabbers[cameraNum-1];
   if (!this) {return;}
   [this stopCapture: cameraNum];
 }
 
 int
 CameraExtent(int cameraNum) {
-  SqueakVideoGrabber *this = grabbers[cameraNum];
+  if(cameraNum<1 || cameraNum>8) {return 0;}
+  SqueakVideoGrabber *this = grabbers[cameraNum-1];
   if (!this) {return 0;}
   return (this->width <<16 | this->height);
 }
 
 int
 CameraGetFrame(int cameraNum, unsigned char *buf, int pixelCount) {
-  SqueakVideoGrabber *this = grabbers[cameraNum];
+  if(cameraNum<1 || cameraNum>8) {return false;}
+  SqueakVideoGrabber *this = grabbers[cameraNum-1];
   if (!this) {return false;}
   if (!this->firstTime) {
     memcpy(buf, this->pixels, pixelCount * 4);

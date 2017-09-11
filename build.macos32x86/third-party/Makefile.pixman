@@ -1,0 +1,45 @@
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
+include ../../third-party/pixman.spec
+
+# plugin definitions
+PIXMANURL:=$(pixman_spec_download_url)
+PIXMANLIBNAME:=$(pixman_spec_product_name_macOS)
+PIXMANDIR:=$(THIRDPARTYDIR)/$(pixman_spec_unpack_dir_name)
+PIXMANARCHIVE:=$(THIRDPARTYCACHEDIR)/$(pixman_spec_archive_name)
+PIXMANLIB:=$(THIRDPARTYINSTALLDIR)/$(PIXMANLIBNAME)
+PIXMANSYMLINKS:=$(pixman_spec_symlinks_macOS)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(PIXMANLIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+
+$(PIXMANARCHIVE): 
+	curl -o $(PIXMANARCHIVE) -L $(PIXMANURL) 
+
+$(THIRDPARTYLIBDIR)/$(PIXMANLIBNAME): $(PIXMANARCHIVE)
+	tar x -f $(PIXMANARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(PIXMANDIR) \
+		&& ./configure \
+			--prefix='$(THIRDPARTYOUTDIR)' \
+			PKG_CONFIG="$(PKG_CONFIG)" \
+			PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" \
+			CFLAGS='-arch i386' \
+			LDFLAGS='-arch i386' \
+		&& make \
+		&& make install
+
+$(PIXMANLIB): pkgconfig $(THIRDPARTYLIBDIR)/$(PIXMANLIBNAME)
+	cp -f $(THIRDPARTYLIBDIR)/$(PIXMANLIBNAME) $(THIRDPARTYINSTALLDIR)
+	install_name_tool -id "@executable_path/Plugins/$(PIXMANLIBNAME)" $(PIXMANLIB)
+	@echo "Installing links"
+	@for each in $(THIRDPARTYLIBDIR)/$(PIXMANSYMLINKS); do \
+		if [ -L $$each ]; then \
+			cp -a $$each $(THIRDPARTYINSTALLDIR); \
+		fi \
+	done
+	@echo "DONE"
+	
+pixman: $(PIXMANLIB)

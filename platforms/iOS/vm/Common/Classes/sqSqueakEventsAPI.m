@@ -43,15 +43,21 @@
 #import "sqSqueakNullScreenAndWindow.h"
 #import "sqaio.h"
 
+# import <OpenGL/gl.h>
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
+# import <OpenGL/OpenGL.h>
+#else
+# import <OpenGL/Opengl.h>
+#endif
+
 extern sqSqueakAppDelegate *gDelegateApp;
 extern struct	VirtualMachine* interpreterProxy;
 extern BOOL gQuitNowRightNow;
 extern sqSqueakNullScreenAndWindow *getMainWindowDelegate();
 
-void nativeIoProcessEvents(void) {
-
+void vmIOProcessEvents(void) {
 	//API Documented
-		
+
     if ([[NSThread currentThread] isCancelled]) {
         gQuitNowRightNow = YES;
         ioExit();  //This might not return, might call exittoshell
@@ -61,18 +67,25 @@ void nativeIoProcessEvents(void) {
 		[getMainWindowDelegate() ioForceDisplayUpdate];
 	}
 
+	/* THIS SHOULD BE COMMENTED TO EXPLAIN WHAT ARE THE TWO CONTEXTS IN WHICH
+	 * THIS IS INVOKED.  THIS SEEMS SUPER DANGEROUS BECAUSE WHETHER THERE IS
+	 * A PRIMITIVE INDEX OR NOT DEPENDS ON WHETHER THIS IS INVOKED WITHIN A
+	 * PRIMITIVE OR NOT.  IF INVOKED IN PARALLEL TO THE VM IT IS ARBITRARY.
+	 * SO PLEASE, WHOEVER UNDERATANDS WHAT'S GOING ON, REPLACE MY CAPS WITH
+	 * A COGENT EXPLANATION ASAP.
+	 */
 	if (interpreterProxy->methodPrimitiveIndex() == 0) {
 		[gDelegateApp.squeakApplication pumpRunLoopEventSendAndSignal:YES];
     } else {
 		[gDelegateApp.squeakApplication pumpRunLoop];
 	}
-	
+
 	if (gQuitNowRightNow) {
 		ioExit();  //This might not return, might call exittoshell
 	}
 }
 
-void (*ioProcessEventsHandler) (void) = nativeIoProcessEvents;
+void (*ioProcessEventsHandler) (void) = vmIOProcessEvents;
 
 extern void setIoProcessEventsHandler(void * handler) {
     ioProcessEventsHandler = (void(*)()) handler;
@@ -80,8 +93,26 @@ extern void setIoProcessEventsHandler(void * handler) {
 
 sqInt ioProcessEvents(void) {
     aioPoll(0);
-    if(ioProcessEventsHandler)
+
+	// We need to restore the opengl context to whatever the image was
+	// already using. This is required by SDL2 in Pharo.
+	NSOpenGLContext *oldContext = [NSOpenGLContext currentContext];
+
+	// We need to run the vmIOProcessEvents even if we are using SDL2,
+	// otherwise we end with some double free errors in an autorelease pool.
+	vmIOProcessEvents();
+    if(ioProcessEventsHandler && ioProcessEventsHandler != vmIOProcessEvents)
         ioProcessEventsHandler();
+
+	NSOpenGLContext *newContext = [NSOpenGLContext currentContext];
+	if(oldContext != newContext) {
+		if (oldContext != nil) {
+			[oldContext makeCurrentContext];
+		} else {
+			[NSOpenGLContext clearCurrentContext];
+		}
+	}
+
     return 0;
 }
 
@@ -94,7 +125,6 @@ sqInt ioSetInputSemaphore(sqInt semaIndex) {
 
 sqInt ioGetNextEvent( sqInputEvent *evt) {
 	//API Documented
-	
 	[gDelegateApp.squeakApplication ioGetNextEvent: evt];
 /*	if (evt->type != 0) {
 		NSLog(@"evt.type %i keyboard pc %i cc %i uc %i m %i",evt->type,((sqKeyboardEvent *)evt)->pressCode,((sqKeyboardEvent *) evt)->charCode,((sqKeyboardEvent *) evt)->utf32Code,((sqKeyboardEvent *) evt)->modifiers);

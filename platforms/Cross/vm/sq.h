@@ -175,6 +175,7 @@ void	checkHighPriorityTickees(usqLong);
 extern int numAsyncTickees; /* prodHighPriorityThread unless necessary */
 # endif						/* see platforms/unix/vm/sqUnixHeartbeat.c */
 void	ioGetClockLogSizeUsecsIdxMsecsIdx(sqInt*,void**,sqInt*,void**,sqInt*);
+void	addIdleUsecs(sqInt);
 #endif
 
 /* this function should return the value of the high performance
@@ -222,7 +223,6 @@ sqInt checkedByteAt(sqInt byteAddress);
 sqInt checkedByteAtput(sqInt byteAddress, sqInt byte);
 sqInt checkedLongAt(sqInt byteAddress);
 sqInt checkedLongAtput(sqInt byteAddress, sqInt a32BitInteger);
-sqInt fullDisplayUpdate(void);
 sqInt interpret(void);
 sqInt primitiveFail(void);
 sqInt signalSemaphoreWithIndex(sqInt semaIndex);
@@ -231,15 +231,19 @@ sqInt success(sqInt);
 
 /* Display, mouse, keyboard, time. */
 
+extern VM_EXPORT void *displayBits;
+extern VM_EXPORT int displayWidth, displayHeight, displayDepth;
+
 sqInt ioBeep(void);
 sqInt ioExit(void);
 sqInt ioExitWithErrorCode(int);
 sqInt crashInThisOrAnotherThread(sqInt flags);
+sqInt fullDisplayUpdate(void);
+void  ioNoteDisplayChangedwidthheightdepth(void *bitsOrHandle, int w, int h, int d);
 sqInt ioForceDisplayUpdate(void);
 sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth,
 		  double hScale, double vScale, sqInt landscapeFlag);
 sqInt ioSetFullScreen(sqInt fullScreen);
-sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds);
 double ioScreenScaleFactor(void);
 sqInt ioScreenSize(void);
 sqInt ioScreenDepth(void);
@@ -260,6 +264,7 @@ sqInt ioGetWindowHeight(void);
 sqInt ioSetWindowWidthHeight(sqInt w, sqInt h);
 sqInt ioIsWindowObscured(void);
 
+sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds);
 #if STACKVM || NewspeakVM
 /* thread subsystem support for e.g. sqExternalSemaphores.c */
 void ioInitThreads();
@@ -395,7 +400,10 @@ sqInt ioProcessEvents(void);
 #define EventTypeDragDropFiles	3
 #define EventTypeMenu		4
 #define EventTypeWindow		5
-#define	EventTypeComplex	6
+#define EventTypeComplex	6 /* For iPhone apps */
+#define EventTypeMouseWheel	7 /* defunct; platforms map to EventTypeKeyboard */
+#define EventTypePlugin		8 /* Terf: events from ActiveX Controls */
+
 
 /* Keypress state for keyboard events. */
 #define EventKeyChar	0

@@ -6,24 +6,26 @@ extern struct VirtualMachine *interpreterProxy;
 #define vm interpreterProxy
 
 /* Large enough since we only use 3 entries with 1k bytes max */
-static char buf[20000];
+#define RESULTBUFSIZE 20000
+static char *buf = 0;
 
-static char* lookup(HKEY hk, char *key) {
-  static char buf[1000];
-  DWORD dwLength, ret;
-  dwLength = sizeof(buf)-1;
-  *buf = 0;
-  ret = RegQueryValueEx(hk, key, NULL, NULL, buf, &dwLength);
-  if(buf[dwLength]) buf[dwLength] = 0;
-  return buf;
+#define LOOKUPBUFSIZ 1000
+
+static void
+lookup(HKEY hk, char *key, char lkupbuf[LOOKUPBUFSIZ]) {
+  DWORD dwLength = LOOKUPBUFSIZ - 1;
+  lkupbuf[0] = 0;
+  (void)RegQueryValueEx(hk, key, NULL, NULL, (BYTE *)lkupbuf, &dwLength);
+  if (lkupbuf[dwLength]) lkupbuf[dwLength] = 0;
 }
 
 /* Print base registry info. Return true if DNS info was provided. */
-static int printBaseInfo(char *hkeyName) {
+static int
+printBaseInfo(char *hkeyName) {
   HKEY hkey;
   DWORD ret;
-  char *value;
   int result = 0;
+  char value[LOOKUPBUFSIZ];
 
   ret = RegOpenKeyEx(HKEY_LOCAL_MACHINE, hkeyName, 0, KEY_READ, &hkey);
   if(ret != ERROR_SUCCESS) {
@@ -32,28 +34,28 @@ static int printBaseInfo(char *hkeyName) {
   }
 
   /* Provide Hostname info if present */
-  value = lookup(hkey, "Hostname");
-  if(*value) {
+  lookup(hkey, "Hostname", value);
+  if(value[0]) {
     strcat(buf, "\nhostname ");
     strcat(buf, value);
   }
 
   /* The list of suffixes to search */
-  value = lookup(hkey, "SearchList");
-  if(*value) {
+  lookup(hkey, "SearchList", value);
+  if(value[0]) {
     strcat(buf, "\nsearch ");
     strcat(buf, value);
   }
 
   /* The (static or dhcp) domain */
-  value = lookup(hkey, "Domain");
-  if(*value) {
+  lookup(hkey, "Domain", value);
+  if(value[0]) {
     strcat(buf, "\ndomain ");
     strcat(buf, value);
     strcat(buf, " # static");
   } else {
-    value = lookup(hkey, "DhcpDomain");
-    if(*value) {
+    lookup(hkey, "DhcpDomain", value);
+    if(value[0]) {
       strcat(buf, "\ndomain ");
       strcat(buf, value);
       strcat(buf, " # dhcp");
@@ -61,15 +63,15 @@ static int printBaseInfo(char *hkeyName) {
   }
 
   /* And the (static or dhcp) configured name servers */
-  value = lookup(hkey, "NameServer");
-  if(*value) {
+  lookup(hkey, "NameServer", value);
+  if(value[0]) {
     strcat(buf, "\nnameserver ");
     strcat(buf, value);
     strcat(buf, " # static");
     result = 1;
   } else {
-    value = lookup(hkey, "DhcpNameServer");
-    if(*value) {
+    lookup(hkey, "DhcpNameServer", value);
+    if(value[0]) {
       strcat(buf, "\nnameserver ");
       strcat(buf, value);
       strcat(buf, " # dhcp");
@@ -80,11 +82,12 @@ static int printBaseInfo(char *hkeyName) {
   return result;
 }
 
-static int printAdapterInfo(char *hkeyName) {
+static int
+printAdapterInfo(char *hkeyName) {
   HKEY hkey;
   DWORD ret;
-  char *value;
   int result = 0;
+  char value[LOOKUPBUFSIZ];
 
   ret = RegOpenKeyEx(HKEY_LOCAL_MACHINE, hkeyName, 0, KEY_READ, &hkey);
   if(ret != ERROR_SUCCESS) {
@@ -93,8 +96,8 @@ static int printAdapterInfo(char *hkeyName) {
   }
 
   /* Provide interface address if present */
-  value = lookup(hkey, "IPAddress");
-  if(*value && strcmp(value, "0.0.0.0")) {
+  lookup(hkey, "IPAddress", value);
+  if(value[0] && strcmp(value, "0.0.0.0")) {
     /* Skip interface info since we can't currently determine
        if the information is correct or a dead adapter */
 #if 0
@@ -103,8 +106,8 @@ static int printAdapterInfo(char *hkeyName) {
     strcat(buf, " # static");
 #endif
   } else {
-    value = lookup(hkey, "DhcpIPAddress");
-    if(*value && strcmp(value, "0.0.0.0")) {
+    lookup(hkey, "DhcpIPAddress", value);
+    if(value[0] && strcmp(value, "0.0.0.0")) {
 #if 0
       strcat(buf, "\ninterface ");
       strcat(buf, value);
@@ -117,15 +120,15 @@ static int printAdapterInfo(char *hkeyName) {
   }
 
   /* Print the (static or dhcp) configured name servers */
-  value = lookup(hkey, "NameServer");
-  if(*value) {
+  lookup(hkey, "NameServer", value);
+  if(value[0]) {
     strcat(buf, "\nnameserver ");
     strcat(buf, value);
     strcat(buf, " # static");
     result = 1;
   } else {
-    value = lookup(hkey, "DhcpNameServer");
-    if(*value) {
+    lookup(hkey, "DhcpNameServer", value);
+    if(value[0]) {
       strcat(buf, "\nnameserver ");
       strcat(buf, value);
       strcat(buf, " # dhcp");
@@ -147,14 +150,20 @@ EXPORT(int) primitiveDnsInfo(void) {
   DWORD dwLength, ret, index;
   char adapter[1024];
 
+  if (!buf) {
+	buf = malloc(RESULTBUFSIZE);
+	if (!buf) {
+	  vm->primitiveFailFor(PrimErrNoCMemory);
+	  return 0;
+	}
+  }
   *buf = 0;
   strcat(buf, "# Global config settings");
 
   /* Print the global options */
-  if(printBaseInfo("SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters")) {
+  if(printBaseInfo("SYSTEM\\CurrentControlSet\\services\\Tcpip\\Parameters"))
     /* If we have DNS entries globally, skip enumerating all interfaces */
     goto done;
-  }
 
   /* Enumerate the available interfaces */
   ret = RegOpenKeyEx(HKEY_LOCAL_MACHINE, BASE_KEY, 0, KEY_READ, &hkey);

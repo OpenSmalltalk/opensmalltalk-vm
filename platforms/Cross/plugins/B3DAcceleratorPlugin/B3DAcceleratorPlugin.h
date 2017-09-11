@@ -1,5 +1,5 @@
 /* Header file for 3D accelerator plugin */
-#ifdef WIN32
+#ifdef _WIN32
 # include <windows.h>
 #endif
 #if defined(BUILD_FOR_OSX) || (MAC_OS_X_VERSION_MAX_ALLOWED >= 1070) || defined(TARGET_API_MAC_CARBON)
@@ -83,10 +83,10 @@ typedef struct B3DPrimitiveLight {
 #define B3D_SYNCVBL           0x0020
 
 /* Win32 defaults to DUAL D3D/GL interface everyone else to OpenGL */
-#if defined(WIN32)
-# if defined(WIN32_PURE_D3D)
+#if defined(_WIN32)
+# if defined(_WIN32_PURE_D3D)
 #  define B3DX_D3D
-# elif defined(WIN32_PURE_GL)
+# elif defined(_WIN32_PURE_GL)
 #  define B3DX_GL
 # else
 #  define B3DX_DUAL

@@ -7,4 +7,10 @@ CroquetPlugin \
 Mpeg3Plugin \
 SqueakFFIPrims \
 SqueakSSL \
-UnixOSProcessPlugin
+UnixOSProcessPlugin \
+# Not working because no 64-bit QuickTime \
+# MIDIPlugin \
+# not working (because of Cocoa vs Carbon): \
+# B3DAcceleratorPlugin \
+# QuicktimePlugin \
+# JoystickTabletPlugin

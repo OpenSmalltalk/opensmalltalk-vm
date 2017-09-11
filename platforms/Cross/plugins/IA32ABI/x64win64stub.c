@@ -5,7 +5,7 @@ or worse, optimize the call away.
 */
 
 #if x86_64|x64|__x86_64|__x86_64__|_M_AMD64|_M_X64
-#ifdef WIN32
+#ifdef _WIN32
 /* Copy the floating point values passed by register into a table fpargs */
 void saveFloatRegsWin64(double xmm0,double xmm1,double xmm2, double xmm3,double *fpargs)
 {

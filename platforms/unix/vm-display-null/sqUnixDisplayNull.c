@@ -185,10 +185,16 @@ SqDisplayDefine(null);
 
 static void  display_parseEnvironment(void) {}
 
+#ifdef PharoVM
+# define VMOPTION(arg) "--"arg
+#else
+# define VMOPTION(arg) "-"arg
+#endif
+
 static int   display_parseArgument(int argc, char **argv)
 {
-  if (!strcmp(argv[0], "-nodisplay")) return 1;
-  if (!strcmp(argv[0], "-headless"))  return 1;
+  if (!strcmp(argv[0], VMOPTION("nodisplay"))) return 1;
+  if (!strcmp(argv[0], VMOPTION("headless")))  return 1;
   return 0;
 }
 

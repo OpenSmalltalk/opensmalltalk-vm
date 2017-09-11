@@ -3,6 +3,15 @@
 
 #include "openssl/ssl.h"
 #include "openssl/err.h"
+#include "openssl/x509v3.h"
+
+#include <strings.h>
+#include <string.h>
+#include <stddef.h>
+
+#include <arpa/inet.h>
+
+#include <sys/param.h>
 
 typedef struct sqSSL {
 	int state;
@@ -24,6 +33,18 @@ typedef struct sqSSL {
 static sqSSL **handleBuf = NULL;
 static sqInt handleMax = 0;
 
+
+#define MAX_HOSTNAME_LENGTH 253
+enum sqMatchResult {
+	MATCH_FOUND = 1, // matches OpenSSL X509_check_host
+	NO_MATCH_DONE_YET = -1,
+	NO_MATCH_FOUND = 0, // matches OpenSSL X509_check_host
+	INVALID_IP_STRING = -2, // matches OpenSSL X509_check_ip_asc
+	NO_SAN_PRESENT = -3
+};
+
+static char* emptyString = "";
+
 /********************************************************************/
 /********************************************************************/
 /********************************************************************/
@@ -37,11 +58,173 @@ static sqSSL *sslFromHandle(sqInt handle) {
 sqInt sqCopyBioSSL(sqSSL *ssl, BIO *bio, char *dstBuf, sqInt dstLen) {
 	int nbytes = BIO_ctrl_pending(bio);
 
-	if(ssl->loglevel) printf("sqCopyBioSSL: %d bytes pending; buffer size %ld\n", 
+	if(ssl->loglevel) printf("sqCopyBioSSL: %d bytes pending; buffer size %ld\n",
 				nbytes, (long)dstLen);
 	if(nbytes > dstLen) return -1;
 	return BIO_read(bio, dstBuf, dstLen);
 }
+
+
+#ifndef X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS
+enum sqMatchResult sqVerifyIP(sqSSL* ssl, X509* cert, const char* serverName, const size_t serverNameLength);
+enum sqMatchResult sqVerifyDNS(sqSSL* ssl, X509* cert, const char* serverName, const size_t serverNameLength);
+enum sqMatchResult sqVerifyNameInner(sqSSL* ssl, X509* cert, void* serverName, const size_t serverNameLength, const int matchType);
+char* sqVerifyFindStar(char* sANData, size_t sANDataSize);
+sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, void* data, const size_t dataSizeIn, const int matchType);
+
+enum sqMatchResult sqVerifyIP(sqSSL* ssl, X509* cert, const char* serverName, const size_t serverNameLength) {
+	struct in6_addr addr = { 0 }; // placeholder, longest of in_addr and in6_addr
+	int af = AF_INET6;
+	size_t addrSize = sizeof(struct in6_addr);
+	int strToAddrWorked = 0;
+
+	if (serverName == NULL) { return INVALID_IP_STRING; }
+	if (memchr(serverName, '.', MIN(INET_ADDRSTRLEN, serverNameLength))) {
+		// there's a dot somewhere in the first bytes, look for IPV4
+		af = AF_INET;
+		addrSize = sizeof(struct in_addr);
+	}
+	strToAddrWorked = inet_pton(af, serverName, &addr);
+	if (strToAddrWorked != 1) { return INVALID_IP_STRING; }
+
+	return sqVerifyNameInner(ssl, cert, &addr, addrSize, GEN_IPADD);
+}
+
+
+enum sqMatchResult sqVerifyDNS(sqSSL* ssl, X509* cert, const char* serverName, const size_t serverNameLength) {
+	return sqVerifyNameInner(ssl, cert, serverName, serverNameLength, GEN_DNS);
+}
+
+enum sqMatchResult sqVerifyNameInner(sqSSL* ssl, X509* cert, void* serverName, const size_t serverNameLength, const int matchType) {
+	enum sqMatchResult matchFound = NO_MATCH_FOUND;
+
+	STACK_OF(GENERAL_NAME)* sANs = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
+	if (!sANs) {
+		if (ssl->loglevel) printf("sqVerifyNameInner: No sAN names\n");
+		matchFound = NO_SAN_PRESENT;
+	} else {
+		int i = 0;
+		int sANCount = sk_GENERAL_NAME_num(sANs);
+		for (i = 0; i < sANCount && matchFound != MATCH_FOUND; ++i) {
+			const GENERAL_NAME* sAN = sk_GENERAL_NAME_value(sANs, i);
+			if ((sAN->type == matchType) &&
+			    sqVerifySAN(ssl, sAN, serverName, serverNameLength, matchType)) {
+				matchFound = MATCH_FOUND;
+				break;
+			}
+		}
+		sk_GENERAL_NAME_pop_free(sANs, GENERAL_NAME_free);
+	}
+	return matchFound;
+}
+
+char* sqVerifyFindStar(char* sANData, size_t sANDataSize) {
+	ptrdiff_t starPosition = 0;
+	char* safeptr = NULL;
+	char* label = NULL;
+	int starFound = 0;
+	size_t labelCount = 0;
+	char ptr[MAX_HOSTNAME_LENGTH + 1] = {0};
+	memcpy(ptr, sANData, MIN(MAX_HOSTNAME_LENGTH + 1, sANDataSize));
+
+#define FAIL_STAR(x) do { if (x) { return NULL; } } while (0)
+
+	for (label = strtok_r(ptr, ".", &safeptr);
+	     label != NULL;
+	     label = strtok_r(NULL, ".", &safeptr), labelCount++) {
+		char* currentStar = strchr(label, '*'); // \0-termination is guaranteed by strtok_r
+		size_t labelLength = strlen(label);  // \0-termination is guaranteed by strtok_r
+		if (currentStar != NULL) {
+			// only one star per label
+			FAIL_STAR(labelLength > 1 && (NULL != strchr(currentStar + 1, '*')));
+			// only one star per pattern
+			FAIL_STAR(starFound);
+			// cannot match partial idna
+			FAIL_STAR(0 == strncasecmp(label, "xn--", MIN(labelLength, 4)));
+			// star not permissible in non-leftmost label
+			FAIL_STAR(labelCount >= 1);
+
+			// first label, star is ok.
+			starFound = 1;
+			starPosition = currentStar - ptr;
+		}
+	}
+	// no star found, nothing to report
+	FAIL_STAR(!starFound);
+	// star in last two labels
+	FAIL_STAR(labelCount < 3);
+	return sANData + starPosition;
+#undef FAIL_STAR
+}
+
+sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, void* data, const size_t dataSizeIn, const int matchType) {
+	char* sANData = (char *)ASN1_STRING_data(sAN->d.ia5);
+	size_t sANDataSize = (size_t)ASN1_STRING_length(sAN->d.ia5);
+	size_t dataSize = dataSizeIn;
+
+	if (ssl->loglevel) printf("sqVerifyNameInner: checking sAN %.*s\n", matchType == GEN_DNS ? (int) sANDataSize : 5 , matchType == GEN_DNS ? sANData : "an IP");
+	// For IPs, exact match only.
+	if (matchType == GEN_IPADD) {
+		return (sANDataSize == dataSize) && !memcmp(sANData, data, sANDataSize);
+	}
+
+	// Normalize dns names by dropping traling dots if any
+	if (sANData[sANDataSize - 1] == '.') { sANDataSize--; }
+	if (((char*)data)[dataSize - 1] == '.') { dataSize--; }
+
+#define NOPE(x) do { if ((x)) return 0; } while (0)
+#define YEAH(x) do { if ((x)) return 1; } while (0)
+
+	// Exact match always wins
+	YEAH((sANDataSize == dataSize) && (0 == strncasecmp(sANData, data, sANDataSize)));
+	// wildcard matching not for IPs et al.
+	NOPE(matchType != GEN_DNS);
+
+	// Malformed DNS name
+	NOPE(sANDataSize != strnlen(sANData, sANDataSize));
+
+	{
+		char* serverName = (char*) data;
+		size_t serverNameSize = dataSize;
+		char* starPosition = NULL;
+		char* sANDataSuffix = NULL;
+		char* serverNameSuffix = NULL;
+		ptrdiff_t prefixLength = 0;
+		ptrdiff_t suffixLength = 0;
+		ptrdiff_t matchLength = 0;
+
+		// Contrary to general certificate machting, we are only
+		// interested in setting up an SSL connection, so we do _NOT_
+		// allow data (aka serverNames) that start with a '.'
+		NOPE(serverName[0] == '.');
+
+		starPosition = sqVerifyFindStar(sANData, sANDataSize);
+		// Since exact matches are already covered and we excluded
+		// leading '.' in the server name, we bail if no _valid_ star
+		// found in the sAN data here.
+		NOPE(starPosition == NULL);
+
+		prefixLength = starPosition - sANData;
+		suffixLength = (sANData + sANDataSize - 1) - starPosition;
+		matchLength = serverNameSize - (suffixLength + prefixLength);
+		sANDataSuffix = starPosition + 1;
+		serverNameSuffix = serverName + serverNameSize - suffixLength;
+
+		// check that prefix matches.
+		NOPE(0 != strncasecmp(sANData, serverName, (size_t) prefixLength));
+		// check that suffix matches
+		NOPE(0 != strncasecmp(sANDataSuffix, serverNameSuffix, (size_t) suffixLength));
+		// complete star labels (*.example.com) must match at least one character
+		NOPE(prefixLength == 0 && sANDataSuffix[0] == '.' && matchLength < 1);
+		// no more than one serverName label can match the star -> cannot contain periods
+		NOPE(matchLength > 0 && (NULL != memchr(serverName + prefixLength, '.', matchLength )));
+	}
+	return 1;
+#undef NOPE
+#undef YEAH
+}
+#endif
+// X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS
 
 /* sqSetupSSL: Common SSL setup tasks */
 sqInt sqSetupSSL(sqSSL *ssl, int server) {
@@ -100,7 +283,7 @@ sqInt sqCreateSSL(void) {
 	ssl->bioWrite = BIO_new(BIO_s_mem());
 	BIO_set_close(ssl->bioRead, BIO_CLOSE);
 	BIO_set_close(ssl->bioWrite, BIO_CLOSE);
-	
+
 	/* Find a free handle */
 	for(handle = 1; handle < handleMax; handle++)
 		if(handleBuf[handle] == NULL) break;
@@ -128,7 +311,7 @@ sqInt sqDestroySSL(sqInt handle) {
 
 	if(ssl->ctx) SSL_CTX_free(ssl->ctx);
 
-	if(ssl->ssl) { 
+	if(ssl->ssl) {
 		SSL_free(ssl->ssl); // This will also free bioRead and bioWrite
 	} else {
 		// SSL_new didn't get called, have to free bioRead and bioWrite manually
@@ -156,7 +339,7 @@ sqInt sqDestroySSL(sqInt handle) {
 */
 sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt dstLen) {
 	int result, n;
-	char peerName[256];
+	char peerName[MAX_HOSTNAME_LENGTH + 1];
 	X509 *cert;
 	sqSSL *ssl = sslFromHandle(handle);
 
@@ -170,9 +353,9 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 	/* Establish initial connection */
 	if(ssl->state == SQSSL_UNUSED) {
 		ssl->state = SQSSL_CONNECTING;
-		if(ssl->loglevel) print("sqConnectSSL: Setting up SSL\n");
+		if(ssl->loglevel) printf("sqConnectSSL: Setting up SSL\n");
 		if(!sqSetupSSL(ssl, 0)) return SQSSL_GENERIC_ERROR;
-		if(ssl->loglevel) print("sqConnectSSL: Setting connect state\n");
+		if(ssl->loglevel) printf("sqConnectSSL: Setting connect state\n");
 		SSL_set_connect_state(ssl->ssl);
 	}
 
@@ -182,7 +365,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 
 	if(n < srcLen) {
 		if(ssl->loglevel) printf("sqConnectSSL: BIO too small for input\n");
-		return SQSSL_GENERIC_ERROR; 
+		return SQSSL_GENERIC_ERROR;
 	}
 	if(n < 0) {
 		if(ssl->loglevel) printf("sqConnectSSL: BIO_write failed\n");
@@ -216,11 +399,64 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 	if(ssl->loglevel) printf("sqConnectSSL: cert = %p\n", cert);
 	/* Fail if no cert received. */
 	if(cert) {
-		X509_NAME_get_text_by_NID(X509_get_subject_name(cert), 
-					NID_commonName, peerName, 
-					sizeof(peerName));
-		if(ssl->loglevel) printf("sqConnectSSL: peerName = %s\n", peerName);
-		ssl->peerName = strndup(peerName, sizeof(peerName) - 1);
+		/*
+		 * Verify that peer is the one we expect (by name, via cert)
+		 *
+		 * Note, this goes beyond checking the commonName:
+		 * 1. If cert has sAN of dNSName type it MUST be used (even if
+		 *	cn is present)
+		 * 2. Cert w/o sAN (and cn only)  is DEPRECATED
+		 * 3. Cert has multiple sAN/dNSName, anyone SHALL match
+		 * 4. Wildcard match have several restrictions (cf RFCs 6125,
+		 *	2181, 2595, or Microsoft doc 258858)
+		 * 5. IP Addresses MUST be of type iPAddress, NOT dNSName
+		 *
+		 * Due to 4., name checking is not as simple as
+		 *	"certificateName match: * peerName" on the image side.
+		 *
+		 * To allow image side reaction to server-name matches we
+		 *	**copy the `serverName` into the `peerName` property.
+		 *	Thus, the image side can check as
+		 *
+				peerNameMatches
+					^ self peerName = self serverName
+		 *
+		 * or likewise.
+		 */
+		enum sqMatchResult matched = NO_MATCH_DONE_YET;
+		if (ssl->peerName) { free(ssl->peerName); }
+		ssl->peerName = NULL;
+
+		if (ssl->serverName) {
+			const size_t serverNameLength = strnlen(ssl->serverName, MAX_HOSTNAME_LENGTH);
+#ifdef X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS
+			if(ssl->loglevel) printf("sqConnectSSL: X509_check_host.");
+			/* Try IP first, expect INVALID_IP_STRING to continue with hostname */
+			matched = (enum sqMatchResult) X509_check_ip_asc(cert, ssl->serverName, 0);
+			if (matched == INVALID_IP_STRING) {
+				matched = (enum sqMatchResult) X509_check_host(cert, ssl->serverName, serverNameLength, X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS, NULL);
+			}
+#else
+			matched = sqVerifyIP(ssl, cert, ssl->serverName, serverNameLength);
+			if (matched == INVALID_IP_STRING) {
+				matched = sqVerifyDNS(ssl, cert, ssl->serverName, serverNameLength);
+			}
+#endif
+			if (matched == MATCH_FOUND) {
+				if (ssl->loglevel) printf("sqConnectSSL: check hostname OK\n");
+				ssl->peerName = strndup(ssl->serverName, serverNameLength);
+			} else {
+				if (ssl->loglevel) printf("sqConnectSSL: check hostname NOT OK\n");
+			}
+		}
+		// fallback for missing sAN or non-provided serverName
+		if (matched == NO_MATCH_DONE_YET || matched == NO_SAN_PRESENT) {
+			X509_NAME_get_text_by_NID(X509_get_subject_name(cert),
+						  NID_commonName, peerName,
+						  sizeof(peerName));
+			if(ssl->loglevel) printf("sqConnectSSL: peerName = %s\n", peerName);
+			ssl->peerName = strndup(peerName, sizeof(peerName) - 1);
+		}
 		X509_free(cert);
 
 		/* Check the result of verification */
@@ -245,7 +481,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 */
 sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt dstLen) {
 	int result, n;
-	char peerName[256];
+	char peerName[MAX_HOSTNAME_LENGTH + 1];
 	X509 *cert;
 	sqSSL *ssl = sslFromHandle(handle);
 
@@ -269,7 +505,7 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt 
 
 	if(n < srcLen) {
 		if(ssl->loglevel) printf("sqAcceptSSL: BIO_write wrote less than expected\n");
-		return SQSSL_GENERIC_ERROR; 
+		return SQSSL_GENERIC_ERROR;
 	}
 	if(n < 0) {
 		if(ssl->loglevel) printf("sqAcceptSSL: BIO_write failed\n");
@@ -300,8 +536,8 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt 
 	if(ssl->loglevel) printf("sqAcceptSSL: cert = %p\n", cert);
 
 	if(cert) {
-		X509_NAME_get_text_by_NID(X509_get_subject_name(cert), 
-					NID_commonName, peerName, 
+		X509_NAME_get_text_by_NID(X509_get_subject_name(cert),
+					NID_commonName, peerName,
 					sizeof(peerName));
 		if(ssl->loglevel) printf("sqAcceptSSL: peerName = %s\n", peerName);
 		ssl->peerName = strndup(peerName, sizeof(peerName) - 1);
@@ -379,7 +615,7 @@ char* sqGetStringPropertySSL(sqInt handle, int propID) {
 
 	if(ssl == NULL) return NULL;
 	switch(propID) {
-		case SQSSL_PROP_PEERNAME:	return ssl->peerName;
+		case SQSSL_PROP_PEERNAME:	return ssl->peerName ? ssl->peerName : emptyString;
 		case SQSSL_PROP_CERTNAME:	return ssl->certName;
 		case SQSSL_PROP_SERVERNAME:	return ssl->serverName;
 		default:
@@ -448,7 +684,7 @@ sqInt sqGetIntPropertySSL(sqInt handle, sqInt propID) {
 	return 0;
 }
 
-/* sqSetIntPropertySSL: Set an integer property in SSL.
+ /* sqSetIntPropertySSL: Set an integer property in SSL.
 	Arguments:
 		handle - the ssl handle
 		propID - the property id to retrieve

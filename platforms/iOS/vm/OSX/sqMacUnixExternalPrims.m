@@ -54,6 +54,7 @@ extern SqueakOSXAppDelegate *gDelegateApp;
 #include <dlfcn.h> 
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <sys/errno.h>
 
 /* get a value for RTLD_NOW, with increasing levels of desperation... */
 
@@ -89,20 +90,22 @@ tryLoadingInternals(NSString *libNameString)
 {	
 	struct stat buf;
 	void        *handle;
-	const char* libName = [libNameString fileSystemRepresentation];
+	const char *libName = [libNameString fileSystemRepresentation];
 
 	if (stat(libName, &buf))
 		dprintf((stderr, "%s does not exist\n", libName));
 	else if (S_ISDIR(buf.st_mode))
 		dprintf((stderr, "ignoring directory: %s\n", libName));
 	else {
+		const char *why;
 	    dprintf((stderr, "tryLoading %s\n", libName));
 		if ((handle = dlopen(libName, RTLD_NOW | RTLD_GLOBAL)))
 			return handle;
-		if (thePListInterface.SqueakDebug) {
-			const char* why = dlerror();
+		why = dlerror();
+		if (thePListInterface.SqueakDebug)
 			fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, why);
-		}
+		else if (strstr(why,"undefined symbol"))
+			fprintf(stderr, "tryLoadingInternals: dlopen: %s\n", why);
 	}
 	return NULL;
 }
@@ -113,7 +116,6 @@ tryLoadingInternals(NSString *libNameString)
 static void *
 tryLoadingBundle(NSString *dirNameString, char *moduleName)
 {
-	void        *handle;
 	NSString    *libName;
 
 	libName = [dirNameString stringByAppendingPathComponent: @(moduleName)];
@@ -136,7 +138,9 @@ tryLoadingVariations(NSString *dirNameString, char *moduleName)
 {
 	void        *handle;
 	NSString    *libName;
-	char	     **prefix, **suffix;
+	const char  *dirName;
+	char	   **prefix, **suffix;
+	struct stat  buf;
 	static char *prefixes[]= { "", "lib", 0 };
 	static char *suffixes[]= { "", "so", "dylib",0 };
 
@@ -147,6 +151,19 @@ tryLoadingVariations(NSString *dirNameString, char *moduleName)
 	if (*moduleName == '/')
 		return NULL;
 
+	dirName = [dirNameString length] == 0
+				? 0
+				: [dirNameString fileSystemRepresentation];
+	/* If dirName does not exist it is pointless searching for libraries in it. */
+	if (dirName && stat(dirName,&buf)) {
+		if (errno != ENOENT)
+			fprintf(stderr,
+					"tryLoading(%s,%s): stat(%s) %s\n",
+					dirName, moduleName, dirName, strerror(errno));
+		else if (thePListInterface.SqueakDebug)
+			fprintf(stderr,"skipping non-existent directory %s\n", dirName);
+		return NULL;
+	}
 	for (prefix= prefixes;  *prefix;  ++prefix)
 		for (suffix= suffixes;  *suffix;  ++suffix)		{
 			libName = [dirNameString stringByAppendingPathComponent: @(*prefix)];

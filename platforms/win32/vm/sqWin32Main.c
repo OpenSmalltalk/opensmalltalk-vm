@@ -733,7 +733,7 @@ void gatherSystemInfo(void) {
       if(ok == 0) {
 	drivers = malloc(dwSize);
 	ok = RegQueryValueEx(hk,"InstalledDisplayDrivers",
-			     NULL, NULL, drivers, &dwSize);
+			     NULL, NULL, (LPBYTE)drivers, &dwSize);
       }
       if(ok == 0) {
 	strcat(tmpString,"\nDriver Versions:");
@@ -1590,18 +1590,33 @@ sqMain(int argc, char *argv[])
 int WINAPI
 WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+  /* Determine if we're running as a console application  We can't report
+   * allocation failures unless running as a console app because doing so
+   * via a MessageBox will make the system unusable.
+   */
+#if 0 /* This way used to work.  Dows no longer. */
   DWORD mode;
+
+  fIsConsole = GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &mode);
+#elif 0 /* This does /not/ work with STD_INPUT_HANDLE or STD_OUTPUT_HANDLE */
+  CONSOLE_SCREEN_BUFFER_INFO csbi;
+
+  if ((fIsConsole = GetConsoleScreenBufferInfo
+						(GetStdHandle(STD_INPUT_HANDLE), &csbi)))
+		fIsConsole = csbi.dwCursorPosition.X || csbi.dwCursorPosition.Y;
+#else /* This /does/ work; see */
+	/* https://stackoverflow.com/questions/9009333/how-to-check-if-the-program-is-run-from-a-console */
+  HWND consoleWnd = GetConsoleWindow();
+  DWORD dwProcessId;
+  GetWindowThreadProcessId(consoleWnd, &dwProcessId);
+  fIsConsole = GetCurrentProcessId() != dwProcessId;
+#endif
 
   /* a few things which need to be done first */
   gatherSystemInfo();
 
   /* check if we're running NT or 95 */
   fWindows95 = (GetVersion() & 0x80000000) != 0;
-  /* Determine if we're running as a console application  We can't report
-   * allocation failures unless running as a console app because doing so
-   * via a MessageBox will make the system unusable.
-   */
-  fIsConsole = GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &mode);
 
   /* fetch us a copy of the command line */
   initialCmdLine = _strdup(lpCmdLine);

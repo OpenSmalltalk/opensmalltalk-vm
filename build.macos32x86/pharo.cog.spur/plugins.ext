@@ -1,5 +1,6 @@
 # Copied, perhaps edited, from ../src/examplePlugins.ext
 EXTERNAL_PLUGINS = \
+B3DAcceleratorPlugin \
 ClipboardExtendedPlugin \
 CroquetPlugin \
 FT2Plugin \
@@ -16,10 +17,11 @@ SerialPlugin \
 ObjectiveCPlugin \
 SDL2DisplayPlugin \
 EventsHandlerPlugin \
+# TEMPORARY REMOVE
+# B3DAcceleratorPlugin \
 # could work, but I don't know if relevant:
 # TestOSAPlugin \
 # not working (because of Cocoa vs Carbon):
 # MIDIPlugin \
 # QuicktimePlugin \
-# JoystickTabletPlugin \
-# B3DAcceleratorPlugin \
+# JoystickTabletPlugin

@@ -33,7 +33,6 @@ StarSqueakPlugin \
 SurfacePlugin \
 UUIDPlugin \
 VMProfileMacSupportPlugin \
-# B3DAcceleratorPlugin \
 # InternetConfigPlugin \
 # JoystickTabletPlugin \
 # MacMenubarPlugin # Does not work under Cocoa

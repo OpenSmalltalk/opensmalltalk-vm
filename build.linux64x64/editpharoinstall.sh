@@ -15,11 +15,11 @@ SOURCE=../../sources/$SourceFile.sources
 test -f $SOURCE || SOURCE=../../../sources/$SourceFile.sources
 if [ -f squeak ]; then
 	mv squeak pharo
-	sed -i.bak 's/squeak/pharo/g' pharo
+	sed -i 's/squeak/pharo/g' pharo
 fi
 if [ -f bin/squeak ]; then
 	mv bin/squeak bin/pharo
-	sed -i.bak 's/squeak/pharo/g' bin/pharo
+	sed -i 's/squeak/pharo/g' bin/pharo
 fi
 rm -rf man doc
 LIBDIR="`echo lib/squeak/[0-9.-]*`"

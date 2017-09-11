@@ -1,1 +1,42 @@
-| manifest load |manifest := #(	('http://source.squeak.org/VMMaker'				6	('BytecodeSets.spur' ))				('http://ss3.gemstone.com/ss/MethodMassage'		3	('MethodMassage' 'MethodMassageCompatibility'))				).load := (manifest collect:				[:tuple|				[:path :order :packages| | repository |				repository := MCHttpRepository								location: path								user: 'squeak'								password: 'squeak'.				MCRepositoryGroup default addRepository: repository.				{repository. order. packages}] valueWithArguments: tuple])			sort: [:a :b| a second <= b second].load do:	[:tuple|	 [:repository :order :packages|	  packages do:		[:package| | latestVersion |		"We need to filter-out branches of unbranched packages."		latestVersion := (repository versionNamesForPackageNamed: package) detect:							[:versionName| (versionName at: package size + 1) = $-].		[| version |		version := ((MCCacheRepository default includesVersionNamed: latestVersion)					ifTrue: [MCCacheRepository default]					ifFalse: [repository]) versionNamed: latestVersion.		 version load.		 version workingCopy repositoryGroup addRepository: repository]			on: Warning			do: [:ex|				(ex messageText beginsWith: 'This package depends on the following classes') ifFalse:					[ex pass].				ex resume]]]		valueWithArguments: tuple].CompiledMethod installSecondaryBytecodeSet: (Smalltalk classNamed: #EncoderForSistaV1).FullBlockClosure tryPrimitive: 161 withArgs: #(38 true).Smalltalk snapshot: true andQuit: true
+| manifest load |
+manifest := #(	('http://source.squeak.org/VMMaker'				6	('BytecodeSets.spur' ))
+				('http://ss3.gemstone.com/ss/MethodMassage'		3	('MethodMassage' 'MethodMassageCompatibility'))
+				).
+
+load := (manifest collect:
+				[:tuple|
+				[:path :order :packages| | repository |
+				repository := MCHttpRepository
+								location: path
+								user: 'squeak'
+								password: 'squeak'.
+				MCRepositoryGroup default addRepository: repository.
+				{repository. order. packages}] valueWithArguments: tuple])
+			sort: [:a :b| a second <= b second].
+
+load do:
+	[:tuple|
+	 [:repository :order :packages|
+	  packages do:
+		[:package| | latestVersion |
+		"We need to filter-out branches of unbranched packages."
+		latestVersion := (repository versionNamesForPackageNamed: package) detect:
+							[:versionName| (versionName at: package size + 1) = $-].
+		[| version |
+		version := ((MCCacheRepository default includesVersionNamed: latestVersion)
+					ifTrue: [MCCacheRepository default]
+					ifFalse: [repository]) versionNamed: latestVersion.
+		 version load.
+		 version workingCopy repositoryGroup addRepository: repository]
+			on: Warning
+			do: [:ex|
+				(ex messageText beginsWith: 'This package depends on the following classes') ifFalse:
+					[ex pass].
+				ex resume]]]
+		valueWithArguments: tuple].
+
+CompiledMethod installSecondaryBytecodeSet: (Smalltalk classNamed: #EncoderForSistaV1).
+
+FullBlockClosure tryPrimitive: 161 withArgs: #(38 true).
+
+Smalltalk snapshot: true andQuit: true

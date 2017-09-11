@@ -69,7 +69,10 @@ sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-y
      build-essential \
      python-dev \
      libffi-dev \
-     zlib1g-dev
+     zlib1g-dev \
+     libtool \
+     automake \
+     autoconf
 
 sudo chown $USER /etc/schroot/schroot.conf
 echo "
@@ -95,7 +98,8 @@ if [ ! -e "$ARMCHROOT/etc/debian_chroot" ]; then
     schroot -c rpi -u root -- apt-get --allow-unauthenticated install -y \
 	    build-essential libcairo2-dev libpango1.0-dev libssl-dev uuid-dev uuid-runtime libasound2-dev \
 	    debhelper devscripts libssl-dev libfreetype6-dev libx11-dev libxext-dev \
-	    libx11-dev libsm-dev libice-dev libgl1-mesa-dev libgl1-mesa-glx git
+	    libx11-dev libsm-dev libice-dev libgl1-mesa-dev libgl1-mesa-glx git \
+	    libtool automake autoconf
     #needed for third-party libraries
     schroot -c rpi -u root -- apt-get --allow-unauthenticated install -y cmake curl
 fi
