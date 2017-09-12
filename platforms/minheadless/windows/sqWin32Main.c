@@ -26,17 +26,11 @@
  *
  * Author: roniesalg@gmail.com
  */
-#include "SqueakVirtualMachine.h"
-
-int main(int argc, const char **argv)
-{
-    return squeak_main(argc, argv);
-}
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <stdlib.h>
-#include "SqueakVirtualMachine.h"
+#include "OpenSmalltalkVM.h"
 
 int CALLBACK WinMain(
   HINSTANCE hInstance,
@@ -45,5 +39,5 @@ int CALLBACK WinMain(
   int       nCmdShow
 )
 {
-    return squeak_main(__argc, (const char **)__argv);
+    return osvm_main(__argc, (const char **)__argv);
 }

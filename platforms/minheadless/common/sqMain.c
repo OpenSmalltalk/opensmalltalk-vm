@@ -25,9 +25,9 @@
  *
  * Author: roniesalg@gmail.com
  */
-#include "SqueakVirtualMachine.h"
+#include "OpenSmalltalkVM.h"
 
 int main(int argc, const char **argv)
 {
-    return squeak_main(argc, argv);
+    return osvm_main(argc, argv);
 }

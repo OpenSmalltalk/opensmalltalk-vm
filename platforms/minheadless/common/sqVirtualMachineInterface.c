@@ -33,7 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "SqueakVirtualMachine.h"
+#include "OpenSmalltalkVM.h"
 #include "sq.h"
 #include "sqSCCSVersion.h"
 
@@ -407,7 +407,7 @@ parseArguments(int argc, char **argv)
         {
             fprintf(stderr, "unknown option: %s\n", argv[0]);
             usage();
-            return SQUEAK_ERROR_UNSUPPORTED_PARAMETER;
+            return OSVM_ERROR_UNSUPPORTED_PARAMETER;
         }
 
         while (n--)
@@ -415,7 +415,7 @@ parseArguments(int argc, char **argv)
     }
 
     if (!argc)
-        return SQUEAK_SUCCESS;
+        return OSVM_SUCCESS;
     if (!strcmp(*argv, "--"))
         skipArg();
     else					/* image name */
@@ -432,17 +432,17 @@ parseArguments(int argc, char **argv)
 
 # undef saveArg
 # undef skipArg
-    return SQUEAK_SUCCESS;
+    return OSVM_SUCCESS;
 }
 
-SQUEAK_VM_CORE_PUBLIC int
-squeak_getInterfaceVersion()
+OSVM_VM_CORE_PUBLIC int
+osvm_getInterfaceVersion()
 {
-    return SQUEAK_VM_CORE_COMPILED_VERSION;
+    return OSVM_VM_CORE_COMPILED_VERSION;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError
-squeak_loadImage(const char *fileName)
+OSVM_VM_CORE_PUBLIC OSVMError
+osvm_loadImage(const char *fileName)
 {
     size_t imageSize = 0;
     sqImageFile imageFile = 0;
@@ -450,7 +450,7 @@ squeak_loadImage(const char *fileName)
     /* Open the image file. */
     imageFile = sqImageFileOpen(fileName, "rb");
     if(!imageFile)
-        return SQUEAK_ERROR_FAILED_TO_OPEN_FILE;
+        return OSVM_ERROR_FAILED_TO_OPEN_FILE;
 
     /* The security plugin requires an absolute path of the image.*/
     sqPathMakeAbsolute(imageName, sizeof(imageName), fileName);
@@ -477,14 +477,14 @@ squeak_loadImage(const char *fileName)
 #endif
     sqImageFileClose(imageFile);
 
-    return SQUEAK_SUCCESS;
+    return OSVM_SUCCESS;
 }
 
 static char tempImageNameAttempt[FILENAME_MAX];
-SQUEAK_VM_CORE_PUBLIC SqueakError
-squeak_loadDefaultImage(void)
+OSVM_VM_CORE_PUBLIC OSVMError
+osvm_loadDefaultImage(void)
 {
-    SqueakError error;
+    OSVMError error;
 
     /* If the image name is empty, try to load the default image. */
     if(!shortImageName[0])
@@ -492,22 +492,22 @@ squeak_loadDefaultImage(void)
 
     /* Try to load the image as was passed. */
     sprintf(tempImageNameAttempt, "%s", shortImageName);
-    error = squeak_loadImage(tempImageNameAttempt);
+    error = osvm_loadImage(tempImageNameAttempt);
     if(!error)
-        return SQUEAK_SUCCESS;
+        return OSVM_SUCCESS;
 
     /* Make the image path relative to the VM*/
     sprintf(tempImageNameAttempt, "%s/%s", vmPath, shortImageName);
-    error = squeak_loadImage(tempImageNameAttempt);
+    error = osvm_loadImage(tempImageNameAttempt);
     if(!error)
-        return SQUEAK_SUCCESS;
+        return OSVM_SUCCESS;
 
     /* Failed. */
-    return SQUEAK_ERROR_FAILED_TO_OPEN_FILE;
+    return OSVM_ERROR_FAILED_TO_OPEN_FILE;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError
-squeak_initialize(void)
+OSVM_VM_CORE_PUBLIC OSVMError
+osvm_initialize(void)
 {
     /* check the interpreter's size assumptions for basic data types */
     if (sizeof(int) != 4) error("This C compiler's integers are not 32 bits.");
@@ -526,18 +526,18 @@ squeak_initialize(void)
     /* Perform platform specific initialization. */
     ioInitPlatformSpecific();
 
-    return SQUEAK_SUCCESS;
+    return OSVM_SUCCESS;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError
-squeak_shutdown(void)
+OSVM_VM_CORE_PUBLIC OSVMError
+osvm_shutdown(void)
 {
     /* Nothing required yet. */
-    return SQUEAK_SUCCESS;
+    return OSVM_SUCCESS;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError
-squeak_parseCommandLineArguments(int argc, const char **argv)
+OSVM_VM_CORE_PUBLIC OSVMError
+osvm_parseCommandLineArguments(int argc, const char **argv)
 {
     /* Make parameters global for access from plugins */
     argCnt = argc;
@@ -557,47 +557,47 @@ squeak_parseCommandLineArguments(int argc, const char **argv)
     return parseArguments(argc, (char**)argv);
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError
-squeak_parseVMCommandLineArguments(int argc, const char **argv)
+OSVM_VM_CORE_PUBLIC OSVMError
+osvm_parseVMCommandLineArguments(int argc, const char **argv)
 {
-    return SQUEAK_ERROR_NOT_YET_IMPLEMENTED;
+    return OSVM_ERROR_NOT_YET_IMPLEMENTED;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError
-squeak_setVMStringParameter(const char *name, const char *value)
+OSVM_VM_CORE_PUBLIC OSVMError
+osvm_setVMStringParameter(const char *name, const char *value)
 {
-    return SQUEAK_ERROR_UNSUPPORTED_PARAMETER;
+    return OSVM_ERROR_UNSUPPORTED_PARAMETER;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError
-squeak_setVMIntegerParameter(const char *name, const char *value)
+OSVM_VM_CORE_PUBLIC OSVMError
+osvm_setVMIntegerParameter(const char *name, const char *value)
 {
-    return SQUEAK_ERROR_UNSUPPORTED_PARAMETER;
+    return OSVM_ERROR_UNSUPPORTED_PARAMETER;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError
-squeak_passImageCommandLineArguments(int argc, const char **argv)
+OSVM_VM_CORE_PUBLIC OSVMError
+osvm_passImageCommandLineArguments(int argc, const char **argv)
 {
-    return SQUEAK_ERROR_NOT_YET_IMPLEMENTED;
+    return OSVM_ERROR_NOT_YET_IMPLEMENTED;
 }
 
 static int
-squeak_doRunInterpreter(void *userdata)
+osvm_doRunInterpreter(void *userdata)
 {
     (void)userdata;
     interpret();
-    return SQUEAK_SUCCESS;
+    return OSVM_SUCCESS;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError
-squeak_run(void)
+OSVM_VM_CORE_PUBLIC OSVMError
+osvm_run(void)
 {
-    sqExecuteFunctionWithCrashExceptionCatching(&squeak_doRunInterpreter, NULL);
-    return SQUEAK_SUCCESS;
+    sqExecuteFunctionWithCrashExceptionCatching(&osvm_doRunInterpreter, NULL);
+    return OSVM_SUCCESS;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError
-squeak_initializeVM(void)
+OSVM_VM_CORE_PUBLIC OSVMError
+osvm_initializeVM(void)
 {
     ioInitWindowSystem(headlessMode);
     ioInitTime();
@@ -605,45 +605,45 @@ squeak_initializeVM(void)
     ioVMThread = ioCurrentOSThread();
     aioInit();
 
-    return SQUEAK_SUCCESS;
+    return OSVM_SUCCESS;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError
-squeak_shutdownVM(void)
+OSVM_VM_CORE_PUBLIC OSVMError
+osvm_shutdownVM(void)
 {
-    return SQUEAK_SUCCESS;
+    return OSVM_SUCCESS;
 }
 
-SQUEAK_VM_CORE_PUBLIC SqueakError
-squeak_main(int argc, const char **argv)
+OSVM_VM_CORE_PUBLIC OSVMError
+osvm_main(int argc, const char **argv)
 {
-    SqueakError error;
+    OSVMError error;
 
     /* Global initialization */
-    error = squeak_initialize();
+    error = osvm_initialize();
     if(error)
         return error;
 
     /* Parse the command line*/
-    error = squeak_parseCommandLineArguments(argc, argv);
+    error = osvm_parseCommandLineArguments(argc, argv);
     if(error)
         return error;
 
     /* Initialize the VM */
-    error = squeak_initializeVM();
+    error = osvm_initializeVM();
     if(error)
         return error;
 
     /* Load the command line image or the default one. */
-    error = squeak_loadDefaultImage();
+    error = osvm_loadDefaultImage();
     if(error)
         return error;
 
     /* Run Squeak */
-    error = squeak_run();
+    error = osvm_run();
 
     /* Shutdown*/
-    squeak_shutdown();
+    osvm_shutdown();
 
     return error;
 }
