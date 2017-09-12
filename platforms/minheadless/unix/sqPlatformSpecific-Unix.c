@@ -232,7 +232,8 @@ osCogStackPageHeadroom()
   ioFilenamefromStringofLengthresolveAliases. Most platforms can ignore the
   resolveAlias boolean - it seems to only be of use by OSX but is crucial there.
 */
-sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filenameLength, sqInt resolveAlias)
+sqInt
+sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filenameLength, sqInt resolveAlias)
 {
     int numLinks= 0;
     struct stat st;
@@ -284,61 +285,73 @@ sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt 
     return 0;
 }
 
-sqInt ioBeep(void)
+sqInt
+ioBeep(void)
 {
     return 0;
 }
 
-sqInt ioExit(void)
+sqInt
+ioExit(void)
 {
     exit(0);
 }
 
-sqInt ioExitWithErrorCode(int errorCode)
+sqInt
+ioExitWithErrorCode(int errorCode)
 {
     exit(errorCode);
 }
 
-sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
+sqInt
+ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
     aioSleepForUsecs(microSeconds);
     return 0;
 }
 
-void  ioProfileStatus(sqInt *running, void **exestartpc, void **exelimitpc,
+void
+ioProfileStatus(sqInt *running, void **exestartpc, void **exelimitpc,
 					  void **vmhst, long *nvmhbin, void **eahst, long *neahbin)
 {
 }
 
-void  ioControlProfile(int on, void **vhp, long *nvb, void **ehp, long *neb)
+void
+ioControlProfile(int on, void **vhp, long *nvb, void **ehp, long *neb)
 {
 }
 
-long  ioControlNewProfile(int on, unsigned long buffer_size)
-{
-    return 0;
-}
-
-void  ioNewProfileStatus(sqInt *running, long *buffersize)
-{
-}
-
-long  ioNewProfileSamplesInto(void *sampleBuffer)
+long
+ioControlNewProfile(int on, unsigned long buffer_size)
 {
     return 0;
 }
 
-void  ioClearProfile(void)
+void
+ioNewProfileStatus(sqInt *running, long *buffersize)
 {
 }
 
-sqInt ioDisablePowerManager(sqInt disableIfNonZero)
+long
+ioNewProfileSamplesInto(void *sampleBuffer)
+{
+    return 0;
+}
+
+void
+ioClearProfile(void)
+{
+}
+
+sqInt
+ioDisablePowerManager(sqInt disableIfNonZero)
 {
     return true;
 }
 
 /* Executable path. */
-void findExecutablePath(const char *localVmName, char *dest, size_t destSize)
+void
+findExecutablePath(const char *localVmName, char *dest, size_t destSize)
 {
 #if defined(__linux__)
     static char	 name[MAXPATHLEN+1];

@@ -85,7 +85,8 @@ extern LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp);
 
 HANDLE vmWakeUpEvent = 0;
 
-static void enableHighDPIAwareness()
+static void
+enableHighDPIAwareness()
 {
     SetProcessDpiAwarenessFunctionPointer setProcessDpiAwareness;
     HMODULE shcore;
@@ -110,7 +111,8 @@ static void enableHighDPIAwareness()
     FreeLibrary(shcore);
 }
 
-void ioInitPlatformSpecific(void)
+void
+ioInitPlatformSpecific(void)
 {
     /* Setup the FPU */
     _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
@@ -128,11 +130,13 @@ void ioInitPlatformSpecific(void)
     enableHighDPIAwareness();
 }
 
-void aioInit(void)
+void
+aioInit(void)
 {
 }
 
-long aioPoll(long microSeconds)
+long
+aioPoll(long microSeconds)
 {
     return 0;
 }
@@ -141,29 +145,34 @@ long aioPoll(long microSeconds)
 ioFilenamefromStringofLengthresolveAliases. Most platforms can ignore the
 resolveAlias boolean - it seems to only be of use by OSX but is crucial there.
 */
-sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filenameLength, sqInt aBoolean)
+sqInt
+sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filenameLength, sqInt aBoolean)
 {
     memcpy(aCharBuffer, aFilenameString, filenameLength);
     aCharBuffer[filenameLength] = 0;
     return 0;
 }
 
-sqInt ioBeep(void)
+sqInt
+ioBeep(void)
 {
     return 0;
 }
 
-sqInt ioExit(void)
+sqInt
+ioExit(void)
 {
     exit(0);
 }
 
-sqInt ioExitWithErrorCode(int errorCode)
+sqInt
+ioExitWithErrorCode(int errorCode)
 {
     exit(errorCode);
 }
 
-sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
+sqInt
+ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
     /* wake us up if something happens */
     ResetEvent(vmWakeUpEvent);
@@ -178,7 +187,8 @@ the networking code and in midi primitives
 we will signal the interpreter several semaphores.
 (Predates the internal synchronization of signalSemaphoreWithIndex ()) */
 
-int synchronizedSignalSemaphoreWithIndex(int semaIndex)
+int
+synchronizedSignalSemaphoreWithIndex(int semaIndex)
 {
     int result;
 
@@ -189,39 +199,47 @@ int synchronizedSignalSemaphoreWithIndex(int semaIndex)
     return result;
 }
 
-void  ioProfileStatus(sqInt *running, void **exestartpc, void **exelimitpc,
+void
+ioProfileStatus(sqInt *running, void **exestartpc, void **exelimitpc,
     void **vmhst, long *nvmhbin, void **eahst, long *neahbin)
 {
 }
 
-void  ioControlProfile(int on, void **vhp, long *nvb, void **ehp, long *neb)
+void
+ioControlProfile(int on, void **vhp, long *nvb, void **ehp, long *neb)
 {
 }
 
-long  ioControlNewProfile(int on, unsigned long buffer_size)
-{
-    return 0;
-}
-
-void  ioNewProfileStatus(sqInt *running, long *buffersize)
-{
-}
-
-long  ioNewProfileSamplesInto(void *sampleBuffer)
+long
+ioControlNewProfile(int on, unsigned long buffer_size)
 {
     return 0;
 }
 
-void  ioClearProfile(void)
+void
+ioNewProfileStatus(sqInt *running, long *buffersize)
 {
 }
 
-sqInt ioDisablePowerManager(sqInt disableIfNonZero)
+long
+ioNewProfileSamplesInto(void *sampleBuffer)
+{
+    return 0;
+}
+
+void
+ioClearProfile(void)
+{
+}
+
+sqInt
+ioDisablePowerManager(sqInt disableIfNonZero)
 {
     return true;
 }
 
-void findExecutablePath(const char *localVmName, char *dest, size_t destSize)
+void
+findExecutablePath(const char *localVmName, char *dest, size_t destSize)
 {
     const char *lastSeparator = strrchr(localVmName, '/');
 #ifdef _WIN32
@@ -370,21 +388,24 @@ static LONG CALLBACK squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
     return result;
 }
 
-void InstallExceptionHandler(void)
+void
+InstallExceptionHandler(void)
 {
     TopLevelFilter = SetUnhandledExceptionFilter(squeakExceptionHandler);
 }
 
-void UninstallExceptionHandler(void)
+void
+UninstallExceptionHandler(void)
 {
     SetUnhandledExceptionFilter(TopLevelFilter);
     TopLevelFilter = NULL;
 }
 
-int sqExecuteFunctionWithCrashExceptionCatching(sqFunctionThatCouldCrash function, void *userdata)
+int
+sqExecuteFunctionWithCrashExceptionCatching(sqFunctionThatCouldCrash function, void *userdata)
 {
     int result = 0;
-    
+
 #if !NO_FIRST_LEVEL_EXCEPTION_HANDLER
 #   ifndef _MSC_VER
     /* Install our top-level exception handler */
@@ -394,9 +415,9 @@ int sqExecuteFunctionWithCrashExceptionCatching(sqFunctionThatCouldCrash functio
     {
 #   endif
 #endif /* !NO_FIRST_LEVEL_EXCEPTION_HANDLER */
-    
+
         result = function(userdata);
-    
+
 #if !NO_FIRST_LEVEL_EXCEPTION_HANDLER
 #   ifdef _MSC_VER
     } __except(squeakExceptionHandler(GetExceptionInformation())) {
@@ -407,11 +428,12 @@ int sqExecuteFunctionWithCrashExceptionCatching(sqFunctionThatCouldCrash functio
     UninstallExceptionHandler();
 #   endif
 #endif /* !NO_FIRST_LEVEL_EXCEPTION_HANDLER */
-    
+
     return result;
 }
 
-static void dumpStackIfInMainThread(FILE *optionalFile)
+static void
+dumpStackIfInMainThread(FILE *optionalFile)
 {
 	extern void printCallStack(void);
 
@@ -460,13 +482,14 @@ static void dumpPrimTrace(FILE *optionalFile)
 #endif
 
 
-void printCommonCrashDumpInfo(FILE *f) {
+void
+printCommonCrashDumpInfo(FILE *f) {
 
     /*fprintf(f,"\n\n%s", hwInfoString);
     fprintf(f,"\n%s", osInfoString);
     fprintf(f,"\n%s", gdInfoString);
     */
-    
+
     /* print VM version information */
     fprintf(f,"%s\n", getVersionInfo(1));
     fflush(f);
@@ -494,7 +517,7 @@ void printCommonCrashDumpInfo(FILE *f) {
 
 static void
 printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
-{ 
+{
   void *callstack[MAXFRAMES];
   symbolic_pc symbolic_pcs[MAXFRAMES];
   int nframes, inVMThread;
@@ -560,7 +583,7 @@ with a complete stack dump",
         f = fopen_for_append("crash.dmp");
         printf("File for crash.dmp: %p\n", f);
         if(f)
-        {  
+        {
             time_t crashTime = time(NULL);
             fprintf(f,"---------------------------------------------------------------------\n");
             fprintf(f,"%s\n", ctime(&crashTime));

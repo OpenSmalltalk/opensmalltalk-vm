@@ -1,23 +1,23 @@
 /* sqUnixCharConv.c -- conversion between character encodings
- * 
+ *
  * Author: Ian.Piumarta@squeakland.org
- * 
+ *
  *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
- *   
+ *
  *   This file is part of Unix Squeak.
- * 
+ *
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
  *   of this software and associated documentation files (the "Software"), to deal
  *   in the Software without restriction, including without limitation the rights
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- * 
+ *
  *   The above copyright notice and this permission notice shall be included in
  *   all copies or substantial portions of the Software.
- * 
+ *
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,7 +25,7 @@
  *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
- * 
+ *
  * Last edited: 2009-08-15 12:59:49 by piumarta on emilia-2.local
  */
 
@@ -42,7 +42,8 @@
 
 static inline int min(int x, int y) { return (x < y) ? x : y; }
 
-static int convertCopy(char *from, int fromLen, char *to, int toLen, int term)
+static int
+convertCopy(char *from, int fromLen, char *to, int toLen, int term)
 {
   int len= min(toLen - term, fromLen);
   strncpy(to, from, len);
@@ -93,11 +94,14 @@ void *uxPathEncoding=	((void *)kCFStringEncodingUTF8);
 void *uxUTF8Encoding=	((void *)kCFStringEncodingUTF8);
 void *uxXWinEncoding=	((void *)kCFStringEncodingISOLatin1);
 
-void setLocaleEncoding(char *locale) { }
+void
+setLocaleEncoding(char *locale) { }
 
-void freeEncoding(void *encoding) { }
+void
+freeEncoding(void *encoding) { }
 
-void setEncoding(void **encoding, char *rawName)
+void
+setEncoding(void **encoding, char *rawName)
 {
   char *name= strdup(rawName);
   int   len= strlen(name);
@@ -119,12 +123,14 @@ void setEncoding(void **encoding, char *rawName)
   free(name);
 }
 
-void setNEncoding(void **encoding, char *rawName, int n)
+void
+setNEncoding(void **encoding, char *rawName, int n)
 {
   setEncoding(encoding, rawName);
 }
 
-int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term)
+int
+convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term)
 {
   CFStringRef	     cfs= CFStringCreateWithBytes(NULL, (unsigned char *)from, fromLen, (CFStringEncoding)fromCode, 0);
   CFMutableStringRef str= CFStringCreateMutableCopy(NULL, 0, cfs);
@@ -171,7 +177,8 @@ void *uxPathEncoding=   (void *)utf8Encoding;
 void *uxUTF8Encoding=   (void *)utf8Encoding;
 void *uxXWinEncoding=   (void *)iso1Encoding;
 
-void freeEncoding(void *encoding)
+void
+freeEncoding(void *encoding)
 {
   int i;
   for (i= 0;  i < sizeof(preDefinedEncodings) / sizeof(char *);  ++i)
@@ -186,7 +193,8 @@ typedef struct
   char *encoding;
 } alias;
 
-void setNEncoding(void **encoding, char *rawName, int n)
+void
+setNEncoding(void **encoding, char *rawName, int n)
 {
   char *name= malloc((size_t)((n + 1) * sizeof(char)));
   int   i;
@@ -226,7 +234,8 @@ void setNEncoding(void **encoding, char *rawName, int n)
   *encoding= name;
 }
 
-void setLocaleEncoding(char *locale)
+void
+setLocaleEncoding(char *locale)
 {
   while (*locale)
     if (*locale++ == '.')
@@ -240,12 +249,14 @@ void setLocaleEncoding(char *locale)
       }
 }
 
-void setEncoding(void **encoding, char *rawName)
+void
+setEncoding(void **encoding, char *rawName)
 {
   setNEncoding(encoding, rawName, strlen(rawName));
 }
 
-static void iconvFail(char *toCode, char *fromCode)
+static void
+iconvFail(char *toCode, char *fromCode)
 {
   static int warned= 0;
   if (!warned++)
@@ -256,7 +267,8 @@ static void iconvFail(char *toCode, char *fromCode)
     }
 }
 
-int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term)
+int
+convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term)
 {
   ichar_t     *inbuf= from;
   size_t     inbytes= fromLen;
@@ -296,7 +308,7 @@ int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, v
 
 		    if (0xfe == c || 0xff == c)		/* invalid */
 		      skip= 1;
-		    else 
+		    else
 		      while ((skip < inbytes) && (mask & c))
 			{
 			  skip++;
@@ -340,13 +352,17 @@ void *uxPathEncoding= 0;
 void *uxUTF8Encoding= 0;
 void *uxXWinEncoding= 0;
 
-void setLocaleEncoding(char *locale) { }
+void
+setLocaleEncoding(char *locale) { }
 
-void freeEncoding(void *encoding) { }
+void
+freeEncoding(void *encoding) { }
 
-void setEncoding(void **encoding, char *name) { }
+void
+setEncoding(void **encoding, char *name) { }
 
-int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term)
+int
+convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term)
 {
   return convertCopy(from, fromLen, to, toLen, term);
 }
@@ -354,7 +370,8 @@ int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, v
 #endif
 
 
-static inline void sq2uxLines(char *string, int n)
+static inline void
+sq2uxLines(char *string, int n)
 {
   while (n--)
     {
@@ -363,7 +380,8 @@ static inline void sq2uxLines(char *string, int n)
     }
 }
 
-static inline void ux2sqLines(char *string, int n)
+static inline void
+ux2sqLines(char *string, int n)
 {
   while (n--)
     {
@@ -397,7 +415,8 @@ Convert(ux,sq, XWin, uxXWinEncoding, sqTextEncoding, 0, 1);
 
 
 
-void sqFilenameFromString(char *uxName, sqInt sqNameIndex, int sqNameLength)
+void
+sqFilenameFromString(char *uxName, sqInt sqNameIndex, int sqNameLength)
 {
   /*xxx BUG: lots of code generate from the image assumes 1000 chars max path len */
   sq2uxPath(pointerForOop(sqNameIndex), sqNameLength, uxName, 1000, 1);
@@ -437,7 +456,7 @@ int main()
     in= "tésté";	// UTF-8 decomposed Unicode (libiconv fails on this one, MacOSX passes)
     n= convertChars(in, strlen(in), uxPathEncoding, out, sizeof(out), uxTextEncoding, 0, 1);
     printf("%d: %s -> %s\n", n, in, out);
-    in= "t�st�";		// ISO-8859-15
+    in= "t�st�";		// ISO-8859-15
     n= convertChars(in, strlen(in), uxTextEncoding, out, sizeof(out), uxPathEncoding, 0, 1);
     printf("%d: %s -> %s\n", n, in, out); // default composition -- should yield "tésté"
     n= convertChars(in, strlen(in), uxTextEncoding, out, sizeof(out), uxPathEncoding, 1, 1);

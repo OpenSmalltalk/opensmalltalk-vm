@@ -38,7 +38,8 @@ extern struct VirtualMachine *interpreterProxy;
    useful for trying to stay in sync with case-sensitive platforms. */
 int caseSensitiveFileMode = 0;
 
-int hasCaseSensitiveDuplicate(WCHAR *path) {
+int
+hasCaseSensitiveDuplicate(WCHAR *path) {
   WCHAR *src, *dst, *prev;
   WCHAR* findPath = NULL;
   WIN32_FIND_DATAW findData; /* cached find data */
@@ -66,7 +67,7 @@ int hasCaseSensitiveDuplicate(WCHAR *path) {
   }
   *dst = 0;
 
-  /* from the root, enumerate all the path components and find 
+  /* from the root, enumerate all the path components and find
      potential mismatches */
   while(true) {
     /* skip backslashes */
@@ -98,10 +99,11 @@ typedef union {
   squeakFileOffsetType offset;
 } win32FileOffset;
 
-DWORD convertToSqueakTime(SYSTEMTIME st)
+DWORD
+convertToSqueakTime(SYSTEMTIME st)
 { DWORD secs;
   DWORD dy;
-  static DWORD nDaysPerMonth[14] = { 
+  static DWORD nDaysPerMonth[14] = {
     0,  0,  31,  59,  90, 120, 151,
       181, 212, 243, 273, 304, 334, 365 };
   /* Squeak epoch is Jan 1, 1901 */
@@ -118,7 +120,8 @@ DWORD convertToSqueakTime(SYSTEMTIME st)
   return secs;
 }
 
-int dir_Create(char *pathString, int pathLength)
+int
+dir_Create(char *pathString, int pathLength)
 {
   WCHAR *win32Path = NULL;
 
@@ -128,12 +131,14 @@ int dir_Create(char *pathString, int pathLength)
   return CreateDirectoryW(win32Path,NULL);
 }
 
-int dir_Delimitor(void)
+int
+dir_Delimitor(void)
 {
   return '\\';
 }
 
-int dir_Lookup(char *pathString, int pathLength, int index,
+int
+dir_Lookup(char *pathString, int pathLength, int index,
 /* outputs: */ char *name, int *nameLength, int *creationDate, int *modificationDate,
 	       int *isDirectory, squeakFileOffsetType *sizeIfFile)
 {
@@ -169,8 +174,8 @@ int dir_Lookup(char *pathString, int pathLength, int index,
   win32PathLength = wcslen(win32Path);
 
   /* check for a dir cache hit (but NEVER on the top level) */
-  if(win32PathLength > 0 && 
-     lastStringLength == win32PathLength && 
+  if(win32PathLength > 0 &&
+     lastStringLength == win32PathLength &&
      lastIndex + 1 == index) {
     for(i=0;i<win32PathLength; i++) {
       if(lastString[i] != win32Path[i]) break;
@@ -190,7 +195,7 @@ int dir_Lookup(char *pathString, int pathLength, int index,
 
 #if !defined(_WIN32_WCE)
   /* Like Unix, Windows CE does not have drive letters */
-  if(win32PathLength == 0) { 
+  if(win32PathLength == 0) {
     /* we're at the top of the file system --- return possible drives */
     int mask;
 
@@ -283,7 +288,8 @@ int dir_Lookup(char *pathString, int pathLength, int index,
   return ENTRY_FOUND;
 }
 
-int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int nameStringLength,
+int
+dir_EntryLookup(char *pathString, int pathLength, char* nameString, int nameStringLength,
 /* outputs: */ char *name, int *nameLength, int *creationDate, int *modificationDate,
 	       int *isDirectory, squeakFileOffsetType *sizeIfFile)
 {
@@ -317,12 +323,12 @@ int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int name
 
 #if !defined(_WIN32_WCE)
   /* Like Unix, Windows CE does not have drive letters */
-  if (win32PathLength == 0) { 
+  if (win32PathLength == 0) {
     /* we're at the top of the file system --- return possible drives */
     char drive = toupper(nameString[0]);
     int mask;
-    if (nameStringLength != 2 
-	|| (drive < 'A') || (drive > 'Z') 
+    if (nameStringLength != 2
+	|| (drive < 'A') || (drive > 'Z')
 	|| (nameString[1] != ':')) {
       return NO_MORE_ENTRIES;
     }
@@ -354,13 +360,13 @@ int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int name
   if(win32PathLength >= 32767) FAIL();
   REALLOC_WIN32_PATH(win32Path, win32PathLength);
   win32Path[win32PathLength-fsz-1] = L'\\';
-  MultiByteToWideChar(CP_UTF8, 0, nameString, nameStringLength, win32Path+sz, fsz); 
+  MultiByteToWideChar(CP_UTF8, 0, nameString, nameStringLength, win32Path+sz, fsz);
   win32Path[win32PathLength] = 0; // Not needed. See REALLOC_WIN32_PATH.
 
   if(!GetFileAttributesExW(win32Path, 0, &winAttrs)) {
   	return NO_MORE_ENTRIES;
   }
- 
+
   memcpy(name, nameString, nameStringLength);
   *nameLength = nameStringLength;
 
@@ -384,21 +390,24 @@ int dir_EntryLookup(char *pathString, int pathLength, char* nameString, int name
 }
 
 
-int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize,
+int
+dir_SetMacFileTypeAndCreator(char *filename, int filenameSize,
 			     char *fType, char *fCreator)
 {
   /* Win32 files are untyped, and the creator is correct by default */
   return true;
 }
 
-int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize,
+int
+dir_GetMacFileTypeAndCreator(char *filename, int filenameSize,
 			     char *fType, char *fCreator)
 {
   /* Win32 files are untyped, and the creator is correct by default */
   FAIL();
 }
 
-int dir_Delete(char *pathString, int pathLength) {
+int
+dir_Delete(char *pathString, int pathLength) {
   /* Delete the existing directory with the given path. */
   WCHAR *win32Path = NULL;
 

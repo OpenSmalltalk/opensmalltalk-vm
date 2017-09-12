@@ -33,13 +33,15 @@
 #ifdef error
 #undef error
 
-void error(char *errorMessage)
+void
+error(char *errorMessage)
 {
     sqError(errorMessage);
 }
 #endif
 
-void sqError(char *errorMessage)
+void
+sqError(char *errorMessage)
 {
     fprintf(stderr, "%s\n", errorMessage);
     abort();
@@ -52,7 +54,8 @@ void sqError(char *errorMessage)
 
 #define PRINTF_BUFFER_SIZE 4096
 
-void sqMessagePrintf(const char *format, ...)
+void
+sqMessagePrintf(const char *format, ...)
 {
     va_list args;
     char *buffer;
@@ -72,7 +75,8 @@ void sqMessagePrintf(const char *format, ...)
     va_end (args);
 }
 
-void sqWarnPrintf(const char *format, ...)
+void
+sqWarnPrintf(const char *format, ...)
 {
     va_list args;
     char *buffer;
@@ -92,7 +96,8 @@ void sqWarnPrintf(const char *format, ...)
     va_end (args);
 }
 
-void sqErrorPrintf(const char *format, ...)
+void
+sqErrorPrintf(const char *format, ...)
 {
     va_list args;
     char *buffer;
@@ -112,7 +117,8 @@ void sqErrorPrintf(const char *format, ...)
     va_end (args);
 }
 
-void sqFatalErrorPrintf(const char *format, ...)
+void
+sqFatalErrorPrintf(const char *format, ...)
 {
     va_list args;
     char *buffer;
@@ -134,7 +140,8 @@ void sqFatalErrorPrintf(const char *format, ...)
     abort();
 }
 
-void sqFatalErrorPrintfNoExit(const char *format, ...)
+void
+sqFatalErrorPrintfNoExit(const char *format, ...)
 {
     va_list args;
     char *buffer;
@@ -155,7 +162,8 @@ void sqFatalErrorPrintfNoExit(const char *format, ...)
     va_end (args);
 }
 
-extern int sqAskSecurityYesNoQuestion(const char *question)
+int
+sqAskSecurityYesNoQuestion(const char *question)
 {
     if (!GetConsoleCP())
     {
@@ -169,7 +177,8 @@ extern int sqAskSecurityYesNoQuestion(const char *question)
 }
 
 #ifndef printLastError
-void printLastError(const TCHAR *prefix)
+void
+printLastError(const TCHAR *prefix)
 { LPVOID lpMsgBuf;
   DWORD lastError;
 
@@ -182,7 +191,8 @@ void printLastError(const TCHAR *prefix)
 }
 #endif
 #ifndef vprintLastError
-void vprintLastError(TCHAR *fmt, ...)
+void
+vprintLastError(TCHAR *fmt, ...)
 { LPVOID lpMsgBuf;
   DWORD lastError;
   TCHAR *buf;
@@ -204,7 +214,8 @@ void vprintLastError(TCHAR *fmt, ...)
 #endif
 
 #ifndef sqMessageBox
-int sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const char* fmt, ...)
+int
+sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const char* fmt, ...)
 {
     TCHAR *ptr, *buf;
     va_list args;
@@ -224,7 +235,8 @@ int sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const char* fmt, ...)
 #endif
 
 #ifndef abortMessage
-int abortMessage(const TCHAR* fmt, ...)
+int
+abortMessage(const TCHAR* fmt, ...)
 {
     TCHAR *buf;
     va_list args;
@@ -241,7 +253,8 @@ int abortMessage(const TCHAR* fmt, ...)
 #endif
 
 #else
-void sqMessagePrintf(const char *format, ...)
+void
+sqMessagePrintf(const char *format, ...)
 {
     va_list args;
 
@@ -250,7 +263,8 @@ void sqMessagePrintf(const char *format, ...)
     va_end(args);
 }
 
-void sqWarnPrintf(const char *format, ...)
+void
+sqWarnPrintf(const char *format, ...)
 {
     va_list args;
 
@@ -259,7 +273,8 @@ void sqWarnPrintf(const char *format, ...)
     va_end(args);
 }
 
-void sqErrorPrintf(const char *format, ...)
+void
+sqErrorPrintf(const char *format, ...)
 {
     va_list args;
 
@@ -268,7 +283,8 @@ void sqErrorPrintf(const char *format, ...)
     va_end(args);
 }
 
-void sqFatalErrorPrintf(const char *format, ...)
+void
+sqFatalErrorPrintf(const char *format, ...)
 {
     va_list args;
 
@@ -278,7 +294,8 @@ void sqFatalErrorPrintf(const char *format, ...)
     abort();
 }
 
-void sqFatalErrorPrintfNoExit(const char *format, ...)
+void
+sqFatalErrorPrintfNoExit(const char *format, ...)
 {
     va_list args;
 
@@ -287,7 +304,8 @@ void sqFatalErrorPrintfNoExit(const char *format, ...)
     va_end(args);
 }
 
-extern int sqAskSecurityYesNoQuestion(const char *question)
+int
+sqAskSecurityYesNoQuestion(const char *question)
 {
     return 0;
 }

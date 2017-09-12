@@ -23,7 +23,8 @@ extern void *os_exports[];
 
 #undef INTERNAL_PLUGIN
 
-static void increaseCapacity()
+static void
+increaseCapacity()
 {
     int newCapacity;
     void **newPluginExports;
@@ -50,7 +51,8 @@ static void increaseCapacity()
     pluginExports = newPluginExports;
 }
 
-void ioAddInternalPluginPrimitives(void *primitiveList)
+void
+ioAddInternalPluginPrimitives(void *primitiveList)
 {
     if(pluginExportsSize >= pluginExportsCapacity)
         increaseCapacity();
@@ -58,7 +60,8 @@ void ioAddInternalPluginPrimitives(void *primitiveList)
     pluginExports[pluginExportsSize++] = primitiveList;
 }
 
-void ioInitializeInternalPluginPrimitives(void)
+void
+ioInitializeInternalPluginPrimitives(void)
 {
     ioAddInternalPluginPrimitives(vm_exports);
     ioAddInternalPluginPrimitives(os_exports);

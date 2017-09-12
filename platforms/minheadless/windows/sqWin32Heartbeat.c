@@ -5,7 +5,7 @@
 *
 *   AUTHOR:  Eliot Miranda
 *
-*   NOTES: 
+*   NOTES:
 *  August 3rd, 2008, EEM added heart-beat thread.
 *
 *****************************************************************************/
@@ -53,7 +53,8 @@
 static DWORD dwTimerPeriod = 0;
 static DWORD timerID = 0;
 
-sqLong ioHighResClock(void) {
+sqLong
+ioHighResClock(void) {
   sqLong value = 0;
 #ifdef __GNUC__
   __asm__ __volatile__ ("rdtsc" : "=A" (value));
@@ -80,7 +81,7 @@ currentUTCMicroseconds(unsigned __int64 *utcTickBaseUsecsp, DWORD *lastTickp, DW
 	*lastTickp = currentTick;
 
 	/* If the timeGetTime millisecond clock wraps (as it will every 49.71 days)
-	 * resync to the system time.  
+	 * resync to the system time.
 	 */
 	if (currentTick < prevTick) {
 

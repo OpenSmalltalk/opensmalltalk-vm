@@ -48,7 +48,8 @@ LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp)
 /************************************************************************/
 /* sqAllocateMemory: Initialize virtual memory                          */
 /************************************************************************/
-void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
+void *
+sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 { SYSTEM_INFO sysInfo;
   DWORD initialCommit, commit;
 
@@ -97,7 +98,8 @@ void *sqAllocateMemory(usqInt minHeapSize, usqInt desiredHeapSize)
 /************************************************************************/
 /* sqGrowMemoryBy: Grow object memory if possible                       */
 /************************************************************************/
-int sqGrowMemoryBy(int oldLimit, int delta) {
+int
+sqGrowMemoryBy(int oldLimit, int delta) {
   /* round delta UP to page size */
   if(fShowAllocations) {
     warnPrintf("Growing memory by %d...", delta);
@@ -122,7 +124,8 @@ int sqGrowMemoryBy(int oldLimit, int delta) {
 /************************************************************************/
 /* sqShrinkMemoryBy: Shrink object memory if possible                   */
 /************************************************************************/
-int sqShrinkMemoryBy(int oldLimit, int delta) {
+int
+sqShrinkMemoryBy(int oldLimit, int delta) {
   /* round delta DOWN to page size */
   if(fShowAllocations) {
     warnPrintf("Shrinking by %d...",delta);
@@ -154,7 +157,8 @@ int sqShrinkMemoryBy(int oldLimit, int delta) {
 /************************************************************************/
 /* sqMemoryExtraBytesLeft: Return memory available to Squeak            */
 /************************************************************************/
-int sqMemoryExtraBytesLeft(int includingSwap) {
+int
+sqMemoryExtraBytesLeft(int includingSwap) {
   DWORD bytesLeft;
   MEMORYSTATUS mStat;
 

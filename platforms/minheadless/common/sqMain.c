@@ -27,7 +27,8 @@
  */
 #include "OpenSmalltalkVM.h"
 
-int main(int argc, const char **argv)
+int
+main(int argc, const char **argv)
 {
     return osvm_main(argc, argv);
 }

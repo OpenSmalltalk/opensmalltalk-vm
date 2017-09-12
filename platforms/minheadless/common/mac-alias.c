@@ -1,6 +1,6 @@
 /* Based on code contributed by Tom Rushworth.
  * Mutilated beyond recognition by Ian Piumarta.
- * 
+ *
  * last edited: 2006-04-24 15:38:40 by piumarta on emilia.local
  */
 
@@ -8,7 +8,8 @@
 
 /* Answer nonzero if path describes an OS X alias file. */
 
-static sqInt isMacAlias(char *path)
+static sqInt
+isMacAlias(char *path)
 {
   Boolean  isAlias=  false;
   Boolean  isFolder= false;
@@ -25,7 +26,8 @@ static sqInt isMacAlias(char *path)
    Answer nonzero if successful.
    Note: dst and src may refer to the same buffer. */
 
-static sqInt resolveMacAlias(char *dst, char *src, sqInt max_length)
+static sqInt
+resolveMacAlias(char *dst, char *src, sqInt max_length)
 {
   Boolean wasAlias= false;
   Boolean isFolder= false;

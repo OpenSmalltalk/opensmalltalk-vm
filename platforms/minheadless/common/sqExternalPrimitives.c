@@ -83,7 +83,8 @@ static const char *additionalModuleSearchPaths[] = {
 
 static char moduleNameBuffer[FILENAME_MAX];
 
-static void *tryToLoadModuleInPath(const char *path, const char *moduleName)
+static void *
+tryToLoadModuleInPath(const char *path, const char *moduleName)
 {
     void *moduleHandle;
 
@@ -100,7 +101,8 @@ static void *tryToLoadModuleInPath(const char *path, const char *moduleName)
     return 0;
 }
 
-void *ioLoadModule(char *pluginName)
+void *
+ioLoadModule(char *pluginName)
 {
     void *moduleHandle;
 
@@ -125,7 +127,8 @@ void *ioLoadModule(char *pluginName)
     return 0;
 }
 
-sqInt ioFreeModule(void *moduleHandle)
+sqInt
+ioFreeModule(void *moduleHandle)
 {
     return freeModuleHandle(moduleHandle);
 }
@@ -168,19 +171,22 @@ ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 
 #if defined(_WIN32)
 
-static void *loadModuleHandle(const char *fileName)
+static void *
+loadModuleHandle(const char *fileName)
 {
     WCHAR convertedPath[MAX_PATH + 1];
     sqUTF8ToUTF16Copy(convertedPath, MAX_PATH + 1, fileName);
     return LoadLibraryW(convertedPath);
 }
 
-static sqInt freeModuleHandle(void *module)
+static sqInt
+freeModuleHandle(void *module)
 {
     return FreeLibrary((HMODULE)module) ? 1 : 0;
 }
 
-static void *getModuleSymbol(void *module, const char *symbol)
+static void *
+getModuleSymbol(void *module, const char *symbol)
 {
     return (void*)GetProcAddress((HMODULE)module, symbol);
 }
@@ -189,7 +195,8 @@ static void *getModuleSymbol(void *module, const char *symbol)
 
 #include <dlfcn.h>
 
-static void *loadModuleHandle(const char *fileName)
+static void *
+loadModuleHandle(const char *fileName)
 {
     int flags = RTLD_NOW | RTLD_GLOBAL;
 #ifdef RTLD_DEEPBIND
@@ -199,29 +206,34 @@ static void *loadModuleHandle(const char *fileName)
     return dlopen(fileName, flags);
 }
 
-static sqInt freeModuleHandle(void *module)
+static sqInt
+freeModuleHandle(void *module)
 {
     return dlclose(module) == 0 ? 0 : 1;
 }
 
-static void *getModuleSymbol(void *module, const char *symbol)
+static void *
+getModuleSymbol(void *module, const char *symbol)
 {
     return dlsym(module, symbol);
 }
 
 #else
 
-static void *loadModuleHandle(const char *fileName)
+static void *
+loadModuleHandle(const char *fileName)
 {
     return 0;
 }
 
-static sqInt freeModuleHandle(void *module)
+static sqInt
+freeModuleHandle(void *module)
 {
     return 1;
 }
 
-static void *getModuleSymbol(void *module, const char *symbol)
+static void *
+getModuleSymbol(void *module, const char *symbol)
 {
     return 0;
 }
