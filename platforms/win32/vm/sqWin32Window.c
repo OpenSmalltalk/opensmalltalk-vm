@@ -188,6 +188,16 @@ EXPORT(void) setIoProcessEventsHandler(void * handler) {
 }
 #endif
 
+extern int sqAskSecurityYesNoQuestion(const char *question)
+{
+    return MessageBoxA(stWindow, question, "Squeak Security Alert", MB_YESNO | MB_ICONSTOP) == IDYES;
+}
+
+extern const char *sqGetCurrentImagePath(void)
+{
+    return imagePath;
+}
+
 /****************************************************************************/
 /*                      Synchronization functions                           */
 /****************************************************************************/

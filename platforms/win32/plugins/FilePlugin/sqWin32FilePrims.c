@@ -298,11 +298,7 @@ size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t st
 
   if (!sqFileValid(f))
     FAIL();
-  if (f->isStdioStream)
-    ReadConsole(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count,
-                &dwReallyRead, NULL);
-  else
-    ReadFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count,
+  ReadFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count,
              &dwReallyRead, NULL);
   return dwReallyRead;
 }
@@ -391,10 +387,7 @@ size_t sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t s
   if (!(sqFileValid(f) && f->writable))
     FAIL();
 
-  if (f->isStdioStream)
-    WriteConsole(FILE_HANDLE(f), (LPVOID) (byteArrayIndex + startIndex), count, &dwReallyWritten, NULL);
-  else
-    WriteFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex + startIndex), count, &dwReallyWritten, NULL);
+  WriteFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex + startIndex), count, &dwReallyWritten, NULL);
   
   if (dwReallyWritten != count)
     FAIL();
@@ -410,7 +403,7 @@ sqInt sqImageFileClose(sqImageFile h)
   return CloseHandle((HANDLE)(h-1));
 }
 
-sqImageFile sqImageFileOpen(char *fileName, char *mode)
+sqImageFile sqImageFileOpen(const char *fileName, const char *mode)
 { char *modePtr;
   int writeFlag = 0;
   WCHAR *win32Path = NULL;
@@ -478,7 +471,15 @@ squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos)
   return ofs.offset;
 }
 
-size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h)
+squeakFileOffsetType sqImageFileSeekEnd(sqImageFile h, squeakFileOffsetType pos)
+{
+    win32FileOffset ofs;
+    ofs.offset = pos;
+    ofs.dwLow = SetFilePointer((HANDLE)(h - 1), ofs.dwLow, &ofs.dwHigh, FILE_END);
+    return ofs.offset;
+}
+
+size_t sqImageFileWrite(const void *ptr, size_t sz, size_t count, sqImageFile h)
 {
   DWORD dwReallyWritten;
   WriteFile((HANDLE)(h-1), (LPVOID) ptr, count*sz, &dwReallyWritten, NULL);

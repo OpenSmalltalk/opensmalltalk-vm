@@ -1,0 +1,4 @@
+#!/bin/sh
+
+./mvm_configure
+make
