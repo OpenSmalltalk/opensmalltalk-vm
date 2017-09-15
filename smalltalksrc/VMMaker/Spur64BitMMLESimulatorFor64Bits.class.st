@@ -1,7 +1,7 @@
 Class {
 	#name : #Spur64BitMMLESimulatorFor64Bits,
 	#superclass : #Spur64BitMMLESimulator,
-	#category : #'VMMaker-SpurMemoryManagerSimulation'
+	#category : 'VMMaker-SpurMemoryManagerSimulation'
 }
 
 { #category : #'memory access' }

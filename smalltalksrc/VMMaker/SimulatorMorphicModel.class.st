@@ -18,7 +18,7 @@ Class {
 	#pools : [
 		'EventSensorConstants'
 	],
-	#category : #'VMMaker-InterpreterSimulation-Morphic'
+	#category : 'VMMaker-InterpreterSimulation-Morphic'
 }
 
 { #category : #'class initialization' }
@@ -64,12 +64,6 @@ SimulatorMorphicModel class >> registerInOpenMenu [
 ]
 
 { #category : #'class initialization' }
-SimulatorMorphicModel class >> registerWindowColor [
-	(Preferences windowColorFor: self name) = Color white
-		ifTrue: [ Preferences setWindowColorFor: self name to: (Color colorFrom: self windowColorSpecification brightColor) ].
-]
-
-{ #category : #'class initialization' }
 SimulatorMorphicModel class >> unload [
 	self 
 		unregisterFromOpenMenu;
@@ -90,13 +84,6 @@ SimulatorMorphicModel class >> unregisterFromOpenMenu [
 
 ]
 
-{ #category : #'window color' }
-SimulatorMorphicModel class >> windowColorSpecification [
-	"Answer a WindowColorSpec object that declares my preference"
-
-	^ WindowColorSpec classSymbol: self name wording: 'StackInterpreter Simulator' brightColor: #(0.645 1.0 1.0)	pastelColor: #(0.886 1.0 1.0) helpMessage: 'A tool for simulating a Stack Interpreter Virtual Machine.'
-]
-
 { #category : #accessing }
 SimulatorMorphicModel >> bounds [
 	^morph bounds.
@@ -111,6 +98,11 @@ SimulatorMorphicModel >> byteCountText [
 SimulatorMorphicModel >> currentContextStack [
 	self flag: 'tty'.
 	^ 'Current Context Stack' printString asText
+]
+
+{ #category : #'user interface' }
+SimulatorMorphicModel >> defaultWindowColor [
+	^ (Color r: 0.645 g: 1.0 b: 1.0)
 ]
 
 { #category : #accessing }

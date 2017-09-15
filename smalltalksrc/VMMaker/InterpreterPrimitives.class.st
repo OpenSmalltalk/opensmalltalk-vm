@@ -74,7 +74,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMStackFrameOffsets'
 	],
-	#category : #'VMMaker-Interpreter'
+	#category : 'VMMaker-Interpreter'
 }
 
 { #category : #'C translation' }
@@ -95,33 +95,11 @@ InterpreterPrimitives class >> defineAtCompileTime: anObject [
 ]
 
 { #category : #'class initialization' }
-InterpreterPrimitives class >> initialize [
-	"Initialize the window color.  This is probably Squeak-specific, so..."
-	[Preferences
-			setWindowColorFor: #cogVirtualMachineSimulatorWindowColor
-			to: (Color colorFrom: InterpreterPrimitives windowColorSpecification brightColor)]
-		on: Error
-		do: [:ex| Transcript show: 'Failed to set window color preference in ', thisContext method methodReference asString]
-]
-
-{ #category : #'class initialization' }
 InterpreterPrimitives class >> initializeMiscConstants [
 	"Initialize the hashMultiply constants."
 	super initializeMiscConstants.
 	HashMultiplyConstant := 1664525.
 	HashMultiplyMask := 16rFFFFFFF "(2 raisedTo: 28) - 1"
-]
-
-{ #category : #'window color' }
-InterpreterPrimitives class >> windowColorSpecification [
-	"Answer a WindowColorSpec object that declares my preference"
-	"Preferences
-		setWindowColorFor: #cogVirtualMachineSimulatorWindowColor
-		to: (Color colorFrom: InterpreterPrimitives windowColorSpecification brightColor)"
-	^WindowColorSpec
-		classSymbol: self name wording: 'Cog Virtual Machine Simulator'
-		brightColor: #(0.645 1.0 1.0) pastelColor: #(0.886 1.0 1.0)
-		helpMessage: 'A tool for simulating a virtual machine in the Cog family.'
 ]
 
 { #category : #'primitive support' }

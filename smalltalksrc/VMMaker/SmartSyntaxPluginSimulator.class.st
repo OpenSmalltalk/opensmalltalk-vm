@@ -8,7 +8,7 @@ Class {
 		'pluginClass',
 		'logging'
 	],
-	#category : #'VMMaker-SmartSyntaxPlugins'
+	#category : 'VMMaker-SmartSyntaxPlugins'
 }
 
 { #category : #simulation }

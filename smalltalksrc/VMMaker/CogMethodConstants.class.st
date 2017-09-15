@@ -30,5 +30,5 @@ Class {
 		'UnimplementedPrimitive',
 		'YoungSelectorInPIC'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }

@@ -60,7 +60,7 @@ Class {
 		'SistaVM',
 		'VMBIGENDIAN'
 	],
-	#category : #'VMMaker-Interpreter'
+	#category : 'VMMaker-Interpreter'
 }
 
 { #category : #'C translation' }
