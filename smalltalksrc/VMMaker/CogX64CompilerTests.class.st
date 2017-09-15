@@ -1,7 +1,7 @@
 Class {
 	#name : #CogX64CompilerTests,
 	#superclass : #AbstractInstructionTests,
-	#category : #'VMMaker-Tests'
+	#category : 'VMMaker-Tests'
 }
 
 { #category : #'abstract instructions' }

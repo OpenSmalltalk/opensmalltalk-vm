@@ -1,7 +1,7 @@
 Class {
 	#name : #CogInLineLiteralsX64Compiler,
 	#superclass : #CogX64Compiler,
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'class initialization' }

@@ -9,7 +9,7 @@ Class {
 		'pad',
 		'crvrvs'
 	],
-	#category : #'VMMaker-Plugins-FFI'
+	#category : 'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }

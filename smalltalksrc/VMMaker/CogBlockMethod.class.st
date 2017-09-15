@@ -88,7 +88,7 @@ Class {
 		'VMBasicConstants',
 		'VMBytecodeConstants'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #accessing }
