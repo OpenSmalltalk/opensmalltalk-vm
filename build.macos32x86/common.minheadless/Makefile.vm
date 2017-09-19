@@ -69,11 +69,14 @@ VPATH:=$(SRCDIRS)
 # Additonal includes are required, eg for SoundPlugin/sqSqueakSoundCoreAudio.h
 PluginIncludes := FilePlugin HostWindowPlugin SoundPlugin
 OSPluginIncludes := FilePlugin HostWindowPlugin SoundPlugin
+BLDDIRINC=$(BLDDIR)/include
 SRCDIRS:=$(SRCDIRS) \
+			$(BLDDIRINC) \
 			$(PLATDIR)/unix/vm \
 			$(PLATDIR)/../include \
 			$(addprefix $(PLATDIR)/Cross/plugins/,$(PluginIncludes)) \
 			$(addprefix $(OSXPLUGINSDIR)/,$(OSPluginIncludes))
+
 
 # The internal (.lib) and external (.bundle) plugins
 #
@@ -189,7 +192,7 @@ print-objects:
 
 ignore := $(addsuffix .%, $(basename $(wildcard $(BUILD)/vm/*.ignore)))
 
-$(OBJDIR)/$(VM): $(EXTRAVMLIBS) $(OBJDIR) $(VMOBJ) $(LIBS)
+$(OBJDIR)/$(VM): headers_built $(EXTRAVMLIBS) $(OBJDIR) $(VMOBJ) $(LIBS)
 	$(CC) -arch $(TARGET_ARCH) -o $(OBJDIR)/version.o $(CFLAGS) $(INCLUDES) $(DEFS) -c $(OSXCOMMONDIR)/version.c
 	$(CC) -arch $(TARGET_ARCH) -isysroot $(SDK) $(LDFLAGS) $(FRAMEWORKS) \
 			-o $(OBJDIR)/$(VM) $(VMOBJ) $(filter-out $(call ignore), $(LIBS))
@@ -283,7 +286,15 @@ FORCE:
 #############################################################################
 # Extra specific dependencies
 #
-sqNamedPrims.h: plugins.int
-	../common.minheadless/mkNamedPrims.sh plugins.int > sqNamedPrims.h
+$(BLDDIRINC)/sqInternalPlugins.inc: plugins.int
+	../common.minheadless/mkInternalPluginsList.sh plugins.int > $(BLDDIRINC)/sqInternalPlugins.inc
 
-$(OBJDIR)/sqNamedPrims.o:	sqNamedPrims.c sqNamedPrims.h
+$(OBJDIR)/sqNamedPrims.o: sqNamedPrims.c $(BLDDIRINC)/sqInternalPlugins.inc
+
+headers_built: $(BLDDIRINC)/config.h
+
+$(BLDDIRINC)/config.h:
+	mkdir -p $(BLDDIRINC)
+	mkdir -p CMakeFiles
+	cd CMakeFiles && cmake -DONLY_CONFIG_H=ON -DBUILD_I386_VERSION=ON ../../..
+	mv CMakeFiles/config.h $(BLDDIRINC)

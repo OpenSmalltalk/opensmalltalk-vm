@@ -12,7 +12,6 @@ FFTPlugin \
 FilePlugin \
 FloatArrayPlugin \
 GeniePlugin \
-HostWindowPlugin \
 IA32ABI \
 LargeIntegers \
 Matrix2x3Plugin \
@@ -21,7 +20,6 @@ SecurityPlugin \
 SocketPlugin \
 SoundCodecPrims \
 SoundGenerationPlugin \
-SoundPlugin \
 SqueakFFIPrims \
 StarSqueakPlugin \
 UnixOSProcessPlugin \
