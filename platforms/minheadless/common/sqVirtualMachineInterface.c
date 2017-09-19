@@ -67,6 +67,7 @@ char *documentName = 0;
 static char shortImageName[FILENAME_MAX];
 static char vmName[FILENAME_MAX];
 static char vmPath[FILENAME_MAX];
+char squeakExtraPluginsPath[FILENAME_MAX];
 
 static int squeakArgumentCount;
 static char **squeakArgumentVector;
@@ -554,6 +555,10 @@ osvm_parseCommandLineArguments(int argc, const char **argv)
 
     recordPathsForVMName(argv[0]); /* full vm path */
     squeakPlugins = vmPath;		/* default plugin location is VM directory */
+    sqPathMakeAbsolute(vmName, sizeof(vmName), argv[0]);
+#ifdef __APPLE__
+    sqPathJoin(squeakExtraPluginsPath, sizeof(squeakExtraPluginsPath), squeakPlugins, "Plugins");
+#endif
     return parseArguments(argc, (char**)argv);
 }
 

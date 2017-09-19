@@ -117,7 +117,19 @@ void sqPathExtractBaseName(char *target, size_t targetSize, const char *src)
         strcpy(target, "");
 }
 
+#ifdef _WIN32
+# define SEPARATOR_STRING "\\"
+# define SEPARATOR_CHAR '\\'
+#else
+# define SEPARATOR_STRING "/"
+# define SEPARATOR_CHAR '/'
+#endif
 void sqPathJoin(char *target, size_t targetSize, const char *first, const char *second)
 {
-    /* TODO: Implement myself */
+    strcpy(target, first);
+    if(first[strnlen(first)-1] != SEPARATOR_CHAR) {
+        strcat(target, SEPARATOR_STRING);
+    }
+    strcat(target, second);
+    strcat(target, SEPARATOR_STRING);
 }

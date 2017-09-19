@@ -69,7 +69,7 @@
 #include "debug.h"
 
 #ifdef __APPLE__
-#include "mac-alias.c"
+#include "mac-alias.inc"
 #endif
 
 #if defined(__GNUC__) && ( defined(i386) || defined(__i386) || defined(__i386__)  \

@@ -2,6 +2,14 @@
 cmake_minimum_required(VERSION 3.1)
 project(OpenSmalltalkVM)
 
+option(ONLY_CONFIG_H "Only generate config.h" OFF)
+option(SPUR_OBJECT_MODEL "Spur Object Model" ON)
+option(SISTA_OPTIMIZER "Sista Optimizer" OFF)
+option(LOWCODE_EXTENSIONS "Lowcode Extensions" OFF)
+option(PHARO_BRANDING "Pharo Branding" ON)
+option(SUPPORT_TRADITIONAL_DISPLAY "Enables building a VM with support for a window." ON)
+option(COG_JIT "Cog JIT" ON)
+
 # Check the build type
 if (CMAKE_BUILD_TYPE STREQUAL "")
 	# CMake defaults to leaving CMAKE_BUILD_TYPE empty. This screws up
@@ -114,21 +122,19 @@ endif()
 set(SourceFolderName "")
 
 # Spur object model
-option(SPUR_OBJECT_MODEL "Spur Object Model" ON)
+
 if(SPUR_OBJECT_MODEL)
 	#add_definitions(SpurVM=1)
 	set(SourceFolderName "spur")
 endif()
 
 # Sista optimizer
-option(SISTA_OPTIMIZER "Sista Optimizer" OFF)
 if(SISTA_OPTIMIZER)
 	#add_definitions(SistaVM=1)
 	set(SourceFolderName "${SourceFolderName}sista")
 endif()
 
 # Lowcode extended instructions
-option(LOWCODE_EXTENSIONS "Lowcode Extensions" OFF)
 if(LOWCODE_EXTENSIONS)
 	add_definitions(-DLowcodeVM=1)
 	set(SourceFolderName "${SourceFolderName}lowcode")
@@ -136,6 +142,7 @@ endif()
 
 # Stack interpreter
 if(NOT COG_JIT)
+    message("COG_JIT ${COG_JIT}")
     set(SourceFolderName "${SourceFolderName}stack")
 endif()
 
@@ -145,7 +152,6 @@ if(VM_64BITS)
 endif()
 
 # Pharo branding
-option(PHARO_BRANDING "Pharo Branding" ON)
 set(VM_EXECUTABLE_NAME squeak)
 set(VM_LIBRARY_NAME SqueakVMCore)
 set(VM_NAME Squeak)
@@ -158,6 +164,7 @@ if(PHARO_BRANDING)
 endif()
 add_definitions(-DVM_NAME="${VM_NAME}")
 
+
 # Set output dir.
 # OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT can be used before including this
 # project using add_subdirectory()
@@ -167,7 +174,6 @@ if(NOT OpenSmalltalkVM_BUILD_AS_INTERNAL_PROJECT)
 endif()
 
 # Cog JIT
-option(COG_JIT "Cog JIT" ON)
 if(COG_JIT)
 	#add_definitions(CogVM=1)
 endif()
@@ -360,7 +366,6 @@ if(SDL2_INCLUDE_DIR AND SDL2_LIBRARY)
 endif()
 
 # Choose the window system
-option(SUPPORT_TRADITIONAL_DISPLAY "Enables building a VM with support for a window." ON)
 
 set(VM_WINDOW_SYSTEM)
 if(SUPPORT_TRADITIONAL_DISPLAY)
@@ -516,30 +521,32 @@ include("Plugins.cmake")
 
 # Generate the config dot h.
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-include_directories(${CMAKE_BINARY_DIR})
+if(NOT ONLY_CONFIG_H)
+    include_directories(${CMAKE_BINARY_DIR})
 
-# Build the VM core library
-set(VM_CORE_LIBRARY_TYPE STATIC)
-#if(WIN32)
-#    set(VM_CORE_LIBRARY_TYPE SHARED)
-#endif()
+    # Build the VM core library
+    set(VM_CORE_LIBRARY_TYPE STATIC)
+    #if(WIN32)
+    #    set(VM_CORE_LIBRARY_TYPE SHARED)
+    #endif()
 
-if("${VM_CORE_LIBRARY_TYPE}" STREQUAL "STATIC")
-	add_definitions(-DBUILD_SQUEAK_STATIC)
-endif()
+    if("${VM_CORE_LIBRARY_TYPE}" STREQUAL "STATIC")
+    	add_definitions(-DBUILD_SQUEAK_STATIC)
+    endif()
 
-add_library(${VM_LIBRARY_NAME} ${VM_CORE_LIBRARY_TYPE} ${VM_SOURCES} ${VM_INTERNAL_PLUGIN_SOURCES})
+    add_library(${VM_LIBRARY_NAME} ${VM_CORE_LIBRARY_TYPE} ${VM_SOURCES} ${VM_INTERNAL_PLUGIN_SOURCES})
 
-target_compile_definitions(${VM_LIBRARY_NAME} PRIVATE
-	-DSQUEAK_BUILTIN_PLUGIN
-    -DBUILD_VM_CORE
-)
+    target_compile_definitions(${VM_LIBRARY_NAME} PRIVATE
+    	-DSQUEAK_BUILTIN_PLUGIN
+        -DBUILD_VM_CORE
+    )
 
-# Build the VM executable(s)
-add_executable(${VM_EXECUTABLE_NAME} platforms/minheadless/common/sqMain.c)
-target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
+    # Build the VM executable(s)
+    add_executable(${VM_EXECUTABLE_NAME} platforms/minheadless/common/sqMain.c)
+    target_link_libraries(${VM_EXECUTABLE_NAME} ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
 
-if(WIN32)
-    add_executable(${VM_EXECUTABLE_NAME}w WIN32 platforms/minheadless/windows/sqWin32Main.c)
-    target_link_libraries(${VM_EXECUTABLE_NAME}w ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
+    if(WIN32)
+        add_executable(${VM_EXECUTABLE_NAME}w WIN32 platforms/minheadless/windows/sqWin32Main.c)
+        target_link_libraries(${VM_EXECUTABLE_NAME}w ${VM_LIBRARY_NAME} ${VM_DEPENDENCIES_LIBRARIES})
+    endif()
 endif()

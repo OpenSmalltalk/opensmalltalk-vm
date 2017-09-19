@@ -42,7 +42,6 @@ static void *getModuleSymbol(void *module, const char *symbol);
 
 /* Modules */
 extern char *squeakPlugins;
-extern char squeakExtraPluginsPath[];
 
 static const char *moduleNamePatterns[] = {
     "%s%s",
@@ -108,10 +107,6 @@ ioLoadModule(char *pluginName)
     void *moduleHandle;
 
     moduleHandle = tryToLoadModuleInPath(squeakPlugins, pluginName);
-    if(moduleHandle)
-        return moduleHandle;
-
-    moduleHandle = tryToLoadModuleInPath(squeakExtraPluginsPath, pluginName);
     if(moduleHandle)
         return moduleHandle;
 
@@ -181,9 +176,6 @@ loadModuleHandle(const char *fileName)
 {
     WCHAR convertedPath[MAX_PATH + 1];
     sqUTF8ToUTF16Copy(convertedPath, MAX_PATH + 1, fileName);
-#ifdef DEBUG
-    printf("try loading  %s\n", fileName);
-#endif
     return LoadLibraryW(convertedPath);
 }
 
@@ -211,9 +203,6 @@ loadModuleHandle(const char *fileName)
     flags |= RTLD_DEEPBIND; /* Prefer local symbols in the shared object vs external symbols. */
 #endif
 
-#ifdef DEBUG
-    printf("try loading  %s\n", fileName);
-#endif
     return dlopen(fileName, flags);
 }
 
