@@ -10,7 +10,7 @@ fi ;;
 esac
 
 THIRDPARTYLIBS="libsdl2 libssh2 libgit2"
-INSTALLDIR=phstacklowcodelinuxht
+INSTALLDIR=phstacklowcodelinux
 
 # Some gcc versions create a broken VM using -O2
 case `gcc -v 2>&1 | grep version | sed 's/gcc version *//'` in
@@ -36,7 +36,7 @@ test -f plugins.int || (test -f ../plugins.int && cp -p ../plugins.int . || cp -
 test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -p ../../plugins.ext .)
 
 for lib in ${THIRDPARTYLIBS}; do
-	../../third-party/${lib}/mvm
+	../../third-party/mvm ${lib}
 done
 
 test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak \
@@ -45,14 +45,16 @@ test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak 
 	CC="gcc -m32" \
 	CXX="g++ -m32" \
 	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DITIMER_HEARTBEAT=1" \
-	LIBS="-lpthread -luuid" \
+	LIBS="-lpthread -luuid -Wl,-rpath,'\$\$ORIGIN' " \
 	LDFLAGS=-Wl,-z,now
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag
 make install-squeak install-plugins prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG
+productDir=`find ../../../products/$INSTALLDIR -name "5.0*"`
+productDir=`(cd $productDir;pwd)`
 for lib in ${THIRDPARTYLIBS}; do
-	../../third-party/${lib}/mvm install `find ../../../products/$INSTALLDIR -name "5.0*"`
+	../../third-party/mvm ${lib} install $productDir
 done
 ../../editpharoinstall.sh ../../../products/$INSTALLDIR "$@"
