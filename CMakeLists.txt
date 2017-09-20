@@ -1,5 +1,5 @@
 # OpenSmalltalkVM cmake build script.
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 2.8)
 project(OpenSmalltalkVM)
 
 option(ONLY_CONFIG_H "Only generate config.h" OFF)
@@ -159,7 +159,7 @@ set(PHARO_VM FALSE)
 set(SQUEAK_VM FALSE)
 
 if(PHARO_BRANDING)
-	add_definitions(-DPharoVM=1)
+	add_definitions(-DPharoVM=1 -DIMMUTABILITY=1)
 	set(VM_EXECUTABLE_NAME pharo)
 	set(VM_LIBRARY_NAME PharoVMCore)
     set(VM_NAME Pharo)
