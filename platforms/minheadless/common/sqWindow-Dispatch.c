@@ -28,6 +28,12 @@ sqWindowSystem *sqAllWindowSystems[] = {
 static sqWindowSystem *currentWindowSystem = 0;
 extern void ioAddInternalPluginPrimitives(void *primitiveList);
 
+void (*ioProcessEventsHandler) (void) = 0;
+
+extern void setIoProcessEventsHandler(void * handler) {
+    ioProcessEventsHandler = (void(*)()) handler;
+}
+
 void
 ioSetWindowSystem(sqWindowSystem *windowSystem)
 {
@@ -196,6 +202,8 @@ ioPeekKeystroke(void)
 sqInt
 ioProcessEvents(void)
 {
+    if(ioProcessEventsHandler)
+        ioProcessEventsHandler();
     sqInt res = currentWindowSystem->processEvents();
     aioPoll(0);
     return res;

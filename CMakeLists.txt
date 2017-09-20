@@ -151,16 +151,21 @@ if(VM_64BITS)
 	set(SourceFolderName "${SourceFolderName}64")
 endif()
 
-# Pharo branding
+# VM branding
 set(VM_EXECUTABLE_NAME squeak)
 set(VM_LIBRARY_NAME SqueakVMCore)
 set(VM_NAME Squeak)
+set(PHARO_VM FALSE)
+set(SQUEAK_VM FALSE)
 
 if(PHARO_BRANDING)
 	add_definitions(-DPharoVM=1)
 	set(VM_EXECUTABLE_NAME pharo)
 	set(VM_LIBRARY_NAME PharoVMCore)
     set(VM_NAME Pharo)
+    set(PHARO_VM TRUE)
+else()
+    set(SQUEAK_VM TRUE)
 endif()
 add_definitions(-DVM_NAME="${VM_NAME}")
 
@@ -517,7 +522,7 @@ source_group("VM Flavor Sources" FILES ${VM_FAVLOR_SOURCES})
 source_group("VM Platform Common Sources" FILES ${VM_PLATFORM_COMMON_SOURCES})
 source_group("VM Platform Sources" FILES ${VM_PLATFORM_SOURCES})
 source_group("VM Window System" FILES ${VM_WINDOW_SYSTEM})
-include("Plugins.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Plugins.cmake")
 
 # Generate the config dot h.
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/platforms/minheadless/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
