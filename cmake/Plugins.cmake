@@ -43,7 +43,7 @@ macro(add_vm_plugin_auto NAME TYPE)
         "${CrossPlatformPluginFolder}/${NAME}/*.c"
         "${CrossPlatformPluginFolder}/${NAME}/*.h"
     )
-    add_vm_plugin_sources(${NAME} ${TYPE} ${PLUGIN_SOURCES})
+    add_vm_plugin_sources(${NAME} ${TYPE} ${PLUGIN_SOURCES} ${ARGN})
 endmacro()
 
 macro(vm_plugin_link_libraries NAME)
@@ -108,20 +108,10 @@ add_vm_plugin_sources(DropPlugin INTERNAL
 # Extra plugins
 add_vm_plugin_auto(ZipPlugin INTERNAL) # Used by Monticello
 
-# Free type plugin
-find_package(Freetype)
-if(FREETYPE_FOUND)
-    include_directories(${FREETYPE_INCLUDE_DIRS})
-    add_vm_plugin_auto(FT2Plugin EXTERNAL)
-    vm_plugin_link_libraries(FT2Plugin ${FREETYPE_LIBRARIES})
-endif()
-
-# OSProcess
-if(UNIX)
-    add_vm_plugin_auto(UnixOSProcessPlugin INTERNAL)
-endif()
-if(WIN32)
-    add_vm_plugin_auto(Win32OSProcessPlugin INTERNAL)
+if(PHARO_VM)
+    include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PluginsPharo.cmake")
+elseif(SQUEAK_VM)
+    include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/PluginsSqueak.cmake")
 endif()
 
 # Write the list of plugins.
