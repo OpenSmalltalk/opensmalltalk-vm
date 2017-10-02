@@ -634,7 +634,7 @@ Class {
 		'VMSpurObjectRepresentationConstants',
 		'VMSqueakClassIndices'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
@@ -12131,6 +12131,12 @@ SpurMemoryManager >> totalFreeListBytes [
 			 listNode := nextNode].
 		 treeNode].
 	^totalFreeBytes
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> totalFreeOldSpace [
+	<cmacro: '() GIV(totalFreeOldSpace)'>
+	^totalFreeOldSpace
 ]
 
 { #category : #accessing }

@@ -36,11 +36,8 @@ savedFirstFieldsSpaceWasAllocated
 "
 Class {
 	#name : #SpurPlanningCompactor,
-	#superclass : #CogClass,
+	#superclass : #SpurCompactor,
 	#instVars : [
-		'manager',
-		'scavenger',
-		'coInterpreter',
 		'biasForGC',
 		'firstFreeObject',
 		'mobileStart',
@@ -53,12 +50,9 @@ Class {
 		'objectAfterLastMobileObject'
 	],
 	#pools : [
-		'SpurMemoryManagementConstants',
-		'VMBasicConstants',
-		'VMBytecodeConstants',
-		'VMSpurObjectRepresentationConstants'
+		'VMBytecodeConstants'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
@@ -141,12 +135,6 @@ SpurPlanningCompactor class >> identifySignedComparisonsFor: options noise: nois
 					[Transcript ensureCr; nextPutAll: sel; space; print: node; flush]]]]
 ]
 
-{ #category : #translation }
-SpurPlanningCompactor class >> implicitReturnTypeFor: aSelector [
-	"Answer the return type for methods that don't have an explicit return."
-	^#void
-]
-
 { #category : #simulation }
 SpurPlanningCompactor class >> simulatorClass [
 	^SpurPlanningCompactorSimulator
@@ -166,12 +154,6 @@ SpurPlanningCompactor >> biasForSnapshot [
 SpurPlanningCompactor >> check: obj [
 	"No-op in the real class."
 	<inline: true>
-]
-
-{ #category : #'instance initialization' }
-SpurPlanningCompactor >> coInterpreter: aVMSimulator [
-	<doNotGenerate>
-	coInterpreter := aVMSimulator
 ]
 
 { #category : #private }
@@ -459,16 +441,6 @@ SpurPlanningCompactor >> isPostMobile: obj [
 SpurPlanningCompactor >> logPhase: phaseName [
 	<inline: true>
 	self cCode: '' inSmalltalk: [coInterpreter transcript nextPutAll: phaseName; flush].
-]
-
-{ #category : #'instance initialization' }
-SpurPlanningCompactor >> manager: aSpurNBitMMXEndianSimulator [
-	<doNotGenerate>
-	manager := aSpurNBitMMXEndianSimulator.
-	aSpurNBitMMXEndianSimulator coInterpreter ifNotNil:
-		[:coint| coInterpreter := coint].
-	aSpurNBitMMXEndianSimulator scavenger ifNotNil:
-		[:scav| scavenger := scav]
 ]
 
 { #category : #private }
