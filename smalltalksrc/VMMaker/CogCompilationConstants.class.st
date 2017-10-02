@@ -27,5 +27,5 @@ Class {
 		'SSSpillNative',
 		'UnimplementedOperation'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }

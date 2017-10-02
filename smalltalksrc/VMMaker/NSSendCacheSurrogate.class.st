@@ -6,7 +6,7 @@ Class {
 		'memory',
 		'cogit'
 	],
-	#category : 'VMMaker-JITSimulation'
+	#category : #'VMMaker-JITSimulation'
 }
 
 { #category : #'as yet unclassified' }

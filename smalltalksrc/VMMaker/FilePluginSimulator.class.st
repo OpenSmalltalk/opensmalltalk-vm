@@ -9,7 +9,7 @@ Class {
 		'states',
 		'maxOpenFiles'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #translation }

@@ -126,7 +126,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMSqueakV3ObjectRepresentationConstants'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #accessing }

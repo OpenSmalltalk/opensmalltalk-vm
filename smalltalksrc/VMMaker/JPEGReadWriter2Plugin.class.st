@@ -68,7 +68,7 @@ jinclude.h
 Class {
 	#name : #JPEGReadWriter2Plugin,
 	#superclass : #SmartSyntaxInterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }

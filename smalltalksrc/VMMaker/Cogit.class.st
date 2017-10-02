@@ -328,7 +328,7 @@ Class {
 		'generatorTable',
 		'primitiveTable'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }

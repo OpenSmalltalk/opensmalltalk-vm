@@ -20,11 +20,8 @@ numCompactionPasses
 "
 Class {
 	#name : #SpurPigCompactor,
-	#superclass : #CogClass,
+	#superclass : #SpurCompactor,
 	#instVars : [
-		'manager',
-		'scavenger',
-		'coInterpreter',
 		'firstFreeChunk',
 		'lastFreeChunk',
 		'numCompactionPasses'
@@ -33,19 +30,8 @@ Class {
 		'CompactionPassesForGC',
 		'CompactionPassesForSnapshot'
 	],
-	#pools : [
-		'SpurMemoryManagementConstants',
-		'VMBasicConstants',
-		'VMSpurObjectRepresentationConstants'
-	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
-
-{ #category : #translation }
-SpurPigCompactor class >> implicitReturnTypeFor: aSelector [
-	"Answer the return type for methods that don't have an explicit return."
-	^#void
-]
 
 { #category : #'class initialization' }
 SpurPigCompactor class >> initialize [
@@ -124,12 +110,6 @@ SpurPigCompactor >> checkTraversableSortedFreeList [
 	self assert: (self nextInSortedFreeListLink: lastFreeChunk given: 0) = prevPrevFree.
 	self assert: freeChunk = 0.
 	^true
-]
-
-{ #category : #initialization }
-SpurPigCompactor >> coInterpreter: aVMSimulator [
-	<doNotGenerate>
-	coInterpreter := aVMSimulator
 ]
 
 { #category : #'compaction - api' }
@@ -245,16 +225,6 @@ SpurPigCompactor >> inSortedFreeListLink: freeChunk to: nextFree given: prevFree
 			[manager storePointer: manager freeChunkNextIndex
 				ofFreeChunk: freeChunk
 				withUncheckedValue: (prevFree bitXor: nextFree)]
-]
-
-{ #category : #initialization }
-SpurPigCompactor >> manager: aSpurNBitMMXEndianSimulator [
-	<doNotGenerate>
-	manager := aSpurNBitMMXEndianSimulator.
-	aSpurNBitMMXEndianSimulator coInterpreter ifNotNil:
-		[:coint| coInterpreter := coint].
-	aSpurNBitMMXEndianSimulator scavenger ifNotNil:
-		[:scav| scavenger := scav]
 ]
 
 { #category : #compaction }

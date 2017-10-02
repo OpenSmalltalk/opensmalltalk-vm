@@ -12,19 +12,11 @@ compactedCopySpace
 "
 Class {
 	#name : #SpurSlidingCompactor,
-	#superclass : #CogClass,
+	#superclass : #SpurCompactor,
 	#instVars : [
-		'manager',
-		'scavenger',
-		'coInterpreter',
 		'compactedCopySpace'
 	],
-	#pools : [
-		'SpurMemoryManagementConstants',
-		'VMBasicConstants',
-		'VMSpurObjectRepresentationConstants'
-	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'compaction - api' }

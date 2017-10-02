@@ -56,7 +56,7 @@ Class {
 		'eventQueue',
 		'assertVEPAES'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'class initialization' }

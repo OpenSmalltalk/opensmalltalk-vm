@@ -123,7 +123,7 @@ Class {
 	#pools : [
 		'SpurMemoryManagementConstants'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
