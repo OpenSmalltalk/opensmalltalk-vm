@@ -63,20 +63,12 @@ SpurSweeper >> canUseNextEntityAsFreeSpace: next [
 	^ (manager oop: next isLessThan: manager endOfMemory) and: [self canUseAsFreeSpace: next]
 ]
 
-{ #category : #initialization }
-SpurSweeper >> coInterpreter: aVMSimulator [
-	<doNotGenerate>
-	super coInterpreter: aVMSimulator.
-	aggressiveCompactor coInterpreter: aVMSimulator.
-]
-
 { #category : #api }
 SpurSweeper >> compact [
-	"Unless we're snapshotting, use a non-compacting sweep algorithm"
 	<inline: #never> "for profiling"
 	biasForGC
 		ifTrue: [self globalSweep]
-		ifFalse: [aggressiveCompactor compact]
+		ifFalse: ["Should use a compacting algo instead"self globalSweep]
 ]
 
 { #category : #'sweep phase' }
@@ -114,11 +106,6 @@ SpurSweeper >> globalSweep [
 	
 ]
 
-{ #category : #initialization }
-SpurSweeper >> initialize [
-	aggressiveCompactor := SpurPlanningCompactor new.
-]
-
 { #category : #'sweep phase' }
 SpurSweeper >> isSingleFreeObject: objOop [
 	<inline: true>
@@ -126,13 +113,6 @@ SpurSweeper >> isSingleFreeObject: objOop [
 	^ (manager isFreeObject: objOop) and: 
 		[next := manager objectAfter: objOop limit: manager endOfMemory.
 		(manager oop: next isGreaterThanOrEqualTo: manager endOfMemory) or: [manager isMarked: next]]
-]
-
-{ #category : #initialization }
-SpurSweeper >> manager: aSpurNBitMMXEndianSimulator [
-	<doNotGenerate>
-	super manager: aSpurNBitMMXEndianSimulator.
-	aggressiveCompactor manager: aSpurNBitMMXEndianSimulator
 ]
 
 { #category : #api }
