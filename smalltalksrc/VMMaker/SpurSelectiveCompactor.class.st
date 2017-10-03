@@ -28,7 +28,7 @@ SpurSelectiveCompactor >> compact [
 	<inline: #never> "for profiling"
 	biasForGC
 		ifTrue: [self internalCompact]
-		ifFalse: [aggressiveCompactor compact]
+		ifFalse: ["Should use a compacting algo instead"self internalCompact]
 	
 ]
 
