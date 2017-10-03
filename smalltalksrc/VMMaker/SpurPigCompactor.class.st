@@ -404,13 +404,6 @@ SpurPigCompactor >> printSortedFreeList [
 		 freeChunk := nextFree]
 ]
 
-{ #category : #'debug support' }
-SpurPigCompactor >> printTheBogons: aBogon [
-	<inline: true>
-	coInterpreter
-		print: 'bogon '; printHexnp: aBogon; cr
-]
-
 { #category : #compaction }
 SpurPigCompactor >> rebuildFreeListsForPigCompact [
 	"Rebuild the free lists from the doubly-linked free list."
