@@ -12134,12 +12134,6 @@ SpurMemoryManager >> totalFreeListBytes [
 ]
 
 { #category : #accessing }
-SpurMemoryManager >> totalFreeOldSpace [
-	<cmacro: '() GIV(totalFreeOldSpace)'>
-	^totalFreeOldSpace
-]
-
-{ #category : #accessing }
 SpurMemoryManager >> totalFreeOldSpace: anInteger [
 	totalFreeOldSpace := anInteger
 ]

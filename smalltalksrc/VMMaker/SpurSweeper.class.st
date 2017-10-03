@@ -40,14 +40,15 @@ SpurSweeper >> bulkFreeChunkFrom: objOop [
 	start := manager startOfObject: objOop.
 	currentObj := objOop.
 	bytes := 0.
-	[bytes := bytes + self bytesInObject: currentObj.
+	[bytes := bytes + (manager bytesInObject: currentObj).
 	self freeEntity: currentObj.
 	next := manager objectStartingAt: start + bytes.
 	self canUseNextEntityAsFreeSpace: next] 
 		whileTrue: [currentObj := next].
 	
-	manager totalFreeOldSpace: manager totalFreeOldSpace + bytes.
-	^manager freeChunkWithBytes: bytes at: start
+	manager addFreeChunkWithBytes: bytes at: start.
+	
+	^ next
 ]
 
 { #category : #'sweep phase' }
@@ -92,10 +93,24 @@ SpurSweeper >> freeEntity: entity [
 
 { #category : #'sweep phase' }
 SpurSweeper >> globalSweep [
-	"allOldSpaceEntitiesDo: computes the address of the next object only once the block has been evaluated,
-	 hence when we rewrite object iterated over as a larger free chunk, the next object is the object after the chunk"
-	self allOldSpaceEntitiesDo: 
-		[:objOop | (self canUseAsFreeSpace: objOop) ifTrue: [self bulkFreeChunkFrom: objOop]].
+	"Iterate over all entities, in order, if the entity is a free chunk or unmarked object, 
+	 make a new big piece of free chunk, else unmark the object which stay live."
+
+	| currentEntity start |
+	currentEntity := manager firstObject.
+	[self oop: currentEntity isLessThan: manager endOfMemory] whileTrue:
+		[(self canUseAsFreeSpace: currentEntity) 
+			ifTrue: ["bulkFreeChunkFrom: may change a 1 word header
+					object to a double word header object"
+					start := manager startOfObject: currentEntity.
+					self bulkFreeChunkFrom: currentEntity.
+					currentEntity := manager objectStartingAt: start]
+			ifFalse: [self unmark: currentEntity].
+		 currentEntity := manager objectAfter: currentEntity limit: manager endOfMemory].
+			
+	manager checkFreeSpace: GCModeFull.
+		
+	manager unmarkSurvivingObjectsForCompact.
 	
 ]
 
@@ -118,4 +133,24 @@ SpurSweeper >> manager: aSpurNBitMMXEndianSimulator [
 	<doNotGenerate>
 	super manager: aSpurNBitMMXEndianSimulator.
 	aggressiveCompactor manager: aSpurNBitMMXEndianSimulator
+]
+
+{ #category : #api }
+SpurSweeper >> remapObj: objOop [
+	<api>
+	<inline: false>
+	^manager vanillaRemapObj: objOop
+]
+
+{ #category : #api }
+SpurSweeper >> shouldRemapObj: objOop [
+	<api>
+	^manager vanillaShouldRemapObj: objOop
+]
+
+{ #category : #'sweep phase' }
+SpurSweeper >> unmark: objOop [
+	self assert: ((manager isMarked: objOop) and: [(manager isFreeObject: objOop) not]).
+	(manager isSegmentBridge: objOop) ifFalse: [manager setIsMarkedOf: objOop to: false].
+	(manager isPinned: objOop) ifTrue: [manager segmentManager notePinned: objOop]
 ]
