@@ -28,6 +28,9 @@
  * Last edited: 2012-07-30 14:59:01 by piumarta on emilia
  */
 
+#include "sqVirtualMachine.h"
+#include "CameraPlugin.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,7 +53,6 @@
 #include <linux/videodev2.h>
 
 
-#define sqInt int
 #define true 1
 #define false 0
 
@@ -208,6 +210,7 @@ libCon(void)
 	  cam->devNum = devNum;
 	  cam->ioMethod = IO_METHOD_MMAP;
 	  cam->nBuffers = 2;
+	  cam->frameCount = 0;
 	  vBufReset(&(cam->vBuf));
 	  /* Pixel format auto selected for ease/speed of conversion */
 
@@ -223,7 +226,6 @@ libCon(void)
 	  cam->sqBuffer = 0;
 	  cam->sqBufferBytes = 0;
 	  cam->sqPixels = 0;
-	  cam->frameCount = 0;
 */
   }
 }
@@ -808,8 +810,8 @@ CameraGetFrame(int camNum, unsigned char* buf, int pixelCount)
 
 	camPtr cam = &camInfo[camNum-1];
 	
-	if (camIsClosed(cam)) return 0;
-	if (pixelCount != cam->sqPixels) return 0;
+	if (camIsClosed(cam)) return -1;
+	if (pixelCount != cam->sqPixels) return -1;
 	
 	cam->sqBuffer = (void *)buf;
 
@@ -836,8 +838,10 @@ printf("%i\n", tstColourIdx);
 /* OPTION 1: ALL FRAMES, SKIP IMAGE-SIDE, INCUR CONVERSION COST... */
 
 	if (getFrame(cam)) {
+	  int ourCount = cam->frameCount;
+	  cam->frameCount = 0;
 	  convertImage (cam);
-	  return 1;
+	  return ourCount;
 	}
 	return 0;
 

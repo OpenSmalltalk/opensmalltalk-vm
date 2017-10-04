@@ -9,13 +9,14 @@
  * variable cameraNum is 1-based in following code in order to fit Smalltalk expectations
  */
 
+#include "sqVirtualMachine.h"
+#include "CameraPlugin.h"
+
 #include <TargetConditionals.h>
 
 #include <Cocoa/Cocoa.h>
 #include <AVFoundation/AVFoundation.h>
-#include "sqVirtualMachine.h"
 
-#include "sqCamera.h"
 
 void printDevices();
 
@@ -31,6 +32,7 @@ void printDevices();
   bool				bInitCalled;
   unsigned int			*pixels;
   bool				firstTime;
+  int				frameCount;
 }
 @end
 
@@ -70,6 +72,7 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
     memcpy(pixels, isrc4, height * width * 4);
     CVPixelBufferUnlockBaseAddress(imageBuffer, 0);
   }
+  frameCount++;
 }
 
 -(SqueakVideoGrabber*)initCapture:(int)deviceNum
@@ -158,6 +161,7 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
 
   bInitCalled = YES;
   firstTime = true;
+  frameCount = 0;
   grabbers[deviceID] = self;
   return self;
 }
@@ -194,6 +198,7 @@ SqueakVideoGrabber *grabbers[8] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NUL
     free(pixels);
     pixels = NULL;
     firstTime = true;
+    frameCount = 0;
     bInitCalled = NO;
     captureSession = NULL;
     captureOutput = NULL;
@@ -262,13 +267,17 @@ CameraExtent(int cameraNum) {
 
 int
 CameraGetFrame(int cameraNum, unsigned char *buf, int pixelCount) {
-  if(cameraNum<1 || cameraNum>8) {return false;}
+  if(cameraNum<1 || cameraNum>8) {return -1;}
   SqueakVideoGrabber *this = grabbers[cameraNum-1];
-  if (!this) {return false;}
+  if (!this) {return -1;}
   if (!this->firstTime) {
+    int ourFrames = this->frameCount;
+    this->frameCount = 0;
     memcpy(buf, this->pixels, pixelCount * 4);
+    return ourFrames;
+  } else {
+    return 0;
   }
-  return true;
 }
 
 char *
