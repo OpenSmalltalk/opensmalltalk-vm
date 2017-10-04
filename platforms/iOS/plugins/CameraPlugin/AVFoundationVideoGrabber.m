@@ -236,7 +236,7 @@ getDeviceName(int cameraNum) {
   return (char*)[((AVCaptureDevice*)[devices objectAtIndex: cameraNum-1]).localizedName UTF8String];
 }
 
-int
+sqInt
 CameraOpen(int cameraNum, int desiredWidth, int desiredHeight) {
   if(cameraNum<1 || cameraNum>8) {return false;}
   SqueakVideoGrabber *this = grabbers[cameraNum-1];
@@ -257,7 +257,7 @@ CameraClose(int cameraNum) {
   [this stopCapture: cameraNum];
 }
 
-int
+sqInt
 CameraExtent(int cameraNum) {
   if(cameraNum<1 || cameraNum>8) {return 0;}
   SqueakVideoGrabber *this = grabbers[cameraNum-1];
@@ -265,7 +265,7 @@ CameraExtent(int cameraNum) {
   return (this->width <<16 | this->height);
 }
 
-int
+sqInt
 CameraGetFrame(int cameraNum, unsigned char *buf, int pixelCount) {
   if(cameraNum<1 || cameraNum>8) {return -1;}
   SqueakVideoGrabber *this = grabbers[cameraNum-1];
@@ -285,7 +285,7 @@ CameraName(int cameraNum) {
   return getDeviceName(cameraNum);
 }
 
-int
+sqInt
 CameraGetParam(int cameraNum, int paramNum) {
   return 1;
 }
