@@ -33,6 +33,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <assert.h>
 
@@ -250,20 +251,20 @@ libDes(void)
 /
 */
 
-static inline unsigned char 
+static inline uint8_t 
 clipPixel(const int pixel) {
     int result;
     result = ((pixel < 0) ? 0 : pixel);
-    return (unsigned char) ((result > 255) ? 255: result);
+    return (uint8_t) ((result > 255) ? 255: result);
 }
 
 
 static inline void 
 convertPixelYUV444toARGB32(
-			   const unsigned char y,
-               const unsigned char u,
-               const unsigned char v,
-               unsigned char* dest)
+			   const uint8_t y,
+               const uint8_t u,
+               const uint8_t v,
+               uint8_t* dest)
 {
     const int C = (y - 16) * 298 + 128;
     const int D = u - 128;
@@ -280,14 +281,14 @@ convertPixelYUV444toARGB32(
 static inline void 
 convertImageYUYVToARGB32 (camPtr cam)
 {
-	int i;
+	size_t i;
 
-	const unsigned char* src = cam->inBuffer;
-	unsigned char* dst = cam->sqBuffer;
-	unsigned long int *pdst;
-	unsigned long int pixelCount = cam->sqPixels;
+	const uint8_t* src = cam->inBuffer;
+	uint8_t* dst = cam->sqBuffer;
+	uint32_t *pdst;
+	uint32_t pixelCount = cam->sqPixels;
 
-	unsigned char u, y1, v, y2;
+	uint8_t u, y1, v, y2;
 
 	for (i = 0; i < pixelCount; i += 2) {
 		y1 = *src++;
@@ -313,11 +314,11 @@ convertImageYUYVToARGB32 (camPtr cam)
 static void 
 convertImageRGB24toARGB32 (camPtr cam)
 {
-	unsigned char 	  *src = cam->inBuffer;
-	unsigned long int *dst = cam->sqBuffer;
-	unsigned long int pixelCount = cam->sqPixels;
-	unsigned long int pixel;
-	int i;
+	uint8_t 	  *src = cam->inBuffer;
+	uint32_t *dst = cam->sqBuffer;
+	uint32_t pixelCount = cam->sqPixels;
+	uint32_t pixel;
+	size_t i;
 
 	if (0 == dst) return;
 
@@ -332,11 +333,11 @@ convertImageRGB24toARGB32 (camPtr cam)
 static void 
 convertImageRGB444toARGB32 (camPtr cam)
 {
-	unsigned char 	  *src = cam->inBuffer;
-	unsigned long int *dst = cam->sqBuffer;
-	unsigned long int pixelCount = cam->sqPixels;
-	unsigned long int r,g,b,pixel;
-	int i;
+	uint8_t 	  *src = cam->inBuffer;
+	uint32_t *dst = cam->sqBuffer;
+	uint32_t pixelCount = cam->sqPixels;
+	uint32_t r,g,b,pixel;
+	size_t i;
 
 	if (0 == dst) return;
 
@@ -358,11 +359,11 @@ convertImageRGB444toARGB32 (camPtr cam)
 static void 
 convertImageRGB565toARGB32 (camPtr cam)
 {
-	unsigned char 	  *src = cam->inBuffer;
-	unsigned long int *dst = cam->sqBuffer;
-	unsigned long int pixelCount = cam->sqPixels;
-	unsigned long int r,g,b,pixel;
-	int i;
+	uint8_t 	  *src = cam->inBuffer;
+	uint32_t *dst = cam->sqBuffer;
+	uint32_t pixelCount = cam->sqPixels;
+	uint32_t r,g,b,pixel;
+	size_t i;
 
 	if (0 == dst) return;
 
@@ -524,7 +525,7 @@ stream_on (camPtr cam)
 static int 
 uninit_device (camPtr cam) 
 {
-	unsigned int i;
+	size_t i;
 
 	if (cam->buffers)
 	  for (i = 0; i < cam->nBuffers; ++i)
@@ -571,11 +572,11 @@ init_mmap (camPtr cam)
 		}
 	}
 <<< */
-
+/* what? this is set above..
 	if (req.count < cam->nBuffers) return false;
 	if (cam->nBuffers < req.count) 
 		printf("Excess Buffers: %i\n", req.count);
-
+*/
 	if (!(cam->buffers = calloc (req.count, sizeof (struct buffer))))
 		return false;
 
