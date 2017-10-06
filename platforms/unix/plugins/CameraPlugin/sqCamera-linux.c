@@ -142,14 +142,6 @@ struct v4l2_buffer tmpVBuf;
 void __attribute__ ((constructor)) libCon(void);
 void __attribute__ ((destructor)) libDes(void);
 
-/* SQUEAK INTERFACE */
-sqInt CameraGetParam(int camNum, int paramNum);
-sqInt CameraGetFrame(int camNum, unsigned char* buf, int pixelCount);
-sqInt CameraExtent(int camNum);
-char* CameraName(int camNum);
-void CameraClose(int camNum);
-sqInt CameraOpen(int camNum, int frameWidth, int frameHeight);
-
 
 /* ========================================================= */
 /* ========================================================= */
@@ -157,8 +149,8 @@ sqInt CameraOpen(int camNum, int frameWidth, int frameHeight);
 
 /* >>>>>>>>>>> UTILITY */
 
-inline int   camIsOpen(camPtr cam) { return ( cam->isOpen); }
-inline int camIsClosed(camPtr cam) { return (!cam->isOpen); }
+static inline int   camIsOpen(camPtr cam) { return ( cam->isOpen); }
+static inline int camIsClosed(camPtr cam) { return (!cam->isOpen); }
 
 
 static void 
@@ -258,7 +250,7 @@ libDes(void)
 /
 */
 
-inline unsigned char 
+static inline unsigned char 
 clipPixel(const int pixel) {
     int result;
     result = ((pixel < 0) ? 0 : pixel);
@@ -266,7 +258,7 @@ clipPixel(const int pixel) {
 }
 
 
-inline void 
+static inline void 
 convertPixelYUV444toARGB32(
 			   const unsigned char y,
                const unsigned char u,
@@ -285,7 +277,7 @@ convertPixelYUV444toARGB32(
 }
 
 
-inline void 
+static inline void 
 convertImageYUYVToARGB32 (camPtr cam)
 {
 	int i;
@@ -429,21 +421,21 @@ xioctl (camPtr cam, int request, void * arg)
 }
 
 
-inline static int
+static inline int
 queueBuffer(camPtr cam, struct v4l2_buffer *bufPtr)
 {
 	return xioctl (cam, VIDIOC_QBUF, bufPtr);
 }
 
 
-inline static int
+static inline int
 dequeueBuffer(camPtr cam, struct v4l2_buffer *bufPtr)
 {
 	return xioctl (cam, VIDIOC_DQBUF, bufPtr);
 }
 
 
-inline static int 
+static inline int 
 read_frame (camPtr cam) 
 {
 	struct v4l2_buffer *bufPtr = &(cam->vBuf);
@@ -779,7 +771,7 @@ initCamera(camPtr cam, int w, int h)
 /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
 sqInt 
-CameraGetParam(int camNum, int paramNum) 
+CameraGetParam(sqInt camNum, int paramNum) 
 {
 	camPtr cam = &camInfo[camNum-1];
 	return false;
@@ -801,7 +793,7 @@ CameraGetParam(int camNum, int paramNum)
 /	  delays due to conversion.
 */
 sqInt 
-CameraGetFrame(int camNum, unsigned char* buf, int pixelCount) 
+CameraGetFrame(sqInt camNum, unsigned char* buf, int pixelCount) 
 {
 #ifdef USE_TEST_PATTERN
 	unsigned long f,i;
@@ -889,7 +881,7 @@ CameraClose(int camNum)
 
 
 sqInt 
-CameraOpen(int camNum, int frameWidth, int frameHeight) 
+CameraOpen(sqInt camNum, int frameWidth, int frameHeight) 
 {
 	camPtr cam = &camInfo[camNum-1];
 

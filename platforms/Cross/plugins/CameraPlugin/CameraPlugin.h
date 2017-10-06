@@ -1,11 +1,11 @@
 #ifndef _SQ_CAMERA_PLUGIN_H_
 #define _SQ_CAMERA_PLUGIN_H_
 
-sqInt CameraOpen(int cameraNum, int frameWidth, int frameHeight);
-void CameraClose(int cameraNum);
-sqInt CameraExtent(int cameraNum);
-sqInt CameraGetFrame(int cameraNum, unsigned char* buf, int pixelCount);
-char* CameraName(int cameraNum);
-sqInt CameraGetParam(int cameraNum, int paramNum);
+sqInt CameraOpen(sqInt cameraNum, sqInt frameWidth, sqInt frameHeight);
+void CameraClose(sqInt cameraNum);
+sqInt CameraExtent(sqInt cameraNum);
+sqInt CameraGetFrame(sqInt cameraNum, unsigned char* buf, sqInt pixelCount);
+char* CameraName(sqInt cameraNum);
+sqInt CameraGetParam(sqInt cameraNum, sqInt paramNum);
 
 #endif /* _SQ_CAMERA_PLUGIN_H_ */
