@@ -229,7 +229,7 @@ libDes(void)
   int camNum;
   for (camNum = 1; camNum < 11; ++camNum)
 	if (camIsOpen(&camInfo[camNum-1]))
-	  CameraClose(camNum);
+	  CameraClose((sqInt)camNum);
   
 /* 
 / Closing libv4l2 causes a crash, so it must
@@ -771,7 +771,7 @@ initCamera(camPtr cam, int w, int h)
 /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
 sqInt 
-CameraGetParam(sqInt camNum, int paramNum) 
+CameraGetParam(sqInt camNum, sqInt paramNum) 
 {
 	camPtr cam = &camInfo[camNum-1];
 	return false;
@@ -793,7 +793,7 @@ CameraGetParam(sqInt camNum, int paramNum)
 /	  delays due to conversion.
 */
 sqInt 
-CameraGetFrame(sqInt camNum, unsigned char* buf, int pixelCount) 
+CameraGetFrame(sqInt camNum, unsigned char* buf, sqInt pixelCount) 
 {
 #ifdef USE_TEST_PATTERN
 	unsigned long f,i;
@@ -851,7 +851,7 @@ printf("%i\n", tstColourIdx);
 
 
 sqInt 
-CameraExtent(int camNum) 
+CameraExtent(sqInt camNum) 
 {
 	camPtr cam = &camInfo[camNum-1];
 	if (camIsClosed(cam)) return false;
@@ -860,7 +860,7 @@ CameraExtent(int camNum)
 
 
 char* 
-CameraName(int camNum) 
+CameraName(sqInt camNum) 
 {
 	camPtr cam = &camInfo[camNum-1];
 	if (camIsClosed(cam)) return "camera not open";
@@ -869,7 +869,7 @@ CameraName(int camNum)
 
 
 void 
-CameraClose(int camNum) 
+CameraClose(sqInt camNum) 
 {
 	camPtr cam = &camInfo[camNum-1];
 	if (camIsClosed(cam)) return;
@@ -881,7 +881,7 @@ CameraClose(int camNum)
 
 
 sqInt 
-CameraOpen(sqInt camNum, int frameWidth, int frameHeight) 
+CameraOpen(sqInt camNum, sqInt frameWidth, sqInt frameHeight) 
 {
 	camPtr cam = &camInfo[camNum-1];
 
