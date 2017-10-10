@@ -65,7 +65,6 @@
 	typedef struct {
 		int		sessionID;
 		File	*file;
-		squeakFileOffsetType		fileSize;  //JMM Nov 8th 2001 64bits we hope
 		char	writable;
 		char	lastOp;  		// 0 = uncommitted, 1 = read, 2 = write //
 		char	lastChar;		// one character peek for stdin //
@@ -107,26 +106,20 @@ static void setFile(SQFile *f, FILE *file)
   void *out= (void *)&f->file;
   memcpy(out, in, sizeof(FILE *));
 }
-static squeakFileOffsetType getSize(SQFile *f)
-{
-  squeakFileOffsetType size;
-  void *in= (void *)&f->fileSize;
-  void *out= (void *)&size;
-  memcpy(out, in, sizeof(squeakFileOffsetType));
-  return size;
-}
-static void setSize(SQFile *f, squeakFileOffsetType size)
-{
-  void *in= (void *)&size;
-  void *out= (void *)&f->fileSize;
-  memcpy(out, in, sizeof(squeakFileOffsetType));
-}
 #else /* OBJECTS_32BIT_ALIGNED */
 # define getFile(f) ((FILE *)((f)->file))
 # define setFile(f,fileptr) ((f)->file = (fileptr))
-# define getSize(f) ((f)->fileSize)
-# define setSize(f,size) ((f)->fileSize = (size))
 #endif /* OBJECTS_32BIT_ALIGNED */
+
+static squeakFileOffsetType getSize(SQFile *f)
+{
+  FILE *file = getFile(f);
+  squeakFileOffsetType currentPosition = ftell(file);
+  fseek(file, 0, SEEK_END);
+  squeakFileOffsetType size = ftell(file);
+  fseek(file, currentPosition, SEEK_SET);
+  return size;
+}
 
 #if 0
 # define pentry(func) do { int fn = fileno(getFile(f)); if (f->isStdioStream) printf("\n"#func "(%s) %lld %d\n", fn == 0 ? "in" : fn == 1 ? "out" : "err", (long long)ftell(getFile(f)), f->lastChar); } while (0)
@@ -163,7 +156,6 @@ sqFileClose(SQFile *f) {
 	setFile(f, NULL);
 	f->sessionID = 0;
 	f->writable = false;
-	setSize(f, 0);
 	f->lastOp = UNCOMMITTED;
 
 	/*
@@ -369,11 +361,6 @@ sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 			f->sessionID = thisSession;
 			setFile(f, file);
 
-			/* compute and cache file size */
-			fseek(file, 0, SEEK_END);
-			setSize(f, ftell(file));
-			fseek(file, 0, SEEK_SET);
-
 			f->writable = writeFlag ? true : false;
 			f->lastOp = UNCOMMITTED;
 			return 1;
@@ -386,7 +373,6 @@ sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 	}
 
 	f->sessionID = 0;
-	setSize(f, 0);
 	f->writable = false;
 	return interpreterProxy->success(false);
 }
@@ -455,7 +441,6 @@ sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists) 
 		if (file != NULL) {
 			f->sessionID = thisSession;
 			setFile(f, file);
-			setSize(f, 0);
 			f->writable = true;
 			f->lastOp = UNCOMMITTED;
 			return 1;
@@ -470,7 +455,6 @@ sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists) 
 	}
 
 	f->sessionID = 0;
-	setSize(f, 0);
 	f->writable = false;
 	return interpreterProxy->success(false);
 }
@@ -493,7 +477,6 @@ sqFileStdioHandlesInto(SQFile files[])
 #endif
 	files[0].sessionID = thisSession;
 	files[0].file = stdin;
-	files[0].fileSize = 0;
 	files[0].writable = false;
 	files[0].lastOp = READ_OP;
 	files[0].isStdioStream = isatty(fileno(stdin));
@@ -501,7 +484,6 @@ sqFileStdioHandlesInto(SQFile files[])
 
 	files[1].sessionID = thisSession;
 	files[1].file = stdout;
-	files[1].fileSize = 0;
 	files[1].writable = true;
 	files[1].isStdioStream = true;
 	files[1].lastChar = EOF;
@@ -509,7 +491,6 @@ sqFileStdioHandlesInto(SQFile files[])
 
 	files[2].sessionID = thisSession;
 	files[2].file = stderr;
-	files[2].fileSize = 0;
 	files[2].writable = true;
 	files[2].isStdioStream = true;
 	files[2].lastChar = EOF;
@@ -695,7 +676,6 @@ sqFileTruncate(SQFile *f, squeakFileOffsetType offset) {
 		return interpreterProxy->success(false);
  	if (sqFTruncate(getFile(f), offset))
 		return interpreterProxy->success(false);
-	setSize(f, ftell(getFile(f)));
 	return 1;
 }
 
@@ -726,11 +706,6 @@ sqFileWriteFromAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInd
 	if (f->lastOp == READ_OP) fseek(file, 0, SEEK_CUR);  /* seek between reading and writing */
 	src = byteArrayIndex + startIndex;
 	bytesWritten = fwrite(src, 1, count, file);
-
-	position = ftell(file);
-	if (position > getSize(f)) {
-		setSize(f, position);  /* update file size */
-	}
 
 	if (bytesWritten != count) {
 		interpreterProxy->success(false);
