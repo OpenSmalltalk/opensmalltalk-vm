@@ -127,7 +127,7 @@ void sqPathExtractBaseName(char *target, size_t targetSize, const char *src)
 void sqPathJoin(char *target, size_t targetSize, const char *first, const char *second)
 {
     strcpy(target, first);
-    if(first[strnlen(first)-1] != SEPARATOR_CHAR) {
+    if(first[strlen(first)-1] != SEPARATOR_CHAR) {
         strcat(target, SEPARATOR_STRING);
     }
     strcat(target, second);

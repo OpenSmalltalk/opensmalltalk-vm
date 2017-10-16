@@ -287,11 +287,10 @@ FORCE:
 # Extra specific dependencies
 #
 $(BLDDIRINC)/sqInternalPlugins.inc: plugins.int
+	mkdir -p $(BLDDIRINC)
 	../common.minheadless/mkInternalPluginsList.sh plugins.int > $(BLDDIRINC)/sqInternalPlugins.inc
 
-$(OBJDIR)/sqNamedPrims.o: sqNamedPrims.c $(BLDDIRINC)/sqInternalPlugins.inc
-
-headers_built: $(BLDDIRINC)/config.h
+headers_built: $(BLDDIRINC)/config.h $(BLDDIRINC)/sqInternalPlugins.inc
 
 $(BLDDIRINC)/config.h:
 	mkdir -p $(BLDDIRINC)
