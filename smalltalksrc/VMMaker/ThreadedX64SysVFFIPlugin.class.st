@@ -173,13 +173,13 @@ ThreadedX64SysVFFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSpe
 				[passField1InXmmReg
 					ifTrue: [self ffiPushDoubleFloat: ((self cCoerceSimple: pointer to: #'double *') at: 1) in: calloutState]
 					ifFalse: [self ffiPushSignedLongLong: ((self cCoerceSimple: pointer to: #'long long *') at: 1) in: calloutState]].
-			 ^0].
+			 ^0]].
 
 	roundedSize := structSize + 7 bitClear: 7.
 	calloutState currentArg + roundedSize > calloutState limit ifTrue:
 		 [^FFIErrorCallFrameTooBig].
 	self mem: calloutState currentArg cp: (self cCoerceSimple: pointer to: 'char *') y: structSize.
-	calloutState currentArg: calloutState currentArg + roundedSize].
+	calloutState currentArg: calloutState currentArg + roundedSize.
 	^0
 ]
 
