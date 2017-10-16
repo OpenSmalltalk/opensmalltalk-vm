@@ -20,6 +20,7 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             libasound2-dev:i386 \
             libssl-dev:i386 \
             libssl0.9.8:i386 \
+            libpng-dev:i386 \
             libfreetype6-dev:i386 \
             libx11-dev:i386 \
             libsm-dev:i386 \
