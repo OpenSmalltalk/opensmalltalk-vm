@@ -319,7 +319,7 @@ ImageFormat class >> knownVersionNumbers [
 
 	"ImageFormat knownVersionNumbers collect: [:e | (ImageFormat fromInteger: e) description]"
 
-	^ self baseVersionNumbers, "the original format number variants"
+	^ ( self baseVersionNumbers, "the original format number variants"
 		{
 			6505 .	"Cog and StackVM"
 			68004 .	"Cog and StackVM running 64-bit image"
@@ -327,7 +327,7 @@ ImageFormat class >> knownVersionNumbers [
 			68019 .	"Spur 64 bit object memory (early)"
 			68021 .	"Spur 64 bit object memory"
 				" ... add others here as bits are allocated to represent requirements of other image formats"
-		}
+		} ) sort.
 
 ]
 
@@ -404,8 +404,10 @@ ImageFormat class >> unixMagicFileEntries [
 { #category : #utility }
 ImageFormat class >> versionDescriptions [
 
-	"ImageFormat versionDescriptions"
 	"ImageFormat versionDescriptions do: [:e | Transcript cr; show: e]"
+
+	"| d | d := ImageFormat versionDescriptions.
+		KnownVersionNumbers do: [ :v | Transcript cr; show: v asString, '- ',  (d at: v)]"
 
 	^ Dictionary
 		withAll: (KnownVersionNumbers
