@@ -629,7 +629,8 @@ SpurGenerationScavenger >> growRememberedSet [
 	newObj ifNil:
 		[newObj := manager allocatePinnedSlots: numSlots + 1024.
 		 newObj ifNil:
-			[self error: 'could not grow remembered set']].
+			[(manager growOldSpaceByAtLeast: numSlots + 1024) ifNil: [self error: 'could not grow remembered set'].
+			 newObj := manager allocatePinnedSlots: numSlots + 1024. "cannot fail"]].
 	manager rememberedSetObj: newObj.
 	base := manager firstIndexableField: newObj.
 	0 to: rememberedSetSize - 1 do:
