@@ -668,6 +668,28 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueak [
 		"(88 primitiveSuspend)"
 		"(89 primitiveFlushCache)"
 
+		"(90 primitiveMousePoint)"
+		"(91 primitiveTestDisplayDepth)"			"Blue Book: primitiveCursorLocPut"
+		"(92 primitiveSetDisplayMode)"				"Blue Book: primitiveCursorLink"
+		"(93 primitiveInputSemaphore)"
+		"(94 primitiveGetNextEvent)"				"Blue Book: primitiveSampleInterval"
+		"(95 primitiveInputWord)"
+		"(96 primitiveFail)"	"primitiveCopyBits"
+		"(97 primitiveSnapshot)"
+		"(98 primitiveStoreImageSegment)"
+		"(99 primitiveLoadImageSegment)"
+		"(100 primitivePerformInSuperclass)"		"Blue Book: primitiveSignalAtTick"
+		"(101 primitiveBeCursor)"
+		"(102 primitiveBeDisplay)"
+		"(103 primitiveScanCharacters)"
+		"(104 primitiveFail)"	"primitiveDrawLoop"
+		(105 genPrimitiveStringReplace)
+		"(106 primitiveScreenSize)"
+		"(107 primitiveMouseButtons)"
+		"(108 primitiveKbdNext)"
+		"(109 primitiveKbdPeek)"
+
+
 		"System Primitives (110-119)"
 		(110 genPrimitiveIdentical 1)
 		(111 genPrimitiveClass)				"Support both class and Context>>objectClass:"
@@ -1182,6 +1204,19 @@ SimpleStackBasedCogit >> compileGetErrorCode [
 	self MoveCq: 0 R: TempReg.
 	self MoveR: TempReg Aw: coInterpreter primFailCodeAddress.
 	jmpNoError jmpTarget: self Label
+]
+
+{ #category : #'primitive generators' }
+SimpleStackBasedCogit >> compileInterpreterPrimitive [
+	<inline: true>
+	| primitiveRoutine |
+	<var: #primitiveRoutine declareC: 'void (*primitiveRoutine)()'>
+	primitiveRoutine := coInterpreter
+							functionPointerForCompiledMethod: methodObj
+							primitiveIndex: primitiveIndex.
+	^ self
+		compileInterpreterPrimitive: primitiveRoutine
+		flags: (coInterpreter primitivePropertyFlags: primitiveIndex)
 ]
 
 { #category : #'primitive generators' }
@@ -3400,6 +3435,20 @@ SimpleStackBasedCogit >> genSpecialSelectorSend [
 	^self genSend: index negated - 1 numArgs: numArgs
 ]
 
+{ #category : #'simulation stack' }
+SimpleStackBasedCogit >> genStackArgAt: n into: reg [ 
+	<inline: true>
+	self
+		MoveMw: (self backEnd hasLinkRegister
+				ifTrue: [n]
+				ifFalse: [n + 1])
+				* objectMemory wordSize
+		r: SPReg
+		R: reg.
+	^ 0
+
+]
+
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genStoreAndPopReceiverVariableBytecode [
 	^self genStorePop: true ReceiverVariable: (byte0 bitAnd: 7)
@@ -4019,6 +4068,17 @@ SimpleStackBasedCogit >> rewritePrimInvocationIn: cogMethod to: primFunctionPoin
 	processor
 		flushICacheFrom: cogMethod asUnsignedInteger + cmNoCheckEntryOffset
 		to: address asUnsignedInteger + extent
+]
+
+{ #category : #testing }
+SimpleStackBasedCogit >> seemsToBeInstantiating: format [
+	"Answers if the code is installed in a class instantiating objects with the format. Used in primitive 
+	 generation to make a quick path based on where the method is installed. This method cannot
+	 be used as a guarantee as there can be false positive, it's just a heuristic.
+	 Tries to interpret the last literal of the method as a behavior (more than 3 fields, 3rd field a Smi).
+	 If it can be interpreted as a behavior, answers if instSpec matches the format, else answers false."
+	<inline: true>
+	^ objectMemory maybeMethodClassOf: methodObj seemsToBeInstantiating: format
 ]
 
 { #category : #initialization }

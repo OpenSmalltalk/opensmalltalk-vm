@@ -1571,6 +1571,238 @@ CogObjectRepresentationForSpur >> genPrimitiveSize [
 	^CompletePrimitive
 ]
 
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStringReplace [
+	"replaceFrom: start to: stop with: replacement startingAt: repStart. 
+	
+	The primitive in the JIT tries to deal with two pathological cases, copy of arrays and byteStrings,
+	which often copies only a dozen of fields and where switching to the C runtime cost a lot.
+	
+	Based on heuristics on the method class, I generate a quick array path (typically for Array),
+	a quick byteString path (typically for ByteString, ByteArray and LargeInteger) or no quick 
+	path at all (Typically for Bitmap).
+	
+	The many tests to ensure that the primitive won't fail are not super optimised (multiple reloading
+	or stack arguments in registers) but this is still good enough and worth it since we're avoiding 
+	the Smalltalk to C stack switch. The tight copying loops are optimised. 
+	
+	It is possible to build a bigger version with the 2 different paths but I (Clement) believe this 
+	is too big machine code wise to be worth it."
+	
+	|arrayReg startReg stopReg replReg repStartReg jumpNotSmi1 jumpNotSmi2 jumpNotSmi3 jumpImm jumpEmpty jumpImmutable jumpOutOfBounds1 jumpOutOfBounds2 jumpOutOfBounds3 jumpOutOfBounds4 jumpIncorrectFormat1 jumpIncorrectFormat2 jumpIncorrectFormat3 jumpIncorrectFormat4 result jmpDestYoung jmpAlreadyRemembered instr jumpFinished adjust|
+	
+	<var: #jumpImm type: #'AbstractInstruction *'>
+	<var: #jumpEmpty type: #'AbstractInstruction *'>
+	<var: #jumpFinished type: #'AbstractInstruction *'>
+	<var: #jumpNotSmi1 type: #'AbstractInstruction *'>
+	<var: #jumpNotSmi2 type: #'AbstractInstruction *'>
+	<var: #jumpNotSmi3 type: #'AbstractInstruction *'>
+	<var: #jmpDestYoung type: #'AbstractInstruction *'>
+	<var: #jumpImmutable type: #'AbstractInstruction *'>
+	<var: #jumpOutOfBounds1 type: #'AbstractInstruction *'>
+	<var: #jumpOutOfBounds2 type: #'AbstractInstruction *'>
+	<var: #jumpOutOfBounds3 type: #'AbstractInstruction *'>
+	<var: #jumpOutOfBounds4 type: #'AbstractInstruction *'>
+	<var: #jumpIncorrectFormat1 type: #'AbstractInstruction *'>
+	<var: #jumpIncorrectFormat2 type: #'AbstractInstruction *'>
+	<var: #jumpIncorrectFormat3 type: #'AbstractInstruction *'>
+	<var: #jumpIncorrectFormat4 type: #'AbstractInstruction *'>
+	<var: #jmpAlreadyRemembered type: #'AbstractInstruction *'>
+	
+	"Can I generate a quick path for this method ?"
+	((cogit seemsToBeInstantiating: objectMemory arrayFormat)
+		or: [cogit seemsToBeInstantiating: objectMemory firstByteFormat]) ifFalse: [^UnimplementedPrimitive].
+	
+	"I redefine those name to ease program comprehension"
+	arrayReg := ReceiverResultReg.
+	startReg := Arg0Reg.
+	stopReg := Arg1Reg.
+	replReg := ClassReg.
+	repStartReg := SendNumArgsReg.
+	
+	"Load arguments in reg"
+	cogit genStackArgAt: 0 into: repStartReg.
+	cogit genStackArgAt: 1 into: replReg.
+	cogit genStackArgAt: 2 into: stopReg.
+	cogit genStackArgAt: 3 into: startReg.
+
+	"start,stop,repStart Smis or fail the primitive"
+	jumpNotSmi1 := self genJumpNotSmallInteger: repStartReg scratchReg: TempReg.
+	jumpNotSmi2 := self genJumpNotSmallInteger: stopReg scratchReg: TempReg.
+	jumpNotSmi3 := self genJumpNotSmallInteger: startReg scratchReg: TempReg.
+	"repl non immediate or fail the primitive"
+	jumpImm := self genJumpImmediate: replReg.
+	
+	"if start>stop primitive success"
+	cogit CmpR: startReg R: stopReg.
+	jumpEmpty := cogit JumpLess: 0.
+	
+	"If receiver immutable fail the primitive "
+	self
+		cppIf: IMMUTABILITY
+		ifTrue: [jumpImmutable := self genJumpImmutable: ReceiverResultReg scratchReg: TempReg].
+		
+	"0 >= start, fail"
+	cogit CmpCq: (objectMemory integerObjectOf: 0) R: startReg.
+	jumpOutOfBounds1 := cogit JumpLess: 0.
+	
+	"0 >= replStart, fail"
+	cogit CmpCq: (objectMemory integerObjectOf: 0) R: repStartReg.
+	jumpOutOfBounds2 := cogit JumpLess: 0.
+
+	"--- Pointer object version ---"
+	(cogit seemsToBeInstantiating: objectMemory arrayFormat) ifTrue:
+		["Are they both array format ?"
+		self genGetFormatOf: arrayReg into: TempReg.
+		self genGetFormatOf: replReg into: startReg.
+		cogit CmpCq: objectMemory arrayFormat R: startReg.
+		jumpIncorrectFormat1 := cogit JumpNonZero: 0.
+		cogit CmpCq: objectMemory arrayFormat R: TempReg.
+		jumpIncorrectFormat2 := cogit JumpNonZero: 0.
+	
+		"Both objects are arrays,"
+		self genGetNumSlotsOf: arrayReg into: TempReg.
+		self genConvertSmallIntegerToIntegerInReg: stopReg.
+	
+		"arr size < stop"
+		cogit CmpR: TempReg R: stopReg.
+		jumpOutOfBounds3 := cogit JumpGreater: 0.
+	
+		"rep size < repStart - start + stop"
+		self genGetNumSlotsOf: replReg into: TempReg.
+		cogit genStackArgAt: 3 into: startReg.
+		self genConvertSmallIntegerToIntegerInReg: startReg.
+		self genConvertSmallIntegerToIntegerInReg: repStartReg.
+		cogit SubR: startReg R: stopReg.
+		cogit AddR: repStartReg R: stopReg.
+		"stopReg: stop - start + repStart"
+		cogit CmpR: TempReg R: stopReg.
+		jumpOutOfBounds4 := cogit JumpGreater: 0.
+	
+		"Everything in bounds"
+		"PossibleRemembered object"
+		cogit MoveCw: objectMemory storeCheckBoundary R: TempReg.
+		cogit CmpR: TempReg R: arrayReg.
+		jmpDestYoung := cogit JumpBelow: 0.
+		self checkRememberedInTrampoline ifFalse: 
+			[jmpAlreadyRemembered := self genCheckRememberedBitOf: arrayReg scratch: TempReg].
+		self callStoreCheckTrampoline.
+		jmpDestYoung jmpTarget: cogit Label.
+		self checkRememberedInTrampoline ifFalse: 
+			[jmpAlreadyRemembered jmpTarget: cogit Label].
+	
+		"Copy the array"
+		cogit genStackArgAt: 2 into: stopReg.
+		self genConvertSmallIntegerToIntegerInReg: stopReg.
+		"shift by baseHeaderSize and then move from 1 relative to zero relative"
+		adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. 
+		adjust ~= 0 ifTrue: 
+			[ cogit AddCq: adjust R: startReg. 
+			  cogit AddCq: adjust R: stopReg. 
+			  cogit AddCq: adjust R: repStartReg. ].
+	
+		instr := cogit CmpR: startReg R: stopReg.
+		jumpFinished := cogit JumpBelow: 0.
+		cogit MoveXwr: repStartReg R: replReg R: TempReg.
+		cogit MoveR: TempReg Xwr: startReg R: arrayReg.
+		cogit AddCq: 1 R: startReg.
+		cogit AddCq: 1 R: repStartReg.
+		cogit Jump: instr.
+		jumpFinished jmpTarget: (jumpEmpty jmpTarget: cogit genPrimReturn).
+	
+		"CANNOT REACH by falling though"
+	
+		jumpIncorrectFormat1 jmpTarget: (jumpIncorrectFormat2 jmpTarget: cogit Label)].
+	
+	"--- Byte object version ---"
+	(cogit seemsToBeInstantiating: objectMemory firstByteFormat) ifTrue:
+		["Are they both byte array format ? CompiledMethod excluded"
+		self genGetFormatOf: arrayReg into: TempReg.
+		self genGetFormatOf: replReg into: startReg.
+		cogit CmpCq: objectMemory firstByteFormat R: startReg.
+		jumpIncorrectFormat1 := cogit JumpLess: 0.
+		cogit CmpCq: objectMemory firstCompiledMethodFormat R: startReg.
+		jumpIncorrectFormat2 := cogit JumpGreaterOrEqual: 0.
+		cogit CmpCq: objectMemory firstByteFormat R: TempReg.
+		jumpIncorrectFormat3 := cogit JumpLess: 0.
+		cogit CmpCq: objectMemory firstCompiledMethodFormat R: TempReg.
+		jumpIncorrectFormat4 := cogit JumpGreaterOrEqual: 0.
+		
+		"Both objects are byte arrays"
+		self genGetNumSlotsOf: arrayReg into: startReg.
+		(cogit LogicalShiftLeftCq: objectMemory shiftForWord R: startReg).
+		cogit AndCq: objectMemory wordSize - 1 R: TempReg R: TempReg.
+		cogit SubR: TempReg R: startReg.
+		self genConvertSmallIntegerToIntegerInReg: stopReg.
+	
+		"arr size < stop"
+		cogit CmpR: startReg R: stopReg.
+		jumpOutOfBounds3 := cogit JumpGreater: 0.
+	
+		"rep size < repStart - start + stop"
+		cogit MoveR: startReg R: TempReg. "TempReg holds repl format"
+		cogit genStackArgAt: 3 into: startReg.
+		self genConvertSmallIntegerToIntegerInReg: startReg.
+		self genConvertSmallIntegerToIntegerInReg: repStartReg.
+		cogit SubR: startReg R: stopReg.
+		cogit AddR: repStartReg R: stopReg.
+		
+		self genGetNumSlotsOf: replReg into: startReg.
+		(cogit LogicalShiftLeftCq: objectMemory shiftForWord R: startReg).
+		cogit AndCq: objectMemory wordSize - 1 R: TempReg R: TempReg.
+		cogit SubR: TempReg R: startReg.
+		
+		"stopReg: stop - start + repStart"
+		cogit CmpR: startReg R: stopReg.
+		jumpOutOfBounds4 := cogit JumpGreater: 0.
+	
+		"Everything in bounds"
+		"Copy the bytes"
+		cogit genStackArgAt: 3 into: startReg.
+		self genConvertSmallIntegerToIntegerInReg: startReg.
+		cogit genStackArgAt: 2 into: stopReg.
+		self genConvertSmallIntegerToIntegerInReg: stopReg.
+		"shift by baseHeaderSize and then move from 1 relative to zero relative"
+		adjust := objectMemory baseHeaderSize - 1.
+		adjust ~= 0 ifTrue: 
+			[ cogit AddCq: adjust R: startReg. 
+			  cogit AddCq: adjust R: stopReg. 
+			  cogit AddCq: adjust R: repStartReg. ].
+	
+		instr := cogit CmpR: startReg R: stopReg.
+		jumpFinished := cogit JumpBelow: 0.
+		cogit MoveXbr: repStartReg R: replReg R: TempReg.
+		cogit MoveR: TempReg Xbr: startReg R: arrayReg.
+		cogit AddCq: 1 R: startReg.
+		cogit AddCq: 1 R: repStartReg.
+		cogit Jump: instr.
+		jumpFinished jmpTarget: (jumpEmpty jmpTarget: cogit genPrimReturn).
+	
+		"CANNOT REACH by falling though"
+	
+		jumpIncorrectFormat4 
+			jmpTarget: (jumpIncorrectFormat3 
+				jmpTarget: (jumpIncorrectFormat2 
+					jmpTarget: (jumpIncorrectFormat1 jmpTarget: cogit Label)))].
+
+	(result := cogit compileInterpreterPrimitive) < 0 ifTrue: [^result].
+	
+	jumpImm 
+		jmpTarget: (jumpNotSmi1
+				jmpTarget: (jumpNotSmi2
+						jmpTarget: (jumpNotSmi3 jmpTarget: cogit Label))).
+	jumpOutOfBounds1 
+		jmpTarget: (jumpOutOfBounds2 
+			jmpTarget: (jumpOutOfBounds3 
+				jmpTarget: (jumpOutOfBounds4 
+					jmpTarget: jumpImm getJmpTarget))).
+	self
+		cppIf: IMMUTABILITY
+		ifTrue: [jumpImmutable jmpTarget: jumpImm getJmpTarget].
+
+	^ CompletePrimitive
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genRemoveCharacterTagsInScratchReg: scratchReg [
 	cogit SubCq: objectMemory characterTag R: scratchReg

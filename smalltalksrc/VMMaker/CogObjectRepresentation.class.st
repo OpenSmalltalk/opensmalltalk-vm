@@ -1354,6 +1354,12 @@ CogObjectRepresentation >> genPrimitiveStringAtPut [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStringReplace [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentation >> genPrimitiveSubtract [
 	| jumpNotSI jumpOvfl |
 	<var: #jumpNotSI type: #'AbstractInstruction *'>

@@ -11345,8 +11345,9 @@ StackToRegisterMappingCogit >> genPrimReturn [
 	 method as do genPrimitiveClosureValue and genPrimitivePerform) take only
 	 register arguments, there is nothing to do."
 	<inline: true>
-	self assert: methodOrBlockNumArgs <= self numRegArgs.
-	^self RetN: 0
+	^methodOrBlockNumArgs <= self numRegArgs
+		ifTrue: [self RetN: 0]
+		ifFalse: [super genPrimReturn]
 ]
 
 { #category : #'primitive generators' }
