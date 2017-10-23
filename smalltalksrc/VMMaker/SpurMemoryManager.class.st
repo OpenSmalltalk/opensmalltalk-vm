@@ -8398,6 +8398,24 @@ SpurMemoryManager >> maxSmallInteger [
 	self subclassResponsibility
 ]
 
+{ #category : #'object testing' }
+SpurMemoryManager >> maybeMethodClassOf: methodObj seemsToBeInstantiating: format [
+	"Answers if the code is installed in a class instantiating objects with the format. Used in primitive 
+	 generation to make a quick path based on where the method is installed. This method cannot
+	 be used as a guarantee as there can be false positive, it's just a heuristic.
+	 Tries to interpret the last literal of the method as a behavior (more than 3 fields, 3rd field a Smi).
+	 If it can be interpreted as a behavior, answers if instSpec matches the format, else answers false."
+	<api>
+	| maybeClassObj maybeFormat instSpec|
+	maybeClassObj := coInterpreter methodClassOf: methodObj.
+	(self isPointersNonImm: maybeClassObj) ifFalse: [^false].
+	(self numSlotsOfAny: maybeClassObj) > InstanceSpecificationIndex ifFalse: [^false].
+	maybeFormat := self fetchPointer: InstanceSpecificationIndex ofObject: maybeClassObj.
+	(self isIntegerObject: maybeFormat) ifFalse: [^false].
+	instSpec := self instSpecOfClassFormat: (self integerValueOf: maybeFormat).
+	^ instSpec = format
+]
+
 { #category : #'interpreter access' }
 SpurMemoryManager >> maybeSplObj: index [
 	<api>
