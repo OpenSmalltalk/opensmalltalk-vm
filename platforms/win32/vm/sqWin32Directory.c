@@ -381,6 +381,7 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
   FILETIME fileTime;
   SYSTEMTIME sysTime;
   sqInt sz, fsz;
+  char *fullName;
 #ifdef PharoVM
   HANDLE findHandle;
   sqInt i;
@@ -436,16 +437,13 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
     return BAD_PATH;
   }
 
-  /* Ensure trailing delimiter and add filename. */
-  if(win32Path[win32PathLength-1] != L'\\') win32PathLength++;
-  fsz = MultiByteToWideChar(CP_UTF8, 0, nameString, nameStringLength, NULL, 0);
-  sz = win32PathLength;
-  win32PathLength += fsz;
-  if(win32PathLength >= 32767) FAIL();
-  REALLOC_WIN32_PATH(win32Path, win32PathLength);
-  win32Path[win32PathLength-fsz-1] = L'\\';
-  MultiByteToWideChar(CP_UTF8, 0, nameString, nameStringLength, win32Path+sz, fsz); 
-  win32Path[win32PathLength] = 0; // Not needed. See REALLOC_WIN32_PATH.
+  fullName = alloca(pathLength + nameStringLength + 1);
+  strcpy(fullName, pathString);
+  if(pathString[pathLength] != '\\') {
+	  strcat(fullName, "\\");
+  }
+  strcat(fullName, nameString);
+  ALLOC_WIN32_PATH(win32Path, fullName, pathLength + nameStringLength + 1);
 
   if(!GetFileAttributesExW(win32Path, 0, &winAttrs)) {
 #ifdef PharoVM
