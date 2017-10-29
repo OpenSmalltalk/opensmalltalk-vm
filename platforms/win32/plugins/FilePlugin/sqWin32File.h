@@ -51,14 +51,16 @@
 #define REALLOC_WIN32_PATH(in_out_wide_path, in_out_size) { \
   int sz = wcslen(in_out_wide_path); \
   WCHAR *tmp = in_out_wide_path; \
-  in_out_wide_path = (WCHAR*)alloca((in_out_size+1) * sizeof(WCHAR)); \
+  if(in_out_size >= 32767) FAIL(); \
   if(in_out_size < sz) tmp[in_out_size] = 0; \
   if(in_out_size >= MAX_PATH-12 && sz < MAX_PATH-12) { \
+    in_out_wide_path = (WCHAR*)alloca((in_out_size+4+1) * sizeof(WCHAR)); \
     in_out_wide_path[0] = L'\\'; in_out_wide_path[1] = L'\\'; \
     in_out_wide_path[2] = L'?'; in_out_wide_path[3] = L'\\'; \
     wcscpy(in_out_wide_path+4, tmp); \
     in_out_size += 4; \
   } else { \
+    in_out_wide_path = (WCHAR*)alloca((in_out_size+1) * sizeof(WCHAR)); \
     wcscpy(in_out_wide_path, tmp); \
   } \
   in_out_wide_path[in_out_size] = 0; \

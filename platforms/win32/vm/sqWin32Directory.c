@@ -441,10 +441,9 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
   fsz = MultiByteToWideChar(CP_UTF8, 0, nameString, nameStringLength, NULL, 0);
   sz = win32PathLength;
   win32PathLength += fsz;
-  if(win32PathLength >= 32767) FAIL();
   REALLOC_WIN32_PATH(win32Path, win32PathLength);
   win32Path[win32PathLength-fsz-1] = L'\\';
-  MultiByteToWideChar(CP_UTF8, 0, nameString, nameStringLength, win32Path+sz, fsz); 
+  MultiByteToWideChar(CP_UTF8, 0, nameString, nameStringLength, win32Path+win32PathLength-fsz, fsz); 
   win32Path[win32PathLength] = 0; // Not needed. See REALLOC_WIN32_PATH.
 
   if(!GetFileAttributesExW(win32Path, 0, &winAttrs)) {
