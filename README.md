@@ -1,6 +1,6 @@
 The Cog VM source tree
 ---------------------
-This is the README for the Git branch of Open Smalltalk VM demonstrating a MSVC 2017 15.2 x64 code generation bug:
+This is the README for the Git branch of Open Smalltalk VM demonstrating a MSVC 2017 15.2 x64 macro substitution bug:
 	https://github.com/OpenSmalltalk/opensmalltalk-vm/tree/MSVCCodeGenerationBug
 
 
@@ -13,11 +13,17 @@ As indicated in the bug report, here is how to reproduce:
   3) select SqueakCogSpur64 project and generate code for Debug X64
   4) inspect generated machine code
 
+This can also be reproduced with version MSVC 2017 15.4.1
+
 The code generated for spur64src/vm/cointerp.c line 22118:
 
     if ((longAt((GIV(specialObjectsOop) + BaseHeaderSize) + (((sqInt)((usqInt)(ClassArray) << (shiftForWord())))))) != ((assert(((ClassArrayCompactIndex >= 1) && (ClassArrayCompactIndex <= (classTablePageSize())))),
+    /* begin fetchPointer:ofObject: */
+    longAt((GIV(classTableFirstPage) + BaseHeaderSize) + (((sqInt)((usqInt)(ClassArrayCompactIndex) << (shiftForWord())))))))) {
+        invalidCompactClassError("Array");
+    }
 
-is incorrect, it misses the offset corresponding to `ClassArray<<shiftForWord`:
+is incorrect, it misses the offset `BaseHeaderSize+(ClassArrayCompactIndex<<shiftForWord())` which should be added to pointer `classTableFirstPage`:
 
     00007FF7E55A254E mov rcx,qword ptr [rcx]
     
@@ -42,7 +48,33 @@ With more context, the incorrect code is:
     00007FF7E55A2551 cmp qword ptr [rax+40h],rcx
     00007FF7E55A2555 je $l2+2A2h (07FF7E55A2563h)
 
-When isolating the few lines of codes and macros into a dedicated project build.msvc/MSVCCodeGenerationBug/MSVCCodeGenerationBug.sln the code generation is correct:
+By using /P compiler option, we can see in generated `cointerp.i` that it's a problem of pre-processed code which lost the offset:
+
+    if (((*(sqInt *)((specialObjectsOop + 8) + (((sqInt)((usqInt)(7) << (3))))))) != ((((((51 >= 1) && (51 <= (classTablePageSize()))))||(warning("((ClassArrayCompactIndex >= 1) && (ClassArrayCompactIndex <= (classTablePageSize())))" " " "22118"),0)),
+    
+    (*(sqInt *)(classTableFirstPage))))) {
+        invalidCompactClassError("Array");
+    }
+
+When isolating the few lines of codes and macros into a dedicated project build.msvc/MSVCCodeGenerationBug/MSVCCodeGenerationBug.sln
+
+    if ((longAt((GIV(specialObjectsOop) + BaseHeaderSize) + ((((usqInt)(ClassArray) << (shiftForWord())))))) != ((
+    /* begin fetchPointer:ofObject: */
+    longAt((GIV(classTableFirstPage) + BaseHeaderSize) + ((((usqInt)(ClassArrayCompactIndex) << (shiftForWord())))))))) {
+        printf("Should not get here\n");
+        return 1;
+    }
+
+the preprocessed code is correct:
+
+    if (((*(sqInt *)((specialObjectsOop + 8) + ((((usqInt)(7) << (3))))))) != ((
+    
+    (*(sqInt *)((classTableFirstPage + 8) + ((((usqInt)(51) << (3))))))))) {
+        printf("Should not get here\n");
+        return 1;
+    }
+
+and the generated code is correct:
 
     00007FF75C7D188E mov rax,qword ptr [specialObjectsOop (07FF75C7DC160h)]
     00007FF75C7D1895 mov rcx,qword ptr [classTableFirstPage (07FF75C7DC168h)]
