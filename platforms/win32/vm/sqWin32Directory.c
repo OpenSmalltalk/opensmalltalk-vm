@@ -480,7 +480,7 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
   }
 
 #ifdef PharoVM
-  read_permissions(posixPermissions, win32Path, win32PathLength, winAttrs.dwFileAttributes);
+  read_permissions(posixPermissions, win32Path, wcslen(win32Path), winAttrs.dwFileAttributes);
 #endif
   return ENTRY_FOUND;
 }
