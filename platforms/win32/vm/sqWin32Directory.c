@@ -206,10 +206,11 @@ sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
   static WIN32_FIND_DATAW findData; /* cached find data */
   static HANDLE findHandle = 0; /* cached find handle */
   static sqInt lastIndex = 0; /* cached last index */
-  static WCHAR *lastString = NULL; /* cached last path */
+  static char *lastString = NULL; /* cached last path */
   static sqInt lastStringLength = 0; /* cached length of last path */
   WCHAR *win32Path = NULL;
-  sqInt win32PathLength = 0;
+  char *pattern;
+  sqInt patternLength;
   FILETIME fileTime;
   SYSTEMTIME sysTime;
   sqInt i, sz;
@@ -226,18 +227,14 @@ sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
   *isSymlink        = 0;
 #endif
 
-  /* convert the path name into a null-terminated C string */
-  ALLOC_WIN32_PATH(win32Path, pathString, pathLength);
-  win32PathLength = wcslen(win32Path);
-
   /* check for a dir cache hit (but NEVER on the top level) */
-  if(win32PathLength > 0 && 
-     lastStringLength == win32PathLength && 
+  if(pathLength > 0 && 
+     lastStringLength == pathLength && 
      lastIndex + 1 == index) {
-    for(i=0;i<win32PathLength; i++) {
-      if(lastString[i] != win32Path[i]) break;
+    for(i=0;i<pathLength; i++) {
+      if(lastString[i] != pathString[i]) break;
     }
-    if(i == win32PathLength) {
+    if(i == pathLength) {
       lastIndex = index;
       index = 2;
       goto dirCacheHit;
@@ -252,7 +249,7 @@ sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
 
 #if !defined(_WIN32_WCE)
   /* Like Unix, Windows CE does not have drive letters */
-  if(win32PathLength == 0) { 
+  if(pathLength == 0) { 
     /* we're at the top of the file system --- return possible drives */
     int mask;
 
@@ -279,29 +276,34 @@ sqInt dir_Lookup(char *pathString, sqInt pathLength, sqInt index,
 
   /* cache the path */
   if(lastString) free(lastString);
-  lastString = (WCHAR*)calloc(win32PathLength+1, sizeof(WCHAR));
-//  wcscpy_s(lastString, win32PathLength, win32Path);
-  wcscpy(lastString, win32Path);
-  lastString[win32PathLength] = 0;
-  lastStringLength = win32PathLength;
+  lastString = (char*)calloc(pathLength, sizeof(char));
+  memcpy(lastString,pathString,pathLength);
+  lastStringLength = pathLength;
 
+  /* Ensure trailing delimiter and add wildcard pattern. */
+  patternLength = pathLength;
+  if(pathString[pathLength-1] != '\\') {
+    patternLength += 2;
+  } else {
+    patternLength++;
+  }
+  pattern = (char*)calloc(patternLength, sizeof(char));
+  memcpy(pattern,pathString,pathLength);
+  if(pathString[pathLength-1] != '\\') {
+    pattern[patternLength-2] = '\\';
+    pattern[patternLength-1] = '*';
+  } else {
+    pattern[patternLength-1] = '*';
+  }
+  
+  /* convert the path name into a null-terminated C string */
+  ALLOC_WIN32_PATH(win32Path, pattern, patternLength);
 
   if(hasCaseSensitiveDuplicate(win32Path)) {
     lastStringLength = 0;
     return BAD_PATH;
   }
-
-  /* Ensure trailing delimiter and add wildcard pattern. */
-  if(win32Path[win32PathLength-1] != L'\\') {
-    win32PathLength += 2;
-  } else {
-    win32PathLength++;
-  };
-  REALLOC_WIN32_PATH(win32Path, win32PathLength);
-  win32Path[win32PathLength-1-1] = L'\\';
-  win32Path[win32PathLength-1] = L'*';
-  win32Path[win32PathLength] = 0; // Not needed. See REALLOC_WIN32_PATH.
-
+  
   /* and go looking for entries */
   findHandle = FindFirstFileW(win32Path,&findData);
   if(findHandle == INVALID_HANDLE_VALUE) {
@@ -377,10 +379,11 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
 
   WIN32_FILE_ATTRIBUTE_DATA winAttrs;
   WCHAR *win32Path = NULL;
-  sqInt win32PathLength = 0;
   FILETIME fileTime;
   SYSTEMTIME sysTime;
   sqInt sz, fsz;
+  char *fullPath;
+  sqInt fullPathLength;
 #ifdef PharoVM
   HANDLE findHandle;
   sqInt i;
@@ -398,13 +401,10 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
   *isSymlink        = 0;
 #endif
 
-  /* convert the path name into a null-terminated C string */
-  ALLOC_WIN32_PATH(win32Path, pathString, pathLength);
-  win32PathLength = wcslen(win32Path);
 
 #if !defined(_WIN32_WCE)
   /* Like Unix, Windows CE does not have drive letters */
-  if (win32PathLength == 0) { 
+  if (pathLength == 0) { 
     /* we're at the top of the file system --- return possible drives */
     char drive = toupper(nameString[0]);
     int mask;
@@ -437,16 +437,17 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
   }
 
   /* Ensure trailing delimiter and add filename. */
-  if(win32Path[win32PathLength-1] != L'\\') win32PathLength++;
-  fsz = MultiByteToWideChar(CP_UTF8, 0, nameString, nameStringLength, NULL, 0);
-  sz = win32PathLength;
-  win32PathLength += fsz;
-  if(win32PathLength >= 32767) FAIL();
-  REALLOC_WIN32_PATH(win32Path, win32PathLength);
-  win32Path[win32PathLength-fsz-1] = L'\\';
-  MultiByteToWideChar(CP_UTF8, 0, nameString, nameStringLength, win32Path+sz, fsz); 
-  win32Path[win32PathLength] = 0; // Not needed. See REALLOC_WIN32_PATH.
-
+  fullPathLength = pathLength;
+  if(pathString[pathLength-1] != '\\') fullPathLength++;
+  fullPathLength += nameStringLength;
+  fullPath=(char *)calloc(fullPathLength,sizeof(char));
+  memcpy(fullPath,pathString,pathLength);
+  if(pathString[pathLength-1] != '\\') fullPath[pathLength]='\\';
+  memcpy(fullPath+fullPathLength-nameStringLength,nameString,nameStringLength);
+  
+  /* convert the path name into a null-terminated C string */
+  ALLOC_WIN32_PATH(win32Path, fullPath, fullPathLength);
+  
   if(!GetFileAttributesExW(win32Path, 0, &winAttrs)) {
 #ifdef PharoVM
     if(GetLastError() == ERROR_SHARING_VIOLATION) {
@@ -479,7 +480,7 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathLength, char* nameString, sqIn
   }
 
 #ifdef PharoVM
-  read_permissions(posixPermissions, win32Path, win32PathLength, winAttrs.dwFileAttributes);
+  read_permissions(posixPermissions, win32Path, wcslen(win32Path), winAttrs.dwFileAttributes);
 #endif
   return ENTRY_FOUND;
 }
