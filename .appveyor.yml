@@ -15,7 +15,7 @@ environment:
       MINGW_ARCH: i686
     - FLAVOR: squeak.cog.spur.lowcode
       ARCH: win32x86
-      CYG_ROOT: C:\cygiwn
+      CYG_ROOT: C:\cygwin
       CYG_SETUP: setup-x86.exe
       MINGW_ARCH: i686
     - FLAVOR: squeak.cog.v3
