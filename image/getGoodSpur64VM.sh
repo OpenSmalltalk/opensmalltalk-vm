@@ -7,12 +7,12 @@ set +v
 if [ "$1" = -vm -a -n "$2" -a -x "`which "$2"`" ]; then
 	VM="$2"
 else
-	echo checking for latest 32-bit VM on bintray...
+	echo checking for latest 64-bit VM on bintray...
 	case $OS in
 	Darwin) 
-		LATESTVM="`curl -s -L "https://dl.bintray.com/opensmalltalk/vm/" | grep cog_macos32x86_squeak.cog.spur_ | tail -n 1 | sed 's/^.*">\(.*\)<.a><.pre>/\1/'`"
+		LATESTVM="`curl -s -L "https://dl.bintray.com/opensmalltalk/vm/" | grep cog_macos64x64_squeak.cog.spur_ | tail -n 1 | sed 's/^.*">\(.*\)<.a><.pre>/\1/'`"
 		# echo $LATESTVM
-		TAG="`echo $LATESTVM | sed 's/.*_\(.*\).tar.gz/\1/'`"
+		TAG="`echo $LATESTVM | sed 's/.*_\(.*\).tar.gz/\1-64/'`"
 		# echo $TAG
 		VM=Squeak.$TAG.app
 		if [ ! -d $VM ]; then
@@ -24,9 +24,9 @@ else
 		fi
 		VM=$VM/Contents/MacOS/Squeak;;
 	Linux) # This needs to be split by $CPU to work on RPi also
-		LATESTVM="`curl -s -L "https://dl.bintray.com/opensmalltalk/vm/" | grep -v itimer | grep cog_linux32x86_squeak.cog.spur_ | tail -n 1 | sed 's/^.*">\(.*\)<.a><.pre>/\1/'`"
+		LATESTVM="`curl -s -L "https://dl.bintray.com/opensmalltalk/vm/" | grep -v itimer | grep cog_linux64x64_squeak.cog.spur_ | tail -n 1 | sed 's/^.*">\(.*\)<.a><.pre>/\1/'`"
 		#echo $LATESTVM
-		TAG="`echo $LATESTVM | sed 's/.*_\(.*\).tar.gz/\1/'`"
+		TAG="`echo $LATESTVM | sed 's/.*_\(.*\).tar.gz/\1-64/'`"
 		#echo $TAG
 		VM=sqlinux.$TAG
 		if [ ! -d $VM ]; then
@@ -40,4 +40,4 @@ else
 	*)	echo do not know how to download a VM for your system 1>&2; exit 1
 	esac
 fi
-echo latest 32-bit VM on $OS is $VM
+echo latest 64-bit VM on $OS is $VM
