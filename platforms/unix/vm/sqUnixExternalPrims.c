@@ -61,7 +61,11 @@
  
 #include <sys/param.h>
 #include <sys/stat.h>
-#include <sys/errno.h>
+#ifdef __OpenBSD__
+#   include <errno.h>
+#else
+#   include <sys/errno.h>
+#endif
 
 /* get a value for RTLD_NOW, with increasing levels of desperation... */
 
