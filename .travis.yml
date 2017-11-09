@@ -39,6 +39,10 @@ matrix:
         branch: Cog
         repo: OpenSmalltalk/opensmalltalk-vm
   - os: linux
+    env: ARCH="linux64x64" FLAVOR="pharo.cog.spur.lowcode" HEARTBEAT="threaded"
+  - os: linux
+    env: ARCH="linux64x64" FLAVOR="pharo.cog.spur.lowcode" HEARTBEAT="itimer"
+  - os: linux
     env: ARCH="linux32x86" FLAVOR="newspeak.cog.spur"
   - os: linux
     env: ARCH="linux32x86" FLAVOR="newspeak.stack.spur"
@@ -72,6 +76,10 @@ matrix:
       on:
         branch: Cog
         repo: OpenSmalltalk/opensmalltalk-vm
+  - os: linux
+    env: ARCH="linux32x86" FLAVOR="pharo.cog.spur.lowcode" HEARTBEAT="threaded"
+  - os: linux
+    env: ARCH="linux32x86" FLAVOR="pharo.cog.spur.lowcode" HEARTBEAT="itimer"
   - os: osx
     env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
   - os: osx
