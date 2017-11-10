@@ -92,7 +92,7 @@ In the case of weak arrays this is simple.  The scavenger refuses to scavenge th
 Ephemeron Processing
 The case of ephemerons is a little more complicated because an ephemeron's key should survive.  The scavenger is cyclical.  It scavenges the remembered set, which may copy and forward surviving objects in past and/or eden spaces to future space.  It then scavenges those promoted objects in future space until no more are promoted, which may in turn remember more objects.  The cycles continue until no more objects get promoted to future space and no more objects get remembered.  At this point all surviving objecta are in futureSpace.
 
-So if the scavenger does not scan ephemerons in the remembered set or in future space until the scavenger finishes cycling, it can detect ephemerons whose keys are about to die because these will be unforwarded objects in eden and/or past space.  Ephemerons encountered in the remembered set are either processed like ordinary objects if their keys have been promoted to futureSpace, or are moved to the front of the rememberedSet (because, dear reader, it is a sequence) if their keys have not been promoted.  Ephemerons encountered in scavengeReferentsOf: are either scanned like normal objects if their keys have been promoted, or added to the ephemeronList, organized identically to the weakList, if their keys are yet to be promoted.  Since references from other ephemerons with surviving keys to ephemeron keys can and should prevent the ephemerons whose keys they are from firing the scavenger does not fire ephemerons unless all unscavenged ephemerons have unscavenged keys.  So the unscavenged ephemerons (the will be at the beginning of the remembered set and on the ephemeronList) are scanned and any that have promoted keys are scavenged.  But if no unscavenged ephemerons have surviving keys then all the unscavenged ephemerons are fired and then scavenged.  This in turn may remember more objects and promote more objects to future space, and encounter more unscavenged ephemerons.  So the scavenger continues until no more objects are remembered, no more objects are promoted to future space and no more unscavenged ephemerons exist.
+So if the scavenger does not scan ephemerons in the remembered set or in future space until the scavenger finishes cycling, it can detect ephemerons whose keys are about to die because these will be unforwarded objects in eden and/or past space.  Ephemerons encountered in the remembered set are either processed like ordinary objects if their keys have been promoted to futureSpace, or are moved to the front of the rememberedSet (because, dear reader, it is a sequence) if their keys have not been promoted.  Ephemerons encountered in scavengeReferentsOf: are either scanned like normal objects if their keys have been promoted, or added to the ephemeronList, organized identically to the weakList, if their keys are yet to be promoted.  Since references from other ephemerons with surviving keys to ephemeron keys can and should prevent the ephemerons whose keys they are from firing the scavenger does not fire ephemerons unless all unscavenged ephemerons have unscavenged keys.  So the unscavenged ephemerons (they will be at the beginning of the remembered set and on the ephemeronList) are scanned and any that have promoted keys are scavenged.  But if no unscavenged ephemerons have surviving keys then all the unscavenged ephemerons are fired and then scavenged.  This in turn may remember more objects and promote more objects to future space, and encounter more unscavenged ephemerons.  So the scavenger continues until no more objects are remembered, no more objects are promoted to future space and no more unscavenged ephemerons exist.
 "
 Class {
 	#name : #SpurGenerationScavenger,
@@ -117,6 +117,7 @@ Class {
 		'tenuringClassIndex',
 		'tenuringProportion',
 		'numRememberedEphemerons',
+		'scavengeLog',
 		'statSurvivorCount',
 		'statTenures'
 	],
@@ -130,8 +131,10 @@ Class {
 SpurGenerationScavenger class >> declareCVarsIn: aCCodeGenerator [
 	#(eden futureSpace pastSpace) do:
 		[:var| aCCodeGenerator var: var type: #SpurNewSpaceSpace].
-	aCCodeGenerator var: #rememberedSet type: #'sqInt *'.
-	aCCodeGenerator var: #tenuringProportion type: #double
+	aCCodeGenerator
+		var: #rememberedSet type: #'sqInt *';
+		var: #tenuringProportion type: #double;
+		var: #scavengeLog type: #'FILE *'
 ]
 
 { #category : #translation }
@@ -757,6 +760,51 @@ SpurGenerationScavenger >> isScavengeSurvivor: oop [
 	  or: [manager isInFutureSpace: target]
 ]
 
+{ #category : #logging }
+SpurGenerationScavenger >> logEndScavenge [
+	<inline: #always>
+	self log: '	survivor bytes: 0x%lx/%ld remembered objects: %ld tenured: %ld\n'
+		with: futureSurvivorStart - pastSpace start
+		with: futureSurvivorStart - pastSpace start
+		with: rememberedSetSize
+		with: statTenures;
+		flushLog
+]
+
+{ #category : #logging }
+SpurGenerationScavenger >> logStartScavenge [
+	<inline: #always>
+	self log: 'scavenge %ld eden bytes: 0x%lx/%ld past bytes: 0x%lx/%ld\n\tremembered set: %ld redzone: %ld size: %ld\n'
+		with: manager statScavenges
+		with: manager freeStart - eden start
+		with: manager freeStart - eden start
+		with: manager pastSpaceStart - pastSpace start
+		with: manager pastSpaceStart - pastSpace start
+		with: rememberedSetSize
+		with: rememberedSetRedZone
+		with: rememberedSetLimit
+]
+
+{ #category : #logging }
+SpurGenerationScavenger >> logStream [
+	<inline: #always>
+	^scavengeLog
+]
+
+{ #category : #logging }
+SpurGenerationScavenger >> logTenuringPolicy [
+	<inline: #always>
+	| policyNames |
+	<var: 'policyNames' declareC: 'static char *policyNames[] = {"", "by age", "by class", "to shrink rt", "don''t tenure", "mark on tenure"}'>
+	self cCode: []
+		inSmalltalk: [policyNames := CLiteralArray on: #('' 'by age' 'by class' 'to shrink rt' 'don''t tenure' 'mark on tenure')].
+	self log: (tenureCriterion = TenureToShrinkRT ifFalse: ['	tenure below 0x%lx/%ld %s\n'] ifTrue: ['	tenure below 0x%lx/%ld %s refct %ld\n'])
+		with: ((tenureCriterion = TenureByAge and: [tenureThreshold > pastSpace start]) ifTrue: [tenureThreshold - pastSpace start] ifFalse: [0])
+		with: ((tenureCriterion = TenureByAge and: [tenureThreshold > pastSpace start]) ifTrue: [tenureThreshold - pastSpace start] ifFalse: [0])
+		with: (policyNames at: tenureCriterion)
+		with: refCountToShrinkRT
+]
+
 { #category : #accessing }
 SpurGenerationScavenger >> newSpaceCapacity [
 	<inline: false>
@@ -824,6 +872,12 @@ SpurGenerationScavenger >> noUnfiredEphemeronsAtEndOfRememberedSet [
 			[(self isScavengeSurvivor: (manager keyOfEphemeron: referrer)) ifFalse:
 				[^false]]].
 	^true
+]
+
+{ #category : #logging }
+SpurGenerationScavenger >> openScavengeLog [
+	<api>
+	scavengeLog := self f: 'scavenge.log' open: 'a+'
 ]
 
 { #category : #accessing }
@@ -1044,11 +1098,14 @@ SpurGenerationScavenger >> scavenge: tenuringCriterion [
 	 Answer the limit of pastSpace, to allow the memory manager to bounds check survivors."
 	statSurvivorCount := 0.
 	tenureCriterion := tenuringCriterion.
+	self logStartScavenge.
 	self strategizeToLimitRememberedTable.
+	self logTenuringPolicy.
 	self scavengeLoop.
 	self processWeaklings.
 	self computeTenuringThreshold.
 	self exchangeSurvivorSpaces.
+	self logEndScavenge.
 	^self initFutureSpaceStart
 ]
 

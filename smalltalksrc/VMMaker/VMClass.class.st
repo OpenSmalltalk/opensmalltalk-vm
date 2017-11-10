@@ -774,6 +774,18 @@ VMClass >> eassert: aBooleanExpressionOrBlock [
 			[AssertionFailure signal: 'Assertion failed']]
 ]
 
+{ #category : #'printf logging' }
+VMClass >> f: logFilename open: mode [
+	"Simulate a FILE stream by answering a transcript.
+	 Can be used with the log:* methods."
+	<doNotGenerate>
+	^true
+		ifTrue: [(TranscriptStream on: (String new: 100000))
+					openLabel: logFilename;
+					yourself]
+		ifFalse: [self coInterpreter transcript]
+]
+
 { #category : #'memory access' }
 VMClass >> fetchSingleFloatAtPointer: pointer into: aFloat [
 	"This gets implemented by Macros in C, where its types will also be checked.
@@ -793,6 +805,14 @@ VMClass >> floatAtPointer: pointer [
 VMClass >> floatAtPointer: pointer put: value [
 	<doNotGenerate>
 	self halt.
+]
+
+{ #category : #'printf logging' }
+VMClass >> flushLog [
+	"Log via printf-style format strings.  Subclasses must implement logStream to answer their log stream/file."
+	<inline: #always>
+	self logStream ifNotNil:
+		[self cCode: [self logStream fflush] inSmalltalk: [self logStream flush]]
 ]
 
 { #category : #'C library simulation' }
@@ -883,6 +903,86 @@ VMClass >> isInterpreterProxy [
 	<doNotGenerate>
 	"Return false since I am a real Interpreter simulation"
 	^false
+]
+
+{ #category : #'printf logging' }
+VMClass >> log: printfString [
+	"Log via printf-style format strings.  Subclasses must implement logStream to answer their log stream/file."
+	<inline: #always>
+	self logStream ifNotNil:
+		[printfString fprintf: self logStream]
+]
+
+{ #category : #'printf logging' }
+VMClass >> log: printfString with: anArgument [
+	"Log via printf-style format strings.  Subclasses must implement logStream to answer their log stream/file."
+	<inline: #always>
+	self logStream ifNotNil:
+		[self logStream f: printfString printf: {anArgument}]
+]
+
+{ #category : #'printf logging' }
+VMClass >> log: printfString with: aArgument with: bArgument [
+	"Log via printf-style format strings.  Subclasses must implement logStream to answer their log stream/file."
+	<inline: #always>
+	self logStream ifNotNil:
+		[self logStream f: printfString printf: {aArgument. bArgument}]
+]
+
+{ #category : #'printf logging' }
+VMClass >> log: printfString with: aArgument with: bArgument with: cArgument [
+	"Log via printf-style format strings.  Subclasses must implement logStream to answer their log stream/file."
+	<inline: #always>
+	self logStream ifNotNil:
+		[self logStream f: printfString printf: {aArgument. bArgument. cArgument}]
+]
+
+{ #category : #'printf logging' }
+VMClass >> log: printfString with: aArgument with: bArgument with: cArgument with: dArgument [
+	"Log via printf-style format strings.  Subclasses must implement logStream to answer their log stream/file."
+	<inline: #always>
+	self logStream ifNotNil:
+		[self logStream f: printfString printf: {aArgument. bArgument. cArgument. dArgument}]
+]
+
+{ #category : #'printf logging' }
+VMClass >> log: printfString with: aArgument with: bArgument with: cArgument with: dArgument with: eArgument [
+	"Log via printf-style format strings.  Subclasses must implement logStream to answer their log stream/file."
+	<inline: #always>
+	self logStream ifNotNil:
+		[self logStream f: printfString printf: {aArgument. bArgument. cArgument. dArgument. eArgument}]
+]
+
+{ #category : #'printf logging' }
+VMClass >> log: printfString with: aArgument with: bArgument with: cArgument with: dArgument with: eArgument with: fArgument [
+	"Log via printf-style format strings.  Subclasses must implement logStream to answer their log stream/file."
+	<inline: #always>
+	self logStream ifNotNil:
+		[self logStream f: printfString printf: {aArgument. bArgument. cArgument. dArgument. eArgument. fArgument}]
+]
+
+{ #category : #'printf logging' }
+VMClass >> log: printfString with: aArgument with: bArgument with: cArgument with: dArgument with: eArgument with: fArgument with: gArgument [
+	"Log via printf-style format strings.  Subclasses must implement logStream to answer their log stream/file."
+	<inline: #always>
+	self logStream ifNotNil:
+		[self logStream f: printfString printf: {aArgument. bArgument. cArgument. dArgument. eArgument. fArgument. gArgument}]
+]
+
+{ #category : #'printf logging' }
+VMClass >> log: printfString with: aArgument with: bArgument with: cArgument with: dArgument with: eArgument with: fArgument with: gArgument with: hArgument [
+	"Log via printf-style format strings.  Subclasses must implement logStream to answer their log stream/file."
+	<inline: #always>
+	self logStream ifNotNil:
+		[self logStream f: printfString printf: {aArgument. bArgument. cArgument. dArgument. eArgument. fArgument. gArgument. hArgument}]
+]
+
+{ #category : #'printf logging' }
+VMClass >> log: printfString withArgs: arguments [
+	"Log via printf-style format strings.  Subclasses must implement logStream to answer their log stream/file."
+	<inline: #always>
+	self logStream ifNotNil:
+		[self logStream f: printfString printf: arguments]
 ]
 
 { #category : #'memory access' }
