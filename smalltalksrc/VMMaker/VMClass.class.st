@@ -812,7 +812,7 @@ VMClass >> flushLog [
 	"Log via printf-style format strings.  Subclasses must implement logStream to answer their log stream/file."
 	<inline: #always>
 	self logStream ifNotNil:
-		[:s| s fflush]
+		[self logStream fflush]
 ]
 
 { #category : #'C library simulation' }
