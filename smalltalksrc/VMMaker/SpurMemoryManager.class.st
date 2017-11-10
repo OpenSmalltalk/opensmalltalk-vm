@@ -9422,6 +9422,12 @@ SpurMemoryManager >> outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag
 		[becomeEffectsFlags := becomeEffectsFlags bitOr: OldBecameNewFlag]
 ]
 
+{ #category : #accessing }
+SpurMemoryManager >> pastSpaceStart [
+	<cmacro: '() GIV(pastSpaceStart)'>
+	^pastSpaceStart
+]
+
 { #category : #'primitive support' }
 SpurMemoryManager >> pinObject: objOop [
 	"Attempt to pin objOop, which must not be immediate.
