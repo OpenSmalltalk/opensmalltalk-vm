@@ -267,7 +267,7 @@ static char *getVersionInfo(int verbose);
 	}
 #endif
 #if SPURVM
-	if ([argData isEqualToString: VMOPTIONOBJ("logscavenger")]) {
+	if ([argData isEqualToString: VMOPTIONOBJ("logscavenge")]) {
 		extern void openScavengeLog(void);
 		openScavengeLog();
 		return 1;

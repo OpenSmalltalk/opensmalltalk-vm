@@ -1591,7 +1591,7 @@ static int vm_parseArgument(int argc, char **argv)
 		extern unsigned long maxOldSpaceSize;
 		maxOldSpaceSize = (unsigned long)strtobkm(argv[1]);	 
 		return 2; }
-	else if (!strcmp(argv[0], VMOPTION("logscavenger"))) {
+	else if (!strcmp(argv[0], VMOPTION("logscavenge"))) {
 		extern void openScavengeLog(void);
 		openScavengeLog();
 		return 1;
