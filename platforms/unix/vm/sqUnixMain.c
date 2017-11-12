@@ -1588,6 +1588,11 @@ static int vm_parseArgument(int argc, char **argv)
 		extern unsigned long maxOldSpaceSize;
 		maxOldSpaceSize = (unsigned long)strtobkm(argv[1]);	 
 		return 2; }
+	else if (!strcmp(argv[0], VMOPTION("logscavenger"))) {
+		extern void openScavengeLog(void);
+		openScavengeLog();
+		return 1;
+	}
 #endif
       else if (!strcmp(argv[0], VMOPTION("textenc"))) {
 		int i, len = strlen(argv[1]);
@@ -1650,6 +1655,7 @@ static void vm_printUsage(void)
 #endif
 #if SPURVM
   printf("  "VMOPTION("maxoldspace")" <size>[mk]    set max size of old space memory to bytes\n");
+  printf("  "VMOPTION("logscavenge")"          log scavenging to scavenge.log\n");
 #endif
   printf("  "VMOPTION("blockonerror")"         on error or segv block, not exit.  useful for attaching gdb\n");
   printf("  "VMOPTION("blockonwarn")"          on warning block, don't warn.  useful for attaching gdb\n");
