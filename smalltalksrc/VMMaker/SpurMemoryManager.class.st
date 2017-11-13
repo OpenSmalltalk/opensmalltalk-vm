@@ -640,7 +640,7 @@ Class {
 { #category : #translation }
 SpurMemoryManager class >> ancilliaryClasses: options [
 	initializationOptions ifNil: [initializationOptions := options].
-	^{	SpurGenerationScavenger. SpurSegmentManager. SpurSegmentInfo. self compactorClass },
+	^{	SpurGenerationScavenger. SpurScavengeLogRecord. SpurSegmentManager. SpurSegmentInfo. self compactorClass },
 		SpurNewSpaceSpace withAllSubclasses
 ]
 
@@ -10780,6 +10780,8 @@ SpurMemoryManager >> scavengingGCTenuringIf: tenuringCriterion [
 	statSGCDeltaUsecs := statGCEndUsecs - gcStartUsecs.
 	statScavengeGCUsecs := statScavengeGCUsecs + statSGCDeltaUsecs.
 	statRootTableCount := scavenger rememberedSetSize.
+
+	scavenger logScavenge.
 
 	coInterpreter postGCAction: GCModeNewSpace.
 
