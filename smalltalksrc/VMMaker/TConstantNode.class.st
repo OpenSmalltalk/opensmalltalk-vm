@@ -7,6 +7,14 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
+{ #category : #transformations }
+TConstantNode >> asPrintfFormatStringNode [
+	^TPrintfFormatStringNode new
+		setValue: value;
+		comment: comment;
+		yourself
+]
+
 { #category : #accessing }
 TConstantNode >> constantNumbericValueIfAtAllPossibleOrNilIn: aCCodeGen [
 	"This is a version of constantNumbericValueOrNil for type checking rather than code generation.

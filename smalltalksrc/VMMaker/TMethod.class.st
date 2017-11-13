@@ -2104,7 +2104,15 @@ TMethod >> prepareMethodIn: aCodeGen [
 							[(CaseStatements includes: node selector) ifTrue:
 								[parent replaceNodesIn: (Dictionary newFromPairs: { node. self buildCaseStmt: node in: aCodeGen})].
 							 (#(caseOf: #caseOf:otherwise:) includes: node selector) ifTrue:
-								[parent replaceNodesIn: (Dictionary newFromPairs: { node. self buildSwitchStmt: node parent: parent })]]]]]
+								[parent replaceNodesIn: (Dictionary newFromPairs: { node. self buildSwitchStmt: node parent: parent })].
+							 (#(printf: f:printf:) includes: node selector) ifTrue:
+								[| map |
+								map := Dictionary new.
+								node nodesDo:
+									[:subNode|
+									 (subNode isConstant and: [subNode value isString and: [subNode value includes: $%]]) ifTrue:
+										[map at: subNode put: subNode asPrintfFormatStringNode].
+								node replaceNodesIn: map]]]]]]
 ]
 
 { #category : #'primitive compilation' }

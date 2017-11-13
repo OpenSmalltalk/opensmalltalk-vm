@@ -749,6 +749,13 @@ CCodeGenerator >> cLiteralForInteger: anInteger hex: aBoolean [
 ]
 
 { #category : #'C code generator' }
+CCodeGenerator >> cLiteralForPrintfString: aString [
+	^(('"', (PrintfFormatString new setFormat: aString) transformForVMMaker, '"')
+		copyReplaceAll: (String with: Character cr) with: '\n')
+			copyReplaceAll: (String with: Character tab) with: '\t'
+]
+
+{ #category : #'C code generator' }
 CCodeGenerator >> cLiteralForUnsignedInteger: anInteger hex: aBoolean longlong: llBoolean [
 	"Answer the string for generating an unsigned literal integer.
 	Use hexadecimal notation as prescribed by aBoolean.
