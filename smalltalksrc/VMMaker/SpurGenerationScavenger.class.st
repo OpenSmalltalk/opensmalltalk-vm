@@ -118,6 +118,7 @@ Class {
 		'tenuringProportion',
 		'numRememberedEphemerons',
 		'scavengeLog',
+		'scavengeLogRecord',
 		'statSurvivorCount',
 		'statTenures'
 	],
@@ -134,6 +135,7 @@ SpurGenerationScavenger class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		var: #rememberedSet type: #'sqInt *';
 		var: #tenuringProportion type: #double;
+		var: #scavengeLogRecord type: #SpurScavengeLogRecord;
 		var: #scavengeLog type: #'FILE *'
 ]
 
@@ -674,7 +676,8 @@ SpurGenerationScavenger >> initialize [
 	eden := SpurNewSpaceSpace new.
 	rememberedSetSize := 0.
 	tenureThreshold := 0.
-	statSurvivorCount := statTenures := 0
+	statSurvivorCount := statTenures := 0.
+	scavengeLogRecord := SpurScavengeLogRecord new
 ]
 
 { #category : #initialization }
@@ -763,26 +766,29 @@ SpurGenerationScavenger >> isScavengeSurvivor: oop [
 { #category : #logging }
 SpurGenerationScavenger >> logEndScavenge [
 	<inline: #always>
-	self log: '	survivor bytes: 0x%lx/%ld remembered objects: %ld tenured: %ld\n'
-		with: futureSurvivorStart - pastSpace start
-		with: futureSurvivorStart - pastSpace start
-		with: rememberedSetSize
-		with: statTenures;
-		flushLog
+	scavengeLogRecord
+		eSurvivorBytes: futureSurvivorStart - pastSpace start;
+		eRememberedSetSize: rememberedSetSize;
+		eStatTenures: statTenures
+]
+
+{ #category : #logging }
+SpurGenerationScavenger >> logScavenge [
+	<inline: #always>
+	scavengeLog ifNotNil:
+		[self writeScavengeLog]
 ]
 
 { #category : #logging }
 SpurGenerationScavenger >> logStartScavenge [
 	<inline: #always>
-	self log: 'scavenge %ld eden bytes: 0x%lx/%ld past bytes: 0x%lx/%ld\n\tremembered set: %ld redzone: %ld size: %ld\n'
-		with: manager statScavenges
-		with: manager freeStart - eden start
-		with: manager freeStart - eden start
-		with: manager pastSpaceStart - pastSpace start
-		with: manager pastSpaceStart - pastSpace start
-		with: rememberedSetSize
-		with: rememberedSetRedZone
-		with: rememberedSetLimit
+	scavengeLogRecord
+		sEdenBytes: manager freeStart - eden start;
+		sPastBytes: manager pastSpaceStart - pastSpace start;
+		sRememberedSetSize: rememberedSetSize;
+		sRememberedSetRedZone: rememberedSetRedZone;
+		sRememberedSetLimit: rememberedSetLimit;
+		sStatTenures: statTenures
 ]
 
 { #category : #logging }
@@ -794,15 +800,12 @@ SpurGenerationScavenger >> logStream [
 { #category : #logging }
 SpurGenerationScavenger >> logTenuringPolicy [
 	<inline: #always>
-	| policyNames |
-	<var: 'policyNames' declareC: 'static char *policyNames[] = {"", "by age", "by class", "to shrink rt", "don''t tenure", "mark on tenure"}'>
-	self cCode: []
-		inSmalltalk: [policyNames := CLiteralArray on: #('' 'by age' 'by class' 'to shrink rt' 'don''t tenure' 'mark on tenure')].
-	self log: (tenureCriterion = TenureToShrinkRT ifFalse: ['	tenure below 0x%lx/%ld %s\n'] ifTrue: ['	tenure below 0x%lx/%ld %s refct %ld\n'])
-		with: ((tenureCriterion = TenureByAge and: [tenureThreshold > pastSpace start]) ifTrue: [tenureThreshold - pastSpace start] ifFalse: [0])
-		with: ((tenureCriterion = TenureByAge and: [tenureThreshold > pastSpace start]) ifTrue: [tenureThreshold - pastSpace start] ifFalse: [0])
-		with: (policyNames at: tenureCriterion)
-		with: refCountToShrinkRT
+	scavengeLogRecord
+		tTenureCriterion: tenureCriterion;
+		tTenureThreshold: ((tenureCriterion = TenureByAge and: [tenureThreshold > pastSpace start])
+								ifTrue: [tenureThreshold - pastSpace start]
+								ifFalse: [0]);
+		tRefCountToShrinkRT: refCountToShrinkRT
 ]
 
 { #category : #accessing }
@@ -1469,4 +1472,40 @@ SpurGenerationScavenger >> tenuringClassIndex [
 { #category : #accessing }
 SpurGenerationScavenger >> tenuringClassIndex: anInteger [
 	tenuringClassIndex := anInteger
+]
+
+{ #category : #logging }
+SpurGenerationScavenger >> writeScavengeLog [
+	"Output the entire record."
+	<inline: #never>
+	| policyNames |
+	<var: 'policyNames' declareC: 'static char *policyNames[] = {"", "by age", "by class", "to shrink rt", "don''t tenure", "mark on tenure"}'>
+	self cCode: []
+		inSmalltalk: [policyNames := CLiteralArray on: #('' 'by age' 'by class' 'to shrink rt' 'don''t tenure' 'mark on tenure')].
+	scavengeLog "log data collected by logStartScavenge"
+		f: 'scavenge %ld eden bytes: 0x%lx/%ld past bytes: 0x%lx/%ld\n\trem set: %ld redzone: %ld size: %ld\n'
+		printf:{	manager statScavenges.
+				scavengeLogRecord sEdenBytes.
+				scavengeLogRecord sEdenBytes.
+				scavengeLogRecord sPastBytes.
+				scavengeLogRecord sPastBytes.
+				scavengeLogRecord sRememberedSetSize.
+				scavengeLogRecord sRememberedSetRedZone.
+				scavengeLogRecord sRememberedSetLimit }.
+	scavengeLog "log data collected by logTenuringPolicy"
+		f: (scavengeLogRecord tTenureCriterion = TenureToShrinkRT
+				ifFalse: ['	tenure below 0x%lx/%ld %s\n']
+				ifTrue: ['	tenure below 0x%lx/%ld %s refct %ld\n'])
+		printf:{	scavengeLogRecord tTenureThreshold.
+				scavengeLogRecord tTenureThreshold.
+				policyNames at: scavengeLogRecord tTenureCriterion.
+				scavengeLogRecord tRefCountToShrinkRT }.
+	scavengeLog "log data collected by logEndScavenge"
+		f: '	survivor bytes: 0x%lx/%ld rem set: %ld tenured: %ld usecs: %ld\n'
+		printf:{	scavengeLogRecord eSurvivorBytes.
+				scavengeLogRecord eSurvivorBytes.
+				scavengeLogRecord eRememberedSetSize.
+				scavengeLogRecord eStatTenures - scavengeLogRecord sStatTenures.
+				manager statSGCDeltaUsecs asUnsignedLong }.
+	scavengeLog fflush
 ]
