@@ -1494,7 +1494,7 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 	 otherwise the assignee variable type must match the return type of the inlinee.  Return
 	 types are not propagated."
 
-	| sel meth methArgs exitLabel inlineStmts exitType elidedArgs argAssignments conditional |
+	| sel meth methArgs exitLabel inlineStmts label exitType elidedArgs |
 	sel := aSendNode selector.
 	meth := aCodeGen methodNamed: sel.
 	methArgs := meth args.
@@ -1545,21 +1545,9 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 				ifTrue: [ labels add: exitLabel ]
 				ifFalse: [ exitLabel := nil ]]].
 	(inlineStmts := OrderedCollection new: meth statements size + meth args size + 2)
-		add: (TLabeledCommentNode new setComment: 'begin ', sel).
-	argAssignments := self argAssignmentsFor: meth send: aSendNode except: elidedArgs in: aCodeGen.
-	"If the method being inlined is of the form
-		guard ifTrue: [...]
-	 and the argument assignments have no side effects,
-	 and guard does not refer to the arguments,
-	 push the argument assignments past the guard into the block so that they too are guarded."
-	(meth statements size = 1
-	 and: [(conditional := meth statements first) isConditionalSend
-	 and: [conditional numArgs = 1
-	 and: [(argAssignments noneSatisfy: [:assign| assign expression hasSideEffect])
-	 and: [conditional receiver noneSatisfy: [:node| node isVariable and: [methArgs includes: node name]]]]]])
-		ifTrue: [conditional args first statements addAllFirst: argAssignments]
-		ifFalse: [inlineStmts addAll: argAssignments].
-	inlineStmts addAll: meth statements.  "method body"
+		add: (label := TLabeledCommentNode new setComment: 'begin ', sel);
+		addAll: (self argAssignmentsFor: meth send: aSendNode except: elidedArgs in: aCodeGen);
+		addAll: meth statements.  "method body"
 	directReturn ifTrue:
 		[meth endsWithReturn
 			ifTrue:
