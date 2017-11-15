@@ -5,10 +5,7 @@ BraceNode >> asTranslatorNodeIn: aTMethod [
 	"make a CCodeGenerator equivalent of me."
 
 	"This is for case statements"
-	(elements allSatisfy:
-		[:elem|
-		elem isMessageNode
-		and: [elem selector key = #->]]) ifTrue:
+	(elements allSatisfy: [:elem| elem isMessageNode and: [elem selector key = #->]]) ifTrue:
 		[self assert: (elements allSatisfy:
 			[:elem|
 			elem receiver isBlockNode
