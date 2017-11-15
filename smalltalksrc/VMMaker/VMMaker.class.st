@@ -1545,10 +1545,9 @@ VMMaker >> initialize [
 	internalPlugins := SortedCollection new.
 	externalPlugins := SortedCollection new.
 	platformName := self class machinesDirName.
-	is64BitVM := Smalltalk wordSize == 8.
+	is64BitVM := false.
 	interpreterClassName := Interpreter name.
-	optionsDictionary := Dictionary new.
-	optionsDictionary at: #BytesPerWord put: Smalltalk wordSize.
+	optionsDictionary := Dictionary newFromPairs: {#BytesPerWord. 4}.
 	VMStructType voidStructTypeCache
 ]
 
