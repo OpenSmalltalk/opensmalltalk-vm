@@ -1386,7 +1386,11 @@ BitBltSimulation >> copyLoop [
 	hInc := hDir*4.  "Byte delta"
 	"degenerate skew fixed for Sparc. 10/20/96 ikp"
 	skew == -32
-		ifTrue: [skew := unskew := skewMask := 0]
+		ifTrue:
+			["Beware: separate skewMask initialization to avoid bad type inference.
+			Indeed, unskew is a bitShift and MUST remain signed, while skewMask is unsigned"
+			skew := unskew := 0.
+			skewMask := 0]
 		ifFalse: [skew < 0
 			ifTrue:
 				[unskew := skew+32.
