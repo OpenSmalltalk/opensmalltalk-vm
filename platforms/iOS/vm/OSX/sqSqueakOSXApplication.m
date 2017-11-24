@@ -266,6 +266,13 @@ static char *getVersionInfo(int verbose);
 		return 1;
 	}
 #endif
+#if SPURVM
+	if ([argData isEqualToString: VMOPTIONOBJ("logscavenge")]) {
+		extern void openScavengeLog(void);
+		openScavengeLog();
+		return 1;
+	}
+#endif
 
 	/* Options with arguments */
 	if (!peek)
@@ -487,6 +494,7 @@ static char *getVersionInfo(int verbose);
 #endif
 #if SPURVM
 	printf("  "VMOPTION("maxoldspace")" <size>[mk]      set max size of old space memory to bytes\n");
+	printf("  "VMOPTION("logscavenge")"          log scavenging to scavenge.log\n");
 #endif
 #if 0 /* Not sure if encoding is an issue with the Cocoa VM. eem 2015-11-30 */
 	printf("  "VMOPTION("pathenc")" <enc>        set encoding for pathnames (default: %s)\n",

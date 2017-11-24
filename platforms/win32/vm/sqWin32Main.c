@@ -1878,6 +1878,11 @@ parseVMArgument(int argc, char *argv[])
     else if (!strncmp(argv[0], VMOPTION("maxoldspace:"), strlen(VMOPTION("maxoldspace:")))) {
 		maxOldSpaceSize = (usqInt) strtobkm(argv[0]+strlen(VMOPTION("maxoldspace:")));
 		return 2; }
+	else if (!strcmp(argv[0], VMOPTION("logscavenge"))) {
+		extern void openScavengeLog(void);
+		openScavengeLog();
+		return 1;
+	}
 #endif
 
   /* NOTE: the following flags are "undocumented" */

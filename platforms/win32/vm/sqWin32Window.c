@@ -3342,6 +3342,7 @@ int printUsage(int level)
 #endif /* COGVM */
 #if SPURVM
                    TEXT("\n\t") TEXT(VMOPTION("maxoldspace:")) TEXT(" bytes \t(set max size of old space memory to bytes)")
+                   TEXT("\n\t") TEXT(VMOPTION("logscavenge")) TEXT(" \t(log scavenging to scavenge.log)")
 #endif
                    );
       break;
