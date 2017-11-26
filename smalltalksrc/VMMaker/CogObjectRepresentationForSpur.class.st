@@ -1644,11 +1644,11 @@ CogObjectRepresentationForSpur >> genPrimitiveStringReplace [
 		
 	"0 >= start, fail"
 	cogit CmpCq: (objectMemory integerObjectOf: 0) R: startReg.
-	jumpOutOfBounds1 := cogit JumpLess: 0.
+	jumpOutOfBounds1 := cogit JumpLessOrEqual: 0.
 	
 	"0 >= replStart, fail"
 	cogit CmpCq: (objectMemory integerObjectOf: 0) R: repStartReg.
-	jumpOutOfBounds2 := cogit JumpLess: 0.
+	jumpOutOfBounds2 := cogit JumpLessOrEqual: 0.
 
 	"--- Pointer object version ---"
 	(cogit seemsToBeInstantiating: objectMemory arrayFormat) ifTrue:
