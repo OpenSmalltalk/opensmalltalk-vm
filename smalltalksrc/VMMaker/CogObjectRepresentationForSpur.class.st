@@ -1718,10 +1718,10 @@ CogObjectRepresentationForSpur >> genPrimitiveStringReplace [
 	(cogit seemsToBeInstantiating: objectMemory firstByteFormat) ifTrue:
 		["Are they both byte array format ? CompiledMethod excluded"
 		self genGetFormatOf: arrayReg into: TempReg.
-		self genGetFormatOf: replReg into: startReg.
-		cogit CmpCq: objectMemory firstByteFormat R: startReg.
+		self genGetFormatOf: replReg into: repStartReg.
+		cogit CmpCq: objectMemory firstByteFormat R: repStartReg.
 		jumpIncorrectFormat1 := cogit JumpLess: 0.
-		cogit CmpCq: objectMemory firstCompiledMethodFormat R: startReg.
+		cogit CmpCq: objectMemory firstCompiledMethodFormat R: repStartReg.
 		jumpIncorrectFormat2 := cogit JumpGreaterOrEqual: 0.
 		cogit CmpCq: objectMemory firstByteFormat R: TempReg.
 		jumpIncorrectFormat3 := cogit JumpLess: 0.
@@ -1740,7 +1740,8 @@ CogObjectRepresentationForSpur >> genPrimitiveStringReplace [
 		jumpOutOfBounds3 := cogit JumpGreater: 0.
 	
 		"rep size < repStart - start + stop"
-		cogit MoveR: startReg R: TempReg. "TempReg holds repl format"
+		cogit MoveR: repStartReg R: TempReg. "TempReg holds repl format"
+		cogit genStackArgAt: 0 into: repStartReg.
 		cogit genStackArgAt: 3 into: startReg.
 		self genConvertSmallIntegerToIntegerInReg: startReg.
 		self genConvertSmallIntegerToIntegerInReg: repStartReg.
