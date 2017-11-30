@@ -338,7 +338,7 @@ sqInt sqDestroySSL(sqInt handle) {
 	Returns: The size of the output token or an error code.
 */
 sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt dstLen) {
-	int result, n;
+	int result;
 	char peerName[MAX_HOSTNAME_LENGTH + 1];
 	X509 *cert;
 	sqSSL *ssl = sslFromHandle(handle);
@@ -361,15 +361,18 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 
 	if(ssl->loglevel) printf("sqConnectSSL: BIO_write %ld bytes\n", (long)srcLen);
 
-	n = BIO_write(ssl->bioRead, srcBuf, srcLen);
 
-	if(n < srcLen) {
-		if(ssl->loglevel) printf("sqConnectSSL: BIO too small for input\n");
-		return SQSSL_GENERIC_ERROR;
-	}
-	if(n < 0) {
-		if(ssl->loglevel) printf("sqConnectSSL: BIO_write failed\n");
-		return SQSSL_GENERIC_ERROR;
+	if(srcLen > 0) {
+		int n = BIO_write(ssl->bioRead, srcBuf, srcLen);
+
+		if(n < srcLen) {
+			if(ssl->loglevel) printf("sqConnectSSL: BIO too small for input\n");
+			return SQSSL_GENERIC_ERROR;
+		}
+		if(n < 0) {
+			if(ssl->loglevel) printf("sqConnectSSL: BIO_write failed\n");
+				return SQSSL_GENERIC_ERROR;
+		}
 	}
 
 	/* if a server name is provided, use it */
@@ -480,7 +483,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 	Returns: The size of the output token or an error code.
 */
 sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt dstLen) {
-	int result, n;
+	int result;
 	char peerName[MAX_HOSTNAME_LENGTH + 1];
 	X509 *cert;
 	sqSSL *ssl = sslFromHandle(handle);
@@ -501,15 +504,17 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt 
 
 	if(ssl->loglevel) printf("sqAcceptSSL: BIO_write %ld bytes\n", (long)srcLen);
 
-	n = BIO_write(ssl->bioRead, srcBuf, srcLen);
+	if(srcLen > 0) {
+		int n = BIO_write(ssl->bioRead, srcBuf, srcLen);
 
-	if(n < srcLen) {
-		if(ssl->loglevel) printf("sqAcceptSSL: BIO_write wrote less than expected\n");
-		return SQSSL_GENERIC_ERROR;
-	}
-	if(n < 0) {
-		if(ssl->loglevel) printf("sqAcceptSSL: BIO_write failed\n");
-		return SQSSL_GENERIC_ERROR;
+		if(n < srcLen) {
+			if(ssl->loglevel) printf("sqAcceptSSL: BIO_write wrote less than expected\n");
+			return SQSSL_GENERIC_ERROR;
+		}
+		if(n < 0) {
+			if(ssl->loglevel) printf("sqAcceptSSL: BIO_write failed\n");
+			return SQSSL_GENERIC_ERROR;
+		}
 	}
 
 	if(ssl->loglevel) printf("sqAcceptSSL: SSL_accept\n");
