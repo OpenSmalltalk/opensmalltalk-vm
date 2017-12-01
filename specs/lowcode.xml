@@ -3396,145 +3396,109 @@
             self ssPushNativeRegister: first.
         </semantic>
     </instruction>
-    <instruction opcode="1147" mnemonic="performCallFloat32" kind="operation">
+    <instruction opcode="1147" mnemonic="performCallout" kind="operation">
         <name>Perform function call.</name>
-        <description>Performs a function with Float32 result</description>
+        <description>Performs a direct function call with Float32 result</description>
         <arguments>
             <extend-a name="function" />
         </arguments>
         <stack-arguments />
         <stack-results>
-            <float32 name="result" />
         </stack-results>
         <semantic language="Smalltalk/Cog/Raw">
             self callSwitchToCStack.
 
             self MoveCw: extA R: TempReg.
             self CallRT: ceFFICalloutTrampoline.
-
-            backEnd cFloatResultToRs: DPFPReg0.
-            self ssPushNativeRegisterSingleFloat: DPFPReg0.
+            self annotateBytecode: self Label.
             extA := 0.
         </semantic>
         <semantic language="Smalltalk/StackInterpreter">
-            result := self lowcodeCalloutFloat32Result: (self cCoerce: function to: #'char*').
+            self lowcodeDoCallout: (self cCoerce: function to: #'char*').
         </semantic>
     </instruction>
-    <instruction opcode="1148" mnemonic="performCallFloat64" kind="operation">
-        <name>Perform function call.</name>
-        <description>Performs a function with Float64 result</description>
-        <arguments>
-            <extend-a name="function" />
-        </arguments>
-        <stack-arguments />
-        <stack-results>
-            <float64 name="result" allocate="true" />
-        </stack-results>
-        <semantic language="Smalltalk/Cog/Raw">
-            self callSwitchToCStack.
-            self MoveCw: extA R: TempReg.
-            self CallRT: ceFFICalloutTrampoline.
-
-
-            backEnd cFloatResultToRd: DPFPReg0.
-            self ssPushNativeRegisterDoubleFloat: DPFPReg0.
-            extA := 0.
-        </semantic>
-        <semantic language="Smalltalk/StackInterpreter">
-            result := self lowcodeCalloutFloat64Result: (self cCoerce: function to: #'char*').
-        </semantic>
-    </instruction>
-    <instruction opcode="1149" mnemonic="performCallIndirectFloat32" kind="operation">
+    <instruction opcode="1148" mnemonic="performCalloutIndirect" kind="operation">
         <name>Perform indirect function call.</name>
-        <description>It performs an indirect function with Float32 result.</description>
+        <description>It calls a function pointer.</description>
         <arguments />
         <stack-arguments>
             <pointer name="function" />
         </stack-arguments>
         <stack-results>
-            <float32 name="result" />
         </stack-results>
         <semantic language="Smalltalk/Cog/Raw">
-	        self ssNativeTop nativeStackPopToReg: TempReg.
-	        self ssNativePop: 1.
+            self ssNativeTop nativeStackPopToReg: TempReg.
+            self ssNativePop: 1.
 
             self callSwitchToCStack.
             self CallRT: ceFFICalloutTrampoline.
-
-
+            self annotateBytecode: self Label.
+        </semantic>
+        <semantic language="Smalltalk/StackInterpreter">
+            self lowcodeDoCallout: function.
+        </semantic>
+    </instruction>
+    <instruction opcode="1149" mnemonic="pushCalloutResultFloat32" kind="operation">
+        <name>Push the callout float32 result.</name>
+        <description>It pushes the float32 result value of the latest callout into the top of the stack.</description>
+        <arguments />
+        <stack-arguments>
+        </stack-arguments>
+        <stack-results>
+            <float32 name="result" />
+        </stack-results>
+        <semantic language="Smalltalk/Cog/Raw">
             backEnd cFloatResultToRs: DPFPReg0.
             self ssPushNativeRegisterSingleFloat: DPFPReg0.
         </semantic>
         <semantic language="Smalltalk/StackInterpreter">
-            result := self lowcodeCalloutFloat32Result: function.
+            result := self lowcodeCalloutStateFetchResultFloat32: lowcodeCalloutState.
         </semantic>
     </instruction>
-    <instruction opcode="1150" mnemonic="performCallIndirectFloat64" kind="operation">
-        <name>Perform indirect function call.</name>
-        <description>It erforms an indirect function with Float64 result.</description>
+    <instruction opcode="1150" mnemonic="pushCalloutResultFloat64" kind="operation">
+        <name>Push the callout float64 result.</name>
+        <description>It pushes the float64 result value of the latest callout into the top of the stack.</description>
         <arguments />
         <stack-arguments>
-            <pointer name="function" />
         </stack-arguments>
         <stack-results>
             <float64 name="result" />
         </stack-results>
         <semantic language="Smalltalk/Cog/Raw">
-	        self ssNativeTop nativeStackPopToReg: TempReg.
-	        self ssNativePop: 1.
-
-            self callSwitchToCStack.
-            self CallRT: ceFFICalloutTrampoline.
-
             backEnd cFloatResultToRd: DPFPReg0.
             self ssPushNativeRegisterDoubleFloat: DPFPReg0.
         </semantic>
         <semantic language="Smalltalk/StackInterpreter">
-            result := self lowcodeCalloutFloat64Result: function.
+            result := self lowcodeCalloutStateFetchResultFloat64: lowcodeCalloutState.
         </semantic>
     </instruction>
-    <instruction opcode="1151" mnemonic="performCallIndirectInt32" kind="operation">
-        <name>Perform indirect function call.</name>
-        <description>It performs an indirect function with I32 result.</description>
+    <instruction opcode="1151" mnemonic="pushCalloutResultInt32" kind="operation">
+        <name>Push the callout int32 result.</name>
+        <description>It pushes the int32 result value of the latest callout into the top of the stack.</description>
         <arguments />
         <stack-arguments>
-            <pointer name="function" />
         </stack-arguments>
         <stack-results>
             <int32 name="result" />
         </stack-results>
         <semantic language="Smalltalk/Cog/Raw">
-	        self ssNativeTop nativeStackPopToReg: TempReg.
-	        self ssNativePop: 1.
-
-            self callSwitchToCStack.
-            self CallRT: ceFFICalloutTrampoline.
-
-
             self MoveR: backEnd cResultRegister R: ReceiverResultReg.
             self ssPushNativeRegister: ReceiverResultReg.
         </semantic>
         <semantic language="Smalltalk/StackInterpreter">
-            result := self lowcodeCalloutInt32Result: function.
+            result := self lowcodeCalloutStateFetchResultInt32: lowcodeCalloutState.
         </semantic>
     </instruction>
-    <instruction opcode="1152" mnemonic="performCallIndirectInt64" kind="operation">
-        <name>Perform indirect function call.</name>
-        <description>It performs an indirect function with I64 result.</description>
+    <instruction opcode="1152" mnemonic="pushCalloutResultInt64" kind="operation">
+        <name>Push the callout int64 result.</name>
+        <description>It pushes the int64 result value of the latest callout into the top of the stack.</description>
         <arguments />
         <stack-arguments>
-            <pointer name="function" />
         </stack-arguments>
         <stack-results>
             <int64 name="result" />
         </stack-results>
         <semantic language="Smalltalk/Cog/Raw">
-	        self ssNativeTop nativeStackPopToReg: TempReg.
-	        self ssNativePop: 1.
-
-            self callSwitchToCStack.
-            self CallRT: ceFFICalloutTrampoline.
-
             BytesPerWord = 4 ifTrue: [
                 self MoveR: backEnd cResultRegisterLow R: ReceiverResultReg.
                 self MoveR: backEnd cResultRegisterHigh R: Arg0Reg.
@@ -3545,216 +3509,24 @@
             ].
         </semantic>
         <semantic language="Smalltalk/StackInterpreter">
-            result := self lowcodeCalloutInt64Result: function.
+            result := self lowcodeCalloutStateFetchResultInt64: lowcodeCalloutState.
         </semantic>
     </instruction>
-    <instruction opcode="1153" mnemonic="performCallIndirectPointer" kind="operation">
-        <name>Perform indirect function call.</name>
-        <description>It performs an indirect function with pointer result.</description>
+    <instruction opcode="1153" mnemonic="pushCalloutResultPointer" kind="operation">
+        <name>Push the callout int64 result.</name>
+        <description>It pushes the int64 result value of the latest callout into the top of the stack.</description>
         <arguments />
         <stack-arguments>
-            <pointer name="function" />
         </stack-arguments>
         <stack-results>
             <pointer name="result" />
         </stack-results>
         <semantic language="Smalltalk/Cog/Raw">
-	        self ssNativeTop nativeStackPopToReg: TempReg.
-	        self ssNativePop: 1.
-
-            self callSwitchToCStack.
-            self CallRT: ceFFICalloutTrampoline.
-
             self MoveR: backEnd cResultRegister R: ReceiverResultReg.
             self ssPushNativeRegister: ReceiverResultReg.
         </semantic>
         <semantic language="Smalltalk/StackInterpreter">
-            result := self lowcodeCalloutPointerResult: function.
-        </semantic>
-    </instruction>
-    <instruction opcode="1154" mnemonic="performCallIndirectStructure" kind="operation">
-        <name>Perform indirection function call.</name>
-        <description>It performs an indirect function with structure result.</description>
-        <arguments>
-            <extend-a name="structureSize" />
-        </arguments>
-        <stack-arguments>
-            <pointer name="function" />
-            <pointer name="result" />
-        </stack-arguments>
-        <stack-results>
-            <pointer name="resultPointer" />
-        </stack-results>
-        <semantic language="Smalltalk/Cog/Raw">
-            "Push the result space"
-	        self ssNativeTop nativeStackPopToReg: TempReg.
-	        self ssNativePop: 1.
-            self PushR: TempReg.
-
-            "Fetch the function pointer"
-	        self ssNativeTop nativeStackPopToReg: TempReg.
-	        self ssNativePop: 1.
-
-            "Call the function"
-            self callSwitchToCStack.
-            self CallRT: ceFFICalloutTrampoline.
-
-            "Fetch the result"
-            self MoveR: backEnd cResultRegister R: ReceiverResultReg.
-            self ssPushNativeRegister: ReceiverResultReg.
-            extA := 0.
-        </semantic>
-        <semantic language="Smalltalk/StackInterpreter">
-            resultPointer := self lowcodeCallout: function structureResult: result.
-        </semantic>
-    </instruction>
-    <instruction opcode="1155" mnemonic="performCallIndirectVoid" kind="operation">
-        <name>Perform indirect function call.</name>
-        <description>It performs an indirect function without a result.</description>
-        <arguments />
-        <stack-arguments>
-            <pointer name="function" />
-        </stack-arguments>
-        <stack-results />
-        <semantic language="Smalltalk/Cog/Raw">
-	        self ssNativeTop nativeStackPopToReg: TempReg.
-	        self ssNativePop: 1.
-
-            self callSwitchToCStack.
-            self CallRT: ceFFICalloutTrampoline.
-        </semantic>
-        <semantic language="Smalltalk/StackInterpreter">
-            self lowcodeCalloutInt32Result: function.
-        </semantic>
-    </instruction>
-    <instruction opcode="1156" mnemonic="performCallInt32" kind="operation">
-        <name>Perform function call.</name>
-        <description>Performs a function with I32 result</description>
-        <arguments>
-            <extend-a name="function" />
-        </arguments>
-        <stack-arguments />
-        <stack-results>
-            <int32 name="result" allocate="true" />
-        </stack-results>
-        <semantic language="Smalltalk/Cog/Raw">
-
-            self callSwitchToCStack.
-            self MoveCw: extA R: TempReg.
-            self CallRT: ceFFICalloutTrampoline.
-
-            self MoveR: backEnd cResultRegister R: ReceiverResultReg.
-            self ssPushNativeRegister: ReceiverResultReg.
-            extA := 0.
-        </semantic>
-        <semantic language="Smalltalk/StackInterpreter">
-            result := self lowcodeCalloutInt32Result: (self cCoerce: function to: #'char*').
-        </semantic>
-    </instruction>
-    <instruction opcode="1157" mnemonic="performCallInt64" kind="operation">
-        <name>Perform function call.</name>
-        <description>Performs a function with I64 result</description>
-        <arguments>
-            <extend-a name="function" />
-        </arguments>
-        <stack-arguments />
-        <stack-results>
-            <int64 name="result" allocate="true" />
-        </stack-results>
-        <semantic language="Smalltalk/Cog/Raw">
-            self callSwitchToCStack.
-            self MoveCw: extA R: TempReg.
-            self CallRT: ceFFICalloutTrampoline.
-
-            BytesPerWord = 4 ifTrue: [
-                self MoveR: backEnd cResultRegisterLow R: ReceiverResultReg.
-                self MoveR: backEnd cResultRegisterHigh R: Arg0Reg.
-                self ssPushNativeRegister: ReceiverResultReg secondRegister: Arg0Reg.
-            ] ifFalse: [
-                self MoveR: backEnd cResultRegister R: ReceiverResultReg.
-                self ssPushNativeRegister: ReceiverResultReg.
-            ].
-            extA := 0.
-        </semantic>
-        <semantic language="Smalltalk/StackInterpreter">
-            result := self lowcodeCalloutInt64Result: (self cCoerce: function to: #'char*').
-        </semantic>
-    </instruction>
-    <instruction opcode="1158" mnemonic="performCallPointer" kind="operation">
-        <name>Perform function call.</name>
-        <description>Performs a function with pointer result</description>
-        <arguments>
-            <extend-a name="function" />
-        </arguments>
-        <stack-arguments />
-        <stack-results>
-            <pointer name="result" allocate="true" />
-        </stack-results>
-        <semantic language="Smalltalk/Cog/Raw">
-            self callSwitchToCStack.
-            self MoveCw: extA R: TempReg.
-            self CallRT: ceFFICalloutTrampoline.
-
-            self MoveR: backEnd cResultRegister R: ReceiverResultReg.
-            self ssPushNativeRegister: ReceiverResultReg.
-            extA := 0.
-        </semantic>
-        <semantic language="Smalltalk/StackInterpreter">
-            result := self lowcodeCalloutPointerResult: (self cCoerce: function to: #'char*').
-        </semantic>
-    </instruction>
-    <instruction opcode="1159" mnemonic="performCallStructure" kind="operation">
-        <name>Perform function call.</name>
-        <description>Performs a function with structure result</description>
-        <arguments>
-            <extend-a name="function" />
-            <extend-b name="structureSize" />
-        </arguments>
-        <stack-arguments>
-            <pointer name="result" />
-        </stack-arguments>
-        <stack-results>
-            <pointer name="resultPointer" />
-        </stack-results>
-        <semantic language="Smalltalk/Cog/Raw">
-            "Push the result space"
-	        self ssNativeTop nativeStackPopToReg: TempReg.
-	        self ssNativePop: 1.
-            self PushR: TempReg.
-
-            "Call the function"
-            self callSwitchToCStack.
-            self MoveCw: extA R: TempReg.
-            self CallRT: ceFFICalloutTrampoline.
-
-            "Fetch the result"
-            self MoveR: backEnd cResultRegister R: ReceiverResultReg.
-            self ssPushNativeRegister: ReceiverResultReg.
-            extA := 0.
-            extB := 0.
-            numExtB := 0.
-        </semantic>
-        <semantic language="Smalltalk/StackInterpreter">
-            self internalPushShadowCallStackPointer: result.
-            resultPointer := self lowcodeCalloutPointerResult: (self cCoerce: function to: #'char*').
-        </semantic>
-    </instruction>
-    <instruction opcode="1160" mnemonic="performCallVoid" kind="operation">
-        <name>Perform function call.</name>
-        <description>Performs a function without a result</description>
-        <arguments>
-            <extend-a name="function" />
-        </arguments>
-        <stack-arguments />
-        <stack-results />
-        <semantic language="Smalltalk/Cog/Raw">
-            self callSwitchToCStack.
-            self MoveCw: extA R: TempReg.
-            self CallRT: ceFFICalloutTrampoline.
-            extA := 0.
-        </semantic>
-        <semantic language="Smalltalk/StackInterpreter">
-            self lowcodeCalloutInt32Result: (self cCoerce: function to: #'char*').
+            result := self lowcodeCalloutStateFetchResultPointer: lowcodeCalloutState.
         </semantic>
     </instruction>
     <instruction opcode="1161" mnemonic="plaftormCode" kind="operation">
