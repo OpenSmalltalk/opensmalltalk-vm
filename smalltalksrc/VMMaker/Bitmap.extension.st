@@ -54,7 +54,7 @@ Bitmap >> long64At: byteIndex put: aValue [
 		ifFalse:
 			[16r7FFFFFFF < (aValue bitShift: -32) ifTrue:
 				[^self errorImproperStore]].
-	mask := 16rFFFFFFFF bitShift: 4 - lowBits * -8.
+	mask := 16rFFFFFFFF bitShift: lowBits * -8.
 	self at: wordIndex + 2 put: (((self at: wordIndex + 2) bitAnd: mask) bitXor: ((aValue bitShift: lowBits * 8) bitAnd: mask bitInvert32)).
 	self at: wordIndex + 1 put: ((aValue bitShift: lowBits * -8) bitAnd: 16rFFFFFFFF).
 	self at: wordIndex put: (((self at: wordIndex) bitAnd: mask bitInvert32) bitXor: ((aValue bitShift: 4 - lowBits + 4 * -8) bitAnd: mask)).
@@ -304,6 +304,8 @@ Bitmap >> unsignedLongAt: byteIndex put: aValue [
 	(lowBits := byteIndex - 1 bitAnd: 3) = 0 ifTrue:
 		[^self at: wordIndex put: aValue].
 	mask := 16rFFFFFFFF bitShift: lowBits * -8.
+	(aValue bitShift: -32) = 0 ifFalse:
+		[^self errorImproperStore].
 	self at: wordIndex put: (((self at: wordIndex) bitAnd: mask bitInvert) bitXor: ((aValue bitShift: lowBits * -8) bitAnd: mask)).
 	self at: wordIndex + 1 put: (((self at: wordIndex + 1) bitAnd: mask) bitXor: (16rFFFFFFFF bitAnd: ((aValue bitShift: (4 - lowBits * 8)) bitAnd: mask bitInvert))).
 	^aValue

@@ -1347,14 +1347,9 @@ VMMaker >> generateCogitIncludeFileFor: cogitClass [
 { #category : #'generate sources' }
 VMMaker >> generateEntire [
 	"Generate the interp, internal plugins and exports as well as the external plugins.
-	 If this comes from a generator, log it for convenience."
+	 If this comes from a generator method, log it for convenience."
 	abortBlock := [^self].
-	self configurationGeneratorNameOrNil ifNotNil:
-		[:generator|
-		 logger cr; nextPutAll: (generator selector copyReplaceAll: 'generate' with: '').
-		 interpreterClassName ifNotNil:
-			[logger space; nextPutAll: (CCodeGenerator shortMonticelloDescriptionForClass: (Smalltalk classNamed: interpreterClassName))].
-		 logger cr; flush].
+	self logGeneration.
 	self generateMainVM.
 	self generateExternalPlugins
 ]
@@ -1518,14 +1513,9 @@ VMMaker >> generateMainVM [
 { #category : #'generate sources' }
 VMMaker >> generatePlugins [
 	"Generate the ``external'' plugins.
-	 If this comes from a generator, log it for convenience."
+	 If this comes from a generator method, log it for convenience."
 	abortBlock := [^self].
-	self configurationGeneratorNameOrNil ifNotNil:
-		[:generator|
-		 logger cr; nextPutAll: (generator selector copyReplaceAll: 'generate' with: '').
-		 interpreterClassName ifNotNil:
-			[logger space; nextPutAll: (CCodeGenerator shortMonticelloDescriptionForClass: (Smalltalk classNamed: interpreterClassName))].
-		 logger cr; flush].
+	self logGeneration.
 	self generateExternalPlugins
 ]
 
@@ -1759,6 +1749,18 @@ VMMaker >> logDateAndTime [
 	"do it this way since Time now includes milliseconds in some versions."
 	now := Time dateAndTimeNow.
 	logger print: now first; space; print: now last; cr; flush
+]
+
+{ #category : #'generate sources' }
+VMMaker >> logGeneration [
+	self configurationGeneratorNameOrNil ifNotNil:
+		[:generator|
+		 logger cr; nextPutAll: (generator selector copyReplaceAll: 'generate' with: '').
+		 interpreterClassName ifNotNil:
+			[logger space; nextPutAll: (CCodeGenerator shortMonticelloDescriptionForClass: (Smalltalk classNamed: interpreterClassName))].
+		 sourceDirName ifNotNil:
+			[logger nextPutAll: ' to '; nextPutAll: sourceDirName].
+		 logger cr; flush]
 ]
 
 { #category : #'UI access' }
