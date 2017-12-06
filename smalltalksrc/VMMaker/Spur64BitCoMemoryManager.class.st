@@ -49,7 +49,9 @@ Spur64BitCoMemoryManager class >> objectRepresentationClass [
 
 { #category : #simulation }
 Spur64BitCoMemoryManager class >> simulatorClass [
-	^Spur64BitMMLECoSimulator
+	^Spur64BitMMLECoSimulatorFor64Bits basicNew memoryClass
+		ifNil: [Spur64BitMMLECoSimulator]
+		ifNotNil: [Spur64BitMMLECoSimulatorFor64Bits]
 ]
 
 { #category : #'growing/shrinking memory' }
