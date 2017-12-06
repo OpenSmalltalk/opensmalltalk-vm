@@ -10,20 +10,27 @@ LittleEndianBitmap >> asByteArray [
 	"Faster way to make a byte array from me.
 	copyFromByteArray: makes equal Bitmap."
 	| f bytes hack |
+	Smalltalk isLittleEndian ifTrue:
+		[bytes := self shallowCopy.
+		 ByteArray adoptInstance: bytes.
+		 ^bytes].
 	f := Form extent: 4@self size depth: 8 bits: self.
 	bytes := ByteArray new: self size * 4.
 	hack := Form new hackBits: bytes.
-	SmalltalkImage current isBigEndian ifTrue:[hack swapEndianness].
+	hack swapEndianness.
 	hack copyBits: f boundingBox
 		from: f
-		at: (0@0)
+		at: 0@0
 		clippingBox: hack boundingBox
 		rule: Form over
 		fillColor: nil
 		map: nil.
-
 	"f displayOn: hack."
 	^bytes
+	"| v | v := LittleEndianBitmap withAll: (1 to: 4).
+	 [v asByteArray] bench '19,700,000 per second. 50.8 nanoseconds per run.'"
+	"| v | v := Bitmap withAll: (1 to: 4).
+	[v asByteArray] bench '977,000 per second. 1.02 microseconds per run.'"
 ]
 
 { #category : #accessing }
@@ -167,7 +174,7 @@ LittleEndianBitmap >> longAt: byteIndex put: aValue [
 	lowBits = 0 ifTrue:
 		[self at: wordIndex put: (16rFFFFFFFF bitAnd: aValue).
 		 ^aValue].
-	mask := 16rFFFFFFFF bitShift: lowBits * -8.
+	mask := 16rFFFFFFFF bitShift: 4 - lowBits * -8.
 	self at: wordIndex put: (((self at: wordIndex) bitAnd: mask) bitXor: ((aValue bitShift: lowBits * 8) bitAnd: mask bitInvert32)).
 	self at: wordIndex + 1 put: (((self at: wordIndex + 1) bitAnd: mask bitInvert32) bitXor: ((aValue bitShift: 4 - lowBits * -8) bitAnd: mask)).
 	^aValue
@@ -340,9 +347,11 @@ LittleEndianBitmap >> unsignedLongAt: byteIndex put: aValue [
 	wordIndex := byteIndex - 1 // 4 + 1.
 	(lowBits := byteIndex - 1 bitAnd: 3) = 0 ifTrue:
 		[^self at: wordIndex put: aValue].
-	mask := 16rFFFFFFFF bitShift: lowBits * -8.
-	self at: wordIndex put: (((self at: wordIndex) bitAnd: mask) bitXor: ((aValue bitShift: 4 - lowBits * 8) bitAnd: mask bitInvert32)).
-	self at: wordIndex + 1 put: (((self at: wordIndex + 1) bitAnd: mask bitInvert32) bitXor: (16rFFFFFFFF bitAnd: ((aValue bitShift: lowBits * -8) bitAnd: mask))).
+	(aValue bitShift: -32) = 0 ifFalse:
+		[^self errorImproperStore].
+	mask := 16rFFFFFFFF bitShift: 4 - lowBits * -8.
+	self at: wordIndex put: (((self at: wordIndex) bitAnd: mask) bitXor: ((aValue bitShift: lowBits * 8) bitAnd: mask bitInvert32)).
+	self at: wordIndex + 1 put: (((self at: wordIndex + 1) bitAnd: mask bitInvert32) bitXor: (16rFFFFFFFF bitAnd: ((aValue bitShift: 4 - lowBits * -8) bitAnd: mask))).
 	^aValue
 ]
 
