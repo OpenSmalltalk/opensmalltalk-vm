@@ -37,6 +37,7 @@ platforms/unix/config/autom4te.cache/
 !makeall
 !makeallclean
 !makealldirty
+!makeem
 !Makefile
 !Makefile.plugin
 !Makefile.rules
