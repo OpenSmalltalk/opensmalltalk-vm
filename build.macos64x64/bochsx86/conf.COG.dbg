@@ -52,4 +52,4 @@ export LDFLAGS
 echo cp config.h bochsconfig.h
 cp config.h bochsconfig.h
 
-echo "and don't forget to run ../../processors/IA32/bochs/makeem"
+echo "and don't forget to run ./makeem"
