@@ -399,6 +399,8 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 	  moduleName functionName moduleLength functionLength
 	  spec addr primRcvr isArray |
 	<var: #addr declareC: 'void (*addr)()'>
+	objectMemory hasSpurMemoryManagerAPI ifTrue: "See checkForAndFollowForwardedPrimitiveState"
+		[metaAccessorDepth := -2].
 	argumentArray := self stackTop.
 	methodArg := self stackValue: 2.
 	((objectMemory isArray: argumentArray)
@@ -429,16 +431,28 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 				moduleLength := objectMemory lengthOf: moduleName.
 				self cCode: '' inSmalltalk:
 					[ (#('FloatArrayPlugin' 'Matrix2x3Plugin') includes: (self stringOf: moduleName)) "??"
-						ifTrue: [moduleLength := 0  "Cause all of these to fail"]]].
+						ifTrue: [moduleLength := 0  "Cause all of these to fail.  Why?? eem 12/7/2017 09:37"]]].
 	functionName := objectMemory fetchPointer: 1 ofObject: spec.
 	self success: (objectMemory isBytes: functionName).
 	functionLength := objectMemory lengthOf: functionName.
 	self successful ifFalse: [^self primitiveFailFor: -3]. "invalid methodArg state"
 
-	addr := self ioLoadExternalFunction: functionName + objectMemory baseHeaderSize
-				OfLength: functionLength
-				FromModule: moduleName + objectMemory baseHeaderSize
-				OfLength: moduleLength.
+	"Spur needs to know the primitive's accessorDepth."
+	objectMemory hasSpurMemoryManagerAPI
+		ifTrue:
+			[addr := self ioLoadExternalFunction: functionName + objectMemory baseHeaderSize
+						OfLength: functionLength
+						FromModule: moduleName + objectMemory baseHeaderSize
+						OfLength: moduleLength
+						AccessorDepthInto: (self addressOf: metaAccessorDepth
+												 put: [:val| metaAccessorDepth := val]).
+			 addr = 0 ifTrue:
+				[metaAccessorDepth := -2]]
+		ifFalse:
+			[addr := self ioLoadExternalFunction: functionName + objectMemory baseHeaderSize
+						OfLength: functionLength
+						FromModule: moduleName + objectMemory baseHeaderSize
+						OfLength: moduleLength].
 	addr = 0 ifTrue:
 		[^self primitiveFailFor: -1]. "could not find function; answer generic failure (see below)"
 
@@ -446,9 +460,7 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 	tempOop := objectMemory
 						eeInstantiateClassIndex: ClassArrayCompactIndex
 						format: objectMemory arrayFormat
-						numSlots: (objectMemory hasSpurMemoryManagerAPI
-									ifTrue: [5]
-									ifFalse: [4]).
+						numSlots: 4.
 	objectMemory
 		storePointerUnchecked: 0 ofObject: tempOop withValue: (argumentArray := self popStack);
 		storePointerUnchecked: 1 ofObject: tempOop withValue: (primRcvr := self popStack);
@@ -458,15 +470,7 @@ StackInterpreterPrimitives >> primitiveDoNamedPrimitiveWithArgs [
 	argumentCount := arraySize.
 	1 to: arraySize do:
 		[:index| self push: (objectMemory fetchPointer: index - 1 ofObject: argumentArray)].
-	objectMemory hasSpurMemoryManagerAPI
-		ifTrue:
-			[objectMemory storePointerUnchecked: 4 ofObject: tempOop withValue: newMethod.
-			 newMethod := methodArg.
-			 self callExternalPrimitive: addr. "On Spur, sets primitiveFunctionPointer"
-			 self maybeRetryPrimitiveOnFailure.
-			 newMethod := objectMemory fetchPointer: 4 ofObject: tempOop]
-		ifFalse:
-			[self callExternalPrimitive: addr].
+	self callExternalPrimitive: addr.
 	self successful ifFalse: "If primitive failed, then restore state for failure code"
 		[self pop: arraySize + 1.
 		 self push: (objectMemory fetchPointer: 3 ofObject: tempOop).
@@ -491,6 +495,8 @@ StackInterpreterPrimitives >> primitiveDoPrimitiveWithArgs [
 	 If this primitive fails, arrange that its error code is a negative integer, to
 	 distinguish between this failing and the primitive it invokes failing."
 	| argumentArray arraySize index primIdx savedNumArgs rcvr |
+	objectMemory hasSpurMemoryManagerAPI ifTrue: "See checkForAndFollowForwardedPrimitiveState"
+		[metaAccessorDepth := -2].
 	(argumentCount between: 2 and: 3) ifFalse:
 		[^self primitiveFailFor: PrimErrUnsupported negated].
 	argumentArray := self stackTop.
@@ -520,7 +526,7 @@ StackInterpreterPrimitives >> primitiveDoPrimitiveWithArgs [
 			[self pop: 2].
 	argumentCount := arraySize.
 	index := 1.
-	[index <= argumentCount] whileTrue:
+	[index <= arraySize] whileTrue:
 		[self push: (objectMemory fetchPointer: index - 1 ofObject: argumentArray).
 		 index := index + 1].
 
@@ -538,15 +544,9 @@ StackInterpreterPrimitives >> primitiveDoPrimitiveWithArgs [
 	tempOop := argumentArray. "prim might alloc/gc"
 
 	"Run the primitive (sets primFailCode)"
-	objectMemory hasSpurMemoryManagerAPI
-		ifTrue:
-			[tempOop3 := newMethod.
-			 newMethod := objectMemory integerObjectOf: primIdx.
-			 self slowPrimitiveResponse.
-			 newMethod := tempOop3.
-			 tempOop3 := 0]
-		ifFalse:
-			[self slowPrimitiveResponse].
+	objectMemory hasSpurMemoryManagerAPI ifTrue: "See checkForAndFollowForwardedPrimitiveState"
+		[metaAccessorDepth := primitiveAccessorDepthTable at: primIdx].
+	self slowPrimitiveResponse.
 
 	self successful ifFalse: "If primitive failed, then restore state for failure code"
 		[self pop: arraySize.
