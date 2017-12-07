@@ -523,7 +523,7 @@ CoInterpreter >> accessorDepthForPrimitiveIndex: primIndex [
 { #category : #'message sending' }
 CoInterpreter >> activateCoggedNewMethod: inInterpreter [
 	"Activate newMethod when newMethod has been cogged, i.e. create a machine-code frame and (re)enter machine-code."
-	| methodHeader cogMethod rcvr numTemps errorCode switched |
+	| methodHeader cogMethod rcvr numTemps switched |
 	<var: #cogMethod type: #'CogMethod *'>
 
 	methodHeader := self rawHeaderOf: newMethod.
@@ -553,15 +553,9 @@ CoInterpreter >> activateCoggedNewMethod: inInterpreter [
 	cogMethod cmNumArgs + 1 to: numTemps do:
 		[:i | self push: objectMemory nilObject].
 
-	(self methodHeaderHasPrimitive: methodHeader) ifTrue:
-		[| initialPC |
-		 "Store the error code if the method starts with a long store temp.  No instructionPointer skip because we're heading for machine code."
-		 initialPC := (self initialIPForHeader: methodHeader method: newMethod) + (self sizeOfCallPrimitiveBytecode: methodHeader).
-		 primFailCode ~= 0 ifTrue:
-			[(objectMemory byteAt: initialPC) = (self longStoreBytecodeForHeader: methodHeader) ifTrue:
-				[errorCode := self getErrorObjectFromPrimFailCode.
-				 self stackTopPut: errorCode "nil if primFailCode == 1, or primFailCode"].
-			 primFailCode := 0]].
+	((self methodHeaderHasPrimitive: methodHeader)
+	 and: [primFailCode ~= 0]) ifTrue:
+		[self reapAndResetErrorCodeTo: stackPointer header: methodHeader].
 
 	"Now check for stack overflow or an event (interrupt, must scavenge, etc)."
 	stackPointer >= stackLimit ifTrue:
@@ -756,7 +750,7 @@ CoInterpreter >> activateNewFullClosure: blockClosure method: theMethod numArgs:
 
 { #category : #'message sending' }
 CoInterpreter >> activateNewMethod [
-	| methodHeader numArgs numTemps rcvr errorCode inInterpreter switched |
+	| methodHeader numArgs numTemps rcvr inInterpreter switched |
 
 	methodHeader := objectMemory methodHeaderOf: newMethod.
 	numTemps := self temporaryCountOfMethodHeader: methodHeader.
@@ -798,11 +792,7 @@ CoInterpreter >> activateNewMethod [
 		  with a long store temp.  Strictly no need to skip the store because it's effectively a noop."
 		 instructionPointer := instructionPointer + (self sizeOfCallPrimitiveBytecode: methodHeader).
 		 primFailCode ~= 0 ifTrue:
-			[(objectMemory byteAt: instructionPointer + 1)
-			  = (self longStoreBytecodeForHeader: methodHeader) ifTrue:
-				[errorCode := self getErrorObjectFromPrimFailCode.
-				 self stackTopPut: errorCode "nil if primFailCode == 1, or primFailCode"].
-			 primFailCode := 0]].
+			[self reapAndResetErrorCodeTo: stackPointer header: methodHeader]].
 
 	"Now check for stack overflow or an event (interrupt, must scavenge, etc)."
 	switched := true.
@@ -2008,6 +1998,15 @@ CoInterpreter >> ceOuterSend: cacheAddress receiver: methodReceiver [
 	instructionPointer := self popStack.
 	self interpretMethodFromMachineCode.
 	self unreachable.
+]
+
+{ #category : #trampolines }
+CoInterpreter >> ceReapAndResetErrorCodeFor: cogMethod [
+	<var: #cogMethod type: #'CogMethod *'>
+	self break.
+	self assert: primFailCode ~= 0.
+	newMethod := cogMethod methodObject.
+	self reapAndResetErrorCodeTo: stackPointer header: cogMethod methodHeader
 ]
 
 { #category : #trampolines }
@@ -4035,6 +4034,14 @@ CoInterpreter >> getDesiredCogCodeSize [
 	^objectMemory integerObjectOf: desiredCogCodeSize
 ]
 
+{ #category : #'message sending' }
+CoInterpreter >> getErrorObjectFromPrimFailCode [
+	"Answer the errorCode object to supply to a failing primitive method that accepts one.
+	 If there is a primitive error table and the primFailCode is a valid index there-in answer
+	 the corresponding entry in the table, otherwise simply answer the code as an integer."
+	^super getErrorObjectFromPrimFailCode
+]
+
 { #category : #accessing }
 CoInterpreter >> getFramePointer [
 	<api>
@@ -4402,7 +4409,7 @@ CoInterpreter >> instructionPointerForFrame: spouseFP currentFP: currentFP curre
 
 { #category : #'message sending' }
 CoInterpreter >> internalActivateNewMethod [
-	| methodHeader numTemps rcvr errorCode switched |
+	| methodHeader numTemps rcvr switched |
 	<inline: true>
 
 	methodHeader := self rawHeaderOf: newMethod.
@@ -4437,11 +4444,7 @@ CoInterpreter >> internalActivateNewMethod [
 		  with a long store temp.  Strictly no need to skip the store because it's effectively a noop."
 		 localIP := localIP + (self sizeOfCallPrimitiveBytecode: methodHeader).
 		 primFailCode ~= 0 ifTrue:
-			[(objectMemory byteAt: localIP + 1)
-			  = (self longStoreBytecodeForHeader: methodHeader) ifTrue:
-				[errorCode := self getErrorObjectFromPrimFailCode.
-				 self internalStackTopPut: errorCode "nil if primFailCode == 1, or primFailCode"].
-			 primFailCode := 0]].
+			[self reapAndResetErrorCodeTo: localSP header: methodHeader]].
 
 	self assert: (self frameNumArgs: localFP) == argumentCount.
 	self assert: (self frameIsBlockActivation: localFP) not.
@@ -4687,7 +4690,7 @@ CoInterpreter >> itemporary: offset in: theFP put: valueOop [
 
 { #category : #'message sending' }
 CoInterpreter >> justActivateNewMethod [
-	| methodHeader activateCogMethod cogMethod numArgs numTemps rcvr errorCode initialIP |
+	| methodHeader activateCogMethod cogMethod numArgs numTemps rcvr initialIP |
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #initialIP type: #usqInt>
 	<inline: true>
@@ -4730,15 +4733,10 @@ CoInterpreter >> justActivateNewMethod [
 	(self methodHeaderHasPrimitive: methodHeader) ifTrue:
 		["Skip the CallPrimitive bytecode, if it's there, and store the error code if the method starts
 		  with a long store temp.  Strictly no need to skip the store because it's effectively a noop."
-		 initialIP := initialIP + (self sizeOfCallPrimitiveBytecode: methodHeader).
 		activateCogMethod ifFalse:
-			[instructionPointer := initialIP].
+			[instructionPointer := initialIP + (self sizeOfCallPrimitiveBytecode: methodHeader)].
 		 primFailCode ~= 0 ifTrue:
-			[(objectMemory byteAt: initialIP + 1)
-			  = (self longStoreBytecodeForHeader: methodHeader) ifTrue:
-				[errorCode := self getErrorObjectFromPrimFailCode.
-				 self stackTopPut: errorCode "nil if primFailCode == 1, or primFailCode"].
-			 primFailCode := 0]].
+			[self reapAndResetErrorCodeTo: stackPointer header: methodHeader]].
 
 	^methodHeader
 ]
