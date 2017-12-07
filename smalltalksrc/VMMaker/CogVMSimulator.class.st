@@ -3497,9 +3497,14 @@ CogVMSimulator >> runWithBreakCount: theBreakCount [
 
 { #category : #'primitive support' }
 CogVMSimulator >> saneFunctionPointerForFailureOfPrimIndex: primIndex [
+	"For simulation override to do the check specially when the
+	 primitiveFunctionPointer is an invalid address proxy for a primitive."
 	| basePrimitive |
 	(instructionPointer < objectMemory nilObject asUnsignedInteger
-	and: [primitiveFunctionPointer isInteger]) ifTrue:
+	and: [primitiveFunctionPointer isInteger
+	and: [self isPrimitiveFunctionPointerAnIndex not
+	and: [primIndex ~= PrimNumberExternalCall
+	and: [(self isMetaPrimitiveIndex: primIndex) not]]]]) ifTrue:
 		[basePrimitive := self functionPointerFor: primIndex inClass: objectMemory nilObject.
 		 ^(cogit lookupAddress: primitiveFunctionPointer) endsWith: basePrimitive].
 

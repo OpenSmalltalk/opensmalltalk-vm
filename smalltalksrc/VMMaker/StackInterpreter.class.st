@@ -7711,7 +7711,7 @@ StackInterpreter >> getDesiredCogCodeSize [
 StackInterpreter >> getErrorObjectFromPrimFailCode [
 	"Answer the errorCode object to supply to a failing primitive method that accepts one.
 	 If there is a primitive error table and the primFailCode is a valid index there-in answer
-	 the coprresponding entry in the table, otherwise simply answer the code as an integer."
+	 the corresponding entry in the table, otherwise simply answer the code as an integer."
 	| table |
 	primFailCode > 0 ifTrue:
 		[table := objectMemory splObj: PrimErrTableIndex.
@@ -8580,7 +8580,7 @@ StackInterpreter >> internalAboutToReturn: resultOop through: aContext [
 
 { #category : #'message sending' }
 StackInterpreter >> internalActivateNewMethod [
-	| methodHeader numTemps rcvr errorCode |
+	| methodHeader numTemps rcvr |
 	<inline: true>
 
 	methodHeader := objectMemory methodHeaderOf: newMethod.
@@ -8613,11 +8613,7 @@ StackInterpreter >> internalActivateNewMethod [
 		  with a long store temp.  Strictly no need to skip the store because it's effectively a noop."
 		 localIP := localIP + (self sizeOfCallPrimitiveBytecode: methodHeader).
 		 primFailCode ~= 0 ifTrue:
-			[(objectMemory byteAt: localIP + 1)
-			  = (self longStoreBytecodeForHeader: methodHeader) ifTrue:
-				[errorCode := self getErrorObjectFromPrimFailCode.
-				 self internalStackTopPut: errorCode "nil if primFailCode == 1, or primFailCode"].
-			 primFailCode := 0]].
+			[self reapAndResetErrorCodeTo: localSP header: methodHeader]].
 
 	self assert: (self frameNumArgs: localFP) == argumentCount.
 	self assert: (self frameIsBlockActivation: localFP) not.
@@ -9619,7 +9615,7 @@ StackInterpreter >> jumplfTrueBy: offset [
 
 { #category : #'message sending' }
 StackInterpreter >> justActivateNewMethod [
-	| methodHeader numArgs numTemps rcvr errorCode |
+	| methodHeader numArgs numTemps rcvr |
 	<inline: true>
 	methodHeader := objectMemory methodHeaderOf: newMethod.
 	numTemps := self temporaryCountOfMethodHeader: methodHeader.
@@ -9648,11 +9644,7 @@ StackInterpreter >> justActivateNewMethod [
 		  with a long store temp.  Strictly no need to skip the store because it's effectively a noop."
 		 instructionPointer := instructionPointer + (self sizeOfCallPrimitiveBytecode: methodHeader).
 		 primFailCode ~= 0 ifTrue:
-			[(objectMemory byteAt: instructionPointer + 1)
-			  = (self longStoreBytecodeForHeader: methodHeader) ifTrue:
-				[errorCode := self getErrorObjectFromPrimFailCode.
-				 self stackTopPut: errorCode "nil if primFailCode == 1, or primFailCode"].
-			 primFailCode := 0]].
+			[self reapAndResetErrorCodeTo: stackPointer header: methodHeader]].
 
 	^methodHeader
 ]
@@ -18743,6 +18735,20 @@ StackInterpreter >> readableFormat: imageVersion [
 			and: [imageVersion = self imageFormatCompatibilityVersion]] "Float words in BigEndian order"
 ]
 
+{ #category : #'primitive support' }
+StackInterpreter >> reapAndResetErrorCodeTo: theSP header: methodHeader [
+	"Assuming the primFailCode is non-zero, check if the method consumes the error code
+	 and if so, assign it through theSP.  Then zero the primFailCode.  This is infrequent code,
+	 so keep it out of the common path."
+	<inline: #never>
+	| initialPC |
+	self assert: primFailCode ~= 0.
+	initialPC := (self initialIPForHeader: methodHeader method: newMethod) + (self sizeOfCallPrimitiveBytecode: methodHeader).
+	(objectMemory byteAt: initialPC) = (self longStoreBytecodeForHeader: methodHeader) ifTrue:
+		[stackPages longAtPointer: theSP put: self getErrorObjectFromPrimFailCode].
+	 primFailCode := 0
+]
+
 { #category : #'internal interpreter access' }
 StackInterpreter >> receiver [
 	<inline: true>
@@ -20141,8 +20147,10 @@ StackInterpreter >> singleExtendedSuperBytecode [
 
 { #category : #'compiled methods' }
 StackInterpreter >> sizeOfCallPrimitiveBytecode: methodHeader [
-	"Answer if the method starts with a long store temp bytecode, which indicates it has a primitive error code."
-	"249		11111001	i i i i i i i i	jjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjjj * 256)"
+	"Answer the size of the CallPrimitive bytecode that may be used to store a method's primitive."
+	"NewsqueakV4:	249	11111001	iiiiiiii	jjjjjjjj	Call Primitive #iiiiiiii + (jjjjjjjj * 256)"
+	"SistaV1:		248	11111000 	iiiiiiii	mssjjjjj	Call Primitive #iiiiiiii + (  jjjjj * 256)"
+	"V3+Closures:	139	11101111	iiiiiiii	jjjjjjjj	Call Primitive #iiiiiiii + (jjjjjjjj * 256)"
 	<api>
 	<inline: true>
 	^objectMemory hasSpurMemoryManagerAPI
