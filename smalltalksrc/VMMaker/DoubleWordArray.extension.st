@@ -66,6 +66,27 @@ DoubleWordArray >> longAt: byteIndex [
 ]
 
 { #category : #'*VMMaker-JITSimulation' }
+DoubleWordArray >> longAt: byteIndex bigEndian: bigEndian [
+	"Compatiblity with the ByteArray & Alien methods of the same name."
+	| wordIndex lowBits word hiWord |
+	wordIndex := byteIndex - 1 // 8 + 1.
+	lowBits := byteIndex - 1 bitAnd: 7.
+	word := (self at: wordIndex) bitShift: lowBits * -8.
+	lowBits > 4 ifTrue: "access straddles two words"
+		[hiWord := (self at: wordIndex + 1) bitShift: 8 - lowBits * 8.
+		 word := word + hiWord].
+	word := word bitAnd: 16rFFFFFFFF.
+	bigEndian ifTrue:
+		[word := ((word bitShift: -24) bitAnd: 16rFF)
+				 + ((word bitShift: -8) bitAnd: 16rFF00)
+ 				 + ((word bitAnd: 16rFF00) bitShift: 8)
+				 + ((word bitAnd: 16rFF) bitShift: 24)].
+	(word bitShift: -24) > 127 ifTrue:
+		[word := word - 16r100000000].
+	^word
+]
+
+{ #category : #'*VMMaker-JITSimulation' }
 DoubleWordArray >> longAt: byteIndex put: aValue [
 	"Compatiblity with the ByteArray & Alien methods of the same name."
 	| wordIndex lowBits word allOnes loMask hiMask |
