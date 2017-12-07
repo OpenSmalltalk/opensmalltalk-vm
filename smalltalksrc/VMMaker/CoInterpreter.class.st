@@ -2002,6 +2002,7 @@ CoInterpreter >> ceOuterSend: cacheAddress receiver: methodReceiver [
 
 { #category : #trampolines }
 CoInterpreter >> ceReapAndResetErrorCodeFor: cogMethod [
+	<api>
 	<var: #cogMethod type: #'CogMethod *'>
 	self break.
 	self assert: primFailCode ~= 0.
@@ -4032,14 +4033,6 @@ CoInterpreter >> getCurrentBytecode [
 CoInterpreter >> getDesiredCogCodeSize [
 	<cmacro: '() integerObjectOf(desiredCogCodeSize)'>
 	^objectMemory integerObjectOf: desiredCogCodeSize
-]
-
-{ #category : #'message sending' }
-CoInterpreter >> getErrorObjectFromPrimFailCode [
-	"Answer the errorCode object to supply to a failing primitive method that accepts one.
-	 If there is a primitive error table and the primFailCode is a valid index there-in answer
-	 the corresponding entry in the table, otherwise simply answer the code as an integer."
-	^super getErrorObjectFromPrimFailCode
 ]
 
 { #category : #accessing }
