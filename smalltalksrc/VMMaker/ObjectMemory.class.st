@@ -4056,6 +4056,11 @@ ObjectMemory >> noShiftCompactClassIndexOfHeader: header [
 	^header bitAnd: 16r1F << self compactClassFieldLSB
 ]
 
+{ #category : #'header formats' }
+ObjectMemory >> nonIndexablePointerFormat [
+	^1
+]
+
 { #category : #'object format' }
 ObjectMemory >> nonWeakFieldsOf: oop [
 	"Return the number of non-weak fields in oop (i.e. the number of fixed fields).

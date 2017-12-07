@@ -48,6 +48,7 @@ Class {
 		'PrimErrNoMemory',
 		'PrimErrNoModification',
 		'PrimErrNotFound',
+		'PrimErrOSError',
 		'PrimErrObjectIsPinned',
 		'PrimErrObjectMayMove',
 		'PrimErrObjectMoved',

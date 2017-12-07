@@ -1589,7 +1589,7 @@ StackInterpreter class >> initializePrimitiveTable [
 		(252 primitiveVMProfileSamplesInto "primitiveStopVMProfiling")
 		(253 primitiveFail "N.B. primitiveCollectCogCodeConstituents in CoInterpreter below")
 		(254 primitiveVMParameter)
-		(255 primitiveFail) "primitiveInstVarsPutFromStack. Never used except in Disney tests."
+		(255 primitiveFail) "RESERVED FOR THE R/Squeak VM. Was primitiveInstVarsPutFromStack. Never used except in Disney tests."
 
 		"Quick Push Const Methods"
 		(256 nil) "primitivePushSelf"
@@ -2076,7 +2076,7 @@ StackInterpreter class >> vmProxyMajorVersion [
 StackInterpreter class >> vmProxyMinorVersion [
 	"Define the  VM_PROXY_MINOR version for this VM as used to
 	 define the api in platforms/Cross/vm/sqVirtualMachine.[ch]"
-	^14 "statNumGCs added"
+	^14 "primitiveFailForOSError: added"
 ]
 
 { #category : #translation }
@@ -4677,6 +4677,32 @@ StackInterpreter >> classNameOf: aClass Is: className [
 	0 to: length - 1 do: [:i | (srcName at: i) = (className at: i) ifFalse: [^false]].
 	"Check if className really ends at this point"
 	^(className at: length) = 0
+]
+
+{ #category : #'message sending' }
+StackInterpreter >> cloneOSErrorObj: errObj numSlots: numSlots [
+	"If errObj is a pointer object with at least two slots, then answer a clone
+	  of the error object with the second slot set to the value of osErrorCode."
+	| clone |
+	<inline: true>
+	clone := objectMemory hasSpurMemoryManagerAPI
+				ifTrue: [objectMemory
+							eeInstantiateSmallClassIndex: (objectMemory classIndexOf: errObj)
+							format: objectMemory nonIndexablePointerFormat
+							numSlots: numSlots]
+				ifFalse: [objectMemory
+							eeInstantiateSmallClass: (objectMemory fetchClassOfNonImm: errObj)
+							numSlots: numSlots].
+	0 to: numSlots - 1 do:
+		[:i| objectMemory
+				storePointerUnchecked: i
+				ofObject: clone
+				withValue: (objectMemory fetchPointer: i ofObject: errObj)].
+	objectMemory
+		storePointerUnchecked: 1
+		ofObject: clone
+		withValue: (self signed64BitIntegerFor: osErrorCode).
+	^clone
 ]
 
 { #category : #'control primitives' }
@@ -7712,11 +7738,18 @@ StackInterpreter >> getErrorObjectFromPrimFailCode [
 	"Answer the errorCode object to supply to a failing primitive method that accepts one.
 	 If there is a primitive error table and the primFailCode is a valid index there-in answer
 	 the corresponding entry in the table, otherwise simply answer the code as an integer."
-	| table |
+	| table errObj numSlots |
 	primFailCode > 0 ifTrue:
 		[table := objectMemory splObj: PrimErrTableIndex.
 		 primFailCode <= (objectMemory numSlotsOf: table) ifTrue:
-			[^objectMemory fetchPointer: primFailCode - 1 ofObject: table]].
+			[errObj := objectMemory followField: primFailCode - 1 ofObject: table.
+			 "If this is a PrimErrOSError and there's a clonable object in the table at that index,
+			 answer a clone of the error object with the second slot set to the value of osErrorCode."
+			 (primFailCode = PrimErrOSError
+			  and: [(objectMemory formatOf: errObj) = objectMemory nonIndexablePointerFormat
+			  and: [(numSlots := objectMemory numSlotsOf: errObj) >= 2]]) ifTrue:
+				[errObj := self cloneOSErrorObj: errObj numSlots: numSlots].
+			 ^errObj]].
 	^objectMemory integerObjectOf: primFailCode
 ]
 

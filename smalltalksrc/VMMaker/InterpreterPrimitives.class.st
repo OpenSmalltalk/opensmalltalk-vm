@@ -9,6 +9,7 @@ Instance Variables
 	objectMemory:				<ObjectMemory> (simulation only)
 	preemptionYields:			<Boolean>
 	primFailCode:				<Integer>
+	osErrorCode:				<Integer>
 	profileMethod:				<Integer>
 	profileProcess:				<Integer>
 	profileSemaphore:			<Integer>
@@ -33,7 +34,10 @@ preemptionYields
 	- a boolean controlling the process primitives.  If true (old, incorrect, blue-book semantics) a preempted process is sent to the back of its run-queue.  If false, a process preempted by a higher-priority process is put back at the head of its run queue, hence preserving cooperative scheduling within priorities.
 
 primFailCode
-	- primtiive success/failure flag, 0 for success, otherwise the reason code for failure
+	- primitive success/failure flag, 0 for success, otherwise the reason code for failure
+
+osErrorCode
+	- a 64-bit value settable by external primitives conveying arbitrary error codes from the operating system and/or system libraries
 
 profileMethod
 	- the oop of the method at the time nextProfileTick was reached
@@ -57,6 +61,7 @@ Class {
 		'argumentCount',
 		'newMethod',
 		'primFailCode',
+		'osErrorCode',
 		'profileMethod',
 		'profileProcess',
 		'profileSemaphore',
@@ -83,7 +88,9 @@ Class {
 
 { #category : #'C translation' }
 InterpreterPrimitives class >> declareCVarsIn: aCCodeGen [
-	aCCodeGen var: 'sHEAFn' declareC: 'int (*sHEAFn)() = 0' "the hasEnvironmentAccess function"
+	aCCodeGen
+		var: 'osErrorCode' type: #sqLong;
+		var: 'sHEAFn' declareC: 'int (*sHEAFn)() = 0' "the hasEnvironmentAccess function"
 ]
 
 { #category : #'C translation' }
@@ -1812,6 +1819,15 @@ InterpreterPrimitives >> primitiveFailFor: reasonCode [
 	 N.B. primitiveFailFor: PrimNoErr is expected to clear the primFailCode."
 	<api>
 	^primFailCode := reasonCode
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> primitiveFailForOSError: osError [
+	<var: 'osError' type: #sqLong>
+	"Set PrimErrOSError primitive failure and associated osErrorCode."
+	<api>
+	osErrorCode := osError.
+	^primFailCode := PrimErrOSError
 ]
 
 { #category : #'primitive support' }
