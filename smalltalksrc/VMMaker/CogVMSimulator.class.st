@@ -3495,6 +3495,17 @@ CogVMSimulator >> runWithBreakCount: theBreakCount [
 	self initialEnterSmalltalkExecutive
 ]
 
+{ #category : #'primitive support' }
+CogVMSimulator >> saneFunctionPointerForFailureOfPrimIndex: primIndex [
+	| basePrimitive |
+	(instructionPointer < objectMemory nilObject asUnsignedInteger
+	and: [primitiveFunctionPointer isInteger]) ifTrue:
+		[basePrimitive := self functionPointerFor: primIndex inClass: objectMemory nilObject.
+		 ^(cogit lookupAddress: primitiveFunctionPointer) endsWith: basePrimitive].
+
+	^super saneFunctionPointerForFailureOfPrimIndex: primIndex
+]
+
 { #category : #'I/O primitives' }
 CogVMSimulator >> savedWindowSize [
 	^savedWindowSize ifNil: [0]

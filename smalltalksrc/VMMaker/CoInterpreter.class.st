@@ -1,5 +1,71 @@
 "
 I am a variant of the StackInterpreter that can co-exist with the Cog JIT.  I interpret unjitted methods, either because they have been found for the first time or because they are judged to be too big to JIT.  See CogMethod class's comment for method interoperability.
+
+cogCodeSize
+	- the current size of the machine code zone
+
+cogCompiledCodeCompactionCalledFor
+	- a variable set when the machine code zone runs out of space, causing a machine code zone compaction at the next available opportunity
+
+cogMethodZone
+	- the manager for the machine code zone (instance of CogMethodZone)
+
+cogit
+	- the JIT (co-jit) (instance of SimpleStackBasedCogit, StackToRegisterMappoingCogit, etc)
+
+deferSmash
+	- a flag causing deferral of smashes of the stackLimit around the call of functionSymbol (for assert checks)
+
+deferredSmash
+	- a flag noting deferral of smashes of the stackLimit around the call of functionSymbol (for assert checks)
+
+desiredCogCodeSize
+	- the desred size of the machine code zone, set at startup or via primitiveVMParameter to be written at snapshot time
+
+flagInterpretedMethods
+	- true if methods that are interpreted shoudl have their flag bit set (used to identity methods that are interpreted because they're unjittable for some reason)
+
+gcMode
+	- the variable holding the gcMode, used to inform the cogit of how to scan the machine code zone for oops on GC
+
+heapBase
+	- the address in memory of the base of the objectMemory's heap, which is immediately above the machine code zone
+
+lastCoggableInterpretedBlockMethod
+	- a variable used to invoke the cogit for a block mehtod being invoked repeatedly in the interpreter
+
+lastUncoggableInterpretedBlockMethod
+	- a variable used to avoid invoking the cogit for an unjittable method encountered on block evaluation
+
+maxLiteralCountForCompile
+	- the variable controlling which methods to jit.  methods with a literal count above this value will not be jitted (on the grounds that large methods are typically used for initialization, and take up a lot of space in the code zone)
+
+minBackwardJumpCountForCompile
+	- the variable controlling when to attempt to jit a method being interpreted.  If as many backward jumps as this occur, the current method will be jitted
+
+primTraceLog
+	- a small array implementing a crcular buffer logging the last N primitive invocations, GCs, code compactions, etc used for crash reporting
+
+primTraceLogIndex
+	- the index into primTraceLog of the next entry
+
+reenterInterpreter
+	- the jmpbuf used to jmp back into the interpreter when transitioning from machine code to the interpreter
+
+statCodeCompactionCount
+	- the count of machine code zone compactions
+
+statCodeCompactionUsecs
+	- the total microseconds spent in machine code zone compactions
+
+traceLog
+	- a log of various events, used in debugging
+
+traceLogIndex
+	- the index into traceLog of the next entry
+
+traceSources
+	- the names associated with the codes of events in traceLog
 "
 Class {
 	#name : #CoInterpreter,
@@ -7165,27 +7231,6 @@ CoInterpreter >> roomToPushNArgs: n [
 			^self stackPointerIndex + n <= cntxSize]
 		ifFalse: "simpler code that simply insists args are <= max arg count"
 			[^n <= (LargeContextSlots - CtxtTempFrameStart)]
-]
-
-{ #category : #'primitive support' }
-CoInterpreter >> saneFunctionPointerForFailureOfPrimIndex: primIndex [
-	^instructionPointer >= objectMemory nilObject asUnsignedInteger
-		ifTrue:
-			[super saneFunctionPointerForFailureOfPrimIndex: primIndex]
-		ifFalse:
-			[self
-				cCode:
-					[primitiveFunctionPointer = (self functionPointerFor: primIndex
-													inClass: objectMemory nilObject)]
-				inSmalltalk:
-					[(primitiveFunctionPointer isInteger
-						ifTrue:
-							[(cogit lookupAddress: primitiveFunctionPointer)
-								endsWith: (self functionPointerFor: primIndex
-												inClass: objectMemory nilObject)]
-						ifFalse:
-							[primitiveFunctionPointer = (self functionPointerFor: primIndex
-															inClass: objectMemory nilObject)])]]
 ]
 
 { #category : #'callback support' }

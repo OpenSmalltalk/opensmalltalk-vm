@@ -2,16 +2,17 @@
 InterpreterPrimitives implements most of the VM's core primitives.  It is the root of the interpreter hierarchy so as to share the core primitives amongst the varioius interpreters.
 
 Instance Variables
-	argumentCount:	<Integer>
-	messageSelector:	<Integer>
-	newMethod:		<Integer>
-	nextProfileTick:		<Integer>
-	objectMemory:		<ObjectMemory> (simulation only)
-	preemptionYields:	<Boolean>
-	primFailCode:		<Integer>
-	profileMethod:		<Integer>
-	profileProcess:		<Integer>
-	profileSemaphore:	<Integer>
+	argumentCount:			<Integer>
+	messageSelector:			<Integer>
+	newMethod:				<Integer>
+	nextProfileTick:				<Integer>
+	objectMemory:				<ObjectMemory> (simulation only)
+	preemptionYields:			<Boolean>
+	primFailCode:				<Integer>
+	profileMethod:				<Integer>
+	profileProcess:				<Integer>
+	profileSemaphore:			<Integer>
+	secHasEnvironmentAccess <Integer>
 
 argumentCount
 	- the number of arguments of the current message
@@ -42,6 +43,9 @@ profileProcess
 
 profileSemaphore
 	- the oop of the semaphore to signal when nextProfileTick is reached
+
+secHasEnvironmentAccess
+	- the function to call to check if access to the envronment should be granted to primitiveGetenv
 
 "
 Class {
