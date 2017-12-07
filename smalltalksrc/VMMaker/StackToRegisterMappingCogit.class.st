@@ -12323,7 +12323,10 @@ StackToRegisterMappingCogit >> generateMissAbortTrampolines [
 		[:numArgs|
 		picMissTrampolines
 			at: numArgs
-			put: (self genPICMissTrampolineFor: numArgs)]
+			put: (self genPICMissTrampolineFor: numArgs)].
+	ceReapAndResetErrorCodeTrampoline := self genTrampolineFor: #ceReapAndResetErrorCodeFor:
+												called: 'ceReapAndResetErrorCodeTrampoline'
+												arg: ClassReg
 ]
 
 { #category : #initialization }
