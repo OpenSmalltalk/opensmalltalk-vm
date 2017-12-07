@@ -1,5 +1,5 @@
 "
-This class should provide the definition of what interpreter support plugins need and can have access to. Note that the proxy related files platforms - Cross - vm - sqVirtualMachine.[ch] are kept under the SVN tree at www.squeakvm.org .
+This class should provide the definition of what interpreter support plugins need and can have access to. Note that the proxy related files platforms - Cross - vm - sqVirtualMachine.[ch] are kept under the git tree at http://www.github.com/opensmalltalk/vm.
 The main use of the class is to support the vm simulator
 "
 Class {
@@ -12,7 +12,11 @@ Class {
 		'method',
 		'argumentCount',
 		'bb',
-		'thisSessionID'
+		'thisSessionID',
+		'osErrorCode'
+	],
+	#pools : [
+		'VMBasicConstants'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -858,6 +862,16 @@ InterpreterProxy >> primitiveFailFor: reasonCode [
 	Primitive 255 is called to indicate that we are currently simulating a primitive that should fail and the VM should handle that case appropriately (if supported by the VM)."
 	<primitive: 255>
 	^ primFailCode := reasonCode
+]
+
+{ #category : #other }
+InterpreterProxy >> primitiveFailForOSError: osError [
+	<var: 'osError' type: #sqLong>
+	"Set PrimErrOSError primitive failure and associated osErrorCode.
+	 Primitive 255 is called to indicate that we are currently simulating a primitive that should fail and the VM should handle that case appropriately (if supported by the VM)."
+	<primitive: 255>
+	osErrorCode := osError.
+	^primFailCode := PrimErrOSError
 ]
 
 { #category : #other }
