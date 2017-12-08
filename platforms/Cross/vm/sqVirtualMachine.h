@@ -348,6 +348,9 @@ typedef struct VirtualMachine {
   sqInt (*unpinObject)(sqInt objOop);
 #endif
 
+# if VM_PROXY_MINOR > 13
+  sqInt (*primitiveFailForOSError)(sqLong);
+#endif
 } VirtualMachine;
 
 #endif /* _SqueakVM_H */
