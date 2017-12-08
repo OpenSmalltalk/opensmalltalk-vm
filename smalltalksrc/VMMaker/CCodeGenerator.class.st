@@ -3095,6 +3095,7 @@ CCodeGenerator >> generateToByDo: msgNode on: aStream indent: level [
 	iterationVar := blockExpr args first.
 	limitExpr := msgNode args first.
 	aStream nextPutAll: 'for (', iterationVar, ' = '.
+	self noteUsedVariableName: iterationVar.
 	self emitCExpression: msgNode receiver on: aStream.
 	mayHaveSideEffects := msgNode args size = 4. "See TMethod>>prepareMethodIn:"
 	mayHaveSideEffects ifTrue:
@@ -3186,6 +3187,7 @@ CCodeGenerator >> generateValue: aTSendNode on: aStream indent: level [
 			ifTrue: [substitutionDict at: argName put: exprNode]
 			ifFalse:
 				[aStream nextPutAll: argName; nextPutAll: ' = '.
+				 self noteUsedVariableName: argName.
 				 exprNode emitCCodeAsExpressionOn: aStream level: level generator: self.
 				 aStream nextPut: $; ; crtab: level]].
 	substitution
@@ -4349,6 +4351,12 @@ CCodeGenerator >> nonStructClassesForTranslationClasses: classes [
 				 or: [classes includes: class]]) ifFalse:
 					[nonStructClasses addLast: class]]]].
 	^ChangeSet superclassOrder: nonStructClasses
+]
+
+{ #category : #utilities }
+CCodeGenerator >> noteUsedVariableName: variableName [
+	currentMethod ifNotNil:
+		[:m| m noteUsedVariableName: variableName]
 ]
 
 { #category : #utilities }
