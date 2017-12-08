@@ -25,7 +25,8 @@ Class {
 		'sharedLabel',
 		'static',
 		'writtenToGlobalVarsCache',
-		'functionAttributes'
+		'functionAttributes',
+		'usedVariablesCache'
 	],
 	#classVars : [
 		'CaseStatements'
@@ -496,18 +497,22 @@ TMethod >> elideAnyFinalReturn [
 TMethod >> emitCCodeOn: aStream generator: aCodeGen [
 	"Emit C code for this method onto the given stream.
 	 All calls to inlined methods should already have been expanded."
-	| conditional |
+	| bodyStream conditional |
 
 	aCodeGen currentMethod: self.
+	usedVariablesCache := Set new.
 	self emitCCommentOn: aStream.	"place method comment and method name before function."
 	aStream crtab; nextPutAll: '/* '; nextPutAll: self definingClass name; nextPutAll: '>>#'; nextPutAll: self smalltalkSelector; nextPutAll: ' */'.	
 	aStream cr. 
 	conditional := self emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: false.
 	aStream cr; nextPut: ${.
-	self emitCLocalsOn: aStream generator: aCodeGen.
-	aCodeGen
+	bodyStream := ReadWriteStream on: (ByteString new: 128).
+	aCodeGen "Generation will note used variables in usedVariablesCache"
 		pushScope: declarations
-		while: [parseTree emitCCodeOn: aStream level: 1 generator: aCodeGen].
+		while: [parseTree emitCCodeOn: bodyStream level: 1 generator: aCodeGen].
+	self emitCLocalsOn: aStream generator: aCodeGen.
+	usedVariablesCache := nil.
+	aStream nextPutAll: bodyStream contents.
 	(returnType = #void or: [parseTree endsWithReturn]) ifFalse:
 		[aStream tab; nextPutAll: 'return 0;'; cr].
 	aStream nextPut: $}; cr.
@@ -607,14 +612,16 @@ TMethod >> emitCLocalsOn: aStream generator: aCodeGen [
 	aStream cr.
 	locals isEmpty ifFalse:
 		[(aCodeGen sortStrings: locals) do:
-			[ :var |
-			aStream next: 4 put: Character space.
-			volatileVariables ifTrue:
-				[aStream nextPutAll: #volatile; space].
-			aStream
-				nextPutAll: (self declarationAt: var);
-				nextPut: $;;
-				cr].
+			[ :var | | decl |
+			decl := self declarationAt: var.
+			(volatileVariables or: [(decl beginsWith: 'static') or: [usedVariablesCache includes: var]]) ifTrue:
+				[aStream next: 4 put: Character space.
+				 volatileVariables ifTrue:
+					[aStream nextPutAll: #volatile; space].
+				 aStream
+					nextPutAll: decl;
+					nextPut: $;;
+					cr]].
 		 aStream cr]
 ]
 
@@ -2005,6 +2012,12 @@ TMethod >> nodeCount [
 	cnt := 0.
 	parseTree nodesDo: [ :n | cnt := cnt + 1 ].
 	^cnt
+]
+
+{ #category : #utilities }
+TMethod >> noteUsedVariableName: token [
+	usedVariablesCache ifNotNil:
+		[usedVariablesCache add: token]
 ]
 
 { #category : #private }

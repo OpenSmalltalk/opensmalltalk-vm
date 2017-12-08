@@ -1220,7 +1220,7 @@ CoInterpreter >> callbackEnter: callbackID [
 			 self signalExternalSemaphores.
 			 "If no process is awakened by signalExternalSemaphores then transfer
 			  to the highest priority runnable one."
-			 (suspendedCallbacks at: jmpDepth) == self activeProcess ifTrue:
+			 (suspendedCallbacks at: jmpDepth) = self activeProcess ifTrue:
 				[self transferTo: self wakeHighestPriority from: CSCallbackLeave]]
 		ifFalse:
 			[self transferTo: self wakeHighestPriority from: CSCallbackLeave].
@@ -1236,7 +1236,7 @@ CoInterpreter >> callbackEnter: callbackID [
 		cp: reenterInterpreter
 		y: (self sizeof: #'jmp_buf').
 	cogit assertCStackWellAligned.
-	(self setjmp: (jmpBuf at: jmpDepth)) == 0 ifTrue: "Fill in callbackID"
+	(self setjmp: (jmpBuf at: jmpDepth)) = 0 ifTrue: "Fill in callbackID"
 		[callbackID at: 0 put: jmpDepth.
 		 self enterSmalltalkExecutive.
 		 self assert: false "NOTREACHED"].
@@ -1870,7 +1870,7 @@ CoInterpreter >> ceNonLocalReturn: returnValue [
 	"If returning to a context we must make a frame for it unless it is dead."
 	contextToReturnTo ~= nil ifTrue:
 		[frameToReturnTo := self establishFrameForContextToReturnTo: contextToReturnTo.
-		 frameToReturnTo == 0 ifTrue:
+		 frameToReturnTo = 0 ifTrue:
 			["error: home's sender is dead; cannot return"
 			 ourContext := self ensureFrameIsMarried: framePointer SP: stackPointer.
 			 ^self externalCannotReturn: returnValue from: ourContext]].
@@ -2814,7 +2814,7 @@ CoInterpreter >> commonCallerReturn [
 	].
 
 	callersFPOrNull := self frameCallerFP: localFP.
-	callersFPOrNull == 0 "baseFrame" ifTrue:
+	callersFPOrNull = 0 "baseFrame" ifTrue:
 		[self assert: localFP = stackPage baseFP.
 		 ^self baseFrameReturn].
 
@@ -4390,7 +4390,7 @@ CoInterpreter >> instructionPointerForFrame: spouseFP currentFP: currentFP curre
 		ifFalse:
 			[thePage := stackPages stackPageFor: spouseFP.
 			 theFPAbove := self findFrameAbove: spouseFP inPage: thePage.
-			 theIP := theFPAbove == 0
+			 theIP := theFPAbove = 0
 						ifTrue: [stackPages longAt: thePage headSP]
 						ifFalse:[self oopForPointer: (self frameCallerSavedIP: theFPAbove)]].
 	value := self contextInstructionPointer: theIP frame: spouseFP.

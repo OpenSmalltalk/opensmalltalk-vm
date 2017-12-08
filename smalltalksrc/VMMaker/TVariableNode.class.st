@@ -28,8 +28,10 @@ TVariableNode >> bindVariablesIn: aDictionary [
 TVariableNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 
 	aStream nextPutAll: (name = 'nil'
-						ifTrue: [ aCodeGen cLiteralFor: nil ]
-						ifFalse: [ aCodeGen returnPrefixFromVariable: name ])
+						ifTrue: [aCodeGen cLiteralFor: nil]
+						ifFalse: [aCodeGen returnPrefixFromVariable: name]).
+	aCodeGen currentMethod ifNotNil:
+		[:m| m noteUsedVariableName: name]
 ]
 
 { #category : #testing }
