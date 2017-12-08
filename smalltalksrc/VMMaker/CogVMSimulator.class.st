@@ -399,6 +399,16 @@ CogVMSimulator >> ceNonLocalReturn: returnValue [
 ]
 
 { #category : #trampolines }
+CogVMSimulator >> ceReapAndResetErrorCodeFor: cogMethod [
+	"Override to map the address into a CogMethodSurrogate"
+	| surrogate |
+	surrogate := cogMethod isInteger
+					ifTrue: [cogit cogMethodSurrogateAt: cogMethod]
+					ifFalse: [cogMethod].
+	^super ceReapAndResetErrorCodeFor: surrogate
+]
+
+{ #category : #trampolines }
 CogVMSimulator >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArgs [
 	"self stringOf: selector"
 	"self printOop: rcvr"

@@ -2004,10 +2004,10 @@ CoInterpreter >> ceOuterSend: cacheAddress receiver: methodReceiver [
 CoInterpreter >> ceReapAndResetErrorCodeFor: cogMethod [
 	<api>
 	<var: #cogMethod type: #'CogMethod *'>
-	self break.
 	self assert: primFailCode ~= 0.
 	newMethod := cogMethod methodObject.
-	self reapAndResetErrorCodeTo: stackPointer header: cogMethod methodHeader
+	self reapAndResetErrorCodeTo: stackPointer + objectMemory wordSize
+		header: cogMethod methodHeader
 ]
 
 { #category : #trampolines }
