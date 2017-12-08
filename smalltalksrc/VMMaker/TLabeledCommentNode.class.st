@@ -93,12 +93,12 @@ TLabeledCommentNode >> printOn: aStream level: level [
 { #category : #printing }
 TLabeledCommentNode >> printOptionalLabelOn: aStream [
 
-	label ~= nil ifTrue: [
-		self unindentOneTab: aStream.
-		aStream nextPutAll: label.
-		aStream nextPut: $:.
-		aStream tab.	
-	].
+	label ifNotNil:
+		[self unindentTabs: aStream.
+		 aStream
+			nextPutAll: label;
+			nextPut: $:;
+			tab]
 ]
 
 { #category : #accessing }
@@ -122,13 +122,13 @@ TLabeledCommentNode >> setLabel: labelString comment: commentString [
 ]
 
 { #category : #'C code generation' }
-TLabeledCommentNode >> unindentOneTab: aStream [
-	"Remove the last tab from the given stream if possible."
+TLabeledCommentNode >> unindentTabs: aStream [
+	"Remove all but one tab up to the beginning of line from the given stream if possible."
 
 	(aStream isKindOf: ReadWriteStream) ifFalse: [ ^self ].
-	aStream position > 0 ifTrue: [
-		aStream position: aStream position - 1.
-		"restore stream position if previous char was not a tab"
-		aStream peek = Character tab ifFalse: [ aStream next ].
-	].
+	[aStream position > 0] whileTrue:
+		[aStream position: aStream position - 1.
+		 "restore stream position if previous char was not a tab"
+		 aStream peek == Character tab ifFalse:
+			[^aStream next; tab]]
 ]

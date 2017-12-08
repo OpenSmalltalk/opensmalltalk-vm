@@ -2400,7 +2400,8 @@ CCodeGenerator >> generateInlineCCode: msgNode on: aStream indent: level [
 		ifTrue:
 			[(msgNode args first value at: 1 ifAbsent: nil) = $# ifTrue:
 				[aStream cr].
-			aStream nextPutAll: msgNode args first value]
+			aStream nextPutAll: msgNode args first value.
+			self noteVariableUsageInString: msgNode args first value]
 		ifFalse: [msgNode args first
 					emitCCodeOn: aStream
 					level: level
@@ -2417,7 +2418,8 @@ CCodeGenerator >> generateInlineCCodeAsArgument: msgNode on: aStream indent: lev
 		ifTrue:
 			[(msgNode args first value at: 1 ifAbsent: nil) = $# ifTrue:
 				[aStream cr].
-			aStream nextPutAll: msgNode args first value]
+			aStream nextPutAll: msgNode args first value.
+			self noteVariableUsageInString: msgNode args first value]
 		ifFalse: [msgNode args first
 					emitCCodeAsArgumentOn: aStream
 					level: level
@@ -2428,7 +2430,8 @@ CCodeGenerator >> generateInlineCCodeAsArgument: msgNode on: aStream indent: lev
 CCodeGenerator >> generateInlineCPreprocessorDirective: msgNode on: aStream indent: level [
 	"Generate the C preprocessor directive for this message onto the given stream."
 
-	aStream cr; nextPutAll: msgNode args first value
+	aStream cr; nextPutAll: msgNode args first value.
+	self noteVariableUsageInString: msgNode args first value
 ]
 
 { #category : #'C translation' }
@@ -4346,6 +4349,16 @@ CCodeGenerator >> nonStructClassesForTranslationClasses: classes [
 				 or: [classes includes: class]]) ifFalse:
 					[nonStructClasses addLast: class]]]].
 	^ChangeSet superclassOrder: nonStructClasses
+]
+
+{ #category : #utilities }
+CCodeGenerator >> noteVariableUsageInString: aString [
+	currentMethod ifNotNil:
+		[:m|
+		 (Scanner new typedScanTokens: aString) do:
+			[:token|
+			 (token isString and: [token first isLetter or: [token first == $_]]) ifTrue:
+				[m noteUsedVariableName: token]]]
 ]
 
 { #category : #utilities }
