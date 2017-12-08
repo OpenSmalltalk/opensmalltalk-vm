@@ -3915,14 +3915,14 @@ StackInterpreter >> callbackEnter: callbackID [
 	self signalExternalSemaphores.
 	"If no process is awakened by signalExternalSemaphores then transfer
 	 to the highest priority runnable one."
-	(suspendedCallbacks at: jmpDepth) == self activeProcess ifTrue:
+	(suspendedCallbacks at: jmpDepth) = self activeProcess ifTrue:
 		[self transferTo: self wakeHighestPriority].
 
 	"Typically, invoking the callback means that some semaphore has been 
 	signaled to indicate the callback. Force an interrupt check as soon as possible."
 	self forceInterruptCheck.
 
-	(self setjmp: (jmpBuf at: jmpDepth)) == 0 ifTrue: "Fill in callbackID"
+	(self setjmp: (jmpBuf at: jmpDepth)) = 0 ifTrue: "Fill in callbackID"
 		[callbackID at: 0 put: jmpDepth.
 		self interpret].
 
@@ -4840,7 +4840,7 @@ StackInterpreter >> commonCallerReturn [
 	].
 
 	callersFPOrNull := self frameCallerFP: localFP.
-	callersFPOrNull == 0 "baseFrame" ifTrue:
+	callersFPOrNull = 0 "baseFrame" ifTrue:
 		[self assert: localFP = stackPage baseFP.
 		 ^self baseFrameReturn].
 
@@ -4915,9 +4915,8 @@ StackInterpreter >> commonReturn [
 	"If returning to a context we must make a frame for it unless it is dead."
 	contextToReturnTo ~= nil ifTrue:
 		[frameToReturnTo := self establishFrameForContextToReturnTo: contextToReturnTo.
-		 frameToReturnTo == 0 ifTrue:
-			["error: home's sender is dead; cannot return"
-			 ^self internalCannotReturn: localReturnValue]].
+		 frameToReturnTo = 0 ifTrue: "error: home's sender is dead; cannot return"
+			[^self internalCannotReturn: localReturnValue]].
 
 	"Now we have a frame to return to.  If it is on a different page we must free intervening pages and
 	 nil out intervening contexts.  We must free intervening stack pages because if we leave the pages
@@ -5159,7 +5158,7 @@ StackInterpreter >> context: thisCntx hasSender: aContext [
 							findMethodWithPrimitive: -1
 							FromContext: thisCntx
 							UpToContext: aContext.
-	^handlerOrNilOrZero == 0
+	^handlerOrNilOrZero = 0
 ]
 
 { #category : #'debug support' }
@@ -6321,7 +6320,7 @@ StackInterpreter >> externalDivorceFrame: theFP andContext: ctxt [
 	theSP := self findSPOf: theFP on: thePage.
 	self updateStateOfSpouseContextForFrame: theFP WithSP: theSP.
 	callerCtx := self ensureCallerContext: theFP.
-	(frameAbove := self findFrameAbove: theFP inPage: thePage) == 0
+	(frameAbove := self findFrameAbove: theFP inPage: thePage) = 0
 		ifTrue: "If we're divorcing the top frame we can simply peel it off."
 			[theIP := stackPages longAt: thePage headSP]
 		ifFalse: "othewise move all frames above to a new stack and then peel the frame off."
@@ -6342,7 +6341,7 @@ StackInterpreter >> externalDivorceFrame: theFP andContext: ctxt [
 		ofObject: ctxt
 		withValue: callerCtx.
 	callerFP := self frameCallerFP: theFP.
-	callerFP == 0 "theFP is a base frame; it is now alone; free the entire page"
+	callerFP = 0 "theFP is a base frame; it is now alone; free the entire page"
 		ifTrue: [stackPages freeStackPage: thePage]
 		ifFalse:
 			[callerIP := self oopForPointer: (self frameCallerSavedIP: theFP).
@@ -8157,7 +8156,7 @@ StackInterpreter >> iframeMethod: theFP [
 StackInterpreter >> imageFormatCompatibilityVersion [
 	"This VM is backward-compatible with the immediately preceding version."
 
-	^objectMemory wordSize == 4 ifTrue: [6504] ifFalse: [68002]
+	^objectMemory wordSize = 4 ifTrue: [6504] ifFalse: [68002]
 ]
 
 { #category : #'image save/restore' }
@@ -8583,7 +8582,7 @@ StackInterpreter >> instructionPointerForFrame: spouseFP currentFP: currentFP cu
 		ifFalse:
 			[thePage := stackPages stackPageFor: spouseFP.
 			 theFPAbove := self findFrameAbove: spouseFP inPage: thePage.
-			 theIP := theFPAbove == 0
+			 theIP := theFPAbove = 0
 						ifTrue: [stackPages longAt: thePage headSP]
 						ifFalse:[self oopForPointer: (self frameCallerSavedIP: theFPAbove)]].
 	^self contextInstructionPointer: theIP frame: spouseFP
@@ -9289,7 +9288,7 @@ StackInterpreter >> isBaseFrame: theFP [
 	"A base frame (first frame in a stack page) is so marked by having a null saved fp."
 	<inline: true>
 	<var: #theFP type: #'char *'>
-	^(stackPages longAt: theFP + FoxSavedFP) == 0
+	^(stackPages longAt: theFP + FoxSavedFP) = 0
 ]
 
 { #category : #'internal interpreter access' }
