@@ -52,7 +52,9 @@
 #include <sys/param.h>
 #include <sys/utsname.h>
 #include <sys/stat.h>
-#include <sys/ucontext.h>
+#ifndef __OpenBSD__
+# include <sys/ucontext.h>
+#endif
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
