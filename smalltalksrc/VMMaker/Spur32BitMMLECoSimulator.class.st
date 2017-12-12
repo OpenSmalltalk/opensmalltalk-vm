@@ -270,6 +270,13 @@ Spur32BitMMLECoSimulator >> longAt: byteAddress put: a32BitValue [
 	^memory at: byteAddress // 4 + 1 put: a32BitValue
 ]
 
+{ #category : #'image segment in/out' }
+Spur32BitMMLECoSimulator >> mapOopsFrom: segStart to: segAddr outPointers: outPointerArray outHashes: savedOutHashes [
+	self leakCheckImageSegments ifTrue:
+		[self halt].
+	^super mapOopsFrom: segStart to: segAddr outPointers: outPointerArray outHashes: savedOutHashes
+]
+
 { #category : #'gc - global' }
 Spur32BitMMLECoSimulator >> markAndTrace: objOop [
 	"objOop = 16rB26020 ifTrue: [self halt].

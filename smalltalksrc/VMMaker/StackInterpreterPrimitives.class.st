@@ -22,7 +22,7 @@ StackInterpreterPrimitives >> cloneContext: aContext [
 			objectMemory
 				storePointerUnchecked: i
 				ofObject: cloned
-				withValue: (self fetchPointer: i ofObject: aContext)].
+				withValue: (objectMemory fetchPointer: i ofObject: aContext)].
 		(self isStillMarriedContext: aContext)
 			ifTrue:
 				[spouseFP := self frameOfMarriedContext: aContext.
@@ -40,7 +40,7 @@ StackInterpreterPrimitives >> cloneContext: aContext [
 					objectMemory
 						storePointerUnchecked: i + CtxtTempFrameStart
 						ofObject: cloned
-						withValue: (self fetchPointer: i + CtxtTempFrameStart ofObject: aContext)]]].
+						withValue: (objectMemory fetchPointer: i + CtxtTempFrameStart ofObject: aContext)]]].
 	^cloned
 ]
 
