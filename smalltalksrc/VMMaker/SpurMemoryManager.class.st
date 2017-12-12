@@ -3985,7 +3985,7 @@ SpurMemoryManager >> convertToArray [
 ]
 
 { #category : #'image segment in/out' }
-SpurMemoryManager >> copyObj: objOop toAddr: segAddr startAt: segStart stopAt: endSeg savedFirstFields: savedFirstFields index: i [
+SpurMemoryManager >> copyObj: objOop toAddr: segAddr stopAt: endSeg savedFirstFields: savedFirstFields index: i [
 	"This is part of storeImageSegmentInto:outPointers:roots:.
 	 Copy objOop into the segment beginning at segAddr, and forward it to the copy,
 	 saving its first field in savedFirstField, and setting its marked bit to indicate it has
@@ -5791,21 +5791,23 @@ SpurMemoryManager >> ifAProxy: objOop updateCopy: copy [
 	 If the object being copied to the segment is weird and has exotic state,
 	 i.e. a married context or a jitted method, update the copy with the vanilla state."
 
-	((self isContext: objOop)
-	 and: [coInterpreter isMarriedOrWidowedContext: objOop]) ifTrue:
+	(self isContext: objOop) ifTrue:
 		[| numMediatedSlots |
-		 "Since the context is here via objectsReachableFromRoots: we know it cannot be divorced.
-		  I'd like to assert coInterpreter checkIsStillMarriedContext: objOop currentFP: framePointer,
-		  here but that requires access to framePointer."
-		 numMediatedSlots := coInterpreter numSlotsOfMarriedContext: objOop.
-		 0 to: numMediatedSlots - 1 do:
-			[:i| | oop |
-			 oop := coInterpreter fetchPointer: i ofMarriedContext: objOop.
-			 self storePointerUnchecked: i ofObject: copy withValue: oop].
+		 (coInterpreter isMarriedOrWidowedContext: objOop)
+			ifTrue:
+				["Since the context is here via objectsReachableFromRoots: we know it cannot be divorced.
+				  I'd like to assert coInterpreter checkIsStillMarriedContext: objOop currentFP: framePointer,
+				  here but that requires access to framePointer."
+				 numMediatedSlots := coInterpreter numSlotsOfMarriedContext: objOop.
+				 0 to: numMediatedSlots - 1 do:
+					[:i| | oop |
+					 oop := coInterpreter fetchPointer: i ofMarriedContext: objOop.
+					 self storePointerUnchecked: i ofObject: copy withValue: oop]]
+			ifFalse:
+				[numMediatedSlots := self numPointerSlotsOf: objOop].
 		 "And make sure to nil the slots beyond the top of stack..."
 		 numMediatedSlots to: (self numSlotsOf: objOop) - 1 do:
-			[:i|
-			self storePointerUnchecked: i ofObject: copy withValue: nilObj]]
+			[:i| self storePointerUnchecked: i ofObject: copy withValue: nilObj]]
 ]
 
 { #category : #'become implementation' }
@@ -7924,14 +7926,14 @@ SpurMemoryManager >> mapOopsFrom: segStart to: segAddr outPointers: outPointerAr
 
 	 Class indices should be set as follows (see assignClassIndicesAndPinFrom:to:outPointers:filling:)
 	 - class indices for classes in the segment "
-	| objOop outIndex |
-	outIndex := 0.
+	| objOop objIndex outIndex |
+	outIndex := objIndex := 0. "objIndex is for debugging; it mirrors indices in the sender's arrayOfObjects."
 	self fillObj: outPointerArray numSlots: (self numSlotsOf: outPointerArray) with: nilObj.
 	objOop := self objectStartingAt: segStart.
 	[self oop: objOop isLessThan: segAddr] whileTrue:
 		[| heapOop oop hash segIndex |
 		 heapOop := self fetchClassOfNonImm: objOop.
-		 "Set the classIndex of the instance.  This is a segment offset (segAddr - segStart / allocatiopnUnit) for instances of
+		 "Set the classIndex of the instance.  This is a segment offset (segAddr - segStart / allocationUnit) for instances of
 		  classes within the segment, and an outPointer index (index in outPointers + TopHashBit) for classes outside the segment."
 		 (self isCopiedIntoSegment: heapOop)
 			ifTrue: "oop is a class in the segment; storeImageSegmentInto:outPointers:roots: established offset is within range."
@@ -7971,7 +7973,8 @@ SpurMemoryManager >> mapOopsFrom: segStart to: segAddr outPointers: outPointerAr
 								 self assert: ((self rawHashBitsOf: heapOop) anyMask: TopHashBit).
 								 oop := (self rawHashBitsOf: heapOop) - TopHashBit * self bytesPerOop + TopOopBit]].
 				 self storePointerUnchecked: i ofObject: objOop withValue: oop]].
-		 objOop := self objectAfter: objOop limit: segAddr].
+		 objOop := self objectAfter: objOop limit: segAddr.
+		 objIndex := objIndex + 1].
 	^outIndex
 ]
 
@@ -9242,6 +9245,9 @@ SpurMemoryManager >> objectsReachableFromRoots: arrayOfRoots [
 	self assert: (self isEmptyObjStack: weaklingStack).
 	self assert: self noUnscannedEphemerons.
 
+	"Now unmark the roots before collecting the transitive closure of unmarked objects accessible from the roots."
+	self unmarkObjectsIn: arrayOfRoots.
+
 	"Use the largest free chunk to answer the result."
 	freeChunk := self allocateLargestFreeChunk. "N.B. Does /not/ update totalFreeOldSpace"
 	totalFreeOldSpace := totalFreeOldSpace - (self bytesInObject: freeChunk). "but must update so that growth in the markStack does not cause assert fails."
@@ -9250,48 +9256,38 @@ SpurMemoryManager >> objectsReachableFromRoots: arrayOfRoots [
 	count := 0.
 
 	"First put the arrayOfRoots; order is important."
-	count := count + 1.
-	ptr < limit ifTrue:
-		[self longAt: ptr put: arrayOfRoots.
-		 ptr := ptr + self bytesPerOop].
+	self noCheckPush: arrayOfRoots onObjStack: markStack.
 
 	"Now collect the roots and the transitive closure of unmarked objects from them."
-	0 to: (self numSlotsOf: arrayOfRoots) - 1 do:
-		[:rx|
-		 oop := self fetchPointer: rx ofObject: arrayOfRoots.
-		 (self isNonImmediate: oop) ifTrue:
-			[self deny: (self isForwarded: oop).
-			 self noCheckPush: oop onObjStack: markStack.
-
-			 "Collect the unmarked objects reachable from this root."
-			 [self isEmptyObjStack: markStack] whileFalse:
-				[objOop := self popObjStack: markStack.
-				 count := count + 1.
-				 ptr < limit ifTrue:
-					[self longAt: ptr put: objOop.
-					 ptr := ptr + self bytesPerOop].
-				 oop := self fetchClassOfNonImm: objOop.
-				 (self isMarked: oop) ifFalse:
-					[self setIsMarkedOf: oop to: true.
-					 self noCheckPush: oop onObjStack: markStack].
-				 ((self isContextNonImm: objOop)
-				  and: [coInterpreter isStillMarriedContext: objOop]) "widow now, before the loop"
-					ifTrue:
-						[0 to: (coInterpreter numSlotsOfMarriedContext: objOop) - 1 do:
-							[:i|
-							 oop := coInterpreter fetchPointer: i ofMarriedContext: objOop.
-							 ((self isImmediate: oop)
-							  or: [self isMarked: oop]) ifFalse:
-								[self setIsMarkedOf: oop to: true.
-								 self noCheckPush: oop onObjStack: markStack]]]
-					ifFalse:
-						[0 to: (self numPointerSlotsOf: objOop) - 1 do:
-							[:i|
-							 oop := self fetchPointer: i ofObject: objOop.
-							 ((self isImmediate: oop)
-							  or: [self isMarked: oop]) ifFalse:
-								[self setIsMarkedOf: oop to: true.
-								 self noCheckPush: oop onObjStack: markStack]]]]]].
+	[self isEmptyObjStack: markStack] whileFalse:
+		[objOop := self popObjStack: markStack.
+		 self assert: (self isMarked: objOop).
+		 count := count + 1.
+		 ptr < limit ifTrue:
+			[self longAt: ptr put: objOop.
+			 ptr := ptr + self bytesPerOop].
+		 oop := self fetchClassOfNonImm: objOop.
+		 (self isMarked: oop) ifFalse:
+			[self setIsMarkedOf: oop to: true.
+			 self noCheckPush: oop onObjStack: markStack].
+		 ((self isContextNonImm: objOop)
+		  and: [coInterpreter isStillMarriedContext: objOop]) "widow now, before the copy loop"
+			ifTrue:
+				[0 to: (coInterpreter numSlotsOfMarriedContext: objOop) - 1 do:
+					[:i|
+					 oop := coInterpreter fetchPointer: i ofMarriedContext: objOop.
+					 ((self isImmediate: oop)
+					  or: [self isMarked: oop]) ifFalse:
+						[self setIsMarkedOf: oop to: true.
+						 self noCheckPush: oop onObjStack: markStack]]]
+			ifFalse:
+				[0 to: (self numPointerSlotsOf: objOop) - 1 do:
+					[:i|
+					 oop := self fetchPointer: i ofObject: objOop.
+					 ((self isImmediate: oop)
+					  or: [self isMarked: oop]) ifFalse:
+						[self setIsMarkedOf: oop to: true.
+						 self noCheckPush: oop onObjStack: markStack]]]].
 
 	self unmarkAllObjects.
 
@@ -11752,7 +11748,6 @@ SpurMemoryManager >> storeImageSegmentInto: segmentWordArrayArg outPointers: out
 		self deny: ((self isImmediate: objOop) or: [self isForwarded: objOop]).
 		newSegAddrOrError := self copyObj: objOop
 									toAddr: segAddr
-									startAt: segStart 
 									stopAt: endSeg
 									savedFirstFields: savedFirstFields
 									index: i.
@@ -12397,6 +12392,16 @@ SpurMemoryManager >> unmarkAllObjects [
 					[(self isSegmentBridge: obj) ifFalse:
 						[self setIsMarkedOf: obj to: false]]]].
 
+]
+
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> unmarkObjectsIn: arrayOfRoots [
+	"This is part of storeImageSegmentInto:outPointers:roots:."
+	0 to: (self numSlotsOf: arrayOfRoots) - 1 do:
+		[:i| | oop |
+		oop := self followField: i ofObject: arrayOfRoots.
+		(self isNonImmediate: oop) ifTrue:
+			[self setIsMarkedOf: oop to: false]]
 ]
 
 { #category : #compaction }
