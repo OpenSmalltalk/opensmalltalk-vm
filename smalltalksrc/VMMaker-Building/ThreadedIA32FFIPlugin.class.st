@@ -4,7 +4,7 @@ This subclass is for the IA32/x86 ABI.
 Class {
 	#name : #ThreadedIA32FFIPlugin,
 	#superclass : #ThreadedFFIPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }
@@ -27,43 +27,37 @@ ThreadedIA32FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: cal
 	<var: #floatRet type: #double>
 	<var: #intRet type: #usqLong>
 	<inline: true>
-	self cppIf: COGMTVM ifTrue:
-	[(calloutState callFlags anyMask: FFICallFlagThreaded) ifTrue:
-		[myThreadIndex := interpreterProxy disownVM: 0]].
+	self maybeDisownVM: calloutState threadIndexInto: [:threadIndex| myThreadIndex := threadIndex].
 
-	self registerArgsSlop + self cStackAlignment > 0 ifTrue:
+	(self allocaLiesSoSetSpBeforeCall or: [self mustAlignStack]) ifTrue:
 		[self setsp: calloutState argVector].
 
 	atomicType := self atomicTypeOf: calloutState ffiRetHeader.
-	(atomicType = FFITypeSingleFloat
-	 or: [atomicType = FFITypeDoubleFloat])
-		ifTrue:
-			[floatRet := self dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'double (*)()')]
-		ifFalse:
-			[intRet := self dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'usqLong (*)()')].
+	(atomicType >> 1) = (FFITypeSingleFloat >> 1) ifTrue:
+		[floatRet := self dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'double (*)()').
+
+		 "undo any callee argument pops because it may confuse stack management with the alloca."
+		 (self isCalleePopsConvention: calloutState callFlags) ifTrue:
+			[self setsp: calloutState argVector].
+		 self maybeOwnVM: calloutState threadIndex: myThreadIndex.
+
+		 ^interpreterProxy floatObjectOf: floatRet].
+
+	intRet := self dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'usqLong (*)()').
+
 	"undo any callee argument pops because it may confuse stack management with the alloca."
 	(self isCalleePopsConvention: calloutState callFlags) ifTrue:
 		[self setsp: calloutState argVector].
+	self maybeOwnVM: calloutState threadIndex: myThreadIndex.
 
-	self cppIf: COGMTVM ifTrue:
-	[(calloutState callFlags anyMask: FFICallFlagThreaded) ifTrue:
-		[interpreterProxy ownVM: myThreadIndex]].
-
-	"Note: Order is important here since FFIFlagPointer + FFIFlagStructure is used to represent
-	 'typedef void* VoidPointer' and VoidPointer must be returned as pointer *not* as struct."
-	(calloutState ffiRetHeader anyMask: FFIFlagPointer) ifTrue:
-		[^self ffiReturnPointer: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState].
-
-	(calloutState ffiRetHeader anyMask: FFIFlagStructure) ifTrue:
-		[^self ffiReturnStruct: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState].
+	(calloutState ffiRetHeader anyMask: FFIFlagPointer+FFIFlagStructure) ifTrue:
+		["Note: Order is important here since FFIFlagPointer + FFIFlagStructure is used to represent
+		 'typedef void* VoidPointer' and VoidPointer must be returned as pointer *not* as struct."
+		 (calloutState ffiRetHeader anyMask: FFIFlagPointer) ifTrue:
+			[^self ffiReturnPointer: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState].
+		 ^self ffiReturnStruct: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState].
 	
-	(atomicType = FFITypeSingleFloat
-	 or: [atomicType = FFITypeDoubleFloat]) ifTrue:
-		[^interpreterProxy methodReturnValue: (interpreterProxy floatObjectOf: floatRet)].
-
-	^interpreterProxy methodReturnValue: (self ffiCreateIntegralResultOop: intRet
-												ofAtomicType: atomicType
-												in: calloutState)
+	^self ffiCreateIntegralResultOop: intRet ofAtomicType: atomicType in: calloutState
 ]
 
 { #category : #marshalling }
@@ -243,30 +237,22 @@ ThreadedIA32FFIPlugin >> ffiReturnStruct: longLongRet ofType: ffiRetType in: cal
 	<inline: true>
 	retClass := interpreterProxy fetchPointer: 1 ofObject: ffiRetType.
 	retOop := interpreterProxy instantiateClass: retClass indexableSize: 0.
-	interpreterProxy pushRemappableOop: retOop.
-	oop := interpreterProxy 
-			instantiateClass: interpreterProxy classByteArray 
-			indexableSize: calloutState structReturnSize.
-	(self returnStructInRegisters: calloutState structReturnSize)
-		ifTrue:
-			[self mem: (interpreterProxy firstIndexableField: oop) cp: (self addressOf: longLongRet) y: calloutState structReturnSize]
-		ifFalse:
-			[self mem: (interpreterProxy firstIndexableField: oop) cp: calloutState limit y: calloutState structReturnSize].
-	retOop := interpreterProxy popRemappableOop.
+	self remapOop: retOop
+		in: [oop := interpreterProxy 
+					instantiateClass: interpreterProxy classByteArray 
+					indexableSize: calloutState structReturnSize].
+	self mem: (interpreterProxy firstIndexableField: oop)
+		cp: ((self returnStructInRegisters: calloutState structReturnSize)
+				ifTrue: [(self addressOf: longLongRet) asVoidPointer]
+				ifFalse: [calloutState limit])
+		 y: calloutState structReturnSize.
 	interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
-	^interpreterProxy methodReturnValue: retOop
-]
-
-{ #category : #marshalling }
-ThreadedIA32FFIPlugin >> registerArgsSlop [
-	"Answer any space needed to prevent the alloca'ed outgoing arguments marshalling area from
-	 being overwritten by any register arguments during calls during marshalling.  On x86 this is 0"
-	^0
+	^retOop
 ]
 
 { #category : #marshalling }
 ThreadedIA32FFIPlugin >> returnStructInRegisters: returnStructSize [
 	"Answer if a struct result of a given size is returned in memory or not."
 	<cmacro: '(sz) (WIN32_X86_STRUCT_RETURN && (sz) <= 8 && !((sz)&((sz)-1)))'>
-	^returnStructSize <= 8 and: [(returnStructSize bitAnd: returnStructSize - 1) = 0]
+	^returnStructSize <= 8 and: [returnStructSize isPowerOfTwo]
 ]

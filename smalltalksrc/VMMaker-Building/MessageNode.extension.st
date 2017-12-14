@@ -4,9 +4,12 @@ Extension { #name : #MessageNode }
 MessageNode >> asTranslatorNodeIn: aTMethod [
 	"make a CCodeGenerator equivalent of me"
 	"selector is sometimes a Symbol, sometimes a SelectorNode!
-	On top of this, numArgs is needed due to the (truly grody) use of
-	arguments as a place to store the extra expressions needed to generate
-	code for in-line to:by:do:, etc.  see below, where it is used."
+	 On top of this, numArgs is needed due to the (truly grody) use of
+	 arguments as a place to store the extra expressions needed to generate
+	 code for in-line to:by:do:, etc.  see below, where it is used.
+
+	 Expand super nodes in place. Elide sends of halt so that halts can be
+	 sprinkled through the simulator but will be eliminated from the generated C."
 	| rcvrOrNil sel args ifNotNilBlock |
 	rcvrOrNil := receiver ifNotNil: [receiver asTranslatorNodeIn: aTMethod].
 	(rcvrOrNil notNil
@@ -14,13 +17,18 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 	and: [rcvrOrNil name = 'super']]) ifTrue:
 		[^aTMethod superExpansionNodeFor: selector key args: arguments].
 	sel := selector isSymbol ifTrue: [selector] ifFalse: [selector key].
-	((sel == #cCode:inSmalltalk: "extracting here rather than in translation allows inlining in the block."
-	  or: [sel == #cCode:])
-	 and: [arguments first isBlockNode]) ifTrue:
-		[| block |
-		 ^(block := arguments first asTranslatorNodeIn: aTMethod) statements size = 1
-			ifTrue: [block statements first]
-			ifFalse: [block]].
+	sel == #halt ifTrue: [^rcvrOrNil].
+	(sel == #cCode:inSmalltalk: "extracting here rather than in translation allows inlining in the block."
+	  or: [sel == #cCode:]) ifTrue:
+		[arguments first isBlockNode ifTrue:
+			[| block |
+			 ^(block := arguments first asTranslatorNodeIn: aTMethod) statements size = 1
+				ifTrue: [block statements first]
+				ifFalse: [block]].
+		 (arguments first isLiteralNode
+		 and: [arguments first key isString
+		 and: [arguments first key isEmpty]]) ifTrue:
+			[^arguments first asTranslatorNodeIn: aTMethod]].
 	args := arguments
 				select: [:arg| arg notNil]
 				thenCollect: [:arg| arg asTranslatorNodeIn: aTMethod].
@@ -70,6 +78,10 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 									receiver: (receiver receiver variable asTranslatorNodeIn: aTMethod)
 									arguments: {receiver arguments first asTranslatorNodeIn: aTMethod})
 						arguments: args }].
+	((CCodeGenerator isVarargsSelector: sel)
+	 and: [args last isCollection
+	 and: [args last isSequenceable]]) ifTrue:
+		[args := args allButLast, args last].
 	^TSendNode new
 		setSelector: sel
 		receiver: rcvrOrNil

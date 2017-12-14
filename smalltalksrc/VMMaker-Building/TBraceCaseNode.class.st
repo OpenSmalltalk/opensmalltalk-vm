@@ -117,3 +117,10 @@ TBraceCaseNode >> replaceNodesIn: aDictionary [
 		cases := cases collect: [:node| node replaceNodesIn: aDictionary].
 		self]
 ]
+
+{ #category : #'type inference' }
+TBraceCaseNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
+	| types |
+	types := Set withAll: (cases collect: [:case| case typeOrNilFrom: aCodeGenerator in: aTMethod]).
+	^types size = 1 ifTrue: [types anyOne]
+]

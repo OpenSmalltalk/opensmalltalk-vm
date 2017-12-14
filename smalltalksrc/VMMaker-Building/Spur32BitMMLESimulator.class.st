@@ -21,30 +21,21 @@ Spur32BitMMLESimulator >> bootstrapping: aBoolean [
 
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> byteAt: byteAddress [
-	| lowBits long |
+	| lowBits long32 |
 	lowBits := byteAddress bitAnd: 3.
-	long := self longAt: byteAddress - lowBits.
-	^(lowBits caseOf: {
-		[0] -> [ long ].
-		[1] -> [ long bitShift: -8  ].
-		[2] -> [ long bitShift: -16 ].
-		[3] -> [ long bitShift: -24 ]
-	}) bitAnd: 16rFF
+	long32 := self long32At: byteAddress - lowBits.
+	^(long32 bitShift: -8 * lowBits) bitAnd: 16rFF
 ]
 
 { #category : #'memory access' }
 Spur32BitMMLESimulator >> byteAt: byteAddress put: byte [
-	| lowBits long longAddress |
+	| lowBits long32 longAddress mask value |
 	lowBits := byteAddress bitAnd: 3.
 	longAddress := byteAddress - lowBits.
-	long := self longAt: longAddress.
-	long := (lowBits caseOf: {
-		[0] -> [ (long bitAnd: 16rFFFFFF00) bitOr: byte ].
-		[1] -> [ (long bitAnd: 16rFFFF00FF) bitOr: (byte bitShift: 8) ].
-		[2] -> [ (long bitAnd: 16rFF00FFFF) bitOr: (byte bitShift: 16)  ].
-		[3] -> [ (long bitAnd: 16r00FFFFFF) bitOr: (byte bitShift: 24)  ]
-	}).
-	self longAt: longAddress put: long.
+	long32 := self long32At: longAddress.
+	mask := (16rFF bitShift: 8 * lowBits) bitInvert.
+	value := byte bitShift: 8 * lowBits.
+	self long32At: longAddress put: ((long32 bitAnd: mask) bitOr: value).
 	^byte
 ]
 
@@ -54,6 +45,16 @@ Spur32BitMMLESimulator >> byteAtPointer: pointer [
 	 pointer is a raw address."
 
 	^self byteAt: pointer
+]
+
+{ #category : #'memory access' }
+Spur32BitMMLESimulator >> byteSwapped32IfBigEndian: w [
+	^w bitAnd: 16rFFFFFFFF
+]
+
+{ #category : #'memory access' }
+Spur32BitMMLESimulator >> byteSwapped64IfBigEndian: w [
+	^w bitAnd: 16rFFFFFFFFFFFFFFFF
 ]
 
 { #category : #'debug support' }
@@ -96,11 +97,9 @@ Spur32BitMMLESimulator >> firstIndexableField: objOop [
 												+ self baseHeaderSize
 												+ ((self fixedFieldsOfClassFormat: classFormat) << self shiftForWord))
 					to: #'oop *'].
-		^self cCoerce: (self pointerForOop: objOop
-											+ self baseHeaderSize
-											+ ((self numSlotsOf: objOop) << self shiftForWord))
+		^self cCoerce: (self pointerForOop: objOop + self baseHeaderSize)
 				to: #'oop *'].
-	"All bit objects, and indeed CompiledMethod, though this is a non-no, start at 0"
+	"All bit objects, and indeed CompiledMethod, though this is a no-no, start at 0"
 	self assert: (fmt >= self sixtyFourBitIndexableFormat and: [fmt < self firstCompiledMethodFormat]).
 	^self
 		cCoerce: (self pointerForOop: objOop + self baseHeaderSize)
@@ -199,6 +198,11 @@ Spur32BitMMLESimulator >> initialize [
 ]
 
 { #category : #'memory access' }
+Spur32BitMMLESimulator >> intAt: byteAddress [ 
+	^self longAt: byteAddress 
+]
+
+{ #category : #'memory access' }
 Spur32BitMMLESimulator >> intAt: byteAddress put: a32BitValue [
 	^self longAt: byteAddress put: (a32BitValue bitAnd: 16rFFFFFFFF)
 ]
@@ -206,7 +210,11 @@ Spur32BitMMLESimulator >> intAt: byteAddress put: a32BitValue [
 { #category : #'image segment in/out' }
 Spur32BitMMLESimulator >> loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray [
 	self leakCheckImageSegments ifTrue:
-		[self halt].
+		[parent ifNil:
+			[| result |
+			 self halt.
+			 result := coInterpreter cloneSimulation objectMemory loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray.
+			 Smalltalk garbageCollect]].
 	^super loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray
 ]
 
@@ -261,6 +269,13 @@ Spur32BitMMLESimulator >> longAt: byteAddress put: a32BitValue [
 		[self halt]."
 	byteAddress \\ 4 ~= 0 ifTrue: [self unalignedAccessError].
 	^memory at: byteAddress // 4 + 1 put: a32BitValue
+]
+
+{ #category : #'image segment in/out' }
+Spur32BitMMLESimulator >> mapOopsFrom: segStart to: segAddr outPointers: outPointerArray outHashes: savedOutHashes [
+	self leakCheckImageSegments ifTrue:
+		[self halt].
+	^super mapOopsFrom: segStart to: segAddr outPointers: outPointerArray outHashes: savedOutHashes
 ]
 
 { #category : #'gc - global' }
@@ -321,32 +336,32 @@ Spur32BitMMLESimulator >> parent: anObject [
 ]
 
 { #category : #'image segment in/out' }
-Spur32BitMMLESimulator >> return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes [
+Spur32BitMMLESimulator >> return: errCode restoringObjectsIn: firstArray savedFirstFields: savedFirstFields and: secondArray savedHashes: savedHashes [
 	self leakCheckImageSegments ifTrue:
 		[self halt: errCode printString].
-	^super return: errCode restoringObjectsIn: firstArray savedHashes: firstSavedHashes and: secondArray savedHashes: secondSavedHashes
+	^super return: errCode restoringObjectsIn: firstArray savedFirstFields: savedFirstFields and: secondArray savedHashes: savedHashes
 ]
 
 { #category : #'debug support' }
-Spur32BitMMLESimulator >> runLeakCheckerFor: gcModes excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
+Spur32BitMMLESimulator >> runLeakCheckerFor: gcModes excludeUnmarkedObjs: excludeUnmarkedObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
 	(coInterpreter displayView isNil
 	 and: [gcModes anyMask: checkForLeaks]) ifTrue:
 		[coInterpreter transcript nextPutAll: 'leak-checking...'; flush].
 	^super
 		runLeakCheckerFor: gcModes
-		excludeUnmarkedNewSpaceObjs: excludeUnmarkedNewSpaceObjs
+		excludeUnmarkedObjs: excludeUnmarkedObjs
 		classIndicesShouldBeValid: classIndicesShouldBeValid
 ]
 
-{ #category : #'generation scavenging' }
+{ #category : #'gc - global' }
 Spur32BitMMLESimulator >> scavengingGCTenuringIf: tenuringCriterion [
-	"Run the scavenger."
-	"self halt: (statScavenges + 1) printString, ((statScavenges between: 9 and: 19)
-													ifTrue: ['th']
-													ifFalse: [#('st' 'nd' 'rd') at: (statScavenges + 1) \\ 10 ifAbsent: 'th']), ' scavenge'."
-													
-	"statFullGCs > 0 ifTrue:
-		[self halt]."
+	"If we're /not/ a clone, clone the VM and push it over the cliff.
+	 If it survives, destroy the clone and continue.  We should be OK until next time."
+	(self leakCheckNewSpaceGC
+	 and: [parent isNil]) ifTrue:
+		[coInterpreter cr; print: 'scavenge '; print: statScavenges; tab; flush.
+		 coInterpreter cloneSimulation objectMemory scavengingGCTenuringIf: tenuringCriterion.
+		 Smalltalk garbageCollect].
 	^super scavengingGCTenuringIf: tenuringCriterion
 ]
 
@@ -403,7 +418,11 @@ Spur32BitMMLESimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 { #category : #'image segment in/out' }
 Spur32BitMMLESimulator >> storeImageSegmentInto: segmentWordArray outPointers: outPointerArray roots: arrayOfRoots [
 	self leakCheckImageSegments ifTrue:
-		[self halt].
+		[parent ifNil:
+			[| result |
+			 self halt.
+			 result := coInterpreter cloneSimulation objectMemory storeImageSegmentInto: segmentWordArray outPointers: outPointerArray roots: arrayOfRoots.
+			 Smalltalk garbageCollect]].
 	^super storeImageSegmentInto: segmentWordArray outPointers: outPointerArray roots: arrayOfRoots
 ]
 

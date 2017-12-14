@@ -6,6 +6,7 @@ Class {
 		'opcodes'
 	],
 	#pools : [
+		'CogAbstractRegisters',
 		'CogRTLOpcodes'
 	],
 	#category : #'VMMaker-Tests'
@@ -61,6 +62,14 @@ AbstractInstructionTests >> abstractInstruction: theAbstractInstruction follows:
 			> (opcodes identityIndexOf: anAbstractInstruction ifAbsent: [1])]
 ]
 
+{ #category : #'cogit compatibility' }
+AbstractInstructionTests >> addressIsInCurrentCompilation: address [
+	"Provide a range of addresses that are assumed to be in the current compilation.  Within this range operands
+	 can be interpreted as pc-relative addresses, and hence allow testing of pc-relative addresses,"
+	^self currentCompilationBase <= address
+	  and: [address - self currentCompilationBase < 1024]
+]
+
 { #category : #'generating machine code' }
 AbstractInstructionTests >> addressIsInFixups: abstractInstruction [ 
 	^false
@@ -71,9 +80,27 @@ AbstractInstructionTests >> addressIsInInstructions: anAbstractOpcode [
 	^opcodes notNil and: [(opcodes identityIndexOf: anAbstractOpcode ifAbsent: []) notNil]
 ]
 
+{ #category : #accessing }
+AbstractInstructionTests >> assert: expected equals: actual [
+	"Override to use a case-insensitive comparison for strings."
+	^self
+		assert: (expected isString
+				ifTrue: [expected sameAs: actual]
+				ifFalse: [expected = actual])
+		description: [ self comparingStringBetween: expected and: actual ]
+
+]
+
 { #category : #running }
 AbstractInstructionTests >> assertCheckQuickArithOpCodeSize: bytes [
 	self subclassResponsibility
+]
+
+{ #category : #'cogit compatibility' }
+AbstractInstructionTests >> assertSaneJumpTarget: jumpTarget [
+	<var: #jumpTarget type: #'AbstractInstruction *'>
+
+	self assert: (self addressIsInInstructions: jumpTarget)
 ]
 
 { #category : #'generating machine code' }
@@ -88,10 +115,17 @@ AbstractInstructionTests >> coInterpreter [
 	^nil
 ]
 
-{ #category : #'generating machine code' }
+{ #category : #accessing }
 AbstractInstructionTests >> concreteCompilerClass [
 	"Answer the concreate subclass of CogAbstractInstruction the concrete test class is testing."
 	self subclassResponsibility
+]
+
+{ #category : #'cogit compatibility' }
+AbstractInstructionTests >> currentCompilationBase [
+	"Provide a range of addresses that are assumed to be in the current compilation.  Within this range operands
+	 can be interpreted as pc-relative addresses, and hence allow testing of pc-relative addresses,"
+	^16r8000
 ]
 
 { #category : #disassembly }
@@ -99,7 +133,7 @@ AbstractInstructionTests >> disassembleOpcodesIn: memory to: aStream [
 	self processor
 		disassembleFrom: opcodes first address
 		to: opcodes last address + opcodes last machineCodeSize - 1
-		in: memory
+		in: (self memoryAsBytes: memory)
 		on: aStream
 ]
 
@@ -150,6 +184,11 @@ AbstractInstructionTests >> gen: opcode operand: operandOne operand: operandTwo 
 ]
 
 { #category : #'generating machine code' }
+AbstractInstructionTests >> genConditionalBranch: opcode operand: operandOne [
+	^self previousInstruction noteFollowingConditionalBranch: (self gen: opcode operand: operandOne)
+]
+
+{ #category : #'generating machine code' }
 AbstractInstructionTests >> generateInstructions [
 	"See Cogit>>computeMaximumSizes, generateInstructionsAt: & outputInstructionsAt:.
 	 This is a pure Smalltalk (non-Slang) version of that trio of methods."
@@ -178,13 +217,29 @@ AbstractInstructionTests >> generateInstructions [
 	instructions := ByteArray new: address.
 	address := 0.
 	opcodes do:
-		[:abstractInstruction|
+		[:abstractInstruction| | machineCodeBytes |
 		self assert: abstractInstruction address = address.
-		0 to: abstractInstruction machineCodeSize - 1 do:
+		machineCodeBytes := self memoryAsBytes: abstractInstruction machineCode object.
+		1 to: abstractInstruction machineCodeSize do:
 			[:j|
-			instructions at: address + 1 put: (abstractInstruction machineCode at: j).
+			instructions at: address + 1 put: (machineCodeBytes at: j).
 			address := address + 1]].
 	^instructions
+]
+
+{ #category : #private }
+AbstractInstructionTests >> memoryAsBytes: instructionMachineCode [
+	"Answer an AbstractInstruction's machine code as a ByteArray.  Subclasses that represent instruction
+	 data using Array should override to convert appropriately."
+	instructionMachineCode isCObjectAccessor ifTrue:
+		[^self memoryAsBytes: instructionMachineCode object].
+	self assert: instructionMachineCode class isBits.
+	^instructionMachineCode
+]
+
+{ #category : #'cogit compatibility' }
+AbstractInstructionTests >> methodLabel [
+	^nil
 ]
 
 { #category : #accessing }
@@ -198,7 +253,13 @@ AbstractInstructionTests >> pairs: aRange do: aBinaryBlock [
 	aRange do: [:a| aRange do: [:b| aBinaryBlock value: a value: b]]
 ]
 
-{ #category : #'generating machine code' }
+{ #category : #accessing }
+AbstractInstructionTests >> previousInstruction [
+	<returnTypeC: #'AbstractInstruction *'>
+	^opcodes last
+]
+
+{ #category : #accessing }
 AbstractInstructionTests >> processor [
 	self subclassResponsibility
 ]
@@ -212,18 +273,16 @@ AbstractInstructionTests >> resetGen [
 AbstractInstructionTests >> runAddCqR: assertPrintBar [
 	"self defaultTester runAddCqR: true"
 	"self defaultTester runAddCqR: false"
-	| memory |
-	memory := ByteArray new: 20.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:reg :rgetter :rsetter|
 		self pairs: (-2 to: 2)  do:
-			[:a :b| | inst len bogus |
+			[:a :b| | inst len bogus memory |
 			inst := self gen: AddCqR operand: a operand: reg.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self processor
 				reset;
-				perform: rsetter with: b signedIntToLong.
+				perform: rsetter with: (processor convertIntegerToInternal: b).
 			[[processor pc < len] whileTrue:
 				[self processor singleStepIn: memory]]
 				on: Error
@@ -231,21 +290,21 @@ AbstractInstructionTests >> runAddCqR: assertPrintBar [
 			"self processor printRegistersOn: Transcript.
 			 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr"
 			assertPrintBar
-				ifTrue: [self assert: processor pc = inst machineCodeSize.
+				ifTrue: [self assert: processor pc equals: inst machineCodeSize.
 						self assertCheckQuickArithOpCodeSize: inst machineCodeSize]
 				ifFalse: [bogus := processor pc ~= inst machineCodeSize].
 			self concreteCompilerClass dataRegistersWithAccessorsDo:
 				[:ireg :getter :setter| | expected |
 				expected := getter == rgetter ifTrue: [a + b] ifFalse: [0].
 				assertPrintBar
-					ifTrue: [self assert: (self processor perform: getter) signedIntFromLong = expected]
+					ifTrue: [self assert: (self processor convertInternalToInteger: (self processor perform: getter)) equals: expected]
 					ifFalse:
-						[(self processor perform: getter) signedIntFromLong ~= expected ifTrue:
+						[(self processor convertInternalToInteger: (self processor perform: getter)) ~= expected ifTrue:
 							[bogus := true]]].
 				assertPrintBar ifFalse:
 					[Transcript
 						nextPutAll: rgetter; nextPut: $(; print: b; nextPutAll: ') + '; print: a; nextPutAll: ' = ';
-						print: (self processor perform: rgetter) signedIntFromLong; cr; flush.
+						print: (self processor convertInternalToInteger: (self processor perform: rgetter)); cr; flush.
 					 bogus ifTrue:
 						[self processor printRegistersOn: Transcript.
 						 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr]]]]
@@ -254,18 +313,16 @@ AbstractInstructionTests >> runAddCqR: assertPrintBar [
 { #category : #running }
 AbstractInstructionTests >> runAddCwR: assertPrintBar [
 	"self defaultTester runAddCwR: false"
-	| memory |
-	memory := ByteArray new: self concreteCompilerClass new machineCodeBytes.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:reg :rgetter :rsetter|
 		self pairs: (-2 to: 2)  do:
-			[:a :b| | inst len bogus |
+			[:a :b| | inst len bogus memory |
 			inst := self gen: AddCwR operand: a operand: reg.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self processor
 				reset;
-				perform: rsetter with: b signedIntToLong.
+				perform: rsetter with: (self processor convertIntegerToInternal: b).
 			[[processor pc < len] whileTrue:
 				[self processor singleStepIn: memory]]
 				on: Error
@@ -278,40 +335,39 @@ AbstractInstructionTests >> runAddCwR: assertPrintBar [
 				ifFalse: [bogus := processor pc ~= inst machineCodeSize].
 			self concreteCompilerClass dataRegistersWithAccessorsDo:
 				[:ireg :getter :setter| | expected |
-				expected := getter == rgetter ifTrue: [a + b] ifFalse: [0].
-				assertPrintBar
-					ifTrue: [self assert: (self processor perform: getter) signedIntFromLong = expected]
-					ifFalse:
-						[(self processor perform: getter) signedIntFromLong ~= expected ifTrue:
-							[bogus := true]]].
-				assertPrintBar ifFalse:
-					[Transcript
-						nextPutAll: rgetter; nextPut: $(; print: b; nextPutAll: ') + '; print: a; nextPutAll: ' = ';
-						print: (self processor perform: rgetter) signedIntFromLong; cr; flush.
-					 bogus ifTrue:
-						[self processor printRegistersOn: Transcript.
-						 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr]]]]
+				(self concreteCompilerClass isRISCTempRegister: ireg) ifFalse:
+					[expected := getter == rgetter ifTrue: [b + a] ifFalse: [0].
+					assertPrintBar
+						ifTrue: [self assert: (self processor convertInternalToInteger: (self processor perform: getter)) equals: expected]
+						ifFalse:
+							[(self processor convertInternalToInteger: (self processor perform: getter)) ~= expected ifTrue:
+								[bogus := true]]].
+					assertPrintBar ifFalse:
+						[Transcript
+							nextPutAll: rgetter; nextPut: $(; print: b; nextPutAll: ') + '; print: a; nextPutAll: ' = ';
+							print: (self processor convertInternalToInteger: (self processor perform: rgetter)); cr; flush.
+						 bogus ifTrue:
+							[self processor printRegistersOn: Transcript.
+							 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr]]]]]
 ]
 
 { #category : #running }
 AbstractInstructionTests >> runAddRR: assertPrintBar [
 	"self defaultTester runAddRR: false"
 	"self defaultTester runAddRR: true"
-	| memory |
-	memory := ByteArray new: 16.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:sreg :srgetter :srsetter|
 		self concreteCompilerClass dataRegistersWithAccessorsDo:
-			[:dreg :drgetter :drsetter| | inst len |
+			[:dreg :drgetter :drsetter| | inst len memory |
 			inst := self gen: AddRR operand: sreg operand: dreg.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self pairs: (-2 to: 2)  do:
 				[:a :b| | bogus |
 				self processor
 					reset;
-					perform: srsetter with: a signedIntToLong;
-					perform: drsetter with: b signedIntToLong.
+					perform: srsetter with: (processor convertIntegerToInternal: a);
+					perform: drsetter with: (processor convertIntegerToInternal: b).
 				[[processor pc < len] whileTrue:
 					[self processor singleStepIn: memory]]
 					on: Error
@@ -319,7 +375,7 @@ AbstractInstructionTests >> runAddRR: assertPrintBar [
 				"self processor printRegistersOn: Transcript.
 				 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr"
 				assertPrintBar
-					ifTrue: [self assert: processor pc = inst machineCodeSize]
+					ifTrue: [self assert: processor pc equals: inst machineCodeSize]
 					ifFalse: [bogus := processor pc ~= inst machineCodeSize].
 				self concreteCompilerClass dataRegistersWithAccessorsDo:
 					[:ireg :getter :setter| | expected |
@@ -331,15 +387,15 @@ AbstractInstructionTests >> runAddRR: assertPrintBar [
 												ifTrue: [a]
 												ifFalse: [0]].
 					assertPrintBar
-						ifTrue: [self assert: (self processor perform: getter) signedIntFromLong = expected]
+						ifTrue: [self assert: (self processor convertInternalToInteger: (self processor perform: getter)) equals: expected]
 						ifFalse:
-							[(self processor perform: getter) signedIntFromLong ~= expected ifTrue:
+							[(self processor convertInternalToInteger: (self processor perform: getter)) ~= expected ifTrue:
 								[bogus := true]]].
 					assertPrintBar ifFalse:
 						[Transcript
 							nextPutAll: drgetter; nextPut: $(; print: b; nextPutAll: ') + ';
 							nextPutAll: srgetter; nextPut: $(; print: a; nextPutAll: ') = ';
-							print: (self processor perform: drgetter) signedIntFromLong; cr; flush.
+							print: (self processor convertInternalToInteger: (self processor perform: drgetter)); cr; flush.
 						 bogus ifTrue:
 							[self processor printRegistersOn: Transcript.
 							 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr]]]]]
@@ -349,22 +405,20 @@ AbstractInstructionTests >> runAddRR: assertPrintBar [
 AbstractInstructionTests >> runArithmeticShiftRightRR: assertPrintBar [
 	"self defaultTester runArithmeticShiftRightRR: false"
 	"self defaultTester runArithmeticShiftRightRR: true"
-	| memory |
-	memory := ByteArray new: 16.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:sreg :srgetter :srsetter|
 		self concreteCompilerClass dataRegistersWithAccessorsDo:
-			[:dreg :drgetter :drsetter| | inst len |
+			[:dreg :drgetter :drsetter| | inst len memory |
 			inst := self gen: ArithmeticShiftRightRR operand: sreg operand: dreg.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self pairs: (-5 to: 19 by: 6)  do:
 				[:a :b| | bogus |
 				(a >= 0 and: [sreg ~= dreg or: [b >= 0]]) ifTrue:
 					[self processor
 						reset;
-						perform: srsetter with: a signedIntToLong;
-						perform: drsetter with: b signedIntToLong.
+						perform: srsetter with: (processor convertIntegerToInternal: a);
+						perform: drsetter with: (processor convertIntegerToInternal: b).
 					[self processor singleStepIn: memory.
 					 self processor pc ~= inst machineCodeSize] whileTrue.
 					"self processor printRegistersOn: Transcript.
@@ -382,15 +436,15 @@ AbstractInstructionTests >> runArithmeticShiftRightRR: assertPrintBar [
 													ifTrue: [a]
 													ifFalse: [0]].
 						assertPrintBar
-							ifTrue: [self assert: (self processor perform: getter) signedIntFromLong = expected]
+							ifTrue: [self assert: (self processor convertInternalToInteger: (self processor perform: getter)) equals: expected]
 							ifFalse:
-								[(self processor perform: getter) signedIntFromLong ~= expected ifTrue:
-									[bogus := true]]].
+								[(self processor convertInternalToInteger: (self processor perform: getter)) ~= expected ifTrue:
+								[bogus := true]]].
 						assertPrintBar ifFalse:
 							[Transcript
 								nextPutAll: drgetter; nextPut: $(; print: b; nextPutAll: ') >> ';
 								nextPutAll: srgetter; nextPut: $(; print: a; nextPutAll: ') = ';
-								print: (self processor perform: drgetter) signedIntFromLong; cr; flush.
+								print: (self processor convertInternalToInteger: (self processor perform: drgetter)); cr; flush.
 							 bogus ifTrue:
 								[self processor printRegistersOn: Transcript.
 								 self processor disassembleFrom: 0 to: inst machineCodeSize in: memory on: Transcript]]]]]]
@@ -399,13 +453,18 @@ AbstractInstructionTests >> runArithmeticShiftRightRR: assertPrintBar [
 { #category : #running }
 AbstractInstructionTests >> runBinaryConditionalJumps: assertPrintBar [
 	"self defaultTester runBinaryConditionalJumps: false"
-	| mask reg1 reg2 reg3 |
+	| mask count reg1 reg2 reg3 reg1Getter reg2Setter reg3Setter |
 	mask := (1 << self processor bitsInWord) - 1.
+	count := 0.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:n :get :set|
-		n = 0 ifTrue: [reg1 := get].
-		n = 1 ifTrue: [reg2 := set].
-		n = 2 ifTrue: [reg3 := set]].
+		count = 0 ifTrue: [reg1 := n. reg1Getter := get].
+		count = 1 ifTrue: [reg2 := n. reg2Setter := set].
+		count = 2 ifTrue: [reg3 := n. reg3Setter := set].
+		count := count + 1].
+	self assert: reg1 ~= nil.
+	self assert: reg2 ~= nil.
+	self assert: reg3 ~= nil.
 	#(	(JumpAbove > unsigned)			(JumpBelowOrEqual <= unsigned)
 		(JumpBelow < unsigned)			(JumpAboveOrEqual >= unsigned)
 		(JumpGreater > signed)			(JumpLessOrEqual <= signed)
@@ -415,29 +474,29 @@ AbstractInstructionTests >> runBinaryConditionalJumps: assertPrintBar [
 		[:opName :relation :signednessOrResult| | opcode jumpNotTaken jumpTaken nop memory bogus |
 		self resetGen.
 		opcode := CogRTLOpcodes classPool at: opName.
-		self gen: CmpRR operand: 2 operand: 1.
-		jumpTaken := self gen: opcode.
-		self gen: MoveCqR operand: 0 operand: 0.
+		self gen: CmpRR operand: reg3 operand: reg2.
+		jumpTaken := self genConditionalBranch: opcode operand: 0.
+		self gen: MoveCqR operand: 0 operand: reg1.
 		jumpNotTaken := self gen: Jump.
-		jumpTaken jmpTarget: (self gen: MoveCqR operand: 1 operand: 0).
+		jumpTaken jmpTarget: (self gen: MoveCqR operand: 1 operand: reg1).
 		jumpNotTaken jmpTarget: (nop := self gen: Nop).
 		memory := self generateInstructions.
-		"self processor disassembleFrom: 0 to: memory size in: memory on: Transcript"
+		"self processor disassembleFrom: 0 to: memory size in: memory on: Transcript."
 		bogus := false.
 		self pairs: (-2 to: 2)  do:
 			[:a :b| | taken |
 			self processor
 				reset;
-				perform: reg2 with: a signedIntToLong;
-				perform: reg3 with: b signedIntToLong.
+				perform: reg2Setter with: (processor convertIntegerToInternal: a);
+				perform: reg3Setter with: (processor convertIntegerToInternal: b).
 			[self processor singleStepIn: memory.
 			 self processor pc ~= nop address] whileTrue.
-			taken := (self processor perform: reg1) = 1.
+			taken := (self processor perform: reg1Getter) = 1.
 			assertPrintBar
 				ifTrue:
-					[self assert: taken = (signednessOrResult == #unsigned
-											ifTrue: [(a bitAnd: mask) perform: relation with: (b bitAnd: mask)]
-											ifFalse: [a perform: relation with: b])]
+					[self assert: taken equals: (signednessOrResult == #unsigned
+												ifTrue: [(a bitAnd: mask) perform: relation with: (b bitAnd: mask)]
+												ifFalse: [a perform: relation with: b])]
 				ifFalse:
 					[Transcript
 						nextPutAll: reg2; nextPut: $(; print: a; nextPutAll: ') '; nextPutAll: relation; space;
@@ -456,14 +515,16 @@ AbstractInstructionTests >> runBinaryConditionalJumps: assertPrintBar [
 { #category : #running }
 AbstractInstructionTests >> runBinaryConditionalJumpsViaCmpCqR: assertPrintBar [
 	"self defaultTester runBinaryConditionalJumpsViaCmpCqR: false"
-	| mask reg1 reg2 resultRegNum operandRegNum |
+	| mask count reg1 reg2 resultRegNum operandRegNum |
 	mask := (1 << self processor bitsInWord) - 1.
-	resultRegNum := 0.
-	operandRegNum := 1.
+	count := 0.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:n :get :set|
-		n = resultRegNum ifTrue: [reg1 := get].
-		n = operandRegNum ifTrue: [reg2 := set]].
+		count = 0 ifTrue: [resultRegNum := n. reg1 := get].
+		count = 1 ifTrue: [operandRegNum := n. reg2 := set].
+		count := count + 1].
+	self assert: resultRegNum ~= nil.
+	self assert: operandRegNum ~= nil.
 	#(	(JumpAbove > unsigned)			(JumpBelowOrEqual <= unsigned)
 		(JumpBelow < unsigned)			(JumpAboveOrEqual >= unsigned)
 		(JumpGreater > signed)			(JumpLessOrEqual <= signed)
@@ -476,7 +537,7 @@ AbstractInstructionTests >> runBinaryConditionalJumpsViaCmpCqR: assertPrintBar [
 			[:b| | jumpNotTaken jumpTaken nop memory bogus |
 			self resetGen.
 			self gen: CmpCqR operand: b operand: operandRegNum.
-			jumpTaken := self gen: opcode.
+			jumpTaken := self genConditionalBranch: opcode operand: 0.
 			self gen: MoveCqR operand: 0 operand: resultRegNum.
 			jumpNotTaken := self gen: Jump.
 			jumpTaken jmpTarget: (self gen: MoveCqR operand: 1 operand: resultRegNum).
@@ -490,7 +551,7 @@ AbstractInstructionTests >> runBinaryConditionalJumpsViaCmpCqR: assertPrintBar [
 				[:a| | taken expected |
 				self processor
 					reset;
-					perform: reg2 with: a signedIntToLong.
+					perform: reg2 with: (processor convertIntegerToInternal: a).
 				[self processor singleStepIn: memory.
 				 self processor pc ~= nop address] whileTrue.
 				taken := (self processor perform: reg1) = 1.
@@ -499,7 +560,7 @@ AbstractInstructionTests >> runBinaryConditionalJumpsViaCmpCqR: assertPrintBar [
 								ifFalse: [a perform: relation with: b].
 				assertPrintBar
 					ifTrue:
-						[self assert: taken = expected]
+						[self assert: taken equals: expected]
 					ifFalse:
 						[Transcript
 							nextPutAll: 'CmpCqR '; print: b; space; nextPutAll: reg2; tab; tab;
@@ -519,14 +580,17 @@ AbstractInstructionTests >> runBinaryConditionalJumpsViaCmpCqR: assertPrintBar [
 { #category : #running }
 AbstractInstructionTests >> runBinaryConditionalJumpsViaSubCqR: assertPrintBar [
 	"self defaultTester runBinaryConditionalJumpsViaSubCqR: false"
-	| mask reg1 reg2 setreg2 resultRegNum operandRegNum |
+	| mask count reg1 reg2 setreg2 resultRegNum operandRegNum |
 	mask := (1 << self processor bitsInWord) - 1.
-	resultRegNum := 0.
-	operandRegNum := 1.
+	count := 0.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:n :get :set|
-		n = resultRegNum ifTrue: [reg1 := get].
-		n = operandRegNum ifTrue: [reg2 := get. setreg2 := set]].
+		count = 0 ifTrue: [resultRegNum := n. reg1 := get].
+		count = 1 ifTrue: [operandRegNum := n. reg2 := get. setreg2 := set].
+		count := count + 1].
+	self assert: resultRegNum ~= nil.
+	self assert: operandRegNum ~= nil.
+	
 	#(	(JumpAbove > unsigned)			(JumpBelowOrEqual <= unsigned)
 		(JumpBelow < unsigned)			(JumpAboveOrEqual >= unsigned)
 		(JumpGreater > signed)			(JumpLessOrEqual <= signed)
@@ -539,7 +603,7 @@ AbstractInstructionTests >> runBinaryConditionalJumpsViaSubCqR: assertPrintBar [
 			[:b| | jumpNotTaken jumpTaken nop memory bogus |
 			self resetGen.
 			self gen: SubCqR operand: b operand: operandRegNum.
-			jumpTaken := self gen: opcode.
+			jumpTaken := self genConditionalBranch: opcode operand: 0.
 			self gen: MoveCqR operand: 0 operand: resultRegNum.
 			jumpNotTaken := self gen: Jump.
 			jumpTaken jmpTarget: (self gen: MoveCqR operand: 1 operand: resultRegNum).
@@ -553,7 +617,7 @@ AbstractInstructionTests >> runBinaryConditionalJumpsViaSubCqR: assertPrintBar [
 				[:a| | taken result expected |
 				self processor
 					reset;
-					perform: setreg2 with: a signedIntToLong.
+					perform: setreg2 with: (self processor convertIntegerToInternal: a).
 				[self processor singleStepIn: memory.
 				 self processor pc ~= nop address] whileTrue.
 				taken := (self processor perform: reg1) = 1.
@@ -646,18 +710,16 @@ AbstractInstructionTests >> runCmpRdRd: assertPrintBar [
 { #category : #running }
 AbstractInstructionTests >> runSubCqR: assertPrintBar [
 	"self defaultTester runSubCqR: false"
-	| memory |
-	memory := ByteArray new: 16.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:reg :rgetter :rsetter|
 		self pairs: (-2 to: 2)  do:
-			[:a :b| | inst len bogus |
+			[:a :b| | inst len bogus memory |
 			inst := self gen: SubCqR operand: a operand: reg.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self processor
 				reset;
-				perform: rsetter with: b signedIntToLong.
+				perform: rsetter with: (processor convertIntegerToInternal: b).
 			[[processor pc < len] whileTrue:
 				[self processor singleStepIn: memory]]
 				on: Error
@@ -672,14 +734,14 @@ AbstractInstructionTests >> runSubCqR: assertPrintBar [
 				[:ireg :getter :setter| | expected |
 				expected := getter == rgetter ifTrue: [b - a] ifFalse: [0].
 				assertPrintBar
-					ifTrue: [self assert: (self processor perform: getter) signedIntFromLong = expected]
+					ifTrue: [self assert: (self processor convertInternalToInteger: (self processor perform: getter)) equals: expected]
 					ifFalse:
-						[(self processor perform: getter) signedIntFromLong ~= expected ifTrue:
+						[(self processor convertInternalToInteger: (self processor perform: getter)) ~= expected ifTrue:
 							[bogus := true]]].
 				assertPrintBar ifFalse:
 					[Transcript
 						nextPutAll: rgetter; nextPut: $(; print: b; nextPutAll: ') - '; print: a; nextPutAll: ' = ';
-						print: (self processor perform: rgetter) signedIntFromLong; cr; flush.
+						print: (self processor convertInternalToInteger: (self processor perform: rgetter)); cr; flush.
 					 bogus ifTrue:
 						[self processor printRegistersOn: Transcript.
 						 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr]]]]
@@ -688,18 +750,16 @@ AbstractInstructionTests >> runSubCqR: assertPrintBar [
 { #category : #running }
 AbstractInstructionTests >> runSubCwR: assertPrintBar [
 	"self defaultTester runSubCwR: false"
-	| memory |
-	memory := ByteArray new: self concreteCompilerClass new machineCodeBytes.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:reg :rgetter :rsetter|
 		self pairs: (-2 to: 2)  do:
-			[:a :b| | inst len bogus |
+			[:a :b| | inst len bogus memory |
 			inst := self gen: SubCwR operand: a operand: reg.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self processor
 				reset;
-				perform: rsetter with: b signedIntToLong.
+				perform: rsetter with: (self processor convertIntegerToInternal: b).
 			[[processor pc < len] whileTrue:
 				[self processor singleStepIn: memory]]
 				on: Error
@@ -712,39 +772,38 @@ AbstractInstructionTests >> runSubCwR: assertPrintBar [
 				ifFalse: [bogus := processor pc ~= inst machineCodeSize].
 			self concreteCompilerClass dataRegistersWithAccessorsDo:
 				[:ireg :getter :setter| | expected |
-				expected := getter == rgetter ifTrue: [b - a] ifFalse: [0].
-				assertPrintBar
-					ifTrue: [self assert: (self processor perform: getter) signedIntFromLong = expected]
-					ifFalse:
-						[(self processor perform: getter) signedIntFromLong ~= expected ifTrue:
-							[bogus := true]]].
-				assertPrintBar ifFalse:
-					[Transcript
-						nextPutAll: rgetter; nextPut: $(; print: b; nextPutAll: ') - '; print: a; nextPutAll: ' = ';
-						print: (self processor perform: rgetter) signedIntFromLong; cr; flush.
-					 bogus ifTrue:
-						[self processor printRegistersOn: Transcript.
-						 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr]]]]
+				(self concreteCompilerClass isRISCTempRegister: ireg) ifFalse:
+					[expected := getter == rgetter ifTrue: [b - a] ifFalse: [0].
+					assertPrintBar
+						ifTrue: [self assert: (self processor convertInternalToInteger: (self processor perform: getter)) equals: expected]
+						ifFalse:
+							[(self processor convertInternalToInteger: (self processor perform: getter)) ~= expected ifTrue:
+								[bogus := true]]].
+					assertPrintBar ifFalse:
+						[Transcript
+							nextPutAll: rgetter; nextPut: $(; print: b; nextPutAll: ') - '; print: a; nextPutAll: ' = ';
+							print: (self processor convertInternalToInteger: (self processor perform: rgetter)); cr; flush.
+						 bogus ifTrue:
+							[self processor printRegistersOn: Transcript.
+							 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr]]]]]
 ]
 
 { #category : #running }
 AbstractInstructionTests >> runSubRR: assertPrintBar [
 	"self defaultTester runSubRR: false"
-	| memory |
-	memory := ByteArray new: self concreteCompilerClass new machineCodeBytes.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:sreg :srgetter :srsetter|
 		self concreteCompilerClass dataRegistersWithAccessorsDo:
-			[:dreg :drgetter :drsetter| | inst len |
+			[:dreg :drgetter :drsetter| | inst len memory |
 			inst := self gen: SubRR operand: sreg operand: dreg.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self pairs: (-2 to: 2)  do:
 				[:a :b| | bogus |
 				self processor
 					reset;
-					perform: srsetter with: a signedIntToLong;
-					perform: drsetter with: b signedIntToLong.
+					perform: srsetter with: (processor convertIntegerToInternal: a);
+					perform: drsetter with: (processor convertIntegerToInternal: b).
 				[[processor pc < len] whileTrue:
 					[self processor singleStepIn: memory]]
 					on: Error
@@ -765,18 +824,23 @@ AbstractInstructionTests >> runSubRR: assertPrintBar [
 														ifTrue: [a]
 														ifFalse: [0]]].
 					assertPrintBar
-						ifTrue: [self assert: (self processor perform: getter) signedIntFromLong = expected]
+						ifTrue: [self assert: (self processor convertInternalToInteger: (self processor perform: getter)) equals: expected]
 						ifFalse:
-							[(self processor perform: getter) signedIntFromLong ~= expected ifTrue:
+							[(self processor convertInternalToInteger: (self processor perform: getter)) ~= expected ifTrue:
 								[bogus := true]]].
 					assertPrintBar ifFalse:
 						[Transcript
 							nextPutAll: drgetter; nextPut: $(; print: b; nextPutAll: ') - ';
 							nextPutAll: srgetter; nextPut: $(; print: a; nextPutAll: ') = ';
-							print: (self processor perform: drgetter) signedIntFromLong; cr; flush.
+							print: (self processor convertInternalToInteger: (self processor perform: drgetter)); cr; flush.
 						 bogus ifTrue:
 							[self processor printRegistersOn: Transcript.
 							 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr]]]]]
+]
+
+{ #category : #running }
+AbstractInstructionTests >> setUp [
+	self concreteCompilerClass initializeAbstractRegisters
 ]
 
 { #category : #tests }
@@ -803,29 +867,27 @@ AbstractInstructionTests >> testBinaryConditionalJumpsViaSubCqR [
 { #category : #running }
 AbstractInstructionTests >> testNegateR [
 	"self defaultTester testNegateR"
-	| memory |
-	memory := ByteArray new: self concreteCompilerClass new machineCodeBytes.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:reg :rgetter :rsetter|
 		-2 to: 2 do:
-			[:a| | inst len |
+			[:a| | inst len memory |
 			inst := self gen: NegateR operand: reg.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self processor
 				reset;
-				perform: rsetter with: a signedIntToLong.
+				perform: rsetter with: (processor convertIntegerToInternal: a).
 			[[processor pc < len] whileTrue:
 				[self processor singleStepIn: memory]]
 				on: Error
 				do: [:ex| ].
 			"self processor printRegistersOn: Transcript.
 			 Transcript show: (self processor disassembleInstructionAt: 0 In: memory); cr"
-			self assert: processor pc = inst machineCodeSize.
+			self assert: processor pc equals: inst machineCodeSize.
 			self concreteCompilerClass dataRegistersWithAccessorsDo:
 				[:ireg :getter :setter| | expected |
 				expected := getter == rgetter ifTrue: [ a negated ] ifFalse: [0].
-				self assert: (self processor perform: getter) signedIntFromLong = expected]]]
+				self assert: (processor convertInternalToInteger: (processor perform: getter)) equals: expected]]]
 ]
 
 { #category : #tests }
@@ -874,4 +936,10 @@ AbstractInstructionTests >> testRunSubCwR [
 AbstractInstructionTests >> testRunSubRR [
 	"self defaultTester testRunSubRR"
 	self runSubRR: true
+]
+
+{ #category : #'cogit compatibility' }
+AbstractInstructionTests >> varBaseAddress [
+	"Answer a value that should be sufficiently high that var base relative addressing is never generated."
+	^1 << 60
 ]

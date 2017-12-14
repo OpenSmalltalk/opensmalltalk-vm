@@ -5,7 +5,9 @@ Class {
 	#name : #InLineLiteralsManager,
 	#superclass : #VMClass,
 	#instVars : [
-		'cogit'
+		'cogit',
+		'objectMemory',
+		'objectRepresentation'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -26,20 +28,6 @@ InLineLiteralsManager >> assertValidAnnotation: annotation for: instruction [
 	<inline: true>
 ]
 
-{ #category : #'closed PIC parsing' }
-InLineLiteralsManager >> cPICCase: caseIndex jumpTargetBefore: pc [
-	<inline: true>
-	^cogit backEnd jumpLongTargetBeforeFollowingAddress: pc
-]
-
-{ #category : #'closed PIC parsing' }
-InLineLiteralsManager >> cPICCase: caseIndex relocateJumpLongBefore: pc by: delta [
-	<inline: true>
-	cogit backEnd
-		relocateJumpLongBeforeFollowingAddress: pc
-		by: delta
-]
-
 { #category : #'compile abstract instructions' }
 InLineLiteralsManager >> checkLiteral: literal forInstruction: anInstruction [
 	<var: #anInstruction type: #'AbstractInstruction *'>
@@ -56,21 +44,23 @@ InLineLiteralsManager >> checkQuickConstant: literal forInstruction: anInstructi
 	^anInstruction
 ]
 
-{ #category : #'garbage collection' }
-InLineLiteralsManager >> classRefInClosedPICAt: mcpc [
-	<inline: true>
-	^cogit backEnd literalBeforeFollowingAddress: mcpc - cogit backEnd loadLiteralByteSize
-]
-
 { #category : #initialization }
 InLineLiteralsManager >> cogit: aCogit [
 	<doNotGenerate>
-	cogit := aCogit
+	cogit := aCogit.
+	objectMemory := aCogit objectMemory.
+	objectRepresentation := aCogit objectRepresentation.
 ]
 
 { #category : #'compile abstract instructions' }
 InLineLiteralsManager >> dumpLiterals: generateBranchAround [
 	<inline: true>
+]
+
+{ #category : #'closed PIC parsing' }
+InLineLiteralsManager >> endSizeOffset [
+	"return the offset need from the cPICEndSize in order to point to just after the last instruction - here that means 0"
+	^0
 ]
 
 { #category : #'garbage collection' }
@@ -85,13 +75,11 @@ InLineLiteralsManager >> fetchLiteralAtAnnotatedAddress: address using: instruct
 
 { #category : #'garbage collection' }
 InLineLiteralsManager >> literalBytesFollowingBranchInClosedPIC [
-	<inline: true>
 	^0
 ]
 
 { #category : #'garbage collection' }
 InLineLiteralsManager >> literalBytesFollowingJumpInClosedPIC [
-	<inline: true>
 	^0
 ]
 
@@ -101,32 +89,16 @@ InLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 	^false
 ]
 
-{ #category : #'garbage collection' }
-InLineLiteralsManager >> objRefInClosedPICAt: mcpc [
-	<inline: true>
-	^cogit backEnd literalBeforeFollowingAddress: mcpc
-]
-
 { #category : #'compile abstract instructions' }
-InLineLiteralsManager >> resetForBlockCompile [
-	<inline: true>
+InLineLiteralsManager >> resetForRecompile [
 ]
 
 { #category : #initialization }
 InLineLiteralsManager >> resetLiterals [
-	<inline: true>
 ]
 
 { #category : #'compile abstract instructions' }
-InLineLiteralsManager >> saveForBlockCompile [
-	<inline: true>
-]
-
-{ #category : #'garbage collection' }
-InLineLiteralsManager >> storeClassRef: classObj inClosedPICAt: address [
-	<var: #address type: #usqInt>
-	<inline: true>
-	cogit backEnd storeLiteral: classObj beforeFollowingAddress: address - cogit backEnd loadLiteralByteSize
+InLineLiteralsManager >> saveForRecompile [
 ]
 
 { #category : #'garbage collection' }
@@ -138,13 +110,6 @@ InLineLiteralsManager >> storeLiteral: literal atAnnotatedAddress: address using
 	<var: 'instruction' type: #'AbstractInstruction *'>
 	<inline: true>
 	^instruction storeLiteral: literal beforeFollowingAddress: address
-]
-
-{ #category : #'garbage collection' }
-InLineLiteralsManager >> storeObjRef: literal inClosedPICAt: address [
-	<var: #address type: #usqInt>
-	<inline: true>
-	cogit backEnd storeLiteral: literal beforeFollowingAddress: address
 ]
 
 { #category : #'compile abstract instructions' }

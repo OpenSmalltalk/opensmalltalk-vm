@@ -37,6 +37,12 @@ CArrayAccessor >> at: index [
 ]
 
 { #category : #accessing }
+CArrayAccessor >> at: index ifAbsent: aBlock [
+	"This is a simulation-time-only convenience..."
+	^object at: index + offset + 1 ifAbsent: aBlock
+]
+
+{ #category : #accessing }
 CArrayAccessor >> at: index put: value [
 	^object at: index + offset + 1 put: value
 ]
@@ -51,6 +57,15 @@ CArrayAccessor >> cPtrAsOop [
 
 	offset = 0 ifFalse: [self error: 'offset must be zero'].
 	^object
+]
+
+{ #category : #accessing }
+CArrayAccessor >> floatAt: index [ 
+	^ (self at: index) isFloat
+		ifTrue: [self at: index]
+		ifFalse: [Float
+				fromIEEE32Bit: (self at: index)]
+
 ]
 
 { #category : #accessing }

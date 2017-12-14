@@ -17,6 +17,11 @@ CObjectAccessor class >> alignedByteSizeOf: aCObjectAccessor forClient: aVMClass
 	^aCObjectAccessor object size
 ]
 
+{ #category : #debugger }
+CObjectAccessor class >> defaultIntegerBaseInDebugger [
+	^VMClass defaultIntegerBaseInDebugger
+]
+
 { #category : #'instance creation' }
 CObjectAccessor class >> on: anObject [
 	^self new setObject: anObject
@@ -56,6 +61,12 @@ CObjectAccessor >> asIntAccessor [
 	^ self asPluggableAccessor
 		atBlock: [:obj :index | obj intAt: index]
 		atPutBlock: [:obj :index :value | obj intAt: index put: value]
+]
+
+{ #category : #converting }
+CObjectAccessor >> asInteger [
+
+	^ self
 ]
 
 { #category : #converting }

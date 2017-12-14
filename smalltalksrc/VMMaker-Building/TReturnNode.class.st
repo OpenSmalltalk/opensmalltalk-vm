@@ -8,6 +8,11 @@ Class {
 }
 
 { #category : #transformations }
+TReturnNode >> asReturnNode [
+	^self
+]
+
+{ #category : #transformations }
 TReturnNode >> bindVariableUsesIn: aDictionary [
 
 	expression := expression bindVariableUsesIn: aDictionary.
@@ -32,6 +37,11 @@ TReturnNode >> bindVariablesIn: aDictionary [
 	expression := expression bindVariablesIn: aDictionary.
 ]
 
+{ #category : #transformations }
+TReturnNode >> copyWithoutReturn [
+	^expression
+]
+
 { #category : #'C code generation' }
 TReturnNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 
@@ -49,7 +59,10 @@ TReturnNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 		 aStream nextPutAll: 'return'.
 		 ^self].
 	aStream nextPutAll: 'return '.
-	expression emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen
+	expression
+		emitCCodeAsArgumentOn: aStream
+		level: (expression isStmtList ifTrue: [level + 1] ifFalse: [level])
+		generator: aCodeGen
 ]
 
 { #category : #'C code generation' }
@@ -152,4 +165,9 @@ TReturnNode >> replaceNodesIn: aDictionary [
 TReturnNode >> setExpression: aNode [
 
 	expression := aNode.
+]
+
+{ #category : #'type inference' }
+TReturnNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
+	^expression typeOrNilFrom: aCodeGenerator in: aTMethod
 ]

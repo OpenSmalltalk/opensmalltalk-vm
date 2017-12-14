@@ -55,6 +55,7 @@ Class {
 		'variables'
 	],
 	#pools : [
+		'CogMethodConstants',
 		'VMBasicConstants',
 		'VMObjectIndices',
 		'VMSqueakClassIndices'
@@ -88,7 +89,7 @@ CurrentImageCoInterpreterFacade class >> objectRepresentationClass [
 { #category : #labels }
 CurrentImageCoInterpreterFacade >> addLabel: l [
 	(variables includesKey: l) ifFalse:
-		[variables at: l put: variables size * 4 + 65536]
+		[variables at: l put: variables size * objectMemory wordSize + 65536]
 ]
 
 { #category : #'debug support' }
@@ -107,7 +108,12 @@ CurrentImageCoInterpreterFacade >> addressCouldBeOop: anOop [
 
 { #category : #labels }
 CurrentImageCoInterpreterFacade >> addressForLabel: l [
-	^variables at: l ifAbsentPut: [variables size * 4 + self variablesBase]
+	^variables at: l ifAbsentPut: [variables size * objectMemory wordSize + self variablesBase]
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> alternateHeaderNumLiteralsMask [
+	^coInterpreter alternateHeaderNumLiteralsMask
 ]
 
 { #category : #accessing }
@@ -169,7 +175,7 @@ CurrentImageCoInterpreterFacade >> cCoerceSimple: value to: cTypeString [
 	 For simulation answer a suitable surrogate for the struct types"
 	^cTypeString
 		caseOf:
-		   {	[#'CogMethod *']		->	[cogit cogMethodSurrogateAt: value asUnsignedInteger].
+		   {	[#'CogMethod *']		->	[value < 0 ifTrue: [value] ifFalse: [cogit cogMethodSurrogateAt: value asUnsignedInteger]].
 			[#'CogBlockMethod *']	->	[cogit cogBlockMethodSurrogateAt: value asUnsignedInteger] }
 		otherwise: [super cCoerceSimple: value to: cTypeString]
 ]
@@ -189,8 +195,18 @@ CurrentImageCoInterpreterFacade >> canContextSwitchIfActivating: method header: 
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> characterObjectOf: anInteger [
+	^objectMemory characterObjectOf: anInteger
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> characterTable [
 	^self subclassResponsibility
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> classCharacter [
+	^self oopForObject: Character
 ]
 
 { #category : #accessing }
@@ -233,6 +249,8 @@ CurrentImageCoInterpreterFacade >> cogit: aCogit [
 		[objectMemory cogit: aCogit].
 	(objectMemory respondsTo: #coInterpreter:) ifTrue:
 		[objectMemory coInterpreter: coInterpreter].
+	coInterpreter setUpForUseByFacade: self.
+	objectMemory setUpForUseByFacade: self.
 	#('stackLimit') do:
 		[:l| self addressForLabel: l].
 	self initializeObjectMap
@@ -332,6 +350,16 @@ CurrentImageCoInterpreterFacade >> fixedFieldsFieldWidth [
 	^objectMemory fixedFieldsFieldWidth
 ]
 
+{ #category : #'cog jit support' }
+CurrentImageCoInterpreterFacade >> fixedFieldsOfClassFormat: classFormat [
+	^objectMemory fixedFieldsOfClassFormat: classFormat
+]
+
+{ #category : #printing }
+CurrentImageCoInterpreterFacade >> flush [
+	coInterpreter transcript flush
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> formatOfClass: classOop [
 	^self subclassResponsibility
@@ -340,6 +368,10 @@ CurrentImageCoInterpreterFacade >> formatOfClass: classOop [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> framePointerAddress [
 	^self addressForLabel: #framePointer
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> freeObject: anObj [
 ]
 
 { #category : #accessing }
@@ -395,19 +427,11 @@ CurrentImageCoInterpreterFacade >> indexablePointersFormat [
 	^objectMemory indexablePointersFormat
 ]
 
-{ #category : #accessing }
-CurrentImageCoInterpreterFacade >> initialPCForHeader: methodHeaderOop method: aMethodOop [
-	self assert: (self objectForOop: aMethodOop) == (headerToMethodMap at: methodHeaderOop).
-	^{ self objectForOop: aMethodOop. (self objectForOop: aMethodOop) initialPC }
-]
-
 { #category : #'initialize-release' }
 CurrentImageCoInterpreterFacade >> initialize [
-	memory := (VMBIGENDIAN
-					ifTrue: [Bitmap]
-					ifFalse: [LittleEndianBitmap]) new: 1024*1024/4.
 	objectMemory := self class objectMemoryClass simulatorClass new.
-	objectMemory memory: memory.
+	objectMemory allocateMemoryOfSize: 1024*1024.
+	memory := objectMemory memory.
 	objectMemory
 		initializeFreeSpaceForFacadeFrom: self startOfMemory
 		to: self variablesBase.
@@ -489,6 +513,11 @@ CurrentImageCoInterpreterFacade >> isImmediate: anOop [
 	^objectMemory isImmediate: anOop
 ]
 
+{ #category : #testing }
+CurrentImageCoInterpreterFacade >> isInOldSpace: address [
+	^objectMemory isInOldSpace: address
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> isIntegerObject: anOop [
 	^objectMemory isIntegerObject: anOop
@@ -499,17 +528,6 @@ CurrentImageCoInterpreterFacade >> isIntegerValue: anInteger [
 	^objectMemory isIntegerValue: anInteger
 ]
 
-{ #category : #labels }
-CurrentImageCoInterpreterFacade >> isLabelRelativeToCogitVarBaseReg: l [
-	coInterpreter class
-		instVarIndexFor: l
-		ifAbsent:
-			[objectMemory class
-				instVarIndexFor: l
-				ifAbsent: [^false]].
-	^true
-]
-
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> isNonImmediate: anOop [
 	^objectMemory isNonImmediate: anOop
@@ -518,6 +536,11 @@ CurrentImageCoInterpreterFacade >> isNonImmediate: anOop [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> isNonIntegerObject: anOop [
 	^objectMemory isNonIntegerObject: anOop
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> isOopCompiledMethod: anOop [
+	^(objectMap keyAtValue: anOop) isCompiledMethod
 ]
 
 { #category : #'cog jit support' }
@@ -633,9 +656,40 @@ CurrentImageCoInterpreterFacade >> lookupAddress: address [
 		ifFalse: [thing asString]) contractTo: 64
 ]
 
+{ #category : #'cog jit support' }
+CurrentImageCoInterpreterFacade >> lookupOrdinary: selectorOop receiver: receiverOop [
+	| rcvr selector |
+	rcvr := self objectForOop: receiverOop.
+	selector := self objectForOop: selectorOop.
+	(rcvr class canUnderstand: selector) ifTrue:
+		[^self oopForObject: ((rcvr class whichClassIncludesSelector: selector)
+									compiledMethodAt: selector)].
+	^SelectorDoesNotUnderstand
+]
+
+{ #category : #'cog jit support' }
+CurrentImageCoInterpreterFacade >> lookupSelector: selectorOop inClass: classOop [
+	| class selector |
+	class := self objectForOop: classOop.
+	selector := self objectForOop: selectorOop.
+	^(class canUnderstand: selector) ifTrue:
+		[self oopForObject: ((class whichClassIncludesSelector: selector)
+									compiledMethodAt: selector)]
+]
+
 { #category : #'frame access' }
 CurrentImageCoInterpreterFacade >> marryFrameCopiesTemps [
 	^ false
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> maxLookupNoMNUErrorCode [
+	^coInterpreter maxLookupNoMNUErrorCode
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> maybeSelectorOfMethod: methodOop [
+	^self oopForObject: (self objectForOop: methodOop) selector
 ]
 
 { #category : #accessing }
@@ -680,6 +734,16 @@ CurrentImageCoInterpreterFacade >> methodNeedsLargeContext: aMethodOop [
 CurrentImageCoInterpreterFacade >> methodUsesAlternateBytecodeSet: methodObjOop [
 	"A negative header selects the alternate bytecode set."
 	^(self objectForOop: methodObjOop) signFlag
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> nameOfClass: objOop [
+	^(objectMap keyAtValue: objOop) name
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> nativeStackPointerAddress [
+	^self addressForLabel: #nativeStackPointer
 ]
 
 { #category : #accessing }
@@ -761,6 +825,11 @@ CurrentImageCoInterpreterFacade >> numSlotsOf: objOop [
 		[8]	->	[obj basicSize + obj class instSize] }
 ]
 
+{ #category : #'cog jit support' }
+CurrentImageCoInterpreterFacade >> objCouldBeClassObj: obj [
+	^(self objectForOop: obj) isBehavior
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> objectAfter: anOop [
 	^anOop + 8
@@ -769,14 +838,7 @@ CurrentImageCoInterpreterFacade >> objectAfter: anOop [
 { #category : #'private-cacheing' }
 CurrentImageCoInterpreterFacade >> objectForOop: anOop [
 	"This is a keyAtValue: search and so needs speeding up either by a reverse map or a simple cache."
-	^(anOop bitAnd: 3) caseOf: {
-		[0] -> [anOop = cachedOop
-				ifTrue: [cachedObject]
-				ifFalse: [cachedObject := objectMap keyAtValue: anOop. "may raise Error"
-						cachedOop := anOop. "Dom't assign until accessed without error"
-						cachedObject]].
-		[1] -> [anOop signedIntFromLong >> 1].
-		[3] -> [anOop signedIntFromLong >> 1] }
+	self subclassResponsibility
 ]
 
 { #category : #accessing }
@@ -786,9 +848,7 @@ CurrentImageCoInterpreterFacade >> objectMemory [
 
 { #category : #'object map' }
 CurrentImageCoInterpreterFacade >> oopForObject: o [
-	^o isInteger
-		ifTrue: [o << 1 bitOr: 1]
-		ifFalse: [objectMap at: o ifAbsentPut: [objectMap size * 8 + (1024 * 1024)]]
+	self subclassResponsibility
 ]
 
 { #category : #testing }
@@ -809,6 +869,11 @@ CurrentImageCoInterpreterFacade >> primErrTable [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> primFailCodeAddress [
 	^self addressForLabel: #primFailCode
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> primNumberExternalCall [
+	^coInterpreter primNumberExternalCall
 ]
 
 { #category : #accessing }
@@ -837,6 +902,14 @@ CurrentImageCoInterpreterFacade >> primitiveIndexOf: anOop [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> primitiveIndexOfMethod: anOop header: header [
+	| method |
+	method := self objectForOop: anOop.
+	self assert: (self objectForOop: header) = method header.
+	^method primitive
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> primitivePropertyFlags: primIndex [
 	^coInterpreter primitivePropertyFlags: primIndex
 ]
@@ -847,12 +920,71 @@ CurrentImageCoInterpreterFacade >> print: it [
 ]
 
 { #category : #printing }
+CurrentImageCoInterpreterFacade >> printChar: aCharacter [
+	coInterpreter transcript nextPut: aCharacter
+]
+
+{ #category : #printing }
+CurrentImageCoInterpreterFacade >> printCogMethod: cogMethod [
+	| address primitive |
+	address := cogMethod asInteger.
+	self printHex: address;
+		print: ' <-> ';
+		printHex: address + cogMethod blockSize.
+	cogMethod cmType = CMMethod ifTrue:
+		[self print: ': method: ';
+			printHex: cogMethod methodObject.
+		 primitive := self primitiveIndexOfMethod: cogMethod methodObject
+							header: cogMethod methodHeader.
+		 primitive ~= 0 ifTrue:
+			[self print: ' prim '; printNum: primitive]].
+	cogMethod cmType = CMBlock ifTrue:
+		[self print: ': block home: ';
+			printHex: (self cCoerceSimple: cogMethod to: #'CogBlockMethod *') cmHomeMethod asUnsignedInteger].
+	cogMethod cmType = CMClosedPIC ifTrue:
+		[self print: ': Closed PIC N: ';
+			printHex: cogMethod cPICNumCases].
+	cogMethod cmType = CMOpenPIC ifTrue:
+		[self print: ': Open PIC '].
+	self print: ' selector: '; printHex: cogMethod selector.
+	cogMethod selector = objectMemory nilObject
+		ifTrue: [self print: ' (nil)']
+		ifFalse: [self space; printStringOf: cogMethod selector].
+	self cr
+]
+
+{ #category : #printing }
 CurrentImageCoInterpreterFacade >> printHex: anInteger [
 	| it16 |
 	it16 := anInteger radix: 16.
 	coInterpreter transcript
 		next: 8 - it16 size put: Character space;
-		nextPutAll: (anInteger storeStringBase: 16)
+		nextPutAll: (anInteger printStringBase: 16)
+]
+
+{ #category : #printing }
+CurrentImageCoInterpreterFacade >> printHexnp: anInteger [
+	coInterpreter transcript nextPutAll: (anInteger printStringBase: 16)
+]
+
+{ #category : #printing }
+CurrentImageCoInterpreterFacade >> printHexnpnp: anInteger [
+	coInterpreter transcript nextPutAll: (anInteger printStringBase: 16)
+]
+
+{ #category : #printing }
+CurrentImageCoInterpreterFacade >> printNum: anInteger [
+	coInterpreter transcript print: anInteger
+]
+
+{ #category : #printing }
+CurrentImageCoInterpreterFacade >> printStringOf: anOop [
+	Transcript nextPutAll: (self objectForOop: anOop)
+]
+
+{ #category : #printing }
+CurrentImageCoInterpreterFacade >> putchar: aCharacter [
+	coInterpreter transcript nextPut: aCharacter
 ]
 
 { #category : #accessing }
@@ -875,13 +1007,18 @@ CurrentImageCoInterpreterFacade >> rawHeaderOf: aMethodOop [
 	| method headerOop |
 	method := self objectForOop: aMethodOop.
 	headerOop := objectMemory integerObjectOf: (self objectForOop: aMethodOop) header.
-	self assert: method = (headerToMethodMap at: headerOop ifAbsentPut: [method]).
+	self assert: method header = (headerToMethodMap at: headerOop ifAbsentPut: [method]) header.
 	^headerOop
 ]
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> rawHeaderOf: anOop put: aCogMethodSurrogate [
 	^self
+]
+
+{ #category : #'cog jit support' }
+CurrentImageCoInterpreterFacade >> remoteIsInstVarAccess [
+	^coInterpreter remoteIsInstVarAccess
 ]
 
 { #category : #accessing }
@@ -903,8 +1040,20 @@ CurrentImageCoInterpreterFacade >> scavengeThresholdAddress [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> shadowCallStackAddress [
+	^self addressForLabel: #shadowCallStackAddress
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> shiftForWord [
 	^objectMemory shiftForWord
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> shortPrint: oop [
+	^(objectMemory isImmediate: oop)
+		ifTrue: [coInterpreter shortPrint: oop]
+		ifFalse: [(objectMap keyAtValue: oop) printString]
 ]
 
 { #category : #accessing }
@@ -917,14 +1066,24 @@ CurrentImageCoInterpreterFacade >> sizeOfLongStoreTempBytecode: methodHeaderOop 
 	^coInterpreter sizeOfLongStoreTempBytecode: methodHeaderOop
 ]
 
+{ #category : #printing }
+CurrentImageCoInterpreterFacade >> space [
+	coInterpreter transcript space
+]
+
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> specialSelector: index [ 
-	^self oopForObject: (Smalltalk specialSelectors at: index * 2 + 1)
+	^self oopForObject: (self specialSelectors at: index * 2 + 1)
 ]
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> specialSelectorNumArgs: index [ 
-	^Smalltalk specialSelectors at: index * 2 + 2
+	^self specialSelectors at: index * 2 + 2
+]
+
+{ #category : #private }
+CurrentImageCoInterpreterFacade >> specialSelectors [
+	^Smalltalk specialObjectsArray at: 24
 ]
 
 { #category : #accessing }
@@ -935,7 +1094,8 @@ CurrentImageCoInterpreterFacade >> splObj: splObjIndex [
 		[ClassLargeNegativeInteger]	-> [self oopForObject: LargeNegativeInteger].
 		[ClassLargePositiveInteger]	-> [self oopForObject: LargePositiveInteger].
 		[ClassSmallInteger]				-> [self oopForObject: SmallInteger].
-		[CompactClasses]				-> [self oopForObject: Smalltalk compactClassesArray]
+		[CompactClasses]				-> [self oopForObject: Smalltalk compactClassesArray].
+		[LowcodeContextMark]				-> [self oopForObject: (Smalltalk globals at: #LowcodeNativeContext ifPresent: [:cls | cls signalingObject ]) ]
 		}
 ]
 
@@ -996,7 +1156,16 @@ CurrentImageCoInterpreterFacade >> storePointerUnchecked: zeroRelativeIndex ofOb
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> stringOf: anOop [
-	^self lookupAddress: anOop
+	| thing |
+	thing := objectMap
+				keyAtValue: anOop
+				ifAbsent:
+					[variables
+						keyAtValue: anOop
+						ifAbsent: [^nil]].
+	^((thing isLiteral and: [thing isSymbol not])
+		ifTrue: [thing storeString]
+		ifFalse: [thing asString]) contractTo: 64
 ]
 
 { #category : #testing }
@@ -1035,6 +1204,23 @@ CurrentImageCoInterpreterFacade >> trueObject [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> ultimateLiteralOf: methodObj [
+	| meth |
+	meth := (objectMap keyAtValue: methodObj).
+	^self oopForObject: (meth literalAt: meth numLiterals)
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> unalignedLongAt: anInteger [
+	^objectMemory unalignedLongAt: anInteger
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> unalignedLongAt: anInteger put: value [
+	^objectMemory unalignedLongAt: anInteger put: value
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> varBaseAddress [
 	"This value is chosen for ARM, which has the ability to do 12-bit relative addresses from the var base register."
 	^(variables at: 'stackLimit') - (1 << 11)
@@ -1050,11 +1236,6 @@ CurrentImageCoInterpreterFacade >> variablesBase [
 		768k to 1023k		method cache
 		 1023k to 1024k	rump C stack"
 	^memory byteSize / 2
-]
-
-{ #category : #accessing }
-CurrentImageCoInterpreterFacade >> voidHeaderToMethodMap [
-	headerToMethodMap := Dictionary new
 ]
 
 { #category : #accessing }

@@ -6,14 +6,15 @@ When an image is written to a snapshot file the second word of the header of the
 On load all segments are read into one single segment, eliminating the bridge objects, and computing the swizzle distance for each segment, based on where the segments were in memory when the image file was written, and where the coalesced segment ends up on load.  Then the segment is traversed, swizzling pointers by selecting the relevant swizzle for each oop's segment.
 
 Instance Variables
-	manager:					<SpurMemoryManager>
-	numSegments:				<Integer>
-	numSegInfos:				<Integer>
-	segments:					<Array of SpurSegmentInfo>
-	firstSegmentSize:			<Integer>
-	canSwizzle:					<Boolean>
-	sweepIndex:				<Integer>
-	preferredPinningSegment:	<SpurSegmentInfo>
+	manager						<SpurMemoryManager>
+	numSegments					<Integer>
+	numSegInfos					<Integer>
+	segments						<Array of SpurSegmentInfo>
+	firstSegmentSize				<Integer>
+	canSwizzle						<Boolean>
+	sweepIndex					<Integer>
+	preferredPinningSegment		<SpurSegmentInfo>
+	totalHeapSizeIncludingBridges	<integer>
 
 canSwizzle
 	- a flag set and cleared during initialization to validate that swizzling is only performed at the right time
@@ -38,6 +39,9 @@ segments
 
 sweepIndex
 	- a segment index used to optimize setting the containsPinned flag on segments during freeUnmarkedObjectsAndSortAndCoalesceFreeSpace
+
+totalHeapSizeIncludingBridges
+	- the total size of all segments, used to compute heap usage
 "
 Class {
 	#name : #SpurSegmentManager,
@@ -50,14 +54,17 @@ Class {
 		'firstSegmentSize',
 		'canSwizzle',
 		'sweepIndex',
-		'preferredPinningSegment'
+		'preferredPinningSegment',
+		'totalHeapSizeIncludingBridges'
 	],
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
 SpurSegmentManager class >> declareCVarsIn: aCCodeGenerator [
-	aCCodeGenerator var: #segments type: #'SpurSegmentInfo *'
+	aCCodeGenerator
+		var: #segments type: #'SpurSegmentInfo *';
+		var: #totalHeapSizeIncludingBridges type: #usqInt
 ]
 
 { #category : #translation }
@@ -86,14 +93,15 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 			AllocatedSizeInto: (self cCode: [self addressOf: allocatedSize]
 									inSmalltalk: [[:sz| allocatedSize := sz]])) ifNotNil:
 		[:segAddress| | newSegIndex newSeg |
-		 newSegIndex := self insertSegmentFor: segAddress asUnsignedLong.
+		 newSegIndex := self insertSegmentFor: segAddress asUnsignedIntegerPtr.
 		 newSeg := self addressOf: (segments at: newSegIndex).
 		 newSeg
-			segStart: segAddress asUnsignedLong;
+			segStart: segAddress asUnsignedIntegerPtr;
 			segSize: allocatedSize.
 		 self bridgeFrom: (self addressOf: (segments at: newSegIndex - 1)) to: newSeg.
 		 self bridgeFrom: newSeg to: (newSegIndex = (numSegments - 1) ifFalse:
 										[self addressOf: (segments at: newSegIndex + 1)]).
+		 totalHeapSizeIncludingBridges := totalHeapSizeIncludingBridges + allocatedSize.
 		 "test isInMemory:"
 		 0 to: numSegments - 1 do:
 			[:i|
@@ -225,7 +233,7 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 	numSegments := 1.
 	(segments at: 0)
 		segStart: manager oldSpaceStart;
-		segSize: manager endOfMemory - manager oldSpaceStart.
+		segSize: (totalHeapSizeIncludingBridges := manager endOfMemory - manager oldSpaceStart).
 	manager bootstrapping ifTrue:
 		["finally plant a bridge at the end of the coalesced segment and cut back the
 		  manager's notion of the end of memory to immediately before the bridge."
@@ -235,6 +243,11 @@ SpurSegmentManager >> collapseSegmentsPostSwizzle [
 			at: manager endOfMemory - manager bridgeSize].
 	self assert: (manager isSegmentBridge: (self bridgeAt: 0)).
 	self assert: (manager numSlotsOfAny: (self bridgeAt: 0)) = 0
+]
+
+{ #category : #'simulation only' }
+SpurSegmentManager >> computeTotalHeapSizeIncludingBridges [
+	totalHeapSizeIncludingBridges := manager endOfMemory - manager oldSpaceStart
 ]
 
 { #category : #'growing/shrinking memory' }
@@ -252,8 +265,8 @@ SpurSegmentManager >> findEmptySegNearestInSizeTo: size [
 				ifNil: [best := seg]
 				ifNotNil:
 					[(size >= (seg segSize * 0.75)
-					 and: [(seg segSize - size) abs < delta]) ifTrue:
-						[best := seg. delta := (seg segSize - size) abs]]]].
+					 and: [(self cCoerce: (seg segSize - size) to: #sqInt ) abs < delta]) ifTrue:
+						[best := seg. delta := (self cCoerce: (seg segSize - size) to: #sqInt ) abs]]]].
 	^best
 ]
 
@@ -311,7 +324,7 @@ SpurSegmentManager >> initSegmentForInImageCompilationFrom: base to: limit [
 
 { #category : #initialization }
 SpurSegmentManager >> initialize [
-	numSegments := numSegInfos := 0.
+	numSegments := numSegInfos := sweepIndex := totalHeapSizeIncludingBridges := 0.
 	canSwizzle := false
 ]
 
@@ -432,7 +445,7 @@ SpurSegmentManager >> notePinned: objOop [
 		ifTrue:
 			[manager setIsMarkedOf: objOop to: true]
 		ifFalse:
-			[[(segments at: sweepIndex) segLimit < objOop] whileTrue:
+			[[self oop: (segments at: sweepIndex) segLimit isLessThan: objOop] whileTrue:
 				[sweepIndex := sweepIndex + 1].
 			 (segments at: sweepIndex) containsPinned: true]
 ]
@@ -468,7 +481,7 @@ SpurSegmentManager >> postSnapshot [
 				addFreeChunkWithBytes: seg segLimit - address - manager bridgeSize
 				at: address]].
 	self checkSegments.
-	manager checkFreeSpace
+	manager checkFreeSpace: GCModeFull
 ]
 
 { #category : #pinning }
@@ -486,7 +499,7 @@ SpurSegmentManager >> prepareForGlobalSweep [
 { #category : #snapshot }
 SpurSegmentManager >> prepareForSnapshot [
 	"shorten all segments by any trailing free space."
-	<inline: false>
+	<inline: #never>
 	<var: #seg type: #'SpurSegmentInfo *'>
 	self checkSegments.
 	0 to: numSegments - 1 do:
@@ -540,10 +553,12 @@ SpurSegmentManager >> readHeapFrom: f at: location dataBytes: numBytes [
 				File: numBytes
 				Read: f]
 		inSmalltalk:
-			[(f	readInto: manager memory
-				startingAt: location // 4 + 1
-				count: numBytes // 4)
-			 * 4]
+			[| bytesPerElement |
+			 bytesPerElement := manager memory bytesPerElement.
+			 (f	readInto: manager memory
+				startingAt: location // bytesPerElement + 1
+				count: numBytes // bytesPerElement)
+			  * bytesPerElement]
 ]
 
 { #category : #snapshot }
@@ -574,7 +589,8 @@ SpurSegmentManager >> readHeapFromImageFile: f dataBytes: numBytes [
 			[totalBytesRead := totalBytesRead + bytesRead].
 	 bytesRead ~= nextSegmentSize ifTrue:
 		[^totalBytesRead].
-	 numSegments := numSegments + 1.
+	 (numSegments := numSegments + 1) >= numSegInfos ifTrue:
+		[self allocateOrExtendSegmentInfos].
 	 bridge := bridgehead + manager baseHeaderSize.
 	 bridgeSpan := (manager rawNumSlotsOf: bridgehead) = 0
 						ifTrue: [0]
@@ -601,6 +617,7 @@ SpurSegmentManager >> removeSegment: emptySeg [
 	i := self indexOfSegment: emptySeg.
 	self assert: i > 0.
 
+	totalHeapSizeIncludingBridges := totalHeapSizeIncludingBridges - emptySeg segSize.
 	manager sqDeallocateMemorySegmentAt: emptySeg segStart asVoidPointer OfSize: emptySeg segSize.
 
 	i to: numSegments - 1 do:
@@ -632,19 +649,22 @@ SpurSegmentManager >> segments [
 
 { #category : #'growing/shrinking memory' }
 SpurSegmentManager >> shrinkObjectMemory: delta [
+	"Answer if any shrinkage was achieved."
 	<inline: false>
 	<var: #delta type: #usqInt>
 	| shrinkage emptySeg |
 	<var: #shrinkage type: #usqInt>
 	<var: #emptySeg type: #'SpurSegmentInfo *'>
+	manager checkFreeSpace: GCModeFreeSpace.
 	shrinkage := delta.
 	[emptySeg := self findEmptySegNearestInSizeTo: shrinkage.
-	 emptySeg notNil] whileTrue:
-		[emptySeg segSize > shrinkage ifTrue:
-			[^self].
-		 shrinkage := shrinkage - emptySeg segSize.
-		 manager detachFreeObject: (manager objectStartingAt: emptySeg segStart).
-		 self removeSegment: emptySeg]
+	 (emptySeg isNil
+	  or: [emptySeg segSize > shrinkage]) ifTrue:
+		[manager checkFreeSpace: GCModeFreeSpace.
+		 ^shrinkage < delta].
+	 shrinkage := shrinkage - emptySeg segSize.
+	 manager detachFreeObject: (manager objectStartingAt: emptySeg segStart).
+	 self removeSegment: emptySeg] repeat
 ]
 
 { #category : #pinning }
@@ -676,7 +696,7 @@ SpurSegmentManager >> totalBytesInNonEmptySegments [
 	^total
 ]
 
-{ #category : #snapshot }
+{ #category : #accessing }
 SpurSegmentManager >> totalBytesInSegments [
 	| total |
 	<var: #total type: #usqInt>
@@ -684,7 +704,13 @@ SpurSegmentManager >> totalBytesInSegments [
 	0 to: numSegments - 1 do:
 		[:i|
 		total := total + (segments at: i) segSize].
+	self assert: totalHeapSizeIncludingBridges = total.
 	^total
+]
+
+{ #category : #accessing }
+SpurSegmentManager >> totalOldSpaceCapacity [
+	^totalHeapSizeIncludingBridges - (numSegments * manager bridgeSize)
 ]
 
 { #category : #snapshot }

@@ -87,6 +87,7 @@ SpurSegmentInfo >> savedSegSize: anObject [
 
 { #category : #accessing }
 SpurSegmentInfo >> segLimit [
+	<returnTypeC: #usqInt>
 	^segSize + segStart
 ]
 

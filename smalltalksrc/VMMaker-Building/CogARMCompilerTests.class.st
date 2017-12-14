@@ -15,16 +15,41 @@ CogARMCompilerTests >> assertCheckQuickArithOpCodeSize: bytes [
 	self assert: bytes <= 4
 ]
 
-{ #category : #'cogit compiler compatibility' }
-CogARMCompilerTests >> assertSaneJumpTarget: jumpTarget [
-	<var: #jumpTarget type: #'AbstractInstruction *'>
-
-	self assert: (self addressIsInInstructions: jumpTarget)
-]
-
 { #category : #accessing }
 CogARMCompilerTests >> concreteCompilerClass [
 	^CogARMCompilerForTests
+]
+
+{ #category : #private }
+CogARMCompilerTests >> disassembleInstructionAt: index In: inst into: binaryBlock [
+	"Manage the fact that in the simulator inst machineCode object is an Array and the disassembler requires a ByteArray or some such."
+	^self processor
+		disassembleInstructionAt: index
+		In: (self memoryAsBytes: inst machineCode object)
+		into: binaryBlock
+]
+
+{ #category : #private }
+CogARMCompilerTests >> memoryAsBytes: instructionMachineCode [
+	"Manage the fact that in the simulator inst machineCode object is an Array and the disassembler requires a ByteArray or some such."
+	| bytes |
+	instructionMachineCode isCObjectAccessor ifTrue:
+		[^self memoryAsBytes: instructionMachineCode object].
+	instructionMachineCode isArray ifFalse:
+		[self assert: instructionMachineCode class isBits.
+		 ^instructionMachineCode].
+	bytes := ByteArray new: instructionMachineCode size * 4.
+	1 to: instructionMachineCode size do:
+		[:i|
+		(instructionMachineCode at: i) ifNotNil:
+			[:word|
+			bytes unsignedLongAt: i - 1* 4 + 1 put: word]].
+	^bytes
+]
+
+{ #category : #'cogit compatibility' }
+CogARMCompilerTests >> objectMemory [
+	^self
 ]
 
 { #category : #accessing }
@@ -53,13 +78,13 @@ CogARMCompilerTests >> testAdd [
 			[:n| | inst len |
 			inst := self gen: AddCqR operand: n operand: reg.
 			len := inst concretizeAt: 0.
-			self processor
+			self
 				disassembleInstructionAt: 0
-				In: inst machineCode object
+				In: inst
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
 					herIntended := 'adds	', regName, ', ', regName, ', #', n asString.
-					self assert: (plainJane match: herIntended)]]].
+					self assert: herIntended equals: plainJane]]].
 		
 	"test AddCwR"
 	self concreteCompilerClass registersWithNamesDo: [ :reg :regName |
@@ -67,41 +92,41 @@ CogARMCompilerTests >> testAdd [
 			[:n| | inst len |
 			inst := self gen: AddCwR operand: n operand: reg.
 			len := inst concretizeAt: 0.
-			self processor
+			self
 				disassembleInstructionAt: 0
-				In: inst machineCode object
+				In: inst
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'mov	sl, #', (n bitAnd: 16rFF << 24) signedIntFromLong asString.
-					self assert: (plainJane match: herIntended)].
-			self processor
+					herIntended := 'mov	ip, #', (n bitAnd: 16rFF << 24) signedIntFromLong asString.
+					self assert: herIntended equals: plainJane].
+			self
 				disassembleInstructionAt: 4
-				In: inst machineCode object
+				In: inst
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'orr	sl, sl, #', (n bitAnd: 16rFF << 16) asString.
-					self assert: (plainJane match: herIntended)].
-			self processor
+					herIntended := 'orr	ip, ip, #', (n bitAnd: 16rFF << 16) asString.
+					self assert: herIntended equals: plainJane].
+			self
 				disassembleInstructionAt: 8
-				In: inst machineCode object
+				In: inst
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'orr	sl, sl, #', (n bitAnd: 16rFF << 8) signedIntFromLong asString.
-					self assert: (plainJane match: herIntended)].
-			self processor
+					herIntended := 'orr	ip, ip, #', (n bitAnd: 16rFF << 8) signedIntFromLong asString.
+					self assert: herIntended equals: plainJane].
+			self
 				disassembleInstructionAt: 12
-				In: inst machineCode object
+				In: inst
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'orr	sl, sl, #', (n bitAnd: 16rFF) asString.
-					self assert: (plainJane match: herIntended)].
-			self processor
+					herIntended := 'orr	ip, ip, #', (n bitAnd: 16rFF) asString.
+					self assert: herIntended equals: plainJane].
+			self
 				disassembleInstructionAt: 16
-				In: inst machineCode object
+				In: inst
 				into: [:str :sz| | plainJane herIntended |
 					plainJane := self strip: str.
-					herIntended := 'adds	', regName, ', ', regName, ', sl'.
-					self assert: (plainJane match: herIntended)]]]
+					herIntended := 'adds	', regName, ', ', regName, ', ip'.
+					self assert: herIntended equals: plainJane]]]
 
 ]
 
@@ -142,18 +167,16 @@ CogARMCompilerTests >> testGenerateMul [
 CogARMCompilerTests >> testMoveCwR [
 	"self new testMoveCwR"
 	
-	| memory |
-	memory := ByteArray new: 16.
 	#(16rFF00FF00 16r00000012 16r12345678) do:
-		[:n| | inst len |
+		[:n|
 		self concreteCompilerClass dataRegistersWithAccessorsDo: 
-			[ :r :rgetter :rset |
+			[ :r :rgetter :rset | | inst len memory |
 			inst := self gen: MoveCwR operand: n operand: r.
 			len := inst concretizeAt: 0.
-			memory replaceFrom: 1 to: len with: inst machineCode object startingAt: 1.
+			memory := self memoryAsBytes: inst machineCode.
 			self processor
 				reset.
-			[[processor pc < len] whileTrue:
+			[[processor pc < inst machineCodeSize] whileTrue:
 				[self processor singleStepIn: memory]]
 				on: Error
 				do: [:ex| ].
@@ -178,7 +201,7 @@ CogARMCompilerTests >> testPerformAdd [
  			self gen: MoveCwR operand: n operand: r.
 			self gen: AddCqR operand: 42 operand: r.
 			memory := self generateInstructions.
-			self disassembleOpcodesIn: memory to: Transcript	.
+			"self disassembleOpcodesIn: memory to: Transcript."
 			self processor
 				reset.
 			[[processor pc < memory size] whileTrue:
@@ -201,14 +224,14 @@ CogARMCompilerTests >> testPrefetchAw [
 		[:n| | inst len |
 		inst := self gen: PrefetchAw operand: n.
 		len := inst concretizeAt: 0.
-		self processor
+		self
 			disassembleInstructionAt: 12
-			In: inst machineCode object
+			In: inst
 			into: [:str :sz| | plainJane herIntended |
 				"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 				plainJane := self strip: str.
 				herIntended := 'pld	[sl', ((n bitAnd: 16rFF) = 0 ifTrue: [''] ifFalse: [', #', (n bitAnd: 16rFF) asString]) ,']'.
-				self assert: (plainJane match: herIntended).
+				self assert: herIntended equals: plainJane.
 				self assert: len = 16]].
 
 ]
@@ -221,14 +244,14 @@ CogARMCompilerTests >> testPushR [
 		[:r :name | | inst len |
 		inst := self gen: PushR operand: r.
 		len := inst concretizeAt: 0.
-		self processor
+		self
 			disassembleInstructionAt: 0
-			In: inst machineCode object
+			In: inst
 			into: [:str :sz| | plainJane herIntended |
 				"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 				plainJane := self strip: str.
 				herIntended := 'push	{', name ,'}'.
-				self assert: (plainJane match: herIntended).
+				self assert: herIntended equals: plainJane.
 				self assert: len = 4]].
 
 ]
@@ -241,9 +264,9 @@ CogARMCompilerTests >> testRetN [
 		[:n| | inst len |
 		inst := self gen: RetN operand: n.
 		len := inst concretizeAt: 0.
-		self processor
+		self
 			disassembleInstructionAt: 0
-			In: inst machineCode object
+			In: inst
 			into: [:str :sz| | plainJane  |
 				"Convert e.g. '00000000: movl %eax, 0x2(%eax) : 89 40 02' to  'movl %eax, 0x2(%eax)'"
 				plainJane := self strip: str.
@@ -254,18 +277,23 @@ CogARMCompilerTests >> testRetN [
 		[:n| | inst len |
 		inst := self gen: RetN operand: n * 4.
 		len := inst concretizeAt: 0.
-		self processor
+		self
 			disassembleInstructionAt: 0
-			In: inst machineCode object
+			In: inst
 			into: [:str :sz| | plainJane herIntended |
 				plainJane := self strip: str.
 				herIntended := 'add	sp, sp, #', (n * 4 )asString.
-				self assert: (plainJane match: herIntended)].
-		self processor
+				self assert: herIntended equals: plainJane].
+		self
 			disassembleInstructionAt: 4
-			In: inst machineCode object
+			In: inst
 			into: [:str :sz| | plainJane |
 				plainJane := self strip: str.
 				self assert: (plainJane match: 'mov	pc, lr').		
 		self assert: len = 8]]
+]
+
+{ #category : #'cogit compatibility' }
+CogARMCompilerTests >> wordSize [
+	^4
 ]

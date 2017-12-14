@@ -107,7 +107,23 @@ TSendNode >> bindVariablesIn: aDictionary [
 	arguments := arguments collect: [ :a | a bindVariablesIn: aDictionary ].
 ]
 
-{ #category : #'C code generation' }
+{ #category : #accessing }
+TSendNode >> constantNumbericValueIfAtAllPossibleOrNilIn: aCCodeGen [
+	"This is a version of constantNumbericValueOrNil for type checking rather than code generation.
+	 It aims to yield a value if at all possible."
+	(#(* // + - << >> bitAnd: bitOr: bitShift:) includes: selector) ifTrue:
+		[(receiver constantNumbericValueIfAtAllPossibleOrNilIn: aCCodeGen) ifNotNil:
+			[:rval|
+			(arguments first constantNumbericValueIfAtAllPossibleOrNilIn: aCCodeGen) ifNotNil:
+				[:aval|
+				^rval perform: selector with: aval]]].
+	^(aCCodeGen anyMethodNamed: selector) ifNotNil:
+		[:m|
+		 m isReturnConstant ifTrue:
+			[m statements last expression constantNumbericValueIfAtAllPossibleOrNilIn: aCCodeGen]]
+]
+
+{ #category : #accessing }
 TSendNode >> constantNumbericValueOrNil [
 	(#(* // + -) includes: selector) ifTrue:
 		[receiver constantNumbericValueOrNil ifNotNil:
@@ -116,6 +132,20 @@ TSendNode >> constantNumbericValueOrNil [
 				[:aval|
 				^rval perform: selector with: aval]]].
 	^nil
+]
+
+{ #category : #transformations }
+TSendNode >> copyWithoutReturn [
+	self assert: self endsWithReturn.
+	^self class new
+		setSelector: selector
+			receiver: receiver
+				arguments: (arguments collect:
+								[:arg|
+								 arg endsWithReturn
+									ifTrue: [arg copyWithoutReturn]
+									ifFalse: [arg]]);
+		yourself
 ]
 
 { #category : #'C code generation' }
@@ -140,7 +170,7 @@ TSendNode >> emitCCodeAsFieldReferenceOn: aStream level: level generator: aCodeG
 	"If appropriate, translate this message send as a pointer dereference"
 
 	| parenCount |
-	(self isStructSendIn: aCodeGen) ifFalse:
+	(aCodeGen isStructSend: self) ifFalse:
 		[^false].
 
 	parenCount := receiver isSend ifTrue: [2] ifFalse: [1].
@@ -162,16 +192,20 @@ TSendNode >> emitCCodeAsFieldReferenceOn: aStream level: level generator: aCodeG
 
 { #category : #'C code generation' }
 TSendNode >> emitCCodeAsFunctionCallOn: aStream level: level generator: aCodeGen [
-
 	"Translate this message send into a C function call"
+
+	selector == #break ifTrue:
+		[aStream nextPutAll: '/* send of break elided */'.
+		 ^self].
+
 	"Special case for pluggable modules. Replace messages to interpreterProxy
 	 by interpreterProxy->message(..) if the message is not builtin"
 	(aCodeGen shouldGenerateAsInterpreterProxySend: self) ifTrue:
 		[(aCodeGen noteUsedPluginFunction: selector) ifTrue:
 			[aStream nextPutAll: 'interpreterProxy->']].
 
-	"Translate this message send into a C function call."
 	aStream nextPutAll: (aCodeGen cFunctionNameFor: selector); nextPut: $(.
+
 	"Only include the receiver as the first argument in certain cases.
 	 The receiver is always included if it is an expression.
 	 If it is a variable:
@@ -208,6 +242,12 @@ TSendNode >> endsWithReturn [
 ]
 
 { #category : #testing }
+TSendNode >> hasSideEffect [
+	"Answer if the parse tree rooted at this node has a side-effect or not."
+	^(#(#+ #- #* #/ #// #\\ #= #== #~= #~~) includes: selector) not
+]
+
+{ #category : #testing }
 TSendNode >> isAssertion [
 	^(selector beginsWith: 'assert') or: [selector beginsWith: 'verify']
 ]
@@ -225,6 +265,13 @@ TSendNode >> isBuiltinOperator: builtinFlag [
 ]
 
 { #category : #testing }
+TSendNode >> isConditionalSend [
+	"Answer if the receiver is a send of any of the conditionals, ifTrue: ifTrue:ifFalse: et al"
+	^#(	ifTrue:ifFalse: ifFalse:ifTrue: ifTrue: ifFalse:
+		ifNil:ifNotNil: ifNotNil:ifNil: ifNil: ifNotNil) includes: selector
+]
+
+{ #category : #testing }
 TSendNode >> isLiteralArrayDeclaration [
 	^selector == #cCoerce:to:
 	  and: [arguments first isConstant
@@ -236,7 +283,8 @@ TSendNode >> isLiteralArrayDeclaration [
 TSendNode >> isNonNullCCode [
 	^(#(cCode: cCode:inSmalltalk:) includes: selector)
 	   and: [arguments first isConstant
-	   and: [arguments first value notEmpty]]
+	   and: [arguments first value isString
+	   and: [arguments first value notEmpty]]]
 ]
 
 { #category : #testing }
@@ -246,14 +294,15 @@ TSendNode >> isPreprocessorDirective [
 
 { #category : #testing }
 TSendNode >> isReturningIf [
-	^(#(ifTrue:ifFalse: ifFalse:ifTrue:) includes: selector)
+	^(#(ifTrue:ifFalse: ifFalse:ifTrue: ifNil:ifNotNil: ifNotNil:ifNil:) includes: selector)
 	   and: [arguments allSatisfy: [:arg| arg endsWithReturn]]
 ]
 
 { #category : #comparing }
 TSendNode >> isSameAs: aTParseNode [
 	(aTParseNode isSend
-	 and: [selector == aTParseNode selector]) ifFalse:
+	 and: [selector == aTParseNode selector
+	 and: [receiver isSameAs: aTParseNode receiver]]) ifFalse:
 		[^false].
 	arguments with: aTParseNode args do:
 		[:a :b|
@@ -277,25 +326,6 @@ TSendNode >> isSend [
 { #category : #'C code generation' }
 TSendNode >> isStructReference: varNode in: aCodeGen [
 	^(varNode structTargetKindIn: aCodeGen) notNil
-]
-
-{ #category : #testing }
-TSendNode >> isStructSendIn: aCodeGen [
-	"Answer if the recever is a send of a structure accessor.
-	 This is tricky.  We want
-		foo bar => foo->bar
-		foo bar => foo.bar
-		foo bar: expr => foo->bar = expr
-		foo bar: expr => foo.bar = expr
-	 depending on whether foo is a struct or a pointer to a struct,
-	 but only if both foo is a struct type and bar is a field accessor.
-	 The tricky cases are self-sends within struct class methods.  Here we need to
-	 distinguish between self-sends of ordinary methods from self sends of accessors."
-	^arguments size <= 1
-	   and: [(receiver structTargetKindIn: aCodeGen) notNil
-	   and: [(aCodeGen methodNamed: selector)
-				ifNil: [false]
-				ifNotNil: [:method| method isStructAccessor]]]
 ]
 
 { #category : #testing }
@@ -451,9 +481,10 @@ TSendNode >> shouldExcludeReceiverAsFirstArgument: aCodeGen [
 		[^true].
 
 	(receiver isSend
-	 and: [receiver receiver isVariable
-	 and: [(self isSelfReference: receiver receiver in: aCodeGen)
-		or: [self isStructReference: receiver receiver in: aCodeGen]]]) ifTrue:
+	 and: [(receiver shouldExcludeReceiverAsFirstArgument: aCodeGen)
+		or: [receiver receiver isVariable
+			 and: [(self isSelfReference: receiver receiver in: aCodeGen)
+				or: [self isStructReference: receiver receiver in: aCodeGen]]]]) ifTrue:
 		[^aCodeGen isNonArgumentImplicitReceiverVariableName: receiver selector].
 
 	^receiver isVariable
@@ -507,4 +538,9 @@ TSendNode >> structTargetKindIn: aCodeGen [
 		[^#struct].
 
 	^nil
+]
+
+{ #category : #'type inference' }
+TSendNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
+	^aCodeGenerator returnTypeForSend: self in: aTMethod ifNil: nil
 ]

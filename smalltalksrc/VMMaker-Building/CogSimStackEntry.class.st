@@ -1,3 +1,44 @@
+"
+A CogSimStackEntry represents an object pushed on the stack, but during the partial evaluation that occurs as part of the StackToRegisterMappingCogit's compilation.  Bytecodes that produce operands (push items onto the stack) push suitably descriptive instances of CogSimStackEntry onto the simStack (simulation stack).  Bytecodes that cnsume operands (sends, assignments, returns, etc) take items off the simStack.  Hence teh generated code avoids pushing items onto the real stack, and the StackToRegisterMappngCogit can put the operands found on the simSTack in registers, etc.  Hence actual stack raffic is much reduced, a much more efficient calling convention is enabled, and so overall performance is increased.  This scheme is due to L. Peter Deutsch and extended here.
+
+Instance Variables
+	bcptr:					<Integer>
+	cogit:					<StackToRegisterMappingCogit>
+	constant:				<Oop>
+	liveRegister:			<Integer>
+	objectRepresentation:	<CogObjectRepresentation>
+	offset:					<Integer>
+	register:				<Integer>
+	spilled:					<Boolean>
+	type:					<Integer from SSBaseOffset, SSConstant, SSRegister or SSSpill>
+
+bcptr
+	- the bytecode PC at which this particular entry was created (pushed onto the stack).
+
+cogit
+	- the StackToRegisterMappingCogit using this instance
+
+constant
+	- if type = SSConstant then this is the constant's oop
+
+liveRegister
+	- unused other than for simSelf.  This is here for simSelf and for the subclass CogRegisterAllocatingSimStackEntry
+
+objectRepresentation
+	- the CogObjectRepresentation in use for the current object model
+
+offset
+	- if type = SSBaseOffset or type = SSSpill then this is the offset from register
+
+register
+	- type = SSBaseOffset or type = SSSpill or type = SSRegister then this is the register's code (NoReg, TempReg, ReceiverResultReg et al)
+
+spilled
+	- if true, then this entry has been spilled onto the actual stack (or rather code has been generated to push the entry onto the real stack)
+
+type
+	- SSBaseOffset, SSConstant, SSRegister or SSSpill
+"
 Class {
 	#name : #CogSimStackEntry,
 	#superclass : #VMStructType,
@@ -6,23 +47,31 @@ Class {
 		'objectRepresentation',
 		'type',
 		'spilled',
-		'annotateUse',
+		'liveRegister',
 		'register',
 		'offset',
 		'constant',
 		'bcptr'
 	],
 	#pools : [
+		'CogAbstractRegisters',
 		'CogCompilationConstants',
 		'CogRTLOpcodes'
 	],
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #'simulation only' }
+CogSimStackEntry class >> byteSizeForSimulator: aVMClass [
+	"Answer an approximation of the byte size of an AbstractInstruction struct.
+	 This is for estimating the alloca in allocateOpcodes:bytecodes:ifFail:"
+	^self instSize * (aVMClass sizeof: #'void *')
+]
+
 { #category : #translation }
 CogSimStackEntry class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
-	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a CogSimStackEntry struct."
-	"self printTypedefOn: Transcript"
+	"Enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a CogSimStackEntry struct."
+	"self typedef"
 	self filteredInstVarNames do:
 		[:ivn|
 		aBinaryBlock
@@ -30,23 +79,15 @@ CogSimStackEntry class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 			value: (ivn caseOf: {
 						['type']			-> [#char].
 						['spilled']		-> [#char].
-						['annotateUse']	-> [#char]}
+						['register']		-> [#'signed char']. "because NoReg = -1"
+						['liveRegister']	-> [#'signed char'].}
 					otherwise:
 						[#sqInt])]
 ]
 
-{ #category : #accessing }
-CogSimStackEntry >> annotateUse [
-	"Answer the value of annotateUse"
-
-	^ annotateUse
-]
-
-{ #category : #accessing }
-CogSimStackEntry >> annotateUse: anObject [
-	"Set the value of annotateUse"
-
-	^annotateUse := anObject
+{ #category : #translation }
+CogSimStackEntry class >> structTypeName [
+	^'SimStackEntry'
 ]
 
 { #category : #accessing }
@@ -104,7 +145,7 @@ CogSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegister [
 	cogit traceSpill: self.
 	type = SSConstant
 		ifTrue:
-			[inst := cogit annotate: (cogit PushCw: constant) objRef: constant]
+			[inst := cogit genPushConstant: constant]
 		ifFalse:
 			[type = SSBaseOffset
 				ifTrue:
@@ -117,9 +158,28 @@ CogSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegister [
 			 offset := baseOffset.
 			 register := baseRegister].
 	spilled := true.
-	annotateUse ifTrue:
-		[cogit annotateBytecode: inst.
-		 annotateUse := false]
+]
+
+{ #category : #accessing }
+CogSimStackEntry >> floatRegisterMask [
+	^ 0
+]
+
+{ #category : #comparing }
+CogSimStackEntry >> isFrameTempVar [
+	"Answer if the receiver is a temporary variable.  This
+	 only works in a frameful method, hence the weird name."
+	<inline: true>
+	^type = SSBaseOffset and: [register = FPReg]
+]
+
+{ #category : #comparing }
+CogSimStackEntry >> isSameEntryAs: ssEntry [
+	<var: 'ssEntry' type: #'CogSimStackEntry *'>
+	^type = ssEntry type
+	  and: [((type = SSBaseOffset or: [type == SSSpill]) and: [offset = ssEntry offset and: [register = ssEntry register]])
+		or: [(type = SSRegister and: [register = ssEntry register])
+		or: [(type = SSConstant and: [constant = ssEntry constant])]]]
 ]
 
 { #category : #accessing }
@@ -127,19 +187,6 @@ CogSimStackEntry >> maybeConstant [
 	"Answer the value of constant, no assert check."
 	<cmacro: '(sse) ((sse)->constant)'>
 	^constant
-]
-
-{ #category : #'compile abstract instructions' }
-CogSimStackEntry >> mergeAt: baseOffset from: baseRegister [
-	"Discard type information because of a control-flow merge."
-	self assert: spilled.
-	type = SSSpill
-		ifTrue:
-			[self assert: (offset = baseOffset and: [register = baseRegister])]
-		ifFalse:
-			[type := SSSpill.
-			 offset := baseOffset.
-			 register := baseRegister]
 ]
 
 { #category : #accessing }
@@ -158,21 +205,16 @@ CogSimStackEntry >> offset: anObject [
 
 { #category : #'compile abstract instructions' }
 CogSimStackEntry >> popToReg: reg [
-	| inst |
-	<var: #inst type: #'AbstractInstruction *'>
 	spilled
 		ifTrue:
-			[inst := cogit PopR: reg]
+			[cogit PopR: reg]
 		ifFalse:
 			[type caseOf: {
-				[SSBaseOffset]	-> [inst := cogit MoveMw: offset r: register R: reg].
-				[SSConstant]	-> [inst := cogit genMoveConstant: constant R: reg].
-				[SSRegister]	-> [inst := reg ~= register
-												ifTrue: [cogit MoveR: register R: reg]
-												ifFalse: [cogit Label]] }].
-	annotateUse ifTrue:
-		[cogit annotateBytecode: inst.
-		 annotateUse := false]
+				[SSBaseOffset]	-> [cogit MoveMw: offset r: register R: reg].
+				[SSConstant]	-> [cogit genMoveConstant: constant R: reg].
+				[SSRegister]	-> [reg ~= register
+										ifTrue: [cogit MoveR: register R: reg]
+										ifFalse: [cogit Label]] }]
 ]
 
 { #category : #printing }
@@ -183,24 +225,22 @@ CogSimStackEntry >> printStateOn: aStream [
 	type caseOf: {
 		[SSBaseOffset]	-> [aStream
 								nextPutAll: 'bo ';
-								nextPutAll: (CogRTLOpcodes nameForRegister: register).
+								nextPutAll: (cogit backEnd nameForRegister: register).
 							offset negative ifFalse: [aStream nextPut: $+].
 							aStream print: offset].
 		[SSConstant]	-> [aStream
 								nextPutAll: 'const ';
-								print: constant].
+								nextPutAll: (cogit coInterpreter shortPrint: constant)].
 		[SSRegister]	-> [aStream
 								nextPutAll: 'reg ';
-								nextPutAll: (CogRTLOpcodes nameForRegister: register)].
+								nextPutAll: (cogit backEnd nameForRegister: register)].
 		[SSSpill]		-> [aStream
 								nextPutAll: 'spill @ ';
-								nextPutAll: (CogRTLOpcodes nameForRegister: register).
+								nextPutAll: (cogit backEnd nameForRegister: register).
 							offset negative ifFalse: [aStream nextPut: $+].
 							aStream print: offset] }.
 	(spilled and: [type ~= SSSpill]) ifTrue:
 		[aStream nextPutAll: ' (spilled)'].
-	annotateUse ifTrue:
-		[aStream nextPutAll: ' (ANNOTATED)'].
 	bcptr ifNotNil:
 		[aStream space; nextPut: ${; print: bcptr; nextPut: $}].
 	aStream nextPut: $)
@@ -230,8 +270,13 @@ CogSimStackEntry >> registerMask [
 ]
 
 { #category : #accessing }
-CogSimStackEntry >> registerOrNil [
-	^type = SSRegister ifTrue: [register]
+CogSimStackEntry >> registerMaskOrNone [
+	^type = SSRegister ifTrue: [cogit registerMaskFor: register] ifFalse: [0]
+]
+
+{ #category : #accessing }
+CogSimStackEntry >> registerOrNone [
+	^type = SSRegister ifTrue: [register] ifFalse: [NoReg]
 ]
 
 { #category : #accessing }
@@ -250,18 +295,13 @@ CogSimStackEntry >> spilled: anObject [
 
 { #category : #'compile abstract instructions' }
 CogSimStackEntry >> storeToReg: reg [
-	| inst |
-	<var: #inst type: #'AbstractInstruction *'>
 	type caseOf: {
-		[SSBaseOffset]	-> [inst := cogit MoveMw: offset r: register R: reg].
-		[SSSpill]		-> [inst := cogit MoveMw: offset r: register R: reg].
-		[SSConstant]	-> [inst := cogit genMoveConstant: constant R: reg].
-		[SSRegister]	-> [inst := reg ~= register
-										ifTrue: [cogit MoveR: register R: reg]
-										ifFalse: [cogit Label]] }.
-	annotateUse ifTrue:
-		[cogit annotateBytecode: inst.
-		 annotateUse := false]
+		[SSBaseOffset]	-> [cogit MoveMw: offset r: register R: reg].
+		[SSSpill]		-> [cogit MoveMw: offset r: register R: reg].
+		[SSConstant]	-> [cogit genMoveConstant: constant R: reg].
+		[SSRegister]	-> [reg ~= register
+								ifTrue: [cogit MoveR: register R: reg]
+								ifFalse: [cogit Label]] }
 ]
 
 { #category : #accessing }

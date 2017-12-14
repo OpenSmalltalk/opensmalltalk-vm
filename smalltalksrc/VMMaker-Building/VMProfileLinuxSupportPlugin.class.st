@@ -21,7 +21,9 @@ VMProfileLinuxSupportPlugin class >> declareHeaderFilesIn: cg [
 
 	cg
 		addHeaderFile: '<limits.h>';
-		addHeaderFile: '#ifndef _GNU_SOURCE\# define _GNU_SOURCE\#endif\#include <link.h>' withCRs
+		addHeaderFile: '#ifdef __OpenBSD__\#include <dlfcn.h>\#endif' withCRs;
+		addHeaderFile: '#ifndef _GNU_SOURCE\# define _GNU_SOURCE\#endif\#include <link.h>' withCRs;
+		addHeaderFile: '#ifndef RTLD_NODELETE\# define RTLD_NODELETE 0\#endif' withCRs
 ]
 
 { #category : #'iteration callbacks' }
@@ -71,7 +73,7 @@ VMProfileLinuxSupportPlugin >> primitiveDLSymInLibrary [
 	self dlclose: lib.
 	ok ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrNotFound].
-	^interpreterProxy methodReturnValue: (interpreterProxy positiveMachineIntegerFor: addr asUnsignedLong)
+	^interpreterProxy methodReturnValue: (interpreterProxy positiveMachineIntegerFor: addr asUnsignedIntegerPtr)
 ]
 
 { #category : #primitives }
@@ -103,7 +105,7 @@ VMProfileLinuxSupportPlugin >> primitiveInterpretAddress [
 	<export: true>
 	| interpret |
 	<var: #interpret declareC: 'extern void interpret()'>
-	^interpreterProxy methodReturnValue: (interpreterProxy positiveMachineIntegerFor: interpret asUnsignedLong)
+	^interpreterProxy methodReturnValue: (interpreterProxy positiveMachineIntegerFor: interpret asUnsignedIntegerPtr)
 ]
 
 { #category : #'iteration callbacks' }

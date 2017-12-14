@@ -7,7 +7,7 @@ Class {
 	#classVars : [
 		'NumRegArgs'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }
@@ -120,14 +120,6 @@ ThreadedPPCBEFFIPlugin >> ffiPushUnsignedInt: value in: calloutState [
 ]
 
 { #category : #marshalling }
-ThreadedPPCBEFFIPlugin >> ffiPushUnsignedLong: value in: calloutState [
-	<var: #calloutState type: #'CalloutState *'>
-	<inline: true>
-	self shouldBeImplemented.
-	^0
-]
-
-{ #category : #marshalling }
 ThreadedPPCBEFFIPlugin >> ffiPushUnsignedLongLong: value in: calloutState [
 	<var: #value type: #usqLong>
 	<var: #calloutState type: #'CalloutState *'>
@@ -142,16 +134,6 @@ ThreadedPPCBEFFIPlugin >> ffiPushUnsignedShort: value in: calloutState [
 	<inline: true>
 	self shouldBeImplemented.
 	^0
-]
-
-{ #category : #marshalling }
-ThreadedPPCBEFFIPlugin >> registerArgsSlop [
-	"Answer any space needed to prevent the alloca'ed outgoing arguments marshalling area from
-	 being overwritten by any register arguments during calls during marshalling.  On PowerPC, which
-	 has 8 register arguments in the calling convention, register arguments are also written to the stack.
-	 So we must leave room for 8 * 4 bytes to avoid overwriting the marshalling stack as register
-	 arguments are written to the stack during calls to interpreterProxy etc."
-	^32
 ]
 
 { #category : #marshalling }

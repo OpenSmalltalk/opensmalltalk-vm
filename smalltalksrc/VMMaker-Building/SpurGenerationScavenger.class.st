@@ -92,7 +92,7 @@ In the case of weak arrays this is simple.  The scavenger refuses to scavenge th
 Ephemeron Processing
 The case of ephemerons is a little more complicated because an ephemeron's key should survive.  The scavenger is cyclical.  It scavenges the remembered set, which may copy and forward surviving objects in past and/or eden spaces to future space.  It then scavenges those promoted objects in future space until no more are promoted, which may in turn remember more objects.  The cycles continue until no more objects get promoted to future space and no more objects get remembered.  At this point all surviving objecta are in futureSpace.
 
-So if the scavenger does not scan ephemerons in the remembered set or in future space until the scavenger finishes cycling, it can detect ephemerons whose keys are about to die because these will be unforwarded objects in eden and/or past space.  Ephemerons encountered in the remembered set are either processed like ordinary objects if their keys have been promoted to futureSpace, or are moved to the front of the rememberedSet (because, dear reader, it is a sequence) if their keys have not been promoted.  Ephemerons encountered in scavengeReferentsOf: are either scanned like normal objects if their keys have been promoted, or added to the ephemeronList, organized identically to the weakList, if their keys are yet to be promoted.  Since references from other ephemerons with surviving keys to ephemeron keys can and should prevent the ephemerons whose keys they are from firing the scavenger does not fire ephemerons unless all unscavenged ephemerons have unscavenged keys.  So the unscavenged ephemerons (the will be at the beginning of the remembered set and on the ephemeronList) are scanned and any that have promoted keys are scavenged.  But if no unscavenged ephemerons have surviving keys then all the unscavenged ephemerons are fired and then scavenged.  This in turn may remember more objects and promote more objects to future space, and encounter more unscavenged ephemerons.  So the scavenger continues until no more objects are remembered, no more objects are promoted to future space and no more unscavenged ephemerons exist.
+So if the scavenger does not scan ephemerons in the remembered set or in future space until the scavenger finishes cycling, it can detect ephemerons whose keys are about to die because these will be unforwarded objects in eden and/or past space.  Ephemerons encountered in the remembered set are either processed like ordinary objects if their keys have been promoted to futureSpace, or are moved to the front of the rememberedSet (because, dear reader, it is a sequence) if their keys have not been promoted.  Ephemerons encountered in scavengeReferentsOf: are either scanned like normal objects if their keys have been promoted, or added to the ephemeronList, organized identically to the weakList, if their keys are yet to be promoted.  Since references from other ephemerons with surviving keys to ephemeron keys can and should prevent the ephemerons whose keys they are from firing the scavenger does not fire ephemerons unless all unscavenged ephemerons have unscavenged keys.  So the unscavenged ephemerons (they will be at the beginning of the remembered set and on the ephemeronList) are scanned and any that have promoted keys are scavenged.  But if no unscavenged ephemerons have surviving keys then all the unscavenged ephemerons are fired and then scavenged.  This in turn may remember more objects and promote more objects to future space, and encounter more unscavenged ephemerons.  So the scavenger continues until no more objects are remembered, no more objects are promoted to future space and no more unscavenged ephemerons exist.
 "
 Class {
 	#name : #SpurGenerationScavenger,
@@ -117,6 +117,9 @@ Class {
 		'tenuringClassIndex',
 		'tenuringProportion',
 		'numRememberedEphemerons',
+		'scavengeLog',
+		'scavengeLogRecord',
+		'statSurvivorCount',
 		'statTenures'
 	],
 	#pools : [
@@ -129,7 +132,11 @@ Class {
 SpurGenerationScavenger class >> declareCVarsIn: aCCodeGenerator [
 	#(eden futureSpace pastSpace) do:
 		[:var| aCCodeGenerator var: var type: #SpurNewSpaceSpace].
-	aCCodeGenerator var: #rememberedSet type: #'sqInt *'
+	aCCodeGenerator
+		var: #rememberedSet type: #'sqInt *';
+		var: #tenuringProportion type: #double;
+		var: #scavengeLogRecord type: #SpurScavengeLogRecord;
+		var: #scavengeLog type: #'FILE *'
 ]
 
 { #category : #translation }
@@ -152,6 +159,11 @@ SpurGenerationScavenger class >> initialize [
 { #category : #translation }
 SpurGenerationScavenger class >> isNonArgumentImplicitReceiverVariableName: instVarName [
 	^#('self' 'coInterpreter' 'manager') includes: instVarName
+]
+
+{ #category : #simulation }
+SpurGenerationScavenger class >> simulatorClass [
+	^SpurGenerationScavengerSimulator
 ]
 
 { #category : #'weakness and ephemerality' }
@@ -298,11 +310,34 @@ SpurGenerationScavenger >> copyAndForward: survivor [
 ]
 
 { #category : #scavenger }
+SpurGenerationScavenger >> copyAndForwardMourner: mourner [
+	"A special version of copyAndForward: for objects in the mournQueue.  If we're
+	 in the good times tenuring regime then copy to futureSpace, otherwise tenure.
+	 Also, don't repeat any of the ephemeron processing."
+	<inline: false>
+	| bytesInObj format tenure newLocation |
+	self assert: ((manager isInEden: mourner) "cog methods should be excluded."
+				or: [manager isInPastSpace: mourner]).
+	bytesInObj := manager bytesInObject: mourner.
+	format := manager formatOf: mourner.
+	tenure := self shouldMournerBeTenured: mourner. "Allow Slang to inline."
+	newLocation := (tenure or: [futureSurvivorStart + bytesInObj > futureSpace limit])
+						ifTrue: [self copyToOldSpace: mourner bytes: bytesInObj format: format]
+						ifFalse: [self copyToFutureSpace: mourner bytes: bytesInObj].
+	manager forwardSurvivor: mourner to: newLocation.
+	"if weak or ephemeron add to the relevant list for subsequent scanning."
+	(manager isWeakFormat: format) ifTrue:
+		[self addToWeakList: mourner].
+	^newLocation
+]
+
+{ #category : #scavenger }
 SpurGenerationScavenger >> copyToFutureSpace: survivor bytes: bytesInObject [
 	"Copy survivor to futureSpace.  Assume it will fit (checked by sender).
 	 Answer the new oop of the object (it may have an overflow size field)."
 	<inline: true>
 	| startOfSurvivor newStart |
+	statSurvivorCount := statSurvivorCount + 1. "we hope writes are cheap..."
 	self assert: futureSurvivorStart + bytesInObject <= futureSpace limit.
 	startOfSurvivor := manager startOfObject: survivor.
 	newStart := futureSurvivorStart.
@@ -408,15 +443,18 @@ SpurGenerationScavenger >> fireEphemeronsInRememberedSet [
 
 	i := 0.
 	[i < numRememberedEphemerons] whileTrue:
-		[ | ephemeron |
+		[ | ephemeron key |
 		 ephemeron := rememberedSet at: i.
 		 self assert: (manager isEphemeron: ephemeron).
-		 self assert: (self isScavengeSurvivor: (manager keyOfEphemeron: ephemeron)) not.
-		 coInterpreter fireEphemeron: ephemeron.
-		 manager
-			storePointerUnchecked: 0
-			ofObject: ephemeron
-			withValue: (self copyAndForward: (manager keyOfEphemeron: ephemeron)).
+		 key := manager keyOfEphemeron: ephemeron.
+		 (self isScavengeSurvivor: key) ifFalse:
+			[coInterpreter fireEphemeron: ephemeron.
+			 manager
+				storePointerUnchecked: 0
+				ofObject: ephemeron
+				withValue: (self copyAndForward: key)].
+		 "Fired ephemerons should have had their format changed."
+		 self deny: ((self isScavengeSurvivor: key) and: [manager isEphemeron: ephemeron]).
 		 (self scavengeReferentsOf: ephemeron)
 			ifTrue: "keep in set"
 				[i := i + 1]
@@ -447,23 +485,29 @@ SpurGenerationScavenger >> fireEphemeronsOnEphemeronList [
 	"There are ephemerons to be fired in the remembered set.
 	 Fire them and scavenge their keys.  Be careful since copyAndForward:
 	 can remember ephemerons (ephemerons pointing to ephemerons)."
-	| ephemeron ephemeronCorpse |
+	| ephemeron ephemeronCorpse key oldList oldCorpse | "old ones for debugging"
 	ephemeronList ifNil:
 		[^self].
+	oldCorpse := nil.
 	ephemeronCorpse := self firstCorpse: ephemeronList.
 	"Reset the list head so that new ephemerons will get added
 	 to a new list, not concatenated on the one we are scanning."
+	oldList := ephemeronList.
 	ephemeronList := nil.
 	[ephemeronCorpse notNil] whileTrue:
-		[self assert: (manager isForwarded: ephemeronCorpse).
+		[self assert: ((manager isYoung: ephemeronCorpse) and: [manager isForwarded: ephemeronCorpse]).
 		 ephemeron := manager followForwarded: ephemeronCorpse.
-		 self assert: (self isScavengeSurvivor: (manager keyOfEphemeron: ephemeron)) not.
-		 coInterpreter fireEphemeron: ephemeron.
-		 manager
-			storePointerUnchecked: 0
-			ofObject: ephemeron
-			withValue: (self copyAndForward: (manager keyOfEphemeron: ephemeron)).
+		 key := manager keyOfMaybeFiredEphemeron: ephemeron.
+		 (self isScavengeSurvivor: key) ifFalse:
+			[coInterpreter fireEphemeron: ephemeron.
+			 manager
+				storePointerUnchecked: 0
+				ofObject: ephemeron
+				withValue: (self copyAndForward: key)].
+		 "Fired ephemerons should have had their format changed."
+		 self deny: ((self isScavengeSurvivor: key) and: [manager isEphemeron: ephemeron]).
 		 self cCoerceSimple: (self scavengeReferentsOf: ephemeron) to: #void.
+		 oldCorpse := ephemeronCorpse.
 		 ephemeronCorpse := self nextCorpseOrNil: ephemeronCorpse]
 ]
 
@@ -523,9 +567,11 @@ SpurGenerationScavenger >> forgetObject: objOop [
 		[| index |
 		 index := 0.
 		 [index < rememberedSetSize] whileTrue:
-			[objOop = (rememberedSet at: index) ifTrue:
-				[rememberedSet at: index put: (rememberedSet at: rememberedSetSize - 1).
-				 index := rememberedSetSize]]].
+			[objOop = (rememberedSet at: index)
+				ifTrue:
+					[rememberedSet at: index put: (rememberedSet at: rememberedSetSize - 1).
+					 index := rememberedSetSize]
+				ifFalse: [index := index + 1]]].
 	rememberedSetSize := rememberedSetSize - 1.
 	self assert: rememberedSetSize >= 0
 ]
@@ -588,7 +634,8 @@ SpurGenerationScavenger >> growRememberedSet [
 	newObj ifNil:
 		[newObj := manager allocatePinnedSlots: numSlots + 1024.
 		 newObj ifNil:
-			[self error: 'could not grow remembered set']].
+			[(manager growOldSpaceByAtLeast: numSlots + 1024) ifNil: [self error: 'could not grow remembered set'].
+			 newObj := manager allocatePinnedSlots: numSlots + 1024. "cannot fail"]].
 	manager rememberedSetObj: newObj.
 	base := manager firstIndexableField: newObj.
 	0 to: rememberedSetSize - 1 do:
@@ -602,6 +649,16 @@ SpurGenerationScavenger >> growRememberedSet [
 	rememberedSet := base.
 	rememberedSetLimit := manager numSlotsOf: newObj.
 	self setRememberedSetRedZone
+]
+
+{ #category : #'store check' }
+SpurGenerationScavenger >> indexInRememberedSet: objOop [
+	<doNotGenerate>
+	0 to: rememberedSetSize - 1 do:
+		[:i|
+		(rememberedSet at: i) = objOop ifTrue:
+			[^i]].
+	^nil
 ]
 
 { #category : #initialization }
@@ -619,16 +676,24 @@ SpurGenerationScavenger >> initialize [
 	eden := SpurNewSpaceSpace new.
 	rememberedSetSize := 0.
 	tenureThreshold := 0.
-	statTenures := 0
+	statSurvivorCount := statTenures := 0.
+	scavengeLogRecord := SpurScavengeLogRecord new
 ]
 
 { #category : #initialization }
 SpurGenerationScavenger >> initializeRememberedSet [
 	| obj |
 	obj := manager rememberedSetObj.
-	obj = manager nilObject ifTrue:
-		[obj := manager allocatePinnedSlots: 1024.
-		 manager rememberedSetObj: obj].
+	obj = manager nilObject
+		ifTrue:
+			[obj := manager allocatePinnedSlots: 1024.
+			 manager rememberedSetObj: obj]
+		ifFalse: "The Spur32to64BitBootstrap failed to set the type of rememberedSetObj to 64-bit indexability.
+				 This is unimportant except for simulation; rememberedSet is declared as sqInt *, but in to have
+				 firstIndexableField: below answer a suitable type the format must be wordIndexableFormat."
+			[manager setFormatOf: obj to: manager wordIndexableFormat].
+	self assert: (manager formatOf: obj) = manager wordIndexableFormat.
+	self assert: (manager isPinned: obj).
 	rememberedSet := manager firstIndexableField: obj.
 	rememberedSetSize := 0.
 	rememberedSetLimit := manager numSlotsOf: obj.
@@ -698,6 +763,51 @@ SpurGenerationScavenger >> isScavengeSurvivor: oop [
 	  or: [manager isInFutureSpace: target]
 ]
 
+{ #category : #logging }
+SpurGenerationScavenger >> logEndScavenge [
+	<inline: #always>
+	scavengeLogRecord
+		eSurvivorBytes: futureSurvivorStart - pastSpace start;
+		eRememberedSetSize: rememberedSetSize;
+		eStatTenures: statTenures
+]
+
+{ #category : #logging }
+SpurGenerationScavenger >> logScavenge [
+	<inline: #always>
+	scavengeLog ifNotNil:
+		[self writeScavengeLog]
+]
+
+{ #category : #logging }
+SpurGenerationScavenger >> logStartScavenge [
+	<inline: #always>
+	scavengeLogRecord
+		sEdenBytes: manager freeStart - eden start;
+		sPastBytes: manager pastSpaceStart - pastSpace start;
+		sRememberedSetSize: rememberedSetSize;
+		sRememberedSetRedZone: rememberedSetRedZone;
+		sRememberedSetLimit: rememberedSetLimit;
+		sStatTenures: statTenures
+]
+
+{ #category : #logging }
+SpurGenerationScavenger >> logStream [
+	<inline: #always>
+	^scavengeLog
+]
+
+{ #category : #logging }
+SpurGenerationScavenger >> logTenuringPolicy [
+	<inline: #always>
+	scavengeLogRecord
+		tTenureCriterion: tenureCriterion;
+		tTenureThreshold: ((tenureCriterion = TenureByAge and: [tenureThreshold > pastSpace start])
+								ifTrue: [tenureThreshold - pastSpace start]
+								ifFalse: [0]);
+		tRefCountToShrinkRT: refCountToShrinkRT
+]
+
 { #category : #accessing }
 SpurGenerationScavenger >> newSpaceCapacity [
 	<inline: false>
@@ -706,28 +816,26 @@ SpurGenerationScavenger >> newSpaceCapacity [
 ]
 
 { #category : #initialization }
-SpurGenerationScavenger >> newSpaceStart: startAddress newSpaceBytes: totalBytes edenBytes: requestedEdenBytes [ 
+SpurGenerationScavenger >> newSpaceStart: startAddress newSpaceBytes: totalBytes survivorBytes: requestedSurvivorBytes [
 	| actualEdenBytes survivorBytes |
-
-	actualEdenBytes := requestedEdenBytes.
-	survivorBytes := totalBytes - actualEdenBytes // 2 truncateTo: manager allocationUnit.
+	survivorBytes := requestedSurvivorBytes truncateTo: manager allocationUnit.
 	actualEdenBytes := totalBytes - survivorBytes - survivorBytes truncateTo: manager allocationUnit.
 	self assert: totalBytes - actualEdenBytes - survivorBytes - survivorBytes < manager allocationUnit.
 
 	"for tenuring we require older objects below younger objects.  since allocation
-	 grows up this means that the survivor spaces must preceed eden."
+	 grows up this means that the survivor spaces must precede eden."
 
 	pastSpace start: startAddress; limit: startAddress + survivorBytes.
 	futureSpace start: pastSpace limit; limit: pastSpace limit + survivorBytes.
-	eden start: futureSpace limit; limit: futureSpace limit + actualEdenBytes.
+	eden start: futureSpace limit; limit: startAddress + totalBytes.
 
-	self assert: futureSpace limit <= (startAddress + totalBytes).
-	self assert: eden start \\ manager allocationUnit
-				+ (eden limit \\ manager allocationUnit) = 0.
-	self assert: pastSpace start \\ manager allocationUnit
-				+ (pastSpace limit \\ manager allocationUnit) = 0.
-	self assert: futureSpace start \\ manager allocationUnit
-				+ (futureSpace limit \\ manager allocationUnit) = 0.
+	self assert: self futureSpace limit <= (startAddress + totalBytes).
+	self assert: self eden start \\ manager allocationUnit
+				+ (self eden limit \\ manager allocationUnit) = 0.
+	self assert: self pastSpace start \\ manager allocationUnit
+				+ (self pastSpace limit \\ manager allocationUnit) = 0.
+	self assert: self futureSpace start \\ manager allocationUnit
+				+ (self futureSpace limit \\ manager allocationUnit) = 0.
 
 	self initFutureSpaceStart.
 	manager initSpaceForAllocationCheck: (self addressOf: eden) limit: eden limit.
@@ -769,6 +877,12 @@ SpurGenerationScavenger >> noUnfiredEphemeronsAtEndOfRememberedSet [
 	^true
 ]
 
+{ #category : #logging }
+SpurGenerationScavenger >> openScavengeLog [
+	<api>
+	scavengeLog := self f: 'scavenge.log' open: 'a+'
+]
+
 { #category : #accessing }
 SpurGenerationScavenger >> pastSpace [
 	<returnTypeC: #SpurNewSpaceSpace>
@@ -779,6 +893,15 @@ SpurGenerationScavenger >> pastSpace [
 { #category : #accessing }
 SpurGenerationScavenger >> pastSpaceBytes [
 	^pastSpace limit - pastSpace start
+]
+
+{ #category : #'debug support' }
+SpurGenerationScavenger >> printRememberedSet [
+	"Print the objects in the remembered set."
+	<api>
+	0 to: rememberedSetSize - 1 do:
+		[:i|
+		coInterpreter printNum: i; space; shortPrintOop: (rememberedSet at: i)]
 ]
 
 { #category : #'debug support' }
@@ -817,7 +940,7 @@ SpurGenerationScavenger >> processEphemerons [
 SpurGenerationScavenger >> processWeakSurvivor: weakObj [
 	"Process a weak survivor on the weakList.  Those of its fields
 	 which have not survived the scavenge should be nilled, and if any
-	 are, the coInterpreter should be informed via signalFinalization:.
+	 are, the coInterpreter should be informed via fireFinalization:.
 	 Answer if the weakObj has any young referents."
 	| weakObjShouldMourn hasYoungReferents numStrongSlots  |
 	weakObjShouldMourn := hasYoungReferents := false.
@@ -852,7 +975,7 @@ SpurGenerationScavenger >> processWeakSurvivor: weakObj [
 							ofObject: weakObj
 							withValue: manager nilObject]]].
 	weakObjShouldMourn ifTrue:
-		[coInterpreter signalFinalization: weakObj].
+		[coInterpreter fireFinalization: weakObj].
 	^hasYoungReferents
 ]
 
@@ -901,6 +1024,10 @@ SpurGenerationScavenger >> referenceCountRememberedReferents: population [
 	0 to: rememberedSetSize - 1 do:
 		[:i| | elephant |
 		elephant := rememberedSet at: i.
+		(manager isForwarded: elephant) ifTrue:
+			[elephant := manager followForwarded: elephant.
+			 (manager isImmediate: elephant) ifTrue: "take care if elephant forwarded to an immediate"
+				[elephant := manager nilObject]].
 		0 to: (manager numPointerSlotsOf: elephant) - 1 do:
 			[:j| | referent refCount |
 			referent := manager fetchPointer: j ofObject: elephant.
@@ -912,6 +1039,12 @@ SpurGenerationScavenger >> referenceCountRememberedReferents: population [
 					 refCount := refCount + 1.
 					 manager rtRefCountOf: referent put: refCount.
 					 population at: refCount put: (population at: refCount) + 1]]]].
+]
+
+{ #category : #'remembered set' }
+SpurGenerationScavenger >> relocateRememberedSet [
+	"For SpurPlanningCompactor"
+	rememberedSet := manager firstIndexableField: manager rememberedSetObj
 ]
 
 { #category : #'store check' }
@@ -966,12 +1099,16 @@ SpurGenerationScavenger >> scavenge: tenuringCriterion [
 	 tenuring can be based on e.g. a particular class.  The argument selects the tenuring criterion.
 
 	 Answer the limit of pastSpace, to allow the memory manager to bounds check survivors."
+	statSurvivorCount := 0.
 	tenureCriterion := tenuringCriterion.
+	self logStartScavenge.
 	self strategizeToLimitRememberedTable.
+	self logTenuringPolicy.
 	self scavengeLoop.
 	self processWeaklings.
 	self computeTenuringThreshold.
 	self exchangeSurvivorSpaces.
+	self logEndScavenge.
 	^self initFutureSpaceStart
 ]
 
@@ -1023,6 +1160,7 @@ SpurGenerationScavenger >> scavengeLoop [
 	 previousRememberedSetSize := rememberedSetSize.
 	 firstTime ifTrue:
 		[coInterpreter mapInterpreterOops.
+		 manager mapMournQueue.
 		 manager mapExtraRoots.
 		 firstTime := false].
 	 "if nothing more copied and forwarded (or remembered by mapInterpreterOops)
@@ -1204,7 +1342,7 @@ SpurGenerationScavenger >> scavengerTenuringThreshold [ "(Slang flattens so need
 
 { #category : #accessing }
 SpurGenerationScavenger >> scavengerTenuringThreshold: aProportion [ "(Slang flattens so need unique selectors)"
-	<var: 'aProportion' type: #float>
+	<var: 'aProportion' type: #double>
 	tenuringProportion := aProportion.
 	tenureThreshold := aProportion = 0.0
 							ifTrue: [0]
@@ -1295,9 +1433,26 @@ SpurGenerationScavenger >> shouldBeTenured: survivor [
 		otherwise: [false]
 ]
 
+{ #category : #scavenger }
+SpurGenerationScavenger >> shouldMournerBeTenured: survivor [
+	"Answer if an object in the mourn queue should be tenured.  If we're
+	 in the good times tenuring regime then copy to futureSpace, otherwise tenure."
+	^(tenureCriterion = TenureByAge and: [tenureThreshold = 0]) not
+]
+
+{ #category : #accessing }
+SpurGenerationScavenger >> statSurvivorCount [
+	^statSurvivorCount
+]
+
 { #category : #accessing }
 SpurGenerationScavenger >> statTenures [
 	^statTenures
+]
+
+{ #category : #accessing }
+SpurGenerationScavenger >> statTenures: aValue [
+	statTenures := aValue
 ]
 
 { #category : #'remembered set' }
@@ -1317,4 +1472,40 @@ SpurGenerationScavenger >> tenuringClassIndex [
 { #category : #accessing }
 SpurGenerationScavenger >> tenuringClassIndex: anInteger [
 	tenuringClassIndex := anInteger
+]
+
+{ #category : #logging }
+SpurGenerationScavenger >> writeScavengeLog [
+	"Output the entire record."
+	<inline: #never>
+	| policyNames |
+	<var: 'policyNames' declareC: 'static char *policyNames[] = {"", "by age", "by class", "to shrink rt", "don''t tenure", "mark on tenure"}'>
+	self cCode: []
+		inSmalltalk: [policyNames := CLiteralArray on: #('' 'by age' 'by class' 'to shrink rt' 'don''t tenure' 'mark on tenure')].
+	scavengeLog "log data collected by logStartScavenge"
+		f: 'scavenge %ld eden bytes: 0x%lx/%ld past bytes: 0x%lx/%ld\n\trem set: %ld redzone: %ld size: %ld\n'
+		printf:{	manager statScavenges.
+				scavengeLogRecord sEdenBytes.
+				scavengeLogRecord sEdenBytes.
+				scavengeLogRecord sPastBytes.
+				scavengeLogRecord sPastBytes.
+				scavengeLogRecord sRememberedSetSize.
+				scavengeLogRecord sRememberedSetRedZone.
+				scavengeLogRecord sRememberedSetLimit }.
+	scavengeLog "log data collected by logTenuringPolicy"
+		f: (scavengeLogRecord tTenureCriterion = TenureToShrinkRT
+				ifFalse: ['	tenure below 0x%lx/%ld %s\n']
+				ifTrue: ['	tenure below 0x%lx/%ld %s refct %ld\n'])
+		printf:{	scavengeLogRecord tTenureThreshold.
+				scavengeLogRecord tTenureThreshold.
+				policyNames at: scavengeLogRecord tTenureCriterion.
+				scavengeLogRecord tRefCountToShrinkRT }.
+	scavengeLog "log data collected by logEndScavenge"
+		f: '	survivor bytes: 0x%lx/%ld rem set: %ld tenured: %ld usecs: %ld\n'
+		printf:{	scavengeLogRecord eSurvivorBytes.
+				scavengeLogRecord eSurvivorBytes.
+				scavengeLogRecord eRememberedSetSize.
+				scavengeLogRecord eStatTenures - scavengeLogRecord sStatTenures.
+				manager statSGCDeltaUsecs asUnsignedLong }.
+	scavengeLog fflush
 ]

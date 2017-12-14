@@ -80,6 +80,16 @@ TStmtListNode >> args [
 ]
 
 { #category : #transformations }
+TStmtListNode >> asReturnNode [
+	self endsWithReturn ifTrue:
+		[^self].
+	^self class new
+		setArguments: arguments
+			statements: statements allButLast, {statements last asReturnNode};
+		yourself
+]
+
+{ #category : #transformations }
 TStmtListNode >> assignLastExpressionTo: variableNode [
 	"Destructively transform the receiver so that its last expression is assigned to the argument."
 	| index |
@@ -116,24 +126,39 @@ TStmtListNode >> bindVariablesIn: aDictionary [
 	statements := statements collect: [ :s | s bindVariablesIn: aDictionary ].
 ]
 
+{ #category : #transformations }
+TStmtListNode >> copyWithoutReturn [
+	self assert: self endsWithReturn.
+	statements size = 1 ifTrue:
+		[^statements last expression].
+	^self class new
+		setArguments: arguments
+			statements: statements allButLast, {statements last copyWithoutReturn};
+		yourself
+]
+
 { #category : #'C code generation' }
 TStmtListNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen [
-
-	| statementWasComment |
-	statements size = 1 ifTrue:
+	| size |
+	(size := statements size) = 1 ifTrue:
 		[^statements first emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen].
-	statementWasComment := false.
+	"Get rid of the annoying newlines in ? : if-then-elses"
+	(size = 2 and: [statements first isComment and: [statements last isLeaf]]) ifTrue:
+		[statements first emitCCodeAsArgumentOn: aStream level: 0 generator: aCodeGen.
+		 aStream space.
+		 ^statements last emitCCodeAsArgumentOn: aStream level: 0 generator: aCodeGen].
 	aStream nextPut: $(. "N.B.  Comma binds weakest of all C operators."
-	statements
-		do:
-			[:s |
-			s emitCCommentOn: aStream level: level.
-			s emitCCodeAsArgumentOn: aStream level: level + 1 generator: aCodeGen.
-			statementWasComment := s isComment]
-		separatedBy:
+	statements withIndexDo:
+		[:s :idx| | p1 p2 |
+		p1 := aStream position.
+		s emitCCommentOn: aStream level: level generator: aCodeGen.
+		(s isLeaf and: [s isLabel not and: [idx < statements size]]) ifFalse:
+			[s emitCCodeAsArgumentOn: aStream level: level + 1 generator: aCodeGen].
+		p2 := aStream position.
+		(idx < size and: [p2 > p1]) ifTrue:
 			[((self endsWithCloseBracket: aStream)
-			  or: [statementWasComment]) ifFalse: [aStream nextPut: $,].
-			aStream crtab: level].
+			  or: [s isComment]) ifFalse: [aStream nextPut: $,].
+			 aStream crtab: level]].
 	aStream nextPut: $)
 ]
 
@@ -151,25 +176,26 @@ TStmtListNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 
 { #category : #'C code generation' }
 TStmtListNode >> emitCCodeOn: aStream prependToEnd: aNodeOrNil level: level generator: aCodeGen [
-	self emitCCommentOn: aStream level: level.
+	self emitCCommentOn: aStream level: level generator: aCodeGen.
 	statements withIndexDo:
-		[:s :idx|
-		s isStmtList ifFalse:
-			[s emitCCommentOn: aStream level: level].
-		aStream peekLast ~~ Character tab ifTrue:
-			[aStream tab: level].
-		(aNodeOrNil notNil
-		 and: [idx = statements size])
-			ifTrue:
-				[s emitCCodeOn: aStream prependToEnd: aNodeOrNil level: level generator: aCodeGen]
-			ifFalse:
-				[s emitCCodeOn: aStream level: level generator: aCodeGen].
-		(self stream: aStream endsWithAnyOf: '};') ifFalse:
-			[s needsTrailingSemicolon ifTrue:
-				[aStream nextPut: $;]].
-		aStream peekLast ~~ Character cr ifTrue:
-			[aStream cr]].
-
+		[:s :idx| | position |
+		s emitCCommentOn: aStream level: level generator: aCodeGen.
+		(s isLeaf and: [s isLabel not and: [aNodeOrNil isNil or: [idx < statements size]]]) ifFalse:
+			[aStream peekLast ~~ Character tab ifTrue:
+				[aStream tab: level].
+			position := aStream position.
+			(aNodeOrNil notNil
+			 and: [idx = statements size])
+				ifTrue:
+					[s emitCCodeOn: aStream prependToEnd: aNodeOrNil level: level generator: aCodeGen]
+				ifFalse:
+					[s emitCCodeOn: aStream level: level generator: aCodeGen].
+			aStream position > position ifTrue:
+				[(self stream: aStream endsWithAnyOf: '};') ifFalse:
+					[s needsTrailingSemicolon ifTrue:
+						[aStream nextPut: $;]].
+					 aStream peekLast ~~ Character cr ifTrue:
+						[aStream cr]]]]
 ]
 
 { #category : #testing }
@@ -189,7 +215,8 @@ TStmtListNode >> endsWithCloseBracket: aStream [
 TStmtListNode >> endsWithReturn [
 	"Answer true if the last statement of this lock is a return."
 
-	^statements last isReturn or: [statements last isReturningIf]
+	^statements notEmpty
+	  and: [statements last isReturn or: [statements last isReturningIf]]
 ]
 
 { #category : #testing }
@@ -199,6 +226,18 @@ TStmtListNode >> isNilStmtListNode [
 	statements size = 1 ifFalse: [^false].
 	stmt := statements at: 1.
 	^ stmt isVariable and: [stmt name = 'nil']
+]
+
+{ #category : #testing }
+TStmtListNode >> isSameAs: aTParseNode [
+	(aTParseNode isStmtList
+	 and: [statements size = aTParseNode statements size]) ifFalse:
+		[^false].
+	statements with: aTParseNode statements do:
+		[:mine :theirs|
+		 (mine isSameAs: theirs) ifFalse:
+			[^false]].
+	^true
 ]
 
 { #category : #testing }
@@ -257,6 +296,7 @@ TStmtListNode >> postCopy [
 { #category : #printing }
 TStmtListNode >> printOn: aStream level: level [
 
+	statements size > 1 ifTrue: [ aStream crtab: level + 1 ].
 	aStream nextPut: $[.
 	(arguments notNil and: [arguments notEmpty]) ifTrue:
 		[arguments do: [ :arg | aStream nextPutAll: ' :'; nextPutAll: arg].
@@ -268,17 +308,9 @@ TStmtListNode >> printOn: aStream level: level [
 { #category : #printing }
 TStmtListNode >> printStatementsOn: aStream level: level [
 
-	statements size > 1 ifTrue: [ aStream crtab: level + 1 ].
-	1 to: statements size do: [ :i |
-		(statements at: i) printOn: aStream level: level.
-		i = statements size ifTrue: [
-			(statements size > 1) ifTrue: [
-				aStream crtab: level.
-			].
-		] ifFalse: [
-			aStream nextPut: $.; crtab: level + 1.
-		].
-	].
+	statements
+		do: [:s| s printOn: aStream level: level]
+		separatedBy: [aStream nextPut: $.; crtab: level + 1]
 ]
 
 { #category : #transformations }
@@ -328,6 +360,20 @@ TStmtListNode >> replaceNodesIn: aDictionary [
 		self]
 ]
 
+{ #category : #testing }
+TStmtListNode >> returnsExpression [
+	"Answer true if the last statement of this block is a return of some expression, not merely self or nil."
+
+	statements isEmpty ifTrue:
+		[^false].
+	statements last isReturn ifFalse:
+		[^false].
+	statements last isVariable ifFalse:
+		[^true].
+	^statements last variable ~= 'self'
+	  and: [statements last variable ~= 'nil']
+]
+
 { #category : #accessing }
 TStmtListNode >> setArguments: argList [
 
@@ -359,33 +405,8 @@ TStmtListNode >> statements [
 	^statements
 ]
 
-{ #category : #testing }
-TStmtListNode >> stream: aStream endsWithAnyOf: characters [
-	"Answer if the given stream ends in any of the characters, ignoring whitespace."
-	| pos ch popped |
-	pos := aStream position.
-	aStream class = WriteStream ifTrue: "i.e. nested in StreamContents"
-		[[pos > 0] whileTrue:
-			[ch := aStream originalContents at: pos.
-			 ch isSeparator ifFalse:
-				[^characters includes: ch].
-			 pos := pos - 1].
-		 ^false].
-
-	popped := OrderedCollection new.
-	[pos > 0] whileTrue:
-		[ch := popped addFirst: (aStream position: pos - 1; peek).
-		 ch isSeparator ifFalse:
-			[popped notEmpty ifTrue: "it almost always is"
-				["*don't* use nextPutAll: to work around a bug in UTF8TextConverter
-				  >>nextPut:toStream: which avoids line-end conversion; sigh."
-				 popped do:
-					[:c| aStream nextPut: c]].
-			 ^characters includes: ch].
-		 pos := pos - 1].
-	"*don't* use nextPutAll: to work around a bug in UTF8TextConverter>>
-	 nextPut:toStream: which avoids line-end conversion; sigh."
-	popped do:
-		[:c| aStream nextPut: c].
-	^false
+{ #category : #'type inference' }
+TStmtListNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
+	^statements isEmpty ifFalse:
+		[statements last typeOrNilFrom: aCodeGenerator in: aTMethod]
 ]

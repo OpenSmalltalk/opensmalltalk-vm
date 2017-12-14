@@ -5,9 +5,18 @@ Class {
 		'ceScheduleScavengeTrampoline',
 		'ceSmallActiveContextInMethodTrampoline',
 		'ceSmallActiveContextInBlockTrampoline',
+		'ceSmallActiveContextInFullBlockTrampoline',
 		'ceLargeActiveContextInMethodTrampoline',
 		'ceLargeActiveContextInBlockTrampoline',
-		'ceStoreCheckContextReceiverTrampoline'
+		'ceLargeActiveContextInFullBlockTrampoline',
+		'ceStoreCheckContextReceiverTrampoline',
+		'ceStoreTrampolines',
+		'ceNewHashTrampoline',
+		'ceInlineNewHashTrampoline'
+	],
+	#classVars : [
+		'CheckRememberedInTrampoline',
+		'NumStoreTrampolines'
 	],
 	#pools : [
 		'VMBytecodeConstants',
@@ -16,9 +25,56 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #translation }
+CogObjectRepresentationForSpur class >> declareCVarsIn: aCodeGen [
+	"Deal wuth the fact that the number of trampolines depends on IMMUTABILITY
+	 and that IMMUTABILITY can be defined at compile time.  Yes, this is a mess."
+	| current values |
+	self assert: (CogObjectRepresentationForSpur allSubclasses allSatisfy:
+					[:sc|
+					 CogObjectRepresentationForSpur initializationOptions == sc initializationOptions]).
+	current := initializationOptions at: #IMMUTABILITY ifAbsent: nil.
+	values := #(true false) collect:
+				[:bool|
+				 initializationOptions at: #IMMUTABILITY put: bool.
+				 self cogitClass initializeNumTrampolines.
+				 (Cogit classPool at: #NumTrampolines) printString].
+	current
+		ifNil: [initializationOptions removeKey: #IMMUTABILITY]
+		ifNotNil: [initializationOptions at: #IMMUTABILITY put: current].
+	values first ~= values last ifTrue:
+		[aCodeGen addConstantForBinding: #NumTrampolines -> ('(IMMUTABILITY ? ' , values first , ' : ' , values last , ')')].
+	aCodeGen
+		var: #ceStoreTrampolines
+		declareC: ('#if IMMUTABILITY\sqInt ceStoreTrampolines[', NumStoreTrampolines printString, '];\#endif') withCRs
+]
+
+{ #category : #'class initialization' }
+CogObjectRepresentationForSpur class >> initialize [
+	"Number of trampolines for the combined IMMUTABILITY/store check instance variable store.
+	 Trampolines from 0 to NumStoreTrampolines - 2 are dedicated to an inst var index, the last one is generic."
+	NumStoreTrampolines := 5
+]
+
+{ #category : #initialization }
+CogObjectRepresentationForSpur class >> initializeMiscConstants [
+	CheckRememberedInTrampoline := initializationOptions at: #CheckRememberedInTrampoline ifAbsent: [false]
+]
+
 { #category : #accessing }
 CogObjectRepresentationForSpur class >> numTrampolines [
-	^super numTrampolines + 6
+	^super numTrampolines
+	 + (SistaV1BytecodeSet
+		ifTrue: [9] "(small,large)x(method,block,fullBlock) context creation,
+					 ceNewHashTrampoline, ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline"
+		ifFalse: [7] "(small,large)x(method,block) context creation, 
+					 ceNewHashTrampoline, ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline")
+	 + ((initializationOptions at: #IMMUTABILITY ifAbsent: [false])
+		ifTrue: [NumStoreTrampolines]
+		ifFalse: [0])
+	 + ((initializationOptions at: #SistaVM ifAbsent: [false])
+		ifTrue: [1] "inline newHash"
+		ifFalse: [0])
 ]
 
 { #category : #'garbage collection' }
@@ -39,6 +95,79 @@ CogObjectRepresentationForSpur >> allocateNPinnedSlots: nSlots [
 ]
 
 { #category : #'sista support' }
+CogObjectRepresentationForSpur >> branchIf: reg instanceOfBehavior: classObj target: targetFixUp [
+	"Generate a branch if reg is an instance of classObj, otherwise fall-
+	 through. Cannot change the value of reg (may be used afterwards)."
+	| classIndex jmp |
+	<inline: true>
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	<var: #jmp type: #'AbstractInstruction *'>
+	classIndex := objectMemory classTagForClass: classObj.
+	classIndex = (objectMemory fetchClassTagOf: objectMemory falseObject)
+		ifTrue: [ self branchIf: reg isOop: objectMemory falseObject target: targetFixUp ].
+	classIndex = (objectMemory fetchClassTagOf: objectMemory trueObject)
+		ifTrue: [ self branchIf: reg isOop: objectMemory trueObject target: targetFixUp ].
+	classIndex = (objectMemory fetchClassTagOf: objectMemory nilObject)
+		ifTrue: [ self branchIf: reg isOop: objectMemory nilObject target: targetFixUp ].
+	(objectMemory isImmediateClass: classObj)
+		ifTrue:
+			[self branchIf: reg hasImmediateTag: classIndex target: targetFixUp ]
+		ifFalse:
+			[jmp := (self genJumpImmediate: reg) .
+			 self genGetClassIndexOfNonImm: reg into: TempReg.
+			 self genCmpClassIndex: classIndex R: TempReg.
+			 cogit JumpZero: targetFixUp.
+			jmp jmpTarget: cogit Label ].
+	^0
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> branchIf: reg instanceOfBehaviors: arrayObj target: targetFixUp [
+	"Generate a branch if reg is an instance of any of the classes in arrayObj,
+	 otherwise fall-through. reg should not be edited."
+	
+	| allImmediate noneImmediate immediateMask numNonImmediates classObj |
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	
+	"let me tell you all about it, let me falsify"
+	allImmediate := true. noneImmediate := true. immediateMask := 0. numNonImmediates := 0.
+	0 to: (objectMemory numSlotsOf: arrayObj) - 1 do:
+		[:i|
+		 classObj := objectMemory fetchPointer: i ofObject: arrayObj.
+		 (objectMemory isImmediateClass: classObj)
+			ifTrue:
+				[noneImmediate := false.
+				 immediateMask := immediateMask + (objectMemory classTagForClass: classObj)]
+			ifFalse:
+				[allImmediate := false.
+				 numNonImmediates := numNonImmediates + 1]].
+
+	noneImmediate ifTrue: [ ^ self noneImmediateBranchIf: reg instanceOfBehaviors: arrayObj target: targetFixUp ].
+
+	allImmediate ifTrue: [ ^ self allImmediate: immediateMask branchIf: reg instanceOfBehaviors: arrayObj target: targetFixUp ].
+
+	^ self mixed: numNonImmediates branchIf: reg instanceOfBehaviors: arrayObj target: targetFixUp
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> branchIf: reg isNotOop:  oop target: targetFixUp [
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	<inline: true>
+	cogit CmpCq: oop R: reg.
+	cogit JumpNonZero: targetFixUp.
+	^0
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> branchIf: reg isOop:  oop target: targetFixUp [
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	<inline: true>
+	cogit CmpCq: oop R: reg.
+	cogit JumpZero: targetFixUp.
+	^0
+]
+
+{ #category : #'sista support' }
 CogObjectRepresentationForSpur >> branchIf: reg notInstanceOfBehavior: classObj target: targetFixUp [
 	"Generate a branch if reg is an instance of classObj, otherwise fall-
 	 through. Cannot change the value of reg (may be used afterwards)."
@@ -46,6 +175,12 @@ CogObjectRepresentationForSpur >> branchIf: reg notInstanceOfBehavior: classObj 
 	<inline: true>
 	<var: #targetFixUp type: #'AbstractInstruction *'>
 	classIndex := objectMemory classTagForClass: classObj.
+	classIndex = (objectMemory fetchClassTagOf: objectMemory falseObject)
+		ifTrue: [ self branchIf: reg isNotOop: objectMemory falseObject target: targetFixUp ].
+	classIndex = (objectMemory fetchClassTagOf: objectMemory trueObject)
+		ifTrue: [ self branchIf: reg isNotOop:  objectMemory trueObject target: targetFixUp ].
+	classIndex = (objectMemory fetchClassTagOf: objectMemory nilObject)
+		ifTrue: [ self branchIf: reg isNotOop:  objectMemory nilObject target: targetFixUp ].
 	(objectMemory isImmediateClass: classObj)
 		ifTrue:
 			[self branchIf: reg hasNotImmediateTag: classIndex target: targetFixUp ]
@@ -93,11 +228,26 @@ CogObjectRepresentationForSpur >> cacheTagIsMarked: cacheTag [
 	^true
 ]
 
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> callStoreCheckTrampoline [
+	cogit CallRT: ceStoreCheckTrampoline
+]
+
 { #category : #testing }
 CogObjectRepresentationForSpur >> canPinObjects [
 	"Answer if the memory manager supports pinned objects."
-	<inline: true>
 	^true
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> checkRememberedInTrampoline [
+	<inline: true>
+	^ CheckRememberedInTrampoline
+]
+
+{ #category : #'debug support' }
+CogObjectRepresentationForSpur >> checkValidDerivedObjectReference: bodyAddress [
+	^(objectMemory heapMapAtWord: (self pointerForOop: bodyAddress - objectMemory baseHeaderSize)) ~= 0
 ]
 
 { #category : #'debug support' }
@@ -106,9 +256,9 @@ CogObjectRepresentationForSpur >> checkValidOopReference: anOop [
 	   or: [(objectMemory heapMapAtWord: (self pointerForOop: anOop)) ~= 0]
 ]
 
-{ #category : #'in-line cacheing' }
-CogObjectRepresentationForSpur >> classForInlineCacheTag: classIndex [
-	^objectMemory classOrNilAtIndex: classIndex
+{ #category : #'garbage collection' }
+CogObjectRepresentationForSpur >> couldBeDerivedObject: bodyAddress [
+	^self oop: bodyAddress - objectMemory baseHeaderSize isGreaterThanOrEqualTo: objectMemory startOfMemory
 ]
 
 { #category : #'garbage collection' }
@@ -144,7 +294,7 @@ CogObjectRepresentationForSpur >> ensureNoForwardedLiteralsIn: aMethodObj [
 CogObjectRepresentationForSpur >> freeCounters: theCounters [
 	<var: #theCounters type: #usqInt>
 	<inline: true>
-	<option: #SistaStackToRegisterMappingCogit>
+	<option: #SistaCogit>
 	theCounters ~= 0 ifTrue:
 		[objectMemory freeObject: theCounters - objectMemory baseHeaderSize]
 ]
@@ -189,16 +339,34 @@ CogObjectRepresentationForSpur >> genAllocFloatValue: dpreg into: resultReg scra
 	cogit CmpCq: objectMemory getScavengeThreshold R: scratch1.
 	jumpFail := cogit JumpAboveOrEqual: 0.
 	cogit MoveR: scratch1 Aw: objectMemory freeStartAddress.
-	cogit MoveCq: newFloatHeader R: scratch2.
-	objectMemory wordSize = objectMemory baseHeaderSize
-		ifTrue: [cogit MoveR: scratch2 Mw: 0 r: resultReg]
-		ifFalse:
-			[self flag: #endianness.
-			 cogit MoveCq: newFloatHeader >> 32 R: scratch1.
-			 cogit MoveR: scratch2 Mw: 0 r: resultReg.
-			 cogit MoveR: scratch1 Mw: objectMemory wordSize r: resultReg].
+	self genStoreHeader: newFloatHeader intoNewInstance: resultReg using: scratch1.
 	cogit MoveRd: dpreg M64: objectMemory baseHeaderSize r: resultReg.
 	^jumpFail
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genCheckRememberedBitOf: objReg scratch: scratchReg [
+	"Check the remembered bit of the object in objReg; answer the jump taken if the bit is already set.
+	 Only need to fetch the byte containing it, which reduces the size of the mask constant."
+	| rememberedBitByteOffset mask |
+	rememberedBitByteOffset := cogit backEnd isBigEndian
+									ifTrue: [objectMemory baseHeaderSize - 1 - (objectMemory rememberedBitShift // 8)]
+									ifFalse:[objectMemory rememberedBitShift // 8].
+	mask := 1 << (objectMemory rememberedBitShift \\ 8).
+	cogit MoveMb: rememberedBitByteOffset r: objReg R: scratchReg.
+	cogit TstCq: mask R: scratchReg.
+	^cogit JumpNonZero: 0
+]
+
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationForSpur >> genCmpClassIndex: classIndex R: reg [
+	"It is safe to use a short comparison for the known classes; these will not
+	 change with become, etc... But it's probably not safe to assume the hash of
+	 some other class won't change over time, so to be sure of generating the
+	 same size code over time, use a long comparison for unknown classes."
+	classIndex < objectMemory classTablePageSize
+		ifTrue: [cogit CmpCq: classIndex R: TempReg]
+		ifFalse: [cogit CmpCw: classIndex R: TempReg]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -218,6 +386,66 @@ CogObjectRepresentationForSpur >> genConvertIntegerToCharacterInReg: reg [
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genConvertSmallIntegerToCharacterInReg: reg [
 	self subclassResponsibility
+]
+
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationForSpur >> genCreateClosureAt: bcpc numArgs: numArgs numCopied: numCopied contextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock [
+	"Create a closure with the given startpc, numArgs and numCopied
+	 within a context with ctxtNumArgs, large if isLargeCtxt that is in a
+	 block if isInBlock.  If numCopied > 0 pop those values off the stack."
+	self genNoPopCreateClosureAt: bcpc
+		numArgs: numArgs
+		numCopied: numCopied
+		contextNumArgs: ctxtNumArgs
+		large: isLargeCtxt
+		inBlock: isInBlock.
+	1 to: numCopied do:
+		[:i|
+		cogit
+			PopR: TempReg;
+			MoveR: TempReg
+				Mw: numCopied - i + ClosureFirstCopiedValueIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize
+					r: ReceiverResultReg].
+	^0
+]
+
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationForSpur >> genCreateFullClosure: compiledBlock numArgs: numArgs numCopied: numCopied ignoreContext: ignoreContext contextNumArgs: contextNumArgs large: contextIsLarge inBlock: contextIsBlock [
+	"Create a full closure with the given values."
+	| numSlots byteSize header skip |
+	<var: #skip type: #'AbstractInstruction *'>
+
+	"First get thisContext into ReceiverResultReg and thence in ClassReg."
+	ignoreContext
+		ifTrue: [ cogit genMoveNilR: ClassReg ]
+		ifFalse: 
+			[self genGetActiveContextNumArgs: contextNumArgs large: contextIsLarge inBlock: contextIsBlock.
+			cogit MoveR: ReceiverResultReg R: ClassReg ].
+	
+	numSlots := FullClosureFirstCopiedValueIndex + numCopied.
+	byteSize := objectMemory smallObjectBytesForSlots: numSlots.
+	self assert: ClassFullBlockClosureCompactIndex ~= 0.
+	header := objectMemory
+					headerForSlots: numSlots
+					format: objectMemory indexablePointersFormat
+					classIndex: ClassFullBlockClosureCompactIndex.
+	cogit MoveAw: objectMemory freeStartAddress R: ReceiverResultReg.
+	self genStoreHeader: header intoNewInstance: ReceiverResultReg using: TempReg.
+	cogit
+		LoadEffectiveAddressMw: byteSize r: ReceiverResultReg R: TempReg;
+		MoveR: TempReg Aw: objectMemory freeStartAddress;
+		CmpCq: objectMemory getScavengeThreshold R: TempReg.
+	skip := cogit JumpBelow: 0.
+	cogit CallRT: ceScheduleScavengeTrampoline.
+	skip jmpTarget: cogit Label.
+
+	cogit
+		MoveR: ClassReg Mw: ClosureOuterContextIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize r: ReceiverResultReg;
+		genMoveConstant: compiledBlock R: TempReg;
+		MoveR: TempReg Mw: ClosureStartPCIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize r: ReceiverResultReg;
+		MoveCq: (objectMemory integerObjectOf: numArgs) R: TempReg;
+		MoveR: TempReg Mw: ClosureNumArgsIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize r: ReceiverResultReg.
+	^0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -258,10 +486,6 @@ CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg:
 	"Make sure that the oop in reg is not forwarded.  
 	 Use the fact that isForwardedObjectClassIndexPun is a power of two to save an instruction."
 	| imm ok finished |
-	<inline: true>
-	<var: #ok type: #'AbstractInstruction *'>
-	<var: #imm type: #'AbstractInstruction *'>
-	<var: #finished type: #'AbstractInstruction *'>
 	self assert: reg ~= scratch.
 	imm := self genJumpImmediate: reg.
 	"notionally
@@ -275,9 +499,9 @@ CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg:
 	ok := cogit JumpNonZero: 0.
 	self genLoadSlot: 0 sourceReg: reg destReg: reg.
 	cogit Jump: fwdJumpTarget.
-	finished := nonFwdJumpTargetOrZero = 0
-		ifTrue: [ cogit Label ]
-		ifFalse: [ self cCoerceSimple: nonFwdJumpTargetOrZero to: #'AbstractInstruction *' ].
+	finished := nonFwdJumpTargetOrZero asUnsignedInteger = 0
+					ifTrue: [cogit Label]
+					ifFalse: [nonFwdJumpTargetOrZero].
 	imm jmpTarget: (ok jmpTarget: finished).
 	^0
 ]
@@ -285,6 +509,7 @@ CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg:
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genEnsureOopInRegNotForwarded: reg scratchReg: scratch jumpBackTo: instruction [
 	<var: #instruction type: #'AbstractInstruction *'>
+	<inline: true>
 	^ self 
 		genEnsureOopInRegNotForwarded: reg 
 		scratchReg: scratch 
@@ -363,17 +588,177 @@ CogObjectRepresentationForSpur >> genFetchIndexRegister: indexReg from: tableObj
 	self subclassResponsibility
 ]
 
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> genGetActiveContextLarge: isLarge inBlock: isInBlock [
+	"Create a trampoline to answer the active context that will
+	 answer it if a frame is already married, and create it otherwise.
+	 Assume numArgs is in SendNumArgsReg and ClassReg is free."
+	| header slotSize jumpSingle loopHead jumpNeedScavenge continuation exit |
+	<var: #jumpNeedScavenge type: #'AbstractInstruction *'>
+	<var: #continuation type: #'AbstractInstruction *'>
+	<var: #jumpSingle type: #'AbstractInstruction *'>
+	<var: #loopHead type: #'AbstractInstruction *'>
+	<var: #exit type: #'AbstractInstruction *'>
+	cogit "load the flag; stash it in both TempReg & ClassReg; do the compare (a prime candidated for use of AndCq:R:R:)"
+		MoveMw: FoxMethod r: FPReg R: ClassReg;
+		AndCq: MFMethodFlagHasContextFlag R: ClassReg R: TempReg.
+	jumpSingle := cogit JumpZero: 0. "jump if flag bit not set"
+	cogit "since the flag bit was set, get the context in the receiver reg and return"
+		MoveMw: FoxThisContext r: FPReg R: ReceiverResultReg;
+		RetN: 0.
+	jumpSingle jmpTarget: cogit Label.
+
+	"OK, it doesn't exist; instantiate and initialize it"
+	"set the hasContext flag; See CoInterpreter class>>initializeFrameIndices"
+	cogit
+		OrCq: MFMethodFlagHasContextFlag R: ClassReg;
+		MoveR: ClassReg Mw: FoxMethod r: FPReg.
+	"now get the home CogMethod into ClassReg and save for post-instantiation."
+	isInBlock caseOf: {
+	[InFullBlock]	-> [cogit SubCq: 3 R: ClassReg]. "-3 is -(hasContext+isBlock) flags"
+	[InVanillaBlock]	-> [cogit
+							SubCq: 3 R: ClassReg; "-3 is -(hasContext+isBlock) flags"
+							MoveM16: 0 r: ClassReg R: TempReg;
+							SubR: TempReg R: ClassReg].
+	[0]				-> [cogit SubCq: 1 R: ClassReg]. "-1 is hasContext flag" }.
+
+	"instantiate the context..."
+	slotSize := isLarge ifTrue: [LargeContextSlots] ifFalse: [SmallContextSlots].
+	header := objectMemory
+					headerForSlots: slotSize
+					format: objectMemory indexablePointersFormat
+					classIndex: ClassMethodContextCompactIndex.
+	self flag: #endianness.
+	cogit MoveAw: objectMemory freeStartAddress R: ReceiverResultReg.
+	self genStoreHeader: header intoNewInstance: ReceiverResultReg using: TempReg.
+	cogit
+		MoveR: ReceiverResultReg R: TempReg;
+		AddCq: (objectMemory smallObjectBytesForSlots: slotSize) R: TempReg;
+		MoveR: TempReg Aw: objectMemory freeStartAddress;
+		CmpCq: objectMemory getScavengeThreshold R: TempReg.
+	jumpNeedScavenge := cogit JumpAboveOrEqual: 0.
+
+	"Now initialize the fields of the context.  See CoInterpreter>>marryFrame:SP:copyTemps:"
+	"sender gets frame pointer as a SmallInteger"
+	continuation :=
+	cogit MoveR: FPReg R: TempReg.
+	self genSetSmallIntegerTagsIn: TempReg.
+	cogit MoveR: TempReg Mw: objectMemory baseHeaderSize + (SenderIndex * objectMemory bytesPerOop) r: ReceiverResultReg.
+
+	"pc gets frame caller as a SmallInteger"
+	cogit MoveMw: FoxSavedFP r: FPReg R: TempReg.
+	self genSetSmallIntegerTagsIn: TempReg.
+	cogit MoveR: TempReg Mw: objectMemory baseHeaderSize + (InstructionPointerIndex * objectMemory bytesPerOop) r: ReceiverResultReg.
+
+	"Set the method field, freeing up ClassReg again, and frame's context field,"
+	cogit
+		MoveMw: (cogit offset: CogMethod of: #methodObject) r: ClassReg R: TempReg;
+		MoveR: TempReg Mw: objectMemory baseHeaderSize + (MethodIndex * objectMemory wordSize) r: ReceiverResultReg;
+		MoveR: ReceiverResultReg Mw: FoxThisContext r: FPReg.
+
+	"Now compute stack pointer; this is stackPointer (- 1 for return pc if a CISC) - framePointer - wordSize (1 each for saved pc, method, context, receiver) + 1 (1-relative) + numArgs"
+	"TPR note - the code here is actually doing
+	context stackPointer := ((((fp - sp) / wordSize) - [3|4]) + num args) asSmallInteger"
+	cogit
+		MoveR: FPReg R: TempReg;
+		SubR: SPReg R: TempReg;
+		LogicalShiftRightCq: self log2BytesPerWord R: TempReg;
+		SubCq: (cogit backEnd hasLinkRegister ifTrue: [3] ifFalse: [4]) R: TempReg;
+		AddR: SendNumArgsReg R: TempReg.
+	self genConvertIntegerToSmallIntegerInReg: TempReg.
+	cogit MoveR: TempReg Mw: objectMemory baseHeaderSize + (StackPointerIndex * objectMemory bytesPerOop) r: ReceiverResultReg.
+
+	"Set closureOrNil to either the stacked receiver or nil"
+	isInBlock > 0
+		ifTrue:
+			[cogit
+				MoveR: SendNumArgsReg R: TempReg;
+				AddCq: 2 R: TempReg; "+2 for saved fp and saved pc"
+				MoveXwr: TempReg R: FPReg R: TempReg]
+		ifFalse:
+			[cogit genMoveNilR: TempReg].
+	cogit MoveR: TempReg Mw: objectMemory baseHeaderSize + (ClosureIndex * objectMemory bytesPerOop) r: ReceiverResultReg.
+
+	"Set the receiver"
+	cogit
+		MoveMw: FoxMFReceiver r: FPReg R: TempReg;
+		MoveR: TempReg Mw: objectMemory baseHeaderSize + (ReceiverIndex * objectMemory bytesPerOop) r: ReceiverResultReg.
+
+	"Now copy the arguments.  This is tricky because of the shortage of registers,.  ClassReg ranges
+	 from 1 to numArgs (SendNumArgsReg), and from ReceiverIndex + 1 to ReceiverIndex + numArgs.
+	 1 to: numArgs do:
+		[:i|
+		temp := longAt(FPReg + ((SendNumArgs - i + 2) * wordSize)). +2 for saved pc and savedfp
+		longAtput(FPReg + FoxMFReceiver + (i * wordSize), temp)]"
+	"TPR note: this is a prime candidate for passing off to the backend to do at least faintly optimal code"
+	cogit MoveCq: 1 R: ClassReg.
+	loopHead := cogit CmpR: SendNumArgsReg R: ClassReg.
+	exit := cogit JumpGreater: 0.
+	cogit
+		MoveR: SendNumArgsReg R: TempReg;
+		SubR: ClassReg R: TempReg;
+		AddCq: 2 R: TempReg; "+2 for saved fp and saved pc"
+		MoveXwr: TempReg R: FPReg R: TempReg;
+		AddCq: ReceiverIndex + (objectMemory baseHeaderSize / objectMemory wordSize) R: ClassReg; "Now convert ClassReg from frame index to context index"
+		MoveR: TempReg Xwr: ClassReg R: ReceiverResultReg;
+		SubCq: ReceiverIndex + (objectMemory baseHeaderSize / objectMemory wordSize) - 1 R: ClassReg; "convert back adding 1 ;-)"
+		Jump: loopHead.
+	exit jmpTarget: cogit Label.
+
+	"Finally nil or copy the non-argument temps.
+	 ClassReg := FPReg + FoxMFReceiver.
+	 SendNumArgsReg := SendNumArgsReg+ReceiverIndex.
+	 [ClassReg := ClassReg - wordSize.
+	  backEnd hasLinkRegister
+			ifTrue: [ClassReg > SPReg]
+			ifFalse: [ClassReg >= SPReg]] whileTrue:
+		[receiver[SendNumArgsReg] := *ClassReg.
+		 SendNumArgsReg := SendNumArgsReg + 1]]"
+	coInterpreter marryFrameCopiesTemps ifFalse:
+		[cogit MoveCq: objectMemory nilObject R: TempReg].
+	cogit
+		MoveR: FPReg R: ClassReg;
+		AddCq: FoxMFReceiver R: ClassReg;
+		AddCq: ReceiverIndex + 1 + (objectMemory baseHeaderSize / objectMemory wordSize) R: SendNumArgsReg.
+	loopHead :=
+	cogit SubCq: objectMemory wordSize R: ClassReg.
+	cogit CmpR: SPReg R: ClassReg.
+	"If on a CISC there's a retpc for the trampoline call on top of stack; if on a RISC there isn't."
+	exit := cogit backEnd hasLinkRegister
+				ifTrue: [cogit JumpBelow: 0]
+				ifFalse: [cogit JumpBelowOrEqual: 0].
+	coInterpreter marryFrameCopiesTemps ifTrue:
+		[cogit MoveMw: 0 r: ClassReg R: TempReg].
+	cogit
+		MoveR: TempReg Xwr: SendNumArgsReg R: ReceiverResultReg;
+		AddCq: 1 R: SendNumArgsReg;
+		Jump: loopHead.
+	exit jmpTarget: cogit Label.
+
+	cogit RetN: 0.
+	
+	jumpNeedScavenge jmpTarget: cogit Label.
+	cogit backEnd saveAndRestoreLinkRegAround:
+		[cogit
+			CallRT: ceScheduleScavengeTrampoline
+			registersToBeSavedMask: (cogit registerMaskFor: ReceiverResultReg and: SendNumArgsReg and: ClassReg)].
+	cogit Jump: continuation.
+	^0
+]
+
 { #category : #'bytecode generator support' }
 CogObjectRepresentationForSpur >> genGetActiveContextNumArgs: numArgs large: isLargeContext inBlock: isInBlock [
 	"Get the active context into ReceiverResultReg, creating it if necessary."
 	| routine |
 	routine := isLargeContext
-				ifFalse: [isInBlock
-							ifFalse: [ceSmallActiveContextInMethodTrampoline]
-							ifTrue: [ceSmallActiveContextInBlockTrampoline]]
-				ifTrue: [isInBlock
-							ifFalse: [ceLargeActiveContextInMethodTrampoline]
-							ifTrue: [ceLargeActiveContextInBlockTrampoline]].
+				ifFalse: [isInBlock caseOf: {
+						[0]				-> [ceSmallActiveContextInMethodTrampoline].
+						[InVanillaBlock]	-> [ceSmallActiveContextInBlockTrampoline].
+						[InFullBlock]	-> [ceSmallActiveContextInFullBlockTrampoline] }]
+				ifTrue: [isInBlock caseOf: {
+						[0]				-> [ceLargeActiveContextInMethodTrampoline].
+						[InVanillaBlock]	-> [ceLargeActiveContextInBlockTrampoline].
+						[InFullBlock]	-> [ceLargeActiveContextInFullBlockTrampoline] }].
 	cogit
 		MoveCq: numArgs R: SendNumArgsReg;
 		CallRT: routine.
@@ -381,15 +766,9 @@ CogObjectRepresentationForSpur >> genGetActiveContextNumArgs: numArgs large: isL
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genGetBits: mask ofFormatByteOf: sourceReg into: destReg baseHeaderIntoScratch: scratchReg [
-	scratchReg
-		ifNil:
-			[self flag: #endianness.
-			 cogit MoveMb: 3 r: sourceReg R: destReg]
-		ifNotNil:
-			[cogit MoveMw: 0 r: sourceReg R: destReg.
-			 cogit MoveR: destReg R: scratchReg. "destReg := (at least) least significant half of self baseHeader: receiver"
-			 cogit LogicalShiftRightCq: objectMemory formatShift R: destReg].
+CogObjectRepresentationForSpur >> genGetBits: mask ofFormatByteOf: sourceReg into: destReg [
+	self flag: #endianness.
+	cogit MoveMb: 3 r: sourceReg R: destReg.
 	cogit AndCq: mask R: destReg.	"formatReg := self formatOfHeader: destReg"
 	^0
 ]
@@ -410,7 +789,7 @@ CogObjectRepresentationForSpur >> genGetClassObjectOf: instReg into: destReg scr
 	<var: #jumpIsImm type: #'AbstractInstruction *'>
 	<var: #jumpNotForwarded type: #'AbstractInstruction *'>
 	<var: #loop type: #'AbstractInstruction *'>
-	instReg = destReg ifTrue:
+	(instReg = destReg or: [instReg = scratchReg or: [destReg = scratchReg]]) ifTrue:
 		[^BadRegisterSet].
 	loop := cogit MoveR: instReg R: scratchReg.
 	cogit AndCq: objectMemory tagMask R: scratchReg.
@@ -430,10 +809,15 @@ CogObjectRepresentationForSpur >> genGetClassObjectOf: instReg into: destReg scr
 		jumpNotForwarded jmpTarget: cogit Label].
 	jumpIsImm jmpTarget:
 	(cogit MoveR: scratchReg R: destReg).
-	cogit PushR: instReg.
-	self genGetClassObjectOfClassIndex: destReg into: instReg scratchReg: TempReg.
-	cogit MoveR: instReg R: destReg.
-	cogit PopR: instReg.
+	scratchReg = TempReg
+		ifTrue:
+			[cogit PushR: instReg.
+			 self genGetClassObjectOfClassIndex: destReg into: instReg scratchReg: TempReg.
+			 cogit MoveR: instReg R: destReg.
+			 cogit PopR: instReg]
+		ifFalse:
+			[self genGetClassObjectOfClassIndex: destReg into: scratchReg scratchReg: TempReg.
+			 cogit MoveR: scratchReg R: destReg].
 	^0
 ]
 
@@ -450,13 +834,22 @@ CogObjectRepresentationForSpur >> genGetClassObjectOfClassIndex: instReg into: d
 		LogicalShiftRightCq: objectMemory classTableMajorIndexShift R: scratchReg;
 		LogicalShiftLeftCq: objectMemory shiftForWord R: scratchReg.
 	self assert: (self shouldAnnotateObjectReference: objectMemory classTableRootObj) not.
+	(cogit backEnd isWithinMwOffsetRange: objectMemory classTableRootObj + objectMemory baseHeaderSize)
+		ifTrue: [cogit MoveMw: objectMemory classTableRootObj + objectMemory baseHeaderSize r: scratchReg R: destReg]
+		ifFalse: [cogit
+					AddCq: objectMemory classTableRootObj R: scratchReg;
+					MoveMw: objectMemory baseHeaderSize r: scratchReg R: destReg].
 	cogit
-		MoveMw: objectMemory classTableRootObj + objectMemory baseHeaderSize r: scratchReg R: destReg;
 		MoveR: instReg R: scratchReg;
 		AndCq: objectMemory classTableMinorIndexMask R: scratchReg;
 		AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: scratchReg;
 		MoveXwr: scratchReg R: destReg R: destReg.
 	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genGetClassTagOf: instReg into: destReg scratchReg: scratchReg [
+	^self genGetInlineCacheClassTagFrom: instReg into: destReg forEntry: true
 ]
 
 { #category : #'compile abstract instructions' }
@@ -475,23 +868,175 @@ CogObjectRepresentationForSpur >> genGetDoubleValueOf: srcReg into: destFPReg [
 CogObjectRepresentationForSpur >> genGetFormatOf: srcReg into: destReg [
 	"Get the format field of the object in srcReg into destReg.
 	 srcReg may equal destReg."
-	^self genGetBits: objectMemory formatMask ofFormatByteOf: srcReg into: destReg baseHeaderIntoScratch: nil
+	^self genGetBits: objectMemory formatMask ofFormatByteOf: srcReg into: destReg
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genGetFormatOf: sourceReg into: destReg leastSignificantHalfOfBaseHeaderIntoScratch: scratchRegOrNil [
-	"Get the format of the object in sourceReg into destReg.  If scratchRegOrNil
-	 is not nil, load at least the least significant 32-bits (64-bits in 64-bits) of the
-	 header word, which contains the format, into scratchRegOrNil."
-	scratchRegOrNil
-		ifNil:
+CogObjectRepresentationForSpur >> genGetFormatOf: sourceReg into: destReg leastSignificantHalfOfBaseHeaderIntoScratch: scratchRegOrNone [
+	"Get the format of the object in sourceReg into destReg.  If scratchRegOrNone
+	 is not NoReg, load at least the least significant 32-bits (64-bits in 64-bits) of the
+	 header word, which contains the format, into scratchRegOrNone."
+	scratchRegOrNone = NoReg
+		ifTrue:
 			[self flag: #endianness.
 			 cogit MoveMb: 3 r: sourceReg R: destReg]
-		ifNotNil:
+		ifFalse:
 			[cogit MoveMw: 0 r: sourceReg R: destReg.
-			 cogit MoveR: destReg R: scratchRegOrNil. "destReg := (at least) least significant half of self baseHeader: receiver"
+			 cogit MoveR: destReg R: scratchRegOrNone. "destReg := (at least) least significant half of self baseHeader: receiver"
 			 cogit LogicalShiftRightCq: objectMemory formatShift R: destReg].
 	cogit AndCq: objectMemory formatMask R: destReg.	"formatReg := self formatOfHeader: destReg"
+	^0
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> genGetIdentityHash: rcvrReg resultReg: resultReg [
+	<var: #jumpSet type: #'AbstractInstruction *'>
+	| jumpSet |
+	"ReceiverResultReg is required for the trampoline. We force the allocation,
+	 and we have two path to avoid conflicts in ReceiverResultReg."
+	cogit voidReceiverResultRegContainsSelf. 
+	resultReg = ReceiverResultReg 
+		ifTrue: 
+			[cogit ssTop popToReg: rcvrReg.
+			 self genGetHashFieldNonImmOf: rcvrReg asSmallIntegerInto: resultReg.
+			 cogit CmpCq: ConstZero R: resultReg.
+			 jumpSet := cogit JumpNonZero: 0.
+			 cogit MoveR: rcvrReg R: resultReg.
+			 cogit CallRT: ceInlineNewHashTrampoline]
+		ifFalse: 
+			[cogit ssTop popToReg: ReceiverResultReg.
+		 	 self genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: resultReg.
+			 cogit CmpCq: ConstZero R: resultReg.
+			 jumpSet := cogit JumpNonZero: 0.
+			 cogit CallRT: ceInlineNewHashTrampoline.
+			 cogit MoveR: ReceiverResultReg R: resultReg].
+	jumpSet jmpTarget: cogit Label
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genGetInstanceOf: classObj into: destReg initializingIf: initializeInstance [
+	"Create an instance of classObj and assign it to destReg, initializing the instance
+	 if initializeInstance is true with nil or 0 as appropriate This is for inline primitives.
+	 Assume there is sufficient space in new space to complete the operation.
+	 Answer zero on success."
+	| classIndex classFormat header slots |
+	((objectMemory isNonImmediate: classObj)
+	 and: [(coInterpreter objCouldBeClassObj: classObj)
+	 and: [(classIndex := objectMemory rawHashBitsOf: classObj) ~= 0
+	 and: [(objectMemory isFixedSizePointerFormat: (objectMemory instSpecOfClassFormat: (classFormat := objectMemory formatOfClass: classObj)))
+	 and: [(slots := objectMemory fixedFieldsOfClassFormat: classFormat) < objectMemory numSlotsMask]]]]) ifFalse:
+		[^UnimplementedOperation].
+
+	self deny: destReg = TempReg.
+
+	header := objectMemory
+					headerForSlots: slots
+					format: (objectMemory instSpecOfClassFormat: classFormat)
+					classIndex: classIndex.
+
+	cogit MoveAw: objectMemory freeStartAddress R: destReg.
+	self genStoreHeader: header intoNewInstance: destReg using: TempReg.
+	cogit
+		LoadEffectiveAddressMw: (objectMemory smallObjectBytesForSlots: slots) r: destReg R: TempReg;
+		MoveR: TempReg Aw: objectMemory freeStartAddress.
+	(initializeInstance and: [slots > 0]) ifTrue:
+		[cogit genMoveConstant: objectMemory nilObject R: TempReg.
+		 0 to: slots - 1 do:
+			[:i| cogit MoveR: TempReg
+					Mw: i * objectMemory wordSize + objectMemory baseHeaderSize
+					r: destReg]].
+	^0
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genGetInstanceOfFixedClass: classObj into: destReg initializingIf: initializeInstance [
+	"Create an instance of classObj and assign it to destReg, initializing the instance
+	 if initializeInstance is true with nil or 0 as appropriate This is for inline primitives.
+	 Assume there is sufficient space in new space to complete the operation.
+	 Answer zero on success."
+	| classIndex classFormat header slots branch constReg inst loop delta loopCount slotsPerIteration |
+	((objectMemory isNonImmediate: classObj)
+	 and: [(coInterpreter objCouldBeClassObj: classObj)
+	 and: [(classIndex := objectMemory rawHashBitsOf: classObj) ~= 0
+	 and: [(objectMemory isFixedSizePointerFormat: (objectMemory instSpecOfClassFormat: (classFormat := objectMemory formatOfClass: classObj)))
+	 and: [(slots := objectMemory fixedFieldsOfClassFormat: classFormat) < objectMemory numSlotsMask]]]]) ifFalse:
+		[^UnimplementedOperation].
+
+	header := objectMemory
+					headerForSlots: slots
+					format: (objectMemory instSpecOfClassFormat: classFormat)
+					classIndex: classIndex.
+
+	cogit MoveAw: objectMemory freeStartAddress R: destReg.
+	self genStoreHeader: header intoNewInstance: destReg using: TempReg.
+	cogit
+		LoadEffectiveAddressMw: (objectMemory smallObjectBytesForSlots: slots) r: destReg R: TempReg;
+		MoveR: TempReg Aw: objectMemory freeStartAddress.
+	(initializeInstance and: [slots > 0]) ifFalse:
+		[^0].
+	slots <= (slotsPerIteration := 8) ifTrue: "slotsPerIteration must be even; see cogit SubCq: objectMemory bytesPerOop R: TempReg below"
+		[cogit genMoveConstant: objectMemory nilObject R: TempReg.
+		 0 to: slots - 1 do:
+			[:i| cogit MoveR: TempReg
+					Mw: i * objectMemory wordSize + objectMemory baseHeaderSize
+					r: destReg].
+		^0].
+	"self halt: 'genGetInstanceOfFixedClass:... ', slots asInteger."
+	constReg := cogit allocateRegNotConflictingWith: destReg.
+	cogit genMoveConstant: objectMemory nilObject R: constReg.
+	
+	slots \\ slotsPerIteration ~= 0
+		ifTrue: "delta maps the offset at the loop entryPoint onto destReg + objectMemory baseHeaderSize"
+			[delta := (slotsPerIteration - (slots \\ slotsPerIteration) * objectMemory bytesPerOop) - objectMemory baseHeaderSize.
+			 delta > 0 ifTrue: [cogit SubCq: delta R: destReg].
+			 delta < 0 ifTrue: [cogit AddCq: delta negated R: destReg].
+			 "now delta maps (loopCount * slotsPerIteration * objectMemory bytesPerOop) + objectMemory baseHeaderSize - delta to the start of the object"
+			 delta := delta + objectMemory baseHeaderSize.
+			 (objectMemory bytesPerOop < objectMemory baseHeaderSize
+			  and: [slots \\ 2 = 1]) ifTrue: "if end of loop is not at start of next object, adjust loop limit in TempReg to point to last field filled."
+				[cogit SubCq: objectMemory bytesPerOop R: TempReg].
+			 branch := cogit Jump: 0]
+		ifFalse:
+			[delta := 0.
+			 cogit AddCq: objectMemory baseHeaderSize R: destReg].
+	"loopCount is number of times through the increment of destReg."
+	loopCount := slots + slotsPerIteration - 1 // slotsPerIteration.
+	self assert: loopCount > 1.
+	loop := cogit Label.
+	0 to: 7 do:
+		[:i|
+		inst := cogit MoveR: constReg Mw: i * objectMemory bytesPerOop r: destReg.
+		slotsPerIteration - (slots \\ slotsPerIteration) = i ifTrue:
+			[branch jmpTarget: inst]].
+	cogit
+		AddCq: slotsPerIteration * objectMemory bytesPerOop R: destReg;
+		CmpR: TempReg R: destReg;
+		JumpBelow: loop;
+		SubCq: (loopCount * slotsPerIteration * objectMemory bytesPerOop) + objectMemory baseHeaderSize - delta R: destReg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genGetNumBytesOf: srcReg into: destReg [
+	"Get the size in byte-sized slots of the object in srcReg into destReg.
+	 srcReg may equal destReg.
+	 destReg <- numSlots << self shiftForWord - (fmt bitAnd: 3).
+	 Assumes the object in srcReg has a byte format, i.e. 16 to 23 or 24 to 31 "
+	self subclassResponsibility
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genGetNumSlotsOf: srcReg into: destReg [
+	"Get the size in word-sized slots of the object in srcReg into destReg.
+	 srcReg may equal destReg."
+	<var: #jmp type: #'AbstractInstruction *'>
+	| jmp |
+	self assert: srcReg ~= destReg.
+	self genGetRawSlotSizeOfNonImm: srcReg into: destReg.
+	cogit CmpCq: objectMemory numSlotsMask R: destReg.
+	jmp := cogit JumpLess: 0.
+	self genGetOverflowSlotsOf: srcReg into: destReg.
+	jmp jmpTarget: cogit Label.
 	^0
 ]
 
@@ -504,112 +1049,36 @@ CogObjectRepresentationForSpur >> genGetOverflowSlotsOf: srcReg into: destReg [
 CogObjectRepresentationForSpur >> genGetRawSlotSizeOfNonImm: sourceReg into: destReg [
 	"The raw numSlots field is the most significant byte of the 64-bit header word.
 	 MoveMbrR zero-extends."
+	cogit backEnd byteReadsZeroExtend ifFalse:
+		[cogit MoveCq: 0 R: destReg].
 	cogit MoveMb: 7 r: sourceReg R: destReg.
 	^0
 ]
 
-{ #category : #'primitive generators' }
-CogObjectRepresentationForSpur >> genInnerPrimitiveAsCharacter: retNOffset inReg: reg [
-	| jumpNotInt jumpOutOfRange |
-	<var: 'jumpNotInt' type: #'AbstractInstruction *'>
-	<var: 'jumpOutOfRange' type: #'AbstractInstruction *'>
-	reg ~= ReceiverResultReg ifTrue:
-		[jumpNotInt := self genJumpNotSmallInteger: reg].
-	cogit MoveR: reg R: TempReg.
-	self genConvertSmallIntegerToIntegerInReg: TempReg.
-	cogit CmpCq: (1 << 30) - 1 R: TempReg.
-	jumpOutOfRange := cogit JumpAbove: 0.
-	self genConvertSmallIntegerToCharacterInReg: reg.
-	reg ~= ReceiverResultReg ifTrue:
-		[cogit MoveR: reg R: ReceiverResultReg].
-	cogit RetN: retNOffset.
-	jumpOutOfRange jmpTarget: cogit Label.
-	reg ~= ReceiverResultReg ifTrue:
-		[jumpNotInt jmpTarget: jumpOutOfRange getJmpTarget].
-	^0
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genInlinedIdenticalOrNotIfGuts: orNot [
+	<inline: true>
+	^ cogit genForwardersInlinedIdenticalOrNotIf: orNot
 ]
 
-{ #category : #'primitive generators' }
-CogObjectRepresentationForSpur >> genInnerPrimitiveCharacterValue: retNOffset [
-	self genConvertCharacterToSmallIntegerInReg: ReceiverResultReg.
-	cogit RetN: retNOffset.
-	^UnfailingPrimitive
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genJumpBaseHeaderImmutable: baseHeaderReg [
+	"baseHeader holds at least the least significant 32 bits of the object"
+	<returnTypeC: #'AbstractInstruction *'>
+	<option: #IMMUTABILITY>
+	<inline: true>
+	cogit TstCq: objectMemory immutableBitMask R: baseHeaderReg.
+	^ cogit JumpNonZero: 0
 ]
 
-{ #category : #'primitive generators' }
-CogObjectRepresentationForSpur >> genInnerPrimitiveIdentical: retNoffset orNotIf: orNot [
-	| jumpImmediate jumpCmp |
-	<var: #jumpCmp type: #'AbstractInstruction *'>
-	<var: #jumpImmediate type: #'AbstractInstruction *'>
-	jumpImmediate := self genJumpImmediate: Arg0Reg.
-	self genEnsureObjInRegNotForwarded: Arg0Reg scratchReg: TempReg.
-	jumpImmediate jmpTarget:
-		(cogit CmpR: Arg0Reg R: ReceiverResultReg).
-	jumpCmp := orNot
-					ifTrue: [cogit JumpZero: 0]
-					ifFalse: [cogit JumpNonZero: 0].
-	cogit genMoveTrueR: ReceiverResultReg.
-	cogit RetN: retNoffset.
-	jumpCmp jmpTarget: (cogit genMoveFalseR: ReceiverResultReg).
-	cogit RetN: retNoffset.
-	^0
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentationForSpur >> genInnerPrimitiveIdentityHash: retNoffset [
-	self subclassResponsibility
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentationForSpur >> genInnerPrimitiveNew: retNoffset [
-	"Implement primitiveNew for convenient cases:
-	- the receiver has a hash
-	- the receiver is fixed size (excluding ephemerons to save instructions & miniscule time)
-	- single word header/num slots < numSlotsMask
-	- the result fits in eden"
-
-	self subclassResponsibility
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentationForSpur >> genInnerPrimitiveNewWithArg: retNoffset [
-	"Implement primitiveNewWithArg for convenient cases:
-	- the receiver has a hash
-	- the receiver is variable and not compiled method
-	- single word header/num slots < numSlotsMask
-	- the result fits in eden
-
-	Here are some dynamic frequencies of class formats in the interpreter doing startUp
-	and recompiling ArrayedCollection in a Squeak4.1 image:
-		{3251->#arrayFormat.		(Array)
-		 1685->#firstByteFormat.	(ByteString, LargePositiveInteger, very few ByteArray)
-		 1533->#firstLongFormat.	(Bitmaps, Floats, MatrixTransform2x3, WordArray)
-		 110->#weakArrayFormat.	(WeakArray, WeakMessageSend)
-		 35->#indexablePointersFormat.	(MethodContext)
-		 5->#nonIndexablePointerFormat	(DirectoryEntry)}"
-
-	self subclassResponsibility
-]
-
-{ #category : #'primitive generators' }
-CogObjectRepresentationForSpur >> genInnerPrimitiveSize: retNoffset [
-	| jumpImm jumpNotIndexable jumpIsContext |
-	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
-	<var: #jumpImm type: #'AbstractInstruction *'>
-	<var: #jumpIsContext type: #'AbstractInstruction *'>
-	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
-	jumpImm := self genJumpImmediate: ReceiverResultReg.
-	self
-		genGetSizeOf: ReceiverResultReg
-		into: ClassReg
-		formatReg: SendNumArgsReg
-		scratchReg: TempReg
-		abortJumpsInto: [:jnx :jic| jumpNotIndexable := jnx. jumpIsContext := jic].
-	self genConvertIntegerToSmallIntegerInReg: ClassReg.
-	cogit MoveR: ClassReg R: ReceiverResultReg.
-	cogit RetN: retNoffset.
-	jumpImm jmpTarget: (jumpNotIndexable jmpTarget: (jumpIsContext jmpTarget: cogit Label)).
-	^0
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genJumpBaseHeaderMutable: baseHeaderReg [
+	"baseHeader holds at least the least significant 32 bits of the object"
+	<returnTypeC: #'AbstractInstruction *'>
+	<option: #IMMUTABILITY>
+	<inline: true>
+	cogit TstCq: objectMemory immutableBitMask R: baseHeaderReg.
+	^ cogit JumpZero: 0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -627,10 +1096,28 @@ CogObjectRepresentationForSpur >> genJumpImmediate: aRegister [
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genJumpImmediateInScratchReg: aRegister [
+CogObjectRepresentationForSpur >> genJumpImmutable: sourceReg scratchReg: scratchReg [
 	<returnTypeC: #'AbstractInstruction *'>
-	cogit AndCq: objectMemory tagMask R: aRegister.
-	^cogit JumpNonZero: 0
+	<option: #IMMUTABILITY>
+	cogit MoveMw: 0 r: sourceReg R: scratchReg. 
+	^ self genJumpBaseHeaderImmutable: scratchReg
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genJumpInOldSpace: reg [
+	"Jump if reg is old."
+	<inline: true>
+	^cogit
+		CmpCq: objectMemory storeCheckBoundary R: reg; "N.B. FLAGS := destReg - scratchReg"
+		JumpAboveOrEqual: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genJumpMutable: sourceReg scratchReg: scratchReg [
+	<returnTypeC: #'AbstractInstruction *'>
+	<option: #IMMUTABILITY>
+	cogit MoveMw: 0 r: sourceReg R: scratchReg. 
+	^ self genJumpBaseHeaderMutable: scratchReg
 ]
 
 { #category : #'compile abstract instructions' }
@@ -647,11 +1134,674 @@ CogObjectRepresentationForSpur >> genJumpNotImmediate: aRegister [
 	^cogit JumpZero: 0
 ]
 
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genJumpNotImmediateInScratchReg: aRegister [
-	<returnTypeC: #'AbstractInstruction *'>
-	cogit AndCq: objectMemory tagMask R: aRegister.
-	^cogit JumpZero: 0
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genLcFirstFieldPointer: objectReg [
+	<option: #LowcodeVM>
+	cogit AddCq: 8 R: objectReg.
+	cogit ssPushNativeRegister: objectReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genLcFirstIndexableFieldPointer: objectReg [
+	<option: #LowcodeVM>
+	"TODO: Retrieve the number of fixed fields."
+	cogit AddCq: 8 R: objectReg.
+	cogit ssPushNativeRegister: objectReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genLcIsBytes: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	
+	"Check for integer"
+	| isImmediate isNotBytes isCompiledMethod cont falseTarget |
+	cogit MoveR: objectReg R: valueReg.
+	cogit AndCq: objectMemory tagMask R: valueReg.
+	isImmediate := cogit JumpNonZero: 0.
+	
+	"Get the format"
+	self genGetFormatOf: objectReg into: valueReg.
+	
+	cogit CmpCq: objectMemory firstByteFormat R: valueReg.
+	isNotBytes := cogit JumpLess: 0.
+	cogit CmpCq: objectMemory firstCompiledMethodFormat R: valueReg.
+	isCompiledMethod := cogit JumpGreaterOrEqual: 0.
+	
+	"True result"
+	cogit MoveCq: 1 R: valueReg.
+	cont := cogit Jump: 0.
+	
+	"False result"
+	falseTarget := cogit Label.
+	isImmediate jmpTarget: falseTarget.
+	isNotBytes jmpTarget: falseTarget.
+	isCompiledMethod jmpTarget: falseTarget.
+	cogit MoveCq: 0 R: valueReg.
+
+	"Return"
+	cont jmpTarget: cogit Label.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genLcIsFloatObject: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	"TODO: Implement this one"
+	cogit MoveCq: 1 R: valueReg.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genLcIsIndexable: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	"TODO: Implement this one"
+	cogit MoveCq: 1 R: valueReg.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genLcIsIntegerObject: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	
+	"Check for the immediate case"
+	| isImmediate isLargePositiveInteger isLargeNegativeInteger falseResult trueResult cont |
+	cogit MoveR: objectReg R: valueReg.
+	cogit AndCq: objectMemory smallIntegerTag R: valueReg.
+	isImmediate := cogit JumpNonZero: 0.
+	
+	"Check the non-immediate case"
+	self genGetClassIndexOfNonImm: objectReg into: TempReg.
+	cogit CmpCq: ClassLargePositiveInteger R: TempReg.
+	isLargePositiveInteger := cogit JumpNonZero: 0.
+	cogit CmpCq: ClassLargeNegativeInteger R: TempReg.
+	isLargeNegativeInteger := cogit JumpNonZero: 0.
+	cogit XorR: valueReg R: valueReg.
+	falseResult := cogit Jump: 0.
+	
+	"True result"
+	trueResult := cogit Label.
+	isLargePositiveInteger jmpTarget: trueResult.
+	isLargeNegativeInteger jmpTarget: trueResult.
+	cogit MoveCq: 1 R: valueReg.
+	
+	"Return"
+	cont := cogit Label.
+	falseResult jmpTarget: cont.
+	isImmediate jmpTarget: cont.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genLcIsPointers: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	
+	"Check for immediate"
+	| isImmediate isNotPointers cont falseTarget |
+	cogit MoveR: objectReg R: valueReg.
+	cogit AndCq: objectMemory tagMask R: valueReg.
+	isImmediate := cogit JumpNonZero: 0.
+	
+	"Get the format"
+	self genGetFormatOf: objectReg into: valueReg.
+	
+	cogit CmpCq: 9 R: valueReg.
+	isNotPointers := cogit JumpGreaterOrEqual: 0.
+	
+	"True result"
+	cogit MoveCq: 1 R: valueReg.
+	cont := cogit Jump: 0.
+	
+	"False result"
+	falseTarget := cogit Label.
+	isImmediate jmpTarget: falseTarget.
+	isNotPointers jmpTarget: falseTarget.
+	cogit MoveCq: 0 R: valueReg.
+
+	"Return"
+	cont jmpTarget: cogit Label.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genLcIsWords: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	
+	"Check for immediate"
+	| isImmediate isNotWords cont falseTarget isBelowRange isAboveRange |
+	cogit MoveR: objectReg R: valueReg.
+	cogit AndCq: objectMemory tagMask R: valueReg.
+	isImmediate := cogit JumpNonZero: 0.
+	
+	"Get the format"
+	self genGetFormatOf: objectReg into: valueReg.
+	
+	"Hack: consider a compiled method as bytes too."
+	BytesPerWord = 8 ifTrue: [
+		cogit CmpCq: objectMemory firstLongFormat R: valueReg.
+		isBelowRange := cogit JumpLess: 0.
+		cogit CmpCq: objectMemory firstShortFormat R: valueReg.
+		isAboveRange := cogit JumpGreaterOrEqual: 0.
+	] ifFalse: [ 
+		cogit CmpCq: objectMemory firstLongFormat R: valueReg.
+		isNotWords := cogit JumpNonZero: 0.
+	].
+	
+	"True result"
+	cogit MoveCq: 1 R: valueReg.
+	cont := cogit Jump: 0.
+	
+	"False result"
+	falseTarget := cogit Label.
+	isImmediate jmpTarget: falseTarget.
+	BytesPerWord = 4 ifTrue: [
+		isNotWords jmpTarget: falseTarget.
+	] ifFalse: [ 
+		isBelowRange jmpTarget: falseTarget.
+		isAboveRange jmpTarget: falseTarget.
+	].
+	cogit MoveCq: 0 R: valueReg.
+
+	"Return"
+	cont jmpTarget: cogit Label.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genLcIsWordsOrBytes: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	
+	"Check for immediate"
+	| isImmediate isNotBits isCompiledMethod cont falseTarget |
+	cogit MoveR: objectReg R: valueReg.
+	cogit AndCq: objectMemory tagMask R: valueReg.
+	isImmediate := cogit JumpNonZero: 0.
+	
+	"Get the format"
+	self genGetFormatOf: objectReg into: valueReg.
+	
+	cogit CmpCq: 9 R: valueReg.
+	isNotBits := cogit JumpLess: 0.
+	cogit CmpCq: 24 R: valueReg.
+	isCompiledMethod := cogit JumpGreaterOrEqual: 0.
+	
+	"True result"
+	cogit MoveCq: 1 R: valueReg.
+	cont := cogit Jump: 0.
+	
+	"False result"
+	falseTarget := cogit Label.
+	isImmediate jmpTarget: falseTarget.
+	isNotBits jmpTarget: falseTarget.
+	isCompiledMethod jmpTarget: falseTarget.
+	cogit MoveCq: 0 R: valueReg.
+
+	"Return"
+	cont jmpTarget: cogit Label.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genLcLoadObject: object at: fieldIndex [
+	<option: #LowcodeVM>
+	cogit AddCq: 8 R: object.
+	cogit MoveXwr: fieldIndex R: object R: object.
+	cogit ssPushRegister: object
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genLcLoadObject: object field: fieldIndex [
+	<option: #LowcodeVM>
+	cogit MoveMw: 8 + (BytesPerOop*fieldIndex) r: object R: object.
+	cogit ssPushRegister: object
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genLcStore: value object: object at: fieldIndex [
+	<option: #LowcodeVM>
+	cogit AddCq: 8 R: object.
+	cogit MoveR: value Xwr: fieldIndex R: object.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genLcStore: value object: object field: fieldIndex [
+	<option: #LowcodeVM>
+	cogit MoveR: value Mw: 8 + (fieldIndex * BytesPerOop) r: object.
+]
+
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationForSpur >> genNewArrayOfSize: size initialized: initialized [
+	"Generate a call to code that allocates a new Array of size.
+	 The Array should be initialized with nils iff initialized is true.
+	 The size arg is passed in SendNumArgsReg, the result
+	 must come back in ReceiverResultReg."
+	| header skip |
+	<var: #skip type: #'AbstractInstruction *'>
+	self assert: size < objectMemory numSlotsMask.
+	header := objectMemory
+					headerForSlots: size
+					format: objectMemory arrayFormat
+					classIndex: ClassArrayCompactIndex.
+	cogit MoveAw: objectMemory freeStartAddress R: ReceiverResultReg.
+	self genStoreHeader: header intoNewInstance: ReceiverResultReg using: TempReg.
+	(initialized and: [size > 0]) ifTrue:
+		[cogit genMoveConstant: objectMemory nilObject R: TempReg.
+		 0 to: size - 1 do:
+			[:i| cogit MoveR: TempReg
+					Mw: i * objectMemory wordSize + objectMemory baseHeaderSize
+					r: ReceiverResultReg]].
+	cogit
+		LoadEffectiveAddressMw: (objectMemory smallObjectBytesForSlots: size) r: ReceiverResultReg R: TempReg;
+		MoveR: TempReg Aw: objectMemory freeStartAddress;
+		CmpCq: objectMemory getScavengeThreshold R: TempReg.
+	skip := cogit JumpBelow: 0.
+	cogit CallRT: ceScheduleScavengeTrampoline.
+	skip jmpTarget: cogit Label.
+	^0
+]
+
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> genNewHashTrampoline: saveRegs called: name [
+	"In non sista VM this is used only from the identityHash primitive, hence only the result of the trampoline, the hash, should be in ReceiverResultReg, other registers can just be ignored.
+	In the sista VM, the inlined hash operation requires registers to be saved"
+	<inline: true>
+	^cogit
+		genTrampolineFor: #ceNewHashOf:
+		called: name
+		numArgs: 1
+		arg: ReceiverResultReg
+		arg: nil
+		arg: nil
+		arg: nil
+		regsToSave: (saveRegs
+						ifTrue: [CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg)]
+						ifFalse: [cogit emptyRegisterMask])
+		pushLinkReg: true
+		resultReg: ReceiverResultReg
+		appendOpcodes: false
+]
+
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationForSpur >> genNoPopCreateClosureAt: bcpc numArgs: numArgs numCopied: numCopied contextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock [
+	"Create a closure with the given startpc, numArgs and numCopied
+	 within a context with ctxtNumArgs, large if isLargeCtxt that is in a
+	 block if isInBlock.  Do /not/ initialize the copied values."
+	| numSlots byteSize header skip |
+	<var: #skip type: #'AbstractInstruction *'>
+
+	"First get thisContext into ReceiverResultRega and thence in ClassReg."
+	self genGetActiveContextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock.
+	cogit MoveR: ReceiverResultReg R: ClassReg.
+
+	numSlots := ClosureFirstCopiedValueIndex + numCopied.
+	byteSize := objectMemory smallObjectBytesForSlots: numSlots.
+	header := objectMemory
+					headerForSlots: numSlots
+					format: objectMemory indexablePointersFormat
+					classIndex: ClassBlockClosureCompactIndex.
+	cogit MoveAw: objectMemory freeStartAddress R: ReceiverResultReg.
+	self genStoreHeader: header intoNewInstance: ReceiverResultReg using: TempReg.
+	cogit
+		LoadEffectiveAddressMw: byteSize r: ReceiverResultReg R: TempReg;
+		MoveR: TempReg Aw: objectMemory freeStartAddress;
+		CmpCq: objectMemory getScavengeThreshold R: TempReg.
+	skip := cogit JumpBelow: 0.
+	cogit CallRT: ceScheduleScavengeTrampoline.
+	skip jmpTarget: cogit Label.
+
+	cogit
+		MoveR: ClassReg Mw: ClosureOuterContextIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize r: ReceiverResultReg;
+		MoveCq: (objectMemory integerObjectOf: bcpc) R: TempReg;
+		MoveR: TempReg Mw: ClosureStartPCIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize r: ReceiverResultReg;
+		MoveCq: (objectMemory integerObjectOf: numArgs) R: TempReg;
+		MoveR: TempReg Mw: ClosureNumArgsIndex * objectMemory bytesPerOop + objectMemory baseHeaderSize r: ReceiverResultReg.
+	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveAsCharacter [
+	| reg jumpNotInt jumpOutOfRange |
+	<var: 'jumpNotInt' type: #'AbstractInstruction *'>
+	<var: 'jumpOutOfRange' type: #'AbstractInstruction *'>
+	cogit methodNumArgs = 0
+		ifTrue: [reg := ReceiverResultReg]
+		ifFalse:
+			[cogit methodNumArgs > 1 ifTrue:
+				[^UnimplementedPrimitive].
+			 reg := Arg0Reg.
+			 cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+			 jumpNotInt := self genJumpNotSmallInteger: reg scratchReg: TempReg].
+	cogit MoveR: reg R: TempReg.
+	self genConvertSmallIntegerToIntegerInReg: TempReg.
+	jumpOutOfRange := self jumpNotCharacterUnsignedValueInRegister: TempReg.
+	self genConvertSmallIntegerToCharacterInReg: reg.
+	reg ~= ReceiverResultReg ifTrue:
+		[cogit MoveR: reg R: ReceiverResultReg].
+	cogit genPrimReturn.
+	jumpOutOfRange jmpTarget: cogit Label.
+	reg ~= ReceiverResultReg ifTrue:
+		[jumpNotInt jmpTarget: jumpOutOfRange getJmpTarget].
+	^CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveIdenticalOrNotIf: orNot [
+	| jumpCmp comp |
+	<var: #jumpCmp type: #'AbstractInstruction *'>
+	<var: #comp type: #'AbstractInstruction *'>
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	comp := cogit CmpR: Arg0Reg R: ReceiverResultReg.
+	orNot
+		ifTrue: 
+			[ jumpCmp := cogit JumpZero: 0.
+			self genEnsureOopInRegNotForwarded: Arg0Reg scratchReg: TempReg jumpBackTo: comp ]
+		ifFalse: 
+			[ jumpCmp := cogit JumpNonZero: 0 ].
+	cogit genMoveTrueR: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpCmp jmpTarget: cogit Label.
+	orNot ifFalse: 
+		[ self genEnsureOopInRegNotForwarded: Arg0Reg scratchReg: TempReg jumpBackTo: comp ].
+	cogit genMoveFalseR: ReceiverResultReg.
+	cogit genPrimReturn.
+	^UnfailingPrimitive
+
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveIdentityHash [
+	self subclassResponsibility
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveImmediateAsInteger [
+	self subclassResponsibility
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveObjectAt [
+	| headerReg jumpBadIndex jumpBounds jumpNotHeaderIndex |
+	<var: #jumpBounds type: #'AbstractInstruction *'>
+	<var: #jumpBadIndex type: #'AbstractInstruction *'>
+	<var: #jumpNotHeaderIndex type: #'AbstractInstruction *'>
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
+	jumpBadIndex := self genJumpNotSmallInteger: Arg0Reg scratchReg: TempReg.
+	self genGetMethodHeaderOf: ReceiverResultReg into: (headerReg := Arg1Reg) scratch: TempReg.
+	cogit CmpCq: (objectMemory integerObjectOf: 1) R: Arg0Reg.
+	jumpNotHeaderIndex := cogit JumpNonZero: 0.
+	cogit
+		MoveR: headerReg R: ReceiverResultReg;
+		genPrimReturn.
+	jumpNotHeaderIndex jmpTarget: (cogit
+		AndCq: (objectMemory integerObjectOf: coInterpreter alternateHeaderNumLiteralsMask) R: headerReg).
+	cogit
+		SubCq: (objectMemory integerObjectOf: 1) - objectMemory smallIntegerTag R: Arg0Reg;
+		CmpR: headerReg R: Arg0Reg.
+	jumpBounds := cogit JumpAbove: 0.
+
+	self genConvertSmallIntegerToIntegerInReg: Arg0Reg.
+	cogit
+		AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg0Reg;
+		MoveXwr: Arg0Reg R: ReceiverResultReg R: ReceiverResultReg;
+		genPrimReturn.
+
+	jumpBounds jmpTarget: (cogit
+		AddCq: (objectMemory integerObjectOf: 1) - objectMemory smallIntegerTag R: Arg0Reg).
+	jumpBadIndex jmpTarget: cogit Label.
+	^CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveSize [
+	| jumpImm jumpNotIndexable jumpIsContext |
+	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
+	<var: #jumpImm type: #'AbstractInstruction *'>
+	<var: #jumpIsContext type: #'AbstractInstruction *'>
+	<var: #jumpNotIndexable type: #'AbstractInstruction *'>
+	jumpImm := self genJumpImmediate: ReceiverResultReg.
+	self
+		genGetSizeOf: ReceiverResultReg
+		into: ClassReg
+		formatReg: SendNumArgsReg
+		scratchReg: TempReg
+		abortJumpsInto: [:jnx :jic| jumpNotIndexable := jnx. jumpIsContext := jic].
+	self genConvertIntegerToSmallIntegerInReg: ClassReg.
+	cogit MoveR: ClassReg R: ReceiverResultReg.
+	cogit genPrimReturn.
+	jumpImm jmpTarget: (jumpNotIndexable jmpTarget: (jumpIsContext jmpTarget: cogit Label)).
+	^CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStringReplace [
+	"replaceFrom: start to: stop with: replacement startingAt: repStart. 
+	
+	The primitive in the JIT tries to deal with two pathological cases, copy of arrays and byteStrings,
+	which often copies only a dozen of fields and where switching to the C runtime cost a lot.
+	
+	Based on heuristics on the method class, I generate a quick array path (typically for Array),
+	a quick byteString path (typically for ByteString, ByteArray and LargeInteger) or no quick 
+	path at all (Typically for Bitmap).
+	
+	The many tests to ensure that the primitive won't fail are not super optimised (multiple reloading
+	or stack arguments in registers) but this is still good enough and worth it since we're avoiding 
+	the Smalltalk to C stack switch. The tight copying loops are optimised. 
+	
+	It is possible to build a bigger version with the 2 different paths but I (Clement) believe this 
+	is too big machine code wise to be worth it."
+	
+	|arrayReg startReg stopReg replReg repStartReg jumpNotSmi1 jumpNotSmi2 jumpNotSmi3 jumpImm jumpEmpty jumpImmutable jumpOutOfBounds1 jumpOutOfBounds2 jumpOutOfBounds3 jumpOutOfBounds4 jumpIncorrectFormat1 jumpIncorrectFormat2 jumpIncorrectFormat3 jumpIncorrectFormat4 result jmpDestYoung jmpAlreadyRemembered instr jumpFinished adjust|
+	
+	<var: #jumpImm type: #'AbstractInstruction *'>
+	<var: #jumpEmpty type: #'AbstractInstruction *'>
+	<var: #jumpFinished type: #'AbstractInstruction *'>
+	<var: #jumpNotSmi1 type: #'AbstractInstruction *'>
+	<var: #jumpNotSmi2 type: #'AbstractInstruction *'>
+	<var: #jumpNotSmi3 type: #'AbstractInstruction *'>
+	<var: #jmpDestYoung type: #'AbstractInstruction *'>
+	<var: #jumpImmutable type: #'AbstractInstruction *'>
+	<var: #jumpOutOfBounds1 type: #'AbstractInstruction *'>
+	<var: #jumpOutOfBounds2 type: #'AbstractInstruction *'>
+	<var: #jumpOutOfBounds3 type: #'AbstractInstruction *'>
+	<var: #jumpOutOfBounds4 type: #'AbstractInstruction *'>
+	<var: #jumpIncorrectFormat1 type: #'AbstractInstruction *'>
+	<var: #jumpIncorrectFormat2 type: #'AbstractInstruction *'>
+	<var: #jumpIncorrectFormat3 type: #'AbstractInstruction *'>
+	<var: #jumpIncorrectFormat4 type: #'AbstractInstruction *'>
+	<var: #jmpAlreadyRemembered type: #'AbstractInstruction *'>
+	
+	"Can I generate a quick path for this method ?"
+	((cogit seemsToBeInstantiating: objectMemory arrayFormat)
+		or: [cogit seemsToBeInstantiating: objectMemory firstByteFormat]) ifFalse: [^UnimplementedPrimitive].
+	
+	"I redefine those name to ease program comprehension"
+	arrayReg := ReceiverResultReg.
+	startReg := Arg0Reg.
+	stopReg := Arg1Reg.
+	replReg := ClassReg.
+	repStartReg := SendNumArgsReg.
+	
+	"Load arguments in reg"
+	cogit genStackArgAt: 0 into: repStartReg.
+	cogit genStackArgAt: 1 into: replReg.
+	cogit genStackArgAt: 2 into: stopReg.
+	cogit genStackArgAt: 3 into: startReg.
+
+	"start,stop,repStart Smis or fail the primitive"
+	jumpNotSmi1 := self genJumpNotSmallInteger: repStartReg scratchReg: TempReg.
+	jumpNotSmi2 := self genJumpNotSmallInteger: stopReg scratchReg: TempReg.
+	jumpNotSmi3 := self genJumpNotSmallInteger: startReg scratchReg: TempReg.
+	"repl non immediate or fail the primitive"
+	jumpImm := self genJumpImmediate: replReg.
+	
+	"if start>stop primitive success"
+	cogit CmpR: startReg R: stopReg.
+	jumpEmpty := cogit JumpLess: 0.
+	
+	"If receiver immutable fail the primitive "
+	self
+		cppIf: IMMUTABILITY
+		ifTrue: [jumpImmutable := self genJumpImmutable: ReceiverResultReg scratchReg: TempReg].
+		
+	"0 >= start, fail"
+	cogit CmpCq: (objectMemory integerObjectOf: 0) R: startReg.
+	jumpOutOfBounds1 := cogit JumpLessOrEqual: 0.
+	
+	"0 >= replStart, fail"
+	cogit CmpCq: (objectMemory integerObjectOf: 0) R: repStartReg.
+	jumpOutOfBounds2 := cogit JumpLessOrEqual: 0.
+
+	"--- Pointer object version ---"
+	(cogit seemsToBeInstantiating: objectMemory arrayFormat) ifTrue:
+		["Are they both array format ?"
+		self genGetFormatOf: arrayReg into: TempReg.
+		self genGetFormatOf: replReg into: startReg.
+		cogit CmpCq: objectMemory arrayFormat R: startReg.
+		jumpIncorrectFormat1 := cogit JumpNonZero: 0.
+		cogit CmpCq: objectMemory arrayFormat R: TempReg.
+		jumpIncorrectFormat2 := cogit JumpNonZero: 0.
+	
+		"Both objects are arrays,"
+		self genGetNumSlotsOf: arrayReg into: TempReg.
+		self genConvertSmallIntegerToIntegerInReg: stopReg.
+	
+		"arr size < stop"
+		cogit CmpR: TempReg R: stopReg.
+		jumpOutOfBounds3 := cogit JumpGreater: 0.
+	
+		"rep size < repStart - start + stop"
+		self genGetNumSlotsOf: replReg into: TempReg.
+		cogit genStackArgAt: 3 into: startReg.
+		self genConvertSmallIntegerToIntegerInReg: startReg.
+		self genConvertSmallIntegerToIntegerInReg: repStartReg.
+		cogit SubR: startReg R: stopReg.
+		cogit AddR: repStartReg R: stopReg.
+		"stopReg: stop - start + repStart"
+		cogit CmpR: TempReg R: stopReg.
+		jumpOutOfBounds4 := cogit JumpGreater: 0.
+	
+		"Everything in bounds"
+		"PossibleRemembered object"
+		cogit MoveCw: objectMemory storeCheckBoundary R: TempReg.
+		cogit CmpR: TempReg R: arrayReg.
+		jmpDestYoung := cogit JumpBelow: 0.
+		self checkRememberedInTrampoline ifFalse: 
+			[jmpAlreadyRemembered := self genCheckRememberedBitOf: arrayReg scratch: TempReg].
+		self callStoreCheckTrampoline.
+		jmpDestYoung jmpTarget: cogit Label.
+		self checkRememberedInTrampoline ifFalse: 
+			[jmpAlreadyRemembered jmpTarget: cogit Label].
+	
+		"Copy the array"
+		cogit genStackArgAt: 2 into: stopReg.
+		self genConvertSmallIntegerToIntegerInReg: stopReg.
+		"shift by baseHeaderSize and then move from 1 relative to zero relative"
+		adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. 
+		adjust ~= 0 ifTrue: 
+			[ cogit AddCq: adjust R: startReg. 
+			  cogit AddCq: adjust R: stopReg. 
+			  cogit AddCq: adjust R: repStartReg. ].
+	
+		instr := cogit CmpR: startReg R: stopReg.
+		jumpFinished := cogit JumpBelow: 0.
+		cogit MoveXwr: repStartReg R: replReg R: TempReg.
+		cogit MoveR: TempReg Xwr: startReg R: arrayReg.
+		cogit AddCq: 1 R: startReg.
+		cogit AddCq: 1 R: repStartReg.
+		cogit Jump: instr.
+		jumpFinished jmpTarget: (jumpEmpty jmpTarget: cogit genPrimReturn).
+	
+		"CANNOT REACH by falling though"
+	
+		jumpIncorrectFormat1 jmpTarget: (jumpIncorrectFormat2 jmpTarget: cogit Label)].
+	
+	"--- Byte object version ---"
+	(cogit seemsToBeInstantiating: objectMemory firstByteFormat) ifTrue:
+		["Are they both byte array format ? CompiledMethod excluded"
+		self genGetFormatOf: arrayReg into: TempReg.
+		self genGetFormatOf: replReg into: repStartReg.
+		cogit CmpCq: objectMemory firstByteFormat R: repStartReg.
+		jumpIncorrectFormat1 := cogit JumpLess: 0.
+		cogit CmpCq: objectMemory firstCompiledMethodFormat R: repStartReg.
+		jumpIncorrectFormat2 := cogit JumpGreaterOrEqual: 0.
+		cogit CmpCq: objectMemory firstByteFormat R: TempReg.
+		jumpIncorrectFormat3 := cogit JumpLess: 0.
+		cogit CmpCq: objectMemory firstCompiledMethodFormat R: TempReg.
+		jumpIncorrectFormat4 := cogit JumpGreaterOrEqual: 0.
+		
+		"Both objects are byte arrays"
+		self genGetNumSlotsOf: arrayReg into: startReg.
+		(cogit LogicalShiftLeftCq: objectMemory shiftForWord R: startReg).
+		cogit AndCq: objectMemory wordSize - 1 R: TempReg R: TempReg.
+		cogit SubR: TempReg R: startReg.
+		self genConvertSmallIntegerToIntegerInReg: stopReg.
+	
+		"arr size < stop"
+		cogit CmpR: startReg R: stopReg.
+		jumpOutOfBounds3 := cogit JumpGreater: 0.
+	
+		"rep size < repStart - start + stop"
+		cogit MoveR: repStartReg R: TempReg. "TempReg holds repl format"
+		cogit genStackArgAt: 0 into: repStartReg.
+		cogit genStackArgAt: 3 into: startReg.
+		self genConvertSmallIntegerToIntegerInReg: startReg.
+		self genConvertSmallIntegerToIntegerInReg: repStartReg.
+		cogit SubR: startReg R: stopReg.
+		cogit AddR: repStartReg R: stopReg.
+		
+		self genGetNumSlotsOf: replReg into: startReg.
+		(cogit LogicalShiftLeftCq: objectMemory shiftForWord R: startReg).
+		cogit AndCq: objectMemory wordSize - 1 R: TempReg R: TempReg.
+		cogit SubR: TempReg R: startReg.
+		
+		"stopReg: stop - start + repStart"
+		cogit CmpR: startReg R: stopReg.
+		jumpOutOfBounds4 := cogit JumpGreater: 0.
+	
+		"Everything in bounds"
+		"Copy the bytes"
+		cogit genStackArgAt: 3 into: startReg.
+		self genConvertSmallIntegerToIntegerInReg: startReg.
+		cogit genStackArgAt: 2 into: stopReg.
+		self genConvertSmallIntegerToIntegerInReg: stopReg.
+		"shift by baseHeaderSize and then move from 1 relative to zero relative"
+		adjust := objectMemory baseHeaderSize - 1.
+		adjust ~= 0 ifTrue: 
+			[ cogit AddCq: adjust R: startReg. 
+			  cogit AddCq: adjust R: stopReg. 
+			  cogit AddCq: adjust R: repStartReg. ].
+	
+		instr := cogit CmpR: startReg R: stopReg.
+		jumpFinished := cogit JumpBelow: 0.
+		cogit MoveXbr: repStartReg R: replReg R: TempReg.
+		cogit MoveR: TempReg Xbr: startReg R: arrayReg.
+		cogit AddCq: 1 R: startReg.
+		cogit AddCq: 1 R: repStartReg.
+		cogit Jump: instr.
+		jumpFinished jmpTarget: (jumpEmpty jmpTarget: cogit genPrimReturn).
+	
+		"CANNOT REACH by falling though"
+	
+		jumpIncorrectFormat4 
+			jmpTarget: (jumpIncorrectFormat3 
+				jmpTarget: (jumpIncorrectFormat2 
+					jmpTarget: (jumpIncorrectFormat1 jmpTarget: cogit Label)))].
+
+	(result := cogit compileInterpreterPrimitive) < 0 ifTrue: [^result].
+	
+	jumpImm 
+		jmpTarget: (jumpNotSmi1
+				jmpTarget: (jumpNotSmi2
+						jmpTarget: (jumpNotSmi3 jmpTarget: cogit Label))).
+	jumpOutOfBounds1 
+		jmpTarget: (jumpOutOfBounds2 
+			jmpTarget: (jumpOutOfBounds3 
+				jmpTarget: (jumpOutOfBounds4 
+					jmpTarget: jumpImm getJmpTarget))).
+	self
+		cppIf: IMMUTABILITY
+		ifTrue: [jumpImmutable jmpTarget: jumpImm getJmpTarget].
+
+	^ CompletePrimitive
 ]
 
 { #category : #'compile abstract instructions' }
@@ -669,15 +1819,18 @@ CogObjectRepresentationForSpur >> genSetCharacterTagsIn: reg [
 	cogit OrCq: objectMemory characterTag R: reg
 ]
 
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genSetSmallIntegerTagsIn: scratchReg [
-	self subclassResponsibility
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genSetGCNeeded [
+	<inline: true>
+	cogit
+		MoveCq: 1 R: TempReg;
+		MoveR: TempReg Aw: objectMemory needGCFlagAddress
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genSpecialSelectorEqualsEqualsGuts [
-	< inline: true >
-	^ cogit genSpecialSelectorEqualsEqualsWithForwarders
+CogObjectRepresentationForSpur >> genSetSmallIntegerTagsIn: scratchReg [
+	cogit OrCq: 1 R: scratchReg.
+	^0
 ]
 
 { #category : #initialization }
@@ -698,15 +1851,13 @@ CogObjectRepresentationForSpur >> genStoreCheckContextReceiverTrampoline [
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genStoreCheckReceiverReg: destReg valueReg: valueReg scratchReg: scratchReg inFrame: inFrame [
 	"Generate the code for a store check of valueReg into destReg."
-	| jmpImmediate jmpDestYoung jmpSourceOld jmpAlreadyRemembered mask rememberedBitByteOffset |
+	| jmpImmediate jmpDestYoung jmpSourceOld jmpAlreadyRemembered |
 	<var: #jmpImmediate type: #'AbstractInstruction *'>
 	<var: #jmpDestYoung type: #'AbstractInstruction *'>
 	<var: #jmpSourceOld type: #'AbstractInstruction *'>
 	<var: #jmpAlreadyRemembered type: #'AbstractInstruction *'>
-	"Is value stored an integer?  If so we're done"
-	cogit MoveR: valueReg R: scratchReg.
-	cogit AndCq: objectMemory tagMask R: scratchReg.
-	jmpImmediate := cogit JumpNonZero: 0.
+	"Is value stored an immediate?  If so we're done"
+	jmpImmediate := self genJumpImmediate: valueReg.
 	"Get the old/new boundary in scratchReg"
 	cogit MoveCw: objectMemory storeCheckBoundary R: scratchReg.
 	"Is target young?  If so we're done"
@@ -716,74 +1867,263 @@ CogObjectRepresentationForSpur >> genStoreCheckReceiverReg: destReg valueReg: va
 	cogit CmpR: scratchReg R: valueReg. "N.B. FLAGS := valueReg - scratchReg"
 	jmpSourceOld := cogit JumpAboveOrEqual: 0.
 	"value is young and target is old.
-	 Need to remember this only if the remembered bit is not already set.
-	 Test the remembered bit.  Only need to fetch the byte containing it,
-	 which reduces the size of the mask constant."
-	rememberedBitByteOffset := jmpSourceOld isBigEndian
-									ifTrue: [objectMemory baseHeaderSize - 1 - (objectMemory rememberedBitShift // 8)]
-									ifFalse:[objectMemory rememberedBitShift // 8].
-	mask := 1 << (objectMemory rememberedBitShift \\ 8).
-	cogit MoveMb: rememberedBitByteOffset r: destReg R: scratchReg.
-	cogit AndCq: mask R: scratchReg.
-	jmpAlreadyRemembered := cogit JumpNonZero: 0.
+	 Need to remember this only if the remembered bit is not already set."
+	CheckRememberedInTrampoline ifFalse:
+		[jmpAlreadyRemembered := self genCheckRememberedBitOf: destReg scratch: scratchReg].
 	"Remembered bit is not set.  Call store check to insert dest into remembered table."
-	self assert: destReg == ReceiverResultReg.
-	inFrame
-		ifTrue:
-			[cogit
-				CallRT: ceStoreCheckTrampoline
-				registersToBeSavedMask: (((cogit registerMaskFor: valueReg)
-												bitOr: cogit callerSavedRegMask)
-												bitClear: (cogit registerMaskFor: ReceiverResultReg))]
-		ifFalse:
-			[cogit backEnd saveAndRestoreLinkRegAround:
-				[cogit
-					CallRT: ceStoreCheckTrampoline
-					registersToBeSavedMask: (((cogit registerMaskFor: valueReg)
-													bitOr: cogit callerSavedRegMask)
-													bitClear: (cogit registerMaskFor: ReceiverResultReg))]].
+	self assert: destReg = ReceiverResultReg.
+	cogit 
+		evaluateTrampolineCallBlock: [cogit CallRT: ceStoreCheckTrampoline]
+		protectLinkRegIfNot: inFrame.
 	jmpImmediate jmpTarget:
 	(jmpDestYoung jmpTarget:
 	(jmpSourceOld jmpTarget:
-	(jmpAlreadyRemembered jmpTarget:
-		cogit Label))).
+		cogit Label)).
+	CheckRememberedInTrampoline ifFalse:
+		[jmpAlreadyRemembered jmpTarget: jmpSourceOld getJmpTarget].
 	^0
 ]
 
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genStoreImmediateInSourceReg: sourceReg slotIndex: index destReg: destReg [
-	cogit MoveR: sourceReg
-		   Mw: index * objectMemory wordSize + objectMemory baseHeaderSize
-		   r: destReg.
-	^0
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> genStoreCheckTrampoline [
+	| jumpSC |
+	<var: #jumpSC type: #'AbstractInstruction *'>
+	<inline: true>
+	CheckRememberedInTrampoline ifTrue:
+		[cogit zeroOpcodeIndex.
+		 jumpSC := self genCheckRememberedBitOf: ReceiverResultReg scratch: cogit backEnd cResultRegister.
+		 self assert: jumpSC opcode = JumpNonZero.
+		 jumpSC opcode: JumpZero.
+		 cogit RetN: 0.
+		 jumpSC jmpTarget: cogit Label].
+	^cogit
+		genTrampolineFor: #remember:
+		called: 'ceStoreCheckTrampoline'
+		numArgs: 1
+		arg: ReceiverResultReg
+		arg: nil
+		arg: nil
+		arg: nil
+		regsToSave: (CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
+		pushLinkReg: true
+		resultReg: cogit returnRegForStoreCheck
+		appendOpcodes: CheckRememberedInTrampoline
+]
+
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> genStoreHeader: header intoNewInstance: rcvrReg using: scratchReg [
+	"Generate the instructions to move the constant header into a new instance pointed to by rcvrReg."
+	<inline: true>
+	self subclassResponsibility
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genStoreSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg [
+CogObjectRepresentationForSpur >> genStoreSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg inFrame: inFrame needsStoreCheck: needsStoreCheck [
+	
+	cogit genTraceStores.
 	"do the store"
 	cogit MoveR: sourceReg
 		   Mw: index * objectMemory wordSize + objectMemory baseHeaderSize
 		   r: destReg.
-	"now the check"
-	^self genStoreCheckReceiverReg: destReg valueReg: sourceReg scratchReg: scratchReg inFrame: true
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSpur >> genStoreSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg inFrame: inFrame [
-	"do the store"
-	cogit MoveR: sourceReg
-		   Mw: index * objectMemory wordSize + objectMemory baseHeaderSize
-		   r: destReg.
-	"now the check"
-	^self genStoreCheckReceiverReg: destReg valueReg: sourceReg scratchReg: scratchReg inFrame: inFrame
+	"now the check. needStoreCheck is false if the JIT has figured out that the value stored does not need the check (immediate, nil, true, false)"
+	needsStoreCheck ifTrue: 
+		[ ^ self 
+			genStoreCheckReceiverReg: destReg 
+			valueReg: sourceReg 
+			scratchReg: scratchReg 
+			inFrame: inFrame ].
+	^ 0
 ]
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genStoreSourceReg: sourceReg slotIndex: index intoNewObjectInDestReg: destReg [
+	"This method is used for unchecked stores in objects after their creation (typically, inlined creation of Array, closures and some temp vectors). 
+	Currently there is no need to do the immutability check here"
 	cogit MoveR: sourceReg
 		   Mw: index * objectMemory wordSize + objectMemory baseHeaderSize
 		   r: destReg.
 	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genStoreTrampolineCall: instVarIndex [
+	<inline: true>
+	instVarIndex >= (NumStoreTrampolines - 1)
+		ifTrue: 
+			[ cogit MoveCq: instVarIndex R: TempReg.
+			  cogit CallRT: (ceStoreTrampolines at: NumStoreTrampolines - 1) ]
+		ifFalse: 
+			[ cogit CallRT: (ceStoreTrampolines at: instVarIndex) ].
+	 cogit annotateBytecode: cogit Label
+]
+
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> genStoreTrampolineCalled: trampolineName instVarIndex: instVarIndex [
+	"Convention:
+	- RcvrResultReg holds the object mutated.
+	If immutability failure:
+	- TempReg holds the instance variable index mutated 
+		if instVarIndex > numDedicatedStoreTrampoline
+	- ClassReg holds the value to store
+	Registers are not lived across this trampoline as the 
+	immutability failure may need new stack frames."
+	
+	| jumpSC jumpRC |
+	<option: #IMMUTABILITY>
+	<var: #trampolineName type: #'char *'>
+	<var: #jumpSC type: #'AbstractInstruction *'>
+	<var: #jumpRC type: #'AbstractInstruction *'>
+	<inline: false>
+	cogit zeroOpcodeIndex.
+	"SendNumArgsReg is mutated but we don't care as register are not live across the trampoline.
+	 There is no reason why registers cannot be saved over the remember: call, but since the
+	 immutability check is a suspension point, registers cannot remain live."
+	jumpSC := self genJumpMutable: ReceiverResultReg scratchReg: SendNumArgsReg.
+	cogit
+		compileTrampolineFor: #ceCannotAssignTo:withIndex:valueToAssign:
+		numArgs: 3
+		arg: ReceiverResultReg
+		arg: (instVarIndex < (NumStoreTrampolines - 1)
+				ifTrue: [cogit trampolineArgConstant: instVarIndex]
+				ifFalse: [TempReg])
+		arg: ClassReg
+		arg: nil
+		regsToSave: cogit emptyRegisterMask
+		pushLinkReg: true
+		resultReg: NoReg.
+		
+	"Store check"
+	jumpSC jmpTarget: cogit Label.
+	"If on 64-bits and doing the remembered bit test here, we can combine the tests to fetch the header once."
+	CheckRememberedInTrampoline ifTrue:
+		[objectMemory wordSize = 8
+			ifTrue:
+				[cogit TstCq: 1 << objectMemory rememberedBitShift R: SendNumArgsReg.
+				 jumpRC := cogit JumpZero: 0.
+				 cogit RetN: 0]
+			ifFalse:
+				[jumpRC := self genCheckRememberedBitOf: ReceiverResultReg scratch: SendNumArgsReg.
+				 self assert: jumpRC opcode = JumpNonZero.
+				 jumpRC opcode: JumpZero.
+				 cogit RetN: 0].
+		 jumpRC jmpTarget: cogit Label].
+	^ cogit genTrampolineFor: #remember:
+		called: trampolineName
+		numArgs: 1
+		arg: ReceiverResultReg
+		arg: nil
+		arg: nil
+		arg: nil
+		regsToSave: cogit emptyRegisterMask
+		pushLinkReg: true
+		resultReg: NoReg
+		appendOpcodes: true
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genStoreWithImmutabilityAndStoreCheckSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg needRestoreRcvr: needRestoreRcvr [ 
+	"Store check code is duplicated to use a single trampoline"
+	<option: #IMMUTABILITY>
+	| immutableJump jmpImmediate jmpDestYoung jmpSourceOld jmpAlreadyRemembered |
+	<var: #immutableJump type: #'AbstractInstruction *'>
+	<var: #jmpImmediate type: #'AbstractInstruction *'>
+	<var: #jmpDestYoung type: #'AbstractInstruction *'>
+	<var: #jmpSourceOld type: #'AbstractInstruction *'>
+	<var: #jmpAlreadyRemembered type: #'AbstractInstruction *'>
+
+	immutableJump := self genJumpImmutable: destReg scratchReg: scratchReg.
+	
+	cogit genTraceStores.
+	
+	"do the store"
+	cogit MoveR: sourceReg
+		   Mw: index * objectMemory wordSize + objectMemory baseHeaderSize
+		   r: destReg.
+	
+	"store check"
+	jmpImmediate := self genJumpImmediate: sourceReg.
+	"Get the old/new boundary in scratchReg"
+	cogit MoveCw: objectMemory storeCheckBoundary R: scratchReg.
+	"Is target young?  If so we're done"
+	cogit CmpR: scratchReg R: destReg. "N.B. FLAGS := destReg - scratchReg"
+	jmpDestYoung := cogit JumpBelow: 0.
+	"Is value stored old?  If so we're done."
+	cogit CmpR: scratchReg R: sourceReg. "N.B. FLAGS := valueReg - scratchReg"
+	jmpSourceOld := cogit JumpAboveOrEqual: 0.
+	"value is young and target is old.
+	 Need to remember this only if the remembered bit is not already set."
+	CheckRememberedInTrampoline ifFalse:
+		[jmpAlreadyRemembered := self genCheckRememberedBitOf: destReg scratch: scratchReg].
+	"Set the inst var index for the benefit of the immutability check. The trampoline will
+	 repeat the check to choose between the immutbality violation and the store check."
+	immutableJump jmpTarget: cogit Label.
+	self genStoreTrampolineCall: index.
+	needRestoreRcvr ifTrue: [ cogit putSelfInReceiverResultReg ].
+
+	jmpImmediate jmpTarget:
+	(jmpDestYoung jmpTarget:
+	(jmpSourceOld jmpTarget:
+		cogit Label)).
+	CheckRememberedInTrampoline ifFalse:
+		[jmpAlreadyRemembered jmpTarget: jmpSourceOld getJmpTarget].
+	^ 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genStoreWithImmutabilityButNoStoreCheckSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg needRestoreRcvr: needRestoreRcvr [
+	"Gen an immutability check with no store check (e.g. assigning an immediate literal)"
+	<option: #IMMUTABILITY>
+	<var: #mutableJump type: #'AbstractInstruction *'>
+	<var: #immutabilityFailure type: #'AbstractInstruction *'>
+	| immutabilityFailure mutableJump |
+	
+	"imm check has its own trampoline"
+	mutableJump := self genJumpMutable: destReg scratchReg: scratchReg.
+	self genStoreTrampolineCall: index.
+	needRestoreRcvr ifTrue: [ cogit putSelfInReceiverResultReg ].
+	immutabilityFailure := cogit Jump: 0.
+	mutableJump jmpTarget: cogit Label.
+
+	cogit genTraceStores.
+	
+	"do the store"
+	cogit MoveR: sourceReg
+		   Mw: index * objectMemory wordSize + objectMemory baseHeaderSize
+		   r: destReg.
+		
+	immutabilityFailure jmpTarget: cogit Label.
+
+	^ 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genStoreWithImmutabilityCheckSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg needsStoreCheck: needsStoreCheck needRestoreRcvr: needRestoreRcvr [
+	<option: #IMMUTABILITY>
+	"We know there is a frame as immutability check requires a frame"
+	"needRestoreRcvr has to be true to keep RcvrResultReg live with the receiver in it across the trampoline"
+	
+	"Trampoline convention..."
+	self assert: destReg == ReceiverResultReg.
+	self assert: scratchReg == TempReg.
+  	self assert: sourceReg == ClassReg.
+	
+	"The two paths are very different as the trampoline is shared in 1 case so we split here"
+	needsStoreCheck
+		ifTrue: 
+			[ self 
+				genStoreWithImmutabilityAndStoreCheckSourceReg: sourceReg 
+				slotIndex: index 
+				destReg: destReg 
+				scratchReg: scratchReg 
+				needRestoreRcvr: needRestoreRcvr ]
+		ifFalse: 
+			[ self 
+				genStoreWithImmutabilityButNoStoreCheckSourceReg: sourceReg 
+				slotIndex: index 
+				destReg: destReg 
+				scratchReg: scratchReg 
+				needRestoreRcvr: needRestoreRcvr ].
+	^ 0
 ]
 
 { #category : #initialization }
@@ -793,19 +2133,39 @@ CogObjectRepresentationForSpur >> generateObjectRepresentationTrampolines [
 	 it allows the code generator to reload ReceiverResultReg cheaply.
 	 In Spur the only thing we leave to the run-time is adding the receiver to the
 	 remembered set and setting its isRemembered bit."
-	ceStoreCheckTrampoline := cogit
-									genTrampolineFor: #remember:
-									called: 'ceStoreCheckTrampoline'
-									arg: ReceiverResultReg
-									result: cogit returnRegForStoreCheck.
+	self 
+		cppIf: IMMUTABILITY
+		ifTrue: 
+			[self cCode: [] inSmalltalk:
+				[ceStoreTrampolines := CArrayAccessor on: (Array new: NumStoreTrampolines)].
+			 0 to: NumStoreTrampolines - 1 do:
+				[:instVarIndex |
+				 ceStoreTrampolines
+					at: instVarIndex
+					put: (self 
+							genStoreTrampolineCalled: (cogit 
+															trampolineName: 'ceStoreTrampoline' 
+															numArgs: instVarIndex 
+															limit: NumStoreTrampolines - 2) 
+							instVarIndex: instVarIndex)]].
+	ceNewHashTrampoline := self genNewHashTrampoline: false called: 'ceNewHash'.
+	SistaVM ifTrue: [ceInlineNewHashTrampoline := self genNewHashTrampoline: true  called: 'ceInlineNewHash'].
+	ceStoreCheckTrampoline := self genStoreCheckTrampoline.
 	ceStoreCheckContextReceiverTrampoline := self genStoreCheckContextReceiverTrampoline.
 	ceScheduleScavengeTrampoline := cogit
-											genSafeTrampolineFor: #ceScheduleScavenge
-											called: 'ceScheduleScavengeTrampoline'.
-	ceSmallActiveContextInMethodTrampoline := self genActiveContextTrampolineLarge: false inBlock: false called: 'ceSmallMethodContext'.
-	ceSmallActiveContextInBlockTrampoline := self genActiveContextTrampolineLarge: false inBlock: true called: 'ceSmallBlockContext'.
-	ceLargeActiveContextInMethodTrampoline := self genActiveContextTrampolineLarge: true inBlock: false called: 'ceLargeMethodContext'.
-	ceLargeActiveContextInBlockTrampoline := self genActiveContextTrampolineLarge: true inBlock: true called: 'ceLargeBlockContext'
+											genTrampolineFor: #ceScheduleScavenge
+											called: 'ceScheduleScavengeTrampoline'
+											regsToSave: CallerSavedRegisterMask.
+	ceSmallActiveContextInMethodTrampoline := self genActiveContextTrampolineLarge: false inBlock: 0 called: 'ceSmallMethodContext'.
+	ceSmallActiveContextInBlockTrampoline := self genActiveContextTrampolineLarge: false inBlock: InVanillaBlock called: 'ceSmallBlockContext'.
+	SistaV1BytecodeSet ifTrue:
+		[ceSmallActiveContextInFullBlockTrampoline := self genActiveContextTrampolineLarge: false inBlock: InFullBlock called: 'ceSmallFullBlockContext'].
+	ceLargeActiveContextInMethodTrampoline := self genActiveContextTrampolineLarge: true inBlock: 0 called: 'ceLargeMethodContext'.
+	ceLargeActiveContextInBlockTrampoline := self genActiveContextTrampolineLarge: true inBlock: InVanillaBlock called: 'ceLargeBlockContext'.
+	SistaV1BytecodeSet ifTrue:
+		[ceLargeActiveContextInFullBlockTrampoline := self genActiveContextTrampolineLarge: true inBlock: InFullBlock called: 'ceLargeFullBlockContext'].
+		
+	LowcodeVM ifTrue: [ self generateLowcodeObjectTrampolines ]
 ]
 
 { #category : #'bytecode generator support' }
@@ -813,6 +2173,14 @@ CogObjectRepresentationForSpur >> getActiveContextAllocatesInMachineCode [
 	"Make sure SendNumArgsReg and ClassReg are available in addition to
 	 ReceiverResultReg and TempReg in genGetActiveContextNumArgs:large:inBlock:."
 	^true
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> getLiteralCountOf: methodReg plusOne: plusOne inBytes: inBytes into: litCountReg scratch: scratchReg [
+	"Get the literal count of a CompiledMethod into headerReg, plus one if requested.
+	  If inBytes is true, scale the count by the word size.  Deal with the possibility of
+	 the method being cogged."
+	self subclassResponsibility
 ]
 
 { #category : #testing }
@@ -836,7 +2204,6 @@ CogObjectRepresentationForSpur >> inlineCacheTagIsYoung: cacheTag [
 
 { #category : #'in-line cacheing' }
 CogObjectRepresentationForSpur >> inlineCacheTagsMayBeObjects [
-	<inline: true>
 	^false
 ]
 
@@ -847,27 +2214,8 @@ CogObjectRepresentationForSpur >> isSmallIntegerTagNonZero [
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> jumpNotCharacterUnsignedValueInRegister: reg [
-	cogit CmpCq: 16r3FFFFFFF R: reg.
+	cogit CmpCq: 1 << self numCharacterBits - 1 R: reg.
 	^cogit JumpAbove: 0
-]
-
-{ #category : #'garbage collection' }
-CogObjectRepresentationForSpur >> markAndTraceCacheTagLiteral: literal in: cogMethodOrNil atpc: address [
-	"Mark and trace a literal in an inline cache preceeding address in cogMethodOrNil.
-	 Answer if code was modified."
-	<var: #cogMethodOrNil type: #'CogMethod *'>
-	<var: #address type: #usqInt>
-	| objOop |
-	(self couldBeObject: literal) ifFalse:
-		[^false].
-	self assert: (objectMemory addressCouldBeObj: literal).
-	(objectMemory isForwarded: literal) ifFalse:
-		[objectMemory markAndTrace: literal.
-		 ^false].
-	objOop := objectMemory followForwarded: literal.
-	cogit backEnd rewriteInlineCacheTag: objOop at: address.
-	self markAndTraceUpdatedLiteral: objOop in: cogMethodOrNil.
-	^true
 ]
 
 { #category : #'garbage collection' }
@@ -896,7 +2244,7 @@ CogObjectRepresentationForSpur >> markAndTraceLiteral: literal in: cogMethod at:
 
 { #category : #'garbage collection' }
 CogObjectRepresentationForSpur >> markAndTraceLiteral: literal in: cogMethodOrNil atpc: address [
-	"Mark and trace a literal in a machine code instruction preceeding address in cogMethodOrNil.
+	"Mark and trace a literal in a machine code instruction preceding address in cogMethodOrNil.
 	 Answer if code was modified."
 	<var: #cogMethodOrNil type: #'CogMethod *'>
 	<var: #address type: #usqInt>
@@ -940,34 +2288,39 @@ CogObjectRepresentationForSpur >> markIfIRC: maybeIRCs [
 	 receiver caches for a method.  If so, map it back to an oop and mark it."
 	<var: #maybeIRCs type: #usqInt>
 	<option: #NewspeakVM>
+	<inline: true>
 	(self oop: maybeIRCs isGreaterThan: objectMemory nilObject) ifTrue:
 		[objectMemory markAndTrace: maybeIRCs - objectMemory baseHeaderSize]
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationForSpur >> maybeCompileRetry: retryInst onPrimitiveFail: primIndex [
-	<var: #retryInst type: #'AbstractInstruction *'>
-	"If primIndex has an accessorDepth, check for primitive failure and call
-	 ceCheckForAndFollowForwardedPrimitiveState if so  If ceCheck.... answers
-	 true, retry the primitive."
+CogObjectRepresentationForSpur >> maybeCompileRetryOnPrimitiveFail: primIndex [
+	"If primIndex has an accessorDepth and fails, or it is external and fails with PrimErrNoMemory,
+	 call ceCheckAndMaybeRetryPrimitive if so  If ceCheck.... answers true, retry the primitive."
 	| jmp |
 	<var: #jmp type: #'AbstractInstruction *'>
-	(coInterpreter accessorDepthForPrimitiveIndex: primIndex) < 0 ifTrue:
-		[^0].
-	cogit MoveAw: coInterpreter primFailCodeAddress R: TempReg.
-	cogit CmpCq: 0 R: TempReg.
-	jmp := cogit JumpZero: 0.
+	(coInterpreter accessorDepthForPrimitiveIndex: primIndex) >= 0
+		ifTrue:
+			[jmp := cogit
+				MoveAw: coInterpreter primFailCodeAddress R: TempReg;
+				CmpCq: 0 R: TempReg;
+				JumpZero: 0]
+		ifFalse:
+			[coInterpreter primNumberExternalCall ~= primIndex ifTrue:
+				[^0].
+			 jmp := cogit
+				MoveAw: coInterpreter primFailCodeAddress R: TempReg;
+				CmpCq: PrimErrNoMemory R: TempReg;
+				JumpNonZero: 0].
 	cogit
-		compileCallFor: #ceCheckForAndFollowForwardedPrimitiveState
-		numArgs: 0
-		arg: nil
+		compileCallFor: #ceCheckAndMaybeRetryPrimitive:
+		numArgs: 1
+		arg: (cogit trampolineArgConstant: primIndex)
 		arg: nil
 		arg: nil
 		arg: nil
 		resultReg: TempReg
-		saveRegs: false.
-	cogit CmpCq: 0 R: TempReg.
-	cogit JumpNonZero: retryInst.
+		regsToSave: cogit emptyRegisterMask.
 	jmp jmpTarget: cogit Label.
 	^0
 ]
@@ -977,7 +2330,7 @@ CogObjectRepresentationForSpur >> maybeMarkCounters: theCounters [
 	"In SIsta Spur counters are held on the heap in pinned objects which must be marked
 	 to avoid them being garbage collected.  This is the hook through which that happens."
 	<var: #theCounters type: #usqInt>
-	<option: #SistaStackToRegisterMappingCogit>
+	<option: #SistaCogit>
 	<inline: true>
 	theCounters ~= 0 ifTrue:
 		[objectMemory markAndTrace: theCounters - objectMemory baseHeaderSize]
@@ -992,6 +2345,56 @@ CogObjectRepresentationForSpur >> maybeNoteDescriptor: descriptor blockStart: bl
 	<inline: true>
 	descriptor isInstVarRef ifTrue:
 		[blockStart hasInstVarRef: true]
+]
+
+{ #category : #'method cacheing' }
+CogObjectRepresentationForSpur >> maybeShiftClassTagRegisterForMethodCacheProbe: classTagReg [
+	"Generate a shift of the register containing the class tag in a method cache probe.
+	 c.f. SpurMemoryManager>>methodCacheHashOf:with:"
+
+	cogit LogicalShiftLeftCq: 2 R: classTagReg.
+	^0
+]
+
+{ #category : #'sista support' }
+CogObjectRepresentationForSpur >> mixed: numNonImmediates branchIf: reg instanceOfBehaviors: arrayObj target: targetFixUp [
+	| jmpImmediate numCases classObj index jmp |
+	<var: #jmpImmediate type: #'AbstractInstruction *'>
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	<var: #jmp type: #'AbstractInstruction *'>
+	numCases := objectMemory numSlotsOf: arrayObj.
+	jmpImmediate := self genJumpImmediate: reg.
+	
+	"Rcvr is non immediate"
+	self genGetClassIndexOfNonImm: reg into: TempReg.
+	index := 0.
+	0 to: numCases - 1 do:
+		[:i|
+			classObj := objectMemory fetchPointer: i ofObject: arrayObj.
+			(objectMemory isImmediateClass: classObj) ifFalse: [
+				self genCmpClassIndex: (objectMemory classTagForClass: classObj) R: TempReg.
+				cogit JumpZero: targetFixUp.
+				index := index + 1 ] ].
+	jmp := cogit Jump: 0.
+	
+	"Rcvr is immediate"
+	jmpImmediate jmpTarget: cogit Label.
+	numCases - numNonImmediates "num Immediates allowed"
+		caseOf:
+		{[ 1 ] -> [ "1 immediate needs to jump. Find it and jump."
+			0 to: numCases - 1 do:
+				[ :j |
+				classObj := objectMemory fetchPointer: j ofObject: arrayObj.
+				(objectMemory isImmediateClass: classObj) ifTrue: [
+					self branchIf: reg hasImmediateTag: (objectMemory classTagForClass: classObj) target: targetFixUp ] ] ] .
+		[ 2 ] -> [ "2 immediates needs to jump"
+				self branch2CasesIf: reg instanceOfBehaviors: arrayObj target: targetFixUp ] .
+		[ 3 ] -> [ "all 3 needs to jump" self Jump: targetFixUp ] }.
+	
+	jmp jmpTarget: self Label.
+	
+	^ 0
+		
 ]
 
 { #category : #'sista support' }
@@ -1040,12 +2443,29 @@ CogObjectRepresentationForSpur >> mixed: numNonImmediates branchIf: reg notInsta
 ]
 
 { #category : #'sista support' }
+CogObjectRepresentationForSpur >> noneImmediateBranchIf: reg instanceOfBehaviors: arrayObj target: targetFixUp [
+	"All classes in arrayObj are not immediate"
+	| classObj jmp |
+	<var: #targetFixUp type: #'AbstractInstruction *'>
+	<var: #jmp type: #'AbstractInstruction *'>
+	jmp := self genJumpImmediate: reg.
+	self genGetClassIndexOfNonImm: reg into: TempReg.
+	0 to: (objectMemory numSlotsOf: arrayObj) - 1 do:
+		[:i|
+		 classObj := objectMemory fetchPointer: i ofObject: arrayObj.
+		 self genCmpClassIndex: (objectMemory classTagForClass: classObj) R: TempReg.
+		cogit JumpZero: targetFixUp ].
+	jmp jmpTarget: self Label.
+	^0
+]
+
+{ #category : #'sista support' }
 CogObjectRepresentationForSpur >> noneImmediateBranchIf: reg notInstanceOfBehaviors: arrayObj target: targetFixUp [
 	"All classes in arrayObj are not immediate"
 	| label numJumps jumps classObj |
-	<var: #targetFixUp type: #'AbstractInstruction *'>
 	<var: #label type: #'AbstractInstruction *'>
 	<var: #jumps type: #'AbstractInstruction **'>
+	<var: #targetFixUp type: #'AbstractInstruction *'>
 	jumps := self alloca: (objectMemory numSlotsOf: arrayObj) type: (self cCode: [#'AbstractInstruction *'] inSmalltalk: [cogit backEnd class]).
 	(self genJumpImmediate: reg) jmpTarget: targetFixUp.
 	self genGetClassIndexOfNonImm: reg into: TempReg.
@@ -1055,10 +2475,15 @@ CogObjectRepresentationForSpur >> noneImmediateBranchIf: reg notInstanceOfBehavi
 		 self genCmpClassIndex: (objectMemory classTagForClass: classObj) R: TempReg.
 		jumps at: i put: (cogit JumpZero: 0) ].
 	cogit Jump: targetFixUp.
-	label := self Label.
+	label := cogit Label.
 	0 to: numJumps - 1 do: [:i |
 		(jumps at: i) jmpTarget: label ].
 	^0
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> numCharacterBits [
+	^30
 ]
 
 { #category : #'calling convention' }
@@ -1073,12 +2498,12 @@ CogObjectRepresentationForSpur >> numRegArgs [
 	 at:receiver: do not have to be implemented in SimpleStackBasedCogit."
 	<api>
 	<option: #StackToRegisterMappingCogit>
-	<inline: true>
 	^2
 ]
 
 { #category : #'garbage collection' }
 CogObjectRepresentationForSpur >> remapObject: objOop [
+	self assert: (objectMemory addressCouldBeObj: objOop).
 	^(objectMemory shouldRemapObj: objOop)
 		ifTrue: [objectMemory remapObj: objOop]
 		ifFalse: [objOop]
@@ -1095,7 +2520,7 @@ CogObjectRepresentationForSpur >> remapOop: objOop [
 CogObjectRepresentationForSpur >> resetCountersIn: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
 	<api>
-	<option: #SistaStackToRegisterMappingCogit>
+	<option: #SistaCogit>
 	cogit fillInCounters: (self numCountersFor: cogMethod counters) atStartAddress: cogMethod counters
 ]
 

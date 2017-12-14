@@ -63,6 +63,7 @@ Class {
 		'NumOperands'
 	],
 	#pools : [
+		'CogAbstractRegisters',
 		'CogCompilationConstants',
 		'CogRTLOpcodes'
 	],
@@ -78,10 +79,14 @@ CogAbstractInstruction class >> ISA [
 { #category : #'simulation only' }
 CogAbstractInstruction class >> byteSizeForSimulator: aVMClass [
 	"Answer an approximation of the byte size of an AbstractInstruction struct.
-	 This is for estimating the alloca in allocateOpcodes:bytecodes:ifFail:"
+	 This is for estimating the alloca in allocateOpcodes:bytecodes:ifFail:
+	 self allSubclasses collect: [:ea| {ea. ea byteSizeForSimulator: ea basicNew}]"
 	| ptrsize |
-	ptrsize := aVMClass sizeof: #'void *'.
-	^CogCompilerClass instSize - 4 "cogit, objectMemory et al" * ptrsize
+	ptrsize := self == CogAbstractInstruction ifTrue: [BytesPerWord] ifFalse: [self wordSize].
+	^CogCompilerClass instSize
+		- 4 "cogit, objectMemory, bcpc, machineCode"
+		- 4 + 1
+	"opcode machineCodeSize maxSize annotation are all bytes -> 1 long" * ptrsize
 	+ CogCompilerClass basicNew machineCodeBytes
 		roundTo: ptrsize
 ]
@@ -89,6 +94,12 @@ CogAbstractInstruction class >> byteSizeForSimulator: aVMClass [
 { #category : #translation }
 CogAbstractInstruction class >> defaultCompilerClass [
 	^self
+]
+
+{ #category : #translation }
+CogAbstractInstruction class >> filteredInstVarNames [
+	"Eliminate bcpc, which is development-time only."
+	^super filteredInstVarNames copyWithout: 'bcpc'
 ]
 
 { #category : #'instance creation' }
@@ -103,28 +114,70 @@ CogAbstractInstruction class >> identifyingPredefinedMacros [
 	^nil
 ]
 
+{ #category : #translation }
+CogAbstractInstruction class >> ifTranslateableAddWithOptionsTo: aCollection [
+	(self wordSize = Cogit objectMemoryClass wordSize
+	 and: [self identifyingPredefinedMacros notNil]) ifTrue:
+		[aCollection add: {self. {#ISA. self ISA}}]
+]
+
 { #category : #'class initialization' }
 CogAbstractInstruction class >> initialize [
 	NumOperands := 3
 ]
 
+{ #category : #'class initialization' }
+CogAbstractInstruction class >> initializeAbstractRegisters [
+	"Assign the abstract registers with the identities/indices of the relevant concrete registers,
+	 and assign CallerSavedRegisterMask appropriately.
+	 First set all abstract registers to #undefined via CogAbstractRegisters initialize, and then,
+	 each subclasses assigns the subset they choose with values of specific concrete registers."
+	CallerSavedRegisterMask := #undefined.
+	CogAbstractRegisters initialize
+]
+
+{ #category : #'class initialization' }
+CogAbstractInstruction class >> initializeSpecificOpcodes: opcodeSymbolSequence in: initializeMethod [
+	"Declare as class variables, the opcodes in opcodeSymbolSequence.
+	 Assign values to them from LastRTLOpcode on.  Undeclare any obsolete
+	 class vars.  The assumption is that initializeMethod defines all class vars
+	 in the class. This method should be used by subclasses wishing to declare
+	 their own specific opcodes."
+	| pool classVariablesDefinedInMethod |
+	self assert: self ~~ CogAbstractInstruction.
+	pool := initializeMethod methodClass classPool.
+	LastRTLCode ifNil:
+		[CogRTLOpcodes initialize].
+	classVariablesDefinedInMethod := (initializeMethod literals select: [:l| l isVariableBinding and: [pool includesKey: l key]]) collect:
+											[:ea| ea key].
+	"Undeclare any class var not defined in opcodeSymbolSequence or by the method."
+	(pool keys reject: [:k| (opcodeSymbolSequence includes: k) or: [classVariablesDefinedInMethod includes: k]]) do:
+		[:k|
+		Undeclared declare: k from: pool].
+	"Declare opcodeSymbolSequence's elements from LastRTLCode on up."
+	opcodeSymbolSequence withIndexDo:
+		[:classVarName :value|
+		pool
+			declare: classVarName from: Undeclared;
+			at: classVarName put: value + LastRTLCode - 1]
+]
+
 { #category : #translation }
 CogAbstractInstruction class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
-	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in an AbstractInstruction struct."
-	"{CogAbstractInstruction. CogIA32Compiler. CogARMCompiler} do:
+	"Enumerate aBinaryBlock with the names and C type strings for the inst vars to include in an AbstractInstruction struct."
+	"(CogAbstractInstruction withAllSubclasses reject: [:c| c name includesSubString: 'ForTests']) do:
 		[:c| Transcript print: c; cr. c printTypedefOn: Transcript]"
 	(self filteredInstVarNames copyWithout: 'machineCode'), #('machineCode') do:
 		[:ivn|
-		ivn ~= 'bcpc' ifTrue:
-			[aBinaryBlock
-				value: ivn
-				value: (ivn caseOf: {
-							['address']			-> [#'unsigned long'].
-							['machineCode']	-> [self machineCodeDeclaration].
-							['operands']		-> [{#'unsigned long'. '[', NumOperands, ']'}].
-							['dependent']		-> ['struct _AbstractInstruction *']}
-						otherwise:
-							[#'unsigned char'])]]
+		 aBinaryBlock
+			value: ivn
+			value: (ivn caseOf: {
+						['address']			-> [#usqInt]. "usqInt is always large enough to contain a pointer; we do not need to use usqIntptr_t"
+						['machineCode']	-> [self machineCodeDeclaration].
+						['operands']		-> [{#usqInt. '[', NumOperands, ']'}].
+						['dependent']		-> ['struct _AbstractInstruction *']}
+					otherwise:
+						[#'unsigned char'])]
 ]
 
 { #category : #testing }
@@ -138,6 +191,12 @@ CogAbstractInstruction class >> isAccessor: aSelector [
 	   and: [super isAccessor: aSelector]
 ]
 
+{ #category : #testing }
+CogAbstractInstruction class >> isRISCTempRegister: reg [
+	"For tests to filter-out bogus values left in the RISCTempRegister, if any."
+	^self subclassResponsibility
+]
+
 { #category : #'accessing class hierarchy' }
 CogAbstractInstruction class >> literalsManagerClass [
 	"Answer the manager that generates in-line literals;
@@ -145,9 +204,18 @@ CogAbstractInstruction class >> literalsManagerClass [
 	^InLineLiteralsManager
 ]
 
+{ #category : #printing }
+CogAbstractInstruction class >> localNameForOpcode: opcode [
+	^(self classPool keyAtValue: opcode ifAbsent: nil)
+		ifNotNil: [:opcodeName| opcodeName]
+		ifNil: [self == CogAbstractInstruction
+				ifTrue: [opcode printString]
+				ifFalse: [superclass localNameForOpcode: opcode]]
+]
+
 { #category : #translation }
 CogAbstractInstruction class >> machineCodeDeclaration [
-	"Answer a dummy declaration.  Subclasses will override to provgide the real one."
+	"Answer a dummy declaration.  Subclasses will override to provide the real one."
 	^#(#'unsigned char' '[4]')
 ]
 
@@ -163,19 +231,75 @@ CogAbstractInstruction class >> nameForOpcode: opcode [ "<Integer>"
 		ifNotNil:
 			[:opcodeName| opcodeName]
 		ifNil:
-			[(self classPool keyAtValue: opcode ifAbsent: [])
-				ifNotNil: [:opcodeName| opcodeName]
-				ifNil: [opcode printString]]
+			[self localNameForOpcode: opcode]
+]
+
+{ #category : #'debug printing' }
+CogAbstractInstruction class >> printFormatForOpcodeName: opcodeName [
+	"Answer a sequence of $r, $f or nil for the operands in the opcode, used for printing, where
+	 r => integer register, f => floating point register, and nil => numeric or address operand.
+	 Subclasses can override to provide a format string for their own private opcodes."
+	^#()
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg [
+	^Cogit basicNew registerMaskFor: reg
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 and: reg3 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2 and: reg3
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2 and: reg3 and: reg4
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 and: reg9 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 and: reg9
+]
+
+{ #category : #'register management' }
+CogAbstractInstruction class >> registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 and: reg9 and: reg10 [
+	^Cogit basicNew registerMaskFor: reg1 and: reg2 and: reg3 and: reg4 and: reg5 and: reg6 and: reg7 and: reg8 and: reg9 and: reg10
 ]
 
 { #category : #translation }
 CogAbstractInstruction class >> requiredMethodNames: options [
 	^self selectors reject:
-		[:s|
+		[:s| | m |
 		(self isAccessor: s)
-		or: [((self compiledMethodAt: s) pragmaAt: #doNotGenerate) notNil
-		or: [((self compiledMethodAt: s) pragmaAt: #inline:) notNil
-			and: [((self compiledMethodAt: s) pragmaAt: #inline:) arguments first == true]]]]
+		or: [((m := self compiledMethodAt: s) isQuick and: [m pragmas isEmpty])
+		or: [(m pragmaAt: #doNotGenerate) notNil
+		or: [(m pragmaAt: #inline:) notNil and: [(m pragmaAt: #inline:) arguments first == true]]]]]
 ]
 
 { #category : #verification }
@@ -189,9 +313,18 @@ CogAbstractInstruction class >> structTypeName [
 ]
 
 { #category : #translation }
-CogAbstractInstruction class >> translateableSubclasses [
-	"CogAbstractInstruction translateableSubclasses"
-	^self subclasses select: [:compilerClass| compilerClass identifyingPredefinedMacros notNil]
+CogAbstractInstruction class >> translateableSubclassesAndOptions [
+	"CogAbstractInstruction translateableSubclassesAndOptions"
+	| translateableSubclassesAndOptions |
+	translateableSubclassesAndOptions := OrderedCollection new.
+	self subclasses do:
+		[:subclass|
+		subclass ifTranslateableAddWithOptionsTo: translateableSubclassesAndOptions].
+	^translateableSubclassesAndOptions sort:
+		[:a :b|
+		a first name < b first name
+		or: [a first name = b first name "If equal, sort on the ABI"
+			and: [a last last < b last last]]]
 ]
 
 { #category : #translation }
@@ -242,6 +375,12 @@ CogAbstractInstruction class >> usedUnimplementedOpcodes [
 		SystemNavigation new allCallsOn: specificUnimplementedOpcodeBindings localToPackage: #VMMaker }
 ]
 
+{ #category : #translation }
+CogAbstractInstruction class >> wordSize [
+	"Answer either 4 or 8 depending on the processor's basic architacture."
+	self subclassResponsibility
+]
+
 { #category : #comparing }
 CogAbstractInstruction >> <= anAbstractInstruction [
 	"Support for Cogit>>abstractInstruction:follows: and CogBytecodeFixup>targetInstruction testing:"
@@ -278,37 +417,11 @@ CogAbstractInstruction >> >= anAbstractInstruction [
 	^(opcodesArray identityIndexOf: self) >= (opcodesArray identityIndexOf: anAbstractInstruction)
 ]
 
-{ #category : #private }
-CogAbstractInstruction >> abstractRegisterForConcreteRegister: reg [
-	(self concreteRegister: TempReg) = reg ifTrue: [^TempReg].
-	(self concreteRegister: ReceiverResultReg) = reg ifTrue: [^ReceiverResultReg].
-	(self concreteRegister: ClassReg) = reg ifTrue: [^ClassReg].
-	(self concreteRegister: SendNumArgsReg) = reg ifTrue: [^SendNumArgsReg].
-	(self concreteRegister: Arg0Reg) = reg ifTrue: [^Arg0Reg].
-	(self concreteRegister: Arg1Reg) = reg ifTrue: [^Arg1Reg].
-	(self concreteRegister: FPReg) = reg ifTrue: [^FPReg].
-	(self concreteRegister: SPReg) = reg ifTrue: [^SPReg].
-	self error: 'could not find abstract register'.
-	^0
-
-	"While the below works fine in Smalltalk it of course doesn't work in C ;)"
-	
-	"^reg caseOf: {
-		[self concreteRegister: TempReg] -> [TempReg].
-		[self concreteRegister: ReceiverResultReg] -> [ReceiverResultReg].
-		[self concreteRegister: ClassReg] -> [ClassReg].
-		[self concreteRegister: SendNumArgsReg] -> [SendNumArgsReg].
-		[self concreteRegister: Arg0Reg] -> [Arg0Reg].
-		[self concreteRegister: Arg1Reg] -> [Arg1Reg].
-		[self concreteRegister: FPReg] -> [FPReg].
-		[self concreteRegister: SPReg] -> [SPReg] }"
-]
-
 { #category : #accessing }
 CogAbstractInstruction >> addDependent: anInstruction [
 	<var: #anInstruction type: #'AbstractInstruction *'>
 	<returnTypeC: #'AbstractInstruction *'>
-	dependent notNil ifTrue:
+	dependent ifNotNil:
 		[anInstruction dependent: dependent].
 	^dependent := anInstruction
 ]
@@ -341,17 +454,54 @@ CogAbstractInstruction >> asInteger [
 ]
 
 { #category : #coercion }
+CogAbstractInstruction >> asIntegerPtr [
+	<doNotGenerate>
+	^self
+]
+
+{ #category : #coercion }
 CogAbstractInstruction >> asUnsignedInteger [
 	<doNotGenerate>
 	^self
 ]
 
+{ #category : #coercion }
+CogAbstractInstruction >> asUnsignedIntegerPtr [
+	<doNotGenerate>
+	^self
+]
+
 { #category : #'register allocation' }
-CogAbstractInstruction >> availableRegisterOrNilFor: liveRegsMask [
+CogAbstractInstruction >> availableFloatRegisterOrNoneFor: liveRegsMask [
 	"Answer an unused abstract register in the liveRegMask.
 	 Subclasses with more registers can override to answer them."
 	<returnTypeC: #sqInt>
-	self flag: 'searching physical registers that are not assigned to abstract registers first will do a better job and allocate with fewer conflicts'.
+	(liveRegsMask anyMask: (cogit registerMaskFor: DPFPReg0)) ifFalse:
+		[^DPFPReg0].
+	(liveRegsMask anyMask: (cogit registerMaskFor: DPFPReg1)) ifFalse:
+		[^DPFPReg1].
+	(liveRegsMask anyMask: (cogit registerMaskFor: DPFPReg2)) ifFalse:
+		[^DPFPReg2].
+	(liveRegsMask anyMask: (cogit registerMaskFor: DPFPReg3)) ifFalse:
+		[^DPFPReg3].
+	(liveRegsMask anyMask: (cogit registerMaskFor: DPFPReg4)) ifFalse:
+		[^DPFPReg4].
+	(liveRegsMask anyMask: (cogit registerMaskFor: DPFPReg5)) ifFalse:
+		[^DPFPReg5].
+	(liveRegsMask anyMask: (cogit registerMaskFor: DPFPReg6)) ifFalse:
+		[^DPFPReg6].
+	(liveRegsMask anyMask: (cogit registerMaskFor: DPFPReg7)) ifFalse:
+		[^DPFPReg7].
+
+	^ NoReg
+]
+
+{ #category : #'register allocation' }
+CogAbstractInstruction >> availableRegisterOrNoneFor: liveRegsMask [
+	"Answer an unused abstract register in the liveRegMask.
+	 Subclasses with more registers can override to answer them.
+	 N.B. Do /not/ allocate TempReg."
+	<returnTypeC: #sqInt>
 	(cogit register: Arg1Reg isInMask: liveRegsMask) ifFalse:
 		[^Arg1Reg].
 	(cogit register: Arg0Reg isInMask: liveRegsMask) ifFalse:
@@ -362,7 +512,7 @@ CogAbstractInstruction >> availableRegisterOrNilFor: liveRegsMask [
 		[^ClassReg].
 	(cogit register: ReceiverResultReg isInMask: liveRegsMask) ifFalse:
 		[^ReceiverResultReg].
-	^nil
+	^NoReg
 ]
 
 { #category : #accessing }
@@ -388,22 +538,24 @@ CogAbstractInstruction >> between: min and: max [
 		and: (opcodesArray identityIndexOf: max)
 ]
 
+{ #category : #testing }
+CogAbstractInstruction >> byteReadsZeroExtend [
+	"Answer if a byte read, via MoveAbR, MoveMbrR, or MoveXbrRR zero-extends
+	 into the full register, or merely affects the least significant 8 bits of the
+	 the register.  By default the code generator assumes that byte reads
+	 to not zero extend.  Note that byte reads /must not/ sign extend."
+	^false
+]
+
 { #category : #accessing }
 CogAbstractInstruction >> cResultRegister [
-	"Answer the abstract register for the C result register.
-	 Only partially implemented (there is as yet no CResultReg abstract reg).
-	 Works on x86 since TempReg = EAX = C result reg."
+	"Answer the register through which C funcitons return integral results."
+	<inline: true>
 	self subclassResponsibility
 ]
 
 { #category : #accessing }
 CogAbstractInstruction >> callInstructionByteSize [
-	self subclassResponsibility
-]
-
-{ #category : #accessing }
-CogAbstractInstruction >> callerSavedRegisterMask [
-	"Answer an abstract register mask as computed by StackToRegisterMappingCogit registerMaskFor:"
 	self subclassResponsibility
 ]
 
@@ -419,6 +571,12 @@ CogAbstractInstruction >> canMulRR [
 	^self subclassResponsibility
 ]
 
+{ #category : #testing }
+CogAbstractInstruction >> canPushPopMultipleRegisters [
+	<inline: true>
+	^false
+]
+
 { #category : #initialization }
 CogAbstractInstruction >> cloneLiteralFrom: existingLiteral [
 	"For out-of-line literal support, clone a literal from a literal."
@@ -430,6 +588,11 @@ CogAbstractInstruction >> cloneLiteralFrom: existingLiteral [
 		at: 0 put: (existingLiteral operands at: 0);
 		at: 1 put: (existingLiteral operands at: 1);
 		at: 2 put: (existingLiteral operands at: 2)
+]
+
+{ #category : #accessing }
+CogAbstractInstruction >> cmpC32RTempByteSize [
+	self subclassResponsibility
 ]
 
 { #category : #accessing }
@@ -459,24 +622,16 @@ CogAbstractInstruction >> computeJumpTargetOffsetPlus: anPCOffset [
 CogAbstractInstruction >> concretizeAt: actualAddress [
 	"Generate concrete machine code for the instruction at actualAddress,
 	 setting machineCodeSize, and answer the following address."
-	self subclassResponsibility
-]
 
-{ #category : #'generate machine code' }
-CogAbstractInstruction >> concretizeFill16 [
-	"fill with (operand 0 bitAnd: 16rFFFF) according to the processor's endianness"
-	self subclassResponsibility
+	address := actualAddress.
+	self dispatchConcretize.
+	self assert: (maxSize = nil or: [maxSize >= machineCodeSize]).
+	^actualAddress + machineCodeSize
 ]
 
 { #category : #'generate machine code' }
 CogAbstractInstruction >> concretizeFill32 [
 	"fill with operand 0 according to the processor's endianness"
-	self subclassResponsibility
-]
-
-{ #category : #'generate machine code' }
-CogAbstractInstruction >> concretizeFillFromWord [
-	"fill with operand 0 + operand 1 according to the processor's endianness"
 	self subclassResponsibility
 ]
 
@@ -502,6 +657,22 @@ CogAbstractInstruction >> dependent: anInstruction [
 	^dependent := anInstruction
 ]
 
+{ #category : #'full transfer run-time support' }
+CogAbstractInstruction >> disassemble [
+	<doNotGenerate>
+	self disassembleOn: Transcript
+]
+
+{ #category : #'full transfer run-time support' }
+CogAbstractInstruction >> disassembleOn: aStream [
+	<doNotGenerate>
+	cogit processor
+		disassembleFrom: 0
+		to: machineCodeSize - 1
+		in: machineCode object
+		on: aStream
+]
+
 { #category : #abi }
 CogAbstractInstruction >> fullCallsAreRelative [
 	"Answer if CallFull and/or JumpFull are relative and hence need relocating on method
@@ -511,14 +682,22 @@ CogAbstractInstruction >> fullCallsAreRelative [
 ]
 
 { #category : #abi }
-CogAbstractInstruction >> genAlignCStackSavingRegisters: saveRegs numArgs: numArgs wordAlignment: alignment [ 
-	| wordsPushedModAlignment delta |
-	wordsPushedModAlignment := ((saveRegs ifTrue: [self numberOfSaveableRegisters] ifFalse: [0])
-									+ numArgs)
-									\\ alignment.
+CogAbstractInstruction >> genAlignCStackSavingRegisters: regMask numArgs: numArgs wordAlignment: alignment [
+	<inline: true>
+	| regMaskCopy numRegsPushed wordsPushedModAlignment delta |
+	<var: 'regMaskCopy' type: #usqInt>
+	regMaskCopy := regMask asUnsignedInteger.
+	numRegsPushed := 0.
+	[regMaskCopy ~= 0] whileTrue:
+		[numRegsPushed := numRegsPushed + (regMaskCopy bitAnd: 1).
+		 regMaskCopy := regMaskCopy bitShift: -1].
+	(numRegsPushed = 0
+	 and: [self numIntRegArgs >= numArgs]) ifTrue:
+		[^0].
+	wordsPushedModAlignment := numRegsPushed + numArgs \\ alignment.
 	wordsPushedModAlignment ~= 0 ifTrue:
 		[delta := alignment - wordsPushedModAlignment.
-		 cogit SubCq: delta * 4 R: SPReg].
+		 cogit SubCq: delta * objectMemory wordSize R: SPReg].
 	^0
 ]
 
@@ -593,6 +772,48 @@ CogAbstractInstruction >> genLoadStackPointers [
 	self subclassResponsibility
 ]
 
+{ #category : #abi }
+CogAbstractInstruction >> genMarshallNArgs: numArgs arg: regOrConst0 arg: regOrConst1 arg: regOrConst2 arg: regOrConst3 [
+	"Generate the code to pass up to four arguments in a C run-time call.  Hack: each argument is
+	 either a negative number, which encodes a constant, or a non-negative number, that of a register.
+
+	 Run-time calls have no more than four arguments, so chosen so that on ARM, where in its C ABI the
+	 first four integer arguments are passed in registers, all arguments can be passed in registers.  We
+	 defer to the back end to generate this code not so much that the back end knows whether it uses
+	 the stack or registers to pass arguments (it does, but...). In fact we defer for an extremely evil reason.
+	 Doing so allows the x64 (where up to 6 args are passed) to assign the register arguments in an order
+	 that allows some of the argument registers to be used for specific abstract  registers, specifically
+	 ReceiverResultReg and ClassReg.  This is evil, evil, evil, but also it's really nice to keep using the old
+	 register assignments the original author has grown accustomed to."
+	<inline: true>
+	^self subclassResponsibility
+]
+
+{ #category : #abi }
+CogAbstractInstruction >> genMarshallNArgs: numArgs floatArg: regOrConst0 floatArg: regOrConst1 floatArg: regOrConst2 floatArg: regOrConst3 [
+	"Generate the code to pass up to four arguments in a C run-time call.  Hack: each argument is
+	 either a negative number, which encodes a constant, or a non-negative number, that of a register.
+
+	 Run-time calls have no more than four arguments, so chosen so that on ARM, where in its C ABI the
+	 first four integer arguments are passed in registers, all arguments can be passed in registers.  We
+	 defer to the back end to generate this code not so much that the back end knows whether it uses
+	 the stack or registers to pass arguments (it does, but...). In fact we defer for an extremely evil reason.
+	 Doing so allows the x64 (where up to 6 args are passed) to assign the register arguments in an order
+	 that allows some of the argument registers to be used for specific abstract  registers, specifically
+	 ReceiverResultReg and ClassReg.  This is evil, evil, evil, but also it's really nice to keep using the old
+	 register assignments the original author has grown accustomed to."
+	<inline: true>
+	^self subclassResponsibility
+]
+
+{ #category : #'abstract instructions' }
+CogAbstractInstruction >> genMulR: regSource R: regDest [
+	"Generate whatever code necessary to do a bytesPerOop x bytesPerOop multiplication,
+	 answering the first instruction uin the sequence."
+	<returnTypeC: #'AbstractInstruction *'>
+	self subclassResponsibility
+]
+
 { #category : #'smalltalk calling convention' }
 CogAbstractInstruction >> genPushRegisterArgsForAbortMissNumArgs: numArgs [
 	"Ensure that the register args are pushed before the outer and
@@ -633,12 +854,6 @@ CogAbstractInstruction >> genPushRegisterArgsForNumArgs: numArgs scratchReg: scr
 	self subclassResponsibility
 ]
 
-{ #category : #abi }
-CogAbstractInstruction >> genSaveRegisters [
-	"Save the general purpose registers for a trampoline call."
-	self subclassResponsibility
-]
-
 { #category : #'smalltalk calling convention' }
 CogAbstractInstruction >> genSaveStackPointers [
 	"Save the frame and stack pointer registers to the framePointer
@@ -654,10 +869,31 @@ CogAbstractInstruction >> genSubstituteReturnAddress: retpc [
 	self subclassResponsibility
 ]
 
+{ #category : #'abstract instructions' }
+CogAbstractInstruction >> genSwapR: regA R: regB Scratch: regTmp [
+	"Generic register swap code.  Subclasses for processors that have a true exchange operation will override to use it."
+	| first |
+	<var: 'first' type: #'AbstractInstruction *'>
+	first :=
+	cogit MoveR: regA R: regTmp.
+	cogit MoveR: regB R: regA.
+	cogit MoveR: TempReg R: regB.
+	^first
+]
+
 { #category : #abi }
 CogAbstractInstruction >> genWriteCResultIntoReg: abstractRegister [
 	| cResultReg |
 	cResultReg := self cResultRegister.
+	abstractRegister ~= cResultReg ifTrue:
+		[cogit gen: MoveRR operand: cResultReg operand: abstractRegister]
+]
+
+{ #category : #abi }
+CogAbstractInstruction >> genWriteCSecondResultIntoReg: abstractRegister [
+	<option: #LowcodeVM>
+	| cResultReg |
+	cResultReg := self cResultRegisterHigh.
 	abstractRegister ~= cResultReg ifTrue:
 		[cogit gen: MoveRR operand: cResultReg operand: abstractRegister]
 ]
@@ -681,8 +917,10 @@ CogAbstractInstruction >> generateLowLevelUnlock: vmOwnerLockAddress [
 
 { #category : #accessing }
 CogAbstractInstruction >> getDefaultCogCodeSize [
-	"Return the default number of bytes to allocate for native code at startup.
-	 The actual value can be set via vmParameterAt: and/or a preference in the ini file."
+	"Answer the default number of bytes to allocate for native code at startup.
+	 The actual value can be set via vmParameterAt: and/or a preference in the ini file.
+	 Subclasses may this default override to arrange that the code zone has about
+	 the same number of methods as the x86 back-end at a similar point in execution."
 	<inline: true>
 	^1024 * 1024
 ]
@@ -690,7 +928,15 @@ CogAbstractInstruction >> getDefaultCogCodeSize [
 { #category : #accessing }
 CogAbstractInstruction >> getJmpTarget [
 	"Get the target of a jump instruction.  Jumps have the target in the first operand."
+	<inline: true>
 	^cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *'
+]
+
+{ #category : #testing }
+CogAbstractInstruction >> hasConditionRegister [
+	"Answer if the receiver supports, e.g., JumpOverflow after a regular AddRR"
+	<inline: true>
+	^self subclassResponsibility
 ]
 
 { #category : #testing }
@@ -713,15 +959,7 @@ CogAbstractInstruction >> hasPCRegister [
 	 On such processors we can execute jumping to pop top of stack by popping into
 	 the pc register.  Note that this is not a generic RISC feature.  The PowerPC does not
 	 allow one to pop into the pc for example.  So by default, answer false."
-	<inline: true>
 	^false
-]
-
-{ #category : #testing }
-CogAbstractInstruction >> hasPCRelativeAddressing [
-	"Answer if the processor has PC-relative addressing."
-	<inline: true>
-	^self subclassResponsibility
 ]
 
 { #category : #testing }
@@ -735,16 +973,15 @@ CogAbstractInstruction >> hasThreeAddressArithmetic [
 CogAbstractInstruction >> hasVarBaseRegister [
 	"Answer if the processor has a dedicated callee-saved register to point to
 	 the base of commonly-accessed variables. By default this is false."
-	<inline: true>
 	^false
 ]
 
-{ #category : #'inline cacheing' }
-CogAbstractInstruction >> implicitReceiveCacheAt: callSiteReturnAddress [
-	"Answer the implicit receiver cache for the return address
-	 of a call to the ceImplicitReceiverTrampoline."
-	<option: #NewspeakVM>
-	^self subclassResponsibility
+{ #category : #'generate machine code' }
+CogAbstractInstruction >> inCurrentCompilation: operand [
+	"Answer if operand is in the current compilation; and henced could be a candidate for pc-relative addressing."
+	<inline: true>
+	^(self isAnInstruction: (cogit cCoerceSimple: operand to: #'AbstractInstruction *')) "i.e. a label, which by definition will be in the current compilation."
+	   or: [cogit addressIsInCurrentCompilation: operand]
 ]
 
 { #category : #initialization }
@@ -781,9 +1018,18 @@ CogAbstractInstruction >> initializeUniqueLiteral: literal [
 		at: 2 put: -1			"opcodeIndex"
 ]
 
+{ #category : #disassembly }
+CogAbstractInstruction >> instructionSizeAt: pc [
+	"Answer the instruction size at pc. This is used in method disassembly
+	 to decode the jumps in block dispatch to discover where block methods
+	 occur within a larger method."
+	^self subclassResponsibility
+]
+
 { #category : #testing }
 CogAbstractInstruction >> isAFixup: fixupOrAddress [
 	<var: #fixupOrAddress type: #'void *'>
+	<inline: true>
 	^cogit addressIsInFixups: fixupOrAddress
 ]
 
@@ -802,8 +1048,8 @@ CogAbstractInstruction >> isBigEndian [
 ]
 
 { #category : #testing }
-CogAbstractInstruction >> isCallPreceedingReturnPC: mcpc [
-	"Assuming mcpc is a return pc answer if the instruction before it is a call."
+CogAbstractInstruction >> isCallPrecedingReturnPC: mcpc [
+	"Assuming mcpc is a send return pc answer if the instruction before it is a call (not a CallFull)."
 	^self subclassResponsibility
 ]
 
@@ -813,14 +1059,18 @@ CogAbstractInstruction >> isJump [
 ]
 
 { #category : #testing }
-CogAbstractInstruction >> isLongJump [
-	^opcode between: FirstJump and: FirstShortJump - 1
-]
-
-{ #category : #testing }
 CogAbstractInstruction >> isPCDependent [
 	"Answer if the receiver is a pc-dependent instruction, such as a relative jump."
 	^self subclassResponsibility
+]
+
+{ #category : #testing }
+CogAbstractInstruction >> isWithinMwOffsetRange: anAddress [
+	"Answer if an address can be accessed using the offset in a MoveMw:r:R: or similar instruction.
+	 We assume this is true for 32-bit processors and expect 64-bit processors to answer false
+	 for values in the interpreter or the object memory."
+
+	^true
 ]
 
 { #category : #accessing }
@@ -831,7 +1081,10 @@ CogAbstractInstruction >> jmpTarget: anAbstractInstruction [
 	self cCode: [] "check for inadvertent smashing of already-set jmpTargets; development only"
 		inSmalltalk: [self assert: ((operands at: 0)
 									ifNil: [true]
-									ifNotNil: [:o| o = 0 or: [self isAFixup: o]])].
+									ifNotNil: [:o|
+											o = 0
+											or: [(self isAFixup: o)
+											or: [self isAnInstruction: anAbstractInstruction]]])].
 	operands at: 0 put: anAbstractInstruction asUnsignedInteger.
 	^anAbstractInstruction
 ]
@@ -844,6 +1097,15 @@ CogAbstractInstruction >> jumpLongByteSize [
 { #category : #accessing }
 CogAbstractInstruction >> jumpLongConditionalByteSize [
 	self subclassResponsibility
+]
+
+{ #category : #'inline cacheing' }
+CogAbstractInstruction >> jumpLongConditionalTargetBeforeFollowingAddress: mcpc [
+	"Extract the target from a long conditional jump.  On many ISAs this si the same as
+	 extracting the target from a long unconditional jump, so we provide the default here.
+	 Processors such as MIPS override as appropriate."
+	<inline: true>
+	^self jumpLongTargetBeforeFollowingAddress: mcpc
 ]
 
 { #category : #'inline cacheing' }
@@ -875,7 +1137,23 @@ CogAbstractInstruction >> labelOffset [
 	 its MFMethodFlagIsBlockFlag bit set we provide labels with an offset.  The
 	 offset for the fakeHeader reference is MFMethodFlagIsBlockFlag.  See
 	 compileBlockFrameBuild:"
+	<inline: true>
 	^operands at: 1
+]
+
+{ #category : #'inline cacheing' }
+CogAbstractInstruction >> literal32BeforeFollowingAddress: followingAddress [
+	"Answer the constant loaded by the instruction sequence just before this address:"
+	<inline: true>
+	^objectMemory wordSize = 8
+		ifTrue: [self subclassResponsibility]
+		ifFalse: [self literalBeforeFollowingAddress: followingAddress]
+]
+
+{ #category : #'inline cacheing' }
+CogAbstractInstruction >> literalBeforeFollowingAddress: followingAddress [
+	"Answer the constant loaded by the instruction sequence just before this address:"
+	^self subclassResponsibility
 ]
 
 { #category : #accessing }
@@ -959,17 +1237,39 @@ CogAbstractInstruction >> maxSize: size [ "<signed byte>"
 	maxSize := size
 ]
 
-{ #category : #'abstract instructions' }
-CogAbstractInstruction >> maybeEstablishVarBase [
-	"If the receiver has a VarBaseReg, generate the code to set it to its value."
-	self subclassResponsibility
+{ #category : #printing }
+CogAbstractInstruction >> nameForFPRegister: reg [ "<Integer>"
+	"subclasses with special purpose registers may need to override."
+	<doNotGenerate>
+	^CogAbstractRegisters nameForFPRegister: reg
 ]
 
 { #category : #printing }
 CogAbstractInstruction >> nameForRegister: reg [ "<Integer>"
 	"subclasses with special purpose registers may need to override."
 	<doNotGenerate>
-	^CogRTLOpcodes nameForRegister: reg
+	^CogAbstractRegisters nameForRegister: reg
+]
+
+{ #category : #'abstract instructions' }
+CogAbstractInstruction >> noteFollowingConditionalBranch: branch [
+	"Support for processors without condition codes, such as the MIPS.
+	 Answer the branch opcode.  If there are no condition codes, modify
+	 the receiver and the branch to implement a suitable conditional
+	 branch that doesn't depend on condition codes being set by the
+	 receiver.  By default a noop. Overridden in subclasses as required."
+	<returnTypeC: #'AbstractInstruction *'>
+	<var: #branch type: #'AbstractInstruction *'>
+	<inline: true>
+	^branch
+]
+
+{ #category : #'inline cacheing' }
+CogAbstractInstruction >> nsSendCacheAt: callSiteReturnAddress [
+	"Answer the NSSendCache for the return address of a Newspeak
+	 self, super, outer, or implicit receiver send."
+	<option: #NewspeakVM>
+	^self subclassResponsibility
 ]
 
 { #category : #initialization }
@@ -986,15 +1286,13 @@ CogAbstractInstruction >> numICacheFlushOpcodes [
 	^0
 ]
 
-{ #category : #'multi-threading' }
-CogAbstractInstruction >> numLowLevelLockOpcodes [
-	self subclassResponsibility
+{ #category : #accessing }
+CogAbstractInstruction >> numIntRegArgs [
+	^self subclassResponsibility
 ]
 
-{ #category : #abi }
-CogAbstractInstruction >> numberOfSaveableRegisters [
-	"Answer the number of registers to be saved in a trampoline call that saves registers.
-	 See genSaveRegisters"
+{ #category : #'multi-threading' }
+CogAbstractInstruction >> numLowLevelLockOpcodes [
 	self subclassResponsibility
 ]
 
@@ -1052,22 +1350,25 @@ CogAbstractInstruction >> outputMachineCodeAt: targetAddress [
 CogAbstractInstruction >> printStateOn: aStream [
 	| opcodeName orneryOperands format |
 	<doNotGenerate> "Smalltalk-side only"
-	opcode isNil ifTrue:
+	opcode ifNil:
 		[^self].
 	aStream space; nextPut: $(; nextPutAll: (opcodeName := self class nameForOpcode: opcode).
 	orneryOperands := operands isCObjectAccessor
 							ifTrue: [operands object]
 							ifFalse: [operands].
-	(cogit isKindOf: Cogit) ifTrue:
-		[format := CogRTLOpcodes printFormatForOpcodeName: opcodeName].
+	format := ((CogRTLOpcodes classPool includesKey: opcodeName)
+				ifTrue: [CogRTLOpcodes]
+				ifFalse: [self class]) printFormatForOpcodeName: opcodeName.
 	orneryOperands withIndexDo:
 		[:operand :index|
-		operand notNil ifTrue:
+		operand ifNotNil:
 			[aStream space.
 			 index >= (orneryOperands identityIndexOf: nil ifAbsent: [orneryOperands size + 1]) ifTrue:
 				[aStream print: index - 1; nextPut: $:].
-			 (format notNil and: [(format at: index ifAbsent: nil) = $r])
-				ifTrue: [aStream nextPutAll: (self nameForRegister: operand)]
+			 (format notNil and: ['rf' includes: (format at: index ifAbsent: $-)])
+				ifTrue: [aStream nextPutAll: ((format at: index) = $r
+												ifTrue: [self nameForRegister: operand]
+												ifFalse: [self nameForFPRegister: operand])]
 				ifFalse:
 					[aStream print: operand.
 					 (operand isInteger and: [operand > 16 and: [opcode ~= Label]]) ifTrue:
@@ -1093,6 +1394,14 @@ CogAbstractInstruction >> printStateOn: aStream [
 	aStream nextPut: $)
 ]
 
+{ #category : #initialization }
+CogAbstractInstruction >> reinitializeOpcode [
+	<inline: true>
+	annotation := nil.
+	dependent := nil.
+	operands at: 0 put: (operands at: 1 put: (operands at: 2 put: 0))
+]
+
 { #category : #'inline cacheing' }
 CogAbstractInstruction >> relocateCallBeforeReturnPC: retpc by: delta [
 	^self subclassResponsibility
@@ -1104,6 +1413,13 @@ CogAbstractInstruction >> relocateJumpLongBeforeFollowingAddress: pc by: delta [
 	 This works on at least x86, ARM and x86_64.  Processors on which that isn't the
 	 case can override as necessary."
 	self relocateCallBeforeReturnPC: pc by: delta
+]
+
+{ #category : #'inline cacheing' }
+CogAbstractInstruction >> relocateJumpLongConditionalBeforeFollowingAddress: pc by: delta [
+	"Relocate a long conditional jump before pc.  Default to relocating a non-conditional jump.
+	 Processors that have different formats for conditional and unconditional jumps override."
+	self relocateJumpLongBeforeFollowingAddress: pc by: delta
 ]
 
 { #category : #'inline cacheing' }
@@ -1137,6 +1453,13 @@ CogAbstractInstruction >> rewriteCallFullAt: callSiteReturnAddress target: callT
 ]
 
 { #category : #'inline cacheing' }
+CogAbstractInstruction >> rewriteConditionalJumpLongAt: callSiteReturnAddress target: callTargetAddress [
+	"Rewrite a conditional jump long to jump to target.  This version defaults to using
+	 rewriteJumpLongAt:, which works for many ISAs.  Subclasses override if necessary."
+	^self rewriteJumpLongAt: callSiteReturnAddress target: callTargetAddress
+]
+
+{ #category : #'inline cacheing' }
 CogAbstractInstruction >> rewriteInlineCacheTag: cacheTag at: callSiteReturnAddress [
 	"Rewrite an inline cache with a new tag.  This variant is used
 	 by the garbage collector."
@@ -1165,6 +1488,7 @@ CogAbstractInstruction >> setLabelOffset: aValue [
 	 its MFMethodFlagIsBlockFlag bit set we provide labels with an offset.  The
 	 offset for the fakeHeader reference is MFMethodFlagIsBlockFlag.  See
 	 compileBlockFrameBuild:"
+	<inline: true>
 	^operands at: 1 put: aValue
 ]
 
@@ -1182,7 +1506,7 @@ CogAbstractInstruction >> sizePCDependentInstructionAt: eventualAbsoluteAddress 
 	 where this instruction will be output.  The span of a jump to a following
 	 instruction is therefore between that instruction's address and this
 	 instruction's address ((which are both still their virtual addresses), but the
-	 span of a jump to a preceeding instruction or to an absolute address is
+	 span of a jump to a preceding instruction or to an absolute address is
 	 between that instruction's address (which by now is its eventual absolute
 	 address) or absolute address and eventualAbsoluteAddress."
 
@@ -1194,6 +1518,15 @@ CogAbstractInstruction >> stackPageInterruptHeadroomBytes [
 	"Return a minimum amount of headroom for each stack page (in bytes).  In a
 	 JIT the stack has to have room for interrupt handlers which will run on the stack."
 	self subclassResponsibility
+]
+
+{ #category : #'inline cacheing' }
+CogAbstractInstruction >> storeLiteral32: literal32 beforeFollowingAddress: followingAddress [
+	"Answer the constant loaded by the instruction sequence just before this address:"
+	<inline: true>
+	objectMemory wordSize = 8
+		ifTrue: [self subclassResponsibility]
+		ifFalse: [self storeLiteral: literal32 beforeFollowingAddress: followingAddress]
 ]
 
 { #category : #printing }
@@ -1215,7 +1548,7 @@ CogAbstractInstruction >> symbolicOn: aStream [
 							ifFalse: [operands].
 	orneryOperands withIndexDo:
 		[:operand :index|
-		operand notNil ifTrue:
+		operand ifNotNil:
 			[aStream space.
 			 index >= (orneryOperands identityIndexOf: nil ifAbsent: [orneryOperands size + 1]) ifTrue:
 				[aStream print: index - 1; nextPut: $:].
@@ -1252,19 +1585,32 @@ CogAbstractInstruction >> unalignedLongAt: byteAddress put: aWord [
 
 { #category : #'generate machine code' }
 CogAbstractInstruction >> updateLabel: labelInstruction [
-	"Update an instruction that depends on a label outside of
-	 generated code (e.g. a method or block header)."
+	"Update an instruction that depends on a label outside
+	 of generated code (e.g. a method or block header)."
 	<var: #labelInstruction type: #'AbstractInstruction *'>
-	| offsetAddress |
-	offsetAddress := labelInstruction address + labelInstruction labelOffset.
-	opcode caseOf: {
-		[MoveCwR]		-> [operands at: 0 put: offsetAddress].
-		[PushCw]		-> [operands at: 0 put: offsetAddress].
-		[FillFromWord]	-> [operands at: 0 put: offsetAddress]}
+	<inline: true>
+	self assert: (opcode = MoveCwR or: [opcode = PushCw]).
+	operands at: 0 put: labelInstruction address + labelInstruction labelOffset
+]
+
+{ #category : #testing }
+CogAbstractInstruction >> usesTempRegForAbsoluteLoads [
+	"Answer if TempReg is used in absolute memory loads (as it is on x64).  By default answer false, allowing subclasses to override."
+	<inline: true>
+	^false
 ]
 
 { #category : #simulation }
 CogAbstractInstruction >> wantsNearAddressFor: anObject [
-	"A hack hook to allow ARM to override the simulated address for the short-cut trampolines"
+	"A hack hook to allow ARM to override the simulated address for the short-cut trampolines,
+	 and to allow x64 to address CStackPointer and CFramePointer relative to VarBaseReg."
 	^false
+]
+
+{ #category : #'inline cacheing' }
+CogAbstractInstruction >> zoneCallsAreRelative [
+	"Answer if Call and JumpLong are relative and hence need to take the caller's
+	 relocation delta into account during code compaction, rather than just the
+	 callee's delta."
+	self subclassResponsibility
 ]

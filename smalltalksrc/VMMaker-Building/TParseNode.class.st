@@ -1,3 +1,6 @@
+"
+A TParseNode is node in the parse tree of a TMethod. Subclasses correspond to different types of nodes in a method parse tree. The tree of translation parse nodes mirrors the parse tree of a Smalltalk method, and is used for translating a Smalltalk method to C source.
+"
 Class {
 	#name : #TParseNode,
 	#superclass : #Object,
@@ -51,6 +54,13 @@ TParseNode >> anySatisfy: aBlock unless: cautionaryBlock [
 ]
 
 { #category : #transformations }
+TParseNode >> asReturnNode [
+	^TReturnNode new 
+		setExpression: self;
+		yourself
+]
+
+{ #category : #transformations }
 TParseNode >> bindVariableUsesIn: aDictionary [
 	"Bind uses of all variables in the given dictionary, but do not change variables that appear on the left-hand-side of an assignment statement."
 
@@ -75,6 +85,7 @@ TParseNode >> bindVariablesIn: aDictionary [
 { #category : #enumerating }
 TParseNode >> collect: aBlock [
 	| nodes |
+	self halt. "This is a misnomer; should be deleted"
 	nodes := OrderedCollection new.
 	self nodesDo: [:n| (aBlock value: n) ifTrue: [nodes add: n]].
 	^nodes
@@ -91,7 +102,14 @@ TParseNode >> comment: aComment [
 	comment := aComment 
 ]
 
-{ #category : #testing }
+{ #category : #accessing }
+TParseNode >> constantNumbericValueIfAtAllPossibleOrNilIn: aCCodeGen [
+	"This is a version of constantNumbericValueOrNil for type checking rather than code generation.
+	 It aims to yield a value if at all possible."
+	^self constantNumbericValueOrNil
+]
+
+{ #category : #accessing }
 TParseNode >> constantNumbericValueOrNil [
 
 	^nil
@@ -133,19 +151,22 @@ TParseNode >> emitCCodeOn: aStream prependToEnd: aNodeOrNil level: lev generator
 ]
 
 { #category : #'C code generation' }
-TParseNode >> emitCCommentOn: aStream level: level [
+TParseNode >> emitCCommentOn: aStream level: level generator: aCodeGen [
 	"Emit the transferred Smalltalk comments as C comments."
 
-	comment ifNotNil:
-		[comment isString ifTrue: [^self].	"safety catch"
-		 aStream cr.
-		 1 to: comment size do: [:index | 
-			aStream tab: level; nextPutAll: '/* '.
-			((comment at: index) findTokens: Character cr)
-				do: [:line| aStream nextPutAll: line withBlanksTrimmed]
-				separatedBy: [aStream crtab: level; next: 3 put: Character space].
-			aStream nextPutAll: ' */'; cr].
-		 aStream cr]
+	((aCodeGen previousCommenter: self) == self or: [comment isNil]) ifTrue:
+		[aCodeGen previousCommentMarksInlining: false.
+		 ^self].
+	comment withIndexDo:
+		[:commentString :index |
+		(index = 1 and: [commentString beginsWith: 'begin ']) ifTrue:
+			[(aCodeGen previousCommentMarksInlining: true) ifTrue: [^true]].
+		aStream crtab: level; nextPutAll: '/* '.
+		((comment at: index) findTokens: Character cr)
+			do: [:line| aStream nextPutAll: line withBlanksTrimmed]
+			separatedBy: [aStream crtab: level; next: 3 put: Character space].
+		aStream nextPutAll: ' */'].
+	 aStream cr
 ]
 
 { #category : #testing }
@@ -161,6 +182,12 @@ TParseNode >> hasExplicitReturn [
 		node isReturn ifTrue: [ ^true ].
 	].
 	^false
+]
+
+{ #category : #testing }
+TParseNode >> hasSideEffect [
+	"Answer if the parse tree rooted at this node has a side-effect or not.  By default assume it has.  Nodes that don't override."
+	^true
 ]
 
 { #category : #testing }
@@ -187,7 +214,19 @@ TParseNode >> isComment [
 ]
 
 { #category : #testing }
+TParseNode >> isConditionalSend [
+	"Answer if the receiver is a send of any of the conditionals, ifTrue: ifTrue:ifFalse: et al"
+	^false
+]
+
+{ #category : #testing }
 TParseNode >> isConstant [
+
+	^false
+]
+
+{ #category : #testing }
+TParseNode >> isDefine [
 
 	^false
 ]
@@ -240,7 +279,9 @@ TParseNode >> isReturningIf [
 
 { #category : #comparing }
 TParseNode >> isSameAs: aTParseNode [
-	^self subclassResponsibility
+	"Answer if the ParseTree rooted at this node is the same as aTParseNode.
+	 By default answer false and have subclasses override as appropriate."
+	^false
 ]
 
 { #category : #testing }
@@ -404,11 +445,62 @@ TParseNode >> replaceNodesIn: aDictionary [
 	^aDictionary at: self ifAbsent: [self]
 ]
 
+{ #category : #enumerating }
+TParseNode >> select: aBlock [
+	| nodes |
+	nodes := OrderedCollection new.
+	self nodesDo: [:n| (aBlock value: n) ifTrue: [nodes add: n]].
+	^nodes
+]
+
+{ #category : #testing }
+TParseNode >> stream: aStream endsWithAnyOf: characters [
+	"Answer if the given stream ends in any of the characters, ignoring whitespace."
+	| pos ch popped |
+	pos := aStream position.
+	aStream class = WriteStream ifTrue: "i.e. nested in StreamContents"
+		[[pos > 0] whileTrue:
+			[ch := aStream originalContents at: pos.
+			 ch isSeparator ifFalse:
+				[^characters includes: ch].
+			 pos := pos - 1].
+		 ^false].
+
+	popped := OrderedCollection new.
+	[pos > 0] whileTrue:
+		[ch := popped addFirst: (aStream position: pos - 1; peek).
+		 ch isSeparator ifFalse:
+			[popped notEmpty ifTrue: "it almost always is"
+				["*don't* use nextPutAll: to work around a bug in UTF8TextConverter
+				  >>nextPut:toStream: which avoids line-end conversion; sigh."
+				 popped do:
+					[:c| aStream nextPut: c]].
+			 ^characters includes: ch].
+		 pos := pos - 1].
+	"*don't* use nextPutAll: to work around a bug in UTF8TextConverter>>
+	 nextPut:toStream: which avoids line-end conversion; sigh."
+	popped do:
+		[:c| aStream nextPut: c].
+	^false
+]
+
 { #category : #testing }
 TParseNode >> structTargetKindIn: aCodeGen [
 	"Answer if the recever evaluates to a struct or struct pointer
 	 and hence can be dereferenced using . or ->.  Answer any of
 	 #struct #pointer or nil"
+	^nil
+]
+
+{ #category : #'type inference' }
+TParseNode >> typeFrom: aCodeGenerator in: aTMethod [
+	"This is the default type in case of doubt"
+	^(self typeOrNilFrom: aCodeGenerator in: aTMethod) ifNil: [#sqInt]
+]
+
+{ #category : #'type inference' }
+TParseNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
+	"When we don't know, it's nil"
 	^nil
 ]
 

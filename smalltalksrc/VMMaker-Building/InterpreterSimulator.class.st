@@ -111,15 +111,6 @@ InterpreterSimulator >> byteCountText [
 	^ byteCount printString asText
 ]
 
-{ #category : #'memory access' }
-InterpreterSimulator >> cCoerce: value to: cTypeString [
-	"Type coercion for translation only; just return the value when running in Smalltalk."
-
-	^value == nil
-		ifTrue: [value]
-		ifFalse: [value coerceTo: cTypeString sim: self]
-]
-
 { #category : #'plugin support' }
 InterpreterSimulator >> callExternalPrimitive: mapIndex [
 	| entry |
@@ -212,13 +203,6 @@ InterpreterSimulator >> commonSend [
 				ifTrue: [(i := i - 1) = 0 ifTrue: [self halt: 'Send of ', breakSelector]]
 				ifFalse: [i := 0]]].
 	^super commonSend
-]
-
-{ #category : #initialization }
-InterpreterSimulator >> convertToArray [
-	"I dont believe it -- this *just works*"
-	
-	memory := memory as: Array
 ]
 
 { #category : #'I/O primitives support' }
@@ -496,20 +480,6 @@ InterpreterSimulator >> insufficientMemorySpecifiedError [
 	self error: 'Insufficient memory for this image'
 ]
 
-{ #category : #'memory access' }
-InterpreterSimulator >> integerAt: byteAddress [
-	"Note: Adjusted for Smalltalk's 1-based array indexing."
-
-	^memory integerAt: (byteAddress // 4) + 1
-]
-
-{ #category : #'memory access' }
-InterpreterSimulator >> integerAt: byteAddress put: a32BitValue [
-	"Note: Adjusted for Smalltalk's 1-based array indexing."
-
-	^memory integerAt: (byteAddress // 4) + 1 put: a32BitValue
-]
-
 { #category : #'interpreter shell' }
 InterpreterSimulator >> internalExecuteNewMethod [
 "Override the Interpreter version to trap cached external prims.
@@ -626,6 +596,11 @@ InterpreterSimulator >> ioProcessEvents [
 { #category : #'I/O primitives' }
 InterpreterSimulator >> ioScreenDepth [
 	^DisplayScreen actualScreenDepth.
+]
+
+{ #category : #'I/O primitives support' }
+InterpreterSimulator >> ioScreenScaleFactor [
+	^ 1.0
 ]
 
 { #category : #'I/O primitives support' }
@@ -891,126 +866,26 @@ InterpreterSimulator >> longPrint: oop [
 { #category : #'file primitives' }
 InterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 	createDate: createDate modDate: modifiedDate
-	isDir: dirFlag fileSize: fileSize [
+		isDir: dirFlag fileSize: fileSize [
 
-	| modDateOop createDateOop nameString results |
-	<var: 'entryName' type: 'char *'>
-
-	"allocate storage for results, remapping newly allocated
-	 oops in case GC happens during allocation"
-	self pushRemappableOop:
-		(self instantiateClass: (self splObj: ClassArray) indexableSize: 5).
-	self pushRemappableOop:
-		(self instantiateClass: (self splObj: ClassByteString) indexableSize: entryNameSize).
-	self pushRemappableOop: (self positive32BitIntegerFor: createDate).
-	self pushRemappableOop: (self positive32BitIntegerFor: modifiedDate).
-
-	modDateOop   := self popRemappableOop.
-	createDateOop := self popRemappableOop.
-	nameString    := self popRemappableOop.
-	results         := self popRemappableOop.
-
-	1 to: entryNameSize do: [ :i |
-		self storeByte: i-1 ofObject: nameString withValue: (entryName at: i) asciiValue.
-	].
-
-	self storePointer: 0 ofObject: results withValue: nameString.
-	self storePointer: 1 ofObject: results withValue: createDateOop.
-	self storePointer: 2 ofObject: results withValue: modDateOop.
-	dirFlag
-		ifTrue: [ self storePointer: 3 ofObject: results withValue: trueObj ]
-		ifFalse: [ self storePointer: 3 ofObject: results withValue: falseObj ].
-	self storePointer: 4 ofObject: results
-		withValue: (self integerObjectOf: fileSize).
-	^ results
-
-]
-
-{ #category : #'file primitives' }
-InterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize createDate: createDate modDate: modifiedDate isDir: dirFlag fileSize: posixPermissions posixPermissions: fileSize [
-	<option: #PharoVM>
-	<var: 'entryName' type: 'char *'>
-	
-	| modDateOop createDateOop nameString results |	
-
-	"allocate storage for results, remapping newly allocated
-	 oops in case GC happens during allocation"
-	self pushRemappableOop:
-		(self instantiateClass: (self splObj: ClassArray) indexableSize: 5).
-	self pushRemappableOop:
-		(self instantiateClass: (self splObj: ClassString) indexableSize: entryNameSize)..
-	self pushRemappableOop: (self positive32BitIntegerFor: createDate).
-	self pushRemappableOop: (self positive32BitIntegerFor: modifiedDate).
-
-	modDateOop   := self popRemappableOop.
-	createDateOop := self popRemappableOop.
-	nameString    := self popRemappableOop.
-	results         := self popRemappableOop.
-
-	1 to: entryNameSize do: [ :i |
-		self storeByte: i-1 ofObject: nameString withValue: (entryName at: i) asciiValue.
-	].
-
-	self storePointer: 0 ofObject: results withValue: nameString.
-	self storePointer: 1 ofObject: results withValue: createDateOop.
-	self storePointer: 2 ofObject: results withValue: modDateOop.
-	dirFlag
-		ifTrue: [ self storePointer: 3 ofObject: results withValue: trueObj ]
-		ifFalse: [ self storePointer: 3 ofObject: results withValue: falseObj ].
-	self storePointer: 4 
-		ofObject: results
-		withValue: (self integerObjectOf: fileSize).
-	self storePointer: 5 
-		ofObject: results
-		withValue: (self integerObjectOf: posixPermissions).
-
-	^ results
-
+	^(pluginList
+		detect: [:assoc| assoc key = 'FilePlugin']
+		ifNone: [self error: 'this message should not be sent unless the FilePlugin has been loaded']) value
+			makeDirEntryName: entryName size: entryNameSize
+				createDate: createDate modDate: modifiedDate
+					isDir: dirFlag fileSize: fileSize
 ]
 
 { #category : #'file primitives' }
 InterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize createDate: createDate modDate: modifiedDate isDir: dirFlag fileSize: posixPermissions posixPermissions: fileSize isSymlink: symlinkFlag [
-	<option: #PharoVM>
-	<var: 'entryName' type: 'char *'>
 
-	| modDateOop createDateOop nameString results |
-
-	"allocate storage for results, remapping newly allocated
-	 oops in case GC happens during allocation"
-	self pushRemappableOop:
-		(self instantiateClass: (self splObj: ClassArray) indexableSize: 6).
-	self pushRemappableOop:
-		(self instantiateClass: (self splObj: ClassString) indexableSize: entryNameSize)..
-	self pushRemappableOop: (self positive32BitIntegerFor: createDate).
-	self pushRemappableOop: (self positive32BitIntegerFor: modifiedDate).
-
-	modDateOop   := self popRemappableOop.
-	createDateOop := self popRemappableOop.
-	nameString    := self popRemappableOop.
-	results         := self popRemappableOop.
-
-	1 to: entryNameSize do: [ :i |
-		self storeByte: i-1 ofObject: nameString withValue: (entryName at: i) asciiValue.
-	].
-
-	self storePointer: 0 ofObject: results withValue: nameString.
-	self storePointer: 1 ofObject: results withValue: createDateOop.
-	self storePointer: 2 ofObject: results withValue: modDateOop.
-	dirFlag
-		ifTrue: [ self storePointer: 3 ofObject: results withValue: trueObj ]
-		ifFalse: [ self storePointer: 3 ofObject: results withValue: falseObj ].
-	self storePointer: 4 
-		ofObject: results
-		withValue: (self integerObjectOf: fileSize).
-	self storePointer: 5 
-		ofObject: results
-		withValue: (self integerObjectOf: posixPermissions).
-	dirFlag
-		ifTrue: [ self storePointer: 6 ofObject: results withValue: trueObj ]
-		ifFalse: [ self storePointer: 6 ofObject: results withValue: falseObj ].
-
-	^ results
-
+	^(pluginList
+		detect: [:assoc| assoc key = 'FilePlugin']
+		ifNone: [self error: 'this message should not be sent unless the FilePlugin has been loaded']) value
+			makeDirEntryName: entryName size: entryNameSize
+				createDate: createDate modDate: modifiedDate
+					isDir: dirFlag fileSize: fileSize
+						posixPermissions: fileSize isSymlink: symlinkFlag
 ]
 
 { #category : #'debug support' }
@@ -1347,6 +1222,14 @@ InterpreterSimulator >> primitiveResume [
 
 	byteCount > 1000000 ifTrue: [self halt].  "Ignore early process activity"
 	^ super primitiveResume
+]
+
+{ #category : #'I/O primitives' }
+InterpreterSimulator >> primitiveScreenScaleFactor [ "Dummied for now"
+
+	self pop: 1.
+	self pushFloat: 1.0
+
 ]
 
 { #category : #'I/O primitives' }

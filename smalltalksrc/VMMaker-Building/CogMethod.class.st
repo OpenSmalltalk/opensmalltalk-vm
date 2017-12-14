@@ -97,10 +97,16 @@ CogMethod >> blockSize: anObject [
 ]
 
 { #category : #testing }
-CogMethod >> containsAddress: address [
+CogMethod >> containsAddress: anAddress [
+	"is anAddress within my bounds; not a test of addresses referred to within instructions in the method"
 	<inline: true>
-	^self asUnsignedInteger <= address asUnsignedInteger
-	  and: [self asUnsignedInteger + self blockSize >= address asUnsignedInteger]
+	^self asUnsignedInteger <= anAddress asUnsignedInteger
+	  and: [self asUnsignedInteger + self blockSize >= anAddress asUnsignedInteger]
+]
+
+{ #category : #accessing }
+CogMethod >> counters [
+	^ 0
 ]
 
 { #category : #accessing }

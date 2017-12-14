@@ -12,7 +12,9 @@ Class {
 		'foreignCallbackProcessSlot',
 		'willNotThreadWarnCount',
 		'activeProcessAffined',
-		'relinquishing'
+		'relinquishing',
+		'processHasThreadId',
+		'noThreadingOfGUIThread'
 	],
 	#classVars : [
 		'DisownFlagsShift',
@@ -73,12 +75,13 @@ CoInterpreterMT class >> initializeMiscConstants [
 { #category : #initialization }
 CoInterpreterMT class >> initializePrimitiveTable [
 	super initializePrimitiveTable.
-	(227 to: 229) do:
-		[:pidx| self assert: (PrimitiveTable at: pidx + 1) = #primitiveFail].
-	PrimitiveTable
-		at: 227 + 1 put: #primitiveVMCurrentThreadId;
-		at: 228 + 1 put: #primitiveProcessBoundThreadId;
-		at: 229 + 1 put: #primitiveProcessBindToThreadId
+	COGMTVM ifTrue:
+		[(227 to: 229) do:
+			[:pidx| self assert: (PrimitiveTable at: pidx + 1) = #primitiveFail].
+		PrimitiveTable
+			at: 227 + 1 put: #primitiveVMCurrentThreadId;
+			at: 228 + 1 put: #primitiveProcessBoundThreadId;
+			at: 229 + 1 put: #primitiveProcessBindToThreadId]
 ]
 
 { #category : #initialization }
@@ -599,6 +602,36 @@ CoInterpreterMT >> forceInterruptCheckFromHeartbeat [
 			ifFalse:
 				[self forceInterruptCheck.
 				 self checkVMOwnershipFromHeartbeat]]
+]
+
+{ #category : #'internal interpreter access' }
+CoInterpreterMT >> getCogVMFlags [
+	"Answer an array of flags indicating various properties of the Cog VM.
+	 These are the same as the image header flags shifted right two bits (excluding float order and full screen flags).
+	 Bit 0: implies the image's Process class has threadId as its 3rd inst var (zero relative)
+	 Bit 1: if set, methods that are interpreted will have the flag bit set in their header
+	 Bit 2: if set, implies preempting a process does not put it to the back of its run queue
+	 Bit 3: if set, implies the GUI will run on the first thread and event queues will not be accessed from other threads
+	 Bit 4: if set, implies the new finalization scheme where WeakArrays are queued"
+	^objectMemory integerObjectOf: (processHasThreadId ifTrue: [1] ifFalse: [0])
+									+ (flagInterpretedMethods ifTrue: [2] ifFalse: [0])
+									+ (preemptionYields ifTrue: [0] ifFalse: [4])
+									+ (noThreadingOfGUIThread ifTrue: [8] ifFalse: [0])
+									+ (newFinalization ifTrue: [16] ifFalse: [0])
+									+ (imageHeaderFlags >> 2 bitClear: 1 + 2 + 4 + 8 + 16)
+]
+
+{ #category : #'image save/restore' }
+CoInterpreterMT >> getImageHeaderFlags [
+	"Answer the flags that are contained in the 7th long of the image header."
+	^fullScreenFlag "0 or 1"
+	+ (VMBIGENDIAN ifTrue: [0] ifFalse: [2]) "this is the imageFloatsLittleEndian flag"
+	+ (processHasThreadId ifTrue: [4] ifFalse: [0])
+	+ (flagInterpretedMethods ifTrue: [8] ifFalse: [0])
+	+ (preemptionYields ifTrue: [0] ifFalse: [16r10])
+	+ (noThreadingOfGUIThread ifTrue: [16r20] ifFalse: [0])
+	+ (newFinalization ifTrue: [16r40] ifFalse: [0])
+	+ (imageHeaderFlags bitClear: 16r7F) "these are any flags we do not recognize"
 ]
 
 { #category : #'process primitive support' }
@@ -1170,37 +1203,6 @@ CoInterpreterMT >> recordTrace: classOrInteger thing: selector source: source [
 ]
 
 { #category : #'process primitive support' }
-CoInterpreterMT >> removeLink: aLink fromList: aLinkedList [
-	| linksNextLink tempLink lastLink nextLink |
-	linksNextLink := objectMemory fetchPointer: NextLinkIndex ofObject: aLink.
-	tempLink := objectMemory fetchPointer: FirstLinkIndex ofObject: aLinkedList.
-	lastLink := objectMemory fetchPointer: LastLinkIndex ofObject: aLinkedList.
-	aLink = tempLink
-		ifTrue:
-			[objectMemory storePointer: FirstLinkIndex
-				ofObject: aLinkedList
-				withValue: linksNextLink.
-			 aLink = lastLink ifTrue:
-				[objectMemory storePointerUnchecked: LastLinkIndex
-					ofObject: aLinkedList
-					withValue: objectMemory nilObject]]
-		ifFalse:
-			[[tempLink = objectMemory nilObject ifTrue: [self error: 'link is not on list'].
-			  nextLink := objectMemory fetchPointer: NextLinkIndex ofObject: tempLink.
-			  nextLink = aLink] whileFalse:
-				[tempLink := nextLink].
-			 objectMemory storePointer: NextLinkIndex
-				ofObject: tempLink
-				withValue: linksNextLink.
-			aLink = lastLink ifTrue:
-				[objectMemory storePointer: LastLinkIndex
-					ofObject: aLinkedList
-					withValue: tempLink]].
-	objectMemory storePointer: NextLinkIndex ofObject: aLink withValue: objectMemory nilObject.
-	^aLink
-]
-
-{ #category : #'process primitive support' }
 CoInterpreterMT >> returnToSchedulingLoopAndReleaseVMOrWakeThread: vmThread source: source [
 	| savedReenterInterpreter |
 	<var: #savedReenterInterpreter type: #'jmp_buf'>
@@ -1238,6 +1240,23 @@ CoInterpreterMT >> sendInvokeCallbackContext: vmCallbackContext [
 	^super sendInvokeCallbackContext: vmCallbackContext
 ]
 
+{ #category : #'internal interpreter access' }
+CoInterpreterMT >> setCogVMFlags: flags [
+	"Set an array of flags indicating various properties of the Cog VM.
+	 Bit 0: if set, implies the image's Process class has threadId as its 3rd inst var (zero relative)
+	 Bit 1: if set, methods that are interpreted will have the flag bit set in their header
+	 Bit 2: if set, implies preempting a process does not put it to the back of its run queue
+	 Bit 3: if set, implies a threaded VM will not dosown the VM if owned by the GUI thread
+	 Bit 4: if set, implies the new finalization scheme where WeakArrays are queued"
+	flags asUnsignedInteger > 31 ifTrue:
+		[^self primitiveFailFor: PrimErrUnsupported].
+	processHasThreadId := (flags bitAnd: 1) ~= 0.
+	flagInterpretedMethods := (flags bitAnd: 2) ~= 0.
+	preemptionYields := (flags bitAnd: 4) = 0.
+	noThreadingOfGUIThread := (flags bitAnd: 8) ~= 0.
+	newFinalization := (flags bitAnd: 16) ~= 0
+]
+
 { #category : #'image save/restore' }
 CoInterpreterMT >> setImageHeaderFlagsFrom: headerFlags [
 	"Set the flags that are contained in the 7th long of the image header."
@@ -1248,6 +1267,7 @@ CoInterpreterMT >> setImageHeaderFlagsFrom: headerFlags [
 	flagInterpretedMethods := (headerFlags bitAnd: 8) ~= 0.
 	preemptionYields := (headerFlags bitAnd: 16) = 0.
 	noThreadingOfGUIThread := (headerFlags bitAnd: 32) ~= 0.
+	newFinalization := (headerFlags bitAnd: 64) ~= 0.
 
 	processHasThreadId ifFalse:
 		[self print: 'warning, processHasThreadId flag is unset; cannot function as a threaded VM if so.'; cr]
