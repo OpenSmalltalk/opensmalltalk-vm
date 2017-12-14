@@ -60,6 +60,7 @@ Class {
 		'quitBlock',
 		'transcript',
 		'displayView',
+		'eventTransformer',
 		'printFrameAtEachStep',
 		'printBytecodeAtEachStep',
 		'systemAttributes',
@@ -68,17 +69,36 @@ Class {
 		'breakCount',
 		'atEachStepBlock',
 		'startMicroseconds',
+		'lastYieldMicroseconds',
 		'externalSemaphoreSignalRequests',
 		'externalSemaphoreSignalResponses',
 		'extSemTabSize',
 		'debugStackDepthDictionary',
-		'performFilters'
+		'performFilters',
+		'eventQueue',
+		'expectedSends',
+		'expecting'
 	],
 	#classVars : [
-		'ByteCountsPerMicrosecond'
+		'ByteCountsPerMicrosecond',
+		'ExpectedSends'
 	],
 	#category : #'VMMaker-JITSimulation'
 }
+
+{ #category : #'debug support' }
+CogVMSimulator class >> expectedSends [
+	^ExpectedSends
+]
+
+{ #category : #initialization }
+CogVMSimulator class >> initializeWithOptions: optionsDictionary [
+	super initializeWithOptions: optionsDictionary.
+
+	ByteCountsPerMicrosecond := initializationOptions
+										at: #ByteCountsPerMicrosecond
+										ifAbsent: [100]
+]
 
 { #category : #'class initialization' }
 CogVMSimulator class >> initializeWithOptions: optionsDictionaryOrArray objectMemoryClass: objectMemoryClassOrNil [
@@ -88,19 +108,14 @@ CogVMSimulator class >> initializeWithOptions: optionsDictionaryOrArray objectMe
 	initializationOptions := optionsDictionaryOrArray isArray
 							ifTrue: [Dictionary newFromPairs: optionsDictionaryOrArray]
 							ifFalse: [optionsDictionaryOrArray].
+
+	(self allSuperclasses copyUpThrough: InterpreterPrimitives) do:
+		[:sc| sc initializationOptions: initializationOptions].
+
 	(objectMemoryClassOrNil ifNil: [self objectMemoryClass])
 		initializeWithOptions: initializationOptions.
 
 	self initializeWithOptions: initializationOptions.
-
-	((initializationOptions at: #COGMTVM ifAbsent: [false])
-			ifTrue: [CoInterpreterMT]
-			ifFalse: [CoInterpreter])
-		initializeWithOptions: initializationOptions.
-
-	ByteCountsPerMicrosecond := initializationOptions
-										at: #ByteCountsPerMicrosecond
-										ifAbsent: [10].
 
 	(self cogitClass withAllSuperclasses copyUpTo: Cogit) reverseDo:
 		[:c| c initializeWithOptions: initializationOptions]
@@ -154,16 +169,6 @@ CogVMSimulator class >> onObjectMemory: anObjectMemory cogit: aCogit options: op
 ]
 
 { #category : #'debug support' }
-CogVMSimulator >> CFramePointer [
-	^self longAt: self inMemoryCFramePointerAddress
-]
-
-{ #category : #'debug support' }
-CogVMSimulator >> CStackPointer [
-	^self longAt: self inMemoryCStackPointerAddress
-]
-
-{ #category : #'debug support' }
 CogVMSimulator >> allObjectsSelect: objBlock [
 	"self allObjectsSelect: [:oop | (self baseHeader: oop) = 1234]"
 
@@ -202,6 +207,16 @@ CogVMSimulator >> assertSaneThreadAndProcess [
 	^self perform: #assertSaneThreadAndProcess
 		withArguments: {}
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
+]
+
+{ #category : #accessing }
+CogVMSimulator >> atEachStepBlock [
+	^atEachStepBlock
+]
+
+{ #category : #accessing }
+CogVMSimulator >> atEachStepBlock: aBlock [
+	atEachStepBlock := aBlock
 ]
 
 { #category : #'jump bytecodes' }
@@ -263,28 +278,16 @@ CogVMSimulator >> byteCountText [
 	^(String streamContents: [:s| s print: byteCount; nextPut: $/; print: sendCount]) asText
 ]
 
-{ #category : #'memory access' }
-CogVMSimulator >> cCoerce: value to: cTypeString [
-	"Type coercion for translation only; just return the value when running in Smalltalk."
-
-	^value == nil
-		ifTrue: [value]
-		ifFalse: [value coerceTo: cTypeString sim: self]
-]
-
 { #category : #'translation support' }
 CogVMSimulator >> cCoerceSimple: value to: cTypeString [
 	"Type coercion for translation and simulation.
 	 For simulation answer a suitable surrogate for the struct types"
-	^cTypeString caseOf:
-	   {	[#'char *']				->	[value].
-		[#'void *']				->	[value].
-		[#sqInt]					->	[value].
-		[#'void (*)()']			->	[value].
-		[#'void (*)(void)']		->	[value].
-		[#'CogMethod *']		->	[cogit cogMethodSurrogateAt: value asUnsignedInteger].
-		[#'CogBlockMethod *']	->	[cogit cogBlockMethodSurrogateAt: value asUnsignedInteger].
-		[#'NSSendCache *']		->	[cogit nsSendCacheSurrogateAt: value asUnsignedInteger]. }
+	^cTypeString
+		caseOf:
+		   {	[#'CogMethod *']		->	[cogit cogMethodSurrogateAt: value asUnsignedInteger].
+			[#'CogBlockMethod *']	->	[cogit cogBlockMethodSurrogateAt: value asUnsignedInteger].
+			[#'NSSendCache *']		->	[cogit nsSendCacheSurrogateAt: value asUnsignedInteger] }
+		otherwise: [value]
 ]
 
 { #category : #'multi-threading simulation switch' }
@@ -396,6 +399,16 @@ CogVMSimulator >> ceNonLocalReturn: returnValue [
 ]
 
 { #category : #trampolines }
+CogVMSimulator >> ceReapAndResetErrorCodeFor: cogMethod [
+	"Override to map the address into a CogMethodSurrogate"
+	| surrogate |
+	surrogate := cogMethod isInteger
+					ifTrue: [cogit cogMethodSurrogateAt: cogMethod]
+					ifFalse: [cogMethod].
+	^super ceReapAndResetErrorCodeFor: surrogate
+]
+
+{ #category : #trampolines }
 CogVMSimulator >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArgs [
 	"self stringOf: selector"
 	"self printOop: rcvr"
@@ -413,10 +426,8 @@ CogVMSimulator >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 	"self printOop: rcvr"
 	self logSend: selector.
 	cogit assertCStackWellAligned.
-	self maybeCheckStackDepth: (selector = (objectMemory splObj: SelectorAboutToReturn)
-										ifTrue: [numArgs]
-										ifFalse: [numArgs + 1])
-		sp: stackPointer + objectMemory wordSize
+	self maybeCheckStackDepth: numArgs + 1
+		sp: stackPointer
 		pc: (stackPages longAt: stackPointer).
 	^super ceSendAbort: selector to: rcvr numArgs: numArgs
 ]
@@ -429,6 +440,10 @@ CogVMSimulator >> ceSendFromInLineCacheMiss: oPIC [
 					ifTrue: [cogit cogMethodSurrogateAt: oPIC]
 					ifFalse: [oPIC].
 	self logSend: surrogate selector.
+	(surrogate cmNumArgs = 0
+	 and: [(self stackValue: 1) = 16r8169D0
+	 and: [self stackTop = 16r53EA7]]) ifTrue:
+		[self halt].
 	^super ceSendFromInLineCacheMiss: surrogate
 ]
 
@@ -546,7 +561,7 @@ CogVMSimulator >> clipboardRead: sz Into: actualAddress At: zeroBaseIndex [
 	| str |
 	str := Clipboard clipboardText.
 	1 to: sz do:
-		[:i | self byteAt: actualAddress + zeroBaseIndex + i - 1 put: (str at: i) asciiValue]
+		[:i | objectMemory byteAt: actualAddress + zeroBaseIndex + i - 1 put: (str at: i) asciiValue]
 ]
 
 { #category : #'I/O primitives' }
@@ -592,9 +607,8 @@ CogVMSimulator >> cloneSimulationWindow [
 ]
 
 { #category : #initialization }
-CogVMSimulator >> close [  "close any files that ST may have opened"
-	(self loadNewPlugin: 'FilePlugin') ifNotNil:
-		[:filePlugin| filePlugin close]
+CogVMSimulator >> close [  "close any files that ST may have opened, etc"
+	pluginList do: [:assoc| | plugin | plugin := assoc value. plugin ~~ self ifTrue: [plugin close]]
 ]
 
 { #category : #'primitive support' }
@@ -610,17 +624,16 @@ CogVMSimulator >> cogit [
 	^cogit
 ]
 
-{ #category : #'process primitive support' }
-CogVMSimulator >> commenceCogCompiledCodeCompaction [
-	self halt.
-	^super commenceCogCompiledCodeCompaction
+{ #category : #'debug support' }
+CogVMSimulator >> collectSends [
+	expectedSends := WriteStream on: (Array new: 65536).
+	expecting := false
 ]
 
-{ #category : #initialization }
-CogVMSimulator >> convertToArray [
-	"This won't work for the Cog VM because the processor simulators need raw bytes for the memory."
-	
-	self shouldNotImplement
+{ #category : #'cog jit support' }
+CogVMSimulator >> commenceCogCompiledCodeCompaction [
+	"self halt."
+	^super commenceCogCompiledCodeCompaction
 ]
 
 { #category : #'frame access' }
@@ -724,8 +737,9 @@ CogVMSimulator >> dispatchOn: anInteger in: selectorArray [
 	The given integer must be between 0 and selectorArray size-1, inclusive.
 	For speed, no range test is done, since it is done by the at: operation.
 	Note that, unlike many other arrays used in the Interpreter, this method expect NO CArrayAccessor wrapping - it would duplicate the +1. Maybe this would be better updated to make it all uniform"
-	cogit breakBlock ifNotNil:
-		[:bb| (bb value: cogit) ifTrue: [self halt: 'breakpoint reached']].
+	cogit breakPC ifNil:
+		[cogit breakBlock ifNotNil:
+			[:bb| (bb value: cogit) ifTrue: [self halt: 'breakpoint reached']]].
 	self perform: (selectorArray at: (anInteger + 1)).
 ]
 
@@ -748,8 +762,14 @@ CogVMSimulator >> displayView [
 { #category : #'process primitive support' }
 CogVMSimulator >> doSignalExternalSemaphores: minTableSize [
 	"This is a non-thread-safe simulation.  See platforms/Cross/vm/sqExternalSemaphores.c
-	 for the real code."
-	| switched |
+	 for the real code.  For the benefit of the SocketPluginSimulator, do a yield every 100
+	 virtual microseconds."
+	| now switched |
+	now := self ioUTCMicroseconds.
+	now - lastYieldMicroseconds >= 100 ifTrue:
+		[lastYieldMicroseconds := now.
+		 Processor yield].
+
 	switched := false.
 	1 to: (minTableSize min: externalSemaphoreSignalRequests size) do:
 		[:i| | responses |
@@ -829,12 +849,12 @@ CogVMSimulator >> ensureDebugAtEachStepBlock [
 ]
 
 { #category : #'frame access' }
-CogVMSimulator >> ensureMethodIsCogged: methodObj [
+CogVMSimulator >> ensureMethodIsCogged: methodObj maybeClosure: maybeClosure [
 	"Uncomment this to compact frequently and hence test if clients are ready for the shock."
 	"[self commenceCogCompiledCodeCompaction]
 		on: Halt
 		do: [:ex| ex resume: nil]."
-	^super ensureMethodIsCogged: methodObj
+	^super ensureMethodIsCogged: methodObj maybeClosure: maybeClosure
 ]
 
 { #category : #initialization }
@@ -844,6 +864,7 @@ CogVMSimulator >> ensureMultiThreadingOverridesAreUpToDate [
 	 on cogThreadManager being non-nil or nil respectively.  i.e. they allow us to use this one
 	 simulator class to simulate for both CoInterpreterMT and CoInterpreter."
 	| thisClass me mtInterpreterClass |
+	self cppIf: COGMTVM ifTrue: [  ] ifFalse: [ ^self ].
 	thisClass := thisContext methodClass.
 	mtInterpreterClass := thisClass superclass.
 	me := thisClass name, '>>', thisContext method selector.
@@ -939,6 +960,12 @@ CogVMSimulator >> executeCogBlock: cogMethod closure: closure mayContextSwitch: 
 	^super executeCogBlock: cogMethod closure: closure mayContextSwitch: mayContextSwitch
 ]
 
+{ #category : #'debug support' }
+CogVMSimulator >> expectSends: anArray [
+	expectedSends := ReadStream on: anArray.
+	expecting := true
+]
+
 { #category : #'miscellaneous bytecodes' }
 CogVMSimulator >> extABytecode [
 	"224		11100000	aaaaaaaa	Extend A (Ext A = Ext A prev * 256 + Ext A)"
@@ -953,6 +980,16 @@ CogVMSimulator >> extBBytecode [
 	(extA = 0 and: [extB = 0]) ifTrue:
 		[lastExtPC := localIP].
 	^super extBBytecode
+]
+
+{ #category : #'jump bytecodes' }
+CogVMSimulator >> extUnconditionalJump [
+	"242		11110010	i i i i i i i i	Jump i i i i i i i i (+ Extend B * 256, where bbbbbbbb = sddddddd, e.g. -32768 = i=0, a=0, s=1)"
+	"| byte offset |
+	byte := objectMemory byteAt: localIP + 1.
+	offset := byte + (extB << 8).
+	(offset < 0 and: [(self iframeBackwardBranchByte: localFP) - 2 = 1]) ifTrue: [self halt]."
+	^super extUnconditionalJump
 ]
 
 { #category : #'debugging traps' }
@@ -1015,6 +1052,16 @@ CogVMSimulator >> externalInstVar: index ofContext: aContext put: anOop [
 	^super externalInstVar: index ofContext: aContext put: anOop
 ]
 
+{ #category : #'frame access' }
+CogVMSimulator >> externalSetStackPageAndPointersForSuspendedContextOfProcess: aProcess [
+	"Override to check stack depth (hence in the simulator only)."
+	super externalSetStackPageAndPointersForSuspendedContextOfProcess:  aProcess.
+	(self isMachineCodeFrame: framePointer) ifTrue:
+		[self maybeCheckStackDepth: 0
+			sp: stackPointer
+			pc: instructionPointer]
+]
+
 { #category : #'interpreter shell' }
 CogVMSimulator >> fetchByte [
 	^objectMemory byteAt: (localIP := localIP + 1)
@@ -1047,12 +1094,9 @@ CogVMSimulator >> findNewMethodInClassTag: classTag [
 			ifFalse: [(self nameOfClass: class)].
 		self cr; print: cName , '>>' , (self stringOf: messageSelector)].
 "
-	(self stringOf: messageSelector) = 'doesNotUnderstand:' ifTrue: [self halt].
+	messageSelector = (objectMemory splObj: SelectorDoesNotUnderstand) ifTrue: [self halt].
 
-	sendCount := sendCount + 1.
-
-	printSends ifTrue:
-		[self cr; print: byteCount; space; printStringOf: messageSelector; cr].
+	self logSend: messageSelector.
 "
 	(sendCount > 1000 and: [sendCount\\10 = 0]) ifTrue:
 		[Transcript print: sendCount; space.
@@ -1135,10 +1179,10 @@ CogVMSimulator >> framePointer [
 { #category : #'I/O primitives' }
 CogVMSimulator >> fullDisplay [
 	| primFailCodeValue |
-	displayForm == nil ifTrue: [^ self].
+	displayForm ifNil: [^self].
 	primFailCodeValue := primFailCode.
 	self initPrimCall.
-	self displayBitsOf: (objectMemory splObj: TheDisplay) Left: 0 Top: 0 Right: displayForm width Bottom: displayForm height.
+	self updateDisplayLeft: 0 Top: 0 Right: displayWidth Bottom: displayHeight.
 	primFailCode := primFailCodeValue
 ]
 
@@ -1178,6 +1222,26 @@ CogVMSimulator >> functionPointerForCompiledMethod: methodObj primitiveIndex: pr
 ]
 
 { #category : #'multi-threading simulation switch' }
+CogVMSimulator >> getCogVMFlags [
+	"This method includes or excludes CoInterpreterMT methods as required.
+	 Auto-generated by CogVMSimulator>>ensureMultiThreadingOverridesAreUpToDate"
+
+	^self perform: #getCogVMFlags
+		withArguments: {}
+		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
+]
+
+{ #category : #'multi-threading simulation switch' }
+CogVMSimulator >> getImageHeaderFlags [
+	"This method includes or excludes CoInterpreterMT methods as required.
+	 Auto-generated by CogVMSimulator>>ensureMultiThreadingOverridesAreUpToDate"
+
+	^self perform: #getImageHeaderFlags
+		withArguments: {}
+		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
+]
+
+{ #category : #'multi-threading simulation switch' }
 CogVMSimulator >> getMaxWaitingPriority [
 	"This method includes or excludes CoInterpreterMT methods as required.
 	 Auto-generated by CogVMSimulator>>ensureMultiThreadingOverridesAreUpToDate"
@@ -1204,6 +1268,22 @@ CogVMSimulator >> halfWordHighInLong32: long32 [
 { #category : #'memory access' }
 CogVMSimulator >> halfWordLowInLong32: long32 [
 	^self subclassResponsibility
+]
+
+{ #category : #'I/O primitives support' }
+CogVMSimulator >> handleListenEvent: aMorphicEvent [
+	"openAsMorph[NoTranscript] registered me for listen events via HandMorph>>addEventListener.
+	Transform the listen event and add it to my event queue.  ALso check if the displayForm shoudl resize."
+	(displayForm ~~ fakeForm and: [displayForm extent ~= displayView extent]) ifTrue:
+		[| newForm |
+		newForm := Form
+						extent: displayView extent
+						depth: displayForm depth.
+		 displayForm displayOn: newForm.
+		 displayForm := newForm].
+	((aMorphicEvent isMouse or: [aMorphicEvent isKeyboard])
+	 and: [displayView bounds containsPoint: aMorphicEvent position]) ifTrue:
+		[eventTransformer degenerateEvent: aMorphicEvent for: self]
 ]
 
 { #category : #'message sending' }
@@ -1375,16 +1455,14 @@ CogVMSimulator >> initialize [
 	cogThreadManager ifNotNil:
 		[super initialize].
 
-	"Note: we must initialize ConstMinusOne & HasBeenReturnedFromMCPC differently
-	 for simulation, due to the fact that the simulator works only with +ve 32-bit values"
-	ConstMinusOne := objectMemory integerObjectOf: -1.
-	HasBeenReturnedFromMCPC := objectMemory integerObjectOf: -1.
+	self assert: ConstMinusOne = (objectMemory integerObjectOf: -1).
+
 	cogMethodZone := cogit methodZone. "Because Slang can't remove intermediate implicit receivers (cogit methodZone foo doesn't reduce to foo())"
 	enableCog := true.
 
 	methodCache := Array new: MethodCacheSize.
 	nsMethodCache := Array new: NSMethodCacheSize.
-	atCache := Array new: AtCacheTotalSize.
+	atCache := nil.
 	self flushMethodCache.
 	cogCompiledCodeCompactionCalledFor := false.
 	gcSemaphoreIndex := 0.
@@ -1403,18 +1481,19 @@ CogVMSimulator >> initialize [
 	desiredNumStackPages := desiredEdenBytes := desiredCogCodeSize := 0.
 	"This is initialized on loading the image, but convenient for testing stack page values..."
 	numStackPages := self defaultNumStackPages. 
-	startMicroseconds := Time totalSeconds * 1000000.
+	startMicroseconds := lastYieldMicroseconds := self ioUTCStartMicroseconds.
 	maxLiteralCountForCompile := MaxLiteralCountForCompile.
 	minBackwardJumpCountForCompile := MinBackwardJumpCountForCompile.
 	flagInterpretedMethods := false.
 
 	"initialize InterpreterSimulator variables used for debugging"
 	byteCount := lastPollCount := sendCount := lookupCount := 0.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	traceOn := true.
 	printSends := printFrameAtEachStep := printBytecodeAtEachStep := false.
 	myBitBlt := BitBltSimulator new setInterpreter: self.
 	displayForm := fakeForm := 'Display has not yet been installed' asDisplayText form.
+	eventQueue := SharedQueue new.
 	suppressHeartbeatFlag := deferSmash := deferredSmash := false.
 	systemAttributes := Dictionary new.
 	primTraceLog := CArrayAccessor on: (Array new: 256 withAll: 0).
@@ -1586,6 +1665,15 @@ CogVMSimulator >> invalidCompactClassError: name [
 	self error: 'Class ', name, ' does not have the required compact class index'
 ]
 
+{ #category : #'I/O primitives' }
+CogVMSimulator >> ioBeDisplay: bitsOrHandleCArray width: width height: height depth: depth [
+	"The real platform may want to note the location of the display and respond to the fact of
+	 its installation.  Here merely create a scratch form the same size as Smalltalk displayObj"
+	super ioBeDisplay: bitsOrHandleCArray asInteger width: width height: height depth: depth.
+	displayForm := Form extent: width @ height depth: depth.
+	displayView ifNotNil: [displayView image: displayForm]
+]
+
 { #category : #security }
 CogVMSimulator >> ioCanRenameImage [
 	^true
@@ -1625,9 +1713,14 @@ CogVMSimulator >> ioGetMaxExtSemTableSize [
 
 { #category : #'I/O primitives' }
 CogVMSimulator >> ioGetNextEvent: evtBuf [
-
-	self primitiveFail.
-
+	| evt |
+	"SimulatorMorphicModel browse"
+	eventQueue ifNil:
+		[^self primitiveFail].
+	eventQueue isEmpty ifFalse:
+		[evt :=  eventQueue next.
+		 1 to: evt size do:
+			[:i| (evt at: i) ifNotNil: [:val| evtBuf at: (i - 1) put: val]]]
 ]
 
 { #category : #'I/O primitives' }
@@ -1763,7 +1856,9 @@ CogVMSimulator >> ioRelinquishProcessorForMicroseconds: microseconds [
 	 If we're simulating threading we're in difficulties.  We need a UI process
 	 (to run activities such as fill-in-the-blanks) but we also need an independent
 	 thread of control to run this VM thread.  So we need to fork a new UI process."
-	Display reverse: (0@0 extent: 16@16).
+	Display reverse: ((displayView
+						ifNil: [0@0]
+						ifNotNil: [displayView bounds origin]) extent: 16@16).
 	Sensor peekEvent ifNotNil:
 		[self forceInterruptCheck].
 	Processor activeProcess == Project uiProcess ifTrue:
@@ -1780,6 +1875,11 @@ CogVMSimulator >> ioRelinquishProcessorForMicroseconds: microseconds [
 { #category : #'I/O primitives' }
 CogVMSimulator >> ioScreenDepth [
 	^DisplayScreen actualScreenDepth.
+]
+
+{ #category : #'I/O primitives support' }
+CogVMSimulator >> ioScreenScaleFactor [
+	^ 1.0
 ]
 
 { #category : #'I/O primitives support' }
@@ -1806,6 +1906,33 @@ CogVMSimulator >> ioSetMaxExtSemTableSize: anInteger [
 	extSemTabSize := anInteger
 ]
 
+{ #category : #'I/O primitives' }
+CogVMSimulator >> ioShow: destBits D: w i: h s: d p: left l: right a: top y: bottom [
+	"This is the simulator's implementation of ioShowDisplay."
+	| raster pixPerWord simDisp realDisp rect |
+	displayForm ifNil: [^self].
+	displayBits = 0 ifTrue: [^self].
+	pixPerWord := 32 // d.
+	raster := displayForm width + (pixPerWord - 1) // pixPerWord.
+	simDisp := Form new hackBits: objectMemory memory.
+	displayForm unhibernate.
+	realDisp := Form new hackBits: displayForm bits.
+	realDisp
+		copy: (0 @ (top * raster) extent: 4 @ (bottom - top * raster))
+		from: 0 @ (destBits // 4 + (top * raster))
+		in: simDisp
+		rule: Form over.
+	displayView ifNotNil: [^displayView changed].
+	
+	"If running without a view, just blat the bits onto the screen..."
+	rect := 0 @ top corner: displayForm width @ bottom.
+	Display
+		copy: (rect translateBy: self displayLocation)
+		from: rect topLeft
+		in: displayForm
+		rule: Form over
+]
+
 { #category : #'process primitive support' }
 CogVMSimulator >> ioSynchronousCheckForEvents [
 	"Hook allowing the platform to do anything it needs to do synchronously."
@@ -1826,6 +1953,16 @@ CogVMSimulator >> ioUTCMicroseconds [
 	 At 20k bytecodes per second, this gives us about 200 ticks per second, or about 1/5
 	 of what you'd expect for the real time clock.  This should still service events at one or
 	 two per second"
+]
+
+{ #category : #'I/O primitives support' }
+CogVMSimulator >> ioUTCStartMicroseconds [
+	"Answer the value of the microsecond clock at startup."
+
+	^startMicroseconds ifNil:
+		[self class initializationOptions
+			at: #startMicroseconds
+			ifAbsent: [[Time utcMicrosecondClock] on: Error do: [Time totalSeconds * 1000000]]]
 ]
 
 { #category : #'multi-threading simulation switch' }
@@ -1938,6 +2075,11 @@ CogVMSimulator >> loadNewPlugin: pluginString [
 		 entry]
 ]
 
+{ #category : #accessing }
+CogVMSimulator >> localIP [
+	^localIP
+]
+
 { #category : #testing }
 CogVMSimulator >> logOfBytesVerify: nBytes fromFileNamed: fileName fromStart: loggingStart [
 	"Verify a questionable interpreter against a successful run"
@@ -1947,7 +2089,7 @@ CogVMSimulator >> logOfBytesVerify: nBytes fromFileNamed: fileName fromStart: lo
 	logFile := (FileStream readOnlyFileNamed: fileName) binary.
 	transcript clear.
 	byteCount := 0.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -1988,7 +2130,7 @@ CogVMSimulator >> logOfBytesWrite: nBytes toFileNamed: fileName fromStart: loggi
 	logFile := (FileStream newFileNamed: fileName) binary.
 	transcript clear.
 	byteCount := 0.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -2013,7 +2155,7 @@ CogVMSimulator >> logOfSendsVerify: nSends fromFileNamed: fileName fromStart: lo
 	byteCount := 0.
 	sendCount := 0.
 	priorFrame := localFP.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -2060,7 +2202,7 @@ CogVMSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromStart: loggi
 	byteCount := 0.
 	sendCount := 0.
 	priorFrame := localFP.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -2080,7 +2222,7 @@ CogVMSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromStart: loggi
 { #category : #'debugging traps' }
 CogVMSimulator >> logSend: oop [
 	sendCount := sendCount + 1.
-	printSends ifTrue:
+	(printSends or: [printBytecodeAtEachStep]) ifTrue:
 		[transcript print: byteCount; nextPut: $/; print: sendCount; space.
 		 self printStringOf: oop.
 		 transcript cr; flush]
@@ -2109,42 +2251,42 @@ CogVMSimulator >> lookupMethodInClass: class [
 ]
 
 { #category : #'callback support' }
-CogVMSimulator >> lookupMethodNoMNUEtcInClass: class [
+CogVMSimulator >> lookupOrdinaryNoMNUEtcInClass: class [
 	lookupCount := lookupCount + 1.
-	^super lookupMethodNoMNUEtcInClass: class
+	^super lookupOrdinaryNoMNUEtcInClass: class
 ]
 
 { #category : #'frame access' }
 CogVMSimulator >> makeBaseFrameFor: aContext [ "<Integer>"
 	"aContext =  26431360 ifTrue: [self halt]."
+	"(objectMemory fetchPointer: MethodIndex ofObject: aContext) = 16rD4C178 ifTrue:
+		[self halt]."
 	^super makeBaseFrameFor: aContext
 ]
 
 { #category : #'file primitives' }
 CogVMSimulator >> makeDirEntryName: entryName size: entryNameSize
 	createDate: createDate modDate: modifiedDate
-	isDir: dirFlag fileSize: fileSize [
+		isDir: dirFlag fileSize: fileSize [
 
-	| modDateOop createDateOop nameString results |
-	<var: 'entryName' type: 'char *'>
+	^(pluginList
+		detect: [:assoc| assoc key = 'FilePlugin']
+		ifNone: [self error: 'this message should not be sent unless the FilePlugin has been loaded']) value
+			makeDirEntryName: entryName size: entryNameSize
+				createDate: createDate modDate: modifiedDate
+					isDir: dirFlag fileSize: fileSize
+]
 
-	results			:= objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 5.
-	nameString		:= objectMemory instantiateClass: (objectMemory splObj: ClassByteString) indexableSize: entryNameSize.
-	createDateOop	:= self positive32BitIntegerFor: createDate.
-	modDateOop	:= self positive32BitIntegerFor: modifiedDate.
+{ #category : #'as yet unclassified' }
+CogVMSimulator >> makeDirEntryName: entryName size: entryNameSize createDate: createDate modDate: modifiedDate isDir: dirFlag fileSize: fileSize posixPermissions: posixPermissions isSymlink: symlinkFlag [
 
-	1 to: entryNameSize do:
-		[ :i |
-		objectMemory storeByte: i-1 ofObject: nameString withValue: (entryName at: i) asciiValue].
-
-	objectMemory storePointerUnchecked: 0 ofObject: results withValue: nameString.
-	objectMemory storePointerUnchecked: 1 ofObject: results withValue: createDateOop.
-	objectMemory storePointerUnchecked: 2 ofObject: results withValue: modDateOop.
-	dirFlag
-		ifTrue: [ objectMemory storePointerUnchecked: 3 ofObject: results withValue: objectMemory trueObject ]
-		ifFalse: [ objectMemory storePointerUnchecked: 3 ofObject: results withValue: objectMemory falseObject ].
-	objectMemory storePointerUnchecked: 4 ofObject: results withValue: (objectMemory integerObjectOf: fileSize).
-	^ results
+	^(pluginList
+		detect: [:assoc| assoc key = 'FilePlugin']
+		ifNone: [self error: 'this message should not be sent unless the FilePlugin has been loaded']) value
+			makeDirEntryName: entryName size: entryNameSize
+				createDate: createDate modDate: modifiedDate
+					isDir: dirFlag fileSize: fileSize
+						posixPermissions: fileSize isSymlink: symlinkFlag
 ]
 
 { #category : #'cog jit support' }
@@ -2161,7 +2303,7 @@ CogVMSimulator >> mapFunctionToAddress: aSymbolOrIndexOrBlock [
 	symbolOrBlock := aSymbolOrIndexOrBlock isInteger
 						ifTrue: [(self pluginEntryFor: aSymbolOrIndexOrBlock) at: 3]
 						ifFalse: [aSymbolOrIndexOrBlock].
-	uniqueIndices isNil ifTrue:
+	uniqueIndices ifNil:
 		[uniqueIndices := Dictionary new.
 		 uniqueIndex := 65535].
 	sobui := uniqueIndices at: symbolOrBlock ifAbsentPut: [uniqueIndex := uniqueIndex + 1].
@@ -2178,6 +2320,11 @@ CogVMSimulator >> mapInterpreterOops [
 	^self perform: #mapInterpreterOops
 		withArguments: {}
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
+]
+
+{ #category : #'plugin support' }
+CogVMSimulator >> mappedPluginEntries [
+	^mappedPluginEntries
 ]
 
 { #category : #'multi-threading simulation switch' }
@@ -2205,19 +2352,68 @@ CogVMSimulator >> maybeCheckStackDepth: delta sp: sp pc: mcpc [
 					ifFalse: [self startPCOfClosure: (self pushedReceiverOrClosureOfFrame: framePointer)].
 	bcpc := cogit bytecodePCFor: mcpc startBcpc: startbcpc in: cogBlockMethod.
 	self assert: bcpc ~= 0.
-	cogBlockMethod ~= cogHomeMethod ifTrue:
+	((cogBlockMethod ~= cogHomeMethod or: [cogBlockMethod cmIsFullBlock])
+	 and: [cogit isNonLocalReturnPC: mcpc]) ifTrue:
 		[| lastbcpc |
-		 lastbcpc := cogit lastBytecodePCForBlockAt: startbcpc in: cogHomeMethod methodObject.
-		 bcpc > lastbcpc ifTrue:
-			[bcpc := lastbcpc]].
+		 "Method returns within a block (within an unwind-protect) must check the stack depth at the
+		  return, not the bytecode following, but the pc mapping maps to the bytecode following the
+		  return. lastBytecodePCForBlockAt:in: catches method returns at the end of a block, modifying
+		  the bcpc to that of the return.  isNonLocalReturnPC: catches method returns not at the end.
+		  Assumes method return bytecodes are 1 bytecode long;a  dodgy assumption, but good enough."
+		 lastbcpc := cogBlockMethod cmIsFullBlock
+						ifTrue: [cogit endPCOf: cogHomeMethod methodObject]
+						ifFalse: [cogit lastBytecodePCForBlockAt: startbcpc in: cogHomeMethod methodObject].
+		 bcpc > lastbcpc ifTrue: [bcpc := lastbcpc]].
 	asp := self stackPointerIndexForFrame: framePointer WithSP: sp + objectMemory wordSize.
-	csp := debugStackPointers at: bcpc.
-	"Compensate lazily for absent receiver sends."
-	(NewspeakVM
-	 and: [asp - delta = csp
-	 and: [cogit isAbsentReceiverSendAt: mcpc in: cogHomeMethod]]) ifTrue:
-		[csp := debugStackPointers at: bcpc put: csp + 1].
+	csp := debugStackPointers at: bcpc ifAbsent: [-1].
+	"Compensate for some edge cases"
+	asp - delta = csp ifTrue:
+		["Compensate for the implicit context receiver push in a trap bytecode with the absence of a contnuation.
+		  Assumes trap bytecodes are 1 byte bytecodes."
+		 (SistaVM
+		  and: [cogit isTrapAt: mcpc]) ifTrue:
+			[csp := csp + 1].
+		"Compensate lazily for absent receiver sends (cuz mapping is slow, even though incrememting csp is a dodgy idea)."
+		(NewspeakVM
+		 and: [cogit isAbsentReceiverSendAt: mcpc in: cogHomeMethod]) ifTrue:
+			[csp := debugStackPointers at: bcpc put: csp + 1]].
 	self assert: asp - delta + 1 = csp
+]
+
+{ #category : #'primitive support' }
+CogVMSimulator >> maybeMapPrimitiveFunctionPointerBackToSomethingEvaluable [
+	"In the real VM primitiveFunctionPointer is either an index (for quick primitives)
+	 or a proper function pointer to a primitive.  In the simulator it may be a small
+	 index (corresponding to a quick primitive index), a symbol (corresponding to
+	 a function pointer) or an index into the externalPrimitiveTable, or an invalid
+	 address that references an evaluable in the simulatedTrampolines dictionary
+	 of the Cogit.  The simulator expects dispatchFunctionPointer to be called with
+	 primitiveFunctionPointer being a symbol only for internal primitives.  External
+	 primitives must have their funciton pointer mapped back to an index.  This
+	 method does the mapping back from fake addresses."
+	<doNotGenerate>
+	(primitiveFunctionPointer isInteger
+	 and: [self isExternalPrimitiveCall: newMethod]) ifTrue: "External prims must be evaluated by the right plugin..."
+		[(cogit simulatedTrampolines at: primitiveFunctionPointer ifAbsent: nil) ifNotNil:
+			[:evaluable| | pfp index externalIndex |
+						"primitiveFunctionPointer := pfp"
+						"(1 to: self mappedPluginEntries size) select: [:index| (self mappedPluginEntries at: index) third == evaluable]"
+			 pfp := primitiveFunctionPointer.
+			 index := self mappedPluginEntries findFirst: [:entry| entry third == evaluable].
+			 self assert: index ~= 0.
+			 externalIndex := 1000 + (externalPrimitiveTable object
+										indexOf: index
+										ifAbsent: [self error: 'entry not found']).
+			 self assert: ((self pluginEntryFor: externalIndex) notNil
+						   and: [(self pluginEntryFor: externalIndex) third == evaluable]).
+			 primitiveFunctionPointer := externalIndex.
+			 ^self]].
+	^super maybeMapPrimitiveFunctionPointerBackToSomethingEvaluable
+]
+
+{ #category : #'cog jit support' }
+CogVMSimulator >> mcprimFunctionForPrimitiveIndex: primIndex [
+	^self mapFunctionToAddress: (super mcprimFunctionForPrimitiveIndex: primIndex)
 ]
 
 { #category : #accessing }
@@ -2257,23 +2453,23 @@ CogVMSimulator >> minBackwardJumpCountForCompile: n [
 CogVMSimulator >> moveMethodCacheToMemoryAt: address [
 	| oldMethodCache |
 	oldMethodCache := methodCache.
-	self flag: 'broken for 64-bit VM because Bitmap access unit is 32-bits'.
 	"In the VM the methodCache is written as a normal array with 1-relative addressing.
 	 In C this works by allocating an extra element in the methodCache array (see
 	 class-side declareCVarsIn:).  In simulation simply position the start of the methodCache
 	 one word lower, achieving the same effect.  -1 because CArrayAccessor is 0-relative
 	 and adds 1 on accesses itself."
 	methodCache := CMethodCacheAccessor new
-						memory: objectMemory memory
-						offset: address / objectMemory wordSize
+						objectMemory: objectMemory
+						at: address
 						array: oldMethodCache
 						functionPointerIndex: MethodCachePrimFunction
 						entrySize: MethodCacheEntrySize.
+	self assert: address - objectMemory wordSize = self methodCacheAddress.
 	1 to: MethodCacheSize do:
 		[:i|
 		self assert: (methodCache at: i) = 0].
 	methodCache at: 1 put: 16rC4EC4.
-	self assert: (self longAt: address) = 16rC4EC4.
+	self assert: (objectMemory longAt: address) = 16rC4EC4.
 	1 to: MethodCacheSize do:
 		[:i|
 		methodCache at: i put: (oldMethodCache at: i)]
@@ -2283,15 +2479,14 @@ CogVMSimulator >> moveMethodCacheToMemoryAt: address [
 CogVMSimulator >> movePrimTraceLogToMemoryAt: address [
 	| oldTraceLog |
 	oldTraceLog := primTraceLog.
-	self flag: 'broken for 64-bit VM because Bitmap access unit is 32-bits'.
-	primTraceLog := CObjectAccessor new
-						memory: objectMemory memory
-						offset: address / objectMemory wordSize.
+	primTraceLog := CArrayOfLongsAccessor new
+						objectMemory: objectMemory at: address.
+	self assert: address = self primTraceLogAddress.
 	0 to: PrimTraceLogSize - 1 do:
 		[:i|
 		self assert: (primTraceLog at: i) = 0].
 	primTraceLog at: 0 put: 16rC4EC4.
-	self assert: (self longAt: address) = 16rC4EC4.
+	self assert: (objectMemory longAt: address) = 16rC4EC4.
 	0 to: PrimTraceLogSize - 1 do:
 		[:i|
 		primTraceLog at: i put: (oldTraceLog at: i)]
@@ -2335,9 +2530,12 @@ CogVMSimulator >> openAsMorph [
 							ifNotNil: [FileDirectory default localNameFor: imageName]
 							ifNil: [' synthetic image'].
 	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
+	window paneColor: self windowColorToUse.
 
-	window addMorph: (displayView := ImageMorph new image: displayForm)
-		frame: (0@0 corner: 1@0.8).
+	window addMorph: (displayView := SimulatorImageMorph new image: displayForm)
+			frame: (0@0 corner: 1@0.8).
+	displayView activeHand addEventListener: self.
+	eventTransformer := SimulatorEventTransformer new.
 
 	transcript := TranscriptStream on: (String new: 10000).
 	window addMorph: (PluggableTextMorph
@@ -2364,11 +2562,16 @@ CogVMSimulator >> openAsMorph [
 CogVMSimulator >> openAsMorphNoTranscript [
 	"Open a morphic view on this simulation."
 	| localImageName borderWidth window |
-	localImageName := FileDirectory default localNameFor: imageName.
-	window := (SystemWindow labelled: 'Simulation of ' , localImageName) model: self.
+	localImageName := imageName
+							ifNotNil: [FileDirectory default localNameFor: imageName]
+							ifNil: [' synthetic image'].
+	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
+	window paneColor: self windowColorToUse.
 
-	window addMorph: (displayView := ImageMorph new image: displayForm)
-		frame: (0@0 corner: 1@0.95).
+	window addMorph: (displayView := SimulatorImageMorph new image: displayForm)
+			frame: (0@0 corner: 1@0.95).
+	displayView activeHand addEventListener: self.
+	eventTransformer := SimulatorEventTransformer new.
 
 	window addMorph: (PluggableTextMorph on: self
 						text: #byteCountText accept: nil
@@ -2398,6 +2601,10 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	f := FileStream readOnlyFileNamed: fileName.
 	f ifNil: [^self error: 'no image found'].
 
+	"Set the image name and the first argument; there are
+	 no arguments during simulation unless set explicitly."
+	systemAttributes at: 1 put: fileName; at: 2 put: nil.
+
 	["begin ensure block..."
 	imageName := f fullName.
 	f binary.
@@ -2405,7 +2612,7 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	version := self getWord32FromFile: f swap: false.  "current version: 16r1968 (=6504) vive la revolucion!"
 	(self readableFormat: version)
 		ifTrue: [swapBytes := false]
-		ifFalse: [(version := objectMemory byteSwapped: version) = self imageFormatVersion
+		ifFalse: [(version := version byteSwap32) = self imageFormatVersion
 					ifTrue: [swapBytes := true]
 					ifFalse: [self error: 'incomaptible image format']].
 	headerSize := self getWord32FromFile: f swap: swapBytes.
@@ -2499,14 +2706,11 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	self assert: cogCodeSize \\ 4 = 0.
 	self assert: objectMemory memoryLimit \\ 4 = 0.
 	self assert: self rumpCStackSize \\ 4 = 0.
+	objectMemory allocateMemoryOfSize: objectMemory memoryLimit.
 	"read in the image in bulk, then swap the bytes if necessary"
 	f position: headerSize.
-	objectMemory memory: ((cogit processor endianness == #little
-					ifTrue: [LittleEndianBitmap]
-					ifFalse: [Bitmap]) new: objectMemory memoryLimit // 4).
 	count := objectMemory readHeapFromImageFile: f dataBytes: dataSize.
-	count ~= dataSize ifTrue: [self halt].
-	]
+	count ~= dataSize ifTrue: [self halt]]
 		ensure: [f close].
 	self moveMethodCacheToMemoryAt: objectMemory cogCodeBase + cogCodeSize + stackZoneSize.
 	self movePrimTraceLogToMemoryAt: objectMemory cogCodeBase + cogCodeSize + stackZoneSize + methodCacheSize.
@@ -2656,27 +2860,6 @@ CogVMSimulator >> primTraceLogSize [
 	^PrimTraceLogSize * objectMemory wordSize
 ]
 
-{ #category : #'I/O primitives' }
-CogVMSimulator >> primitiveBeDisplay [
-	"Extended to create a scratch Form for use by showDisplayBits."
-
-	| rcvr destWidth destHeight destDepth |
-	rcvr := self stackTop.
-	self success: ((objectMemory isPointers: rcvr) and: [(objectMemory lengthOf: rcvr) >= 4]).
-	self successful ifTrue: [
-		destWidth := self fetchInteger: 1 ofObject: rcvr.
-		destHeight := self fetchInteger: 2 ofObject: rcvr.
-		destDepth := self fetchInteger: 3 ofObject: rcvr.
-	].
-	self successful ifTrue: [
-		"create a scratch form the same size as Smalltalk displayObj"
-		displayForm := Form extent: destWidth @ destHeight
-							depth: destDepth.
-		displayView ifNotNil: [displayView image: displayForm].
-	].
-	super primitiveBeDisplay
-]
-
 { #category : #'other primitives' }
 CogVMSimulator >> primitiveBeep [
 
@@ -2714,63 +2897,61 @@ CogVMSimulator >> primitiveDeferDisplayUpdates [
 
 { #category : #'file primitives' }
 CogVMSimulator >> primitiveDirectoryEntry [
-	| name pathName array result |
+	| name pathName arrayNilOrSymbol result |
 	name := self stringOf: self stackTop.
 	pathName := self stringOf: (self stackValue: 1).
 	
 	self successful ifFalse:
 		[^self primitiveFail].
 
-	array := FileDirectory default primLookupEntryIn: pathName name: name.
-	array == nil ifTrue:
+	arrayNilOrSymbol := FileDirectory default primLookupEntryIn: pathName name: name.
+	arrayNilOrSymbol ifNil:
 		[self pop: 3 thenPush: objectMemory nilObject.
-		^array].
-	array == #badDirectoryPath ifTrue:
-		[self halt.
-		^self primitiveFail].
+		 ^self].
+	arrayNilOrSymbol isArray ifFalse:
+		["arrayNilOrSymbol ~~ #primFailed ifTrue:
+			[self halt]. "
+		self transcript show: name, ' NOT FOUND'.
+		 ^self primitiveFail].
 
-	PharoVM 
-		ifTrue: [  
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
-				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4) fileSize: (array at: 5)
-				posixPermissions: (array at: 6) isSymlink: (array at: 7) ]
-		ifFalse: [ 
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
-				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4) fileSize: (array at: 5) ].
-	self pop: 3.
-	self push: result
+	result := PharoVM 
+		ifTrue:
+			[self makeDirEntryName: (arrayNilOrSymbol at: 1) size: (arrayNilOrSymbol at: 1) size
+				createDate: (arrayNilOrSymbol at: 2) modDate: (arrayNilOrSymbol at: 3)
+				isDir: (arrayNilOrSymbol at: 4) fileSize: (arrayNilOrSymbol at: 5)
+				posixPermissions: (arrayNilOrSymbol at: 6 ifAbsent: [8r644]) isSymlink: (arrayNilOrSymbol at: 7 ifAbsent: [false])]
+		ifFalse:
+			[self makeDirEntryName: (arrayNilOrSymbol at: 1) size: (arrayNilOrSymbol at: 1) size
+				createDate: (arrayNilOrSymbol at: 2) modDate: (arrayNilOrSymbol at: 3)
+				isDir: (arrayNilOrSymbol at: 4) fileSize: (arrayNilOrSymbol at: 5) ].
+	self pop: 3 thenPush: result
 ]
 
 { #category : #'file primitives' }
 CogVMSimulator >> primitiveDirectoryLookup [
 	| index pathName array result |
 	index := self stackIntegerValue: 0.
-	pathName := (self stringOf: (self stackValue: 1)).
+	pathName := self stringOf: (self stackValue: 1).
 	
 	self successful ifFalse:
 		[^self primitiveFail].
 
 	array := FileDirectory default primLookupEntryIn: pathName index: index.
 
-	array == nil ifTrue:
+	array ifNil:
 		[self pop: 3 thenPush: objectMemory nilObject.
-		^array].
+		 ^array].
 	array == #badDirectoryPath ifTrue:
-		["self halt."
-		^self primitiveFail].
+		[^self "halt" primitiveFail].
 
-	PharoVM
-		ifTrue: [  
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
+	result := PharoVM
+		ifTrue: [self makeDirEntryName: (array at: 1) size: (array at: 1) size
 				createDate: (array at: 2) modDate: (array at: 3)
 				isDir: (array at: 4) fileSize: (array at: 5)
-				posixPermissions: (array at: 6) isSymlink: (array at: 7) ]
-		ifFalse: [ 
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
+				posixPermissions: (array at: 6 ifAbsent: 8r664) isSymlink: (array at: 7 ifAbsent: [false]) ]
+		ifFalse: [self makeDirEntryName: (array at: 1) size: (array at: 1) size
 				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4) fileSize: (array at: 5) ].
+				isDir: (array at: 4) fileSize: (array at: 5)].
 			
 	self pop: 3 thenPush: result
 ]
@@ -2858,6 +3039,17 @@ CogVMSimulator >> primitiveObject: actualReceiver perform: selector withArgument
 ]
 
 { #category : #'object access primitives' }
+CogVMSimulator >> primitiveObjectAt [
+	"self transcript
+		nextPutAll: (self nameOfClass: (self methodClassOf: (self stackValue: 1)));
+		nextPutAll: '>>#';
+		nextPutAll: (self stringOf: (self maybeSelectorOfMethod: (self stackValue: 1)));
+		nextPutAll: ' objectAt: '; print: (objectMemory integerValueOf: self stackTop); cr; flush.
+	self halt."
+	^super primitiveObjectAt
+]
+
+{ #category : #'object access primitives' }
 CogVMSimulator >> primitiveObjectAtPut [
 	| newValue |
 	newValue := self stackValue: 0.
@@ -2877,10 +3069,17 @@ CogVMSimulator >> primitiveObjectPointsTo [
 
 { #category : #'debugging traps' }
 CogVMSimulator >> primitivePerform [
-	| selector |
+	| receiver selector |
+	"If called from the machine code perform primitive, it should not have been found,
+	 except that the cacheing for V3 has a mismatch between that used ror the first-level
+	 method cache and inline caches."
+	receiver := (self stackValue: argumentCount).
 	selector := self stackValue: argumentCount - 1.
-	self sendBreakpoint: selector receiver: (self stackValue: argumentCount).
-	(self filterPerformOf: selector to: (self stackValue: argumentCount)) ifTrue:
+	((self methodHasCogMethod: newMethod)
+	 and: [(objectMemory isCompactInstance: receiver) not]) ifTrue:
+		[self deny: (self newMethodInLookupCacheAt: selector and: (objectMemory fetchClassTagOf: receiver))].
+	self sendBreakpoint: selector receiver: receiver.
+	(self filterPerformOf: selector to: receiver) ifTrue:
 		[^self pop: argumentCount].
 	^super primitivePerform
 ]
@@ -2944,11 +3143,37 @@ CogVMSimulator >> primitiveVMCurrentThreadId [
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
 ]
 
+{ #category : #'system control primitives' }
+CogVMSimulator >> primitiveVMParameter [
+	(argumentCount = 2
+	 and: [(self stackValue: 1) = (objectMemory integerObjectOf: 34)]) ifTrue:
+		[self halt].
+	^super primitiveVMParameter
+]
+
+{ #category : #'system control primitives' }
+CogVMSimulator >> primitiveVoidVMState [
+	self halt.
+	^super primitiveVoidVMState
+]
+
 { #category : #'debug printing' }
 CogVMSimulator >> print: it [
 
 	traceOn ifTrue:
 		[it isString ifTrue: [transcript nextPutAll: it] ifFalse: [it printOn: transcript]]
+]
+
+{ #category : #'debug printing' }
+CogVMSimulator >> printActivationNameForSelector: aSelector startClass: startClass [
+	super printActivationNameForSelector: aSelector startClass: startClass.
+	"(self transcript dependents detect: [:d| d isTextView] ifNone: []) ifNotNil:
+		[:textView| | text size |
+		text := textView text asString.
+		((size := text size) >= 30
+		and: [(text copyFrom: size - 29 to: size) = 'Object(ProtoObject)>initialize']) ifTrue:
+			[self doOrDefer: [self changed: #byteCountText; changed: #composeAll].
+			 self halt]"
 ]
 
 { #category : #'debug printing' }
@@ -3077,7 +3302,14 @@ CogVMSimulator >> printHex: anInteger [
 CogVMSimulator >> printHexnp: anInteger [
 
 	traceOn ifTrue:
-		[transcript nextPutAll: (anInteger storeStringBase: 16)]
+		[transcript nextPutAll: ((anInteger ifNil: [0]) asInteger storeStringBase: 16)]
+]
+
+{ #category : #'debug printing' }
+CogVMSimulator >> printHexnpnp: anInteger [
+	"Print n in hex, in the form '1234', unpadded"
+	traceOn ifTrue:
+		[transcript nextPutAll: ((anInteger ifNil: [0]) printStringBase: 16)]
 ]
 
 { #category : #'debug printing' }
@@ -3109,7 +3341,14 @@ CogVMSimulator >> printRumpCStackTo: address [
 		by: objectMemory wordSize negated
 		do:
 			[:addr|
-			self printHex: addr; tab; printHex: (self longAt: addr); cr]
+			self printHex: addr.
+			addr = cogit processor sp
+				ifTrue: [self print: ' sp->']
+				ifFalse:
+					[addr = cogit processor fp
+						ifTrue: [self print: ' fp->']
+						ifFalse: [self tab]].
+			self tab; printHex: (objectMemory longAt: addr); cr]
 ]
 
 { #category : #'debug printing' }
@@ -3145,6 +3384,13 @@ CogVMSimulator >> printStringOf: oop on: aStream [
 	aStream flush
 ]
 
+{ #category : #'I/O primitives support' }
+CogVMSimulator >> queueForwardedEvent: event [
+	eventQueue ifNil:
+		[eventQueue := SharedQueue new].
+	eventQueue nextPut: event
+]
+
 { #category : #'multi-threading simulation switch' }
 CogVMSimulator >> recordThreadSwitchTo: ownerIndex source: sourceCode [
 	"This method includes or excludes CoInterpreterMT methods as required.
@@ -3155,23 +3401,22 @@ CogVMSimulator >> recordThreadSwitchTo: ownerIndex source: sourceCode [
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
 ]
 
-{ #category : #'multi-threading simulation switch' }
+{ #category : #'debug support' }
 CogVMSimulator >> recordTrace: classOrInteger thing: selector source: source [
 	"This method includes or excludes CoInterpreterMT methods as required.
-	 Auto-generated by CogVMSimulator>>ensureMultiThreadingOverridesAreUpToDate"
-
+	 It used to be auto-generated by CogVMSimulator>>ensureMultiThreadingOverridesAreUpToDate.
+	 Now checks for or collects expectedSends."
+	(expectedSends == nil
+	 or: [objectMemory isIntegerObject: classOrInteger]) ifFalse:
+		[expecting
+			ifTrue:
+				[expectedSends peek ~~ selector ifTrue: [self halt].
+				 expectedSends next]
+			ifFalse:
+				[expectedSends nextPut: selector]].
+	
 	^self perform: #recordTrace:thing:source:
 		withArguments: {classOrInteger. selector. source}
-		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
-]
-
-{ #category : #'multi-threading simulation switch' }
-CogVMSimulator >> removeLink: aLink fromList: aLinkedList [
-	"This method includes or excludes CoInterpreterMT methods as required.
-	 Auto-generated by CogVMSimulator>>ensureMultiThreadingOverridesAreUpToDate"
-
-	^self perform: #removeLink:fromList:
-		withArguments: {aLink. aLinkedList}
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
 ]
 
@@ -3203,7 +3448,7 @@ CogVMSimulator >> rewriteMethodCacheEntryForExternalPrimitiveToFunction: localPr
 	(methodCache at: lastMethodCacheProbeWrite + MethodCacheMethod) = newMethod ifTrue:
 		[methodCache
 			at: lastMethodCacheProbeWrite + MethodCachePrimFunction
-			put: (self cCoerce: localPrimAddress to: #long)]
+			put: (self cCoerce: localPrimAddress to: #'sqIntptr_t')]
 ]
 
 { #category : #'rump c stack' }
@@ -3238,7 +3483,7 @@ CogVMSimulator >> run [
 					((World submorphs includes: topWindow)
 					 and: [UIManager default confirm: 'close?']) ifTrue:
 						[topWindow delete]]].
-				  ^self].
+				  ^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self initialEnterSmalltalkExecutive
@@ -3253,11 +3498,27 @@ CogVMSimulator >> runWithBreakCount: theBreakCount [
 					((World submorphs includes: topWindow)
 					 and: [UIManager default confirm: 'close?']) ifTrue:
 						[topWindow delete]]].
-				  ^self].
+				  ^self close].
 	breakCount := theBreakCount.
 	self initStackPages.
 	self loadInitialContext.
 	self initialEnterSmalltalkExecutive
+]
+
+{ #category : #'primitive support' }
+CogVMSimulator >> saneFunctionPointerForFailureOfPrimIndex: primIndex [
+	"For simulation override to do the check specially when the
+	 primitiveFunctionPointer is an invalid address proxy for a primitive."
+	| basePrimitive |
+	(instructionPointer < objectMemory nilObject asUnsignedInteger
+	and: [primitiveFunctionPointer isInteger
+	and: [self isPrimitiveFunctionPointerAnIndex not
+	and: [primIndex ~= PrimNumberExternalCall
+	and: [(self isMetaPrimitiveIndex: primIndex) not]]]]) ifTrue:
+		[basePrimitive := self functionPointerFor: primIndex inClass: objectMemory nilObject.
+		 ^(cogit lookupAddress: primitiveFunctionPointer) endsWith: basePrimitive].
+
+	^super saneFunctionPointerForFailureOfPrimIndex: primIndex
 ]
 
 { #category : #'I/O primitives' }
@@ -3287,6 +3548,16 @@ CogVMSimulator >> setBreakBlockFromString: aString [
 					UIManager default warn: ex messageText.
 					^self].
 	cogit breakBlock: block
+]
+
+{ #category : #'multi-threading simulation switch' }
+CogVMSimulator >> setCogVMFlags: flags [
+	"This method includes or excludes CoInterpreterMT methods as required.
+	 Auto-generated by CogVMSimulator>>ensureMultiThreadingOverridesAreUpToDate"
+
+	^self perform: #setCogVMFlags:
+		withArguments: {flags}
+		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
 ]
 
 { #category : #'multi-threading simulation switch' }
@@ -3331,50 +3602,36 @@ CogVMSimulator >> shortPrintFrame: theFP [
 	^super shortPrintFrame: theFP
 ]
 
-{ #category : #'I/O primitives' }
-CogVMSimulator >> showDisplayBits: destBits w: w h: h d: d left: left right: right top: top bottom: bottom [
-	| raster pixPerWord simDisp realDisp rect |
-	displayForm ifNil: [^self].
-	pixPerWord := 32 // d.
-	raster := displayForm width + (pixPerWord - 1) // pixPerWord.
-	simDisp := Form new hackBits: objectMemory memory.
-	displayForm unhibernate.
-	realDisp := Form new hackBits: displayForm bits.
-	realDisp
-		copy: (0 @ (top * raster) extent: 4 @ (bottom - top * raster))
-		from: 0 @ (destBits // 4 + (top * raster))
-		in: simDisp
-		rule: Form over.
-	displayView ifNotNil: [^ displayView changed].
-	
-	"If running without a view, just blat the bits onto the screen..."
-	rect := 0 @ top corner: displayForm width @ bottom.
-	Display
-		copy: (rect translateBy: self displayLocation)
-		from: rect topLeft
-		in: displayForm
-		rule: Form over
-]
-
 { #category : #'process primitive support' }
 CogVMSimulator >> signalSemaphoreWithIndex: index [
-	"This is a non-thread-safe simulation.  See platforms/Cross/vm/sqExternalSemaphores.c
-	 for the real code."
+	"This is a simulation.  See platforms/Cross/vm/sqExternalSemaphores.c for the real code.
+	 Thanks to Levente Uzoni for making this version almost thread-safe (in Smalltalk)"
+	<doNotGenerate>
+	| originalResponses newRequests newResponses |
 	index <= 0 ifTrue: [^false].
 	index > externalSemaphoreSignalRequests size ifTrue:
-		[| newRequests newResponses |
-		newRequests := Array new: 1 << index highBit withAll: 0.
-		newResponses := newRequests copy.
-		newRequests
+		[newRequests := Array new: 1 << index highBit withAll: 0.
+		 newResponses := newRequests shallowCopy].
+	"This is a lock-free thread-safe grow...; thanks Levente"
+	originalResponses := externalSemaphoreSignalResponses.
+	[index > externalSemaphoreSignalRequests size] whileTrue:
+		[newRequests
 			replaceFrom: 1
 			to: externalSemaphoreSignalRequests size
 			with: externalSemaphoreSignalRequests
 			startingAt: 1.
-		newResponses
+		 newResponses
 			replaceFrom: 1
 			to: externalSemaphoreSignalResponses size
 			with: externalSemaphoreSignalResponses
-			startingAt: 1].
+			startingAt: 1.
+		 externalSemaphoreSignalResponses == originalResponses "This should always be true."
+			ifTrue:
+				[externalSemaphoreSignalRequests := newRequests.
+				 externalSemaphoreSignalResponses := newResponses]
+			ifFalse:
+				[originalResponses := externalSemaphoreSignalResponses]].
+	"This is not thread-safe however..."
 	externalSemaphoreSignalRequests
 		at: index
 		put: (externalSemaphoreSignalRequests at: index) + 1.
@@ -3537,7 +3794,7 @@ CogVMSimulator >> testBreakCount: breakCount printSends: shouldPrintSends printF
 	self initStackPages.
 	self loadInitialContext.
 	transcript clear.
-	quitBlock := [^self].
+	quitBlock := [^self close].
 	printSends := true & shouldPrintSends. "true & foo allows evaluating printFoo := true in the debugger"
 	printFrameAtEachStep := true & shouldPrintFrames.
 	printBytecodeAtEachStep := true & shouldPrintBytecodes.
@@ -3679,13 +3936,13 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		addLine;
 		add: 'print ext head frame' action: #printExternalHeadFrame;
 		add: 'print int head frame' action: #printHeadFrame;
-		add: 'print mc/cog frame' action: [self printFrame: cogit processor fp WithSP: cogit processor sp];
-		add: 'short print ext frame & callers' action: [self shortPrintFrameAndCallers: framePointer];
-		add: 'short print int frame & callers' action: [self shortPrintFrameAndCallers: localFP];
-		add: 'short print mc/cog frame & callers' action: [self shortPrintFrameAndCallers: cogit processor fp];
-		add: 'long print ext frame & callers' action: [self printFrameAndCallers: framePointer SP: stackPointer];
-		add: 'long print int frame & callers' action: [self printFrameAndCallers: localFP SP: localSP];
-		add: 'long print mc/cog frame & callers' action: [self printFrameAndCallers: cogit processor fp SP: cogit processor sp];
+		add: 'print mc/cog head frame' action: [self printFrame: cogit processor fp WithSP: cogit processor sp];
+		add: 'short print ext head frame & callers' action: [self shortPrintFrameAndCallers: framePointer];
+		add: 'short print int head frame & callers' action: [self shortPrintFrameAndCallers: localFP];
+		add: 'short print mc/cog head frame & callers' action: [self shortPrintFrameAndCallers: cogit processor fp];
+		add: 'long print ext head frame & callers' action: [self printFrameAndCallers: framePointer SP: stackPointer];
+		add: 'long print int head frame & callers' action: [self printFrameAndCallers: localFP SP: localSP];
+		add: 'long print mc/cog head frame & callers' action: [self printFrameAndCallers: cogit processor fp SP: cogit processor sp];
 		add: 'print frame...' action: [(self promptHex: 'print frame') ifNotNil: [:fp| self printFrame: fp]];
 		add: 'print call stack' action: #printCallStack;
 		add: 'print stack call stack' action: #printStackCallStack;
@@ -3695,23 +3952,26 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'print all stacks' action: #printAllStacks;
 		add: 'write back local ptrs' action: [stackPointer := localSP. framePointer := localFP. instructionPointer := localIP.
 											self writeBackHeadFramePointers];
-		add: 'write back mc ptrs' action: [stackPointer := cogit processor sp. framePointer := cogit processor fp. instructionPointer := cogit processor eip.
-											self writeBackHeadFramePointers];
+		add: 'write back mc ptrs' action: [stackPointer := cogit processor sp. framePointer := cogit processor fp. instructionPointer := cogit processor pc.
+											self externalWriteBackHeadFramePointers];
 		addLine;
-		add: 'print rump C stack' action: [objectMemory printMemoryFrom: cogit processor sp to: self CStackPointer];
+		add: 'print rump C stack' action: [objectMemory printMemoryFrom: cogit processor sp to: cogit getCStackPointer];
 		add: 'print registers' action: [cogit processor printRegistersOn: transcript];
 		add: 'print register map' action: [cogit printRegisterMapOn: transcript];
 		add: 'disassemble method/trampoline...' action: [(self promptHex: 'pc') ifNotNil: [:pc| cogit disassembleCodeAt: pc]];
 		add: 'disassemble method/trampoline at pc' action:
-			[cogit disassembleCodeAt: ((cogit methodZone methodFor: cogit processor pc) = 0
+			[cogit disassembleCodeAt: (((cogit codeEntryFor: cogit processor pc) isNil
+										  and: [(cogit methodZone methodFor: cogit processor pc) = 0])
 											ifTrue: [instructionPointer]
 											ifFalse: [cogit processor pc])];
 		add: 'disassemble ext head frame method' action: [cogit disassembleMethod: (self frameMethod: framePointer)];
 		add: 'print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self printOop: oop]];
 		add: 'long print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self longPrintOop: oop]];
 		add: 'print context...' action: [(self promptHex: 'print context') ifNotNil: [:oop| self printContext: oop]];
+		add: 'symbolic method...' action: [(self promptHex: 'method bytecodes') ifNotNil: [:oop| self symbolicMethod: oop]];
 		addLine;
 		add: 'inspect object memory' target: objectMemory action: #inspect;
+		add: 'run leak checker' action: [Cursor execute showWhile: [self runLeakChecker]];
 		add: 'inspect cointerpreter' action: #inspect;
 		add: 'inspect cogit' target: cogit action: #inspect;
 		add: 'inspect method zone' target: cogit methodZone action: #inspect.
@@ -3733,16 +3993,17 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 									n: (m selector + objectMemory baseHeaderSize)
 									cmp: (objectMemory numBytesOf: m selector)) = 0]]) ifTrue:
 						[cogit printCogMethod: m]]]];
+		add: 'print cog methods with method...' action:
+			[(self promptHex: 'method') ifNotNil: [:methodOop|
+			 cogMethodZone methodsDo:
+				[:m|
+				m methodObject = methodOop ifTrue:
+					[cogit printCogMethod: m]]]];
 		add: 'print cog method for...' action: [(self promptHex: 'pc') ifNotNil: [:pc| cogit printCogMethodFor: pc]];
 		add: 'print cog method header for...' action: [(self promptHex: 'pc') ifNotNil: [:pc| cogit printCogMethodHeaderFor: pc]];
 		add: 'print trampoline table' target: cogit action: #printTrampolineTable;
 		add: 'print prim trace log' action: #dumpPrimTraceLog;
 		add: 'report recent instructions' target: cogit action: #reportLastNInstructions;
-		add: 'set break pc (', (cogit breakPC isInteger ifTrue: [cogit breakPC hex] ifFalse: [cogit breakPC printString]), ')...' action: [(self promptHex: 'break pc') ifNotNil: [:bpc| cogit breakPC: bpc]];
-		add: (cogit singleStep
-				ifTrue: ['no single step']
-				ifFalse: ['single step'])
-			action: [cogit singleStep: cogit singleStep not];
 		add: (cogit printRegisters
 				ifTrue: ['no print registers each instruction']
 				ifFalse: ['print registers each instruction'])
@@ -3752,7 +4013,12 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 				ifFalse: ['print instructions each instruction'])
 			action: [cogit printInstructions: cogit printInstructions not];
 		addLine;
+		add: (cogit singleStep
+				ifTrue: ['no single step']
+				ifFalse: ['single step'])
+			action: [cogit singleStep: cogit singleStep not];
 		add: 'click step' action: [cogit setClickStepBreakBlock];
+		add: 'set break pc', cogit breakPC menuPrompt, '...-ve to disable or remove' action: [cogit promptForBreakPC];
 		add: 'set break count...' action: [|s| s := UIManager default request: 'break count (dec)'.
 											s notEmpty ifTrue: [breakCount := Integer readFrom: s readStream]];
 		add: 'set break selector...' action: [|s| s := UIManager default request: 'break selector'.
@@ -3773,18 +4039,6 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 	^aMenuMorph
 ]
 
-{ #category : #testing }
-CogVMSimulator >> validOop: oop [
-	" Return true if oop appears to be valid "
-	(oop bitAnd: 1) = 1 ifTrue: [^ true].  "Integer"
-	(oop bitAnd: 3) = 0 ifFalse: [^ false].  "Uneven address"
-	oop >= objectMemory endOfMemory ifTrue: [^ false].  "Out of range"
-	"could test if within the first large freeblock"
-	(self longAt: oop) = 4 ifTrue: [^ false].
-	(objectMemory headerType: oop) = 2 ifTrue: [^ false].	"Free object"
-	^ true
-]
-
 { #category : #'debug support' }
 CogVMSimulator >> veryDeepCopyWith: deepCopier [
 	"Override to short-circuit the copying of any VMPluginCodeGenerators referenced from mappedPluginEntries and
@@ -3793,9 +4047,9 @@ CogVMSimulator >> veryDeepCopyWith: deepCopier [
 		at: mappedPluginEntries ifAbsentPut: [mappedPluginEntries];
 		at: uniqueIndices ifAbsentPut: [uniqueIndices].
 	mappedPluginEntries do:
-		[:tuple|
-		[:sim :sel :block :argCount|
-		deepCopier references at: block ifAbsentPut: [block]] valueWithArguments: tuple].
+		[:tuple| | block |
+		block := tuple third.
+		deepCopier references at: block ifAbsentPut: [block]].
 	uniqueIndices keysDo:
 		[:block|
 		deepCopier references at: block ifAbsentPut: [block]].
@@ -3854,6 +4108,17 @@ CogVMSimulator >> warpBits [
 	^ myBitBlt warpBits
 ]
 
+{ #category : #'debug printing' }
+CogVMSimulator >> whereIs: anOop [
+	(self isOnRumpCStack: anOop) ifTrue: [^'is on rump C stack'].
+	^super whereIs: anOop
+]
+
+{ #category : #UI }
+CogVMSimulator >> windowColorToUse [
+	^Color lightBlue
+]
+
 { #category : #'primitive support' }
 CogVMSimulator >> windowIsClosing [
 	self threadManager ifNotNil:
@@ -3873,10 +4138,10 @@ CogVMSimulator >> windowIsClosing [
 
 { #category : #'debug printing' }
 CogVMSimulator >> withMemoryProtectionDo: aBlock [
-	self writeProtectMemory.
+	objectMemory writeProtectMemory.
 	stackPages writeProtectMemory.
 	^aBlock ensure:
-		[self writeEnableMemory.
+		[objectMemory writeEnableMemory.
 		 stackPages writeEnableMemory]
 ]
 

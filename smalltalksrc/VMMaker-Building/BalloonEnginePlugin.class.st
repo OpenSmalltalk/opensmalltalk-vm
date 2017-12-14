@@ -19,9 +19,11 @@ BalloonEnginePlugin >> absoluteSquared8Dot24: value [
 	e.g., compute (value * value) bitShift: -24"
 	| word1 word2 |
 	<inline: true>
+	<var: 'word1' type: #'unsigned int'>
+	<var: 'word2' type: #'unsigned int'>
 	word1 := value bitAnd: 16rFFFF.
 	word2 := (value bitShift: -16) bitAnd: 255.
-	^(( (self cCoerce: (word1 * word1) to:'unsigned') bitShift: -16) +
+	^(( (word1 * word1) bitShift: -16) +
 		((word1 * word2) * 2) +
 			((word2 * word2) bitShift: 16)) bitShift: -8
 ]
@@ -2970,7 +2972,7 @@ BalloonEnginePlugin >> stepToFirstWideBezierIn: bezier at: yValue [
 
 	"Compute primary x direction of curve (e.g., 1: left to right; -1: right to left)."
 	xDir := ((self bezierUpdateDataOf: bezier) at: GBUpdateDX).
-	xDir = 0 ifTrue:[((self bezierUpdateDataOf: bezier) at: GBUpdateDDX)].
+	xDir = 0 ifTrue:[xDir := ((self bezierUpdateDataOf: bezier) at: GBUpdateDDX)].
 	xDir >= 0 ifTrue:[xDir := 1] ifFalse:[xDir := -1].
 
 	"Adjust the curve to start/end at the right position"

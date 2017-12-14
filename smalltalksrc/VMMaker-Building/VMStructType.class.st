@@ -22,14 +22,57 @@ VMStructType class >> alignedByteSizeOf: objectSymbolOrClass forClient: aVMClass
 ]
 
 { #category : #'code generation' }
-VMStructType class >> checkGenerateFieldAccessors: fieldSpecs bitPosition: firstBitPosition in: surrogateClass [
-	| bitPosition alignedByteSize currentOffset code |
-	bitPosition := firstBitPosition.
-	fieldSpecs do:
+VMStructType class >> changedAccesorsForSurrogate: surrogateClass bytesPerWord: bytesPerWord [
+	"Answer the changed accessor methods for the fields of the receiver and the alignedByteSize class method."
+
+	"{CogBlockMethod changedAccesorsForSurrogate: CogBlockMethodSurrogate32 bytesPerWord: 4.
+	 CogMethod changedAccesorsForSurrogate: CogMethodSurrogate32 bytesPerWord: 4.
+	 CogBlockMethod changedAccesorsForSurrogate: CogBlockMethodSurrogate64 bytesPerWord: 8.
+	 CogMethod changedAccesorsForSurrogate: CogMethodSurrogate64 bytesPerWord: 8}"
+
+	^Dictionary withAll: ((self fieldAccessorSourceFor: surrogateClass bytesPerWord: bytesPerWord) associationsSelect:
+		[:a| a value ~= a key sourceString])
+]
+
+{ #category : #'code generation' }
+VMStructType class >> checkGenerateSurrogate: surrogateClass bytesPerWord: bytesPerWord [
+	"Check the accessor methods for the fields of the receiver and if necessary install new
+	 or updated versions in the surrogate class alpng with the alignedByteSize class method."
+
+	"CogBlockMethod checkGenerateSurrogate: CogBlockMethodSurrogate32 bytesPerWord: 4.
+	 CogMethod checkGenerateSurrogate: CogMethodSurrogate32 bytesPerWord: 4.
+	 CogBlockMethod checkGenerateSurrogate: CogBlockMethodSurrogate64 bytesPerWord: 8.
+	 CogMethod checkGenerateSurrogate: CogMethodSurrogate64 bytesPerWord: 8"
+	| accessors oldBytesPerWord |
+	oldBytesPerWord := BytesPerWord.
+	accessors := [self fieldAccessorSourceFor: surrogateClass bytesPerWord: (BytesPerWord := bytesPerWord)]
+					ensure: [BytesPerWord := oldBytesPerWord].
+	accessors keysAndValuesDo:
+		[:mr :source|
+		source ~= mr sourceString ifTrue:
+			[mr actualClass compile: source classified: #accessing]]
+
+	"Dictionary withAll: ((self fieldAccessorSourceFor: surrogateClass bytesPerWord: bytesPerWord) associationsSelect:
+		[:a| a value ~= a key sourceString])"
+]
+
+{ #category : #'code generation' }
+VMStructType class >> fieldAccessorSourceFor: surrogateClass bytesPerWord: bytesPerWord [
+	"Answer a Dictionary of MethodReference to source for the accessors of the inst vars of the
+	 receiver and the alignedByteSize class method in surrogateClass with the given word size."
+
+	"{CogBlockMethod fieldAccessorSourceFor: CogBlockMethodSurrogate32 bytesPerWord: 4.
+	 CogMethod fieldAccessorSourceFor: CogMethodSurrogate32 bytesPerWord: 4.
+	 CogBlockMethod fieldAccessorSourceFor: CogBlockMethodSurrogate64 bytesPerWord: 8.
+	 CogMethod fieldAccessorSourceFor: CogMethodSurrogate64 bytesPerWord: 8}"
+	| methods bitPosition alignedByteSize currentOffset |
+	methods := Dictionary new.
+	bitPosition := 0.
+	(self fieldAccessorsForBytesPerWord: bytesPerWord) do:
 		[:spec|
 		"reset the bitPosition if the offset expression changes."
 		currentOffset ~= (self offsetForInstVar: spec first) ifTrue:
-			[bitPosition := firstBitPosition.
+			[bitPosition := 0.
 			 currentOffset := self offsetForInstVar: spec first].
 		"If the accessor is already defined in a superclass don't redefine it in the subclass.
 		 We assume it is correctly defined in the superclass."
@@ -39,37 +82,27 @@ VMStructType class >> checkGenerateFieldAccessors: fieldSpecs bitPosition: first
 				ifNotNil: [:implementingClass|
 						self assert: (implementingClass inheritsFrom: Object).
 						implementingClass == surrogateClass]]) ifTrue:
-			[code := self getter: spec first
-						 bitPosition: bitPosition
-						 bitWidth: spec second
-						 type: (spec at: 3 ifAbsent: []).
-			 code ~= (surrogateClass sourceCodeAt: spec first asSymbol ifAbsent: ['']) asString ifTrue:
-				[surrogateClass compile: code classified: #accessing].
-			 code := self setter: spec first
-						 bitPosition: bitPosition
-						 bitWidth: spec second
-						 type: (spec at: 3 ifAbsent: []).
-			 code ~= (surrogateClass sourceCodeAt: (spec first, ':') asSymbol ifAbsent: ['']) asString ifTrue:
-				[surrogateClass compile: code classified: #accessing]].
+			[methods
+				at: (MethodReference class: surrogateClass selector: spec first asSymbol)
+					put: (self getter: spec first
+							 bitPosition: bitPosition
+							 bitWidth: spec second
+							 type: (spec at: 3 ifAbsent: []));
+				at: (MethodReference class: surrogateClass selector: (spec first, ':') asSymbol)
+					put: (self setter: spec first
+							 bitPosition: bitPosition
+							 bitWidth: spec second
+							 type: (spec at: 3 ifAbsent: []))].
 		bitPosition := bitPosition + spec second].
-	alignedByteSize := bitPosition / 8.
+	alignedByteSize := (self roundUpBitPosition: bitPosition toWordBoundary: bytesPerWord) / 8.
 	self assert: alignedByteSize isInteger.
-	code := 'alignedByteSize'
-			, (String with: Character cr with: Character tab with: $^)
-			, alignedByteSize printString,
-			(currentOffset ifNil: [''] ifNotNil: [' + self ', currentOffset]).
-	code ~= (surrogateClass class sourceCodeAt: #alignedByteSize) asString ifTrue:
-		[surrogateClass class compile: code classified: #accessing]
-]
-
-{ #category : #'code generation' }
-VMStructType class >> checkGenerateSurrogate: class bytesPerWord: bytesPerWord [
-	self checkGenerateFieldAccessors: (self fieldAccessorsForBytesPerWord: bytesPerWord)
-		bitPosition: 0
-		in: class
-
-	"CogBlockMethod checkGenerateSurrogate: CogBlockMethodSurrogate32 bytesPerWord: 4.
-	 CogMethod checkGenerateSurrogate: CogMethodSurrogate32 bytesPerWord: 4"
+	methods
+		at: (MethodReference class: surrogateClass class selector: #alignedByteSize)
+			put: #alignedByteSize
+				, (String with: Character cr with: Character tab with: $^)
+				, alignedByteSize printString,
+				(currentOffset ifNil: [''] ifNotNil: [' + self ', currentOffset]).
+	^methods
 ]
 
 { #category : #'code generation' }
@@ -97,9 +130,12 @@ VMStructType class >> fieldAccessorsForBytesPerWord: bytesPerWord [
 				ifFalse:
 					[typeTuple
 						caseOf: {
-								['unsigned char']	->	[8].
-								['unsigned short']	->	[16].
-								['unsigned int']		->	[32] }
+								[#char]				->	[8].
+								[#'unsigned char']	->	[8].
+								[#short]			->	[16].
+								[#'unsigned short']	->	[16].
+								[#int]				->	[32].
+								[#'unsigned int']	->	[32] }
 						otherwise: [bytesPerWord * 8]].
 			typeTuple isArray
 				ifTrue:
@@ -126,7 +162,7 @@ VMStructType class >> filteredInstVarNames [
 { #category : #'code generation' }
 VMStructType class >> getter: getter bitPosition: bitPosition bitWidth: bitWidth type: typeOrNil [
 	^String streamContents:
-		[:s| | startByte endByte alignedPowerOf2 shift bool |
+		[:s| | startByte endByte alignedPowerOf2 shift |
 		startByte := bitPosition // 8.
 		endByte := bitPosition + bitWidth - 1 // 8.
 		shift := bitPosition \\ 8.
@@ -146,7 +182,7 @@ VMStructType class >> getter: getter bitPosition: bitPosition bitWidth: bitWidth
 		s nextPutAll: 'memory unsigned';
 		   nextPutAll: (#('Byte' 'Short' 'Long' 'Long')
 							at: endByte - startByte + 1
-							ifAbsent: ['LongLong']);
+							ifAbsent: ['Long64']);
 		  nextPutAll: 'At: address + '; print: startByte + 1.
 		(self offsetForInstVar: getter) ifNotNil:
 			[:offsetExpr| s nextPutAll: ' + '; nextPutAll: offsetExpr].
@@ -232,7 +268,7 @@ VMStructType class >> needsTypeTag [
 		((type isArray ifTrue: [type] ifFalse: [{type}]) anySatisfy:
 			[:str|
 			str isString
-			and: [str includesSubString: self structTagName]]) ifTrue:
+			and: [str includesSubstring: self structTagName]]) ifTrue:
 				[^true]].
 	^false
 
@@ -253,38 +289,37 @@ VMStructType class >> printTypedefOn: aStream [
 	aStream nextPut: ${; cr.
 	self instVarNamesAndTypesForTranslationDo:
 		[:ivn :typeArg| | type |
-		type := typeArg.
-		#(BytesPerWord BaseHeaderSize BytesPerOop) do:
-			[:sizeConstant| | index sizeConstantSize |
-			(type notNil
-			and: [(index := type indexOf: sizeConstant ifAbsent: 0) > 0]) ifTrue:
-				[sizeConstantSize  := VMBasicConstants classPool at: sizeConstant.
-				type := (type at: index + 1) = sizeConstantSize ifTrue:
-							[type := type copyReplaceFrom: index to: index + 1 with: #().
-							 type size = 1 ifTrue: [type first] ifFalse: [type]]]].
-		type ifNotNil:
-			[type isArray
-				ifTrue:
-					[aStream tab: 1.
-					 aStream nextPutAll: type first.
-					 (type first last isSeparator or: [type first last = $*]) ifFalse:
-						[aStream tab: 2].
-					 aStream nextPutAll: ivn.
-					 type last first isSeparator ifFalse:
-						[aStream space].
-					 aStream
-						nextPutAll: type last;
-						nextPut: $;;
-						cr]
-				ifFalse:
-					[aStream tab: 1.
-					 aStream nextPutAll: type.
-					 (type last isSeparator or: [type last = $*]) ifFalse:
-						[aStream tab: 1].
-					 aStream
-						nextPutAll: ivn;
-						nextPut: $;;
-						cr]]].
+		ivn first == $#
+			ifTrue: [aStream nextPutAll: ivn]
+			ifFalse:
+				[type := typeArg.
+				 #(BytesPerWord BaseHeaderSize BytesPerOop) do:
+					[:sizeConstant| | index sizeConstantSize |
+					(type notNil
+					and: [(index := type indexOf: sizeConstant ifAbsent: 0) > 0]) ifTrue:
+						[sizeConstantSize  := VMBasicConstants classPool at: sizeConstant.
+						type := (type at: index + 1) = sizeConstantSize ifTrue:
+									[type := type copyReplaceFrom: index to: index + 1 with: #().
+									 type size = 1 ifTrue: [type first] ifFalse: [type]]]].
+				 type ifNotNil:
+					[type isArray
+						ifTrue:
+							[aStream tab: 1.
+							 aStream nextPutAll: type first.
+							 (type first last isSeparator or: [type first last = $*]) ifFalse:
+								[aStream tab: 2].
+							 aStream nextPutAll: ivn.
+							 type last first isSeparator ifFalse:
+								[aStream space].
+							 aStream nextPutAll: type last]
+						ifFalse:
+							[aStream tab: 1.
+							 aStream nextPutAll: type.
+							 (type last isSeparator or: [type last = $*]) ifFalse:
+								[aStream tab: 1].
+							 aStream nextPutAll: ivn]].
+				 aStream nextPut: $;].
+		 aStream cr].
 	aStream
 		nextPutAll: ' } ';
 		nextPutAll: self structTypeName;
@@ -328,6 +363,11 @@ VMStructType class >> returnTypeForAccessor: aSelector [
 ]
 
 { #category : #'code generation' }
+VMStructType class >> roundUpBitPosition: bitPosition toWordBoundary: bytesPerWord [
+	^bitPosition + 7 // 8 + bytesPerWord - 1 // bytesPerWord * bytesPerWord * 8
+]
+
+{ #category : #'code generation' }
 VMStructType class >> setter: getter bitPosition: bitPosition bitWidth: bitWidth type: typeOrNil [
 	^String streamContents:
 		[:s| | startByte endByte shift alignedPowerOf2 accessor mask expr |
@@ -338,7 +378,7 @@ VMStructType class >> setter: getter bitPosition: bitPosition bitWidth: bitWidth
 		accessor := 'unsigned'
 					, (#('Byte' 'Short' 'Long' 'Long')
 							at: endByte - startByte + 1
-							ifAbsent: ['LongLong'])
+							ifAbsent: ['Long64'])
 					, 'At: address + '.
 		(self offsetForInstVar: getter) ifNotNil:
 			[:offsetExpr| accessor := accessor, offsetExpr, ' + '].

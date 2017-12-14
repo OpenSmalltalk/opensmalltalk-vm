@@ -28,8 +28,16 @@ TVariableNode >> bindVariablesIn: aDictionary [
 TVariableNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 
 	aStream nextPutAll: (name = 'nil'
-						ifTrue: [ aCodeGen cLiteralFor: nil ]
-						ifFalse: [ aCodeGen returnPrefixFromVariable: name ])
+						ifTrue: [aCodeGen cLiteralFor: nil]
+						ifFalse: [aCodeGen returnPrefixFromVariable: name]).
+	aCodeGen currentMethod ifNotNil:
+		[:m| m noteUsedVariableName: name]
+]
+
+{ #category : #testing }
+TVariableNode >> hasSideEffect [
+	"Answer if the parse tree rooted at this node has a side-effect or not."
+	^false
 ]
 
 { #category : #testing }
@@ -87,6 +95,11 @@ TVariableNode >> structTargetKindIn: aCodeGen [
 	 and hence can be dereferenced using . or ->.  Answer any of
 	 #struct #pointer or nil"
 	^aCodeGen structTargetKindForVariableName: name
+]
+
+{ #category : #'type inference' }
+TVariableNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
+	^aTMethod typeFor: self in: aCodeGenerator
 ]
 
 { #category : #accessing }

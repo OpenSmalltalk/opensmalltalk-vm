@@ -31,6 +31,13 @@ VMClass class >> apiExportHeaderName [
 	^nil
 ]
 
+{ #category : #'adding/removing methods' }
+VMClass class >> basicRemoveSelector: aSelector [
+	"Override to update the timeStamp"
+	^(super basicRemoveSelector: aSelector) ifNotNil:
+		[:oldMethod| self touch. oldMethod]
+]
+
 { #category : #translation }
 VMClass class >> cogMethodClass: options [
 	^(options at: #NewspeakVM ifAbsent: [false])
@@ -40,25 +47,13 @@ VMClass class >> cogMethodClass: options [
 
 { #category : #'accessing class hierarchy' }
 VMClass class >> cogitClass [
+	"Answer the cogitClass in effect.  Ensure that StackInterpreter has a nil cogitClass."
+	(self isInterpreterClass and: [self hasCogit not]) ifTrue:
+		[^nil].
 	^initializationOptions ifNotNil:
 		[Smalltalk classNamed: (initializationOptions
 									at: #Cogit
 									ifAbsent: [#SimpleStackBasedCogit])]
-]
-
-{ #category : #initialization }
-VMClass class >> copyOptionsBackTo: optionsDictionary [
-	"Ugh.  Copy back those options that the CCodeGenerator will do
-	 dead-code elimination for that are not yet set in optionsDictionary.
-	 This lets the CCodeGenerator see defaults for the options below."
-
-	optionsDictionary ifNil: [^self].
-	initializationOptions ifNil: [^self].
-	#(MULTIPLEBYTECODESETS IMMUTABILITY) do:
-		[:option|
-		((initializationOptions includesKey: option)
-		 and: [(optionsDictionary includesKey: option) not]) ifTrue:
-			[optionsDictionary at: option put: (initializationOptions at: option)]]
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -141,24 +136,6 @@ VMClass class >> defaultObjectMemoryClass [
 ]
 
 { #category : #translation }
-VMClass class >> emitExportPragma [	
-	"#pragma export -- seems only to have been for CodeWarrior on Mac."
-	^false
-]
-
-{ #category : #translation }
-VMClass class >> exportAPISelectors: options [
-	^self exportAPISelectorsFor: self
-]
-
-{ #category : #translation }
-VMClass class >> exportAPISelectorsFor: aClass [
-	^(aClass selectors select:
-		[:s| | m |
-		((m := aClass compiledMethodAt: s) pragmaAt: #api) notNil or: [(m pragmaAt: #api:) notNil]]) asSet
-]
-
-{ #category : #translation }
 VMClass class >> getVMMaker [
 	^Notification new tag: #getVMMaker; signal
 ]
@@ -188,21 +165,19 @@ VMClass class >> initializationOptions: optionsDictionary [
 VMClass class >> initialize [
 	(Utilities classPool at: #CommonRequestStrings ifAbsent: []) ifNotNil:
 		[:commonRequestStringHolder|
-		(commonRequestStringHolder contents asString includesSubString: 'VMClass open') ifFalse:
-			[Utilities appendToCommonRequests: '-\VMMaker generateConfiguration\VMMaker generateAllConfigurationsUnderVersionControl\VMMaker generateAllSpurConfigurations\VMClass openCogMultiWindowBrowser\VMClass openObjectMemoriesInterpretersBrowser\VMClass openSpurMultiWindowBrowser' withCRs]].
+		(commonRequestStringHolder contents asString includesSubstring: 'VMClass open') ifFalse:
+			[Utilities appendToCommonRequests: '-\VMMaker generateConfiguration\VMMaker generateAllConfigurationsUnderVersionControl\VMMaker generateAllSpurConfigurations\VMClass openCogMultiWindowBrowser\VMClass openObjectMemoriesInterpretersBrowser\VMClass openSpurMultiWindowBrowser\VMClass openCogSpurMultiWindowBrowser' withCRs]].
 	ExpensiveAsserts := false
 ]
 
 { #category : #initialization }
 VMClass class >> initializeMiscConstants [
-	"Falsify the `what type of VM is this?' flags that are defined in the various interp.h files,
-	 or in the case of VMBIGENDIAN the various sqConfig.h files.
+	"Falsify the `what type of VM is this?' flags that are defined in the various interp.h files.
 	 Subclass implementations need to include a super initializeMiscConstants"
 
 	| omc |
 	VMBIGENDIAN class. "Mention this for the benefit of CCodeGenerator>>emitCConstantsOn:"
-	self isInterpreterClass ifTrue:
-		[STACKVM := COGVM := COGMTVM := false].
+	SPURVM := STACKVM := COGVM := COGMTVM := false.
 
 	initializationOptions ifNil: [self initializationOptions: Dictionary new].
 	omc := initializationOptions at: #ObjectMemory ifAbsent: nil.
@@ -223,17 +198,18 @@ VMClass class >> initializeMiscConstants [
 	PharoVM := initializationOptions at: #PharoVM ifAbsentPut: [false].
 	NewspeakVM := initializationOptions at: #NewspeakVM ifAbsentPut: [false].
 	SistaVM := initializationOptions at: #SistaVM ifAbsentPut: [false].
+	LowcodeVM := initializationOptions at: #LowcodeVM ifAbsentPut: [false].
 	MULTIPLEBYTECODESETS := initializationOptions at: #MULTIPLEBYTECODESETS ifAbsentPut: [false].
-	"N.B.  Not yet implemented."
-	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsentPut: [false].
+	"But not these; they're compile-time"
+	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsent: [false].
 
-	"These for scripts etc... Usually they should get set by an Interpreter class's initializeMiscConstantsWith:"
-	(initializationOptions includesKey: #STACKVM) ifTrue:
-		[STACKVM := initializationOptions at: #STACKVM].
-	(initializationOptions includesKey: #COGVM) ifTrue:
-		[COGVM := initializationOptions at: #COGVM].
-	(initializationOptions includesKey: #COGMTVM) ifTrue:
-		[COGMTVM := initializationOptions at: #COGMTVM]
+	"These must be set only if specified, not defaulted, because they are set on the command line or in include files."
+	initializationOptions
+		at: #VMBIGENDIAN	ifPresent: [:value| VMBIGENDIAN := value];
+		at: #ObjectMemory	ifPresent: [:value| SPURVM := value beginsWith: 'Spur'];
+		at: #STACKVM		ifPresent: [:value| STACKVM := value];
+		at: #COGVM		ifPresent: [:value| COGVM := initializationOptions at: #COGVM];
+		at: #COGMTVM		ifPresent: [:value| COGMTVM := initializationOptions at: #COGMTVM]
 ]
 
 { #category : #initialization }
@@ -265,7 +241,11 @@ VMClass class >> initializePrimitiveErrorCodes [
 	PrimErrObjectMayMove		:= pet indexOf: #'object may move' ifAbsent: 14.
 	PrimErrLimitExceeded		:= pet indexOf: #'resource limit exceeded' ifAbsent: 15.
 	PrimErrObjectIsPinned		:= pet indexOf: #'object is pinned' ifAbsent: 16.
-	PrimErrWritePastObject	:= pet indexOf: #'primitive write beyond end of object' ifAbsent: 17
+	PrimErrWritePastObject		:= pet indexOf: #'primitive write beyond end of object' ifAbsent: 17.
+	PrimErrObjectMoved		:= pet indexOf: #'object moved' ifAbsent: 18.
+	PrimErrObjectNotPinned	:= pet indexOf: #'object not pinned' ifAbsent: 19.
+	PrimErrCallbackError		:= pet indexOf: #'error in callback' ifAbsent: 20.
+	PrimErrOSError				:= pet indexOf: #'operating system error' ifAbsent: 21
 ]
 
 { #category : #initialization }
@@ -396,6 +376,60 @@ VMClass class >> openCogMultiWindowBrowser [
 ]
 
 { #category : #utilities }
+VMClass class >> openCogSpurMultiWindowBrowser [
+	"Answer a new multi-window browser on the ObjectMemory classes, the Cog Interpreter classes, and the main JIT classes"
+	| b |
+	b := Browser open.
+	#(	SpurMemoryManager Spur32BitMemoryManager Spur32BitCoMemoryManager
+		 Spur64BitMemoryManager Spur64BitCoMemoryManager SpurGenerationScavenger
+		InterpreterPrimitives StackInterpreter StackInterpreterPrimitives CoInterpreter CoInterpreterPrimitives CoInterpreterMT
+		Cogit SimpleStackBasedCogit StackToRegisterMappingCogit
+		CogObjectRepresentation CogObjectRepresentationForSpur
+		CogObjectRepresentationFor32BitSpur CogObjectRepresentationFor64BitSpur
+		VMStructType VMMaker CCodeGenerator TMethod)
+		do: [:className|
+			(Smalltalk classNamed: className) ifNotNil:
+				[:class| b selectCategoryForClass: class; selectClass: class]]
+		separatedBy:
+			[b multiWindowState addNewWindow].
+	b multiWindowState selectWindowIndex: 1
+]
+
+{ #category : #utilities }
+VMClass class >> openCogTestsMultiWindowBrowser [
+	"Answer a new multi-window browser on the test classes in VMMaker"
+	"self openCogTestsMultiWindowBrowser"
+	| testClasses b |
+	testClasses := (PackageInfo named: 'VMMaker') classes select: [:c| c inheritsFrom: TestCase].
+	testClasses removeAll: AbstractInstructionTests allSubclasses.
+	testClasses removeAll: (testClasses select: [:c| '*Plugin*' match: c name]).
+	b := Browser open.
+	testClasses do:
+		[:class| b selectCategoryForClass: class; selectClass: class]
+		separatedBy:
+			[b multiWindowState addNewWindow].
+	b multiWindowState selectWindowIndex: 1
+]
+
+{ #category : #utilities }
+VMClass class >> openCogitMultiWindowBrowser [
+	"Answer a new multi-window browser on the ObjectMemory classes, the Cog Interpreter classes, and the main JIT classes"
+	"self openCogitMultiWindowBrowser"
+	| b |
+	b := Browser open.
+	Cogit withAllSubclasses,
+	CogObjectRepresentation withAllSubclasses,
+	{CogMethodZone. CogRTLOpcodes },
+	(CogAbstractInstruction withAllSubclasses reject: [:c| c name endsWith: 'Tests']),
+	{VMStructType. VMMaker. CCodeGenerator. TMethod}
+		do: [:class|
+			b selectCategoryForClass: class; selectClass: class]
+		separatedBy:
+			[b multiWindowState addNewWindow].
+	b multiWindowState selectWindowIndex: 1
+]
+
+{ #category : #utilities }
 VMClass class >> openObjectMemoriesInterpretersBrowser [
 	"Answer a new multi-window browser on the ObjectMemory classes and the Cog Interpreter classes"
 	| b |
@@ -435,32 +469,6 @@ VMClass class >> prepareToBeAddedToCodeGenerator: aCCodeGenerator [
 	 superclass's methods by deleting them before it adds its own."
 ]
 
-{ #category : #utilities }
-VMClass class >> removeThreadedSubSystem [
-	"VMClass removeQwaqPlugins.
-	 VMClass removeThreadedSubSystem"
-	"For releasing/merging OSCog"
-	SystemChangeNotifier uniqueInstance doSilently:
-		[CogVMSimulator
-			removeSelector: #isThreadedVM;
-			removeSelector: #initializeThreadSupport;
-			removeSelector: #initialEnterSmalltalkExecutive;
-			removeSelector: #ensureMultiThreadingOverridesAreUpToDate.
-		(CogVMSimulator organization listAtCategoryNamed: #'multi-threading simulation switch') do:
-			[:s| CogVMSimulator removeSelector: s].
-		CoInterpreterPrimitives
-			subclass: #CogVMSimulator
-			instanceVariableNames: CogVMSimulator instanceVariablesString
-			classVariableNames: CogVMSimulator classVariablesString
-			poolDictionaries: CogVMSimulator sharedPoolsString
-			category: CogVMSimulator category.
-		SystemOrganization removeSystemCategory: #'VMMaker-Multithreading'.
-		self class removeSelector: thisContext selector].
-	(Smalltalk classNamed: #MCWorkingCopy) ifNotNil:
-		[:mcwc|
-		(mcwc forPackage: (MCPackage named: 'VMMaker')) modified: true]
-]
-
 { #category : #translation }
 VMClass class >> requiredMethodNames: options [
 	"Answer a list of method names that should be retained for export or other
@@ -482,6 +490,34 @@ VMClass class >> shouldGenerateDeadCode [
 VMClass class >> shouldGenerateTypedefFor: aStructClass [
 	"Hack to work-around multiple definitions.  Sometimes a type has been defined in an include."
 	^aStructClass ~~ VMCallbackContext
+]
+
+{ #category : #translation }
+VMClass class >> shouldIncludeMethodForSelector: selector [
+	"Answer whether a primitive method should be translated.  Emit a warning to the transcript if the method doesn't exist."
+	^(self whichClassIncludesSelector: selector)
+		ifNotNil:
+			[:c|
+			 (c >> selector pragmaAt: #option:)
+				ifNotNil:
+					[:pragma|
+					(VMBasicConstants defineAtCompileTime: pragma arguments first)
+					 or: [initializationOptions
+							at: pragma arguments first
+							ifAbsent: [(self bindingOf: pragma arguments first)
+										ifNil: [false]
+										ifNotNil: [:binding| binding value ~~ #undefined]]]]
+				ifNil: [true]]
+		ifNil:
+			[Transcript nextPutAll: 'Cannot find implementation of '; nextPutAll: selector; nextPutAll: ' in hierarchy of '; print: self; cr; flush.
+			 false]
+]
+
+{ #category : #simulation }
+VMClass class >> simulatorClass [
+	"For running from Smalltalk - answer a class that can be used to simulate the receiver."
+
+	^self
 ]
 
 { #category : #translation }
@@ -546,6 +582,7 @@ VMClass class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
 	aStream
 		nextPutAll: '#define MinSmallInteger '; print: self objectMemoryClass minSmallInteger; cr;
 		nextPutAll: '#define MaxSmallInteger '; print: self objectMemoryClass maxSmallInteger; cr;
+		nextPutAll: '#define NumSmallIntegerTagBits '; print: self objectMemoryClass numSmallIntegerTagBits; cr;
 		cr.
 ]
 
@@ -654,6 +691,16 @@ VMClass >> cCode: codeStringOrBlock inSmalltalk: aBlock [
 	^aBlock value
 ]
 
+{ #category : #'memory access' }
+VMClass >> cCoerce: value to: cTypeString [
+	"Type coercion. For translation a cast will be emmitted. When running in Smalltalk
+	  answer a suitable wrapper for correct indexing."
+	<doNotGenerate>
+	^value
+		ifNil: [value]
+		ifNotNil: [value coerceTo: cTypeString sim: self]
+]
+
 { #category : #'translation support' }
 VMClass >> cPreprocessorDirective: codeString [
 	"For translation only; noop when running in Smalltalk."
@@ -728,6 +775,18 @@ VMClass >> eassert: aBooleanExpressionOrBlock [
 			[AssertionFailure signal: 'Assertion failed']]
 ]
 
+{ #category : #'printf logging' }
+VMClass >> f: logFilename open: mode [
+	"Simulate a FILE stream by answering a transcript.
+	 Can be used with the f:printf: method."
+	<doNotGenerate>
+	^true
+		ifTrue: [(TranscriptStream on: (String new: 100000))
+					openLabel: logFilename;
+					yourself]
+		ifFalse: [self coInterpreter transcript]
+]
+
 { #category : #'memory access' }
 VMClass >> fetchSingleFloatAtPointer: pointer into: aFloat [
 	"This gets implemented by Macros in C, where its types will also be checked.
@@ -735,6 +794,96 @@ VMClass >> fetchSingleFloatAtPointer: pointer into: aFloat [
 	<doNotGenerate>
 
 	^self fetchSingleFloatAt: pointer into: aFloat
+]
+
+{ #category : #'memory access' }
+VMClass >> floatAtPointer: pointer [
+	<doNotGenerate>
+	self halt.
+]
+
+{ #category : #'memory access' }
+VMClass >> floatAtPointer: pointer put: value [
+	<doNotGenerate>
+	self halt.
+]
+
+{ #category : #'C library simulation' }
+VMClass >> free: pointer [
+	<doNotGenerate>
+	"Do nothing"
+]
+
+{ #category : #'memory access' }
+VMClass >> int16AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 16 bit integer."
+	<doNotGenerate>
+
+	^self shortAt: pointer
+]
+
+{ #category : #'memory access' }
+VMClass >> int16AtPointer: pointer put: value [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 16 bit integer."
+	<doNotGenerate>
+
+	^self shortAt: pointer put: value
+]
+
+{ #category : #'memory access' }
+VMClass >> int32AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 32 bit integer."
+	<doNotGenerate>
+
+	^self longAt: pointer
+]
+
+{ #category : #'memory access' }
+VMClass >> int32AtPointer: pointer put: value [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 32 bit integer."
+	<doNotGenerate>
+
+	^self longAt: pointer put: value
+]
+
+{ #category : #'memory access' }
+VMClass >> int64AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is the width of a machine word."
+	<doNotGenerate>
+
+	^self halt
+]
+
+{ #category : #'memory access' }
+VMClass >> int64AtPointer: pointer put: longValue [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and longValue is the width of a machine word."
+	<doNotGenerate>
+
+	^self halt.
+]
+
+{ #category : #'memory access' }
+VMClass >> int8AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 16 bit integer."
+	<doNotGenerate>
+
+	^self at: pointer
+]
+
+{ #category : #'memory access' }
+VMClass >> int8AtPointer: pointer put: value [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 16 bit integer."
+	<doNotGenerate>
+
+	^self at: pointer put: value
 ]
 
 { #category : #testing }
@@ -747,6 +896,24 @@ VMClass >> isInterpreterProxy [
 	<doNotGenerate>
 	"Return false since I am a real Interpreter simulation"
 	^false
+]
+
+{ #category : #'memory access' }
+VMClass >> long64AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is the width of a machine word."
+	<doNotGenerate>
+
+	^self halt
+]
+
+{ #category : #'memory access' }
+VMClass >> long64AtPointer: pointer put: longValue [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and longValue is the width of a machine word."
+	<doNotGenerate>
+
+	^self halt.
 ]
 
 { #category : #'memory access' }
@@ -775,25 +942,41 @@ VMClass >> majorVersion [
 ]
 
 { #category : #'C library simulation' }
-VMClass >> mem: aString cp: bString y: n [
+VMClass >> malloc: size [
 	<doNotGenerate>
-	"implementation of memcpy(3)"
-	aString isString
+	^ ByteArray new: size
+]
+
+{ #category : #'C library simulation' }
+VMClass >> mem: dString cp: sString y: bytes [
+	<doNotGenerate>
+	"implementation of memcpy(3). N.B. If ranges overlap, must use memmove."
+	(dString isString or: [sString isString]) ifFalse:
+		[| destAddress sourceAddress |
+		 dString class == ByteArray ifTrue:
+			[ByteString adoptInstance: dString.
+			 ^[self mem: dString cp: sString y: bytes] ensure:
+				[ByteArray adoptInstance: dString]].
+		 destAddress := dString asInteger.
+		 sourceAddress := sString asInteger.
+		 self deny: ((destAddress <= sourceAddress and: [destAddress + bytes > sourceAddress])
+					or: [sourceAddress <= destAddress and: [sourceAddress + bytes > destAddress]])].
+	dString isString
 		ifTrue:
-			[1 to: n do:
+			[1 to: bytes do:
 				[:i| | v |
-				v := bString isString
-						ifTrue: [bString at: i]
-						ifFalse: [Character value: (self byteAt: bString + i - 1)].
-				aString at: i put: v]]
+				v := sString isString
+						ifTrue: [sString at: i]
+						ifFalse: [Character value: (self byteAt: sString + i - 1)].
+				dString at: i put: v]]
 		ifFalse:
-			[1 to: n do:
+			[1 to: bytes do:
 				[:i| | v |
-				v := bString isString
-						ifTrue: [(bString at: i) asInteger]
-						ifFalse: [self byteAt: bString + i - 1].
-				self byteAt: aString + i - 1 put: v]].
-	^aString
+				v := sString isString
+						ifTrue: [(sString at: i) asInteger]
+						ifFalse: [self byteAt: sString + i - 1].
+				self byteAt: dString + i - 1 put: v]].
+	^dString
 ]
 
 { #category : #'C library simulation' }
@@ -903,6 +1086,24 @@ VMClass >> oopForPointer: pointerOrSurrogate [
 	^pointerOrSurrogate asInteger
 ]
 
+{ #category : #'memory access' }
+VMClass >> pointerAtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is the width of a machine word."
+	<doNotGenerate>
+
+	^self longAt: pointer
+]
+
+{ #category : #'memory access' }
+VMClass >> pointerAtPointer: pointer put: value [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is the width of a machine word."
+	<doNotGenerate>
+
+	^self longAt: pointer put: value
+]
+
 { #category : #'translation support' }
 VMClass >> pointerForOop: oop [
 	"This gets implemented by Macros in C, where its types will also be checked.
@@ -949,16 +1150,28 @@ VMClass >> safe: signedInteger mod: positiveModulus [
 		ifFalse: [remainder]
 ]
 
+{ #category : #'memory access' }
+VMClass >> singleFloatAtPointer: pointer [
+	<doNotGenerate>
+	self halt.
+]
+
+{ #category : #'memory access' }
+VMClass >> singleFloatAtPointer: pointer put: value [
+	<doNotGenerate>
+	self halt.
+]
+
 { #category : #'translation support' }
 VMClass >> sizeof: objectSymbolOrClass [
 	<doNotGenerate>
 	| index |
 	objectSymbolOrClass isInteger ifTrue:
 		[^self class objectMemoryClass wordSize].
+	(#(usqInt sqInt) includes: objectSymbolOrClass) ifTrue: [^self class objectMemoryClass bytesPerOop].
 	objectSymbolOrClass isSymbol ifTrue:
 		[(objectSymbolOrClass last == $*
-		 or: [#long == objectSymbolOrClass
-		 or: [#'unsigned long' == objectSymbolOrClass]]) ifTrue:
+		 or: [#(#long #'unsigned long' #'sqIntptr_t'  #'usqIntptr_t' #'size_t') includes: objectSymbolOrClass]) ifTrue:
 			[^self class objectMemoryClass wordSize].
 		index := #(	#sqLong #usqLong #double
 					#int #'unsigned int' #float
@@ -966,8 +1179,7 @@ VMClass >> sizeof: objectSymbolOrClass [
 					#char #'unsigned char' #'signed char')
 						indexOf: objectSymbolOrClass
 						ifAbsent:
-							[(#(usqInt sqInt) includes: objectSymbolOrClass) ifTrue: [^self class objectMemoryClass bytesPerOop].
-							 self error: 'unrecognized C type name'].
+							[self error: 'unrecognized C type name'].
 		^#(8 8 8
 			4 4 4
 			2 2
@@ -1077,7 +1289,85 @@ VMClass >> strlen: aCString [
 	len := len + 1] repeat
 ]
 
+{ #category : #'memory access' }
+VMClass >> uint16AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 16 bit integer."
+	<doNotGenerate>
+
+	^self shortAt: pointer
+]
+
+{ #category : #'memory access' }
+VMClass >> uint16AtPointer: pointer put: value [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 16 bit integer."
+	<doNotGenerate>
+
+	^self shortAt: pointer put: value
+]
+
+{ #category : #'memory access' }
+VMClass >> uint32AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 32 bit integer."
+	<doNotGenerate>
+
+	^self longAt: pointer
+]
+
+{ #category : #'memory access' }
+VMClass >> uint32AtPointer: pointer put: value [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 32 bit integer."
+	<doNotGenerate>
+
+	^self longAt: pointer put: value
+]
+
+{ #category : #'memory access' }
+VMClass >> uint64AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is the width of a machine word."
+	<doNotGenerate>
+
+	^self halt
+]
+
+{ #category : #'memory access' }
+VMClass >> uint64AtPointer: pointer put: longValue [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and longValue is the width of a machine word."
+	<doNotGenerate>
+
+	^self halt.
+]
+
+{ #category : #'memory access' }
+VMClass >> uint8AtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 16 bit integer."
+	<doNotGenerate>
+
+	^self at: pointer
+]
+
+{ #category : #'memory access' }
+VMClass >> uint8AtPointer: pointer put: value [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is an 16 bit integer."
+	<doNotGenerate>
+
+	^self at: pointer put: value
+]
+
 { #category : #simulation }
 VMClass >> unalignedAccessError [
 	^self error: 'unaligned access'
+]
+
+{ #category : #'debug support' }
+VMClass >> unreachable [
+	<inline: true>
+	self error: 'UNREACHABLE'
 ]

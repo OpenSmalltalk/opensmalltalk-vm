@@ -38,13 +38,13 @@ TAssignmentNode >> bindVariablesIn: aDictionary [
 
 { #category : #'C code generation' }
 TAssignmentNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen [
-	aStream nextPut: $(.
-	self emitCCodeOn: aStream level: level generator: aCodeGen.
-	aStream nextPut: $)
+	^self emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen
 ]
 
 { #category : #'C code generation' }
 TAssignmentNode >> emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen [
+	(expression isStmtList and: [expression statements size > 1]) ifTrue:
+		[^self emitStatementListExpansionAsExpression: expression on: aStream level: level generator: aCodeGen].
 	aStream nextPut: $(.
 	self emitCCodeOn: aStream level: level generator: aCodeGen.
 	aStream nextPut: $)
@@ -106,6 +106,15 @@ TAssignmentNode >> emitStatementListExpansion: stmtList on: aStream level: level
 ]
 
 { #category : #'C code generation' }
+TAssignmentNode >> emitStatementListExpansionAsExpression: stmtList on: aStream level: level generator: aCodeGen [
+	stmtList statements last = variable ifTrue:
+		[^expression emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen].
+	stmtList copy
+		assignLastExpressionTo: variable;
+		emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen
+]
+
+{ #category : #'C code generation' }
 TAssignmentNode >> emitValueExpansionOn: aStream level: level generator: aCodeGen [
 	| stmtList lastStmt copy |
 	self assert: (expression isSend and: [expression isValueExpansion]).
@@ -136,6 +145,13 @@ TAssignmentNode >> expression [
 TAssignmentNode >> isAssignment [
 
 	^true
+]
+
+{ #category : #testing }
+TAssignmentNode >> isSameAs: aTParseNode [
+	^aTParseNode isAssignment
+	 and: [(variable isSameAs: aTParseNode variable)
+	 and: [expression isSameAs: aTParseNode expression]]
 ]
 
 { #category : #testing }
@@ -248,6 +264,13 @@ TAssignmentNode >> structTargetKindIn: aCodeGen [
 	 and hence can be dereferenced using . or ->.  Answer any of
 	 #struct #pointer or nil"
 	^variable structTargetKindIn: aCodeGen
+]
+
+{ #category : #'type inference' }
+TAssignmentNode >> typeOrNilFrom: aCodeGenerator in: aTMethod [
+	"This is the default type in case of doubt"
+	^(variable typeOrNilFrom: aCodeGenerator in: aTMethod) ifNil:
+		[expression typeOrNilFrom: aCodeGenerator in: aTMethod]
 ]
 
 { #category : #accessing }

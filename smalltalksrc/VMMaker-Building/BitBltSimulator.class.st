@@ -84,6 +84,17 @@ BitBltSimulator class >> warpBitShiftTable [
 	^ warpBitShiftTable
 ]
 
+{ #category : #'translation support' }
+BitBltSimulator >> cppIf: conditionBlockOrSymbolValue ifTrue: trueExpressionOrBlock ifFalse: falseExpressionOrBlockOrNil [
+	"The simulator does not have fast blt defines"
+	^ conditionBlockOrSymbolValue = #'ENABLE_FAST_BLT'
+		ifTrue: falseExpressionOrBlockOrNil
+		ifFalse: [super
+					cppIf: conditionBlockOrSymbolValue
+					ifTrue: trueExpressionOrBlock
+					ifFalse: falseExpressionOrBlockOrNil]
+]
+
 { #category : #'debug support' }
 BitBltSimulator >> dstLongAt: dstIndex [
 
@@ -104,6 +115,32 @@ BitBltSimulator >> dstLongAt: dstIndex put: value [
 		dstIndex >= (destBits + (destPitch * destHeight))]])
 			ifTrue:[self error:'Out of bounds'].
 	^self long32At: dstIndex put: value
+]
+
+{ #category : #'memory access' }
+BitBltSimulator >> halftoneAt: idx [
+
+	^self
+		cCode: [(halftoneBase + (idx \\ halftoneHeight * 4)) long32At: 0]
+		inSmalltalk: [super halftoneAt: idx]
+]
+
+{ #category : #'memory access' }
+BitBltSimulator >> incDestIndex: offset [
+	"if offset is a CObject, this avoids a copy, making the simulation massively faster"
+	^ destIndex isCObjectAccessor
+		ifTrue: [destIndex += offset]
+		ifFalse: [super incDestIndex: offset]
+
+]
+
+{ #category : #'memory access' }
+BitBltSimulator >> incSrcIndex: offset [
+	"if offset is a CObject, this avoids a copy, making the simulation massively faster"
+	^ sourceIndex isCObjectAccessor
+		ifTrue: [sourceIndex += offset]
+		ifFalse: [super incSrcIndex: offset]
+
 ]
 
 { #category : #simulation }
@@ -166,6 +203,17 @@ BitBltSimulator >> mergeFn: arg1 with: arg2 [
 BitBltSimulator >> primitive: primitiveName parameters: parameterTypesArray receiver: rcvrType [
 	primitiveName caseOf: {
 		['primitivePixelValueAt'] -> [^self] }
+]
+
+{ #category : #primitives }
+BitBltSimulator >> primitiveCopyBits [
+	"Override to provide a convenience to investigate primitive failures.
+	 Comment out the first statement to be able to loop, examining e.g. why a BitBlt fails to load."
+	true ifTrue:
+		[^super primitiveCopyBits].
+	[super primitiveCopyBits.
+	 interpreterProxy failed] whileTrue:
+		[self halt. interpreterProxy coInterpreter initPrimCall]
 ]
 
 { #category : #simulation }

@@ -36,11 +36,10 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
-{ #category : #translation }
-Spur32BitCoMemoryManager class >> exportAPISelectors: options [
-	^(Set withAll: (self exportAPISelectorsFor: self))
-		addAll: (SpurGenerationScavenger exportAPISelectors: options);
-		yourself
+{ #category : #simulation }
+Spur32BitCoMemoryManager class >> defaultISA [
+	"Answer the default instruction set architecture to use for simulation."
+	^#IA32
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -48,7 +47,7 @@ Spur32BitCoMemoryManager class >> objectRepresentationClass [
 	^CogObjectRepresentationFor32BitSpur
 ]
 
-{ #category : #'simulation only' }
+{ #category : #simulation }
 Spur32BitCoMemoryManager class >> simulatorClass [
 	^Spur32BitMMLECoSimulator
 ]
@@ -63,24 +62,10 @@ Spur32BitCoMemoryManager >> assimilateNewSegment: segInfo [
 ]
 
 { #category : #trampolines }
-Spur32BitCoMemoryManager >> ceClassAtIndex: classIndex [
-	<api>
-	| result |
-	result := self classAtIndex: classIndex.
-	self assert: (coInterpreter addressCouldBeClassObj: result).
-	^result
-]
-
-{ #category : #trampolines }
 Spur32BitCoMemoryManager >> ceScheduleScavenge [
 	<api>
 	self assert: freeStart >= scavengeThreshold.
 	self scheduleScavenge
-]
-
-{ #category : #accessing }
-Spur32BitCoMemoryManager >> checkForLeaks [
-	^checkForLeaks
 ]
 
 { #category : #'debug support' }
@@ -176,7 +161,8 @@ Spur32BitCoMemoryManager >> initializeFreeSpaceForFacadeFrom: base to: limit [
 	"c.f. initializeFreeSpacePostLoad: freeListObj."
 	| freeListObj freeBytes |
 	newSpaceLimit := oldSpaceStart := freeStart := base.
-	endOfMemory := scavengeThreshold := limit.
+	endOfMemory := limit.
+	scavengeThreshold := limit * 3 // 4.
 	segmentManager initSegmentForInImageCompilationFrom: base to: limit.
 	freeListObj := self allocateSlots: self numFreeLists
 						format: self wordIndexableFormat
@@ -225,6 +211,16 @@ Spur32BitCoMemoryManager >> isReallyYoungObject: objOop [
 	  and: [self oop: objOop isGreaterThanOrEqualTo: newSpaceStart]
 ]
 
+{ #category : #compaction }
+Spur32BitCoMemoryManager >> methodHeaderFromSavedFirstField: field [
+	(self isIntegerObject: field) ifTrue:
+		[^field].
+	self assert: ((self isNonImmediate: field) and: [field < newSpaceStart]).
+	self assert: (coInterpreter cCoerceSimple: field to: #'CogMethod *') objectHeader
+				= self nullHeaderForMachineCodeMethod.
+	^(coInterpreter cCoerceSimple: field to: #'CogMethod *') methodHeader
+]
+
 { #category : #'growing/shrinking memory' }
 Spur32BitCoMemoryManager >> methodHeaderOf: methodObj [
 	"Answer the method header of a CompiledMethod object.
@@ -244,6 +240,14 @@ Spur32BitCoMemoryManager >> methodHeaderOf: methodObj [
 			(coInterpreter cCoerceSimple: header to: #'CogMethod *') methodHeader]
 ]
 
+{ #category : #'trampoline support' }
+Spur32BitCoMemoryManager >> needGCFlagAddress [
+	<api>
+	<returnTypeC: #usqInt>
+	^self cCode: [(self addressOf: needGCFlag) asUnsignedInteger]
+		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #needGCFlag in: self]
+]
+
 { #category : #'garbage collection' }
 Spur32BitCoMemoryManager >> nullHeaderForMachineCodeMethod [
 	<api>
@@ -251,6 +255,29 @@ Spur32BitCoMemoryManager >> nullHeaderForMachineCodeMethod [
 	^(self firstLongFormat << self formatShift)
 	+ (1 << self markedBitFullShift)
 	+ ClassBitmapCompactIndex
+]
+
+{ #category : #'cog jit support' }
+Spur32BitCoMemoryManager >> receiverTagBitsForMethod: aMethodObj [
+	"Answer the tag bits for the receiver based on the method's methodClass, if any."
+	<api>
+	| methodClassOrNil |
+	methodClassOrNil := coInterpreter methodClassOf: aMethodObj.
+	NewspeakVM "Mixins don't necessarily have a format inst var; filter out non-integer format."
+		ifTrue:
+			[| instSpec |
+			(methodClassOrNil = nilObj
+			 or: [(self isNonIntegerObject: (instSpec := self fetchPointer: InstanceSpecificationIndex ofObject: methodClassOrNil))
+			 or: [(self instSpecOfClassFormat: (self integerValueOf: instSpec)) ~= self forwardedFormat]]) ifTrue:
+				[^0]]
+		ifFalse:
+			[(methodClassOrNil = nilObj
+			 or: [(self instSpecOfClass: methodClassOrNil) ~= self forwardedFormat]) ifTrue:
+				[^0]].
+	^methodClassOrNil = (self fetchPointer: self smallIntegerTag ofObject: classTableFirstPage)
+		ifTrue: [self smallIntegerTag]
+		ifFalse: [self assert: methodClassOrNil = (self fetchPointer: self characterTag ofObject: classTableFirstPage).
+				self characterTag]
 ]
 
 { #category : #'cog jit support' }
@@ -271,6 +298,7 @@ Spur32BitCoMemoryManager >> scavengeThresholdAddress [
 Spur32BitCoMemoryManager >> smallIntegerTag [
 	"Beware, SmallInteger tags are 1 or 3.  But SmallInteger's identityHash is 1."
 	<api>
+	<cmacro>
 	^1
 ]
 

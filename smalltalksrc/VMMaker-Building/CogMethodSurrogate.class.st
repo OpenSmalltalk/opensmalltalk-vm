@@ -7,6 +7,10 @@ Class {
 		'baseHeaderSize',
 		'cogit'
 	],
+	#pools : [
+		'CogMethodConstants',
+		'VMBytecodeConstants'
+	],
 	#category : #'VMMaker-JITSimulation'
 }
 
@@ -77,15 +81,37 @@ CogMethodSurrogate >> asInteger [
 ]
 
 { #category : #accessing }
+CogMethodSurrogate >> asIntegerPtr [
+	"Answer the surrogate's adress. This is equivalent to a C cast to usqIntptr_t,
+	 which is precisely what Slang generates for asIntegerPtr"
+	^address
+]
+
+{ #category : #accessing }
 CogMethodSurrogate >> asUnsignedInteger [
 	"Answer the surrogate's adress. This is equivalent to a C cast to usqInt,
 	 which is precisely what Slang generates for asUnsignedInteger"
 	^address
 ]
 
+{ #category : #accessing }
+CogMethodSurrogate >> asUnsignedIntegerPtr [
+	"Answer the surrogate's adress. This is equivalent to a C cast to usqIntptr_t,
+	 which is precisely what Slang generates for asUnsignedIntegerPtr"
+	^address
+]
+
 { #category : #coercing }
 CogMethodSurrogate >> asVoidPointer [
 	^self
+]
+
+{ #category : #'instance initialization' }
+CogMethodSurrogate >> at: anAddress memory: memoryArray headerSize: headerSize cogit: aCogit [
+	address := anAddress.
+	memory := memoryArray.
+	baseHeaderSize := headerSize.
+	cogit := aCogit
 ]
 
 { #category : #'instance initialization' }
@@ -106,11 +132,43 @@ CogMethodSurrogate >> cPICNumCases: n [
 	^self stackCheckOffset: n
 ]
 
+{ #category : #accessing }
+CogMethodSurrogate >> cmHomeMethod [
+	^cogit cogMethodSurrogateAt: ((SistaV1BytecodeSet and: [self cmIsFullBlock])
+										ifTrue: [address]
+										ifFalse: [address - self homeOffset])
+]
+
+{ #category : #accessing }
+CogMethodSurrogate >> cmIsFullBlock [
+	"Answer the value of cpicHasMNUCaseOrCMIsFullBlock"
+
+	^SistaV1BytecodeSet
+		ifTrue: [self cpicHasMNUCaseOrCMIsFullBlock]
+		ifFalse: [false]
+]
+
 { #category : #testing }
-CogMethodSurrogate >> containsAddress: address [
-	"Simulation only; N.B. this will error if used on block method surrogates."
-	^address <= address asUnsignedInteger
-	  and: [address + self blockSize >= address asUnsignedInteger]
+CogMethodSurrogate >> containsAddress: anAddress [
+	^address <= anAddress asUnsignedInteger
+	  and: [address + self blockSize >= anAddress asUnsignedInteger]
+]
+
+{ #category : #accessing }
+CogMethodSurrogate >> cpicHasMNUCase [
+	"Answer if the receiver has an MNU case."
+	<inline: true>
+
+	^SistaV1BytecodeSet
+		ifTrue: [self cpicHasMNUCaseOrCMIsFullBlock and: [self cmType = CMClosedPIC]]
+		ifFalse: [self cpicHasMNUCaseOrCMIsFullBlock]
+]
+
+{ #category : #accessing }
+CogMethodSurrogate >> cpicHasMNUCase: anObject [
+	"Set if the receiver has an MNU case."
+
+	^self cpicHasMNUCaseOrCMIsFullBlock: anObject
 ]
 
 { #category : #comparing }

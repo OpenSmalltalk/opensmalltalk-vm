@@ -41,10 +41,12 @@ Class {
 		'quitBlock',
 		'transcript',
 		'displayView',
+		'eventTransformer',
 		'printFrameAtEachStep',
 		'printBytecodeAtEachStep',
 		'systemAttributes',
 		'startMicroseconds',
+		'lastYieldMicroseconds',
 		'externalSemaphoreSignalRequests',
 		'externalSemaphoreSignalResponses',
 		'extSemTabSize',
@@ -65,6 +67,10 @@ StackInterpreterSimulator class >> initializeWithOptions: optionsDictionaryOrArr
 	initializationOptions := optionsDictionaryOrArray isArray
 							ifTrue: [Dictionary newFromPairs: optionsDictionaryOrArray]
 							ifFalse: [optionsDictionaryOrArray].
+
+	(self allSuperclasses copyUpThrough: InterpreterPrimitives) do:
+		[:sc| sc initializationOptions: initializationOptions].
+
 	(objectMemoryClassOrNil ifNil: [self objectMemoryClass])
 		initializeWithOptions: initializationOptions.
 
@@ -187,11 +193,13 @@ StackInterpreterSimulator >> browserPluginReturnIfNeeded [
 
 { #category : #'memory access' }
 StackInterpreterSimulator >> byteAt: byteAddress [
+	self deprecated.
 	^objectMemory byteAt: byteAddress
 ]
 
 { #category : #'memory access' }
 StackInterpreterSimulator >> byteAt: byteAddress put: byte [
+	self deprecated.
 	^objectMemory byteAt: byteAddress put: byte
 ]
 
@@ -213,15 +221,6 @@ StackInterpreterSimulator >> byteCountText [
 StackInterpreterSimulator >> bytecodePrimAtPut [
 	"self halt."
 	^super bytecodePrimAtPut
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulator >> cCoerce: value to: cTypeString [
-	"Type coercion for translation only; just return the value when running in Smalltalk."
-
-	^value == nil
-		ifTrue: [value]
-		ifFalse: [value coerceTo: cTypeString sim: self]
 ]
 
 { #category : #'translation support' }
@@ -292,7 +291,7 @@ StackInterpreterSimulator >> clipboardRead: sz Into: actualAddress At: zeroBaseI
 	| str |
 	str := Clipboard clipboardText.
 	1 to: sz do:
-		[:i | self byteAt: actualAddress + zeroBaseIndex + i - 1 put: (str at: i) asciiValue]
+		[:i | objectMemory byteAt: actualAddress + zeroBaseIndex + i - 1 put: (str at: i) asciiValue]
 ]
 
 { #category : #'I/O primitives' }
@@ -340,16 +339,14 @@ StackInterpreterSimulator >> cloneSimulationWindow [
 ]
 
 { #category : #initialization }
-StackInterpreterSimulator >> close [  "close any files that ST may have opened"
-	(self loadNewPlugin: 'FilePlugin') ifNotNil:
-		[:filePlugin| filePlugin close]
+StackInterpreterSimulator >> close [  "close any files that ST may have opened, etc"
+	pluginList do: [:assoc| | plugin | plugin := assoc value. plugin ~~ self ifTrue: [plugin close]]
 ]
 
-{ #category : #initialization }
-StackInterpreterSimulator >> convertToArray [
-	"I dont believe it -- this *just works*"
-
-	objectMemory memory: (objectMemory memory as: Array)
+{ #category : #'simulation only' }
+StackInterpreterSimulator >> cogit [
+	"We don't have a cogit; try and get by on our own devices."
+	^self
 ]
 
 { #category : #'I/O primitives support' }
@@ -467,8 +464,14 @@ StackInterpreterSimulator >> divorceFramesIn: aStackPage [
 { #category : #'process primitive support' }
 StackInterpreterSimulator >> doSignalExternalSemaphores: minTableSize [
 	"This is a non-thread-safe simulation.  See platforms/Cross/vm/sqExternalSemaphores.c
-	 for the real code."
-	| switched |
+	 for the real code.  For the benefit of the SocketPluginSimulator, do a yield every 100
+	 virtual microseconds."
+	| now switched |
+	now := self ioUTCMicroseconds.
+	now - lastYieldMicroseconds >= 100 ifTrue:
+		[lastYieldMicroseconds := now.
+		 Processor yield].
+
 	switched := false.
 	1 to: (minTableSize min: externalSemaphoreSignalRequests size) do:
 		[:i| | responses |
@@ -517,6 +520,47 @@ StackInterpreterSimulator >> elementsPerPrintOopLine [
 	^4
 ]
 
+{ #category : #'compiled methods' }
+StackInterpreterSimulator >> endPCOf: aMethod [
+	"Determine the endPC of a method in the heap using interpretation that looks for returns and uses branches to skip intervening bytecodes."
+	| pc end farthestContinuation prim encoderClass inst is |
+	(prim := self primitiveIndexOf: aMethod) > 0 ifTrue:
+		[(self isQuickPrimitiveIndex: prim) ifTrue:
+			[^(self startPCOfMethod: aMethod) - 1]].
+	encoderClass := self encoderClassForHeader: (objectMemory methodHeaderOf: aMethod).
+	is := (InstructionStream
+			on: (VMCompiledMethodProxy new
+					for: aMethod
+					coInterpreter: self
+					objectMemory: objectMemory)).
+	pc := farthestContinuation := self startPCOfMethod: aMethod.
+	end := objectMemory numBytesOf: aMethod.
+	is pc: pc + 1.
+	[pc <= end] whileTrue:
+		[inst := encoderClass interpretNextInstructionFor: MessageCatcher new in: is.
+		 inst selector
+			caseOf: {
+				 [#pushClosureCopyNumCopiedValues:numArgs:blockSize:]	
+											->	[is pc: is pc + inst arguments last.
+												 farthestContinuation := farthestContinuation max: pc].
+				 [#jump:]					->	[farthestContinuation := farthestContinuation max: pc + inst arguments first].
+				 [#jump:if:]					->	[farthestContinuation := farthestContinuation max: pc + inst arguments first].
+				 [#methodReturnConstant:]	->	[pc >= farthestContinuation ifTrue: [end := pc]].
+				 [#methodReturnReceiver]	->	[pc >= farthestContinuation ifTrue: [end := pc]].
+				 [#methodReturnTop]		->	[pc >= farthestContinuation ifTrue: [end := pc]].
+				"This is for CompiledBlock/FullBlockClosure.  Since the response to pushClosure... above
+				 skips over all block bytecoes, we will only see a blockReturnTop if it is at the top level,
+				 and so it must be a blockReturnTop in a CompiledBlock for a FullBlockClosure."
+				 [#blockReturnTop]			->	[pc >= farthestContinuation ifTrue: [end := pc]].
+				 [#branchIfInstanceOf:distance:]
+											->	[farthestContinuation := farthestContinuation max: pc + inst arguments last].
+				 [#branchIfNotInstanceOf:distance:]
+											->	[farthestContinuation := farthestContinuation max: pc + inst arguments last] }
+			otherwise: [].
+		 pc := is pc - 1].
+	^end
+]
+
 { #category : #testing }
 StackInterpreterSimulator >> ensureDebugAtEachStepBlock [
 	atEachStepBlock := [printFrameAtEachStep ifTrue:
@@ -552,17 +596,9 @@ StackInterpreterSimulator >> externalInstVar: index ofContext: aMarriedContext p
 	^result
 ]
 
-{ #category : #'stack pages' }
-StackInterpreterSimulator >> externalWriteBackHeadFramePointers [
-	self assert: (localFP = framePointer
-				or: [localFP = (self frameCallerFP: framePointer)]).
-	super externalWriteBackHeadFramePointers
-]
-
 { #category : #'interpreter shell' }
 StackInterpreterSimulator >> fetchByte [
-
-	^ self byteAt: (localIP := localIP + 1).
+	^objectMemory byteAt: (localIP := localIP + 1).
 ]
 
 { #category : #'control primitives' }
@@ -585,11 +621,11 @@ StackInterpreterSimulator >> findNewMethodInClassTag: classTag [
 			ifFalse: [(self nameOfClass: class)].
 		self cr; print: cName , '>>' , (self stringOf: messageSelector)].
 "
-	(self stringOf: messageSelector) = 'doesNotUnderstand:' ifTrue: [self halt].
+	messageSelector = (objectMemory splObj: SelectorDoesNotUnderstand) ifTrue: [self halt].
 
 	sendCount := sendCount + 1.
 
-	printSends ifTrue:
+	(printSends or: [printBytecodeAtEachStep]) ifTrue:
 		[self cr; print: byteCount; space; printStringOf: messageSelector; cr].
 "
 	(sendCount > 1000 and: [sendCount\\10 = 0]) ifTrue:
@@ -645,10 +681,10 @@ StackInterpreterSimulator >> framePointer [
 { #category : #'I/O primitives' }
 StackInterpreterSimulator >> fullDisplay [
 	| primFailCodeValue |
-	displayForm == nil ifTrue: [^ self].
+	displayForm ifNil: [^self].
 	primFailCodeValue := primFailCode.
 	self initPrimCall.
-	self displayBitsOf: (objectMemory splObj: TheDisplay) Left: 0 Top: 0 Right: displayForm width Bottom: displayForm height.
+	self updateDisplayLeft: 0 Top: 0 Right: displayWidth Bottom: displayHeight.
 	primFailCode := primFailCodeValue
 ]
 
@@ -674,7 +710,7 @@ StackInterpreterSimulator >> functionPointerFor: primIndex inClass: lookupClass 
 
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> getErrorObjectFromPrimFailCode [
-	primFailCode > 1 ifTrue: [self halt].
+	(primFailCode > 1 and: [(#(primitiveNew primitiveFetchNextMourner) includes: primitiveFunctionPointer) not]) ifTrue: [self halt].
 	^super getErrorObjectFromPrimFailCode
 ]
 
@@ -695,6 +731,22 @@ StackInterpreterSimulator >> halfWordHighInLong32: long32 [
 { #category : #'memory access' }
 StackInterpreterSimulator >> halfWordLowInLong32: long32 [
 	^self subclassResponsibility
+]
+
+{ #category : #'I/O primitives support' }
+StackInterpreterSimulator >> handleListenEvent: aMorphicEvent [
+	"openAsMorph[NoTranscript] registered me for listen events via HandMorph>>addEventListener.
+	Transform the listen event and add it to my event queue.  ALso check if the displayForm shoudl resize."
+	(displayForm ~~ fakeForm and: [displayForm extent ~= displayView extent]) ifTrue:
+		[| newForm |
+		newForm := Form
+						extent: displayView extent
+						depth: displayForm depth.
+		 displayForm displayOn: newForm.
+		 displayForm := newForm].
+	((aMorphicEvent isMouse or: [aMorphicEvent isKeyboard])
+	 and: [displayView bounds containsPoint: aMorphicEvent position]) ifTrue:
+		[eventTransformer degenerateEvent: aMorphicEvent for: self]
 ]
 
 { #category : #'debug support' }
@@ -764,9 +816,7 @@ StackInterpreterSimulator >> initialize [
 		[objectMemory := self class objectMemoryClass simulatorClass new].
 	objectMemory coInterpreter: self.
 
-	"Note: we must initialize ConstMinusOne differently for simulation,
-		due to the fact that the simulator works only with +ve 32-bit values"
-	ConstMinusOne := objectMemory integerObjectOf: -1.
+	self assert: ConstMinusOne = (objectMemory integerObjectOf: -1).
 
 	methodCache := Array new: MethodCacheSize.
 	nsMethodCache := Array new: NSMethodCacheSize.
@@ -788,11 +838,11 @@ StackInterpreterSimulator >> initialize [
 	desiredNumStackPages := desiredEdenBytes := 0.
 	"This is initialized on loading the image, but convenient for testing stack page values..."
 	numStackPages := self defaultNumStackPages. 
-	startMicroseconds := Time totalSeconds * 1000000.
+	startMicroseconds := lastYieldMicroseconds := self ioUTCStartMicroseconds.
 
 	"initialize InterpreterSimulator variables used for debugging"
 	byteCount := sendCount := lookupCount := 0.
-	quitBlock := [^self].
+	quitBlock := [^self close].
 	traceOn := true.
 	printSends := printReturns := printFrameAtEachStep := printBytecodeAtEachStep := false.
 	myBitBlt := BitBltSimulator new setInterpreter: self.
@@ -833,20 +883,6 @@ StackInterpreterSimulator >> insufficientMemoryAvailableError [
 { #category : #'interpreter shell' }
 StackInterpreterSimulator >> insufficientMemorySpecifiedError [
 	self error: 'Insufficient memory for this image'
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulator >> integerAt: byteAddress [
-	"Note: Adjusted for Smalltalk's 1-based array indexing."
-
-	^objectMemory memory integerAt: (byteAddress // 4) + 1
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulator >> integerAt: byteAddress put: a32BitValue [
-	"Note: Adjusted for Smalltalk's 1-based array indexing."
-
-	^objectMemory memory integerAt: (byteAddress // 4) + 1 put: a32BitValue
 ]
 
 { #category : #'debugging traps' }
@@ -903,6 +939,15 @@ StackInterpreterSimulator >> invalidCompactClassError: name [
 	self error: 'Class ', name, ' does not have the required compact class index'
 ]
 
+{ #category : #'I/O primitives' }
+StackInterpreterSimulator >> ioBeDisplay: bitsOrHandleCArray width: width height: height depth: depth [
+	"The real platform may want to note the location of the display and respond to the fact of
+	 its installation.  Here merely create a scratch form the same size as Smalltalk displayObj"
+	super ioBeDisplay: bitsOrHandleCArray asInteger width: width height: height depth: depth.
+	displayForm := Form extent: width @ height depth: depth.
+	displayView ifNotNil: [displayView image: displayForm]
+]
+
 { #category : #security }
 StackInterpreterSimulator >> ioCanRenameImage [
 	^true
@@ -937,16 +982,14 @@ StackInterpreterSimulator >> ioGetMaxExtSemTableSize [
 
 { #category : #'I/O primitives' }
 StackInterpreterSimulator >> ioGetNextEvent: evtBuf [
-	| evt  |
-	"StackInterpreterSimulatorMorphicModel browse"
-	eventQueue isNil ifTrue: 
+	| evt |
+	"SimulatorMorphicModel browse"
+	eventQueue ifNil:
 		[^self primitiveFail].
-	eventQueue isEmpty
-		ifFalse:
-			[	evt :=  eventQueue next.
-			      1 to: (evt size) do: [:i | ((evt at: i) isNil) ifFalse: [evtBuf at: (i - 1) put: (evt at: i)]]].
-	 self success: true.
-
+	eventQueue isEmpty ifFalse:
+		[evt :=  eventQueue next.
+		 1 to: evtBuf size do:
+			[:i| (evt at: i) ifNotNil: [:val| evtBuf at: (i - 1) put: val asInteger]]]
 ]
 
 { #category : #'I/O primitives' }
@@ -1061,7 +1104,9 @@ StackInterpreterSimulator >> ioProcessEvents [
 { #category : #'I/O primitives support' }
 StackInterpreterSimulator >> ioRelinquishProcessorForMicroseconds: microseconds [
 	"In the simulator give an indication that we're idling and check for input."
-	Display reverse: (0@0 extent: 16@16).
+	Display reverse: ((displayView
+						ifNil: [0@0]
+						ifNotNil: [displayView bounds origin]) extent: 16@16).
 	Sensor peekEvent ifNotNil:
 		[self forceInterruptCheck].
 	Processor activeProcess == Project uiProcess ifTrue:
@@ -1077,6 +1122,11 @@ StackInterpreterSimulator >> ioRelinquishProcessorForMicroseconds: microseconds 
 { #category : #'I/O primitives' }
 StackInterpreterSimulator >> ioScreenDepth [
 	^DisplayScreen actualScreenDepth.
+]
+
+{ #category : #'I/O primitives support' }
+StackInterpreterSimulator >> ioScreenScaleFactor [
+	^ 1.0
 ]
 
 { #category : #'I/O primitives support' }
@@ -1103,6 +1153,33 @@ StackInterpreterSimulator >> ioSetMaxExtSemTableSize: anInteger [
 	extSemTabSize := anInteger
 ]
 
+{ #category : #'I/O primitives' }
+StackInterpreterSimulator >> ioShow: destBits D: w i: h s: d p: left l: right a: top y: bottom [
+	"This is the simulator's implementation of ioShowDisplay."
+	| raster pixPerWord simDisp realDisp rect |
+	displayForm ifNil: [^self].
+	displayBits = 0 ifTrue: [^self].
+	pixPerWord := 32 // d.
+	raster := displayForm width + (pixPerWord - 1) // pixPerWord.
+	simDisp := Form new hackBits: objectMemory memory.
+	displayForm unhibernate.
+	realDisp := Form new hackBits: displayForm bits.
+	realDisp
+		copy: (0 @ (top * raster) extent: 4 @ (bottom - top * raster))
+		from: 0 @ (destBits // 4 + (top * raster))
+		in: simDisp
+		rule: Form over.
+	displayView ifNotNil: [^displayView changed].
+	
+	"If running without a view, just blat the bits onto the screen..."
+	rect := 0 @ top corner: displayForm width @ bottom.
+	Display
+		copy: (rect translateBy: self displayLocation)
+		from: rect topLeft
+		in: displayForm
+		rule: Form over
+]
+
 { #category : #'process primitive support' }
 StackInterpreterSimulator >> ioSynchronousCheckForEvents [
 	"Hook allowing the platform to do anything it needs to do synchronously."
@@ -1117,6 +1194,16 @@ StackInterpreterSimulator >> ioUTCMicroseconds [
 	^byteCount + startMicroseconds
 	
 "At 20k bytecodes per second, this gives us aobut 200 ticks per second, or about 1/5 of what you'd expect for the real time clock.  This should still service events at one or two per second"
+]
+
+{ #category : #'I/O primitives support' }
+StackInterpreterSimulator >> ioUTCStartMicroseconds [
+	"Answer the value of the microsecond clock at startup."
+
+	^startMicroseconds ifNil:
+		[self class initializationOptions
+			at: #startMicroseconds
+			ifAbsent: [[Time utcMicrosecondClock] on: Error do: [Time totalSeconds * 1000000]]]
 ]
 
 { #category : #'primitive support' }
@@ -1204,7 +1291,7 @@ StackInterpreterSimulator >> logOfBytesVerify: nBytes fromFileNamed: fileName fr
 	logFile := (FileStream readOnlyFileNamed: fileName) binary.
 	transcript clear.
 	byteCount := 0.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -1245,7 +1332,7 @@ StackInterpreterSimulator >> logOfBytesWrite: nBytes toFileNamed: fileName fromS
 	logFile := (FileStream newFileNamed: fileName) binary.
 	transcript clear.
 	byteCount := 0.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -1270,7 +1357,7 @@ StackInterpreterSimulator >> logOfSendsVerify: nSends fromFileNamed: fileName fr
 	byteCount := 0.
 	sendCount := 0.
 	priorFrame := localFP.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -1317,7 +1404,7 @@ StackInterpreterSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromS
 	byteCount := 0.
 	sendCount := 0.
 	priorFrame := localFP.
-	quitBlock := [^ self].
+	quitBlock := [^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -1336,11 +1423,13 @@ StackInterpreterSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromS
 
 { #category : #'memory access' }
 StackInterpreterSimulator >> longAt: byteAddress [
+	self deprecated.
 	^objectMemory longAt: byteAddress
 ]
 
 { #category : #'memory access' }
 StackInterpreterSimulator >> longAt: byteAddress put: a32BitValue [
+	self deprecated.
 	^objectMemory longAt: byteAddress put: a32BitValue
 ]
 
@@ -1351,94 +1440,39 @@ StackInterpreterSimulator >> lookupMethodInClass: class [
 ]
 
 { #category : #'callback support' }
-StackInterpreterSimulator >> lookupMethodNoMNUEtcInClass: class [
+StackInterpreterSimulator >> lookupOrdinaryNoMNUEtcInClass: class [
 	lookupCount := lookupCount + 1.
-	^super lookupMethodNoMNUEtcInClass: class
+	^super lookupOrdinaryNoMNUEtcInClass: class
 ]
 
 { #category : #'file primitives' }
 StackInterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 	createDate: createDate modDate: modifiedDate
-	isDir: dirFlag fileSize: fileSize [
+		isDir: dirFlag fileSize: fileSize [
 
-	| modDateOop createDateOop nameString results |
-	<var: 'entryName' type: 'char *'>
-
-	results			:= objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 5.
-	nameString		:= objectMemory instantiateClass: (objectMemory splObj: ClassByteString) indexableSize: entryNameSize.
-	createDateOop	:= self positive32BitIntegerFor: createDate.
-	modDateOop	:= self positive32BitIntegerFor: modifiedDate.
-
-	1 to: entryNameSize do:
-		[ :i |
-		objectMemory storeByte: i-1 ofObject: nameString withValue: (entryName at: i) asciiValue].
-
-	objectMemory storePointerUnchecked: 0 ofObject: results withValue: nameString.
-	objectMemory storePointerUnchecked: 1 ofObject: results withValue: createDateOop.
-	objectMemory storePointerUnchecked: 2 ofObject: results withValue: modDateOop.
-	dirFlag
-		ifTrue: [ objectMemory storePointerUnchecked: 3 ofObject: results withValue: objectMemory trueObject ]
-		ifFalse: [ objectMemory storePointerUnchecked: 3 ofObject: results withValue: objectMemory falseObject ].
-	objectMemory storePointerUnchecked: 4 ofObject: results withValue: (objectMemory integerObjectOf: fileSize).
-	^ results
-]
-
-{ #category : #'file primitives' }
-StackInterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize createDate: createDate modDate: modifiedDate isDir: dirFlag fileSize: fileSize posixPermissions: posixPermissions [
-	<option: #PharoVM>
-	<var: 'entryName' type: 'char *'>
-
-	| modDateOop createDateOop nameString results |
-
-	results			:= objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 5.
-	nameString		:= objectMemory instantiateClass: (objectMemory splObj: ClassString) indexableSize: entryNameSize.
-	createDateOop	:= self positive32BitIntegerFor: createDate.
-	modDateOop	:= self positive32BitIntegerFor: modifiedDate.
-
-	1 to: entryNameSize do:
-		[ :i |
-		objectMemory storeByte: i-1 ofObject: nameString withValue: (entryName at: i) asciiValue].
-
-	objectMemory storePointerUnchecked: 0 ofObject: results withValue: nameString.
-	objectMemory storePointerUnchecked: 1 ofObject: results withValue: createDateOop.
-	objectMemory storePointerUnchecked: 2 ofObject: results withValue: modDateOop.
-	dirFlag
-		ifTrue: [ objectMemory storePointerUnchecked: 3 ofObject: results withValue: objectMemory trueObject ]
-		ifFalse: [ objectMemory storePointerUnchecked: 3 ofObject: results withValue: objectMemory falseObject ].
-	objectMemory storePointerUnchecked: 4 ofObject: results withValue: (objectMemory integerObjectOf: fileSize).
-	objectMemory storePointerUnchecked: 5 ofObject: results withValue: (objectMemory integerObjectOf: posixPermissions).
-	^ results
+	^(pluginList
+		detect: [:assoc| assoc key = 'FilePlugin']
+		ifNone: [self error: 'this message should not be sent unless the FilePlugin has been loaded']) value
+			makeDirEntryName: entryName size: entryNameSize
+				createDate: createDate modDate: modifiedDate
+					isDir: dirFlag fileSize: fileSize
 ]
 
 { #category : #'file primitives' }
 StackInterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize createDate: createDate modDate: modifiedDate isDir: dirFlag fileSize: fileSize posixPermissions: posixPermissions isSymlink: symlinkFlag [
-	<option: #PharoVM>
-	<var: 'entryName' type: 'char *'>
 
-	| modDateOop createDateOop nameString results |
+	^(pluginList
+		detect: [:assoc| assoc key = 'FilePlugin']
+		ifNone: [self error: 'this message should not be sent unless the FilePlugin has been loaded']) value
+			makeDirEntryName: entryName size: entryNameSize
+				createDate: createDate modDate: modifiedDate
+					isDir: dirFlag fileSize: fileSize
+						posixPermissions: fileSize isSymlink: symlinkFlag
+]
 
-	results			:= objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 7.
-	nameString		:= objectMemory instantiateClass: (objectMemory splObj: ClassString) indexableSize: entryNameSize.
-	createDateOop	:= self positive32BitIntegerFor: createDate.
-	modDateOop	:= self positive32BitIntegerFor: modifiedDate.
-
-	1 to: entryNameSize do:
-		[ :i |
-		objectMemory storeByte: i-1 ofObject: nameString withValue: (entryName at: i) asciiValue].
-
-	objectMemory storePointerUnchecked: 0 ofObject: results withValue: nameString.
-	objectMemory storePointerUnchecked: 1 ofObject: results withValue: createDateOop.
-	objectMemory storePointerUnchecked: 2 ofObject: results withValue: modDateOop.
-	dirFlag
-		ifTrue: [ objectMemory storePointerUnchecked: 3 ofObject: results withValue: objectMemory trueObject ]
-		ifFalse: [ objectMemory storePointerUnchecked: 3 ofObject: results withValue: objectMemory falseObject ].
-	objectMemory storePointerUnchecked: 4 ofObject: results withValue: (objectMemory integerObjectOf: fileSize).
-	objectMemory storePointerUnchecked: 5 ofObject: results withValue: (objectMemory integerObjectOf: posixPermissions).
-	symlinkFlag
-		ifTrue: [ objectMemory storePointerUnchecked: 6 ofObject: results withValue: objectMemory trueObject ]
-		ifFalse: [ objectMemory storePointerUnchecked: 6 ofObject: results withValue: objectMemory falseObject ].
-
-	^ results
+{ #category : #'plugin support' }
+StackInterpreterSimulator >> mappedPluginEntries [
+	^mappedPluginEntries
 ]
 
 { #category : #'frame access' }
@@ -1493,9 +1527,12 @@ StackInterpreterSimulator >> openAsMorph [
 							ifNotNil: [FileDirectory default localNameFor: imageName]
 							ifNil: [' synthetic image'].
 	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
+	window paneColor: self windowColorToUse.
 
-	window addMorph: (displayView := ImageMorph new image: displayForm)
-		frame: (0@0 corner: 1@0.8).
+	window addMorph: (displayView := SimulatorImageMorph new image: displayForm)
+			frame: (0@0 corner: 1@0.8).
+	displayView activeHand addEventListener: self.
+	eventTransformer := SimulatorEventTransformer new.
 
 	transcript := TranscriptStream on: (String new: 10000).
 	window addMorph: (PluggableTextMorph
@@ -1522,11 +1559,16 @@ StackInterpreterSimulator >> openAsMorph [
 StackInterpreterSimulator >> openAsMorphNoTranscript [
 	"Open a morphic view on this simulation."
 	| localImageName borderWidth window |
-	localImageName := FileDirectory default localNameFor: imageName.
-	window := (SystemWindow labelled: 'Simulation of ' , localImageName) model: self.
+	localImageName := imageName
+							ifNotNil: [FileDirectory default localNameFor: imageName]
+							ifNil: [' synthetic image'].
+	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
+	window paneColor: self windowColorToUse.
 
-	window addMorph: (displayView := ImageMorph new image: displayForm)
-		frame: (0@0 corner: 1@0.95).
+	window addMorph: (displayView := SimulatorImageMorph new image: displayForm)
+			frame: (0@0 corner: 1@0.95).
+	displayView activeHand addEventListener: self.
+	eventTransformer := SimulatorEventTransformer new.
 
 	window addMorph: (PluggableTextMorph on: self
 						text: #byteCountText accept: nil
@@ -1544,30 +1586,28 @@ StackInterpreterSimulator >> openAsMorphNoTranscript [
 ]
 
 { #category : #UI }
-StackInterpreterSimulator >> openAsStackInterpreterSimulatorMorph [
+StackInterpreterSimulator >> openAsSimulatorMorph [
 	"Open a morphic view on this simulation. ala Bert Freudenberg's
 	SqueakJS http://lively-web.org/users/bert/squeak.html	"
 	| localImageName borderWidth window |
 	localImageName := imageName
-				ifNil: [' synthetic image']
-				ifNotNil: [FileDirectory default localNameFor: imageName].
+							ifNil: [' synthetic image']
+							ifNotNil: [FileDirectory default localNameFor: imageName].
 
-	transcript := TranscriptStream
-				on: (String new: 10000).
+	transcript := TranscriptStream on: (String new: 10000).
 
-	window := StackInterpreterSimulatorMorph	
+	window := SimulatorMorph	
 					withVMSimulator: self 
 					title: 'Simulation of ' , localImageName, ' (beta)'
 					transcript: transcript.				
 
-	borderWidth := [StackInterpreterSimulatorMorph borderWidth
-			"Squeak 4.1"]
-				on: MessageNotUnderstood
-				do: [:ex | 0].
+	borderWidth := [SimulatorMorph borderWidth] "Squeak 4.1"
+						on: MessageNotUnderstood
+						do: [:ex | 0].
 	"3.8"
 	borderWidth := borderWidth + window borderWidth.
 	window openInWorldExtent: (self desiredDisplayExtent + (2 * borderWidth) + (0 @ window labelHeight) * (1 @ (1 / 0.8))) rounded.
-	^ window
+	^window
 ]
 
 { #category : #initialization }
@@ -1581,6 +1621,10 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 
 	f := FileStream readOnlyFileNamed: fileName.
 	f ifNil: [^self error: 'no image found'].
+
+	"Set the image name and the first argument; there are
+	 no arguments during simulation unless set explicitly."
+	systemAttributes at: 1 put: fileName; at: 2 put: nil.
 
 	["begin ensure block..."
 	imageName := f fullName.
@@ -1659,15 +1703,11 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 		setHeapBase: heapBase
 		memoryLimit: heapBase + heapSize
 		endOfMemory: heapBase + dataSize. "bogus for Spur"
-	objectMemory memory: ((objectMemory endianness == #little 
-					ifTrue: [LittleEndianBitmap]
-					ifFalse: [Bitmap]) new: objectMemory memoryLimit // 4).
-
+	objectMemory allocateMemoryOfSize: objectMemory memoryLimit.
 	"read in the image in bulk, then swap the bytes if necessary"
 	f position: headerSize.
 	count := objectMemory readHeapFromImageFile: f dataBytes: dataSize.
-	count ~= dataSize ifTrue: [self halt].
-	]
+	count ~= dataSize ifTrue: [self halt]]
 		ensure: [f close].
 
 	self ensureImageFormatIsUpToDate: swapBytes.
@@ -1760,27 +1800,6 @@ StackInterpreterSimulator >> primitiveAtPut [
 	^super primitiveAtPut
 ]
 
-{ #category : #'I/O primitives' }
-StackInterpreterSimulator >> primitiveBeDisplay [
-	"Extended to create a scratch Form for use by showDisplayBits."
-
-	| rcvr destWidth destHeight destDepth |
-	rcvr := self stackTop.
-	self success: ((objectMemory isPointers: rcvr) and: [(objectMemory lengthOf: rcvr) >= 4]).
-	self successful ifTrue: [
-		destWidth := self fetchInteger: 1 ofObject: rcvr.
-		destHeight := self fetchInteger: 2 ofObject: rcvr.
-		destDepth := self fetchInteger: 3 ofObject: rcvr.
-	].
-	self successful ifTrue: [
-		"create a scratch form the same size as Smalltalk displayObj"
-		displayForm := Form extent: destWidth @ destHeight
-							depth: destDepth.
-		displayView ifNotNil: [displayView image: displayForm].
-	].
-	super primitiveBeDisplay
-]
-
 { #category : #'other primitives' }
 StackInterpreterSimulator >> primitiveBeep [
 
@@ -1795,63 +1814,62 @@ StackInterpreterSimulator >> primitiveContextAt [
 
 { #category : #'file primitives' }
 StackInterpreterSimulator >> primitiveDirectoryEntry [
-	| name pathName array result |
+	| name pathName arrayNilOrSymbol result |
 	name := self stringOf: self stackTop.
 	pathName := self stringOf: (self stackValue: 1).
 	
 	self successful ifFalse:
 		[^self primitiveFail].
 
-	array := FileDirectory default primLookupEntryIn: pathName name: name.
-	array == nil ifTrue:
+	arrayNilOrSymbol := FileDirectory default primLookupEntryIn: pathName name: name.
+	arrayNilOrSymbol ifNil:
 		[self pop: 3 thenPush: objectMemory nilObject.
-		^array].
-	array == #badDirectoryPath ifTrue:
-		[self halt.
-		^self primitiveFail].
+		 ^self].
+	arrayNilOrSymbol isArray ifFalse:
+		["arrayNilOrSymbol ~~ #primFailed ifTrue:
+			[self halt]. "
+		self transcript show: name , ' NOT FOUND'.
+		 ^self primitiveFail].
 
-	PharoVM 
-		ifTrue: [ 
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
-				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4) fileSize: (array at: 5)
-				posixPermissions: (array at: 6) isSymlink: (array at: 7) ]
-		ifFalse: [ 
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
-				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4)  fileSize: (array at: 5) ].
-	self pop: 3.
-	self push: result
+	result := PharoVM 
+		ifTrue:
+			[self makeDirEntryName: (arrayNilOrSymbol at: 1) size: (arrayNilOrSymbol at: 1) size
+				createDate: (arrayNilOrSymbol at: 2) modDate: (arrayNilOrSymbol at: 3)
+				isDir: (arrayNilOrSymbol at: 4) fileSize: (arrayNilOrSymbol at: 5)
+				posixPermissions: (arrayNilOrSymbol at: 6 ifAbsent: [8r644]) isSymlink: (arrayNilOrSymbol at: 7 ifAbsent: [false]) ]
+		ifFalse:
+			[self makeDirEntryName: (arrayNilOrSymbol at: 1) size: (arrayNilOrSymbol at: 1) size
+				createDate: (arrayNilOrSymbol at: 2) modDate: (arrayNilOrSymbol at: 3)
+				isDir: (arrayNilOrSymbol at: 4) fileSize: (arrayNilOrSymbol at: 5) ].
+	self pop: 3 thenPush: result
 ]
 
 { #category : #'file primitives' }
 StackInterpreterSimulator >> primitiveDirectoryLookup [
 	| index pathName array result |
 	index := self stackIntegerValue: 0.
-	pathName := (self stringOf: (self stackValue: 1)).
+	pathName := self stringOf: (self stackValue: 1).
 	
 	self successful ifFalse:
 		[^self primitiveFail].
 
 	array := FileDirectory default primLookupEntryIn: pathName index: index.
 
-	array == nil ifTrue:
+	array ifNil:
 		[self pop: 3 thenPush: objectMemory nilObject.
-		^array].
+		 ^array].
 	array == #badDirectoryPath ifTrue:
-		["self halt."
-		^self primitiveFail].
+		[^self "halt" primitiveFail].
 
-	PharoVM
-		ifTrue: [ 
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
+	result := PharoVM
+		ifTrue: [self makeDirEntryName: (array at: 1) size: (array at: 1) size
 				createDate: (array at: 2) modDate: (array at: 3)
 				isDir: (array at: 4) fileSize: (array at: 5)
-				posixPermissions: (array at: 6) isSymlink: (array at: 7) ]
-		ifFalse: [ 
-			result := self makeDirEntryName: (array at: 1) size: (array at: 1) size
+				posixPermissions: (array at: 6 ifAbsent: 8r664) isSymlink: (array at: 7 ifAbsent: [false]) ]
+		ifFalse: [self makeDirEntryName: (array at: 1) size: (array at: 1) size
 				createDate: (array at: 2) modDate: (array at: 3)
-				isDir: (array at: 4)  fileSize: (array at: 5) ].
+				isDir: (array at: 4) fileSize: (array at: 5)].
+			
 	self pop: 3 thenPush: result
 ]
 
@@ -1869,9 +1887,9 @@ StackInterpreterSimulator >> primitiveExecuteMethod [
 
 { #category : #'control primitives' }
 StackInterpreterSimulator >> primitiveExecuteMethodArgsArray [
-	"self halt: thisContext selector."
-	(objectMemory isOopCompiledMethod: self stackTop) ifFalse:
-		[self halt].
+	self halt: thisContext selector.
+	"(objectMemory isOopCompiledMethod: self stackTop) ifFalse:
+		[self halt]."
 	^super primitiveExecuteMethodArgsArray
 ]
 
@@ -2171,7 +2189,14 @@ StackInterpreterSimulator >> printHex: anInteger [
 StackInterpreterSimulator >> printHexnp: anInteger [
 
 	traceOn ifTrue:
-		[transcript nextPutAll: (anInteger storeStringBase: 16)]
+		[transcript nextPutAll: ((anInteger ifNil: [0]) storeStringBase: 16)]
+]
+
+{ #category : #'debug printing' }
+StackInterpreterSimulator >> printHexnpnp: anInteger [
+	"Print n in hex, in the form '1234', unpadded"
+	traceOn ifTrue:
+		[transcript nextPutAll: ((anInteger ifNil: [0]) printStringBase: 16)]
 ]
 
 { #category : #'debug printing' }
@@ -2183,6 +2208,16 @@ StackInterpreterSimulator >> printLCS [
 StackInterpreterSimulator >> printNum: anInteger [
 
 	traceOn ifTrue: [ transcript print: anInteger ].
+]
+
+{ #category : #'debug printing' }
+StackInterpreterSimulator >> printSends [
+	^printSends
+]
+
+{ #category : #'debug printing' }
+StackInterpreterSimulator >> printSends: aBoolean [
+	printSends := aBoolean
 ]
 
 { #category : #'debug printing' }
@@ -2221,11 +2256,11 @@ StackInterpreterSimulator >> pushMaybeContextReceiverVariable: index [
 	^super pushMaybeContextReceiverVariable: index
 ]
 
-{ #category : #'event forwarding' }
-StackInterpreterSimulator >> queueForwardedEvent:evt [
-	eventQueue isNil
-		ifTrue:[eventQueue := SharedQueue new].
-	eventQueue nextPut: evt.
+{ #category : #'I/O primitives support' }
+StackInterpreterSimulator >> queueForwardedEvent: event [
+	eventQueue ifNil:
+		[eventQueue := SharedQueue new].
+	eventQueue nextPut: event
 ]
 
 { #category : #'debug support' }
@@ -2261,7 +2296,7 @@ StackInterpreterSimulator >> run [
 					((World submorphs includes: topWindow)
 					 and: [UIManager default confirm: 'close?']) ifTrue:
 						[topWindow delete]]].
-				  ^self].
+				  ^self close].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -2338,7 +2373,7 @@ StackInterpreterSimulator >> runWithBreakCount: theBreakCount [
 					((World submorphs includes: topWindow)
 					 and: [UIManager default confirm: 'close?']) ifTrue:
 						[topWindow delete]]].
-				  ^self].
+				  ^self close].
 	breakCount := theBreakCount.
 	self initStackPages.
 	self loadInitialContext.
@@ -2375,50 +2410,36 @@ StackInterpreterSimulator >> shortPrintFrame: theFP [
 	^super shortPrintFrame: theFP
 ]
 
-{ #category : #'I/O primitives' }
-StackInterpreterSimulator >> showDisplayBits: destBits w: w h: h d: d left: left right: right top: top bottom: bottom [
-	| raster pixPerWord simDisp realDisp rect |
-	displayForm ifNil: [^self].
-	pixPerWord := 32 // d.
-	raster := displayForm width + (pixPerWord - 1) // pixPerWord.
-	simDisp := Form new hackBits: objectMemory memory.
-	displayForm unhibernate.
-	realDisp := Form new hackBits: displayForm bits.
-	realDisp
-		copy: (0 @ (top * raster) extent: 4 @ (bottom - top * raster))
-		from: 0 @ (destBits // 4 + (top * raster))
-		in: simDisp
-		rule: Form over.
-	displayView ifNotNil: [^ displayView changed].
-	
-	"If running without a view, just blat the bits onto the screen..."
-	rect := 0 @ top corner: displayForm width @ bottom.
-	Display
-		copy: (rect translateBy: self displayLocation)
-		from: rect topLeft
-		in: displayForm
-		rule: Form over
-]
-
 { #category : #'process primitive support' }
 StackInterpreterSimulator >> signalSemaphoreWithIndex: index [
-	"This is a non-thread-safe simulation.  See platforms/Cross/vm/sqExternalSemaphores.c
-	 for the real code."
+	"This is a simulation.  See platforms/Cross/vm/sqExternalSemaphores.c for the real code.
+	 Thanks to Levente Uzoni for making this version almost thread-safe (in Smalltalk)"
+	<doNotGenerate>
+	| originalResponses newRequests newResponses |
 	index <= 0 ifTrue: [^false].
 	index > externalSemaphoreSignalRequests size ifTrue:
-		[| newRequests newResponses |
-		newRequests := Array new: 1 << index highBit withAll: 0.
-		newResponses := newRequests copy.
-		newRequests
+		[newRequests := Array new: 1 << index highBit withAll: 0.
+		 newResponses := newRequests shallowCopy].
+	"This is a lock-free thread-safe grow...; thanks Levente"
+	originalResponses := externalSemaphoreSignalResponses.
+	[index > externalSemaphoreSignalRequests size] whileTrue:
+		[newRequests
 			replaceFrom: 1
 			to: externalSemaphoreSignalRequests size
 			with: externalSemaphoreSignalRequests
 			startingAt: 1.
-		newResponses
+		 newResponses
 			replaceFrom: 1
 			to: externalSemaphoreSignalResponses size
 			with: externalSemaphoreSignalResponses
-			startingAt: 1].
+			startingAt: 1.
+		 externalSemaphoreSignalResponses == originalResponses "This should always be true."
+			ifTrue:
+				[externalSemaphoreSignalRequests := newRequests.
+				 externalSemaphoreSignalResponses := newResponses]
+			ifFalse:
+				[originalResponses := externalSemaphoreSignalResponses]].
+	"This is not thread-safe however..."
 	externalSemaphoreSignalRequests
 		at: index
 		put: (externalSemaphoreSignalRequests at: index) + 1.
@@ -2546,7 +2567,7 @@ StackInterpreterSimulator >> test [
 	transcript clear.
 	byteCount := 0.
 	breakCount := -1.
-	quitBlock := [^self].
+	quitBlock := [^self close].
 	printSends := printReturns := true.
 	self internalizeIPandSP.
 	self fetchNextBytecode.
@@ -2573,7 +2594,7 @@ StackInterpreterSimulator >> test1 [
 	byteCount := 0.
 	breakCount := -1.
 	self setBreakSelector: #blockCopy:.
-	quitBlock := [^self].
+	quitBlock := [^self close].
 	printSends := printReturns := true.
 	self internalizeIPandSP.
 	self fetchNextBytecode.
@@ -2637,7 +2658,7 @@ StackInterpreterSimulator >> testBreakCount: breakCount printSends: shouldPrintS
 	self loadInitialContext.
 	transcript clear.
 	byteCount := 0.
-	quitBlock := [^self].
+	quitBlock := [^self close].
 	printSends := true & shouldPrintSends. "true & foo allows evaluating printFoo := true in the debugger"
 	printFrameAtEachStep := true & shouldPrintFrames.
 	printBytecodeAtEachStep := true & shouldPrintBytecodes.
@@ -2741,8 +2762,10 @@ StackInterpreterSimulator >> utilitiesMenu: aMenuMorph [
 		addLine;
 		add: 'print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self printOop: oop]];
 		add: 'long print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self longPrintOop: oop]];
+		add: 'print context...' action: [(self promptHex: 'print context') ifNotNil: [:oop| self printContext: oop]];
 		addLine;
 		add: 'inspect object memory' target: objectMemory action: #inspect;
+		add: 'run leak checker' action: [Cursor execute showWhile: [self runLeakChecker]];
 		add: 'inspect interpreter' action: #inspect;
 		addLine;
 		add: 'set break count...' action: [|s| s := UIManager default request: 'break count (dec)'.
@@ -2774,18 +2797,6 @@ StackInterpreterSimulator >> utilitiesMenu: aMenuMorph [
 	^aMenuMorph
 ]
 
-{ #category : #testing }
-StackInterpreterSimulator >> validOop: oop [
-	" Return true if oop appears to be valid "
-	(oop bitAnd: 1) = 1 ifTrue: [^ true].  "Integer"
-	(oop bitAnd: 3) = 0 ifFalse: [^ false].  "Uneven address"
-	oop >= objectMemory endOfMemory ifTrue: [^ false].  "Out of range"
-	"could test if within the first large freeblock"
-	(self longAt: oop) = 4 ifTrue: [^ false].
-	(objectMemory headerType: oop) = 2 ifTrue: [^ false].	"Free object"
-	^ true
-]
-
 { #category : #'debug support' }
 StackInterpreterSimulator >> veryDeepCopyWith: deepCopier [
 	"Override to short-circuit the copying of any VMPluginCodeGenerators referenced from mappedPluginEntries.
@@ -2794,9 +2805,9 @@ StackInterpreterSimulator >> veryDeepCopyWith: deepCopier [
 		[deepCopier references
 			at: mappedPluginEntries ifAbsentPut: [mappedPluginEntries].
 		mappedPluginEntries do:
-			[:tuple|
-			[:sim :sel :block :argCount|
-			deepCopier references at: block ifAbsentPut: [block]] valueWithArguments: tuple]].
+			[:tuple| | block |
+			block := tuple third.
+			deepCopier references at: block ifAbsentPut: [block]]].
 	^super veryDeepCopyWith: deepCopier
 ]
 
@@ -2827,31 +2838,38 @@ StackInterpreterSimulator >> warpBits [
 	^ myBitBlt warpBits
 ]
 
+{ #category : #UI }
+StackInterpreterSimulator >> windowColorToUse [
+	^Color lightBlue
+]
+
+{ #category : #'primitive support' }
+StackInterpreterSimulator >> windowIsClosing [
+	quitBlock ifNotNil:
+		[:effectiveQuitBlock|
+		quitBlock := nil. "stop recursion on explicit window close."
+		[effectiveQuitBlock value]
+			on: BlockCannotReturn
+			do: [:ex|]]	"Cause return from #test, et al"
+]
+
 { #category : #'debug printing' }
 StackInterpreterSimulator >> withMemoryProtectionDo: aBlock [
-	self writeProtectMemory.
+	objectMemory writeProtectMemory.
 	stackPages writeProtectMemory.
 	^aBlock ensure:
-		[self writeEnableMemory.
+		[objectMemory writeEnableMemory.
 		 stackPages writeEnableMemory]
 ]
 
 { #category : #'frame access' }
 StackInterpreterSimulator >> withoutSmallIntegerTags: anInteger [
+	| signBit |
 	self assert: (anInteger >= 0 and: [anInteger highBit <= (objectMemory wordSize * 8)]).
-	^(anInteger bitAnd: 16r80000000) ~= 0
+	signBit := 1 << (objectMemory wordSize * 8 - 1).
+	^(anInteger bitAnd: signBit) ~= 0
 		ifTrue: ["negative"
-				(anInteger bitAnd: 16r7FFFFFFE) - 16r80000000]
+				(anInteger bitClear: signBit + 1) - signBit]
 		ifFalse: ["positive"
 				anInteger - 1]
-]
-
-{ #category : #'debug printing' }
-StackInterpreterSimulator >> writeEnableMemory [
-	objectMemory memory: objectMemory memory array
-]
-
-{ #category : #'debug printing' }
-StackInterpreterSimulator >> writeProtectMemory [
-	objectMemory memory: (ReadOnlyArrayWrapper around: objectMemory memory)
 ]

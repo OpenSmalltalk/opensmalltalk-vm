@@ -9,6 +9,11 @@ CogOutOfLineLiteralsARMCompiler class >> literalsManagerClass [
 	^OutOfLineLiteralsManager
 ]
 
+{ #category : #accessing }
+CogOutOfLineLiteralsARMCompiler >> cmpC32RTempByteSize [
+	^8
+]
+
 { #category : #'generate machine code' }
 CogOutOfLineLiteralsARMCompiler >> concretizeLiteral [
 	"Generate an out-of-line literal.  Copy the value and any annotation from the stand-in in the literals manager."
@@ -37,8 +42,9 @@ CogOutOfLineLiteralsARMCompiler >> getDefaultCogCodeSize [
 ]
 
 { #category : #'inline cacheing' }
-CogOutOfLineLiteralsARMCompiler >> inlineCacheTagAt: followingAddress [
-	^objectMemory longAt: (self pcRelativeAddressAt: followingAddress - 8)
+CogOutOfLineLiteralsARMCompiler >> inlineCacheTagAt: callSiteReturnAddress [
+	<inline: true>
+	^objectMemory longAt: (self pcRelativeAddressAt: (callSiteReturnAddress - 8) asUnsignedInteger)
 ]
 
 { #category : #testing }
@@ -58,6 +64,15 @@ CogOutOfLineLiteralsARMCompiler >> isSharable [
 	^operands at: 1
 ]
 
+{ #category : #'inline cacheing' }
+CogOutOfLineLiteralsARMCompiler >> literalBeforeFollowingAddress: followingAddress [
+	"Return the literal referenced by the instruction immediately preceding followingAddress."
+	^objectMemory longAt: (self pcRelativeAddressAt:
+		((self instructionIsLDR: (self instructionBeforeAddress: followingAddress))
+			ifTrue: [self instructionAddressBefore: followingAddress]
+			ifFalse: [self instructionAddressBefore: followingAddress - 4]))
+]
+
 { #category : #accessing }
 CogOutOfLineLiteralsARMCompiler >> literalLoadInstructionBytes [
 	"Answer the size of a literal load instruction (which does not include the size of the literal).
@@ -73,6 +88,12 @@ CogOutOfLineLiteralsARMCompiler >> literalOpcodeIndex [
 	<inline: true>
 	self assert: opcode = Literal.
 	^(operands at: 2) asInteger
+]
+
+{ #category : #accessing }
+CogOutOfLineLiteralsARMCompiler >> loadLiteralByteSize [
+	"Answer the byte size of a MoveCwR opcode's corresponding machine code. On ARM this is a single instruction pc-relative register load - unless we have made a mistake and not turned on the out of line literals manager"
+	^4
 ]
 
 { #category : #'generate machine code' }
@@ -106,6 +127,14 @@ CogOutOfLineLiteralsARMCompiler >> moveCw: constant intoR: destReg [
 	^machineCodeSize := 4
 ]
 
+{ #category : #'inline cacheing' }
+CogOutOfLineLiteralsARMCompiler >> nsSendCacheAt: callSiteReturnAddress [
+	"Answer the NSSendCache for the return address of a Newspeak
+	 self, super, outer, or implicit receiver send."
+	<inline: true>
+	^objectMemory longAt: (self pcRelativeAddressAt: (callSiteReturnAddress - 8) asUnsignedInteger)
+]
+
 { #category : #'compile abstract instructions' }
 CogOutOfLineLiteralsARMCompiler >> outOfLineLiteralOpcodeLimit [
 	"The maximum offset in a LDR is (1<<12)-1, or (1<<10)-1 instructions.
@@ -136,13 +165,13 @@ CogOutOfLineLiteralsARMCompiler >> relocateMethodReferenceBeforeAddress: pc by: 
 	 generated, and if not, adjust a load literal.  There are two cases, a push
 	 or a register load.  If a push, then there is a register load, but in the instruction
 	 before."
-	| pcPreceedingLoad reference litAddr |
-	pcPreceedingLoad := (self instructionIsPush: (self instructionBeforeAddress: pc))
+	| pcPrecedingLoad reference litAddr |
+	pcPrecedingLoad := (self instructionIsPush: (self instructionBeforeAddress: pc))
 							ifTrue: [pc - 4]
 							ifFalse: [pc].
 	"If the load is not done via pc-relative addressing we have to relocate."
-	(self isPCRelativeValueLoad: (self instructionBeforeAddress: pcPreceedingLoad)) ifFalse:
-		[litAddr := self pcRelativeAddressAt: pcPreceedingLoad.
+	(self isPCRelativeValueLoad: (self instructionBeforeAddress: pcPrecedingLoad)) ifFalse:
+		[litAddr := self pcRelativeAddressAt: pcPrecedingLoad.
 		 reference := objectMemory longAt: litAddr.
 		 objectMemory longAt: litAddr put: reference + delta]
 ]
@@ -150,7 +179,9 @@ CogOutOfLineLiteralsARMCompiler >> relocateMethodReferenceBeforeAddress: pc by: 
 { #category : #'inline cacheing' }
 CogOutOfLineLiteralsARMCompiler >> rewriteFullTransferAt: callSiteReturnAddress target: callTargetAddress expectedInstruction: expectedInstruction [
 	"Rewrite a CallFull or JumpFull instruction to transfer to a different target.
-	 This variant is used to rewrite cached primitive calls.   Answer the extent
+	 This variant is used to rewrite cached primitive calls where we load the target address into ip
+	and use the 'bx ip' or 'blx ip' instruction for the actual jump or call.
+	Answer the extent
 	 of the code change which is used to compute the range of the icache to flush."
 	<var: #callSiteReturnAddress type: #usqInt>
 	<var: #callTargetAddress type: #usqInt>
@@ -175,7 +206,7 @@ CogOutOfLineLiteralsARMCompiler >> rewriteInlineCacheAt: callSiteReturnAddress t
 	self assert: (self isInImmediateJumpRange: callDistance). "we don't support long call updates here"
 	call := self bl: callDistance.
 	objectMemory
-		longAt: callSiteReturnAddress - 4 put: call;
+		longAt: (self instructionAddressBefore: callSiteReturnAddress ) put: call;
 		longAt: (self pcRelativeAddressAt: callSiteReturnAddress - 8) put: cacheTag.
 	self assert: (self inlineCacheTagAt: callSiteReturnAddress) = cacheTag.
 	"self cCode: ''
@@ -208,7 +239,7 @@ CogOutOfLineLiteralsARMCompiler >> sizePCDependentInstructionAt: eventualAbsolut
 	 where this instruction will be output.  The span of a jump to a following
 	 instruction is therefore between that instruction's address and this
 	 instruction's address ((which are both still their virtual addresses), but the
-	 span of a jump to a preceeding instruction or to an absolute address is
+	 span of a jump to a preceding instruction or to an absolute address is
 	 between that instruction's address (which by now is its eventual absolute
 	 address) or absolute address and eventualAbsoluteAddress.
 
@@ -242,8 +273,13 @@ CogOutOfLineLiteralsARMCompiler >> sizePCDependentInstructionAt: eventualAbsolut
 
 { #category : #'inline cacheing' }
 CogOutOfLineLiteralsARMCompiler >> storeLiteral: literal beforeFollowingAddress: followingAddress [
-	"Rewrite the literal in the instruction immediately preceeding followingAddress."
-	objectMemory longAt: (self pcRelativeAddressAt: followingAddress - 4) put: literal
+	"Rewrite the literal in the instruction immediately preceding followingAddress."
+	objectMemory
+		longAt: (self pcRelativeAddressAt:
+					((self instructionIsLDR: (self instructionBeforeAddress: followingAddress))
+						ifTrue: [self instructionAddressBefore: followingAddress]
+						ifFalse: [self instructionAddressBefore: followingAddress - 4]))
+		put: literal
 ]
 
 { #category : #'generate machine code' }
@@ -284,19 +320,20 @@ CogOutOfLineLiteralsARMCompiler >> usesOutOfLineLiteral [
 						-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		"Data Movement"						
 		[MoveCqR]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
-		[MoveCwR]		-> [^((self isAnInstruction: (cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *')) "i.e. a label, which by definition will be in the current compilation."
-							  or: [cogit addressIsInCurrentCompilation: (operands at: 0)]) not].
+		[MoveCwR]		-> [^(self inCurrentCompilation: (operands at: 0)) not].
 		[MoveAwR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
 		[MoveRAw]		-> [^(self isAddressRelativeToVarBase: (operands at: 1)) ifTrue: [false] ifFalse: [true]].
+		[MoveAbR]		-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
+		[MoveRAb]		-> [^(self isAddressRelativeToVarBase: (operands at: 1)) ifTrue: [false] ifFalse: [true]].
 		[MoveRMwr]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:u :i| false] ifFalse: [true]].
 		[MoveRdM64r]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:u :i| false] ifFalse: [true]]. 
 		[MoveMbrR]		-> [^self is12BitValue: (operands at: 0) ifTrue: [:u :i| false] ifFalse: [true]].
 		[MoveRMbr]		-> [^self is12BitValue: (operands at: 1) ifTrue: [:u :i| false] ifFalse: [true]].
 		[MoveM16rR]	-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
+		[MoveRM16r]	-> [^self is12BitValue: (operands at: 1) ifTrue: [:u :i| false] ifFalse: [true]].
 		[MoveM64rRd]	-> [^self is12BitValue: (operands at: 0) ifTrue: [:u :i| false] ifFalse: [true]].
 		[MoveMwrR]	-> [^self is12BitValue: (operands at: 0) ifTrue: [:u :i| false] ifFalse: [true]].
-		[PushCw]		-> [^((self isAnInstruction: (cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *')) "i.e. a label, which by definiion will be in the current compilation."
-							  or: [cogit addressIsInCurrentCompilation: (operands at: 0)]) not].
+		[PushCw]		-> [^(self inCurrentCompilation: (operands at: 0)) not].
 		[PushCq]		-> [^self rotateable8bitImmediate: (operands at: 0) ifTrue: [:r :i| false] ifFalse: [true]].
 		[PrefetchAw] 	-> [^(self isAddressRelativeToVarBase: (operands at: 0)) ifTrue: [false] ifFalse: [true]].
 		}

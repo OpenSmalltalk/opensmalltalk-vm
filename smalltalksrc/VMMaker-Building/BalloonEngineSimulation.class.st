@@ -239,30 +239,31 @@ BalloonEngineSimulation >> loadPointIntAt: index from: intArray [
 ]
 
 { #category : #simulation }
-BalloonEngineSimulation >> loadPointShortAt: index from: intArray [
+BalloonEngineSimulation >> loadPointShortAt: index from: intArray [ 
 	"Load the short value from the given index in intArray"
-
 	| long |
 	long := intArray at: index // 2.
-	^ ((index bitAnd: 1) = 0
-		ifTrue:[interpreterProxy halfWordHighInLong32: long]
-		ifFalse:[interpreterProxy halfWordLowInLong32: long])
-		signedIntFromShort
+	long isPoint
+		ifTrue: [^ (index bitAnd: 1)
+					= 0
+				ifTrue: [long x]
+				ifFalse: [long y]].
+	^ ((index bitAnd: 1)
+			= 0
+		ifTrue: [interpreterProxy halfWordHighInLong32: long]
+		ifFalse: [interpreterProxy halfWordLowInLong32: long]) signedIntFromShort
 
 ]
 
-{ #category : #initialize }
-BalloonEngineSimulation >> loadWordTransformFrom: transformOop into: destPtr length: n [
+{ #category : #simulation }
+BalloonEngineSimulation >> loadWordTransformFrom: transformOop into: destPtr length: n [ 
 	"Load a float array transformation from the given oop"
-
-	| srcPtr wordDestPtr |
-
-	false ifTrue:
-		[^super loadWordTransformFrom: transformOop into: destPtr length: n].
-
+	| srcPtr |
 	srcPtr := interpreterProxy firstIndexableField: transformOop.
-	wordDestPtr := destPtr as: CArrayAccessor.  "Remove float conversion shell"
-	0 to: n-1 do: [:i | wordDestPtr at: i put: (srcPtr floatAt: i)]
+	"Use BalloonArray's float conversion shell.  It stores both the float bits into
+	 the heap object, and the float object into the simArray.  This is needed for
+	 correct simulation, otherwise there will be errors in BalloonArray>>floatAt:"
+	0 to: n - 1 do: [:i| destPtr at: i put: (srcPtr floatAt: i)]
 ]
 
 { #category : #simulation }

@@ -7,7 +7,7 @@ Class {
 { #category : #io }
 ClipboardExtendedPlugin >> ioAddClipboardData: clipboard data: data dataFormat: aFormat [
 	| clipboardAddress formatLength dataLength |
-	<var: #clipboardAddress type: #'unsigned long'>
+	<var: #clipboardAddress type: #'usqIntptr_t'>
 	self primitive: 'ioAddClipboardData' parameters: #(Oop ByteArray String).
 
 	clipboardAddress := interpreterProxy positiveMachineIntegerValueOf: clipboard.
@@ -21,7 +21,7 @@ ClipboardExtendedPlugin >> ioAddClipboardData: clipboard data: data dataFormat: 
 { #category : #io }
 ClipboardExtendedPlugin >> ioClearClipboard: clipboard [
 	| clipboardAddress |
-	<var: #clipboardAddress type: #'unsigned long'>
+	<var: #clipboardAddress type: #'usqIntptr_t'>
 	self primitive: 'ioClearClipboard' parameters: #(Oop).
 	clipboardAddress :=  interpreterProxy positiveMachineIntegerValueOf: clipboard.
 	self sqPasteboardClear: clipboardAddress.
@@ -40,7 +40,7 @@ ClipboardExtendedPlugin >> ioCreateClipboard [
 { #category : #io }
 ClipboardExtendedPlugin >> ioGetClipboardFormat: clipboard formatNumber: formatNumber [ 
 	| clipboardAddress itemCount |
-	<var: #clipboardAddress type: #'unsigned long'>
+	<var: #clipboardAddress type: #'usqIntptr_t'>
 	self primitive: 'ioGetClipboardFormat' parameters: #(#Oop #SmallInteger ).
 	clipboardAddress := interpreterProxy positiveMachineIntegerValueOf: clipboard.
 	itemCount := self sqPasteboardGetItemCount: clipboardAddress.
@@ -52,7 +52,7 @@ ClipboardExtendedPlugin >> ioGetClipboardFormat: clipboard formatNumber: formatN
 { #category : #io }
 ClipboardExtendedPlugin >> ioReadClipboardData: clipboard format: format [
 	| clipboardAddress formatLength |
-	<var: #clipboardAddress type: #'unsigned long'>
+	<var: #clipboardAddress type: #'usqIntptr_t'>
 	self primitive: 'ioReadClipboardData' parameters: #(Oop String).
 	clipboardAddress := interpreterProxy positiveMachineIntegerValueOf: clipboard.
 	formatLength := interpreterProxy slotSizeOf: format cPtrAsOop.

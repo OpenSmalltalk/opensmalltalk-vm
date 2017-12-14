@@ -36,11 +36,10 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
-{ #category : #translation }
-Spur64BitCoMemoryManager class >> exportAPISelectors: options [
-	^(Set withAll: (self exportAPISelectorsFor: self))
-		addAll: (SpurGenerationScavenger exportAPISelectors: options);
-		yourself
+{ #category : #simulation }
+Spur64BitCoMemoryManager class >> defaultISA [
+	"Answer the default instruction set architecture to use for simulation."
+	^#X64
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -48,9 +47,11 @@ Spur64BitCoMemoryManager class >> objectRepresentationClass [
 	^CogObjectRepresentationFor64BitSpur
 ]
 
-{ #category : #'simulation only' }
+{ #category : #simulation }
 Spur64BitCoMemoryManager class >> simulatorClass [
-	^Spur64BitMMLECoSimulator
+	^Spur64BitMMLECoSimulatorFor64Bits basicNew memoryClass
+		ifNil: [Spur64BitMMLECoSimulator]
+		ifNotNil: [Spur64BitMMLECoSimulatorFor64Bits]
 ]
 
 { #category : #'growing/shrinking memory' }
@@ -63,24 +64,10 @@ Spur64BitCoMemoryManager >> assimilateNewSegment: segInfo [
 ]
 
 { #category : #trampolines }
-Spur64BitCoMemoryManager >> ceClassAtIndex: classIndex [
-	<api>
-	| result |
-	result := self classAtIndex: classIndex.
-	self assert: (coInterpreter addressCouldBeClassObj: result).
-	^result
-]
-
-{ #category : #trampolines }
 Spur64BitCoMemoryManager >> ceScheduleScavenge [
 	<api>
 	self assert: freeStart >= scavengeThreshold.
 	self scheduleScavenge
-]
-
-{ #category : #accessing }
-Spur64BitCoMemoryManager >> checkForLeaks [
-	^checkForLeaks
 ]
 
 { #category : #'debug support' }
@@ -108,6 +95,12 @@ Spur64BitCoMemoryManager >> checkMemoryMap [
 		 self assert: (self isYoungObject: cogit maxCogMethodAddress) not].
 	self assert: (self isOldObject: cogit minCogMethodAddress) not.
 	self assert: (self isOldObject: cogit maxCogMethodAddress) not
+]
+
+{ #category : #accessing }
+Spur64BitCoMemoryManager >> classSmallFloat [
+	<api>
+	^self fetchPointer: self smallFloatTag ofObject: classTableFirstPage
 ]
 
 { #category : #'debug support' }
@@ -176,7 +169,8 @@ Spur64BitCoMemoryManager >> initializeFreeSpaceForFacadeFrom: base to: limit [
 	"c.f. initializeFreeSpacePostLoad: freeListObj."
 	| freeListObj freeBytes |
 	newSpaceLimit := oldSpaceStart := freeStart := base.
-	endOfMemory := scavengeThreshold := limit.
+	endOfMemory := limit.
+	scavengeThreshold := limit * 3 // 4.
 	segmentManager initSegmentForInImageCompilationFrom: base to: limit.
 	freeListObj := self allocateSlots: self numFreeLists
 						format: self wordIndexableFormat
@@ -225,6 +219,16 @@ Spur64BitCoMemoryManager >> isReallyYoungObject: objOop [
 	  and: [self oop: objOop isGreaterThanOrEqualTo: newSpaceStart]
 ]
 
+{ #category : #compaction }
+Spur64BitCoMemoryManager >> methodHeaderFromSavedFirstField: field [
+	(self isIntegerObject: field) ifTrue:
+		[^field].
+	self assert: ((self isNonImmediate: field) and: [field < newSpaceStart]).
+	self assert: (coInterpreter cCoerceSimple: field to: #'CogMethod *') objectHeader
+				= self nullHeaderForMachineCodeMethod.
+	^(coInterpreter cCoerceSimple: field to: #'CogMethod *') methodHeader
+]
+
 { #category : #'growing/shrinking memory' }
 Spur64BitCoMemoryManager >> methodHeaderOf: methodObj [
 	"Answer the method header of a CompiledMethod object.
@@ -244,6 +248,14 @@ Spur64BitCoMemoryManager >> methodHeaderOf: methodObj [
 			(coInterpreter cCoerceSimple: header to: #'CogMethod *') methodHeader]
 ]
 
+{ #category : #'trampoline support' }
+Spur64BitCoMemoryManager >> needGCFlagAddress [
+	<api>
+	<returnTypeC: #usqInt>
+	^self cCode: [(self addressOf: needGCFlag) asUnsignedInteger]
+		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #needGCFlag in: self]
+]
+
 { #category : #'garbage collection' }
 Spur64BitCoMemoryManager >> nullHeaderForMachineCodeMethod [
 	<api>
@@ -251,6 +263,31 @@ Spur64BitCoMemoryManager >> nullHeaderForMachineCodeMethod [
 	^(self firstLongFormat << self formatShift)
 	+ (1 << self markedBitFullShift)
 	+ ClassBitmapCompactIndex
+]
+
+{ #category : #'cog jit support' }
+Spur64BitCoMemoryManager >> receiverTagBitsForMethod: aMethodObj [
+	"Answer the tag bits for the receiver based on the method's methodClass, if any."
+	<api>
+	| methodClassOrNil |
+	methodClassOrNil := coInterpreter methodClassOf: aMethodObj.
+	NewspeakVM "Mixins don't necessarily have a format inst var; filter out non-integer format."
+		ifTrue:
+			[| instSpec |
+			(methodClassOrNil = nilObj
+			 or: [(self isNonIntegerObject: (instSpec := self fetchPointer: InstanceSpecificationIndex ofObject: methodClassOrNil))
+			 or: [(self instSpecOfClassFormat: (self integerValueOf: instSpec)) ~= self forwardedFormat]]) ifTrue:
+				[^0]]
+		ifFalse:
+			[(methodClassOrNil = nilObj
+			 or: [(self instSpecOfClass: methodClassOrNil) ~= self forwardedFormat]) ifTrue:
+				[^0]].
+	methodClassOrNil = (self fetchPointer: self smallIntegerTag ofObject: classTableFirstPage) ifTrue:
+		[^self smallIntegerTag].
+	methodClassOrNil = (self fetchPointer: self characterTag ofObject: classTableFirstPage) ifTrue:
+		[^self characterTag].
+	self assert: methodClassOrNil = (self fetchPointer: self smallFloatTag ofObject: classTableFirstPage).
+	^self smallFloatTag
 ]
 
 { #category : #'cog jit support' }
@@ -267,10 +304,22 @@ Spur64BitCoMemoryManager >> scavengeThresholdAddress [
 		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #getScavengeThreshold in: self]
 ]
 
-{ #category : #'cog jit support' }
-Spur64BitCoMemoryManager >> smallIntegerTag [
+{ #category : #'debug support' }
+Spur64BitCoMemoryManager >> setUpForUseByFacade: aCurrentImageCoInterpreterFacade [
+	"Make sure that eden etc are initialized, so that methods can be printed.
+	 This is really to make addressCouldBeObj: et al work."
+	<doNotGenerate>
+	self edenBytes: 0.
+	self setHeapBase: self freeStart
+		memoryLimit: self endOfMemory
+		endOfMemory: self endOfMemory
+]
+
+{ #category : #'trampoline support' }
+Spur64BitCoMemoryManager >> specialObjectsArrayAddress [
 	<api>
-	^1
+	^self cCode: [(self addressOf: specialObjectsOop) asUnsignedInteger]
+		inSmalltalk: [cogit simulatedVariableAddress: #specialObjectsOop in: self]
 ]
 
 { #category : #accessing }
@@ -287,29 +336,27 @@ Spur64BitCoMemoryManager >> startOfMemory [
 Spur64BitCoMemoryManager >> unalignedLongAt: byteAddress [
 	<doNotGenerate>
 	| rem |
-	self shouldBeImplemented.
-	rem := byteAddress \\ 4.
+	rem := byteAddress \\ 8.
 	^rem = 0
 		ifTrue: [self longAt: byteAddress]
-		ifFalse: [((self longAt: byteAddress - rem) + ((self longAt: byteAddress - rem + 4) bitShift: 32) bitShift: rem * -8) bitAnd: 16rFFFFFFFF]
+		ifFalse: [((self longAt: byteAddress - rem) + ((self longAt: byteAddress - rem + 8) bitShift: 64) bitShift: rem * -8) bitAnd: 16rFFFFFFFFFFFFFFFF]
 ]
 
 { #category : #'simulation only' }
 Spur64BitCoMemoryManager >> unalignedLongAt: byteAddress put: aLong [
 	<doNotGenerate>
 	| rem mask |
-	self shouldBeImplemented.
-	rem := byteAddress \\ 4.
+	rem := byteAddress \\ 8.
 	^rem = 0
 		ifTrue: [self longAt: byteAddress put: aLong]
 		ifFalse:
-			[mask := 16rFFFFFFFF bitAnd: (-1 bitShift: rem * 8).
+			[mask := 16rFFFFFFFFFFFFFFFF bitAnd: (-1 bitShift: rem * 8).
 			 self longAt: byteAddress - rem
 				put: ((self longAt: byteAddress - rem) bitAnd: mask bitInvert)
 					+ ((aLong bitShift: rem * 8) bitAnd: mask).
-			 self longAt: byteAddress - rem + 4
-				put: ((self longAt: byteAddress - rem + 4) bitAnd: mask)
-					+ ((aLong bitShift: 4 - rem * -8) bitAnd: mask bitInvert).
+			 self longAt: byteAddress - rem + 8
+				put: ((self longAt: byteAddress - rem + 8) bitAnd: mask)
+					+ ((aLong bitShift: 8 - rem * -8) bitAnd: mask bitInvert).
 			 aLong]
 ]
 

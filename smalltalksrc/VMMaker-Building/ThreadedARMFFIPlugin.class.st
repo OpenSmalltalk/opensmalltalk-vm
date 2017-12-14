@@ -8,7 +8,7 @@ Class {
 		'NumFloatRegArgs',
 		'NumIntRegArgs'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }
@@ -43,18 +43,6 @@ ThreadedARMFFIPlugin class >> numIntRegArgs [
 ]
 
 { #category : #'callout support' }
-ThreadedARMFFIPlugin >> dispatchFunctionPointer: aFunctionPointer with: int1 with: int2 with: int3 with: int4 [
-	"In C aFunctionPointer is void (*aFunctionPointer)(int, int, int, int)"
-	<cmacro: '(aFunctionPointer, int1, int2, int3, int4) (aFunctionPointer)(int1, int2, int3, int4)'>
-	^self 
-		perform: aFunctionPointer
-		with: int1
-		with: int2
-		with: int3
-		with: int4
-]
-
-{ #category : #'callout support' }
 ThreadedARMFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: calloutState [
 	<var: #procAddr type: #'void *'>
 	<var: #calloutState type: #'CalloutState *'>
@@ -65,73 +53,68 @@ ThreadedARMFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: call
 	<var: #floatRet type: #double>
 	<var: #intRet type: #usqLong>
 	<inline: true>
-	self cppIf: COGMTVM ifTrue:
-	[(calloutState callFlags anyMask: FFICallFlagThreaded) ifTrue:
-		[myThreadIndex := interpreterProxy disownVM: 0]].
+	self cCode: '' inSmalltalk: [loadFloatRegs := #used. loadFloatRegs class].
+	self maybeDisownVM: calloutState threadIndexInto: [:threadIndex| myThreadIndex := threadIndex].
 
-	self registerArgsSlop + self cStackAlignment > 0 ifTrue:
+	calloutState floatRegisterIndex > 0 ifTrue:
+		[self 
+			load: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 0)) to: 'double *') at: 0)
+			Flo: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 2)) to: 'double *') at: 0)
+			a: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 4)) to: 'double *') at: 0)
+			t: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 6)) to: 'double *') at: 0)
+			R: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 8)) to: 'double *') at: 0)
+			e: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 10)) to: 'double *') at: 0)
+			g: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 12)) to: 'double *') at: 0)
+			s: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 14)) to: 'double *') at: 0)].
+
+	(self allocaLiesSoSetSpBeforeCall or: [self mustAlignStack]) ifTrue:
 		[self setsp: calloutState argVector].
 
-	calloutState floatRegisterIndex > 0
-		ifTrue:
-			[self 
-				load: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 0)) to: 'double *') at: 0)
-				Flo: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 2)) to: 'double *') at: 0)
-				a: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 4)) to: 'double *') at: 0)
-				t: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 6)) to: 'double *') at: 0)
-				R: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 8)) to: 'double *') at: 0)
-				e: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 10)) to: 'double *') at: 0)
-				g: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 12)) to: 'double *') at: 0)
-				s: ((self cCoerceSimple: (self addressOf: (calloutState floatRegisters at: 14)) to: 'double *') at: 0)
-			].
-
 	atomicType := self atomicTypeOf: calloutState ffiRetHeader.
-	atomicType = FFITypeSingleFloat
-		ifTrue:
-			[floatRet := self 
-				dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'float (*)(int, int, int, int)') 
+	(atomicType >> 1) = (FFITypeSingleFloat >> 1) ifTrue:
+		[atomicType = FFITypeSingleFloat
+			ifTrue:
+				[floatRet := self 
+					dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'float (*)(sqIntptr_t, sqIntptr_t, sqIntptr_t, sqIntptr_t)') 
+					with: (calloutState integerRegisters at: 0)
+					with: (calloutState integerRegisters at: 1)
+					with: (calloutState integerRegisters at: 2)
+					with: (calloutState integerRegisters at: 3)]
+			ifFalse: "atomicType = FFITypeDoubleFloat"
+				[floatRet := self 
+					dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'double (*)(sqIntptr_t, sqIntptr_t, sqIntptr_t, sqIntptr_t)') 
+					with: (calloutState integerRegisters at: 0)
+					with: (calloutState integerRegisters at: 1)
+					with: (calloutState integerRegisters at: 2)
+					with: (calloutState integerRegisters at: 3)].
+
+		 "undo any callee argument pops because it may confuse stack management with the alloca."
+		 (self isCalleePopsConvention: calloutState callFlags) ifTrue:
+			[self setsp: calloutState argVector].
+		 self maybeOwnVM: calloutState threadIndex: myThreadIndex.
+
+		 ^interpreterProxy floatObjectOf: floatRet].
+
+	intRet := self 
+				dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'usqIntptr_t (*)(sqIntptr_t, sqIntptr_t, sqIntptr_t, sqIntptr_t)') 
 				with: (calloutState integerRegisters at: 0)
 				with: (calloutState integerRegisters at: 1)
 				with: (calloutState integerRegisters at: 2)
-				with: (calloutState integerRegisters at: 3)].
-	 atomicType = FFITypeDoubleFloat
-		ifTrue:
-			[floatRet := self 
-				dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'double (*)(int, int, int, int)') 
-				with: (calloutState integerRegisters at: 0)
-				with: (calloutState integerRegisters at: 1)
-				with: (calloutState integerRegisters at: 2)
-				with: (calloutState integerRegisters at: 3)]
-		ifFalse:
-			[intRet := self 
-				dispatchFunctionPointer: (self cCoerceSimple: procAddr to: 'usqLong (*)(int, int, int, int)') 
-				with: (calloutState integerRegisters at: 0)
-				with: (calloutState integerRegisters at: 1)
-				with: (calloutState integerRegisters at: 2)
-				with: (calloutState integerRegisters at: 3)].
+				with: (calloutState integerRegisters at: 3).
+
 	"undo any callee argument pops because it may confuse stack management with the alloca."
 	(self isCalleePopsConvention: calloutState callFlags) ifTrue:
 		[self setsp: calloutState argVector].
+	self maybeOwnVM: calloutState threadIndex: myThreadIndex.
 
-	self cppIf: COGMTVM ifTrue:
-	[(calloutState callFlags anyMask: FFICallFlagThreaded) ifTrue:
-		[interpreterProxy ownVM: myThreadIndex]].
-
-	"Note: Order is important here since FFIFlagPointer + FFIFlagStructure is used to represent
-	 'typedef void* VoidPointer' and VoidPointer must be returned as pointer *not* as struct."
-	(calloutState ffiRetHeader anyMask: FFIFlagPointer) ifTrue:
-		[^self ffiReturnPointer: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState].
-
-	(calloutState ffiRetHeader anyMask: FFIFlagStructure) ifTrue:
-		[^self ffiReturnStruct: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState].
+	(calloutState ffiRetHeader anyMask: FFIFlagPointer+FFIFlagStructure) ifTrue:
+		["Note: Order is important here since FFIFlagPointer + FFIFlagStructure is used to represent
+		 'typedef void* VoidPointer' and VoidPointer must be returned as pointer *not* as struct."
+		 (calloutState ffiRetHeader anyMask: FFIFlagPointer) ifTrue:
+			[^self ffiReturnPointer: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState].
+		 ^self ffiReturnStruct: intRet ofType: (self ffiReturnType: specOnStack) in: calloutState].
 	
-	(atomicType = FFITypeSingleFloat
-	 or: [atomicType = FFITypeDoubleFloat]) ifTrue:
-		[^interpreterProxy methodReturnValue: (interpreterProxy floatObjectOf: floatRet)].
-
-	^interpreterProxy methodReturnValue: (self ffiCreateIntegralResultOop: intRet
-												ofAtomicType: atomicType
-												in: calloutState)
+	^self ffiCreateIntegralResultOop: intRet ofAtomicType: atomicType in: calloutState
 ]
 
 { #category : #marshalling }
@@ -167,7 +150,7 @@ ThreadedARMFFIPlugin >> ffiPushPointer: pointer in: calloutState [
 	<inline: true>
 	calloutState integerRegisterIndex < NumIntRegArgs
 		ifTrue:
-			[calloutState integerRegisters at: calloutState integerRegisterIndex put: pointer.
+			[calloutState integerRegisters at: calloutState integerRegisterIndex put: pointer asInteger.
 			 calloutState integerRegisterIndex: calloutState integerRegisterIndex + 1]
 		ifFalse:
 			[calloutState currentArg + 4 > calloutState limit ifTrue:
@@ -423,32 +406,23 @@ ThreadedARMFFIPlugin >> ffiPushUnsignedShort: value in: calloutState [
 ThreadedARMFFIPlugin >> ffiReturnStruct: longLongRet ofType: ffiRetType in: calloutState [
 	<var: #longLongRet type: #usqLong>
 	<var: #calloutState type: #'CalloutState *'>
-	"Create a structure return value from an external function call.  The value as been stored in
-	 alloca'ed space pointed to by the calloutState."
+	"Create a structure return value from an external function call.  The value has been stored in
+	 alloca'ed space pointed to by the calloutState or in the return value."
 	| retOop retClass oop |
 	<inline: true>
 	retClass := interpreterProxy fetchPointer: 1 ofObject: ffiRetType.
 	retOop := interpreterProxy instantiateClass: retClass indexableSize: 0.
-	interpreterProxy pushRemappableOop: retOop.
-	oop := interpreterProxy 
-			instantiateClass: interpreterProxy classByteArray 
-			indexableSize: calloutState structReturnSize.
-	(self returnStructInRegisters: calloutState structReturnSize)
-		ifTrue:
-			[self mem: (interpreterProxy firstIndexableField: oop) cp: (self addressOf: longLongRet) y: calloutState structReturnSize]
-		ifFalse:
-			[self mem: (interpreterProxy firstIndexableField: oop) cp: calloutState limit y: calloutState structReturnSize].
-	retOop := interpreterProxy popRemappableOop.
+	self remapOop: retOop
+		in: [oop := interpreterProxy 
+					instantiateClass: interpreterProxy classByteArray 
+					indexableSize: calloutState structReturnSize].
+	self mem: (interpreterProxy firstIndexableField: oop)
+		cp: ((self returnStructInRegisters: calloutState structReturnSize)
+				ifTrue: [self addressOf: longLongRet]
+				ifFalse: [calloutState limit])
+		 y: calloutState structReturnSize.
 	interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
-	^interpreterProxy methodReturnValue: retOop
-]
-
-{ #category : #marshalling }
-ThreadedARMFFIPlugin >> registerArgsSlop [
-	"Answer any space needed to prevent the alloca'ed outgoing arguments marshalling area from
-	 being overwritten by any register arguments during calls during marshalling.  On ARM we
-	 believe this is zero."
-	^0
+	^retOop
 ]
 
 { #category : #marshalling }

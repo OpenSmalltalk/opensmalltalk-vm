@@ -21,6 +21,7 @@ Class {
 		'savedLastDumpedLiteralIndex'
 	],
 	#pools : [
+		'CogAbstractRegisters',
 		'CogCompilationConstants',
 		'CogRTLOpcodes'
 	],
@@ -98,32 +99,6 @@ OutOfLineLiteralsManager >> assertValidAnnotation: annotation for: instruction [
 	self assert: (annotation ~= cogit getIsObjectReference or: [instruction opcode = Literal])
 ]
 
-{ #category : #'closed PIC parsing' }
-OutOfLineLiteralsManager >> cPICCase: caseIndex jumpTargetBefore: pc [
-	<inline: true>
-	"With Spur the class tag is always 32-bits and the literal is bytesPerOop.
-	 With V3 the class and literal are both bytesPerOop."
-	^cogit backEnd jumpLongTargetBeforeFollowingAddress: pc - (caseIndex <= 1
-																		ifTrue: [objectMemory bytesPerOop]
-																		ifFalse: [objectRepresentation inlineCacheTagsMayBeObjects
-																					ifTrue: [objectMemory bytesPerOop * 2]
-																					ifFalse: [objectMemory bytesPerOop + 4]])
-]
-
-{ #category : #'closed PIC parsing' }
-OutOfLineLiteralsManager >> cPICCase: caseIndex relocateJumpLongBefore: pc by: delta [
-	<inline: true>
-	"With Spur the class tag is always 32-bits and the literal is bytesPerOop.
-	 With V3 the class and literal are both bytesPerOop."
-	cogit backEnd
-		relocateJumpLongBeforeFollowingAddress: pc - (caseIndex <= 1
-															ifTrue: [objectMemory bytesPerOop]
-															ifFalse: [objectRepresentation inlineCacheTagsMayBeObjects
-																		ifTrue: [objectMemory bytesPerOop * 2]
-																		ifFalse: [objectMemory bytesPerOop + 4]])
-		by: delta
-]
-
 { #category : #'compile abstract instructions' }
 OutOfLineLiteralsManager >> checkLiteral: literal forInstruction: anInstruction [
 	<var: #anInstruction type: #'AbstractInstruction *'>
@@ -137,18 +112,10 @@ OutOfLineLiteralsManager >> checkLiteral: literal forInstruction: anInstruction 
 OutOfLineLiteralsManager >> checkQuickConstant: literal forInstruction: anInstruction [
 	<var: #anInstruction type: #'AbstractInstruction *'>
 	<returnTypeC: #'AbstractInstruction *'>
-	anInstruction usesOutOfLineLiteral ifTrue:
-		[anInstruction dependent: (self locateLiteral: literal)].
-	^anInstruction
-]
-
-{ #category : #'garbage collection' }
-OutOfLineLiteralsManager >> classRefInClosedPICAt: address [
 	<inline: true>
-	"If inline cache tags are not objects they will be 32-bit values."
-	^objectRepresentation inlineCacheTagsMayBeObjects
-		ifTrue: [objectMemory long32At: address - 4]
-		ifFalse: [objectMemory longAt: address - objectMemory bytesPerOop]
+	anInstruction usesOutOfLineLiteral ifTrue:
+		[anInstruction dependent: (self locateLiteral: (self cCode: [literal] inSmalltalk: [literal bitAnd: 1 << (objectMemory wordSize * 8) - 1]))].
+	^anInstruction
 ]
 
 { #category : #initialization }
@@ -181,6 +148,12 @@ OutOfLineLiteralsManager >> dumpLiterals: generateBranchAround [
 
 	firstOpcodeIndex := cogit getOpcodeIndex.
 	lastDumpedLiteralIndex := nextLiteralIndex
+]
+
+{ #category : #'closed PIC parsing' }
+OutOfLineLiteralsManager >> endSizeOffset [
+	"return the offset need from the cPICEndSize in order to point to just after the last instruction - here that means bytesPerOop * list size"
+	^nextLiteralIndex * objectMemory bytesPerOop
 ]
 
 { #category : #'garbage collection' }
@@ -246,14 +219,9 @@ OutOfLineLiteralsManager >> mustDumpLiterals: currentOpcodeIndex [
 	  and: [currentOpcodeIndex - firstOpcodeIndex >= cogit backEnd outOfLineLiteralOpcodeLimit]
 ]
 
-{ #category : #'garbage collection' }
-OutOfLineLiteralsManager >> objRefInClosedPICAt: address [
-	<inline: true>
-	^objectMemory longAt: address
-]
-
 { #category : #initialization }
-OutOfLineLiteralsManager >> resetForBlockCompile [
+OutOfLineLiteralsManager >> resetForRecompile [
+	<inline: true>
 	firstOpcodeIndex := savedFirstOpcodeIndex.
 	nextLiteralIndex := savedNextLiteralIndex.
 	lastDumpedLiteralIndex := savedLastDumpedLiteralIndex
@@ -267,20 +235,12 @@ OutOfLineLiteralsManager >> resetLiterals [
 ]
 
 { #category : #initialization }
-OutOfLineLiteralsManager >> saveForBlockCompile [
+OutOfLineLiteralsManager >> saveForRecompile [
+
+	<inline: true>
 	savedFirstOpcodeIndex := firstOpcodeIndex.
 	savedNextLiteralIndex := nextLiteralIndex.
 	savedLastDumpedLiteralIndex := lastDumpedLiteralIndex
-]
-
-{ #category : #'garbage collection' }
-OutOfLineLiteralsManager >> storeClassRef: classObj inClosedPICAt: address [
-	<var: #address type: #usqInt>
-	<inline: true>
-	"If inline cache tags are not objects they will be 32-bit values."
-	objectRepresentation inlineCacheTagsMayBeObjects
-		ifTrue: [objectMemory long32At: address - 4 put: classObj]
-		ifFalse: [objectMemory longAt: address - objectMemory bytesPerOop]
 ]
 
 { #category : #'garbage collection' }
@@ -289,13 +249,6 @@ OutOfLineLiteralsManager >> storeLiteral: literal atAnnotatedAddress: address us
 	 the start of the literal and hence access the memory directly."
 	<var: 'address' type: #usqInt>
 	<var: 'instruction' type: #'AbstractInstruction *'>
-	<inline: true>
-	objectMemory longAt: address put: literal
-]
-
-{ #category : #'garbage collection' }
-OutOfLineLiteralsManager >> storeObjRef: literal inClosedPICAt: address [
-	<var: #address type: #usqInt>
 	<inline: true>
 	objectMemory longAt: address put: literal
 ]

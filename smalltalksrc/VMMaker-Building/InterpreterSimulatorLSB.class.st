@@ -42,6 +42,18 @@ InterpreterSimulatorLSB >> byteAt: byteAddress put: byte [
 	^byte
 ]
 
+{ #category : #'memory access' }
+InterpreterSimulatorLSB >> byteSwapped32IfBigEndian: w [
+	"Accelerate, we now we are not big endian"
+	^w bitAnd: 16rFFFFFFFF
+]
+
+{ #category : #'memory access' }
+InterpreterSimulatorLSB >> byteSwapped64IfBigEndian: w [
+	"Accelerate, we now we are not big endian"
+	^w bitAnd: 16rFFFFFFFFFFFFFFFF
+]
+
 { #category : #'debug support' }
 InterpreterSimulatorLSB >> charsOfLong: long [
 	^ (1 to: 4) collect:

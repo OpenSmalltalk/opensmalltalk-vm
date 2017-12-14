@@ -6,7 +6,6 @@ Class {
 	#superclass : #CCodeGenerator,
 	#instVars : [
 		'pluginClass',
-		'pluginName',
 		'pluginFunctionsUsed',
 		'inProgressSelectors',
 		'inliningDone'
@@ -94,21 +93,24 @@ VMPluginCodeGenerator >> doInlining: inlineFlag [
 VMPluginCodeGenerator >> emitAccessorDepthsOn: aStream [ 
 	"Output accessor depth bytes for all primitives in the plugin.
 	 This is for external primitives in Spur."
-	(self sortStrings: self exportedPrimitiveNames) do:
-		[:primName|
+	self sortedExportMethods do:
+		[:method| | primName |
+		 primName := self cFunctionNameFor: method selector.
 		 (self accessorDepthForSelector: primName asSymbol) ifNotNil:
 			[:depth|
 			 "store the accessor depth in a byte variable; save a little space
 			  by omitting depths < 0; support code supplies the default."
 			 self assert: depth < 128.
 			 depth >= 0 ifTrue:
-				[aStream
-					nextPutAll: 'signed char ';
-					nextPutAll: primName;
-					nextPutAll: 'AccessorDepth = ';
-					nextPutAll: (self cLiteralFor: depth);
-					nextPut: $;;
-					cr]]]
+				[self withOptionalConditionalDefineFor: method
+					on: aStream
+					do: [aStream
+							nextPutAll: 'signed char ';
+							nextPutAll: primName;
+							nextPutAll: 'AccessorDepth = ';
+							nextPutAll: (self cLiteralFor: depth);
+							nextPut: $;;
+							cr]]]]
 ]
 
 { #category : #'C code generator' }
@@ -143,26 +145,22 @@ VMPluginCodeGenerator >> emitCHeaderOn: aStream [
 #define EXPORT(returnType) returnType
 
 /* Do not include the entire sq.h file but just those parts needed. */
-/*  The virtual machine proxy definition */
-#include "sqVirtualMachine.h"
-/* Configuration options */
-#include "sqConfig.h"
-/* Platform specific definitions */
-#include "sqPlatformSpecific.h"
+#include "sqConfig.h"			/* Configuration options */
+#include "sqVirtualMachine.h"	/*  The virtual machine proxy definition */
+#include "sqPlatformSpecific.h"	/* Platform specific definitions */
 
 #define true 1
 #define false 0
 #define null 0  /* using ''null'' because nil is predefined in Think C */
 #ifdef SQUEAK_BUILTIN_PLUGIN
-#undef EXPORT
-// was #undef EXPORT(returnType) but screws NorCroft cc
-#define EXPORT(returnType) static returnType
+# undef EXPORT
+# define EXPORT(returnType) static returnType
 #endif'; cr; cr.
 	self addHeaderFile: '"sqMemoryAccess.h"'.
 	"Additional header files; include squeak VM ones last"
 	self emitHeaderFiles: (headerFiles reject: [:hdr| hdr includes: $<]) on: aStream.
 	self maybePutPreambleFor: pluginClass on: aStream.
-	aStream cr.
+	aStream cr
 ]
 
 { #category : #'C code generator' }
@@ -179,32 +177,138 @@ VMPluginCodeGenerator >> emitCTypesOn: aStream [
 { #category : #'C code generator' }
 VMPluginCodeGenerator >> emitExportsOn: aStream [
 	"Store all the exported primitives in the form used by the internal named prim system."
+	| nilVMClass |
+	(nilVMClass := vmClass isNil) ifTrue: "We need a vmClass temporarily to compute accessor depths."
+		[vmClass := StackInterpreter].
 	aStream cr; cr; nextPutAll:'#ifdef SQUEAK_BUILTIN_PLUGIN'.
-	self emitExportsNamed: pluginName pluginName: pluginName on: aStream.
+	self emitExportsNamed: pluginClass moduleName
+		pluginName: pluginClass moduleExportsName
+		on: aStream.
 	aStream cr; nextPutAll: '#else /* ifdef SQ_BUILTIN_PLUGIN */'; cr; cr.
 	self emitAccessorDepthsOn: aStream.
-	aStream cr; nextPutAll: '#endif /* ifdef SQ_BUILTIN_PLUGIN */'; cr
+	aStream cr; nextPutAll: '#endif /* ifdef SQ_BUILTIN_PLUGIN */'; cr.
+	nilVMClass ifTrue:
+		[vmClass := nil]
 ]
 
 { #category : #'C translation' }
-VMPluginCodeGenerator >> emitIfdefForPluginFunctionOption: anArray on: aStream [ 
-	aStream nextPutAll: '#if '; nextPutAll: (self perform: anArray first withArguments: anArray allButFirst)
+VMPluginCodeGenerator >> emitIfdefForPluginFunctionOption: anArrayOrSymbol on: aStream [
+	"See e.g. senders of atLeastVMProxyMajor:minor: or <option: #IMMUTABLITY>
+	 in InterpreterProxy"
+	aStream nextPutAll: '#if '; nextPutAll: (anArrayOrSymbol isSymbol
+											ifTrue: [anArrayOrSymbol]
+											ifFalse: [self perform: anArrayOrSymbol first
+														withArguments: anArrayOrSymbol allButFirst])
 ]
 
 { #category : #'C translation' }
-VMPluginCodeGenerator >> generateInterpreterProxyFunctionDeference: aNode on: aStream indent: anInteger [
+VMPluginCodeGenerator >> generateIntegerObjectOf: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+	| expr mustCastToUnsigned type typeIsUnsigned |
+	expr := msgNode args first.
+	aStream nextPutAll: '(('.
+	"Note that the default type of an integer constant in C is int.  Hence we /must/
+	 cast expression to long if in the 64-bit world, since e.g. in 64-bits
+		(int)(16r1FFFFF << 3) = (int)16rFFFFFFF8 = -8
+	 whereas
+		(long)(16r1FFFFF << 3) = (long)16rFFFFFFF8 = 4294967288."
+	type := self typeFor: expr in: currentMethod.
+	typeIsUnsigned := type first = $u.
+	mustCastToUnsigned := typeIsUnsigned not
+							  or: [(self sizeOfIntegralCType: type) < (self sizeOfIntegralCType: #usqInt)].
+	mustCastToUnsigned ifTrue:
+		[aStream nextPutAll: '(usqInt)'].
+	self emitCExpression: expr on: aStream.
+	aStream nextPutAll: ' << NumSmallIntegerTagBits) | 1)'
+]
+
+{ #category : #'C translation' }
+VMPluginCodeGenerator >> generateIntegerValueOf: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream nextPut: $(.
+	self emitCExpression: msgNode args first on: aStream.
+	aStream nextPutAll: ' >> NumSmallIntegerTagBits)'
+]
+
+{ #category : #'C translation' }
+VMPluginCodeGenerator >> generateInterpreterProxyFunctionDereference: aNode on: aStream indent: anInteger [
 	| pluginsToClone |
-	(pluginsToClone := self pluginFunctionsToClone) isEmpty ifTrue:
+	pluginsToClone := self pluginFunctionsToClone copyWithoutAll: self selectorsThatAreGeneratedAsMacros.
+	pluginsToClone isEmpty ifTrue:
 		[^self].
-	aStream cr; nextPutAll: '#if !defined(SQUEAK_BUILTIN_PLUGIN)'.
+	aStream cr; nextPutAll: '#if !defined(SQUEAK_BUILTIN_PLUGIN)'; cr.
 	pluginsToClone do:
 		[:s| | cs |
 		cs := self cFunctionNameFor: s.
 		self withOptionalVerbiageFor: s
 			on: aStream
-			do: [aStream crtab: anInteger; nextPutAll: cs; nextPutAll: ' = interpreterProxy->'; nextPutAll: cs; nextPut: $;]
-			ifOptionalDo: [aStream crtab: anInteger; nextPutAll: cs; nextPutAll: ' = 0;']].
-	aStream cr; nextPutAll: '#endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */'.
+			do: [aStream tab: anInteger; nextPutAll: cs; nextPutAll: ' = interpreterProxy->'; nextPutAll: cs; nextPut: $;; cr]
+			ifOptionalDo: [aStream
+							nextPutAll: '# if !defined('; nextPutAll: cs; nextPut: $);
+							crtab: anInteger; nextPutAll: cs; nextPutAll: ' = 0;';
+							cr; nextPutAll: '# endif'; cr]].
+	aStream nextPutAll: '#endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */'.
+]
+
+{ #category : #'C translation' }
+VMPluginCodeGenerator >> generateRemapOopIn: aNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+	| arm |
+	"Avoid nesting #if SPURVM...#else...#endif within arms of an outer #if SPURVM...#else...#endif."
+	(Notification new tag: #inRemapOopInArm; signal) ifNotNil:
+		[:inRemapOopInArm|
+		 ^inRemapOopInArm
+			ifTrue: [self generateSpurRemapOopIn: aNode on: aStream indent: level]
+			ifFalse: [self generateV3RemapOopIn: aNode on: aStream indent: level]].
+	[aStream cr; nextPutAll: '#if SPURVM'; cr.
+	 arm := true.
+	 self generateSpurRemapOopIn: aNode on: aStream indent: level.
+	 aStream cr; nextPutAll: '#else /* SPURVM */'; cr.
+	 arm := false.
+	 self generateV3RemapOopIn: aNode on: aStream indent: level.
+	 aStream cr; nextPutAll: '#endif /* SPURVM */'; cr]
+		on: Notification
+		do: [:ex|
+			ex tag == #inRemapOopInArm
+				ifTrue: [ex resume: arm]
+				ifFalse: [ex pass]]
+]
+
+{ #category : #'C translation' }
+VMPluginCodeGenerator >> generateSpurRemapOopIn: aNode on: aStream indent: level [
+	"Generate just the block argument for this message as Spur does not GC on allocation."
+
+	aNode args second emitCCodeOn: aStream level: level generator: self
+]
+
+{ #category : #'C translation' }
+VMPluginCodeGenerator >> generateV3RemapOopIn: aNode on: aStream indent: level [
+	"Generate call on remapOop: for the variable oopOrList (or all of the
+	 variables in oopOrList) before evaluating aBlock, and restore them after.
+	 This keeps the oops valid if, as V3 will, there is a GC on allocation."
+
+	| idList |
+	pluginFunctionsUsed add: #pushRemappableOop:; add: #popRemappableOop.
+	idList := aNode args first nameOrValue.
+	idList class == Array ifFalse: [idList := Array with: idList].
+	idList do:
+		[:each | 
+		 aStream
+			tab: level;
+			nextPutAll: 'pushRemappableOop(';
+			nextPutAll: each asString;
+			nextPutAll: ');']
+		separatedBy: [aStream cr].
+	aStream cr.
+	aNode args second emitCCodeOn: aStream level: level generator: self.
+	level timesRepeat: [aStream tab].
+	idList reversed do:
+		[:each |
+		 aStream 
+			nextPutAll: each asString;
+			nextPutAll: ' = popRemappableOop()']
+		separatedBy: [aStream nextPut: $;; crtab: level]
 ]
 
 { #category : #'type inference' }
@@ -230,7 +334,9 @@ VMPluginCodeGenerator >> initializeCTranslationDictionary [
 	super initializeCTranslationDictionary.
 	translationDict
 		at: #expandDereferenceInterpreterProxyFunctionTable
-		put: #generateInterpreterProxyFunctionDeference:on:indent:
+			put: #generateInterpreterProxyFunctionDereference:on:indent:;
+		at: #remapOop:in:
+			put: #generateRemapOopIn:on:indent:
 ]
 
 { #category : #testing }
@@ -246,9 +352,40 @@ VMPluginCodeGenerator >> isObjectAccessor: selector given: interpreterClass [
 	  or: [super isObjectAccessor: selector given: interpreterClass]
 ]
 
+{ #category : #utilities }
+VMPluginCodeGenerator >> isStructSend: aTSendNode [
+	"Answer if the argument aTSendNode is a send of a structure accessor.
+	 This is tricky.  We want
+		foo bar => foo->bar
+		foo bar => foo.bar
+		foo bar: expr => foo->bar = expr
+		foo bar: expr => foo.bar = expr
+	 depending on whether foo is a struct or a pointer to a struct,
+	 but only if both foo is a struct type and bar is a field accessor.
+	 The tricky cases are self-sends within struct class methods.  Here we need to
+	 distinguish between self-sends of ordinary methods from self sends of accessors.
+
+	Override to avoid requiring that there be a struct accessor method for the selector."
+	^aTSendNode numArgs <= 1
+	   and: [(aTSendNode receiver structTargetKindIn: self) notNil]
+]
+
 { #category : #public }
 VMPluginCodeGenerator >> localizeGlobalVariables [
 "TPR - we don't do this for plugins"
+]
+
+{ #category : #public }
+VMPluginCodeGenerator >> notePluginFunctionsUsedByMacros [
+	"Declare the plugin functions that are used by macros."
+	#(
+		isKindOfInteger: #(classLargeNegativeInteger classLargePositiveInteger fetchClassOf: isIntegerObject: )
+		isIntegerObject:  #()
+		isLargeIntegerObject: #(classLargeNegativeInteger classLargePositiveInteger fetchClassOf: )
+		isLargeNegativeIntegerObject: 	#(classLargeNegativeInteger fetchClassOf: )
+		isLargePositiveIntegerObject: 	#(classLargePositiveInteger fetchClassOf: ))
+			pairsDo: [:macro :funcs |
+				(pluginFunctionsUsed includes: macro) ifTrue: [pluginFunctionsUsed addAll: funcs]].
 ]
 
 { #category : #public }
@@ -268,12 +405,11 @@ VMPluginCodeGenerator >> pluginClass: aPluginClass [
 	 And for run-time use, answer the name string."
 	| packageId |
 	pluginClass := aPluginClass.
-	pluginName := pluginClass moduleName.
 	packageId := self shortMonticelloDescriptionForClass: pluginClass.
 	(packageId beginsWith: pluginClass name) ifTrue:
 		[packageId := packageId allButFirst: pluginClass name size].
-	(packageId beginsWith: pluginName) ifTrue:
-		[packageId := packageId allButFirst: pluginName size].
+	(packageId beginsWith: pluginClass moduleName) ifTrue:
+		[packageId := packageId allButFirst: pluginClass moduleName size].
 	^self declareModuleName: pluginClass moduleNameAndVersion, packageId
 ]
 
@@ -289,13 +425,6 @@ VMPluginCodeGenerator >> pluginFunctionsToClone [
 				asSortedCollection
 ]
 
-{ #category : #public }
-VMPluginCodeGenerator >> pluginName: aString [
-"TPR - moved from CCodeGenerator"
-	"Set the plugin name when generating plugins."
-	pluginName := aString.
-]
-
 { #category : #'C code generator' }
 VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 	"Put the necessary #defines needed before interpreterProxy.  Basically
@@ -309,8 +438,14 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 	pcc preDeclareInterpreterProxyOn: Transcript.
 	Transcript flush"
 	| pluginFuncs interpreterClass objectMemoryClass |
+	self notePluginFunctionsUsedByMacros.
 	(pluginFuncs := self pluginFunctionsToClone) isEmpty ifTrue:
 		[^super preDeclareInterpreterProxyOn: aStream].
+	(pluginFuncs includesAnyOf: self selectorsThatAreGeneratedAsMacros) ifTrue:
+		[self preDeclareMacrosForFastClassCheckingOn: aStream].
+	pluginFuncs := pluginFuncs copyWithoutAll: self selectorsThatAreGeneratedAsMacros.
+	pluginFuncs isEmpty ifTrue:
+		[^self].
 	aStream cr; nextPutAll: '#if !defined(SQUEAK_BUILTIN_PLUGIN)'; cr.
 	interpreterClass := self referenceInterpreterClass.
 	objectMemoryClass := self referenceObjectMemoryClass.
@@ -347,28 +482,67 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 						emitCFunctionPrototype: s generator: self])
 				copyReplaceAll: functionName
 				with: '(*', functionName, ')'
-				tokenish: [:ch| ch = $_ or: [ch isAlphaNumeric]]).
-		aStream nextPut: $;; cr].
-	aStream nextPutAll: '#else /* !defined(SQUEAK_BUILTIN_PLUGIN) */'.
+				tokenish: [:ch| ch = $_ or: [ch isAlphaNumeric]])].
+	aStream nextPutAll: '#else /* !defined(SQUEAK_BUILTIN_PLUGIN) */'; cr.
 	pluginFuncs do:
 		[:tMethod|
-		self withOptionalVerbiageFor: tMethod selector
-			on: aStream
-			do: [aStream cr.
-				tMethod static: false; export: false; emitCFunctionPrototype: aStream generator: self.
-				aStream nextPut: $;]
-			ifOptionalDo:
-				[aStream cr; nextPutAll: '# define '.
-				 (TSendNode new
-					setSelector: tMethod selector
-						receiver: (TVariableNode new setName: 'interpreterProxy')
-							arguments: (tMethod args collect: [:a| TVariableNode new setName: a]))
-					emitCCodeAsArgumentOn: aStream
-						level: 0
-							generator: self.
-				 aStream nextPutAll: ' 0']].
-	aStream cr; nextPutAll: 'extern'.
-	aStream cr; nextPutAll: '#endif'; cr
+		self withGuardAgainstDefinitionOf: tMethod selector on: aStream do:
+			[self withOptionalVerbiageFor: tMethod selector
+				on: aStream
+				do: [tMethod static: false; export: false; emitCFunctionPrototype: aStream generator: self]
+				ifOptionalDo:
+					[aStream nextPutAll: '# define '.
+					 (TSendNode new
+						setSelector: tMethod selector
+							receiver: (TVariableNode new setName: 'interpreterProxy')
+								arguments: (tMethod args collect: [:a| TVariableNode new setName: a]))
+						emitCCodeAsArgumentOn: aStream
+							level: 0
+								generator: self.
+					 aStream nextPutAll: ' 0'; cr]]].
+	aStream nextPutAll: 'extern'; cr; nextPutAll: '#endif'; cr
+]
+
+{ #category : #'C code generator' }
+VMPluginCodeGenerator >> preDeclareMacrosForFastClassCheckingOn: aStream [
+	"These macros can be used to check for various cases of Integer types.
+	 Since they can be defined based on existing API, this is a good trade off:
+	 - avoid extending the interpreterProxy API unnecessarily
+	 - provide fast type checking"
+	
+	"Speed-up generated code for internal plugins by using macros and fixed class indices to define this well known functionality."
+	#(	'#if defined(SQUEAK_BUILTIN_PLUGIN)' cr
+
+		'# define isIntegerObject(oop) ((oop) & 1)' cr
+
+		'# if SPURVM'
+		'extern sqInt classIndexOf(sqInt);'
+	"Compact class indices are hardcoded here because there is no guarantee that the pool values at generation time
+	 are that of SPUR.. Make sure they are in sync with SpurMemoryManager class>>initializeCompactClassIndices"
+		'#	define LargeNegativeIntegerClassIndex 32'
+		'#	define LargePositiveIntegerClassIndex 33'
+		'#	if BytesPerOop == 4'
+		'#	  define isImmediate(oop) ((oop) & 3)'
+		'#	else'
+		'#	  define isImmediate(oop) ((oop) & 7)'
+		'#	endif'
+		'#	define isKindOfInteger(oop) (isImmediate(oop) ? isIntegerObject(oop) : (unsigned)(classIndexOf(oop) - LargeNegativeIntegerClassIndex) <= 1)'
+		'#	define isLargeIntegerObject(oop) (!isImmediate(oop) && (unsigned)(classIndexOf(oop) - LargeNegativeIntegerClassIndex) <= 1)'
+		'#	define isLargeNegativeIntegerObject(oop) (!isImmediate(oop) && classIndexOf(oop) == LargeNegativeIntegerClassIndex)'
+		'#	define isLargePositiveIntegerObject(oop) (!isImmediate(oop) && classIndexOf(oop) == LargePositiveIntegerClassIndex)'
+		'# endif /* SPURVM */'
+		'#endif /* defined(SQUEAK_BUILTIN_PLUGIN) */' cr
+
+	"If the functionality has not been defined via macros, define default versions using existing plugin API"
+		'#if !defined(isKindOfInteger)'
+		'# define isLargeNegativeIntegerObject(oop) (fetchClassOf(oop) == classLargeNegativeInteger())'
+		'# define isLargePositiveIntegerObject(oop) (fetchClassOf(oop) == classLargePositiveInteger())'
+		'# define isLargeIntegerObject(oop) (isLargeNegativeIntegerObject(oop) || isLargePositiveIntegerObject(oop))'
+		'# define isKindOfInteger(oop) (isIntegerObject(oop) || isLargeNegativeIntegerObject(oop) || isLargePositiveIntegerObject(oop))'
+		'#endif' cr) do:
+		[:element|
+		aStream cr.
+		element ~~ #cr ifTrue: [aStream nextPutAll: element]]
 ]
 
 { #category : #'C code generator' }
@@ -397,6 +571,59 @@ VMPluginCodeGenerator >> referenceObjectMemoryClass [
 	^(Smalltalk classNamed: #SpurMemoryManager) ifNil:
 		[(Smalltalk classNamed: #NewObjectMemory) ifNil:
 			[ObjectMemory]]
+]
+
+{ #category : #public }
+VMPluginCodeGenerator >> selectorsThatAreGeneratedAsMacros [
+	"Answer a list of selectors that are generated as a C macro rather than as an interpreterProxy function call."
+	
+	^#(isKindOfInteger: isLargeIntegerObject: isLargeNegativeIntegerObject: isLargePositiveIntegerObject:)
+]
+
+{ #category : #public }
+VMPluginCodeGenerator >> selectorsThatMayBeGeneratedAsMacros [
+	"Answer a list of selectors that maybe generated as a C macro rather than as an interpreterProxy function call."
+	
+	^self selectorsThatAreGeneratedAsMacros, #(isIntegerObject: isImmediate:)
+]
+
+{ #category : #inlining }
+VMPluginCodeGenerator >> sizeOfIntegralCType: anIntegralCType [ "<String>"
+	"Hack; because the plugin sources are compiled either as 32 or 64 bit
+	 size those types which are either 32 or 64 bits in size as 48 bits.
+	 This happens to produce sane results for integer promotion."
+	"N.B. Only works for values for which isIntegralCType: answers true."
+	| prunedCType index |
+	(anIntegralCType beginsWith: 'register ') ifTrue:
+		[^self sizeOfIntegralCType: (anIntegralCType allButFirst: 9)].
+	prunedCType := (anIntegralCType beginsWith: 'unsigned ')
+						ifTrue: [(anIntegralCType allButFirst: 9) withBlanksTrimmed]
+						ifFalse: [(anIntegralCType beginsWith: 'signed ')
+									ifTrue: [(anIntegralCType allButFirst: 7) withBlanksTrimmed]
+									ifFalse: [anIntegralCType]].
+	
+	^prunedCType asString caseOf: {
+		['sqLong']		->	[8].
+		['usqLong']		->	[8].
+		['long long']	->	[8].
+		['sqInt']			->	[6].
+		['usqInt']		->	[6].
+		['sqIntptr_t']	->	[6].
+		['usqIntptr_t']	->	[6].
+		['int']			->	[4].
+		['short']			->	[2].
+		['short int']		->	[2].
+		['char']			->	[1].
+		['long']			->	[BytesPerWord]. "It's ambiguous on LLP64 and we'll later remove it"
+		['size_t']		->	[6].
+		['pid_t']			->	[6].
+	}
+	otherwise:
+		[((anIntegralCType beginsWith: 'unsigned') "e.g. 'unsigned  : 8'"
+		  and: [(anIntegralCType includesAnyOf: '[*]') not
+		  and: [(index := anIntegralCType indexOf: $:) > 0]])
+			ifTrue: [(Integer readFrom: (anIntegralCType copyFrom: index + 1 to: anIntegralCType size) withBlanksTrimmed readStream) + 7 // 8]
+			ifFalse: [self error: 'unrecognized integral type']]
 ]
 
 { #category : #private }
@@ -451,8 +678,7 @@ VMPluginCodeGenerator >> storeVirtualMachineProxyImplementation: categoryList on
 	categoryList do:[:assoc|
 		stream cr; cr; nextPutAll:'/* InterpreterProxy methodsFor: ''',assoc key, ''' */'; cr.
 		(self sortStrings: assoc value) do:[:sel|
-			(methods at: sel) emitCFunctionPrototype: stream generator: self.
-			stream nextPut: $;; cr]].
+			(methods at: sel) emitCFunctionPrototype: stream generator: self]].
 
 	stream cr; nextPutAll:'struct VirtualMachine *VM = NULL;'; cr.
 	stream cr; nextPutAll:
@@ -486,6 +712,18 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	stream close.
 ]
 
+{ #category : #'C code generator' }
+VMPluginCodeGenerator >> structTargetKindForDeclaration: decl [ "<String>"
+	^(super structTargetKindForDeclaration: decl) ifNil:
+		[pluginClass ifNotNil:
+			[(pluginClass isStructType: (decl last = $*
+											ifTrue: [decl allButLast]
+											ifFalse: [decl]) withBlanksTrimmed) ifTrue:
+				[(decl indexOf: $*) > 0
+					ifTrue: [#pointer]
+					ifFalse: [#struct]]]]
+]
+
 { #category : #'type inference' }
 VMPluginCodeGenerator >> typeFor: aNode in: aTMethod [
 	"Override to provide the type for InterpreterProxy's implicit stack variable."
@@ -498,16 +736,26 @@ VMPluginCodeGenerator >> typeFor: aNode in: aTMethod [
 ]
 
 { #category : #'C translation' }
+VMPluginCodeGenerator >> withGuardAgainstDefinitionOf: selector on: aStream do: aBlock [
+	"Evaluate aBlock, surrounded by a define if selector is defined as a macro (i.e. by preDeclareInterpreterProxyOn:"
+	(self selectorsThatMayBeGeneratedAsMacros includes: selector) ifFalse:
+		[^aBlock value].
+	aStream nextPutAll: '#if !defined('; nextPutAll: (self cFunctionNameFor: selector); nextPut: $); cr.
+	aBlock value.
+	aStream nextPutAll: '#endif'; cr
+]
+
+{ #category : #'C translation' }
 VMPluginCodeGenerator >> withOptionalVerbiageFor: selector on: aStream do: mainBlock ifOptionalDo: optionalBlock [
 	(InterpreterProxy >> selector pragmaAt: #option:)
 		ifNil:
 			[mainBlock value]
 		ifNotNil:
 			[:pragma|
-			 aStream cr.
 			 self emitIfdefForPluginFunctionOption: pragma arguments first on: aStream.
+			 aStream cr.
 			 mainBlock value.
-			 aStream cr; nextPutAll: '#else'.
+			 aStream nextPutAll: '#else'; cr.
 			 optionalBlock value.
-			 aStream cr; nextPutAll: '#endif']
+			 aStream nextPutAll: '#endif'; cr]
 ]

@@ -26,7 +26,7 @@ InterpreterPlugin class >> allCallsOn [
 
 { #category : #translation }
 InterpreterPlugin class >> allCodeOlderThan: modificationTime [
-	^((self pluginClassesUpTo: self) allSatisfy:
+	^((self pluginClassesUpToRoot) allSatisfy:
 			[:aPluginClass| aPluginClass timeStamp < modificationTime])
 	  and: [self translatedPrimitives allSatisfy:
 			[:pair| | c m stamp |
@@ -59,17 +59,24 @@ InterpreterPlugin class >> browseTranslatedPrimitives [
 ]
 
 { #category : #translation }
-InterpreterPlugin class >> buildCodeGeneratorUpTo: aPluginClass [
+InterpreterPlugin class >> buildCodeGenerator [
 	"Build a CCodeGenerator for the plugin"
 	| cg pluginClasses |
 	cg := self codeGeneratorClass new initialize.
 	cg pluginClass: self.
-	(pluginClasses := self pluginClassesUpTo: aPluginClass) do:
+	(pluginClasses := self pluginClassesUpToRoot) do:
 		[:aClass| cg addClass: aClass].
 	(cg structClassesForTranslationClasses: pluginClasses) do:
 		[:structClasss| cg addStructClass: structClasss].
 	cg addMethodsForTranslatedPrimitives: self translatedPrimitives.
 	^cg
+]
+
+{ #category : #translation }
+InterpreterPlugin class >> buildCodeGeneratorUpTo: aPluginClass [
+	"Build a CCodeGenerator for the plugin - Deprecated and here only in case old plugin code tries to use it"
+	self deprecated.
+	^self buildCodeGenerator
 ]
 
 { #category : #private }
@@ -85,8 +92,8 @@ InterpreterPlugin class >> declareCVarsIn: aCCodeGenerator [
 
 	aCCodeGenerator 
 		var: #interpreterProxy type: #'struct VirtualMachine*';
-		removeVariable: 'translatedMethodCache'.
-	self declareHeaderFilesIn: aCCodeGenerator.
+		removeVariable: 'translatedMethodCache' ifAbsent: nil.
+	self declareHeaderFilesIn: aCCodeGenerator
 ]
 
 { #category : #translation }
@@ -130,13 +137,23 @@ InterpreterPlugin class >> isPluginClass [
 	^true
 ]
 
+{ #category : #translation }
+InterpreterPlugin class >> isStructType: typeName [ "<String>"
+	"Subclasses should override to answer trye for struct types they use."
+	^false
+]
+
 { #category : #'translated primitives' }
 InterpreterPlugin class >> methodForTranslatedPrimitiveTuple: tuple [
 	| class |
 	class := Smalltalk classNamed: tuple first.
 	^class
 		compiledMethodAt: tuple last
-		ifAbsent: [class class compiledMethodAt: tuple last]
+		ifAbsent:
+			[class class
+				compiledMethodAt: tuple last
+				ifAbsent: [tuple = #(String findSubstringViaPrimitive:in:startingAt:matchTable:) ifTrue:
+							[ByteString compiledMethodAt: #findSubstring:in:startingAt:matchTable:]]]
 ]
 
 { #category : #'translated primitives' }
@@ -158,9 +175,25 @@ InterpreterPlugin class >> methodsToBePruned [
 	^#()
 ]
 
+{ #category : #translation }
+InterpreterPlugin class >> moduleExportsName [
+	"Answer the name to include in receiver's internal plugin exports.
+	 This is the value of the module: argument in named primitives.
+	 By default answer the moduleName."
+
+	^self moduleName
+]
+
 { #category : #accessing }
 InterpreterPlugin class >> moduleExtension [
 	^ self isCPP ifTrue: ['.cpp'] ifFalse: ['.c']
+]
+
+{ #category : #translation }
+InterpreterPlugin class >> moduleFileName [
+	"Answer the receiver's module name that is used for the plugin's C code."
+
+	^ self moduleName, self moduleExtension
 ]
 
 { #category : #translation }
@@ -184,8 +217,8 @@ InterpreterPlugin class >> newFor: anUnsimulatedInterpreterPluginClass [
 ]
 
 { #category : #translation }
-InterpreterPlugin class >> pluginClassesUpTo: aPluginClass [
-	"Answer the classes to include for translation of aPluginClass, superclasses first, aPluginClass last."
+InterpreterPlugin class >> pluginClassesUpToRoot [
+	"Answer the classes to include for translation of aPluginClass, superclasses first, and the root (VMClass in general, possibly Object)  last."
 	| theClass classes |
 
 	classes := OrderedCollection new.
@@ -281,7 +314,7 @@ InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFla
 			[^nil]].
 
 	self initialize.
-	cg := self buildCodeGeneratorUpTo: self.
+	cg := self buildCodeGenerator.
 	cg inferTypesForImplicitlyTypedVariablesAndMethods.
 	self pruneUnusedInterpreterPluginMethodsIn: cg.
 	cg storeCodeOnFile:  (directory fullNameFor: fname) doInlining: inlineFlag.
@@ -294,6 +327,27 @@ InterpreterPlugin class >> translatedPrimitives [
 	 be translated from Smalltalk methods elsewhere in the system.
 	 By default answer none.  Some subclasses redefine as required."
 	^#()
+]
+
+{ #category : #simulation }
+InterpreterPlugin >> cCoerce: value to: cType [
+	"Type coercion for translation only; just return the value when running in Smalltalk.
+	 This overrides the generic coercion method in VMClass.  For some reason we are the exception.
+	 If we want that style of coercion we can send cCoerce:to: to interpreterProxy, not self."
+
+	^value
+]
+
+{ #category : #simulation }
+InterpreterPlugin >> cCoerceSimple: value to: cType [
+	"Coercion without type mapping.  Don't even bother to check for valid types..."
+	^value
+]
+
+{ #category : #'simulation support' }
+InterpreterPlugin >> close [
+	"Simulation subclasses needing some specific close action override as required."
+	<doNotGenerate>
 ]
 
 { #category : #'simulation support' }
@@ -467,11 +521,41 @@ InterpreterPlugin >> msg: s [
 
 { #category : #'API access' }
 InterpreterPlugin >> positiveMachineIntegerFor: value [
-	<var: #value type: #'unsigned long'>
-	<inline: true>
+	<var: #value type: #'usqIntptr_t'>
+	<inline: #always>
 	^interpreterProxy wordSize = 8
 		ifTrue: [interpreterProxy positive64BitIntegerFor: value]
 		ifFalse: [interpreterProxy positive32BitIntegerFor: value]
+]
+
+{ #category : #simulation }
+InterpreterPlugin >> remapOop: oopOrList in: aBlock [
+	"Call remapOop: for the variable oopOrList (or all of the variables in oopOrList) before evaluating
+	 aBlock, and restore them after.  If this is Spur, do nothing, since Spur does not GC on allocation
+	 and the  SmartSyntaxPluginCodeGenerator generates null code for this op in Spur."
+	<doNotGenerate>
+	| ctxt tempNames tempIndices |
+	interpreterProxy hasSpurMemoryManagerAPI ifTrue:
+		[^aBlock value].
+	ctxt := thisContext sender.
+	tempNames := ctxt tempNames.
+	oopOrList isArray
+		ifTrue:
+			[tempIndices := oopOrList collect: [:tempName| tempNames indexOf: tempName].
+			 tempIndices do:
+				[:index| interpreterProxy pushRemappableOop: (ctxt namedTempAt: index)]]
+		ifFalse: [interpreterProxy pushRemappableOop: oopOrList].
+	^aBlock ensure:
+		[oopOrList isArray
+			ifTrue:
+				[tempIndices reverseDo:
+					[:index| ctxt namedTempAt: index put: interpreterProxy popRemappableOop]]
+			ifFalse:
+				[1 to: ctxt numTemps do:
+					[:index|
+					(ctxt tempAt: index) = oopOrList ifTrue:
+						[ctxt tempAt: index put: interpreterProxy topRemappableOop]].
+				 interpreterProxy popRemappableOop]]
 ]
 
 { #category : #initialize }
@@ -491,8 +575,8 @@ InterpreterPlugin >> setInterpreter: anInterpreter [
 
 { #category : #'API access' }
 InterpreterPlugin >> signedMachineIntegerFor: value [
-	<var: #value type: #'unsigned long'>
-	<inline: true>
+	<var: #value type: #'sqIntptr_t'>
+	<inline: #always>
 	^interpreterProxy wordSize = 8
 		ifTrue: [interpreterProxy signed64BitIntegerFor: value]
 		ifFalse: [interpreterProxy signed32BitIntegerFor: value]
@@ -503,16 +587,26 @@ InterpreterPlugin >> sizeof: objectSymbolOrClass [
 	<doNotGenerate>
 	objectSymbolOrClass isInteger ifTrue:
 		[^interpreterProxy wordSize].
-	"In the simulator file handles are just integer indices into openFiles and so need
-	 only be BytesPerWord big. But in the actual VM they are at least 5 words long."
-	objectSymbolOrClass == #SQFile ifTrue:
-		[^interpreterProxy wordSize * 5].
-	"SQSocket is typedef struct { int sessionID; int socketType; void *privateSocketPtr; } SQSocket"
-	objectSymbolOrClass == #SQSocket ifTrue:
-		[^8 + interpreterProxy wordSize].
-	"We assume the file offset type is always 64-bits."
-	objectSymbolOrClass == #squeakFileOffsetType ifTrue:
-		[^8].
+	objectSymbolOrClass isSymbol ifTrue:
+		["In the simulator file handles are just integer indices into openFiles and so need
+		 only be BytesPerWord big. But in the actual VM they are at least 5 words long."
+		objectSymbolOrClass == #SQFile ifTrue:
+			[^interpreterProxy wordSize * 5].
+		"SQSocket is typedef struct { int sessionID; int socketType; void *privateSocketPtr; } SQSocket"
+		objectSymbolOrClass == #SQSocket ifTrue:
+			[^8 + interpreterProxy wordSize].
+		"We assume the file offset type is always 64-bits."
+		objectSymbolOrClass == #squeakFileOffsetType ifTrue:
+			[^8].
+		(objectSymbolOrClass last == $*
+		 or: [#long == objectSymbolOrClass
+		 or: [#'unsigned long' == objectSymbolOrClass
+		 or: [#'sqIntptr_t' == objectSymbolOrClass
+		 or: [#'usqIntptr_t' == objectSymbolOrClass
+		 or: [#'size_t' == objectSymbolOrClass]]]]]) ifTrue:
+			[^interpreterProxy wordSize].
+		(#(usqInt sqInt) includes: objectSymbolOrClass) ifTrue:
+			[^interpreterProxy bytesPerOop]].
 	^super sizeof: objectSymbolOrClass
 ]
 
@@ -530,14 +624,21 @@ InterpreterPlugin >> strlen: aCString [
 
 { #category : #simulation }
 InterpreterPlugin >> translatedPrimitiveArgument: index ofType: cTypeString using: aCCodeGenerator [
-	| oop |
+	| oop unitSize |
 	oop := interpreterProxy stackValue: interpreterProxy methodArgumentCount - index.
 	(interpreterProxy isOopForwarded: oop) ifTrue: [^nil]. 
 	cTypeString last == $* ifTrue:
-		[^ObjectProxyForTranslatedPrimitiveSimulation new
+		[unitSize := self sizeof: (aCCodeGenerator baseTypeForPointerType: cTypeString) asSymbol.
+		 unitSize caseOf: {
+			[1]	->	[(interpreterProxy isBytes: oop) ifFalse: [^nil]].
+			[2]	->	[(interpreterProxy isShorts: oop) ifFalse: [^nil]].
+			[4]	->	[(interpreterProxy isWords: oop) ifFalse: [^nil]].
+			[8]	->	[(interpreterProxy isLong64s: oop) ifFalse: [^nil]] }
+			otherwise: [^nil].
+		^ObjectProxyForTranslatedPrimitiveSimulation new
 			interpreter: interpreterProxy
 			oop: oop
-			unitSize: (self sizeof: (aCCodeGenerator baseTypeForPointerType: cTypeString) asSymbol)].
+			unitSize: unitSize].
 	((interpreterProxy isIntegerObject: oop)
 	 and: [aCCodeGenerator isIntegralCType: cTypeString]) ifTrue:
 		[^interpreterProxy integerValueOf: oop].

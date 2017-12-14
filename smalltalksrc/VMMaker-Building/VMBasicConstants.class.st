@@ -12,29 +12,7 @@ Class {
 	#superclass : #SharedPool,
 	#classVars : [
 		'BaseHeaderSize',
-		'Byte0Mask',
-		'Byte0Shift',
-		'Byte1Mask',
-		'Byte1Shift',
-		'Byte1ShiftNegated',
-		'Byte2Mask',
-		'Byte2Shift',
-		'Byte3Mask',
-		'Byte3Shift',
-		'Byte3ShiftNegated',
-		'Byte4Mask',
-		'Byte4Shift',
-		'Byte4ShiftNegated',
-		'Byte5Mask',
-		'Byte5Shift',
-		'Byte5ShiftNegated',
-		'Byte6Mask',
-		'Byte6Shift',
-		'Byte7Mask',
-		'Byte7Shift',
-		'Byte7ShiftNegated',
-		'Bytes3to0Mask',
-		'Bytes7to4Mask',
+		'BytecodeSetHasExtensions',
 		'BytesPerOop',
 		'BytesPerWord',
 		'COGMTVM',
@@ -42,12 +20,17 @@ Class {
 		'DisownVMLockOutFullGC',
 		'DoAssertionChecks',
 		'DoExpensiveAssertionChecks',
+		'GCCheckPrimCall',
 		'GCModeBecome',
+		'GCModeFreeSpace',
 		'GCModeFull',
 		'GCModeImageSegment',
 		'GCModeIncremental',
 		'GCModeNewSpace',
+		'HashMultiplyConstant',
+		'HashMultiplyMask',
 		'IMMUTABILITY',
+		'LowcodeVM',
 		'MULTIPLEBYTECODESETS',
 		'NewspeakVM',
 		'PharoVM',
@@ -56,6 +39,7 @@ Class {
 		'PrimErrBadMethod',
 		'PrimErrBadNumArgs',
 		'PrimErrBadReceiver',
+		'PrimErrCallbackError',
 		'PrimErrGenericFailure',
 		'PrimErrInappropriate',
 		'PrimErrLimitExceeded',
@@ -64,17 +48,27 @@ Class {
 		'PrimErrNoMemory',
 		'PrimErrNoModification',
 		'PrimErrNotFound',
+		'PrimErrOSError',
 		'PrimErrObjectIsPinned',
 		'PrimErrObjectMayMove',
+		'PrimErrObjectMoved',
+		'PrimErrObjectNotPinned',
 		'PrimErrUnsupported',
 		'PrimErrWritePastObject',
 		'PrimNoErr',
+		'SPURVM',
 		'STACKVM',
 		'SistaVM',
 		'VMBIGENDIAN'
 	],
 	#category : #'VMMaker-Interpreter'
 }
+
+{ #category : #'C translation' }
+VMBasicConstants class >> defineAtCompileTime: anObject [
+	^anObject isSymbol
+	 and: [self namesDefinedAtCompileTime includes: anObject]
+]
 
 { #category : #'C translation' }
 VMBasicConstants class >> mostBasicConstantNames [
@@ -88,6 +82,24 @@ VMBasicConstants class >> mostBasicConstantSelectors [
 	^#(	baseHeaderSize wordSize bytesPerOop shiftForWord
 		bytesPerWord "bytesPerWord isn't used, but kept for history"
 		minSmallInteger maxSmallInteger)
+]
+
+{ #category : #'C translation' }
+VMBasicConstants class >> namesDefinedAtCompileTime [
+	"Answer the set of names for variables that should be defined at compile time.
+	 Some of these get default values during simulation, and hence get defaulted in
+	 the various initializeMiscConstants methods.  But that they have values should
+	 /not/ cause the code generator to do dead code elimination based on their
+	 default values."
+	^#(	VMBIGENDIAN
+		IMMUTABILITY
+		STACKVM COGVM COGMTVM SPURVM
+		PharoVM								"Pharo vs Squeak"
+		TerfVM									"Terf vs Squeak"
+		EnforceAccessControl					"Newspeak"
+		CheckRememberedInTrampoline		"IMMUTABILITY"
+		LLDB									"As of lldb-370.0.42 Swift-3.1, passing funciton parameters to printOopsSuchThat fails with Internal error [IRForTarget]: Couldn't rewrite one of the arguments of a function call.  Turning off link time optimization with -fno-lto has no effect.  hence we define some debugging functions as being <option: LLDB>"
+		WIN32)
 ]
 
 { #category : #'C translation' }

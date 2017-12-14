@@ -8,7 +8,10 @@ Class {
 		'ceCreateNewArrayTrampoline',
 		'cePositive32BitIntegerTrampoline',
 		'ceActiveContextTrampoline',
-		'ceClosureCopyTrampoline'
+		'ceClosureCopyTrampoline',
+		'ceSigned32BitIntegerTrampoline',
+		'ceSigned32BitValueOfTrampoline',
+		'cePositive32BitValueOfTrampoline'
 	],
 	#classVars : [
 		'RootBitDigitLength'
@@ -34,7 +37,7 @@ CogObjectRepresentationForSqueakV3 class >> initialize [
 
 { #category : #accessing }
 CogObjectRepresentationForSqueakV3 class >> numTrampolines [
-	^super numTrampolines + 4
+	^super numTrampolines + 4 + (LowcodeVM ifTrue: [ 3 ] ifFalse: [ 0 ])
 ]
 
 { #category : #'garbage collection' }
@@ -128,7 +131,7 @@ CogObjectRepresentationForSqueakV3 >> genActiveContextTrampoline [
 		arg: nil
 		arg: nil
 		arg: nil
-		saveRegs: false
+		regsToSave: cogit emptyRegisterMask
 		pushLinkReg: true
 		resultReg: ReceiverResultReg
 		appendOpcodes: true
@@ -165,6 +168,12 @@ CogObjectRepresentationForSqueakV3 >> genAllocFloatValue: dpreg into: resultReg 
 	cogit MoveRd: dpreg M64: objectMemory baseHeaderSize r: resultReg.
 	cogit MoveR: scratch1 Aw: objectMemory freeStartAddress.
 	^jumpFail
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genClearAndSetSmallIntegerTagsIn: scratchReg [
+	"Set the SmallInteger tag bits when the tag bits may be filled with garbage."
+	^self genSetSmallIntegerTagsIn: scratchReg
 ]
 
 { #category : #'compile abstract instructions' }
@@ -390,6 +399,10 @@ CogObjectRepresentationForSqueakV3 >> genGetInlineCacheClassTagFrom: sourceReg i
 	^entryLabel
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genGetNumSlotsOf: srcRegister into: destRegister [
+]
+
 { #category : #'primitive generators' }
 CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg formatReg: formatReg scratchReg: scratchReg abortJumpsInto: aBinaryBlock [
 	"Get the size of the non-immediate object in sourceReg into destReg using formatReg
@@ -461,8 +474,356 @@ CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg form
 	aBinaryBlock value: jumpNotIndexable value: jumpIsContext
 ]
 
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genInlinedIdenticalOrNotIfGuts: orNot [
+	<inline: true>
+	^ cogit genVanillaInlinedIdenticalOrNotIf: orNot
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpImmediate: aRegister [
+	^self genJumpSmallInteger: aRegister
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpInOldSpace: reg [
+	"Jump if reg is old."
+	<inline: true>
+	^cogit
+		MoveAw: objectMemory youngStartAddress R: TempReg;
+		CmpR: TempReg R: reg;	"N.B. FLAGS := destReg - scratchReg"
+		JumpBelow: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpIsSmallIntegerValue: aRegister scratch: scratchReg [
+	"Generate a test for aRegister containing an integer value in the SmallInteger range, and a jump if so, answering the jump.
+	 c.f. ObjectMemory>>isIntegerValue:"
+	<returnTypeC: #'AbstractInstruction *'>
+	^cogit
+		MoveR: aRegister R: scratchReg;
+		LogicalShiftLeftCq: 1 R: scratchReg;
+		XorR: aRegister R: scratchReg;
+		JumpGreaterOrEqual: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpNotImmediate: aRegister [
+	<inline: true>
+	^self genJumpNotSmallInteger: aRegister
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpNotSmallInteger: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit TstCq: 1 R: aRegister.
+	^cogit JumpZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpNotSmallIntegerInScratchReg: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit AndCq: 1 R: aRegister.
+	^cogit JumpZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpNotSmallIntegerValue: aRegister scratch: scratchReg [
+	"Generate a test for aRegister containing an integer value outside the SmallInteger range, and a jump if so, answering the jump.
+	 c.f. ObjectMemory>>isIntegerValue:"
+	<returnTypeC: #'AbstractInstruction *'>
+	^cogit
+		MoveR: aRegister R: scratchReg;
+		ArithmeticShiftRightCq: 1 R: scratchReg;
+		XorR: aRegister R: scratchReg;
+		JumpLess: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpSmallInteger: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit TstCq: 1 R: aRegister.
+	^cogit JumpNonZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpSmallIntegerInScratchReg: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit AndCq: 1 R: aRegister.
+	^cogit JumpNonZero: 0
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcFirstFieldPointer: objectReg [
+	<option: #LowcodeVM>
+	cogit AddCq: 4 R: objectReg.
+	cogit ssPushNativeRegister: objectReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcFirstIndexableFieldPointer: objectReg [
+	<option: #LowcodeVM>
+	"TODO: Fixme for fixed fields"
+	cogit AddCq: 4 R: objectReg.
+	cogit ssPushNativeRegister: objectReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcInt32ToOop: value [
+	<option: #LowcodeVM>
+	value ~= ReceiverResultReg ifTrue: [ cogit MoveR: value R: ReceiverResultReg.].
+	cogit CallRT: ceSigned32BitIntegerTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushRegister: ReceiverResultReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcIsBytes: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	| isInteger isNotBytes falseTarget cont |
+	
+	"Check for integer"
+	cogit MoveR: objectReg R: TempReg.
+	cogit AndCq: 1 R: TempReg.
+	isInteger := cogit JumpNonZero: 0.
+
+	"Get the class format"
+	self genGetClassFormatOfNonInt: objectReg into: valueReg scratchReg: TempReg.
+
+	"Hack: consider a compiled method as bytes too."
+	cogit CmpCq: 8 R: valueReg.
+	isNotBytes := cogit JumpLess: 0.
+
+	"True result"
+	cogit MoveCq: 1 R: valueReg.
+	cont := cogit Jump: 0.
+
+	"False result"
+	falseTarget := cogit Label.
+	isInteger jmpTarget: falseTarget.
+	isNotBytes jmpTarget: falseTarget.
+	cogit MoveCq: 0 R: valueReg.
+
+	"Return"
+	cont jmpTarget: cogit Label.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcIsFloatObject: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	"TODO: Implement this one"
+	cogit MoveCq: 1 R: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcIsIndexable: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	| isInteger isNotIndexable falseTarget cont |
+	
+	"Check for integer"
+	cogit MoveR: objectReg R: TempReg.
+	cogit AndCq: 1 R: TempReg.
+	isInteger := cogit JumpNonZero: 0.
+
+	"Get the class format"
+	self genGetClassFormatOfNonInt: objectReg into: valueReg scratchReg: TempReg.
+
+	"Hack: consider a compiled method as bytes too."
+	cogit CmpCq: 2 R: valueReg.
+	isNotIndexable := cogit JumpLess: 0.
+
+	"True result"
+	cogit MoveCq: 1 R: valueReg.
+	cont := cogit Jump: 0.
+
+	"False result"
+	falseTarget := cogit Label.
+	isInteger jmpTarget: falseTarget.
+	isNotIndexable jmpTarget: falseTarget.
+	cogit MoveCq: 0 R: valueReg.
+
+	"Return"
+	cont jmpTarget: cogit Label.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcIsIntegerObject: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	"TODO: Support larger integers"
+	cogit AndCq: 1 R: objectReg.
+	cogit ssPushNativeRegister: objectReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcIsPointers: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	| isInteger isNotIndexable falseTarget cont |
+	
+	"Check for integer"
+	cogit MoveR: objectReg R: TempReg.
+	cogit AndCq: 1 R: TempReg.
+	isInteger := cogit JumpNonZero: 0.
+
+	"Get the class format"
+	self genGetClassFormatOfNonInt: objectReg into: valueReg scratchReg: TempReg.
+
+	"Hack: consider a compiled method as bytes too."
+	cogit CmpCq: 3 R: valueReg.
+	isNotIndexable := cogit JumpGreater: 0.
+
+	"True result"
+	cogit MoveCq: 1 R: valueReg.
+	cont := cogit Jump: 0.
+
+	"False result"
+	falseTarget := cogit Label.
+	isInteger jmpTarget: falseTarget.
+	isNotIndexable jmpTarget: falseTarget.
+	cogit MoveCq: 0 R: valueReg.
+
+	"Return"
+	cont jmpTarget: cogit Label.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcIsWords: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	| isInteger isNotWords falseTarget cont |
+	
+	"Check for integer"
+	cogit MoveR: objectReg R: TempReg.
+	cogit AndCq: 1 R: TempReg.
+	isInteger := cogit JumpNonZero: 0.
+
+	"Get the class format"
+	self genGetClassFormatOfNonInt: objectReg into: valueReg scratchReg: TempReg.
+
+	"Check for the words format"
+	cogit CmpCq: 6 R: valueReg.
+	isNotWords := cogit JumpNonZero: 0.
+
+	"True result"
+	cogit MoveCq: 1 R: valueReg.
+	cont := cogit Jump: 0.
+
+	"False result"
+	falseTarget := cogit Label.
+	isInteger jmpTarget: falseTarget.
+	isNotWords jmpTarget: falseTarget.
+	cogit MoveCq: 0 R: valueReg.
+
+	"Return"
+	cont jmpTarget: cogit Label.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcIsWordsOrBytes: objectReg to: valueReg [
+	<option: #LowcodeVM>
+	| isInteger isNotBytes falseTarget cont |
+	
+	"Check for integer"
+	cogit MoveR: objectReg R: TempReg.
+	cogit AndCq: 1 R: TempReg.
+	isInteger := cogit JumpNonZero: 0.
+
+	"Get the class format"
+	self genGetClassFormatOfNonInt: objectReg into: valueReg scratchReg: TempReg.
+
+	"Hack: consider a compiled method as bytes too."
+	cogit CmpCq: 6 R: valueReg.
+	isNotBytes := cogit JumpLess: 0.
+
+	"True result"
+	cogit MoveCq: 1 R: valueReg.
+	cont := cogit Jump: 0.
+
+	"False result"
+	falseTarget := cogit Label.
+	isInteger jmpTarget: falseTarget.
+	isNotBytes jmpTarget: falseTarget.
+	cogit MoveCq: 0 R: valueReg.
+
+	"Return"
+	cont jmpTarget: cogit Label.
+	cogit ssPushNativeRegister: valueReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcLoadObject: object at: fieldIndex [
+	<option: #LowcodeVM>
+	cogit AddCq: 1 R: fieldIndex.
+	cogit MoveXwr: fieldIndex R: object R: object.
+	cogit ssPushRegister: object
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcLoadObject: object field: fieldIndex [
+	<option: #LowcodeVM>
+	cogit MoveMw: (fieldIndex+ 1) * BytesPerWord r: object R: object.
+	cogit ssPushRegister: object
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcOopToInt32: value [
+	<option: #LowcodeVM>
+	value ~= ReceiverResultReg ifTrue: [ cogit MoveR: value R: ReceiverResultReg.].
+	cogit CallRT: ceSigned32BitValueOfTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushNativeRegister: ReceiverResultReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcOopToUInt32: value [
+	<option: #LowcodeVM>
+	value ~= ReceiverResultReg ifTrue: [ cogit MoveR: value R: ReceiverResultReg.].
+	cogit CallRT: cePositive32BitValueOfTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushNativeRegister: ReceiverResultReg.
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcStore: value object: object at: fieldIndex [
+	<option: #LowcodeVM>
+	cogit AddCq: 1 R: fieldIndex.
+	cogit MoveR: value Xwr: fieldIndex R: object
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcStore: value object: object field: fieldIndex [
+	<option: #LowcodeVM>
+	cogit MoveR: value Mw: (fieldIndex+ 1) * BytesPerWord r: object
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSqueakV3 >> genLcUInt32ToOop: value [
+	<option: #LowcodeVM>
+	value ~= ReceiverResultReg ifTrue: [ cogit MoveR: value R: ReceiverResultReg.].
+	cogit CallRT: cePositive32BitIntegerTrampoline.
+
+	cogit MoveR: TempReg R: ReceiverResultReg.
+	cogit ssPushRegister: ReceiverResultReg.
+]
+
+{ #category : #'bytecode generator support' }
+CogObjectRepresentationForSqueakV3 >> genNewArrayOfSize: size initialized: initialized [
+	"Generate a call to code that allocates a new Array of size.
+	 The Array should be initialized with nils iff initialized is true.
+	 The size arg is passed in SendNumArgsReg, the result
+	 must come back in ReceiverResultReg."
+	cogit
+		MoveCq: size R: SendNumArgsReg;
+		CallRT: ceCreateNewArrayTrampoline
+]
+
 { #category : #'primitive generators' }
-CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
+CogObjectRepresentationForSqueakV3 >> genPrimitiveAt [
 	| jumpSI jumpNotSI jumpNotIndexable jumpIsContext jumpBounds jumpFmtGt4 jumpFmtEq2 jumpFmtLt8 jumpFmtGt11 jumpLarge |
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
 	<var: #jumpSI type: #'AbstractInstruction *'>
@@ -475,6 +836,7 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 	<var: #jumpFmtLt8 type: #'AbstractInstruction *'>
 	<var: #jumpFmtGt11 type: #'AbstractInstruction *'>
 	<var: #jumpLarge type: #'AbstractInstruction *'>
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
 	jumpSI := self genJumpSmallInteger: ReceiverResultReg.
 	cogit MoveR: Arg0Reg R: Arg1Reg.
 	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg.
@@ -508,7 +870,7 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 	cogit "Too lazy [knackered, more like. ed.] to define index with displacement addressing right now"
 		AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: Arg1Reg;
 		MoveXwr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg;
-		RetN: retNoffset.
+		genPrimReturn.
 	jumpFmtGt4 jmpTarget: cogit Label.
 	"Byte objects have formats 8 through 15, Compiled methods being 12 through 15;
 	 fail for CompiledMethod allowing the CoInterpeter to impose stricter bounds checks."
@@ -520,7 +882,7 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 		AddCq: objectMemory baseHeaderSize R: Arg1Reg;
 		MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
 	self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
-	cogit RetN: retNoffset.
+	cogit genPrimReturn.
 	jumpFmtLt8 jmpTarget: cogit Label.
 	self assert: objectMemory wordSize = 4. "documenting my laziness"
 	cogit "Too lazy [knackered, more like. ed.] to define index with displacement addressing right now"
@@ -529,11 +891,11 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 		CmpCq: 16r3FFFFFFF R: ReceiverResultReg.
 	jumpLarge := cogit JumpAbove: 0.
 	self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
-	cogit RetN: retNoffset.
+	cogit genPrimReturn.
 	jumpLarge jmpTarget: (cogit CallRT: cePositive32BitIntegerTrampoline).
 	cogit
 		MoveR: TempReg R: ReceiverResultReg;
-		RetN: retNoffset.
+		genPrimReturn.
 	jumpSI jmpTarget:
 	(jumpNotSI jmpTarget:
 	(jumpNotIndexable jmpTarget:
@@ -545,34 +907,35 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveIdentical: retNoffset orNotIf: orNot [
+CogObjectRepresentationForSqueakV3 >> genPrimitiveIdenticalOrNotIf: orNot [
 	| jumpCmp |
 	<var: #jumpCmp type: #'AbstractInstruction *'>
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
 	cogit CmpR: Arg0Reg R: ReceiverResultReg.
 	jumpCmp := orNot
 					ifTrue: [cogit JumpZero: 0]
 					ifFalse: [cogit JumpNonZero: 0].
 	cogit genMoveTrueR: ReceiverResultReg.
-	cogit RetN: retNoffset.
+	cogit genPrimReturn.
 	jumpCmp jmpTarget: (cogit genMoveFalseR: ReceiverResultReg).
-	cogit RetN: retNoffset.
-	^0
+	cogit genPrimReturn.
+	^UnfailingPrimitive
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveIdentityHash: retNOffset [
+CogObjectRepresentationForSqueakV3 >> genPrimitiveIdentityHash [
 	| jumpSI |
 	<var: #jumpSI type: #'AbstractInstruction *'>
 	jumpSI := self genJumpSmallInteger: ReceiverResultReg.
 	self genGetHashFieldNonImmOf: ReceiverResultReg asSmallIntegerInto: TempReg.
 	cogit MoveR: TempReg R: ReceiverResultReg.
-	cogit RetN: retNOffset.
+	cogit genPrimReturn.
 	jumpSI jmpTarget: cogit Label.
 	^0
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveSize: retNoffset [
+CogObjectRepresentationForSqueakV3 >> genPrimitiveSize [
 	| jumpSI jumpNotIndexable jumpIsContext |
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
 	<var: #jumpSI type: #'AbstractInstruction *'>
@@ -587,13 +950,13 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveSize: retNoffset [
 		abortJumpsInto: [:jnx :jic| jumpNotIndexable := jnx. jumpIsContext := jic].
 	self genConvertIntegerToSmallIntegerInReg: ClassReg.
 	cogit MoveR: ClassReg R: ReceiverResultReg.
-	cogit RetN: retNoffset.
+	cogit genPrimReturn.
 	jumpSI jmpTarget: (jumpNotIndexable jmpTarget: (jumpIsContext jmpTarget: cogit Label)).
 	^0
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveStringAt: retNOffset [
+CogObjectRepresentationForSqueakV3 >> genPrimitiveStringAt [
 	| jumpNotSI jumpNotByteIndexable jumpBounds jumpShortHeader jumpSkip |
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
@@ -601,6 +964,7 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveStringAt: retNOffset [
 	<var: #jumpBounds type: #'AbstractInstruction *'>
 	<var: #jumpShortHeader type: #'AbstractInstruction *'>
 	<var: #jumpSkip type: #'AbstractInstruction *'>
+	cogit genLoadArgAtDepth: 0 into: Arg0Reg.
 	cogit MoveR: Arg0Reg R: Arg1Reg.
 	jumpNotSI := self genJumpNotSmallInteger: Arg0Reg.
 	cogit
@@ -635,67 +999,12 @@ CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveStringAt: retNOffset [
 	cogit MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg;
 		AddCq: objectMemory baseHeaderSize / objectMemory wordSize R: ReceiverResultReg.
 	cogit MoveXwr: ReceiverResultReg R: Arg0Reg R: ReceiverResultReg.
-	cogit RetN: retNOffset.
+	cogit genPrimReturn.
 	jumpNotSI jmpTarget:
 	(jumpNotByteIndexable jmpTarget:
 	(jumpBounds jmpTarget:
 		cogit Label)).
 	^0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genJumpImmediate: aRegister [
-	^self genJumpSmallInteger: aRegister
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genJumpImmediateInScratchReg: aRegister [
-	^self genJumpSmallIntegerInScratchReg: aRegister
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genJumpNotImmediate: aRegister [
-	<inline: true>
-	^self genJumpNotSmallInteger: aRegister
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genJumpNotSmallInteger: aRegister [
-	<returnTypeC: #'AbstractInstruction *'>
-	cogit TstCq: 1 R: aRegister.
-	^cogit JumpZero: 0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genJumpNotSmallIntegerInScratchReg: aRegister [
-	<returnTypeC: #'AbstractInstruction *'>
-	cogit AndCq: 1 R: aRegister.
-	^cogit JumpZero: 0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genJumpSmallInteger: aRegister [
-	<returnTypeC: #'AbstractInstruction *'>
-	cogit TstCq: 1 R: aRegister.
-	^cogit JumpNonZero: 0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genJumpSmallIntegerInScratchReg: aRegister [
-	<returnTypeC: #'AbstractInstruction *'>
-	cogit AndCq: 1 R: aRegister.
-	^cogit JumpNonZero: 0
-]
-
-{ #category : #'bytecode generator support' }
-CogObjectRepresentationForSqueakV3 >> genNewArrayOfSize: size initialized: initialized [
-	"Generate a call to code that allocates a new Array of size.
-	 The Array should be initialized with nils iff initialized is true.
-	 The size arg is passed in SendNumArgsReg, the result
-	 must come back in ReceiverResultReg."
-	cogit
-		MoveCq: size R: SendNumArgsReg;
-		CallRT: ceCreateNewArrayTrampoline
 ]
 
 { #category : #'compile abstract instructions' }
@@ -717,30 +1026,20 @@ CogObjectRepresentationForSqueakV3 >> genShiftAwaySmallIntegerTagsInScratchReg: 
 ]
 
 { #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genSpecialSelectorEqualsEqualsGuts [
-	< inline: true >
-	^ cogit genVanillaSpecialSelectorEqualsEquals
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genStoreImmediateInSourceReg: sourceReg slotIndex: index destReg: destReg [
-	cogit MoveR: sourceReg Mw: index * objectMemory wordSize + objectMemory baseHeaderSize r: destReg.
-	^0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg inFrame: inFrame [
+CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg inFrame: inFrame needsStoreCheck: needsStoreCheck [
 	| jmpImmediate jmpDestYoung jmpSourceOld jmpAlreadyRoot mask rootBitByteOffset |
 	<var: #jmpImmediate type: #'AbstractInstruction *'>
 	<var: #jmpDestYoung type: #'AbstractInstruction *'>
 	<var: #jmpSourceOld type: #'AbstractInstruction *'>
 	<var: #jmpAlreadyRoot type: #'AbstractInstruction *'>
+	
+	cogit genTraceStores.
 	"do the store"
 	cogit MoveR: sourceReg Mw: index * objectMemory wordSize + objectMemory baseHeaderSize r: destReg.
+	"if no need for the store check then returns"
+	needsStoreCheck ifFalse: [ ^ 0 ].
 	"now the check.  Is value stored an integer?  If so we're done"
-	cogit MoveR: sourceReg R: scratchReg.
-	cogit AndCq: 1 R: scratchReg.
-	jmpImmediate := cogit JumpNonZero: 0.
+	jmpImmediate := self genJumpImmediate: sourceReg.
 	"Get the old/new boundary in scratchReg"
 	cogit MoveAw: objectMemory youngStartAddress R: scratchReg.
 	"Is target young?  If so we're done"
@@ -764,20 +1063,9 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 	jmpAlreadyRoot := cogit JumpNonZero: 0.
 	"Root bit is not set.  Call store check to insert dest into root table."
 	self assert: destReg == ReceiverResultReg.
-	inFrame
-		ifTrue:
-			[cogit
-				CallRT: ceStoreCheckTrampoline
-				registersToBeSavedMask: (((cogit registerMaskFor: sourceReg)
-												bitOr: cogit callerSavedRegMask)
-												bitClear: (cogit registerMaskFor: ReceiverResultReg))]
-		ifFalse:
-			[cogit backEnd saveAndRestoreLinkRegAround:
-				[cogit
-					CallRT: ceStoreCheckTrampoline
-					registersToBeSavedMask: (((cogit registerMaskFor: sourceReg)
-													bitOr: cogit callerSavedRegMask)
-													bitClear: (cogit registerMaskFor: ReceiverResultReg))]].
+	cogit 
+		evaluateTrampolineCallBlock: [cogit CallRT: ceStoreCheckTrampoline]
+		protectLinkRegIfNot: inFrame.
 	jmpImmediate jmpTarget:
 	(jmpDestYoung jmpTarget:
 	(jmpSourceOld jmpTarget:
@@ -801,20 +1089,40 @@ CogObjectRepresentationForSqueakV3 >> generateObjectRepresentationTrampolines [
 									genTrampolineFor: #ceStoreCheck:
 									called: 'ceStoreCheckTrampoline'
 									arg: ReceiverResultReg
+									regsToSave: (CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
 									result: cogit returnRegForStoreCheck.
 	ceCreateNewArrayTrampoline := cogit genTrampolineFor: #ceNewArraySlotSize:
 											called: 'ceCreateNewArrayTrampoline'
 											arg: SendNumArgsReg
+											regsToSave: (CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
 											result: ReceiverResultReg.
 	cePositive32BitIntegerTrampoline := cogit genTrampolineFor: #positive32BitIntegerFor:
 												called: 'cePositive32BitIntegerTrampoline'
 												arg: ReceiverResultReg
+												regsToSave: (CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
 												result: TempReg.
 	ceActiveContextTrampoline := self genActiveContextTrampoline.
 	ceClosureCopyTrampoline := cogit genTrampolineFor: #ceClosureCopyDescriptor:
 										called: 'ceClosureCopyTrampoline'
 										arg: SendNumArgsReg
-										result: ReceiverResultReg
+										regsToSave: (CallerSavedRegisterMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
+										result: ReceiverResultReg.
+										
+	LowcodeVM ifTrue:
+		[cePositive32BitValueOfTrampoline := cogit genTrampolineFor: #positive32BitValueOf:
+													called: 'cePositive32BitValueOfTrampoline'
+													arg: ReceiverResultReg
+													result: TempReg.
+		ceSigned32BitIntegerTrampoline := cogit genTrampolineFor: #signed32BitIntegerFor:
+													called: 'ceSigned32BitIntegerTrampoline'
+													arg: ReceiverResultReg
+													result: TempReg.
+		ceSigned32BitValueOfTrampoline := cogit genTrampolineFor: #signed32BitValueOf:
+													called: 'ceSigned32BitValueOfTrampoline'
+													arg: ReceiverResultReg
+													result: TempReg.
+
+		self generateLowcodeObjectTrampolines]
 ]
 
 { #category : #'garbage collection' }
@@ -826,7 +1134,6 @@ CogObjectRepresentationForSqueakV3 >> hasValidHeaderPostGC: cogMethod [
 
 { #category : #'in-line cacheing' }
 CogObjectRepresentationForSqueakV3 >> illegalClassTag [
-	<inline: true>
 	^0
 ]
 
@@ -861,7 +1168,6 @@ CogObjectRepresentationForSqueakV3 >> inlineCacheTagIsYoung: cacheTag [
 
 { #category : #'in-line cacheing' }
 CogObjectRepresentationForSqueakV3 >> inlineCacheTagsMayBeObjects [
-	<inline: true>
 	^true
 ]
 
@@ -887,7 +1193,7 @@ CogObjectRepresentationForSqueakV3 >> isSmallIntegerTagNonZero [
 
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> markAndTraceCacheTagLiteral: literal in: cogMethodOrNil atpc: address [
-	"Mark and trace a literal in an inline cache preceeding address in cogMethodOrNil.
+	"Mark and trace a literal in an inline cache preceding address in cogMethodOrNil.
 	 Answer if code was modified."
 	<var: #cogMethodOrNil type: #'CogMethod *'>
 	<var: #address type: #usqInt>
@@ -914,7 +1220,7 @@ CogObjectRepresentationForSqueakV3 >> markAndTraceLiteral: literal in: cogMethod
 
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> markAndTraceLiteral: literal in: cogMethodOrNil atpc: address [
-	"Mark and trace a literal in a machine code instruction preceeding address in cogMethodOrNil.
+	"Mark and trace a literal in a machine code instruction preceding address in cogMethodOrNil.
 	 Answer if code was modified."
 	<var: #cogMethodOrNil type: #'CogMethod *'>
 	<var: #address type: #usqInt>
@@ -950,7 +1256,6 @@ CogObjectRepresentationForSqueakV3 >> numRegArgs [
 	 at:receiver: do not have to be implemented in SimpleStackBasedCogit."
 	<api>
 	<option: #StackToRegisterMappingCogit>
-	<inline: true>
 	^1
 ]
 
@@ -965,15 +1270,9 @@ CogObjectRepresentationForSqueakV3 >> numSmallIntegerTagBits [
 ]
 
 { #category : #'garbage collection' }
-CogObjectRepresentationForSqueakV3 >> remapCacheTag: cacheTag [
-	^(self couldBeObject: cacheTag)
-		ifTrue: [objectMemory remap: cacheTag]
-		ifFalse: [cacheTag]
-]
-
-{ #category : #'garbage collection' }
-CogObjectRepresentationForSqueakV3 >> remapObject: oop [
-	^objectMemory remap: oop
+CogObjectRepresentationForSqueakV3 >> remapObject: objOop [
+	self assert: (objectMemory addressCouldBeObj: objOop).
+	^objectMemory remap: objOop
 ]
 
 { #category : #'garbage collection' }
@@ -987,7 +1286,7 @@ CogObjectRepresentationForSqueakV3 >> remapOop: oop [
 CogObjectRepresentationForSqueakV3 >> resetCountersIn: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
 	<api>
-	<option: #SistaStackToRegisterMappingCogit>
+	<option: #SistaCogit>
 	cogit
 		fillInCounters: (self numCountersFor: cogMethod counters)
 		atStartAddress: cogMethod counters

@@ -17,6 +17,16 @@ HostWindowPlugin class >> requiresPlatformFiles [
 	^true
 ]
 
+{ #category : #support }
+HostWindowPlugin >> pointFromCompactPointEncoding: encodedPoint [
+	"Answer a point from one of the funky encoded x,y position/size values the VM uses.
+	 The issue here is that the values can be negative, each value being in the range -32768 to 32767"
+	<inline: #always>
+	^interpreterProxy
+		makePointwithxValue: (self cCoerceSimple: encodedPoint >> 16 to: #short)
+		yValue: (self cCoerceSimple: (encodedPoint bitAnd: 16rFFFF) to: #short)
+]
+
 { #category : #'system primitives' }
 HostWindowPlugin >> primitiveCloseHostWindow: windowIndex [
 "Close a host window. windowIndex is the SmallInt handle returned previously by primitiveCreateHostWindow. Fail if the index is invalid or the platform code fails"
@@ -57,21 +67,47 @@ HostWindowPlugin >> primitiveHostWindowPosition: windowIndex [
 	self primitive: 'primitiveHostWindowPosition'
 		parameters: #(SmallInteger ).
 	pos := self ioPositionOfWindow: windowIndex.
-	pos = -1
-		ifTrue: [^ interpreterProxy primitiveFail]
-		ifFalse: [^ interpreterProxy makePointwithxValue: pos >> 16  yValue: (pos bitAnd: 16rFFFF)]
+	pos = -1 ifTrue:
+		[^interpreterProxy primitiveFail].
+	^self pointFromCompactPointEncoding: pos
 ]
 
 { #category : #'system primitives' }
-HostWindowPlugin >> primitiveHostWindowPositionSet: windowIndex x:  x y: y [
-	"Set the origin position of the user area of the window  in pixels from the topleft corner of the screen- return the position actually set by the OS/GUI/window manager. Fail if the windowIndex is invalid or the platform routine returns -1 to indicate failure"
+HostWindowPlugin >> primitiveHostWindowPositionSet: windowIndex x: x y: y [
+	"Set the origin position of the user area of the window in pixels from the topleft corner of the screen- return the position actually set by the OS/GUI/window manager. Fail if the windowIndex is invalid or the platform routine returns -1 to indicate failure"
 	| pos |
 	self primitive: 'primitiveHostWindowPositionSet'
 		parameters: #(SmallInteger SmallInteger SmallInteger).
 	pos := self ioPositionOfWindowSet: windowIndex x: x y: y.
-	pos = -1
-		ifTrue: [^ interpreterProxy primitiveFail]
-		ifFalse: [^ interpreterProxy makePointwithxValue: pos >> 16  yValue: (pos bitAnd: 16rFFFF)]
+	pos = -1 ifTrue:
+		[^interpreterProxy primitiveFail].
+	^self pointFromCompactPointEncoding: pos
+]
+
+{ #category : #'system primitives' }
+HostWindowPlugin >> primitiveHostWindowScreenWorkAreaPosition: windex [
+	<option: #TerfVM>
+	"Answer the platform's notion of the available work area on the screen containing the given window."
+	| size |
+	self primitive: 'primitiveHostWindowScreenWorkAreaPosition'
+		parameters: #(SmallInteger).
+	size := self ioPositionOfScreenWorkArea: windex.
+	size = -1 ifTrue:
+		[^interpreterProxy primitiveFail].
+	^self pointFromCompactPointEncoding: size
+]
+
+{ #category : #'system primitives' }
+HostWindowPlugin >> primitiveHostWindowScreenWorkAreaSize: windex [
+	<option: #TerfVM>
+	"Answer the platform's notion of the available work area on the screen containing the given window."
+	| size |
+	self primitive: 'primitiveHostWindowScreenWorkAreaSize'
+		parameters: #(SmallInteger).
+	size := self ioSizeOfScreenWorkArea: windex.
+	size = -1 ifTrue:
+		[^interpreterProxy primitiveFail].
+	^self pointFromCompactPointEncoding: size
 ]
 
 { #category : #'system primitives' }
@@ -81,9 +117,9 @@ HostWindowPlugin >> primitiveHostWindowSize: windowIndex [
 	self primitive: 'primitiveHostWindowSize'
 		parameters: #(SmallInteger ).
 	size := self ioSizeOfWindow: windowIndex.
-	size = -1
-		ifTrue: [^ interpreterProxy primitiveFail]
-		ifFalse: [^ interpreterProxy makePointwithxValue: size >> 16  yValue: (size bitAnd: 16rFFFF)]
+	size = -1 ifTrue:
+		[^interpreterProxy primitiveFail].
+	^self pointFromCompactPointEncoding: size
 ]
 
 { #category : #'system primitives' }
@@ -93,9 +129,9 @@ HostWindowPlugin >> primitiveHostWindowSizeSet: windowIndex x: x y: y [
 	self primitive: 'primitiveHostWindowSizeSet'
 		parameters: #(SmallInteger SmallInteger SmallInteger).
 	size := self ioSizeOfWindowSet: windowIndex x: x y: y.
-	size = -1
-		ifTrue: [^ interpreterProxy primitiveFail]
-		ifFalse: [^ interpreterProxy makePointwithxValue: size >> 16  yValue: (size bitAnd: 16rFFFF)]
+	size = -1 ifTrue:
+		[^interpreterProxy primitiveFail].
+	^self pointFromCompactPointEncoding: size
 ]
 
 { #category : #'system primitives' }
@@ -108,6 +144,75 @@ HostWindowPlugin >> primitiveHostWindowTitle: id string: titleString [
 	res := self cCode: 'ioSetTitleOfWindow(id, titleString, titleLength)'.
 	res = -1
 		ifTrue: [interpreterProxy primitiveFail]
+]
+
+{ #category : #'system primitives' }
+HostWindowPlugin >> primitiveNativeDisplayPosition: windowHandle [
+	<option: #TerfVM>
+	"Answer the origin position of the user area of the given native window in pixels from the topleft corner of the screen.
+	 Fail if the windowHandle is invalid or the platform routine returns -1 to indicate failure"
+	| pos |
+	self primitive: 'primitiveNativeDisplayPosition'
+		parameters: #(Unsigned).
+	pos := self ioPositionOfNativeDisplay: windowHandle.
+	pos = -1 ifTrue:
+		[^interpreterProxy primitiveFail].
+	^self pointFromCompactPointEncoding: pos
+]
+
+{ #category : #'system primitives' }
+HostWindowPlugin >> primitiveNativeDisplaySize: windowHandle [
+	<option: #TerfVM>
+	"Answer the size of the user area of the given native window in pixels.
+	 Fail if the windowHandle is invalid or the platform routine returns -1 to indicate failure"
+	| size |
+	self primitive: 'primitiveNativeDisplaySize'
+		parameters: #(Unsigned).
+	size := self ioSizeOfNativeDisplay: windowHandle.
+	size = -1 ifTrue:
+		[^interpreterProxy primitiveFail].
+	^self pointFromCompactPointEncoding: size
+]
+
+{ #category : #'system primitives' }
+HostWindowPlugin >> primitiveNativeWindowPosition: windowHandle [
+	<option: #TerfVM>
+	"Answer the origin position of the given native window in pixels from the topleft corner of the screen.
+	 Fail if the windowHandle is invalid or the platform routine returns -1 to indicate failure"
+	| pos |
+	self primitive: 'primitiveNativeWindowPosition'
+		parameters: #(Unsigned).
+	pos := self ioPositionOfNativeWindow: windowHandle.
+	pos = -1 ifTrue:
+		[^interpreterProxy primitiveFail].
+	^self pointFromCompactPointEncoding: pos
+]
+
+{ #category : #'system primitives' }
+HostWindowPlugin >> primitiveNativeWindowSize: windowHandle [
+	<option: #TerfVM>
+	"Answer the size of the given native window in pixels.
+	 Fail if the windowHandle is invalid or the platform routine returns -1 to indicate failure"
+	| size |
+	self primitive: 'primitiveNativeWindowSize'
+		parameters: #(Unsigned).
+	size := self ioSizeOfNativeWindow: windowHandle.
+	size = -1 ifTrue:
+		[^interpreterProxy primitiveFail].
+	^self pointFromCompactPointEncoding: size
+]
+
+{ #category : #'system primitives' }
+HostWindowPlugin >> primitiveSetCursorPositionX: x Y: y [
+	<option: #TerfVM>
+	"Set the position of the cursor to the specified position on the desktop.
+	 Fail if the platform routine returns -1 to indicate failure."
+	| result |
+	self primitive: 'primitiveSetCursorPosition'
+		parameters: #(SmallInteger SmallInteger).
+	result := self ioSetCursorPositionX: x Y: y.
+	result = -1 ifTrue:
+		[^interpreterProxy primitiveFail]
 ]
 
 { #category : #'system primitives' }
@@ -127,6 +232,21 @@ ioShowDisplay with the extra parameter of the windowIndex integer"
 	ok := self cCode: 'ioShowDisplayOnWindow(dispBits, w, h, d, left, right, top,
 bottom, windowIndex)'.
 	ok ifFalse:[interpreterProxy primitiveFail]
+]
+
+{ #category : #'system primitives' }
+HostWindowPlugin >> primitiveSqueakWindowHandle [
+	<option: #TerfVM>
+	"Answer the native Squeak window handle, presumably a pointer, as an unsigned integer.
+	 This value should be usable in native calls to the window manager as well as
+	 the argument to primitiveNativeWindowPosition:"
+	| handle |
+	<var: #handle type: 'void *'>
+	self primitive: 'primitiveSqueakWindowHandle'.
+	handle := self ioGetWindowHandle.
+	handle = 0 ifTrue:
+		[^interpreterProxy primitiveFail].
+	^interpreterProxy positiveMachineIntegerFor: (self cCoerceSimple: handle to: #sqInt)
 ]
 
 { #category : #'initialize-release' }

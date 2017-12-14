@@ -42,5 +42,5 @@ Unsigned class >> ccgCanConvertFrom: anObject [
 { #category : #'plugin generation' }
 Unsigned class >> ccgDeclareCForVar: aSymbolOrString [
 
-	^'unsigned long ', aSymbolOrString
+	^'usqIntptr_t ', aSymbolOrString
 ]

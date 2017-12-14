@@ -1,5 +1,5 @@
 "
-This class should provide the definition of what interpreter support plugins need and can have access to. Note that the proxy related files platforms - Cross - vm - sqVirtualMachine.[ch] are kept under the SVN tree at www.squeakvm.org .
+This class should provide the definition of what interpreter support plugins need and can have access to. Note that the proxy related files platforms - Cross - vm - sqVirtualMachine.[ch] are kept under the git tree at http://www.github.com/opensmalltalk/vm.
 The main use of the class is to support the vm simulator
 "
 Class {
@@ -12,7 +12,11 @@ Class {
 		'method',
 		'argumentCount',
 		'bb',
-		'thisSessionID'
+		'thisSessionID',
+		'osErrorCode'
+	],
+	#pools : [
+		'VMBasicConstants'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -74,12 +78,43 @@ InterpreterProxy >> byteAt: accessor put: value [
 	^accessor byteAt: 0 put: value
 ]
 
+{ #category : #private }
+InterpreterProxy >> byteAtPointer: accessor [
+	^ self byteAt: accessor
+]
+
 { #category : #'object access' }
 InterpreterProxy >> byteSizeOf: oop [
 	"Return the size of the receiver in bytes"
 	^oop class isBytes
 		ifTrue:[(self slotSizeOf: oop)]
 		ifFalse:[(self slotSizeOf: oop) * 4]
+]
+
+{ #category : #other }
+InterpreterProxy >> byteSwapped32IfBigEndian: anInteger [
+	"Note: for simulation only.
+	This message is not generated in C but replaced with a macro"
+	<doNotGenerate>
+	self vmEndianness = 1 ifTrue: [^anInteger byteSwap32].
+	^anInteger
+]
+
+{ #category : #other }
+InterpreterProxy >> byteSwapped64IfBigEndian: anInteger [
+	"Note: for simulation only.
+	This message is not generated in C but replaced with a macro"
+	<doNotGenerate>
+	self vmEndianness = 1 ifTrue: [^anInteger byteSwap64].
+	^anInteger
+]
+
+{ #category : #testing }
+InterpreterProxy >> cStringOrNullFor: oop [
+	"Answer either a malloced string with the null-terminated contents of oop if oop is a string,
+	 or the null pointer if oop is nil, or fail.  It is the client's responsibility to free the string later."
+	<returnTypeC: #'char *'>
+	oop isString ifTrue: [^oop] ifFalse: [self primitiveFail. ^0]
 ]
 
 { #category : #'callback support' }
@@ -558,9 +593,35 @@ InterpreterProxy >> isInterpreterProxy [
 ]
 
 { #category : #testing }
-InterpreterProxy >> isOopImmutable: anOop [
-	<api>
-	^self notYetImplementedError
+InterpreterProxy >> isKindOfInteger: objectOrientedPointer [
+	^objectOrientedPointer isInteger
+]
+
+{ #category : #testing }
+InterpreterProxy >> isLargeIntegerObject: objectOrientedPointer [
+	^objectOrientedPointer isKindOf: LargePositiveInteger
+]
+
+{ #category : #testing }
+InterpreterProxy >> isLargeNegativeIntegerObject: objectOrientedPointer [
+	^objectOrientedPointer isMemberOf: LargeNegativeInteger
+]
+
+{ #category : #testing }
+InterpreterProxy >> isLargePositiveIntegerObject: objectOrientedPointer [
+	^objectOrientedPointer isMemberOf: LargePositiveInteger
+]
+
+{ #category : #testing }
+InterpreterProxy >> isNonImmediate: anObject [
+
+	^ (self isImmediate: anObject) not
+]
+
+{ #category : #'object access' }
+InterpreterProxy >> isOopImmutable: oop [
+	<option: #IMMUTABILITY>
+	^StackInterpreter objectMemoryClass isOopImmutable: oop
 ]
 
 { #category : #testing }
@@ -624,6 +685,13 @@ InterpreterProxy >> loadStackFrom: aContext [
 ]
 
 { #category : #private }
+InterpreterProxy >> long32At: arrayOffset [
+
+	^ arrayOffset long32At: 0
+
+]
+
+{ #category : #private }
 InterpreterProxy >> longAt: accessor [
 	^accessor longAt: 0
 ]
@@ -635,7 +703,7 @@ InterpreterProxy >> longAt: accessor put: value [
 
 { #category : #other }
 InterpreterProxy >> majorVersion [
-	self notYetImplemented
+	^ 1
 ]
 
 { #category : #'instance creation' }
@@ -671,7 +739,7 @@ InterpreterProxy >> methodReturnValue: oop [
 
 { #category : #other }
 InterpreterProxy >> minorVersion [
-	self notYetImplemented
+	^ 8
 ]
 
 { #category : #'special objects' }
@@ -730,6 +798,7 @@ InterpreterProxy >> popRemappableOop [
 
 { #category : #converting }
 InterpreterProxy >> positive32BitIntegerFor: integerValue [
+	<var: 'integerValue' type: #'unsigned int'>
 	integerValue isInteger ifFalse:[self error:'Not an Integer object'].
 	^integerValue > 0
 		ifTrue:[integerValue]
@@ -749,7 +818,7 @@ InterpreterProxy >> positive32BitValueOf: oop [
 InterpreterProxy >> positive64BitIntegerFor: integerValue [
 	<api>
 	<returnTypeC: #sqInt> "...because answering the 64-bit argument causes the type inferencer to say this answers 64-bits."
-	<var: 'integerValue' type: #sqLong>
+	<var: 'integerValue' type: #usqLong>
 	integerValue isInteger ifFalse:[self error:'Not an Integer object'].
 	^integerValue > 0
 		ifTrue:[integerValue]
@@ -767,7 +836,7 @@ InterpreterProxy >> positive64BitValueOf: oop [
 
 { #category : #converting }
 InterpreterProxy >> positiveMachineIntegerValueOf: oop [
-	<returnTypeC: #'unsigned long'>
+	<returnTypeC: #'usqIntptr_t'>
 	oop isInteger ifFalse:[self error: 'Not an integer object'].
 	^oop < 0 
 		ifTrue: [self primitiveFail. 0]
@@ -793,6 +862,16 @@ InterpreterProxy >> primitiveFailFor: reasonCode [
 	Primitive 255 is called to indicate that we are currently simulating a primitive that should fail and the VM should handle that case appropriately (if supported by the VM)."
 	<primitive: 255>
 	^ primFailCode := reasonCode
+]
+
+{ #category : #other }
+InterpreterProxy >> primitiveFailForOSError: osError [
+	<var: 'osError' type: #sqLong>
+	"Set PrimErrOSError primitive failure and associated osErrorCode.
+	 Primitive 255 is called to indicate that we are currently simulating a primitive that should fail and the VM should handle that case appropriately (if supported by the VM)."
+	<primitive: 255>
+	osErrorCode := osError.
+	^primFailCode := PrimErrOSError
 ]
 
 { #category : #other }
@@ -891,6 +970,7 @@ InterpreterProxy >> setInterruptCheckChain: aFunction [
 { #category : #other }
 InterpreterProxy >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
 	aForm == Display ifTrue:[
+		Display class isDeferringUpdates ifTrue: [^ nil].
 		Display forceToScreen: (Rectangle left: l right: r top: t bottom: b)].
 ]
 
@@ -935,7 +1015,7 @@ InterpreterProxy >> signed64BitValueOf: oop [
 
 { #category : #converting }
 InterpreterProxy >> signedMachineIntegerValueOf: oop [
-	<returnTypeC: #'long'>
+	<returnTypeC: #'sqIntptr_t'>
 	oop isInteger ifFalse:[self error:'Not an integer object'].
 	^oop
 ]
@@ -998,17 +1078,24 @@ InterpreterProxy >> stackObjectValue: offset [
 
 { #category : #'stack access' }
 InterpreterProxy >> stackPositiveMachineIntegerValue: offset [
+	<returnTypeC: #'usqIntptr_t'>
 	^self positiveMachineIntegerValueOf: (self stackValue: offset)
 ]
 
 { #category : #'stack access' }
 InterpreterProxy >> stackSignedMachineIntegerValue: offset [
+	<returnTypeC: #'sqIntptr_t'>
 	^self signedMachineIntegerValueOf: (self stackValue: offset)
 ]
 
 { #category : #'stack access' }
 InterpreterProxy >> stackValue: offset [
 	^stack at: stack size - offset.
+]
+
+{ #category : #other }
+InterpreterProxy >> statNumGCs [
+	^(Smalltalk vmParameterAt: 7 "statFullGCs") + (Smalltalk vmParameterAt: 9 "statScavenges/statIncrGCs")
 ]
 
 { #category : #'object access' }
@@ -1021,6 +1108,13 @@ InterpreterProxy >> storeInteger: index ofObject: oop withValue: integer [
 { #category : #'object access' }
 InterpreterProxy >> storePointer: index ofObject: oop withValue: valuePointer [
 	^oop instVarAt: index+1 put: valuePointer
+]
+
+{ #category : #testing }
+InterpreterProxy >> stringForCString: aCString [
+	"Answer a ByteString object containing the bytes (possibly UTF-8?) in the null-terminated C string aCString."
+	<var: #aCString type: #'char *'>
+	self notYetImplemented
 ]
 
 { #category : #other }
@@ -1045,7 +1139,7 @@ InterpreterProxy >> synthesizeStackFor: receiver with: args [
 
 { #category : #other }
 InterpreterProxy >> tenuringIncrementalGC [
-	<returnTypeC: #sqInt>
+	<returnTypeC: #void>
 	Smalltalk forceTenuring; garbageCollectMost
 ]
 

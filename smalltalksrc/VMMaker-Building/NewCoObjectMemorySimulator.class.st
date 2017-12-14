@@ -76,15 +76,6 @@ NewCoObjectMemorySimulator >> bytesPerOop [
 	^4
 ]
 
-{ #category : #'memory access' }
-NewCoObjectMemorySimulator >> cCoerce: value to: cTypeString [
-	"Type coercion for translation only; just return the value when running in Smalltalk."
-
-	^value == nil
-		ifTrue: [value]
-		ifFalse: [value coerceTo: cTypeString sim: self]
-]
-
 { #category : #'simulation only' }
 NewCoObjectMemorySimulator >> capturePendingFinalizationSignals [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -237,6 +228,26 @@ NewCoObjectMemorySimulator >> is: oop KindOf: classNameString [
 NewCoObjectMemorySimulator >> isFloatObject: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter isFloatObject: oop
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> isKindOfInteger: offset [
+	^coInterpreter isKindOfInteger: offset
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> isLargeIntegerObject: offset [
+	^coInterpreter isLargeIntegerObject: offset
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> isLargeNegativeIntegerObject: offset [
+	^coInterpreter isLargeNegativeIntegerObject: offset
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> isLargePositiveIntegerObject: offset [
+	^coInterpreter isLargePositiveIntegerObject: offset
 ]
 
 { #category : #'memory access' }
@@ -452,6 +463,12 @@ NewCoObjectMemorySimulator >> pushInteger: integerValue [
 	^coInterpreter pushInteger: integerValue
 ]
 
+{ #category : #'debug support' }
+NewCoObjectMemorySimulator >> setUpForUseByFacade: aCurrentImageCoInterpreterFacade [
+	"This is a noop"
+	<doNotGenerate>
+]
+
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> shortAt: byteAddress [
     "Return the half-word at byteAddress which must be even."
@@ -473,6 +490,12 @@ NewCoObjectMemorySimulator >> showDisplayBits: aForm Left: l Top: t Right: r Bot
 NewCoObjectMemorySimulator >> signalFinalization: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter signalFinalization: oop
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> signalSemaphoreWithIndex: index [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter signalSemaphoreWithIndex: index
 ]
 
 { #category : #'simulation only' }

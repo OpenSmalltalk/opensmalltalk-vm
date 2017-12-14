@@ -10,6 +10,12 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #simulation }
+NewCoObjectMemory class >> defaultISA [
+	"Answer the default instruction set architecture to use for simulation."
+	^#IA32
+]
+
 { #category : #'accessing class hierarchy' }
 NewCoObjectMemory class >> objectRepresentationClass [
 	^CogObjectRepresentationForSqueakV3
@@ -114,6 +120,11 @@ NewCoObjectMemory >> freeObject: obj header: objHeader [
 	super freeObject: obj header: objHeader
 ]
 
+{ #category : #accessing }
+NewCoObjectMemory >> freeStart: aValue [
+	^freeStart := aValue
+]
+
 { #category : #'trampoline support' }
 NewCoObjectMemory >> freeStartAddress [
 	<api>
@@ -135,17 +146,15 @@ NewCoObjectMemory >> growObjectMemory: delta [
 ]
 
 { #category : #simulation }
-NewCoObjectMemory >> headerIndicatesAlternateBytecodeSet: methodHeader [
-	"this is here only for in-image compilation"
-	<doNotGenerate>
-	"A negative header selects the alternate bytecode set."
-	^methodHeader signedIntFromLong < 0
-]
-
-{ #category : #simulation }
 NewCoObjectMemory >> initializeFreeSpaceForFacadeFrom: base to: limit [
 	freeStart := base.
 	endOfMemory := scavengeThreshold := limit
+]
+
+{ #category : #'debug support' }
+NewCoObjectMemory >> isCompactInstance: oop [
+	"For assert checking"
+	^(self isNonImmediate: oop) and: [((self baseHeader: oop) bitAnd: CompactClassMask) ~= 0]
 ]
 
 { #category : #'cog jit support' }
@@ -208,6 +217,15 @@ NewCoObjectMemory >> noShiftCompactClassIndexOf: oop [
 NewCoObjectMemory >> nullHeaderForMachineCodeMethod [
 	<api>
 	^(1 << 12 "CompactClassIndex 1") + HeaderTypeShort
+]
+
+{ #category : #'cog jit support' }
+NewCoObjectMemory >> receiverTagBitsForMethod: aMethodObj [
+	"Answer the tag bits for the receiver based on the method's methodClass, if any."
+	<api>
+	^(coInterpreter methodClassOf: aMethodObj) = self classSmallInteger
+		ifTrue: [self smallIntegerTag]
+		ifFalse: [0]
 ]
 
 { #category : #become }

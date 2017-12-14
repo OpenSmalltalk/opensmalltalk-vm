@@ -6,7 +6,8 @@ Class {
 	#superclass : #FilePlugin,
 	#instVars : [
 		'openFiles',
-		'states'
+		'states',
+		'maxOpenFiles'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -35,12 +36,33 @@ FilePluginSimulator >> createDirectory: aString [
 FilePluginSimulator >> fileOpenName: nameIndex size: nameSize write: writeFlag secure: secureFlag [
 	"Open the named file, possibly checking security. Answer the file oop."
 	| path f index |
-	path := interpreterProxy interpreter asString: nameIndex size: nameSize.
+	openFiles size >= maxOpenFiles ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrLimitExceeded].
+	path := interpreterProxy asString: nameIndex size: nameSize.
 	f := writeFlag
 			ifTrue: [FileStream fileNamed: path]
 			ifFalse:
 				[(StandardFileStream isAFileNamed: path) ifTrue:
 					[FileStream readOnlyFileNamed: path]].
+	f ifNil: [^interpreterProxy primitiveFail].
+	f binary.
+	index := openFiles size + 1.
+	openFiles at: index put: f.
+	^interpreterProxy integerObjectOf: index
+]
+
+{ #category : #'file primitives' }
+FilePluginSimulator >> fileOpenNewName: nameIndex size: nameSize secure: secureFlag [
+	"Open the new named file, possibly checking security. Answer the file oop."
+	| path f index |
+	openFiles size >= maxOpenFiles ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrLimitExceeded].
+	path := interpreterProxy interpreter asString: nameIndex size: nameSize.
+	"the #defaultAction for FileExistsException creates a dialog,
+	so it is caught and resignaled as a generic Error"
+	[f := FileStream newFileNamed: nameIndex]
+		on: FileExistsException
+		do: [:error | ^ interpreterProxy primitiveFailFor: PrimErrInappropriate].
 	f ifNil: [^interpreterProxy primitiveFail].
 	f binary.
 	index := openFiles size + 1.
@@ -75,9 +97,10 @@ FilePluginSimulator >> initialiseModule [
 	"See FilePluginSimulator>>sqFileStdioHandlesInto:"
 	(openFiles := Dictionary new)
 		at: 0 put: (FakeStdinStream for: interpreterProxy interpreter); "stdin"
-		at: 1 put: Transcript; "stdout"
-		at: 2 put: Transcript. "stderr"
+		at: 1 put: interpreterProxy interpreter transcript; "stdout"
+		at: 2 put: interpreterProxy interpreter transcript. "stderr"
 	states := IdentityDictionary new.
+	maxOpenFiles := VMClass initializationOptions at: #MaxFileDescriptors ifAbsent: [1024].
 	^super initialiseModule
 ]
 
@@ -130,33 +153,6 @@ FilePluginSimulator >> ioCanSetFileType: fileNameIndex OfSize: fileNameSize [
 ]
 
 { #category : #simulation }
-FilePluginSimulator >> makeDirEntryName: entryName size: entryNameSize
-	createDate: createDate modDate: modifiedDate
-	isDir: dirFlag fileSize: fileSize [
-
-	^interpreterProxy
-		makeDirEntryName: entryName size: entryNameSize
-		createDate: createDate modDate: modifiedDate
-		isDir: dirFlag fileSize: fileSize
-
-]
-
-{ #category : #'file primitives' }
-FilePluginSimulator >> makeDirEntryName: entryName size: entryNameSize createDate: createDate modDate: modifiedDate isDir: dirFlag fileSize: fileSize posixPermissions: posixPermissions isSymlink: symlinkFlag [
-	"This is used just by the PharoVM, at the moment"
-	
-	^interpreterProxy
-		makeDirEntryName: entryName 
-		size: entryNameSize
-		createDate: createDate 
-		modDate: modifiedDate
-		isDir: dirFlag 
-		fileSize: fileSize
-		posixPermissions: posixPermissions
-		isSymlink: symlinkFlag
-]
-
-{ #category : #simulation }
 FilePluginSimulator >> primitiveDirectoryEntry [
 	^interpreterProxy interpreter primitiveDirectoryEntry
 ]
@@ -164,11 +160,6 @@ FilePluginSimulator >> primitiveDirectoryEntry [
 { #category : #simulation }
 FilePluginSimulator >> primitiveDirectoryLookup [
 	^interpreterProxy interpreter primitiveDirectoryLookup
-]
-
-{ #category : #simulation }
-FilePluginSimulator >> primitiveFileRename [
-	^interpreterProxy primitiveFileRename
 ]
 
 { #category : #simulation }
@@ -181,17 +172,17 @@ FilePluginSimulator >> recordStateOf: file [
 ]
 
 { #category : #simulation }
-FilePluginSimulator >> sqFile: file Read: count Into: byteArrayIndex At: startIndex [
-	| interpreter |
-	interpreter := interpreterProxy interpreter.
+FilePluginSimulator >> sqFile: file Read: count Into: byteArrayIndexArg At: startIndex [
+	| byteArrayIndex |
+	byteArrayIndex := byteArrayIndexArg asInteger. "Coerces CArray et al correctly"
 	[[startIndex to: startIndex + count - 1 do:
 		[ :i |
 		file atEnd ifTrue:
 			[(file isKindOf: FakeStdinStream) ifTrue: [file atEnd: false].
 			 ^i - startIndex].
-		interpreter
+		interpreterProxy
 			byteAt: byteArrayIndex + i
-			put: file next asInteger]]
+			put: (file next ifNil: [(file isKindOf: FakeStdinStream) ifTrue: [^0]] ifNotNil: [:c| c asInteger])]]
 			on: Error
 			do: [:ex|
 				(file isKindOf: TranscriptStream) ifFalse: [ex pass].
@@ -213,17 +204,17 @@ FilePluginSimulator >> sqFile: file Truncate: truncatePosition [
 ]
 
 { #category : #simulation }
-FilePluginSimulator >> sqFile: file Write: count From: byteArrayIndex At: startIndex [
-	| interpreter |
-	interpreter := interpreterProxy interpreter.
+FilePluginSimulator >> sqFile: file Write: count From: byteArrayIndexArg At: startIndex [
+	| byteArrayIndex |
+	byteArrayIndex := byteArrayIndexArg asInteger. "Coerces CArray et al correctly"
 	file isBinary
 		ifTrue:
 			[startIndex to: startIndex + count - 1 do:
-				[ :i | file nextPut: (interpreter byteAt: byteArrayIndex + i)]]
+				[ :i | file nextPut: (interpreterProxy byteAt: byteArrayIndex + i)]]
 		ifFalse:
 			[startIndex to: startIndex + count - 1 do:
 				[ :i | | byte |
-				byte := interpreter byteAt: byteArrayIndex + i.
+				byte := interpreterProxy byteAt: byteArrayIndex + i.
 				file nextPut: (Character value: (byte == 12 "lf" ifTrue: [15"cr"] ifFalse: [byte]))]].
 	self recordStateOf: file.
 	^count
@@ -290,4 +281,9 @@ FilePluginSimulator >> sqFileStdioHandlesInto: anArray [
 		at: 2 put: 1;
 		at: 3 put: 2.
 	^7
+]
+
+{ #category : #simulation }
+FilePluginSimulator >> sqFileSync: file [
+	^file sync
 ]

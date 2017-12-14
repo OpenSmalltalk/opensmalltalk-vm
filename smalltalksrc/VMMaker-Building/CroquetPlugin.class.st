@@ -520,18 +520,50 @@ CroquetPlugin >> primitiveMD5Transform [
 	^interpreterProxy push: bufOop.
 ]
 
+{ #category : #'mesh processing' }
+CroquetPlugin >> primitiveOptimizeVertexIndicesForCacheLocality [
+	"Given a list of integer indices for rendering a triangle-mesh in indexed-triangles mode, reorganize the indices in-place to provide better vertex cache locality.
+	We use Tom Forsyth's algorithm:
+		http://home.comcast.net/~tom_forsyth/papers/fast_vert_cache_opt.html
+	... and the MIT-licensed implementation by Michael Georgoulpoulos at:
+		http://code.google.com/p/vcacne/"
+	| indicesOop indices byteSize triCount result |
+	<export: true>
+	<inline: true>
+	<var: #indices type: 'void *'>
+
+	"Get the oop of the IntegerArray containing the indices."
+	(interpreterProxy methodArgumentCount = 1) ifFalse: [^interpreterProxy primitiveFail].
+	indicesOop := interpreterProxy stackObjectValue: 0.
+	interpreterProxy failed ifTrue: [^nil].
+	(interpreterProxy isWords: indicesOop) ifFalse: [^interpreterProxy primitiveFail].
+	
+	"Ensure that the number of indices is a multiple of 3."
+	byteSize := interpreterProxy byteSizeOf: indicesOop.
+	triCount := byteSize / 12.
+	(triCount * 12) = byteSize ifFalse: [^interpreterProxy primitiveFail].
+	
+	"Get an int* to the indices, and optimize 'em."
+	indices := interpreterProxy firstIndexableField: indicesOop.
+	self touch: indices.
+	interpreterProxy failed ifTrue: [^nil].
+	result := self cCode: 'optimizeVertexIndices((int*)indices, triCount)'.
+	result = 0 "success" ifFalse: [^interpreterProxy primitiveFail].
+	^interpreterProxy pop: 1
+]
+
 { #category : #transforms }
 CroquetPlugin >> primitiveOrthoNormInverseMatrix [
 	| srcOop dstOop src dst x y z rx ry rz |
 	<export: true>
-	<var: #src declareC:'float *src'>
-	<var: #dst declareC:'float *dst'>
-	<var: #x declareC:'double x'>
-	<var: #y declareC:'double y'>
-	<var: #z declareC:'double z'>
-	<var: #rx declareC:'double rx'>
-	<var: #ry declareC:'double ry'>
-	<var: #rz declareC:'double rz'>
+	<var: #src type: #'float *'>
+	<var: #dst type: #'float *'>
+	<var: #x type: #double>
+	<var: #y type: #double>
+	<var: #z type: #double>
+	<var: #rx type: #double>
+	<var: #ry type: #double>
+	<var: #rz type: #double>
 
 	interpreterProxy methodArgumentCount = 0
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -558,13 +590,11 @@ CroquetPlugin >> primitiveOrthoNormInverseMatrix [
 	ry := (x * (dst at: 4)) + (y * (dst at: 5)) + (z * (dst at: 6)).
 	rz := (x * (dst at: 8)) + (y * (dst at: 9)) + (z * (dst at: 10)).
 
-	dst at: 3 put: (self cCoerce: 0.0-rx to: 'float').
-	dst at: 7 put: (self cCoerce: 0.0-ry to: 'float').
-	dst at: 11 put: (self cCoerce: 0.0-rz to: 'float').
+	dst at: 3 put: (self cCoerce: 0.0-rx to: #float).
+	dst at: 7 put: (self cCoerce: 0.0-ry to: #float).
+	dst at: 11 put: (self cCoerce: 0.0-rz to: #float).
 
-	interpreterProxy pop: 1.
-	^interpreterProxy push: dstOop.
-
+	interpreterProxy pop: 1 thenPush: dstOop
 ]
 
 { #category : #transforms }

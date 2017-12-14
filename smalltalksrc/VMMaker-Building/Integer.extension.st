@@ -7,6 +7,26 @@ Integer >> >>> shiftAmount [  "right shift, but causes CCodeGenerator to generat
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
+Integer >> addBreakpoint: address [
+	^{self. address}
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> asCharPtr [
+	^(Notification new tag: #getInterpreter; signal)
+		ifNotNil: [:interpreter|
+				(interpreter firstIndexableField: self) asInteger
+					coerceTo: #'char *'
+					sim: interpreter]
+		ifNil: [self]
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> asIntegerPtr [
+	^self
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
 Integer >> asLong [
 	^self
 ]
@@ -27,13 +47,44 @@ Integer >> asPositiveIntegerObj [
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
+Integer >> asSmallIntegerObj [
+	^(Notification new tag: #getInterpreter; signal)
+		ifNotNil: [:interpreter| interpreter integerObjectOf: self]
+		ifNil: [self]
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
 Integer >> asUnsignedInteger [
-	self assert: self >= 0.
+	"Since the simulator deals with positive integers most of the time we assert that the receiver is greater than zero.
+	 But one major exception is stack pointers in the StackInterpreterSimulator, which are negative.  So don't fail
+	 if the sender is a StackInterpreter and the receiver could be a stack pointer."
+	self >= 0 ifFalse:
+		[self assert: (((thisContext sender methodClass includesBehavior: CoInterpreter)
+					   and: [self between: Cogit maxNegativeErrorCode and: -1])
+					or: [(thisContext sender methodClass includesBehavior: StackInterpreter)
+					   and: [thisContext sender receiver stackPages couldBeFramePointer: self]])].
+	^self
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> asUnsignedIntegerPtr [
+	"Since the simulator deals with positive integers most of the time we assert that the receiver is greater than zero.
+	 But one major exception is stack pointers in the StackInterpreterSimulator, which are negative.  So don't fail
+	 if the sender is a StackInterpreter and the receiver could be a stack pointer."
+	self >= 0 ifFalse:
+		[self assert: ((thisContext sender methodClass includesBehavior: StackInterpreter)
+					and: [thisContext sender receiver stackPages couldBeFramePointer: self])].
 	^self
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
 Integer >> asUnsignedLong [
+	self assert: self >= 0.
+	^self
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> asUnsignedLongLong [
 	self assert: self >= 0.
 	^self
 ]
@@ -50,27 +101,61 @@ Integer >> bitInvert64 [
 	^self bitXor: 16rFFFFFFFFFFFFFFFF
 ]
 
+{ #category : #'*VMMaker-bit manipulation' }
+Integer >> byteSwap32 [
+	"swap the bytes of a 32 bit unsigned integer"
+	
+	^((self << 24) bitAnd: 16rFF000000) bitOr:
+	  (((self << 8) bitAnd: 16rFF0000) bitOr:
+	  (((self >> 8) bitAnd: 16rFF00) bitOr:
+	  (((self >> 24) bitAnd: 16rFF))))
+]
+
+{ #category : #'*VMMaker-bit manipulation' }
+Integer >> byteSwap64 [
+	"swap the bytes of a 64 bit unsigned integer"
+	
+	^(((self << 56) bitAnd: 16rFF00000000000000) bitOr:
+	  (((self << 40) bitAnd: 16rFF000000000000) bitOr:
+	  (((self << 24) bitAnd: 16rFF0000000000) bitOr:
+	  (((self << 8) bitAnd: 16rFF00000000) bitOr:
+	  (((self >> 8) bitAnd: 16rFF000000) bitOr:
+	  (((self >> 24) bitAnd: 16rFF0000) bitOr:
+	  (((self >> 40) bitAnd: 16rFF00) bitOr:
+	  ((self >> 56) bitAnd: 16rFF))))))))
+]
+
+{ #category : #'*VMMaker-plugin generation' }
+Integer class >> ccg: cg prolog: aBlock expr: aString index: anInteger [
+
+	^cg ccgLoad: aBlock expr: aString asKindOfIntegerFrom: anInteger
+]
+
 { #category : #'*VMMaker-interpreter simulator' }
 Integer >> coerceTo: cTypeString sim: interpreter [
 
 	| unitSize |
-	cTypeString last = $* ifTrue: [  "C pointer"
-		unitSize := cTypeString caseOf: {
+	cTypeString last = $* ifTrue:  "C pointer"
+		[unitSize := cTypeString caseOf: {
 		['char *'] -> [1].
 		['short *'] -> [2].
 		['int *'] -> [4].
-		['long *'] -> [interpreter wordSize].
-		['float *'] -> [4].
-		['double *'] -> [8].
+		['long long *'] -> [8].
+		['float *'] -> [^CFloatArray basicNew interpreter: interpreter address: self unitSize: 4; yourself].
+		['double *'] -> [^CFloatArray basicNew interpreter: interpreter address: self unitSize: 8; yourself].
 		['unsigned *'] -> [4].
+		['unsigned int *'] -> [4].
+		['unsigned char *'] -> [1].
+		['signed char *'] -> [1].
+		['unsigned short *'] -> [2].
+		['unsigned long long *'] -> [8].
 		['oop *'] -> [interpreter bytesPerOop].
 		}
-		otherwise: [ (cTypeString beginsWith: 'char') ifTrue: [1] ifFalse: [interpreter wordSize] ].
-		^(CArray basicNew)
+		otherwise: [interpreter wordSize].
+		^CArray basicNew
 			interpreter: interpreter address: self unitSize: unitSize;
-			yourself.
-	].
-	^ self  "C number (int, char, float, etc)"
+			yourself].
+	^self  "C number (int, char, float, etc)"
 ]
 
 { #category : #'*VMMaker-printing' }
@@ -88,6 +173,26 @@ Integer >> hex8 [
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
+Integer >> isActiveBreakpoint [
+	^true
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> isBreakpointFor: address [
+	^self = address
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> menuPrompt [
+	^' (', self hex, ')'
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> removeBreakpoint: address [
+	^nil
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
 Integer >> signedBitShift: anInteger [
 	"For historical reasons Slang generates an unsigned shift from all of the shift operators >>, << & bitShift:.
 	 These are too deeply entrenched to try and redefine the semantics.  So instead we provide a signed bitShift:
@@ -96,14 +201,39 @@ Integer >> signedBitShift: anInteger [
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
+Integer >> signedIntFromChar [
+	"Self is an unsigned 8-bit integer in twos-comp form"
+
+	| shortBits |
+	shortBits := self bitAnd: 16rFF.
+	^(self bitAnd: 16r80) "sign bit" = 0
+		ifTrue: [shortBits]
+		ifFalse: [shortBits - 16r100]
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
 Integer >> signedIntFromLong [
 	"Self is a signed or unsigned 32-bit integer"
 
-	| sign |
-	self < 0 ifTrue: [^self].
-	sign := self bitAnd: 16r80000000.
-	sign = 0 ifTrue: [^ self].
-	^ self - sign - sign
+	| bits |
+	(self >= -1073741824 and: [self <= 1073741823]) ifTrue: "These are known to be SmallIntegers..."
+		[^self].
+	bits := self bitAnd: 16rFFFFFFFF.
+	(bits digitAt: 4) <= 16r7F ifTrue: [^bits].
+	^bits - 16r100000000
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> signedIntFromLong64 [
+	"Self is a signed or unsigned 64-bit integer"
+
+	| bits |
+	"This case is handled by the SmallInteger subclass..."
+	"(self >= -1073741824 and: [self <= 1073741823]) ifTrue:
+		[^self]."
+	bits := self bitAnd: 16rFFFFFFFFFFFFFFFF.
+	(bits digitAt: 8) <= 16r7F ifTrue: [^bits].
+	^bits - 16r10000000000000000
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
@@ -118,18 +248,34 @@ Integer >> signedIntFromShort [
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
+Integer >> signedIntToChar [
+	"Produces an 8-bit value in twos-comp form. Truncates if out-of-range as per a C cast"
+
+	^self bitAnd: 16rFF
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
 Integer >> signedIntToLong [
-	"Produces a 32-bit value in twos-comp form.  Sorry no error checking"
+	"Produces a 32-bit value in twos-comp form. Truncates if out-of-range as per a C cast"
 
-	self >= 0
-		ifTrue: [^ self]
-		ifFalse: [^ self + 16r80000000 + 16r80000000]
+	^self bitAnd: 16rFFFFFFFF
+]
 
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> signedIntToLong64 [
+	"Produces a 64-bit value in twos-comp form. Truncates if out-of-range as per a C cast"
+
+	^self bitAnd: 16rFFFFFFFFFFFFFFFF
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
 Integer >> signedIntToShort [
-	"Produces a 16-bit value (0-65k) in twos-comp form.  Sorry no error checking"
+	"Produces a 16-bit value in twos-comp form. Truncates if out-of-range as per a C cast"
 
 	^self bitAnd: 16rFFFF
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> singleStepRequiredToTriggerIn: aCogit [
+	^self between: aCogit cogCodeBase and: aCogit methodZone limitZony
 ]

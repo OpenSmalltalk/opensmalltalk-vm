@@ -40,6 +40,11 @@ NewObjectMemory class >> mustBeGlobal: var [
 	   or: ['checkForLeaks' = var]
 ]
 
+{ #category : #'accessing class hierarchy' }
+NewObjectMemory class >> objectRepresentationClass [
+	^CogObjectRepresentationForSqueakV3
+]
+
 { #category : #translation }
 NewObjectMemory class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 	"Remove the methods and instance variables we don't use."
@@ -326,6 +331,13 @@ NewObjectMemory >> allocateInterpreterChunk: byteSize [
 
 	self error: 'out of memory'.
 	^nil
+]
+
+{ #category : #simulation }
+NewObjectMemory >> allocateMemoryOfSize: limit [
+	<doNotGenerate>
+	super allocateMemoryOfSize: limit.
+	freeStart := memoryLimit
 ]
 
 { #category : #snapshot }
@@ -674,7 +686,7 @@ NewObjectMemory >> clone: obj [
 { #category : #'cog jit support' }
 NewObjectMemory >> compactClassFieldWidth [
 	<api>
-	<cmacro: '() 5'>
+	<cmacro>
 	^5
 ]
 
@@ -1187,11 +1199,6 @@ NewObjectMemory >> freeStart [
 	^freeStart
 ]
 
-{ #category : #accessing }
-NewObjectMemory >> freeStart: aValue [
-	^freeStart := aValue
-]
-
 { #category : #'garbage collection' }
 NewObjectMemory >> fullCompaction [
 	"Move all accessible objects down to leave one big free chunk at the end of memory.
@@ -1659,14 +1666,14 @@ NewObjectMemory >> initializeObjectMemory: bytesToShift [
 { #category : #'cog jit support' }
 NewObjectMemory >> instFormatFieldLSB [
 	<api>
-	<cmacro: '() 8'>
+	<cmacro>
 	^8
 ]
 
 { #category : #'cog jit support' }
 NewObjectMemory >> instFormatFieldWidth [
 	<api>
-	<cmacro: '() 4'>
+	<cmacro>
 	^4
 ]
 
@@ -1681,6 +1688,16 @@ NewObjectMemory >> isContextHeader: aHeader [
 	<inline: true>
 	"c.f. {BlockContext. MethodContext. PseudoContext} collect: [:class| class -> class indexIfCompact]"
 	^(self compactClassIndexOfHeader: aHeader) = ClassMethodContextCompactIndex
+]
+
+{ #category : #'interpreter access' }
+NewObjectMemory >> isFloatOrInt: anOop [
+	"Answer if anOop is either a SmallInteger or a Float."
+
+	<inline: true>
+
+	^(self isIntegerObject: anOop)
+	  or: [(self compactClassIndexOf: anOop) = ClassFloatCompactIndex]
 ]
 
 { #category : #'image segment in/out' }
@@ -1818,13 +1835,13 @@ NewObjectMemory >> leakCheckNewSpaceGC [
 ]
 
 { #category : #'memory access' }
-NewObjectMemory >> literalCountOfMethodHeader: header [
+NewObjectMemory >> literalCountOfMethodHeader: methodHeader [
 	<api>
 	<inline: true>
-	self assert: (self isIntegerObject: header).
-	^(coInterpreter headerIndicatesAlternateBytecodeSet: header)
-		ifTrue: [coInterpreter literalCountOfAlternateHeader: header]
-		ifFalse: [coInterpreter literalCountOfOriginalHeader: header]
+	self assert: (self isIntegerObject: methodHeader).
+	^(self headerIndicatesAlternateBytecodeSet: methodHeader)
+		ifTrue: [coInterpreter literalCountOfAlternateHeader: methodHeader]
+		ifFalse: [coInterpreter literalCountOfOriginalHeader: methodHeader]
 ]
 
 { #category : #'image segment in/out' }
@@ -2093,6 +2110,14 @@ NewObjectMemory >> maybeFillWithAllocationCheckFillerFrom: start to: end [
 	self checkAllocFiller ifTrue:
 		[start to: end by: self wordSize do:
 			[:p| self longAt: p put: p]]
+]
+
+{ #category : #'interpreter access' }
+NewObjectMemory >> methodCacheHashOf: selector with: classTag [
+	"Since class tags are class objects, and classes are aligned on a 4 byte boundary there
+	 is no need to shift the class to include the least significant bits of the class in the hash."
+	<inline: true>
+	^selector bitXor: classTag
 ]
 
 { #category : #'primitive support' }
@@ -2365,6 +2390,39 @@ NewObjectMemory >> prepareForwardingTableForBecoming: array1 with: array2 twoWay
 ]
 
 { #category : #'debug printing' }
+NewObjectMemory >> printActivationsOf: aMethodObj [
+	"Scan the heap printing the oops of any and all contexts that refer to anOop"
+	| oop |
+	<api>
+	oop := self firstAccessibleObject.
+	[oop = nil] whileFalse:
+		[((self isContextNonImm: oop)
+		  and: [aMethodObj = (self fetchPointer: MethodIndex ofObject: oop)]) ifTrue:
+			[coInterpreter
+				printHex: oop; space; printOopShort: oop; print: ' pc ';
+				printHex: (self fetchPointer: InstructionPointerIndex ofObject: oop); cr].
+		 oop := self accessibleObjectAfter: oop]
+]
+
+{ #category : #'debug printing' }
+NewObjectMemory >> printContextReferencesTo: anOop [
+	"Scan the heap printing the oops of any and all contexts that refer to anOop"
+	| oop i |
+	<api>
+	oop := self firstAccessibleObject.
+	[oop = nil] whileFalse:
+		[(self isContextNonImm: oop) ifTrue:
+			[i := CtxtTempFrameStart + (coInterpreter fetchStackPointerOf: oop)].
+			 [(i := i - 1) >= 0] whileTrue:
+				[anOop = (self fetchPointer: i ofObject: oop) ifTrue:
+					[coInterpreter
+						printHex: oop; print: ' @ '; printNum: i; space; printOopShort: oop;
+						print: ' pc '; printHex: (self fetchPointer: InstructionPointerIndex ofObject: oop); cr.
+					 i := 0]].
+		 oop := self accessibleObjectAfter: oop]
+]
+
+{ #category : #'debug printing' }
 NewObjectMemory >> printHeaderTypeOf: obj [
 	(self headerType: obj) caseOf: {
 		[HeaderTypeFree]			-> [coInterpreter print: ' HeaderTypeFree (4 bytes)'].
@@ -2439,7 +2497,7 @@ NewObjectMemory >> printReferencesTo: anOop [
 						ifFalse: [i := self lengthOf: oop]].
 			[(i := i - 1) >= 0] whileTrue:
 				[anOop = (self fetchPointer: i ofObject: oop) ifTrue:
-					[self interpreter printHex: oop; print: ' @ '; printNum: i; space; printOopShort: oop; cr.
+					[coInterpreter printHex: oop; print: ' @ '; printNum: i; space; printOopShort: oop; cr.
 					 i := 0]]].
 		 oop := self accessibleObjectAfter: oop]
 ]
@@ -2539,7 +2597,7 @@ NewObjectMemory >> runLeakCheckerFor: gcModes [
 			ifFalse: [coInterpreter reverseDisplayFrom: 8 to: 15].
 		 self clearLeakMapAndMapAccessibleObjects.
 		 self assert: self checkHeapIntegrity.
-		 self assert: coInterpreter checkInterpreterIntegrity.
+		 self assert: coInterpreter checkInterpreterIntegrity = 0.
 		 self assert: coInterpreter checkStackIntegrity.
 		 self assert: (coInterpreter checkCodeIntegrity: gcModes).
 		 self validate "simulation only"]
@@ -2619,6 +2677,7 @@ NewObjectMemory >> shorten: obj toIndexableSize: nSlots [
 	was possible."
 	| deltaBytes desiredLength fixedFields fmt hdr totalLength
 	 indexableFields |
+	<api>
 	(self isPointersNonImm: obj) ifFalse: [^0].
 	nSlots >  0
 		ifFalse: [^0]. "no change if nSlots is zero, error if nSlots is negative"

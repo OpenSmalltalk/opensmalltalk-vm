@@ -28,6 +28,16 @@ Class vars:
 History
 --------
 
+v2.0
+
+Rewrite primitives to use 32-bits digits instead of 8-bits digits. This can fasten many operation up to 2x and multiplication up to 7x.
+Since Large Integers are still variable byte object, care is taken to allocate just enough bytes to contain integer value (not necessarily a multiple of 4 bytes).
+Primitives will use the extra bytes beyond necessary bytes up to next multiple of 4, so it's mandatory that those extra bytes be correctly set to zero
+At image side, digits are still 8-bits so that fallback code involve only SmallInteger.
+
+Primitives assume that byte ordering (endianness) is allways little endian, because LargeIntegers remain regular byte Objects.
+On (hypothetic) big endian machines, conversion is performed at fetch/store time thru usage of dedicated macro.
+
 v1.5
 
 - no code change at all compared to v1.4
@@ -104,436 +114,54 @@ LargeIntegersPlugin class >> simulatorClass [
 LargeIntegersPlugin class >> version [
 	"Answer the receiver's version info as String."
 
-	^ 'v1.5'
+	^ 'v2.0'
 ]
 
 { #category : #util }
-LargeIntegersPlugin >> anyBitOfBytes: aBytesOop from: start to: stopArg [ 
-	"Argument has to be aBytesOop!"
+LargeIntegersPlugin >> anyBitOfLargeInt: anOop from: start to: stopArg [ 
+	"Argument has to be a Large Integer!"
 	"Tests for any magnitude bits in the interval from start to stopArg."
-	| magnitude rightShift leftShift stop firstByteIx lastByteIx |
+	| magnitude stop firstDigitIx lastDigitIx firstMask lastMask |
+	<var: #digit type: #'unsigned int'>
+	<var: #firstMask type: #'unsigned int'>
+	<var: #lastMask type: #'unsigned int'>
+	<var: #firstDigitIx type: #usqInt>
+	<var: #lastDigitIx type: #usqInt>
+	<var: #ix type: #usqInt>
 	self
-		debugCode: [self msg: 'anyBitOfBytes: aBytesOop from: start to: stopArg'].
+		debugCode: [self msg: 'anyBitOfLargeInt: anOop from: start to: stopArg'].
 	start < 1 | (stopArg < 1)
 		ifTrue: [^ interpreterProxy primitiveFail].
-	magnitude := aBytesOop.
-	stop := stopArg
-				min: (self highBitOfBytes: magnitude).
+	magnitude := anOop.
+	stop := stopArg min: (self highBitOfLargeInt: magnitude).
 	start > stop
 		ifTrue: [^ false].
-	firstByteIx := start - 1 // 8 + 1.
-	lastByteIx := stop - 1 // 8 + 1.
-	rightShift := (start - 1 \\ 8).
-	leftShift := 7 - (stop - 1 \\ 8).
-	firstByteIx = lastByteIx
-		ifTrue: [| digit mask | 
-			mask := (255 << rightShift) bitAnd: (255 >> leftShift).
-			digit := self digitOfBytes: magnitude at: firstByteIx.
-			^ (digit bitAnd: mask)
+	firstDigitIx := start - 1 // 32 + 1.
+	lastDigitIx := stop - 1 // 32 + 1.
+	firstMask := 16rFFFFFFFF asUnsignedLong << (start - 1 bitAnd: 31). "Note asUnsignedLong required to avoid ULLL suffix bug"
+	lastMask := 16rFFFFFFFF >> (31 - (stop - 1 bitAnd: 31)).
+	firstDigitIx = lastDigitIx
+		ifTrue: [| digit | 
+			digit := self unsafeDigitOfLargeInt: magnitude at: firstDigitIx.
+			^ (digit bitAnd: (firstMask bitAnd: lastMask))
 				~= 0].
-	((self digitOfBytes: magnitude at: firstByteIx)
-			>> rightShift)
+	((self unsafeDigitOfLargeInt: magnitude at: firstDigitIx) bitAnd: firstMask)
 			~= 0
 		ifTrue: [^ true].
-	firstByteIx + 1
-		to: lastByteIx - 1
-		do: [:ix | (self digitOfBytes: magnitude at: ix)
+	firstDigitIx + 1
+		to: lastDigitIx - 1
+		do: [:ix | (self unsafeDigitOfLargeInt: magnitude at: ix)
 					~= 0
 				ifTrue: [^ true]].
-	(((self digitOfBytes: magnitude at: lastByteIx)
-			<< leftShift)
-			bitAnd: 255)
+	((self unsafeDigitOfLargeInt: magnitude at: lastDigitIx)  bitAnd: lastMask)
 			~= 0
 		ifTrue: [^ true].
 	^ false
 ]
 
 { #category : #util }
-LargeIntegersPlugin >> byteSizeOfBytes: bytesOop [ 
-	"Precondition: bytesOop is not anInteger and a bytes object."
-	"Function #byteSizeOf: is used by the interpreter, be careful with name
-	clashes..."
-	^ interpreterProxy slotSizeOf: bytesOop
-]
-
-{ #category : #'oop functions' }
-LargeIntegersPlugin >> bytes: aBytesOop Lshift: shiftCount [ 
-	"Attention: this method invalidates all oop's! Only newBytes is valid at return."
-	"Does not normalize."
-	| newBytes highBit newLen oldLen |
-	oldLen := self byteSizeOfBytes: aBytesOop.
-	(highBit := self cBytesHighBit: (interpreterProxy firstIndexableField: aBytesOop)
-				len: oldLen) = 0 ifTrue: [^ 0 asOop: SmallInteger].
-	newLen := highBit + shiftCount + 7 // 8.
-	self remapOop: aBytesOop in: [newBytes := interpreterProxy instantiateClass: (interpreterProxy fetchClassOf: aBytesOop)
-					indexableSize: newLen].
-	self
-		cBytesLshift: shiftCount
-		from: (interpreterProxy firstIndexableField: aBytesOop)
-		len: oldLen
-		to: (interpreterProxy firstIndexableField: newBytes)
-		len: newLen.
-	^ newBytes
-]
-
-{ #category : #'oop functions' }
-LargeIntegersPlugin >> bytes: aBytesOop Rshift: anInteger bytes: b lookfirst: a [ 
-	"Attention: this method invalidates all oop's! Only newBytes is valid at return."
-	"Shift right 8*b+anInteger bits, 0<=n<8.         
-	Discard all digits beyond a, and all zeroes at or below a."
-	"Does not normalize."
-	| x f digit i oldLen newLen newBytes |
-	x := 0.
-	f := 8 - anInteger.
-	i := a.
-	digit := self digitOfBytes: aBytesOop at: i.
-	[((digit >> anInteger)
-		bitOr: x)
-		= 0 and: [i ~= 1]]
-		whileTrue: 
-			[x := digit << f.
-			"Can't exceed 8 bits"
-			i := i - 1.
-			digit := self digitOfBytes: aBytesOop at: i].
-	i <= b ifTrue: [^ interpreterProxy instantiateClass: (interpreterProxy fetchClassOf: aBytesOop)
-			indexableSize: 0"Integer new: 0 neg: self negative"].
-	"All bits lost"
-	oldLen := self byteSizeOfBytes: aBytesOop.
-	newLen := i - b.
-	self remapOop: aBytesOop in: [newBytes := interpreterProxy instantiateClass: (interpreterProxy fetchClassOf: aBytesOop)
-					indexableSize: newLen].
-	"r := Integer new: i - b neg: self negative."
-	"	count := i.       
-	"
-	self
-		cCoreBytesRshiftCount: i
-		n: anInteger
-		f: f
-		bytes: b
-		from: (interpreterProxy firstIndexableField: aBytesOop)
-		len: oldLen
-		to: (interpreterProxy firstIndexableField: newBytes)
-		len: newLen.
-	^ newBytes
-]
-
-{ #category : #'oop util' }
-LargeIntegersPlugin >> bytes: aBytesObject growTo: newLen [ 
-	"Attention: this method invalidates all oop's! Only newBytes is valid at return."
-	"Does not normalize."
-	| newBytes oldLen copyLen |
-	self remapOop: aBytesObject in: [newBytes := interpreterProxy instantiateClass: (interpreterProxy fetchClassOf: aBytesObject)
-					indexableSize: newLen].
-	oldLen := self byteSizeOfBytes: aBytesObject.
-	oldLen < newLen
-		ifTrue: [copyLen := oldLen]
-		ifFalse: [copyLen := newLen].
-	self
-		cBytesCopyFrom: (interpreterProxy firstIndexableField: aBytesObject)
-		to: (interpreterProxy firstIndexableField: newBytes)
-		len: copyLen.
-	^ newBytes
-]
-
-{ #category : #'oop util' }
-LargeIntegersPlugin >> bytesOrInt: oop growTo: len [ 
-	"Attention: this method invalidates all oop's! Only newBytes is valid at return."
-	| newBytes val class |
-	(interpreterProxy isIntegerObject: oop)
-		ifTrue: 
-			[val := interpreterProxy integerValueOf: oop.
-			val < 0
-				ifTrue: [class := interpreterProxy classLargeNegativeInteger]
-				ifFalse: [class := interpreterProxy classLargePositiveInteger].
-			newBytes := interpreterProxy instantiateClass: class indexableSize: len.
-			self cCopyIntVal: val toBytes: newBytes]
-		ifFalse: [newBytes := self bytes: oop growTo: len].
-	^ newBytes
-]
-
-{ #category : #'C core' }
-LargeIntegersPlugin >> cByteOp: opIndex short: pByteShort len: shortLen long: pByteLong len: longLen into: pByteRes [ 
-	"pByteRes len = longLen."
-	| limit |
-	<var: #pByteShort type: 'unsigned char * '>
-	<var: #pByteLong type: 'unsigned char * '>
-	<var: #pByteRes type: 'unsigned char * '>
-	limit := shortLen - 1.
-	opIndex = andOpIndex
-		ifTrue: 
-			[0 to: limit do: [:i | pByteRes at: i put: ((pByteShort at: i)
-						bitAnd: (pByteLong at: i))].
-			limit := longLen - 1.
-			shortLen to: limit do: [:i | pByteRes at: i put: 0].
-			^ 0].
-	opIndex = orOpIndex
-		ifTrue: 
-			[0 to: limit do: [:i | pByteRes at: i put: ((pByteShort at: i)
-						bitOr: (pByteLong at: i))].
-			limit := longLen - 1.
-			shortLen to: limit do: [:i | pByteRes at: i put: (pByteLong at: i)].
-			^ 0].
-	opIndex = xorOpIndex
-		ifTrue: 
-			[0 to: limit do: [:i | pByteRes at: i put: ((pByteShort at: i)
-						bitXor: (pByteLong at: i))].
-			limit := longLen - 1.
-			shortLen to: limit do: [:i | pByteRes at: i put: (pByteLong at: i)].
-			^ 0].
-	^ interpreterProxy primitiveFail
-]
-
-{ #category : #'C core util' }
-LargeIntegersPlugin >> cBytesCopyFrom: pFrom to: pTo len: len [ 
-	| limit |
-	<returnTypeC: 'int'>
-	<var: #pFrom type: 'unsigned char * '>
-	<var: #pTo type: 'unsigned char * '>
-
-	self cCode: '' inSmalltalk: [
-		(interpreterProxy isKindOf: InterpreterSimulator) ifTrue: [
-			"called from InterpreterSimulator"
-				limit := len - 1.
-				0 to: limit do: [:i |
-					interpreterProxy byteAt: pTo + i
-						put: (interpreterProxy byteAt: pFrom + i)
-				].
-			^ 0
-		].
-	].	
-	limit := len - 1.
-	0 to: limit do: [:i | pTo at: i put: (pFrom at: i)].
-	^ 0
-]
-
-{ #category : #'C core util' }
-LargeIntegersPlugin >> cBytesHighBit: pByte len: len [ 
-	"Answer the index (in bits) of the high order bit of the receiver, or zero if the    
-	 receiver is zero. This method is allowed (and needed) for     
-	LargeNegativeIntegers as well, since Squeak's LargeIntegers are     
-	sign/magnitude."
-	| realLength lastDigit |
-	<var: #pByte type: 'unsigned char *  '>
-	realLength := len.
-	[(lastDigit := pByte at: realLength - 1) = 0]
-		whileTrue: [(realLength := realLength - 1) = 0 ifTrue: [^ 0]].
-	^  (self cHighBit: lastDigit) + (8 * (realLength - 1))
-]
-
-{ #category : #'C core' }
-LargeIntegersPlugin >> cBytesLshift: shiftCount from: pFrom len: lenFrom to: pTo len: lenTo [ 
-	"C indexed!"
-	| byteShift bitShift carry limit digit lastIx |
-	<returnTypeC: 'int'>
-	<var: #pTo type: 'unsigned char * '>
-	<var: #pFrom type: 'unsigned char * '>
-	byteShift := shiftCount // 8.
-	bitShift := shiftCount \\ 8.
-	bitShift = 0 ifTrue: ["Fast version for byte-aligned shifts"
-		"C indexed!"
-		^ self
-			cBytesReplace: pTo
-			from: byteShift
-			to: lenTo - 1
-			with: pFrom
-			startingAt: 0].
-		
-	"This implementation use at most 15 bits of carry.
-	bitAnd: 255 is only for simulator, useless in C"
-	carry := 0.
-	limit := byteShift - 1.
-	0 to: limit do: [:i | pTo at: i put: 0].
-	limit := lenTo - byteShift - 2.
-	self sqAssert: limit < lenFrom.
-	0 to: limit do: 
-		[:i | 
-		digit := pFrom at: i.
-		carry := (carry >> 8) bitOr: (digit << bitShift).
-		pTo at: i + byteShift put: (carry bitAnd: 255)].
-	lastIx := limit + 1.
-	lastIx > (lenFrom - 1)
-		ifTrue: [digit := 0]
-		ifFalse: [digit := pFrom at: lastIx].
-	carry := (carry >> 8) bitOr: (digit << bitShift).
-	pTo at: lastIx + byteShift put: (carry "bitAnd: 255").
-	carry := carry >> 8.
-	self sqAssert: carry = 0
-]
-
-{ #category : #'C core util' }
-LargeIntegersPlugin >> cBytesReplace: pTo from: start to: stop with: pFrom startingAt: repStart [ 
-	"C indexed!"
-	<returnTypeC: 'int'>
-	<var: #pTo type: 'unsigned char * '>
-	<var: #pFrom type: 'unsigned char * '>
-	^ self
-		cBytesCopyFrom: pFrom + repStart
-		to: pTo + start
-		len: stop - start + 1
-]
-
-{ #category : #'C core util' }
-LargeIntegersPlugin >> cCopyIntVal: val toBytes: bytes [ 
-	| pByte |
-	<var: #pByte type: 'unsigned char *  '>
-	pByte := interpreterProxy firstIndexableField: bytes.
-	1 to: (self cDigitLengthOfCSI: val)
-		do: [:ix | pByte at: ix - 1 put: (self cDigitOfCSI: val at: ix)]
-]
-
-{ #category : #'C core' }
-LargeIntegersPlugin >> cCoreBytesRshiftCount: count n: n f: f bytes: b from: pFrom len: fromLen to: pTo len: toLen [ 
-	| x digit |
-	<var: #pTo type: 'unsigned char * '>
-	<var: #pFrom type: 'unsigned char * '>
-	self sqAssert: b < fromLen.
-	n = 0 ifTrue: ["Fast version for byte-aligned shifts"
-		"C indexed!"
-		^self
-			cBytesReplace: pTo
-			from: 0
-			to: toLen - 1
-			with: pFrom
-			startingAt: b].
-		
-	"This implementation use at most 16 bits of x"
-	x := (pFrom at: b) << f.
-	self sqAssert: count - 1 < fromLen.
-	b + 1 to: count - 1 do: 
-		[:j | 
-		digit := pFrom at: j.
-		x := (x >> 8) bitOr: (digit << f).
-		pTo at: j - b - 1 put: (x bitAnd: 255)].
-	count = fromLen
-				ifTrue: [digit := 0]
-				ifFalse: [digit := pFrom at: count].
-	x := (x >> 8) bitOr: (digit << f).
-	pTo at: count - b - 1 put: (x "bitAnd: 255")
-]
-
-{ #category : #'C core' }
-LargeIntegersPlugin >> cCoreDigitDivDiv: pDiv len: divLen rem: pRem len: remLen quo: pQuo len: quoLen [ 
-	| dl ql dh dnh j t hi lo r3 l a cond q r1r2 mul |
-	<var: #pDiv type: #'unsigned char *'>
-	<var: #pRem type: #'unsigned char *'>
-	<var: #pQuo type: #'unsigned char *'>
-	dl := divLen - 1.
-	"Last actual byte of data (ST ix)"
-	ql := quoLen.
-	dh := pDiv at: dl - 1.
-	dnh := dl = 1
-			ifTrue: [0]
-			ifFalse: [pDiv at: dl - 2].
-	1 to: ql do: 
-		[:k | 
-		"maintain quo*arg+rem=self"
-		"Estimate rem/div by dividing the leading two bytes of rem by dh."
-		"The estimate is q = qhi*16+qlo, where qhi and qlo are nibbles."
-		"Nibbles are kicked off! We use full 16 bits now, because we are in  
-		the year 2000 ;-) [sr]"
-		j := remLen + 1 - k.
-		"r1 := rem digitAt: j."
-		(pRem at: j - 1) = dh
-			ifTrue: [q := 255]
-			ifFalse: 
-				["Compute q = (r1,r2)//dh, t = (r1,r2)\\dh.                
-				Note that r1,r2 are bytes, not nibbles.                
-				Be careful not to generate intermediate results exceeding 13  
-				            bits."
-				"r2 := (rem digitAt: j - 2)."
-				r1r2 := ((pRem at: j - 1) bitShift: 8) + (pRem at: j - 2).
-				t := r1r2 \\ dh.
-				q := r1r2 // dh.
-				"Next compute (hi,lo) := q*dnh"
-				mul := q * dnh.
-				hi := mul bitShift: -8.
-				lo := mul bitAnd: 255.
-				"Correct overestimate of q.                
-				Max of 2 iterations through loop -- see Knuth vol. 2"
-				j < 3
-					ifTrue: [r3 := 0]
-					ifFalse: [r3 := pRem at: j - 3].
-				
-				[(t < hi
-					or: [t = hi and: [r3 < lo]])
-					ifTrue: 
-						["i.e. (t,r3) < (hi,lo)"
-						q := q - 1.
-						lo := lo - dnh.
-						lo < 0
-							ifTrue: 
-								[hi := hi - 1.
-								lo := lo + 256].
-						cond := hi >= dh]
-					ifFalse: [cond := false].
-				cond]
-					whileTrue: [hi := hi - dh]].
-		"Subtract q*div from rem"
-		l := j - dl.
-		a := 0.
-		1 to: divLen do: 
-			[:i | 
-			hi := (pDiv at: i - 1) * (q bitShift: -8).
-			lo := a + (pRem at: l - 1) - ((pDiv at: i - 1) * (q bitAnd: 255)).
-			pRem at: l - 1 put: (self cCode: [lo] inSmalltalk: [lo bitAnd: 255]).
-			a := (lo signedBitShift: -8) - hi.
-			l := l + 1].
-		a < 0 ifTrue: "Add div back into rem, decrease q by 1"
-			[q := q - 1.
-			l := j - dl.
-			a := 0.
-			1 to: divLen do: 
-				[:i | 
-				a := (a bitShift: -8) + (pRem at: l - 1) + (pDiv at: i - 1).
-				pRem at: l - 1 put: (self cCode: [a] inSmalltalk: [a bitAnd: 255]).
-				l := l + 1]].
-		pQuo at: quoLen - k put: q]
-]
-
-{ #category : #'C core' }
-LargeIntegersPlugin >> cDigitAdd: pByteShort len: shortLen with: pByteLong len: longLen into: pByteRes [ 
-	"pByteRes len = longLen; returns over.."
-	| accum limit |
-	<returnTypeC: 'unsigned char'>
-	<var: #pByteShort type: 'unsigned char * '>
-	<var: #pByteLong type: 'unsigned char * '>
-	<var: #pByteRes type: 'unsigned char * '>
-	accum := 0.
-	limit := shortLen - 1.
-	0 to: limit do: 
-		[:i | 
-		accum := (accum bitShift: -8)
-					+ (pByteShort at: i) + (pByteLong at: i).
-		pByteRes at: i put: (accum bitAnd: 255)].
-	limit := longLen - 1.
-	shortLen to: limit do: 
-		[:i | 
-		accum := (accum bitShift: -8)
-					+ (pByteLong at: i).
-		pByteRes at: i put: (accum bitAnd: 255)].
-	^ accum bitShift: -8
-]
-
-{ #category : #'C core' }
-LargeIntegersPlugin >> cDigitCompare: pFirst with: pSecond len: len [ 
-	"Precondition: pFirst len = pSecond len."
-	| secondDigit ix firstDigit |
-	<var: #pFirst type: 'unsigned char * '>
-	<var: #pSecond type: 'unsigned char * '>
-	ix := len - 1.
-	[ix >= 0]
-		whileTrue: 
-			[(secondDigit := pSecond at: ix) ~= (firstDigit := pFirst at: ix)
-				ifTrue: [secondDigit < firstDigit
-						ifTrue: [^ 1]
-						ifFalse: [^ -1]].
-			ix := ix - 1].
-	^ 0
-]
-
-{ #category : #'C core util' }
-LargeIntegersPlugin >> cDigitLengthOfCSI: csi [ 
-	"Answer the number of bytes required to represent the value of a CSmallInteger."
+LargeIntegersPlugin >> byteSizeOfCSI: csi [ 
+	"Answer the number of bytes required to represent the value of a C-SmallInteger."
 	csi >= 0 ifTrue:
 		[csi < 256 ifTrue:
 			[^1].
@@ -575,217 +203,633 @@ LargeIntegersPlugin >> cDigitLengthOfCSI: csi [
 			^8]
 ]
 
+{ #category : #util }
+LargeIntegersPlugin >> byteSizeOfLargeInt: bytesOop [ 
+	"Answer the number of bytes required to represent a LargeInteger.
+	Precondition: bytesOop is not a small integer."
+	<inline: #always>
+	^ interpreterProxy slotSizeOf: bytesOop
+]
+
+{ #category : #'C core util' }
+LargeIntegersPlugin >> byteSwapped32IfBigEndian: anInteger [
+	"This is only for simulation purposes"
+	<doNotGenerate>
+	^interpreterProxy byteSwapped32IfBigEndian: anInteger
+]
+
+{ #category : #'C core util' }
+LargeIntegersPlugin >> byteSwapped64IfBigEndian: anInteger [
+	"This is only for simulation purposes"
+	<doNotGenerate>
+	^interpreterProxy byteSwapped64IfBigEndian: anInteger
+]
+
 { #category : #'C core' }
-LargeIntegersPlugin >> cDigitMultiply: pByteShort len: shortLen with: pByteLong len: longLen into: pByteRes [ 
-	| limitLong digit k carry limitShort ab |
-	<returnTypeC: 'unsigned char'>
-	<var: #pByteShort type: 'unsigned char * '>
-	<var: #pByteLong type: 'unsigned char * '>
-	<var: #pByteRes type: 'unsigned char * '>
-	(shortLen = 1 and: [(pByteShort at: 0)
-			= 0])
-		ifTrue: [^ 0].
-	(longLen = 1 and: [(pByteLong at: 0)
-			= 0])
-		ifTrue: [^ 0].
-	"prod starts out all zero"
-	limitShort := shortLen - 1.
-	0 to: limitShort do: [:i | (digit := pByteShort at: i) ~= 0
-			ifTrue: 
-				[k := i.
-				carry := 0.
-				"Loop invariant: 0<=carry<=0377, k=i+j-1 (ST)"
-				"-> Loop invariant: 0<=carry<=0377, k=i+j (C) (?)"
-				limitLong := longLen - 1.
-				0 to: limitLong do: 
-					[:j | 
-					ab := (pByteLong at: j)
-								* digit + carry + (pByteRes at: k).
-					carry := ab bitShift: -8.
-					pByteRes at: k put: (ab bitAnd: 255).
-					k := k + 1].
-				pByteRes at: k put: carry]].
+LargeIntegersPlugin >> cDigitAdd: pWordShort len: shortLen with: pWordLong len: longLen into: pWordRes [ 
+	"pWordRes len = longLen; returns over.."
+	| accum |
+	<returnTypeC: #'unsigned int'>
+	<var: #pWordShort type: #'unsigned int *'>
+	<var: #pWordLong type: #'unsigned int *'>
+	<var: #pWordRes type: #'unsigned int *'>
+	<var: #accum type: #'unsigned long long'>
+	accum := 0.
+	0 to: shortLen - 1 do: 
+		[:i | 
+		accum := (accum >> 32)
+					+ (self cDigitOf: pWordShort at: i)
+					+ (self cDigitOf: pWordLong at: i).
+		self cDigitOf: pWordRes at: i put: (accum bitAnd: 16rFFFFFFFF)].
+	shortLen to: longLen - 1 do: 
+		[:i | 
+		accum := (accum >> 32)
+					+ (self cDigitOf: pWordLong at: i).
+		self cDigitOf: pWordRes at: i put: (accum bitAnd: 16rFFFFFFFF)].
+	^ accum >> 32
+]
+
+{ #category : #'C core' }
+LargeIntegersPlugin >> cDigitCompare: pFirst with: pSecond len: len [ 
+	"Precondition: pFirst len = pSecond len."
+	| secondDigit ix firstDigit |
+	<var: #pFirst type: #'unsigned int *'>
+	<var: #pSecond type: #'unsigned int *'>
+	<var: #firstDigit type: #'unsigned int'>
+	<var: #secondDigit type: #'unsigned int'>
+	ix := len - 1.
+	[ix >= 0]
+		whileTrue: 
+			[(secondDigit := pSecond at: ix) ~= (firstDigit := pFirst at: ix)
+				ifTrue: [(self byteSwapped32IfBigEndian: secondDigit) < (self byteSwapped32IfBigEndian: firstDigit)
+						ifTrue: [^ 1]
+						ifFalse: [^ -1]].
+			ix := ix - 1].
 	^ 0
 ]
 
 { #category : #'C core util' }
-LargeIntegersPlugin >> cDigitOfCSI: csi at: ix [ 
-	"Answer the value of an indexable field in the receiver.              
-	LargePositiveInteger uses bytes of base two number, and each is a       
-	      'digit' base 256."
-	"ST indexed!"
-	^self
-		cCode: [(csi < 0
-					ifTrue: [0 - csi]
-					ifFalse: [csi]) >> (ix - 1 * 8) bitAnd: 255]
-		inSmalltalk: [csi digitAt: ix]
+LargeIntegersPlugin >> cDigitCopyFrom: pFrom to: pTo len: len [ 
+	<var: #pFrom type: #'unsigned int *'>
+	<var: #pTo type: #'unsigned int *'>
+
+	self cCode: '' inSmalltalk: [
+		(interpreterProxy isKindOf: InterpreterSimulator) ifTrue: [
+			"called from InterpreterSimulator"
+				0 to: (len - 1) * 4 do: [:i |
+					interpreterProxy byteAt: pTo + i
+						put: (interpreterProxy byteAt: pFrom + i)
+				].
+			^ 0
+		].
+	].	
+	"Note: don't care about endianness here, copy operation is endian neutral"
+	0 to: len - 1 do: [:i | pTo at: i put: (pFrom at: i)].
+	^ 0
 ]
 
 { #category : #'C core' }
-LargeIntegersPlugin >> cDigitSub: pByteSmall len: smallLen with: pByteLarge len: largeLen into: pByteRes [
-	| z |
-	<var: #pByteSmall type: #'unsigned char *'>
-	<var: #pByteLarge type: #'unsigned char *'>
-	<var: #pByteRes type: #'unsigned char *'>
-
-	z := 0. "Loop invariant is -1<=z<=1"
-	0 to: smallLen - 1 do: 
-		[:i | 
-		z := z + (pByteLarge at: i) - (pByteSmall at: i).
-		pByteRes at: i put: (self cCode: [z] inSmalltalk: [z bitAnd: 255]).
-		z := z signedBitShift: -8].
-	smallLen to: largeLen - 1 do: 
-		[:i | 
-		z := z + (pByteLarge at: i) .
-		pByteRes at: i put: (self cCode: [z] inSmalltalk: [z bitAnd: 255]).
-		z := z signedBitShift: -8].
-
+LargeIntegersPlugin >> cDigitDiv: pDiv len: divLen rem: pRem len: remLen quo: pQuo len: quoLen [ 
+	| dl ql dh dnh j t hi lo r3 l a b cond q r1r2 mul |
+	<var: #pDiv type: #'unsigned int *'>
+	<var: #pRem type: #'unsigned int *'>
+	<var: #pQuo type: #'unsigned int *'>
+	<var: #dh type: #'unsigned int'>
+	<var: #dnh type: #'unsigned int'>
+	<var: #r3 type: #'unsigned int'>
+	<var: #q type: #'unsigned long long'>
+	<var: #a type: #'unsigned long long'>
+	<var: #b type: #'unsigned long long'>
+	<var: #t type: #'unsigned long long'>
+	<var: #mul type: #'unsigned long long'>
+	<var: #hi type: #'unsigned long long'>
+	<var: #lo type: #'unsigned long long'>
+	<var: #r1r2 type: #'unsigned long long'>
+	dl := divLen - 1.
+	"Last actual byte of data (ST ix)"
+	ql := quoLen.
+	dh := self cDigitOf: pDiv at: dl - 1.
+	dl = 1
+		ifTrue: [dnh := 0]
+		ifFalse: [dnh := self cDigitOf: pDiv at: dl - 2].
+	1 to: ql do: 
+		[:k | 
+		"maintain quo*arg+rem=self"
+		"Estimate rem/div by dividing the leading two unint32 of rem by dh."
+		"The estimate is q = qhi*16r100000000+qlo, where qhi and qlo are uint32."
+		j := remLen + 1 - k.
+		"r1 := rem digitAt: j."
+		(self cDigitOf: pRem at: j - 1)
+			= dh
+			ifTrue: [q := 16rFFFFFFFF]
+			ifFalse: 
+				["Compute q = (r1,r2)//dh, t = (r1,r2)\\dh.
+				Note that r1,r2 are uint64, not uint32."
+				"r2 := (rem digitAt: j - 2)."
+				r1r2 := self cDigitOf: pRem at: j - 1.
+				r1r2 := (r1r2 << 32) + (self cDigitOf: pRem at: j - 2).
+				t := r1r2 \\ dh.
+				q := r1r2 // dh.
+				"Next compute (hi,lo) := q*dnh"
+				mul := q * dnh.
+				hi := mul >> 32.
+				lo := mul bitAnd: 16rFFFFFFFF.
+				"Correct overestimate of q.                
+				Max of 2 iterations through loop -- see Knuth vol. 2"
+				j < 3
+					ifTrue: [r3 := 0]
+					ifFalse: [r3 := self cDigitOf: pRem at: j - 3].
+				
+				[(t < hi
+					or: [t = hi and: [r3 < lo]])
+					ifTrue: 
+						["i.e. (t,r3) < (hi,lo)"
+						q := q - 1.
+						hi = 0 "since hi is unsigned we must have this guard"
+							ifTrue: [cond := false]
+							ifFalse:
+								[lo < dnh
+									ifTrue: 
+										[hi := hi - 1.
+										lo := lo + 16r100000000 - dnh]
+									ifFalse:
+										[lo := lo - dnh].
+								cond := hi >= dh]]
+					ifFalse: [cond := false].
+				cond]
+					whileTrue: [hi := hi - dh]].
+		"Subtract q*div from rem"
+		l := j - dl.
+		a := 0.
+		1 to: divLen do: 
+			[:i | 
+			hi := (self cDigitOf: pDiv at: i - 1) * (q >> 32).
+			lo := (self cDigitOf: pDiv at: i - 1) * (q bitAnd: 16rFFFFFFFF).
+			b := (self cDigitOf: pRem at: l - 1) - a - (lo bitAnd: 16rFFFFFFFF).
+			self cDigitOf: pRem at: l - 1 put: (b bitAnd: 16rFFFFFFFF).
+			"simulate arithmetic shift (preserving sign of b)"
+			b := b >> 32 bitOr: (0 - (b >> 63) bitAnd: 16rFFFFFFFF00000000).
+			a := hi + (lo >> 32) - b.
+			l := l + 1].
+		a > 0
+			ifTrue: 
+				["Add div back into rem, decrease q by 1"
+				q := q - 1.
+				l := j - dl.
+				a := 0.
+				1 to: divLen do: 
+					[:i | 
+					a := (a >> 32)
+								+ (self cDigitOf: pRem at: l - 1) + (self cDigitOf: pDiv at: i - 1).
+					self cDigitOf: pRem at: l - 1 put: (a bitAnd: 16rFFFFFFFF).
+					l := l + 1]].
+		self cDigitOf: pQuo at: quoLen - k put: (self cCoerceSimple: q to: #'unsigned int')].
+	^0
 ]
 
 { #category : #'C core util' }
-LargeIntegersPlugin >> cHighBit: uint [ 
+LargeIntegersPlugin >> cDigitHighBit: pUint32 len: len [ 
+	"Answer the index (in bits) of the high order bit of the receiver, or zero if the    
+	 receiver is zero. This method is allowed (and needed) for     
+	LargeNegativeIntegers as well, since Squeak's LargeIntegers are sign/magnitude.
+	Work with 32 bits digits."
+	| realLength lastDigit |
+	<var: #pUint32 type: #'unsigned int *'>
+	<var: #lastDigit type: #'unsigned int'>
+	realLength := len.
+	[realLength = 0 ifTrue: [^0].
+	(lastDigit := self cDigitOf: pUint32 at: (realLength := realLength - 1)) = 0]
+		whileTrue.
+	^  (self cHighBit32: lastDigit) + (32 * realLength)
+]
+
+{ #category : #'C core' }
+LargeIntegersPlugin >> cDigitLshift: shiftCount from: pFrom len: lenFrom to: pTo len: lenTo [ 
+	"C indexed!"
+	| digitShift bitShift carry limit digit rshift |
+	<var: #pTo type: #'unsigned int *'>
+	<var: #pFrom type: #'unsigned int *'>
+	<var: #carry type: #'unsigned int'>
+	<var: #digit type: #'unsigned int'>
+	digitShift := shiftCount // 32.
+	bitShift := shiftCount \\ 32.
+	
+	limit := digitShift - 1.
+	"Note: 0 is endian neutral, use direct access"
+	0 to: limit do: [:i | pTo at: i put: 0].
+	
+	bitShift = 0 ifTrue: ["Fast version for digit-aligned shifts"
+		"C indexed!"
+		^ self
+			cDigitReplace: pTo
+			from: digitShift
+			to: lenTo - 1
+			with: pFrom
+			startingAt: 0].
+		
+	"This implementation use at most 31 bits of carry.
+	bitAnd: 16rFFFFFFFF is only for simulator, useless in C"
+	rshift := 32 - bitShift.
+	carry := 0.
+	limit := lenFrom - 1.
+	0 to: limit do: 
+		[:i | 
+		digit := self cDigitOf: pFrom at: i.
+		self cDigitOf: pTo at: i + digitShift put: ((carry bitOr: digit << bitShift) bitAnd: 16rFFFFFFFF).
+		carry := digit >> rshift].
+	carry = 0 ifFalse: [self cDigitOf: pTo at: lenTo - 1 put: carry].
+	^0
+]
+
+{ #category : #'C core' }
+LargeIntegersPlugin >> cDigitMontgomery: pFirst
+				len: firstLen
+				times: pSecond
+				len: secondLen
+				modulo: pThird
+				len: thirdLen
+				mInvModB: mInv
+				into: pRes [
+				
+	| u limit1 limit2 limit3 accum accum2 accum3 lastDigit |
+	<var: #pFirst type: #'unsigned int *'>
+	<var: #pSecond type: #'unsigned int *'>
+	<var: #pThird type: #'unsigned int *'>
+	<var: #mInv type: #'unsigned int'>
+	<var: #pRes type: #'unsigned int *'>
+	<var: #accum type: #'unsigned long long'>
+	<var: #accum2 type: #'unsigned long long'>
+	<var: #accum3 type: #'unsigned long long'>
+	<var: #u type: #'unsigned long long '>
+	<var: #lastDigit type: #'unsigned int '>
+	limit1 := firstLen - 1.
+	limit2 := secondLen - 1.
+	limit3 := thirdLen - 1.
+	lastDigit := 0.
+	0 to: limit1 do: 
+		[:i | 
+		accum3 := self cDigitOf: pFirst at: i.
+		accum3 := accum3*(self cDigitOf: pSecond at: 0) + (self cDigitOf: pRes at: 0).
+		u := accum3 * mInv bitAnd: 16rFFFFFFFF.
+		accum2 :=  u * (self cDigitOf: pThird at: 0).
+		accum := (accum2 bitAnd: 16rFFFFFFFF) + (accum3 bitAnd: 16rFFFFFFFF).
+		accum := (accum >> 32) + (accum2 >> 32) + (accum3 >> 32).
+		1 to: limit2 do: [:k |
+			accum3 := self cDigitOf: pFirst at: i.
+			accum3 := accum3*(self cDigitOf: pSecond at: k) + (self cDigitOf: pRes at: k).
+			accum2 :=  u * (self cDigitOf: pThird at: k).
+			accum := accum + (accum2 bitAnd: 16rFFFFFFFF) + (accum3 bitAnd: 16rFFFFFFFF).
+			self cDigitOf: pRes at: k-1 put: (accum bitAnd: 16rFFFFFFFF).
+			accum := (accum >> 32) + (accum2 >> 32) + (accum3 >> 32)].
+		secondLen to: limit3 do: [:k |
+			accum2 :=  u * (self cDigitOf: pThird at: k).
+			accum := accum + (self cDigitOf: pRes at: k) + (accum2 bitAnd: 16rFFFFFFFF).
+			self cDigitOf: pRes at: k-1 put: (accum bitAnd: 16rFFFFFFFF).
+			accum := (accum >> 32) + (accum2 >> 32)].
+		accum := accum + lastDigit.
+		self cDigitOf: pRes at: limit3 put: (accum bitAnd: 16rFFFFFFFF).
+		lastDigit := accum >> 32].
+	firstLen to: limit3 do: 
+		[:i | 
+		accum := (self cDigitOf: pRes at: 0).
+		u := accum * mInv bitAnd: 16rFFFFFFFF.
+		accum := accum + (u * (self cDigitOf: pThird at: 0)).
+		accum := accum >> 32.
+		1 to: limit3 do: [:k |
+			accum2 :=  u * (self cDigitOf: pThird at: k).
+			accum := accum + (self cDigitOf: pRes at: k) + (accum2 bitAnd: 16rFFFFFFFF).
+			self cDigitOf: pRes at: k-1 put: (accum bitAnd: 16rFFFFFFFF).
+			accum := (accum >> 32) + (accum2 >> 32)].
+		accum := accum + lastDigit.
+		self cDigitOf: pRes at: limit3 put: (accum bitAnd: 16rFFFFFFFF).
+		lastDigit := accum >> 32].
+	(lastDigit = 0 and: [(self cDigitCompare: pThird with: pRes len: thirdLen) = 1]) ifFalse: [
+		"self cDigitSub: pThird len: thirdLen with: pRes len: thirdLen into: pRes"
+		accum := 0.
+		0 to: limit3 do: 
+			[:i | 
+			accum := accum + (self cDigitOf: pRes at: i) - (self cDigitOf: pThird at: i).
+			self cDigitOf: pRes at: i put: (accum bitAnd: 16rFFFFFFFF).
+			accum := 0 - (accum >> 63)]].
+	^0
+]
+
+{ #category : #'C core' }
+LargeIntegersPlugin >> cDigitMultiply: pWordShort len: shortLen with: pWordLong len: longLen into: pWordRes len: resLen [
+	| limitLong digit k carry limitShort ab |
+	<returnTypeC: #'unsigned int'>
+	<var: #pWordShort type: #'unsigned int *'>
+	<var: #pWordLong type: #'unsigned int *'>
+	<var: #pWordRes type: #'unsigned int *'>
+	<var: #digit type: #'unsigned int'>
+	<var: #carry type: #'unsigned int'>
+	<var: #ab type: #'unsigned long long'>
+	(shortLen = 1 and: [(pWordShort at: 0) = 0])
+		ifTrue: [^ 0].
+	(longLen = 1 and: [(pWordLong at: 0) = 0])
+		ifTrue: [^ 0].
+	"prod starts out all zero"
+	limitShort := shortLen - 1.
+	limitLong := longLen - 1.
+	0 to: limitShort do: [:i | (digit := self cDigitOf: pWordShort at: i) ~= 0
+			ifTrue: 
+				[k := i.
+				carry := 0.
+				"Loop invariant: 0<=carry<=16rFFFFFFFF, k=i+j-1 (ST)"
+				"-> Loop invariant: 0<=carry<=16rFFFFFFFF, k=i+j (C) (?)"
+				0 to: limitLong do: 
+					[:j | 
+					ab := (self cDigitOf: pWordLong at: j).
+					ab := ab * digit + carry + (self cDigitOf: pWordRes at: k).
+					carry := ab >> 32.
+					self cDigitOf: pWordRes at: k put: (ab bitAnd: 16rFFFFFFFF).
+					k := k + 1].
+				k < resLen ifTrue: [self cDigitOf: pWordRes at: k put: carry]]].
+	^ 0
+]
+
+{ #category : #'C core util' }
+LargeIntegersPlugin >> cDigitOf: cPointer at: zeroBasedDigitIndex [
+	<inline: true>
+	<returnTypeC: #'unsigned int'>
+	<var: 'cPointer' type: #'unsigned int *'>
+	^self byteSwapped32IfBigEndian: ((self cCode: [cPointer] inSmalltalk: [interpreterProxy cCoerce: cPointer to: #'unsigned int *']) at: zeroBasedDigitIndex)
+]
+
+{ #category : #'C core util' }
+LargeIntegersPlugin >> cDigitOf: cPointer at: zeroBasedDigitIndex put: aValue [
+	<inline: true>
+	<returnTypeC: #'unsigned int'>
+	<var: 'cPointer' type: #'unsigned int *'>
+	<var: 'aValue' type: #'unsigned int'>
+	^(self cCode: [cPointer] inSmalltalk: [interpreterProxy cCoerce: cPointer to: #'unsigned int *'])
+		at: zeroBasedDigitIndex
+		put: (self byteSwapped32IfBigEndian: aValue)
+]
+
+{ #category : #'C core' }
+LargeIntegersPlugin >> cDigitOp: opIndex short: pWordShort len: shortLen long: pWordLong len: longLen into: pWordRes [ 
+	"pWordRes len = longLen.
+	NOTE: we don't bother with endianness here, those bit opes are endian-neutral"
+	| limit |
+	<var: #pWordShort type: #'unsigned int *'>
+	<var: #pWordLong type: #'unsigned int *'>
+	<var: #pWordRes type: #'unsigned int *'>
+	limit := shortLen - 1.
+	opIndex = andOpIndex
+		ifTrue: 
+			[0 to: limit do: [:i | pWordRes at: i put: ((pWordShort at: i)
+						bitAnd: (pWordLong at: i))].
+			limit := longLen - 1.
+			shortLen to: limit do: [:i | pWordRes at: i put: 0].
+			^ 0].
+	opIndex = orOpIndex
+		ifTrue: 
+			[0 to: limit do: [:i | pWordRes at: i put: ((pWordShort at: i)
+						bitOr: (pWordLong at: i))].
+			limit := longLen - 1.
+			shortLen to: limit do: [:i | pWordRes at: i put: (pWordLong at: i)].
+			^ 0].
+	opIndex = xorOpIndex
+		ifTrue: 
+			[0 to: limit do: [:i | pWordRes at: i put: ((pWordShort at: i)
+						bitXor: (pWordLong at: i))].
+			limit := longLen - 1.
+			shortLen to: limit do: [:i | pWordRes at: i put: (pWordLong at: i)].
+			^ 0].
+	^ interpreterProxy primitiveFail
+]
+
+{ #category : #'C core util' }
+LargeIntegersPlugin >> cDigitReplace: pTo from: start to: stop with: pFrom startingAt: repStart [ 
+	"C indexed!"
+	<var: #pTo type: #'unsigned int *'>
+	<var: #pFrom type: #'unsigned int *'>
+	^ self
+		cDigitCopyFrom: pFrom + repStart
+		to: pTo + start
+		len: stop - start + 1
+]
+
+{ #category : #'C core' }
+LargeIntegersPlugin >> cDigitRshift: shiftCount from: pFrom len: lenFrom to: pTo len: lenTo [ 
+	| carry digit digitShift bitShift leftShift limit start |
+	<var: #pTo type: #'unsigned int *'>
+	<var: #pFrom type: #'unsigned int *'>
+	<var: #carry type: #'unsigned int'>
+	<var: #digit type: #'unsigned int'>
+	digitShift := shiftCount // 32.
+	bitShift := shiftCount \\ 32.
+	bitShift = 0 ifTrue: ["Fast version for digit-aligned shifts"
+		"C indexed!"
+		^self
+			cDigitReplace: pTo
+			from: 0
+			to: lenTo - 1
+			with: pFrom
+			startingAt: digitShift].
+		
+	"This implementation use at most 31 bits of carry.
+	bitAnd: 16rFFFFFFFF is only for simulator, useless in C"
+	leftShift := 32 - bitShift.
+	carry := (self cDigitOf: pFrom at: digitShift) >> bitShift.
+	start := digitShift + 1.
+	limit := lenFrom - 1.
+	start to: limit do: 
+		[:j | 
+		digit := self cDigitOf: pFrom at: j.
+		self cDigitOf: pTo at: j - start put: ((carry bitOr: digit << leftShift) bitAnd: 16rFFFFFFFF).
+		carry := digit >> bitShift].
+	carry = 0 ifFalse: [self cDigitOf: pTo at: lenTo - 1 put: carry].
+	^0
+]
+
+{ #category : #'C core' }
+LargeIntegersPlugin >> cDigitSub: pWordSmall
+		len: smallLen
+		with: pWordLarge
+		len: largeLen
+		into: pWordRes [
+	| z |
+	<var: #pWordSmall type: #'unsigned int *'>
+	<var: #pWordLarge type: #'unsigned int *'>
+	<var: #pWordRes type: #'unsigned int *'>
+	<var: #z type: #'unsigned long long'>
+
+	z := 0.
+	0 to: smallLen - 1 do: 
+		[:i | 
+		z := z + (self cDigitOf: pWordLarge at: i) - (self cDigitOf: pWordSmall at: i).
+		self cDigitOf: pWordRes at: i put: (z bitAnd: 16rFFFFFFFF).
+		z := 0 - (z >> 63)].
+	smallLen to: largeLen - 1 do: 
+		[:i | 
+		z := z + (self cDigitOf: pWordLarge at: i) .
+		self cDigitOf: pWordRes at: i put: (z bitAnd: 16rFFFFFFFF).
+		z := 0 - (z >> 63)].
+	^0
+]
+
+{ #category : #'C core util' }
+LargeIntegersPlugin >> cHighBit32: anUnsignedInt32 [ 
 	"Answer the index of the high order bit of the argument, or zero if the  
 	argument is zero."
-	"For 64 bit uints there could be added a 32-shift."
 	| shifted bitNo |
 
-	<var: #shifted type: 'unsigned int  '>
-	shifted := uint.
+	<var: #anUnsignedInt32 type: #'unsigned int'>
+	<var: #shifted type: #'unsigned int'>
+	shifted := anUnsignedInt32.
 	bitNo := 0.
 	shifted < (1 << 16)
-		ifFalse: [shifted := shifted bitShift: -16.
+		ifFalse: [shifted := shifted >> 16.
 			bitNo := bitNo + 16].
 	shifted < (1 << 8)
-		ifFalse: [shifted := shifted bitShift: -8.
+		ifFalse: [shifted := shifted >> 8.
 			bitNo := bitNo + 8].
 	shifted < (1 << 4)
-		ifFalse: [shifted := shifted bitShift: -4.
+		ifFalse: [shifted := shifted >> 4.
 			bitNo := bitNo + 4].
 	shifted < (1 << 2)
-		ifFalse: [shifted := shifted bitShift: -2.
+		ifFalse: [shifted := shifted >> 2.
 			bitNo := bitNo + 2].
 	shifted < (1 << 1)
-		ifFalse: [shifted := shifted bitShift: -1.
+		ifFalse: [shifted := shifted >> 1.
 			bitNo := bitNo + 1].
 	"shifted 0 or 1 now"
 	^ bitNo + shifted
 ]
 
-{ #category : #'C core' }
-LargeIntegersPlugin >> cdigitMontgomery: pBytesFirst
-				len: firstLen
-				times: pBytesSecond
-				len: secondLen
-				modulo: pBytesThird
-				len: thirdLen
-				mInvModB: mInv
-				into: pBytesRes [
-				
-	| u limit1 limit2 limit3 accum lastByte |
-	<var: #pBytesFirst type: #'unsigned char *'>
-	<var: #pBytesSecond type: #'unsigned char *'>
-	<var: #pBytesThird type: #'unsigned char *'>
-	<var: #pBytesRes type: #'unsigned char *'>
-	<var: #accum type: #usqInt>
-	<var: #u type: #'unsigned char'>
-	<var: #lastByte type: #'unsigned char'>
-	limit1 := firstLen - 1.
-	limit2 := secondLen - 1.
-	limit3 := thirdLen - 1.
-	lastByte := 0.
-	0 to: limit1 do: 
-		[:i | 
-		accum := (pBytesRes at: 0) + ((pBytesFirst at: i)*(pBytesSecond at: 0)).
-		u := accum * mInv bitAnd: 255.
-		accum :=  accum + (u * (pBytesThird at: 0)).
-		1 to: limit2 do: [:k |
-			accum := (accum >> 8) + (pBytesRes at: k) + ((pBytesFirst at: i)*(pBytesSecond at: k)) + (u * (pBytesThird at: k)).
-			pBytesRes at: k-1 put: (accum bitAnd: 255)].
-		secondLen to: limit3 do: [:k |
-			accum := (accum >> 8) + (pBytesRes at: k) + (u * (pBytesThird at: k)).
-			pBytesRes at: k-1 put: (accum bitAnd: 255)].
-		accum := (accum >> 8) + lastByte.
-		pBytesRes at: limit3 put: (accum bitAnd: 255).
-		lastByte := accum >> 8].
-	firstLen to: limit3 do: 
-		[:i | 
-		accum := (pBytesRes at: 0).
-		u := accum * mInv bitAnd: 255.
-		accum := accum + (u * (pBytesThird at: 0)).
-		1 to: limit3 do: [:k |
-			accum := (accum >> 8) + (pBytesRes at: k) + (u * (pBytesThird at: k)).
-			pBytesRes at: k-1 put: (accum bitAnd: 255)].
-		accum := (accum >> 8) + lastByte.
-		pBytesRes at: limit3 put: (accum bitAnd: 255).
-		lastByte := accum >> 8].
-	(lastByte = 0 and: [(self cDigitCompare: pBytesThird with: pBytesRes len: thirdLen) = 1]) ifFalse: [
-		"self cDigitSub: pBytesThird len: thirdLen with: pBytesRes len: thirdLen into: pBytesRes"
-		accum := 0.
-		0 to: limit3 do: 
-			[:i | 
-			accum := accum + (pBytesRes at: i) - (pBytesThird at: i).
-			pBytesRes at: i put: (self cCode: [accum] inSmalltalk: [accum bitAnd: 255]).
-			accum := accum signedBitShift: -8]].
-]
-
 { #category : #'oop util' }
 LargeIntegersPlugin >> createLargeFromSmallInteger: anOop [ 
 	"anOop has to be a SmallInteger!"
-	| val class size res pByte byte |
-	<var: #pByte type: 'unsigned char *  '>
+	| val res pDigit byteSize digitSize |
+	<var: #pDigit type: #'unsigned int *'>
 	val := interpreterProxy integerValueOf: anOop.
-	val < 0
-		ifTrue: [class := interpreterProxy classLargeNegativeInteger]
-		ifFalse: [class := interpreterProxy classLargePositiveInteger].
-	size := self cDigitLengthOfCSI: val.
-	res := interpreterProxy instantiateClass: class indexableSize: size.
-	pByte := interpreterProxy firstIndexableField: res.
-	1 to: size do: [:ix |
-		byte := self cDigitOfCSI: val at: ix.
-		pByte at: ix - 1 put: byte].
-	^res
+	byteSize := self byteSizeOfCSI: val.
+	res := self createLargeIntegerNeg: val < 0 byteLength: byteSize.
+	pDigit := self pointerToFirstDigitOfLargeInt: res.
+	digitSize := byteSize + 3 // 4.
+	1 to: digitSize do: [:ix | self cDigitOf: pDigit at: ix - 1 put: (self digitOfCSI: val at: ix)].
+	^ res
+]
+
+{ #category : #util }
+LargeIntegersPlugin >> createLargeIntegerNeg: neg byteLength: byteLength [
+	<inline: #always>
+	^interpreterProxy
+		instantiateClass: (neg
+				ifTrue: [interpreterProxy classLargeNegativeInteger]
+				ifFalse: [interpreterProxy classLargePositiveInteger])
+		indexableSize: byteLength
+]
+
+{ #category : #util }
+LargeIntegersPlugin >> createLargeIntegerNeg: neg digitLength: digitLength [
+	<inline: #always>
+	^self createLargeIntegerNeg: neg byteLength: digitLength * 4
+]
+
+{ #category : #'oop functions' }
+LargeIntegersPlugin >> digit: anOop Lshift: shiftCount [ 
+	"Attention: this method invalidates all oop's! Only newOop is valid at return."
+	"Does not normalize."
+	| newOop highBit newDigitLen newByteLen oldDigitLen |
+	oldDigitLen := self digitSizeOfLargeInt: anOop.
+	(highBit := self cDigitHighBit: (self pointerToFirstDigitOfLargeInt: anOop)
+				len: oldDigitLen) = 0 ifTrue: [^  interpreterProxy instantiateClass: (interpreterProxy fetchClassOf: anOop) indexableSize: 1].
+	newByteLen := highBit + shiftCount + 7 // 8.
+	self remapOop: anOop in:
+		[newOop := interpreterProxy
+						instantiateClass: (interpreterProxy fetchClassOf: anOop)
+						indexableSize: newByteLen].
+	newOop ifNil:
+		[interpreterProxy primitiveFailFor: PrimErrNoMemory.
+		 ^nil].
+	newDigitLen := newByteLen + 3 // 4.
+	self
+		cDigitLshift: shiftCount
+		from: (self pointerToFirstDigitOfLargeInt: anOop)
+		len: oldDigitLen
+		to: (self pointerToFirstDigitOfLargeInt: newOop)
+		len: newDigitLen.
+	^ newOop
+]
+
+{ #category : #'oop functions' }
+LargeIntegersPlugin >> digit: anOop Rshift: shiftCount lookfirst: a [ 
+	"Attention: this method invalidates all oop's! Only newBytes is valid at return."
+	"Shift right 32*digitShift+bitShift bits, 0<=bitShift<32.         
+	Discard all digits beyond a, and all zeroes at or below a."
+	"Does not normalize."
+	| newByteLen newOop oldBitLen newBitLen oldDigitLen newDigitLen |
+	oldBitLen := self cDigitHighBit: (self pointerToFirstDigitOfLargeInt: anOop) len: a.
+	oldDigitLen := oldBitLen + 31 // 32.
+	newBitLen := oldBitLen - shiftCount.
+	newBitLen <= 0 ifTrue: ["All bits lost"
+		^ interpreterProxy
+			instantiateClass: (interpreterProxy fetchClassOf: anOop)
+			indexableSize: 0].
+	newByteLen := newBitLen + 7 // 8.
+	newDigitLen := newByteLen + 3 // 4.
+	self remapOop: anOop in:
+		[newOop := interpreterProxy
+						instantiateClass: (interpreterProxy fetchClassOf: anOop)
+						indexableSize: newByteLen].
+	newOop ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
+	self
+		cDigitRshift: shiftCount
+		from: (self pointerToFirstDigitOfLargeInt: anOop)
+		len: oldDigitLen
+		to: (self pointerToFirstDigitOfLargeInt: newOop)
+		len: newDigitLen.
+	^ newOop
 ]
 
 { #category : #'oop functions' }
 LargeIntegersPlugin >> digitAddLarge: firstInteger with: secondInteger [ 
 	"Does not need to normalize!"
-	| over firstLen secondLen shortInt shortLen longInt longLen sum newSum resClass |
-	<var: #over type: 'unsigned char  '>
-	firstLen := self byteSizeOfBytes: firstInteger.
-	secondLen := self byteSizeOfBytes: secondInteger.
-	resClass := interpreterProxy fetchClassOf: firstInteger.
-	firstLen <= secondLen
+	| over firstDigitLen secondDigitLen shortInt shortDigitLen longInt longDigitLen sum newSum neg |
+	<var: #over type: #'unsigned int'>
+	firstDigitLen := self digitSizeOfLargeInt: firstInteger.
+	secondDigitLen := self digitSizeOfLargeInt: secondInteger.
+	neg := interpreterProxy isLargeNegativeIntegerObject: firstInteger.
+	firstDigitLen <= secondDigitLen
 		ifTrue: 
 			[shortInt := firstInteger.
-			shortLen := firstLen.
+			shortDigitLen := firstDigitLen.
 			longInt := secondInteger.
-			longLen := secondLen]
+			longDigitLen := secondDigitLen]
 		ifFalse: 
 			[shortInt := secondInteger.
-			shortLen := secondLen.
+			shortDigitLen := secondDigitLen.
 			longInt := firstInteger.
-			longLen := firstLen].
+			longDigitLen := firstDigitLen].
 	"	sum := Integer new: len neg: firstInteger negative."
-	self remapOop: #(shortInt longInt ) in: [sum := interpreterProxy instantiateClass: resClass indexableSize: longLen].
+	self remapOop: #(shortInt longInt ) in: [sum := self createLargeIntegerNeg: neg digitLength: longDigitLen].
+	sum ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	over := self
-				cDigitAdd: (interpreterProxy firstIndexableField: shortInt)
-				len: shortLen
-				with: (interpreterProxy firstIndexableField: longInt)
-				len: longLen
-				into: (interpreterProxy firstIndexableField: sum).
+				cDigitAdd: (self pointerToFirstDigitOfLargeInt: shortInt)
+				len: shortDigitLen
+				with: (self pointerToFirstDigitOfLargeInt: longInt)
+				len: longDigitLen
+				into: (self pointerToFirstDigitOfLargeInt: sum).
 	over > 0
 		ifTrue: 
 			["sum := sum growby: 1."
-			self remapOop: sum in: [newSum := interpreterProxy instantiateClass: resClass indexableSize: longLen + 1].
+			self remapOop: sum in: [newSum := self createLargeIntegerNeg: neg byteLength: longDigitLen * 4 + 1].
+			newSum ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 			self
-				cBytesCopyFrom: (interpreterProxy firstIndexableField: sum)
-				to: (interpreterProxy firstIndexableField: newSum)
-				len: longLen.
+				cDigitCopyFrom: (self pointerToFirstDigitOfLargeInt: sum)
+				to: (self pointerToFirstDigitOfLargeInt: newSum)
+				len: longDigitLen.
 			sum := newSum.
 			"C index!"
-			(self cCoerce: (interpreterProxy firstIndexableField: sum)
-				to: 'unsigned char *')
-				at: longLen put: over].
+			self cDigitOf: (self pointerToFirstDigitOfLargeInt: sum)
+				at: longDigitLen put: over]
+		ifFalse:
+			[sum := neg 
+				ifTrue: [self normalizeNegative: sum]
+				ifFalse: [self normalizePositive: sum]].
 	^ sum
 ]
 
@@ -796,26 +840,24 @@ LargeIntegersPlugin >> digitBitLogic: firstInteger with: secondInteger opIndex: 
 	| firstLarge secondLarge firstLen secondLen shortLen shortLarge longLen longLarge result |
 	(interpreterProxy isIntegerObject: firstInteger)
 		ifTrue: 
-			[(interpreterProxy integerValueOf: firstInteger)
-				< 0 ifTrue: [^ interpreterProxy primitiveFail].
+			[(interpreterProxy integerValueOf: firstInteger) < 0 ifTrue:
+				[^ interpreterProxy primitiveFail].
 			"convert it to a not normalized LargeInteger"
 			self remapOop: secondInteger in: [firstLarge := self createLargeFromSmallInteger: firstInteger]]
 		ifFalse: 
-			[(interpreterProxy fetchClassOf: firstInteger)
-				= interpreterProxy classLargeNegativeInteger ifTrue: [^ interpreterProxy primitiveFail].
+			[(interpreterProxy isLargePositiveIntegerObject: firstInteger) ifFalse: [^ interpreterProxy primitiveFail].
 			firstLarge := firstInteger].
 	(interpreterProxy isIntegerObject: secondInteger)
 		ifTrue: 
-			[(interpreterProxy integerValueOf: secondInteger)
-				< 0 ifTrue: [^ interpreterProxy primitiveFail].
+			[(interpreterProxy integerValueOf: secondInteger) < 0 ifTrue:
+				[^ interpreterProxy primitiveFail].
 			"convert it to a not normalized LargeInteger"
 			self remapOop: firstLarge in: [secondLarge := self createLargeFromSmallInteger: secondInteger]]
 		ifFalse: 
-			[(interpreterProxy fetchClassOf: secondInteger)
-				= interpreterProxy classLargeNegativeInteger ifTrue: [^ interpreterProxy primitiveFail].
+			[(interpreterProxy isLargePositiveIntegerObject: secondInteger) ifFalse: [^ interpreterProxy primitiveFail].
 			secondLarge := secondInteger].
-	firstLen := self byteSizeOfBytes: firstLarge.
-	secondLen := self byteSizeOfBytes: secondLarge.
+	firstLen := self byteSizeOfLargeInt: firstLarge.
+	secondLen := self byteSizeOfLargeInt: secondLarge.
 	firstLen < secondLen
 		ifTrue: 
 			[shortLen := firstLen.
@@ -827,33 +869,35 @@ LargeIntegersPlugin >> digitBitLogic: firstInteger with: secondInteger opIndex: 
 			shortLarge := secondLarge.
 			longLen := firstLen.
 			longLarge := firstLarge].
-	self remapOop: #(shortLarge longLarge ) in: [result := interpreterProxy instantiateClass: interpreterProxy classLargePositiveInteger indexableSize: longLen].
+	self remapOop: #(shortLarge longLarge) in:
+		[result := interpreterProxy instantiateClass: interpreterProxy classLargePositiveInteger indexableSize: longLen].
+	result ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	self
-		cByteOp: opIx
-		short: (interpreterProxy firstIndexableField: shortLarge)
-		len: shortLen
-		long: (interpreterProxy firstIndexableField: longLarge)
-		len: longLen
-		into: (interpreterProxy firstIndexableField: result).
+		cDigitOp: opIx
+		short: (self pointerToFirstDigitOfLargeInt: shortLarge)
+		len: shortLen + 3 // 4
+		long: (self pointerToFirstDigitOfLargeInt: longLarge)
+		len: longLen + 3 // 4
+		into: (self pointerToFirstDigitOfLargeInt: result).
 	interpreterProxy failed ifTrue: [^ 0].
-	^ self normalizePositive: result
+	^self normalizePositive: result
 ]
 
 { #category : #'oop functions' }
 LargeIntegersPlugin >> digitCompareLarge: firstInteger with: secondInteger [ 
 	"Compare the magnitude of firstInteger with that of secondInteger.      
 	Return a code of 1, 0, -1 for firstInteger >, = , < secondInteger"
-	| firstLen secondLen |
-	firstLen := self byteSizeOfBytes: firstInteger.
-	secondLen := self byteSizeOfBytes: secondInteger.
-	secondLen ~= firstLen
-		ifTrue: [secondLen > firstLen
+	| firstDigitLen secondDigitLen |
+	firstDigitLen := self digitSizeOfLargeInt: firstInteger.
+	secondDigitLen := self digitSizeOfLargeInt: secondInteger.
+	secondDigitLen ~= firstDigitLen
+		ifTrue: [secondDigitLen > firstDigitLen
 				ifTrue: [^ -1 asOop: SmallInteger]
 				ifFalse: [^ 1 asOop: SmallInteger]].
 	^ (self
-		cDigitCompare: (interpreterProxy firstIndexableField: firstInteger)
-		with: (interpreterProxy firstIndexableField: secondInteger)
-		len: firstLen)
+		cDigitCompare: (self pointerToFirstDigitOfLargeInt: firstInteger)
+		with: (self pointerToFirstDigitOfLargeInt: secondInteger)
+		len: firstDigitLen)
 		asOop: SmallInteger
 ]
 
@@ -861,99 +905,82 @@ LargeIntegersPlugin >> digitCompareLarge: firstInteger with: secondInteger [
 LargeIntegersPlugin >> digitDivLarge: firstInteger with: secondInteger negative: neg [ 
 	"Does not normalize."
 	"Division by zero has to be checked in caller."
-	| firstLen secondLen resultClass l d div rem quo result |
-	firstLen := self byteSizeOfBytes: firstInteger.
-	secondLen := self byteSizeOfBytes: secondInteger.
-	neg
-		ifTrue: [resultClass := interpreterProxy classLargeNegativeInteger]
-		ifFalse: [resultClass := interpreterProxy classLargePositiveInteger].
-	l := firstLen - secondLen + 1.
-	l <= 0
+	| firstDigitLen secondDigitLen quoDigitLen d div rem quo result |
+	firstDigitLen := self digitSizeOfLargeInt: firstInteger.
+	secondDigitLen := self digitSizeOfLargeInt: secondInteger.
+	quoDigitLen := firstDigitLen - secondDigitLen + 1.
+	quoDigitLen <= 0
 		ifTrue: 
 			[self remapOop: firstInteger in: [result := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: 2].
-			result stAt: 1 put: (0 asOop: SmallInteger).
-			result stAt: 2 put: firstInteger.
+			 result ifNotNil:
+				[interpreterProxy stObject: result at: 1 put: (0 asOop: SmallInteger).
+				 interpreterProxy stObject: result at: 2 put: firstInteger].
 			^ result].
 	"set rem and div to copies of firstInteger and secondInteger, respectively. 
-	  However,  
-	 to facilitate use of Knuth's algorithm, multiply rem and div by 2 (that 
-	 is, shift)   
-	 until the high byte of div is >=128"
-	d := 8 - (self cHighBit: (self unsafeByteOf: secondInteger at: secondLen)).
+	 However,  to facilitate use of Knuth's algorithm, multiply rem and div by 2
+	 (that is, shift) until the high word of div is >=16r80000000"
+	d := 32 - (self cHighBit32: (self unsafeDigitOfLargeInt: secondInteger at: secondDigitLen)).
 	self remapOop: firstInteger
-		in: 
-			[div := self bytes: secondInteger Lshift: d.
-			div := self bytesOrInt: div growTo: (self digitLength: div)
-							+ 1].
+		in:	[div := self digit: secondInteger Lshift: d.
+			 div ifNotNil:
+				[div := self largeInt: div growTo: (self digitSizeOfLargeInt: div) + 1 * 4].
+			 div ifNil: [^div]].
 	self remapOop: div
-		in: 
-			[rem := self bytes: firstInteger Lshift: d.
-			(self digitLength: rem)
-				= firstLen ifTrue: [rem := self bytesOrInt: rem growTo: firstLen + 1]].
-	self remapOop: #(div rem ) in: [quo := interpreterProxy instantiateClass: resultClass indexableSize: l].
+		in:	[rem := self digit: firstInteger Lshift: d.
+			 rem ifNotNil:
+				[(self digitSizeOfLargeInt: rem) = firstDigitLen ifTrue:
+					[rem := self largeInt: rem growTo: firstDigitLen + 1 * 4]].
+			 rem ifNil: [^rem]].
+	self remapOop: #(div rem)
+		in: [quo := self createLargeIntegerNeg: neg digitLength: quoDigitLen].
 	self
-		cCoreDigitDivDiv: (interpreterProxy firstIndexableField: div)
-		len: (self digitLength: div)
-		rem: (interpreterProxy firstIndexableField: rem)
-		len: (self digitLength: rem)
-		quo: (interpreterProxy firstIndexableField: quo)
-		len: (self digitLength: quo).
-	self remapOop: #(quo ) in: [rem := self
-					bytes: rem
-					Rshift: d
-					bytes: 0
-					lookfirst: (self digitLength: div)
-							- 1].
+		cDigitDiv: (self pointerToFirstDigitOfLargeInt: div)
+		len: (self digitSizeOfLargeInt: div)
+		rem: (self pointerToFirstDigitOfLargeInt: rem)
+		len: (self digitSizeOfLargeInt: rem)
+		quo: (self pointerToFirstDigitOfLargeInt: quo)
+		len: (self digitSizeOfLargeInt: quo).
+	self remapOop: quo
+		in: [rem := self digit: rem Rshift: d lookfirst: (self digitSizeOfLargeInt: div) - 1].
 	"^ Array with: quo with: rem"
-	self remapOop: #(quo rem ) in: [result := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: 2].
-	result stAt: 1 put: quo.
-	result stAt: 2 put: rem.
-	^ result
-]
-
-{ #category : #util }
-LargeIntegersPlugin >> digitLength: oop [ 
-	(interpreterProxy isIntegerObject: oop)
-		ifTrue: [^ self cDigitLengthOfCSI: (interpreterProxy integerValueOf: oop)]
-		ifFalse: [^ self byteSizeOfBytes: oop]
-]
-
-{ #category : #util }
-LargeIntegersPlugin >> digitLengthOfNonImmediate: oop [
-	<inline: true>
-	^self byteSizeOfBytes: oop
+	self remapOop: #(quo rem)
+		in: [result := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: 2].
+	result ifNotNil:
+		[interpreterProxy stObject: result at: 1 put: quo.
+		 interpreterProxy stObject: result at: 2 put: rem].
+	^result
 ]
 
 { #category : #'oop functions' }
 LargeIntegersPlugin >> digitMontgomery: firstLarge times: secondLarge modulo: thirdLarge mInvModB: mInv [
-
+	<var: #mInv type: #'unsigned int'>
 	| firstLen secondLen thirdLen prod |
-	firstLen := self byteSizeOfBytes: firstLarge.
-	secondLen := self byteSizeOfBytes: secondLarge.
-	thirdLen := self byteSizeOfBytes: thirdLarge.
+	firstLen := self digitSizeOfLargeInt: firstLarge.
+	secondLen := self digitSizeOfLargeInt: secondLarge.
+	thirdLen := self digitSizeOfLargeInt: thirdLarge.
+	(firstLen <= thirdLen and: [secondLen <= thirdLen]) ifFalse: [^interpreterProxy primitiveFail].
 
-	firstLen <= thirdLen ifFalse: [^interpreterProxy primitiveFail].
-	secondLen <= thirdLen ifFalse: [^interpreterProxy primitiveFail].
-	(mInv >= 0 and: [mInv <= 255]) ifFalse: [^interpreterProxy primitiveFail].
-	self remapOop: #(firstLarge secondLarge thirdLarge) in: [prod := interpreterProxy instantiateClass: interpreterProxy classLargePositiveInteger indexableSize: thirdLen].
+	self remapOop: #(firstLarge secondLarge thirdLarge)
+		in: [prod := interpreterProxy instantiateClass: interpreterProxy classLargePositiveInteger indexableSize: thirdLen * 4].
+	prod ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	self
-				cdigitMontgomery: (interpreterProxy firstIndexableField: firstLarge)
-				len: firstLen
-				times: (interpreterProxy firstIndexableField: secondLarge)
-				len: secondLen
-				modulo: (interpreterProxy firstIndexableField: thirdLarge)
-				len: thirdLen
-				mInvModB: mInv
-				into: (interpreterProxy firstIndexableField: prod).
+		cDigitMontgomery: (self pointerToFirstDigitOfLargeInt: firstLarge)
+		len: firstLen
+		times: (self pointerToFirstDigitOfLargeInt: secondLarge)
+		len: secondLen
+		modulo: (self pointerToFirstDigitOfLargeInt: thirdLarge)
+		len: thirdLen
+		mInvModB: mInv
+		into: (self pointerToFirstDigitOfLargeInt: prod).
 	^self normalizePositive: prod
 ]
 
 { #category : #'oop functions' }
 LargeIntegersPlugin >> digitMultiplyLarge: firstInteger with: secondInteger negative: neg [ 
 	"Normalizes."
-	| firstLen secondLen shortInt shortLen longInt longLen prod resultClass |
-	firstLen := self byteSizeOfBytes: firstInteger.
-	secondLen := self byteSizeOfBytes: secondInteger.
+	| firstLen secondLen shortInt shortLen longInt longLen prod |
+	firstLen := self byteSizeOfLargeInt: firstInteger.
+	secondLen := self byteSizeOfLargeInt: secondInteger.
 	firstLen <= secondLen
 		ifTrue: 
 			[shortInt := firstInteger.
@@ -965,86 +992,105 @@ LargeIntegersPlugin >> digitMultiplyLarge: firstInteger with: secondInteger nega
 			shortLen := secondLen.
 			longInt := firstInteger.
 			longLen := firstLen].
-	neg
-		ifTrue: [resultClass := interpreterProxy classLargeNegativeInteger]
-		ifFalse: [resultClass := interpreterProxy classLargePositiveInteger].
-	self remapOop: #(shortInt longInt ) in: [prod := interpreterProxy instantiateClass: resultClass indexableSize: longLen + shortLen].
+	self remapOop: #(shortInt longInt) in: [prod := self createLargeIntegerNeg: neg byteLength: longLen + shortLen].
+	prod ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	self
-		cDigitMultiply: (interpreterProxy firstIndexableField: shortInt)
-		len: shortLen
-		with: (interpreterProxy firstIndexableField: longInt)
-		len: longLen
-		into: (interpreterProxy firstIndexableField: prod).
-	^ self normalize: prod
+		cDigitMultiply: (self pointerToFirstDigitOfLargeInt: shortInt)
+		len: shortLen + 3 // 4
+		with: (self pointerToFirstDigitOfLargeInt: longInt)
+		len: longLen + 3 // 4
+		into: (self pointerToFirstDigitOfLargeInt: prod)
+		len: longLen + shortLen + 3 // 4.
+	^neg 
+		ifTrue: [self normalizeNegative: prod]
+		ifFalse: [self normalizePositive: prod]
 ]
 
 { #category : #util }
-LargeIntegersPlugin >> digitOf: oop at: ix [ 
-	(interpreterProxy isIntegerObject: oop) ifTrue:
-		[ix < 1 ifTrue: [interpreterProxy primitiveFail. ^0].
-		 ix > interpreterProxy bytesPerOop ifTrue: [^0].
-		 ^self cDigitOfCSI: (interpreterProxy integerValueOf: oop) at: ix].
-	^self digitOfBytes: oop at: ix
+LargeIntegersPlugin >> digitOfCSI: csi at: ix [ 
+	"Answer the value of a 32 bits digit in a C-SmallInteger."
+	"ST indexed!"
+	^(csi < 0
+		ifTrue:  [0 - csi]
+		ifFalse: [csi]) >> (ix - 1 * 32)
 ]
 
 { #category : #util }
-LargeIntegersPlugin >> digitOfBytes: aBytesOop at: ix [ 
+LargeIntegersPlugin >> digitOfLargeInt: aBytesOop at: ix [ 
 	"Argument has to be aLargeInteger!"
-	ix > (self byteSizeOfBytes: aBytesOop)
+	ix > (self digitSizeOfLargeInt: aBytesOop)
 		ifTrue: [^ 0]
-		ifFalse: [^ self unsafeByteOf: aBytesOop at: ix]
+		ifFalse: [^ self unsafeDigitOfLargeInt: aBytesOop at: ix]
+]
+
+{ #category : #util }
+LargeIntegersPlugin >> digitSizeOfCSI: csi [ 
+	"Answer the number of 32-bits fields of a C-SmallInteger. This value is 
+	   the same as the largest legal subscript."
+	^(interpreterProxy maxSmallInteger <= 16r3FFFFFFF)
+		ifTrue: [1]
+		ifFalse: [csi > 16rFFFFFFFF asIntegerPtr "conversion is not really needed here, but avoid generating a warning in 32bits, and harmless in 64bits"
+			ifTrue: [2]
+			ifFalse: [csi < -16rFFFFFFFF
+				ifTrue: [2]
+				ifFalse: [1]]]
+]
+
+{ #category : #util }
+LargeIntegersPlugin >> digitSizeOfLargeInt: anOop [
+	"answer number of 32 bits digits of a Large Integer"
+	<inline: true>
+	^(self byteSizeOfLargeInt: anOop) + 3 // 4
 ]
 
 { #category : #'oop functions' }
 LargeIntegersPlugin >> digitSubLarge: firstInteger with: secondInteger [ 
 	"Normalizes."
-	| firstLen secondLen larger largerLen smaller smallerLen neg resLen res firstNeg |
-	firstNeg := (interpreterProxy fetchClassOf: firstInteger)
-				= interpreterProxy classLargeNegativeInteger.
-	firstLen := self byteSizeOfBytes: firstInteger.
-	secondLen := self byteSizeOfBytes: secondInteger.
-	firstLen = secondLen ifTrue: 
-		[[firstLen > 1
-		  and: [(self digitOfBytes: firstInteger at: firstLen) = (self digitOfBytes: secondInteger at: firstLen)]]
-			whileTrue: [firstLen := firstLen - 1].
-		secondLen := firstLen].
-	(firstLen < secondLen
-	 or: [firstLen = secondLen
-		 and: [(self digitOfBytes: firstInteger at: firstLen) < (self digitOfBytes: secondInteger at: firstLen)]])
+	| firstDigitLen secondDigitLen larger largeDigitLen smaller smallerDigitLen neg resDigitLen res firstNeg |
+	firstNeg := interpreterProxy isLargeNegativeIntegerObject: firstInteger.
+	firstDigitLen := self digitSizeOfLargeInt: firstInteger.
+	secondDigitLen := self digitSizeOfLargeInt: secondInteger.
+	firstDigitLen = secondDigitLen ifTrue: 
+		[[firstDigitLen > 1
+		  and: [(self unsafeDigitOfLargeInt: firstInteger at: firstDigitLen) = (self unsafeDigitOfLargeInt: secondInteger at: firstDigitLen)]]
+			whileTrue: [firstDigitLen := firstDigitLen - 1].
+		secondDigitLen := firstDigitLen].
+	(firstDigitLen < secondDigitLen
+	 or: [firstDigitLen = secondDigitLen
+		 and: [(self unsafeDigitOfLargeInt: firstInteger at: firstDigitLen) < (self unsafeDigitOfLargeInt: secondInteger at: firstDigitLen)]])
 		ifTrue: 
 			[larger := secondInteger.
-			largerLen := secondLen.
+			largeDigitLen := secondDigitLen.
 			smaller := firstInteger.
-			smallerLen := firstLen.
+			smallerDigitLen := firstDigitLen.
 			neg := firstNeg == false]
 		ifFalse: 
 			[larger := firstInteger.
-			largerLen := firstLen.
+			largeDigitLen := firstDigitLen.
 			smaller := secondInteger.
-			smallerLen := secondLen.
+			smallerDigitLen := secondDigitLen.
 			neg := firstNeg].
-	resLen := largerLen.
+	resDigitLen := largeDigitLen.
 	self remapOop: #(smaller larger)
-		in: [res := interpreterProxy
-					instantiateClass: (neg
-										ifTrue: [interpreterProxy classLargeNegativeInteger]
-										ifFalse: [interpreterProxy classLargePositiveInteger])
-					indexableSize: resLen].
+		in: [res := self createLargeIntegerNeg: neg digitLength: resDigitLen].
+	res ifNil: [^interpreterProxy primitiveFailFor: PrimErrNoMemory].
 	self
-		cDigitSub: (interpreterProxy firstIndexableField: smaller)
-		len: smallerLen
-		with: (interpreterProxy firstIndexableField: larger)
-		len: largerLen
-		into: (interpreterProxy firstIndexableField: res).
+		cDigitSub: (self pointerToFirstDigitOfLargeInt: smaller)
+		len: smallerDigitLen
+		with: (self pointerToFirstDigitOfLargeInt: larger)
+		len: largeDigitLen
+		into: (self pointerToFirstDigitOfLargeInt: res).
 	^neg 
 		ifTrue: [self normalizeNegative: res]
 		ifFalse: [self normalizePositive: res]
 ]
 
 { #category : #util }
-LargeIntegersPlugin >> highBitOfBytes: aBytesOop [ 
-	^ self cBytesHighBit: (interpreterProxy firstIndexableField: aBytesOop)
-		len: (self byteSizeOfBytes: aBytesOop)
+LargeIntegersPlugin >> highBitOfLargeInt: anOop [ 
+	<inline: true>
+	^ self
+		cDigitHighBit: (self pointerToFirstDigitOfLargeInt: anOop)
+		len: (self digitSizeOfLargeInt: anOop)
 ]
 
 { #category : #'ST initialize' }
@@ -1059,53 +1105,45 @@ LargeIntegersPlugin >> initialize [
 ]
 
 { #category : #'oop functions' }
-LargeIntegersPlugin >> isNormalized: anInteger [ 
-	| len class positive pointer |
-	<var: #pointer type: #'unsigned char *'>
-	(interpreterProxy isIntegerObject: anInteger) ifTrue:
-		[^true].
-	class := interpreterProxy fetchClassOf: anInteger.
-	(positive := class = interpreterProxy classLargePositiveInteger) ifFalse:
-		[class = interpreterProxy classLargeNegativeInteger ifFalse:
-			[interpreterProxy primitiveFailFor: PrimErrBadArgument.
-			 ^false]].
-	pointer := interpreterProxy cCoerce: (interpreterProxy firstIndexableField: anInteger) to: #'unsigned char *'.
+LargeIntegersPlugin >> isNormalized: aLargeInteger [ 
+	| len |
 	"Check for leading zero of LargeInteger"
-	len := self digitLengthOfNonImmediate: anInteger.
-	(len = 0 or: [(pointer at: len - 1) = 0]) ifTrue:
-		[^false].
-	"no leading zero, now check if anInteger is in SmallInteger range or not"
-	"maximal digitLength of aSmallInteger"
-	len ~= interpreterProxy bytesPerOop ifTrue:
-		[^len > interpreterProxy bytesPerOop].
-	positive ifTrue: "all bytes of but the highest one are just FF's"
-		[^(pointer at: interpreterProxy bytesPerOop - 1)
-			> (self cDigitOfCSI: interpreterProxy maxSmallInteger at: interpreterProxy bytesPerOop)].
-	"all bytes of but the highest one are just 00's"
-	(pointer at: interpreterProxy bytesPerOop - 1)
-	 < (self cDigitOfCSI: interpreterProxy minSmallInteger at: interpreterProxy bytesPerOop) ifTrue:
-		[^false].
-	"if just one digit differs, then anInteger < minval (the corresponding digit byte is greater!)
-	 and therefore a LargeNegativeInteger"
-	0 to: interpreterProxy bytesPerOop - 1 do:
-		[:ix |
-		(pointer at: ix) = (self cDigitOfCSI: interpreterProxy minSmallInteger at: ix + 1) ifFalse:
-			[^true]].
-	^false
+	len := self byteSizeOfLargeInt: aLargeInteger.
+	len = 0 ifTrue:
+		[^ false].
+	(self unsafeByteOfLargeInt: aLargeInteger at: len) = 0 ifTrue:
+		[^ false].
+	^true
 ]
 
-{ #category : #util }
-LargeIntegersPlugin >> negative: aLarge [ 
-	^ (interpreterProxy fetchClassOf: aLarge)
-		= interpreterProxy classLargeNegativeInteger
+{ #category : #'oop util' }
+LargeIntegersPlugin >> largeInt: aBytesObject growTo: newByteLen [ 
+	"Attention: this method invalidates all oop's! Only newBytes is valid at return."
+	"Does not normalize."
+	| newBytes oldDigitLen newDigitLen copyLen |
+	self remapOop: aBytesObject in:
+		[newBytes := interpreterProxy
+						instantiateClass: (interpreterProxy fetchClassOf: aBytesObject)
+						indexableSize: newByteLen.
+		 newBytes ifNil:
+			[interpreterProxy primitiveFailFor: PrimErrNoMemory. ^nil]].
+	newDigitLen := newByteLen + 3 // 4.
+	oldDigitLen := self digitSizeOfLargeInt: aBytesObject.
+	copyLen := oldDigitLen < newDigitLen
+					ifTrue: [oldDigitLen]
+					ifFalse: [newDigitLen].
+	self
+		cDigitCopyFrom: (self pointerToFirstDigitOfLargeInt: aBytesObject)
+		to: (self pointerToFirstDigitOfLargeInt: newBytes)
+		len: copyLen.
+	^newBytes
 ]
 
 { #category : #'oop functions' }
 LargeIntegersPlugin >> normalize: aLargeInteger [ 
 	"Check for leading zeroes and return shortened copy if so."
 	self debugCode: [self msg: 'normalize: aLargeInteger'].
-	(interpreterProxy fetchClassOf: aLargeInteger)
-		= interpreterProxy classLargePositiveInteger
+	(interpreterProxy isLargePositiveIntegerObject: aLargeInteger)
 		ifTrue: [^ self normalizePositive: aLargeInteger]
 		ifFalse: [^ self normalizeNegative: aLargeInteger]
 ]
@@ -1114,71 +1152,84 @@ LargeIntegersPlugin >> normalize: aLargeInteger [
 LargeIntegersPlugin >> normalizeNegative: aLargeNegativeInteger [ 
 	"Check for leading zeroes and return shortened copy if so."
 	"First establish len = significant length."
-	| sLen val len oldLen pointer |
-	len := oldLen := self digitLengthOfNonImmediate: aLargeNegativeInteger.
-	pointer := interpreterProxy
-				cCoerce: (interpreterProxy firstIndexableField: aLargeNegativeInteger)
-				to: #'unsigned char *'.
-	[len > 0 and: [(pointer at: len - 1) = 0]] whileTrue:
-		[len := len - 1].
-	len = 0 ifTrue: [^ 0 asOop: SmallInteger].
-
+	| val val2 sLen digitLen byteLen oldByteLen minVal |
+	<var: #val type: #usqInt>
+	<var: #val2 type: #usqInt>
+	<var: #minVal type: #usqInt>
+	digitLen := self digitSizeOfLargeInt: aLargeNegativeInteger.
+	[digitLen ~= 0 and: [(self unsafeDigitOfLargeInt: aLargeNegativeInteger at: digitLen) = 0]]
+		whileTrue: [digitLen := digitLen - 1].
+	digitLen = 0 ifTrue: [^ 0 asOop: SmallInteger].
 	"Now check if in SmallInteger range"
+	val := self unsafeDigitOfLargeInt: aLargeNegativeInteger at: digitLen.
 	sLen := interpreterProxy minSmallInteger < -16r40000000
-				ifTrue: [8]
-				ifFalse: [4]. "SmallInteger digitLength"
-	len <= sLen ifTrue: 
-		[(len < sLen
-		  or: [(pointer at: sLen - 1)
-				< (self cDigitOfCSI: interpreterProxy minSmallInteger at: sLen)]) ifTrue: "interpreterProxy minSmallInteger lastDigit"
-			["If high digit less, then can be small"
-			val := 0 - (pointer at: (len := len - 1)).
-			len - 1 to: 0 by: -1 do:
-				[:i | val := val * 256 - (pointer at: i)].
-			^val asOop: SmallInteger].
-		 1 to: sLen do:
-			[:i | | byte | "If all digits same, then = minSmallInteger (sr: minSmallInteger digits 1 to sLen - 1 are 0)"
-			byte := i > len ifTrue: [0] ifFalse: [pointer at: i - 1].
-			byte ~= (self cDigitOfCSI: interpreterProxy minSmallInteger at: i) ifTrue: "Not so; return self shortened"
-				[len < oldLen ifTrue: "^ self growto: len"
-					[^self bytes: aLargeNegativeInteger growTo: len].
-				 ^aLargeNegativeInteger]].
-		 ^interpreterProxy minSmallInteger asOop: SmallInteger].
+				ifTrue: [2]
+				ifFalse: [1]. "SmallInteger minVal digitLength"
+	digitLen <= sLen
+		ifTrue: 
+			[minVal := 0 - interpreterProxy minSmallInteger.
+			val2 := val.
+			digitLen > 1 ifTrue: [val2 := val2 << 32 + (self unsafeDigitOfLargeInt: aLargeNegativeInteger at: 1)].
+			val2 <= minVal
+				ifTrue: [^0 -  val2 asOop: SmallInteger]].
 	"Return self, or a shortened copy"
-	len < oldLen ifTrue: "^ self growto: len"
-		[^self bytes: aLargeNegativeInteger growTo: len].
-	^aLargeNegativeInteger
+	byteLen := digitLen * 4.
+	val <= 16rFFFF
+		ifTrue: [byteLen := byteLen - 2]
+		ifFalse: [val := val >> 16].
+	val <= 16rFF
+		ifTrue: [byteLen := byteLen - 1].
+	oldByteLen := self byteSizeOfLargeInt: aLargeNegativeInteger.
+	byteLen < oldByteLen
+		ifTrue: [^ self largeInt: aLargeNegativeInteger growTo: byteLen]
+		ifFalse: [^ aLargeNegativeInteger]
 ]
 
 { #category : #'oop functions' }
 LargeIntegersPlugin >> normalizePositive: aLargePositiveInteger [ 
 	"Check for leading zeroes and return shortened copy if so."
 	"First establish len = significant length."
-	| sLen val len oldLen pointer |
-	<var: #pointer type: #'unsigned char *'>
-	len := oldLen := self digitLengthOfNonImmediate: aLargePositiveInteger.
-	pointer := interpreterProxy
-				cCoerce: (interpreterProxy firstIndexableField: aLargePositiveInteger)
-				to: #'unsigned char *'.
-	[len > 0 and: [(pointer at: len - 1) = 0]] whileTrue:
-		[len := len - 1].
-	len = 0 ifTrue: [^ 0 asOop: SmallInteger].
-
+	| val val2 sLen digitLen byteLen oldByteLen maxVal |
+	<var: #val type: #usqInt>
+	<var: #val2 type: #usqInt>
+	<var: #maxVal type: #usqInt>
+	digitLen := self digitSizeOfLargeInt: aLargePositiveInteger.
+	[digitLen ~= 0 and: [(self unsafeDigitOfLargeInt: aLargePositiveInteger at: digitLen) = 0]]
+		whileTrue: [digitLen := digitLen - 1].
+	digitLen = 0 ifTrue: [^ 0 asOop: SmallInteger].
 	"Now check if in SmallInteger range"
-	sLen := interpreterProxy maxSmallInteger > 16r3FFFFFFF "SmallInteger maxVal digitLength."
-				ifTrue: [8]
-				ifFalse: [4].
-	(len <= sLen
-	 and: [(pointer at: sLen - 1) <= (self cDigitOfCSI: interpreterProxy maxSmallInteger at: sLen)]) ifTrue: 
-		["If so, return its SmallInt value"
-		 val := pointer at: (len := len - 1).
-		 len - 1 to: 0 by: -1 do:
-			[:i | val := val * 256 + (pointer at: i)].
-		^val asOop: SmallInteger].
+	val := self unsafeDigitOfLargeInt: aLargePositiveInteger at: digitLen.
+	sLen := interpreterProxy maxSmallInteger > 16r3FFFFFFF
+				ifTrue: [2]
+				ifFalse: [1]. "SmallInteger maxVal digitLength"
+	digitLen <= sLen
+		ifTrue: 
+			[maxVal := interpreterProxy maxSmallInteger.
+			val2 := val.
+			digitLen > 1 ifTrue:
+				["Note: asUnsignedLongLong is not necessary because this branch is for 64 bits only.
+				but we want to avoid a C Compiler warning on 32 bits"
+				val2 := val2 asUnsignedLongLong << 32 + (self unsafeDigitOfLargeInt: aLargePositiveInteger at: 1)].
+			val2 <= maxVal
+				ifTrue: [^val2 asOop: SmallInteger]].
 	"Return self, or a shortened copy"
-	len < oldLen ifTrue: "^ self growto: len"
-		[^self bytes: aLargePositiveInteger growTo: len].
-	^aLargePositiveInteger
+	byteLen := digitLen * 4.
+	val <= 16rFFFF
+		ifTrue: [byteLen := byteLen - 2]
+		ifFalse: [val := val >> 16].
+	val <= 16rFF
+		ifTrue: [byteLen := byteLen - 1].
+	oldByteLen := self byteSizeOfLargeInt: aLargePositiveInteger.
+	byteLen < oldByteLen
+		ifTrue: [^ self largeInt: aLargePositiveInteger growTo: byteLen]
+		ifFalse: [^ aLargePositiveInteger]
+]
+
+{ #category : #util }
+LargeIntegersPlugin >> pointerToFirstDigitOfLargeInt: bytesObject [
+	<inline: #always>
+	<returnTypeC: #'unsigned int *'>
+	^interpreterProxy cCoerce: (interpreterProxy firstIndexableField: bytesObject) to: #'unsigned int *'
 ]
 
 { #category : #'Integer primitives' }
@@ -1194,59 +1245,10 @@ LargeIntegersPlugin >> primAnyBitFrom: from to: to [
 			large := self createLargeFromSmallInteger: integer]
 		ifFalse: [large := integer].
 	^ (self
-		anyBitOfBytes: large
+		anyBitOfLargeInt: large
 		from: from
 		to: to)
 		asOop: Boolean
-]
-
-{ #category : #'control & support primitives' }
-LargeIntegersPlugin >> primAsLargeInteger: anInteger [
-	"Converts a SmallInteger into a - non normalized! - LargeInteger;          
-	 aLargeInteger will be returned unchanged."
-	"Do not check for forced fail, because we need this conversion to test the 
-	plugin in ST during forced fail, too."
-	self debugCode: [self msg: 'primAsLargeInteger: anInteger'].
-	self
-		primitive: 'primAsLargeInteger'
-		parameters: #(Integer )
-		receiver: #Oop.
-	(interpreterProxy isIntegerObject: anInteger)
-		ifTrue: [^ self createLargeFromSmallInteger: anInteger]
-		ifFalse: [^ anInteger]
-]
-
-{ #category : #obsolete }
-LargeIntegersPlugin >> primCheckIfCModuleExists [
-	"If calling this primitive fails, then C module does not exist. Do not check for forced fail, because we want to know if module exists during forced fail, too."
-	self
-		primitive: 'primCheckIfCModuleExists'
-		parameters: #()
-		receiver: #Oop.
-	^ true asOop: Boolean
-]
-
-{ #category : #'development primitives' }
-LargeIntegersPlugin >> primDigit: anInteger bitShift: shiftCount [ 
-	| rShift aLarge |
-	self debugCode: [self msg: 'primDigit: anInteger bitShift: shiftCount'].
-	self
-		primitive: '_primDigitBitShift'
-		parameters: #(Integer SmallInteger )
-		receiver: #Oop.
-	(interpreterProxy isIntegerObject: anInteger)
-		ifTrue: ["convert it to a not normalized LargeInteger"
-			aLarge := self createLargeFromSmallInteger: anInteger]
-		ifFalse: [aLarge := anInteger].
-	shiftCount >= 0
-		ifTrue: [^ self bytes: aLarge Lshift: shiftCount]
-		ifFalse: 
-			[rShift := 0 - shiftCount.
-			^ self normalize: (self
-					bytes: aLarge
-					Rshift: (rShift bitAnd: 7)
-					bytes: (rShift bitShift: -3)
-					lookfirst: (self byteSizeOfBytes: aLarge))]
 ]
 
 { #category : #'Integer primitives' }
@@ -1257,25 +1259,6 @@ LargeIntegersPlugin >> primDigitAdd: secondInteger [
 				primitive: 'primDigitAdd'
 				parameters: #(Integer )
 				receiver: #Integer.
-	(interpreterProxy isIntegerObject: firstInteger)
-		ifTrue: ["convert it to a not normalized LargeInteger"
-			self remapOop: secondInteger in: [firstLarge := self createLargeFromSmallInteger: firstInteger]]
-		ifFalse: [firstLarge := firstInteger].
-	(interpreterProxy isIntegerObject: secondInteger)
-		ifTrue: ["convert it to a not normalized LargeInteger"
-			self remapOop: firstLarge in: [secondLarge := self createLargeFromSmallInteger: secondInteger]]
-		ifFalse: [secondLarge := secondInteger].
-	^ self digitAddLarge: firstLarge with: secondLarge
-]
-
-{ #category : #'development primitives' }
-LargeIntegersPlugin >> primDigitAdd: firstInteger with: secondInteger [ 
-	| firstLarge secondLarge |
-	self debugCode: [self msg: 'primDigitAdd: firstInteger with: secondInteger'].
-	self
-		primitive: 'primDigitAddWith'
-		parameters: #(Integer Integer )
-		receiver: #Oop.
 	(interpreterProxy isIntegerObject: firstInteger)
 		ifTrue: ["convert it to a not normalized LargeInteger"
 			self remapOop: secondInteger in: [firstLarge := self createLargeFromSmallInteger: firstInteger]]
@@ -1303,20 +1286,6 @@ LargeIntegersPlugin >> primDigitBitAnd: secondInteger [
 		opIndex: andOpIndex
 ]
 
-{ #category : #'development primitives' }
-LargeIntegersPlugin >> primDigitBitLogic: firstInteger with: secondInteger op: opIndex [ 
-	"Bit logic here is only implemented for positive integers or Zero; if any arg is negative, it fails."
-	self debugCode: [self msg: 'primDigitBitLogic: firstInteger with: secondInteger op: opIndex'].
-	self
-		primitive: 'primDigitBitLogicWithOp'
-		parameters: #(Integer Integer SmallInteger )
-		receiver: #Oop.
-	^ self
-		digitBitLogic: firstInteger
-		with: secondInteger
-		opIndex: opIndex
-]
-
 { #category : #'Integer primitives' }
 LargeIntegersPlugin >> primDigitBitOr: secondInteger [ 
 	"Bit logic here is only implemented for positive integers or Zero; if rec 
@@ -1333,29 +1302,6 @@ LargeIntegersPlugin >> primDigitBitOr: secondInteger [
 		opIndex: orOpIndex
 ]
 
-{ #category : #obsolete }
-LargeIntegersPlugin >> primDigitBitShift: shiftCount [ 
-	| rShift aLarge anInteger |
-	self debugCode: [self msg: 'primDigitBitShift: shiftCount'].
-	anInteger := self
-				primitive: 'primDigitBitShift'
-				parameters: #(SmallInteger )
-				receiver: #Integer.
-	(interpreterProxy isIntegerObject: anInteger)
-		ifTrue: ["convert it to a not normalized LargeInteger"
-			aLarge := self createLargeFromSmallInteger: anInteger]
-		ifFalse: [aLarge := anInteger].
-	shiftCount >= 0
-		ifTrue: [^ self bytes: aLarge Lshift: shiftCount]
-		ifFalse: 
-			[rShift := 0 - shiftCount.
-			^ self normalize: (self
-					bytes: aLarge
-					Rshift: (rShift bitAnd: 7)
-					bytes: (rShift bitShift: -3)
-					lookfirst: (self byteSizeOfBytes: aLarge))]
-]
-
 { #category : #'Integer primitives' }
 LargeIntegersPlugin >> primDigitBitShiftMagnitude: shiftCount [ 
 	| rShift aLarge anInteger |
@@ -1369,14 +1315,13 @@ LargeIntegersPlugin >> primDigitBitShiftMagnitude: shiftCount [
 			aLarge := self createLargeFromSmallInteger: anInteger]
 		ifFalse: [aLarge := anInteger].
 	shiftCount >= 0
-		ifTrue: [^ self bytes: aLarge Lshift: shiftCount]
+		ifTrue: [^ self digit: aLarge Lshift: shiftCount]
 		ifFalse: 
 			[rShift := 0 - shiftCount.
 			^ self normalize: (self
-					bytes: aLarge
-					Rshift: (rShift bitAnd: 7)
-					bytes: (rShift bitShift: -3)
-					lookfirst: (self byteSizeOfBytes: aLarge))]
+					digit: aLarge
+					Rshift: rShift
+					lookfirst: (self digitSizeOfLargeInt: aLarge))]
 ]
 
 { #category : #'Integer primitives' }
@@ -1423,32 +1368,6 @@ LargeIntegersPlugin >> primDigitCompare: secondInteger [
 					^ self digitCompareLarge: firstInteger with: secondInteger]]
 ]
 
-{ #category : #'development primitives' }
-LargeIntegersPlugin >> primDigitCompare: firstInteger with: secondInteger [ 
-	| firstVal secondVal |
-	self debugCode: [self msg: 'primDigitCompare: firstInteger with: secondInteger'].
-	self
-		primitive: 'primDigitCompareWith'
-		parameters: #(Integer Integer )
-		receiver: #Oop.
-	"shortcut: aSmallInteger has to be smaller in Magnitude as aLargeInteger"
-	(interpreterProxy isIntegerObject: firstInteger)
-		ifTrue: ["first"
-			(interpreterProxy isIntegerObject: secondInteger)
-				ifTrue: ["second"
-					(firstVal := interpreterProxy integerValueOf: firstInteger) > (secondVal := interpreterProxy integerValueOf: secondInteger)
-						ifTrue: [^ 1 asOop: SmallInteger"first > second"]
-						ifFalse: [firstVal < secondVal
-								ifTrue: [^ -1 asOop: SmallInteger"first < second"]
-								ifFalse: [^ 0 asOop: SmallInteger"first = second"]]]
-				ifFalse: ["SECOND" ^ -1 asOop: SmallInteger"first < SECOND"]]
-		ifFalse: ["FIRST"
-			(interpreterProxy isIntegerObject: secondInteger)
-				ifTrue: ["second" ^ 1 asOop: SmallInteger"FIRST > second"]
-				ifFalse: ["SECOND"
-					^ self digitCompareLarge: firstInteger with: secondInteger]]
-]
-
 { #category : #'Integer primitives' }
 LargeIntegersPlugin >> primDigitDiv: secondInteger negative: neg [ 
 	"Answer the result of dividing firstInteger by secondInteger. 
@@ -1460,17 +1379,6 @@ LargeIntegersPlugin >> primDigitDiv: secondInteger negative: neg [
 				primitive: 'primDigitDivNegative'
 				parameters: #(#Integer #Boolean )
 				receiver: #Integer.
-	"Avoid crashes in case of getting unnormalized args."
-	(self isNormalized: firstInteger)
-		ifFalse: [self
-				debugCode: [self msg: 'ERROR in primDigitDiv: secondInteger negative: neg'.
-					self msg: '------> receiver *not* normalized!'].
-			^ interpreterProxy primitiveFail].
-	(self isNormalized: secondInteger)
-		ifFalse: [self
-				debugCode: [self msg: 'ERROR in primDigitDiv: secondInteger negative: neg'.
-					self msg: '------> argument *not* normalized!'].
-			^ interpreterProxy primitiveFail].
 	"Coerce SmallIntegers to corresponding (not normalized) large integers  
 	and check for zerodivide."
 	(interpreterProxy isIntegerObject: firstInteger)
@@ -1478,7 +1386,15 @@ LargeIntegersPlugin >> primDigitDiv: secondInteger negative: neg [
 			self
 				remapOop: secondInteger
 				in: [firstAsLargeInteger := self createLargeFromSmallInteger: firstInteger]]
-		ifFalse: [firstAsLargeInteger := firstInteger].
+		ifFalse:
+			["Avoid crashes in case of getting unnormalized args."
+			(self isNormalized: firstInteger)
+				ifFalse:
+					[self debugCode:
+						[self msg: 'ERROR in primDigitDiv: secondInteger negative: neg'.
+						self msg: '------> receiver *not* normalized!'].
+					^ interpreterProxy primitiveFail].
+			firstAsLargeInteger := firstInteger].
 	(interpreterProxy isIntegerObject: secondInteger)
 		ifTrue: ["check for zerodivide and convert to LargeInteger"
 			(interpreterProxy integerValueOf: secondInteger)
@@ -1487,36 +1403,15 @@ LargeIntegersPlugin >> primDigitDiv: secondInteger negative: neg [
 			self
 				remapOop: firstAsLargeInteger
 				in: [secondAsLargeInteger := self createLargeFromSmallInteger: secondInteger]]
-		ifFalse: [secondAsLargeInteger := secondInteger].
-	^ self
-		digitDivLarge: firstAsLargeInteger
-		with: secondAsLargeInteger
-		negative: neg
-]
-
-{ #category : #'development primitives' }
-LargeIntegersPlugin >> primDigitDiv: firstInteger with: secondInteger negative: neg [ 
-	"Answer the result of dividing firstInteger by secondInteger.
-	Fail if parameters are not integers or secondInteger is zero."
-	| firstAsLargeInteger secondAsLargeInteger |
-	self debugCode: [self msg: 'primDigitDiv: firstInteger with: secondInteger negative: neg'].
-	self
-		primitive: 'primDigitDivWithNegative'
-		parameters: #(Integer Integer Boolean )
-		receiver: #Oop.
-	"Coerce SmallIntegers to corresponding (not normalized) large integers    
-	 and check for zerodivide."
-	(interpreterProxy isIntegerObject: firstInteger)
-		ifTrue: ["convert to LargeInteger"
-			self remapOop: secondInteger in: [firstAsLargeInteger := self createLargeFromSmallInteger: firstInteger]]
-		ifFalse: [firstAsLargeInteger := firstInteger].
-	(interpreterProxy isIntegerObject: secondInteger)
-		ifTrue: 
-			["check for zerodivide and convert to LargeInteger"
-			(interpreterProxy integerValueOf: secondInteger)
-				= 0 ifTrue: [^ interpreterProxy primitiveFail].
-			self remapOop: firstAsLargeInteger in: [secondAsLargeInteger := self createLargeFromSmallInteger: secondInteger]]
-		ifFalse: [secondAsLargeInteger := secondInteger].
+		ifFalse:
+			["Avoid crashes in case of getting unnormalized args."
+			(self isNormalized: secondInteger)
+				ifFalse:
+					[self debugCode:
+						[self msg: 'ERROR in primDigitDiv: secondInteger negative: neg'.
+						self msg: '------> argument *not* normalized!'].
+					^ interpreterProxy primitiveFail].
+			secondAsLargeInteger := secondInteger].
 	^ self
 		digitDivLarge: firstAsLargeInteger
 		with: secondAsLargeInteger
@@ -1549,28 +1444,6 @@ LargeIntegersPlugin >> primDigitMultiply: secondInteger negative: neg [
 		negative: neg
 ]
 
-{ #category : #'development primitives' }
-LargeIntegersPlugin >> primDigitMultiply: firstInteger with: secondInteger negative: neg [
-	| firstLarge secondLarge |
-	self debugCode: [self msg: 'primDigitMultiply: firstInteger with: secondInteger negative: neg'].
-	self
-		primitive: 'primDigitMultiplyWithNegative'
-		parameters: #(Integer Integer Boolean )
-		receiver: #Oop.
-	(interpreterProxy isIntegerObject: firstInteger)
-		ifTrue: ["convert it to a not normalized LargeInteger"
-			self remapOop: secondInteger in: [firstLarge := self createLargeFromSmallInteger: firstInteger]]
-		ifFalse: [firstLarge := firstInteger].
-	(interpreterProxy isIntegerObject: secondInteger)
-		ifTrue: ["convert it to a not normalized LargeInteger"
-			self remapOop: firstLarge in: [secondLarge := self createLargeFromSmallInteger: secondInteger]]
-		ifFalse: [secondLarge := secondInteger].
-	^ self
-		digitMultiplyLarge: firstLarge
-		with: secondLarge
-		negative: neg
-]
-
 { #category : #'Integer primitives' }
 LargeIntegersPlugin >> primDigitSubtract: secondInteger [ 
 	| firstLarge secondLarge firstInteger |
@@ -1594,25 +1467,6 @@ LargeIntegersPlugin >> primDigitSubtract: secondInteger [
 	^ self digitSubLarge: firstLarge with: secondLarge
 ]
 
-{ #category : #'development primitives' }
-LargeIntegersPlugin >> primDigitSubtract: firstInteger with: secondInteger [
-	| firstLarge secondLarge |
-	self debugCode: [self msg: 'primDigitSubtract: firstInteger with: secondInteger'].
-	self
-		primitive: 'primDigitSubtractWith'
-		parameters: #(Integer Integer )
-		receiver: #Oop.
-	(interpreterProxy isIntegerObject: firstInteger)
-		ifTrue: ["convert it to a not normalized LargeInteger"
-			self remapOop: secondInteger in: [firstLarge := self createLargeFromSmallInteger: firstInteger]]
-		ifFalse: [firstLarge := firstInteger].
-	(interpreterProxy isIntegerObject: secondInteger)
-		ifTrue: ["convert it to a not normalized LargeInteger"
-			self remapOop: firstLarge in: [secondLarge := self createLargeFromSmallInteger: secondInteger]]
-		ifFalse: [secondLarge := secondInteger].
-	^ self digitSubLarge: firstLarge with: secondLarge
-]
-
 { #category : #'control & support primitives' }
 LargeIntegersPlugin >> primGetModuleName [
 	"If calling this primitive fails, then C module does not exist."
@@ -1631,13 +1485,25 @@ LargeIntegersPlugin >> primGetModuleName [
 ]
 
 { #category : #'Integer primitives' }
-LargeIntegersPlugin >> primMontgomeryTimes: secondOperandInteger modulo: thirdModuloInteger mInvModB: smallInverseInteger [
-	| firstLarge secondLarge firstInteger thirdLarge |
+LargeIntegersPlugin >> primMontgomeryDigitLength [
+	self debugCode: [self msg: 'primMontgomeryDigitLength'].
+	self
+				primitive: 'primMontgomeryDigitLength'
+				parameters: #()
+				receiver: #Integer.
+	^interpreterProxy integerObjectOf: 32
+]
+
+{ #category : #'Integer primitives' }
+LargeIntegersPlugin >> primMontgomeryTimes: secondOperandInteger modulo: thirdModuloInteger mInvModB: mInverseInteger [
+	| firstLarge secondLarge firstInteger thirdLarge mInv |
+	<var: #mInv type: #'unsigned int'>
 	self debugCode: [self msg: 'montgomeryTimes: secondOperandInteger modulo: thirdModuloInteger mInvModB: smallInverseInteger'].
 	firstInteger := self
 				primitive: 'primMontgomeryTimesModulo'
-				parameters: #(Integer Integer SmallInteger )
+				parameters: #(Integer Integer Integer )
 				receiver: #Integer.
+	 mInv := interpreterProxy positive32BitValueOf: mInverseInteger.
 	(interpreterProxy isIntegerObject: firstInteger)
 		ifTrue: ["convert it to a not normalized LargeInteger"
 			self remapOop: #(secondOperandInteger thirdModuloInteger) in: [firstLarge := self createLargeFromSmallInteger: firstInteger]]
@@ -1650,20 +1516,7 @@ LargeIntegersPlugin >> primMontgomeryTimes: secondOperandInteger modulo: thirdMo
 		ifTrue: ["convert it to a not normalized LargeInteger"
 			self remapOop: #(firstLarge secondLarge) in: [thirdLarge := self createLargeFromSmallInteger: thirdModuloInteger]]
 		ifFalse: [thirdLarge := thirdModuloInteger].
-	^ self digitMontgomery: firstLarge times: secondLarge modulo: thirdLarge mInvModB: smallInverseInteger
-]
-
-{ #category : #'development primitives' }
-LargeIntegersPlugin >> primNormalize: anInteger [ 
-"Parameter specification #(Integer) doesn't convert!"
-	self debugCode: [self msg: 'primNormalize: anInteger'].
-	self
-		primitive: 'primNormalize'
-		parameters: #(Integer )
-		receiver: #Oop.
-	(interpreterProxy isIntegerObject: anInteger)
-		ifTrue: [^ anInteger].
-	^ self normalize: anInteger
+	^ self digitMontgomery: firstLarge times: secondLarge modulo: thirdLarge mInvModB: mInv
 ]
 
 { #category : #'Integer primitives' }
@@ -1688,16 +1541,18 @@ LargeIntegersPlugin >> primNormalizePositive [
 	^ self normalizePositive: rcvr
 ]
 
-{ #category : #debugging }
-LargeIntegersPlugin >> think [
-	"Flag for marking methods for later thinking."
-	self debugCode: [self msg: '#think should not be called'].
-	^nil
+{ #category : #util }
+LargeIntegersPlugin >> unsafeByteOfLargeInt: bytesObj at: ix [
+	"Argument bytesObj must not be aSmallInteger!"
+	<inline: true>
+	<returnTypeC: #'unsigned char'>
+	^(interpreterProxy cCoerce: (interpreterProxy firstIndexableField: bytesObj) to: #'unsigned char *') at: ix - 1
 ]
 
 { #category : #util }
-LargeIntegersPlugin >> unsafeByteOf: bytesObj at: ix [
-	"Argument bytesObj must not be aSmallInteger!"
-	<inline: true>
-	^(interpreterProxy cCoerce: (interpreterProxy firstIndexableField: bytesObj) to: #'unsigned char *') at: ix - 1
+LargeIntegersPlugin >> unsafeDigitOfLargeInt: anOop at: ix [
+	"Argument must not be aSmallInteger!"
+	<inline: #always>
+	<returnTypeC: #'unsigned int'>
+	^self cDigitOf: (self pointerToFirstDigitOfLargeInt: anOop) at: ix - 1
 ]

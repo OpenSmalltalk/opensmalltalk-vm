@@ -5,6 +5,13 @@ Class {
 }
 
 { #category : #'test support' }
+CogIA32CompilerForTests class >> byteRegistersWithNamesDo: aBinaryBlock [
+	(self registers first: 4)
+		with: #('%al' '%cl' '%dl' '%bl')
+		do: aBinaryBlock
+]
+
+{ #category : #'test support' }
 CogIA32CompilerForTests class >> dataRegistersWithAccessorsDo: aTrinaryBlock [
 	self registers withIndexDo:
 		[:reg :i|
@@ -41,7 +48,7 @@ CogIA32CompilerForTests class >> fp64registers [
 
 { #category : #'test support' }
 CogIA32CompilerForTests class >> registers [
-	^{ EAX. ECX. EDX. EBX. ESP. EBP. ESI. EDI } "a.k.a. (0 to: 7)"
+	^(0 to: 7) "a.k.a. { EAX. ECX. EDX. EBX. ESP. EBP. ESI. EDI }"
 ]
 
 { #category : #'test support' }
@@ -58,9 +65,18 @@ CogIA32CompilerForTests class >> xmmRegistersWithNamesDo: aBinaryBlock [
 		do: aBinaryBlock
 ]
 
-{ #category : #encoding }
-CogIA32CompilerForTests >> concreteRegister: value [
-	^value
+{ #category : #'generate machine code' }
+CogIA32CompilerForTests >> concretizeAt: actualAddress [
+	"Override to check maxSize and machineCodeSize"
+
+	| result |
+	maxSize ifNil: [maxSize := self computeMaximumSize].
+	result := super concretizeAt: actualAddress.
+	self assert: (maxSize notNil
+				and: [self isPCDependent
+						ifTrue: [maxSize >= machineCodeSize]
+						ifFalse: [maxSize = machineCodeSize]]).
+	^result
 ]
 
 { #category : #testing }

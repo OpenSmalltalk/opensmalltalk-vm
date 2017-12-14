@@ -76,15 +76,6 @@ NewObjectMemorySimulator >> bytesPerOop [
 	^4
 ]
 
-{ #category : #'memory access' }
-NewObjectMemorySimulator >> cCoerce: value to: cTypeString [
-	"Type coercion for translation only; just return the value when running in Smalltalk."
-
-	^value == nil
-		ifTrue: [value]
-		ifFalse: [value coerceTo: cTypeString sim: self]
-]
-
 { #category : #'simulation only' }
 NewObjectMemorySimulator >> capturePendingFinalizationSignals [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -217,6 +208,26 @@ NewObjectMemorySimulator >> is: oop KindOf: classNameString [
 NewObjectMemorySimulator >> isFloatObject: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter isFloatObject: oop
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> isKindOfInteger: offset [
+	^coInterpreter isKindOfInteger: offset
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> isLargeIntegerObject: offset [
+	^coInterpreter isLargeIntegerObject: offset
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> isLargeNegativeIntegerObject: offset [
+	^coInterpreter isLargeNegativeIntegerObject: offset
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> isLargePositiveIntegerObject: offset [
+	^coInterpreter isLargePositiveIntegerObject: offset
 ]
 
 { #category : #'memory access' }
@@ -452,6 +463,12 @@ NewObjectMemorySimulator >> showDisplayBits: aForm Left: l Top: t Right: r Botto
 NewObjectMemorySimulator >> signalFinalization: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter signalFinalization: oop
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> signalSemaphoreWithIndex: index [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter signalSemaphoreWithIndex: index
 ]
 
 { #category : #'simulation only' }

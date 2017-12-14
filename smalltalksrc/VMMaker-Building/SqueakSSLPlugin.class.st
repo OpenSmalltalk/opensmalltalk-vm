@@ -26,15 +26,15 @@ SqueakSSLPlugin >> primitiveAccept [
 		< -1 - Other errors.
 	"
 	| start srcLen dstLen srcOop dstOop handle srcPtr dstPtr result |
-	<var: #srcPtr type: 'char *'>
-	<var: #dstPtr type: 'char *'>
+	<var: #srcPtr type: #'char *'>
+	<var: #dstPtr type: #'char *'>
 	<export: true>
 	interpreterProxy methodArgumentCount = 5
 		ifFalse:[^interpreterProxy primitiveFail].
-	dstOop := interpreterProxy stackObjectValue: 0.
+	dstOop := interpreterProxy stackValue: 0.
 	srcLen := interpreterProxy stackIntegerValue: 1.
 	start := interpreterProxy stackIntegerValue: 2.
-	srcOop := interpreterProxy stackObjectValue: 3.
+	srcOop := interpreterProxy stackValue: 3.
 	handle := interpreterProxy stackIntegerValue: 4.
 	interpreterProxy failed ifTrue:[^nil].
 	((start > 0 and:[srcLen >= 0])
@@ -65,15 +65,15 @@ SqueakSSLPlugin >> primitiveConnect [
 		< -1 - Other errors.
 	"
 	| start srcLen dstLen srcOop dstOop handle srcPtr dstPtr result |
-	<var: #srcPtr type: 'char *'>
-	<var: #dstPtr type: 'char *'>
+	<var: #srcPtr type: #'char *'>
+	<var: #dstPtr type: #'char *'>
 	<export: true>
 	interpreterProxy methodArgumentCount = 5
 		ifFalse:[^interpreterProxy primitiveFail].
-	dstOop := interpreterProxy stackObjectValue: 0.
+	dstOop := interpreterProxy stackValue: 0.
 	srcLen := interpreterProxy stackIntegerValue: 1.
 	start := interpreterProxy stackIntegerValue: 2.
-	srcOop := interpreterProxy stackObjectValue: 3.
+	srcOop := interpreterProxy stackValue: 3.
 	handle := interpreterProxy stackIntegerValue: 4.
 	interpreterProxy failed ifTrue:[^nil].
 	((start > 0 and:[srcLen >= 0])
@@ -120,10 +120,10 @@ SqueakSSLPlugin >> primitiveDecrypt [
 	<export: true>
 	interpreterProxy methodArgumentCount = 5
 		ifFalse:[^interpreterProxy primitiveFail].
-	dstOop := interpreterProxy stackObjectValue: 0.
+	dstOop := interpreterProxy stackValue: 0.
 	srcLen := interpreterProxy stackIntegerValue: 1.
 	start := interpreterProxy stackIntegerValue: 2.
-	srcOop := interpreterProxy stackObjectValue: 3.
+	srcOop := interpreterProxy stackValue: 3.
 	handle := interpreterProxy stackIntegerValue: 4.
 	interpreterProxy failed ifTrue:[^nil].
 	((start > 0 and:[srcLen >= 0])
@@ -173,10 +173,10 @@ SqueakSSLPlugin >> primitiveEncrypt [
 	<export: true>
 	interpreterProxy methodArgumentCount = 5
 		ifFalse:[^interpreterProxy primitiveFail].
-	dstOop := interpreterProxy stackObjectValue: 0.
+	dstOop := interpreterProxy stackValue: 0.
 	srcLen := interpreterProxy stackIntegerValue: 1.
 	start := interpreterProxy stackIntegerValue: 2.
-	srcOop := interpreterProxy stackObjectValue: 3.
+	srcOop := interpreterProxy stackValue: 3.
 	handle := interpreterProxy stackIntegerValue: 4.
 	interpreterProxy failed ifTrue:[^nil].
 	((start > 0 and:[srcLen >= 0])
@@ -276,7 +276,7 @@ SqueakSSLPlugin >> primitiveSetStringProperty [
 	<export: true>
 	interpreterProxy methodArgumentCount = 3
 		ifFalse:[^interpreterProxy primitiveFail].
-	srcOop := interpreterProxy stackObjectValue: 0.
+	srcOop := interpreterProxy stackValue: 0.
 	propID := interpreterProxy stackIntegerValue: 1.
 	handle := interpreterProxy stackIntegerValue: 2.
 	interpreterProxy failed ifTrue:[^nil].

@@ -7,7 +7,7 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
-{ #category : #testing }
+{ #category : #accessing }
 TDefineNode >> constantNumbericValueOrNil [
 	"Override so that named constants don't get elided."
 	^nil
@@ -20,6 +20,12 @@ TDefineNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	aStream nextPutAll: name.
 ]
 
+{ #category : #testing }
+TDefineNode >> isDefine [
+
+	^true
+]
+
 { #category : #comparing }
 TDefineNode >> isSameAs: aTParseNode [
 	^self class == aTParseNode class
@@ -30,7 +36,7 @@ TDefineNode >> isSameAs: aTParseNode [
 
 { #category : #accessing }
 TDefineNode >> name [
-	^name asString
+	^name
 ]
 
 { #category : #accessing }

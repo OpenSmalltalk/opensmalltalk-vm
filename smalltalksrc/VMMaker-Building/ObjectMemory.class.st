@@ -129,12 +129,6 @@ Class {
 	#category : #'VMMaker-Interpreter'
 }
 
-{ #category : #translation }
-ObjectMemory class >> additionalHeadersDo: aBinaryBlock [
-	"Evaluate aBinaryBlock with the names and contents of
-	 any additional header files that need to be generated."
-]
-
 { #category : #accessing }
 ObjectMemory class >> baseHeaderSize [
 "To support SmartSyntaxPluginCodeGenerator"
@@ -194,35 +188,6 @@ ObjectMemory class >> implicitReturnTypeFor: aSelector [
 ObjectMemory class >> initBytesPerWord: nBytes [
 
 	BytesPerWord := nBytes.
-	"The following is necessary to avoid confusing the compiler with shifts that are larger than the width of the type on which they operate.  In gcc, such shifts cause incorrect code to be generated."
-	BytesPerWord = 8
-		ifTrue:					"64-bit VM"
-			[Byte0Mask := 16r00000000000000FF.	Byte0Shift := 0.
-			 Byte1Mask := 16r000000000000FF00.	Byte1Shift := 8.
-			 Byte2Mask := 16r0000000000FF0000.	Byte2Shift := 16.
-			 Byte3Mask := 16r00000000FF000000.	Byte3Shift := 24.
-			 Byte4Mask := 16r000000FF00000000.	Byte4Shift := 32.
-			 Byte5Mask := 16r0000FF0000000000.	Byte5Shift := 40.
-			 Byte6Mask := 16r00FF000000000000.	Byte6Shift := 48.
-			 Byte7Mask := 16rFF00000000000000.	Byte7Shift := 56.
-			 Bytes3to0Mask := 16r00000000FFFFFFFF.
-			 Bytes7to4Mask := 16rFFFFFFFF00000000]
-		ifFalse:					"32-bit VM"
-			[Byte0Mask := 16r00000000000000FF.	Byte0Shift := 0.
-			 Byte1Mask := 16r000000000000FF00.	Byte1Shift := 8.
-			 Byte2Mask := 16r0000000000FF0000.	Byte2Shift := 16.
-			 Byte3Mask := 16r00000000FF000000.	Byte3Shift := 24.
-			 Byte4Mask := 16r0000000000000000.	Byte4Shift := 0.		"unused"
-			 Byte5Mask := 16r0000000000000000.	Byte5Shift := 0.		"unused"
-			 Byte6Mask := 16r0000000000000000.	Byte6Shift := 0.		"unused"
-			 Byte7Mask := 16r0000000000000000.	Byte7Shift := 0.		"unused"
-			 Bytes3to0Mask := 16r0000000000000000.					"unused"
-			 Bytes7to4Mask := 16r0000000000000000					"unused"].
-	Byte1ShiftNegated := Byte1Shift negated.
-	Byte3ShiftNegated := Byte3Shift negated.
-	Byte4ShiftNegated := Byte4Shift negated.
-	Byte5ShiftNegated := Byte5Shift negated.
-	Byte7ShiftNegated := Byte7Shift negated.
 	"N.B.  This is *not* output when generating the interpreter file.
 	 It is left to the various sqConfig.h files to define correctly."
 	VMBIGENDIAN := Smalltalk endianness == #big
@@ -346,7 +311,7 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 	SelectorCannotInterpret := 34.
 	"Was MethodContextProto := 35."
 	ClassBlockClosure := 36.
-	"Was BlockContextProto := 37."
+	ClassFullBlockClosure := 37. "Was BlockContextProto := 37."
 	ExternalObjectsArray := 38.
 	ClassMutex := 39.
 	"Was: ClassTranslatedMethod := 40."
@@ -375,7 +340,10 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 
 	SelectorUnknownBytecode := 57.
 	SelectorCounterTripped := 58.
-	SelectorSistaTrap := 59
+	SelectorSistaTrap := 59.
+	
+	LowcodeContextMark := 60.
+	LowcodeNativeContextClass := 61.
 
 ]
 
@@ -452,26 +420,6 @@ ObjectMemory class >> numSmallIntegerTagBits [
 { #category : #'accessing class hierarchy' }
 ObjectMemory class >> objectRepresentationClass [
 	^self subclassResponsibility
-]
-
-{ #category : #translation }
-ObjectMemory class >> requiredMethodNames: options [
-	"return the list of method names that should be retained for export or other support reasons"
-	^self exportAPISelectors: options
-]
-
-{ #category : #translation }
-ObjectMemory class >> unsignedIntegerSuffix [
-	"Answer the suffix that should be appended to unsigned integer literals in generated code."
-
-	^BytesPerWord = 4 ifTrue: ['UL'] ifFalse: ['ULL']
-]
-
-{ #category : #translation }
-ObjectMemory class >> unsignedLongLongSuffix [
-	"Answer the suffix that should be appended to unsigned integer literals in generated code."
-
-	^'ULL'
 ]
 
 { #category : #accessing }
@@ -1059,26 +1007,36 @@ ObjectMemory >> byteSwapByteObjectsFrom: startOop to: stopAddr flipFloatsIf: fli
 			oop := self objectAfter: oop]
 ]
 
+{ #category : #'memory access' }
+ObjectMemory >> byteSwapped32IfBigEndian: w [
+	"If the VM is big endian, then swap the bytes of w"
+	<api>
+	<var: 'w' type: #'unsigned int'>
+	<returnTypeC: #'unsigned int'>
+	self cppIf: VMBIGENDIAN
+		ifTrue: [^w byteSwap32]
+		ifFalse: [^w bitAnd: 16rFFFFFFFF]
+]
+
+{ #category : #'memory access' }
+ObjectMemory >> byteSwapped64IfBigEndian: w [
+	"If the VM is big endian, then swap the bytes of w"
+	<api>
+	<var: 'w' type: #'unsigned long long'>
+	<returnTypeC: #'unsigned long long'>
+	self cppIf: VMBIGENDIAN
+		ifTrue: [^w byteSwap64]
+		ifFalse: [^w bitAnd: 16rFFFFFFFFFFFFFFFF]
+]
+
 { #category : #'image save/restore' }
 ObjectMemory >> byteSwapped: w [
 	"Answer the given integer with its bytes in the reverse order."
 	<api>
 	<returnTypeC: #sqInt>
-	self cppIf: self wordSize = 4
-		ifTrue:
-			[^ ((w bitShift: Byte3ShiftNegated) bitAnd: Byte0Mask)
-			 + ((w bitShift: Byte1ShiftNegated) bitAnd: Byte1Mask)
-			 + ((w bitShift: Byte1Shift         ) bitAnd: Byte2Mask)
-			 + ((w bitShift: Byte3Shift         ) bitAnd: Byte3Mask)]
-		ifFalse:
-			[^ ((w bitShift: Byte7ShiftNegated) bitAnd: Byte0Mask)
-			 + ((w bitShift: Byte5ShiftNegated) bitAnd: Byte1Mask)
-			 + ((w bitShift: Byte3ShiftNegated) bitAnd: Byte2Mask)
-			 + ((w bitShift: Byte1ShiftNegated) bitAnd: Byte3Mask)
-			 + ((w bitShift: Byte1Shift         ) bitAnd: Byte4Mask)
-			 + ((w bitShift: Byte3Shift         ) bitAnd: Byte5Mask)
-			 + ((w bitShift: Byte5Shift         ) bitAnd: Byte6Mask)
-			 + ((w bitShift: Byte7Shift         ) bitAnd: Byte7Mask)]
+	^self cppIf: self wordSize = 4
+		ifTrue: [w byteSwap32]
+		ifFalse: [w byteSwap64]
 ]
 
 { #category : #allocation }
@@ -1099,7 +1057,8 @@ ObjectMemory >> bytesPerOop [
 ObjectMemory >> cCoerceSimple: value to: cTypeString [
 	<doNotGenerate>
 	^cTypeString caseOf:
-	   {	[#'char *']	->	[value] }
+	   {	[#'char *']			->	[value].
+		[#'unsigned int']	->	[value]. }
 ]
 
 { #category : #'interpreter access' }
@@ -1659,7 +1618,7 @@ ObjectMemory >> compactClassAt: ccIndex [
 { #category : #'cog jit support' }
 ObjectMemory >> compactClassFieldLSB [
 	<api>
-	<cmacro: '() 12'>
+	<cmacro>
 	^12
 ]
 
@@ -1734,6 +1693,14 @@ ObjectMemory >> containOnlyOops: array1 and: array2 [
 			(self isIntegerObject: (self longAt: array2 + fieldOffset)) ifTrue: [^ false].
 			fieldOffset := fieldOffset - self bytesPerOop].
 	^ true
+]
+
+{ #category : #simulation }
+ObjectMemory >> convertToArray [
+	<doNotGenerate>
+	"I dont believe it -- this *just works*"
+
+	memory:= memory as: Array
 ]
 
 { #category : #'image segment in/out' }
@@ -1888,7 +1855,16 @@ ObjectMemory >> fetchLong32: fieldIndex ofObject: oop [
 { #category : #'object access' }
 ObjectMemory >> fetchLong64: longIndex ofObject: oop [
 	<returnTypeC: #sqLong>
-	^self long64At: oop + self baseHeaderSize + (longIndex << 3)
+	^self cppIf: BytesPerWord = 8
+		ifTrue: [self long64At: oop + self baseHeaderSize + (longIndex << 3)]
+		ifFalse:
+			["BEWARE OF SIGN EXTENSION ON LEAST SIGNIFICAND LIMB
+			'unsigned int) CAST IS THERE TO PREVENT SUCH ERROR"
+			self cppIf: VMBIGENDIAN
+				ifTrue: [((self long32At: oop + self baseHeaderSize + (longIndex << 3)) asUnsignedLongLong << 32)
+					+ (self cCoerceSimple: (self long32At: oop + self baseHeaderSize + (longIndex << 3 + 4)) to: #'unsigned int')]
+				ifFalse: [(self cCoerceSimple: (self long32At: oop + self baseHeaderSize + (longIndex << 3)) to: #'unsigned int')
+					+ ((self long32At: oop + self baseHeaderSize + (longIndex << 3 + 4)) asUnsignedLongLong << 32)]]
 ]
 
 { #category : #'object access' }
@@ -1901,6 +1877,11 @@ ObjectMemory >> fetchPointer: fieldIndex ofObject: oop [
 { #category : #'object access' }
 ObjectMemory >> fetchShort16: shortIndex ofObject: oop [
 	^self shortAt: oop + self baseHeaderSize + (shortIndex << 1)
+]
+
+{ #category : #'object access' }
+ObjectMemory >> fetchUnsignedShort16: shortIndex ofObject: oop [
+	^self cCoerceSimple: (self shortAt: oop + self baseHeaderSize + (shortIndex << 1)) to: #'unsigned short'
 ]
 
 { #category : #finalization }
@@ -1953,12 +1934,14 @@ ObjectMemory >> firstAccessibleObject [
 { #category : #'header formats' }
 ObjectMemory >> firstByteFormat [
 	<api>
+	<cmacro>
 	^8
 ]
 
 { #category : #'header formats' }
 ObjectMemory >> firstCompiledMethodFormat [
 	<api>
+	<cmacro>
 	^12
 ]
 
@@ -1996,6 +1979,7 @@ ObjectMemory >> firstIndexableField: oop [
 { #category : #'header formats' }
 ObjectMemory >> firstLongFormat [
 	<api>
+	<cmacro>
 	^6
 ]
 
@@ -2417,6 +2401,13 @@ ObjectMemory >> hasForwardingBlock: objOop [
 	^self isMarked: objOop
 ]
 
+{ #category : #'header access' }
+ObjectMemory >> hasIdentityHash: objOop [
+	"Objects gain their identityHash on instantiation in V3."
+	<inline: true>
+	^true
+]
+
 { #category : #'object format' }
 ObjectMemory >> hasSixtyFourBitImmediates [
 	"The V3 64-bit memory manager has 64-bit oops, but its SmallIntegers only have
@@ -2433,6 +2424,14 @@ ObjectMemory >> hasSpurMemoryManagerAPI [
 ObjectMemory >> hashBitsOf: oop [
 
 	^ ((self baseHeader: oop) >> HashBitsOffset) bitAnd: HashMaskUnshifted
+]
+
+{ #category : #'method access' }
+ObjectMemory >> headerIndicatesAlternateBytecodeSet: methodHeader [
+	"A negative header selects the alternate bytecode set."
+	<api>
+	<inline: true>
+	^methodHeader signedIntFromLong < 0
 ]
 
 { #category : #'header access' }
@@ -2460,6 +2459,14 @@ ObjectMemory >> headerWhileForwardingOf: oop [
 		 self assert: (self fwdBlockValid: fwdBlock).
 		 header := self longAt: fwdBlock + self wordSize].
 	^header
+]
+
+{ #category : #'image save/restore' }
+ObjectMemory >> imageFormatVersion [
+	"Return a magic constant that changes when the image format changes.
+	 Since the image reading code uses this to detect byte ordering, one
+	 must avoid version numbers that are invariant under byte reversal."
+	^self wordSize = 4 ifTrue: [6505] ifFalse: [68003]
 ]
 
 { #category : #'image segment in/out' }
@@ -2664,6 +2671,7 @@ ObjectMemory >> incrementalGC [
 { #category : #'header formats' }
 ObjectMemory >> indexablePointersFormat [
 	<api>
+	<cmacro>
 	^3
 ]
 
@@ -2865,14 +2873,13 @@ ObjectMemory >> instantiateClass: classPointer indexableSize: size [
 	class format word. The sizeHiBits will go away and other shifts change by 2 
 	when the split fields get merged in an (incompatible) image change."
 	<api>
-	| hash header1 header2 cClass byteSize format binc header3 hdrSize sizeHiBits bm1 classFormat |
+	| hash header1 cClass byteSize format binc header3 hdrSize sizeHiBits bm1 classFormat |
 	<inline: false>
 	self assert: size >= 0. "'cannot have a negative indexable field count"
 	hash := self newObjectHash.
 	classFormat := self formatOfClass: classPointer.
 	"Low 2 bits are 0"
 	header1 := (classFormat bitAnd: 16r1FF00) bitOr: (hash bitAnd: HashMaskUnshifted) << HashBitsOffset.
-	header2 := classPointer.
 	sizeHiBits := (classFormat bitAnd: 16r60000) >> 9.
 	cClass := header1 bitAnd: CompactClassMask. "compact class field from format word"
 	byteSize := (classFormat bitAnd: SizeMask + Size4Bit) + sizeHiBits.
@@ -2905,7 +2912,7 @@ ObjectMemory >> instantiateClass: classPointer indexableSize: size [
 	byteSize > 255 "requires size header word/full header"
 		ifTrue: [header3 := byteSize. hdrSize := 3]
 		ifFalse: [header1 := header1 bitOr: byteSize. hdrSize := cClass = 0 ifTrue: [2] ifFalse: [1]].
-	^self allocate: byteSize headerSize: hdrSize h1: header1 h2: header2 h3: header3 doFill: true format: format
+	^self allocate: byteSize headerSize: hdrSize h1: header1 h2: classPointer h3: header3 doFill: true format: format
 ]
 
 { #category : #'interpreter access' }
@@ -2914,10 +2921,9 @@ ObjectMemory >> instantiateContext: classPointer sizeInBytes: sizeInBytes [
 	size is under 256 bytes, the limit for objects with only one or 
 	two header words. Note that the size is specified in bytes 
 	and should include four bytes for the base header word."
-	| hash header1 header2 hdrSize |
+	| hash header1 hdrSize |
 	hash := self newObjectHash.
 	header1 := (hash bitAnd: HashMaskUnshifted) << HashBitsOffset bitOr: (self formatOfClass: classPointer).
-	header2 := classPointer.
 	(header1 bitAnd: CompactClassMask) > 0 "are contexts compact?"
 		ifTrue: [hdrSize := 1]
 		ifFalse: [hdrSize := 2].
@@ -2927,8 +2933,7 @@ ObjectMemory >> instantiateContext: classPointer sizeInBytes: sizeInBytes [
 		ifFalse: [hdrSize := 3.
 				"Zero the size field of header1 if large"
 				header1 := header1 - (header1 bitAnd: SizeMask)].
-self flag: #Dan.  "Check details of context sizes"
-	^ self allocate: sizeInBytes headerSize: hdrSize h1: header1 h2: header2 h3: LargeContextSize doFill: false format: 0
+	^self allocate: sizeInBytes headerSize: hdrSize h1: header1 h2: classPointer h3: LargeContextSize doFill: false format: 0 "ignored cuz doFill: is false"
 ]
 
 { #category : #'interpreter access' }
@@ -2940,19 +2945,20 @@ ObjectMemory >> instantiateSmallClass: classPointer sizeInBytes: sizeInBytes [
 	NOTE this code will only work for sizes that are an integral number of words
 		(like not a 32-bit LargeInteger in a 64-bit system). 
 	May cause a GC.
-	Note that the created small object IS NOT FILLED and must be completed before returning it to Squeak. Since this call is used in routines that do jsut that we are safe. Break this rule and die."
+	Note that the created small object IS NOT FILLED and must be completed before
+	returning it to Squeak. Since this call is used in routines that do just that we are safe.
+	Break this rule and die."
 
-	| hash header1 header2 hdrSize |
+	| hash header1 hdrSize |
 	(sizeInBytes bitAnd: (self wordSize-1)) = 0 ifFalse:
 		[self error: 'size must be integral number of words'].
 	hash := self newObjectHash.
 	header1 := (hash bitAnd: HashMaskUnshifted) << HashBitsOffset bitOr: (self formatOfClass: classPointer).
-	header2 := classPointer.
 	hdrSize := (header1 bitAnd: CompactClassMask) > 0 "is this a compact class"
 				ifTrue: [1]
 				ifFalse: [2].
 	header1 := header1 + (sizeInBytes - (header1 bitAnd: SizeMask+Size4Bit)).
-	^ self allocate: sizeInBytes headerSize: hdrSize h1: header1 h2: header2 h3: 0 doFill: false format: 0
+	^self allocate: sizeInBytes headerSize: hdrSize h1: header1 h2: classPointer h3: 0 doFill: false format: 0 "ignored cuz doFill: is false"
 ]
 
 { #category : #'interpreter access' }
@@ -3111,6 +3117,11 @@ ObjectMemory >> isCompiledMethod: oop [
 ]
 
 { #category : #'interpreter access' }
+ObjectMemory >> isCompiledMethodFormat: format [
+	^format >= self firstCompiledMethodFormat
+]
+
+{ #category : #'interpreter access' }
 ObjectMemory >> isCompiledMethodHeader: objHeader [
     "Answer whether the argument header has compiled method format"
     ^(self formatOfHeader: objHeader) >= self firstCompiledMethodFormat
@@ -3248,6 +3259,32 @@ ObjectMemory >> isIndexableFormat: format [
 ]
 
 { #category : #'interpreter access' }
+ObjectMemory >> isInstanceOfClassLargeNegativeInteger: oop [
+	<inline: true>
+	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
+	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
+	 phrase (objectMemory splObj: ClassLargeNegativeInteger) is expanded
+	 in-place and is _not_ evaluated if oop has a non-zero CompactClassIndex."
+	^self
+		is: oop
+		instanceOf: (self splObj: ClassLargeNegativeInteger) 
+		compactClassIndex: ClassLargeNegativeIntegerCompactIndex
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> isInstanceOfClassLargePositiveInteger: oop [
+	<inline: true>
+	"N.B.  Because Slang always inlines is:instanceOf:compactClassIndex:
+	 (because is:instanceOf:compactClassIndex: has an inline: pragma) the
+	 phrase (objectMemory splObj: ClassLargePositiveInteger) is expanded
+	 in-place and is _not_ evaluated if oop has a non-zero CompactClassIndex."
+	^self
+		is: oop
+		instanceOf: (self splObj: ClassLargePositiveInteger) 
+		compactClassIndex: ClassLargePositiveIntegerCompactIndex
+]
+
+{ #category : #'interpreter access' }
 ObjectMemory >> isIntegerObject: objectPointer [
 
 	^ (objectPointer bitAnd: 1) > 0
@@ -3261,8 +3298,15 @@ ObjectMemory >> isIntegerValue: intValue [
 	 exactly those integers in the range that can be represented in 31-bits or 63-bits."
 	<api>
 	^self
-		cCode: [(intValue bitXor: (intValue << 1)) >= 0]
-		inSmalltalk: [intValue >= 16r-40000000 and: [intValue <= 16r3FFFFFFF]]
+		cCode: [(intValue asUnsignedInteger bitXor: (intValue asUnsignedInteger << 1)) asInteger >= 0]
+		inSmalltalk: [intValue >= self minSmallInteger and: [intValue <= self maxSmallInteger]]
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> isLargeIntegerInstance: oop [
+	<inline: true>
+	^(self isInstanceOfClassLargePositiveInteger: oop)
+		or: [self isInstanceOfClassLargeNegativeInteger: oop]
 ]
 
 { #category : #'header access' }
@@ -3379,6 +3423,19 @@ ObjectMemory >> isPointersNonImm: oop [
 	"Answer if the argument has only fields that can hold oops. See comment in formatOf:"
 
 	^(self formatOf: oop) <= self lastPointerFormat
+]
+
+{ #category : #'header formats' }
+ObjectMemory >> isPureBitsFormat: format [
+	^format >= self firstLongFormat
+	  and: [format < self firstCompiledMethodFormat]
+]
+
+{ #category : #'object format' }
+ObjectMemory >> isPureBitsNonImm: objOop [
+	"Answer if the argument contains only indexable words (no oops). See comment in formatOf:"
+
+	^self isPureBitsFormat: (self formatOf: objOop)
 ]
 
 { #category : #'interpreter access' }
@@ -3943,12 +4000,19 @@ ObjectMemory >> methodHeaderOf: methodObj [
 { #category : #allocation }
 ObjectMemory >> minSlotsForShortening [
 	"HeaderTypeFree free chunks require 1 word of header"
+	<api>
 	^1
 ]
 
 { #category : #'interpreter access' }
 ObjectMemory >> minSmallInteger [
 	^-1073741824
+]
+
+{ #category : #simulation }
+ObjectMemory >> newInputEventAccessorOfSize: numElements [
+	<doNotGenerate>
+	^CArrayAccessor on: (IntegerArray new: 8)
 ]
 
 { #category : #'header access' }
@@ -3990,6 +4054,11 @@ ObjectMemory >> noShiftCompactClassIndexOfHeader: header [
 	<api>
 	<inline: true>
 	^header bitAnd: 16r1F << self compactClassFieldLSB
+]
+
+{ #category : #'header formats' }
+ObjectMemory >> nonIndexablePointerFormat [
+	^1
 ]
 
 { #category : #'object format' }
@@ -4159,7 +4228,7 @@ ObjectMemory >> objectAfterWhileForwarding: oop [
 
 { #category : #'object enumeration' }
 ObjectMemory >> objectBefore: address [ 
-	"Return the object or start of free space immediately preceeding the given
+	"Return the object or start of free space immediately preceding the given
 	 address, object or free chunk in memory. If none, return 0.  This is for debugging only."
 	| obj nextObj sz |
 	<api>
@@ -4179,7 +4248,7 @@ ObjectMemory >> objectBefore: address [
 
 { #category : #'object enumeration' }
 ObjectMemory >> objectExactlyBefore: oop [ 
-	"Return the object or start of free space immediately preceeding the given
+	"Return the object or start of free space immediately preceding the given
 	 object or free chunk in memory. If none, return 0.  This is for debugging only."
 	| obj nextObj sz |
 	<api>
@@ -4465,6 +4534,37 @@ ObjectMemory >> primitiveFailCodeAfterCleanup: outPointerArray [
 ]
 
 { #category : #'debug printing' }
+ObjectMemory >> printActivationsOf: aMethodObj [
+	"Scan the heap printing the oops of any and all contexts that refer to anOop"
+	| oop |
+	<api>
+	oop := self firstAccessibleObject.
+	[oop = nil] whileFalse:
+		[((self isContextNonImm: oop)
+		  and: [aMethodObj = (self fetchPointer: MethodIndex ofObject: oop)]) ifTrue:
+			[self interpreter
+				printHex: oop; space; printOopShort: oop; print: ' pc ';
+				printHex: (self fetchPointer: InstructionPointerIndex ofObject: oop); cr].
+		 oop := self accessibleObjectAfter: oop]
+]
+
+{ #category : #'debug printing' }
+ObjectMemory >> printContextReferencesTo: anOop [
+	"Scan the heap printing the oops of any and all contexts that refer to anOop"
+	| oop i |
+	<api>
+	oop := self firstAccessibleObject.
+	[oop = nil] whileFalse:
+		[(self isContextNonImm: oop) ifTrue:
+			[i := CtxtTempFrameStart + (self fetchStackPointerOf: oop)].
+			 [(i := i - 1) >= 0] whileTrue:
+				[anOop = (self fetchPointer: i ofObject: oop) ifTrue:
+					[self interpreter printHex: oop; print: ' @ '; printNum: i; space; printOopShort: oop; cr.
+					 i := 0]].
+		 oop := self accessibleObjectAfter: oop]
+]
+
+{ #category : #'debug printing' }
 ObjectMemory >> printInstancesOf: aClassOop [
 	"Scan the heap printing the oops of any and all objects that are instances of aClassOop"
 	| oop |
@@ -4474,6 +4574,18 @@ ObjectMemory >> printInstancesOf: aClassOop [
 		[(self fetchClassOfNonImm: oop) = aClassOop ifTrue:
 			[self printHex: oop; cr].
 		 oop := self accessibleObjectAfter: oop]
+]
+
+{ #category : #'debug printing' }
+ObjectMemory >> printMethodImplementorsOf: anOop [
+	"Scan the heap printing the oops of any and all methods that implement anOop"
+	<api>
+	| obj |
+	obj := self firstAccessibleObject.
+	[obj = nil] whileFalse:
+		[((self isCompiledMethod: obj)
+		  and: [(self maybeSelectorOfMethod: obj) = anOop]) ifTrue:
+			[self printHex: obj; space; printOopShort: obj; cr]]
 ]
 
 { #category : #'debug printing' }
@@ -4950,7 +5062,7 @@ ObjectMemory >> shiftForWord [
 	 a 64-bit image, this method could be removed and the relevant one substituted.  We can't
 	 mark this method as <doNotGenerate> as we need an actual method to guide code gen."
 	<api>
-	<cmacro: '() 2'>
+	<cmacro>
 	^2
 ]
 
@@ -4962,6 +5074,7 @@ ObjectMemory >> shorten: obj toIndexableSize: nSlots [
 	was possible."
 	| deltaBytes desiredLength fixedFields fmt hdr totalLength
 	 indexableFields |
+	<api>
 	(self isPointersNonImm: obj) ifFalse: [^0].
 	nSlots >  0
 		ifFalse: [^0]. "no change if nSlots is zero, error if nSlots is negative"
@@ -4984,6 +5097,12 @@ ObjectMemory >> shorten: obj toIndexableSize: nSlots [
 		[HeaderTypeShort] ->
 			[self longAt: obj put: ((hdr bitClear: SizeMask) bitOr: (hdr bitAnd: SizeMask) - deltaBytes)] }.
 	^deltaBytes
+]
+
+{ #category : #'debug support' }
+ObjectMemory >> shouldBreakForLookupIn: lookupClass given: breakClassTag [
+	<inline: true>
+	^lookupClass == breakClassTag
 ]
 
 { #category : #'gc -- compaction' }
@@ -5228,6 +5347,8 @@ ObjectMemory >> statMkFwdCount [
 
 { #category : #accessing }
 ObjectMemory >> statNumGCs [
+	"Part of InterpreterProxy's 1.14 API"
+	<export: true>
 	^statIncrGCs + statFullGCs
 ]
 
@@ -5264,6 +5385,11 @@ ObjectMemory >> statSweepCount [
 { #category : #accessing }
 ObjectMemory >> statTenures [
 	^statTenures
+]
+
+{ #category : #accessing }
+ObjectMemory >> statTenures: aValue [
+	statTenures := aValue
 ]
 
 { #category : #'object access' }
@@ -5486,6 +5612,12 @@ ObjectMemory >> storePointer: fieldIndex ofObject: oop withValue: valuePointer [
 ]
 
 { #category : #'object access' }
+ObjectMemory >> storePointerImmutabilityCheck: index ofObject: rcvr withValue: top [
+	<inline: true>
+	^ self storePointer: index ofObject: rcvr withValue: top
+]
+
+{ #category : #'object access' }
 ObjectMemory >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
 	"Like storePointer:ofObject:withValue:, but the caller guarantees that the
 	 object being stored into is a young object or is already marked as a root."
@@ -5690,7 +5822,8 @@ ObjectMemory >> tenuringThreshold [
 
 { #category : #accessing }
 ObjectMemory >> tenuringThreshold: aValue [
-	^tenuringThreshold := aValue
+	tenuringThreshold := aValue.
+	^0
 ]
 
 { #category : #'interpreter access' }
@@ -5877,6 +6010,7 @@ ObjectMemory >> vmEndianness [
 { #category : #'header formats' }
 ObjectMemory >> weakArrayFormat [
 	<api>
+	<cmacro>
 	^4
 ]
 
@@ -5917,4 +6051,18 @@ ObjectMemory >> whereIsMaybeHeapThing: anOop [
 ObjectMemory >> wordSize [
 	"Answer the manager's word size, which is assumed to be equivalent to the underlying machine's word size."
 	^4
+]
+
+{ #category : #simulation }
+ObjectMemory >> writeEnableMemory [
+	<doNotGenerate>
+	memory class == ReadOnlyArrayWrapper ifTrue:
+		[memory := memory array]
+]
+
+{ #category : #simulation }
+ObjectMemory >> writeProtectMemory [
+	<doNotGenerate>
+	memory class ~~ ReadOnlyArrayWrapper ifTrue:
+		[memory := ReadOnlyArrayWrapper around: memory]
 ]

@@ -57,17 +57,18 @@ Class {
 	#superclass : #CogClass,
 	#instVars : [
 		'youngReferrers',
+		'unpairedMethodList',
 		'methodCount',
 		'openPICList',
 		'mzFreeStart',
 		'baseAddress',
 		'limitAddress',
 		'methodBytesFreedSinceLastCompaction',
+		'compactionInProgress',
 		'coInterpreter',
 		'objectRepresentation',
 		'cogit',
-		'objectMemory',
-		'unpairedMethodList'
+		'objectMemory'
 	],
 	#pools : [
 		'CogMethodConstants',
@@ -157,7 +158,7 @@ CogMethodZone >> addToYoungReferrers: cogMethod [
 CogMethodZone >> allocate: numBytes [
 	| roundedBytes allocation |
 	roundedBytes := numBytes + 7 bitAnd: -8.
-	mzFreeStart + roundedBytes >= (limitAddress - (methodCount * objectMemory wordSize)) ifTrue:
+	mzFreeStart + roundedBytes >= self allocationLimit ifTrue:
 		[^0].
 	allocation := mzFreeStart.
 	mzFreeStart := mzFreeStart + roundedBytes.
@@ -169,12 +170,18 @@ CogMethodZone >> allocate: numBytes [
 	^allocation
 ]
 
+{ #category : #allocating }
+CogMethodZone >> allocationLimit [
+	<inline: true>
+	^limitAddress - (methodCount * objectMemory wordSize)
+]
+
 { #category : #'jit - api' }
 CogMethodZone >> clearCogCompiledCode [
 	"Free all methods"
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
-	self cppIf: NewspeakVM ifTrue: [unpairedMethodList := nil].
+	NewspeakVM ifTrue: [unpairedMethodList := nil].
 	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
 	[cogMethod asUnsignedInteger < mzFreeStart] whileTrue:
 		[cogMethod cmType = CMMethod ifTrue:
@@ -222,18 +229,19 @@ CogMethodZone >> compactCompiledCode [
 	| objectHeaderValue source dest bytes |
 	<var: #source type: #'CogMethod *'>
 	<var: #dest type: #'CogMethod *'>
+	compactionInProgress := true.
 	objectHeaderValue := objectMemory nullHeaderForMachineCodeMethod.
 	source := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
 	openPICList := nil.
 	methodCount := 0.
-	self cppIf: NewspeakVM ifTrue: [unpairedMethodList := nil].
+	NewspeakVM ifTrue: [unpairedMethodList := nil].
 	[source < self limitZony
 	 and: [source cmType ~= CMFree]] whileTrue:
 		[self assert: (cogit cogMethodDoesntLookKosher: source) = 0.
 		 source objectHeader: objectHeaderValue.
 		 source cmUsageCount > 0 ifTrue:
 			[source cmUsageCount: source cmUsageCount // 2].
-		 self cppIf: NewspeakVM ifTrue:
+		 NewspeakVM ifTrue:
 				[(source cmType = CMMethod
 				  and: [(coInterpreter rawHeaderOf: source methodObject) asInteger ~= source asInteger]) ifTrue:
 					[source nextMethodOrIRCs: unpairedMethodList.
@@ -265,7 +273,7 @@ CogMethodZone >> compactCompiledCode [
 							[coInterpreter rawHeaderOf: dest methodObject put: dest asInteger]
 						ifFalse:
 							[self assert: (cogit noAssertMethodClassAssociationOf: dest methodObject) = objectMemory nilObject.
-							 self cppIf: NewspeakVM ifTrue:
+							 NewspeakVM ifTrue:
 								[dest nextMethodOrIRCs: unpairedMethodList.
 								 unpairedMethodList := dest asUnsignedInteger]]]
 				ifFalse:
@@ -283,7 +291,19 @@ CogMethodZone >> compactCompiledCode [
 							cCoerceSimple: source asUnsignedInteger + bytes
 							to: #'CogMethod *'].
 	mzFreeStart := dest asUnsignedInteger.
-	methodBytesFreedSinceLastCompaction := 0
+	methodBytesFreedSinceLastCompaction := 0.
+	compactionInProgress := false
+]
+
+{ #category : #accessing }
+CogMethodZone >> compactionInProgress [
+	^compactionInProgress
+]
+
+{ #category : #allocating }
+CogMethodZone >> effectiveLimit [
+	<inline: true>
+	^limitAddress
 ]
 
 { #category : #'young referers' }
@@ -323,15 +343,24 @@ CogMethodZone >> findPreviouslyCompiledVersionOf: aMethodObj with: aSelectorOop 
 	^nil
 ]
 
+{ #category : #'jit - api' }
+CogMethodZone >> followForwardedLiteralsInOpenPICList [
+	<option: #SpurObjectMemory>
+	| openPIC |
+	<var: #openPIC type: #'CogMethod *'>
+	openPIC := openPICList.
+	[openPIC notNil] whileTrue:
+		[cogit followForwardedLiteralsIn: openPIC.
+		 openPIC := self cCoerceSimple: openPIC nextOpenPIC to: #'CogMethod *'.]
+]
+
 { #category : #compaction }
 CogMethodZone >> freeMethod: cogMethod [
 	<api>
 	<var: #cogMethod type: #'CogMethod *'>
 	<inline: false>
 	self assert: cogMethod cmType ~= CMFree.
-	self assert: ((cogit cogMethodDoesntLookKosher: cogMethod) = 0
-				 or: [(cogit cogMethodDoesntLookKosher: cogMethod) = 23
-					 and: [(cogit cCoerceSimple: cogMethod methodObject to: #'CogMethod *') cmType = CMFree]]).
+	self assert: (cogit cogMethodDoesntLookKosher: cogMethod) = 0.
 	cogMethod cmType = CMMethod ifTrue:
 		["For non-Newspeak there should ne a one-to-one mapping between bytecoded and
 		  cog methods.  For Newspeak not necessarily, but only for anonymous accessors."
@@ -339,12 +368,14 @@ CogMethodZone >> freeMethod: cogMethod [
 		 (coInterpreter rawHeaderOf: cogMethod methodObject) asInteger = cogMethod asInteger
 			ifTrue:
 				[coInterpreter rawHeaderOf: cogMethod methodObject put: cogMethod methodHeader.
-				 self cppIf: NewspeakVM ifTrue:
-					[(objectRepresentation canPinObjects and: [cogMethod nextMethodOrIRCs ~= 0]) ifTrue:
+				 NewspeakVM ifTrue:
+					[(objectRepresentation canPinObjects and: [cogMethod nextMethodOrIRCs > self zoneEnd]) ifTrue:
 						[objectRepresentation freeIRCs: cogMethod nextMethodOrIRCs]]]
 			ifFalse:
-				[self assert: (cogit noAssertMethodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject.
-				 self cppIf: NewspeakVM ifTrue:
+				[self cCode: [self assert: (cogit noAssertMethodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject]
+					inSmalltalk: [self assert: ((cogit noAssertMethodClassAssociationOf: cogMethod methodObject) = objectMemory nilObject
+											or: [coInterpreter isKindOf: CurrentImageCoInterpreterFacade])].
+				 NewspeakVM ifTrue:
 					[self removeFromUnpairedMethodList: cogMethod]].
 		 cogit maybeFreeCountersOf: cogMethod].
 	cogMethod cmType = CMOpenPIC ifTrue:
@@ -360,8 +391,8 @@ CogMethodZone >> freeOlderMethodsForCompaction [
 	"Free methods, preferring older methods for compaction, up to some fraction, currently a quarter."
 	| zoneSize amountToFree initialFreeSpace freedSoFar freeableUsage cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
-	zoneSize := limitAddress - baseAddress.
-	initialFreeSpace := limitAddress - mzFreeStart + methodBytesFreedSinceLastCompaction.
+	zoneSize := self effectiveLimit - baseAddress.
+	initialFreeSpace := self effectiveLimit - mzFreeStart + methodBytesFreedSinceLastCompaction.
 	freedSoFar := initialFreeSpace.
 	amountToFree := zoneSize // 4. "4 needs to be e.g. a start-up parameter"
 	freeableUsage := 0.
@@ -395,13 +426,14 @@ CogMethodZone >> freeStart [
 { #category : #accessing }
 CogMethodZone >> freeStart: zoneLimit [
 	<doNotGenerate>
-	^mzFreeStart := zoneLimit
+	^baseAddress := mzFreeStart := zoneLimit
 ]
 
 { #category : #initialization }
 CogMethodZone >> initialize [
 	"Make youngReferrers arithmetic for addressIsInCodeZone:"
-	youngReferrers := 0
+	youngReferrers := methodCount := methodBytesFreedSinceLastCompaction := 0.
+	compactionInProgress := false
 ]
 
 { #category : #'young referers' }
@@ -435,7 +467,7 @@ CogMethodZone >> manageFrom: theStartAddress to: theLimitAddress [
 	mzFreeStart := baseAddress := theStartAddress.
 	youngReferrers := limitAddress := theLimitAddress.
 	openPICList := nil.
-	self cppIf: NewspeakVM ifTrue: [unpairedMethodList := nil].
+	NewspeakVM ifTrue: [unpairedMethodList := nil].
 	methodBytesFreedSinceLastCompaction := 0.
 	methodCount := 0
 ]
@@ -486,6 +518,25 @@ CogMethodZone >> methods [
 	^methods
 ]
 
+{ #category : #'method zone introspection' }
+CogMethodZone >> methodsCompiledToMachineCodeInto: arrayObj [ 
+	<api>
+	<var: #cogMethod type: #'CogMethod *'>
+	| cogMethod methodIndex |
+	methodIndex := 0.
+	cogMethod := cogit cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[cogMethod cmType = CMMethod ifTrue:
+			[objectMemory 
+				storePointerUnchecked: methodIndex 
+				ofObject: arrayObj 
+				withValue: cogMethod methodObject.
+			 methodIndex := methodIndex + 1].
+		 cogMethod := self methodAfter: cogMethod].
+	^ methodIndex
+	
+]
+
 { #category : #'simulation only' }
 CogMethodZone >> methodsDo: aBlock [
 	<doNotGenerate>
@@ -508,6 +559,7 @@ CogMethodZone >> methodsDo: aBlock [
 
 { #category : #accessing }
 CogMethodZone >> numMethods [
+	<api>
 	^methodCount
 ]
 
@@ -585,12 +637,24 @@ CogMethodZone >> planCompaction [
 CogMethodZone >> printCogMethods [
 	<api>
 	<returnTypeC: #void>
-	| cogMethod |
+	| cogMethod nm nc no nf nu |
 	<var: #cogMethod type: #'CogMethod *'>
+	nm := nc := no := nf := nu := 0.
 	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
 	[cogMethod < self limitZony] whileTrue:
 		[coInterpreter printCogMethod: cogMethod.
-		 cogMethod := self methodAfter: cogMethod]
+		 cogMethod cmType
+			caseOf: {
+			[CMFree]		->	[nf := nf + 1].
+			[CMMethod]	->	[nm := nm + 1].
+			[CMClosedPIC]	->	[nc := nc + 1].
+			[CMOpenPIC]	->	[no:= no+ 1] }
+			otherwise: [nu := nu + 1].
+		 cogMethod := self methodAfter: cogMethod].
+	coInterpreter print: 'CMMethod '; printNum: nm;  print: ' CMClosedPIC '; printNum: nc;  print: ' CMOpenPIC '; printNum: no;  print: ' CMFree '; printNum: nf.
+	nu > 0 ifTrue:
+		[coInterpreter print: ' UNKNOWN '; printNum: nu].
+	coInterpreter print: ' total '; printNum: nm+nc+no+nf+nu; cr
 ]
 
 { #category : #printing }
@@ -626,7 +690,7 @@ CogMethodZone >> printCogMethodsWithPrimitive: primIdx [
 	<var: #cogMethod type: #'CogMethod *'>
 	cogMethod := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
 	[cogMethod < self limitZony] whileTrue:
-		[(cogMethod cmType ~= CMFree
+		[(cogMethod cmType = CMMethod
 		  and: [primIdx = (coInterpreter primitiveIndexOfMethod: cogMethod methodObject
 							header: cogMethod methodHeader)]) ifTrue:
 			[coInterpreter printCogMethod: cogMethod].
@@ -672,7 +736,7 @@ CogMethodZone >> printOpenPICList [
 	<var: #openPIC type: #'CogMethod *'>
 	openPIC := openPICList.
 	[openPIC == nil] whileFalse:
-		[self printCogMethod: openPIC.
+		[coInterpreter printCogMethod: openPIC.
 		 openPIC := self cCoerceSimple: openPIC nextOpenPIC to: #'CogMethod *']
 ]
 
@@ -829,7 +893,7 @@ CogMethodZone >> restorePICUsageCount: cogMethod [
 CogMethodZone >> roundUpAddress: address [
 	<returnTypeC: #'void *'>
 	<var: #address type: #'void *'>
-	^self cCoerce: ((self cCoerce: address to: 'unsigned long') + 7 bitAnd: -8) to: #'void *'
+	^self cCoerce: ((self cCoerce: address to: #'usqIntptr_t') + 7 bitAnd: -8) to: #'void *'
 ]
 
 { #category : #accessing }
@@ -924,8 +988,12 @@ CogMethodZone >> youngReferrers [
 ]
 
 { #category : #accessing }
+CogMethodZone >> zoneAlignment [
+	^8
+]
+
+{ #category : #accessing }
 CogMethodZone >> zoneEnd [
-	<inline: true>
 	^limitAddress
 ]
 
@@ -937,6 +1005,5 @@ CogMethodZone >> zoneEnd: zoneEnd [
 
 { #category : #accessing }
 CogMethodZone >> zoneFree [
-	<inline: true>
 	^mzFreeStart
 ]

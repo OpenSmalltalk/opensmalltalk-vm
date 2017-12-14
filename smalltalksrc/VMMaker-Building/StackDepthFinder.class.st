@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'stackp',
 		'joins',
-		'encoderClass'
+		'encoderClass',
+		'deadCode'
 	],
 	#category : #'VMMaker-Support'
 }
@@ -20,6 +21,18 @@ StackDepthFinder >> blockReturnTop [
 	"Return Top Of Stack bytecode."
 	self drop.
 	self resetStackAfterBranchOrReturn
+]
+
+{ #category : #'instruction decoding' }
+StackDepthFinder >> branchIfInstanceOf: behaviorOrArrayOfBehavior distance: delta [
+	self drop.
+	self doJump: delta
+]
+
+{ #category : #'instruction decoding' }
+StackDepthFinder >> branchIfNotInstanceOf: behaviorOrArrayOfBehavior distance: delta [ 
+	self drop.
+	self doJump: delta
 ]
 
 { #category : #'instruction decoding' }
@@ -99,6 +112,8 @@ StackDepthFinder >> doDup [
 
 { #category : #'stack depth' }
 StackDepthFinder >> doJump: delta [
+	deadCode ifTrue:
+		[^self].
 	delta < 0
 		ifTrue:
 			[(joins at: pc + delta) ~= stackp ifTrue: [(Notification new tag: #'bad join'; signal)]]
@@ -114,7 +129,8 @@ StackDepthFinder >> doNop [
 { #category : #'instruction decoding' }
 StackDepthFinder >> doPop [
 	"Remove Top Of Stack bytecode."
-	self drop
+	deadCode ifFalse:
+		[self drop]
 ]
 
 { #category : #'stack depth' }
@@ -139,8 +155,15 @@ StackDepthFinder >> encoderClass: anObject [
 	encoderClass := anObject
 ]
 
+{ #category : #'instruction decoding' }
+StackDepthFinder >> ensureAllocableSlots: numSlots [
+	"nothing to do here..."
+]
+
 { #category : #decoding }
 StackDepthFinder >> interpretNextInstructionFor: client [
+	(deadCode and: [(joins at: pc) notNil]) ifTrue:
+		[deadCode := false].
 	joins at: pc put: stackp.
 	^encoderClass
 		ifNil: [super interpretNextInstructionFor: client]
@@ -176,8 +199,11 @@ StackDepthFinder >> jumpOrPop: delta IfNotInstanceOf: behaviors [
 { #category : #private }
 StackDepthFinder >> method: method pc: startpc [
 	super method: method pc: startpc.
-	joins := Array new: method endPC.
-	stackp := method numTemps
+	"The + 1 is there for full blocks ending with non local return,
+	as the following pc is mapped and beyong endPC"
+	joins := Array new: method endPC + 1.
+	stackp := method numTemps.
+	deadCode := false
 ]
 
 { #category : #'instruction decoding' }
@@ -275,6 +301,23 @@ StackDepthFinder >> pushExplicitOuter: level [
 ]
 
 { #category : #'instruction decoding' }
+StackDepthFinder >> pushFullClosure: literal numCopied: numCopied [
+	"Push Closure bytecode."
+	numCopied = 0
+		ifTrue: [self push]
+		ifFalse: [numCopied > 1 ifTrue:
+					[self drop: numCopied - 1]]
+]
+
+{ #category : #'instruction decoding' }
+StackDepthFinder >> pushFullClosure: literal numCopied: numCopied receiverOnStack: receiverOnStack ignoreOuterContext: ignoreOuterContext [
+	"Push Closure bytecode."
+	| delta |
+	delta := 1 - (receiverOnStack ifTrue: [1] ifFalse: [0]) - numCopied.
+	delta ~= 0 ifTrue: [self drop: delta negated]
+]
+
+{ #category : #'instruction decoding' }
 StackDepthFinder >> pushLiteralVariable: anAssociation [
 	"Push Contents Of anAssociation On Top Of Stack bytecode."
 	self push
@@ -323,6 +366,7 @@ StackDepthFinder >> resetStackAfterBranchOrReturn [
 					ifTrue: [^self bar]
 					ifFalse: [^self baz].
 				^nil"
+				deadCode := true.
 				^self].
 		 stackp := joins at: pc]
 ]
@@ -372,14 +416,15 @@ StackDepthFinder >> stackPointers [
 	 For the convenience of clients, write the stack depth for extended bytecodes
 	 to the bytecode pc, as well as the bytecocdes' extensions' pcs."
 	| method stackPointers end |
-	stackPointers :=  Array new: (end := (method := self method) endPC).
+	"endPC +1 because of full blocks that can end with NLR effectively mapping the pc right after the end PC"
+	stackPointers :=  Array new: (end := (method := self method) endPC) + 1.
 	encoderClass ifNil: [encoderClass := method encoderClass].
 	[pc <= end] whileTrue:
 		[stackPointers at: pc put: stackp.
 		 encoderClass extensionsAt: pc in: method into:
 			[:extA :extB :delta|
-			delta > 0 ifTrue:
-				[stackPointers at: pc + delta put: stackp]].
+			2 to: delta by: 2 do: [ :dlt |
+				stackPointers at: pc + dlt put: stackp]].
 		 self interpretNextInstructionFor: self].
 	^stackPointers
 ]

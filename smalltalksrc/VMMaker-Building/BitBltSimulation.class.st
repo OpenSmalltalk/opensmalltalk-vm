@@ -130,7 +130,9 @@ Class {
 		'componentAlphaModeColor',
 		'componentAlphaModeAlpha',
 		'ungammaLookupTable',
-		'gammaLookupTable'
+		'gammaLookupTable',
+		'numGCsOnInvocation',
+		'bitBltIsReceiver'
 	],
 	#classVars : [
 		'AllOnes',
@@ -153,6 +155,7 @@ Class {
 		'BBWarpBase',
 		'BBWidthIndex',
 		'BBXTableIndex',
+		'BEBitBltIndex',
 		'BinaryPoint',
 		'BlueIndex',
 		'ColorMapFixedPart',
@@ -167,7 +170,6 @@ Class {
 		'FormHeightIndex',
 		'FormWidthIndex',
 		'GreenIndex',
-		'JitBltHookSize',
 		'OpTable',
 		'OpTableSize',
 		'RedIndex'
@@ -185,10 +187,8 @@ BitBltSimulation class >> copyBitsFrom: aBitBlt [
 	bb initialiseModule.
 	bb setInterpreter: proxy.
 	proxy success: (bb loadBitBltFrom: aBitBlt).
-	bb copyBits.
-	proxy failed ifFalse:[
-		proxy showDisplayBits: aBitBlt destForm Left: bb affectedLeft Top: bb affectedTop Right: bb affectedRight Bottom: bb affectedBottom].
-	^proxy stackValue: 0
+	bb primitiveCopyBits.
+	^ proxy stackValue: 0
 ]
 
 { #category : #translation }
@@ -196,6 +196,7 @@ BitBltSimulation class >> declareCVarsIn: aCCodeGenerator [
 
 	"add option of  fast path BitBLT code header"
 	aCCodeGenerator
+		addHeaderFile:'"sqAssert.h"';
 		addHeaderFile:'#ifdef ENABLE_FAST_BLT
 #include "BitBltDispatch.h"
 #else
@@ -243,9 +244,14 @@ BitBltSimulation class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator var:'gammaLookupTable' 
 		type: 'unsigned char *'.
 
-	aCCodeGenerator var: 'querySurfaceFn' type: 'void *'.
-	aCCodeGenerator var: 'lockSurfaceFn' type: 'void *'.
-	aCCodeGenerator var: 'unlockSurfaceFn' type: 'void *'
+	aCCodeGenerator
+		var: 'querySurfaceFn' declareC: 'int (*querySurfaceFn)(sqIntptr_t, int*, int*, int*, int*)';
+		var: 'lockSurfaceFn' declareC: 'sqIntptr_t (*lockSurfaceFn)(sqIntptr_t, int*, int, int, int, int)';
+		var: 'unlockSurfaceFn' declareC: 'int (*unlockSurfaceFn)(sqIntptr_t, int, int, int, int)'.
+	
+	#(sourcePitch sourceWidth sourceHeight sourceDepth sourceMSB sx sy
+		destPitch destWidth destHeight destDepth destMSB dx dy bbW bbH)
+		do: [:ivar | aCCodeGenerator var: ivar type: #int]
 ]
 
 { #category : #initialization }
@@ -288,6 +294,11 @@ BitBltSimulation class >> initialize [
 	BBWarpBase := 15.
 	BBLastIndex := 15.
 	BBXTableIndex := 16.
+
+	"BalloonEngineFields"
+	BEBitBltIndex := (Smalltalk classNamed: #BalloonEngine)
+						ifNil: [2]
+						ifNotNil: [:be| (be allInstVarNames indexOf: 'bitBlt') - 1].
 
 	"RGBA indexes"
 	RedIndex := 0.
@@ -495,6 +506,9 @@ BitBltSimulation >> OLDtallyIntoMap: sourceWord with: destinationWord [
 
 { #category : #'combination rules' }
 BitBltSimulation >> addWord: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord + destinationWord
 ]
 
@@ -532,7 +546,7 @@ BitBltSimulation >> alphaBlend: sourceWord with: destinationWord [
 	component.  The high byte of the result will be 0."
 	| alpha unAlpha result blendRB blendAG |
 	<inline: false>
-	<return: 'unsigned int'>
+	<returnTypeC: 'unsigned int'>
 	<var: #sourceWord type: 'unsigned int'>
 	<var: #destinationWord type: 'unsigned int'>
 	<var: #blendRB type: 'unsigned int'>
@@ -562,6 +576,9 @@ BitBltSimulation >> alphaBlend: sourceWord with: destinationWord [
 
 { #category : #'combination rules' }
 BitBltSimulation >> alphaBlendConst: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 
 	^ self alphaBlendConst: sourceWord with: destinationWord paintMode: false
 ]
@@ -584,7 +601,7 @@ BitBltSimulation >> alphaBlendConst: sourceWord with: destinationWord paintMode:
 
 	| pixMask destShifted sourceShifted destPixVal rgbMask sourcePixVal unAlpha result pixBlend shift blend maskShifted bitsPerColor blendAG blendRB |
 	<inline: false>
-	<return: 'unsigned int'>
+	<returnTypeC: 'unsigned int'>
 	<var: #sourceWord type: 'unsigned int'>
 	<var: #destinationWord type: 'unsigned int'>
 	<var: #blendRB type: 'unsigned int'>
@@ -592,6 +609,13 @@ BitBltSimulation >> alphaBlendConst: sourceWord with: destinationWord paintMode:
 	<var: #result type: 'unsigned int'>
 	<var: #sourceAlpha type: 'unsigned int'>
 	<var: #unAlpha type: 'unsigned int'>
+	<var: #sourceShifted type: 'unsigned int'>
+	<var: #destShifted type: 'unsigned int'>
+	<var: #maskShifted type: 'unsigned int'>
+	<var: #pixMask type: 'unsigned int'>
+	<var: #rgbMask type: 'unsigned int'>
+	<var: #pixBlend type: 'unsigned int'>
+	<var: #blend type: 'unsigned int'>
 	destDepth < 16 ifTrue: [^ destinationWord "no-op"].
 	unAlpha := 255 - sourceAlpha.
 	result := destinationWord.
@@ -649,6 +673,7 @@ BitBltSimulation >> alphaBlendScaled: sourceWord with: destinationWord [
 	e.g., it is assumed that the source color is already scaled."
 	| unAlpha rb ag |
 	<inline: false>	"Do NOT inline this into optimized loops"
+	<returnTypeC: 'unsigned int'>
 	<var: #sourceWord type: 'unsigned int'>
 	<var: #destinationWord type: 'unsigned int'>
 	<var: #rb type: 'unsigned int'>
@@ -664,6 +689,9 @@ BitBltSimulation >> alphaBlendScaled: sourceWord with: destinationWord [
 
 { #category : #'combination rules' }
 BitBltSimulation >> alphaPaintConst: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 
 	sourceWord = 0 ifTrue: [^ destinationWord  "opt for all-transparent source"].
 	^ self alphaBlendConst: sourceWord with: destinationWord paintMode: true
@@ -680,6 +708,9 @@ BitBltSimulation >> alphaSourceBlendBits16 [
 	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY 
 	srcY dstY dstMask srcShift ditherBase ditherIndex ditherThreshold |
 	<inline: false> "This particular method should be optimized in itself"
+	<var: #sourceWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
+	<var: #dstMask type: #'unsigned int'>
 	deltaY := bbH + 1. "So we can pre-decrement"
 	srcY := sy.
 	dstY := dy.
@@ -754,6 +785,8 @@ BitBltSimulation >> alphaSourceBlendBits32 [
 	"
 	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY srcY dstY |
 	<inline: false> "This particular method should be optimized in itself"
+	<var: #sourceWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
 
 	"Give the compile a couple of hints"
 
@@ -832,6 +865,9 @@ BitBltSimulation >> alphaSourceBlendBits8 [
 	srcY dstY dstMask srcShift adjust mappingTable mapperFlags |
 	<inline: false>
 	<var: #mappingTable type:'unsigned int *'>
+	<var: #sourceWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
+	<var: #dstMask type: #'unsigned int'>
 	mappingTable := self default8To32Table.
 	mapperFlags := cmFlags bitAnd: ColorMapNewStyle bitInvert32.
 	deltaY := bbH + 1. "So we can pre-decrement"
@@ -896,61 +932,97 @@ BitBltSimulation >> alphaSourceBlendBits8 [
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitAnd: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitAnd: destinationWord
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitAndInvert: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitAnd: destinationWord bitInvert32
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitInvertAnd: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitInvert32 bitAnd: destinationWord
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitInvertAndInvert: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitInvert32 bitAnd: destinationWord bitInvert32
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitInvertDestination: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^destinationWord bitInvert32
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitInvertOr: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitInvert32 bitOr: destinationWord
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitInvertOrInvert: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitInvert32 bitOr: destinationWord bitInvert32
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitInvertSource: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitInvert32
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitInvertXor: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitInvert32 bitXor: destinationWord
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitOr: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitOr: destinationWord
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitOrInvert: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitOr: destinationWord bitInvert32
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> bitXor: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord bitXor: destinationWord
 ]
 
@@ -984,7 +1056,10 @@ BitBltSimulation >> checkSourceOverlap [
 ]
 
 { #category : #'combination rules' }
-BitBltSimulation >> clearWord: source with: destination [
+BitBltSimulation >> clearWord: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^ 0
 ]
 
@@ -1296,124 +1371,182 @@ BitBltSimulation >> copyLoop [
 	| prevWord thisWord skewWord halftoneWord mergeWord hInc y unskew skewMask notSkewMask mergeFnwith destWord |
 	"This version of the inner loop assumes noSource = false."
 	<inline: false>
-	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
-	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
+	<var: #prevWord type: #'unsigned int'>
+	<var: #thisWord type: #'unsigned int'>
+	<var: #skewWord type: #'unsigned int'>
+	<var: #halftoneWord type: #'unsigned int'>
+	<var: #mergeWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
+	<var: #skewMask type: #'unsigned int'>
+	<var: #notSkewMask type: #'unsigned int'>
+	<var: #unskew type: #int> "unskew is a bitShift and MUST remain signed, while skewMask is unsigned."
+	<var: #mergeFnwith declareC: 'unsigned int (*mergeFnwith)(unsigned int, unsigned int)'>
+	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'unsigned int (*)(unsigned int, unsigned int)'.
 	mergeFnwith.  "null ref for compiler"
 
-	hInc := hDir*4.  "Byte delta"
+	hInc := hDir * 4.  "Byte delta"
 	"degenerate skew fixed for Sparc. 10/20/96 ikp"
-	skew == -32
+	skew = -32
 		ifTrue: [skew := unskew := skewMask := 0]
-		ifFalse: [skew < 0
-			ifTrue:
-				[unskew := skew+32.
-				skewMask := AllOnes << (0-skew)]
-			ifFalse:
-				[skew = 0
-					ifTrue:
-						[unskew := 0.
-						skewMask := AllOnes]
-					ifFalse:
-						[unskew := skew-32.
-						skewMask := AllOnes >> skew]]].
+		ifFalse:
+			[skew < 0
+				ifTrue:
+					[unskew := skew+32.
+					skewMask := AllOnes << (0-skew)]
+				ifFalse:
+					[skew = 0
+						ifTrue:
+							[unskew := 0.
+							skewMask := AllOnes]
+						ifFalse:
+							[unskew := skew-32.
+							skewMask := AllOnes >> skew]]].
 	notSkewMask := skewMask bitInvert32.
 	noHalftone
 		ifTrue: [halftoneWord := AllOnes.  halftoneHeight := 0]
 		ifFalse: [halftoneWord := self halftoneAt: 0].
 
 	y := dy.
-	1 to: bbH do: "here is the vertical loop"
-		[ :i |
-		halftoneHeight > 1 ifTrue:  "Otherwise, its always the same"
-			[halftoneWord := self halftoneAt: y.
-			y := y + vDir].
-		preload ifTrue:
-			["load the 64-bit shifter"
-			prevWord := self srcLongAt: sourceIndex.
-			sourceIndex := sourceIndex + hInc]
-			ifFalse:
-			[prevWord := 0].
+	"Here is the vertical loop, in two versions, one for the combinationRule = 3 copy mode, one for the general case."
+	combinationRule = 3
+		ifTrue:
+			[1 to: bbH do: "here is the vertical loop for combinationRule = 3 copy mode; no need to call merge"
+				[ :i |
+				halftoneHeight > 1 ifTrue:  "Otherwise, its always the same"
+					[halftoneWord := self halftoneAt: y.
+					y := y + vDir].
+				preload
+					ifTrue: "load the 64-bit shifter"
+						[prevWord := self srcLongAt: sourceIndex.
+						self incSrcIndex: hInc]
+					ifFalse:
+						[prevWord := 0].
 
-	"Note: the horizontal loop has been expanded into three parts for speed:"
+				"Note: the horizontal loop has been expanded into three parts for speed:"
 
-			"This first section requires masking of the destination store..."
-			destMask := mask1.
-			thisWord := self srcLongAt: sourceIndex.  "pick up next word"
-			sourceIndex := sourceIndex + hInc.
-			skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
-							bitOr:  "32-bit rotate"
-						((thisWord bitAnd: skewMask) bitShift: skew).
-			prevWord := thisWord.
-			destWord := self dstLongAt: destIndex.
-			mergeWord := self mergeFn: (skewWord bitAnd: halftoneWord) with: destWord.
-			destWord := (destMask bitAnd: mergeWord) bitOr:
-							(destWord bitAnd: destMask bitInvert32).
-			self dstLongAt: destIndex put: destWord.
-			destIndex := destIndex + hInc.
+				"This first section requires masking of the destination store..."
+				destMask := mask1.
+				thisWord := self srcLongAt: sourceIndex.  "pick up next word"
+				self incSrcIndex: hInc.
+				skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
+								bitOr:  "32-bit rotate"
+									((thisWord bitAnd: skewMask) bitShift: skew).
+				prevWord := thisWord.
+				destWord := self dstLongAt: destIndex.
+				destWord := (destMask bitAnd: (skewWord bitAnd: halftoneWord))
+								bitOr: (destWord bitAnd: destMask bitInvert32).
+				self dstLongAt: destIndex put: destWord.
+				self incDestIndex: hInc.
 
-		"This central horizontal loop requires no store masking"
-		destMask := AllOnes.
-combinationRule = 3
-ifTrue: [(skew = 0) & (halftoneWord = AllOnes)
-		ifTrue: 
-		["Very special inner loop for STORE mode with no skew -- just move words"
-		hDir = -1
-		ifTrue: ["Woeful patch: revert to older code for hDir = -1"
-				2 to: nWords-1 do: 
-					[ :word |
-					thisWord := self srcLongAt: sourceIndex.
-					sourceIndex := sourceIndex + hInc.
-					self dstLongAt: destIndex put: thisWord.
-					destIndex := destIndex + hInc]]
-		ifFalse: [2 to: nWords-1 do: 
-					[ :word |  "Note loop starts with prevWord loaded (due to preload)"
-					self dstLongAt: destIndex put: prevWord.
-					destIndex := destIndex + hInc.
-					prevWord := self srcLongAt: sourceIndex.
-					sourceIndex := sourceIndex + hInc]]]
+				"This central horizontal loop requires no store masking"
+				destMask := AllOnes.
+				(skew = 0 and: [halftoneWord = AllOnes])
+					ifTrue: "Very special inner loop for STORE mode with no skew -- just move words"
+						[hDir = -1
+							ifTrue: "Woeful patch: revert to older code for hDir = -1"
+								[2 to: nWords-1 do: 
+									[ :word |
+									thisWord := self srcLongAt: sourceIndex.
+									self incSrcIndex: hInc.
+									self dstLongAt: destIndex put: thisWord.
+									self incDestIndex: hInc]]
+							ifFalse:
+								[2 to: nWords-1 do: 
+									[ :word |  "Note loop starts with prevWord loaded (due to preload)"
+									self dstLongAt: destIndex put: prevWord.
+									self incDestIndex: hInc.
+									prevWord := self srcLongAt: sourceIndex.
+									self incSrcIndex: hInc]]]
+						ifFalse:
+							[2 to: nWords-1 do: 
+								[ :word |
+								thisWord := self srcLongAt: sourceIndex.
+								self incSrcIndex: hInc.
+								skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
+												bitOr:  "32-bit rotate"
+											((thisWord bitAnd: skewMask) bitShift: skew).
+								prevWord := thisWord.
+								self dstLongAt: destIndex put: (skewWord bitAnd: halftoneWord).
+								self incDestIndex: hInc]].
+
+				"This last section, if used, requires masking of the destination store..."
+				nWords > 1 ifTrue:
+					[destMask := mask2.
+					thisWord := self srcLongAt: sourceIndex.  "pick up next word"
+					self incSrcIndex: hInc.
+					skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
+									bitOr:  "32-bit rotate"
+										((thisWord bitAnd: skewMask) bitShift: skew).
+					destWord := self dstLongAt: destIndex.
+					destWord := (destMask bitAnd: (skewWord bitAnd: halftoneWord))
+									bitOr: (destWord bitAnd: destMask bitInvert32).
+					self dstLongAt: destIndex put: destWord.
+					self incDestIndex: hInc].
+
+				self incSrcIndex: sourceDelta.
+				self incDestIndex: destDelta]]
 		ifFalse:
-		["Special inner loop for STORE mode -- no need to call merge"
-		2 to: nWords-1 do: 
-			[ :word |
-			thisWord := self srcLongAt: sourceIndex.
-			sourceIndex := sourceIndex + hInc.
-			skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
-							bitOr:  "32-bit rotate"
-						((thisWord bitAnd: skewMask) bitShift: skew).
-			prevWord := thisWord.
-			self dstLongAt: destIndex put: (skewWord bitAnd: halftoneWord).
-			destIndex := destIndex + hInc]]
-] ifFalse: [2 to: nWords-1 do: "Normal inner loop does merge:"
-			[ :word |
-			thisWord := self srcLongAt: sourceIndex.  "pick up next word"
-			sourceIndex := sourceIndex + hInc.
-			skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
-							bitOr:  "32-bit rotate"
-						((thisWord bitAnd: skewMask) bitShift: skew).
-			prevWord := thisWord.
-			mergeWord := self mergeFn: (skewWord bitAnd: halftoneWord)
-							with: (self dstLongAt: destIndex).
-			self dstLongAt: destIndex put: mergeWord.
-			destIndex := destIndex + hInc]
-].
+			[1 to: bbH do: "here is the vertical loop for the general case (combinationRule ~= 3)"
+				[ :i |
+				halftoneHeight > 1 ifTrue:  "Otherwise, its always the same"
+					[halftoneWord := self halftoneAt: y.
+					y := y + vDir].
+				preload
+					ifTrue: "load the 64-bit shifter"
+						[prevWord := self srcLongAt: sourceIndex.
+						self incSrcIndex: hInc]
+					ifFalse:
+						[prevWord := 0].
 
-		"This last section, if used, requires masking of the destination store..."
-		nWords > 1 ifTrue:
-			[destMask := mask2.
-			thisWord := self srcLongAt: sourceIndex.  "pick up next word"
-			sourceIndex := sourceIndex + hInc.
-			skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
-							bitOr:  "32-bit rotate"
-						((thisWord bitAnd: skewMask) bitShift: skew).
-			destWord := self dstLongAt: destIndex.
-			mergeWord := self mergeFn: (skewWord bitAnd: halftoneWord) with: destWord.
-			destWord := (destMask bitAnd: mergeWord) bitOr:
-							(destWord bitAnd: destMask bitInvert32).
-			self dstLongAt: destIndex put: destWord.
-			destIndex := destIndex + hInc].
+				"Note: the horizontal loop has been expanded into three parts for speed:"
 
-	sourceIndex := sourceIndex + sourceDelta.
-	destIndex := destIndex + destDelta]
+				"This first section requires masking of the destination store..."
+				destMask := mask1.
+				thisWord := self srcLongAt: sourceIndex.  "pick up next word"
+				self incSrcIndex: hInc.
+				skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
+								bitOr:  "32-bit rotate"
+							((thisWord bitAnd: skewMask) bitShift: skew).
+				prevWord := thisWord.
+				destWord := self dstLongAt: destIndex.
+				mergeWord := self mergeFn: (skewWord bitAnd: halftoneWord) with: destWord.
+				destWord := (destMask bitAnd: mergeWord)
+								bitOr: (destWord bitAnd: destMask bitInvert32).
+				self dstLongAt: destIndex put: destWord.
+				self incDestIndex: hInc.
+
+				"This central horizontal loop requires no store masking"
+				destMask := AllOnes.
+				2 to: nWords-1 do: "Normal inner loop does merge:"
+					[ :word |
+					thisWord := self srcLongAt: sourceIndex.  "pick up next word"
+					self incSrcIndex: hInc.
+					skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
+									bitOr:  "32-bit rotate"
+								((thisWord bitAnd: skewMask) bitShift: skew).
+					prevWord := thisWord.
+					mergeWord := self mergeFn: (skewWord bitAnd: halftoneWord)
+									with: (self dstLongAt: destIndex).
+					self dstLongAt: destIndex put: mergeWord.
+					self incDestIndex: hInc].
+
+				"This last section, if used, requires masking of the destination store..."
+				nWords > 1 ifTrue:
+					[destMask := mask2.
+					thisWord := self srcLongAt: sourceIndex.  "pick up next word"
+					self incSrcIndex: hInc.
+					skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
+									bitOr:  "32-bit rotate"
+								((thisWord bitAnd: skewMask) bitShift: skew).
+					destWord := self dstLongAt: destIndex.
+					mergeWord := self mergeFn: (skewWord bitAnd: halftoneWord) with: destWord.
+					destWord := (destMask bitAnd: mergeWord)
+									bitOr: (destWord bitAnd: destMask bitInvert32).
+					self dstLongAt: destIndex put: destWord.
+					self incDestIndex: hInc].
+
+				self incSrcIndex: sourceDelta.
+				self incDestIndex: destDelta]]
 ]
 
 { #category : #'inner loop' }
@@ -1422,8 +1555,11 @@ BitBltSimulation >> copyLoopNoSource [
 	positive, and perload and skew are unused"
 	| halftoneWord mergeWord mergeFnwith destWord |
 	<inline: false>
-	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
-	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
+	<var: #mergeFnwith declareC: 'unsigned int (*mergeFnwith)(unsigned int, unsigned int)'>
+	<var: #halftoneWord type: #'unsigned int'>
+	<var: #mergeWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
+	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'unsigned int (*)(unsigned int, unsigned int)'.
 	mergeFnwith.  "null ref for compiler"
 
 	1 to: bbH do: "here is the vertical loop"
@@ -1442,7 +1578,7 @@ BitBltSimulation >> copyLoopNoSource [
 			destWord := (destMask bitAnd: mergeWord) bitOr: 
 							(destWord bitAnd: destMask bitInvert32).
 			self dstLongAt: destIndex put: destWord.
-			destIndex := destIndex + 4.
+			self incDestIndex: 4.
 
 		"This central horizontal loop requires no store masking"
 			destMask := AllOnes.
@@ -1450,13 +1586,13 @@ BitBltSimulation >> copyLoopNoSource [
 				destWord := halftoneWord.
 				2 to: nWords-1 do:[ :word |
 					self dstLongAt: destIndex put: destWord.
-					destIndex := destIndex + 4].
+					self incDestIndex: 4].
 			] ifFalse:[ "Normal inner loop does merge"
 				2 to: nWords-1 do:[ :word | "Normal inner loop does merge"
 					destWord := self dstLongAt: destIndex.
 					mergeWord := self mergeFn: halftoneWord with: destWord.
 					self dstLongAt: destIndex put: mergeWord.
-					destIndex := destIndex + 4].
+					self incDestIndex: 4].
 			].
 
 		"This last section, if used, requires masking of the destination store..."
@@ -1467,9 +1603,9 @@ BitBltSimulation >> copyLoopNoSource [
 			destWord := (destMask bitAnd: mergeWord) bitOr:
 							(destWord bitAnd: destMask bitInvert32).
 			self dstLongAt: destIndex put: destWord.
-			destIndex := destIndex + 4].
+			self incDestIndex: 4].
 
-	destIndex := destIndex + destDelta]
+	self incDestIndex: destDelta]
 ]
 
 { #category : #'inner loop' }
@@ -1487,8 +1623,14 @@ BitBltSimulation >> copyLoopPixMap [
 	to inline pickSourcePixels we could optimize the loop instead."
 	| skewWord halftoneWord mergeWord scrStartBits nSourceIncs startBits endBits sourcePixMask destPixMask mergeFnwith nPix srcShift dstShift destWord words srcShiftInc dstShiftInc dstShiftLeft mapperFlags |
 	<inline: false>
-	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
-	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
+	<var: #mergeFnwith declareC: 'unsigned int (*mergeFnwith)(unsigned int, unsigned int)'>
+	<var: #skewWord type: #'unsigned int'>
+	<var: #halftoneWord type: #'unsigned int'>
+	<var: #mergeWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
+	<var: #sourcePixMask type: #'unsigned int'>
+	<var: #destPixMask type: #'unsigned int'>
+	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'unsigned int (*)(unsigned int, unsigned int)'.
 	mergeFnwith.  "null ref for compiler"
 
 	"Additional inits peculiar to unequal source and dest pix size..."
@@ -1556,7 +1698,7 @@ BitBltSimulation >> copyLoopPixMap [
 								(destWord bitAnd: destMask bitInvert32).
 				self dstLongAt: destIndex put: destWord.
 			].
-			destIndex := destIndex + 4.
+			self incDestIndex: 4.
 			words = 2 "e.g., is the next word the last word?"
 				ifTrue:["set mask for last word in this row"
 						destMask := mask2.
@@ -1566,8 +1708,8 @@ BitBltSimulation >> copyLoopPixMap [
 						nPix := destPPW].
 			(words := words - 1) = 0] whileFalse.
 		"--- end of inner loop ---"
-		sourceIndex := sourceIndex + sourceDelta.
-		destIndex := destIndex + destDelta]
+		self incSrcIndex: sourceDelta.
+		self incDestIndex: destDelta]
 
 ]
 
@@ -1669,6 +1811,9 @@ BitBltSimulation >> destMaskAndPointerInit [
 
 { #category : #'combination rules' }
 BitBltSimulation >> destinationWord: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^destinationWord
 ]
 
@@ -1677,6 +1822,8 @@ BitBltSimulation >> dither32To16: srcWord threshold: ditherValue [
 	"Dither the given 32bit word to 16 bit. Ignore alpha."
 	| addThreshold  |
 	<inline: true> "You bet"
+	<returnTypeC: 'unsigned int'>
+	<var: #srcWord type: 'unsigned int'>
 	addThreshold := ditherValue bitShift: 8.
 	^((dither8Lookup at: (addThreshold+((srcWord bitShift: -16) bitAnd: 255))) bitShift: 10) + 
 		((dither8Lookup at: (addThreshold+((srcWord bitShift: -8) bitAnd: 255))) bitShift: 5) + 
@@ -1793,11 +1940,21 @@ BitBltSimulation >> dstLongAt: idx put: srcValue mask: dstMask [
 	self dstLongAt: idx put: dstValue.
 ]
 
+{ #category : #setup }
+BitBltSimulation >> ensureDestAndSourceFormsAreValid [
+	"If a GC has occurred, update destForm and sourceForm from the stack."
+	<inline: #always>
+	numGCsOnInvocation ~= interpreterProxy statNumGCs ifTrue:
+		[self reloadDestAndSourceForms]
+]
+
 { #category : #'pixel mapping' }
 BitBltSimulation >> expensiveDither32To16: srcWord threshold: ditherValue [
 	"Dither the given 32bit word to 16 bit. Ignore alpha."
 	| pv threshold value out |
 	<inline: true> "You bet"
+	<returnTypeC: 'unsigned int'>
+	<var: #srcWord type: 'unsigned int'>
 	pv := srcWord bitAnd: 255.
 	threshold := ditherThresholds16 at: (pv bitAnd: 7).
 	value := ditherValues16 at: (pv bitShift: -3).
@@ -1851,6 +2008,9 @@ BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer ifNil: d
 { #category : #'combination rules' }
 BitBltSimulation >> fixAlpha: sourceWord with: destinationWord [
 	"For any non-zero pixel value in destinationWord with zero alpha channel take the alpha from sourceWord and fill it in. Intended for fixing alpha channels left at zero during 16->32 bpp conversions."
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	destDepth = 32 ifFalse:[^destinationWord]. "no-op for non 32bpp"
 	destinationWord = 0 ifTrue:[^0].
 	(destinationWord bitAnd: 16rFF000000) = 0 ifFalse:[^destinationWord].
@@ -1874,6 +2034,20 @@ BitBltSimulation >> ignoreSourceOrHalftone: formPointer [
 	combinationRule = 10 ifTrue: [ ^true ].
 	combinationRule = 15 ifTrue: [ ^true ].
 	^false
+]
+
+{ #category : #'memory access' }
+BitBltSimulation >> incDestIndex: offset [
+	<inline: true>
+	^ destIndex := destIndex + offset
+
+]
+
+{ #category : #'memory access' }
+BitBltSimulation >> incSrcIndex: offset [
+	<inline: true>
+	^ sourceIndex := sourceIndex + offset
+
 ]
 
 { #category : #'initialize-release' }
@@ -1962,36 +2136,42 @@ BitBltSimulation >> isIdentityMap: shifts with: masks [
 
 { #category : #'interpreter interface' }
 BitBltSimulation >> loadBitBltDestForm [
-	"Load the dest form for BitBlt. Return false if anything is wrong, true otherwise."
+	"Load the dest form for BitBlt. Answer false if anything is wrong, true otherwise."
 
 	| destBitsSize |
 	<inline: true>
 	destBits := interpreterProxy fetchPointer: FormBitsIndex ofObject: destForm.
 	destWidth := interpreterProxy fetchInteger: FormWidthIndex ofObject: destForm.
 	destHeight := interpreterProxy fetchInteger: FormHeightIndex ofObject: destForm.
-	(destWidth >= 0 and: [destHeight >= 0])
-		ifFalse: [^ false].
+	(destWidth >= 0 and: [destHeight >= 0]) ifFalse:
+		[^false].
 	destDepth := interpreterProxy fetchInteger: FormDepthIndex ofObject: destForm.
 	destMSB := destDepth > 0.
-	destDepth < 0 ifTrue:[destDepth := 0 - destDepth].
+	destDepth < 0 ifTrue:
+		[destDepth := 0 - destDepth].
 	"Ignore an integer bits handle for Display in which case 
 	the appropriate values will be obtained by calling ioLockSurfaceBits()."
-	(interpreterProxy isIntegerObject: destBits) ifTrue:[
-		"Query for actual surface dimensions"
-		(self queryDestSurface: (interpreterProxy integerValueOf: destBits))
-			ifFalse:[^false].
-		destPPW := 32 // destDepth.
-		destBits := destPitch := 0.
-	] ifFalse:[
-		destPPW := 32 // destDepth.
-		destPitch := destWidth + (destPPW-1) // destPPW * 4.
-		destBitsSize := interpreterProxy byteSizeOf: destBits.
-		((interpreterProxy isWordsOrBytes: destBits)
-			and: [destBitsSize = (destPitch * destHeight)])
-			ifFalse: [^ false].
-		"Skip header since external bits don't have one"
-		destBits := self oopForPointer: (interpreterProxy firstIndexableField: destBits).
-	].
+	(interpreterProxy isIntegerObject: destBits)
+		ifTrue: "Query for actual surface dimensions"
+			[querySurfaceFn = 0 ifTrue: [self loadSurfacePlugin ifFalse: [^false]].
+			 (self query: (interpreterProxy integerValueOf: destBits)
+				Sur: (self addressOf: destWidth)
+				fa: (self addressOf: destHeight)
+				ce: (self addressOf: destDepth)
+				Fn: (self addressOf: destMSB)) ifFalse:
+					[interpreterProxy primitiveFailFor: PrimErrCallbackError.
+					 ^false].
+			destPPW := 32 // destDepth.
+			destBits := destPitch := 0]
+		ifFalse:
+			[destPPW := 32 // destDepth.
+			destPitch := destWidth + (destPPW-1) // destPPW * 4.
+			destBitsSize := interpreterProxy byteSizeOf: destBits.
+			((interpreterProxy isWordsOrBytes: destBits)
+			 and: [destBitsSize >= (destPitch * destHeight)]) ifFalse:
+				[^false].
+			"Skip header since external bits don't have one"
+			destBits := self oopForPointer: (interpreterProxy firstIndexableField: destBits)].
 	^true
 ]
 
@@ -2012,12 +2192,14 @@ BitBltSimulation >> loadBitBltFrom: bbObj warping: aBool [
 	<inline: false>
 	bitBltOop := bbObj.
 	isWarping := aBool.
+	bitBltIsReceiver := bbObj = (interpreterProxy stackValue: interpreterProxy methodArgumentCount).
+	numGCsOnInvocation := interpreterProxy statNumGCs.
 	combinationRule := interpreterProxy fetchInteger: BBRuleIndex ofObject: bitBltOop.
 	(interpreterProxy failed
 		or: [combinationRule < 0 or: [combinationRule > (OpTableSize - 2)]])
-		 ifTrue: [^ false  "operation out of range"].
+		 ifTrue: [^false  "operation out of range"].
 	(combinationRule >= 16 and: [combinationRule <= 17])
-		 ifTrue: [^ false  "fail for old simulated paint, erase modes"].
+		 ifTrue: [^false  "fail for old simulated paint, erase modes"].
 	sourceForm := interpreterProxy fetchPointer: BBSourceFormIndex ofObject: bitBltOop.
 	noSource := self ignoreSourceOrHalftone: sourceForm.
 	halftoneForm := interpreterProxy fetchPointer: BBHalftoneFormIndex ofObject: bitBltOop.
@@ -2025,7 +2207,7 @@ BitBltSimulation >> loadBitBltFrom: bbObj warping: aBool [
 
 	destForm := interpreterProxy fetchPointer: BBDestFormIndex ofObject: bbObj.
 	((interpreterProxy isPointers: destForm) and: [(interpreterProxy slotSizeOf: destForm) >= 4])
-		ifFalse: [^ false].
+		ifFalse: [^false].
 	ok := self loadBitBltDestForm.
 	ok ifFalse:[^false].
 
@@ -2033,21 +2215,22 @@ BitBltSimulation >> loadBitBltFrom: bbObj warping: aBool [
 	destY := self fetchIntOrFloat: BBDestYIndex ofObject: bitBltOop ifNil: 0.
 	width := self fetchIntOrFloat: BBWidthIndex ofObject: bitBltOop ifNil: destWidth.
 	height := self fetchIntOrFloat: BBHeightIndex ofObject: bitBltOop ifNil: destHeight.
-		interpreterProxy failed ifTrue: [^ false  "non-integer value"].
+	interpreterProxy failed ifTrue: [^false].
 
-	noSource ifTrue:
-		[sourceX := sourceY := 0]
+	noSource
+		ifTrue:
+			[sourceX := sourceY := 0]
 		ifFalse: 
-		[((interpreterProxy isPointers: sourceForm) and: [(interpreterProxy slotSizeOf: sourceForm) >= 4])
-			ifFalse: [^ false].
-		ok := self loadBitBltSourceForm.
-		ok ifFalse:[^false].
-		ok := self loadColorMap.
-		ok ifFalse:[^false].
-		"Need the implicit setup here in case of 16<->32 bit conversions"
-		(cmFlags bitAnd: ColorMapNewStyle) = 0 ifTrue:[self setupColorMasks].
-		sourceX := self fetchIntOrFloat: BBSourceXIndex ofObject: bitBltOop ifNil: 0.
-		sourceY := self fetchIntOrFloat: BBSourceYIndex ofObject: bitBltOop ifNil: 0].
+			[((interpreterProxy isPointers: sourceForm) and: [(interpreterProxy slotSizeOf: sourceForm) >= 4])
+				ifFalse: [^false].
+			ok := self loadBitBltSourceForm.
+			ok ifFalse:[^false].
+			ok := self loadColorMap.
+			ok ifFalse:[^false].
+			"Need the implicit setup here in case of 16<->32 bit conversions"
+			(cmFlags bitAnd: ColorMapNewStyle) = 0 ifTrue:[self setupColorMasks].
+			sourceX := self fetchIntOrFloat: BBSourceXIndex ofObject: bitBltOop ifNil: 0.
+			sourceY := self fetchIntOrFloat: BBSourceYIndex ofObject: bitBltOop ifNil: 0].
 
 	ok := self loadHalftoneForm.
 	ok ifFalse:[^false].
@@ -2055,12 +2238,15 @@ BitBltSimulation >> loadBitBltFrom: bbObj warping: aBool [
 	clipY := self fetchIntOrFloat: BBClipYIndex ofObject: bitBltOop ifNil: 0.
 	clipWidth := self fetchIntOrFloat: BBClipWidthIndex ofObject: bitBltOop ifNil: destWidth.
 	clipHeight := self fetchIntOrFloat: BBClipHeightIndex ofObject: bitBltOop ifNil: destHeight.
-		interpreterProxy failed ifTrue: [^ false  "non-integer value"].
+	interpreterProxy failed ifTrue: [^ false  "non-integer value"].
 	clipX < 0 ifTrue: [clipWidth := clipWidth + clipX.  clipX := 0].
 	clipY < 0 ifTrue: [clipHeight := clipHeight + clipY.  clipY := 0].
 	clipX+clipWidth > destWidth ifTrue: [clipWidth := destWidth - clipX].
 	clipY+clipHeight > destHeight ifTrue: [clipHeight := destHeight - clipY].
-	^ true
+	numGCsOnInvocation ~= interpreterProxy statNumGCs ifTrue: "querySurface could be a callback in loadSourceFor: and loadDestForm:"
+		[interpreterProxy primitiveFailFor: PrimErrObjectMoved.
+		 ^false].
+	^true
 ]
 
 { #category : #'interpreter interface' }
@@ -2071,29 +2257,35 @@ BitBltSimulation >> loadBitBltSourceForm [
 	sourceBits := interpreterProxy fetchPointer: FormBitsIndex ofObject: sourceForm.
 	sourceWidth := self fetchIntOrFloat: FormWidthIndex ofObject: sourceForm.
 	sourceHeight := self fetchIntOrFloat: FormHeightIndex ofObject: sourceForm.
-	(sourceWidth >= 0 and: [sourceHeight >= 0])
-		ifFalse: [^ false].
+	(sourceWidth >= 0 and: [sourceHeight >= 0]) ifFalse:
+		[^false].
 	sourceDepth := interpreterProxy fetchInteger: FormDepthIndex ofObject: sourceForm.
 	sourceMSB := sourceDepth > 0.
-	sourceDepth < 0 ifTrue:[sourceDepth := 0 - sourceDepth].
+	sourceDepth < 0 ifTrue:
+		[sourceDepth := 0 - sourceDepth].
 	"Ignore an integer bits handle for Display in which case 
-	the appropriate values will be obtained by calling ioLockSurfaceBits()."
-	(interpreterProxy isIntegerObject: sourceBits) ifTrue:[
-		"Query for actual surface dimensions"
-		(self querySourceSurface: (interpreterProxy integerValueOf: sourceBits))
-			ifFalse:[^false].
-		sourcePPW := 32 // sourceDepth.
-		sourceBits := sourcePitch := 0.
-	] ifFalse:[
-		sourcePPW := 32 // sourceDepth.
-		sourcePitch := sourceWidth + (sourcePPW-1) // sourcePPW * 4.
-		sourceBitsSize := interpreterProxy byteSizeOf: sourceBits.
-		((interpreterProxy isWordsOrBytes: sourceBits)
-			and: [sourceBitsSize = (sourcePitch * sourceHeight)])
-			ifFalse: [^ false].
-		"Skip header since external bits don't have one"
-		sourceBits := self oopForPointer: (interpreterProxy firstIndexableField: sourceBits).
-	].
+	 the appropriate values will be obtained by calling ioLockSurfaceBits()."
+	(interpreterProxy isIntegerObject: sourceBits)
+		ifTrue: "Query for actual surface dimensions"
+			[querySurfaceFn = 0 ifTrue: [self loadSurfacePlugin ifFalse:[^false]].
+			 (self query: (interpreterProxy integerValueOf: sourceBits)
+				Sur: (self addressOf: sourceWidth)
+				fa: (self addressOf: sourceHeight)
+				ce: (self addressOf: sourceDepth)
+				Fn: (self addressOf: sourceMSB)) ifFalse:
+					[interpreterProxy primitiveFailFor: PrimErrCallbackError.
+					 ^false].
+			sourcePPW := 32 // sourceDepth.
+			sourceBits := sourcePitch := 0]
+		ifFalse:
+			[sourcePPW := 32 // sourceDepth.
+			sourcePitch := sourceWidth + (sourcePPW-1) // sourcePPW * 4.
+			sourceBitsSize := interpreterProxy byteSizeOf: sourceBits.
+			((interpreterProxy isWordsOrBytes: sourceBits)
+			 and: [sourceBitsSize >= (sourcePitch * sourceHeight)]) ifFalse:
+				[^false].
+			"Skip header since external bits don't have one"
+			sourceBits := self oopForPointer: (interpreterProxy firstIndexableField: sourceBits)].
 	^true
 ]
 
@@ -2133,9 +2325,7 @@ BitBltSimulation >> loadColorMap [
 					cmLookupTable := interpreterProxy firstIndexableField: oop].
 		cmFlags := cmFlags bitOr: ColorMapNewStyle.
 		self cCode: '' inSmalltalk:
-			[self assert: cmShiftTable unitSize = 4.
-			 self assert: cmMaskTable unitSize = 4.
-			 self assert: cmLookupTable unitSize = 4].
+			[].
 	].
 	(cmSize bitAnd: cmSize - 1) = 0 ifFalse:[^false].
 	cmMask := cmSize - 1.
@@ -2206,6 +2396,13 @@ BitBltSimulation >> loadWarpBltFrom: bbObj [
 ]
 
 { #category : #'surface support' }
+BitBltSimulation >> lock: sourceHandle Su: pitchPtr rf: x ac: y eF: w n: h [
+	"Simulate the lockSurfaceFn function call as a failure to load the surface."
+	<doNotGenerate>
+	^0
+]
+
+{ #category : #'surface support' }
 BitBltSimulation >> lockSurfaces [
 	"Get a pointer to the bits of any OS surfaces."
 	"Notes: 
@@ -2237,53 +2434,94 @@ BitBltSimulation >> lockSurfaces [
 	* Warping always requires the entire source surface to be locked because
 	there is no beforehand knowledge about what area will actually be traversed.
 
+	* Fail if a GC has occurred since the primitive started (presumably in the lockSurface
+	   function), because one or more of the primitives' parameters may have been moved.
 	"
-	| sourceHandle destHandle l r t b fn |
+	| sourceHandle destHandle l r t b |
 	<inline: true>
-	<var: #fn declareC:'sqInt (*fn)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)'>
+	self assert: numGCsOnInvocation = interpreterProxy statNumGCs.
 	hasSurfaceLock := false.
-	destBits = 0 ifTrue:["Blitting *to* OS surface"
-		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
-		fn := self cCoerce: lockSurfaceFn to: 'sqInt (*)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)'.
-		destHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: destForm.
-		(sourceBits = 0 and:[noSource not]) ifTrue:[
-			sourceHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: sourceForm.
-			"Handle the special case of equal source and dest handles"
-			(sourceHandle = destHandle) ifTrue:[
+	destBits = 0 ifTrue: "Blitting *to* OS surface"
+		[lockSurfaceFn = 0 ifTrue: [self loadSurfacePlugin ifFalse: [^false]].
+		 destHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: destForm.
+		 (sourceBits ~= 0 or: [noSource]) ifFalse:
+			[sourceHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: sourceForm.
+			 "Handle the special case of equal source and dest handles"
+			 sourceHandle = destHandle ifTrue:
 				"If we have overlapping source/dest we lock the entire area
 				so that there is only one area transmitted"
-				isWarping ifFalse:[
-					"When warping we always need the entire surface for the source"
-					sourceBits := self cCode:'fn(sourceHandle, &sourcePitch, 0,0, sourceWidth, sourceHeight)'.
-				] ifTrue:[
-					"Otherwise use overlapping area"
-					l := sx min: dx. r := (sx max: dx) + bbW.
-					t := sy min: dy. b := (sy max: dy) + bbH.
-					sourceBits := self cCode:'fn(sourceHandle, &sourcePitch, l, t, r-l, b-t)'.
-				].
+				[isWarping
+					ifFalse: "When warping we always need the entire surface for the source"
+						[sourceBits := self lock: sourceHandle
+											Su: (self addressOf: sourcePitch)
+											rf: 0
+											ac: 0
+											eF: sourceWidth
+											n: sourceHeight]
+					ifTrue: "Otherwise use overlapping area"
+						[l := sx min: dx. r := (sx max: dx) + bbW.
+						t := sy min: dy. b := (sy max: dy) + bbH.
+						sourceBits := self lock: sourceHandle
+											Su: (self addressOf: sourcePitch)
+											rf: l
+											ac: t
+											eF: r - l
+											n: b - t].
 				destBits := sourceBits.
 				destPitch := sourcePitch.
 				hasSurfaceLock := true.
-				^destBits ~~ 0
-			].
-			"Fall through - if not equal it'll be handled below"
-		].
-		destBits := self cCode:'fn(destHandle, &destPitch, dx, dy, bbW, bbH)'.
+				numGCsOnInvocation ~= interpreterProxy statNumGCs ifTrue:
+					[self unlockSurfaces.
+					 interpreterProxy primitiveFailFor: PrimErrObjectMoved.
+					 ^false].
+				destBits = 0 ifTrue:
+					[self unlockSurfaces.
+					 interpreterProxy primitiveFailFor: PrimErrCallbackError.
+					 ^false].
+				^true]].
+		"Fall through - if not equal it'll be handled below"
+		destBits := self lock: destHandle
+						Su: (self addressOf: destPitch)
+						rf: dx
+						ac: dy
+						eF: bbW
+						n: bbH.
 		hasSurfaceLock := true.
-	].
-	(sourceBits == 0 and:[noSource not]) ifTrue:["Blitting *from* OS surface"
-		sourceHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: sourceForm.
-		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
-		fn := self cCoerce: lockSurfaceFn to: 'sqInt (*)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)'.
+		numGCsOnInvocation ~= interpreterProxy statNumGCs ifTrue:
+			[self unlockSurfaces.
+			 interpreterProxy primitiveFailFor: PrimErrObjectMoved.
+			 ^false].
+		destBits = 0 ifTrue:
+			[interpreterProxy primitiveFailFor: PrimErrCallbackError]].
+
+	(sourceBits ~= 0 or: [noSource]) ifFalse: "Blitting *from* OS surface"
+		[sourceHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: sourceForm.
+		 interpreterProxy failed ifTrue: [^false]. "fetch sourceHandle could fail"
+		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^false]].
 		"Warping requiring the entire surface"
-		isWarping ifTrue:[
-			sourceBits := self cCode:'fn(sourceHandle, &sourcePitch, 0, 0, sourceWidth, sourceHeight)'.
-		] ifFalse:[
-			sourceBits := self cCode:'fn(sourceHandle, &sourcePitch, sx, sy, bbW, bbH)'.
-		].
+		isWarping
+			ifTrue:
+				[sourceBits := self lock: sourceHandle
+												Su: (self addressOf: sourcePitch)
+												rf: 0
+												ac: 0
+												eF: sourceWidth
+												n: sourceHeight]
+			ifFalse:
+				[sourceBits := self lock: sourceHandle
+									Su: (self addressOf: sourcePitch)
+									rf: sx
+									ac: sy
+									eF: bbW
+									n: bbH].
 		hasSurfaceLock := true.
-	].
-	^destBits ~~ 0 and:[sourceBits ~~ 0 or:[noSource]].
+		numGCsOnInvocation ~= interpreterProxy statNumGCs ifTrue:
+			[self unlockSurfaces.
+			 interpreterProxy primitiveFailFor: PrimErrObjectMoved.
+			 ^false].
+		sourceBits = 0 ifTrue:
+			[interpreterProxy primitiveFailFor: PrimErrCallbackError]].
+	^destBits ~= 0 and: [sourceBits ~= 0 or: [noSource]]
 ]
 
 { #category : #'color mapping' }
@@ -2307,8 +2545,11 @@ BitBltSimulation >> mapPixel: sourcePixel flags: mapperFlags [
 BitBltSimulation >> merge: sourceWord with: destinationWord [
 	| mergeFnwith |
 	"Sender warpLoop is too big to include this in-line"
-	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
-	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
+	<var: #mergeFnwith declareC: 'unsigned int (*mergeFnwith)(unsigned int, unsigned int)'>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
+	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'unsigned int (*)(unsigned int, unsigned int)'.
 	mergeFnwith.  "null ref for compiler"
 
 	^ self mergeFn: sourceWord with: destinationWord
@@ -2317,13 +2558,13 @@ BitBltSimulation >> merge: sourceWord with: destinationWord [
 { #category : #'initialize-release' }
 BitBltSimulation >> moduleUnloaded: aModuleName [
 	"The module with the given name was just unloaded.
-	Make sure we have no dangling references."
+	 Make sure we have no dangling references."
 	<export: true>
 	<var: #aModuleName type: 'char *'>
-	(aModuleName strcmp: 'SurfacePlugin') = 0 ifTrue:[
-		"The surface plugin just shut down. How nasty."
-		querySurfaceFn := lockSurfaceFn := unlockSurfaceFn := 0.
-	].
+	(aModuleName strcmp: 'SurfacePlugin') = 0 ifTrue: "The surface plugin just shut down. How nasty."
+		[querySurfaceFn := 0.
+		 lockSurfaceFn := 0.
+		 unlockSurfaceFn := 0]
 ]
 
 { #category : #'combination rules' }
@@ -2332,6 +2573,10 @@ BitBltSimulation >> partitionedAND: word1 to: word2 nBits: nBits nPartitions: nP
 	Any field of word1 not all-ones is treated as all-zeroes.
 	Used for erasing, eg, brush shapes prior to ORing in a color"
 	| mask result |
+	<returnTypeC: 'unsigned int'>
+	<var: #word1 type: 'unsigned int'>
+	<var: #word2 type: 'unsigned int'>
+	<var: #result type: 'unsigned int'>
 	mask := maskTable at: nBits.  "partition mask starts at the right"
 	result := 0.
 	1 to: nParts do:
@@ -2349,6 +2594,7 @@ BitBltSimulation >> partitionedAdd: word1 to: word2 nBits: nBits componentMask: 
 	This is useful for packed pixels, or packed colors"
 	| carryOverflow sum w1 w2 |
 	"Use unsigned int everywhere because it has a well known arithmetic model without undefined behavior w.r.t. overflow and shifts"
+	<returnTypeC: 'unsigned int'>
 	 <var: #word1 type: 'unsigned int'>
 	<var: #word2 type: 'unsigned int'>
 	 <var: #w1 type: 'unsigned int'>
@@ -2372,6 +2618,7 @@ BitBltSimulation >> partitionedMax: word1 with: word2 nBits: nBits nPartitions: 
 	"In C, most arithmetic operations answer the same bit pattern regardless of the operands being signed or unsigned ints
 	(this is due to the way 2's complement numbers work). However, comparisions might fail. Add the proper declaration of
 	words as unsigned int in those cases where comparisions are done (jmv)"
+	<returnTypeC: 'unsigned int'>
 	<var: #word1 type: 'unsigned int'>
 	<var: #word2 type: 'unsigned int'>
 	<var: #mask type: 'unsigned int'>
@@ -2393,6 +2640,7 @@ BitBltSimulation >> partitionedMin: word1 with: word2 nBits: nBits nPartitions: 
 	"In C, most arithmetic operations answer the same bit pattern regardless of the operands being signed or unsigned ints
 	(this is due to the way 2's complement numbers work). However, comparisions might fail. Add the proper declaration of
 	words as unsigned int in those cases where comparisions are done (jmv)"
+	<returnTypeC: 'unsigned int'>
 	<var: #word1 type: 'unsigned int'>
 	<var: #word2 type: 'unsigned int'>
 	<var: #mask type: 'unsigned int'>
@@ -2417,6 +2665,13 @@ BitBltSimulation >> partitionedMul: word1 with: word2 nBits: nBits nPartitions: 
 	"In C, integer multiplication might answer a wrong value if the unsigned values are declared as signed.
 	This problem does not affect this method, because the most significant bit (i.e. the sign bit) will
 	always be zero (jmv)"
+	<returnTypeC: 'unsigned int'>
+	<var: #word1 type: 'unsigned int'>
+	<var: #word2 type: 'unsigned int'>
+	<var: #sMask type: 'unsigned int'>
+	<var: #dMask type: 'unsigned int'>
+	<var: #result type: 'unsigned int'>
+	<var: #product type: 'unsigned int'>
 	sMask := maskTable at: nBits.  "partition mask starts at the right"
 	dMask :=  sMask << nBits.
 	result := (((word1 bitAnd: sMask)+1) * ((word2 bitAnd: sMask)+1) - 1 
@@ -2449,6 +2704,13 @@ BitBltSimulation >> partitionedMul: word1 with: word2 nBits: nBits nPartitions: 
 { #category : #'combination rules' }
 BitBltSimulation >> partitionedRgbComponentAlpha: sourceWord dest: destWord nBits: nBits nPartitions: nParts [
 	| mask result p1 p2 v |
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destWord type: 'unsigned int'>
+	<var: #p1 type: 'unsigned int'>
+	<var: #p2 type: 'unsigned int'>
+	<var: #mask type: 'unsigned int'>
+	<var: #result type: 'unsigned int'>
 	mask := maskTable at: nBits.  "partition mask starts at the right"
 	result := 0.
 	1 to: nParts do:
@@ -2482,6 +2744,7 @@ BitBltSimulation >> partitionedSub: word1 from: word2 nBits: nBits nPartitions: 
 	"In C, most arithmetic operations answer the same bit pattern regardless of the operands being signed or unsigned ints
 	(this is due to the way 2's complement numbers work). However, comparisions might fail. Add the proper declaration of
 	words as unsigned int in those cases where comparisions are done (jmv)"
+	<returnTypeC: 'unsigned int'>
 	<var: #word1 type: 'unsigned int'>
 	<var: #word2 type: 'unsigned int'>
 	<var: #p1 type: 'unsigned int'>
@@ -2530,6 +2793,9 @@ BitBltSimulation >> pickSourcePixels: nPixels flags: mapperFlags srcMask: srcMas
 	color map, and justify them according to dstBitIndex in the resulting destWord."
 	| sourceWord destWord sourcePix destPix srcShift dstShift nPix |
 	<inline: true> "oh please"
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
 	sourceWord := self srcLongAt: sourceIndex.
 	destWord := 0.
 	srcShift := srcBitShift. "Hint: Keep in register"
@@ -2546,7 +2812,7 @@ BitBltSimulation >> pickSourcePixels: nPixels flags: mapperFlags srcMask: srcMas
 			"adjust source pix index"
 			((srcShift := srcShift + srcShiftInc) bitAnd: 16rFFFFFFE0) = 0 ifFalse:[
 				sourceMSB ifTrue:[srcShift := srcShift + 32] ifFalse:[srcShift := srcShift - 32].
-				sourceWord := self srcLongAt: (sourceIndex := sourceIndex + 4)].
+				sourceWord := self srcLongAt: (self incSrcIndex: 4)].
 		(nPix := nPix - 1) = 0] whileFalse.
 	] ifFalse:[
 		[	"grab, colormap and mix in pixel"
@@ -2558,7 +2824,7 @@ BitBltSimulation >> pickSourcePixels: nPixels flags: mapperFlags srcMask: srcMas
 			"adjust source pix index"
 			((srcShift := srcShift + srcShiftInc) bitAnd: 16rFFFFFFE0) = 0 ifFalse:[
 				sourceMSB ifTrue:[srcShift := srcShift + 32] ifFalse:[srcShift := srcShift - 32].
-				sourceWord := self srcLongAt: (sourceIndex := sourceIndex + 4)].
+				sourceWord := self srcLongAt: (self incSrcIndex: 4)].
 		(nPix := nPix - 1) = 0] whileFalse.
 	].
 	srcBitShift := srcShift. "Store back"
@@ -2573,6 +2839,8 @@ BitBltSimulation >> pickWarpPixelAtX: xx y: yy [
 	and still relatively important when smoothing is used."
 	| x y srcIndex sourceWord sourcePix |
 	<inline: true> "*please*"
+	<returnTypeC: #'unsigned int'>
+	<var: #sourceWord type: #'unsigned int'>
 
 	"note: it would be much faster if we could just
 	avoid these stupid tests for being inside sourceForm."
@@ -2598,6 +2866,12 @@ BitBltSimulation >> pixClear: sourceWord with: destinationWord [
 	"Clear all pixels in destinationWord for which the pixels of sourceWord have the same values. Used to clear areas of some constant color to zero."
 	| mask result nBits pv |
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
+	<var: #mask type: 'unsigned int'>
+	<var: #pv type: 'unsigned int'>
+	<var: #result type: 'unsigned int'>
 	destDepth = 32 ifTrue:[
 		sourceWord = destinationWord ifTrue:[^0] ifFalse:[^destinationWord].
 	].
@@ -2615,6 +2889,9 @@ BitBltSimulation >> pixClear: sourceWord with: destinationWord [
 { #category : #'combination rules' }
 BitBltSimulation >> pixMask: sourceWord with: destinationWord [
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^ self partitionedAND: sourceWord bitInvert32 to: destinationWord
 					nBits: destDepth nPartitions: destPPW
 ]
@@ -2622,6 +2899,9 @@ BitBltSimulation >> pixMask: sourceWord with: destinationWord [
 { #category : #'combination rules' }
 BitBltSimulation >> pixPaint: sourceWord with: destinationWord [
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	sourceWord = 0 ifTrue: [^ destinationWord].
 	^ sourceWord bitOr:
 		(self partitionedAND: sourceWord bitInvert32 to: destinationWord
@@ -2633,6 +2913,12 @@ BitBltSimulation >> pixSwap: sourceWord with: destWord [
 	"Swap the pixels in destWord"
 	| result shift lowMask highMask |
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destWord type: 'unsigned int'>
+	<var: #lowMask type: 'unsigned int'>
+	<var: #highMask type: 'unsigned int'>
+	<var: #result type: 'unsigned int'>
 	destPPW = 1 ifTrue:[^destWord]. "a single pixel per word"
 	result := 0.
 	lowMask := (1 << destDepth) - 1. "mask low pixel"
@@ -2833,7 +3119,7 @@ BitBltSimulation >> primitivePixelValueAtX: xVal y: yVal [
 	ppW := 32//depth. "pixels in each word"
 	stride := (width + (ppW  -1)) // ppW. "how many words per row of pixels"
 	bitsSize := interpreterProxy byteSizeOf: bitmap.
-	bitsSize = (stride * height * 4 "bytes per word")
+	bitsSize >= (stride * height * 4 "bytes per word")
 		ifFalse: [^interpreterProxy primitiveFail].
 	word := interpreterProxy fetchLong32:(yVal * stride) + (xVal//ppW) ofObject: bitmap. "load the word that contains our target"
 	mask := 16rFFFFFFFF >> (32 - depth). "make a mask to isolate the pixel within that word"
@@ -2859,36 +3145,35 @@ BitBltSimulation >> primitiveWarpBits [
 ]
 
 { #category : #'surface support' }
-BitBltSimulation >> queryDestSurface: handle [
+BitBltSimulation >> query: handle Sur: widthPtr fa: heightPtr ce: depthPtr Fn: endianPtr [
 	"Query the dimension of an OS surface.
 	This method is provided so that in case the inst vars of the
 	source form are broken, *actual* values of the OS surface
 	can be obtained. This might, for instance, happen if the user
 	resizes the main window.
-	Note: Moved to a separate function for better inlining of the caller."
-	querySurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^false]].
-	^(self cCode:' ((sqInt (*) (sqInt, sqInt*, sqInt*, sqInt*, sqInt*))querySurfaceFn)
-		(handle, &destWidth, &destHeight, &destDepth, &destMSB)'
-			 inSmalltalk:[false])
+	This is a simulation of the querySurfaceFn function call; simulate as a failure."
+	<doNotGenerate>
+	^false
 ]
 
-{ #category : #'surface support' }
-BitBltSimulation >> querySourceSurface: handle [
-	"Query the dimension of an OS surface.
-	This method is provided so that in case the inst vars of the
-	source form are broken, *actual* values of the OS surface
-	can be obtained. This might, for instance, happen if the user
-	resizes the main window.
-	Note: Moved to a separate function for better inlining of the caller."
-	querySurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^false]].
-	^(self cCode:' ((sqInt (*) (sqInt, sqInt*, sqInt*, sqInt*, sqInt*))querySurfaceFn)
-		(handle, &sourceWidth, &sourceHeight, &sourceDepth, &sourceMSB)'
-			inSmalltalk:[false])
+{ #category : #setup }
+BitBltSimulation >> reloadDestAndSourceForms [
+	"A GC has occurred.  The destForm must be updated.  But where to derive it from?
+	  For copyBits and warpBits it is derived from the receiver.  But for a BalloonEnginePlugin
+	  it should be obtained from (interpreterProxy fetchPointer: BEBitBltIndex ofObject: engine).
+	  For the moment implement something that works for these two cases."
+	<inline: false>
+	| receiver |
+	receiver := interpreterProxy stackValue: interpreterProxy methodArgumentCount.
+	bitBltIsReceiver ifFalse: [receiver := interpreterProxy fetchPointer: BEBitBltIndex ofObject: receiver].
+	destForm := interpreterProxy fetchPointer: BBDestFormIndex ofObject: receiver.
+	sourceForm := interpreterProxy fetchPointer: BBSourceFormIndex ofObject: receiver
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> rgbAdd: sourceWord with: destinationWord [
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
 	<var: #sourceWord type: 'unsigned int'>
 	<var: #destinationWord type: 'unsigned int'>
 	<var: #carryOverflowMask type: 'unsigned int'>
@@ -2923,6 +3208,9 @@ BitBltSimulation >> rgbComponentAlpha16 [
 		sourceForm ~= destForm.
 	"
 	<inline: false>  "This particular method should be optimized in itself"
+	<var: #sourceWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
+	<var: #dstMask type: #'unsigned int'>
 	
 	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY 
 	srcY dstY dstMask srcShift ditherBase ditherIndex ditherThreshold |
@@ -2995,16 +3283,17 @@ BitBltSimulation >> rgbComponentAlpha32 [
 	<inline: false> "This particular method should be optimized in itself"
 
 	"Give the compile a couple of hints"
-	<var: #sourceWord type: 'register long'>
-	<var: #deltaX type: 'register long'>
+	<var: #deltaX type: 'register sqInt'>
+	<var: #sourceWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
 
 	"The following should be declared as pointers so the compiler will
 	notice that they're used for accessing memory locations 
 	(good to know on an Intel architecture) but then the increments
 	would be different between ST code and C code so must hope the
 	compiler notices what happens (MS Visual C does)"
-	<var: #srcIndex type: 'register long'>
-	<var: #dstIndex type: 'register long'>
+	<var: #srcIndex type: 'register sqIntptr_t'>
+	<var: #dstIndex type: 'register sqIntptr_t'>
 	
 	deltaY := bbH + 1. "So we can pre-decrement"
 	srcY := sy.
@@ -3146,6 +3435,9 @@ BitBltSimulation >> rgbComponentAlpha8 [
 	
 	<inline: false>  "This particular method should be optimized in itself"
 	<var: #mappingTable declareC:'unsigned int *mappingTable'>
+	<var: #sourceWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
+	<var: #dstMask type: #'unsigned int'>
 	
 	mappingTable := self default8To32Table.
 	mapperFlags := cmFlags bitAnd: ColorMapNewStyle bitInvert32.
@@ -3244,6 +3536,14 @@ BitBltSimulation >> rgbDiff: sourceWord with: destinationWord [
 	For non-rgb, return the number of differing pixels."
 	| pixMask destShifted sourceShifted destPixVal bitsPerColor rgbMask sourcePixVal diff maskShifted |
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
+	<var: #sourceShifted type: 'unsigned int'>
+	<var: #destShifted type: 'unsigned int'>
+	<var: #maskShifted type: 'unsigned int'>
+	<var: #pixMask type: 'unsigned int'>
+	<var: #rgbMask type: 'unsigned int'>
 	pixMask := maskTable at: destDepth.
 	destDepth = 16
 		ifTrue: [bitsPerColor := 5.  rgbMask := 16r1F]
@@ -3336,16 +3636,19 @@ BitBltSimulation >> rgbMapPixel: sourcePixel flags: mapperFlags [
 	"Perform the RGBA conversion for the given source pixel"
 	| val |
 	<inline: true>
-	val := 			((sourcePixel bitAnd: (cmMaskTable at: 0)) bitShift: (cmShiftTable at: 0)).
-	val := val bitOr: ((sourcePixel bitAnd: (cmMaskTable at: 1)) bitShift: (cmShiftTable at: 1)).
-	val := val bitOr: ((sourcePixel bitAnd: (cmMaskTable at: 2)) bitShift: (cmShiftTable at: 2)).
-		  ^val bitOr: ((sourcePixel bitAnd: (cmMaskTable at: 3)) bitShift: (cmShiftTable at: 3)).
+	val := 			((sourcePixel bitAnd: (cmMaskTable at: 0)) bitShift: (cmShiftTable at: 0) signedIntFromLong).
+	val := val bitOr: ((sourcePixel bitAnd: (cmMaskTable at: 1)) bitShift: (cmShiftTable at: 1) signedIntFromLong).
+	val := val bitOr: ((sourcePixel bitAnd: (cmMaskTable at: 2)) bitShift: (cmShiftTable at: 2) signedIntFromLong).
+		  ^val bitOr: ((sourcePixel bitAnd: (cmMaskTable at: 3)) bitShift: (cmShiftTable at: 3) signedIntFromLong).
 
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> rgbMax: sourceWord with: destinationWord [
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	destDepth < 16 ifTrue:
 		["Max each pixel separately"
 		^ self partitionedMax: sourceWord with: destinationWord
@@ -3365,6 +3668,9 @@ BitBltSimulation >> rgbMax: sourceWord with: destinationWord [
 { #category : #'combination rules' }
 BitBltSimulation >> rgbMin: sourceWord with: destinationWord [
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	destDepth < 16 ifTrue:
 		["Min each pixel separately"
 		^ self partitionedMin: sourceWord with: destinationWord
@@ -3385,6 +3691,10 @@ BitBltSimulation >> rgbMin: sourceWord with: destinationWord [
 BitBltSimulation >> rgbMinInvert: wordToInvert with: destinationWord [
 	| sourceWord |
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #wordToInvert type: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	sourceWord := wordToInvert bitInvert32.
 	destDepth < 16 ifTrue:
 		["Min each pixel separately"
@@ -3405,6 +3715,9 @@ BitBltSimulation >> rgbMinInvert: wordToInvert with: destinationWord [
 { #category : #'combination rules' }
 BitBltSimulation >> rgbMul: sourceWord with: destinationWord [
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	destDepth < 16 ifTrue:
 		["Mul each pixel separately"
 		^ self partitionedMul: sourceWord with: destinationWord
@@ -3429,6 +3742,9 @@ BitBltSimulation >> rgbMul: sourceWord with: destinationWord [
 { #category : #'combination rules' }
 BitBltSimulation >> rgbSub: sourceWord with: destinationWord [
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	destDepth < 16 ifTrue:
 		["Sub each pixel separately"
 		^ self partitionedSub: sourceWord from: destinationWord
@@ -3503,6 +3819,7 @@ BitBltSimulation >> setupColorMasksFrom: srcBits to: targetBits [
 
 { #category : #'interpreter interface' }
 BitBltSimulation >> showDisplayBits [
+	self ensureDestAndSourceFormsAreValid.
 	interpreterProxy 
 		showDisplayBits: destForm
 		Left: affectedL
@@ -3551,6 +3868,9 @@ BitBltSimulation >> sourceSkewAndPointerInit [
 
 { #category : #'combination rules' }
 BitBltSimulation >> sourceWord: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord
 ]
 
@@ -3562,6 +3882,9 @@ BitBltSimulation >> srcLongAt: idx [
 
 { #category : #'combination rules' }
 BitBltSimulation >> subWord: sourceWord with: destinationWord [
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
 	^sourceWord - destinationWord
 ]
 
@@ -3573,6 +3896,12 @@ BitBltSimulation >> tallyIntoMap: sourceWord with: destinationWord [
 	to be performed at setup."
 	| mapIndex pixMask destShifted maskShifted pixVal |
 	<inline: false>
+	<returnTypeC: 'unsigned int'>
+	<var: #sourceWord type: 'unsigned int'>
+	<var: #destinationWord type: 'unsigned int'>
+	<var: #pixMask type: 'unsigned int'>
+	<var: #destShifted type: 'unsigned int'>
+	<var: #maskShifted type: 'unsigned int'>
 	(cmFlags bitAnd: (ColorMapPresent bitOr: ColorMapIndexedPart)) = 
 		(ColorMapPresent bitOr: ColorMapIndexedPart)
 			ifFalse: [^ destinationWord "no op"].
@@ -3668,43 +3997,48 @@ BitBltSimulation >> tryCopyingBitsQuickly [
 ]
 
 { #category : #'surface support' }
+BitBltSimulation >> unlock: handle Sur: x fa: y ce: w Fn: h [
+	"Simulate the unlockSurfaceFn function call."
+	<doNotGenerate>
+	^self
+]
+
+{ #category : #'surface support' }
 BitBltSimulation >> unlockSurfaces [
 	"Unlock the bits of any OS surfaces."
-	"See the comment in lockSurfaces. Similar rules apply. That is, the area provided in ioUnlockSurface can be used to determine the dirty region after drawing. If a source is unlocked, then the area will be (0,0,0,0) to indicate that no portion is dirty."
-	| sourceHandle destHandle destLocked fn |
-	<var: #fn declareC:'sqInt (*fn)(sqInt, sqInt, sqInt, sqInt, sqInt)'>
-	hasSurfaceLock ifTrue:[
-		unlockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
-		fn := self cCoerce: unlockSurfaceFn to: 'sqInt (*)(sqInt, sqInt, sqInt, sqInt, sqInt)'.
-		destLocked := false.
-		destHandle := interpreterProxy fetchPointer: FormBitsIndex ofObject: destForm.
-		(interpreterProxy isIntegerObject: destHandle) ifTrue:[
-			destHandle := interpreterProxy integerValueOf: destHandle.
-			"The destBits are always assumed to be dirty"
-			self cCode:'fn(destHandle, affectedL, affectedT, affectedR-affectedL, affectedB-affectedT)'.
-			destBits := destPitch := 0.
-			destLocked := true.
-		].
-		noSource ifFalse:[
-			sourceHandle := interpreterProxy fetchPointer: FormBitsIndex ofObject: sourceForm.
-			(interpreterProxy isIntegerObject: sourceHandle) ifTrue:[
-				sourceHandle := interpreterProxy integerValueOf: sourceHandle.
-				"Only unlock sourceHandle if different from destHandle"
-				(destLocked and:[sourceHandle = destHandle]) 
-					ifFalse:[self cCode: 'fn(sourceHandle, 0, 0, 0, 0)'].
-				sourceBits := sourcePitch := 0.
-			].
-		].
-		hasSurfaceLock := false.
-		self cCode: [] inSmalltalk:
-			[self touch: fn.
-			 interpreterProxy displayObject = destForm ifTrue:
-				[interpreterProxy getDeferDisplayUpdates "for some reason this is true..."
-					ifTrue:
-						[interpreterProxy fullDisplayUpdate]
-					ifFalse:
-						[interpreterProxy fullDisplayUpdate]]].
-	].
+	"See the comment in lockSurfaces. Similar rules apply. That is, the area provided in ioUnlockSurface
+	 can be used to determine the dirty region after drawing. If a source is unlocked, then the area will
+	 be (0,0,0,0) to indicate that no portion is dirty.  Note that if a GC happens during unlockSourceFn
+	 (if it is effectively a callback) no matter.  No bits are touched after unlock."
+	| sourceHandle destHandle destLocked |
+	hasSurfaceLock ifFalse: [^self].
+	unlockSurfaceFn = 0 ifTrue:
+		[self loadSurfacePlugin ifFalse:
+			[^self]].
+	self ensureDestAndSourceFormsAreValid.
+	destLocked := false.
+	destHandle := interpreterProxy fetchPointer: FormBitsIndex ofObject: destForm.
+	(interpreterProxy isIntegerObject: destHandle) ifTrue: "The destBits are always assumed to be dirty"
+		[self unlock: (interpreterProxy integerValueOf: destHandle)
+			Sur: affectedL
+			fa: affectedT
+			ce: affectedR - affectedL
+			Fn: affectedB - affectedT.
+		 destBits := destPitch := 0.
+		 destLocked := true].
+	noSource ifFalse:
+		[self ensureDestAndSourceFormsAreValid.
+		 sourceHandle := interpreterProxy fetchPointer: FormBitsIndex ofObject: sourceForm.
+		 (interpreterProxy isIntegerObject: sourceHandle) ifTrue:
+			["Only unlock sourceHandle if different from destHandle"
+			 (destLocked and: [sourceHandle = destHandle]) ifFalse:
+				[self unlock: (interpreterProxy integerValueOf: sourceHandle) Sur: 0 fa: 0 ce: 0 Fn: 0].
+			sourceBits := sourcePitch := 0]].
+	hasSurfaceLock := false.
+	self cCode: [] inSmalltalk:
+		[interpreterProxy displayObject = destForm ifTrue:
+			[interpreterProxy getDeferDisplayUpdates ifFalse:
+				[interpreterProxy fullDisplayUpdate]]]
 ]
 
 { #category : #setup }
@@ -3744,9 +4078,13 @@ BitBltSimulation >> warpLoop [
 	  deltaP12x deltaP12y deltaP43x deltaP43y pAx pAy pBx pBy
 	  xDelta yDelta smoothingCount sourceMapOop
 	  nSteps nPix words destWord endBits mergeFnwith dstShiftInc dstShiftLeft mapperFlags |
-	<inline: false>
-	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
-	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
+	<inline: false>	
+	<var: #mergeFnwith declareC: 'unsigned int (*mergeFnwith)(unsigned int, unsigned int)'>
+	<var: #skewWord type: #'unsigned int'>
+	<var: #halftoneWord type: #'unsigned int'>
+	<var: #mergeWord type: #'unsigned int'>
+	<var: #destWord type: #'unsigned int'>
+	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'unsigned int (*)(unsigned int, unsigned int)'.
 	mergeFnwith.  "null ref for compiler"
 
 	(interpreterProxy slotSizeOf: bitBltOop) >= (BBWarpBase+12)
@@ -3869,7 +4207,7 @@ BitBltSimulation >> warpLoop [
 								(destWord bitAnd: destMask bitInvert32).
 				self dstLongAt: destIndex put: destWord.
 			].
-			destIndex := destIndex + 4.
+			self incDestIndex: 4.
 			words = 2 "e.g., is the next word the last word?"
 				ifTrue:["set mask for last word in this row"
 						destMask := mask2.
@@ -3883,7 +4221,7 @@ BitBltSimulation >> warpLoop [
 		pAy := pAy + deltaP12y.
 		pBx := pBx + deltaP43x.
 		pBy := pBy + deltaP43y.
-		destIndex := destIndex + destDelta]
+		self incDestIndex: destDelta]
 ]
 
 { #category : #'pixel mapping' }
@@ -3929,6 +4267,7 @@ BitBltSimulation >> warpPickSmoothPixels: nPixels
 	This version is only called from WarpBlt with smoothingCount > 1"
 	| rgb x y a r g b xx yy xdh ydh xdv ydv dstMask destWord i j k nPix |
 	<inline: false> "nope - too much stuff in here"
+	<var: #rgb type: #'unsigned int'>
 	dstMask := maskTable at: destDepth.
 	destWord := 0.
 	n = 2 "Try avoiding divides for most common n (divide by 2 is generated as shift)"
