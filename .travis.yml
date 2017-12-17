@@ -17,14 +17,12 @@ aliases:
     osx_image: xcode7.3
   - &pharo-deploy
     before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
-    addons:
-      ssh_known_hosts: 193.51.193.142
     deploy:
     - provider: script
       skip_cleanup: true
       script: ./deploy/pharo/deploy-files.pharo.org.sh
       on:
-        branch: Cog
+        branch: CogRemoveThisToEnablePharoDeployAgain
         repo: OpenSmalltalk/opensmalltalk-vm
 
 jobs:
