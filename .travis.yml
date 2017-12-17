@@ -1,47 +1,44 @@
 language: c
 osx_image: xcode7.3
 sudo: required
+
 cache:
   directories:
   - armchroot
   - .thirdparty-cache
+
 notifications:
   slack:
     secure: gyekIJqPdx7SxqpugvtpY5mZSg54oFkFJ+DKBPILtjyI/sDhcSwT9GwY/zoHoYkoHrPLepDxyPgkAC8JCcTiAcxOazq5zlVva6SoQRjlDnC64oCYvOj/2giuYkXLXnwvj8mIINEgXzEvLdalpHwazsY0fzKNFM1mdrkPolmf2CvaNbKCGkiagsjrxJHEEB4tLcUP4ArqVE6wb+20HXoMKlHccgCFvN67bYJrTXDnuhEgKMooQRFv0yVoimckdRn1amvIgljavPwv2yHX+V1roneyi90e4ri9AT2sROeRprGnaib9Z8p+/mgWIUnTLL7pjbNHhtvZptsj3xjanWy1Bt/4MMewTWN4REE/KKxLp79CQvGNR+Ki7mF2UpgYUtxHYpFNIGNF9VomwnfWAuYdGDAYAGY3S1W12RPo37CC7RP/lPM96L6ypW41FoQKlnhzm+StJV+mlI5C1jQBU2WKoVhaKXJpraX2mUJXyN8ilYDo7PrJe0SRLH6J2WwPM5Z/RdscBDEGAR4RhZnn++1IE7e1gZPJB4NZH/3wLBwDhz8S4kB/GB32/rz3ZaftCf2+XjAZXzF3SroUCZ/MWZPGrwchEkU/3z1Tm8FTbELxZk1rSYpdLwVnXYooo5vggqjgAZvmlTerJuufl5lOkXT44PynZAvE+I+MrD04DpKuH0w=
-matrix:
+
+aliases:
+  - &pharo-deploy
+    before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
+    addons:
+      ssh_known_hosts: sesi-ssh.inria.fr
+    deploy:
+    - provider: script
+      skip_cleanup: true
+      script: ./deploy/pharo/deploy-files.pharo.org.sh
+      on:
+        branch: Cog
+        repo: OpenSmalltalk/opensmalltalk-vm
+
+jobs:
   include:
-  - os: linux
+  - stage: "Linux builds"
+    os: linux
     env: ARCH="linux64x64" FLAVOR="newspeak.cog.spur"
-  - os: linux
-    env: ARCH="linux64x64" FLAVOR="newspeak.stack.spur"
   - os: linux
     env: ARCH="linux64x64" FLAVOR="squeak.cog.spur"
   - os: linux
-    env: ARCH="linux64x64" FLAVOR="squeak.stack.spur"
-  - os: linux
     env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
-    before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
-    deploy:
-    - provider: script
-      skip_cleanup: true
-      script: ./deploy/pharo/deploy-files.pharo.org.sh
-      on:
-        branch: Cog
-        repo: OpenSmalltalk/opensmalltalk-vm
+    <<: *pharo-deploy
   - os: linux
     env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
-    before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
-    deploy:
-    - provider: script
-      skip_cleanup: true
-      script: ./deploy/pharo/deploy-files.pharo.org.sh
-      on:
-        branch: Cog
-        repo: OpenSmalltalk/opensmalltalk-vm
+    <<: *pharo-deploy
   - os: linux
     env: ARCH="linux32x86" FLAVOR="newspeak.cog.spur"
-  - os: linux
-    env: ARCH="linux32x86" FLAVOR="newspeak.stack.spur"
   - os: linux
     env: ARCH="linux32x86" FLAVOR="squeak.cog.spur"
   - os: linux
@@ -49,84 +46,69 @@ matrix:
   - os: linux
     env: ARCH="linux32x86" FLAVOR="squeak.sista.spur"
   - os: linux
-    env: ARCH="linux32x86" FLAVOR="squeak.stack.spur"
-  - os: linux
-    env: ARCH="linux32x86" FLAVOR="squeak.stack.v3"
-  - os: linux
     env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
-    before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
-    deploy:
-    - provider: script
-      skip_cleanup: true
-      script: ./deploy/pharo/deploy-files.pharo.org.sh
-      on:
-        branch: Cog
-        repo: OpenSmalltalk/opensmalltalk-vm
+    <<: *pharo-deploy
   - os: linux
     env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
-    before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
-    deploy:
-    - provider: script
-      skip_cleanup: true
-      script: ./deploy/pharo/deploy-files.pharo.org.sh
-      on:
-        branch: Cog
-        repo: OpenSmalltalk/opensmalltalk-vm
-  - os: osx
+    <<: *pharo-deploy
+
+  - stage: "macOS builds"
+    os: osx
     env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
-  - os: osx
-    env: ARCH="macos64x64" FLAVOR="newspeak.stack.spur"
   - os: osx
     env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
     before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
-    deploy:
-    - provider: script
-      skip_cleanup: true
-      script: ./deploy/pharo/deploy-files.pharo.org.sh
-      on:
-        branch: Cog
-        repo: OpenSmalltalk/opensmalltalk-vm
-  - os: osx
-    env: ARCH="macos64x64" FLAVOR="pharo.stack.spur"
+    <<: *pharo-deploy
   - os: osx
     env: ARCH="macos64x64" FLAVOR="pharo.cog.spur.lowcode"
   - os: osx
-    env: ARCH="macos64x64" FLAVOR="pharo.stack.spur.lowcode"
-  - os: osx
     env: ARCH="macos64x64" FLAVOR="squeak.cog.spur"
-  - os: osx
-    env: ARCH="macos64x64" FLAVOR="squeak.stack.spur"
   - os: osx
     env: ARCH="macos32x86" FLAVOR="newspeak.cog.spur"
   - os: osx
-    env: ARCH="macos32x86" FLAVOR="newspeak.stack.spur"
-  - os: osx
     env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
-    before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
-    deploy:
-    - provider: script
-      skip_cleanup: true
-      script: ./deploy/pharo/deploy-files.pharo.org.sh
-      on:
-        branch: Cog
-        repo: OpenSmalltalk/opensmalltalk-vm
-  - os: osx
-    env: ARCH="macos32x86" FLAVOR="pharo.stack.spur"
+    <<: *pharo-deploy
   - os: osx
     env: ARCH="macos32x86" FLAVOR="pharo.cog.spur.lowcode"
-  - os: osx
-    env: ARCH="macos32x86" FLAVOR="pharo.stack.spur.lowcode"
   - os: osx
     env: ARCH="macos32x86" FLAVOR="squeak.cog.spur"
   - os: osx
     env: ARCH="macos32x86" FLAVOR="squeak.cog.v3"
   - os: osx
     env: ARCH="macos32x86" FLAVOR="squeak.sista.spur"
+
+  - stage: "Stack builds"
+    os: linux
+    env: ARCH="linux64x64" FLAVOR="newspeak.stack.spur"
+  - os: linux
+    env: ARCH="linux64x64" FLAVOR="squeak.stack.spur"
+  - os: linux
+    env: ARCH="linux32x86" FLAVOR="newspeak.stack.spur"
+  - os: linux
+    env: ARCH="linux32x86" FLAVOR="squeak.stack.spur"
+  - os: linux
+    env: ARCH="linux32x86" FLAVOR="squeak.stack.v3"
+  - os: osx
+    env: ARCH="macos64x64" FLAVOR="pharo.stack.spur"
+  - os: osx
+    env: ARCH="macos64x64" FLAVOR="pharo.stack.spur.lowcode"
+  - os: osx
+    env: ARCH="macos64x64" FLAVOR="squeak.stack.spur"
+  - os: osx
+    env: ARCH="macos32x86" FLAVOR="newspeak.stack.spur"
+  - os: osx
+    env: ARCH="macos64x64" FLAVOR="newspeak.stack.spur"
+  - os: osx
+    env: ARCH="macos32x86" FLAVOR="pharo.stack.spur"
+  - os: osx
+    env: ARCH="macos32x86" FLAVOR="pharo.stack.spur.lowcode"
   - os: osx
     env: ARCH="macos32x86" FLAVOR="squeak.stack.spur"
   - os: osx
     env: ARCH="macos32x86" FLAVOR="squeak.stack.v3"
-  - os: linux
+
+  - stage: "linux32ARMv6 builds"
+    os: linux
     env: ARCH="linux32ARMv6" FLAVOR="newspeak.cog.spur" CHROOT="schroot -p -c rpi
       -- bash -c "
     dist: trusty
@@ -146,14 +128,7 @@ matrix:
       bash -c "
     dist: trusty
     group: edge
-    before_deploy: (cd deploy/pharo && ./pack-vm.sh && ./deploy-key.sh)
-    deploy:
-    - provider: script
-      skip_cleanup: true
-      script: ./deploy/pharo/deploy-files.pharo.org.sh
-      on:
-        branch: Cog
-        repo: OpenSmalltalk/opensmalltalk-vm
+    <<: *pharo-deploy
   - os: linux
     env: ARCH="linux32ARMv6" FLAVOR="squeak.stack.spur" CHROOT="schroot -p -c rpi
       -- bash -c "
@@ -164,12 +139,13 @@ matrix:
       bash -c "
     dist: trusty
     group: edge
-install:
-- ./.travis_install.sh
+
+install: ./.travis_install.sh
+
 script:
 - cd platforms/unix/config/ && make configure
 - cd ../../../
 - $CHROOT ./.travis_build.sh
 - ./.travis_test.sh
-after_success:
-- ./.travis_deploy.sh
+
+after_success: ./.travis_deploy.sh
