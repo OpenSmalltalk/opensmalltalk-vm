@@ -1057,6 +1057,11 @@ CurrentImageCoInterpreterFacade >> shortPrint: oop [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> sixtyFourBitIndexableFormat [
+	^objectMemory sixtyFourBitIndexableFormat
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> sizeOfCallPrimitiveBytecode: methodHeaderOop [
 	^coInterpreter sizeOfCallPrimitiveBytecode: methodHeaderOop
 ]
