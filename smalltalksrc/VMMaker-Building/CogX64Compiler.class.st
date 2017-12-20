@@ -4269,9 +4269,9 @@ CogX64Compiler >> setsConditionCodesFor: aConditionalJumpOpcode [
 		{	[ArithmeticShiftRightCqR]	->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
 			[ArithmeticShiftRightRR]	->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
 			[LogicalShiftLeftCqR]		->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
-			[LogicalShiftLeftRR]		->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
-			[LogicalShiftRightCqR]		->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
-			[XorRR]					->	[true]
+			[LogicalShiftLeftRR]			->	[self shiftSetsConditionCodesFor: aConditionalJumpOpcode].
+			[LogicalShiftRightCqR]		->	[false].
+			[XorRR]						->	[true]
 		}
 		otherwise: [self halt: 'unhandled opcode in setsConditionCodesFor:'. false]
 ]
