@@ -9805,10 +9805,23 @@ StackInterpreter >> longPrintOop: oop [
 		[^self printStringOf: oop; cr].
 	(fmt between: objectMemory firstLongFormat and: objectMemory firstByteFormat - 1) ifTrue:
 		[0 to: ((objectMemory num32BitUnitsOf: oop) min: 256) - 1 do:
-			[:i| | fieldOop |
-			fieldOop := objectMemory fetchLong32: i ofObject: oop.
-			self space; printNum: i; space; printHex: fieldOop; space; cr].
+			[:i| | field32 |
+			field32 := objectMemory fetchLong32: i ofObject: oop.
+			self space; printNum: i; space; printHex: field32; space; cr].
 		 ^self].
+	objectMemory hasSpurMemoryManagerAPI ifTrue:
+		[fmt = objectMemory sixtyFourBitIndexableFormat ifTrue:
+			[0 to: ((objectMemory num64BitUnitsOf: oop) min: 256) - 1 do:
+				[:i| | field64 |
+				field64 := objectMemory fetchLong64: i ofObject: oop.
+				self space; printNum: i; space; printHex: field64; space; cr].
+			 ^self].
+		 (fmt between: objectMemory firstShortFormat and: objectMemory firstShortFormat + 1) ifTrue:
+			[0 to: ((objectMemory num16BitUnitsOf: oop) min: 256) - 1 do:
+				[:i| | field16 |
+				field16 := objectMemory fetchShort16: i ofObject: oop.
+				self space; printNum: i; space; printHex: field16; space; cr].
+			 ^self]].
 	"this is nonsense.  apologies."
 	startIP := (objectMemory lastPointerOf: oop) + objectMemory bytesPerOop - objectMemory baseHeaderSize / objectMemory bytesPerOop.
 	lastIndex := 256 min: startIP.
