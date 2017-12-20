@@ -74,7 +74,6 @@ Class {
 		'LastRTLCode',
 		'Literal',
 		'LoadEffectiveAddressMwrR',
-		'LoadEffectiveAddressXowrR',
 		'LogicalShiftLeftCqR',
 		'LogicalShiftLeftRR',
 		'LogicalShiftRightCqR',
@@ -83,7 +82,6 @@ Class {
 		'MoveAbR',
 		'MoveAwR',
 		'MoveC32R',
-		'MoveC64R',
 		'MoveCqR',
 		'MoveCwR',
 		'MoveM16rR',
@@ -107,7 +105,6 @@ Class {
 		'MoveRX16rR',
 		'MoveRX32rR',
 		'MoveRXbrR',
-		'MoveRXowr',
 		'MoveRXwrR',
 		'MoveRdM64r',
 		'MoveRdR',
@@ -117,7 +114,6 @@ Class {
 		'MoveX16rRR',
 		'MoveX32rRR',
 		'MoveXbrRR',
-		'MoveXowrR',
 		'MoveXwrRR',
 		'MulRdRd',
 		'MulRsRs',
@@ -190,7 +186,7 @@ CogRTLOpcodes class >> initialize [
 		M64r	- memory 64-bit doubleword whose address is at a constant offset from an address in a register
 		Xbr		- memory byte whose address is r * byte size away from an address in a register
 		X16r	- memory 16-bit halfword whose address is r * (2 bytes size) away from an address in a register
-		X32r	- memory 32-bit halfword whose address is r * (4 bytes size) away from an address in a register
+		X32r	- memory 32-bit halfword whose address is r * (4 bytes size) away from an address in a register (64-bit ISAs only)
 		Xwr		- memory word whose address is r * word size away from an address in a register
 		Xowr	- memory word whose address is o + (r * word size) away from an address in a register (scaled indexed)
 
@@ -202,8 +198,8 @@ CogRTLOpcodes class >> initialize [
 	The assumption is that comparison and arithmetic instructions set condition codes and that move instructions
 	leave the condition codes unaffected.  In particular LoadEffectiveAddressMwrR does not set condition codes
 	although it can be used to do arithmetic.  On processors such as MIPS this distinction is invalid; there are no
-	condition codes.  So the backend is allowed to collapse operation, branch pairs to internal instruciton definitions
-	(see sender and implementors of noteFollowingConditionalBranch:). 
+	condition codes.  So the backend is allowed to collapse operation, branch pairs to internal instruction definitions
+	(see senders and implementors of noteFollowingConditionalBranch:). 
 
 	Not all of the definitions in opcodeDefinitions below are implemented.  In particular we do not implement the
 	XowrR scaled index addressing mode since it requires 4 operands.
@@ -280,19 +276,19 @@ CogRTLOpcodes class >> initialize [
 						MoveRAw MoveRA32
 						MoveAbR
 						MoveRAb
-						MoveMwrR MoveRMwr MoveXwrRR MoveRXwrR MoveXowrR MoveRXowr
+						MoveMwrR MoveRMwr MoveXwrRR MoveRXwrR "MoveXowrR MoveRXowr""Unused"
 						MoveM8rR MoveMs8rR MoveRM8r 
 						MoveM16rR MoveRM16r MoveX16rRR MoveRX16rR
 						MoveM32rR MoveRM32r MoveX32rRR MoveRX32rR
 						MoveMbrR MoveRMbr MoveXbrRR MoveRXbrR
-						MoveCqR MoveCwR MoveC32R MoveC64R
+						MoveCqR MoveCwR MoveC32R "MoveC64R""Not used"
 						MoveRRd MoveRdR MoveRdRd MoveM64rRd MoveRdM64r
 						MoveRsRs MoveM32rRs MoveRsM32r
 						PopR PushR PushCq PushCw
 						PrefetchAw
 
 						"Arithmetic; destination is always last operand except Cmp; CmpXR is SubRX with no update of result"
-						LoadEffectiveAddressMwrR LoadEffectiveAddressXowrR "Variants of add/multiply"
+						LoadEffectiveAddressMwrR "LoadEffectiveAddressXowrR" "Variants of add/multiply"
 						NegateR "2's complement negation"
 						NotR
 						ArithmeticShiftRightCqR ArithmeticShiftRightRR
