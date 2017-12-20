@@ -175,6 +175,12 @@ MemoryTests >> testLittleEndian32BitLongAccessFor: aClass [
 				[:i| self assert: 0 equals: (memory byteAt: i)].
 			12 to: 15 do:
 				[:i| self assert: 0 equals: (memory byteAt: i)]]].
+	memory
+		unsignedLongAt: 49 put: 16rAAAAAAAA;
+		unsignedLongAt: 53 put: 16rAAAAAAAA.
+	49 to: 52 do:
+		[:i|
+		 self assert: -1431655766 equals: (memory longAt: i)].
 	"unsigned access"
 	0 to: 31 do:
 		[:shift| | value |
@@ -245,6 +251,12 @@ MemoryTests >> testLittleEndian64BitLongAccessFor: aClass [
 				[:i| self assert: 0 equals: (memory byteAt: i)].
 			23 to: 31 do:
 				[:i| self assert: 0 equals: (memory byteAt: i)]]].
+	memory
+		unsignedLong64At: 49 put: 16rAAAAAAAAAAAAAAAA;
+		unsignedLong64At: 57 put: 16rAAAAAAAAAAAAAAAA.
+	49 to: 56 do:
+		[:i|
+		 self assert: -6148914691236517206 equals: (memory long64At: i)].
 	"unsigned access"
 	0 to: 63 do:
 		[:shift| | value |

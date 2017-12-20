@@ -23,7 +23,7 @@ DoubleWordArray >> long64At: byteIndex [
 		ifTrue:
 			[value := self at: wordIndex]
 		ifFalse:
-			[high := (self at: wordIndex + 1) bitShift: 8 - lowBits * 8.
+			[high := ((self at: wordIndex + 1) bitAnd: (1 bitShift: lowBits * 8) - 1) bitShift: 8 - lowBits * 8.
 			 low := (self at: wordIndex) bitShift: lowBits * -8.
 			 high = 0 ifTrue:
 				[^low].
@@ -143,7 +143,7 @@ DoubleWordArray >> unsignedLong64At: byteIndex [
 	wordIndex := byteIndex - 1 // 8 + 1.
 	(lowBits := byteIndex - 1 bitAnd: 7) = 0 ifTrue:
 		[^self at: wordIndex].
-	high := (self at: wordIndex + 1) bitShift: 8 - lowBits * 8.
+	high := ((self at: wordIndex + 1) bitAnd: (1 bitShift: lowBits * 8) - 1) bitShift: 8 - lowBits * 8.
 	low := (self at: wordIndex) bitShift: lowBits * -8.
 	^high = 0 ifTrue: [low] ifFalse: [high + low]
 ]

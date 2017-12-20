@@ -55,7 +55,7 @@ Spur64BitMMLESimulatorFor64Bits >> long32At: byteAddress put: a32BitValue [
 
 { #category : #'memory access' }
 Spur64BitMMLESimulatorFor64Bits >> long64At: byteAddress [
-	"memory is a DobleWordArray, a 64-bit indexable array of bits"
+	"memory is a DoubleWordArray, a 64-bit indexable array of bits"
 	byteAddress \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
 	^memory at: byteAddress // 8 + 1
 ]
