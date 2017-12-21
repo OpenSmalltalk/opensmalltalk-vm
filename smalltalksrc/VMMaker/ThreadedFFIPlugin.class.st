@@ -342,22 +342,22 @@ ThreadedFFIPlugin >> externalFunctionHasStackSizeSlot [
 ThreadedFFIPlugin >> ffiAddressOf: rcvr startingAt: byteOffset size: byteSize [
 	"Answer a long of the address of the byteSize slot (byte, short, int, whatever) at byteOffset in rcvr.
 	 Nominally intended for use with ExternalAddress objects, this code will work (for obscure historical
-	 reasons) with plain Byte or Word Arrays as well. "
+	 reasons) with plain Byte or Word Arrays as well. Answer 0 on error."
 	| rcvrClass rcvrSize addr |
-	(interpreterProxy isBytes: rcvr) ifFalse:[^interpreterProxy primitiveFail].
-	byteOffset > 0 ifFalse:[^interpreterProxy primitiveFail].
+	(interpreterProxy isBytes: rcvr) ifFalse:[^0].
+	byteOffset > 0 ifFalse:[^0].
 	rcvrClass := interpreterProxy fetchClassOf: rcvr.
 	rcvrSize := interpreterProxy byteSizeOf: rcvr.
 	rcvrClass = interpreterProxy classExternalAddress
 		ifTrue:
-			[rcvrSize = BytesPerWord ifFalse:[^interpreterProxy primitiveFail].
+			[rcvrSize = BytesPerWord ifFalse:[^0].
 			addr := interpreterProxy fetchPointer: 0 ofObject: rcvr. "Hack!!"
 			"don't you dare to read from object memory (unless is pinned)!"
 			(addr = 0 "or: [(interpreterProxy isInMemory: addr) or: [(interpreterProxy isPinned: rcvr) not]]") ifTrue:
-				[^interpreterProxy primitiveFail]]
+				[^0]]
 		ifFalse:
 			[byteOffset+byteSize-1 <= rcvrSize ifFalse:
-				[^interpreterProxy primitiveFail].
+				[^0].
 			addr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: #'sqIntptr_t'].
 	addr := addr + byteOffset - 1.
 	^addr asVoidPointer
@@ -1601,7 +1601,7 @@ ThreadedFFIPlugin >> primitiveFFIDoubleAt [
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^0].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 8.
-	interpreterProxy failed ifTrue:[^0].
+	addr = 0 ifTrue: [^interpreterProxy primitiveFail].
 	self mem: (self addressOf: floatValue) cp: addr y: (self sizeof: floatValue).
 	interpreterProxy pop: 2.
 	^interpreterProxy pushFloat: floatValue
@@ -1623,7 +1623,7 @@ ThreadedFFIPlugin >> primitiveFFIDoubleAtPut [
 	rcvr := interpreterProxy stackObjectValue: 2.
 	interpreterProxy failed ifTrue:[^0].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 8.
-	interpreterProxy failed ifTrue:[^0].
+	addr = 0 ifTrue: [^interpreterProxy primitiveFail].
 	self mem: addr cp: (self addressOf: floatValue) y: (self sizeof: floatValue).
 	^interpreterProxy pop: 3 thenPush: floatOop
 ]
@@ -1639,7 +1639,7 @@ ThreadedFFIPlugin >> primitiveFFIFloatAt [
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^0].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 4.
-	interpreterProxy failed ifTrue:[^0].
+	addr = 0 ifTrue: [^interpreterProxy primitiveFail].
 	self mem: (self addressOf: floatValue) cp: addr y: (self sizeof: floatValue).
 	interpreterProxy pop: 2.
 	^interpreterProxy pushFloat: floatValue
@@ -1660,7 +1660,7 @@ ThreadedFFIPlugin >> primitiveFFIFloatAtPut [
 	rcvr := interpreterProxy stackObjectValue: 2.
 	interpreterProxy failed ifTrue:[^0].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 4.
-	interpreterProxy failed ifTrue:[^0].
+	addr = 0 ifTrue: [^interpreterProxy primitiveFail].
 	self mem: addr cp: (self addressOf: floatValue) y: (self sizeof: floatValue).
 	^interpreterProxy pop: 3 thenPush: floatOop
 ]
@@ -1717,7 +1717,7 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAt [
 	 and: [(byteSize bitAnd: byteSize - 1) = 0 "a.k.a. isPowerOfTwo"]]) ifFalse:
 		[^interpreterProxy primitiveFail].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: byteSize.
-	interpreterProxy failed ifTrue:[^0].
+	addr = 0 ifTrue: [^interpreterProxy primitiveFail].
 	byteSize <= 2
 		ifTrue:
 			[byteSize = 1
@@ -1768,7 +1768,7 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAtPut [
 	 and: [(byteSize bitAnd: byteSize - 1) = 0 "a.k.a. isPowerOfTwo"]]) ifFalse:
 		[^interpreterProxy primitiveFail].
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: byteSize.
-	interpreterProxy failed ifTrue:[^0].
+	addr = 0 ifTrue: [^interpreterProxy primitiveFail].
 	isSigned 
 		ifTrue:[value := interpreterProxy signed64BitValueOf: valueOop]
 		ifFalse:[value := interpreterProxy positive64BitValueOf: valueOop].
