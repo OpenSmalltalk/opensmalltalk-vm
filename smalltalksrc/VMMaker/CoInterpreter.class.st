@@ -513,6 +513,12 @@ CoInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
 			aStream nextPutAll: '#define '; nextPutAll: a key; space; print: a value; cr]
 ]
 
+{ #category : #simulation }
+CoInterpreter >> ISA [
+	<doNotGenerate>
+	^cogit backEnd class ISA
+]
+
 { #category : #'cog jit support' }
 CoInterpreter >> accessorDepthForPrimitiveIndex: primIndex [
 	<api>

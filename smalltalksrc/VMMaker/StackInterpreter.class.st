@@ -2106,6 +2106,16 @@ StackInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
 		[aStream nextPutAll: '#define SPURVM 1'; cr]
 ]
 
+{ #category : #simulation }
+StackInterpreter >> ISA [
+	<doNotGenerate>
+	^self class initializationOptions
+		at: #ISA
+		ifAbsent: [Smalltalk wordSize = 8
+					ifTrue: [#X64]
+					ifFalse: [#IA32]]
+]
+
 { #category : #'debug support' }
 StackInterpreter >> abstractDetailedSymbolicMethod: aMethod [
 	<doNotGenerate>
@@ -9172,15 +9182,11 @@ StackInterpreter >> ioLoadExternalFunction: functionName OfLength: functionLengt
 	<doNotGenerate>
 	| pluginString functionString |
 	pluginString := String new: moduleLength.
-	1 to: moduleLength do:[:i| pluginString byteAt: i put: (objectMemory byteAt: moduleName+i-1)].
+	(1 to: moduleLength) do:[:i| pluginString byteAt: i put: (objectMemory byteAt: moduleName+i-1)].
 	functionString := String new: functionLength.
-	1 to: functionLength do:[:i| functionString byteAt: i put: (objectMemory byteAt: functionName+i-1)].
-	"Pharo images as of 2016 use the FFI plugin (for getenv:?).  We can't simulate such function loads.  So ignore"
-	pluginString = 'SqueakFFIPrims' ifTrue:
-		["self halt."
-		 true ifTrue:
-			[self transcript cr; show: 'ignoring function load from SqueakFFIPrims'.
-			 ^0]].
+	(1 to: functionLength) do:[:i| functionString byteAt: i put: (objectMemory byteAt: functionName+i-1)].
+	"We used to ignore loads of the SqueakFFIPrims plugin, but that means doing without integerAt:[put:]size:signed:
+	 which is too much of a limitation (not that these simulate unaligned accesses yet)."
 	^self ioLoadFunction: functionString From: pluginString AccessorDepthInto: accessorDepthPtr
 ]
 
