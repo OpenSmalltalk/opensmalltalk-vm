@@ -98,7 +98,7 @@ sqInt ioSizeOfWindowSetxy(wIndexType windowIndex, sqInt x, sqInt y)
     rect.size.height = y;
     [window setFrame:rect display:YES];    
     
-	return (0);  /* w is high 16 bits; h is low 16 bits */
+	return 0;  /* w is high 16 bits; h is low 16 bits */
 }
 
 sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle) {
@@ -129,7 +129,8 @@ windowDescriptorBlock *windowBlockFromIndex(sqInt windowIndex) {
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
 	while(entry) {
-		if(entry->windowIndex == windowIndex) return entry;
+		if(entry->windowIndex == windowIndex)
+			return entry;
 		entry = entry->next;
 	}
 	return NULL;
@@ -139,7 +140,8 @@ windowDescriptorBlock *windowBlockFromHandle(wHandleType windowHandle) {
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
 	while(entry) {
-		if(entry->handle == windowHandle) return entry;
+		if(entry->handle == windowHandle)
+			return entry;
 		entry = entry->next;
 	}
 	return NULL;
@@ -150,7 +152,8 @@ wHandleType windowHandleFromIndex(sqInt windowIndex)  {
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
 	while(entry) {
-		if(entry->windowIndex == windowIndex) return entry->handle;
+		if(entry->windowIndex == windowIndex)
+			return entry->handle;
 		entry = entry->next;
 	}
 	return NULL;
@@ -160,7 +163,8 @@ sqInt windowIndexFromHandle(wHandleType windowHandle) {
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
 	while(entry) {
-		if(entry->handle == windowHandle) return entry->windowIndex;
+		if(entry->handle == windowHandle)
+			return entry->windowIndex;
 		entry = entry->next;
 	}
 	return 0;
@@ -170,7 +174,8 @@ sqInt windowIndexFromBlock( windowDescriptorBlock * thisWindow) {
 windowDescriptorBlock *entry;
 	entry = windowListRoot;
 	while(entry) {
-		if(entry == thisWindow) return entry->windowIndex;
+		if(entry == thisWindow)
+			return entry->windowIndex;
 		entry = entry->next;
 	}
 	return 0;
@@ -203,7 +208,7 @@ windowDescriptorBlock *thisWindow;
  * Remove the given entry from the list of windows.
  * free it, if found.
  */
- sqInt RemoveWindowBlock(windowDescriptorBlock * thisWindow) {
+sqInt RemoveWindowBlock(windowDescriptorBlock * thisWindow) {
 windowDescriptorBlock *prevEntry;
 
 
@@ -227,3 +232,54 @@ windowDescriptorBlock *prevEntry;
 sqInt getCurrentIndexInUse(void) {
 	return nextIndex-1;
 }
+
+/* Temporary stubs */
+#if TerfVM
+void *ioGetWindowHandle(void)
+{
+	extern void *getSTWindow();
+	return getSTWindow();
+}
+sqInt
+ioPositionOfNativeWindow(unsigned long windowHandle)
+{	return -1; }
+
+sqInt
+ioSizeOfNativeWindow(unsigned long windowHandle)
+{	return -1; }
+
+sqInt
+ioSizeOfNativeDisplay(unsigned long windowHandle)
+{	return -1; }
+
+/* Return the pixel origin (topleft) of the platform-defined working area
+   for the screen containing the given window. */
+/* copied from platforms/unix/vm-display-X11/sqUnixX11.c */
+sqInt
+ioPositionOfScreenWorkArea(long windowIndex)
+{
+/* We simply hard-code this.  There's no obvious window-manager independent way
+ * to discover this that doesn't involve creating a window.
+ * We're also not attempting multi-monitor support; attempting to configure a
+ * laptop with a second monitor via ATI's "control center" resulted in no
+ * cursor and no ATI control center once the multi-monitor mode was enabled.
+ */
+#define NominalMenubarHeight 24 /* e.g. Gnome default */
+	return (0 << 16) | NominalMenubarHeight;
+}
+
+/* Return the pixel extent of the platform-defined working area
+   for the screen containing the given window. */
+sqInt
+ioSizeOfScreenWorkArea(long windowIndex)
+{	return -1; }
+
+/* eem Mar 22 2010 - new code to come up to level of Qwaq host window support
+ * on Mac & Win32.
+ * In the following functions "Display" refers to the user area of a window and
+ * "Window" refers to the entire window including border & title bar.
+ */
+sqInt
+ioSetCursorPositionXY(long x, long y)
+{	return -1; }
+#endif

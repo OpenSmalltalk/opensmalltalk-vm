@@ -26,15 +26,21 @@ munge(char *s)
 	return buf;
 }
 
+#if FOR64BITS
+# define CLASS "!BochsX64Alien64"
+#else
+# define CLASS "!BochsX64Alien"
+#endif
+
 int
 main()
 {
 #define stoffsetof(type,field) (offsetof(type,field)+1)
 #define print(r,ra,len) \
-printf("!BochsX64Alien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
+printf(CLASS " methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
 	"%s\r\t^self unsigned" #len "At: %ld! !\r", m,d,y,h,i, munge(#r), \
 	stoffsetof(BX_CPU_C,ra));\
-printf("!BochsX64Alien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
+printf(CLASS " methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
 	"%s: anUnsignedInteger\r\t^self unsigned" #len "At: %ld put: anUnsignedInteger! !\r", m,d,y,h,i, munge(#r), \
 	stoffsetof(BX_CPU_C,ra));
 

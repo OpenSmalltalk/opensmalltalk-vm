@@ -42,7 +42,7 @@ else
 COGDEFS:= $(COGDEFS) -DCOGMTVM=0 -DDEBUGVM=$(DEBUGVM)
 endif
 
-# Set minimum version to WindowsXP (see /cygwin/usr/include//w32api/w32api.h)
+# Set minimum version to WindowsXP (see /cygwin/usr/include/w32api/w32api.h)
 WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
 
 # define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
@@ -67,7 +67,7 @@ LD:=	 $(CC)
 LDCXX := $(TOOLPREFIX)clang++ # For linking c++ bundles
 
 EXPORT:=--export-all-symbols
-BASELDFLAGS:=-m32 -mthreads -Wl,--large-address-aware,$(EXPORT)
+BASELDFLAGS:=-m32 -mthreads -Wl,--large-address-aware,--dynamicbase,--nxcompat,$(EXPORT)
 LDFLAGS:= -mwindows $(BASELDFLAGS)
 CONSOLELDFLAGS:= -mconsole $(BASELDFLAGS)
 STDLIBS:= -lddraw -ldinput -lopengl32 -lws2_32 -lcomdlg32 -lole32 -lwinmm \
