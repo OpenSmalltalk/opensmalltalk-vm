@@ -931,7 +931,7 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveAt [
 	cogit AddCq: objectMemory baseHeaderSize >> objectMemory shiftForWord R: Arg1Reg.
 	cogit MoveXwr: Arg1Reg R: ReceiverResultReg R: ClassReg.
 	cogit MoveR: ClassReg R: TempReg.
-	cogit LogicalShiftRightCq: self numSmallIntegerBits R: TempReg. "If in range this is now 0"
+	cogit LogicalShiftRightCq: self numSmallIntegerBits - 1 R: TempReg. "If in range this is now 0"
 	(cogit lastOpcode setsConditionCodesFor: JumpZero) ifFalse:
 		[cogit CmpCq: 0 R: TempReg]. "N.B. FLAGS := ClassReg - 0"
 	jumpNotSmallInteger := cogit JumpNonZero: 0.
