@@ -14,8 +14,7 @@ if [ "$APPVEYOR_REPO_NAME" != "OpenSmalltalk/opensmalltalk-vm" ]; then
 fi
 
 # deploy on master branch
-#if [ "$APPVEYOR_REPO_BRANCH" != "Cog" ]; then
-if [ "$APPVEYOR_REPO_BRANCH" != "estebanlm/fix-pharo-upload" ]; then
+if [ "$APPVEYOR_REPO_BRANCH" != "Cog" ]; then
 	echo "Trying to deploy in branch: $APPVEYOR_REPO_BRANCH. Skipping."
 	exit 
 fi
