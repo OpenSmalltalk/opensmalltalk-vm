@@ -1098,6 +1098,13 @@ SpurMemoryManager class >> wordSize [
 	^self subclassResponsibility
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> ISA [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter ISA
+]
+
 { #category : #'simulation tests support' }
 SpurMemoryManager >> abandonEmptySegmentForTests [
 	"Assume a freshly-loaded image. Eliminate the last segment."
@@ -11145,6 +11152,20 @@ SpurMemoryManager >> signed32BitValueOf: oop [
 ]
 
 { #category : #'simulation only' }
+SpurMemoryManager >> signed64BitIntegerFor: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter signed64BitIntegerFor: integerValue
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> signed64BitValueOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter signed64BitValueOf: oop
+]
+
+{ #category : #'simulation only' }
 SpurMemoryManager >> signedMachineIntegerValueOf: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
@@ -12187,6 +12208,94 @@ SpurMemoryManager >> trueObject [
 SpurMemoryManager >> trueObject: anOop [
 	"For mapInterpreterOops"
 	trueObj := anOop
+]
+
+{ #category : #simulation }
+SpurMemoryManager >> unalignedLong32At: index [
+	"Support for primitiveFFIIntegerAt[Put]"
+	<doNotGenerate>
+	| odd hi lo |
+	(odd := index bitAnd: 3) = 0 ifTrue:
+		[^self long32At: index].
+	lo := self long32At: index - odd.
+	hi := self long32At: index + 4 - odd.
+	^lo >> (odd * 8) + ((hi bitAnd: 1 << (odd * 8) - 1) << (4 - odd * 8))
+]
+
+{ #category : #simulation }
+SpurMemoryManager >> unalignedLong32At: index put: aValue [
+	"Support for primitiveFFIIntegerAt[Put]"
+	<doNotGenerate>
+	| odd hi lo mask |
+	aValue < 0 ifTrue:
+		[self unalignedLong64At: index put: (aValue bitAnd: 16rFFFFFFFF).
+		 ^aValue].
+	(odd := index bitAnd: 3) = 0 ifTrue:
+		[^self long32At: index put: aValue].
+	mask := 1 << (odd * 8) - 1.
+	lo := self long32At: index - odd.
+	self long32At: index - odd
+		put: (lo bitAnd: mask)
+			+ ((aValue bitAnd: 1 << (4 - odd * 8) - 1) << (odd * 8)).
+	hi := self long32At: index + 4 - odd.
+	self long32At: index + 4 - odd
+		put: (hi bitClear: mask) + (aValue >> (4 - odd * 8) bitAnd: mask).
+	^aValue
+]
+
+{ #category : #simulation }
+SpurMemoryManager >> unalignedLong64At: index [
+	"Support for primitiveFFIIntegerAt[Put]"
+	<doNotGenerate>
+	| odd hi lo |
+	(odd := index bitAnd: 7) = 0 ifTrue:
+		[^self long64At: index].
+	lo := self long64At: index - odd.
+	hi := self long64At: index + 8 - odd.
+	^lo >> (odd * 8) + ((hi bitAnd: 1 << (odd * 8) - 1) << (8 - odd * 8))
+]
+
+{ #category : #simulation }
+SpurMemoryManager >> unalignedLong64At: index put: aValue [
+	"Support for primitiveFFIIntegerAt[Put]"
+	<doNotGenerate>
+	| odd hi lo mask |
+	aValue < 0 ifTrue:
+		[self unalignedLong64At: index put: (aValue bitAnd: 16rFFFFFFFFFFFFFFFF).
+		 ^aValue].
+	(odd := index bitAnd: 7) = 0 ifTrue:
+		[^self long64At: index put: aValue].
+	mask := 1 << (odd * 8) - 1.
+	lo := self long64At: index - odd.
+	self long64At: index - odd
+		put: (lo bitAnd: mask)
+			+ ((aValue bitAnd: 1 << (8 - odd * 8) - 1) << (odd * 8)).
+	hi := self long64At: index + 8 - odd.
+	self long64At: index + 8 - odd
+		put: (hi bitClear: mask) + (aValue >> (8 - odd * 8) bitAnd: mask).
+	^aValue
+]
+
+{ #category : #simulation }
+SpurMemoryManager >> unalignedShortAt: index [
+	"Support for primitiveFFIIntegerAt[Put]"
+	<doNotGenerate>
+	| hi lo |
+	(index bitAnd: 1) = 0 ifTrue:
+		[^self shortAt: index].
+	lo := self shortAt: index - 1.
+	hi := self shortAt: index + 1.
+	^lo >> 8 + ((hi bitAnd: 16rFF) << 8)
+]
+
+{ #category : #simulation }
+SpurMemoryManager >> unalignedShortAt: index put: aValue [
+	"Support for primitiveFFIIntegerAt[Put]"
+	<doNotGenerate>
+	(index bitAnd: 1) = 0 ifTrue:
+		[^self shortAt: index put: aValue].
+	self shouldBeImplemented.
+	^aValue
 ]
 
 { #category : #'primitive support' }

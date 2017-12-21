@@ -217,6 +217,17 @@ ThreadedFFIPlugin class >> preambleCCode [
 # define PLATFORM_API_USES_CALLEE_POPS_CONVENTION 0
 #endif
 
+/* This alignment stuff is a hack for integerAt:put:size:signed:/primitiveFFIIntegerAt[Put].
+ * The assumption right now is that all processors suppoprt unaligned access.  That only
+ * holds true for x86, x86-64 & ARMv6 & later.  But this keeps us going until we can addresws it properly.
+ */
+#define unalignedShortAt(a) shortAt(a)
+#define unalignedShortAtput(a) shortAtput(a)
+#define unalignedLong32At(a) long32At(a)
+#define unalignedLong32Atput(a) long32Atput(a)
+#define unalignedLong64At(a) long64At(a)
+#define unalignedLong64Atput(a) long64Atput(a)
+
 /* The dispatchOn:in:with:with: generates an unwanted call on error.  Just squash it. */
 #define error(foo) 0
 #ifndef SQUEAK_BUILTIN_PLUGIN
@@ -1348,6 +1359,13 @@ ThreadedFFIPlugin >> getModuleName [
 	^'SqueakFFIPrims'
 ]
 
+{ #category : #simulation }
+ThreadedFFIPlugin >> initSurfacePluginFunctionPointers [
+	"This is a simulation-only stub.  The real code is in
+		platforms/Cross/plugins/SqueakFFIPrims/sqManualSurface.c"
+	<doNotGenerate>
+]
+
 { #category : #initialize }
 ThreadedFFIPlugin >> initialiseModule [
 	<export: true>
@@ -1357,7 +1375,7 @@ ThreadedFFIPlugin >> initialiseModule [
 	 and what the offset of ExternalLibraryFunction's functionName and moduleName slots are."
 	externalFunctionInstSize := interpreterProxy instanceSizeOf: interpreterProxy classExternalFunction.
 	self initSurfacePluginFunctionPointers.
-	^1
+	^true
 ]
 
 { #category : #'primitive support' }
@@ -1401,6 +1419,21 @@ ThreadedFFIPlugin >> maybeOwnVM: calloutState threadIndex: myThreadIndex [
 	self cppIf: COGMTVM ifTrue:
 	[(calloutState callFlags anyMask: FFICallFlagThreaded) ifTrue:
 		[interpreterProxy ownVM: myThreadIndex]]
+]
+
+{ #category : #simulation }
+ThreadedFFIPlugin >> morphIntoConcreteSubclass: aCoInterpreter [
+	<doNotGenerate>
+	| concreteClass |
+	concreteClass :=
+		aCoInterpreter ISA caseOf: {
+			[#X64]		->	[(Smalltalk platformName beginsWith: 'Win')
+								ifTrue: [ThreadedX64Win64FFIPlugin]
+								ifFalse: [ThreadedX64SysVFFIPlugin]].
+			[#IA32]	->	[ThreadedIA32FFIPlugin].
+			[#ARMv5]	->	[ThreadedARMFFIPlugin] }
+			otherwise: [self error: 'simulation not set up for this ISA'].
+	self changeClassTo: concreteClass
 ]
 
 { #category : #debugging }
@@ -1689,11 +1722,11 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAt [
 		ifTrue:
 			[byteSize = 1
 				ifTrue: [value := self cCoerceSimple: (interpreterProxy byteAt: addr) to: #'unsigned char']
-				ifFalse: [value := self cCoerceSimple: (interpreterProxy shortAt: addr) to: #'unsigned short']]
+				ifFalse: [value := self cCoerceSimple: (interpreterProxy unalignedShortAt: addr) to: #'unsigned short']]
 		ifFalse:
 			[byteSize = 4
-				ifTrue: [value := self cCoerceSimple: (interpreterProxy long32At: addr) to: #'unsigned int']
-				ifFalse: [value := interpreterProxy long64At: addr]].
+				ifTrue: [value := self cCoerceSimple: (interpreterProxy unalignedLong32At: addr) to: #'unsigned int']
+				ifFalse: [value := interpreterProxy unalignedLong64At: addr]].
 	byteSize < BytesPerWord
 		ifTrue:
 			[isSigned ifTrue: "sign extend value"
@@ -1707,6 +1740,9 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAt [
 					[byteSize < 8 ifTrue: "sign extend value"
 						[mask := 1 asUnsignedLongLong << (byteSize * 8 - 1).
 						value := (value bitAnd: mask-1) - (value bitAnd: mask)].
+					 self cCode: [] inSmalltalk:
+						[(byteSize = 8 and: [(value bitShift: -56) >= 128]) ifTrue:
+							[value := value - (1 bitShift: 64)]].
 					 valueOop := interpreterProxy signed64BitIntegerFor: value]
 				ifFalse:[valueOop := interpreterProxy positive64BitIntegerFor: value]].
 	^interpreterProxy pop: 4 thenPush: valueOop
@@ -1748,11 +1784,11 @@ ThreadedFFIPlugin >> primitiveFFIIntegerAtPut [
 		ifTrue:
 			[byteSize = 1
 				ifTrue: [interpreterProxy byteAt: addr put: value]
-				ifFalse: [interpreterProxy shortAt: addr put: value]]
+				ifFalse: [interpreterProxy unalignedShortAt: addr put: value]]
 		ifFalse:
 			[byteSize = 4
-				ifTrue: [interpreterProxy long32At: addr put: value]
-				ifFalse: [interpreterProxy long64At: addr put: value]].
+				ifTrue: [interpreterProxy unalignedLong32At: addr put: value]
+				ifFalse: [interpreterProxy unalignedLong64At: addr put: value]].
 	^interpreterProxy pop: 5 thenPush: valueOop
 ]
 
@@ -1876,6 +1912,16 @@ ThreadedFFIPlugin >> primitiveSetManualSurfacePointer [
 ThreadedFFIPlugin >> returnStructInRegisters: returnStructSize [
 	"Answer if a struct result of a given size is returned in memory or not."
 	^self subclassResponsibility
+]
+
+{ #category : #simulation }
+ThreadedFFIPlugin >> setInterpreter: anInterpreter [
+	"Initialization of the plugin in the simulator.
+	 The real routine is in the superclass."
+	self cCode: []
+		inSmalltalk: [self class == thisContext method methodClass ifTrue:
+						[self morphIntoConcreteSubclass: anInterpreter]].
+	^super setInterpreter: anInterpreter
 ]
 
 { #category : #'primitive support' }

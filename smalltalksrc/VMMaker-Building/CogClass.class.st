@@ -22,12 +22,13 @@ CogClass >> cCoerceSimple: value to: cTypeString [
 	^cTypeString caseOf:
 	   {	[#'unsigned long']							->	[value].
 		[#'unsigned int']							->	[value].
-		[#sqInt]										->	[value].
+		[#'unsigned short']							->	[value].
+		[#sqInt]									->	[value].
 		[#'sqIntptr_t']								->	[value].
 		[#'usqIntptr_t']								->	[value].
 		[#usqInt]									->	[value].
 		[#sqLong]									->	[value].
-		[#usqLong]									->	[value].
+		[#usqLong]								->	[value].
 		[#'AbstractInstruction *']					->	[value].
 		[#'BytecodeFixup *']						->	[value].
 		[#'CogMethod *']							->	[value].
