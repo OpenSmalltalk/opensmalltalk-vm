@@ -960,7 +960,7 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveAt [
 	(jumpBadIndex jmpTarget:
 	(jumpImmediate jmpTarget: cogit Label)))))))))).
 
-	^0
+	^0 "Can't be complete because of contexts."
 ]
 
 { #category : #'primitive generators' }
