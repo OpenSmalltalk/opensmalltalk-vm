@@ -661,12 +661,12 @@ LargeIntegersPlugin >> cDigitSub: pWordSmall
 		[:i | 
 		z := z + (self cDigitOf: pWordLarge at: i) - (self cDigitOf: pWordSmall at: i).
 		self cDigitOf: pWordRes at: i put: (z bitAnd: 16rFFFFFFFF).
-		z := 0 - (z >> 63)].
+		z := 0 - (self cCode: [z >> 63] inSmalltalk: [z >> 63 bitAnd: 1])].
 	smallLen to: largeLen - 1 do: 
 		[:i | 
 		z := z + (self cDigitOf: pWordLarge at: i) .
 		self cDigitOf: pWordRes at: i put: (z bitAnd: 16rFFFFFFFF).
-		z := 0 - (z >> 63)].
+		z := 0 - (self cCode: [z >> 63] inSmalltalk: [z >> 63 bitAnd: 1])].
 	^0
 ]
 
