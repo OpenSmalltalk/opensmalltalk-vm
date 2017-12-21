@@ -19,7 +19,7 @@ aliases:
       skip_cleanup: true
       script: ./deploy/pharo/deploy-files.pharo.org.sh
       on:
-        branch: CogRemoveThisToEnablePharoDeployAgain
+        branch: estebanlm/fix-pharo-upload
         repo: OpenSmalltalk/opensmalltalk-vm
 
 jobs:
