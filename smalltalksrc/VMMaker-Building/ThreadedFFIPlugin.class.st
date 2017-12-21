@@ -222,11 +222,11 @@ ThreadedFFIPlugin class >> preambleCCode [
  * holds true for x86, x86-64 & ARMv6 & later.  But this keeps us going until we can addresws it properly.
  */
 #define unalignedShortAt(a) shortAt(a)
-#define unalignedShortAtput(a) shortAtput(a)
+#define unalignedShortAtput(a,v) shortAtput(a,v)
 #define unalignedLong32At(a) long32At(a)
-#define unalignedLong32Atput(a) long32Atput(a)
+#define unalignedLong32Atput(a,v) long32Atput(a,v)
 #define unalignedLong64At(a) long64At(a)
-#define unalignedLong64Atput(a) long64Atput(a)
+#define unalignedLong64Atput(a,v) long64Atput(a,v)
 
 /* The dispatchOn:in:with:with: generates an unwanted call on error.  Just squash it. */
 #define error(foo) 0
