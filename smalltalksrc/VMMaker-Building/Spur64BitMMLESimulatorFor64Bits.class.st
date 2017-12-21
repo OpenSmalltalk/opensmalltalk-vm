@@ -39,6 +39,9 @@ Spur64BitMMLESimulatorFor64Bits >> long32At: byteAddress [
 Spur64BitMMLESimulatorFor64Bits >> long32At: byteAddress put: a32BitValue [
  	"Store the 32-bit word at byteAddress which must be a multiple of four."
 	| lowBits long longAddress |
+	a32BitValue < 0 ifTrue:
+		[self long32At: byteAddress put: (a32BitValue bitAnd: 16rFFFFFFFF).
+		 ^a32BitValue].
 	lowBits := byteAddress bitAnd: 4.
 	lowBits = 0
 		ifTrue: "storing into LS word"
@@ -62,7 +65,7 @@ Spur64BitMMLESimulatorFor64Bits >> long64At: byteAddress [
 
 { #category : #'memory access' }
 Spur64BitMMLESimulatorFor64Bits >> long64At: byteAddress put: a64BitValue [
-	"memory is a DobleWordArray, a 64-bit indexable array of bits"
+	"memory is a DoubleWordArray, a 64-bit indexable array of bits"
 	byteAddress \\ 8 ~= 0 ifTrue: [self unalignedAccessError].
 	^memory at: byteAddress // 8 + 1 put: a64BitValue
 ]

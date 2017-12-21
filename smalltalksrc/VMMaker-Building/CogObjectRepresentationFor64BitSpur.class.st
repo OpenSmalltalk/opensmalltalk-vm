@@ -1086,7 +1086,7 @@ CogObjectRepresentationFor64BitSpur >> genPrimitiveAtPut [
 	cogit MoveR: Arg1Reg R: SendNumArgsReg.
 	self genConvertSmallIntegerToIntegerInReg: SendNumArgsReg.
 	cogit CmpCq: 0 R: SendNumArgsReg.
-	jumpNegative := cogit JumpBelow: 0.
+	jumpNegative := cogit JumpLess: 0.
 	rejoin :=
 	cogit CmpR: Arg0Reg R: nSlotsOrBytesReg.
 	jump64BitsOutOfBounds := cogit JumpBelowOrEqual: 0.
