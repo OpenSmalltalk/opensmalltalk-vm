@@ -2,7 +2,7 @@
 
 set -e 
 
-baseDir="/appli/files.pharo.org/vm"
+baseDir="/vm"
 case "${ARCH}" in
 	macos32x86) 
 		destDir="$baseDir/pharo-spur32/mac" 
