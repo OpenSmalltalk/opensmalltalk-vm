@@ -36,9 +36,9 @@ if [ -z "$productName" ]; then
 	exit 1
 fi 
 echo "Uploading $productName to files.pharo.org/$destDir"
-scp $productName ssh.cluster023.hosting.ovh.net:$destDir/$productName
+scp $productName files.pharo.org:$destDir/$productName
 if [ "$HEARTBEAT" = "threaded" ]; then 
 	SUFFIX="-threaded"
 fi
 echo "Uploading $productName to files.pharo.org/$destDir/latest$SUFFIX.zip"
-scp $productName ssh.cluster023.hosting.ovh.net:$destDir/latest$SUFFIX.zip
+scp $productName files.pharo.org:$destDir/latest$SUFFIX.zip
