@@ -54,7 +54,8 @@ Class {
 		'disableBooleanCheat',
 		'performFilters',
 		'eventQueue',
-		'assertVEPAES'
+		'assertVEPAES',
+		'primTraceLog'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -1191,9 +1192,7 @@ StackInterpreterSimulator >> ioUTCMicroseconds [
 	"NOT.  Actually, we want something a lot slower and, for exact debugging,
 	something more repeatable than real time.  Dan had an idea: use the byteCount..."
 
-	^byteCount + startMicroseconds
-	
-"At 20k bytecodes per second, this gives us aobut 200 ticks per second, or about 1/5 of what you'd expect for the real time clock.  This should still service events at one or two per second"
+	^(byteCount // 50) + startMicroseconds
 ]
 
 { #category : #'I/O primitives support' }
@@ -2454,6 +2453,15 @@ StackInterpreterSimulator >> singleStep [
 	self incrementByteCount
 ]
 
+{ #category : #'primitive support' }
+StackInterpreterSimulator >> slowPrimitiveResponse [
+	primTraceLog ifNotNil:
+		[primTraceLog size > 127 ifTrue:
+			[primTraceLog removeFirst].
+		 primTraceLog addLast: primitiveFunctionPointer].
+	^super slowPrimitiveResponse
+]
+
 { #category : #'debug printing' }
 StackInterpreterSimulator >> space [
 
@@ -2723,6 +2731,12 @@ StackInterpreterSimulator >> transcript: aTranscript [
 StackInterpreterSimulator >> transferTo: aProc [
 	"self halt."
 	^super transferTo: aProc
+]
+
+{ #category : #accessing }
+StackInterpreterSimulator >> turnOnPrimTraceLog [
+	primTraceLog ifNil:
+		[primTraceLog := OrderedCollection new: 512]
 ]
 
 { #category : #'interpreter shell' }
