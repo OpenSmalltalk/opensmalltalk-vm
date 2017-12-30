@@ -331,6 +331,7 @@ InterpreterPlugin class >> translatedPrimitives [
 
 { #category : #simulation }
 InterpreterPlugin >> cCoerce: value to: cType [
+	<doNotGenerate>
 	"Type coercion for translation only; just return the value when running in Smalltalk.
 	 This overrides the generic coercion method in VMClass.  For some reason we are the exception.
 	 If we want that style of coercion we can send cCoerce:to: to interpreterProxy, not self."
@@ -340,6 +341,7 @@ InterpreterPlugin >> cCoerce: value to: cType [
 
 { #category : #simulation }
 InterpreterPlugin >> cCoerceSimple: value to: cType [
+	<doNotGenerate>
 	"Coercion without type mapping.  Don't even bother to check for valid types..."
 	^value
 ]
@@ -624,6 +626,7 @@ InterpreterPlugin >> strlen: aCString [
 
 { #category : #simulation }
 InterpreterPlugin >> translatedPrimitiveArgument: index ofType: cTypeString using: aCCodeGenerator [
+	<doNotGenerate>
 	| oop unitSize |
 	oop := interpreterProxy stackValue: interpreterProxy methodArgumentCount - index.
 	(interpreterProxy isOopForwarded: oop) ifTrue: [^nil]. 
