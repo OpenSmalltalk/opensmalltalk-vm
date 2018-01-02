@@ -2,7 +2,7 @@
 
 set -e 
 
-baseDir="/appli/files.pharo.org/vm"
+baseDir="/homez.141/pharoorgde/files/vm"
 case "${ARCH}" in
 	macos32x86) 
 		destDir="$baseDir/pharo-spur32/mac" 
@@ -35,10 +35,10 @@ if [ -z "$productName" ]; then
 	echo "Product not found in `pwd`. Aborting deploy."
 	exit 1
 fi 
-echo "Uploading $productName to pharo.files.org/$destDir"
+echo "Uploading $productName to files.pharo.org/$destDir"
 scp $productName files.pharo.org:$destDir/$productName
 if [ "$HEARTBEAT" = "threaded" ]; then 
 	SUFFIX="-threaded"
 fi
-echo "Uploading $productName to pharo.files.org/$destDir/latest$SUFFIX.zip"
+echo "Uploading $productName to files.pharo.org/$destDir/latest$SUFFIX.zip"
 scp $productName files.pharo.org:$destDir/latest$SUFFIX.zip
