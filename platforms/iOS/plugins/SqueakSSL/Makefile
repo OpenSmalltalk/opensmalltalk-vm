@@ -1,3 +1,3 @@
-EXTRALIBS:=	-framework CoreFoundation -framework Security -lssl -lcrypto
+EXTRALIBS:=	-framework CoreFoundation -framework Security
 
 include ../common/Makefile.plugin
