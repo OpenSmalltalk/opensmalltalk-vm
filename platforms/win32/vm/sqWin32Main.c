@@ -1843,15 +1843,19 @@ parseVMArgument(int argc, char *argv[])
 		return 1; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("dpcso"))) {
 		extern usqIntptr_t debugPrimCallStackOffset;
-		debugPrimCallStackOffset = (usqIntptr_t) strtobkm(argv[1]);	 
+		debugPrimCallStackOffset = (usqIntptr_t) strtobkm(argv[1]);
 		return 2; }
+	else if (!strcmp(argv[0], VMOPTION("dpcso:"))) {
+		extern usqIntptr_t debugPrimCallStackOffset;
+		debugPrimCallStackOffset = strtobkm(argv[0]+strlen(VMOPTION("dpcso:")));
+		return 1; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("cogmaxlits"))) {
 		extern sqInt maxLiteralCountForCompile;
 		maxLiteralCountForCompile = strtobkm(argv[1]);	 
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("cogmaxlits:"), strlen(VMOPTION("cogmaxlits:")))) {
 		extern sqInt maxLiteralCountForCompile;
-		maxLiteralCountForCompile = strtobkm(argv[0]+strlen(VMOPTION("cogmaxlits:"))); 
+		maxLiteralCountForCompile = strtobkm(argv[0]+strlen(VMOPTION("cogmaxlits:")));
 		return 1; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("cogminjumps"))) {
 		extern sqInt minBackwardJumpCountForCompile;
