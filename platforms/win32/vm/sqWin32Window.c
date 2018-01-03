@@ -3315,14 +3315,14 @@ int printUsage(int level)
                    TEXT("\n\t") TEXT(VMOPTION("breakmnu:")) TEXT(" string \t(call warning on MNU of sel for debug)")
                    TEXT("\n\t") TEXT(VMOPTION("leakcheck:")) TEXT(" n \t(leak check on GC (1=full,2=incr,3=both))")
                    TEXT("\n\t") TEXT(VMOPTION("eden:")) TEXT(" bytes \t(set eden memory size to bytes)")
-				   TEXT("\n\t") TEXT(VMOPTION("stackpages:")) TEXT(" n \t(use n stack pages)")
+                   TEXT("\n\t") TEXT(VMOPTION("stackpages:")) TEXT(" n \t(use n stack pages)")
                    TEXT("\n\t") TEXT(VMOPTION("numextsems:")) TEXT(" n \t(allow up to n external semaphores)")
                    TEXT("\n\t") TEXT(VMOPTION("checkpluginwrites")) TEXT(" \t(check for writes past end of object in plugins")
                    TEXT("\n\t") TEXT(VMOPTION("noheartbeat")) TEXT(" \t(no heartbeat for debug)")
 #endif /* STACKVM */
 #if STACKVM || NewspeakVM
 # if COGVM
-					TEXT("\n\t") TEXT(VMOPTION("trace")) TEXT("[=num]\tenable tracing (optionally to a specific value)\n")
+                   TEXT("\n\t") TEXT(VMOPTION("trace")) TEXT("[=num]\tenable tracing (optionally to a specific value)\n")
 # else
                    TEXT("\n\t") TEXT(VMOPTION("sendtrace")) TEXT(" \t(trace sends to stdout for debug)")
 # endif
