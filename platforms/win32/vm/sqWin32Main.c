@@ -49,11 +49,7 @@
  */
 #define VISTA_SECURITY 1 /* IE7/Vista protected mode support */
 
-#ifdef PharoVM
-# define VMOPTION(arg) "--"arg
-#else
 # define VMOPTION(arg) "-"arg
-#endif
 
 /*** Crash debug -- Imported from Virtual Machine ***/
 int getFullScreenFlag(void);
@@ -1911,10 +1907,15 @@ parseVMArgument(int argc, char *argv[])
 /* parse all arguments meaningful to the VM; answer index of last VM arg + 1 */
 static int
 parseVMArgs(int argc, char *argv[])
-{ int n, i = 0, j;
+{
+    int n,j,ddash,i = 0;
 
 	while (++i < argc && *argv[i] == '-' && strcmp(argv[i],"--")) {
-        if ((n = parseVMArgument(argc - i, argv + i))) {
+        ddash= (argv[i][1] == '-');
+        if(ddash) argv[i]++;
+        n = parseVMArgument(argc - i, argv + i);
+        if(ddash) argv[i]--;
+        if (n > 0) {
 			for (j = 0; j < n; j++)
 				vmOptions[numOptionsVM++] = argv[i+j];
 			i += n - 1;
