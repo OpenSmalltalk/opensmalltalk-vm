@@ -1776,7 +1776,7 @@ parseVMArgument(int argc, char *argv[])
 		return 1; }
 #endif /* STACKVM || NewspeakVM */
 #if STACKVM
-      else if (!strcmp(argv[0], VMOPTION("breakmnu"))) {
+      else if (argc > 1 && !strcmp(argv[0], VMOPTION("breakmnu"))) {
 		extern void setBreakMNUSelector(char *);
 		setBreakMNUSelector(argv[1]);
 		return 2; }
@@ -1822,7 +1822,7 @@ parseVMArgument(int argc, char *argv[])
 		return 1; }
 #endif /* STACKVM */
 #if COGVM
-	else if (!strcmp(argv[0], VMOPTION("codesize"))) {
+	else if (argc > 1 && !strcmp(argv[0], VMOPTION("codesize"))) {
 		extern sqInt desiredCogCodeSize;
 		desiredCogCodeSize = strtobkm(argv[1]);	 
 		return 2; }
@@ -1845,7 +1845,7 @@ parseVMArgument(int argc, char *argv[])
 		extern sqInt traceStores;
 		traceStores = 1;
 		return 1; }
-	else if (!strcmp(argv[0], VMOPTION("dpcso"))) {
+	else if (argc > 1 && !strcmp(argv[0], VMOPTION("dpcso"))) {
 		extern usqIntptr_t debugPrimCallStackOffset;
 		debugPrimCallStackOffset = (usqIntptr_t) strtobkm(argv[1]);	 
 		return 2; }
@@ -1872,7 +1872,7 @@ parseVMArgument(int argc, char *argv[])
 		return 1; }
 #endif /* COGVM */
 #if SPURVM
-    else if (!strcmp(argv[0], VMOPTION("maxoldspace"))) {
+    else if (argc > 1 && !strcmp(argv[0], VMOPTION("maxoldspace"))) {
 		maxOldSpaceSize = (usqInt) strtobkm(argv[1]);	 
 		return 2; }
     else if (!strncmp(argv[0], VMOPTION("maxoldspace:"), strlen(VMOPTION("maxoldspace:")))) {
