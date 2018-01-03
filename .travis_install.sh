@@ -30,7 +30,8 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             libxext-dev:i386 \
             libglapi-mesa:i386 \
             gcc-multilib \
-            uuid-dev:i386
+            uuid-dev:i386 \
+            libcurl3-dev:i386
 fi
 
 [[ "${ARCH}" != "linux32ARMv6" ]] && exit 0

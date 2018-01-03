@@ -265,7 +265,7 @@ getDeviceName(sqInt cameraNum) {
 }
 
 sqInt
-CameraOpen(sqInt cameraNum, int desiredWidth, int desiredHeight) {
+CameraOpen(sqInt cameraNum, sqInt desiredWidth, sqInt desiredHeight) {
   if(cameraNum<1 || cameraNum>8) {return false;}
   SqueakVideoGrabber *this = grabbers[cameraNum-1];
 
@@ -314,6 +314,6 @@ CameraName(sqInt cameraNum) {
 }
 
 sqInt
-CameraGetParam(sqInt cameraNum, int paramNum) {
+CameraGetParam(sqInt cameraNum, sqInt paramNum) {
   return 1;
 }

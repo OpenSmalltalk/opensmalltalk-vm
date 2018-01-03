@@ -160,13 +160,21 @@ ioHighResClock(void)
 {
   /* return the value of the high performance counter */
   sqLong value = 0;
-#if defined(__GNUC__) && ( defined(i386) || defined(__i386) || defined(__i386__)  \
-			|| defined(i486) || defined(__i486) || defined (__i486__) \
-			|| defined(intel) || defined(x86) || defined(i86pc) \
-			|| defined(x86_64) || defined(__x86_64) || defined (__x86_64__))
+
+#if defined(__GNUC__) && (defined(i386) || defined(__i386) || defined(__i386__))
     __asm__ __volatile__ ("rdtsc" : "=A"(value));
+#elif defined(__GNUC__) && (defined(x86_64) || defined(__x86_64) || defined (__x86_64__))
+    __asm__ __volatile__ ("rdtsc\n\t"			// Returns the time in EDX:EAX.
+						"shl $32, %%rdx\n\t"	// Shift the upper bits left.
+						"or %%rdx, %0"			// 'Or' in the lower bits.
+						: "=a" (value)
+						: 
+						: "rdx");
 #elif defined(__arm__) && (defined(__ARM_ARCH_6__) || defined(__ARM_ARCH_7A__))
 	/* tpr - do nothing for now; needs input from eliot to decide further */
+	/* Tim, not sure I have input beyond:
+		Is there a 64-bit clock on ARM?  If so, access it here :-)
+	 */
 #else
 # error "no high res clock defined"
 #endif

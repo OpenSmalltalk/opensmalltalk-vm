@@ -185,11 +185,7 @@ SqDisplayDefine(null);
 
 static void  display_parseEnvironment(void) {}
 
-#ifdef PharoVM
-# define VMOPTION(arg) "--"arg
-#else
 # define VMOPTION(arg) "-"arg
-#endif
 
 static int   display_parseArgument(int argc, char **argv)
 {
