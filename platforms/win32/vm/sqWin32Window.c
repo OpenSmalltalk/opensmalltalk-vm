@@ -3303,9 +3303,9 @@ int printUsage(int level)
       abortMessage(TEXT("%s\n"),
                    TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [vmOptions] imageFile [imageOptions]\n\n")
                    TEXT("vmOptions:")
-		   /* TEXT("\n\t-service: ServiceName \t(install Squeak as NT service)") */
-                   TEXT("\n\t") TEXT(VMOPTION("headless")) TEXT(" \t\t(force Squeak to run headless)")
-                   TEXT("\n\t") TEXT(VMOPTION("timephases")) TEXT(" (print start load and run times)")
+                   TEXT("\n\t") TEXT(VMOPTION("service:")) TEXT(" ServiceName \t(install VM as NT service)")
+                   TEXT("\n\t") TEXT(VMOPTION("headless")) TEXT(" \t\t(force VM to run headless)")
+                   TEXT("\n\t") TEXT(VMOPTION("timephases")) TEXT(" \t(print start load and run times)")
                    TEXT("\n\t") TEXT(VMOPTION("log:")) TEXT(" LogFile \t\t(use LogFile for VM messages)")
                    TEXT("\n\t") TEXT(VMOPTION("memory:")) TEXT(" megaByte \t(set memory to megaByte MB)")
 #if STACKVM || NewspeakVM
