@@ -1791,7 +1791,7 @@ parseVMArgument(int argc, char *argv[])
 	else if (!strncmp(argv[0], VMOPTION("eden:"), strlen(VMOPTION("eden:")))) {
 		extern sqInt desiredEdenBytes;
 		desiredEdenBytes = strtobkm(argv[0]+strlen(VMOPTION("eden:")));	 
-		return 2; }
+		return 1; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("leakcheck"))) {
 		extern sqInt checkForLeaks;
 		checkForLeaks = atoi(argv[1]);	 
@@ -1799,7 +1799,7 @@ parseVMArgument(int argc, char *argv[])
 	else if (!strncmp(argv[0], VMOPTION("leakcheck:"), strlen(VMOPTION("leakcheck:")))) {
 		extern sqInt checkForLeaks;
 		checkForLeaks = atoi(argv[0]+strlen(VMOPTION("leakcheck:")));	 
-		return 2; }
+		return 1; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("stackpages"))) {
 		extern sqInt desiredNumStackPages;
 		desiredNumStackPages = atoi(argv[1]);	 
@@ -1807,7 +1807,7 @@ parseVMArgument(int argc, char *argv[])
 	else if (!strncmp(argv[0], VMOPTION("stackpages:"), strlen(VMOPTION("stackpages:")))) {
 		extern sqInt desiredNumStackPages;
 		desiredNumStackPages = atoi(argv[0]+strlen(VMOPTION("stackpages:")));	 
-		return 2; }
+		return 1; }
 	else if (!strcmp(argv[0], VMOPTION("checkpluginwrites"))) {
 		extern sqInt checkAllocFiller;
 		checkAllocFiller = 1;
@@ -1856,7 +1856,7 @@ parseVMArgument(int argc, char *argv[])
 	else if (!strncmp(argv[0], VMOPTION("cogmaxlits:"), strlen(VMOPTION("cogmaxlits:")))) {
 		extern sqInt maxLiteralCountForCompile;
 		maxLiteralCountForCompile = strtobkm(argv[0]+strlen(VMOPTION("cogmaxlits:"))); 
-		return 2; }
+		return 1; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("cogminjumps"))) {
 		extern sqInt minBackwardJumpCountForCompile;
 		minBackwardJumpCountForCompile = strtobkm(argv[1]); 
@@ -1864,7 +1864,7 @@ parseVMArgument(int argc, char *argv[])
 	else if (!strncmp(argv[0], VMOPTION("cogminjumps:"),strlen(VMOPTION("cogminjumps:")))) {
 		extern sqInt minBackwardJumpCountForCompile;
 		minBackwardJumpCountForCompile = strtobkm(argv[0]+strlen(VMOPTION("cogminjumps:")));
-		return 2; }
+		return 1; }
     else if (!strcmp(argv[0], VMOPTION("reportheadroom"))
           || !strcmp(argv[0], VMOPTION("rh"))) {
 		extern sqInt reportStackHeadroom;
