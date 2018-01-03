@@ -1772,7 +1772,7 @@ parseVMArgument(int argc, char *argv[])
 		ioSetMaxExtSemTableSize(atoi(argv[1]));
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("numextsems:"), strlen(VMOPTION("numextsems:")))) {
-		ioSetMaxExtSemTableSize(atoi(argv[1]+strlen(VMOPTION("numextsems:"))));
+		ioSetMaxExtSemTableSize(atoi(argv[0]+strlen(VMOPTION("numextsems:"))));
 		return 1; }
 #endif /* STACKVM || NewspeakVM */
 #if STACKVM
