@@ -3344,6 +3344,7 @@ int printUsage(int level)
                    TEXT("\n\t") TEXT(VMOPTION("maxoldspace:")) TEXT(" bytes \t(set max size of old space memory to bytes)")
                    TEXT("\n\t") TEXT(VMOPTION("logscavenge")) TEXT(" \t(log scavenging to scavenge.log)")
 #endif
+                   TEXT("\n") TEXT("Options begin with single -, but -- prefix is silently accepted")
                    );
       break;
     case 2: /* No image found */
