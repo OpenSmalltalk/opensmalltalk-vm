@@ -3341,6 +3341,7 @@ int printUsage(int level)
                    TEXT("\n\t") TEXT(VMOPTION("logscavenge")) TEXT(" \t(log scavenging to scavenge.log)")
 #endif
                    TEXT("\n") TEXT("Options begin with single -, but -- prefix is silently accepted")
+                   TEXT("\n") TEXT("Options with arguments -opt:n are also accepted with separators -opt n")
                    );
       break;
     case 2: /* No image found */
