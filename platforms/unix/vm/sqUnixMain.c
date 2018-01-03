@@ -1474,144 +1474,141 @@ static int vm_parseArgument(int argc, char **argv)
 
   /* vm arguments */
 
-  if      (!strcmp(argv[0], VMOPTION("help")))		{ usage();         	exit(0); }
-  else if (!strcmp(argv[0], VMOPTION("version")))	{ versionInfo();	return 0; }
-  else if (!strcmp(argv[0], VMOPTION("noevents")))	{ noEvents	= 1;	return 1; }
-  else if (!strcmp(argv[0], VMOPTION("nomixer")))	{ noSoundMixer	= 1;	return 1; }
-  else if (!strcmp(argv[0], VMOPTION("notimer")))	{ useItimer	= 0;	return 1; }
-  else if (!strcmp(argv[0], VMOPTION("nohandlers")))	{ installHandlers= 0;	return 1; }
-  else if (!strcmp(argv[0], VMOPTION("blockonerror"))) 	{ blockOnError = 1; return 1; }
-  else if (!strcmp(argv[0], VMOPTION("blockonwarn"))) 	{ erroronwarn = blockOnError = 1; return 1; }
-  else if (!strcmp(argv[0], VMOPTION("exitonwarn"))) 	{ erroronwarn = 1; return 1; }
-  else if (!strcmp(argv[0], VMOPTION("timephases"))) 	{ printPhaseTime(1); return 1; }
+  if      (!strcmp(argv[0], VMOPTION("help")))         { usage();             exit(0); }
+  else if (!strcmp(argv[0], VMOPTION("version")))      { versionInfo();      return 0; }
+  else if (!strcmp(argv[0], VMOPTION("noevents")))     { noEvents       = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("nomixer")))      { noSoundMixer   = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("notimer")))      { useItimer      = 0; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("nohandlers")))   { installHandlers= 0; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("blockonerror"))) { blockOnError   = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("blockonwarn")))  { erroronwarn = blockOnError = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("exitonwarn")))   { erroronwarn    = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("timephases")))   { printPhaseTime(1) ; return 1; }
 #if !STACKVM && !COGVM
-  else if (!strncmp(argv[0],VMOPTION("jit"), 4))	{ useJit	= jitArgs(argv[0]+4);	return 1; }
-  else if (!strcmp(argv[0], VMOPTION("nojit")))		{ useJit	= 0;	return 1; }
-  else if (!strcmp(argv[0], VMOPTION("spy")))		{ withSpy	= 1;	return 1; }
+  else if (!strncmp(argv[0],VMOPTION("jit"), 4))    { useJit  = jitArgs(argv[0]+4); return 1; }
+  else if (!strcmp(argv[0], VMOPTION("nojit")))     { useJit  = 0; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("spy")))       { withSpy = 1; return 1; }
 #endif /* !STACKVM && !COGVM */
-  else if (!strcmp(argv[0], VMOPTION("single")))	{ runAsSingleInstance=1; return 1; }
-  /* option requires an argument */
-  else if (argc > 1)
-    {
-      if (!strcmp(argv[0], VMOPTION("memory")))		{ extraMemory=	 strtobkm(argv[1]);	 return 2; }
-#if !STACKVM && !COGVM
-      else if (!strcmp(argv[0], VMOPTION("procs")))	{ jitProcs=	 atoi(argv[1]);		 return 2; }
-      else if (!strcmp(argv[0], VMOPTION("maxpic")))	{ jitMaxPIC=	 atoi(argv[1]);		 return 2; }
-#endif /* !STACKVM && !COGVM */
-      else if (!strcmp(argv[0], VMOPTION("mmap")))	{ useMmap=	 strtobkm(argv[1]);	 return 2; }
-      else if (!strcmp(argv[0], VMOPTION("plugins")))	{ squeakPlugins= strdup(argv[1]);	 return 2; }
-      else if (!strcmp(argv[0], VMOPTION("encoding")))	{ setEncoding(&sqTextEncoding, argv[1]); return 2; }
-      else if (!strcmp(argv[0], VMOPTION("pathenc")))	{ setEncoding(&uxPathEncoding, argv[1]); return 2; }
 #if (STACKVM || NewspeakVM) && !COGVM
-	  else if (!strcmp(argv[0], VMOPTION("sendtrace"))) { extern sqInt sendTrace; sendTrace = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("sendtrace"))) { extern sqInt sendTrace; sendTrace = 1; return 1; }
 #endif
+  else if (!strcmp(argv[0], VMOPTION("single")))    { runAsSingleInstance=1; return 1; }
+  /* option requires an argument */
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("memory")))   { extraMemory  = strtobkm(argv[1]); return 2; }
+#if !STACKVM && !COGVM
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("procs")))    { jitProcs     = atoi(argv[1]);     return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("maxpic")))   { jitMaxPIC    = atoi(argv[1]);     return 2; }
+#endif /* !STACKVM && !COGVM */
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("mmap")))     { useMmap      = strtobkm(argv[1]); return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("plugins")))  { squeakPlugins= strdup(argv[1]);   return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("encoding"))) { setEncoding(&sqTextEncoding, argv[1]); return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("pathenc")))  { setEncoding(&uxPathEncoding, argv[1]); return 2; }
 #if STACKVM || NewspeakVM
-      else if (!strcmp(argv[0], VMOPTION("breaksel"))) { 
-		extern void setBreakSelector(char *);
-		setBreakSelector(argv[1]);
-		return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("breaksel"))) { 
+    extern void setBreakSelector(char *);
+    setBreakSelector(argv[1]);
+    return 2; }
 #endif
 #if STACKVM
-      else if (!strcmp(argv[0], VMOPTION("breakmnu"))) { 
-		extern void setBreakMNUSelector(char *);
-		setBreakMNUSelector(argv[1]);
-		return 2; }
-      else if (!strcmp(argv[0], VMOPTION("eden"))) {
-		extern sqInt desiredEdenBytes;
-		desiredEdenBytes = strtobkm(argv[1]);
-		return 2; }
-      else if (!strcmp(argv[0], VMOPTION("leakcheck"))) { 
-		extern sqInt checkForLeaks;
-		checkForLeaks = atoi(argv[1]);	 
-		return 2; }
-      else if (!strcmp(argv[0], VMOPTION("stackpages"))) {
-		extern sqInt desiredNumStackPages;
-		desiredNumStackPages = atoi(argv[1]);
-		return 2; }
-      else if (!strcmp(argv[0], VMOPTION("numextsems"))) { 
-		ioSetMaxExtSemTableSize(atoi(argv[1]));
-		return 2; }
-      else if (!strcmp(argv[0], VMOPTION("checkpluginwrites"))) { 
-		extern sqInt checkAllocFiller;
-		checkAllocFiller = 1;
-		return 1; }
-      else if (!strcmp(argv[0], VMOPTION("noheartbeat"))) { 
-		extern sqInt suppressHeartbeatFlag;
-		suppressHeartbeatFlag = 1;
-		return 1; }
-      else if (!strcmp(argv[0], VMOPTION("warnpid"))) { 
-		extern sqInt warnpid;
-		warnpid = getpid();
-		return 1; }
-      else if (!strcmp(argv[0], VMOPTION("pollpip"))) { 
-		extern sqInt pollpip;
-		pollpip = atoi(argv[1]);	 
-		return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("breakmnu"))) { 
+    extern void setBreakMNUSelector(char *);
+    setBreakMNUSelector(argv[1]);
+    return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("eden"))) {
+    extern sqInt desiredEdenBytes;
+    desiredEdenBytes = strtobkm(argv[1]);
+    return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("leakcheck"))) { 
+    extern sqInt checkForLeaks;
+    checkForLeaks = atoi(argv[1]);	 
+    return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("stackpages"))) {
+    extern sqInt desiredNumStackPages;
+    desiredNumStackPages = atoi(argv[1]);
+    return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("numextsems"))) { 
+    ioSetMaxExtSemTableSize(atoi(argv[1]));
+    return 2; }
+  else if (!strcmp(argv[0], VMOPTION("checkpluginwrites"))) { 
+    extern sqInt checkAllocFiller;
+    checkAllocFiller = 1;
+    return 1; }
+  else if (!strcmp(argv[0], VMOPTION("noheartbeat"))) { 
+    extern sqInt suppressHeartbeatFlag;
+    suppressHeartbeatFlag = 1;
+    return 1; }
+  else if (!strcmp(argv[0], VMOPTION("warnpid"))) { 
+    extern sqInt warnpid;
+    warnpid = getpid();
+    return 1; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("pollpip"))) { 
+    extern sqInt pollpip;
+    pollpip = atoi(argv[1]);	 
+    return 2; }
 #endif /* STACKVM */
 #if COGVM
-      else if (!strcmp(argv[0], VMOPTION("codesize"))) { 
-		extern sqInt desiredCogCodeSize;
-		desiredCogCodeSize = strtobkm(argv[1]);	 
-		return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("codesize"))) { 
+    extern sqInt desiredCogCodeSize;
+    desiredCogCodeSize = strtobkm(argv[1]);	 
+    return 2; }
 # define TLSLEN (sizeof(VMOPTION("trace"))-1)
-      else if (!strncmp(argv[0], VMOPTION("trace"), TLSLEN)) { 
-		extern int traceFlags;
-		char *equalsPos = strchr(argv[0],'=');
+  else if (!strncmp(argv[0], VMOPTION("trace"), TLSLEN)) { 
+    extern int traceFlags;
+    char *equalsPos = strchr(argv[0],'=');
 
-		if (!equalsPos) {
-			traceFlags = 1;
-			return 1;
-		}
-		if (equalsPos - argv[0] != TLSLEN
-		  || (equalsPos[1] != '-' && !isdigit(equalsPos[1])))
-			return 0;
+    if (!equalsPos) {
+      traceFlags = 1;
+      return 1;
+    }
+    if (equalsPos - argv[0] != TLSLEN
+      || (equalsPos[1] != '-' && !isdigit(equalsPos[1])))
+      return 0;
 
-		traceFlags = atoi(equalsPos + 1);
-		return 1; }
-      else if (!strcmp(argv[0], VMOPTION("tracestores"))) { 
-		extern sqInt traceStores;
-		traceStores = 1;
-		return 1; }
-      else if (!strcmp(argv[0], VMOPTION("cogmaxlits"))) { 
-		extern sqInt maxLiteralCountForCompile;
-		maxLiteralCountForCompile = strtobkm(argv[1]);	 
-		return 2; }
-      else if (!strcmp(argv[0], VMOPTION("cogminjumps"))) { 
-		extern sqInt minBackwardJumpCountForCompile;
-		minBackwardJumpCountForCompile = strtobkm(argv[1]);	 
-		return 2; }
-      else if (!strcmp(argv[0], VMOPTION("reportheadroom"))
-			|| !strcmp(argv[0], VMOPTION("rh"))) { 
-		extern sqInt reportStackHeadroom;
-		reportStackHeadroom = 1;
-		return 1; }
+    traceFlags = atoi(equalsPos + 1);
+    return 1; }
+  else if (!strcmp(argv[0], VMOPTION("tracestores"))) { 
+    extern sqInt traceStores;
+    traceStores = 1;
+    return 1; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("cogmaxlits"))) { 
+    extern sqInt maxLiteralCountForCompile;
+    maxLiteralCountForCompile = strtobkm(argv[1]);	 
+    return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("cogminjumps"))) { 
+    extern sqInt minBackwardJumpCountForCompile;
+    minBackwardJumpCountForCompile = strtobkm(argv[1]);	 
+    return 2; }
+  else if (!strcmp(argv[0], VMOPTION("reportheadroom"))
+        || !strcmp(argv[0], VMOPTION("rh"))) { 
+    extern sqInt reportStackHeadroom;
+    reportStackHeadroom = 1;
+    return 1; }
 #endif /* COGVM */
 #if SPURVM
-      else if (!strcmp(argv[0], VMOPTION("maxoldspace"))) { 
-		extern unsigned long maxOldSpaceSize;
-		maxOldSpaceSize = (unsigned long)strtobkm(argv[1]);	 
-		return 2; }
-	else if (!strcmp(argv[0], VMOPTION("logscavenge"))) {
-		extern void openScavengeLog(void);
-		openScavengeLog();
-		return 1;
-	}
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("maxoldspace"))) { 
+    extern unsigned long maxOldSpaceSize;
+    maxOldSpaceSize = (unsigned long)strtobkm(argv[1]);	 
+    return 2; }
+  else if (!strcmp(argv[0], VMOPTION("logscavenge"))) {
+    extern void openScavengeLog(void);
+    openScavengeLog();
+    return 1;
+  }
 #endif
-      else if (!strcmp(argv[0], VMOPTION("textenc"))) {
-		int i, len = strlen(argv[1]);
-		char *buf = (char *)alloca(len + 1);
-		for (i = 0;  i <= len;  ++i)
-			buf[i] = toupper(argv[1][i]);
-		if ((!strcmp(buf, "UTF8")) || (!strcmp(buf, "UTF-8")))
-			textEncodingUTF8 = 1;
-		else {
-			textEncodingUTF8 = 0;
-			setEncoding(&uxTextEncoding, buf);
-		}
-		return 2;
-	  }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("textenc"))) {
+    int i, len = strlen(argv[1]);
+    char *buf = (char *)alloca(len + 1);
+    for (i = 0;  i <= len;  ++i)
+      buf[i] = toupper(argv[1][i]);
+    if ((!strcmp(buf, "UTF8")) || (!strcmp(buf, "UTF-8")))
+      textEncodingUTF8 = 1;
+    else {
+      textEncodingUTF8 = 0;
+      setEncoding(&uxTextEncoding, buf);
     }
-  return 0;	/* option not recognised */
+    return 2;
+  }
+  return 0; /* option not recognised */
 }
 
 
