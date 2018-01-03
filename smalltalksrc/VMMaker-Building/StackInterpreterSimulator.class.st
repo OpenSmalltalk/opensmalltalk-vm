@@ -2392,6 +2392,33 @@ StackInterpreterSimulator >> savedWindowSize [
 	^savedWindowSize ifNil: [0]
 ]
 
+{ #category : #UI }
+StackInterpreterSimulator >> setClickStepBreakBlock [
+	"Set the break block to present a confirmer, breaking if true, and restoring the previous break block.
+	 If an open debugger on the receiver can be found, proceed it."
+	<doNotGenerate>
+	| previousAtEachStepBlock |
+	(atEachStepBlock isNil or: [atEachStepBlock method ~~ thisContext method]) ifTrue:
+		[previousAtEachStepBlock := atEachStepBlock.
+		 atEachStepBlock :=
+							[previousAtEachStepBlock value.
+							 (UIManager confirm: 'step?') ifFalse:
+								[atEachStepBlock := previousAtEachStepBlock.
+								 self halt]]].
+	(World submorphs
+		detect:
+			[:m|
+			 m model class == Debugger
+			 and: [(m model interruptedProcess suspendedContext findContextSuchThat:
+					[:ctxt|
+					 ctxt receiver == self
+					 and: [ctxt selector == #run]]) notNil]]
+		ifNone: []) ifNotNil:
+			[:debuggerWindow|
+			 WorldState addDeferredUIMessage:
+				[debuggerWindow model proceed]]
+]
+
 { #category : #'spur bootstrap' }
 StackInterpreterSimulator >> setDisplayForm: aForm [
 	displayForm := aForm
@@ -2787,6 +2814,7 @@ StackInterpreterSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'set break selector...' action: [|s| s := UIManager default request: 'break selector'.
 											s notEmpty ifTrue: [self setBreakSelector: s]];
 		add: 'turn valid exec ptrs assert o', (assertVEPAES ifTrue: ['ff'] ifFalse: ['n']) action: [assertVEPAES := assertVEPAES not];
+		add: 'click step' action: [self setClickStepBreakBlock];
 		add: (printSends
 				ifTrue: ['no print sends']
 				ifFalse: ['print sends'])
