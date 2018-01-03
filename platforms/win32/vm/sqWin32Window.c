@@ -3287,14 +3287,10 @@ void HideSplashScreen(void) {
 }
 
 /****************************************************************************/
-/*                      Usage of Squeak                                     */
+/*                      Usage of Open Smalltalk VM                          */
 /****************************************************************************/
 
-#ifdef PharoVM
-# define VMOPTION(arg) "--"arg
-#else
 # define VMOPTION(arg) "-"arg
-#endif
 
 /* print usage with different output levels */
 int printUsage(int level)
