@@ -1740,7 +1740,7 @@ parseVMArgument(int argc, char *argv[])
 		return 2;
 	}
 	else if (!strncmp(argv[0], VMOPTION("service:"), strlen(VMOPTION("service:")))) {
-		installServiceName = argv[0] + 9;
+		installServiceName = argv[0] + strlen(VMOPTION("service:"));
 		return 1;
 	}
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("log"))) {
@@ -1748,7 +1748,7 @@ parseVMArgument(int argc, char *argv[])
 		return 2;
 	}
 	else if (!strncmp(argv[0], VMOPTION("log:"), strlen(VMOPTION("log:")))) {
-		logName = argv[0] + 5;
+		logName = argv[0] + strlen(VMOPTION("log:"));
 		return 1;
 	}
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("memory"))) {
@@ -1756,7 +1756,7 @@ parseVMArgument(int argc, char *argv[])
 		return 2;
 	}
 	else if (!strncmp(argv[0], VMOPTION("memory:"), strlen(VMOPTION("memory:")))) {
-		dwMemorySize = strtobkm(argv[0] + 8);
+		dwMemorySize = strtobkm(argv[0] + strlen(VMOPTION("memory:")));
 		return 1;
 	}
 #if STACKVM || NewspeakVM
@@ -1766,13 +1766,13 @@ parseVMArgument(int argc, char *argv[])
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("breaksel:"), strlen(VMOPTION("breaksel:")))) {
 		extern void setBreakSelector(char *);
-		setBreakSelector(argv[0] + 10);
+		setBreakSelector(argv[0] + strlen(VMOPTION("breaksel:")));
 		return 1; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("numextsems"))) {
 		ioSetMaxExtSemTableSize(atoi(argv[1]));
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("numextsems:"), strlen(VMOPTION("numextsems:")))) {
-		ioSetMaxExtSemTableSize(atoi(argv[1]+12));
+		ioSetMaxExtSemTableSize(atoi(argv[1]+strlen(VMOPTION("numextsems:"))));
 		return 1; }
 #endif /* STACKVM || NewspeakVM */
 #if STACKVM
@@ -1782,7 +1782,7 @@ parseVMArgument(int argc, char *argv[])
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("breakmnu:"), strlen(VMOPTION("breakmnu:")))) {
 		extern void setBreakMNUSelector(char *);
-		setBreakMNUSelector(argv[0] + 10);
+		setBreakMNUSelector(argv[0] + strlen(VMOPTION("breakmnu:")));
 		return 1; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("eden"))) {
 		extern sqInt desiredEdenBytes;
@@ -1790,7 +1790,7 @@ parseVMArgument(int argc, char *argv[])
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("eden:"), strlen(VMOPTION("eden:")))) {
 		extern sqInt desiredEdenBytes;
-		desiredEdenBytes = strtobkm(argv[0]+6);	 
+		desiredEdenBytes = strtobkm(argv[0]+strlen(VMOPTION("eden:")));	 
 		return 2; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("leakcheck"))) {
 		extern sqInt checkForLeaks;
@@ -1798,7 +1798,7 @@ parseVMArgument(int argc, char *argv[])
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("leakcheck:"), strlen(VMOPTION("leakcheck:")))) {
 		extern sqInt checkForLeaks;
-		checkForLeaks = atoi(argv[0]+11);	 
+		checkForLeaks = atoi(argv[0]+strlen(VMOPTION("leakcheck:")));	 
 		return 2; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("stackpages"))) {
 		extern sqInt desiredNumStackPages;
@@ -1806,7 +1806,7 @@ parseVMArgument(int argc, char *argv[])
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("stackpages:"), strlen(VMOPTION("stackpages:")))) {
 		extern sqInt desiredNumStackPages;
-		desiredNumStackPages = atoi(argv[0]+12);	 
+		desiredNumStackPages = atoi(argv[0]+strlen(VMOPTION("stackpages:")));	 
 		return 2; }
 	else if (!strcmp(argv[0], VMOPTION("checkpluginwrites"))) {
 		extern sqInt checkAllocFiller;
@@ -1855,7 +1855,7 @@ parseVMArgument(int argc, char *argv[])
 		return 2; }
 	else if (!strncmp(argv[0], VMOPTION("cogmaxlits:"), strlen(VMOPTION("cogmaxlits:")))) {
 		extern sqInt maxLiteralCountForCompile;
-		maxLiteralCountForCompile = strtobkm(argv[0]+12); 
+		maxLiteralCountForCompile = strtobkm(argv[0]+strlen(VMOPTION("cogmaxlits:"))); 
 		return 2; }
 	else if (argc > 1 && !strcmp(argv[0], VMOPTION("cogminjumps"))) {
 		extern sqInt minBackwardJumpCountForCompile;
