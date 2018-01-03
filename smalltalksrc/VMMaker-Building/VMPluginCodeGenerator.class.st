@@ -446,7 +446,6 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 	pluginFuncs := pluginFuncs copyWithoutAll: self selectorsThatAreGeneratedAsMacros.
 	pluginFuncs isEmpty ifTrue:
 		[^self].
-	aStream cr; nextPutAll: '#if !defined(SQUEAK_BUILTIN_PLUGIN)'; cr.
 	interpreterClass := self referenceInterpreterClass.
 	objectMemoryClass := self referenceObjectMemoryClass.
 	pluginFuncs := pluginFuncs collect:
@@ -456,6 +455,11 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 											[(objectMemoryClass whichClassIncludesSelector: selector) ifNil:
 												[InterpreterProxy]]).
 						actual := self compileToTMethodSelector: selector in: InterpreterProxy.
+						{ actual. reference } do:
+							[:tMethod|
+							 tMethod recordDeclarationsIn: self.
+							 tMethod returnType ifNil:
+								[tMethod inferReturnTypeIn: self]].
 						(reference returnType ~= actual returnType
 						 or: [(1 to: reference args size) anySatisfy:
 								[:i| (reference typeFor: (reference args at: i) in: self)
@@ -466,11 +470,7 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 								nextPutAll: ' does not match reference implementation.';
 								cr].
 						actual].
-	pluginFuncs do:
-		[:tMethod|
-		 tMethod recordDeclarationsIn: self.
-		 tMethod returnType ifNil:
-			[tMethod inferReturnTypeIn: self]].
+	aStream cr; nextPutAll: '#if !defined(SQUEAK_BUILTIN_PLUGIN)'; cr.
 	pluginFuncs do:
 		[:tMethod| | functionName |
 		functionName := self cFunctionNameFor: tMethod selector.
