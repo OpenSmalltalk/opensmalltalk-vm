@@ -648,7 +648,9 @@ StackInterpreter class >> initializeBytecodeTable [
 			ifTrue: [self initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid]
 			ifFalse: [self initializeBytecodeTableForNewspeakV4]].
 
-	^self initializeBytecodeTableForSqueakV3PlusClosures
+	^MULTIPLEBYTECODESETS
+		ifTrue: [self initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid]
+		ifFalse: [self initializeBytecodeTableForSqueakV3PlusClosures]
 ]
 
 { #category : #initialization }
