@@ -798,6 +798,7 @@ InterpreterProxy >> popRemappableOop [
 
 { #category : #converting }
 InterpreterProxy >> positive32BitIntegerFor: integerValue [
+	<returnTypeC: #sqInt>
 	<var: 'integerValue' type: #'unsigned int'>
 	integerValue isInteger ifFalse:[self error:'Not an Integer object'].
 	^integerValue > 0
