@@ -1553,7 +1553,7 @@ static int vm_parseArgument(int argc, char **argv)
 		extern sqInt desiredCogCodeSize;
 		desiredCogCodeSize = strtobkm(argv[1]);	 
 		return 2; }
-# define TLSLEN (sizeof("-trace")-1)
+# define TLSLEN (sizeof(VMOPTION("trace"))-1)
       else if (!strncmp(argv[0], VMOPTION("trace"), TLSLEN)) { 
 		extern int traceFlags;
 		char *equalsPos = strchr(argv[0],'=');
@@ -1581,7 +1581,7 @@ static int vm_parseArgument(int argc, char **argv)
 		minBackwardJumpCountForCompile = strtobkm(argv[1]);	 
 		return 2; }
       else if (!strcmp(argv[0], VMOPTION("reportheadroom"))
-			|| !strcmp(argv[0], "-rh")) { 
+			|| !strcmp(argv[0], VMOPTION("rh"))) { 
 		extern sqInt reportStackHeadroom;
 		reportStackHeadroom = 1;
 		return 1; }
@@ -1600,7 +1600,7 @@ static int vm_parseArgument(int argc, char **argv)
       else if (!strcmp(argv[0], VMOPTION("textenc"))) {
 		int i, len = strlen(argv[1]);
 		char *buf = (char *)alloca(len + 1);
-		for (i = 0;  i < len;  ++i)
+		for (i = 0;  i <= len;  ++i)
 			buf[i] = toupper(argv[1][i]);
 		if ((!strcmp(buf, "UTF8")) || (!strcmp(buf, "UTF-8")))
 			textEncodingUTF8 = 1;
