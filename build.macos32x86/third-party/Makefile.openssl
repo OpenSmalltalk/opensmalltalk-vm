@@ -35,7 +35,7 @@ $(OPENSSLLIB): $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME)
 			&& install_name_tool -id "@executable_path/Plugins/$$each" $(THIRDPARTYINSTALLDIR)/$$each ; \
 	done
 	@echo "Installing links"
-	@for each in $(THIRDPARTYLIBDIR)/$(OPENSSLSYMLINKS); do \
+	@for each in $(addprefix $(THIRDPARTYLIBDIR)/,$(OPENSSLSYMLINKS)); do \
 		if [ -L $$each ]; then \
 			cp -a $$each $(THIRDPARTYINSTALLDIR); \
 		fi \
