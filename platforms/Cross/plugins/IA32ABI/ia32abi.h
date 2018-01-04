@@ -69,3 +69,15 @@ extern VMCallbackContext *getMostRecentCallbackContext(void);
 # define setjmp _setjmp
 # define longjmp _longjmp
 #endif
+/*  Note: on windows 64 via mingw-w64, the 2nd argument NULL to _setjmp prevents stack unwinding
+ */
+#if defined(_WIN64)
+# undef setjmp
+# undef longjmp
+# if defined(__GNUC__)
+#  define setjmp(jb) _setjmp(jb,NULL)
+# elif defined(_MSC_VER)
+#  define setjmp(jb) _setjmp(jb)
+# endif
+#endif
+
