@@ -71,7 +71,6 @@ int mpeg3_check_sig(char *path)
 {
 	mpeg3_fs_t *fs;
 	unsigned int bits;
-	char *ext;
 	int result = 0;
 
 	fs = mpeg3_new_fs(path,0);
@@ -97,13 +96,18 @@ int mpeg3_check_sig(char *path)
 		((bits >> 8) == MPEG3_ID3_PREFIX) ||
 		(bits == MPEG3_RIFF_CODE))
 	{
+/* JMM Don't want extends, too ugly */
+#if 1
+		result = 1;
+#else
+		char *ext;
+
 		result = 1;
 
-		/* JMM Don't want extends, too ugly 
 		ext = strrchr(path, '.');
 		if(ext)
 		{
-/* Test file extension. 
+/* Test file extension. */
 			if(strncasecmp(ext, ".mp2", 4) && 
 				strncasecmp(ext, ".mp3", 4) &&
 				strncasecmp(ext, ".m1v", 4) &&
@@ -112,9 +116,10 @@ int mpeg3_check_sig(char *path)
 				strncasecmp(ext, ".mpg", 4) &&
 				strncasecmp(ext, ".vob", 4) &&
 				strncasecmp(ext, ".mpeg", 4) /* JMM &&
-				strncasecmp(ext, ".ac3", 4) )
+				strncasecmp(ext, ".ac3", 4)  */ )
 				result = 0;
-		} */
+		}
+#endif
 	}
 
 	mpeg3io_close_file(fs);
