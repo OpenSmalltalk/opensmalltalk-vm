@@ -182,6 +182,11 @@ StackInterpreterSimulator >> bootstrapping: aBoolean [
 		[objectMemory bootstrapping: aBoolean]
 ]
 
+{ #category : #accessing }
+StackInterpreterSimulator >> breakCount [
+	^breakCount
+]
+
 { #category : #'interpreter shell' }
 StackInterpreterSimulator >> browserPluginInitialiseIfNeeded [
 "do nothing - its a macro in C code to support Mac browser plugin strangeness"
@@ -240,11 +245,6 @@ StackInterpreterSimulator >> callExternalPrimitive: mapIndex [
 	objectMemory hasSpurMemoryManagerAPI ifTrue:
 		[primitiveFunctionPointer := entry at: 2].
 	^(entry at: 1) perform: (entry at: 2)
-]
-
-{ #category : #'debug support' }
-StackInterpreterSimulator >> charsOfLong: long [
-	^self subclassResponsibility
 ]
 
 { #category : #'object memory support' }
@@ -796,7 +796,7 @@ StackInterpreterSimulator >> imageNameSize [
 StackInterpreterSimulator >> incrementByteCount [
 	(byteCount := byteCount + 1) = breakCount ifTrue:
 		[self doOrDefer: [self changed: #byteCountText].
-		 self halt].
+		 self halt: 'breakCount reached'].
 	byteCount \\ 1000 = 0 ifTrue:
 		[self doOrDefer: [self changed: #byteCountText].
 		 self forceInterruptCheck]
@@ -2363,33 +2363,14 @@ StackInterpreterSimulator >> runForNBytes: nBytecodes [
 	self externalizeIPandSP
 ]
 
-{ #category : #testing }
-StackInterpreterSimulator >> runWithBreakCount: theBreakCount [
-	"Just run, halting when byteCount is reached"
-	quitBlock := [displayView ifNotNil:
-				   [displayView containingWindow ifNotNil:
-					[:topWindow|
-					((World submorphs includes: topWindow)
-					 and: [UIManager default confirm: 'close?']) ifTrue:
-						[topWindow delete]]].
-				  ^self close].
-	breakCount := theBreakCount.
-	self initStackPages.
-	self loadInitialContext.
-	self internalizeIPandSP.
-	self fetchNextBytecode.
-	[true] whileTrue:
-		[self assertValidExecutionPointers.
-		 self dispatchOn: currentBytecode in: BytecodeTable.
-		 self incrementByteCount].
-	localIP := localIP - 1.
-	"undo the pre-increment of IP before returning"
-	self externalizeIPandSP
-]
-
 { #category : #'I/O primitives' }
 StackInterpreterSimulator >> savedWindowSize [
 	^savedWindowSize ifNil: [0]
+]
+
+{ #category : #accessing }
+StackInterpreterSimulator >> setBreakCount: anInteger [
+	breakCount := anInteger
 ]
 
 { #category : #UI }
@@ -2402,6 +2383,7 @@ StackInterpreterSimulator >> setClickStepBreakBlock [
 		[previousAtEachStepBlock := atEachStepBlock.
 		 atEachStepBlock :=
 							[previousAtEachStepBlock value.
+							 self changed: #byteCountText.
 							 (UIManager confirm: 'step?') ifFalse:
 								[atEachStepBlock := previousAtEachStepBlock.
 								 self halt]]].

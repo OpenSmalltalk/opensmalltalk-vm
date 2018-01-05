@@ -1476,19 +1476,6 @@ InterpreterSimulator >> runUntilDivergenceFromTrace: aSequence [
 	self externalizeIPandSP
 ]
 
-{ #category : #testing }
-InterpreterSimulator >> runWithBreakCount: breakCount [
-	self internalizeIPandSP.
-	self fetchNextBytecode.
-	[true] whileTrue:
-		[self dispatchOn: currentBytecode in: BytecodeTable.
-		 (byteCount := byteCount + 1) = breakCount ifTrue:
-			[self halt]].
-	localIP := localIP - 1.
-	"undo the pre-increment of IP before returning"
-	self externalizeIPandSP
-]
-
 { #category : #'memory access' }
 InterpreterSimulator >> shortAt: byteAddress [
     "Return the half-word at byteAddress which must be even."
