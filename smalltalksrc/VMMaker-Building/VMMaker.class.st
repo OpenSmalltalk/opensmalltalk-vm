@@ -707,8 +707,9 @@ VMMaker class >> generateVMPlugins [
 		including:#(	ADPCMCodecPlugin AsynchFilePlugin
 					BalloonEnginePlugin B3DAcceleratorPlugin B3DEnginePlugin BMPReadWriterPlugin BitBltSimulation
 					BochsIA32Plugin BochsX64Plugin
-					CameraPlugin CroquetPlugin DSAPlugin DeflatePlugin DropPlugin
-					"FT2Plugin" FFTPlugin FileCopyPlugin FilePlugin FloatArrayPlugin FloatMathPlugin
+					CameraPlugin CroquetPlugin DeflatePlugin DropPlugin
+					"Cryptography Plugins:" DESPlugin DSAPlugin MD5Plugin SHA256Plugin
+					"FT2Plugin" FFTPlugin FileCopyPlugin FilePlugin FileAttributesPlugin FloatArrayPlugin FloatMathPlugin
 					GeniePlugin GdbARMPlugin HostWindowPlugin IA32ABIPlugin ImmX11Plugin InternetConfigPlugin
 					JPEGReadWriter2Plugin JPEGReaderPlugin JoystickTabletPlugin KlattSynthesizerPlugin
 					LargeIntegersPlugin LocalePlugin MIDIPlugin MacMenubarPlugin Matrix2x3Plugin
