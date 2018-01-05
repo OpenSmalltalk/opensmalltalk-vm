@@ -4018,6 +4018,17 @@ StackInterpreter >> characterForAscii: ascii [  "Above ObjectMemory, arg must li
 ]
 
 { #category : #'debug support' }
+StackInterpreter >> charsOfLong: long [
+	"N.B. This will need to be overridden in big-endian simulator subclasses."
+	<doNotGenerate>
+	^ (1 to: objectMemory wordSize) collect:
+		[:i | | d |
+		(d := long digitAt: i) >= 14
+			ifTrue: [d asCharacter]
+			ifFalse: [$?]]
+]
+
+{ #category : #'debug support' }
 StackInterpreter >> checkAllAccessibleObjectsOkay [
 	"Ensure that all accessible objects in the heap are okay."
 	<api>

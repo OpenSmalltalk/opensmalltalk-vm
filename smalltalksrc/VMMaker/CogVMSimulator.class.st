@@ -244,6 +244,11 @@ CogVMSimulator >> bindProcess: aProcess toId: newId [
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
 ]
 
+{ #category : #accessing }
+CogVMSimulator >> breakCount [
+	^breakCount
+]
+
 { #category : #'interpreter shell' }
 CogVMSimulator >> browserPluginInitialiseIfNeeded [
 "do nothing - its a macro in C code to support Mac browser plugin strangeness"
@@ -488,11 +493,6 @@ CogVMSimulator >> cedeToHigherPriorityThreads [
 	^self perform: #cedeToHigherPriorityThreads
 		withArguments: {}
 		inSuperclass: (cogThreadManager ifNil: [CoInterpreterPrimitives] ifNotNil: [CoInterpreterMT])
-]
-
-{ #category : #'debug support' }
-CogVMSimulator >> charsOfLong: long [
-	^self subclassResponsibility
 ]
 
 { #category : #'multi-threading simulation switch' }
@@ -1404,7 +1404,7 @@ CogVMSimulator >> inMemoryVMOwnerLockAddress [
 CogVMSimulator >> incrementByteCount [
 	(byteCount := byteCount + 1) = breakCount ifTrue:
 		[self doOrDefer: [self changed: #byteCountText; changed: #composeAll].
-		 self halt].
+		 self halt: 'breakCount reached'].
 	byteCount \\ 1000 = 0 ifTrue:
 		[self doOrDefer: [self changed: #byteCountText; changed: #composeAll].
 		 self forceInterruptCheck]
@@ -3489,22 +3489,6 @@ CogVMSimulator >> run [
 	self initialEnterSmalltalkExecutive
 ]
 
-{ #category : #testing }
-CogVMSimulator >> runWithBreakCount: theBreakCount [
-	"Just run, halting when byteCount is reached"
-	quitBlock := [displayView ifNotNil:
-				   [displayView containingWindow ifNotNil:
-					[:topWindow|
-					((World submorphs includes: topWindow)
-					 and: [UIManager default confirm: 'close?']) ifTrue:
-						[topWindow delete]]].
-				  ^self close].
-	breakCount := theBreakCount.
-	self initStackPages.
-	self loadInitialContext.
-	self initialEnterSmalltalkExecutive
-]
-
 { #category : #'primitive support' }
 CogVMSimulator >> saneFunctionPointerForFailureOfPrimIndex: primIndex [
 	"For simulation override to do the check specially when the
@@ -3548,6 +3532,11 @@ CogVMSimulator >> setBreakBlockFromString: aString [
 					UIManager default warn: ex messageText.
 					^self].
 	cogit breakBlock: block
+]
+
+{ #category : #accessing }
+CogVMSimulator >> setBreakCount: anInteger [
+	breakCount := anInteger
 ]
 
 { #category : #'multi-threading simulation switch' }
