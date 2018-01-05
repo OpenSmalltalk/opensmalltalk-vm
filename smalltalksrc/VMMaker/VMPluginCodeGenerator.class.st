@@ -74,6 +74,46 @@ VMPluginCodeGenerator >> atLeastVMProxyMajor: major minor: minor [
 			nextPutAll: ')']
 ]
 
+{ #category : #utilities }
+VMPluginCodeGenerator >> collectAndCheckInterpreterProxyInterfaceFor: selectors verbose: beVerbose [
+	"self new
+		collectAndCheckInterpreterProxyInterfaceFor: (InterpreterProxy selectors reject: [:s| #(initialize private) includes: (InterpreterProxy whichCategoryIncludesSelector: s)])
+		verbose: true"
+	| interpreterClass objectMemoryClass |
+	interpreterClass := self referenceInterpreterClass.
+	objectMemoryClass := self referenceObjectMemoryClass.
+	^selectors collect:
+		[:selector| | reference actual |
+		reference := self compileToTMethodSelector: selector
+						in: ((interpreterClass whichClassIncludesSelector: selector) ifNil:
+							[(objectMemoryClass whichClassIncludesSelector: selector) ifNil:
+								[InterpreterProxy]]).
+		actual := self compileToTMethodSelector: selector in: InterpreterProxy.
+		{ actual. reference } do:
+			[:tMethod|
+			 tMethod recordDeclarationsIn: self.
+			 tMethod returnType ifNil:
+				[tMethod inferReturnTypeIn: self.
+				 tMethod returnType ifNil:
+					[tMethod returnType: #sqInt]]].
+		(reference returnType ~= actual returnType
+		 or: [(1 to: reference args size) anySatisfy:
+				[:i| (reference typeFor: (reference args at: i) in: self)
+				  ~= (actual typeFor: (actual args at: i) in: self)]]) ifTrue:
+			[self logger
+				nextPutAll: 'warning, signature of InterpreterProxy>>';
+				nextPutAll: selector;
+				nextPutAll: ' does not match reference implementation.';
+				cr.
+			 beVerbose ifTrue:
+				[self logger nextPutAll: 'reference:'; tab.
+				 reference emitCFunctionPrototype: self logger generator: self.
+				 self logger nextPutAll: 'actual:'; tab; tab.
+				 actual emitCFunctionPrototype: self logger generator: self].
+			 self logger flush"; halt: selector"].
+		actual]
+]
+
 { #category : #inlining }
 VMPluginCodeGenerator >> doInlining: inlineFlag [
 	"do inlining for a plugin; avoid doing it twice and make sure that
@@ -437,7 +477,7 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 		[:s| pcc noteUsedPluginFunction: s].
 	pcc preDeclareInterpreterProxyOn: Transcript.
 	Transcript flush"
-	| pluginFuncs interpreterClass objectMemoryClass |
+	| pluginFuncs |
 	self notePluginFunctionsUsedByMacros.
 	(pluginFuncs := self pluginFunctionsToClone) isEmpty ifTrue:
 		[^super preDeclareInterpreterProxyOn: aStream].
@@ -446,30 +486,7 @@ VMPluginCodeGenerator >> preDeclareInterpreterProxyOn: aStream [
 	pluginFuncs := pluginFuncs copyWithoutAll: self selectorsThatAreGeneratedAsMacros.
 	pluginFuncs isEmpty ifTrue:
 		[^self].
-	interpreterClass := self referenceInterpreterClass.
-	objectMemoryClass := self referenceObjectMemoryClass.
-	pluginFuncs := pluginFuncs collect:
-						[:selector| | reference actual |
-						reference := self compileToTMethodSelector: selector
-										in: ((interpreterClass whichClassIncludesSelector: selector) ifNil:
-											[(objectMemoryClass whichClassIncludesSelector: selector) ifNil:
-												[InterpreterProxy]]).
-						actual := self compileToTMethodSelector: selector in: InterpreterProxy.
-						{ actual. reference } do:
-							[:tMethod|
-							 tMethod recordDeclarationsIn: self.
-							 tMethod returnType ifNil:
-								[tMethod inferReturnTypeIn: self]].
-						(reference returnType ~= actual returnType
-						 or: [(1 to: reference args size) anySatisfy:
-								[:i| (reference typeFor: (reference args at: i) in: self)
-								  ~= (actual typeFor: (actual args at: i) in: self)]]) ifTrue:
-							[self logger
-								nextPutAll: 'warning, signature of InterpreterProxy>>';
-								nextPutAll: selector;
-								nextPutAll: ' does not match reference implementation.';
-								cr].
-						actual].
+	pluginFuncs := self collectAndCheckInterpreterProxyInterfaceFor: pluginFuncs verbose: false.
 	aStream cr; nextPutAll: '#if !defined(SQUEAK_BUILTIN_PLUGIN)'; cr.
 	pluginFuncs do:
 		[:tMethod| | functionName |
@@ -568,7 +585,7 @@ VMPluginCodeGenerator >> referenceInterpreterClass [
 { #category : #'C code generator' }
 VMPluginCodeGenerator >> referenceObjectMemoryClass [
 	"Define the class from which to take methods to define the interpreter proxy imports."
-	^(Smalltalk classNamed: #SpurMemoryManager) ifNil:
+	^(Smalltalk classNamed: #Spur32BitMemoryManager) ifNil:
 		[(Smalltalk classNamed: #NewObjectMemory) ifNil:
 			[ObjectMemory]]
 ]
