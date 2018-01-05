@@ -57,6 +57,7 @@ InterpreterProxy >> arrayValueOf: oop [
 
 { #category : #other }
 InterpreterProxy >> become: array1 with: array2 [
+	<returnTypeC: #sqInt>
 	array1 elementsExchangeIdentityWith: array2
 ]
 
@@ -251,11 +252,13 @@ InterpreterProxy >> clone: oop [
 
 { #category : #'BitBlt support' }
 InterpreterProxy >> copyBits [
-	bb copyBits.
+	<returnTypeC: #sqInt>
+	bb copyBits
 ]
 
 { #category : #'BitBlt support' }
 InterpreterProxy >> copyBitsFrom: leftX to: rightX at: yValue [
+	<returnTypeC: #sqInt>
 	bb copyBitsFrom: leftX to: rightX at: yValue.
 ]
 
@@ -379,6 +382,7 @@ InterpreterProxy >> floatValueOf: oop [
 
 { #category : #other }
 InterpreterProxy >> fullDisplayUpdate [
+	<returnTypeC: #sqInt>
 	Display display
 ]
 
@@ -673,7 +677,8 @@ InterpreterProxy >> literalCountOf: methodPointer [
 
 { #category : #'BitBlt support' }
 InterpreterProxy >> loadBitBltFrom: bbOop [
-	bb := bbOop.
+	<returnTypeC: #sqInt>
+	bb := bbOop
 ]
 
 { #category : #initialize }
@@ -928,6 +933,7 @@ InterpreterProxy >> pushRemappableOop: oop [
 InterpreterProxy >> reestablishContextPriorToCallback: callbackContext [
 	"callbackContext is an activation of invokeCallback:stack:registers:jmpbuf:.  Its sender
 	is the interpreter's state prior to the callback.  Reestablish that state."
+	<returnTypeC: #sqInt>
 	self notYetImplemented
 ]
 
@@ -946,6 +952,7 @@ InterpreterProxy >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regs
 	"Send the 4 argument callback message invokeCallback:stack:registers:jmpbuf:
 	 to Alien class with the supplied args.  The arguments are raw C addresses
 	 and are converted to integer objects on the way."
+	<returnTypeC: #sqInt>
 	self notYetImplemented
 ]
 
@@ -958,6 +965,7 @@ InterpreterProxy >> sendInvokeCallbackContext: vmCallbackContext [
 	 Note that if invoking the legacy invokeCallback:stack:registers:jmpbuf: we pass the
 	 vmCallbackContext as the jmpbuf argument (see reestablishContextPriorToCallback:).
 	 The arguments are raw C addresses and are converted to integer objects on the way."
+	<returnTypeC: #sqInt>
 	self notYetImplemented
 ]
 
@@ -1114,6 +1122,7 @@ InterpreterProxy >> storePointer: index ofObject: oop withValue: valuePointer [
 { #category : #testing }
 InterpreterProxy >> stringForCString: aCString [
 	"Answer a ByteString object containing the bytes (possibly UTF-8?) in the null-terminated C string aCString."
+	<returnTypeC: #sqInt>
 	<var: #aCString type: #'char *'>
 	self notYetImplemented
 ]
