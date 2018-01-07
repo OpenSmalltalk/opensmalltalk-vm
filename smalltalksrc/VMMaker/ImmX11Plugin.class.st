@@ -12,7 +12,7 @@ ImmX11Plugin class >> declareHeaderFilesIn: cg [
 	cg addHeaderFile: '"sqUnixCharConv.h"', Character cr asString,
 		'extern char *setLocale(char *, size_t);', Character cr asString,
 		'extern int setCompositionWindowPosition(int, int);', Character cr asString,
-		'extern int setCompostionFocus(int);'.
+		'extern int setCompositionFocus(int);'.
 ]
 
 { #category : #'initialize-release' }
