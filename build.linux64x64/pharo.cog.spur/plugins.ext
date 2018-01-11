@@ -9,6 +9,7 @@ InternetConfigPlugin \
 SurfacePlugin \
 EventsHandlerPlugin \
 SqueakSSL \
+FileAttributesPlugin \
 AioPlugin \
 #SDL2DisplayPlugin \
 
