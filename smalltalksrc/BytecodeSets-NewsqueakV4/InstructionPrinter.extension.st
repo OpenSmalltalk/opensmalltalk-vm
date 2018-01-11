@@ -80,11 +80,6 @@ InstructionPrinter >> callInlinePrimitive: index [
 											ifNone: [{index printString}]) last)
 ]
 
-{ #category : #'*BytecodeSets-SistaV1-decoding' }
-InstructionPrinter >> pushClosureTemps: numTemps [
-	self print: 'pushClosureTemps: ', numTemps printString
-]
-
 { #category : #'*BytecodeSets-NewsqueakV3-decoding' }
 InstructionPrinter >> pushExplicitOuter: n [ 
 	"Print the Push the Active Context's Receiver for an outer send at level (method literalAt: litIndex) bytecode."
@@ -93,8 +88,8 @@ InstructionPrinter >> pushExplicitOuter: n [
 ]
 
 { #category : #'*BytecodeSets-instruction decoding' }
-InstructionPrinter >> pushFullClosure: cb numCopied: num receiverOnStack: rcvrOnStack ignoreOuterContext: ignoreOuterContext [
-	self print: 'pushFullClosure: ', cb printString, ' numCopied: ', num, ' receiverOnStack: ', rcvrOnStack printString, ' ignoreOuterContext: ', ignoreOuterContext printString
+InstructionPrinter >> pushFullClosure: compiledBlock numCopied: numCopied receiverOnStack: rcvrOnStack ignoreOuterContext: ignoreOuterContext [
+	self print: 'pushFullClosure: ', compiledBlock printString, ' numCopied: ', numCopied printString, ' receiverOnStack: ', rcvrOnStack printString, ' ignoreOuterContext: ', ignoreOuterContext printString
 ]
 
 { #category : #'*BytecodeSets-NewsqueakV3-decoding' }
