@@ -32,8 +32,7 @@ InstructionClient >> pushExplicitOuter: n [ "<Integer>"
 
 { #category : #'*BytecodeSets-instruction decoding' }
 InstructionClient >> pushFullClosure: compiledBlockLiteralIndex numCopied: numCopied receiverOnStack: rcvrOnStack ignoreOuterContext: ignoreOuterContext [
-	"Creates and oushes a FullBlockClosure with variations."
-	
+	"Creates and pushes a FullBlockClosure with variations."
 ]
 
 { #category : #'*BytecodeSets-NewsqueakV4-decoding' }
