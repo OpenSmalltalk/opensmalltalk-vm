@@ -1,13 +1,6 @@
 Extension { #name : #InstructionClient }
 
 { #category : #'*BytecodeSets-instruction decoding' }
-InstructionClient >> blockReturnConstant: value [
-	"Return Constant From Block bytecode."
-
-
-]
-
-{ #category : #'*BytecodeSets-instruction decoding' }
 InstructionClient >> branchIfInstanceOf: literal distance: distance [
 	"If the object on top of stack has the type -or one of the type- present in the literal (the literal is a behavior or an array of behavior), then pop it. Else jumps by the distance."
 	
@@ -26,14 +19,6 @@ InstructionClient >> callInlinePrimitive: pimIndex [
 ]
 
 { #category : #'*BytecodeSets-instruction decoding' }
-InstructionClient >> directedSuperSend: selector numArgs: numArgs [
-	"Send Message Above Specific Class With Selector, selector, bytecode.
-	 Start the lookup above the class that is the value of the association on
-	 top of stack. The arguments  of the message are found in the top numArgs
-	 stack locations beneath the association, and the receiver just below them."
-]
-
-{ #category : #'*BytecodeSets-instruction decoding' }
 InstructionClient >> doNop [
 	"Do nothing"
 
@@ -43,11 +28,6 @@ InstructionClient >> doNop [
 { #category : #'*BytecodeSets-NewsqueakV3-decoding' }
 InstructionClient >> pushExplicitOuter: n [ "<Integer>"
 	"Push the enclosing object at level n."
-]
-
-{ #category : #'*BytecodeSets-instruction decoding' }
-InstructionClient >> pushFullClosure: compiledBlock numCopied: numCopied [
-	"Creates and push a fullBlockClosure"
 ]
 
 { #category : #'*BytecodeSets-instruction decoding' }
