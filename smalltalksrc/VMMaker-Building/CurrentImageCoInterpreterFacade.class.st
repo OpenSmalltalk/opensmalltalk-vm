@@ -325,7 +325,7 @@ CurrentImageCoInterpreterFacade >> fetchByte: index ofObject: anOop [
 CurrentImageCoInterpreterFacade >> fetchPointer: index ofObject: anOop [
 	| obj |
 	obj := (objectMap keyAtValue: anOop).
-	^self oopForObject: (obj isCompiledMethod
+	^self oopForObject: (obj isCompiledCode
 							ifTrue: [obj objectAt: index + 1]
 							ifFalse: [obj instVarAt: index + 1])
 ]
@@ -540,7 +540,7 @@ CurrentImageCoInterpreterFacade >> isNonIntegerObject: anOop [
 
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> isOopCompiledMethod: anOop [
-	^(objectMap keyAtValue: anOop) isCompiledMethod
+	^(objectMap keyAtValue: anOop) isCompiledCode
 ]
 
 { #category : #'cog jit support' }

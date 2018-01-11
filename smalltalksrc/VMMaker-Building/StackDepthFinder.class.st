@@ -277,12 +277,6 @@ StackDepthFinder >> pushClosureCopyNumCopiedValues: numCopied numArgs: numArgs b
 ]
 
 { #category : #'instruction decoding' }
-StackDepthFinder >> pushClosureTemps: numTemps [
-	"230		11100110	iiiiiiii		PushNClosureTemps iiiiiiii"
-	stackp := stackp + numTemps
-]
-
-{ #category : #'instruction decoding' }
 StackDepthFinder >> pushConsArrayWithElements: numElements [
 	"Push Cons Array of size numElements popping numElements items from the stack into the array bytecode."
 	self drop: numElements - 1
