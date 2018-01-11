@@ -27,6 +27,7 @@ Class {
 { #category : #translation }
 FilePlugin class >> declareCVarsIn: aCCodeGenerator [
 
+	"Hmmm, we could use (self instVarNames select: [:ivn| ivn first = $s and: [ivn second isUppercase]])"
 	self declareC:  #('sCCPfn' 'sCDFfn' 'sCDPfn' 'sCGFTfn' 'sCLPfn' 'sCOFfn' 'sCRFfn' 'sCSFTfn' 'sDFAfn' 'sHFAfn')
 		as: #'void *'
 		in: aCCodeGenerator.
