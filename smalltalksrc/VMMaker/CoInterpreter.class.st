@@ -2117,7 +2117,7 @@ CoInterpreter >> ceSelfSend: cacheAddress receiver: methodReceiver [
 ]
 
 { #category : #trampolines }
-CoInterpreter >> ceSend: selector above: startAssociationArg to: rcvr numArgs: numArgs [
+CoInterpreter >> ceSend: selector above: methodClass to: rcvr numArgs: numArgs [
 	"Entry-point for an unlinked directed super send in a CogMethod.  Smalltalk stack looks like
 					receiver
 					args
@@ -2133,7 +2133,7 @@ CoInterpreter >> ceSend: selector above: startAssociationArg to: rcvr numArgs: n
 	depending on whether the target method is cogged or not."
 	<api>
 	<option: #BytecodeSetHasDirectedSuperSend>
-	| startAssociation classTag classObj errSelIdx cogMethod |
+	| classTag classObj errSelIdx cogMethod |
 	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #newCogMethod type: #'CogMethod *'>
@@ -2142,8 +2142,7 @@ CoInterpreter >> ceSend: selector above: startAssociationArg to: rcvr numArgs: n
 	cogit assertCStackWellAligned.
 	self assert: (objectMemory addressCouldBeOop: rcvr).
 	self sendBreakpoint: selector receiver: rcvr.
-	startAssociation := objectMemory followMaybeForwarded: startAssociationArg.
-	classTag := objectMemory classTagForClass: (self superclassOf: (objectMemory fetchPointer: ValueIndex ofObject: startAssociation)).
+	classTag := objectMemory classTagForClass: (self superclassOf: (objectMemory followMaybeForwarded: methodClass)).
 	argumentCount := numArgs.
 	(self lookupInMethodCacheSel: selector classTag: classTag)
 		ifTrue:"check for coggability because method is in the cache"
@@ -2155,7 +2154,7 @@ CoInterpreter >> ceSend: selector above: startAssociationArg to: rcvr numArgs: n
 			 (objectMemory isOopForwarded: selector) ifTrue:
 				[^self
 					ceSend: (self handleForwardedSelectorFaultFor: selector)
-					above: startAssociation
+					above: methodClass
 					to: rcvr
 					numArgs: numArgs].
 			 messageSelector := selector.
@@ -2178,7 +2177,7 @@ CoInterpreter >> ceSend: selector above: startAssociationArg to: rcvr numArgs: n
 					classForMessage: classObj.
 				self assert: false "NOTREACHED"]].
 	"Method found and has a cog method.  Attempt to link to it.  The receiver's class may be young.
-	 If the Cogit can't store young classes in inline caches we can link to an open PIC instead."
+	 We must not link to an Open PIC since they perform normal sends."
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
 		[cogMethod := self cogMethodOf: newMethod.
 		 cogMethod selector = objectMemory nilObject
@@ -2189,19 +2188,13 @@ CoInterpreter >> ceSend: selector above: startAssociationArg to: rcvr numArgs: n
 				 cogMethod selector ~= selector ifTrue:
 					[(cogit cog: newMethod selector: selector) ifNotNil:
 						[:newCogMethod| cogMethod := newCogMethod]]].
-		 cogMethod selector = selector
-			ifTrue:
-				[cogit
-					linkSendAt: (stackPages longAt: stackPointer)
-					in: (self mframeHomeMethod: framePointer)
-					to: cogMethod
-					offset: cogit noCheckEntryOffset
-					receiver: rcvr]
-			ifFalse: "If patchToOpenPICFor:.. returns we're out of code memory"
-				[cogit
-					patchToOpenPICFor: selector
-					numArgs: numArgs
-					receiver: rcvr].
+		 cogMethod selector = selector ifTrue:
+			[cogit
+				linkSendAt: (stackPages longAt: stackPointer)
+				in: (self mframeHomeMethod: framePointer)
+				to: cogMethod
+				offset: cogit noCheckEntryOffset
+				receiver: rcvr].
 		 instructionPointer := self popStack.
 		 self executeNewMethod.
 		 self assert: false "NOTREACHED"].
@@ -2299,10 +2292,11 @@ CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArg
 								ifFalse: [cogit noCheckEntryOffset])
 					receiver: rcvr]
 			ifFalse: "If patchToOpenPICFor:.. returns we're out of code memory"
-				[cogit
-					patchToOpenPICFor: selector
-					numArgs: numArgs
-					receiver: rcvr].
+				[superNormalBar = 0 ifTrue: "Open PICs perform normal sends. Can't patch if this is a super send."
+					[cogit
+						patchToOpenPICFor: selector
+						numArgs: numArgs
+						receiver: rcvr]].
 		 instructionPointer := self popStack.
 		 self executeNewMethod.
 		 self assert: false "NOTREACHED"].

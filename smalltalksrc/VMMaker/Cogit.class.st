@@ -687,7 +687,7 @@ Cogit class >> genAndDis: compiledBlock numCopied: numCopied options: optionsDic
 { #category : #'in-image compilation' }
 Cogit class >> genAndDis: methodOrDoitString options: optionsDictionaryOrArray [
 	| tuple |
-	methodOrDoitString isCompiledMethod ifFalse:
+	methodOrDoitString isCompiledCode ifFalse:
 		[^self
 			genAndDis: (Compiler new
 							compiledMethodFor: methodOrDoitString
@@ -697,7 +697,11 @@ Cogit class >> genAndDis: methodOrDoitString options: optionsDictionaryOrArray [
 							ifFail: nil
 							logged: false)
 			 options: optionsDictionaryOrArray].
-	tuple := self cog: methodOrDoitString selectorOrNumCopied: methodOrDoitString selector options: optionsDictionaryOrArray.
+	tuple := self cog: methodOrDoitString
+				selectorOrNumCopied: (methodOrDoitString isCompiledBlock
+											ifTrue: [methodOrDoitString numCopiedValues]
+											ifFalse: [methodOrDoitString selector])
+				options: optionsDictionaryOrArray.
 	tuple second disassembleMethod: tuple last.
 	^tuple
 ]
@@ -940,7 +944,9 @@ Cogit class >> initializeBytecodeTable [
 									ifTrue: [#initializeBytecodeTableForSqueakV3PlusClosuresNewspeakV4Hybrid]
 									ifFalse: [#initializeBytecodeTableForNewspeakV4]]
 							ifFalse:
-								[#initializeBytecodeTableForSqueakV3PlusClosures]].
+								[MULTIPLEBYTECODESETS
+									ifTrue: [#initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid]
+									ifFalse: [#initializeBytecodeTableForSqueakV3PlusClosures]]].
 	"Now make sure all classes in the hierarchy have initialized to the same bytecode table."
 	(self withAllSuperclasses copyUpTo: Cogit) reverseDo: "i.e. exclude Cogit"
 		[:cogitClass|
