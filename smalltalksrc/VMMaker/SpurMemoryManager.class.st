@@ -3836,6 +3836,8 @@ SpurMemoryManager >> cloneInOldSpace: objOop forPinning: forPinning [
 					[scavenger remember: newObj]]].
 	(hash := self rawHashBitsOf: objOop) ~= 0 ifTrue:
 		[self setHashBitsOf: newObj to: hash].
+	(self isObjImmutable: objOop) ifTrue:
+		[self setIsImmutableOf: newObj to: true].
 	^newObj
 ]
 
@@ -9408,6 +9410,10 @@ SpurMemoryManager >> outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag
 	clone2 := (self isContextNonImm: obj2)
 				ifTrue: [coInterpreter cloneContext: obj2]
 				ifFalse: [self clone: obj2].
+	(self isObjImmutable: obj1) ifTrue:
+		[self setIsImmutableOf: clone1 to: true].
+	(self isObjImmutable: obj2) ifTrue:
+		[self setIsImmutableOf: clone2 to: true].
 	copyHashFlag
 		ifTrue:
 			[self setHashBitsOf: clone1 to: (self rawHashBitsOf: obj1).
