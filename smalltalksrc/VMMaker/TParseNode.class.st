@@ -157,12 +157,12 @@ TParseNode >> emitCCommentOn: aStream level: level generator: aCodeGen [
 	((aCodeGen previousCommenter: self) == self or: [comment isNil]) ifTrue:
 		[aCodeGen previousCommentMarksInlining: false.
 		 ^self].
-	comment withIndexDo:
+	(comment isString ifTrue: [{comment}] ifFalse: [comment]) withIndexDo:
 		[:commentString :index |
 		(index = 1 and: [commentString beginsWith: 'begin ']) ifTrue:
 			[(aCodeGen previousCommentMarksInlining: true) ifTrue: [^true]].
 		aStream crtab: level; nextPutAll: '/* '.
-		((comment at: index) findTokens: Character cr)
+		(commentString findTokens: Character cr)
 			do: [:line| aStream nextPutAll: line withBlanksTrimmed]
 			separatedBy: [aStream crtab: level; next: 3 put: Character space].
 		aStream nextPutAll: ' */'].

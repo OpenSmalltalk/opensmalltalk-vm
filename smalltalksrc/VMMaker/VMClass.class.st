@@ -53,7 +53,7 @@ VMClass class >> cogitClass [
 	^initializationOptions ifNotNil:
 		[Smalltalk classNamed: (initializationOptions
 									at: #Cogit
-									ifAbsent: [#SimpleStackBasedCogit])]
+									ifAbsent: [#StackToRegisterMappingCogit])]
 ]
 
 { #category : #'accessing class hierarchy' }
