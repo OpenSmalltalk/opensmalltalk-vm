@@ -18,18 +18,6 @@ BytecodeEncoder >> sizeCallInlinePrimitive: primitiveIndex [
 ]
 
 { #category : #'*BytecodeSets-opcode sizing' }
-BytecodeEncoder >> sizePushFullClosure: compiledBlockLiteralIndex numCopied: numCopied [
-	^self sizeOpcodeSelector: #genPushFullClosure:numCopied: withArguments: {compiledBlockLiteralIndex.numCopied}
-]
-
-{ #category : #'*BytecodeSets-opcode sizing' }
-BytecodeEncoder >> sizePushFullClosure: compiledBlockLiteralIndex numCopied: numCopied receiverOnStack: rcvrOnStack ignoreOuterContext: ignoreOuterContext [
-	^self
-		sizeOpcodeSelector: #genPushFullClosure:numCopied:receiverOnStack:ignoreOuterContext:
-		withArguments: {compiledBlockLiteralIndex.numCopied. rcvrOnStack. ignoreOuterContext}
-]
-
-{ #category : #'*BytecodeSets-opcode sizing' }
 BytecodeEncoder >> sizePushRemoteInstanceVariable: tempIndex inObjectAt: InstVarIndex [
 	^self sizeOpcodeSelector: #genPushRemoteInstanceVariable:inObjectAt:
 			withArguments: {tempIndex. InstVarIndex}
@@ -43,11 +31,6 @@ BytecodeEncoder >> sizeSendAbsentDynamicSuperclass: selectorLiteralIndex numArgs
 { #category : #'*BytecodeSets-opcode sizing' }
 BytecodeEncoder >> sizeSendAbsentImplicit: selectorLiteralIndex numArgs: numArgs [
 	^self sizeOpcodeSelector: #genSendAbsentImplicit:numArgs: withArguments: {selectorLiteralIndex. numArgs}
-]
-
-{ #category : #'*BytecodeSets-opcode sizing' }
-BytecodeEncoder >> sizeSendDirectedSuper: selectorLiteralIndex numArgs: numArgs [
-	^self sizeOpcodeSelector: #genSendDirectedSuper:numArgs: withArguments: {selectorLiteralIndex. numArgs}
 ]
 
 { #category : #'*BytecodeSets-opcode sizing' }
@@ -73,17 +56,6 @@ BytecodeEncoder >> sizeTrap [
 ]
 
 { #category : #'*BytecodeSets-opcode sizing' }
-BytecodeEncoder >> sizeTrapIfNotInstanceOf: litIndex [
-	^self sizeOpcodeSelector: #genTrapIfNotInstanceOf: withArguments: {litIndex}
-]
-
-{ #category : #'*BytecodeSets-opcode sizing' }
 BytecodeEncoder >> sizeUnsignedSingleExtendB: anInteger [
 	^self sizeOpcodeSelector: #genUnsignedSingleExtendB: withArguments: {anInteger}
-]
-
-{ #category : #'*BytecodeSets-bytecode decoding' }
-BytecodeEncoder class >> stackDeltaForPrimitive: primitiveIndex in: method [
-	"This is the default implementation.  Subclasses with inline primitives will need to override."
-	^0
 ]
