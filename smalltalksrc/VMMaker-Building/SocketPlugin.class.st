@@ -17,6 +17,10 @@ Class {
 { #category : #translation }
 SocketPlugin class >> declareCVarsIn: aCCodeGenerator [
 
+	"Hmmm, we could use 
+		self declareC:  (self instVarNames select: [:ivn| ivn first = $s and: [ivn second isUppercase]])
+			as: #'void *'
+			in: aCCodeGenerator."
 	aCCodeGenerator var: 'sDSAfn'	type: 'void *'.
 	aCCodeGenerator var: 'sHSAfn'	type: 'void *'.
 	aCCodeGenerator var: 'sCCTPfn'	type: 'void *'.
