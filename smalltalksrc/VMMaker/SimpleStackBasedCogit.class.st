@@ -826,20 +826,24 @@ SimpleStackBasedCogit >> annotationForSendTable: sendTable [
 	"c.f. offsetAndSendTableFor:annotation:into:"
 	<inline: true>
 	<var: #sendTable type: #'sqInt *'>
-	(NewspeakVM and: [sendTable == implicitReceiverSendTrampolines]) ifTrue:
-		[self error: 'Unexpected implicit receiver send using dirty send machinery'].
-	(NewspeakVM and: [sendTable == outerSendTrampolines]) ifTrue:
-		[self error: 'Unexpected outer send using dirty send machinery'].
-	(NewspeakVM and: [sendTable == selfSendTrampolines]) ifTrue:
-		[^IsNSSelfSend].
-	(NewspeakVM and: [sendTable == dynamicSuperSendTrampolines]) ifTrue:
-		[^IsNSDynamicSuperSend].
-	(BytecodeSetHasDirectedSuperSend and: [sendTable == directedSuperSendTrampolines]) ifTrue:
-		[^IsDirectedSuperSend].
-	sendTable == superSendTrampolines ifTrue:
-		[^IsSuperSend].
-	self assert: sendTable == ordinarySendTrampolines.
-	^IsSendCall
+	sendTable == ordinarySendTrampolines ifTrue:
+		[^IsSendCall].
+	BytecodeSetHasDirectedSuperSend ifTrue:
+		[sendTable == directedSuperSendTrampolines ifTrue:
+			[^IsDirectedSuperSend].
+		 sendTable == directedSuperBindingSendTrampolines ifTrue:
+			[^IsDirectedSuperBindingSend]].
+	NewspeakVM ifTrue:
+		[sendTable == implicitReceiverSendTrampolines ifTrue:
+			[self error: 'Unexpected implicit receiver send using dirty send machinery'].
+		 sendTable == outerSendTrampolines ifTrue:
+			[self error: 'Unexpected outer send using dirty send machinery'].
+		sendTable == selfSendTrampolines ifTrue:
+			[^IsNSSelfSend].
+		sendTable == dynamicSuperSendTrampolines ifTrue:
+			[^IsNSDynamicSuperSend]].
+	self assert: sendTable == superSendTrampolines.
+	^IsSuperSend
 ]
 
 { #category : #'simulation only' }
@@ -1948,15 +1952,6 @@ SimpleStackBasedCogit >> genExtPushIntegerBytecode [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genExtPushLitVarDirSupBytecode [
-	"227		11100011	i i i i i i i i	Push Literal Variable #iiiiiiii (+ Extend A * 256)"
-	| index |
-	index := byte1 + (extA << 8).
-	extA := 0.
-	^self genPushLiteralVariableGivenDirectedSuper: index
-]
-
-{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtPushLiteralBytecode [
 	"228		11100100	i i i i i i i i	Push Literal #iiiiiiii (+ Extend A * 256)"
 	| index |
@@ -2897,17 +2892,6 @@ SimpleStackBasedCogit >> genPushEnclosingObjectAt: level [
 	^0
 ]
 
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genPushLitVarDirSup16CasesBytecode [
-	"e.g. SistaV1: 16-31		0001 iiii			Push Literal Variable #iiii"
-	^self genPushLiteralVariableGivenDirectedSuper: (byte0 bitAnd: 15)
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genPushLitVarDirSupBytecode [
-	^self genPushLiteralVariableGivenDirectedSuper: (byte0 bitAnd: 31)
-]
-
 { #category : #'bytecode generator support' }
 SimpleStackBasedCogit >> genPushLiteral: literal [
 	self genPushConstant: literal.
@@ -2924,6 +2908,12 @@ SimpleStackBasedCogit >> genPushLiteralIndex: literalIndex [ "<SmallInteger>"
 	<inline: false>
 	| literal |
 	literal := self getLiteral: literalIndex.
+	BytecodeSetHasDirectedSuperSend ifTrue:
+		[self nextDescriptorExtensionsAndNextPCInto:
+			[:descriptor :exta :extb :followingPC|
+			(self isDirectedSuper: descriptor extA: exta extB: extb) ifTrue:
+				[tempOop := literal.
+				 ^0]]].
 	^self genPushLiteral: literal
 ]
 
@@ -2938,6 +2928,17 @@ SimpleStackBasedCogit >> genPushLiteralVariable: literalIndex [
 	<inline: false>
 	| association |
 	association := self getLiteral: literalIndex.
+	"If followed by a directed super send bytecode, avoid generating any code yet.
+	 The association will be passed to the directed send trampoline in a register
+	 and fully dereferenced only when first linked.  It will be ignored in later sends."
+	BytecodeSetHasDirectedSuperSend ifTrue:
+		[self deny: directedSendUsesBinding.
+		 self nextDescriptorExtensionsAndNextPCInto:
+			[:descriptor :exta :extb :followingPC|
+			(self isDirectedSuper: descriptor extA: exta extB: extb) ifTrue:
+				[tempOop := association.
+				 directedSendUsesBinding := true.
+				 ^0]]].
 	"N.B. Do _not_ use ReceiverResultReg to avoid overwriting receiver in assignment in frameless methods."
 	self genMoveConstant: association R: ClassReg.
 	objectRepresentation
@@ -2954,19 +2955,6 @@ SimpleStackBasedCogit >> genPushLiteralVariable: literalIndex [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushLiteralVariableBytecode [
 	^self genPushLiteralVariable: (byte0 bitAnd: 31)
-]
-
-{ #category : #'bytecode generator support' }
-SimpleStackBasedCogit >> genPushLiteralVariableGivenDirectedSuper: literalIndex [
-	"This is a version of genPushLiteralVariable: that looks ahead for a directed super send bytecode
-	 and does not generate any code for the dereference yet if followed by a directed super send."
-	<inline: false>
-	self nextDescriptorExtensionsAndNextPCInto:
-		[:descriptor :exta :extb :followingPC|
-		(self isDirectedSuper: descriptor extA: exta extB: extb) ifTrue:
-			[tempOop := self getLiteral: literalIndex.
-			 ^0]].
-	^self genPushLiteralVariable: literalIndex
 ]
 
 { #category : #'bytecode generator support' }
@@ -3235,7 +3223,9 @@ SimpleStackBasedCogit >> genSend: selectorIndex numArgs: numArgs sendTable: send
 	numArgs >= (NumSendTrampolines - 1) ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
 	(BytecodeSetHasDirectedSuperSend
-	 and: [annotation = IsDirectedSuperSend]) ifTrue:
+	 and: [annotation
+			between: IsDirectedSuperSend
+			and: IsDirectedSuperBindingSend]) ifTrue:
 		[self genMoveConstant: tempOop R: TempReg].
 	self genLoadInlineCacheWithSelector: selectorIndex.
 	(self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1))) annotation: annotation.
@@ -3293,7 +3283,15 @@ SimpleStackBasedCogit >> genSendAbsentSelf: selectorIndex numArgs: numArgs [
 SimpleStackBasedCogit >> genSendDirectedSuper: selectorIndex numArgs: numArgs [
 	<inline: false>
 	"N.B. genPushLiteralVariableGivenDirectedSuper: has already loaded tempOop with the association."
-	^self genSend: selectorIndex numArgs: numArgs sendTable: directedSuperSendTrampolines
+	| result |
+	result := self
+				genSend: selectorIndex
+				numArgs: numArgs
+				sendTable: (directedSendUsesBinding
+								ifTrue: [directedSuperBindingSendTrampolines]
+								ifFalse: [directedSuperSendTrampolines]).
+	directedSendUsesBinding := false.
+	^result
 ]
 
 { #category : #'bytecode generators' }

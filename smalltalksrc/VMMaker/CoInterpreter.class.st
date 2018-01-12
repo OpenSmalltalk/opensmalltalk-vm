@@ -2122,7 +2122,7 @@ CoInterpreter >> ceSend: selector above: methodClass to: rcvr numArgs: numArgs [
 					receiver
 					args
 		head sp ->	sender return pc
-	startAssociation is an association whose value is the class above which to start the lookup.
+	methodClass is the class above which to start the lookup.
 
 	If an MNU then defer to handleMNUInMachineCodeTo:... which will dispatch the MNU and
 	may choose to allocate a closed PIC with a fast MNU dispatch for this send.  Otherwise
@@ -2201,6 +2201,21 @@ CoInterpreter >> ceSend: selector above: methodClass to: rcvr numArgs: numArgs [
 	instructionPointer := self popStack.
 	^self interpretMethodFromMachineCode
 	"NOTREACHED"
+]
+
+{ #category : #trampolines }
+CoInterpreter >> ceSend: selector aboveClassBinding: methodClassBinding to: rcvr numArgs: numArgs [
+	"Entry-point for an unlinked directed super send in a CogMethod.  Smalltalk stack looks like
+					receiver
+					args
+		head sp ->	sender return pc
+	methodClassBinding is an association whose value is the class above which to start the lookup."
+	<api>
+	<option: #BytecodeSetHasDirectedSuperSend>
+	self ceSend: selector
+		above: (objectMemory followMaybeForwarded: methodClassBinding)
+		to: rcvr
+		numArgs: numArgs
 ]
 
 { #category : #trampolines }
