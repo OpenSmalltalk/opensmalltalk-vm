@@ -410,7 +410,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		"1 byte bytecodes"
 		"pushes"
 		(1    0   15 genPushReceiverVariableBytecode isInstVarRef		needsFrameNever: 1)
-		(1  16   31 genPushLitVarDirSup16CasesBytecode				needsFrameNever: 1)
+		(1  16   31 genPushLiteralVariable16CasesBytecode			needsFrameNever: 1)
 		(1  32   63 genPushLiteralConstantBytecode					needsFrameNever: 1)
 		(1  64   75 genPushTemporaryVariableBytecode				needsFrameIfMod16GENumArgs: 1)
 		(1  76   76 genPushReceiverBytecode							needsFrameNever: 1)
@@ -478,7 +478,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 
 		"pushes"
 		(2 226 226 genExtPushReceiverVariableBytecode isInstVarRef)		"Needs a frame for context inst var access"
-		(2 227 227 genExtPushLitVarDirSupBytecode			needsFrameNever: 1)
+		(2 227 227 genExtPushLiteralVariableBytecode			needsFrameNever: 1)
 		(2 228 228 genExtPushLiteralBytecode					needsFrameNever: 1)
 		(2 229 229 genLongPushTemporaryVariableBytecode)
 		(2 230 230 unknownBytecode)
@@ -11185,7 +11185,9 @@ StackToRegisterMappingCogit >> genMarshalledSend: selectorIndex numArgs: numArgs
 	numArgs >= (NumSendTrampolines - 1) ifTrue:
 		[self MoveCq: numArgs R: SendNumArgsReg].
 	(BytecodeSetHasDirectedSuperSend
-	 and: [annotation = IsDirectedSuperSend]) ifTrue:
+	 and: [annotation
+			between: IsDirectedSuperSend
+			and: IsDirectedSuperBindingSend]) ifTrue:
 		[self genMoveConstant: tempOop R: TempReg].
 	self genLoadInlineCacheWithSelector: selectorIndex.
 	(self Call: (sendTable at: (numArgs min: NumSendTrampolines - 1))) annotation: annotation.
@@ -11438,11 +11440,32 @@ StackToRegisterMappingCogit >> genPushLiteral: literal [
 ]
 
 { #category : #'bytecode generator support' }
+StackToRegisterMappingCogit >> genPushLiteralIndex: literalIndex [ "<SmallInteger>"
+	"Override to avoid the BytecodeSetHasDirectedSuperSend check, which is unnecessary
+	 here given the simulation stack."
+	<inline: false>
+	| literal |
+	literal := self getLiteral: literalIndex.
+	^self genPushLiteral: literal
+]
+
+{ #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genPushLiteralVariable: literalIndex [
 	<inline: false>
 	| association freeReg |
-	freeReg := self allocateRegNotConflictingWith: 0.
 	association := self getLiteral: literalIndex.
+	"If followed by a directed super send bytecode, avoid generating any code yet.
+	 The association will be passed to the directed send trampoline in a register
+	 and fully dereferenced only when first linked.  It will be ignored in later sends."
+	BytecodeSetHasDirectedSuperSend ifTrue:
+		[self deny: directedSendUsesBinding.
+		 self nextDescriptorExtensionsAndNextPCInto:
+			[:descriptor :exta :extb :followingPC|
+			(self isDirectedSuper: descriptor extA: exta extB: extb) ifTrue:
+				[self ssPushConstant: association.
+				 directedSendUsesBinding := true.
+				 ^0]]].
+	freeReg := self allocateRegNotConflictingWith: 0.
 	"N.B. Do _not_ use ReceiverResultReg to avoid overwriting receiver in assignment in frameless methods."
 	"So far descriptors are not rich enough to describe the entire dereference so generate the register
 	 load but don't push the result.  There is an order-of-evaluation issue if we defer the dereference."
@@ -11456,19 +11479,6 @@ StackToRegisterMappingCogit >> genPushLiteralVariable: literalIndex [
 		destReg: freeReg.
 	self ssPushRegister: freeReg.
 	^0
-]
-
-{ #category : #'bytecode generator support' }
-StackToRegisterMappingCogit >> genPushLiteralVariableGivenDirectedSuper: literalIndex [
-	"This is a version of genPushLiteralVariable: that looks ahead for a directed super send bytecode
-	 and does not generate any code for the dereference yet if followed by a directed super send."
-	<inline: false>
-	self nextDescriptorExtensionsAndNextPCInto:
-		[:descriptor :exta :extb :followingPC|
-		(self isDirectedSuper: descriptor extA: exta extB: extb) ifTrue:
-			[self ssPushConstant: (self getLiteral: literalIndex).
-			 ^0]].
-	^self genPushLiteralVariable: literalIndex
 ]
 
 { #category : #'bytecode generator support' }
@@ -11645,11 +11655,19 @@ StackToRegisterMappingCogit >> genSend: selectorIndex numArgs: numArgs [
 
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genSendDirectedSuper: selectorIndex numArgs: numArgs [
+	| result |
 	self assert: self ssTop type = SSConstant.
 	tempOop := self ssTop constant.
 	self ssPop: 1.
 	self marshallSendArguments: numArgs.
-	^self genMarshalledSend: selectorIndex numArgs: numArgs sendTable: directedSuperSendTrampolines
+	result := self
+				genMarshalledSend: selectorIndex
+				numArgs: numArgs
+				sendTable: (directedSendUsesBinding
+								ifTrue: [directedSuperBindingSendTrampolines]
+								ifFalse: [directedSuperSendTrampolines]).
+	directedSendUsesBinding := false.
+	^result
 ]
 
 { #category : #'bytecode generator support' }
@@ -12354,6 +12372,15 @@ StackToRegisterMappingCogit >> generateSendTrampolines [
 				put: (self genSendTrampolineFor: #ceSend:above:to:numArgs:
 						  numArgs: numArgs
 						  called: (self trampolineName: 'ceDirectedSuperSend' numArgs: numArgs)
+						  arg: ClassReg
+						  arg: TempReg
+						  arg: ReceiverResultReg
+						  arg: (self numArgsOrSendNumArgsReg: numArgs)).
+			directedSuperBindingSendTrampolines
+				at: numArgs
+				put: (self genSendTrampolineFor: #ceSend:aboveClassBinding:to:numArgs:
+						  numArgs: numArgs
+						  called: (self trampolineName: 'ceDirectedSuperBindingSend' numArgs: numArgs)
 						  arg: ClassReg
 						  arg: TempReg
 						  arg: ReceiverResultReg
