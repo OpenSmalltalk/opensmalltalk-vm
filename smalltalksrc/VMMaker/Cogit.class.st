@@ -228,6 +228,7 @@ Class {
 		'ordinarySendTrampolines',
 		'superSendTrampolines',
 		'directedSuperSendTrampolines',
+		'directedSuperBindingSendTrampolines',
 		'dynamicSuperSendTrampolines',
 		'outerSendTrampolines',
 		'selfSendTrampolines',
@@ -267,7 +268,8 @@ Class {
 		'debugBytecodePointers',
 		'debugOpcodeIndices',
 		'disassemblingMethod',
-		'cogConstituentIndex'
+		'cogConstituentIndex',
+		'directedSendUsesBinding'
 	],
 	#classVars : [
 		'AltBlockCreationBytecodeSize',
@@ -287,6 +289,7 @@ Class {
 		'HasBytecodePC',
 		'IsAbsPCReference',
 		'IsAnnotationExtension',
+		'IsDirectedSuperBindingSend',
 		'IsDirectedSuperSend',
 		'IsDisplacementX2N',
 		'IsNSDynamicSuperSend',
@@ -606,17 +609,24 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		var: #ordinarySendTrampolines
 			declareC: 'sqInt ordinarySendTrampolines[NumSendTrampolines]';
 		var: #superSendTrampolines
-			declareC: 'sqInt superSendTrampolines[NumSendTrampolines]';
-		var: #directedSuperSendTrampolines
-			declareC: 'sqInt directedSuperSendTrampolines[NumSendTrampolines]';
-		var: #selfSendTrampolines
-			declareC: 'sqInt selfSendTrampolines[NumSendTrampolines]';
-		var: #dynamicSuperSendTrampolines
-			declareC: 'sqInt dynamicSuperSendTrampolines[NumSendTrampolines]';
-		var: #implicitReceiverSendTrampolines
-			declareC: 'sqInt implicitReceiverSendTrampolines[NumSendTrampolines]';
-		var: #outerSendTrampolines
-			declareC: 'sqInt outerSendTrampolines[NumSendTrampolines]';
+			declareC: 'sqInt superSendTrampolines[NumSendTrampolines]'.
+	BytecodeSetHasDirectedSuperSend ifTrue:
+		[aCCodeGenerator
+			var: #directedSuperSendTrampolines
+				declareC: 'sqInt directedSuperSendTrampolines[NumSendTrampolines]';
+			var: #directedSuperBindingSendTrampolines
+				declareC: 'sqInt directedSuperBindingSendTrampolines[NumSendTrampolines]'].
+	NewspeakVM ifTrue:
+		[aCCodeGenerator
+			var: #selfSendTrampolines
+				declareC: 'sqInt selfSendTrampolines[NumSendTrampolines]';
+			var: #dynamicSuperSendTrampolines
+				declareC: 'sqInt dynamicSuperSendTrampolines[NumSendTrampolines]';
+			var: #implicitReceiverSendTrampolines
+				declareC: 'sqInt implicitReceiverSendTrampolines[NumSendTrampolines]';
+			var: #outerSendTrampolines
+				declareC: 'sqInt outerSendTrampolines[NumSendTrampolines]'].
+	aCCodeGenerator
 		var: #trampolineAddresses
 			declareC: 'static char *trampolineAddresses[NumTrampolines*2]';
 		var: #objectReferencesInRuntime
@@ -892,10 +902,11 @@ Cogit class >> initializeAnnotationConstants [
 	IsSendCall := 7.
 	"These are formed by combining IsSendCall and IsAnnotationExtension annotations."
 	IsSuperSend := 8.
-	IsDirectedSuperSend := 9.
-	IsNSSelfSend := NewspeakVM ifTrue: [10].
-	IsNSDynamicSuperSend := NewspeakVM ifTrue: [11].
-	IsNSImplicitReceiverSend := NewspeakVM ifTrue: [12].
+	IsDirectedSuperSend := BytecodeSetHasDirectedSuperSend ifTrue: [9].
+	IsDirectedSuperBindingSend := BytecodeSetHasDirectedSuperSend ifTrue: [10].
+	IsNSSelfSend := NewspeakVM ifTrue: [11].
+	IsNSDynamicSuperSend := NewspeakVM ifTrue: [12].
+	IsNSImplicitReceiverSend := NewspeakVM ifTrue: [13].
 
 	DisplacementMask := (1 << AnnotationShift) - 1.
 	DisplacementX2N := IsDisplacementX2N << AnnotationShift.
@@ -914,6 +925,7 @@ Cogit class >> initializeAnnotationConstants [
 										IsSendCall
 										IsSuperSend
 										IsDirectedSuperSend
+										IsDirectedSuperBindingSend
 										IsNSSelfSend
 										IsNSDynamicSuperSend
 										IsNSImplicitReceiverSend).
@@ -922,6 +934,7 @@ Cogit class >> initializeAnnotationConstants [
 										IsSendCall
 										IsSuperSend
 										IsDirectedSuperSend
+										IsDirectedSuperBindingSend
 										IsNSSelfSend
 										IsNSDynamicSuperSend
 										IsNSImplicitReceiverSend),
@@ -1065,8 +1078,8 @@ Cogit class >> initializeMiscConstants [
 Cogit class >> initializeNumTrampolines [
 	NumTrampolines := self numTrampolines
 						+ self objectRepresentationClass numTrampolines
-						+ (NewspeakVM ifTrue: [18] ifFalse: [0])
-						+ (BytecodeSetHasDirectedSuperSend ifTrue: [4] ifFalse: [0])
+						+ (NewspeakVM ifTrue: [NumSendTrampolines * 4 + 2] ifFalse: [0])
+						+ (BytecodeSetHasDirectedSuperSend ifTrue: [NumSendTrampolines * 2] ifFalse: [0])
 ]
 
 { #category : #'class initialization' }
@@ -3207,7 +3220,10 @@ Cogit >> annotationForMcpc: mcpc in: cogHomeMethod [
 Cogit >> annotationIsForUncheckedEntryPoint: annotation [
 	<inline: true>
 	^annotation = IsSuperSend
-	  or: [BytecodeSetHasDirectedSuperSend and: [annotation = IsDirectedSuperSend]]
+	  or: [BytecodeSetHasDirectedSuperSend
+		  and: [annotation
+					between: IsDirectedSuperSend
+					and: IsDirectedSuperBindingSend]]
 ]
 
 { #category : #'simulation only' }
@@ -7768,7 +7784,7 @@ Cogit >> generateClosedPICPrototype [
 
 	backEnd storeLiteral: 0 beforeFollowingAddress: endCPICCase0 address - backEnd jumpLongByteSize.
 	
-	"update the methodZoneBase so we keep the prototype aruond for later use"
+	"update the methodZoneBase so we keep the prototype around for later use"
 	methodZoneBase := self alignUptoRoutineBoundary: endAddress.
 	cPICPrototype := cPIC.
 	"self cCode: ''
@@ -8145,6 +8161,14 @@ Cogit >> generateSendTrampolines [
 				at: numArgs
 				put: (self genTrampolineFor: #ceSend:above:to:numArgs:
 						  called: (self trampolineName: 'ceDirectedSuperSend' numArgs: numArgs)
+						  arg: ClassReg
+						  arg: TempReg
+						  arg: ReceiverResultReg
+						  arg: (self numArgsOrSendNumArgsReg: numArgs)).
+			directedSuperBindingSendTrampolines
+				at: numArgs
+				put: (self genTrampolineFor: #ceSend:aboveClassBinding:to:numArgs:
+						  called: (self trampolineName: 'ceDirectedSuperBindingSend' numArgs: numArgs)
 						  arg: ClassReg
 						  arg: TempReg
 						  arg: ReceiverResultReg
@@ -10335,6 +10359,9 @@ Cogit >> offsetAndSendTableFor: entryPoint annotation: annotation into: binaryBl
 	[(BytecodeSetHasDirectedSuperSend and: [annotation = IsDirectedSuperSend]) ifTrue:
 		[offset := cmNoCheckEntryOffset.
 		 sendTable := directedSuperSendTrampolines] ifFalse:
+	[(BytecodeSetHasDirectedSuperSend and: [annotation = IsDirectedSuperBindingSend]) ifTrue:
+		[offset := cmNoCheckEntryOffset.
+		 sendTable := directedSuperBindingSendTrampolines] ifFalse:
 	[(NewspeakVM and: [annotation = IsNSSelfSend]) ifTrue:
 		[offset := cmEntryOffset.
 		 sendTable := selfSendTrampolines] ifFalse:
@@ -10343,7 +10370,7 @@ Cogit >> offsetAndSendTableFor: entryPoint annotation: annotation into: binaryBl
 		 sendTable := dynamicSuperSendTrampolines] ifFalse:
 	[self assert: annotation = IsSuperSend.
 	 offset := cmNoCheckEntryOffset.
-	 sendTable := superSendTrampolines]]]].
+	 sendTable := superSendTrampolines]]]]].
 
 	binaryBlock
 		value: offset
@@ -10662,9 +10689,10 @@ Cogit >> printOnTrace [
 
 { #category : #'method map' }
 Cogit >> printPCMapPairsFor: cogMethod [
-	<api>
+	<doNotGenerate>
+	"<api>
 	<var: 'cogMethod' type: #'CogMethod *'>
-	<var: 'mapByte' type: #'unsigned char'>
+	<var: 'mapByte' type: #'unsigned char'>"
 	| mcpc map mapByte annotation value |
 	mcpc := self firstMappedPCFor: cogMethod.
 	map := self mapStartFor: cogMethod.
@@ -10692,37 +10720,32 @@ Cogit >> printPCMapPairsFor: cogMethod [
 		 	printChar: $ ;
 			printNum: annotation;
 			print: ' ('.
-		 NewspeakVM
-			ifTrue:
-				[value
-					caseOf: {
-						[IsDisplacementX2N]		->	[coInterpreter print: 'IsDisplacementX2N'].
-						[IsAnnotationExtension]		->	[coInterpreter print: 'IsAnnotationExtension'].
-						[IsObjectReference]		->	[coInterpreter print: 'IsObjectReference'].
-						[IsAbsPCReference]		->	[coInterpreter print: 'IsAbsPCReference'].
-						[HasBytecodePC]			->	[coInterpreter print: 'HasBytecodePC'].
-						[IsRelativeCall]				->	[coInterpreter print: 'IsRelativeCall'].
-						[IsNSSendCall]				->	[coInterpreter print: 'IsNSSendCall'].
-						[IsSendCall]					->	[coInterpreter print: 'IsSendCall'].
-						[IsSuperSend]				->	[coInterpreter print: 'IsSuperSend'].
-						[IsDirectedSuperSend]		->	[coInterpreter print: 'IsDirectedSuperSend'].
-						[IsNSSelfSend]				->	[coInterpreter print: 'IsNSSelfSend'].
-						[IsNSDynamicSuperSend]	->	[coInterpreter print: 'IsNSDynamicSuperSend'].
-						[IsNSImplicitReceiverSend]	->	[coInterpreter print: 'IsNSImplicitReceiverSend'] }
-					otherwise: [coInterpreter print: '??? '; printHexnp: value]]
-			ifFalse:
-				[value
-					caseOf: {
-						[IsDisplacementX2N]		->	[coInterpreter print: 'IsDisplacementX2N'].
-						[IsAnnotationExtension]		->	[coInterpreter print: 'IsAnnotationExtension'].
-						[IsObjectReference]		->	[coInterpreter print: 'IsObjectReference'].
-						[IsAbsPCReference]		->	[coInterpreter print: 'IsAbsPCReference'].
-						[HasBytecodePC]			->	[coInterpreter print: 'HasBytecodePC'].
-						[IsRelativeCall]				->	[coInterpreter print: 'IsRelativeCall'].
-						[IsSendCall]					->	[coInterpreter print: 'IsSendCall'].
-						[IsSuperSend]				->	[coInterpreter print: 'IsSuperSend'].
-						[IsDirectedSuperSend]		->	[coInterpreter print: 'IsDirectedSuperSend'] }
-					otherwise: [coInterpreter print: '??? '; printHexnp: value]].
+		 (NewspeakVM
+		  and: [value = IsNSSendCall
+			     or: [value between: IsNSSendCall and: IsNSImplicitReceiverSend]]) ifTrue:
+			[value
+				caseOf: {
+					[IsNSSendCall]				->	[coInterpreter print: 'NSSendCall'].
+					[IsNSSelfSend]				->	[coInterpreter print: 'NSSelfSend'].
+					[IsNSDynamicSuperSend]	->	[coInterpreter print: 'NSDynamicSuperSend'].
+					[IsNSImplicitReceiverSend]	->	[coInterpreter print: 'NSImplicitReceiverSend'] }] ifFalse:
+		 [(BytecodeSetHasDirectedSuperSend
+		    and: [value between: IsDirectedSuperSend and: IsDirectedSuperBindingSend]) ifTrue:
+			[value
+				caseOf: {
+					[IsDirectedSuperSend]			->	[coInterpreter print: 'DirectedSuperSend'].
+					[IsDirectedSuperBindingSend]	->	[coInterpreter print: 'DirectedSuperBindingSend'] }] ifFalse:
+		 [value
+			caseOf: {
+				[IsDisplacementX2N]		->	[coInterpreter print: 'DisplacementX2N'].
+				[IsAnnotationExtension]	->	[coInterpreter print: 'AnnotationExtension'].
+				[IsObjectReference]			->	[coInterpreter print: 'ObjectReference'].
+				[IsAbsPCReference]			->	[coInterpreter print: 'AbsPCReference'].
+				[HasBytecodePC]			->	[coInterpreter print: 'HasBytecodePC'].
+				[IsRelativeCall]				->	[coInterpreter print: 'RelativeCall'].
+				[IsSendCall]				->	[coInterpreter print: 'SendCall'].
+				[IsSuperSend]				->	[coInterpreter print: 'SuperSend'] }
+			otherwise: [coInterpreter print: '??? '; printHexnp: value]]].
 		 coInterpreter
 			print: ') ';
 			printHexnp: (mapByte bitAnd: DisplacementMask);
@@ -11649,7 +11672,9 @@ Cogit >> setInterpreter: aCoInterpreter [
 	ordinarySendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
 	superSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
 	BytecodeSetHasDirectedSuperSend ifTrue:
-		[directedSuperSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines)].
+		[directedSuperSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
+		 directedSuperBindingSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
+		 directedSendUsesBinding := false].
 	NewspeakVM ifTrue:
 		[selfSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
 		dynamicSuperSendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
@@ -12055,29 +12080,15 @@ Cogit >> targetMethodAndSendTableFor: entryPoint annotation: annotation into: bi
 	 we don't need to distinguish between ceImplicitReceiver and the other sends since
 	 ceImplicitReceiver will never appear to be linked, so only three cases here."
 	<inline: true>
-	| targetMethod sendTable |
 	<var: #targetMethod type: #'CogMethod *'>
-	<var: #sendTable type: #'sqInt *'>
 
-	annotation = IsSendCall ifTrue:
-		[targetMethod := self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *'.
-		 sendTable := ordinarySendTrampolines] ifFalse:
-	[(BytecodeSetHasDirectedSuperSend and: [annotation = IsDirectedSuperSend]) ifTrue:
-		[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
-		 sendTable := directedSuperSendTrampolines] ifFalse:
-	[(NewspeakVM and: [annotation = IsNSSelfSend]) ifTrue:
-		[targetMethod := self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *'.
-		 sendTable := selfSendTrampolines] ifFalse:
-	[(NewspeakVM and: [annotation = IsNSDynamicSuperSend]) ifTrue:
-		[targetMethod := self cCoerceSimple: entryPoint - cmEntryOffset to: #'CogMethod *'.
-		 sendTable := dynamicSuperSendTrampolines] ifFalse:
-	[self assert: annotation = IsSuperSend.
-	 targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
-	 sendTable := superSendTrampolines]]]].
-
-	binaryBlock
-		value: targetMethod
-		value: sendTable
+	self offsetAndSendTableFor: entryPoint
+		annotation: annotation
+		into: [:offset :sendTable| | targetMethod |
+			targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
+			binaryBlock
+				value: targetMethod
+				value: sendTable]
 ]
 
 { #category : #testing }
