@@ -4,7 +4,7 @@ set -e
 PR=${TRAVIS_PULL_REQUEST:-${APPVEYOR_PULL_REQUEST_NUMBER:-false}}
 BR=${TRAVIS_BRANCH:-${APPVEYOR_REPO_BRANCH}}
 
-if [[ $PR == "false" ]] && ( [[ "$BR" == "Cog" || "$BR" == "master" ]] ); then
+if [[ $PR == "false" ]] && ( [[ "$BR" == "Cog" || "$BR" == "master" || true ]] ); then
     "./deploy/generate-artifacts.sh"
 
     echo "$(cat .bintray.json | .git_filters/RevDateURL.smudge)" > .bintray.json
