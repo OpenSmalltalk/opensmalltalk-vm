@@ -94,9 +94,9 @@ build_osx() {
 build_windows() {
     echo "Building for Windows"
 
-    [[ ! -d "${BUILD_DIRECTORY}" ]] && exit 100
+    [[ ! -d "${BUILD_DIRECTORY}/" ]] && exit 100
 
-    pushd "${BUILD_DIRECTORY}"
+    pushd "${BUILD_DIRECTORY}/"
     echo "remove bochs plugins"
     sed -i 's/Bochs.* //g' plugins.ext
 
