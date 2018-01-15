@@ -416,9 +416,8 @@ InterpreterProxy >> getThisSessionID [
 
 	[thisSessionID = 0]
 		whileTrue:
-			[thisSessionID := (Random new next * SmallInteger maxVal) asInteger].
+			[thisSessionID := (Random new next * (SmallInteger maxVal min: 16rFFFFFFFF)) asInteger].
 	^ thisSessionID
-
 ]
 
 { #category : #testing }

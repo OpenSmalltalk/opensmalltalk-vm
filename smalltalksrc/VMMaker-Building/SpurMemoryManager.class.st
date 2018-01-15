@@ -3029,6 +3029,15 @@ SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedObjs classIndicesShouldB
 	 rememberedSet entries have their isRemembered: flag set.  Answer if all checks pass."
 	| ok numRememberedObjectsInHeap |
 	<inline: false>
+	self cCode: []
+		inSmalltalk:
+			["Almost all of the time spent here used to go into the asserts in fetchPointer:ofObject: in the
+			  simulator class overrides. Since we know here the indices used are valid we temporarily
+			  remove them to claw back that performance."
+			(self class whichClassIncludesSelector: #fetchPointer:ofObject:) ~= SpurMemoryManager ifTrue:
+				[^self withSimulatorFetchPointerMovedAsideDo:
+					[self checkHeapIntegrity: excludeUnmarkedObjs
+						classIndicesShouldBeValid: classIndicesShouldBeValid]]].
 	ok := true.
 	numRememberedObjectsInHeap := 0.
 	0 to: self numFreeLists - 1 do:
@@ -12717,6 +12726,20 @@ SpurMemoryManager >> whereIsMaybeHeapThing: anOop [
 			[^' is in old space'].
 		 ^' is between old space segments'].
 	^nil
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> withSimulatorFetchPointerMovedAsideDo: aBlock [
+	"For performance, remove the simulator implementation of fetchPointer:ofObject:
+	 while aBlock is running and answer the block's result."
+	| theMethod |
+	theMethod := self class lookupSelector: #fetchPointer:ofObject:.
+	self deny: (theMethod isNil or: [theMethod methodClass == SpurMemoryManager]).
+	theMethod methodClass basicRemoveSelector: #fetchPointer:ofObject:.
+	^aBlock ensure:
+		[theMethod methodClass
+			basicAddSelector: #fetchPointer:ofObject:
+			withMethod: theMethod]
 ]
 
 { #category : #'header formats' }
