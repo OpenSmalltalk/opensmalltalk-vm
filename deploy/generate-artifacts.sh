@@ -14,9 +14,9 @@ if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
   counter=0
   for dir in */; do
     if [[ "${dir}" == *"ht/" ]]; then
-      name="${IDENTIFIER}_itimer"
-    else
       name="${IDENTIFIER}"
+    else
+      name="${IDENTIFIER}_itimer"
     fi
     tar czf "${name}.tar.gz" "${dir}"
     counter=$((counter+1))
