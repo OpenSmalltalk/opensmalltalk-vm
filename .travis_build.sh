@@ -4,6 +4,7 @@ set -e
 source ./.travis_helpers.sh
 
 if [[ "${APPVEYOR}" ]]; then
+    TRAVIS_BUILD_DIR="$(pwd)"
     TRAVIS_TAG="${APPVEYOR_REPO_TAG}"
     PLATFORM="windows"
 
@@ -29,6 +30,7 @@ if [[ "${ARCH}" == "linux32ARM"* ]]; then
     export LC_CTYPE=C
     export LANG=C
     export LANGUAGE=C
+    TRAVIS_BUILD_DIR="$(pwd)"
 fi
 
 echo "$(cat platforms/Cross/vm/sqSCCSVersion.h | .git_filters/RevDateURL.smudge)" > platforms/Cross/vm/sqSCCSVersion.h
@@ -94,9 +96,9 @@ build_osx() {
 build_windows() {
     echo "Building for Windows"
 
-    [[ ! -d "${BUILD_DIRECTORY}/" ]] && exit 100
+    [[ ! -d "${BUILD_DIRECTORY}" ]] && exit 100
 
-    pushd "${BUILD_DIRECTORY}/"
+    pushd "${BUILD_DIRECTORY}"
     echo "remove bochs plugins"
     sed -i 's/Bochs.* //g' plugins.ext
 
