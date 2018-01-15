@@ -66,7 +66,7 @@ Spur64BitMemoryManager >> addressAfter: objOop [
 	numSlots = 0 ifTrue: [^objOop + self allocationUnit + self baseHeaderSize].
 	numSlots = self numSlotsMask ifTrue:
 		[numSlots := self rawOverflowSlotsOf: objOop].
-	^objOop + self baseHeaderSize + (numSlots << self shiftForWord)
+	^objOop + self baseHeaderSize + (numSlots bitShift: self shiftForWord)
 ]
 
 { #category : #allocation }
