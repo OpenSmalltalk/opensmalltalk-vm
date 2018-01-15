@@ -57,6 +57,14 @@ Spur64BitMMLECoSimulator >> byteSwapped64IfBigEndian: w [
 	^w bitAnd: 16rFFFFFFFFFFFFFFFF
 ]
 
+{ #category : #'debug support' }
+Spur64BitMMLECoSimulator >> checkHeapIntegrity: excludeUnmarkedObjs classIndicesShouldBeValid: classIndicesShouldBeValid [
+	"Almost all of the time spent in SourMemoryManager>>checkHeapIntegrity:classIndicesShouldBeValid: used to go into the asserts in fetchPointer:ofObject: in the simulator class overrides.
+	 Since we know here the indices used are valid we temporarily remove them to claw back that poerformance."
+	^self withSimulatorFetchPointerMovedAsideDo:
+		[super checkHeapIntegrity: excludeUnmarkedObjs classIndicesShouldBeValid: classIndicesShouldBeValid]
+]
+
 { #category : #initialization }
 Spur64BitMMLECoSimulator >> coInterpreter: aCoInterpreter cogit: aCogit [
 	coInterpreter := aCoInterpreter.
