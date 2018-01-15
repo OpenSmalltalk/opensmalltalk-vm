@@ -98,7 +98,7 @@ cache:
 install:
   - ps: 'Start-FileDownload "http://cygwin.com/setup-x86.exe" -FileName "setup-x86.exe"'
   - ps: 'Start-FileDownload "http://cygwin.com/setup-x86_64.exe" -FileName "setup-x86_64.exe"'
-  - '%CYG_SETUP% -dgnqNO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_ROOT%\var\cache\setup" -P mingw64-%MINGW_ARCH%-gcc-core,mingw64-%MINGW_ARCH%-gcc-g++,mingw64-%MINGW_ARCH%-headers,mingw64-%MINGW_ARCH%-runtime,zip,mingw64-%MINGW_ARCH%-clang,mingw64-%MINGW_ARCH%-openssl,libiconv-devel,libglib2.0-devel,perl,mingw64-%MINGW_ARCH%-zlib,make,cmake,wget,mingw64-%MINGW_ARCH%-win-iconv'
+  - '%CYG_SETUP% -dgnqNO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_ROOT%\var\cache\setup" -P mingw64-%MINGW_ARCH%-gcc-core,mingw64-%MINGW_ARCH%-gcc-g++,mingw64-%MINGW_ARCH%-headers,mingw64-%MINGW_ARCH%-runtime,zip,mingw64-%MINGW_ARCH%-clang,mingw64-%MINGW_ARCH%-openssl,libiconv-devel,libglib2.0-devel,perl,mingw64-%MINGW_ARCH%-zlib,make,cmake,wget,mingw64-%MINGW_ARCH%-win-iconv,libclang3.9'
 
 build: false
 
@@ -110,7 +110,6 @@ build: false
 # build which causes failures as certain functions attempt to redirect
 # default file handles. Ensure a dummy file descriptor is opened with 'exec'.
 test_script:
-  - '%CYG_ROOT%\bin\bash -lc "cygcheck /usr/bin/make"'
   - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./.travis_build.sh"'
 on_success:
   - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./.travis_deploy.sh"'
