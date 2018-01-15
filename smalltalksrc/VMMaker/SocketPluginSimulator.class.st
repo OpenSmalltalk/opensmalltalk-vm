@@ -8,10 +8,25 @@ Class {
 		'simSocketToHostSocketMap',
 		'fakeAddressCounter',
 		'resolverSemaphoreIndex',
-		'ipv6support'
+		'ipv6support',
+		'resolverStatus'
+	],
+	#classVars : [
+		'ResolverBusy',
+		'ResolverError',
+		'ResolverReady',
+		'ResolverUninitialized'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
+
+{ #category : #'class initialization' }
+SocketPluginSimulator class >> initialize [
+	ResolverUninitialized := 0.	"network is not initialized"
+	ResolverReady := 1.		"resolver idle, last request succeeded"
+	ResolverBusy := 2.			"lookup in progress"
+	ResolverError := 3.			"resolver idle, last request failed"
+]
 
 { #category : #'initialize-release' }
 SocketPluginSimulator >> close [  "close any sockets that ST may have opened"
@@ -120,6 +135,7 @@ SocketPluginSimulator >> socketInit [
 	sDSAfn := sHSAfn := sCCTPfn := sCCLOPfn := sCCSOTfn := 0.
 	"for now..."
 	ipv6support := false.
+	resolverStatus := ResolverUninitialized.
 	^true
 ]
 
@@ -131,6 +147,7 @@ SocketPluginSimulator >> sqNetworkInit: resolverSemaIndex [
 	resolverSemaphoreIndex
 		ifNil: [resolverSemaphoreIndex := resolverSemaIndex]
 		ifNotNil: [self assert: resolverSemaphoreIndex = resolverSemaIndex].
+	resolverStatus := ResolverReady.
 	^0
 ]
 
@@ -169,20 +186,21 @@ SocketPluginSimulator >> sqResolverNameLookupResult [
 { #category : #simulation }
 SocketPluginSimulator >> sqResolverStartName: aCArray Lookup: size [
 	"For now don't simulate the implicit semaphore."
-	| hostName busy |
-	busy := NetNameResolver classPool at: #ResolverBusy.
+	| hostName |
 	hostName := self st: (String new: size) rn: aCArray cpy: size.
 	NetNameResolver primStartLookupOfName: hostName.
 	resolverSemaphoreIndex ifNotNil:
-		[[[NetNameResolver primNameResolverStatus = busy] whileTrue:
+		[| status |
+		 resolverStatus := ResolverBusy.
+		 [[(status := NetNameResolver primNameResolverStatus) = resolverStatus] whileTrue:
 			[(Delay forSeconds: 1) wait].
+		 resolverStatus := status.
 		 interpreterProxy signalSemaphoreWithIndex: resolverSemaphoreIndex] fork]
-	 
 ]
 
 { #category : #simulation }
 SocketPluginSimulator >> sqResolverStatus [
-	^NetNameResolver primNameResolverStatus
+	^resolverStatus
 ]
 
 { #category : #simulation }
@@ -265,6 +283,26 @@ SocketPluginSimulator >> sqSocket: socketHandleCArray SendDataBuf: bufferStartCA
 		do: [:ex|
 			interpreterProxy primitiveFail.
 			0]
+]
+
+{ #category : #simulation }
+SocketPluginSimulator >> sqSocketAbortConnection: socketHandleCArray [
+	^[Socket basicNew
+			primSocketAbortConnection: ((self hostSocketHandleFromSimSocketHandle: socketHandleCArray) ifNil: [^false])]
+		on: SocketPrimitiveFailed
+		do: [:ex|
+			interpreterProxy primitiveFail.
+			false]
+]
+
+{ #category : #simulation }
+SocketPluginSimulator >> sqSocketCloseConnection: socketHandleCArray [
+	^[Socket basicNew
+			primSocketCloseConnection: ((self hostSocketHandleFromSimSocketHandle: socketHandleCArray) ifNil: [^false])]
+		on: SocketPrimitiveFailed
+		do: [:ex|
+			interpreterProxy primitiveFail.
+			false]
 ]
 
 { #category : #simulation }

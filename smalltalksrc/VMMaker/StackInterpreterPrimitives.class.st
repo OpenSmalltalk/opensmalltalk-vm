@@ -378,17 +378,18 @@ StackInterpreterPrimitives >> primitiveContextXray [
 { #category : #'I/O primitives' }
 StackInterpreterPrimitives >> primitiveDeferDisplayUpdates [
 	"Set or clear the flag that controls whether modifications of 
-	the Display object are propagated to the underlying 
-	platform's screen."
+	 the Display object are propagated to the underlying 
+	 platform's screen."
 	| flag |
 	flag := self stackTop.
 	flag = objectMemory trueObject
 		ifTrue: [deferDisplayUpdates := true]
-		ifFalse: [flag = objectMemory falseObject
+		ifFalse:
+			[flag = objectMemory falseObject
 				ifTrue: [deferDisplayUpdates := false]
-				ifFalse: [self primitiveFail]].
-	self successful
-		ifTrue: [self pop: 1]
+				ifFalse: [^self primitiveFail]].
+	self cCode: [] inSmalltalk: [self fullDisplayUpdate].
+	self pop: 1
 ]
 
 { #category : #'plugin primitives' }

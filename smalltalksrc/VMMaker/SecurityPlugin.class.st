@@ -45,6 +45,12 @@ SecurityPlugin >> initialiseModule [
 	^self cCode: 'ioInitSecurity()' inSmalltalk:[true]
 ]
 
+{ #category : #simulation }
+SecurityPlugin >> ioCanRenameImage [
+	<doNotGenerate>
+	^true
+]
+
 { #category : #primitives }
 SecurityPlugin >> primitiveCanWriteImage [
 	<export: true>

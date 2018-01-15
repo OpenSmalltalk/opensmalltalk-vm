@@ -973,7 +973,8 @@ StackInterpreterSimulator >> ioExitWithErrorCode: ec [
 
 { #category : #'other primitives' }
 StackInterpreterSimulator >> ioForceDisplayUpdate [
-	"no-op"
+	"This assumes morphic"
+	World doOneCycle
 ]
 
 { #category : #'process primitive support' }
@@ -2211,7 +2212,7 @@ StackInterpreterSimulator >> printNum: anInteger [
 
 { #category : #'debug printing' }
 StackInterpreterSimulator >> printSends [
-	^printSends
+	^printSends or: [printBytecodeAtEachStep]
 ]
 
 { #category : #'debug printing' }

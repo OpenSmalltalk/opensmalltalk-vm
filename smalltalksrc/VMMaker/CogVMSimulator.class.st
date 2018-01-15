@@ -1753,7 +1753,10 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString [
 		cr;
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
-	functionString = breakSelector ifTrue: [self halt: breakSelector].
+	(breakSelector notNil
+	 and: [(self str: pluginString n: breakSelector cmp: pluginString size) = 0
+		or: [(self str: functionString n: breakSelector cmp: functionString size) = 0]]) ifTrue:
+		[self halt: functionString].
 	plugin := pluginList 
 				detect:[:any| any key = pluginString asString]
 				ifNone:
@@ -1793,7 +1796,8 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString AccessorDept
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
 	(breakSelector notNil
-	 and: [(self str: functionString n: breakSelector cmp: functionString size) = 0]) ifTrue:
+	 and: [(self str: pluginString n: breakSelector cmp: pluginString size) = 0
+		or: [(self str: functionString n: breakSelector cmp: functionString size) = 0]]) ifTrue:
 		[self halt: functionString].
 	plugin := pluginList 
 				detect: [:any| any key = pluginString asString]
@@ -2884,15 +2888,6 @@ CogVMSimulator >> primitiveContextAtPut [
 						WithSP: (self frameOfMarriedContext: aContext) - 48]
 			ifFalse: [self printContext: aContext]]."
 	^super primitiveContextAtPut
-]
-
-{ #category : #'I/O primitives' }
-CogVMSimulator >> primitiveDeferDisplayUpdates [
-	| oldDeferDisplayUpdates |
-	oldDeferDisplayUpdates := deferDisplayUpdates.
-	super primitiveDeferDisplayUpdates.
-	oldDeferDisplayUpdates ~= deferDisplayUpdates ifTrue:
-		[self fullDisplayUpdate]
 ]
 
 { #category : #'file primitives' }

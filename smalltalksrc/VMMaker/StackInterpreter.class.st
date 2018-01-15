@@ -5434,6 +5434,12 @@ StackInterpreter >> dispatchFunctionPointer: aFunctionPointer [
 		ifFalse: [self perform: aFunctionPointer]
 ]
 
+{ #category : #simulation }
+StackInterpreter >> displayBits [
+	<doNotGenerate>
+	^displayBits
+]
+
 { #category : #'frame access' }
 StackInterpreter >> divorceAllFrames [
 	| activeContext |
@@ -8382,7 +8388,7 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 	[globalSessionID = 0] whileTrue:
 		[globalSessionID := self
 								cCode: [(self time: #NULL) + self ioMSecs]
-								inSmalltalk: [(Random new next * SmallInteger maxVal) asInteger]].
+								inSmalltalk: [(Random new next * (SmallInteger maxVal min: 16rFFFFFFFF)) asInteger]].
 	metaAccessorDepth := -2.
 	super initializeInterpreter: bytesToShift
 ]
@@ -16714,17 +16720,29 @@ StackInterpreter >> postGCAction: gcModeArg [
 	"Signal the gc semaphore, and inform the display subsystem if the display bitmap has moved."
 
 	self signalSemaphoreWithIndex: gcSemaphoreIndex.
-	objectMemory hasSpurMemoryManagerAPI ifFalse:
-		[| displayObj bitsOop bitsNow |
-		 displayObj := objectMemory splObj: TheDisplay.
-		 ((objectMemory isPointers: displayObj)
-		  and: [(objectMemory lengthOf: displayObj) >= 4
-		  and: [objectMemory isWordsOrBytes: (bitsOop := objectMemory fetchPointer: 0 ofObject: displayObj)]]) ifTrue:
-			[bitsNow := self cCode: [objectMemory firstIndexableField: bitsOop]
-							inSmalltalk: [(objectMemory firstIndexableField: bitsOop) asInteger].
-			 displayBits ~= bitsNow ifTrue:
-				[displayBits := bitsNow.
-				 self ioNoteDisplayChanged: displayBits width: displayWidth height: displayHeight depth: displayDepth]]]
+	self postGCUpdateDisplayBits
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> postGCUpdateDisplayBits [
+	"Update the displayBits after a GC may have moved it.
+	 Answer if the displayBits appear valid"
+	<inline: false>
+	| displayObj bitsOop bitsNow |
+	displayObj := objectMemory splObj: TheDisplay.
+	((objectMemory isPointers: displayObj)
+	 and: [(objectMemory lengthOf: displayObj) >= 4
+	 and: [objectMemory isWordsOrBytes: (bitsOop := objectMemory fetchPointer: 0 ofObject: displayObj)]]) ifFalse:
+		[^false].
+
+	(objectMemory hasSpurMemoryManagerAPI
+	 and: [objectMemory isPinned: bitsOop]) ifFalse:
+		[bitsNow := self cCode: [objectMemory firstIndexableField: bitsOop]
+					inSmalltalk: [(objectMemory firstIndexableField: bitsOop) asInteger].
+		 displayBits ~= bitsNow ifTrue:
+			[displayBits := bitsNow.
+			 self ioNoteDisplayChanged: displayBits width: displayWidth height: displayHeight depth: displayDepth]].
+	^true
 ]
 
 { #category : #'object memory support' }
@@ -19230,6 +19248,8 @@ StackInterpreter >> reverseDisplayFrom: startIndex to: endIndex [
 	 It is assumed that the given word range falls entirely within the first line of the Display."
 	
 	| wordStartIndex wordEndIndex primFailCodeValue |
+	self postGCUpdateDisplayBits ifFalse:
+		[^self].
 	(displayBits = 0 or: [(objectMemory isImmediate: displayBits asInteger) or: [displayDepth <= 0]]) ifTrue: [^nil].
 	wordStartIndex := (startIndex max: 0) * displayDepth // 32.
 	wordEndIndex := (endIndex min: displayWidth) * displayDepth // 32.

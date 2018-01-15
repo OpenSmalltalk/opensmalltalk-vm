@@ -763,10 +763,12 @@ SpurSegmentManager >> writeSegment: segment nextSegment: nextSegment toFile: aBi
 							File: segment segSize
 							Write: aBinaryStream]
 					inSmalltalk:
-						[aBinaryStream
-							next: segment segSize / 4
+						[| bytesPerElement |
+						 bytesPerElement := manager memory bytesPerElement.
+						 aBinaryStream
+							next: segment segSize / bytesPerElement
 							putAll: manager memory
-							startingAt: segment segStart / 4 + 1.
+							startingAt: segment segStart / bytesPerElement + 1.
 						 segment segSize].
 	manager
 		long64At: pier1 put: firstSavedBridgeWord;
