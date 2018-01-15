@@ -68,20 +68,16 @@ build_linux() {
 
 	if [ -z "$HEARTBEAT" ] || [ "$HEARTBEAT" = "threaded" ]; then
     	build_linux_in "${BUILD_DIRECTORY}/build" "build_vm"
-        mv "${PRODUCTS_DIR}" "./threaded" # rename products dir
 	fi
 
     # Also build VM with itimerheartbeat if available
-    if [[ -d "${BUILD_DIRECTORY}/build.itimerheartbeat" ]]; then
-    	if [ -z "$HEARTBEAT" ] || [ "$HEARTBEAT" = "itimer" ]; then
-        	build_linux_in "${BUILD_DIRECTORY}/build.itimerheartbeat" "build_itimer_vm"
-            mv "${PRODUCTS_DIR}" "./itimer" # rename products dir
-	   fi
+    if [[ ! -d "${BUILD_DIRECTORY}/build.itimerheartbeat" ]]; then
+    	return
     fi
-    # create products dir and move threaded and/or itimer
-    mkdir "${PRODUCTS_DIR}"
-    [[ -d "./threaded" ]] && mv "./threaded" "${PRODUCTS_DIR}/"
-    [[ -d "./itimer" ]] && mv "./itimer" "${PRODUCTS_DIR}/"
+
+    if [ -z "$HEARTBEAT" ] || [ "$HEARTBEAT" = "itimer" ]; then
+        build_linux_in "${BUILD_DIRECTORY}/build.itimerheartbeat" "build_itimer_vm"
+    fi
 }
 
 build_osx() {

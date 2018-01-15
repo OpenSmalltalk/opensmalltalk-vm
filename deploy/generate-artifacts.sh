@@ -11,12 +11,20 @@ readonly OUTPUT_PREFIX="${PRODUCTS_DIR}/${IDENTIFIER}"
 
 pushd "${PRODUCTS_DIR}"
 if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
-  if [[ -d "threaded" ]]; then
-    tar czf "${OUTPUT_PREFIX}.tar.gz" "./threaded"
-  fi
-  if [[ -d "itimer" ]]; then
-    tar czf "${OUTPUT_PREFIX}_itimer.tar.gz" "./itimer"
-  fi
+  counter=0
+  for dir in */; do
+    if [[ "${dir}" == *"ht/" ]]; then
+      name="${OUTPUT_PREFIX}_itimer"
+    else
+      name="${OUTPUT_PREFIX}"
+    fi
+    tar czf "${name}.tar.gz" "${dir}"
+    counter=$((counter+1))
+    if [[ "${counter}" -gt 2 ]]; then
+      echo "No more than two directories expected (threaded and/or itimer)"
+      exit 20
+    fi
+  done
 elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
   TMP_DMG="temp.dmg"
   hdiutil create -size 8m -volname "${IDENTIFIER}" -srcfolder "${PRODUCTS_DIR}"/*.app \
@@ -31,6 +39,6 @@ elif [[ "${APPVEYOR}" ]]; then
   zip -r "${OUTPUT_PREFIX}.zip" "./"
 else
   echo "Unsupported platform '$(uname -s)'." 1>&2
-  exit 20
+  exit 30
 fi
 popd
