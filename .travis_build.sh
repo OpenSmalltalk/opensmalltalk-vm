@@ -106,8 +106,10 @@ build_windows() {
     # We cannot zip dbg and ast if we pass -f to just to the full thing...
     # Once this builds, let's pass -A instead of -f and put the full zip (but we should do several zips in the future)
     bash -e ./mvm -f || exit 1
-    rm -rf "${PRODUCTS_DIR}" || true # ensure there is no PRODUCTS_DIR
-    mv "./build/vm" "${PRODUCTS_DIR}"
+    ls
+    echo "##"
+    ls "${PRODUCTS_DIR}/"
+    mv "./build/vm" "${PRODUCTS_DIR}/"
     # zip -r "${output_file}.zip" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
     popd
 }
