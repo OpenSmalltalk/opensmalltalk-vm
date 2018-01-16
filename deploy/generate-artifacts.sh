@@ -35,7 +35,7 @@ elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
   hdiutil convert "${TMP_DMG}" -format UDBZ -imagekey bzip2-level=9 -o "${IDENTIFIER}.dmg"
   rm "${TMP_DMG}"
 elif [[ "${APPVEYOR}" ]]; then
-  rm -f *.def *.exp *.map *.o *Unstripped* # remove temporary build files
+  rm -f *.def *.exp *.lib *.map *.o *.res *Unstripped* # remove temporary build files
   zip -r "${IDENTIFIER}.zip" "./"
 else
   echo "Unsupported platform '$(uname -s)'." 1>&2
