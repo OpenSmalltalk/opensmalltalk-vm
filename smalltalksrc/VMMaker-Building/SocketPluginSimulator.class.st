@@ -196,8 +196,6 @@ SocketPluginSimulator >> sqResolverStartName: aCArray Lookup: size [
 
 { #category : #simulation }
 SocketPluginSimulator >> sqResolverStatus [
-	self break.
-	self break.
 	^resolverStatus 
 ]
 
