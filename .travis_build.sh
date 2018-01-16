@@ -61,6 +61,10 @@ build_linux_in() {
 }
 
 build_linux() {
+    travis_fold start 'unix_configure' 'Running "make config" in platforms/unix/config ...'
+    (cd platforms/unix/config/ && make configure)
+    travis_fold end 'unix_configure'
+
 	# build will include both, threaded and itimer version unless 
 	# HEARTBEAT variable is set, in which case just one of both 
 	# will be built.
@@ -89,25 +93,23 @@ build_osx() {
     bash -e ./mvm -f
     travis_fold end build_vm
 
-    mv ./*.app "${PRODUCTS_DIR}/" # Move app to products dir
+    mv ./*.app "${PRODUCTS_DIR}/" # Move app to PRODUCTS_DIR
     popd
 }
 
 build_windows() {
-    echo "Building for Windows"
-
     [[ ! -d "${BUILD_DIRECTORY}" ]] && exit 100
 
     pushd "${BUILD_DIRECTORY}"
-    echo "remove bochs plugins"
+    echo "Removing bochs plugins..."
     sed -i 's/Bochs.* //g' plugins.ext
 
-    echo "Let's build"
+    echo "Building OpenSmalltalk VM for Windows..."
     # We cannot zip dbg and ast if we pass -f to just to the full thing...
     # Once this builds, let's pass -A instead of -f and put the full zip (but we should do several zips in the future)
     bash -e ./mvm -f || exit 1
-    mv "./build/vm" "${PRODUCTS_DIR}/"
     # zip -r "${output_file}.zip" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
+    mv "./build/vm" "${PRODUCTS_DIR}/" # Move result to PRODUCTS_DIR
     popd
 }
 

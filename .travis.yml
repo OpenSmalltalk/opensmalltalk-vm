@@ -121,10 +121,8 @@ jobs:
 
 install: ./.travis_install.sh
 
-script:
-- cd platforms/unix/config/ && make configure
-- cd ../../../
-- $CHROOT ./.travis_build.sh
-- ./.travis_test.sh
+before_script: $CHROOT ./.travis_build.sh
+
+script: ./.travis_test.sh
 
 after_success: ./.travis_deploy.sh
