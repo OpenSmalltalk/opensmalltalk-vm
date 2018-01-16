@@ -971,12 +971,6 @@ StackInterpreterSimulator >> ioExitWithErrorCode: ec [
 	quitBlock value  "Cause return from #test"
 ]
 
-{ #category : #'other primitives' }
-StackInterpreterSimulator >> ioForceDisplayUpdate [
-	"This assumes morphic"
-	World doOneCycle
-]
-
 { #category : #'process primitive support' }
 StackInterpreterSimulator >> ioGetMaxExtSemTableSize [
 	^extSemTabSize
@@ -1018,6 +1012,11 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString [
 		cr;
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
+	(breakSelector notNil
+	 and: [pluginString size = breakSelector size
+	 and: [(self str: pluginString n: breakSelector cmp: pluginString size) = 0
+		or: [(self str: functionString n: breakSelector cmp: functionString size) = 0]]]) ifTrue:
+		[self halt: functionString].
 	plugin := pluginList 
 				detect:[:any| any key = pluginString asString]
 				ifNone:[self loadNewPlugin: pluginString].
@@ -1048,7 +1047,9 @@ StackInterpreterSimulator >> ioLoadFunction: functionString From: pluginString A
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
 	(breakSelector notNil
-	 and: [(self str: functionString n: breakSelector cmp: functionString size) = 0]) ifTrue:
+	 and: [pluginString size = breakSelector size
+	 and: [(self str: pluginString n: breakSelector cmp: pluginString size) = 0
+		or: [(self str: functionString n: breakSelector cmp: functionString size) = 0]]]) ifTrue:
 		[self halt: functionString].
 	plugin := pluginList 
 				detect: [:any| any key = pluginString asString]

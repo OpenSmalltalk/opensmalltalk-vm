@@ -1701,11 +1701,6 @@ CogVMSimulator >> ioExitWithErrorCode: ec [
 	self ioExit
 ]
 
-{ #category : #'other primitives' }
-CogVMSimulator >> ioForceDisplayUpdate [
-	"no-op"
-]
-
 { #category : #'process primitive support' }
 CogVMSimulator >> ioGetMaxExtSemTableSize [
 	^extSemTabSize
@@ -1754,8 +1749,9 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString [
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
 	(breakSelector notNil
+	 and: [pluginString size = breakSelector size
 	 and: [(self str: pluginString n: breakSelector cmp: pluginString size) = 0
-		or: [(self str: functionString n: breakSelector cmp: functionString size) = 0]]) ifTrue:
+		or: [(self str: functionString n: breakSelector cmp: functionString size) = 0]]]) ifTrue:
 		[self halt: functionString].
 	plugin := pluginList 
 				detect:[:any| any key = pluginString asString]
@@ -1796,8 +1792,9 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString AccessorDept
 		show: '(', byteCount printString, ') Looking for ', functionString, ' in ',
 				(pluginString isEmpty ifTrue:['vm'] ifFalse:[pluginString]).
 	(breakSelector notNil
+	 and: [pluginString size = breakSelector size
 	 and: [(self str: pluginString n: breakSelector cmp: pluginString size) = 0
-		or: [(self str: functionString n: breakSelector cmp: functionString size) = 0]]) ifTrue:
+		or: [(self str: functionString n: breakSelector cmp: functionString size) = 0]]]) ifTrue:
 		[self halt: functionString].
 	plugin := pluginList 
 				detect: [:any| any key = pluginString asString]
