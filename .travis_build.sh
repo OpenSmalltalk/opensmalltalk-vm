@@ -38,8 +38,8 @@ echo "$(cat platforms/Cross/plugins/sqPluginsSCCSVersion.h | .git_filters/RevDat
 
 # echo $PATH
 
-readonly BUILD_DIRECTORY="./build.${ARCH}/${FLAVOR}";
-readonly PRODUCTS_DIR="./products"
+readonly BUILD_DIRECTORY="$(pwd)/build.${ARCH}/${FLAVOR}";
+readonly PRODUCTS_DIR="$(pwd)/products"
 
 export COGVREV="$(git describe --tags --always)"
 export COGVDATE="$(git show -s --format=%cd HEAD)"
@@ -106,9 +106,6 @@ build_windows() {
     # We cannot zip dbg and ast if we pass -f to just to the full thing...
     # Once this builds, let's pass -A instead of -f and put the full zip (but we should do several zips in the future)
     bash -e ./mvm -f || exit 1
-    ls
-    echo "##"
-    ls "${PRODUCTS_DIR}/"
     mv "./build/vm" "${PRODUCTS_DIR}/"
     # zip -r "${output_file}.zip" "./builddbg/vm/" "./buildast/vm/" "./build/vm/"
     popd
