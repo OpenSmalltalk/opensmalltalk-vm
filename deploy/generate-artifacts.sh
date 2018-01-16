@@ -54,6 +54,7 @@ elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
   elif [[ "${FLAVOR}" == "pharo"* ]]; then
     # TODO: decrypt Pharo signing certificate and invoke macos_codesign to sign app bundle
     # macos_codesign "${DEPLOY_DIR}/pharo/sign.p12" "${PHARO_CERT_PASSWORD}" "${PHARO_SIGN_IDENTITY}"
+    true
   fi
   TMP_DMG="temp.dmg"
   hdiutil create -size 8m -volname "${IDENTIFIER}" -srcfolder "./"*.app \
