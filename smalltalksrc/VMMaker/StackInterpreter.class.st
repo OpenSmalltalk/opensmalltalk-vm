@@ -9181,6 +9181,13 @@ Note the resolveAliases flag - this is an awful artefact of OSX and Apples demen
 			aCharBuffer replaceFrom:1 to: filenameLength with: aFilenameString]
 ]
 
+{ #category : #simulation }
+StackInterpreter >> ioForceDisplayUpdate [
+	"Make sure the display is updated.  Simulation only"
+	<doNotGenerate>
+	World displayWorldSafely
+]
+
 { #category : #'primitive support' }
 StackInterpreter >> ioLoadExternalFunction: functionName OfLength: functionLength FromModule: moduleName OfLength: moduleLength [
 	"Load and return the requested function from a module.

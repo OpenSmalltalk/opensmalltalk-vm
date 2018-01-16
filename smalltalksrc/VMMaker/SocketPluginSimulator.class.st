@@ -9,7 +9,8 @@ Class {
 		'fakeAddressCounter',
 		'resolverSemaphoreIndex',
 		'ipv6support',
-		'resolverStatus'
+		'resolverStatus',
+		'addressForName'
 	],
 	#classVars : [
 		'ResolverBusy',
@@ -173,14 +174,13 @@ SocketPluginSimulator >> sqResolverLocalAddress [
 { #category : #simulation }
 SocketPluginSimulator >> sqResolverNameLookupResult [
 	"For now don't simulate the implicit semaphore."
-	| bytes |
-	bytes := NetNameResolver primNameLookupResult.
-	self assert: bytes size = 4.
+	addressForName ifNil: [^interpreterProxy primitiveFail].
+	self assert: addressForName size = 4.
 	"Effectively netAddressToInt: bytes"
-	^	((bytes at: 4)) +
-		((bytes at: 3) <<8) +
-		((bytes at: 2) <<16) +
-		((bytes at: 1) <<24)
+	^	((addressForName at: 4)) +
+		((addressForName at: 3) <<8) +
+		((addressForName at: 2) <<16) +
+		((addressForName at: 1) <<24)
 ]
 
 { #category : #simulation }
@@ -188,19 +188,17 @@ SocketPluginSimulator >> sqResolverStartName: aCArray Lookup: size [
 	"For now don't simulate the implicit semaphore."
 	| hostName |
 	hostName := self st: (String new: size) rn: aCArray cpy: size.
-	NetNameResolver primStartLookupOfName: hostName.
+	addressForName := NetNameResolver addressForName: hostName timeout: 30.
 	resolverSemaphoreIndex ifNotNil:
-		[| status |
-		 resolverStatus := ResolverBusy.
-		 [[(status := NetNameResolver primNameResolverStatus) = resolverStatus] whileTrue:
-			[(Delay forSeconds: 1) wait].
-		 resolverStatus := status.
-		 interpreterProxy signalSemaphoreWithIndex: resolverSemaphoreIndex] fork]
+		[resolverStatus := ResolverReady.
+		 interpreterProxy signalSemaphoreWithIndex: resolverSemaphoreIndex]
 ]
 
 { #category : #simulation }
 SocketPluginSimulator >> sqResolverStatus [
-	^resolverStatus
+	self break.
+	self break.
+	^resolverStatus 
 ]
 
 { #category : #simulation }

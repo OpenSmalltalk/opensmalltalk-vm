@@ -489,6 +489,16 @@ InterpreterProxy >> ioLoadFunction: functionName From: moduleName [
 ]
 
 { #category : #'FFI support' }
+InterpreterProxy >> ioLoadFunction: functionName From: moduleName AccessorDepthInto: accessorDepthPtr [
+	<returnTypeC: #'void *'>
+	<var: #functionName type: #'char *'>
+	<var: #moduleName type: #'char *'>
+	<var: #accessorDepthPtr type: #'sqInt *'>
+	"Dummy - provided by support code"
+	^0
+]
+
+{ #category : #'FFI support' }
 InterpreterProxy >> ioLoadModule: moduleNameIndex OfLength: moduleLength [
 	<returnTypeC: #'void *'>
 	"Dummy - provided by support code"
