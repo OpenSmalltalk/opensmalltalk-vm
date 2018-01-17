@@ -125,20 +125,18 @@ before_script: $CHROOT ./.travis_build.sh
 
 script: ./.travis_test.sh
 
-deploy: # Deploy bleeding edge to Bintray
-  provider: script
-  script: ./.travis_deploy.sh
-  # on:
-  #   repo: OpenSmalltalk/opensmalltalk-vm
-  #   branch: Cog
-
-deploy: # Deploy stable tags to GitHub releases
-  provider: releases
-  api_key:
-    secure: ASzbVm1ootfvzfAYm50rWCfIvwp/O+6N1NMv2lymvswj/sGW7MxmYGHj2UNtLg9OAD+lL9YyElyy94MCpSK496+pD7GrOdRAitilMreWR6jGab0D92pPcujMAsDDSRTPNZsui1kvK1skWGMCN41mXLlwtCxSqWdhQ1viMmjXeK29TJbHykFEdfgZc6RcB97NdMyz6Pp9uqbxXSA656UxeLJzsKX88mXFcd5983pVt1ME8dfeUC9dwTihG5IAEg3Uz6HDxcR3uero0alLXycer5zI1kHLede03aNNvcRcUnVjBa5rNY8ON884DblDC+lcc+8b104MQTAGKWbyibjpm+9b0oWJV/tB20VdJUxZ2MpuktLzUrFBjVFjSrB5NmkITtJ1o+eYmjJOzWZNqFueNIsEkbGItDQJkKhNySBnUZ3/gyxnTBwmulUF2i8dimdwAuZlMiTN5mqpSLzLCE9ZrGWz9zuuCCombvpNIAc2IMsaTlpj391TjQfqGvu+Z88hmJOmDwpdUsGwNHo+Cz1N+KivAfySgj1T+CfE4xnuKOQzVbUK1Aqv/uGl1ieS1MfgyrqfgvRWEcGQh7/35n6yxG5s2z1qrs9Vl0e0rN261GQuK5ElNsQSLVRNH13+PdDwTCEZ/APzo+0uGRGTmGKJtzAofmkeAsrwmgGJPAuip/0=
-  file_glob: true
-  file: "./products/*.{dmg,gz,zip}"
-  skip_cleanup: true
-  on:
-    repo: OpenSmalltalk/opensmalltalk-vm
-    tags: true
+deploy:
+  - provider: script # Deploy bleeding edge to Bintray
+    script: ./.travis_deploy.sh
+    # on:
+    #   repo: OpenSmalltalk/opensmalltalk-vm
+    #   branch: Cog
+  - provider: releases # Deploy stable tags to GitHub releases
+    api_key:
+      secure: ASzbVm1ootfvzfAYm50rWCfIvwp/O+6N1NMv2lymvswj/sGW7MxmYGHj2UNtLg9OAD+lL9YyElyy94MCpSK496+pD7GrOdRAitilMreWR6jGab0D92pPcujMAsDDSRTPNZsui1kvK1skWGMCN41mXLlwtCxSqWdhQ1viMmjXeK29TJbHykFEdfgZc6RcB97NdMyz6Pp9uqbxXSA656UxeLJzsKX88mXFcd5983pVt1ME8dfeUC9dwTihG5IAEg3Uz6HDxcR3uero0alLXycer5zI1kHLede03aNNvcRcUnVjBa5rNY8ON884DblDC+lcc+8b104MQTAGKWbyibjpm+9b0oWJV/tB20VdJUxZ2MpuktLzUrFBjVFjSrB5NmkITtJ1o+eYmjJOzWZNqFueNIsEkbGItDQJkKhNySBnUZ3/gyxnTBwmulUF2i8dimdwAuZlMiTN5mqpSLzLCE9ZrGWz9zuuCCombvpNIAc2IMsaTlpj391TjQfqGvu+Z88hmJOmDwpdUsGwNHo+Cz1N+KivAfySgj1T+CfE4xnuKOQzVbUK1Aqv/uGl1ieS1MfgyrqfgvRWEcGQh7/35n6yxG5s2z1qrs9Vl0e0rN261GQuK5ElNsQSLVRNH13+PdDwTCEZ/APzo+0uGRGTmGKJtzAofmkeAsrwmgGJPAuip/0=
+    file_glob: true
+    file: "./products/*.{dmg,gz,zip}"
+    skip_cleanup: true
+    on:
+      repo: OpenSmalltalk/opensmalltalk-vm
+      tags: true
