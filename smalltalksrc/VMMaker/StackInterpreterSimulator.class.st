@@ -220,7 +220,7 @@ StackInterpreterSimulator >> byteCount [
 
 { #category : #UI }
 StackInterpreterSimulator >> byteCountText [
-	^ byteCount printString asText
+	^ byteCount asStringWithCommas asText
 ]
 
 { #category : #'indexing primitives' }
@@ -777,14 +777,20 @@ StackInterpreterSimulator >> imageNameGet: p Length: sz [
 
 { #category : #'file primitives' }
 StackInterpreterSimulator >> imageNamePut: p Length: sz [
-	| newName |
+	| newName window |
 	newName := ByteString new: sz.
 	1 to: sz  do:
 		[:i |
 		newName
 			at: i
 			put: (Character value: (objectMemory byteAt: p + i - 1))].
-	imageName := newName
+	imageName := newName.
+	(displayView notNil
+	 and: [(window := displayView containingWindow) notNil]) ifTrue:
+		[window setLabel: (window label
+							copyReplaceFrom: (window label lastIndexOf: Character space) + 1
+							to: window label size
+							with: (FileDirectory localNameFor: imageName))]
 ]
 
 { #category : #'file primitives' }

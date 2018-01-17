@@ -280,7 +280,7 @@ CogVMSimulator >> byteCount [
 
 { #category : #UI }
 CogVMSimulator >> byteCountText [
-	^(String streamContents: [:s| s print: byteCount; nextPut: $/; print: sendCount]) asText
+	^(String streamContents: [:s| s nextPutAll: byteCount asStringWithCommas; nextPut: $/; nextPutAll: sendCount asStringWithCommas]) asText
 ]
 
 { #category : #'translation support' }
@@ -1355,14 +1355,20 @@ CogVMSimulator >> imageNameGet: p Length: sz [
 
 { #category : #'file primitives' }
 CogVMSimulator >> imageNamePut: p Length: sz [
-	| newName |
+	| newName window |
 	newName := ByteString new: sz.
 	1 to: sz  do:
 		[:i |
 		newName
 			at: i
 			put: (Character value: (objectMemory byteAt: p + i - 1))].
-	imageName := newName
+	imageName := newName.
+	(displayView notNil
+	 and: [(window := displayView containingWindow) notNil]) ifTrue:
+		[window setLabel: (window label
+							copyReplaceFrom: (window label lastIndexOf: Character space) + 1
+							to: window label size
+							with: (FileDirectory localNameFor: imageName))]
 ]
 
 { #category : #'file primitives' }
@@ -1449,7 +1455,8 @@ CogVMSimulator >> initialize [
 		[cogit := self class cogitClass new setInterpreter: self].
 	objectMemory coInterpreter: self cogit: cogit.
 
-	cogit numRegArgs > 0 ifTrue:
+	(cogit numRegArgs > 0
+	 and: [VMClass initializationOptions at: #CheckStackDepth ifAbsent: [true]]) ifTrue:
 		[debugStackDepthDictionary := Dictionary new].
 
 	cogThreadManager ifNotNil:
@@ -3656,7 +3663,8 @@ CogVMSimulator >> stackLimitFromMachineCode [
 	 the profile tick has expired.."
 
 	(byteCount := byteCount + 1) - lastPollCount >= (2000 * ByteCountsPerMicrosecond) ifTrue:
-		[lastPollCount := byteCount].
+		[lastPollCount := byteCount.
+		 self doOrDefer: [self changed: #byteCountText; changed: #composeAll]].
 	(lastPollCount = byteCount
 	 or: [nextProfileTick > 0 and: [nextProfileTick <= self ioUTCMicroseconds]]) ifTrue:
 		[suppressHeartbeatFlag "gets set by selector breakpoints"
