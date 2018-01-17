@@ -141,5 +141,4 @@ deploy: # Deploy stable tags to GitHub releases
   skip_cleanup: true
   on:
     repo: OpenSmalltalk/opensmalltalk-vm
-    branch: fniephaus/artifacts
-    # tags: true
+    tags: true
