@@ -128,9 +128,9 @@ script: ./.travis_test.sh
 deploy: # Deploy bleeding edge to Bintray
   provider: script
   script: ./.travis_deploy.sh
-  on:
-    repo: OpenSmalltalk/opensmalltalk-vm
-    branch: Cog
+  # on:
+  #   repo: OpenSmalltalk/opensmalltalk-vm
+  #   branch: Cog
 
 deploy: # Deploy stable tags to GitHub releases
   provider: releases
