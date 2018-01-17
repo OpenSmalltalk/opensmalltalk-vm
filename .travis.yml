@@ -140,4 +140,5 @@ deploy:
     skip_cleanup: true
     on:
       repo: OpenSmalltalk/opensmalltalk-vm
-      tags: true
+      branch: fniephaus/artifacts #Cog
+      # tags: true
