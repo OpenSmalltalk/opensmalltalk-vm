@@ -46,7 +46,7 @@ FilePluginSimulator >> fileOpenName: nameIndex size: nameSize write: writeFlag s
 					[FileStream readOnlyFileNamed: path]].
 	f ifNil: [^interpreterProxy primitiveFail].
 	f binary.
-	index := openFiles size + 1.
+	index := (3 to: openFiles size + 1) detect: [:n| (openFiles includesKey: n) not].
 	openFiles at: index put: f.
 	^interpreterProxy integerObjectOf: index
 ]
@@ -65,7 +65,7 @@ FilePluginSimulator >> fileOpenNewName: nameIndex size: nameSize secure: secureF
 		do: [:error | ^ interpreterProxy primitiveFailFor: PrimErrInappropriate].
 	f ifNil: [^interpreterProxy primitiveFail].
 	f binary.
-	index := openFiles size + 1.
+	index := (3 to: openFiles size + 1) detect: [:n| (openFiles includesKey: n) not].
 	openFiles at: index put: f.
 	^interpreterProxy integerObjectOf: index
 ]
@@ -227,8 +227,11 @@ FilePluginSimulator >> sqFileAtEnd: file [
 
 { #category : #simulation }
 FilePluginSimulator >> sqFileClose: file [
-	file close.
-	self recordStateOf: file
+	| index |
+	index := openFiles keyAtValue: file.
+	openFiles removeKey: index.
+	states removeKey: file ifAbsent: [].
+	file close
 ]
 
 { #category : #simulation }

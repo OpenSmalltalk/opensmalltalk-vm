@@ -9185,7 +9185,7 @@ Note the resolveAliases flag - this is an awful artefact of OSX and Apples demen
 StackInterpreter >> ioForceDisplayUpdate [
 	"Make sure the display is updated.  Simulation only"
 	<doNotGenerate>
-	World displayWorldSafely
+	Project current restore
 ]
 
 { #category : #'primitive support' }
