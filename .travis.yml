@@ -128,6 +128,7 @@ script: ./.travis_test.sh
 deploy:
   - provider: script # Deploy bleeding edge to Bintray
     script: ./.travis_deploy.sh
+    skip_cleanup: true
     on:
       repo: OpenSmalltalk/opensmalltalk-vm
       branch: fniephaus/artifacts #Cog
