@@ -49,7 +49,7 @@ if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
 elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
   readonly DEPLOY_DIR="${TRAVIS_BUILD_DIR}/deploy"
   if [[ "${FLAVOR}" == "squeak"* ]]; then
-    openssl aes-256-cbc -k "${SQUEAK_SIGN_PASSWORD}" -in "{DEPLOY_DIR}/squeak/sign.enc" -out "${DEPLOY_DIR}/squeak/sign.p12" -d
+    openssl aes-256-cbc -k "${SQUEAK_SIGN_PASSWORD}" -in "${DEPLOY_DIR}/squeak/sign.enc" -out "${DEPLOY_DIR}/squeak/sign.p12" -d
     macos_codesign "${DEPLOY_DIR}/squeak/sign.p12" "${SQUEAK_CERT_PASSWORD}" "${SQUEAK_SIGN_IDENTITY}"
   elif [[ "${FLAVOR}" == "pharo"* ]]; then
     # TODO: decrypt Pharo signing certificate and invoke macos_codesign to sign app bundle
@@ -63,7 +63,7 @@ elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
   VOLUME="$(mount | grep "$DEVICE" | sed 's/^[^ ]* on //;s/ ([^)]*)$//')"
   hdiutil detach "$DEVICE"
   hdiutil convert "${TMP_DMG}" -format UDBZ -imagekey bzip2-level=9 -o "${IDENTIFIER}.dmg"
-  rm "${TMP_DMG}"
+  rm -f "${TMP_DMG}"
 elif [[ "${APPVEYOR}" ]]; then
   rm -f *.def *.exp *.lib *.map *.o *.res *Unstripped* # remove temporary build files
   zip -r "${IDENTIFIER}.zip" "./"
