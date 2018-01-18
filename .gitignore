@@ -256,3 +256,4 @@ platforms/unix/config/autom4te.cache/
 
 # /products/debug/
 /products/debug/*
+*.p12
