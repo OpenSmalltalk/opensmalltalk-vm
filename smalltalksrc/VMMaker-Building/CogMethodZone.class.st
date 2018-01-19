@@ -232,7 +232,7 @@ CogMethodZone >> compactCompiledCode [
 	compactionInProgress := true.
 	objectHeaderValue := objectMemory nullHeaderForMachineCodeMethod.
 	source := coInterpreter cCoerceSimple: baseAddress to: #'CogMethod *'.
-	openPICList := nil.
+	self voidOpenPICList. "The list will be rebuilt with the current live set"
 	methodCount := 0.
 	NewspeakVM ifTrue: [unpairedMethodList := nil].
 	[source < self limitZony
@@ -249,8 +249,7 @@ CogMethodZone >> compactCompiledCode [
 		 SistaVM ifTrue:
 			[self clearSavedPICUsageCount: source].
 		 source cmType = CMOpenPIC ifTrue:
-			[source nextOpenPIC: openPICList asUnsignedInteger.
-			 openPICList := source].
+			[self addToOpenPICList: source].
 		 methodCount := methodCount + 1.
 		 source := self methodAfter: source].
 	source >= self limitZony ifTrue:
@@ -279,9 +278,8 @@ CogMethodZone >> compactCompiledCode [
 				ifFalse:
 					[SistaVM ifTrue:
 						[self clearSavedPICUsageCount: dest].
-					dest cmType = CMOpenPIC ifTrue:
-						[dest nextOpenPIC: openPICList asUnsignedInteger.
-						 openPICList := dest]].
+					 dest cmType = CMOpenPIC ifTrue:
+						[self addToOpenPICList: dest]].
 			 dest cmUsageCount > 0 ifTrue:
 				[dest cmUsageCount: dest cmUsageCount // 2].
 			 dest := coInterpreter
@@ -732,12 +730,15 @@ CogMethodZone >> printCogYoungReferrers [
 { #category : #accessing }
 CogMethodZone >> printOpenPICList [
 	<api>
-	| openPIC |
+	| n openPIC |
 	<var: #openPIC type: #'CogMethod *'>
+	n := 0.
 	openPIC := openPICList.
 	[openPIC == nil] whileFalse:
-		[coInterpreter printCogMethod: openPIC.
-		 openPIC := self cCoerceSimple: openPIC nextOpenPIC to: #'CogMethod *']
+		[n := n + 1.
+		 coInterpreter printCogMethod: openPIC.
+		 openPIC := self cCoerceSimple: openPIC nextOpenPIC to: #'CogMethod *'].
+	^n
 ]
 
 { #category : #'young referers' }
@@ -838,6 +839,10 @@ CogMethodZone >> removeFromOpenPICList: anOpenPIC [
 	| prevPIC |
 	<var: #prevPIC type: #'CogMethod *'>
 	self assert: anOpenPIC cmType = CMOpenPIC.
+	openPICList ifNil: [^nil]. "As it is when compacting or unlinking all sends"
+	self assert: (openPICList cmType = CMOpenPIC
+				and: [openPICList nextOpenPIC isNil
+					or: [(self cCoerceSimple: openPICList nextOpenPIC to: #'CogMethod *') cmType = CMOpenPIC]]).
 	anOpenPIC = openPICList ifTrue:
 		["N.B. Use self rather than coInterpreter to avoid attempting to cast nil.
 		  Conversion to CogMethod done in the nextOpenPIC accessor."
@@ -846,7 +851,7 @@ CogMethodZone >> removeFromOpenPICList: anOpenPIC [
 	prevPIC := openPICList.
 	[self assert: (prevPIC ~~ nil
 				and: [prevPIC cmType = CMOpenPIC]).
-	 prevPIC nextOpenPIC = anOpenPIC asInteger ifTrue:
+	 prevPIC nextOpenPIC = anOpenPIC asUnsignedInteger ifTrue:
 		[prevPIC nextOpenPIC: anOpenPIC nextOpenPIC.
 		 ^nil].
 	  prevPIC := self cCoerceSimple: prevPIC nextOpenPIC to: #'CogMethod *'.
@@ -948,6 +953,11 @@ CogMethodZone >> shouldFreeMethod: cogMethod given: freeableUsage [
 		ifFalse:
 			[cogMethod cmType ~= CMFree
 			  and: [cogMethod cmUsageCount <= freeableUsage]]
+]
+
+{ #category : #accessing }
+CogMethodZone >> voidOpenPICList [
+	openPICList := nil
 ]
 
 { #category : #'jit - api' }
