@@ -462,6 +462,7 @@ CogVMSimulator >> ceSendMustBeBoolean: anObject [
 CogVMSimulator >> ceStackOverflow: contextSwitchIfNotNil [
 	"Override to bump up the byteCount from which the microsecond clock is derived."
 	byteCount := byteCount + 1000.
+	self doOrDefer: [self changed: #byteCountText; changed: #composeAll].
 	^super ceStackOverflow: contextSwitchIfNotNil
 ]
 

@@ -12294,6 +12294,7 @@ Cogit >> unlinkAllSends [
 	<var: #cogMethod type: #'CogMethod *'>
 	methodZoneBase ifNil: [^self].
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
+	methodZone voidOpenPICList.
 	[cogMethod < methodZone limitZony] whileTrue:
 		[cogMethod cmType = CMMethod
 			ifTrue:
