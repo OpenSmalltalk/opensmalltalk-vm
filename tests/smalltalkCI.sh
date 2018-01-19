@@ -16,7 +16,6 @@ case "${FLAVOR}" in
       SMALLTALK_VERSION="Squeak-4.6"
     fi
     LINUX_BINARY="squeak"
-    MACOS_BUNDLE="Squeak"
     MACOS_BINARY="Squeak"
     ;;
   "Xpharo"*) # disabled until pharo-vm is merged
@@ -26,7 +25,6 @@ case "${FLAVOR}" in
       SMALLTALK_VERSION="Pharo-5.0"
     fi
     LINUX_BINARY="pharo"
-    MACOS_BUNDLE="Pharo"
     MACOS_BINARY="Pharo"
     ;;
   *)
@@ -37,13 +35,14 @@ esac
 
 case "$(uname -s)" in
   "Linux")
-    VM=$(find "${TRAVIS_BUILD_DIR}/products" -type f -name "${LINUX_BINARY}" | head -n 1)
+    BINARY_PATH="*/bin/${LINUX_BINARY}"
     ;;
   "Darwin")
-    VM_BUILD_DIR="${TRAVIS_BUILD_DIR}/build.${ARCH}/${FLAVOR}"
-    VM="${VM_BUILD_DIR}/${MACOS_BUNDLE}.app/Contents/MacOS/${MACOS_BINARY}"
+    BINARY_PATH="*/Contents/MacOS/${MACOS_BINARY}"
     ;;
 esac
+
+VM=$(find "${TRAVIS_BUILD_DIR}/products" -type f -path "${BINARY_PATH}" | head -n 1)
 
 if [[ ! -f "${VM}" ]]; then
   echo "Could not locate VM."
