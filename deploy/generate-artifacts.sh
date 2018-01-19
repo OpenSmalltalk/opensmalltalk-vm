@@ -56,8 +56,9 @@ elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
     # macos_codesign "${DEPLOY_DIR}/pharo/sign.p12" "${PHARO_CERT_PASSWORD}" "${PHARO_SIGN_IDENTITY}"
     true
   fi
+  APP_DIR=$(find "${PRODUCTS_DIR}" -type d -path "*.app" | head -n 1)
   TMP_DMG="temp.dmg"
-  hdiutil create -size 8m -volname "${IDENTIFIER}" -srcfolder "./"*.app \
+  hdiutil create -size 8m -volname "${IDENTIFIER}" -srcfolder "${APP_DIR}" \
       -fs HFS+ -fsargs "-c c=64,a=16,e=16" -format UDRW -nospotlight "${TMP_DMG}"
   DEVICE="$(hdiutil attach -readwrite -noautoopen -nobrowse "${TMP_DMG}" | awk 'NR==1{print$1}')"
   VOLUME="$(mount | grep "$DEVICE" | sed 's/^[^ ]* on //;s/ ([^)]*)$//')"
