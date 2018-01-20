@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+source ./.travis_helpers.sh
+
 readonly PRODUCTS_DIR="$(pwd)/products"
 if [[ ! -d "${PRODUCTS_DIR}" ]]; then
   echo "No products directory found."
