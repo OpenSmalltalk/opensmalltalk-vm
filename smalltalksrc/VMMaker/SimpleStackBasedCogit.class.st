@@ -2310,7 +2310,7 @@ SimpleStackBasedCogit >> genJumpIf: boolean to: targetBytecodePC [
 	self PopR: TempReg.
 	self genSubConstant: boolean R: TempReg.
 	self JumpZero: (self ensureFixupAt: targetBytecodePC).
-	self CmpCq: (boolean == objectMemory falseObject
+	self CmpCq: (boolean = objectMemory falseObject
 					ifTrue: [objectMemory trueObject - objectMemory falseObject]
 					ifFalse: [objectMemory falseObject - objectMemory trueObject])
 		R: TempReg.

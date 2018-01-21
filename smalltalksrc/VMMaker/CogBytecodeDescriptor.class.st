@@ -147,6 +147,12 @@ CogBytecodeDescriptor >> isCallPrimitive [
 ]
 
 { #category : #accessing }
+CogBytecodeDescriptor >> isConditionalBranch [
+	<inline: true>
+	^isBranchTrue or: [isBranchFalse]
+]
+
+{ #category : #accessing }
 CogBytecodeDescriptor >> isExtension [
 	"Answer the value of isExtension"
 
@@ -217,7 +223,7 @@ CogBytecodeDescriptor >> isReturn: anObject [
 
 { #category : #accessing }
 CogBytecodeDescriptor >> isUnconditionalBranch [
-
+	<inline: true>
 	^self isBranch and: [(isBranchTrue or: [isBranchFalse]) not]
 ]
 
