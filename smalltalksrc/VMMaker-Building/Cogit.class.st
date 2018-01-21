@@ -8263,6 +8263,13 @@ Cogit >> generatorAt: index [
 	^generatorTable at: index
 ]
 
+{ #category : #'compile abstract instructions' }
+Cogit >> generatorForPC: pc [
+	<returnTypeC: #'BytecodeDescriptor *'>
+	<inline: true>
+	^self generatorAt: bytecodeSetOffset + (objectMemory fetchByte: pc ofObject: methodObj)
+]
+
 { #category : #accessing }
 Cogit >> generatorTable [
 	<doNotGenerate>
@@ -12015,7 +12022,7 @@ Cogit >> spanForCleanBlockStartingAt: startPC [
 	pc := startPC.
 	end := objectMemory numBytesOf: methodObj.
 	[pc <= end] whileTrue:
-		[descriptor := self generatorAt: (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
+		[descriptor := self generatorForPC: pc.
 		 pc := pc + descriptor numBytes.
 		 descriptor isReturn ifTrue:
 			[^pc - startPC]].
