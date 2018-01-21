@@ -352,17 +352,16 @@ SistaRegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	"We detect and: / or:, if found, we don't generate the counters to avoid pathological counter slow down"
 	boolean = objectMemory falseObject ifTrue:
 		[ nextPC := bytecodePC + (self generatorAt: byte0) numBytes.
-		  nextDescriptor := self generatorAt: (objectMemory fetchByte: nextPC ofObject: methodObj) + bytecodeSetOffset.
+		  nextDescriptor := self generatorForPC: nextPC.
 		  nextDescriptor generator ==  #genPushConstantTrueBytecode ifTrue: [ ^ super genJumpIf: boolean to: targetBytecodePC ].
-		  nextDescriptor := self generatorAt: (objectMemory fetchByte: targetBytecodePC ofObject: methodObj) + bytecodeSetOffset.
+		  nextDescriptor := self generatorForPC: targetBytecodePC.
 		  nextDescriptor generator == #genPushConstantFalseBytecode ifTrue: [ ^ super genJumpIf: boolean to: targetBytecodePC ]. ].
 
 	extA := 0. "We ignore the noMustBeBoolean flag. It should not be present in methods with counters, and if it is we don't care."
 
 	"We don't generate counters on branches on true/false, the basicblock usage can be inferred"
 	desc := self ssTop.
-	(desc type == SSConstant
-	 and: [desc constant = objectMemory trueObject or: [desc constant = objectMemory falseObject]]) ifTrue:
+	(self stackEntryIsBoolean: desc) ifTrue:
 		[ ^ super genJumpIf: boolean to: targetBytecodePC ].
 
 	eventualTarget := self eventualTargetOf: targetBytecodePC.
