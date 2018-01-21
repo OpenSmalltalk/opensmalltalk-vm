@@ -305,11 +305,14 @@ RegisterAllocatingCogit >> duplicateRegisterAssignmentsInTemporaries [
 RegisterAllocatingCogit >> ensureFixupAt: targetPC [
 	"Make sure there's a flagged fixup at the target pc in fixups.
 	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction.
-	 Override to enerate stack merging code if required."
+	 Override to generate stack merging code if required."
 	| fixup |	
 	<var: #fixup type: #'BytecodeFixup *'>
 	self assert: targetPC > bytecodePC.
 	fixup := self fixupAt: targetPC.
+	"If a non-merge fixup has already been defined then where-ever that was done didn't
+	 realise there needed to be a merge and forgot to save the stack state for that merge."
+	self deny: fixup isNonMergeFixup.
 	fixup needsFixup 
 		ifTrue:
 			[fixup mergeSimStack
@@ -320,7 +323,7 @@ RegisterAllocatingCogit >> ensureFixupAt: targetPC [
 					 self restoreSimStackFromScratch]]
 		ifFalse: 
 			[self assert: (fixup mergeSimStack isNil or: [compilationPass = 2]).
-			 self moveVolatileSimStackEntriesToRegisters.
+			 self moveVolatileSimStackEntriesToRegisters. "Is this needed here?  It is sent immediately in setMergeSimStackOf:; maybe it should be in the ifNotNil: branch only?"
 			 fixup mergeSimStack
 				ifNil: [self setMergeSimStackOf: fixup]
 				ifNotNil: [self assert: (self simStack: simStack isIdenticalTo: fixup mergeSimStack)]].
@@ -401,16 +404,14 @@ RegisterAllocatingCogit >> ensureRegisterAssignmentsAreAtHeadOfLoop: target [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> existsInstVarRefBeforeSendOrReturn [
 	"Answer if the current bytecode is followed by an inst var ref before the next full send."
-	| pc nExts byte descriptor |
+	| pc nExts descriptor |
 	pc := bytecodePC.
 	nExts := 0.
 	[pc <= endPC] whileTrue:
-		[byte := (objectMemory fetchByte: pc ofObject: methodObj) + bytecodeSetOffset.
-		 descriptor := self generatorAt: byte.
+		[descriptor := self generatorForPC: pc.
 		 (descriptor isMapped
-		  or: [descriptor isBranchTrue
-		  or: [descriptor isBranchFalse
-		  or: [descriptor spanFunction notNil]]]) ifTrue:
+		  or: [descriptor isConditionalBranch
+		  or: [descriptor spanFunction notNil]]) ifTrue:
 			[^false].
 		 descriptor isInstVarRef ifTrue:
 			[^true].
@@ -682,8 +683,7 @@ RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	noMustBeBoolean := self extASpecifiesNoMustBeBoolean.
 	extA := 0.
 
-	(desc type == SSConstant
-	 and: [desc constant = objectMemory trueObject or: [desc constant = objectMemory falseObject]]) ifTrue:
+	(self stackEntryIsBoolean: desc) ifTrue:
 		["Must annotate the bytecode for correct pc mapping."
 		 desc constant = boolean
 			ifTrue:

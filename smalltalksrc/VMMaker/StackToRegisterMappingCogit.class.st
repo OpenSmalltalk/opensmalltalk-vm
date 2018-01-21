@@ -2778,10 +2778,10 @@ StackToRegisterMappingCogit >> ensureFixupAt: targetPC [
 			[fixup isBackwardBranchFixup
 				ifTrue: "this is the target of a backward branch and
 						 so doesn't have a simStackPtr assigned yet."
-						[fixup simStackPtr: simStackPtr.
-			 			 LowcodeVM ifTrue:
-				 			[fixup simNativeStackPtr: simNativeStackPtr.
-				 			 fixup simNativeStackSize: simNativeStackSize]]
+					[fixup simStackPtr: simStackPtr.
+		 			 LowcodeVM ifTrue:
+			 			[fixup simNativeStackPtr: simNativeStackPtr.
+			 			 fixup simNativeStackSize: simNativeStackSize]]
 				ifFalse:
 					[self assert: fixup simStackPtr = simStackPtr.
 					 LowcodeVM ifTrue:
@@ -2837,16 +2837,17 @@ StackToRegisterMappingCogit >> evaluate: descriptor at: pc [
 
 { #category : #'peephole optimizations' }
 StackToRegisterMappingCogit >> eventualTargetOf: targetBytecodePC [
-	"Attempt to follow a branch to a pc.  Handle branches to unconditional jumps
-	 and branches to push: aBoolean; conditional branch pairs.  If the branch cannot
-	 be followed answer targetBytecodePC."
+	"Attempt to follow a branch to a pc.  Handle branches to unconditional jumps and
+	 branches to push: aBoolean; conditional branch pairs.  If the branch cannot be
+	 followed answer targetBytecodePC. It is not possible to follow jumps to conditional
+	 branches because the stack changes depth.  That following is left to the genJumpIf:to:
+	 clients."
 
 	| currentTarget nextPC nExts descriptor span cond |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	nextPC := currentTarget := targetBytecodePC.
 	[ nExts := 0.
-	 [descriptor := self generatorAt: bytecodeSetOffset
-								+ (objectMemory fetchByte: nextPC ofObject: methodObj).
+	 [descriptor := self generatorForPC: nextPC.
 	  descriptor isReturn ifTrue: [^currentTarget]. "avoid stepping off the end of methods"
 	  descriptor isExtension]
 		whileTrue:
@@ -2867,8 +2868,7 @@ StackToRegisterMappingCogit >> eventualTargetOf: targetBytecodePC [
 				[^currentTarget].
 			 nextPC := self eventualTargetOf: nextPC + descriptor numBytes.
 			 nExts := 0.
-			 [descriptor := self generatorAt: bytecodeSetOffset
-								+ (objectMemory fetchByte: nextPC ofObject: methodObj).
+			 [descriptor := self generatorForPC: nextPC.
 			  descriptor isReturn ifTrue: [^currentTarget]. "avoid stepping off the end of methods"
 			  descriptor isExtension]
 				whileTrue:
@@ -2934,7 +2934,7 @@ StackToRegisterMappingCogit >> extractMaybeBranchDescriptorInto: fourArgBlock [
 
 	nextPC := bytecodePC + primDescriptor numBytes.
 	nExts := 0.
-	[[branchDescriptor := self generatorAt: (objectMemory fetchByte: nextPC ofObject: methodObj) + bytecodeSetOffset.
+	[[branchDescriptor := self generatorForPC: nextPC.
 	  branchDescriptor isExtension] whileTrue:
 		[nExts := nExts + 1.
 		 nextPC := nextPC + branchDescriptor numBytes].
@@ -3484,8 +3484,7 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	self ssFlushTo: simStackPtr - 1.
 	desc := self ssTop.
 	self ssPop: 1.
-	(desc type == SSConstant
-	 and: [desc constant = objectMemory trueObject or: [desc constant = objectMemory falseObject]]) ifTrue:
+	(self stackEntryIsBoolean: desc) ifTrue:
 		["Must arrange there's a fixup at the target whether it is jumped to or
 		  not so that the simStackPtr can be kept correct."
 		 fixup := self ensureFixupAt: eventualTarget.
@@ -3523,9 +3522,26 @@ StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 
 { #category : #'bytecode generator support' }
 StackToRegisterMappingCogit >> genJumpTo: targetBytecodePC [
-	self ssFlushTo: simStackPtr.
+	| eventualTarget generator fixup |
+	eventualTarget := self eventualTargetOf: targetBytecodePC.
+	(eventualTarget > bytecodePC
+	 and: [self stackTopIsBoolean
+	 and: [(generator := self generatorForPC: eventualTarget) isConditionalBranch]])
+		ifTrue:
+			[eventualTarget := eventualTarget
+							  + generator numBytes
+							  + (generator isBranchTrue == (self ssTop constant = objectMemory trueObject)
+									ifTrue: [self spanFor: generator at: eventualTarget exts: 0 in: methodObj]
+									ifFalse: [0]).
+			self ssPop: 1.
+			self ssFlushTo: simStackPtr.
+			fixup := self ensureFixupAt: eventualTarget.
+			self ssPop: -1]
+		ifFalse:
+			[self ssFlushTo: simStackPtr.
+			fixup := self ensureFixupAt: eventualTarget].
 	deadCode := true. "can't fall through"
-	self Jump: (self ensureFixupAt: (self eventualTargetOf: targetBytecodePC)).
+	self Jump: fixup.
 	^0
 ]
 
@@ -13964,6 +13980,21 @@ StackToRegisterMappingCogit >> ssValue: n [
 	^self simStackAt: simStackPtr - n
 ]
 
+{ #category : #testing }
+StackToRegisterMappingCogit >> stackEntryIsBoolean: simStackEntry [
+	<var: #simStackEntry type: #'CogSimStackEntry *'>
+	<inline: true>
+	^simStackEntry type = SSConstant
+	  and: [simStackEntry constant = objectMemory trueObject
+			or: [simStackEntry constant = objectMemory falseObject]]
+]
+
+{ #category : #testing }
+StackToRegisterMappingCogit >> stackTopIsBoolean [
+	<inline: true>
+	^simStackPtr > 0 and: [self stackEntryIsBoolean: self ssTop]
+]
+
 { #category : #'simulation only' }
 StackToRegisterMappingCogit >> traceDescriptor: descriptor [
 	<cmacro: '(ign) 0'>
@@ -14041,16 +14072,9 @@ StackToRegisterMappingCogit >> tryCollapseTempVectorInitializationOfSize: slots 
 	<var: #storeValueDesc type: #'BytecodeDescriptor *'>
 	slots ~= 1 ifTrue:
 		[^false].
-	pushArrayDesc := self generatorAt: bytecodeSetOffset
-										+ (objectMemory
-												fetchByte: bytecodePC
-												ofObject: methodObj).
+	pushArrayDesc := self generatorForPC: bytecodePC.
 	self assert: pushArrayDesc generator == #genPushNewArrayBytecode.
-	storeArrayDesc := self generatorAt: bytecodeSetOffset
-										+ (objectMemory
-												fetchByte: bytecodePC
-														+ pushArrayDesc numBytes
-												ofObject: methodObj).
+	storeArrayDesc := self generatorForPC: bytecodePC + pushArrayDesc numBytes.
 	storeArrayDesc generator == #genStoreAndPopTemporaryVariableBytecode
 		ifTrue:
 			[tempIndex := (objectMemory
@@ -14062,30 +14086,24 @@ StackToRegisterMappingCogit >> tryCollapseTempVectorInitializationOfSize: slots 
 			 tempIndex := objectMemory
 								fetchByte: bytecodePC + pushArrayDesc numBytes + 1
 								ofObject: methodObj].
-	pushValueDesc := self generatorAt: bytecodeSetOffset
-										+ (objectMemory
-												fetchByte: bytecodePC
-														+ pushArrayDesc numBytes
-														+ storeArrayDesc numBytes
-												ofObject: methodObj).
+	pushValueDesc := self generatorForPC: bytecodePC
+										+ pushArrayDesc numBytes
+										+ storeArrayDesc numBytes.
 	(pushValueDesc generator == #genPushLiteralConstantBytecode
 	 or: [pushValueDesc generator == #genPushQuickIntegerConstantBytecode
 	 or: [pushValueDesc generator == #genPushTemporaryVariableBytecode]]) ifFalse:
 		[^false].
-	storeValueDesc := self generatorAt: bytecodeSetOffset
-										+ (objectMemory
-												fetchByte: bytecodePC
-														+ pushArrayDesc numBytes
-														+ storeArrayDesc numBytes
-														+ pushValueDesc numBytes
-												ofObject: methodObj).
+	storeValueDesc := self generatorForPC: bytecodePC
+											+ pushArrayDesc numBytes
+											+ storeArrayDesc numBytes
+											+ pushValueDesc numBytes.
 	remoteTempIndex := objectMemory
-												fetchByte: bytecodePC
-														+ pushArrayDesc numBytes
-														+ storeArrayDesc numBytes
-														+ pushValueDesc numBytes
-														+ 2
-												ofObject: methodObj.
+									fetchByte: bytecodePC
+											+ pushArrayDesc numBytes
+											+ storeArrayDesc numBytes
+											+ pushValueDesc numBytes
+											+ 2
+									ofObject: methodObj.
 	(storeValueDesc generator == #genStoreAndPopRemoteTempLongBytecode
 	 and: [tempIndex = remoteTempIndex]) ifFalse:
 		[^false].
