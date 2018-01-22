@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-source ./.travis_helpers.sh
-
 readonly PRODUCTS_DIR="$(pwd)/products"
 if [[ ! -d "${PRODUCTS_DIR}" ]]; then
   echo "No products directory found."
@@ -13,23 +11,24 @@ readonly IDENTIFIER="cog_${ARCH}_${FLAVOR}_${REV}"
 readonly KEY_CHAIN=macos-build.keychain
 
 macos_codesign() {
-  local cert_path=$1
-  local cert_pass=$2
-  local sign_identity=$3
+  local path_cer=$1
+  local path_p12=$2
+  local cert_pass=$3
+  local sign_identity=$4
 
-  travis_fold start macos_signing "Signing app bundle..."
+  echo "Signing app bundle..."
   # Set up keychain
   security create-keychain -p travis "${KEY_CHAIN}"
   security default-keychain -s "${KEY_CHAIN}"
   security unlock-keychain -p travis "${KEY_CHAIN}"
   security set-keychain-settings -t 3600 -u "${KEY_CHAIN}"
-  security import "${cert_path}" -k ~/Library/Keychains/"${KEY_CHAIN}" -P "${cert_pass}" -T /usr/bin/codesign
+  security import "${path_cer}" -k ~/Library/Keychains/"${KEY_CHAIN}" -T /usr/bin/codesign
+  security import "${path_p12}" -k ~/Library/Keychains/"${KEY_CHAIN}" -P "${cert_pass}" -T /usr/bin/codesign
   # Invoke codesign
   codesign -s "${sign_identity}" --force --deep ./*.app
   # Remove sensitive files again
-  rm -rf "${cert_path}"
+  rm -rf "${path_cer}" "${path_p12}"
   security delete-keychain "${KEY_CHAIN}"
-  travis_fold end macos_signing
 }
 
 pushd "${PRODUCTS_DIR}"
@@ -51,11 +50,14 @@ if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
 elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
   readonly DEPLOY_DIR="${TRAVIS_BUILD_DIR}/deploy"
   if [[ "${FLAVOR}" == "squeak"* ]]; then
-    openssl aes-256-cbc -k "${SQUEAK_SIGN_PASSWORD}" -in "${DEPLOY_DIR}/squeak/sign.enc" -out "${DEPLOY_DIR}/squeak/sign.p12" -d
-    macos_codesign "${DEPLOY_DIR}/squeak/sign.p12" "${SQUEAK_CERT_PASSWORD}" "${SQUEAK_SIGN_IDENTITY}"
+    path_cer="${DEPLOY_DIR}/squeak/sign.cer"
+    path_p12="${DEPLOY_DIR}/squeak/sign.p12"
+    openssl aes-256-cbc -k "${SQUEAK_SIGN_PASSWORD}" -in "${path_cer}.enc" -out "${path_cer}" -d
+    openssl aes-256-cbc -k "${SQUEAK_SIGN_PASSWORD}" -in "${path_p12}.enc" -out "${path_p12}" -d
+    macos_codesign "${path_cer}" "${path_p12}" "${SQUEAK_CERT_PASSWORD}" "${SQUEAK_SIGN_IDENTITY}"
   elif [[ "${FLAVOR}" == "pharo"* ]]; then
     # TODO: decrypt Pharo signing certificate and invoke macos_codesign to sign app bundle
-    # macos_codesign "${DEPLOY_DIR}/pharo/sign.p12" "${PHARO_CERT_PASSWORD}" "${PHARO_SIGN_IDENTITY}"
+    # macos_codesign "${path_cer}" "${path_p12}" "${PHARO_CERT_PASSWORD}" "${PHARO_SIGN_IDENTITY}"
     true
   fi
   APP_DIR=$(find "${PRODUCTS_DIR}" -type d -path "*.app" | head -n 1)
