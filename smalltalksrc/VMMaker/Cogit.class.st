@@ -441,6 +441,14 @@ Cogit class >> assumptions [
 ]
 
 { #category : #'in-image compilation support' }
+Cogit class >> attemptToComputeInstVarNamesFor: aCompiledMethod [
+	(aCompiledMethod methodClass instSize > 0) ifTrue:
+		[initializationOptions
+			at: #instVarNames
+			put: (aCompiledMethod methodClass allInstVarNames)]
+]
+
+{ #category : #'in-image compilation support' }
 Cogit class >> attemptToComputeTempNamesFor: aCompiledMethod [
 	(aCompiledMethod respondsTo: #tempNames) ifTrue:
 		[| blocks |
@@ -493,6 +501,7 @@ Cogit class >> cog: aCompiledMethod selectorOrNumCopied: selectorOrNumCopied opt
 	| cogit coInterpreter |
 	cogit := self instanceForTests: optionsDictionaryOrArray.
 	self attemptToComputeTempNamesFor: aCompiledMethod.
+	self attemptToComputeInstVarNamesFor: aCompiledMethod.
 	coInterpreter := CurrentImageCoInterpreterFacade forCogit: cogit.
 	[cogit
 		setInterpreter: coInterpreter;
@@ -5856,8 +5865,23 @@ Cogit >> disassembleFrom: startAddress to: endAddress [
 { #category : #disassembly }
 Cogit >> disassembleFrom: startAddress to: endAddress labels: labelDictionary on: aStream [
 	<doNotGenerate>
+	| previousTVP |
 	aStream ensureCr.
-	processor disassembleFrom: startAddress to: endAddress in: coInterpreter memory for: self labels: labelDictionary on: aStream.
+	previousTVP := processor class printTempNames.
+	processor class
+		printTempNames: (self class initializationOptions includesKey: #tempNames);
+		setReceiverResultReg: ((self class initializationOptions includesKey: #instVarNames) ifTrue:
+									[ReceiverResultReg]).
+	[processor
+		disassembleFrom: startAddress
+		to: endAddress
+		in: coInterpreter memory
+		for: self
+		labels: labelDictionary
+		on: aStream] ensure:
+			[processor class
+				printTempNames: previousTVP;
+				setReceiverResultReg: nil].
 	aStream flush
 ]
 
@@ -9085,6 +9109,16 @@ Cogit >> lookupFrameOffset: anInteger [
 					anInteger = (self frameOffsetOfTemporary: i - 1 numArgs: numArgs) ifTrue:
 						[^tempNames at: i]]]]].
 	^nil
+]
+
+{ #category : #disassembly }
+Cogit >> lookupInstVarOffset: offset [
+	^offset \\ objectMemory bytesPerOop = 0 ifTrue:
+		[(self class initializationOptions at: #instVarNames ifAbsent: nil) ifNotNil:
+			[:array|
+			 array
+				at: offset - objectMemory baseHeaderSize / objectMemory bytesPerOop + 1
+				ifAbsent: nil]]
 ]
 
 { #category : #'method map' }

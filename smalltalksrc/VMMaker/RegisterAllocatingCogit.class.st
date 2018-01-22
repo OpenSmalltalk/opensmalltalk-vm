@@ -323,10 +323,11 @@ RegisterAllocatingCogit >> ensureFixupAt: targetPC [
 					 self restoreSimStackFromScratch]]
 		ifFalse: 
 			[self assert: (fixup mergeSimStack isNil or: [compilationPass = 2]).
-			 self moveVolatileSimStackEntriesToRegisters. "Is this needed here?  It is sent immediately in setMergeSimStackOf:; maybe it should be in the ifNotNil: branch only?"
 			 fixup mergeSimStack
 				ifNil: [self setMergeSimStackOf: fixup]
-				ifNotNil: [self assert: (self simStack: simStack isIdenticalTo: fixup mergeSimStack)]].
+				ifNotNil:
+					[self moveVolatileSimStackEntriesToRegisters.
+					 self assert: (self simStack: simStack isIdenticalTo: fixup mergeSimStack)]].
 	^super ensureFixupAt: targetPC
 ]
 
@@ -643,8 +644,9 @@ RegisterAllocatingCogit >> genJumpBackTo: targetPC [
 	| target |
 	"On first pass install register allocations (if any) as of the end of the loop and back up to recompile.
 	 One the second pass generate
-				(any merge elided because register assignments copied to loop head in first pass)
+				(any merge other than self elided because register assignments copied to loop head in first pass)
 				cmp stackLimit
+				maybe reload self
 				jumpAboveOrEqual target
 				flush
 				checkForInterrupts
@@ -655,6 +657,9 @@ RegisterAllocatingCogit >> genJumpBackTo: targetPC [
 	target := self fixupAt: targetPC.
 	self ensureRegisterAssignmentsAreAtHeadOfLoop: target.
 	self MoveAw: coInterpreter stackLimitAddress R: TempReg.
+	(target isReceiverResultRegSelf
+	 and: [simSelf liveRegister = NoReg]) ifTrue:
+		[simSelf storeToReg: ReceiverResultReg].
 	self CmpR: TempReg R: SPReg. "N.B. FLAGS := SPReg - TempReg"
 	self JumpAboveOrEqual: target.
 
@@ -753,9 +758,25 @@ RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> genJumpTo: targetBytecodePC [
 	"Overriden to avoid the flush because in this cogit stack state is merged at merge point."
+	| eventualTarget generator fixup |
+	eventualTarget := self eventualTargetOf: targetBytecodePC.
+	(eventualTarget > bytecodePC
+	 and: [self stackTopIsBoolean
+	 and: [(generator := self generatorForPC: eventualTarget) isConditionalBranch]])
+		ifTrue:
+			[eventualTarget := eventualTarget
+							  + generator numBytes
+							  + (generator isBranchTrue == (self ssTop constant = objectMemory trueObject)
+									ifTrue: [self spanFor: generator at: eventualTarget exts: 0 in: methodObj]
+									ifFalse: [0]).
+			self ssPop: 1.
+			fixup := self ensureFixupAt: eventualTarget.
+			self ssPop: -1]
+		ifFalse:
+			[fixup := self ensureFixupAt: eventualTarget].
 	deadCode := true. "can't fall through"
-	self Jump: (self ensureFixupAt: (self eventualTargetOf: targetBytecodePC)).
-	^ 0
+	self Jump: fixup.
+	^0
 ]
 
 { #category : #'bytecode generator support' }
