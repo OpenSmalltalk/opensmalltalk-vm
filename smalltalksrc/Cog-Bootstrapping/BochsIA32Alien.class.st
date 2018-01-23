@@ -69,6 +69,11 @@ BochsIA32Alien class >> dataSize [
 	^18096
 ]
 
+{ #category : #'instance creation' }
+BochsIA32Alien class >> implementationClass [
+	^Smalltalk wordSize = 8 ifTrue: [BochsIA32Alien64] ifFalse: [self]
+]
+
 { #category : #'class initialization' }
 BochsIA32Alien class >> initialize [
 	"BochsIA32Alien initialize"
