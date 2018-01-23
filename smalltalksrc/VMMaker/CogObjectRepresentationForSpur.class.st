@@ -1686,7 +1686,8 @@ CogObjectRepresentationForSpur >> genPrimitiveStringReplace [
 		jmpDestYoung := cogit JumpBelow: 0.
 		self checkRememberedInTrampoline ifFalse: 
 			[jmpAlreadyRemembered := self genCheckRememberedBitOf: arrayReg scratch: TempReg].
-		self callStoreCheckTrampoline.
+		cogit backEnd saveAndRestoreLinkRegAround:
+			[self callStoreCheckTrampoline].
 		jmpDestYoung jmpTarget: cogit Label.
 		self checkRememberedInTrampoline ifFalse: 
 			[jmpAlreadyRemembered jmpTarget: cogit Label].

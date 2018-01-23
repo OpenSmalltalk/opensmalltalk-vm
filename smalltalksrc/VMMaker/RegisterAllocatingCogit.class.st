@@ -659,7 +659,7 @@ RegisterAllocatingCogit >> genJumpBackTo: targetPC [
 	self MoveAw: coInterpreter stackLimitAddress R: TempReg.
 	(target isReceiverResultRegSelf
 	 and: [simSelf liveRegister = NoReg]) ifTrue:
-		[simSelf storeToReg: ReceiverResultReg].
+		[(self addressOf: simSelf) storeToReg: ReceiverResultReg].
 	self CmpR: TempReg R: SPReg. "N.B. FLAGS := SPReg - TempReg"
 	self JumpAboveOrEqual: target.
 
