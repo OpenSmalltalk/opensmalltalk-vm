@@ -14,6 +14,16 @@ GdbARMAlien64 class >> dataSize [
 ]
 
 { #category : #accessing }
+GdbARMAlien64 >> cflag [
+	^self unsignedLongAt: 577
+]
+
+{ #category : #accessing }
+GdbARMAlien64 >> cflag: anUnsignedInteger [
+	^self unsignedLongAt: 577 put: anUnsignedInteger
+]
+
+{ #category : #accessing }
 GdbARMAlien64 >> d0 [
 	^self unsignedLongLongAt: 2313
 ]
@@ -334,161 +344,82 @@ GdbARMAlien64 >> d9: anUnsignedInteger [
 ]
 
 { #category : #accessing }
-GdbARMAlien64 >> lr [
-	^self unsignedLongAt: 69
+GdbARMAlien64 >> fpCPSR [
+"The VFP cpsr flags are kept as a single word in the Alien structure. Return just the top 4 bits, the actual flags"
+	^(self unsignedLongAt: 2569) >>28
 ]
 
 { #category : #accessing }
-GdbARMAlien64 >> lr: anUnsignedInteger [
-	^self unsignedLongAt: 69 put: anUnsignedInteger
+GdbARMAlien64 >> ifflags [
+	^self unsignedLongAt: 585
 ]
 
 { #category : #accessing }
-GdbARMAlien64 >> pc [
-	^self unsignedLongAt: 73
+GdbARMAlien64 >> ifflags: anUnsignedInteger [
+	^self unsignedLongAt: 585 put: anUnsignedInteger
 ]
 
 { #category : #accessing }
-GdbARMAlien64 >> pc: anUnsignedInteger [
-	^self unsignedLongAt: 73 put: anUnsignedInteger
+GdbARMAlien64 >> nflag [
+	^self unsignedLongAt: 569
 ]
 
 { #category : #accessing }
-GdbARMAlien64 >> r0 [
-	^self unsignedLongAt: 13
+GdbARMAlien64 >> nflag: anUnsignedInteger [
+	^self unsignedLongAt: 569 put: anUnsignedInteger
 ]
 
 { #category : #accessing }
-GdbARMAlien64 >> r0: anUnsignedInteger [
-	^self unsignedLongAt: 13 put: anUnsignedInteger
+GdbARMAlien64 >> priorPc [
+	^self unsignedLongAt: 613
 ]
 
 { #category : #accessing }
-GdbARMAlien64 >> r1 [
-	^self unsignedLongAt: 17
+GdbARMAlien64 >> priorPc: anUnsignedInteger [
+	^self unsignedLongAt: 613 put: anUnsignedInteger
 ]
 
 { #category : #accessing }
-GdbARMAlien64 >> r10 [
-	^self unsignedLongAt: 53
+GdbARMAlien64 >> rawCPSR [
+	^self unsignedLongAt: 537
 ]
 
 { #category : #accessing }
-GdbARMAlien64 >> r10: anUnsignedInteger [
-	^self unsignedLongAt: 53 put: anUnsignedInteger
+GdbARMAlien64 >> sflag [
+	^self unsignedLongAt: 589
 ]
 
 { #category : #accessing }
-GdbARMAlien64 >> r11 [
-	^self unsignedLongAt: 57
+GdbARMAlien64 >> sflag: anUnsignedInteger [
+	^self unsignedLongAt: 589 put: anUnsignedInteger
 ]
 
 { #category : #accessing }
-GdbARMAlien64 >> r11: anUnsignedInteger [
-	^self unsignedLongAt: 57 put: anUnsignedInteger
+GdbARMAlien64 >> tflag [
+	^self unsignedLongAt: 593
 ]
 
 { #category : #accessing }
-GdbARMAlien64 >> r12 [
-	^self unsignedLongAt: 61
+GdbARMAlien64 >> tflag: anUnsignedInteger [
+	^self unsignedLongAt: 593 put: anUnsignedInteger
 ]
 
 { #category : #accessing }
-GdbARMAlien64 >> r12: anUnsignedInteger [
-	^self unsignedLongAt: 61 put: anUnsignedInteger
+GdbARMAlien64 >> vflag [
+	^self unsignedLongAt: 581
 ]
 
 { #category : #accessing }
-GdbARMAlien64 >> r1: anUnsignedInteger [
-	^self unsignedLongAt: 17 put: anUnsignedInteger
+GdbARMAlien64 >> vflag: anUnsignedInteger [
+	^self unsignedLongAt: 581 put: anUnsignedInteger
 ]
 
 { #category : #accessing }
-GdbARMAlien64 >> r2 [
-	^self unsignedLongAt: 21
+GdbARMAlien64 >> zflag [
+	^self unsignedLongAt: 573
 ]
 
 { #category : #accessing }
-GdbARMAlien64 >> r2: anUnsignedInteger [
-	^self unsignedLongAt: 21 put: anUnsignedInteger
-]
-
-{ #category : #accessing }
-GdbARMAlien64 >> r3 [
-	^self unsignedLongAt: 25
-]
-
-{ #category : #accessing }
-GdbARMAlien64 >> r3: anUnsignedInteger [
-	^self unsignedLongAt: 25 put: anUnsignedInteger
-]
-
-{ #category : #accessing }
-GdbARMAlien64 >> r4 [
-	^self unsignedLongAt: 29
-]
-
-{ #category : #accessing }
-GdbARMAlien64 >> r4: anUnsignedInteger [
-	^self unsignedLongAt: 29 put: anUnsignedInteger
-]
-
-{ #category : #accessing }
-GdbARMAlien64 >> r5 [
-	^self unsignedLongAt: 33
-]
-
-{ #category : #accessing }
-GdbARMAlien64 >> r5: anUnsignedInteger [
-	^self unsignedLongAt: 33 put: anUnsignedInteger
-]
-
-{ #category : #accessing }
-GdbARMAlien64 >> r6 [
-	^self unsignedLongAt: 37
-]
-
-{ #category : #accessing }
-GdbARMAlien64 >> r6: anUnsignedInteger [
-	^self unsignedLongAt: 37 put: anUnsignedInteger
-]
-
-{ #category : #accessing }
-GdbARMAlien64 >> r7 [
-	^self unsignedLongAt: 41
-]
-
-{ #category : #accessing }
-GdbARMAlien64 >> r7: anUnsignedInteger [
-	^self unsignedLongAt: 41 put: anUnsignedInteger
-]
-
-{ #category : #accessing }
-GdbARMAlien64 >> r8 [
-	^self unsignedLongAt: 45
-]
-
-{ #category : #accessing }
-GdbARMAlien64 >> r8: anUnsignedInteger [
-	^self unsignedLongAt: 45 put: anUnsignedInteger
-]
-
-{ #category : #accessing }
-GdbARMAlien64 >> r9 [
-	^self unsignedLongAt: 49
-]
-
-{ #category : #accessing }
-GdbARMAlien64 >> r9: anUnsignedInteger [
-	^self unsignedLongAt: 49 put: anUnsignedInteger
-]
-
-{ #category : #accessing }
-GdbARMAlien64 >> sp [
-	^self unsignedLongAt: 65
-]
-
-{ #category : #accessing }
-GdbARMAlien64 >> sp: anUnsignedInteger [
-	^self unsignedLongAt: 65 put: anUnsignedInteger
+GdbARMAlien64 >> zflag: anUnsignedInteger [
+	^self unsignedLongAt: 573 put: anUnsignedInteger
 ]
