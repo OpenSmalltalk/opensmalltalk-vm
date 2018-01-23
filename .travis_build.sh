@@ -40,6 +40,7 @@ echo "$(cat platforms/Cross/plugins/sqPluginsSCCSVersion.h | .git_filters/RevDat
 
 readonly BUILD_DIRECTORY="$(pwd)/build.${ARCH}/${FLAVOR}";
 readonly PRODUCTS_DIR="$(pwd)/products"
+mkdir "${PRODUCTS_DIR}" || true # ensure PRODUCTS_DIR exists
 
 export COGVREV="$(git describe --tags --always)"
 export COGVDATE="$(git show -s --format=%cd HEAD)"
@@ -112,7 +113,6 @@ build_windows() {
     mv "./build/vm" "${PRODUCTS_DIR}/" # Move result to PRODUCTS_DIR
     popd
 }
-
 
 if [[ ! $(type -t build_$PLATFORM) ]]; then
     echo "Unsupported platform '$(uname -s)'." 1>&2
