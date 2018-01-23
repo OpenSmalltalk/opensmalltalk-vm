@@ -1,3 +1,6 @@
+"
+I am a wrapper around the Bochs C++ x86_64 CPU emulator.
+"
 Class {
 	#name : #BochsX64Alien,
 	#superclass : #CogProcessorAlien,
@@ -13,6 +16,11 @@ Class {
 { #category : #'instance creation' }
 BochsX64Alien class >> dataSize [
 	^22672
+]
+
+{ #category : #'instance creation' }
+BochsX64Alien class >> implementationClass [
+	^Smalltalk wordSize = 8 ifTrue: [BochsX64Alien64] ifFalse: [self]
 ]
 
 { #category : #'class initialization' }
@@ -175,7 +183,7 @@ BochsX64Alien >> cr4: anUnsignedInteger [
 
 { #category : #disassembly }
 BochsX64Alien >> decorateDisassembly: anInstructionString for: aSymbolManager "<Cogit>" fromAddress: address [
-	| string i1 i2 v extra |
+	| string i1 i2 v o extra |
 	string := PrintCodeBytes
 				ifTrue: [anInstructionString]
 				ifFalse: [anInstructionString copyFrom: 1 to: (anInstructionString lastIndexOf: $:) - 1]. "trailing space useful for parsing numbers"
@@ -189,30 +197,35 @@ BochsX64Alien >> decorateDisassembly: anInstructionString for: aSymbolManager "<
 		[i2 := i1 + 6.
 		 ['0123456789abcdef' includes: (string at: i2)] whileTrue: [i2 := i2 + 1].
 		 (v := string copyFrom: i2 to: (i2 + 5 min: string size)) = '(%rbx)' ifTrue:
-			[v := Integer readFrom: (ReadStream on: string from: i1 + 6 to: i2 - 1) base: 16.
-		 	 (aSymbolManager lookupAddress: aSymbolManager varBaseAddress + v) ifNotNil:
+			[o := Integer readFrom: (ReadStream on: string from: i1 + 6 to: i2 - 1) base: 16.
+		 	 (aSymbolManager lookupAddress: aSymbolManager varBaseAddress + o) ifNotNil:
 				[:varName| extra := ' = ', varName]].
 		 v = '(%rip)' ifTrue:
-			[v := anInstructionString size - (anInstructionString lastIndexOf: $:) - 1 / 3. "Count number of instruction bytes to find size of instruction"
-			 v := v + address. "Add address of instruction"
-			 v := v + (Integer readFrom: (ReadStream on: string from: i1 + 6 to: i2 - 1) base: 16) signedIntFromLong64. "Add offset to yield pc-relative address"
-		 	 (aSymbolManager lookupAddress: v) ifNotNil:
+			[o := anInstructionString size - (anInstructionString lastIndexOf: $:) - 1 / 3. "Count number of instruction bytes to find size of instruction"
+			 o := o + address. "Add address of instruction"
+			 o := o + (Integer readFrom: (ReadStream on: string from: i1 + 6 to: i2 - 1) base: 16) signedIntFromLong64. "Add offset to yield pc-relative address"
+		 	 (aSymbolManager lookupAddress: o) ifNotNil:
 				[:methodName| extra := ' = ', methodName]].
-		 string := string
-					copyReplaceFrom: i1
-					to: i2 - 1
-					with: (aSymbolManager lookupCHexString: (string copyFrom: i1 + 4 to: i2 - 1))].
+		 v = ReceiverResultRegDereference ifTrue:
+			[o := Integer readFrom: (ReadStream on: string from: i1 + 6 to: i2 - 1) base: 16.
+		 	 (aSymbolManager lookupInstVarOffset: o) ifNotNil:
+				[:varName| string := string copyReplaceFrom: i1 to: i2 - 1 with: varName,'@',o printString. i2 := 0]].
+		 i2 ~= 0 ifTrue:
+			[string := string
+				copyReplaceFrom: i1
+				to: i2 - 1
+				with: (aSymbolManager lookupCHexString: (string copyFrom: i1 + 4 to: i2 - 1))]].
 	(i1 := string indexOfSubCollection: '%ss:0x') > 0 ifTrue:
 		[i2 := i1 + 6.
 		 ['0123456789abcdef' includes: (string at: i2)] whileTrue: [i2 := i2 + 1].
 		 ((string at: i2) = $(
 		  and: [(string at: i2 + 1) = $%]) ifTrue:
-			[v := Integer readFrom: (ReadStream on: string from: i1 + 6 to: i2 - 1) base: 16.
-			 v := (v bitAnd: (1 bitShift: 31) - 1) - (v bitAnd: (1 bitShift: 31)).
+			[o := Integer readFrom: (ReadStream on: string from: i1 + 6 to: i2 - 1) base: 16.
+			 o := (o bitAnd: (1 bitShift: 31) - 1) - (o bitAnd: (1 bitShift: 31)).
 			 ((string copyFrom: i2 to: (i2 + 5 min: string size)) = '(%rbp)' and: [PrintTempNames]) ifTrue:
-				[(aSymbolManager lookupFrameOffset: v) ifNotNil:
-					[:varName| string := string copyReplaceFrom: i1 to: i2 - 1 with: varName. i2 := 0].
-			i2 ~= 0 ifTrue: [string := string copyReplaceFrom: i1 to: i2 - 1 with: v printString]]]].
+				[(aSymbolManager lookupFrameOffset: o) ifNotNil:
+					[:varName| string := string copyReplaceFrom: i1 to: i2 - 1 with: varName,'@',o printString. i2 := 0].
+			i2 ~= 0 ifTrue: [string := string copyReplaceFrom: i1 to: i2 - 1 with: o printString]]]].
 	(i1 := string indexOfSubCollection: '$0x') > 0 ifTrue:
 		[i2 := i1 + 3.
 		 ['0123456789abcdef' includes: (string at: i2)] whileTrue: [i2 := i2 + 1].
@@ -229,12 +242,12 @@ BochsX64Alien >> decorateDisassembly: anInstructionString for: aSymbolManager "<
 					with: (aSymbolManager lookupCHexString: (string copyFrom: i1 + 1 to: i2 - 1)).
 		 i1 := string indexOfSubCollection: '+0x'. "calls & jumps"
 		 i1 > 0 ifTrue:
-			[v := Integer readFrom: (i2 := ReadStream on: string from: i1 + 3 to: string size) base: 16.
-			 v := ((v bitAnd: (1 bitShift: 63) - 1) - (v bitAnd: (1 bitShift: 63))) printStringRadix: 16.
-			 v := v first = $1
-					ifTrue: [v copyReplaceFrom: 1 to: 3 with: '+0x']
-					ifFalse: [v copyReplaceFrom: 2 to: 4 with: '0x'].
-			 string := string copyReplaceFrom: i1 to: i2 position with: v]].
+			[o := Integer readFrom: (i2 := ReadStream on: string from: i1 + 3 to: string size) base: 16.
+			 o := ((o bitAnd: (1 bitShift: 63) - 1) - (o bitAnd: (1 bitShift: 63))) printStringRadix: 16.
+			 o := o first = $1
+					ifTrue: [o copyReplaceFrom: 1 to: 3 with: '+0x']
+					ifFalse: [o copyReplaceFrom: 2 to: 4 with: '0x'].
+			 string := string copyReplaceFrom: i1 to: i2 position with: o]].
 	^extra
 		ifNil: [string]
 		ifNotNil:

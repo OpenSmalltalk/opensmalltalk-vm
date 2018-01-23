@@ -28,6 +28,11 @@ GdbARMAlien class >> dataSize [
 	^1792
 ]
 
+{ #category : #'instance creation' }
+GdbARMAlien class >> implementationClass [
+	^Smalltalk wordSize = 8 ifTrue: [GdbARMAlien64] ifFalse: [self]
+]
+
 { #category : #'class initialization' }
 GdbARMAlien class >> initialize [
 	"GdbARMAlien initialize"
