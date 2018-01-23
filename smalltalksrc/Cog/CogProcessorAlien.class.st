@@ -8,6 +8,7 @@ Class {
 	#classVars : [
 		'PrintCodeBytes',
 		'PrintTempNames',
+		'ReceiverResultRegDereference',
 		'SavedState'
 	],
 	#category : #'Cog-Processors'
@@ -16,6 +17,11 @@ Class {
 { #category : #debugger }
 CogProcessorAlien class >> defaultIntegerBaseInDebugger [
 	^16
+]
+
+{ #category : #'instance creation' }
+CogProcessorAlien class >> implementationClass [
+	^self subclassResponsibility
 ]
 
 { #category : #'class initialization' }
@@ -30,7 +36,7 @@ CogProcessorAlien class >> initialize [
 
 { #category : #'instance creation' }
 CogProcessorAlien class >> new [
-	^(self atAddress: self primitiveNewCPU) reset
+	^(self implementationClass atAddress: self primitiveNewCPU) reset
 ]
 
 { #category : #accessing }
@@ -59,6 +65,11 @@ CogProcessorAlien class >> printTempNames [
 { #category : #accessing }
 CogProcessorAlien class >> printTempNames: aBoolean [
 	PrintTempNames := aBoolean
+]
+
+{ #category : #accessing }
+CogProcessorAlien class >> setReceiverResultReg: integerOrNil [
+	ReceiverResultRegDereference := integerOrNil ifNotNil: ['(%', (self basicNew registerStateGetters at: integerOrNil + 1), ')']
 ]
 
 { #category : #'system startup' }
