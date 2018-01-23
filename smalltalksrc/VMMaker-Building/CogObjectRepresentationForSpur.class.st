@@ -1589,7 +1589,7 @@ CogObjectRepresentationForSpur >> genPrimitiveStringReplace [
 	It is possible to build a bigger version with the 2 different paths but I (Clement) believe this 
 	is too big machine code wise to be worth it."
 	
-	|arrayReg startReg stopReg replReg repStartReg jumpNotSmi1 jumpNotSmi2 jumpNotSmi3 jumpImm jumpEmpty jumpImmutable jumpOutOfBounds1 jumpOutOfBounds2 jumpOutOfBounds3 jumpOutOfBounds4 jumpIncorrectFormat1 jumpIncorrectFormat2 jumpIncorrectFormat3 jumpIncorrectFormat4 result jmpDestYoung jmpAlreadyRemembered instr jumpFinished adjust|
+	|arrayReg startReg stopReg replReg repStartReg jumpNotSmi1 jumpNotSmi2 jumpNotSmi3 jumpImm jumpEmpty jumpImmutable jumpOutOfBounds1 jumpOutOfBounds2 jumpOutOfBounds3 jumpOutOfBounds4 jumpIncorrectFormat1 jumpIncorrectFormat2 jumpIncorrectFormat3 jumpIncorrectFormat4 result jmpDestYoung jmpAlreadyRemembered instr adjust|
 	
 	<var: #jumpImm type: #'AbstractInstruction *'>
 	<var: #jumpEmpty type: #'AbstractInstruction *'>
@@ -1608,11 +1608,11 @@ CogObjectRepresentationForSpur >> genPrimitiveStringReplace [
 	<var: #jumpIncorrectFormat3 type: #'AbstractInstruction *'>
 	<var: #jumpIncorrectFormat4 type: #'AbstractInstruction *'>
 	<var: #jmpAlreadyRemembered type: #'AbstractInstruction *'>
-	
+
 	"Can I generate a quick path for this method ?"
 	((cogit seemsToBeInstantiating: objectMemory arrayFormat)
 		or: [cogit seemsToBeInstantiating: objectMemory firstByteFormat]) ifFalse: [^UnimplementedPrimitive].
-	
+
 	"I redefine those name to ease program comprehension"
 	arrayReg := ReceiverResultReg.
 	startReg := Arg0Reg.
@@ -1694,21 +1694,24 @@ CogObjectRepresentationForSpur >> genPrimitiveStringReplace [
 		"Copy the array"
 		cogit genStackArgAt: 2 into: stopReg.
 		self genConvertSmallIntegerToIntegerInReg: stopReg.
+		"Shift replReg to read it with startReg offset"
+		cogit SubR: startReg R: repStartReg. 
+		cogit LogicalShiftLeftCq: objectMemory shiftForWord R: repStartReg.
+		cogit AddR: repStartReg R: replReg. 
 		"shift by baseHeaderSize and then move from 1 relative to zero relative"
 		adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. 
 		adjust ~= 0 ifTrue: 
 			[ cogit AddCq: adjust R: startReg. 
-			  cogit AddCq: adjust R: stopReg. 
-			  cogit AddCq: adjust R: repStartReg. ].
+			  cogit AddCq: adjust R: stopReg ].
 	
-		instr := cogit CmpR: startReg R: stopReg.
-		jumpFinished := cogit JumpBelow: 0.
-		cogit MoveXwr: repStartReg R: replReg R: TempReg.
+		"Tight copying loop"
+		instr := cogit MoveXwr: startReg R: replReg R: TempReg.
 		cogit MoveR: TempReg Xwr: startReg R: arrayReg.
 		cogit AddCq: 1 R: startReg.
-		cogit AddCq: 1 R: repStartReg.
-		cogit Jump: instr.
-		jumpFinished jmpTarget: (jumpEmpty jmpTarget: cogit genPrimReturn).
+		cogit CmpR: startReg R: stopReg.
+		cogit JumpAboveOrEqual: instr.
+		
+		jumpEmpty jmpTarget: cogit genPrimReturn.
 	
 		"CANNOT REACH by falling though"
 	
@@ -1763,21 +1766,23 @@ CogObjectRepresentationForSpur >> genPrimitiveStringReplace [
 		self genConvertSmallIntegerToIntegerInReg: startReg.
 		cogit genStackArgAt: 2 into: stopReg.
 		self genConvertSmallIntegerToIntegerInReg: stopReg.
+		"Shift replReg to read it with startReg offset"
+		cogit SubR: startReg R: repStartReg. 
+		cogit AddR: repStartReg R: replReg. 
 		"shift by baseHeaderSize and then move from 1 relative to zero relative"
 		adjust := objectMemory baseHeaderSize - 1.
 		adjust ~= 0 ifTrue: 
 			[ cogit AddCq: adjust R: startReg. 
-			  cogit AddCq: adjust R: stopReg. 
-			  cogit AddCq: adjust R: repStartReg. ].
+			  cogit AddCq: adjust R: stopReg.  ].
 	
-		instr := cogit CmpR: startReg R: stopReg.
-		jumpFinished := cogit JumpBelow: 0.
-		cogit MoveXbr: repStartReg R: replReg R: TempReg.
+		"Tight copying loop"
+		instr := cogit MoveXbr: startReg R: replReg R: TempReg.
 		cogit MoveR: TempReg Xbr: startReg R: arrayReg.
 		cogit AddCq: 1 R: startReg.
-		cogit AddCq: 1 R: repStartReg.
-		cogit Jump: instr.
-		jumpFinished jmpTarget: (jumpEmpty jmpTarget: cogit genPrimReturn).
+		cogit CmpR: startReg R: stopReg.
+		cogit JumpAboveOrEqual: instr.
+		
+		jumpEmpty jmpTarget: cogit genPrimReturn.
 	
 		"CANNOT REACH by falling though"
 	
