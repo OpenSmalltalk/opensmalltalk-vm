@@ -11,10 +11,11 @@ readonly IDENTIFIER="cog_${ARCH}_${FLAVOR}_${REV}"
 readonly KEY_CHAIN=macos-build.keychain
 
 macos_codesign() {
-  local path_cer=$1
-  local path_p12=$2
-  local cert_pass=$3
-  local sign_identity=$4
+  local app_dir=$1
+  local path_cer=$2
+  local path_p12=$3
+  local cert_pass=$4
+  local sign_identity=$5
 
   echo "Signing app bundle..."
   # Set up keychain
@@ -25,7 +26,7 @@ macos_codesign() {
   security import "${path_cer}" -k ~/Library/Keychains/"${KEY_CHAIN}" -T /usr/bin/codesign
   security import "${path_p12}" -k ~/Library/Keychains/"${KEY_CHAIN}" -P "${cert_pass}" -T /usr/bin/codesign
   # Invoke codesign
-  codesign -s "${sign_identity}" --force --deep ./*.app
+  codesign -s "${sign_identity}" --force --deep "${app_dir}"
   # Remove sensitive files again
   rm -rf "${path_cer}" "${path_p12}"
   security delete-keychain "${KEY_CHAIN}"
@@ -48,23 +49,22 @@ if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
     fi
   done
 elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+  readonly APP_DIR=$(find "${PRODUCTS_DIR}" -type d -path "*.app" | head -n 1)
+  if [[ -z "${APP_DIR}" ]]; then
+    echo "Unable to locate app bundle."
+    exit 30
+  fi
   readonly DEPLOY_DIR="${TRAVIS_BUILD_DIR}/deploy"
   if [[ "${FLAVOR}" == "squeak"* ]]; then
     path_cer="${DEPLOY_DIR}/squeak/sign.cer"
     path_p12="${DEPLOY_DIR}/squeak/sign.p12"
     openssl aes-256-cbc -k "${SQUEAK_SIGN_PASSWORD}" -in "${path_cer}.enc" -out "${path_cer}" -d
     openssl aes-256-cbc -k "${SQUEAK_SIGN_PASSWORD}" -in "${path_p12}.enc" -out "${path_p12}" -d
-    macos_codesign "${path_cer}" "${path_p12}" "${SQUEAK_CERT_PASSWORD}" "${SQUEAK_SIGN_IDENTITY}"
+    macos_codesign "${APP_DIR}" "${path_cer}" "${path_p12}" "${SQUEAK_CERT_PASSWORD}" "${SQUEAK_SIGN_IDENTITY}"
   elif [[ "${FLAVOR}" == "pharo"* ]]; then
     # TODO: decrypt Pharo signing certificate and invoke macos_codesign to sign app bundle
-    # macos_codesign "${path_cer}" "${path_p12}" "${PHARO_CERT_PASSWORD}" "${PHARO_SIGN_IDENTITY}"
+    # macos_codesign "${APP_DIR}" "${path_cer}" "${path_p12}" "${PHARO_CERT_PASSWORD}" "${PHARO_SIGN_IDENTITY}"
     true
-  fi
-  APP_DIR=$(find "${PRODUCTS_DIR}" -type d -path "*.app" | head -n 1)
-  if [[ -z "${APP_DIR}" ]]; then
-    echo "Unable to locate app bundle."
-    ls
-    exit 30
   fi
   TMP_DMG="temp.dmg"
   hdiutil create -size 64m -volname "${IDENTIFIER}" -srcfolder "${APP_DIR}" \
