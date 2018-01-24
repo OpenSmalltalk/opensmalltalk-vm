@@ -49,7 +49,7 @@ if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
     fi
   done
 elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-  readonly APP_DIR=$(find "${PRODUCTS_DIR}" -type d -path "*.app" | head -n 1)
+  APP_DIR=$(find "${PRODUCTS_DIR}" -type d -path "*.app" | head -n 1)
   if [[ -z "${APP_DIR}" ]]; then
     echo "Unable to locate app bundle."
     exit 30
@@ -65,6 +65,15 @@ elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
     # TODO: decrypt Pharo signing certificate and invoke macos_codesign to sign app bundle
     # macos_codesign "${APP_DIR}" "${path_cer}" "${path_p12}" "${PHARO_CERT_PASSWORD}" "${PHARO_SIGN_IDENTITY}"
     true
+  elif [[ "${FLAVOR}" == "newspeak"* ]]; then
+    NEW_APP_DIR="${PRODUCTS_DIR}/Newspeak.app"
+    mv "${APP_DIR}" "${NEW_APP_DIR}"
+    APP_DIR="${NEW_APP_DIR}"
+    path_cer="${DEPLOY_DIR}/newspeak/sign.cer"
+    path_p12="${DEPLOY_DIR}/newspeak/sign.p12"
+    openssl aes-256-cbc -k "${NEWSPEAK_SIGN_PASSWORD}" -in "${path_cer}.enc" -out "${path_cer}" -d
+    openssl aes-256-cbc -k "${NEWSPEAK_SIGN_PASSWORD}" -in "${path_p12}.enc" -out "${path_p12}" -d
+    macos_codesign "${APP_DIR}" "${path_cer}" "${path_p12}" "${NEWSPEAK_CERT_PASSWORD}" "${NEWSPEAK_SIGN_IDENTITY}"
   fi
   TMP_DMG="temp.dmg"
   hdiutil create -size 64m -volname "${IDENTIFIER}" -srcfolder "${APP_DIR}" \
