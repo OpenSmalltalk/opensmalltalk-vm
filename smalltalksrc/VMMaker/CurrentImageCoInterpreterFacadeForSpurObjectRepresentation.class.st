@@ -178,6 +178,20 @@ CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> isImmediateClass: 
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> maybeMethodClassOf: methodObj seemsToBeInstantiating: format [
+	"Answers if the code is installed in a class instantiating objects with the format. Used in primitive 
+	 generation to make a quick path based on where the method is installed. This method cannot
+	 be used as a guarantee as there can be false positive, it's just a heuristic.
+	 Tries to interpret the last literal of the method as a behavior (more than 3 fields, 3rd field a Smi).
+	 If it can be interpreted as a behavior, answers if instSpec matches the format, else answers false."
+	<api>
+	| maybeClassObj|
+	maybeClassObj := (self objectForOop: methodObj) methodClass.
+	^maybeClassObj isBehavior
+	 and: [maybeClassObj instSpec = format]
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacadeForSpurObjectRepresentation >> needGCFlagAddress [
 	^self addressForLabel: #needGCFlag
 ]
