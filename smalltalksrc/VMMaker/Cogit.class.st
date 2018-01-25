@@ -499,20 +499,10 @@ Cogit class >> cog: aCompiledMethod selector: aSelector [
 Cogit class >> cog: aCompiledMethod selectorOrNumCopied: selectorOrNumCopied options: optionsDictionaryOrArray [
 	"StackToRegisterMappingCogit cog: (Integer >> #benchFib) selector: #benchFib options: #(COGMTVM false)"
 	| cogit coInterpreter |
-	cogit := self instanceForTests: optionsDictionaryOrArray.
+	cogit := self initializedInstanceForTests: optionsDictionaryOrArray.
+	coInterpreter := cogit coInterpreter.
 	self attemptToComputeTempNamesFor: aCompiledMethod.
 	self attemptToComputeInstVarNamesFor: aCompiledMethod.
-	coInterpreter := CurrentImageCoInterpreterFacade forCogit: cogit.
-	[cogit
-		setInterpreter: coInterpreter;
-		singleStep: true;
-		initializeCodeZoneFrom: 1024 upTo: coInterpreter memory size / 2. "leave space for rump C stack"
-	 cogit methodZone freeStart: (cogit methodZone freeStart roundUpTo: 1024)]
-		on: Notification
-		do: [:ex|
-			(ex messageText beginsWith: 'cannot find receiver for') ifTrue:
-				[ex resume: coInterpreter].
-			ex pass].
 	^{ coInterpreter.
 		cogit.
 		selectorOrNumCopied isInteger
@@ -727,19 +717,9 @@ Cogit class >> genAndDis: methodOrDoitString options: optionsDictionaryOrArray [
 
 { #category : #'in-image compilation' }
 Cogit class >> genAndDisPICoptions: optionsDictionaryOrArray [
-	"StackToRegisterMappingCogit genAndDisPICoptions: #(ISA ARMv5 CogCompilerClass CogInLineLiteralsARMCompiler)"
-	| cogit coInterpreter |
-	cogit := self instanceForTests: optionsDictionaryOrArray.
-	coInterpreter := CurrentImageCoInterpreterFacade forCogit: cogit.
-	[cogit
-		setInterpreter: coInterpreter;
-		singleStep: true;
-		initializeCodeZoneFrom: 1024 upTo: coInterpreter memory size / 2. "leave space for rump C stack"
-	 cogit methodZone freeStart: (cogit methodZone freeStart roundUpTo: 1024)]
-		on: Notification
-		do: [:ex|
-			(ex messageText beginsWith: 'cannot find receiver for') ifTrue:
-				[ex resume: coInterpreter]].
+	"StackToRegisterMappingCogit genAndDisPICoptions: #(ISA ARMv5 CogCompilerClass CogOutOfLineLiteralsARMCompiler)"
+	| cogit |
+	cogit := self initializedInstanceForTests: optionsDictionaryOrArray.
 	cogit disassembleFrom: cogit cPICPrototype + (cogit sizeof: CogMethod) to: cogit cPICPrototype + cogit closedPICSize
 ]
 
@@ -1115,6 +1095,26 @@ Cogit class >> initializeWithOptions: optionsDictionary [
 ]
 
 { #category : #'in-image compilation support' }
+Cogit class >> initializedInstanceForTests: optionsDictionaryOrArray [
+	"Answer an instance of a Cogit suitable for running tests that has initialized
+	 its method zone (generated trampolines etc)"
+	| cogit coInterpreter |
+	cogit := self instanceForTests: optionsDictionaryOrArray.
+	coInterpreter := CurrentImageCoInterpreterFacade forCogit: cogit.
+	[cogit
+		setInterpreter: coInterpreter;
+		singleStep: true;
+		initializeCodeZoneFrom: 1024 upTo: coInterpreter memory size.
+	 cogit methodZone freeStart: (cogit methodZone freeStart roundUpTo: 1024)]
+		on: Notification
+		do: [:ex|
+			(ex messageText beginsWith: 'cannot find receiver for') ifTrue:
+				[ex resume: coInterpreter].
+			ex pass].
+	^cogit
+]
+
+{ #category : #'in-image compilation support' }
 Cogit class >> instanceForTests: optionsDictionaryOrArray [
 	"Initialize all the relevant classes from the options and answer a new instance of me."
 	| initOptions |
@@ -1426,17 +1426,9 @@ Cogit class >> testPCMappingSelect: aBlock [
 { #category : #tests }
 Cogit class >> testPCMappingSelect: aBlock options: optionsDictionaryOrArray [
 	"Test pc mapping both ways using a selection of the methods in the current image."
-	| n cogit coInterpreter |
-	cogit := self instanceForTests: optionsDictionaryOrArray.
-	coInterpreter := CurrentImageCoInterpreterFacade forCogit: cogit.
-	[cogit
-			setInterpreter: coInterpreter;
-			singleStep: true;
-			initializeCodeZoneFrom: 1024 upTo: coInterpreter memory size]
-		on: Notification
-		do: [:ex|
-			(ex messageText beginsWith: 'cannot find receiver for') ifTrue:
-				[ex resume: coInterpreter]].
+	| cogit coInterpreter n |
+	cogit := self initializedInstanceForTests: optionsDictionaryOrArray.
+	coInterpreter := cogit coInterpreter.
 	n := -1.
 	SystemNavigation new allSelect:
 		[:m| | cm |
@@ -1455,7 +1447,7 @@ Cogit class >> testPCMappingSelect: aBlock options: optionsDictionaryOrArray [
 				cm ifNil: [Transcript show: 'After 1 Cog compiled code compaction, still not able to generate the cog method...' ] ].
 			  cm ifNotNil:
 				[cogit testPCMappingForCompiledMethod: m cogMethod: cm]].
-		 false] 
+		 false]
 ]
 
 { #category : #documentation }

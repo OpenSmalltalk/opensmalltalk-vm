@@ -13042,9 +13042,11 @@ StackToRegisterMappingCogit >> printSimStack: aSimStack toDepth: limit spillBase
 		width ifNotNil:
 			[self put: (tempNames at: i + 1 ifAbsent: ['']) paddedTo: width tabWidth: tabWidth on: aStream].
 		aStream print: i.
-		i = spillBase
-			ifTrue: [aStream nextPutAll: ' sb'; tab]
-			ifFalse: [aStream tab; tab].
+		i = simStackPtr ifTrue:
+			[aStream nextPutAll: '<-' ].
+		i = spillBase ifTrue:
+			[aStream nextPutAll: '(sb)'].
+		aStream tab: (i = spillBase ifTrue: [1] ifFalse: [2]).
 		(aSimStack at: i) printStateOn: aStream.
 		aStream cr; flush]
 ]
@@ -13336,6 +13338,15 @@ StackToRegisterMappingCogit >> simStackEntryClass [
 StackToRegisterMappingCogit >> simStackNativeEntryClass [
 	<doNotGenerate>
 	^CogSimStackNativeEntry
+]
+
+{ #category : #'simulation only' }
+StackToRegisterMappingCogit >> simStackPrintString [
+	<doNotGenerate>
+	^String streamContents:
+		[:s|
+		 optStatus printStateOn: s.
+		self printSimStack: simStack toDepth: simStackPtr spillBase: simSpillBase on: s]
 ]
 
 { #category : #'simulation stack' }
@@ -13992,7 +14003,7 @@ StackToRegisterMappingCogit >> stackEntryIsBoolean: simStackEntry [
 { #category : #testing }
 StackToRegisterMappingCogit >> stackTopIsBoolean [
 	<inline: true>
-	^simStackPtr > 0 and: [self stackEntryIsBoolean: self ssTop]
+	^simStackPtr >= methodOrBlockNumArgs and: [self stackEntryIsBoolean: self ssTop]
 ]
 
 { #category : #'simulation only' }
@@ -14203,7 +14214,7 @@ StackToRegisterMappingCogit >> voidReceiverResultRegContainsSelf [
 		(self simStackAt: i) registerOrNone = ReceiverResultReg ifTrue:
 			[spillIndex := i]].
 	spillIndex > 0 ifTrue:
-		[self ssFlushTo: simStackPtr - spillIndex]
+		[self ssFlushTo: spillIndex]
 ]
 
 { #category : #'simulation only' }

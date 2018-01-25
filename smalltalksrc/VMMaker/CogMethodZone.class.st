@@ -773,7 +773,8 @@ CogMethodZone >> quickClearCogCompiledCode [
 	"Quick, for in-image testing"
 	<doNotGenerate>
 	mzFreeStart := baseAddress.
-	self clearCogCompiledCode
+	self clearCogCompiledCode.
+	cogit backEnd stopsFrom: mzFreeStart to: limitAddress - 1
 ]
 
 { #category : #'young referers' }
