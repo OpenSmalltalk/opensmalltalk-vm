@@ -129,5 +129,4 @@ deploy:
     secure: SOq4LiXFepptbgPZ4w2McefZOsRRAy8u88/+dpNof57BG4gYTvyESV1EB4CXTXjX
   artifact: osvm
   on:
-    branch: Cog
     appveyor_repo_tag: true
