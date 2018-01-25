@@ -9,7 +9,7 @@
         "desc": "Automatic build"
     },
     "files": [
-        {"includePattern": "./products/(cog_.*\\.(?:gz|zip|dmg))", "uploadPattern": "$1"}
+        {"includePattern": "../products/(cog_.*\\.(?:gz|zip|dmg))", "uploadPattern": "$1"}
     ],
     "publish": true
 }

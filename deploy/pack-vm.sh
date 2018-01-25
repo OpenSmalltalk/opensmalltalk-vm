@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-readonly PRODUCTS_DIR="$(pwd)/products"
+readonly PRODUCTS_DIR="${TRAVIS_BUILD_DIR:-${APPVEYOR_BUILD_FOLDER}}/products"
 if [[ ! -d "${PRODUCTS_DIR}" ]]; then
   echo "No products directory found."
   exit 10

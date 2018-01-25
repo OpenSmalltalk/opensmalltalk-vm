@@ -1,23 +1,7 @@
 #!/bin/bash
 set -e
 
-"./deploy/generate-artifacts.sh"
-
-echo "$(cat .bintray.json | .git_filters/RevDateURL.smudge)" > .bintray.json
-sed -i.bak 's/$Rev: \([0-9][0-9]*\) \$/\1/' .bintray.json
-sed -i.bak 's/$Date: \(.*\) \$/\1/' .bintray.json
-rm -f .bintray.json.bak
-
-if [[ "${APPVEYOR}" ]]; then
-    appveyor DownloadFile https://curl.haxx.se/ca/cacert.pem
-    export SSL_CERT_FILE=cacert.pem
-    export PATH="C:\\Ruby23\\bin:$PATH"
-    export CMDSHELL="cmd /C "
-fi
-$CMDSHELL gem install dpl
-$CMDSHELL dpl --provider=bintray --user=timfel --key=$BINTRAYAPIKEY --file=.bintray.json
-
-# Clean out old versions from bintray, leaving only the last version per month
+# Remove old versions from bintray, leaving only the last version per month
 if [[ "${TRAVIS_OS_NAME}" == "linux" ]] && [[ "${ARCH}" == "linux64x64" ]] && [[ "${FLAVOR}" == "squeak.cog.spur" ]]; then
     ruby -rdate -rnet/http -rjson -e "lastver=DateTime.now;
         user='timfel';

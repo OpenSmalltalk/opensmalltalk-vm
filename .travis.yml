@@ -109,9 +109,11 @@ before_script: $CHROOT ./.travis_build.sh
 
 script: ./.travis_test.sh
 
+before_deploy: (cd deploy && ./filter-exec.sh pack-vm.sh)
+
 deploy:
   - provider: script # Deploy bleeding edge to Bintray
-    script: ./.travis_deploy.sh
+    script: (cd deploy && ./bintray.sh)
     skip_cleanup: true
     on:
       repo: OpenSmalltalk/opensmalltalk-vm
@@ -132,3 +134,5 @@ deploy:
     on:
       repo: OpenSmalltalk/opensmalltalk-vm
       tags: true
+
+after_deploy: (cd deploy && ./filter-exec.sh bintray-cleanup.sh)
