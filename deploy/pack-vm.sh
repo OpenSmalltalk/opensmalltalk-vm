@@ -8,7 +8,8 @@ if [[ ! -d "${PRODUCTS_DIR}" ]]; then
   exit 10
 fi
 readonly REV=$(grep -m1 "SvnRawRevisionString" "${BUILD_DIR}/platforms/Cross/vm/sqSCCSVersion.h" | sed 's/[^0-9.]*\([0-9.]*\).*/\1/')
-readonly IDENTIFIER="cog_${ARCH}_${FLAVOR}_${REV}"
+readonly IDENTIFIER="${FLAVOR}_${ARCH}_${REV}"
+readonly IDENTIFIER_ITIMER="${FLAVOR}_${ARCH}_itimer_${REV}"
 readonly KEY_CHAIN=macos-build.keychain
 
 macos_codesign() {
@@ -40,7 +41,7 @@ if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then
     if [[ "${dir}" == *"ht/" ]]; then
       name="${IDENTIFIER}"
     else
-      name="${IDENTIFIER}_itimer"
+      name="${IDENTIFIER_ITIMER}"
     fi
     tar czf "${name}.tar.gz" "${dir}"
     counter=$((counter+1))
