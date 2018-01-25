@@ -2,7 +2,7 @@
 set -e
 
 if [[ -n "${TRAVIS_TAG:-${APPVEYOR_REPO_TAG_NAME}}" ]]; then
-  "Skipping a deployment to Bintray because build was pushed by a tag."
+  echo "Skipping a deployment to Bintray because build was pushed by a tag."
   exit
 fi
 
