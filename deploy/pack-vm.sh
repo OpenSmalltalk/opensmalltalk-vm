@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-readonly BUILD_DIR="${TRAVIS_BUILD_DIR:-${APPVEYOR_BUILD_FOLDER}}/products"
+readonly BUILD_DIR="${TRAVIS_BUILD_DIR:-${APPVEYOR_BUILD_FOLDER}}"
 readonly PRODUCTS_DIR="${BUILD_DIR}/products"
 if [[ ! -d "${PRODUCTS_DIR}" ]]; then
   echo "No products directory found."
