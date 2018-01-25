@@ -622,6 +622,16 @@ CurrentImageCoInterpreterFacade >> long32At: index put: value [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> long64At: byteIndex [
+	^objectMemory long64At: byteIndex
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> long64At: byteIndex put: aValue [
+	^objectMemory long64At: byteIndex put: aValue
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> longAt: index [
 	^objectMemory longAt: index
 ]
@@ -690,6 +700,11 @@ CurrentImageCoInterpreterFacade >> maxLookupNoMNUErrorCode [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> maybeSelectorOfMethod: methodOop [
 	^self oopForObject: (self objectForOop: methodOop) selector
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> mcprimFunctionForPrimitiveIndex: primIndex [
+	^self oopForObject: (coInterpreter mcprimFunctionForPrimitiveIndex: primIndex)
 ]
 
 { #category : #accessing }

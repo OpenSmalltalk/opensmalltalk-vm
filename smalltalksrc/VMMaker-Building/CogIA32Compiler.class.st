@@ -4110,8 +4110,25 @@ CogIA32Compiler >> stop [
 
 { #category : #'generate machine code' }
 CogIA32Compiler >> stopsFrom: startAddr to: endAddr [
-	startAddr to: endAddr do:
-		[:addr | objectMemory byteAt: addr put: self stop]
+	self
+		cCode: [self self me: startAddr ms: self stop et: endAddr - startAddr + 1]
+		inSmalltalk:
+			[| alignedEnd alignedStart stops |
+			stops := self stop << 8 + self stop.
+			stops := stops << 16 + stops.
+			alignedStart := startAddr + 3 // 4 * 4.
+			alignedEnd := endAddr - 1 // 4 * 4.
+			alignedEnd <= startAddr
+				ifTrue:
+					[startAddr to: endAddr do:
+						[:addr | objectMemory byteAt: addr put: self stop]]
+				ifFalse:
+					[startAddr to: alignedStart - 1 do:
+						[:addr | objectMemory byteAt: addr put: self stop].
+					 alignedStart to: alignedEnd by: 4 do:
+						[:addr | objectMemory long32At: addr put: stops].
+					 alignedEnd + 4 to: endAddr do:
+						[:addr | objectMemory byteAt: addr put: self stop]]]
 ]
 
 { #category : #'inline cacheing' }
