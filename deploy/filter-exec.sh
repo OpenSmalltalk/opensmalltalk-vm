@@ -14,4 +14,4 @@ if [ "${TRAVIS_BRANCH:-${APPVEYOR_REPO_BRANCH}}" != "Cog" ]; then
 	exit
 fi
 
-sh `dirname $0`/$1
+`dirname $0`/$1

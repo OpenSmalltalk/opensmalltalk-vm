@@ -117,8 +117,8 @@ artifacts:
     name: osvm
 
 before_deploy: # instead of `deploy_script` (because a `deploy` provider is used as well)
-   '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh pack-vm.sh"'
-   '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh bintray.sh"'
+  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh pack-vm.sh"'
+  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh bintray.sh"'
   # - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy/pharo; exec 0</dev/null; exec ./filter-exec.sh pack-vm.sh"'
   # - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy/pharo; exec 0</dev/null; exec ./filter-exec.sh deploy-key.sh"'
   # - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy/pharo; exec 0</dev/null; exec ./filter-exec.sh deploy-files.pharo.org.sh"'
