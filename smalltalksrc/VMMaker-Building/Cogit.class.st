@@ -5350,6 +5350,8 @@ Cogit >> compileCogMethod: selector [
 	(numBlocks := self scanMethod) < 0 ifTrue:
 		[^coInterpreter cCoerceSimple: numBlocks to: #'CogMethod *'].
 	numCleanBlocks := self scanForCleanBlocks.
+	self methodFoundInvalidPostScan ifTrue:
+		[^coInterpreter cCoerceSimple: ShouldNotJIT to: #'CogMethod *'].
 	self allocateBlockStarts: numBlocks + numCleanBlocks.
 	blockCount := 0.
 	numCleanBlocks > 0 ifTrue:
@@ -10169,6 +10171,12 @@ Cogit >> method: methodA hasSameCodeAs: methodB checkPenultimate: comparePenulti
 		(objectMemory fetchByte: bi ofObject: methodA) ~= (objectMemory fetchByte: bi ofObject: methodB) ifTrue:
 			[^false]].
 	^true
+]
+
+{ #category : #testing }
+Cogit >> methodFoundInvalidPostScan [
+	"This is a hook for subclasses to filter out methods they can't deal with."
+	^false
 ]
 
 { #category : #accessing }
