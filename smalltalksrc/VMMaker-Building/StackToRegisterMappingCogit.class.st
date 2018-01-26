@@ -2311,12 +2311,14 @@ StackToRegisterMappingCogit >> assertCorrectSimStackPtr [
 	"Would like to assert simply simSpillBase > methodOrBlockNumTemps but can't because
 	 of the initialNils hack for nested blocks in SqueakV3PlusClosures"
 	self assert: (simSpillBase >= methodOrBlockNumTemps
-				or: [inBlock = InVanillaBlock]).
- 	 self cCode: '' inSmalltalk:
+				or: [inBlock = InVanillaBlock and: [simSpillBase >= 0]]).
+	(needsFrame and: [simSpillBase > 0]) ifTrue:
+		[self assert: (self simStackAt: simSpillBase - 1) spilled == true.
+		 self assert: (simSpillBase > simStackPtr or: [(self simStackAt: simSpillBase) spilled == false])].
+ 	self cCode: '' inSmalltalk:
 		[deadCode ifFalse:
 			[self assert: simStackPtr + (needsFrame ifTrue: [0] ifFalse: [1])
 						= (self debugStackPointerFor: bytecodePC)]].
-	
 ]
 
 { #category : #'simulation stack' }
@@ -12873,6 +12875,16 @@ StackToRegisterMappingCogit >> methodAbortTrampolineFor: numArgs [
 	^methodAbortTrampolines at: (numArgs min: self numRegArgs + 1)
 ]
 
+{ #category : #testing }
+StackToRegisterMappingCogit >> methodFoundInvalidPostScan [
+	"Frameless methods with local temporaries cause problems,
+	 mostly in asserts, and yet they matter not at all for performance.
+	 Shun them."
+	needsFrame ifFalse:
+		[^methodOrBlockNumTemps > methodOrBlockNumArgs].
+	^super methodFoundInvalidPostScan
+]
+
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> needsFrameIfExtBGT2: stackDelta [
 	^extB < 0 or: [extB > 2]
@@ -13084,7 +13096,6 @@ StackToRegisterMappingCogit >> restoreSimStackAtMergePoint: fixup [
 	"All the execution paths reaching a merge point expect everything to be
 	 spilled on stack and the optStatus is unknown. Throw away all simStack and 
 	 optStatus optimization state."
-	simSpillBase := methodOrBlockNumTemps + 1.
 	self voidReceiverOptStatus.
 	methodOrBlockNumTemps + 1 to: simStackPtr do:
 		[:i|
@@ -13093,6 +13104,7 @@ StackToRegisterMappingCogit >> restoreSimStackAtMergePoint: fixup [
 			offset: FoxMFReceiver - (i - methodOrBlockNumArgs * objectMemory bytesPerOop);
 			register: FPReg;
 			spilled: true].
+	simSpillBase := simStackPtr + 1.
 	LowcodeVM ifTrue:
 		[0 to: simNativeStackPtr do:
 			[ :i |
@@ -13520,7 +13532,8 @@ StackToRegisterMappingCogit >> ssFlushUpThrough: unaryBlock [
 	"Any occurrences on the stack of the value being stored (which is the top of stack)
 	 must be flushed, and hence any values colder than them stack."
 	<inline: true>
-	simStackPtr - 1 to: (simSpillBase max: 0) by: -1 do:
+	self assert: simSpillBase >= 0.
+	simStackPtr - 1 to: simSpillBase by: -1 do:
 		[ :index |
 		(unaryBlock value: (self simStackAt: index)) ifTrue: [ ^ self ssFlushTo: index ] ]
 ]
@@ -13635,7 +13648,8 @@ StackToRegisterMappingCogit >> ssPop: n [
 	self assert: (simStackPtr - n >= methodOrBlockNumTemps
 				or: [(needsFrame not and: [simStackPtr - n >= 0])
 				or: [self maybeCompilingFirstPassOfBlockWithInitialPushNil]]).
-	simStackPtr := simStackPtr - n
+	simStackPtr := simStackPtr - n.
+	self updateSimSpillBase
 ]
 
 { #category : #'simulation stack' }
@@ -13661,13 +13675,7 @@ StackToRegisterMappingCogit >> ssPush: n [
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssPushAnnotatedConstant: literal [
-	self ssPush: 1.
-	self updateSimSpillBase.
-	self ssTop
-		type: SSConstant;
-		spilled: false;
-		constant: literal;
-		bcptr: bytecodePC.
+	self ssPushConstant: literal.
 	self annotateInstructionForBytecode.
 	^0
 ]
@@ -13675,25 +13683,25 @@ StackToRegisterMappingCogit >> ssPushAnnotatedConstant: literal [
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssPushBase: reg offset: offset [
 	self ssPush: 1.
-	self updateSimSpillBase.
 	self ssTop
 		type: SSBaseOffset;
 		spilled: false;
 		register: reg;
 		offset: offset;
 		bcptr: bytecodePC.
+	self updateSimSpillBase.
 	^0
 ]
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssPushConstant: literal [
 	self ssPush: 1.
-	self updateSimSpillBase.
 	self ssTop
 		type: SSConstant;
 		spilled: false;
 		constant: literal;
 		bcptr: bytecodePC.
+	self updateSimSpillBase.
 	^0
 ]
 
@@ -13872,12 +13880,12 @@ StackToRegisterMappingCogit >> ssPushNativeRegisterSingleFloat: reg [
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssPushRegister: reg [
 	self ssPush: 1.
-	self updateSimSpillBase.
 	self ssTop
 		type: SSRegister;
 		spilled: false;
 		register: reg;
 		bcptr: bytecodePC.
+	self updateSimSpillBase.
 	^0
 ]
 
@@ -14110,11 +14118,24 @@ StackToRegisterMappingCogit >> tryCollapseTempVectorInitializationOfSize: slots 
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> updateSimSpillBase [
+	"Something volatile has been pushed on the stack; update simSpillBase accordingly."
 	<inline: true>
-	self assert: (simSpillBase > methodOrBlockNumTemps
-				or: [inBlock = InVanillaBlock]).
-	simSpillBase > simStackPtr ifTrue:
-		[simSpillBase := simStackPtr max: methodOrBlockNumTemps].
+	self assert: ((simSpillBase > methodOrBlockNumTemps
+				and: [simStackPtr >= methodOrBlockNumTemps])
+				or: [inBlock = InVanillaBlock and: [compilationPass = 1]]).
+	simSpillBase > simStackPtr
+		ifTrue:
+			[simSpillBase := simStackPtr + 1.
+			 [simSpillBase - 1 > methodOrBlockNumTemps
+			   and: [(self simStackAt: simSpillBase - 1) spilled not]] whileTrue:
+				[simSpillBase := simSpillBase - 1]]
+		ifFalse:
+			[[(self simStackAt: simSpillBase) spilled
+			   and: [simSpillBase <= simStackPtr]] whileTrue:
+				[simSpillBase := simSpillBase + 1]].
+	methodOrBlockNumTemps + 1 to: (simSpillBase - 1 min: simStackPtr) do:
+		[:i|
+		self assert: (self simStackAt: i) spilled == true]
 ]
 
 { #category : #'span functions' }

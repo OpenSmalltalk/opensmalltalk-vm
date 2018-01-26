@@ -7435,8 +7435,9 @@ StackInterpreter >> frameCallerContext: theFP [
 
 { #category : #'frame access' }
 StackInterpreter >> frameCallerContext: theFP put: aValue [
-	<inline: true>
 	<var: #theFP type: #'char *'>
+	<inline: true>
+	self assert: (aValue = objectMemory nilObject or: [objectMemory isContext: aValue]).
 	^stackPages
 		longAt: theFP + FoxCallerContext "a.k.a. FoxCallerSavedIP"
 		put: aValue
