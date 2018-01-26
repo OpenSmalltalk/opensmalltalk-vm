@@ -243,6 +243,7 @@ RegisterAllocatingCogit >> copySimStack [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> copySimStackToScratch: spillBase [
 	<inline: true>
+	self assert: spillBase > methodOrBlockNumTemps.
 	scratchBytecodePC = bytecodePC ifTrue:
 		[^self].
 	scratchBytecodePC := bytecodePC.
@@ -350,15 +351,14 @@ RegisterAllocatingCogit >> ensureNonMergeFixupAt: targetPC [
 
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> ensureReceiverResultRegContainsSelf [
-	methodOrBlockNumTemps + 1 to: simStackPtr do:
-		[:i|
-		(self simSelf isSameEntryAs: (self simStackAt: i))
-			ifTrue: [(self simStackAt: i) liveRegister: ReceiverResultReg]
-			ifFalse:
-				[(self simStackAt: i) liveRegister = ReceiverResultReg ifTrue:
-					[(self simStackAt: i) liveRegister: NoReg]]].
+	"First ensure that ReceiverResultReg is allocated to self,
+	 which may cause spills, etc.  Then copy the register into
+	 any instances of simSelf on the stack."
 	super ensureReceiverResultRegContainsSelf.
-	self assert: self receiverIsInReceiverResultReg
+	"the storeToReg: in putSelfInReceiverResultReg in
+	 ensureReceiverResultRegContainsSelf copies the register to all copies.
+	 So simply check that the stack agrees with this."
+	self assert: self receiverResultRegIsAssignedToSelfAndNothingElse
 ]
 
 { #category : #'bytecode generator support' }
@@ -439,7 +439,8 @@ RegisterAllocatingCogit >> flushLiveRegistersForSend [
 							or: [i > methodOrBlockNumTemps
 								and: [(self simStackAt: i) type = SSSpill]])
 							 and: [(self simStackAt: i) register = FPReg
-							 and: [(self simStackAt: i) offset = (self frameOffsetOfTemporary: i)]]]]).
+							 and: [i = 0
+								or: [(self simStackAt: i) offset = (self frameOffsetOfTemporary: i - 1)]]]]]).
 		 (self simStackAt: i) liveRegister: NoReg]
 ]
 
@@ -486,7 +487,8 @@ RegisterAllocatingCogit >> freeAnyRegNotConflictingWith: regMask [
 	<var: #desc type: #'CogSimStackEntry *'>
 	| index desc |
 	self assert: needsFrame.
-	index := simSpillBase max: 0.
+	self assert: simSpillBase >= 0.
+	index := simSpillBase.
 	[index < simStackPtr] whileTrue: 
 		[desc := self simStackAt: index.
 		 desc type = SSRegister ifTrue:
@@ -933,7 +935,7 @@ RegisterAllocatingCogit >> genSpecialSelectorArithmetic [
 		ifNotNil:
 			[jumpNotSmallInts jmpTarget: self Label].
 	self ssPushRegister: destReg.
-	self copySimStackToScratch: (simSpillBase min: simStackPtr - 1).
+	self copySimStackToScratch: simSpillBase.
 	self ssPop: 1.
 	self ssFlushTo: simStackPtr.
 	rcvrReg = Arg0Reg
@@ -1319,7 +1321,7 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup forwards: forwards [
 	"Still haven't handled simSpillBase."
 	self assert: (simSpillBase > simStackPtr
 				or: [simSpillBase > methodOrBlockNumTemps
-					and: [(self simStack: mergeSimStack at: simSpillBase) spilled]])
+					and: [(self simStack: mergeSimStack at: simSpillBase - 1) spilled]])
 ]
 
 { #category : #'bytecode generator support' }
@@ -1502,7 +1504,8 @@ RegisterAllocatingCogit >> moveVolatileSimStackEntriesToRegisters [
 	| allocatedRegs |
 	<var: #desc type: #'SimStackEntry *'>
 	allocatedRegs := self allocatedRegisters.
-	(simSpillBase max: 0) to: simStackPtr do: 
+	self assert: simSpillBase >= 0.
+	simSpillBase to: simStackPtr do: 
 		[:i| | desc reg |
 		 desc := self simStackAt: i.
 		 desc spilled
@@ -1539,12 +1542,26 @@ RegisterAllocatingCogit >> pushForMergeWith: mergeSimStack [
 
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> receiverRefOnScratchSimStack [
-	simStackPtr to: (0 max: scratchSpillBase) by: -1 do:
+
+	self assert: scratchSpillBase >= 0.
+	simStackPtr to: scratchSpillBase by: -1 do:
 		[:i|
 		 ((self simStack: scratchSimStack at: i) register = ReceiverResultReg
 		  and: [(self simStack: scratchSimStack at: i) type = SSBaseOffset]) ifTrue:
 			[^true]].
 	^false
+]
+
+{ #category : #testing }
+RegisterAllocatingCogit >> receiverResultRegIsAssignedToSelfAndNothingElse [
+	| culprit |
+	0 to: simStackPtr do:
+		[:i|
+		 (self simSelf isSameEntryAs: (self simStackAt: i))
+		 ~= ((self simStackAt: i) liveRegister = ReceiverResultReg) ifTrue:
+			[culprit := i.
+			 ^false]].
+	^true
 ]
 
 { #category : #'bytecode generator support' }
@@ -1740,7 +1757,8 @@ RegisterAllocatingCogit >> ssFlushFrom: start upThrough: unaryBlock [
 	"Any occurrences on the stack of the value being stored (which is the top of stack)
 	 must be flushed, and hence any values colder than them stack."
 	<inline: true>
-	start to: (simSpillBase max: 0) by: -1 do:
+	self assert: simSpillBase >= 0.
+	start to: simSpillBase by: -1 do:
 		[ :index |
 		(unaryBlock value: (self simStackAt: index)) ifTrue: [ ^ self ssFlushTo: index ] ]
 ]
@@ -1844,7 +1862,7 @@ RegisterAllocatingCogit >> swap: target with: current at: index [
 RegisterAllocatingCogit >> traceSimStack [
 	<cmacro: '() 0'>
 	(compilationTrace anyMask: 4) ifTrue:
-		[self printSimSelf; printSimStack]
+		[self printSimStack]
 ]
 
 { #category : #'bytecode generator support' }
