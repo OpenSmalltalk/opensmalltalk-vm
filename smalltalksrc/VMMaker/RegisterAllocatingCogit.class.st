@@ -46,7 +46,6 @@ Class {
 		'nextFixup',
 		'scratchSimStack',
 		'scratchSpillBase',
-		'scratchSimSelf',
 		'ceSendMustBeBooleanAddTrueLongTrampoline',
 		'ceSendMustBeBooleanAddFalseLongTrampoline',
 		'recompileForLoopRegisterAssignments',
@@ -251,8 +250,7 @@ RegisterAllocatingCogit >> copySimStackToScratch: spillBase [
 		inSmalltalk: [0 to: simStackPtr do:
 						[:i|
 						scratchSimStack at: i put: (simStack at: i) copy]].
-	scratchSpillBase := spillBase.
-	scratchSimSelf := self cCode: [simSelf] inSmalltalk: [simSelf copy]
+	scratchSpillBase := spillBase
 ]
 
 { #category : #'bytecode generator support' }
@@ -271,18 +269,18 @@ RegisterAllocatingCogit >> deassignRegisterForTempVar: targetEntry in: mergeSimS
 	self assert: (reg ~= NoReg and: [targetEntry type = SSConstant or: [targetEntry isFrameTempVar]]).
 	targetEntry type = SSConstant
 		ifTrue:
-			[simStackPtr to: 0 by: -1 do:
+			[simStackPtr to: 1 by: -1 do:
 				[:j| | duplicateEntry |
 				 duplicateEntry := self simStack: mergeSimStack at: j.
 				 (duplicateEntry registerOrNone = reg
 				  and: [duplicateEntry type = SSBaseOffset or: [duplicateEntry type = SSSpill]]) ifTrue:
 					[duplicateEntry liveRegister: NoReg]]]
 		ifFalse:
-			[simStackPtr to: 0 by: -1 do:
+			[simStackPtr to: 1 by: -1 do:
 				[:j| | duplicateEntry |
 				 duplicateEntry := self simStack: mergeSimStack at: j.
 				 (targetEntry isSameEntryAs: duplicateEntry) ifTrue:
-					[j < methodOrBlockNumTemps
+					[j <= methodOrBlockNumTemps
 						ifTrue: [duplicateEntry liveRegister: NoReg]
 						ifFalse: [duplicateEntry type: SSRegister; register: reg]]]]
 ]
@@ -291,7 +289,7 @@ RegisterAllocatingCogit >> deassignRegisterForTempVar: targetEntry in: mergeSimS
 RegisterAllocatingCogit >> duplicateRegisterAssignmentsInTemporaries [
 	| liveRegisters |
 	liveRegisters := 0.
-	0 to: methodOrBlockNumTemps - 1 do:
+	0 to: methodOrBlockNumTemps do:
 		[:i| | liveRegister |
 		liveRegister := (self simStackAt: i) liveRegister.
 		liveRegister ~= NoReg ifTrue:
@@ -344,30 +342,22 @@ RegisterAllocatingCogit >> ensureNonMergeFixupAt: targetPC [
 			fixup := super ensureNonMergeFixupAt: targetPC.
 			fixup mergeSimStack
 				ifNil: [self setMergeSimStackOf: fixup]
-				ifNotNil: [self assert: simStackPtr = fixup simStackPtr.
-						self deny: (self mergeRequiredToTarget: fixup mergeSimStack)].
-			self receiverIsInReceiverResultReg ifFalse:
-				[fixup isReceiverResultRegSelf: false].
+				ifNotNil:
+					[self assert: simStackPtr = fixup simStackPtr.
+					 self deny: (self mergeRequiredToTarget: fixup mergeSimStack)].
 			^fixup]
 ]
 
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> ensureReceiverResultRegContainsSelf [
-	methodOrBlockNumTemps to: simStackPtr do:
+	methodOrBlockNumTemps + 1 to: simStackPtr do:
 		[:i|
-		((self addressOf: simSelf) isSameEntryAs: (self simStackAt: i))
+		(self simSelf isSameEntryAs: (self simStackAt: i))
 			ifTrue: [(self simStackAt: i) liveRegister: ReceiverResultReg]
 			ifFalse:
 				[(self simStackAt: i) liveRegister = ReceiverResultReg ifTrue:
 					[(self simStackAt: i) liveRegister: NoReg]]].
-	needsFrame
-		ifTrue:
-			[self receiverIsInReceiverResultReg ifFalse:
-				[self ssAllocateRequiredReg: ReceiverResultReg.
-				 self putSelfInReceiverResultReg]]
-		ifFalse:
-			[self assert: (simSelf type = SSRegister
-						  and: [simSelf liveRegister = ReceiverResultReg])].
+	super ensureReceiverResultRegContainsSelf.
 	self assert: self receiverIsInReceiverResultReg
 ]
 
@@ -397,9 +387,7 @@ RegisterAllocatingCogit >> ensureRegisterAssignmentsAreAtHeadOfLoop: target [
 		[:i| | currentEntry targetEntry |
 		 currentEntry := self simStack: simStack at: i.
 		 targetEntry := self simStack: target mergeSimStack at: i.
-		 targetEntry liveRegister: currentEntry liveRegister].
-	self receiverIsInReceiverResultReg ifTrue:
-		[target isReceiverResultRegSelf: true]
+		 targetEntry liveRegister: currentEntry liveRegister]
 ]
 
 { #category : #'bytecode generator support' }
@@ -428,14 +416,9 @@ RegisterAllocatingCogit >> flushLiveRegistersForCRunTimeCall [
 	<inline: true>
 	| flushed reg |
 	flushed := false.
-	self assert: simSelf type = SSBaseOffset.
-	reg := simSelf liveRegister.
-	(reg ~= NoReg and: [(self isCallerSavedReg: reg)]) ifTrue:
-		[simSelf liveRegister: NoReg.
-		 flushed := true].
 	0 to: simStackPtr do:
 		[:i|
-		 self assert: (self simStackAt: i) type = (i < methodOrBlockNumTemps
+		 self assert: (self simStackAt: i) type = (i <= methodOrBlockNumTemps
 													ifTrue: [SSBaseOffset]
 													ifFalse: [SSSpill]).
 		 reg := (self simStackAt: i) liveRegister.
@@ -448,14 +431,12 @@ RegisterAllocatingCogit >> flushLiveRegistersForCRunTimeCall [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> flushLiveRegistersForSend [
 	<inline: true>
-	self assert: simSelf type = SSBaseOffset.
-	simSelf liveRegister: NoReg.
 	0 to: simStackPtr do:
 		[:i|
 		 self assert: ((self simStackAt: i) spilled
 					 and: [(self simStackAt: i) type = SSConstant
 						or: [((self simStackAt: i) type = SSBaseOffset
-							or: [i >= methodOrBlockNumTemps
+							or: [i > methodOrBlockNumTemps
 								and: [(self simStackAt: i) type = SSSpill]])
 							 and: [(self simStackAt: i) register = FPReg
 							 and: [(self simStackAt: i) offset = (self frameOffsetOfTemporary: i)]]]]).
@@ -469,13 +450,9 @@ RegisterAllocatingCogit >> flushLiveRegistersForSuspensionPoint [
 	<inline: true>
 	| flushed |
 	flushed := false.
-	self assert: simSelf type = SSBaseOffset.
-	simSelf liveRegister ~= NoReg ifTrue:
-		[simSelf liveRegister: NoReg.
-		 flushed := true].
 	0 to: simStackPtr do:
 		[:i|
-		 self assert: (i < methodOrBlockNumTemps
+		 self assert: (i <= methodOrBlockNumTemps
 						ifTrue: [(self simStackAt: i) type = SSBaseOffset]
 						ifFalse: [(self simStackAt: i)  spilled]).
 		 (self simStackAt: i) liveRegister ~= NoReg ifTrue:
@@ -517,13 +494,17 @@ RegisterAllocatingCogit >> freeAnyRegNotConflictingWith: regMask [
 				[self ssAllocateRequiredReg: desc register.
 				 ^desc register]].
 		 index := index + 1].
-	0 to: methodOrBlockNumTemps - 1 do:
+	1 to: methodOrBlockNumTemps do:
 		[:i|
 		 desc := self simStackAt: i.
 		 (desc liveRegister = NoReg
-		 or: [self register: desc liveRegister isInMask: regMask]) ifFalse:
+		  or: [self register: desc liveRegister isInMask: regMask]) ifFalse:
 			[self ssAllocateRequiredReg: desc liveRegister.
 			 ^desc liveRegister]].
+	(self simSelf liveRegister = NoReg
+	 or: [self register: self simSelf liveRegister isInMask: regMask]) ifFalse:
+		[self ssAllocateRequiredReg: self simSelf liveRegister.
+		 ^self simSelf liveRegister].
 	^NoReg
 ]
 
@@ -657,9 +638,6 @@ RegisterAllocatingCogit >> genJumpBackTo: targetPC [
 	target := self fixupAt: targetPC.
 	self ensureRegisterAssignmentsAreAtHeadOfLoop: target.
 	self MoveAw: coInterpreter stackLimitAddress R: TempReg.
-	(target isReceiverResultRegSelf
-	 and: [simSelf liveRegister = NoReg]) ifTrue:
-		[(self addressOf: simSelf) storeToReg: ReceiverResultReg].
 	self CmpR: TempReg R: SPReg. "N.B. FLAGS := SPReg - TempReg"
 	self JumpAboveOrEqual: target.
 
@@ -833,7 +811,7 @@ RegisterAllocatingCogit >> genSpecialSelectorArithmetic [
 				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)].
 	rcvrIsInt := ((rcvrIsConst := (self ssValue: 1) type = SSConstant)
 				  and: [objectMemory isIntegerObject: (rcvrInt := (self ssValue: 1) constant)])
-				or: [self mclassIsSmallInteger and: [(self ssValue: 1) isSameEntryAs: (self addressOf: simSelf)]].
+				or: [self mclassIsSmallInteger and: [(self ssValue: 1) isSameEntryAs: self simSelf]].
 
 	(argIsInt and: [rcvrIsInt and: [rcvrIsConst]]) ifTrue:
 		[| result |
@@ -1003,7 +981,7 @@ RegisterAllocatingCogit >> genSpecialSelectorComparison [
 				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)].
 	rcvrIsInt := ((rcvrIsConst := (self ssValue: 1) type = SSConstant)
 				  and: [objectMemory isIntegerObject: (self ssValue: 1) constant])
-				or: [self mclassIsSmallInteger and: [(self ssValue: 1) isSameEntryAs: (self addressOf: simSelf)]].
+				or: [self mclassIsSmallInteger and: [(self ssValue: 1) isSameEntryAs: self simSelf]].
 
 	(argIsIntConst and: [rcvrIsInt and: [rcvrIsConst]]) ifTrue:
 		[^self genStaticallyResolvedSpecialSelectorComparison].
@@ -1216,7 +1194,6 @@ RegisterAllocatingCogit >> initOptStatus: receiverResultRegLive [
 { #category : #'simulation stack' }
 RegisterAllocatingCogit >> initSimStackForFramefulMethod: startpc [
 	super initSimStackForFramefulMethod: startpc.
-	simSelf liveRegister: NoReg.
 	0 to: simStackPtr do:
 		[:i| (self simStackAt: i) liveRegister: NoReg]
 ]
@@ -1224,15 +1201,14 @@ RegisterAllocatingCogit >> initSimStackForFramefulMethod: startpc [
 { #category : #'simulation stack' }
 RegisterAllocatingCogit >> initSimStackForFramelessBlock: startpc [
 	super initSimStackForFramelessBlock: startpc.
-	simSelf liveRegister: ReceiverResultReg.
-	0 to: simStackPtr do:
+	self simSelf liveRegister: ReceiverResultReg.
+	1 to: simStackPtr do:
 		[:i| (self simStackAt: i) liveRegister: NoReg]
 ]
 
 { #category : #'simulation stack' }
 RegisterAllocatingCogit >> initSimStackForFramelessMethod: startpc [
 	super initSimStackForFramelessMethod: startpc.
-	simSelf liveRegister: ReceiverResultReg.
 	0 to: simStackPtr do:
 		[:i| | desc |
 		desc := self simStackAt: i.
@@ -1335,18 +1311,15 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup forwards: forwards [
 		[Notification new tag: #failedMerge; signal].
 	(self pushForMergeWith: mergeSimStack)
 		ifTrue:
-			[methodOrBlockNumTemps to: simStackPtr do:
+			[methodOrBlockNumTemps + 1 to: simStackPtr do:
 				[:i| self mergePushingWithEntryInTargetSimStack: mergeSimStack at: i]]
 		ifFalse:
-			[simStackPtr to: methodOrBlockNumTemps by: -1 do:
+			[simStackPtr to: methodOrBlockNumTemps + 1 by: -1 do:
 				[:i| self mergePoppingWithEntryInTargetSimStack: mergeSimStack at: i]].
 	"Still haven't handled simSpillBase."
 	self assert: (simSpillBase > simStackPtr
-				or: [simSpillBase < (methodOrBlockNumTemps max: 1)
-				or: [(self simStack: mergeSimStack at: simSpillBase - 1) spilled]]).
-	fixup isReceiverResultRegSelf ifTrue:
-		[self receiverIsInReceiverResultReg ifFalse:
-			[self putSelfInReceiverResultReg]]
+				or: [simSpillBase > methodOrBlockNumTemps
+					and: [(self simStack: mergeSimStack at: simSpillBase) spilled]])
 ]
 
 { #category : #'bytecode generator support' }
@@ -1377,7 +1350,7 @@ RegisterAllocatingCogit >> mergePushingWithEntryInTargetSimStack: mergeSimStack 
 	currentEntry := self simStack: simStack at: i.
 	targetEntry := self simStack: mergeSimStack at: i.
 	(currentEntry reconcilePushingWith: targetEntry) ifTrue:
-		[self assert: i >= methodOrBlockNumTemps.
+		[self assert: i > methodOrBlockNumTemps.
 		 self deassignRegisterForTempVar: targetEntry in: mergeSimStack.
 		 targetEntry
 			type: SSRegister;
@@ -1557,19 +1530,11 @@ RegisterAllocatingCogit >> pushForMergeWith: mergeSimStack [
 	"Answer if values must be pushed from simStack to merge with mergeSimStack, otherwise < 0 (the default)."
 	<var: #mergeSimStack type: #'SimStackEntry *'>
 	<inline: true>
-	simStackPtr to: methodOrBlockNumTemps by: -1 do:
+	simStackPtr to: methodOrBlockNumTemps + 1 by: -1 do:
 		[:i|
 		 (self simStack: mergeSimStack at: i) spilled ~= (self simStack: simStack at: i) spilled ifTrue:
 			[^(self simStack: mergeSimStack at: i) spilled]].
 	^false
-]
-
-{ #category : #'bytecode generator support' }
-RegisterAllocatingCogit >> receiverIsInReceiverResultReg [
-	"Used to mark ReceiverResultReg as dead or not containing simSelf.
-	 Used when the simStack has already been flushed, e.g. for sends."
-	<inline: true>
-	^simSelf liveRegister = ReceiverResultReg
 ]
 
 { #category : #'bytecode generator support' }
@@ -1588,16 +1553,6 @@ RegisterAllocatingCogit >> reconcileRegisterStateForJoinAfterSpecialSelectorSend
 	 joins the control flow from the send, taken when the inlined code fails, we should decide
 	 whether to reload any registers known to contain useful values or mark them as dead."
 	 
-	"If ReceiverResultReg is live along the inlined path, and is used before the next full send,
-	 reload it on the uncommon path."
-	scratchSimSelf liveRegister = ReceiverResultReg ifTrue:
-		[(self existsInstVarRefBeforeSendOrReturn
-		  or: [self receiverRefOnScratchSimStack])
-			ifTrue:
-				[simSelf liveRegister: ReceiverResultReg.
-				 self putSelfInReceiverResultReg]
-			ifFalse: [self voidReceiverOptStatus]].
-
 	"Restore the simStack to that in scratchSimStack,
 	 popping any spilled state back into allocated registers."
 	simSpillBase := scratchSpillBase.
@@ -1617,7 +1572,7 @@ RegisterAllocatingCogit >> reconcileRegisterStateForJoinAfterSpecialSelectorSend
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> reconcileRegistersInTempVarsInCurrentSimStackWithThoseIn: mergeSimStack [
 	<var: #mergeSimStack type: #'SimStackEntry *'>
-	0 to: methodOrBlockNumTemps - 1 do: 
+	0 to: methodOrBlockNumTemps do: 
 		[ :i | | current target |
 		current := self simStack: simStack at: i.
 		target := self simStack: mergeSimStack at: i.
@@ -1678,11 +1633,11 @@ RegisterAllocatingCogit >> reinitializeOpcodesFrom: start to: end [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> resetSimStack: startPC [
 	<inline: true>
-	simSpillBase := methodOrBlockNumTemps.
-	simStackPtr := methodOrBlockNumTemps - 1.
+	simSpillBase := methodOrBlockNumTemps + 1.
+	simStackPtr := methodOrBlockNumTemps.
 	self flushLiveRegistersForSend.
 	self cCode: '' inSmalltalk:
-		[0 to: methodOrBlockNumTemps - 1 do:
+		[0 to: methodOrBlockNumTemps do:
 			[:i|
 			(self simStackAt: i) bcptr: startPC]]
 ]
@@ -1694,11 +1649,9 @@ RegisterAllocatingCogit >> restoreSimStackAtMergePoint: fixup [
 	 on stack and the optStatus is unknown.  If the merge point follows a return, it
 	 isn't a merge, but a skip past a return.  If it is a real merge point then throw
 	 away all simStack and optStatus optimization state."
-	simSelf liveRegister: (fixup isReceiverResultRegSelf
-							ifTrue: [ReceiverResultReg]
-							ifFalse: [NoReg]).
+
 	fixup mergeSimStack ifNotNil:
-		[simSpillBase := methodOrBlockNumTemps.
+		[simSpillBase := methodOrBlockNumTemps + 1.
 		 0 to: simStackPtr do:
 			[:i|
 			self cCode: [simStack at: i put: (fixup mergeSimStack at: i)]
@@ -1713,17 +1666,7 @@ RegisterAllocatingCogit >> restoreSimStackFromScratch [
 		inSmalltalk: [0 to: simStackPtr do:
 						[:i|
 						simStack at: i put: (scratchSimStack at: i)]].
-	simSpillBase := scratchSpillBase.
-	simSelf := scratchSimSelf
-]
-
-{ #category : #initialization }
-RegisterAllocatingCogit >> setInterpreter: aCoInterpreter [
-	"Override to elide optStatus which shoudl be unused since simSelf has a liveRegister
-	 and hence more elegantly accomplishes the same purpose."
-	<doNotGenerate>
-	super setInterpreter: aCoInterpreter.
-	optStatus := nil
+	simSpillBase := scratchSpillBase
 ]
 
 { #category : #'bytecode generator support' }
@@ -1742,9 +1685,7 @@ RegisterAllocatingCogit >> setMergeSimStackOf: fixup [
 				self assert: ((self simStackAt: i) isSameEntryAs: (self addressOf: (fixup mergeSimStack at: i))).
 				(self simStackAt: i) liveRegister ~= (self addressOf: (fixup mergeSimStack at: i)) liveRegister ifTrue:
 					[(self simStackAt: i) liveRegister: NoReg]]].
-	fixup
-		simStackPtr: simStackPtr;
-		isReceiverResultRegSelf: self receiverIsInReceiverResultReg.
+	fixup simStackPtr: simStackPtr.
 	self cCode: [self mem: fixup mergeSimStack cp: simStack y: self simStackSlots * (self sizeof: CogSimStackEntry)]
 		inSmalltalk: [fixup mergeSimStack: self copySimStack]
 ]
@@ -1752,9 +1693,9 @@ RegisterAllocatingCogit >> setMergeSimStackOf: fixup [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> simSelfOnStackInReceiverResultReg [
 	"For assert checking only."
-	methodOrBlockNumTemps to: simStackPtr do:
+	methodOrBlockNumTemps + 1 to: simStackPtr do:
 		[:i|
-		 (((self addressOf: simSelf) isSameEntryAs: (self simStackAt: i))
+		 ((self simSelf isSameEntryAs: (self simStackAt: i))
 		  and: [(self simStackAt: i) registerOrNone = ReceiverResultReg]) ifTrue:
 			[^true]].
 	^false
@@ -1787,9 +1728,7 @@ RegisterAllocatingCogit >> simStackEntryClass [
 { #category : #'simulation stack' }
 RegisterAllocatingCogit >> ssAllocateRequiredRegMask: requiredRegsMask upThrough: stackPtr upThroughNative: nativeStackPtr [
 	"Override to void any required registers in temp vars."
-	(requiredRegsMask anyMask: (self registerMaskFor: ReceiverResultReg)) ifTrue:
-		[self voidReceiverOptStatus].
-	0 to: methodOrBlockNumTemps - 1 do:
+	0 to: methodOrBlockNumTemps do:
 		[:i|
 		((self simStackAt: i) registerMask anyMask: requiredRegsMask) ifTrue:
 			[(self simStackAt: i) liveRegister: NoReg]].
@@ -1882,7 +1821,7 @@ RegisterAllocatingCogit >> swap: target with: current at: index [
 	self assert: target registerMaskOrNone ~= 0.
 	current registerMaskOrNone ~= 0 ifTrue: 
 		[ self SwapR: target liveRegister R: current liveRegister Scratch: RISCTempReg.
-		  methodOrBlockNumTemps to: simStackPtr do: 
+		  methodOrBlockNumTemps + 1 to: simStackPtr do: 
 			[:i| | localCurrent |
 			localCurrent := self simStack: simStack at: i.
 			localCurrent liveRegister = current liveRegister 
@@ -1891,7 +1830,7 @@ RegisterAllocatingCogit >> swap: target with: current at: index [
 						ifTrue: [ localCurrent liveRegister: current liveRegister ] ] ].
 		current liveRegister: target liveRegister.
 		 ^ 0 ].
-	0 to: index -1 do: [:j | self assert: (self simStack: simStack at: j) liveRegister ~= target liveRegister].
+	0 to: index - 1 do: [:j | self assert: (self simStack: simStack at: j) liveRegister ~= target liveRegister].
 	
 	currentLiveRegisters := self liveRegistersExceptingTopNItems: 0 in: simStack.
 	(self register: target liveRegister isInMask: currentLiveRegisters) ifTrue:
@@ -1909,23 +1848,18 @@ RegisterAllocatingCogit >> traceSimStack [
 ]
 
 { #category : #'bytecode generator support' }
-RegisterAllocatingCogit >> voidReceiverOptStatus [
-	"Used to mark ReceiverResultReg as dead or not containing simSelf.
-	 Used when the simStack has already been flushed, e.g. for sends."
-	<inline: true>
-	simSelf liveRegister: NoReg
-]
-
-{ #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> voidReceiverResultRegContainsSelf [
 	"Used when ReceiverResultReg is allocated for other than simSelf, and
 	 there may be references to ReceiverResultReg which need to be spilled."
 	self receiverIsInReceiverResultReg ifFalse:
 		[self deny: self simSelfOnStackInReceiverResultReg.
 		 ^self].
-	methodOrBlockNumTemps to: simStackPtr do:
+	1 to: methodOrBlockNumTemps do:
 		[:i|
-		((self addressOf: simSelf) isSameEntryAs: (self simStackAt: i)) ifTrue:
+		self deny: (self simStackAt: i) liveRegister = ReceiverResultReg].
+	methodOrBlockNumTemps + 1 to: simStackPtr do:
+		[:i|
+		(self simSelf isSameEntryAs: (self simStackAt: i)) ifTrue:
 			[(self simStackAt: i) liveRegister: NoReg]].
-	simSelf liveRegister: NoReg
+	self simSelf liveRegister: NoReg
 ]
