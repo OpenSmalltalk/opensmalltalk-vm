@@ -19,7 +19,7 @@ CogRegisterAllocatingSimStackEntry >> copyLiveRegisterIfSameAs: simStackEntry [
 CogRegisterAllocatingSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegister [
 	spilled ifTrue:
 		[type = SSSpill ifTrue:
-			[self assert: (offset = baseOffset and: [register = baseRegister]).
+			[self assert: ((offset = baseOffset and: [register = baseRegister]) or: [cogit violatesEnsureSpilledSpillAssert]).
 			 liveRegister := NoReg.
 			 ^self]].
 	self assert: type ~= SSSpill.
@@ -82,12 +82,6 @@ CogRegisterAllocatingSimStackEntry >> isMergedWithTargetEntry: targetEntry [
 CogRegisterAllocatingSimStackEntry >> liveRegister [
 
 	^ liveRegister
-]
-
-{ #category : #accessing }
-CogRegisterAllocatingSimStackEntry >> liveRegister: anObject [
-
-	^liveRegister := anObject
 ]
 
 { #category : #accessing }

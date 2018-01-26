@@ -139,7 +139,7 @@ CogSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegister [
 	<var: #inst type: #'AbstractInstruction *'>
 	spilled ifTrue:
 		[type = SSSpill ifTrue:
-			[self assert: (offset = baseOffset and: [register = baseRegister]).
+			[self assert: ((offset = baseOffset and: [register = baseRegister]) or: [cogit violatesEnsureSpilledSpillAssert]).
 			 ^self]].
 	self assert: type ~= SSSpill.
 	cogit traceSpill: self.
@@ -180,6 +180,18 @@ CogSimStackEntry >> isSameEntryAs: ssEntry [
 	  and: [((type = SSBaseOffset or: [type == SSSpill]) and: [offset = ssEntry offset and: [register = ssEntry register]])
 		or: [(type = SSRegister and: [register = ssEntry register])
 		or: [(type = SSConstant and: [constant = ssEntry constant])]]]
+]
+
+{ #category : #accessing }
+CogSimStackEntry >> liveRegister [
+
+	^ liveRegister
+]
+
+{ #category : #accessing }
+CogSimStackEntry >> liveRegister: anObject [
+
+	^liveRegister := anObject
 ]
 
 { #category : #accessing }
