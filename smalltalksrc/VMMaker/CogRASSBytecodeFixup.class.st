@@ -16,8 +16,7 @@ Class {
 	#superclass : #CogSSBytecodeFixup,
 	#instVars : [
 		'cogit',
-		'mergeSimStack',
-		'isReceiverResultRegSelf'
+		'mergeSimStack'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -44,25 +43,12 @@ CogRASSBytecodeFixup class >> for: aCogit [
 { #category : #'initialize-release' }
 CogRASSBytecodeFixup >> cogit: aCogit [
 	cogit := aCogit.
-	isReceiverResultRegSelf := false.
 	^self
 ]
 
 { #category : #'debug printing' }
 CogRASSBytecodeFixup >> hasMergeSimStack [
 	^self needsFixup and: [mergeSimStack notNil]
-]
-
-{ #category : #accessing }
-CogRASSBytecodeFixup >> isReceiverResultRegSelf [
-
-	^ isReceiverResultRegSelf
-]
-
-{ #category : #accessing }
-CogRASSBytecodeFixup >> isReceiverResultRegSelf: anObject [
-
-	^isReceiverResultRegSelf := anObject
 ]
 
 { #category : #accessing }
@@ -100,6 +86,5 @@ CogRASSBytecodeFixup >> printStateOn: aStream [
 CogRASSBytecodeFixup >> reinitialize [
 	<inline: true>
 	super reinitialize.
-	mergeSimStack := nil.
-	isReceiverResultRegSelf := false
+	mergeSimStack := nil
 ]
