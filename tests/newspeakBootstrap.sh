@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-readonly REV_NEWSPEAK="7fed4bc928ac3fa85fa28493ca1e26c359f875ac"
-readonly REV_NSBOOT="afc5b23866b518d926e300bca9efdf41b6e62fe0"
+readonly REV_NEWSPEAK="afebb7f0a5774e8aed06369be8aa2012d6a0cc07"
+readonly REV_NSBOOT="41f3615f4d79cb0e0d1e7aecc865fedca21e8a15"
 readonly GH_BASE="https://github.com/newspeaklanguage"
 readonly TMP_DIR=$(mktemp -d 2>/dev/null || mktemp -d -t 'newspeak')
 
