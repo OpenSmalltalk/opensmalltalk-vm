@@ -36,7 +36,7 @@ $(OPENSSLLIB): $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME)
 	done
 	@echo "Installing links"
 	@for each in $(addprefix $(THIRDPARTYLIBDIR)/,$(OPENSSLSYMLINKS)); do \
-		if [ -L $$eachFile ]; then \
+		if [ -L $$each ]; then \
 			cp -a $$each $(THIRDPARTYINSTALLDIR); \
 		fi \
 	done

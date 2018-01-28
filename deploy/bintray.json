@@ -9,7 +9,7 @@
         "desc": "Automatic build"
     },
     "files": [
-        {"includePattern": "./(cog_.*\\.(?:gz|zip))", "uploadPattern": "$1"}
+        {"includePattern": "../products/((newspeak|pharo|squeak).*\\.(?:gz|zip|dmg))", "uploadPattern": "$1"}
     ],
     "publish": true
 }
