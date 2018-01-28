@@ -21,12 +21,11 @@ $(LIBSSH2ARCHIVE):
 $(THIRDPARTYLIBDIR)/$(LIBSSH2LIBNAME): $(LIBSSH2ARCHIVE)
 	tar x -f $(LIBSSH2ARCHIVE) -C $(THIRDPARTYDIR)
 	cd $(LIBSSH2DIR) \
-		&& ./configure \
-			--build=x86_64-w64-cygwin \
-			--host=x86_64-w64-mingw32 \
+		&& $(THIRDPARTY_TOOLCHAIN) ./configure \
 			--prefix='$(THIRDPARTYOUTDIR)' \
 			CFLAGS='$(THIRDPARTY_CFLAGS)' \
 			LDFLAGS='$(THIRDPARTY_LDFLAGS)' \
+			--disable-examples-build \
 		&& make \
 		&& make install
 

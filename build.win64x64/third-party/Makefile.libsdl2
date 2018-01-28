@@ -21,7 +21,7 @@ $(LIBSDL2ARCHIVE):
 $(THIRDPARTYLIBDIR)/$(LIBSDL2LIBNAME): $(LIBSDL2ARCHIVE)
 	tar x -f $(LIBSDL2ARCHIVE) -C $(THIRDPARTYDIR)
 	cd $(LIBSDL2DIR) \
-		&& ./configure --prefix='$(THIRDPARTYOUTDIR)' \
+		&& bash ./configure --prefix='$(THIRDPARTYOUTDIR)' \
 			--host=x86_64-w64-mingw32 \
 			CFLAGS='$(THIRDPARTY_CFLAGS)' \
 			LDFLAGS='$(THIRDPARTY_LDFLAGS)' \
