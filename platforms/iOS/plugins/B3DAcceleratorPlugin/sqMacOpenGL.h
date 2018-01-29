@@ -3,43 +3,34 @@
 
 #define MAX_RENDERER 16
 	
-# import <OpenGL/gl.h>
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
-# import <OpenGL/OpenGL.h>
+#if defined(__MWERKS__) 
+#include <agl.h>
+#include <gl.h>
 #else
-# import <OpenGL/Opengl.h>
+#include <AGL/agl.h>
+#ifdef MAC_OS_X_VERSION_10_7
+#include <OpenGL/gl.h>
+#else
+#include <AGL/gl.h>
 #endif
-
-typedef struct glRendererFramebuffer {
-	GLuint handle;
-	GLuint texture;
-	GLuint depthStencilBuffer;
-	
-	GLuint resolveFramebuffer;
-	GLuint multisampleColorbuffer;
-} glRendererFramebuffer;
-
+#endif
 typedef struct glRenderer {
-    /* Required by the common implementation */
 	GLint bufferRect[4];
 	GLint viewport[4];
-    
-    int used;
 
-    void* theOpenGLContext;
-    unsigned int layerHandle;
-    
-	// Multi sampling
-	int hasMultisampling;
-	int sampleCount;
-	
-	// Depth and stencil buffer
-	int hasStencilBuffer;
-	GLenum depthStencilFormat;
-	
-	glRendererFramebuffer framebuffers[2];
-	unsigned int backBufferIndex;
-    
+	int used;
+	int finished;
+	AGLContext context;
+
+	/* hardware attributes */
+	AGLDrawable drawable;
+
+	/* software attributes */
+	GWorldPtr gWorld;
+	PixMapHandle pixMap;
+	int depth;
+	int pitch;
+	unsigned char *bits;
 } glRenderer;
 
 #define GL_RENDERER_DEFINED 1
