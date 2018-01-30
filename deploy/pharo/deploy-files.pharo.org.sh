@@ -35,6 +35,10 @@ readonly PHARO_PRODUCTS_DIR="${BUILD_DIR}/productsPharo"
 do_upload() {
 	# function arguments
 	local extension=$1
+	if [[ "$(ls -1 "${PHARO_PRODUCTS_DIR}"/*.${extension} 2>/dev/null | wc -l)" = 0 ]]; then
+		echo "No ${extension} files found to upload."
+		return
+	fi
 	for productPath in "${PHARO_PRODUCTS_DIR}"/*.${extension}; do
 		productName="$(basename "${productPath}")"
 		echo "Uploading $productName to files.pharo.org/$destDir"
@@ -48,4 +52,6 @@ do_upload() {
 }
 
 do_upload "zip"
-do_upload "dmg"
+if [[ "${TRAVIS_OS_NAME}" = "osx" ]]; then
+	do_upload "dmg"
+fi
