@@ -28,6 +28,9 @@ macos_codesign() {
   security import "${path_cer}" -k ~/Library/Keychains/"${KEY_CHAIN}" -T /usr/bin/codesign
   security import "${path_p12}" -k ~/Library/Keychains/"${KEY_CHAIN}" -P "${cert_pass}" -T /usr/bin/codesign
   # Invoke codesign
+  if [[ -d "${app_dir}/Contents/MacOS/Plugins" ]]; then # Pharo.app does not (yet) have its plugins in Resources dir
+    codesign -s "${sign_identity}" --force --deep "${app_dir}/Contents/MacOS/Plugins/*"
+  fi
   codesign -s "${sign_identity}" --force --deep "${app_dir}"
   # Remove sensitive files again
   rm -rf "${path_cer}" "${path_p12}"
@@ -68,7 +71,6 @@ elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
     path_p12="${DEPLOY_DIR}/pharo/pharo.p12"
     openssl aes-256-cbc -k "${PHARO_SIGN_PASSWORD}" -in "${path_cer}.enc" -out "${path_cer}" -d
     openssl aes-256-cbc -k "${PHARO_SIGN_PASSWORD}" -in "${path_p12}.enc" -out "${path_p12}" -d
-    macos_codesign "${APP_DIR}/Contents/MacOS/Plugins/*" "${path_cer}" "${path_p12}" "${PHARO_CERT_PASSWORD}" "${PHARO_SIGN_IDENTITY}"
     macos_codesign "${APP_DIR}" "${path_cer}" "${path_p12}" "${PHARO_CERT_PASSWORD}" "${PHARO_SIGN_IDENTITY}"
   elif [[ "${FLAVOR}" == "newspeak"* ]]; then
     NEW_APP_DIR="${PRODUCTS_DIR}/Newspeak.app"
