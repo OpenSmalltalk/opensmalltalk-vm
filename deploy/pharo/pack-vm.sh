@@ -10,6 +10,7 @@ set -ex
 readonly BUILD_DIR="${TRAVIS_BUILD_DIR:-${APPVEYOR_BUILD_FOLDER}}"
 readonly PRODUCTS_DIR="${BUILD_DIR}/products"
 readonly PHARO_PRODUCTS_DIR="${BUILD_DIR}/productsPharo"
+mkdir "${PHARO_PRODUCTS_DIR}" || true # ensure directory exists
 
 # revision date
 BUILD_DATE="`grep -m1 "SvnRawRevisionString" ${BUILD_DIR}/platforms/Cross/vm/sqSCCSVersion.h | sed 's/[^0-9.]*\([0-9.]*\).*/\1/'`"
