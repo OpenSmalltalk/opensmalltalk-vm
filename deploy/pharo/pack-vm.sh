@@ -46,7 +46,7 @@ do_pack_vm() {
 		
 	zipFilePath="${PHARO_PRODUCTS_DIR}/pharo-${os}-${productArch}${suffix}-${BUILD_DATE}-${BUILD_ID}.zip"
 	pushd "${PRODUCTS_DIR}"
-	zip -y -r ${zipFilePath} ${pattern}
+	zip -x "*.gz" -y -r ${zipFilePath} ${pattern}
 	popd
 }
 
@@ -78,13 +78,13 @@ case "${ARCH}" in
 		do_rename_vm "mac" "x86_64" "" "dmg"
 		;;
 	linux32x86)
-		do_rename_vm "linux" "i386" "${HEARTBEAT}"
+		do_pack_vm "linux" "i386" "*" "${HEARTBEAT}"
 		;;
 	linux64x64)
-		do_rename_vm "linux" "x86_64" "${HEARTBEAT}"
+		do_pack_vm "linux" "x86_64" "*" "${HEARTBEAT}"
 		;;
 	linux32ARMv6)
-		do_rename_vm "linux" "ARMv6"
+		do_pack_vm "linux" "ARMv6" "*"
 		;;
 	win32x86)
 		do_rename_vm "win" "i386"
