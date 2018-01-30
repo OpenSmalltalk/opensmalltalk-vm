@@ -29,7 +29,7 @@ macos_codesign() {
   security import "${path_p12}" -k ~/Library/Keychains/"${KEY_CHAIN}" -P "${cert_pass}" -T /usr/bin/codesign
   # Invoke codesign
   if [[ -d "${app_dir}/Contents/MacOS/Plugins" ]]; then # Pharo.app does not (yet) have its plugins in Resources dir
-    codesign -s "${sign_identity}" --force --deep "${app_dir}/Contents/MacOS/Plugins/*"
+    codesign -s "${sign_identity}" --force --deep "${app_dir}/Contents/MacOS/Plugins/"*
   fi
   codesign -s "${sign_identity}" --force --deep "${app_dir}"
   # Remove sensitive files again
