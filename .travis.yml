@@ -118,7 +118,7 @@ deploy:
     on:
       repo: OpenSmalltalk/opensmalltalk-vm
       branch: Cog
-  - provider: script # Deploy to files.pharo.org (temporarily disabled)
+  - provider: script # Deploy to files.pharo.org
     script: (cd deploy/pharo && ./deploy.sh)
     skip_cleanup: true
     on:

@@ -1,10 +1,9 @@
 #! /bin/bash
-
 set -e 
 
 baseDir="/homez.141/pharoorgde/files/vm"
 case "${ARCH}" in
-	macos32x86) 
+	macos32x86)
 		destDir="$baseDir/pharo-spur32/mac" 
 		;;
 	macos64x64) 
@@ -30,15 +29,22 @@ case "${ARCH}" in
 		exit 1
 esac
 
-productName=`ls ./pharo-*.zip`
-if [ -z "$productName" ]; then 
-	echo "Product not found in `pwd`. Aborting deploy."
-	exit 1
-fi 
-echo "Uploading $productName to files.pharo.org/$destDir"
-scp $productName files.pharo.org:$destDir/$productName
-if [ "$HEARTBEAT" = "threaded" ]; then 
-	SUFFIX="-threaded"
-fi
-echo "Uploading $productName to files.pharo.org/$destDir/latest$SUFFIX.zip"
-scp $productName files.pharo.org:$destDir/latest$SUFFIX.zip
+readonly BUILD_DIR="${TRAVIS_BUILD_DIR:-${APPVEYOR_BUILD_FOLDER}}"
+readonly PHARO_PRODUCTS_DIR="${BUILD_DIR}/productsPharo"
+
+do_upload() {
+	# function arguments
+	local extension=$1
+	for productName in "${PHARO_PRODUCTS_DIR}"/*.${extension}; do
+		echo "Uploading $productName to files.pharo.org/$destDir"
+		scp $productName files.pharo.org:$destDir/$productName
+		if [[ "$HEARTBEAT" = "threaded" ]]; then 
+			SUFFIX="-threaded"
+		fi
+		echo "Uploading $productName to files.pharo.org/$destDir/latest$SUFFIX.${extension}"
+		scp $productName files.pharo.org:$destDir/latest$SUFFIX.${extension}
+	done
+}
+
+do_upload "zip"
+do_upload "dmg"
