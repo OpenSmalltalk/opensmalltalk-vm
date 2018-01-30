@@ -14,8 +14,8 @@ if [[ "${REPO_NAME}" != "OpenSmalltalk/opensmalltalk-vm" ]]; then
 fi
 
 if [[ "${BRANCH_NAME}" != "Cog" ]] && [[ -z "${TAG_NAME}" ]]; then
-  echo "Skipping a deployment with the script provider because this branch is not permitted"
-  exit
+	echo "Skipping a deployment with the script provider because this branch is not permitted"
+	exit
 fi
 
 `dirname $0`/$1
