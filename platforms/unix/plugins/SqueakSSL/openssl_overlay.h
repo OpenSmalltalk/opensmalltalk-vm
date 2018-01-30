@@ -169,7 +169,9 @@ void (*sqo_sk_pop_free)(STACK *st, void (*func) (void *));
 #define sqo_sk_GENERAL_NAME_pop_free(st, free_func)     \
   sqo_SKM_sk_pop_free(GENERAL_NAME, (st), (free_func))
 
-
+#if !defined(X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS)
+#define X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS 0x10
+#endif
 
 bool loadLibrary(void)
 {
