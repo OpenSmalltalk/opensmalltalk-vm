@@ -1,2 +1,9 @@
+#
+# For platform builds, use
+
 #XLDFLAGS=	-lcrypto -lssl
-XLDFLAGS=	-Wl,--no-as-needed -lrt -Wl,-Bstatic -lcrypto -lssl -Wl,-Bdynamic -lrt
+#XCFLAGS=	-DSQSSL_OPENSSL_LINKED
+
+# otherwise the OpenSSL libs will be looked up at runtime.
+#
+#
