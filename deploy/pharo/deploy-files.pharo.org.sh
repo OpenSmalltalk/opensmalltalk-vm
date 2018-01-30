@@ -32,20 +32,13 @@ esac
 readonly BUILD_DIR="${TRAVIS_BUILD_DIR:-${APPVEYOR_BUILD_FOLDER}}"
 readonly PHARO_PRODUCTS_DIR="${BUILD_DIR}/productsPharo"
 
-do_upload() {
-	# function arguments
-	local extension=$1
-	for productPath in "${PHARO_PRODUCTS_DIR}"/*.${extension}; do
-		productName="$(basename "${productPath}")"
-		echo "Uploading $productName to files.pharo.org/$destDir"
-		scp $productPath files.pharo.org:$destDir/$productName
-		if [[ "$HEARTBEAT" = "threaded" ]]; then 
-			SUFFIX="-threaded"
-		fi
-		echo "Uploading $productName to files.pharo.org/$destDir/latest$SUFFIX.${extension}"
-		scp $productPath files.pharo.org:$destDir/latest$SUFFIX.${extension}
-	done
-}
-
-do_upload "zip"
-do_upload "dmg"
+for productPath in "${PHARO_PRODUCTS_DIR}"/*.zip; do
+	productName="$(basename "${productPath}")"
+	echo "Uploading $productName to files.pharo.org/$destDir"
+	scp $productPath files.pharo.org:$destDir/$productName
+	if [[ "$HEARTBEAT" = "threaded" ]]; then 
+		SUFFIX="-threaded"
+	fi
+	echo "Uploading $productName to files.pharo.org/$destDir/latest$SUFFIX.zip"
+	scp $productPath files.pharo.org:$destDir/latest$SUFFIX.zip
+done

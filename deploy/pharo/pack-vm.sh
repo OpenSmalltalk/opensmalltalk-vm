@@ -56,7 +56,6 @@ do_rename_vm() {
 	local os=$1
 	local productArch=$2
 	local suffix=$3
-	local fileExtension=${4-:zip}
 	# variables
 	local zipFilePath=
 	
@@ -66,17 +65,15 @@ do_rename_vm() {
 	fi
 		
 	zipFilePath="${PHARO_PRODUCTS_DIR}/pharo-${os}-${productArch}${suffix}-${BUILD_DATE}-${BUILD_ID}.zip"
-	cp "${PRODUCTS_DIR}/"*.${fileExtension} "${zipFilePath}"
+	cp "${PRODUCTS_DIR}/"*.zip "${zipFilePath}"
 }
 
 case "${ARCH}" in
 	macos32x86)
 		do_pack_vm "mac" "i386" "*.app"
-		do_rename_vm "mac" "i386" "" "dmg"
 		;;
 	macos64x64)
 		do_pack_vm "mac" "x86_64" "*.app"
-		do_rename_vm "mac" "x86_64" "" "dmg"
 		;;
 	linux32x86)
 		do_pack_vm "linux" "i386" "*" "${HEARTBEAT}"
