@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -ex
+set -e
 
 # This are defined elsewhere (usually in travis):
 # 
@@ -38,16 +38,16 @@ do_pack_vm() {
 	local pattern=$3
 	local suffix=$4
 	# variables
-	local zipFilePath=
+	local filename=
 	
-	if [ -z "${PRODUCTS_DIR}${subdir}" ]; then
-		echo "Error: Product not found!"
+	if [ ! -d "${PRODUCTS_DIR}${subdir}" ]; then
+		echo "Error: ${PRODUCTS_DIR}${subdir} does not exist."
 		exit 1
 	fi
 		
-	zipFilePath="${PHARO_PRODUCTS_DIR}/pharo-${os}-${productArch}${suffix}-${BUILD_DATE}-${BUILD_ID}.zip"
+	filename="pharo-${os}-${productArch}${suffix}-${BUILD_DATE}-${BUILD_ID}.zip"
 	pushd "${PRODUCTS_DIR}"
-	zip -x "*.gz" -y -r ${zipFilePath} ${pattern}
+	zip -x "*.gz" -y -r "${PHARO_PRODUCTS_DIR}/${filename}" ${pattern}
 	popd
 }
 
@@ -58,15 +58,15 @@ do_rename_vm() {
 	local suffix=$3
 	local fileExtension=${4-:zip}
 	# variables
-	local zipFilePath=
+	local filename=
 	
-	if [ -z "${PRODUCTS_DIR}" ]; then
-		echo "Error: Product not found!"
+	if [ ! -d "${PRODUCTS_DIR}" ]; then
+		echo "Error: ${PRODUCTS_DIR} does not exist."
 		exit 1
 	fi
 		
-	zipFilePath="${PHARO_PRODUCTS_DIR}/pharo-${os}-${productArch}${suffix}-${BUILD_DATE}-${BUILD_ID}.zip"
-	cp "${PRODUCTS_DIR}/"*.${fileExtension} "${zipFilePath}"
+	filename="pharo-${os}-${productArch}${suffix}-${BUILD_DATE}-${BUILD_ID}.${fileExtension}"
+	cp "${PRODUCTS_DIR}/"*.${fileExtension} "${PHARO_PRODUCTS_DIR}/${filename}"
 }
 
 case "${ARCH}" in
