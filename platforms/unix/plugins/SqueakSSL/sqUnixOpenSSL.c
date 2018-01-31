@@ -1,13 +1,12 @@
 #include "sq.h"
 #include "SqueakSSL.h"
 
-#include "openssl/ssl.h"
-#include "openssl/err.h"
-#include "openssl/x509v3.h"
+#include "openssl_overlay.h"
 
 #include <strings.h>
 #include <string.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 #include <arpa/inet.h>
 
@@ -29,6 +28,8 @@ typedef struct sqSSL {
 	BIO *bioWrite;
 } sqSSL;
 
+
+static bool wasInitialized = false;
 
 static sqSSL **handleBuf = NULL;
 static sqInt handleMax = 0;
@@ -56,21 +57,20 @@ static sqSSL *sslFromHandle(sqInt handle) {
 
 /* sqCopyBioSSL: Copies data from a BIO into an out buffer */
 sqInt sqCopyBioSSL(sqSSL *ssl, BIO *bio, char *dstBuf, sqInt dstLen) {
-	int nbytes = BIO_ctrl_pending(bio);
+	int nbytes = sqo_BIO_ctrl_pending(bio);
 
 	if(ssl->loglevel) printf("sqCopyBioSSL: %d bytes pending; buffer size %ld\n",
 				nbytes, (long)dstLen);
 	if(nbytes > dstLen) return -1;
-	return BIO_read(bio, dstBuf, dstLen);
+	return sqo_BIO_read(bio, dstBuf, dstLen);
 }
 
 
-#ifndef X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS
 enum sqMatchResult sqVerifyIP(sqSSL* ssl, X509* cert, const char* serverName, const size_t serverNameLength);
 enum sqMatchResult sqVerifyDNS(sqSSL* ssl, X509* cert, const char* serverName, const size_t serverNameLength);
-enum sqMatchResult sqVerifyNameInner(sqSSL* ssl, X509* cert, void* serverName, const size_t serverNameLength, const int matchType);
+enum sqMatchResult sqVerifyNameInner(sqSSL* ssl, X509* cert, const void* serverName, const size_t serverNameLength, const int matchType);
 char* sqVerifyFindStar(char* sANData, size_t sANDataSize);
-sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, void* data, const size_t dataSizeIn, const int matchType);
+sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, const void* data, const size_t dataSizeIn, const int matchType);
 
 enum sqMatchResult sqVerifyIP(sqSSL* ssl, X509* cert, const char* serverName, const size_t serverNameLength) {
 	struct in6_addr addr = { 0 }; // placeholder, longest of in_addr and in6_addr
@@ -95,25 +95,25 @@ enum sqMatchResult sqVerifyDNS(sqSSL* ssl, X509* cert, const char* serverName, c
 	return sqVerifyNameInner(ssl, cert, serverName, serverNameLength, GEN_DNS);
 }
 
-enum sqMatchResult sqVerifyNameInner(sqSSL* ssl, X509* cert, void* serverName, const size_t serverNameLength, const int matchType) {
+enum sqMatchResult sqVerifyNameInner(sqSSL* ssl, X509* cert, const void* serverName, const size_t serverNameLength, const int matchType) {
 	enum sqMatchResult matchFound = NO_MATCH_FOUND;
 
-	STACK_OF(GENERAL_NAME)* sANs = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
+	STACK_OF(GENERAL_NAME)* sANs = sqo_X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL);
 	if (!sANs) {
 		if (ssl->loglevel) printf("sqVerifyNameInner: No sAN names\n");
 		matchFound = NO_SAN_PRESENT;
 	} else {
 		int i = 0;
-		int sANCount = sk_GENERAL_NAME_num(sANs);
+		int sANCount = sqo_sk_GENERAL_NAME_num(sANs);
 		for (i = 0; i < sANCount && matchFound != MATCH_FOUND; ++i) {
-			const GENERAL_NAME* sAN = sk_GENERAL_NAME_value(sANs, i);
+			const GENERAL_NAME* sAN = sqo_sk_GENERAL_NAME_value(sANs, i);
 			if ((sAN->type == matchType) &&
 			    sqVerifySAN(ssl, sAN, serverName, serverNameLength, matchType)) {
 				matchFound = MATCH_FOUND;
 				break;
 			}
 		}
-		sk_GENERAL_NAME_pop_free(sANs, GENERAL_NAME_free);
+		sqo_sk_GENERAL_NAME_pop_free(sANs, (void(*)(void*))sqo_sk_free);
 	}
 	return matchFound;
 }
@@ -157,9 +157,9 @@ char* sqVerifyFindStar(char* sANData, size_t sANDataSize) {
 #undef FAIL_STAR
 }
 
-sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, void* data, const size_t dataSizeIn, const int matchType) {
-	char* sANData = (char *)ASN1_STRING_data(sAN->d.ia5);
-	size_t sANDataSize = (size_t)ASN1_STRING_length(sAN->d.ia5);
+sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, const void* data, const size_t dataSizeIn, const int matchType) {
+	char* sANData = (char *) sqo_ASN1_STRING_data(sAN->d.ia5);
+	size_t sANDataSize = (size_t) sqo_ASN1_STRING_length(sAN->d.ia5);
 	size_t dataSize = dataSizeIn;
 
 	if (ssl->loglevel) printf("sqVerifyNameInner: checking sAN %.*s\n", matchType == GEN_DNS ? (int) sANDataSize : 5 , matchType == GEN_DNS ? sANData : "an IP");
@@ -223,44 +223,44 @@ sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, void* data, const size_t 
 #undef NOPE
 #undef YEAH
 }
-#endif
-// X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS
 
 /* sqSetupSSL: Common SSL setup tasks */
 sqInt sqSetupSSL(sqSSL *ssl, int server) {
-
 	/* Fixme. Needs to use specified version */
 	if(ssl->loglevel) printf("sqSetupSSL: setting method\n");
-	ssl->method = (SSL_METHOD*) SSLv23_method();
+	ssl->method = (SSL_METHOD*) sqo_SSLv23_method();
 	if(ssl->loglevel) printf("sqSetupSSL: Creating context\n");
-	ssl->ctx = SSL_CTX_new(ssl->method);
+	ssl->ctx = sqo_SSL_CTX_new(ssl->method);
 	if(ssl->loglevel) printf("sqSetupSSL: Disabling SSLv2 and SSLv3\n");
-	SSL_CTX_set_options(ssl->ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
+	sqo_SSL_CTX_set_options(ssl->ctx, SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
 
-	if(!ssl->ctx) ERR_print_errors_fp(stdout);
+	if(!ssl->ctx) sqo_ERR_print_errors_fp(stdout);
 
 	if(ssl->loglevel) printf("sqSetupSSL: setting cipher list\n");
-	SSL_CTX_set_cipher_list(ssl->ctx, "!ADH:HIGH:MEDIUM:@STRENGTH");
+	sqo_SSL_CTX_set_cipher_list(ssl->ctx, "!ADH:HIGH:MEDIUM:@STRENGTH");
 
 	/* if a cert is provided, use it */
 	if(ssl->certName) {
-		if(ssl->loglevel) printf("sqSetupSSL: Using cert file %s\n", ssl->certName);
-		if(SSL_CTX_use_certificate_file(ssl->ctx, ssl->certName, SSL_FILETYPE_PEM)<=0)
-			ERR_print_errors_fp(stderr);
-
-		if(SSL_CTX_use_PrivateKey_file(ssl->ctx, ssl->certName, SSL_FILETYPE_PEM)<=0)
-			ERR_print_errors_fp(stderr);
+		if(ssl->loglevel) { 
+                	printf("sqSetupSSL: Using cert file %s\n", ssl->certName);
+		}
+		if(sqo_SSL_CTX_use_certificate_file(ssl->ctx, ssl->certName, SSL_FILETYPE_PEM)<=0) {
+			sqo_ERR_print_errors_fp(stderr);
+		}
+		if(sqo_SSL_CTX_use_PrivateKey_file(ssl->ctx, ssl->certName, SSL_FILETYPE_PEM)<=0) {
+			sqo_ERR_print_errors_fp(stderr);
+		}
 	}
 
 	/* Set up trusted CA */
 	if(ssl->loglevel) printf("sqSetupSSL: No root CA given; using default verify paths\n");
-	if(SSL_CTX_set_default_verify_paths(ssl->ctx) <=0)
-		ERR_print_errors_fp(stderr);
+	if(sqo_SSL_CTX_set_default_verify_paths(ssl->ctx) <=0)
+		sqo_ERR_print_errors_fp(stderr);
 
 	if(ssl->loglevel) printf("sqSetupSSL: Creating SSL\n");
-	ssl->ssl = SSL_new(ssl->ctx);
+	ssl->ssl = sqo_SSL_new(ssl->ctx);
 	if(ssl->loglevel) printf("sqSetupSSL: setting bios\n");
-	SSL_set_bio(ssl->ssl, ssl->bioRead, ssl->bioWrite);
+	sqo_SSL_set_bio(ssl->ssl, ssl->bioRead, ssl->bioWrite);
 	return 1;
 }
 /********************************************************************/
@@ -275,14 +275,20 @@ sqInt sqCreateSSL(void) {
 	sqInt handle = 0;
 	sqSSL *ssl = NULL;
 
-	SSL_library_init();
-	SSL_load_error_strings();
+	if (!wasInitialized) {
+ 		if (!loadLibrary()) {
+			return 0;
+		}
+		sqo_SSL_library_init();
+		sqo_SSL_load_error_strings();
+		wasInitialized = true;
+	}
 
 	ssl = calloc(1, sizeof(sqSSL));
-	ssl->bioRead = BIO_new(BIO_s_mem());
-	ssl->bioWrite = BIO_new(BIO_s_mem());
-	BIO_set_close(ssl->bioRead, BIO_CLOSE);
-	BIO_set_close(ssl->bioWrite, BIO_CLOSE);
+	ssl->bioRead = sqo_BIO_new(sqo_BIO_s_mem());
+	ssl->bioWrite = sqo_BIO_new(sqo_BIO_s_mem());
+	sqo_BIO_set_close(ssl->bioRead, BIO_CLOSE);
+	sqo_BIO_set_close(ssl->bioWrite, BIO_CLOSE);
 
 	/* Find a free handle */
 	for(handle = 1; handle < handleMax; handle++)
@@ -309,14 +315,14 @@ sqInt sqDestroySSL(sqInt handle) {
 	sqSSL *ssl = sslFromHandle(handle);
 	if(ssl == NULL) return 0;
 
-	if(ssl->ctx) SSL_CTX_free(ssl->ctx);
+	if(ssl->ctx) sqo_SSL_CTX_free(ssl->ctx);
 
 	if(ssl->ssl) {
-		SSL_free(ssl->ssl); // This will also free bioRead and bioWrite
+		sqo_SSL_free(ssl->ssl); // This will also free bioRead and bioWrite
 	} else {
 		// SSL_new didn't get called, have to free bioRead and bioWrite manually
-		BIO_free_all(ssl->bioRead);
-		BIO_free_all(ssl->bioWrite);
+		sqo_BIO_free_all(ssl->bioRead);
+		sqo_BIO_free_all(ssl->bioWrite);
 	}
 
 	if(ssl->certName) free(ssl->certName);
@@ -356,14 +362,14 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		if(ssl->loglevel) printf("sqConnectSSL: Setting up SSL\n");
 		if(!sqSetupSSL(ssl, 0)) return SQSSL_GENERIC_ERROR;
 		if(ssl->loglevel) printf("sqConnectSSL: Setting connect state\n");
-		SSL_set_connect_state(ssl->ssl);
+		sqo_SSL_set_connect_state(ssl->ssl);
 	}
 
 	if(ssl->loglevel) printf("sqConnectSSL: BIO_write %ld bytes\n", (long)srcLen);
 
 
 	if(srcLen > 0) {
-		int n = BIO_write(ssl->bioRead, srcBuf, srcLen);
+		int n = sqo_BIO_write(ssl->bioRead, srcBuf, srcLen);
 
 		if(n < srcLen) {
 			if(ssl->loglevel) printf("sqConnectSSL: BIO too small for input\n");
@@ -378,16 +384,16 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 	/* if a server name is provided, use it */
 	if(ssl->serverName) {
 		if(ssl->loglevel) printf("sqSetupSSL: Using server name %s\n", ssl->serverName);
-		SSL_set_tlsext_host_name(ssl->ssl, ssl->serverName);
+		sqo_SSL_set_tlsext_host_name(ssl->ssl, ssl->serverName);
 	}
 
 	if(ssl->loglevel) printf("sqConnectSSL: SSL_connect\n");
-	result = SSL_connect(ssl->ssl);
+	result = sqo_SSL_connect(ssl->ssl);
 	if(result <= 0) {
-		int error = SSL_get_error(ssl->ssl, result);
+		int error = sqo_SSL_get_error(ssl->ssl, result);
 		if(error != SSL_ERROR_WANT_READ) {
 			if(ssl->loglevel) printf("sqConnectSSL: SSL_connect failed\n");
-			ERR_print_errors_fp(stdout);
+			sqo_ERR_print_errors_fp(stdout);
 			return SQSSL_GENERIC_ERROR;
 		}
 		if(ssl->loglevel) printf("sqConnectSSL: sqCopyBioSSL\n");
@@ -398,7 +404,7 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 	ssl->state = SQSSL_CONNECTED;
 
 	if(ssl->loglevel) printf("sqConnectSSL: SSL_get_peer_certificate\n");
-	cert = SSL_get_peer_certificate(ssl->ssl);
+	cert = sqo_SSL_get_peer_certificate(ssl->ssl);
 	if(ssl->loglevel) printf("sqConnectSSL: cert = %p\n", cert);
 	/* Fail if no cert received. */
 	if(cert) {
@@ -432,19 +438,19 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 
 		if (ssl->serverName) {
 			const size_t serverNameLength = strnlen(ssl->serverName, MAX_HOSTNAME_LENGTH);
-#ifdef X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS
-			if(ssl->loglevel) printf("sqConnectSSL: X509_check_host.");
-			/* Try IP first, expect INVALID_IP_STRING to continue with hostname */
-			matched = (enum sqMatchResult) X509_check_ip_asc(cert, ssl->serverName, 0);
-			if (matched == INVALID_IP_STRING) {
-				matched = (enum sqMatchResult) X509_check_host(cert, ssl->serverName, serverNameLength, X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS, NULL);
+                        if (sqo_X509_check_ip_asc && sqo_X509_check_host) {
+				if(ssl->loglevel) printf("sqConnectSSL: X509_check_host.");
+				/* Try IP first, expect INVALID_IP_STRING to continue with hostname */
+				matched = (enum sqMatchResult) sqo_X509_check_ip_asc(cert, ssl->serverName, 0);
+				if (matched == INVALID_IP_STRING) {
+					matched = (enum sqMatchResult) sqo_X509_check_host(cert, ssl->serverName, serverNameLength, sqo_X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS, NULL);
+				}
+			} else {
+				matched = sqVerifyIP(ssl, cert, ssl->serverName, serverNameLength);
+				if (matched == INVALID_IP_STRING) {
+					matched = sqVerifyDNS(ssl, cert, ssl->serverName, serverNameLength);
+				}
 			}
-#else
-			matched = sqVerifyIP(ssl, cert, ssl->serverName, serverNameLength);
-			if (matched == INVALID_IP_STRING) {
-				matched = sqVerifyDNS(ssl, cert, ssl->serverName, serverNameLength);
-			}
-#endif
 			if (matched == MATCH_FOUND) {
 				if (ssl->loglevel) printf("sqConnectSSL: check hostname OK\n");
 				ssl->peerName = strndup(ssl->serverName, serverNameLength);
@@ -454,16 +460,16 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 		}
 		// fallback for missing sAN or non-provided serverName
 		if (matched == NO_MATCH_DONE_YET || matched == NO_SAN_PRESENT) {
-			X509_NAME_get_text_by_NID(X509_get_subject_name(cert),
-						  NID_commonName, peerName,
-						  sizeof(peerName));
+			sqo_X509_NAME_get_text_by_NID(sqo_X509_get_subject_name(cert),
+						      NID_commonName, peerName,
+						      sizeof(peerName));
 			if(ssl->loglevel) printf("sqConnectSSL: peerName = %s\n", peerName);
 			ssl->peerName = strndup(peerName, sizeof(peerName) - 1);
 		}
-		X509_free(cert);
+		sqo_X509_free(cert);
 
 		/* Check the result of verification */
-		result = SSL_get_verify_result(ssl->ssl);
+		result = sqo_SSL_get_verify_result(ssl->ssl);
 		if(ssl->loglevel) printf("sqConnectSSL: SSL_get_verify_result = %d\n", result);
 		/* FIXME: Figure out the actual failure reason */
 		ssl->certFlags = result ? SQSSL_OTHER_ISSUE : SQSSL_OK;
@@ -499,13 +505,13 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt 
 		if(ssl->loglevel) printf("sqAcceptSSL: Setting up SSL\n");
 		if(!sqSetupSSL(ssl, 1)) return SQSSL_GENERIC_ERROR;
 		if(ssl->loglevel) printf("sqAcceptSSL: setting accept state\n");
-		SSL_set_accept_state(ssl->ssl);
+		sqo_SSL_set_accept_state(ssl->ssl);
 	}
 
 	if(ssl->loglevel) printf("sqAcceptSSL: BIO_write %ld bytes\n", (long)srcLen);
 
 	if(srcLen > 0) {
-		int n = BIO_write(ssl->bioRead, srcBuf, srcLen);
+		int n = sqo_BIO_write(ssl->bioRead, srcBuf, srcLen);
 
 		if(n < srcLen) {
 			if(ssl->loglevel) printf("sqAcceptSSL: BIO_write wrote less than expected\n");
@@ -518,14 +524,14 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt 
 	}
 
 	if(ssl->loglevel) printf("sqAcceptSSL: SSL_accept\n");
-	result = SSL_accept(ssl->ssl);
+	result = sqo_SSL_accept(ssl->ssl);
 
 	if(result <= 0) {
 		int count = 0;
-		int error = SSL_get_error(ssl->ssl, result);
+		int error = sqo_SSL_get_error(ssl->ssl, result);
 		if(error != SSL_ERROR_WANT_READ) {
 			if(ssl->loglevel) printf("sqAcceptSSL: SSL_accept failed\n");
-			ERR_print_errors_fp(stdout);
+			sqo_ERR_print_errors_fp(stdout);
 			return SQSSL_GENERIC_ERROR;
 		}
 		if(ssl->loglevel) printf("sqAcceptSSL: sqCopyBioSSL\n");
@@ -537,19 +543,19 @@ sqInt sqAcceptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt 
 	ssl->state = SQSSL_CONNECTED;
 
 	if(ssl->loglevel) printf("sqAcceptSSL: SSL_get_peer_certificate\n");
-	cert = SSL_get_peer_certificate(ssl->ssl);
+	cert = sqo_SSL_get_peer_certificate(ssl->ssl);
 	if(ssl->loglevel) printf("sqAcceptSSL: cert = %p\n", cert);
 
 	if(cert) {
-		X509_NAME_get_text_by_NID(X509_get_subject_name(cert),
-					NID_commonName, peerName,
-					sizeof(peerName));
+		sqo_X509_NAME_get_text_by_NID(sqo_X509_get_subject_name(cert),
+					      NID_commonName, peerName,
+					      sizeof(peerName));
 		if(ssl->loglevel) printf("sqAcceptSSL: peerName = %s\n", peerName);
 		ssl->peerName = strndup(peerName, sizeof(peerName) - 1);
-		X509_free(cert);
+		sqo_X509_free(cert);
 
 		/* Check the result of verification */
-		result = SSL_get_verify_result(ssl->ssl);
+		result = sqo_SSL_get_verify_result(ssl->ssl);
 		if(ssl->loglevel) printf("sqAcceptSSL: SSL_get_verify_result = %d\n", result);
 		/* FIXME: Figure out the actual failure reason */
 		ssl->certFlags = result ? SQSSL_OTHER_ISSUE : SQSSL_OK;
@@ -576,7 +582,7 @@ sqInt sqEncryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 
 	if(ssl->loglevel) printf("sqEncryptSSL: Encrypting %ld bytes\n", (long)srcLen);
 
-	nbytes = SSL_write(ssl->ssl, srcBuf, srcLen);
+	nbytes = sqo_SSL_write(ssl->ssl, srcBuf, srcLen);
 	if(nbytes != srcLen) return SQSSL_GENERIC_ERROR;
 	return sqCopyBioSSL(ssl, ssl->bioWrite, dstBuf, dstLen);
 }
@@ -596,11 +602,11 @@ sqInt sqDecryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 
 	if(ssl == NULL || ssl->state != SQSSL_CONNECTED) return SQSSL_INVALID_STATE;
 
-	nbytes = BIO_write(ssl->bioRead, srcBuf, srcLen);
+	nbytes = sqo_BIO_write(ssl->bioRead, srcBuf, srcLen);
 	if(nbytes != srcLen) return SQSSL_GENERIC_ERROR;
-	nbytes = SSL_read(ssl->ssl, dstBuf, dstLen);
+	nbytes = sqo_SSL_read(ssl->ssl, dstBuf, dstLen);
 	if(nbytes <= 0) {
-		int error = SSL_get_error(ssl->ssl, nbytes);
+		int error = sqo_SSL_get_error(ssl->ssl, nbytes);
 		if(error != SSL_ERROR_WANT_READ && error != SSL_ERROR_ZERO_RETURN) {
 			return SQSSL_GENERIC_ERROR;
 		}
