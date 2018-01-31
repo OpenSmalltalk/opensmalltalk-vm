@@ -6,7 +6,7 @@
  *   CONTENT: Overlay OpenSSL for Linux/Unix
  *
  *   AUTHORS: Tobias Pape (topa)
- *               Hasso Plattner Institute, Postdam, Germany
+ *               Hasso Plattner Institute, Potsdam, Germany
  *****************************************************************************
  *   When we dynamically link against OpenSSL, the bundles are not
  *   portable, as CentOS and friends use other SO_NAMEs than Debian and
@@ -33,7 +33,7 @@
  *
  * SQO_DECL___(RETURN_TYPE, NAME, ARGS...)
  *
- * For symbols that appeard first version XYZ (X >=1) use SQO_DECLXYZ,
+ * For symbols that appeared first version XYZ (X >=1) use SQO_DECLXYZ,
  * for example:
  *
  * SQO_DECL102 (Available since OpenSSL 1.0.2)
@@ -130,7 +130,7 @@
  * List of optional OpenSSL constants
  *
  * This is necessary to allow usage of those constants with newer
- * dyamically loaded libraries, but whlist using older versions at
+ * dynamically loaded libraries, but whilst using older versions at
  * compile time.
  */
 #if defined(X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS)
@@ -169,8 +169,8 @@
  *
  *  The following stanzas will do this:
  *
- *  * When compiling non-linked (dynmically loaded):
- *    * find dl-header, define helper marcos for symbol lookup
+ *  * When compiling non-linked (dynamically loaded):
+ *    * find dl-header, define helper macros for symbol lookup
  *    * define static handles for dynamic libraries
  *    * helper function that does actual lookup
  *    * helper function that unloads libraries on SqueakSSL unload
@@ -181,7 +181,7 @@
  *    * When compiling linked (not dynamically loaded):
  *      * alias all necessary OpenSSL symbols to sqo_ prefixed
  *    * otherwise, when compiling non-linked (dynamically loaded):
- *      * lookup every symbol and assing to sqo_ prefixed name
+ *      * lookup every symbol and assign to sqo_ prefixed name
  *
  *  That's it, essentially.
  */
@@ -232,7 +232,7 @@ void SQO_DESTRUCTOR fini(void)
  * Macro that lookups a symbol in a library and does immediately
  * return the address when found.
  *
- * (whith optional debug output)
+ * (with optional debug output)
  */
 #if (defined(DEBUG) || defined(DEBUGVM)) && !defined(NDEBUG)
 #define SQO_HAS_FOUND_SYM(s,n,h)                                \
@@ -319,7 +319,7 @@ SQO_DECLARATIONS
  *      true    when all required symbols could be loaded/are linked
  *      false   when at least one required symbol could not be loaded
  *
- * Call this exaclty once!
+ * Call this exactly once!
  */
 bool loadLibrary(void)
 {
