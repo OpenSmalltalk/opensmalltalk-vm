@@ -279,8 +279,8 @@ sqInt sqCreateSSL(void) {
  		if (!loadLibrary()) {
 			return 0;
 		}
-                sqo_SSL_library_init();
-                sqo_SSL_load_error_strings();
+		sqo_SSL_library_init();
+		sqo_SSL_load_error_strings();
 		wasInitialized = true;
 	}
 
@@ -438,13 +438,12 @@ sqInt sqConnectSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 
 		if (ssl->serverName) {
 			const size_t serverNameLength = strnlen(ssl->serverName, MAX_HOSTNAME_LENGTH);
-                        //#ifdef X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS
                         if (sqo_X509_check_ip_asc && sqo_X509_check_host) {
 				if(ssl->loglevel) printf("sqConnectSSL: X509_check_host.");
 				/* Try IP first, expect INVALID_IP_STRING to continue with hostname */
 				matched = (enum sqMatchResult) sqo_X509_check_ip_asc(cert, ssl->serverName, 0);
 				if (matched == INVALID_IP_STRING) {
-					matched = (enum sqMatchResult) sqo_X509_check_host(cert, ssl->serverName, serverNameLength, X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS, NULL);
+					matched = (enum sqMatchResult) sqo_X509_check_host(cert, ssl->serverName, serverNameLength, sqo_X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS, NULL);
 				}
 			} else {
 				matched = sqVerifyIP(ssl, cert, ssl->serverName, serverNameLength);
