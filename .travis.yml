@@ -109,7 +109,7 @@ before_script: $CHROOT ./.travis_build.sh
 
 script: ./.travis_test.sh
 
-before_deploy: (cd deploy && ./filter-exec.sh pack-vm.sh)
+after_success: (cd deploy && ./filter-exec.sh pack-vm.sh)
 
 deploy:
   - provider: script # Deploy bleeding edge to Bintray
