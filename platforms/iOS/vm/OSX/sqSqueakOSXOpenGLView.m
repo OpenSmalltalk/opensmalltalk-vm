@@ -152,16 +152,15 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
     {
 		// NSOpenGLPFAOpenGLProfile,
 		// 	NSAppKitVersionNumber < NSAppKitVersionNumber10_9 ? NSOpenGLProfileVersionLegacy : NSOpenGLProfileVersion3_2Core,
-		NSOpenGLPFAAccelerated,
 		NSOpenGLPFANoRecovery,
 		NSOpenGLPFABackingStore,
 		NSOpenGLPFADoubleBuffer,
 		NSOpenGLPFAAllowOfflineRenderers, // Enables automatic graphics card switching
-		NSOpenGLPFADepthSize, 0,
-		NSOpenGLPFAStencilSize, 0,
+		NSOpenGLPFADepthSize, (NSOpenGLPixelFormatAttribute)0,
+		NSOpenGLPFAStencilSize, (NSOpenGLPixelFormatAttribute)0,
 		0
-    };
-    return AUTORELEASEOBJ([[NSOpenGLPixelFormat alloc] initWithAttributes:attrs]);
+	};
+	return AUTORELEASEOBJ([[NSOpenGLPixelFormat alloc] initWithAttributes:attrs]);
 }
 
 #pragma mark Initialization / Release
