@@ -105,7 +105,7 @@ jobs:
 
 install: ./.travis_install.sh
 
-before_script: $CHROOT ./.travis_build.sh
+before_script: travis_retry $CHROOT ./.travis_build.sh
 
 script: ./.travis_test.sh
 
