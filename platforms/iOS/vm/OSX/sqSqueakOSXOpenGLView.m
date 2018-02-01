@@ -150,6 +150,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 + (NSOpenGLPixelFormat *)defaultPixelFormat {
 	NSOpenGLPixelFormatAttribute attrs[] =
     {
+		// NSOpenGLPFAOpenGLProfile,
+		// 	NSAppKitVersionNumber < NSAppKitVersionNumber10_9 ? NSOpenGLProfileVersionLegacy : NSOpenGLProfileVersion3_2Core,
 		NSOpenGLPFAAccelerated,
 		NSOpenGLPFANoRecovery,
 		NSOpenGLPFABackingStore,
@@ -316,12 +318,21 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	
 	CGLContextObj ctx = [[self openGLContext] CGLContextObj];
 	CGLEnable( ctx, kCGLCEMPEngine);
+	// from gl3.h
+#ifndef GL_MAJOR_VERSION
+#define GL_MAJOR_VERSION 0x821B
+#endif
+	GLint maj = 0;
+	glGetIntegerv(GL_MAJOR_VERSION, &maj);
+	if (maj > 3) {
+		hasVertexArrayObject = YES;
+	} else {
+		const char* oldExtensions = (const char*)glGetString(GL_EXTENSIONS);
+		hasVertexArrayObject = oldExtensions && (strstr(oldExtensions, "GL_APPLE_vertex_array_object") != NULL);
+	}
 	
-	const char *extensions = (const char*)glGetString(GL_EXTENSIONS);
-	hasVertexArrayObject = strstr(extensions, "GL_APPLE_vertex_array_object") != NULL;
-	
-	//printf("Opengl version: %s\n", glGetString(GL_VERSION));
-	//printf("Opengl extensions: %s\n", glGetString(GL_EXTENSIONS));
+	// printf("Opengl version: %s\n", glGetString(GL_VERSION));
+	// printf("Opengl extensions: %s\n", glGetString(GL_EXTENSIONS));
 	
 	[self buildGPUPrograms];
 	[self buildScreenQuad];
@@ -369,8 +380,13 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	// This should never fail.
 	glGetShaderiv(handle, GL_COMPILE_STATUS, &status);
 	if(status != GL_TRUE) {
-		fprintf(stderr, "Failed to compile shader with source: %s\n", shaderSource);
-		abort();
+		GLint logSize = 0;
+		glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &logSize);
+		char errorLog[logSize];
+		glGetShaderInfoLog(handle, logSize, &logSize, &errorLog[0]);
+		
+		fprintf(stderr, "Failed to compile shader with source: \n%s\nError: %s", shaderSource, errorLog);
+		return NULL;
 	}
 	
 	return handle;
@@ -395,8 +411,13 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 	// This should never fail.
 	glGetProgramiv(program, GL_LINK_STATUS, &status);
 	if(status != GL_TRUE) {
-		fprintf(stderr, "Failed to link the screen quad shader.\n");
-		abort();
+		GLint logSize = 0;
+		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logSize);
+		char errorLog[logSize];
+		glGetProgramInfoLog(program, logSize, &logSize, &errorLog[0]);
+		fprintf(stderr, "Failed to link the screen quad shader.\nError: %s", errorLog);
+
+		return NULL;
 	}
 	
 	// Bind the screen texture to the first texture binding point.
