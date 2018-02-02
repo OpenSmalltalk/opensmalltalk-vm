@@ -14,7 +14,7 @@ notifications:
 aliases:
   - &mac-build
     os: osx
-    osx_image: xcode7.3
+    osx_image: xcode8.3
 
 jobs:
   include:
@@ -109,7 +109,7 @@ before_script: $CHROOT ./.travis_build.sh
 
 script: ./.travis_test.sh
 
-before_deploy: (cd deploy && ./filter-exec.sh pack-vm.sh)
+after_success: (cd deploy && ./filter-exec.sh pack-vm.sh)
 
 deploy:
   - provider: script # Deploy bleeding edge to Bintray
@@ -118,12 +118,12 @@ deploy:
     on:
       repo: OpenSmalltalk/opensmalltalk-vm
       branch: Cog
-  - provider: script # Deploy to files.pharo.org (temporarily disabled)
+  - provider: script # Deploy to files.pharo.org
     script: (cd deploy/pharo && ./deploy.sh)
     skip_cleanup: true
     on:
       repo: OpenSmalltalk/opensmalltalk-vm
-      branch: CogRemoveThisToEnablePharoDeployAgain
+      branch: Cog
       condition: $FLAVOR == pharo*
   - provider: releases # Deploy stable tags to GitHub releases
     api_key:

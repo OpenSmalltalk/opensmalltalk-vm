@@ -23,8 +23,8 @@ $(OPENSSLARCHIVE):
 $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME): $(OPENSSLARCHIVE)
 	tar x -f $(OPENSSLARCHIVE) -C $(THIRDPARTYDIR)
 	cd $(OPENSSLDIR) \
-		&& ./Configure darwin-i386-cc --prefix='$(THIRDPARTYOUTDIR)' shared \
-		&& LDFLAGS='-Wl,-rpath,@executable_path:@executable_path/Plugins' make \
+		&& ./Configure darwin-i386-cc --prefix='$(THIRDPARTYOUTDIR)' shared | grep -C10 "Error" \
+		&& LDFLAGS='-Wl,-rpath,@executable_path:@executable_path/Plugins' make | grep -C10 "Error" \
 		&& make install
 
 # Assuming building libssl will also build libcrypto
