@@ -1557,7 +1557,6 @@ NewObjectMemory >> initForwardBlock: fwdBlock mapping: objOop to: newOop withBac
 
 { #category : #initialization }
 NewObjectMemory >> initialize [
-	<doNotGenerate>
 	"Initialize NewObjectMemory when simulating the VM inside Smalltalk."
 	super initialize.
 	checkForLeaks := fullGCLock := 0.
