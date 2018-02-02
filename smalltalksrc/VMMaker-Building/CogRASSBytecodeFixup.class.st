@@ -29,9 +29,7 @@ CogRASSBytecodeFixup class >> filteredInstVarNames [
 	vars := super filteredInstVarNames asOrderedCollection.
 	vars
 		remove: 'mergeSimStack';
-		add: 'mergeSimStack' afterIndex: (vars indexOf: 'targetInstruction');
-		remove: 'isReceiverResultRegSelf';
-		add: 'isReceiverResultRegSelf' afterIndex: (vars indexOf: 'simStackPtr').
+		add: 'mergeSimStack' afterIndex: (vars indexOf: 'targetInstruction').
 	^vars
 ]
 

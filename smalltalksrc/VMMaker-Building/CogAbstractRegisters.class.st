@@ -36,6 +36,8 @@ Class {
 		'FPReg',
 		'LinkReg',
 		'NoReg',
+		'NumFloatRegisters',
+		'NumRegisters',
 		'PCReg',
 		'RISCTempReg',
 		'ReceiverResultReg',

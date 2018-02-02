@@ -2,23 +2,27 @@
 A CogSSBytecodeFixup extends CogBytecodeFixup with state to merge the stack at control-flow joins.  At a join the code generator must ensure that the stack is spilled to the same point along both branches and that the simStackPtr is correct.
 
 Instance Variables
-	simStackPtr:		<Integer>
+	simStackPtr:					<Integer>
+	isTargetOfBackwardBranch:		<Boolean>
 
 simStackPtr
-	- the simStackPtr at the jump to this fixup.  It should either agree with the incoming fixup if control continues, or replace the simStackPtr if control doesn't continue (the incomming control flow ended with a return)
+	- the simStackPtr at the jump to this fixup.  It should either agree with the incoming fixup if control continues, or replace the simStackPtr if control doesn't continue (the incoming control flow ended with a return)
+
+isTargetOfBackwardBranch:
+	- if true the fixup is the target of some backward branch
 "
 Class {
 	#name : #CogSSBytecodeFixup,
 	#superclass : #CogBytecodeFixup,
 	#instVars : [
 		'simStackPtr',
+		'isTargetOfBackwardBranch',
 		'simNativeStackPtr',
 		'simNativeStackSize'
 	],
 	#classVars : [
 		'NeedsMergeFixupFlag',
-		'NeedsNonMergeFixupFlag',
-		'UnknownSimStackPtrFlag'
+		'NeedsNonMergeFixupFlag'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -40,7 +44,9 @@ CogSSBytecodeFixup class >> filteredInstVarNames [
 	vars := super filteredInstVarNames asOrderedCollection.
 	vars
 		remove: 'instructionIndex';
-		add: 'instructionIndex' afterIndex: (vars indexOf: 'simStackPtr');
+			add: 'instructionIndex' afterIndex: (vars indexOf: 'simStackPtr');
+		remove: 'isTargetOfBackwardBranch';
+			add: 'isTargetOfBackwardBranch' afterIndex: (vars indexOf: 'simStackPtr');
 		add: '#if LowcodeVM' beforeIndex: (vars indexOf: 'simNativeStackPtr');
 		add: '#endif' afterIndex: (vars indexOf: 'simNativeStackSize').
 	^vars
@@ -60,9 +66,7 @@ CogSSBytecodeFixup class >> initialize [
 	 the right instruction."
 	NeedsNonMergeFixupFlag := 1.
 	NeedsMergeFixupFlag := 2.
-	self assert: NeedsNonMergeFixupFlag < NeedsMergeFixupFlag.
-
-	UnknownSimStackPtrFlag := -2
+	self assert: NeedsNonMergeFixupFlag < NeedsMergeFixupFlag
 ]
 
 { #category : #'simulation support' }
@@ -95,10 +99,15 @@ CogSSBytecodeFixup >> becomeNonMergeFixup [
 	targetInstruction := self cCoerceSimple: NeedsNonMergeFixupFlag to: #'AbstractInstruction *'
 ]
 
+{ #category : #'instance initialization' }
+CogSSBytecodeFixup >> initialize [
+	targetInstruction := 0.
+	isTargetOfBackwardBranch := false
+]
+
 { #category : #testing }
 CogSSBytecodeFixup >> isBackwardBranchFixup [
-	<inline: true>
-	^ simStackPtr = UnknownSimStackPtrFlag
+	^isTargetOfBackwardBranch
 ]
 
 { #category : #testing }
@@ -169,12 +178,7 @@ CogSSBytecodeFixup >> reinitialize [
 { #category : #accessing }
 CogSSBytecodeFixup >> setIsBackwardBranchFixup [
 	<inline: true>
-	simStackPtr := UnknownSimStackPtrFlag.
-	LowcodeVM ifTrue: [ 
-		simNativeStackPtr := UnknownSimStackPtrFlag.
-		simNativeStackSize := 0.
-	]
-
+	isTargetOfBackwardBranch := true
 ]
 
 { #category : #accessing }
