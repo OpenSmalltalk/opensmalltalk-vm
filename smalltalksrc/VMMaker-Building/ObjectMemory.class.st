@@ -2729,7 +2729,6 @@ ObjectMemory >> initialInstanceOf: classPointer [
 
 { #category : #initialization }
 ObjectMemory >> initialize [
-	<doNotGenerate>
 	"Initialize ObjectMemory when simulating the VM inside Smalltalk."
 	super initialize.
 	headerTypeBytes := CArrayAccessor on: HeaderTypeExtraBytes.

@@ -12837,13 +12837,11 @@ StackToRegisterMappingCogit >> mergeWithFixupIfRequired: fixup [
 	self traceMerge: fixup.
 	deadCode
 		ifTrue: "case 3"
-			["Would like to assert fixup simStackPtr >= methodOrBlockNumTemps but can't because
-			   a) the initialNils hack, b) deadCode removal allows arriving at an isBackwardBranchFixup."
+			["Would like to assert fixup simStackPtr >= methodOrBlockNumTemps
+			   but can't because of the initialNils hack."
 			 self assert: (fixup simStackPtr >= methodOrBlockNumTemps
-						or: [inBlock = InVanillaBlock
-						or: [fixup isBackwardBranchFixup]]).
-			 fixup isBackwardBranchFixup ifFalse:
-				[simStackPtr := fixup simStackPtr].
+						or: [inBlock = InVanillaBlock]).
+			 simStackPtr := fixup simStackPtr.
 			 LowcodeVM ifTrue:
 				[simNativeStackPtr := fixup simNativeStackPtr.
 				simNativeStackSize := fixup simNativeStackSize]]
@@ -12967,6 +12965,12 @@ StackToRegisterMappingCogit >> prevInstIsPCAnnotated [
 ]
 
 { #category : #'debug printing' }
+StackToRegisterMappingCogit >> printRegisterMask: registerMask [
+	<doNotGenerate>
+	^String streamContents: [:s| self printRegisterMask: registerMask on: s]
+]
+
+{ #category : #'debug printing' }
 StackToRegisterMappingCogit >> printRegisterMask: registerMask on: aStream [
 	<doNotGenerate>
 	| first |
@@ -12992,9 +12996,13 @@ StackToRegisterMappingCogit >> printSimStack [
 ]
 
 { #category : #'simulation only' }
-StackToRegisterMappingCogit >> printSimStack: aSimStack [
+StackToRegisterMappingCogit >> printSimStack: aSimStackOrFixup [
 	<doNotGenerate>
-	self printSimStack: aSimStack toDepth: simStackPtr spillBase: simSpillBase on: coInterpreter transcript
+	(aSimStackOrFixup isKindOf: CogRASSBytecodeFixup)
+		ifTrue:
+			[self printSimStack: aSimStackOrFixup mergeSimStack toDepth: aSimStackOrFixup simStackPtr spillBase: -1 on: coInterpreter transcript]
+		ifFalse:
+			[self printSimStack: aSimStackOrFixup toDepth: simStackPtr spillBase: simSpillBase on: coInterpreter transcript]
 ]
 
 { #category : #'simulation only' }
@@ -13093,9 +13101,8 @@ StackToRegisterMappingCogit >> reinitializeFixupsFrom: start through: end [
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> restoreSimStackAtMergePoint: fixup [
 	<inline: true>
-	"All the execution paths reaching a merge point expect everything to be
-	 spilled on stack and the optStatus is unknown. Throw away all simStack and 
-	 optStatus optimization state."
+	"All the execution paths reaching a merge point expect everything
+	 to be spilled on stack. Throw away all simStack optimization state."
 	self voidReceiverOptStatus.
 	methodOrBlockNumTemps + 1 to: simStackPtr do:
 		[:i|
@@ -13565,12 +13572,15 @@ StackToRegisterMappingCogit >> ssFlushUpThroughTemporaryVariable: tempIndex [
 	"Any occurrences on the stack of the value being stored (which is the top of stack)
 	 must be flushed, and hence any values colder than them stack."
 	<var: #desc type: #'CogSimStackEntry *'>
+	| offset |
 	LowcodeVM ifTrue: [ self ssNativeFlushTo: simNativeStackPtr ].
+	offset := (self simStackAt: tempIndex + 1) offset.
+	self assert: offset = (self frameOffsetOfTemporary: tempIndex).
 	self ssFlushUpThrough: 
 		[ :desc |
 			desc type = SSBaseOffset
 		 	and: [desc register = FPReg
-		 	and: [desc offset = (self frameOffsetOfTemporary: tempIndex) ] ] ]
+		 	and: [desc offset = offset ] ] ]
 ]
 
 { #category : #'simulation stack' }
@@ -14014,19 +14024,15 @@ StackToRegisterMappingCogit >> traceFixup: fixup merge: isMerge [
 { #category : #'simulation only' }
 StackToRegisterMappingCogit >> traceMerge: fixup [
 	<cmacro: '(ign) 0'>
-	| index original |
+	| index |
 	(compilationTrace anyMask: 16) ifTrue:
 		[index := (fixups object identityIndexOf: fixup) - 1.
-		 (fixup isBackwardBranchFixup and: [compilationPass notNil and: [compilationPass > 1 and: [(original := fixup simStackPtr) < 0]]]) ifTrue:
-			[fixup simStackPtr: simStackPtr].
-
-		 [coInterpreter transcript
-				ensureCr;
-				print: index; nextPut: $/; print: index + initialPC;
-				nextPut: $:; space.
-				fixup printStateOn: coInterpreter transcript.
-				coInterpreter transcript cr; flush]
-			ensure: [original ifNotNil: [fixup simStackPtr: original]]]
+		 coInterpreter transcript
+			ensureCr;
+			print: index; nextPut: $/; print: index + initialPC;
+			nextPut: $:; space.
+			fixup printStateOn: coInterpreter transcript.
+			coInterpreter transcript cr; flush]
 ]
 
 { #category : #'simulation only' }

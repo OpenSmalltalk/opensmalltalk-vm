@@ -399,7 +399,7 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 	(self shouldIncludeMethodFor: aClass selector: selector) ifFalse:
 		[^nil].
 	tmethod := self compileToTMethodSelector: selector in: aClass.
-	"Even thoug we exclude initialize methods, we must consider their
+	"Even though we exclude initialize methods, we must consider their
 	 global variable usage, otherwise globals may be incorrectly localized."
 	selector == #initialize ifTrue:
 		[self checkForGlobalUsage: (tmethod allReferencedVariablesUsing: self) in: tmethod.

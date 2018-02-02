@@ -56,13 +56,13 @@ CogBytecodeFixup class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 			value: ivn
 			value: (ivn first ~= $# ifTrue:
 						[ivn caseOf: {
-							['targetInstruction']			-> [#'AbstractInstruction *'].
-							['mergeSimStack']			-> [#'SimStackEntry *'].
-							['instructionIndex']			-> [#'unsigned short'].
-							['simStackPtr']				-> [#'signed char'].
-							['simNativeStackPtr']		-> [#'short'].
-							['simNativeStackSize']		-> [#'unsigned short'].
-							['isReceiverResultRegSelf']	-> [#char] }])]
+							['targetInstruction']				-> [#'AbstractInstruction *'].
+							['mergeSimStack']				-> [#'SimStackEntry *'].
+							['instructionIndex']				-> [#'unsigned short'].
+							['simStackPtr']					-> [#'unsigned char'].
+							['simNativeStackPtr']			-> [#'short'].
+							['simNativeStackSize']			-> [#'unsigned short'].
+							['isTargetOfBackwardBranch']	-> [#char] }])]
 ]
 
 { #category : #translation }
@@ -100,9 +100,8 @@ CogBytecodeFixup >> cCoerceSimple: flagOrAbstractOp to: cType [
 	^ flagOrAbstractOp
 ]
 
-{ #category : #'initialize-release' }
+{ #category : #'instance initialization' }
 CogBytecodeFixup >> initialize [
-	<doNotGenerate>
 	targetInstruction := 0
 ]
 
