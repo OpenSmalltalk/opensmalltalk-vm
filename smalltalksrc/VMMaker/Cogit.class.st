@@ -10053,7 +10053,7 @@ Cogit >> maybeHaltIfDebugPC [
 	<cmacro: '() 0'> "Simulation only; void in C"
 	((debugBytecodePointers includes: bytecodePC)
 	 and: [breakMethod isNil or: [methodObj = breakMethod]]) ifTrue:
-		[self halt]
+		[self halt: ' at bcpc ', bytecodePC printString, '/', (bytecodePC + 1) printString]
 ]
 
 { #category : #'garbage collection' }

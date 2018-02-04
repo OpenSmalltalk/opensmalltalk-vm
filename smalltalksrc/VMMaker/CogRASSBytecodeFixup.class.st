@@ -86,3 +86,13 @@ CogRASSBytecodeFixup >> reinitialize [
 	super reinitialize.
 	mergeSimStack := nil
 ]
+
+{ #category : #'debug printing' }
+CogRASSBytecodeFixup >> simStackPrintString [
+	<doNotGenerate>
+	^String streamContents:
+		[:s|
+		 self notAFixup
+			ifTrue: [s nextPutAll: 'notAFixup']
+			ifFalse: [cogit printSimStack: mergeSimStack toDepth: simStackPtr spillBase: -1 on: s]]
+]
