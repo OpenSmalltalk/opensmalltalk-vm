@@ -4006,6 +4006,12 @@ SimpleStackBasedCogit >> register: reg isInMask: mask [
 	^ mask anyMask: (self registerMaskFor: reg)
 ]
 
+{ #category : #'simulation stack' }
+SimpleStackBasedCogit >> register: reg isNotInMask: mask [
+	<inline: true>
+	^ mask noMask: (self registerMaskFor: reg)
+]
+
 { #category : #trampolines }
 SimpleStackBasedCogit >> returnRegForStoreCheck [
 	"We must ensure the ReceiverResultReg is live across the store check so that

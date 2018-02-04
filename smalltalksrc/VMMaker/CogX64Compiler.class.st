@@ -195,6 +195,8 @@ CogX64Compiler class >> initializeAbstractRegisters [
 		ifTrue: [self initializeAbstractRegistersSysV]
 		ifFalse: [self initializeAbstractRegistersWin64].
 
+	NumRegisters := 16.
+
 	DPFPReg0				:= XMM0L.
 	DPFPReg1				:= XMM1L.
 	DPFPReg2				:= XMM2L.
@@ -210,7 +212,9 @@ CogX64Compiler class >> initializeAbstractRegisters [
 	DPFPReg12				:= XMM12L.
 	DPFPReg13				:= XMM13L.
 	DPFPReg14				:= XMM14L.
-	DPFPReg15				:= XMM15L
+	DPFPReg15				:= XMM15L.
+
+	NumFloatRegisters := 16
 ]
 
 { #category : #'class initialization' }

@@ -140,6 +140,8 @@ CogIA32Compiler class >> initializeAbstractRegisters [
 	Arg0Reg				:= ESI.
 	Arg1Reg				:= EDI.
 
+	NumRegisters := 8.
+
 	DPFPReg0				:= XMM0L.
 	DPFPReg1				:= XMM1L.
 	DPFPReg2				:= XMM2L.
@@ -147,7 +149,9 @@ CogIA32Compiler class >> initializeAbstractRegisters [
 	DPFPReg4				:= XMM4L.
 	DPFPReg5				:= XMM5L.
 	DPFPReg6				:= XMM6L.
-	DPFPReg7				:= XMM7L
+	DPFPReg7				:= XMM7L.
+
+	NumFloatRegisters := 8
 ]
 
 { #category : #testing }

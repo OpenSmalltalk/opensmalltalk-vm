@@ -116,13 +116,12 @@ RegisterAllocatingCogit >> allocatedRegisters [
 
 { #category : #'compile abstract instructions' }
 RegisterAllocatingCogit >> assertCorrectSimStackPtr [
-	<inline: true> "generates nothing anyway"
+	<inline: true> "generates nothing anyway" "self simStackPrintString"
 	 self cCode: '' inSmalltalk:
 		[deadCode ifFalse:
 			[self assert: simStackPtr + (needsFrame ifTrue: [0] ifFalse: [1])
 						= (self debugStackPointerFor: bytecodePC)].
-		 self deny: self duplicateRegisterAssignmentsInTemporaries].
-	
+		 self deny: self duplicateRegisterAssignmentsInTemporaries]
 ]
 
 { #category : #'simulation only' }
@@ -136,17 +135,17 @@ RegisterAllocatingCogit >> compileAbstractInstructionsFrom: start through: end [
 	"Loop over bytecodes, dispatching to the generator for each bytecode, handling fixups in due course.
 	 Override to provide a development-time only escape for failed merges due to partially implemented
 	 parallel move.  Override to recompile after a loop requiring a merge is detected."
-	^[| result initialOpcodeIndex initialCounterIndex initialIndexOfIRC |
-	   compilationPass := 1.
-	   scratchBytecodePC := nil.
-	   initialOpcodeIndex := opcodeIndex.
-	   initialCounterIndex := self maybeCounterIndex."for SistaCogit"
-	   literalsManager saveForRecompile.
-	   NewspeakVM ifTrue:
-			[initialIndexOfIRC := indexOfIRC].
-	   [recompileForLoopRegisterAssignments := false.
-	    result := super compileAbstractInstructionsFrom: start through: end.
-	    result = 0 and: [recompileForLoopRegisterAssignments]]
+	| result initialOpcodeIndex initialCounterIndex initialIndexOfIRC |
+	compilationPass := 1.
+	scratchBytecodePC := nil.
+	initialOpcodeIndex := opcodeIndex.
+	initialCounterIndex := self maybeCounterIndex."for SistaCogit"
+	literalsManager saveForRecompile.
+	NewspeakVM ifTrue:
+		[initialIndexOfIRC := indexOfIRC].
+	[recompileForLoopRegisterAssignments := false.
+	 result := super compileAbstractInstructionsFrom: start through: end.
+	 result = 0 and: [recompileForLoopRegisterAssignments]]
 		whileTrue:
 			[self assert: compilationPass <= 2.
 			 self reinitializeAllButBackwardFixupsFrom: start through: end.
@@ -159,17 +158,7 @@ RegisterAllocatingCogit >> compileAbstractInstructionsFrom: start through: end [
 			 literalsManager resetForRecompile.
 			 NewspeakVM ifTrue:
 				[indexOfIRC := initialIndexOfIRC]].
-	    result]
-			on: Notification
-			do: [:ex|
-				ex tag == #failedMerge ifTrue:
-					[coInterpreter transcript
-						ensureCr; nextPutAll: 'FAILED MERGE IN ';
-						nextPutAll: (coInterpreter nameOfClass: (coInterpreter methodClassOf: methodObj));
-						nextPutAll: '>>#'; nextPutAll: (coInterpreter stringOf: (coInterpreter maybeSelectorOfMethod: methodObj));
-						flush.
-					 ^ShouldNotJIT].
-				ex pass]
+	^result
 ]
 
 { #category : #'compile abstract instructions' }
@@ -218,7 +207,8 @@ RegisterAllocatingCogit >> conflictsResolvedBetweenSimStackAnd: mergeSimStack [
 		[:i| | mergeMask currentMask |
 		mergeMask := (self simStack: mergeSimStack at: i) registerMaskOrNone.
 		currentMask := (self simStack: simStack at: i) registerMaskOrNone.
-		mergeMask ~= currentMask ifTrue:
+		"Ignore targets with no registers.  Current's register can be deassigned and so there's no conflict."
+		(mergeMask ~= 0 and: [mergeMask ~= currentMask]) ifTrue:
 			[(currentMask anyMask: regsWrittenToMask) ifTrue:
 				[^false]].
 		regsWrittenToMask := regsWrittenToMask bitOr: mergeMask].
@@ -238,6 +228,16 @@ RegisterAllocatingCogit >> copyLiveRegisterToCopiesOf: simStackEntry [
 RegisterAllocatingCogit >> copySimStack [
 	<doNotGenerate>
 	^CArrayAccessor on: (simStack object collect: [:stackEntry| stackEntry copy])
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> copySimStackToFixup: fixup [
+	<var: #fixup type: #'BytecodeFixup *'>
+	<inline: true>
+	self cCode: [self mem: fixup mergeSimStack cp: simStack y: simStackPtr + 1 * (self sizeof: CogSimStackEntry)]
+		inSmalltalk: [0 to: simStackPtr do:
+						[:i|
+						fixup mergeSimStack at: i put: (simStack at: i) copy]]
 ]
 
 { #category : #'bytecode generator support' }
@@ -371,8 +371,7 @@ RegisterAllocatingCogit >> ensureRegisterAssignmentsAreAtHeadOfLoop: target [
 	 exactly the same code as for a merge at the end of an if."
 	| conflictingRegsMask |
 	compilationPass > 1 ifTrue:
-		["self deny: (self mergeRequiredToTarget: target mergeSimStack)."
-		 self assert: (target mergeSimStack isNil or: [self simStack: simStack isIdenticalTo: target mergeSimStack]).
+		[self assert: (target mergeSimStack notNil).
 		 ^self].
 	(self mergeRequiredToTarget: target mergeSimStack) ifFalse:
 		[^self].
@@ -639,6 +638,8 @@ RegisterAllocatingCogit >> genJumpBackTo: targetPC [
 	self assert: targetPC < bytecodePC.
 	target := self fixupAt: targetPC.
 	self ensureRegisterAssignmentsAreAtHeadOfLoop: target.
+	self copySimStackToScratch: simSpillBase.
+	self mergeCurrentSimStackWith: target.
 	self MoveAw: coInterpreter stackLimitAddress R: TempReg.
 	self CmpR: TempReg R: SPReg. "N.B. FLAGS := SPReg - TempReg"
 	self JumpAboveOrEqual: target.
@@ -646,8 +647,9 @@ RegisterAllocatingCogit >> genJumpBackTo: targetPC [
 	self ssFlushTo: simStackPtr.
 	self CallRT: ceCheckForInterruptTrampoline.
 	self annotateBytecode: self Label.
+	self restoreSimStackFromScratch.
 	self flushLiveRegistersForSuspensionPoint.
-	self mergeCurrentSimStackWith: target forwards: false.
+	self mergeCurrentSimStackWith: target.
 	self Jump: target.
 	deadCode := true. "can't fall through"
 	^0
@@ -1090,7 +1092,7 @@ RegisterAllocatingCogit >> genStorePop: popBoolean TemporaryVariable: tempIndex 
 	 if, for example, the ssEntry to be popped is already in ReceiverResultReg (as the result of a send).
 	 ReceiverResultReg is not a good choice for a temporary variable; it has other uses.  So if the ssEntry
 	 at top of stack has ReceiverResultReg as its live variable, try and allocate an alternative."
-	destReg := (self simStackAt: tempIndex) liveRegister.
+	destReg := (self simStackAt: tempIndex + 1) liveRegister.
 	destReg ~= NoReg
 		ifTrue:
 			[self ssStorePop: popBoolean toReg: destReg]
@@ -1109,12 +1111,12 @@ RegisterAllocatingCogit >> genStorePop: popBoolean TemporaryVariable: tempIndex 
 				 destReg ~= NoReg ifTrue:
 					[self MoveR: srcRegOrNone R: destReg]].
 			 (destReg ~= NoReg and: [destReg ~= TempReg]) ifTrue:
-				[(self simStackAt: tempIndex) liveRegister: destReg.
-				 self copyLiveRegisterToCopiesOf: (self simStackAt: tempIndex)]].
+				[(self simStackAt: tempIndex + 1) liveRegister: destReg.
+				 self copyLiveRegisterToCopiesOf: (self simStackAt: tempIndex + 1)]].
 	self MoveR: (srcRegOrNone ~= NoReg ifTrue: [srcRegOrNone] ifFalse: [destReg])
 		Mw: (self frameOffsetOfTemporary: tempIndex)
 		r: FPReg.
-	(self simStackAt: tempIndex) bcptr: bytecodePC. "for debugging"
+	(self simStackAt: tempIndex + 1) bcptr: bytecodePC. "for debugging"
 	self deny: self duplicateRegisterAssignmentsInTemporaries.
 	^0
 ]
@@ -1257,16 +1259,18 @@ RegisterAllocatingCogit >> liveRegisters [
 { #category : #'simulation stack' }
 RegisterAllocatingCogit >> liveRegistersExceptingTopNItems: n in: aSimStack [
 	<var: 'aSimStack' type: #'SimStackEntry *'>
+	^self liveRegistersFrom: 0 to: simStackPtr - n in: aSimStack
+]
+
+{ #category : #'simulation stack' }
+RegisterAllocatingCogit >> liveRegistersFrom: low to: high in: aSimStack [
+	<var: 'aSimStack' type: #'SimStackEntry *'>
+	<inline: true>
 	| regsSet |
 	regsSet := 0.
-	0 to: simStackPtr - n do:
+	low to: high do:
 		[:i|
 		regsSet := regsSet bitOr: (self simStack: aSimStack at: i) registerMask].
-	LowcodeVM ifTrue:
-		[self shouldBeImplemented.
-		 (simNativeSpillBase max: 0) to: simNativeStackPtr - n do:
-			[:i|
-			regsSet := regsSet bitOr: (self simNativeStackAt: i) nativeRegisterMask]].
 	^regsSet
 ]
 
@@ -1284,6 +1288,43 @@ RegisterAllocatingCogit >> maybeCountFixup: descriptor [
 RegisterAllocatingCogit >> maybeInitNumFixups [
 	<inline: true>
 	numFixups := 0
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup [
+	"At a merge point the cogit expects the stack to be in the same state as fixup's mergeSimStack.
+	 mergeSimStack is the state as of some jump forward or backward to this point.  So make
+	 simStack agree with mergeSimStack (it is, um, problematic to plant code at the jump). Values
+	 may have to be assigned to registers.  Registers may have to be swapped.
+	 Generate code to merge the current simStack with that of the target fixup, the goal being to
+	 keep as many registers live as possible."
+	"self printSimStack; printSimStack: fixup mergeSimStack"
+	"self simStackPrintString-> fixup simStackPrintString"
+	"abstractOpcodes object copyFrom: startIndex to: opcodeIndex"
+	<var: #fixup type: #'BytecodeFixup *'>
+	| currentRegisters targetRegisters mergeSimStack current target |
+	(mergeSimStack := fixup mergeSimStack) ifNil: [^self].
+	self assert: simStackPtr = fixup simStackPtr.
+	currentRegisters := self liveRegistersFrom: 0 to: simStackPtr in: simStack.
+	targetRegisters := self liveRegistersFrom: 0 to: simStackPtr in: mergeSimStack.
+	self resolveConflicts: (currentRegisters bitAnd: targetRegisters) with: fixup mergeSimStack to: fixup simStackPtr.
+	self assert: (self conflictsResolvedBetweenSimStackAnd: mergeSimStack).
+	"if we simply compare spill bases it is trivial here to decide whether to push or pop.
+	 Otherwise we have to determine the spill base in fixup's mergeSimStack."
+	(self pushForMergeWith: mergeSimStack)
+		ifTrue:
+			[0 to: simStackPtr do:
+				[:i|
+				 current := self simStack: simStack at: i.
+				 target := self simStack: mergeSimStack at: i.
+				 current reconcilePushingWith: target]]
+		ifFalse:
+			[simStackPtr to: 0 by: -1 do:
+				[:i|
+				 current := self simStack: simStack at: i.
+				 target := self simStack: mergeSimStack at: i.
+				 current reconcilePoppingWith: target]].
+	self assertCorrectSimStackPtr
 ]
 
 { #category : #'bytecode generator support' }
@@ -1445,10 +1486,12 @@ RegisterAllocatingCogit >> mergeWithFixupIfRequired: fixup [
 	for later assertions. self printSimStack: fixup mergeSimStack"
 
 	<var: #fixup type: #'BytecodeFixup *'>
-	self deny: self duplicateRegisterAssignmentsInTemporaries.
+	deadCode ifFalse:
+		[self assertCorrectSimStackPtr].
 
 	"case 1"
-	fixup notAFixup ifTrue: [^0].
+	fixup notAFixup ifTrue:
+		[^0].
 
 	"case 2"
 	fixup isNonMergeFixup ifTrue:
@@ -1457,7 +1500,8 @@ RegisterAllocatingCogit >> mergeWithFixupIfRequired: fixup [
 				[self deny: fixup simStackPtr isNil.
 				 simStackPtr := fixup simStackPtr.
 				 self restoreSimStackAtMergePoint: fixup.
-				 deadCode := false]
+				 deadCode := false.
+				 self assertCorrectSimStackPtr]
 			ifFalse:
 				[self flushRegistersOnlyLiveOnFallThrough: fixup].
 		 ^0].
@@ -1466,22 +1510,27 @@ RegisterAllocatingCogit >> mergeWithFixupIfRequired: fixup [
 	self assert: fixup isMergeFixup.
 	self traceMerge: fixup.
 	deadCode 
-		ifTrue: [simStackPtr := fixup simStackPtr] "case 3"
-		ifFalse: [(fixup isBackwardBranchFixup and: [compilationPass > 1]) ifTrue:
-					[fixup simStackPtr: simStackPtr].
-				self mergeCurrentSimStackWith: fixup forwards: true]. "case 4"
+		ifTrue: "case 3"
+			[simStackPtr := fixup simStackPtr.
+			self restoreSimStackAtMergePoint: fixup.
+			deadCode := false.]
+		ifFalse: "case 4"
+			[(fixup isBackwardBranchFixup and: [compilationPass > 1])
+				ifTrue:
+					[fixup simStackPtr: simStackPtr.
+					 self mergeCurrentSimStackWith: fixup.
+					 self copySimStackToFixup: fixup]
+				ifFalse:
+					[self mergeCurrentSimStackWith: fixup]].
 	"cases 3 and 4"
-	deadCode := false.
 	fixup isBackwardBranchFixup ifTrue:
-		[self assert: fixup mergeSimStack isNil == (compilationPass = 1).
-		 fixup mergeSimStack ifNil:
-			[self setMergeSimStackOf: fixup]].
+		[fixup mergeSimStack ifNil:
+			[self assert: compilationPass = 1.
+			 self setMergeSimStackOf: fixup]].
 	fixup targetInstruction: self Label.
-	self assert: simStackPtr = fixup simStackPtr.
-	self cCode: '' inSmalltalk:
-		[self assert: fixup simStackPtr = (self debugStackPointerFor: bytecodePC)].
-	self restoreSimStackAtMergePoint: fixup.
-	
+	self assertCorrectSimStackPtr.
+	self assert: (self simStackMergeCompatibleWith: fixup).
+	"self simStackPrintString""fixup simStackPrintString"
 	^0
 ]
 
@@ -1659,13 +1708,59 @@ RegisterAllocatingCogit >> resetSimStack: startPC [
 			(self simStackAt: i) bcptr: startPC]]
 ]
 
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> resolveConflicts: registersInCommon with: mergeSimStack to: simStackPtr [
+	"registersInCommon is the register mask of registers in use in both the current
+	 simStack and the target mergeSimStack. Swap any and all conflicting register uses
+	 in registersInCommon, until register uses in simStack agree with mergeSimStack."
+	| registerLocations visited |
+	"registerLocations records where a register has moved to
+	 during an exchange. This allows a single pass of the stack
+	 to rename registers, instead of 1/2 N^2; max stack ~ 56"
+	<var: 'registerLocations' declareC: 'int registerLocations[NumRegisters]'>
+	registersInCommon = (self registerMaskFor: FPReg) ifTrue:
+		[^self].
+	self cCode: '' inSmalltalk:
+		[registerLocations := CArrayAccessor on: (Array new: NumRegisters)].
+	0 to: NumRegisters - 1 do:
+		[:i| registerLocations at: i put: i].
+	visited := 0.
+	0 to: simStackPtr do:
+		[:i| | currentReg targetReg |
+		currentReg := (self simStackAt: i) registerOrNone.
+		targetReg := (self simStack: mergeSimStack at: i) registerOrNone.
+		(currentReg ~= NoReg
+		 and: [targetReg ~= NoReg]) ifTrue:
+			[currentReg := registerLocations at: currentReg.
+			 (currentReg ~= targetReg
+			  and: [(self register: currentReg isInMask: registersInCommon)
+			  and: [(self register: currentReg isNotInMask: visited)]]) ifTrue:
+				[visited := visited + (self registerMaskFor: currentReg).
+				 self SwapR: targetReg R: currentReg Scratch: RISCTempReg.
+				 registerLocations
+					at: currentReg put: targetReg;
+					at: targetReg put: currentReg]]].
+	visited = 0 ifTrue:
+		[^self].
+	0 to: simStackPtr do:
+		[:i| | ssEntry reg |
+		ssEntry := self simStackAt: i.
+		reg := ssEntry registerOrNone.
+		(reg ~= NoReg
+		 and: [(self register: reg isInMask: registersInCommon)
+		 and: [reg ~= (self simStack: mergeSimStack at: i) registerOrNone]]) ifTrue:
+			[ssEntry type = SSRegister
+				ifTrue: [ssEntry register: (registerLocations at: reg)]
+				ifFalse: [ssEntry liveRegister: (registerLocations at: reg)]]]
+]
+
 { #category : #'simulation stack' }
 RegisterAllocatingCogit >> restoreSimStackAtMergePoint: fixup [
 	<inline: true>
 	"All the execution paths reaching a merge point expect everything to be spilled
 	 on stack and the optStatus is unknown.  If the merge point follows a return, it
 	 isn't a merge, but a skip past a return.  If it is a real merge point then throw
-	 away all simStack and optStatus optimization state."
+	 away all simStack optimization state."
 
 	fixup mergeSimStack ifNotNil:
 		[simSpillBase := methodOrBlockNumTemps + 1.
@@ -1740,6 +1835,57 @@ RegisterAllocatingCogit >> simStack: aSimStack isIdenticalTo: bSimStack [
 RegisterAllocatingCogit >> simStackEntryClass [
 	<doNotGenerate>
 	^CogRegisterAllocatingSimStackEntry
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> simStackMergeCompatibleWith: fixup [
+	simStackPtr = fixup simStackPtr ifFalse:
+		[^false].
+	simStackPtr to: 0 by: -1 do:
+		[:i| | target current |
+		target := self simStack: fixup mergeSimStack at: i.
+		current := self simStack: simStack at: i.
+		(target isSameEntryAs: current) ifFalse:
+			[^current type caseOf: {
+				[SSBaseOffset]	-> [target type caseOf: {
+										[SSBaseOffset]	-> [false].
+										[SSSpill]		-> [false].
+										[SSConstant]	-> [false].
+										[SSRegister]	-> [false] }].
+				[SSSpill]		-> [target type caseOf: {
+										[SSBaseOffset]	-> [true].
+										[SSSpill]		-> [true].
+										[SSConstant]	-> [true].
+										[SSRegister]	-> [true] }].
+				[SSConstant]	-> [target type caseOf: {
+										[SSBaseOffset]	-> [false].
+										[SSSpill]		-> [false].
+										[SSConstant]	-> [current constant = target constant].
+										[SSRegister]	-> [false] }].
+				[SSRegister]	-> [target type caseOf: {
+										[SSBaseOffset]	-> [current register = target liveRegister].
+										[SSSpill]		-> [current register = target liveRegister].
+										[SSConstant]	-> [current register = target liveRegister].
+										[SSRegister]	-> [current register = target register] }] }]].
+	^true
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> simStackSameAs: fixup [ 
+	"There are no register conflicts between simStack and mergeSimStack if
+	 traversing both stacks from hot end (simStackPtr) to cold end (0) no register
+	 exists in simStack that has previously existed in mergeSimStack.  This is because
+	 the resolution assigns values from simStack to registers in mergeSimStack and so
+	 must not assign to a register yet to be read."
+	 | |
+	simStackPtr = fixup simStackPtr ifFalse:
+		[^false].
+	simStackPtr to: 0 by: -1 do:
+		[:i| | target |
+		target := self simStack: fixup mergeSimStack at: i.
+		(target isSameEntryAs: (self simStack: simStack at: i)) ifFalse:
+			[^false]].
+	^true
 ]
 
 { #category : #'simulation stack' }

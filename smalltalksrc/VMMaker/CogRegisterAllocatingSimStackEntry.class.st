@@ -24,6 +24,10 @@ CogRegisterAllocatingSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegi
 			 ^self]].
 	self assert: type ~= SSSpill.
 	cogit traceSpill: self.
+	"N.B. Keep the type of SSConstant spills as SSConstant so that when joins occur
+	 as a result of expressions with constants on the stack, the constant on stack
+	 can be recovered.  e.g. as in
+		self at: 1 put: (self foo ifTrue: [self bar] ifFalse: [self baz])."
 	type = SSConstant
 		ifTrue:
 			[cogit genPushConstant: constant]
@@ -38,11 +42,11 @@ CogRegisterAllocatingSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegi
 				ifFalse:
 					[self assert: type = SSRegister.
 					 cogit PushR: register].
-			 type := SSSpill.
-			 offset := baseOffset.
-			 register := baseRegister].
+			 type := SSSpill].
 	liveRegister := NoReg.
-	spilled := true
+	spilled := true.
+	offset := baseOffset.
+	register := baseRegister
 ]
 
 { #category : #comparing }
@@ -70,10 +74,12 @@ CogRegisterAllocatingSimStackEntry >> isMergedWithTargetEntry: targetEntry [
 		[^true].
 	"self: const =1 (16r1) (live: Extra4Reg) {172} vs reg ReceiverResultReg {127}"
 	"self: reg ReceiverResultReg {95} vs reg Extra5Reg {85}"
-	"(bo ReceiverResultReg+296 (live: Extra5Reg) {88} vs reg ReceiverResultReg {84}"
+	"self: (bo ReceiverResultReg+296 (live: Extra5Reg) {88} vs reg ReceiverResultReg {84}"
+	"self: const =1 (16r1) (spilled) {167} vs spill @ FPReg-48 {122}"
 	((type = SSConstant and: [targetEntry type = SSRegister and: [liveRegister ~= targetEntry registerOrNone]])
 	 or: [(type = SSRegister and: [targetEntry type = SSRegister and: [register ~= targetEntry registerOrNone]])
-	 or: [type = SSBaseOffset and: [register = ReceiverResultReg and: [targetEntry type = SSRegister]]]]) ifFalse:
+	 or: [(type = SSBaseOffset and: [register = ReceiverResultReg and: [targetEntry type = SSRegister]])
+	 or: [(type = SSConstant and: [targetEntry type = SSSpill])]]]) ifFalse:
 		[self halt: 'comment the incompatible pair please'].
 	^false
 ]
@@ -239,21 +245,35 @@ CogRegisterAllocatingSimStackEntry >> reconcilePoppingWith: targetEntry [
 	| targetReg |
 	spilled = targetEntry spilled ifTrue:
 		[self assert: ((self isSameEntryAs: targetEntry)
-					 or: [targetEntry spilled not and: [targetEntry registerOrNone ~= NoReg]]).
+					 or: [(targetEntry spilled not and: [targetEntry registerOrNone ~= NoReg])
+					 or: [spilled and: [type = SSConstant and: [offset = targetEntry offset]]]]).
 		 (targetReg := targetEntry registerOrNone) = NoReg ifTrue:
-			[^self].
+			[liveRegister := NoReg.
+			 ^self].
 		 type caseOf: {
-				[SSBaseOffset]	-> [cogit MoveMw: offset r: register R: targetReg].
-				[SSSpill]		-> [cogit MoveMw: offset r: register R: targetReg].
-				[SSConstant]	-> [cogit genMoveConstant: constant R: targetReg].
-				[SSRegister]	-> [targetReg ~= register ifTrue:
-										[cogit MoveR: register R: targetReg]] }.
+			[SSBaseOffset]	-> [liveRegister ~= targetReg ifTrue:
+									[cogit MoveMw: offset r: register R: targetReg].
+								targetEntry type caseOf: {
+									[SSBaseOffset]	-> [liveRegister := targetReg.
+														(self isSameEntryAs: targetEntry) ifFalse:
+															[type := SSSpill]].
+									[SSSpill]		-> [liveRegister := targetReg. type := SSSpill].
+									[SSConstant]	-> [liveRegister := targetReg. type := SSSpill].
+									[SSRegister]	-> [register := targetReg. type := SSRegister] }].
+			[SSSpill]		-> [cogit MoveMw: offset r: register R: targetReg.
+								liveRegister := targetReg].
+			[SSConstant]	-> [cogit genMoveConstant: constant R: targetReg.
+								type := SSRegister. register := targetReg].
+			[SSRegister]	-> [targetReg ~= register ifTrue:
+									[cogit MoveR: register R: targetReg.
+									 register := targetReg]] }.
 		 ^self].
 	self assert: spilled.
-	(targetEntry type ~= SSConstant
-	 and: [(targetReg := targetEntry registerOrNone) ~= NoReg])
+	(targetReg := targetEntry registerOrNone) ~= NoReg
 		ifTrue: [cogit PopR: targetReg]
-		ifFalse: [cogit AddCq: objectRepresentation wordSize R: SPReg]
+		ifFalse: [cogit AddCq: objectRepresentation wordSize R: SPReg].
+	liveRegister ~= targetReg ifTrue:
+		[liveRegister := NoReg]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -262,57 +282,40 @@ CogRegisterAllocatingSimStackEntry >> reconcilePushingWith: targetEntry [
 	 the same as the corresponding simStackEntry at the target of a preceding
 	 jump to the beginning of the next basic block.  Make sure targetEntry
 	 reflects the state of the merged simStack; it will be installed as the current
-	 entry by restoreSimStackAtMergePoint: in mergeWithFixupIfRequired:.
-
-	 Answer if the liveRegister for the targetEntry (if any) should be deassigned;
-	 this is because if merging a non-temp with a temp that has a live register we
-	 can assign to the register, but must unassign the register from the temp,
-	 otherwise the temp will acquire the merged value without an assignment."
+	 entry by restoreSimStackAtMergePoint: in mergeWithFixupIfRequired:."
 	<var: #targetEntry type: #'SimStackEntry *'>
 	| targetReg |
-	(targetReg := targetEntry registerOrNone) = NoReg ifTrue:
-		[| reg |
-		 self assert: targetEntry spilled.
-		 (self isSameEntryAs: targetEntry) ifTrue:
-			[self assert: spilled.
-			 ^false].
-		 (reg := self registerOrNone) = NoReg ifTrue: [reg := TempReg].
-		 self storeToReg: reg.
-		 spilled
-			ifTrue: [cogit MoveR: reg Mw: targetEntry offset r: targetEntry register]
-			ifFalse: [cogit PushR: reg].
-		 ^false].
-	liveRegister ~= NoReg ifTrue:
-		[liveRegister ~= targetReg ifTrue:
-			[cogit MoveR: liveRegister R: targetReg].
-		 (spilled and: [targetEntry spilled not]) ifTrue:
-			[cogit AddCq: objectRepresentation wordSize R: SPReg].
-		 ^false].
-	spilled
-		ifTrue:
-			[targetEntry spilled ifFalse:
-				[cogit PopR: targetReg. "KISS; generate the least number of instructions..."
-				 ^false]]
-		ifFalse:
-			[targetEntry spilled ifTrue:
-				[cogit SubCq: objectRepresentation wordSize R: SPReg]].
-	type caseOf: {
-		[SSBaseOffset]	-> [cogit MoveMw: offset r: register R: targetReg].
-		[SSSpill]		-> [cogit MoveMw: offset r: register R: targetReg].
-		[SSConstant]	-> [cogit genMoveConstant: constant R: targetReg].
-		[SSRegister]	-> [register ~= targetReg ifTrue:
-								[cogit MoveR: register R: targetReg]] }.
-	(targetEntry type = SSConstant
-	 and: [type ~= SSConstant or: [constant ~= targetEntry constant]]) ifTrue:
-		[targetEntry
-			register: targetReg;
-			type: SSRegister].
-	"If merging a constant with a constant assigned to a register, then the register must be deassigned from any temps."
-	^targetEntry type = SSConstant
-	"If merging a non-temp with a temp that has a live register we can assign
-	 to the register, but must unassign the register from the temp, otherwise
-	 the temp will acquire the merged value without an assignment."
-	 or: [targetEntry isFrameTempVar and: [(self isSameEntryAs: targetEntry) not]]
+	spilled = targetEntry spilled ifTrue:
+		[self assert: ((self isSameEntryAs: targetEntry)
+					 or: [(targetEntry spilled not and: [targetEntry registerOrNone ~= NoReg])
+					 or: [spilled and: [type = SSConstant and: [offset = targetEntry offset]]]]).
+		 (targetReg := targetEntry registerOrNone) = NoReg ifTrue:
+			[liveRegister := NoReg.
+			 ^self].
+		 type caseOf: {
+			[SSBaseOffset]	-> [liveRegister ~= targetReg ifTrue:
+									[cogit MoveMw: offset r: register R: targetReg].
+								targetEntry type caseOf: {
+									[SSBaseOffset]	-> [liveRegister := targetReg.
+														(self isSameEntryAs: targetEntry) ifFalse:
+															[type := SSSpill]].
+									[SSSpill]		-> [liveRegister := targetReg. type := SSSpill].
+									[SSConstant]	-> [liveRegister := targetReg. type := SSSpill].
+									[SSRegister]	-> [register := targetReg. type := SSRegister] }].
+			[SSSpill]		-> [cogit MoveMw: offset r: register R: targetReg.
+								liveRegister := targetReg].
+			[SSConstant]	-> [cogit genMoveConstant: constant R: targetReg.
+								type := SSRegister. register := targetReg].
+			[SSRegister]	-> [targetReg ~= register ifTrue:
+									[cogit MoveR: register R: targetReg.
+									 register := targetReg]] }.
+		 ^self].
+	self assert: spilled.
+	(targetReg := targetEntry registerOrNone) ~= NoReg
+		ifTrue: [cogit PopR: targetReg]
+		ifFalse: [cogit AddCq: objectRepresentation wordSize R: SPReg].
+	liveRegister ~= targetReg ifTrue:
+		[liveRegister := NoReg]
 ]
 
 { #category : #accessing }

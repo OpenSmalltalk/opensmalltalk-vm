@@ -142,6 +142,8 @@ CogMIPSELCompiler class >> initializeAbstractRegisters [
 	RISCTempReg			:= AT.
 	LinkReg					:= RA.
 
+	NumRegisters := 32
+
 	self flag: #todo.
 	"Extra0Reg			:= ??.
 	Extra1Reg			:= ??.

@@ -94,6 +94,8 @@ CogAbstractRegisters class >> initialize [
 	PCReg			:= #undefined.		"If the processor has an assignable pc, e.g. ARM"
 	VarBaseReg	:= #undefined.		"If useful, points to base of interpreter variables."
 
+	NumRegisters	:= #undefined.	"Number of basic/integer regsiters (we don't do M68k ;-) )"
+
 	"Up to 16 floating-point registers. e.g. IA32+SSE2 can use 8, x64 can use 16."
 	DPFPReg0	:= #undefined.
 	DPFPReg1	:= #undefined.
@@ -110,7 +112,9 @@ CogAbstractRegisters class >> initialize [
 	DPFPReg12	:= #undefined.
 	DPFPReg13	:= #undefined.
 	DPFPReg14	:= #undefined.
-	DPFPReg15	:= #undefined
+	DPFPReg15	:= #undefined.
+
+	NumFloatRegisters	:= #undefined.	"Number of floating-point registers (we don;t do single-precision; we don't do xmm high (yet)."
 ]
 
 { #category : #'debug printing' }
