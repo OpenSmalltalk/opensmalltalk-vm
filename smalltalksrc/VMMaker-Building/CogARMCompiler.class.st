@@ -245,6 +245,8 @@ CogARMCompiler class >> initializeAbstractRegisters [
 	LinkReg				:= LR. "R14"
 	PCReg				:= PC. "R15"	
 
+	NumRegisters := 16.
+
 	DPFPReg0			:= D0.
 	DPFPReg1			:= D1.
 	DPFPReg2			:= D2.
@@ -252,7 +254,9 @@ CogARMCompiler class >> initializeAbstractRegisters [
 	DPFPReg4			:= D4.
 	DPFPReg5			:= D5.
 	DPFPReg6			:= D6.
-	DPFPReg7			:= D7
+	DPFPReg7			:= D7.
+
+	NumFloatRegisters := 8
 ]
 
 { #category : #testing }
