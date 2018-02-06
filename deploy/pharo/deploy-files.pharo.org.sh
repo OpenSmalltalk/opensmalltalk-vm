@@ -29,7 +29,7 @@ case "${ARCH}" in
 		exit 1
 esac
 
-readonly BUILD_DIR="${TRAVIS_BUILD_DIR:-${APPVEYOR_BUILD_FOLDER}}"
+readonly BUILD_DIR="${TRAVIS_BUILD_DIR:-$(cygpath ${APPVEYOR_BUILD_FOLDER})}"
 readonly PHARO_PRODUCTS_DIR="${BUILD_DIR}/productsPharo"
 
 do_upload() {

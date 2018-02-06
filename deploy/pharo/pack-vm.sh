@@ -7,7 +7,7 @@ set -e
 # ARCH			- macos32x86, linux64x64, win32x86, etc.
 # HEARTBEAT		- in case of linux vms (threaded, itimer)
 
-readonly BUILD_DIR="${TRAVIS_BUILD_DIR:-${APPVEYOR_BUILD_FOLDER}}"
+readonly BUILD_DIR="${TRAVIS_BUILD_DIR:-$(cygpath ${APPVEYOR_BUILD_FOLDER})}"
 readonly PRODUCTS_DIR="${BUILD_DIR}/products"
 readonly PHARO_PRODUCTS_DIR="${BUILD_DIR}/productsPharo"
 mkdir "${PHARO_PRODUCTS_DIR}" || true # ensure directory exists
