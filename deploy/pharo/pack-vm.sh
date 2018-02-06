@@ -28,9 +28,6 @@ if [ -z "${BUILD_ID}" ]; then
 	BUILD_ID="NOSHA" 
 fi
 
-# append a cog or stack suffix for WIN64 build
-SUFFIX="`cat ${FLAVOR} | sed 's/^pharo\.//' | sed 's/\.spur$//'`"
-
 do_pack_vm() {
 	# function arguments 
 	local os=$1
@@ -92,7 +89,7 @@ case "${ARCH}" in
 		do_pack_vm "win" "i386" "${BUILD_DIR}/build.${ARCH}/${FLAVOR}/build/vm" "Pharo.exe PharoConsole.exe *.dll"
 		;;
 	win64x64)
-		do_pack_vm "win" "x86_64" "${SUFFIX}" "${BUILD_DIR}/build.${ARCH}/${FLAVOR}/build/vm" "Pharo.exe PharoConsole.exe *.dll"
+		do_pack_vm "win" "x86_64" "${BUILD_DIR}/build.${ARCH}/${FLAVOR}/build/vm" "Pharo.exe PharoConsole.exe *.dll"
 		;;
 	*) 
 		echo "Undefined platform!"
