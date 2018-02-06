@@ -471,7 +471,7 @@ Cogit class >> attemptToComputeTempNamesFor: aCompiledMethod [
 						[aCompiledMethod embeddedBlockClosures
 							with: ((aCompiledMethod methodNode schematicTempNamesString allButFirst:
 									(aCompiledMethod methodNode schematicTempNamesString indexOf: $[)) piecesCutWhere: [:a :b| b = $[])
-							collect: [:c :s| c startpc -> s substrings]]))]
+							collect: [:c :s| c startpc -> (s substrings collect: [:ea| ea copyWithout: $] ])]]))]
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -10892,7 +10892,7 @@ Cogit >> processorHasMultiplyAndMClassIsSmallInteger [
 Cogit >> promptForBreakPC [
 	<doNotGenerate>
 	| s first pc |
-	s := UIManager default request: 'Break pc (hex)'.
+	s := UIManager default request: 'Break pc (hex, + to add, - to remove)'.
 	s := s withBlanksTrimmed.
 	s isEmpty ifTrue: [^self].
 	('+-' includes: s first) ifTrue: [first := s first. s := s allButFirst].
