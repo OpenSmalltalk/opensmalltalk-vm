@@ -89,10 +89,10 @@ case "${ARCH}" in
 		do_pack_vm "linux" "ARMv6" "`ls -d ${BUILD_DIR}/products/*`" "*"
 		;;
 	win32x86)
-		do_rename_vm "win" "i386" "${BUILD_DIR}/build.${ARCH}/${FLAVOR}/build/vm" "Pharo.exe PharoConsole.exe *.dll"
+		do_pack_vm "win" "i386" "${BUILD_DIR}/build.${ARCH}/${FLAVOR}/build/vm" "Pharo.exe PharoConsole.exe *.dll"
 		;;
 	win64x64)
-		do_rename_vm "win" "x86_64" "${SUFFIX}" "${BUILD_DIR}/build.${ARCH}/${FLAVOR}/build/vm" "Pharo.exe PharoConsole.exe *.dll"
+		do_pack_vm "win" "x86_64" "${SUFFIX}" "${BUILD_DIR}/build.${ARCH}/${FLAVOR}/build/vm" "Pharo.exe PharoConsole.exe *.dll"
 		;;
 	*) 
 		echo "Undefined platform!"
