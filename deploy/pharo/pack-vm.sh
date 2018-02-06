@@ -28,15 +28,13 @@ if [ -z "${BUILD_ID}" ]; then
 	BUILD_ID="NOSHA" 
 fi
 
-# append a cog or stack suffix for WIN64 build
-SUFFIX="`cat ${FLAVOR} | sed 's/^pharo\.//' | sed 's/\.spur$//'`"
-
 do_pack_vm() {
 	# function arguments 
 	local os=$1
 	local productArch=$2
-	local pattern=$3
-	local suffix=$4
+	local productDir=$3
+	local pattern=$4
+	local suffix=$5
 	# variables
 	local filename=
 	
@@ -46,17 +44,14 @@ do_pack_vm() {
 	fi
 		
 	filename="pharo-${os}-${productArch}${suffix}-${BUILD_DATE}-${BUILD_ID}.zip"
-	pushd "${PRODUCTS_DIR}"
-	zip -x "*.gz" -y -r "${PHARO_PRODUCTS_DIR}/${filename}" ${pattern}
+	pushd "${productDir}"
+	zip -y -r "${PHARO_PRODUCTS_DIR}/${filename}" ${pattern}
 	popd
 }
 
-do_rename_vm() {
+do_copy_dmg() {
 	# function arguments
-	local os=$1
-	local productArch=$2
-	local suffix=$3
-	local fileExtension=${4-:zip}
+	local productArch=$1
 	# variables
 	local filename=
 	
@@ -65,33 +60,33 @@ do_rename_vm() {
 		exit 1
 	fi
 		
-	filename="pharo-${os}-${productArch}${suffix}-${BUILD_DATE}-${BUILD_ID}.${fileExtension}"
-	cp "${PRODUCTS_DIR}/"*.${fileExtension} "${PHARO_PRODUCTS_DIR}/${filename}"
+	filename="pharo-mac-${productArch}-${BUILD_DATE}-${BUILD_ID}.dmg"
+	cp "${PRODUCTS_DIR}/"*.dmg "${PHARO_PRODUCTS_DIR}/${filename}"
 }
 
 case "${ARCH}" in
 	macos32x86)
-		do_pack_vm "mac" "i386" "*.app"
-		do_rename_vm "mac" "i386" "" "dmg"
+		do_pack_vm "mac" "i386" "${BUILD_DIR}/build.${ARCH}/pharo.cog.spur" "*.app"
+		do_copy_dmg "i386"
 		;;
 	macos64x64)
-		do_pack_vm "mac" "x86_64" "*.app"
-		do_rename_vm "mac" "x86_64" "" "dmg"
+		do_pack_vm "mac" "x86_64" "${BUILD_DIR}/build.${ARCH}/pharo.cog.spur" "*.app"
+		do_copy_dmg "x86_64"
 		;;
 	linux32x86)
-		do_pack_vm "linux" "i386" "*" "${HEARTBEAT}"
+		do_pack_vm "linux" "i386" ""`ls -d ${BUILD_DIR}/products/*`"" "*" "${HEARTBEAT}"
 		;;
 	linux64x64)
-		do_pack_vm "linux" "x86_64" "*" "${HEARTBEAT}"
+		do_pack_vm "linux" "x86_64"  ""`ls -d ${BUILD_DIR}/products/*`"" "*" "${HEARTBEAT}"
 		;;
 	linux32ARMv6)
-		do_pack_vm "linux" "ARMv6" "*"
+		do_pack_vm "linux" "ARMv6" "`ls -d ${BUILD_DIR}/products/*`" "*"
 		;;
 	win32x86)
-		do_rename_vm "win" "i386"
+		do_pack_vm "win" "i386" "${BUILD_DIR}/build.${ARCH}/${FLAVOR}/build/vm" "Pharo.exe PharoConsole.exe *.dll"
 		;;
 	win64x64)
-		do_rename_vm "win" "x86_64" "${SUFFIX}"
+		do_pack_vm "win" "x86_64" "${BUILD_DIR}/build.${ARCH}/${FLAVOR}/build/vm" "Pharo.exe PharoConsole.exe *.dll"
 		;;
 	*) 
 		echo "Undefined platform!"
