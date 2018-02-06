@@ -30,7 +30,9 @@ CogRegisterAllocatingSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegi
 		self at: 1 put: (self foo ifTrue: [self bar] ifFalse: [self baz])."
 	type = SSConstant
 		ifTrue:
-			[cogit genPushConstant: constant]
+			[liveRegister = NoReg
+				ifTrue: [cogit genPushConstant: constant]
+				ifFalse: [cogit PushR: liveRegister]]
 		ifFalse:
 			[type = SSBaseOffset
 				ifTrue:
@@ -114,6 +116,7 @@ CogRegisterAllocatingSimStackEntry >> popToReg: reg [
 				ifFalse:
 					[type caseOf: {
 						[SSBaseOffset]	-> [cogit MoveMw: offset r: register R: reg].
+						[SSSpill]		-> [cogit MoveMw: offset r: register R: reg].
 						[SSConstant]	-> [cogit genMoveConstant: constant R: reg].
 						[SSRegister]	-> [reg ~= register
 												ifTrue: [cogit MoveR: register R: reg]
@@ -156,166 +159,54 @@ CogRegisterAllocatingSimStackEntry >> printStateOn: aStream [
 ]
 
 { #category : #'compile abstract instructions' }
-CogRegisterAllocatingSimStackEntry >> reconcileBackwardsWith: targetEntry [
-	"Make the state of the receiver, a stack entry at a backward jump,
-	 the same as the corresponding simStackEntry at the target of the jump"
-	<var: #targetEntry type: #'SimStackEntry *'>
-	| targetReg |
-	(targetReg := targetEntry registerOrNone) = NoReg ifTrue:
-		[^self].
-	targetEntry type = SSConstant ifTrue:
-		[self assert: (type = SSConstant and: [constant = targetEntry constant]).
-		 ^self].
-	liveRegister ~= NoReg ifTrue:
-		[liveRegister ~= targetReg ifTrue:
-			[cogit MoveR: liveRegister R: targetReg].
-		 ^self].
-	type caseOf: {
-		[SSBaseOffset]	-> [cogit MoveMw: offset r: register R: targetReg].
-		[SSSpill]		-> [cogit MoveMw: offset r: register R: targetReg].
-		[SSConstant]	-> [cogit genMoveConstant: constant R: targetReg].
-		[SSRegister]	-> [register ~= targetReg ifTrue:
-								[cogit MoveR: register R: targetReg]] }
-]
-
-{ #category : #'compile abstract instructions' }
-CogRegisterAllocatingSimStackEntry >> reconcileForwardsWith: targetEntry [
-	"Make the state of the receiver, a stack entry at the end of a basic block,
-	 the same as the corresponding simStackEntry at the target of a preceding
-	 jump to the beginning of the next basic block.  Make sure targetEntry
-	 reflects the state of the merged simStack; it will be installed as the current
-	 entry by restoreSimStackAtMergePoint: in mergeWithFixupIfRequired:.
-
-	 Answer if the liveRegister for the targetEntry (if any) should be deassigned;
-	 this is because if merging a non-temp with a temp that has a live register we
-	 can assign to the register, but must unassign the register from the temp,
-	 otherwise the temp will acquire the merged value without an assignment."
-	<var: #targetEntry type: #'SimStackEntry *'>
-	| targetReg |
-	(targetReg := targetEntry registerOrNone) = NoReg ifTrue:
-		[| reg |
-		 self assert: targetEntry spilled.
-		 (self isSameEntryAs: targetEntry) ifTrue:
-			[self assert: spilled.
-			 ^false].
-		 (reg := self registerOrNone) = NoReg ifTrue: [reg := TempReg].
-		 self storeToReg: reg.
-		 spilled
-			ifTrue: [cogit MoveR: reg Mw: targetEntry offset r: targetEntry register]
-			ifFalse: [cogit PushR: reg].
-		 ^false].
-	liveRegister ~= NoReg ifTrue:
-		[liveRegister ~= targetReg ifTrue:
-			[cogit MoveR: liveRegister R: targetReg].
-		 (spilled and: [targetEntry spilled not]) ifTrue:
-			[cogit AddCq: objectRepresentation wordSize R: SPReg].
-		 ^false].
-	spilled
-		ifTrue:
-			[targetEntry spilled ifFalse:
-				[cogit PopR: targetReg. "KISS; generate the least number of instructions..."
-				 ^false]]
-		ifFalse:
-			[targetEntry spilled ifTrue:
-				[cogit SubCq: objectRepresentation wordSize R: SPReg]].
-	type caseOf: {
-		[SSBaseOffset]	-> [cogit MoveMw: offset r: register R: targetReg].
-		[SSSpill]		-> [cogit MoveMw: offset r: register R: targetReg].
-		[SSConstant]	-> [cogit genMoveConstant: constant R: targetReg].
-		[SSRegister]	-> [register ~= targetReg ifTrue:
-								[cogit MoveR: register R: targetReg]] }.
-	(targetEntry type = SSConstant
-	 and: [type ~= SSConstant or: [constant ~= targetEntry constant]]) ifTrue:
-		[targetEntry
-			register: targetReg;
-			type: SSRegister].
-	"If merging a constant with a constant assigned to a register, then the register must be deassigned from any temps."
-	^targetEntry type = SSConstant
-	"If merging a non-temp with a temp that has a live register we can assign
-	 to the register, but must unassign the register from the temp, otherwise
-	 the temp will acquire the merged value without an assignment."
-	 or: [targetEntry isFrameTempVar and: [(self isSameEntryAs: targetEntry) not]]
-]
-
-{ #category : #'compile abstract instructions' }
-CogRegisterAllocatingSimStackEntry >> reconcilePoppingWith: targetEntry [
+CogRegisterAllocatingSimStackEntry >> reconcileWith: targetEntry spillOffset: spillOffset onSpillOrUnspill: spillOrUnspillBlock [
 	"Make the state of a targetEntry, a stack entry following a non-inlined special selector
-	 send, the same as the corresponding entry (the receiver) along the inlined path."
+	 send, the same as the corresponding entry (the receiver) along the inlined path.
+	 spillOffset is zero for non-spill locations (self & temps), and the offset of the spill for
+	 volatile stack entries. spillOrUnspillBlock is a block evaluated with the target's
+	 registerOrNone if the receiver and target have different spilledness.
+	 Answer if the reconciliation merged a register; merged registers must be deassigned."
 	<var: #targetEntry type: #'SimStackEntry *'>
-	| targetReg |
+	<inline: true>
+	| targetReg mergedRegister |
 	spilled = targetEntry spilled ifTrue:
 		[self assert: ((self isSameEntryAs: targetEntry)
 					 or: [(targetEntry spilled not and: [targetEntry registerOrNone ~= NoReg])
 					 or: [spilled and: [type = SSConstant and: [offset = targetEntry offset]]]]).
 		 (targetReg := targetEntry registerOrNone) = NoReg ifTrue:
 			[liveRegister := NoReg.
-			 ^self].
+			 ^false].
+		 mergedRegister := false.
 		 type caseOf: {
 			[SSBaseOffset]	-> [liveRegister ~= targetReg ifTrue:
-									[cogit MoveMw: offset r: register R: targetReg].
+									[cogit MoveMw: offset r: register R: targetReg.
+									 mergedRegister := true].
 								targetEntry type caseOf: {
 									[SSBaseOffset]	-> [liveRegister := targetReg.
 														(self isSameEntryAs: targetEntry) ifFalse:
-															[type := SSSpill]].
-									[SSSpill]		-> [liveRegister := targetReg. type := SSSpill].
-									[SSConstant]	-> [liveRegister := targetReg. type := SSSpill].
+															[type := SSSpill.
+															 offset := spillOffset]].
+									[SSSpill]		-> [liveRegister := targetReg. type := SSSpill.
+														offset := spillOffset].
+									[SSConstant]	-> [liveRegister := targetReg. type := SSSpill.
+														offset := spillOffset].
 									[SSRegister]	-> [register := targetReg. type := SSRegister] }].
 			[SSSpill]		-> [cogit MoveMw: offset r: register R: targetReg.
-								liveRegister := targetReg].
+								liveRegister := targetReg.
+								mergedRegister := true].
 			[SSConstant]	-> [cogit genMoveConstant: constant R: targetReg.
-								type := SSRegister. register := targetReg].
+								type := SSRegister. register := targetReg.
+								mergedRegister := true].
 			[SSRegister]	-> [targetReg ~= register ifTrue:
 									[cogit MoveR: register R: targetReg.
-									 register := targetReg]] }.
-		 ^self].
-	self assert: spilled.
-	(targetReg := targetEntry registerOrNone) ~= NoReg
-		ifTrue: [cogit PopR: targetReg]
-		ifFalse: [cogit AddCq: objectRepresentation wordSize R: SPReg].
+									 register := targetReg.
+									 mergedRegister := true]] }.
+		 ^mergedRegister].
+	targetReg := targetEntry registerOrNone.
+	spillOrUnspillBlock value: targetReg.
 	liveRegister ~= targetReg ifTrue:
-		[liveRegister := NoReg]
-]
-
-{ #category : #'compile abstract instructions' }
-CogRegisterAllocatingSimStackEntry >> reconcilePushingWith: targetEntry [
-	"Make the state of the receiver, a stack entry at the end of a basic block,
-	 the same as the corresponding simStackEntry at the target of a preceding
-	 jump to the beginning of the next basic block.  Make sure targetEntry
-	 reflects the state of the merged simStack; it will be installed as the current
-	 entry by restoreSimStackAtMergePoint: in mergeWithFixupIfRequired:."
-	<var: #targetEntry type: #'SimStackEntry *'>
-	| targetReg |
-	spilled = targetEntry spilled ifTrue:
-		[self assert: ((self isSameEntryAs: targetEntry)
-					 or: [(targetEntry spilled not and: [targetEntry registerOrNone ~= NoReg])
-					 or: [spilled and: [type = SSConstant and: [offset = targetEntry offset]]]]).
-		 (targetReg := targetEntry registerOrNone) = NoReg ifTrue:
-			[liveRegister := NoReg.
-			 ^self].
-		 type caseOf: {
-			[SSBaseOffset]	-> [liveRegister ~= targetReg ifTrue:
-									[cogit MoveMw: offset r: register R: targetReg].
-								targetEntry type caseOf: {
-									[SSBaseOffset]	-> [liveRegister := targetReg.
-														(self isSameEntryAs: targetEntry) ifFalse:
-															[type := SSSpill]].
-									[SSSpill]		-> [liveRegister := targetReg. type := SSSpill].
-									[SSConstant]	-> [liveRegister := targetReg. type := SSSpill].
-									[SSRegister]	-> [register := targetReg. type := SSRegister] }].
-			[SSSpill]		-> [cogit MoveMw: offset r: register R: targetReg.
-								liveRegister := targetReg].
-			[SSConstant]	-> [cogit genMoveConstant: constant R: targetReg.
-								type := SSRegister. register := targetReg].
-			[SSRegister]	-> [targetReg ~= register ifTrue:
-									[cogit MoveR: register R: targetReg.
-									 register := targetReg]] }.
-		 ^self].
-	self assert: spilled.
-	(targetReg := targetEntry registerOrNone) ~= NoReg
-		ifTrue: [cogit PopR: targetReg]
-		ifFalse: [cogit AddCq: objectRepresentation wordSize R: SPReg].
-	liveRegister ~= targetReg ifTrue:
-		[liveRegister := NoReg]
+		[liveRegister := NoReg].
+	^false
 ]
 
 { #category : #accessing }
