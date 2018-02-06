@@ -66,11 +66,11 @@ do_copy_dmg() {
 
 case "${ARCH}" in
 	macos32x86)
-		do_pack_vm "mac" "i386" "${BUILD_DIR}/build.${ARCH}/pharo.cog.spur" "*.app"
+		do_pack_vm "mac" "i386" "${PRODUCTS_DIR}" "*.app"
 		do_copy_dmg "i386"
 		;;
 	macos64x64)
-		do_pack_vm "mac" "x86_64" "${BUILD_DIR}/build.${ARCH}/pharo.cog.spur" "*.app"
+		do_pack_vm "mac" "x86_64" "${PRODUCTS_DIR}" "*.app"
 		do_copy_dmg "x86_64"
 		;;
 	linux*)
@@ -90,10 +90,10 @@ case "${ARCH}" in
 		do_pack_vm "linux" "${archName}" "${VM_SUBDIR}" "*" "${HEARTBEAT}"
 		;;
 	win32x86)
-		do_pack_vm "win" "i386" "${BUILD_DIR}/build.${ARCH}/${FLAVOR}/build/vm" "Pharo.exe PharoConsole.exe *.dll"
+		do_pack_vm "win" "i386" "${PRODUCTS_DIR}/vm" "Pharo.exe PharoConsole.exe *.dll"
 		;;
 	win64x64)
-		do_pack_vm "win" "x86_64" "${BUILD_DIR}/build.${ARCH}/${FLAVOR}/build/vm" "Pharo.exe PharoConsole.exe *.dll"
+		do_pack_vm "win" "x86_64" "${PRODUCTS_DIR}/vm" "Pharo.exe PharoConsole.exe *.dll"
 		;;
 	*) 
 		echo "Undefined platform!"
