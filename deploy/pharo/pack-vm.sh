@@ -73,14 +73,21 @@ case "${ARCH}" in
 		do_pack_vm "mac" "x86_64" "${BUILD_DIR}/build.${ARCH}/pharo.cog.spur" "*.app"
 		do_copy_dmg "x86_64"
 		;;
-	linux32x86)
-		do_pack_vm "linux" "i386" "`ls -d ${BUILD_DIR}/products/*`" "*" "${HEARTBEAT}"
-		;;
-	linux64x64)
-		do_pack_vm "linux" "x86_64"  "`ls -d ${BUILD_DIR}/products/*`" "*" "${HEARTBEAT}"
-		;;
-	linux32ARMv6)
-		do_pack_vm "linux" "ARMv6" "`ls -d ${BUILD_DIR}/products/*`" "*"
+	linux*)
+		archName="unknown"
+		case "${ARCH}" in
+			linux32x86)
+				archName="i386"
+				;;
+			linux64x64)
+				archName="x86_64"
+				;;
+			linux32ARMv6)
+				archName="ARMv6"
+				;;
+		esac
+		VM_SUBDIR="$(find "${PRODUCTS_DIR}" -type d -mindepth 1 -maxdepth 1 | head -n 1)"
+		do_pack_vm "linux" "${archName}" "${VM_SUBDIR}" "*" "${HEARTBEAT}"
 		;;
 	win32x86)
 		do_pack_vm "win" "i386" "${BUILD_DIR}/build.${ARCH}/${FLAVOR}/build/vm" "Pharo.exe PharoConsole.exe *.dll"
