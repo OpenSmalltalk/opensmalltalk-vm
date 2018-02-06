@@ -55,8 +55,9 @@ do_rename_vm() {
 	# function arguments
 	local os=$1
 	local productArch=$2
-	local suffix=$3
-	local fileExtension=${4-:zip}
+	local productDir=$3
+	local suffix=$4
+	local fileExtension=${5-:zip}
 	# variables
 	local filename=
 	
@@ -71,27 +72,27 @@ do_rename_vm() {
 
 case "${ARCH}" in
 	macos32x86)
-		do_pack_vm "mac" "i386" "*.app"
+		do_pack_vm "mac" "i386" "${BUILD_DIR}/build.${ARCH}/pharo.cog.spur" "*.app"
 		do_rename_vm "mac" "i386" "" "dmg"
 		;;
 	macos64x64)
-		do_pack_vm "mac" "x86_64" "*.app"
+		do_pack_vm "mac" "x86_64" "${BUILD_DIR}/build.${ARCH}/pharo.cog.spur" "*.app"
 		do_rename_vm "mac" "x86_64" "" "dmg"
 		;;
 	linux32x86)
-		do_pack_vm "linux" "i386" "*" "${HEARTBEAT}"
+		do_pack_vm "linux" "i386" ""`ls -d ${BUILD_DIR}/products/*`"" "*" "${HEARTBEAT}"
 		;;
 	linux64x64)
-		do_pack_vm "linux" "x86_64" "*" "${HEARTBEAT}"
+		do_pack_vm "linux" "x86_64"  ""`ls -d ${BUILD_DIR}/products/*`"" "*" "${HEARTBEAT}"
 		;;
 	linux32ARMv6)
-		do_pack_vm "linux" "ARMv6" "*"
+		do_pack_vm "linux" "ARMv6" "`ls -d ${BUILD_DIR}/products/*`" "*"
 		;;
 	win32x86)
-		do_rename_vm "win" "i386"
+		do_pack_vm "win" "i386" "${BUILD_DIR}/build.${ARCH}/${FLAVOR}/build/vm" "Pharo.exe PharoConsole.exe *.dll"
 		;;
 	win64x64)
-		do_rename_vm "win" "x86_64" "${SUFFIX}"
+		do_pack_vm "win" "x86_64" "${SUFFIX}" "${BUILD_DIR}/build.${ARCH}/${FLAVOR}/build/vm" "Pharo.exe PharoConsole.exe *.dll"
 		;;
 	*) 
 		echo "Undefined platform!"
