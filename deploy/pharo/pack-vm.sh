@@ -74,10 +74,10 @@ case "${ARCH}" in
 		do_copy_dmg "x86_64"
 		;;
 	linux32x86)
-		do_pack_vm "linux" "i386" ""`ls -d ${BUILD_DIR}/products/*`"" "*" "${HEARTBEAT}"
+		do_pack_vm "linux" "i386" "`ls -d ${BUILD_DIR}/products/*`" "*" "${HEARTBEAT}"
 		;;
 	linux64x64)
-		do_pack_vm "linux" "x86_64"  ""`ls -d ${BUILD_DIR}/products/*`"" "*" "${HEARTBEAT}"
+		do_pack_vm "linux" "x86_64"  "`ls -d ${BUILD_DIR}/products/*`" "*" "${HEARTBEAT}"
 		;;
 	linux32ARMv6)
 		do_pack_vm "linux" "ARMv6" "`ls -d ${BUILD_DIR}/products/*`" "*"
