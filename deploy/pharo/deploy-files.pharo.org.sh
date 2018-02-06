@@ -41,13 +41,13 @@ do_upload() {
 	fi
 	for productPath in "${PHARO_PRODUCTS_DIR}"/*.${extension}; do
 		productName="$(basename "${productPath}")"
-		echo "Uploading $productName to files.pharo.org/$destDir"
-		scp $productPath files.pharo.org:$destDir/$productName
+		echo "Uploading $productName to files.pharo.org:$destDir"
+		scp -B $productPath files.pharo.org:$destDir/$productName
 		if [[ "$HEARTBEAT" = "threaded" ]]; then 
 			SUFFIX="-threaded"
 		fi
-		echo "Uploading $productName to files.pharo.org/$destDir/latest$SUFFIX.${extension}"
-		scp $productPath files.pharo.org:$destDir/latest$SUFFIX.${extension}
+		echo "Uploading $productName to files.pharo.org:$destDir/latest$SUFFIX.${extension}"
+		scp -B $productPath files.pharo.org:$destDir/latest$SUFFIX.${extension}
 	done
 }
 
