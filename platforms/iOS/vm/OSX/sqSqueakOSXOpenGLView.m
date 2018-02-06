@@ -773,7 +773,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 
 	NSArray *down = @[theEvent];
 	@synchronized(self) {
-		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
+		self.lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
 		[self interpretKeyEvents: down];
 		self.lastSeenKeyBoardStrokeDetails = NULL;
 	}
@@ -900,7 +900,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
 		keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
 		aKeyBoardStrokeDetails.keyCode = keyCode;
 		aKeyBoardStrokeDetails.modifierFlags = self.lastSeenKeyBoardModifierDetails.modifierFlags;
-		lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
+		self.lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
 
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordCharEvent: unicodeString fromView: self];
 		self.lastSeenKeyBoardStrokeDetails = NULL;
@@ -924,7 +924,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,l
         keyBoardStrokeDetails *aKeyBoardStrokeDetails = AUTORELEASEOBJ([[keyBoardStrokeDetails alloc] init]);
         aKeyBoardStrokeDetails.keyCode = [theEvent keyCode];
         aKeyBoardStrokeDetails.modifierFlags = [theEvent modifierFlags];
-        lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
+        self.lastSeenKeyBoardStrokeDetails = aKeyBoardStrokeDetails;
 
         [(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordCharEvent: unicodeString fromView: self];
         self.lastSeenKeyBoardStrokeDetails = NULL;
