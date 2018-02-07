@@ -19,4 +19,4 @@ echo "Host files.pharo.org
 	Hostname ssh.cluster023.hosting.ovh.net
 " >> ~/.ssh/config
 
-echo "files.pharo.org ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC6CP8ge+bLZMtSK/GWha70Iih+4qPfXjixz7g4c+is3VmhDBY2JF9mHCUOzTpnYVnfBFomv4EavDGJZU+7a3GzllflJeRdcYt6X+rxKJ6aMa5TIi5m8FRfHyojjVeNWAG2M51U8yonQE8h4nsDcs2y/sXycx5jwvuFUWLuB41ubc28EiYLdHMsI6yq9HygNrxF6QLwWdl17so6qZo91GafpxlZz0YFhHxJ7h8WS/XJAAKQl4rx59Eqo8N1nhwlmQMa0GNJAy0TDTAy/rgF6AG6D47P2evKKvqFSJ7GkjvtzxA7lVS9kS8WmfMHLNOOq+d+BXvVAHfg5VJOQPaWYfRP" >> ~/.ssh/known_hosts
+echo "ssh.cluster023.hosting.ovh.net ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC6CP8ge+bLZMtSK/GWha70Iih+4qPfXjixz7g4c+is3VmhDBY2JF9mHCUOzTpnYVnfBFomv4EavDGJZU+7a3GzllflJeRdcYt6X+rxKJ6aMa5TIi5m8FRfHyojjVeNWAG2M51U8yonQE8h4nsDcs2y/sXycx5jwvuFUWLuB41ubc28EiYLdHMsI6yq9HygNrxF6QLwWdl17so6qZo91GafpxlZz0YFhHxJ7h8WS/XJAAKQl4rx59Eqo8N1nhwlmQMa0GNJAy0TDTAy/rgF6AG6D47P2evKKvqFSJ7GkjvtzxA7lVS9kS8WmfMHLNOOq+d+BXvVAHfg5VJOQPaWYfRP" >> ~/.ssh/known_hosts

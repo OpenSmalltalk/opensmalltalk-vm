@@ -32,7 +32,7 @@ $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME): $(CAIROARCHIVE)
 			--disable-xlib \
 			--disable-dependency-tracking \
 			--disable-interpreter \
-		&& make \
+		&& make -s \
 		&& make install
 
 $(CAIROLIB): pkgconfig libpng freetype2 pixman $(THIRDPARTYLIBDIR)/$(CAIROLIBNAME)
