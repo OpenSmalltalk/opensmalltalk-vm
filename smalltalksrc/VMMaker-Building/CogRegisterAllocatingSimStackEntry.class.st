@@ -195,7 +195,7 @@ CogRegisterAllocatingSimStackEntry >> reconcileWith: targetEntry spillOffset: sp
 								liveRegister := targetReg.
 								mergedRegister := true].
 			[SSConstant]	-> [cogit genMoveConstant: constant R: targetReg.
-								type := SSRegister. register := targetReg.
+								type := SSRegister. register := targetReg. liveRegister := NoReg.
 								mergedRegister := true].
 			[SSRegister]	-> [targetReg ~= register ifTrue:
 									[cogit MoveR: register R: targetReg.
@@ -204,6 +204,9 @@ CogRegisterAllocatingSimStackEntry >> reconcileWith: targetEntry spillOffset: sp
 		 ^mergedRegister].
 	targetReg := targetEntry registerOrNone.
 	spillOrUnspillBlock value: targetReg.
+	(type = SSConstant
+	 and: [targetEntry type ~= SSConstant or: [targetEntry constant ~= constant]]) ifTrue:
+		[type := SSSpill. offset := spillOffset. register := FPReg].
 	liveRegister ~= targetReg ifTrue:
 		[liveRegister := NoReg].
 	^false
