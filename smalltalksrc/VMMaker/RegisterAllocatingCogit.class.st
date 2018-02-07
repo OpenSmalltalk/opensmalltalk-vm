@@ -133,32 +133,66 @@ RegisterAllocatingCogit >> bytecodeFixupClass [
 { #category : #'compile abstract instructions' }
 RegisterAllocatingCogit >> compileAbstractInstructionsFrom: start through: end [
 	"Loop over bytecodes, dispatching to the generator for each bytecode, handling fixups in due course.
-	 Override to provide a development-time only escape for failed merges due to partially implemented
-	 parallel move.  Override to recompile after a loop requiring a merge is detected."
-	| result initialOpcodeIndex initialCounterIndex initialIndexOfIRC |
-	compilationPass := 1.
+	 Override to recompile after a loop requiring a merge is detected."
 	scratchBytecodePC := nil.
-	initialOpcodeIndex := opcodeIndex.
-	initialCounterIndex := self maybeCounterIndex."for SistaCogit"
-	literalsManager saveForRecompile.
-	NewspeakVM ifTrue:
-		[initialIndexOfIRC := indexOfIRC].
-	[recompileForLoopRegisterAssignments := false.
-	 result := super compileAbstractInstructionsFrom: start through: end.
-	 result = 0 and: [recompileForLoopRegisterAssignments]]
-		whileTrue:
-			[self assert: compilationPass <= 2.
-			 self reinitializeAllButBackwardFixupsFrom: start through: end.
-			 self resetSimStack: start.
-			 self reinitializeOpcodesFrom: initialOpcodeIndex to: opcodeIndex - 1.
-			 compilationPass := compilationPass + 1.
-			 nextFixup := 0.
-			 opcodeIndex := initialOpcodeIndex.
-			 self maybeSetCounterIndex: initialCounterIndex. "For SistaCogit"
-			 literalsManager resetForRecompile.
-			 NewspeakVM ifTrue:
-				[indexOfIRC := initialIndexOfIRC]].
-	^result
+	^super compileAbstractInstructionsFrom: start through: end
+]
+
+{ #category : #'compile abstract instructions' }
+RegisterAllocatingCogit >> compileBlockBodies [
+	<inline: false>
+	| result compiledBlocksCount blockStart savedNeedsFrame savedNumArgs savedNumTemps
+	  initialStackPtr initialOpcodeIndex initialIndexOfIRC initialCounterIndex |
+	<var: #blockStart type: #'BlockStart *'>
+	self assert: blockCount > 0.
+	"scanBlock: in compileBlockEntry: sets both of these appropriately for each block."
+	savedNeedsFrame := needsFrame.
+	savedNumArgs := methodOrBlockNumArgs.
+	savedNumTemps := methodOrBlockNumTemps.
+	inBlock := InVanillaBlock.
+	compiledBlocksCount := 0.
+	[compiledBlocksCount < blockCount] whileTrue:
+		[blockStart := self blockStartAt: compiledBlocksCount.
+		 (result := self scanBlock: blockStart) < 0 ifTrue: [^result].
+		 compilationPass := 1.
+		 scratchBytecodePC := nil.
+		 initialOpcodeIndex := opcodeIndex.
+		 initialCounterIndex := self maybeCounterIndex."for SistaCogit"
+		 literalsManager saveForRecompile.
+		 NewspeakVM ifTrue:
+			[initialIndexOfIRC := indexOfIRC].
+		 [recompileForLoopRegisterAssignments := false.
+		  self compileBlockEntry: blockStart.
+		  initialStackPtr := simStackPtr.
+		  (result := self compileAbstractInstructionsFrom: blockStart startpc + (self pushNilSize: methodObj numInitialNils: blockStart numInitialNils)
+						through: blockStart startpc + blockStart span - 1) < 0 ifTrue:
+			[^result].
+		  "If the final simStackPtr is less than the initial simStackPtr then scanBlock: over-
+		   estimated the number of initial nils (because it assumed one or more pushNils to
+		   produce an operand were pushNils to initialize temps.  This is very rare, so
+		   compensate by checking, adjusting numInitialNils and recompiling the block body.
+		   N.B.  No need to reinitialize the literalsManager because it answers existing literals."
+		  initialStackPtr ~= simStackPtr or: [recompileForLoopRegisterAssignments]]
+			whileTrue:
+				[self assert: (initialStackPtr > simStackPtr or: [deadCode]).
+				 self assert: compilationPass = 1.
+				 compilationPass := compilationPass + 1. "for asserts"
+				 blockStart numInitialNils: blockStart numInitialNils + simStackPtr - initialStackPtr.
+				 blockStart fakeHeader dependent: nil.
+				 self reinitializeAllButBackwardFixupsFrom: blockStart startpc + blockStart numInitialNils through: blockStart startpc + blockStart span - 1.
+				 nextFixup := 0.
+				 self resetSimStack: blockStart startpc.
+				 self reinitializeOpcodesFrom: initialOpcodeIndex to: opcodeIndex - 1.
+				 opcodeIndex := initialOpcodeIndex.
+				 self maybeSetCounterIndex: initialCounterIndex. "For SistaCogit"
+				 literalsManager resetForRecompile.
+				 NewspeakVM ifTrue:
+					[indexOfIRC := initialIndexOfIRC]].
+		compiledBlocksCount := compiledBlocksCount + 1].
+	needsFrame := savedNeedsFrame.
+	methodOrBlockNumArgs := savedNumArgs.
+	methodOrBlockNumTemps := savedNumTemps.
+	^0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -173,6 +207,41 @@ RegisterAllocatingCogit >> compileEntireMethod [
 	"Compile the abstract instructions for the entire method, including blocks."
 	self allocateMergeFixups.
 	^super compileEntireMethod
+]
+
+{ #category : #'compile abstract instructions' }
+RegisterAllocatingCogit >> compileMethodBody [
+	"Compile the top-level method body."
+	<inline: true>
+	| result initialOpcodeIndex initialCounterIndex initialIndexOfIRC start |
+	endPC < initialPC ifTrue: [^0]. "quick primitives"
+	"When compiling, skip any initial CallPrimitive and optional StorePrimErrCode bytecodes.
+	 These are dealt with in compileFrameBuild."
+	compilationPass := 1.
+	scratchBytecodePC := nil.
+	initialOpcodeIndex := opcodeIndex.
+	initialCounterIndex := self maybeCounterIndex."for SistaCogit"
+	literalsManager saveForRecompile.
+	NewspeakVM ifTrue:
+		[initialIndexOfIRC := indexOfIRC].
+	[recompileForLoopRegisterAssignments := false.
+	 start := initialPC + (self deltaToSkipPrimAndErrorStoreIn: methodObj header: methodHeader).
+	 result := self compileAbstractInstructionsFrom: start through: endPC.
+	 result = 0
+	 and: [recompileForLoopRegisterAssignments]]
+		whileTrue:
+			[self assert: compilationPass <= 2.
+			 self reinitializeAllButBackwardFixupsFrom: start through: endPC.
+			 self resetSimStack: start.
+			 self reinitializeOpcodesFrom: initialOpcodeIndex to: opcodeIndex - 1.
+			 compilationPass := compilationPass + 1.
+			 nextFixup := 0.
+			 opcodeIndex := initialOpcodeIndex.
+			 self maybeSetCounterIndex: initialCounterIndex. "For SistaCogit"
+			 literalsManager resetForRecompile.
+			 NewspeakVM ifTrue:
+				[indexOfIRC := initialIndexOfIRC]].
+	^result
 ]
 
 { #category : #'bytecode generator support' }
@@ -243,7 +312,8 @@ RegisterAllocatingCogit >> copySimStackToFixup: fixup [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> copySimStackToScratch: spillBase [
 	<inline: true>
-	self assert: spillBase > methodOrBlockNumTemps.
+	self assert: (spillBase > methodOrBlockNumTemps
+				or: [self maybeCompilingFirstPassOfBlockWithInitialPushNil and: [spillBase > methodOrBlockNumArgs]]).
 	scratchBytecodePC = bytecodePC ifTrue:
 		[^self].
 	scratchBytecodePC := bytecodePC.
@@ -269,13 +339,17 @@ RegisterAllocatingCogit >> deassignRegister: register in: aSimStack [
 RegisterAllocatingCogit >> duplicateRegisterAssignmentsInTemporaries [
 	| liveRegisters |
 	liveRegisters := 0.
-	0 to: methodOrBlockNumTemps do:
-		[:i| | liveRegister |
-		liveRegister := (self simStackAt: i) liveRegister.
+	0 to: (methodOrBlockNumTemps min: (simStackPtr min: simSpillBase - 1)) do: "The min:s are for the initial push nil hack"
+		[:i| | current liveRegister |
+		liveRegister := (current := self simStackAt: i) liveRegister.
 		liveRegister ~= NoReg ifTrue:
 			[(self register: liveRegister isInMask: liveRegisters) ifTrue:
-				[^true].
-			 liveRegisters := liveRegisters bitOr: 1 << liveRegister]].
+				["Filter out pushed temps in first-pass vanilla blocks"
+				 (self maybeCompilingFirstPassOfBlockWithInitialPushNil
+				  and: [current type = SSBaseOffset
+				  and: [current offset ~= (self frameOffsetOfTemporary: i - 1)]]) ifFalse:
+					[^true]].
+			 liveRegisters := liveRegisters bitOr: (self registerMaskFor: liveRegister)]].
 	^false
 ]
 
@@ -1308,6 +1382,7 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup [
 						 current ensureSpilledAt: spillOffset from: FPReg]) ifTrue:
 					[i > methodOrBlockNumTemps ifTrue:
 						[self deassignRegister: current registerOrNone in: mergeSimStack.
+						 self deassignRegister: current registerOrNone in: simStack.
 						 self deny: (self register: current registerOrNone
 										isInMask: self liveRegistersInSelfAndTemps)]]]]
 		ifFalse:
@@ -1328,6 +1403,7 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup [
 							ifFalse: [self AddCq: objectRepresentation wordSize R: SPReg]]) ifTrue:
 					[i > methodOrBlockNumTemps ifTrue:
 						[self deassignRegister: current registerOrNone in: mergeSimStack.
+						 self deassignRegister: current registerOrNone in: simStack.
 						 self deny: (self register: current registerOrNone
 										isInMask: self liveRegistersInSelfAndTemps)]]]].
 	self updateSimSpillBase
@@ -1438,7 +1514,7 @@ RegisterAllocatingCogit >> mergeWithFixupIfRequired: fixup [
 		ifTrue: "case 3"
 			[simStackPtr := fixup simStackPtr.
 			self restoreSimStackAtMergePoint: fixup.
-			deadCode := false.]
+			deadCode := false]
 		ifFalse: "case 4"
 			[(fixup isBackwardBranchFixup and: [compilationPass > 1])
 				ifTrue:
@@ -1455,7 +1531,7 @@ RegisterAllocatingCogit >> mergeWithFixupIfRequired: fixup [
 	fixup targetInstruction: self Label.
 	self assertCorrectSimStackPtr.
 	self assert: (self simStackMergeCompatibleWith: fixup).
-	"self simStackPrintString""fixup simStackPrintString"
+	"self simStackPrintString, fixup simStackPrintString"
 	^0
 ]
 
@@ -1582,7 +1658,6 @@ RegisterAllocatingCogit >> reinitializeAllButBackwardFixupsFrom: start through: 
 	"When a method must be recompiled due to moving a loop's register
 	 assignments to the head of a loop, backward fixups must be marked
 	 as such, and all but backward fixups must be reinitialized."
-	<inline: true>
 	| descriptor nExts pc distance targetPC |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	pc := start.
@@ -1621,11 +1696,10 @@ RegisterAllocatingCogit >> resetSimStack: startPC [
 	<inline: true>
 	simSpillBase := methodOrBlockNumTemps + 1.
 	simStackPtr := methodOrBlockNumTemps.
-	self flushLiveRegistersForSend.
-	self cCode: '' inSmalltalk:
-		[0 to: methodOrBlockNumTemps do:
-			[:i|
-			(self simStackAt: i) bcptr: startPC]]
+	0 to: simStackPtr do:
+		[:i|
+		(self simStackAt: i) liveRegister: NoReg.
+		self cCode: '' inSmalltalk: [(self simStackAt: i) bcptr: startPC]]
 ]
 
 { #category : #'bytecode generator support' }
@@ -1687,7 +1761,8 @@ RegisterAllocatingCogit >> restoreSimStackAtMergePoint: fixup [
 		 0 to: simStackPtr do:
 			[:i|
 			self cCode: [simStack at: i put: (fixup mergeSimStack at: i)]
-				inSmalltalk: [(simStack at: i) copyFrom: (fixup mergeSimStack at: i)]]].
+				inSmalltalk: [(simStack at: i) copyFrom: (fixup mergeSimStack at: i)]].
+		 self updateSimSpillBase].
 	^0
 ]
 

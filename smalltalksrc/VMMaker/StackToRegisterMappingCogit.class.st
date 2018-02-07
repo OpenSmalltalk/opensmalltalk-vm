@@ -2311,7 +2311,7 @@ StackToRegisterMappingCogit >> assertCorrectSimStackPtr [
 	"Would like to assert simply simSpillBase > methodOrBlockNumTemps but can't because
 	 of the initialNils hack for nested blocks in SqueakV3PlusClosures"
 	self assert: (simSpillBase >= methodOrBlockNumTemps
-				or: [inBlock = InVanillaBlock and: [simSpillBase >= 0]]).
+				or: [self maybeCompilingFirstPassOfBlockWithInitialPushNil and: [simSpillBase > methodOrBlockNumArgs]]).
 	(needsFrame and: [simSpillBase > 0]) ifTrue:
 		[self assert: (self simStackAt: simSpillBase - 1) spilled == true.
 		 self assert: (simSpillBase > simStackPtr or: [(self simStackAt: simSpillBase) spilled == false])].
@@ -12840,7 +12840,7 @@ StackToRegisterMappingCogit >> mergeWithFixupIfRequired: fixup [
 			["Would like to assert fixup simStackPtr >= methodOrBlockNumTemps
 			   but can't because of the initialNils hack."
 			 self assert: (fixup simStackPtr >= methodOrBlockNumTemps
-						or: [inBlock = InVanillaBlock]).
+						or: [self maybeCompilingFirstPassOfBlockWithInitialPushNil]).
 			 simStackPtr := fixup simStackPtr.
 			 LowcodeVM ifTrue:
 				[simNativeStackPtr := fixup simNativeStackPtr.
@@ -13405,10 +13405,8 @@ StackToRegisterMappingCogit >> ssAllocateCallReg: requiredReg1 and: requiredReg2
 	"Allocate registers needed in a run-time call (i.e. flush uses of the
 	 registers to the real stack).  Since the run-time can smash any and
 	 all caller-saved registers also flush all caller-saved registers."
-	self ssAllocateRequiredRegMask: (CallerSavedRegisterMask
-										bitOr: ((self registerMaskFor: requiredReg1)
-										bitOr: ((self registerMaskFor: requiredReg2)
-										bitOr: (self registerMaskFor: requiredReg3))))
+	self ssAllocateRequiredRegMask: (CallerSavedRegisterMask bitOr:
+										(self registerMaskFor: requiredReg1 and: requiredReg2 and: requiredReg3))
 		upThrough: simStackPtr
 ]
 
@@ -13496,7 +13494,7 @@ StackToRegisterMappingCogit >> ssAllocateRequiredRegMask: requiredRegsMask upThr
 	(simSpillBase max: 0) to: stackPtr do:
 		[:i|
 		liveRegs := liveRegs bitOr: (self simStackAt: i) registerMask.
-		((self simStackAt: i) registerMask bitAnd: requiredRegsMask) ~= 0 ifTrue:
+		((self simStackAt: i) registerMask anyMask: requiredRegsMask) ifTrue:
 			[lastRequired := i]].
 	LowcodeVM ifTrue:
 		[self assert: nativeStackPtr = simNativeStackPtr.
@@ -13525,7 +13523,7 @@ StackToRegisterMappingCogit >> ssFlushTo: index [
 	LowcodeVM ifTrue:
 		[self ssNativeFlushTo: simNativeStackPtr].
 	simSpillBase <= index ifTrue:
-		[(simSpillBase max: methodOrBlockNumTemps + 1) to: index do:
+		[((simSpillBase max: methodOrBlockNumTemps + 1) min: simStackPtr) to: index do:
 			[:i|
 			self assert: needsFrame.
 			(self simStackAt: i)
@@ -14128,7 +14126,7 @@ StackToRegisterMappingCogit >> updateSimSpillBase [
 	<inline: true>
 	self assert: ((simSpillBase > methodOrBlockNumTemps
 				and: [simStackPtr >= methodOrBlockNumTemps])
-				or: [inBlock = InVanillaBlock and: [compilationPass = 1]]).
+				or: [self maybeCompilingFirstPassOfBlockWithInitialPushNil]).
 	simSpillBase > simStackPtr
 		ifTrue:
 			[simSpillBase := simStackPtr + 1.
