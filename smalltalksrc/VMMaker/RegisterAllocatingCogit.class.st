@@ -120,7 +120,12 @@ RegisterAllocatingCogit >> assertCorrectSimStackPtr [
 	 self cCode: '' inSmalltalk:
 		[deadCode ifFalse:
 			[self assert: simStackPtr + (needsFrame ifTrue: [0] ifFalse: [1])
-						= (self debugStackPointerFor: bytecodePC)].
+						= (self debugStackPointerFor: bytecodePC).
+			 self assert: (simSpillBase >= methodOrBlockNumTemps
+						or: [self maybeCompilingFirstPassOfBlockWithInitialPushNil and: [simSpillBase > methodOrBlockNumArgs]]).
+			 (needsFrame and: [simSpillBase > 0]) ifTrue:
+				[self assert: (self simStackAt: simSpillBase - 1) spilled == true.
+				 self assert: (simSpillBase > simStackPtr or: [(self simStackAt: simSpillBase) spilled == false])]].
 		 self deny: self duplicateRegisterAssignmentsInTemporaries]
 ]
 
@@ -381,28 +386,14 @@ RegisterAllocatingCogit >> ensureFixupAt: targetPC [
 			 fixup mergeSimStack
 				ifNil: [self setMergeSimStackOf: fixup]
 				ifNotNil:
-					[self moveVolatileSimStackEntriesToRegisters.
-					 self assert: (self simStack: simStack isIdenticalTo: fixup mergeSimStack)]].
+					[self assert: (self simStack: simStack isIdenticalTo: fixup mergeSimStack)]].
 	^super ensureFixupAt: targetPC
 ]
 
 { #category : #'compile abstract instructions' }
 RegisterAllocatingCogit >> ensureNonMergeFixupAt: targetPC [
-	"Make sure there's a flagged fixup at the target pc in fixups.
-	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction.
-	 Override to remember the simStack state at the target, if not already there."
-	"self printSimStack; printSimStack: fixup mergeSimStack"
-	true
-		ifTrue: [self shouldNotImplement]
-		ifFalse:
-			[| fixup |
-			fixup := super ensureNonMergeFixupAt: targetPC.
-			fixup mergeSimStack
-				ifNil: [self setMergeSimStackOf: fixup]
-				ifNotNil:
-					[self assert: simStackPtr = fixup simStackPtr.
-					 self deny: (self mergeRequiredToTarget: fixup mergeSimStack)].
-			^fixup]
+	"RegisterAllocatingCogit insists on merging."
+	self shouldNotImplement
 ]
 
 { #category : #'bytecode generator support' }
@@ -616,8 +607,13 @@ RegisterAllocatingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 			orNotIf: orNot].
 	
 	self assert: (unforwardArg or: [unforwardRcvr]).
-
+	self ssPop: 2. "If we had moveAllButTop: 2 volatileSimStackEntriesToRegistersPreserving: we could avoid the extra ssPop:s"
+	self moveVolatileSimStackEntriesToRegistersPreserving:
+		(self allocatedRegisters bitOr: (argReg = NoReg
+										ifTrue: [self registerMaskFor: rcvrReg]
+										ifFalse: [self registerMaskFor: rcvrReg and: argReg])).
 	retry := self Label.
+	self ssPop: -2.
 	self genCmpArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
 	self ssPop: 2.
 
@@ -726,6 +722,8 @@ RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	noMustBeBoolean := self extASpecifiesNoMustBeBoolean.
 	extA := 0.
 
+	self moveVolatileSimStackEntriesToRegisters.
+
 	(self stackEntryIsBoolean: desc) ifTrue:
 		["Must annotate the bytecode for correct pc mapping."
 		 desc constant = boolean
@@ -797,6 +795,7 @@ RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 RegisterAllocatingCogit >> genJumpTo: targetBytecodePC [
 	"Overriden to avoid the flush because in this cogit stack state is merged at merge point."
 	| eventualTarget generator fixup |
+	self moveVolatileSimStackEntriesToRegisters.
 	eventualTarget := self eventualTargetOf: targetBytecodePC.
 	(eventualTarget > bytecodePC
 	 and: [self stackTopIsBoolean
@@ -1072,6 +1071,11 @@ RegisterAllocatingCogit >> genSpecialSelectorComparison [
 			 self ssTop popToReg: argReg.
 			 (self ssValue: 1) popToReg: rcvrReg].
 	self ssPop: 2.
+	self moveVolatileSimStackEntriesToRegistersPreserving:
+		(self allocatedRegisters bitOr: (argReg = NoReg
+										ifTrue: [self registerMaskFor: rcvrReg]
+										ifFalse: [self registerMaskFor: rcvrReg and: argReg])).
+
 	jumpNotSmallInts := (rcvrIsInt and: [argIsIntConst]) ifFalse:
 							[argIsIntConst
 								ifTrue: [objectRepresentation genJumpNotSmallInteger: rcvrReg]
@@ -1205,8 +1209,13 @@ RegisterAllocatingCogit >> genVanillaInlinedIdenticalOrNotIf: orNot [
 			rcvrReg: rcvrReg 
 			orNotIf: orNot].
 	
-	self genCmpArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg.
 	self ssPop: 2.
+	self moveVolatileSimStackEntriesToRegistersPreserving:
+		(self allocatedRegisters bitOr: (argReg = NoReg
+										ifTrue: [self registerMaskFor: rcvrReg]
+										ifFalse: [self registerMaskFor: rcvrReg and: argReg])).
+
+	self genCmpArgIsConstant: argIsConstant rcvrIsConstant: rcvrIsConstant argReg: argReg rcvrReg: rcvrReg.
 
 	"For now just deny we're in the situation we have yet to implement ;-)"
 	self deny: (self mergeRequiredForJumpTo: targetBytecodePC).
@@ -1400,7 +1409,11 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup [
 						 self assert: spillOffset ~= 0.
 						 targetReg  ~= NoReg
 							ifTrue: [self PopR: targetReg]
-							ifFalse: [self AddCq: objectRepresentation wordSize R: SPReg]]) ifTrue:
+							ifFalse: [self AddCq: objectRepresentation wordSize R: SPReg].
+						 current type ~= SSSpill ifTrue:
+							[current spilled: false.
+							  simSpillBase > i ifTrue:
+								[simSpillBase := i]]]) ifTrue:
 					[i > methodOrBlockNumTemps ifTrue:
 						[self deassignRegister: current registerOrNone in: mergeSimStack.
 						 self deassignRegister: current registerOrNone in: simStack.
@@ -1537,6 +1550,11 @@ RegisterAllocatingCogit >> mergeWithFixupIfRequired: fixup [
 
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> moveVolatileSimStackEntriesToRegisters [
+	self moveVolatileSimStackEntriesToRegistersPreserving: self allocatedRegisters
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> moveVolatileSimStackEntriesToRegistersPreserving: registerSet [
 	"When jumping forward to a merge point the stack must be reconcilable with the state that falls through to the merge point.
 	 We cannot easily arrange that later we add code to the branch, e.g. to spill values.  Instead, any volatile contents must be
 	 moved to registers.
@@ -1553,7 +1571,7 @@ RegisterAllocatingCogit >> moveVolatileSimStackEntriesToRegisters [
 	<inline: true>
 	| allocatedRegs |
 	<var: #desc type: #'SimStackEntry *'>
-	allocatedRegs := self allocatedRegisters.
+	allocatedRegs := registerSet.
 	self assert: simSpillBase >= 0.
 	simSpillBase to: simStackPtr do: 
 		[:i| | desc reg |
@@ -1779,7 +1797,6 @@ RegisterAllocatingCogit >> restoreSimStackFromScratch [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> setMergeSimStackOf: fixup [
 	<var: #fixup type: #'BytecodeFixup *'>
-	self moveVolatileSimStackEntriesToRegisters.
 	fixup mergeSimStack
 		ifNil:
 			[self assert: nextFixup <= numFixups.
