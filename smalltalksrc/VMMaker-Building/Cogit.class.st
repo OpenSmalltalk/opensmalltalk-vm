@@ -4364,7 +4364,7 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	 depend on the zone remaining constant across method generation."
 	<api>
 	<returnTypeC: #'CogMethod *'>
-	| cogMethod |
+	| selector cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
 	(self exclude: aMethodObj selector: aSelectorOop) ifTrue:
 		[^nil].
@@ -4383,10 +4383,13 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 					^nil]]]
 		ifFalse: [self deny: (coInterpreter methodHasCogMethod: aMethodObj)].
 	self deny: (objectMemory isOopCompiledMethod: (coInterpreter ultimateLiteralOf: aMethodObj)).
-	"coInterpreter stringOf: aSelectorOop"
+	selector := aSelectorOop = objectMemory nilObject
+					ifTrue: [coInterpreter maybeSelectorOfMethod: aMethodObj]
+					ifFalse: [aSelectorOop].
+	"coInterpreter stringOf: selector"
 	coInterpreter
-		compilationBreak: aSelectorOop
-		point: (objectMemory lengthOf: aSelectorOop)
+		compilationBreak: selector
+		point: (objectMemory lengthOf: selector)
 		isMNUCase: false.
 	aMethodObj = breakMethod ifTrue: [self halt: 'Compilation of breakMethod'].
 	NewspeakVM ifTrue:
