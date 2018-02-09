@@ -611,7 +611,10 @@ RegisterAllocatingCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 	self moveVolatileSimStackEntriesToRegistersPreserving:
 		(self allocatedRegisters bitOr: (argReg = NoReg
 										ifTrue: [self registerMaskFor: rcvrReg]
-										ifFalse: [self registerMaskFor: rcvrReg and: argReg])).
+										ifFalse:
+											[rcvrReg = NoReg
+												ifTrue: [self registerMaskFor: argReg]
+												ifFalse: [self registerMaskFor: rcvrReg and: argReg]])).
 	retry := self Label.
 	self ssPop: -2.
 	self genCmpArgIsConstant: unforwardArg not rcvrIsConstant: unforwardRcvr not argReg: argReg rcvrReg: rcvrReg.
@@ -1388,12 +1391,14 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup [
 						[:targetReg|
 						 self deny: current spilled.
 						 self assert: spillOffset ~= 0.
-						 current ensureSpilledAt: spillOffset from: FPReg]) ifTrue:
-					[i > methodOrBlockNumTemps ifTrue:
-						[self deassignRegister: current registerOrNone in: mergeSimStack.
-						 self deassignRegister: current registerOrNone in: simStack.
-						 self deny: (self register: current registerOrNone
-										isInMask: self liveRegistersInSelfAndTemps)]]]]
+						 current ensureSpilledAt: spillOffset from: FPReg.
+						 simSpillBase <= i ifTrue:
+							[simSpillBase := i + 1]]) ifTrue:
+					[| targetReg |
+					 (i > methodOrBlockNumTemps and: [(targetReg := target registerOrNone) ~= NoReg]) ifTrue:
+						[self deassignRegister: targetReg in: simStack.
+						 self deassignRegister: targetReg in: mergeSimStack.
+						 self deny: (self register: targetReg isInMask: self liveRegistersInSelfAndTemps)]]]]
 		ifFalse:
 			[simStackPtr to: 0 by: -1 do:
 				[:i|
@@ -1410,15 +1415,14 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup [
 						 targetReg  ~= NoReg
 							ifTrue: [self PopR: targetReg]
 							ifFalse: [self AddCq: objectRepresentation wordSize R: SPReg].
-						 current type ~= SSSpill ifTrue:
-							[current spilled: false.
-							  simSpillBase > i ifTrue:
-								[simSpillBase := i]]]) ifTrue:
-					[i > methodOrBlockNumTemps ifTrue:
-						[self deassignRegister: current registerOrNone in: mergeSimStack.
-						 self deassignRegister: current registerOrNone in: simStack.
-						 self deny: (self register: current registerOrNone
-										isInMask: self liveRegistersInSelfAndTemps)]]]].
+						 current spilled: false.
+						 simSpillBase > i ifTrue:
+							[simSpillBase := i]]) ifTrue:
+					[| targetReg |
+					 (i > methodOrBlockNumTemps and: [(targetReg := target registerOrNone) ~= NoReg]) ifTrue:
+						[self deassignRegister: targetReg in: simStack.
+						 self deassignRegister: targetReg in: mergeSimStack.
+						 self deny: (self register: targetReg isInMask: self liveRegistersInSelfAndTemps)]]]].
 	self updateSimSpillBase
 ]
 
@@ -1859,11 +1863,15 @@ RegisterAllocatingCogit >> simStackMergeCompatibleWith: fixup [
 		current := self simStack: simStack at: i.
 		(target isSameEntryAs: current) ifFalse:
 			[^current type caseOf: {
-				[SSBaseOffset]	-> [target type caseOf: {
-										[SSBaseOffset]	-> [false].
-										[SSSpill]		-> [false].
-										[SSConstant]	-> [false].
-										[SSRegister]	-> [false] }].
+				[SSBaseOffset]	-> [(current offset = (self frameOffsetOfTemporary: i - 1)
+									and: [current register = FPReg])
+										ifTrue: [true] "current has been spilled virtually"
+										ifFalse:
+											[target type caseOf: {
+												[SSBaseOffset]	-> [false].
+												[SSSpill]		-> [false].
+												[SSConstant]	-> [false].
+												[SSRegister]	-> [false] }]].
 				[SSSpill]		-> [target type caseOf: {
 										[SSBaseOffset]	-> [true].
 										[SSSpill]		-> [true].
