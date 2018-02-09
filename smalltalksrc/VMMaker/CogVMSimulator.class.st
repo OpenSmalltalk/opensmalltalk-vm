@@ -614,10 +614,12 @@ CogVMSimulator >> close [  "close any files that ST may have opened, etc"
 
 { #category : #'primitive support' }
 CogVMSimulator >> codeGeneratorToComputeAccessorDepth [
-	^VMMaker new
+	^(VMMaker new
 		buildCodeGeneratorForInterpreter: CoInterpreterPrimitives
 		includeAPIMethods: false
-		initializeClasses: false
+		initializeClasses: false)
+			logger: self transcript;
+			yourself
 ]
 
 { #category : #'simulation only' }
@@ -4011,8 +4013,11 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'set break pc', cogit breakPC menuPrompt, '...-ve to disable or remove' action: [cogit promptForBreakPC];
 		add: 'set break count...' action: [|s| s := UIManager default request: 'break count (dec)'.
 											s notEmpty ifTrue: [breakCount := Integer readFrom: s readStream]];
-		add: 'set break selector...' action: [|s| s := UIManager default request: 'break selector'.
-											s notEmpty ifTrue: [self setBreakSelector: s]];
+		add: 'set break selector...' action: [|s| s := UIManager default request: 'break selector (MNU:foo for MNU)'.
+											s notEmpty ifTrue:
+												[(s size > 4 and: [s beginsWith: 'MNU:'])
+													ifTrue: [self setBreakMNUSelector: (s allButFirst: 4)]
+													ifFalse: [self setBreakSelector: s]]];
 		add: 'set break block...' action: [|s| s := UIManager default request: 'break block' initialAnswer: '[:theCogit| false]'.
 											s notEmpty ifTrue: [self setBreakBlockFromString: s]];
 		add: 'set cogit break method...' action: [(self promptHex: 'cogit breakMethod') ifNotNil: [:bm| cogit setBreakMethod: bm]];

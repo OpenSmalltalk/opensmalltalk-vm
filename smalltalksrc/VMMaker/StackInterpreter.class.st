@@ -4780,10 +4780,12 @@ StackInterpreter >> closureIn: context numArgs: numArgs instructionPointer: init
 
 { #category : #'primitive support' }
 StackInterpreter >> codeGeneratorToComputeAccessorDepth [
-	^VMMaker new
+	^(VMMaker new
 		buildCodeGeneratorForInterpreter: self class primitivesClass
 		includeAPIMethods: false
-		initializeClasses: false
+		initializeClasses: false)
+			logger: self transcript;
+			yourself
 ]
 
 { #category : #'indexing primitive support' }
