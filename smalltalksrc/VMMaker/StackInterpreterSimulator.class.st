@@ -2801,8 +2801,11 @@ StackInterpreterSimulator >> utilitiesMenu: aMenuMorph [
 		addLine;
 		add: 'set break count...' action: [|s| s := UIManager default request: 'break count (dec)'.
 											s notEmpty ifTrue: [breakCount := Integer readFrom: s readStream]];
-		add: 'set break selector...' action: [|s| s := UIManager default request: 'break selector'.
-											s notEmpty ifTrue: [self setBreakSelector: s]];
+		add: 'set break selector...' action: [|s| s := UIManager default request: 'break selector (MNU:foo for MNU)'.
+											s notEmpty ifTrue:
+												[(s size > 4 and: [s beginsWith: 'MNU:'])
+													ifTrue: [self setBreakMNUSelector: (s allButFirst: 4)]
+													ifFalse: [self setBreakSelector: s]]];
 		add: 'turn valid exec ptrs assert o', (assertVEPAES ifTrue: ['ff'] ifFalse: ['n']) action: [assertVEPAES := assertVEPAES not];
 		add: 'click step' action: [self setClickStepBreakBlock];
 		add: (printSends

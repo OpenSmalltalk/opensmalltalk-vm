@@ -209,8 +209,11 @@ CogRegisterAllocatingSimStackEntry >> reconcileWith: targetEntry spillOffset: sp
 	(type = SSConstant
 	 and: [targetEntry type ~= SSConstant or: [targetEntry constant ~= constant]]) ifTrue:
 		[type := SSSpill. offset := spillOffset. register := FPReg].
+	(spilled not and: [type = SSSpill]) ifTrue:
+		[self assert: targetReg ~= NoReg. type := SSRegister. register := targetReg].
 	liveRegister ~= targetReg ifTrue:
-		[liveRegister := NoReg].
+		[liveRegister := NoReg.
+		 ^true].
 	^false
 ]
 
