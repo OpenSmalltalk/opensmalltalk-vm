@@ -143,26 +143,25 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
 #define setRMCC(t) (mostRecentCallbackContext = (void *)(t))
 
 /*
- * Entry-point for call-back thunks.  Args are thunk address and stack pointer,
- * where the stack pointer is pointing one word below the return address of the
- * thunk's callee, 4 bytes below the thunk's first argument.  The stack is:
- *		callback
- *		arguments
+ * Entry-point for call-back thunks.  Args are the integer register args, the
+ * floating-point register arguments, the thunk address and stack pointer, where
+ * the stack pointer is pointing one word below the return address of the thunk's
+ * callee, 8 bytes below the thunk's first stacked argument.  The stack is:
+ *		callback stack arguments
  *		retpc (thunk) <--\
  *		address of retpc-/        <--\
  *		address of address of ret pc-/
  *		thunkp
- * esp->retpc (thunkEntry)
+ * rsp->retpc (thunkEntry)
  *
  * This function's roles are to use setjmp/longjmp to save the call point
  * and return to it, and to return any of the various values from the callback.
  *
- * To support x86-64, which has 6 integer register arguments, and 8 floating-
- * point register arguments, the function takes 16 arguments, the 6 register
- * args as longs, folowed by 8 floating-point arguments as doubles, followed
- * by the thunkp and stackp passed on the stack.  The register args get copied
- * into a struct on the stack. A pointer to the struct is then passed as an
- * element of the VMCallbackContext.
+ * To support x86-64, which when using the SysV ABI has 6 integer register arguments, and 8
+ * floating-point register arguments, the function takes 16 arguments, the 6 register args
+ * as longs, folowed by 8 floating-point arguments as doubles, followed by the thunkp and
+ * stackp passed on the stack.  The register args get copied into a struct on the stack.
+ * A pointer to the struct is then passed as an element of the VMCallbackContext.
  */
 
 long
