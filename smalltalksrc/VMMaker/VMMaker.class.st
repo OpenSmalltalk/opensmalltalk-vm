@@ -527,6 +527,21 @@ VMMaker class >> generateSqueakCogVMWithInterpreterClass: interpreterClass optio
 ]
 
 { #category : #configurations }
+VMMaker class >> generateSqueakSpurCog64MTVM [
+	"No primitives since we can use those for the Cog VM"
+	^VMMaker
+		generate: CoInterpreterMT
+		and: StackToRegisterMappingCogit
+		with: #(COGMTVM true
+				ObjectMemory Spur64BitCoMemoryManager
+				MULTIPLEBYTECODESETS true
+				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
+		to: (FileDirectory default pathFromURI: self sourceTree, '/spur64src')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		including:#()
+]
+
+{ #category : #configurations }
 VMMaker class >> generateSqueakSpurCog64VM [
 	"No primitives since we can use those for the Cog VM"
 	^VMMaker
@@ -536,6 +551,21 @@ VMMaker class >> generateSqueakSpurCog64VM [
 				MULTIPLEBYTECODESETS true
 				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
 		to: (FileDirectory default pathFromURI: self sourceTree, '/spur64src')
+		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
+		including:#()
+]
+
+{ #category : #configurations }
+VMMaker class >> generateSqueakSpurCogMTVM [
+	"No primitives since we can use those for the Cog VM"
+	^VMMaker
+		generate: CoInterpreterMT
+		and: StackToRegisterMappingCogit
+		with: #(COGMTVM true
+				ObjectMemory Spur32BitCoMemoryManager
+				MULTIPLEBYTECODESETS true
+				bytecodeTableInitializer initializeBytecodeTableForSqueakV3PlusClosuresSistaV1Hybrid)
+		to: (FileDirectory default pathFromURI: self sourceTree, '/spursrc')
 		platformDir: (FileDirectory default pathFromURI: self sourceTree, '/platforms')
 		including:#()
 ]

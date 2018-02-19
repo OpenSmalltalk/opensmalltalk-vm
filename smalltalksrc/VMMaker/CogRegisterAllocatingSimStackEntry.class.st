@@ -127,6 +127,30 @@ CogRegisterAllocatingSimStackEntry >> popToReg: reg [
 		 cogit copyLiveRegisterToCopiesOf: self]
 ]
 
+{ #category : #'compile abstract instructions' }
+CogRegisterAllocatingSimStackEntry >> popToRegNoAssign: reg [
+	liveRegister ~= NoReg
+		ifTrue: 
+			[self deny: (type = SSRegister and: [register ~= liveRegister and: [cogit needsFrame]]).
+			 spilled ifTrue: "This is rare, and in some cases it isn't even needed (e.g. frameful return) but we can't tell as yet."
+				[cogit AddCq: objectRepresentation wordSize R: SPReg].
+			 reg ~= liveRegister
+				ifTrue: [cogit MoveR: liveRegister R: reg]
+				ifFalse: [cogit Label]]
+		ifFalse: 
+			[spilled
+				ifTrue:
+					[cogit PopR: reg]
+				ifFalse:
+					[type caseOf: {
+						[SSBaseOffset]	-> [cogit MoveMw: offset r: register R: reg].
+						[SSSpill]		-> [cogit MoveMw: offset r: register R: reg].
+						[SSConstant]	-> [cogit genMoveConstant: constant R: reg].
+						[SSRegister]	-> [reg ~= register
+												ifTrue: [cogit MoveR: register R: reg]
+												ifFalse: [cogit Label]] }]]
+]
+
 { #category : #printing }
 CogRegisterAllocatingSimStackEntry >> printStateOn: aStream [
 	<doNotGenerate> "Smalltalk-side only"
@@ -179,7 +203,9 @@ CogRegisterAllocatingSimStackEntry >> reconcileWith: targetEntry spillOffset: sp
 		 mergedRegister := false.
 		 type caseOf: {
 			[SSBaseOffset]	-> [liveRegister ~= targetReg ifTrue:
-									[cogit MoveMw: offset r: register R: targetReg.
+									[liveRegister = NoReg
+										ifTrue: [cogit MoveMw: offset r: register R: targetReg]
+										ifFalse: [cogit MoveR: liveRegister R: targetReg].
 									 mergedRegister := true].
 								targetEntry type caseOf: {
 									[SSBaseOffset]	-> [liveRegister := targetReg.
@@ -190,18 +216,23 @@ CogRegisterAllocatingSimStackEntry >> reconcileWith: targetEntry spillOffset: sp
 														offset := spillOffset].
 									[SSConstant]	-> [liveRegister := targetReg. type := SSSpill.
 														offset := spillOffset].
-									[SSRegister]	-> [register := targetReg. type := SSRegister] }].
-			[SSSpill]		-> [cogit MoveMw: offset r: register R: targetReg.
+									[SSRegister]	-> [register := targetReg. type := SSRegister. liveRegister := NoReg] }].
+			[SSSpill]		-> [liveRegister = NoReg
+									ifTrue: [cogit MoveMw: offset r: register R: targetReg]
+									ifFalse: [cogit MoveR: liveRegister R: targetReg].
 								liveRegister := targetReg.
 								mergedRegister := true].
-			[SSConstant]	-> [liveRegister = NoReg
-									ifTrue: [cogit genMoveConstant: constant R: targetReg]
-									ifFalse: [cogit MoveR: liveRegister R: targetReg].
-								type := SSRegister. register := targetReg. liveRegister := NoReg.
-								mergedRegister := true].
+			[SSConstant]	-> [(targetEntry type = SSConstant
+								 and: [targetEntry constant = constant
+								 and: [liveRegister = targetReg]]) ifFalse:
+									[liveRegister = NoReg
+										ifTrue: [cogit genMoveConstant: constant R: targetReg]
+										ifFalse: [cogit MoveR: liveRegister R: targetReg].
+									type := SSRegister. register := targetReg. liveRegister := NoReg.
+									mergedRegister := true]].
 			[SSRegister]	-> [targetReg ~= register ifTrue:
 									[cogit MoveR: register R: targetReg.
-									 register := targetReg.
+									 register := targetReg. liveRegister := NoReg.
 									 mergedRegister := true]] }.
 		 ^mergedRegister].
 	targetReg := targetEntry registerOrNone.
@@ -266,4 +297,22 @@ CogRegisterAllocatingSimStackEntry >> storeToReg: reg [
 	(reg ~= TempReg and: [liveRegister = NoReg and: [type ~= SSRegister]]) ifTrue:
 		[liveRegister := reg.
 		 cogit copyLiveRegisterToCopiesOf: self]
+]
+
+{ #category : #'compile abstract instructions' }
+CogRegisterAllocatingSimStackEntry >> storeToRegNoAssign: reg [
+	liveRegister ~= NoReg
+		ifTrue:
+			[self deny: (type = SSRegister and: [register ~= liveRegister]).
+			 reg ~= liveRegister
+				ifTrue: [cogit MoveR: liveRegister R: reg]
+				ifFalse: [cogit Label]]
+		ifFalse:
+			[type caseOf: {
+				[SSBaseOffset]	-> [cogit MoveMw: offset r: register R: reg].
+				[SSSpill]		-> [cogit MoveMw: offset r: register R: reg].
+				[SSConstant]	-> [cogit genMoveConstant: constant R: reg].
+				[SSRegister]	-> [reg ~= register
+											ifTrue: [cogit MoveR: register R: reg]
+											ifFalse: [cogit Label]] }]
 ]

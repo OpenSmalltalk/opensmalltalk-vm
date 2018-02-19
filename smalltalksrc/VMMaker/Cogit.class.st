@@ -10179,6 +10179,7 @@ Cogit >> method: methodA hasSameCodeAs: methodB checkPenultimate: comparePenulti
 { #category : #testing }
 Cogit >> methodFoundInvalidPostScan [
 	"This is a hook for subclasses to filter out methods they can't deal with."
+	<inline: true>
 	^false
 ]
 

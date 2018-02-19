@@ -56,7 +56,8 @@ Class {
 	#pools : [
 		'CogAbstractRegisters',
 		'CogCompilationConstants',
-		'CogRTLOpcodes'
+		'CogRTLOpcodes',
+		'VMStackFrameOffsets'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -166,8 +167,23 @@ CogSimStackEntry >> floatRegisterMask [
 ]
 
 { #category : #comparing }
+CogSimStackEntry >> isFrameSimSelf [
+	"Answer if the receiver is self.  This only works in a frameful method, hence the weird name."
+	<inline: true>
+	^type = SSBaseOffset and: [register = FPReg and: [offset = FoxMFReceiver]]
+]
+
+{ #category : #comparing }
 CogSimStackEntry >> isFrameTempVar [
 	"Answer if the receiver is a temporary variable.  This
+	 only works in a frameful method, hence the weird name."
+	<inline: true>
+	^type = SSBaseOffset and: [register = FPReg and: [offset ~= FoxMFReceiver]]
+]
+
+{ #category : #comparing }
+CogSimStackEntry >> isFrameVar [
+	"Answer if the receiver is a temporary variable or self.  This
 	 only works in a frameful method, hence the weird name."
 	<inline: true>
 	^type = SSBaseOffset and: [register = FPReg]
