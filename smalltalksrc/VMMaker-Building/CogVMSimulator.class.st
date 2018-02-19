@@ -2563,7 +2563,7 @@ CogVMSimulator >> openAsMorph [
 						do: [:ex| 0]. "3.8"
 	borderWidth := borderWidth + window borderWidth.
 	window openInWorldExtent: (self desiredDisplayExtent
-								+ (2 * borderWidth)
+								+ (2 * borderWidth @ borderWidth)
 								+ (0@window labelHeight)
 								* (1@(1/0.8))) rounded.
 	^window
@@ -2594,7 +2594,7 @@ CogVMSimulator >> openAsMorphNoTranscript [
 						do: [:ex| 0]. "3.8"
 	borderWidth := borderWidth + window borderWidth.
 	window openInWorldExtent: (self desiredDisplayExtent
-								+ (2 * borderWidth)
+								+ (2 * borderWidth@borderWidth)
 								+ (0@window labelHeight)
 								* (1@(1/0.95))) rounded
 ]

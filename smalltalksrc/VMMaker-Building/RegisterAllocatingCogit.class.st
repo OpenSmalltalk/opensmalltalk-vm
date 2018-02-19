@@ -861,6 +861,11 @@ RegisterAllocatingCogit >> genMustBeBooleanTrampolineFor: boolean called: trampo
 ]
 
 { #category : #'bytecode generators' }
+RegisterAllocatingCogit >> genPushReceiverBytecode [
+	^self ssPushDesc: self simSelf
+]
+
+{ #category : #'bytecode generators' }
 RegisterAllocatingCogit >> genSpecialSelectorArithmetic [
 	| primDescriptor rcvrIsConst argIsConst rcvrIsInt argIsInt rcvrInt argInt destReg
 	 jumpNotSmallInts jumpContinue jumpOverflow index rcvrReg argReg regMask |
@@ -1145,41 +1150,33 @@ RegisterAllocatingCogit >> genSpecialSelectorComparison [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> genStorePop: popBoolean TemporaryVariable: tempIndex [
 	<inline: false>
-	| top srcRegOrNone destReg |
+	| top targetTemp srcRegOrNone destReg |
 	self deny: self duplicateRegisterAssignmentsInTemporaries.
 	self ssFlushUpThroughTemporaryVariable: tempIndex.
 	"To avoid a stall writing through destReg, remember srcReg before the potential ssPop: 1 in ssStorePop:toReg:"
 	top := self ssTop.
+	targetTemp := self simStackAt: tempIndex + 1.
 	srcRegOrNone := top registerOrNone.
-	"ssStorePop:toPreferredReg: will allocate a register, and indeed may allocate ReceiverResultReg
-	 if, for example, the ssEntry to be popped is already in ReceiverResultReg (as the result of a send).
-	 ReceiverResultReg is not a good choice for a temporary variable; it has other uses.  So if the ssEntry
-	 at top of stack has ReceiverResultReg as its live variable, try and allocate an alternative."
-	destReg := (self simStackAt: tempIndex + 1) liveRegister.
-	destReg ~= NoReg
-		ifTrue:
-			[self ssStorePop: popBoolean toReg: destReg]
+	"Take care to avoid duplicating registers in different temps and/or self."
+	destReg := targetTemp liveRegister.
+	destReg = NoReg ifTrue:
+		[destReg := self availableRegOrNoneNotConflictingWith: (self registerMaskUndesirableForTempVars bitOr: self liveRegisters)].
+	destReg = NoReg ifTrue:
+		[destReg := TempReg].
+	self deny: srcRegOrNone = destReg.
+	srcRegOrNone = NoReg
+		ifTrue: "Avoid duplicating destReg into top; this would only be ok if top
+				is the same entry as the target, which is not worth optimizing."
+			[self ssStorePopNoAssign: popBoolean toReg: destReg]
 		ifFalse:
-			[((top type = SSConstant
-			    or: [srcRegOrNone = NoReg
-			    or: [self register: srcRegOrNone isInMask: self registerMaskUndesirableForTempVars]])
-			  and: [(destReg := self availableRegOrNoneNotConflictingWith: (self registerMaskUndesirableForTempVars bitOr: self liveRegisters)) ~= NoReg])
-				ifTrue: [self ssStorePop: popBoolean toReg: destReg]
-				ifFalse: [destReg := self ssStorePop: popBoolean toPreferredReg: TempReg].
-			 "The ssStorePop: may end up assigning a register to ssTop, and if it is also a temp then a new
-			  register must be found for the destination temp, sicne two temp vars can't share a register."
-			 (top isFrameTempVar and: [top liveRegister = destReg]) ifTrue:
-				[srcRegOrNone := destReg.
-				 destReg := self availableRegOrNoneNotConflictingWith: (self registerMaskUndesirableForTempVars bitOr: self liveRegisters).
-				 destReg ~= NoReg ifTrue:
-					[self MoveR: srcRegOrNone R: destReg]].
-			 (destReg ~= NoReg and: [destReg ~= TempReg]) ifTrue:
-				[(self simStackAt: tempIndex + 1) liveRegister: destReg.
-				 self copyLiveRegisterToCopiesOf: (self simStackAt: tempIndex + 1)]].
+			[self ssStorePop: popBoolean toReg: destReg].
+	(destReg ~= TempReg and: [targetTemp liveRegister = NoReg]) ifTrue:
+		[targetTemp liveRegister: destReg.
+		 self copyLiveRegisterToCopiesOf: targetTemp].
 	self MoveR: (srcRegOrNone ~= NoReg ifTrue: [srcRegOrNone] ifFalse: [destReg])
 		Mw: (self frameOffsetOfTemporary: tempIndex)
 		r: FPReg.
-	(self simStackAt: tempIndex + 1) bcptr: bytecodePC. "for debugging"
+	targetTemp bcptr: bytecodePC. "for debugging"
 	self deny: self duplicateRegisterAssignmentsInTemporaries.
 	^0
 ]
@@ -1370,8 +1367,9 @@ RegisterAllocatingCogit >> mergeCurrentSimStackWith: fixup [
 	"self simStackPrintString-> fixup simStackPrintString"
 	"abstractOpcodes object copyFrom: startIndex to: opcodeIndex"
 	<var: #fixup type: #'BytecodeFixup *'>
-	| currentRegisters targetRegisters mergeSimStack current target spillOffset |
+	| currentRegisters targetRegisters mergeSimStack current target spillOffset them |
 	(mergeSimStack := fixup mergeSimStack) ifNil: [^self].
+	self cCode: '' inSmalltalk: [them := {self simStackPrintString. fixup simStackPrintString}].
 	self assert: simStackPtr = fixup simStackPtr.
 	currentRegisters := self liveRegistersFrom: 0 to: simStackPtr in: simStack.
 	targetRegisters := self liveRegistersFrom: 0 to: simStackPtr in: mergeSimStack.
@@ -1529,9 +1527,12 @@ RegisterAllocatingCogit >> mergeWithFixupIfRequired: fixup [
 	self traceMerge: fixup.
 	deadCode 
 		ifTrue: "case 3"
-			[simStackPtr := fixup simStackPtr.
-			self restoreSimStackAtMergePoint: fixup.
-			deadCode := false]
+			[(fixup isBackwardBranchFixup and: [fixup mergeSimStack isNil]) "e.g. a loop within false ifTrue: []"
+				ifTrue: [self assert: fixup simStackPtr isNil]
+				ifFalse:
+					[simStackPtr := fixup simStackPtr.
+					 self restoreSimStackAtMergePoint: fixup.
+					 deadCode := false]]
 		ifFalse: "case 4"
 			[(fixup isBackwardBranchFixup and: [compilationPass > 1])
 				ifTrue:
@@ -1610,6 +1611,18 @@ RegisterAllocatingCogit >> pushForMergeWith: mergeSimStack [
 		 (self simStack: mergeSimStack at: i) spilled ~= (self simStack: simStack at: i) spilled ifTrue:
 			[^(self simStack: mergeSimStack at: i) spilled]].
 	^false
+]
+
+{ #category : #'bytecode generator support' }
+RegisterAllocatingCogit >> putSelfInReceiverResultReg [
+	"Override to force copying the register to duplicates on stack."
+	<inline: true>
+	| simSelfHasRegister |
+	simSelfHasRegister := self simSelf liveRegister ~= NoReg.
+	super putSelfInReceiverResultReg.
+	simSelfHasRegister ifTrue:
+		[self simSelf liveRegister: ReceiverResultReg.
+		 self copyLiveRegisterToCopiesOf: self simSelf]
 ]
 
 { #category : #'bytecode generator support' }
@@ -1729,35 +1742,52 @@ RegisterAllocatingCogit >> resolveConflicts: registersInCommon with: mergeSimSta
 	"registersInCommon is the register mask of registers in use in both the current
 	 simStack and the target mergeSimStack. Swap any and all conflicting register uses
 	 in registersInCommon, until register uses in simStack agree with mergeSimStack."
-	| registerLocations visited |
+	| registerExchanges registerLocations agreements visited initialIndex |
 	"registerLocations records where a register has moved to
 	 during an exchange. This allows a single pass of the stack
 	 to rename registers, instead of 1/2 N^2; max stack ~ 56"
+	<var: 'registerExchanges' declareC: 'int registerExchanges[NumRegisters]'>
 	<var: 'registerLocations' declareC: 'int registerLocations[NumRegisters]'>
+	self deny: self duplicateRegisterAssignmentsInTemporaries.
 	registersInCommon = (self registerMaskFor: FPReg) ifTrue:
-		[^self].
+		[self assert: (self conflictsResolvedBetweenSimStackAnd: mergeSimStack).
+		 ^self].
 	self cCode: '' inSmalltalk:
-		[registerLocations := CArrayAccessor on: (Array new: NumRegisters)].
+		[registerExchanges := CArrayAccessor on: (Array new: NumRegisters).
+		 registerLocations := CArrayAccessor on: (Array new: NumRegisters)].
 	0 to: NumRegisters - 1 do:
-		[:i| registerLocations at: i put: i].
-	visited := 0.
+		[:i| registerExchanges at: i put: i].
+	initialIndex := opcodeIndex. "for debugging"
+	agreements := visited := 0.
 	0 to: simStackPtr do:
 		[:i| | currentReg targetReg |
 		currentReg := (self simStackAt: i) registerOrNone.
 		targetReg := (self simStack: mergeSimStack at: i) registerOrNone.
 		(currentReg ~= NoReg
 		 and: [targetReg ~= NoReg]) ifTrue:
-			[currentReg := registerLocations at: currentReg.
-			 (currentReg ~= targetReg
-			  and: [(self register: currentReg isInMask: registersInCommon)
-			  and: [(self register: currentReg isNotInMask: visited)]]) ifTrue:
-				[visited := visited + (self registerMaskFor: currentReg).
-				 self SwapR: targetReg R: currentReg Scratch: RISCTempReg.
-				 registerLocations
-					at: currentReg put: targetReg;
-					at: targetReg put: currentReg]]].
-	visited = 0 ifTrue:
-		[^self].
+			[currentReg := registerExchanges at: currentReg.
+			 currentReg = targetReg
+				ifTrue:
+					[(self register: currentReg isInMask: visited) ifFalse:
+						[visited := visited bitOr: (self registerMaskFor: currentReg).
+						 agreements := agreements bitOr: (self registerMaskFor: currentReg)]]
+				ifFalse:
+					[((self register: currentReg isInMask: registersInCommon)
+					  and: [(self register: currentReg isNotInMask: visited)
+							or: [self register: targetReg isNotInMask: visited]]) ifTrue:
+						[| this that |
+						 visited := visited bitOr: (self registerMaskFor: currentReg and: targetReg).
+						 self SwapR: targetReg R: currentReg Scratch: RISCTempReg.
+						 this := registerExchanges at: currentReg.
+						 that := registerExchanges at: targetReg.
+						 registerExchanges
+							at: currentReg put: that;
+							at: targetReg put: this]]]].
+	(visited := visited bitClear: agreements) = 0 ifTrue:
+		[self assert: (self conflictsResolvedBetweenSimStackAnd: mergeSimStack).
+		 ^self].
+	0 to: NumRegisters - 1 do:
+		[:i| registerLocations at: (registerExchanges at: i) put: i].
 	0 to: simStackPtr do:
 		[:i| | ssEntry reg |
 		ssEntry := self simStackAt: i.
@@ -1767,7 +1797,10 @@ RegisterAllocatingCogit >> resolveConflicts: registersInCommon with: mergeSimSta
 		 and: [reg ~= (self simStack: mergeSimStack at: i) registerOrNone]]) ifTrue:
 			[ssEntry type = SSRegister
 				ifTrue: [ssEntry register: (registerLocations at: reg)]
-				ifFalse: [ssEntry liveRegister: (registerLocations at: reg)]]]
+				ifFalse: [ssEntry liveRegister: (registerLocations at: reg)]]].
+	self deny: self duplicateRegisterAssignmentsInTemporaries.
+	self assert: (self conflictsResolvedBetweenSimStackAnd: mergeSimStack)
+	"(initialIndex to: opcodeIndex - 1) collect: [:x| abstractOpcodes at: x]"
 ]
 
 { #category : #'simulation stack' }
@@ -1987,6 +2020,18 @@ RegisterAllocatingCogit >> ssStorePop: popBoolean toPreferredReg: preferredReg [
 	self deny: (self register: actualReg isInMask: liveRegisters).
 	self ssStorePop: popBoolean toReg: actualReg. "generates nothing if ssTop is already in actualReg"
 	^actualReg
+]
+
+{ #category : #'simulation stack' }
+RegisterAllocatingCogit >> ssStorePopNoAssign: popBoolean toReg: reg [
+	"Store or pop the top simulated stack entry to a register.
+	 Do /not/ assign reg to ssTop.
+	N.B.: popToReg: and storeToReg: does not generate anything if 
+	it moves a register to the same register."	
+	popBoolean
+		ifTrue: [self ssTop popToRegNoAssign: reg.
+				self ssPop: 1]
+		ifFalse: [self ssTop storeToRegNoAssign: reg].
 ]
 
 { #category : #'simulation only' }
