@@ -1,22 +1,34 @@
-# Filter for Pharo (appveyor cannot filter in appveyor.yml file).
+# Deployment filter for Pharo (compatible with Travis and AppVeyor)
+# (deploy/filter-exec.sh adapted for Pharo)
 #
-# execute script if: 
-#   - FLAVOR=*pharo*
+# execute script if:
+#   - FLAVOR includes 'pharo'
 #   - REPOSITORY=OpenSmalltalk/opensmalltalk-vm
+#   - Build is not triggered by a pull request
+#   - BRANCH=Cog or TAG_NAME is not empty
+
+readonly REPO_NAME="${TRAVIS_REPO_SLUG:-${APPVEYOR_REPO_NAME}}"
+readonly PR_SHA="${TRAVIS_PULL_REQUEST_SHA:-${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}}"
+readonly BRANCH_NAME="${TRAVIS_BRANCH:-${APPVEYOR_REPO_BRANCH}}"
+readonly TAG_NAME="${TRAVIS_TAG:-${APPVEYOR_REPO_TAG_NAME}}"
 
 if [[ "$FLAVOR" != *pharo* ]]; then
-	exit 
+  exit 
 fi
 
-if [ "$APPVEYOR_REPO_NAME" != "OpenSmalltalk/opensmalltalk-vm" ]; then
-	echo "Trying to deploy in repository: $APPVEYOR_REPO_NAME. Skipping."
-	exit 
+if [[ "${REPO_NAME}" != "OpenSmalltalk/opensmalltalk-vm" ]]; then
+  echo "Trying to deploy in repository: ${REPO_NAME}. Skipping."
+  exit
 fi
 
-# deploy on master branch
-if [ "$APPVEYOR_REPO_BRANCH" != "Cog" ]; then
-	echo "Trying to deploy in branch: $APPVEYOR_REPO_BRANCH. Skipping."
-	exit 
+if [[ -n "${PR_SHA}" ]]; then
+  echo "Skipping a deployment with the script provider because PRs are not permitted."
+  exit
 fi
 
-sh `dirname $0`/$1
+if [[ "${BRANCH_NAME}" != "Cog" ]] && [[ -z "${TAG_NAME}" ]]; then
+  echo "Skipping a deployment with the script provider because this branch is not permitted."
+  exit
+fi
+
+`dirname $0`/$1

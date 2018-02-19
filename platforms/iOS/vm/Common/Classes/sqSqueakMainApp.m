@@ -250,11 +250,11 @@ printRegisterState(ucontext_t *uap)
 	return (void *)(regs->eip);
 #elif __x86_64__
 	_STRUCT_X86_THREAD_STATE64 *regs = &uap->uc_mcontext->__ss;
-	printf(	"\trax 0x%016lx rbx 0x%016lx rcx 0x%016lx rdx 0x%016lx\n"
-			"\trdi 0x%016lx rsi 0x%016lx rbp 0x%016lx rsp 0x%016lx\n"
-			"\tr8  0x%016lx r9  0x%016lx r10 0x%016lx r11 0x%016lx\n"
-			"\tr12 0x%016lx r13 0x%016lx r14 0x%016lx r15 0x%016lx\n"
-			"\trip 0x%016lx\n",
+	printf(	"\trax 0x%016llx rbx 0x%016llx rcx 0x%016llx rdx 0x%016llx\n"
+			"\trdi 0x%016llx rsi 0x%016llx rbp 0x%016llx rsp 0x%016llx\n"
+			"\tr8  0x%016llx r9  0x%016llx r10 0x%016llx r11 0x%016llx\n"
+			"\tr12 0x%016llx r13 0x%016llx r14 0x%016llx r15 0x%016llx\n"
+			"\trip 0x%016llx\n",
 			regs->__rax, regs->__rbx, regs->__rcx, regs->__rdx,
 			regs->__rdi, regs->__rdi, regs->__rbp, regs->__rsp,
 			regs->__r8 , regs->__r9 , regs->__r10, regs->__r11,

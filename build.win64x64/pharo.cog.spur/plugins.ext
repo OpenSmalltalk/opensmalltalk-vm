@@ -2,4 +2,5 @@
 EXTERNAL_PLUGINS = \
 SurfacePlugin \
 FT2Plugin \
-SqueakSSL 
+SqueakSSL \
+FileAttributesPlugin
