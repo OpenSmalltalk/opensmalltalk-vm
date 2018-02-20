@@ -10422,6 +10422,15 @@ Cogit >> offsetAndSendTableFor: entryPoint annotation: annotation into: binaryBl
 		value: sendTable
 ]
 
+{ #category : #'debug printing' }
+Cogit >> opcodePrintStringFrom: startIndex to: stopIndex [
+	^(String streamContents:
+		[:s|
+		startIndex to: stopIndex do:
+			[:i|
+			(abstractOpcodes at: i) printStateOn: s]]) allButFirst
+]
+
 { #category : #'generate machine code' }
 Cogit >> outputInstructionsAt: startAddress [
 	"Store the generated machine code, answering the last address"

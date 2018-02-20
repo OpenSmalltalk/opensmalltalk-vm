@@ -4000,13 +4000,19 @@ SimpleStackBasedCogit >> recordCallOffsetIn: cogMethod [
 		ifFalse: [self assert: (offsetTable at: cogMethod cmNumArgs) = offset]
 ]
 
-{ #category : #'simulation stack' }
+{ #category : #testing }
+SimpleStackBasedCogit >> register: reg1 and: reg2 isNotInMask: mask [
+	<inline: true>
+	^mask noMask: (self registerMaskFor: reg1 and: reg2)
+]
+
+{ #category : #testing }
 SimpleStackBasedCogit >> register: reg isInMask: mask [
 	<inline: true>
 	^ mask anyMask: (self registerMaskFor: reg)
 ]
 
-{ #category : #'simulation stack' }
+{ #category : #testing }
 SimpleStackBasedCogit >> register: reg isNotInMask: mask [
 	<inline: true>
 	^ mask noMask: (self registerMaskFor: reg)
