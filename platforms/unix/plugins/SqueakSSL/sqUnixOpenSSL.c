@@ -113,7 +113,7 @@ enum sqMatchResult sqVerifyNameInner(sqSSL* ssl, X509* cert, const void* serverN
 				break;
 			}
 		}
-		sqo_sk_GENERAL_NAME_pop_free(sANs, (void(*)(void*))sqo_sk_free);
+		sqo_sk_GENERAL_NAME_pop_free(sANs, (sk_GENERAL_NAME_freefunc)sqo_OPENSSL_sk_free);
 	}
 	return matchFound;
 }

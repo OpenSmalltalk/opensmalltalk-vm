@@ -46,6 +46,8 @@
  *    (NAME will not be defined in > 0.9.8)
  * SQO_DECL100 (OpenSSL >= 1.0.0)
  *    (NAME will not be defined in < 1.0.0)
+ * SQO_DECL110 (OpenSSL >= 1.1.0)
+ *    (NAME will not be defined in < 1.1.0)
  *
  */
 #define SQO_DECLARATIONS                                                \
@@ -89,6 +91,8 @@
   SQO_DECL102(int, X509_check_ip_asc, X509 *x, const char *ipasc, unsigned int flags) \
   SQO_DECL102(int, X509_check_host, X509 *x, const char *chk, size_t chklen, unsigned int flags, char **peername) \
                                                                         \
+  SQO_DECL110(unsigned long, SSL_CTX_set_options, SSL_CTX *ctx, unsigned long op) \
+                                                                        \
   SQO_DECL100(_STACK *, sk_new_null, void)                              \
   SQO_DECL100(int, sk_push, _STACK *st, void *data)                     \
   SQO_DECL100(void, sk_free, _STACK *st)                                \
@@ -97,6 +101,13 @@
   SQO_DECL100(void, sk_pop_free, _STACK *st, void (*func) (void *))     \
   SQO_DECL100(const SSL_METHOD *, SSLv23_method, void)                  \
   SQO_DECL100(SSL_CTX *, SSL_CTX_new, const SSL_METHOD *a)              \
+                                                                        \
+  SQO_DECL110(OPENSSL_STACK *, OPENSSL_sk_new_null, void)               \
+  SQO_DECL110(int, OPENSSL_sk_push, _STACK *st, void *data)             \
+  SQO_DECL110(void, OPENSSL_sk_free, _STACK *st)                        \
+  SQO_DECL110(void *, OPENSSL_sk_value, const _STACK *st, int i)        \
+  SQO_DECL110(int, OPENSSL_sk_num, const _STACK *st)                    \
+  SQO_DECL110(void, OPENSSL_sk_pop_free, _STACK *st, void (*func) (void *)) \
                                                                         \
   SQO_DECL098(STACK *, sk_new_null, void)                               \
   SQO_DECL098(int, sk_push, STACK *st, char *data)                      \
@@ -107,37 +118,6 @@
   SQO_DECL098(SSL_METHOD *, SSLv23_method, void)                        \
   SQO_DECL098(SSL_CTX *, SSL_CTX_new, SSL_METHOD *a)                    \
   /* backstop */
-
-/*
- * List of re-defined OpenSSL macros
- *
- * This is necessary to "redirect" the usage of un-prefixed symbols to
- * sqo_-prefixed ones.
- */
-#define sqo_BIO_set_close(b,c) (int)sqo_BIO_ctrl(b,BIO_CTRL_SET_CLOSE,(c),NULL)
-#define sqo_SSL_set_tlsext_host_name(s,name) sqo_SSL_ctrl(s,SSL_CTRL_SET_TLSEXT_HOSTNAME,TLSEXT_NAMETYPE_host_name,(char *)name)
-#define sqo_SSL_CTX_set_options(ctx,op) sqo_SSL_CTX_ctrl((ctx),SSL_CTRL_OPTIONS,(op),NULL)
-#define sqo_SKM_sk_num(type, st) sqo_sk_num(CHECKED_STACK_OF(type, st))
-#define sqo_SKM_sk_value(type, st,i) ((type *)sqo_sk_value(CHECKED_STACK_OF(type, st), i))
-#define sqo_SKM_sk_free(type, st) sqo_sk_free(CHECKED_STACK_OF(type, st))
-#define sqo_SKM_sk_pop_free(type, st, free_func) sqo_sk_pop_free(CHECKED_STACK_OF(type, st), CHECKED_SK_FREE_FUNC(type, free_func))
-#define sqo_sk_GENERAL_NAME_num(st) sqo_SKM_sk_num(GENERAL_NAME, (st))
-#define sqo_sk_GENERAL_NAME_value(st, i) sqo_SKM_sk_value(GENERAL_NAME, (st), (i))
-#define sqo_sk_GENERAL_NAME_free(st) sqo_SKM_sk_free(GENERAL_NAME, (st))
-#define sqo_sk_GENERAL_NAME_pop_free(st, free_func) sqo_SKM_sk_pop_free(GENERAL_NAME, (st), (free_func))
-
-/*
- * List of optional OpenSSL constants
- *
- * This is necessary to allow usage of those constants with newer
- * dynamically loaded libraries, but whilst using older versions at
- * compile time.
- */
-#if defined(X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS)
-#define sqo_X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS
-#else
-#define sqo_X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS 0x10
-#endif
 
 
 /***********************************************************************/
@@ -159,6 +139,12 @@
 #define SQO_DECL102 SQO_DECL___
 #else
 #define SQO_DECL102 SQO_DECL_IF
+#endif
+
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#define SQO_DECL110 SQO_DECL___
+#else
+#define SQO_DECL110 SQO_DECL_IF
 #endif
 
 /*
@@ -267,6 +253,19 @@ void SQO_DESTRUCTOR fini(void)
     }                                                           \
   } while (0)
 
+#if defined(__linux__)
+/* This is to find possible library locations. We need _GNU_SOURCE for that and
+   reset it if necessary */   
+#  if !defined(_GNU_SOURCE)
+#    define _GNU_SOURCE 1
+#    define UNDEF_GNU_SOURCE
+#  endif
+#include <link.h>
+#  if defined(UNDEF_GNU_SOURCE)
+#    undef _GNU_SOURCE
+#  endif
+#endif
+
 
 /*
  * Find symbol named "name" in one of the following namespaces
@@ -311,6 +310,83 @@ SQO_DECLARATIONS
 #undef SQO_DECL_NO
 #undef SQO_DECL_IF
 
+
+/*
+ * List of re-defined OpenSSL macros
+ *
+ * This is necessary to "redirect" the usage of un-prefixed symbols to
+ * sqo_-prefixed ones.
+ */
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#  define OPENSSL_STACK _STACK
+#  define sqo_OPENSSL_sk_num sqo_sk_num
+#  define sqo_OPENSSL_sk_value sqo_sk_value
+#  define sqo_OPENSSL_sk_set sqo_sk_set
+#  define sqo_OPENSSL_sk_new sqo_sk_new
+#  define sqo_OPENSSL_sk_new_null sqo_sk_new_null
+#  define sqo_OPENSSL_sk_free sqo_sk_free
+#  define sqo_OPENSSL_sk_pop_free sqo_sk_pop_free
+#  define sqo_OPENSSL_sk_deep_copy sqo_sk_deep_copy
+#  define sqo_OPENSSL_sk_insert sqo_sk_insert
+#  define sqo_OPENSSL_sk_delete sqo_sk_delete
+#  define sqo_OPENSSL_sk_delete_ptr sqo_sk_delete_ptr
+#  define sqo_OPENSSL_sk_find sqo_sk_find
+#  define sqo_OPENSSL_sk_find_ex sqo_sk_find_ex
+#  define sqo_OPENSSL_sk_push sqo_sk_push
+#  define sqo_OPENSSL_sk_unshift sqo_sk_unshift
+#  define sqo_OPENSSL_sk_shift sqo_sk_shift
+#  define sqo_OPENSSL_sk_pop sqo_sk_pop
+#  define sqo_OPENSSL_sk_zero sqo_sk_zero
+#  define sqo_OPENSSL_sk_set_cmp_func sqo_sk_set_cmp_func
+#  define sqo_OPENSSL_sk_dup sqo_sk_dup
+#  define sqo_OPENSSL_sk_sort sqo_sk_sort
+#  define sqo_OPENSSL_sk_is_sorted sqo_sk_is_sorted
+# else
+#  define CHECKED_STACK_OF(type, st) (OPENSSL_STACK*)st
+# endif
+
+#define sqo_BIO_set_close(b,c) (int)sqo_BIO_ctrl(b,BIO_CTRL_SET_CLOSE,(c),NULL)
+#define sqo_SSL_set_tlsext_host_name(s,name) sqo_SSL_ctrl(s,SSL_CTRL_SET_TLSEXT_HOSTNAME,TLSEXT_NAMETYPE_host_name,(char *)name)
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+
+ #define sqo_SSL_CTX_set_options(ctx,op) sqo_SSL_CTX_ctrl((ctx),SSL_CTRL_OPTIONS,(op),NULL)
+   
+#define sqo_SKM_sk_num(type, st) sqo_sk_num(CHECKED_STACK_OF(type, st))
+#define sqo_SKM_sk_value(type, st,i) ((type *)sqo_sk_value(CHECKED_STACK_OF(type, st), i))
+#define sqo_SKM_sk_free(type, st) sqo_sk_free(CHECKED_STACK_OF(type, st))
+#define sqo_SKM_sk_pop_free(type, st, free_func) sqo_sk_pop_free(CHECKED_STACK_OF(type, st), CHECKED_SK_FREE_FUNC(type, free_func))
+#define sqo_sk_GENERAL_NAME_num(st) sqo_SKM_sk_num(GENERAL_NAME, (st))
+#define sqo_sk_GENERAL_NAME_value(st, i) sqo_SKM_sk_value(GENERAL_NAME, (st), (i))
+#define sqo_sk_GENERAL_NAME_free(st) sqo_SKM_sk_free(GENERAL_NAME, (st))
+#define sqo_sk_GENERAL_NAME_pop_free(st, free_func) sqo_SKM_sk_pop_free(GENERAL_NAME, (st), (free_func))
+#define sk_GENERAL_NAME_freefunc (void(*)(void*))
+# else
+static ossl_inline int
+    sqo_sk_GENERAL_NAME_num(const STACK_OF(GENERAL_NAME)* sk) { return sqo_OPENSSL_sk_num((const OPENSSL_STACK*)sk);}
+static ossl_inline GENERAL_NAME*
+    sqo_sk_GENERAL_NAME_value(const STACK_OF(GENERAL_NAME)* sk, int idx) { return (GENERAL_NAME*)sqo_OPENSSL_sk_value((const OPENSSL_STACK*)sk, idx);}
+static ossl_inline void
+    sqo_sk_GENERAL_NAME_free(const STACK_OF(GENERAL_NAME)* sk) { return sqo_OPENSSL_sk_free((OPENSSL_STACK*)sk);}
+static ossl_inline void
+    sqo_sk_GENERAL_NAME_pop_free(const STACK_OF(GENERAL_NAME)* sk, sk_GENERAL_NAME_freefunc f) { return sqo_OPENSSL_sk_pop_free((OPENSSL_STACK*)sk, (OPENSSL_sk_freefunc)f);}
+#
+#endif
+/*
+ * List of optional OpenSSL constants
+ *
+ * This is necessary to allow usage of those constants with newer
+ * dynamically loaded libraries, but whilst using older versions at
+ * compile time.
+ */
+#if defined(X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS)
+#define sqo_X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS
+#else
+#define sqo_X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS 0x10
+#endif
+
+    
 /*
  * Function that makes sure that all sqo_ prefixed OpenSSL names are
  * actually available.
