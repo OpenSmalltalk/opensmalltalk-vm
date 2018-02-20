@@ -53,7 +53,7 @@
 #  define sqo_OPENSSL_sk_dup sqo_sk_dup
 #  define sqo_OPENSSL_sk_sort sqo_sk_sort
 #  define sqo_OPENSSL_sk_is_sorted sqo_sk_is_sorted
-#  define sk_GENERAL_NAME_freefunc (void(*)(void*))
+#  define sk_GENERAL_NAME_freefunc void(*)(void*)
 # else
 #  define CHECKED_STACK_OF(type, st) (OPENSSL_STACK*)st
 # endif
