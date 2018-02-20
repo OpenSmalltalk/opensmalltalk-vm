@@ -53,6 +53,7 @@
 #  define sqo_OPENSSL_sk_dup sqo_sk_dup
 #  define sqo_OPENSSL_sk_sort sqo_sk_sort
 #  define sqo_OPENSSL_sk_is_sorted sqo_sk_is_sorted
+#  define sk_GENERAL_NAME_freefunc (void(*)(void*))
 # else
 #  define CHECKED_STACK_OF(type, st) (OPENSSL_STACK*)st
 # endif
@@ -362,7 +363,6 @@ SQO_DECLARATIONS
 #define sqo_sk_GENERAL_NAME_value(st, i) sqo_SKM_sk_value(GENERAL_NAME, (st), (i))
 #define sqo_sk_GENERAL_NAME_free(st) sqo_SKM_sk_free(GENERAL_NAME, (st))
 #define sqo_sk_GENERAL_NAME_pop_free(st, free_func) sqo_SKM_sk_pop_free(GENERAL_NAME, (st), (free_func))
-#define sk_GENERAL_NAME_freefunc (void(*)(void*))
 # else
 static ossl_inline int
     sqo_sk_GENERAL_NAME_num(const STACK_OF(GENERAL_NAME)* sk) { return sqo_OPENSSL_sk_num((const OPENSSL_STACK*)sk);}
