@@ -28,6 +28,35 @@
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
 
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#  define OPENSSL_STACK _STACK
+#  define sqo_OPENSSL_sk_num sqo_sk_num
+#  define sqo_OPENSSL_sk_value sqo_sk_value
+#  define sqo_OPENSSL_sk_set sqo_sk_set
+#  define sqo_OPENSSL_sk_new sqo_sk_new
+#  define sqo_OPENSSL_sk_new_null sqo_sk_new_null
+#  define sqo_OPENSSL_sk_free sqo_sk_free
+#  define sqo_OPENSSL_sk_pop_free sqo_sk_pop_free
+#  define sqo_OPENSSL_sk_deep_copy sqo_sk_deep_copy
+#  define sqo_OPENSSL_sk_insert sqo_sk_insert
+#  define sqo_OPENSSL_sk_delete sqo_sk_delete
+#  define sqo_OPENSSL_sk_delete_ptr sqo_sk_delete_ptr
+#  define sqo_OPENSSL_sk_find sqo_sk_find
+#  define sqo_OPENSSL_sk_find_ex sqo_sk_find_ex
+#  define sqo_OPENSSL_sk_push sqo_sk_push
+#  define sqo_OPENSSL_sk_unshift sqo_sk_unshift
+#  define sqo_OPENSSL_sk_shift sqo_sk_shift
+#  define sqo_OPENSSL_sk_pop sqo_sk_pop
+#  define sqo_OPENSSL_sk_zero sqo_sk_zero
+#  define sqo_OPENSSL_sk_set_cmp_func sqo_sk_set_cmp_func
+#  define sqo_OPENSSL_sk_dup sqo_sk_dup
+#  define sqo_OPENSSL_sk_sort sqo_sk_sort
+#  define sqo_OPENSSL_sk_is_sorted sqo_sk_is_sorted
+# else
+#  define CHECKED_STACK_OF(type, st) (OPENSSL_STACK*)st
+# endif
+
 /*
  * List of all used OpenSSL functions in the following format:
  *
@@ -317,34 +346,6 @@ SQO_DECLARATIONS
  * This is necessary to "redirect" the usage of un-prefixed symbols to
  * sqo_-prefixed ones.
  */
-
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-#  define OPENSSL_STACK _STACK
-#  define sqo_OPENSSL_sk_num sqo_sk_num
-#  define sqo_OPENSSL_sk_value sqo_sk_value
-#  define sqo_OPENSSL_sk_set sqo_sk_set
-#  define sqo_OPENSSL_sk_new sqo_sk_new
-#  define sqo_OPENSSL_sk_new_null sqo_sk_new_null
-#  define sqo_OPENSSL_sk_free sqo_sk_free
-#  define sqo_OPENSSL_sk_pop_free sqo_sk_pop_free
-#  define sqo_OPENSSL_sk_deep_copy sqo_sk_deep_copy
-#  define sqo_OPENSSL_sk_insert sqo_sk_insert
-#  define sqo_OPENSSL_sk_delete sqo_sk_delete
-#  define sqo_OPENSSL_sk_delete_ptr sqo_sk_delete_ptr
-#  define sqo_OPENSSL_sk_find sqo_sk_find
-#  define sqo_OPENSSL_sk_find_ex sqo_sk_find_ex
-#  define sqo_OPENSSL_sk_push sqo_sk_push
-#  define sqo_OPENSSL_sk_unshift sqo_sk_unshift
-#  define sqo_OPENSSL_sk_shift sqo_sk_shift
-#  define sqo_OPENSSL_sk_pop sqo_sk_pop
-#  define sqo_OPENSSL_sk_zero sqo_sk_zero
-#  define sqo_OPENSSL_sk_set_cmp_func sqo_sk_set_cmp_func
-#  define sqo_OPENSSL_sk_dup sqo_sk_dup
-#  define sqo_OPENSSL_sk_sort sqo_sk_sort
-#  define sqo_OPENSSL_sk_is_sorted sqo_sk_is_sorted
-# else
-#  define CHECKED_STACK_OF(type, st) (OPENSSL_STACK*)st
-# endif
 
 #define sqo_BIO_set_close(b,c) (int)sqo_BIO_ctrl(b,BIO_CTRL_SET_CLOSE,(c),NULL)
 #define sqo_SSL_set_tlsext_host_name(s,name) sqo_SSL_ctrl(s,SSL_CTRL_SET_TLSEXT_HOSTNAME,TLSEXT_NAMETYPE_host_name,(char *)name)
