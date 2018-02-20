@@ -1742,7 +1742,7 @@ RegisterAllocatingCogit >> resolveConflicts: registersInCommon with: mergeSimSta
 	"registersInCommon is the register mask of registers in use in both the current
 	 simStack and the target mergeSimStack. Swap any and all conflicting register uses
 	 in registersInCommon, until register uses in simStack agree with mergeSimStack."
-	| registerExchanges registerLocations agreements visited initialIndex |
+	| registerExchanges registerLocations agreements visited initialIndex initialStack |
 	"registerLocations records where a register has moved to
 	 during an exchange. This allows a single pass of the stack
 	 to rename registers, instead of 1/2 N^2; max stack ~ 56"
@@ -1757,7 +1757,8 @@ RegisterAllocatingCogit >> resolveConflicts: registersInCommon with: mergeSimSta
 		 registerLocations := CArrayAccessor on: (Array new: NumRegisters)].
 	0 to: NumRegisters - 1 do:
 		[:i| registerExchanges at: i put: i].
-	initialIndex := opcodeIndex. "for debugging"
+	self cCode: '' inSmalltalk:
+		[initialIndex := opcodeIndex. initialStack := self simStackPrintString]. "for debugging"
 	agreements := visited := 0.
 	0 to: simStackPtr do:
 		[:i| | currentReg targetReg |
@@ -1773,8 +1774,7 @@ RegisterAllocatingCogit >> resolveConflicts: registersInCommon with: mergeSimSta
 						 agreements := agreements bitOr: (self registerMaskFor: currentReg)]]
 				ifFalse:
 					[((self register: currentReg isInMask: registersInCommon)
-					  and: [(self register: currentReg isNotInMask: visited)
-							or: [self register: targetReg isNotInMask: visited]]) ifTrue:
+					  and: [self register: currentReg isNotInMask: (visited bitOr: agreements)]) ifTrue:
 						[| this that |
 						 visited := visited bitOr: (self registerMaskFor: currentReg and: targetReg).
 						 self SwapR: targetReg R: currentReg Scratch: RISCTempReg.
