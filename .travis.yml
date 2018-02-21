@@ -23,17 +23,21 @@ jobs:
   - env: ARCH="linux64x64" FLAVOR="squeak.cog.spur"
   - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
   - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
+  - env: ARCH="linux64x64" FLAVOR="pharo.sista.spur" HEARTBEAT="threaded"
   - env: ARCH="linux32x86" FLAVOR="newspeak.cog.spur"
   - env: ARCH="linux32x86" FLAVOR="squeak.cog.spur"
   - env: ARCH="linux32x86" FLAVOR="squeak.cog.v3"
   - env: ARCH="linux32x86" FLAVOR="squeak.sista.spur"
   - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
   - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
+  - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="threaded"
 
   - stage: "Mac builds"
     env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
     <<: *mac-build
   - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
+    <<: *mac-build
+  - env: ARCH="macos64x64" FLAVOR="pharo.sista.spur"
     <<: *mac-build
   - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur.lowcode"
     <<: *mac-build
@@ -42,6 +46,8 @@ jobs:
   - env: ARCH="macos32x86" FLAVOR="newspeak.cog.spur"
     <<: *mac-build
   - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
+    <<: *mac-build
+  - env: ARCH="macos32x86" FLAVOR="pharo.sista.spur"
     <<: *mac-build
   - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur.lowcode"
     <<: *mac-build
