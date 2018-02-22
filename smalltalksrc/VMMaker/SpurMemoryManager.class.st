@@ -11254,6 +11254,13 @@ SpurMemoryManager >> sizeOfObjStack: objStack [
 	^total
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> sizeOfSTArrayFromCPrimitive: cPtr [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter sizeOfSTArrayFromCPrimitive: cPtr
+]
+
 { #category : #testing }
 SpurMemoryManager >> slidingCompactionInProgress [
 	^gcPhaseInProgress == SlidingCompactionInProgress

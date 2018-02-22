@@ -137,19 +137,19 @@ Integer >> coerceTo: cTypeString sim: interpreter [
 	| unitSize |
 	cTypeString last = $* ifTrue:  "C pointer"
 		[unitSize := cTypeString caseOf: {
-		['char *'] -> [1].
-		['short *'] -> [2].
-		['int *'] -> [4].
-		['long long *'] -> [8].
-		['float *'] -> [^CFloatArray basicNew interpreter: interpreter address: self unitSize: 4; yourself].
-		['double *'] -> [^CFloatArray basicNew interpreter: interpreter address: self unitSize: 8; yourself].
-		['unsigned *'] -> [4].
-		['unsigned int *'] -> [4].
-		['unsigned char *'] -> [1].
-		['signed char *'] -> [1].
-		['unsigned short *'] -> [2].
-		['unsigned long long *'] -> [8].
-		['oop *'] -> [interpreter bytesPerOop].
+		[#'char *'] -> [1].
+		[#'short *'] -> [2].
+		[#'int *'] -> [4].
+		[#'long long *'] -> [8].
+		[#'float *'] -> [^CFloatArray basicNew interpreter: interpreter address: self unitSize: 4; yourself].
+		[#'double *'] -> [^CFloatArray basicNew interpreter: interpreter address: self unitSize: 8; yourself].
+		[#'unsigned *'] -> [4].
+		[#'unsigned int *'] -> [4].
+		[#'unsigned char *'] -> [1].
+		[#'signed char *'] -> [1].
+		[#'unsigned short *'] -> [2].
+		[#'unsigned long long *'] -> [8].
+		[#'oop *'] -> [interpreter bytesPerOop].
 		}
 		otherwise: [interpreter wordSize].
 		^CArray basicNew

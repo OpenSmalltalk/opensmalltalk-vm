@@ -407,7 +407,7 @@ CogMethodZone >> freeOlderMethodsForCompaction [
 	 and: [(freeableUsage := freeableUsage + 1) < CMMaxUsageCount]] whileTrue.
 	self cCode: ''
 		inSmalltalk: [coInterpreter transcript
-						nextPutAll: 'Compaction freeing '; print: freedSoFar;
+						nextPutAll: 'Code Compaction freeing '; print: freedSoFar;
 						nextPutAll: ' of '; print: zoneSize;
 						nextPutAll: ' (target: '; print: amountToFree;
 						nextPutAll: ' (newly freed: '; print: freedSoFar - initialFreeSpace;

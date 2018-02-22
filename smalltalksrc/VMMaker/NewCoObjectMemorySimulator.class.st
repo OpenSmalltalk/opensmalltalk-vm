@@ -516,6 +516,12 @@ NewCoObjectMemorySimulator >> signedMachineIntegerValueOf: oop [
 	^coInterpreter signedMachineIntegerValueOf: oop
 ]
 
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> sizeOfSTArrayFromCPrimitive: cPtr [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter sizeOfSTArrayFromCPrimitive: cPtr
+]
+
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> sqGrowMemory: oldLimit By: delta [
 	| newMemory |

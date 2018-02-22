@@ -102,8 +102,11 @@ CObjectAccessor >> at: index put: value [
 { #category : #converting }
 CObjectAccessor >> coerceTo: cTypeString sim: interpreterSimulator [
 
-	cTypeString = 'float *' ifTrue: [^ self asFloatAccessor].
-	cTypeString = 'int *' ifTrue: [^ self asIntAccessor].
+	cTypeString caseOf: {
+		[#'float *']			-> [^self asFloatAccessor].
+		[#'int *']			-> [^self asIntAccessor].
+		['sqInputEvent*']	-> [^self] }
+		otherwise: [self halt].
 	^ self
 ]
 
