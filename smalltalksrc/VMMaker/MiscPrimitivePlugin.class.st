@@ -187,7 +187,7 @@ MiscPrimitivePlugin >> primitiveDecompressFromByteArray [
 						[ :j | anInt := (anInt bitShift: 8) + (ba at: i).
 						i := i + 1]]].
 		n := anInt >> 2.
-		k + n >= pastEnd ifTrue: [^interpreterProxy primitiveFail].
+		k + n > pastEnd ifTrue: [^interpreterProxy primitiveFail].
 		code := anInt bitAnd: 3.
 		"code = 0 ifTrue: [nil]."
 		code = 1 ifTrue: 
