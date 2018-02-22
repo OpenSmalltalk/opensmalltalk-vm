@@ -483,6 +483,12 @@ NewObjectMemorySimulator >> signedMachineIntegerValueOf: oop [
 	^coInterpreter signedMachineIntegerValueOf: oop
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> sizeOfSTArrayFromCPrimitive: cPtr [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter sizeOfSTArrayFromCPrimitive: cPtr
+]
+
 { #category : #printing }
 NewObjectMemorySimulator >> space [
 	^coInterpreter space
