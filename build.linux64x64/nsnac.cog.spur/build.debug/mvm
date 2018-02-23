@@ -22,7 +22,7 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
 		--with-src=nsspur64src \
 		--without-vm-display-fbdev --without-npsqueak \
-	CC="gcc -m64" \
+	CC="c99 -m64" \
 	CXX="g++ -m64" \
 	CFLAGS="$OPT -DEnforceAccessControl=0 -msse2 -D_GNU_SOURCE" \
 	LIBS="-lpthread -luuid" \
