@@ -18,7 +18,7 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
 	--with-src=spurstack64src --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
-	CC="gcc -m64" \
+	CC="c99 -m64" \
 	CXX="g++ -m64" \
 	CFLAGS="$OPT -msse2 -D_GNU_SOURCE" \
 	LIBS="-lpthread -luuid" \
