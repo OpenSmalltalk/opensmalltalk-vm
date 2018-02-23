@@ -604,7 +604,10 @@ void* _sqo_dlopen_any(const char* name, int mode)
          dir_idx++
     ) {
   	char* possible_files  = NULL;
-        asprintf(&possible_files, "%s/%s.*", dirs[dir_idx], name);
+        int written = asprintf(&possible_files, "%s/%s.*", dirs[dir_idx], name);
+        if (writte <= 0) {
+            continue;
+        }
         glob_t g = {0};     
         if (0 == glob(possible_files, GLOB_NOSORT, NULL, &g)) {
             if (g.gl_pathc > 0) {
@@ -649,11 +652,13 @@ void* _sqo_dlopen(const char* name, int mode)
     /* 1. */
   #if defined(SHLIB_VERSION_NUMBER)
     char* newname = NULL;
-    asprintf(&newname, "%s." SHLIB_VERSION_NUMBER, name);
-    if ((handle = dlopen(newname, mode)) != NULL) {
-        DEBUG_PRINT("Found %s at %s\n", name, newname);
-        free(newname);
-        return handle;
+    int wirtten = asprintf(&newname, "%s." SHLIB_VERSION_NUMBER, name);
+    if (written > 0) {
+        if ((handle = dlopen(newname, mode)) != NULL) {
+            DEBUG_PRINT("Found %s at %s\n", name, newname);
+            free(newname);
+            return handle;
+        }
     }
 #endif
     /* 2. */
