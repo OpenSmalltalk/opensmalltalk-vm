@@ -28,6 +28,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -205,6 +206,18 @@
 #  define sqo_OPENSSL_sk_is_sorted sqo_sk_is_sorted
 #  define sk_GENERAL_NAME_freefunc void(*)(void*)
 #  define OPENSSL_INIT_SETTINGS struct ossl_init_settings_st
+OPENSSL_INIT_SETTINGS;
+
+#if !defined(inline)
+#  if defined(__GNUC__)
+#    define ossl_inline __inline__
+#  else
+#    define ossl_inline /**/
+#  endif
+#else
+#  define ossl_inline inline
+#endif
+
 # else
 #  define _STACK OPENSSL_STACK
 #  define STACK OPENSSL_STACK
@@ -803,7 +816,7 @@ static ossl_inline void
 #if defined(OPENSSL_INIT_LOAD_CRYPTO_STRINGS)
 #define sqo_OPENSSL_INIT_LOAD_CRYPTO_STRINGS OPENSSL_INIT_LOAD_CRYPTO_STRINGS
 #else
-#define sqo_OPENSSL_INIT_LOAD_SSLCRYPTO_STRINGS 0x00000002L
+#define sqo_OPENSSL_INIT_LOAD_CRYPTO_STRINGS 0x00000002L
 #endif
 
 #define sqo_SSL_ERROR_WANT_READ SSL_ERROR_WANT_READ

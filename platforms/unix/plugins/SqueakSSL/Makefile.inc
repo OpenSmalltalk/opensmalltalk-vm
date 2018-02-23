@@ -1,6 +1,9 @@
-
+#
+# C99 can drive a car by now.
+CC=c99
+#
+#
 XLDFLAGS=	-ldl
-
 #
 # For platform builds, use
 
