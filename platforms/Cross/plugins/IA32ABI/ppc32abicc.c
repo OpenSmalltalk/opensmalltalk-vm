@@ -245,7 +245,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 				_asm mov edx, dword ptr vhigh;
 #elif __GNUC__
 #warning ASSEMBLER
-//asm ("mov %0,%%edx" : : "m"(vhigh));
+//asm("mov %0,%%edx" : : "m"(vhigh));
 #else
 # error need to load edx with rs->rvs.valint64.high on this compiler
 #endif
@@ -258,7 +258,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 				_asm fld qword ptr valflt64;
 #elif __GNUC__
 #warning ASSEMBLER
-//				asm ("fldl %0" : : "m"(valflt64));
+//				asm("fldl %0" : : "m"(valflt64));
 #else
 # error need to load %f0 with rs->rvs.valflt64 on this compiler
 #endif

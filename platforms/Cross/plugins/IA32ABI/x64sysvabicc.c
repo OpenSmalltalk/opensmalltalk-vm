@@ -225,7 +225,7 @@ thunkEntry(long a0, long a1, long a2, long a3, long a4, long a5,
 #if _MSC_VER
 				_asm mov qword ptr valflt64, xmm0;
 #elif __GNUC__
-				asm ("movq %0, %%xmm0" : : "m"(valflt64));
+				asm("movq %0, %%xmm0" : : "m"(valflt64));
 #else
 # error need to load %xmm0 with vmcc.rvs.valflt64 on this compiler
 #endif

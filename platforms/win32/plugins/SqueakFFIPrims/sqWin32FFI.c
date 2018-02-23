@@ -320,7 +320,7 @@ int ffiCallAddress(int fn)
 	}
 #endif
 #ifdef __GNUC__
-	asm (
+	asm(
 	  "movl %%ebp, _oldBP\n\t"
 	  "movl %%esp, _oldSP\n\t"
 		"pushl %%ebx\n\t"

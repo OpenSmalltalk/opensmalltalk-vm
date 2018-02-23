@@ -175,7 +175,7 @@ extern const pthread_key_t tltiIndex;
 # undef EXPORT
 # define EXPORT(returnType) __attribute__((visibility("default"))) returnType
 # if !defined(VM_LABEL)
-#	define VM_LABEL(foo) asm ("\n.globl L" #foo "\nL" #foo ":")
+#	define VM_LABEL(foo) asm("\n.globl L" #foo "\nL" #foo ":")
 # endif
 #endif
 

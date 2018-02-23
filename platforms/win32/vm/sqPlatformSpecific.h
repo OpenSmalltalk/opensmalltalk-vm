@@ -149,7 +149,7 @@ extern const unsigned long tltiIndex;
 
 #if defined(__GNUC__)
 # if !defined(VM_LABEL)
-#	define VM_LABEL(foo) asm ("\n.globl L" #foo "\nL" #foo ":")
+#	define VM_LABEL(foo) asm("\n.globl L" #foo "\nL" #foo ":")
 # endif
 #endif
 #if !defined(VM_LABEL) || COGVM
