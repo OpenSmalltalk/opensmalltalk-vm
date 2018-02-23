@@ -1950,8 +1950,8 @@ sqInt ioSetFullScreen(sqInt fullScreen) {
    /* GCC generates *optimal* code with a little help */
 #  define BYTE_SWAP(w) __asm__("bswap %0" : "+r" (w))
 #  define WORD_SWAP(w) __asm__("roll $16, %0" : "+r" (w))
-#  define SRC_PIX_REG asm("%esi")
-#  define DST_PIX_REG asm("%edi")
+#  define SRC_PIX_REG asm ("%esi")
+#  define DST_PIX_REG asm ("%edi")
 # else /* Not GCC?! Well, it's your own fault ;-) */
 #  define BYTE_SWAP(w) w = (w<<24) | ((w&0xFF00)<<8) | ((w>>8)&0xFF00) | (w>>24)
 #  define WORD_SWAP(w) w = (( (unsigned)(w) << 16) | ((unsigned) (w) >> 16))

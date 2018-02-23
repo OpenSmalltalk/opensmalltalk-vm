@@ -264,7 +264,7 @@ inline void mpeg3_bgra32_mmx(unsigned long y,
 		unsigned long v, 
 		unsigned long *output)
 {
-	asm(
+	asm (
 "\n"
 "/* Output will be 0x00rrggbb with the 00 trailing so this can also be used */\n"
 "/* for bgr24. */\n"
@@ -307,7 +307,7 @@ inline void mpeg3_601_bgra32_mmx(unsigned long y,
 		unsigned long v, 
 		unsigned long *output)
 {
-asm("\n"
+asm ("\n"
 "/* Output will be 0x00rrggbb with the 00 trailing so this can also be used */\n"
 "/* for bgr24. */\n"
 "	movd (%0), %%mm0;          /* Load y   0x00000000000000yy */\n"
@@ -355,7 +355,7 @@ inline void mpeg3_rgba32_mmx(unsigned long y,
 		unsigned long v, 
 		unsigned long *output)
 {
-asm("\n"
+asm ("\n"
 "/* Output will be 0x00bbggrr with the 00 trailing so this can also be used */\n"
 "/* for rgb24. */\n"
 "	movd (%0), %%mm0;          /* Load y   0x00000000000000yy */\n"
@@ -397,7 +397,7 @@ inline void mpeg3_601_rgba32_mmx(unsigned long y,
 		unsigned long v, 
 		unsigned long *output)
 {
-asm("\n"
+asm ("\n"
 "/* Output will be 0x00bbggrr with the 00 trailing so this can also be used */\n"
 "/* for rgb24. */\n"
 "	movd (%0), %%mm0;          /* Load y   0x00000000000000yy */\n"
