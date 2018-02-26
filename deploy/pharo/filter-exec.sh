@@ -2,7 +2,7 @@
 # (deploy/filter-exec.sh adapted for Pharo)
 #
 # execute script if:
-#   - FLAVOR includes 'pharo'
+#   - FLAVOR is 'pharo.cog.spur'
 #   - REPOSITORY=OpenSmalltalk/opensmalltalk-vm
 #   - Build is not triggered by a pull request
 #   - BRANCH=Cog or TAG_NAME is not empty
