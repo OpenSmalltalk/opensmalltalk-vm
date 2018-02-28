@@ -12,7 +12,8 @@ readonly PR_SHA="${TRAVIS_PULL_REQUEST_SHA:-${APPVEYOR_PULL_REQUEST_HEAD_COMMIT}
 readonly BRANCH_NAME="${TRAVIS_BRANCH:-${APPVEYOR_REPO_BRANCH}}"
 readonly TAG_NAME="${TRAVIS_TAG:-${APPVEYOR_REPO_TAG_NAME}}"
 
-if [[ "$FLAVOR" != "pharo.cog.spur" ]]; then
+if [[ "${FLAVOR}" != "pharo.cog.spur" ]]; then
+  echo "Trying to deploy flavour: ${FLAVOR}. Skipping."
   exit 
 fi
 
