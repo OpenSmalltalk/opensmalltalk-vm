@@ -475,6 +475,41 @@ sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists) 
 	return interpreterProxy->success(false);
 }
 
+#if PharoVM
+sqInt
+sqFileFdOpen(SQFile *sqFile, int fd, sqInt writeFlag)
+{
+	/*
+	 * Open the file with the supplied file descriptor in binary mode.
+	 *
+	 * writeFlag determines whether the file is read-only or writable.
+	 * sqFile is populated with the file information.
+	 * Smalltalk is reponsible for handling character encoding and 
+	 * line ends.
+	 */
+	FILE *file = fdopen(fd, writeFlag ? "wb" : "rb");
+	if (!file)
+		return interpreterProxy->success(false);
+	return sqFileFileOpen(sqFile, file, writeFlag);
+}
+
+sqInt
+sqFileFileOpen(SQFile *sqFile, FILE *file, sqInt writeFlag)
+{
+	/*
+	 * Populate the supplied SQFile structure with the supplied FILE.
+	 *
+	 * writeFlag indicates whether the file is read-only or writable.
+	 */
+	setFile(sqFile, file);
+	setSize(sqFile, 0);
+	sqFile->sessionID = thisSession;
+	sqFile->lastOp = UNCOMMITTED;
+	sqFile->writable = writeFlag;
+	return 1;
+}
+#endif
+
 /*
  * Fill-in files with 3 handles for stdin, stdout and stderr as available and
  * answer a bit-mask of the availability, 1 corresponding to stdin, 2 to stdout
