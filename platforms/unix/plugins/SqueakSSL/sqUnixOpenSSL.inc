@@ -1,5 +1,4 @@
-#include "sq.h"
-#include "SqueakSSL.h"
+/* -*- mode: c; -*- */
 
 #include "openssl_overlay.h"
 
