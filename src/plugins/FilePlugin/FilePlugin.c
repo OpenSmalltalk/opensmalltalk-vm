@@ -106,17 +106,14 @@ EXPORT(sqInt) primitiveFileSync(void);
 EXPORT(sqInt) primitiveFileTruncate(void);
 EXPORT(sqInt) primitiveFileWrite(void);
 EXPORT(sqInt) primitiveHasFileAccess(void);
-EXPORT(sqInt) primitiveVersionString(void);
 EXPORT(sqInt) setInterpreter(struct VirtualMachine*anInterpreter);
 EXPORT(sqInt) setMacFileTypeAndCreator(char *fileName, char *typeString, char *creatorString);
 EXPORT(sqInt) shutdownModule(void);
-static sqInt stringFromCString(const char *aCString);
 
 
 /*** Variables ***/
 
 #if !defined(SQUEAK_BUILTIN_PLUGIN)
-static void * (*arrayValueOf)(sqInt oop);
 static sqInt (*booleanValueOf)(sqInt obj);
 static sqInt (*byteSizeOf)(sqInt oop);
 static sqInt (*characterObjectOf)(sqInt characterCode);
@@ -159,7 +156,6 @@ static void (*tenuringIncrementalGC)(void);
 static sqInt (*topRemappableOop)(void);
 static sqInt (*trueObject)(void);
 #else /* !defined(SQUEAK_BUILTIN_PLUGIN) */
-extern void * arrayValueOf(sqInt oop);
 extern sqInt booleanValueOf(sqInt obj);
 extern sqInt byteSizeOf(sqInt oop);
 #if VM_PROXY_MAJOR > 1 || (VM_PROXY_MAJOR == 1 && VM_PROXY_MINOR >= 13)
@@ -1658,17 +1654,6 @@ primitiveHasFileAccess(void)
 }
 
 
-/*	Answer a string containing the version string for this plugin. */
-
-	/* FilePlugin>>#primitiveVersionString */
-EXPORT(sqInt)
-primitiveVersionString(void)
-{
-	popthenPush(1, stringFromCString("3"));
-	return 0;
-}
-
-
 /*	Note: This is coded so that it can be run in Squeak. */
 
 	/* InterpreterPlugin>>#setInterpreter: */
@@ -1683,7 +1668,6 @@ setInterpreter(struct VirtualMachine*anInterpreter)
 	if (ok) {
 		
 #if !defined(SQUEAK_BUILTIN_PLUGIN)
-		arrayValueOf = interpreterProxy->arrayValueOf;
 		booleanValueOf = interpreterProxy->booleanValueOf;
 		byteSizeOf = interpreterProxy->byteSizeOf;
 #if VM_PROXY_MAJOR > 1 || (VM_PROXY_MAJOR == 1 && VM_PROXY_MINOR >= 13)
@@ -1756,26 +1740,6 @@ shutdownModule(void)
 }
 
 
-/*	Answer a new String copied from a null-terminated C string.
-	Caution: This may invoke the garbage collector. */
-
-	/* FilePlugin>>#stringFromCString: */
-static sqInt
-stringFromCString(const char *aCString)
-{
-    sqInt len;
-    sqInt newString;
-
-	len = strlen(aCString);
-	newString = instantiateClassindexableSize(classString(), len);
-	if (!(newString)) {
-		return primitiveFailFor(PrimErrNoMemory);
-	}
-	strncpy(arrayValueOf(newString), aCString, len);
-	return newString;
-}
-
-
 #ifdef SQUEAK_BUILTIN_PLUGIN
 
 static char _m[] = "FilePlugin";
@@ -1822,7 +1786,6 @@ void* FilePlugin_exports[][3] = {
 	{(void*)_m, "primitiveFileTruncate\000\001", (void*)primitiveFileTruncate},
 	{(void*)_m, "primitiveFileWrite\000\001", (void*)primitiveFileWrite},
 	{(void*)_m, "primitiveHasFileAccess\000\377", (void*)primitiveHasFileAccess},
-	{(void*)_m, "primitiveVersionString\000\377", (void*)primitiveVersionString},
 	{(void*)_m, "setInterpreter", (void*)setInterpreter},
 	{(void*)_m, "setMacFileTypeAndCreator", (void*)setMacFileTypeAndCreator},
 	{(void*)_m, "shutdownModule\000\377", (void*)shutdownModule},
