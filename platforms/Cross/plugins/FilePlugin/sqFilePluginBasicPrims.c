@@ -9,6 +9,7 @@
 *   RCSID:   $Id$
 *
 *   NOTES: See change log below.
+*   	2018-03-01 AKG Add sqFileFdOpen & sqFileFileOpen
 *	2005-03-26 IKP fix unaligned accesses to file[Size] members
 * 	2004-06-10 IKP 64-bit cleanliness
 * 	1/28/02    Tim remove non-ansi stuff
@@ -475,7 +476,6 @@ sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists) 
 	return interpreterProxy->success(false);
 }
 
-#if PharoVM
 sqInt
 sqFileFdOpen(SQFile *sqFile, int fd, sqInt writeFlag)
 {
@@ -508,7 +508,6 @@ sqFileFileOpen(SQFile *sqFile, FILE *file, sqInt writeFlag)
 	sqFile->writable = writeFlag;
 	return 1;
 }
-#endif
 
 /*
  * Fill-in files with 3 handles for stdin, stdout and stderr as available and

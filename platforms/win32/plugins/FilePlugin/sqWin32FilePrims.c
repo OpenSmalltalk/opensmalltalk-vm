@@ -250,7 +250,6 @@ sqInt sqFileOpenNew(SQFile *f, char* fileNameIndex, sqInt fileNameSize, sqInt* e
   return 1;
 }
 
-#if PharoVM
 sqInt
 sqFileFdOpen(SQFile *sqFile, int fd, sqInt writeFlag)
 {
@@ -279,7 +278,6 @@ sqFileFileOpen(SQFile *sqFile, FILE *file, sqInt writeFlag)
 	 */
 	return interpreterProxy->success(false);
 }
-#endif
 
 
 
