@@ -24,7 +24,7 @@ $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME): $(OPENSSLARCHIVE)
 	tar x -f $(OPENSSLARCHIVE) -C $(THIRDPARTYDIR)
 	cd $(OPENSSLDIR) \
 		&& ./Configure darwin-i386-cc --prefix='$(THIRDPARTYOUTDIR)' shared \
-		&& LDFLAGS='-Wl,-rpath,@executable_path:@executable_path/Plugins' make \
+		&& LDFLAGS='-Wl,-rpath,@executable_path:@executable_path/Plugins' make -s \
 		&& make install
 
 # Assuming building libssl will also build libcrypto
@@ -35,7 +35,7 @@ $(OPENSSLLIB): $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME)
 			&& install_name_tool -id "@executable_path/Plugins/$$each" $(THIRDPARTYINSTALLDIR)/$$each ; \
 	done
 	@echo "Installing links"
-	@for each in $(THIRDPARTYLIBDIR)/$(OPENSSLSYMLINKS); do \
+	@for each in $(addprefix $(THIRDPARTYLIBDIR)/,$(OPENSSLSYMLINKS)); do \
 		if [ -L $$each ]; then \
 			cp -a $$each $(THIRDPARTYINSTALLDIR); \
 		fi \

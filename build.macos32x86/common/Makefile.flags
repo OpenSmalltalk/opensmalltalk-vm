@@ -7,7 +7,7 @@ XCODE:=/Applications/Xcode.app/Contents/Developer
 XCUB:=$(XCODE)/usr/bin
 SDKsDIR:=$(XCODE)/Platforms/MacOSX.platform/Developer/SDKs
 #Build the oldest SDK installed
-SDKs:=MacOSX10.9.sdk MacOSX10.10.sdk MacOSX10.11.sdk MacOSX10.12.sdk
+SDKs:=MacOSX10.9.sdk MacOSX10.10.sdk MacOSX10.11.sdk MacOSX10.12.sdk MacOSX10.13.sdk
 SDK:=$(firstword $(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
 TARGET_ARCH:=i386
 TARGET_VERSION_MIN:=10.7

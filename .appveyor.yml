@@ -13,6 +13,11 @@ environment:
       CYG_ROOT: C:\cygwin
       CYG_SETUP: setup-x86.exe
       MINGW_ARCH: i686
+    - FLAVOR: squeak.cog.spur.lowcode
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
     - FLAVOR: squeak.cog.v3
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
@@ -29,6 +34,11 @@ environment:
       CYG_SETUP: setup-x86.exe
       MINGW_ARCH: i686
     - FLAVOR: pharo.cog.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
+    - FLAVOR: pharo.cog.spur.lowcode
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
       CYG_SETUP: setup-x86.exe
@@ -90,8 +100,6 @@ install:
   - ps: 'Start-FileDownload "http://cygwin.com/setup-x86_64.exe" -FileName "setup-x86_64.exe"'
   - '%CYG_SETUP% -dgnqNO -R "%CYG_ROOT%" -s "%CYG_MIRROR%" -l "%CYG_ROOT%\var\cache\setup" -P mingw64-%MINGW_ARCH%-gcc-core,mingw64-%MINGW_ARCH%-gcc-g++,mingw64-%MINGW_ARCH%-headers,mingw64-%MINGW_ARCH%-runtime,zip,mingw64-%MINGW_ARCH%-clang,mingw64-%MINGW_ARCH%-openssl,libiconv-devel,libglib2.0-devel,perl,mingw64-%MINGW_ARCH%-zlib,make,cmake,wget,mingw64-%MINGW_ARCH%-win-iconv'
 
-build: false
-
 # Cygwin build script
 #
 # NOTES:
@@ -99,12 +107,29 @@ build: false
 # The stdin/stdout file descriptor appears not to be valid for the Appveyor
 # build which causes failures as certain functions attempt to redirect
 # default file handles. Ensure a dummy file descriptor is opened with 'exec'.
-test_script:
+build_script:
   - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./.travis_build.sh"'
-on_success:
-  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./.travis_deploy.sh"'
-before_deploy:
-  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy/pharo; exec 0</dev/null; exec ./filter-exec.sh pack-vm.sh"'
-  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy/pharo; exec 0</dev/null; exec ./filter-exec.sh deploy-key.sh"'
-deploy_script:
-  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./deploy/pharo/filter-exec.sh deploy-files.pharo.org.sh"'
+
+# Using `after_build` instead of `before_deploy` and `deploy_script`.
+#  `before_deploy` is only invoked if the deployment provider is triggered.
+#  `deploy_script` is mutually exclusive to `deploy`.
+# In addition, the vm needs to be packed before artifacts are collected.
+after_build:
+  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh pack-vm.sh"'
+  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy; exec 0</dev/null; exec ./filter-exec.sh bintray.sh"'
+  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER/deploy/pharo; exec 0</dev/null; exec ./filter-exec.sh deploy.sh"'
+
+test: off
+
+artifacts:
+  - path: products\*.zip
+    name: osvm
+
+deploy:
+  provider: GitHub # Deploy stable tags to GitHub releases
+  description: 'Automatic release'
+  auth_token:
+    secure: SOq4LiXFepptbgPZ4w2McefZOsRRAy8u88/+dpNof57BG4gYTvyESV1EB4CXTXjX
+  artifact: osvm
+  on:
+    appveyor_repo_tag: true

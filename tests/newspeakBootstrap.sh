@@ -1,15 +1,19 @@
 #!/bin/bash
 set -e
 
-readonly REV_NEWSPEAK="7fed4bc928ac3fa85fa28493ca1e26c359f875ac"
-readonly REV_NSBOOT="afc5b23866b518d926e300bca9efdf41b6e62fe0"
+readonly REV_NEWSPEAK="afebb7f0a5774e8aed06369be8aa2012d6a0cc07"
+readonly REV_NSBOOT="41f3615f4d79cb0e0d1e7aecc865fedca21e8a15"
 readonly GH_BASE="https://github.com/newspeaklanguage"
 readonly TMP_DIR=$(mktemp -d 2>/dev/null || mktemp -d -t 'newspeak')
 
 source ./.travis_helpers.sh
 
 case "$(uname -s)" in
-  "Linux"|"Darwin")
+  "Linux")
+    BINARY_PATH="*/bin/nsvm"
+    ;;
+  "Darwin")
+    BINARY_PATH="*/Contents/MacOS/Newspeak Virtual Machine"
     ;;
   *)
     echo "Skipping Newspeak bootstrapping process..."
@@ -38,18 +42,10 @@ else
   BUILD_SCRIPT="./build32.sh"
 fi
 
-case "$(uname -s)" in
-  "Linux")
-    NSVM=$(find "${TRAVIS_BUILD_DIR}/products" -type f -path "*/bin/nsvm" | head -n 1)
-    ;;
-  "Darwin")
-    VM_BUILD_DIR="${TRAVIS_BUILD_DIR}/build.${ARCH}/${FLAVOR}"
-    NSVM="${VM_BUILD_DIR}/CocoaFast.app/Contents/MacOS/Newspeak Virtual Machine"
-    ;;
-esac
+NSVM=$(find "${TRAVIS_BUILD_DIR}/products" -type f -path "${BINARY_PATH}" | head -n 1)
 
 if [[ ! -f "${NSVM}" ]]; then
-  echo "Could not locate VM."
+  echo "Could not locate Newspeak VM."
   exit 1
 fi
 

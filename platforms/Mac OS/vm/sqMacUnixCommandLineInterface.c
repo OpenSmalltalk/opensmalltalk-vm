@@ -38,6 +38,7 @@
 #include "sqMacUIConstants.h"
 #include "sqMacUnixFileInterface.h"
 
+# define VMOPTION(arg) "-"arg
 
 extern CFStringEncoding gCurrentVMEncoding;
 extern Boolean gSqueakHeadless;
@@ -150,145 +151,142 @@ static int parseArgument(int argc, char **argv)
 {
    /* vm arguments */
 
-  if      (!strcmp(argv[0], "-help"))		{ 
+  if      (!strcmp(argv[0], VMOPTION("help")))		{ 
 	usage();
-	return 1; }
-  else if (!strcmp(argv[0], "-version")) {
+	exit(0); }
+  else if (!strcmp(argv[0], VMOPTION("version"))) {
 	extern char *getVersionInfo(int verbose);
 	printf("%s\n", getVersionInfo(0));
 	exit(0);
   }
   else if (!strncmp(argv[0], "-psn_", 5)) { return 1; }
-  else if (!strcmp(argv[0], "-headless")) { gSqueakHeadless = true; return 1; }
-  else if (!strcmp(argv[0], "-headfull")) { gSqueakHeadless = false; return 1; }
-  else if (!strcmp(argv[0], "-blockonerror")) {
+  else if (!strcmp(argv[0], VMOPTION("headless"))) { gSqueakHeadless = true; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("headfull"))) { gSqueakHeadless = false; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("blockonerror"))) {
 	extern int blockOnError;
 	blockOnError = true;
 	return 1; }
-  else if (!strcmp(argv[0], "-exitonwarn")) {
+  else if (!strcmp(argv[0], VMOPTION("exitonwarn"))) {
 	extern sqInt erroronwarn;
 	erroronwarn = true;
 	return 1; }
-  else if (!strcmp(argv[0], "-blockonwarn")) {
+  else if (!strcmp(argv[0], VMOPTION("blockonwarn"))) {
 	extern int blockOnError;
 	extern sqInt erroronwarn;
 	erroronwarn = blockOnError = true;
 	return 1; }
-  else if (!strcmp(argv[0], "-timephases")) {
+  else if (!strcmp(argv[0], VMOPTION("timephases"))) {
 	extern void printPhaseTime(int);
 	printPhaseTime(1);
 	return 1; }
 #if (STACKVM || NewspeakVM) && !COGVM
-  else if (!strcmp(argv[0], "-sendtrace")) { extern sqInt sendTrace; sendTrace = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("sendtrace"))) { extern sqInt sendTrace; sendTrace = 1; return 1; }
 #endif
-  else if (argc > 1) {
-	  if (!strcmp(argv[0], "-memory"))	{ 
-		gMaxHeapSize = strtolbkm(argv[1]);	 
-		return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("memory")))	{ 
+	gMaxHeapSize = strtolbkm(argv[1]);	 
+	return 2; }
 #if STACKVM || NewspeakVM
-      else if (!strcmp(argv[0], "-breaksel")) { 
-		extern void setBreakSelector(char *);
-		setBreakSelector(argv[1]);
-		return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("breaksel"))) { 
+	extern void setBreakSelector(char *);
+	setBreakSelector(argv[1]);
+	return 2; }
 #endif
 #if STACKVM
-      else if (!strcmp(argv[0], "-breakmnu")) { 
-		extern void setBreakMNUSelector(char *);
-		setBreakMNUSelector(argv[1]);
-		return 2; }
-      else if (!strcmp(argv[0], "-eden")) { 
-		extern sqInt desiredEdenBytes;
-		desiredEdenBytes = strtobkm(argv[1]);	 
-		return 2; }
-      else if (!strcmp(argv[0], "-leakcheck")) { 
-		extern sqInt checkForLeaks;
-		checkForLeaks = atoi(argv[1]);	 
-		return 2; }
-      else if (!strcmp(argv[0], "-stackpages")) { 
-		extern sqInt desiredNumStackPages;
-		desiredNumStackPages = atoi(argv[1]);	 
-		return 2; }
-      else if (!strcmp(argv[0], "-numextsems")) { 
-		ioSetMaxExtSemTableSize(atoi(argv[1]));
-		return 2; }
-      else if (!strcmp(argv[0], "-checkpluginwrites")) { 
-		extern sqInt checkAllocFiller;
-		checkAllocFiller = 1;
-		return 1; }
-      else if (!strcmp(argv[0], "-noheartbeat")) { 
-		extern sqInt suppressHeartbeatFlag;
-		suppressHeartbeatFlag = 1;
-		return 1; }
-      else if (!strcmp(argv[0], "-warnpid")) { 
-		extern sqInt warnpid;
-		warnpid = getpid();
-		return 1; }
-      else if (!strcmp(argv[0], "-pollpip")) { 
-		extern sqInt pollpip;
-		pollpip = atoi(argv[1]);	 
-		return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("breakmnu"))) { 
+	extern void setBreakMNUSelector(char *);
+	setBreakMNUSelector(argv[1]);
+	return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("eden"))) { 
+	extern sqInt desiredEdenBytes;
+	desiredEdenBytes = strtobkm(argv[1]);	 
+	return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("leakcheck"))) { 
+	extern sqInt checkForLeaks;
+	checkForLeaks = atoi(argv[1]);	 
+	return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("stackpages"))) { 
+	extern sqInt desiredNumStackPages;
+	desiredNumStackPages = atoi(argv[1]);	 
+	return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("numextsems"))) { 
+	ioSetMaxExtSemTableSize(atoi(argv[1]));
+	return 2; }
+  else if (!strcmp(argv[0], VMOPTION("checkpluginwrites"))) { 
+	extern sqInt checkAllocFiller;
+	checkAllocFiller = 1;
+	return 1; }
+  else if (!strcmp(argv[0], VMOPTION("noheartbeat"))) { 
+	extern sqInt suppressHeartbeatFlag;
+	suppressHeartbeatFlag = 1;
+	return 1; }
+  else if (!strcmp(argv[0], VMOPTION("warnpid"))) { 
+	extern sqInt warnpid;
+	warnpid = getpid();
+	return 1; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("pollpip"))) { 
+	extern sqInt pollpip;
+	pollpip = atoi(argv[1]);	 
+	return 2; }
 #endif /* STACKVM */
 #if COGVM
-      else if (!strcmp(argv[0], "-codesize")) { 
-		extern sqInt desiredCogCodeSize;
-		desiredCogCodeSize = strtobkm(argv[1]);	 
-		return 2; }
-# define TLSLEN (sizeof("-trace")-1)
-      else if (!strncmp(argv[0], "-trace", TLSLEN)) { 
-		extern int traceFlags;
-		char *equalsPos = strchr(argv[0],'=');
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("codesize"))) { 
+	extern sqInt desiredCogCodeSize;
+	desiredCogCodeSize = strtobkm(argv[1]);	 
+	return 2; }
+# define TLSLEN (sizeof(VMOPTION("trace"))-1)
+  else if (!strncmp(argv[0], VMOPTION("trace"), TLSLEN)) { 
+	extern int traceFlags;
+	char *equalsPos = strchr(argv[0],'=');
 
-		if (!equalsPos) {
-			traceFlags = 1;
-			return 1;
-		}
-		if (equalsPos - argv[0] != TLSLEN
-		  || (equalsPos[1] != '-' && !isdigit(equalsPos[1])))
-			return 0;
+	if (!equalsPos) {
+		traceFlags = 1;
+		return 1;
+	}
+	if (equalsPos - argv[0] != TLSLEN
+	  || (equalsPos[1] != '-' && !isdigit(equalsPos[1])))
+		return 0;
 
-		traceFlags = atoi(equalsPos + 1);
-		return 1; }
-      else if (!strcmp(argv[0], "-tracestores")) { 
-		extern sqInt traceStores;
-		traceStores = 1;
-		return 1; }
-      else if (!strcmp(argv[0], "-dpcso")) { 
-		extern unsigned long debugPrimCallStackOffset;
-		debugPrimCallStackOffset = (unsigned long)strtobkm(argv[1]);	 
-		return 2; }
-      else if (!strcmp(argv[0], "-cogmaxlits")) { 
-		extern sqInt maxLiteralCountForCompile;
-		maxLiteralCountForCompile = strtobkm(argv[1]);	 
-		return 2; }
-      else if (!strcmp(argv[0], "-cogminjumps")) { 
-		extern sqInt minBackwardJumpCountForCompile;
-		minBackwardJumpCountForCompile = strtobkm(argv[1]);	 
-		return 2; }
-      else if (!strcmp(argv[0], "-reportheadroom")
-			|| !strcmp(argv[0], "-rh")) { 
-		extern sqInt reportStackHeadroom;
-		reportStackHeadroom = 1;
-		return 1; }
+	traceFlags = atoi(equalsPos + 1);
+	return 1; }
+  else if (!strcmp(argv[0], VMOPTION("tracestores"))) { 
+	extern sqInt traceStores;
+	traceStores = 1;
+	return 1; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("dpcso"))) { 
+	extern unsigned long debugPrimCallStackOffset;
+	debugPrimCallStackOffset = (unsigned long)strtobkm(argv[1]);	 
+	return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("cogmaxlits"))) { 
+	extern sqInt maxLiteralCountForCompile;
+	maxLiteralCountForCompile = strtobkm(argv[1]);	 
+	return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("cogminjumps"))) { 
+	extern sqInt minBackwardJumpCountForCompile;
+	minBackwardJumpCountForCompile = strtobkm(argv[1]);	 
+	return 2; }
+  else if (!strcmp(argv[0], VMOPTION("reportheadroom"))
+		|| !strcmp(argv[0], VMOPTION("rh"))) { 
+	extern sqInt reportStackHeadroom;
+	reportStackHeadroom = 1;
+	return 1; }
 #endif /* COGVM */
 #if SPURVM
-      else if (!strcmp(argv[0], "-maxoldspace")) { 
-		extern unsigned long maxOldSpaceSize;
-		maxOldSpaceSize = (unsigned long)strtobkm(argv[1]);	 
-		return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("maxoldspace"))) { 
+	extern unsigned long maxOldSpaceSize;
+	maxOldSpaceSize = (unsigned long)strtobkm(argv[1]);	 
+	return 2; }
 #endif
-      else if (!strcmp(argv[0], "-pathenc")) { 
-		setEncodingType(argv[1]);
-		return 2; }
-      else if (!strcmp(argv[0], "-browserPipes")) {
-		extern int		 gSqueakBrowserPipes[]; /* read/write fd for browser communication */
-		extern Boolean gSqueakBrowserSubProcess;
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("pathenc"))) { 
+	setEncodingType(argv[1]);
+	return 2; }
+  else if (argc > 2 && !strcmp(argv[0], VMOPTION("browserPipes"))) {
+	extern int		 gSqueakBrowserPipes[]; /* read/write fd for browser communication */
+	extern Boolean gSqueakBrowserSubProcess;
 
-		if (!argv[2]) return 0;
-		sscanf(argv[1], "%i", &gSqueakBrowserPipes[0]);
-		sscanf(argv[2], "%i", &gSqueakBrowserPipes[1]);
-		gSqueakBrowserSubProcess = true;
-		return 3;
-	}
+	sscanf(argv[1], "%i", &gSqueakBrowserPipes[0]);
+	sscanf(argv[2], "%i", &gSqueakBrowserPipes[1]);
+	gSqueakBrowserSubProcess = true;
+	return 3;
   }
   return 0;	/* option not recognised */
 }
@@ -307,58 +305,58 @@ static void usage(void)
 static void printUsage(void)
 {
   printf("\nCommon <option>s:\n");
-  printf("  -help                 print this help message, then exit\n");
-  printf("  -memory <size>[mk]    use fixed heap size (added to image size)\n");
-  printf("  -timephases           print start load and run times\n");
+  printf("  "VMOPTION("help")"                 print this help message, then exit\n");
+  printf("  "VMOPTION("memory")" <size>[mk]    use fixed heap size (added to image size)\n");
+  printf("  "VMOPTION("timephases")"           print start load and run times\n");
 #if STACKVM || NewspeakVM
-  printf("  -breaksel selector    set breakpoint on send of selector\n");
+  printf("  "VMOPTION("breaksel")" selector    set breakpoint on send of selector\n");
 #endif
 #if STACKVM
-  printf("  -breakmnu selector    set breakpoint on MNU of selector\n");
-  printf("  -eden <size>[mk]      set eden memory to bytes\n");
-  printf("  -leakcheck num        check for leaks in the heap\n");
-  printf("  -stackpages num       use n stack pages\n");
-  printf("  -numextsems num       make the external semaphore table num in size\n");
-  printf("  -noheartbeat          disable the heartbeat for VM debugging. disables input\n");
-  printf("  -pollpip              output . on each poll for input\n");
-  printf("  -checkpluginwrites    check for writes past end of object in plugins\n");
+  printf("  "VMOPTION("breakmnu")" selector    set breakpoint on MNU of selector\n");
+  printf("  "VMOPTION("eden")" <size>[mk]      set eden memory to bytes\n");
+  printf("  "VMOPTION("leakcheck")" num        check for leaks in the heap\n");
+  printf("  "VMOPTION("stackpages")" num       use n stack pages\n");
+  printf("  "VMOPTION("numextsems")" num       make the external semaphore table num in size\n");
+  printf("  "VMOPTION("noheartbeat")"          disable the heartbeat for VM debugging. disables input\n");
+  printf("  "VMOPTION("pollpip")"              output . on each poll for input\n");
+  printf("  "VMOPTION("checkpluginwrites")"    check for writes past end of object in plugins\n");
 #endif
 #if STACKVM || NewspeakVM
 # if COGVM
-  printf("  -trace[=num]          enable tracing (optionally to a specific value)\n");
+  printf("  "VMOPTION("trace")"[=num]          enable tracing (optionally to a specific value)\n");
 # else
-  printf("  -sendtrace            enable send tracing\n");
+  printf("  "VMOPTION("sendtrace")"            enable send tracing\n");
 # endif
-  printf("  -warnpid              print pid in warnings\n");
+  printf("  "VMOPTION("warnpid")"              print pid in warnings\n");
 #endif
 #if COGVM
-  printf("  -codesize <size>[mk]  set machine code memory to bytes\n");
-  printf("  -tracestores          enable store tracing (assert check stores)\n");
-  printf("  -cogmaxlits <n>       set max number of literals for methods to be compiled to machine code\n");
-  printf("  -cogminjumps <n>      set min number of backward jumps for interpreted methods to be considered for compilation to machine code\n");
-  printf("  -reportheadroom       report unused stack headroom on exit\n");
+  printf("  "VMOPTION("codesize")" <size>[mk]  set machine code memory to bytes\n");
+  printf("  "VMOPTION("tracestores")"          enable store tracing (assert check stores)\n");
+  printf("  "VMOPTION("cogmaxlits")" <n>       set max number of literals for methods to be compiled to machine code\n");
+  printf("  "VMOPTION("cogminjumps")" <n>      set min number of backward jumps for interpreted methods to be considered for compilation to machine code\n");
+  printf("  "VMOPTION("reportheadroom")"       report unused stack headroom on exit\n");
 #endif
 #if SPURVM
-  printf("  -maxoldspace <size>[mk]      set max size of old space memory to bytes\n");
+  printf("  "VMOPTION("maxoldspace")" <size>[mk]      set max size of old space memory to bytes\n");
 #endif
-  printf("  -pathenc <enc>        set encoding for pathnames (default: %s)\n",
+  printf("  "VMOPTION("pathenc")" <enc>        set encoding for pathnames (default: %s)\n",
 		getEncodingType(gCurrentVMEncoding));
 
-  printf("  -headless             run in headless (no window) mode (default: false)\n");
-  printf("  -headfull             run in headful (window) mode (default: true)\n");
-  printf("  -version              print version information, then exit\n");
+  printf("  "VMOPTION("headless")"             run in headless (no window) mode (default: false)\n");
+  printf("  "VMOPTION("headfull")"             run in headful (window) mode (default: true)\n");
+  printf("  "VMOPTION("version")"              print version information, then exit\n");
 
-  printf("  -blockonerror         on error or segv block, not exit.  useful for attaching gdb\n");
-  printf("  -blockonwarn          on warning block, don't warn.  useful for attaching gdb\n");
-  printf("  -exitonwarn           treat warnings as errors, exiting on warn\n");
+  printf("  "VMOPTION("blockonerror")"         on error or segv block, not exit.  useful for attaching gdb\n");
+  printf("  "VMOPTION("blockonwarn")"          on warning block, don't warn.  useful for attaching gdb\n");
+  printf("  "VMOPTION("exitonwarn")"           treat warnings as errors, exiting on warn\n");
 }
 
 static void printUsageNotes(void)
 {
 #if SPURVM
-	printf("  If `-memory' or '-maxoldspace' are not specified then the heap will grow dynamically.\n");
+	printf("  If `"VMOPTION("memory")"' or '"VMOPTION("maxoldspace")"' are not specified then the heap will grow dynamically.\n");
 #else
-	printf("  If `-memory' is not specified then the heap will grow dynamically.\n");
+	printf("  If `"VMOPTION("memory")"' is not specified then the heap will grow dynamically.\n");
 #endif
   printf("  <argument>s are ignored, but are processed by the " IMAGE_DIALECT_NAME " image.\n");
   printf("  The first <argument> normally names a " IMAGE_DIALECT_NAME " `script' to execute.\n");

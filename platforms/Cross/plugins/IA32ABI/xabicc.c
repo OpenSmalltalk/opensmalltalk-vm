@@ -5,7 +5,7 @@
  * The plugin is misnamed.  It should be the AlienPlugin, but its history
  * dictates otherwise.
  */
-#if i386|i486|i586|i686
+#if i386|i486|i586|i686|__i386__|__i486__|__i586__|__i686__
 # include "ia32abicc.c"
 #elif powerpc|ppc
 # include "ppc32abicc.c"
@@ -17,5 +17,6 @@
 # endif
 #elif __ARM_ARCH__|__arm__|__arm32__|ARM32
 # include "arm32abicc.c"
+#else
+#error "Unsupported architecture"
 #endif
-	

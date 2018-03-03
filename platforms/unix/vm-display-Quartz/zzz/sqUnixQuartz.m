@@ -101,11 +101,7 @@
 // 
 #undef	FULLSCREEN_FADE	 0.02
 
-#ifdef PharoVM
-# define VMOPTION(arg) "--"arg
-#else
 # define VMOPTION(arg) "-"arg
-#endif
 
 /// 
 /// No more user-serviceable parts in this file.  Stop Tweaking Now!

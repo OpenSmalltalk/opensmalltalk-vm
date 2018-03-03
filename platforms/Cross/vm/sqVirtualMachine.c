@@ -194,9 +194,10 @@ sqInt pinObject(sqInt objOop);
 sqInt unpinObject(sqInt objOop);
 char *cStringOrNullFor(sqInt);
 #endif
-#if VM_PROXY_MINOR > 13 /* More Spur */
+#if VM_PROXY_MINOR > 13 /* More Spur + OS Errors available via prim error code */
 sqInt statNumGCs(void);
 sqInt stringForCString(char *);
+sqInt primitiveFailForOSError(sqLong);
 #endif
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
@@ -510,9 +511,10 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->unpinObject = unpinObject;
 #endif
 
-#if VM_PROXY_MINOR > 13 /* More Spur */
+#if VM_PROXY_MINOR > 13 /* More Spur + OS Errors available via prim error code */
 	VM->statNumGCs = statNumGCs;
 	VM->stringForCString = stringForCString;
+	VM->primitiveFailForOSError = primitiveFailForOSError;
 #endif
 
 	return VM;

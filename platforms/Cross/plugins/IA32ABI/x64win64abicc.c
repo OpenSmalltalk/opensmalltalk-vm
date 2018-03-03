@@ -39,8 +39,8 @@ extern
 struct VirtualMachine* interpreterProxy;
 
 #if __GNUC__
-# define setsp(sp) asm volatile ("movq %0,%%rsp" : : "m"(sp))
-# define getsp() ({ void *sp; asm volatile ("movq %%rsp,%0" : "=r"(sp) : ); sp;})
+# define setsp(sp) __asm__ volatile ("movq %0,%%rsp" : : "m"(sp))
+# define getsp() ({ void *sp; __asm__ volatile ("movq %%rsp,%0" : "=r"(sp) : ); sp;})
 #endif
 #define STACK_ALIGN_BYTES 32 /* 32 if a 256-bit argument is passed; 16 otherwise */
 
@@ -168,11 +168,11 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
 #define setRMCC(t) (mostRecentCallbackContext = (void *)(t))
 
 /*
- * Entry-point for call-back thunks.  Args are thunk address and stack pointer,
- * where the stack pointer is pointing one word below the return address of the
- * thunk's callee, 4 bytes below the thunk's first argument.  The stack is:
- *		callback
- *		arguments
+ * Entry-point for call-back thunks.  Args are the integer register args, the
+ * floating-point register arguments, the thunk address and stack pointer, where
+ * the stack pointer is pointing one word below the return address of the thunk's
+ * callee, 8 bytes below the thunk's first stacked argument.  The stack is:
+ *		callback stack arguments
  *		retpc (thunk) <--\
  *		address of retpc-/        <--\
  *		address of address of ret pc-/
@@ -183,7 +183,7 @@ getMostRecentCallbackContext() { return mostRecentCallbackContext; }
  * This function's roles are to use setjmp/longjmp to save the call point
  * and return to it, and to return any of the various values from the callback.
  *
- * To support x86-64, which has 4 register arguments (int or floating-point)
+ * To support x86-64, which on WIN^$ has 4 register arguments (int or floating-point)
  * the function takes 6 arguments, the 4 register args as long longs,
  * followed by the thunkp and stackp passed on the stack.  The register
  * args get copied into a struct on the stack. A pointer to the struct is then

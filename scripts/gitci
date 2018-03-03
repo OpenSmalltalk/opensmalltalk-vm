@@ -7,6 +7,12 @@
 # git add . stages new and modified, without deleted
 # git add -u stages modified and deleted, without new
 
+echo "Have you checked incoming?  Y/n \c"
+read n
+case $n in
+n|N|no|nO|No|NO)	exit 1;;
+esac
+
 echo sanity checking generated files...
 
 if [ "$1" = "-?" -o "$1" = -help -o "$1" = --help ]; then
@@ -28,7 +34,7 @@ if [ -n "`\`dirname $0\`/findUnofficialFiles`" ]; then
 	read n
 	case $n in
 	"")					exit 1;;
-	n|N|no|nO\No|NO)	exit 1;;
+	n|N|no|nO|No|NO)	exit 1;;
 	esac
 fi
 

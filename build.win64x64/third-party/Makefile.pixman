@@ -21,7 +21,7 @@ $(PIXMANARCHIVE):
 $(THIRDPARTYLIBDIR)/$(PIXMANLIBNAME): $(PIXMANARCHIVE)
 	tar x -f $(PIXMANARCHIVE) -C $(THIRDPARTYDIR)
 	cd $(PIXMANDIR) \
-		&& ./configure \
+		&& bash ./configure \
 			--prefix='$(THIRDPARTYOUTDIR)' \
 			--host=x86_64-w64-mingw32 \
 			PKG_CONFIG="$(PKG_CONFIG)" \

@@ -24,7 +24,7 @@ $(OPENSSLARCHIVE):
 	tar x -f $(OPENSSLARCHIVE) -C $(THIRDPARTYDIR)
 	cd $(OPENSSLDIR) \
 		&& ./Configure darwin64-x86_64-cc --prefix='$(THIRDPARTYOUTDIR)' shared \
-		&& LDFLAGS='-Wl,-rpath,@executable_path:@executable_path/Plugins' make \
+		&& LDFLAGS='-Wl,-rpath,@executable_path:@executable_path/Plugins' make -s \
 		&& make install
 
 # Assuming building libssl will also build libcrypto
