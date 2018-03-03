@@ -8,6 +8,7 @@
 *   EMAIL:
 *   RCSID:   $Id$
 *
+*	2018-03-01 AKG add SqFileFileOpen() & sqFileFdOpen()
 *	2009-05-15 EEM add stdio flag; reorder SQFile to make it more compact
 *	2005-03-26 IKP fix unaligned accesses to file member
 *	2004-06-10 IKP 64-bit cleanliness
@@ -52,6 +53,10 @@ sqInt   sqFileInit(void);
 sqInt   sqFileShutdown(void);
 sqInt   sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag);
 sqInt   sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists);
+#if PharoVM
+sqInt   sqFileFdOpen(SQFile *f, int fd, sqInt writeFlag);
+sqInt   sqFileFileOpen(SQFile *f, FILE *inFile, sqInt writeFlag);
+#endif
 size_t  sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex);
 sqInt   sqFileRenameOldSizeNewSize(char *sqOldName, sqInt sqOldNameSize, char *sqNewName, sqInt sqNewNameSize);
 sqInt   sqFileSetPosition(SQFile *f, squeakFileOffsetType position);
