@@ -75,18 +75,17 @@ FilePlugin >> asciiDirectoryDelimiter [
 				ifNil: [FileDirectory pathNameDelimiter asciiValue]]
 ]
 
-{ #category : #'pharo primitives' }
+{ #category : #private }
 FilePlugin >> cfileRecordSize [
 	"Return the size of a stdio FILE* handle"
 	<inline: #always>
 	^self sizeof: #'FILE*'
 ]
 
-{ #category : #'private - pharo' }
+{ #category : #private }
 FilePlugin >> fileOpenFd: fd write: writeFlag [
 	"Open the fd as file. Answer the file oop."
 	| file fileOop |
-	<option: #PharoVM>
 	<var: #file type: 'SQFile *'>
 	<var: 'fd' type: 'int'>
 	<export: true>
@@ -97,11 +96,10 @@ FilePlugin >> fileOpenFd: fd write: writeFlag [
 	^ fileOop
 ]
 
-{ #category : #'private - pharo' }
+{ #category : #private }
 FilePlugin >> fileOpenFile: cfile write: writeFlag [
 	"Open the FILE* as file. Answer the file oop."
 	| file fileOop |
-	<option: #PharoVM>
 	<var: #file type: 'SQFile *'>
 	<var: 'cfile' type: 'FILE *'>
 	<export: true>
@@ -719,10 +717,12 @@ FilePlugin >> primitiveFileOpenNew [
 
 ]
 
-{ #category : #'pharo primitives' }
+{ #category : #'file primitives' }
 FilePlugin >> primitiveFileOpenUseFile [
+	"Open the file with the supplied FILE* and writeFlag.
+	FILE* must be supplied in a byte object (ByteArray) with the platform address size.
+	writeFlag must be a boolean."
 	| writeFlag cfileOop cfile filePointer |
-	<option: #PharoVM>
 	<var: 'cfile' type: 'FILE* '>
 	<export: true>
 	writeFlag := interpreterProxy
@@ -740,10 +740,12 @@ FilePlugin >> primitiveFileOpenUseFile [
 	^interpreterProxy primitiveFail.
 ]
 
-{ #category : #'pharo primitives' }
+{ #category : #'file primitives' }
 FilePlugin >> primitiveFileOpenUseFileDescriptor [
+	"Open the file with the supplied file descriptor and writeFlag.
+	fileDescriptor must be an integer.
+	writeFlag must be a boolean."
 	| writeFlag fdPointer fd filePointer |
-	<option: #PharoVM>
 	<var: 'fd' type: 'int'>
 	<export: true>
 	writeFlag := interpreterProxy
