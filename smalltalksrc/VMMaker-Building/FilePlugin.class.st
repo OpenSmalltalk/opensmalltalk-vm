@@ -75,6 +75,43 @@ FilePlugin >> asciiDirectoryDelimiter [
 				ifNil: [FileDirectory pathNameDelimiter asciiValue]]
 ]
 
+{ #category : #'pharo primitives' }
+FilePlugin >> cfileRecordSize [
+	"Return the size of a stdio FILE* handle"
+	<inline: #always>
+	^self sizeof: #'FILE*'
+]
+
+{ #category : #'private - pharo' }
+FilePlugin >> fileOpenFd: fd write: writeFlag [
+	"Open the fd as file. Answer the file oop."
+	| file fileOop |
+	<option: #PharoVM>
+	<var: #file type: 'SQFile *'>
+	<var: 'fd' type: 'int'>
+	<export: true>
+	fileOop := interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: self fileRecordSize.
+	file := self fileValueOf: fileOop.
+	interpreterProxy failed
+		ifFalse: [self cCode: 'sqFileFdOpen(file, fd, writeFlag)' inSmalltalk: [file]].
+	^ fileOop
+]
+
+{ #category : #'private - pharo' }
+FilePlugin >> fileOpenFile: cfile write: writeFlag [
+	"Open the FILE* as file. Answer the file oop."
+	| file fileOop |
+	<option: #PharoVM>
+	<var: #file type: 'SQFile *'>
+	<var: 'cfile' type: 'FILE *'>
+	<export: true>
+	fileOop := interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: self fileRecordSize.
+	file := self fileValueOf: fileOop.
+	interpreterProxy failed
+		ifFalse: [self cCode: 'sqFileFileOpen(file, cfile, writeFlag)' inSmalltalk: [file]].
+	^ fileOop
+]
+
 { #category : #'file primitives' }
 FilePlugin >> fileOpenName: nameIndex size: nameSize write: writeFlag secure: secureFlag [
 	"Open the named file, possibly checking security. Answer the file oop."
@@ -680,6 +717,46 @@ FilePlugin >> primitiveFileOpenNew [
 				pop: 2 "rcvr, name"
 				thenPush: filePointer]
 
+]
+
+{ #category : #'pharo primitives' }
+FilePlugin >> primitiveFileOpenUseFile [
+	| writeFlag cfileOop cfile filePointer |
+	<option: #PharoVM>
+	<var: 'cfile' type: 'FILE* '>
+	<export: true>
+	writeFlag := interpreterProxy
+				booleanValueOf: (interpreterProxy stackValue: 0).
+	cfileOop := interpreterProxy stackValue: 1.
+	(((interpreterProxy isBytes: cfileOop) and:
+		 [(interpreterProxy byteSizeOf: cfileOop) = self cfileRecordSize]))
+			ifFalse: [^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	cfile := interpreterProxy firstIndexableField: cfileOop.
+	interpreterProxy failed ifFalse: 
+		[filePointer := self fileOpenFile: cfile write: writeFlag].
+	interpreterProxy failed ifFalse: 
+		[^interpreterProxy pop: 3 "rcvr, name, writeFlag"
+							thenPush: filePointer].
+	^interpreterProxy primitiveFail.
+]
+
+{ #category : #'pharo primitives' }
+FilePlugin >> primitiveFileOpenUseFileDescriptor [
+	| writeFlag fdPointer fd filePointer |
+	<option: #PharoVM>
+	<var: 'fd' type: 'int'>
+	<export: true>
+	writeFlag := interpreterProxy
+				booleanValueOf: (interpreterProxy stackValue: 0).
+	fdPointer := interpreterProxy stackValue: 1.
+	(interpreterProxy isIntegerObject: fdPointer)
+		ifFalse: [^ interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	fd := interpreterProxy integerValueOf: fdPointer.
+	filePointer := self fileOpenFd: fd write: writeFlag.
+	interpreterProxy failed
+		ifFalse: [^interpreterProxy pop: 3 "rcvr, name, writeFlag"
+			thenPush: filePointer].
+	^interpreterProxy primitiveFail.
 ]
 
 { #category : #'file primitives' }
