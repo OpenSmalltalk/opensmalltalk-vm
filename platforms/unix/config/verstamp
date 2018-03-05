@@ -12,14 +12,14 @@ else
 fi
 
 if expr "$2" : ".*gcc" >/dev/null ; then
-  CC=`$2 -v 2>&1 | tail -1 | sed 's/.*based on//g' | awk '{print $1 , $3} '`
+  CC="$2 $($2 -dumpversion)"
 else
   CC=$2
 fi
 
 cat <<_EOF >$1
 int vm_serial= $SERIAL;
-char *vm_date= "`date`";
+char *vm_date= "$(LC_TIME=C date)";
 char *cc_version= "$CC";
-char *ux_version= "`uname -a | sed 's, unknown,,g'`";
+char *ux_version= "$(uname -a | sed 's, unknown,,g')";
 _EOF
