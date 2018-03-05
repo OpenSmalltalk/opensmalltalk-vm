@@ -1,4 +1,4 @@
-
+dnl SqueakSSL
 AC_MSG_CHECKING([for SSL support])
 
 case $host in
@@ -44,3 +44,5 @@ case $host in
         ])
         ;;
 esac
+
+dnl EOF
