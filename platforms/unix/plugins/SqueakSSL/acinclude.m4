@@ -41,7 +41,7 @@ case $host in
             ],[
                 AC_PLUGIN_SEARCH_LIBS([BIO_new], [crypto])
                 AC_PLUGIN_SEARCH_LIBS([SSL_new], [ssl])
-                AC_DEFINE(SQSSL_OPENSSL_LINKED, 1, [Linked OpenSSL])
+                AC_DEFINE([SQSSL_OPENSSL_LINKED], [1], [Linked OpenSSL])
                 AC_MSG_CHECKING([for SSL support])
                 AC_MSG_RESULT([OpenSSL (linked)])
             ])
