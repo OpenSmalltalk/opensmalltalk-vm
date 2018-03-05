@@ -194,8 +194,9 @@ AC_ARG_WITH(gnu-as,
   [GAS="unknown"])
 
 AC_PROG_MAKE_SET
-AC_PROG_CC_WALL
+AC_PROG_CC
 AC_PROG_CC_C99
+AX_CFLAGS_WARN_ALL
 AC_PROG_AS_GNU
 LT_INIT
 AC_PROG_INSTALL
@@ -266,7 +267,14 @@ test $have_rfb = "yes" && AC_DEFINE(USE_RFB,[1], [Use RFB])
 AC_CHECK_LIB(nsl, yp_bind)
 AC_CHECK_LIB(socket, socket)
 AC_CHECK_LIB(m, sin)
-AC_CHECK_LIB(pthread, pthread_create)
+
+
+AX_PTHREAD([
+  LIBS="$PTHREAD_LIBS $LIBS"
+  CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
+  CC="$PTHREAD_CC"
+],[break])
+
 # this seems to add no benefit
 #AC_CHECK_LIB(rt, clock_nanosleep)
 
