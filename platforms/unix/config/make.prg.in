@@ -7,14 +7,15 @@
 o		= .o
 a		= .a
 x		=
-COMPILE		= $(CC) $(CFLAGS) $(XCFLAGS) \
-		  $(LDFLAGS) $(XLDFLAGS) -export-dynamic -c -o
+COMPILE		= $(CC) $(CFLAGS) $(CPPFLAGS) $(XCFLAGS) \
+		  $(LDFLAGS) $(XLDFLAGS) $(TARGET_ARCH) -export-dynamic -c -o
 COMPILEIFP	= $(CC) $(CFLAGS) $(XCFLAGS) \
-		  $(LDFLAGS) $(XLDFLAGS) -export-dynamic -fno-omit-frame-pointer -c -o
+		  $(LDFLAGS) $(XLDFLAGS) $(TARGET_ARCH) -export-dynamic -fno-omit-frame-pointer -c -o
 CXXFLAGS	= $(CFLAGS) # Hack; can't be bothered to add CXXFLAGS to the configure mess
-COMPILE.cpp	= $(CXX) $(CXXFLAGS) $(XCFLAGS) \
-		  $(LDFLAGS) $(XLDFLAGS) -export-dynamic -c -o
+COMPILE.cpp = $(COMPILE.cc)
+COMPILE.cc	= $(CXX) $(CXXFLAGS) $(CPPFLAGS) $(XCFLAGS) \
+		  $(LDFLAGS) $(XLDFLAGS) $(TARGET_ARCH) -export-dynamic -c -o
 LINK		= $(LIBTOOL) --mode=link \
 		  $(CC) $(CFLAGS) $(XCFLAGS) \
-		  $(LDFLAGS) $(XLDFLAGS) -export-dynamic -o
+		  $(LDFLAGS) $(XLDFLAGS) $(TARGET_ARCH) -export-dynamic -o
 RANLIB		= :
