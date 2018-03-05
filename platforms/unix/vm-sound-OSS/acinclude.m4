@@ -9,10 +9,6 @@ if test "$with_vm_sound_OSS" = "no"; then
 	AC_PLUGIN_DISABLE_PLUGIN(vm-sound-OSS);
 else
 	AC_MSG_CHECKING([for Open Sound System])
-	AC_TRY_COMPILE([#include <sys/soundcard.h>],[OPEN_SOUND_SYSTEM;],[
-	  AC_MSG_RESULT(yes)
-	],[
-	  AC_MSG_RESULT(no)
-	  AC_PLUGIN_DISABLE
-	])
+	AC_CHECK_HEADERS([soundcard.h sys/soundcard.h],,AC_PLUGIN_DISABLE)
+	AC_PLUGIN_SEARCH_LIBS([OSS_init],[ossaudio])
 fi

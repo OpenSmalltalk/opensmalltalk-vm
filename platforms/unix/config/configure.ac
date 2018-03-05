@@ -38,16 +38,17 @@ AC_CONFIG_SRCDIR([config.h.in])
 
 SVNREV=`grep '\$Rev: ' ${srcdir}/../../../platforms/Cross/vm/sqSCCSVersion.h \
 	        | sed 's/.*$Rev: \([0-9][0-9]*\).*";/\1/'`
+	        | head -n 1
 AC_ARG_WITH(vmversion,
-[  --with-vmversion=M.N	vm version number [default = 4.0]],
-[ vmversion="${with_vmversion}"],
-[ vmversion="4.0"])
+	AS_HELP_STRING([ --with-vmversion=M.N], [vm version number (default=5.0)]),
+	[vmversion="${with_vmversion}"],
+	[vmversion="5.0"])
 vmmajor=`echo ${vmversion} | sed 's/\..*//'`
 vmminor=`echo ${vmversion} | sed 's/^.*\.//'`
 AC_ARG_WITH(sqversion,
-[  --with-sqversion=M.N	squeak version number [default = 4.5]],
-[ sqversion="${with_sqversion}"],
-[ sqversion="4.5"])
+	AS_HELP_STRING([ --with-sqversion=M.N], [squeak version number (default=5.0)]),
+	[sqversion="${with_sqversion}"],
+	[sqversion="5.0"])
 sqmajor=`echo ${sqversion} | sed 's/\..*//'`
 sqminor=`echo ${sqversion} | sed 's/^.*\.//'`
 
@@ -57,16 +58,16 @@ topdir=`cd ${srcdir}/../../..; pwd`
 cfgdir=`cd ${srcdir}; pwd`
 
 AC_ARG_WITH(src,
-[  --with-src=dir	generated src directory [default=src]],
-[ vmmsrc="${with_src}"],
-[ vmmsrc="src"])
+	AS_HELP_STRING([ --with-src=dir], [generated src directory (default=src)]),
+	[vmmsrc="${with_src}"],
+	[vmmsrc="src"])
 
 vmmdir="${topdir}/${vmmsrc}"
 
 AC_ARG_WITH(plugins,
-[  --with-plugins=dir	generated plugins directory [default=${topdir}/src/plugins]],
-[ vmpsrc="${topdir}/${with_plugins}"],
-[ vmpsrc="${topdir}/src/plugins"])
+	AS_HELP_STRING([ --with-plugins=dir], [generated plugins directory (default=${topdir}/src/plugins)]),
+	[vmpsrc="${topdir}/${with_plugins}"],
+	[vmpsrc="${topdir}/src/plugins"])
 
 vmpdir="${vmpsrc}"
 
@@ -90,23 +91,17 @@ AC_MSG_RESULT(${vmpdir})
 blddir=`pwd`
 
 AC_ARG_WITH(vmmcfg,
-[  --with-vmmcfg=dir	vm configuration directory containing plugins.int and plugins.ext [default=.]],
-[ vmmcfg="${with-vmmcfg}"],
-[ vmmcfg="${blddir}"])
+	AS_HELP_STRING([ --with-vmmcfg=dir], [vm configuration directory containing plugins.int and plugins.ext (default=.)]),
+	[vmmcfg="${with-vmmcfg}"],
+	[vmmcfg="${blddir}"])
 
 # Compiling a Cogit VM or not?  If so, need a cogit$o, cointerp, etc.
 
 AC_ARG_ENABLE(cogit,
-[  --enable-cogit			compile a cogit VM [default=yes]],
-cogit="no", cogit="yes")
+	AS_HELP_STRING([ --disable-cogit], [compile a cogit VM (default=enabled)]),
+	[cogit="$enableval"],
+	[cogit="yes"])
 AC_SUBST(cogit)
-
-#AC_ARG_ENABLE(jit,
-#[  --enable-jit            enable J4 support [default=no]],
-#JIT="yes", JIT="no")
-#
-#test $JIT = "yes" && J_CFLAGS="-DJ_ENABLED"
-#AC_SUBST(J_CFLAGS)
 
 # Check the generated src dir looks sane
 
@@ -162,6 +157,7 @@ AC_SUBST(host_os)
 
 AC_DEFINE_UNQUOTED(VM_HOST, "$host", [host])
 AC_DEFINE_UNQUOTED(VM_HOST_OS, "$host_os", [host os])
+AC_DEFINE_UNQUOTED(VM_HOST_VERNDOR, "$host_vendor", [host vendor])
 AC_DEFINE_UNQUOTED(VM_HOST_CPU, "$host_cpu", [host cpu])
 
 AC_CANONICAL_TARGET
@@ -176,6 +172,7 @@ AC_SUBST(target_os)
 
 AC_DEFINE_UNQUOTED(VM_TARGET, "$target", [target])
 AC_DEFINE_UNQUOTED(VM_TARGET_OS, "$target_os", [target os])
+AC_DEFINE_UNQUOTED(VM_TARGET_VENDOR, "target_vendor", [target vendor])
 AC_DEFINE_UNQUOTED(VM_TARGET_CPU, "$target_cpu", [target cpu])
 
 echo
@@ -185,17 +182,17 @@ echo
 # Checks for programs.
 
 AC_ARG_WITH(gnu-awk,
-[  --with-gnu-awk          assume that awk is GNU gawk [default=no]],
-[GAWK="$withval"],
-[case $host_os in
-  darwin*)	GAWK="yes";;
-  *)		GAWK="unknown";;
-esac])
+	AS_HELP_STRING([ --with-gnu-awk], [assume that awk is GNU gawk (default=no)]),
+	[GAWK="$withval"],
+	[case $host_os in
+	  darwin*)	GAWK="yes";;
+	  *)		GAWK="unknown";;
+	esac])
 
 AC_ARG_WITH(gnu-as,
-[  --with-gnu-as           assume that as is the GNU assembler [default=no]],
-  [GAS="$withval"],
-  [GAS="unknown"])
+	AS_HELP_STRING([ --with-gnu-as], [assume that as is the GNU assembler (default=no)]),
+	[GAS="$withval"],
+	[GAS="unknown"])
 
 ########################
 
@@ -256,15 +253,15 @@ AC_SUBST(INCLUDES)
 AC_NEED_SUNOS_H
 
 AC_STDC_HEADERS
-AC_HAVE_HEADERS(unistd.h string.h fcntl.h sys/file.h sys/param.h)
-AC_HAVE_HEADERS(sys/time.h sys/filio.h sys/select.h)
-AC_HAVE_HEADERS(features.h)
-AC_HAVE_HEADERS(alloca.h) # SunOS5
+AC_CHECK_HEADERS_ONCE([unistd.h string.h fcntl.h sys/file.h sys/param.h])
+AC_CHECK_HEADERS_ONCE([sys/time.h sys/filio.h sys/select.h])
+AC_CHECK_HEADERS_ONCE([features.h])
+AC_CHECK_HEADERS_ONCE([alloca.h]) # SunOS5
 AC_HEADER_TIME
 AC_HEADER_DIRENT
 
 if test -f "${vmmdir}/vm/interp.h"; then
-  AC_DEFINE(HAVE_INTERP_H, 1, [Interpreter header file present])
+  AC_DEFINE([HAVE_INTERP_H], [1], [Interpreter header file present])
 fi
 AC_SUBST(HAVE_INTERP_H)
 
@@ -280,61 +277,37 @@ AC_CHECK_GETHOSTNAME
 # Display options.
 
 AC_ARG_WITH(rfb,
-[  --without-rfb           disable Remote FrameBuffer support [default=enabled]],
-  [have_rfb="$withval"],
-  [have_rfb="no"])
+	AS_HELP_STRING([ --without-rfb], [disable Remote FrameBuffer support (default=enabled)]),
+	[have_rfb="$withval"],
+	[have_rfb="no"])
 
 test $have_rfb = "yes" && AC_DEFINE(USE_RFB,[1], [Use RFB])
 
 # Checks for libraries.
 
-AC_CHECK_LIB(nsl, yp_bind)
-AC_CHECK_LIB(socket, socket)
-AC_CHECK_LIB(m, sin)
+AC_SEARCH_LIBS([gethostbyname], [nsl])
+AC_SEARCH_LIBS([socket], [socket])
+AC_SEARCH_LIBS([sin], [m])
 
 
 AX_PTHREAD([
   LIBS="$PTHREAD_LIBS $LIBS"
   CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
   CC="$PTHREAD_CC"
-],[break])
-
-# this seems to add no benefit
-#AC_CHECK_LIB(rt, clock_nanosleep)
-
-#AC_CHECK_FUNC(dlopen, [
-#  AC_DEFINE(HAVE_LIBDL,[1])
-#],[
-#  AC_CHECK_LIB(dl, dlopen, [
-#    LIBS="-ldl $LIBS"
-#    AC_DEFINE(HAVE_LIBDL,[1])
-#  ],[
-#    AC_CHECK_FUNC(_dyld_present, [
-#      AC_DEFINE(HAVE_DYLD,[1])
-#    ])
-#  ])
-#])
-
-AC_CHECK_FUNC(_dyld_present, [
-  AC_DEFINE(HAVE_DYLD,[1], [dyld linker present])
-],[
-  AC_HAVE_HEADERS(dlfcn.h)
-  AC_CHECK_FUNC(dlopen, [
-    AC_DEFINE(HAVE_LIBDL,[1], [dl linker present])
-  ],[
-    AC_CHECK_LIB(dl, dlopen, [
-      LIBS="-ldl $LIBS"
-      AC_DEFINE(HAVE_LIBDL,[1])
-    ])
-  ])
 ])
 
-AC_CHECK_FUNCS(snprintf __snprintf,[break])
+
+
+AC_CHECK_FUNC(_dyld_image_count, [AC_DEFINE(HAVE_DYLD,[1], [dyld linker present])])
+AC_CHECK_HEADERS(dlfcn.h)
+AC_SEARCH_LIBS([dlopen], [dl dld], [AC_DEFINE(HAVE_LIBDL,[1], [dl linker present])])
+
+AC_CHECK_FUNCS([snprintf __snprintf],[break])
 
 AC_CHECK_FUNCS([mmap])
 AC_FUNC_ALLOCA
-AX_HAVE_EPOLL
-AX_HAVE_EPOLL_PWAIT
+AX_HAVE_EPOLL([AC_DEFINE(HAVE_EPOLL, [1], [epoll(7) is supported])])
+AX_HAVE_EPOLL_PWAIT([AC_DEFINE(HAVE_EPOLL_PWAIT, [1], [epoll_pwait(7) is supported])])
 
 # Checks for platform characteristics.
 
@@ -367,9 +340,9 @@ AC_SUBST(install_nps)
 AC_SUBST(uninstall_nps)
 
 AC_ARG_WITH(npsqueak,
-[  --without-npsqueak      disable browser plugin support [default=enabled]],
-  [with_npsqueak="$withval"],
-  [with_npsqueak="yes"])
+	AS_HELP_STRING([ --without-npsqueak], [     disable browser plugin support (default=enabled)]),
+	  [with_npsqueak="$withval"],
+	  [with_npsqueak="yes"])
 
 if test "$with_npsqueak" = "no"; then
   npsqueak=""
@@ -479,11 +452,13 @@ AH_TOP([/* config.h.in -- template for config.h			-*- C -*-
  #define __sq_config_h
 ])
 
+AH_TEMPLATE([VM_DLSYM_PREFIX],[Once used to specify mangled names on Mac OS, left for documentation purposes])
+
 
 AH_BOTTOM([#endif /* __sq_config_h */])
 
-AC_CONFIG_HEADER(config.h)
-AC_CONFIG_FILES(mkconfig make.cfg make.int make.ext make.prg inisqueak Makefile)
+AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_FILES([mkconfig make.cfg make.int make.ext make.prg inisqueak Makefile])
 AC_CONFIG_COMMANDS([default],[
   chmod +x mkconfig inisqueak
   ${SHELL} -ec "./mkconfig; ${cfgdir}/mktargets; ${cfgdir}/mkmf"],[

@@ -23,9 +23,9 @@ AC_DEFUN([AC_ICONV], [
 ])
 
 AC_ARG_ENABLE(iconv,
-[  --disable-iconv         disable iconv support [default=enabled]],
-  [with_iconv="$withval"],
-  [with_iconv="yes"])
+	AC_HELP_STRING[--disable-iconv] [disable iconv support (default=enabled)]),
+	[with_iconv="$enableval"],
+	[with_iconv="yes"])
 
 
 case $host_os in
@@ -34,7 +34,7 @@ case $host_os in
 esac
 
 if test "$with_iconv" = "yes"; then
-  AC_CHECK_HEADERS(iconv.h)
+  AC_CHECK_HEADERS([iconv.h])
   AC_ICONV
   AC_LANGINFO_CODESET
 else

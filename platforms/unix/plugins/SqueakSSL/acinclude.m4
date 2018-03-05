@@ -29,13 +29,13 @@ case $host in
             AS_IF([test "x$enable_dynamicopenssl" != "xno"], [
                 AC_CHECK_HEADERS([openssl/ssl.h],[
                     AC_PLUGIN_SEARCH_LIBS([dlopen], [dl dld], [], [
-                        AC_MSG_ERROR([unable to find the dlopen() function])
+                        AC_MSG_FAILURE([unable to find the dlopen() function])
                     ])
                     AC_MSG_CHECKING([for SSL support])
                     AC_MSG_RESULT([OpenSSL (dynamic)])
                 ],[
                     AC_MSG_CHECKING([for SSL support])
-                    AC_MSG_ERROR([Headers Missing])
+                    AC_MSG_FAILURE([Headers Missing])
                     AC_PLUGIN_DISABLE()
                 ])
             ],[
