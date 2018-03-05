@@ -32,7 +32,9 @@
 
 AC_PREREQ([2.69])
 
-AC_INIT([config.h.in],[],[vm-dev@lists.squeakfoundation.org],[OpenSmalltalk VM],[http://opensmalltalk.org/])
+AC_INIT([opensmalltalk-vm],[],[vm-dev@lists.squeakfoundation.org],[OpenSmalltalk VM],[http://opensmalltalk.org/])
+
+AC_CONFIG_SRCDIR([config.h.in])
 
 SVNREV=`grep '\$Rev: ' ${srcdir}/../../../platforms/Cross/vm/sqSCCSVersion.h \
 	        | sed 's/.*$Rev: \([0-9][0-9]*\).*";/\1/'`
