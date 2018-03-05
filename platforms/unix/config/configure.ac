@@ -30,6 +30,7 @@
 # 
 # Last edited: Wed Nov 13 17:15:30 PST 2013 by eliot
 
+AC_PREREQ([2.69])
 
 AC_INIT([opensmalltalk-vm],[],[vm-dev@lists.squeakfoundation.org],[OpenSmalltalk VM],[http://opensmalltalk.org/])
 
