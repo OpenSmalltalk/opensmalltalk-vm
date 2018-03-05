@@ -202,6 +202,12 @@ LT_INIT
 AC_PROG_INSTALL
 AC_PROG_NM
 
+
+#sigh 
+if test "$GCC" = "yes"; then
+  CPPFLAGS="$CPPFLAGS -Wno-unknown-pragmas -Wno-unused-value"
+fi
+
 AC_CHECK_PROG(LN, ln, ln)
 
 # Check size assumptions of basic data types
