@@ -1,8 +1,8 @@
 dnl SqueakSSL
-AC_MSG_CHECKING([for SSL support])
 
 case $host in
-    *-openbsd*) 
+    *-openbsd*)
+        AC_MSG_CHECKING([for SSL support])
         AC_PLUGIN_USE_LIB([crypto])
         AC_PLUGIN_USE_LIB([ssl])
         AC_PLUGIN_USE_LIB([tls])
@@ -19,6 +19,7 @@ case $host in
               [have_tls=no])
 
         AS_IF([test "x$have_tls" = "xyes"],[
+              AC_MSG_CHECKING([for SSL support])
               AC_PLUGIN_USE_LIB([crypto])
               AC_PLUGIN_USE_LIB([ssl])
               AC_PLUGIN_USE_LIB([tls])
@@ -30,8 +31,10 @@ case $host in
                     AC_PLUGIN_SEARCH_LIBS([dlopen], [dl dld], [], [
                         AC_MSG_ERROR([unable to find the dlopen() function])
                     ])
+                    AC_MSG_CHECKING([for SSL support])
                     AC_MSG_RESULT([OpenSSL (dynamic)])
                 ],[
+                    AC_MSG_CHECKING([for SSL support])
                     AC_MSG_ERROR([Headers Missing])
                     AC_PLUGIN_DISABLE()
                 ])
@@ -39,10 +42,12 @@ case $host in
                 AC_PLUGIN_SEARCH_LIBS([BIO_new], [crypto])
                 AC_PLUGIN_SEARCH_LIBS([SSL_new], [ssl])
                 AC_DEFINE(SQSSL_OPENSSL_LINKED, 1, [Linked OpenSSL])
+                AC_MSG_CHECKING([for SSL support])
                 AC_MSG_RESULT([OpenSSL (linked)])
             ])
         ])
         ;;
 esac
+
 
 dnl EOF
