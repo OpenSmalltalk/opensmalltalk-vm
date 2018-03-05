@@ -45,20 +45,21 @@ if test "$have_x" = "yes"; then
     INCLUDES="${INCLUDES} -I${x_includes}"
     X_INCLUDES="-I${x_includes}"
   fi
-  AC_SEARCH_LIBS(XOpenDisplay],[X11], [
-    AC_DEFINE(USE_X11, [1], [Use X11])
-    AC_DEFINE_UNQUOTED(VM_X11DIR, "${x_libraries}", [X11 libraries])
+  AC_SEARCH_LIBS([XOpenDisplay],[X11], [
+    AC_DEFINE([USE_X11], [1], [Use X11])
+    AC_DEFINE_UNQUOTED([VM_X11DIR], "${x_libraries}", [X11 libraries])
     AC_SEARCH_LIBS([XShmAttach],[Xext])
     if test "$have_gl" = ""; then have_gl="no"; fi
-	if test "$have_gl" = "yes"; then
-		AC_CHECK_HEADERS([GL/gl.h gl/gl.h gl.h], [
-		  have_gl=yes
-		  AC_DEFINE([USE_X11_GLX], [1], [Use X11 GLX])
-		  AC_SEARCH_LIBS([glIsEnabled],[GL])
-		])
-	else
-		AC_DEFINE([USE_X11_GLX], [0], [Use X11 GLX])
-	fi
+    if test "$have_gl" = "yes"; then
+        AC_CHECK_HEADERS([GL/gl.h gl/gl.h gl.h], [
+          have_gl=yes
+          AC_DEFINE([USE_X11_GLX], [1], [Use X11 GLX])
+          AC_SEARCH_LIBS([glIsEnabled],[GL])
+          break
+        ])
+    else
+        AC_DEFINE([USE_X11_GLX], [0], [Use X11 GLX])
+    fi
   ],[
     AC_PLUGIN_DISABLE
   ])
