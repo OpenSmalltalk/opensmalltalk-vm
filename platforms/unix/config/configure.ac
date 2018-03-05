@@ -37,7 +37,7 @@ AC_INIT([opensmalltalk-vm],[],[vm-dev@lists.squeakfoundation.org],[OpenSmalltalk
 AC_CONFIG_SRCDIR([config.h.in])
 
 SVNREV=`grep '\$Rev: ' ${srcdir}/../../../platforms/Cross/vm/sqSCCSVersion.h \
-	        | sed 's/.*$Rev: \([0-9][0-9]*\).*";/\1/'`
+	        | sed 's/.*$Rev: \([0-9][0-9]*\).*";/\1/'` \
 	        | head -n 1
 AC_ARG_WITH(vmversion,
 	AS_HELP_STRING([ --with-vmversion=M.N], [vm version number (default=5.0)]),
