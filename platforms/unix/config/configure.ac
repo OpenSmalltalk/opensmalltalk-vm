@@ -36,7 +36,6 @@ AC_INIT([opensmalltalk-vm],[],[vm-dev@lists.squeakfoundation.org],[OpenSmalltalk
 
 AC_CONFIG_SRCDIR([config.h.in])
 
-AC_USE_SYSTEM_EXTENSIONS
 
 SVNREV=`grep '\$Rev: ' ${srcdir}/../../../platforms/Cross/vm/sqSCCSVersion.h \
 	        | sed 's/.*$Rev: \([0-9][0-9]*\).*";/\1/'` \
@@ -209,6 +208,7 @@ LDFLAGS="$TARGET_ARCH $LDFLAGS"
 AC_PROG_MAKE_SET
 AC_PROG_CC
 AC_PROG_CC_C99
+AC_USE_SYSTEM_EXTENSIONS
 AX_CFLAGS_WARN_ALL
 AC_PROG_AS_GNU
 LT_INIT
