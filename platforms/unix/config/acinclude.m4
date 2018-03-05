@@ -282,6 +282,7 @@ AC_DEFUN([AC_PLUGIN_CHECK_LIB],[
     disabled_plugins="${disabled_plugins} ${plugin}")])
 
 # Recent Unix stuff
+m4_include([ax_require_defined.m4])
 m4_include([ax_append_flag.m4])
 m4_include([ax_have_epoll.m4])
 m4_include([ax_pthread.m4])
