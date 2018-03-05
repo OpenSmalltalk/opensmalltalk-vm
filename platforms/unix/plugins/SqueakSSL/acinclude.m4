@@ -9,8 +9,8 @@ case $host in
         AC_MSG_RESULT([libtls (system LibreSSL)])
         ;;
     *)
-        AC_ARG_ENABLE([dynamic-openssl],
-            AS_HELP_STRING([--disable-dynamic-openssl], [Disable dynamic lookup of OpenSSL, rather link]))
+        AC_ARG_ENABLE([dynamicopenssl],
+            AS_HELP_STRING([--disable-dynamicopenssl], [Disable dynamic lookup of OpenSSL, rather link]))
         AC_ARG_WITH([libtls],
             AS_HELP_STRING([--with-libtls], [Use libtls instead of OpenSSL unconditionally]))
 
@@ -26,7 +26,7 @@ case $host in
               AC_MSG_RESULT([libtls])
         ],[
             AS_IF([test "x$with_libtls" = "xyes"], [AC_MSG_ERROR([libtls requested but not found])])
-            AS_IF([test "x$enable_dynamic-openssl" != "xno"], [
+            AS_IF([test "x$enable_dynamicopenssl" != "xno"], [
                 AC_CHECK_HEADERS([openssl/ssl.h],[
                     AC_PLUGIN_SEARCH_LIBS([dlopen], [dl dld], [], [
                         AC_MSG_ERROR([unable to find the dlopen() function])
