@@ -8,7 +8,7 @@ case $(c99 -dumpversion) in
 esac
 
 CFLAGS="$OPT -msse2 -D_GNU_SOURCE -DCOGMTVM=0"
-LIBS="-lpthread"
+LIBS=""
 LDFLAGS="-Wl,-z,now"
 case $(uname -s) in
   OpenBSD)
