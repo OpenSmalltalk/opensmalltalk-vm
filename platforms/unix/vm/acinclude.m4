@@ -22,8 +22,8 @@ case $host_os in
       [with_iconv="yes"])
     if test "$with_iconv" = "yes"; then
       AC_CHECK_HEADERS([iconv.h])
-      AC_SEARCH_LIB([iconv_open], [iconv], [], [
-        AC_SEARCH_LIB([libiconv_open], [iconv])])
+      AC_SEARCH_LIBS([iconv_open], [iconv], [], [
+        AC_SEARCH_LIBS([libiconv_open], [iconv])])
     else
       AC_MSG_RESULT([******** disabling iconv])
     fi
