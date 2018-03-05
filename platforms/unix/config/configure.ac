@@ -30,7 +30,7 @@
 # 
 # Last edited: Wed Nov 13 17:15:30 PST 2013 by eliot
 
-AC_INIT([config.h.in])
+AC_INIT([OpenSmalltalk VM])
 
 SVNREV=`grep '\$Rev: ' ${srcdir}/../../../platforms/Cross/vm/sqSCCSVersion.h \
 	        | sed 's/.*$Rev: \([0-9][0-9]*\).*";/\1/'`
@@ -211,6 +211,14 @@ if test "$GCC" = "yes"; then
 fi
 AC_SUBST(WFLAGS)
 
+TARGET_ARCH="$TARGET_ARCH"
+
+# tpr - try to keep msse out of it for Pi CFLAGS="$CFLAGS_32 $CFLAGS -msse"
+CFLAGS="$CFLAGS_32 $CFLAGS"
+
+CPPFLAGS="$CPPFLAGS $TARGET_ARTCH"
+
+
 AC_CHECK_PROG(LN, ln, ln)
 
 # Check size assumptions of basic data types
@@ -327,13 +335,6 @@ AC_GNU_OPT
 AC_GNU_INTERP
 AC_MODULE_LIB_PREFIX
 AC_64BIT_ARCH
-
-# tpr - try to keep msse out of it for Pi CFLAGS="$CFLAGS_32 $CFLAGS -msse"
-CFLAGS="$CFLAGS_32 $CFLAGS"
-
-TARGET_ARCH="$TARGET_ARCH"
-AC_SUBST(TARGET_ARCH)
-
 
 AC_C_BYTEORDER
 AC_C_DOUBLE_ALIGNMENT
