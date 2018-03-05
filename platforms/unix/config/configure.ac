@@ -250,6 +250,8 @@ AC_SUBST(INCLUDES)
 
 # Checks for header files.
 
+AC_USE_SYSTEM_EXTENSIONS
+
 AC_NEED_SUNOS_H
 
 AC_STDC_HEADERS
@@ -303,8 +305,7 @@ AC_CHECK_HEADERS(dlfcn.h)
 AC_SEARCH_LIBS([dlopen], [dl dld], [AC_DEFINE(HAVE_LIBDL,[1], [dl linker present])])
 
 AC_CHECK_FUNCS([snprintf __snprintf],[break])
-
-AC_CHECK_FUNCS([mmap])
+AC_CHECK_FUNCS_ONCE([mmap nanosleep])
 AC_FUNC_ALLOCA
 AX_HAVE_EPOLL([AC_DEFINE(HAVE_EPOLL, [1], [epoll(7) is supported])])
 AX_HAVE_EPOLL_PWAIT([AC_DEFINE(HAVE_EPOLL_PWAIT, [1], [epoll_pwait(7) is supported])])
