@@ -203,10 +203,13 @@ AC_PROG_INSTALL
 AC_PROG_NM
 
 
-#sigh 
 if test "$GCC" = "yes"; then
-  CPPFLAGS="$CPPFLAGS -Wno-unknown-pragmas -Wno-unused-value"
+  # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53119
+  CPPFLAGS="$CPPFLAGS -Wno-missing-braces"
+  #sigh 
+  CPPFLAGS="$CPPFLAGS -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable"
 fi
+AC_SUBST(WFLAGS)
 
 AC_CHECK_PROG(LN, ln, ln)
 
