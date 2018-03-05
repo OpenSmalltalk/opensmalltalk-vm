@@ -331,6 +331,7 @@ AC_64BIT_ARCH
 # tpr - try to keep msse out of it for Pi CFLAGS="$CFLAGS_32 $CFLAGS -msse"
 CFLAGS="$CFLAGS_32 $CFLAGS"
 
+TARGET_ARCH="$TARGET_ARCH"
 AC_SUBST(TARGET_ARCH)
 
 
