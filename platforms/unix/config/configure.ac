@@ -30,7 +30,8 @@
 # 
 # Last edited: Wed Nov 13 17:15:30 PST 2013 by eliot
 
-AC_INIT([OpenSmalltalk VM])
+
+AC_INIT([opensmalltalk-vm],[],[vm-dev@lists.squeakfoundation.org],[OpenSmalltalk VM],[http://opensmalltalk.org/])
 
 SVNREV=`grep '\$Rev: ' ${srcdir}/../../../platforms/Cross/vm/sqSCCSVersion.h \
 	        | sed 's/.*$Rev: \([0-9][0-9]*\).*";/\1/'`
