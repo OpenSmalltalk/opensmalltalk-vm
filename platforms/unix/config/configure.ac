@@ -36,6 +36,8 @@ AC_INIT([opensmalltalk-vm],[],[vm-dev@lists.squeakfoundation.org],[OpenSmalltalk
 
 AC_CONFIG_SRCDIR([config.h.in])
 
+AC_USE_SYSTEM_EXTENSIONS
+
 SVNREV=`grep '\$Rev: ' ${srcdir}/../../../platforms/Cross/vm/sqSCCSVersion.h \
 	        | sed 's/.*$Rev: \([0-9][0-9]*\).*";/\1/'` \
 	        | head -n 1
@@ -249,8 +251,6 @@ INCLUDES="-I${blddir} -I${vmmcfg} -I${topdir}/platforms/unix/vm -I${topdir}/plat
 AC_SUBST(INCLUDES)
 
 # Checks for header files.
-
-AC_USE_SYSTEM_EXTENSIONS
 
 AC_NEED_SUNOS_H
 
