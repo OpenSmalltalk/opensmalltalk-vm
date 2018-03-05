@@ -195,6 +195,16 @@ AC_ARG_WITH(gnu-as,
   [GAS="$withval"],
   [GAS="unknown"])
 
+########################
+
+TARGET_ARCH="$TARGET_ARCH"
+
+# tpr - try to keep msse out of it for Pi CFLAGS="$CFLAGS_32 $CFLAGS -msse"
+CFLAGS="$CFLAGS_32 $CFLAGS"
+
+CPPFLAGS="$CPPFLAGS $TARGET_ARCH"
+
+
 AC_PROG_MAKE_SET
 AC_PROG_CC
 AC_PROG_CC_C99
@@ -212,13 +222,6 @@ if test "$GCC" = "yes"; then
   CPPFLAGS="$CPPFLAGS -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable"
 fi
 AC_SUBST(WFLAGS)
-
-TARGET_ARCH="$TARGET_ARCH"
-
-# tpr - try to keep msse out of it for Pi CFLAGS="$CFLAGS_32 $CFLAGS -msse"
-CFLAGS="$CFLAGS_32 $CFLAGS"
-
-CPPFLAGS="$CPPFLAGS $TARGET_ARTCH"
 
 
 AC_CHECK_PROG(LN, ln, ln)
