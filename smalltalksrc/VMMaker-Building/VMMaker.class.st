@@ -912,6 +912,11 @@ VMMaker class >> pluginsDirName [
 ]
 
 { #category : #accessing }
+VMMaker class >> rootDirectory [
+	^FileDirectory default directoryNamed: self sourceTree
+]
+
+{ #category : #accessing }
 VMMaker class >> sourceDirName [
 	^DirNames at: #sourceDir
 ]
@@ -1209,25 +1214,22 @@ VMMaker >> createCogitCodeGenerator [
 VMMaker >> crossPlatformDirectory [
 	"return the directory where we should find the cross-platform literal 
 	sources - <sq.h> etc"
-	| fd machDirNm |
-	fd := self platformRootDirectory.
-	(fd directoryExists: (machDirNm := 'Cross'))
-		ifFalse: ["The supposed directory for the actual cross-platform code  
-			does not exist."
-			^ self couldNotFindPlatformDirectoryFor: 'cross-platform '].
-	^ fd directoryNamed: machDirNm
+	| dir |
+	dir := self platformRootDirectory directoryNamed: 'Cross'.
+	dir exists ifFalse: "The supposed directory for the actual cross-platform code does not exist."
+		[^self couldNotFindPlatformDirectoryFor: 'cross-platform '].
+	^dir
 ]
 
 { #category : #'source directories' }
 VMMaker >> crossPlatformPluginsDirectory [
 	"return the directory where we should find the cross-platform plugin specific sources"
-
-	(self crossPlatformDirectory directoryExists: self class pluginsDirName)
-		ifFalse: ["The supposed directory for the plugins code does not 
-					exist. We need to raise a suitable exception, but cant 
-					think of one right now."
-					^self couldNotFindPlatformDirectoryFor: 'any plugins needing cross-platform'].
-	^self crossPlatformDirectory directoryNamed: self class pluginsDirName
+	| dir |
+	dir := self crossPlatformDirectory directoryNamed: self class pluginsDirName.
+	dir exists ifFalse: "The supposed directory for the plugins code does not exist.
+					  We need to raise a suitable exception, but can't think of one right now."
+		[^self couldNotFindPlatformDirectoryFor: 'any plugins needing cross-platform'].
+	^dir
 ]
 
 { #category : #'target directories' }
@@ -1255,17 +1257,6 @@ VMMaker >> doInlining [
 { #category : #exports }
 VMMaker >> export: exportList forExternalPlugin: aPlugin [
 "it may be useful on certain platforms to do something with the export list of external plugins, just as the internal plugins' exports get added to the VM list. Default is to do nothing though."
-]
-
-{ #category : #'plugin lists' }
-VMMaker >> externalFilesRequiredFor: plugin [
-	^plugin requiresCrossPlatformFiles or:[plugin requiresPlatformFiles]
-]
-
-{ #category : #'plugin lists' }
-VMMaker >> externalModuleNames [
-	"return the list of all the external plugins' moduleNames"
-	^Array streamContents:[:strm| self externalPluginsDo:[:pl| strm nextPut: pl moduleName ]]
 ]
 
 { #category : #'UI access' }
@@ -1567,37 +1558,9 @@ VMMaker >> initialize [
 	externalPlugins := SortedCollection new.
 	platformName := self class machinesDirName.
 	is64BitVM := false.
-	interpreterClassName := Interpreter name.
+	interpreterClassName := StackInterpreterPrimitives name.
 	optionsDictionary := Dictionary newFromPairs: {#BytesPerWord. 4}.
 	VMStructType voidStructTypeCache
-]
-
-{ #category : #initialize }
-VMMaker >> initializeAllExternal [
-	"add all the plugins to the external list and make sure the internal list is empty"
-
-	self initializeInternal: #() external: self availablePlugins 
-]
-
-{ #category : #initialize }
-VMMaker >> initializeAllExternalBut: arrayOfInternalPluginNames [
-	"add all the plugins to the external list except for those listed, which should be added to the internal list"
-
-	self initializeInternal: arrayOfInternalPluginNames external: (self availablePlugins copyWithoutAll: arrayOfInternalPluginNames )
-]
-
-{ #category : #initialize }
-VMMaker >> initializeAllInternal [
-	"add all the plugins to the internal list and make sure the external list is empty"
-
-	self initializeInternal: self availablePlugins  external: #()
-]
-
-{ #category : #initialize }
-VMMaker >> initializeAllInternalBut: arrayOfExternalPluginNames [
-	"add all the plugins to the internal list except for those listed, which should be added to the external list"
-
-	self initializeInternal: (self availablePlugins copyWithoutAll: arrayOfExternalPluginNames) external:  arrayOfExternalPluginNames
 ]
 
 { #category : #initialize }
@@ -1624,12 +1587,6 @@ VMMaker >> internal: arrayOfInternalPluginNames external: arrayOfExternalPluginN
 	externalPlugins := (allPlugins intersection: arrayOfExternalPluginNames) select: [:pl | self canSupportPlugin: pl ].
 	allPlugins := allPlugins copyWithoutAll: externalPlugins.
 	
-]
-
-{ #category : #'plugin lists' }
-VMMaker >> internalModuleNames [
-	"return the list of all the internal plugins' moduleNames"
-	^Array streamContents:[:strm| self internalPluginsDo:[:pl| strm nextPut: pl moduleName ]]
 ]
 
 { #category : #'UI access' }
@@ -1727,12 +1684,6 @@ VMMaker >> interpreterHeaderPath [
 VMMaker >> invalidClassName [
 	"This should raise a nice exception to a UI"
 	(VMMakerException new messageText: self class name, ' invalid interpreter class name: ', interpreterClassName) signal
-]
-
-{ #category : #initialize }
-VMMaker >> isFor32BitVM [
-"is my flag to make a 32bit pointer model VM?"
-	^is64BitVM not
 ]
 
 { #category : #initialize }
@@ -1936,13 +1887,11 @@ VMMaker >> platformDirectories [
 { #category : #'source directories' }
 VMMaker >> platformDirectory [
 	"return the directory where we should find the platform specific sources"
-	| fd platNm |
-	fd := self platformRootDirectory.
-	(fd directoryExists: (platNm := self platformName))
-		ifFalse: ["The supposed directory for the actual platform code  
-			does not exist."
-			^ self couldNotFindPlatformDirectoryFor: platNm].
-	^ fd directoryNamed: platNm
+	| dir |
+	dir := self platformRootDirectory directoryNamed: self platformName.
+	dir exists ifFalse: "The supposed directory for the actual platform code does not exist."
+		[^self couldNotFindPlatformDirectoryFor: self platformName].
+	^dir
 ]
 
 { #category : #'UI access' }
@@ -1962,32 +1911,29 @@ VMMaker >> platformPluginsDirectories [
 VMMaker >> platformPluginsDirectory [
 	"return the directory where we should find the platform plugin specific sources"
 
-	(self platformDirectory directoryExists: self class pluginsDirName)
-		ifFalse: ["The supposed directory for the plugins code does not 
-					exist. We need to raise a suitable exception, but cant 
-					think of one right now."
-					^self couldNotFindPlatformDirectoryFor: 'any plugins needing ', self platformName].
-	^self platformDirectory directoryNamed: self class pluginsDirName
+	| dir |
+	dir := self platformDirectory directoryNamed: self class pluginsDirName.
+	dir exists ifFalse: "The supposed directory for the plugins code does not exist.
+					   We need to raise a suitable exception, but can't think of one right now."
+		[^self couldNotFindPlatformDirectoryFor: 'any plugins needing ', self platformName].
+	^dir
 ]
 
 { #category : #'source directories' }
 VMMaker >> platformRootDirectory [
-	"return the directory where we should find all platform's sources"
-	(FileDirectory default
-			directoryExists: (platformRootDirName
-					ifNil: [self class platformsDirName]))
-		ifFalse: ["The supposed directory for the platforms code does not  
-			exist."
-			^ self couldNotFindDirectory: 'the platform code tree'].
-	^ FileDirectory default
-		directoryNamed: (platformRootDirName
-				ifNil: [self class platformsDirName])
+	"Answer the directory where we should find all platform's sources"
+	| dir |
+	dir := FileDirectory default directoryNamed: self platformRootDirectoryName.
+	dir exists ifFalse: "The supposed directory for the platforms code does not exist."
+		 [^self couldNotFindDirectory: 'the platform code tree'].
+	^dir
 ]
 
 { #category : #'source directories' }
 VMMaker >> platformRootDirectoryName [
 	"Answer the name of the directory where we should find all platform's sources"
-	^platformRootDirName
+	^platformRootDirName ifNil:
+		[self class rootDirectory fullNameFor: self class platformsDirName]
 ]
 
 { #category : #'source directories' }
@@ -2131,15 +2077,15 @@ VMMaker >> setPlatName: aString [
 { #category : #'target directories' }
 VMMaker >> sourceDirectory [
 	| fd |
-	fd := FileDirectory default directoryNamed: (sourceDirName
-		ifNil: [self class sourceDirName, self vmBitnessString]).
+	fd := FileDirectory default directoryNamed: self sourceDirectoryName.
 	fd assureExistence.
-	^ fd
+	^fd
 ]
 
 { #category : #'target directories' }
 VMMaker >> sourceDirectoryName [
-	^sourceDirName
+	^sourceDirName ifNil:
+		[self class rootDirectory fullNameFor: self class sourceDirName]
 ]
 
 { #category : #'target directories' }
@@ -2151,13 +2097,6 @@ VMMaker >> sourceDirectoryName: aString [
 		ifFalse: [FileDirectory on: aString]) assureExistence.
 	self changed: #sourceDirectory.
 	^true
-]
-
-{ #category : #'target directories' }
-VMMaker >> sourceFileNameFor: aVMClass [
-	"Answer the source file name for a VM class."
-
-	^aVMClass sourceFileName
 ]
 
 { #category : #'generate sources' }
@@ -2246,12 +2185,6 @@ VMMaker >> validatePlugin:	plName in: listOfPlugins [
 					^ self couldNotFindPlatformFilesFor: plugin]].
 
 	^plugin
-]
-
-{ #category : #'target directories' }
-VMMaker >> vmBitnessString [
-	"Return a string of 32 or 64 depending on the is64BitVM valuse"
-	^is64BitVM ifTrue:['64'] ifFalse:['32']
 ]
 
 { #category : #initialize }

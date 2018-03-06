@@ -462,7 +462,7 @@ VMMakerTool >> entryRowWithLabel: label balloonText: balloonText getFieldText: g
 		addMorph: ((PluggableTextMorph
 				on: self
 				text: getTextSelector
-				accept: setTextSelector) hideVScrollBarIndefinitely: true;
+				accept: setTextSelector) vScrollBarPolicy: #never;
 				 acceptOnCR: true)
 		fullFrame: (LayoutFrame
 				fractions: (0 @ 0 corner: 1 @ 1)
