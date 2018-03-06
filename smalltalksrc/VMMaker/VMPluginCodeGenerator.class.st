@@ -177,6 +177,7 @@ VMPluginCodeGenerator >> emitCHeaderOn: aStream [
 
 	#('<math.h>' '<stdio.h>' '<stdlib.h>' '<string.h>' '<time.h>') reverseDo:
 		[:hdr| self addHeaderFileFirst: hdr].
+	self addHeaderFileFirst: '"config.h"'. "Should always go first"
 
 	"Additional header files; include C library ones first."
 	self emitHeaderFiles: (headerFiles select: [:hdr| hdr includes: $<]) on: aStream.
