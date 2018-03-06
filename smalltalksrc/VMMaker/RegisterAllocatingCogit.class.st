@@ -862,7 +862,7 @@ RegisterAllocatingCogit >> genMustBeBooleanTrampolineFor: boolean called: trampo
 
 { #category : #'bytecode generators' }
 RegisterAllocatingCogit >> genPushReceiverBytecode [
-	^self ssPushDesc: self simSelf
+	^self ssPushDesc: self ssSelfDescriptor
 ]
 
 { #category : #'bytecode generators' }
