@@ -477,29 +477,31 @@ sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists) 
 }
 
 sqInt
-sqFileFdOpen(SQFile *sqFile, int fd, sqInt writeFlag)
+sqConnectToFileDescriptor(SQFile *sqFile, int fd, sqInt writeFlag)
 {
 	/*
 	 * Open the file with the supplied file descriptor in binary mode.
 	 *
-	 * writeFlag determines whether the file is read-only or writable.
+	 * writeFlag determines whether the file is read-only or writable
+	 * and must be compatible with the existing access.
 	 * sqFile is populated with the file information.
 	 * Smalltalk is reponsible for handling character encoding and 
 	 * line ends.
 	 */
-	FILE *file = fdopen(fd, writeFlag ? "wb" : "rb");
+	FILE *file = openFileDescriptor(fd, writeFlag ? "wb" : "rb");
 	if (!file)
 		return interpreterProxy->success(false);
-	return sqFileFileOpen(sqFile, file, writeFlag);
+	return sqConnectToFile(sqFile, file, writeFlag);
 }
 
 sqInt
-sqFileFileOpen(SQFile *sqFile, FILE *file, sqInt writeFlag)
+sqConnectToFile(SQFile *sqFile, FILE *file, sqInt writeFlag)
 {
 	/*
 	 * Populate the supplied SQFile structure with the supplied FILE.
 	 *
-	 * writeFlag indicates whether the file is read-only or writable.
+	 * writeFlag indicates whether the file is read-only or writable
+	 * and must be compatible with the existing access.
 	 */
 	setFile(sqFile, file);
 	setSize(sqFile, 0);
