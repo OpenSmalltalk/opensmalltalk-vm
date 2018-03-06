@@ -895,14 +895,14 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 			void *fp = (void *)(uap ? uap->uc_mcontext.mc_rbp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.mc_rsp: 0);
 # elif __OpenBSD__ && __i386__
-                        void *fp = (void *)(uap ? uap->sc_ebp: 0);
-                        void *sp = (void *)(uap ? uap->sc_esp: 0);
+			void *fp = (void *)(uap ? uap->sc_ebp: 0);
+			void *sp = (void *)(uap ? uap->sc_esp: 0);
 # elif __OpenBSD__ && __amd64__
 			void *fp = (void *)(uap ? uap->sc_rbp: 0);
 			void *sp = (void *)(uap ? uap->sc_rsp: 0);
 # elif __sun__ && __i386__
-      void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
-      void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);
+			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);
 # elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
 			void *fp = (void *)(uap ? uap->uc_mcontext.arm_fp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.arm_sp: 0);
