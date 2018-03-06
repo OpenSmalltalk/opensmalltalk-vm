@@ -11569,7 +11569,7 @@ StackToRegisterMappingCogit >> genPushNewArrayBytecode [
 StackToRegisterMappingCogit >> genPushReceiverBytecode [
 	self receiverIsInReceiverResultReg ifTrue:
 		[^self ssPushRegister: ReceiverResultReg].
-	^self ssPushDesc: self simSelf
+	^self ssPushDesc: self ssSelfDescriptor
 ]
 
 { #category : #'bytecode generator support' }
@@ -12569,6 +12569,7 @@ StackToRegisterMappingCogit >> initializeFixupAt: targetPC [
 	 These are the targets of backward branches.  A backward branch fixup's simStackPtr
 	 needs to be set when generating the code for the bytecode at the targetPC.
 	 Initially a fixup's target is just a flag.  Later on it is replaced with a proper instruction."
+	<inline: true>
 	| fixup |
 	fixup := self fixupAt: targetPC.
 	self initializeFixup: fixup
@@ -13898,6 +13899,13 @@ StackToRegisterMappingCogit >> ssPushRegister: reg [
 ]
 
 { #category : #'simulation stack' }
+StackToRegisterMappingCogit >> ssSelfDescriptor [
+	<returnTypeC: #SimStackEntry>
+	<inline: true>
+	^simStack at: 0
+]
+
+{ #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssStoreAndReplacePop: popBoolean toReg: reg [
 	"In addition to ssStorePop:toReg:, if this is a store and not
 	a popInto I change the simulated stack to use the register 
@@ -13944,6 +13952,7 @@ StackToRegisterMappingCogit >> ssTop [
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssTopDescriptor [
 	<returnTypeC: #SimStackEntry>
+	<inline: true>
 	^simStack at: simStackPtr
 ]
 

@@ -15973,6 +15973,7 @@ StackInterpreter >> maybeSelectorOfMethod: methodObj [
 	 into the VM, but it is needed for adequate crash debugging at Cadence.
 	 With full blocks as of 9/2016 the last literal of a CompiledBlock is a back pointer
 	 to the enclosing block or compiled method."
+	<api>
 	| ultimateLiteral penultimateLiteral maybeSelector |
 	self assert: (objectMemory isOopCompiledMethod: methodObj).
 	ultimateLiteral := self ultimateLiteralOf: methodObj.
