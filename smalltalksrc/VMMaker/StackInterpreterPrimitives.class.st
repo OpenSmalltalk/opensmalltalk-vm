@@ -1079,7 +1079,7 @@ StackInterpreterPrimitives >> primitiveSignalAtMilliseconds [
 	 the given tick value. A tick value of zero turns off timer interrupts."
 	| msecsObj msecs deltaMsecs sema |
 	<var: #msecs type: #usqInt>
-	<var: #deltaMsecs type: #usqLong>
+	<var: #deltaMsecs type: #sqLong>
 	msecsObj := self stackTop.
 	sema := self stackValue: 1.
 	msecs := self positive32BitValueOf: msecsObj.
@@ -1542,7 +1542,7 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		62	compiled code compactions since startup (read-only; Cog only; otherwise nil)
 		63	total milliseconds in compiled code compactions since startup (read-only; Cog only; otherwise nil)
 		64	the number of methods that currently have jitted machine-code
-		65	whether the VM supports a certain feature, MULTIPLE_BYTECODE_SETS is bit 0, IMMTABILITY is bit 1
+		65	whether the VM supports a certain feature, MULTIPLE_BYTECODE_SETS is bit 0, IMMUTABILITY is bit 1
 		66	the byte size of a stack page
 		67	the max allowed size of old space (Spur only; nil otherwise; 0 implies no limit except that of the underlying platform)
 		68	the average number of live stack pages when scanned by GC (at scavenge/gc/become et al) (read-write)
