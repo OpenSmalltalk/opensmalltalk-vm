@@ -4339,7 +4339,7 @@ CogX64Compiler >> stop [
 { #category : #'generate machine code' }
 CogX64Compiler >> stopsFrom: startAddr to: endAddr [
 	self
-		cCode: [self self me: startAddr ms: self stop et: endAddr - startAddr + 1]
+		cCode: [self me: startAddr ms: self stop et: endAddr - startAddr + 1]
 		inSmalltalk:
 			[| alignedEnd alignedStart stops |
 			stops := self stop << 8 + self stop.
