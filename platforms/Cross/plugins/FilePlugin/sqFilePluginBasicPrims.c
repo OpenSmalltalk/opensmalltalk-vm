@@ -491,11 +491,11 @@ sqConnectToFileDescriptor(SQFile *sqFile, int fd, sqInt writeFlag)
 	FILE *file = openFileDescriptor(fd, writeFlag ? "wb" : "rb");
 	if (!file)
 		return interpreterProxy->success(false);
-	return sqConnectToFile(sqFile, file, writeFlag);
+	return sqConnectToFile(sqFile, (void *)file, writeFlag);
 }
 
 sqInt
-sqConnectToFile(SQFile *sqFile, FILE *file, sqInt writeFlag)
+sqConnectToFile(SQFile *sqFile, void *file, sqInt writeFlag)
 {
 	/*
 	 * Populate the supplied SQFile structure with the supplied FILE.

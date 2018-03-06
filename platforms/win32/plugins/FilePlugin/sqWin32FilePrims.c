@@ -262,14 +262,14 @@ sqConnectToFileDescriptor(SQFile *sqFile, int fd, sqInt writeFlag)
 	 * Smalltalk is reponsible for handling character encoding and 
 	 * line ends.
 	 */
-	FILE *file = _fdopen(fd, writeFlag ? "wb" : "rb");
+	HANDLE file = _fdopen(fd, writeFlag ? "wb" : "rb");
 	if (!file)
 		return interpreterProxy->success(false);
 	return sqConnectToFile(sqFile, file, writeFlag);
 }
 
 sqInt
-sqConnectToFile(SQFile *sqFile, FILE *file, sqInt writeFlag)
+sqConnectToFile(SQFile *sqFile, void *file, sqInt writeFlag)
 {
 	/*
 	 * Populate the supplied SQFile structure with the supplied FILE.
@@ -277,10 +277,11 @@ sqConnectToFile(SQFile *sqFile, FILE *file, sqInt writeFlag)
 	 * writeFlag indicates whether the file is read-only or writable
 	 * and must be compatible with the existing access.
 	 */
-	setFile(sqFile, file);
-	setSize(sqFile, 0);
+    	sqFile->file = (HANDLE)file;
+	AddHandleToTable(win32Files, file);
+	/* setSize(sqFile, 0); */
 	sqFile->sessionID = thisSession;
-	sqFile->lastOp = UNCOMMITTED;
+	sqFile->lastOp = 0; /* Unused on Win32 */
 	sqFile->writable = writeFlag;
 	return 1;
 }

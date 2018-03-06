@@ -56,7 +56,7 @@ sqInt   sqFileShutdown(void);
 sqInt   sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag);
 sqInt   sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists);
 sqInt   sqConnectToFileDescriptor(SQFile *f, int fd, sqInt writeFlag);
-sqInt   sqConnectToFile(SQFile *f, FILE *inFile, sqInt writeFlag);
+sqInt   sqConnectToFile(SQFile *f, void *file, sqInt writeFlag);
 size_t  sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex);
 sqInt   sqFileRenameOldSizeNewSize(char *sqOldName, sqInt sqOldNameSize, char *sqNewName, sqInt sqNewNameSize);
 sqInt   sqFileSetPosition(SQFile *f, squeakFileOffsetType position);
