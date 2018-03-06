@@ -170,19 +170,21 @@ VMPluginCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertion
 
 { #category : #'C code generator' }
 VMPluginCodeGenerator >> emitCHeaderOn: aStream [
-	"Write a C file header onto the given stream."
+	"Write a C file header onto the given stream, adding include files and some basic definitions."
+	| standardHeaders |
+	aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: pluginClass); cr; cr.
 
-	aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: pluginClass).
-	aStream cr; cr.
+	"config.h should always go first because config.h properly defines flags.
+	 One of those is _GNU_SOURCE, as explained in https://www.gnu.org/software/autoconf/manual/autoconf.html#Posix-Variants,
+	 where the Autoconf macro AC_USE_SYSTEM_EXTENSIONS makes sure this is defined."
+	standardHeaders := #('"config.h"' '<math.h>' '<stdio.h>' '<stdlib.h>' '<string.h>' '<time.h>').
+	self emitHeaderFiles: standardHeaders on: aStream.
 
-	#('<math.h>' '<stdio.h>' '<stdlib.h>' '<string.h>' '<time.h>') reverseDo:
-		[:hdr| self addHeaderFileFirst: hdr].
-	self addHeaderFileFirst: '"config.h"'. "Should always go first"
-
+	headerFiles := headerFiles copyWithoutAll: standardHeaders.
 	"Additional header files; include C library ones first."
 	self emitHeaderFiles: (headerFiles select: [:hdr| hdr includes: $<]) on: aStream.
 
-	aStream cr; nextPutAll:'/* Default EXPORT macro that does nothing (see comment in sq.h): */
+	aStream cr; nextPutAll: '/* Default EXPORT macro that does nothing (see comment in sq.h): */
 #define EXPORT(returnType) returnType
 
 /* Do not include the entire sq.h file but just those parts needed. */
