@@ -57,7 +57,7 @@ static char __buildInfo[] = "FilePlugin * VMMaker.oscog-akg.2341 uuid: d0fa56c5-
 /*** Function Prototypes ***/
 static sqInt asciiDirectoryDelimiter(void);
 EXPORT(sqInt) connectToFdwrite(int fd, sqInt writeFlag);
-EXPORT(sqInt) connectToFilewrite(FILE *cfile, sqInt writeFlag);
+EXPORT(sqInt) connectToFilewrite(void *cfile, sqInt writeFlag);
 EXPORT(sqInt) fileOpenNamesizewritesecure(char *nameIndex, sqInt nameSize, sqInt writeFlag, sqInt secureFlag);
 EXPORT(sqInt) fileOpenNewNamesizesecure(char *nameIndex, sqInt nameSize, sqInt secureFlag);
 extern usqIntptr_t fileRecordSize(void);
@@ -70,6 +70,7 @@ static sqInt makeDirEntryNamesizecreateDatemodDateisDirfileSize(char *entryName,
 static sqInt makeDirEntryNamesizecreateDatemodDateisDirfileSizeposixPermissionsisSymlink(char *entryName, sqInt entryNameSize, sqInt createDate, sqInt modifiedDate, sqInt dirFlag, squeakFileOffsetType fileSize, sqInt posixPermissions, sqInt symlinkFlag);
 #endif /* PharoVM */
 EXPORT(sqInt) moduleUnloaded(char *aModuleName);
+static void * pointerFrom(sqInt pointerByteArray);
 EXPORT(sqInt) primitiveConnectToFile(void);
 EXPORT(sqInt) primitiveConnectToFileDescriptor(void);
 EXPORT(sqInt) primitiveDirectoryCreate(void);
@@ -106,6 +107,7 @@ EXPORT(sqInt) shutdownModule(void);
 /*** Variables ***/
 
 #if !defined(SQUEAK_BUILTIN_PLUGIN)
+static void * (*arrayValueOf)(sqInt oop);
 static sqInt (*booleanValueOf)(sqInt obj);
 static sqInt (*byteSizeOf)(sqInt oop);
 static sqInt (*characterObjectOf)(sqInt characterCode);
@@ -122,6 +124,7 @@ static sqInt (*instantiateClassindexableSize)(sqInt classPointer, sqInt size);
 static sqInt (*integerObjectOf)(sqInt value);
 static sqInt (*integerValueOf)(sqInt oop);
 static void * (*ioLoadFunctionFrom)(char *functionName, char *moduleName);
+static sqInt (*isKindOf)(sqInt oop, char *aString);
 static sqInt (*isBytes)(sqInt oop);
 static sqInt (*isIntegerObject)(sqInt objectPointer);
 static sqInt (*isWords)(sqInt oop);
@@ -141,6 +144,7 @@ static sqInt (*primitiveFailureCode)(void);
 static sqInt (*pushBool)(sqInt trueOrFalse);
 static sqInt (*pushRemappableOop)(sqInt oop);
 static sqInt (*slotSizeOf)(sqInt oop);
+static sqInt (*stSizeOf)(sqInt oop);
 static sqInt (*stackIntegerValue)(sqInt offset);
 static sqInt (*stackValue)(sqInt offset);
 static sqInt (*storePointerofObjectwithValue)(sqInt index, sqInt oop, sqInt valuePointer);
@@ -148,6 +152,7 @@ static void (*tenuringIncrementalGC)(void);
 static sqInt (*topRemappableOop)(void);
 static sqInt (*trueObject)(void);
 #else /* !defined(SQUEAK_BUILTIN_PLUGIN) */
+extern void * arrayValueOf(sqInt oop);
 extern sqInt booleanValueOf(sqInt obj);
 extern sqInt byteSizeOf(sqInt oop);
 #if VM_PROXY_MAJOR > 1 || (VM_PROXY_MAJOR == 1 && VM_PROXY_MINOR >= 13)
@@ -168,6 +173,7 @@ extern sqInt instantiateClassindexableSize(sqInt classPointer, sqInt size);
 extern sqInt integerObjectOf(sqInt value);
 extern sqInt integerValueOf(sqInt oop);
 extern void * ioLoadFunctionFrom(char *functionName, char *moduleName);
+extern sqInt isKindOf(sqInt oop, char *aString);
 extern sqInt isBytes(sqInt oop);
 #if !defined(isIntegerObject)
 extern sqInt isIntegerObject(sqInt objectPointer);
@@ -189,6 +195,7 @@ extern sqInt primitiveFailureCode(void);
 extern sqInt pushBool(sqInt trueOrFalse);
 extern sqInt pushRemappableOop(sqInt oop);
 extern sqInt slotSizeOf(sqInt oop);
+extern sqInt stSizeOf(sqInt oop);
 extern sqInt stackIntegerValue(sqInt offset);
 extern sqInt stackValue(sqInt offset);
 extern sqInt storePointerofObjectwithValue(sqInt index, sqInt oop, sqInt valuePointer);
@@ -259,7 +266,7 @@ connectToFdwrite(int fd, sqInt writeFlag)
 
 	/* FilePlugin>>#connectToFile:write: */
 EXPORT(sqInt)
-connectToFilewrite(FILE *cfile, sqInt writeFlag)
+connectToFilewrite(void *cfile, sqInt writeFlag)
 {
     SQFile *file;
     sqInt fileOop;
@@ -567,6 +574,30 @@ moduleUnloaded(char *aModuleName)
 }
 
 
+/*	Answer the machine address contained in anExternalAddressOop. */
+
+	/* FilePlugin>>#pointerFrom: */
+static void *
+pointerFrom(sqInt pointerByteArray)
+{
+    union {void *address; unsigned char bytes[sizeof(void *)];} addressUnion;
+    sqInt idx;
+    unsigned char *ptr;
+
+	if (!((isKindOf(pointerByteArray, "ByteArray"))
+		 && ((stSizeOf(pointerByteArray)) == (sizeof(void *))))) {
+		return null;
+	}
+	ptr = arrayValueOf(pointerByteArray);
+	idx = 0;
+	while (idx < (sizeof(void *))) {
+		addressUnion.bytes[idx] = ptr[idx];
+		idx += 1;
+	}
+	return addressUnion.address;
+}
+
+
 /*	Connect to the file with the supplied FILE* and writeFlag.
 	FILE* must be supplied in a byte object (ByteArray) with the platform
 	address size.
@@ -577,22 +608,18 @@ moduleUnloaded(char *aModuleName)
 EXPORT(sqInt)
 primitiveConnectToFile(void)
 {
-    FILE*  cfile;
+    void*  cfile;
     sqInt cfileOop;
     sqInt filePointer;
     sqInt writeFlag;
 
-	filePointer = 0;
 	writeFlag = booleanValueOf(stackValue(0));
 	cfileOop = stackValue(1);
-	if (!((isBytes(cfileOop))
-		 && ((byteSizeOf(cfileOop)) == (sizeof(FILE*))))) {
+	cfile = pointerFrom(cfileOop);
+	if (!(cfile)) {
 		return primitiveFailFor(PrimErrBadArgument);
 	}
-	cfile = firstIndexableField(cfileOop);
-	if (!(failed())) {
-		filePointer = connectToFilewrite(cfile, writeFlag);
-	}
+	filePointer = connectToFilewrite(cfile, writeFlag);
 	if (!(failed())) {
 		return popthenPush(3, filePointer);
 	}
@@ -1669,6 +1696,7 @@ setInterpreter(struct VirtualMachine*anInterpreter)
 	if (ok) {
 		
 #if !defined(SQUEAK_BUILTIN_PLUGIN)
+		arrayValueOf = interpreterProxy->arrayValueOf;
 		booleanValueOf = interpreterProxy->booleanValueOf;
 		byteSizeOf = interpreterProxy->byteSizeOf;
 #if VM_PROXY_MAJOR > 1 || (VM_PROXY_MAJOR == 1 && VM_PROXY_MINOR >= 13)
@@ -1691,6 +1719,7 @@ setInterpreter(struct VirtualMachine*anInterpreter)
 		integerObjectOf = interpreterProxy->integerObjectOf;
 		integerValueOf = interpreterProxy->integerValueOf;
 		ioLoadFunctionFrom = interpreterProxy->ioLoadFunctionFrom;
+		isKindOf = interpreterProxy->isKindOf;
 		isBytes = interpreterProxy->isBytes;
 		isIntegerObject = interpreterProxy->isIntegerObject;
 		isWords = interpreterProxy->isWords;
@@ -1710,6 +1739,7 @@ setInterpreter(struct VirtualMachine*anInterpreter)
 		pushBool = interpreterProxy->pushBool;
 		pushRemappableOop = interpreterProxy->pushRemappableOop;
 		slotSizeOf = interpreterProxy->slotSizeOf;
+		stSizeOf = interpreterProxy->stSizeOf;
 		stackIntegerValue = interpreterProxy->stackIntegerValue;
 		stackValue = interpreterProxy->stackValue;
 		storePointerofObjectwithValue = interpreterProxy->storePointerofObjectwithValue;
