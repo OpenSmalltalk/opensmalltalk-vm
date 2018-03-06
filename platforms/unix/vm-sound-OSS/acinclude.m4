@@ -10,5 +10,4 @@ if test "$with_vm_sound_OSS" = "no"; then
 else
 	AC_MSG_CHECKING([for Open Sound System])
 	AC_CHECK_HEADERS([soundcard.h sys/soundcard.h],,AC_PLUGIN_DISABLE)
-	AC_PLUGIN_SEARCH_LIBS([OSS_init],[ossaudio])
 fi
