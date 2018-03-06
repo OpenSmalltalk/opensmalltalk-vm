@@ -135,6 +135,11 @@ CogSSBytecodeFixup >> isNonMergeFixupOrNotAFixup [
 ]
 
 { #category : #testing }
+CogSSBytecodeFixup >> isTargetOfBackwardBranch [
+	^isTargetOfBackwardBranch
+]
+
+{ #category : #testing }
 CogSSBytecodeFixup >> needsFixup [
 	<inline: true>
 	^ targetInstruction asUnsignedInteger between: NeedsNonMergeFixupFlag and: NeedsMergeFixupFlag
