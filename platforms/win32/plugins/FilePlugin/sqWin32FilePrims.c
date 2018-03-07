@@ -277,7 +277,7 @@ sqConnectToFile(SQFile *sqFile, void *file, sqInt writeFlag)
 	 * writeFlag indicates whether the file is read-only or writable
 	 * and must be compatible with the existing access.
 	 */
-    	sqFile->file = (HANDLE)file;
+	sqFile->file = (HANDLE)file;
 	AddHandleToTable(win32Files, file);
 	/* setSize(sqFile, 0); */
 	sqFile->sessionID = thisSession;
