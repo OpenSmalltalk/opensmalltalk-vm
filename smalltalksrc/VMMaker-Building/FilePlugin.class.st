@@ -76,15 +76,10 @@ FilePlugin >> asciiDirectoryDelimiter [
 ]
 
 { #category : #private }
-FilePlugin >> cfileRecordSize [
-	"Return the size of a stdio FILE* handle"
-	<inline: #always>
-	^self sizeof: #'FILE*'
-]
-
-{ #category : #private }
-FilePlugin >> fileOpenFd: fd write: writeFlag [
-	"Open the fd as file. Answer the file oop."
+FilePlugin >> connectToFd: fd write: writeFlag [
+	"Connect to the supplied file descriptor. Answer the file oop.
+	On POSIX platforms this translates to fdopen().
+	writeFlag must be compatible with the existing file access."
 	| file fileOop |
 	<var: #file type: 'SQFile *'>
 	<var: 'fd' type: 'int'>
@@ -92,21 +87,22 @@ FilePlugin >> fileOpenFd: fd write: writeFlag [
 	fileOop := interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: self fileRecordSize.
 	file := self fileValueOf: fileOop.
 	interpreterProxy failed
-		ifFalse: [self cCode: 'sqFileFdOpen(file, fd, writeFlag)' inSmalltalk: [file]].
+		ifFalse: [self cCode: 'sqConnectToFileDescriptor(file, fd, writeFlag)' inSmalltalk: [file]].
 	^ fileOop
 ]
 
 { #category : #private }
-FilePlugin >> fileOpenFile: cfile write: writeFlag [
-	"Open the FILE* as file. Answer the file oop."
+FilePlugin >> connectToFile: cfile write: writeFlag [
+	"Open the FILE* as file. Answer the file oop.
+	writeFlag must be compatible with the existing file access."
 	| file fileOop |
-	<var: #file type: 'SQFile *'>
-	<var: 'cfile' type: 'FILE *'>
+	<var: 'file' type: 'SQFile *'>
+	<var: 'cfile' type: 'void *'>
 	<export: true>
 	fileOop := interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: self fileRecordSize.
 	file := self fileValueOf: fileOop.
 	interpreterProxy failed
-		ifFalse: [self cCode: 'sqFileFileOpen(file, cfile, writeFlag)' inSmalltalk: [file]].
+		ifFalse: [self cCode: 'sqConnectToFile(file, cfile, writeFlag)' inSmalltalk: [file]].
 	^ fileOop
 ]
 
@@ -294,6 +290,68 @@ FilePlugin >> moduleUnloaded: aModuleName [
 		"The security plugin just shut down. How odd."
 		sCCPfn := sCDPfn := sCGFTfn := sCLPfn := sCSFTfn := sDFAfn := sCDFfn := sCOFfn := sCRFfn := sHFAfn := 0.
 	].
+]
+
+{ #category : #private }
+FilePlugin >> pointerFrom: pointerByteArray [
+	"Answer the machine address contained in anExternalAddressOop."
+
+	| ptr addressUnion idx |
+	<returnTypeC: 'void *'>
+	<var: 'ptr' type: 'unsigned char *'>
+	<var: 'addressUnion' type: 'union {void *address; unsigned char bytes[sizeof(void *)];}'>
+	((interpreterProxy is: pointerByteArray KindOf: 'ByteArray') and:
+		[(interpreterProxy stSizeOf: pointerByteArray) = self sizeOfPointer])
+		ifFalse: [^ nil].
+	ptr := interpreterProxy arrayValueOf: pointerByteArray.
+	idx := 0.
+	[idx < self sizeOfPointer] whileTrue:
+		[self cCode: 'addressUnion.bytes[idx] = ptr[idx]'.
+		idx := idx + 1].
+	^ self cCode: 'addressUnion.address' inSmalltalk: [addressUnion]
+
+]
+
+{ #category : #'file primitives' }
+FilePlugin >> primitiveConnectToFile [
+	"Connect to the file with the supplied FILE* and writeFlag.
+	FILE* must be supplied in a byte object (ByteArray) with the platform address size.
+	writeFlag must be a boolean and compatible with the existing file access."
+	| writeFlag cfileOop cfile filePointer |
+	<var: 'cfile' type: 'void* '>
+	<export: true>
+	writeFlag := interpreterProxy
+				booleanValueOf: (interpreterProxy stackValue: 0).
+	cfileOop := interpreterProxy stackValue: 1.
+	cfile := self pointerFrom: cfileOop.
+	cfile ifNil:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	filePointer := self connectToFile: cfile write: writeFlag.
+	interpreterProxy failed ifFalse: 
+		[^interpreterProxy pop: 3 "rcvr, name, writeFlag"
+							thenPush: filePointer].
+	^interpreterProxy primitiveFail.
+]
+
+{ #category : #'file primitives' }
+FilePlugin >> primitiveConnectToFileDescriptor [
+	"Connect to the existing file identified by fileDescriptor.
+	fileDescriptor must be an integer.
+	writeFlag is aboolean indicating whether to open in read or write mode and must be compatible with the existing file access."
+	| writeFlag fdPointer fd filePointer |
+	<var: 'fd' type: 'int'>
+	<export: true>
+	writeFlag := interpreterProxy
+				booleanValueOf: (interpreterProxy stackValue: 0).
+	fdPointer := interpreterProxy stackValue: 1.
+	(interpreterProxy isIntegerObject: fdPointer)
+		ifFalse: [^ interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	fd := interpreterProxy integerValueOf: fdPointer.
+	filePointer := self connectToFd: fd write: writeFlag.
+	interpreterProxy failed
+		ifFalse: [^interpreterProxy pop: 3 "rcvr, name, writeFlag"
+			thenPush: filePointer].
+	^interpreterProxy primitiveFail.
 ]
 
 { #category : #'directory primitives' }
@@ -718,50 +776,6 @@ FilePlugin >> primitiveFileOpenNew [
 ]
 
 { #category : #'file primitives' }
-FilePlugin >> primitiveFileOpenUseFile [
-	"Open the file with the supplied FILE* and writeFlag.
-	FILE* must be supplied in a byte object (ByteArray) with the platform address size.
-	writeFlag must be a boolean."
-	| writeFlag cfileOop cfile filePointer |
-	<var: 'cfile' type: 'FILE* '>
-	<export: true>
-	writeFlag := interpreterProxy
-				booleanValueOf: (interpreterProxy stackValue: 0).
-	cfileOop := interpreterProxy stackValue: 1.
-	(((interpreterProxy isBytes: cfileOop) and:
-		 [(interpreterProxy byteSizeOf: cfileOop) = self cfileRecordSize]))
-			ifFalse: [^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	cfile := interpreterProxy firstIndexableField: cfileOop.
-	interpreterProxy failed ifFalse: 
-		[filePointer := self fileOpenFile: cfile write: writeFlag].
-	interpreterProxy failed ifFalse: 
-		[^interpreterProxy pop: 3 "rcvr, name, writeFlag"
-							thenPush: filePointer].
-	^interpreterProxy primitiveFail.
-]
-
-{ #category : #'file primitives' }
-FilePlugin >> primitiveFileOpenUseFileDescriptor [
-	"Open the file with the supplied file descriptor and writeFlag.
-	fileDescriptor must be an integer.
-	writeFlag must be a boolean."
-	| writeFlag fdPointer fd filePointer |
-	<var: 'fd' type: 'int'>
-	<export: true>
-	writeFlag := interpreterProxy
-				booleanValueOf: (interpreterProxy stackValue: 0).
-	fdPointer := interpreterProxy stackValue: 1.
-	(interpreterProxy isIntegerObject: fdPointer)
-		ifFalse: [^ interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	fd := interpreterProxy integerValueOf: fdPointer.
-	filePointer := self fileOpenFd: fd write: writeFlag.
-	interpreterProxy failed
-		ifFalse: [^interpreterProxy pop: 3 "rcvr, name, writeFlag"
-			thenPush: filePointer].
-	^interpreterProxy primitiveFail.
-]
-
-{ #category : #'file primitives' }
 FilePlugin >> primitiveFileRead [
 	<export: true>
 	self cppIf: SPURVM
@@ -1048,4 +1062,11 @@ FilePlugin >> setMacFile: fileName Type: typeString AndCreator: creatorString [
 FilePlugin >> shutdownModule [
 	<export: true>
 	^self cCode: 'sqFileShutdown()' inSmalltalk:[true]
+]
+
+{ #category : #private }
+FilePlugin >> sizeOfPointer [
+	"Return the size of a pointer (address size)"
+	<inline: #always>
+	^self sizeof: #'void *'
 ]
