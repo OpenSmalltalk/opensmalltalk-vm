@@ -250,36 +250,41 @@ sqInt sqFileOpenNew(SQFile *f, char* fileNameIndex, sqInt fileNameSize, sqInt* e
   return 1;
 }
 
-#if PharoVM
 sqInt
-sqFileFdOpen(SQFile *sqFile, int fd, sqInt writeFlag)
+sqConnectToFileDescriptor(SQFile *sqFile, int fd, sqInt writeFlag)
 {
 	/*
 	 * Open the file with the supplied file descriptor in binary mode.
 	 *
-	 * writeFlag determines whether the file is read-only or writable.
+	 * writeFlag determines whether the file is read-only or writable
+	 * and must be compatible with the existing access.
 	 * sqFile is populated with the file information.
 	 * Smalltalk is reponsible for handling character encoding and 
 	 * line ends.
-	 *
-	 * Not supported on Windows
 	 */
-	return interpreterProxy->success(false);
+	HANDLE file = _fdopen(fd, writeFlag ? "wb" : "rb");
+	if (!file)
+		return interpreterProxy->success(false);
+	return sqConnectToFile(sqFile, file, writeFlag);
 }
 
 sqInt
-sqFileFileOpen(SQFile *sqFile, FILE *file, sqInt writeFlag)
+sqConnectToFile(SQFile *sqFile, void *file, sqInt writeFlag)
 {
 	/*
 	 * Populate the supplied SQFile structure with the supplied FILE.
 	 *
-	 * writeFlag indicates whether the file is read-only or writable.
-	 *
-	 * Not supported on Windows
+	 * writeFlag indicates whether the file is read-only or writable
+	 * and must be compatible with the existing access.
 	 */
-	return interpreterProxy->success(false);
+    	sqFile->file = (HANDLE)file;
+	AddHandleToTable(win32Files, file);
+	/* setSize(sqFile, 0); */
+	sqFile->sessionID = thisSession;
+	sqFile->lastOp = 0; /* Unused on Win32 */
+	sqFile->writable = writeFlag;
+	return 1;
 }
-#endif
 
 
 
