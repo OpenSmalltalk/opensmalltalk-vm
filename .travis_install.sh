@@ -17,24 +17,11 @@ if [[ "${ARCH}" = "linux64x64" ]]; then
             uuid-dev
 elif [[ "${ARCH}" = "linux32x86" ]]; then
     sudo apt-get remove -q -y gvfs-daemons
-    # the more renitent ones
-    sudo apt-get install -yq --force-yes \
-            libglib2.0-0:i386 \
-            gir1.2-freedesktop:i386 \
-            gir1.2-glib-2.0:i386 \
-            gir1.2-pango-1.0:i386 \
-            libgirepository-1.0-1:i386 \
-            libpango1.0-dev:i386 \
-            libpulse-dev:i386
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-yes \
             devscripts \
-            libc6-dev:i386 \
-            libasound2:i386 \
-            libasound2-dev:i386 \
-            libssl-dev:i386 \
-            libssl0.9.8:i386 \
-            libpng-dev:i386 \
-            libfreetype6-dev:i386 \
+            gcc-multilib \
+            uuid-dev:i386 \
+            libcurl3-dev:i386 \
             libx11-dev:i386 \
             libsm-dev:i386 \
             libice-dev:i386 \
@@ -43,9 +30,70 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             libxext-dev:i386 \
             libglapi-mesa:i386 \
             libaudio-dev:i386 \
-            gcc-multilib \
-            uuid-dev:i386 \
-            libcurl3-dev:i386
+            libasound2:i386 \
+            libasound2-dev:i386 \
+            gir1.2-freedesktop:i386 \
+            gir1.2-glib-2.0:i386 \
+            gir1.2-pango-1.0:i386 \
+            libasan3:i386 \
+            libatomic1:i386 \
+            libblkid1:i386 \
+            libc6-dev:i386 \
+            libcairo-gobject2:i386 \
+            libcairo-script-interpreter2:i386 \
+            libcairo2:i386 \
+            libcairo2-dev:i386 \
+            libcilkrts5:i386 \
+            libdatrie1:i386 \
+            libexpat1-dev:i386 \
+            libfontconfig1:i386 \
+            libfontconfig1-dev:i386 \
+            libfreetype6-dev:i386 \
+            libgcc-6-dev:i386 \
+            libgirepository-1.0-1:i386 \
+            libglib2.0-0:i386 \
+            libglib2.0-dev:i386 \
+            libgomp1:i386 \
+            libgraphite2-3:i386 \
+            libgraphite2-dev:i386 \
+            libharfbuzz-dev:i386 \
+            libharfbuzz-gobject0:i386 \
+            libharfbuzz-icu0:i386 \
+            libharfbuzz0b:i386 \
+            libicu-dev:i386 \
+            libicu57:i386 \
+            libitm1:i386 \
+            liblzo2-2:i386 \
+            libmount1:i386 \
+            libmpx2:i386 \
+            libpango-1.0-0:i386 \
+            libpangocairo-1.0-0:i386 \
+            libpangoft2-1.0-0:i386 \
+            libpangoxft-1.0-0:i386 \
+            libpulse-dev:i386 \
+            libpcre16-3:i386 \
+            libpcre3:i386 \
+            libpcre3-dev:i386 \
+            libpcre32-3:i386 \
+            libpcrecpp0v5:i386 \
+            libpixman-1-0:i386 \
+            libpixman-1-dev:i386 \
+            libpng-dev:i386 \
+            libpng-tools \
+            libquadmath0:i386 \
+            libselinux1:i386 \
+            libstdc++-6-dev:i386 \
+            libthai0:i386 \
+            libubsan0:i386 \
+            libxcb-shm0:i386 \
+            libxcb-shm0-dev:i386 \
+            libxft-dev:i386 \
+            libxft2:i386 \
+            libxrender-dev:i386 \
+            linux-libc-dev:i386 \
+            libssl-dev:i386 \
+            libssl0.9.8:i386 \
+            zlib1g-dev:i386
 fi
 
 [[ "${ARCH}" != "linux32ARMv6" ]] && exit 0
