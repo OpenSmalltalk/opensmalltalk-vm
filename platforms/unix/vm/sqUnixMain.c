@@ -59,7 +59,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <fcntl.h>
-#if !defined(NOEXECINFO)
+#if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 # include <execinfo.h>
 # define BACKTRACE_DEPTH 64
 #endif
@@ -837,7 +837,7 @@ static void *printRegisterState(ucontext_t *uap);
 static void
 reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 {
-#if !defined(NOEXECINFO)
+#if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 	void *addrs[BACKTRACE_DEPTH];
 	void *pc;
 	int depth;
@@ -859,7 +859,7 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 		return;
 #endif
 
-#if !defined(NOEXECINFO)
+#if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 	printf("C stack backtrace & registers:\n");
 	if (uap) {
 		addrs[0] = printRegisterState(uap);

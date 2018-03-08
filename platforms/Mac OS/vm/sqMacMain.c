@@ -104,7 +104,7 @@
 #if !defined(PATH_MAX)
 # include <sys/syslimits.h>
 #endif
-#if !defined(NOEXECINFO)
+#if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 # include <execinfo.h>
 # define BACKTRACE_DEPTH 64
 #endif
@@ -165,7 +165,7 @@ static void *printRegisterState(ucontext_t *uap);
 static void
 reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 {
-#if !defined(NOEXECINFO)
+#if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 	void *addrs[BACKTRACE_DEPTH+1];
 	int depth;
 #endif
@@ -175,7 +175,7 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 	printf("\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
 	printf("%s\n%s\n\n", GetAttributeString(0), getVersionInfo(1));
 
-#if !defined(NOEXECINFO)
+#if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 	printf("C stack backtrace & registers:\n");
 	if (uap) {
 		addrs[0] = printRegisterState(uap);
