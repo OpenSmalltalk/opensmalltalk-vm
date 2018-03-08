@@ -304,6 +304,7 @@ AX_PTHREAD([
 ])
 
 
+AC_SYS_LARGEFILE
 
 AC_CHECK_FUNC(_dyld_image_count, [AC_DEFINE(HAVE_DYLD,[1], [dyld linker present])])
 AC_CHECK_HEADERS([dlfcn.h])

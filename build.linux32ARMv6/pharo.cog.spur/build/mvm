@@ -41,7 +41,7 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--without-vm-display-fbdev \
 		--enable-fast-bitblt \
 	TARGET_ARCH="-march=armv6 -mfpu=vfp -mfloat-abi=hard" \
-	CFLAGS="$OPT -D_FILE_OFFSET_BITS=64 -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS -DUSE_MIDI_ALSA -DCOGMTVM=0" \
+	CFLAGS="$OPT -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS -DUSE_MIDI_ALSA -DCOGMTVM=0" \
 	LIBS=" -Wl,-rpath,'\$\$ORIGIN'" \
 	LDFLAGS=-Wl,-z,now
 rm -f vm/sqUnixMain.o # nuke version info
