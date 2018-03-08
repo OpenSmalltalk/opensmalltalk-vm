@@ -19,9 +19,11 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
     sudo apt-get remove -q -y gvfs-daemons
     # the more renitent ones
     sudo apt-get install -yq --force-yes \
+            libglib2.0-0:i386 \
             gir1.2-freedesktop:i386 \
             gir1.2-glib-2.0:i386 \
             gir1.2-pango-1.0:i386 \
+            libgirepository-1.0-1:i386 \
             libpango1.0-dev:i386 \
             libpulse-dev:i386
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-yes \
