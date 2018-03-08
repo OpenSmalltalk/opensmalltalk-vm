@@ -12614,7 +12614,7 @@ if test "$GCC" = "yes"; then
   # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=53119
   CPPFLAGS="$CPPFLAGS -Wno-missing-braces"
   #sigh
-  CPPFLAGS="$CPPFLAGS -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable"
+  CPPFLAGS="$CPPFLAGS -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable"
 fi
 
 
