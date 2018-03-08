@@ -262,7 +262,7 @@ SistaCogit >> genBinaryAtConstInlinePrimitive: primIndex [
 	word object, Smi => 32 bits unsigned Smi (1-based, optimised if arg1 is a constant)
 	2069	doubleWordAt:
 	double word object, Smi => 64 bits unsigned Smi or LargePositiveInteger (1-based, optimised if arg1 is a constant)"
-	| rr val |
+	| rr val zeroBasedIndex |
 	val := self ssTop constant.
 	rr := primIndex = 65 
 		ifFalse: [self allocateRegForStackEntryAt: 1]
@@ -271,13 +271,13 @@ SistaCogit >> genBinaryAtConstInlinePrimitive: primIndex [
 				ReceiverResultReg].
 	(self ssValue: 1) popToReg: rr.
 	self ssPop: 2.
+	zeroBasedIndex := (objectMemory integerValueOf: val) - 1.
 	primIndex caseOf: {
-		[64] ->	[objectRepresentation genLoadSlot: (objectMemory integerValueOf: val) - 1 sourceReg: rr destReg: rr].
+		[64] ->	[objectRepresentation genLoadSlot: zeroBasedIndex sourceReg: rr destReg: rr].
 		[65] ->	[self ssAllocateRequiredReg: SendNumArgsReg.
-				 ^self genPushMaybeContextSlotIndex: (objectMemory integerValueOf: val) - 1].
-		[66] ->	[self MoveCq: (objectMemory integerValueOf: val) + objectMemory baseHeaderSize - 1 R: TempReg.
-				self MoveXbr: TempReg R: rr R: rr.
-				objectRepresentation genConvertIntegerToSmallIntegerInReg: rr]
+				 ^self genPushMaybeContextSlotIndex: zeroBasedIndex].
+		[66] ->	[self MoveMb: zeroBasedIndex * objectMemory wordSize + objectMemory baseHeaderSize r: rr R: rr.
+				 objectRepresentation genConvertIntegerToSmallIntegerInReg: rr]
 	}
 	otherwise: [^EncounteredUnknownBytecode].
 	^self ssPushRegister: rr
