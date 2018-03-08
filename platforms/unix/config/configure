@@ -15501,8 +15501,6 @@ $as_echo "#define DARWIN 1" >>confdefs.h
     ;;
 esac
 
-case
-
 
 
 # Checks for browser support
