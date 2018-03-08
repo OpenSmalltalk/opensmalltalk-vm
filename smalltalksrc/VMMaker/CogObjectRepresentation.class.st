@@ -137,6 +137,11 @@ CogObjectRepresentation >> genCmpClassMethodContextCompactIndexR: reg [
 	^cogit CmpCq: ClassMethodContextCompactIndex R: reg
 ]
 
+{ #category : #'sista support' }
+CogObjectRepresentation >> genConvertSmallFloatToSmallFloatHashAsIntegerInReg: reg scratch: scratch [
+	^EncounteredUnknownBytecode
+]
+
 { #category : #'bytecode generator support' }
 CogObjectRepresentation >> genCreateClosureAt: bcpc numArgs: numArgs numCopied: numCopied contextNumArgs: ctxtNumArgs large: isLargeCtxt inBlock: isInBlock [
 	"Create a closure with the given startpc, numArgs and numCopied
@@ -317,15 +322,6 @@ CogObjectRepresentation >> genGetInlineCacheClassTagFrom: sourceReg into: destRe
 	 classes. If forEntry is true answer the entry label at which control is to enter (cmEntryOffset).
 	 If forEntry is false, control enters at the start."
 	<returnTypeC: #'AbstractInstruction *'>
-	self subclassResponsibility
-]
-
-{ #category : #'bytecode generator support' }
-CogObjectRepresentation >> genGetInstanceOf: classObj into: destReg initializingIf: initializeInstance [
-	"Create an instance of classObj and assign it to destReg, initializing the instance
-	 if initializeInstance is true with nil or 0 as appropriate This is for inline primitives.
-	 Assume there is sufficient space in new space to complete the operation.
-	 Answer zero on success."
 	self subclassResponsibility
 ]
 

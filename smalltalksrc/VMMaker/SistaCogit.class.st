@@ -138,6 +138,17 @@ SistaCogit >> compileFullBlockMethodFrameBuild: numCopied [
 		[self PrefetchAw: counters]
 ]
 
+{ #category : #'compile abstract instructions' }
+SistaCogit >> decodePushIntegerLongBefore: bcpc in: aMethodObj [
+	<inline: true>
+	| distance upperByte | 
+	distance := objectMemory fetchByte: bcpc - 1 ofObject: aMethodObj.
+	upperByte := objectMemory fetchByte: bcpc - 3 ofObject: aMethodObj.
+	upperByte > 127 ifTrue: [upperByte := upperByte - 256].
+	^ (upperByte << 8) + distance.
+		 
+]
+
 { #category : #accessing }
 SistaCogit >> defaultCogCodeSize [
 	"Return the default number of bytes to allocate for native code at startup.
@@ -215,43 +226,153 @@ SistaCogit >> fillInOPICHeader: pic numArgs: numArgs selector: selector [
 
 { #category : #'inline primitive generators' }
 SistaCogit >> genAtPutInlinePrimitive: prim [
-	"Unary inline primitives."
-	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
-	 See EncoderForSistaV1's class comment and StackInterpreter>>#trinaryInlinePrimitive:"
-	| ra1 ra2 rr adjust needsStoreCheck |
 	"The store check requires rr to be ReceiverResultReg"
-	needsStoreCheck := (objectRepresentation isUnannotatableConstant: self ssTop) not.
-	self 
-		allocateRegForStackTopThreeEntriesInto: [:rTop :rNext :rThird | ra2 := rTop. ra1 := rNext. rr := rThird ] 
-		thirdIsReceiver: (prim = 0 and: [ needsStoreCheck ]).
-	self assert: (rr ~= ra1 and: [rr ~= ra2 and: [ra1 ~= ra2]]).
-	self ssTop popToReg: ra2.
-	self ssPop: 1.
-	self ssTop popToReg: ra1.
+	prim caseOf: {
+		"3000	pointerAt:put:
+		 Mutable pointer object (Fixed sized or not) and not a context, Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)"
+		[0] ->	[self genPointerAtPutMaybeContext: false storeCheck: false immutabilityCheck: false].
+		"3001	storeCheckPointerAt:put:
+		 Mutable pointer object (Fixed sized or not) and not a context, Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)"
+		[1] ->	[self genPointerAtPutMaybeContext: false storeCheck: true immutabilityCheck: false].
+		"3002	maybeContextPointerAt:put:
+		 Mutable pointer object (Fixed sized or not), Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)"
+		[2] ->	[self genPointerAtPutMaybeContext: true storeCheck: false immutabilityCheck: false].
+		"3003	maybeContextStoreCheckPointerAt:put:
+		 Mutable pointer object (Fixed sized or not), Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)"
+		[3] ->	[self genPointerAtPutMaybeContext: true storeCheck: true immutabilityCheck: false].
+		"3004	byteAt:put:
+		 Mutable byte object, Smi, 8 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)"
+		[4] ->	[self genByteAtPut].
+	}
+	otherwise: [^EncounteredUnknownBytecode].
+	^0
+]
+
+{ #category : #'inline primitive binary generators' }
+SistaCogit >> genBinaryAtConstInlinePrimitive: primIndex [
+	"2064	pointerAt:
+	Pointer object (Fixed sized or not) and not a context, Smi =>  (1-based, optimised if arg1 is a constant)
+	2065	maybeContextPointerAt:
+	Pointer object (Fixed sized or not), Smi =>  (1-based, optimised if arg1 is a constant)
+	2066	byteAt:
+	byte object, Smi => 8 bits unsigned Smi (1-based, optimised if arg1 is a constant)
+	2067	shortAt:
+	short object, Smi => 16 bits unsigned Smi (1-based, optimised if arg1 is a constant)
+	2068	wordAt:
+	word object, Smi => 32 bits unsigned Smi (1-based, optimised if arg1 is a constant)
+	2069	doubleWordAt:
+	double word object, Smi => 64 bits unsigned Smi or LargePositiveInteger (1-based, optimised if arg1 is a constant)"
+	| rr val |
+	val := self ssTop constant.
+	rr := primIndex = 65 
+		ifFalse: [self allocateRegForStackEntryAt: 1]
+		ifTrue: [self ssAllocateRequiredReg: ReceiverResultReg.
+				self voidReceiverResultRegContainsSelf.
+				ReceiverResultReg].
+	(self ssValue: 1) popToReg: rr.
+	self ssPop: 2.
+	primIndex caseOf: {
+		[64] ->	[objectRepresentation genLoadSlot: (objectMemory integerValueOf: val) - 1 sourceReg: rr destReg: rr].
+		[65] ->	[self ssAllocateRequiredReg: SendNumArgsReg.
+				 ^self genPushMaybeContextSlotIndex: (objectMemory integerValueOf: val) - 1].
+		[66] ->	[self MoveCq: (objectMemory integerValueOf: val) + objectMemory baseHeaderSize - 1 R: TempReg.
+				self MoveXbr: TempReg R: rr R: rr.
+				objectRepresentation genConvertIntegerToSmallIntegerInReg: rr]
+	}
+	otherwise: [^EncounteredUnknownBytecode].
+	^self ssPushRegister: rr
+]
+
+{ #category : #'inline primitive binary generators' }
+SistaCogit >> genBinaryAtInlinePrimitive: primIndex [
+	"2064	pointerAt:
+	Pointer object (Fixed sized or not) and not a context, Smi =>  (1-based, optimised if arg1 is a constant)
+	2065	maybeContextPointerAt:
+	Pointer object (Fixed sized or not), Smi =>  (1-based, optimised if arg1 is a constant)
+	2066	byteAt:
+	byte object, Smi => 8 bits unsigned Smi (1-based, optimised if arg1 is a constant)
+	2067	shortAt:
+	short object, Smi => 16 bits unsigned Smi (1-based, optimised if arg1 is a constant)
+	2068	wordAt:
+	word object, Smi => 32 bits unsigned Smi (1-based, optimised if arg1 is a constant)
+	2069	doubleWordAt:
+	double word object, Smi => 64 bits unsigned Smi or LargePositiveInteger (1-based, optimised if arg1 is a constant)"
+	| ra rr adjust |
+	self allocateRegForStackTopTwoEntriesInto: [:rTop :rNext | ra := rTop. rr := rNext ].
+	self ssTop popToReg: ra.
 	self ssPop: 1.
 	self ssTop popToReg: rr.
 	self ssPop: 1.
-	objectRepresentation genConvertSmallIntegerToIntegerInReg: ra1.
-	"Now: ra is the variable object, rr is long, TempReg holds the value to store."
-	self flag: #TODO. "This is not really working as the immutability and store check needs to be present. "
-	prim caseOf: {
-		"0 - 1 pointerAt:put: and byteAt:Put:"
-		[0] ->	[ adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
-				adjust ~= 0 ifTrue: [ self AddCq: adjust R: ra1. ]. 
-				self MoveR: ra2 Xwr: ra1 R: rr.
-				"I added needsStoreCheck so if you initialize an array with a Smi such as 0 or a boolean you don't need the store check"
-				needsStoreCheck ifTrue: 
-					[ self assert: needsFrame. 
-					objectRepresentation genStoreCheckReceiverReg: rr valueReg: ra2 scratchReg: TempReg inFrame: true] ].
-		[1] ->	[ objectRepresentation genConvertSmallIntegerToIntegerInReg: ra2.
-				adjust := objectMemory baseHeaderSize - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
-				self AddCq: adjust R: ra1.
-				self MoveR: ra2 Xbr: ra1 R: rr.
-				objectRepresentation genConvertIntegerToSmallIntegerInReg: ra2. ].
+	primIndex caseOf: {
+		[64] ->	[objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
+				adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1.
+				adjust ~= 0 ifTrue: [ self AddCq: adjust R: ra. ]. 
+				self MoveXwr: ra R: rr R: rr ].
+		[66] ->	[objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
+				adjust := objectMemory baseHeaderSize - 1. 
+				self AddCq: adjust R: ra.
+				self MoveXbr: ra R: rr R: rr.
+				objectRepresentation genConvertIntegerToSmallIntegerInReg: rr].
 	}
 	otherwise: [^EncounteredUnknownBytecode].
-	self ssPushRegister: ra2.
-	^0
+	^self ssPushRegister: rr
+]
+
+{ #category : #'inline primitive binary generators' }
+SistaCogit >> genBinaryCompInlinePrimitive: primIndex [
+	"2032	>
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2033	<
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2034	>=
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2035	<=
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2036	=
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2037	~=
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2038	rawEqualsEquals:
+	not a forwarder, not a forwarder => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2039	rawNotEqualsEquals:
+	not a forwarder, not a forwarder => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)"
+	|resultReg otherReg opTrue opFalse invertedOpTrue invertedOpFalse|
+	self assert: (primIndex between: 32 and: 39).
+	primIndex caseOf: {
+		[32]	->	[opTrue := JumpGreater. opFalse := JumpLessOrEqual. invertedOpTrue := JumpLess. invertedOpFalse := JumpGreaterOrEqual].
+		[33]	->	[opTrue := JumpLess. opFalse := JumpGreaterOrEqual. invertedOpTrue := JumpGreater. invertedOpFalse := JumpLessOrEqual].
+		[34]	->	[opTrue := JumpGreaterOrEqual. opFalse := JumpLess. invertedOpTrue := JumpLessOrEqual. invertedOpFalse := JumpGreater].
+		[35]	->	[opTrue := JumpLessOrEqual. opFalse := JumpGreater. invertedOpTrue := JumpGreaterOrEqual. invertedOpFalse := JumpLess].
+		[36]	->	[opTrue := JumpZero. opFalse := JumpNonZero. invertedOpTrue := JumpZero. invertedOpFalse := JumpNonZero].
+		[37]	->	[opTrue := JumpNonZero. opFalse := JumpZero. invertedOpTrue := JumpNonZero. invertedOpFalse := JumpZero].
+		[38]	->	[opTrue := JumpZero. opFalse := JumpNonZero. invertedOpTrue := JumpZero. invertedOpFalse := JumpNonZero].
+		[39]	->	[opTrue := JumpNonZero. opFalse := JumpZero. invertedOpTrue := JumpNonZero. invertedOpFalse := JumpZero].
+	}.
+	"Gen comparison"
+	self ssTop type = SSConstant 
+		ifTrue: [resultReg := self allocateRegForStackEntryAt: 1.
+				(self ssValue: 1) popToReg: resultReg.
+				self genCmpConstant: self ssTop constant R: resultReg.
+				self ssPop: 2.
+				self genBinaryInlineComparison: opTrue opFalse: opFalse destReg: resultReg.
+				^self ssPushRegister: resultReg].
+	(self ssValue: 1) type = SSConstant 
+		ifTrue: [resultReg := self allocateRegForStackEntryAt: 0.
+				self ssTop popToReg: resultReg.
+				self genCmpConstant: (self ssValue: 1) constant R: resultReg.
+				self ssPop: 2.
+				self genBinaryInlineComparison: invertedOpTrue opFalse: invertedOpFalse destReg: resultReg.
+				^self ssPushRegister: resultReg].
+	otherReg := self allocateRegForStackEntryAt: 0.	
+	self ssTop popToReg: otherReg.
+	resultReg := self allocateRegForStackEntryAt: 1 notConflictingWith: (self registerMaskFor: otherReg).	
+	(self ssValue: 1) popToReg: resultReg.
+	self CmpR: otherReg R: resultReg.
+	self ssPop: 2.
+	self genBinaryInlineComparison: opTrue opFalse: opFalse destReg: resultReg.
+	^self ssPushRegister: resultReg
+	
+	
 ]
 
 { #category : #'inline primitive generators' }
@@ -329,7 +450,48 @@ SistaCogit >> genBinaryConstOpVarInlinePrimitive: prim [
 	^0
 ]
 
-{ #category : #'inline primitive generators' }
+{ #category : #'inline primitive binary generators' }
+SistaCogit >> genBinaryConstOpVarSmiInlinePrimitive: primIndex [
+	| ra val untaggedVal |
+	ra := self allocateRegForStackEntryAt: 0.
+	self ssTop popToReg: ra.
+	self ssPop: 1.
+	val := self ssTop constant.
+	self ssPop: 1.
+	untaggedVal := val - objectMemory smallIntegerTag.
+	primIndex caseOf: {
+		"2000	+
+		Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
+		[0]	->	[self AddCq: untaggedVal R: ra].
+		"2001	-
+		Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
+		[1]	->	[self MoveCq: val R: TempReg.
+				 self SubR: ra R: TempReg.
+				 objectRepresentation genAddSmallIntegerTagsTo: TempReg.
+				 self MoveR: TempReg R: ra].
+		"2002	*
+		Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
+		[2]	->	[objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ra.
+				 self MoveCq: untaggedVal R: TempReg.
+				 self MulR: TempReg R: ra.
+				 objectRepresentation genSetSmallIntegerTagsIn: ra].
+		
+		"2016	bitAnd:
+		 Smi, Smi => Smi (optimised if one operand is a constant)"
+		[16] -> [ self AndCq: val R: ra ].
+		"2017	bitOr:
+		Smi, Smi => Smi (optimised if one operand is a constant)"
+		[17] -> [ self OrCq: val R: ra ].
+		"2018	bitXor:
+		Smi, Smi => Smi (optimised if one operand is a constant)"
+		[18] -> [ self XorCw: untaggedVal R: ra. ].
+	}
+	otherwise: [^EncounteredUnknownBytecode].
+	self ssPushRegister: ra.
+	^0
+]
+
+{ #category : #'inline primitive binary generators' }
 SistaCogit >> genBinaryInlineComparison: opTrue opFalse: opFalse destReg: destReg [
 	"Inlined comparison. opTrue = jump for true and opFalse = jump for false"
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
@@ -363,6 +525,160 @@ SistaCogit >> genBinaryInlineComparison: opTrue opFalse: opFalse destReg: destRe
 			condJump jmpTarget: (self genMoveTrueR: destReg).
 			jump jmpTarget: self Label].
 	^ 0
+]
+
+{ #category : #'inline primitive binary generators' }
+SistaCogit >> genBinaryInlinePrimitive: primIndex [
+	"Bulk comments: each sub-method has its own comment with the specific case.
+	2000	+
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant)
+	2001	-
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant)
+	2002	*
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant)
+	2003	/
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant)
+	2004	//
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant)
+	2005	\
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant)
+	2006	quo:
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant)
+	2016	bitAnd:
+	Smi, Smi => Smi (optimised if one operand is a constant)
+	2017	bitOr:
+	Smi, Smi => Smi (optimised if one operand is a constant)
+	2018	bitXor:
+	Smi, Smi => Smi (optimised if one operand is a constant)
+	2019	bitShiftLeft:
+	Smi greater or equal to 0, Smi greater or equal to 0 => Smi (no overflow, optimised if arg1 is a constant)
+	2020	bitShiftRight:
+	Smi, Smi greater or equal to 0 => Smi (optimised if arg1 is a constant)
+	2032	>
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2033	<
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2034	>=
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2035	<=
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2036	=
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2037	~=
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2038	rawEqualsEquals:
+	not a forwarder, not a forwarder => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2039	rawNotEqualsEquals:
+	not a forwarder, not a forwarder => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2048	rawNew:
+	literal which is a fixed-sized behavior, Smi => instance of receiver, fields nilled out (optimised if arg1 is a constant)
+	2049	rawNewNoInit:
+	literal which is a fixed-sized behavior, Smi => instance of receiver (Fields of returned value contain undefined data, optimised if arg1 is a constant)
+	2064	pointerAt:
+	Pointer object (Fixed sized or not) and not a context, Smi =>  (1-based, optimised if arg1 is a constant)
+	2065	maybeContextPointerAt:
+	Pointer object (Fixed sized or not), Smi =>  (1-based, optimised if arg1 is a constant)
+	2066	byteAt:
+	byte object, Smi => 8 bits unsigned Smi (1-based, optimised if arg1 is a constant)
+	2067	shortAt:
+	short object, Smi => 16 bits unsigned Smi (1-based, optimised if arg1 is a constant)
+	2068	wordAt:
+	word object, Smi => 32 bits unsigned Smi (1-based, optimised if arg1 is a constant)
+	2069	doubleWordAt:
+	double word object, Smi => 64 bits unsigned Smi or LargePositiveInteger (1-based, optimised if arg1 is a constant)"
+	(primIndex <= 18 and: [primIndex <= 2 or: [primIndex > 6]])  ifTrue: 
+		[self ssTop type = SSConstant 
+			ifTrue: [^self genBinaryVarOpConstSmiInlinePrimitive: primIndex].
+		(self ssValue: 1) type = SSConstant 
+			ifTrue: [^self genBinaryConstOpVarSmiInlinePrimitive: primIndex].
+		^self genBinaryVarOpVarSmiInlinePrimitive: primIndex].
+	primIndex <= 6 ifTrue: [^self genDivInlinePrimitive: primIndex].
+	primIndex = 19 ifTrue: [^self genBinarySmiBitShiftLeftInlinePrimitive].
+	primIndex = 20 ifTrue: [^self genBinarySmiBitShiftRightInlinePrimitive].
+	primIndex < 32 ifTrue: [^EncounteredUnknownBytecode].
+	primIndex <= 39 ifTrue: [^self genBinaryCompInlinePrimitive: primIndex].
+	primIndex < 48 ifTrue: [^EncounteredUnknownBytecode].
+	primIndex <= 49 ifTrue: [^self genBinaryNewInlinePrimitive: primIndex].
+	primIndex < 64 ifTrue: [^EncounteredUnknownBytecode].
+	primIndex <= 69 ifTrue: 
+		[self ssTop type = SSConstant
+			ifTrue: [^self genBinaryAtConstInlinePrimitive: primIndex].
+		^self genBinaryAtInlinePrimitive: primIndex].
+	^EncounteredUnknownBytecode
+]
+
+{ #category : #'inline primitive binary generators' }
+SistaCogit >> genBinaryNewInlinePrimitive: primIndex [
+	"2048	rawNew:
+	literal which is a variable-sized behavior, Smi => instance of receiver, fields nilled/zeroed out (optimised if arg1 is a constant)
+	2049	rawNewNoInit:
+	literal which is a variable-sized behavior, Smi => instance of receiver (Fields of returned value contain undefined data, optimised if arg1 is a constant)"
+	| resultReg classObj classFormat argInt |
+
+	"Assertion"
+	(self ssValue: 1) type = SSConstant ifFalse: [^UnimplementedOperation].
+	
+	"It would be nice to deal with variable-sized allocation on non-constant.
+	We need to see, however, than inlined allocation cannot deal with large allocations (i.e.
+	allocation directly in old space, > 65k currently. So Scorch still needs to perform range analysis
+	or generate 2 paths at the bytecode level in this case."
+	self ssTop type = SSConstant ifFalse: [^UnimplementedOperation].
+	
+	classObj := (self ssValue: 1) constant.
+	self assert: (objectMemory isNonImmediate: classObj).
+	self assert: (coInterpreter objCouldBeClassObj: classObj).
+	self deny: (objectMemory isFixedSizePointerFormat: (objectMemory instSpecOfClassFormat: (objectMemory formatOfClass: classObj))).
+	objectMemory classTagForClass: classObj. "Ensure Behavior hash"
+	
+	"Actual code"
+	resultReg := self allocateRegNotConflictingWith: 0.
+	classFormat := objectMemory instSpecOfClassFormat: (objectMemory formatOfClass: classObj).
+	argInt := objectMemory integerValueOf: self ssTop constant.
+	self ssPop: 2.
+	self ssPushRegister: resultReg.
+	(classFormat = objectMemory arrayFormat or: [classFormat = objectMemory indexablePointersFormat]) ifTrue: 
+		[^objectRepresentation genGetInstanceOfPointerClass: classObj into: resultReg initializingIf: primIndex = 48 numVariableSlots: argInt].
+	(classFormat = objectMemory firstByteFormat) ifTrue: 
+		[^objectRepresentation genGetInstanceOfByteClass: classObj into: resultReg initializingIf: primIndex = 48 numBytes: argInt].
+	^UnimplementedOperation
+]
+
+{ #category : #'inline primitive binary generators' }
+SistaCogit >> genBinarySmiBitShiftLeftInlinePrimitive [
+	"2019	bitShiftLeft:
+	Smi greater or equal to 0, Smi greater or equal to 0 => Smi (no overflow, optimised if arg1 is a constant)"
+	| rr ra |
+	rr := self allocateRegForStackEntryAt: 1.
+	(self ssValue: 1) popToReg: rr.
+	objectRepresentation genRemoveSmallIntegerTagsInScratchReg: rr.
+	self ssTop type = SSConstant 
+		ifTrue: [self LogicalShiftLeftCq: (objectMemory integerValueOf: self ssTop constant) R: rr]
+		ifFalse: [ra := self allocateRegForStackEntryAt: 0 notConflictingWith: (self registerMaskFor: rr).
+				self ssTop popToReg: ra.
+				objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
+				self LogicalShiftLeftR: ra R: rr.].
+	objectRepresentation genAddSmallIntegerTagsTo: rr.
+	self ssPop: 2.
+	^self ssPushRegister: rr
+
+]
+
+{ #category : #'inline primitive binary generators' }
+SistaCogit >> genBinarySmiBitShiftRightInlinePrimitive [
+	"2019	bitShiftLeft:
+	Smi greater or equal to 0, Smi greater or equal to 0 => Smi (no overflow, optimised if arg1 is a constant)"
+	| rr ra |
+	rr := self allocateRegForStackEntryAt: 1.
+	(self ssValue: 1) popToReg: rr.
+	self ssTop type = SSConstant 
+		ifTrue: [self ArithmeticShiftRightCq: (objectMemory integerValueOf: self ssTop constant) R: rr]
+		ifFalse: [ra := self allocateRegForStackEntryAt: 0 notConflictingWith: (self registerMaskFor: rr).
+				self ssTop popToReg: ra.
+				objectRepresentation genConvertSmallIntegerToIntegerInReg: ra.
+				 self ArithmeticShiftRightR: ra R: rr].
+	objectRepresentation genClearAndSetSmallIntegerTagsIn: rr.
+	self ssPop: 2.
+	^self ssPushRegister: rr
 ]
 
 { #category : #'inline primitive generators' }
@@ -419,6 +735,48 @@ SistaCogit >> genBinaryVarOpConstInlinePrimitive: prim [
 		[65] ->	[self MoveCq: (objectMemory integerValueOf: val) + objectMemory baseHeaderSize - 1 R: TempReg.
 				self MoveXbr: TempReg R: rr R: rr.
 				objectRepresentation genConvertIntegerToSmallIntegerInReg: rr]
+
+	}
+	otherwise: [^EncounteredUnknownBytecode].
+	self ssPushRegister: rr.
+	^0
+]
+
+{ #category : #'inline primitive binary generators' }
+SistaCogit >> genBinaryVarOpConstSmiInlinePrimitive: primIndex [
+	| rr val untaggedVal |
+	self assert: primIndex <= 18.
+	val := self ssTop constant.
+	self ssPop: 1.
+	rr := self allocateRegForStackEntryAt: 0.
+	self ssTop popToReg: rr.
+	self ssPop: 1.
+	untaggedVal := val - objectMemory smallIntegerTag.
+	primIndex caseOf: {
+		"2000	+
+		 Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
+		[0]	->	[self AddCq: untaggedVal R: rr].
+		"2001	-
+		 Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
+		[1]	->	[self SubCq: untaggedVal R: rr ].
+		"2002	*
+		 Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
+		[2]	->	[self flag: 'could use MulCq:R'.
+				 objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: rr.
+				 self MoveCq: untaggedVal R: TempReg.
+				 self MulR: TempReg R: rr.
+				 objectRepresentation genSetSmallIntegerTagsIn: rr].
+		
+		"2016	bitAnd:
+		 Smi, Smi => Smi (optimised if one operand is a constant)"
+		[16] -> [ self AndCq: val R: rr ].
+		"2017	bitOr:
+		 Smi, Smi => Smi (optimised if one operand is a constant)"
+		[17] -> [ self OrCq: val R: rr ].
+		"2018	bitXor:
+		 Smi, Smi => Smi (optimised if one operand is a constant)"
+		[18] -> [ self flag: 'could use XorCq:'.
+				self XorCw: untaggedVal R: rr. ]
 
 	}
 	otherwise: [^EncounteredUnknownBytecode].
@@ -495,6 +853,108 @@ SistaCogit >> genBinaryVarOpVarInlinePrimitive: prim [
 	}
 	otherwise: [^EncounteredUnknownBytecode].
 	self ssPushRegister: rr.
+	^0
+]
+
+{ #category : #'inline primitive binary generators' }
+SistaCogit >> genBinaryVarOpVarSmiInlinePrimitive: primIndex [
+	| ra rr |
+	self allocateRegForStackTopTwoEntriesInto: [:rTop :rNext | ra := rTop. rr := rNext ].
+	self ssTop popToReg: ra.
+	self ssPop: 1.
+	self ssTop popToReg: rr.
+	self ssPop: 1.
+	primIndex caseOf: {
+		"2000	+
+		Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
+		[0]	->	[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ra.
+				 self AddR: ra R: rr].
+		"2001	-
+		Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
+		[1]	->	[self SubR: ra R: rr.
+				 objectRepresentation genAddSmallIntegerTagsTo: rr].
+		"2002	*
+		Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
+		[2]	->	[self genShiftAwaySmallIntegerTagsInScratchReg: rr.
+				 self genRemoveSmallIntegerTagsInScratchReg: ra.
+				 self MulR: ra R: rr.
+				 self genSetSmallIntegerTagsIn: rr].
+			
+		"2016	bitAnd:
+		 Smi, Smi => Smi (optimised if one operand is a constant)"
+		[16] -> [ self AndR: ra R: rr ].
+		"2017	bitOr:
+		Smi, Smi => Smi (optimised if one operand is a constant)"
+		[17] -> [ self OrR: ra R: rr ].
+		"2018	bitXor:
+		Smi, Smi => Smi (optimised if one operand is a constant)"
+		[18] -> [objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ra. 
+				self XorR: ra R: rr. ]
+	}
+	otherwise: [^EncounteredUnknownBytecode].
+	self ssPushRegister: rr.
+	^0
+]
+
+{ #category : #'inline primitive generators' }
+SistaCogit >> genByteAtPut [
+	| ra1 ra2 rr adjust |
+	self 
+		allocateRegForStackTopThreeEntriesInto: [:rTop :rNext :rThird | ra2 := rTop. ra1 := rNext. rr := rThird ] 
+		thirdIsReceiver: false.
+	self assert: (rr ~= ra1 and: [rr ~= ra2 and: [ra1 ~= ra2]]).
+	self ssTop popToReg: ra2.
+	self ssPop: 1.
+	self ssTop popToReg: ra1.
+	self ssPop: 1.
+	self ssTop popToReg: rr.
+	self ssPop: 1.
+	adjust := objectMemory baseHeaderSize - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: ra1.
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: ra2.
+	self AddCq: adjust R: ra1.
+	self MoveR: ra2 Xbr: ra1 R: rr.
+	objectRepresentation genConvertIntegerToSmallIntegerInReg: ra2.
+	^self ssPushRegister: ra2
+]
+
+{ #category : #'mapped inline primitive generators' }
+SistaCogit >> genByteAtPutImmutabilityCheck [
+	| ra1 ra2 rr adjust mutableJump immutabilityFailure indexIsCst |
+	<var: #mutableJump type: #'AbstractInstruction *'>
+	<var: #immutabilityFailure type: #'AbstractInstruction *'>
+	"Assumes rr is not a context and no store check is needed"
+	indexIsCst := (self ssValue: 1) type = SSConstant.
+	rr := ReceiverResultReg.
+	ra1 := TempReg.
+	ra2 := ClassReg.
+	self voidReceiverResultRegContainsSelf.
+	self ssFlushTo: simStackPtr - 1. "we use top value immediately after, so it does not require flush"
+	self ssTop popToReg: ra2.
+	adjust := objectMemory baseHeaderSize - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
+	indexIsCst
+		ifFalse:
+			[(self ssValue: 1) popToReg: ra1.
+			objectRepresentation genConvertSmallIntegerToIntegerInReg: ra1.
+			self AddCq: adjust R: ra1]
+		ifTrue: [self MoveCq: (objectMemory integerValueOf: (self ssValue: 1) constant) + adjust R: ra1].
+	(self ssValue: 2) popToReg: rr.
+	self ssPop: 3.
+	self ssPushRegister: ra2.
+
+	"Everything is flushed except returned value. All regs are unused except rr ra1 ra2"
+	mutableJump := self genJumpMutable: rr scratchReg: Arg0Reg.
+	self PushR: ra2. "flush sim stack top"
+	self SubCq: 1 + adjust R: ra1. "index 0-relative for trampoline, ra1 unused afterwards"
+	objectRepresentation genVarIndexCallStoreTrampoline.
+	self PopR: ra2. "restore sim stack top"
+	immutabilityFailure := self Jump: 0.
+	
+	mutableJump jmpTarget: (self MoveR: ra2 R: Arg0Reg).
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: Arg0Reg.
+	self MoveR: Arg0Reg Xbr: ra1 R: rr.
+	
+	immutabilityFailure jmpTarget: self Label.
 	^0
 ]
 
@@ -666,6 +1126,12 @@ SistaCogit >> genByteEqualsInlinePrimitiveResult: jmp returnReg: reg [
 	^0
 ]
 
+{ #category : #'mapped inline primitive generators' }
+SistaCogit >> genCallMappedInlinedPrimitive [
+	"SistaV1:	236		11101100	iiiiiiii		callMappedInlinedPrimitive"
+	^ self genMappedInlinePrimitive: byte1
+]
+
 { #category : #'bytecode generators' }
 SistaCogit >> genCallPrimitiveBytecode [
 	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
@@ -698,29 +1164,7 @@ SistaCogit >> genCallPrimitiveBytecode [
 	
 	self assert: primSet = 0.
 	
-	prim < 1000 ifTrue:
-		[^self genNullaryInlinePrimitive: prim].
-
-	prim < 2000 ifTrue:
-		[^self genUnaryInlinePrimitive: prim - 1000].
-		
-	prim < 3000 ifTrue:
-		[self ssTop type = SSConstant ifTrue:
-			[^self genBinaryVarOpConstInlinePrimitive: prim - 2000].
-		 (self ssValue: 1) type = SSConstant ifTrue:
-			[^self genBinaryConstOpVarInlinePrimitive: prim - 2000].
-		 ^self genBinaryVarOpVarInlinePrimitive: prim - 2000].
-
-	prim < 4000 ifTrue:
-		[^self genTrinaryInlinePrimitive: prim - 3000].
-	
-	prim < 5000 ifTrue: 
-		[^self genQuaternaryInlinePrimitive: prim - 4000].
-	
-	prim < 6000 ifTrue: 
-		[^self genQuinaryInlinePrimitive: prim - 5000].
-		
-	^EncounteredUnknownBytecode
+	^ self genSistaInlinePrimitive: prim
 ]
 
 { #category : #'bytecode generator support' }
@@ -771,6 +1215,113 @@ SistaCogit >> genCounterTripOnlyJumpIf: boolean to: targetBytecodePC [
 	^0
 ]
 
+{ #category : #'mapped inline primitive generators' }
+SistaCogit >> genDirectCall [
+	"250	directCall
+	literal index of the method to call on top of stack =>  (variable number of parameters)"
+	| newMethod newMethodHeader newMethodArgCount sendTable annotation litIndex |
+	self assert: (self ssTop type = SSConstant and: [objectMemory isCompiledMethod: self ssTop constant]).
+	litIndex := objectMemory integerValueOf: self ssTop constant.
+	newMethod := self getLiteral: litIndex.
+	self ssPop: 1.
+	self flag: #TODO. "One needs to finish the implementation with the annotation and the sendTable"
+	sendTable := 1. "directCallSendTable"
+	annotation := 1. "directCallAnnotation"
+	newMethodHeader := self rawHeaderOf: newMethod.
+	newMethodArgCount := self argumentCountOfMethodHeader: methodHeader.
+	"The receiver cannot be a forwader"
+	"numArgs >= (NumSendTrampolines - 1) ifTrue:
+		[self MoveCq: newMethodArgCount R: SendNumArgsReg]."
+	"Load inline cache with method index"
+	"self MoveUniqueC32: litIndex R: ClassReg.
+	(self Call: (sendTable at: (newMethodArgCount min: NumSendTrampolines - 1))) annotation: annotation.
+	self voidReceiverOptStatus.
+	self ssPushRegister: ReceiverResultReg."
+	^ EncounteredUnknownBytecode "Need to finish implementation"
+]
+
+{ #category : #'inline primitive binary generators' }
+SistaCogit >> genDivInlinePrimitive: primIndex [
+	"2003	/
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant) "
+	"2004	//
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant) "
+	"2005	\\
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant) "
+	"2006	quo:
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant) "
+	
+	"We don't deal with constants here. Too complex and does nto bring much"
+	| ra rr jumpExact jumpSameSign |
+	<var: #jumpExact type: #'AbstractInstruction *'>
+	<var: #jumpSameSign type: #'AbstractInstruction *'>
+	self allocateRegForStackTopTwoEntriesInto: [:rTop :rNext | ra := rTop. rr := rNext ].
+	self ssTop popToReg: ra.
+	self ssPop: 1.
+	self ssTop popToReg: rr.
+	self ssPop: 1.
+	self assert: backEnd canDivQuoRem.
+	"arg non zero, no overflow check. / remains (unused in optimised code)"
+	primIndex caseOf: {
+		[4] ->	[objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ra.
+				objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: rr.
+				self DivR: ra R: rr Quo: rr Rem: TempReg.
+				"If remainder is zero, success"
+				self CmpCq: 0 R: TempReg.
+				jumpExact := self JumpZero: 0.
+				"If arg and remainder signs are different we must round down."
+				objectRepresentation genConvertIntegerToSmallIntegerInReg: ra.
+				self XorR: TempReg R: ra.
+				(self lastOpcode setsConditionCodesFor: JumpZero) ifFalse:
+					[self CmpCq: 0 R: ra].
+				jumpSameSign := self JumpGreaterOrEqual: 0.
+				self SubCq: 1 R: rr.
+				jumpSameSign jmpTarget: (jumpExact jmpTarget: self Label).
+				objectRepresentation genConvertIntegerToSmallIntegerInReg: rr ].
+		[5] ->	[objectRepresentation genRemoveSmallIntegerTagsInScratchReg: ra.
+				objectRepresentation genRemoveSmallIntegerTagsInScratchReg: rr.
+			 	self DivR: ra R: rr Quo: TempReg Rem: rr.
+				"If remainder is zero we're done."
+				self CmpCq: 0 R: rr.
+				jumpExact := self JumpZero: 0.
+				"If arg and remainder signs are different we must reflect around zero."
+				self XorR: rr R: ra.
+				(self lastOpcode setsConditionCodesFor: JumpZero) ifFalse:
+					[self CmpCq: 0 R: ra].
+				jumpSameSign := self JumpGreaterOrEqual: 0.
+				self XorR: rr R: ra.
+				self AddR: ra R: rr.
+				jumpSameSign jmpTarget: (jumpExact jmpTarget: self Label).
+				objectRepresentation genSetSmallIntegerTagsIn: rr ].
+		[6] ->	[objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: ra.
+				objectRepresentation genShiftAwaySmallIntegerTagsInScratchReg: rr.
+				self DivR: ra R: rr Quo: rr Rem: ra.
+				objectRepresentation genConvertIntegerToSmallIntegerInReg: rr].
+	} otherwise: [^EncounteredUnknownBytecode].
+	self ssPushRegister: rr.
+	^0
+]
+
+{ #category : #'mapped inline primitive generators' }
+SistaCogit >> genEnsureEnoughSlots [
+	"50	EnsureEnoughWords
+	 literal which is a Smi => ret value is receiver"
+	|slots skip|
+	<var: #skip type: #'AbstractInstruction *'>
+	self assert: (self ssTop type = SSConstant and: [objectMemory isIntegerObject: self ssTop constant]).
+	slots := objectMemory integerValueOf: self ssTop constant.
+	self ssFlushTo: simStackPtr - 1.
+	self
+		MoveAw: objectMemory freeStartAddress R: TempReg;
+		CmpCq: objectMemory getScavengeThreshold - (objectMemory bytesPerOop * slots) R: TempReg.
+	skip := self JumpBelow: 0.
+	objectRepresentation genSetGCNeeded.
+	self CallRT: ceCheckForInterruptTrampoline.
+	skip jmpTarget: self Label.
+	self annotateBytecode: skip getJmpTarget.
+	^0
+]
+
 { #category : #'bytecode generator support' }
 SistaCogit >> genExecutionCountLogicInto: binaryBlock counterReg: counterReg [
 	<var: #countTripped type: #'AbstractInstruction *'>
@@ -784,39 +1335,6 @@ SistaCogit >> genExecutionCountLogicInto: binaryBlock counterReg: counterReg [
 	countTripped := self JumpCarry: 0.
 	self MoveR: counterReg A32: counterAddress. "write back"
 	binaryBlock value: counterAddress value: countTripped
-]
-
-{ #category : #'bytecode generators' }
-SistaCogit >> genExtJumpIfNotInstanceOfBehaviorsBytecode [
-	"SistaV1: *	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
-	| reg literal distance targetFixUp inverse |
-
-	"We lose the information of in which register is stack top 
-	 when jitting the branch target so we need to flush everything. 
-	 We could use a fixed register here...."
-	reg := self allocateRegForStackEntryAt: 0.
-	self ssTop popToReg: reg.
-	self ssPop: 1.
-	self ssFlushTo: simStackPtr. "flushed but the value is still in reg"
-
-	literal := self getLiteral: (extA * 256 + byte1).
-	(inverse := extB < 0) ifTrue:
-		[extB := extB + 128].
-	distance := extB * 256 + byte2.
-	extA := extB := numExtB := 0.
-
-	targetFixUp := self cCoerceSimple: (self ensureFixupAt: bytecodePC + 3 + distance) to: #'AbstractInstruction *'.
-	inverse
-		ifFalse: 
-			[(objectMemory isArrayNonImm: literal)
-				ifTrue: [objectRepresentation branchIf: reg notInstanceOfBehaviors: literal target: targetFixUp]
-				ifFalse: [objectRepresentation branchIf: reg notInstanceOfBehavior: literal target: targetFixUp] ]
-		ifTrue:
-			[(objectMemory isArrayNonImm: literal)
-				ifTrue: [objectRepresentation branchIf: reg instanceOfBehaviors: literal target: targetFixUp]
-				ifFalse: [objectRepresentation branchIf: reg instanceOfBehavior: literal target: targetFixUp]].
-
-	^0
 ]
 
 { #category : #'bytecode generator support' }
@@ -925,6 +1443,42 @@ SistaCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 	^ 0
 ]
 
+{ #category : #'inline primitive generators' }
+SistaCogit >> genJumpBinaryInlinePrimitive: primIndex [
+	| target testReg |
+	self assert: self ssTop type = SSConstant.
+	target := self eventualTargetOf: ((objectMemory integerValueOf: self ssTop constant) + 3 + bytecodePC).
+	testReg := self allocateRegForStackEntryAt: 1.
+	(self ssValue: 1) popToReg: testReg.
+	self ssPop: 2.
+	primIndex caseOf: {
+		"7016	jumpIfWritable:
+		 Not a forwarder, literal which is a Smi"
+		[16]	->	[self cppIf: #IMMUTABILITY
+						ifTrue: [(objectRepresentation genJumpMutable: testReg scratchReg: TempReg) jmpTarget: (self ensureFixupAt: target).]
+						ifFalse: [self Jump: (self ensureFixupAt: target)].
+					^0].
+		"7017	jumpIfReadOnly:
+		 Not a forwarder, literal which is a Smi"
+		[17]	->	[self cppIf: #IMMUTABILITY
+						ifTrue: [(objectRepresentation genJumpImmutable: testReg scratchReg: TempReg) jmpTarget: (self ensureFixupAt: target)]
+						ifFalse: [0"Do nothing - fall through"].
+					^0].
+		"7018	jumpIfYoung:
+		 Not a forwarder, literal which is a Smi"
+		[18]	->	[self CmpCw: objectMemory storeCheckBoundary R: testReg.
+	 				 self JumpBelow: (self ensureFixupAt: target).
+					 ^0].
+		"7019	jumpIfOld:
+		 Not a forwarder, literal which is a Smi"
+		[19]	->	[self CmpCw: objectMemory storeCheckBoundary R: testReg.
+	 				 self JumpAboveOrEqual: (self ensureFixupAt: target).
+					^0].
+	}. 
+	^ EncounteredUnknownBytecode
+	
+]
+
 { #category : #'bytecode generator support' }
 SistaCogit >> genJumpIf: boolean to: targetBytecodePC [
 	"The heart of performance counting in Sista.  Conditional branches are 6 times less
@@ -1017,6 +1571,108 @@ SistaCogit >> genJumpIf: boolean to: targetBytecodePC [
 ]
 
 { #category : #'inline primitive generators' }
+SistaCogit >> genJumpTrinaryInlinePrimitive: primIndex [
+	"Note: those tests work with forwarders (wrong class index)"
+	| testReg target behavior targetFixUp |
+	<var: #targetFixUp type: #'BytecodeFixup *'>
+	self assert: self ssTop type = SSConstant.
+	self assert: (self ssValue: 1) type = SSConstant.
+	testReg := self allocateRegForStackEntryAt: 2.
+	(self ssValue: 2) popToReg: testReg.
+	behavior := (self ssValue: 1) constant.
+	target := self eventualTargetOf: ((objectMemory integerValueOf: self ssTop constant) + 3 + bytecodePC).
+	self ssPop: 3.
+	targetFixUp := self cCoerceSimple: (self ensureFixupAt: target) to: #'AbstractInstruction *'.
+	primIndex caseOf: {
+	[0] -> 	["8000	jumpIfInstanceOf:distance:
+			 Anything, literal which is a Behavior, literal which is a Smi"
+			objectRepresentation branchIf: testReg instanceOfBehavior: behavior target: targetFixUp.
+			^0].
+	[1] -> 	["8001	jumpIfNotInstanceOf:distance:
+			 Anything, literal which is a Behavior, literal which is a Smi"
+			 objectRepresentation branchIf: testReg notInstanceOfBehavior: behavior target: targetFixUp.
+			^0].
+	[2] -> 	["8002	jumpIfInstanceOfOneOf:distance:
+			 Anything, Array of behaviors, literal which is a Smi"
+			 objectRepresentation branchIf: testReg instanceOfBehaviors: behavior target: targetFixUp.
+			^0].
+	[3] -> 	["8003	jumpIfNotInstanceOfOneOf:distance:
+			  Anything, Array of behaviors, literal which is a Smi"
+			 objectRepresentation branchIf: testReg notInstanceOfBehaviors: behavior target: targetFixUp.
+			^0].
+	}.
+	^ EncounteredUnknownBytecode
+	
+	
+]
+
+{ #category : #'inline primitive generators' }
+SistaCogit >> genJumpUnaryInlinePrimitive: primIndex [
+	"6000	backjumpNoInterrupt
+	 literal which is a Smi"
+	primIndex = 0 ifTrue: 
+		[|targetBytecodePC|
+		 self assert: self ssTop type = SSConstant.
+		 targetBytecodePC := (objectMemory integerValueOf: self ssTop constant) + 3 + bytecodePC.
+		 self ssPop: 1.
+		 self ssFlushTo: simStackPtr.
+		 deadCode := true. "can't fall through"
+		 self Jump: (self fixupAt: targetBytecodePC).
+		 ^0].
+	^EncounteredUnknownBytecode
+]
+
+{ #category : #'mapped inline primitive generators' }
+SistaCogit >> genMappedInlinePrimitive: primIndex [
+	"SistaV1:	236		11101100	iiiiiiii		callMappedInlinedPrimitive"
+	"Number of arguments:
+	 0-49 nullary
+	 50-99 unary
+	 100-149  binary
+	 150-199 trinary
+	 200-255 variable"
+	"Specification:
+	50	EnsureEnoughWords
+	literal which is a Smi => ret value is receiver
+	150	immCheckPointerAt:put:
+	pointer object (Fixed sized or not) and not a context, Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	151	immCheckStoreCheckPointerAt:put:
+	pointer object (Fixed sized or not) and not a context, Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	152	immCheckMaybeContextPointerAt:put:
+	pointer object (Fixed sized or not), Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	153	immCheckMaybeContextStoreCheckPointerAt:put:
+	pointer object (Fixed sized or not), Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	154	immCheckByteAt:put:
+	byte object, Smi, 8 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)
+	155	immCheckShortAt:put:
+	short object, Smi, 16 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)
+	156	immCheckWordAt:put:
+	word object, Smi, 32 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)
+	157	immCheckDoubleWordAt:put:
+	double word object, Smi, 64 bits unsigned Smi or LargePositiveInteger => arg2 (1-based, optimised if arg1 is a constant)
+	250	directCall
+	method to call on top of stack =>  (variable number of parameters)"
+	primIndex caseOf: 
+	{ 
+		[50] ->	 [^self genEnsureEnoughSlots].
+		[150] -> [^self genPointerAtPutMaybeContext: false storeCheck: false immutabilityCheck: true].
+		[151] -> [^self genPointerAtPutMaybeContext: false storeCheck: true immutabilityCheck: true].
+		[152] -> [^self genPointerAtPutMaybeContext: true storeCheck: false immutabilityCheck: true].
+		[153] -> [^self genPointerAtPutMaybeContext: true storeCheck: true immutabilityCheck: true].
+		[154] -> [self cppIf: #IMMUTABILITY
+					ifTrue: [^self genByteAtPutImmutabilityCheck]
+					ifFalse: [self genByteAtPut.
+							self annotateBytecode: self Label.
+							 ^0]].
+		[155] -> [^EncounteredUnknownBytecode "not implemented, missing short instruction in Cog RTL"].
+		[156] -> [^EncounteredUnknownBytecode "not implemented, need to deal with LargePositiveInteger in 32 bits"].
+		[157] -> [^EncounteredUnknownBytecode "not implemented, need to deal with LargePositiveInteger in 64 bits"].
+		[250] -> [^self genDirectCall].
+	} otherwise: [^EncounteredUnknownBytecode].
+	
+]
+
+{ #category : #'inline primitive generators' }
 SistaCogit >> genMoveAndAdjustSSEntry: ssEntry into: reg [
 	<var: #ssEntry type: #'SimStackEntry *'>
 	<inline: true>
@@ -1091,140 +1747,242 @@ SistaCogit >> genMustBeBooleanTrampolineFor: boolean called: trampolineName [
 
 { #category : #'inline primitive generators' }
 SistaCogit >> genNullaryInlinePrimitive: prim [
-	"Nullary inline primitives."
-	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
-	 See EncoderForSistaV1's class comment and StackInterpreter>>#nullaryInlinePrimitive:"
-
 	<option: #SistaVM>
 	^EncounteredUnknownBytecode
 ]
 
 { #category : #'inline primitive generators' }
-SistaCogit >> genQuaternaryInlinePrimitive: prim [
-	"Quaternary inline primitives."
-	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
-	 See EncoderForSistaV1's class comment and StackInterpreter>>#quaternaryInlinePrimitive:"
-	| needStoreCheck sourceReg stopReg objReg adjust jmp cmp isStartCst isStopCst startCst stopCst iteratorReg |
-	<var: #jmp type: #'AbstractInstruction *'>
-	<var: #cmp type: #'AbstractInstruction *'>
-	prim = 0 ifFalse: [^EncounteredUnknownBytecode].
-	
-	"4000	Pointer Object>> fillFrom:to:with: The receiver is a Pointer object. the middle two arguments are smallintegers. Last argument is any object. Fills the object in between the two indexes with last argument. Receiver is guaranteed to be mutable. The pointer accesses are raw (no inst var check). If ExtB is set to 1, no store check is present. Else a single store check is done for the bulk operation. Answers the receiver."
-	needStoreCheck := self sistaNeedsStoreCheck.
-	extB := numExtB := 0.
-	
-	"Allocate reg for src, objToStore, iterator and stop."
-	sourceReg := needStoreCheck 
-		ifTrue: [	self ssAllocateRequiredReg: ReceiverResultReg.
-				self voidReceiverResultRegContainsSelf.
-				ReceiverResultReg ]
-		ifFalse: [ self allocateRegForStackEntryAt: 3 notConflictingWith: self emptyRegisterMask ].
-	(self ssValue: 3) popToReg: sourceReg.
-	objReg := self allocateRegForStackEntryAt: 0 notConflictingWith: (self registerMaskFor: sourceReg).
-	self ssTop popToReg: objReg.
-	
-	"Set up iterator to first index to write and stop to last index to write"
-	adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
-	isStartCst := (self ssValue: 2) type = SSConstant.
-	isStopCst := (self ssValue: 1) type = SSConstant.
-	isStartCst ifTrue: [startCst := adjust + (objectMemory integerValueOf: (self ssValue: 2) constant)].
-	isStopCst ifTrue: [stopCst := adjust + (objectMemory integerValueOf: (self ssValue: 1) constant)].
-	
-	(isStartCst
-	and: [isStopCst
-	and: [stopCst - startCst < 7 ]]) "The other path generates at least 7 instructions"
-		ifTrue: ["unroll"
-				startCst
-					to: stopCst
-					do: [ :i | self MoveMw: i r: sourceReg R: objReg ] ]
-		ifFalse: ["loop"
-				stopReg := self allocateRegNotConflictingWith: (self registerMaskFor: sourceReg and: objReg).
-				iteratorReg := self allocateRegNotConflictingWith: (self registerMaskFor: sourceReg and: objReg and: stopReg).
-				isStartCst 
-					ifTrue: [ self MoveCq: startCst R: iteratorReg ]
-					ifFalse: [ (self ssValue: 2) popToReg: iteratorReg. 
-							 adjust ~= 0 ifTrue: [ self AddCq: adjust R: iteratorReg ] ].
-				isStopCst 
-					ifTrue: [ self MoveCq: stopCst R: stopReg ]
-					ifFalse: [ (self ssValue: 1) popToReg: stopReg. 
-							 adjust ~= 0 ifTrue: [ self AddCq: adjust R: stopReg ] ].
-				cmp := self CmpR: stopReg R: iteratorReg.
-				jmp := self JumpAbove: 0.
-				self MoveR: objReg Xwr: iteratorReg R: sourceReg.
-				self AddCq: 1 R: iteratorReg.
-				self Jump: cmp.
-				jmp jmpTarget: self Label].
+SistaCogit >> genPointerAtPutConstantMaybeContext: maybeContext storeCheck: needsStoreCheck immutabilityCheck: needsImmCheck [ 
+	| rcvrReg valReg indexCst |
+	indexCst := (objectMemory integerValueOf: (self ssValue: 1) constant) - 1.
+	"we want to have on top of stack the value to write descriptor."
+	(maybeContext or: [needsImmCheck]) 
+		ifTrue: [ valReg := ClassReg.
+				 self voidReceiverResultRegContainsSelf.
+				 rcvrReg := ReceiverResultReg ]
+		ifFalse: [ valReg := self allocateRegForStackEntryAt: 0 notConflictingWith: 0.
+				  needsStoreCheck 
+					ifFalse: [rcvrReg := self allocateRegForStackEntryAt: 2 notConflictingWith: (self registerMaskFor: valReg)]
+					ifTrue: [self voidReceiverResultRegContainsSelf.
+							rcvrReg := ReceiverResultReg]].
+	"If rcvr is valReg, we flush it. Could generate a move instead but not that common"
+	self ssAllocateRequiredReg: valReg upThrough: simStackPtr - 2.
+	self ssAllocateRequiredReg: rcvrReg upThrough: simStackPtr - 3.
+	self ssTop popToReg: valReg.
+	self ssPop: 1.
+	self ssTop spilled ifTrue: [self AddCq: objectRepresentation wordSize R: SPReg].
+	self ssPop: 1.
+	self ssTop popToReg: rcvrReg.
+	self ssPop: 1.
+	self ssPushRegister: valReg.
 			
-	needStoreCheck ifTrue: [objectRepresentation genStoreCheckReceiverReg: sourceReg valueReg: objReg scratchReg: TempReg inFrame: true].
+	maybeContext
+		ifFalse: 
+			[^self 
+				genGenericStorePop: false 
+				slotIndex: indexCst
+				destReg: rcvrReg 
+				needsStoreCheck: needsStoreCheck 
+				needsRestoreRcvr: false 
+				needsImmutabilityCheck: needsImmCheck]
+		ifTrue:
+			[^self
+				genGenericStorePop: false 
+				MaybeContextSlotIndex: indexCst
+				needsStoreCheck: needsStoreCheck 
+				needsRestoreRcvr: false 
+				needsImmutabilityCheck: needsImmCheck]
+]
+
+{ #category : #'mapped inline primitive generators' }
+SistaCogit >> genPointerAtPutImmCheckAndStoreCheck [
+	| ra1 ra2 rr adjust scratchReg immutableJump jmpImmediate jmpDestYoung jmpSourceOld jumpRemembered indexIsCst |
+	<var: #jmpSourceOld type: #'AbstractInstruction *'>
+	<var: #jmpDestYoung type: #'AbstractInstruction *'>
+	<var: #jmpImmediate type: #'AbstractInstruction *'>
+	<var: #immutableJump type: #'AbstractInstruction *'>
+	<var: #jumpRemembered type: #'AbstractInstruction *'>
+	"Assumes rr is not a context and no store check is needed"
+	indexIsCst := (self ssValue: 1) type = SSConstant.
+	self ssFlushTo: simStackPtr - 3.
+	rr := ReceiverResultReg.
+	ra1 := TempReg.
+	ra2 := ClassReg.
+	scratchReg := Arg0Reg.
+	adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
+	(self ssValue: 2) popToReg: rr.
+	indexIsCst
+		ifFalse:
+			[(self ssValue: 1) popToReg: ra1.
+			objectRepresentation genConvertSmallIntegerToIntegerInReg: ra1.
+			adjust ~= 0 ifTrue: [self AddCq: adjust R: ra1]]
+		ifTrue: [self MoveCq: (objectMemory integerValueOf: (self ssValue: 1) constant) + adjust R: ra1].
+	self ssTop popToReg: ra2.
+	self ssPop: 3.
+	self ssPushRegister: ra2.
+	self voidReceiverResultRegContainsSelf.
+
+	immutableJump := self genJumpImmutable: rr scratchReg: scratchReg.
+	self MoveR: ra2 Xwr: ra1 R: rr.
 	
-	self ssPop: 4.
-	self ssPushRegister: sourceReg.
-	 ^0
+	"store check"
+	jmpImmediate := self genJumpImmediate: ra2.
+	"Get the old/new boundary in scratchReg"
+	self MoveCw: objectMemory storeCheckBoundary R: scratchReg.
+	"Is target young?  If so we're done"
+	self CmpR: scratchReg R: rr. "N.B. FLAGS := destReg - scratchReg"
+	jmpDestYoung := self JumpBelow: 0.
+	"Is value stored old?  If so we're done."
+	self CmpR: scratchReg R: ra2. "N.B. FLAGS := valueReg - scratchReg"
+	jmpSourceOld := self JumpAboveOrEqual: 0.
+	"value is young and target is old.
+	 Need to remember this only if the remembered bit is not already set."
+	jumpRemembered := objectRepresentation genIfRequiredCheckRememberedBitOf: rr scratch: scratchReg.
+	"Set the inst var index for the benefit of the immutability check. The trampoline will
+	 repeat the check to choose between the immutbality violation and the store check."
+	immutableJump jmpTarget: self Label.
+	self PushR: ra2.
+	self SubCq: 1 + adjust R: ra1. "index 0-relative for trampoline, ra1 unused afterwards"
+	objectRepresentation genVarIndexCallStoreTrampoline.
+	self PopR: ra2.
+	jmpImmediate jmpTarget:
+	(jmpDestYoung jmpTarget:
+	(jmpSourceOld jmpTarget:
+		self Label)).
+	self setIfRequiredTargetOf: jumpRemembered toTargetOf: jmpImmediate.
+	
+	^0
+]
+
+{ #category : #'mapped inline primitive generators' }
+SistaCogit >> genPointerAtPutImmCheckButNoStoreCheck [
+	| ra1 ra2 rr adjust mutableJump immutabilityFailure indexIsCst |
+	<var: #mutableJump type: #'AbstractInstruction *'>
+	<var: #immutabilityFailure type: #'AbstractInstruction *'>
+	"Assumes rr is not a context and no store check is needed"
+	indexIsCst := (self ssValue: 1) type = SSConstant.
+	self ssFlushTo: simStackPtr - 3.
+	rr := ReceiverResultReg.
+	ra1 := TempReg.
+	ra2 := ClassReg.
+	(self ssValue: 2) popToReg: rr.
+	adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
+	indexIsCst
+		ifFalse:
+			[(self ssValue: 1) popToReg: ra1.
+			objectRepresentation genConvertSmallIntegerToIntegerInReg: ra1.
+			adjust ~= 0 ifTrue: [self AddCq: adjust R: ra1]]
+		ifTrue: [self MoveCq: (objectMemory integerValueOf: (self ssValue: 1) constant) + adjust R: ra1].
+	self ssTop popToReg: ra2.
+	self ssPop: 3.
+	self ssPushRegister: ra2.
+	self voidReceiverResultRegContainsSelf.
+
+	mutableJump := self genJumpMutable: rr scratchReg: Arg0Reg.
+	"simStack is flushed, but result is not"
+	self PushR: ra2.
+	self SubCq: 1 + adjust R: ra1. "index 0-relative for trampoline, ra1 unused afterwards"
+	objectRepresentation genVarIndexCallStoreTrampoline.
+	self PopR: ra2.
+	immutabilityFailure := self Jump: 0.
+	
+	mutableJump jmpTarget: self Label.
+	self MoveR: ra2 Xwr: ra1 R: rr.
+	immutabilityFailure jmpTarget: self Label.
+	^0
+]
+
+{ #category : #'mapped inline primitive generators' }
+SistaCogit >> genPointerAtPutMaybeContext: maybeContext storeCheck: needsStoreCheck immutabilityCheck: needsImmCheck [
+	"150	immCheckPointerAt:put:
+	pointer object (Fixed sized or not) and not a context, Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	151	immCheckStoreCheckPointerAt:put:
+	pointer object (Fixed sized or not) and not a context, Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	152	immCheckMaybeContextPointerAt:put:
+	pointer object (Fixed sized or not), Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	153	immCheckMaybeContextStoreCheckPointerAt:put:
+	pointer object (Fixed sized or not), Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)"
+	| index |
+	index := self ssValue: 1.
+	"Instruction always annoted - uncommon, IMMUTABILITY disabled. We need a Nop since previous instr can be annotated."
+	self cppIf: #IMMUTABILITY ifTrue: [] ifFalse: [ needsImmCheck ifTrue: [ self annotateBytecode: self Nop ] ].
+	"Optimised case if arg1 is constant"
+	index type = SSConstant 
+		ifTrue:  [^self genPointerAtPutConstantMaybeContext: maybeContext storeCheck: needsStoreCheck immutabilityCheck: needsImmCheck].
+	maybeContext ifTrue: [^EncounteredUnknownBytecode "not implemented, not used right now, for tempAt: optimisation on non constant"].
+	self cppIf: #IMMUTABILITY ifTrue:
+		[needsImmCheck
+			ifTrue: [needsStoreCheck
+				ifTrue: [^self genPointerAtPutImmCheckAndStoreCheck]
+				ifFalse: [^self genPointerAtPutImmCheckButNoStoreCheck] ] ].
+	^self genPointerAtPutStoreCheck: needsStoreCheck
+]
+
+{ #category : #'mapped inline primitive generators' }
+SistaCogit >> genPointerAtPutStoreCheck: needsStoreCheck [ 
+	| ra1 ra2 rr adjust |
+	"Assumes rr is not a context and no immutability check is needed"
+	"The store check requires rr to be ReceiverResultReg"
+	self 
+		allocateRegForStackTopThreeEntriesInto: [:rTop :rNext :rThird | ra2 := rTop. ra1 := rNext. rr := rThird ] 
+		thirdIsReceiver: needsStoreCheck.
+	self assert: (rr ~= ra1 and: [rr ~= ra2 and: [ra1 ~= ra2]]).
+	self ssTop popToReg: ra2.
+	self ssPop: 1.
+	self ssTop popToReg: ra1.
+	self ssPop: 1.
+	self ssTop popToReg: rr.
+	self ssPop: 1.
+	objectRepresentation genConvertSmallIntegerToIntegerInReg: ra1.
+	adjust := (objectMemory baseHeaderSize >> objectMemory shiftForWord) - 1. "shift by baseHeaderSize and then move from 1 relative to zero relative"
+	adjust ~= 0 ifTrue: [ self AddCq: adjust R: ra1. ]. 
+	self MoveR: ra2 Xwr: ra1 R: rr.
+	needsStoreCheck ifTrue: 
+		[ self assert: needsFrame. 
+		objectRepresentation genStoreCheckReceiverReg: rr valueReg: ra2 scratchReg: TempReg inFrame: true].
+	self ssPushRegister: ra2.
+	^0
+]
+
+{ #category : #'inline primitive generators' }
+SistaCogit >> genQuaternaryInlinePrimitive: prim [
+	^ EncounteredUnknownBytecode
 ]
 
 { #category : #'inline primitive generators' }
 SistaCogit >> genQuinaryInlinePrimitive: prim [
-	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
-	 See EncoderForSistaV1's class comment and StackInterpreter>>#quaternaryInlinePrimitive:"
-	| srcReg destReg destIterator srcIterator limitReg jmpDestYoung instr jmpAlreadyRemembered jumpFinished singleIterator |
-	<var: #jmpAlreadyRemembered type: #'AbstractInstruction *'>
-	<var: #jmpDestYoung type: #'AbstractInstruction *'>
-	<var: #jumpFinished type: #'AbstractInstruction *'>
-	<var: #instr type: #'AbstractInstruction *'>
-	prim ~= 0 ifTrue: [^EncounteredUnknownBytecode].
+	^ EncounteredUnknownBytecode
+]
+
+{ #category : #'inline primitive generators' }
+SistaCogit >> genSistaInlinePrimitive: prim [
+	"SistaV1:	248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution. This is the dispatch for unmapped sista inlined primitives."
 	
-	"5000	Pointer Object>> replaceFrom: srcPos to: srcLast with: startingAt: 
-	Src and dest are pointer objects. 
-	ScrPos, scrLast and destLast are smallintegers. 
-	Receiver is guaranteed to be mutable.  
-	Both ranges are in-bounds. 
-	The pointer accesses are raw (no inst var check). 
-	As for the normal primitive, the copy is linear from the first field to the last field (legacy code relies on it). 
-	Answers the receiver."
-	singleIterator := self ssTop type = SSConstant 
-						and: [(self ssValue: 3) type = SSConstant 
-						and: [self ssTop constant = (self ssValue: 3) constant]].
-	 srcIterator :=  self allocateRegForStackEntryAt: 0 notConflictingWith: self emptyRegisterMask.
-	 self genMoveAndAdjustSSEntry: (self ssValue: 0) into: srcIterator. 
-	 srcReg := self allocateRegForStackEntryAt: 1 notConflictingWith: (self registerMaskFor: srcIterator).
-	 (self ssValue: 1) popToReg: srcReg.
-	 limitReg := self allocateRegForStackEntryAt: 2 notConflictingWith: (self registerMaskFor: srcIterator and: srcReg).
-	 self genMoveAndAdjustSSEntry: (self ssValue: 2) into: limitReg.
-	singleIterator
-		ifTrue: 
-			[ destIterator := srcIterator ]
-		ifFalse: 
-			[ destIterator := self allocateRegForStackEntryAt: 3 notConflictingWith: (self registerMaskFor: srcIterator and: srcReg and: limitReg).
-			  self genMoveAndAdjustSSEntry: (self ssValue: 3) into: destIterator ].
-	 destReg := self allocateRegForStackEntryAt: 4 notConflictingWith: (self registerMaskFor: srcIterator and: srcReg and: limitReg and: destIterator).
-	 (self ssValue: 4) popToReg: destReg.
+	prim < 1000 ifTrue:
+		[^self genNullaryInlinePrimitive: prim].
+
+	prim < 2000 ifTrue:
+		[^self genUnaryInlinePrimitive: prim - 1000].
 	
-	"store check"
-	extB > 0 ifFalse:
-		[self MoveCw: objectMemory storeCheckBoundary R: TempReg.
-		 self CmpR: TempReg R: destReg.
-		 jmpDestYoung := self JumpBelow: 0.
-		 objectRepresentation checkRememberedInTrampoline ifFalse: 
-			[jmpAlreadyRemembered := objectRepresentation genCheckRememberedBitOf: destReg scratch: TempReg].
-		 objectRepresentation callStoreCheckTrampoline.
-		 jmpDestYoung jmpTarget: self Label.
-		 objectRepresentation checkRememberedInTrampoline ifFalse: 
-			[jmpAlreadyRemembered jmpTarget: self Label]].
-	extB := 0.
+	prim < 3000 ifTrue:
+		[^self genBinaryInlinePrimitive: prim - 2000].
+
+	prim < 4000 ifTrue:
+		[^self genTrinaryInlinePrimitive: prim - 3000].
 	
-	"Fast copy - no store check"
-	instr := self CmpR: destIterator R: limitReg.
-	jumpFinished := self JumpBelow: 0.
-	self MoveXwr: srcIterator R: srcReg R: TempReg.
-	self MoveR: TempReg Xwr: destIterator R: destReg.
-	self AddCq: 1 R: srcIterator.
-	srcIterator ~= destIterator ifTrue: [ self AddCq: 1 R: destIterator ].
-	self Jump: instr.
-	jumpFinished jmpTarget: self Label.
+	prim < 5000 ifTrue: 
+		[^self genQuaternaryInlinePrimitive: prim - 4000].
 	
-	self ssPop: 5.
-	self ssPushRegister: destReg.
-	^ 0
+	prim < 6000 ifTrue: 
+		[^self genQuinaryInlinePrimitive: prim - 5000].
+		
+	 prim < 7000 ifTrue:
+		[^self genJumpUnaryInlinePrimitive: prim - 6000].
+	
+ 	prim < 8000 ifTrue:
+		[^self genJumpBinaryInlinePrimitive: prim - 7000].
+	
+	^ self genJumpTrinaryInlinePrimitive: prim - 8000.
 ]
 
 { #category : #'bytecode generators' }
@@ -1322,68 +2080,89 @@ SistaCogit >> genSpecialSelectorComparisonWithoutCounters [
 
 { #category : #'inline primitive generators' }
 SistaCogit >> genTrinaryInlinePrimitive: prim [
-	"trinary inline primitives."
-	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
-	 See EncoderForSistaV1's class comment and StackInterpreter>>#trinaryInlinePrimitive:"
-
-	prim < 10 ifTrue: [^ self genAtPutInlinePrimitive: prim].
-	prim = 21 ifTrue: [^ self genByteEqualsInlinePrimitive: prim].
+	"Bulk comment, each sub method has its own comment
+	3000	pointerAt:put:
+	Mutable pointer object (Fixed sized or not) and not a context, Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	3001	storeCheckPointerAt:put:
+	Mutable pointer object (Fixed sized or not) and not a context, Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	3002	maybeContextPointerAt:put:
+	Mutable pointer object (Fixed sized or not), Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	3003	maybeContextStoreCheckPointerAt:put:
+	Mutable pointer object (Fixed sized or not), Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	3004	byteAt:put:
+	Mutable byte object, Smi, 8 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)
+	3005	shortAt:put:
+	Mutable short object, Smi, 16 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)
+	3006	wordAt:put:
+	Mutable word object, Smi, 32 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)
+	3007	doubleWordAt:put:
+	Mutable double word object, Smi, 64 bits unsigned Smi or LargePositiveInteger => arg2 (1-based, optimised if arg1 is a constant)
+	3021 is deprecated."
+	prim <= 7 ifTrue: [^self genAtPutInlinePrimitive: prim].
+	prim = 21 ifTrue: [^self genByteEqualsInlinePrimitive: prim].
 	^ EncounteredUnknownBytecode
 ]
 
-{ #category : #'inline primitive generators' }
-SistaCogit >> genUnaryInlinePrimitive: prim [
-	"Unary inline primitives."
-	"SistaV1: 248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution.
-	 See EncoderForSistaV1's class comment and StackInterpreter>>#unaryInlinePrimitive:"
-	| rcvrReg resultReg |
-	rcvrReg := self allocateRegForStackEntryAt: 0.
-	resultReg := self allocateRegNotConflictingWith: (self registerMaskFor: rcvrReg).
-	prim
-		caseOf: {
-					"00		unchecked class"
-			[1] ->	"01		unchecked pointer numSlots"
-				[self ssTop popToReg: rcvrReg.
-				 self ssPop: 1.
-				 objectRepresentation
-					genGetNumSlotsOf: rcvrReg into: resultReg;
-					genConvertIntegerToSmallIntegerInReg: resultReg].
-					"02		unchecked pointer basicSize"
-			[3] ->	"03		unchecked byte numBytes"
-				[self ssTop popToReg: rcvrReg.
-				 self ssPop: 1.
-				 objectRepresentation
-					genGetNumBytesOf: rcvrReg into: resultReg;
-					genConvertIntegerToSmallIntegerInReg: resultReg].
-					"04		unchecked short16Type format numShorts"
-					"05		unchecked word32Type format numWords"
-					"06		unchecked doubleWord64Type format numDoubleWords"
-			[11] ->	"11		unchecked fixed pointer basicNew"
-				[self ssTop type ~= SSConstant ifTrue:
-					[^EncounteredUnknownBytecode].
-				 (objectRepresentation
-					genGetInstanceOfFixedClass: self ssTop constant
-						into: resultReg
-							initializingIf: self extBSpecifiesInitializeInstance) ~= 0 ifTrue:
-					[^ShouldNotJIT]. "e.g. bad class"
-				 self ssPop: 1] .
-			[20] ->	"20 	identityHash"
-				[objectRepresentation genGetIdentityHash: rcvrReg resultReg: resultReg.
-				 self ssPop: 1] .
-					"21		identityHash (SmallInteger)"
-					"22		identityHash (Character)"
-					"23		identityHash (SmallFloat64)"
-					"24		identityHash (Behavior)"
-					"30 	immediateAsInteger (Character)
-					 31 	immediateAsInteger (SmallFloat64)
-					 35		immediateAsFloat 	  (SmallInteger)	"
-			[30] -> 
-				[self ssTop popToReg: resultReg.
-				 objectRepresentation genConvertCharacterToSmallIntegerInReg: resultReg.
-				 self ssPop: 1].
-			[35] -> 
-				[self assert: self processorHasDoublePrecisionFloatingPointSupport.
-				self MoveR: rcvrReg R: TempReg.
+{ #category : #'inline primitive unary generators' }
+SistaCogit >> genUnaryClassPrimitive [ 
+	"1000	rawClass
+	not a forwarder => Behavior (Same as class special send, but receiver is not a forwarder)"
+	
+	"Important performance note:
+	In Scorch, typically a value is known as not being a forwarder if there is a trap.
+	If the trap is due to a monomorphic send, the #class send leads to:
+		trapIf: X notInstanceOf: C
+		X rawClass
+	therefore X rawClass is simplified in Scorch to the cst:C
+	The rawClass is therefore used only for PICs. 
+		trapIf: X notInstanceOf: C, C', C''
+		X rawClass
+	This unsafe operation is important to avoid register flush, but the performance 
+	difference in differencing rawClass for immediate and rawClass for non immediate 
+	classes is not that relevant"
+	
+	| topReg jumpIsImm destReg |
+	<var: #jumpIsImm type: #'AbstractInstruction *'>
+	topReg := self allocateRegForStackEntryAt: 0 notConflictingWith: 0.
+	destReg := self allocateRegNotConflictingWith: (self registerMaskFor: topReg).
+	self ssTop popToReg: topReg.
+	
+	"1. Read the class index"
+	self MoveR: topReg R: TempReg.
+	self AndCq: objectMemory tagMask R: TempReg.
+	jumpIsImm := self JumpNonZero: 0.
+	self flag: #endianness.
+	"Get least significant half of header word in destReg"
+	self MoveMw: 0 r: topReg R: TempReg.
+	"mask off class index"
+	self AndCq: objectMemory classIndexMask R: TempReg.
+	
+	"2. Read the class from class index"
+	jumpIsImm jmpTarget: self Label.
+	objectRepresentation genGetClassObjectOfClassIndex: TempReg into: destReg scratchReg: topReg.
+	self ssPop: 1.
+	^self ssPushRegister: destReg
+]
+
+{ #category : #'inline primitive unary generators' }
+SistaCogit >> genUnaryConvertInlinePrimitive: primIndex [
+	| resultReg |
+	self assert: (primIndex between: 30 and: 32).
+	primIndex caseOf: {
+		"1030	characterAsInteger
+		 Character => 22 bits strictly positive Smi (Unicode)"
+		[30] -> [resultReg := self allocateRegForStackEntryAt: 0. 
+				self ssTop popToReg: resultReg.
+				objectRepresentation genConvertCharacterToSmallIntegerInReg: resultReg].
+		"1031	smallFloatAsInteger
+		 SmallFloat => Smi"
+		[31] -> [^EncounteredUnknownBytecode "to implement"].
+		"1032	smiAsFloat
+		 Smi => SmallFloat"
+		[32] -> [resultReg := self allocateRegForStackEntryAt: 0. 
+				self ssTop popToReg: resultReg.
+				self assert: self processorHasDoublePrecisionFloatingPointSupport.
+				self MoveR: resultReg R: TempReg.
 				self genConvertSmallIntegerToIntegerInReg: TempReg.
 				self ConvertR: TempReg Rd: DPFPReg0.
 				self flag: #TODO. "Should never fail"
@@ -1391,15 +2170,193 @@ SistaCogit >> genUnaryInlinePrimitive: prim [
 					genAllocFloatValue: DPFPReg0
 					into: resultReg
 					scratchReg: TempReg
-					scratchReg: NoReg. "scratch2 for V3 only"]
-				  }
-				
-		otherwise:
-			[^EncounteredUnknownBytecode].
-	extB := 0.
-	numExtB := 0.
+					scratchReg: NoReg. "scratch2 for V3 only"] 
+	}.
+	self ssPop: 1.
+	^self ssPushRegister: resultReg
+]
+
+{ #category : #'inline primitive unary generators' }
+SistaCogit >> genUnaryHashInlinePrimitive: primIndex [
+	| rcvrReg resultReg |
+	self assert: (primIndex between: 20 and: 23).
+	primIndex caseOf: {
+		"1020	objectIdentityHash
+		 non-immediate and non-behavior => 22 bits strictly positive Smi"
+		[20] ->	[rcvrReg := self allocateRegForStackEntryAt: 0.
+				 resultReg := self allocateRegNotConflictingWith: (self registerMaskFor: rcvrReg).
+				 self ssTop popToReg: rcvrReg.
+				 objectRepresentation genGetIdentityHash: rcvrReg resultReg: resultReg].
+		"1021	smiIdentityHash
+		 Smi => Smi"
+		[21] -> [resultReg := self allocateRegForStackEntryAt: 0. 
+				self ssTop popToReg: resultReg].		
+		"1022	charIdentityHash
+		 Character => 22 bits strictly positive Smi"
+		[22] -> [resultReg := self allocateRegForStackEntryAt: 0. 
+				self ssTop popToReg: resultReg.
+				objectRepresentation genConvertCharacterToSmallIntegerInReg: resultReg].
+		"1023	smallfloatIdentityHash
+		 SmallFloat => Smi"
+		[23] -> [resultReg := self allocateRegForStackEntryAt: 0. 
+				objectRepresentation genConvertSmallFloatToSmallFloatHashAsIntegerInReg: resultReg scratch: TempReg].
+		"1024	behaviorIdentityHash
+		 Behavior => 22 bits strictly positive Smi"
+		[24] -> [^EncounteredUnknownBytecode "not implemented"].	
+		}.
+		self ssPop: 1.
+		^self ssPushRegister: resultReg
+]
+
+{ #category : #'inline primitive unary generators' }
+SistaCogit >> genUnaryInlinePrimitive: primIndex [
+	"Bulk comments: each sub-method has its own comment with the specific case.
+	1000	rawClass
+	not a forwarder => Behavior (Same as class special send, but receiver is not a forwarder)
+	1001	numSlots
+	pointer object => Smi between 0 and SmallInteger maxVal // 4 - 1 (Answers total size in pointer-sized slots)
+	1002	numBytes
+	byte object => Smi between 0 and SmallInteger maxVal - 9 (Includes compiled code)
+	1003	numShorts
+	short object => Smi between 0 and SmallInteger maxVal - 9
+	1004	numWords
+	word object => Smi between 0 and SmallInteger maxVal - 9
+	1005	numDoubleWords
+	double word object => Smi between 0 and SmallInteger maxVal - 9
+	1011	RawNew
+	literal which is a fixed-sized behavior => instance of the receiver with fields nilled out
+	1012	RawNewNoInit
+	literal which is a fixed-sized behavior => instance of the receiver (Fields of returned value contain undefined data)
+	1020	objectIdentityHash
+	non-immediate and non-behavior => 22 bits strictly positive Smi
+	1021	smiIdentityHash
+	Smi => Smi
+	1022	charIdentityHash
+	Character => 22 bits strictly positive Smi
+	1023	smallfloatIdentityHash
+	SmallFloat => Smi
+	1024	behaviorIdentityHash
+	Behavior => 22 bits strictly positive Smi
+	1030	characterAsInteger
+	Character => 22 bits strictly positive Smi (Unicode)
+	1031	smallFloatAsInteger
+	SmallFloat => Smi
+	1032	smiAsFloat
+	Smi => SmallFloat
+	1040	unforward
+	Anything => Not a forwarder
+	1041	possibleRoot
+	non-immediate, not a forwarder => receiver is returned (should be effect-only) (If old, becomes gray and remembered to allow many unchecked stores in a row afterwards)"
+	primIndex = 0 ifTrue: [^self genUnaryClassPrimitive].
+	primIndex <= 6 ifTrue: [^self genUnarySizeInlinePrimitive: primIndex].
+	primIndex < 11 ifTrue: [^EncounteredUnknownBytecode].
+	primIndex <= 12 ifTrue: [^self genUnaryNewInlinePrimitive: primIndex].
+	primIndex < 20 ifTrue: [^EncounteredUnknownBytecode].
+	primIndex <= 24 ifTrue: [^self genUnaryHashInlinePrimitive: primIndex].
+	primIndex < 30 ifTrue: [^EncounteredUnknownBytecode].
+	primIndex <= 32 ifTrue: [^self genUnaryConvertInlinePrimitive: primIndex].
+	primIndex = 39 ifTrue: [^self genUnaryUnforwardNonImmediateInlinePrimitive].
+	primIndex = 40 ifTrue: [^self genUnaryUnforwardInlinePrimitive].
+	primIndex = 41 ifTrue: [^self genUnaryPossibleRootInlinePrimitive].
+	^EncounteredUnknownBytecode
+]
+
+{ #category : #'inline primitive unary generators' }
+SistaCogit >> genUnaryNewInlinePrimitive: primIndex [ 
+	"1011	RawNew
+	 literal which is a fixed-sized behavior => instance of the receiver with fields nilled out
+	1012	RawNewNoInit
+	literal which is a fixed-sized behavior => instance of the receiver (Fields of returned value contain undefined data)"
+	| resultReg classObj |
+	self assert: (self ssTop type = SSConstant).
+	classObj := self ssTop constant.
+	self assert: (objectMemory isNonImmediate: classObj).
+	self assert: (coInterpreter objCouldBeClassObj: classObj).
+	self assert: (objectMemory isFixedSizePointerFormat: (objectMemory instSpecOfClassFormat: (objectMemory formatOfClass: classObj))).
+	objectMemory classTagForClass: classObj. "Ensure Behavior hash"
+	resultReg := self allocateRegNotConflictingWith: 0.
+	objectRepresentation genGetInstanceOfPointerClass: classObj into: resultReg initializingIf: primIndex = 11 numVariableSlots: 0.
+	self ssPop: 1.
+	^self ssPushRegister: resultReg
+]
+
+{ #category : #'inline primitive unary generators' }
+SistaCogit >> genUnaryPossibleRootInlinePrimitive [
+	"1041	possibleRoot
+	 non-immediate, not a forwarder => receiver is returned (should be effect-only) (If old, becomes gray and remembered to allow many unchecked stores in a row afterwards)"
+	| topReg jmpDestYoung jmpAlreadyRemembered|
+	<var: #jmpDestYoung type: #'AbstractInstruction *'>
+	<var: #jmpAlreadyRemembered type: #'AbstractInstruction *'>
+	topReg := self allocateRegForStackEntryAt: 0 notConflictingWith: 0.
+	self ssTop popToReg: topReg.
+	self MoveCw: objectMemory storeCheckBoundary R: TempReg.
+	 self CmpR: TempReg R: topReg.
+	 jmpDestYoung := self JumpBelow: 0.
+	 objectRepresentation checkRememberedInTrampoline ifFalse: 
+		[jmpAlreadyRemembered := objectRepresentation genCheckRememberedBitOf: topReg scratch: TempReg].
+	 objectRepresentation callStoreCheckTrampoline.
+	 jmpDestYoung jmpTarget: self Label.
+	 objectRepresentation checkRememberedInTrampoline ifFalse: 
+		[jmpAlreadyRemembered jmpTarget: self Label].
+	self ssPop: 1.
+	^self ssPushRegister: topReg
+]
+
+{ #category : #'inline primitive unary generators' }
+SistaCogit >> genUnarySizeInlinePrimitive: primIndex [ 
+	| rcvrReg resultReg |
+	self assert: (primIndex between: 1 and: 6).
+	rcvrReg := self allocateRegForStackEntryAt: 0 notConflictingWith: 0.
+	resultReg := self allocateRegNotConflictingWith: (self registerMaskFor: rcvrReg).
+	self ssTop popToReg: rcvrReg.
+	self ssPop: 1.
 	self ssPushRegister: resultReg.
-	^0
+	primIndex caseOf: {
+		"1001	numSlots
+		 pointer object => Smi between 0 and SmallInteger maxVal // 4 - 1 (Answers total size in pointer-sized slots)"
+		[1]	->	[objectRepresentation
+					genGetNumSlotsOf: rcvrReg into: resultReg;
+					genConvertIntegerToSmallIntegerInReg: resultReg].
+		"1002	numBytes
+		 byte object => Smi between 0 and SmallInteger maxVal - 9 (Includes compiled code)"
+		[2]	->	[objectRepresentation
+					genGetNumBytesOf: rcvrReg into: resultReg;
+					genConvertIntegerToSmallIntegerInReg: resultReg].
+		"1003	numShorts
+		 short object => Smi between 0 and SmallInteger maxVal - 9"
+		[3]	->	[^EncounteredUnknownBytecode "not implemented"].
+		"1004	numWords
+		 word object => Smi between 0 and SmallInteger maxVal - 9"
+		[5]	->	[^EncounteredUnknownBytecode "not implemented"].
+		"1005	numDoubleWords 
+		 double word object => Smi between 0 and SmallInteger maxVal - 9"
+		[6]	->	[^EncounteredUnknownBytecode "not implemented"].
+	}..
+	^ 0
+]
+
+{ #category : #'inline primitive unary generators' }
+SistaCogit >> genUnaryUnforwardInlinePrimitive [
+	"1040	unforward
+	 Anything => Not a forwarder"
+	| topReg |
+	topReg := self allocateRegForStackEntryAt: 0 notConflictingWith: 0.
+	self ssTop popToReg: topReg.
+	objectRepresentation genEnsureOopInRegNotForwarded: topReg scratchReg: TempReg.
+	self ssPop: 1.
+	^self ssPushRegister: topReg
+]
+
+{ #category : #'inline primitive unary generators' }
+SistaCogit >> genUnaryUnforwardNonImmediateInlinePrimitive [
+	"1039	unforwardNonImmediate
+	 non immediate => Not a forwarder"
+	| topReg |
+	topReg := self allocateRegForStackEntryAt: 0 notConflictingWith: 0.
+	self ssTop popToReg: topReg.
+	objectRepresentation genEnsureObjInRegNotForwarded: topReg scratchReg: TempReg.
+	self ssPop: 1.
+	^self ssPushRegister: topReg
 ]
 
 { #category : #'bytecode generators' }
@@ -1483,6 +2440,44 @@ SistaCogit >> maybeCounterIndex [
 ]
 
 { #category : #'compile abstract instructions' }
+SistaCogit >> maybeDealWithUnsafeJumpForDescriptor: descriptor pc: pc latestContinuation: latestContinuation [
+	"Mapped: 250	backjumpAlwaysInterrupt
+	 Unmapped: 6000	backjumpNoInterrupt 
+				 7016-7020 jumpWritable/Young
+				 8000-8003 type branches
+	In all cases the distance is an integer pushed on stack just before with pushIntegerLong:"
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	| distance targetPC byte01 byte02 newContinuation |
+	newContinuation := latestContinuation.
+	descriptor hasUnsafeJump ifTrue:
+		[ byte01 := objectMemory fetchByte: pc + 1 ofObject: methodObj.
+		  byte02 := objectMemory fetchByte: pc + 2 ofObject: methodObj.
+		  distance := self decodePushIntegerLongBefore: pc in: methodObj.
+		  targetPC := pc + descriptor numBytes + distance.
+		  descriptor isMapped 
+			ifTrue: [ byte01 = 250 ifTrue: 
+				[ "mapped always interrupt backjump" 
+				 self maybeCountFixup: descriptor.
+				 self initializeFixupAt: targetPC ] ]
+			ifFalse: 
+				[ byte02 >> 5 = 2r100 ifTrue: 
+					[ "inlined sista primitive" 
+					| prim |
+					prim := (byte02 bitAnd: 16r1F) << 8 + byte01.
+					prim >= 7000
+						ifTrue: 
+							["branch forward"
+							 self maybeCountFixup: descriptor.
+							 newContinuation := latestContinuation max: targetPC ]
+						ifFalse: 
+							[prim >= 6000 ifTrue: 
+								["no interrupt back jump"
+								self maybeCountFixup: descriptor.
+								self initializeFixupAt: targetPC]]]]].
+	^newContinuation
+]
+
+{ #category : #'compile abstract instructions' }
 SistaCogit >> maybeFreeCounters [
 	<inline: true>
 	counters ~= 0 ifTrue:
@@ -1515,6 +2510,32 @@ SistaCogit >> maybeMarkCountersIn: cogMethod [
 SistaCogit >> maybeSetCounterIndex: value [
 	<inline: true>
 	counterIndex := value
+]
+
+{ #category : #'compile abstract instructions' }
+SistaCogit >> maybeUnsafeJumpContinuation: latestContinuation at: bcpc for: descriptor in: aMethodObj [
+	<inline: true>
+	"Note: ignore backward jumps."
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	| distance targetPC byte01 byte02 newContinuation | 
+	newContinuation := latestContinuation.
+	descriptor hasUnsafeJump ifTrue:
+		[ byte01 := objectMemory fetchByte: bcpc + 1 ofObject: aMethodObj.
+		  byte02 := objectMemory fetchByte: bcpc + 2 ofObject: aMethodObj.
+		  "pushIntegerLong"
+		  distance := self decodePushIntegerLongBefore: bcpc in: methodObj.
+		  targetPC := bcpc + descriptor numBytes + distance.
+		  descriptor isMapped 
+			ifFalse: 
+				[ byte02 >> 5 = 2r100 ifTrue: 
+					[ "inlined sista primitive" 
+					| prim |
+					prim := (byte02 bitAnd: 16r1F) << 8 + byte01.
+					prim >= 7000
+						ifTrue: 
+							["branch forward"
+							 newContinuation := latestContinuation max: targetPC ]]]].
+	^newContinuation
 ]
 
 { #category : #'simulation only' }
