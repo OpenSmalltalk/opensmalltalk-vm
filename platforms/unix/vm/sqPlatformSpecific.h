@@ -87,8 +87,6 @@ extern const pthread_key_t tltiIndex;
 # endif /* COGMTVM */
 #endif /* STACKVM || NewspeakVM */
 
-#include <limits.h>
-
 #include <sys/types.h>
 
 typedef off_t squeakFileOffsetType;

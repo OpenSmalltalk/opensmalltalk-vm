@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <limits.h>
 
 #include "sqMemoryAccess.h"
 #include "sqVirtualMachine.h"

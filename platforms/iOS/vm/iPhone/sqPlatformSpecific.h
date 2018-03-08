@@ -56,7 +56,6 @@
 #define ENABLE_URL_FETCH
 /* replace the image file manipulation macros with functions */
 
-
 #undef sqAllocateMemory
 
 //64bit function pointers undef
@@ -175,12 +174,12 @@ extern const pthread_key_t tltiIndex;
 # undef EXPORT
 # define EXPORT(returnType) __attribute__((visibility("default"))) returnType
 //# define VM_LABEL(foo) asmXXX("\n.globl L" #foo "\nL" #foo ":")
-# define VM_LABEL(foo)  
+// # define VM_LABEL(foo)
 #endif
 
 #if !defined(VM_LABEL) || COGVM
 # undef VM_LABEL
-# define VM_LABEL(foo) 0
+# define VM_LABEL(foo) ((void)0)
 #endif
 
 #endif /* macintoshSqueak */
