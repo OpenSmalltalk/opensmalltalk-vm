@@ -812,12 +812,12 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 
 		( 96	 bytecodePrimAdd)
 		( 97	 bytecodePrimSubtract)
-		( 98	 bytecodePrimLessThanSistaV1) "for booleanCheatSistaV1:"
-		( 99	 bytecodePrimGreaterThanSistaV1) "for booleanCheatSistaV1:"
-		(100	 bytecodePrimLessOrEqualSistaV1) "for booleanCheatSistaV1:"
-		(101	 bytecodePrimGreaterOrEqualSistaV1) "for booleanCheatSistaV1:"
-		(102	 bytecodePrimEqualSistaV1) "for booleanCheatSistaV1:"
-		(103	 bytecodePrimNotEqualSistaV1) "for booleanCheatSistaV1:"
+		( 98	 bytecodePrimLessThanSistaV1) 		"for booleanCheatSistaV1:"
+		( 99	 bytecodePrimGreaterThanSistaV1) 	"for booleanCheatSistaV1:"
+		(100	 bytecodePrimLessOrEqualSistaV1) 	"for booleanCheatSistaV1:"
+		(101	 bytecodePrimGreaterOrEqualSistaV1) 	"for booleanCheatSistaV1:"
+		(102	 bytecodePrimEqualSistaV1) 			"for booleanCheatSistaV1:"
+		(103	 bytecodePrimNotEqualSistaV1) 		"for booleanCheatSistaV1:"
 		(104	 bytecodePrimMultiply)
 		(105	 bytecodePrimDivide)
 		(106	 bytecodePrimMod)
@@ -875,18 +875,18 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 		(234		extSendBytecode)
 		(235		extSendSuperBytecode)
 
-		(236		extEnsureAllocableSlots)
+		(236		callMappedInlinedPrimitive)
 
 		(237		extUnconditionalJump)
 		(238		extJumpIfTrue)
 		(239		extJumpIfFalse)
 
-		(240		extSistaStoreAndPopReceiverVariableBytecode)
-		(241		extSistaStoreAndPopLiteralVariableBytecode)
+		(240		extStoreAndPopReceiverVariableBytecode)
+		(241		extStoreAndPopLiteralVariableBytecode)
 		(242		longStoreAndPopTemporaryVariableBytecode)
 
-		(243		extSistaStoreReceiverVariableBytecode)
-		(244		extSistaStoreLiteralVariableBytecode)
+		(243		extStoreReceiverVariableBytecode)
+		(244		extStoreLiteralVariableBytecode)
 		(245		longStoreTemporaryVariableBytecode)
 
 		(246 247	unknownBytecode)
@@ -896,13 +896,11 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 		(249		extPushFullClosureBytecode)
 
 		(250		extPushClosureBytecode)
-		(251		extPushRemoteTempOrInstVarLongBytecode)
-		(252		extStoreRemoteTempOrInstVarLongBytecode)
-		(253		extStoreAndPopRemoteTempOrInstVarLongBytecode)
+		(251		pushRemoteTempLongBytecode)
+		(252		storeRemoteTempLongBytecode)
+		(253		storeAndPopRemoteTempLongBytecode)
 				
-		(254		extJumpIfNotInstanceOfBehaviorsBytecode)
-
-		(255		unknownBytecode)
+		(254 255	unknownBytecode)
 	)
 ]
 
@@ -2661,112 +2659,264 @@ StackInterpreter >> bereaveAllMarriedContextsForSnapshotFlushingExternalPrimitiv
 			[self flushExternalPrimitiveOf: obj]]
 ]
 
-{ #category : #'miscellaneous bytecodes' }
-StackInterpreter >> binaryInlinePrimitive: primIndex [
-	"SistaV1:	248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution."
+{ #category : #'sista inline primitives - binary' }
+StackInterpreter >> binaryAtInlinePrimitive: primIndex [
 	<option: #SistaVM>
-	| result result64 |
+	| result rec argIntAdjusted top |
+	rec := self internalStackValue: 1.
+	top := self internalStackTop.
+	self deny: ((objectMemory isOopForwarded: rec) or: [(objectMemory isImmediate: rec)]).
+	self assert: (objectMemory isIntegerObject: top).
+	argIntAdjusted := (objectMemory integerValueOf: top) - 1.
+	self assert: argIntAdjusted >= 0.
 	primIndex caseOf: {
-		"2000	unchecked SmallInteger #+.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
-		[0]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: (self internalStackValue: 1))
-															+ (objectMemory integerValueOf: self internalStackTop)).
-				 self internalPop: 1; internalStackTopPut: result].
-		"2001	unchecked SmallInteger #-.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
-		[1]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: (self internalStackValue: 1))
-															- (objectMemory integerValueOf: self internalStackTop)).
-				 self internalPop: 1; internalStackTopPut: result].
-		"2002	unchecked SmallInteger #*.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
-		[2]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: (self internalStackValue: 1))
-															* (objectMemory integerValueOf: self internalStackTop)).
-				 self internalPop: 1; internalStackTopPut: result].
-		"2003	unchecked SmallInteger #/.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
-		[3]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: (self internalStackValue: 1))
-															/ (objectMemory integerValueOf: self internalStackTop)).
-				 self internalPop: 1; internalStackTopPut: result].
-		"2004	unchecked SmallInteger #//.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
-		[4]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: (self internalStackValue: 1))
-															// (objectMemory integerValueOf: self internalStackTop)).
-				 self internalPop: 1; internalStackTopPut: result].
-		"2005	unchecked SmallInteger #\\.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
-		[5]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: (self internalStackValue: 1))
-															\\ (objectMemory integerValueOf: self internalStackTop)).
-				 self internalPop: 1; internalStackTopPut: result].
-		"2006	unchecked SmallInteger #quo:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
-		[6]	->	[| rcvr arg |
-				 rcvr := objectMemory integerValueOf: (self internalStackValue: 1).
-				 arg := objectMemory integerValueOf: self internalStackTop.
-				 result := self quot: rcvr ient: arg.
-				 self internalPop: 1; internalStackTopPut: (objectMemory integerObjectOf: result)].
+		"2064	pointerAt:
+		Pointer object (Fixed sized or not) and not a context, Smi =>  (1-based, optimised if arg1 is a constant)"
+		[64]	->	[self assert: (objectMemory isPointers: rec).
+					 self assert: argIntAdjusted < (objectMemory numSlotsOfAny: rec).
+					 result := objectMemory fetchPointer: argIntAdjusted ofObject: rec.].
+		"2065	maybeContextPointerAt:
+		 Pointer object (Fixed sized or not), Smi =>  (1-based, optimised if arg1 is a constant)"
+		[65]	->	[ ((objectMemory isContextNonImm: rec) 
+						 and: [self isMarriedOrWidowedContext: rec])
+							ifTrue:
+								[self externalizeIPandSP.
+								 result := self externalInstVar: argIntAdjusted ofContext: rec.
+								 self internalizeIPandSP]
+					ifFalse: [result := objectMemory fetchPointer: argIntAdjusted ofObject: rec]
+			].
+		"2066	byteAt:
+		 byte object, Smi => 8 bits unsigned Smi (1-based, optimised if arg1 is a constant)"
+		[66]	->	[self assert: (objectMemory isBytes: rec).
+					 self assert: argIntAdjusted < (objectMemory numBytesOf: rec).
+					 result := objectMemory integerObjectOf: (objectMemory fetchByte: argIntAdjusted ofObject: rec)].
+		"2067	shortAt:
+		short object, Smi => 16 bits unsigned Smi (1-based, optimised if arg1 is a constant)"
+		[67]	->	[self assert: (objectMemory isShorts: rec).
+					 self assert: argIntAdjusted < (objectMemory num16BitUnitsOf: rec).
+					 result := objectMemory integerObjectOf: (objectMemory fetchShort16: argIntAdjusted ofObject: rec)].
+		"2068	wordAt:
+		 word object, Smi => 32 bits unsigned Smi (1-based, optimised if arg1 is a constant)."
+		[68]	->	[self assert: (objectMemory isWords: rec).
+					 self assert: argIntAdjusted < (objectMemory num32BitUnitsOf: rec).
+					 result := self positive32BitIntegerFor: (objectMemory fetchLong32: argIntAdjusted ofObject: rec)].
+		"2069	doubleWordAt:
+		 double word object, Smi => 64 bits unsigned Smi or LargePositiveInteger (1-based, optimised if arg1 is a constant)"
+		[69]	->	[self assert: (objectMemory isLong64s: rec).
+					 self assert: argIntAdjusted < (objectMemory num64BitUnitsOf: rec).
+					 result := self positive64BitIntegerFor: (objectMemory fetchLong64: argIntAdjusted ofObject: rec)].}.
+		self internalPop: 1; internalStackTopPut: result
+]
 
-		"2016	unchecked SmallInteger #bitAnd:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
-		[16]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: (self internalStackValue: 1))
-															bitAnd: (objectMemory integerValueOf: self internalStackTop)).
-					 self internalPop: 1; internalStackTopPut: result].
-		"2017	unchecked SmallInteger #bitOr:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
-		[17]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: (self internalStackValue: 1))
-															bitOr: (objectMemory integerValueOf: self internalStackTop)).
-					 self internalPop: 1; internalStackTopPut: result].
-		"2018	unchecked SmallInteger #bitXor:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
-		[18]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: (self internalStackValue: 1))
-															bitXor: (objectMemory integerValueOf: self internalStackTop)).
-					 self internalPop: 1; internalStackTopPut: result].
-		"2019	unchecked SmallInteger #bitShiftLeft:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
-		[19]	->	[result := objectMemory integerObjectOf: ((objectMemory integerValueOf: (self internalStackValue: 1)) 
-															<< (objectMemory integerValueOf: self internalStackTop)).
-					 self internalPop: 1; internalStackTopPut: result].
-		"2019	unchecked SmallInteger #bitShiftRight:.  Both arguments are SmallIntegers and the result fits in a SmallInteger (* depends on word size)"
-		[20]	->	[result := objectMemory integerObjectOf: (objectMemory wordSize = 4
-						ifTrue: [ (objectMemory integerValueOf: (self internalStackValue: 1)) >> (objectMemory integerValueOf: self internalStackTop)]
-						ifFalse: [ (objectMemory integerValueOf: (self internalStackValue: 1)) >>> (objectMemory integerValueOf: self internalStackTop)]).
-					 self internalPop: 1; internalStackTopPut: result].
+{ #category : #'sista inline primitives - binary' }
+StackInterpreter >> binaryCompInlinePrimitive: primIndex [
+	<option: #SistaVM>
+	| result |
+	self assert: (primIndex between: 38 and: 39).
+	primIndex caseOf: {
+		"2038	rawEqualsEquals:
+		 not a forwarder, not a forwarder => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)"
+		[38]	->	[result := ((self internalStackValue: 1) = self internalStackTop).].
+		"2039	rawNotEqualsEquals:
+		 not a forwarder, not a forwarder => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)"
+		[39]	->	[result := ((self internalStackValue: 1) ~= self internalStackTop)].
+	}.
+	self internalPop: 1; internalStackTopPut: (objectMemory booleanObjectOf: result)
+]
 
-		"2032	unchecked SmallInteger #>.  Both arguments are SmallIntegers"
-		[32]	->	[result := objectMemory booleanObjectOf: ((self internalStackValue: 1) > self internalStackTop).
-					 self internalPop: 1; internalStackTopPut: result].
-		"2033	unchecked SmallInteger #<.  Both arguments are SmallIntegers"
-		[33]	->	[result := objectMemory booleanObjectOf: ((self internalStackValue: 1) < self internalStackTop).
-					 self internalPop: 1; internalStackTopPut: result].
-		"2034	unchecked SmallInteger #>=.  Both arguments are SmallIntegers"
-		[34]	->	[result := objectMemory booleanObjectOf: ((self internalStackValue: 1) >= self internalStackTop).
-					 self internalPop: 1; internalStackTopPut: result].
-		"2035	unchecked SmallInteger #<=.  Both arguments are SmallIntegers"
-		[35]	->	[result := objectMemory booleanObjectOf: ((self internalStackValue: 1) <= self internalStackTop).
-					 self internalPop: 1; internalStackTopPut: result].
-		"2036	unchecked SmallInteger #=.  Both arguments are SmallIntegers"
-		[36]	->	[result := objectMemory booleanObjectOf: ((self internalStackValue: 1) = self internalStackTop).
-					 self internalPop: 1; internalStackTopPut: result].
-		"2037	unchecked SmallInteger #~=.  Both arguments are SmallIntegers"
-		[37]	->	[result := objectMemory booleanObjectOf: ((self internalStackValue: 1) ~= self internalStackTop).
-					 self internalPop: 1; internalStackTopPut: result].
+{ #category : #'sista inline primitives - binary' }
+StackInterpreter >> binaryInlinePrimitive: primIndex [
+	<option: #SistaVM>
+	"Bulk comments: each sub-method has its own comment with the specific case.
+	2000	+
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant)
+	2001	-
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant)
+	2002	*
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant)
+	2003	/
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant)
+	2004	//
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant)
+	2005	\
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant)
+	2006	quo:
+	Smi, Smi => Smi (no overflow, optimised if one operand is a constant)
+	2016	bitAnd:
+	Smi, Smi => Smi (optimised if one operand is a constant)
+	2017	bitOr:
+	Smi, Smi => Smi (optimised if one operand is a constant)
+	2018	bitXor:
+	Smi, Smi => Smi (optimised if one operand is a constant)
+	2019	bitShiftLeft:
+	Smi greater or equal to 0, Smi greater or equal to 0 => Smi (no overflow, optimised if arg1 is a constant)
+	2020	bitShiftRight:
+	Smi, Smi greater or equal to 0 => Smi (optimised if arg1 is a constant)
+	2032	>
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2033	<
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2034	>=
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2035	<=
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2036	=
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2037	~=
+	Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2038	rawEqualsEquals:
+	not a forwarder, not a forwarder => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2039	rawNotEqualsEquals:
+	not a forwarder, not a forwarder => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)
+	2048	rawNew:
+	literal which is a fixed-sized behavior, Smi => instance of receiver, fields nilled out (optimised if arg1 is a constant)
+	2049	rawNewNoInit:
+	literal which is a fixed-sized behavior, Smi => instance of receiver (Fields of returned value contain undefined data, optimised if arg1 is a constant)
+	2064	pointerAt:
+	Pointer object (Fixed sized or not) and not a context, Smi =>  (1-based, optimised if arg1 is a constant)
+	2065	maybeContextPointerAt:
+	Pointer object (Fixed sized or not), Smi =>  (1-based, optimised if arg1 is a constant)
+	2066	byteAt:
+	byte object, Smi => 8 bits unsigned Smi (1-based, optimised if arg1 is a constant)
+	2067	shortAt:
+	short object, Smi => 16 bits unsigned Smi (1-based, optimised if arg1 is a constant)
+	2068	wordAt:
+	word object, Smi => 32 bits unsigned Smi (1-based, optimised if arg1 is a constant)
+	2069	doubleWordAt:
+	double word object, Smi => 64 bits unsigned Smi or LargePositiveInteger (1-based, optimised if arg1 is a constant)"
+	primIndex <= 6 ifTrue: [^self binarySmiArithmeticInlinePrimitive: primIndex].
+	primIndex < 16 ifTrue: [^self unknownInlinePrimitive].
+	primIndex <= 20 ifTrue: [^self binarySmiBitInlinePrimitive: primIndex].
+	primIndex < 32 ifTrue: [^self unknownInlinePrimitive].
+	primIndex <= 37 ifTrue: [^self binarySmiCompInlinePrimitive: primIndex].
+	primIndex <= 39 ifTrue: [^self binaryCompInlinePrimitive: primIndex].
+	primIndex < 48 ifTrue: [^self unknownInlinePrimitive].
+	primIndex <= 49 ifTrue: [^self binaryNewInlinePrimitive: primIndex].
+	primIndex < 64 ifTrue: [^self unknownInlinePrimitive].
+	primIndex <= 69 ifTrue: [^self binaryAtInlinePrimitive: primIndex].
+	self unknownInlinePrimitive
+]
 
-		"2064	unchecked Pointer Object>>at:.		The receiver is guaranteed to be a pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger"
-		[64]	->	[result := objectMemory
-									fetchPointer: (objectMemory integerValueOf: self internalStackTop) - 1
-									ofObject: (self internalStackValue: 1).
-					 self internalPop: 1; internalStackTopPut: result].
-		"2065	unchecked Byte Object>>at:.			The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The result is a SmallInteger."
-		[65]	->	[result := objectMemory
-									fetchByte: (objectMemory integerValueOf: self internalStackTop) - 1
-									ofObject: (self internalStackValue: 1).
-					 self internalPop: 1; internalStackTopPut: (objectMemory integerObjectOf: result)].
-		"2066	unchecked 16-bit Word Object>>at:.			The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The result is a SmallInteger."
-		[66]	->	[result := objectMemory
-									fetchShort16: (objectMemory integerValueOf: self internalStackTop) - 1
-									ofObject: (self internalStackValue: 1).
-					 self internalPop: 1; internalStackTopPut: (objectMemory integerObjectOf: result)].
-		"2067	unchecked 32 bit Word Object>>at:.	The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The result is a SmallInteger or a LargePositiveInteger."
-		[67]	->	[result := objectMemory
-									fetchLong32: (objectMemory integerValueOf: self internalStackTop) - 1
-									ofObject: (self internalStackValue: 1).
-					 self internalPop: 1; internalStackTopPut: (self signed64BitValueOf: result)].
-		"2068	unchecked 64 bit Word Object>>at:.		The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The result is a SmallInteger or a LargePositiveInteger."
-		[68]	->	[result64 := objectMemory
-									fetchLong64: (objectMemory integerValueOf: self internalStackTop) - 1
-									ofObject: (self internalStackValue: 1).
-					 self internalPop: 1; internalStackTopPut: (self signed64BitValueOf: result)] }
-	otherwise:
-		[localIP := localIP - 3.
-		 self respondToUnknownBytecode]
+{ #category : #'sista inline primitives - binary' }
+StackInterpreter >> binaryNewInlinePrimitive: primIndex [
+	"2048	rawNew:
+	literal which is a variable-sized behavior, Smi => instance of receiver, fields nilled/zeroed out (optimised if arg1 is a constant)
+	2049	rawNewNoInit:
+	literal which is a variable-sized behavior, Smi => instance of receiver (Fields of returned value contain undefined data, optimised if arg1 is a constant)
+	
+	WARNING: In the interpreter version, fields are always initialized."
+	| classObj result size top |
+	self assert: (primIndex between: 48 and: 49).
+	top := self internalStackTop.
+	classObj := self internalStackValue: 1.
+	self assert: ((objectMemory isNonImmediate: classObj) and: [self objCouldBeClassObj: classObj]).
+	self assert: (objectMemory isIntegerObject: top).
+	size := self positiveMachineIntegerValueOf: top.
+	result := objectMemory instantiateClass: classObj indexableSize: size.
+	self internalPop: 1; internalStackTopPut: result
+]
+
+{ #category : #'sista inline primitives - binary' }
+StackInterpreter >> binarySmiArithmeticInlinePrimitive: primIndex [
+	<option: #SistaVM>
+	| result recInt argInt rcvr top |
+	rcvr := self internalStackValue: 1.
+	top := self internalStackTop.
+	self assert: primIndex <= 6.
+	self assert: (objectMemory isIntegerObject: rcvr).
+	self assert: (objectMemory isIntegerObject: top).
+	recInt := objectMemory integerValueOf: rcvr.
+	argInt := objectMemory integerValueOf: top.
+	primIndex caseOf: {
+		"2000	+
+		 Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
+		[0]	->	[result := recInt + argInt].
+		"2001	-
+		 Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
+		[1]	->	[result := recInt - argInt].
+		"2002	*
+		 Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
+		[2]	->	[result := recInt * argInt].
+		"2003	/
+		 Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
+		[3]	->	[result := recInt / argInt].
+		"2004	//
+		 Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
+		[4]	->	[result := recInt // argInt].
+		"2005	\
+		 Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
+		[5]	->	[result := recInt \\ argInt].
+		"2006	quo:
+		 Smi, Smi => Smi (no overflow, optimised if one operand is a constant)"
+		[6]	->	[result := self quot: recInt ient: argInt].
+	}.
+	self internalPop: 1; internalStackTopPutIntegerObjectOf: result
+]
+
+{ #category : #'sista inline primitives - binary' }
+StackInterpreter >> binarySmiBitInlinePrimitive: primIndex [
+	<option: #SistaVM>
+	| result recInt argInt rcvr top |
+	rcvr := self internalStackValue: 1.
+	top := self internalStackTop.
+	self assert: (primIndex between: 16 and: 20).
+	self assert: (objectMemory isIntegerObject: rcvr).
+	self assert: (objectMemory isIntegerObject: top).
+	recInt := objectMemory integerValueOf: rcvr.
+	argInt := objectMemory integerValueOf: top.
+	primIndex caseOf: {
+		"2016	bitAnd:
+		 Smi, Smi => Smi (optimised if one operand is a constant)"
+		[16]	->	[result := recInt bitAnd: argInt].
+		"2017	bitOr:
+		 Smi, Smi => Smi (optimised if one operand is a constant)"
+		[17]	->	[result := recInt bitOr: argInt].
+		"2018	bitXor:
+		 Smi, Smi => Smi (optimised if one operand is a constant)"
+		[18]	->	[result := recInt bitXor: argInt].
+		"2019	bitShiftLeft:
+		 Smi greater or equal to 0, Smi greater or equal to 0 => Smi (no overflow, optimised if arg1 is a constant)"
+		[19]	->	[self assert: recInt >= 0.
+					 self assert: argInt >= 0.
+					 result := recInt << argInt].
+		"2020	bitShiftRight:
+		 Smi, Smi greater or equal to 0 => Smi (optimised if arg1 is a constant)"
+		[20]	->	[self assert: argInt >= 0.
+					 result := recInt >> argInt].
+	}.
+	self internalPop: 1; internalStackTopPutIntegerObjectOf: result
+]
+
+{ #category : #'sista inline primitives - binary' }
+StackInterpreter >> binarySmiCompInlinePrimitive: primIndex [
+	<option: #SistaVM>
+	| result top rcvr |
+	self assert: (primIndex between: 32 and: 37).
+	rcvr := self internalStackValue: 1.
+	top := self internalStackTop.
+	self assert: (objectMemory isIntegerObject: rcvr).
+	self assert: (objectMemory isIntegerObject: top).
+	primIndex caseOf: {
+		"2032	>
+		Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)"
+		[32]	->	[result := rcvr > top].
+		"2033	<
+		Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)"
+		[33]	->	[result := rcvr < top].
+		"2034	>=
+		Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)"
+		[34]	->	[result := rcvr >= top].
+		"2035	<=
+		Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)"
+		[35]	->	[result :=rcvr <= top].
+		"2036	=
+		Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)"
+		[36]	->	[result := (rcvr = top).].
+		"2037	~=
+		Smi, Smi => Boolean (optimised if one operand is a constant, Pipelined with ifTrue:ifFalse:)"
+		[37]	->	[result := (rcvr ~= top)].
+	}.
+	self internalPop: 1; internalStackTopPut: (objectMemory booleanObjectOf: result)
 ]
 
 { #category : #utilities }
@@ -3822,6 +3972,20 @@ StackInterpreter >> callExternalPrimitive: functionID [
 	self maybeFailForLastObjectOverwrite.
 ]
 
+{ #category : #'sista bytecodes' }
+StackInterpreter >> callMappedInlinedPrimitive [
+	"SistaV1:	236		11101100	iiiiiiii		callMappedInlinedPrimitive"
+	| primIndex |
+	SistaVM
+		ifTrue:
+			[primIndex := self fetchByte.
+			self fetchNextBytecode.
+			self sistaMappedInlinePrimitive: primIndex]
+		ifFalse: 
+			[localIP := localIP - 2.
+			self respondToUnknownBytecode].
+]
+
 { #category : #'miscellaneous bytecodes' }
 StackInterpreter >> callPrimitiveBytecode [
 	"V4:			249		11111001	i i i i i i i i	jjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjjj * 256)
@@ -3847,27 +4011,7 @@ StackInterpreter >> callPrimitiveBytecode [
 			 prim := byte2 - 128 << 8 + byte1.
 			 primSet := prim >> 13 bitAnd: 3.
 			 prim := prim bitAnd: 8191.
-			 primSet = 0 ifTrue: [
-				
-				 prim < 1000 ifTrue:
-					[^self nullaryInlinePrimitive: prim].
-
-				 prim < 2000 ifTrue:
-					[^self unaryInlinePrimitive: prim - 1000].
-				
-				 prim < 3000 ifTrue:
-					[^self binaryInlinePrimitive: prim - 2000].
-				
-				 prim < 4000 ifTrue:
-					[^self trinaryInlinePrimitive: prim - 3000].
-
-				 prim < 5000 ifTrue:
-					[^self quaternaryInlinePrimitive: prim - 4000].
-
-				 prim < 6000 ifTrue:
-					[^self quinaryInlinePrimitive: prim - 5000].
-				
-			 ].
+			 primSet = 0 ifTrue: [^self sistaInlinePrimitive: prim].
 		
 			LowcodeVM ifTrue: [
 				primSet = 1 ifTrue: [
@@ -5827,21 +5971,6 @@ StackInterpreter >> extBBytecode [
 	numExtB := numExtB + 1
 ]
 
-{ #category : #'miscellaneous bytecodes' }
-StackInterpreter >> extEnsureAllocableSlots [
-	"SistaV1		*	236		11101100	iiiiiiii		Ensure Allocable Slots (+ Extend A * 256)"
-	| slots ok |
-	slots := (extA bitShift: 8) + self fetchByte.
-	self fetchNextBytecode.
-	extA := 0.
-	ok := objectMemory checkForAvailableSlots: slots.
-	ok ifFalse:
-		[self externalizeIPandSP.
-		 self checkForEventsMayContextSwitch: true.
-		 self browserPluginReturnIfNeeded.
-		 self internalizeIPandSP]
-]
-
 { #category : #'jump bytecodes' }
 StackInterpreter >> extJumpIfFalse [
 	"244		11110100	i i i i i i i i	Pop and Jump 0n False i i i i i i i i (+ Extend B * 256, where Extend B >= 0)"
@@ -5850,34 +5979,6 @@ StackInterpreter >> extJumpIfFalse [
 	offset := byte + (extB << 8).
 	numExtB := extB := extA := 0.
 	self jumplfFalseBy: offset
-]
-
-{ #category : #'sista bytecodes' }
-StackInterpreter >> extJumpIfNotInstanceOfBehaviorsBytecode [
-	"254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B between: 0 and: 127)
-	 254		11111110	kkkkkkkk	jjjjjjjj		branch If Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B - 128 * 256, where Extend B between: 128 and: 255)"
-	| tosClassTag literal distance inverse |
-	SistaVM ifFalse: [^self respondToUnknownBytecode].
-	self assert: ((extB bitAnd: 128) = 0 or: [extB < 0]).
-	(inverse := extB < 0) ifTrue:
-		[extB := extB + 128].
-	tosClassTag := objectMemory fetchClassTagOf: self internalPopStack.
-	literal := self literal: extA << 8 + self fetchByte.
-	distance := extB << 8 + self fetchByte.
-	extA := extB := numExtB := 0.
-
-	(objectMemory isArrayNonImm: literal) ifTrue:
-		[0 to: (objectMemory numSlotsOf: literal) asInteger - 1 do:
-			[:i |
-			 tosClassTag = (objectMemory rawClassTagForClass: (objectMemory fetchPointer: i ofObject: literal)) ifTrue:
-				[inverse ifTrue: [ localIP := localIP + distance ].
-				 ^self fetchNextBytecode ] ].
-		 inverse ifFalse: [localIP := localIP + distance].
-		 ^self fetchNextBytecode].
-
-	tosClassTag = (objectMemory rawClassTagForClass: literal) = inverse ifTrue:
-		[localIP := localIP + distance].
-	self fetchNextBytecode
 ]
 
 { #category : #'jump bytecodes' }
@@ -6033,22 +6134,6 @@ StackInterpreter >> extPushReceiverVariableBytecode [
 	self pushMaybeContextReceiverVariable: index
 ]
 
-{ #category : #'stack bytecodes' }
-StackInterpreter >> extPushRemoteTempOrInstVarLongBytecode [
-	| slotIndex tempIndex object |
-	slotIndex := self fetchByte.
-	tempIndex := self fetchByte.
-	self fetchNextBytecode.
-	(tempIndex noMask: self remoteIsInstVarAccess)
-		ifTrue: [self pushRemoteTemp: slotIndex inVectorAt: tempIndex]
-		ifFalse: 
-			[ slotIndex := slotIndex + (extA << 8).
-			tempIndex := tempIndex - self remoteIsInstVarAccess.
-			numExtB := extA := extB := 0.
-			object := self temporary: tempIndex in: localFP.
-			self pushMaybeContext: object receiverVariable: slotIndex ]
-]
-
 { #category : #'return bytecodes' }
 StackInterpreter >> extReturnTopFromBlock [
 	"218		11011010		Return Stack Top From Block [* return from enclosing block N, N = Extend A]
@@ -6152,54 +6237,6 @@ StackInterpreter >> extSendSuperBytecode [
 ]
 
 { #category : #'stack bytecodes' }
-StackInterpreter >> extSistaStoreAndPopLiteralVariableBytecode [
-	"236		11101100	i i i i i i i i	Pop and Store Literal Variable #iiiiiiii (+ Extend A * 256)
-	(3) ExtB lowest bit implies no store check is needed, ExtB next bit implies the object may be a context, other bits in the extension are unused."
-	| variableIndex value |
-	variableIndex := self fetchByte + (extA << 8).
-	value := self internalStackTop.
-	self internalPop: 1.
-	extA := numExtB := extB := 0.
-	self storeLiteralVariable: variableIndex withValue: value.
-	self fetchNextBytecode.
-]
-
-{ #category : #'stack bytecodes' }
-StackInterpreter >> extSistaStoreAndPopReceiverVariableBytecode [
-	"235		11101011	i i i i i i i i	Pop and Store Receiver Variable #iiiiiii (+ Extend A * 256)
-	(3) ExtB lowest bit implies no store check is needed, ExtB next bit implies the object may be a context, other bits in the extension are unused."
-	| variableIndex value |
-	variableIndex := self fetchByte + (extA << 8).
-	extA := numExtB := extB := 0.
-	value := self internalStackTop.
-	self internalPop: 1.
-	self storeMaybeContextReceiverVariable: variableIndex withValue: value.
-	self fetchNextBytecode.
-]
-
-{ #category : #'stack bytecodes' }
-StackInterpreter >> extSistaStoreLiteralVariableBytecode [
-	"233		11101001	i i i i i i i i	Store Literal Variable #iiiiiiii (+ Extend A * 256)
-	(3) ExtB lowest bit implies no store check is needed, ExtB next bit implies the object may be a context, other bits in the extension are unused."
-	| variableIndex |
-	variableIndex := self fetchByte + (extA << 8).
-	extA := numExtB := extB := 0.
-	self storeLiteralVariable: variableIndex withValue: self internalStackTop.
-	self fetchNextBytecode.
-]
-
-{ #category : #'stack bytecodes' }
-StackInterpreter >> extSistaStoreReceiverVariableBytecode [
-	"232		11101000	i i i i i i i i	Store Receiver Variable #iiiiiii (+ Extend A * 256)
-	(3) ExtB lowest bit implies no store check is needed, ExtB next bit implies the object may be a context, other bits in the extension are unused."
-	| variableIndex |
-	variableIndex := self fetchByte + (extA << 8).
-	extA := numExtB := extB := 0.
-	self storeMaybeContextReceiverVariable: variableIndex withValue: self internalStackTop.
-	self fetchNextBytecode.
-]
-
-{ #category : #'stack bytecodes' }
 StackInterpreter >> extStoreAndPopLiteralVariableBytecode [
 	"236		11101100	i i i i i i i i	Pop and Store Literal Variable #iiiiiiii (+ Extend A * 256)"
 	| variableIndex value |
@@ -6224,12 +6261,6 @@ StackInterpreter >> extStoreAndPopReceiverVariableBytecode [
 ]
 
 { #category : #'stack bytecodes' }
-StackInterpreter >> extStoreAndPopRemoteTempOrInstVarLongBytecode [
-	self extStoreRemoteTempOrInstVarLongBytecode.
-	self internalPop: 1
-]
-
-{ #category : #'stack bytecodes' }
 StackInterpreter >> extStoreLiteralVariableBytecode [
 	"233		11101001	i i i i i i i i	Store Literal Variable #iiiiiiii (+ Extend A * 256)"
 	| variableIndex |
@@ -6247,23 +6278,6 @@ StackInterpreter >> extStoreReceiverVariableBytecode [
 	extA := 0.
 	self storeMaybeContextReceiverVariable: variableIndex withValue: self internalStackTop.
 	self fetchNextBytecode.
-]
-
-{ #category : #'stack bytecodes' }
-StackInterpreter >> extStoreRemoteTempOrInstVarLongBytecode [
-	<inline: true>
-	| slotIndex tempIndex object |
-	slotIndex := self fetchByte.
-	tempIndex := self fetchByte.
-	self fetchNextBytecode.
-	(tempIndex noMask: self remoteIsInstVarAccess)
-		ifTrue: [self storeRemoteTemp: slotIndex inVectorAt: tempIndex]
-		ifFalse: 
-			[ slotIndex := slotIndex + (extA << 8).
-			tempIndex := tempIndex - self remoteIsInstVarAccess.
-			extA := numExtB := extB := 0.
-			object := self temporary: tempIndex in: localFP.
-			self storeMaybeContext: object receiverVariable: slotIndex withValue: self internalStackTop ]
 ]
 
 { #category : #'jump bytecodes' }
@@ -9093,7 +9107,6 @@ StackInterpreter >> internalQuickPrimitiveResponse [
 
 { #category : #'internal interpreter access' }
 StackInterpreter >> internalStackTop [
-
 	^stackPages longAtPointer: localSP
 ]
 
@@ -9101,6 +9114,12 @@ StackInterpreter >> internalStackTop [
 StackInterpreter >> internalStackTopPut: aValue [
 
 	^stackPages longAtPointer: localSP put: aValue
+]
+
+{ #category : #'internal interpreter access' }
+StackInterpreter >> internalStackTopPutIntegerObjectOf: aValue [
+	
+	^self internalStackTopPut: (objectMemory integerObjectOf: aValue)
 ]
 
 { #category : #'internal interpreter access' }
@@ -9652,6 +9671,111 @@ StackInterpreter >> jump: offset [
 	self cppIf: MULTIPLEBYTECODESETS
 		ifTrue: [currentBytecode := (objectMemory byteAtPointer: localIP) + bytecodeSetSelector]
 		ifFalse: [currentBytecode := objectMemory byteAtPointer: localIP]
+]
+
+{ #category : #'sista bytecodes' }
+StackInterpreter >> jumpBinaryInlinePrimitive: primIndex [
+	<option: #SistaVM>
+	| test offset top |
+	top := self internalStackTop.
+	self assert: (objectMemory isIntegerObject: top).
+	offset := objectMemory integerValueOf: top.
+	test := self internalStackValue: 1.
+	self assert: offset >= 0.
+	primIndex caseOf: {
+		"7016	jumpIfWritable:
+		 Not a forwarder, literal which is a Smi"
+		[16]	->	[self deny: (objectMemory isOopForwarded: test).
+					 self deny: (objectMemory isImmediate: test).
+					 (objectMemory isImmutable: test) ifFalse: [localIP := localIP + offset]].
+		"7017	jumpIfReadOnly:
+		 Not a forwarder, literal which is a Smi"
+		[17]	->	[self deny: (objectMemory isOopForwarded: test).
+					 self deny: (objectMemory isImmediate: test).
+					 (objectMemory isImmutable: test) ifTrue: [localIP := localIP + offset]].
+		"7018	jumpIfYoung:
+		 Not a forwarder, literal which is a Smi"
+		[18]	->	[self deny: (objectMemory isOopForwarded: test).
+					 self deny: (objectMemory isImmediate: test).
+					 (objectMemory isYoungObject: test) ifTrue: [localIP := localIP + offset]].
+		"7019	jumpIfOld:
+		 Not a forwarder, literal which is a Smi"
+		[19]	->	[self deny: (objectMemory isOopForwarded: test).
+					 self deny: (objectMemory isImmediate: test).
+					 (objectMemory isYoungObject: test) ifFalse: [localIP := localIP + offset]].
+	}.
+	localIP := localIP - 1. "we've already fetched, but we may have incorrectly fetched if jump"
+	self fetchNextBytecode.
+	self internalPop: 2.
+	
+]
+
+{ #category : #'sista bytecodes' }
+StackInterpreter >> jumpTrinaryInlinePrimitive: primIndex [
+	<option: #SistaVM>
+	"Note: those tests work with forwarders (wrong class index)"
+	| test classObj offset classTag top |
+	top := self internalStackTop.
+	self assert: (objectMemory isIntegerObject: top).
+	offset := objectMemory integerValueOf: top.
+	self assert: offset >= 0.
+	test := self internalStackValue: 2.
+	classObj := self internalStackValue: 1.
+	self assert: (objectMemory isNonImmediate: classObj).
+	primIndex caseOf: {
+	[0] -> 	["8000	jumpIfInstanceOf:distance:
+			 Anything, literal which is a Behavior, literal which is a Smi"
+			 self assert: (self objCouldBeClassObj: classObj).
+			 classTag := objectMemory fetchClassTagOf: test.
+			 classTag = (objectMemory rawClassTagForClass: classObj) ifTrue: 
+				[localIP := localIP + offset]].
+	[1] -> 	["8001	jumpIfNotInstanceOf:distance:
+			 Anything, literal which is a Behavior, literal which is a Smi"
+			 self assert: (self objCouldBeClassObj: classObj).
+			 classTag := objectMemory fetchClassTagOf: test.
+			 classTag = (objectMemory rawClassTagForClass: classObj) ifFalse: 
+				[localIP := localIP + offset]].
+	[2] -> 	["8002	jumpIfInstanceOfOneOf:distance:
+			 Anything, Array of behaviors, literal which is a Smi"
+			 self assert: (objectMemory isArrayNonImm: classObj).
+			 classTag := objectMemory fetchClassTagOf: test.
+			0 to: (objectMemory numSlotsOf: classObj) asInteger - 1 do:
+			[:i |
+			 classTag = (objectMemory rawClassTagForClass: (objectMemory fetchPointer: i ofObject: classObj)) ifTrue:
+				[localIP := localIP + offset]]].
+	[3] -> 	["8003	jumpIfNotInstanceOfOneOf:distance:
+			  Anything, Array of behaviors, literal which is a Smi"
+			 self assert: (objectMemory isArrayNonImm: classObj).
+			 classTag := objectMemory fetchClassTagOf: test.
+			0 to: (objectMemory numSlotsOf: classObj) asInteger - 1 do:
+			[:i |
+			 classTag = (objectMemory rawClassTagForClass: (objectMemory fetchPointer: i ofObject: classObj)) ifTrue:
+				[localIP := localIP - 1.
+				 self fetchNextBytecode.
+				 ^self internalPop: 3]].
+			localIP := localIP + offset].
+	}.
+	localIP := localIP - 1. "we've already fetched, but we may have incorrectly fetched if jump"
+	self fetchNextBytecode.
+	self internalPop: 3
+	
+]
+
+{ #category : #'sista bytecodes' }
+StackInterpreter >> jumpUnaryInlinePrimitive: primIndex [
+	<option: #SistaVM>
+	"6000	backjumpNoInterrupt
+	 literal which is a Smi"
+	| top |
+	top := self internalStackTop.
+	primIndex = 0 ifTrue: 
+		[self assert: (objectMemory isIntegerObject: top). 
+		 self assert: (objectMemory integerValueOf: top) < 0.
+		"We've already fetched next bytecode, so we add -1"
+		 localIP := localIP + (objectMemory integerValueOf: top) - 1. 
+		 self fetchNextBytecode.
+		 ^self internalPop: 1].
+	^ self unknownInlinePrimitive	
 ]
 
 { #category : #'jump bytecodes' }
@@ -15510,6 +15634,146 @@ StackInterpreter >> mapVMRegisters [
 		[newMethod := objectMemory remapObj: newMethod]
 ]
 
+{ #category : #'sista bytecodes' }
+StackInterpreter >> mappedBackjumpAlwaysInterrupt [
+	| top offset |
+	top := self internalStackTop.
+	self assert: (objectMemory isIntegerObject: top).
+	offset := objectMemory integerObjectOf: top.
+	localIP := localIP - offset.
+	self internalPop: 1.
+	"+1 since this instr is 3 bytes not 2"
+	self ifBackwardsCheckForEvents: 0 - offset + 1. 
+	localIP := localIP - 1.
+	self fetchNextBytecode
+]
+
+{ #category : #'sista bytecodes' }
+StackInterpreter >> mappedDirectCall [
+	"250	directCall
+	literal index of the method to call on top of stack =>  (variable number of parameters)"
+	|methodHeader localPrimIndex methodIndex|
+	methodIndex := self internalPopStack. "Can't write this inside next line for Slang inliner"
+	newMethod := self literal: (objectMemory integerValueOf: methodIndex).
+	self assert: (objectMemory isCompiledMethod: newMethod).
+	methodHeader := objectMemory methodHeaderOf: newMethod.
+	localPrimIndex := self primitiveIndexOfMethod: newMethod header: methodHeader.
+	argumentCount := self argumentCountOfMethodHeader: methodHeader.
+	"The primitive function pointer is not cached in the interpreter, but it's called quickly in the JIT"
+	primitiveFunctionPointer := self functionPointerFor: localPrimIndex inClass: objectMemory nilObject..
+	self internalActivateNewMethod
+]
+
+{ #category : #'sista bytecodes' }
+StackInterpreter >> mappedEnsureEnoughWords [
+	"50	EnsureEnoughWords
+	 literal which is a Smi => ret value is receiver"
+	 | slots ok top |
+	 top := self internalStackTop.
+	 self assert: (objectMemory isIntegerObject: top).
+	 slots := objectMemory integerValueOf: top.
+	 self assert: slots >= 0.
+	 ok := objectMemory checkForAvailableSlots: slots.
+	 ok ifFalse:
+		[self externalizeIPandSP.
+		 self checkForEventsMayContextSwitch: true.
+		 self browserPluginReturnIfNeeded.
+		 self internalizeIPandSP]
+]
+
+{ #category : #'sista bytecodes' }
+StackInterpreter >> mappedImmcheckDataAtPut: primIndex [
+	<option: #SistaVM>
+	| argIntAdjusted rec result arg1 |
+	self assert: (primIndex between: 154 and: 157).
+	arg1 := self internalStackValue: 1.
+	rec := self internalStackValue: 2.
+	self deny: ((objectMemory isOopForwarded: rec) or: [(objectMemory isImmediate: rec)]).
+	self assert: (objectMemory isIntegerObject: arg1).
+	argIntAdjusted := (objectMemory integerValueOf: arg1) - 1.
+	self assert: argIntAdjusted >= 0.
+	result := self internalStackTop.
+	self internalPop: 2; internalStackTopPut: result.
+	(objectMemory isImmutable: rec) ifTrue: [^self cannotAssign: result to: rec withIndex: argIntAdjusted].
+	
+	primIndex caseOf: {
+		"154	immCheckByteAt:put:
+		byte object, Smi, 8 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)"
+		[154]	->	[self assert: (objectMemory isBytes: rec).
+				 self assert: argIntAdjusted < (objectMemory numBytesOf: rec).
+				 self assert: (objectMemory isIntegerObject: result).
+				 objectMemory
+					storeByte: argIntAdjusted
+					ofObject: rec
+					withValue: (objectMemory integerValueOf: result)].
+		"155	immCheckShortAt:put:
+		short object, Smi, 16 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)"
+		[155]	->	[self assert: (objectMemory isShorts: rec).
+				 self assert: argIntAdjusted < (objectMemory num16BitUnitsOf: rec).
+				 self assert: (objectMemory isIntegerObject: result).
+				 objectMemory
+					storeShort16: argIntAdjusted
+					ofObject: rec
+					withValue: (objectMemory integerValueOf: result)].
+		"156	immCheckWordAt:put:
+		word object, Smi, 32 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)"
+		[156]	->	[self assert: (objectMemory isWords: rec).
+				 self assert: argIntAdjusted < (objectMemory num32BitUnitsOf: rec).
+				 objectMemory
+					storeLong32: argIntAdjusted
+					ofObject: rec
+					withValue: (objectMemory positive32BitValueOf: result)].
+		"157	immCheckDoubleWordAt:put:
+		double word object, Smi, 64 bits unsigned Smi or LargePositiveInteger => arg2 (1-based, optimised if arg1 is a constant)"
+		[157]	->	[self assert: (objectMemory isLong64s: rec).
+				 self assert: argIntAdjusted < (objectMemory num64BitUnitsOf: rec).
+				 objectMemory
+					storeLong64: argIntAdjusted
+					ofObject: rec
+					withValue: (objectMemory positive64BitValueOf: result)]}.
+		
+]
+
+{ #category : #'sista bytecodes' }
+StackInterpreter >> mappedImmcheckMaybeContextStoreCheckPointerAtPut [
+	"153	immCheckMaybeContextStoreCheckPointerAt:put:
+	 pointer object (Fixed sized or not), Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)"
+	|rec argIntAdjusted result arg1|
+	rec := self internalStackValue: 2.
+	arg1 := self internalStackValue: 1.
+	self assert: (objectMemory isIntegerObject: arg1).
+	argIntAdjusted := (objectMemory integerValueOf: arg1) - 1.
+	result := self internalStackTop.
+	self internalPop: 3.
+	self internalPush: result.
+	(self isWriteMediatedContextInstVarIndex: argIntAdjusted) 
+						ifFalse: [objectMemory storePointerImmutabilityCheck: argIntAdjusted ofObject: rec withValue: result]
+						ifTrue: [self externalizeIPandSP.
+								self externalInstVar: argIntAdjusted ofContext: rec  put: result.
+								self internalizeIPandSP]
+]
+
+{ #category : #'sista bytecodes' }
+StackInterpreter >> mappedImmcheckStoreCheckPointerAtPut [
+	"151	immCheckStoreCheckPointerAt:put:
+	 pointer object (Fixed sized or not) and not a context, Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)"
+	|rec argIntAdjusted result arg1|
+	rec := self internalStackValue: 2.
+	arg1 := self internalStackValue: 1.
+	self assert: (objectMemory isPointers: rec).
+	self assert: (objectMemory isIntegerObject: arg1).
+	argIntAdjusted := (objectMemory integerValueOf: arg1) - 1.
+	self assert: argIntAdjusted >= 0.
+	self assert: argIntAdjusted < (objectMemory numSlotsOfAny: rec).
+	result := self internalStackTop.
+	self internalPop: 3.
+	self internalPush: result.
+	objectMemory
+		storePointerImmutabilityCheck: argIntAdjusted
+		ofObject: rec
+		withValue: result
+]
+
 { #category : #'object memory support' }
 StackInterpreter >> markAndTraceAndMaybeFreeStackPages: fullGCFlag [
 	"Read markAndTraceStackPages:'s comment.  Finish tracing to-be-traced pages.
@@ -16405,12 +16669,10 @@ StackInterpreter >> normalSend [
 	self commonSendOrdinary
 ]
 
-{ #category : #'miscellaneous bytecodes' }
+{ #category : #'sista bytecodes' }
 StackInterpreter >> nullaryInlinePrimitive: primIndex [
-	"SistaV1:	248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution."
 	<option: #SistaVM>
-	localIP := localIP - 3.
-	self respondToUnknownBytecode
+	self unknownInlinePrimitive
 ]
 
 { #category : #'internal interpreter access' }
@@ -18647,11 +18909,10 @@ StackInterpreter >> putWord32: aWord32 toFile: aFile [
 	self success: objectsWritten = 1
 ]
 
-{ #category : #'miscellaneous bytecodes' }
+{ #category : #'sista bytecodes' }
 StackInterpreter >> quaternaryInlinePrimitive: primIndex [
-	"SistaV1:	248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution."
 	<option: #SistaVM>
-	self respondToUnknownBytecode
+	self unknownInlinePrimitive
 ]
 
 { #category : #utilities }
@@ -18664,24 +18925,25 @@ StackInterpreter >> quickFetchInteger: fieldIndex ofObject: objectPointer [
 	^objectMemory integerValueOf: oop
 ]
 
-{ #category : #'miscellaneous bytecodes' }
+{ #category : #'sista bytecodes' }
 StackInterpreter >> quinaryInlinePrimitive: primIndex [
-	"SistaV1:	248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution."
 	| src srcIndex dest destIndex destLimit oop |
 	<option: #SistaVM>
-	primIndex = 0 ifFalse: [self respondToUnknownBytecode].
-	dest := self internalStackValue: 4.
-	destIndex := (objectMemory integerValueOf: (self internalStackValue: 3)) - 1.
-	destLimit := (objectMemory integerValueOf: (self internalStackValue: 2)) - 1.
-	src := self internalStackValue: 1.
-	srcIndex := (objectMemory integerValueOf: (self internalStackValue: 0)) - 1.
-	self internalPop: 4.
-	destLimit < destIndex ifTrue: [^self].
-	(objectMemory isYoung: dest) ifFalse: [objectMemory possibleRootStoreInto: dest].
-	0 to: destLimit - destIndex do: [:i |
-		oop := objectMemory fetchPointer: srcIndex + i ofObject: src.
-		objectMemory storePointerUnchecked: destIndex + i ofObject: dest withValue: oop ].
-	
+	"0 is deprecated, now this can be handled at Scorch level"
+	primIndex = 0 ifTrue: "Array copy, pointer variable object with no inst vars"
+		[dest := self internalStackValue: 4.
+		destIndex := (objectMemory integerValueOf: (self internalStackValue: 3)) - 1.
+		destLimit := (objectMemory integerValueOf: (self internalStackValue: 2)) - 1.
+		src := self internalStackValue: 1.
+		srcIndex := (objectMemory integerValueOf: (self internalStackValue: 0)) - 1.
+		self internalPop: 4.
+		destLimit < destIndex ifTrue: [^self].
+		(objectMemory isYoung: dest) ifFalse: [objectMemory possibleRootStoreInto: dest].
+		0 to: destLimit - destIndex do: 
+			[:i| oop := objectMemory fetchPointer: srcIndex + i ofObject: src.
+			    objectMemory storePointerUnchecked: destIndex + i ofObject: dest withValue: oop].
+		^ self].
+	self unknownInlinePrimitive
 ]
 
 { #category : #'image save/restore' }
@@ -20240,6 +20502,92 @@ StackInterpreter >> singleExtendedSuperBytecode [
 
 ]
 
+{ #category : #'sista bytecodes' }
+StackInterpreter >> sistaInlinePrimitive: prim [
+	"SistaV1:	248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution. This is the dispatch for unmapped sista inlined primitives."
+	<option: #SistaVM>
+	
+	 prim < 1000 ifTrue:
+		[^self nullaryInlinePrimitive: prim].
+
+	 prim < 2000 ifTrue:
+		[^self unaryInlinePrimitive: prim - 1000].
+
+	 prim < 3000 ifTrue:
+		[^self binaryInlinePrimitive: prim - 2000].
+
+	 prim < 4000 ifTrue:
+		[^self trinaryInlinePrimitive: prim - 3000].
+
+	 prim < 5000 ifTrue:
+		[^self quaternaryInlinePrimitive: prim - 4000].
+
+	 prim < 6000 ifTrue:
+		[^self quinaryInlinePrimitive: prim - 5000].
+	
+	 prim < 7000 ifTrue:
+		[^self jumpUnaryInlinePrimitive: prim - 6000].
+	
+ 	prim < 8000 ifTrue:
+		[^self jumpBinaryInlinePrimitive: prim - 7000].
+	
+	^ self jumpTrinaryInlinePrimitive: prim - 8000.
+]
+
+{ #category : #'sista bytecodes' }
+StackInterpreter >> sistaMappedInlinePrimitive: primIndex [
+	"SistaV1:	236		11101100	iiiiiiii		callMappedInlinedPrimitive"
+	"Number of arguments:
+	 0-49 nullary
+	 50-99 unary
+	 100-149  binary
+	 150-199 trinary
+	 200-249 variable
+	 250-255 mapped jumps"
+	"Specification:
+	50	EnsureEnoughWords
+	literal which is a Smi => ret value is receiver
+	150	immCheckPointerAt:put:
+	pointer object (Fixed sized or not) and not a context, Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	151	immCheckStoreCheckPointerAt:put:
+	pointer object (Fixed sized or not) and not a context, Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	152	immCheckMaybeContextPointerAt:put:
+	pointer object (Fixed sized or not), Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	153	immCheckMaybeContextStoreCheckPointerAt:put:
+	pointer object (Fixed sized or not), Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	154	immcheckByteAt:put:
+	byte object, Smi, 8 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)
+	155	immCheckShortAt:put:
+	short object, Smi, 16 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)
+	156	immCheckWordAt:put:
+	word object, Smi, 32 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)
+	157	immCheckDoubleWordAt:put:
+	double word object, Smi, 64 bits unsigned Smi or LargePositiveInteger => arg2 (1-based, optimised if arg1 is a constant)
+	200	directCall
+	method to call on top of stack =>  (variable number of parameters)
+	250 	backjumpAlwaysInterrupt
+	literal which is a Smi"
+	<option: #SistaVM>
+	(primIndex between: 154 and: 157) ifTrue: [^self mappedImmcheckDataAtPut: primIndex].
+	primIndex caseOf: {
+		[50]	->	[self mappedEnsureEnoughWords].
+		[150]	->	["150	immCheckPointerAt:put:
+		 			 pointer object (Fixed sized or not) and not a context, Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)"
+					"We could ignore the store check but we don't care in the interpreter"
+					self mappedImmcheckStoreCheckPointerAtPut].
+		[151]	->	[self mappedImmcheckStoreCheckPointerAtPut].
+		[152]	->	["152	immCheckMaybeContextPointerAt:put:
+					 pointer object (Fixed sized or not), Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)"
+					 "We could ignore the store check but we don't care in the interpreter"
+					 self mappedImmcheckMaybeContextStoreCheckPointerAtPut].
+		[153]	->	[self mappedImmcheckMaybeContextStoreCheckPointerAtPut].
+		[200] 	->	[self mappedDirectCall].
+		[250] 	->	[self mappedBackjumpAlwaysInterrupt].
+	} otherwise: [self unknownInlinePrimitive]
+	
+
+]
+
 { #category : #'compiled methods' }
 StackInterpreter >> sizeOfCallPrimitiveBytecode: methodHeader [
 	"Answer the size of the CallPrimitive bytecode that may be used to store a method's primitive."
@@ -21098,66 +21446,126 @@ StackInterpreter >> transferTo: newProc [
 	self externalSetStackPageAndPointersForSuspendedContextOfProcess: newProc
 ]
 
-{ #category : #'miscellaneous bytecodes' }
-StackInterpreter >> trinaryInlinePrimitive: primIndex [
-	"SistaV1:	248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution."
+{ #category : #'sista bytecodes' }
+StackInterpreter >> trinaryAtPutInlinePrimitive: primIndex [
 	<option: #SistaVM>
-	| result |
+	| result rec argIntAdjusted arg1|
+	arg1 := self internalStackValue: 1.
+	rec := self internalStackValue: 2.
+	self deny: ((objectMemory isOopForwarded: rec) or: [(objectMemory isImmediate: rec)]).
+	self assert: (objectMemory isIntegerObject: arg1).
+	argIntAdjusted := (objectMemory integerValueOf: arg1) - 1.
+	self assert: argIntAdjusted >= 0.
+	result := self internalStackTop.
+	
 	primIndex caseOf: {
+		"3000	pointerAt:put:
+		 Mutable pointer object (Fixed sized or not) and not a context, Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)"
+		[0]	->	[self assert: (objectMemory isPointers: rec).
+				 self assert: argIntAdjusted < (objectMemory numSlotsOfAny: rec).
+				 objectMemory
+					storePointerUnchecked: argIntAdjusted
+					ofObject: rec
+					withValue: result.].
+		"3001	storeCheckPointerAt:put:
+		 Mutable pointer object (Fixed sized or not) and not a context, Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)"
+		[1]	->	[self assert: (objectMemory isPointers: rec).
+				 self assert: argIntAdjusted < (objectMemory numSlotsOfAny: rec).
+				 objectMemory
+					storePointer: argIntAdjusted
+					ofObject: rec
+					withValue: result].
+		"3002	maybeContextPointerAt:put:
+		 Mutable pointer object (Fixed sized or not), Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)"
+		[2]	->	[((objectMemory isContextNonImm: rec) 
+				 and: [self isMarriedOrWidowedContext: rec])
+					ifTrue:
+						[self externalizeIPandSP.
+						 self externalInstVar: argIntAdjusted ofContext: rec  put: result.
+						 self internalizeIPandSP]
+					ifFalse: [objectMemory storePointer: argIntAdjusted ofObject: rec withValue: result]].
+		"3003	maybeContextStoreCheckPointerAt:put:
+		Mutable pointer object (Fixed sized or not), Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)"
+		[3]	->	[((objectMemory isContextNonImm: rec) 
+				 and: [self isMarriedOrWidowedContext: rec])
+					ifTrue:
+						[self externalizeIPandSP.
+						 self externalInstVar: argIntAdjusted ofContext: rec  put: result.
+						 self internalizeIPandSP]
+					ifFalse: [objectMemory storePointer: argIntAdjusted ofObject: rec withValue: result]].
+		"3004	byteAt:put:
+		Mutable byte object, Smi, 8 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)"
+		[4]	->	[self assert: (objectMemory isBytes: rec).
+				 self assert: argIntAdjusted < (objectMemory numBytesOf: rec).
+				 self assert: (objectMemory isIntegerObject: result).
+				 objectMemory
+					storeByte: argIntAdjusted
+					ofObject: rec
+					withValue: (objectMemory integerValueOf: result).].
+		"3005	shortAt:put:
+		 Mutable short object, Smi, 16 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)"
+		[5]	->	[self assert: (objectMemory isShorts: rec).
+				 self assert: argIntAdjusted < (objectMemory num16BitUnitsOf: rec).
+				 self assert: (objectMemory isIntegerObject: result).
+				 objectMemory
+					storeShort16: argIntAdjusted
+					ofObject: rec
+					withValue: (objectMemory integerValueOf: result).].
+		"3006	wordAt:put:
+		 Mutable word object, Smi, 32 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)"
+		[6]	->	[self assert: (objectMemory isWords: rec).
+				 self assert: argIntAdjusted < (objectMemory num32BitUnitsOf: rec).
+				 objectMemory
+					storeLong32: argIntAdjusted
+					ofObject: rec
+					withValue: (objectMemory positive32BitValueOf: result).].
+		"3007	doubleWordAt:put:
+		 Mutable double word object, Smi, 64 bits unsigned Smi or LargePositiveInteger => arg2 (1-based, optimised if arg1 is a constant)"
+		[7]	->	[self assert: (objectMemory isLong64s: rec).
+				 self assert: argIntAdjusted < (objectMemory num64BitUnitsOf: rec).
+				 objectMemory
+					storeLong64: argIntAdjusted
+					ofObject: rec
+					withValue: (objectMemory positive64BitValueOf: result).].
+	}.
+	 self internalPop: 2; internalStackTopPut: result
+]
 
-		"3000	unchecked Pointer Object>>at:put:.			The receiver is guaranteed to be a pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger"
-		[0]	->	[result := self internalStackTop.
-				 objectMemory
-					storePointer: (objectMemory integerValueOf: (self internalStackValue: 1)) - 1
-					ofObject: (self internalStackValue: 2)
-					withValue: result.
-				 self internalPop: 2; internalStackTopPut: result].
-		"3001	unchecked Byte Object>>at:put:.			The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 8 bits."
-		[1]	->	[result := self internalStackTop.
-				 objectMemory
-					storeByte: (objectMemory integerValueOf: (self internalStackValue: 1)) - 1
-					ofObject: (self internalStackValue: 2)
-					withValue: (objectMemory integerValueOf: result).
-				 self internalPop: 2; internalStackTopPut: result].
-		"3002	unchecked Word Object>>at:put:.			The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 16 bits."
-		[2]	->	[result := self internalStackTop.
-				 objectMemory
-					storeShort16: (objectMemory integerValueOf: (self internalStackValue: 1)) - 1
-					ofObject: (self internalStackValue: 2)
-					withValue: (objectMemory integerValueOf: result).
-				 self internalPop: 2; internalStackTopPut: result].
-		"3003	unchecked DoubleWord Object>>at:put:.	The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 32 bits."
-		[3]	->	[result := self internalStackTop.
-				 objectMemory
-					storeLong32: (objectMemory integerValueOf: (self internalStackValue: 1)) - 1
-					ofObject: (self internalStackValue: 2)
-					withValue: (objectMemory integerValueOf: result).
-				 self internalPop: 2; internalStackTopPut: result].
-		"3004	unchecked QuadWord Object>>at:put:.		The receiver is guaranteed to be a non-pointer object.  The 0-relative (1-relative?) index is an in-range SmallInteger.  The argument is a SmallInteger.  The primitive stores the least significant 64 bits."
-		[4]	->	[result := self internalStackTop.
-				 objectMemory
-					storeLong64: (objectMemory integerValueOf: (self internalStackValue: 1)) - 1
-					ofObject: (self internalStackValue: 2)
-					withValue: (objectMemory integerValueOf: result).
-				 self internalPop: 2; internalStackTopPut: result].
-		"3021	Byte Object >> equals:length:	
-				The receiver and the arguments are both byte objects and have both the same size (length in bytes). 
-				The length argument is a smallinteger. 
-				Answers true if all fields are equal, false if not. 
-				Comparison is bulked to word comparison."
-		[21]	->	[ | str1 str2 word1 word2 len |
-					  len := objectMemory integerValueOf: self internalStackTop.
-					  len = 0 ifTrue: [^self internalPop: 2; internalStackTopPut: objectMemory trueObject].
-					  str1 := self internalStackValue: 2.
+{ #category : #'sista bytecodes' }
+StackInterpreter >> trinaryInlinePrimitive: primIndex [
+	<option: #SistaVM>
+	"Bulk comment, each sub method has its own comment
+	3000	pointerAt:put:
+	Mutable pointer object (Fixed sized or not) and not a context, Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	3001	storeCheckPointerAt:put:
+	Mutable pointer object (Fixed sized or not) and not a context, Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	3002	maybeContextPointerAt:put:
+	Mutable pointer object (Fixed sized or not), Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	3003	maybeContextStoreCheckPointerAt:put:
+	Mutable pointer object (Fixed sized or not), Smi, Anything => arg2 (1-based, optimised if arg1 is a constant)
+	3004	byteAt:put:
+	Mutable byte object, Smi, 8 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)
+	3005	shortAt:put:
+	Mutable short object, Smi, 16 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)
+	3006	wordAt:put:
+	Mutable word object, Smi, 32 bits unsigned Smi => arg2 (1-based, optimised if arg1 is a constant)
+	3007	doubleWordAt:put:
+	Mutable double word object, Smi, 64 bits unsigned Smi or LargePositiveInteger => arg2 (1-based, optimised if arg1 is a constant)
+	3021 is deprecated."
+	primIndex <= 7 ifTrue: [^self trinaryAtPutInlinePrimitive: primIndex].
+	"21 is deprecated, now this can be handled at Scorch level"
+	primIndex = 21 ifTrue: 
+		[ | str1 str2 word1 word2 len |
+		  len := objectMemory integerValueOf: self internalStackTop.
+		  len = 0 ifTrue: [^self internalPop: 2; internalStackTopPut: objectMemory trueObject].
+		  str1 := self internalStackValue: 2.
   					  str2 := self internalStackValue: 1.
-					  0 to: len - 1 >> objectMemory shiftForWord do: [:i |
-						word1 := objectMemory fetchPointer: i ofObject: str1.
-						word2 := objectMemory fetchPointer: i ofObject: str2. 
-						word1 = word2 ifFalse: [^self internalPop: 2; internalStackTopPut: objectMemory falseObject] ].
-					 self internalPop: 2; internalStackTopPut: objectMemory trueObject ] }
-	otherwise:
-		[localIP := localIP - 3.
-		 self respondToUnknownBytecode]
+		  0 to: len - 1 >> objectMemory shiftForWord do: [:i |
+			word1 := objectMemory fetchPointer: i ofObject: str1.
+			word2 := objectMemory fetchPointer: i ofObject: str2. 
+			word1 = word2 ifFalse: [^self internalPop: 2; internalStackTopPut: objectMemory falseObject] ].
+		 ^self internalPop: 2; internalStackTopPut: objectMemory trueObject ].
+	self unknownInlinePrimitive
 ]
 
 { #category : #'primitive support' }
@@ -21239,62 +21647,222 @@ StackInterpreter >> unPop: nItems [
 	stackPointer := stackPointer - (nItems*objectMemory wordSize)
 ]
 
-{ #category : #'miscellaneous bytecodes' }
-StackInterpreter >> unaryInlinePrimitive: primIndex [
-	"SistaV1:	248		11111000 	iiiiiiii		mjjjjjjj		Call Primitive #iiiiiiii + (jjjjjjj * 256) m=1 means inlined primitive, no hard return after execution."
-	<option: #SistaVM>
-	| result |
-	primIndex caseOf: {
-		"1000	unchecked class"
-		[0]	->	[result := objectMemory fetchClassOf: self internalStackTop.
-				 self internalStackTopPut: result].
-		"1001	unchecked pointer numSlots"
-		[1]	->	[result := objectMemory numSlotsOf: self internalStackTop.
-				 self internalStackTopPut: (objectMemory integerObjectOf: result)].
-		"1002	unchecked pointer basicSize"
-		[2]	->	[result := (objectMemory numSlotsOf: self internalStackTop)
-						- (objectMemory fixedFieldsOfClass: (objectMemory fetchClassOfNonImm: self internalStackTop)).
-				 self internalStackTopPut: (objectMemory integerObjectOf: result)].
-		"1003	unchecked byte8Type format numBytes (includes CompiledMethod)"
-		[3]	->	[result := objectMemory numBytesOf: self internalStackTop.
-				 self internalStackTopPut: (objectMemory integerObjectOf: result)].
-		"1004	unchecked short16Type format numShorts"
-		[4]	->	[result := objectMemory num16BitUnitsOf: self internalStackTop.
-				 self internalStackTopPut: (objectMemory integerObjectOf: result)].
-		"1005	unchecked word32Type format numWords"
-		[5]	->	[result := objectMemory num32BitUnitsOf: self internalStackTop.
-				 self internalStackTopPut: (objectMemory integerObjectOf: result)].
-		"1006	unchecked doubleWord64Type format numDoubleWords"
-		[6]	->	[result := objectMemory num64BitUnitsOf: self internalStackTop.
-				 self internalStackTopPut: (objectMemory integerObjectOf: result)].
+{ #category : #'sista inline primitives - unary' }
+StackInterpreter >> unaryClassPrimitive [
+	| result top |
+	"1000	rawClass
+	 not a forwarder => Behavior (Same as class special send, but receiver is not a forwarder)"
+	 top := self internalStackTop.
+	 self deny: (objectMemory isOopForwarded: top).
+	 result := objectMemory fetchClassOf: top.
+	 self internalStackTopPut: result
+]
 
-		"1011	unchecked fixed pointer basicNew"
-		[11] ->	[| classObj numSlots |
-				 classObj := self internalStackTop.
-				 numSlots := objectMemory instanceSizeOf: classObj.
-				 result := objectMemory instantiateClass: classObj.
-				" result := objectMemory eeInstantiateSmallClass: classObj numSlots: numSlots.
-				 (extB noMask: 1) ifTrue:
-					[0 to: numSlots - 1 do:
-						[:i| objectMemory storePointerUnchecked: i ofObject: result withValue: objectMemory nilObject]]."
-				 extB := 0.
-				numExtB := 0.
-				 self internalStackTopPut: result].
-		"1020 	identityHash"
-		[20] ->	[result := objectMemory hashBitsOf: self internalStackTop.
-				 self internalStackTopPut: (objectMemory integerObjectOf: result)].
-		"1021		identityHash (SmallInteger)"
-		"1022		identityHash (Character)"
-		"1023		identityHash (SmallFloat64)"
-		"1024		identityHash (Behavior)"
-		"1030 	immediateAsInteger (Character)
-		 1031 	immediateAsInteger (SmallFloat64)"
-		[30] -> [ result := objectMemory characterValueOf: self internalStackTop.
-				 self internalStackTopPut: (objectMemory integerObjectOf: result)]
+{ #category : #'sista inline primitives - unary' }
+StackInterpreter >> unaryConvertInlinePrimitive: primIndex [
+	<option: #SistaVM>
+	| result top |
+	self assert: (primIndex between: 30 and: 32).
+	top := self internalStackTop.
+	primIndex caseOf: {
+		"1030	characterAsInteger
+		 Character => 22 bits strictly positive Smi (Unicode)"
+		[30] -> [self assert: (objectMemory isImmediateCharacter: top).
+				result := objectMemory characterValueOf: top.
+				self assert: (result between: 1 and: "1 << 22 - 1" 4194303).
+				self internalStackTopPutIntegerObjectOf: result].
+		"1031	smallFloatAsInteger
+		 SmallFloat => Smi"
+		[31] -> [objectMemory hasSixtyFourBitImmediates
+					ifTrue: "Needs to protect rotatedFloatBitsOf:"
+						[self assert: (objectMemory isImmediateFloat: top).
+						result := objectMemory rotatedFloatBitsOf: top.
+						self assert: (objectMemory isIntegerObject: result).
+						self internalStackTopPutIntegerObjectOf: result]
+					ifFalse: [self unknownInlinePrimitive]].
+		"1032	smiAsFloat
+		 Smi => SmallFloat"
+		[32] -> [self assert: (objectMemory isIntegerObject: top).
+				self pop: 1 thenPushFloat: (objectMemory integerValueOf: top) asFloat].
 		 }
-	otherwise:
-		[localIP := localIP - 3.
-		 self respondToUnknownBytecode]
+]
+
+{ #category : #'sista inline primitives - unary' }
+StackInterpreter >> unaryHashInlinePrimitive: primIndex [
+	<option: #SistaVM>
+	| result top |
+	self assert: (primIndex between: 20 and: 23).
+	top := self internalStackTop.
+	primIndex caseOf: {
+		"1020	objectIdentityHash
+		 non-immediate and non-behavior => 22 bits strictly positive Smi"
+		[20] ->	[self deny: ((objectMemory isOopForwarded: top)
+						or: [(objectMemory isImmediate: top)
+							or: [objectMemory isInClassTable: top]]).
+				 result := objectMemory hashBitsOf: top.
+				self assert: (result between: 1 and: "1 << 22 - 1" 4194303).
+				self internalStackTopPutIntegerObjectOf: result].
+		"1021	smiIdentityHash
+		 Smi => Smi"
+		[21] -> [self assert: (objectMemory isIntegerObject: top).
+				"Don't do anything, Smi hash is the object itself"].		
+		"1022	charIdentityHash
+		 Character => 22 bits strictly positive Smi"
+		[22] -> [self assert: (objectMemory isImmediateCharacter: top).
+				result := objectMemory integerObjectOfCharacterObject: top.
+				self assert: (result between: 1 and: "1 << 22 - 1" 4194303).
+				self internalStackTopPut: result].
+		"1023	smallfloatIdentityHash
+		 SmallFloat => Smi"
+		[23] -> [objectMemory hasSixtyFourBitImmediates
+					ifTrue: "Needs to protect rotatedFloatBitsOf:"
+						[self assert: (objectMemory isImmediateFloat: top).
+						result := objectMemory rotatedFloatBitsOf: top.
+						self assert: (objectMemory isIntegerObject: result).
+						self internalStackTopPutIntegerObjectOf: result]
+					ifFalse: [self unknownInlinePrimitive]].
+		"1024	behaviorIdentityHash
+		 Behavior => 22 bits strictly positive Smi"
+		[24] -> [self assert: ((objectMemory isNonImmediate: top) 
+					and: [objectMemory objCouldBeClassObj: top]).
+				result := objectMemory ensureBehaviorHash: top.
+				self assert: (result between: 1 and: "1 << 22 - 1" 4194303).
+				self internalStackTopPutIntegerObjectOf: result].	
+		 }
+]
+
+{ #category : #'sista inline primitives - unary' }
+StackInterpreter >> unaryInlinePrimitive: primIndex [
+	<option: #SistaVM>
+	"Bulk comments: each sub-method has its own comment with the specific case.
+	1000	rawClass
+	not a forwarder => Behavior (Same as class special send, but receiver is not a forwarder)
+	1001	numSlots
+	pointer object => Smi between 0 and SmallInteger maxVal // 4 - 1 (Answers total size in pointer-sized slots)
+	1002	numBytes
+	byte object => Smi between 0 and SmallInteger maxVal - 9 (Includes compiled code)
+	1003	numShorts
+	short object => Smi between 0 and SmallInteger maxVal - 9
+	1004	numWords
+	word object => Smi between 0 and SmallInteger maxVal - 9
+	1005	numDoubleWords
+	double word object => Smi between 0 and SmallInteger maxVal - 9
+	1011	RawNew
+	literal which is a fixed-sized behavior => instance of the receiver with fields nilled out
+	1012	RawNewNoInit
+	literal which is a fixed-sized behavior => instance of the receiver (Fields of returned value contain undefined data)
+	1020	objectIdentityHash
+	non-immediate and non-behavior => 22 bits strictly positive Smi
+	1021	smiIdentityHash
+	Smi => Smi
+	1022	charIdentityHash
+	Character => 22 bits strictly positive Smi
+	1023	smallfloatIdentityHash
+	SmallFloat => Smi
+	1024	behaviorIdentityHash
+	Behavior => 22 bits strictly positive Smi
+	1030	characterAsInteger
+	Character => 22 bits strictly positive Smi (Unicode)
+	1031	smallFloatAsInteger
+	SmallFloat => Smi
+	1032	smiAsFloat
+	Smi => SmallFloat
+	1039	unforwardNonImmediate
+	non immediate => Not a forwarder
+	1040	unforward
+	Anything => Not a forwarder
+	1041	possibleRoot
+	non-immediate, not a forwarder => receiver is returned (should be effect-only) (If old, becomes gray and remembered to allow many unchecked stores in a row afterwards)"
+	primIndex = 0 ifTrue: [^self unaryClassPrimitive].
+	primIndex <= 6 ifTrue: [^self unarySizeInlinePrimitive: primIndex].
+	primIndex < 11 ifTrue: [^self unknownInlinePrimitive].
+	primIndex <= 12 ifTrue: [^self unaryNewInlinePrimitive: primIndex].
+	primIndex < 20 ifTrue: [^self unknownInlinePrimitive].
+	primIndex <= 24 ifTrue: [^self unaryHashInlinePrimitive: primIndex].
+	primIndex < 30 ifTrue: [^self unknownInlinePrimitive].
+	primIndex <= 32 ifTrue: [^self unaryConvertInlinePrimitive: primIndex].
+	primIndex < 39 ifTrue: [^ self unknownInlinePrimitive].
+	primIndex <= 40 ifTrue: [^self unaryUnforwardInlinePrimitive: primIndex].
+	primIndex = 41 ifTrue: [^self unaryPossibleRootInlinePrimitive].
+	self unknownInlinePrimitive
+]
+
+{ #category : #'sista inline primitives - unary' }
+StackInterpreter >> unaryNewInlinePrimitive: primIndex [
+	"1011	RawNew
+	 literal which is a fixed-sized behavior => instance of the receiver with fields nilled out
+	1012	RawNewNoInit
+	literal which is a fixed-sized behavior => instance of the receiver (Fields of returned value contain undefined data)
+	
+	WARNING: In the interpreter version, fields are always initialized."
+	| classObj result |
+	self assert: (primIndex between: 11 and: 12).
+	classObj := self internalStackTop.
+	self assert: ((objectMemory isNonImmediate: classObj) and: [self objCouldBeClassObj: classObj]).
+	result := objectMemory instantiateClass: classObj.
+	self internalStackTopPut: result
+]
+
+{ #category : #'sista inline primitives - unary' }
+StackInterpreter >> unaryPossibleRootInlinePrimitive [
+	<option: #SistaVM>
+	"1041	possibleRoot
+	 non-immediate, not a forwarder => receiver is returned (should be effect-only) (If old, becomes gray and remembered to allow many unchecked stores in a row afterwards)"
+	| top |
+	top := self internalStackTop.
+	self deny: (objectMemory isImmediate: top).
+	self deny: (objectMemory isOopForwarded: top).
+	(objectMemory isYoungObject: top)
+		ifFalse: [objectMemory possibleRootStoreInto: top]
+]
+
+{ #category : #'sista inline primitives - unary' }
+StackInterpreter >> unarySizeInlinePrimitive: primIndex [
+	<option: #SistaVM>
+	| result top |
+	self assert: (primIndex between: 1 and: 6).
+	top := self internalStackTop.
+	primIndex caseOf: {
+		"1001	numSlots
+		 pointer object => Smi between 0 and SmallInteger maxVal // 4 - 1 (Answers total size in pointer-sized slots)"
+		[1]	->	[self assert: (objectMemory isPointers: top).
+				 result := objectMemory numSlotsOfAny: top.
+				 self assert: (result between: 0 and: objectMemory maxSmallInteger // 4 - 1)].
+		"1002	numBytes
+		 byte object => Smi between 0 and SmallInteger maxVal - 9 (Includes compiled code)"
+		[2]	->	[self assert: (objectMemory isBytes: top).
+				 result := objectMemory numBytesOf: top].
+		"1003	numShorts
+		 short object => Smi between 0 and SmallInteger maxVal - 9"
+		[3]	->	[self assert: (objectMemory isShorts: top).
+				 result := objectMemory num16BitUnitsOf: top].
+		"1004	numWords
+		 word object => Smi between 0 and SmallInteger maxVal - 9"
+		[5]	->	[self assert: (objectMemory isWords: top).
+				 result := objectMemory num32BitUnitsOf: top].
+		"1005	numDoubleWords 
+		 double word object => Smi between 0 and SmallInteger maxVal - 9"
+		[6]	->	[self assert: (objectMemory isLong64s: top).
+				 result := objectMemory num64BitUnitsOf: top].
+	}.
+	self assert: (result between: 0 and: objectMemory maxSmallInteger - 9).
+	self internalStackTopPut: (objectMemory integerObjectOf: result)
+	
+]
+
+{ #category : #'sista inline primitives - unary' }
+StackInterpreter >> unaryUnforwardInlinePrimitive: primIndex [
+	<option: #SistaVM>
+	"1039	unforwardNonImmediate
+	 non immediate => Not a forwarder
+	 1040	unforward
+	 Anything => Not a forwarder"
+	"Only perf in jitted code matters, don't remove the immediate check"
+	 | top |
+	 top := self internalStackTop.
+	self assert: (primIndex = 40 or: [objectMemory isNonImmediate: top]).
+	 (objectMemory isOopForwarded: top) ifTrue:
+		[self internalStackTopPut: (objectMemory followForwarded: top)]
 ]
 
 { #category : #'sista bytecodes' }
@@ -21325,6 +21893,13 @@ StackInterpreter >> unfollow: litVar atIndex: literalIndex [
 { #category : #'miscellaneous bytecodes' }
 StackInterpreter >> unknownBytecode [
 	"If an error selector is available then send it to the activeContext, otherwise abort."
+	self respondToUnknownBytecode
+]
+
+{ #category : #'sista bytecodes' }
+StackInterpreter >> unknownInlinePrimitive [
+	<inline: true> "Should be inlined everywhere to access localIP"
+	localIP := localIP - 3.
 	self respondToUnknownBytecode
 ]
 

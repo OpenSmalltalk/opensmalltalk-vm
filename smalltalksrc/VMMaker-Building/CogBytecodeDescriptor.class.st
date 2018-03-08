@@ -20,7 +20,8 @@ Class {
 		'isExtension',
 		'isInstVarRef',
 		'is1ByteInstVarStore',
-		'hasIRC'
+		'hasIRC',
+		'hasUnsafeJump'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -77,6 +78,18 @@ CogBytecodeDescriptor >> hasIRC: anObject [
 	"Set the value of hasIRC"
 
 	^hasIRC := anObject
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> hasUnsafeJump [
+
+	^ hasUnsafeJump
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> hasUnsafeJump: anObject [
+
+	^hasUnsafeJump := anObject
 ]
 
 { #category : #accessing }
