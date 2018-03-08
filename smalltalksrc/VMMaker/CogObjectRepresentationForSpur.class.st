@@ -64,17 +64,15 @@ CogObjectRepresentationForSpur class >> initializeMiscConstants [
 { #category : #accessing }
 CogObjectRepresentationForSpur class >> numTrampolines [
 	^super numTrampolines
-	 + (SistaV1BytecodeSet
-		ifTrue: [9] "(small,large)x(method,block,fullBlock) context creation,
-					 ceNewHashTrampoline, ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline"
-		ifFalse: [7] "(small,large)x(method,block) context creation, 
-					 ceNewHashTrampoline, ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline")
-	 + ((initializationOptions at: #IMMUTABILITY ifAbsent: [false])
-		ifTrue: [NumStoreTrampolines]
-		ifFalse: [0])
-	 + ((initializationOptions at: #SistaVM ifAbsent: [false])
-		ifTrue: [1] "inline newHash"
-		ifFalse: [0])
+			 + (SistaV1BytecodeSet
+				ifTrue: [9] "(small,large)x(method,block,fullBlock) context creation,
+							 ceNewHashTrampoline, ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline"
+				ifFalse: [7] "(small,large)x(method,block) context creation, 
+							 ceNewHashTrampoline, ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline")
+			 + NumStoreTrampolines
+			 + ((initializationOptions at: #SistaVM ifAbsent: [false])
+				ifTrue: [1] "inline newHash"
+				ifFalse: [0]) 
 ]
 
 { #category : #'garbage collection' }
@@ -914,106 +912,39 @@ CogObjectRepresentationForSpur >> genGetIdentityHash: rcvrReg resultReg: resultR
 ]
 
 { #category : #'inline primitive support' }
-CogObjectRepresentationForSpur >> genGetInstanceOf: classObj into: destReg initializingIf: initializeInstance [
+CogObjectRepresentationForSpur >> genGetInstanceOfByteClass: classObj into: destReg initializingIf: initializeInstance numBytes: numBytes [
 	"Create an instance of classObj and assign it to destReg, initializing the instance
-	 if initializeInstance is true with nil or 0 as appropriate This is for inline primitives.
-	 Assume there is sufficient space in new space to complete the operation.
-	 Answer zero on success."
-	| classIndex classFormat header slots |
-	((objectMemory isNonImmediate: classObj)
-	 and: [(coInterpreter objCouldBeClassObj: classObj)
-	 and: [(classIndex := objectMemory rawHashBitsOf: classObj) ~= 0
-	 and: [(objectMemory isFixedSizePointerFormat: (objectMemory instSpecOfClassFormat: (classFormat := objectMemory formatOfClass: classObj)))
-	 and: [(slots := objectMemory fixedFieldsOfClassFormat: classFormat) < objectMemory numSlotsMask]]]]) ifFalse:
-		[^UnimplementedOperation].
-
-	self deny: destReg = TempReg.
-
-	header := objectMemory
-					headerForSlots: slots
-					format: (objectMemory instSpecOfClassFormat: classFormat)
-					classIndex: classIndex.
-
-	cogit MoveAw: objectMemory freeStartAddress R: destReg.
-	self genStoreHeader: header intoNewInstance: destReg using: TempReg.
-	cogit
-		LoadEffectiveAddressMw: (objectMemory smallObjectBytesForSlots: slots) r: destReg R: TempReg;
-		MoveR: TempReg Aw: objectMemory freeStartAddress.
-	(initializeInstance and: [slots > 0]) ifTrue:
-		[cogit genMoveConstant: objectMemory nilObject R: TempReg.
-		 0 to: slots - 1 do:
-			[:i| cogit MoveR: TempReg
-					Mw: i * objectMemory wordSize + objectMemory baseHeaderSize
-					r: destReg]].
+	 if initializeInstance is true with 0 This is for inline primitives.
+	 Assume there is sufficient space in new space to complete the operation."
+	| classIndex numSlots byteFormat |
+	classIndex := objectMemory rawHashBitsOf: classObj.
+	self flag: #duplication. "Duplicated byteFormatForNumBytes: and numSlotsForBytes:, might be worth adding api"
+	numSlots := numBytes + (objectMemory wordSize - 1) // objectMemory wordSize.
+	byteFormat := objectMemory firstByteFormat + (8 - numBytes bitAnd: objectMemory wordSize - 1).
+	self assert: classIndex ~= 0.
+	self genGetUninitializedInstanceWithClassIndex: classIndex numSlots: numSlots format: byteFormat into: destReg.
+	(initializeInstance and: [numBytes > 0]) ifTrue: 
+		[self genStoreValue: 0 instance: destReg numSlots: numSlots].
 	^0
+	
 ]
 
 { #category : #'inline primitive support' }
-CogObjectRepresentationForSpur >> genGetInstanceOfFixedClass: classObj into: destReg initializingIf: initializeInstance [
+CogObjectRepresentationForSpur >> genGetInstanceOfPointerClass: classObj into: destReg initializingIf: initializeInstance numVariableSlots: varSlots [
 	"Create an instance of classObj and assign it to destReg, initializing the instance
-	 if initializeInstance is true with nil or 0 as appropriate This is for inline primitives.
-	 Assume there is sufficient space in new space to complete the operation.
-	 Answer zero on success."
-	| classIndex classFormat header slots branch constReg inst loop delta loopCount slotsPerIteration |
-	((objectMemory isNonImmediate: classObj)
-	 and: [(coInterpreter objCouldBeClassObj: classObj)
-	 and: [(classIndex := objectMemory rawHashBitsOf: classObj) ~= 0
-	 and: [(objectMemory isFixedSizePointerFormat: (objectMemory instSpecOfClassFormat: (classFormat := objectMemory formatOfClass: classObj)))
-	 and: [(slots := objectMemory fixedFieldsOfClassFormat: classFormat) < objectMemory numSlotsMask]]]]) ifFalse:
-		[^UnimplementedOperation].
-
-	header := objectMemory
-					headerForSlots: slots
-					format: (objectMemory instSpecOfClassFormat: classFormat)
-					classIndex: classIndex.
-
-	cogit MoveAw: objectMemory freeStartAddress R: destReg.
-	self genStoreHeader: header intoNewInstance: destReg using: TempReg.
-	cogit
-		LoadEffectiveAddressMw: (objectMemory smallObjectBytesForSlots: slots) r: destReg R: TempReg;
-		MoveR: TempReg Aw: objectMemory freeStartAddress.
-	(initializeInstance and: [slots > 0]) ifFalse:
-		[^0].
-	slots <= (slotsPerIteration := 8) ifTrue: "slotsPerIteration must be even; see cogit SubCq: objectMemory bytesPerOop R: TempReg below"
-		[cogit genMoveConstant: objectMemory nilObject R: TempReg.
-		 0 to: slots - 1 do:
-			[:i| cogit MoveR: TempReg
-					Mw: i * objectMemory wordSize + objectMemory baseHeaderSize
-					r: destReg].
-		^0].
-	"self halt: 'genGetInstanceOfFixedClass:... ', slots asInteger."
-	constReg := cogit allocateRegNotConflictingWith: destReg.
-	cogit genMoveConstant: objectMemory nilObject R: constReg.
-	
-	slots \\ slotsPerIteration ~= 0
-		ifTrue: "delta maps the offset at the loop entryPoint onto destReg + objectMemory baseHeaderSize"
-			[delta := (slotsPerIteration - (slots \\ slotsPerIteration) * objectMemory bytesPerOop) - objectMemory baseHeaderSize.
-			 delta > 0 ifTrue: [cogit SubCq: delta R: destReg].
-			 delta < 0 ifTrue: [cogit AddCq: delta negated R: destReg].
-			 "now delta maps (loopCount * slotsPerIteration * objectMemory bytesPerOop) + objectMemory baseHeaderSize - delta to the start of the object"
-			 delta := delta + objectMemory baseHeaderSize.
-			 (objectMemory bytesPerOop < objectMemory baseHeaderSize
-			  and: [slots \\ 2 = 1]) ifTrue: "if end of loop is not at start of next object, adjust loop limit in TempReg to point to last field filled."
-				[cogit SubCq: objectMemory bytesPerOop R: TempReg].
-			 branch := cogit Jump: 0]
-		ifFalse:
-			[delta := 0.
-			 cogit AddCq: objectMemory baseHeaderSize R: destReg].
-	"loopCount is number of times through the increment of destReg."
-	loopCount := slots + slotsPerIteration - 1 // slotsPerIteration.
-	self assert: loopCount > 1.
-	loop := cogit Label.
-	0 to: 7 do:
-		[:i|
-		inst := cogit MoveR: constReg Mw: i * objectMemory bytesPerOop r: destReg.
-		slotsPerIteration - (slots \\ slotsPerIteration) = i ifTrue:
-			[branch jmpTarget: inst]].
-	cogit
-		AddCq: slotsPerIteration * objectMemory bytesPerOop R: destReg;
-		CmpR: TempReg R: destReg;
-		JumpBelow: loop;
-		SubCq: (loopCount * slotsPerIteration * objectMemory bytesPerOop) + objectMemory baseHeaderSize - delta R: destReg.
+	 if initializeInstance is true with nil This is for inline primitives.
+	 Assume there is sufficient space in new space to complete the operation."
+	| classIndex classFormat totalNumSlots fixedSlots |
+	classIndex := objectMemory rawHashBitsOf: classObj.
+	classFormat := objectMemory formatOfClass: classObj.
+	fixedSlots := objectMemory fixedFieldsOfClassFormat: classFormat.
+	totalNumSlots := varSlots + fixedSlots.
+	self assert: classIndex ~= 0.
+	self genGetUninitializedInstanceWithClassIndex: classIndex numSlots: totalNumSlots format: (objectMemory instSpecOfClassFormat: classFormat) into: destReg.
+	(initializeInstance and: [totalNumSlots > 0]) ifTrue: 
+		[self genStoreValue: objectMemory nilObject instance: destReg numSlots: totalNumSlots].
 	^0
+	
 ]
 
 { #category : #'compile abstract instructions' }
@@ -1053,6 +984,40 @@ CogObjectRepresentationForSpur >> genGetRawSlotSizeOfNonImm: sourceReg into: des
 		[cogit MoveCq: 0 R: destReg].
 	cogit MoveMb: 7 r: sourceReg R: destReg.
 	^0
+]
+
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genGetUninitializedInstanceWithClassIndex: classIndex numSlots: numSlots format: format into: destReg [
+	"Write in destReg the pointer to the object (adjusted based on header size)
+	Can deal with large header but not with with old space allocation (max allocation size)"
+	| overflowHeader header lowNumSlots |
+	<var: #overflowHeader type: #usqLong>
+	numSlots >= objectMemory fixedFieldsOfClassFormatMask ifTrue: [^UnimplementedOperation].
+	cogit MoveAw: objectMemory freeStartAddress R: destReg.
+	numSlots >= objectMemory numSlotsMask
+		ifTrue: 
+			[overflowHeader := numSlots + (objectMemory numSlotsMask << objectMemory numSlotsFullShift).
+			 self genStoreHeader: overflowHeader intoNewInstance: destReg using: TempReg.
+			 cogit AddCq: objectMemory baseHeaderSize R: destReg. "Allow to store base header at correct place and to use smallObjectBytes in the rest of the method"
+			 lowNumSlots := objectMemory numSlotsMask]
+		ifFalse: 
+			[lowNumSlots := numSlots].	
+	header := objectMemory
+					headerForSlots: lowNumSlots
+					format: format
+					classIndex: classIndex.
+	self genStoreHeader: header intoNewInstance: destReg using: TempReg.
+	cogit
+		LoadEffectiveAddressMw: (objectMemory smallObjectBytesForSlots: numSlots) r: destReg R: TempReg;
+		MoveR: TempReg Aw: objectMemory freeStartAddress.
+
+	
+]
+
+{ #category : #'mapped inlined primitive support' }
+CogObjectRepresentationForSpur >> genIfRequiredCheckRememberedBitOf: rr scratch: scratchReg [
+	CheckRememberedInTrampoline ifFalse: 
+		[^self genCheckRememberedBitOf: rr scratch: scratchReg]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -2026,6 +1991,57 @@ CogObjectRepresentationForSpur >> genStoreTrampolineCalled: trampolineName instV
 		appendOpcodes: true
 ]
 
+{ #category : #'inline primitive support' }
+CogObjectRepresentationForSpur >> genStoreValue: value instance: destReg numSlots: numSlots [ 
+	"Store the value in the instance from field 1 to numSlots
+	 Typically used for for inlined allocations, initializing objects with 0 or nil.
+	 destReg is referencing the object (oop) and is restored at the end of this code.
+	 If less than 8 fields, use a full unrolled initialization (up to 8 stores)
+	 If more than 8 fields, use a duff device to initialize with a 8-vectorized loop."
+
+	| slotsPerIteration constReg delta branch loopCount loop inst |
+	numSlots <= (slotsPerIteration := 8) ifTrue: "slotsPerIteration must be even; see cogit SubCq: objectMemory bytesPerOop R: TempReg below"
+		[cogit genMoveConstant: value R: TempReg.
+		 0 to: numSlots - 1 do:
+			[:i| cogit MoveR: TempReg
+					Mw: i * objectMemory wordSize + objectMemory baseHeaderSize
+					r: destReg].
+		^0].
+	
+	constReg := cogit allocateRegNotConflictingWith: (cogit registerMaskFor: destReg).
+	cogit genMoveConstant: value R: constReg.
+	
+	numSlots \\ slotsPerIteration ~= 0
+		ifTrue: "delta maps the offset at the loop entryPoint onto destReg + objectMemory baseHeaderSize"
+			[delta := (slotsPerIteration - (numSlots \\ slotsPerIteration) * objectMemory bytesPerOop) - objectMemory baseHeaderSize.
+			 delta > 0 ifTrue: [cogit SubCq: delta R: destReg].
+			 delta < 0 ifTrue: [cogit AddCq: delta negated R: destReg].
+			 "now delta maps (loopCount * slotsPerIteration * objectMemory bytesPerOop) + objectMemory baseHeaderSize - delta to the start of the object"
+			 delta := delta + objectMemory baseHeaderSize.
+			 (objectMemory bytesPerOop < objectMemory baseHeaderSize
+			  and: [numSlots \\ 2 = 1]) ifTrue: "if end of loop is not at start of next object, adjust loop limit in TempReg to point to last field filled."
+				[cogit SubCq: objectMemory bytesPerOop R: TempReg].
+			 branch := cogit Jump: 0]
+		ifFalse:
+			[delta := 0.
+			 cogit AddCq: objectMemory baseHeaderSize R: destReg].
+	"loopCount is number of times through the increment of destReg."
+	loopCount := numSlots + slotsPerIteration - 1 // slotsPerIteration.
+	self assert: loopCount > 1.
+	loop := cogit Label.
+	0 to: 7 do:
+		[:i|
+		inst := cogit MoveR: constReg Mw: i * objectMemory bytesPerOop r: destReg.
+		slotsPerIteration - (numSlots \\ slotsPerIteration) = i ifTrue:
+			[branch jmpTarget: inst]].
+	cogit
+		AddCq: slotsPerIteration * objectMemory bytesPerOop R: destReg;
+		CmpR: TempReg R: destReg;
+		JumpBelow: loop;
+		SubCq: (loopCount * slotsPerIteration * objectMemory bytesPerOop) + objectMemory baseHeaderSize - delta R: destReg.
+	^0
+]
+
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genStoreWithImmutabilityAndStoreCheckSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg needRestoreRcvr: needRestoreRcvr [ 
 	"Store check code is duplicated to use a single trampoline"
@@ -2130,6 +2146,14 @@ CogObjectRepresentationForSpur >> genStoreWithImmutabilityCheckSourceReg: source
 				scratchReg: scratchReg 
 				needRestoreRcvr: needRestoreRcvr ].
 	^ 0
+]
+
+{ #category : #'mapped inlined primitive support' }
+CogObjectRepresentationForSpur >> genVarIndexCallStoreTrampoline [	
+	self assert: IMMUTABILITY.
+	self cppIf: #IMMUTABILITY
+		ifTrue: [cogit CallRT: (ceStoreTrampolines at: NumStoreTrampolines - 1).
+				cogit annotateBytecode: cogit Label ].
 ]
 
 { #category : #initialization }
@@ -2528,6 +2552,13 @@ CogObjectRepresentationForSpur >> resetCountersIn: cogMethod [
 	<api>
 	<option: #SistaCogit>
 	cogit fillInCounters: (self numCountersFor: cogMethod counters) atStartAddress: cogMethod counters
+]
+
+{ #category : #'mapped inlined primitive support' }
+CogObjectRepresentationForSpur >> setIfRequiredTargetOf: jumpRemembered toTargetOf: jmpImmediate [
+	<inline: true> "To avoid typing..."
+	CheckRememberedInTrampoline ifFalse:
+		[jumpRemembered jmpTarget: jmpImmediate getJmpTarget].
 ]
 
 { #category : #'garbage collection' }

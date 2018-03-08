@@ -400,7 +400,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		"1 byte bytecodes"
 		"pushes"
 		(1    0   15 genPushReceiverVariableBytecode isInstVarRef		needsFrameNever: 1)
-		(1  16   31 genPushLiteralVariable16CasesBytecode			needsFrameNever: 1)
+		(1  16   31 genPushLitVarDirSup16CasesBytecode				needsFrameNever: 1)
 		(1  32   63 genPushLiteralConstantBytecode					needsFrameNever: 1)
 		(1  64   75 genPushTemporaryVariableBytecode				needsFrameIfMod16GENumArgs: 1)
 		(1  76   76 genPushReceiverBytecode							needsFrameNever: 1)
@@ -468,7 +468,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 
 		"pushes"
 		(2 226 226 genExtPushReceiverVariableBytecode isInstVarRef)		"Needs a frame for context inst var access"
-		(2 227 227 genExtPushLiteralVariableBytecode			needsFrameNever: 1)
+		(2 227 227 genExtPushLitVarDirSupBytecode			needsFrameNever: 1)
 		(2 228 228 genExtPushLiteralBytecode					needsFrameNever: 1)
 		(2 229 229 genLongPushTemporaryVariableBytecode)
 		(2 230 230 unknownBytecode)
@@ -482,7 +482,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		(2 235 235 genExtSendSuperBytecode isMapped)
 
 		"sista bytecodes"
-		(2 236 236 genExtEnsureAllocableSlots isMapped)
+		(2 236 236 genCallMappedInlinedPrimitive isMapped hasUnsafeJump)
 
 		"jumps"
 		(2 237 237 genExtUnconditionalJump	branch isMapped "because of interrupt check" v4:Long:Branch:Distance:)
@@ -490,26 +490,24 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		(2 239 239 genExtJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
 
 		"stores"
-		(2 240 240 genSistaExtStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
-		(2 241 241 genSistaExtStoreAndPopLiteralVariableBytecode isMappedIfImmutability)
+		(2 240 240 genExtStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
+		(2 241 241 genExtStoreAndPopLiteralVariableBytecode isMappedIfImmutability)
 		(2 242 242 genLongStoreAndPopTemporaryVariableBytecode)
-		(2 243 243 genSistaExtStoreReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
-		(2 244 244 genSistaExtStoreLiteralVariableBytecode isMappedIfImmutability)
+		(2 243 243 genExtStoreReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
+		(2 244 244 genExtStoreLiteralVariableBytecode isMappedIfImmutability)
 		(2 245 245 genLongStoreTemporaryVariableBytecode)
 
 		(2 246 247	unknownBytecode)
 
 		"3 byte bytecodes"
-		(3 248 248 genCallPrimitiveBytecode)
+		(3 248 248 genCallPrimitiveBytecode hasUnsafeJump)
 		(3 249 249 genExtPushFullClosureBytecode)
 		(3 250 250 genExtPushClosureBytecode block v4:Block:Code:Size:)
-		(3 251 251 genExtPushRemoteTempOrInstVarLongBytecode)
-		(3 252 252 genExtStoreRemoteTempOrInstVarLongBytecode isMappedIfImmutability)
-		(3 253 253 genExtStoreAndPopRemoteTempOrInstVarLongBytecode isMappedIfImmutability)
-
-		(3 254 254	genExtJumpIfNotInstanceOfBehaviorsBytecode branch v4:Long:BranchIfNotInstanceOf:Distance:)
+		(3 251 251 genPushRemoteTempLongBytecode)
+		(3 252 252 genStoreRemoteTempLongBytecode isMappedIfImmutability)
+		(3 253 253 genStoreAndPopRemoteTempLongBytecode isMappedIfImmutability)
 		
-		(3 255 255	unknownBytecode))
+		(3 254 255	unknownBytecode))
 ]
 
 { #category : #'class initialization' }
@@ -3099,13 +3097,6 @@ StackToRegisterMappingCogit >> genCmpArgIsConstant: argIsConstant rcvrIsConstant
 ]
 
 { #category : #'bytecode generators' }
-StackToRegisterMappingCogit >> genExtEnsureAllocableSlots [
-	"SistaV1	*	236	11101100	iiiiiiii	Ensure Allocable Slots (+ Extend A * 256)"
-	self ssFlushTo: simStackPtr.
-	^super genExtEnsureAllocableSlots
-]
-
-{ #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genExtPushClosureBytecode [
 	"Block compilation.  At this point in the method create the block.  Note its start
 	 and defer generating code for it until after the method and any other preceding
@@ -3352,16 +3343,16 @@ StackToRegisterMappingCogit >> genGenericStorePop: popBoolean slotIndex: slotInd
 	- needsStoreCheck (young into old object check)
 	- needRestoreRcvr (ensures the receiver is live across the store)
 	- needsImmCheck (do the call-back if the receiver is immutable)"
-	<inline: true>
 	"We have two very different paths as only the immutability path requires a specific register 
 	for the value on top of stack as well as the stack flush"
 	| topReg |
+	<inline: true>
 	self 
 		cppIf: IMMUTABILITY
 		ifTrue:
 			[needsImmCheck
 				ifTrue: 
-					[self ssAllocateRequiredReg: ClassReg.
+					[self ssAllocateRequiredReg: ClassReg upThrough: simStackPtr - 1. "If already classReg don't spill it"
 					 "we replace the top value for the flush"
 					 self ssStoreAndReplacePop: popBoolean toReg: ClassReg.
 					 self ssFlushTo: simStackPtr.
@@ -13217,7 +13208,7 @@ StackToRegisterMappingCogit >> scanMethod [
 		 (descriptor isReturn
 		  and: [pc >= latestContinuation]) ifTrue:
 			[endPC := pc].
-
+		
 		  needsFrame ifFalse:
 			[(descriptor needsFrameFunction isNil
 			  or: [self perform: descriptor needsFrameFunction with: framelessStackDelta])
@@ -13248,6 +13239,12 @@ StackToRegisterMappingCogit >> scanMethod [
 				ifFalse:
 					[latestContinuation := latestContinuation max: targetPC.
 					 self maybeCountCounter]].
+			
+		 latestContinuation := self 
+			maybeDealWithUnsafeJumpForDescriptor: descriptor 
+			pc: pc 
+			latestContinuation: latestContinuation.
+		
 		 descriptor isBlockCreation ifTrue:
 			[numBlocks := numBlocks + 1.
 			 distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.

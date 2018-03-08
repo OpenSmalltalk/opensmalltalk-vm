@@ -261,11 +261,11 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		(2 239 239 genExtJumpIfFalse			branch isBranchFalse isMapped "because of mustBeBoolean" v4:Long:Branch:Distance:)
 
 		"stores"
-		(2 240 240 genSistaExtStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
-		(2 241 241 genSistaExtStoreAndPopLiteralVariableBytecode isMappedIfImmutability)
+		(2 240 240 genExtStoreAndPopReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
+		(2 241 241 genExtStoreAndPopLiteralVariableBytecode isMappedIfImmutability)
 		(2 242 242 genLongStoreAndPopTemporaryVariableBytecode)
-		(2 243 243 genSistaExtStoreReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
-		(2 244 244 genSistaExtStoreLiteralVariableBytecode isMappedIfImmutability)
+		(2 243 243 genExtStoreReceiverVariableBytecode isInstVarRef isMappedIfImmutability)
+		(2 244 244 genExtStoreLiteralVariableBytecode isMappedIfImmutability)
 		(2 245 245 genLongStoreTemporaryVariableBytecode)
 
 		(2 246 247	unknownBytecode)
@@ -274,13 +274,11 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		(3 248 248 genCallPrimitiveBytecode)
 		(3 249 249 genExtPushFullClosureBytecode) 
 		(3 250 250 genExtPushClosureBytecode block v4:Block:Code:Size:)
-		(3 251 251 genExtPushRemoteTempOrInstVarLongBytecode)
-		(3 252 252 genExtStoreRemoteTempOrInstVarLongBytecode isMappedIfImmutability)
-		(3 253 253 genExtStoreAndPopRemoteTempOrInstVarLongBytecode isMappedIfImmutability)
+		(3 251 251 genPushRemoteTempLongBytecode)
+		(3 252 252 genStoreRemoteTempLongBytecode isMappedIfImmutability)
+		(3 253 253 genStoreAndPopRemoteTempLongBytecode isMappedIfImmutability)
 
-		(3 254 254	genExtJumpIfNotInstanceOfBehaviorsBytecode)
-			
-		(3 255 255	unknownBytecode))
+		(3 254 255	unknownBytecode))
 ]
 
 { #category : #'class initialization' }
@@ -1773,6 +1771,12 @@ SimpleStackBasedCogit >> genBlockReturn [
 ]
 
 { #category : #'bytecode generators' }
+SimpleStackBasedCogit >> genCallMappedInlinedPrimitive [
+	"Implemented with SistaCogit only"
+	^EncounteredUnknownBytecode
+]
+
+{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genCallPrimitiveBytecode [
 	"V3PlusClosures:	139 10001011	iiiiiiii   jjjjjjjj  Call Primitive #iiiiiiii + (jjjjjjjj * 256)
 	 NewsqueakV4:		249 11111001	iiiiiiii   jjjjjjjj  Call Primitive #iiiiiiii + (jjjjjjjj * 256)
@@ -1805,23 +1809,6 @@ SimpleStackBasedCogit >> genDoubleFailIfZeroArgRcvr: rcvrReg arg: argReg [
 ]
 
 { #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genExtEnsureAllocableSlots [
-	"SistaV1	*	236	11101100	iiiiiiii	Ensure Allocable Slots (+ Extend A * 256)"
-	| slots skip |
-	slots := (extA bitShift: 8) + byte1.
-	extA := 0.
-	self
-		MoveAw: objectMemory freeStartAddress R: TempReg;
-		CmpCq: objectMemory getScavengeThreshold - (objectMemory bytesPerOop * slots) R: TempReg.
-	skip := self JumpBelow: 0.
-	objectRepresentation genSetGCNeeded.
-	self CallRT: ceCheckForInterruptTrampoline.
-	skip jmpTarget: self Label.
-	self annotateBytecode: skip getJmpTarget.
-	^0
-]
-
-{ #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genExtJumpIfFalse [
 	"244		11110100	i i i i i i i i	Pop and Jump 0n False i i i i i i i i (+ Extend B * 256, where Extend B >= 0)"
 	| distance target |
@@ -1834,14 +1821,6 @@ SimpleStackBasedCogit >> genExtJumpIfFalse [
 	numExtB := 0.
 	target := distance + 2 + bytecodePC.
 	^self genJumpIf: objectMemory falseObject to: target
-]
-
-{ #category : #'bytecode generators' }
-SimpleStackBasedCogit >> genExtJumpIfNotInstanceOfBehaviorsBytecode [
-	"SistaV1: *	254		11111110	kkkkkkkk	jjjjjjjj		branch If Not Instance Of Behavior/Array Of Behavior kkkkkkkk (+ Extend A * 256, where Extend A >= 0) distance jjjjjjjj (+ Extend B * 256, where Extend B >= 0)"
-	"Non supported in non Sista VMs"
-	^EncounteredUnknownBytecode
-	
 ]
 
 { #category : #'bytecode generators' }
