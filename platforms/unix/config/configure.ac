@@ -32,14 +32,16 @@
 
 AC_PREREQ([2.69])
 
-AC_INIT([opensmalltalk-vm],[],[vm-dev@lists.squeakfoundation.org],[OpenSmalltalk VM],[http://opensmalltalk.org/])
+AC_INIT([OpenSmalltalk VM],[devel],
+        [vm-dev@lists.squeakfoundation.org],
+        [],
+        [http://opensmalltalk.org/])
 
 AC_CONFIG_SRCDIR([config.h.in])
 
-
 SVNREV=`grep '\$Rev: ' ${srcdir}/../../../platforms/Cross/vm/sqSCCSVersion.h \
-	        | sed 's/.*$Rev: \([0-9][0-9]*\).*";/\1/'` \
-	        | head -n 1
+	        | sed 's/.*$Rev: \([0-9][0-9]*\).*";/\1/' \
+	        | head -n 1`
 AC_ARG_WITH(vmversion,
 	AS_HELP_STRING([ --with-vmversion=M.N], [vm version number (default=5.0)]),
 	[vmversion="${with_vmversion}"],
@@ -292,7 +294,7 @@ AC_SEARCH_LIBS([socket], [socket])
 AC_SEARCH_LIBS([sin], [m])
 
 AC_CHECK_HEADERS_ONCE([execinfo.h])
-AC_SEARCH_LIBS([bactrace],[execinfo])
+AC_SEARCH_LIBS([backtrace],[execinfo])
 
 
 AX_PTHREAD([
