@@ -38,6 +38,11 @@ environment:
       CYG_ROOT: C:\cygwin
       CYG_SETUP: setup-x86.exe
       MINGW_ARCH: i686
+    - FLAVOR: pharo.sista.spur
+      ARCH: win32x86
+      CYG_ROOT: C:\cygwin
+      CYG_SETUP: setup-x86.exe
+      MINGW_ARCH: i686
     - FLAVOR: pharo.cog.spur.lowcode
       ARCH: win32x86
       CYG_ROOT: C:\cygwin
@@ -63,6 +68,11 @@ environment:
       CYG_ROOT: C:\cygwin64
       CYG_SETUP: setup-x86_64.exe
       MINGW_ARCH: x86_64
+    # - FLAVOR: pharo.sista.spur
+    #   ARCH: win64x64
+    #   CYG_ROOT: C:\cygwin64
+    #   CYG_SETUP: setup-x86_64.exe
+    #   MINGW_ARCH: x86_64
     - FLAVOR: newspeak.cog.spur
       ARCH: win64x64
       CYG_ROOT: C:\cygwin64
