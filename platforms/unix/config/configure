@@ -12617,6 +12617,9 @@ if test "$GCC" = "yes"; then
   CPPFLAGS="$CPPFLAGS -Wno-missing-braces"
   #sigh
   CPPFLAGS="$CPPFLAGS -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable"
+  if $CC -E -xc -Wno-unused-but-set-variable - </dev/null 2>&1 >/dev/null; then
+    CPPFLAGS="$CPPFLAGS -Wno-unused-but-set-variable"
+  fi
 fi
 
 
@@ -16900,9 +16903,10 @@ if test "$with_vm_sound_OSS" = "no"; then
 $as_echo "******** disabling vm-sound-OSS" >&6; }
   disabled_plugins="${disabled_plugins} vm-sound-OSS";
 else
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Open Sound System" >&5
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for Open Sound System" >&5
 $as_echo_n "checking for Open Sound System... " >&6; }
-	for ac_header in soundcard.h sys/soundcard.h
+  soundcard_h_found="no"
+  for ac_header in soundcard.h sys/soundcard.h
 do :
   as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
 ac_fn_c_check_header_mongrel "$LINENO" "$ac_header" "$as_ac_Header" "$ac_includes_default"
@@ -16910,17 +16914,18 @@ if eval test \"x\$"$as_ac_Header"\" = x"yes"; then :
   cat >>confdefs.h <<_ACEOF
 #define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
 _ACEOF
- break
-else
+ soundcard_h_found="yes"; break
+fi
+
+done
+
+  if test "$soundcard_h_found" = "no"; then
 
 
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ******** disabling ${plugin}" >&5
 $as_echo "******** disabling ${plugin}" >&6; }
   disabled_plugins="${disabled_plugins} ${plugin}"
-fi
-
-done
-
+  fi
 fi
 if test "${plibs}"; then
   llibs="${LIBS}"
