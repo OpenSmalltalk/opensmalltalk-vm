@@ -33,14 +33,12 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             libgl1-mesa-dev:i386 \
             libxext-dev:i386 \
             libglapi-mesa:i386 \
-            libpango1.0-dev:i386 \
-              gir1.2-pango-1.0:i386 \
-              libxft-dev:i386 \
             libpulse-dev:i386 \
             libaudio-dev:i386 \
             gcc-multilib \
             uuid-dev:i386 \
             libcurl3-dev:i386
+    sudo apt-get install -yq --force-yes libpango1.0-dev:i386 
 fi
 
 [[ "${ARCH}" != "linux32ARMv6" ]] && exit 0
