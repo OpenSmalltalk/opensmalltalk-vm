@@ -47,7 +47,7 @@
 #endif
 
 
-static int sound_Stop(void);
+static sqInt sound_Stop(void);
 
 /** routines for converting samples to different formats **/
 
