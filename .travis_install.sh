@@ -37,7 +37,13 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             gcc-multilib \
             uuid-dev:i386 \
             libcurl3-dev:i386
-    sudo apt-get install -yq --force-yes gir1.2-pango-1.0:i386 libpango1.0-dev:i386 libpulse-dev:i386
+    # the more renitent ones
+    sudo apt-get install -yq --force-yes \
+            gir1.2-freedesktop:i386 \
+            gir1.2-glib-2.0:i386 \
+            gir1.2-pango-1.0:i386 \
+            libpango1.0-dev:i386 \
+            libpulse-dev:i386
 fi
 
 [[ "${ARCH}" != "linux32ARMv6" ]] && exit 0
