@@ -34,6 +34,8 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             libxext-dev:i386 \
             libglapi-mesa:i386 \
             libpango1.0-dev:i386 \
+              gir1.2-pango-1.0:i386 \
+              libxft-dev:i386 \
             libpulse-dev:i386 \
             libaudio-dev:i386 \
             gcc-multilib \
