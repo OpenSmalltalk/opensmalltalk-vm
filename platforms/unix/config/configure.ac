@@ -256,7 +256,7 @@ AC_SUBST(INCLUDES)
 
 AC_NEED_SUNOS_H
 
-AC_STDC_HEADERS
+AC_HEADER_STDC
 AC_CHECK_HEADERS_ONCE([unistd.h string.h fcntl.h sys/file.h sys/param.h])
 AC_CHECK_HEADERS_ONCE([sys/time.h sys/filio.h sys/select.h])
 AC_CHECK_HEADERS_ONCE([features.h])
