@@ -9,6 +9,7 @@
 *   RCSID:   $Id$
 *
 *   NOTES: See change log below.
+*   	2018-03-01 AKG Add sqFileFdOpen & sqFileFileOpen
 *	2005-03-26 IKP fix unaligned accesses to file[Size] members
 * 	2004-06-10 IKP 64-bit cleanliness
 * 	1/28/02    Tim remove non-ansi stuff
@@ -473,6 +474,41 @@ sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists) 
 	setSize(f, 0);
 	f->writable = false;
 	return interpreterProxy->success(false);
+}
+
+sqInt
+sqConnectToFileDescriptor(SQFile *sqFile, int fd, sqInt writeFlag)
+{
+	/*
+	 * Open the file with the supplied file descriptor in binary mode.
+	 *
+	 * writeFlag determines whether the file is read-only or writable
+	 * and must be compatible with the existing access.
+	 * sqFile is populated with the file information.
+	 * Smalltalk is reponsible for handling character encoding and 
+	 * line ends.
+	 */
+	FILE *file = openFileDescriptor(fd, writeFlag ? "wb" : "rb");
+	if (!file)
+		return interpreterProxy->success(false);
+	return sqConnectToFile(sqFile, (void *)file, writeFlag);
+}
+
+sqInt
+sqConnectToFile(SQFile *sqFile, void *file, sqInt writeFlag)
+{
+	/*
+	 * Populate the supplied SQFile structure with the supplied FILE.
+	 *
+	 * writeFlag indicates whether the file is read-only or writable
+	 * and must be compatible with the existing access.
+	 */
+	setFile(sqFile, file);
+	setSize(sqFile, 0);
+	sqFile->sessionID = thisSession;
+	sqFile->lastOp = UNCOMMITTED;
+	sqFile->writable = writeFlag;
+	return 1;
 }
 
 /*
