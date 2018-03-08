@@ -31,6 +31,7 @@ jobs:
   - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
   - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
   - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="threaded"
+  - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="itimer"
 
   - stage: "Mac builds"
     env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
