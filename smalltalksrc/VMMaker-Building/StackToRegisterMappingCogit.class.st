@@ -400,7 +400,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		"1 byte bytecodes"
 		"pushes"
 		(1    0   15 genPushReceiverVariableBytecode isInstVarRef		needsFrameNever: 1)
-		(1  16   31 genPushLitVarDirSup16CasesBytecode				needsFrameNever: 1)
+		(1  16   31 genPushLiteralVariable16CasesBytecode			needsFrameNever: 1)
 		(1  32   63 genPushLiteralConstantBytecode					needsFrameNever: 1)
 		(1  64   75 genPushTemporaryVariableBytecode				needsFrameIfMod16GENumArgs: 1)
 		(1  76   76 genPushReceiverBytecode							needsFrameNever: 1)
@@ -468,7 +468,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 
 		"pushes"
 		(2 226 226 genExtPushReceiverVariableBytecode isInstVarRef)		"Needs a frame for context inst var access"
-		(2 227 227 genExtPushLitVarDirSupBytecode			needsFrameNever: 1)
+		(2 227 227 genExtPushLiteralVariableBytecode			needsFrameNever: 1)
 		(2 228 228 genExtPushLiteralBytecode					needsFrameNever: 1)
 		(2 229 229 genLongPushTemporaryVariableBytecode)
 		(2 230 230 unknownBytecode)
