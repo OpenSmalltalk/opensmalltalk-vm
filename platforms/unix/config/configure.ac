@@ -225,7 +225,7 @@ fi
 AC_SUBST(WFLAGS)
 
 
-AC_CHECK_PROG(LN, ln, ln)
+AC_CHECK_PROG([LN], [ln], [ln])
 
 # Check size assumptions of basic data types
 
@@ -291,6 +291,9 @@ AC_SEARCH_LIBS([gethostbyname], [nsl])
 AC_SEARCH_LIBS([socket], [socket])
 AC_SEARCH_LIBS([sin], [m])
 
+AC_CHECK_HEADERS_ONCE([execinfo.h])
+AC_SEARCH_LIBS([bactrace],[execinfo])
+
 
 AX_PTHREAD([
   LIBS="$PTHREAD_LIBS $LIBS"
@@ -301,7 +304,7 @@ AX_PTHREAD([
 
 
 AC_CHECK_FUNC(_dyld_image_count, [AC_DEFINE(HAVE_DYLD,[1], [dyld linker present])])
-AC_CHECK_HEADERS(dlfcn.h)
+AC_CHECK_HEADERS([dlfcn.h])
 AC_SEARCH_LIBS([dlopen], [dl dld], [AC_DEFINE(HAVE_LIBDL,[1], [dl linker present])])
 
 AC_CHECK_FUNCS([snprintf __snprintf],[break])
@@ -422,19 +425,19 @@ AH_TOP([/* config.h.in -- template for config.h			-*- C -*-
  *   Copyright (C) 1996-2007 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
- *   
+ *
  *   This file is part of Unix Squeak.
- * 
+ *
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
  *   of this software and associated documentation files (the "Software"), to deal
  *   in the Software without restriction, including without limitation the rights
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- * 
+ *
  *   The above copyright notice and this permission notice shall be included in
  *   all copies or substantial portions of the Software.
- * 
+ *
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -444,13 +447,13 @@ AH_TOP([/* config.h.in -- template for config.h			-*- C -*-
  *   SOFTWARE.
  */
 
- /* Author: Ian.Piumarta@squeakland.org
-  *
-  * Last edited: 2006-04-23 12:34:41 by piumarta on emilia.local
-  */
+/* Author: Ian.Piumarta@squeakland.org
+ *
+ * Last edited: 2006-04-23 12:34:41 by piumarta on emilia.local
+ */
 
- #ifndef __sq_config_h
- #define __sq_config_h
+#ifndef __sq_config_h
+#define __sq_config_h
 ])
 
 AH_TEMPLATE([VM_DLSYM_PREFIX],[Once used to specify mangled names on Mac OS, left for documentation purposes])
