@@ -39,8 +39,26 @@ StackDepthFinder >> branchIfNotInstanceOf: behaviorOrArrayOfBehavior distance: d
 StackDepthFinder >> callInlinePrimitive: primitiveIndex [
 	"The convention for inline primitives is that the argument count is primitiveIndex // 1000 - 1,
 	 so receiverless 0-arg prims are from 0 to 999 (does this even make sense?), 0-arg prims
-	 are from 1 to 1999, 2-arg prims from 1000 to 1999, and so on."
+	 are from 1 to 1999, 2-arg prims from 1000 to 1999, and so on.
+	 Primitives over 6000 are jumps."
+	primitiveIndex >= 6000 ifTrue: [
+		| upperByte delta |
+		 self drop: (primitiveIndex - 4999) // 1000.
+		 upperByte := self method at: pc - 6.
+		 upperByte > 127 ifTrue: [upperByte := upperByte - 256].
+		 delta := upperByte << 8 + (self method at: pc - 4).
+		 delta < 0
+			ifTrue:
+				[(joins at: pc + delta) ~= stackp ifTrue: [(Notification new tag: #'bad join'; signal)]]
+			ifFalse:
+				[joins at: pc + delta put: stackp].
+		^ self ].
 	self drop: (primitiveIndex // 1000 - 1 max: 0)
+]
+
+{ #category : #'instruction decoding' }
+StackDepthFinder >> callMappedInlinePrimitive: primIndex [
+	self drop: (primIndex // 50 - 1 max: 0)
 ]
 
 { #category : #'instruction decoding' }
@@ -155,11 +173,6 @@ StackDepthFinder >> encoderClass: anObject [
 	encoderClass := anObject
 ]
 
-{ #category : #'instruction decoding' }
-StackDepthFinder >> ensureAllocableSlots: numSlots [
-	"nothing to do here..."
-]
-
 { #category : #decoding }
 StackDepthFinder >> interpretNextInstructionFor: client [
 	(deadCode and: [(joins at: pc) notNil]) ifTrue:
@@ -187,13 +200,6 @@ StackDepthFinder >> jump: delta if: condition [
 	"Conditional Jump bytecode."
 	self drop.
 	self doJump: delta
-]
-
-{ #category : #'instruction decoding' }
-StackDepthFinder >> jumpOrPop: delta IfNotInstanceOf: behaviors [
-	"Conditional Jump bytecode."
-	self doJump: delta.
-	self drop.
 ]
 
 { #category : #private }

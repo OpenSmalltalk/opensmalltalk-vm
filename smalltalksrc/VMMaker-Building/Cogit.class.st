@@ -780,6 +780,7 @@ Cogit class >> generatorTableFrom: anArray [
 						numBytes: tuple first;
 						generator: tuple fourth;
 						isReturn: (tuple includes: #return);
+						hasUnsafeJump: (tuple includes: #hasUnsafeJump);
 						isMapped: ((tuple includes: #isMappedIfImmutability)
 										ifTrue: [self bindingOf: #IMMUTABILITY]
 										ifFalse: [tuple includes: #isMapped]);
@@ -6053,12 +6054,15 @@ Cogit >> endPCOf: aMethod [
 		(descriptor isReturn
 		 and: [pc >= latestContinuation]) ifTrue:
 			[end := pc].
-		(descriptor isBranch or: [descriptor isBlockCreation]) ifTrue:
-			[distance := self spanFor: descriptor at: pc exts: nExts in: aMethod.
-			 targetPC := pc + descriptor numBytes + distance.
-			 latestContinuation := latestContinuation max: targetPC.
-			 descriptor isBlockCreation ifTrue:
-				[pc := pc + distance]].
+		(descriptor isBranch or: [descriptor isBlockCreation]) 
+			ifTrue:
+				[distance := self spanFor: descriptor at: pc exts: nExts in: aMethod.
+			 	targetPC := pc + descriptor numBytes + distance.
+			 	latestContinuation := latestContinuation max: targetPC.
+			 	descriptor isBlockCreation ifTrue:
+					[pc := pc + distance]]
+			ifFalse: 
+				[latestContinuation := self maybeUnsafeJumpContinuation: latestContinuation at: pc for: descriptor in: aMethod].
 		nExts := descriptor isExtension ifTrue: [nExts + 1] ifFalse: [0].
 		pc := pc + descriptor numBytes].
 	^end
@@ -9230,7 +9234,8 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 							 (descriptor isBranch or: [descriptor isBlockCreation]) ifTrue:
 								[| targetPC |
 								 targetPC := self latestContinuationPCFor: descriptor at: bcpc exts: nExts in: aMethodObj.
-								 latestContinuation := latestContinuation max: targetPC]].
+								 latestContinuation := latestContinuation max: targetPC].
+							 latestContinuation := self maybeUnsafeJumpContinuation: latestContinuation at: bcpc for: descriptor in: aMethodObj].
 					  nextBcpc := self nextBytecodePCFor: descriptor at: bcpc exts: nExts in: aMethodObj.
 					  descriptor isMapped
 					  or: [isInBlock and: [descriptor isMappedInBlock]]] whileFalse:
@@ -9987,6 +9992,12 @@ Cogit >> maybeBreakGeneratingAt: address [
 ]
 
 { #category : #'compile abstract instructions' }
+Cogit >> maybeDealWithUnsafeJumpForDescriptor: descriptor pc: pc latestContinuation: latestContinuation [
+	<inline: true>
+	^ latestContinuation
+]
+
+{ #category : #'compile abstract instructions' }
 Cogit >> maybeDumpLiterals: descriptor [
 	<inline: true>
 	<var: #descriptor type: #'BytecodeDescriptor *'>
@@ -10084,6 +10095,12 @@ Cogit >> maybeNoteStartpcFor: thing [ "<CogBlockStart|CogCodeRange>"
 			at: #numArgs put: ([thing cogMethod ifNil: [-1] ifNotNil: [:cm| cm cmNumArgs]] "CogCodeRange"
 									on: MessageNotUnderstood
 									do: [:ex| thing numArgs])] "CogBlockStart"
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> maybeUnsafeJumpContinuation: latestContinuation at: bcpc for: descriptor in: aMethodObj [
+	<inline: true>
+	^ latestContinuation
 ]
 
 { #category : #'method map' }
@@ -11531,9 +11548,16 @@ Cogit >> scanMethod [
 			 distance := self spanFor: descriptor at: pc exts: nExts in: methodObj.
 			 targetPC := pc + descriptor numBytes + distance.
 			 latestContinuation := latestContinuation max: targetPC].
-		 NewspeakVM ifTrue:
-			[descriptor hasIRC ifTrue:
-				[numIRCs := numIRCs + 1]].
+		 NewspeakVM 
+			ifTrue:
+				[descriptor hasIRC ifTrue:
+					[numIRCs := numIRCs + 1]]
+			ifFalse: 
+				[descriptor hasIRC ifTrue:
+					[ (objectMemory fetchByte: pc + 1 ofObject: methodObj) 
+						<< 8 
+						+ (objectMemory fetchByte: pc + 2 ofObject: methodObj)
+						= ((1 << 15) + 6000) ifTrue: [self initializeFixupAt: targetPC]	 ] ].
 		 pc := pc + descriptor numBytes.
 		 descriptor isExtension
 			ifTrue: [nExts := nExts + 1]
