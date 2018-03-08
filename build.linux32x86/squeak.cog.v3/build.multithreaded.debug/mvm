@@ -25,8 +25,7 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak \
 	INTERP=cointerpmt \
 	TARGET_ARCH="-m32" \
-	CFLAGS="$OPT -msse2 -DCOGMTVM=1" \
-	LDFLAGS=-Wl,-z,now
+	CFLAGS="$OPT -msse2 -DCOGMTVM=1"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`

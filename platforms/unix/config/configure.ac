@@ -337,9 +337,12 @@ case $host_os in
     VM_APP_ICONS="${imgdir}/SqueakVM.icns"
     ;;
   *)
+    LDFLAGS="$LDFLAGS -Wl,-z,now"
     VM_APP_ICONS=""
     ;;
 esac
+
+case
 
 AC_SUBST(VM_APP_ICONS)
 

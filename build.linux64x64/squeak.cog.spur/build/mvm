@@ -9,7 +9,7 @@ esac
 
 CFLAGS="$OPT -msse2 -DCOGMTVM=0"
 LIBS=""
-LDFLAGS="-Wl,-z,now"
+LDFLAGS=""
 case $(uname -s) in
   OpenBSD)
            CFLAGS="$CFLAGS -I/usr/local/include"
