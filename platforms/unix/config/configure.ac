@@ -223,6 +223,9 @@ if test "$GCC" = "yes"; then
   CPPFLAGS="$CPPFLAGS -Wno-missing-braces"
   #sigh 
   CPPFLAGS="$CPPFLAGS -Wno-unknown-pragmas -Wno-unused-value -Wno-unused-label -Wno-unused-function -Wno-unused-variable"
+  if $CC -E -xc -Wunused-but-set-variable - </dev/null 2>&1 >/dev/null; then
+    CPPFLAGS="$CPPFLAGS -Wunused-but-set-variable"
+  fi
 fi
 AC_SUBST(WFLAGS)
 
