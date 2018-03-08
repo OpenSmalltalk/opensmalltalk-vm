@@ -15496,9 +15496,12 @@ $as_echo "#define DARWIN 1" >>confdefs.h
     VM_APP_ICONS="${imgdir}/SqueakVM.icns"
     ;;
   *)
+    LDFLAGS="$LDFLAGS -Wl,-z,now"
     VM_APP_ICONS=""
     ;;
 esac
+
+case
 
 
 

@@ -342,8 +342,6 @@ case $host_os in
     ;;
 esac
 
-case
-
 AC_SUBST(VM_APP_ICONS)
 
 # Checks for browser support
