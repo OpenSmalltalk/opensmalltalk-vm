@@ -6,6 +6,7 @@ i*86) ;; # we're good
 	exec i386 "$0" "$@"
 fi ;;
 esac
+
 # debug Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=debug/sqcogspurlinuxht
 OPT="-g3 -O0 -fwrapv -DDEBUGVM=1"
@@ -31,4 +32,7 @@ rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`
 # but older linux readlinks lack the -f flag
-make install-squeak install-plugins prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR 2>&1 | tee LOG
+exec \
+    script -f -q -e -c \
+    "make install-squeak install-plugins prefix=`(cd ../../../;pwd)`/products/$INSTALLDIR" \
+    >(sed "s/\x1B\[\([0-9]\{1,2\}\(;[0-9]\{1,2\}\)\?\)\?[mGK]//g" > LOG)

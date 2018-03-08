@@ -18087,6 +18087,8 @@ if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
 
+  plibs="${plibs} uuid"
+
 $as_echo "#define HAVE_UUID_GENERATE 1" >>confdefs.h
 
 
@@ -18146,6 +18148,8 @@ ac_res=$ac_cv_search_uuidgen
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
+
+  plibs="${plibs} uuid"
 
 $as_echo "#define HAVE_UUIDGEN 1" >>confdefs.h
 
