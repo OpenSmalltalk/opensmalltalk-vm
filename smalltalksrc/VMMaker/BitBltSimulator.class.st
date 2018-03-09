@@ -14,7 +14,7 @@ Class {
 		'dither8Lookup',
 		'isInitialised'
 	],
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : 'VMMaker-InterpreterSimulation'
 }
 
 { #category : #accessing }

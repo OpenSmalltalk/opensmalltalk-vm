@@ -159,7 +159,7 @@ Class {
 		'numPushNilsFunction',
 		'pushNilSizeFunction'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -13476,6 +13476,7 @@ StackToRegisterMappingCogit >> ssAllocateRequiredReg: requiredReg upThrough: sta
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssAllocateRequiredRegMask: requiredRegsMask upThrough: stackPtr [
+	<inline: true>
 	self ssAllocateRequiredRegMask: requiredRegsMask upThrough: stackPtr upThroughNative: simNativeStackPtr.
 
 ]
@@ -13521,7 +13522,7 @@ StackToRegisterMappingCogit >> ssFlushTo: index [
 	LowcodeVM ifTrue:
 		[self ssNativeFlushTo: simNativeStackPtr].
 	simSpillBase <= index ifTrue:
-		[((simSpillBase max: methodOrBlockNumTemps + 1) min: simStackPtr) to: index do:
+		[(((simSpillBase max: methodOrBlockNumTemps + 1) min: simStackPtr) min: index) to: index do:
 			[:i|
 			self assert: needsFrame.
 			(self simStackAt: i)
@@ -14136,7 +14137,7 @@ StackToRegisterMappingCogit >> updateSimSpillBase [
 	simSpillBase > simStackPtr
 		ifTrue:
 			[simSpillBase := simStackPtr + 1.
-			 [simSpillBase - 1 > methodOrBlockNumTemps
+			 [simSpillBase > methodOrBlockNumTemps
 			   and: [(self simStackAt: simSpillBase - 1) spilled not]] whileTrue:
 				[simSpillBase := simSpillBase - 1]]
 		ifFalse:

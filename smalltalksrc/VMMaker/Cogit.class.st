@@ -332,7 +332,7 @@ Class {
 		'generatorTable',
 		'primitiveTable'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -451,27 +451,18 @@ Cogit class >> attemptToComputeInstVarNamesFor: aCompiledMethod [
 { #category : #'in-image compilation support' }
 Cogit class >> attemptToComputeTempNamesFor: aCompiledMethod [
 	(aCompiledMethod respondsTo: #tempNames) ifTrue:
-		[| blocks |
+		[| schematicTemps blocks |
+		 schematicTemps := aCompiledMethod methodNode schematicTempNamesString.
 		 blocks := aCompiledMethod embeddedBlockClosures.
 		 initializationOptions
 			at: #tempNames
-			put: (Dictionary withAll: {aCompiledMethod initialPC -> ([aCompiledMethod tempNames]
-																		on: MessageNotUnderstood
-																		do: [:ex|
-																			(self isSistaMessage: ex message unimplementedIn: Decompiler) ifTrue:
-																				[^self].
-																			 (Smalltalk classNamed: #AssemblerAbsentClassImport) ifNotNil:
-																				[:aaciClass|
-																				 (ex receiver isKindOf: aaciClass) ifTrue:
-																					[^self]].
-																			 ex pass])},
+			put: (Dictionary withAll: {aCompiledMethod initialPC -> (self decomposeSchematicTemps: (schematicTemps copyUpTo: $[))},
 				(blocks
 					ifEmpty: [#()]
 					ifNotEmpty:
 						[aCompiledMethod embeddedBlockClosures
-							with: ((aCompiledMethod methodNode schematicTempNamesString allButFirst:
-									(aCompiledMethod methodNode schematicTempNamesString indexOf: $[)) piecesCutWhere: [:a :b| b = $[])
-							collect: [:c :s| c startpc -> (s substrings collect: [:ea| ea copyWithout: $] ])]]))]
+							with: (schematicTemps piecesCutWhere: [:a :b| b = $[]) allButFirst
+							collect: [:c :s| c startpc -> (self decomposeSchematicTemps: (s copyWithoutAll: '[]'))]]))]
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -655,6 +646,19 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		[:s|
 		aCCodeGenerator addSelectorTranslation: s to: 'g', (aCCodeGenerator cFunctionNameFor: s)].
 	aCCodeGenerator addSelectorTranslation: #halt: to: 'haltmsg'
+]
+
+{ #category : #'in-image compilation support' }
+Cogit class >> decomposeSchematicTemps: aString [
+	^Array streamContents:
+		[:ws| | rs |
+		rs := aString readStream.
+		[rs atEnd] whileFalse:
+			[ws nextPut: (rs peek = $(
+						ifTrue: [[rs upThrough: $)]
+									on: MessageNotUnderstood
+									do: [:ex| (rs upTo: $)), ')']]
+						ifFalse: [rs upTo: Character space])]]
 ]
 
 { #category : #'accessing class hierarchy' }

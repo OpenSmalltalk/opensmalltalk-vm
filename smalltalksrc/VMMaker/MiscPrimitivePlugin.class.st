@@ -4,7 +4,7 @@ This plugin pulls together a number of string and array related primitives.  In 
 Class {
 	#name : #MiscPrimitivePlugin,
 	#superclass : #InterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #'helper functions' }
