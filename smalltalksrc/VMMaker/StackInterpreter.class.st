@@ -470,7 +470,7 @@ Class {
 		'VMSqueakClassIndices',
 		'VMStackFrameOffsets'
 	],
-	#category : #'VMMaker-Interpreter'
+	#category : 'VMMaker-Interpreter'
 }
 
 { #category : #translation }
@@ -5844,7 +5844,8 @@ StackInterpreter >> encodeFrameFieldHasContext: hasContext "<Boolean>" isBlock: 
 
 { #category : #simulation }
 StackInterpreter >> encoderClassForHeader: headerInteger [
-	^Smalltalk classNamed: ((objectMemory headerIndicatesAlternateBytecodeSet: headerInteger)
+	<doNotGenerate>
+	^Smalltalk classNamed: ((headerInteger < 0 or: [objectMemory headerIndicatesAlternateBytecodeSet: headerInteger])
 								ifTrue: [AltBytecodeEncoderClassName]
 								ifFalse: [BytecodeEncoderClassName])
 ]
@@ -9107,6 +9108,7 @@ StackInterpreter >> internalQuickPrimitiveResponse [
 
 { #category : #'internal interpreter access' }
 StackInterpreter >> internalStackTop [
+
 	^stackPages longAtPointer: localSP
 ]
 

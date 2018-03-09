@@ -141,7 +141,7 @@ Class {
 		'CogMethodConstants',
 		'VMStackFrameOffsets'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }

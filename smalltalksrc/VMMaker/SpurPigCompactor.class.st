@@ -30,7 +30,7 @@ Class {
 		'CompactionPassesForGC',
 		'CompactionPassesForSnapshot'
 	],
-	#category : #'VMMaker-SpurMemoryManager'
+	#category : 'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'class initialization' }

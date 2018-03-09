@@ -60,7 +60,7 @@ Class {
 		'VMObjectIndices',
 		'VMSqueakClassIndices'
 	],
-	#category : #'VMMaker-Support'
+	#category : 'VMMaker-Support'
 }
 
 { #category : #'instance creation' }
@@ -592,7 +592,7 @@ CurrentImageCoInterpreterFacade >> lengthOf: anOop [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> literal: index ofMethod: anOop [
 	| lit |
-	lit := (self objectForOop: anOop) literalAt: index + 1.
+	lit := (anOop isInteger ifTrue: [self objectForOop: anOop] ifFalse: [anOop]) literalAt: index + 1.
 	^lit class == SmallInteger
 		ifTrue: [objectMemory integerObjectOf: lit]
 		ifFalse: [self oopForObject: lit]

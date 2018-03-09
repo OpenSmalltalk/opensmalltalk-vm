@@ -20,7 +20,7 @@ Class {
 		'regionsToReclaim',
 		'regionToFill'
 	],
-	#category : #'VMMaker-SpurMemoryManager'
+	#category : 'VMMaker-SpurMemoryManager'
 }
 
 { #category : #api }
