@@ -64,15 +64,15 @@ CogObjectRepresentationForSpur class >> initializeMiscConstants [
 { #category : #accessing }
 CogObjectRepresentationForSpur class >> numTrampolines [
 	^super numTrampolines
-			 + (SistaV1BytecodeSet
-				ifTrue: [9] "(small,large)x(method,block,fullBlock) context creation,
-							 ceNewHashTrampoline, ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline"
-				ifFalse: [7] "(small,large)x(method,block) context creation, 
-							 ceNewHashTrampoline, ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline")
-			 + NumStoreTrampolines
-			 + ((initializationOptions at: #SistaVM ifAbsent: [false])
-				ifTrue: [1] "inline newHash"
-				ifFalse: [0]) 
+		 + (SistaV1BytecodeSet
+			ifTrue: [9] "(small,large)x(method,block,fullBlock) context creation,
+						 ceNewHashTrampoline, ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline"
+			ifFalse: [7] "(small,large)x(method,block) context creation, 
+						 ceNewHashTrampoline, ceStoreCheckContextReceiverTrampoline and ceScheduleScavengeTrampoline")
+		 + NumStoreTrampolines
+		 + (SistaVM
+			ifTrue: [1] "inline newHash"
+			ifFalse: [0])
 ]
 
 { #category : #'garbage collection' }
@@ -1919,6 +1919,7 @@ CogObjectRepresentationForSpur >> genStoreSourceReg: sourceReg slotIndex: index 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genStoreTrampolineCall: instVarIndex [
 	<inline: true>
+	self assert: IMMUTABILITY.
 	instVarIndex >= (NumStoreTrampolines - 1)
 		ifTrue: 
 			[ cogit MoveCq: instVarIndex R: TempReg.
