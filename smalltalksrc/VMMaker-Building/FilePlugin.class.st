@@ -370,7 +370,7 @@ FilePlugin >> primitiveDirectoryCreate [
 			[^interpreterProxy primitiveFail]].
 	(self
 		cCode: 'dir_Create(dirNameIndex, dirNameSize)'
-		inSmalltalk: [self createDirectory: (interpreterProxy asString: dirNameIndex)]) ifFalse:
+		inSmalltalk: [self createDirectory: (interpreterProxy asString: dirNameIndex size: dirNameSize)]) ifFalse:
 		[^interpreterProxy primitiveFail].
 	interpreterProxy pop: 1
 ]
