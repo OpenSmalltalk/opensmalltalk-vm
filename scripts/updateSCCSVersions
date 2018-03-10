@@ -19,7 +19,7 @@ if is_run_as_hook; then
         fi
     fi
 else
-    hooks_dir=$(git rev-parse --git-path hooks)
+    hooks_dir=$(git rev-parse --git-dir)/hooks
     mkdir -p "$hooks_dir"
     cp -f "$0" "$hooks_dir/post-commit"
     cp -f "$0" "$hooks_dir/post-merge"
