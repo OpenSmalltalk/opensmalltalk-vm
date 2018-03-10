@@ -21,7 +21,7 @@ Class {
 		'PageShift',
 		'PageSize'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'class initialization' }

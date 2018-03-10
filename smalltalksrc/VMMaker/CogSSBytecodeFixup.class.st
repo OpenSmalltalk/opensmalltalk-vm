@@ -24,7 +24,7 @@ Class {
 		'NeedsMergeFixupFlag',
 		'NeedsNonMergeFixupFlag'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #'simulation only' }

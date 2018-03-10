@@ -9,7 +9,7 @@ If needed, that can be optimized then.
 Class {
 	#name : #SerialPlugin,
 	#superclass : #SmartSyntaxInterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }
@@ -51,7 +51,6 @@ SerialPlugin >> primitiveSerialPortOpen: portNum baudRate: baudRate stopBitsType
 
 { #category : #primitives }
 SerialPlugin >> primitiveSerialPortOpenByName: portName baudRate: baudRate stopBitsType: stopBitsType parityType: parityType dataBits: dataBits inFlowControlType: inFlowControl outFlowControlType: outFlowControl xOnByte: xOnChar xOffByte: xOffChar [
-	<option: #PharoVM>
 	<var: #port type: 'char *'>
 
 	| port portNameSize |
@@ -85,7 +84,6 @@ SerialPlugin >> primitiveSerialPortRead: portNum into: array startingAt: startIn
 
 { #category : #primitives }
 SerialPlugin >> primitiveSerialPortReadByName: portName into: array startingAt: startIndex count: count [ 
-	<option: #PharoVM>
 	<var: #port type: 'char *'>
 
 	| port portNameSize bytesRead arrayPtr |
@@ -126,7 +124,6 @@ SerialPlugin >> primitiveSerialPortWrite: portNum from: array startingAt: startI
 
 { #category : #primitives }
 SerialPlugin >> primitiveSerialPortWriteByName: portName from: array startingAt: startIndex count: count [ 
-	<option: #PharoVM>
 	<var: #port type: 'char *'>
 
 	| bytesWritten arrayPtr portNameSize port |

@@ -18,7 +18,7 @@ Class {
 		'ResolverReady',
 		'ResolverUninitialized'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'class initialization' }

@@ -7,7 +7,7 @@ Class {
 	#pools : [
 		'VMObjectIndices'
 	],
-	#category : 'VMMaker-Support'
+	#category : #'VMMaker-Support'
 }
 
 { #category : #testing }

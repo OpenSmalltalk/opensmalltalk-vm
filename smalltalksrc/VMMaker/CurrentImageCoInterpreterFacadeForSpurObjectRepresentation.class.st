@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'hiddenRoots'
 	],
-	#category : 'VMMaker-Support'
+	#category : #'VMMaker-Support'
 }
 
 { #category : #'accessing class hierarchy' }
