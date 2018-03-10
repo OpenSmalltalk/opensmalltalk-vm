@@ -504,8 +504,8 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSistaV1 [
 		(3 249 249 genExtPushFullClosureBytecode)
 		(3 250 250 genExtPushClosureBytecode block v4:Block:Code:Size:)
 		(3 251 251 genPushRemoteTempLongBytecode)
-		(3 252 252 genStoreRemoteTempLongBytecode isMappedIfImmutability)
-		(3 253 253 genStoreAndPopRemoteTempLongBytecode isMappedIfImmutability)
+		(3 252 252 genStoreRemoteTempLongBytecode)
+		(3 253 253 genStoreAndPopRemoteTempLongBytecode)
 		
 		(3 254 255	unknownBytecode))
 ]
@@ -2712,10 +2712,10 @@ StackToRegisterMappingCogit >> doubleExtendedDoAnythingBytecode [
 			[(coInterpreter isWriteMediatedContextInstVarIndex: byte2)
 				ifTrue: [self genStorePop: opType = 6 MaybeContextReceiverVariable: byte2]
 				ifFalse: [self genStorePop: opType = 6 ReceiverVariable: byte2].
-			self cppIf: IMMUTABILITY ifTrue: [ "genStorePop:LiteralVariable: annotates; don't annotate twice" ^0 ]].
+			self cppIf: IMMUTABILITY ifTrue: [ "genStorePop:...ReceiverVariable: annotate; don't annotate twice" ^0 ]].
 	"We need a map entry for this bytecode for correct parsing (if the method builds a frame)."
 	self assert: needsFrame.
-	"genPushMaybeContextInstVar, pushListVar, store & storePop all generate code"
+	"genPushMaybeContextInstVar, pushLitVar, store & storePop all generate code"
 	self assert: self prevInstIsPCAnnotated not.
 	self annotateBytecode: self Label.
 	^0
@@ -14137,7 +14137,7 @@ StackToRegisterMappingCogit >> updateSimSpillBase [
 	simSpillBase > simStackPtr
 		ifTrue:
 			[simSpillBase := simStackPtr + 1.
-			 [simSpillBase > methodOrBlockNumTemps
+			 [simSpillBase - 1 > methodOrBlockNumTemps
 			   and: [(self simStackAt: simSpillBase - 1) spilled not]] whileTrue:
 				[simSpillBase := simSpillBase - 1]]
 		ifFalse:
@@ -14146,7 +14146,8 @@ StackToRegisterMappingCogit >> updateSimSpillBase [
 				[simSpillBase := simSpillBase + 1]].
 	methodOrBlockNumTemps + 1 to: (simSpillBase - 1 min: simStackPtr) do:
 		[:i|
-		self assert: (self simStackAt: i) spilled == true]
+		self assert: (self simStackAt: i) spilled == true].
+	self assert: (simSpillBase > simStackPtr or: [(self simStackAt: simSpillBase) spilled == false])
 ]
 
 { #category : #'span functions' }

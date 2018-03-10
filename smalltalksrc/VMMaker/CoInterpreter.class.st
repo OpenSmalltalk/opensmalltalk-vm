@@ -2213,7 +2213,8 @@ CoInterpreter >> ceSend: selector aboveClassBinding: methodClassBinding to: rcvr
 	<api>
 	<option: #BytecodeSetHasDirectedSuperSend>
 	self ceSend: selector
-		above: (objectMemory followMaybeForwarded: methodClassBinding)
+		above: (self fetchPointer: ValueIndex
+					ofObject: (objectMemory followMaybeForwarded: methodClassBinding))
 		to: rcvr
 		numArgs: numArgs
 ]

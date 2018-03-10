@@ -275,8 +275,8 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSistaV1 [
 		(3 249 249 genExtPushFullClosureBytecode) 
 		(3 250 250 genExtPushClosureBytecode block v4:Block:Code:Size:)
 		(3 251 251 genPushRemoteTempLongBytecode)
-		(3 252 252 genStoreRemoteTempLongBytecode isMappedIfImmutability)
-		(3 253 253 genStoreAndPopRemoteTempLongBytecode isMappedIfImmutability)
+		(3 252 252 genStoreRemoteTempLongBytecode)
+		(3 253 253 genStoreAndPopRemoteTempLongBytecode)
 
 		(3 254 255	unknownBytecode))
 ]
