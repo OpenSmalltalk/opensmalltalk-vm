@@ -4,7 +4,7 @@ This plugin is a simple workaround for the lamentable state of the Squeak file h
 Class {
 	#name : #FileCopyPlugin,
 	#superclass : #SmartSyntaxInterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }

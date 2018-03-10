@@ -1,7 +1,7 @@
 Class {
 	#name : #CogRegisterAllocatingSimStackEntry,
 	#superclass : #CogSimStackEntry,
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #'compile abstract instructions' }
