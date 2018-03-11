@@ -8,7 +8,7 @@
  *             David T. Lewis (dtl)
  *
  *             Tobias Pape (topa)
- *               Hasso Plattner Institute, Postdam, Germany
+ *               Hasso Plattner Institute, Potsdam, Germany
  *****************************************************************************/
 
 #include "sq.h"
