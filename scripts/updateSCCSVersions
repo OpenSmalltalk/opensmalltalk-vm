@@ -36,8 +36,8 @@ unstagedVersionFileChanges=$(git diff $versionfiles)
 touch $versionfiles
 git checkout HEAD -- $versionfiles
 if [[ -n "$stagedVersionFileChanges" ]]; then
-	echo "$stagedVersionFileChanges" | git apply && git add $versionfiles
+    echo "$stagedVersionFileChanges" | git apply && git add $versionfiles
 fi
 if [[ -n "$unstagedVersionFileChanges" ]]; then
-	echo "$unstagedVersionFileChanges" | git apply
+    echo "$unstagedVersionFileChanges" | git apply
 fi
