@@ -31,7 +31,13 @@ if [[ -n "$(git rev-parse --show-toplevel)" ]]; then
 fi
 versionfiles="platforms/Cross/vm/sqSCCSVersion.h platforms/Cross/plugins/sqPluginsSCCSVersion.h"
 git config --local include.path ../.gitconfig
-versionfilechanges=$(git diff $versionfiles)
+stagedVersionFileChanges=$(git diff --cached $versionfiles)
+unstagedVersionFileChanges=$(git diff $versionfiles)
 touch $versionfiles
 git checkout HEAD -- $versionfiles
-test -n "$versionfilechanges" && echo "$versionfilechanges" | git apply
+if [[ -n "$stagedVersionFileChanges" ]]; then
+	echo "$stagedVersionFileChanges" | git apply && git add $versionfiles
+fi
+if [[ -n "$unstagedVersionFileChanges" ]]; then
+	echo "$unstagedVersionFileChanges" | git apply
+fi
