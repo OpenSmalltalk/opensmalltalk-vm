@@ -164,7 +164,7 @@ FilePlugin >> fileRecordSize [
 { #category : #'file primitives' }
 FilePlugin >> fileValueOf: objectPointer [
 	"Return a pointer to the first byte of of the file record within the given Smalltalk object, or nil if objectPointer is not a file record."
-	<returnTypeC: 'SQFile *'>
+	<returnTypeC: #'SQFile *'>
 	<static: false>
 	(((interpreterProxy isBytes: objectPointer) and:
 		 [(interpreterProxy byteSizeOf: objectPointer) = self fileRecordSize]))
@@ -295,13 +295,14 @@ FilePlugin >> pointerFrom: pointerByteArray [
 	"Answer the machine address contained in anExternalAddressOop."
 
 	| ptr addressUnion idx |
-	<returnTypeC: 'void *'>
-	<var: 'ptr' type: 'unsigned char *'>
-	<var: 'addressUnion' type: 'union {void *address; unsigned char bytes[sizeof(void *)];}'>
+	<returnTypeC: #'void *'>
+	<var: 'ptr' type: #'unsigned char *'>
+	<var: 'addressUnion' type: #'union {void *address; unsigned char bytes[sizeof(void *)];}'>
 	((interpreterProxy is: pointerByteArray KindOf: 'ByteArray') and:
 		[(interpreterProxy stSizeOf: pointerByteArray) = self sizeOfPointer])
-		ifFalse: [^ nil].
+		ifFalse: [^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	ptr := interpreterProxy arrayValueOf: pointerByteArray.
+	interpreterProxy failed ifTrue: [^nil].
 	idx := 0.
 	[idx < self sizeOfPointer] whileTrue:
 		[self cCode: 'addressUnion.bytes[idx] = ptr[idx]'.
@@ -321,8 +322,9 @@ FilePlugin >> primitiveConnectToFile [
 	writeFlag := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 0).
 	cfileOop := interpreterProxy stackValue: 1.
 	cfile := self pointerFrom: cfileOop.
-	cfile ifNil:
-		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	interpreterProxy failed ifTrue: [
+		"Ensure that the appropriate failure code has been set"
+		^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	filePointer := self connectToFile: cfile write: writeFlag.
 	interpreterProxy failed ifFalse: 
 		[interpreterProxy pop: 3 "rcvr, name, writeFlag"
@@ -337,12 +339,14 @@ FilePlugin >> primitiveConnectToFileDescriptor [
 	| writeFlag fdPointer fd filePointer |
 	<var: 'fd' type: #int>
 	<export: true>
-	writeFlag := interpreterProxy
-				booleanValueOf: (interpreterProxy stackValue: 0).
+	writeFlag := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 0).
 	fdPointer := interpreterProxy stackValue: 1.
 	(interpreterProxy isIntegerObject: fdPointer)
 		ifFalse: [^ interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	fd := interpreterProxy integerValueOf: fdPointer.
+	interpreterProxy failed ifTrue: [
+		"Ensure that the appropriate failure code has been set"
+		^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	filePointer := self connectToFd: fd write: writeFlag.
 	interpreterProxy failed ifFalse:
 		[interpreterProxy pop: 3 "rcvr, name, writeFlag"
