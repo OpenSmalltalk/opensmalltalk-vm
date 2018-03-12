@@ -45,6 +45,8 @@
 #define DEBUG_PRINT(X, ...)
 #endif
 
+#define NULL_FUNC ((void*(*)())NULL)
+
 /**********************************************************************/
 #if defined(SQSSL_OPENSSL_LINKED)
 /**********************************************************************/
@@ -103,8 +105,8 @@
 #define sqo_X509_check_ip_asc X509_check_ip_asc
 #define sqo_X509_check_host X509_check_host
 #elif  OPENSSL_VERSION_NUMBER < 0x10002000L
-#define sqo_X509_check_ip_asc ((void(*)(void))NULL)
-#define sqo_X509_check_host ((void(*)(void))NULL)
+#define sqo_X509_check_ip_asc NULL_FUNC
+#define sqo_X509_check_host NULL_FUNC
 #endif
     
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
@@ -120,33 +122,34 @@
 #define sqo_TLS_method TLS_method
 
 #define sqo_ASN1_STRING_get0_data ASN1_STRING_get0_data 
-#define sqo_ASN1_STRING_data  ((void*(*)(void*))NULL)
+#define sqo_ASN1_STRING_data NULL_FUNC
 
-#define sqo_sk_new_null ((void*(*)(void))NULL)
-#define sqo_sk_push ((void*(*)(void))NULL)
-#define sqo_sk_free ((void*(*)(void))NULL)
-#define sqo_sk_value ((void*(*)(void))NULL)
-#define sqo_sk_num ((void*(*)(void))NULL)
-#define sqo_sk_pop_free ((void*(*)(void))NULL)
-#define sqo_SSLv23_method ((void*(*)(void))NULL)
+#define sqo_sk_new_null NULL_FUNC
+#define sqo_sk_push NULL_FUNC
+#define sqo_sk_free NULL_FUNC
+#define sqo_sk_value NULL_FUNC
+#define sqo_sk_num NULL_FUNC
+#define sqo_sk_pop_free NULL_FUNC
+#define sqo_SSLv23_method NULL_FUNC
 
-#define sqo_SSL_library_init ((void*(*)(void))NULL)
-#define sqo_SSL_load_error_strings ((void*(*)(void))NULL)
+#define sqo_SSL_library_init NULL_FUNC
+#define sqo_SSL_load_error_strings NULL_FUNC
 
 #elif OPENSSL_VERSION_NUMBER < 0x10100000L
 
-#define sqo_SSL_CTX_set_options ((void*(*)(void))NULL)
-#define sqo_BIO_test_flags ((void*(*)(void))NULL)
-#define sqo_OPENSSL_init_ssl ((void*(*)(void))NULL)
-#define sqo_OPENSSL_sk_new_null ((void*(*)(void))NULL)
-#define sqo_OPENSSL_sk_push ((void*(*)(void))NULL)
-#define sqo_OPENSSL_sk_free ((void*(*)(void))NULL)
-#define sqo_OPENSSL_sk_value ((void*(*)(void))NULL)
-#define sqo_OPENSSL_sk_num ((void*(*)(void))NULL)
-#define sqo_OPENSSL_sk_pop_free ((void*(*)(void))NULL)
-#define sqo_TLS_method ((void*(*)(void))NULL)
 
-#define sqo_ASN1_STRING_get0_data ((void*(*)(void))NULL)
+#define sqo_SSL_CTX_set_options NULL_FUNC
+#define sqo_BIO_test_flags NULL_FUNC
+#define sqo_OPENSSL_init_ssl NULL_FUNC
+#define sqo_OPENSSL_sk_new_null NULL_FUNC
+#define sqo_OPENSSL_sk_push NULL_FUNC
+#define sqo_OPENSSL_sk_free NULL_FUNC
+#define sqo_OPENSSL_sk_value NULL_FUNC
+#define sqo_OPENSSL_sk_num NULL_FUNC
+#define sqo_OPENSSL_sk_pop_free NULL_FUNC
+#define sqo_TLS_method NULL_FUNC
+
+#define sqo_ASN1_STRING_get0_data NULL_FUNC
 
 #define sqo_ASN1_STRING_data ASN1_STRING_data
 
@@ -160,6 +163,9 @@
 
 #define sqo_SSL_library_init SSL_library_init
 #define sqo_SSL_load_error_strings SSL_load_error_strings
+
+#define sk_GENERAL_NAME_freefunc void(*)(void*)
+
 #endif
 
 /**********************************************************************/
