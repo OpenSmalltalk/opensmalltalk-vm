@@ -402,9 +402,15 @@ static void* dlhandle_ssl = NULL;
 
 void SQO_DESTRUCTOR fini(void)
 {
-  if (dlhandle_self) { dlclose(dlhandle_self); }
-  if (dlhandle_crypto) { dlclose(dlhandle_crypto); }
-  if (dlhandle_ssl) { dlclose(dlhandle_ssl);}
+#if defined(RTLD_NODELETE)
+  if (!(SQO_DL_FLAGS & RTLD_NODELETE)) {
+#endif
+    if (dlhandle_self) { dlclose(dlhandle_self); }
+    if (dlhandle_crypto) { dlclose(dlhandle_crypto); }
+    if (dlhandle_ssl) { dlclose(dlhandle_ssl);}
+#if defined(RTLD_NODELETE)
+  }
+#endif
 }
 
 
