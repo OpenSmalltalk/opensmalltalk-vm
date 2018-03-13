@@ -213,7 +213,7 @@ glCreateRendererFlags(int x, int y, int w, int h, int flags)
     NSOpenGLPixelFormat *pixelFormat = createPixelFormat(flags);
     
     NSOpenGLContext *theContext = [[NSOpenGLContext alloc] initWithFormat: pixelFormat shareContext: mainOpenGLContext];
-    [pixelFormat dealloc];
+    DEALLOCOBJ(pixelFormat);
     
     // Make sure that the context is created successfully.
     if(!theContext) {
@@ -221,7 +221,7 @@ glCreateRendererFlags(int x, int y, int w, int h, int flags)
         return -1;
     }
     
-    renderer->theOpenGLContext = theContext;
+    renderer->theOpenGLContext = (__bridge void *)theContext;
     renderer->used = 1;
     renderer->bufferRect[0] = x;
     renderer->bufferRect[1] = y;
@@ -284,7 +284,7 @@ glDestroyRenderer(int handle)
         return 1; /* already destroyed */
     }
     
-    NSOpenGLContext *context = (NSOpenGLContext*)renderer->theOpenGLContext;
+    NSOpenGLContext *context = (__bridge NSOpenGLContext *)renderer->theOpenGLContext;
     
     // Delete the potentially shared resources
     [context makeCurrentContext];
@@ -292,7 +292,7 @@ glDestroyRenderer(int handle)
     
     // Destroy the context.
     [NSOpenGLContext clearCurrentContext];
-    [context release];
+    RELEASEOBJ(context);
     
     currentGLRenderer = NULL;
     renderer->used = 0;
@@ -309,7 +309,7 @@ glMakeCurrentRenderer(glRenderer *renderer) {
             return 0;
     }
     
-    NSOpenGLContext *context = (NSOpenGLContext*)renderer->theOpenGLContext;
+    NSOpenGLContext *context = (__bridge NSOpenGLContext *)renderer->theOpenGLContext;
     [context makeCurrentContext];
     currentGLRenderer = renderer;
     

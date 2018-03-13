@@ -39,8 +39,8 @@ extern
 struct VirtualMachine* interpreterProxy;
 
 #if __GNUC__
-# define setsp(sp) asm volatile ("movq %0,%%rsp" : : "m"(sp))
-# define getsp() ({ void *sp; asm volatile ("movq %%rsp,%0" : "=r"(sp) : ); sp;})
+# define setsp(sp) __asm__ volatile ("movq %0,%%rsp" : : "m"(sp))
+# define getsp() ({ void *sp; __asm__ volatile ("movq %%rsp,%0" : "=r"(sp) : ); sp;})
 #endif
 #define STACK_ALIGN_BYTES 32 /* 32 if a 256-bit argument is passed; 16 otherwise */
 

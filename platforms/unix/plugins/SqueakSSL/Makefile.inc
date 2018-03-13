@@ -1,6 +1,5 @@
-
+#
 XLDFLAGS=	-ldl
-
 #
 # For platform builds, use
 

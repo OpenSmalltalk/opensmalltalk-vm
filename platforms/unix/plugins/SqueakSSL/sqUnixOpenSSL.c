@@ -113,7 +113,7 @@ enum sqMatchResult sqVerifyNameInner(sqSSL* ssl, X509* cert, const void* serverN
 				break;
 			}
 		}
-		sqo_sk_GENERAL_NAME_pop_free(sANs, (void(*)(void*))sqo_sk_free);
+		sqo_sk_GENERAL_NAME_pop_free(sANs, (sk_GENERAL_NAME_freefunc)sqo_OPENSSL_sk_free);
 	}
 	return matchFound;
 }
@@ -158,7 +158,9 @@ char* sqVerifyFindStar(char* sANData, size_t sANDataSize) {
 }
 
 sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, const void* data, const size_t dataSizeIn, const int matchType) {
-	char* sANData = (char *) sqo_ASN1_STRING_data(sAN->d.ia5);
+	char* sANData = (char *) (sqo_ASN1_STRING_get0_data
+			? sqo_ASN1_STRING_get0_data(sAN->d.ia5)
+			: sqo_ASN1_STRING_data(sAN->d.ia5));
 	size_t sANDataSize = (size_t) sqo_ASN1_STRING_length(sAN->d.ia5);
 	size_t dataSize = dataSizeIn;
 
@@ -228,7 +230,11 @@ sqInt sqVerifySAN(sqSSL* ssl, const GENERAL_NAME* sAN, const void* data, const s
 sqInt sqSetupSSL(sqSSL *ssl, int server) {
 	/* Fixme. Needs to use specified version */
 	if(ssl->loglevel) printf("sqSetupSSL: setting method\n");
-	ssl->method = (SSL_METHOD*) sqo_SSLv23_method();
+        if (sqo_TLS_method) {
+            ssl->method = (SSL_METHOD*) sqo_TLS_method();
+        } else {
+            ssl->method = (SSL_METHOD*) sqo_SSLv23_method();
+        }
 	if(ssl->loglevel) printf("sqSetupSSL: Creating context\n");
 	ssl->ctx = sqo_SSL_CTX_new(ssl->method);
 	if(ssl->loglevel) printf("sqSetupSSL: Disabling SSLv2 and SSLv3\n");
@@ -279,8 +285,6 @@ sqInt sqCreateSSL(void) {
  		if (!loadLibrary()) {
 			return 0;
 		}
-		sqo_SSL_library_init();
-		sqo_SSL_load_error_strings();
 		wasInitialized = true;
 	}
 
@@ -602,15 +606,27 @@ sqInt sqDecryptSSL(sqInt handle, char* srcBuf, sqInt srcLen, char *dstBuf, sqInt
 
 	if(ssl == NULL || ssl->state != SQSSL_CONNECTED) return SQSSL_INVALID_STATE;
 
-	nbytes = sqo_BIO_write(ssl->bioRead, srcBuf, srcLen);
-	if(nbytes != srcLen) return SQSSL_GENERIC_ERROR;
+	if (srcLen > 0) {
+		nbytes = sqo_BIO_write(ssl->bioRead, srcBuf, srcLen);
+		if(nbytes != srcLen) {
+			if(ssl->loglevel) printf("sqDecryptSSL: Only wrote %ld bytes\n", (long)nbytes);
+			return SQSSL_GENERIC_ERROR;
+		}
+	}
 	nbytes = sqo_SSL_read(ssl->ssl, dstBuf, dstLen);
 	if(nbytes <= 0) {
 		int error = sqo_SSL_get_error(ssl->ssl, nbytes);
-		if(error != SSL_ERROR_WANT_READ && error != SSL_ERROR_ZERO_RETURN) {
+		if(
+			error != sqo_SSL_ERROR_WANT_READ &&
+			error != sqo_SSL_ERROR_ZERO_RETURN &&
+			error != sqo_SSL_ERROR_WANT_X509_LOOKUP
+		) {
+			if(ssl->loglevel) printf("sqDecryptSSL: Got error %d\n", error);
 			return SQSSL_GENERIC_ERROR;
 		}
 		nbytes = 0;
+	} else {
+		if(ssl->loglevel) printf("sqDecryptSSL: Decrypted %ld bytes\n", (long)nbytes);
 	}
 	return nbytes;
 }

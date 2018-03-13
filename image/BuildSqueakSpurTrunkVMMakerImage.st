@@ -3,7 +3,7 @@ manifest := #(	('http://source.squeak.org/FFI'					1	('FFI-Pools' 'FFI-Kernel'))
 				('http://source.squeak.org/VMMaker'				6	('Balloon-Engine-Pools' 'BytecodeSets.spur' 'VMMaker.oscog' 'Cog' 'CogTools' 'ImageFormat'))
 				('http://ss3.gemstone.com/ss/MethodMassage'		3	('MethodMassage' 'MethodMassageCompatibility'))
 				('http://www.squeaksource.com/AioPlugin'		7	('VMConstruction-Plugins-AioPlugin'))
-				('http://www.squeaksource.com/Alien'			0	('Alien'))
+				('http://www.squeaksource.com/Alien'			0	('Alien-Core' 'Alien-Tests-Core' 'Alien-Win32'))
 				"('http://www.squeaksource.com/FreeTypePlus'	5	('FreeType')) can't load this.  it is toxic to Squeak 4.5"
 				('http://www.squeaksource.com/FreetypePlugin'	8	('Freetype-Plugin'))
 				('http://www.squeaksource.com/OSProcess'		4	('OSProcess'))

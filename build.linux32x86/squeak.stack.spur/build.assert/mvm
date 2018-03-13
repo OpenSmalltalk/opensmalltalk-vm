@@ -26,7 +26,7 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
 	--with-src=spurstacksrc --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
-	CC="gcc -m32" \
+	CC="c99 -m32" \
 	CXX="g++ -m32" \
 	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64" \
 	LIBS="-lpthread -luuid" \
