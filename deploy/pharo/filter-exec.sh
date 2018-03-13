@@ -1,3 +1,4 @@
+#!/bin/bash
 # Deployment filter for Pharo (compatible with Travis and AppVeyor)
 # (deploy/filter-exec.sh adapted for Pharo)
 #
