@@ -483,6 +483,37 @@ EncoderForNewsqueakV4 class >> pushClosureBytecodeSize [
 	^3
 ]
 
+{ #category : #scanning }
+EncoderForNewsqueakV4 class >> scanBlockOrNilForLiteral: aLiteral [
+	"Answer a block argument for CompiledMethod>>#scanFor: that answers
+	 if the method refers to the literal implicitly via a special bytecode.
+	 If the literal is not accessible via a special bytecode, answer nil."
+	| value |
+
+	"80-95		0101 i i i i		Send Arithmetic Message #iiii
+	 96-111	0110 i i i i		Send Special Message #iiii"
+	aLiteral isSymbol ifTrue:
+		[value := 80 + ((Smalltalk specialSelectors indexOf: aLiteral ifAbsent: [^nil]) // 2).
+		 ^[:byte| byte = value]].
+
+	"78			01001110		Push 0
+	 79			01001111		Push 1"
+	aLiteral isInteger ifTrue:
+		[(aLiteral between: 0 and: 1) ifFalse: [^nil].
+		 value := aLiteral + 78.
+		 ^[:byte| byte = value]].
+
+	"77			01001101		Push false [* 1:true, 2:nil, 3:thisContext, ..., -N: pushExplicitOuter: N, N = Extend B]"
+	aLiteral == false ifTrue:
+		[^[:byte| byte = 77]].
+	aLiteral == true ifTrue:
+		[^[:b1 :b2 :b3| b1 = 16rE1 and: [b2 = 1 and: [b3 = 77]]]].
+	aLiteral == nil ifTrue:
+		[^[:b1 :b2 :b3| b1 = 16rE1 and: [b2 = 2 and: [b3 = 77]]]].
+
+	^nil
+]
+
 { #category : #'instruction stream support' }
 EncoderForNewsqueakV4 class >> selectorToSendOrItselfFor: anInstructionStream in: method at: pc [
 	"If anInstructionStream is at a send bytecode then answer the send's selector,
