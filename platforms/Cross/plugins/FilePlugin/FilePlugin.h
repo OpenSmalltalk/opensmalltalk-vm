@@ -30,7 +30,6 @@ typedef int mode_t;
 typedef struct {
   int			 sessionID;	/* ikp: must be first */
   void			*file;
-  squeakFileOffsetType	 fileSize;	/* 64-bits we hope. */
 #if defined(ACORN)
 // ACORN has to have 'lastOp' as at least a 32 bit field in order to work
   int lastOp; // actually used to save file position
