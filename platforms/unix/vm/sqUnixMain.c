@@ -59,7 +59,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <fcntl.h>
-#if !defined(NOEXECINFO)
+#if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 # include <execinfo.h>
 # define BACKTRACE_DEPTH 64
 #endif
@@ -837,7 +837,7 @@ static void *printRegisterState(ucontext_t *uap);
 static void
 reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 {
-#if !defined(NOEXECINFO)
+#if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 	void *addrs[BACKTRACE_DEPTH];
 	void *pc;
 	int depth;
@@ -859,7 +859,7 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 		return;
 #endif
 
-#if !defined(NOEXECINFO)
+#if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 	printf("C stack backtrace & registers:\n");
 	if (uap) {
 		addrs[0] = printRegisterState(uap);
@@ -895,14 +895,14 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 			void *fp = (void *)(uap ? uap->uc_mcontext.mc_rbp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.mc_rsp: 0);
 # elif __OpenBSD__ && __i386__
-                        void *fp = (void *)(uap ? uap->sc_ebp: 0);
-                        void *sp = (void *)(uap ? uap->sc_esp: 0);
+			void *fp = (void *)(uap ? uap->sc_ebp: 0);
+			void *sp = (void *)(uap ? uap->sc_esp: 0);
 # elif __OpenBSD__ && __amd64__
 			void *fp = (void *)(uap ? uap->sc_rbp: 0);
 			void *sp = (void *)(uap ? uap->sc_rsp: 0);
 # elif __sun__ && __i386__
-      void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
-      void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);
+			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);
 # elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
 			void *fp = (void *)(uap ? uap->uc_mcontext.arm_fp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.arm_sp: 0);

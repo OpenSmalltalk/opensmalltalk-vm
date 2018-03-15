@@ -28,8 +28,9 @@
 * and thus bypasses this file
 */
 
-#include <errno.h>
 #include "sq.h"
+
+#include <errno.h>
 
 #ifndef NO_STD_FILE_SUPPORT
 

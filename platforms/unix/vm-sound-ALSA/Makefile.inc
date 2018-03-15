@@ -1,1 +1,0 @@
-PLIBS=-lasound

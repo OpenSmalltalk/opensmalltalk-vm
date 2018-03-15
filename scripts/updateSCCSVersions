@@ -1,10 +1,11 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
 # checkin script for Git that serves to cause
 # platforms/Cross/vm/sqSCCSVersion.h to be checked-in so that its version
 # info reflects that of the current check-in.
+set -e
 
 if [ -d `dirname $0`/../.git ]; then
-	hooks_dir="`git rev-parse --git-dir`/hooks"
+    hooks_dir="`git rev-parse --git-dir`/hooks"
     mkdir -p $hooks_dir
     cp -f $0 $hooks_dir/post-commit
     cp -f $0 $hooks_dir/post-merge
