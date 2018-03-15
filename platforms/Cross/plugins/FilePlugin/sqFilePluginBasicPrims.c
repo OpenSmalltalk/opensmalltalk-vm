@@ -486,7 +486,6 @@ sqFileFileOpen(SQFile *sqFile, FILE *file, sqInt writeFlag)
 	 * writeFlag indicates whether the file is read-only or writable.
 	 */
 	setFile(sqFile, file);
-	setSize(sqFile, 0);
 	sqFile->sessionID = thisSession;
 	sqFile->lastOp = UNCOMMITTED;
 	sqFile->writable = writeFlag;
