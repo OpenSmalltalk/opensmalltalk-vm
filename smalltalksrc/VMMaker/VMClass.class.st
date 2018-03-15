@@ -16,7 +16,7 @@ Class {
 		'timeStamp',
 		'initializationOptions'
 	],
-	#category : #'VMMaker-Support'
+	#category : 'VMMaker-Support'
 }
 
 { #category : #translation }

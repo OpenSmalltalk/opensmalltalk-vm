@@ -60,7 +60,7 @@ Class {
 	#pools : [
 		'VMSqueakClassIndices'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -276,7 +276,7 @@ SistaCogit >> genBinaryAtConstInlinePrimitive: primIndex [
 		[64] ->	[objectRepresentation genLoadSlot: zeroBasedIndex sourceReg: rr destReg: rr].
 		[65] ->	[self ssAllocateRequiredReg: SendNumArgsReg.
 				 ^self genPushMaybeContextSlotIndex: zeroBasedIndex].
-		[66] ->	[self MoveMb: zeroBasedIndex * objectMemory wordSize + objectMemory baseHeaderSize r: rr R: rr.
+		[66] ->	[self MoveMb: zeroBasedIndex + objectMemory baseHeaderSize r: rr R: rr.
 				 objectRepresentation genConvertIntegerToSmallIntegerInReg: rr]
 	}
 	otherwise: [^EncounteredUnknownBytecode].

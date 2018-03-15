@@ -154,7 +154,7 @@ Class {
 		'ZeroExtend32RR',
 		'ZeroExtend8RR'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'class initialization' }

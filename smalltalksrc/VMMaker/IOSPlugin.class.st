@@ -4,7 +4,7 @@ Class {
 	#pools : [
 		'VMBasicConstants'
 	],
-	#category : #'VMMaker-Plugins-IOS'
+	#category : 'VMMaker-Plugins-IOS'
 }
 
 { #category : #primitives }

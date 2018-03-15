@@ -14,7 +14,7 @@ Class {
 		'biasForGC',
 		'aggressiveCompactor'
 	],
-	#category : #'VMMaker-SpurMemoryManager'
+	#category : 'VMMaker-SpurMemoryManager'
 }
 
 { #category : #api }

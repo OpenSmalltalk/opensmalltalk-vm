@@ -18,7 +18,7 @@ Class {
 		'cogit',
 		'mergeSimStack'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }

@@ -22,7 +22,7 @@ Class {
 		'VMBytecodeConstants',
 		'VMSqueakClassIndices'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }
@@ -1558,7 +1558,6 @@ CogObjectRepresentationForSpur >> genPrimitiveStringReplace [
 	
 	<var: #jumpImm type: #'AbstractInstruction *'>
 	<var: #jumpEmpty type: #'AbstractInstruction *'>
-	<var: #jumpFinished type: #'AbstractInstruction *'>
 	<var: #jumpNotSmi1 type: #'AbstractInstruction *'>
 	<var: #jumpNotSmi2 type: #'AbstractInstruction *'>
 	<var: #jumpNotSmi3 type: #'AbstractInstruction *'>

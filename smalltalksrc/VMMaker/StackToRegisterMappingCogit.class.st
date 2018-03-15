@@ -159,7 +159,7 @@ Class {
 		'numPushNilsFunction',
 		'pushNilSizeFunction'
 	],
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #translation }

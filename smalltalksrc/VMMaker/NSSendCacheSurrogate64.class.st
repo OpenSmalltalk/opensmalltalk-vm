@@ -1,7 +1,7 @@
 Class {
 	#name : #NSSendCacheSurrogate64,
 	#superclass : #NSSendCacheSurrogate,
-	#category : #'VMMaker-JITSimulation'
+	#category : 'VMMaker-JITSimulation'
 }
 
 { #category : #accessing }
