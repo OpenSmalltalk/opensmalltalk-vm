@@ -4,7 +4,7 @@ An assorted list of useful primitives for Croquet.
 Class {
 	#name : #CroquetPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }
