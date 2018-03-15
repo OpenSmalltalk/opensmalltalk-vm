@@ -4392,10 +4392,11 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 					ifTrue: [coInterpreter maybeSelectorOfMethod: aMethodObj]
 					ifFalse: [aSelectorOop].
 	"coInterpreter stringOf: selector"
-	coInterpreter
-		compilationBreak: selector
-		point: (objectMemory lengthOf: selector)
-		isMNUCase: false.
+	selector ifNotNil:
+		[coInterpreter
+			compilationBreak: selector
+			point: (objectMemory lengthOf: selector)
+			isMNUCase: false].
 	aMethodObj = breakMethod ifTrue: [self halt: 'Compilation of breakMethod'].
 	NewspeakVM ifTrue:
 		[cogMethod := methodZone findPreviouslyCompiledVersionOf: aMethodObj with: aSelectorOop.
