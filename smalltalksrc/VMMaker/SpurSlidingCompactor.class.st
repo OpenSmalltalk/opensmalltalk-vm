@@ -16,7 +16,7 @@ Class {
 	#instVars : [
 		'compactedCopySpace'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'compaction - api' }
