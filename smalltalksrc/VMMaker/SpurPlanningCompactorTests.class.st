@@ -5,7 +5,7 @@ Class {
 		'VMBasicConstants',
 		'VMSqueakClassIndices'
 	],
-	#category : 'VMMaker-Tests'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #debugger }

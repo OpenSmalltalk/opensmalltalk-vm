@@ -12,7 +12,7 @@ Class {
 	#pools : [
 		'VMBasicConstants'
 	],
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #accessing }

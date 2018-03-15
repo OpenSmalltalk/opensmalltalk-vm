@@ -5,7 +5,7 @@ Class {
 		'allocationThreshold',
 		'thresholdRatio'
 	],
-	#category : 'VMMaker-JIT'
+	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }

@@ -57,7 +57,7 @@ Class {
 		'preferredPinningSegment',
 		'totalHeapSizeIncludingBridges'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }

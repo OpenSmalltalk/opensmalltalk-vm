@@ -60,7 +60,7 @@ Class {
 		'VMObjectIndices',
 		'VMSqueakClassIndices'
 	],
-	#category : 'VMMaker-Support'
+	#category : #'VMMaker-Support'
 }
 
 { #category : #'instance creation' }

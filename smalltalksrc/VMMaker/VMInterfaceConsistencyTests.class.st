@@ -4,7 +4,7 @@ VMInterfaceConsistencyTests tests that the interpreter proxy implementations are
 Class {
 	#name : #VMInterfaceConsistencyTests,
 	#superclass : #TestCase,
-	#category : 'VMMaker-Tests'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #tests }

@@ -1,7 +1,7 @@
 Class {
 	#name : #TPrintfFormatStringNode,
 	#superclass : #TConstantNode,
-	#category : 'VMMaker-Translation to C'
+	#category : #'VMMaker-Translation to C'
 }
 
 { #category : #'C code generation' }
