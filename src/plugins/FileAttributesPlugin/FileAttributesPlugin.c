@@ -7,6 +7,7 @@ static char __buildInfo[] = "FileAttributesPlugin FileAttributesPlugin.oscog-Ali
 
 
 
+#include "config.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

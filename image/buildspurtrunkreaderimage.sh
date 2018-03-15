@@ -7,8 +7,8 @@
 
 ./ensureSqueakV50sources.sh
 
-cp -p trunk50.image spurreader.image
-cp -p trunk50.changes spurreader.changes
+cp -p ${BASE}.image spurreader.image
+cp -p ${BASE}.changes spurreader.changes
 
 . ./getGoodSpurVM.sh
 

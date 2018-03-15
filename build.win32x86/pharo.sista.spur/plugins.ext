@@ -1,0 +1,9 @@
+# Copied, perhaps edited, from ../../src/examplePlugins.ext
+EXTERNAL_PLUGINS = \
+FileAttributesPlugin \
+SurfacePlugin \
+SqueakSSL \
+FT2Plugin \
+# SDL2DisplayPlugin \
+# BochsIA32Plugin \
+# BochsX64Plugin \

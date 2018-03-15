@@ -1,19 +1,24 @@
 //
-// Prefix header for all source files of the 'SqueakPureObjC' target in the 'SqueakPureObjC' project
+// Prefix header for all Objective-C files in the iOS platform.  The main function is to
+// provide macros that hide the distinction between the ARC and old manual RC regime.
+// See https://developer.apple.com/library/content/releasenotes/
+//					ObjectiveC/RN-TransitioningToARC/Introduction/Introduction.html
 //
 
 #ifdef __OBJC__
-    #import <Cocoa/Cocoa.h>
+# import <Cocoa/Cocoa.h>
 #endif
 
 #if __has_feature(objc_arc)
-#define RELEASEOBJ(x) x
-#define RETAINOBJ(x) x
-#define AUTORELEASEOBJ(x) x
-#define SUPERDEALLOC
+# define RELEASEOBJ(o) o
+# define RETAINOBJ(o) o
+# define AUTORELEASEOBJ(o) o
+# define SUPERDEALLOC
+# define DEALLOCOBJ(o) o
 #else
-#define RELEASEOBJ(x) [x release]
-#define RETAINOBJ(x) [x retain]
-#define AUTORELEASEOBJ(x) [x autorelease]
-#define SUPERDEALLOC [super dealloc];
+# define RELEASEOBJ(o) [o release]
+# define RETAINOBJ(o) [o retain]
+# define AUTORELEASEOBJ(o) [o autorelease]
+# define SUPERDEALLOC [super dealloc];
+# define DEALLOCOBJ(o) [o dealloc]
 #endif
