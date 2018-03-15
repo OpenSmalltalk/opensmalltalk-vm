@@ -345,6 +345,8 @@ MiscPrimitivePlugin >> primitiveTranslateStringWithTable [
 	table := interpreterProxy firstIndexableField: (interpreterProxy stackValue: 0).
 	(start >= 1 and: [stop <= (interpreterProxy sizeOfSTArrayFromCPrimitive: aString)]) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	(interpreterProxy sizeOfSTArrayFromCPrimitive: table) < 256 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	start - 1 to: stop - 1 do: [ :i | aString at: i put: (table at: (aString at: i))].
 	interpreterProxy pop: interpreterProxy methodArgumentCount
 ]
