@@ -33,7 +33,7 @@ else
 			echo Downloading $LATESTVM from bintray
 			curl -L "https://dl.bintray.com/opensmalltalk/vm/$LATESTVM" -o "$LATESTVM"
 			tar xzf "$LATESTVM"
-			mv sqcogspurlinuxht $VM
+			mv sqcogspur64linuxht $VM
 			rm -f "$LATESTVM"
 		fi
 		VM=$VM/squeak;;
