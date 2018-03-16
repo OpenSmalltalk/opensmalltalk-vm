@@ -57,16 +57,11 @@ CameraPlugin >> primCloseCamera [
 CameraPlugin >> primFrameExtent [
 	"Answer the frame extent of the given camera, or zero if the camera is not open. The extent is 16 bits of width and height packed into a single integer."
 
-	| cameraNum e |
+	| cameraNum |
 	<export: true>
 	cameraNum := interpreterProxy stackIntegerValue: 0.
-	interpreterProxy failed ifTrue: [^ 0].
-
-	e := self cCode: 'CameraExtent(cameraNum)'.
-
-	interpreterProxy pop: 2 thenPush: (interpreterProxy integerObjectOf: e).  "pop rcvr & arg, push int result"
-	^ 0
-
+	interpreterProxy failed ifFalse:
+		[interpreterProxy methodReturnInteger: (self CameraExtent: cameraNum)]
 ]
 
 { #category : #primitives }
@@ -86,31 +81,22 @@ CameraPlugin >> primGetFrame [
 	pixCount := interpreterProxy stSizeOf: bitmapOop.
 
 	result := self Camera: cameraNum Get: bitmap Frame: pixCount.
-	result < 0 ifTrue: [
-		interpreterProxy success: false.
-		^ 0].
+	result < 0 ifTrue:
+		[^interpreterProxy primitiveFail].
 
-	interpreterProxy pop: 3 thenPush: (interpreterProxy integerObjectOf: result).  "pop rcvr & args, push int result"
-	^ 0
-
-
+	interpreterProxy methodReturnInteger: result
 ]
 
 { #category : #primitives }
 CameraPlugin >> primGetParam [
 	"Answer the given integer parameter of the given camera."
 
-	| cameraNum paramNum result |
+	| cameraNum paramNum |
 	<export: true>
 	cameraNum := interpreterProxy stackIntegerValue: 1.
 	paramNum := interpreterProxy stackIntegerValue: 0.
-	interpreterProxy failed ifTrue: [^ 0].
-
-	result := self cCode: 'CameraGetParam(cameraNum, paramNum)'.
-
-	interpreterProxy pop: 3 thenPush: (interpreterProxy integerObjectOf: result).  "pop rcvr & args, push int result"
-	^ 0
-
+	interpreterProxy failed ifFalse:
+		[interpreterProxy methodReturnInteger: (self Camera: cameraNum GetParam: paramNum)]
 ]
 
 { #category : #primitives }
