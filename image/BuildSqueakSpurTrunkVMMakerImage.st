@@ -14,6 +14,7 @@ manifest := #(	('http://source.squeak.org/FFI'					1	('FFI-Pools' 'FFI-Kernel'))
 				('http://www.squeaksource.com/XDCP'				9	('VMConstruction-Plugins-XDisplayControlPlugin' ))
 				('http://www.squeaksource.com/Balloon3D'		9	('Balloon3D-Constants' 'Balloon3D-Plugins'  ))
 				('http://www.squeaksource.com/Cryptography'		9	('CryptographyPlugins'  ))
+				('http://smalltalkhub.com/mc/Alistair/FileAttributesPlugin/main'		9	('FileAttributesPlugin'  ))
 				('http://ss3.gemstone.com/ss/AndreasSystemProfiler'	9	('AndreasProfiler'))
 				('http://www.squeaksource.com/Printf'			9	('Printf'))
 				).
@@ -62,13 +63,12 @@ UIManager default
 	label: 'Overview'.
 
 
-#( 'VM Simulation Workspace'
-   'Slang Test Workspace'
-   'In-image Compilation Workspace' ) reverse do:
-	[:textFileName| | workspace |
+#('VM Simulation' 'Source Generation' 'Slang Test' 'In-image Compilation') reverseDo:
+	[:nickname| | label workspace |
+	label := nickname, ' Workspace'.
 	workspace := (UIManager default
-					edit: (FileDirectory default fileNamed: textFileName, '.text') contentsOfEntireFile
-					label: textFileName) model.
+					edit: (FileDirectory default fileNamed: label, '.text') contentsOfEntireFile
+					label: label) model.
 	workspace shouldStyle ifFalse:
 		[workspace toggleStyling]].
 
