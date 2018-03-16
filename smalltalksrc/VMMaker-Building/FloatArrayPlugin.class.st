@@ -222,7 +222,7 @@ FloatArrayPlugin >> primitiveLength [
 		[:i| len := len + ((self cCoerce: (rcvrPtr at: i) to: #double) * (self cCoerce: (rcvrPtr at: i) to: #double)) ].
 	len > 0.0 ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadReceiver].
-	interpreterProxy pop: 1 thenPush: (interpreterProxy floatObjectOf: (self sqrt: len))
+	interpreterProxy methodReturnFloat: (self sqrt: len)
 ]
 
 { #category : #'arithmetic primitives' }
@@ -348,7 +348,7 @@ FloatArrayPlugin >> primitiveSum [
 	0 to: length-1 do:[:i|
 		sum := sum + (self cCoerce: (rcvrPtr at: i) to: #double).
 	].
-	interpreterProxy pop: 1 thenPush: (interpreterProxy floatObjectOf: sum)
+	interpreterProxy methodReturnFloat: sum
 ]
 
 { #category : #simulation }
