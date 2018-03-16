@@ -383,6 +383,6 @@ FloatMathPlugin >> primitiveTimesTwoPower [
 	result := self cCode: '__ieee754_ldexp(rcvr, (int)arg)'
 					inSmalltalk: [rcvr timesTwoPower: arg].
 	(self isnan: result) ifFalse:
-		[interpreterProxy methodReturnValue: (interpreterProxy floatObjectOf: result)].
+		[interpreterProxy methodReturnFloat: result].
 	^nil
 ]
