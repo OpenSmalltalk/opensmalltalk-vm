@@ -248,12 +248,7 @@ ScratchPlugin >> primOpenPortNamed [
 	portNum := self SerialPortOpen: nameStr PortNamed: baudRate.
 	portNum = -1 ifTrue: [interpreterProxy success: false. ^ 0].
 
-	interpreterProxy	"pop args and rcvr, push result"
-		pop: 3
-		thenPush: (interpreterProxy integerObjectOf: portNum).
-
-	^ 0
-
+	^interpreterProxy methodReturnInteger: portNum
 ]
 
 { #category : #'serial port' }
@@ -263,12 +258,10 @@ ScratchPlugin >> primPortCount [
 	| result |
 	<export: true>
 
-	result := self cCode: 'SerialPortCount()'.
+	result := self SerialPortCount.
 	result = -1 ifTrue: [interpreterProxy success: false. ^ 0].
 
-	interpreterProxy
-		pop: 1 thenPush: (interpreterProxy integerObjectOf: result).  "pop rcvr, push result"
-	^ 0
+	^interpreterProxy methodReturnInteger: result
 
 ]
 

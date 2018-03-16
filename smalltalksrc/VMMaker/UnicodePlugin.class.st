@@ -83,10 +83,7 @@ UnicodePlugin >> primitiveClipboardGet [
 
 	count := self unicodeClipboard: utf16 Get: utf16Length.
 
-	interpreterProxy pop: 2
-		thenPush: (interpreterProxy integerObjectOf: count).
-
-	^ 0
+	^interpreterProxy methodReturnInteger: count
 ]
 
 { #category : #primitives }
@@ -117,15 +114,8 @@ UnicodePlugin >> primitiveClipboardPut [
 { #category : #primitives }
 UnicodePlugin >> primitiveClipboardSize [
 
-	| count |
 	<export: true>
-
-	count := self cCode: 'unicodeClipboardSize()'.
-
-	interpreterProxy pop: 1
-		thenPush: (interpreterProxy integerObjectOf: count).
-	^ 0
-
+	^interpreterProxy methodReturnInteger: self unicodeClipboardSize
 ]
 
 { #category : #primitives }
@@ -157,21 +147,15 @@ UnicodePlugin >> primitiveDrawString [
 UnicodePlugin >> primitiveGetFontList [
 
 
-	| strOop str strLength count |
+	| strOop str strLength |
 	<export: true>
 	<var: 'str' declareC: 'char *str'>
 
 	strOop := interpreterProxy stackValue: 0.
 	str := self asCString: strOop.
-	interpreterProxy failed ifTrue: [^ nil].
-
-	strLength := interpreterProxy stSizeOf: strOop.
-	count := self cCode: 'unicodeGetFontList(str, strLength)'.
-
-	interpreterProxy pop: 2
-		thenPush: (interpreterProxy integerObjectOf: count).
-	^ 0
-
+	interpreterProxy failed ifFalse:
+		[strLength := interpreterProxy stSizeOf: strOop.
+		 interpreterProxy methodReturnInteger: (self unicodeGetFont: str List: strLength)]
 ]
 
 { #category : #primitives }
@@ -191,11 +175,9 @@ UnicodePlugin >> primitiveGetXRanges [
 
 	utf8Length := interpreterProxy stSizeOf: utf8Oop.
 	resultLength := interpreterProxy stSizeOf: resultOop.
-	count := self cCode: 'unicodeGetXRanges(utf8, utf8Length, resultPtr, resultLength)'.
+	count := self unicode: utf8 Get: utf8Length X: resultPtr Ranges: resultLength.
 
-	interpreterProxy pop: 3 thenPush: (interpreterProxy integerObjectOf: count).
-	^ 0
-
+	^interpreterProxy methodReturnInteger: count
 ]
 
 { #category : #primitives }

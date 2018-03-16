@@ -295,6 +295,30 @@ NewObjectMemorySimulator >> methodArgumentCount [
 ]
 
 { #category : #'simulation only' }
+NewObjectMemorySimulator >> methodReturnBool: boolean [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter methodReturnBool: boolean
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> methodReturnFloat: aFloat [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter methodReturnFloat: aFloat
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> methodReturnInteger: integer [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter methodReturnInteger: integer
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> methodReturnString: aCString [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter methodReturnString: aCString
+]
+
+{ #category : #'simulation only' }
 NewObjectMemorySimulator >> methodReturnValue: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter methodReturnValue: oop

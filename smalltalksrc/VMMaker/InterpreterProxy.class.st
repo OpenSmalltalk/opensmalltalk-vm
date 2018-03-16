@@ -357,8 +357,10 @@ InterpreterProxy >> firstIndexableField: oop [
 { #category : #'stack access' }
 InterpreterProxy >> floatArg: offset [
 	"Like #stackFloatValue: but access method arguments left-to-right"
+	"Obsolete; was never used; replaced with methodReturnString: in the VirtualMachine struct."
 	| oop |
-	<returnTypeC: 'double'>
+	<returnTypeC: #double>
+	self deprecated.
 	oop := self methodArg: offset.
 	(self isFloatObject: oop) ifFalse: [self primitiveFail. ^0.0].
 	^oop
@@ -367,8 +369,8 @@ InterpreterProxy >> floatArg: offset [
 { #category : #converting }
 InterpreterProxy >> floatObjectOf: aFloat [
 	<returnTypeC: #sqInt> "...because answering the float argument causes the type inferencer to say this answers a float."
-	<var: #aFloat type: 'double '>
-	aFloat isFloat ifFalse:[self error:'Not a float object'].
+	<var: #aFloat type: #double>
+	aFloat isFloat ifFalse: [self error:'Not a float object'].
 	^aFloat
 ]
 
@@ -452,7 +454,9 @@ InterpreterProxy >> instantiateClass: classPointer indexableSize: size [
 { #category : #'stack access' }
 InterpreterProxy >> integerArg: offset [
 	"Like #stackIntegerValue: but access method arguments left-to-right"
+	"Obsolete; was never used; replaced with methodReturnInteger: in the VirtualMachine struct."
 	| oop |
+	self deprecated.
 	oop := self methodArg: offset.
 	(self isIntegerObject: oop) ifFalse: [self primitiveFail. ^0].
 	^oop
@@ -730,6 +734,8 @@ InterpreterProxy >> makePointwithxValue: xValue yValue: yValue [
 { #category : #'stack access' }
 InterpreterProxy >> methodArg: offset [
 	"Like #stackValue: but access method arguments left-to-right"
+	"Obsolete; was never used; replaced with methodReturnBool: in the VirtualMachine struct."
+	self deprecated.
 	offset > argumentCount + 1 ifTrue:[^self primitiveFail].
 	^self stackValue: argumentCount - offset
 ]
@@ -742,6 +748,36 @@ InterpreterProxy >> methodArgumentCount [
 { #category : #'object access' }
 InterpreterProxy >> methodPrimitiveIndex [
 	^method primitive
+]
+
+{ #category : #'stack access' }
+InterpreterProxy >> methodReturnBool: boolean [
+	"Sets the return value for a method"
+	self pop: argumentCount+1 thenPushBool: boolean.
+	^0
+]
+
+{ #category : #'stack access' }
+InterpreterProxy >> methodReturnFloat: aFloat [
+	"Sets the return value for a method"
+	<var: 'aFloat' type: #double>
+	self pop: argumentCount+1 thenPushFloat: aFloat.
+	^0
+]
+
+{ #category : #'stack access' }
+InterpreterProxy >> methodReturnInteger: integer [
+	"Sets the return value for a method"
+	self pop: argumentCount+1 thenPushInteger: integer.
+	^0
+]
+
+{ #category : #'stack access' }
+InterpreterProxy >> methodReturnString: aCString [
+	"Sets the return value for a method"
+	<var: 'aCString' type: #'char *'>
+	self pop: argumentCount+1 thenPush: (self stringForCString: aCString).
+	^0
 ]
 
 { #category : #'stack access' }
@@ -769,9 +805,11 @@ InterpreterProxy >> notYetImplementedError [
 { #category : #'stack access' }
 InterpreterProxy >> objectArg: offset [
 	"Like #stackObjectValue: but access method arguments left-to-right"
+	"Obsolete; was never used; replaced with methodReturnFloat: in the VirtualMachine struct."
 	| oop |
+	self deprecated.
 	oop := self methodArg: offset.
-	(self isIntegerObject: oop) ifTrue: [self primitiveFail. ^ nil].
+	(self isImmediate: oop) ifTrue: [self primitiveFail. ^ nil].
 	^oop
 ]
 
@@ -803,6 +841,28 @@ InterpreterProxy >> pop: nItems thenPush: oop [
 	<returnTypeC: #sqInt>
 	self pop: nItems.
 	self push: oop
+]
+
+{ #category : #private }
+InterpreterProxy >> pop: nItems thenPushBool: boolean [
+	<returnTypeC: #sqInt>
+	self pop: nItems.
+	self push: (boolean ifTrue: [self trueObject] ifFalse: [self falseObject])
+]
+
+{ #category : #private }
+InterpreterProxy >> pop: nItems thenPushFloat: float [
+	<var: #float type: #double>
+	<returnTypeC: #sqInt>
+	self pop: nItems.
+	self push: (self floatObjectOf: float)
+]
+
+{ #category : #private }
+InterpreterProxy >> pop: nItems thenPushInteger: integer [
+	<returnTypeC: #sqInt>
+	self pop: nItems.
+	self push: (self integerObjectOf: integer)
 ]
 
 { #category : #'instance creation' }

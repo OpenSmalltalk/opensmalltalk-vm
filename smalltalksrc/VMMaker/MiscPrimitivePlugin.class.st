@@ -58,12 +58,9 @@ MiscPrimitivePlugin >> primitiveCompareString [
 		c1 := order at: (string1 at: i).
 		c2 := order at: (string2 at: i).
 		c1 = c2 ifFalse:
-			[^interpreterProxy methodReturnValue:
-				(interpreterProxy integerObjectOf:
-					(c1 < c2 ifTrue: [1] ifFalse: [3]))]].
-	interpreterProxy methodReturnValue:
-		(interpreterProxy integerObjectOf:
-			(len1 = len2 ifTrue: [2] ifFalse: [len1 < len2 ifTrue: [1] ifFalse: [3]]))
+			[^interpreterProxy methodReturnInteger: (c1 < c2 ifTrue: [1] ifFalse: [3])]].
+	interpreterProxy methodReturnInteger:
+		(len1 = len2 ifTrue: [2] ifFalse: [len1 < len2 ifTrue: [1] ifFalse: [3]])
 ]
 
 { #category : #primitives }
@@ -119,7 +116,7 @@ MiscPrimitivePlugin >> primitiveCompressToByteArray [
 						i := self encodeInt: j - k * 4 + 3 in: ba at: i.
 						k to: j - 1 by: 1 do: [ :m | i := self encodeBytesOf: (bm at: m) in: ba at: i].
 						k := j]]].
-	interpreterProxy methodReturnValue: (interpreterProxy integerObjectOf: i)
+	interpreterProxy methodReturnInteger: i
 ]
 
 { #category : #primitives }
@@ -245,12 +242,12 @@ MiscPrimitivePlugin >> primitiveFindFirstInString [
 	inclusionMap := interpreterProxy firstIndexableField: (interpreterProxy stackValue: 1).
 	start := interpreterProxy integerValueOf: (interpreterProxy stackValue: 0).
 	(interpreterProxy sizeOfSTArrayFromCPrimitive: inclusionMap) ~= 256 ifTrue:
-		[^interpreterProxy methodReturnValue: (interpreterProxy integerObjectOf: 0)].
+		[^interpreterProxy methodReturnInteger: 0].
 	i := start - 1.
 	stringSize := interpreterProxy sizeOfSTArrayFromCPrimitive: aString.
 	[i < stringSize and: [(inclusionMap at: (aString at: i)) = 0]] whileTrue:
 		[i := i + 1].
-	interpreterProxy methodReturnValue: (interpreterProxy integerObjectOf: (i >= stringSize ifTrue: [0] ifFalse: [i + 1]))
+	interpreterProxy methodReturnInteger: (i >= stringSize ifTrue: [0] ifFalse: [i + 1])
 ]
 
 { #category : #primitives }
@@ -277,9 +274,9 @@ MiscPrimitivePlugin >> primitiveFindSubstring [
 			index := 0.
 			[(matchTable at: (body at: startIndex + index - 1)) = (matchTable at: (key at: index))] whileTrue: 
 				[index = keySize ifTrue:
-					[^interpreterProxy methodReturnValue: (interpreterProxy integerObjectOf: startIndex)].
+					[^interpreterProxy methodReturnInteger: startIndex].
 				index := index + 1]]].
-	^interpreterProxy methodReturnValue: (interpreterProxy integerObjectOf: 0)
+	^interpreterProxy methodReturnInteger: 0
 ]
 
 { #category : #primitives }
@@ -299,8 +296,8 @@ MiscPrimitivePlugin >> primitiveIndexOfAsciiInString [
 	start - 1 to: stringSize - 1 do:
 		[ :pos |
 		(aString at: pos) = anInteger ifTrue:
-			[^interpreterProxy methodReturnValue: (interpreterProxy integerObjectOf: pos + 1)]].
-	^interpreterProxy methodReturnValue: (interpreterProxy integerObjectOf: 0)
+			[^interpreterProxy methodReturnInteger: pos + 1]].
+	^interpreterProxy methodReturnInteger: 0
 ]
 
 { #category : #primitives }
@@ -321,8 +318,7 @@ MiscPrimitivePlugin >> primitiveStringHash [
 		[ :pos |
 		hash := hash + (aByteArray at: pos).
 		hash := hash * 16r19660D bitAnd: 16r0FFFFFFF].
-	interpreterProxy methodReturnValue:
-		(interpreterProxy integerObjectOf: hash)
+	interpreterProxy methodReturnInteger: hash
 ]
 
 { #category : #primitives }

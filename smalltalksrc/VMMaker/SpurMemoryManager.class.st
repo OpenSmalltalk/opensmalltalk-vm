@@ -8511,6 +8511,34 @@ SpurMemoryManager >> methodHeaderOf: methodObj [
 ]
 
 { #category : #'simulation only' }
+SpurMemoryManager >> methodReturnBool: boolean [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter methodReturnBool: boolean
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> methodReturnFloat: aFloat [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter methodReturnFloat: aFloat
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> methodReturnInteger: integer [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter methodReturnInteger: integer
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> methodReturnString: aCString [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter methodReturnString: aCString
+]
+
+{ #category : #'simulation only' }
 SpurMemoryManager >> methodReturnValue: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>

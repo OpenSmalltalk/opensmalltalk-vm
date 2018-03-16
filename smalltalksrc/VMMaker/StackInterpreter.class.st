@@ -7062,8 +7062,10 @@ StackInterpreter >> firstBytecodeOfAlternateHeader: methodHeader method: theMeth
 { #category : #'plugin primitive support' }
 StackInterpreter >> floatArg: index [
 	"Like #stackFloatValue: but access method arguments left-to-right"
-	| oop |
 	<returnTypeC: #double>
+	<doNotGenerate> "Obsolete; was never used; replaced with methodReturnString: in the VirtualMachine struct."
+	| oop |
+	self deprecated.
 	oop := self methodArg: index.
 	oop = 0 ifTrue:[^0.0]. "methodArg: failed"
 	^objectMemory floatValueOf: oop
@@ -8638,7 +8640,9 @@ StackInterpreter >> instructionPointerForFrame: spouseFP currentFP: currentFP cu
 { #category : #'plugin primitive support' }
 StackInterpreter >> integerArg: index [
 	"Like #stackIntegerValue: but access method arguments left-to-right"
+	<doNotGenerate> "Obsolete; was never used; replaced with methodReturnInteger: in the VirtualMachine struct."
 	| oop |
+	self deprecated.
 	oop := self methodArg: index.
 	oop = 0 ifTrue:[^0]. "methodArg: failed"
 	^self checkedIntegerValueOf: oop
@@ -16274,8 +16278,10 @@ StackInterpreter >> metaclassNumSlots [
 { #category : #'plugin primitive support' }
 StackInterpreter >> methodArg: index [
 	"Like #stackValue: but access method arguments left-to-right"
-	index > argumentCount + 1 ifTrue:[
-		self cCode: 'fprintf(stderr,"[VM]: Attempt to access method args beyond range\n")'.
+	<doNotGenerate> "Obsolete; was never used; replaced with methodReturnBool: in the VirtualMachine struct."
+	self deprecated.
+	index > argumentCount + 1 ifTrue:
+		[self cCode: 'fprintf(stderr,"[VM]: Attempt to access method args beyond range\n")'.
 		self printCallStack.
 		self primitiveFail.
 		^0].
@@ -16340,6 +16346,38 @@ StackInterpreter >> methodPrimitiveIndex [
 	 and: [objectMemory isCompiledMethod: newMethod]) ifFalse:
 		[^-1].
 	^self primitiveIndexOf: newMethod
+]
+
+{ #category : #'plugin primitive support' }
+StackInterpreter >> methodReturnBool: boolean [
+	"Sets the return value for a method.  In the CoInterpreter we replace the cumbersome
+	 primResult machinery."
+	self pop: argumentCount+1 thenPushBool: boolean.
+	^0
+]
+
+{ #category : #'plugin primitive support' }
+StackInterpreter >> methodReturnFloat: aFloat [
+	"Sets the return value for a method."
+	<var: 'aFloat' type: #double>
+	self pop: argumentCount+1 thenPushFloat: aFloat.
+	^0
+]
+
+{ #category : #'plugin primitive support' }
+StackInterpreter >> methodReturnInteger: integer [
+	"Sets the return value for a method.  In the CoInterpreter we replace the cumbersome
+	 primResult machinery."
+	self pop: argumentCount+1 thenPushInteger: integer.
+	^0
+]
+
+{ #category : #'plugin primitive support' }
+StackInterpreter >> methodReturnString: aCString [
+	"Sets the return value for a method."
+	<var: 'aCString' type: #'char *'>
+	self pop: argumentCount+1 thenPush: (objectMemory stringForCString: aCString).
+	^0
 ]
 
 { #category : #'plugin primitive support' }
@@ -16717,7 +16755,9 @@ StackInterpreter >> objCouldBeClassObj: objOop [
 { #category : #'plugin primitive support' }
 StackInterpreter >> objectArg: index [
 	"Like #stackObjectValue: but access method arguments left-to-right"
+	<doNotGenerate> "Obsolete; was never used; replaced with methodReturnFloat: in the VirtualMachine struct."
 	| oop |
+	self deprecated.
 	oop := self methodArg: index.
 	oop = 0 ifTrue:[^0]. "methodArg: failed"
 	(objectMemory isImmediate: oop) ifTrue: [self primitiveFail. ^ nil].
