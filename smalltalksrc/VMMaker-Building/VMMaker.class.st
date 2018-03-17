@@ -370,6 +370,8 @@ VMMaker class >> generateAllSpurConfigurationsUnderVersionControl [
 		generateNewspeakSpurCogVM;
 		generateSqueakSpurCogVM;
 		generateSqueakSpurCog64VM;
+		generateSqueakSpurCogMTVM;
+		generateSqueakSpurCog64MTVM;
 		generateSqueakSpurCogSistaVM;
 		generateSqueakSpurCogSista64VM
 ]
