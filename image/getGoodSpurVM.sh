@@ -8,30 +8,47 @@ if [ "$1" = -vm -a -n "$2" -a -x "`which "$2"`" ]; then
 	VM="$2"
 else
 	echo checking for latest 32-bit VM on bintray...
+	LATESTRELEASE=`curl -s -L "https://bintray.com/opensmalltalk/notifications" | grep 'has released version' | head -1 | sed 's/^.*[0-9]">\([0-9][0-9]*\).*$/\1/'`
+	if [ -z "$LATESTRELEASE" ]; then
+		echo "cannot find latest release on https://bintray.com/opensmalltalk/notifications" 1>&2
+		exit 1
+	fi
 	case $OS in
 	Darwin) 
-		LATESTVM="`curl -s -L "https://dl.bintray.com/opensmalltalk/vm/" | grep cog_macos32x86_squeak.cog.spur_ | tail -n 1 | sed 's/^.*">\(.*\)<.a><.pre>/\1/'`"
-		# echo $LATESTVM
-		TAG="`echo $LATESTVM | sed 's/.*_\(.*\).tar.gz/\1/'`"
-		# echo $TAG
-		VM=Squeak.$TAG.app
+		VOLUME="squeak.cog.spur_macos32_x86_$LATESTRELEASE"
+		LATESTVM="$VOLUME.dmg"
+		VM=Squeak.$LATESTRELEASE.app
 		if [ ! -d $VM ]; then
-			echo Downloading $LATESTVM from bintray
-			curl -L "https://dl.bintray.com/opensmalltalk/vm/$LATESTVM" -o "$LATESTVM"
-			tar xzf "$LATESTVM"
-			mv Squeak.app $VM
-			rm -f "$LATESTVM"
+			URL="https://dl.bintray.com/opensmalltalk/vm/$LATESTVM"
+			echo Downloading $LATESTVM from $URL
+			if [ "$1" = -test ]; then
+				echo curl -L "$URL" -o "$LATESTVM"
+				exit
+			fi
+			curl -L "$URL" -o "$LATESTVM"
+			open $LATESTVM
+			while [ ! -d "/Volumes/$VOLUME/Squeak.app" ]; do sleep 1; done
+			rm -rf $VM
+			cp -Rp "/Volumes/$VOLUME/Squeak.app" $VM
+			eject "/Volumes/$VOLUME"
 		fi
 		VM=$VM/Contents/MacOS/Squeak;;
 	Linux) # This needs to be split by $CPU to work on RPi also
-		LATESTVM="`curl -s -L "https://dl.bintray.com/opensmalltalk/vm/" | grep -v itimer | grep cog_linux32x86_squeak.cog.spur_ | tail -n 1 | sed 's/^.*">\(.*\)<.a><.pre>/\1/'`"
-		#echo $LATESTVM
-		TAG="`echo $LATESTVM | sed 's/.*_\(.*\).tar.gz/\1/'`"
-		#echo $TAG
-		VM=sqlinux.$TAG
+		case $CPU in
+		i386|x86_64)	LATESTVM="squeak.cog.spur_linux32x86_$LATESTRELEASE.tar.gz";;
+		arm)			LATESTVM="squeak.cog.spur_linux32ARMv6_$LATESTRELEASE.tar.gz";;
+		*)	echo "Don't know what kind of machine you're running.  I have $CPU"
+			exit 1
+		esac
+		VM=sqlinux.$LATESTRELEASE
 		if [ ! -d $VM ]; then
 			echo Downloading $LATESTVM from bintray
-			curl -L "https://dl.bintray.com/opensmalltalk/vm/$LATESTVM" -o "$LATESTVM"
+			URL="https://dl.bintray.com/opensmalltalk/vm/$LATESTVM"
+			if [ "$1" = -test ]; then
+				echo curl -L "$URL" -o "$LATESTVM"
+				exit
+			fi
+			curl -L "$URL" -o "$LATESTVM"
 			tar xzf "$LATESTVM"
 			mv sqcogspurlinuxht $VM
 			rm -f "$LATESTVM"
