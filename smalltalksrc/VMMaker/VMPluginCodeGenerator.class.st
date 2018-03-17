@@ -280,18 +280,22 @@ VMPluginCodeGenerator >> generateInterpreterProxyFunctionDereference: aNode on: 
 	pluginsToClone := self pluginFunctionsToClone copyWithoutAll: self selectorsThatAreGeneratedAsMacros.
 	pluginsToClone isEmpty ifTrue:
 		[^self].
-	aStream cr; nextPutAll: '#if !defined(SQUEAK_BUILTIN_PLUGIN)'; cr.
-	pluginsToClone do:
-		[:s| | cs |
-		cs := self cFunctionNameFor: s.
-		self withOptionalVerbiageFor: s
-			on: aStream
-			do: [aStream tab: anInteger; nextPutAll: cs; nextPutAll: ' = interpreterProxy->'; nextPutAll: cs; nextPut: $;; cr]
-			ifOptionalDo: [aStream
-							nextPutAll: '# if !defined('; nextPutAll: cs; nextPut: $);
-							crtab: anInteger; nextPutAll: cs; nextPutAll: ' = 0;';
-							cr; nextPutAll: '# endif'; cr]].
-	aStream nextPutAll: '#endif /* !defined(SQUEAK_BUILTIN_PLUGIN) */'.
+	aStream cr.
+	self withConditionalDefineOf: 'SQUEAK_BUILTIN_PLUGIN'
+		comment: nil
+		on: aStream
+		do: [pluginsToClone do:
+				[:s| | cs |
+				cs := self cFunctionNameFor: s.
+				self withOptionalVerbiageFor: s
+					on: aStream
+					do: [aStream tab: anInteger; nextPutAll: cs; nextPutAll: ' = interpreterProxy->'; nextPutAll: cs; nextPut: $;; cr]
+					ifOptionalDo:
+						[self
+							withConditionalDefineOf: cs
+							comment: nil
+							on: aStream
+							do: [aStream tab: anInteger; nextPutAll: cs; nextPutAll: ' = 0;']]]]
 ]
 
 { #category : #'C translation' }
@@ -760,9 +764,11 @@ VMPluginCodeGenerator >> withGuardAgainstDefinitionOf: selector on: aStream do: 
 	"Evaluate aBlock, surrounded by a define if selector is defined as a macro (i.e. by preDeclareInterpreterProxyOn:"
 	(self selectorsThatMayBeGeneratedAsMacros includes: selector) ifFalse:
 		[^aBlock value].
-	aStream nextPutAll: '#if !defined('; nextPutAll: (self cFunctionNameFor: selector); nextPut: $); cr.
-	aBlock value.
-	aStream nextPutAll: '#endif'; cr
+	self
+		withConditionalDefineOf: (self cFunctionNameFor: selector)
+		comment: nil
+		on: aStream
+		do: aBlock value
 ]
 
 { #category : #'C translation' }
