@@ -4,7 +4,7 @@
 #
 
 VMSRCDIR:= ../../spur64src/vm
-COGDEFS=-DIMMUTABILITY=1
+COGDEFS=
 SOURCEFILE:=SqueakV50.sources
 
 # Now include the Makefile proper, which is common to all Mac OS builds.

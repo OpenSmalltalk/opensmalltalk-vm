@@ -5,7 +5,7 @@
 
 VMSRCDIR:=../../spurlowcodestack64src/vm
 VM:=Pharo
-COGDEFS:= -DPharoVM=1 -DIMMUTABILITY=1
+COGDEFS:= -DPharoVM=1
 APPNAME:=Pharo
 APPNAMEDEF:=$(APPNAME)
 APPIDENTIFIER:=org.pharo.$(APPNAME)

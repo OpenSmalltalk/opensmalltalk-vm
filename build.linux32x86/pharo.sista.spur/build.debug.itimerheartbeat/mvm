@@ -8,7 +8,7 @@ fi ;;
 esac
 # debug Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=debug/phsistaspurlinuxht
-OPT="-g3 -O0 -fwrapv -DDEBUGVM=1 -DPharoVM -DIMMUTABILITY=1"
+OPT="-g3 -O0 -fwrapv -DDEBUGVM=1 -DPharoVM"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift

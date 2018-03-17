@@ -20,6 +20,7 @@
 # define NeverInline /*empty*/
 #endif
 
+extern sqOSThread getVMOSThread(void);
 extern signed char accessorDepthForPrimitiveIndex(sqInt primIndex);
 extern usqInt argumentCountAddress(void);
 extern void assertValidMachineCodeFrame(sqInt instrPtr);
@@ -35,21 +36,18 @@ extern void ceCheckForInterrupts(void);
 extern void ceCheckProfileTick(void);
 extern sqInt ceContextinstVar(sqInt maybeContext, sqInt slotIndex);
 extern sqInt ceContextinstVarvalue(sqInt maybeMarriedContext, sqInt slotIndex, sqInt anOop);
-extern void ceDynamicSuperSendreceiver(sqInt cacheAddress, sqInt methodReceiver);
-extern sqInt ceEnclosingObjectAt(sqInt level);
-extern void ceImplicitReceiverSendreceiver(sqInt cacheAddress, sqInt methodReceiver);
 extern sqInt ceInterpretMethodFromPICreceiver(sqInt aMethodObj, sqInt rcvr);
 extern sqInt ceMNUFromPICMNUMethodreceiver(sqInt aMethodObj, sqInt rcvr);
 extern sqInt ceNewHashOf(sqInt anObject);
 extern sqInt ceNonLocalReturn(sqInt returnValue);
-extern void ceOuterSendreceiver(sqInt cacheAddress, sqInt methodReceiver);
 extern void ceReapAndResetErrorCodeFor(CogMethod *cogMethod);
 extern sqInt ceReturnToInterpreter(sqInt anOop);
-extern void ceSelfSendreceiver(sqInt cacheAddress, sqInt methodReceiver);
 extern sqInt ceSendAborttonumArgs(sqInt selector, sqInt rcvr, sqInt numArgs);
 extern sqInt ceSendFromInLineCacheMiss(CogMethod *cogMethodOrPIC);
 extern void ceSendMustBeBooleanTointerpretingAtDelta(sqInt aNonBooleanObject, sqInt jumpSize);
 extern sqInt ceSendMustBeBoolean(sqInt anObject);
+extern void ceSendaboveClassBindingtonumArgs(sqInt selector, sqInt methodClassBinding, sqInt rcvr, sqInt numArgs);
+extern sqInt ceSendabovetonumArgs(sqInt selector, sqInt methodClass, sqInt rcvr, sqInt numArgs);
 extern sqInt ceSendsupertonumArgs(sqInt selector, sqInt superNormalBar, sqInt rcvr, sqInt numArgs);
 extern void ceStackOverflow(sqInt contextSwitchIfNotNil);
 extern void ceTraceBlockActivation(void);
@@ -68,7 +66,6 @@ extern void flushExternalPrimitiveOf(sqInt methodObj);
 extern usqInt framePointerAddress(void);
 extern void (*functionPointerForCompiledMethodprimitiveIndex(sqInt methodObj, sqInt primIndex))(void) ;
 extern sqInt getCheckAllocFiller(void);
-extern char * getFramePointer(void);
 extern void ifValidWriteBackStackPointersSaveTo(void *theCFP, void *theCSP, char **savedFPP, char **savedSPP);
 extern usqInt instructionPointerAddress(void);
 extern usqInt interpretAddress(void);
@@ -121,6 +118,9 @@ extern sqInt startPCOrNilOfLiteralin(sqInt lit, sqInt aMethodObj);
 extern void updateStackZoneReferencesToCompiledCodePreCompaction(void);
 extern usqInt varBaseAddress(void);
 extern char * whereIs(sqInt anOop);
+extern sqInt disownVM(sqInt flags);
+extern sqInt ownVM(sqInt threadIndexAndFlags);
+extern usqInt vmOwnerLockAddress(void);
 extern sqInt mcprimHashMultiply(sqInt receiverArg);
 extern usqInt primitiveFunctionPointerAddress(void);
 extern char * cStringOrNullFor(sqInt oop);
@@ -130,11 +130,11 @@ extern sqInt primitiveFail(void);
 extern sqInt primitiveFailForOSError(sqLong osError);
 extern sqInt primitiveFailFor(sqInt reasonCode);
 extern sqInt primitiveFailureCode(void);
+extern void primitiveFullClosureValueNoContextSwitch(void);
 extern sqInt signalNoResume(sqInt aSemaphore);
 extern usqInt sizeOfAlienData(sqInt oop);
 extern void * startOfAlienData(sqInt oop);
 extern void ceScheduleScavenge(void);
-extern sqInt classSmallFloat(void);
 extern void ensureNoForwardedLiteralsIn(sqInt aMethodObj);
 extern usqInt freeStartAddress(void);
 extern usqInt getScavengeThreshold(void);
@@ -146,7 +146,6 @@ extern usqInt needGCFlagAddress(void);
 extern sqLong nullHeaderForMachineCodeMethod(void);
 extern sqInt receiverTagBitsForMethod(sqInt aMethodObj);
 extern usqInt scavengeThresholdAddress(void);
-extern usqInt specialObjectsArrayAddress(void);
 extern sqInt withoutForwardingOnandwithsendToCogit(sqInt obj1, sqInt obj2, sqInt aBool, sqInt (*selector)(sqInt,sqInt,sqInt));
 extern sqInt byteSwapped(sqInt w);
 extern sqInt fetchClassTagOf(sqInt oop);
@@ -308,7 +307,6 @@ extern sqInt checkAllAccessibleObjectsOkay(void);
 extern sqInt checkOkayInterpreterObjects(sqInt writeBack);
 extern sqInt copiedValueCountOfClosure(sqInt closurePointer);
 extern sqInt copiedValueCountOfFullClosure(sqInt closurePointer);
-extern sqInt disownVM(sqInt flags);
 extern sqInt doSignalSemaphoreWithIndex(sqInt index);
 extern void (*functionPointerForinClass(sqInt primIdx,sqInt theClass))(void) ;
 extern usqLong getNextWakeupUsecs(void);
@@ -333,7 +331,6 @@ extern sqInt methodClassOf(sqInt methodPointer);
 extern sqInt methodPrimitiveIndex(void);
 extern sqInt methodUsesAlternateBytecodeSet(sqInt aMethodObj);
 extern sqInt objCouldBeClassObj(sqInt objOop);
-extern sqInt ownVM(sqInt threadIndexAndFlags);
 extern sqInt penultimateLiteralOf(sqInt aMethodOop);
 extern sqInt popStack(void);
 extern sqInt primitiveIndexOfMethodheader(sqInt theMethod, sqInt methodHeader);
@@ -383,6 +380,7 @@ VM_EXPORT sqInt deferDisplayUpdates;
 VM_EXPORT sqInt desiredCogCodeSize;
 VM_EXPORT sqInt desiredEdenBytes;
 VM_EXPORT sqInt desiredNumStackPages;
+VM_EXPORT sqInt disownCount;
 VM_EXPORT void * displayBits;
 VM_EXPORT int displayDepth;
 VM_EXPORT int displayHeight;
@@ -397,6 +395,7 @@ VM_EXPORT sqInt minBackwardJumpCountForCompile ;
 VM_EXPORT volatile int sendTrace;
 VM_EXPORT int (*showSurfaceFn)(sqIntptr_t, int, int, int, int);
 VM_EXPORT sqInt suppressHeartbeatFlag;
+VM_EXPORT sqInt willNotThreadWarnCount;
 
 
 /*** Macros ***/
@@ -415,14 +414,12 @@ VM_EXPORT sqInt suppressHeartbeatFlag;
 	} \
 } while (0)
 #define primNumberExternalCall() 117
+#define smallIntegerTag() 1
 #define startOfMemory() heapBase
-#define numTagBits() 3
-#define shiftForWord() 3
-#define smallFloatExponentBits() 8
-#define smallFloatExponentOffset() 896
-#define smallFloatMantissaBits() 52
-#define smallFloatTag() 4
-#define tagMask() 0x7
+#define numTagBits() 2
+#define shiftForWord() 2
+#define tagMask() 0x3
+#define wordSize() 4
 #define characterTag() 2
 #define classIndexMask() 0x3FFFFF
 #define classTableMajorIndexShift() 10
@@ -442,7 +439,6 @@ VM_EXPORT sqInt suppressHeartbeatFlag;
 #define numSlotsMask() 0xFF
 #define rememberedBitShift() 29
 #define sixtyFourBitIndexableFormat() 9
-#define smallIntegerTag() 1
 #define weakArrayFormat() 4
 #define alternateHeaderNumLiteralsMask() 0x7FFF
 #define flush() fflush(stdout)
