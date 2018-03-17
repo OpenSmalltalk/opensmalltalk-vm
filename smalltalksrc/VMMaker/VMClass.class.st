@@ -200,8 +200,6 @@ VMClass class >> initializeMiscConstants [
 	SistaVM := initializationOptions at: #SistaVM ifAbsentPut: [false].
 	LowcodeVM := initializationOptions at: #LowcodeVM ifAbsentPut: [false].
 	MULTIPLEBYTECODESETS := initializationOptions at: #MULTIPLEBYTECODESETS ifAbsentPut: [false].
-	"But not these; they're compile-time"
-	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsent: [false].
 
 	"These must be set only if specified, not defaulted, because they are set on the command line or in include files."
 	initializationOptions
@@ -209,7 +207,10 @@ VMClass class >> initializeMiscConstants [
 		at: #ObjectMemory	ifPresent: [:value| SPURVM := value beginsWith: 'Spur'];
 		at: #STACKVM		ifPresent: [:value| STACKVM := value];
 		at: #COGVM		ifPresent: [:value| COGVM := initializationOptions at: #COGVM];
-		at: #COGMTVM		ifPresent: [:value| COGMTVM := initializationOptions at: #COGMTVM]
+		at: #COGMTVM		ifPresent: [:value| COGMTVM := initializationOptions at: #COGMTVM].
+
+	"And not these; they're compile-time"
+	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsent: [SPURVM] "Default as enabled for Spur VMs"
 ]
 
 { #category : #initialization }
@@ -556,36 +557,35 @@ VMClass class >> typeForSelf [
 ]
 
 { #category : #translation }
-VMClass class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
+VMClass class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord generator: aCCodeGenerator [
 	"Generate the contents of interp.h on aStream.  Specific Interpreter subclasses
 	 override to add more stuff."
-	aStream
-		nextPutAll: '#define VM_PROXY_MAJOR '; print: self vmProxyMajorVersion; cr;
-		nextPutAll: '#define VM_PROXY_MINOR '; print: self vmProxyMinorVersion; cr;
-		cr;
-		nextPutAll: '#define SQ_VI_BYTES_PER_WORD '; print: bytesPerWord; cr;
-		cr.
+	aCCodeGenerator
+		putDefineOf: 'VM_PROXY_MAJOR' as: self vmProxyMajorVersion on: aStream;
+		putDefineOf: 'VM_PROXY_MINOR' as: self vmProxyMinorVersion on: aStream.
+	aStream cr.
+	aCCodeGenerator
+		putDefineOf: 'SQ_VI_BYTES_PER_WORD' as: bytesPerWord on: aStream.
+	aStream cr.
 
-	"The most basic constants must be defined here, not in e.g. the plugin sources, so allow those
+	"The most basic constants must be defined here, not in e.g. the plugin sources, to allow those
 	 other sources to be shared between different builds (Spur vs SqueakV3, 32-bit vs 64-bit, etc)"
-	VMBasicConstants mostBasicConstantNames asSet asArray sort do:
+	VMBasicConstants mostBasicConstantNames asSet sorted do:
 		[:constName|
 		(VMBasicConstants classPool at: constName ifAbsent: []) ifNotNil:
-			[:const|
-			aStream nextPutAll: '#define '; nextPutAll: constName; space; print: const; cr]].
+			[:const| aCCodeGenerator putDefineOf: constName as: const on: aStream]].
 	aStream cr.
 
 	((VMBasicConstants classPool associations select: [:a| a key beginsWith: 'PrimErr'])
-		asSortedCollection: [:a1 :a2| a1 value <= a2 value])
-		do: [:a|
-			aStream nextPutAll: '#define '; nextPutAll: a key; space; print: a value; cr].
+		sorted: [:a1 :a2| a1 value <= a2 value])
+		do: [:a| aCCodeGenerator putDefineOf: a key as: a value on: aStream].
 	aStream cr.
 
-	aStream
-		nextPutAll: '#define MinSmallInteger '; print: self objectMemoryClass minSmallInteger; cr;
-		nextPutAll: '#define MaxSmallInteger '; print: self objectMemoryClass maxSmallInteger; cr;
-		nextPutAll: '#define NumSmallIntegerTagBits '; print: self objectMemoryClass numSmallIntegerTagBits; cr;
-		cr.
+	aCCodeGenerator
+		putDefineOf: 'MinSmallInteger' as: self objectMemoryClass minSmallInteger on: aStream;
+		putDefineOf: 'MaxSmallInteger' as: self objectMemoryClass maxSmallInteger on: aStream;
+		putDefineOf: 'NumSmallIntegerTagBits' as: self objectMemoryClass numSmallIntegerTagBits on: aStream.
+	aStream cr
 ]
 
 { #category : #'translation support' }

@@ -1200,7 +1200,7 @@ CCodeGenerator >> emitCConstants: constList on: aStream [
 	constList isEmpty ifTrue: [^self].
 	aStream cr; nextPutAll: '/*** Constants ***/'; cr.
 	(self sortStrings: constList) do:
-		[:varName| | node default value conditional |
+		[:varName| | node default value |
 		node := constants at: varName.
 		node name isEmpty ifFalse:
 			["If the definition includes a C comment, or looks like a conditional, take it as is, otherwise convert
@@ -1214,20 +1214,18 @@ CCodeGenerator >> emitCConstants: constList on: aStream [
 			default = #undefined
 				ifTrue: [aStream nextPutAll: '#undef '; nextPutAll: node name; cr]
 				ifFalse:
-					[conditional := (vmClass ifNil: VMBasicConstants) defineAtCompileTime: node name.
-					conditional ifTrue:
-						[aStream nextPutAll: '#if !defined('; nextPutAll: node name; nextPutAll: ') /* Allow this to be overridden on the compiler command line */'; cr].
-					value := vmClass
+					[value := vmClass
 								ifNotNil:
 									[(vmClass specialValueForConstant: node name default: default)
 										ifNotNil: [:specialDef| specialDef]
 										ifNil: [default]]
 								ifNil: [default].
-					value first ~= $# ifTrue:
-						[aStream nextPutAll: (conditional ifTrue: ['# define '] ifFalse: ['#define ']); nextPutAll: node name; space].
-					aStream nextPutAll: value; cr.
-					conditional ifTrue:
-						[aStream nextPutAll: '#endif'; cr]]]].
+					((vmClass ifNil: VMBasicConstants) defineAtCompileTime: node name)
+						ifTrue: [self putConditionalDefineOf: node name
+									as: value
+									comment: 'Allow this to be overridden on the compiler command line'
+									on: aStream]
+						ifFalse: [self putDefineOf: node name as: value on: aStream]]]].
 	aStream cr
 ]
 
@@ -4679,6 +4677,28 @@ CCodeGenerator >> pushScope: variableToType "<Dictionary>" while: aBlock [
 	^aBlock ensure: [scopeStack removeLast]
 ]
 
+{ #category : #'C code generator' }
+CCodeGenerator >> putConditionalDefineOf: aConstantNameString as: valueOrValueString comment: commentOrNil on: aStream [
+	self withConditionalDefineOf: aConstantNameString
+		comment: commentOrNil
+		on: aStream
+		do: [| valueAsString |
+			 valueAsString := valueOrValueString asString.
+			 valueAsString first ~= $# ifTrue:
+				[aStream nextPutAll: '# define '; nextPutAll: aConstantNameString; space].
+			 aStream nextPutAll: valueAsString; cr]
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> putDefineOf: aConstantNameString as: valueOrValueString on: aStream [
+	aStream
+		nextPutAll: '#define ';
+		nextPutAll: aConstantNameString;
+		space;
+		nextPutAll: valueOrValueString asString;
+		cr
+]
+
 { #category : #inlining }
 CCodeGenerator >> removeAssertions [
 	"Remove all assertions in method bodies.  This is for the benefit of inlining, which
@@ -5491,9 +5511,8 @@ CCodeGenerator >> vmClass: aClass [
 CCodeGenerator >> vmHeaderContentsWithBytesPerWord: bytesPerWord [
 	"Store C header code on the given stream."
 
-	^ByteString streamContents:
-		[:tempStream|
-		vmClass writeVMHeaderTo: tempStream bytesPerWord: bytesPerWord]
+	^ ByteString
+		streamContents: [ :tempStream | vmClass writeVMHeaderTo: tempStream bytesPerWord: bytesPerWord generator: self ]
 ]
 
 { #category : #accessing }
@@ -5519,6 +5538,20 @@ CCodeGenerator >> with: aNode ifAppropriateSetTo: aBoolean do: aBlock [
 							ifNotNil: [savedOptions copy].
 	optionsDictionary at: aNode name put: aBoolean.
 	^aBlock ensure: [optionsDictionary := savedOptions]
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> withConditionalDefineOf: aConstantNameString comment: commentOrNil on: aStream do: aBlock [
+	| start |
+	aStream nextPutAll: '#if !defined('; nextPutAll: aConstantNameString; nextPut: $).
+	commentOrNil ifNotNil: [aStream nextPutAll: ' /* '; nextPutAll: commentOrNil; nextPutAll: ' */'].
+	aStream cr.
+	start := aStream position.
+	aBlock value.
+	aStream nextPutAll: '#endif'.
+	aStream position - start > 80 ifTrue:
+		[aStream nextPutAll: ' /* !defined('; nextPutAll: aConstantNameString; nextPutAll: ') */'].
+	aStream cr
 ]
 
 { #category : #'C code generator' }

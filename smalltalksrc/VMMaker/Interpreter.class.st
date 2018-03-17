@@ -1041,13 +1041,6 @@ Interpreter class >> wantsLabels [
 	^true
 ]
 
-{ #category : #translation }
-Interpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
-	"Currently the Interpreter adds nothing to interp.h above and beyond VMClass's default.
-	 But the code in trunk's CCodeGenerator>>emitDefineBytesPerWordOn: is a candidate."
-	super writeVMHeaderTo: aStream bytesPerWord: bytesPerWord
-]
-
 { #category : #'control primitives' }
 Interpreter >> activateNewClosureMethod: blockClosure [
 	"Similar to activateNewMethod but for Closure and newMethod."

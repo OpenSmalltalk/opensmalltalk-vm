@@ -2089,21 +2089,25 @@ StackInterpreter class >> wantsLabels [
 ]
 
 { #category : #translation }
-StackInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
-	super writeVMHeaderTo: aStream bytesPerWord: bytesPerWord.
+StackInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord generator: aCCodeGenerator [
+	super writeVMHeaderTo: aStream bytesPerWord: bytesPerWord generator: aCCodeGenerator.
 	SistaVM ifTrue:
-		[aStream nextPutAll: '#define SistaVM 1'; cr].
+		[aCCodeGenerator putDefineOf: #SistaVM as: 1 on: aStream].
 	NewspeakVM ifTrue:
-		[aStream nextPutAll: '#define NewspeakVM 1'; cr].
+		[aCCodeGenerator putDefineOf: #NewspeakVM as: 1 on: aStream].
 	MULTIPLEBYTECODESETS ifTrue:
-		[aStream nextPutAll: '#define MULTIPLEBYTECODESETS 1'; cr].
+		[aCCodeGenerator putDefineOf: #MULTIPLEBYTECODESETS as: 1 on: aStream].
 	IMMUTABILITY ifTrue:
-		[aStream nextPutAll: '#define IMMUTABILITY 1'; cr].
-	NewspeakVM | MULTIPLEBYTECODESETS | IMMUTABILITY ifTrue:
+		[aCCodeGenerator
+			putConditionalDefineOf: #IMMUTABILITY
+			as: 1
+			comment: 'Allow this to be overridden on the compiler command line'
+			on: aStream].
+	SistaVM | NewspeakVM | MULTIPLEBYTECODESETS | IMMUTABILITY ifTrue:
 		[aStream cr].
-	aStream nextPutAll: '#define STACKVM 1'; cr.
+	aCCodeGenerator putDefineOf: #STACKVM as: 1 on: aStream.
 	(initializationOptions at: #SpurObjectMemory ifAbsent: false) ifTrue:
-		[aStream nextPutAll: '#define SPURVM 1'; cr]
+		[aCCodeGenerator putDefineOf: #SPURVM as: 1 on: aStream]
 ]
 
 { #category : #simulation }
