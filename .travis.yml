@@ -21,6 +21,7 @@ notifications:
     - vm-dev@lists.squeakfoundation.org
 
 jobs:
+  fast_finish: true
   include:
   - stage: "Linux builds"
     env: ARCH="linux64x64" FLAVOR="newspeak.cog.spur"
@@ -113,9 +114,6 @@ jobs:
       bash -c "
     dist: trusty
     group: edge
-
-matrix:
-  fast_finish: true
 
 install: ./.travis_install.sh
 
