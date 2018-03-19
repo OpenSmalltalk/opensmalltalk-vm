@@ -295,7 +295,7 @@ VMPluginCodeGenerator >> generateInterpreterProxyFunctionDereference: aNode on: 
 							withConditionalDefineOf: cs
 							comment: nil
 							on: aStream
-							do: [aStream tab: anInteger; nextPutAll: cs; nextPutAll: ' = 0;']]]]
+							do: [aStream tab: anInteger; nextPutAll: cs; nextPutAll: ' = 0;'; cr]]]]
 ]
 
 { #category : #'C translation' }
