@@ -114,6 +114,9 @@ jobs:
     dist: trusty
     group: edge
 
+matrix:
+  fast_finish: true
+
 install: ./.travis_install.sh
 
 before_script: $CHROOT ./.travis_build.sh
