@@ -16,6 +16,10 @@ aliases:
     os: osx
     osx_image: xcode7.3
 
+notifications:
+  email:
+    - vm-dev@lists.squeakfoundation.org
+
 jobs:
   include:
   - stage: "Linux builds"

@@ -94,6 +94,12 @@ environment:
       CYG_SETUP: setup-x86_64.exe
       MINGW_ARCH: x86_64
 
+notifications:
+  - provider: Email
+    to:
+      - vm-dev@lists.squeakfoundation.org
+    on_build_success: false
+
 matrix:
   fast_finish: false
 
