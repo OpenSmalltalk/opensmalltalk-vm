@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 
 # This script is really intended for "batch-mode" nightly builds of
 # Squeak binary distributions.  It is therefore intended mainly for
