@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # assert Stack VM with VM profiler and threaded heartbeat
 INSTALLDIR=assert/sqstklinuxhtRPi
 OPT="-g3 -O1 -fwrapv -DDEBUGVM=0"

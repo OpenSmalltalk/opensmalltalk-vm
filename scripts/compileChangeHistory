@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Concatenate all the history READMEs
 if [ -z "$1" -o -n "$2" ]; then
 	echo usage: $0 Revision 1>&2

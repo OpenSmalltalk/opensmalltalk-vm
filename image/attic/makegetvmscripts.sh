@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Create the getGoodCogVM.sh & getGoodSpurVM.sh scripts.
 GetCogScript=getGoodCogVM.sh
 GetSpurScript=getGoodSpurVM.sh

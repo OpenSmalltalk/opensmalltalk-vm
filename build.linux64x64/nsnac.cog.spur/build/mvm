@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # VM with VM profiler and threaded heartbeat
 INSTALLDIR=nsnaccogspur64linuxht
 # Some gcc versions create a broken VM using -O2

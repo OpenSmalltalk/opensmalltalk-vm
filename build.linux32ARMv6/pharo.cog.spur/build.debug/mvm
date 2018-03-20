@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # debug PharoVM with VM profiler and threaded heartbeat
 INSTALLDIR=debug/phcogspurlinuxhtRPi
 OPT="-g3 -O0 -fwrapv -DDEBUGVM=1 -DPharoVM"

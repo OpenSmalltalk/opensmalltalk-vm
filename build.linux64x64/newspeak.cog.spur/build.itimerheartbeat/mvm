@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Spur VM with VM profiler and itimer heartbeat
 INSTALLDIR=nscogspur64linux
 # Some gcc versions create a broken VM using -O2

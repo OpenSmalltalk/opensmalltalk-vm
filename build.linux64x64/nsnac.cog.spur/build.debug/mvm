@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # debug Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=debug/nsnaccogspur64linuxht
 OPT="-g3 -O0 -fwrapv -DDEBUGVM=1"

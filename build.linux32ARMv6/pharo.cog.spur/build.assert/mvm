@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # assert PharoVM with VM profiler and threaded heartbeat
 INSTALLDIR=assert/phcogspurlinuxhtRPi
 OPT="-g3 -O1 -fwrapv -DDEBUGVM=0 -DPharoVM"

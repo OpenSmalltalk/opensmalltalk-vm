@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 trap 'exit 2' HUP INT PIPE TERM
 DIRS="squeak.sista.spur"
 for d in $DIRS; do
