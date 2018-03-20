@@ -253,7 +253,31 @@ AC_PROG_LIBTOOL
 
 INCLUDES="-I${blddir} -I${vmmcfg} -I${topdir}/platforms/unix/vm -I${topdir}/platforms/Cross/vm -I${vmmdir}/vm"
 
+# these are not always added
+case $host_os in
+  cygwin*)
+    : #noop
+    ;;
+  *)
+    INCLUDES="$INCLUDES -I/usr/local/include"
+    LDFLAGS="$LDFLAGS -L/usr/local/lib"
+    ;;
+esac
+
 AC_SUBST(INCLUDES)
+
+# Linker specialities
+case $host_os in
+  cygwin*|darwin*)
+    : #noop
+    ;;
+  openbsd*)
+    LDFLAGS="$LDFLAGS -Wl,-z,wxneeded -Wl,-z,now"
+    ;;
+  *)
+    LDFLAGS="$LDFLAGS -Wl,-z,now"
+    ;;
+esac
 
 # Checks for header files.
 
@@ -337,7 +361,6 @@ case $host_os in
     VM_APP_ICONS="${imgdir}/SqueakVM.icns"
     ;;
   *)
-    LDFLAGS="$LDFLAGS -Wl,-z,now"
     VM_APP_ICONS=""
     ;;
 esac
