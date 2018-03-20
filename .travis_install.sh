@@ -1,7 +1,7 @@
 set -e
 
 if [[ "${ARCH}" = "linux64x64" ]]; then
-    sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+    sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
     sudo apt-get update -qq
     sudo apt-get install -yq --force-yes g++-6 gcc-6-multilib
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-yes \
@@ -19,7 +19,7 @@ if [[ "${ARCH}" = "linux64x64" ]]; then
             uuid-dev
 elif [[ "${ARCH}" = "linux32x86" ]]; then
     sudo apt-get remove -q -y gvfs-daemons
-    sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+    sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
     sudo apt-get update -qq
     sudo apt-get install -yq --force-yes g++-6 gcc-6-multilib
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-yes \
