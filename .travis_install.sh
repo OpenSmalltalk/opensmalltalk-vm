@@ -1,6 +1,9 @@
 set -e
 
 if [[ "${ARCH}" = "linux64x64" ]]; then
+    sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+    sudo apt-get update -qq
+    sudo apt-get install -yq --force-yes g++-6 gcc-6-multilib
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-yes \
             debhelper \
             devscripts \
@@ -13,10 +16,12 @@ if [[ "${ARCH}" = "linux64x64" ]]; then
             libpango1.0-dev \
             libpulse-dev \
             libaudio-dev \
-            gcc-multilib \
             uuid-dev
 elif [[ "${ARCH}" = "linux32x86" ]]; then
     sudo apt-get remove -q -y gvfs-daemons
+    sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+    sudo apt-get update -qq
+    sudo apt-get install -yq --force-yes g++-6 gcc-6-multilib
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-yes \
             devscripts \
             libc6-dev:i386 \
@@ -41,7 +46,6 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
               libgirepository-1.0-1:i386 \
             libpulse-dev:i386 \
             libaudio-dev:i386 \
-            gcc-multilib \
             uuid-dev:i386 \
             libcurl3-dev:i386
 fi
