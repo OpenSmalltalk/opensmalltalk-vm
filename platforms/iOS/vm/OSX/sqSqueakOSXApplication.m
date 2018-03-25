@@ -65,9 +65,11 @@
 #ifdef PharoVM
 # define VMOPTION(arg) "--"arg
 # define VMOPTIONOBJ(arg) @"--"arg
+# define VMOPTIONLEN(n) (1+n)
 #else
 # define VMOPTION(arg) "-"arg
 # define VMOPTIONOBJ(arg) @"-"arg
+# define VMOPTIONLEN(n) (n)
 #endif
 
 usqInt gMaxHeapSize = 512*1024*1024;
@@ -222,19 +224,19 @@ static char *getVersionInfo(int verbose);
 		return 1;
 	}
 #if COGVM
-	if ([argData compare:  VMOPTIONOBJ("trace") options: NSLiteralSearch range: NSMakeRange(0,6)] == NSOrderedSame) {
+	if ([argData compare: VMOPTIONOBJ("trace") options: NSLiteralSearch range: NSMakeRange(0,VMOPTIONLEN(6))] == NSOrderedSame) {
 		extern int traceFlags;
 
-		if ([argData length] == 6) {
+		if ([argData length] == VMOPTIONLEN(6)) {
 			traceFlags = 1;
 			return 1;
 		}
-		if ([argData length] <= 7
-		 || [argData characterAtIndex: 6] != '='
-		 || !isdigit([argData characterAtIndex: 7]))
+		if ([argData length] <= VMOPTIONLEN(7)
+		 || [argData characterAtIndex: VMOPTIONLEN(6)] != '='
+		 || !isdigit([argData characterAtIndex: VMOPTIONLEN(7)]))
 			return 0;
 
-		traceFlags = atoi([argData UTF8String] + 7);
+		traceFlags = atoi([argData UTF8String] + VMOPTIONLEN(7));
 		return 1;
 	}
 	if ([argData isEqualToString: VMOPTIONOBJ("tracestores")]) {
