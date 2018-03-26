@@ -9,6 +9,7 @@
 *   RCSID:   $Id$
 *
 *   NOTES: See change log below.
+*   	2018-03-25 AKG sqFileAtEnd() Use feof() for non-regular files
 *   	2018-03-01 AKG Add sqFileFdOpen & sqFileFileOpen
 *	2005-03-26 IKP fix unaligned accesses to file[Size] members
 * 	2004-06-10 IKP 64-bit cleanliness
@@ -33,9 +34,6 @@
 #include <errno.h>
 
 #ifndef NO_STD_FILE_SUPPORT
-
-#include <sys/stat.h>
-#include <sys/types.h>
 
 #include <fcntl.h>
 #include <limits.h>
@@ -123,6 +121,18 @@ static squeakFileOffsetType getSize(SQFile *f)
   return size;
 }
 
+static int setMode(SQFile *f)
+{
+  int fd;
+  struct stat statBuf;
+
+  fd = fileno(getFile(f));
+  if (fstat(fd, &statBuf))
+    return -1;
+  f->st_mode = statBuf.st_mode;
+  return 0;
+}
+
 #if 0
 # define pentry(func) do { int fn = fileno(getFile(f)); if (f->isStdioStream) printf("\n"#func "(%s) %lld %d\n", fn == 0 ? "in" : fn == 1 ? "out" : "err", (long long)ftell(getFile(f)), f->lastChar); } while (0)
 # define pexit(expr) (f->isStdioStream && printf("\n\t^"#expr " %lld %d\n", (long long)(sqFileValid(f) ? ftell(getFile(f)) : -1), f->lastChar)), expr
@@ -140,9 +150,11 @@ sqFileAtEnd(SQFile *f) {
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
 	pentry(sqFileAtEnd);
-	if (f->isStdioStream)
-		return pexit(feof(getFile(f)));
-	return ftell(getFile(f)) >= getSize(f);
+	/* Regular files test based on current position vs size,
+	 * all other files use feof() */
+        if (f->isStdioStream || !S_ISREG(f->st_mode))
+                return pexit(feof(getFile(f)));
+        return pexit(ftell(getFile(f)) >= getSize(f));
 }
 
 sqInt
@@ -365,6 +377,8 @@ sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 
 			f->writable = writeFlag ? true : false;
 			f->lastOp = UNCOMMITTED;
+			if (setMode(f))
+				return interpreterProxy->success(false);
 			return 1;
 		}
 
@@ -445,6 +459,8 @@ sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists) 
 			setFile(f, file);
 			f->writable = true;
 			f->lastOp = UNCOMMITTED;
+			if (setMode(f))
+				return interpreterProxy->success(false);
 			return 1;
 		}
 
@@ -492,6 +508,8 @@ sqConnectToFile(SQFile *sqFile, void *file, sqInt writeFlag)
 	sqFile->sessionID = thisSession;
 	sqFile->lastOp = UNCOMMITTED;
 	sqFile->writable = writeFlag;
+	if (setMode(sqFile))
+		return interpreterProxy->success(false);
 	return 1;
 }
 
