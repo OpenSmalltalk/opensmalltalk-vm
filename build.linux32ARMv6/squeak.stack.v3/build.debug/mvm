@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # debug Stack VM with VM profiler and threaded heartbeat
 INSTALLDIR=debug/sqstklinuxhtRPi
 OPT="-g3 -O0 -fwrapv -DDEBUGVM=1"
@@ -18,11 +19,8 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../platforms/unix/config/configure \
 	--with-src=stacksrc --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak --enable-fast-bitblt \
-	CC="c99 -march=armv6 -mfpu=vfp -mfloat-abi=hard" \
-	CXX=g++ \
-	CFLAGS="$OPT -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS" \
-	LIBS="-lpthread -luuid -lasound" \
-	LDFLAGS=-Wl,-z,now
+	TARGET_ARCH="-march=armv6 -mfpu=vfp -mfloat-abi=hard" \
+	CFLAGS="$OPT -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`

@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # PharoVM with VM profiler and itimer heartbeat
 
 case "`uname -m`" in # ensure we see x86 as machine type
@@ -17,7 +18,7 @@ case $(c99 -dumpversion) in
 3.4.*)	OPT="-g -O1 -fwrapv -DNDEBUG -DDEBUGVM=0";;
 *)	OPT="-g -O2 -DNDEBUG -DDEBUGVM=0";;
 esac
-OPT="$OPT -DPharoVM -DIMMUTABILITY=1"
+OPT="$OPT -DPharoVM"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -42,11 +43,9 @@ done
 test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak \
 		--with-vmversion=5.0 \
 		--with-src=spursrc \
-	CC="c99 -m32" \
-	CXX="g++ -m32" \
-	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1" \
-	LIBS="-lpthread -luuid -Wl,-rpath,'\$\$ORIGIN' " \
-	LDFLAGS=-Wl,-z,now
+	TARGET_ARCH="-m32" \
+	CFLAGS="$OPT -msse2 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1" \
+	LDFLAGS="-Wl,-rpath,'\$\$ORIGIN' "
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`

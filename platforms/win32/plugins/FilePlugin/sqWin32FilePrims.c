@@ -53,7 +53,6 @@ extern struct VirtualMachine *interpreterProxy;
     typedef struct {
 	  int			 sessionID;	(* ikp: must be first *)
 	  void			*file;
-	  squeakFileOffsetType	 fileSize;	(* 64-bits we hope. *)
 	  char			 writable;
 	  char			 lastOp; (* 0 = uncommitted, 1 = read, 2 = write *)
 	  char			 lastChar;
@@ -301,7 +300,6 @@ sqFileStdioHandlesInto(SQFile files[3])
 
 	files[0].sessionID = thisSession;
 	files[0].file = GetStdHandle(STD_INPUT_HANDLE);
-	files[0].fileSize = 0;
 	files[0].writable = false;
 	files[0].lastOp = 0; /* unused on win32 */
 	files[0].isStdioStream = GetConsoleMode(files[0].file, &mode) != 0;
@@ -309,7 +307,6 @@ sqFileStdioHandlesInto(SQFile files[3])
 
 	files[1].sessionID = thisSession;
 	files[1].file = GetStdHandle(STD_OUTPUT_HANDLE);
-	files[1].fileSize = 0;
 	files[1].writable = true;
 	files[1].lastOp = 0; /* unused on win32 */
 	files[1].isStdioStream = GetConsoleMode(files[1].file, &mode) != 0;
@@ -317,7 +314,6 @@ sqFileStdioHandlesInto(SQFile files[3])
 
 	files[2].sessionID = thisSession;
 	files[2].file = GetStdHandle(STD_ERROR_HANDLE);
-	files[2].fileSize = 0;
 	files[2].writable = true;
 	files[2].lastOp = 0; /* unused on win32 */
 	files[2].isStdioStream = GetConsoleMode(files[2].file, &mode) != 0;

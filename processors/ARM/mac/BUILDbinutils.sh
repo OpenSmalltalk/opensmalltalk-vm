@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # This script builds
 #	binutils-2.25/bfd/bfd.h
 #	binutils-2.25/libiberty/libiberty.a

@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Upload archives from products to a web/ftp site via ssh.
 RemoteUser=eliotmiranda@highland-park.dreamhost.com
 RemoteRoot=mirandabanda.org/files/Cog/VM

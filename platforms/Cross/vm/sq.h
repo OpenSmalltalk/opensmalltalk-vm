@@ -13,13 +13,15 @@
 #ifndef _SQ_H
 #define _SQ_H
 
+#include "sqConfig.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <limits.h>
 
-#include "sqConfig.h"
 #include "sqMemoryAccess.h"
 #include "sqVirtualMachine.h"
 

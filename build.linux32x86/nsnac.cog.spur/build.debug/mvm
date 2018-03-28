@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 case "`uname -m`" in # ensure we see x86 as machine type
 i*86) ;; # we're good
 *) if type i386 2>&1 >/dev/null; then
@@ -29,11 +30,8 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--with-vmversion=5.0 \
 		--with-src=nsspursrc \
 		--without-vm-display-fbdev --without-npsqueak \
-	CC="c99 -m32" \
-	CXX="g++ -m32" \
-	CFLAGS="$OPT -DEnforceAccessControl=0 -msse2 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64" \
-	LIBS="-lpthread -luuid" \
-	LDFLAGS=-Wl,-z,now
+	TARGET_ARCH="-m32" \
+	CFLAGS="$OPT -DEnforceAccessControl=0 -msse2"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`

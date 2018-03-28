@@ -39,7 +39,7 @@
 /*
  * Debug helper
  */
-#if (defined(DEBUG) || defined(DEBUGVM)) && !defined(NDEBUG)
+#if (defined(DEBUG) || (defined(DEBUGVM) && DEBUGVM==1)) && !defined(NDEBUG)
 #define DEBUG_PRINT(X, ...) fprintf(stderr, X, __VA_ARGS__)
 #else
 #define DEBUG_PRINT(X, ...)

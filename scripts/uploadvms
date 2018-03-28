@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Upload archives from products to a web/ftp site via ssh.
 RemoteUser=eliotmiranda@highland-park.dreamhost.com
 RemoteRoot=mirandabanda.org/files/Cog/VM
@@ -235,7 +236,8 @@ sudo cp /etc/security/limits.d/squeak.conf /etc/security/limits.d/nsvm.conf
      Make sure you're using bash and before your launch command, raise the max
      thread priority limit with ulimit -r 2, e.g. versions of the following
      script will work on ubuntu
-        #!/bin/bash -e
+        #!/usr/bin/env bash
+        set -e
         cd /path/to/squeak/directory
         ulimit -r 2
         exec setuidgid <account> ./coglinuxht/squeak -vm display-null -vm sound-null squeak.image

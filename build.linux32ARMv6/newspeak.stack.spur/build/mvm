@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Stack Spur VM and threaded heartbeat
 INSTALLDIR=nsstkspurlinuxhtRPi
 OPT="-g -O3 -fwrapv -DNDEBUG -DDEBUGVM=0 -DNO_VM_PROFILE=1"
@@ -19,11 +20,8 @@ test -f config.h || ../../../platforms/unix/config/configure \
 	--with-vmversion=5.0 \
 	--with-src=nsspurstacksrc --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak --enable-fast-bitblt \
-	CC="c99 -march=armv6 -mfpu=vfp -mfloat-abi=hard" \
-	CXX=g++ \
-	CFLAGS="$OPT -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64" \
-	LIBS="-lpthread -luuid" \
-	LDFLAGS=-Wl,-z,now
+	TARGET_ARCH="-march=armv6 -mfpu=vfp -mfloat-abi=hard" \
+	CFLAGS="$OPT"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`

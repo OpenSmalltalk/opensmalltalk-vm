@@ -111,12 +111,6 @@ AC_DEFUN([AC_NEED_SUNOS_H],
   *-sunos*)	AC_DEFINE(NEED_SUNOS_H, 1, [building on SunOS])
 esac])
 
-
-AC_DEFUN([AC_PROG_CC_WALL],
-[AC_PROG_CC
-test "$GCC" = yes && WFLAGS="-Wall -Wno-unknown-pragmas"
-AC_SUBST(WFLAGS)])
-
 AC_DEFUN([AC_GNU_OPT],
 [AC_MSG_CHECKING([for $host_cpu optimisation flags])
 ac_optflags="no"
@@ -288,4 +282,8 @@ AC_DEFUN([AC_PLUGIN_CHECK_LIB],[
     disabled_plugins="${disabled_plugins} ${plugin}")])
 
 # Recent Unix stuff
+m4_include([ax_require_defined.m4])
+m4_include([ax_append_flag.m4])
 m4_include([ax_have_epoll.m4])
+m4_include([ax_pthread.m4])
+m4_include([ax_cflags_warn_all.m4])

@@ -195,8 +195,8 @@ char *getDefaultSoundPlayer(void)                   { return -1; }
 char *getDefaultSoundRecorder(void)                 { return -1; }
 char *getSoundPlayerDeviceName(sqInt i)             { return -1; }
 char *getSoundRecorderDeviceName(sqInt i)           { return -1; }
-void  setDefaultSoundPlayer(char *deviceName)       { return -1; }
-void  setDefaultSoundRecorder(char *deviceName)     { return -1; }
+void  setDefaultSoundPlayer(char *deviceName)       { return ; }
+void  setDefaultSoundRecorder(char *deviceName)     { return ; }
 #endif /* SqSoundVersionMajor > 1 || SqSoundVersionMinor >= 2 */
 
 #if SqSoundVersionMajor > 1 || SqSoundVersionMinor >= 3

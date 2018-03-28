@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # PharoVM with VM profiler and itimer heartbeat
 THIRDPARTYLIBS="libsdl2 openssl libssh2 libgit2"
 INSTALLDIR=cogspur64linux
@@ -7,7 +8,7 @@ case $(c99 -dumpversion) in
 3.4.*)	OPT="-g -O1 -fwrapv -DNDEBUG -DDEBUGVM=0";;
 *)	OPT="-g -O2 -DNDEBUG -DDEBUGVM=0";;
 esac
-OPT="$OPT -DPharoVM -DIMMUTABILITY=1"
+OPT="$OPT -DPharoVM"
 
 if [ $# -ge 1 ]; then
 	INSTALLDIR="$1"; shift
@@ -33,11 +34,9 @@ test -f config.h || ../../../platforms/unix/config/configure \
 		--without-npsqueak \
 		--with-vmversion=5.0 \
 		--with-src=spur64src \
-	CC="c99 -m64" \
-	CXX="g++ -m64" \
-	CFLAGS="$OPT -msse2 -D_GNU_SOURCE -DCOGMTVM=0 -DITIMER_HEARTBEAT=1" \
-	LIBS="-lpthread -luuid -Wl,-rpath,'\$\$ORIGIN' " \
-	LDFLAGS=-Wl,-z,now
+	TARGET_ARCH="-m64" \
+	CFLAGS="$OPT -msse2 -DCOGMTVM=0 -DITIMER_HEARTBEAT=1" \
+	LDFLAGS="-Wl,-rpath,'\$\$ORIGIN' "
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`

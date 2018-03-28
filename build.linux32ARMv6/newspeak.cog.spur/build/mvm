@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=nscogspurlinuxhtRPi
 OPT="-g -O2 -fwrapv -DNDEBUG -DDEBUGVM=0"
@@ -19,11 +20,8 @@ test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak 
 		--without-vm-display-fbdev --with-vmversion=5.0 \
 		--with-src=nsspursrc \
 		--without-vm-display-fbdev --without-npsqueak --enable-fast-bitblt \
-	CC="c99 -march=armv6 -mfpu=vfp -mfloat-abi=hard" \
-	CXX=g++ \
-	CFLAGS="$OPT -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS -DCOGMTVM=0" \
-	LIBS="-lpthread -luuid -lasound" \
-	LDFLAGS=-Wl,-z,now
+	TARGET_ARCH="-march=armv6 -mfpu=vfp -mfloat-abi=hard" \
+	CFLAGS="$OPT -DI_REALLY_DONT_CARE_HOW_UNSAFE_THIS_IS -DCOGMTVM=0"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`

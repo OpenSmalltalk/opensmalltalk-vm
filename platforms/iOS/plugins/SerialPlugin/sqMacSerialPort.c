@@ -88,12 +88,31 @@ EXPORT (int) serialPortOpen(
     return false;
 }
 
+EXPORT (int) serialPortOpenByName(
+  const char *portName, int baudRate, int stopBitsType, int parityType, int dataBits,
+  int inFlowCtrl, int outFlowCtrl, int xOnChar, int xOffChar) {
+/* Open the given serial port using the given settings. The baud rate can be
+   any number between about 224 and 57600; the driver will pick a clock
+   divisor that will generate the closest available baud rate. */
+#pragma unused(portName,baudRate,stopBitsType,parityType,dataBits,inFlowCtrl,outFlowCtrl,xOnChar,xOffChar)
+    return false;
+}
+
 EXPORT (int) serialPortReadInto(int portNum, int count, void *bufferPtr) {
 /* Read up to count bytes from the given serial port into the given byte array.
    Read only up to the number of bytes in the port's input buffer; if fewer bytes
    than count have been received, do not wait for additional data to arrive.
    Return zero if no data is available. */
 #pragma unused(portNum,count,bufferPtr)
+    return false;
+}
+
+EXPORT (int) serialPortReadIntoByName(const char *portName, int count, void *bufferPtr) {
+/* Read up to count bytes from the given serial port into the given byte array.
+   Read only up to the number of bytes in the port's input buffer; if fewer bytes
+   than count have been received, do not wait for additional data to arrive.
+   Return zero if no data is available. */
+#pragma unused(portName,count,bufferPtr)
     return false;
 }
 
@@ -115,4 +134,14 @@ EXPORT (int) serialPortWriteFrom(int portNum, int count, void *bufferPtr) {
 		return interpreterProxy->success(false);
 	}
 	return byteCount;
+}
+
+EXPORT (int) serialPortWriteFromByName(const char *portName, int count, void *bufferPtr) {
+/* Write count bytes from the given byte array to the given serial port's
+   output buffer. Return the number of bytes written. This implementation is
+   synchronous: it doesn't return until the data has been sent. However, other
+   implementations may return before transmission is complete. */
+
+#pragma unused(portName,count,bufferPtr)
+	return interpreterProxy->success(false);
 }

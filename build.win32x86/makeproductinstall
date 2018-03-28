@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 trap 'exit 2' HUP INT PIPE TERM
 for d in newspeak.cog.spur/installer; do
 	if test -d "$d"; then

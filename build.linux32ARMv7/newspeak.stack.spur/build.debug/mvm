@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # debug Stack Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=debug/nsstkspurlinuxhtARMv7
 OPT="-g3 -O0 -fwrapv -DDEBUGVM=1"
@@ -19,11 +20,7 @@ test -f config.h || ../../../platforms/unix/config/configure \
 	--with-vmversion=5.0 \
 	--with-src=nsspurstacksrc --disable-cogit \
 	--without-vm-display-fbdev --without-npsqueak \
-	CC=c99 \
-	CXX=g++ \
-	CFLAGS="$OPT -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64" \
-	LIBS="-lpthread -luuid" \
-	LDFLAGS=-Wl,-z,now
+	CFLAGS="$OPT"
 rm -f vm/sqUnixMain.o # nuke version info
 rm -rf ../../../products/$INSTALLDIR
 # prefer make install prefix=`readlink -f \`pwd\`/../../../products/$INSTALLDIR`

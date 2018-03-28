@@ -16,7 +16,12 @@ aliases:
     os: osx
     osx_image: xcode7.3
 
+notifications:
+  email:
+    - vm-dev@lists.squeakfoundation.org
+
 jobs:
+  fast_finish: true
   include:
   - stage: "Linux builds"
     env: ARCH="linux64x64" FLAVOR="newspeak.cog.spur"

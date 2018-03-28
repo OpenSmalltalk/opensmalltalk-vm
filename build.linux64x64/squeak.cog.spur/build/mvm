@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Spur VM with VM profiler and threaded heartbeat
 INSTALLDIR=sqcogspur64linuxht
 # Some gcc versions create a broken VM using -O2
@@ -7,9 +8,9 @@ case $(c99 -dumpversion) in
 *)		OPT="-g -O2 -DNDEBUG -DDEBUGVM=0";;
 esac
 
-CFLAGS="$OPT -msse2 -D_GNU_SOURCE -DCOGMTVM=0"
-LIBS="-lpthread -luuid"
-LDFLAGS="-Wl,-z,now"
+CFLAGS="$OPT -msse2 -DCOGMTVM=0"
+LIBS=""
+LDFLAGS=""
 case $(uname -s) in
   OpenBSD)
            CFLAGS="$CFLAGS -I/usr/local/include"
@@ -33,8 +34,7 @@ test -f plugins.ext || (test -f ../plugins.ext && cp -p ../plugins.ext . || cp -
 test -f config.h || ../../../platforms/unix/config/configure --without-npsqueak \
 		--with-vmversion=5.0 \
 		--with-src=spur64src \
-	CC="c99 -m64" \
-	CXX="g++ -m64" \
+	TARGET_ARCH="-m64" \
 	CFLAGS="$CFLAGS" \
 	LIBS="$LIBS" \
 	LDFLAGS="$LDFLAGS"

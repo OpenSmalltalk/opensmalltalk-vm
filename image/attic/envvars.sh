@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 SQUEAK45APP=Squeak-4.5-All-in-One.app
 SQUEAK45RESOURCES=$SQUEAK45APP/Contents/Resources
 SQUEAK45=$SQUEAK45RESOURCES/Squeak4.5-13680
