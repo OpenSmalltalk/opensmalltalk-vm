@@ -37,6 +37,9 @@ static char SvnRawRevisionDate[] = "$Date$";
 static char SvnRawRepositoryURL[] = "$URL$";
 # define URL_START (SvnRawRepositoryURL + 6)
 
+static char SvnRawRevisionShortHash[] = "$Hash$";
+# define SHORTHASH_START (SvnRawRevisionShortHash + 7)
+
 static char *
 revisionAsString()
 {
@@ -63,6 +66,13 @@ repositoryURL()
 		*maybe_platforms = 0;
 	return URL_START;
 }
+
+static char *
+revisionShortHash()
+{
+	return SHORTHASH_START;
+}
+
 # undef REV_START
 # undef URL_START
 #elif GIT
@@ -76,6 +86,9 @@ static char GitRawRevisionDate[] = "$Date$";
 static char GitRawRepositoryURL[] = "$URL$";
 # define URL_START (GitRawRepositoryURL + 6)
 
+static char SvnRawRevisionShortHash[] = "$Hash$";
+# define SHORTHASH_START (SvnRawRevisionShortHash + 7)
+
 static char *
 revisionAsString()
 {
@@ -102,6 +115,13 @@ repositoryURL()
 		*maybe_platforms = 0;
 	return URL_START;
 }
+
+static char *
+revisionShortHash()
+{
+	return SHORTHASH_START;
+}
+
 # undef REV_START
 # undef URL_START
 #else /* SUBVERSION */
@@ -111,6 +131,10 @@ revisionAsString() { return "?"; }
 
 static char *
 repositoryURL() { return "unknown"; }
+
+static char *
+revisionShortHash() { return "unknown"; }
+
 #endif /* SUBVERSION */
 
 static char *sourceVersion = 0;
@@ -120,22 +144,27 @@ sourceVersionString(char separator)
 {
 	if (!sourceVersion) {
 #if 1 /* a) mingw32 doesn't have asprintf and b) on Mac OS it segfaults. */
-		char *fmt = "VM: " PREFIX "%s %s Date: %s%cPlugins: " PREFIX "%s %s";
+		char *fmt = "VM: " PREFIX "%s %s%cDate: %s Hash: %s%cPlugins: " PREFIX "%s %s";
 		int len = strlen(fmt)
 				+ strlen(revisionAsString())
 				+ strlen(repositoryURL())
 				+ strlen(revisionDateAsString())
+				+ strlen(revisionShortHash())
 				+ strlen(pluginsRevisionAsString())
 				+ strlen(pluginsRepositoryURL());
 		sourceVersion = malloc(len);
 		snprintf(sourceVersion, len, fmt,
-				revisionAsString(), repositoryURL(), revisionDateAsString(),
+				revisionAsString(), repositoryURL(), 
+				separator,
+				revisionDateAsString(), revisionShortHash(),
 				separator,
 				pluginsRevisionAsString(), pluginsRepositoryURL());
 #else
 		asprintf(&sourceVersion,
-				"VM: " PREFIX "%s %s Date: %s%cPlugins: " PREFIX "%s %s",
-				revisionAsString(), repositoryURL(), revisionDateAsString(),
+				"VM: " PREFIX "%s %s%cDate: %s Hash: %s%cPlugins: " PREFIX "%s %s",
+				revisionAsString(), repositoryURL(), 
+				separator,
+				revisionDateAsString(), revisionShortHash(),
 				separator,
 				pluginsRevisionAsString(), pluginsRepositoryURL());
 #endif
