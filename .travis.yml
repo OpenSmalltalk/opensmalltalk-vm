@@ -45,8 +45,10 @@ jobs:
   - env: ARCH="linux32x86" FLAVOR="squeak.cog.v3"
   - env: ARCH="linux32x86" FLAVOR="squeak.sista.spur"
   - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
-  - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" CC="clang" HEARTBEAT="threaded"
-  - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" CC="clang" HEARTBEAT="itimer" 
+  - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="threaded"
+    compiler: clang
+  - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="itimer" 
+    compiler: clang
 
   - stage: "Other Mac builds"
     env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
