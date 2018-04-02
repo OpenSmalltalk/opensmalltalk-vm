@@ -24,8 +24,7 @@ jobs:
   fast_finish: true
   include:
   - stage: "Linux builds"
-    env: ARCH="linux64x64" FLAVOR="newspeak.cog.spur"
-  - env: ARCH="linux64x64" FLAVOR="squeak.cog.spur"
+    env: ARCH="linux64x64" FLAVOR="squeak.cog.spur"
   - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
   - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
   # - env: ARCH="linux64x64" FLAVOR="pharo.sista.spur" HEARTBEAT="threaded"
@@ -39,17 +38,13 @@ jobs:
   - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="itimer"
 
   - stage: "Mac builds"
-    env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
-    <<: *mac-build
-  - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
+    env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
     <<: *mac-build
   # - env: ARCH="macos64x64" FLAVOR="pharo.sista.spur"
   #   <<: *mac-build
   - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur.lowcode"
     <<: *mac-build
   - env: ARCH="macos64x64" FLAVOR="squeak.cog.spur"
-    <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="newspeak.cog.spur"
     <<: *mac-build
   - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
     <<: *mac-build
@@ -65,9 +60,7 @@ jobs:
     <<: *mac-build
 
   - stage: "Stack builds"
-    env: ARCH="linux64x64" FLAVOR="newspeak.stack.spur"
-  - env: ARCH="linux64x64" FLAVOR="squeak.stack.spur"
-  - env: ARCH="linux32x86" FLAVOR="newspeak.stack.spur"
+    env: ARCH="linux64x64" FLAVOR="squeak.stack.spur"
   - env: ARCH="linux32x86" FLAVOR="squeak.stack.spur"
   - env: ARCH="linux32x86" FLAVOR="squeak.stack.v3"
   - env: ARCH="macos64x64" FLAVOR="pharo.stack.spur"
@@ -75,10 +68,6 @@ jobs:
   - env: ARCH="macos64x64" FLAVOR="pharo.stack.spur.lowcode"
     <<: *mac-build
   - env: ARCH="macos64x64" FLAVOR="squeak.stack.spur"
-    <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="newspeak.stack.spur"
-    <<: *mac-build
-  - env: ARCH="macos64x64" FLAVOR="newspeak.stack.spur"
     <<: *mac-build
   - env: ARCH="macos32x86" FLAVOR="pharo.stack.spur"
     <<: *mac-build
@@ -90,30 +79,47 @@ jobs:
     <<: *mac-build
 
   - stage: "linux32ARMv6 builds"
-    env: ARCH="linux32ARMv6" FLAVOR="newspeak.cog.spur" CHROOT="schroot -p -c rpi
-      -- bash -c "
+    env: ARCH="linux32ARMv6" FLAVOR="squeak.cog.spur" CHROOT="schroot -p -c rpi -- bash -c "
     dist: trusty
     group: edge
-  - env: ARCH="linux32ARMv6" FLAVOR="newspeak.stack.spur" CHROOT="schroot -p -c rpi
-      -- bash -c "
+  - env: ARCH="linux32ARMv6" FLAVOR="pharo.cog.spur" CHROOT="schroot -p -c rpi -- bash -c "
     dist: trusty
     group: edge
-  - env: ARCH="linux32ARMv6" FLAVOR="squeak.cog.spur" CHROOT="schroot -p -c rpi --
-      bash -c "
+  - env: ARCH="linux32ARMv6" FLAVOR="squeak.stack.spur" CHROOT="schroot -p -c rpi -- bash -c "
     dist: trusty
     group: edge
-  - env: ARCH="linux32ARMv6" FLAVOR="pharo.cog.spur" CHROOT="schroot -p -c rpi --
-      bash -c "
+  - env: ARCH="linux32ARMv6" FLAVOR="squeak.stack.v3" CHROOT="schroot -p -c rpi -- bash -c "
     dist: trusty
     group: edge
-  - env: ARCH="linux32ARMv6" FLAVOR="squeak.stack.spur" CHROOT="schroot -p -c rpi
-      -- bash -c "
+
+  - stage: "Newspeak"
+    env: ARCH="linux64x64" FLAVOR="newspeak.cog.spur"
+  - env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
+    <<: *mac-build
+  - env: ARCH="macos32x86" FLAVOR="newspeak.cog.spur"
+    <<: *mac-build
+  - env: ARCH="linux64x64" FLAVOR="newspeak.stack.spur"
+  - env: ARCH="linux32x86" FLAVOR="newspeak.stack.spur"
+  - env: ARCH="macos32x86" FLAVOR="newspeak.stack.spur"
+    <<: *mac-build
+  - env: ARCH="macos64x64" FLAVOR="newspeak.stack.spur"
+    <<: *mac-build
+  - env: ARCH="linux32ARMv6" FLAVOR="newspeak.cog.spur" CHROOT="schroot -p -c rpi -- bash -c "
     dist: trusty
     group: edge
-  - env: ARCH="linux32ARMv6" FLAVOR="squeak.stack.v3" CHROOT="schroot -p -c rpi --
-      bash -c "
+  - env: ARCH="linux32ARMv6" FLAVOR="newspeak.stack.spur" CHROOT="schroot -p -c rpi -- bash -c "
     dist: trusty
     group: edge
+  allow_failures:
+  - env: ARCH="linux64x64" FLAVOR="newspeak.cog.spur"
+  - env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
+  - env: ARCH="macos32x86" FLAVOR="newspeak.cog.spur"
+  - env: ARCH="linux64x64" FLAVOR="newspeak.stack.spur"
+  - env: ARCH="linux32x86" FLAVOR="newspeak.stack.spur"
+  - env: ARCH="macos32x86" FLAVOR="newspeak.stack.spur"
+  - env: ARCH="macos64x64" FLAVOR="newspeak.stack.spur"
+  - env: ARCH="linux32ARMv6" FLAVOR="newspeak.cog.spur" CHROOT="schroot -p -c rpi -- bash -c "
+  - env: ARCH="linux32ARMv6" FLAVOR="newspeak.stack.spur" CHROOT="schroot -p -c rpi -- bash -c "
 
 install: ./.travis_install.sh
 

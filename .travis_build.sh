@@ -62,22 +62,27 @@ build_linux_in() {
 }
 
 build_linux() {
+    # accound for buggy gcc-4.8
+    if command -v gcc-6 2>&1 >/dev/null; then
+        export CC=gcc-6
+        export CXX=g++-6
+    fi
     travis_fold start 'unix_configure' 'Running "make config" in platforms/unix/config ...'
     (cd platforms/unix/config/ && make configure)
     travis_fold end 'unix_configure'
 
-	# build will include both, threaded and itimer version unless 
-	# HEARTBEAT variable is set, in which case just one of both 
-	# will be built.
-	# HEARTBEAT can be "threaded" or "itimer"
+    # build will include both, threaded and itimer version unless 
+    # HEARTBEAT variable is set, in which case just one of both 
+    # will be built.
+    # HEARTBEAT can be "threaded" or "itimer"
 
-	if [ -z "$HEARTBEAT" ] || [ "$HEARTBEAT" = "threaded" ]; then
-    	build_linux_in "${BUILD_DIRECTORY}/build" "build_vm"
-	fi
+    if [ -z "$HEARTBEAT" ] || [ "$HEARTBEAT" = "threaded" ]; then
+        build_linux_in "${BUILD_DIRECTORY}/build" "build_vm"
+    fi
 
     # Also build VM with itimerheartbeat if available
     if [[ ! -d "${BUILD_DIRECTORY}/build.itimerheartbeat" ]]; then
-    	return
+        return
     fi
 
     if [ -z "$HEARTBEAT" ] || [ "$HEARTBEAT" = "itimer" ]; then
