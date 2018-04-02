@@ -15,6 +15,8 @@ VMSRCDIR:=../../spurlowcodesrc/vm
 #COGDEFS:= -DPharoVM=1 -DSTACK_ALIGN_BYTES=16 -DALLOCA_LIES_SO_USE_GETSP=0
 COGDEFS:= -DPharoVM=1
 
+COMPILER_TO_USE:=clang
+
 THIRDPARTYLIBS:=pkgconfig openssl libssh2 libgit2 libsdl2 zlib libpng freetype2 pixman cairo libgcc
 	
 include ../common/Makefile
