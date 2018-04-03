@@ -18,5 +18,5 @@ if [[ "${APPVEYOR}" ]]; then
     export CMDSHELL="cmd /C "
 fi
 
-$CMDSHELL gem install dpl --version 1.8.47
+$CMDSHELL gem install dpl
 $CMDSHELL dpl --provider=bintray --user=osvm --key=$BINTRAYAPIKEY --file=bintray.json --skip_cleanup=true
