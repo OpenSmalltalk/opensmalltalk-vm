@@ -27,10 +27,14 @@ $url =~ s/\s+//gm;
 $date = `git log --format=%ad -1`;
 $date =~ s/\s+$//m;
 
+$shorthash = `git log --format=%h -1`;
+$shorthash =~ s/\s+$//m;
+
 while (<STDIN>) {
     s/\$Date[^\$]*\$/\$Date: $date \$/;
     s/\$URL[^\$]*\$/\$URL: $url \$/;
     s/\$Rev[^\$]*\$/\$Rev: $myrev \$/;
+    s/\$CommitHash[^\$]*\$/\$CommitHash: $shorthash \$/;
 } continue {
     print or die "-p destination: $!\n";
 }

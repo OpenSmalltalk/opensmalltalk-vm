@@ -8,6 +8,11 @@ if [[ "${ARCH}" = *"64x64" ]]; then
   exit 0
 fi
 
+if [[ "${FLAVOR}" = *"sista"* ]]; then
+  echo "Skipping SUnit testing in Sista builds..."
+  exit 0
+fi
+
 case "${FLAVOR}" in
   "squeak"*)
     if [[ "${FLAVOR}" = *".spur" ]]; then

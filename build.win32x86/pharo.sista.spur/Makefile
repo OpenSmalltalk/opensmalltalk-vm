@@ -17,6 +17,8 @@ COGDEFS:= -DPharoVM=1
 
 THIRDPARTYLIBS:=pkgconfig openssl libssh2 libgit2 libsdl2 zlib libpng freetype2 pixman cairo libgcc
 	
+COMPILER_TO_USE:=clang
+
 include ../common/Makefile
 
 # third-party libraries

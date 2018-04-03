@@ -36,7 +36,7 @@ else
 		VM=$VM/Contents/MacOS/Squeak;;
 	Linux) # This needs to be split by $CPU to work on RPi also
 		case $CPU in
-		x86_64)	LATESTVM="squeak.cog.spur_linux64_x64_$LATESTRELEASE.tar.gz";;
+		x86_64)	LATESTVM="squeak.cog.spur_linux64x64_$LATESTRELEASE.tar.gz";;
 		*)		echo "Don't know what kind of 64-bit linux machine you're running.  I have $CPU"
 				exit 1
 		esac

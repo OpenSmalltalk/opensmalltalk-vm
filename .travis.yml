@@ -23,41 +23,45 @@ notifications:
 jobs:
   fast_finish: true
   include:
-  - stage: "Linux builds"
-    env: ARCH="linux64x64" FLAVOR="newspeak.cog.spur"
+  - stage: "Main Squeak and Pharo builds"
+    env: ARCH="linux32x86" FLAVOR="squeak.cog.spur"
+  - env: ARCH="macos32x86" FLAVOR="squeak.cog.spur"
+    <<: *mac-build
   - env: ARCH="linux64x64" FLAVOR="squeak.cog.spur"
+  - env: ARCH="macos64x64" FLAVOR="squeak.cog.spur"
+    <<: *mac-build
+  - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
+  - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
+    <<: *mac-build
   - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
+  - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
+    <<: *mac-build
+
+  - stage: "Other Linux builds"
+    env: ARCH="linux64x64" FLAVOR="newspeak.cog.spur"
   - env: ARCH="linux64x64" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
   # - env: ARCH="linux64x64" FLAVOR="pharo.sista.spur" HEARTBEAT="threaded"
   - env: ARCH="linux32x86" FLAVOR="newspeak.cog.spur"
-  - env: ARCH="linux32x86" FLAVOR="squeak.cog.spur"
   - env: ARCH="linux32x86" FLAVOR="squeak.cog.v3"
   - env: ARCH="linux32x86" FLAVOR="squeak.sista.spur"
-  - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="threaded"
   - env: ARCH="linux32x86" FLAVOR="pharo.cog.spur" HEARTBEAT="itimer"
   - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="threaded"
-  - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="itimer"
+    compiler: clang
+  - env: ARCH="linux32x86" FLAVOR="pharo.sista.spur" HEARTBEAT="itimer" 
+    compiler: clang
 
-  - stage: "Mac builds"
+  - stage: "Other Mac builds"
     env: ARCH="macos64x64" FLAVOR="newspeak.cog.spur"
-    <<: *mac-build
-  - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur"
     <<: *mac-build
   # - env: ARCH="macos64x64" FLAVOR="pharo.sista.spur"
   #   <<: *mac-build
   - env: ARCH="macos64x64" FLAVOR="pharo.cog.spur.lowcode"
     <<: *mac-build
-  - env: ARCH="macos64x64" FLAVOR="squeak.cog.spur"
-    <<: *mac-build
   - env: ARCH="macos32x86" FLAVOR="newspeak.cog.spur"
-    <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur"
     <<: *mac-build
   - env: ARCH="macos32x86" FLAVOR="pharo.sista.spur"
     <<: *mac-build
   - env: ARCH="macos32x86" FLAVOR="pharo.cog.spur.lowcode"
-    <<: *mac-build
-  - env: ARCH="macos32x86" FLAVOR="squeak.cog.spur"
     <<: *mac-build
   - env: ARCH="macos32x86" FLAVOR="squeak.cog.v3"
     <<: *mac-build
@@ -114,6 +118,11 @@ jobs:
       bash -c "
     dist: trusty
     group: edge
+  allow_failures:
+  - env: FLAVOR="squeak.sista.spur"
+  - env: FLAVOR="pharo.sista.spur"
+  - env: FLAVOR="squeak.cog.spur.lowcode"
+  - env: FLAVOR="pharo.cog.spur.lowcode"
 
 install: ./.travis_install.sh
 
