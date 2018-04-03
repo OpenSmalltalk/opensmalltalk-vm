@@ -1,7 +1,5 @@
 environment:
   CYG_MIRROR: http://cygwin.mirror.constant.com
-  BINTRAYAPIKEY:
-    secure: uknPzww818XWJiLecwur9p1MfrkACOyx9d3iNrw/TuD89EoPSc8zLqKdPZjWdcQd
   matrix:
     - FLAVOR: squeak.cog.spur
       ARCH: win32x86
