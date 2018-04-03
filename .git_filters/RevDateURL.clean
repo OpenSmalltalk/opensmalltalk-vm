@@ -3,4 +3,4 @@
 s/\$Date[^\$]*\$/\$Date\$/;
 s/\$Rev[^\$]*\$/\$Rev\$/;
 s/\$URL[^\$]*\$/\$URL\$/;
-s/\$Hash[^\$]*\$/\$Hash\$/;
+s/\$CommitHash[^\$]*\$/\$CommitHash\$/;

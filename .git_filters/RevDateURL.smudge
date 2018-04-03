@@ -34,7 +34,7 @@ while (<STDIN>) {
     s/\$Date[^\$]*\$/\$Date: $date \$/;
     s/\$URL[^\$]*\$/\$URL: $url \$/;
     s/\$Rev[^\$]*\$/\$Rev: $myrev \$/;
-    s/\$Hash[^\$]*\$/\$Hash: $shorthash \$/;
+    s/\$CommitHash[^\$]*\$/\$CommitHash: $shorthash \$/;
 } continue {
     print or die "-p destination: $!\n";
 }
