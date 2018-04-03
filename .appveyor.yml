@@ -95,6 +95,11 @@ environment:
 
 matrix:
   fast_finish: true
+  allow_failures:
+    - FLAVOR: squeak.sista.spur
+    - FLAVOR: pharo.sista.spur
+    - FLAVOR: squeak.cog.spur.lowcode
+    - FLAVOR: pharo.cog.spur.lowcode
 
 notifications:
   - provider: Email
