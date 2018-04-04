@@ -121,18 +121,6 @@ static squeakFileOffsetType getSize(SQFile *f)
   return size;
 }
 
-static int setMode(SQFile *f)
-{
-  int fd;
-  struct stat statBuf;
-
-  fd = fileno(getFile(f));
-  if (fstat(fd, &statBuf))
-    return -1;
-  f->st_mode = statBuf.st_mode;
-  return 0;
-}
-
 #if 0
 # define pentry(func) do { int fn = fileno(getFile(f)); if (f->isStdioStream) printf("\n"#func "(%s) %lld %d\n", fn == 0 ? "in" : fn == 1 ? "out" : "err", (long long)ftell(getFile(f)), f->lastChar); } while (0)
 # define pexit(expr) (f->isStdioStream && printf("\n\t^"#expr " %lld %d\n", (long long)(sqFileValid(f) ? ftell(getFile(f)) : -1), f->lastChar)), expr
@@ -393,8 +381,6 @@ sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 
 			f->writable = writeFlag ? true : false;
 			f->lastOp = UNCOMMITTED;
-			if (setMode(f))
-				return interpreterProxy->success(false);
 			return 1;
 		}
 
@@ -475,8 +461,6 @@ sqFileOpenNew(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt *exists) 
 			setFile(f, file);
 			f->writable = true;
 			f->lastOp = UNCOMMITTED;
-			if (setMode(f))
-				return interpreterProxy->success(false);
 			return 1;
 		}
 
@@ -524,8 +508,6 @@ sqConnectToFile(SQFile *sqFile, void *file, sqInt writeFlag)
 	sqFile->sessionID = thisSession;
 	sqFile->lastOp = UNCOMMITTED;
 	sqFile->writable = writeFlag;
-	if (setMode(sqFile))
-		return interpreterProxy->success(false);
 	return 1;
 }
 

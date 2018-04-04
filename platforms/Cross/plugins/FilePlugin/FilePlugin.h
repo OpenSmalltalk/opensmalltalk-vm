@@ -18,7 +18,6 @@
 */
 /* File support definitions */
 
-#include <sys/stat.h>
 #include <sys/types.h>
 
 #ifdef _MSC_VER
@@ -31,7 +30,6 @@ typedef int mode_t;
 typedef struct {
   int			 sessionID;	/* ikp: must be first */
   void			*file;
-  mode_t		st_mode;	/* from stat() */
 #if defined(ACORN)
 // ACORN has to have 'lastOp' as at least a 32 bit field in order to work
   int lastOp; // actually used to save file position
