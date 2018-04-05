@@ -9,6 +9,7 @@
 *   RCSID:   $Id$
 *
 *   NOTES: See change log below.
+*   	2018-03-25 AKG sqFileAtEnd() Use feof() for all files
 *   	2018-03-01 AKG Add sqFileFdOpen & sqFileFileOpen
 *	2005-03-26 IKP fix unaligned accesses to file[Size] members
 * 	2004-06-10 IKP 64-bit cleanliness
@@ -33,9 +34,6 @@
 #include <errno.h>
 
 #ifndef NO_STD_FILE_SUPPORT
-
-#include <sys/stat.h>
-#include <sys/types.h>
 
 #include <fcntl.h>
 #include <limits.h>
@@ -135,14 +133,32 @@ static squeakFileOffsetType getSize(SQFile *f)
 
 sqInt
 sqFileAtEnd(SQFile *f) {
-	/* Return true if the file's read/write head is at the end of the file. */
+	/* Return true if the file's read/write head is at the end of the file.
+	 * Fail and return errno if an error in the file i/o has been flagged.
+	 *
+	 * libc's end of file function, feof(), returns a flag that is set by
+	 * attempting to read past the end of the file.  I.e if the last character in
+	 * the file has been read, but not one more, feof() will return false.
+	 *
+	 * Smalltalk's #atEnd should return true as soon as the last character has
+	 * been read.
+	 *
+	 * To keep the expected behaviour of #atEnd, we can peek at the next 
+	 * character in the file using ungetc() & fgetc(), which will 
+	 * set the eof-file-flag if required, but not advance the stream.
+	 */
+	sqInt status;
+	int   c;
+	FILE  *fp;
 
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
 	pentry(sqFileAtEnd);
-	if (f->isStdioStream)
-		return pexit(feof(getFile(f)));
-	return ftell(getFile(f)) >= getSize(f);
+	fp = getFile(f);
+	status = ungetc(fgetc(fp), fp) == EOF && feof(fp);
+	if (ferror(fp))
+		interpreterProxy->primitiveFailForOSError(errno);
+	return pexit(status);
 }
 
 sqInt
