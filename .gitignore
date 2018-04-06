@@ -96,6 +96,7 @@ platforms/unix/config/autom4te.cache/
 /image/Cog.app
 /image/cogspurlinux*
 /image/sqlinux*
+/image/sqwin*
 /image/cogspurwin
 /image/CogSpur.app
 /image/Squeak*.app
