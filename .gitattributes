@@ -1,6 +1,7 @@
 # Bash needs lf even on windows/cygwin
 /scripts/* eol=lf
 /image/*.st eol=lf
+/image/*.sh eol=lf
 mvm eol=lf
 sq*SCCSVersion.h filter=RevDateURL ident
 *.changes -diff
