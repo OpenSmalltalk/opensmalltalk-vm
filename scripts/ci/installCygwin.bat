@@ -3,7 +3,7 @@
 REM This script can takes up to 4 parameters:
 REM        - The architecture of the vm to build. Can be: i686 or x86_64. By default is i686.
 REM        - The directory where to install Cygwin. By default "C:\cygwin" or "C:\cygwin64" depending on the architecture.
-REM        - The path to the cygwin setup. By defaul "../../setup-x86.exe" or "../../setup-x86_64.exe" depending on the architecture.
+REM        - The path to the cygwin setup. By defaul "setup-x86.exe" or "setup-x86_64.exe" depending on the architecture.
 REM        - The mirror from where download cygwin. By default http://cygwin.mirror.constant.com.
 
 REM The architecture can either be i686 or x86_64. By default, if no argument is passed, it will be i686.
@@ -27,13 +27,13 @@ IF "%CYG_INSTALL_ROOT%"=="" (
     )
 )
 
-REM The CYG_INSTALL_SETUP is the executable to use to install the vm. By default, it will be "../../setup-x86.exe" for i686 architecture and "../../setup-x86_64.exe" for x86_64.
+REM The CYG_INSTALL_SETUP is the executable to use to install the vm. By default, it will be "setup-x86.exe" for i686 architecture and "setup-x86_64.exe" for x86_64.
 SET CYG_INSTALL_SETUP=%3
 IF "%CYG_INSTALL_SETUP%"=="" (
     IF "%CYG_INSTALL_ARCH%"=="i686" (
-        SET CYG_INSTALL_SETUP="../../setup-x86.exe"
+        SET CYG_INSTALL_SETUP="setup-x86.exe"
     ) ELSE (
-        IF "%CYG_INSTALL_ARCH%"=="x86_64" (SET CYG_INSTALL_SETUP="../../setup-x86_64.exe")
+        IF "%CYG_INSTALL_ARCH%"=="x86_64" (SET CYG_INSTALL_SETUP="setup-x86_64.exe")
     )
 ) 
 
