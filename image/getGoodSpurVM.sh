@@ -55,6 +55,23 @@ else
 			rm -f "$LATESTVM"
 		fi
 		VM=$VM/squeak;;
+	CYGWIN_NT*)
+		VOLUME="squeak.cog.spur_win32x86_$LATESTRELEASE"
+		LATESTVM="$VOLUME.zip"
+		VM=sqwin.$LATESTRELEASE
+		if [ ! -d $VM ]; then
+			URL="https://dl.bintray.com/opensmalltalk/vm/$LATESTVM"
+			echo Downloading $LATESTVM from $URL
+			if [ "$1" = -test ]; then
+				echo curl -L "$URL" -o "$LATESTVM"
+				exit
+			fi
+			echo curl -L "$URL" -o "$LATESTVM"
+			curl -L "$URL" -o "$LATESTVM"
+			unzip $LATESTVM -d sqwin.$LATESTRELEASE
+			rm -f $LATESTVM
+		fi
+		VM=sqwin.$LATESTRELEASE/SqueakConsole.exe;;
 	*)	echo do not know how to download a VM for your system 1>&2; exit 1
 	esac
 fi
