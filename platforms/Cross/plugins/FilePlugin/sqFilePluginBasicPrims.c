@@ -148,16 +148,26 @@ sqFileAtEnd(SQFile *f) {
 	 * set the eof-file-flag if required, but not advance the stream.
 	 */
 	sqInt status;
-	int   c;
+	int   fd;
 	FILE  *fp;
 
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
 	pentry(sqFileAtEnd);
 	fp = getFile(f);
-	status = ungetc(fgetc(fp), fp) == EOF && feof(fp);
-	if (ferror(fp))
-		interpreterProxy->primitiveFailForOSError(errno);
+	fd = fileno(fp);
+	/* Can't peek write-only streams */
+	if (fd == 1 || fd == 2)
+		status = false;
+	else if (f->isStdioStream)
+		/* We can't block waiting for interactive input */
+		status = feof(fp);
+	else if (!feof(fp)) {
+		status = ungetc(fgetc(fp), fp) == EOF && feof(fp);
+		if (ferror(fp))
+			interpreterProxy->primitiveFailForOSError(errno); }
+	else
+		status = true;
 	return pexit(status);
 }
 
