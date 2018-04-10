@@ -96,6 +96,7 @@ to fix this.
 2. cd to the VM configuration of your choice and run the mvm script, e.g.
 	cd buiild.macos64x64/squeak.cog.spur
 	./mvm -A
+	
 This will build CocoaFast.app, CocoaDebug.app and CocoaAssert.app applications
 (or maybe Squeak.app, SqueakAssert.app, SqueakDebug.app, Pharo.app,
  PharoAssert.app, PharoDebug.app, etc) containing the three VM configurations.
@@ -103,6 +104,9 @@ If the configuration includes the multi-threaded VM you can use mvm -S to make
 the single-threaded VMs, mvm -T to make the multi-threadeds in FastMT.app et al,
 and mvm -A to make them all.  mvm -d will make the Debug.app VM, etc.  mvm -?
 provides the gory details.
+
+In order to only build the production vm, you can launch the command:
+	./mvm -f
 
 Each build directory contains three files
 	plugins.int
