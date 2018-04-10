@@ -131,25 +131,27 @@ static squeakFileOffsetType getSize(SQFile *f)
 # define pfail() 0
 #endif
 
-sqInt
-sqFileAtEnd(SQFile *f) {
+sqInt sqFileAtEnd(SQFile *f) {
 	/* Return true if the file's read/write head is at the end of the file.
-	 * Fail and return errno if an error in the file i/o has been flagged.
 	 *
 	 * libc's end of file function, feof(), returns a flag that is set by
-	 * attempting to read past the end of the file.  I.e if the last character in
-	 * the file has been read, but not one more, feof() will return false.
+	 * attempting to read past the end of the file.  I.e if the last
+	 * character in the file has been read, but not one more, feof() will
+	 * return false.
 	 *
-	 * Smalltalk's #atEnd should return true as soon as the last character has
-	 * been read.
+	 * Smalltalk's #atEnd should return true as soon as the last character
+	 * has been read.
 	 *
-	 * To keep the expected behaviour of #atEnd, we can peek at the next 
-	 * character in the file using ungetc() & fgetc(), which will 
-	 * set the eof-file-flag if required, but not advance the stream.
+	 * We can keep the expected behaviour of #atEnd for streams other than
+	 * terminals by peeking for the next character in the file using
+	 * ungetc() & fgetc(), which will set the eof-file-flag if required,
+	 * but not advance the stream.
+	 *
+	 * Terminals / consoles use feof() only, which means that #atEnd
+	 * doesn't answer true until after the end-of-file character (Ctrl-D)
+	 * has been read.
 	 */
-	sqInt status;
-	int   fd;
-	FILE  *fp;
+	sqInt status; int   fd; FILE  *fp;
 
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
@@ -164,8 +166,14 @@ sqFileAtEnd(SQFile *f) {
 		status = feof(fp);
 	else if (!feof(fp)) {
 		status = ungetc(fgetc(fp), fp) == EOF && feof(fp);
+		/* Normally we should check if a file error has occurred.
+		 * But error checking isn't occurring anywhere else,
+		 * causing hard-to-trace failures here.
+		 * Revert to previous behaviour of ignoring errors.
 		if (ferror(fp))
-			interpreterProxy->primitiveFailForOSError(errno); }
+			interpreterProxy->primitiveFail();
+		 */
+		}
 	else
 		status = true;
 	return pexit(status);
