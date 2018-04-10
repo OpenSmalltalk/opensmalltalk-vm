@@ -16,7 +16,7 @@ manifest := #(	('http://source.squeak.org/FFI'					1	('FFI-Pools' 'FFI-Kernel'))
 				('http://www.squeaksource.com/Cryptography'		9	('CryptographyPlugins'  ))
 				('http://smalltalkhub.com/mc/Alistair/FileAttributesPlugin/main'		9	('FileAttributesPlugin'  ))
 				('http://ss3.gemstone.com/ss/AndreasSystemProfiler'	9	('AndreasProfiler'))
-				('http://www.squeaksource.com/Printf'			9	('Printf'))
+				('http://www.squeaksource.com/Printf'			5	('Printf'))
 				).
 
 load := (manifest collect:
