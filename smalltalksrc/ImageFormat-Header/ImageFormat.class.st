@@ -289,7 +289,7 @@ ImageFormat class >> generateCkFormatProgram: programName on: stream [
 				stream nextPutAll: elem asString.
 				false].
 			stream nextPutAll: '};'; cr;
-					tab; nextPutAll: 'if (strncmp(buf, ', b, ', ', v size asString, ') == 0) {'; cr;
+					tab; nextPutAll: 'if (memcmp(buf, ', b, ', ', v size asString, ') == 0) {'; cr;
 					tab; tab; nextPutAll: 'printf("%d\n", ', formatNumber, ');'; cr;
 					tab; tab; nextPutAll: 'exit(0);'; cr;
 					tab; nextPutAll: '}'; cr; tab; nextPutAll: '}'; cr]].
