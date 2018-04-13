@@ -241,15 +241,17 @@ Different linux distributions have different mechanisms for loading packages.
 Here are some examples:
 
 CentOS
-	sudo yum install cairo-devel
-	sudo yum install pango-devel
-	sudo yum install libuuid-devel
-	sudo yum install libX11-devel
-	sudo yum install mesa-libGL mesa-libGL-devel 
+	sudo yum install -y cairo-devel
+	sudo yum install -y pango-devel
+	sudo yum install -y libuuid-devel
+	sudo yum install -y libX11-devel
+	sudo yum install -y mesa-libGL-devel 
+	sudo yum install -y openssl-devel
+	sudo yum install -y cmake
+	sudo yum install -y gcc-c++
 N.B. if you get failures due to version conflicts try
 	sudo yum update
 and then retry.
-
 
 Ubuntu
 	sudo apt-get install uuid-dev libcairo2-dev libpango1.0-dev libgl1-mesa-dev libgl1-mesa-glx
