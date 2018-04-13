@@ -172,10 +172,16 @@ typedef struct VirtualMachine {
 	sqInt (*success)(sqInt aBoolean);
 	sqInt (*superclassOf)(sqInt classPointer);
 
+# if VM_PROXY_MINOR > 13
+	/* Reuse these now that Cog provides a production JIT. */
+	sqInt (*statNumGCs)(void);
+	sqInt (*stringForCString)(char *nullTerminatedCString);
+# else
 	/* InterpreterProxy methodsFor: 'compiler' */
 
 	CompilerHook *(*compilerHookVector)(void);
-	sqInt          (*setCompilerInitialized)(sqInt initFlag);
+	sqInt         (*setCompilerInitialized)(sqInt initFlag);
+# endif
 
 #if VM_PROXY_MINOR > 1
 
@@ -291,10 +297,18 @@ typedef struct VirtualMachine {
 #endif
 
 #if VM_PROXY_MINOR > 9
-  sqInt  (*methodArg)  (sqInt index);
+# if VM_PROXY_MINOR > 13 /* OS Errors available in primitives; easy return forms */
+  sqInt  (*methodReturnBool)(sqInt);
+  sqInt  (*methodReturnFloat)(double);
+  sqInt  (*methodReturnInteger)(sqInt);
+  sqInt  (*methodReturnString)(char *);
+#	define returnSelf() methodReturnValue(0)
+# else
+  sqInt  (*methodArg)  (sqInt index); /* These ended up never being used. */
   sqInt  (*objectArg)  (sqInt index);
   sqInt  (*integerArg) (sqInt index);
   double (*floatArg)   (sqInt index);
+# endif
   sqInt  (*methodReturnValue) (sqInt oop);
   sqInt  (*topRemappableOop)  (void);
 #endif
@@ -307,7 +321,7 @@ typedef struct VirtualMachine {
   sqInt	(*ownVM)   (sqInt threadIdAndFlags);
   void  (*addHighPriorityTickee)(void (*ticker)(void), unsigned periodms);
   void  (*addSynchronousTickee)(void (*ticker)(void), unsigned periodms, unsigned roundms);
-  usqLong (*utcMicroseconds)(void);
+  volatile usqLong (*utcMicroseconds)(void);
   void (*tenuringIncrementalGC)(void);
   sqInt (*isYoung) (sqInt anOop);
   sqInt (*isKindOfClass)(sqInt oop, sqInt aClass);
@@ -340,6 +354,10 @@ typedef struct VirtualMachine {
   sqInt (*isPinned)(sqInt objOop);
   sqInt (*pinObject)(sqInt objOop);
   sqInt (*unpinObject)(sqInt objOop);
+#endif
+
+#if VM_PROXY_MINOR > 13 /* OS Errors available in primitives; easy return forms (see above) */
+  sqInt  (*primitiveFailForOSError)(sqLong osErrorCode);
 #endif
 } VirtualMachine;
 

@@ -1,30 +1,78 @@
-#!/bin/bash -e
-# Sets the VM env var to the r3692 Cog Spur VM for the current platform.
-# will download and install the VM in this directory if necessary.
+#!/usr/bin/env bash
+set -e
 
-TAG=16.18.3692
-REV=3692
-LSBINDIR=5.0-3692
-URL=http://www.mirandabanda.org/files/Cog/VM/VM.r$REV/
+set +v
 
 . ./envvars.sh
 
-if [ "$1" = -vm -a -n "$2" -a -x "`which $2`" ]; then
+if [ "$1" = -vm -a -n "$2" -a -x "`which "$2"`" ]; then
 	VM="$2"
 else
-	case "$OS" in
-	Darwin) get_vm_from_tar \
-				CogSpur.app/Contents/MacOS/Squeak 97460b152803235de4b0c11333f0cf74 \
-				CogSpur.app-$TAG.tgz 38c190e78fff34760292d6a9da3a61b8
-			VM=CogSpur.app/Contents/MacOS/Squeak;;
-	Linux) get_vm_from_tar \
-			cogspurlinuxht/lib/squeak/$LSBINDIR/squeak 64cda56486bf7351de7a40f0389edfba \
-			cogspurlinuxht-$TAG.tgz 02948787583829d450d807afa910b178
-		VM=cogspurlinuxht/squeak;;
-	CYGWIN*) get_vm_from_zip \
-				cogspurwin/SqueakConsole.exe 247e1e7a6acbb71f350f838ddc88b361 \
-				cogspurwin-$TAG.zip 6a58964e6f69a6a379a5dcd73796207b
-		VM=cogspurwin/SqueakConsole.exe;;
-	*)  echo "don't know how to run Squeak on your system.  bailing out." 1>&2; exit 2
+	echo checking for latest 32-bit VM on bintray...
+	LATESTRELEASE=`curl -s -L "https://bintray.com/opensmalltalk/notifications" | grep 'has released version' | head -1 | sed 's/^.*[0-9]">\([0-9][0-9]*\).*$/\1/'`
+	if [ -z "$LATESTRELEASE" ]; then
+		echo "cannot find latest release on https://bintray.com/opensmalltalk/notifications" 1>&2
+		exit 1
+	fi
+	case $OS in
+	Darwin) 
+		VOLUME="squeak.cog.spur_macos32_x86_$LATESTRELEASE"
+		LATESTVM="$VOLUME.dmg"
+		VM=Squeak.$LATESTRELEASE.app
+		if [ ! -d $VM ]; then
+			URL="https://dl.bintray.com/opensmalltalk/vm/$LATESTVM"
+			echo Downloading $LATESTVM from $URL
+			if [ "$1" = -test ]; then
+				echo curl -L "$URL" -o "$LATESTVM"
+				exit
+			fi
+			curl -L "$URL" -o "$LATESTVM"
+			open $LATESTVM
+			while [ ! -d "/Volumes/$VOLUME/Squeak.app" ]; do sleep 1; done
+			rm -rf $VM
+			cp -Rp "/Volumes/$VOLUME/Squeak.app" $VM
+			eject "/Volumes/$VOLUME"
+		fi
+		VM=$VM/Contents/MacOS/Squeak;;
+	Linux) # This needs to be split by $CPU to work on RPi also
+		case $CPU in
+		i386|x86_64)	LATESTVM="squeak.cog.spur_linux32x86_$LATESTRELEASE.tar.gz";;
+		arm)			LATESTVM="squeak.cog.spur_linux32ARMv6_$LATESTRELEASE.tar.gz";;
+		*)	echo "Don't know what kind of machine you're running.  I have $CPU"
+			exit 1
+		esac
+		VM=sqlinux.$LATESTRELEASE
+		if [ ! -d $VM ]; then
+			echo Downloading $LATESTVM from bintray
+			URL="https://dl.bintray.com/opensmalltalk/vm/$LATESTVM"
+			if [ "$1" = -test ]; then
+				echo curl -L "$URL" -o "$LATESTVM"
+				exit
+			fi
+			curl -L "$URL" -o "$LATESTVM"
+			tar xzf "$LATESTVM"
+			mv sqcogspurlinuxht $VM
+			rm -f "$LATESTVM"
+		fi
+		VM=$VM/squeak;;
+	CYGWIN_NT*)
+		VOLUME="squeak.cog.spur_win32x86_$LATESTRELEASE"
+		LATESTVM="$VOLUME.zip"
+		VM=sqwin.$LATESTRELEASE
+		if [ ! -d $VM ]; then
+			URL="https://dl.bintray.com/opensmalltalk/vm/$LATESTVM"
+			echo Downloading $LATESTVM from $URL
+			if [ "$1" = -test ]; then
+				echo curl -L "$URL" -o "$LATESTVM"
+				exit
+			fi
+			echo curl -L "$URL" -o "$LATESTVM"
+			curl -L "$URL" -o "$LATESTVM"
+			unzip $LATESTVM -d sqwin.$LATESTRELEASE
+			rm -f $LATESTVM
+		fi
+		VM=sqwin.$LATESTRELEASE/SqueakConsole.exe;;
+	*)	echo do not know how to download a VM for your system 1>&2; exit 1
 	esac
 fi
+echo latest 32-bit VM on $OS is $VM

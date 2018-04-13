@@ -1,5 +1,5 @@
 #############################################################################
-# Compilations flags & paths for Mac OS X
+# Compilation flags & paths for Mac OS X
 #
 # These are derived from Xcode v 6.2 for Apple LLVM version 6.0 (clang-600.0.57)
 
@@ -7,7 +7,7 @@ XCODE:=/Applications/Xcode.app/Contents/Developer
 XCUB:=$(XCODE)/usr/bin
 SDKsDIR:=$(XCODE)/Platforms/MacOSX.platform/Developer/SDKs
 #Build the oldest SDK installed
-SDKs:=MacOSX10.9.sdk MacOSX10.10.sdk MacOSX10.11.sdk MacOSX10.12.sdk
+SDKs:=MacOSX10.9.sdk MacOSX10.10.sdk MacOSX10.11.sdk MacOSX10.12.sdk MacOSX10.13.sdk
 SDK:=$(firstword $(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
 TARGET_ARCH:=i386
 TARGET_VERSION_MIN:=10.7
@@ -37,13 +37,8 @@ CFLAGS:=$(CFLAGS) -DBUILD_FOR_OSX=1 \
 		-isysroot $(SDK) \
 		-include $(PLATDIR)/iOS/vm/SqueakPureObjc_Prefix.pch
 
-BFLAGS:=-arch $(TARGET_ARCH) \
-		-bundle \
-		-isysroot $(SDK)
-
-DYFLAGS:=-arch $(TARGET_ARCH) \
-		-shared \
-		-isysroot $(SDK)
+BFLAGS:=-arch $(TARGET_ARCH) -bundle -isysroot $(SDK) $(EXTRABFLAGS)
+DYFLAGS:=-arch $(TARGET_ARCH) -shared -isysroot $(SDK) $(EXTRADYFLAGS)
 
 WARNINGS:= -Wno-missing-field-initializers -Wno-missing-prototypes \
 	-Wno-missing-braces -Wparentheses -Wswitch -Wno-unused-function \

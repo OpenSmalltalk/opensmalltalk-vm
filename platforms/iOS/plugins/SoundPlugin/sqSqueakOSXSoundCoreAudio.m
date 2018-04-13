@@ -54,6 +54,10 @@
 	self.inputBuffers = calloc((unsigned) kNumberOfBuffers,sizeof(AudioQueueBufferRef));
 	soundOutQueue = [Queue new];
 	soundInQueue = [Queue new];
+	numDevices = 0;
+	deviceIDs = nil;
+	deviceNames = nil;
+	deviceTypes = nil;
 	return 1;
 }
 

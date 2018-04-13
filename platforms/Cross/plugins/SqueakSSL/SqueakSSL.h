@@ -6,10 +6,11 @@
 /* Version 1: Inital version                              */
 /* Version 2: SNI support by Levente Uzonyi and help by   */
 /*            Marcel Taeumel and Tobias Pape              */
+/* Version 3: Verification support in macOS               */
 /**********************************************************/
 
 
-#define SQSSL_VERSION 2
+#define SQSSL_VERSION 3
 
 /*************************/
 /* SSL connection states */

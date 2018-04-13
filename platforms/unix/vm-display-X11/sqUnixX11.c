@@ -160,6 +160,8 @@
 # define xResName	"squeak"
 #endif
 
+# define VMOPTION(arg) "-"arg
+
 char		*displayName= 0;	/* name of display, or 0 for $DISPLAY */
 Display		*stDisplay= null;	/* Squeak display */
 int		 isConnectedToXServer=0;/* True when connected to an X server */
@@ -1326,32 +1328,16 @@ static sqInt display_clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqIn
   return clipSize;
 }
 
-/* a modified copy of fullDisplayUpdate() that redraws
-   only the damaged parts of the window according to each
-   expose event on the queue.
-   Note: if the format of Form or Bitmap changes, or if
-   the special object index of Display is changed, this
-   version of the code WILL FAIL!  Otherwise it is to be
-   preferred.
+/* A modified copy of fullDisplayUpdate() that redraws only the damaged
+ * parts of the window according to each expose event on the queue.
+ * Note: if the format of Form or Bitmap changes, this version of the
+ * code WILL FAIL!  Otherwise it is to be preferred.
 */
 static void redrawDisplay(int l, int r, int t, int b)
 {
-  extern sqInt displayObject(void);
-  extern sqInt isPointers(sqInt);
-  extern sqInt lengthOf(sqInt);
-  extern sqInt fetchPointerofObject(sqInt, sqInt);
-
-  sqInt displayObj= displayObject();
-
-  if (isPointers(displayObj) && lengthOf(displayObj) >= 4)
-    {
-      sqInt dispBits= fetchPointerofObject(0, displayObj);
-      sqInt w= fetchIntegerofObject(1, displayObj);
-      sqInt h= fetchIntegerofObject(2, displayObj);
-      sqInt d= fetchIntegerofObject(3, displayObj);
-      sqInt dispBitsIndex= dispBits + BaseHeaderSize;
-      ioShowDisplay(dispBitsIndex, w, h, d, (sqInt)l, (sqInt)r, (sqInt)t, (sqInt)b);
-    }
+  if (displayBits)
+      ioShowDisplay((sqInt)displayBits, displayWidth, displayHeight, displayDepth,
+					(sqInt)l, (sqInt)r, (sqInt)t, (sqInt)b);
 }
 
 
@@ -6891,6 +6877,50 @@ static void display_ioGLsetBufferRect(glRenderer *r, sqInt x, sqInt y, sqInt w, 
 # include "B3DAcceleratorPlugin.h"
 # include "sqOpenGLRenderer.h"
 
+/* Local copy of code in sqOpenGLRenderer.c/.h so as not to conflict with
+ * B3DAcceleratorPlugin.
+ */
+#undef DPRINTF3D
+#define DPRINTF3D(v,a) do { if ((v) <= verboseLevel) myPrint3Dlog a; } while (0)
+
+static FILE *logfile = 0;
+static void
+closelog(void)
+{ if (logfile) (void)fclose(logfile); }
+
+static int
+myPrint3Dlog(char *fmt, ...)
+{	va_list args;
+
+	if (!logfile) {
+		char *slash;
+		char fileName[PATH_MAX+1];
+#if !defined(SQUEAK_BUILTIN_PLUGIN)
+		char *(*getImageName)();
+		extern struct VirtualMachine *interpreterProxy;
+
+		getImageName = interpreterProxy->ioLoadFunctionFrom("getImageName", "");
+		if (!getImageName)
+			strcpy(fileName,"./");
+		else
+#endif
+		strcpy(fileName,getImageName());
+		slash = strrchr(fileName,'/');
+		strcpy(slash ? slash + 1 : fileName, "Squeak3D.log");
+		logfile = fopen(fileName, "at");
+		if (!logfile) {
+			perror("fopen Squeak3D.log");
+			return 0;
+		}
+		atexit(closelog);
+	}
+	va_start(args,fmt);
+	vfprintf(logfile, fmt, args);
+	va_end(args);
+	if (forceFlush) /* from sqOpenGLRenderer.h */
+		fflush(logfile);
+}
+
 # include <GL/gl.h>
 # include <GL/glx.h>
 
@@ -6932,12 +6962,12 @@ static sqInt display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w
   _renderWindow(r)= 0;
   _renderContext(r)= 0;
 
-  DPRINTF3D(3, (fp, "---- Creating new renderer ----\r\r"));
+  DPRINTF3D(3, ("---- Creating new renderer ----\r\r"));
 
   /* sanity checks */
   if (w < 0 || h < 0)
     {
-      DPRINTF3D(1, (fp, "Negative extent (%i@%i)!\r", w, h));
+      DPRINTF3D(1, ("Negative extent (%i@%i)!\r", w, h));
       goto fail;
     }
   /* choose visual and create context */
@@ -6953,20 +6983,20 @@ static sqInt display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w
       }
     if (!visinfo)
       {
-	DPRINTF3D(1, (fp, "No OpenGL visual found!\r"));
+	DPRINTF3D(1, ("No OpenGL visual found!\r"));
 	goto fail;
       }
-    DPRINTF3D(3, (fp, "\r#### Selected GLX visual ID 0x%lx ####\r", visinfo->visualid));
+    DPRINTF3D(3, ("\r#### Selected GLX visual ID 0x%lx ####\r", visinfo->visualid));
     if (verboseLevel >= 3)
       printVisual(visinfo);
 
     /* create context */
     if (!(_renderContext(r)= glXCreateContext(stDisplay, visinfo, 0, GL_TRUE)))
       {
-	DPRINTF3D(1, (fp, "Creating GLX context failed!\r"));
+	DPRINTF3D(1, ("Creating GLX context failed!\r"));
 	goto fail;
       }
-    DPRINTF3D(3, (fp, "\r#### Created GLX context ####\r"  ));
+    DPRINTF3D(3, ("\r#### Created GLX context ####\r"  ));
 
     /* create window */
     {
@@ -6987,12 +7017,12 @@ static sqInt display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w
 						    visinfo->depth, InputOutput, visinfo->visual, 
 						    valuemask, &attributes)))
 	{
-	  DPRINTF3D(1, (fp, "Failed to create client window\r"));
+	  DPRINTF3D(1, ("Failed to create client window\r"));
 	  goto fail;
 	}
       XMapWindow(stDisplay, renderWindow(r));
     }
-    DPRINTF3D(3, (fp, "\r#### Created window ####\r"  ));
+    DPRINTF3D(3, ("\r#### Created window ####\r"  ));
     XFree(visinfo);
     visinfo= 0;
   }
@@ -7000,14 +7030,14 @@ static sqInt display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w
   /* Make the context current */
   if (!glXMakeCurrent(stDisplay, renderWindow(r), renderContext(r)))
     {
-      DPRINTF3D(1, (fp, "Failed to make context current\r"));
+      DPRINTF3D(1, ("Failed to make context current\r"));
       goto fail;
     }
-  DPRINTF3D(3, (fp, "\r### Renderer created! ###\r"));
+  DPRINTF3D(3, ("\r### Renderer created! ###\r"));
   return 1;
 
  fail:
-  DPRINTF3D(1, (fp, "OpenGL initialization failed\r"));
+  DPRINTF3D(1, ("OpenGL initialization failed\r"));
   if (visinfo)
     XFree(visinfo);
   if (renderContext(r))
@@ -7037,7 +7067,7 @@ static sqInt display_ioGLmakeCurrentRenderer(glRenderer *r)
     {
       if (!glXMakeCurrent(stDisplay, renderWindow(r), renderContext(r)))
 	{
-	  DPRINTF3D(1, (fp, "Failed to make context current\r"));
+	  DPRINTF3D(1, ("Failed to make context current\r"));
 	  return 0;
 	}
     }
@@ -7077,13 +7107,13 @@ static void printVisual(XVisualInfo* visinfo)
       glXGetConfig(stDisplay, visinfo, GLX_DEPTH_SIZE,    &depth);
 
       if (slow != GLX_SLOW_CONFIG)
-        { DPRINTF3D(3, (fp,"===> OpenGL visual\r")) }
+        DPRINTF3D(3, ("===> OpenGL visual\r"));
       else
-        { DPRINTF3D(3, (fp,"---> slow OpenGL visual\r")) }
+        DPRINTF3D(3, ("---> slow OpenGL visual\r"));
 
-      DPRINTF3D(3, (fp,"rgbaBits = %i+%i+%i+%i\r", red, green, blue, alpha));
-      DPRINTF3D(3, (fp,"stencilBits = %i\r", stencil));
-      DPRINTF3D(3, (fp,"depthBits = %i\r", depth));
+      DPRINTF3D(3, ("rgbaBits = %i+%i+%i+%i\r", red, green, blue, alpha));
+      DPRINTF3D(3, ("stencilBits = %i\r", stencil));
+      DPRINTF3D(3, ("depthBits = %i\r", depth));
     }
   glGetError();	/* reset error flag */
 }
@@ -7097,7 +7127,7 @@ static void listVisuals(void)
 
   for (i= 0; i < nvisuals; i++)
     {
-      DPRINTF3D(3, (fp,"#### Checking pixel format (visual ID 0x%lx)\r", visinfo[i].visualid));
+      DPRINTF3D(3, ("#### Checking pixel format (visual ID 0x%lx)\r", visinfo[i].visualid));
       printVisual(&visinfo[i]);
     }
   XFree(visinfo);
@@ -7381,42 +7411,42 @@ SqDisplayDefine(X11);
 static void display_printUsage(void)
 {
   printf("\nX11 <option>s:\n");
-  printf("  -browserWindow <wid>  run in window <wid>\n");
-  printf("  -browserPipes <r> <w> run as Browser plugin using descriptors <r> <w>\n");
-  printf("  -cmdmod <n>           map Mod<n> to the Command key\n");
-  printf("  -compositioninput     enable overlay window for composed characters\n");
-  printf("  -display <dpy>        display on <dpy> (default: $DISPLAY)\n");
-  printf("  -fullscreen           occupy the entire screen\n");
-  printf("  -fullscreenDirect     simple window manager support for fullscreen\n");
+  printf("  "VMOPTION("browserWindow")" <wid>  run in window <wid>\n");
+  printf("  "VMOPTION("browserPipes")" <r> <w> run as Browser plugin using descriptors <r> <w>\n");
+  printf("  "VMOPTION("cmdmod")" <n>           map Mod<n> to the Command key\n");
+  printf("  "VMOPTION("compositioninput")"     enable overlay window for composed characters\n");
+  printf("  "VMOPTION("display")" <dpy>        display on <dpy> (default: $DISPLAY)\n");
+  printf("  "VMOPTION("fullscreen")"           occupy the entire screen\n");
+  printf("  "VMOPTION("fullscreenDirect")"     simple window manager support for fullscreen\n");
 #if (USE_X11_GLX)
-  printf("  -glxdebug <n>         set GLX debug verbosity level to <n>\n");
+  printf("  "VMOPTION("glxdebug")" <n>         set GLX debug verbosity level to <n>\n");
 #endif
-  printf("  -headless             run in headless (no window) mode\n");
-  printf("  -iconic               start up iconified\n");
-  printf("  -lazy                 go to sleep when main window unmapped\n");
-  printf("  -mapdelbs             map Delete key onto Backspace\n");
-  printf("  -nointl               disable international keyboard support\n");
-  printf("  -notitle              disable the " xResName " window title bar\n");
-  printf("  -title <t>            use t as the " xResName " window title instead of the image name\n");
-  printf("  -ldtoms <n>           launch drop timeout milliseconds\n");
-  printf("  -noxdnd               disable X drag-and-drop protocol support\n");
-  printf("  -optmod <n>           map Mod<n> to the Option key\n");
+  printf("  "VMOPTION("headless")"             run in headless (no window) mode\n");
+  printf("  "VMOPTION("iconic")"               start up iconified\n");
+  printf("  "VMOPTION("lazy")"                 go to sleep when main window unmapped\n");
+  printf("  "VMOPTION("mapdelbs")"             map Delete key onto Backspace\n");
+  printf("  "VMOPTION("nointl")"               disable international keyboard support\n");
+  printf("  "VMOPTION("notitle")"              disable the " xResName " window title bar\n");
+  printf("  "VMOPTION("title")" <t>            use t as the " xResName " window title instead of the image name\n");
+  printf("  "VMOPTION("ldtoms")" <n>           launch drop timeout milliseconds\n");
+  printf("  "VMOPTION("noxdnd")"               disable X drag-and-drop protocol support\n");
+  printf("  "VMOPTION("optmod")" <n>           map Mod<n> to the Option key\n");
 #if defined(SUGAR)
-  printf("  -sugarBundleId <id>   set window property _SUGAR_BUNDLE_ID to <id>\n");
-  printf("  -sugarActivityId <id> set window property _SUGAR_ACTIVITY_ID to <id>\n");
+  printf("  "VMOPTION("sugarBundleId")" <id>   set window property _SUGAR_BUNDLE_ID to <id>\n");
+  printf("  "VMOPTION("sugarActivityId")" <id> set window property _SUGAR_ACTIVITY_ID to <id>\n");
 #endif
-  printf("  -swapbtn              swap yellow (middle) and blue (right) buttons\n");
-  printf("  -xasync               don't serialize display updates\n");
+  printf("  "VMOPTION("swapbtn")"              swap yellow (middle) and blue (right) buttons\n");
+  printf("  "VMOPTION("xasync")"               don't serialize display updates\n");
 #if defined(USE_XICFONT_OPTION)
-  printf("  -xicfont <f>          use font set <f> for the input context overlay\n");
+  printf("  "VMOPTION("xicfont")" <f>          use font set <f> for the input context overlay\n");
 #endif
-  printf("  -xshm                 use X shared memory extension\n");
+  printf("  "VMOPTION("xshm")"                 use X shared memory extension\n");
 }
 
 static void display_printUsageNotes(void)
 {
   printf("  Using `unix:0' for <dpy> may improve local display performance.\n");
-  printf("  -xshm only works when " xResName " is running on the X server host.\n");
+  printf("  "VMOPTION("xshm")" only works when " xResName " is running on the X server host.\n");
 }
 
 
@@ -7466,47 +7496,47 @@ static int display_parseArgument(int argc, char **argv)
   int n= 1;
   char *arg= argv[0];
 
-  if      (!strcmp(arg, "-headless"))	headless= 1;
+  if      (!strcmp(arg, VMOPTION("headless")))	headless= 1;
 #if defined(USE_XSHM)
-  else if (!strcmp(arg, "-xshm"))	useXshm= 1;
-  else if (!strcmp(arg, "-xasync"))	asyncUpdate= 1;
+  else if (!strcmp(arg, VMOPTION("xshm")))	useXshm= 1;
+  else if (!strcmp(arg, VMOPTION("xasync")))	asyncUpdate= 1;
 #else
-  else if (!strcmp(arg, "-xshm") ||
-           !strcmp(arg, "-xasync"))	fprintf(stderr, "ignoring %s (not supported by this VM)\n", arg);
+  else if (!strcmp(arg, VMOPTION("xshm")) ||
+           !strcmp(arg, VMOPTION("xasync")))	fprintf(stderr, "ignoring %s (not supported by this VM)\n", arg);
 #endif
-  else if (!strcmp(arg, "-lazy"))	sleepWhenUnmapped= 1;
-  else if (!strcmp(arg, "-notitle"))	noTitle= 1;
-  else if (!strcmp(arg, "-mapdelbs"))	mapDelBs= 1;
-  else if (!strcmp(arg, "-swapbtn"))	swapBtn= 1;
-  else if (!strcmp(arg, "-fullscreen"))	fullScreen= 1;
-  else if (!strcmp(arg, "-fullscreenDirect"))	fullScreenDirect= 1;
-  else if (!strcmp(arg, "-iconic"))	iconified= 1;
+  else if (!strcmp(arg, VMOPTION("lazy")))	sleepWhenUnmapped= 1;
+  else if (!strcmp(arg, VMOPTION("notitle")))	noTitle= 1;
+  else if (!strcmp(arg, VMOPTION("mapdelbs")))	mapDelBs= 1;
+  else if (!strcmp(arg, VMOPTION("swapbtn")))	swapBtn= 1;
+  else if (!strcmp(arg, VMOPTION("fullscreen")))	fullScreen= 1;
+  else if (!strcmp(arg, VMOPTION("fullscreenDirect")))	fullScreenDirect= 1;
+  else if (!strcmp(arg, VMOPTION("iconic")))	iconified= 1;
 #if !defined (INIT_INPUT_WHEN_KEY_PRESSED)
-  else if (!strcmp(arg, "-nointl"))	initInput= initInputNone;
+  else if (!strcmp(arg, VMOPTION("nointl")))	initInput= initInputNone;
 #else
-  else if (!strcmp(arg, "-nointl"))	x2sqKey= x2sqKeyPlain;
+  else if (!strcmp(arg, VMOPTION("nointl")))	x2sqKey= x2sqKeyPlain;
 #endif
-  else if (!strcmp(arg, "-compositioninput"))
+  else if (!strcmp(arg, VMOPTION("compositioninput")))
     {
       compositionInput= 1;
       x2sqKey= x2sqKeyCompositionInput;
       initInput= initInputI18n;
     }
-  else if (!strcmp(arg, "-noxdnd"))	useXdnd= 0;
+  else if (!strcmp(arg, VMOPTION("noxdnd")))	useXdnd= 0;
   else if (argv[1])	/* option requires an argument */
     {
       n= 2;
-      if      (!strcmp(arg, "-display")) displayName= argv[1];
-      else if (!strcmp(arg, "-optmod"))	 optMapIndex= Mod1MapIndex + atoi(argv[1]) - 1;
-      else if (!strcmp(arg, "-cmdmod"))  cmdMapIndex= Mod1MapIndex + atoi(argv[1]) - 1;
+      if      (!strcmp(arg, VMOPTION("display"))) displayName= argv[1];
+      else if (!strcmp(arg, VMOPTION("optmod")))	 optMapIndex= Mod1MapIndex + atoi(argv[1]) - 1;
+      else if (!strcmp(arg, VMOPTION("cmdmod")))  cmdMapIndex= Mod1MapIndex + atoi(argv[1]) - 1;
 #    if defined(SUGAR)
-      else if (!strcmp(arg, "-sugarBundleId"))   sugarBundleId= argv[1];
-      else if (!strcmp(arg, "-sugarActivityId")) sugarActivityId= argv[1];
+      else if (!strcmp(arg, VMOPTION("sugarBundleId")))   sugarBundleId= argv[1];
+      else if (!strcmp(arg, VMOPTION("sugarActivityId"))) sugarActivityId= argv[1];
 #    endif
 #    if defined(USE_XICFONT_OPTION)
-      else if (!strcmp(arg, "-xicfont")) inputFontStr= argv[1];  
+      else if (!strcmp(arg, VMOPTION("xicfont"))) inputFontStr= argv[1];
 #    endif
-      else if (!strcmp(arg, "-browserWindow"))
+      else if (!strcmp(arg, VMOPTION("browserWindow")))
 	{
 	  sscanf(argv[1], "%lu", (unsigned long *)&browserWindow);
 	  if (browserWindow == 0)
@@ -7515,7 +7545,7 @@ static int display_parseArgument(int argc, char **argv)
 	      exit(1);
 	    }
 	}
-      else if (!strcmp(arg, "-browserPipes"))
+      else if (!strcmp(arg, VMOPTION("browserPipes")))
 	{
 	  if (!argv[2]) return 0;
 	  sscanf(argv[1], "%i", &browserPipes[0]);
@@ -7536,13 +7566,13 @@ static int display_parseArgument(int argc, char **argv)
 	  return 3;
 	}
 #    if (USE_X11_GLX)
-      else if (!strcmp(arg, "-glxdebug"))
+      else if (!strcmp(arg, VMOPTION("glxdebug")))
 	{
 	  sscanf(argv[1], "%d", &verboseLevel);
 	}
 #    endif
-      else if (!strcmp(arg, "-title")) defaultWindowLabel = argv[1];
-      else if (!strcmp(arg, "-ldtoms")) launchDropTimeoutMsecs = atol(argv[1]);
+      else if (!strcmp(arg, VMOPTION("title"))) defaultWindowLabel = argv[1];
+      else if (!strcmp(arg, VMOPTION("ldtoms"))) launchDropTimeoutMsecs = atol(argv[1]);
       else
 	n= 0;	/* not recognised */
     }

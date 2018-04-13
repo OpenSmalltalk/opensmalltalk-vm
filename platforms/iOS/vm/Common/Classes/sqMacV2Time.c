@@ -146,7 +146,7 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds) {
 	extern sqInt setInterruptCheckCounter(sqInt value);  //This is a VM Callback
 
 	setInterruptCheckCounter(0);
-	now = ioMSecs();
+	now = ioMicroMSecs();
 	next = getNextWakeupTick();
 	
 	/*BUG??? what if clock wraps? */

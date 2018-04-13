@@ -766,7 +766,7 @@ primitivePluginRequestFileHandle(void) {
 	   folder will be--it's folder might even be user-name dependent. sqFileOpen() will
 	   only allow opening files within the sandbox, which would be better. Here's the
 	   sandbox-safe alternative:
-		  sqFileOpen(filePtr, (int) fileName, strlen(fileName), false);
+		  sqFileOpen(filePtr, fileName, strlen(fileName), false);
 	*/
 	OpenFileReadOnly(filePtr, fileName);
 
@@ -1033,22 +1033,12 @@ void OpenFileReadOnly(SQFile *f, char *MacfileName) {
 
 	if (f->file == NULL) {
 		f->sessionID = 0;
-		f->fileSize = 0;
 		interpreterProxy->success(false);
 		return;
 	} else {
 		extern int thisSession;  /* from sqFilePrims.c: */
 
 		f->sessionID = thisSession;
-		/* compute and cache file size */
-		fseek(f->file, 0, SEEK_END);
-		{
-		  squeakFileOffsetType size=ftello(f->file);
-		  void *in= (void *)&size;
-		  void *out= (void *)&f->fileSize;
-		  memcpy(out, in, sizeof(squeakFileOffsetType));
-		}
-		fseek(f->file, 0, SEEK_SET);
 	}
 	f->lastOp = 0;
 }

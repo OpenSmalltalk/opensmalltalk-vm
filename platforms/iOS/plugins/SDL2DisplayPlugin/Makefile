@@ -1,4 +1,4 @@
 THIRDPARTYLIBS:=libsdl2
-include ../third-party/libsdl2/Makefile.lib
+include ../third-party/Makefile.libsdl2
 
 include ../common/Makefile.plugin

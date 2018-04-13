@@ -358,7 +358,7 @@
 	<key>CFBundleIconFile</key>
 	<string>Squeak.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.squeak.Squeak$(VM_MONIKER)</string>
+	<string>$(VM_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>

@@ -53,7 +53,6 @@ extern struct VirtualMachine *interpreterProxy;
     typedef struct {
 	  int			 sessionID;	(* ikp: must be first *)
 	  void			*file;
-	  squeakFileOffsetType	 fileSize;	(* 64-bits we hope. *)
 	  char			 writable;
 	  char			 lastOp; (* 0 = uncommitted, 1 = read, 2 = write *)
 	  char			 lastChar;
@@ -212,6 +211,83 @@ sqInt sqFileOpen(SQFile *f, char* fileNameIndex, sqInt fileNameSize, sqInt write
   return 1;
 }
 
+sqInt sqFileOpenNew(SQFile *f, char* fileNameIndex, sqInt fileNameSize, sqInt* exists) {
+  HANDLE h;
+  WCHAR *win32Path = NULL;
+
+  *exists = false;
+  /* convert the file name into a null-terminated C string */
+  ALLOC_WIN32_PATH(win32Path, fileNameIndex, fileNameSize);
+
+  /* test for case duplicates using hasCaseSensitiveDuplicate(), even though
+     CreateFileW() with CREATE_NEW should fail if any exist, so if
+     hasCaseSensitiveDuplicate() treats some paths as duplicates that
+     CreateFileW() doesn't, sqFileOpenNew() will fail like sqFileOpen() would
+   */
+  if(hasCaseSensitiveDuplicate(win32Path)) {
+    f->sessionID = 0;
+    FAIL();
+  }
+  h = CreateFileW(win32Path,
+		  (GENERIC_READ | GENERIC_WRITE),
+		  FILE_SHARE_READ,
+		  NULL, /* No security descriptor */
+		  CREATE_NEW, /* Only create and open if it doesn't exist */
+		  FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+		  NULL /* No template */);
+  if(h == INVALID_HANDLE_VALUE) {
+    f->sessionID = 0;
+    if (GetLastError() == ERROR_FILE_EXISTS)
+      *exists = true;
+    FAIL();
+  } else {
+    f->sessionID = thisSession;
+    f->file = (HANDLE)h;
+    f->writable = true;
+    AddHandleToTable(win32Files, h);
+  }
+  return 1;
+}
+
+sqInt
+sqConnectToFileDescriptor(SQFile *sqFile, int fd, sqInt writeFlag)
+{
+	/*
+	 * Open the file with the supplied file descriptor in binary mode.
+	 *
+	 * writeFlag determines whether the file is read-only or writable
+	 * and must be compatible with the existing access.
+	 * sqFile is populated with the file information.
+	 * Smalltalk is reponsible for handling character encoding and 
+	 * line ends.
+	 */
+	HANDLE file = _fdopen(fd, writeFlag ? "wb" : "rb");
+	if (!file)
+		return interpreterProxy->success(false);
+	return sqConnectToFile(sqFile, file, writeFlag);
+}
+
+sqInt
+sqConnectToFile(SQFile *sqFile, void *file, sqInt writeFlag)
+{
+	/*
+	 * Populate the supplied SQFile structure with the supplied FILE.
+	 *
+	 * writeFlag indicates whether the file is read-only or writable
+	 * and must be compatible with the existing access.
+	 */
+	sqFile->file = (HANDLE)file;
+	AddHandleToTable(win32Files, file);
+	/* setSize(sqFile, 0); */
+	sqFile->sessionID = thisSession;
+	sqFile->lastOp = 0; /* Unused on Win32 */
+	sqFile->writable = writeFlag;
+	return 1;
+}
+
+
+
+
 /*
  * Fill-in files with handles for stdin, stdout and seterr as available and
  * answer a bit-mask of the availability, 1 corresponding to stdin, 2 to stdout
@@ -224,7 +300,6 @@ sqFileStdioHandlesInto(SQFile files[3])
 
 	files[0].sessionID = thisSession;
 	files[0].file = GetStdHandle(STD_INPUT_HANDLE);
-	files[0].fileSize = 0;
 	files[0].writable = false;
 	files[0].lastOp = 0; /* unused on win32 */
 	files[0].isStdioStream = GetConsoleMode(files[0].file, &mode) != 0;
@@ -232,7 +307,6 @@ sqFileStdioHandlesInto(SQFile files[3])
 
 	files[1].sessionID = thisSession;
 	files[1].file = GetStdHandle(STD_OUTPUT_HANDLE);
-	files[1].fileSize = 0;
 	files[1].writable = true;
 	files[1].lastOp = 0; /* unused on win32 */
 	files[1].isStdioStream = GetConsoleMode(files[1].file, &mode) != 0;
@@ -240,7 +314,6 @@ sqFileStdioHandlesInto(SQFile files[3])
 
 	files[2].sessionID = thisSession;
 	files[2].file = GetStdHandle(STD_ERROR_HANDLE);
-	files[2].fileSize = 0;
 	files[2].writable = true;
 	files[2].lastOp = 0; /* unused on win32 */
 	files[2].isStdioStream = GetConsoleMode(files[2].file, &mode) != 0;
@@ -266,7 +339,7 @@ size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t st
   else
     ReadFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count,
              &dwReallyRead, NULL);
-  return (int)dwReallyRead;
+  return dwReallyRead;
 }
 
 sqInt sqFileRenameOldSizeNewSize(char* oldNameIndex, sqInt oldNameSize, char* newNameIndex, sqInt newNameSize)
@@ -358,9 +431,9 @@ size_t sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t s
   else
     WriteFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex + startIndex), count, &dwReallyWritten, NULL);
   
-  if ((int)dwReallyWritten != count)
+  if (dwReallyWritten != count)
     FAIL();
-  return (int) dwReallyWritten;
+  return dwReallyWritten;
 }
 
 /***************************************************************************/
@@ -418,7 +491,7 @@ squeakFileOffsetType sqImageFilePosition(sqImageFile h)
 size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h)
 {
   DWORD dwReallyRead;
-  int position;
+  squeakFileOffsetType position;
 	
   position = sqImageFilePosition(h);
   ReadFile((HANDLE)(h-1), (LPVOID) ptr, count*sz, &dwReallyRead, NULL);
@@ -429,7 +502,7 @@ size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h)
     sqImageFileSeek(h, position);
     ReadFile((HANDLE)(h-1), (LPVOID) ptr, count*sz, &dwReallyRead, NULL);
   }
-  return (int)(dwReallyRead / sz);
+  return (dwReallyRead / sz);
 }
 
 squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos)

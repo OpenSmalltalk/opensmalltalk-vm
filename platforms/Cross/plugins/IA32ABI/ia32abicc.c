@@ -8,7 +8,7 @@
 /* null if compiled on other than x86, to get around gnu make bugs or
  * misunderstandings on our part.
  */
-#if i386|i486|i586|i686
+#if i386|i486|i586|i686|__i386__|__i486__|__i586__|__i686__
 
 #if defined(_MSC_VER) || defined(__MINGW32__)
 # include "windows.h" /* for GetSystemInfo & VirtualAlloc */
@@ -53,14 +53,14 @@ struct VirtualMachine* interpreterProxy;
 # define alloca _alloca
 #endif
 #if __GNUC__
-# define setsp(sp) asm volatile ("movl %0,%%esp" : : "m"(sp))
-# define getsp() ({ void *sp; asm volatile ("movl %%esp,%0" : "=r"(sp) : ); sp;})
+# define setsp(sp) __asm__ volatile ("movl %0,%%esp" : : "m"(sp))
+# define getsp() ({ void *sp; __asm__ volatile ("movl %%esp,%0" : "=r"(sp) : ); sp;})
 #endif
 #if __APPLE__ && __MACH__ && __i386__
 # define STACK_ALIGN_BYTES 16
 #elif __linux__ && __i386__
 # define STACK_ALIGN_BYTES 16
-#elif defined(WIN32) && __SSE2__
+#elif defined(_WIN32) && __SSE2__
 /* using sse2 instructions requires 16-byte stack alignment but on win32 there's
  * no guarantee that libraries preserve alignment so compensate on callback.
  */
@@ -183,7 +183,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 # if _MSC_VER
 		_asm sub esp, dword ptr offset;
 # elif __GNUC__
-		asm("sub %0,%%esp" : : "m"(offset));
+		__asm__ ("sub %0,%%esp" : : "m"(offset));
 # else
 #  error need to subtract offset from esp
 # endif
@@ -223,7 +223,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 #if _MSC_VER
 				_asm mov edx, dword ptr vhigh;
 #elif __GNUC__
-				asm("mov %0,%%edx" : : "m"(vhigh));
+				__asm__ ("mov %0,%%edx" : : "m"(vhigh));
 #else
 # error need to load edx with vmcc.rvs.valleint64.high on this compiler
 #endif
@@ -235,7 +235,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 #if _MSC_VER
 				_asm fld qword ptr valflt64;
 #elif __GNUC__
-				asm("fldl %0" : : "m"(valflt64));
+				__asm__ ("fldl %0" : : "m"(valflt64));
 #else
 # error need to load %f0 with vmcc.rvs.valflt64 on this compiler
 #endif
@@ -252,7 +252,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 }
 
 /*
- * Thunk allocation support.  Since thunks must be exectuable and some OSs
+ * Thunk allocation support.  Since thunks must be executable and some OSs
  * may not provide default execute permission on memory returned by malloc
  * we must provide memory that is guaranteed to be executable.  The abstraction
  * is to answer an Alien that references an executable piece of memory that

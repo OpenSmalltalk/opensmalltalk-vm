@@ -135,17 +135,17 @@ static int maybeOpenDir(char *unixPath)
      open the new one, and save its name.  Return true if the operation
      was successful, false if not. */
   if (!lastPathValid || strcmp(lastPath, unixPath))
-    {
-      /* invalidate the old, open the new */
-      if (lastPathValid)
-	closedir(openDir);
-      lastPathValid= false;
-      strcpy(lastPath, unixPath);
-      if ((openDir= opendir(unixPath)) == 0)
-	return false;
-      lastPathValid= true;
-      lastIndex= 0;	/* first entry is index 1 */
-    }
+  {
+    /* invalidate the old, open the new */
+    if (lastPathValid)
+      closedir(openDir);
+    lastPathValid= false;
+    strncpy(lastPath, unixPath, MAXPATHLEN);
+    if ((openDir= opendir(unixPath)) == 0)
+      return false;
+    lastPathValid= true;
+    lastIndex= 0;	/* first entry is index 1 */
+  }
   return true;
 }
 
@@ -226,17 +226,21 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   *nameLength= ux2sqPath(dirEntry->d_name, nameLen, name, MAXPATHLEN, 0);
 
   {
-    char terminatedName[MAXPATHLEN];
+    char terminatedName[MAXPATHLEN+1];
+    if(nameLen > MAXPATHLEN)
+      return BAD_PATH;
     strncpy(terminatedName, dirEntry->d_name, nameLen);
     terminatedName[nameLen]= '\0';
+    if(strlen(unixPath) + 1 + nameLen > MAXPATHLEN)
+      return BAD_PATH;
     strcat(unixPath, "/");
     strcat(unixPath, terminatedName);
     if (stat(unixPath, &statBuf) && lstat(unixPath, &statBuf))
-      {
+    {
 	/* We can't stat the entry, but failing here would invalidate
 	   the whole directory --bertf */
-	return ENTRY_FOUND;
-      }
+      return ENTRY_FOUND;
+    }
   }
 
   /* last change time */
@@ -297,8 +301,12 @@ sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString
     return BAD_PATH;
 
   char terminatedName[MAXPATHLEN+1];
+  if(nameStringLength > MAXPATHLEN)
+    return BAD_PATH;
   strncpy(terminatedName, nameString, nameStringLength);
   terminatedName[nameStringLength]= '\0';
+  if(strlen(unixPath) + 1 + nameStringLength > MAXPATHLEN)
+    return BAD_PATH;
   strcat(unixPath, "/");
   strcat(unixPath, terminatedName);
   if (stat(unixPath, &statBuf) && lstat(unixPath, &statBuf)) {

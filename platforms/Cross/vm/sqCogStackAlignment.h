@@ -83,7 +83,7 @@
 					  asm volatile ("mov %0, %%sp" : "=r"(sp) : );	\
 					  sp; })
 #  endif
-# elif __x86_64__
+# elif defined(x86_64) || defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(__amd64__) || defined(x64) || defined(_M_AMD64) || defined(_M_X64) || defined(_M_IA64)
 #  if __GNUC__ || __clang__
 #   define getfp() ({ register usqIntptr_t fp;					\
 					  asm volatile ("movq %%rbp,%0" : "=r"(fp) : );	\
@@ -91,6 +91,7 @@
 #   define getsp() ({ register usqIntptr_t sp;					\
 					  asm volatile ("movq %%rsp,%0" : "=r"(sp) : );	\
 					  sp; })
+#  else /* MSVC for example: use ceGetFP ceGetSP */
 #  endif
 # else /* !(__i386__ || __arm__ || __x86_64__) */
 #  error define code for your processor here

@@ -39,21 +39,21 @@
 #import <Cocoa/Cocoa.h>
 #import "sqSqueakAppDelegate.h"
 #import "sqSqueakOSXApplication.h"
-#import "sqSqueakOSXOpenGLView.h"
+#import "sqSqueakOSXView.h"
 
 @class sqSqueakMainApplication;
 @class sqSqueakNullScreenAndWindow;
 
 @interface SqueakOSXAppDelegate : sqSqueakAppDelegate <NSApplicationDelegate> {
     NSWindow *__weak window;
-	sqSqueakOSXOpenGLView	 *__weak mainView;
+	NSView <sqSqueakOSXView>	 *__weak mainView;
 	BOOL checkForFileNameOnFirstParm;
 	NSString *possibleImageNameAtLaunchTime;
     sqSqueakOSXScreenAndWindow *windowHandler;
 }
 
 @property (nonatomic,weak) IBOutlet NSWindow *window;
-@property (nonatomic,weak) IBOutlet sqSqueakOSXOpenGLView *mainView;
+@property (nonatomic,weak) IBOutlet NSView <sqSqueakOSXView> *mainView;
 @property (nonatomic,strong) NSString *possibleImageNameAtLaunchTime;
 @property (nonatomic,assign) BOOL checkForFileNameOnFirstParm;
 @property (nonatomic, strong) sqSqueakNullScreenAndWindow *windowHandler;

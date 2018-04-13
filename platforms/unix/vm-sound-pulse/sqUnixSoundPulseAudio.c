@@ -38,7 +38,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/errno.h>
 #include <sys/mman.h>
 #include <string.h>
 #include <unistd.h>
@@ -181,18 +180,18 @@ static int  ioFreeBytes(audioIO_t *audioIO);
 static int  ioIsFull(audioIO_t *audioIO);
 static int  ioAddPlayBuffer(void *buffer, int frameCount);
 static int  ioGetRecordBuffer(void *buffer, int bufferBytes);
-static int  ioAllocBuffers(audioIO_t *audioIO, int frameCount);
+static void ioAllocBuffers(audioIO_t *audioIO, int frameCount);
 static int  ioGetBufferData(audioIO_t *audioIO, void **buffer, int *frames);
 static int  ioNextBuffer(audioIO_t *audioIO);
 
-static void *writerThread(void *ptr);
-static void *readerThread(void *ptr);
+static void writerThread(void *ptr);
+static void readerThread(void *ptr);
 
-static int  ioInit();
+static void ioInit();
 
 /* SQUEAK INTERFACE */
 
-static int trace();
+static void trace();
 
 static sqInt sound_AvailableSpace(void);
 static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime);
@@ -437,7 +436,7 @@ static int ioFreeBytes(audioIO_t *audioIO) {
 	return freeBytes;
 }
 
-static int ioAllocBuffers(audioIO_t *audioIO, int frameCount) {
+static void ioAllocBuffers(audioIO_t *audioIO, int frameCount) {
 	int i;
 	
 	/* Not preserving buffers when play/record stopped */
@@ -508,7 +507,7 @@ static int ioGetBufferData(audioIO_t *audioIO, void **buffer, int *frames) {
 	return true;
 }
 
-static int ioNextPlayBuffer() {
+static void ioNextPlayBuffer() {
 	pthread_mutex_lock(audioOut.bufferMutex);
 		audioOut.buffer[audioOut.bufferNext].samples = 0;
 		audioOut.buffer[audioOut.bufferNext].isFree  = true;
@@ -518,7 +517,7 @@ static int ioNextPlayBuffer() {
 	pthread_mutex_unlock(audioOut.bufferMutex);
 }
 
-static int ioNextRecordBuffer() {
+static void ioNextRecordBuffer() {
 	pthread_mutex_lock(audioIn.bufferMutex);
 		audioIn.buffer[audioIn.bufferNext].isFree  = false;
 		audioIn.bufferFree = (audioIn.bufferNext + 1) % audioIn.maxBuffers;
@@ -529,7 +528,7 @@ static int ioNextRecordBuffer() {
 
 /* ================================== IO THREADS */
 
-static void *writerThread(void *ptr) {
+static void writerThread(void *ptr) {
 	struct timespec tm = {0, 1000 * 1000};
 	int rc;
 	int nextBuffer, frames;
@@ -600,7 +599,7 @@ static void *writerThread(void *ptr) {
 }
 
 
-static void *readerThread(void *ptr) {
+static void readerThread(void *ptr) {
 	int rc;
 	int wc;
 	unsigned short *p;
@@ -715,7 +714,7 @@ DBGMSG("[readerThread: stopped]");
 
 /* ================================== IO INIT */
 
-static int ioInit() {
+static void ioInit() {
 	if (initDone) return true;
 	initDone = true; 
 	
@@ -817,7 +816,7 @@ static int ioInit() {
 /* ================================== VM PLUGIN */
 /* ============================================ */
 
-static int trace() {
+static void trace() {
 }
 
 /* ================================== AUDIO OUT */

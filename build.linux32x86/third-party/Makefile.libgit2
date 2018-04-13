@@ -1,0 +1,64 @@
+ifndef THIRDPARTYDIR
+	include Makefile.lib.extra
+endif
+include ../../third-party/libgit2.spec
+
+# plugin definitions
+LIBGIT2URL:=$(libgit2_spec_download_url)
+LIBGIT2LIBNAME:=$(libgit2_spec_product_name_linux)
+LIBGIT2DIR:=$(THIRDPARTYDIR)/$(libgit2_spec_unpack_dir_name)
+LIBGIT2ARCHIVE:=$(THIRDPARTYCACHEDIR)/$(libgit2_spec_archive_name)
+LIBGIT2LIB:=$(THIRDPARTYINSTALLDIR)/$(LIBGIT2LIBNAME)
+LIBGIT2SYMLINKS:=$(libgit2_spec_symlinks_linux)
+
+# ensure third-party library is built and recognised by plugins
+INCDIRS:=$(INCDIRS) $(THIRDPARTYINCLUDEDIR)
+EXTRALIBS:=$(EXTRALIBS) $(LIBGIT2LIB)
+PLUGINREQS:=$(THIRDPARTYLIBS)
+
+$(LIBGIT2ARCHIVE): 
+	curl -o $(LIBGIT2ARCHIVE) -L $(LIBGIT2URL) 
+
+# NOTE: I'm adding this ugly hack of "sed..." because CMake does not find properly libssl and libcrypto 
+# on 64bits envirenments (it always find the 64bits version, regardless the architecture).
+# this is ugly, but the only way I fond :( 
+# NOTE: We also need to edit the RPATH as CMAKE likes (because it ignores the -Wl line), that's why we
+# need to add special flags as you can see here: https://cmake.org/Wiki/CMake_RPATH_handling
+$(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME): $(LIBGIT2ARCHIVE)
+	tar x -f $(LIBGIT2ARCHIVE) -C $(THIRDPARTYDIR)
+	cd $(LIBGIT2DIR) \
+		&& cmake \
+			-DCMAKE_INSTALL_PREFIX=$(THIRDPARTYOUTDIR) \
+			-DUSE_SSH=ON \
+			-DBUILD_CLAR=OFF \
+			-DCMAKE_C_FLAGS="-m32" \
+			-DOPENSSL_FOUND=ON \
+			-DOPENSSL_INCLUDE_DIRS=$(THIRDPARTYINCLUDEDIR) \
+			-DOPENSSL_LIBRARY_DIRS=$(THIRDPARTYLIBDIR) \
+			-DOPENSSL_LIBRARIES=$(THIRDPARTYLIBDIR)/libssl.so \
+			-DLIBSSH2_FOUND=ON \
+			-DLIBSSH2_INCLUDE_DIRS=$(THIRDPARTYINCLUDEDIR) \
+			-DLIBSSH2_LIBRARY_DIRS=$(THIRDPARTYLIBDIR) \
+			-DLIBSSH2_LIBRARIES=$(THIRDPARTYLIBDIR)/libssh2.so.1.0.1 \
+		&& sed -i.bak 's/x86_64-linux-gnu/i386-linux-gnu/g' CMakeCache.txt \
+		&& make \
+		&& make install
+
+$(LIBGIT2LIB): $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME)
+	
+libgit2: $(LIBGIT2LIB)
+
+install: $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME)
+	cp -f $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME) $(THIRDPARTYINSTALLDIR)
+	@echo "Installing links"
+	@for each in $(THIRDPARTYLIBDIR)/$(LIBGIT2SYMLINKS); do \
+		if [ -L $$each ]; then \
+			cp -d $$each $(THIRDPARTYINSTALLDIR); \
+		fi \
+	done
+	@echo "DONE"
+
+all: $(THIRDPARTYOUTDIR) $(THIRDPARTYINSTALLDIR) $(THIRDPARTYCACHEDIR) libgit2
+
+clean: 
+	rm -Rf $(LIBGIT2DIR)

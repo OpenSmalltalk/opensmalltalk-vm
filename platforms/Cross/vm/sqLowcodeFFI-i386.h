@@ -45,9 +45,20 @@ typedef struct _sqLowcodeCalloutState
 #define lowcodeCalloutStateFetchResultFloat64(calloutState) (calloutState)->floatResult
 #define lowcodeCalloutStateFetchResultStructure(calloutState) ((char*)(calloutState)->eax)
 
-__asm__ (
-".section .text                                                              \n\
-lowcodeCalloutStatestackPointerstackSizecallFunction:                        \n\
+#if defined(_WIN32)
+#define LOWCODE_FFI_PROGRAM_SECTION ".section .text"
+#define LOWCODE_FFI_SYMBOL_PREFIX "_"
+#elif defined(__APPLE__)
+#define LOWCODE_FFI_PROGRAM_SECTION ".section __TEXT,__text"
+#define LOWCODE_FFI_SYMBOL_PREFIX "_"
+#else /* Linux */
+#define LOWCODE_FFI_PROGRAM_SECTION ".section .text"
+#define LOWCODE_FFI_SYMBOL_PREFIX
+#endif
+
+__asm__ ( "\n\
+" LOWCODE_FFI_PROGRAM_SECTION " \n\
+" LOWCODE_FFI_SYMBOL_PREFIX "lowcodeCalloutStatestackPointerstackSizecallFunction: \n\
     pusha                                                                    \n\
     movl %esp, %ebp                                                          \n\
     /* Align the stack */                                                    \n\

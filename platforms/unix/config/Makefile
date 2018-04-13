@@ -1,7 +1,6 @@
 configure : .force
 	./mkacinc > acplugins.m4
-	aclocal
-	autoconf
+	autoreconf --install --force
 	rm acplugins.m4
 
 .force :

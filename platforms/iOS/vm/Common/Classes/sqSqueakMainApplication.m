@@ -233,8 +233,8 @@ extern sqInt interpret(void);  //This is a VM Callback
 
 @end
 
-int plugInTimeToReturn(void);
-int plugInTimeToReturn(void) {
+int
+plugInTimeToReturn(void) {
 	extern BOOL	gQuitNowRightNow;
 	
 	if (gQuitNowRightNow)
@@ -243,7 +243,8 @@ int plugInTimeToReturn(void) {
 }
 
 
-sqInt convertToSqueakTime(NSDate *givenDate)
+sqInt
+convertToSqueakTime(NSDate *givenDate)
 {
 	
 	time_t unixTime = [givenDate timeIntervalSince1970];

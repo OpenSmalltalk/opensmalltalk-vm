@@ -1,0 +1,8 @@
+#
+# FileAttributesPlugin uses sqWin32File.h, provided by FilePlugin
+#
+# Add $(WIN32PLUGINSDIR)/FilePlugin to the include path so sqWin32File.h
+# will be found
+#
+include ../common/Makefile.plugin
+INCLUDES += -I$(PLATDIR)/win32/plugins/FilePlugin

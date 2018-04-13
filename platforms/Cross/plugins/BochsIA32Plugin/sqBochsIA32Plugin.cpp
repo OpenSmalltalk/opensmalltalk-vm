@@ -13,7 +13,7 @@
  * Define setjmp and longjmp to be the most minimal setjmp/longjmp available
  * on the platform.
  */
-#if !WIN32
+#if !_WIN32
 # define setjmp(jb) _setjmp(jb)
 # define longjmp(jb,v) _longjmp(jb,v)
 #endif

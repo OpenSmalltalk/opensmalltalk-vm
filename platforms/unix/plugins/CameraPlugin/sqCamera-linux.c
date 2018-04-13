@@ -28,8 +28,12 @@
  * Last edited: 2012-07-30 14:59:01 by piumarta on emilia
  */
 
+#include "sqVirtualMachine.h"
+#include "CameraPlugin.h"
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <assert.h>
 
@@ -50,7 +54,6 @@
 #include <linux/videodev2.h>
 
 
-#define sqInt int
 #define true 1
 #define false 0
 
@@ -140,14 +143,6 @@ struct v4l2_buffer tmpVBuf;
 void __attribute__ ((constructor)) libCon(void);
 void __attribute__ ((destructor)) libDes(void);
 
-/* SQUEAK INTERFACE */
-sqInt CameraGetParam(int camNum, int paramNum);
-sqInt CameraGetFrame(int camNum, unsigned char* buf, int pixelCount);
-sqInt CameraExtent(int camNum);
-char* CameraName(int camNum);
-void CameraClose(int camNum);
-sqInt CameraOpen(int camNum, int frameWidth, int frameHeight);
-
 
 /* ========================================================= */
 /* ========================================================= */
@@ -155,8 +150,8 @@ sqInt CameraOpen(int camNum, int frameWidth, int frameHeight);
 
 /* >>>>>>>>>>> UTILITY */
 
-inline int   camIsOpen(camPtr cam) { return ( cam->isOpen); }
-inline int camIsClosed(camPtr cam) { return (!cam->isOpen); }
+static inline int   camIsOpen(camPtr cam) { return ( cam->isOpen); }
+static inline int camIsClosed(camPtr cam) { return (!cam->isOpen); }
 
 
 static void 
@@ -208,6 +203,7 @@ libCon(void)
 	  cam->devNum = devNum;
 	  cam->ioMethod = IO_METHOD_MMAP;
 	  cam->nBuffers = 2;
+	  cam->frameCount = 0;
 	  vBufReset(&(cam->vBuf));
 	  /* Pixel format auto selected for ease/speed of conversion */
 
@@ -223,7 +219,6 @@ libCon(void)
 	  cam->sqBuffer = 0;
 	  cam->sqBufferBytes = 0;
 	  cam->sqPixels = 0;
-	  cam->frameCount = 0;
 */
   }
 }
@@ -235,7 +230,7 @@ libDes(void)
   int camNum;
   for (camNum = 1; camNum < 11; ++camNum)
 	if (camIsOpen(&camInfo[camNum-1]))
-	  CameraClose(camNum);
+	  CameraClose((sqInt)camNum);
   
 /* 
 / Closing libv4l2 causes a crash, so it must
@@ -256,20 +251,20 @@ libDes(void)
 /
 */
 
-inline unsigned char 
+static inline uint8_t 
 clipPixel(const int pixel) {
     int result;
     result = ((pixel < 0) ? 0 : pixel);
-    return (unsigned char) ((result > 255) ? 255: result);
+    return (uint8_t) ((result > 255) ? 255: result);
 }
 
 
-inline void 
+static inline void 
 convertPixelYUV444toARGB32(
-			   const unsigned char y,
-               const unsigned char u,
-               const unsigned char v,
-               unsigned char* dest)
+			   const uint8_t y,
+               const uint8_t u,
+               const uint8_t v,
+               uint8_t* dest)
 {
     const int C = (y - 16) * 298 + 128;
     const int D = u - 128;
@@ -283,17 +278,17 @@ convertPixelYUV444toARGB32(
 }
 
 
-inline void 
+static inline void 
 convertImageYUYVToARGB32 (camPtr cam)
 {
-	int i;
+	size_t i;
 
-	const unsigned char* src = cam->inBuffer;
-	unsigned char* dst = cam->sqBuffer;
-	unsigned long int *pdst;
-	unsigned long int pixelCount = cam->sqPixels;
+	const uint8_t* src = cam->inBuffer;
+	uint8_t* dst = cam->sqBuffer;
+	uint32_t *pdst;
+	uint32_t pixelCount = cam->sqPixels;
 
-	unsigned char u, y1, v, y2;
+	uint8_t u, y1, v, y2;
 
 	for (i = 0; i < pixelCount; i += 2) {
 		y1 = *src++;
@@ -319,11 +314,11 @@ convertImageYUYVToARGB32 (camPtr cam)
 static void 
 convertImageRGB24toARGB32 (camPtr cam)
 {
-	unsigned char 	  *src = cam->inBuffer;
-	unsigned long int *dst = cam->sqBuffer;
-	unsigned long int pixelCount = cam->sqPixels;
-	unsigned long int pixel;
-	int i;
+	uint8_t 	  *src = cam->inBuffer;
+	uint32_t *dst = cam->sqBuffer;
+	uint32_t pixelCount = cam->sqPixels;
+	uint32_t pixel;
+	size_t i;
 
 	if (0 == dst) return;
 
@@ -338,11 +333,11 @@ convertImageRGB24toARGB32 (camPtr cam)
 static void 
 convertImageRGB444toARGB32 (camPtr cam)
 {
-	unsigned char 	  *src = cam->inBuffer;
-	unsigned long int *dst = cam->sqBuffer;
-	unsigned long int pixelCount = cam->sqPixels;
-	unsigned long int r,g,b,pixel;
-	int i;
+	uint8_t 	  *src = cam->inBuffer;
+	uint32_t *dst = cam->sqBuffer;
+	uint32_t pixelCount = cam->sqPixels;
+	uint32_t r,g,b,pixel;
+	size_t i;
 
 	if (0 == dst) return;
 
@@ -364,11 +359,11 @@ convertImageRGB444toARGB32 (camPtr cam)
 static void 
 convertImageRGB565toARGB32 (camPtr cam)
 {
-	unsigned char 	  *src = cam->inBuffer;
-	unsigned long int *dst = cam->sqBuffer;
-	unsigned long int pixelCount = cam->sqPixels;
-	unsigned long int r,g,b,pixel;
-	int i;
+	uint8_t 	  *src = cam->inBuffer;
+	uint32_t *dst = cam->sqBuffer;
+	uint32_t pixelCount = cam->sqPixels;
+	uint32_t r,g,b,pixel;
+	size_t i;
 
 	if (0 == dst) return;
 
@@ -427,21 +422,21 @@ xioctl (camPtr cam, int request, void * arg)
 }
 
 
-inline static int
+static inline int
 queueBuffer(camPtr cam, struct v4l2_buffer *bufPtr)
 {
 	return xioctl (cam, VIDIOC_QBUF, bufPtr);
 }
 
 
-inline static int
+static inline int
 dequeueBuffer(camPtr cam, struct v4l2_buffer *bufPtr)
 {
 	return xioctl (cam, VIDIOC_DQBUF, bufPtr);
 }
 
 
-inline static int 
+static inline int 
 read_frame (camPtr cam) 
 {
 	struct v4l2_buffer *bufPtr = &(cam->vBuf);
@@ -530,7 +525,7 @@ stream_on (camPtr cam)
 static int 
 uninit_device (camPtr cam) 
 {
-	unsigned int i;
+	size_t i;
 
 	if (cam->buffers)
 	  for (i = 0; i < cam->nBuffers; ++i)
@@ -577,11 +572,11 @@ init_mmap (camPtr cam)
 		}
 	}
 <<< */
-
+/* what? this is set above..
 	if (req.count < cam->nBuffers) return false;
 	if (cam->nBuffers < req.count) 
 		printf("Excess Buffers: %i\n", req.count);
-
+*/
 	if (!(cam->buffers = calloc (req.count, sizeof (struct buffer))))
 		return false;
 
@@ -777,7 +772,7 @@ initCamera(camPtr cam, int w, int h)
 /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
 
 sqInt 
-CameraGetParam(int camNum, int paramNum) 
+CameraGetParam(sqInt camNum, sqInt paramNum) 
 {
 	camPtr cam = &camInfo[camNum-1];
 	return false;
@@ -799,7 +794,7 @@ CameraGetParam(int camNum, int paramNum)
 /	  delays due to conversion.
 */
 sqInt 
-CameraGetFrame(int camNum, unsigned char* buf, int pixelCount) 
+CameraGetFrame(sqInt camNum, unsigned char* buf, sqInt pixelCount) 
 {
 #ifdef USE_TEST_PATTERN
 	unsigned long f,i;
@@ -808,8 +803,8 @@ CameraGetFrame(int camNum, unsigned char* buf, int pixelCount)
 
 	camPtr cam = &camInfo[camNum-1];
 	
-	if (camIsClosed(cam)) return 0;
-	if (pixelCount != cam->sqPixels) return 0;
+	if (camIsClosed(cam)) return -1;
+	if (pixelCount != cam->sqPixels) return -1;
 	
 	cam->sqBuffer = (void *)buf;
 
@@ -836,8 +831,10 @@ printf("%i\n", tstColourIdx);
 /* OPTION 1: ALL FRAMES, SKIP IMAGE-SIDE, INCUR CONVERSION COST... */
 
 	if (getFrame(cam)) {
+	  int ourCount = cam->frameCount;
+	  cam->frameCount = 0;
 	  convertImage (cam);
-	  return 1;
+	  return ourCount;
 	}
 	return 0;
 
@@ -855,7 +852,7 @@ printf("%i\n", tstColourIdx);
 
 
 sqInt 
-CameraExtent(int camNum) 
+CameraExtent(sqInt camNum) 
 {
 	camPtr cam = &camInfo[camNum-1];
 	if (camIsClosed(cam)) return false;
@@ -864,7 +861,7 @@ CameraExtent(int camNum)
 
 
 char* 
-CameraName(int camNum) 
+CameraName(sqInt camNum) 
 {
 	camPtr cam = &camInfo[camNum-1];
 	if (camIsClosed(cam)) return "camera not open";
@@ -873,7 +870,7 @@ CameraName(int camNum)
 
 
 void 
-CameraClose(int camNum) 
+CameraClose(sqInt camNum) 
 {
 	camPtr cam = &camInfo[camNum-1];
 	if (camIsClosed(cam)) return;
@@ -885,7 +882,7 @@ CameraClose(int camNum)
 
 
 sqInt 
-CameraOpen(int camNum, int frameWidth, int frameHeight) 
+CameraOpen(sqInt camNum, sqInt frameWidth, sqInt frameHeight) 
 {
 	camPtr cam = &camInfo[camNum-1];
 

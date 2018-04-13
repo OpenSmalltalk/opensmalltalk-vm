@@ -17,7 +17,6 @@
 OPENSSL:=/usr/local/openssl-1.0.1e
 EXTRALIBS:= -L$(OPENSSL) \
 			-lssl -lcrypto \
-			-L/usr/lib/w32api \
 			-lcrypt32 -lsecur32
 
 # You may need the following to make an internal plugin

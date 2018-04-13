@@ -1751,7 +1751,7 @@ sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue
     (SocketPtr s,char *optionName, sqInt optionNameSize, sqInt *result)
 {
   int optval;
-  size_t len;
+  socklen_t len;
   socketOption *opt;
   if (!SocketValid(s)) goto barf;
   opt= findOption(optionName, (size_t)optionNameSize);

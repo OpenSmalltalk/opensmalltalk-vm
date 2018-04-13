@@ -29,16 +29,22 @@ endif
 ifeq ($(APPNAMEDEF),)
 APPNAMEDEF:=$(APPNAME)Fast
 endif
+ifeq ($(APPIDENTIFIER),)
+APPIDENTIFIER:=org.opensmalltalk.$(APPNAME)
+endif
 ifeq ($(USEPLUGINASDYLIB),)
 USEPLUGINASDYLIB:=FALSE
 endif
 
 ifeq ($(CONFIGURATION),debug)
 	APP:=$(APPNAME)Debug.app
+	VM_IDENTIFIER:=$(APPIDENTIFIER)Debug
 else ifeq ($(CONFIGURATION),assert)
 	APP:=$(APPNAME)Assert.app
+	VM_IDENTIFIER:=$(APPIDENTIFIER)Assert
 else # default CONFIGURATION=product => $(APPNAMEDEF).app
 	APP:=$(APPNAMEDEF).app
+	VM_IDENTIFIER:=$(APPIDENTIFIER)
 endif
 
 default:	$(APP)
@@ -87,16 +93,6 @@ $(APP)/Contents/Resources/$(APPSOURCE): $(SOURCESDIR)/$(APPSOURCE)
 	test -f $@ || ln $(SOURCESDIR)/$(notdir $@) $@
 endif
 
-SED_COMMAND_INFO_PLIST:=\
-	s!$$(VERSION)!$(shell ./getversion VERSION_TAG)!g;\
-	s!$$(VERSION_NUMBER)!$(shell ./getversion VERSION_NUMBER)!g;\
-	s!$$(VERSION_TAG)!$(shell ./getversion VERSION_TAG)!g;\
-	s!$$(VIRTUAL_MACHINE_NICKNAME)!$(shell ./getversion VIRTUAL_MACHINE_NICKNAME)!g;\
-	s!$$(VM_NICKNAME)!$(shell ./getversion VM_NICKNAME)!g;\
-	s!$$(VM_MAJOR)!$(shell ./getversion VM_MAJOR)!g;\
-	s!$$(VM_MINOR)!$(shell ./getversion VM_MINOR)!g;\
-	#
-
 $(APP):	cleanbundles $(THIRDPARTYPREREQS) $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS) \
 		$(VMPLIST) $(VMLOCALIZATION) $(VMMENUNIB) $(VMICONS) \
  		$(SOURCES) $(THIRDPARTYLIBS) $(APPPOST) signapp touchapp
@@ -129,9 +125,18 @@ $(APP)/Contents/MacOS/Plugins/%.dylib: $(BLDDIR)/vm/%.dylib
 	
 
 $(VMPLIST): $(OSXDIR)/$(SYSTEM)-Info.plist getversion
-	@mkdir -p $(APP)/Contents
+	-mkdir -p $(APP)/Contents
 	cp -p $< $@
-	sed -i '' '$(SED_COMMAND_INFO_PLIST)' $@
+	sed -i '' '\
+		s!$$(VERSION)!$(shell ./getversion VERSION_TAG)!g;\
+		s!$$(VERSION_NUMBER)!$(shell ./getversion VERSION_NUMBER)!g;\
+		s!$$(VERSION_TAG)!$(shell ./getversion VERSION_TAG)!g;\
+		s!$$(VIRTUAL_MACHINE_NICKNAME)!$(shell ./getversion VIRTUAL_MACHINE_NICKNAME)!g;\
+		s!$$(VM_NICKNAME)!$(shell ./getversion VM_NICKNAME)!g;\
+		s!$$(VM_MAJOR)!$(shell ./getversion VM_MAJOR)!g;\
+		s!$$(VM_MINOR)!$(shell ./getversion VM_MINOR)!g;\
+		s!$$(VM_IDENTIFIER)!$(VM_IDENTIFIER)!g;\
+	' $@
 
 $(VMLOCALIZATION): $(OSXCOMMONDIR)/English.lproj/$(SYSTEM)-Localizable.strings
 	@mkdir -p $(dir $@)

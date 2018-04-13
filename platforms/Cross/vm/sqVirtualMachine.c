@@ -6,6 +6,7 @@
 #include <setjmp.h>
 
 #include "sqVirtualMachine.h"
+#include "sqAssert.h"
 
 
 /*** Function prototypes ***/
@@ -191,8 +192,13 @@ sqInt characterValueOf(sqInt oop);
 sqInt isPinned(sqInt objOop);
 sqInt pinObject(sqInt objOop);
 sqInt unpinObject(sqInt objOop);
-#endif
 char *cStringOrNullFor(sqInt);
+#endif
+#if VM_PROXY_MINOR > 13 /* More Spur + OS Errors available via prim error code */
+sqInt statNumGCs(void);
+sqInt stringForCString(char *);
+sqInt primitiveFailForOSError(sqLong);
+#endif
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
 
@@ -211,10 +217,17 @@ sqInt addGCRoot(sqInt *varLoc);
 sqInt removeGCRoot(sqInt *varLoc);
 
 /* Proxy declarations for v1.10 */
+# if VM_PROXY_MINOR > 13 /* OS Errors available in primitives; easy return forms */
+sqInt  methodReturnBool(sqInt);
+sqInt  methodReturnFloat(double);
+sqInt  methodReturnInteger(sqInt);
+sqInt  methodReturnString(char *);
+# else
 sqInt methodArg(sqInt index);
 sqInt objectArg(sqInt index);
 sqInt integerArg(sqInt index);
 double floatArg(sqInt index);
+#endif
 sqInt methodReturnValue(sqInt oop);
 sqInt topRemappableOop(void);
 
@@ -242,17 +255,8 @@ void (*setInterruptCheckChain(void (*aFunction)(void)))() { return 0; }
 #endif
 
 #if VM_PROXY_MINOR > 10
-# if COGMTVM
-sqInt disownVM(sqInt flags);
-sqInt ownVM(sqInt threadIdAndFlags);
-# else
-sqInt disownVM(sqInt flags) { return 1; }
-sqInt ownVM(sqInt threadIdAndFlags)
-{
-	extern sqInt amInVMThread(void);
-	return amInVMThread() ? 0 : -1;
-}
-# endif
+extern sqInt disownVM(sqInt flags);
+extern sqInt ownVM(sqInt threadIdAndFlags);
 #endif /* VM_PROXY_MINOR > 10 */
 extern sqInt isYoung(sqInt);
 
@@ -385,8 +389,12 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->success = success;
 	VM->superclassOf = superclassOf;
 
+#if VM_PROXY_MINOR <= 13 /* reused in 14 and above */
+
 	VM->compilerHookVector= 0;
 	VM->setCompilerInitialized= 0;
+
+#endif
 
 #if VM_PROXY_MINOR > 1
 
@@ -463,10 +471,17 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 #endif
 
 #if VM_PROXY_MINOR > 9
+# if VM_PROXY_MINOR > 13 /* OS Errors available in primitives; easy return forms */
+	VM->methodReturnBool = methodReturnBool;
+	VM->methodReturnFloat = methodReturnFloat;
+	VM->methodReturnInteger = methodReturnInteger;
+	VM->methodReturnString = methodReturnString;
+# else
 	VM->methodArg = methodArg;
 	VM->objectArg = objectArg;
 	VM->integerArg = integerArg;
 	VM->floatArg = floatArg;
+# endif
 	VM->methodReturnValue = methodReturnValue;
 	VM->topRemappableOop = topRemappableOop;
 #endif
@@ -510,6 +525,12 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->unpinObject = unpinObject;
 #endif
 
+#if VM_PROXY_MINOR > 13 /* More Spur + OS Errors available via prim error code */
+	VM->statNumGCs = statNumGCs;
+	VM->stringForCString = stringForCString;
+	VM->primitiveFailForOSError = primitiveFailForOSError;
+#endif
+
 	return VM;
 }
 
@@ -537,7 +558,7 @@ fopen_for_append(char *filename)
 		fseek(f,0,SEEK_END);
 	return f;
 }
-#elif defined(WIN32)
+#elif defined(_WIN32)
 # define fopen_for_append(filename) fopen(filename,"a+t")
 #else
 # define fopen_for_append(filename) fopen(filename,"a+")

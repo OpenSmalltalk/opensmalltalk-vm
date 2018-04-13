@@ -37,8 +37,6 @@
 #include "sqMacOpenGL.h"
 #include "sqOpenGLRenderer.h"
 
-#define INTERNAL
-
 #ifdef BROWSERPLUGIN
 #include "npapi.h"
 #endif
@@ -50,7 +48,7 @@ static glRenderer *current = NULL;
 static glRenderer allRenderer[MAX_RENDERER];
 typedef int (*eventMessageHook)(EventRecord* event);
 
-#ifdef INTERNAL
+#ifdef SQUEAK_BUILTIN_PLUGIN
 #ifdef BROWSERPLUGIN
 int gPortX,gPortY;
 extern NP_Port *getNP_Port(void);
@@ -323,7 +321,7 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 	renderer->drawable = NULL;
 	renderer->gWorld = NULL;
 
-#ifdef INTERNAL
+#ifdef SQUEAK_BUILTIN_PLUGIN
 	if (! getSTWindow()) {
 		return 0;
 	}
@@ -688,7 +686,7 @@ int glInitialize(void)
 	for(i = 0; i < MAX_RENDERER; i++) {
 		allRenderer[i].used = 0;
 	}
-#ifdef INTERNAL
+#ifdef SQUEAK_BUILTIN_PLUGIN
 	setPostMessageHook(macEventHook);
 #else
 	getSTWindow = (getSTWindowFn) interpreterProxy->ioLoadFunctionFrom("getSTWindow", "");

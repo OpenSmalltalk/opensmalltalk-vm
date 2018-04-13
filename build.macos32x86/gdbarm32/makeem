@@ -1,4 +1,5 @@
 #!/bin/sh -e
+test -d bfd || ./conf.COG
 for d in zlib bfd libiberty opcodes sim/arm; do
 	(cd ./$d; make COG=1)
 done

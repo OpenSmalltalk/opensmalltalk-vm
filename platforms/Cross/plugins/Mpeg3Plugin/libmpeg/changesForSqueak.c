@@ -44,7 +44,7 @@
 #include "sq.h"
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <windows.h>
 #endif
 
@@ -89,7 +89,7 @@ void memoryFree(void *stuff) {
 
 
 
-#if (defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )) || (defined(WIN32) && !defined(__GNUC__))
+#if (defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )) || (defined(_WIN32) && !defined(__GNUC__))
 #define NEEDSTRFUNCS
 #endif
 
@@ -127,7 +127,7 @@ int			strcasecmp (const char *str1, const char *str2) {
 
 #endif
 
-#ifdef WIN32
+#ifdef _WIN32
 int bzero(char* block, long size) {
 	ZeroMemory(block,size);
 }

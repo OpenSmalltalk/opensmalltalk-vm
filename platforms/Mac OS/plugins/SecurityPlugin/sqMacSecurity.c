@@ -31,6 +31,16 @@ static Boolean gInitialized = false;
 /***************************************************************************/
 /***************************************************************************/
 /***************************************************************************/
+/* environment security */
+static int allowEnvironmentAccess = 1; /* full access to C environment */
+
+sqInt ioDisableEnvironmentAccess(void) { return allowEnvironmentAccess = 0; }
+sqInt ioHasEnvironmentAccess(void) { return allowEnvironmentAccess; }
+
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
+/***************************************************************************/
 /* file security */
 static int allowFileAccess = 1;  /* full access to files */
 
@@ -108,11 +118,7 @@ sqInt ioCanSetFileTypeOfSize(char* pathString, sqInt pathStringLength) {
 }
 
 /* disabling/querying */
-sqInt ioDisableFileAccess(void) {
-	allowFileAccess = 0;
-	return 0;
-}
-
+sqInt ioDisableFileAccess(void) { return allowFileAccess = 0; }
 sqInt ioHasFileAccess(void) { return allowFileAccess; }
 
 /***************************************************************************/
@@ -128,11 +134,7 @@ sqInt ioCanRenameImage(void) {
 }
 
 sqInt ioCanWriteImage() { return allowImageWrite; }
-
-sqInt ioDisableImageWrite() {
-	allowImageWrite = 0;
-	return 0;
-}
+sqInt ioDisableImageWrite() { return allowImageWrite = 0; }
 
 
 /***************************************************************************/
@@ -157,11 +159,7 @@ sqInt ioCanListenOnPort(sqInt s, sqInt port) {
   return allowSocketAccess;
 }
 
-sqInt ioDisableSocketAccess() {
-	allowSocketAccess = 0;
-	return 0;
-}
-
+sqInt ioDisableSocketAccess() { return allowSocketAccess = 0; }
 sqInt ioHasSocketAccess() { return allowSocketAccess; }
 
 /***************************************************************************/

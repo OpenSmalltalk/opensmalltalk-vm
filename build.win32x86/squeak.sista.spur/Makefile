@@ -6,4 +6,6 @@
 VM:=Squeak
 VMSRCDIR:=../../spursistasrc/vm
 
+COMPILER_TO_USE:=clang
+
 include ../common/Makefile

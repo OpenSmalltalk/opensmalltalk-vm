@@ -1,4 +1,4 @@
-	# 
+# 
 # THIRDPARTYLIBS			The libraries to build (you define them in ./third-party/LIB/Makefile.lib)
 # THIRDPARTYDIR				Where to build libraries
 # THIRDPARTYOUTDIR 			Where to first install libraries (output place)

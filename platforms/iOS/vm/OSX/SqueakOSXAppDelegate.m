@@ -84,10 +84,20 @@ SqueakOSXAppDelegate *gDelegateApp;
 		[self.squeakApplication setupEventQueue];
 		[self singleThreadStart];
 //	[self workerThreadStart];
-	
 	}
-	
+    
+#ifdef PharoVM
+     [[NSUserNotificationCenter defaultUserNotificationCenter] setDelegate:self];
+#endif
 }
+
+#ifdef PharoVM
+- (BOOL)userNotificationCenter:(NSUserNotificationCenter *)center
+     shouldPresentNotification:(NSUserNotification *)notification
+{
+    return YES;
+}
+#endif
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender {
 	return NO;

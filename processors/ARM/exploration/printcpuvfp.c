@@ -20,16 +20,22 @@ lower(char *s)
 	return buf;
 }
 
+#if FOR64BITS
+# define CLASS "!GdbARMAlien64"
+#else
+# define CLASS "!GdbARMAlien"
+#endif
+
 int
 main()
 {
 #define offsetof(type,field) (long)(&(((type *)0)->field))
 #define stoffsetof(type,field) (offsetof(type,field)+1)
 #define print(n,r) \
-printf("!GdbARMAlien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
+printf(CLASS " methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
 	"%s\r\t^self unsignedLongLongAt: %ld! !\r", m,d,y,h,i, lower(#r), \
 	stoffsetof(ARMul_State,VFP_Reg[n].dword));\
-printf("!GdbARMAlien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
+printf(CLASS " methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
 	"%s: anUnsignedInteger\r\t^self unsignedLongLongAt: %ld put: anUnsignedInteger! !\r", m,d,y,h,i, lower(#r), \
 	stoffsetof(ARMul_State,VFP_Reg[n].dword))
 
@@ -42,7 +48,7 @@ printf("!GdbARMAlien methodsFor: 'accessing' stamp: 'eem %d/%d/%d %d:%02d'!\r"\
 	int i = now.tm_min;
 
 	printf("\"Hello world!!\"!\r");
-	printf("!GdbARMAlien class methodsFor: 'instance creation' stamp: 'eem %d/%d/%d %d:%02d'!\r"
+	printf(CLASS " class methodsFor: 'instance creation' stamp: 'eem %d/%d/%d %d:%02d'!\r"
 	"dataSize\r\t^%ld! !\r", m,d,y,h,i, sizeof(ARMul_State));
 
 	print(0,d0);

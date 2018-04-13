@@ -250,11 +250,11 @@ printRegisterState(ucontext_t *uap)
 	return (void *)(regs->eip);
 #elif __x86_64__
 	_STRUCT_X86_THREAD_STATE64 *regs = &uap->uc_mcontext->__ss;
-	printf(	"\trax 0x%016lx rbx 0x%016lx rcx 0x%016lx rdx 0x%016lx\n"
-			"\trdi 0x%016lx rsi 0x%016lx rbp 0x%016lx rsp 0x%016lx\n"
-			"\tr8  0x%016lx r9  0x%016lx r10 0x%016lx r11 0x%016lx\n"
-			"\tr12 0x%016lx r13 0x%016lx r14 0x%016lx r15 0x%016lx\n"
-			"\trip 0x%016lx\n",
+	printf(	"\trax 0x%016llx rbx 0x%016llx rcx 0x%016llx rdx 0x%016llx\n"
+			"\trdi 0x%016llx rsi 0x%016llx rbp 0x%016llx rsp 0x%016llx\n"
+			"\tr8  0x%016llx r9  0x%016llx r10 0x%016llx r11 0x%016llx\n"
+			"\tr12 0x%016llx r13 0x%016llx r14 0x%016llx r15 0x%016llx\n"
+			"\trip 0x%016llx\n",
 			regs->__rax, regs->__rbx, regs->__rcx, regs->__rdx,
 			regs->__rdi, regs->__rdi, regs->__rbp, regs->__rsp,
 			regs->__r8 , regs->__r9 , regs->__r10, regs->__r11,
@@ -299,7 +299,7 @@ sigusr1(int sig, siginfo_t *info, void *uap)
 	int saved_errno = errno;
 	time_t now = time(NULL);
 	char ctimebuf[32];
-	char crashdump[imageNameSize()+1];
+	char crashdump[PATH_MAX+1];
 
 	if (!ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 		pthread_kill(getVMOSThread(),sig);
@@ -317,26 +317,38 @@ sigusr1(int sig, siginfo_t *info, void *uap)
 	errno = saved_errno;
 }
 
+static int inFault = 0;
+
 void
 sigsegv(int sig, siginfo_t *info, void *uap)
 {
 	time_t now = time(NULL);
 	char ctimebuf[32];
-	char crashdump[imageNameSize()+1];
+	char crashdump[PATH_MAX+1];
+	char *fault = sig == SIGSEGV
+					? "Segmentation fault"
+					: (sig == SIGBUS
+						? "Bus error"
+						: (sig == SIGILL
+							? "Illegal instruction"
+							: "Unknown signal"));
 
-	getCrashDumpFilenameInto(crashdump);
-	ctime_r(&now,ctimebuf);
-	pushOutputFile(crashdump);
-	reportStackState("Segmentation fault", ctimebuf, 0, uap);
-	popOutputFile();
-	reportStackState("Segmentation fault", ctimebuf, 0, uap);
+	if (!inFault) {
+		inFault = 1;
+		getCrashDumpFilenameInto(crashdump);
+		ctime_r(&now,ctimebuf);
+		pushOutputFile(crashdump);
+		reportStackState(fault, ctimebuf, 0, uap);
+		popOutputFile();
+		reportStackState(fault, ctimebuf, 0, uap);
+	}
+	if (blockOnError) block();
 	abort();
 }
 #else /* COGVM || STACKVM */
 void
 sigsegv(int sig, siginfo_t *info, void *uap)
 {
-
     /* error("Segmentation fault"); */
     static int printingStack= 0;
 
@@ -364,6 +376,8 @@ attachToSignals() {
     sigsegv_handler_action.sa_sigaction = sigsegv;
     sigsegv_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
     sigemptyset(&sigsegv_handler_action.sa_mask);
+    (void)sigaction(SIGBUS, &sigsegv_handler_action, 0);
+    (void)sigaction(SIGILL, &sigsegv_handler_action, 0);
     (void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
 
     sigusr1_handler_action.sa_sigaction = sigusr1;

@@ -58,7 +58,11 @@ static const int kNumberOfBuffers=4;
 	BOOL			outputIsRunning;
 	AudioStreamBasicDescription *outputFormat;
 	AudioQueueBufferRef *outputBuffers;
-	Queue*			soundOutQueue;
+	Queue				*soundOutQueue;
+	int					 numDevices;
+	unsigned int		*deviceIDs; // a.k.a. AudioDeviceID *
+	char			   **deviceNames;
+	char				*deviceTypes; // per device flags, has input, has output
 }
 - (sqInt)	soundInit;
 - (sqInt)	soundShutdown;
@@ -74,6 +78,22 @@ static const int kNumberOfBuffers=4;
 - (sqInt)	snd_RecordSamplesIntoAtLength: (char*) arrayIndex startSliceIndex: (usqInt) startSliceIndex bufferSizeInBytes: (usqInt) bufferSizeInBytes;
 - (sqInt)	snd_StopRecording;
 - (double)	snd_GetRecordingSampleRate;
+
+// Terf SqSoundVersion 1.2 improvements
+- (sqInt)	snd_SetRecordBufferFrameCount: (sqInt) frameCount;
+- (int)		snd_GetRecordLevel;
+- (sqInt)	getNumberOfSoundPlayerDevices;
+- (sqInt)	getNumberOfSoundRecorderDevices;
+- (char *)	getDefaultSoundPlayer;
+- (char *)	getDefaultSoundRecorder;
+- (char *)	getSoundPlayerDeviceName: (sqInt) i;
+- (char *)	getSoundRecorderDeviceName: (sqInt) i;
+- (void)	setDefaultSoundPlayer: (char *) deviceName;
+- (void)	setDefaultSoundRecorder: (char *) deviceName;
+
+// Terf SqSoundVersion 1.3 improvements
+- (sqInt)	snd_SupportsAEC;
+- (sqInt)	snd_EnableAEC: (sqInt) flag;
 
 @property (nonatomic) AudioQueueRef	outputAudioQueue;
 @property (nonatomic) AudioQueueRef	inputAudioQueue;

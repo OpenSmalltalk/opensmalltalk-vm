@@ -156,10 +156,13 @@ static int printerSetup = FALSE;
 UINT g_WM_MOUSEWHEEL = 0;	/* RvL: 1999-04-19 The message we receive from wheel mices */
 #endif
 
-/* misc declarations */
+/* misc forward declarations */
 int recordMouseEvent(MSG *msg, UINT nrClicks);
 int recordKeyboardEvent(MSG *msg);
 int recordWindowEvent(int action, RECT *r);
+#if NewspeakVM
+int ioDrainEventQueue(void);
+#endif
 
 extern sqInt byteSwapped(sqInt);
 extern int convertToSqueakTime(SYSTEMTIME);
@@ -1289,6 +1292,7 @@ int recordKeyboardEvent(MSG *msg) {
   /* clean up reserved */
   evt->reserved1 = 0;
 
+#ifdef PharoVM
   /* so the image can distinguish between control sequence
      like SOH and characters with modifier like ctrl+a */
   if(pressCode == EventKeyChar && ctrl)
@@ -1296,6 +1300,7 @@ int recordKeyboardEvent(MSG *msg) {
     evt->utf32Code = MapVirtualKey(LOBYTE(HIWORD(msg->lParam)), 1);
     return 1;
   }
+#endif
 
   /* note: several keys are not reported as character events;
      most noticably the mapped virtual keys. For those we
@@ -1575,18 +1580,22 @@ sqInt ioBeep(void)
   return 1;
 }
 
+void  ioNoteDisplayChangedwidthheightdepth(void *b, int w, int h, int d) {}
+
 /*
  * In the Cog VMs time management is in platforms/win32/vm/sqin32Heartbeat.c.
  */
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
-  /* wake us up if something happens */
-  ResetEvent(vmWakeUpEvent);
-  MsgWaitForMultipleObjects(1, &vmWakeUpEvent, FALSE,
-			    microSeconds / 1000, QS_ALLINPUT);
-  ioProcessEvents(); /* keep up with mouse moves etc. */
-  return microSeconds;
-}
+	/* wake us up if something happens */
+	ResetEvent(vmWakeUpEvent);
+	if (WAIT_TIMEOUT ==
+		MsgWaitForMultipleObjects(1, &vmWakeUpEvent, FALSE,
+			    microSeconds / 1000, QS_ALLINPUT))
+		addIdleUsecs(microSeconds);
+	ioProcessEvents(); /* keep up with mouse moves etc. */
+	return microSeconds;
+	}
 
 sqInt ioProcessEvents(void)
 {	static MSG msg;
@@ -1673,7 +1682,7 @@ sqInt ioProcessEvents(void)
 }
 
 #if NewspeakVM
-sqInt
+int
 ioDrainEventQueue(void)
 { static MSG msg;
   POINT mousePt;
@@ -2745,6 +2754,11 @@ sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
   return count;
 }
 
+char* getImageName(void)
+{
+  return imageName;
+}
+
 sqInt imageNameSize(void)
 {
   return strlen(imageName);
@@ -2843,7 +2857,14 @@ char * GetAttributeString(sqInt id) {
     case 1004:
       return (char*) interpreterVersion;
     case 1005: /* window system name */
+	/* An attempt to eliminate one absurdity.  If this breaks too many things
+	 * we'll have to change it back.  But Win32 is not a good name.
+	 */
+#if 0
       return "Win32";
+#else
+      return "Windows";
+#endif
     case 1006: /* VM build ID */
       return vmBuildString;
 #if STACKVM
@@ -3071,16 +3092,21 @@ DWORD SqueakImageLengthFromHandle(HANDLE hFile) {
   return 0;
 }
 
-DWORD SqueakImageLength(char *fileName) {
+DWORD SqueakImageLength(TCHAR *fileName) {
   DWORD dwSize;
-  WCHAR wideName[MAX_PATH];
   HANDLE hFile;
 
   /* open image file */
+#ifdef UNICODE
+  hFile = CreateFileW(fileName, GENERIC_READ, FILE_SHARE_READ,
+		      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+#else
+  WCHAR wideName[MAX_PATH];
   MultiByteToWideChar(CP_UTF8, 0, fileName, -1, wideName, MAX_PATH);
   hFile = CreateFileW(wideName, GENERIC_READ, FILE_SHARE_READ,
 		      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-  if(hFile == INVALID_HANDLE_VALUE) return 0;
+#endif
+  if (hFile == INVALID_HANDLE_VALUE) return 0;
   dwSize = SqueakImageLengthFromHandle(hFile);
   CloseHandle(hFile);
   return dwSize;
@@ -3261,29 +3287,25 @@ void HideSplashScreen(void) {
 }
 
 /****************************************************************************/
-/*                      Usage of Squeak                                     */
+/*                      Usage of Open Smalltalk VM                          */
 /****************************************************************************/
 
-#ifdef PharoVM
-# define VMOPTION(arg) "--"arg
-#else
 # define VMOPTION(arg) "-"arg
-#endif
 
 /* print usage with different output levels */
 int printUsage(int level)
 {
   switch(level) {
     case 0: /* No command line given */
-      abortMessage(TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [options] <imageFile>"));
+      abortMessage(TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [options] <imageFile>\n"));
       break;
     case 1: /* full usage */
-      abortMessage(TEXT("%s"),
+      abortMessage(TEXT("%s\n"),
                    TEXT("Usage: ") TEXT(VM_NAME) TEXT(" [vmOptions] imageFile [imageOptions]\n\n")
                    TEXT("vmOptions:")
-		   /* TEXT("\n\t-service: ServiceName \t(install Squeak as NT service)") */
-                   TEXT("\n\t") TEXT(VMOPTION("headless")) TEXT(" \t\t(force Squeak to run headless)")
-                   TEXT("\n\t") TEXT(VMOPTION("timephases")) TEXT(" (print start load and run times)")
+                   TEXT("\n\t") TEXT(VMOPTION("service:")) TEXT(" ServiceName \t(install VM as NT service)")
+                   TEXT("\n\t") TEXT(VMOPTION("headless")) TEXT(" \t\t(force VM to run headless)")
+                   TEXT("\n\t") TEXT(VMOPTION("timephases")) TEXT(" \t\t(print start load and run times)")
                    TEXT("\n\t") TEXT(VMOPTION("log:")) TEXT(" LogFile \t\t(use LogFile for VM messages)")
                    TEXT("\n\t") TEXT(VMOPTION("memory:")) TEXT(" megaByte \t(set memory to megaByte MB)")
 #if STACKVM || NewspeakVM
@@ -3291,32 +3313,35 @@ int printUsage(int level)
 #endif /* STACKVM || NewspeakVM */
 #if STACKVM
                    TEXT("\n\t") TEXT(VMOPTION("breakmnu:")) TEXT(" string \t(call warning on MNU of sel for debug)")
-                   TEXT("\n\t") TEXT(VMOPTION("leakcheck:")) TEXT(" n \t(leak check on GC (1=full,2=incr,3=both))")
-                   TEXT("\n\t") TEXT(VMOPTION("eden:")) TEXT(" bytes \t(set eden memory size to bytes)")
-				   TEXT("\n\t") TEXT(VMOPTION("stackpages:")) TEXT(" n \t(use n stack pages)")
-                   TEXT("\n\t") TEXT(VMOPTION("numextsems:")) TEXT(" n \t(allow up to n external semaphores)")
+                   TEXT("\n\t") TEXT(VMOPTION("leakcheck:")) TEXT(" n \t\t(leak check on GC (1=full,2=incr,3=both))")
+                   TEXT("\n\t") TEXT(VMOPTION("eden:")) TEXT(" bytes \t\t(set eden memory size to bytes)")
+                   TEXT("\n\t") TEXT(VMOPTION("stackpages:")) TEXT(" n \t\t(use n stack pages)")
+                   TEXT("\n\t") TEXT(VMOPTION("numextsems:")) TEXT(" n \t\t(allow up to n external semaphores)")
                    TEXT("\n\t") TEXT(VMOPTION("checkpluginwrites")) TEXT(" \t(check for writes past end of object in plugins")
-                   TEXT("\n\t") TEXT(VMOPTION("noheartbeat")) TEXT(" \t(no heartbeat for debug)")
+                   TEXT("\n\t") TEXT(VMOPTION("noheartbeat")) TEXT(" \t\t(no heartbeat for debug)")
 #endif /* STACKVM */
 #if STACKVM || NewspeakVM
 # if COGVM
-					TEXT("\n\t") TEXT(VMOPTION("trace")) TEXT("[=num]\tenable tracing (optionally to a specific value)\n")
+                   TEXT("\n\t") TEXT(VMOPTION("trace")) TEXT("[=num]\t\tenable tracing (optionally to a specific value)")
 # else
-                   TEXT("\n\t") TEXT(VMOPTION("sendtrace")) TEXT(" \t(trace sends to stdout for debug)")
+                   TEXT("\n\t") TEXT(VMOPTION("sendtrace")) TEXT(" \t\t(trace sends to stdout for debug)")
 # endif
-                   TEXT("\n\t") TEXT(VMOPTION("warnpid")) TEXT("   \t(print pid in warnings)")
+                   TEXT("\n\t") TEXT(VMOPTION("warnpid")) TEXT("   \t\t(print pid in warnings)")
 #endif
 #if COGVM
                    TEXT("\n\t") TEXT(VMOPTION("codesize:")) TEXT(" bytes \t(set machine-code memory size to bytes)")
-                   TEXT("\n\t") TEXT(VMOPTION("cogmaxlits:")) TEXT(" n \t(set max number of literals for methods to be compiled to machine code)")
+                   TEXT("\n\t") TEXT(VMOPTION("cogmaxlits:")) TEXT(" n \t\t(set max number of literals for methods to be compiled to machine code)")
                    TEXT("\n\t") TEXT(VMOPTION("cogminjumps:")) TEXT(" n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
-                   TEXT("\n\t") TEXT(VMOPTION("tracestores")) TEXT(" \t(assert-check stores for debug)")
-                   TEXT("\n\t") TEXT(VMOPTION("reportheadroom")) TEXT("\t(report unused stack headroom on exit)")
-                   TEXT("\n\t") TEXT(VMOPTION("dpcso:")) TEXT(" bytes \t(stack offset for prim calls for debug)")
+                   TEXT("\n\t") TEXT(VMOPTION("tracestores")) TEXT(" \t\t(assert-check stores for debug)")
+                   TEXT("\n\t") TEXT(VMOPTION("reportheadroom")) TEXT(" \t(report unused stack headroom on exit)")
+                   TEXT("\n\t") TEXT(VMOPTION("dpcso:")) TEXT(" bytes \t\t(stack offset for prim calls for debug)")
 #endif /* COGVM */
 #if SPURVM
                    TEXT("\n\t") TEXT(VMOPTION("maxoldspace:")) TEXT(" bytes \t(set max size of old space memory to bytes)")
+                   TEXT("\n\t") TEXT(VMOPTION("logscavenge")) TEXT(" \t\t(log scavenging to scavenge.log)")
 #endif
+                   TEXT("\n") TEXT("Options begin with single -, but -- prefix is silently accepted")
+                   TEXT("\n") TEXT("Options with arguments -opt:n are also accepted with separators -opt n")
                    );
       break;
     case 2: /* No image found */
@@ -3330,4 +3355,3 @@ int printUsage(int level)
   }
   return -1;
 }
-

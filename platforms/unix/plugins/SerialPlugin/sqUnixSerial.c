@@ -239,7 +239,7 @@ static int portOpenFailed(serial_port_type *sp)
  * is not as flexible about the speed as the Mac driver, apparently.
  * If the port is already open, it does nothing. */
 
-int serialPortOpenByName(char *portName, int dataRate, int stopBitsType, int parityType, int dataBits,
+int serialPortOpenByName(const char *portName, int dataRate, int stopBitsType, int parityType, int dataBits,
 			 int inFlowCtrl, int outFlowCtrl, int xOnChar, int xOffChar)
 {
   int newPort= false;

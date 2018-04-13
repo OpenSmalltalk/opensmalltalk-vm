@@ -29,7 +29,3 @@ deps/%.d: ;
 .PRECIOUS: deps/%.d
 
 -include $(patsubst %,deps/%.d,$(notdir $(basename $(VMSRC))))
-
-#.cpp.o:
-#		$(CXX) -c $(CXXFLAGS) $(CXXINCLUDES) $<
-#

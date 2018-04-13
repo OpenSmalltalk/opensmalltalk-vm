@@ -61,12 +61,14 @@ such third-party acknowledgments.
 #define BAD_PATH        2
 
 - (sqInt)linkIsDirectory:(NSString *)filePath fileManager:(NSFileManager *)fileManager {
-    NSString *resolvedPath = [self resolvedAliasFiles: filePath];
+    NSString *resolvedPath;
 	NSDictionary *fileAttributes;
     NSError *error;
     
+    resolvedPath = [self resolvedAliasFiles: filePath];
 	fileAttributes = [fileManager attributesOfItemAtPath:resolvedPath error: &error];
-    return [[fileAttributes objectForKey: NSFileType] isEqualToString: NSFileTypeDirectory] ? 1 : 0;
+    
+    return [fileAttributes[NSFileType] isEqualToString: NSFileTypeDirectory] ? 1 : 0;
 }
 
 - (sqInt)attributesForPath:(NSString *)filePath 
@@ -178,7 +180,7 @@ such third-party acknowledgments.
 	NSString*	directoryPath = NULL;
 	NSString*	filePath;
 	NSString*	fileName;
-	BOOL		readDirectory = false;
+	BOOL		readDirectory;
 	
 	
 	/* default return values */
@@ -201,8 +203,7 @@ such third-party acknowledgments.
     }
 	
 	if ([self.lastPathForDirLookup isEqualToString: directoryPath]) {
-		if (lastIndexForDirLookup >= index)
-			readDirectory = true;
+		readDirectory = lastIndexForDirLookup >= index;
 	} else {
 		readDirectory = true;
 	}
@@ -223,12 +224,21 @@ such third-party acknowledgments.
 		}
 	}
 		
-	lastIndexForDirLookup = index;  //Note index is 1 based, but objc is 0 based
+	do {
+		lastIndexForDirLookup = index;  //Note index is 1 based, but objc is 0 based
 	
-	if (index < 1 || (NSUInteger) index > [directoryContentsForDirLookup count])
-		return NO_MORE_ENTRIES;
-	
-	filePath = directoryContentsForDirLookup[(NSUInteger) (index-1)];
+		if (index < 1 || (NSUInteger) index > [directoryContentsForDirLookup count])
+			return NO_MORE_ENTRIES;
+
+		filePath = directoryContentsForDirLookup[(NSUInteger) (index-1)];
+		index++;
+		/* N.B.  attributesOfItemAtPath:error: in attributesForPath:..isSymLink:
+		 * below will answer null for .afpDeleted files and hence cause the
+		 * primitive to terminate early.
+		 */
+	}
+	while ([filePath hasPrefix: @".afpDeleted"]);
+
 	filePath = [[ lastPathForDirLookup stringByAppendingString: @"/"] stringByAppendingString: filePath] ;
 	fileName = [[filePath lastPathComponent] precomposedStringWithCanonicalMapping];
 	strlcpy(name,[fileName UTF8String], 256);
@@ -368,11 +378,10 @@ such third-party acknowledgments.
 	
 	NSNumber *typeCode = [NSNumber numberWithUnsignedLong: CFSwapInt32HostToBig(*((uint32_t *) fType))];
 	NSNumber *creatorCode = [NSNumber numberWithUnsignedLong: CFSwapInt32HostToBig(*((uint32_t *) fCreator))];
-
-	
-    BOOL ok=[fileMgr  setAttributes:  @{ NSFileHFSTypeCode : typeCode, NSFileHFSCreatorCode: creatorCode} ofItemAtPath: filePath
-													 error: NULL];
-	return ok;
+    return [fileMgr
+             setAttributes: @{ NSFileHFSTypeCode: typeCode, NSFileHFSCreatorCode: creatorCode }
+             ofItemAtPath: filePath
+             error: NULL];
 }
 
 - (NSString *) resolvedAliasFiles: (NSString *) filePath {

@@ -3,23 +3,23 @@
     <description>
     The Lowcode instruction set defines a register based virtual machine for
     C like low-level operations and Smalltalk object oriented pointer
-    manipulations. 
-        
-        
-        
+    manipulations.
+
+
+
         <br />
 
     Lowcode has different set of registers, one for integer, another for
     object-oriented pointers and another for floating point numbers.
-        
-        
-        
+
+
+
         <br />
     Lowcode is encoded using the Sista inline primitives and they starting with
     opcode inline primitive.
-        
-        
-        
+
+
+
         <br /></description>
     <!--Sista extended bytecode instructions-->
     <!--Lowcode  instructions-->
@@ -228,8 +228,7 @@
             <oop name="object" aliased="true" />
         </stack-results>
         <semantic language="Smalltalk/Cog">
-            self LogicalShiftLeftCq: 1 R: value.
-            self OrCq: 1 R: value.
+            objectRepresentation genConvertIntegerToSmallIntegerInReg: value.
             self ssPushRegister: value.
         </semantic>
         <semantic language="Smalltalk/StackInterpreter">
@@ -1957,7 +1956,7 @@
             self ssPushNativeRegister: value.
         </semantic>
         <semantic language="Smalltalk/StackInterpreter">
-            result := self cCoerce: value to: 'uintptr_t'.
+            result := self cCoerce: (self cCoerce: value to: 'uintptr_t') to: 'char*'.
         </semantic>
     </instruction>
     <instruction opcode="1078" mnemonic="int64Equal" kind="operation">
@@ -2102,14 +2101,15 @@
         </semantic>
         <semantic locals="falseJump contJump" language="Smalltalk/Cog/64">
             self CmpR: second R: first.
-            falseJump := self JumpNonZero: 0.
+            falseJump := self JumpZero: 0.
 
             "True result"
             self MoveCq: 1 R: first.
             contJump := self Jump: 0.
 
             "False result"
-            falseJump jmpTarget: self self MoveCq: 0 R: first.
+            falseJump jmpTarget: self Label.
+            self MoveCq: 0 R: first.
 
             contJump jmpTarget: self Label.
             self ssPushNativeRegister: first.
@@ -2942,9 +2942,12 @@
         </arguments>
         <stack-arguments />
         <stack-results />
-        <semantic language="Smalltalk/Cog">
+        <semantic language="Smalltalk/Cog" locals="alignedSize">
             self assert: needsFrame.
             hasNativeFrame := true.
+
+            "Align the size to 16 bytes."
+            alignedSize := size + 15 bitAnd: -16.
 
             "Mark the stack frame"
             self annotate: (self MoveCw: (objectMemory splObj: LowcodeContextMark) R: TempReg) objRef: (objectMemory splObj: LowcodeContextMark).
@@ -2956,7 +2959,7 @@
             self MoveR: TempReg Mw: self frameOffsetOfPreviousNativeStackPointer r: FPReg.
 
             "Store the frame pointer"
-            self SubCq: size R: TempReg.
+            self SubCq: alignedSize R: TempReg.
             self MoveR: TempReg Mw: self frameOffsetOfNativeFramePointer r: FPReg.
 
             "Store the new stack pointer"
@@ -2965,9 +2968,12 @@
             "Allocate space for the locals"
             self SubCq: 1 + coInterpreter defaultNativeStackFrameSize R: TempReg.
             self MoveR: TempReg Aw: coInterpreter nativeStackPointerAddress.
-            
+
         </semantic>
-        <semantic language="Smalltalk/StackInterpreter">
+        <semantic language="Smalltalk/StackInterpreter" locals="alignedSize">
+            "Align the size to 16 bytes."
+            alignedSize := size + 15 bitAnd: -16.
+
             "Mark the frame"
             self setFrameHasNativeFrame: localFP.
 
@@ -2975,7 +2981,7 @@
             self nativePreviousStackPointerIn: localFP put: nativeStackPointer + 1.
 
             "Make the frame pointer"
-            nativeStackPointer := nativeStackPointer - size.
+            nativeStackPointer := nativeStackPointer - alignedSize.
             self nativeFramePointerIn: localFP put: nativeStackPointer + 1.
 
             "Set the stack pointer"
@@ -2995,6 +3001,9 @@
         <arguments />
         <stack-arguments />
         <stack-results />
+        <semantic language="Smalltalk/StackInterpreter">
+            "Nop in the interpreter"
+        </semantic>
         <semantic language="Smalltalk/Cog">
             self ssFlushAll.
         </semantic>
@@ -3076,7 +3085,7 @@
         </stack-arguments>
         <stack-results />
         <semantic language="Smalltalk/StackInterpreter">
-            self mem: dest cp: source y: size.
+            self lowcode_mem: dest cp: source y: size.
         </semantic>
         <semantic language="Smalltalk/Cog">
             self ssFlushAll.
@@ -3094,7 +3103,7 @@
         </stack-arguments>
         <stack-results />
         <semantic language="Smalltalk/StackInterpreter">
-            self mem: dest cp: source y: size.
+            self lowcode_mem: dest cp: source y: size.
         </semantic>
         <semantic language="Smalltalk/Cog">
             self ssFlushAll.
@@ -3113,7 +3122,7 @@
         </stack-arguments>
         <stack-results />
         <semantic language="Smalltalk/StackInterpreter">
-            self mem: dest cp: source y: size.
+            self lowcode_mem: dest cp: source y: size.
         </semantic>
         <semantic language="Smalltalk/Cog">
             size = BytesPerWord ifTrue: [
@@ -3138,6 +3147,12 @@
         <semantic language="Smalltalk/StackInterpreter">
             self lowcodeCalloutState: lowcodeCalloutState float32Register: registerID value: value.
         </semantic>
+        <semantic language="Smalltalk/Cog/Raw">
+            self ssNativeTop nativeStackPopToReg: extA.
+            self ssNativePop: 1.
+	        currentCallCleanUpSize := currentCallCleanUpSize + BytesPerWord.
+            extA := 0.
+        </semantic>
     </instruction>
     <instruction opcode="1135" mnemonic="moveFloat64ToPhysical" kind="operation">
         <name>Move Float64 Register To Physical Register</name>
@@ -3151,6 +3166,12 @@
         <stack-results />
         <semantic language="Smalltalk/StackInterpreter">
             self lowcodeCalloutState: lowcodeCalloutState float64Register: registerID value: value.
+        </semantic>
+        <semantic language="Smalltalk/Cog/Raw">
+            self ssNativeTop nativeStackPopToReg: extA.
+            self ssNativePop: 1.
+	        currentCallCleanUpSize := currentCallCleanUpSize + 8.
+            extA := 0.
         </semantic>
     </instruction>
     <instruction opcode="1136" mnemonic="moveInt32ToPhysical" kind="operation">
@@ -3166,6 +3187,12 @@
         <semantic language="Smalltalk/StackInterpreter">
             self lowcodeCalloutState: lowcodeCalloutState int32Register: registerID value: value.
         </semantic>
+        <semantic language="Smalltalk/Cog/Raw">
+            self ssNativeTop nativeStackPopToReg: extA.
+            self ssNativePop: 1.
+	        currentCallCleanUpSize := currentCallCleanUpSize + BytesPerWord.
+            extA := 0.
+        </semantic>
     </instruction>
     <instruction opcode="1137" mnemonic="moveInt64ToPhysical" kind="operation">
         <name>Move Int64 To Physical Register</name>
@@ -3180,6 +3207,12 @@
         <semantic language="Smalltalk/StackInterpreter">
             self lowcodeCalloutState: lowcodeCalloutState int64Register: registerID value: value.
         </semantic>
+        <semantic language="Smalltalk/Cog/Raw">
+            self ssNativeTop nativeStackPopToReg: extA.
+            self ssNativePop: 1.
+	        currentCallCleanUpSize := currentCallCleanUpSize + 8.
+            extA := 0.
+        </semantic>
     </instruction>
     <instruction opcode="1138" mnemonic="movePointerToPhysical" kind="operation">
         <name>Move Pointer To Physical Register</name>
@@ -3193,6 +3226,12 @@
         <stack-results />
         <semantic language="Smalltalk/StackInterpreter">
             self lowcodeCalloutState: lowcodeCalloutState pointerRegister: registerID value: pointerValue.
+        </semantic>
+        <semantic language="Smalltalk/Cog/Raw">
+            self ssNativeTop nativeStackPopToReg: extA.
+            self ssNativePop: 1.
+	        currentCallCleanUpSize := currentCallCleanUpSize + BytesPerWord.
+            extA := 0.
         </semantic>
     </instruction>
     <instruction opcode="1139" mnemonic="mul32" kind="operation">
@@ -3693,6 +3732,7 @@
             self ssPushNativeRegister: ReceiverResultReg.
             extA := 0.
             extB := 0.
+            numExtB := 0.
         </semantic>
         <semantic language="Smalltalk/StackInterpreter">
             self internalPushShadowCallStackPointer: result.
@@ -5180,6 +5220,9 @@
         <arguments />
         <stack-arguments />
         <stack-results />
+        <semantic language="Smalltalk/StackInterpreter">
+            "Nop in the interpreter"
+        </semantic>
         <semantic language="Smalltalk/Cog">
             "Do nothing for now"
         </semantic>
@@ -5566,7 +5609,7 @@
     </instruction>
     <instruction opcode="2011" mnemonic="oopSmallIntegerToInt64" kind="operation">
         <name>Oop to Int</name>
-        <description>It decodes an Oop representing a small integer boolean into a64-bit integer.</description>
+        <description>It decodes an Oop representing a small integer boolean into a 64-bit integer.</description>
         <arguments />
         <stack-arguments>
             <oop name="object" />

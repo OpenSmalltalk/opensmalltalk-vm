@@ -9,7 +9,7 @@
 
 #include <stdio.h>
 #include <stdlib.h> /* proto for alloca in MINGW */
-#if !WIN32 && !__FreeBSD__ && !__OpenBSD__
+#if !_WIN32 && !__FreeBSD__ && !__OpenBSD__
 # include <alloca.h>
 #endif
 #include <string.h>

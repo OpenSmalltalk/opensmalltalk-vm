@@ -11,10 +11,13 @@ CFLAGS=-m32 -DMODET $(INCLUDES) $(LIBS)
 
 .PHONY:	$(LIBDEPS)
 
-all: GdbARMAlien-regs.st GdbARMAlien-vfp.st
+all: GdbARMAlien-regs.st GdbARMAlien-ctrl.st GdbARMAlien-vfp.st
 
 GdbARMAlien-regs.st: printcpu
 	./printcpu >GdbARMAlien-regs.st
+
+GdbARMAlien-ctrl.st: printcpuctrl
+	./printcpuctrl >GdbARMAlien-ctrl.st
 
 GdbARMAlien-vfp.st: printcpuvfp
 	./printcpuvfp >GdbARMAlien-vfp.st
@@ -25,6 +28,9 @@ clean:
 	rm -f printcpu.exe printcpuvfp.exe
 
 printcpu: $(GDBARMEXP)/printcpu.c $(LIBDEPS)
+	$(CC) -o $@ $< $(CFLAGS)
+
+printcpuctrl: $(GDBARMEXP)/printcpuctrl.c $(LIBDEPS)
 	$(CC) -o $@ $< $(CFLAGS)
 
 printcpuvfp: $(GDBARMEXP)/printcpuvfp.c $(LIBDEPS)

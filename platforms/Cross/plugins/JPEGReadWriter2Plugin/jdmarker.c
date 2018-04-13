@@ -2,6 +2,9 @@
  * jdmarker.c
  *
  * Copyright (C) 1991-1998, Thomas G. Lane.
+ * Modified 2013 by Bill Allombert for CVE 2013-6629 and 2013-6630
+ * by applying a fix by Guido Vollbeding.
+ *
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -238,7 +241,7 @@ get_sof (j_decompress_ptr cinfo, boolean is_prog, boolean is_arith)
 /* Process a SOFn marker */
 {
   INT32 length;
-  int c, ci;
+  int c, ci, i;
   jpeg_component_info * compptr;
   INPUT_VARS(cinfo);
 
@@ -275,11 +278,27 @@ get_sof (j_decompress_ptr cinfo, boolean is_prog, boolean is_arith)
     cinfo->comp_info = (jpeg_component_info *) (*cinfo->mem->alloc_small)
 			((j_common_ptr) cinfo, JPOOL_IMAGE,
 			 cinfo->num_components * SIZEOF(jpeg_component_info));
-  
-  for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
-       ci++, compptr++) {
+
+  for (ci = 0; ci < cinfo->num_components; ci++) {
+    INPUT_BYTE(cinfo, c, return FALSE);
+    /* Check to see whether component id has already been seen   */
+    /* (in violation of the spec, but unfortunately seen in some */
+    /* files).  If so, create "fake" component id equal to the   */
+    /* max id seen so far + 1. */
+    for (i = 0, compptr = cinfo->comp_info; i < ci; i++, compptr++) {
+      if (c == compptr->component_id) {
+	compptr = cinfo->comp_info;
+	c = compptr->component_id;
+	compptr++;
+	for (i = 1; i < ci; i++, compptr++) {
+	  if (compptr->component_id > c) c = compptr->component_id;
+	}
+	c++;
+	break;
+      }
+    }
+    compptr->component_id = c;
     compptr->component_index = ci;
-    INPUT_BYTE(cinfo, compptr->component_id, return FALSE);
     INPUT_BYTE(cinfo, c, return FALSE);
     compptr->h_samp_factor = (c >> 4) & 15;
     compptr->v_samp_factor = (c     ) & 15;
@@ -302,7 +321,7 @@ get_sos (j_decompress_ptr cinfo)
 /* Process a SOS marker */
 {
   INT32 length;
-  int i, ci, n, c, cc;
+  int c, ci, i, n;
   jpeg_component_info * compptr;
   INPUT_VARS(cinfo);
 
@@ -323,24 +342,38 @@ get_sos (j_decompress_ptr cinfo)
   /* Collect the component-spec parameters */
 
   for (i = 0; i < n; i++) {
-    INPUT_BYTE(cinfo, cc, return FALSE);
     INPUT_BYTE(cinfo, c, return FALSE);
-    
+
+    /* Detect the case where component id's are not unique, and, if so, */
+    /* create a fake component id using the same logic as in get_sof.   */
+    for (ci = 0; ci < i; ci++) {
+      if (c == cinfo->cur_comp_info[ci]->component_id) {
+	c = cinfo->cur_comp_info[0]->component_id;
+	for (ci = 1; ci < i; ci++) {
+	  compptr = cinfo->cur_comp_info[ci];
+	  if (compptr->component_id > c) c = compptr->component_id;
+	}
+	c++;
+	break;
+      }
+    }
+
     for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
 	 ci++, compptr++) {
-      if (cc == compptr->component_id)
+      if (c == compptr->component_id)
 	goto id_found;
     }
 
-    ERREXIT1(cinfo, JERR_BAD_COMPONENT_ID, cc);
+    ERREXIT1(cinfo, JERR_BAD_COMPONENT_ID, c);
 
   id_found:
 
     cinfo->cur_comp_info[i] = compptr;
+    INPUT_BYTE(cinfo, c, return FALSE);
     compptr->dc_tbl_no = (c >> 4) & 15;
     compptr->ac_tbl_no = (c     ) & 15;
-    
-    TRACEMS3(cinfo, 1, JTRC_SOS_COMPONENT, cc,
+
+    TRACEMS3(cinfo, 1, JTRC_SOS_COMPONENT, compptr->component_id,
 	     compptr->dc_tbl_no, compptr->ac_tbl_no);
   }
 
@@ -455,6 +488,8 @@ get_dht (j_decompress_ptr cinfo)
      */
     if (count > 256 || ((INT32) count) > length)
       ERREXIT(cinfo, JERR_BAD_HUFF_TABLE);
+
+    MEMZERO(huffval, SIZEOF(huffval)); /* pre-zero array for later copy */
 
     for (i = 0; i < count; i++)
       INPUT_BYTE(cinfo, huffval[i], return FALSE);

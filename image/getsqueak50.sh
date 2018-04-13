@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 . ./envvars.sh
 
 IMAGEHASH=e6be0ea204a8409dc0976a792502ab65
@@ -8,7 +9,7 @@ if [ "`quietmd5 \"$SQUEAK50\".image`" != $IMAGEHASH ]; then
 	ZIP=Squeak-5.0-All-in-One.zip
 	if [ "`quietmd5 $ZIP`" != $ZIPHASH ]
 	then
-		geturl http://ftp.squeak.org/5.0/$ZIP
+		geturl http://files.squeak.org/5.0/$ZIP
 	fi
 	if unzip --help >/dev/null; then
 		true

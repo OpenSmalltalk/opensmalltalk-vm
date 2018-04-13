@@ -37,6 +37,8 @@ platforms/unix/config/autom4te.cache/
 !makeall
 !makeallclean
 !makealldirty
+!makeclean
+!makeem
 !Makefile
 !Makefile.plugin
 !Makefile.rules
@@ -93,16 +95,26 @@ platforms/unix/config/autom4te.cache/
 /image/cogwin
 /image/Cog.app
 /image/cogspurlinux*
+/image/sqlinux*
+/image/sqwin*
 /image/cogspurwin
 /image/CogSpur.app
+/image/Squeak*.app
+/image/[sS]queak*.dmg
 /image/Squeak-*-All-in-One.*
 /image/SqueakDebug.log
+/image/Squeak3D.log
 /image/__MACOSX
 /image/crash.dmp
 /image/package-cache
 /image/prefs
 /image/special-dirs
 /image/*.zip
+/image/.*history
+
+# /sources/
+/sources/*.sources
+/sources/*.gz
 
 # /platforms/Cross/
 
@@ -246,3 +258,5 @@ platforms/unix/config/autom4te.cache/
 
 # /products/debug/
 /products/debug/*
+*.cer
+*.p12

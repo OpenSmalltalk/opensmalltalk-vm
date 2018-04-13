@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # Build a Spur image that starts up in a simple REPL, which is
 # really useful for VMMaker simulation testing.
 . ./envvars.sh
@@ -7,8 +8,8 @@
 
 ./ensureSqueakV50sources.sh
 
-cp -p trunk50.image spurreader.image
-cp -p trunk50.changes spurreader.changes
+cp -p ${BASE}.image spurreader.image
+cp -p ${BASE}.changes spurreader.changes
 
 . ./getGoodSpurVM.sh
 

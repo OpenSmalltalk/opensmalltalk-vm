@@ -1,8 +1,17 @@
 /* SqViewClut.m created by marcel on Sat 23-Dec-2000 */
 
-#import "sqSqueakOSXOpenGLView.h"
+#import "SqViewClut.h"
 
-@implementation sqSqueakOSXOpenGLView(Clut)
+#ifndef USE_CORE_GRAPHICS
+#  import "sqSqueakOSXOpenGLView.h"
+#  define ContentViewClass sqSqueakOSXOpenGLView
+#else
+#  import "sqSqueakOSXCGView.h"
+#  define ContentViewClass sqSqueakOSXCGView
+#endif
+
+
+@implementation ContentViewClass (sqViewClut)
 	
 	-(void)initializeSqueakColorMap
 	{

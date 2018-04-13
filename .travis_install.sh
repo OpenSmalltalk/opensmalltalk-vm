@@ -5,10 +5,14 @@ if [[ "${ARCH}" = "linux64x64" ]]; then
             debhelper \
             devscripts \
             libasound2-dev \
+            libc6-dev \
             libssl-dev \
             libfreetype6-dev \
             libx11-dev \
             libxext-dev \
+            libpango1.0-dev \
+            libpulse-dev \
+            libaudio-dev \
             gcc-multilib \
             uuid-dev
 elif [[ "${ARCH}" = "linux32x86" ]]; then
@@ -20,6 +24,7 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             libasound2-dev:i386 \
             libssl-dev:i386 \
             libssl0.9.8:i386 \
+            libpng-dev:i386 \
             libfreetype6-dev:i386 \
             libx11-dev:i386 \
             libsm-dev:i386 \
@@ -28,8 +33,17 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             libgl1-mesa-dev:i386 \
             libxext-dev:i386 \
             libglapi-mesa:i386 \
+            libpango1.0-dev:i386 \
+              libxft-dev:i386 \
+              gir1.2-pango-1.0:i386 \
+              gir1.2-freedesktop:i386 \
+              gir1.2-glib-2.0:i386 \
+              libgirepository-1.0-1:i386 \
+            libpulse-dev:i386 \
+            libaudio-dev:i386 \
             gcc-multilib \
-            uuid-dev:i386
+            uuid-dev:i386 \
+            libcurl3-dev:i386
 fi
 
 [[ "${ARCH}" != "linux32ARMv6" ]] && exit 0
@@ -69,7 +83,10 @@ sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-y
      build-essential \
      python-dev \
      libffi-dev \
-     zlib1g-dev
+     zlib1g-dev \
+     libtool \
+     automake \
+     autoconf
 
 sudo chown $USER /etc/schroot/schroot.conf
 echo "
@@ -95,7 +112,8 @@ if [ ! -e "$ARMCHROOT/etc/debian_chroot" ]; then
     schroot -c rpi -u root -- apt-get --allow-unauthenticated install -y \
 	    build-essential libcairo2-dev libpango1.0-dev libssl-dev uuid-dev uuid-runtime libasound2-dev \
 	    debhelper devscripts libssl-dev libfreetype6-dev libx11-dev libxext-dev \
-	    libx11-dev libsm-dev libice-dev libgl1-mesa-dev libgl1-mesa-glx git
+	    libx11-dev libsm-dev libice-dev libgl1-mesa-dev libgl1-mesa-glx git \
+	    libtool automake autoconf
     #needed for third-party libraries
     schroot -c rpi -u root -- apt-get --allow-unauthenticated install -y cmake curl
 fi

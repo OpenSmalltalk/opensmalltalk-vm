@@ -30,7 +30,7 @@ typedef struct
 // Beginning of file
 #define mpeg3io_bof(fs)	(((mpeg3_fs_t *)(fs))->current_byte < 0)
 
-#ifdef WIN32
+#ifdef _WIN32
 #define inline __inline
 #endif
 

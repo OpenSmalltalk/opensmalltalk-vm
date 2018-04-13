@@ -40,6 +40,11 @@ squeak		= squeak
 squeaksh	= squeak.sh
 binsqueaksh	= bin.squeak.sh
 
+# We are not really using automake but we need to link vm/vm.a multiple
+# times or we have undefined references. This was taken from:
+# http://lists.gnu.org/archive/html/automake/2006-05/msg00091.html
+LIBTOOL = @LIBTOOL@ --preserve-dup-deps
+
 all : $(squeak) plugins squeak.1 $(npsqueak)
 
 # VM
@@ -60,7 +65,7 @@ version.c : $(SQLIBS)
 
 
 getversion : ${cfgdir}/getversion.c ${topdir}/platforms/Cross/vm/sqSCCSVersion.h
-	$(CC) -o getversion $(CFLAGS) $(INCLUDES) ${cfgdir}/getversion.c
+	$(LINK) getversion $(INCLUDES) ${cfgdir}/getversion.c
 
 plugins : config.sh $(PLUGINS_LA)
 

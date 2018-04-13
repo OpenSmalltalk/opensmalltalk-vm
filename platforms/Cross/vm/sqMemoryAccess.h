@@ -1,7 +1,7 @@
 /* sqMemoryAccess.h -- memory accessors (and associated type definitions)
- * 
+ *
  * Author: Ian.Piumarta@squeakland.org
- * 
+ *
  * Last edited: 2013-10-14 12:23:39 by eliot on McStalker
  */
 
@@ -142,6 +142,10 @@ typedef unsigned long long usqIntptr_t;
   static inline sqInt longAtPointerput(char *ptr, sqInt val)	{ return *(sqInt *)ptr= val; }
   static inline sqLong long64AtPointer(char *ptr)			{ return *(sqLong *)ptr; }
   static inline sqLong long64AtPointerput(char *ptr, sqLong val)	{ return *(sqLong *)ptr= val; }
+  static inline float singleFloatAtPointer(char *ptr)			{ return *(float *)ptr; }
+  static inline float singleFloatAtPointerput(char *ptr, float val)	{ return *(float *)ptr= val; }
+  static inline double floatAtPointer(char *ptr)			{ return *(double *)ptr; }
+  static inline double floatAtPointerput(char *ptr, double val)	{ return *(double *)ptr= val; }  
   static inline sqInt oopAtPointer(char *ptr)			{ return *(sqInt *)ptr; }
   static inline sqInt oopAtPointerput(char *ptr, sqInt val)	{ return (sqInt)(*(sqInt *)ptr= val); }
 # if defined(sqMemoryBase) && !sqMemoryBase

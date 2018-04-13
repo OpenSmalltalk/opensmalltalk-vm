@@ -92,13 +92,13 @@ struct VirtualMachine* interpreterProxy;
 # define alloca _alloca
 #endif
 #if __GNUC__
-//# define setsp(sp) asm volatile ("movl %0,%%esp" : : "memory"(sp))
-//# define getsp(sp) asm volatile ("movl %%esp,%0" : "=r"(sp) : )
+//# define setsp(sp) __asm__ volatile ("movl %0,%%esp" : : "memory"(sp))
+//# define getsp(sp) __asm__ volatile ("movl %%esp,%0" : "=r"(sp) : )
 #endif
 # define STACK_ALIGN_BYTES 16
 
 #if !defined(setsp)
-# define setsp(ignored)  asm volatile ("stwu r1,12(r1)\n")
+# define setsp(ignored)  __asm__ volatile ("stwu r1,12(r1)\n")
 #endif
 
 #define moduloPOT(m,v) ((v)+(m)-1 & ~((m)-1))
@@ -245,7 +245,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 				_asm mov edx, dword ptr vhigh;
 #elif __GNUC__
 #warning ASSEMBLER
-//asm("mov %0,%%edx" : : "m"(vhigh));
+//__asm__("mov %0,%%edx" : : "m"(vhigh));
 #else
 # error need to load edx with rs->rvs.valint64.high on this compiler
 #endif
@@ -258,7 +258,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 				_asm fld qword ptr valflt64;
 #elif __GNUC__
 #warning ASSEMBLER
-//				asm("fldl %0" : : "m"(valflt64));
+//				__asm__("fldl %0" : : "m"(valflt64));
 #else
 # error need to load %f0 with rs->rvs.valflt64 on this compiler
 #endif
@@ -275,7 +275,7 @@ thunkEntry(void *thunkp, sqIntptr_t *stackp)
 }
 
 /*
- * Thunk allocation support.  Since thunks must be exectuable and some OSs
+ * Thunk allocation support.  Since thunks must be executable and some OSs
  * may not provide default execute permission on memory returned by malloc
  * we must provide memory that is guaranteed to be executable.  The abstraction
  * is to answer an Alien that references an executable piece of memory that

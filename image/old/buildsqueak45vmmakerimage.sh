@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 . ./envvars.sh
 ./getsqueak45.sh
 . ./getGoodCogVM.sh

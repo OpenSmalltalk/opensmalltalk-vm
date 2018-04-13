@@ -45,8 +45,6 @@
 
 - (instancetype)init {
     self = [super init];
-    if (self) {
-    }
     return self;
 }
 
@@ -77,12 +75,8 @@
 }
 
 - (sqInt) ioHasDisplayDepth: (sqInt) depth {
-    if (depth == 2 || depth ==  4 || depth == 8 || depth == 16 || depth == 32 ||
-        depth == -2 || depth ==  -4 || depth == -8 || depth == -16 || depth == -32) {
-        return true;
-    } else {
-        return false;
-    }
+    return (depth == 2 || depth ==  4 || depth == 8 || depth == 16 || depth == 32 ||
+        	depth == -2 || depth ==  -4 || depth == -8 || depth == -16 || depth == -32);
 }
 
 - (void) ioForceDisplayUpdate {

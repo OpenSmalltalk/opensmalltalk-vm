@@ -13,8 +13,11 @@
  * assertl, assertal & assertfl take a line number as an argument.
  */
 
+#pragma auto_inline(off)
 extern void warning(char *);
 extern void warningat(char *,int);
+void error(char *s);
+#pragma auto_inline(on)
 
 #undef assert
 # define __stringify(foo) #foo

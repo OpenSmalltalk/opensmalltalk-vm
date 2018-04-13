@@ -9,6 +9,7 @@
 *
 *****************************************************************************/
 #include <windows.h>
+#include <tchar.h>
 #include <math.h>
 #include "sq.h"
 
@@ -138,18 +139,34 @@ int __cdecl sqMessageBox(DWORD dwFlags, const TCHAR *titleString, const char* fm
 /* Print out a message and abort execution                                  */
 /****************************************************************************/
 #ifndef abortMessage
-int __cdecl abortMessage(const TCHAR* fmt, ...)
+int __cdecl
+abortMessage(TCHAR *fmt, ...)
 { TCHAR *buf;
 	va_list args;
 
-  buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
 	va_start(args, fmt);
+	if (fIsConsole) {
+#if _UNICODE
+		vfwprintf(stderr, fmt, args);
+#else
+		vfprintf(stderr, fmt, args);
+#endif
+		exit(-1);
+	}
+	buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
+	if (fmt[_tcslen(fmt)-1] == '\n')
+		fmt[_tcslen(fmt)-1] = 0;
+#if _UNICODE
 	wvsprintf(buf, fmt, args);
+#else
+	vsprintf(buf, fmt, args);
+#endif
 	va_end(args);
 
 	MessageBox(NULL,buf,TEXT(VM_NAME) TEXT("!"),MB_OK | MB_TASKMODAL | MB_SETFOREGROUND);
-  free(buf);
-  exit(-1);
+	free(buf);
+	exit(-1);
+	return 0;
 }
 #endif
 
@@ -157,16 +174,31 @@ int __cdecl abortMessage(const TCHAR* fmt, ...)
 /* Print out a warning message                                              */
 /****************************************************************************/
 #ifndef warnPrintf
-int __cdecl warnPrintf(const TCHAR *fmt, ...)
+int __cdecl
+warnPrintf(TCHAR *fmt, ...)
 { TCHAR *buf;
 	va_list args;
 
-  buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
 	va_start(args, fmt);
+	if (fIsConsole)
+#if _UNICODE
+		vfwprintf(stderr, fmt, args);
+#else
+		vfprintf(stderr, fmt, args);
+#endif
+
+	buf = (TCHAR*) calloc(sizeof(TCHAR), 4096);
+	if (fmt[_tcslen(fmt)-1] == '\n')
+		fmt[_tcslen(fmt)-1] = 0;
+#if _UNICODE
 	wvsprintf(buf, fmt, args);
+#else
+	vsprintf(buf, fmt, args);
+#endif
 	va_end(args);
-  MessageBox(stWindow, buf, TEXT(VM_NAME) TEXT(" Warning!"), MB_OK | MB_ICONSTOP | MB_SETFOREGROUND);
-  free(buf);
+	MessageBox(stWindow, buf, TEXT(VM_NAME) TEXT(" Warning!"), MB_OK | MB_ICONSTOP | MB_SETFOREGROUND);
+	free(buf);
+	return 0;
 }
 #endif
 
@@ -182,7 +214,7 @@ void printLastError(TCHAR *prefix)
   FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                 NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                 (LPTSTR) &lpMsgBuf, 0, NULL );
-  warnPrintf(TEXT("%s (%ld) -- %s\n"), prefix, lastError, lpMsgBuf);
+  warnPrintf(TEXT("%s (%ld) -- %s\n"), prefix, lastError, (char *)lpMsgBuf);
   LocalFree( lpMsgBuf );
 }
 #endif
@@ -202,7 +234,7 @@ void vprintLastError(TCHAR *fmt, ...)
   FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |  FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                 NULL, GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
                 (LPTSTR) &lpMsgBuf, 0, NULL );
-  warnPrintf(TEXT("%s (%ld: %s)\n"), buf, lastError, lpMsgBuf);
+  warnPrintf(TEXT("%s (%ld: %s)\n"), buf, lastError, (char *)lpMsgBuf);
   LocalFree( lpMsgBuf );
   free(buf);
 }

@@ -1,0 +1,30 @@
+# TODO: This is a very UGLY workaround, since I need to distribute LIBGCC_S_DW2-1.DLL with 
+# Pharo because some third-party libraries persist on require it as dependency. 
+#
+# 14/12/2017: Of course I need to find a way to fix the real problem, but I do not have 
+# the time right now so I'm doing this :(
+
+ifndef THIRDPARTYDIR
+	include ../common/Makefile.lib.extra
+endif
+
+LIBGCCLIBNAME:=libgcc_s_seh-1.dll
+LIBGCCLIB:=$(THIRDPARTYINSTALLDIR)/$(LIBGCCLIBNAME)
+MINGWLIBDIR:=/usr/x86_64-w64-mingw32/sys-root/mingw/bin
+
+LIBPTHREADLIBNAME:=libwinpthread-1.dll
+LIBPTHREADLIB:=$(THIRDPARTYINSTALLDIR)/$(LIBPTHREADLIBNAME)
+
+LIBICONVLIBNAME:=iconv.dll
+LIBICONVLIB:=$(THIRDPARTYINSTALLDIR)/$(LIBICONVLIBNAME)
+
+$(LIBGCCLIB): $(LIBICONVLIB) $(LIBPTHREADLIB)
+	cp -f $(MINGWLIBDIR)/$(LIBGCCLIBNAME) $(THIRDPARTYINSTALLDIR)
+
+$(LIBPTHREADLIB): 
+	cp -f $(MINGWLIBDIR)/$(LIBPTHREADLIBNAME) $(THIRDPARTYINSTALLDIR)
+
+$(LIBICONVLIB): 
+	cp -f $(MINGWLIBDIR)/$(LIBICONVLIBNAME) $(THIRDPARTYINSTALLDIR)
+
+libgcc: $(LIBGCCLIB)

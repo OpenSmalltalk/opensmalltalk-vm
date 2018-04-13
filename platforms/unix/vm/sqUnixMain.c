@@ -45,28 +45,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>  /* for toupper isdigit */
 #include <time.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/utsname.h>
 #include <sys/stat.h>
+#ifndef __OpenBSD__
+# include <sys/ucontext.h>
+#endif
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
 #include <fcntl.h>
-#if !defined(NOEXECINFO)
+#if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 # include <execinfo.h>
 # define BACKTRACE_DEPTH 64
 #endif
 #if __OpenBSD__
 # include <sys/signal.h>
 #endif
-#if __FreeBSD__
-# include <sys/ucontext.h>
-#endif
 # if __sun__
-  # include <sys/ucontext.h>
   # include <limits.h>
 # endif
 
@@ -568,6 +568,12 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt us)
 
 sqInt ioBeep(void)				 { return dpy->ioBeep(); }
 
+/* Right now this funciton isn't responded to so we simply provide a dummy
+ * definition here.  If any of the display subsystems do need it then it will
+ * have to be reimplemented as per the functions above.
+ */
+void  ioNoteDisplayChangedwidthheightdepth(void *b, int w, int h, int d) {}
+
 #if defined(IMAGE_DUMP)
 
 static void emergencyDump(int quit)
@@ -831,7 +837,7 @@ static void *printRegisterState(ucontext_t *uap);
 static void
 reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 {
-#if !defined(NOEXECINFO)
+#if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 	void *addrs[BACKTRACE_DEPTH];
 	void *pc;
 	int depth;
@@ -853,7 +859,7 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 		return;
 #endif
 
-#if !defined(NOEXECINFO)
+#if !defined(NOEXECINFO) && defined(HAVE_EXECINFO_H)
 	printf("C stack backtrace & registers:\n");
 	if (uap) {
 		addrs[0] = printRegisterState(uap);
@@ -885,12 +891,18 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 # elif __FreeBSD__ && __i386__
 			void *fp = (void *)(uap ? uap->uc_mcontext.mc_ebp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.mc_esp: 0);
-# elif __OpenBSD__
+# elif __FreeBSD__ && __amd64__
+			void *fp = (void *)(uap ? uap->uc_mcontext.mc_rbp: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext.mc_rsp: 0);
+# elif __OpenBSD__ && __i386__
+			void *fp = (void *)(uap ? uap->sc_ebp: 0);
+			void *sp = (void *)(uap ? uap->sc_esp: 0);
+# elif __OpenBSD__ && __amd64__
 			void *fp = (void *)(uap ? uap->sc_rbp: 0);
 			void *sp = (void *)(uap ? uap->sc_rsp: 0);
 # elif __sun__ && __i386__
-      void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
-      void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);
+			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_FP]: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_SP]: 0);
 # elif defined(__arm__) || defined(__arm32__) || defined(ARM32)
 			void *fp = (void *)(uap ? uap->uc_mcontext.arm_fp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.arm_sp: 0);
@@ -1026,7 +1038,7 @@ sigusr1(int sig, siginfo_t *info, void *uap)
 	int saved_errno = errno;
 	time_t now = time(NULL);
 	char ctimebuf[32];
-	char crashdump[IMAGE_NAME_SIZE+1];
+	char crashdump[MAXPATHLEN+1];
 	unsigned long pc;
 
 	if (!ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
@@ -1052,7 +1064,7 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 {
 	time_t now = time(NULL);
 	char ctimebuf[32];
-	char crashdump[IMAGE_NAME_SIZE+1];
+	char crashdump[MAXPATHLEN+1];
 	char *fault = sig == SIGSEGV
 					? "Segmentation fault"
 					: (sig == SIGBUS
@@ -1062,6 +1074,7 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 							: "Unknown signal"));
 
 	if (!inFault) {
+		inFault = 1;
 		getCrashDumpFilenameInto(crashdump);
 		ctime_r(&now,ctimebuf);
 		pushOutputFile(crashdump);
@@ -1310,9 +1323,6 @@ static void loadModules(void)
   checkModuleVersion(soundModule,   SqSoundVersion,   snd->version);
 }
 
-/* built-in main vm module */
-
-
 static long
 strtobkm(const char *str)
 {
@@ -1345,6 +1355,7 @@ static int jitArgs(char *str)
 }
 #endif /* !STACKVM && !COGVM */
 
+/* ----------------- built-in main vm module */
 
 # include <locale.h>
 static void vm_parseEnvironment(void)
@@ -1380,7 +1391,7 @@ static void vm_parseEnvironment(void)
 }
 
 
-static void usage(void);
+static void usage();
 static void versionInfo(void);
 
 
@@ -1398,7 +1409,8 @@ static int parseModuleArgument(int argc, char **argv, struct SqModule **addr, ch
 
 static int vm_parseArgument(int argc, char **argv)
 {
-  /* deal with arguments that implicitly load modules */
+  // parse arguments for main vm module including those that
+  // implicitly load modules.
 
   if (!strncmp(argv[0], "-psn_", 5))
     {
@@ -1418,13 +1430,8 @@ static int vm_parseArgument(int argc, char **argv)
       return 1;
     }
 
-  /* legacy compatibility */		/*** XXX to be removed at some time ***/
 
-#ifdef PharoVM
-# define VMOPTION(arg) "--"arg
-#else
 # define VMOPTION(arg) "-"arg
-#endif
 
 # define moduleArg(arg, type, name)						\
     if (!strcmp(argv[0], VMOPTION(arg)))							\
@@ -1467,139 +1474,141 @@ static int vm_parseArgument(int argc, char **argv)
 
   /* vm arguments */
 
-  if      (!strcmp(argv[0], VMOPTION("help")))		{ usage();		return 1; }
-  else if (!strcmp(argv[0], VMOPTION("noevents")))	{ noEvents	= 1;	return 1; }
-  else if (!strcmp(argv[0], VMOPTION("nomixer")))	{ noSoundMixer	= 1;	return 1; }
-  else if (!strcmp(argv[0], VMOPTION("notimer")))	{ useItimer	= 0;	return 1; }
-  else if (!strcmp(argv[0], VMOPTION("nohandlers")))	{ installHandlers= 0;	return 1; }
-  else if (!strcmp(argv[0], VMOPTION("blockonerror"))) 	{ blockOnError = 1; return 1; }
-  else if (!strcmp(argv[0], VMOPTION("blockonwarn"))) 	{ erroronwarn = blockOnError = 1; return 1; }
-  else if (!strcmp(argv[0], VMOPTION("exitonwarn"))) 	{ erroronwarn = 1; return 1; }
-  else if (!strcmp(argv[0], VMOPTION("timephases"))) 	{ printPhaseTime(1); return 1; }
+  if      (!strcmp(argv[0], VMOPTION("help")))         { usage();             exit(0); }
+  else if (!strcmp(argv[0], VMOPTION("version")))      { versionInfo();      return 0; }
+  else if (!strcmp(argv[0], VMOPTION("noevents")))     { noEvents       = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("nomixer")))      { noSoundMixer   = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("notimer")))      { useItimer      = 0; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("nohandlers")))   { installHandlers= 0; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("blockonerror"))) { blockOnError   = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("blockonwarn")))  { erroronwarn = blockOnError = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("exitonwarn")))   { erroronwarn    = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("timephases")))   { printPhaseTime(1) ; return 1; }
 #if !STACKVM && !COGVM
-  else if (!strncmp(argv[0],VMOPTION("jit"), 4))	{ useJit	= jitArgs(argv[0]+4);	return 1; }
-  else if (!strcmp(argv[0], VMOPTION("nojit")))		{ useJit	= 0;	return 1; }
-  else if (!strcmp(argv[0], VMOPTION("spy")))		{ withSpy	= 1;	return 1; }
+  else if (!strncmp(argv[0],VMOPTION("jit"), 4))    { useJit  = jitArgs(argv[0]+4); return 1; }
+  else if (!strcmp(argv[0], VMOPTION("nojit")))     { useJit  = 0; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("spy")))       { withSpy = 1; return 1; }
 #endif /* !STACKVM && !COGVM */
-  else if (!strcmp(argv[0], VMOPTION("version")))	{ versionInfo();	return 1; }
-  else if (!strcmp(argv[0], VMOPTION("single")))	{ runAsSingleInstance=1; return 1; }
-  /* option requires an argument */
-  else if (argc > 1)
-    {
-      if (!strcmp(argv[0], VMOPTION("memory")))		{ extraMemory=	 strtobkm(argv[1]);	 return 2; }
-#if !STACKVM && !COGVM
-      else if (!strcmp(argv[0], VMOPTION("procs")))	{ jitProcs=	 atoi(argv[1]);		 return 2; }
-      else if (!strcmp(argv[0], VMOPTION("maxpic")))	{ jitMaxPIC=	 atoi(argv[1]);		 return 2; }
-#endif /* !STACKVM && !COGVM */
-      else if (!strcmp(argv[0], VMOPTION("mmap")))	{ useMmap=	 strtobkm(argv[1]);	 return 2; }
-      else if (!strcmp(argv[0], VMOPTION("plugins")))	{ squeakPlugins= strdup(argv[1]);	 return 2; }
-      else if (!strcmp(argv[0], VMOPTION("encoding")))	{ setEncoding(&sqTextEncoding, argv[1]); return 2; }
-      else if (!strcmp(argv[0], VMOPTION("pathenc")))	{ setEncoding(&uxPathEncoding, argv[1]); return 2; }
 #if (STACKVM || NewspeakVM) && !COGVM
-	  else if (!strcmp(argv[0], VMOPTION("sendtrace"))) { extern sqInt sendTrace; sendTrace = 1; return 1; }
+  else if (!strcmp(argv[0], VMOPTION("sendtrace"))) { extern sqInt sendTrace; sendTrace = 1; return 1; }
 #endif
+  else if (!strcmp(argv[0], VMOPTION("single")))    { runAsSingleInstance=1; return 1; }
+  /* option requires an argument */
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("memory")))   { extraMemory  = strtobkm(argv[1]); return 2; }
+#if !STACKVM && !COGVM
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("procs")))    { jitProcs     = atoi(argv[1]);     return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("maxpic")))   { jitMaxPIC    = atoi(argv[1]);     return 2; }
+#endif /* !STACKVM && !COGVM */
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("mmap")))     { useMmap      = strtobkm(argv[1]); return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("plugins")))  { squeakPlugins= strdup(argv[1]);   return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("encoding"))) { setEncoding(&sqTextEncoding, argv[1]); return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("pathenc")))  { setEncoding(&uxPathEncoding, argv[1]); return 2; }
 #if STACKVM || NewspeakVM
-      else if (!strcmp(argv[0], VMOPTION("breaksel"))) { 
-		extern void setBreakSelector(char *);
-		setBreakSelector(argv[1]);
-		return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("breaksel"))) { 
+    extern void setBreakSelector(char *);
+    setBreakSelector(argv[1]);
+    return 2; }
 #endif
 #if STACKVM
-      else if (!strcmp(argv[0], VMOPTION("breakmnu"))) { 
-		extern void setBreakMNUSelector(char *);
-		setBreakMNUSelector(argv[1]);
-		return 2; }
-      else if (!strcmp(argv[0], VMOPTION("eden"))) {
-		extern sqInt desiredEdenBytes;
-		desiredEdenBytes = strtobkm(argv[1]);
-		return 2; }
-      else if (!strcmp(argv[0], VMOPTION("leakcheck"))) { 
-		extern sqInt checkForLeaks;
-		checkForLeaks = atoi(argv[1]);	 
-		return 2; }
-      else if (!strcmp(argv[0], VMOPTION("stackpages"))) {
-		extern sqInt desiredNumStackPages;
-		desiredNumStackPages = atoi(argv[1]);
-		return 2; }
-      else if (!strcmp(argv[0], VMOPTION("numextsems"))) { 
-		ioSetMaxExtSemTableSize(atoi(argv[1]));
-		return 2; }
-      else if (!strcmp(argv[0], VMOPTION("checkpluginwrites"))) { 
-		extern sqInt checkAllocFiller;
-		checkAllocFiller = 1;
-		return 1; }
-      else if (!strcmp(argv[0], VMOPTION("noheartbeat"))) { 
-		extern sqInt suppressHeartbeatFlag;
-		suppressHeartbeatFlag = 1;
-		return 1; }
-      else if (!strcmp(argv[0], VMOPTION("warnpid"))) { 
-		extern sqInt warnpid;
-		warnpid = getpid();
-		return 1; }
-      else if (!strcmp(argv[0], VMOPTION("pollpip"))) { 
-		extern sqInt pollpip;
-		pollpip = atoi(argv[1]);	 
-		return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("breakmnu"))) { 
+    extern void setBreakMNUSelector(char *);
+    setBreakMNUSelector(argv[1]);
+    return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("eden"))) {
+    extern sqInt desiredEdenBytes;
+    desiredEdenBytes = strtobkm(argv[1]);
+    return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("leakcheck"))) { 
+    extern sqInt checkForLeaks;
+    checkForLeaks = atoi(argv[1]);	 
+    return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("stackpages"))) {
+    extern sqInt desiredNumStackPages;
+    desiredNumStackPages = atoi(argv[1]);
+    return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("numextsems"))) { 
+    ioSetMaxExtSemTableSize(atoi(argv[1]));
+    return 2; }
+  else if (!strcmp(argv[0], VMOPTION("checkpluginwrites"))) { 
+    extern sqInt checkAllocFiller;
+    checkAllocFiller = 1;
+    return 1; }
+  else if (!strcmp(argv[0], VMOPTION("noheartbeat"))) { 
+    extern sqInt suppressHeartbeatFlag;
+    suppressHeartbeatFlag = 1;
+    return 1; }
+  else if (!strcmp(argv[0], VMOPTION("warnpid"))) { 
+    extern sqInt warnpid;
+    warnpid = getpid();
+    return 1; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("pollpip"))) { 
+    extern sqInt pollpip;
+    pollpip = atoi(argv[1]);	 
+    return 2; }
 #endif /* STACKVM */
 #if COGVM
-      else if (!strcmp(argv[0], VMOPTION("codesize"))) { 
-		extern sqInt desiredCogCodeSize;
-		desiredCogCodeSize = strtobkm(argv[1]);	 
-		return 2; }
-# define TLSLEN (sizeof("-trace")-1)
-      else if (!strncmp(argv[0], VMOPTION("trace"), TLSLEN)) { 
-		extern int traceFlags;
-		char *equalsPos = strchr(argv[0],'=');
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("codesize"))) { 
+    extern sqInt desiredCogCodeSize;
+    desiredCogCodeSize = strtobkm(argv[1]);	 
+    return 2; }
+# define TLSLEN (sizeof(VMOPTION("trace"))-1)
+  else if (!strncmp(argv[0], VMOPTION("trace"), TLSLEN)) { 
+    extern int traceFlags;
+    char *equalsPos = strchr(argv[0],'=');
 
-		if (!equalsPos) {
-			traceFlags = 1;
-			return 1;
-		}
-		if (equalsPos - argv[0] != TLSLEN
-		  || (equalsPos[1] != '-' && !isdigit(equalsPos[1])))
-			return 0;
+    if (!equalsPos) {
+      traceFlags = 1;
+      return 1;
+    }
+    if (equalsPos - argv[0] != TLSLEN
+      || (equalsPos[1] != '-' && !isdigit(equalsPos[1])))
+      return 0;
 
-		traceFlags = atoi(equalsPos + 1);
-		return 1; }
-      else if (!strcmp(argv[0], VMOPTION("tracestores"))) { 
-		extern sqInt traceStores;
-		traceStores = 1;
-		return 1; }
-      else if (!strcmp(argv[0], VMOPTION("cogmaxlits"))) { 
-		extern sqInt maxLiteralCountForCompile;
-		maxLiteralCountForCompile = strtobkm(argv[1]);	 
-		return 2; }
-      else if (!strcmp(argv[0], VMOPTION("cogminjumps"))) { 
-		extern sqInt minBackwardJumpCountForCompile;
-		minBackwardJumpCountForCompile = strtobkm(argv[1]);	 
-		return 2; }
-      else if (!strcmp(argv[0], VMOPTION("reportheadroom"))
-			|| !strcmp(argv[0], "-rh")) { 
-		extern sqInt reportStackHeadroom;
-		reportStackHeadroom = 1;
-		return 1; }
+    traceFlags = atoi(equalsPos + 1);
+    return 1; }
+  else if (!strcmp(argv[0], VMOPTION("tracestores"))) { 
+    extern sqInt traceStores;
+    traceStores = 1;
+    return 1; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("cogmaxlits"))) { 
+    extern sqInt maxLiteralCountForCompile;
+    maxLiteralCountForCompile = strtobkm(argv[1]);	 
+    return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("cogminjumps"))) { 
+    extern sqInt minBackwardJumpCountForCompile;
+    minBackwardJumpCountForCompile = strtobkm(argv[1]);	 
+    return 2; }
+  else if (!strcmp(argv[0], VMOPTION("reportheadroom"))
+        || !strcmp(argv[0], VMOPTION("rh"))) { 
+    extern sqInt reportStackHeadroom;
+    reportStackHeadroom = 1;
+    return 1; }
 #endif /* COGVM */
 #if SPURVM
-      else if (!strcmp(argv[0], VMOPTION("maxoldspace"))) { 
-		extern unsigned long maxOldSpaceSize;
-		maxOldSpaceSize = (unsigned long)strtobkm(argv[1]);	 
-		return 2; }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("maxoldspace"))) { 
+    extern unsigned long maxOldSpaceSize;
+    maxOldSpaceSize = (unsigned long)strtobkm(argv[1]);	 
+    return 2; }
+  else if (!strcmp(argv[0], VMOPTION("logscavenge"))) {
+    extern void openScavengeLog(void);
+    openScavengeLog();
+    return 1;
+  }
 #endif
-      else if (!strcmp(argv[0], VMOPTION("textenc"))) {
-		int i, len = strlen(argv[1]);
-		char *buf = (char *)alloca(len + 1);
-		for (i = 0;  i < len;  ++i)
-			buf[i] = toupper(argv[1][i]);
-		if ((!strcmp(buf, "UTF8")) || (!strcmp(buf, "UTF-8")))
-			textEncodingUTF8 = 1;
-		else {
-			textEncodingUTF8 = 0;
-			setEncoding(&uxTextEncoding, buf);
-		}
-		return 2;
-	  }
+  else if (argc > 1 && !strcmp(argv[0], VMOPTION("textenc"))) {
+    int i, len = strlen(argv[1]);
+    char *buf = (char *)alloca(len + 1);
+    for (i = 0;  i <= len;  ++i)
+      buf[i] = toupper(argv[1][i]);
+    if ((!strcmp(buf, "UTF8")) || (!strcmp(buf, "UTF-8")))
+      textEncodingUTF8 = 1;
+    else {
+      textEncodingUTF8 = 0;
+      setEncoding(&uxTextEncoding, buf);
     }
-  return 0;	/* option not recognised */
+    return 2;
+  }
+  return 0; /* option not recognised */
 }
 
 
@@ -1646,6 +1655,7 @@ static void vm_printUsage(void)
 #endif
 #if SPURVM
   printf("  "VMOPTION("maxoldspace")" <size>[mk]    set max size of old space memory to bytes\n");
+  printf("  "VMOPTION("logscavenge")"          log scavenging to scavenge.log\n");
 #endif
   printf("  "VMOPTION("blockonerror")"         on error or segv block, not exit.  useful for attaching gdb\n");
   printf("  "VMOPTION("blockonwarn")"          on warning block, don't warn.  useful for attaching gdb\n");
@@ -1692,11 +1702,12 @@ SqModuleDefine(vm, Module);
 /*** options processing ***/
 
 
-static void usage(void)
+static void usage()
 {
   struct SqModule *m= 0;
   printf("Usage: %s [<option>...] [<imageName> [<argument>...]]\n", argVec[0]);
   printf("       %s [<option>...] -- [<argument>...]\n", argVec[0]);
+  printf("options begin with single -, but -- prefix is silently accepted\n");
   sqIgnorePluginErrors= 1;
   {
     struct moduleDescription *md;
@@ -1721,7 +1732,6 @@ static void usage(void)
   printf("\nAvailable drivers:\n");
   for (m= modules;  m->next;  m= m->next)
     printf("  %s\n", m->name);
-  exit(1);
 }
 
 
@@ -1808,11 +1818,17 @@ static void parseArguments(int argc, char **argv)
     {
       struct SqModule *m= 0;
       int n= 0;
+      int ddash=0;
       if (!strcmp(*argv, "--"))		/* escape from option processing */
 	break;
+      ddash = (argv[0][1] == '-');
+      if (ddash)
+	argv[0]++;	/* skip one dash in double dash options */
       modulesDo (m)
 	if ((n= m->parseArgument(argc, argv)))
 	  break;
+      if (ddash)
+	argv[0]--;
 #    ifdef DEBUG_IMAGE
       printf("parseArgument n = %d\n", n);
 #    endif
@@ -1820,6 +1836,7 @@ static void parseArguments(int argc, char **argv)
 	{
 	  fprintf(stderr, "unknown option: %s\n", argv[0]);
 	  usage();
+	  exit(1);
 	}
       while (n--)
 	saveArg();
@@ -2061,9 +2078,9 @@ main(int argc, char **argv, char **envp)
 	sigsegv_handler_action.sa_sigaction = sigsegv;
 	sigsegv_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
 	sigemptyset(&sigsegv_handler_action.sa_mask);
-    (void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
     (void)sigaction(SIGBUS, &sigsegv_handler_action, 0);
     (void)sigaction(SIGILL, &sigsegv_handler_action, 0);
+    (void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
 
 	sigusr1_handler_action.sa_sigaction = sigusr1;
 	sigusr1_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;

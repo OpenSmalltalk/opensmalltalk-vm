@@ -38,7 +38,7 @@
 #import "sqSqueakOSXScreenAndWindow.h"
 #include "sqMacHostWindow.h"
 #include "sq.h"
-#import "sqSqueakOSXOpenGLView.h"
+#import "sqSqueakOSXView.h"
 
 extern wHandleType windowHandleFromIndex(sqInt windowIndex);
 extern struct VirtualMachine* interpreterProxy;
@@ -53,7 +53,7 @@ sqInt dropShutdown(void) {
 
 char* dropRequestFileName(sqInt dropIndex) {
 	/* return name of file or NULL if error */
-	sqSqueakOSXOpenGLView *view = [((sqSqueakOSXScreenAndWindow*)((__bridge NSWindow *)windowHandleFromIndex(1)).delegate) getMainViewOnWindow];
+	NSView <sqSqueakOSXView> *view = [((sqSqueakOSXScreenAndWindow*)((__bridge NSWindow *)windowHandleFromIndex(1)).delegate) getMainViewOnWindow];
 	NSString *fileNameString = [view dragFileNameStringAtIndex: dropIndex];
 	return (char *) [fileNameString UTF8String];
 }

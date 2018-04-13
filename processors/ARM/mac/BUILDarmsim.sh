@@ -1,4 +1,5 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+set -e
 # This script builds
 #	gdb-7.6/opcodes/libopcodes.a
 #	gdb-7.6/sim/arm/libsim.a

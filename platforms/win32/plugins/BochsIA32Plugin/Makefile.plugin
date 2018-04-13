@@ -1,17 +1,19 @@
-DLLTOOLEXTRA := ../bochsx86/cpu/libcpu.a \
-				../bochsx86/fpu/libfpu.a \
-				../bochsx86/disasm/libdisasm.a
+BOX:=../bochsx86
+PREREQUISITES:=$(BOX)/cpu/libcpu.a $(BOX)/disasm/libdisasm.a $(BOX)/fpu/libfpu.a
+
+DLLTOOLEXTRA := $(BOX)/cpu/libcpu.a \
+				$(BOX)/fpu/libfpu.a \
+				$(BOX)/disasm/libdisasm.a
 DLLWRAPEXTRA := $(DLLTOOLEXTRA)
 
 LINK_WITH_GPP := yes
-EXTRALIBS:= -L../bochsx86/cpu -L../bochsx86/fpu -L../bochsx86/disasm \
+EXTRALIBS:= -L$(BOX)/cpu -L$(BOX)/fpu -L$(BOX)/disasm \
 			-lcpu -lfpu -ldisasm
 
 include ../common/Makefile.plugin
 
-INCLUDES+=-I../bochsx86 \
+INCLUDES+=-I$(BOX) \
          -I../../processors/IA32/bochs \
 		 -I../../processors/IA32/bochs/instrument/stubs
 
-CFLAGS:=	-m32 -DWIN32 -msse2 -ggdb2 \
-			-mno-rtd -mms-bitfields
+# CFLAGS:= -m32 -msse2 -ggdb2 -mno-rtd -mms-bitfields

@@ -48,7 +48,6 @@ extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 SInt32 undoCounter=1, oldValue=0;  // jdr undo support
 
 @implementation SqueakUIView : UIView ;
-@synthesize squeakTheDisplayBits;
 
 - (instancetype)initWithFrame:(CGRect) aFrame {
 	self = [super initWithFrame: aFrame];

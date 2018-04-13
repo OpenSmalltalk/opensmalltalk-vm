@@ -8,5 +8,8 @@ RePlugin \
 InternetConfigPlugin \
 SurfacePlugin \
 EventsHandlerPlugin \
+SqueakSSL \
+AioPlugin \
+FileAttributesPlugin \
 #SDL2DisplayPlugin \
 

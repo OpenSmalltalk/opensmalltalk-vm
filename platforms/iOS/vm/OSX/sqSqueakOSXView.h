@@ -35,16 +35,30 @@
  */
 //
 #import "sqMemoryAccess.h"
+#import "keyBoardStrokeDetails.h"
+
+@class sqSqueakOSXScreenAndWindow;
 
 @protocol sqSqueakOSXView <NSObject>
-    
--(void)setWindowLogic:(id)screenAndWindow;
--(id)windowLogic;
--(void)fakeKeyDownUp:(id)theEvent;
--(id)lastSeenKeyBoardStrokeDetails;
--(id)dragFileNameStringAtIndex:(sqInt)index;
--(void)initializeVariables;
--(void)drawThelayers;
--(void)drawImageUsingClip:(CGRect)clip;
+
+@property (nonatomic,assign) NSTrackingRectTag squeakTrackingRectForCursor;
+@property (nonatomic,strong) keyBoardStrokeDetails* lastSeenKeyBoardStrokeDetails;
+@property (nonatomic,strong) keyBoardStrokeDetails* lastSeenKeyBoardModifierDetails;
+@property (nonatomic,assign) BOOL dragInProgress;
+@property (nonatomic,assign) int dragCount;
+@property (nonatomic,strong) NSMutableArray* dragItems;
+@property (nonatomic,weak) sqSqueakOSXScreenAndWindow *windowLogic;
+
+- (void) initializeVariables;
+- (void) ioSetFullScreen: (sqInt) fullScreen;
+
+- (NSUInteger) countNumberOfNoneSqueakImageFilesInDraggedFiles: (id<NSDraggingInfo>)info;
+- (NSMutableArray *) filterOutSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info;
+- (NSMutableArray *) filterSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info;
+- (NSString*) dragFileNameStringAtIndex:(sqInt) index;
+
+- (void) drawThelayers;
+- (void) preDrawThelayers;
+- (void) drawImageUsingClip: (CGRect) clip;
 
 @end

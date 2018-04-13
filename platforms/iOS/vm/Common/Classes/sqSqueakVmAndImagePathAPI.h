@@ -34,4 +34,4 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
  such third-party acknowledgments.
  */
 
-//
+extern char *getImageName(void);

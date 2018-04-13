@@ -6,7 +6,8 @@
 #include <qedit.h>
 
 extern "C" {
-#include "cameraOps.h"
+#include "sq.h"
+#include "CameraPlugin.h"
 }
 
 //////////////////////////////////////////////
