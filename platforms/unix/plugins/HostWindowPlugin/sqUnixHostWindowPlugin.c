@@ -149,6 +149,14 @@ int ioSetTitleOfWindow(int windowIndex, char *newTitle, int sizeOfTitle)
 }
 
 
+/* ioSetIconOfWindow: args are int windowIndex, char* iconPath and
+ * int size of new logo path. If one of the function is failing, the logo is not set.
+ */
+sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfPath) {
+  //Not implemented
+  return -1;
+}
+
 /* ioCloseAllWindows: intended for VM shutdown.
  * Close all the windows that appear to be open.
  * No useful return value since we're getting out of Dodge anyway.

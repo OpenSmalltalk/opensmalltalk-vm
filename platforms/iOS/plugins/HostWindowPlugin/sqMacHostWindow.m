@@ -109,6 +109,14 @@ sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle) 
 	return 1;
 }
 
+/* ioSetIconOfWindow: args are int windowIndex, char* iconPath and
+ * int size of new logo path. If one of the function is failing, the logo is not set.
+ */
+sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfPath) {
+	//Not implemented
+	return -1;
+}
+
 sqInt ioCloseAllWindows(void) {
 	return 1;
 }
