@@ -255,7 +255,7 @@ ImageFormat class >> generateCkFormatProgram: programName on: stream [
 			nextPutAll: '#include <stdio.h>'; cr;
 			nextPutAll: '#include <stdlib.h>'; cr;
 			nextPutAll: '#include <string.h>'; cr; cr;
-			nextPutAll: 'main(int argc, char **argv) {'; cr;
+			nextPutAll: 'int main(int argc, char **argv) {'; cr;
 			tab; nextPutAll: 'FILE *f;'; cr;
 			tab; nextPutAll: 'unsigned char buf[8];'; cr;		
 			tab; nextPutAll: 'int formatNumber;'; cr;		
