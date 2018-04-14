@@ -133,6 +133,9 @@ SmartSyntaxPluginSimulator >> ccgValBlock: aString [
 		['isBytes']			-> [	[:oop|
 								 interpreterProxy success: (interpreterProxy isBytes: oop).
 								 oop]].
+		['isWords']			-> [	[:oop|
+								 interpreterProxy success: (interpreterProxy isWords: oop).
+								 oop]].
 		['isWordsOrBytes']	-> [	[:oop|
 								 interpreterProxy success: (interpreterProxy isWordsOrBytes: oop).
 								 oop]] }
