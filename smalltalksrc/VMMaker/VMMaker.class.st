@@ -147,22 +147,6 @@ VMMaker class >> default [
 						ifFalse: [SmalltalkImage current platformName])
 ]
 
-{ #category : #utilities }
-VMMaker class >> executeDisplayingProgress: anActionsMap [
-	| barValue |
-	barValue := 0.
-	''
-		displayProgressFrom: 0
-		to: anActionsMap size
-		during: [ :bar | 
-			anActionsMap
-				keysAndValuesDo: [ :label :action | 
-					bar value: barValue.
-					barValue := barValue + 1.
-					ProgressNotification signal: '' extra: label.
-					action value ] ]
-]
-
 { #category : #initialisation }
 VMMaker class >> forConfigurationFile: aFileName [
 	| config fileStream vmMaker |
@@ -326,139 +310,102 @@ VMMaker class >> generate: interpreterClass with: optionsPairsArray to: srcDirNa
 
 { #category : #configurations }
 VMMaker class >> generateAllCogConfigurationsUnderVersionControl [
-	self
-		executeDisplayingProgress:
-			(OrderedDictionary new
-				add: 'Generate newspeak spur cog 32bits' -> [ self generateNewspeakSpurCogVM ];
-				add: 'Generate newspeak spur cog 64bits' -> [ self generateNewspeakSpurCog64VM ];
-				add: 'Generate squeak cog' -> [ self generateSqueakCogVM ];
-				add: 'Generate squeak cog multi-threaded' -> [ self generateSqueakCogMTVM ];
-				add: 'Generate squeak spur cog 32bits' -> [ self generateSqueakSpurCogVM ];
-				add: 'Generate squeak spur cog 64bits' -> [ self generateSqueakSpurCog64VM ];
-				add: 'Generate squeak spur cog sista 32bits' -> [ self generateSqueakSpurCogSistaVM ];
-				add: 'Generate squeak spur cog sista 64bits' -> [ self generateSqueakSpurCogSista64VM ];
-				yourself)
+	self generateNewspeakSpurCogVM;
+		generateNewspeakSpurCog64VM;
+		generateSqueakCogVM;
+		generateSqueakCogMTVM;
+		generateSqueakSpurCogVM;
+		generateSqueakSpurCog64VM;
+		generateSqueakSpurCogSistaVM;
+		generateSqueakSpurCogSista64VM
 ]
 
 { #category : #configurations }
 VMMaker class >> generateAllConfigurationsUnderVersionControl [
-	self
-		executeDisplayingProgress:
-			(OrderedDictionary
-				with: 'Generate all newspeak configurations under VCS' -> [ self generateAllNewspeakConfigurationsUnderVersionControl ]
-				with: 'Generate all squeak cofigurations under VCS' -> [ self generateAllSqueakConfigurationsUnderVersionControl ]
-				with: 'Generate all spur lowercode configurations' -> [ self generateAllSpurLowcodeConfigurations ]
-				with: 'Generate VM plugins' -> [ self generateVMPlugins ])
+	self generateAllNewspeakConfigurationsUnderVersionControl;
+		generateAllSqueakConfigurationsUnderVersionControl;
+		generateAllSpurLowcodeConfigurations;
+		generateVMPlugins
 ]
 
 { #category : #configurations }
 VMMaker class >> generateAllNewspeakConfigurationsUnderVersionControl [
-	self
-		executeDisplayingProgress:
-			(OrderedDictionary
-				with: 'Generate newspeak spur stack 32bits' -> [ self generateNewspeakSpurStackVM ]
-				with: 'Generate newspeak spur stack 64bits' -> [ self generateNewspeakSpurStack64VM ]
-				with: 'Generate newspeak spur cog 32bits' -> [ self generateNewspeakSpurCogVM ]
-				with: 'Generate newspeak spur cog 64bits' -> [ self generateNewspeakSpurCog64VM ])
+	self generateNewspeakSpurStackVM;
+		generateNewspeakSpurStack64VM;
+		generateNewspeakSpurCogVM;
+		generateNewspeakSpurCog64VM
 ]
 
 { #category : #configurations }
 VMMaker class >> generateAllNonSpurConfigurationsUnderVersionControl [
-	self
-		executeDisplayingProgress:
-			(OrderedDictionary 
-				with: 'Generate squeak cog' -> [ self generateSqueakCogVM ]
-				with: 'Generate squeak cog multi-threaded' -> [ self generateSqueakCogMTVM ]
-				with: 'Generate squeak stack' -> [ self generateSqueakStackVM ])
+	self generateSqueakCogVM;
+		generateSqueakCogMTVM;
+		generateSqueakStackVM
 ]
 
 { #category : #configurations }
 VMMaker class >> generateAllSistaConfigurationsUnderVersionControl [
-	self
-		executeDisplayingProgress:
-			(OrderedDictionary 
-				with: 'Generate squeak spur cog sista 32bits' -> [ self generateSqueakSpurCogSistaVM ]
-				with: 'Generate squeak spur cog sista 64bits' -> [ self generateSqueakSpurCogSista64VM ])
+	self generateSqueakSpurCogSistaVM;
+		generateSqueakSpurCogSista64VM
 ]
 
 { #category : #configurations }
 VMMaker class >> generateAllSpurConfigurations [
-	self
-		executeDisplayingProgress:
-			(OrderedDictionary new
-				add: 'Generate all newspeak configurations under VCS' -> [ self generateAllNewspeakConfigurationsUnderVersionControl ];
-				add: 'Generate squeak spur cog 32bits' -> [ self generateSqueakSpurCogVM ];
-				add: 'Generate squeak spur cog 64bits' -> [ self generateSqueakSpurCog64VM ];
-				add: 'Generate squeak spur cog sista 32bits' -> [ self generateSqueakSpurCogSistaVM ];
-				add: 'Generate squeak spur cog sista 64bits' -> [ self generateSqueakSpurCogSista64VM ];
-				add: 'Generate squeak spur stack 32bits' -> [ self generateSqueakSpurStackVM ];
-				add: 'Generate squeak spur stack 64bits' -> [ self generateSqueakSpurStack64VM ];				
-				add: 'Generate all spur lowcode configurations' -> [ self generateAllSpurLowcodeConfigurations ];
-				yourself)
-		
+	self generateAllNewspeakConfigurationsUnderVersionControl;
+		generateSqueakSpurCogVM;
+		generateSqueakSpurCog64VM;
+		generateSqueakSpurCogSistaVM;
+		generateSqueakSpurCogSista64VM;
+		generateSqueakSpurStackVM;
+		generateSqueakSpurStack64VM;
+		generateAllSpurLowcodeConfigurations
 ]
 
 { #category : #configurations }
 VMMaker class >> generateAllSpurConfigurationsUnderVersionControl [
-	self
-		executeDisplayingProgress:
-			(OrderedDictionary new
-				add: 'Generate newspeak spur stack 32bits' -> [ self generateNewspeakSpurStackVM ];
-				add: 'Generate newspeak spur cog 64bits' -> [ self generateNewspeakSpurCog64VM ];
-				add: 'Generate squeak spur stack 32bits' -> [ self generateSqueakSpurStackVM ];
-				add: 'Generate squeak spur stack 64bits' -> [ self generateSqueakSpurStack64VM ];			
-				add: 'Generate newspeak spur cog 32bits' -> [ self generateNewspeakSpurCogVM ];
-				add: 'Generate squeak spur cog 32bits' -> [ self generateSqueakSpurCogVM ];
-				add: 'Generate squeak spur cog 64bits' -> [ self generateSqueakSpurCog64VM ];
-				add: 'Generate squeak spur cog multi-threaded 32bits' -> [ self generateSqueakSpurCogMTVM ];
-				add: 'Generate squeak spur cog multi-threaded 64bits' -> [ self generateSqueakSpurCog64MTVM ];
-				add: 'Generate squeak spur cog sista 32bits' -> [ self generateSqueakSpurCogSistaVM ];
-				add: 'Generate squeak spur cog sista 64bits' -> [ self generateSqueakSpurCogSista64VM ];		
-				yourself)
-
+	self generateNewspeakSpurStackVM;
+		generateNewspeakSpurCog64VM;
+		generateSqueakSpurStackVM;
+		generateSqueakSpurStack64VM;
+		generateNewspeakSpurCogVM;
+		generateSqueakSpurCogVM;
+		generateSqueakSpurCog64VM;
+		generateSqueakSpurCogMTVM;
+		generateSqueakSpurCog64MTVM;
+		generateSqueakSpurCogSistaVM;
+		generateSqueakSpurCogSista64VM
 ]
 
 { #category : #configurations }
 VMMaker class >> generateAllSpurLowcodeConfigurations [
-	self
-		executeDisplayingProgress:
-			(OrderedDictionary
-				with: 'Generate squeak spur lowcode cog 32bits' -> [ self generateSqueakSpurLowcodeCogVM ]
-				with: 'Generate squeak spur lowcode stack 32bits' -> [ self generateSqueakSpurLowcodeStackVM ]
-				with: 'Generate squeak spur lowcode cog 64bits' -> [ self generateSqueakSpurLowcodeCog64VM ]
-				with: 'Generate squeak spur lowcode stack 64bits' -> [ self generateSqueakSpurLowcodeStack64VM ])
+	self generateSqueakSpurLowcodeCogVM;
+		generateSqueakSpurLowcodeStackVM;
+		generateSqueakSpurLowcodeCog64VM;
+		generateSqueakSpurLowcodeStack64VM
 ]
 
 { #category : #configurations }
 VMMaker class >> generateAllSqueakConfigurationsUnderVersionControl [
-	self
-		executeDisplayingProgress:
-			(OrderedDictionary new
-				add: 'Generate squeak stack' -> [ self generateSqueakStackVM ];
-				add: 'Generate squeak cog' -> [ self generateSqueakCogVM ];
-				add: 'Generate squeak cog multi-threaded' -> [ self generateSqueakCogMTVM ];
-				add: 'Generate squeak spur stack 32bits' -> [ self generateSqueakSpurStackVM ];
-				add: 'Generate squeak spur stack 64bits' -> [ self generateSqueakSpurStack64VM ];
-				add: 'Generate squeak spur cog 32bits' -> [ self generateSqueakSpurCogVM ];
-				add: 'Generate squeak spur cog 64bits' -> [ self generateSqueakSpurCog64VM ];
-				add: 'Generate squeak spur cog sista 32bits' -> [ self generateSqueakSpurCogSistaVM ];
-				add: 'Generate squeak spur cog sista 64bits' -> [ self generateSqueakSpurCogSista64VM ];
-				add: 'Generate squeak spur cog multi-threaded 32bits' -> [ self generateSqueakSpurCogMTVM ];
-				add: 'Generate squeak spur cog multi-threaded 64bits' -> [ self generateSqueakSpurCog64MTVM ];
-				yourself)
+	self generateSqueakStackVM;
+		generateSqueakCogVM;
+		generateSqueakCogMTVM;
+		generateSqueakSpurStackVM;
+		generateSqueakSpurStack64VM;
+		generateSqueakSpurCogVM;
+		generateSqueakSpurCog64VM;
+		generateSqueakSpurCogSistaVM;
+		generateSqueakSpurCogSista64VM;
+		generateSqueakSpurCogMTVM;
+		generateSqueakSpurCog64MTVM
 ]
 
 { #category : #configurations }
 VMMaker class >> generateAllStackConfigurationsUnderVersionControl [
-	self
-		executeDisplayingProgress:
-			(OrderedDictionary new
-				add: 'Generate newspeak spur stack 32bits' -> [ self generateNewspeakSpurStackVM ];
-				add: 'Generate newspeak spur stack 64bits' -> [ self generateNewspeakSpurStack64VM ];
-				add: 'Generate squeak stack' -> [ self generateSqueakStackVM ];				
-				add: 'Generate squeak spur stack 32bits' -> [ self generateSqueakSpurStackVM ];
-				add: 'Generate squeak spur stack 64bits' -> [ self generateSqueakSpurStack64VM ];
-				yourself)
+	self generateNewspeakSpurStackVM;
+		generateNewspeakSpurStack64VM;
+		generateSqueakStackVM;
+		generateSqueakSpurStackVM;
+		generateSqueakSpurStack64VM
 ]
 
 { #category : #configurations }

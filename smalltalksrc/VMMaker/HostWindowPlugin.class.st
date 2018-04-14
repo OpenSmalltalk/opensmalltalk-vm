@@ -61,6 +61,20 @@ length: listLength.
 ]
 
 { #category : #'system primitives' }
+HostWindowPlugin >> primitiveHostWindowIcon: id path: pathString [
+	"Set the icon of the window by fetching the logo in given path. Fail if the windowIndex is invalid or the platform routine returns -1 to indicate failure"
+	| res pathLength |
+	self primitive: 'primitiveHostWindowIcon'
+		parameters: #(SmallInteger ByteArray).
+	pathLength := interpreterProxy slotSizeOf: pathString cPtrAsOop.
+	res := self cCode: 'ioSetIconOfWindow(id, pathString, pathLength)'.
+	res = 0 ifTrue: [^ self ].
+	res = -1 ifTrue: [^ interpreterProxy primitiveFailFor: PrimErrBadArgument ].
+	"As the GetLastError function can return 0, but it is still an error, 1 is added to all the GetLastError error codes."
+	^ interpreterProxy primitiveFail
+]
+
+{ #category : #'system primitives' }
 HostWindowPlugin >> primitiveHostWindowPosition: windowIndex [ 
 	"Return the origin position of the user area of the window in pixels from the topleft corner of the screen. Fail if the windowIndex is invalid or the platform routine returns -1 to indicate failure"
 	| pos |
