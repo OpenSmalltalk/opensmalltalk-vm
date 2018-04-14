@@ -1590,7 +1590,7 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
    * allocation failures unless running as a console app because doing so
    * via a MessageBox will make the system unusable.
    */
-#if 0 /* This way used to work.  Dows no longer. */
+#if 0 /* This way used to work.  Does no longer. */
   DWORD mode;
 
   fIsConsole = GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &mode);
