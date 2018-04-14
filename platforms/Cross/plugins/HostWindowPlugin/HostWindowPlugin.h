@@ -73,6 +73,11 @@ extern sqInt ioPositionOfWindowSetxy(sqInt windowIndex, sqInt x, sqInt y);
 long for platform etc. Leave previous title in place on failure */
 sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle);
 
+/* ioSetIconOfWindow: args are int windowIndex, char* iconPath and
+ * int size of new logo path. If one of the function is failing, the logo is not set.
+ */
+extern sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfPath);
+
 /* ioCloseAllWindows: intended for VM shutdown.
  * Close all the windows that appear to be open.
  * No useful return value since we're getting out of Dodge anyway.
