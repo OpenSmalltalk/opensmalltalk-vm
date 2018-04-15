@@ -37,9 +37,6 @@ static char SvnRawRevisionDate[] = "$Date$";
 static char SvnRawRepositoryURL[] = "$URL$";
 # define URL_START (SvnRawRepositoryURL + 6)
 
-static char SvnRawRevisionShortHash[] = "$CommitHash$";
-# define SHORTHASH_START (SvnRawRevisionShortHash + 13)
-
 static char *
 revisionAsString()
 {
@@ -68,10 +65,7 @@ repositoryURL()
 }
 
 static char *
-revisionShortHash()
-{
-	return SHORTHASH_START;
-}
+revisionShortHash() { return "N.A."; }
 
 # undef REV_START
 # undef URL_START
@@ -86,8 +80,8 @@ static char GitRawRevisionDate[] = "$Date$";
 static char GitRawRepositoryURL[] = "$URL$";
 # define URL_START (GitRawRepositoryURL + 6)
 
-static char SvnRawRevisionShortHash[] = "$CommitHash$";
-# define SHORTHASH_START (SvnRawRevisionShortHash + 13)
+static char GitRawRevisionShortHash[] = "$CommitHash$";
+# define SHORTHASH_START (GitRawRevisionShortHash + 13)
 
 static char *
 revisionAsString()
@@ -119,6 +113,9 @@ repositoryURL()
 static char *
 revisionShortHash()
 {
+	char *maybe_space = strchr(SHORTHASH_START, ' ');
+	if (maybe_space)
+		*maybe_space = 0;
 	return SHORTHASH_START;
 }
 
@@ -133,7 +130,7 @@ static char *
 repositoryURL() { return "unknown"; }
 
 static char *
-revisionShortHash() { return "unknown"; }
+revisionShortHash() { return "?"; }
 
 #endif /* SUBVERSION */
 
@@ -242,6 +239,8 @@ main(int _argc, char **_argv)
 		printf("%s-%s\n", vm_version, revisionAsString());
 	if (printit("VERSION_NUMBER"))
 		printf("%s.%s\n", vm_version, revisionAsString());
+	if (printit("COMMIT_HASH"))
+		printf("%s\n", revisionShortHash());
 	if (printit("NICKNAME"))
 		printf("%s\n", NICKNAME);
 	if (printit("OBJMEM"))
