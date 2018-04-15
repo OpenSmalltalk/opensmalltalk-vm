@@ -53,7 +53,7 @@ pluginsRevisionAsString()
 static char *
 pluginsRepositoryURL()
 {
-	char *maybe_sqplugins = strstr(URL_START, "/sqPlugins");
+	char *maybe_sqplugins = strchr(URL_START, ' ');
 	if (maybe_sqplugins)
 		*maybe_sqplugins = 0;
 	return URL_START;

@@ -95,16 +95,16 @@ revisionAsString()
 static char *
 revisionDateAsString()
 {
-	char *maybe_paren = strchr(DATE_START,'(');
+	char *maybe_paren = strrchr(DATE_START,' ');
 	if (maybe_paren)
-		*(maybe_paren - 1) = 0;
+		*maybe_paren = 0;
 	return DATE_START;
 }
 
 static char *
 repositoryURL()
 {
-	char *maybe_platforms = strstr(URL_START, "/platforms");
+	char *maybe_platforms = strchr(URL_START, ' ');
 	if (maybe_platforms)
 		*maybe_platforms = 0;
 	return URL_START;
