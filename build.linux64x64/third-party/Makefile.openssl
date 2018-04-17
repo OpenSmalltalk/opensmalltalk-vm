@@ -24,7 +24,7 @@ $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME): $(OPENSSLARCHIVE)
 	tar x -f $(OPENSSLARCHIVE) -C $(THIRDPARTYDIR)
 	cd $(OPENSSLDIR) \
 		&& ./Configure linux-generic32 --prefix='$(THIRDPARTYOUTDIR)' shared \
-		&& make install_sw
+		&& make install
 
 # Assuming building libssl will also build libcrypto
 $(OPENSSLLIB): $(THIRDPARTYLIBDIR)/$(OPENSSLLIBNAME)
