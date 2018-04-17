@@ -1159,7 +1159,7 @@ ThreadedFFIPlugin >> ffiPushStructureContentsOf: oop in: calloutState [
 				ofLength: calloutState ffiArgSpecSize
 				in: calloutState].
 		"If FFIFlagPointer + FFIFlagStructure is set use ffiPushPointer on the contents"
-		(calloutState ffiArgHeader bitAnd: FFIStructSizeMask) = 4 ifFalse:
+		(calloutState ffiArgHeader bitAnd: FFIStructSizeMask) = BytesPerWord ifFalse:
 			[^FFIErrorStructSize].
 		ptrAddress := (interpreterProxy fetchPointer: 0 ofObject: oop) asVoidPointer.
 		(interpreterProxy isInMemory: ptrAddress) ifTrue:
