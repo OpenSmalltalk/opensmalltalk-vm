@@ -173,8 +173,12 @@ SDKs and Problems
 -----------------
 The makefiles will use the oldest available SDK that is installed that is new
 enough to build the system.  The 32-bit build requires at least the 10.9 SDK.
-To obtain SDKs it is best to web search for "obtaining older sdks for Xcode",
-and follow the instructions you find.
+SDKs are installed in
+	/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/
+To obtain SDKs one way is to web search for "obtaining older sdks for Xcode",
+and follow the instructions you find.  But a more convenient place, at time of
+writing, is
+	git clone https://github.com/phracker/MacOSX-SDKs.git
 
 On Sierra people have reported that the support libraries for the SSLPlugin
 (libssl.dylib and libcrypto.dylib) are missing.  The symptom is an error
@@ -254,5 +258,6 @@ e.g. if in the image directory you might do
 The VM includes many functions intended for VM debugging.  See e.g. functions
 beginning with print in the main VM source (e.g. spursrc/vm/gcc3x-cointerp.c).
 
+
 Eliot Miranda
-August 2017
+April 2018
