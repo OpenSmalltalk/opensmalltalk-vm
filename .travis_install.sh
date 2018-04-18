@@ -43,7 +43,7 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             libaudio-dev:i386 \
             gcc-multilib \
             uuid-dev:i386 \
-            libcurl4-gnutls-dev:i386 \
+            libcurl4-openssl-dev:i386:i386 \
 			libssh2-1-dev:i386
 fi
 
