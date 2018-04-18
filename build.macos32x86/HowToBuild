@@ -173,6 +173,8 @@ SDKs and Problems
 -----------------
 The makefiles will use the oldest available SDK that is installed that is new
 enough to build the system.  The 32-bit build requires at least the 10.9 SDK.
+Under Zcode 9, getversion fails to compile using 10.9 and one must use at least
+the 10.10 SDK.
 SDKs are installed in
 	/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/
 To obtain SDKs one way is to web search for "obtaining older sdks for Xcode",
