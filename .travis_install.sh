@@ -44,9 +44,6 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             gcc-multilib \
             uuid-dev:i386 \
             libcurl3-dev:i386 \
-		    libssh2-1-dev:i386 \
-			libcurl3-gnutls:i386 \
-		    libcurl4-gnutls-dev:i386 \
 			libssh2-1-dev:i386
 fi
 
