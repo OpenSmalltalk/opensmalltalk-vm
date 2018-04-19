@@ -1350,6 +1350,12 @@ CogObjectRepresentation >> genPrimitiveStringAtPut [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveStringCompareWith [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentation >> genPrimitiveStringReplace [
 	"subclasses override if they can"
 	^UnimplementedPrimitive
