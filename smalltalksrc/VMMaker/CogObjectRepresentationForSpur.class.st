@@ -1537,6 +1537,93 @@ CogObjectRepresentationForSpur >> genPrimitiveSize [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveStringCompareWith [
+	"primitiveCompareWith:"
+	
+	| instr jump jumpAbove jumpIncorrectFormat1 jumpIncorrectFormat2 jumpIncorrectFormat3 jumpIncorrectFormat4 jumpMidFailure jumpSuccess minSizeReg string1CharOrByteSizeReg string2CharOrByteSizeReg string1Reg string2Reg |
+	
+	<var: #jumpIncorrectFormat1 type: #'AbstractInstruction *'>
+	<var: #jumpIncorrectFormat2 type: #'AbstractInstruction *'>
+	<var: #jumpIncorrectFormat3 type: #'AbstractInstruction *'>
+	<var: #jumpIncorrectFormat4 type: #'AbstractInstruction *'>
+	<var: #jumpAbove type: #'AbstractInstruction *'>
+	<var: #jumpSuccess type: #'AbstractInstruction *'>
+	<var: #jump type: #'AbstractInstruction *'>
+	<var: #jumpMidFailure type: #'AbstractInstruction *'>
+	
+	"I redefine those name to ease program comprehension"
+	string1Reg := ReceiverResultReg.
+	string2Reg := Arg0Reg.
+	string1CharOrByteSizeReg := Arg1Reg.
+	string2CharOrByteSizeReg := ClassReg.
+	minSizeReg := SendNumArgsReg.
+	
+	"Load arguments in reg"
+	cogit genLoadArgAtDepth: 0 into: string2Reg.
+	
+	"checks if string1 is a byteobject and get its size in bytes"
+	self genGetFormatOf: string1Reg into: TempReg.
+	cogit CmpCq: objectMemory firstByteFormat R: TempReg.
+	jumpIncorrectFormat1 := cogit JumpLess: 0.
+	cogit CmpCq: objectMemory firstCompiledMethodFormat R: TempReg.
+	jumpIncorrectFormat2 := cogit JumpAboveOrEqual: 0.
+		
+	self genGetNumSlotsOf: string1Reg into: string1CharOrByteSizeReg.
+	(cogit LogicalShiftLeftCq: objectMemory shiftForWord R: string1CharOrByteSizeReg). 
+	cogit AndCq: objectMemory wordSize - 1 R: TempReg R: TempReg. 
+	cogit SubR: TempReg R: string1CharOrByteSizeReg. 
+	
+	"checks if string2 is a byteobject and get its size in bytes"
+	self genGetFormatOf: string2Reg into: TempReg.
+	cogit CmpCq: objectMemory firstByteFormat R: TempReg.
+	jumpIncorrectFormat3 := cogit JumpLess: 0.
+	cogit CmpCq: objectMemory firstCompiledMethodFormat R: TempReg.
+	jumpIncorrectFormat4 := cogit JumpAboveOrEqual: 0.
+		
+	self genGetNumSlotsOf: string2Reg into: string2CharOrByteSizeReg.
+	(cogit LogicalShiftLeftCq: objectMemory shiftForWord R: string2CharOrByteSizeReg).
+	cogit AndCq: objectMemory wordSize - 1 R: TempReg R: TempReg.
+	cogit SubR: TempReg R: string2CharOrByteSizeReg.
+	
+	"Type and number of arguments are correct"
+	"Compute the min"	 
+	cogit CmpR: string1CharOrByteSizeReg R: string2CharOrByteSizeReg.
+	jumpAbove := cogit JumpBelow: 0. 
+	cogit MoveR: string1CharOrByteSizeReg R: minSizeReg. 
+	jump := cogit Jump: 0. 
+	jumpAbove jmpTarget: (cogit MoveR: string2CharOrByteSizeReg R: minSizeReg). 
+	jump jmpTarget: (cogit CmpCq: 0 R: minSizeReg). 
+	jumpSuccess := cogit JumpZero: 0. "if one of the string is empty, no need to go through the comparing loop"
+	
+	"Compare the bytes"
+	cogit MoveCq: objectMemory baseHeaderSize  R: TempReg.
+	cogit AddCq: objectMemory baseHeaderSize R: minSizeReg.
+	
+	instr := cogit MoveXbr: TempReg R: string1Reg R: string1CharOrByteSizeReg.
+	cogit MoveXbr: TempReg R: string2Reg R: string2CharOrByteSizeReg.
+	cogit SubR: string2CharOrByteSizeReg R: string1CharOrByteSizeReg. 
+	jumpMidFailure := cogit JumpNonZero: 0. "the 2 compared characters are different, exit the loop"
+	cogit AddCq: 1 R: TempReg.
+	cogit CmpR: TempReg R: minSizeReg. 
+	cogit JumpNonZero: instr.
+	
+	"all bytes from 1 to minSize are equal"
+	self genGetNumBytesOf: string1Reg into: string1CharOrByteSizeReg.
+	self genGetNumBytesOf: string2Reg into: string2CharOrByteSizeReg.
+	jumpSuccess jmpTarget: (cogit SubR: string2CharOrByteSizeReg R: string1CharOrByteSizeReg).
+	jumpMidFailure  jmpTarget: (cogit MoveR: string1CharOrByteSizeReg R: ReceiverResultReg).	
+	self genConvertIntegerToSmallIntegerInReg: ReceiverResultReg.
+	cogit genPrimReturn.
+	
+	jumpIncorrectFormat4 
+		jmpTarget: (jumpIncorrectFormat3 
+			jmpTarget: (jumpIncorrectFormat2 
+				jmpTarget: (jumpIncorrectFormat1 jmpTarget: cogit Label))).
+	
+	^ CompletePrimitive
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentationForSpur >> genPrimitiveStringReplace [
 	"replaceFrom: start to: stop with: replacement startingAt: repStart. 
 	
