@@ -1409,6 +1409,45 @@ InterpreterPrimitives >> primitiveCompareBytes [
 
 ]
 
+{ #category : #'string primitives' }
+InterpreterPrimitives >> primitiveCompareWith [
+	"<string1> primitiveCompareWith: string2 [collated: order] "
+	<export: true>
+	
+	| string1 string2 order strLength1 strLength2 result |
+
+	"1 - fetch the parameters from the stack"	
+	(argumentCount = 0 or: [argumentCount > 2]) ifTrue:
+		[^self primitiveFailFor: PrimErrBadNumArgs].
+	argumentCount = 1
+			ifFalse: "argCount must be 2"
+				[order := self stackTop.
+				(objectMemory isBytes: order) ifFalse: [^self primitiveFailFor: PrimErrBadArgument]].
+	string1 := self stackValue: argumentCount.
+	string2 := self stackValue: argumentCount - 1. 
+			
+	"2 - check their types - all parameters are ByteObject"
+	((objectMemory isBytes: string1)
+	and: [objectMemory isBytes: string2 ])
+		ifFalse: 
+			[^self primitiveFailFor: PrimErrBadArgument].
+	
+	"3 - compare the strings"	
+	strLength1 := objectMemory numBytesOfBytes: string1.
+	strLength2 := objectMemory numBytesOfBytes: string2.
+	result := order 
+		ifNil: [self rawCompare: string1 length: strLength1 with: string2 length: strLength2 accessBlock: [:str :index | objectMemory fetchByte: index ofObject: str ]]
+		ifNotNil: 
+			[self rawCompare: string1 length: strLength1 with: string2 length: strLength2 accessBlock: [:str :index | objectMemory fetchByte: (objectMemory fetchByte: index ofObject: str) +1 ofObject: order ]].
+	self pop: argumentCount + 1 thenPush: (objectMemory integerObjectOf: result)
+	
+
+
+	
+	
+	
+]
+
 { #category : #'sound primitives' }
 InterpreterPrimitives >> primitiveConstantFill [
 	"Fill the receiver, which must be an indexable non-pointer
@@ -5106,6 +5145,23 @@ InterpreterPrimitives >> quot: integerRcvr ient: integerArg [
 			[integerArg > 0
 				ifTrue: [0 - ((0 - integerRcvr) // integerArg)]
 				ifFalse: [(0 - integerRcvr) // (0 - integerArg)]]
+]
+
+{ #category : #'string primitives' }
+InterpreterPrimitives >> rawCompare: string1 length: strLength1 with: string2 length: strLength2 accessBlock: accessBlock [
+	| c1 c2 min |
+	<inline: true> "needs to be forced else slang does not inline it by default"
+	min := strLength1 min: strLength2.
+	0 to: min-1 do: 
+		[:i | c1 := accessBlock value: string1 value: i.
+			c2 := accessBlock value: string2 value: i.
+			c1 = c2 ifFalse: [^c1 - c2]].
+	^strLength1 - strLength2
+
+
+	
+	
+	
 ]
 
 { #category : #'simulation support' }

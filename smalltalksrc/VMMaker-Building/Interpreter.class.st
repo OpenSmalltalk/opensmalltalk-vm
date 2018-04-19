@@ -627,7 +627,9 @@ Interpreter class >> initializePrimitiveTable [
 		(149 primitiveGetAttribute)
 
 		"File Primitives (150-169) - NO LONGER INDEXED"
-		(150 159 primitiveFail)
+		(150 157 primitiveFail)
+		(158 primitiveCompareWith)
+		(159 primitiveFail)
 		(160 primitiveAdoptInstance)
 		(161 primitiveSetIdentityHash) "CogMemoryManager primitives"
 		(162 164 primitiveFail)

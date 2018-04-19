@@ -702,6 +702,7 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueak [
 
 		(148 genPrimitiveShallowCopy 0)			"a.k.a. clone"
 
+		(158 genPrimitiveStringCompareWith 1)
 		(159 genPrimitiveHashMultiply 0)
 
 		(169 genPrimitiveNotIdentical 1)
