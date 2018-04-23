@@ -1590,23 +1590,7 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
    * allocation failures unless running as a console app because doing so
    * via a MessageBox will make the system unusable.
    */
-#if 0 /* This way used to work.  Does no longer. */
-  DWORD mode;
-
-  fIsConsole = GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &mode);
-#elif 0 /* This does /not/ work with STD_INPUT_HANDLE or STD_OUTPUT_HANDLE */
-  CONSOLE_SCREEN_BUFFER_INFO csbi;
-
-  if ((fIsConsole = GetConsoleScreenBufferInfo
-						(GetStdHandle(STD_INPUT_HANDLE), &csbi)))
-		fIsConsole = csbi.dwCursorPosition.X || csbi.dwCursorPosition.Y;
-#else /* This /does/ work; see */
-	/* https://stackoverflow.com/questions/9009333/how-to-check-if-the-program-is-run-from-a-console */
-  HWND consoleWnd = GetConsoleWindow();
-  DWORD dwProcessId;
-  GetWindowThreadProcessId(consoleWnd, &dwProcessId);
-  fIsConsole = GetCurrentProcessId() != dwProcessId;
-#endif
+  fIsConsole = sqStdioDescriptorIsATTY();
 
   /* a few things which need to be done first */
   gatherSystemInfo();
