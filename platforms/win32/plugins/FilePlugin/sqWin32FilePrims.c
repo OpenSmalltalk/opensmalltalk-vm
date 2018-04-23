@@ -25,6 +25,10 @@
 *****************************************************************************/
 #include <windows.h>
 #include <malloc.h>
+
+#include <errno.h>
+#include <Winternl.h>
+
 #include "sq.h"
 #include "FilePlugin.h"
 
@@ -320,6 +324,57 @@ sqFileStdioHandlesInto(SQFile files[3])
 	AddHandleToTable(win32Files, files[2].file);
 
 	return 7;
+}
+
+
+sqInt  sqStdioDescriptorIsATTY(void) { 
+	/* See https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/isatty
+	  Return: 
+			positive: "stdout has not been redirected to a file"
+			-1: "stdout has been redirected to a file"
+			Below -1: error
+	}*/
+	int stdOutFd = _fileno(stdout);
+	int res = _isatty(stdOutFd);
+	//In case of Windows Shell case
+	if (res != 0) return res;
+	if (errno == EBADF)	return -1;
+	//In case of Unix emulator
+	HMODULE ntdll = LoadLibraryW(L"ntdll.dll"); 
+	if (ntdll == 0) return -6;
+
+	typedef NTSTATUS(NTAPI *FNNtQueryObject)(HANDLE, OBJECT_INFORMATION_CLASS, PVOID, ULONG, PULONG);
+	FNNtQueryObject ntQueryObject = (FNNtQueryObject) GetProcAddress(ntdll, "NtQueryObject");
+	
+
+	HANDLE h = (HANDLE)_get_osfhandle(stdOutFd);
+	if (GetFileType(h) != FILE_TYPE_PIPE) 
+		return -2; //Should not happen
+
+	ULONG result;
+	BYTE buffer[1024];
+	POBJECT_NAME_INFORMATION nameinfo = (POBJECT_NAME_INFORMATION)buffer;
+	PWSTR name;
+	if (!NT_SUCCESS(ntQueryObject(h, ObjectNameInformation,	buffer, sizeof(buffer) - 2, &result)))
+		return -3;
+	name = nameinfo->Name.Buffer;
+	name[nameinfo->Name.Length / sizeof(*name)] = 0;
+
+	if ((!wcsstr(name, L"msys-") && !wcsstr(name, L"cygwin-")) ||
+		!wcsstr(name, L"-pty"))
+		return -4;
+
+		//if (fd == 2)
+		//		setvbuf(stderr, NULL, _IONBF, BUFSIZ);
+		//	fd_is_interactive[fd] |= FD_MSYS;
+	//L"\\Device\\NamedPipe\\cygwin-c5e39b7a9d22bafb-pty0-to-master"
+
+
+
+		
+	return -5; //https://github.com/fusesource/jansi-native/commit/52d4840b2e7a65ef973c4542cedb42d118dba983
+	
+	
 }
 
 size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {

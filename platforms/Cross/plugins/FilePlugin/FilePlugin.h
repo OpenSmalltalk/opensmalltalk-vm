@@ -68,6 +68,8 @@ sqInt   sqFileTruncate(SQFile *f,squeakFileOffsetType offset);
 sqInt   sqFileThisSession(void);
 sqInt   sqFileStdioHandlesInto(SQFile files[3]);
 
+sqInt  sqStdioDescriptorIsATTY(void);
+
 /* directories */
 
 sqInt dir_Create(char *pathString, sqInt pathStringLength);
