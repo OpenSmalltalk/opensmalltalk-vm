@@ -1048,6 +1048,17 @@ FilePlugin >> primitiveHasFileAccess [
 ]
 
 { #category : #'file primitives' }
+FilePlugin >> primitiveStdioDescriptorIsATTY [
+	| isStdoutRedirected |
+	<export: true>
+	isStdoutRedirected := self
+				cCode: 'sqStdioDescriptorIsATTY() '
+				inSmalltalk: [true].
+	interpreterProxy pop: 1.
+	interpreterProxy pushInteger: isStdoutRedirected
+]
+
+{ #category : #'file primitives' }
 FilePlugin >> setMacFile: fileName Type: typeString AndCreator: creatorString [
 	"Exported entry point for the VM. Needed for image saving only and no-op on anything but Macs."
 	<export: true>
