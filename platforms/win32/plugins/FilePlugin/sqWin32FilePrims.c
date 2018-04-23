@@ -23,11 +23,54 @@
 *        (Max Leske)
 *
 *****************************************************************************/
+
+#include <ctype.h>
+#include <io.h>
+#include <wchar.h>
+
 #include <windows.h>
 #include <malloc.h>
 
 #include <errno.h>
 #include <Winternl.h>
+
+
+#include <winbase.h>
+
+/************************************************************************************************************/
+/* few addtional definitions for those having older include files especially #include <fileextd.h>          */
+/************************************************************************************************************/
+#if (WINVER < 0x0600)
+	/*Copied from winbase.h*/
+	typedef struct _FILE_NAME_INFO {
+		DWORD FileNameLength;
+		WCHAR FileName[1];
+	} FILE_NAME_INFO, *PFILE_NAME_INFO;
+	typedef enum _FILE_INFO_BY_HANDLE_CLASS {
+		FileBasicInfo = 0,
+		FileStandardInfo = 1,
+		FileNameInfo = 2,
+		FileRenameInfo = 3,
+		FileDispositionInfo = 4,
+		FileAllocationInfo = 5,
+		FileEndOfFileInfo = 6,
+		FileStreamInfo = 7,
+		FileCompressionInfo = 8,
+		FileAttributeTagInfo = 9,
+		FileIdBothDirectoryInfo = 10, // 0xA
+		FileIdBothDirectoryRestartInfo = 11, // 0xB
+		FileIoPriorityHintInfo = 12, // 0xC
+		FileRemoteProtocolInfo = 13, // 0xD
+		FileFullDirectoryInfo = 14, // 0xE
+		FileFullDirectoryRestartInfo = 15, // 0xF
+		FileStorageInfo = 16, // 0x10
+		FileAlignmentInfo = 17, // 0x11
+		FileIdInfo = 18, // 0x12
+		FileIdExtdDirectoryInfo = 19, // 0x13
+		FileIdExtdDirectoryRestartInfo = 20, // 0x14
+		MaximumFileInfoByHandlesClass
+	} FILE_INFO_BY_HANDLE_CLASS, *PFILE_INFO_BY_HANDLE_CLASS;
+#endif //(WINVER < 0x0600)
 
 #include "sq.h"
 #include "FilePlugin.h"
@@ -326,55 +369,61 @@ sqFileStdioHandlesInto(SQFile files[3])
 	return 7;
 }
 
-
+/* 
+ * Allow to test if the standard input/output files are from a console or not
+ * 1 if stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
+ * Inspired of: https://fossies.org/linux/misc/vim-8.0.tar.bz2/vim80/src/iscygpty.c?m=t
+ */
 sqInt  sqStdioDescriptorIsATTY(void) { 
-	/* See https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/isatty
-	  Return: 
-			positive: "stdout has not been redirected to a file"
-			-1: "stdout has been redirected to a file"
-			Below -1: error
-	}*/
+	//In case of Windows Shell case
 	int stdOutFd = _fileno(stdout);
 	int res = _isatty(stdOutFd);
-	//In case of Windows Shell case
-	if (res != 0) return res;
-	if (errno == EBADF)	return -1;
-	//In case of Unix emulator
-	HMODULE ntdll = LoadLibraryW(L"ntdll.dll"); 
-	if (ntdll == 0) return -6;
+	if (res != 0) return res > 0 ;
+	if (errno == EBADF)	return 0;
+	//In case of Unix emulator, we parse the name of the pipe
+	HANDLE h;
+	int size = sizeof(FILE_NAME_INFO) + sizeof(WCHAR) * MAX_PATH;
+	FILE_NAME_INFO *nameinfo;
+	WCHAR *p = NULL;
 
-	typedef NTSTATUS(NTAPI *FNNtQueryObject)(HANDLE, OBJECT_INFORMATION_CLASS, PVOID, ULONG, PULONG);
-	FNNtQueryObject ntQueryObject = (FNNtQueryObject) GetProcAddress(ntdll, "NtQueryObject");
-	
+	typedef BOOL(WINAPI *pfnGetFileInformationByHandleEx)(
+		HANDLE                    hFile,
+		FILE_INFO_BY_HANDLE_CLASS FileInformationClass,
+		LPVOID                    lpFileInformation,
+		DWORD                     dwBufferSize
+		);
+	static pfnGetFileInformationByHandleEx pGetFileInformationByHandleEx = NULL;
 
-	HANDLE h = (HANDLE)_get_osfhandle(stdOutFd);
-	if (GetFileType(h) != FILE_TYPE_PIPE) 
-		return -2; //Should not happen
+	pGetFileInformationByHandleEx = (pfnGetFileInformationByHandleEx)
+		GetProcAddress(GetModuleHandle(TEXT("kernel32.dll")), "GetFileInformationByHandleEx");
+	if (pGetFileInformationByHandleEx == NULL)  return -2;
 
-	ULONG result;
-	BYTE buffer[1024];
-	POBJECT_NAME_INFORMATION nameinfo = (POBJECT_NAME_INFORMATION)buffer;
-	PWSTR name;
-	if (!NT_SUCCESS(ntQueryObject(h, ObjectNameInformation,	buffer, sizeof(buffer) - 2, &result)))
-		return -3;
-	name = nameinfo->Name.Buffer;
-	name[nameinfo->Name.Length / sizeof(*name)] = 0;
-
-	if ((!wcsstr(name, L"msys-") && !wcsstr(name, L"cygwin-")) ||
-		!wcsstr(name, L"-pty"))
-		return -4;
-
-		//if (fd == 2)
-		//		setvbuf(stderr, NULL, _IONBF, BUFSIZ);
-		//	fd_is_interactive[fd] |= FD_MSYS;
-	//L"\\Device\\NamedPipe\\cygwin-c5e39b7a9d22bafb-pty0-to-master"
-
-
-
-		
-	return -5; //https://github.com/fusesource/jansi-native/commit/52d4840b2e7a65ef973c4542cedb42d118dba983
-	
-	
+	h = (HANDLE)_get_osfhandle(2);
+	if (h == INVALID_HANDLE_VALUE) {
+		return 0;
+	}
+	/* Cygwin/msys's pty is a pipe. */
+	if (GetFileType(h) != FILE_TYPE_PIPE) {
+		return 0;
+	}
+	nameinfo = malloc(size);
+	if (nameinfo == NULL) {
+		return 0;
+	}
+	/* Check the name of the pipe:  '\{cygwin,msys}-XXXXXXXXXXXXXXXX-ptyN-{from,to}-master' */
+	if (pGetFileInformationByHandleEx(h, FileNameInfo, nameinfo, size)) {
+		nameinfo->FileName[nameinfo->FileNameLength / sizeof(WCHAR)] = L'\0';
+		p = nameinfo->FileName;
+		//Check that the pipe name contains msys or cygwin
+		if ((((wcsstr(p, L"msys-") || wcsstr(p, L"cygwin-"))) &&
+			(wcsstr(p, L"-pty") && wcsstr(p, L"-master")))) {
+			//The openned pipe is not a msys xor cygwin pipe to pty
+			free(nameinfo);
+			return 1;
+		}
+	}
+	free(nameinfo);
+	return 0;
 }
 
 size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
