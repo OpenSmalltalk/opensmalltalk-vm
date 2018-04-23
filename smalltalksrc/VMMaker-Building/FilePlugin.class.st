@@ -1055,7 +1055,7 @@ FilePlugin >> primitiveStdioDescriptorIsATTY [
 				cCode: 'sqStdioDescriptorIsATTY() '
 				inSmalltalk: [true].
 	interpreterProxy pop: 1.
-	interpreterProxy pushInteger: isStdoutRedirected
+	interpreterProxy pushBool: isStdoutRedirected
 ]
 
 { #category : #'file primitives' }
