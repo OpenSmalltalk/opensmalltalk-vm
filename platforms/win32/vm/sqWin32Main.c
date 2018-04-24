@@ -879,7 +879,7 @@ sqInt  isFileDescriptorATTY(int fdNum) {
 	//In case of Windows Shell case
 	int res = _isatty(fdNum);
 	if (res != 0)
-		return res > 0;
+		return res < 0;
 	if (errno == EBADF)	
 		return 0;
 	//In case of Unix emulator, we parse the name of the pipe
