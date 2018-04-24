@@ -569,8 +569,12 @@ sqFileStdioHandlesInto(SQFile files[])
 	return 7;
 }
 
-sqInt sqStdioDescriptorIsATTY(void) {
-	return isatty(fileno(stdin));
+/*
+* Allow to test if the standard input/output files are from a console or not
+* 1 if stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
+*/
+sqInt sqIsFileDescriptorATTY(int fdNum) {
+	return isatty(fdNum);
 }
 
 

@@ -875,10 +875,9 @@ getVersionInfo(int verbose)
  * 1 if stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
  * Inspired of: https://fossies.org/linux/misc/vim-8.0.tar.bz2/vim80/src/iscygpty.c?m=t
  */
-sqInt  isStdioDescriptorATTY(void) {
+sqInt  isFileDescriptorATTY(int fdNum) {
 	//In case of Windows Shell case
-	int stdOutFd = _fileno(stdout);
-	int res = _isatty(stdOutFd);
+	int res = _isatty(fdNum);
 	if (res != 0)
 		return res > 0;
 	if (errno == EBADF)	
@@ -902,7 +901,7 @@ sqInt  isStdioDescriptorATTY(void) {
 		if (!pGetFileInformationByHandleEx)
 			return 0;
 	}
-	h = (HANDLE)_get_osfhandle(2);
+	h = (HANDLE)_get_osfhandle(fdNum);
 	if (h == INVALID_HANDLE_VALUE) {
 		return 0;
 	}
@@ -928,6 +927,18 @@ sqInt  isStdioDescriptorATTY(void) {
 	}
 	free(nameinfo);
 	return 0;
+}
+
+/*
+* Allow to test whether one of the standard input/output files is from a console or not
+* 1 if one of the stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
+*/
+sqInt  isOneStdioDescriptorATTY() {
+	int ret = 0;
+	for (int fd = 0; fd < 3; fd++) {
+		ret |= isFileDescriptorATTY(fd);
+	}
+	return ret;
 }
 
 static void
@@ -1687,7 +1698,7 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
    * allocation failures unless running as a console app because doing so
    * via a MessageBox will make the system unusable.
    */
-  fIsConsole = isStdioDescriptorATTY();
+  fIsConsole = isOneStdioDescriptorATTY();
 
   /* a few things which need to be done first */
   gatherSystemInfo();

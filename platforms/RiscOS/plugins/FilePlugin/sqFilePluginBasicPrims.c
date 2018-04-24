@@ -407,7 +407,7 @@ sqInt sqFileStdioHandlesInto(SQFile files[3]) {
 	return 0;
 }
 
-sqInt sqStdioDescriptorIsATTY(void) {
+sqInt sqIsFileDescriptorATTY(int fdNum) {
 	//Not implemented
 	return 0;
 }

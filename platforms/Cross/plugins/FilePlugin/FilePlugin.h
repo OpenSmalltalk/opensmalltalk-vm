@@ -67,7 +67,7 @@ sqInt   sqFileSync(SQFile *f);
 sqInt   sqFileTruncate(SQFile *f,squeakFileOffsetType offset);
 sqInt   sqFileThisSession(void);
 sqInt   sqFileStdioHandlesInto(SQFile files[3]);
-sqInt   sqStdioDescriptorIsATTY(void);
+sqInt   sqIsFileDescriptorATTY(int fdNum);
 
 /* directories */
 

@@ -326,10 +326,9 @@ sqFileStdioHandlesInto(SQFile files[3])
 /* 
  * Allow to test if the standard input/output files are from a console or not
  * 1 if stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
- * Inspired of: https://fossies.org/linux/misc/vim-8.0.tar.bz2/vim80/src/iscygpty.c?m=t
  */
-sqInt  sqStdioDescriptorIsATTY(void) { 
-	return isStdioDescriptorATTY();
+sqInt  sqIsFileDescriptorATTY(int fdNum) {
+	return isFileDescriptorATTY(fdNum);
 }
 
 size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
