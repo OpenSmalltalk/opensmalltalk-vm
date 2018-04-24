@@ -1048,13 +1048,21 @@ FilePlugin >> primitiveHasFileAccess [
 ]
 
 { #category : #'file primitives' }
-FilePlugin >> primitiveStdioDescriptorIsATTY [
-	| isStdoutRedirected |
+FilePlugin >> primitiveIsFileDescriptorATTY [
+	| isStdoutRedirected fd fdPointer |
+	<var: 'fd' type: #int>
 	<export: true>
+	fdPointer := interpreterProxy stackValue: 0.
+	(interpreterProxy isIntegerObject: fdPointer)
+		ifFalse: [^ interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	fd := interpreterProxy integerValueOf: fdPointer.
+	interpreterProxy failed ifTrue: [
+		"Ensure that the appropriate failure code has been set"
+		^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	isStdoutRedirected := self
-				cCode: 'sqStdioDescriptorIsATTY() '
+				cCode: 'sqIsFileDescriptorATTY(fd) '
 				inSmalltalk: [true].
-	interpreterProxy pop: 1.
+	interpreterProxy pop: 2.
 	interpreterProxy pushBool: isStdoutRedirected
 ]
 
