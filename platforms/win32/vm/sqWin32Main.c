@@ -875,15 +875,14 @@ getVersionInfo(int verbose)
  * 1 if stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
  * Inspired of: https://fossies.org/linux/misc/vim-8.0.tar.bz2/vim80/src/iscygpty.c?m=t
  */
-sqInt  isFileDescriptorATTY(int fdNum) {
+sqInt  isFileDescriptorATTY(HANDLE fdHandle) {
 	//In case of Windows Shell case
-	int res = _isatty(fdNum);
+	int res = _isatty(_fileno(fdHandle));
 	if (res != 0)
 		return res < 0;
 	if (errno == EBADF)	
 		return 0;
 	//In case of Unix emulator, we parse the name of the pipe
-	HANDLE h;
 	int size = sizeof(FILE_NAME_INFO) + sizeof(WCHAR) * MAX_PATH;
 	FILE_NAME_INFO *nameinfo;
 	WCHAR *p = NULL;
@@ -901,12 +900,11 @@ sqInt  isFileDescriptorATTY(int fdNum) {
 		if (!pGetFileInformationByHandleEx)
 			return 0;
 	}
-	h = (HANDLE)_get_osfhandle(fdNum);
-	if (h == INVALID_HANDLE_VALUE) {
+	if (fdHandle == INVALID_HANDLE_VALUE) {
 		return 0;
 	}
 	/* Cygwin/msys's pty is a pipe. */
-	if (GetFileType(h) != FILE_TYPE_PIPE) {
+	if (GetFileType(fdHandle) != FILE_TYPE_PIPE) {
 		return 0;
 	}
 	nameinfo = malloc(size);
@@ -914,7 +912,7 @@ sqInt  isFileDescriptorATTY(int fdNum) {
 		return 0;
 	}
 	/* Check the name of the pipe:  '\{cygwin,msys}-XXXXXXXXXXXXXXXX-ptyN-{from,to}-master' */
-	if (pGetFileInformationByHandleEx(h, FileNameInfo, nameinfo, size)) {
+	if (pGetFileInformationByHandleEx(fdHandle, FileNameInfo, nameinfo, size)) {
 		nameinfo->FileName[nameinfo->FileNameLength / sizeof(WCHAR)] = L'\0';
 		p = nameinfo->FileName;
 		//Check that the pipe name contains msys or cygwin
@@ -934,11 +932,7 @@ sqInt  isFileDescriptorATTY(int fdNum) {
 * 1 if one of the stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
 */
 sqInt  isOneStdioDescriptorATTY() {
-	int ret = 0;
-	for (int fd = 0; fd < 3; fd++) {
-		ret |= isFileDescriptorATTY(fd);
-	}
-	return ret;
+	return isFileDescriptorATTY(STD_INPUT_HANDLE) || isFileDescriptorATTY(STD_OUTPUT_HANDLE) ||  isFileDescriptorATTY(STD_ERROR_HANDLE)
 }
 
 static void
