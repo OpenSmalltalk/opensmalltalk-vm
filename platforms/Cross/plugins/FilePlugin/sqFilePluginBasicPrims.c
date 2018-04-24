@@ -569,6 +569,12 @@ sqFileStdioHandlesInto(SQFile files[])
 	return 7;
 }
 
+sqInt sqStdioDescriptorIsATTY(void) {
+	//There is always an TTY to write into for Unix and Mac
+	return 1;
+}
+
+
 size_t
 sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex) {
 	/* Read count bytes from the given file into byteArray starting at
