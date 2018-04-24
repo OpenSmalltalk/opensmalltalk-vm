@@ -875,7 +875,7 @@ getVersionInfo(int verbose)
  * 1 if stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
  * Inspired of: https://fossies.org/linux/misc/vim-8.0.tar.bz2/vim80/src/iscygpty.c?m=t
  */
-sqInt  isFileDescriptorATTY(HANDLE fdHandle) {
+sqInt  isFileHandleATTY(HANDLE fdHandle) {
 	//In case of Windows Shell case
 	int res = _isatty(_fileno(fdHandle));
 	if (res != 0)
@@ -932,7 +932,7 @@ sqInt  isFileDescriptorATTY(HANDLE fdHandle) {
 * 1 if one of the stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
 */
 sqInt  isOneStdioDescriptorATTY() {
-	return isFileDescriptorATTY(STD_INPUT_HANDLE) || isFileDescriptorATTY(STD_OUTPUT_HANDLE) ||  isFileDescriptorATTY(STD_ERROR_HANDLE)
+	return isFileHandleATTY(STD_INPUT_HANDLE) || isFileHandleATTY(STD_OUTPUT_HANDLE) || isFileHandleATTY(STD_ERROR_HANDLE);
 }
 
 static void

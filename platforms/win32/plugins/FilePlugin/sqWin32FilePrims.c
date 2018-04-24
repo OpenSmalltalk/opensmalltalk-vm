@@ -303,21 +303,21 @@ sqFileStdioHandlesInto(SQFile files[3])
 	files[0].file = GetStdHandle(STD_INPUT_HANDLE);
 	files[0].writable = false;
 	files[0].lastOp = 0; /* unused on win32 */
-	files[0].isStdioStream = isFileDescriptorATTY(STD_INPUT_HANDLE);
+	files[0].isStdioStream = isFileHandleATTY(STD_INPUT_HANDLE);
 	AddHandleToTable(win32Files, files[0].file);
 
 	files[1].sessionID = thisSession;
 	files[1].file = GetStdHandle(STD_OUTPUT_HANDLE);
 	files[1].writable = true;
 	files[1].lastOp = 0; /* unused on win32 */
-	files[1].isStdioStream = isFileDescriptorATTY(STD_OUTPUT_HANDLE);
+	files[1].isStdioStream = isFileHandleATTY(STD_OUTPUT_HANDLE);
 	AddHandleToTable(win32Files, files[1].file);
 
 	files[2].sessionID = thisSession;
 	files[2].file = GetStdHandle(STD_ERROR_HANDLE);
 	files[2].writable = true;
 	files[2].lastOp = 0; /* unused on win32 */
-	files[2].isStdioStream = isFileDescriptorATTY(STD_ERROR_HANDLE);
+	files[2].isStdioStream = isFileHandleATTY(STD_ERROR_HANDLE);
 	AddHandleToTable(win32Files, files[2].file);
 
 	return 7;
@@ -328,7 +328,7 @@ sqFileStdioHandlesInto(SQFile files[3])
  * 1 if stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
  */
 sqInt  sqIsFileDescriptorATTY(int fdNum) {
-	return isFileDescriptorATTY(_get_osfhandle(fdNum));
+	return isFileHandleATTY(_get_osfhandle(fdNum));
 }
 
 size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
