@@ -24,13 +24,8 @@
 *
 *****************************************************************************/
 
-#include <ctype.h>
-#include <io.h>
-#include <wchar.h>
-
 #include <windows.h>
 #include <malloc.h>
-
 #include "sq.h"
 #include "FilePlugin.h"
 
