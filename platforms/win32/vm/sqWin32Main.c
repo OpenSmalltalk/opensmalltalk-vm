@@ -879,8 +879,10 @@ sqInt  isStdioDescriptorATTY(void) {
 	//In case of Windows Shell case
 	int stdOutFd = _fileno(stdout);
 	int res = _isatty(stdOutFd);
-	if (res != 0) return res > 0;
-	if (errno == EBADF)	return 0;
+	if (res != 0)
+		return res > 0;
+	if (errno == EBADF)	
+		return 0;
 	//In case of Unix emulator, we parse the name of the pipe
 	HANDLE h;
 	int size = sizeof(FILE_NAME_INFO) + sizeof(WCHAR) * MAX_PATH;
@@ -894,11 +896,12 @@ sqInt  isStdioDescriptorATTY(void) {
 		DWORD                     dwBufferSize
 		);
 	static pfnGetFileInformationByHandleEx pGetFileInformationByHandleEx = NULL;
-
-	pGetFileInformationByHandleEx = (pfnGetFileInformationByHandleEx)
-		GetProcAddress(GetModuleHandle(TEXT("kernel32.dll")), "GetFileInformationByHandleEx");
-	if (pGetFileInformationByHandleEx == NULL)  return -2;
-
+	if (!pGetFileInformationByHandleEx) {
+		pGetFileInformationByHandleEx = (pfnGetFileInformationByHandleEx)
+			GetProcAddress(GetModuleHandle(TEXT("kernel32.dll")), "GetFileInformationByHandleEx");
+		if (!pGetFileInformationByHandleEx)
+			return 0;
+	}
 	h = (HANDLE)_get_osfhandle(2);
 	if (h == INVALID_HANDLE_VALUE) {
 		return 0;

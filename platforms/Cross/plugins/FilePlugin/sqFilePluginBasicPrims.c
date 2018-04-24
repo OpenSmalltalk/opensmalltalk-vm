@@ -570,8 +570,7 @@ sqFileStdioHandlesInto(SQFile files[])
 }
 
 sqInt sqStdioDescriptorIsATTY(void) {
-	//There is always an TTY to write into for Unix and Mac
-	return 1;
+	return isatty(fileno(stdin));
 }
 
 
