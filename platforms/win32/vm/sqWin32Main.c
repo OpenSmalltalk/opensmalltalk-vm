@@ -876,13 +876,24 @@ getVersionInfo(int verbose)
  * Inspired of: https://fossies.org/linux/misc/vim-8.0.tar.bz2/vim80/src/iscygpty.c?m=t
  */
 sqInt  isFileHandleATTY(HANDLE fdHandle) {
-	//In case of Windows Shell case
-	int res = _isatty(_fileno(fdHandle));
-	if (res != 0)
-		return res < 0;
-	if (errno == EBADF)	
+	if (fdHandle == INVALID_HANDLE_VALUE) {
 		return 0;
-	//In case of Unix emulator, we parse the name of the pipe
+	}
+	
+	/* In case of Windows Shell case */
+	DWORD fileType = GetFileType(fdHandle);
+	if (fileType == FILE_TYPE_CHAR)
+		/* The specified file is a character file, typically an LPT device or a console. */
+		/* https://msdn.microsoft.com/en-us/library/windows/desktop/aa364960(v=vs.85).aspx */
+		return 1;
+
+	/* In case of Unix emulator, we need to parse the name of the pipe */
+	
+	/* Cygwin/msys's pty is a pipe. */
+	if (fileType != FILE_TYPE_PIPE) {
+		return 0;
+	}
+	
 	int size = sizeof(FILE_NAME_INFO) + sizeof(WCHAR) * MAX_PATH;
 	FILE_NAME_INFO *nameinfo;
 	WCHAR *p = NULL;
@@ -900,13 +911,7 @@ sqInt  isFileHandleATTY(HANDLE fdHandle) {
 		if (!pGetFileInformationByHandleEx)
 			return 0;
 	}
-	if (fdHandle == INVALID_HANDLE_VALUE) {
-		return 0;
-	}
-	/* Cygwin/msys's pty is a pipe. */
-	if (GetFileType(fdHandle) != FILE_TYPE_PIPE) {
-		return 0;
-	}
+
 	nameinfo = malloc(size);
 	if (nameinfo == NULL) {
 		return 0;
@@ -932,7 +937,8 @@ sqInt  isFileHandleATTY(HANDLE fdHandle) {
 * 1 if one of the stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
 */
 sqInt  isOneStdioDescriptorATTY() {
-	return isFileHandleATTY(STD_INPUT_HANDLE) || isFileHandleATTY(STD_OUTPUT_HANDLE) || isFileHandleATTY(STD_ERROR_HANDLE);
+	return isFileHandleATTY(GetStdHandle(STD_INPUT_HANDLE)) || 
+		isFileHandleATTY(GetStdHandle(STD_OUTPUT_HANDLE)) || isFileHandleATTY(GetStdHandle(STD_ERROR_HANDLE));
 }
 
 static void
