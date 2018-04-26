@@ -1783,6 +1783,23 @@ SpurMemoryManager >> allOldSpaceEntitiesFrom: initialObject to: finalObject do: 
 ]
 
 { #category : #'object enumeration' }
+SpurMemoryManager >> allOldSpaceFreeChunksDo: aBlock [
+	<inline: true>
+	<doNotGenerate> "Could be generated, but used for debug only"
+	self allOldSpaceFreeChunksFrom: self firstObject do: aBlock
+]
+
+{ #category : #'object enumeration' }
+SpurMemoryManager >> allOldSpaceFreeChunksFrom: initialObject do: aBlock [
+	<inline: true>
+	<doNotGenerate> "Could be generated, but used for debug only"
+	self allOldSpaceEntitiesFrom: initialObject
+		do: [:objOop|
+			 (self isFreeObject: objOop) ifTrue:
+				[aBlock value: objOop]]
+]
+
+{ #category : #'object enumeration' }
 SpurMemoryManager >> allOldSpaceObjectsDo: aBlock [
 	<inline: true>
 	self allOldSpaceObjectsFrom: self firstObject do: aBlock
@@ -4165,7 +4182,12 @@ SpurMemoryManager >> detachFreeObject: freeChunk [
 	| chunkBytes result |
 	chunkBytes := self bytesInObject: freeChunk.
 	result := self allocateOldSpaceChunkOfExactlyBytes: chunkBytes suchThat: [:f| f = freeChunk].
-	self assert: result = (self startOfObject: freeChunk)
+	self assert: result = (self startOfObject: freeChunk).
+	"Following is assertion only. Typical problem is that the free structures (tree/list) keep references to detached object somehow"
+	self cCode: '' inSmalltalk: 
+		[self allOldSpaceFreeChunksDo: 
+			[ :f | self assert: (self isValidFreeObject: f)]].
+	
 ]
 
 { #category : #accessing }
@@ -6216,6 +6238,7 @@ SpurMemoryManager >> initializeObjectMemory: bytesToShift [
 	self initializeFreeSpacePostLoad: freeListObj.
 	segmentManager collapseSegmentsPostSwizzle.
 	self computeFreeSpacePostSwizzle.
+	compactor postSwizzleAction.
 	self initializeOldSpaceFirstFree: freeOldSpaceStart. "initializes endOfMemory, freeStart, free space"
 	self initializeNewSpaceVariables.
 	scavenger initializeRememberedSet.
@@ -12221,6 +12244,12 @@ SpurMemoryManager >> totalFreeListBytes [
 			 listNode := nextNode].
 		 treeNode].
 	^totalFreeBytes
+]
+
+{ #category : #'debug support' }
+SpurMemoryManager >> totalFreeOldSpace [
+	<doNotGenerate>
+	^ totalFreeOldSpace
 ]
 
 { #category : #accessing }
