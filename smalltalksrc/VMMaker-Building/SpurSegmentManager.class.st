@@ -644,6 +644,7 @@ SpurSegmentManager >> segmentContainingObj: objOop [
 
 { #category : #accessing }
 SpurSegmentManager >> segments [
+	<cmacro: '() GIV(segments)'>
 	^segments
 ]
 
