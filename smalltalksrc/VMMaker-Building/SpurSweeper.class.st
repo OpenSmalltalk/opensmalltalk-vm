@@ -11,8 +11,7 @@ Class {
 	#name : #SpurSweeper,
 	#superclass : #SpurCompactor,
 	#instVars : [
-		'biasForGC',
-		'aggressiveCompactor'
+		'biasForGC'
 	],
 	#category : #'VMMaker-SpurMemoryManager'
 }
@@ -66,9 +65,7 @@ SpurSweeper >> canUseNextEntityAsFreeSpace: next [
 { #category : #api }
 SpurSweeper >> compact [
 	<inline: #never> "for profiling"
-	biasForGC
-		ifTrue: [self globalSweep]
-		ifFalse: ["Should use a compacting algo instead"self globalSweep]
+	self globalSweep
 ]
 
 { #category : #'sweep phase' }

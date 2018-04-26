@@ -71,6 +71,11 @@ SpurCompactor >> manager: aSpurNBitMMXEndianSimulator [
 		[:scav| scavenger := scav]
 ]
 
+{ #category : #api }
+SpurCompactor >> postSwizzleAction [
+	"Do nothing by default"
+]
+
 { #category : #debugging }
 SpurCompactor >> printTheBogons: aBogon [
 	<inline: true>
