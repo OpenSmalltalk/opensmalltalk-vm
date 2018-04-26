@@ -113,6 +113,19 @@ SpurSweeper >> isSingleFreeObject: objOop [
 ]
 
 { #category : #api }
+SpurSweeper >> postSwizzleAction [
+	"do nothing"
+	
+]
+
+{ #category : #debugging }
+SpurSweeper >> printTheBogons: aBogon [
+	<inline: true>
+	coInterpreter
+		print: 'bogon '; printHexnp: aBogon; cr
+]
+
+{ #category : #api }
 SpurSweeper >> remapObj: objOop [
 	<api>
 	<inline: false>

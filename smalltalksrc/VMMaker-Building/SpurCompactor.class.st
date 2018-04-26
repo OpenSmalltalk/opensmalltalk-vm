@@ -1,6 +1,8 @@
 "
 Common superclass of all compactors to define apis and simulation variables.
 
+IMPORTANT: This defines APIs only, subclassing is prohibited on auxiliary classes (Slang compiler won't find inherited methods).
+
 The full GC in Spur is split in two, the marking phase and the compactor phase. The subclasses of SpurCompactor are implementations of the second phase, so they are called once the marking phase is finished. SpurCompactor is reponsible for:
 - freeing unmarked objects
 - compacting the live old space objects (though each subclass define what it does, some spurCompactor may not compact)
@@ -73,14 +75,12 @@ SpurCompactor >> manager: aSpurNBitMMXEndianSimulator [
 
 { #category : #api }
 SpurCompactor >> postSwizzleAction [
-	"Do nothing by default"
+	self subclassResponsibility
 ]
 
 { #category : #debugging }
 SpurCompactor >> printTheBogons: aBogon [
-	<inline: true>
-	coInterpreter
-		print: 'bogon '; printHexnp: aBogon; cr
+	self subclassResponsibility
 ]
 
 { #category : #api }

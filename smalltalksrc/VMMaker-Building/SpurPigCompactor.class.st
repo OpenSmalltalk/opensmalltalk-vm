@@ -384,6 +384,12 @@ SpurPigCompactor >> pigCompact [
 	self assert: self checkTraversableSortedFreeList
 ]
 
+{ #category : #compatibility }
+SpurPigCompactor >> postSwizzleAction [
+	"do nothing"
+	
+]
+
 { #category : #'debug printing' }
 SpurPigCompactor >> printSortedFreeList [
 	<api>
@@ -402,6 +408,13 @@ SpurPigCompactor >> printSortedFreeList [
 		[nextFree := self nextInSortedFreeListLink: freeChunk given: prevFree.
 		 prevFree := freeChunk.
 		 freeChunk := nextFree]
+]
+
+{ #category : #'debug printing' }
+SpurPigCompactor >> printTheBogons: aBogon [
+	<inline: true>
+	coInterpreter
+		print: 'bogon '; printHexnp: aBogon; cr
 ]
 
 { #category : #compaction }
