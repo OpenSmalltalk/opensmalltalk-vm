@@ -7,14 +7,17 @@ The compaction is effectively partial, compacting only the most critical segment
 
 Now this works well when biasForGC is true, but when performing a snapshot, the compactor is just total crap (we need to figure out a solution).
 
+IMPORTANT: I could not figure out to make inheritance work so I copied methods from SpurSweeper here.
+
 segmentToFill <SegInfo> the segment that will be filled through the copying algorithm
 
 
 "
 Class {
 	#name : #SpurSelectiveCompactor,
-	#superclass : #SpurSweeper,
+	#superclass : #SpurCompactor,
 	#instVars : [
+		'biasForGC',
 		'segmentToFill'
 	],
 	#classVars : [
@@ -51,13 +54,60 @@ SpurSelectiveCompactor >> allocateSegmentToFill [
 
 { #category : #compaction }
 SpurSelectiveCompactor >> assertNoSegmentBeingCompacted [
-
 	"Assertion only - no segment is being claimed at this point"
+	| segInfo |
+	<var: 'segInfo' type: #'SpurSegmentInfo *'>
 	0 to: manager numSegments - 1 do:
-		[:i| | segInfo |
+		[:i|
 		 segInfo := self addressOf: (manager segmentManager segments at: i).
 		 self deny: (self isSegmentBeingCompacted: segInfo)].
 	
+]
+
+{ #category : #api }
+SpurSelectiveCompactor >> biasForGC [
+	biasForGC := true.
+]
+
+{ #category : #api }
+SpurSelectiveCompactor >> biasForSnapshot [
+	biasForGC := false.
+]
+
+{ #category : #'sweep phase - copied from SpurSweeper' }
+SpurSelectiveCompactor >> bulkFreeChunkFrom: objOop [
+	"ObjOop is either a freeChunk or an object to free, always in old space. The old space entity before objOop is necessarily a marked object.
+	 Attempts to free as many byte from objOop, looking ahead for multiple freechunks / objects to free in a row"
+	| bytes start next currentObj |
+	
+	"Avoids pathological case, not point in dealing with non-mergeable free chunks, we would remove them and re-add them to the free list."
+	(self isSingleFreeObject: objOop) ifTrue: [^0].
+	
+	"We free unmarked objects and freechunks next to each others and merge them at the same time"
+	start := manager startOfObject: objOop.
+	currentObj := objOop.
+	bytes := 0.
+	[bytes := bytes + (manager bytesInObject: currentObj).
+	self freeEntity: currentObj.
+	next := manager objectStartingAt: start + bytes.
+	self canUseNextEntityAsFreeSpace: next] 
+		whileTrue: [currentObj := next].
+	
+	manager addFreeChunkWithBytes: bytes at: start.
+	
+	^ next
+]
+
+{ #category : #'sweep phase - copied from SpurSweeper' }
+SpurSelectiveCompactor >> canUseAsFreeSpace: objOop [
+	<inline: true>
+	^ (manager isFreeObject: objOop) or: [(manager isMarked: objOop) not]
+]
+
+{ #category : #'sweep phase - copied from SpurSweeper' }
+SpurSelectiveCompactor >> canUseNextEntityAsFreeSpace: next [
+	<inline: true>
+	^ (manager oop: next isLessThan: manager endOfMemory) and: [self canUseAsFreeSpace: next]
 ]
 
 { #category : #api }
@@ -103,7 +153,8 @@ SpurSelectiveCompactor >> compactSegment: segInfo freeStart: initialFreeStart [
 { #category : #compaction }
 SpurSelectiveCompactor >> compactSegmentsToCompact [
 	"Forwards all objects in segments to compact and removes their freechunks"
-	| fillStart |
+	| segInfo fillStart |
+	<var: 'segInfo' type: #'SpurSegmentInfo *'>
 	fillStart := segmentToFill segStart.
 	
 	 "Removes initial free chunk in segment to fill... (Segment is entirely free)"
@@ -111,7 +162,7 @@ SpurSelectiveCompactor >> compactSegmentsToCompact [
 	
 	 "Compact each segment to compact..."
 	0 to: manager numSegments - 1 do:
-		[:i| | segInfo |
+		[:i| 
 		 segInfo := self addressOf: (manager segmentManager segments at: i).
 		(self isSegmentBeingCompacted: segInfo)
 			ifTrue: [fillStart := self compactSegment: segInfo freeStart: fillStart ]].
@@ -130,8 +181,8 @@ SpurSelectiveCompactor >> compactSegmentsToCompact [
 SpurSelectiveCompactor >> computeSegmentsToCompact [
 	"Compute segments to claim: least occupied.
 	 Answers true if at least 1 segment is being compacted."
-	
 	| canStillClaim aboutToClaim aboutToClaimSegment atLeastOneSegmentToCompact |
+	<var: 'aboutToClaimSegment' type: #'SpurSegmentInfo *'>
 	atLeastOneSegmentToCompact := false.
 	aboutToClaimSegment := self findNextSegmentToCompact.
 	"Segment to fill is one of the segment compacted last GC. 
@@ -152,8 +203,10 @@ SpurSelectiveCompactor >> computeSegmentsToCompact [
 
 { #category : #freeing }
 SpurSelectiveCompactor >> findAndSetSegmentToFill [
+	| segInfo firstEntity |
+	<var: 'segInfo' type: #'SpurSegmentInfo *'>
 	0 to: manager numSegments - 1 do:
-		[:i| | segInfo firstEntity |
+		[:i| 
 		 segInfo := self addressOf: (manager segmentManager segments at: i).
 		 firstEntity := manager objectStartingAt: segInfo segStart.
 		 ((manager isFreeObject: firstEntity) and: [(manager objectAfter: firstEntity limit: manager endOfMemory) = (manager segmentManager bridgeFor: segInfo)])
@@ -172,10 +225,11 @@ SpurSelectiveCompactor >> findNextSegmentToCompact [
 	 - cannot contain pinned object (since we're in a copying GC)
 	 - cannot be entirely empty (no need to block that empty segment until next marking phase)
 	 - cannot have a high occupation rate (> MaxOccupationForCompaction)"
-	| leastOccupied leastOccupiedSegment tempOccupied |
+	| leastOccupied leastOccupiedSegment tempOccupied segInfo |
+	<var: 'segInfo' type: #'SpurSegmentInfo *'>
 	leastOccupied := 255.
 	1 to: manager numSegments - 1 do:
-		[:i| | segInfo |
+		[:i|
 		 segInfo := self addressOf: (manager segmentManager segments at: i).
 		 ((self isSegmentBeingCompacted: segInfo) or: [segInfo containsPinned or: [manager segmentManager isEmptySegment: segInfo] ])
 			ifFalse: 
@@ -200,12 +254,26 @@ SpurSelectiveCompactor >> findOrAllocateSegmentToFill [
 	
 ]
 
+{ #category : #'sweep phase - copied from SpurSweeper' }
+SpurSelectiveCompactor >> freeEntity: entity [
+	<inline: true>
+	(manager isFreeObject: entity) 
+		ifFalse: "Freed old space objects are removed from remembered table"
+			[(manager isRemembered: entity) ifTrue:
+				[scavenger forgetObject: entity]]
+		ifTrue:  "Merged old space free chunks are removed from free list"
+			[manager detachFreeObject: entity]
+	
+]
+
 { #category : #freeing }
 SpurSelectiveCompactor >> freePastSegmentsAndSetSegmentToFill [	
 	"The first segment being claimed met becomes the segmentToFill. The others are just freed."
+	| segInfo |
+	<var: 'segInfo' type: #'SpurSegmentInfo *'>
 	segmentToFill := nil.
 	0 to: manager numSegments - 1 do:
-		[:i| | segInfo |
+		[:i|
 		 segInfo := self addressOf: (manager segmentManager segments at: i).
 		 (self isSegmentBeingCompacted: segInfo)
 			ifTrue: 
@@ -273,6 +341,15 @@ SpurSelectiveCompactor >> isSegmentBeingCompacted: segInfo [
 	^ segInfo swizzle anyMask: 1 << 8
 ]
 
+{ #category : #'sweep phase - copied from SpurSweeper' }
+SpurSelectiveCompactor >> isSingleFreeObject: objOop [
+	<inline: true>
+	| next |
+	^ (manager isFreeObject: objOop) and: 
+		[next := manager objectAfter: objOop limit: manager endOfMemory.
+		(manager oop: next isGreaterThanOrEqualTo: manager endOfMemory) or: [manager isMarked: next]]
+]
+
 { #category : #'segment access' }
 SpurSelectiveCompactor >> markSegmentAsBeingCompacted: segInfo [ 
 	<var: 'segInfo' type: #'SpurSegmentInfo *'>
@@ -281,10 +358,10 @@ SpurSelectiveCompactor >> markSegmentAsBeingCompacted: segInfo [
 ]
 
 { #category : #'segment access' }
-SpurSelectiveCompactor >> occupationOf: segment [ 
-	<var: 'segment' type: #'SpurSegmentInfo *'>
+SpurSelectiveCompactor >> occupationOf: segInfo [ 
+	<var: 'segInfo' type: #'SpurSegmentInfo *'>
 	"Swizzle is abused bit 8 isClaimed bits 0-7 occupation"
-	^segment swizzle bitAnd: 16rFF
+	^segInfo swizzle bitAnd: 16rFF
 ]
 
 { #category : #compaction }
@@ -300,10 +377,26 @@ SpurSelectiveCompactor >> postForwardingAction [
 { #category : #api }
 SpurSelectiveCompactor >> postSwizzleAction [
 	"Since the compact abuses the swizzle field of segment, it needs to be rest after start-up."
+	| segInfo |
+	<var: 'segInfo' type: #'SpurSegmentInfo *'>
 	0 to: manager numSegments - 1 do:
-		[:i| | segInfo |
+		[:i|
 		 segInfo := self addressOf: (manager segmentManager segments at: i).
 		 segInfo swizzle: 0 ]
+]
+
+{ #category : #debugging }
+SpurSelectiveCompactor >> printTheBogons: aBogon [
+	<inline: true>
+	coInterpreter
+		print: 'bogon '; printHexnp: aBogon; cr
+]
+
+{ #category : #api }
+SpurSelectiveCompactor >> remapObj: objOop [
+	<api>
+	<inline: false>
+	^manager vanillaRemapObj: objOop
 ]
 
 { #category : #compaction }
@@ -322,13 +415,13 @@ SpurSelectiveCompactor >> selectiveCompaction [
 ]
 
 { #category : #'segment access' }
-SpurSelectiveCompactor >> setOccupation: segment used: used unused: unused [
-	<var: 'segment' type: #'SpurSegmentInfo *'>
+SpurSelectiveCompactor >> setOccupation: segInfo used: used unused: unused [
+	<var: 'segInfo' type: #'SpurSegmentInfo *'>
 	"Swizzle is abused bit 8 isClaimed bits 0-7 occupation
 	 Setting occupation resets the claim bit"
 	| occupation |
 	occupation := used * 255 // (used + unused).
-	segment swizzle: occupation
+	segInfo swizzle: occupation
 ]
 
 { #category : #'segment access' }
@@ -336,7 +429,21 @@ SpurSelectiveCompactor >> setOccupationAtIndex: segmentIndex used: used unused: 
 	"Swizzle is abused bit 8 isClaimed bits 0-7 occupation
 	 Setting occupation resets the claim bit"
 	| occupation segInfo |
+	<var: 'segInfo' type: #'SpurSegmentInfo *'>
 	segInfo := self addressOf: (manager segmentManager segments at: segmentIndex).
 	occupation := used * 255 // (used + unused).
 	segInfo swizzle: occupation
+]
+
+{ #category : #api }
+SpurSelectiveCompactor >> shouldRemapObj: objOop [
+	<api>
+	^manager vanillaShouldRemapObj: objOop
+]
+
+{ #category : #'sweep phase - copied from SpurSweeper' }
+SpurSelectiveCompactor >> unmark: objOop [
+	self assert: ((manager isMarked: objOop) and: [(manager isFreeObject: objOop) not]).
+	(manager isSegmentBridge: objOop) ifFalse: [manager setIsMarkedOf: objOop to: false].
+	(manager isPinned: objOop) ifTrue: [manager segmentManager notePinned: objOop]
 ]
