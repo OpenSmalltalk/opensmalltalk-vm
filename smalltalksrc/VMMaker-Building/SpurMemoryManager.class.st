@@ -1783,23 +1783,6 @@ SpurMemoryManager >> allOldSpaceEntitiesFrom: initialObject to: finalObject do: 
 ]
 
 { #category : #'object enumeration' }
-SpurMemoryManager >> allOldSpaceFreeChunksDo: aBlock [
-	<inline: true>
-	<doNotGenerate> "Could be generated, but used for debug only"
-	self allOldSpaceFreeChunksFrom: self firstObject do: aBlock
-]
-
-{ #category : #'object enumeration' }
-SpurMemoryManager >> allOldSpaceFreeChunksFrom: initialObject do: aBlock [
-	<inline: true>
-	<doNotGenerate> "Could be generated, but used for debug only"
-	self allOldSpaceEntitiesFrom: initialObject
-		do: [:objOop|
-			 (self isFreeObject: objOop) ifTrue:
-				[aBlock value: objOop]]
-]
-
-{ #category : #'object enumeration' }
 SpurMemoryManager >> allOldSpaceObjectsDo: aBlock [
 	<inline: true>
 	self allOldSpaceObjectsFrom: self firstObject do: aBlock
@@ -2342,7 +2325,9 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes suchThat: a
 	node := 0.
 	child := freeLists at: 0.
 	[child ~= 0] whileTrue:
-		[self assert: (self isValidFreeObject: child).
+		[self "Sorry stepping over isValidFreeObject all the time was killing me"
+			cCode: [self assert: (self isValidFreeObject: child)]
+			inSmalltalk: [self assertValidFreeObject: child].
 		 childBytes := self bytesInObject: child.
 		 childBytes = chunkBytes
 			ifTrue: "size match; try to remove from list at node first."
@@ -2514,6 +2499,24 @@ SpurMemoryManager >> arrayValueOf: arrayOop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
 	^coInterpreter arrayValueOf: arrayOop
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> assertValidFreeObject: objOop [
+	<doNotGenerate> "If you want to generate this you want to use 'self assert: (self isValidFreeObject: objOop)' instead not to generate code in assertion-free VMs"
+	| chunk |
+	"duplicated assertions from isValidFreeObject: because I need to know what is wrong not only that it is not valid (I got bored of stepping inside isValidFreeObject:...)"
+	self assert: (self oop: (self addressAfter: objOop) isLessThanOrEqualTo: endOfMemory).
+	chunk := self fetchPointer: self freeChunkNextIndex ofFreeChunk: objOop.
+	self assert: (chunk = 0 or: [self isFreeOop: chunk]).
+	(self isLargeFreeObject: objOop) ifTrue: [
+		"Tree assertions"
+		chunk := self fetchPointer: self freeChunkParentIndex ofFreeChunk: objOop.
+		self assert: (chunk = 0 or: [(self isFreeOop: chunk) and: [self isLargeFreeObject: chunk]]).
+		chunk := self fetchPointer: self freeChunkSmallerIndex ofFreeChunk: objOop.
+		self assert: (chunk = 0 or: [(self isFreeOop: chunk) and: [self isLargeFreeObject: chunk]]).
+		chunk := self fetchPointer: self freeChunkLargerIndex ofFreeChunk: objOop.
+		self assert: (chunk = 0 or: [(self isFreeOop: chunk) and: [self isLargeFreeObject: chunk]]). ]
 ]
 
 { #category : #'image segment in/out' }
@@ -3024,7 +3027,12 @@ SpurMemoryManager >> checkHeapFreeSpaceIntegrity [
 			ifFalse:
 				[0 to: (self numPointerSlotsOf: obj) - 1 do:
 					[:fi|
-					 fieldOop := self fetchPointer: fi ofObject: obj.
+					 (self isForwarded: obj)
+						ifTrue: 
+							[self assert: fi = 0. "I'm now trying to use forwarders in GC algorithms..."
+							 fieldOop := self fetchPointer: fi ofMaybeForwardedObject: obj] 
+						ifFalse: "We keep #fetchPointer:ofObject: API here for assertions"
+							[fieldOop := self fetchPointer: fi ofObject: obj].
 					 (self isNonImmediate: fieldOop) ifTrue:
 						[(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) ~= 0 ifTrue:
 							[coInterpreter print: 'object leak in '; printHex: obj; print: ' @ '; printNum: fi; print: ' = '; printHex: fieldOop; print: ' is free'; cr.
@@ -4183,10 +4191,6 @@ SpurMemoryManager >> detachFreeObject: freeChunk [
 	chunkBytes := self bytesInObject: freeChunk.
 	result := self allocateOldSpaceChunkOfExactlyBytes: chunkBytes suchThat: [:f| f = freeChunk].
 	self assert: result = (self startOfObject: freeChunk).
-	"Following is assertion only. Typical problem is that the free structures (tree/list) keep references to detached object somehow"
-	self cCode: '' inSmalltalk: 
-		[self allOldSpaceFreeChunksDo: 
-			[ :f | self assert: (self isValidFreeObject: f)]].
 	
 ]
 
