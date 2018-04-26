@@ -103,6 +103,11 @@ SpurSelectiveCompactor >> compactSegmentsToCompact [
 	"Forwards all objects in segments to compact and removes their freechunks"
 	| freeStart |
 	freeStart := segmentToFill segStart.
+	
+	 "Removes initial free chunk in segment to fill... (Segment is entirely free)"
+	manager detachFreeObject: (manager objectStartingAt: freeStart).
+	
+	 "Compact each segment to compact..."
 	0 to: manager numSegments - 1 do:
 		[:i| | segInfo |
 		 segInfo := self addressOf: (manager segmentManager segments at: i).
@@ -114,6 +119,7 @@ SpurSelectiveCompactor >> compactSegmentsToCompact [
 		addFreeChunkWithBytes: segmentToFill segSize - manager bridgeSize + segmentToFill segStart - freeStart 
 		at: freeStart.
 	
+	 "Follow stack zone and caches..."
 	self postForwardingAction
 	
 ]
@@ -149,7 +155,7 @@ SpurSelectiveCompactor >> findAndSetSegmentToFill [
 		 segInfo := self addressOf: (manager segmentManager segments at: i).
 		 firstEntity := manager objectStartingAt: segInfo segStart.
 		 ((manager isFreeObject: firstEntity) and: [(manager objectAfter: firstEntity limit: manager endOfMemory) = (manager segmentManager bridgeFor: segInfo)])
-			ifTrue: [segmentToFill := segInfo. manager detachFreeObject: firstEntity. ^0]].
+			ifTrue: [segmentToFill := segInfo. ^0]].
 	
 ]
 
@@ -194,16 +200,15 @@ SpurSelectiveCompactor >> findOrAllocateSegmentToFill [
 
 { #category : #freeing }
 SpurSelectiveCompactor >> freePastSegmentsAndSetSegmentToFill [	
-	"The first segment being claimed met becomes the segmentToFill. The others are just freed"
+	"The first segment being claimed met becomes the segmentToFill. The others are just freed."
 	segmentToFill := nil.
 	0 to: manager numSegments - 1 do:
 		[:i| | segInfo |
 		 segInfo := self addressOf: (manager segmentManager segments at: i).
 		 (self isSegmentBeingCompacted: segInfo)
 			ifTrue: 
-				[segmentToFill
-					ifNil: [segmentToFill := segInfo]
-					ifNotNil: [self freeSegment: segInfo]]]
+				[self freeSegment: segInfo.
+				 segmentToFill ifNil: [segmentToFill := segInfo]]]
 ]
 
 { #category : #freeing }
@@ -310,9 +315,7 @@ SpurSelectiveCompactor >> selectiveCompaction [
 	atLeastOneSegmentToCompact 
 		ifTrue:
 			[self assert: segmentToFill ~~ nil.
-		 	 self compactSegmentsToCompact]
-		ifFalse: 
-			[segmentToFill ifNotNil: [self freeSegment: segmentToFill]].
+		 	 self compactSegmentsToCompact].
 	manager checkFreeSpace: GCModeFull.
 ]
 
