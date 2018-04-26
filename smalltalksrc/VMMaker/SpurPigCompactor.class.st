@@ -384,12 +384,6 @@ SpurPigCompactor >> pigCompact [
 	self assert: self checkTraversableSortedFreeList
 ]
 
-{ #category : #compatibility }
-SpurPigCompactor >> postSwizzleAction [
-	"do nothing"
-	
-]
-
 { #category : #'debug printing' }
 SpurPigCompactor >> printSortedFreeList [
 	<api>
@@ -410,13 +404,6 @@ SpurPigCompactor >> printSortedFreeList [
 		 freeChunk := nextFree]
 ]
 
-{ #category : #'debug printing' }
-SpurPigCompactor >> printTheBogons: aBogon [
-	<inline: true>
-	coInterpreter
-		print: 'bogon '; printHexnp: aBogon; cr
-]
-
 { #category : #compaction }
 SpurPigCompactor >> rebuildFreeListsForPigCompact [
 	"Rebuild the free lists from the doubly-linked free list."
@@ -429,26 +416,6 @@ SpurPigCompactor >> rebuildFreeListsForPigCompact [
 		 start := manager startOfObject: freeObj.
 		 manager addFreeChunkWithBytes: bytes at: start].
 	manager checkFreeSpace: GCModeFull
-]
-
-{ #category : #'gc - scavenge/compact' }
-SpurPigCompactor >> remapObj: objOop [
-	"Scavenge or simply follow objOop.  Answer the new location of objOop.
-	 The send should have been guarded by a send of shouldRemapOop:.
-	 The method is called remapObj: for compatibility with ObjectMemory."
-	<api>
-	<inline: false>
-	^manager vanillaRemapObj: objOop
-]
-
-{ #category : #'gc - scavenge/compact' }
-SpurPigCompactor >> shouldRemapObj: objOop [
-	<api>
-	"Answer if the obj should be scavenged (or simply followed). The method is called
-	 shouldRemapObj: for compatibility with ObjectMemory.  Defer to the compactor
-	 to choose the actual test, there being a difference between the vanilla test and
-	 that used with a sliding compactor where objects are not marked as forwarded."
-	^manager vanillaShouldRemapObj: objOop
 ]
 
 { #category : #compaction }
