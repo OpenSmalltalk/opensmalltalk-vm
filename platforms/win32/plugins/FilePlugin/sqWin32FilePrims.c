@@ -288,11 +288,11 @@ sqConnectToFile(SQFile *sqFile, void *file, sqInt writeFlag)
 
 void
 sqFileStdioHandlesIntoFile_WithHandle_IsWritable(SQFile file, HANDLE handle, int isWritable) {
-	file.sessionID = thisSession;
-	file.file = handle;
-	file.writable = isWritable;
-	file.lastOp = 0; /* unused on win32 */
-	file.isStdioStream = isFileHandleATTY(handle);
+	file->sessionID = thisSession;
+	file->file = handle;
+	file->writable = isWritable;
+	file->lastOp = 0; /* unused on win32 */
+	file->isStdioStream = isFileHandleATTY(handle);
 	AddHandleToTable(win32Files, handle);
 }
 
@@ -304,9 +304,9 @@ sqFileStdioHandlesIntoFile_WithHandle_IsWritable(SQFile file, HANDLE handle, int
 sqInt
 sqFileStdioHandlesInto(SQFile files[3])
 {
-	sqFileStdioHandlesIntoFile_WithHandle_IsWritable(files[0], GetStdHandle(STD_INPUT_HANDLE), false);
-	sqFileStdioHandlesIntoFile_WithHandle_IsWritable(files[1], GetStdHandle(STD_OUTPUT_HANDLE), true);
-	sqFileStdioHandlesIntoFile_WithHandle_IsWritable(files[2], GetStdHandle(STD_ERROR_HANDLE), true);
+	sqFileStdioHandlesIntoFile_WithHandle_IsWritable(&files[0], GetStdHandle(STD_INPUT_HANDLE), false);
+	sqFileStdioHandlesIntoFile_WithHandle_IsWritable(&files[1], GetStdHandle(STD_OUTPUT_HANDLE), true);
+	sqFileStdioHandlesIntoFile_WithHandle_IsWritable(&files[2], GetStdHandle(STD_ERROR_HANDLE), true);
 
 	return 7;
 }
