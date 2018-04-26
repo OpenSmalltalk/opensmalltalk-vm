@@ -72,7 +72,7 @@ SpurSelectiveCompactor >> compact [
 { #category : #compaction }
 SpurSelectiveCompactor >> compactSegment: segInfo freeStart: initialFreeStart [
 	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	| currentEntity fillStart bytesInObject numSlots bridge |
+	| currentEntity fillStart bytesToCopy numSlots bridge |
 	fillStart := initialFreeStart.
 	bridge := manager segmentManager bridgeFor: segInfo.
 	currentEntity := manager objectStartingAt: segInfo segStart.
@@ -86,9 +86,9 @@ SpurSelectiveCompactor >> compactSegment: segInfo freeStart: initialFreeStart [
 				["Copy the object in segmentToFill and replace it by a forwarder."
 				 self assert: (manager isPinned: currentEntity) not. 
 				 numSlots := manager numSlotsOfAny: currentEntity.
-				 bytesInObject := manager bytesInObject: currentEntity.
+				 bytesToCopy := manager bytesInObject: currentEntity.
 				 self assert: (manager objectBytesForSlots: numSlots) = (manager bytesInObject: currentEntity).
-				 manager mem: fillStart asVoidPointer cp: (manager startOfObject: currentEntity) asVoidPointer y: bytesInObject.
+				 manager mem: fillStart asVoidPointer cp: (manager startOfObject: currentEntity) asVoidPointer y: bytesToCopy.
 				 self assert: (manager baseHeader: (manager objectStartingAt: fillStart)) = (manager baseHeader: currentEntity).
 				 self assert: (manager fetchPointer: numSlots - 1 ofObject: (manager objectStartingAt: fillStart)) = (manager fetchPointer: numSlots - 1 ofObject: currentEntity).
 				 manager forward: currentEntity to: (manager objectStartingAt: fillStart).
@@ -238,7 +238,7 @@ SpurSelectiveCompactor >> internalGlobalSweepAndSegmentOccupationAnalysis [
 			ifTrue: 
 				["End of segment, set occupation"
 				  self 
-					setOccupation: (manager segmentManager segments at: segmentIndex) 
+					setOccupationAtIndex: segmentIndex
 					used: currentUsed 
 					unused: currentUnused.
 				  currentUnused := currentUsed := 0.
@@ -261,7 +261,7 @@ SpurSelectiveCompactor >> internalGlobalSweepAndSegmentOccupationAnalysis [
 		 currentEntity := manager objectAfter: currentEntity limit: manager endOfMemory].
 	"set last segment (last bridge = endOfMemory)"	
 	self 
-		setOccupation: (manager segmentManager segments at: segmentIndex) 
+		setOccupationAtIndex: segmentIndex
 		used: currentUsed 
 		unused: currentUnused.
 ]
@@ -329,4 +329,14 @@ SpurSelectiveCompactor >> setOccupation: segment used: used unused: unused [
 	| occupation |
 	occupation := used * 255 // (used + unused).
 	segment swizzle: occupation
+]
+
+{ #category : #'segment access' }
+SpurSelectiveCompactor >> setOccupationAtIndex: segmentIndex used: used unused: unused [
+	"Swizzle is abused bit 8 isClaimed bits 0-7 occupation
+	 Setting occupation resets the claim bit"
+	| occupation segInfo |
+	segInfo := self addressOf: (manager segmentManager segments at: segmentIndex).
+	occupation := used * 255 // (used + unused).
+	segInfo swizzle: occupation
 ]
