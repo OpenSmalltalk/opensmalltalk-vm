@@ -1,7 +1,9 @@
 "
 SpurSelectiveCompactor compacts memory by selecting the memory segments with the most free space and compacting only those, to limit fragmentation while being really quick to perform. The algorithm is fast mostly because it does not update pointers: they are updated lazily during the next marking phase, so there is no need to read the fields of objects in other memory segments that the one compacted.
 
-The algorithm works as follow. First, a global sweep pass iterates over the memory linearly, changing unmarked objects to free chunks and concatenating free chunks. During the global sweep phase, the segments of the heap are analysed to determine the percentage of occupation. Second, the least occupied segments are compacted by copying the remaining live objects into an entirely free segment, called regionToFill (we detail later in the paragraph where regionToFill comes from) and changing their values to forwarding objects. The rest of each segment being freed is removed from the freeList, it will be entirely freed at the beginning of the next compaction phase. Third, the next marking phase removes all forwarders. Fourth, at the beginning of the next compaction phase the compacted segments from the previous GC can be entirely marked as free space (No need to check anything inside, there were only forwarders that were removed and free chunks not on the free list). One of the freed segment is then selected as the regionToFill, others are just marked as free space. The compaction is effectively partial, compacting only the most critical regions of the heap to limit fragmentation. 
+The algorithm works as follow. First, a global sweep pass iterates over the memory linearly, changing unmarked objects to free chunks and concatenating free chunks. During the global sweep phase, the segments of the heap are analysed to determine the percentage of occupation. Second, the least occupied segments are compacted by copying the remaining live objects into an entirely free segment, called regionToFill (we detail later in the paragraph where regionToFill comes from), changing their values to forwarding objects and marking the free chunks as unavailable (removed from free list and marked as data objects). Third, the next marking phase removes all forwarders. Fourth, at the beginning of the next compaction phase the compacted segments from the previous GC can be entirely marked as free space (No need to check anything inside, there were only forwarders and trash data). One of the compacted segment is then selected as the segmentToFill, others are just marked as free chunks. 
+
+The compaction is effectively partial, compacting only the most critical segments of the heap to limit fragmentation. Compaction time is crazy low, since a low number of objects are moved and pointer updated is lazily done during the next marking phase, while still preventing memory fragmentation.
 
 Now this works well when biasForGC is true, but when performing a snapshot, the compactor is just total crap (we need to figure out a solution).
 
@@ -70,8 +72,8 @@ SpurSelectiveCompactor >> compact [
 { #category : #compaction }
 SpurSelectiveCompactor >> compactSegment: segInfo freeStart: initialFreeStart [
 	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	| currentEntity freeStart bytesInObject numSlots bridge |
-	freeStart := initialFreeStart.
+	| currentEntity fillStart bytesInObject numSlots bridge |
+	fillStart := initialFreeStart.
 	bridge := manager segmentManager bridgeFor: segInfo.
 	currentEntity := manager objectStartingAt: segInfo segStart.
 	[self oop: currentEntity isLessThan: bridge] whileTrue:
@@ -86,38 +88,38 @@ SpurSelectiveCompactor >> compactSegment: segInfo freeStart: initialFreeStart [
 				 numSlots := manager numSlotsOfAny: currentEntity.
 				 bytesInObject := manager bytesInObject: currentEntity.
 				 self assert: (manager objectBytesForSlots: numSlots) = (manager bytesInObject: currentEntity).
-				 manager mem: freeStart asVoidPointer cp: (manager startOfObject: currentEntity) asVoidPointer y: bytesInObject.
-				 self assert: (manager baseHeader: (manager objectStartingAt: freeStart)) = (manager baseHeader: currentEntity).
-				 self assert: (manager fetchPointer: numSlots - 1 ofObject: (manager objectStartingAt: freeStart)) = (manager fetchPointer: numSlots - 1 ofObject: currentEntity).
-				 manager forward: currentEntity to: (manager objectStartingAt: freeStart).
-				 freeStart := freeStart + (manager objectBytesForSlots: numSlots).
+				 manager mem: fillStart asVoidPointer cp: (manager startOfObject: currentEntity) asVoidPointer y: bytesInObject.
+				 self assert: (manager baseHeader: (manager objectStartingAt: fillStart)) = (manager baseHeader: currentEntity).
+				 self assert: (manager fetchPointer: numSlots - 1 ofObject: (manager objectStartingAt: fillStart)) = (manager fetchPointer: numSlots - 1 ofObject: currentEntity).
+				 manager forward: currentEntity to: (manager objectStartingAt: fillStart).
+				 fillStart := fillStart + (manager objectBytesForSlots: numSlots).
 				 self assert: (manager isForwarded: currentEntity).
-				 self assert: freeStart < (segmentToFill segLimit - manager bridgeSize)].
+				 self assert: fillStart < (segmentToFill segLimit - manager bridgeSize)].
 		 currentEntity := manager objectAfter: currentEntity limit: manager endOfMemory].
 	self assert: currentEntity = bridge.
-	^ freeStart
+	^ fillStart
 ]
 
 { #category : #compaction }
 SpurSelectiveCompactor >> compactSegmentsToCompact [
 	"Forwards all objects in segments to compact and removes their freechunks"
-	| freeStart |
-	freeStart := segmentToFill segStart.
+	| fillStart |
+	fillStart := segmentToFill segStart.
 	
 	 "Removes initial free chunk in segment to fill... (Segment is entirely free)"
-	manager detachFreeObject: (manager objectStartingAt: freeStart).
+	manager detachFreeObject: (manager objectStartingAt: fillStart).
 	
 	 "Compact each segment to compact..."
 	0 to: manager numSegments - 1 do:
 		[:i| | segInfo |
 		 segInfo := self addressOf: (manager segmentManager segments at: i).
 		(self isSegmentBeingCompacted: segInfo)
-			ifTrue: [freeStart := self compactSegment: segInfo freeStart: freeStart ]].
+			ifTrue: [fillStart := self compactSegment: segInfo freeStart: fillStart ]].
 		
 	 "Final free chunk in segment to fill..."
 	 manager 
-		addFreeChunkWithBytes: segmentToFill segSize - manager bridgeSize + segmentToFill segStart - freeStart 
-		at: freeStart.
+		addFreeChunkWithBytes: segmentToFill segSize - manager bridgeSize + segmentToFill segStart - fillStart 
+		at: fillStart.
 	
 	 "Follow stack zone and caches..."
 	self postForwardingAction
