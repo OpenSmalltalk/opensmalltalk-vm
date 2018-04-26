@@ -640,8 +640,11 @@ Class {
 { #category : #translation }
 SpurMemoryManager class >> ancilliaryClasses: options [
 	initializationOptions ifNil: [initializationOptions := options].
-	^{	SpurGenerationScavenger. SpurScavengeLogRecord. SpurSegmentManager. SpurSegmentInfo. self compactorClass },
+	^{	SpurGenerationScavenger. SpurScavengeLogRecord. SpurSegmentManager. SpurSegmentInfo }, 
+		(self compactorClass withAllSuperclasses copyUpThrough: SpurCompactor) reverse,
 		SpurNewSpaceSpace withAllSubclasses
+		
+	
 ]
 
 { #category : #accessing }

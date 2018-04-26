@@ -75,20 +75,29 @@ SpurCompactor >> manager: aSpurNBitMMXEndianSimulator [
 
 { #category : #api }
 SpurCompactor >> postSwizzleAction [
-	self subclassResponsibility
+	"do nothing"
 ]
 
 { #category : #debugging }
 SpurCompactor >> printTheBogons: aBogon [
-	self subclassResponsibility
+	<inline: true>
+	coInterpreter
+		print: 'bogon '; printHexnp: aBogon; cr
 ]
 
 { #category : #api }
 SpurCompactor >> remapObj: objOop [
-	self subclassResponsibility
+	<api>
+	<inline: false>
+	^manager vanillaRemapObj: objOop
 ]
 
 { #category : #api }
 SpurCompactor >> shouldRemapObj: objOop [
-	self subclassResponsibility
+	<api>
+	"Answer if the obj should be scavenged (or simply followed). The method is called
+	 shouldRemapObj: for compatibility with ObjectMemory.  Defer to the compactor
+	 to choose the actual test, there being a difference between the vanilla test and
+	 that used with a sliding compactor where objects are not marked as forwarded."
+	^manager vanillaShouldRemapObj: objOop
 ]
