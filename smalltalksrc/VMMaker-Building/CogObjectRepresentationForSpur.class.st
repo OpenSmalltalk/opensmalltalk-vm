@@ -1008,7 +1008,7 @@ CogObjectRepresentationForSpur >> genGetUninitializedInstanceWithClassIndex: cla
 					classIndex: classIndex.
 	self genStoreHeader: header intoNewInstance: destReg using: TempReg.
 	cogit
-		LoadEffectiveAddressMw: (objectMemory smallObjectBytesForSlots: numSlots) r: destReg R: TempReg;
+		LoadEffectiveAddressMw: (objectMemory objectBytesForSlots: numSlots) r: destReg R: TempReg;
 		MoveR: TempReg Aw: objectMemory freeStartAddress.
 
 	
