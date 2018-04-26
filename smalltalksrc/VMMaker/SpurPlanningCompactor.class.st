@@ -544,6 +544,12 @@ SpurPlanningCompactor >> planCompactSavingForwarders [
 	^true
 ]
 
+{ #category : #compatibility }
+SpurPlanningCompactor >> postSwizzleAction [
+	"do nothing"
+	
+]
+
 { #category : #'debug support' }
 SpurPlanningCompactor >> printTheBogons: aBogon [
 	<inline: true>
