@@ -112,32 +112,6 @@ SpurSweeper >> isSingleFreeObject: objOop [
 		(manager oop: next isGreaterThanOrEqualTo: manager endOfMemory) or: [manager isMarked: next]]
 ]
 
-{ #category : #api }
-SpurSweeper >> postSwizzleAction [
-	"do nothing"
-	
-]
-
-{ #category : #debugging }
-SpurSweeper >> printTheBogons: aBogon [
-	<inline: true>
-	coInterpreter
-		print: 'bogon '; printHexnp: aBogon; cr
-]
-
-{ #category : #api }
-SpurSweeper >> remapObj: objOop [
-	<api>
-	<inline: false>
-	^manager vanillaRemapObj: objOop
-]
-
-{ #category : #api }
-SpurSweeper >> shouldRemapObj: objOop [
-	<api>
-	^manager vanillaShouldRemapObj: objOop
-]
-
 { #category : #'sweep phase' }
 SpurSweeper >> unmark: objOop [
 	self assert: ((manager isMarked: objOop) and: [(manager isFreeObject: objOop) not]).
