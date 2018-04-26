@@ -287,7 +287,7 @@ sqConnectToFile(SQFile *sqFile, void *file, sqInt writeFlag)
 }
 
 void
-sqFileStdioHandlesIntoFile_WithHandle_IsWritable(SQFile file, HANDLE handle, int isWritable) {
+sqFileStdioHandlesIntoFile_WithHandle_IsWritable(SQFile * file, HANDLE handle, int isWritable) {
 	file->sessionID = thisSession;
 	file->file = handle;
 	file->writable = isWritable;
