@@ -145,6 +145,12 @@ SpurSelectiveCompactorSimulator >> markSegmentAsBeingCompacted: segInfo [
 	self talk: 'Marking as being compacted segment ' , (manager segmentManager indexOfSegment: segInfo) printString.
 ]
 
+{ #category : #compaction }
+SpurSelectiveCompactorSimulator >> selectiveCompaction [
+	super selectiveCompaction.
+	manager allFreeObjectsDo: [:objOop | manager assertValidFreeObject: objOop]
+]
+
 { #category : #debugging }
 SpurSelectiveCompactorSimulator >> talk: string [
 	Talking ifTrue: [Transcript cr; show: string]
