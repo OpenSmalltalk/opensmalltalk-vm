@@ -14,56 +14,18 @@ segmentToFill <SegInfo> the segment that will be filled through the copying algo
 Segment abuse:
 The swizzle field of segInfo is abused by using the low 8 bits for occupation and the 9th bit as isBeingCompacted bit.
 
+TODO: check it seems when memory is decreasing rapidly many empty segment are kept (14 and not 4 - Bug in totalFreeSpace?)
 
 "
 Class {
 	#name : #SpurSelectiveCompactor,
-	#superclass : #SpurAnalysingSweeper,
-	#instVars : [
-		'segmentToFill'
-	],
-	#classVars : [
-		'MaxOccupationForCompaction'
-	],
+	#superclass : #SpurAnalysingSweeperCompactor,
 	#category : #'VMMaker-SpurMemoryManager'
 }
-
-{ #category : #translation }
-SpurSelectiveCompactor class >> declareCVarsIn: aCCodeGenerator [
-	aCCodeGenerator var: 'segmentToFill' type: #'SpurSegmentInfo *'
-]
-
-{ #category : #initialization }
-SpurSelectiveCompactor class >> initialize [
-	super initialize.
-	"If the segment is occupied by more than MaxOccupationForCompaction, 
-	 it's not worth compacting it, whatever the rest of the system looks like.
-	 MaxOccupationForCompaction is included in [0;255]."
-	MaxOccupationForCompaction := 150. "Basically if segment is occupied by more than 60%, not worth compacting"
-]
 
 { #category : #simulation }
 SpurSelectiveCompactor class >> simulatorClass [
 	^SpurSelectiveCompactorSimulator
-]
-
-{ #category : #freeing }
-SpurSelectiveCompactor >> allocateSegmentToFill [
-	| res |
-	res := manager growOldSpaceByAtLeast: manager growHeadroom.
-	res ifNil: [self error: 'not enough memory for selective compaction'].
-]
-
-{ #category : #compaction }
-SpurSelectiveCompactor >> assertNoSegmentBeingCompacted [
-	"Assertion only - no segment is being claimed at this point"
-	| segInfo |
-	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	0 to: manager numSegments - 1 do:
-		[:i|
-		 segInfo := self addressOf: (manager segmentManager segments at: i).
-		 self deny: (self isSegmentBeingCompacted: segInfo)].
-	
 ]
 
 { #category : #api }
@@ -72,141 +34,6 @@ SpurSelectiveCompactor >> compact [
 	self freePastSegmentsAndSetSegmentToFill.
 	self globalSweepAndSegmentOccupationAnalysis.
 	self selectiveCompaction.
-	
-]
-
-{ #category : #compaction }
-SpurSelectiveCompactor >> compactSegment: segInfo freeStart: initialFreeStart [
-	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	| currentEntity fillStart bytesToCopy numSlots bridge |
-	fillStart := initialFreeStart.
-	bridge := manager segmentManager bridgeFor: segInfo.
-	currentEntity := manager objectStartingAt: segInfo segStart.
-	[self oop: currentEntity isLessThan: bridge] whileTrue:
-		[(manager isFreeObject: currentEntity)
-			ifTrue: 
-				["To avoid confusing too much Spur (especially the leak/free checks), we mark the free chunk as a word object."
-				 manager detachFreeObject: currentEntity.
-				 manager set: currentEntity classIndexTo: manager wordSizeClassIndexPun formatTo: manager wordIndexableFormat]
-			ifFalse: 
-				["Copy the object in segmentToFill and replace it by a forwarder."
-				 self assert: (manager isPinned: currentEntity) not. 
-				 numSlots := manager numSlotsOfAny: currentEntity.
-				 bytesToCopy := manager bytesInObject: currentEntity.
-				 self assert: (manager objectBytesForSlots: numSlots) = (manager bytesInObject: currentEntity).
-				 manager mem: fillStart asVoidPointer cp: (manager startOfObject: currentEntity) asVoidPointer y: bytesToCopy.
-				 self assert: (manager baseHeader: (manager objectStartingAt: fillStart)) = (manager baseHeader: currentEntity).
-				 self assert: (manager fetchPointer: numSlots - 1 ofObject: (manager objectStartingAt: fillStart)) = (manager fetchPointer: numSlots - 1 ofObject: currentEntity).
-				 manager forward: currentEntity to: (manager objectStartingAt: fillStart).
-				 fillStart := fillStart + (manager objectBytesForSlots: numSlots).
-				 self assert: (manager isForwarded: currentEntity).
-				 self assert: fillStart < (segmentToFill segLimit - manager bridgeSize)].
-		 currentEntity := manager objectAfter: currentEntity limit: manager endOfMemory].
-	self assert: currentEntity = bridge.
-	^ fillStart
-]
-
-{ #category : #compaction }
-SpurSelectiveCompactor >> compactSegmentsToCompact [
-	"Forwards all objects in segments to compact and removes their freechunks"
-	| segInfo fillStart |
-	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	fillStart := segmentToFill segStart.
-	
-	 "Removes initial free chunk in segment to fill... (Segment is entirely free)"
-	manager detachFreeObject: (manager objectStartingAt: fillStart).
-	
-	 "Compact each segment to compact..."
-	0 to: manager numSegments - 1 do:
-		[:i| 
-		 segInfo := self addressOf: (manager segmentManager segments at: i).
-		(self isSegmentBeingCompacted: segInfo)
-			ifTrue: [fillStart := self compactSegment: segInfo freeStart: fillStart ]].
-		
-	 "Final free chunk in segment to fill..."
-	 manager 
-		addFreeChunkWithBytes: segmentToFill segSize - manager bridgeSize + segmentToFill segStart - fillStart 
-		at: fillStart.
-	
-	 "Follow stack zone and caches..."
-	self postForwardingAction
-	
-]
-
-{ #category : #compaction }
-SpurSelectiveCompactor >> computeSegmentsToCompact [
-	"Compute segments to claim: least occupied.
-	 Answers true if at least 1 segment is being compacted."
-	| canStillClaim aboutToClaim aboutToClaimSegment atLeastOneSegmentToCompact |
-	<var: 'aboutToClaimSegment' type: #'SpurSegmentInfo *'>
-	atLeastOneSegmentToCompact := false.
-	aboutToClaimSegment := self findNextSegmentToCompact.
-	"Segment to fill is one of the segment compacted last GC. 
-	 If no segment were compacted last GC, and that there is 
-	 at least one segment to compact, allocate a new one."
-	aboutToClaimSegment ifNil: [^false].
-	segmentToFill ifNil: [self findOrAllocateSegmentToFill].
-	canStillClaim := segmentToFill segSize - manager bridgeSize.
-	[aboutToClaimSegment ifNil: [^atLeastOneSegmentToCompact].
-	 aboutToClaim := aboutToClaimSegment segSize - manager bridgeSize * ((self occupationOf: aboutToClaimSegment) + 1) // 255. "+1 to round up, this is approx"
-	 aboutToClaim < canStillClaim ] whileTrue: 
-		[self markSegmentAsBeingCompacted: aboutToClaimSegment.
-		 atLeastOneSegmentToCompact := true.
-		 canStillClaim := canStillClaim - aboutToClaim.
-		 aboutToClaimSegment := self findNextSegmentToCompact].
-	^atLeastOneSegmentToCompact
-]
-
-{ #category : #freeing }
-SpurSelectiveCompactor >> findAndSetSegmentToFill [
-	| segInfo firstEntity |
-	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	0 to: manager numSegments - 1 do:
-		[:i| 
-		 segInfo := self addressOf: (manager segmentManager segments at: i).
-		 firstEntity := manager objectStartingAt: segInfo segStart.
-		 ((manager isFreeObject: firstEntity) and: [(manager objectAfter: firstEntity limit: manager endOfMemory) = (manager segmentManager bridgeFor: segInfo)])
-			ifTrue: [segmentToFill := segInfo. ^0]].
-	
-]
-
-{ #category : #compaction }
-SpurSelectiveCompactor >> findNextSegmentToCompact [
-	"Answers the next segment to compact or nil if none.
-	  The next segment to compact:
-	 - cannot be segment 0 (Segment 0 has specific objects 
-	  (nil, true, etc.) and special size computed at start-up 
-	  that we don't want to deal with)
-	 - cannot be be a segment already being compacted.
-	 - cannot contain pinned object (since we're in a copying GC)
-	 - cannot be entirely empty (no need to block that empty segment until next marking phase)
-	 - cannot have a high occupation rate (> MaxOccupationForCompaction)"
-	| leastOccupied leastOccupiedSegment tempOccupied segInfo |
-	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	leastOccupied := 255.
-	1 to: manager numSegments - 1 do:
-		[:i|
-		 segInfo := self addressOf: (manager segmentManager segments at: i).
-		 ((self isSegmentBeingCompacted: segInfo) or: [segInfo containsPinned or: [manager segmentManager isEmptySegment: segInfo] ])
-			ifFalse: 
-				[(tempOccupied := self occupationOf: segInfo) <= leastOccupied
-					ifTrue: [ leastOccupied := tempOccupied.
-							 leastOccupiedSegment := segInfo ]]].
-	leastOccupied > MaxOccupationForCompaction ifTrue: [^nil].
-	^ leastOccupiedSegment
-]
-
-{ #category : #freeing }
-SpurSelectiveCompactor >> findOrAllocateSegmentToFill [
-	"There was no compacted segments from past GC that we can directly re-use.
-	 We need either to find an empty segment or allocate a new one."
-	self findAndSetSegmentToFill.
-	segmentToFill ifNotNil: [^0].
-	"No empty segment. We need to allocate a new one"
-	self allocateSegmentToFill.
-	"We don't know which segment it is that we've just allocated... So we look for it... This is a bit dumb."
-	self findAndSetSegmentToFill.
-	self assert: segmentToFill ~~ nil.
 	
 ]
 
@@ -223,79 +50,4 @@ SpurSelectiveCompactor >> freePastSegmentsAndSetSegmentToFill [
 			ifTrue: 
 				[self freeSegment: segInfo.
 				 segmentToFill ifNil: [segmentToFill := segInfo]]]
-]
-
-{ #category : #freeing }
-SpurSelectiveCompactor >> freeSegment: segInfo [
-	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	 manager addFreeChunkWithBytes: segInfo segSize - manager bridgeSize at: segInfo segStart.
-]
-
-{ #category : #'segment access' }
-SpurSelectiveCompactor >> isSegmentBeingCompacted: segInfo [ 
-	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	"Swizzle is abused bit 8 isBeingCompacted bits 0-7 occupation"
-	^ segInfo swizzle anyMask: 1 << 8
-]
-
-{ #category : #'segment access' }
-SpurSelectiveCompactor >> markSegmentAsBeingCompacted: segInfo [ 
-	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	"Swizzle is abused bit 8 isBeingCompacted bits 0-7 occupation"
-	segInfo swizzle: (segInfo swizzle bitOr: 1 << 8)
-]
-
-{ #category : #'segment access' }
-SpurSelectiveCompactor >> occupationOf: segInfo [ 
-	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	"Swizzle is abused bit 8 isBeingCompacted bits 0-7 occupation"
-	^segInfo swizzle bitAnd: 16rFF
-]
-
-{ #category : #compaction }
-SpurSelectiveCompactor >> postForwardingAction [
-	| allFlags |
-	"For now we don't optimize and just follow everything everywhere on stack and in caches, let's see in the profiler if we need to optimize with those cases. My guess is that this is < 100 microSecond"
-	manager followSpecialObjectsOop.
-	allFlags := BecamePointerObjectFlag + BecameActiveClassFlag bitOr: BecameCompiledMethodFlag.
-	manager coInterpreter postBecomeAction: allFlags.
-	manager postBecomeScanClassTable: allFlags.
-]
-
-{ #category : #api }
-SpurSelectiveCompactor >> postSwizzleAction [
-	"Since the compact abuses the swizzle field of segment, it needs to be rest after start-up."
-	| segInfo |
-	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	0 to: manager numSegments - 1 do:
-		[:i|
-		 segInfo := self addressOf: (manager segmentManager segments at: i).
-		 segInfo swizzle: 0 ]
-]
-
-{ #category : #compaction }
-SpurSelectiveCompactor >> selectiveCompaction [
-	"Figures out which segments to compact and compact them into segmentToFill"
-	| atLeastOneSegmentToCompact |
-	self assertNoSegmentBeingCompacted.
-	atLeastOneSegmentToCompact := self computeSegmentsToCompact.
-	"If no compaction we don't pay forwarding cost (stack scan, cache scan, etc.)
-	 and we don't allocate segmentToFill if none available."
-	atLeastOneSegmentToCompact 
-		ifTrue:
-			[self assert: segmentToFill ~~ nil.
-		 	 self compactSegmentsToCompact].
-	manager checkFreeSpace: GCModeFull.
-]
-
-{ #category : #'segment access' }
-SpurSelectiveCompactor >> setOccupationAtIndex: segmentIndex used: used unused: unused [
-	"WARNING: Resets the isCompacted bit"
-	"Swizzle is abused bit 8 isBeingCompacted bits 0-7 occupation
-	 Setting occupation resets the claim bit"
-	| occupation segInfo |
-	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	segInfo := self addressOf: (manager segmentManager segments at: segmentIndex).
-	occupation := used * 255 // (used + unused).
-	segInfo swizzle: occupation
 ]
