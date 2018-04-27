@@ -1,11 +1,8 @@
 "
 SpurSweeper is a sweep-only algorithm, setting the compactor to SpurSweeper effectively changes the fullGC to a mark-sweep non-moving algorithm. 
 
-SpurSweeper has two main purposes:
-1. SpurSelectiveCompactor includes a sweep algorithm, inherited from SpurSweeper, and SpurSweeper allows to debug it separatedly.
-2. SpurSweeper is a non-moving GC which can be convenient in some cases (For example when accessing objects from C in a concurrent thread called with ThreadedFFI, the C code can access the objects during fullGC since there won't be conflict with object fields being updated while being read).
+SpurSweeper is a reference implementation if one wants to evaluate GC performance and compare it to a Mark-Sweep. It's also the only non-moving GC available right now which can be convenient for some experiments. One of the main reason why it was implemented is because advanced compaction algorithm includes a sweep phase (See SelectiveCompactor for example) and SpurSweeper allows to debug the sweep phase separatedly.
 
-For snapshots a non-compacting algortihm does not make sense, hence a more aggressive compactor is called instead (see #compact).
 "
 Class {
 	#name : #SpurSweeper,
