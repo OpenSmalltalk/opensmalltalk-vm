@@ -7,15 +7,18 @@ The compaction is effectively partial, compacting only the most critical segment
 
 Now this works well when biasForGC is true, but when performing a snapshot, the compactor is just total crap (we need to figure out a solution).
 
-IMPORTANT: I could not figure out to make inheritance work so I copied methods from SpurSweeper here.
-
 segmentToFill <SegInfo> the segment that will be filled through the copying algorithm
+
+------------------------
+
+Segment abuse:
+The swizzle field of segInfo is abused by using the low 8 bits for occupation and the 9th bit as isBeingCompacted bit.
 
 
 "
 Class {
 	#name : #SpurSelectiveCompactor,
-	#superclass : #SpurSweeper,
+	#superclass : #SpurAnalysingSweeper,
 	#instVars : [
 		'segmentToFill'
 	],
@@ -228,71 +231,24 @@ SpurSelectiveCompactor >> freeSegment: segInfo [
 	 manager addFreeChunkWithBytes: segInfo segSize - manager bridgeSize at: segInfo segStart.
 ]
 
-{ #category : #'sweep phase' }
-SpurSelectiveCompactor >> globalSweepAndSegmentOccupationAnalysis [
-	self internalGlobalSweepAndSegmentOccupationAnalysis.
-	manager checkFreeSpace: GCModeFull.
-	manager unmarkSurvivingObjectsForCompact.
-]
-
-{ #category : #'sweep phase' }
-SpurSelectiveCompactor >> internalGlobalSweepAndSegmentOccupationAnalysis [
-	"Iterate over old space, free unmarked objects, annotate each segment with each occupation"
-	| currentEntity nextBridge start segmentIndex currentUsed currentUnused |
-	currentEntity := manager firstObject.
-	nextBridge := manager segmentManager bridgeAt: 0.
-	segmentIndex := currentUnused := currentUsed := 0.
-	[self oop: currentEntity isLessThan: manager endOfMemory] whileTrue:
-		[currentEntity = nextBridge
-			ifTrue: 
-				["End of segment, set occupation"
-				  self 
-					setOccupationAtIndex: segmentIndex
-					used: currentUsed 
-					unused: currentUnused.
-				  currentUnused := currentUsed := 0.
-				  segmentIndex := segmentIndex + 1.
-				  self unmark: currentEntity.
-				  nextBridge := manager segmentManager bridgeAt: segmentIndex]
-			ifFalse: 
-				["In-segment, sweep and compute occupation"
-				 (self canUseAsFreeSpace: currentEntity) 
-					ifTrue: 
-						["bulkFreeChunkFrom: may change a 1 word header
-						object to a double word header object"
-						start := manager startOfObject: currentEntity.
-						self bulkFreeChunkFrom: currentEntity.
-						currentEntity := manager objectStartingAt: start.
-						currentUnused := currentUnused + (manager numSlotsOfAny: currentEntity)]
-					ifFalse: 
-						[self unmark: currentEntity.
-						 currentUsed := currentUsed + (manager numSlotsOfAny: currentEntity)]].
-		 currentEntity := manager objectAfter: currentEntity limit: manager endOfMemory].
-	"set last segment (last bridge = endOfMemory)"	
-	self 
-		setOccupationAtIndex: segmentIndex
-		used: currentUsed 
-		unused: currentUnused.
-]
-
 { #category : #'segment access' }
 SpurSelectiveCompactor >> isSegmentBeingCompacted: segInfo [ 
 	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	"Swizzle is abused bit 8 isClaimed bits 0-7 occupation"
+	"Swizzle is abused bit 8 isBeingCompacted bits 0-7 occupation"
 	^ segInfo swizzle anyMask: 1 << 8
 ]
 
 { #category : #'segment access' }
 SpurSelectiveCompactor >> markSegmentAsBeingCompacted: segInfo [ 
 	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	"Swizzle is abused bit 8 isClaimed bits 0-7 occupation"
+	"Swizzle is abused bit 8 isBeingCompacted bits 0-7 occupation"
 	segInfo swizzle: (segInfo swizzle bitOr: 1 << 8)
 ]
 
 { #category : #'segment access' }
 SpurSelectiveCompactor >> occupationOf: segInfo [ 
 	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	"Swizzle is abused bit 8 isClaimed bits 0-7 occupation"
+	"Swizzle is abused bit 8 isBeingCompacted bits 0-7 occupation"
 	^segInfo swizzle bitAnd: 16rFF
 ]
 
@@ -333,18 +289,9 @@ SpurSelectiveCompactor >> selectiveCompaction [
 ]
 
 { #category : #'segment access' }
-SpurSelectiveCompactor >> setOccupation: segInfo used: used unused: unused [
-	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	"Swizzle is abused bit 8 isClaimed bits 0-7 occupation
-	 Setting occupation resets the claim bit"
-	| occupation |
-	occupation := used * 255 // (used + unused).
-	segInfo swizzle: occupation
-]
-
-{ #category : #'segment access' }
 SpurSelectiveCompactor >> setOccupationAtIndex: segmentIndex used: used unused: unused [
-	"Swizzle is abused bit 8 isClaimed bits 0-7 occupation
+	"WARNING: Resets the isCompacted bit"
+	"Swizzle is abused bit 8 isBeingCompacted bits 0-7 occupation
 	 Setting occupation resets the claim bit"
 	| occupation segInfo |
 	<var: 'segInfo' type: #'SpurSegmentInfo *'>
