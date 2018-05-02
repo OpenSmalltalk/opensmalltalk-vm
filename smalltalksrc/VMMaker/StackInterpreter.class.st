@@ -9944,6 +9944,9 @@ StackInterpreter >> longJumpIfTrue [
 StackInterpreter >> longPrintOop: oop [
 	<api>
 	| fmt lastIndex startIP bytecodesPerLine column |
+	<var: 'field16' type: #'unsigned short'>
+	<var: 'field32' type: #'unsigned int'>
+	<var: 'field64' type: #usqLong>
 	((objectMemory isImmediate: oop)
 	 or: [(objectMemory addressCouldBeObj: oop) not
 	 or: [(oop bitAnd: objectMemory allocationUnit - 1) ~= 0
@@ -17893,6 +17896,7 @@ StackInterpreter >> printHex: n [
 	"Print n in hex,  in the form '    0x1234', padded to a width of 10 characters
 	 in 32-bits ('0x' + 8 nibbles) or 18 characters in 64-bits ('0x' + 16 nibbles)"
 	<api>
+	<var: #n type: #usqInt>
 	| len buf |
 	<var: #buf declareC: 'char buf[37]'> "large enough for a 64-bit value in hex plus the null plus 16 spaces"
 	self cCode: 'memset(buf,'' '',36)' inSmalltalk: [buf := 'doh!'].
@@ -17920,14 +17924,16 @@ StackInterpreter >> printHexPtrnp: p [
 { #category : #'debug printing' }
 StackInterpreter >> printHexnp: n [
 	<api>
+	<var: #n type: #usqInt>
 	"Print n in hex,  in the form '0x1234', unpadded"
-	self print: '0x%lx' f: (self cCoerceSimple: n to: #'unsigned long')
+	self print: '0x%lx' f: n
 ]
 
 { #category : #'debug printing' }
 StackInterpreter >> printHexnpnp: n [
+	<var: #n type: #usqInt>
 	"Print n in hex, in the form '1234', unpadded"
-	self print: '%lx' f: (self cCoerceSimple: n to: #'unsigned long')
+	self print: '%lx' f: n
 ]
 
 { #category : #'debug printing' }
@@ -18113,7 +18119,8 @@ StackInterpreter >> printOop: oop [
 			 lastIndex > 0 ifTrue:
 				[1 to: lastIndex do:
 					[:index|
-					self space; printHex: (objectMemory fetchLong32: index - 1 ofObject: oop).
+					self space; printHex: (self cCoerceSimple: (objectMemory fetchLong32: index - 1 ofObject: oop)
+											to: #'unsigned int').
 					(index \\ self elementsPerPrintOopLine) = 0 ifTrue:
 						[self cr]].
 				(lastIndex \\ self elementsPerPrintOopLine) = 0 ifFalse:
