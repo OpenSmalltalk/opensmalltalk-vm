@@ -7679,7 +7679,7 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 	 The primitive, if it succeeds, also becomes the segmentWordArray into the array of loaded objects.
 	 This allows fixing up of loaded objects directly, without nextObject, which Spur doesn't support."
 
-	<inline: false>
+	<inline: #never>
 	| segmentLimit segmentStart segVersion errorCode numLoadedObjects loadedObjectsArray |
 
 	segmentLimit := self numSlotsOf: segmentWordArray.
@@ -7690,12 +7690,10 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 	 If it is still wrong, undo the damage and fail."
 	segVersion := self longAt: segmentWordArray + self baseHeaderSize.
 	(coInterpreter readableFormat: (segVersion bitAnd: 16rFFFFFF "low 3 bytes")) ifFalse:
-		[self reverseBytesIn32BitWordsFrom: segmentWordArray + self baseHeaderSize
-			to: (self addressAfter: segmentWordArray).
+		[self reverseBytesIn32BitWordsIn: segmentWordArray.
 		 segVersion := self longAt: segmentWordArray + self baseHeaderSize.
 		 (coInterpreter readableFormat: (segVersion bitAnd: 16rFFFFFF "low 3 bytes")) ifFalse:
-			[self reverseBytesIn32BitWordsFrom: segmentWordArray + self baseHeaderSize
-				to: (self addressAfter: segmentWordArray).
+			[self reverseBytesIn32BitWordsIn: segmentWordArray.
 			 ^PrimErrBadArgument halt]].
 
 	segmentStart := segmentWordArray + self baseHeaderSize + self allocationUnit.
@@ -7704,7 +7702,7 @@ SpurMemoryManager >> loadImageSegmentFrom: segmentWordArray outPointers: outPoin
 	"Notionally reverse the Byte type objects if the data is from opposite endian machine.
 	 Test top byte.  $d on the Mac or $s on the PC.  Rest of word is equal.  If Spur is ever
 	 ported to big-endian machines then the segment may have to be byte/word swapped,
-	 but so far it only runs on little-endian machines, so for now just fail if endinanness is wrong."
+	 but so far it only runs on little-endian machines, so for now just fail if endianness is wrong."
 	self flag: #endianness.
 	(segVersion >> 24 bitAnd: 16rFF) ~= (self imageSegmentVersion >> 24 bitAnd: 16rFF) ifTrue:
 		"Reverse the byte-type objects once"
@@ -10672,6 +10670,15 @@ SpurMemoryManager >> reverseBytesIn32BitWordsFrom: startAddr to: stopAddr [
 	[self oop: addr isLessThan: stopAddr] whileTrue:
 		[self long32At: addr put: ((self long32At: addr) byteSwap32).
 		 addr := addr + 4]
+]
+
+{ #category : #'image segment in/out' }
+SpurMemoryManager >> reverseBytesIn32BitWordsIn: segmentWordArray [
+	"This exists to get around a compiler bug in Apple LLVM version 7.0.0 (clang-700.1.76)
+	 that was avoiding the second comparison of segVersion after the first byte swap."
+	<inline: #never>
+	self reverseBytesIn32BitWordsFrom: segmentWordArray + self baseHeaderSize
+		to: (self addressAfter: segmentWordArray)
 ]
 
 { #category : #snapshot }
