@@ -347,7 +347,7 @@ VMMaker class >> generateAllConfigurationsUnderVersionControl [
 			(OrderedDictionary
 				with: 'Generate all newspeak configurations under VCS' -> [ self generateAllNewspeakConfigurationsUnderVersionControl ]
 				with: 'Generate all squeak cofigurations under VCS' -> [ self generateAllSqueakConfigurationsUnderVersionControl ]
-				with: 'Generate all spur lowercode configurations' -> [ self generateAllSpurLowcodeConfigurations ]
+				with: 'Generate all spur lowcode configurations' -> [ self generateAllSpurLowcodeConfigurations ]
 				with: 'Generate VM plugins' -> [ self generateVMPlugins ])
 ]
 

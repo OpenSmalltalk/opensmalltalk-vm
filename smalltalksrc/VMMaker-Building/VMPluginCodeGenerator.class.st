@@ -768,7 +768,7 @@ VMPluginCodeGenerator >> withGuardAgainstDefinitionOf: selector on: aStream do: 
 		withConditionalDefineOf: (self cFunctionNameFor: selector)
 		comment: nil
 		on: aStream
-		do: aBlock value
+		do: aBlock
 ]
 
 { #category : #'C translation' }
