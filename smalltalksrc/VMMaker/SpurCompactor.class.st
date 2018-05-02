@@ -31,7 +31,7 @@ Class {
 		'VMBasicConstants',
 		'VMSpurObjectRepresentationConstants'
 	],
-	#category : #'VMMaker-SpurMemoryManager'
+	#category : 'VMMaker-SpurMemoryManager'
 }
 
 { #category : #'as yet unclassified' }

@@ -4,7 +4,7 @@ Class {
 	#pools : [
 		'CogAbstractRegisters'
 	],
-	#category : #'VMMaker-Tests'
+	#category : 'VMMaker-Tests'
 }
 
 { #category : #tests }

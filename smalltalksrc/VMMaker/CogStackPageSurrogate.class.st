@@ -8,7 +8,7 @@ Class {
 		'zoneBase',
 		'zoneLimit'
 	],
-	#category : #'VMMaker-JITSimulation'
+	#category : 'VMMaker-JITSimulation'
 }
 
 { #category : #comparing }
