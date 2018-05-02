@@ -15,7 +15,7 @@ Class {
 		'eRememberedSetSize',
 		'eStatTenures'
 	],
-	#category : #'VMMaker-SpurMemoryManager'
+	#category : 'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
