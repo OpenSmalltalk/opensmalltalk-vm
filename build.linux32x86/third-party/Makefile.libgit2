@@ -29,8 +29,10 @@ $(THIRDPARTYLIBDIR)/$(LIBGIT2LIBNAME): $(LIBGIT2ARCHIVE)
 	cd $(LIBGIT2DIR) \
 		&& echo "AKG Check library presence: $(THIRDPARTYLIBDIR)" \
 		&& ls -l $(THIRDPARTYLIBDIR) \
-		&& echo "AKG ldd $(THIRDPARTYLIBDIR)/libssh2.so.1.0.1" \
+		&& echo "AKG info $(THIRDPARTYLIBDIR)/libssh2.so.1.0.1" \
+		&& file $(THIRDPARTYLIBDIR)/libssh2.so.1.0.1 \
 		&& ldd $(THIRDPARTYLIBDIR)/libssh2.so.1.0.1 \
+		&& readelf -aW $(THIRDPARTYLIBDIR)/libssh2.so.1.0.1 \
 		&& echo "AKG ls -l ../libssh2-1.7.0" \
 		&& ls -l ../libssh2-1.7.0 \
 		&& cmake \
