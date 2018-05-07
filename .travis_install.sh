@@ -43,7 +43,8 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             libaudio-dev:i386 \
             gcc-multilib \
             uuid-dev:i386 \
-            libcurl3-dev:i386
+            libcurl4-openssl-dev:i386 \
+			libssh2-1-dev:i386
 fi
 
 [[ "${ARCH}" != "linux32ARMv6" ]] && exit 0
