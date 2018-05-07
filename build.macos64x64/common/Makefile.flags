@@ -9,6 +9,9 @@ SDKsDIR:=$(XCODE)/Platforms/MacOSX.platform/Developer/SDKs
 #Build the oldest SDK installed (must be MacOSX10.10.sdk and later)
 SDKs:=MacOSX10.10.sdk MacOSX10.11.sdk MacOSX10.12.sdk MacOSX10.13.sdk
 SDK:=$(firstword $(realpath $(addprefix $(SDKsDIR)/, $(SDKs))))
+ifeq ($(strip $(SDK)),)
+$(error could not find a valid SDK)
+endif
 TARGET_ARCH:=x86_64
 TARGET_VERSION_MIN:=10.7
 
