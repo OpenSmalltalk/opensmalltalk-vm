@@ -312,13 +312,18 @@ sqFileStdioHandlesInto(SQFile files[3])
 }
 
 
-
-/* 
- * Allow to test if the standard input/output files are from a console or not
- * 1 if stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
- */
-sqInt  sqIsFileDescriptorATTY(int fdNum) {
-	return isFileHandleATTY(_get_osfhandle(fdNum));
+/*
+* Allow to test if the standard input/output files are from a console or not
+* Return values:
+* -1 - Error
+* 0 - no console (windows only)
+* 1 - normal terminal (unix terminal / windows console)
+* 2 - pipe
+* 3 - file
+* 4 - cygwin terminal (windows only)
+*/
+sqInt  sqFileDescriptorType(int fdNum) {
+	return fileHandleType(_get_osfhandle(fdNum));
 }
 
 size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {

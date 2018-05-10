@@ -569,11 +569,19 @@ sqFileStdioHandlesInto(SQFile files[])
 	return 7;
 }
 
+
 /*
 * Allow to test if the standard input/output files are from a console or not
-* 1 if stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
+* Return values:
+* -1 - Error
+* 0 - no console (windows only)
+* 1 - normal terminal (unix terminal / windows console)
+* 2 - pipe
+* 3 - file
+* 4 - cygwin terminal (windows only)
 */
-sqInt sqIsFileDescriptorATTY(int fdNum) {
+sqInt sqFileDescriptorType(int fdNum) {
+	/* TODO  Implement the unix version */
 	return isatty(fdNum);
 }
 
