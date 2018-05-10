@@ -20,7 +20,7 @@ TODO: check it seems when memory is decreasing rapidly many empty segment are ke
 Class {
 	#name : #SpurSelectiveCompactor,
 	#superclass : #SpurAnalysingSweeperCompactor,
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #simulation }

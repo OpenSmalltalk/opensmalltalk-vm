@@ -21,7 +21,7 @@ Class {
 		'DirEntryFound',
 		'DirNoMoreEntries'
 	],
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }
@@ -715,6 +715,33 @@ FilePlugin >> primitiveFileDelete [
 ]
 
 { #category : #'file primitives' }
+FilePlugin >> primitiveFileDescriptorType [
+	| fileType fd fdPointer |
+	"Allow to test if the standard input/output files are from a console or not
+	Return values:
+	* -1 - Error
+	* 0 - no console (windows only)
+	* 1 - normal terminal (unix terminal / windows console)
+	* 2 - pipe
+	* 3 - file
+	* 4 - cygwin terminal (windows only)"
+	<var: 'fd' type: #int>
+	<export: true>
+	fdPointer := interpreterProxy stackValue: 0.
+	(interpreterProxy isIntegerObject: fdPointer)
+		ifFalse: [^ interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	fd := interpreterProxy integerValueOf: fdPointer.
+	interpreterProxy failed ifTrue: [
+		"Ensure that the appropriate failure code has been set"
+		^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	fileType := self
+				cCode: 'sqFileDescriptorType(fd)'
+				inSmalltalk: [1].
+	interpreterProxy pop: 2.
+	interpreterProxy pushInteger: fileType
+]
+
+{ #category : #'file primitives' }
 FilePlugin >> primitiveFileFlush [
 	| file |
 	<var: 'file' type: 'SQFile *'>
@@ -1045,25 +1072,6 @@ FilePlugin >> primitiveHasFileAccess [
 		ifFalse: [hasAccess := true].
 	interpreterProxy pop: 1.
 	interpreterProxy pushBool: hasAccess
-]
-
-{ #category : #'file primitives' }
-FilePlugin >> primitiveIsFileDescriptorATTY [
-	| isStdoutRedirected fd fdPointer |
-	<var: 'fd' type: #int>
-	<export: true>
-	fdPointer := interpreterProxy stackValue: 0.
-	(interpreterProxy isIntegerObject: fdPointer)
-		ifFalse: [^ interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	fd := interpreterProxy integerValueOf: fdPointer.
-	interpreterProxy failed ifTrue: [
-		"Ensure that the appropriate failure code has been set"
-		^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	isStdoutRedirected := self
-				cCode: 'sqIsFileDescriptorATTY(fd) '
-				inSmalltalk: [true].
-	interpreterProxy pop: 2.
-	interpreterProxy pushBool: isStdoutRedirected
 ]
 
 { #category : #'file primitives' }

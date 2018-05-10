@@ -10,7 +10,7 @@ Class {
 	#instVars : [
 		'biasForGC'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #api }

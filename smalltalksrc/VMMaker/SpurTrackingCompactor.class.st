@@ -18,7 +18,7 @@ Implement cards for 2Gb (2Mb global card and 250kb), allow only segments within 
 Class {
 	#name : #SpurTrackingCompactor,
 	#superclass : #SpurAnalysingSweeperCompactor,
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #api }
