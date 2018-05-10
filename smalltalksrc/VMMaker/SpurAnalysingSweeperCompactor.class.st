@@ -10,7 +10,7 @@ Class {
 	#classVars : [
 		'MaxOccupationForCompaction'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
