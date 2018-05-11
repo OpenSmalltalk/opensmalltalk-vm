@@ -409,7 +409,7 @@ sqInt sqFileStdioHandlesInto(SQFile files[3]) {
 
 sqInt sqFileDescriptorType(int fdNum) {
 	//Not implemented
-	return 0;
+	return -1;
 }
 
 size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
