@@ -327,8 +327,7 @@ FilePlugin >> primitiveConnectToFile [
 		^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	filePointer := self connectToFile: cfile write: writeFlag.
 	interpreterProxy failed ifFalse: 
-		[interpreterProxy pop: 3 "rcvr, name, writeFlag"
-							thenPush: filePointer]
+		[interpreterProxy methodReturnValue: filePointer]
 ]
 
 { #category : #'file primitives' }
@@ -349,8 +348,7 @@ FilePlugin >> primitiveConnectToFileDescriptor [
 		^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	filePointer := self connectToFd: fd write: writeFlag.
 	interpreterProxy failed ifFalse:
-		[interpreterProxy pop: 3 "rcvr, name, writeFlag"
-							thenPush: filePointer]
+		[interpreterProxy methodReturnValue: filePointer]
 ]
 
 { #category : #'directory primitives' }
@@ -674,8 +672,7 @@ FilePlugin >> primitiveFileAtEnd [
 	interpreterProxy failed
 		ifFalse: [atEnd := self sqFileAtEnd: file].
 	interpreterProxy failed
-		ifFalse: [interpreterProxy pop: 2. "rcvr, file"
-			interpreterProxy pushBool: atEnd]
+		ifFalse: [interpreterProxy methodReturnBool: atEnd]
 ]
 
 { #category : #'file primitives' }
@@ -737,8 +734,7 @@ FilePlugin >> primitiveFileDescriptorType [
 	fileType := self
 				cCode: 'sqFileDescriptorType(fd)'
 				inSmalltalk: [1].
-	interpreterProxy pop: 2.
-	interpreterProxy pushInteger: fileType
+	interpreterProxy methodReturnInteger: fileType
 ]
 
 { #category : #'file primitives' }
@@ -760,7 +756,7 @@ FilePlugin >> primitiveFileGetPosition [
 	file := self fileValueOf: (interpreterProxy stackValue: 0).
 	interpreterProxy failed ifFalse: [position := self sqFileGetPosition: file].
 	interpreterProxy failed ifFalse: [
-		interpreterProxy pop: 2 thenPush: (interpreterProxy positive64BitIntegerFor: position)].
+		interpreterProxy methodReturnValue: (interpreterProxy positive64BitIntegerFor: position)].
 ]
 
 { #category : #'file primitives' }
@@ -777,8 +773,7 @@ FilePlugin >> primitiveFileOpen [
 	nameSize := interpreterProxy byteSizeOf: namePointer.
 	filePointer := self fileOpenName: nameIndex size: nameSize write: writeFlag secure: true.
 	interpreterProxy failed
-		ifFalse: [interpreterProxy pop: 3 "rcvr, name, writeFlag"
-			thenPush: filePointer]
+		ifFalse: [interpreterProxy methodReturnValue: filePointer]
 
 ]
 
@@ -795,9 +790,7 @@ FilePlugin >> primitiveFileOpenNew [
 	filePointer := self fileOpenNewName: nameIndex size: nameSize secure: true.
 	interpreterProxy failed
 		ifFalse: [
-			interpreterProxy
-				pop: 2 "rcvr, name"
-				thenPush: filePointer]
+			interpreterProxy methodReturnValue: filePointer]
 
 ]
 
@@ -844,8 +837,7 @@ FilePlugin >> primitiveFileReadWithPinning [
 					At: startIndex - 1 * elementSize.
 	interpreterProxy failed ifFalse:
 		[interpreterProxy
-			pop: 5 "pop rcvr, file, array, startIndex, count"
-			thenPush:(interpreterProxy integerObjectOf: bytesRead // elementSize)  "push # of elements read"]
+			methodReturnValue: (interpreterProxy integerObjectOf: bytesRead // elementSize)  "push # of elements read"]
 ]
 
 { #category : #'file primitives' }
@@ -887,8 +879,7 @@ FilePlugin >> primitiveFileReadWithoutPinning [
 			primitiveFailFor: PrimNoErr].
 	interpreterProxy failed ifFalse:
 		[interpreterProxy
-			pop: 5 "pop rcvr, file, array, startIndex, count"
-			thenPush:(interpreterProxy integerObjectOf: bytesRead // elementSize)  "push # of elements read"]
+				methodReturnValue: (interpreterProxy integerObjectOf: bytesRead // elementSize)  "push # of elements read"]
 ]
 
 { #category : #'file primitives' }
@@ -946,7 +937,7 @@ FilePlugin >> primitiveFileSize [
 	file := self fileValueOf: (interpreterProxy stackValue: 0).
 	interpreterProxy failed ifFalse:[size := self sqFileSize: file].
 	interpreterProxy failed ifFalse: [
-		interpreterProxy pop: 2 thenPush: (interpreterProxy positive64BitIntegerFor: size)].
+		interpreterProxy methodReturnValue: (interpreterProxy positive64BitIntegerFor: size)].
 ]
 
 { #category : #'file primitives' }
@@ -994,7 +985,7 @@ FilePlugin >> primitiveFileStdioHandles [
 					ifTrue: []
 					ifFalse: [interpreterProxy fullGC]].
 	result := interpreterProxy popRemappableOop.
-	interpreterProxy pop: 1 thenPush: result
+	interpreterProxy methodReturnValue: result
 ]
 
 { #category : #'file primitives' }
@@ -1058,7 +1049,7 @@ FilePlugin >> primitiveFileWrite [
 						From: (interpreterProxy cCoerce: (interpreterProxy firstIndexableField: array) to: #'char *')
 						At: startIndex - 1 * elementSize.
 	interpreterProxy failed ifFalse:
-		[interpreterProxy pop: 5 thenPush: (interpreterProxy integerObjectOf: bytesWritten // elementSize)]
+		[interpreterProxy methodReturnValue: (interpreterProxy integerObjectOf: bytesWritten // elementSize)]
 ]
 
 { #category : #'security primitives' }
@@ -1070,8 +1061,7 @@ FilePlugin >> primitiveHasFileAccess [
 	sHFAfn ~= 0
 		ifTrue: [hasAccess := self cCode: ' ((sqInt (*)(void))sHFAfn)()' inSmalltalk: [true]]
 		ifFalse: [hasAccess := true].
-	interpreterProxy pop: 1.
-	interpreterProxy pushBool: hasAccess
+	interpreterProxy methodReturnBool: hasAccess
 ]
 
 { #category : #'file primitives' }
