@@ -35,6 +35,7 @@
 
 #ifndef NO_STD_FILE_SUPPORT
 
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
