@@ -1,5 +1,6 @@
 set -e
 
+sudo apt-get update -y
 if [[ "${ARCH}" = "linux64x64" ]]; then
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-yes \
             debhelper \
