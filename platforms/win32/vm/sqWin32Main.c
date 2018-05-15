@@ -12,6 +12,7 @@
 *       with Unicode support.
 *****************************************************************************/
 #include <windows.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,6 +36,42 @@
      extern usqInt maxOldSpaceSize;
 #  endif
 #endif
+
+
+/************************************************************************************************************/
+/* few addtional definitions for those having older include files especially #include <fileextd.h>          */
+/************************************************************************************************************/
+#if (WINVER < 0x0600)
+	 /*Copied from winbase.h*/
+	 typedef struct _FILE_NAME_INFO {
+		 DWORD FileNameLength;
+		 WCHAR FileName[1];
+	 } FILE_NAME_INFO, *PFILE_NAME_INFO;
+	 typedef enum _FILE_INFO_BY_HANDLE_CLASS {
+		 FileBasicInfo = 0,
+		 FileStandardInfo = 1,
+		 FileNameInfo = 2,
+		 FileRenameInfo = 3,
+		 FileDispositionInfo = 4,
+		 FileAllocationInfo = 5,
+		 FileEndOfFileInfo = 6,
+		 FileStreamInfo = 7,
+		 FileCompressionInfo = 8,
+		 FileAttributeTagInfo = 9,
+		 FileIdBothDirectoryInfo = 10, // 0xA
+		 FileIdBothDirectoryRestartInfo = 11, // 0xB
+		 FileIoPriorityHintInfo = 12, // 0xC
+		 FileRemoteProtocolInfo = 13, // 0xD
+		 FileFullDirectoryInfo = 14, // 0xE
+		 FileFullDirectoryRestartInfo = 15, // 0xF
+		 FileStorageInfo = 16, // 0x10
+		 FileAlignmentInfo = 17, // 0x11
+		 FileIdInfo = 18, // 0x12
+		 FileIdExtdDirectoryInfo = 19, // 0x13
+		 FileIdExtdDirectoryRestartInfo = 20, // 0x14
+		 MaximumFileInfoByHandlesClass
+	 } FILE_INFO_BY_HANDLE_CLASS, *PFILE_INFO_BY_HANDLE_CLASS;
+#endif //(WINVER < 0x0600)
 
 #if !defined(IMAGE_SIZEOF_NT_OPTIONAL_HEADER)
 #include <winnt.h>
@@ -833,6 +870,99 @@ getVersionInfo(int verbose)
  */
 #define exit(ec) do { _cexit(ec); ExitProcess(ec); } while (0)
 
+ /*
+ * Allow to test if the standard input/output files are from a console or not
+ * Inspired of: https://fossies.org/linux/misc/vim-8.0.tar.bz2/vim80/src/iscygpty.c?m=t
+ * Return values:
+ * -1 - Error
+ * 0 - no console (windows only)
+ * 1 - normal terminal (unix terminal / windows console)
+ * 2 - pipe
+ * 3 - file
+ * 4 - cygwin terminal (windows only)
+ */
+sqInt  fileHandleType(HANDLE fdHandle) {
+	if (fdHandle == INVALID_HANDLE_VALUE) {
+		return -1;
+	}
+	
+	/* In case of Windows Shell case */
+	DWORD fileType = GetFileType(fdHandle);
+	if (fileType == FILE_TYPE_CHAR)
+		/* The specified file is a character file, typically an LPT device or a console. */
+		/* https://msdn.microsoft.com/en-us/library/windows/desktop/aa364960(v=vs.85).aspx */
+		return 1;
+
+	/* In case of Unix emulator, we need to parse the name of the pipe */
+	
+	/* Cygwin/msys's pty is a pipe. */
+	if (fileType != FILE_TYPE_PIPE) {
+		if (fileType == FILE_TYPE_DISK)
+			return 3; //We have a file here
+		if (fileType == FILE_TYPE_UNKNOWN && GetLastError() == ERROR_INVALID_HANDLE)
+			return  0; //No stdio allocated
+		return  -1;
+	}
+	
+	int size = sizeof(FILE_NAME_INFO) + sizeof(WCHAR) * MAX_PATH;
+	FILE_NAME_INFO *nameinfo;
+	WCHAR *p = NULL;
+
+	typedef BOOL(WINAPI *pfnGetFileInformationByHandleEx)(
+		HANDLE                    hFile,
+		FILE_INFO_BY_HANDLE_CLASS FileInformationClass,
+		LPVOID                    lpFileInformation,
+		DWORD                     dwBufferSize
+		);
+	static pfnGetFileInformationByHandleEx pGetFileInformationByHandleEx = NULL;
+	if (!pGetFileInformationByHandleEx) {
+		pGetFileInformationByHandleEx = (pfnGetFileInformationByHandleEx)
+			GetProcAddress(GetModuleHandle(TEXT("kernel32.dll")), "GetFileInformationByHandleEx");
+		if (!pGetFileInformationByHandleEx)
+			return -1;
+	}
+
+	nameinfo = malloc(size);
+	if (nameinfo == NULL) {
+		return -1;
+	}
+	/* Check the name of the pipe: '\{cygwin,msys}-XXXXXXXXXXXXXXXX-ptyN-{from,to}-master' */
+	if (pGetFileInformationByHandleEx(fdHandle, FileNameInfo, nameinfo, size)) {
+		nameinfo->FileName[nameinfo->FileNameLength / sizeof(WCHAR)] = L'\0';
+		p = nameinfo->FileName;
+		//Check that the pipe name contains msys or cygwin
+		if ((((wcsstr(p, L"msys-") || wcsstr(p, L"cygwin-"))) &&
+			(wcsstr(p, L"-pty") && wcsstr(p, L"-master")))) {
+			//The openned pipe is a msys xor cygwin pipe to pty
+			free(nameinfo);
+			return 4;
+		}
+		else
+			free(nameinfo);
+			return 2; //else it is just a standard pipe
+	}
+	free(nameinfo);
+	return -1;
+}
+
+/*
+* Allow to test whether the file handle is from a console or not
+* 1 if one of the stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
+*/
+sqInt  isFileHandleATTY(HANDLE fdHandle) {
+	sqInt res = fileHandleType(fdHandle) ;
+	return res == 1 || res == 4;
+}
+
+/*
+* Allow to test whether one of the standard input/output files is from a console or not
+* 1 if one of the stdio is redirected to a console pipe, else 0 (and in this case, a file should be created)
+*/
+sqInt  isOneStdioDescriptorATTY() {
+	return isFileHandleATTY(GetStdHandle(STD_INPUT_HANDLE)) || 
+		isFileHandleATTY(GetStdHandle(STD_OUTPUT_HANDLE)) || isFileHandleATTY(GetStdHandle(STD_ERROR_HANDLE));
+}
+
 static void
 versionInfo(void)
 {
@@ -1590,23 +1720,7 @@ WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
    * allocation failures unless running as a console app because doing so
    * via a MessageBox will make the system unusable.
    */
-#if 0 /* This way used to work.  Does no longer. */
-  DWORD mode;
-
-  fIsConsole = GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &mode);
-#elif 0 /* This does /not/ work with STD_INPUT_HANDLE or STD_OUTPUT_HANDLE */
-  CONSOLE_SCREEN_BUFFER_INFO csbi;
-
-  if ((fIsConsole = GetConsoleScreenBufferInfo
-						(GetStdHandle(STD_INPUT_HANDLE), &csbi)))
-		fIsConsole = csbi.dwCursorPosition.X || csbi.dwCursorPosition.Y;
-#else /* This /does/ work; see */
-	/* https://stackoverflow.com/questions/9009333/how-to-check-if-the-program-is-run-from-a-console */
-  HWND consoleWnd = GetConsoleWindow();
-  DWORD dwProcessId;
-  GetWindowThreadProcessId(consoleWnd, &dwProcessId);
-  fIsConsole = GetCurrentProcessId() != dwProcessId;
-#endif
+  fIsConsole = isOneStdioDescriptorATTY();
 
   /* a few things which need to be done first */
   gatherSystemInfo();

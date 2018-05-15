@@ -570,6 +570,23 @@ sqFileStdioHandlesInto(SQFile files[])
 	return 7;
 }
 
+
+/*
+* Allow to test if the standard input/output files are from a console or not
+* Return values:
+* -1 - Error
+* 0 - no console (windows only)
+* 1 - normal terminal (unix terminal / windows console)
+* 2 - pipe
+* 3 - file
+* 4 - cygwin terminal (windows only)
+*/
+sqInt sqFileDescriptorType(int fdNum) {
+	/* TODO  Implement the unix version */
+	return isatty(fdNum);
+}
+
+
 size_t
 sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex) {
 	/* Read count bytes from the given file into byteArray starting at
