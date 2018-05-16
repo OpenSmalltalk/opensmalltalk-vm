@@ -2,6 +2,10 @@ language: c
 
 sudo: required
 
+addons:
+    apt:
+      update: true
+
 cache:
   directories:
   - armchroot
