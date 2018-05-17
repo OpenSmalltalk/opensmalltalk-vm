@@ -582,8 +582,19 @@ sqFileStdioHandlesInto(SQFile files[])
 * 4 - cygwin terminal (windows only)
 */
 sqInt sqFileDescriptorType(int fdNum) {
-	/* TODO  Implement the unix version */
-	return isatty(fdNum);
+        int status;
+        struct stat statBuf;
+
+        /* Is this a terminal? */
+        if (isatty(fdNum)) return 1;
+
+        /* Is this a pipe? */
+        status = fstat(fdNum, &statBuf);
+        if (status) return -1;
+        if (S_ISFIFO(statBuf.st_mode)) return 2;
+
+        /* Must be a normal file */
+        return 3;
 }
 
 
