@@ -1,6 +1,6 @@
 Class {
 	#name : #SpurSelectiveCompactorSimulator,
-	#superclass : #AnObsoleteSpurSelectiveCompactor,
+	#superclass : #SpurSelectiveCompactor,
 	#classVars : [
 		'Talking'
 	],
