@@ -335,7 +335,7 @@ MiscPrimitivePlugin >> primitiveStringHash [
 	<var: 'aByteArray' type: #'unsigned char *'>
 	<var: 'hash' type: #'unsigned int'>
 	hash := interpreterProxy stackIntegerValue: 0.
-	interpreterProxy failed ifFalse:
+	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	byteArrayOop := interpreterProxy stackValue: 1.
 	(interpreterProxy isBytes: byteArrayOop) ifFalse:
