@@ -37,22 +37,25 @@ MiscPrimitivePlugin >> encodeInt: anInt in: ba at: i [
 MiscPrimitivePlugin >> primitiveCompareString [
 	"ByteString (class) compare: string1 with: string2 collated: order"
 	<export: true>
-	| len1 len2 order string1 string2 |
+	| len1 len2 order string1 string2 orderOop string1Oop string2Oop |
 
 	<var: 'order' type: #'unsigned char *'>
 	<var: 'string1' type: #'unsigned char *'>
 	<var: 'string2' type: #'unsigned char *'>
-	((interpreterProxy isBytes: (interpreterProxy stackValue: 0))
-	and: [(interpreterProxy isBytes: (interpreterProxy stackValue: 1))
-	and: [interpreterProxy isBytes: (interpreterProxy stackValue: 2)]]) ifFalse:
+	orderOop := interpreterProxy stackValue: 0.
+	string2Oop := interpreterProxy stackValue: 1.
+	string1Oop := interpreterProxy stackValue: 2.
+	((interpreterProxy isBytes: orderOop)
+	and: [(interpreterProxy isBytes: string2Oop)
+	and: [interpreterProxy isBytes: string1Oop]]) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	string1 := interpreterProxy firstIndexableField: (interpreterProxy stackValue: 2).
-	string2 := interpreterProxy firstIndexableField: (interpreterProxy stackValue: 1).
-	order := interpreterProxy firstIndexableField: (interpreterProxy stackValue: 0).
-	len1 := interpreterProxy sizeOfSTArrayFromCPrimitive: string1.
-	len2 := interpreterProxy sizeOfSTArrayFromCPrimitive: string2.
+	order := interpreterProxy firstIndexableField: orderOop.
 	(interpreterProxy sizeOfSTArrayFromCPrimitive: order) < 256 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	string1 := interpreterProxy firstIndexableField: string1Oop.
+	string2 := interpreterProxy firstIndexableField: string2Oop.
+	len1 := interpreterProxy sizeOfSTArrayFromCPrimitive: string1.
+	len2 := interpreterProxy sizeOfSTArrayFromCPrimitive: string2.
 	0 to: (len1 min: len2) - 1 do: 
 		[ :i | | c1 c2 |
 		c1 := order at: (string1 at: i).
@@ -123,22 +126,25 @@ MiscPrimitivePlugin >> primitiveCompressToByteArray [
 MiscPrimitivePlugin >> primitiveConvert8BitSigned [
 	"SampledSound (class) convert8bitSignedFrom: aByteArray to16Bit: aSoundBuffer"
 	<export: true>
-	| aByteArray aSoundBuffer arraySize |
+	| aByteArray aSoundBuffer arraySize byteArrayOop soundBufferOop |
+
 	<var: 'aByteArray' type: #'unsigned char *'>
 	<var: 'aSoundBuffer' type: #'unsigned short *'>
-	(interpreterProxy isBytes: (interpreterProxy stackValue: 1)) ifFalse:
+	byteArrayOop := interpreterProxy stackValue: 1.
+	(interpreterProxy isBytes: byteArrayOop) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	aByteArray := interpreterProxy firstIndexableField: (interpreterProxy stackValue: 1).
+	aByteArray := interpreterProxy firstIndexableField: byteArrayOop.
+	soundBufferOop := interpreterProxy stackValue: 0.
 	aSoundBuffer := self
-						cCode: [interpreterProxy arrayValueOf: (interpreterProxy stackValue: 0)]
+						cCode: [interpreterProxy arrayValueOf: soundBufferOop]
 						inSmalltalk: [interpreterProxy
-										cCoerce: (interpreterProxy arrayValueOf: (interpreterProxy stackValue: 0))
+										cCoerce: (interpreterProxy arrayValueOf: soundBufferOop)
 										to: #'unsigned short *'].
-	interpreterProxy failed ifTrue: [^nil].
-	(interpreterProxy isOopImmutable: (interpreterProxy stackValue: 0)) ifTrue:
+	interpreterProxy failed ifTrue: [^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	(interpreterProxy isOopImmutable: soundBufferOop) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	arraySize := interpreterProxy sizeOfSTArrayFromCPrimitive: aByteArray.
-	(interpreterProxy byteSizeOf: (interpreterProxy stackValue: 0)) < (2 * arraySize) ifTrue:
+	(interpreterProxy byteSizeOf: soundBufferOop) < (2 * arraySize) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	0 to: arraySize - 1 do: 
 		[ :i | | s |
@@ -148,7 +154,7 @@ MiscPrimitivePlugin >> primitiveConvert8BitSigned [
 			put: (s > 127
 					ifTrue: [s - 256 bitShift: 8]
 					ifFalse: [s bitShift: 8])].
-	interpreterProxy pop: interpreterProxy methodArgumentCount
+	interpreterProxy methodReturnReceiver
 ]
 
 { #category : #primitives }
@@ -231,19 +237,24 @@ MiscPrimitivePlugin >> primitiveDecompressFromByteArray [
 MiscPrimitivePlugin >> primitiveFindFirstInString [
 	"ByteString (class) findFirstInString: aString inSet: inclusionMap  startingAt: start"
 	<export: true>
-	|  aString i inclusionMap start stringSize |
+	
+	|  aString i inclusionMap stringSize aStringOop inclusionMapOop |
 	<var: 'aString' type: #'unsigned char *'>
-	<var: 'inclusionMap' type: #'char *'>
-	((interpreterProxy isIntegerObject: (interpreterProxy stackValue: 0))
-	and: [(interpreterProxy isBytes: (interpreterProxy stackValue: 1))
-	and: [interpreterProxy isBytes: (interpreterProxy stackValue: 2)]]) ifFalse:
+	<var: 'inclusionMap' type: #'unsigned char *'>
+	aStringOop := interpreterProxy stackValue: 2.
+	(interpreterProxy isBytes: aStringOop) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	aString := interpreterProxy firstIndexableField: (interpreterProxy stackValue: 2).
-	inclusionMap := interpreterProxy firstIndexableField: (interpreterProxy stackValue: 1).
-	start := interpreterProxy integerValueOf: (interpreterProxy stackValue: 0).
+	inclusionMapOop :=  interpreterProxy stackValue: 1.
+	(interpreterProxy isBytes: inclusionMapOop) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	i := interpreterProxy stackIntegerValue: 0.
+	interpreterProxy failed ifTrue: [^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	i := i - 1. "Convert to 0-based index."
+	i < 0 ifTrue: [^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	inclusionMap := interpreterProxy firstIndexableField: inclusionMapOop.
 	(interpreterProxy sizeOfSTArrayFromCPrimitive: inclusionMap) ~= 256 ifTrue:
 		[^interpreterProxy methodReturnInteger: 0].
-	i := start - 1.
+	aString := interpreterProxy firstIndexableField: aStringOop.
 	stringSize := interpreterProxy sizeOfSTArrayFromCPrimitive: aString.
 	[i < stringSize and: [(inclusionMap at: (aString at: i)) = 0]] whileTrue:
 		[i := i + 1].
@@ -254,27 +265,37 @@ MiscPrimitivePlugin >> primitiveFindFirstInString [
 MiscPrimitivePlugin >> primitiveFindSubstring [
 	"ByteString findSubstring: key in: body startingAt: start matchTable: matchTable"
 	<export: true>
-	| body key keySize matchTable start |
+
+	| body key keySize matchTable start bodyOop keyOop matchTableOop |
 	<var: #key type: #'unsigned char *'>
 	<var: #body type: #'unsigned char *'>
 	<var: #matchTable type: #'unsigned char *'>
-	((interpreterProxy isBytes: (interpreterProxy stackValue: 0))
-	and: [(interpreterProxy isIntegerObject: (interpreterProxy stackValue: 1))
-	and: [(interpreterProxy isBytes: (interpreterProxy stackValue: 2))
-	and: [interpreterProxy isBytes: (interpreterProxy stackValue: 3)]]]) ifFalse:
+	keyOop := interpreterProxy stackValue: 3.
+	(interpreterProxy isBytes: keyOop) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	key := interpreterProxy firstIndexableField: (interpreterProxy stackValue: 3).
-	body := interpreterProxy firstIndexableField: (interpreterProxy stackValue: 2).
-	start := interpreterProxy integerValueOf: (interpreterProxy stackValue: 1).
-	matchTable := interpreterProxy firstIndexableField: (interpreterProxy stackValue: 0).
+	bodyOop := interpreterProxy stackValue: 2.
+	(interpreterProxy isBytes: bodyOop) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	start := interpreterProxy stackIntegerValue: 1.
+	interpreterProxy failed ifTrue: 
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	matchTableOop := interpreterProxy stackValue: 0.
+	(interpreterProxy isBytes: matchTableOop) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	matchTable := interpreterProxy firstIndexableField: matchTableOop.
+	(interpreterProxy sizeOfSTArrayFromCPrimitive: matchTable) < 256 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].		
+	key := interpreterProxy firstIndexableField: keyOop.
 	(keySize := interpreterProxy sizeOfSTArrayFromCPrimitive: key) > 0 ifTrue:
-		[keySize := keySize - 1. "adjust for zero relative indxes"
-		 (start max: 1) to: (interpreterProxy sizeOfSTArrayFromCPrimitive: body) - keySize do: 
+		[keySize := keySize - 1. "adjust for zero relative indexes"
+		start := start - 1 max: 0. "adjust for zero relative indexes"
+		body := interpreterProxy firstIndexableField: bodyOop.	
+		start to: (interpreterProxy sizeOfSTArrayFromCPrimitive: body) - 1 - keySize do: 
 			[ :startIndex | | index |
 			index := 0.
-			[(matchTable at: (body at: startIndex + index - 1)) = (matchTable at: (key at: index))] whileTrue: 
+			[(matchTable at: (body at: startIndex + index)) = (matchTable at: (key at: index))] whileTrue: 
 				[index = keySize ifTrue:
-					[^interpreterProxy methodReturnInteger: startIndex].
+					[^interpreterProxy methodReturnInteger: startIndex + 1].
 				index := index + 1]]].
 	^interpreterProxy methodReturnInteger: 0
 ]
@@ -283,15 +304,20 @@ MiscPrimitivePlugin >> primitiveFindSubstring [
 MiscPrimitivePlugin >> primitiveIndexOfAsciiInString [
 	"ByteString indexOfAscii: anInteger inString: aString startingAt: start"
 	<export: true>
-	| anInteger aString start stringSize |
+
+	| anInteger aString start stringSize aStringOop |
 	<var: #aString type: #'unsigned char *'>
-	((interpreterProxy isIntegerObject: (interpreterProxy stackValue: 0))
-	and: [(start := interpreterProxy integerValueOf: (interpreterProxy stackValue: 0)) >= 1
-	and: [(interpreterProxy isBytes: (interpreterProxy stackValue: 1))
-	and: [(interpreterProxy isIntegerObject: (interpreterProxy stackValue: 2))]]]) ifFalse:
+	anInteger := interpreterProxy stackIntegerValue: 2.
+	interpreterProxy failed ifTrue: 
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	anInteger := interpreterProxy integerValueOf: (interpreterProxy stackValue: 2).
-	aString := interpreterProxy firstIndexableField: (interpreterProxy stackValue: 1).
+	aStringOop := interpreterProxy stackValue: 1.
+	(interpreterProxy isBytes: aStringOop) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	start := interpreterProxy stackIntegerValue: 0.	
+	interpreterProxy failed ifTrue: 
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	start >= 1 ifFalse: [^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	aString := interpreterProxy firstIndexableField: aStringOop.
 	stringSize := interpreterProxy sizeOfSTArrayFromCPrimitive: aString.
 	start - 1 to: stringSize - 1 do:
 		[ :pos |
@@ -304,45 +330,51 @@ MiscPrimitivePlugin >> primitiveIndexOfAsciiInString [
 MiscPrimitivePlugin >> primitiveStringHash [
 	"ByteArray (class) hashBytes: aByteArray startingWith: speciesHash"
 	<export: true>
-	| aByteArray speciesHash byteArraySize hash |
+
+	| aByteArray hash byteArrayOop |
 	<var: 'aByteArray' type: #'unsigned char *'>
-	<var: 'speciesHash' type: #int>
-	((interpreterProxy isIntegerObject: (interpreterProxy stackValue: 0))
-	and: [interpreterProxy isBytes: (interpreterProxy stackValue: 1)]) ifFalse:
+	<var: 'hash' type: #'unsigned int'>
+	hash := interpreterProxy stackIntegerValue: 0.
+	interpreterProxy failed ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	aByteArray := interpreterProxy firstIndexableField: (interpreterProxy stackValue: 1).
-	speciesHash := interpreterProxy integerValueOf: (interpreterProxy stackValue: 0).
-	byteArraySize := interpreterProxy sizeOfSTArrayFromCPrimitive: aByteArray.
-	hash := speciesHash bitAnd: 16r0FFFFFFF.
-	0 to: byteArraySize - 1 do: 
+	byteArrayOop := interpreterProxy stackValue: 1.
+	(interpreterProxy isBytes: byteArrayOop) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	aByteArray := interpreterProxy firstIndexableField: byteArrayOop.
+	0 to: (interpreterProxy sizeOfSTArrayFromCPrimitive: aByteArray) - 1 do: 
 		[ :pos |
-		hash := hash + (aByteArray at: pos).
-		hash := hash * 16r19660D bitAnd: 16r0FFFFFFF].
-	interpreterProxy methodReturnInteger: hash
+		hash := hash + (aByteArray at: pos) * 16r19660D ].
+	interpreterProxy methodReturnInteger: (hash bitAnd: 16r0FFFFFFF)
 ]
 
 { #category : #primitives }
 MiscPrimitivePlugin >> primitiveTranslateStringWithTable [
 	"ByteString (class) translate: aString from: start to: stop table: table"
 	<export: true>
-	| aString start stop table |
+
+	| aString start stop table aStringOop tableOop |
 	<var: #table type: #'unsigned char *'>
 	<var: #aString type: #'unsigned char *'>
-	((interpreterProxy isBytes: (interpreterProxy stackValue: 0))
-	and: [(interpreterProxy isIntegerObject: (interpreterProxy stackValue: 1))
-	and: [(interpreterProxy isIntegerObject: (interpreterProxy stackValue: 2))
-	and: [interpreterProxy isBytes: (interpreterProxy stackValue: 3)]]]) ifFalse:
+	aStringOop := interpreterProxy stackValue: 3.
+	(interpreterProxy isBytes: aStringOop) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(interpreterProxy isOopImmutable: (interpreterProxy stackValue: 3)) ifTrue:
+	(interpreterProxy isOopImmutable: aStringOop) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
-	aString := interpreterProxy firstIndexableField: (interpreterProxy stackValue: 3).
-	start := interpreterProxy integerValueOf: (interpreterProxy stackValue: 2).
-	stop := interpreterProxy integerValueOf: (interpreterProxy stackValue: 1).
-	table := interpreterProxy firstIndexableField: (interpreterProxy stackValue: 0).
+	start := interpreterProxy stackIntegerValue: 2.
+	interpreterProxy failed ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].	
+	stop := interpreterProxy stackIntegerValue: 1.
+	interpreterProxy failed ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].	
+	tableOop := interpreterProxy stackValue: 0.
+	(interpreterProxy isBytes: tableOop) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	aString := interpreterProxy firstIndexableField: aStringOop.
 	(start >= 1 and: [stop <= (interpreterProxy sizeOfSTArrayFromCPrimitive: aString)]) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
+	table := interpreterProxy firstIndexableField: tableOop.
 	(interpreterProxy sizeOfSTArrayFromCPrimitive: table) < 256 ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	start - 1 to: stop - 1 do: [ :i | aString at: i put: (table at: (aString at: i))].
-	interpreterProxy pop: interpreterProxy methodArgumentCount
+	interpreterProxy methodReturnReceiver
 ]
