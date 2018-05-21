@@ -16381,6 +16381,13 @@ StackInterpreter >> methodReturnInteger: integer [
 ]
 
 { #category : #'plugin primitive support' }
+StackInterpreter >> methodReturnReceiver [
+	"Sets the return value for a method"
+	self pop: argumentCount.
+	^0
+]
+
+{ #category : #'plugin primitive support' }
 StackInterpreter >> methodReturnString: aCString [
 	"Sets the return value for a method."
 	<var: 'aCString' type: #'char *'>

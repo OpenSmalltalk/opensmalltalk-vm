@@ -773,6 +773,13 @@ InterpreterProxy >> methodReturnInteger: integer [
 ]
 
 { #category : #'stack access' }
+InterpreterProxy >> methodReturnReceiver [
+	"Sets the return value for a method"
+	self pop: argumentCount.
+	^0
+]
+
+{ #category : #'stack access' }
 InterpreterProxy >> methodReturnString: aCString [
 	"Sets the return value for a method"
 	<var: 'aCString' type: #'char *'>

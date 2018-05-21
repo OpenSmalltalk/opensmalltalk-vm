@@ -8560,6 +8560,13 @@ SpurMemoryManager >> methodReturnInteger: integer [
 ]
 
 { #category : #'simulation only' }
+SpurMemoryManager >> methodReturnReceiver [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter methodReturnReceiver
+]
+
+{ #category : #'simulation only' }
 SpurMemoryManager >> methodReturnString: aCString [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
