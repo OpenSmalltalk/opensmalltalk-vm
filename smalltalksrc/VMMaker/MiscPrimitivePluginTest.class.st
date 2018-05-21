@@ -12,33 +12,30 @@ Class {
 MiscPrimitivePluginTest >> compare: string1 with: string2 collated: order [
 	"Return 1, 2 or 3, if string1 is <, =, or > string2, with the collating order of characters given by the order array."
 
-	<primitive: 'primitiveCompareString' module: 'MiscPrimitivePlugin'>
-	self primitiveFailed
-
+	<primitive: 'primitiveCompareString' module: 'MiscPrimitivePlugin'  error: ec>
+	^ec
 ]
 
 { #category : #primitives }
 MiscPrimitivePluginTest >> compress: bm toByteArray: ba [
 
-	<primitive: 'primitiveCompressToByteArray' module: 'MiscPrimitivePlugin'>
-	self primitiveFailed
+	<primitive: 'primitiveCompressToByteArray' module: 'MiscPrimitivePlugin' error: ec>
+	^ec
 ]
 
 { #category : #primitives }
 MiscPrimitivePluginTest >> convert8bitSignedFrom: aByteArray to16Bit: aSoundBuffer [
 	"Copy the contents of the given array of signed 8-bit samples into the given array of 16-bit signed samples."
 
-	<primitive: 'primitiveConvert8BitSigned' module: 'MiscPrimitivePlugin'>
-	self primitiveFailed
-
+	<primitive: 'primitiveConvert8BitSigned' module: 'MiscPrimitivePlugin' error: ec>
+	^ec
 ]
 
 { #category : #primitives }
 MiscPrimitivePluginTest >> decompress: bm fromByteArray: ba at: index [
 
-	<primitive: 'primitiveDecompressFromByteArray' module: 'MiscPrimitivePlugin'>
-	self primitiveFailed
-
+	<primitive: 'primitiveDecompressFromByteArray' module: 'MiscPrimitivePlugin' error: ec>
+	^ec
 ]
 
 { #category : #testing }
@@ -52,18 +49,16 @@ MiscPrimitivePluginTest >> expectedFailures [
 { #category : #primitives }
 MiscPrimitivePluginTest >> findFirstInString: aString  inSet: inclusionMap  startingAt: start [
 
-	<primitive: 'primitiveFindFirstInString' module: 'MiscPrimitivePlugin'>
-	self primitiveFailed
-
+	<primitive: 'primitiveFindFirstInString' module: 'MiscPrimitivePlugin'  error: ec>
+	^ec
 ]
 
 { #category : #primitives }
 MiscPrimitivePluginTest >> findSubstring: key in: body startingAt: start matchTable: matchTable [
 	"Answer the index in the string body at which the substring key first occurs, at or beyond start.  The match is determined using matchTable, which can be used to effect, eg, case-insensitive matches.  If no match is found, zero will be returned."
 
-	<primitive: 'primitiveFindSubstring' module: 'MiscPrimitivePlugin'>
-	self primitiveFailed
-
+	<primitive: 'primitiveFindSubstring' module: 'MiscPrimitivePlugin' error: ec>
+	^ec
 ]
 
 { #category : #primitives }
@@ -75,25 +70,52 @@ MiscPrimitivePluginTest >> hashBytes: aByteArray startingWith: speciesHash [
 	The primitive should be renamed at a
 	suitable point in the future"
 
-	<primitive: 'primitiveStringHash' module: 'MiscPrimitivePlugin'>
-	self primitiveFailed
-
+	<primitive: 'primitiveStringHash' module: 'MiscPrimitivePlugin' error: ec>
+	^ec
 ]
 
 { #category : #primitives }
 MiscPrimitivePluginTest >> indexOfAscii: anInteger inString: aString startingAt: start [
 
-	<primitive: 'primitiveIndexOfAsciiInString' module: 'MiscPrimitivePlugin'>
-	self primitiveFailed
-
+	<primitive: 'primitiveIndexOfAsciiInString' module: 'MiscPrimitivePlugin' error: ec>
+	^ec
 ]
 
 { #category : #testing }
 MiscPrimitivePluginTest >> testCompareWithCollated [
-	"Verify that primitive exists in the VM"
 
-	self assert: 3 = (self compare: 'foo' with: 'bar' collated: ((0 to: 255) as: ByteArray))
-
+	| collation |
+	collation := (0 to: 255) asByteArray.
+	self 
+		assert: #'bad argument' 
+			equals: (self compare: nil with: '' collated: collation)
+			description: 'First argument must be a bytes object';
+		assert: #'bad argument'
+			equals: (self compare: '' with: nil collated: collation)
+			description: 'Second argument must be a bytes object';
+		assert: #'bad argument'
+			equals: (self compare: '' with: '' collated: nil)
+			description: 'Third argument must be a bytes object';
+		assert: #'bad argument'
+			equals: (self compare: '' with: '' collated: collation allButLast)
+			description: 'Size of third argument must be at least 256'.
+	self
+		assert: 1 equals: (self compare: '' with: 'foo' collated: collation);
+		assert: 1 equals: (self compare: 'bar' with: 'foo' collated: collation);
+		assert: 1 equals: (self compare: 'bar' with: 'bare' collated: collation);		
+		assert: 2 equals: (self compare: '' with: '' collated: collation);
+		assert: 2 equals: (self compare: 'bar' with: 'bar' collated: collation);
+		assert: 2 equals: (self compare: 'bar' with: 'bar' copy collated: collation);
+		assert: 3 equals: (self compare: 'foo' with: '' collated: collation);
+		assert: 3 equals: (self compare: 'foo' with: 'bar' collated: collation);
+		assert: 3 equals: (self compare: 'bare' with: 'bar' collated: collation).
+	collation
+		at: $b asInteger + 1 put: $f asInteger;
+		at: $a asInteger + 1 put: $o asInteger;
+		at: $r asInteger + 1 put: $o asInteger.
+	self
+		assert: 2 equals: (self compare: 'bar' with: 'foo' collated: collation);
+		assert: 2 equals: (self compare: 'foo' with: 'bar' collated: collation)
 ]
 
 { #category : #testing }
@@ -151,22 +173,20 @@ MiscPrimitivePluginTest >> testFindSubstringInByteString [
 	parameter, leading to incorrect results, as documented in
 	testFindSubstringOldVersionWithMissingTypeChecks"
 
-	| position |
-	position := MiscPrimitivePluginTest new
-				findSubstring: 'bc'
-				in: 'abcdef'
-				startingAt: 1
-				matchTable: ((0 to: 255)
-						as: ByteArray).
-	self assert: position = 2.
-	self should: [MiscPrimitivePluginTest new
-				findSubstring: 'bc' asWideString
-				in: 'abcdef'
-				startingAt: 1
-				matchTable: ((0 to: 255)
-						as: ByteArray)]
-		raise: Error
-	
+	self
+		assert: 2
+		equals: (self
+			findSubstring: 'bc'
+			in: 'abcdef'
+			startingAt: 1
+			matchTable: (0 to: 255) asByteArray).
+	self
+		assert: #'bad argument'
+		equals: (self
+			findSubstring: 'bc' asWideString
+			in: 'abcdef'
+			startingAt: 1
+			matchTable: (0 to: 255) asByteArray)
 
 ]
 
@@ -268,8 +288,8 @@ MiscPrimitivePluginTest >> testTranslateFromToTable [
 
 	| s t |
 	s := 'foo' copy. "copy so string is instantiated each time"
-	t := ByteArray withAll: ((1 to: 255) as: ByteArray).
-	self translate: s from: 1 to: 3 table: t.
+	t := (0 to: 255) asByteArray replace: [ :each | each + 1 \\ 256 ].
+	self assert: self equals: (self translate: s from: 1 to: 3 table: t).
 	self assert: s = 'gpp'
 
 ]
@@ -278,6 +298,6 @@ MiscPrimitivePluginTest >> testTranslateFromToTable [
 MiscPrimitivePluginTest >> translate: aString from: start  to: stop  table: table [
 	"translate the characters in the string by the given table, in place"
 
-	<primitive: 'primitiveTranslateStringWithTable' module: 'MiscPrimitivePlugin'>
-	self primitiveFailed
+	<primitive: 'primitiveTranslateStringWithTable' module: 'MiscPrimitivePlugin' error: ec>
+	^ec
 ]

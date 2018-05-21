@@ -327,6 +327,12 @@ NewCoObjectMemorySimulator >> methodReturnInteger: integer [
 ]
 
 { #category : #'simulation only' }
+NewCoObjectMemorySimulator >> methodReturnReceiver [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter methodReturnReceiver
+]
+
+{ #category : #'simulation only' }
 NewCoObjectMemorySimulator >> methodReturnString: aCString [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter methodReturnString: aCString
