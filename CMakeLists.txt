@@ -350,6 +350,8 @@ if(APPLE)
 		${CoreServices_LIBRARY}
 		${CoreFoundation_LIBRARY}
 		${VM_DEPENDENCIES_LIBRARIES})
+		# SDL2 and openssl need this
+	include_directories(/opt/local/include)
 endif()
 
 # Find SDL2
