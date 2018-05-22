@@ -35,6 +35,7 @@
 
 #ifndef NO_STD_FILE_SUPPORT
 
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
@@ -568,6 +569,34 @@ sqFileStdioHandlesInto(SQFile files[])
 
 	return 7;
 }
+
+
+/*
+* Allow to test if the standard input/output files are from a console or not
+* Return values:
+* -1 - Error
+* 0 - no console (windows only)
+* 1 - normal terminal (unix terminal / windows console)
+* 2 - pipe
+* 3 - file
+* 4 - cygwin terminal (windows only)
+*/
+sqInt sqFileDescriptorType(int fdNum) {
+        int status;
+        struct stat statBuf;
+
+        /* Is this a terminal? */
+        if (isatty(fdNum)) return 1;
+
+        /* Is this a pipe? */
+        status = fstat(fdNum, &statBuf);
+        if (status) return -1;
+        if (S_ISFIFO(statBuf.st_mode)) return 2;
+
+        /* Must be a normal file */
+        return 3;
+}
+
 
 size_t
 sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex) {

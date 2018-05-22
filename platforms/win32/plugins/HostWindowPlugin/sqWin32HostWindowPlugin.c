@@ -240,14 +240,14 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
 
   /* reverse the image bits if necessary */
 
-  if( !lsbDisplay && depth < 32 )
-    if(depth == 16)
-      reverse_image_words((unsigned int*) dispBits, (unsigned int*) dispBits,
+  if (!lsbDisplay && depth < 32) {
+	  if (depth == 16)
+		  reverse_image_words((unsigned int*)dispBits, (unsigned int*)dispBits,
 			  depth, width, &updateRect);
-    else
-      reverse_image_bytes((unsigned int*) dispBits, (unsigned int*) dispBits,
+	  else
+		  reverse_image_bytes((unsigned int*)dispBits, (unsigned int*)dispBits,
 			  depth, width, &updateRect);
-
+  }
   bmi->bmiHeader.biWidth = width;
   bmi->bmiHeader.biHeight = -height;
   bmi->bmiHeader.biSizeImage = 0;
@@ -283,11 +283,11 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width,
     sqIntptr_t bitsPtr;
 
     /* compute pitch of form */
-    pitch = ((width * depth) + 31 & ~31) / 8;
+    pitch = (((width * depth) + 31) & ~31) / 8;
     /* compute first word of update region */
     start = ((updateRect.left * depth) & ~31) / 8;
     /* compute last word of update region */
-    end   = ((updateRect.right * depth) + 31 & ~31) / 8;
+    end   = (((updateRect.right * depth) + 31) & ~31) / 8;
     /* compute #of bits covered in update region */
     nPix = ((end - start) * 8) / depth;
     left = (start * 8) / depth;
@@ -410,6 +410,24 @@ sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle) 
   if(SetWindowTextW(hwnd, wideTitle) == 0) return -1;
   return sizeOfTitle;
 }
+
+/* ioSetIconOfWindow: args are int windowIndex, char* iconPath and
+ * int size of new logo path. If one of the function is failing, the logo is not set.
+ */
+sqInt ioSetIconOfWindow(sqInt windowIndex, char * iconPath, sqInt sizeOfPath) {
+	HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
+	if (!IsWindow(hwnd)) return 0;
+	//Check if file exists and have read rights
+	if (access(iconPath, 4) == -1) { return -1; }; 
+	//Load the image into an icon
+	HICON hIcon = (HICON)LoadImage(NULL, iconPath, IMAGE_ICON, 0, 0, LR_LOADFROMFILE);
+	if (hIcon == 0)
+		return -2;
+	SendMessage(hwnd, WM_SETICON, ICON_BIG, (LONG)hIcon); 
+	return 0;
+}
+
+
 
 /* ioCloseAllWindows: intended for VM shutdown.
  * Close all the windows that appear to be open.
