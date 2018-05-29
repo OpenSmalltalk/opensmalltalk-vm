@@ -11606,6 +11606,10 @@ StackToRegisterMappingCogit >> genPushRemoteTempLongBytecode [
 	self MoveMw: (self frameOffsetOfTemporary: byte2) r: FPReg R: tempVectReg.
 	remoteTempReg := self availableRegOrNoneNotConflictingWith: (self registerMaskFor: tempVectReg). 
 	remoteTempReg = NoReg ifTrue: [remoteTempReg := tempVectReg].
+	TempVectReadBarrier
+		ifTrue: [objectRepresentation
+				genEnsureObjInRegNotForwarded: tempVectReg
+				scratchReg: TempReg].
 	objectRepresentation
 		genLoadSlot: byte1
 		sourceReg: tempVectReg
@@ -12099,6 +12103,10 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At:
 	self ssAllocateRequiredReg: ReceiverResultReg. 
 	self voidReceiverResultRegContainsSelf.
 	self MoveMw: (self frameOffsetOfTemporary: remoteTempIndex) r: FPReg R: ReceiverResultReg.
+	TempVectReadBarrier
+		ifTrue: [objectRepresentation
+				genEnsureObjInRegNotForwarded: ReceiverResultReg
+				scratchReg: TempReg].
 	^self 
 		genGenericStorePop: popBoolean 
 		slotIndex: slotIndex 

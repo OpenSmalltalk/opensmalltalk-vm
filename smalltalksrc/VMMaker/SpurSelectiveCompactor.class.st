@@ -35,7 +35,12 @@ SpurSelectiveCompactor class >> initialize [
 	"If the segment is occupied by more than MaxOccupationForCompaction, 
 	 it's not worth compacting it, whatever the rest of the system looks like.
 	 MaxOccupationForCompaction is included in [0;16rFFFF]."
-	MaxOccupationForCompaction := 16rA000. "Basically if segment is occupied by more than 60%, not worth compacting"
+	MaxOccupationForCompaction := 16rD000. "81%"
+]
+
+{ #category : #simulation }
+SpurSelectiveCompactor class >> simulatorClass [
+	^ SpurSelectiveCompactor"Simulator"
 ]
 
 { #category : #'segment to fill' }
@@ -84,16 +89,37 @@ SpurSelectiveCompactor >> compactSegment: segInfo freeStart: initialFreeStart [
 				 self assert: (manager isPinned: currentEntity) not. 
 				 numSlots := manager numSlotsOfAny: currentEntity.
 				 bytesToCopy := manager bytesInObject: currentEntity.
-				 self assert: (manager objectBytesForSlots: numSlots) = (manager bytesInObject: currentEntity).
 				 manager mem: fillStart asVoidPointer cp: (manager startOfObject: currentEntity) asVoidPointer y: bytesToCopy.
-				 self assert: (manager baseHeader: (manager objectStartingAt: fillStart)) = (manager baseHeader: currentEntity).
-				 self assert: (manager fetchPointer: numSlots - 1 ofObject: (manager objectStartingAt: fillStart)) = (manager fetchPointer: numSlots - 1 ofObject: currentEntity).
 				 manager forward: currentEntity to: (manager objectStartingAt: fillStart).
-				 fillStart := fillStart + (manager objectBytesForSlots: numSlots).
-				 self assert: (manager isForwarded: currentEntity).
-				 self assert: fillStart < (segmentToFill segLimit - manager bridgeSize)].
+				 fillStart := fillStart + bytesToCopy.
+				 self assert: (self oop: fillStart isLessThan: (segmentToFill segLimit - manager bridgeSize))].
 		 currentEntity := manager objectAfter: currentEntity limit: manager endOfMemory].
 	self assert: currentEntity = bridge.
+	
+	"| beingCompacted sz |
+	beingCompacted := OrderedCollection new.
+	sz := 0.
+	0 to: manager numSegments - 1 do:
+		[:i| | segInfo |
+		 segInfo := self addressOf: (manager segmentManager segments at: i).
+		(self isSegmentBeingCompacted: segInfo) ifTrue: [beingCompacted add: segInfo]].
+	Transcript show: 'Segment being compacted: ' , 
+			(beingCompacted collect: [:seg | 
+				sz := sz + (self  sizeClaimedIn: seg).
+				(manager segmentManager indexOfSegment: seg) printString ,
+				' sizeClaimed: ' , (self  sizeClaimedIn: seg).
+				 ]) asArray printString.
+	Transcript cr; show: 'Claimed size: '.
+	Transcript show: sz.
+	Transcript cr; show: 'SegToFill size: '.
+	Transcript show: segmentToFill segSize .
+	Transcript cr; show: 'SegToFill limit: '.
+	Transcript show: segmentToFill segLimit - manager bridgeSize .
+	Transcript cr; show: 'fillStart: '.
+	Transcript show: fillStart.
+	
+	Transcript show: 'Normally grow up to ' , (segmentToFill segStart +  sz) printString."
+	
 	^ fillStart
 ]
 
@@ -138,7 +164,7 @@ SpurSelectiveCompactor >> computeSegmentsToCompact [
 	segmentToFill ifNil: [self findOrAllocateSegmentToFill].
 	canStillClaim := segmentToFill segSize - manager bridgeSize.
 	[aboutToClaimSegment ifNil: [^atLeastOneSegmentToCompact].
-	 aboutToClaim := aboutToClaimSegment segSize - manager bridgeSize * ((self occupationOf: aboutToClaimSegment) + 1) // 16rFFFF. "+1 to round up, this is approx"
+	 aboutToClaim := self sizeClaimedIn: aboutToClaimSegment.
 	 aboutToClaim < canStillClaim ] whileTrue: 
 		[self markSegmentAsBeingCompacted: aboutToClaimSegment.
 		 atLeastOneSegmentToCompact := true.
@@ -253,10 +279,10 @@ SpurSelectiveCompactor >> internalGlobalSweepAndSegmentOccupationAnalysis [
 						start := manager startOfObject: currentEntity.
 						self bulkFreeChunkFrom: currentEntity.
 						currentEntity := manager objectStartingAt: start.
-						currentUnused := currentUnused + (manager numSlotsOfAny: currentEntity)]
+						currentUnused := currentUnused + (manager bytesInObject: currentEntity)]
 					ifFalse: 
 						[self unmark: currentEntity.
-						 currentUsed := currentUsed + (manager numSlotsOfAny: currentEntity)]].
+						 currentUsed := currentUsed + (manager bytesInObject: currentEntity)]].
 		 currentEntity := manager objectAfter: currentEntity limit: manager endOfMemory].
 	"set last segment (last bridge = endOfMemory)"	
 	self 
@@ -288,17 +314,19 @@ SpurSelectiveCompactor >> occupationOf: segInfo [
 
 { #category : #compaction }
 SpurSelectiveCompactor >> postCompactionAction [
-	self postForwardingAction
-]
-
-{ #category : #compaction }
-SpurSelectiveCompactor >> postForwardingAction [
 	| allFlags |
 	"For now we don't optimize and just follow everything everywhere on stack and in caches, let's see in the profiler if we need to optimize with those cases. My guess is that this is < 100 microSecond"
 	manager followSpecialObjectsOop.
 	allFlags := BecamePointerObjectFlag + BecameActiveClassFlag bitOr: BecameCompiledMethodFlag.
+	"should be gcMode Become - gcMode flag is cleared after postBecomeAction"
 	manager coInterpreter postBecomeAction: allFlags.
 	manager postBecomeScanClassTable: allFlags.
+	manager coInterpreter setGCMode: GCModeFull.
+	
+	"Not sure the following are needed...
+	coInterpreter mapInterpreterOops.
+	manager mapExtraRoots."
+	self assert: manager validClassTableHashes.
 ]
 
 { #category : #api }
@@ -335,6 +363,19 @@ SpurSelectiveCompactor >> setOccupationAtIndex: segmentIndex used: used unused: 
 	| occupation segInfo |
 	<var: 'segInfo' type: #'SpurSegmentInfo *'>
 	segInfo := self addressOf: (manager segmentManager segments at: segmentIndex).
-	occupation := used * 16rFFFF // (used + unused).
+	"careful with overflow here..."
+	occupation := ((used asFloat / (used + unused)) * 16rFFFF) asInteger.
+	self assert: (occupation between: 0 and: 16rFFFF).
 	segInfo swizzle: occupation
+]
+
+{ #category : #'segment access' }
+SpurSelectiveCompactor >> sizeClaimedIn: segment [ 
+	<var: 'segment' type: #'SpurSegmentInfo *'>
+	<var: 'ratio' type: #'double'>
+	"careful with overflow here"
+	"roundedup used ratio (+1 to round up)"
+	| ratio |
+	ratio := ((self occupationOf: segment) + 1) asFloat / 16rFFFF.
+	^(ratio * (segment segSize - manager bridgeSize)) asInteger 
 ]

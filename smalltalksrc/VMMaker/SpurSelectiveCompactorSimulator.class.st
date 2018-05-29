@@ -129,11 +129,11 @@ SpurSelectiveCompactorSimulator >> globalSweepAndSegmentOccupationAnalysis [
 	0 to: manager numSegments - 1 do:
 		[:i| | segInfo |
 		 segInfo := self addressOf: (manager segmentManager segments at: i).
-		 self talkNoCr: (manager segmentManager indexOfSegment: segInfo) printString.
+		 self talkNoCr: i.
 		 self talkNoCr: '->'.
 		 self talkNoCr: (self occupationOf: segInfo) printString.
 		 self talkNoCr: '('.
-		 self talkNoCr: ((self occupationOf: segInfo) * 100 * 100 // 255 / 100) asFloat printString.
+		 self talkNoCr: ((self occupationOf: segInfo) * 100 * 100 // 16rFFFF / 100) asFloat printString.
 		 self talkNoCr: '%);'].
 	self checkSegmentsIterable.
 	
