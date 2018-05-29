@@ -6799,6 +6799,10 @@ CoInterpreter >> pushRemoteTemp: index inVectorAt: tempVectorIndex [
 	"Override to use itemporary:in:put:"
 	| tempVector |
 	tempVector := self itemporary: tempVectorIndex in: localFP.
+	TempVectReadBarrier
+		ifTrue: 
+			[(objectMemory isForwarded: tempVector) ifTrue:
+				[tempVector := self unfollowTempVector: tempVector atIndex: tempVectorIndex in: localFP]].
 	self internalPush: (objectMemory fetchPointer: index ofObject: tempVector)
 ]
 
@@ -7304,6 +7308,11 @@ CoInterpreter >> setDesiredCogCodeSize: dccs [
 	desiredCogCodeSize := dccs
 ]
 
+{ #category : #'object memory support' }
+CoInterpreter >> setGCMode: mode [
+	gcMode := mode
+]
+
 { #category : #'frame access' }
 CoInterpreter >> setIFrameHasContext: theFP [
 	"See encodeFrameFieldHasContext:numArgs:"
@@ -7598,6 +7607,10 @@ CoInterpreter >> storeRemoteTemp: index inVectorAt: tempVectorIndex [
 	"Override to use itemporary:in:put:"
 	| tempVector |
 	tempVector := self itemporary: tempVectorIndex in: localFP.
+	TempVectReadBarrier
+		ifTrue: 
+			[(objectMemory isForwarded: tempVector) ifTrue:
+				[tempVector := self unfollowTempVector: tempVector atIndex: tempVectorIndex in: localFP]].
 	objectMemory storePointer: index ofObject: tempVector withValue: self internalStackTop
 ]
 
@@ -7737,6 +7750,17 @@ CoInterpreter >> transferTo: newProc from: sourceCode [
 	objectMemory storePointer: ActiveProcessIndex ofObject: sched withValue: newProc.
 	objectMemory storePointerUnchecked: MyListIndex ofObject: newProc withValue: objectMemory nilObject.
 	self externalSetStackPageAndPointersForSuspendedContextOfProcess: newProc
+]
+
+{ #category : #'compiled methods' }
+CoInterpreter >> unfollowTempVector: tempVector atIndex: tempVectorIndex in: theFP [
+	"override for itemporary"
+	<option: #TempVectReadBarrier>
+	<inline: #never> "So rare it mustn't bulk up the common path"
+	| followed |
+	followed := objectMemory followForwarded: tempVector.
+	self itemporary: tempVectorIndex in: theFP put: followed.
+	^followed
 ]
 
 { #category : #'image save/restore' }
