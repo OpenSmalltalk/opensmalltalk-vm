@@ -94,10 +94,13 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 									inSmalltalk: [[:sz| allocatedSize := sz]])) ifNotNil:
 		[:segAddress| | newSegIndex newSeg |
 		 newSegIndex := self insertSegmentFor: segAddress asUnsignedIntegerPtr.
+		 "Simulation insertion code duplicates entries if newSegIndex ~= numSegments - 1"
+		 self cCode: '' inSmalltalk: [segments at: newSegIndex put: SpurSegmentInfo new].
 		 newSeg := self addressOf: (segments at: newSegIndex).
 		 newSeg
 			segStart: segAddress asUnsignedIntegerPtr;
 			segSize: allocatedSize.
+		 self assert: self segmentOverlap not. "self printSegmentAddresses."
 		 self bridgeFrom: (self addressOf: (segments at: newSegIndex - 1)) to: newSeg.
 		 self bridgeFrom: newSeg to: (newSegIndex = (numSegments - 1) ifFalse:
 										[self addressOf: (segments at: newSegIndex + 1)]).
@@ -201,6 +204,7 @@ SpurSegmentManager >> bridgeFrom: aSegment to: nextSegmentOrNil [
 	bridgeSpan := nextSegmentOrNil
 					ifNil: [manager bridgeSize]
 					ifNotNil: [nextSegmentOrNil segStart - segEnd + manager bridgeSize].
+	self assert: bridgeSpan >= 0.
 	manager initSegmentBridgeWithBytes: bridgeSpan at: clifton.
 	"the revised bridge should get us to the new segment"
 	self assert: (manager addressAfter: (manager objectStartingAt: clifton))
@@ -543,6 +547,21 @@ SpurSegmentManager >> prepareForSnapshot [
 	manager setEndOfMemory: (segments at: numSegments - 1) segLimit - manager bridgeSize
 ]
 
+{ #category : #'simulation only' }
+SpurSegmentManager >> printSegmentAddresses [
+	<doNotGenerate>
+	"Convenient when debugging segment overlap"
+	Transcript show: 'Seg addresses: '; cr.
+	0 to: numSegments - 1 do:
+		[:i|
+			Transcript
+				show: (segments at: i) segStart;
+				show: ' -> ';
+				show: (segments at: i) segLimit;
+				show: ' ; '].
+			Transcript cr.
+]
+
 { #category : #private }
 SpurSegmentManager >> readHeapFrom: f at: location dataBytes: numBytes [
 	"Read numBytes from f into mmory at location.  Answer the number of bytes read."
@@ -640,6 +659,30 @@ SpurSegmentManager >> segmentContainingObj: objOop [
 		objOop >= (segments at: i) segStart ifTrue:
 			[^self addressOf: (segments at: i)]].
 	^nil
+]
+
+{ #category : #'growing/shrinking memory' }
+SpurSegmentManager >> segmentOverlap [
+	"Answers true if a segment overlaps with another one."
+	0 to: numSegments - 1 do:
+		[:i| | starti endi |
+			starti := (segments at: i) segStart.
+			endi := (segments at: i) segLimit.
+			0 to: numSegments - 1 do:
+				[:j| | startj endj |
+					startj := (segments at: j) segStart.
+					endj := (segments at: j) segLimit.
+					i = j ifFalse: 
+						[(starti < startj or: [starti >= endj])
+							ifFalse: 
+								[self cCode: '' inSmalltalk: [self error: 'segment overlap ' , i printString , ' and ' , j printString].
+								 ^true].
+						 (endi <= startj or: [endi >= endj])
+							ifFalse: [self cCode: '' inSmalltalk: [self error: 'segment overlap ' , i printString , ' and ' , j printString].
+								 ^true].
+						"self printSegmentAddresses"
+						]]].
+	^false
 ]
 
 { #category : #accessing }
