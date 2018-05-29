@@ -198,6 +198,7 @@ VMClass class >> initializeMiscConstants [
 	PharoVM := initializationOptions at: #PharoVM ifAbsentPut: [false].
 	NewspeakVM := initializationOptions at: #NewspeakVM ifAbsentPut: [false].
 	SistaVM := initializationOptions at: #SistaVM ifAbsentPut: [false].
+	TempVectReadBarrier := initializationOptions at: #TempVectReadBarrier ifAbsentPut: [false].
 	LowcodeVM := initializationOptions at: #LowcodeVM ifAbsentPut: [false].
 	MULTIPLEBYTECODESETS := initializationOptions at: #MULTIPLEBYTECODESETS ifAbsentPut: [false].
 
@@ -208,6 +209,11 @@ VMClass class >> initializeMiscConstants [
 		at: #STACKVM		ifPresent: [:value| STACKVM := value];
 		at: #COGVM		ifPresent: [:value| COGVM := initializationOptions at: #COGVM];
 		at: #COGMTVM		ifPresent: [:value| COGMTVM := initializationOptions at: #COGMTVM].
+
+	"consistency checks"
+	(TempVectReadBarrier and: [SPURVM not]) ifTrue: [self error: 'read barrier works with spur VM only...'].
+	(SistaVM and: [SPURVM not]) ifTrue: [self error: 'Sista VM works with spur VM only...'].
+	((initializationOptions at: #compactorClass) = #SpurSelectiveCompactor and: [TempVectReadBarrier not]) ifTrue: [self error: 'Selective compactor requires read barrier'].
 
 	"And not these; they're compile-time"
 	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsent: [SPURVM] "Default as enabled for Spur VMs"

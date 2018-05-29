@@ -18848,6 +18848,11 @@ StackInterpreter >> pushReceiverVariableBytecode [
 StackInterpreter >> pushRemoteTemp: index inVectorAt: tempVectorIndex [
 	| tempVector |
 	tempVector := self temporary: tempVectorIndex in: localFP.
+	TempVectReadBarrier
+		ifTrue: 
+			[(objectMemory isForwarded: tempVector) ifTrue:
+				[Transcript show: 'unfwd Tmp vect'; cr.
+				tempVector := self unfollowTempVector: tempVector atIndex: tempVectorIndex in: localFP]].
 	self internalPush: (objectMemory fetchPointer: index ofObject: tempVector)
 ]
 
@@ -19963,6 +19968,12 @@ StackInterpreter >> setFrameHasNotNativeFrame: theFP [
 { #category : #'plugin primitive support' }
 StackInterpreter >> setFullScreenFlag: value [
 	fullScreenFlag := value
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> setGCMode: mode [
+	"This is a no-op in the StackVM"
+	^0
 ]
 
 { #category : #'stack pages' }
@@ -21168,8 +21179,7 @@ StackInterpreter >> storeLiteralVariable: literalIndex withValue: anObject [
 	 rare; in my work image 8.7% of literals are globals)."
 
 	(objectMemory isForwarded: litVar) ifTrue:
-		[litVar := objectMemory followForwarded: litVar.
-		 self literal: literalIndex ofMethod: method put: litVar].
+		[litVar := self unfollow: litVar atIndex: literalIndex].
 	objectMemory storePointerImmutabilityCheck: ValueIndex ofObject: litVar withValue: anObject
 ]
 
@@ -21202,6 +21212,11 @@ StackInterpreter >> storeMaybeContextReceiverVariable: fieldIndex withValue: anO
 StackInterpreter >> storeRemoteTemp: index inVectorAt: tempVectorIndex [
 	| tempVector |
 	tempVector := self temporary: tempVectorIndex in: localFP.
+	TempVectReadBarrier
+		ifTrue: 
+			[(objectMemory isForwarded: tempVector) ifTrue:
+				[Transcript show: 'unfwd Tmp vect'; cr.
+				tempVector := self unfollowTempVector: tempVector atIndex: tempVectorIndex in: localFP]].
 	objectMemory storePointer: index ofObject: tempVector withValue: self internalStackTop.
 ]
 
@@ -21948,6 +21963,16 @@ StackInterpreter >> unfollow: litVar atIndex: literalIndex [
 	| followed |
 	followed := objectMemory followForwarded: litVar.
 	self literal: literalIndex ofMethod: method put: followed.
+	^followed
+]
+
+{ #category : #'compiled methods' }
+StackInterpreter >> unfollowTempVector: tempVector atIndex: tempVectorIndex in: theFP [
+	<option: #TempVectReadBarrier>
+	<inline: #never> "So rare it mustn't bulk up the common path"
+	| followed |
+	followed := objectMemory followForwarded: tempVector.
+	self temporary: tempVectorIndex in: theFP put: followed.
 	^followed
 ]
 

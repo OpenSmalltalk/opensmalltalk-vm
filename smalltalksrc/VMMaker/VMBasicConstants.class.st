@@ -59,6 +59,7 @@ Class {
 		'SPURVM',
 		'STACKVM',
 		'SistaVM',
+		'TempVectReadBarrier',
 		'VMBIGENDIAN'
 	],
 	#category : #'VMMaker-Interpreter'

@@ -101,6 +101,38 @@ SpurPlanningCompactor class >> identify64BitSignedComparisons [
 ]
 
 { #category : #analysis }
+SpurPlanningCompactor class >> identifyMul: options noise: noise [
+	"Mul can overflow...
+	SpurPlanningCompactor identifyMul: #(
+	ObjectMemory Spur32BitMemoryManager
+	compactorClass SpurSelectiveCompactor) noise: #()"
+	| vmm cg |
+	vmm := (VMMaker forPlatform: 'Cross')
+				interpreterClass: StackInterpreter;
+				options: options.
+	cg := [vmm buildCodeGeneratorForInterpreter]
+			on: Notification
+			do: [:ex|
+				ex tag == #getVMMaker
+					ifTrue: [ex resume: vmm]
+					ifFalse: [ex pass]].
+	cg vmClass preGenerationHook: cg.
+	cg inferTypesForImplicitlyTypedVariablesAndMethods.
+	cg retainMethods: self selectors.
+	cg prepareMethods.
+	cg doInlining: true.
+	self selectors sort do:
+		[:sel|
+		(cg methodNamed: sel) ifNotNil:
+			[:m|
+			m parseTree nodesDo:
+				[:node|
+				(node isSend
+				 and: [#* = node selector]) ifTrue:
+					[Transcript ensureCr; nextPutAll: sel; space; print: node; flush]]]]
+]
+
+{ #category : #analysis }
 SpurPlanningCompactor class >> identifySignedComparisonsFor: options noise: noise [
 	"self identify32BitSignedComparisons"
 	"self identify64BitSignedComparisons"
