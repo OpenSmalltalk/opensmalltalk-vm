@@ -213,7 +213,7 @@ VMClass class >> initializeMiscConstants [
 	"consistency checks"
 	(TempVectReadBarrier and: [SPURVM not]) ifTrue: [self error: 'read barrier works with spur VM only...'].
 	(SistaVM and: [SPURVM not]) ifTrue: [self error: 'Sista VM works with spur VM only...'].
-	((initializationOptions at: #compactorClass) = #SpurSelectiveCompactor and: [TempVectReadBarrier not]) ifTrue: [self error: 'Selective compactor requires read barrier'].
+	((initializationOptions at: #compactorClass ifAbsent: []) = #SpurSelectiveCompactor and: [TempVectReadBarrier not]) ifTrue: [self error: 'Selective compactor requires read barrier'].
 
 	"And not these; they're compile-time"
 	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsent: [SPURVM] "Default as enabled for Spur VMs"
