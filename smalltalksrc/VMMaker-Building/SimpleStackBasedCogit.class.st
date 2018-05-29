@@ -1096,20 +1096,16 @@ SimpleStackBasedCogit >> compileFrameBuild [
 SimpleStackBasedCogit >> compileFullBlockFramelessEntry: numCopied [ 
 	"Make sure ReceiverResultReg holds the receiver, loaded from the closure,
 	 which is what is initially in ReceiverResultReg.  "
-	"Use ReceiverResultReg for Context to agree with store check trampoline"
-	objectRepresentation
-		genLoadSlot: ClosureOuterContextIndex
-			sourceReg: ReceiverResultReg
-				destReg: ReceiverResultReg;
-		genLoadSlot: ReceiverIndex
-			sourceReg: ReceiverResultReg
-				destReg: Arg0Reg.
 	self flag: #TODO. "we could follow the receiver only if the block has inst var ref. Currently we use scanMethod for fullBlock 
 	and that scanner does not provide this information. We could extend it based on the scanBlock: method"
+	"Use ReceiverResultReg for the closure to agree with store check trampoline"
 	objectRepresentation
-		genEnsureOopInRegNotForwarded: Arg0Reg scratchReg: TempReg updatingSlot: ReceiverIndex in: ReceiverResultReg.
-	self MoveR: Arg0Reg R: ReceiverResultReg
-
+		genLoadSlot: FullClosureReceiverIndex
+			sourceReg: ReceiverResultReg
+				destReg: Arg0Reg.
+	objectRepresentation
+		genEnsureOopInRegNotForwarded: Arg0Reg scratchReg: TempReg updatingSlot: FullClosureReceiverIndex in: ReceiverResultReg.
+	self MoveR: Arg0Reg R: ReceiverResultReg.
 ]
 
 { #category : #'compile abstract instructions' }
@@ -3075,6 +3071,10 @@ SimpleStackBasedCogit >> genPushRemoteInstVar: index inObjectAt: objectIndex [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushRemoteTempLongBytecode [
 	self MoveMw: (self frameOffsetOfTemporary: byte2) r: FPReg R: ClassReg.
+	TempVectReadBarrier
+		ifTrue: [objectRepresentation
+				genEnsureObjInRegNotForwarded: ClassReg
+				scratchReg: TempReg].
 	objectRepresentation
 		genLoadSlot: byte1
 		sourceReg: ClassReg
@@ -3585,6 +3585,10 @@ SimpleStackBasedCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remot
 		ifTrue: [self PopR: ClassReg]
 		ifFalse: [self MoveMw: 0 r: SPReg R: ClassReg].
 	self MoveMw: (self frameOffsetOfTemporary: remoteTempIndex) r: FPReg R: ReceiverResultReg.
+	TempVectReadBarrier
+		ifTrue: [objectRepresentation
+				genEnsureObjInRegNotForwarded: ReceiverResultReg
+				scratchReg: TempReg].
 	^objectRepresentation
 		genStoreSourceReg: ClassReg
 		slotIndex: slotIndex

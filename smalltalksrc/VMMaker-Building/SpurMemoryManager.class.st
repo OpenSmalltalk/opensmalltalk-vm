@@ -7087,8 +7087,7 @@ SpurMemoryManager >> isOopCompiledMethod: oop [
 { #category : #'object testing' }
 SpurMemoryManager >> isOopForwarded: oop [
 	<api>
-	^(self isNonImmediate: oop)
-	  and: [(self classIndexOf: oop) = self isForwardedObjectClassIndexPun]
+	^(self isNonImmediate: oop) and: [self isForwarded: oop]
 ]
 
 { #category : #'object testing' }
