@@ -6557,6 +6557,7 @@ StackInterpreter >> externalSetStackPageAndPointersForSuspendedContextOfProcess:
 StackInterpreter >> externalWriteBackHeadFramePointers [
 	self assert:  (framePointer - stackPointer) < (LargeContextSlots * objectMemory bytesPerOop).
 	self assert: stackPage = stackPages mostRecentlyUsedPage.
+	self deny: stackPage isFree.
 	self setHeadFP: framePointer andSP: stackPointer inPage: stackPage.
 	self assert: stackPages pageListIsWellFormed
 ]
@@ -7334,6 +7335,11 @@ StackInterpreter >> followForwardingPointersInStackZone: theBecomeEffectsFlags [
 	<var: #theIPPtr type: #usqInt>
 	<var: #callerFP type: #'char *'>
 	<var: #thePage type: #'StackPage *'>
+
+	stackPage = 0 ifTrue: "the system must be snapshotting; nothing to do..."
+		[self assert: stackPages mostRecentlyUsedPage isFree.
+		 self cCode: [] inSmalltalk: [stackPages allPagesFree].
+		 ^self].
 
 	self externalWriteBackHeadFramePointers.
 
