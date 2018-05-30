@@ -3008,11 +3008,11 @@ BitBltSimulation >> primitiveDisplayString [
 	interpreterProxy methodArgumentCount = 6 ifFalse:
 		[^interpreterProxy primitiveFail].
 	kernDelta := interpreterProxy stackIntegerValue: 0.
-	xTable := interpreterProxy stackObjectValue: 1.
-	glyphMap := interpreterProxy stackObjectValue: 2.
+	xTable := interpreterProxy stackValue: 1.
+	glyphMap := interpreterProxy stackValue: 2.
 	stopIndex := interpreterProxy stackIntegerValue: 3.
 	startIndex := interpreterProxy stackIntegerValue: 4.
-	sourceString := interpreterProxy stackObjectValue: 5.
+	sourceString := interpreterProxy stackValue: 5.
 	bbObj := interpreterProxy stackObjectValue: 6.
 	interpreterProxy failed ifTrue:
 		[^nil].
@@ -3022,12 +3022,14 @@ BitBltSimulation >> primitiveDisplayString [
 	 and: [(interpreterProxy slotSizeOf: glyphMap) = 256
 	 and: [(interpreterProxy isBytes: sourceString)
 	 and: [startIndex > 0
-	 and: [stopIndex > 0
+	 and: [stopIndex >= 0 "to avoid failing for empty strings..."
 	 and: [stopIndex <= (interpreterProxy byteSizeOf: sourceString)
 	 and: [(self loadBitBltFrom: bbObj)
 	 and: [combinationRule ~= 30 "these two need extra source alpha"
 	 and: [combinationRule ~= 31]]]]]]]]]) ifFalse:
 		[^interpreterProxy primitiveFail].
+	stopIndex = 0 ifTrue:
+		[interpreterProxy pop: 6. "the string is empty; pop args, return rcvr"].
 	maxGlyph := (interpreterProxy slotSizeOf: xTable) - 2.
 	"See if we can go directly into copyLoopPixMap (usually we can)"
 	quickBlt := destBits ~= 0 "no OS surfaces please"
@@ -3065,7 +3067,7 @@ BitBltSimulation >> primitiveDisplayString [
 	self showDisplayBits.
 	"store destX back"	
 	interpreterProxy storeInteger: BBDestXIndex ofObject: bbObj withValue: destX.
-	interpreterProxy pop: 6. "pop args, return rcvr"
+	interpreterProxy pop: 6 "pop args, return rcvr"
 ]
 
 { #category : #primitives }

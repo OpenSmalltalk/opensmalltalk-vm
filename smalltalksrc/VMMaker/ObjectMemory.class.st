@@ -2347,14 +2347,6 @@ ObjectMemory >> gcStartUsecs [
 	^gcStartUsecs
 ]
 
-{ #category : #accessing }
-ObjectMemory >> getHeapGrowthToSizeGCRatio [
-	"For compatibility with spur object memory"
-	<option: #PharoVM>
-	<returnTypeC: #float>
-	^ 0
-]
-
 { #category : #contexts }
 ObjectMemory >> goodContextSize: oop [
 	| numSlots |

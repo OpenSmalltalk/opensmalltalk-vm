@@ -147,8 +147,9 @@ Spur64BitMMLECoSimulator >> globalGarbageCollect [
 	 If it survives, destroy the clone and continue.  We should be OK until next time."
 	parent ifNil:
 		[coInterpreter cr; print: 'GC number '; print: statFullGCs; tab; flush.
-		 coInterpreter cloneSimulation objectMemory globalGarbageCollect.
-		 Smalltalk garbageCollect].
+		 CloneOnGC ifTrue:
+			[coInterpreter cloneSimulation objectMemory globalGarbageCollect.
+			 Smalltalk garbageCollect]].
 	^super globalGarbageCollect
 ]
 
@@ -352,8 +353,9 @@ Spur64BitMMLECoSimulator >> scavengingGCTenuringIf: tenuringCriterion [
 	(self leakCheckNewSpaceGC
 	 and: [parent isNil]) ifTrue:
 		[coInterpreter cr; print: 'scavenge '; print: statScavenges; tab; flush.
-		 coInterpreter cloneSimulation objectMemory scavengingGCTenuringIf: tenuringCriterion.
-		 Smalltalk garbageCollect].
+		 CloneOnScavenge ifTrue:
+			[coInterpreter cloneSimulation objectMemory scavengingGCTenuringIf: tenuringCriterion.
+			 Smalltalk garbageCollect]].
 	^super scavengingGCTenuringIf: tenuringCriterion
 ]
 

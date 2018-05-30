@@ -142,8 +142,9 @@ NewObjectMemorySimulator >> fullGC [
 	 If it survives, destroy the clone and continue.  We should be OK until next time."
 	parent ifNil:
 		[coInterpreter cr; print: 'GC number '; print: statFullGCs; tab; flush.
-		 coInterpreter cloneSimulation objectMemory fullGC.
-		 Smalltalk garbageCollect].
+		 CloneOnGC ifTrue:
+			[coInterpreter cloneSimulation objectMemory fullGC.
+			 Smalltalk garbageCollect]].
 	^super fullGC
 ]
 
@@ -169,8 +170,9 @@ NewObjectMemorySimulator >> incrementalGC [
 	(self leakCheckNewSpaceGC
 	 and: [parent isNil]) ifTrue:
 		[coInterpreter cr; print: 'Incremental GC number '; print: statIncrGCs; tab; flush.
-		 coInterpreter cloneSimulation objectMemory incrementalGC.
-		 Smalltalk garbageCollect].
+		 CloneOnScavenge ifTrue:
+			[coInterpreter cloneSimulation objectMemory incrementalGC.
+			 Smalltalk garbageCollect]].
 	^super incrementalGC
 ]
 
