@@ -528,7 +528,7 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		as: #usqInt
 		in: aCCodeGenerator.
 	"These are all pointers; char * because Slang has no support for C pointer arithmetic."
-	self declareC: #(localIP localSP localFP nativeSP stackPointer framePointer stackLimit breakSelector nativeStackPointer nativeFramePointer shadowCallStack)
+	self declareC: #(localIP localSP localFP stackPointer framePointer stackLimit breakSelector)
 		as: #'char *'
 		in: aCCodeGenerator.
 	aCCodeGenerator
@@ -558,6 +558,7 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 				declareC: 'sqIntptr_t nsMethodCache[NSMethodCacheSize + 1 /* ', (NSMethodCacheSize + 1) printString, ' */]']
 		ifFalse:
 			[aCCodeGenerator
+				removeVariable: #nsMethodCache;
 				removeVariable: 'localAbsentReceiver';
 				removeVariable: 'localAbsentReceiverOrZero'].
 	AtCacheTotalSize isInteger ifTrue:
@@ -610,10 +611,16 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 		in: aCCodeGenerator.
 	aCCodeGenerator var: #nextProfileTick type: #sqLong.
 	
-	LowcodeVM ifTrue:
-		[aCCodeGenerator
-			var: #shadowCallStackPointer type: #'char *';
-			var: #lowcodeCalloutState type: #'sqLowcodeCalloutState*']
+	LowcodeVM
+		ifTrue:
+			[aCCodeGenerator
+				var: #lowcodeCalloutState type: #'sqLowcodeCalloutState*'.
+			 self declareC: #(nativeSP nativeStackPointer shadowCallStackPointer)
+				as: #'char *'
+				in: aCCodeGenerator]
+		ifFalse:
+			[#(lowcodeCalloutState nativeSP nativeStackPointer shadowCallStackPointer) do:
+				[:var| aCCodeGenerator removeVariable: var]]
 ]
 
 { #category : #'accessing class hierarchy' }

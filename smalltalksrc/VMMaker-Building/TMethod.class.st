@@ -614,7 +614,10 @@ TMethod >> emitCLocalsOn: aStream generator: aCodeGen [
 		[(aCodeGen sortStrings: locals) do:
 			[ :var | | decl |
 			decl := self declarationAt: var.
-			(volatileVariables or: [(decl beginsWith: 'static') or: [usedVariablesCache includes: var]]) ifTrue:
+			(volatileVariables
+			 or: [(decl beginsWith: 'static')
+			 or: [(decl beginsWith: 'extern')
+			 or: [usedVariablesCache includes: var]]]) ifTrue:
 				[aStream next: 4 put: Character space.
 				 volatileVariables ifTrue:
 					[aStream nextPutAll: #volatile; space].
