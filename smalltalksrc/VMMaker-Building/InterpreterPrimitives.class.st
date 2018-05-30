@@ -925,7 +925,9 @@ InterpreterPrimitives >> primitiveBeDisplay [
 	 and: [(objectMemory isPinned: bitsOop) not]]) ifTrue:
 		[rcvr := objectMemory pinObject: bitsOop. "Answers 0 if memory required to pin bit not enough memory available."
 		 rcvr ~= 0 ifTrue: [bitsOop := rcvr]].
-	self ioBeDisplay: ((objectMemory isNonImmediate: bitsOop) ifTrue: [objectMemory firstIndexableField: bitsOop] ifFalse: [bitsOop])
+	self ioBeDisplay: ((objectMemory isNonImmediate: bitsOop)
+						ifTrue: [objectMemory firstIndexableField: bitsOop]
+						ifFalse: [bitsOop asVoidPointer])
 		width: (objectMemory integerValueOf: widthOop)
 		height: (objectMemory integerValueOf: heightOop)
 		depth: (objectMemory integerValueOf: depthOop)
@@ -2301,25 +2303,25 @@ InterpreterPrimitives >> primitiveGetWindowSize [
 { #category : #'other primitives' }
 InterpreterPrimitives >> primitiveGetenv [
 	"Access to environment variables via getenv.  No putenv or setenv as yet."
-	| var result |
+	| key var result |
 	<export: true>
+	<var: #key type: #'char *'>
 	<var: #var type: #'char *'>
-	<var: #result type: #'char *'>
 	sHEAFn ~= 0 ifTrue: "secHasEnvironmentAccess"
 		[self sHEAFn ifFalse: [^self primitiveFailFor: PrimErrInappropriate]].
-	var := self cStringOrNullFor: self stackTop.
-	var = 0 ifTrue:
+	key := self cStringOrNullFor: self stackTop.
+	key = 0 ifTrue:
 		[self successful ifTrue:
 			[^self primitiveFailFor: PrimErrBadArgument].
 		 ^self primitiveFailFor: primFailCode].
-	result := self getenv: (self cCode: [var] inSmalltalk: [var allButLast]).
-	self free: var.
-	result ~= 0 ifTrue:
-		[result := objectMemory stringForCString: result.
+	var := self getenv: (self cCode: [key] inSmalltalk: [key allButLast]).
+	self free: key.
+	var ~= 0 ifTrue:
+		[result := objectMemory stringForCString: var.
 		 result ifNil:
 			[^self primitiveFailFor: PrimErrNoMemory]].
 	self assert: primFailCode = 0.
-	self pop: 2 thenPush: (result = 0 ifTrue: [objectMemory nilObject] ifFalse: [result])
+	self pop: 2 thenPush: (var = 0 ifTrue: [objectMemory nilObject] ifFalse: [result])
 ]
 
 { #category : #'arithmetic integer primitives' }
