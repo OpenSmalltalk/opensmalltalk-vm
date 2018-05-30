@@ -781,9 +781,12 @@ InterpreterProxy >> methodReturnReceiver [
 
 { #category : #'stack access' }
 InterpreterProxy >> methodReturnString: aCString [
-	"Sets the return value for a method"
+	"Sets the return value for a method."
+	"THIS IS DUBIOUS!  CONSIDER REMOVING IT!  RIGHT NOW IT IS NOT SENT."
 	<var: 'aCString' type: #'char *'>
-	self pop: argumentCount+1 thenPush: (self stringForCString: aCString).
+	(self stringForCString: aCString)
+		ifNil: [primFailCode := PrimErrNoMemory]
+		ifNotNil: [:result| self pop: argumentCount+1 thenPush: result].
 	^0
 ]
 
