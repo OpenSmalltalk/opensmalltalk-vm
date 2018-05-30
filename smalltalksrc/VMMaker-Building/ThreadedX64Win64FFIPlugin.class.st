@@ -69,9 +69,8 @@ ThreadedX64Win64FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in:
 		[self 
 			load: (calloutState floatRegisters at: 0)
 			Flo: (calloutState floatRegisters at: 1)
-			at: (calloutState floatRegisters at: 2)
-			Re: (calloutState floatRegisters at: 3)
-			gs: (calloutState floatRegisters at: 4)].
+			atR: (calloutState floatRegisters at: 2)
+			egs: (calloutState floatRegisters at: 3)].
 
 	(self allocaLiesSoSetSpBeforeCall or: [self mustAlignStack]) ifTrue:
 		[self setsp: calloutState argVector].
