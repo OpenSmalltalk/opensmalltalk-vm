@@ -74,7 +74,7 @@ SpurSelectiveCompactor >> compact [
 { #category : #compaction }
 SpurSelectiveCompactor >> compactSegment: segInfo freeStart: initialFreeStart [
 	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	| currentEntity fillStart bytesToCopy numSlots bridge |
+	| currentEntity fillStart bytesToCopy bridge copy |
 	fillStart := initialFreeStart.
 	bridge := manager segmentManager bridgeFor: segInfo.
 	currentEntity := manager objectStartingAt: segInfo segStart.
@@ -87,39 +87,18 @@ SpurSelectiveCompactor >> compactSegment: segInfo freeStart: initialFreeStart [
 			ifFalse: 
 				["Copy the object in segmentToFill and replace it by a forwarder."
 				 self assert: (manager isPinned: currentEntity) not. 
-				 numSlots := manager numSlotsOfAny: currentEntity.
 				 bytesToCopy := manager bytesInObject: currentEntity.
 				 manager mem: fillStart asVoidPointer cp: (manager startOfObject: currentEntity) asVoidPointer y: bytesToCopy.
+				 copy := manager objectStartingAt: fillStart.
+				 (manager isRemembered: copy) ifTrue: 
+					["copy has the remembered bit set, but is not in the remembered table."
+					 manager setIsRememberedOf: copy to: false.
+					 scavenger remember: copy].
 				 manager forward: currentEntity to: (manager objectStartingAt: fillStart).
 				 fillStart := fillStart + bytesToCopy.
 				 self assert: (self oop: fillStart isLessThan: (segmentToFill segLimit - manager bridgeSize))].
 		 currentEntity := manager objectAfter: currentEntity limit: manager endOfMemory].
 	self assert: currentEntity = bridge.
-	
-	"| beingCompacted sz |
-	beingCompacted := OrderedCollection new.
-	sz := 0.
-	0 to: manager numSegments - 1 do:
-		[:i| | segInfo |
-		 segInfo := self addressOf: (manager segmentManager segments at: i).
-		(self isSegmentBeingCompacted: segInfo) ifTrue: [beingCompacted add: segInfo]].
-	Transcript show: 'Segment being compacted: ' , 
-			(beingCompacted collect: [:seg | 
-				sz := sz + (self  sizeClaimedIn: seg).
-				(manager segmentManager indexOfSegment: seg) printString ,
-				' sizeClaimed: ' , (self  sizeClaimedIn: seg).
-				 ]) asArray printString.
-	Transcript cr; show: 'Claimed size: '.
-	Transcript show: sz.
-	Transcript cr; show: 'SegToFill size: '.
-	Transcript show: segmentToFill segSize .
-	Transcript cr; show: 'SegToFill limit: '.
-	Transcript show: segmentToFill segLimit - manager bridgeSize .
-	Transcript cr; show: 'fillStart: '.
-	Transcript show: fillStart.
-	
-	Transcript show: 'Normally grow up to ' , (segmentToFill segStart +  sz) printString."
-	
 	^ fillStart
 ]
 
