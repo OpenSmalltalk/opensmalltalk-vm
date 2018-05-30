@@ -2450,11 +2450,14 @@ TMethod >> removeUnusedTempsIn: aCodeGen [
 	"reset the locals to be only those still referred to"
 	locals do:
 		[:local|
-		 ((usedVariables includes: local) not
-		  and: [((declarations at: local ifAbsent: ['']) includesSubstring: 'static') not
-		  and: [((declarations at: local ifAbsent: ['']) includesSubstring: 'extern') not]]) ifTrue:
-			[locals remove: local.
-			 declarations removeKey: local ifAbsent: []]].
+		 (usedVariables includes: local) ifFalse:
+			[(((declarations at: local ifAbsent: ['']) includesSubstring: 'static')
+			  or: [(declarations at: local ifAbsent: ['']) includesSubstring: 'extern'])
+				ifFalse:
+					[locals remove: local.
+					 declarations removeKey: local ifAbsent: []]
+				ifTrue:
+					[usedVariables add: local "In case this is a function declaration, e.g. amInVMThread in ownVM:"]]].
 	^usedVariables
 ]
 
