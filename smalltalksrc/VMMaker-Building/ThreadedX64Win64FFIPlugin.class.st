@@ -59,11 +59,10 @@ ThreadedX64Win64FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in:
 	<var: #loadFloatRegs declareC: 'extern void loadFloatRegs(double, double, double, double)'>
 	"Go out, call this guy and create the return value.  This *must* be inlined because of
 	 the alloca of the outgoing stack frame in ffiCall:WithFlags:NumArgs:Args:AndTypes:"
-	| myThreadIndex atomicType floatRet intRet loadFloatRegs |
+	| myThreadIndex atomicType floatRet intRet |
 	<var: #floatRet type: #double>
 	<var: #intRet type: #usqLong>
 	<inline: true>
-	self cCode: '' inSmalltalk: [loadFloatRegs := #used. loadFloatRegs class].
 	self maybeDisownVM: calloutState threadIndexInto: [:threadIndex| myThreadIndex := threadIndex].
 
 	calloutState floatRegisterSignature > 0 ifTrue:

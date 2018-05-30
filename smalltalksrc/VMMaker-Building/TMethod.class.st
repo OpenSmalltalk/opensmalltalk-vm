@@ -601,7 +601,7 @@ TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen isPrototype: isPr
 TMethod >> emitCLocalsOn: aStream generator: aCodeGen [
 	"Emit a C function header for this method onto the given stream."
 
-	| volatileVariables |
+	| volatileVariables maybeExternFunctions |
 	volatileVariables := properties includesKey: #volatile.
 	self refersToGlobalStruct ifTrue:
 		[aStream
@@ -610,8 +610,9 @@ TMethod >> emitCLocalsOn: aStream generator: aCodeGen [
 						ifTrue: ['DECL_MAYBE_VOLATILE_SQ_GLOBAL_STRUCT']
 						ifFalse: ['DECL_MAYBE_SQ_GLOBAL_STRUCT'])].
 	aStream cr.
-	locals isEmpty ifFalse:
-		[(aCodeGen sortStrings: locals) do:
+	maybeExternFunctions := (declarations select: [:decl| decl beginsWith: 'extern']) keys.
+	(locals isEmpty and: [maybeExternFunctions isEmpty]) ifFalse:
+		[(aCodeGen sortStrings: locals, maybeExternFunctions) do:
 			[ :var | | decl |
 			decl := self declarationAt: var.
 			(volatileVariables
