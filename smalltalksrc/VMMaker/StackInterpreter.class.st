@@ -16880,9 +16880,7 @@ StackInterpreter >> ownVM: threadIndexAndFlags [
 
 	 Answer the argumentCount encoded as a SmallInteger if the current thread is the VM thread.
 	 Answer -1 if the current thread is unknown to the VM and fails to take ownership."
-	| amInVMThread |
 	<var: 'amInVMThread' declareC: 'extern sqInt amInVMThread(void)'>
-	self cCode: [] inSmalltalk: [amInVMThread := 1. amInVMThread class].
 	self amInVMThread ifFalse:
 		[^-1].
 	self assert: primFailCode = 0.
