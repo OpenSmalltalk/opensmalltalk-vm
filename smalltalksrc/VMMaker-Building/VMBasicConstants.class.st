@@ -17,6 +17,8 @@ Class {
 		'BytesPerWord',
 		'COGMTVM',
 		'COGVM',
+		'CloneOnGC',
+		'CloneOnScavenge',
 		'DisownVMLockOutFullGC',
 		'DoAssertionChecks',
 		'DoExpensiveAssertionChecks',
