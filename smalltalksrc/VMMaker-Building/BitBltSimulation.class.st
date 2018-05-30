@@ -3029,7 +3029,7 @@ BitBltSimulation >> primitiveDisplayString [
 	 and: [combinationRule ~= 31]]]]]]]]]) ifFalse:
 		[^interpreterProxy primitiveFail].
 	stopIndex = 0 ifTrue:
-		[interpreterProxy pop: 6. "the string is empty; pop args, return rcvr"].
+		[^interpreterProxy pop: 6 "the string is empty; pop args, return rcvr"].
 	maxGlyph := (interpreterProxy slotSizeOf: xTable) - 2.
 	"See if we can go directly into copyLoopPixMap (usually we can)"
 	quickBlt := destBits ~= 0 "no OS surfaces please"
