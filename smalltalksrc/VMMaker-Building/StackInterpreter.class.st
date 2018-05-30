@@ -18851,8 +18851,7 @@ StackInterpreter >> pushRemoteTemp: index inVectorAt: tempVectorIndex [
 	TempVectReadBarrier
 		ifTrue: 
 			[(objectMemory isForwarded: tempVector) ifTrue:
-				[Transcript show: 'unfwd Tmp vect'; cr.
-				tempVector := self unfollowTempVector: tempVector atIndex: tempVectorIndex in: localFP]].
+				[tempVector := self unfollowTempVector: tempVector atIndex: tempVectorIndex in: localFP]].
 	self internalPush: (objectMemory fetchPointer: index ofObject: tempVector)
 ]
 
@@ -21215,8 +21214,7 @@ StackInterpreter >> storeRemoteTemp: index inVectorAt: tempVectorIndex [
 	TempVectReadBarrier
 		ifTrue: 
 			[(objectMemory isForwarded: tempVector) ifTrue:
-				[Transcript show: 'unfwd Tmp vect'; cr.
-				tempVector := self unfollowTempVector: tempVector atIndex: tempVectorIndex in: localFP]].
+				[tempVector := self unfollowTempVector: tempVector atIndex: tempVectorIndex in: localFP]].
 	objectMemory storePointer: index ofObject: tempVector withValue: self internalStackTop.
 ]
 
