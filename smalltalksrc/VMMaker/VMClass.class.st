@@ -201,6 +201,9 @@ VMClass class >> initializeMiscConstants [
 	TempVectReadBarrier := initializationOptions at: #TempVectReadBarrier ifAbsentPut: [false].
 	LowcodeVM := initializationOptions at: #LowcodeVM ifAbsentPut: [false].
 	MULTIPLEBYTECODESETS := initializationOptions at: #MULTIPLEBYTECODESETS ifAbsentPut: [false].
+	"Simulation only; on by default..."
+	CloneOnGC := initializationOptions at: #CloneOnGC ifAbsentPut: [true].
+	CloneOnScavenge := initializationOptions at: #CloneOnScavenge ifAbsentPut: [true].
 
 	"These must be set only if specified, not defaulted, because they are set on the command line or in include files."
 	initializationOptions
