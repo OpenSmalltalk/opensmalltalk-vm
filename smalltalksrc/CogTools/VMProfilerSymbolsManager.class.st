@@ -70,8 +70,12 @@ VMProfilerSymbolsManager >> analyzeClosedPIC: aClosedPIC [
 	^ Dictionary new
 		at: 'selector' put: aClosedPIC first;
 		at: 'nbOfCases' put: aClosedPIC size -1;
-		at: 'listOfCases' put: ((aClosedPIC allButFirst collect: [ :each | each methodClass name ]) asSet);
-		yourself.
+		at: 'listOfCases' put: ((aClosedPIC allButFirst collect:
+								[ :each |
+								each isSymbol "MNU PIC Case"
+									ifTrue: [each]
+									ifFalse: [each methodClass name]]) asSet);
+		yourself
 ]
 
 { #category : #accessing }
