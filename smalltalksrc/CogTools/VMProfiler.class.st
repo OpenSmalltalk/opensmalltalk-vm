@@ -256,7 +256,9 @@ VMProfiler >> computeCogCodeModule [
 { #category : #profiling }
 VMProfiler >> computeHistograms: numSamples [
 	sampleBuffer ifNil:
-		[sampleBuffer := Bitmap new: self profileSize].
+		[sampleBuffer := (Smalltalk wordSize = 8
+							ifTrue: [DoubleWordArray]
+							ifFalse: [WordArray]) new: self profileSize].
 	self getVMProfileSamplesInto: sampleBuffer.
 	Cursor wait showWhile:
 		[1 to: numSamples do:
