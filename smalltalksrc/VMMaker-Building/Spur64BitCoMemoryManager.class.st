@@ -265,6 +265,15 @@ Spur64BitCoMemoryManager >> nullHeaderForMachineCodeMethod [
 	+ ClassBitmapCompactIndex
 ]
 
+{ #category : #'object enumeration' }
+Spur64BitCoMemoryManager >> objectBytesForSlots: numSlots [
+	"Answer the total number of bytes in an object with the given
+	 number of slots, including header and possible overflow size header."
+	<api>
+	<option: #SistaVM>
+	^super objectBytesForSlots: numSlots
+]
+
 { #category : #'cog jit support' }
 Spur64BitCoMemoryManager >> receiverTagBitsForMethod: aMethodObj [
 	"Answer the tag bits for the receiver based on the method's methodClass, if any."
