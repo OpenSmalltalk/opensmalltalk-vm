@@ -3972,7 +3972,8 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 	aMenuMorph
 		addLine;
 		add: 'print cog methods' target: cogMethodZone action: #printCogMethods;
-		add: 'print cog methods with prim...' action: [(self promptNum: 'prim index') ifNotNil: [:pix| cogMethodZone printCogMethodsWithPrimitive: pix]];
+		add: 'print cog methods with prim...' action:
+			[(self promptNum: 'prim index') ifNotNil: [:pix| cogMethodZone printCogMethodsWithPrimitive: pix]];
 		add: 'print cog methods with selector...' action:
 			[|s| s := UIManager default request: 'selector'.
 			s notEmpty ifTrue:
@@ -3986,11 +3987,7 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 									cmp: (objectMemory numBytesOf: m selector)) = 0]]) ifTrue:
 						[cogit printCogMethod: m]]]];
 		add: 'print cog methods with method...' action:
-			[(self promptHex: 'method') ifNotNil: [:methodOop|
-			 cogMethodZone methodsDo:
-				[:m|
-				m methodObject = methodOop ifTrue:
-					[cogit printCogMethod: m]]]];
+			[(self promptHex: 'method') ifNotNil: [:methodOop| cogMethodZone printCogMethodsWithMethod: methodOop]];
 		add: 'print cog method for...' action: [(self promptHex: 'pc') ifNotNil: [:pc| cogit printCogMethodFor: pc]];
 		add: 'print cog method header for...' action: [(self promptHex: 'pc') ifNotNil: [:pc| cogit printCogMethodHeaderFor: pc]];
 		add: 'print trampoline table' target: cogit action: #printTrampolineTable;

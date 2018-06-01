@@ -353,7 +353,8 @@ TMethod >> checkSuccessExpr [
 TMethod >> checkedDeclarationAt: aVariableName put: aDeclaration in: aCCodeGen [
 	((args includes: aVariableName)
 	 or: [(locals includes: aVariableName)
-	 or: [(definingClass instVarIndexFor: aVariableName asString ifAbsent: nil) notNil]]) ifFalse:
+	 or: [(definingClass instVarIndexFor: aVariableName asString ifAbsent: nil) notNil
+	 or: [aDeclaration beginsWith: 'extern ']]]) ifFalse:
 		[| msg |
 		 msg := definingClass name, '>>', selector, ' contains declaration for non-existent variable ', aVariableName.
 		 aCCodeGen
