@@ -1519,11 +1519,12 @@ CCodeGenerator >> extractTypeFor: aVariable fromDeclaration: aVariableDeclaratio
 	"Eliminate inessentials from aVariableDeclaration to answer a C type without the variable,
 	 or initializations etc"
 	| decl |
-	decl := aVariableDeclaration.
-	(decl beginsWith: 'static') ifTrue:
-		[decl := decl allButFirst: 6].
-	(decl indexOf: $= ifAbsent: []) ifNotNil:
-		[:index| decl := decl copyFrom: 1 to: index - 1].
+	((aVariableDeclaration beginsWith: 'static ')
+	 or: [aVariableDeclaration beginsWith: 'extern ']) ifTrue:
+		[^self extractTypeFor: aVariable fromDeclaration: (aVariableDeclaration allButFirst: 7)].
+	decl := (aVariableDeclaration indexOf: $= ifAbsent: [])
+				ifNotNil: [:index| aVariableDeclaration copyFrom: 1 to: index - 1]
+				ifNil: [aVariableDeclaration].
 	decl := decl copyReplaceAll: aVariable with: '' tokenish: [:ch| ch = $_ or: [ch isAlphaNumeric]].
 	^self baseTypeForType: decl
 ]
@@ -3757,6 +3758,12 @@ CCodeGenerator >> isConstantNode: aNode valueInto: aBlock [
 { #category : #inlining }
 CCodeGenerator >> isFloatingPointCType: aCType [ "<String>"
 	^#('float' 'double' 'long double') includes: aCType asString
+]
+
+{ #category : #'type inference' }
+CCodeGenerator >> isFunctionalCType: aType [
+	"Answer if aType is either a function or a pointer to a function."
+	^aType last == $) and: [(aType indexOf: $() > 0]
 ]
 
 { #category : #utilities }
