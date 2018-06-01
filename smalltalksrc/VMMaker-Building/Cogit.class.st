@@ -4230,6 +4230,23 @@ Cogit >> checkValidObjectReferencesInClosedPIC: cPIC [
 	^ok
 ]
 
+{ #category : #'profiling primitives' }
+Cogit >> cleanUpFailingCogCodeConstituents: cogMethodArg [
+	<var: #cogMethodArg type: #'CogMethod *'>
+	<inline: #never> "i.e. this should never be called, so keep it out of the main path."
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := cogMethodArg.
+	[cogMethod < methodZone limitZony] whileTrue:
+		[cogMethod cmType = CMClosedPIC ifTrue:
+			[cogMethod methodObject: 0].
+		cogMethod := methodZone methodAfter: cogMethod].
+	"would like to assert this, but it requires the leak checked be run :-(
+		self assert: self allMachineCodeObjectReferencesValid."
+	coInterpreter popRemappableOop.
+	^nil
+]
+
 { #category : #'garbage collection' }
 Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 	"Answer if the ClosedPIC refers to any unmarked objects or freed/freeable target methods,
@@ -4462,7 +4479,16 @@ Cogit >> cogCodeBase [
 Cogit >> cogCodeConstituents: withDetails [
 	"Answer the contents of the code zone as an array of pair-wise element, address in ascending address order.
 	 Answer a string for a runtime routine or abstract label (beginning, end, etc), a CompiledMethod for a CMMethod,
-	 or a selector (presumably a Symbol) for a PIC."
+	 or a selector (presumably a Symbol) for a PIC.
+	 If withDetails is true
+		- answer machine-code to bytecode pc mapping information for methods
+		- answer class, target pair information for closed PIC
+	 N.B. Since the class tag for the first case of a closed PIC is stored at the send site, it must be collected
+		  by scanning methods (see collectCogConstituentFor:Annotation:Mcpc:Bcpc:Method:).  Since closed PICs
+		  are never shared they always come after the method that references them, so we don't need an extra pass
+		  to collect the first case class tags, which are (temporarily) assigned to each closed PIC's methodObject field.
+		  But we do need to reset the methodObject fields to zero.  This is done in createPICData:, unless memory
+		  runs out, in which case it is done by cleanUpFailingCogCodeConstituents:."
 	<api>
 	| count cogMethod constituents label value |
 	<var: #cogMethod type: #'CogMethod *'>
@@ -4478,10 +4504,11 @@ Cogit >> cogCodeConstituents: withDetails [
 	coInterpreter pushRemappableOop: constituents.
 	((label := objectMemory stringForCString: 'CogCode') isNil
 	 or: [(value := self positiveMachineIntegerFor: codeBase) isNil]) ifTrue:
-		[^nil].
+		[coInterpreter popRemappableOop.
+		 ^nil].
 	coInterpreter
-		storePointerUnchecked: 0 ofObject: coInterpreter topRemappableOop withValue: label;
-		storePointerUnchecked: 1 ofObject: coInterpreter topRemappableOop withValue: value.
+		storePointerUnchecked: 0 ofObject: (self maybeTopRemapped: constituents) withValue: label;
+		storePointerUnchecked: 1 ofObject: (self maybeTopRemapped: constituents) withValue: value.
 	0 to: trampolineTableIndex - 1 by: 2 do:
 		[:i|
 		((label := objectMemory stringForCString: (trampolineAddresses at: i)) isNil
@@ -4489,23 +4516,26 @@ Cogit >> cogCodeConstituents: withDetails [
 			[coInterpreter popRemappableOop.
 			 ^nil].
 		coInterpreter
-			storePointerUnchecked: 2 + i ofObject: coInterpreter topRemappableOop withValue: label;
-			storePointerUnchecked: 3 + i ofObject: coInterpreter topRemappableOop withValue: value].
+			storePointerUnchecked: 2 + i ofObject: (self maybeTopRemapped: constituents) withValue: label;
+			storePointerUnchecked: 3 + i ofObject: (self maybeTopRemapped: constituents) withValue: value].
 	count := trampolineTableIndex + 2.
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
 	[cogMethod < methodZone limitZony] whileTrue:
 		[cogMethod cmType ~= CMFree ifTrue:
-			[coInterpreter
+			[| profileData |
+			 profileData := self profileDataFor: cogMethod withDetails: withDetails.
+			 profileData ifNil: [^self cleanUpFailingCogCodeConstituents: cogMethod].
+			 coInterpreter
 				storePointerUnchecked: count
-				ofObject: coInterpreter topRemappableOop
-				withValue: (self valueOf: cogMethod).
+				ofObject: (self maybeTopRemapped: constituents)
+				withValue: profileData.
 			value := withDetails
-				ifFalse: [self positiveMachineIntegerFor: cogMethod asUnsignedInteger]
-				ifTrue: [self collectCogMethodConstituent: cogMethod].
-			value ifNil: [coInterpreter popRemappableOop. ^nil].
+						ifTrue: [self collectCogMethodConstituent: cogMethod]
+						ifFalse: [self positiveMachineIntegerFor: cogMethod asUnsignedInteger].
+			value ifNil: [^self cleanUpFailingCogCodeConstituents: cogMethod].
 			coInterpreter
 						storePointerUnchecked: count + 1
-						ofObject: coInterpreter topRemappableOop
+						ofObject: (self maybeTopRemapped: constituents)
 						withValue: value.
 			 count := count + 2].
 		cogMethod := methodZone methodAfter: cogMethod].
@@ -4514,17 +4544,19 @@ Cogit >> cogCodeConstituents: withDetails [
 		[coInterpreter popRemappableOop.
 		 ^nil].
 	coInterpreter
-		storePointerUnchecked: count ofObject: coInterpreter topRemappableOop withValue: label;
-		storePointerUnchecked: count + 1 ofObject: coInterpreter topRemappableOop withValue: value.
+		storePointerUnchecked: count ofObject: (self maybeTopRemapped: constituents) withValue: label;
+		storePointerUnchecked: count + 1 ofObject: (self maybeTopRemapped: constituents) withValue: value.
 	((label := objectMemory stringForCString: 'CCEnd') isNil
 	 or: [(value := self positiveMachineIntegerFor: methodZone zoneEnd) isNil]) ifTrue:
 		[coInterpreter popRemappableOop.
 		 ^nil].
 	coInterpreter
-		storePointerUnchecked: count + 2 ofObject: coInterpreter topRemappableOop withValue: label;
-		storePointerUnchecked: count + 3 ofObject: coInterpreter topRemappableOop withValue: value.
+		storePointerUnchecked: count + 2 ofObject: (self maybeTopRemapped: constituents) withValue: label;
+		storePointerUnchecked: count + 3 ofObject: (self maybeTopRemapped: constituents) withValue: value.
 	constituents := coInterpreter popRemappableOop.
 	coInterpreter beRootIfOld: constituents.
+	"would like to assert this, but it requires the leak checked be run :-(
+		self assert: self allMachineCodeObjectReferencesValid."
 	^constituents
 ]
 
@@ -4860,11 +4892,12 @@ Cogit >> collectCogConstituentFor: descriptor Annotation: isBackwardBranchAndAnn
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #mcpc type: #'char *'>
 	<var: #cogMethodArg type: #'void *'>
-	| address |
+	<var: #targetMethod type: #'CogMethod *'>
+	| address entryPoint |
 	descriptor ifNil: [^0].
 	descriptor isMapped ifFalse: [^0].
 	address := self positiveMachineIntegerFor: mcpc.
-	address ifNil: [^InsufficientCodeSpace]. "We should have a dedicated error code... This cannot trigger a GC but fails if not enough space in Eden,"
+	address ifNil: [^PrimErrNoMemory]. "This cannot trigger a GC but fails if not enough space in Eden,"
 	"Assumes we write the values into topRemappableOop"
 	coInterpreter
 		storePointerUnchecked: cogConstituentIndex
@@ -4873,9 +4906,19 @@ Cogit >> collectCogConstituentFor: descriptor Annotation: isBackwardBranchAndAnn
 	coInterpreter
 		storePointerUnchecked: cogConstituentIndex + 1
 		ofObject: coInterpreter topRemappableOop
-		withValue: (objectMemory integerObjectOf: bcpc)..
+		withValue: (objectMemory integerObjectOf: bcpc).
 	cogConstituentIndex := cogConstituentIndex + 2.
-	^ 0
+
+	"Collect any first case classTags for closed PICs."
+	((isBackwardBranchAndAnnotation noMask: 1)
+	 and: [self isSendAnnotation: isBackwardBranchAndAnnotation >> 1]) ifTrue:
+		[entryPoint := backEnd callTargetFromReturnAddress: mcpc asInteger.
+		 entryPoint > methodZoneBase ifTrue: "send is linked"
+			[self targetMethodAndSendTableFor: entryPoint annotation: isBackwardBranchAndAnnotation >> 1 into:
+				[:targetMethod :sendTable|
+				  targetMethod cmType = CMClosedPIC ifTrue:
+					[targetMethod methodObject: (objectRepresentation classForInlineCacheTag: (backEnd inlineCacheTagAt: mcpc))]]]].
+	^0
 ]
 
 { #category : #'profiling primitives' }
@@ -5784,28 +5827,40 @@ Cogit >> cr [
 
 { #category : #'profiling primitives' }
 Cogit >> createCPICData: cPIC [
+	"Answer an Array of the PIC's selector, followed by class and targetMethod/doesNotUnderstand: for each entry in the PIC."
 	<var: #cPIC type: #'CogMethod *'>
-	| pc entryPoint targetMethod value array |
+	| picData |
 	<var: #targetMethod type: #'CogMethod *'>
-	array := 1.
-	array := objectMemory instantiateClass: objectMemory classArray indexableSize: 1 + cPIC cPICNumCases.
-      objectMemory storePointerUnchecked: 0 ofObject: array withValue: cPIC selector.
+	self assert: (cPIC methodObject = 0 or: [objectMemory addressCouldBeOop: cPIC methodObject]).
+	picData := objectMemory instantiateClass: objectMemory classArray indexableSize: cPIC cPICNumCases * 2 + 1.
+	picData ifNil: [^picData].
+      objectMemory storePointerUnchecked: 0 ofObject: picData withValue: cPIC selector.
 	1 to: cPIC cPICNumCases do:
-		[:i|
+		[:i| | pc entryPoint target targetMethod class |
 		pc := self addressOfEndOfCase: i inCPIC: cPIC.
-		entryPoint := i = 1
-						ifTrue: [backEnd jumpLongTargetBeforeFollowingAddress: pc]
-						ifFalse: [backEnd jumpLongConditionalTargetBeforeFollowingAddress: pc].
+		i = 1
+			ifTrue:
+				[class := cPIC methodObject. "first case may have been collected and stored here by collectCogConstituentFor:Annotation:Mcpc:Bcpc:Method:"
+				 class = 0 ifTrue: [class := objectMemory nilObject]. "cPIC is unreferenced; likely evolved to OpenPIC"
+				 entryPoint := backEnd jumpLongTargetBeforeFollowingAddress: pc]
+			ifFalse:
+				[class := objectRepresentation classForInlineCacheTag:
+							(backEnd literal32BeforeFollowingAddress: pc - backEnd jumpLongConditionalByteSize).
+				 entryPoint := backEnd jumpLongConditionalTargetBeforeFollowingAddress: pc].
 		"Find target from jump.  A jump to the MNU entry-point should collect #doesNotUnderstand:"
 		(cPIC containsAddress: entryPoint)
 			ifTrue:
-				[value := objectMemory splObj: SelectorDoesNotUnderstand]
+				[target := objectMemory splObj: SelectorDoesNotUnderstand]
 			ifFalse:
 				[targetMethod := self cCoerceSimple: entryPoint - cmNoCheckEntryOffset to: #'CogMethod *'.
 				 self assert: targetMethod cmType = CMMethod.
-				 value := targetMethod methodObject].
-		objectMemory storePointer: i ofObject: array withValue: value].
-	^ array
+				 target := targetMethod methodObject].
+		objectMemory
+			storePointerUnchecked: i * 2 - 1 ofObject: picData withValue: class;
+			storePointerUnchecked: i * 2 ofObject: picData withValue: target].
+	objectMemory beRootIfOld: picData.
+	cPIC methodObject: 0. "restore invariant."
+	^picData
 ]
 
 { #category : #accessing }
@@ -10102,6 +10157,12 @@ Cogit >> maybeNoteStartpcFor: thing [ "<CogBlockStart|CogCodeRange>"
 									do: [:ex| thing numArgs])] "CogBlockStart"
 ]
 
+{ #category : #'profiling primitives' }
+Cogit >> maybeTopRemapped: anOop [
+	<inline: true>
+	^SPURVM ifTrue: [anOop] ifFalse: [objectMemory topRemappableOop]
+]
+
 { #category : #'compile abstract instructions' }
 Cogit >> maybeUnsafeJumpContinuation: latestContinuation at: bcpc for: descriptor in: aMethodObj [
 	<inline: true>
@@ -10412,6 +10473,37 @@ Cogit >> offset: aClass of: fieldSymbol [
 	<doNotGenerate>
 	^aClass caseOf:
 		{ [CogMethod] -> [cogMethodSurrogateClass offsetOf: fieldSymbol] }
+]
+
+{ #category : #'in-line cacheing' }
+Cogit >> offsetAndSendTableFoAnnotation: annotation into: binaryBlock [
+	"Find the relevant sendTable for a linked-send with the given annotation.
+	 c.f. annotationForSendTable:"
+	<inline: true>
+	| offset sendTable |
+	<var: #sendTable type: #'sqInt *'>
+	annotation = IsSendCall ifTrue:
+		[offset := cmEntryOffset.
+		 sendTable := ordinarySendTrampolines] ifFalse:
+	[(BytecodeSetHasDirectedSuperSend and: [annotation = IsDirectedSuperSend]) ifTrue:
+		[offset := cmNoCheckEntryOffset.
+		 sendTable := directedSuperSendTrampolines] ifFalse:
+	[(BytecodeSetHasDirectedSuperSend and: [annotation = IsDirectedSuperBindingSend]) ifTrue:
+		[offset := cmNoCheckEntryOffset.
+		 sendTable := directedSuperBindingSendTrampolines] ifFalse:
+	[(NewspeakVM and: [annotation = IsNSSelfSend]) ifTrue:
+		[offset := cmEntryOffset.
+		 sendTable := selfSendTrampolines] ifFalse:
+	[(NewspeakVM and: [annotation = IsNSDynamicSuperSend]) ifTrue:
+		[offset := cmEntryOffset.
+		 sendTable := dynamicSuperSendTrampolines] ifFalse:
+	[self assert: annotation = IsSuperSend.
+	 offset := cmNoCheckEntryOffset.
+	 sendTable := superSendTrampolines]]]]].
+
+	binaryBlock
+		value: offset
+		value: sendTable
 ]
 
 { #category : #'in-line cacheing' }
@@ -10922,6 +11014,21 @@ Cogit >> processorHasDoublePrecisionFloatingPointSupport [
 { #category : #initialization }
 Cogit >> processorHasMultiplyAndMClassIsSmallInteger [
 	^backEnd canMulRR and: [self mclassIsSmallInteger]
+]
+
+{ #category : #'profiling primitives' }
+Cogit >> profileDataFor: cogMethod withDetails: withDetails [
+	"Answers characteristic data for the type of the cogMethod, answering
+		a CompiledMethod for a compiled method,
+		a selector for an open PIC
+		if withDetails then an array containing a selector followed by pairs of class and target method for a closed PIC, otherwise simply a selector."
+	<inline: true>
+	<var: #cogMethod type: #'CogMethod *'>
+	^cogMethod cmType = CMMethod 
+		ifTrue: [cogMethod methodObject]
+		ifFalse: [(withDetails and: [cogMethod cmType = CMClosedPIC])
+					ifTrue: [self createCPICData: cogMethod]
+					ifFalse: [cogMethod selector]]
 ]
 
 { #category : #'simulation only' }
@@ -12715,19 +12822,6 @@ Cogit >> unlockVMOwner [
 	<api>
 	<cmacro: '() ceUnlockVMOwner()'>
 	^self simulateLeafCallOf: ceUnlockVMOwner
-]
-
-{ #category : #'profiling primitives' }
-Cogit >> valueOf: cogMethod [
-	"gives the type of the cogMethod and returns a CompiledMethod for a compiled method, a selector for an openPIC or an array containing a selector followed by the methods present in the closedPIC for a closedPIC"
-	
-	<var: #cogMethod type: #'CogMethod *'>
-	^cogMethod cmType = CMMethod 
-							ifTrue: [cogMethod methodObject]
-							ifFalse: [cogMethod cmType = CMClosedPIC 
-																ifTrue: [self createCPICData: cogMethod.]
-																ifFalse: [cogMethod selector]]
-                     
 ]
 
 { #category : #accessing }
