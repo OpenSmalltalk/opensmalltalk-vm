@@ -537,11 +537,6 @@ VMProfiler >> positionedLabels [
 ]
 
 { #category : #primitives }
-VMProfiler >> primitiveCollectCogCodeConstituents [
-	^ self primitiveCollectCogCodeConstituents: self withDetails
-]
-
-{ #category : #primitives }
 VMProfiler >> primitiveCollectCogCodeConstituents: withDetails [
 	"Answer the contents of the code zone as an array of pair-wise element, address
 	 in ascending address order.  Answer a string for a runtime routine or abstract label
@@ -849,13 +844,13 @@ VMProfiler >> stopProfiling [
 	numSamples := self stopVMProfile.
 	now := Time millisecondClockValue.
 	vmParameters := self getVMParameters. 
-	cogCodeConstituents := self primitiveCollectCogCodeConstituents.
+	cogCodeConstituents := self primitiveCollectCogCodeConstituents: self withDetails.
 	elapsedTime := now - startTime + elapsedTime.
 	self computeStats: vmParameters.
 	self computeHistograms: numSamples.
 	self computeCogCodeModule.
 	('Mac OS' match: Smalltalk platformName) ifTrue: [self computeSortedSymbols]. "workaround. sometimes fails on linux"
-	self clearHistory.
+	self clearHistory
 	
 ]
 
