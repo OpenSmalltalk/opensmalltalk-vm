@@ -26,6 +26,7 @@ Class {
 
 { #category : #translation }
 SpurSelectiveCompactor class >> declareCVarsIn: aCCodeGenerator [
+	super declareCVarsIn: aCCodeGenerator.
 	aCCodeGenerator var: 'segmentToFill' type: #'SpurSegmentInfo *'
 ]
 
@@ -184,8 +185,9 @@ SpurSelectiveCompactor >> findNextSegmentToCompact [
 				[(tempOccupied := self occupationOf: segInfo) <= leastOccupied
 					ifTrue: [ leastOccupied := tempOccupied.
 							 leastOccupiedSegment := segInfo ]]].
-	leastOccupied > MaxOccupationForCompaction ifTrue: [^nil].
-	^ leastOccupiedSegment
+	leastOccupied > MaxOccupationForCompaction ifTrue:
+		[^self cCoerceSimple: nil to: #'SpurSegmentInfo *'].
+	^leastOccupiedSegment
 ]
 
 { #category : #'segment to fill' }
@@ -310,7 +312,7 @@ SpurSelectiveCompactor >> postCompactionAction [
 
 { #category : #api }
 SpurSelectiveCompactor >> postSwizzleAction [
-	"Since the compact abuses the swizzle field of segment, it needs to be rest after start-up."
+	"Since the compact abuses the swizzle field of segment, it needs to be reset after start-up."
 	| segInfo |
 	<var: 'segInfo' type: #'SpurSegmentInfo *'>
 	0 to: manager numSegments - 1 do:

@@ -33,6 +33,7 @@ Class {
 		'asmLabelCounts',
 		'pools',
 		'selectorTranslations',
+		'staticallyResolvedPolymorphicReceivers',
 		'optionsDictionary',
 		'breakSrcInlineSelectors',
 		'breakDestInlineSelectors',
@@ -3320,6 +3321,22 @@ CCodeGenerator >> harmonizeReturnTypesIn: aSetOfTypes [
 					ifFalse: [aSetOfTypes]]
 ]
 
+{ #category : #public }
+CCodeGenerator >> ifStaticallyResolvedPolymorphicReceiverThenUpdateSelectorIn: aSendNode [
+	"We allow a limited amount of polymorphism; if a class chooses, its selectoers can be
+	 prefixed with a given string to disambiguate. This hack allows us to use two different
+	 compaction algorithms with the same API at the same time; the selection being done
+	 by a class which holds the flag stating which algorithm is in effect at the current time."
+	| class |
+	staticallyResolvedPolymorphicReceivers ifNil: [^self].
+	aSendNode receiver isVariable ifFalse:
+		[^self].
+	class := staticallyResolvedPolymorphicReceivers
+				at: aSendNode receiver name
+				ifAbsent: [^self].
+	aSendNode selector: (class staticallyResolvePolymorphicSelector: aSendNode selector)
+]
+
 { #category : #'type inference' }
 CCodeGenerator >> implicitReturnTypeFor: aSelector [
 	"Answer the default return type for mthods of the defining class of
@@ -4107,6 +4124,13 @@ CCodeGenerator >> methodStatsString [
 		].
 	].
 	^ s contents
+]
+
+{ #category : #utilities }
+CCodeGenerator >> methodsForDefiningClass: dc [
+	"Answer a collection of methods that refer to the given global variable."
+
+	^methods select: [:tMethod| tMethod definingClass == dc]
 ]
 
 { #category : #utilities }
@@ -5140,6 +5164,33 @@ CCodeGenerator >> sortStrings: aStringOrSymbolCollection [
 CCodeGenerator >> sortedExportMethods [
 	"Answer a suitably-sorted array of all exported TMethods"
 	^(methods select: [:m| m export]) asSortedCollection: [:a :b| a selector caseSensitiveLessOrEqual: b selector]
+]
+
+{ #category : #public }
+CCodeGenerator >> staticallyResolveMethodNamed: selector forClass: aClass to: staticallyResolvedSelector [
+	"We allow a limited amount of polymorphism; if a class chooses, its selectoers can be
+	 prefixed with a given string to disambiguate. This hack allows us to use two different
+	 compaction algorithms with the same API at the same time; the selection being done
+	 by a class which holds the flag stating which algorithm is in effect at the current time."
+	| method |
+	method := methods
+					removeKey: selector
+					ifAbsent:
+						[self logger cr; nextPutAll: 'warning: did not find ', selector, ' to be able to map to ', staticallyResolvedSelector.
+						^self].
+	method selector: staticallyResolvedSelector.
+	methods at: staticallyResolvedSelector put: method
+]
+
+{ #category : #public }
+CCodeGenerator >> staticallyResolvedPolymorphicReceiver: variableName to: aClass [
+	"We allow a limited amount of polymorphism; if a class chooses, its selectoers can be
+	 prefixed with a given string to disambiguate. This hack allows us to use two different
+	 compaction algorithms with the same API at the same time; the selection being done
+	 by a class which holds the flag stating which algorithm is in effect at the current time."
+	(staticallyResolvedPolymorphicReceivers ifNil: [staticallyResolvedPolymorphicReceivers := Dictionary new])
+		at: variableName
+		put: aClass
 ]
 
 { #category : #'C translation support' }

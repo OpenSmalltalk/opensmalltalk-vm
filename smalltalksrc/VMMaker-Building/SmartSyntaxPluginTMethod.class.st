@@ -1,5 +1,7 @@
 "
-Variation of TMethod node of the Smalltalk C Code Generator, used in conjunction with TestCodeGenerator and TestInterpreterPlugin to generate named primitives with type coercion specifications.
+Variation of TMethod node of the Smalltalk C Code Generator, used in conjunction with SmartSyntaxPluginCodeGenerator and SmartSyntaxInterpreterPlugin to generate named primitives from methods containing type coercion specifications such as
+	primitive: functionName parameters: #(Boolean Oop String WordsArray WordsOrBytes)
+	primitive: functionName parameters: #(SmallInteger LargeNegativeInteger LargePositiveInteger Integer Unsigned) receiver: #Oop
 "
 Class {
 	#name : #SmartSyntaxPluginTMethod,
@@ -148,7 +150,7 @@ SmartSyntaxPluginTMethod >> fixUpReturns [
 					[:stmt | self fixUpReturnOneStmt: stmt on: sStream]])]]
 ]
 
-{ #category : #initializing }
+{ #category : #initialization }
 SmartSyntaxPluginTMethod >> fromContext: aContext primitive: aString parameters: aClassList receiver: aClass [
 
 	fullArgs := args := aContext tempNames
@@ -425,7 +427,7 @@ SmartSyntaxPluginTMethod >> resultExpressionCanFail: aTSendNode [
 	^(#(asSmallIntegerObj asBooleanObj) includes: aTSendNode selector) not
 ]
 
-{ #category : #initializing }
+{ #category : #initialization }
 SmartSyntaxPluginTMethod >> setSelector: sel definingClass: class args: argList locals: localList block: aBlockNode primitive: aNumber properties: methodProperties comment: aComment [
 	"Initialize this method using the given information."
 

@@ -538,6 +538,11 @@ VMClass class >> specialValueForConstant: constantName default: defaultValue [
 ]
 
 { #category : #translation }
+VMClass class >> staticallyResolvePolymorphicSelector: aSelectorSymbol [
+	^((self name select: [:ea| ea isUppercase]), '_', aSelectorSymbol) asSymbol
+]
+
+{ #category : #translation }
 VMClass class >> timeStamp [
 	^timeStamp ifNil:[0]
 ]
