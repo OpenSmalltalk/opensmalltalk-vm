@@ -7,20 +7,15 @@ SpurSweeper is a reference implementation if one wants to evaluate GC performanc
 Class {
 	#name : #SpurSweeper,
 	#superclass : #SpurCompactor,
-	#instVars : [
-		'biasForGC'
-	],
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #api }
 SpurSweeper >> biasForGC [
-	biasForGC := true.
 ]
 
 { #category : #api }
 SpurSweeper >> biasForSnapshot [
-	biasForGC := false.
 ]
 
 { #category : #'sweep phase' }

@@ -53,7 +53,7 @@ TMethod >> addLabelsTo: aTMethod [
 	aTMethod labels addAll: labels
 ]
 
-{ #category : #utilities }
+{ #category : #initialization }
 TMethod >> addTypeForSelf [
 	"If self should be typed then add a suitable type declaration.
 	 Preserve the flagging of an implicit self using the #implicit symbol as the fake type."
@@ -2100,7 +2100,8 @@ TMethod >> prepareMethodIn: aCodeGen [
 			[parseTree nodesWithParentsDo:
 				[:node :parent|
 				 node isSend ifTrue:
-					[(aCodeGen isBuiltinSelector: node selector)
+					[aCodeGen ifStaticallyResolvedPolymorphicReceiverThenUpdateSelectorIn: node.
+					 (aCodeGen isBuiltinSelector: node selector)
 						ifTrue:
 							[node isBuiltinOperator: true.
 							"If a to:by:do:'s limit has side-effects, declare the limit variable, otherwise delete it from the args"

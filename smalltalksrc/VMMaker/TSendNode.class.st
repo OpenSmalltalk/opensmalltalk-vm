@@ -449,6 +449,11 @@ TSendNode >> selector [
 ]
 
 { #category : #accessing }
+TSendNode >> selector: aSymbol [
+	selector := aSymbol
+]
+
+{ #category : #accessing }
 TSendNode >> setSelector: aSymbol receiver: rcvrNode arguments: argList [
 
 	selector := aSymbol.
