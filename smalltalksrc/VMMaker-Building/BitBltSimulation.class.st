@@ -2164,11 +2164,12 @@ BitBltSimulation >> loadBitBltDestForm [
 			destPPW := 32 // destDepth.
 			destBits := destPitch := 0]
 		ifFalse:
-			[destPPW := 32 // destDepth.
+			[(interpreterProxy isWordsOrBytes: destBits) ifFalse:
+				[^false].
+			destPPW := 32 // destDepth.
 			destPitch := destWidth + (destPPW-1) // destPPW * 4.
 			destBitsSize := interpreterProxy byteSizeOf: destBits.
-			((interpreterProxy isWordsOrBytes: destBits)
-			 and: [destBitsSize >= (destPitch * destHeight)]) ifFalse:
+			destBitsSize >= (destPitch * destHeight) ifFalse:
 				[^false].
 			"Skip header since external bits don't have one"
 			destBits := self oopForPointer: (interpreterProxy firstIndexableField: destBits)].
@@ -2278,11 +2279,12 @@ BitBltSimulation >> loadBitBltSourceForm [
 			sourcePPW := 32 // sourceDepth.
 			sourceBits := sourcePitch := 0]
 		ifFalse:
-			[sourcePPW := 32 // sourceDepth.
+			[(interpreterProxy isWordsOrBytes: sourceBits) ifFalse:
+				[^false].
+			sourcePPW := 32 // sourceDepth.
 			sourcePitch := sourceWidth + (sourcePPW-1) // sourcePPW * 4.
 			sourceBitsSize := interpreterProxy byteSizeOf: sourceBits.
-			((interpreterProxy isWordsOrBytes: sourceBits)
-			 and: [sourceBitsSize >= (sourcePitch * sourceHeight)]) ifFalse:
+			sourceBitsSize >= (sourcePitch * sourceHeight) ifFalse:
 				[^false].
 			"Skip header since external bits don't have one"
 			sourceBits := self oopForPointer: (interpreterProxy firstIndexableField: sourceBits)].
@@ -2360,23 +2362,23 @@ BitBltSimulation >> loadHalftoneForm [
 	"Load the halftone form"
 	| halftoneBits |
 	<inline: true>
-	noHalftone ifTrue:[
-		halftoneBase := nil.
+	noHalftone ifTrue:
+		[halftoneBase := nil.
 		^true].
-	((interpreterProxy isPointers: halftoneForm) and: [(interpreterProxy slotSizeOf: halftoneForm) >= 4])
+	((interpreterProxy isPointers: halftoneForm)
+	 and: [(interpreterProxy slotSizeOf: halftoneForm) >= 4])
 		ifTrue:
-		["Old-style 32xN monochrome halftone Forms"
-		halftoneBits := interpreterProxy fetchPointer: FormBitsIndex ofObject: halftoneForm.
-		halftoneHeight := interpreterProxy fetchInteger: FormHeightIndex ofObject: halftoneForm.
-		(interpreterProxy isWords: halftoneBits)
-			ifFalse: [noHalftone := true]]
+			["Old-style 32xN monochrome halftone Forms"
+			halftoneBits := interpreterProxy fetchPointer: FormBitsIndex ofObject: halftoneForm.
+			halftoneHeight := interpreterProxy fetchInteger: FormHeightIndex ofObject: halftoneForm.
+			(interpreterProxy isWords: halftoneBits) ifFalse:
+				[noHalftone := true]]
 		ifFalse:
-		["New spec accepts, basically, a word array"
-		((interpreterProxy isPointers: halftoneForm) not
-			and: [interpreterProxy isWords: halftoneForm])
-			ifFalse: [^ false].
-		halftoneBits := halftoneForm.
-		halftoneHeight := interpreterProxy slotSizeOf: halftoneBits].
+			["New spec accepts, basically, a word array"
+			(interpreterProxy isWords: halftoneForm) ifFalse:
+				[^false].
+			halftoneBits := halftoneForm.
+			halftoneHeight := interpreterProxy slotSizeOf: halftoneBits].
 	halftoneBase := self oopForPointer: (interpreterProxy firstIndexableField: halftoneBits).
 	^true
 ]
