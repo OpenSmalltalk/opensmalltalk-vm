@@ -2140,6 +2140,9 @@ BitBltSimulation >> loadBitBltDestForm [
 
 	| destBitsSize |
 	<inline: true>
+	((interpreterProxy isPointers: destForm)
+	 and: [(interpreterProxy slotSizeOf: destForm) >= 4]) ifFalse:
+		[^false].
 	destBits := interpreterProxy fetchPointer: FormBitsIndex ofObject: destForm.
 	destWidth := interpreterProxy fetchInteger: FormWidthIndex ofObject: destForm.
 	destHeight := interpreterProxy fetchInteger: FormHeightIndex ofObject: destForm.
@@ -2207,8 +2210,6 @@ BitBltSimulation >> loadBitBltFrom: bbObj warping: aBool [
 	noHalftone := self ignoreSourceOrHalftone: halftoneForm.
 
 	destForm := interpreterProxy fetchPointer: BBDestFormIndex ofObject: bbObj.
-	((interpreterProxy isPointers: destForm) and: [(interpreterProxy slotSizeOf: destForm) >= 4])
-		ifFalse: [^false].
 	ok := self loadBitBltDestForm.
 	ok ifFalse:[^false].
 
@@ -2222,9 +2223,7 @@ BitBltSimulation >> loadBitBltFrom: bbObj warping: aBool [
 		ifTrue:
 			[sourceX := sourceY := 0]
 		ifFalse: 
-			[((interpreterProxy isPointers: sourceForm) and: [(interpreterProxy slotSizeOf: sourceForm) >= 4])
-				ifFalse: [^false].
-			ok := self loadBitBltSourceForm.
+			[ok := self loadBitBltSourceForm.
 			ok ifFalse:[^false].
 			ok := self loadColorMap.
 			ok ifFalse:[^false].
@@ -2255,6 +2254,9 @@ BitBltSimulation >> loadBitBltSourceForm [
 	"Load the source form for BitBlt. Return false if anything is wrong, true otherwise."
 	| sourceBitsSize |
 	<inline: true>
+	((interpreterProxy isPointers: sourceForm)
+	 and: [(interpreterProxy slotSizeOf: sourceForm) >= 4]) ifFalse:
+		[^false].
 	sourceBits := interpreterProxy fetchPointer: FormBitsIndex ofObject: sourceForm.
 	sourceWidth := self fetchIntOrFloat: FormWidthIndex ofObject: sourceForm.
 	sourceHeight := self fetchIntOrFloat: FormHeightIndex ofObject: sourceForm.
@@ -2264,7 +2266,7 @@ BitBltSimulation >> loadBitBltSourceForm [
 	sourceMSB := sourceDepth > 0.
 	sourceDepth < 0 ifTrue:
 		[sourceDepth := 0 - sourceDepth].
-	"Ignore an integer bits handle for Display in which case 
+	"Ignore an integer bits handle for Display in which case
 	 the appropriate values will be obtained by calling ioLockSurfaceBits()."
 	(interpreterProxy isIntegerObject: sourceBits)
 		ifTrue: "Query for actual surface dimensions"
