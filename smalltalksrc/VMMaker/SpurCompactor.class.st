@@ -34,7 +34,26 @@ Class {
 	#category : #'VMMaker-SpurMemoryManager'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #translation }
+SpurCompactor class >> classesForTranslation [
+	^(self withAllSuperclasses copyUpThrough: SpurCompactor) reverse
+]
+
+{ #category : #translation }
+SpurCompactor class >> declareCVarsIn: aCCodeGenerator [
+	"If subclasses are being used but are not the compactorClass itself
+	 then staticvally resolve their api selectors."
+	((self inheritsFrom: SpurCompactor)
+	 and: [(initializationOptions at: #compactorClass) ~= self name]) ifTrue:
+		[#(compact biasForGC biasForSnapshot remapObj: shouldRemapObj:) do:
+			[:selectorToStaticallyResolve|
+			 aCCodeGenerator
+				staticallyResolveMethodNamed: selectorToStaticallyResolve
+				forClass: self
+				to: (self staticallyResolvePolymorphicSelector: selectorToStaticallyResolve)]]
+]
+
+{ #category : #translation }
 SpurCompactor class >> implicitReturnTypeFor: aSelector [
 	"Answer the return type for methods that don't have an explicit return."
 	^#void
@@ -88,6 +107,12 @@ SpurCompactor >> remapObj: objOop [
 	<api>
 	<inline: false>
 	^manager vanillaRemapObj: objOop
+]
+
+{ #category : #initialization }
+SpurCompactor >> scavenger: aSpurGenerationScavenger [
+	<doNotGenerate>
+	scavenger := aSpurGenerationScavenger
 ]
 
 { #category : #api }

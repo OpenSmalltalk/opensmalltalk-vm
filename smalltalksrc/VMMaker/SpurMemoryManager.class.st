@@ -641,7 +641,7 @@ Class {
 SpurMemoryManager class >> ancilliaryClasses: options [
 	initializationOptions ifNil: [initializationOptions := options].
 	^{	SpurGenerationScavenger. SpurScavengeLogRecord. SpurSegmentManager. SpurSegmentInfo }, 
-		(self compactorClass withAllSuperclasses copyUpThrough: SpurCompactor) reverse,
+		self compactorClass classesForTranslation,
 		SpurNewSpaceSpace withAllSubclasses
 		
 	
@@ -1024,7 +1024,7 @@ SpurMemoryManager class >> isImmediate: anObject [
 
 { #category : #translation }
 SpurMemoryManager class >> isNonArgumentImplicitReceiverVariableName: aString [
-	^#('self' 'coInterpreter' 'manager' 'scavenger' 'segmentManager' 'compactor' 'heapMap') includes: aString
+	^#('self' 'coInterpreter' 'manager' 'scavenger' 'segmentManager' 'compactor' 'planningCompactor' 'selectiveCompactor' 'heapMap') includes: aString
 ]
 
 { #category : #translation }
