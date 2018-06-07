@@ -176,7 +176,8 @@ Spur64BitMemoryManager >> byteSwapped: w [
 
 { #category : #'free space' }
 Spur64BitMemoryManager >> bytesBigEnoughForPrevPointer: chunkBytes [
-	^ chunkBytes ~= (self baseHeaderSize + self allocationUnit)
+	"To have a prev pointer, which follows the next pointer, we need at least two slots."
+	^chunkBytes > (self baseHeaderSize + self allocationUnit)
 ]
 
 { #category : #'object enumeration' }

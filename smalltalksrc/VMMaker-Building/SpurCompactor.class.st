@@ -44,15 +44,15 @@ SpurCompactor class >> classesForTranslation [
 { #category : #translation }
 SpurCompactor class >> declareCVarsIn: aCCodeGenerator [
 	"If subclasses are being used but are not the compactorClass itself
-	 then staticvally resolve their api selectors."
-	((self inheritsFrom: SpurCompactor)
-	 and: [(InitializationOptions at: #compactorClass) ~= self name]) ifTrue:
-		[#(compact biasForGC biasForSnapshot remapObj: shouldRemapObj:) do:
-			[:selectorToStaticallyResolve|
-			 aCCodeGenerator
-				staticallyResolveMethodNamed: selectorToStaticallyResolve
-				forClass: self
-				to: (self staticallyResolvePolymorphicSelector: selectorToStaticallyResolve)]]
+	 then statically resolve their api selectors."
+	(self inheritsFrom: SpurCompactor) ifTrue: "leave SpurCompactor methods alone"
+		[(SpurMemoryManager compactorClass includesBehavior: self) ifFalse: "only map methods not in the compactorClass"
+			[#(compact biasForGC biasForSnapshot remapObj: shouldRemapObj:) do: "map the public api methods only"
+				[:selectorToStaticallyResolve|
+				 aCCodeGenerator
+					staticallyResolveMethodNamed: selectorToStaticallyResolve
+					forClass: self
+					to: (self staticallyResolvePolymorphicSelector: selectorToStaticallyResolve)]]]
 ]
 
 { #category : #translation }
