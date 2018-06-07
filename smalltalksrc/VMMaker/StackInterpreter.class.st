@@ -488,7 +488,7 @@ StackInterpreter class >> additionalSelectorTables [
 ]
 
 { #category : #translation }
-StackInterpreter class >> ancilliaryClasses: options [
+StackInterpreter class >> ancilliaryClasses [
 	"Answer any extra classes to be included in the translation."
 	^{	self objectMemoryClass.
 		VMCallbackContext.
@@ -644,10 +644,10 @@ StackInterpreter class >> initializeAssociationIndex [
 StackInterpreter class >> initializeBytecodeTable [
 	"StackInterpreter initializeBytecodeTable"
 
-	VMBytecodeConstants falsifyBytecodeSetFlags: initializationOptions.
+	VMBytecodeConstants falsifyBytecodeSetFlags: InitializationOptions.
 	BytecodeSetHasDirectedSuperSend := false.
 
-	(initializationOptions at: #bytecodeTableInitializer ifAbsent: nil) ifNotNil:
+	(InitializationOptions at: #bytecodeTableInitializer ifAbsent: nil) ifNotNil:
 		[:initalizer| ^self perform: initalizer].
 
 	NewspeakVM ifTrue:
@@ -665,7 +665,7 @@ StackInterpreter class >> initializeBytecodeTableForNewspeakV4 [
 	"StackInterpreter initializeBytecodeTableForNewspeakV4"
 	"Note: This table will be used to generate a C switch statement."
 
-	initializationOptions at: #NewsqueakV4BytecodeSet put: (NewsqueakV4BytecodeSet := true).
+	InitializationOptions at: #NewsqueakV4BytecodeSet put: (NewsqueakV4BytecodeSet := true).
 	BytecodeTable := Array new: 256.
 	BytecodeEncoderClassName := #EncoderForNewsqueakV4.
 	BytecodeSetHasExtensions := true.
@@ -785,7 +785,7 @@ StackInterpreter class >> initializeBytecodeTableForSistaV1 [
 	"StackInterpreter initializeBytecodeTableForSistaV1"
 	"Note: This table will be used to generate a C switch statement."
 
-	initializationOptions at: #SistaV1BytecodeSet put: (SistaV1BytecodeSet := true).
+	InitializationOptions at: #SistaV1BytecodeSet put: (SistaV1BytecodeSet := true).
 
 	BytecodeTable := Array new: 256.
 	BytecodeEncoderClassName := #EncoderForSistaV1.
@@ -916,7 +916,7 @@ StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosures [
 	"StackInterpreter initializeBytecodeTableForSqueakV3PlusClosures"
 	"Note: This table will be used to generate a C switch statement."
 
-	initializationOptions at: #SqueakV3PlusClosuresBytecodeSet put: (SqueakV3PlusClosuresBytecodeSet := true).
+	InitializationOptions at: #SqueakV3PlusClosuresBytecodeSet put: (SqueakV3PlusClosuresBytecodeSet := true).
 
 	BytecodeTable := Array new: 256.
 	BytecodeEncoderClassName := #EncoderForV3PlusClosures.
@@ -960,7 +960,7 @@ StackInterpreter class >> initializeBytecodeTableForSqueakV3PlusClosures [
 		(137 pushActiveContextBytecode)
 		(138 pushNewArrayBytecode)),
 
-	((initializationOptions at: #SpurObjectMemory ifAbsent: [false])
+	((InitializationOptions at: #SpurObjectMemory ifAbsent: [false])
 		ifTrue: [#((139 callPrimitiveBytecode))]	"V3PlusClosures on Spur"
 		ifFalse: [#((139 unknownBytecode))]),	"V3PlusClosures on V3"
 
@@ -1289,8 +1289,8 @@ StackInterpreter class >> initializeMiscConstants [
 	MaxExternalPrimitiveTableSize := 4096. "entries"
 
 	MaxJumpBuf := 32. "max. callback depth"
-	FailImbalancedPrimitives := initializationOptions at: #FailImbalancedPrimitives ifAbsentPut: [true].
-	EnforceAccessControl := initializationOptions at: #EnforceAccessControl ifAbsent: [true]
+	FailImbalancedPrimitives := InitializationOptions at: #FailImbalancedPrimitives ifAbsentPut: [true].
+	EnforceAccessControl := InitializationOptions at: #EnforceAccessControl ifAbsent: [true]
 ]
 
 { #category : #initialization }
@@ -1690,8 +1690,6 @@ StackInterpreter class >> initializeWithOptions: optionsDictionary [
 	"StackInterpreter initializeWithOptions: Dictionary new"
 
 	super initializeWithOptions: optionsDictionary.
-	(self primitivesClass withAllSuperclasses copyUpTo: StackInterpreter) do:
-		[:class| class initializationOptions: initializationOptions].
 	self initializeMiscConstants. "must precede other initialization."
 	self initializeAssociationIndex.
 	self initializeBytecodeTable.
@@ -2114,7 +2112,7 @@ StackInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord ge
 	SistaVM | NewspeakVM | MULTIPLEBYTECODESETS | IMMUTABILITY ifTrue:
 		[aStream cr].
 	aCCodeGenerator putDefineOf: #STACKVM as: 1 on: aStream.
-	(initializationOptions at: #SpurObjectMemory ifAbsent: false) ifTrue:
+	(InitializationOptions at: #SpurObjectMemory ifAbsent: false) ifTrue:
 		[aCCodeGenerator putDefineOf: #SPURVM as: 1 on: aStream]
 ]
 

@@ -33,15 +33,15 @@ CogObjectRepresentationForSpur class >> declareCVarsIn: aCodeGen [
 	self assert: (CogObjectRepresentationForSpur allSubclasses allSatisfy:
 					[:sc|
 					 CogObjectRepresentationForSpur initializationOptions == sc initializationOptions]).
-	current := initializationOptions at: #IMMUTABILITY ifAbsent: nil.
+	current := InitializationOptions at: #IMMUTABILITY ifAbsent: nil.
 	values := #(true false) collect:
 				[:bool|
-				 initializationOptions at: #IMMUTABILITY put: bool.
+				 InitializationOptions at: #IMMUTABILITY put: bool.
 				 self cogitClass initializeNumTrampolines.
 				 (Cogit classPool at: #NumTrampolines) printString].
 	current
-		ifNil: [initializationOptions removeKey: #IMMUTABILITY]
-		ifNotNil: [initializationOptions at: #IMMUTABILITY put: current].
+		ifNil: [InitializationOptions removeKey: #IMMUTABILITY]
+		ifNotNil: [InitializationOptions at: #IMMUTABILITY put: current].
 	values first ~= values last ifTrue:
 		[aCodeGen addConstantForBinding: #NumTrampolines -> ('(IMMUTABILITY ? ' , values first , ' : ' , values last , ')')].
 	aCodeGen
@@ -58,7 +58,7 @@ CogObjectRepresentationForSpur class >> initialize [
 
 { #category : #initialization }
 CogObjectRepresentationForSpur class >> initializeMiscConstants [
-	CheckRememberedInTrampoline := initializationOptions at: #CheckRememberedInTrampoline ifAbsent: [false]
+	CheckRememberedInTrampoline := InitializationOptions at: #CheckRememberedInTrampoline ifAbsent: [false]
 ]
 
 { #category : #accessing }
