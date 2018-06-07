@@ -163,8 +163,8 @@ Class {
 }
 
 { #category : #translation }
-StackToRegisterMappingCogit class >> ancilliaryClasses: options [
-	^(super ancilliaryClasses: options),
+StackToRegisterMappingCogit class >> ancilliaryClasses [
+	^super ancilliaryClasses,
 	  { self basicNew simStackEntryClass. self basicNew bytecodeFixupClass. CogSSOptStatus } ,
 	(LowcodeVM ifTrue: [ { self basicNew simStackNativeEntryClass } ] ifFalse: [ #() ])
 ]
@@ -560,7 +560,7 @@ StackToRegisterMappingCogit class >> initializeBytecodeTableForSqueakV3PlusClosu
 		(1 137 137 genPushActiveContextBytecode)
 		(2 138 138 genPushNewArrayBytecode)),
 
-		((initializationOptions at: #SpurObjectMemory ifAbsent: [false])
+		((InitializationOptions at: #SpurObjectMemory ifAbsent: [false])
 			ifTrue: [#((3 139 139 genCallPrimitiveBytecode))]
 			ifFalse: [#((1 139 139 unknownBytecode))]),
 

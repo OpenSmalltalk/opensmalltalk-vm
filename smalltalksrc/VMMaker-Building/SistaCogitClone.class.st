@@ -14,8 +14,9 @@ SistaCogitClone class >> additionalHeadersDo: aBinaryBlock [
 ]
 
 { #category : #translation }
-SistaCogitClone class >> ancilliaryClasses: options [
-	^(super ancilliaryClasses: options) copyWith: SistaCogMethod
+SistaCogitClone class >> ancilliaryClasses [
+	"Answer any extra classes to be included in the translation."
+	^super ancilliaryClasses copyWith: SistaCogMethod
 ]
 
 { #category : #translation }

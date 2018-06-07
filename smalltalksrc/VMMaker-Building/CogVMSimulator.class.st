@@ -95,7 +95,7 @@ CogVMSimulator class >> expectedSends [
 CogVMSimulator class >> initializeWithOptions: optionsDictionary [
 	super initializeWithOptions: optionsDictionary.
 
-	ByteCountsPerMicrosecond := initializationOptions
+	ByteCountsPerMicrosecond := InitializationOptions
 										at: #ByteCountsPerMicrosecond
 										ifAbsent: [100]
 ]
@@ -105,20 +105,17 @@ CogVMSimulator class >> initializeWithOptions: optionsDictionaryOrArray objectMe
 	"The relevant ObjectMemory, Interpreter and Cogit classes must be initialized in order.
 	 This happens notionally every time we start the simulator,
 	 but in fact happens when ever we instantiate a simulator."
-	initializationOptions := optionsDictionaryOrArray isArray
+	InitializationOptions := optionsDictionaryOrArray isArray
 							ifTrue: [Dictionary newFromPairs: optionsDictionaryOrArray]
 							ifFalse: [optionsDictionaryOrArray].
 
-	(self allSuperclasses copyUpThrough: InterpreterPrimitives) do:
-		[:sc| sc initializationOptions: initializationOptions].
-
 	(objectMemoryClassOrNil ifNil: [self objectMemoryClass])
-		initializeWithOptions: initializationOptions.
+		initializeWithOptions: InitializationOptions.
 
-	self initializeWithOptions: initializationOptions.
+	self initializeWithOptions: InitializationOptions.
 
 	(self cogitClass withAllSuperclasses copyUpTo: Cogit) reverseDo:
-		[:c| c initializeWithOptions: initializationOptions]
+		[:c| c initializeWithOptions: InitializationOptions]
 ]
 
 { #category : #'instance creation' }

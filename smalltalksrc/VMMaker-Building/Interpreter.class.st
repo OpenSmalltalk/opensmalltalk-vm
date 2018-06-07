@@ -426,7 +426,7 @@ Interpreter class >> initializeMiscConstants [
 
 	super initializeMiscConstants.
 
-	DoBalanceChecks := initializationOptions at: #DoBalanceChecks ifAbsent: [false]. "generate stack balance checks"
+	DoBalanceChecks := InitializationOptions at: #DoBalanceChecks ifAbsent: [false]. "generate stack balance checks"
 	SemaphoresToSignalSize := 500.
 	PrimitiveExternalCallIndex := 117. "Primitive index for #primitiveExternalCall"
 	MillisecondClockMask := 16r1FFFFFFF.

@@ -23,10 +23,9 @@ Class {
 }
 
 { #category : #translation }
-SimpleStackBasedCogit class >> ancilliaryClasses: options [
-	initializationOptions ifNil:
-		[initializationOptions := options].
-	^(super ancilliaryClasses: options), (self objectRepresentationClass withAllSuperclasses copyUpThrough: CogObjectRepresentation) reverse
+SimpleStackBasedCogit class >> ancilliaryClasses [
+	"Answer any extra classes to be included in the translation."
+	^super ancilliaryClasses, (self objectRepresentationClass withAllSuperclasses copyUpThrough: CogObjectRepresentation) reverse
 ]
 
 { #category : #documentation }
@@ -329,7 +328,7 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForSqueakV3PlusClosures [
 		(1 137 137 genPushActiveContextBytecode)
 		(2 138 138 genPushNewArrayBytecode)),
 
-		((initializationOptions at: #SpurObjectMemory ifAbsent: [false])
+		((InitializationOptions at: #SpurObjectMemory ifAbsent: [false])
 			ifTrue: [#((3 139 139 genCallPrimitiveBytecode))]
 			ifFalse: [#((1 139 139 unknownBytecode))]),
 

@@ -3640,7 +3640,7 @@ CCodeGenerator >> initializerForInstVar: varName inStartClass: aClass [
 	[sizeBefore := allClasses size.
 	 allClasses copy do:
 		[:class|
-		(class ancilliaryClasses: optionsDictionary) do:
+		class ancilliaryClasses do:
 			[:ancilliary|
 			allClasses addAll: (ancilliary withAllSuperclasses copyUpTo: VMClass)]].
 	 sizeBefore ~= allClasses size] whileTrue.
@@ -4367,10 +4367,10 @@ CCodeGenerator >> nonStructClassesForTranslationClasses: classes [
 	nonStructClasses := OrderedCollection new.
 	classes do:
 		[:aTranslationClass|
-		([aTranslationClass ancilliaryClasses: self options]
+		([aTranslationClass ancilliaryClasses]
 				on: MessageNotUnderstood
 				do: [:ex|
-					ex message selector == #ancilliaryClasses:
+					ex message selector == #ancilliaryClasses
 						ifTrue: [#()]
 						ifFalse: [ex pass]]) do:
 			[:class|
@@ -5261,10 +5261,10 @@ CCodeGenerator >> structClassesForTranslationClasses: classes [
 	theStructClasses := OrderedCollection new.
 	classes do:
 		[:aTranslationClass|
-		([aTranslationClass ancilliaryClasses: self options]
+		([aTranslationClass ancilliaryClasses]
 				on: MessageNotUnderstood
 				do: [:ex|
-					ex message selector == #ancilliaryClasses:
+					ex message selector == #ancilliaryClasses
 						ifTrue: [#()]
 						ifFalse: [ex pass]]) do:
 			[:class|

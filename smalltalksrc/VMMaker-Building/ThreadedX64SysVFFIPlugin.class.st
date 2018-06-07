@@ -10,7 +10,7 @@ Class {
 }
 
 { #category : #translation }
-ThreadedX64SysVFFIPlugin class >> ancilliaryClasses: options [
+ThreadedX64SysVFFIPlugin class >> ancilliaryClasses [
 	^{ self calloutStateClass. ThreadedFFIX64SixteenByteReturn }
 ]
 
