@@ -638,8 +638,8 @@ Class {
 }
 
 { #category : #translation }
-SpurMemoryManager class >> ancilliaryClasses: options [
-	initializationOptions ifNil: [initializationOptions := options].
+SpurMemoryManager class >> ancilliaryClasses [
+	"Answer any extra classes to be included in the translation."
 	^{	SpurGenerationScavenger. SpurScavengeLogRecord. SpurSegmentManager. SpurSegmentInfo }, 
 		self compactorClass classesForTranslation,
 		SpurNewSpaceSpace withAllSubclasses
@@ -691,13 +691,13 @@ SpurMemoryManager class >> classTableBitmapBytes [
 { #category : #'accessing class hierarchy' }
 SpurMemoryManager class >> compactorClass [
 	"Answer the compaction algorithm to use."
-	^Smalltalk classNamed: (initializationOptions at: #compactorClass ifAbsent: [#SpurPlanningCompactor])
+	^Smalltalk classNamed: (InitializationOptions at: #compactorClass ifAbsent: [#SpurPlanningCompactor])
 ]
 
 { #category : #translation }
 SpurMemoryManager class >> declareCVarsIn: aCCodeGenerator [
 	self declareCAsOop: #(	memory freeStart scavengeThreshold newSpaceStart newSpaceLimit pastSpaceStart
-							lowSpaceThreshold freeOldSpaceStart oldSpaceStart endOfMemory firstFreeChunk lastFreeChunk)
+							lowSpaceThreshold freeOldSpaceStart oldSpaceStart endOfMemory)
 		in: aCCodeGenerator.
 	self declareCAsUSqLong: (self allInstVarNames select: [:ivn| ivn endsWith: 'Usecs']), #(statAllocatedBytes)
 		in: aCCodeGenerator.
@@ -994,13 +994,8 @@ SpurMemoryManager class >> initializeSpurObjectRepresentationConstants [
 SpurMemoryManager class >> initializeWithOptions: optionsDictionary [
 	"SpurMemoryManager initializeWithOptions: Dictionary new"
 
-	{self}, (self ancilliaryClasses: optionsDictionary) do:
-		[:aSuperclass|
-		 aSuperclass withAllSubclasses do:
-			[:class| class initializationOptions: optionsDictionary]].
-
 	super initializeWithOptions: optionsDictionary.
-	initializationOptions
+	InitializationOptions
 		at: #Spur32BitMemoryManager ifAbsentPut: false;
 		at: #Spur64BitMemoryManager ifAbsentPut: false.
 	self initialize.

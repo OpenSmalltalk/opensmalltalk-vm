@@ -119,8 +119,7 @@ CogX64Compiler class >> initialize [
 
 	self ~~ CogX64Compiler ifTrue: [^self].
 
-	initializationOptions ifNil: [ initializationOptions := Dictionary new ].
-	initializationOptions
+	InitializationOptions
 		at: #ABI
 		ifPresent: [:abi| SysV := abi asUppercase ~= #WIN64 and: [abi asUppercase ~= #'_WIN64']]
 		ifAbsent: [SysV := true]. "Default ABI; set to true for SysV, false for WIN64/_WIN64"
@@ -314,7 +313,7 @@ CogX64Compiler class >> machineCodeDeclaration [
 { #category : #translation }
 CogX64Compiler class >> moduleName [
 	"CogAbstractInstruction subclasses collect: [:ea| ea moduleName]"
-	^'cogit', self ISA, ((initializationOptions at: #ABI ifAbsent: ['']) copyWithout: $_)
+	^'cogit', self ISA, ((InitializationOptions at: #ABI ifAbsent: ['']) copyWithout: $_)
 ]
 
 { #category : #translation }

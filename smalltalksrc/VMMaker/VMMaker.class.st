@@ -1026,13 +1026,13 @@ VMMaker >> buildCodeGeneratorForCogit: cogitClass includeAPIMethods: getAPIMetho
 				ifFalse: [cgc initialize]]].
 
 	cogitClasses := OrderedCollection withAll: (cogitClass withAllSuperclasses copyUpThrough: VMClass) reverse.
-	cogitClasses addAllLast: ((cogitClass ancilliaryClasses: optionsDictionary) reject: [:class| class isStructClass]).
+	cogitClasses addAllLast: (cogitClass ancilliaryClasses reject: [:class| class isStructClass]).
 	cogitClasses do: [:cgc| cg addClass: cgc].
 	"Now make sure to add struct classes that the most specific subclasses specify.
 	 This makes sure that struct classes are ordered as the most specific cogitClass desires.
 	 This must happen for references between the struct classes to be resolved in a specific order."
 	cogitClasses := OrderedCollection with: cogitClass with: cogitClass objectRepresentationClass.
-	cogitClasses addAll: ((cogitClass ancilliaryClasses: optionsDictionary) reject:
+	cogitClasses addAll: (cogitClass ancilliaryClasses reject:
 							[:class|
 							 class isStructClass
 							 or: [cogitClass objectRepresentationClass includesBehavior: class]]).
@@ -1073,8 +1073,7 @@ VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods:
 	initializeClasses ifTrue:
 		[interpreterClass initializeWithOptions: optionsDictionary.
 		 interpreterClass hasCogit ifTrue:
-			[interpreterClass cogitClass initializeWithOptions: optionsDictionary].
-		 interpreterClass objectMemoryClass initializationOptions: optionsDictionary].
+			[interpreterClass cogitClass initializeWithOptions: optionsDictionary]].
 
 	(cg := self createCodeGenerator) vmClass: interpreterClass.
 
@@ -1085,8 +1084,7 @@ VMMaker >> buildCodeGeneratorForInterpreter: interpreterClass includeAPIMethods:
 		[:vmClass| | theClass |
 		 theClass := vmClass.
 		 [theClass ~~ VMClass] whileTrue:
-			[theClass initializationOptions: interpreterClass initializationOptions.
-			 interpreterClasses addFirst: theClass.
+			[interpreterClasses addFirst: theClass.
 			 theClass := theClass superclass]].
 	interpreterClasses
 		addFirst: VMClass;
@@ -1845,7 +1843,7 @@ VMMaker >> needsToRegenerateCogitFile [
 
 	| cogitClass cogitClasses tStamp files |
 	cogitClasses := (cogitClass := self interpreterClass cogitClass) withAllSuperclasses copyUpThrough: Cogit.
-	cogitClasses addAllLast: (cogitClass ancilliaryClasses: self options).
+	cogitClasses addAllLast: cogitClass ancilliaryClasses.
 	tStamp := cogitClasses inject: 0 into: [:tS :cl| tS max: cl timeStamp].
 
 	"don't translate if the file(s) is newer than my timeStamp"
@@ -1879,7 +1877,7 @@ VMMaker >> needsToRegenerateInterpreterFile [
 		[:objectMemoryClass|
 		classes addAllLast: (objectMemoryClass withAllSuperclasses copyUpTo: VMClass)].
 	classes copy do:
-		[:class| classes addAllLast: (class ancilliaryClasses: self options)].
+		[:class| classes addAllLast: class ancilliaryClasses].
 	tStamp := classes inject: 0 into: [:tS :cl| tS max: cl timeStamp].
 
 	"don't translate if the file is newer than my timeStamp"

@@ -33,8 +33,9 @@ Class {
 }
 
 { #category : #translation }
-CoInterpreterMT class >> ancilliaryClasses: options [
-	^(super ancilliaryClasses: options), { CogThreadManager. CogVMThread }
+CoInterpreterMT class >> ancilliaryClasses [
+	"Answer any extra classes to be included in the translation."
+	^super ancilliaryClasses, { CogThreadManager. CogVMThread }
 ]
 
 { #category : #translation }
@@ -63,13 +64,12 @@ CoInterpreterMT class >> initializeMiscConstants [
 	DisownVMLockOutFullGC := 1.
 	DisownVMForProcessorRelinquish := 2.
 
-	(initializationOptions notNil
-	 and: [(initializationOptions at: #COGMTVM ifAbsent: [false]) == false]) ifTrue:
+	(InitializationOptions at: #COGMTVM ifAbsent: [false]) == false ifTrue:
 		[^self].
 
 	COGMTVM := true.
 
-	ReturnToThreadSchedulingLoop := 2. "setjmp/longjmp code."
+	ReturnToThreadSchedulingLoop := 2 "setjmp/longjmp code."
 ]
 
 { #category : #initialization }
