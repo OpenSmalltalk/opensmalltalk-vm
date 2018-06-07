@@ -1554,7 +1554,7 @@ InterpreterPrimitives >> primitiveControlVMProfiling [
 			[((objectMemory isIntegerObject: bufferSize)
 			  and: [(bufferSize := objectMemory integerValueOf: bufferSize) > 0]) ifFalse:
 				[^self primitiveFail]].
-	numSamples := self cCode: 'ioControlNewProfile(onOffBar,bufferSize)'.
+	numSamples := self cCode: 'ioControlNewProfile(onOffBar,bufferSize)' inSmalltalk: [1667].
 	self pop: 3 thenPushInteger: numSamples
 ]
 
