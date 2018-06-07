@@ -408,7 +408,7 @@ SqueakVMProfiler >> openInWindow [
 						changeListSelection: #symbolSelectionAt:put:
 						getListElement: #listEntryForIndex:
 						menu: #symbolListMenu:.
-	symbolListMorph showHScrollBarOnlyWhenNeeded: false. "buggy misnamed selector :)"
+	symbolListMorph hScrollBarPolicy: #whenNeeded. "buggy misnamed selector :)"
 	labelsMorph := VMProfileGraphLabelMorph model: self font: self labelFont getLabels: #positionedLabels.
 	expressionTextMorph := PluggableTextMorph
 								on: self
