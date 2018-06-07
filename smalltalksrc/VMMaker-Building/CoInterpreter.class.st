@@ -145,12 +145,12 @@ Class {
 }
 
 { #category : #translation }
-CoInterpreter class >> ancilliaryClasses: options [
+CoInterpreter class >> ancilliaryClasses [
 	"Answer any extra classes to be included in the translation."
-	^((super ancilliaryClasses: options) copyWithout: InterpreterStackPages),
+	^(super ancilliaryClasses copyWithout: InterpreterStackPages),
 	   {	CoInterpreterStackPages.
 		CogBlockMethod. NSSendCache },
-	((Cogit ancilliaryClasses: options) select: [:class| class inheritsFrom: CogBlockMethod])
+	((Cogit ancilliaryClasses) select: [:class| class inheritsFrom: CogBlockMethod])
 ]
 
 { #category : #translation }

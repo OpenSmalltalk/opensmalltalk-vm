@@ -26,7 +26,8 @@ Class {
 }
 
 { #category : #translation }
-IA32ABIPlugin class >> ancilliaryClasses: options [
+IA32ABIPlugin class >> ancilliaryClasses [
+	"Answer any extra classes to be included in the translation."
 	^{ VMCallbackContext. VMCallbackReturnValue }
 ]
 

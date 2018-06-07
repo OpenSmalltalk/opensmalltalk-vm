@@ -36,6 +36,8 @@ Class {
 
 { #category : #translation }
 SpurCompactor class >> classesForTranslation [
+	"Usually we want to add the SpurCompactor first, followed by the subclass.
+	 SpurHybridCompactor is more complicated."
 	^(self withAllSuperclasses copyUpThrough: SpurCompactor) reverse
 ]
 
@@ -44,7 +46,7 @@ SpurCompactor class >> declareCVarsIn: aCCodeGenerator [
 	"If subclasses are being used but are not the compactorClass itself
 	 then staticvally resolve their api selectors."
 	((self inheritsFrom: SpurCompactor)
-	 and: [(initializationOptions at: #compactorClass) ~= self name]) ifTrue:
+	 and: [(InitializationOptions at: #compactorClass) ~= self name]) ifTrue:
 		[#(compact biasForGC biasForSnapshot remapObj: shouldRemapObj:) do:
 			[:selectorToStaticallyResolve|
 			 aCCodeGenerator

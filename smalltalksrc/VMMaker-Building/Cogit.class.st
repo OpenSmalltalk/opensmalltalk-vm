@@ -337,13 +337,13 @@ Class {
 
 { #category : #translation }
 Cogit class >> activeCompilerClass [
-	^initializationOptions
+	^InitializationOptions
 		at: #CogCompilerClass
 		ifPresent: [:compilerClassName| Smalltalk classNamed: compilerClassName]
 		ifAbsent:
 			[(CogAbstractInstruction subclasses detect:
 				[:compilerClass|
-				 compilerClass ISA == (initializationOptions at: #ISA ifAbsent: [#IA32])]) defaultCompilerClass]
+				 compilerClass ISA == (InitializationOptions at: #ISA ifAbsent: [#IA32])]) defaultCompilerClass]
 ]
 
 { #category : #translation }
@@ -371,7 +371,8 @@ Cogit class >> additionalSelectorTables [
 ]
 
 { #category : #translation }
-Cogit class >> ancilliaryClasses: options [
+Cogit class >> ancilliaryClasses [
+	"Answer any extra classes to be included in the translation."
 	ProcessorClass ifNil:
 		[Cogit initializeMiscConstants].
 	^(self activeCompilerClass withAllSuperclasses copyUpThrough: CogAbstractInstruction),
@@ -383,10 +384,10 @@ Cogit class >> ancilliaryClasses: options [
 		CogBlockMethod.
 		CogMethod.
 		self activeCompilerClass literalsManagerClass},
-	((options at: #NewspeakVM ifAbsent: [false])
+	((InitializationOptions at: #NewspeakVM ifAbsent: [false])
 		ifTrue: [{NewspeakCogMethod. NSSendCache}]
 		ifFalse: [#()]),
-	((options at: #SistaVM ifAbsent: [false])
+	((InitializationOptions at: #SistaVM ifAbsent: [false])
 		ifTrue: [{SistaMethodZone}]
 		ifFalse: [#()])
 ]
@@ -443,7 +444,7 @@ Cogit class >> assumptions [
 { #category : #'in-image compilation support' }
 Cogit class >> attemptToComputeInstVarNamesFor: aCompiledMethod [
 	(aCompiledMethod methodClass instSize > 0) ifTrue:
-		[initializationOptions
+		[InitializationOptions
 			at: #instVarNames
 			put: (aCompiledMethod methodClass allInstVarNames)]
 ]
@@ -454,7 +455,7 @@ Cogit class >> attemptToComputeTempNamesFor: aCompiledMethod [
 		[| schematicTemps blocks |
 		 schematicTemps := aCompiledMethod methodNode schematicTempNamesString.
 		 blocks := aCompiledMethod embeddedBlockClosures.
-		 initializationOptions
+		 InitializationOptions
 			at: #tempNames
 			put: (Dictionary withAll: {aCompiledMethod initialPC -> (self decomposeSchematicTemps: (schematicTemps copyUpTo: $[))},
 				(blocks
@@ -745,7 +746,7 @@ Cogit class >> generateCodeStringForCogitDotC [
 		 self translateableInstructionSubclassesAndInstalledOptionsDo:
 			[:class | | abi |
 			 s nextPutAll: 'if '.
-			 (abi := initializationOptions at: #ABI ifAbsent: []) ifNotNil:
+			 (abi := InitializationOptions at: #ABI ifAbsent: []) ifNotNil:
 				[s nextPutAll: (abis addLast: abi); nextPutAll: ' && ('].
 			 class identifyingPredefinedMacros
 				do: [:predefinedMacro| s nextPutAll: 'defined('; nextPutAll: predefinedMacro; nextPut: $)]
@@ -942,7 +943,7 @@ Cogit class >> initializeBytecodeTable [
 
 	| initializer |
 	BytecodeSetHasDirectedSuperSend := BytecodeSetHasExtensions := false.
-	initializer := initializationOptions
+	initializer := InitializationOptions
 					at: #bytecodeTableInitializer
 					ifAbsent:
 						[NewspeakVM
@@ -1024,15 +1025,15 @@ Cogit class >> initializeErrorCodes [
 { #category : #'class initialization' }
 Cogit class >> initializeMiscConstants [
 	super initializeMiscConstants.
-	Debug := initializationOptions at: #Debug ifAbsent: [false].
-	(initializationOptions includesKey: #EagerInstructionDecoration)
+	Debug := InitializationOptions at: #Debug ifAbsent: [false].
+	(InitializationOptions includesKey: #EagerInstructionDecoration)
 		ifTrue:
-			[EagerInstructionDecoration := initializationOptions at: #EagerInstructionDecoration]
+			[EagerInstructionDecoration := InitializationOptions at: #EagerInstructionDecoration]
 		ifFalse:
 			[EagerInstructionDecoration ifNil:
 				[EagerInstructionDecoration := false]]. "speeds up single stepping but could lose fidelity"
 
-	ProcessorClass := (initializationOptions at: #ISA ifAbsentPut: [self objectMemoryClass defaultISA]) caseOf: {
+	ProcessorClass := (InitializationOptions at: #ISA ifAbsentPut: [self objectMemoryClass defaultISA]) caseOf: {
 							[#X64] 		->	[BochsX64Alien].
 							[#IA32] 	->	[BochsIA32Alien].
 							[#ARMv5]	->	[GdbARMAlien].
@@ -1042,7 +1043,7 @@ Cogit class >> initializeMiscConstants [
 		[:compilerClass| compilerClass initialize; initializeAbstractRegisters].
 	self objectMemoryClass objectRepresentationClass initializeMiscConstants.
 	"Our criterion for which methods to JIT is literal count.  The default value is 60 literals or less."
-	MaxLiteralCountForCompile := initializationOptions at: #MaxLiteralCountForCompile ifAbsent: [60].
+	MaxLiteralCountForCompile := InitializationOptions at: #MaxLiteralCountForCompile ifAbsent: [60].
 	"we special-case 0, 1 & 2 argument sends, N is numArgs >= 3"
 	NumSendTrampolines := 4.
 	"Currently not even the ceImplicitReceiverTrampoline contains object references."
@@ -1085,10 +1086,6 @@ Cogit class >> initializePrimitiveTable [
 
 { #category : #'class initialization' }
 Cogit class >> initializeWithOptions: optionsDictionary [
-	{ self. CogMethodSurrogate. } , (self ancilliaryClasses: optionsDictionary) do:
-		[:aSuperclass|
-		 aSuperclass withAllSubclasses do:
-			[:class| class initializationOptions: optionsDictionary]].
 	super initializeWithOptions: optionsDictionary.
 	self initializeMiscConstants. "must precede other initialization."
 	self initializeErrorCodes.
@@ -1544,11 +1541,11 @@ Cogit class >> translateableInstructionSubclassesAndInstalledOptionsDo: aBlock [
 		 toRemove := Set new.
 		 options pairsDo:
 			[:key :value|
-			 (initializationOptions includesKey: key) ifFalse:
+			 (InitializationOptions includesKey: key) ifFalse:
 				[toRemove add: key].
-			 initializationOptions at: key put: value].
+			 InitializationOptions at: key put: value].
 		 aBlock value: class.
-		 toRemove do: [:key| initializationOptions removeKey: key]]
+		 toRemove do: [:key| InitializationOptions removeKey: key]]
 			valueWithArguments: pair]
 ]
 

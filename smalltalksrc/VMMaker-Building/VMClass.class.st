@@ -1,26 +1,26 @@
 "
-I am an abstract superclass for all classes in the VM that want to maintain a source timeStamp.
+I am an abstract superclass for all classes in the VM that want to maintain a source timeStamp.  I am also the holder of the InitializationOptions class variable which holds options such as which JIT or which memory manager to use when creating or generating a VM.
 "
 Class {
 	#name : #VMClass,
 	#superclass : #Object,
 	#classVars : [
 		'DefaultBase',
-		'ExpensiveAsserts'
+		'ExpensiveAsserts',
+		'InitializationOptions'
 	],
 	#pools : [
 		'VMBasicConstants',
 		'VMObjectIndices'
 	],
 	#classInstVars : [
-		'timeStamp',
-		'initializationOptions'
+		'timeStamp'
 	],
 	#category : #'VMMaker-Support'
 }
 
 { #category : #translation }
-VMClass class >> ancilliaryClasses: optionsDictionary [
+VMClass class >> ancilliaryClasses [
 	"Answer any extra classes to be included in the translation."
 	^{}
 ]
@@ -50,10 +50,9 @@ VMClass class >> cogitClass [
 	"Answer the cogitClass in effect.  Ensure that StackInterpreter has a nil cogitClass."
 	(self isInterpreterClass and: [self hasCogit not]) ifTrue:
 		[^nil].
-	^initializationOptions ifNotNil:
-		[Smalltalk classNamed: (initializationOptions
-									at: #Cogit
-									ifAbsent: [#StackToRegisterMappingCogit])]
+	^Smalltalk classNamed: (InitializationOptions
+								at: #Cogit
+								ifAbsent: [#StackToRegisterMappingCogit])
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -153,16 +152,12 @@ VMClass class >> implicitReturnTypeFor: aSelector [
 
 { #category : #initialization }
 VMClass class >> initializationOptions [
-	^initializationOptions
-]
-
-{ #category : #initialization }
-VMClass class >> initializationOptions: optionsDictionary [
-	initializationOptions := optionsDictionary
+	^InitializationOptions
 ]
 
 { #category : #initialization }
 VMClass class >> initialize [
+	InitializationOptions ifNil: [InitializationOptions := Dictionary new].
 	(Utilities classPool at: #CommonRequestStrings ifAbsent: []) ifNotNil:
 		[:commonRequestStringHolder|
 		(commonRequestStringHolder contents asString includesSubstring: 'VMClass open') ifFalse:
@@ -179,11 +174,11 @@ VMClass class >> initializeMiscConstants [
 	VMBIGENDIAN class. "Mention this for the benefit of CCodeGenerator>>emitCConstantsOn:"
 	SPURVM := STACKVM := COGVM := COGMTVM := false.
 
-	initializationOptions ifNil: [self initializationOptions: Dictionary new].
-	omc := initializationOptions at: #ObjectMemory ifAbsent: nil.
+	InitializationOptions ifNil: [InitializationOptions := Dictionary new].
+	omc := InitializationOptions at: #ObjectMemory ifAbsent: nil.
 	(omc isNil and: [self defaultObjectMemoryClass notNil]) ifTrue:
-		[omc := initializationOptions at: #ObjectMemory put: self defaultObjectMemoryClass name].
-	initializationOptions
+		[omc := InitializationOptions at: #ObjectMemory put: self defaultObjectMemoryClass name].
+	InitializationOptions
 		at: #SqueakV3ObjectMemory	"the good ole default"
 			ifAbsentPut: (omc
 					ifNil: [true]
@@ -195,31 +190,37 @@ VMClass class >> initializeMiscConstants [
 
 	"Use ifAbsentPut: so that they will get copied back to the
 	 VMMaker's options and dead code will likely be eliminated."
-	PharoVM := initializationOptions at: #PharoVM ifAbsentPut: [false].
-	NewspeakVM := initializationOptions at: #NewspeakVM ifAbsentPut: [false].
-	SistaVM := initializationOptions at: #SistaVM ifAbsentPut: [false].
-	TempVectReadBarrier := initializationOptions at: #TempVectReadBarrier ifAbsentPut: [false].
-	LowcodeVM := initializationOptions at: #LowcodeVM ifAbsentPut: [false].
-	MULTIPLEBYTECODESETS := initializationOptions at: #MULTIPLEBYTECODESETS ifAbsentPut: [false].
+	PharoVM := InitializationOptions at: #PharoVM ifAbsentPut: [false].
+	NewspeakVM := InitializationOptions at: #NewspeakVM ifAbsentPut: [false].
+	SistaVM := InitializationOptions at: #SistaVM ifAbsentPut: [false].
+	TempVectReadBarrier := InitializationOptions at: #TempVectReadBarrier ifAbsentPut: [false].
+	LowcodeVM := InitializationOptions at: #LowcodeVM ifAbsentPut: [false].
+	MULTIPLEBYTECODESETS := InitializationOptions at: #MULTIPLEBYTECODESETS ifAbsentPut: [false].
 	"Simulation only; on by default..."
-	CloneOnGC := initializationOptions at: #CloneOnGC ifAbsentPut: [true].
-	CloneOnScavenge := initializationOptions at: #CloneOnScavenge ifAbsentPut: [true].
+	CloneOnGC := InitializationOptions at: #CloneOnGC ifAbsentPut: [true].
+	CloneOnScavenge := InitializationOptions at: #CloneOnScavenge ifAbsentPut: [true].
 
 	"These must be set only if specified, not defaulted, because they are set on the command line or in include files."
-	initializationOptions
+	InitializationOptions
 		at: #VMBIGENDIAN	ifPresent: [:value| VMBIGENDIAN := value];
 		at: #ObjectMemory	ifPresent: [:value| SPURVM := value beginsWith: 'Spur'];
 		at: #STACKVM		ifPresent: [:value| STACKVM := value];
-		at: #COGVM		ifPresent: [:value| COGVM := initializationOptions at: #COGVM];
-		at: #COGMTVM		ifPresent: [:value| COGMTVM := initializationOptions at: #COGMTVM].
+		at: #COGVM		ifPresent: [:value| COGVM := InitializationOptions at: #COGVM];
+		at: #COGMTVM		ifPresent: [:value| COGMTVM := InitializationOptions at: #COGMTVM].
 
 	"consistency checks"
-	(TempVectReadBarrier and: [SPURVM not]) ifTrue: [self error: 'read barrier works with spur VM only...'].
-	(SistaVM and: [SPURVM not]) ifTrue: [self error: 'Sista VM works with spur VM only...'].
-	((initializationOptions at: #compactorClass ifAbsent: []) = #SpurSelectiveCompactor and: [TempVectReadBarrier not]) ifTrue: [self error: 'Selective compactor requires read barrier'].
+	SPURVM
+		ifTrue:
+			[(TempVectReadBarrier not
+			  and: [{SpurMemoryManager compactorClass}, (SpurMemoryManager compactorClass ancilliaryClasses) anySatisfy:
+						[:c| c == SpurSelectiveCompactor]]) ifTrue:
+				[self error: 'Selective compactor requires read barrier']]
+		ifFalse:
+			[TempVectReadBarrier ifTrue: [self error: 'read barrier works with spur VM only...'].
+			 SistaVM ifTrue: [self error: 'Sista VM works with spur VM only...']].
 
 	"And not these; they're compile-time"
-	IMMUTABILITY := initializationOptions at: #IMMUTABILITY ifAbsent: [SPURVM] "Default as enabled for Spur VMs"
+	IMMUTABILITY := InitializationOptions at: #IMMUTABILITY ifAbsent: [SPURVM] "Default as enabled for Spur VMs"
 ]
 
 { #category : #initialization }
@@ -262,19 +263,11 @@ VMClass class >> initializePrimitiveErrorCodes [
 VMClass class >> initializeWithOptions: optionsDictionaryOrArray [
 	"Initialize the receiver, typically initializing class variables. Initialize any class variables
 	 whose names occur in optionsDictionary with the corresponding values there-in."
-	| optionsDictionary |
-	optionsDictionary := optionsDictionaryOrArray isArray
-							ifTrue: [Dictionary newFromPairs: optionsDictionaryOrArray]
-							ifFalse: [optionsDictionaryOrArray].
-	"This is necessary.  e.g. if the receiver is CoInterpreterPrimitives,
-	 it is still necessary to set the options in CoInterpreter.  Otherwise,
-	 some class in the chain may have stale options, and when building
-	 the code generator, a stale ancilliary class may be computed."
-	(self withAllSuperclasses copyUpThrough: VMClass) do:
-		[:class|
-		class initializationOptions: optionsDictionary].
+	InitializationOptions := optionsDictionaryOrArray isArray
+								ifTrue: [Dictionary newFromPairs: optionsDictionaryOrArray]
+								ifFalse: [optionsDictionaryOrArray].
 
-	ExpensiveAsserts := optionsDictionary at: #ExpensiveAsserts ifAbsent: [false]
+	ExpensiveAsserts := InitializationOptions at: #ExpensiveAsserts ifAbsent: [false]
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -356,9 +349,9 @@ VMClass class >> noteCompilationOf: aSelector meta: isMeta [
 
 { #category : #'accessing class hierarchy' }
 VMClass class >> objectMemoryClass [
-	initializationOptions ifNil:
+	InitializationOptions ifNil:
 		[^self defaultObjectMemoryClass].
-	^Smalltalk at: (initializationOptions
+	^Smalltalk at: (InitializationOptions
 					at: #ObjectMemory
 					ifAbsent: [^self defaultObjectMemoryClass])
 ]
@@ -514,7 +507,7 @@ VMClass class >> shouldIncludeMethodForSelector: selector [
 				ifNotNil:
 					[:pragma|
 					(VMBasicConstants defineAtCompileTime: pragma arguments first)
-					 or: [initializationOptions
+					 or: [InitializationOptions
 							at: pragma arguments first
 							ifAbsent: [(self bindingOf: pragma arguments first)
 										ifNil: [false]

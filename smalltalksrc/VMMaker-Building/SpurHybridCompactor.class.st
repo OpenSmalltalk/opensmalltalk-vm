@@ -28,16 +28,10 @@ Class {
 }
 
 { #category : #translation }
-SpurHybridCompactor class >> ancilliaryClasses: options [
-	"Answer any extra classes to be included in the translation."
+SpurHybridCompactor class >> classesForTranslation [
 	^{	SpurPlanningCompactor.
 		SpurSelectiveCompactor.
-		SpurSweeper }
-]
-
-{ #category : #translation }
-SpurHybridCompactor class >> classesForTranslation [
-	^(self ancilliaryClasses: nil), super classesForTranslation
+		SpurSweeper }, super classesForTranslation
 ]
 
 { #category : #translation }

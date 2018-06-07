@@ -27,7 +27,7 @@ Class {
 }
 
 { #category : #translation }
-ThreadedFFIPlugin class >> ancilliaryClasses: options [
+ThreadedFFIPlugin class >> ancilliaryClasses [
 	^{ self calloutStateClass }
 ]
 
