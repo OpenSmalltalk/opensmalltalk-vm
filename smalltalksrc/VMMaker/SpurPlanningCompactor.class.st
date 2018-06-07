@@ -193,7 +193,7 @@ SpurPlanningCompactor >> check: obj [
 SpurPlanningCompactor >> coalesceFrom: maybeStartOfFree [
 	"manager printOopsFrom: maybeStartOfFree to: manager endOfMemory"
 	<var: 'maybeStartOfFree' type: #usqInt>
-	| obj next |
+	|obj next objBytes nextBytes|
 	<var: 'obj' type: #usqInt>
 	<var: 'next' type: #usqInt>
 	maybeStartOfFree >= manager endOfMemory ifTrue:
@@ -203,9 +203,11 @@ SpurPlanningCompactor >> coalesceFrom: maybeStartOfFree [
 	 next < manager endOfMemory] whileTrue:
 		[((manager isFreeObject: obj) and: [manager isFreeObject: next])
 			ifTrue:
-				[manager unlinkFreeChunk: obj.
-				 manager unlinkFreeChunk: next.
-				 obj := manager freeChunkWithBytes: (manager bytesInObject: obj) + (manager bytesInObject: next) at: (manager startOfObject: obj)]
+				[objBytes := manager bytesInObject: obj.
+				 nextBytes := manager bytesInObject: next.
+				 manager unlinkFreeChunk: obj chunkBytes: objBytes.
+				 manager unlinkFreeChunk: next chunkBytes: nextBytes.
+				 obj := manager freeChunkWithBytes: objBytes + nextBytes at: (manager startOfObject: obj)]
 			ifFalse:
 				[obj := next]]
 ]
