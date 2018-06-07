@@ -2736,6 +2736,9 @@ SpurMemoryManager >> byteSwapped: w [
 
 { #category : #'free space' }
 SpurMemoryManager >> bytesBigEnoughForPrevPointer: chunkBytes [
+	"Answer if chunkBytes (which includes an object header) has room enough for both
+	 a next free chunk and a previous free chunk pointer.  This is always true in 32-bits,
+	 but in 64-bits requires at least 24 bytes."
 	self subclassResponsibility
 ]
 
