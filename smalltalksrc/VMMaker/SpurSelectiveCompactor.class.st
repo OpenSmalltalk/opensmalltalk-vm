@@ -230,6 +230,7 @@ SpurSelectiveCompactor >> globalSweepAndSegmentOccupationAnalysis [
 	self internalGlobalSweepAndSegmentOccupationAnalysis.
 	manager checkFreeSpace: GCModeFull.
 	manager unmarkSurvivingObjectsForCompact.
+	self cCode: '' inSmalltalk: [manager freeTreeOverlapCheck].
 ]
 
 { #category : #'sweep phase' }
@@ -332,7 +333,8 @@ SpurSelectiveCompactor >> selectiveCompaction [
 	atLeastOneSegmentToCompact 
 		ifTrue:
 			[self assert: segmentToFill ~~ nil.
-		 	 self compactSegmentsToCompact].
+		 	 self compactSegmentsToCompact.
+			 self cCode: '' inSmalltalk: [manager freeTreeOverlapCheck].].
 	manager checkFreeSpace: GCModeFull.
 ]
 

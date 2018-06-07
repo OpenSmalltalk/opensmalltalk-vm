@@ -30,6 +30,7 @@ CogClass >> cCoerceSimple: value to: cTypeString [
 		[#sqLong]									->	[value].
 		[#usqLong]								->	[value].
 		[#'AbstractInstruction *']					->	[value].
+		[#'SpurSegmentInfo *']						->	[value].
 		[#'BytecodeFixup *']						->	[value].
 		[#'CogMethod *']							->	[value].
 		[#'char *']									->	[value].
