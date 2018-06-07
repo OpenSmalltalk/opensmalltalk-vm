@@ -174,6 +174,11 @@ Spur64BitMemoryManager >> byteSwapped: w [
 	^w byteSwap64
 ]
 
+{ #category : #'free space' }
+Spur64BitMemoryManager >> bytesBigEnoughForPrevPointer: chunkBytes [
+	^ chunkBytes ~= (self baseHeaderSize + self allocationUnit)
+]
+
 { #category : #'object enumeration' }
 Spur64BitMemoryManager >> bytesInObject: objOop [
 	"Answer the total number of bytes in an object including header and possible overflow size header."

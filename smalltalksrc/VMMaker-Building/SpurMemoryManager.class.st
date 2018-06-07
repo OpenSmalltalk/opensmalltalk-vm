@@ -1310,8 +1310,8 @@ SpurMemoryManager >> addToFreeTree: freeChunk bytes: chunkBytes [
 		 self assert: ((self oop: freeChunk + chunkBytes - self baseHeaderSize isLessThanOrEqualTo: child)
 						or: [self oop: freeChunk isGreaterThanOrEqualTo: child + childBytes - self baseHeaderSize]).
 		 childBytes = chunkBytes ifTrue: "size match; add to list at node."
-			[self setNextFreeChunkOf: freeChunk withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: child) sizeIsOne: false. 
-			 self setNextFreeChunkOf: child withValue: freeChunk sizeIsOne: false.
+			[self setNextFreeChunkOf: freeChunk withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: child) bytesBigEnoughForPrevPointer: true. 
+			 self setNextFreeChunkOf: child withValue: freeChunk bytesBigEnoughForPrevPointer: true.
 			 ^child].
 		 "walk down the tree"
 		 parent := child.
@@ -1877,7 +1877,7 @@ SpurMemoryManager >> allocateLargestFreeChunk [
 		 self 
 			setNextFreeChunkOf: freeChunk 
 			withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: next) 
-			sizeIsOne: false.
+			bytesBigEnoughForPrevPointer: true.
 		 ^next].
 	self unlinkSolitaryFreeTreeNode: freeChunk.
 	^freeChunk
@@ -2025,7 +2025,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 					 self 
 						setNextFreeChunkOf: child 
 						withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: chunk) 
-						sizeIsOne: false.
+						bytesBigEnoughForPrevPointer: true.
 					 ^self startOfObject: chunk].
 				 nodeBytes := childBytes.
 				 parent := child.
@@ -2056,7 +2056,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes [
 		self 
 			setNextFreeChunkOf: parent 
 			withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: chunk) 
-			sizeIsOne: false.
+			bytesBigEnoughForPrevPointer: true.
 		 chunkBytes ~= nodeBytes ifTrue:
 			[self freeChunkWithBytes: nodeBytes - chunkBytes
 					at: (self startOfObject: chunk) + chunkBytes].
@@ -2169,7 +2169,10 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptan
 			  node ~= 0] whileTrue:
 				[(acceptanceBlock value: node) ifTrue:
 					[self assert: (self isValidFreeObject: node).
-					 self setNextFreeChunkOf: prev withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: node) sizeIsOne: false.
+					 self 
+						setNextFreeChunkOf: prev 
+						withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: node) 
+						bytesBigEnoughForPrevPointer: true.
 					 ^self startOfObject: node]].
 			 (acceptanceBlock value: child) ifTrue:
 				[next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: child.
@@ -2215,7 +2218,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfBytes: chunkBytes suchThat: acceptan
 			 self 
 				setNextFreeChunkOf: acceptedNode 
 				withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: acceptedChunk) 
-				sizeIsOne: false.
+				bytesBigEnoughForPrevPointer: true.
 			self freeChunkWithBytes: (self bytesInObject: acceptedChunk) - chunkBytes
 					at: (self startOfObject: acceptedChunk) + chunkBytes.
 			^self startOfObject: acceptedChunk].
@@ -2273,7 +2276,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes [
 					 self 
 						setNextFreeChunkOf: child 
 						withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: node) 
-						sizeIsOne: false. 
+						bytesBigEnoughForPrevPointer: true. 
 					 totalFreeOldSpace := totalFreeOldSpace - chunkBytes.
 					 ^self startOfObject: node].
 				 "nothing acceptable on node's list; answer the node."
@@ -2342,7 +2345,7 @@ SpurMemoryManager >> allocateOldSpaceChunkOfExactlyBytes: chunkBytes suchThat: a
 						 self 
 							setNextFreeChunkOf: prev 
 							withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: node) 
-							sizeIsOne: false. 
+							bytesBigEnoughForPrevPointer: true. 
 						 totalFreeOldSpace := totalFreeOldSpace - chunkBytes.
 						 ^self startOfObject: node]].
 				 (acceptanceBlock value: child) ifFalse:
@@ -2512,7 +2515,7 @@ SpurMemoryManager >> assertValidFreeObject: objOop [
 	self assert: (self oop: (self addressAfter: objOop) isLessThanOrEqualTo: endOfMemory).
 	chunk := self fetchPointer: self freeChunkNextIndex ofFreeChunk: objOop.
 	self assert: (chunk = 0 or: [self isFreeOop: chunk]).
-	(self bytesInObject: objOop) / self wordSize = 1 ifFalse:
+	(self bytesBigEnoughForPrevPointer: (self bytesInObject: objOop)) ifTrue:
 		["double linkedlist assertions"
 		 chunk := self fetchPointer: self freeChunkNextIndex ofFreeChunk: objOop.
 		 chunk = 0 ifFalse: 
@@ -2810,6 +2813,11 @@ SpurMemoryManager >> byteSwapped: w [
 	self subclassResponsibility
 ]
 
+{ #category : #'free space' }
+SpurMemoryManager >> bytesBigEnoughForPrevPointer: chunkBytes [
+	self subclassResponsibility
+]
+
 { #category : #'object enumeration' }
 SpurMemoryManager >> bytesInObject: objOop [
 	"Answer the total number of bytes in an object including header and possible overflow size header."
@@ -3027,7 +3035,7 @@ SpurMemoryManager >> checkHeapFreeSpaceIntegrity [
 					[coInterpreter print: 'leak in free chunk '; printHex: obj; print: ' @ 0 = '; printHex: fieldOop; print: ' is unmapped'; cr.
 					 self eek.
 					 ok := false].
-				(self bytesInObject: obj) / self wordSize = 1 ifFalse:
+				(self bytesBigEnoughForPrevPointer: (self bytesInObject: obj)) ifTrue:
 					[fieldOop := self fetchPointer: self freeChunkPrevIndex ofFreeChunk: obj.
 					 (fieldOop ~= 0
 					 and: [(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0]) ifTrue:
@@ -3145,7 +3153,7 @@ SpurMemoryManager >> checkHeapIntegrity: excludeUnmarkedObjs classIndicesShouldB
 					[coInterpreter print: 'leak in free chunk '; printHex: obj; print: ' @ 0 = '; printHex: fieldOop; print: ' is mapped'; cr.
 					 self eek.
 					 ok := false].
-				(self bytesInObject: obj) / self wordSize = 1 ifFalse:
+				(self bytesBigEnoughForPrevPointer: (self bytesInObject: obj)) ifTrue:
 					[fieldOop := self fetchPointer: self freeChunkPrevIndex ofFreeChunk: obj.
 					 (fieldOop ~= 0
 					 and: [(heapMap heapMapAtWord: (self pointerForOop: fieldOop)) = 0]) ifTrue:
@@ -11083,30 +11091,27 @@ SpurMemoryManager >> setMaxOldSpaceSize: limit [
 ]
 
 { #category : #'free space' }
-SpurMemoryManager >> setNextFreeChunkOf: freeChunk withValue: nextFreeChunk chunkBytes: chunkBytes [
-	<inline: true>
+SpurMemoryManager >> setNextFreeChunkOf: freeChunk withValue: nextFreeChunk bytesBigEnoughForPrevPointer: bytesBigEnoughForPrevPointer [ 
+	<inline: true> "Inlining is quite important since bytesBigEnoughForPrevPointer is often true"
 	self 
-		setNextFreeChunkOf: freeChunk 
-		withValue: nextFreeChunk 
-		sizeIsOne: chunkBytes / self wordSize = 1 
+		storePointer: self freeChunkNextIndex 
+		ofFreeChunk: freeChunk 
+		withValue: nextFreeChunk.
+	(nextFreeChunk ~= 0 and: [bytesBigEnoughForPrevPointer]) ifTrue:
+		[self 
+			storePointer: self freeChunkPrevIndex 
+			ofFreeChunk: nextFreeChunk 
+			withValue: freeChunk]
 	
 	
 ]
 
 { #category : #'free space' }
-SpurMemoryManager >> setNextFreeChunkOf: freeChunk withValue: nextFreeChunk sizeIsOne: sizeIsOne [ 
-	<inline: true> "Inlining is quite important since sizeIsOne is often false"
+SpurMemoryManager >> setNextFreeChunkOf: freeChunk withValue: nextFreeChunk chunkBytes: chunkBytes [
 	self 
-		storePointer: self freeChunkNextIndex 
-		ofFreeChunk: freeChunk 
-		withValue: nextFreeChunk.
-	"In 32 bits, there's always enough room, 
-	 in 64 bits, size 1 is special."
-	(nextFreeChunk = 0 or: [sizeIsOne]) ifFalse:
-		[self 
-			storePointer: self freeChunkPrevIndex 
-			ofFreeChunk: nextFreeChunk 
-			withValue: freeChunk]
+		setNextFreeChunkOf: freeChunk 
+		withValue: nextFreeChunk 
+		bytesBigEnoughForPrevPointer: (self bytesBigEnoughForPrevPointer: chunkBytes) 
 	
 	
 ]
@@ -12066,7 +12071,7 @@ SpurMemoryManager >> swizzleFieldsOfFreeChunk: chunk [
 		[self storePointerNoAssert: self freeChunkNextIndex
 			ofFreeChunk: chunk
 			withValue: (segmentManager swizzleObj: field)].
-	(chunkBytes := self bytesInObject: chunk) / self wordSize = 1 ifFalse: 
+	(self bytesBigEnoughForPrevPointer: (chunkBytes := self bytesInObject: chunk)) ifTrue:
 		[field := self fetchPointer: self freeChunkPrevIndex ofFreeChunk: chunk.
 		 field ~= 0 ifTrue:
 			[self storePointerNoAssert: self freeChunkPrevIndex
@@ -12421,7 +12426,8 @@ SpurMemoryManager >> unlinkFreeChunk: freeChunk chunkBytes: chunkBytes [
 	index := chunkBytes / self allocationUnit.
 	
 	"Pathological 64 bits case - size 1 - single linked list"
-	chunkBytes / self wordSize = 1 ifTrue: 
+	
+	(self bytesBigEnoughForPrevPointer: chunkBytes) ifFalse:
 		[node := freeLists at: index.
 			 prev := 0.
 			 [node ~= 0] whileTrue:
@@ -12571,7 +12577,7 @@ SpurMemoryManager >> updateFreeLists [
 	|min|
 	"Small chunks"
 	"Skip in 64 bits size 1 which is single linked list - pathological case"
-	self allocationUnit / self wordSize = 1 ifTrue: [min := 2] ifFalse: [min := 1].
+	self wordSize = 8 ifTrue: [min := 2] ifFalse: [min := 1].
 	min to: self numFreeLists - 1 do:
 		[:i| self updateListStartingAt: (freeLists at: i)].
 	"Large chunks"
