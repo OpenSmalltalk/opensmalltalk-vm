@@ -93,6 +93,8 @@ SpurSweeper >> globalSweep [
 		
 	manager unmarkSurvivingObjectsForCompact.
 	
+	self cCode: '' inSmalltalk: [manager freeTreeOverlapCheck].
+	
 ]
 
 { #category : #'sweep phase' }
