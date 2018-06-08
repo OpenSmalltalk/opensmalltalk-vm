@@ -14,7 +14,7 @@ manifest := #(	('http://source.squeak.org/FFI'					1	('FFI-Pools' 'FFI-Kernel'))
 				('http://www.squeaksource.com/XDCP'				9	('VMConstruction-Plugins-XDisplayControlPlugin' ))
 				('http://www.squeaksource.com/Balloon3D'		9	('Balloon3D-Constants' 'Balloon3D-Plugins'  ))
 				('http://www.squeaksource.com/Cryptography'		9	('CryptographyPlugins'  ))
-				('http://smalltalkhub.com/mc/Alistair/FileAttributesPlugin/main'		9	('FileAttributesPlugin'  ))
+				('http://smalltalkhub.com/mc/Alistair/FileAttributesPlugin/main'		9	('FileAttributesPlugin.oscog'  ))
 				('http://ss3.gemstone.com/ss/AndreasSystemProfiler'	9	('AndreasProfiler'))
 				('http://www.squeaksource.com/Printf'			5	('Printf'))
 				).
@@ -38,10 +38,13 @@ load do:
 	[:tuple|
 	 [:repository :order :packages|
 	  packages do:
-		[:package| | latestVersion |
-		"We need to filter-out branches of unbranched packages."
-		latestVersion := (repository versionNamesForPackageNamed: package) detect:
-							[:versionName| (versionName at: package size + 1) = $-].
+		[:package | | packageVersions latestVersion |
+		"We need to filter-out branches of unbranched packages, but can't assume
+		the package list is (reverse) ordered."
+		packageVersions := ((repository versionNamesForPackageNamed: package)
+			select: [:versionName| (versionName at: package size + 1) = $-])
+			asSortedCollection: [ :a :b | a versionNumber < b versionNumber ].
+		latestVersion := packageVersions last.
 		[| version |
 		version := ((MCCacheRepository default includesVersionNamed: latestVersion)
 					ifTrue: [MCCacheRepository default]
