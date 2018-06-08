@@ -11777,8 +11777,8 @@ SpurMemoryManager >> storePointer: fieldIndex ofFreeChunk: objOop withValue: val
 	self assert: (self isFreeObject: objOop).
 	self assert: (valuePointer = 0 or: [self isFreeObject: valuePointer]).
 	self assert: (fieldIndex >= 0 and: [fieldIndex < (self numSlotsOfAny: objOop)
-				or: [fieldIndex = 0 "forwarders and free objs"]
-				or: [fieldIndex = 1 and: [self wordSize = 4]]]).
+				or: [fieldIndex = 0 "forwarders and free objs"
+				or: [fieldIndex = 1 and: [self wordSize = 4]]]]).
 			
 	^self
 		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
@@ -12279,7 +12279,10 @@ SpurMemoryManager >> unlinkFreeChunk: chunk atIndex: index bytesBigEnoughForPrev
 	self assert: ((self bytesInObject: chunk) = (index * self allocationUnit)
 				and: [index > 1 "a.k.a. (self bytesInObject: chunk) > self allocationUnit"
 				and: [(self startOfObject: chunk) = chunk]]).
-	self assert: (self bytesBigEnoughForPrevPointer:(self bytesInObject: chunk)) = bytesBigEnoughForPrevPointer.
+			
+	"For some reason the assertion is not compiled correctly"
+	self cCode: '' inSmalltalk: [self assert: (self bytesBigEnoughForPrevPointer:(self bytesInObject: chunk)) = bytesBigEnoughForPrevPointer].
+	
 	freeLists
 		at: index 
 		put: (next := self
@@ -12316,7 +12319,7 @@ SpurMemoryManager >> unlinkFreeChunk: freeChunk chunkBytes: chunkBytes [
 					[prev = 0
 						ifTrue: [self unlinkFreeChunk: freeChunk atIndex: index bytesBigEnoughForPrevPointer: false]
 						ifFalse: [self setNextFreeChunkOf: prev withValue: next bytesBigEnoughForPrevPointer: false].
-					 ^self].
+					 ^freeChunk].
 				 prev := node.
 				 node := next].
 			 self error: 'freeChunk not found in free list of size 1'].
@@ -12328,19 +12331,21 @@ SpurMemoryManager >> unlinkFreeChunk: freeChunk chunkBytes: chunkBytes [
 			setNextFreeChunkOf: prev 
 			withValue: (self fetchPointer: self freeChunkNextIndex ofFreeChunk: freeChunk) 
 			chunkBytes: chunkBytes.
-		 ^self].
+		 ^freeChunk].
 	
 	"Is the beginning of a list"
 	"Small chunk"
-	(index < self numFreeLists and: [1 << index <= freeListsMask]) ifTrue: [
-		^self unlinkFreeChunk: freeChunk atIndex: index bytesBigEnoughForPrevPointer: true ].
+	(index < self numFreeLists and: [1 << index <= freeListsMask]) ifTrue: 
+		[self unlinkFreeChunk: freeChunk atIndex: index bytesBigEnoughForPrevPointer: true.
+		 ^freeChunk].
 	"Large chunk"
 	 next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: freeChunk.
 	 next = 0
 		ifTrue: "no list; remove the interior node"
 			[self unlinkSolitaryFreeTreeNode: freeChunk]
 		ifFalse: "list; replace node with it"
-			[self inFreeTreeReplace: freeChunk with: next]
+			[self inFreeTreeReplace: freeChunk with: next].
+	^freeChunk
 	
 	
 
