@@ -222,6 +222,7 @@ SpurSelectiveCompactor >> freePastSegmentsAndSetSegmentToFill [
 { #category : #'segment access' }
 SpurSelectiveCompactor >> freeSegment: segInfo [
 	<var: 'segInfo' type: #'SpurSegmentInfo *'>
+	 "self unmarkSegmentAsBeingCompacted: segInfo. 'For assertion in free chunk management'."
 	 manager addFreeChunkWithBytes: segInfo segSize - manager bridgeSize at: segInfo segStart.
 ]
 
@@ -361,4 +362,12 @@ SpurSelectiveCompactor >> sizeClaimedIn: segment [
 	| ratio |
 	ratio := ((self occupationOf: segment) + 1) asFloat / 16rFFFF.
 	^(ratio * (segment segSize - manager bridgeSize)) asInteger 
+]
+
+{ #category : #'segment access' }
+SpurSelectiveCompactor >> unmarkSegmentAsBeingCompacted: segInfo [ 
+	<inline: true> "So it is not generated if unused"
+	<var: 'segInfo' type: #'SpurSegmentInfo *'>
+	"Swizzle is abused bit 16 isBeingCompacted bits 0-15 occupation"
+	segInfo swizzle: (segInfo swizzle bitAnd: 16rFFFF)
 ]

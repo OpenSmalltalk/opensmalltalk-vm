@@ -99,7 +99,8 @@ SpurSegmentManager >> addSegmentOfSize: ammount [
 		 newSeg := self addressOf: (segments at: newSegIndex).
 		 newSeg
 			segStart: segAddress asUnsignedIntegerPtr;
-			segSize: allocatedSize.
+			segSize: allocatedSize;
+			swizzle: 0. "Required in the C version only"
 		 self assert: self segmentOverlap not. "self printSegmentAddresses."
 		 self bridgeFrom: (self addressOf: (segments at: newSegIndex - 1)) to: newSeg.
 		 self bridgeFrom: newSeg to: (newSegIndex = (numSegments - 1) ifFalse:
