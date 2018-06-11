@@ -1268,6 +1268,8 @@ SpurMemoryManager >> addToFreeList: freeChunk bytes: chunkBytes [
 	"coInterpreter transcript ensureCr. coInterpreter print: 'freeing '. self printFreeChunk: freeChunk."
 	self assert: (self isFreeObject: freeChunk).
 	self assert: chunkBytes = (self bytesInObject: freeChunk).
+	"Too slow to be enabled byt default but useful to debug Selective...
+	 self deny: (compactor isSegmentBeingCompacted: (segmentManager segmentContainingObj: freeChunk))."
 	index := chunkBytes / self allocationUnit.
 	index < self numFreeLists ifTrue:
 		[self setNextFreeChunkOf: freeChunk withValue: (freeLists at: index) chunkBytes: chunkBytes.
@@ -2376,10 +2378,25 @@ SpurMemoryManager >> arrayValueOf: arrayOop [
 ]
 
 { #category : #'free space' }
+SpurMemoryManager >> assertFreeChunkPrevHeadZero [
+	|min|
+	self wordSize = 8 ifTrue: [min := 3] ifFalse: [min := 2].
+	min to: self numFreeLists - 1 do:
+		[:i| 
+		 	(freeLists at: i) ~= 0 ifTrue:
+				[self assert: (self bytesBigEnoughForPrevPointer: (freeLists at: i)).
+				 self assert: (self fetchPointer: self freeChunkPrevIndex ofFreeChunk: (freeLists at: i)) = 0]].
+	"Large chunks"
+	self freeTreeNodesDo: [:freeNode |
+		self assert: (self fetchPointer: self freeChunkPrevIndex ofFreeChunk: freeNode) = 0.
+		freeNode].
+	^ true
+]
+
+{ #category : #'free space' }
 SpurMemoryManager >> assertInnerValidFreeObject: objOop [
-	<inline: #never> "we don't want to inline so we can nest that in an assertion with the return true so the production VM does not generate any code here, whil ein simulation, the code breaks on the assertion we want to."
+	<inline: #never> "we don't want to inline so we can nest that in an assertion with the return true so the production VM does not generate any code here, while in simulation, the code breaks on the assertion we want to."
 	| chunk index |
-	"duplicated assertions from isValidFreeObject: because I need to know what is wrong not only that it is not valid (I got bored of stepping inside isValidFreeObject:...)"
 	self assert: (self oop: (self addressAfter: objOop) isLessThanOrEqualTo: endOfMemory).
 	chunk := self fetchPointer: self freeChunkNextIndex ofFreeChunk: objOop.
 	self assert: (chunk = 0 or: [self isFreeOop: chunk]).
@@ -2391,8 +2408,12 @@ SpurMemoryManager >> assertInnerValidFreeObject: objOop [
 			 self assert: objOop = (self fetchPointer: self freeChunkPrevIndex ofFreeChunk: chunk)].
 		chunk := self fetchPointer: self freeChunkPrevIndex ofFreeChunk: objOop.
 		index := (self bytesInObject: objOop) / self allocationUnit.
-		(index < self numFreeLists and: [1 << index <= freeListsMask]) ifTrue: 
-			[(freeLists at: index) = objOop ifTrue: [self assert: chunk = 0]].
+		(index < self numFreeLists and: [1 << index <= freeListsMask]) 
+			ifTrue: 
+				[(freeLists at: index) = objOop ifTrue: [self assert: chunk = 0]]
+			ifFalse: 
+				[self freeTreeNodesDo: [:freeNode |
+					freeNode = objOop ifTrue: [self assert: chunk = 0]. freeNode]].
 		 chunk = 0 ifFalse: 
 			[self assert: (self isFreeOop: chunk).
 			 self assert: objOop = (self fetchPointer: self freeChunkNextIndex ofFreeChunk: chunk)]].
@@ -4664,9 +4685,6 @@ SpurMemoryManager >> fetchLong64: longIndex ofObject: objOop [
 
 { #category : #'heap management' }
 SpurMemoryManager >> fetchPointer: fieldIndex ofFreeChunk: objOop [
-	self assert: (fieldIndex >= 0 and: [fieldIndex < (self numSlotsOfAny: objOop)
-				or: [fieldIndex = 0 "forwarders and free objs"
-				or: [fieldIndex = 1 and: [self wordSize = 4]]]]).
 	^self longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
 ]
 
@@ -9806,6 +9824,10 @@ SpurMemoryManager >> printFreeChunk: freeChunk printAsTreeNode: printAsTreeNode 
 		print: ' bytes '; printNum: numBytes;
 		print: ' next '; printHexPtrnp: (self fetchPointer: self freeChunkNextIndex
 											ofFreeChunk: freeChunk).
+	(self bytesBigEnoughForPrevPointer: numBytes) ifTrue: 
+		[coInterpreter
+			print: ' prev '; printHexPtrnp: (self fetchPointer: self freeChunkPrevIndex
+											ofFreeChunk: freeChunk).].
 	(numBytes >= (self numFreeLists * self allocationUnit)
 	 and: [printAsTreeNode]) ifTrue:
 		[coInterpreter
@@ -11775,11 +11797,7 @@ SpurMemoryManager >> storePointer: fieldIndex ofFreeChunk: objOop withUncheckedV
 SpurMemoryManager >> storePointer: fieldIndex ofFreeChunk: objOop withValue: valuePointer [
 
 	self assert: (self isFreeObject: objOop).
-	self assert: (valuePointer = 0 or: [self isFreeObject: valuePointer]).
-	self assert: (fieldIndex >= 0 and: [fieldIndex < (self numSlotsOfAny: objOop)
-				or: [fieldIndex = 0 "forwarders and free objs"
-				or: [fieldIndex = 1 and: [self wordSize = 4]]]]).
-			
+	self assert: (valuePointer = 0 or: [self isFreeObject: valuePointer]).		
 	^self
 		longAt: objOop + self baseHeaderSize + (fieldIndex << self shiftForWord)
 		put: valuePointer
@@ -12460,7 +12478,7 @@ SpurMemoryManager >> updateFreeLists [
 	|min|
 	"Small chunks"
 	"Skip in 64 bits size 1 which is single linked list - pathological case"
-	self wordSize = 8 ifTrue: [min := 2] ifFalse: [min := 1].
+	self wordSize = 8 ifTrue: [min := 3] ifFalse: [min := 2].
 	min to: self numFreeLists - 1 do:
 		[:i| self updateListStartingAt: (freeLists at: i)].
 	"Large chunks"

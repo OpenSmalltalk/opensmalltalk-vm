@@ -85,8 +85,7 @@ Spur32BitMMLESimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 Spur32BitMMLESimulator >> fetchPointer: fieldIndex ofObject: objOop [
 	self assert: (self isForwarded: objOop) not.
 	self assert: (fieldIndex >= 0 and: [fieldIndex < (self numSlotsOfAny: objOop)
-				or: [fieldIndex = 0 "forwarders and free objs"
-				or: [fieldIndex = 1 and: [self isFreeObject: objOop]]]]).
+				or: [fieldIndex = 0 "forwarders"]]).
 	^super fetchPointer: fieldIndex ofObject: objOop
 ]
 
