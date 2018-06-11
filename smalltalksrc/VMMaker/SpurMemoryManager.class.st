@@ -14,17 +14,19 @@ The instance variable descriptions can be checked for extra and missing declarat
 
 Instance Variables
 	becomeEffectsFlags		<Integer>
+	bogon						<Integer oop>
 	checkForLeaks				<Boolean>
 	classTableFirstPage		<Integer oop>
 	classTableIndex			<Integer>
 	coInterpreter				<StackInterpreter|CoInterpreter (StackInterpreterSimulator|CogVMSimulator)>
+	compactionStartUsecs		<Integer>
+	compactor					<subclass of SpurCompactor>
 	edenBytes					<Integer>
 	endOfMemory				<Integer address>
 	mournQueue			<Integer objStack oop>
 	extraRootCount			<Integer>
 	extraRoots					<Array of: oop>
 	falseObj					<Integer oop>
-	firstFreeChunk				<Integer oop|nil>
 	freeLists					<CArray on: memory>
 	freeListsMask				<Integer>
 	freeOldSpaceStart			<Integer address>
@@ -36,7 +38,6 @@ Instance Variables
 	heapGrowthToSizeGCRatio	<Float>
 	heapSizeAtPreviousGC		<Integer>
 	invalidObjStackPage		<Integer oop|nil>
-	lastFreeChunk				<Integer oop|nil>
 	lastHash					<Integer>
 	lowSpaceThreshold		<Integer address>
 	marking					<Boolean>
@@ -48,9 +49,9 @@ Instance Variables
 	newSpaceStart				<Integer address>
 	nilObj						<Integer oop>
 	numClassTablePages		<Integer>
-	numCompactionPasses		<Integer>
 	objStackInvalidBecause	<String|nil>
 	oldSpaceStart				<Integer address>
+	oldSpaceUsePriorToScavenge	<Integer>
 	pastSpaceStart				<Integer address>
 	remapBuffer				<CArrayAccessor on: (Array new: RemapBufferSize)>
 	remapBufferCount			<Integer>
@@ -84,7 +85,10 @@ Instance Variables
 
 becomeEffectsFlags
 	- a set of flags to limit the work done during become; one of BecameCompiledMethodFlag, BecamePointerObjectFlag
-	
+
+bogon
+	- an oop that can be checked for.  Currently allObjectsUnmarked sets it to the first marked object found.
+
 checkForLeaks
 	- a set of flags determining when to run leak checks on the heap's contents
 
@@ -96,6 +100,12 @@ classTableIndex
 
 coInterpreter
 	- the VM interpreter using this heap
+
+compactionStartUsecs
+	- the microsecond clock value immediatel;y before a cmpaction p[hase starts.  For primitiveVMParameter reporting of time spent in the mark and compaction phases of full GC.
+
+compactor
+	- the compactor that compacts oldSpace
 
 edenBytes
 	- a variable holding the size of eden at start up only
@@ -114,9 +124,6 @@ extraRoots
 
 falseObj
 	- the oop of the false object; must be the second object in oldSpace
-
-firstFreeChunk
-	- the free chunk at the lowest address discovered during global gc's sweep through the heap.  used in compaction.
 
 freeLists
 	- an array of list heads of free chunks of each size (in allocationUnits).  the 0'th element
@@ -159,9 +166,6 @@ hiddenRootsObj
 invalidObjStackPage
 	- the offending objStack page, if isValidObjStack: failed, or nil. This is for debugging.
 
-lastFreeChunk
-	- the free chunk at the highest address discovered during global gc's sweep through the heap.  used in compaction.
-
 lastHash
 	- the last object hash value.  the seed to the pseudo-random number generator for identity hashes.
 
@@ -188,9 +192,6 @@ newSpaceStart
 
 newSpaceLimit
 	- the last address in newSpace (the last address in eden)
-	
-numCompactionPasses
-	- controls the number of pig compaction passes done in a full GC.  When snapshotting this is set to 3 to reduce the free space in the snapshot file.  In normal use it is set to two.
 
 nilObj
 	- the oop of the nil object; must be the first object in oldSpace
@@ -203,6 +204,9 @@ objStackInvalidBecause
 
 oldSpaceStart
 	- the start of oldSpace, which happens to be nilObj.
+
+oldSpaceUsePriorToScavenge
+	- a count of oldSpace occupation prior to a scavenge, used to maintain an accurate byte allocation count from start-up.
 
 pastSpaceStart
 	- the address past the last object in pastSpace, used to enumerate objects in newSpace.
@@ -354,7 +358,7 @@ The basic approach is to use a fixed size new space and a segmented, growable ol
 
 To provide apparent pinning in new space we rely on lazy become.  Since most pinned objects will be byte data and these do not require stack zone activation scanning, the overhead is simply an old space allocation and forwarding.
 
-To provide pinning in old space, objects hav their ""is pinned"" bit set in the object header (which could be set automaticaly when allocating a large object).  Compaction moves objects from high memory down to low memory using forwarders, and stepping over pinned objects (see Pig Compact below).
+To provide pinning in old space, objects hav their ""is pinned"" bit set in the object header (which could be set automaticaly when allocating a large object).  Compaction moves objects from high memory down to low memory using forwarders, and stepping over pinned objects (see Compact below).
 
 Free space in old space is organized by a number of free lists and a free tree.  There are 32 or 64 free lists, depending on word size, indices 1 through wordSize - 1 holding blocks of space of the index * allocationUnit, index 0 holding a semi-balanced ordered tree of free blocks, each node being the head of the list of free blocks of that size.  At the start of the mark phase the free list is thrown away and the sweep phase coalesces free space and reclaimed forwarders, stepping over pinned objects as it proceeds.  We can reuse the forwarding pointer compaction scheme used in the old collector for incremental collections.  Incremental collections merely move unmarked objects to the free lists (as well as nilling weak pointers in weak arrays and scheduling them for finalization).  The occupancy of the free lists is represented by a bitmap in an integer so that an allocation of size wordSize - 1 or less can know whether there exists a free chunk of that size, but more importantly can know whether a free chunk larger than it exists in the fixed size free lists without having to search all larger free list heads.
 
@@ -374,8 +378,11 @@ The incremental collector implies a more complex write barrier.  Objects are of 
 
 The incremental collector does not detect already marked objects all of whose references have been overwritten by other stores (e.g. in the above if newValue overwrites the sole remaining reference to a marked object).  So the incremental collector only guarantees to collect all garbage created in cycle N at the end of cycle N + 1.  The cost is hence slightly worse memory density but the benefit, provided the IGC works hard enough, is the elimination of long pauses due to full garbage collections, which become actions of last resort or programmer desire.
 
+Compaction:
+The main issue with compaction is handling pinned objects.  Our first two attempts, Incremental Best-Fit Compaction and Pig Compact, performed abysmally.  The current compaction algorithms are SpurPlanningCompactor, and SpurSelectiveCompactor.
+
 Incremental Best-Fit Compaction
-[This does not work; see Pig Compact below]
+[A Failure]
 The free list also looks like it allows efficient incremental compaction.  Currently in the 32-bit implementation, but easily affordable in the 64-bit implementation, objects have at least two fields, the first one being a forwarding pointer, the second one rounding up to 8-byte object alignment.  On the free list the first field is used to link the list of free chunks of a given size.  The second field could be used to link free chunks in memory order.  And of course the last free chunk is the chunk before the last run of non-free objects.  We compact by
 
 a) keeping each free list in memory order (including the lists of free chunks off each node in the large free chunk tree)
@@ -387,7 +394,11 @@ c) the rounding of objects to an 8-byte alignment improves the chances of findin
 Note that this incremental collection is easily amenable to leave pinned objects where they are; they are simply filtered out when looking for a best fit.
 
 Pig Compact
-Our first attempt at best fit compaction failed miserably.  Instead we use an eager algorithm that moves as many objects for the top of memory to the bottom of memory as possible.  We call this ""Pig"" compact, and it is used as the compactor for global mark/sweep, used at least on snapshot.  Free memory is linked in memory ascending order through the first field, using the xor pointer trick to implement a doubly-linked list through a single field.  [Note this design is chosen for the benefit of the 64-bit image where there really is only one spare field.  In the 32-bit system there are at least two fields and th code could be simplified.  Volunteers are welcome.].  With the doubly-linked list we can access objects at the top of memory by scanning up from the end of the list, and can move objects down into the free space at the front of the list, forwarding objects to their new locations.  Pinned objecvts are simply left where they are.  After a single pass there will be many forwarders at the top of memory and it will not have been compacted very much.  Memory is then swept to follow forwarders, and then again to free forwarders and coallesce free space.  The entire process is repeated (currently 3 times) to effectively compact memory.
+[Another failure]
+Pig Compact was an eager algorithm that moved as many objects for the top of memory to the bottom of memory as possible.  We called this ""Pig"" compact, and it was used as the compactor for global mark/sweep, used at least on snapshot.  Free memory was linked in memory ascending order through the first field, using the xor pointer trick to implement a doubly-linked list through a single field.  [Note this design was chosen for the benefit of the 64-bit image where there really is only one spare field.  In the 32-bit system there are at least two fields and the code could be simplified.].  With the doubly-linked list we can access objects at the top of memory by scanning up from the end of the list, and can move objects down into the free space at the front of the list, forwarding objects to their new locations.  Pinned objects are simply left where they are.  After a single pass there will be many forwarders at the top of memory and it will not have been compacted very much.  Memory is then swept to follow forwarders, and then again to free forwarders and coallesce free space.  The entire process is repeated (currently 3 times) to effectively compact memory.  Performance is dreadful.
+
+Planning Compaction
+This is an efficient algorithm for full GC, especially snapshot, where we want to fully compact the heap.  See SpurPlanningCompactor.  It uses the fact that there is room for a forwarding pointer in all objects to store the eventual position of an object in the first field.  It therefore first locates a large free chunk, or eden or a memory segment, and uses this to store the first fields of objects that will be compacted.  It then makes at least three passes through the heap.  The first pass plans where live movable objects will go, copying their first field to the next slot in savedFirstFieldsSpace, and setting their forwarding pointer to point to their eventual location.  The second pass updates all pointers in live pointer objects to point to objects' final destinations, including the fields in savedFirstFieldsSpace.  The third pass moves objects to their final positions, unmarking objects as it does so.  If the forwarding fields of live objects in the to-be-moved portion of the entire heap won't fit in savedFirstFieldsSpace, then additional passes are made until the entire heap has been compacted.  Each pass uses a three finger algorithm, a simple extension of the classic two finger algorithm with an extra finger used to identify the lowest pinned object between the to and from fingers.  Objects are moved down, starting at the first free object or chunk, provided that they fit below the lowest pinned object above the to finger.  When an object won't fit the to finger is moved above the pinned object and the third finger is reset to the next pinned object below the from finger, if any.
 
 Segmented Old Space via Bridges
 A segmented oldSpace is useful.  It allows growing oldSpace incrementally, adding a segment at a time, and freeing empty segments.  But such a scheme is likely to introduce complexity in object enumeration, and compaction (enumeration would apear to require visiting each segment, compaction must be wthin a segment, etc). Spur turns segmented old space into one that appears to be a single contiguous space by using fake pinned objects to bridge the gaps between segments.  We call these ""bridges"".  The last two words of each segment can be used to hold the header of a pinned object whose overflow size is the distance to the next segment.  The pinned object's classIndex is one of the puns so that it doesn't show up in allInstances or allObjects; this can perhaps also indicate to the incremental collector that it is not to reclaim the object, etc.  Bridge objects need a large enough overflow size field to stretch across large gaps in the address space.  This is no problem in the 32-bit system which has a 32-bit overflow slot coult, 4 times larger than necessary.  But the 64-bit sytsem only has a 56 bit overflow slot count, 5 bits short of spanning a full 64-bit address space.  We expect that this is adequate if we preferrentially allocate segments at one end of the address space or the other (in fact we try and allocate low).
