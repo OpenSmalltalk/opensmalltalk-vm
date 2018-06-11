@@ -22,9 +22,9 @@ Class {
 	#name : #SpurCompactor,
 	#superclass : #CogClass,
 	#instVars : [
+		'coInterpreter',
 		'manager',
-		'scavenger',
-		'coInterpreter'
+		'scavenger'
 	],
 	#pools : [
 		'SpurMemoryManagementConstants',

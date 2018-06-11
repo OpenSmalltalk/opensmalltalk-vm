@@ -1,17 +1,24 @@
 "
-SpurPlanningCompactor implements the classic planning compaction algorithm for Spur.  It makes at least three passes through the heap.  The first pass plans where live movable objects will go, copying their forwarding field to the next slot in savedFirstFieldsSpace, and setting their forwarding pointer to point to their eventual location.  The second pass updates all pointers in live pointer objects to point to objects' final destinations.  The third pass moves objects to their final positions, unmarking objects as it does so.  If the forwarding fields of live objects in the to-be-moved portion of the entire heap won't fit in savedFirstFieldsSpace, then additional passes are made until the entire heap has been compacted.
+SpurPlanningCompactor implements the classic planning compaction algorithm for Spur.  It uses the fact that there is room for a forwarding pointer in all objects to store the eventual position of an object in the first field.  It therefore first locates a large free chunk, or eden or a memory segment, to use as the savedFirstFieldsSpace, which it uses to store the first fields of objects that will be compacted.  It then makes at least three passes through the heap.
+
+The first pass plans where live movable objects will go, copying their first field to the next slot in savedFirstFieldsSpace, and setting their forwarding pointer to point to their eventual location (see planCompactSavingForwarders).  The second pass updates all pointers in live pointer objects to point to objects' final destinations, including the fields in savedFirstFieldsSpace (see updatePointers and updatePointersInMobileObjects).  The third pass moves objects to their final positions, unmarking objects, and restoring saved first fields as it does so (see copyAndUnmark: and copyAndUnmarkMobileObjects).  If the forwarding fields of live objects in the to-be-moved portion of the entire heap won't fit in savedFirstFieldsSpace, then additional passes can be made until the entire heap has been compacted.  When snapshotting multiple passes are made, but when doing a normal GC only one pass is made.
+
+Each pass uses a three finger algorithm, a simple extension of the classic two finger algorithm with an extra finger used to identify the lowest pinned object between the to and from fingers.  Objects are moved down, starting at the first free object or chunk, provided that they fit below the lowest pinned object above the to finger.  When an object won't fit the to finger is moved above the pinned object and the third finger is reset to the next pinned object below the from finger, if any.
 
 Instance Variables
-	biasForGC						<Boolean>
-	coInterpreter:					<StackInterpreter>
-	firstFieldOfRememberedSet		<Oop>
-	firstFreeObject					<Oop>
-	firstMobileObject				<Oop>
-	lastMobileObject				<Oop>
-	manager:						<SpurMemoryManager>
+	anomaly							<Oop>
+	biasForGC							<Boolean>
+	firstFieldOfRememberedSet			<Oop>
+	firstFreeObject						<Oop>
+	firstMobileObject					<Oop>
+	lastMobileObject					<Oop>
+	mobileStart							<Integer address>
+	objectAfterLastMobileObject		<Oop|nil>
 	savedFirstFieldsSpace				<SpurContiguousObjStack>
 	savedFirstFieldsSpaceWasAllocated	<Boolean>
-	scavenger:						<SpurGenerationScavenger>
+
+anomaly
+	- if any bogus object is detected by asserts, etc, it is stored in anomaly
 
 biasForGC
 	- true if compacting for GC, in which case do only one pass, or false if compacting for snapshot, in which case do as many passes as necessary to compact the entire heap.
@@ -28,6 +35,12 @@ firstMobileObject
 lastMobileObject
 	- the last mobile object in a compaction.  Unpinned objects from the firstMobileObject through to the lastMobileObject are implicitly forwarded.
 
+mobileStart
+	- the address of the first byte in firstFreeObject
+
+objectAfterLastMobileObject
+	- the object following the last object that can be moved, used when more than one pass is needed.
+
 savedFirstFieldsSpace
 	- the space holding the saved first fields, each overwritten by a forwarding pointer, for the objects from firstMobileObject through to lastMobileObject.
 
@@ -38,16 +51,16 @@ Class {
 	#name : #SpurPlanningCompactor,
 	#superclass : #SpurCompactor,
 	#instVars : [
+		'anomaly',
 		'biasForGC',
+		'firstFieldOfRememberedSet',
 		'firstFreeObject',
-		'mobileStart',
 		'firstMobileObject',
 		'lastMobileObject',
+		'mobileStart',
+		'objectAfterLastMobileObject',
 		'savedFirstFieldsSpace',
-		'savedFirstFieldsSpaceNotInOldSpace',
-		'firstFieldOfRememberedSet',
-		'anomaly',
-		'objectAfterLastMobileObject'
+		'savedFirstFieldsSpaceNotInOldSpace'
 	],
 	#pools : [
 		'VMBytecodeConstants'
