@@ -30,9 +30,6 @@ CogObjectRepresentationForSpur class >> declareCVarsIn: aCodeGen [
 	"Deal wuth the fact that the number of trampolines depends on IMMUTABILITY
 	 and that IMMUTABILITY can be defined at compile time.  Yes, this is a mess."
 	| current values |
-	self assert: (CogObjectRepresentationForSpur allSubclasses allSatisfy:
-					[:sc|
-					 CogObjectRepresentationForSpur initializationOptions == sc initializationOptions]).
 	current := InitializationOptions at: #IMMUTABILITY ifAbsent: nil.
 	values := #(true false) collect:
 				[:bool|

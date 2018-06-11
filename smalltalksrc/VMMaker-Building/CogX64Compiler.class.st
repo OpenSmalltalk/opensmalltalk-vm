@@ -119,7 +119,7 @@ CogX64Compiler class >> initialize [
 
 	self ~~ CogX64Compiler ifTrue: [^self].
 
-	InitializationOptions
+	(InitializationOptions ifNil: [Dictionary new])
 		at: #ABI
 		ifPresent: [:abi| SysV := abi asUppercase ~= #WIN64 and: [abi asUppercase ~= #'_WIN64']]
 		ifAbsent: [SysV := true]. "Default ABI; set to true for SysV, false for WIN64/_WIN64"
