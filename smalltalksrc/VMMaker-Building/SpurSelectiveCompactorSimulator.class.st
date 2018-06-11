@@ -47,7 +47,7 @@ SpurSelectiveCompactorSimulator >> checkSegmentToFillLooksAllRight [
 		[(manager isFreeObject: currentEntity) 
 			ifTrue: "should be last entity"
 				[self assert: (manager objectAfter: currentEntity limit: manager endOfMemory) = bridge.
-				 self assertValidFreeObject: currentEntity].
+				 manager assertValidFreeObject: currentEntity].
 		 currentEntity := manager objectAfter: currentEntity limit: manager endOfMemory].
 	"End of iteration should end on bridge"
 	self assert: currentEntity = bridge.
