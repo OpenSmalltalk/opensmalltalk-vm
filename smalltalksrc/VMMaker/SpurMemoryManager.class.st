@@ -1221,8 +1221,8 @@ SpurMemoryManager >> activeAndDeferredScan: anEphemeron [
 
 { #category : #'free space' }
 SpurMemoryManager >> addFreeChunkWithBytes: bytes at: address [
-	self freeChunkWithBytes: bytes at: address.
-	totalFreeOldSpace := totalFreeOldSpace + bytes
+	totalFreeOldSpace := totalFreeOldSpace + bytes.
+	^self freeChunkWithBytes: bytes at: address
 ]
 
 { #category : #'free space' }
@@ -12333,25 +12333,12 @@ SpurMemoryManager >> unlinkFreeChunk: chunk atIndex: index chunkBytes: chunkByte
 { #category : #'free space' }
 SpurMemoryManager >> unlinkFreeChunk: freeChunk chunkBytes: chunkBytes [
 	"Unlink a free object from the free lists. Do not alter totalFreeOldSpace. Used for coalescing."
-	| index node next prev |
+	| index next prev |
 	index := chunkBytes / self allocationUnit.
 	
 	"Pathological 64 bits case - size 1 - single linked list"
 	(self bytesBigEnoughForPrevPointer: chunkBytes) ifFalse:
-		[node := freeLists at: index.
-			 prev := 0.
-			 [node ~= 0] whileTrue:
-				[self assert: node = (self startOfObject: node).
-				 self assertValidFreeObject: node.
-				 next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: node.
-				 node = freeChunk ifTrue:
-					[prev = 0
-						ifTrue: [self unlinkFreeChunk: freeChunk atIndex: index bytesBigEnoughForPrevPointer: false]
-						ifFalse: [self setNextFreeChunkOf: prev withValue: next bytesBigEnoughForPrevPointer: false].
-					 ^freeChunk].
-				 prev := node.
-				 node := next].
-			 self error: 'freeChunk not found in free list of size 1'].
+		[^self unlinkSmallChunk: freeChunk index: index].
 	
 	prev := self fetchPointer: self freeChunkPrevIndex ofFreeChunk: freeChunk.
 	"Has prev element: update double linked list"
@@ -12375,6 +12362,30 @@ SpurMemoryManager >> unlinkFreeChunk: freeChunk chunkBytes: chunkBytes [
 		ifFalse: "list; replace node with it"
 			[self inFreeTreeReplace: freeChunk with: next].
 	^freeChunk
+	
+	
+
+	
+]
+
+{ #category : #'free space' }
+SpurMemoryManager >> unlinkSmallChunk: freeChunk index: index [
+	| node prev next |
+	<inline: #never> "for profiling"
+	 node := freeLists at: index.
+	 prev := 0.
+	 [node ~= 0] whileTrue:
+		[self assert: node = (self startOfObject: node).
+		 self assertValidFreeObject: node.
+		 next := self fetchPointer: self freeChunkNextIndex ofFreeChunk: node.
+		 node = freeChunk ifTrue:
+			[prev = 0
+				ifTrue: [self unlinkFreeChunk: freeChunk atIndex: index bytesBigEnoughForPrevPointer: false]
+				ifFalse: [self setNextFreeChunkOf: prev withValue: next bytesBigEnoughForPrevPointer: false].
+			 ^freeChunk].
+		 prev := node.
+		 node := next].
+	 self error: 'freeChunk not found in free list of size 1'
 	
 	
 
