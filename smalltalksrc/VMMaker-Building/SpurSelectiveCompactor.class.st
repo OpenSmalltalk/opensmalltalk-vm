@@ -65,7 +65,8 @@ SpurSelectiveCompactor >> assertNoSegmentBeingCompacted [
 
 { #category : #api }
 SpurSelectiveCompactor >> compact [
-	<inline: #never> "for profiling"
+	<inline: #never> "for profiling, though we profile selectiveCompaction and sweep separatly."
+	self resetFreeLists.
 	self freePastSegmentsAndSetSegmentToFill.
 	self globalSweepAndSegmentOccupationAnalysis.
 	self selectiveCompaction.
@@ -215,63 +216,46 @@ SpurSelectiveCompactor >> freePastSegmentsAndSetSegmentToFill [
 		 segInfo := self addressOf: (manager segmentManager segments at: i).
 		 (self isSegmentBeingCompacted: segInfo)
 			ifTrue: 
-				[self freeSegment: segInfo.
+				[manager 
+					initFreeChunkWithBytes: segInfo segSize - manager bridgeSize 
+					at: segInfo segStart.
 				 segmentToFill ifNil: [segmentToFill := segInfo]]]
-]
-
-{ #category : #'segment access' }
-SpurSelectiveCompactor >> freeSegment: segInfo [
-	<var: 'segInfo' type: #'SpurSegmentInfo *'>
-	 "self unmarkSegmentAsBeingCompacted: segInfo. 'For assertion in free chunk management'."
-	 manager addFreeChunkWithBytes: segInfo segSize - manager bridgeSize at: segInfo segStart.
 ]
 
 { #category : #'sweep phase' }
 SpurSelectiveCompactor >> globalSweepAndSegmentOccupationAnalysis [
-	self internalGlobalSweepAndSegmentOccupationAnalysis.
-	manager checkFreeSpace: GCModeFull.
-	manager unmarkSurvivingObjectsForCompact.
-	self cCode: '' inSmalltalk: [manager freeTreeOverlapCheck].
-]
-
-{ #category : #'sweep phase' }
-SpurSelectiveCompactor >> internalGlobalSweepAndSegmentOccupationAnalysis [
+	<inline: #never> "profiling"
 	"Iterate over old space, free unmarked objects, annotate each segment with each occupation"
-	| currentEntity nextBridge start segmentIndex currentUsed currentUnused |
+	| currentEntity nextBridge segmentIndex currentUsed currentUnused |
 	currentEntity := manager firstObject.
 	nextBridge := manager segmentManager bridgeAt: 0.
 	segmentIndex := currentUnused := currentUsed := 0.
 	[self oop: currentEntity isLessThan: manager endOfMemory] whileTrue:
-		[currentEntity = nextBridge
+		[currentEntity = nextBridge "End of segment, set occupation"
 			ifTrue: 
-				["End of segment, set occupation"
-				  self 
+				[self 
 					setOccupationAtIndex: segmentIndex
 					used: currentUsed 
 					unused: currentUnused.
 				  currentUnused := currentUsed := 0.
 				  segmentIndex := segmentIndex + 1.
-				  self unmark: currentEntity.
 				  nextBridge := manager segmentManager bridgeAt: segmentIndex]
 			ifFalse: 
-				["In-segment, sweep and compute occupation"
-				 (self canUseAsFreeSpace: currentEntity) 
+				[(self canUseAsFreeSpace: currentEntity) "In-segment, sweep and compute occupation"
 					ifTrue: 
-						["bulkFreeChunkFrom: may change a 1 word header
-						object to a double word header object"
-						start := manager startOfObject: currentEntity.
-						self bulkFreeChunkFrom: currentEntity.
-						currentEntity := manager objectStartingAt: start.
-						currentUnused := currentUnused + (manager bytesInObject: currentEntity)]
+						[currentEntity := self bulkFreeChunkFrom: currentEntity.
+						 currentUnused := currentUnused + (manager bytesInObject: currentEntity)]
 					ifFalse: 
 						[self unmark: currentEntity.
 						 currentUsed := currentUsed + (manager bytesInObject: currentEntity)]].
 		 currentEntity := manager objectAfter: currentEntity limit: manager endOfMemory].
-	"set last segment (last bridge = endOfMemory)"	
-	self 
+	self "set last segment occupation"	
 		setOccupationAtIndex: segmentIndex
 		used: currentUsed 
 		unused: currentUnused.
+		
+	manager checkFreeSpace: GCModeFull.
+	manager unmarkSurvivingObjectsForCompact.
 ]
 
 { #category : #'segment access' }
@@ -327,6 +311,7 @@ SpurSelectiveCompactor >> postSwizzleAction [
 SpurSelectiveCompactor >> selectiveCompaction [
 	"Figures out which segments to compact and compact them into segmentToFill"
 	| atLeastOneSegmentToCompact |
+	<inline: #never> "profiling"
 	self assertNoSegmentBeingCompacted.
 	atLeastOneSegmentToCompact := self computeSegmentsToCompact.
 	"If no compaction we don't pay forwarding cost (stack scan, cache scan, etc.)
@@ -334,8 +319,7 @@ SpurSelectiveCompactor >> selectiveCompaction [
 	atLeastOneSegmentToCompact 
 		ifTrue:
 			[self assert: segmentToFill ~~ nil.
-		 	 self compactSegmentsToCompact.
-			 self cCode: '' inSmalltalk: [manager freeTreeOverlapCheck].].
+		 	 self compactSegmentsToCompact].
 	manager checkFreeSpace: GCModeFull.
 ]
 
