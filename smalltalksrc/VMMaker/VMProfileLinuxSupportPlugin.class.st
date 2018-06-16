@@ -13,7 +13,7 @@ Class {
 		'numModules',
 		'primErr'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }
@@ -22,6 +22,7 @@ VMProfileLinuxSupportPlugin class >> declareHeaderFilesIn: cg [
 	cg
 		addHeaderFile: '<limits.h>';
 		addHeaderFile: '#if defined(HAVE_DLFCN_H)\# include <dlfcn.h>\#endif' withCRs;
+		addHeaderFile: '<link.h>';
 		addHeaderFile: '#ifndef RTLD_NODELETE\# define RTLD_NODELETE 0\#endif' withCRs
 ]
 

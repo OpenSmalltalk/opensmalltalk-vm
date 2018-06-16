@@ -4,7 +4,7 @@ A test plugin to exercise imbalanced stack access.
 Class {
 	#name : #BrokenPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #tests }

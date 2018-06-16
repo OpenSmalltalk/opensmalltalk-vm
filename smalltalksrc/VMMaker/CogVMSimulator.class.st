@@ -83,7 +83,7 @@ Class {
 		'ByteCountsPerMicrosecond',
 		'ExpectedSends'
 	],
-	#category : #'VMMaker-JITSimulation'
+	#category : 'VMMaker-JITSimulation'
 }
 
 { #category : #'debug support' }
