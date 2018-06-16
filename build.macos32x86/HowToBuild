@@ -12,6 +12,7 @@ Contents:
 	- The Structure of the Makefiles
 	- Building the VM Simulator Support Libraries
 	- Using Different Compilers
+	- Compilers To Avoid
 	- Installing third-party libraries
 	- Debugging with lldb
 
@@ -238,6 +239,13 @@ For example, to install gcc 5.2 see
 	http://hamelot.co.uk/programming/add-gcc-compiler-to-xcode-6/
 (Thanks Hammad!).  There are no guarantees that this will work, but that's the
 best pointer I've found.
+
+
+Compilers To Avoid
+------------------
+Xcode 9.3.1 produces a broken VM on 64 bits.  We suggest that you avoid
+Xcode v9.3.x. 9.3.x ships with Apple LLVM version 9.1.0 (clang-902.0.39.1).
+See e.g. https://gist.github.com/yamaya/2924292
 
 
 Installing third-party libraries

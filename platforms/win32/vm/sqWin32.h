@@ -123,7 +123,7 @@
  * getSystemAttribute: 1001 ("platform name") to answer 'Win32' on Windows.
  * Yes, this is regrettable.  No, it's not easy to fix without breaking existing
  * images :-(.  The NT vs CE distinction isn't particularly meaningful either.
- * Further (see sqWin32Window.c) parameter 1005 (the windoing sytsem name) also
+ * Further (see sqWin32Window.c) parameter 1005 (the windoing system name) also
  * answers Win32.  Perhaps this could be changed to "Windows", because at least
  * in a base Squeak 5.1 image as of mid 2017 there is no use of windowSystemName
  * that depends on its result being 'Win32' (see e.g. HandMorph class>>
