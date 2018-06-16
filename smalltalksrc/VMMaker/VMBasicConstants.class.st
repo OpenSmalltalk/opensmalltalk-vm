@@ -64,7 +64,7 @@ Class {
 		'TempVectReadBarrier',
 		'VMBIGENDIAN'
 	],
-	#category : #'VMMaker-Interpreter'
+	#category : 'VMMaker-Interpreter'
 }
 
 { #category : #'C translation' }
