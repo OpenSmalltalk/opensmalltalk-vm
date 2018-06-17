@@ -414,6 +414,10 @@ faConvertUnixToLongSqueakTime(time_t unixTime)
 {
     sqLong squeakTime;
 
+	
+#  if defined(_WIN32)
+	squeakTime = 0;
+#  else /* defined(_WIN32) */
 	squeakTime = unixTime;
 	
 #  if defined(HAVE_TM_GMTOFF)
@@ -428,6 +432,7 @@ faConvertUnixToLongSqueakTime(time_t unixTime)
 #  endif /* defined(HAVE_TIMEZONE) */
 #  endif /* defined(HAVE_TM_GMTOFF) */
 	squeakTime += (52*365UL + 17*366UL) * 24*60*60UL;
+#  endif /* defined(_WIN32) */
 	return squeakTime;
 }
 
