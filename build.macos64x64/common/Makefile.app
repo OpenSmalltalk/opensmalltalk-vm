@@ -102,8 +102,10 @@ $(APP):	cleanbundles $(THIRDPARTYPREREQS) $(VMEXE) $(VMBUNDLES) $(VMPLUGINDYLIBS
 # to do this we must both delete the bundles and touch any ignore files, upon
 # which the bundle build depends.
 cleanbundles:
-	-rm -rf $(APP)/Contents/Resources/*.bundle
-	-touch $(OBJDIR)/*.ignore
+	-rm -rf $(wildcard $(APP)/Contents/Resources/*.bundle)
+ifneq ($(wildcard $(OBJDIR)/*.ignore),)
+	-touch $(wildcard $(OBJDIR)/*.ignore)
+endif
 
 $(VMEXE): $(OBJDIR)/$(VM)
 	@mkdir -p $(APP)/Contents/MacOS
