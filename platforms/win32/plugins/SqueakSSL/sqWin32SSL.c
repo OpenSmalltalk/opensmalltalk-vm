@@ -20,8 +20,37 @@
 
 #define SECURITY_WIN32
 #include <security.h>
+#include <schnlsp.h>
 #include <schannel.h>
 #include <wincrypt.h>
+
+/* Constants that mingw might have forgotten.
+   For reference see https://msdn.microsoft.com/en-us/library/aa379810.aspx
+ */
+#if !defined(SP_PROT_TLS1_SERVER)
+#define SP_PROT_TLS1_SERVER             0x00000040
+#endif
+#if !defined(SP_PROT_TLS1_CLIENT)
+#define SP_PROT_TLS1_CLIENT             0x00000080
+#endif
+#if !defined(SP_PROT_TLS1_0_SERVER)
+#define SP_PROT_TLS1_0_SERVER           SP_PROT_TLS1_SERVER
+#endif
+#if !defined(SP_PROT_TLS1_0_CLIENT)
+#define SP_PROT_TLS1_0_CLIENT           SP_PROT_TLS1_CLIENT
+#endif
+#if !defined(SP_PROT_TLS1_1_SERVER)
+#define SP_PROT_TLS1_1_SERVER           0x00000100
+#endif
+#if !defined(SP_PROT_TLS1_1_CLIENT)
+#define SP_PROT_TLS1_1_CLIENT           0x00000200
+#endif
+#if !defined(SP_PROT_TLS1_2_SERVER)
+#define SP_PROT_TLS1_2_SERVER           0x00000400
+#endif
+#if !defined(SP_PROT_TLS1_2_CLIENT)
+#define SP_PROT_TLS1_2_CLIENT           0x00000800
+#endif
 
 typedef struct sqSSL {
 	int state;
@@ -182,7 +211,9 @@ static sqInt sqSetupCert(sqSSL *ssl, char *certName, int server) {
 
 	sc_cred.dwVersion = SCHANNEL_CRED_VERSION;
 	sc_cred.dwFlags = SCH_CRED_NO_DEFAULT_CREDS | SCH_CRED_MANUAL_CRED_VALIDATION;
-	sc_cred.grbitEnabledProtocols = server ? SP_PROT_TLS1_SERVER | SP_PROT_SSL3_SERVER : 0;
+#define SQSSL_WIN_SERVER_PROTOS SP_PROT_TLS1_0_SERVER | SP_PROT_TLS1_1_SERVER | SP_PROT_TLS1_2_SERVER
+#define SQSSL_WIN_CLIENT_PROTOS SP_PROT_TLS1_0_CLIENT | SP_PROT_TLS1_1_CLIENT | SP_PROT_TLS1_2_CLIENT
+	sc_cred.grbitEnabledProtocols = server ? SQSSL_WIN_SERVER_PROTOS : SQSSL_WIN_CLIENT_PROTOS;
 	sc_cred.dwMinimumCipherStrength = 0;
 	sc_cred.dwMaximumCipherStrength = 0;
 

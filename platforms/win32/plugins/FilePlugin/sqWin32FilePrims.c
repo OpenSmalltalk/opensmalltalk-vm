@@ -23,6 +23,7 @@
 *        (Max Leske)
 *
 *****************************************************************************/
+
 #include <windows.h>
 #include <malloc.h>
 #include "sq.h"
@@ -285,8 +286,15 @@ sqConnectToFile(SQFile *sqFile, void *file, sqInt writeFlag)
 	return 1;
 }
 
-
-
+void
+sqFileStdioHandlesIntoFile_WithHandle_IsWritable(SQFile * file, HANDLE handle, int isWritable) {
+	file->sessionID = thisSession;
+	file->file = handle;
+	file->writable = isWritable;
+	file->lastOp = 0; /* unused on win32 */
+	file->isStdioStream = isFileHandleATTY(handle);
+	AddHandleToTable(win32Files, handle);
+}
 
 /*
  * Fill-in files with handles for stdin, stdout and seterr as available and
@@ -296,30 +304,26 @@ sqConnectToFile(SQFile *sqFile, void *file, sqInt writeFlag)
 sqInt
 sqFileStdioHandlesInto(SQFile files[3])
 {
-	DWORD mode;
-
-	files[0].sessionID = thisSession;
-	files[0].file = GetStdHandle(STD_INPUT_HANDLE);
-	files[0].writable = false;
-	files[0].lastOp = 0; /* unused on win32 */
-	files[0].isStdioStream = GetConsoleMode(files[0].file, &mode) != 0;
-	AddHandleToTable(win32Files, files[0].file);
-
-	files[1].sessionID = thisSession;
-	files[1].file = GetStdHandle(STD_OUTPUT_HANDLE);
-	files[1].writable = true;
-	files[1].lastOp = 0; /* unused on win32 */
-	files[1].isStdioStream = GetConsoleMode(files[1].file, &mode) != 0;
-	AddHandleToTable(win32Files, files[1].file);
-
-	files[2].sessionID = thisSession;
-	files[2].file = GetStdHandle(STD_ERROR_HANDLE);
-	files[2].writable = true;
-	files[2].lastOp = 0; /* unused on win32 */
-	files[2].isStdioStream = GetConsoleMode(files[2].file, &mode) != 0;
-	AddHandleToTable(win32Files, files[2].file);
+	sqFileStdioHandlesIntoFile_WithHandle_IsWritable(&files[0], GetStdHandle(STD_INPUT_HANDLE), false);
+	sqFileStdioHandlesIntoFile_WithHandle_IsWritable(&files[1], GetStdHandle(STD_OUTPUT_HANDLE), true);
+	sqFileStdioHandlesIntoFile_WithHandle_IsWritable(&files[2], GetStdHandle(STD_ERROR_HANDLE), true);
 
 	return 7;
+}
+
+
+/*
+* Allow to test if the standard input/output files are from a console or not
+* Return values:
+* -1 - Error
+* 0 - no console (windows only)
+* 1 - normal terminal (unix terminal / windows console)
+* 2 - pipe
+* 3 - file
+* 4 - cygwin terminal (windows only)
+*/
+sqInt  sqFileDescriptorType(int fdNum) {
+	return fileHandleType(_get_osfhandle(fdNum));
 }
 
 size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
