@@ -594,6 +594,8 @@ Class {
 		'maxOldSpaceSize',
 		'gcPhaseInProgress',
 		'gcStartUsecs',
+		'gcMarkEndUsecs',
+		'gcSweepEndUsecs',
 		'compactionStartUsecs',
 		'bogon',
 		'statCoalesces',
@@ -601,6 +603,8 @@ Class {
 		'statFGCDeltaUsecs',
 		'statFullGCUsecs',
 		'statCompactionUsecs',
+		'statSweepUsecs',
+		'statMarkUsecs',
 		'statFullGCs',
 		'statGCEndUsecs',
 		'statGrowMemory',
@@ -645,7 +649,7 @@ Class {
 		'VMSpurObjectRepresentationConstants',
 		'VMSqueakClassIndices'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
@@ -5486,10 +5490,8 @@ SpurMemoryManager >> fullGC [
 	coInterpreter preGCAction: GCModeFull.
 	self globalGarbageCollect.
 	coInterpreter postGCAction: GCModeFull.
-	statFullGCs := statFullGCs + 1.
 	statGCEndUsecs := coInterpreter ioUTCMicrosecondsNow.
-	statFullGCUsecs := statFullGCUsecs + (statGCEndUsecs - gcStartUsecs).
-	statCompactionUsecs := statCompactionUsecs + (statGCEndUsecs - compactionStartUsecs).
+	self updateFullGCStats.
 	^(freeLists at: 0) ~= 0
 		ifTrue: [self bytesInObject: self findLargestFreeChunk]
 		ifFalse: [0]
@@ -5539,7 +5541,8 @@ SpurMemoryManager >> globalGarbageCollect [
 
 	"Mark objects /before/ scavenging, to empty the rememberedTable of unmarked roots."
 	self markObjects: true.
-
+	gcMarkEndUsecs := coInterpreter ioUTCMicrosecondsNow.
+	
 	scavenger forgetUnmarkedRememberedObjects.
 	self doScavenge: MarkOnTenure.
 
@@ -6115,7 +6118,7 @@ SpurMemoryManager >> initialize [
 	needGCFlag := signalLowSpace := marking := false.
 	becomeEffectsFlags := gcPhaseInProgress := 0.
 	statScavenges := statIncrGCs := statFullGCs := 0.
-	statScavengeGCUsecs := statIncrGCUsecs := statFullGCUsecs := statCompactionUsecs := statGCEndUsecs := 0.
+	statMarkUsecs := statSweepUsecs := statScavengeGCUsecs := statIncrGCUsecs := statFullGCUsecs := statCompactionUsecs := statGCEndUsecs := gcSweepEndUsecs := 0.
 	statSGCDeltaUsecs := statIGCDeltaUsecs := statFGCDeltaUsecs := 0.
 	statGrowMemory := statShrinkMemory := statRootTableCount := statAllocatedBytes := 0.
 	statRootTableOverflows := statMarkCount := statCompactPassCount := statCoalesces := 0.
@@ -11531,6 +11534,11 @@ SpurMemoryManager >> statMarkCount [
 ]
 
 { #category : #accessing }
+SpurMemoryManager >> statMarkUsecs [
+	^statMarkUsecs
+]
+
+{ #category : #accessing }
 SpurMemoryManager >> statMkFwdCount [
 	^0
 ]
@@ -11586,6 +11594,11 @@ SpurMemoryManager >> statSurvivorCount [
 { #category : #accessing }
 SpurMemoryManager >> statSweepCount [
 	^0
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> statSweepUsecs [
+	^statSweepUsecs
 ]
 
 { #category : #accessing }
@@ -12509,6 +12522,21 @@ SpurMemoryManager >> updateFreeLists [
 		freeNode]
 ]
 
+{ #category : #'gc - global' }
+SpurMemoryManager >> updateFullGCStats [	
+	"Stats updated (since VM start-up): 
+	1) number of full GCs,
+	2) time spent in full GC,
+	3) time spent in compaction (included in 2)
+	4) time spent in sweep phase (included in 2 & 3, 0 if no sweep phase)
+	5) time spent in mark phase (included in 2)"
+	statFullGCs := statFullGCs + 1.
+	statFullGCUsecs := statFullGCUsecs + (statGCEndUsecs - gcStartUsecs).
+	statCompactionUsecs := statCompactionUsecs + (statGCEndUsecs - compactionStartUsecs).
+	gcSweepEndUsecs = 0 ifFalse: [statSweepUsecs := statSweepUsecs + (gcSweepEndUsecs - compactionStartUsecs)].
+	statMarkUsecs := statMarkUsecs + (gcMarkEndUsecs - gcStartUsecs).
+]
+
 { #category : #initialization }
 SpurMemoryManager >> updateListStartingAt: freeNode [ 
 	|prev obj|
@@ -12538,6 +12566,11 @@ SpurMemoryManager >> updateRootOfObjStackAt: objStackRootIndex with: newRootPage
 		[WeaklingStackRootIndex]	->	[weaklingStack := newRootPage].
 		[MournQueueRootIndex]	->	[mournQueue := newRootPage] }.
 	^newRootPage
+]
+
+{ #category : #accessing }
+SpurMemoryManager >> updateSweepEndUsecs [
+	gcSweepEndUsecs := coInterpreter ioUTCMicrosecondsNow.
 ]
 
 { #category : #'class table' }

@@ -1,7 +1,7 @@
 Class {
 	#name : #StackInterpreterPrimitives,
 	#superclass : #StackInterpreter,
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #'primitive support' }
@@ -1549,10 +1549,13 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		69	the maximum number of live stack pages when scanned by GC (at scavenge/gc/become et al) (read-write)
 		70	the vmProxyMajorVersion (the interpreterProxy VM_MAJOR_VERSION)
 		71	the vmProxyMinorVersion (the interpreterProxy VM_MINOR_VERSION)
+		72 total milliseconds in full GCs Mark phase since startup (read-only)
+		73 total milliseconds in full GCs Sweep phase since startup (read-only, can be 0 depending on compactors)
+		
 	Note: Thanks to Ian Piumarta for this primitive."
 
 	| paramsArraySize result arg index |
-	paramsArraySize := 71.
+	paramsArraySize := 73.
 	argumentCount = 0 ifTrue:
 		[result := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: paramsArraySize.
 		objectMemory storePointerUnchecked: 0	ofObject: result withValue: (self positiveMachineIntegerFor: objectMemory oldSpaceSize).
@@ -1647,8 +1650,9 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		objectMemory
 			storePointerUnchecked: 70
 			ofObject: result
-			withValue: (objectMemory integerObjectOf: (self cCode: 'VM_PROXY_MINOR' inSmalltalk: [self class vmProxyMinorVersion])).
-		self assert: paramsArraySize = 71.
+			withValue: (objectMemory integerObjectOf: (self cCode: 'VM_PROXY_MINOR' inSmalltalk: [self class vmProxyMinorVersion])).	
+		objectMemory storePointerUnchecked: 71	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statMarkUsecs + 500 // 1000).
+		objectMemory storePointerUnchecked: 72	ofObject: result withValue: (objectMemory integerObjectOf: objectMemory statSweepUsecs + 500 // 1000).
 		objectMemory beRootIfOld: result.
 		self pop: 1 thenPush: result.
 		^nil].
@@ -1746,7 +1750,8 @@ StackInterpreterPrimitives >> primitiveVMParameter [
 		arg = 69 ifTrue: [result := objectMemory integerObjectOf: stackPages statMaxPageCountWhenMapping].
 		arg = 70 ifTrue: [result := self integerObjectOf: (self cCode: 'VM_PROXY_MAJOR' inSmalltalk: [self class vmProxyMajorVersion])].
 		arg = 71 ifTrue: [result := self integerObjectOf: (self cCode: 'VM_PROXY_MINOR' inSmalltalk: [self class vmProxyMinorVersion])].
-
+		arg = 72 ifTrue: [result := objectMemory integerObjectOf: objectMemory statMarkUsecs + 500 // 1000].
+		arg = 73 ifTrue: [result := objectMemory integerObjectOf: objectMemory statSweepUsecs + 500 // 1000].
 		self pop: 2 thenPush: result.
 		^nil].
 

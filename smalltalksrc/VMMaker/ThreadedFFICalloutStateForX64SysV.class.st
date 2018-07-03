@@ -4,7 +4,7 @@ A ThreadedFFICalloutStateForX64SysV is a holder for the callout state maintained
 Class {
 	#name : #ThreadedFFICalloutStateForX64SysV,
 	#superclass : #ThreadedFFICalloutStateForX64,
-	#category : 'VMMaker-Plugins-FFI'
+	#category : #'VMMaker-Plugins-FFI'
 }
 
 { #category : #accessing }

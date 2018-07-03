@@ -5,7 +5,7 @@ primitives and methods in the interpreter.
 Class {
 	#name : #InterpreterPrimitivesTest,
 	#superclass : #TestCase,
-	#category : 'VMMaker-Tests'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #testing }
