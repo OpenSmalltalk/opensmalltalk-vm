@@ -21,7 +21,7 @@ Class {
 	#classVars : [
 		'MaxOccupationForCompaction'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
@@ -69,6 +69,7 @@ SpurSelectiveCompactor >> compact [
 	self resetFreeLists.
 	self freePastSegmentsAndSetSegmentToFill.
 	self globalSweepAndSegmentOccupationAnalysis.
+	manager updateSweepEndUsecs.
 	self selectiveCompaction.
 	
 ]

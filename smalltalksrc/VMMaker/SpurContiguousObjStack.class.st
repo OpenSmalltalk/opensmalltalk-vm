@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'top'
 	],
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #printing }

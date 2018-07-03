@@ -7,7 +7,7 @@ SpurSweeper is a reference implementation if one wants to evaluate GC performanc
 Class {
 	#name : #SpurSweeper,
 	#superclass : #SpurCompactor,
-	#category : 'VMMaker-SpurMemoryManager'
+	#category : #'VMMaker-SpurMemoryManager'
 }
 
 { #category : #api }
@@ -51,7 +51,8 @@ SpurSweeper >> canUseAsFreeSpace: objOop [
 SpurSweeper >> compact [
 	<inline: #never> "for profiling"
 	self resetFreeLists.
-	self globalSweep
+	self globalSweep.
+	manager updateSweepEndUsecs
 ]
 
 { #category : #'sweep phase' }
