@@ -51,7 +51,8 @@ SpurSweeper >> canUseAsFreeSpace: objOop [
 SpurSweeper >> compact [
 	<inline: #never> "for profiling"
 	self resetFreeLists.
-	self globalSweep
+	self globalSweep.
+	manager updateSweepEndUsecs
 ]
 
 { #category : #'sweep phase' }

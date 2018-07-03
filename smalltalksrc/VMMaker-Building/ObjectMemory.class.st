@@ -5332,6 +5332,11 @@ ObjectMemory >> statMarkCount [
 ]
 
 { #category : #accessing }
+ObjectMemory >> statMarkUsecs [
+	^ 0
+]
+
+{ #category : #accessing }
 ObjectMemory >> statMkFwdCount [
 	^statMkFwdCount
 ]
@@ -5371,6 +5376,11 @@ ObjectMemory >> statSurvivorCount [
 { #category : #accessing }
 ObjectMemory >> statSweepCount [
 	^statSweepCount
+]
+
+{ #category : #accessing }
+ObjectMemory >> statSweepUsecs [
+	^ 0
 ]
 
 { #category : #accessing }

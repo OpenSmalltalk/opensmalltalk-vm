@@ -69,6 +69,7 @@ SpurSelectiveCompactor >> compact [
 	self resetFreeLists.
 	self freePastSegmentsAndSetSegmentToFill.
 	self globalSweepAndSegmentOccupationAnalysis.
+	manager updateSweepEndUsecs.
 	self selectiveCompaction.
 	
 ]
