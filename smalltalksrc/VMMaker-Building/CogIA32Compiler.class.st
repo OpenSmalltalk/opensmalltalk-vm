@@ -251,6 +251,20 @@ CogIA32Compiler >> canMulRR [
 	^true
 ]
 
+{ #category : #testing }
+CogIA32Compiler >> canSignExtend [
+	"IA32 has native SignExtend8RR & SignExtend16RR."
+	<inline: true>
+	^true
+]
+
+{ #category : #testing }
+CogIA32Compiler >> canZeroExtend [
+	"IA32 has native ZeroExtend8RR & ZeroExtend16RR."
+	<inline: true>
+	^true
+]
+
 { #category : #accessing }
 CogIA32Compiler >> cmpC32RTempByteSize [
 	^5

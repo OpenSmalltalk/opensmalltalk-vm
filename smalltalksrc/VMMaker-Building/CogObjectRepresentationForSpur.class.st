@@ -1446,6 +1446,18 @@ CogObjectRepresentationForSpur >> genPrimitiveAsCharacter [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveAt [
+	"Generate primitive 60, at: with unsigned access for pure bits classes."
+	^self genPrimitiveAtSigned: false
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveAtPut [
+	"Generate primitive 61, at:put: with unsigned access for pure bits classes."
+	^self genPrimitiveAtPutSigned: false
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentationForSpur >> genPrimitiveIdenticalOrNotIf: orNot [
 	| jumpCmp comp |
 	<var: #jumpCmp type: #'AbstractInstruction *'>
@@ -1477,6 +1489,18 @@ CogObjectRepresentationForSpur >> genPrimitiveIdentityHash [
 { #category : #'primitive generators' }
 CogObjectRepresentationForSpur >> genPrimitiveImmediateAsInteger [
 	self subclassResponsibility
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveIntegerAt [
+	"Generate primitive 164, at: with signed access for pure bits classes."
+	^self genPrimitiveAtSigned: true
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentationForSpur >> genPrimitiveIntegerAtPut [
+	"Generate primitive 165, at:put: with signed access for pure bits classes."
+	^self genPrimitiveAtPutSigned: true
 ]
 
 { #category : #'primitive generators' }

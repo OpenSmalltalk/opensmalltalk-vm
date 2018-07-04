@@ -332,6 +332,17 @@ InterpreterPrimitives >> isPointerAlien: oop [
 ]
 
 { #category : #'primitive support' }
+InterpreterPrimitives >> isSignedInteger: integer inRangeForBits: nBits [
+	"Answer if integer will fit within a variable of nBits, where nBits is 8, 16, 32 or 64.
+	 Signed shift right by nBits - 1 to map in-range values to either 0 or -1.
+	 Add one to map in-range values to 0 or 1.
+	 Perform an unsigned comparison for greater than 1 to eliminate values out of range."
+	<inline: true>
+	^self cCode: [(self asUnsigned: (integer signedBitShift: 1 - nBits) + 1) <= 1]
+		inSmalltalk: [((integer bitShift: 1 - nBits) + 1 bitAnd: objectMemory maxCInteger) <= 1]
+]
+
+{ #category : #'primitive support' }
 InterpreterPrimitives >> magnitude64BitIntegerFor: magnitude neg: isNegative [
 	"Return a Large Integer object for the given integer magnitude and sign"
 	| newLargeInteger largeClass highWord sz isSmall smallVal |
@@ -2607,52 +2618,18 @@ InterpreterPrimitives >> primitiveInstVarAtPut [
 	self pop: argumentCount + 1 thenPush: newValue
 ]
 
-{ #category : #'sound primitives' }
+{ #category : #'indexing primitives' }
 InterpreterPrimitives >> primitiveIntegerAt [
-	"Return the 32bit signed integer contents of a words receiver"
-
-	| index rcvr sz addr intValue result |
-	<var: #intValue type: #int>
-	index := self stackValue: 0.
-	(objectMemory isIntegerObject: index) ifFalse:
-		[^self primitiveFailFor: PrimErrBadArgument].
-	rcvr := self stackValue: 1.
-	(objectMemory isWords: rcvr) ifFalse:
-		[^self primitiveFailFor: PrimErrInappropriate].
-	index := objectMemory integerValueOf: index.
-	sz := objectMemory lengthOf: rcvr.  "number of fields"
-	(index >= 1 and: [index <= sz]) ifFalse:
-		[^self primitiveFailFor: PrimErrBadIndex].
-	"4 = 32 bits / 8"
-	addr := rcvr + objectMemory baseHeaderSize + (index - 1 * 4). "for zero indexing"
-	intValue := objectMemory intAt: addr.
-	result := self signed32BitIntegerFor: intValue.
-	self pop: 2 thenPush: result
+	SPURVM
+		ifTrue: [self primitiveSpurIntegerAt] "Answer the signed integer element of a pure bits receiver"
+		ifFalse: [self primitiveV3IntegerAt]    "Answer the 32 bit signed integer contents of a words receiver"
 ]
 
-{ #category : #'sound primitives' }
+{ #category : #'indexing primitives' }
 InterpreterPrimitives >> primitiveIntegerAtPut [
-	"Return the 32bit signed integer contents of a words receiver"
-	| index rcvr sz addr value valueOop |
-	<var: 'value' type: 'int'>
-	valueOop := self stackValue: 0.
-	index := self stackIntegerValue: 1.
-	value := self signed32BitValueOf: valueOop.
-	self successful ifFalse:
-		[^self primitiveFailFor: PrimErrBadArgument].
-	rcvr := self stackValue: 2.
-	(objectMemory isWords: rcvr) ifFalse:
-		[^self primitiveFailFor: PrimErrInappropriate].
-	(objectMemory isObjImmutable: rcvr) ifTrue:
-		[^self primitiveFailFor: PrimErrNoModification].
-	sz := objectMemory lengthOf: rcvr.  "number of fields"
-	(index >= 1 and: [index <= sz]) ifFalse:
-		[^self primitiveFailFor: PrimErrBadIndex].
-	"4 = 32 bits / 8"
-	addr := rcvr + objectMemory baseHeaderSize + (index - 1 * 4). "for zero indexing"
-	value := objectMemory intAt: addr put: value.
-	self pop: 3 thenPush: valueOop "pop all; return value"
-
+	SPURVM
+		ifTrue: [self primitiveSpurIntegerAtPut] "Assign an indexable variable of a pure bits receiver with a signed integer."
+		ifFalse: [self primitiveV3IntegerAtPut]    "Assign an indexable variable of a words receiver with a 32 bit signed integer."
 ]
 
 { #category : #'process primitives' }
@@ -4517,6 +4494,168 @@ InterpreterPrimitives >> primitiveSpecialObjectsOop [
 ]
 
 { #category : #'indexing primitives' }
+InterpreterPrimitives >> primitiveSpurIntegerAt [
+	"Answer the signed integer element of a pure bits receiver.
+	 If the receiver is indexable pointers simply function like at:.
+	 Favour bits access over pointer access (normal at: being available)."
+
+	<inline: true>
+	| index rcvr fmt numSlots value |
+	index := self stackTop.
+	rcvr := self stackValue: 1.
+	(objectMemory isIntegerObject: index) ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
+	(objectMemory isImmediate: rcvr) ifTrue:
+		[^self primitiveFailFor: PrimErrBadReceiver].
+	fmt := objectMemory formatOf: rcvr.
+	index := (objectMemory integerValueOf: index) - 1.
+
+	fmt >= objectMemory firstByteFormat ifTrue:
+		[fmt >= objectMemory firstCompiledMethodFormat ifTrue:
+			[^self primitiveFailFor: PrimErrUnsupported].
+		 numSlots := objectMemory numBytesOfBytes: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[value := objectMemory fetchByte: index ofObject: rcvr.
+			 value > 127 ifTrue: [value := value - 256].
+			 self methodReturnInteger: value.
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
+	fmt >= objectMemory firstShortFormat ifTrue:
+		[numSlots := objectMemory num16BitUnitsOf: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[value := objectMemory fetchShort16: index ofObject: rcvr.
+			 value > 32767 ifTrue: [value := value - 65536].
+			 self methodReturnInteger: value.
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
+	fmt = objectMemory sixtyFourBitIndexableFormat ifTrue:
+		[numSlots := objectMemory num64BitUnitsOf: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[self
+				cCode:
+					[self methodReturnValue: (self signed64BitIntegerFor: (objectMemory fetchLong64: index ofObject: rcvr))]
+				inSmalltalk:
+					[value := objectMemory fetchLong64: index ofObject: rcvr.
+					 value > ((2 raisedTo: 63) - 1) ifTrue:
+						[value := value - (2 raisedTo: 64)].
+					 self methodReturnValue: (self signed64BitIntegerFor: value)].
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
+	fmt >= objectMemory firstLongFormat ifTrue:
+		[numSlots := objectMemory num32BitUnitsOf: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[objectMemory bytesPerOop = 8
+				ifTrue:
+					[value := objectMemory fetchLong32: index ofObject: rcvr.
+					 value > 2147483647 ifTrue: [value := value - 4294967296].
+					 self methodReturnInteger: value]
+				ifFalse: [self methodReturnValue: (self signed32BitIntegerFor: (objectMemory fetchLong32: index ofObject: rcvr))].
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
+	(fmt <= objectMemory lastPointerFormat
+	 and: [objectMemory isIndexableFormat: fmt]) ifTrue:
+		[| numFixed |
+		 numSlots := objectMemory numSlotsOf: rcvr.
+		 fmt = objectMemory arrayFormat ifTrue:
+			[(self asUnsigned: index) < numSlots ifTrue:
+				[self methodReturnValue: (objectMemory fetchPointer: index ofObject: rcvr).
+				 ^0]].
+		 numFixed := self numFixedSlotsOf: rcvr.
+		 (index + 1 between: numFixed and: numSlots) ifTrue:
+			[self methodReturnValue: (objectMemory fetchPointer: index + numFixed ofObject: rcvr).
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
+	^self primitiveFailFor: PrimErrBadReceiver
+]
+
+{ #category : #'indexing primitives' }
+InterpreterPrimitives >> primitiveSpurIntegerAtPut [
+	"Assign an indexable variable of a pure bits receiver with a signed integer.
+	 If the receiver is indexable pointers simply function like at:put: primitive 61.
+	 Favour bits access over pointer access (normal at:put: being available)."
+
+	<inline: true>
+	| index rcvr value valueOop fmt numSlots |
+	valueOop := self stackValue: 0.
+	index := self stackValue: 1.
+	rcvr := self stackValue: 2.
+	value := self signed64BitValueOf: valueOop.
+	(self successful
+	 and: [objectMemory isIntegerObject: index]) ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
+	(objectMemory isImmediate: rcvr) ifTrue:
+		[^self primitiveFailFor: PrimErrBadReceiver].
+	(objectMemory isObjImmutable: rcvr) ifTrue:
+		[^self primitiveFailFor: PrimErrNoModification].
+	fmt := objectMemory formatOf: rcvr.
+	index := (objectMemory integerValueOf: index) - 1.
+
+	fmt >= objectMemory firstByteFormat ifTrue:
+		[fmt >= objectMemory firstCompiledMethodFormat ifTrue:
+			[^self primitiveFailFor: PrimErrUnsupported].
+		 (self isSignedInteger: value inRangeForBits: 8) ifFalse:
+			[^self primitiveFailFor: PrimErrBadArgument].
+		 numSlots := objectMemory numBytesOfBytes: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[objectMemory storeByte: index ofObject: rcvr withValue: (self cCode: [value] inSmalltalk: [value bitAnd: 16rFF]).
+			 self methodReturnValue: valueOop.
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
+	fmt >= objectMemory firstShortFormat ifTrue:
+		[(self isSignedInteger: value inRangeForBits: 16) ifFalse:
+			[^self primitiveFailFor: PrimErrBadArgument].
+		 numSlots := objectMemory num16BitUnitsOf: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[objectMemory storeShort16: index ofObject: rcvr withValue: (self cCode: [value] inSmalltalk: [value bitAnd: 16rFFFF]).
+			 self methodReturnValue: valueOop.
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
+	fmt = objectMemory sixtyFourBitIndexableFormat ifTrue:
+		["No range check on value in this case because signed64BitValueOf: performed it above."
+		 numSlots := objectMemory num64BitUnitsOf: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[objectMemory storeLong64: index ofObject: rcvr withValue: (self cCode: [value] inSmalltalk: [value bitAnd: 16rFFFFFFFFFFFFFFFF]).
+			 self methodReturnValue: valueOop.
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
+	fmt >= objectMemory firstLongFormat ifTrue:
+		[(self isSignedInteger: value inRangeForBits: 32) ifFalse:
+			[^self primitiveFailFor: PrimErrBadArgument].
+		 numSlots := objectMemory num32BitUnitsOf: rcvr.
+		 (self asUnsigned: index) < numSlots ifTrue:
+			[objectMemory storeLong32: index ofObject: rcvr withValue: (self cCode: [value] inSmalltalk: [value bitAnd: 16rFFFFFFFF]).
+			 self methodReturnValue: valueOop.
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
+	(fmt <= objectMemory lastPointerFormat
+	 and: [objectMemory isIndexableFormat: fmt]) ifTrue:
+		[| numFixed |
+		 numSlots := objectMemory numSlotsOf: rcvr.
+		 fmt = objectMemory arrayFormat ifTrue:
+			[(self asUnsigned: index) < numSlots ifTrue:
+				[self storePointer: index ofObject: rcvr withValue: valueOop.
+				 self methodReturnValue: valueOop.
+				 ^0]].
+		 numFixed := self numFixedSlotsOf: rcvr.
+		 (index + 1 between: numFixed and: numSlots) ifTrue:
+			[self storePointer: index + numFixed ofObject: rcvr withValue: valueOop.
+			 self methodReturnValue: valueOop.
+			 ^0].
+		 ^self primitiveFailFor: PrimErrBadIndex].
+
+	^self primitiveFailFor: PrimErrBadReceiver
+]
+
+{ #category : #'indexing primitives' }
 InterpreterPrimitives >> primitiveSpurStringReplace [
 	"<array> primReplaceFrom: start to: stop with: replacement startingAt: repStart  
 		<primitive: 105>"
@@ -4955,6 +5094,53 @@ InterpreterPrimitives >> primitiveUtcWithOffset [
 		storePointerUnchecked: 1 ofObject: resultArray withValue: (objectMemory integerObjectOf: self ioLocalSecondsOffset);
 		storePointer: 0 ofObject: resultArray withValue: (self positive64BitIntegerFor: self ioUTCMicroseconds - epochDelta).
 	self pop: argumentCount + 1 thenPush: resultArray
+]
+
+{ #category : #'indexing primitives' }
+InterpreterPrimitives >> primitiveV3IntegerAt [
+	"Answer the 32bit signed integer contents of a words receiver"
+	<inline: true>
+	| index rcvr sz addr intValue result |
+	<var: #intValue type: #int>
+	index := self stackValue: 0.
+	(objectMemory isIntegerObject: index) ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
+	rcvr := self stackValue: 1.
+	(objectMemory isWords: rcvr) ifFalse:
+		[^self primitiveFailFor: PrimErrInappropriate].
+	index := objectMemory integerValueOf: index.
+	sz := objectMemory lengthOf: rcvr.  "number of fields"
+	(index >= 1 and: [index <= sz]) ifFalse:
+		[^self primitiveFailFor: PrimErrBadIndex].
+	"4 = 32 bits / 8"
+	addr := rcvr + objectMemory baseHeaderSize + (index - 1 * 4). "for zero indexing"
+	intValue := objectMemory intAt: addr.
+	result := self signed32BitIntegerFor: intValue.
+	self pop: 2 thenPush: result
+]
+
+{ #category : #'indexing primitives' }
+InterpreterPrimitives >> primitiveV3IntegerAtPut [
+	"Assign an indexable variable of a words receiver with a 32 bit signed integer."
+	| index rcvr sz addr value valueOop |
+	<var: 'value' type: #int>
+	valueOop := self stackValue: 0.
+	index := self stackIntegerValue: 1.
+	value := self signed32BitValueOf: valueOop.
+	self successful ifFalse:
+		[^self primitiveFailFor: PrimErrBadArgument].
+	rcvr := self stackValue: 2.
+	(objectMemory isWords: rcvr) ifFalse:
+		[^self primitiveFailFor: PrimErrInappropriate].
+	(objectMemory isObjImmutable: rcvr) ifTrue:
+		[^self primitiveFailFor: PrimErrNoModification].
+	sz := objectMemory lengthOf: rcvr.  "number of fields"
+	(index >= 1 and: [index <= sz]) ifFalse:
+		[^self primitiveFailFor: PrimErrBadIndex].
+	"4 = 32 bits / 8"
+	addr := rcvr + objectMemory baseHeaderSize + (index - 1 * 4). "for zero indexing"
+	value := objectMemory intAt: addr put: value.
+	self pop: 3 thenPush: valueOop "pop all; return value"
 ]
 
 { #category : #'indexing primitives' }
