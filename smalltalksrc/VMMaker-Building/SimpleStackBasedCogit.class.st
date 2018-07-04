@@ -485,6 +485,9 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForNewsqueak [
 
 		(148 genPrimitiveShallowCopy 0)			"a.k.a. clone"
 
+		(165 genPrimitiveIntegerAt			1)	"Signed version of genPrimitiveAt"
+		(166 genPrimitiveIntegerAtPut		2)	"Signed version of genPrimitiveAtPut"
+
 		(169 genPrimitiveNotIdentical 1)
 
 		(170 genPrimitiveAsCharacter)				"SmallInteger>>asCharacter, Character class>>value:"
@@ -703,6 +706,9 @@ SimpleStackBasedCogit class >> initializePrimitiveTableForSqueak [
 
 		(158 genPrimitiveStringCompareWith 1)
 		(159 genPrimitiveHashMultiply 0)
+
+		(165 genPrimitiveIntegerAt			1)	"Signed version of genPrimitiveAt"
+		(166 genPrimitiveIntegerAtPut		2)	"Signed version of genPrimitiveAtPut"
 
 		(169 genPrimitiveNotIdentical 1)
 

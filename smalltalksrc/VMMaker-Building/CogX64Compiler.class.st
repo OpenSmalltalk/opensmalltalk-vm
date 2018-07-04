@@ -400,6 +400,20 @@ CogX64Compiler >> canMulRR [
 	^true
 ]
 
+{ #category : #testing }
+CogX64Compiler >> canSignExtend [
+	"x64 has native SignExtend8RR, SignExtend16RR, & SignExtend32RR."
+	<inline: true>
+	^true
+]
+
+{ #category : #testing }
+CogX64Compiler >> canZeroExtend [
+	"x64 has native ZeroExtend8RR, ZeroExtend16RR, & ZeroExtend32RR."
+	<inline: true>
+	^true
+]
+
 { #category : #accessing }
 CogX64Compiler >> cmpC32RTempByteSize [
 	^5

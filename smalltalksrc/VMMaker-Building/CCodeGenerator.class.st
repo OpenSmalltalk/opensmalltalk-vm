@@ -1844,17 +1844,17 @@ CCodeGenerator >> generateBitOr: msgNode on: aStream indent: level [
 CCodeGenerator >> generateBitShift: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	| arg rcvr |
+	| arg rcvr shift |
 	arg := msgNode args first.
 	rcvr := msgNode receiver.
-	arg isConstant
+	(self isConstantNode: arg valueInto: [:shiftValue| shift := shiftValue])
 		ifTrue: "bit shift amount is a constant"
 			[aStream nextPutAll: '((usqInt) '.
 			self emitCExpression: rcvr on: aStream.
-			arg value < 0
-				ifTrue: [aStream nextPutAll: ' >> ', arg value negated printString]
-				ifFalse: [aStream nextPutAll: ' << ', arg value printString].
-			aStream nextPutAll: ')']
+			shift < 0
+				ifTrue: [aStream nextPutAll: ' >> '; print: shift negated]
+				ifFalse: [aStream nextPutAll: ' << '; print: shift].
+			aStream nextPut: $)]
 		ifFalse: "bit shift amount is an expression"
 			[aStream nextPutAll: '(('.
 			self emitCExpression: arg on: aStream indent: level.
@@ -2946,18 +2946,18 @@ CCodeGenerator >> generateShiftRight: msgNode on: aStream indent: level [
 CCodeGenerator >> generateSignedBitShift: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	| cast type arg |
+	| cast type arg shift |
 	"since ``signed'' is a synonym for ``signed int'' do not cast 64-bit values to signed if at all possible."
 	cast := (self is64BitIntegralVariable: msgNode receiver typeInto: [:t| type := t])
 				ifTrue: ['(', (type first = $u ifTrue: [type allButFirst: (type second = $n ifTrue: [2] ifFalse: [1])] ifFalse: [type]), ')']
 				ifFalse: ['(signed)'].
-	(arg := msgNode args first) isConstant
+	(self isConstantNode: (arg := msgNode args first) valueInto: [:shiftValue| shift := shiftValue])
 		ifTrue: "bit shift amount is a constant"
 			[aStream nextPut: $(; nextPutAll: cast.
 			self emitCExpression: msgNode receiver on: aStream.
-			arg value < 0
-				ifTrue: [aStream nextPutAll: ' >> '; print: arg value negated]
-				ifFalse: [aStream nextPutAll: ' << '; print: arg value].
+			shift < 0
+				ifTrue: [aStream nextPutAll: ' >> '; print: shift negated]
+				ifFalse: [aStream nextPutAll: ' << '; print: shift].
 			aStream nextPut: $)]
 		ifFalse: "bit shift amount is an expression"
 			[aStream nextPutAll: '(('.
@@ -3756,19 +3756,22 @@ CCodeGenerator >> isConstantNode: aNode valueInto: aBlock [
 	 and: [aNode name = #nil]) ifTrue:
 		[aBlock value: nil.
 		 ^true].
-	aNode isSend ifFalse:
-		[^false].
-	(self anyMethodNamed: aNode selector)
-		ifNil:
-			[(VMBasicConstants valueOfBasicSelector: aNode selector) ifNotNil:
-				[:value|
-				 aBlock value: value.
-				 ^true]]
-		ifNotNil:
-			[:m|
-			(m statements size = 1
-			 and: [m statements last isReturn]) ifTrue:
-				[^self isConstantNode: m statements last expression valueInto: aBlock]].
+	aNode isSend ifTrue:
+		[(self anyMethodNamed: aNode selector)
+			ifNil:
+				[(VMBasicConstants valueOfBasicSelector: aNode selector) ifNotNil:
+					[:value|
+					 aBlock value: value.
+					 ^true].
+				 aNode constantNumbericValueOrNil ifNotNil:
+					[:value|
+					 aBlock value: value.
+					 ^true]]
+			ifNotNil:
+				[:m|
+				(m statements size = 1
+				 and: [m statements last isReturn]) ifTrue:
+					[^self isConstantNode: m statements last expression valueInto: aBlock]]].
 	^false
 ]
 

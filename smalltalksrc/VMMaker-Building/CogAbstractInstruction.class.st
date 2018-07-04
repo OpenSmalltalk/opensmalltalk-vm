@@ -577,6 +577,24 @@ CogAbstractInstruction >> canPushPopMultipleRegisters [
 	^false
 ]
 
+{ #category : #testing }
+CogAbstractInstruction >> canSignExtend [
+	"Answer if the processor provides native sign extension instructions.  If it does it must be able to generate
+		SignExtend8RR SignExtend16RR
+	 and if 64-bits, SignExtend32RR."
+	<inline: true>
+	^false
+]
+
+{ #category : #testing }
+CogAbstractInstruction >> canZeroExtend [
+	"Answer if the processor provides native zero extension instructions.  If it does it must be able to generate
+		ZeroExtend8RR ZeroExtend16RR
+	 and if 64-bits, ZeroExtend32RR."
+	<inline: true>
+	^false
+]
+
 { #category : #initialization }
 CogAbstractInstruction >> cloneLiteralFrom: existingLiteral [
 	"For out-of-line literal support, clone a literal from a literal."
