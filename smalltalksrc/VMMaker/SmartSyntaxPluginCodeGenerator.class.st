@@ -667,7 +667,7 @@ SmartSyntaxPluginCodeGenerator >> generateFromStack: aNode on: aStream indent: a
 			aStream 
 				nextPutAll: (idList at: i);
 				nextPutAll: ' = stackValue(';
-				nextPutAll: (idList size - i) asString;
+				print: idList size - i;
 				nextPut: $)]
 		separatedBy: [aStream nextPut: $;; crtab: anInteger].
 

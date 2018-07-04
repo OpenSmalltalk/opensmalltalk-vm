@@ -11984,12 +11984,16 @@ SpurMemoryManager >> swizzleFieldsOfFreeChunk: chunk [
 		[self storePointerNoAssert: self freeChunkNextIndex
 			ofFreeChunk: chunk
 			withValue: (segmentManager swizzleObj: field)].
-	(self bytesBigEnoughForPrevPointer: (chunkBytes := self bytesInObject: chunk)) ifTrue:
-		[field := self fetchPointer: self freeChunkPrevIndex ofFreeChunk: chunk.
-		 field ~= 0 ifTrue:
-			[self storePointerNoAssert: self freeChunkPrevIndex
-				ofFreeChunk: chunk
-				withValue: (segmentManager swizzleObj: field)]].
+	chunkBytes := self bytesInObject: chunk.
+	false ifTrue: "The prevPointer is not guaranteed to be valid in older images.
+				 updateListStartingAt: via updateFreeLists does restore the prev pointer
+				 in all small free lists, so simply avoid swizzling it now."
+		[(self bytesBigEnoughForPrevPointer: chunkBytes) ifTrue:
+			[field := self fetchPointer: self freeChunkPrevIndex ofFreeChunk: chunk.
+			 field ~= 0 ifTrue:
+				[self storePointerNoAssert: self freeChunkPrevIndex
+					ofFreeChunk: chunk
+					withValue: (segmentManager swizzleObj: field)]]].
 	chunkBytes >= (self numFreeLists * self allocationUnit) ifTrue:
 		[self freeChunkParentIndex to: self freeChunkLargerIndex do:
 			[:index|

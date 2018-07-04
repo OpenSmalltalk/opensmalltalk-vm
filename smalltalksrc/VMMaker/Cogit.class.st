@@ -2658,21 +2658,54 @@ Cogit >> RotateRightCq: quickConstant R: reg [
 Cogit >> SignExtend16R: reg1 R: reg2 [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: SignExtend16RR operand: reg1 operand: reg2
+	backEnd canSignExtend
+		ifTrue: [^self gen: SignExtend16RR operand: reg1 operand: reg2]
+		ifFalse:
+			[| first |
+			 reg1 = reg2
+				ifTrue:
+					[first := self LogicalShiftLeftCq: BytesPerWord * 8 - 16 R: reg1]
+				ifFalse:
+					[first := self MoveR: reg1 R: reg2.
+					 self LogicalShiftLeftCq: BytesPerWord * 8 - 16 R: reg1].
+			self ArithmeticShiftRightCq: BytesPerWord * 8 - 16 R: reg2.
+			^first]
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> SignExtend32R: reg1 R: reg2 [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: SignExtend32RR operand: reg1 operand: reg2
+	backEnd canSignExtend
+		ifTrue: [^self gen: SignExtend32RR operand: reg1 operand: reg2]
+		ifFalse:
+			[| first |
+			 reg1 = reg2
+				ifTrue:
+					[first := self LogicalShiftLeftCq: 32 R: reg1]
+				ifFalse:
+					[first := self MoveR: reg1 R: reg2.
+					 self LogicalShiftLeftCq: 32 R: reg1].
+			self ArithmeticShiftRightCq: 32 R: reg2.
+			^first]
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> SignExtend8R: reg1 R: reg2 [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: SignExtend8RR operand: reg1 operand: reg2
+	backEnd canSignExtend
+		ifTrue: [^self gen: SignExtend8RR operand: reg1 operand: reg2]
+		ifFalse:
+			[| first |
+			 reg1 = reg2
+				ifTrue:
+					[first := self LogicalShiftLeftCq: BytesPerWord * 8 - 8 R: reg1]
+				ifFalse:
+					[first := self MoveR: reg1 R: reg2.
+					 self LogicalShiftLeftCq: BytesPerWord * 8 - 8 R: reg1].
+			self ArithmeticShiftRightCq: BytesPerWord * 8 - 8 R: reg2.
+			^first]
 ]
 
 { #category : #'abstract instructions' }
@@ -2790,21 +2823,54 @@ Cogit >> XorRs: reg1 Rs: reg2 [
 Cogit >> ZeroExtend16R: reg1 R: reg2 [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: ZeroExtend16RR operand: reg1 operand: reg2
+	backEnd canZeroExtend
+		ifTrue: [^self gen: ZeroExtend16RR operand: reg1 operand: reg2]
+		ifFalse:
+			[| first |
+			 reg1 = reg2
+				ifTrue:
+					[first := self LogicalShiftLeftCq: BytesPerWord * 8 - 16 R: reg1]
+				ifFalse:
+					[first := self MoveR: reg1 R: reg2.
+					 self LogicalShiftLeftCq: BytesPerWord * 8 - 16 R: reg1].
+			self LogicalShiftRightCq: BytesPerWord * 8 - 16 R: reg2.
+			^first]
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> ZeroExtend32R: reg1 R: reg2 [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: ZeroExtend32RR operand: reg1 operand: reg2
+	backEnd canZeroExtend
+		ifTrue: [^self gen: ZeroExtend32RR operand: reg1 operand: reg2]
+		ifFalse:
+			[| first |
+			 reg1 = reg2
+				ifTrue:
+					[first := self LogicalShiftLeftCq: 32 R: reg1]
+				ifFalse:
+					[first := self MoveR: reg1 R: reg2.
+					 self LogicalShiftLeftCq: 32 R: reg1].
+			self LogicalShiftRightCq: 32 R: reg2.
+			^first]
 ]
 
 { #category : #'abstract instructions' }
 Cogit >> ZeroExtend8R: reg1 R: reg2 [
 	<inline: true>
 	<returnTypeC: #'AbstractInstruction *'>
-	^self gen: ZeroExtend8RR operand: reg1 operand: reg2
+	backEnd canZeroExtend
+		ifTrue: [^self gen: ZeroExtend8RR operand: reg1 operand: reg2]
+		ifFalse:
+			[| first |
+			 reg1 = reg2
+				ifTrue:
+					[first := self LogicalShiftLeftCq: BytesPerWord * 8 - 8 R: reg1]
+				ifFalse:
+					[first := self MoveR: reg1 R: reg2.
+					 self LogicalShiftLeftCq: BytesPerWord * 8 - 8 R: reg1].
+			self LogicalShiftRightCq: BytesPerWord * 8 - 8 R: reg2.
+			^first]
 ]
 
 { #category : #'in-line cacheing' }

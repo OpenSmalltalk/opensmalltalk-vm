@@ -1101,6 +1101,19 @@ CogObjectRepresentation >> genPrimitiveImmediateAsInteger [
 ]
 
 { #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveIntegerAt [
+	"subclasses override if they can"
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
+CogObjectRepresentation >> genPrimitiveIntegerAtPut [
+	"subclasses override if they can"
+	self break.
+	^UnimplementedPrimitive
+]
+
+{ #category : #'primitive generators' }
 CogObjectRepresentation >> genPrimitiveLessOrEqual [
 	^self
 		genSmallIntegerComparison: JumpLessOrEqual
