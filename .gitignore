@@ -91,6 +91,7 @@ platforms/unix/config/autom4te.cache/
 # /image/
 /image/*.sum
 /image/*.tgz
+/image/*.st
 /image/coglinux*
 /image/cogwin
 /image/Cog.app
