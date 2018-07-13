@@ -1,6 +1,7 @@
 set -e
 
 if [[ "${ARCH}" = "linux64x64" ]]; then
+    sudo apt-get update -y
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-yes \
             debhelper \
             devscripts \
@@ -16,6 +17,7 @@ if [[ "${ARCH}" = "linux64x64" ]]; then
             gcc-multilib \
             uuid-dev
 elif [[ "${ARCH}" = "linux32x86" ]]; then
+    sudo apt-get update -y
     sudo apt-get remove -q -y gvfs-daemons
     sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-yes \
             devscripts \
@@ -43,7 +45,8 @@ elif [[ "${ARCH}" = "linux32x86" ]]; then
             libaudio-dev:i386 \
             gcc-multilib \
             uuid-dev:i386 \
-            libcurl3-dev:i386
+            libcurl4-openssl-dev:i386 \
+			libssh2-1-dev:i386
 fi
 
 [[ "${ARCH}" != "linux32ARMv6" ]] && exit 0
@@ -58,6 +61,7 @@ sudo apt-add-repository multiverse
 sudo apt-add-repository universe
 sudo apt-get update -myq || true
 
+sudo apt-get update -y
 sudo apt-get install -yq --no-install-suggests --no-install-recommends --force-yes \
      gcc-arm-linux-gnueabi \
      gcc-arm-linux-gnueabihf \

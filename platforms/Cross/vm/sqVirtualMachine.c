@@ -221,6 +221,7 @@ sqInt removeGCRoot(sqInt *varLoc);
 sqInt  methodReturnBool(sqInt);
 sqInt  methodReturnFloat(double);
 sqInt  methodReturnInteger(sqInt);
+sqInt  methodReturnReceiver(void);
 sqInt  methodReturnString(char *);
 # else
 sqInt methodArg(sqInt index);
@@ -475,6 +476,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->methodReturnBool = methodReturnBool;
 	VM->methodReturnFloat = methodReturnFloat;
 	VM->methodReturnInteger = methodReturnInteger;
+	VM->methodReturnReceiver = methodReturnReceiver;
 	VM->methodReturnString = methodReturnString;
 # else
 	VM->methodArg = methodArg;

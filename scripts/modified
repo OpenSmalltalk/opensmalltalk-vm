@@ -1,0 +1,3 @@
+#!/bin/bash
+# echo modified files to stdout
+git status --porcelain | grep "^ M" | sed 's/^ M //'

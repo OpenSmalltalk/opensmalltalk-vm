@@ -35,6 +35,7 @@
 
 #ifndef NO_STD_FILE_SUPPORT
 
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
@@ -131,33 +132,51 @@ static squeakFileOffsetType getSize(SQFile *f)
 # define pfail() 0
 #endif
 
-sqInt
-sqFileAtEnd(SQFile *f) {
+sqInt sqFileAtEnd(SQFile *f) {
 	/* Return true if the file's read/write head is at the end of the file.
-	 * Fail and return errno if an error in the file i/o has been flagged.
 	 *
 	 * libc's end of file function, feof(), returns a flag that is set by
-	 * attempting to read past the end of the file.  I.e if the last character in
-	 * the file has been read, but not one more, feof() will return false.
+	 * attempting to read past the end of the file.  I.e if the last
+	 * character in the file has been read, but not one more, feof() will
+	 * return false.
 	 *
-	 * Smalltalk's #atEnd should return true as soon as the last character has
-	 * been read.
+	 * Smalltalk's #atEnd should return true as soon as the last character
+	 * has been read.
 	 *
-	 * To keep the expected behaviour of #atEnd, we can peek at the next 
-	 * character in the file using ungetc() & fgetc(), which will 
-	 * set the eof-file-flag if required, but not advance the stream.
+	 * We can keep the expected behaviour of #atEnd for streams other than
+	 * terminals by peeking for the next character in the file using
+	 * ungetc() & fgetc(), which will set the eof-file-flag if required,
+	 * but not advance the stream.
+	 *
+	 * Terminals / consoles use feof() only, which means that #atEnd
+	 * doesn't answer true until after the end-of-file character (Ctrl-D)
+	 * has been read.
 	 */
-	sqInt status;
-	int   c;
-	FILE  *fp;
+	sqInt status; int   fd; FILE  *fp;
 
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
 	pentry(sqFileAtEnd);
 	fp = getFile(f);
-	status = ungetc(fgetc(fp), fp) == EOF && feof(fp);
-	if (ferror(fp))
-		interpreterProxy->primitiveFailForOSError(errno);
+	fd = fileno(fp);
+	/* Can't peek write-only streams */
+	if (fd == 1 || fd == 2)
+		status = false;
+	else if (f->isStdioStream)
+		/* We can't block waiting for interactive input */
+		status = feof(fp);
+	else if (!feof(fp)) {
+		status = ungetc(fgetc(fp), fp) == EOF && feof(fp);
+		/* Normally we should check if a file error has occurred.
+		 * But error checking isn't occurring anywhere else,
+		 * causing hard-to-trace failures here.
+		 * Revert to previous behaviour of ignoring errors.
+		if (ferror(fp))
+			interpreterProxy->primitiveFail();
+		 */
+		}
+	else
+		status = true;
 	return pexit(status);
 }
 
@@ -550,6 +569,34 @@ sqFileStdioHandlesInto(SQFile files[])
 
 	return 7;
 }
+
+
+/*
+* Allow to test if the standard input/output files are from a console or not
+* Return values:
+* -1 - Error
+* 0 - no console (windows only)
+* 1 - normal terminal (unix terminal / windows console)
+* 2 - pipe
+* 3 - file
+* 4 - cygwin terminal (windows only)
+*/
+sqInt sqFileDescriptorType(int fdNum) {
+        int status;
+        struct stat statBuf;
+
+        /* Is this a terminal? */
+        if (isatty(fdNum)) return 1;
+
+        /* Is this a pipe? */
+        status = fstat(fdNum, &statBuf);
+        if (status) return -1;
+        if (S_ISFIFO(statBuf.st_mode)) return 2;
+
+        /* Must be a normal file */
+        return 3;
+}
+
 
 size_t
 sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startIndex) {

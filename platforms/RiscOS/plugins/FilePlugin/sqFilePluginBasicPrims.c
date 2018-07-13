@@ -407,6 +407,11 @@ sqInt sqFileStdioHandlesInto(SQFile files[3]) {
 	return 0;
 }
 
+sqInt sqFileDescriptorType(int fdNum) {
+	//Not implemented
+	return -1;
+}
+
 size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
 /* Read count bytes from the given file into byteArray starting at
  * startIndex. byteArray is the address of the first byte of a

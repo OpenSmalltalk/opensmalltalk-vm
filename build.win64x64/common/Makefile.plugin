@@ -6,6 +6,7 @@
 # platforms/win32/plugins/BochsIA32Plugin/Makefile.  Look at
 # platforms/win32/plugins/*/Makefile for examples.
 #
+# EXCLUDESRC 	 defines patterns of source files to not compile, e.g. %/dump.c
 # PREREQUISITES  supplies names of files that must exist to make lib or bundle
 
 # The following are the four key locations (set via invocation):
@@ -47,6 +48,9 @@ CROSSSRC:= $(wildcard $(CROSSDIR)/*.c) $(wildcard $(CROSSDIR)/*.cpp)
 WIN32SRC:= $(wildcard $(WIN32DIR)/*.c) $(wildcard $(WIN32DIR)/*.cpp)
 MAKERSRC:= $(wildcard $(MAKERDIR)/*.c)
 LIBSRC:= $(notdir $(MAKERSRC) $(WIN32SRC) $(CROSSSRC))
+ifneq ($(EXCLUDESRC),)
+LIBSRC:=$(filter-out $(EXCLUDESRC),$(LIBSRC))
+endif
 
 #############################################################################
 # C compiler settings (gcc 4.x)
