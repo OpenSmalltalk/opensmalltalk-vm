@@ -7,7 +7,7 @@ B2DPlugin \
 BitBltPlugin \
 BMPReadWriterPlugin \
 CroquetPlugin \
-# HostWindowPlugin \
+HostWindowPlugin \
 ZipPlugin \
 DropPlugin \
 DSAPrims \
