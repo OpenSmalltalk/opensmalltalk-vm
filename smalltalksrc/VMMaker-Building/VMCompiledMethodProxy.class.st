@@ -4,12 +4,16 @@ A VMCompiledMethodProxy is a wrapper for the oop of a CompiledMethod object in t
 Class {
 	#name : #VMCompiledMethodProxy,
 	#superclass : #VMObjectProxy,
+	#instVars : [
+		'size',
+		'numLiterals'
+	],
 	#category : #'VMMaker-Support'
 }
 
 { #category : #accessing }
 VMCompiledMethodProxy >> at: index [
-	^(index between: 1 and: (objectMemory numBytesOf: oop))
+	^(index between: self numLiterals + 1 * objectMemory wordSize + 1 and: self size)
 		ifTrue: [objectMemory fetchByte: index - 1 ofObject: oop]
 		ifFalse: [self errorSubscriptBounds: index]
 ]
@@ -57,12 +61,27 @@ VMCompiledMethodProxy >> numArgs [
 VMCompiledMethodProxy >> numLiterals [
 	"Answer the number of literals used by the receiver."
 	
-	^objectMemory literalCountOf: oop
+	^numLiterals ifNil: [numLiterals := objectMemory literalCountOf: oop]
 ]
 
 { #category : #accessing }
 VMCompiledMethodProxy >> numTemps [
 	^coInterpreter tempCountOf: oop
+]
+
+{ #category : #scanning }
+VMCompiledMethodProxy >> pcPreviousTo: thePC [
+	"Answer the pc of the bytecode before the bytecode at thePC."
+	| pc prevPc byte encoderClass |
+	thePC > self endPC ifTrue: [^self endPC].
+	pc := self initialPC.
+	encoderClass := self encoderClass.
+	[pc < thePC] whileTrue:
+		[byte := self at: (prevPc := pc).
+		 [pc := pc + (encoderClass bytecodeSize: byte).
+		  encoderClass isExtension: byte] whileTrue:
+			[byte := self at: pc]].
+	^prevPc
 ]
 
 { #category : #accessing }
@@ -74,5 +93,5 @@ VMCompiledMethodProxy >> primitive [
 
 { #category : #accessing }
 VMCompiledMethodProxy >> size [
-	^objectMemory numBytesOf: oop
+	^size ifNil: [size := objectMemory numBytesOf: oop]
 ]
