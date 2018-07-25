@@ -661,9 +661,11 @@ CurrentImageCoInterpreterFacade >> lookupAddress: address [
 					[variables
 						keyAtValue: address
 						ifAbsent: [^nil]].
-	^(thing isLiteral
+	^(((thing isLiteral
 		ifTrue: [thing storeString]
-		ifFalse: [thing asString]) contractTo: 64
+		ifFalse: [thing asString]) contractTo: 64)
+			copyReplaceAll: String cr with: '\r')
+				copyReplaceAll: String lf with: '\n'
 ]
 
 { #category : #'cog jit support' }

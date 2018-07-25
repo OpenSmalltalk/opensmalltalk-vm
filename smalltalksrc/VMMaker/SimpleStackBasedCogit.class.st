@@ -3824,23 +3824,13 @@ SimpleStackBasedCogit >> methodAbortTrampolineFor: numArgs [
 ]
 
 { #category : #'compile abstract instructions' }
-SimpleStackBasedCogit >> methodUsesPrimitiveErrorCode [
-	"Answer if methodObj contains a primitive and uses the primitive error code."
-	^(coInterpreter primitiveIndexOfMethod: methodObj header: methodHeader) > 0
-	  and: [(coInterpreter longStoreBytecodeForHeader: methodHeader)
-			= (objectMemory
-				fetchByte: initialPC + (coInterpreter sizeOfCallPrimitiveBytecode: methodHeader)
-				ofObject: methodObj)]
-]
-
-{ #category : #'compile abstract instructions' }
 SimpleStackBasedCogit >> methodUsesPrimitiveErrorCode: aMethodObj header: aMethodHeader [
 	"Answer if aMethodObj contains a primitive and uses the primitive error code."
 	<inline: true>
 	^(coInterpreter primitiveIndexOfMethod: aMethodObj header: aMethodHeader) > 0
 	  and: [(coInterpreter longStoreBytecodeForHeader: aMethodHeader)
 			= (objectMemory
-				fetchByte: initialPC + (coInterpreter sizeOfCallPrimitiveBytecode: aMethodHeader)
+				fetchByte: (coInterpreter startPCOfMethod: aMethodObj) + (coInterpreter sizeOfCallPrimitiveBytecode: aMethodHeader)
 				ofObject: aMethodObj)]
 ]
 
@@ -4187,4 +4177,10 @@ SimpleStackBasedCogit >> voidCogCompiledCode [
 		externalPrimJumpOffsets at: i put: nil.
 		externalPrimCallOffsets at: i put: nil.
 		externalSetPrimOffsets at: i put: nil]
+]
+
+{ #category : #'bytecode generator support' }
+SimpleStackBasedCogit >> voidReceiverOptStatus [
+	"No op in this cogit. Provided for compatibility with the cleverer subclasses."
+	<inline: true>
 ]
