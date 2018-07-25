@@ -1377,15 +1377,11 @@ SistaCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 	register so the forwarder check can jump back to the comparison after unforwarding the constant.
 	However, if one of the operand is an unnanotable constant, does not allocate a register for it 
 	(machine code will use operations on constants)."
-	rcvrReg:= argReg := NoReg.
 	self 
 		allocateEqualsEqualsRegistersArgNeedsReg: unforwardArg 
 		rcvrNeedsReg: unforwardRcvr 
 		into: [ :rcvr :arg | rcvrReg:= rcvr. argReg := arg ].
-		
-	argReg ~= NoReg ifTrue: [ regMask := self registerMaskFor: argReg ].
-	rcvrReg ~= NoReg ifTrue: [ regMask := regMask bitOr: (self registerMaskFor: rcvrReg) ].
-	
+
 	"Only interested in inlining if followed by a conditional branch."
 	(branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse]) ifFalse:
 		[^ self 
@@ -1401,6 +1397,12 @@ SistaCogit >> genForwardersInlinedIdenticalOrNotIf: orNot [
 	unforwardArg ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: argReg scratchReg: TempReg ].
 	unforwardRcvr ifTrue: [ objectRepresentation genEnsureOopInRegNotForwarded: rcvrReg scratchReg: TempReg ].
 	
+	regMask := argReg = NoReg
+					ifTrue: [self registerMaskFor: rcvrReg]
+					ifFalse:
+						[rcvrReg = NoReg
+							ifTrue: [self registerMaskFor: argReg]
+							ifFalse: [self registerMaskFor: rcvrReg and: argReg]].
 	counterReg := self allocateRegNotConflictingWith: regMask.
 	self 
 		genExecutionCountLogicInto: [ :cAddress :countTripBranch | 
