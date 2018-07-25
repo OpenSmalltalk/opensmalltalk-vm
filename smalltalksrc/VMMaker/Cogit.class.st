@@ -3379,11 +3379,11 @@ Cogit >> bcpcsDescriptorsAndStartpcsFor: aMethod bsOffset: bsOffset do: quintern
 		[^self].
 	latestContinuation := pc := coInterpreter startPCOfMethod: aMethod.
 	startpcs := OrderedCollection with: pc.
-	blockEndPCs := OrderedCollection with: (coInterpreter numBytesOf: aMethod).
+	blockEndPCs := OrderedCollection with: (objectMemory numBytesOf: aMethod).
 	quinternaryBlock value: pc value: nil value: nil value: 0 value: pc. "stackCheck/entry pc"
 	primIdx > 0 ifTrue:
 		[pc := pc + (self deltaToSkipPrimAndErrorStoreIn: aMethod
-							header: (coInterpreter methodHeaderOf: aMethod))].
+							header: (objectMemory methodHeaderOf: aMethod))].
 	nExts := 0.
 	endpc := objectMemory numBytesOf: aMethod.
 	[pc <= endpc] whileTrue:
@@ -11598,6 +11598,20 @@ Cogit >> reportLastNInstructions [
 	coInterpreter transcript flush
 ]
 
+{ #category : #'tests-method map' }
+Cogit >> resolveToOopOrNil: proxyOrSpecialSelector [
+	"Answer the oop of a proxy or a special selector.  When testing pc mapping on simulation
+	 methods (as opposed to CurrentImageFacades) selectorForSendBefore:in: answers either
+	 VMObjectProxy instances (normal sends) or symbols (special selector sends)."
+	<doNotGenerate>
+	| index |
+	proxyOrSpecialSelector isSymbol ifFalse:
+		[^proxyOrSpecialSelector oop].
+	index := Smalltalk specialSelectors indexOf: proxyOrSpecialSelector.
+	^index > 0 ifTrue:
+		[coInterpreter specialSelector: index - 1 // 2]
+]
+
 { #category : #'in-line cacheing' }
 Cogit >> rewriteCPIC: cPIC caseJumpTo: target [ 
 	"adding a new CPIC case, or making an MNU CPIC, requires altering the jump that takes us to the first case to be used"
@@ -12446,7 +12460,8 @@ Cogit >> testMcToBcPcMappingForCompiledMethod: aCompiledMethod cogMethod: cogMet
 					mcSelector := self selectorForSendAt: mcpc annotation: annotation in: aCompiledMethod.
 					"sends map to the following pc.  need to find the selector for the previous pc"
 					bcSelector := self selectorForSendBefore: bcpc in: bcMethod.
-					self assert: mcSelector = bcSelector]].
+					self assert: (mcSelector = bcSelector
+								or: [mcSelector = (self resolveToOopOrNil: bcSelector)])]].
 			 prevMcpc := mcpc].
 		 false "keep scanning"]
 ]
@@ -12455,6 +12470,8 @@ Cogit >> testMcToBcPcMappingForCompiledMethod: aCompiledMethod cogMethod: cogMet
 Cogit >> testPCMappingForCompiledMethod: aCompiledMethod cogMethod: cm [
 	<doNotGenerate>
 	methodObj := methodHeader := nil.
+	cm isInteger ifTrue: "If testing in a simulation..."
+		[^self testPCMappingForCompiledMethod: aCompiledMethod cogMethod: (self cogMethodSurrogateAt: cm)].
 	self
 		testMcToBcPcMappingForCompiledMethod: aCompiledMethod cogMethod: cm;
 		testBcToMcPcMappingForCogMethod: cm
