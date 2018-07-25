@@ -2416,9 +2416,13 @@ CoInterpreter >> ceSendMustBeBoolean: anObject [
 
 { #category : #trampolines }
 CoInterpreter >> ceSendMustBeBooleanTo: aNonBooleanObject interpretingAtDelta: jumpSize [
-	"For RegisterAllocatingCogit we want the address following a conditional branch not to be reachable, so we
-	 don't have to generate code to reload registers.  Instead simply convert to an interpreter frame,
-	 backup the pc to the branch, reenter the interpreter and hence retry the mustBeBoolean send therein."
+	"For RegisterAllocatingCogit we want the pc following a conditional branch not to be reachable, so
+	 we don't have to generate code to reload registers.  But notionally the pc following a conditional
+	 branch is reached when continuing from a mustBeBoolean error.  Instead of supporting this in the
+	 JIT, simply convert to an interpreter frame, backup the pc to the branch, reenter the interpreter
+	 and hence retry the mustBeBoolean send therein.  N.B. We could do this for immutability violations
+	 too, but immutability is used in actual applications and so should be performant, whereas
+	 mustBeBoolean errors are extremely rare and so we choose brevity over performance in this case."
 	<api>
 	| cogMethod methodObj methodHeader startBcpc |
 	<var: 'cogMethod' type: #'CogBlockMethod *'>

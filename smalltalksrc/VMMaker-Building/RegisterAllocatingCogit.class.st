@@ -125,7 +125,7 @@ RegisterAllocatingCogit >> assertCorrectSimStackPtr [
 						or: [self maybeCompilingFirstPassOfBlockWithInitialPushNil and: [simSpillBase > methodOrBlockNumArgs]]).
 			 (needsFrame and: [simSpillBase > 0]) ifTrue:
 				[self assert: (self simStackAt: simSpillBase - 1) spilled == true.
-				 self assert: (simSpillBase > simStackPtr or: [(self simStackAt: simSpillBase) spilled == false])]].
+				 self assert: (simSpillBase >= simStackPtr or: [(self simStackAt: simSpillBase) spilled == false])]].
 		 self deny: self duplicateRegisterAssignmentsInTemporaries]
 ]
 
@@ -401,7 +401,31 @@ RegisterAllocatingCogit >> ensureReceiverResultRegContainsSelf [
 	"First ensure that ReceiverResultReg is allocated to self,
 	 which may cause spills, etc.  Then copy the register into
 	 any instances of simSelf on the stack."
-	super ensureReceiverResultRegContainsSelf.
+
+	| freeReg live ssEntry |
+	needsFrame
+		ifTrue:
+			[self receiverIsInReceiverResultReg ifFalse: "Avoid spilling if possible"
+				[live := self liveRegisters.
+				 ssEntry := self ssEntrySuchThat: [:e| e registerOrNone = ReceiverResultReg].
+				 (ssEntry notNil
+				  and: [(freeReg := backEnd availableRegisterOrNoneFor: live) ~= NoReg])
+					ifTrue: "ReceiverResultReg is being used, but we have a free register.  So avoid spill by assigining."
+						[ssEntry storeToRegNoAssign: freeReg.
+						 self ssEntriesDo:
+							[:e|
+							 e registerOrNone = ReceiverResultReg ifTrue:
+								[e type = SSRegister
+									ifTrue: [e register: freeReg]
+									ifFalse: [e liveRegister: freeReg]]]]
+					ifFalse:
+						[self ssAllocateRequiredReg: ReceiverResultReg].
+				 self putSelfInReceiverResultReg.
+				 self simSelf liveRegister: ReceiverResultReg]]
+		ifFalse:
+			[self assert: (self simSelf type = SSRegister
+						  and: [self simSelf register = ReceiverResultReg
+						  and: [self receiverIsInReceiverResultReg]])].
 	"the storeToReg: in putSelfInReceiverResultReg in
 	 ensureReceiverResultRegContainsSelf copies the register to all copies.
 	 So simply check that the stack agrees with this."
@@ -558,6 +582,7 @@ RegisterAllocatingCogit >> freeAnyRegNotConflictingWith: regMask [
 
 { #category : #'trampoline support' }
 RegisterAllocatingCogit >> genCallMustBeBooleanFor: boolean [
+	"Call ceSendMustBeBooleanTo:interpretingAtDelta: via the relevant trampoline."
 	self assert: ((self generatorAt: byte0) numBytes between: 1 and: 2).
 	^self CallRT: ((self generatorAt: byte0) numBytes = 1
 					ifTrue:
@@ -713,7 +738,7 @@ RegisterAllocatingCogit >> genJumpBackTo: targetPC [
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	<inline: false>
-	| eventualTarget desc reg fixup ok mbb noMustBeBoolean |
+	| eventualTarget desc reg fixup ok mbb |
 	<var: #fixup type: #'BytecodeFixup *'>
 	<var: #ok type: #'AbstractInstruction *'>
 	<var: #desc type: #'CogSimStackEntry *'>
@@ -722,7 +747,6 @@ RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	desc := self ssTop.
 	self ssPop: 1.
 
-	noMustBeBoolean := self extASpecifiesNoMustBeBoolean.
 	extA := 0.
 
 	self moveVolatileSimStackEntriesToRegisters.
@@ -752,6 +776,8 @@ RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 their distance send mustBeBoolean."
 	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
 
+	"Copy simStack before any branching.  If no branch then the stack is as it is here, not after the merge for eventualTarget."
+	self copySimStackToScratch: simSpillBase.
 	"Merge required; must not generate merge code along untaken branch, so flip the order."
 	(self mergeRequiredForJumpTo: eventualTarget)
 		ifTrue:
@@ -764,29 +790,23 @@ RegisterAllocatingCogit >> genJumpIf: boolean to: targetBytecodePC [
 							ifTrue: [objectMemory trueObject - objectMemory falseObject]
 							ifFalse: [objectMemory falseObject - objectMemory trueObject])
 				R: reg.
-			 noMustBeBoolean ifTrue: 
-				[self JumpZero: (self ensureFixupAt: eventualTarget). "generates merge code"
-				 ok jmpTarget: (self annotateBytecode: self lastOpcode).
-				 ^0].
 			 mbb := self JumpNonZero: 0.
 			 self Jump: (self ensureFixupAt: eventualTarget). "generates merge code"
 			 mbb jmpTarget: self Label]
 		ifFalse:
 			[self genSubConstant: boolean R: reg.
 			 self JumpZero: (self ensureFixupAt: eventualTarget).
-			 noMustBeBoolean ifTrue: 
-				[self annotateBytecode: self lastOpcode.
-				 ^0].
 			 self CmpCq: (boolean = objectMemory falseObject
 							ifTrue: [objectMemory trueObject - objectMemory falseObject]
 							ifFalse: [objectMemory falseObject - objectMemory trueObject])
 				R: reg.
 			 ok := self JumpZero: 0].
-
+	"Restore simStack after the merges in ensureFixupAt: above."
+	self restoreSimStackFromScratch.
 	reg ~= TempReg ifTrue:
 		[self MoveR: reg R: TempReg].
-	self copySimStackToScratch: simSpillBase.
 	self ssFlushTo: simStackPtr.
+	"In the RegisterAllocatingCogit we map to an interpreter frame in ceSendMustBeBooleanTo:interpretingAtDelta:"
 	self genCallMustBeBooleanFor: boolean.
 	"NOTREACHED"
 	ok jmpTarget: (self annotateBytecode: self Label).
@@ -1555,6 +1575,7 @@ RegisterAllocatingCogit >> mergeWithFixupIfRequired: fixup [
 
 { #category : #'bytecode generator support' }
 RegisterAllocatingCogit >> moveVolatileSimStackEntriesToRegisters [
+	<inline: true>
 	self moveVolatileSimStackEntriesToRegistersPreserving: self allocatedRegisters
 ]
 
@@ -1827,7 +1848,7 @@ RegisterAllocatingCogit >> restoreSimStackFromScratch [
 	self cCode: [self mem: simStack cp: scratchSimStack y: self simStackSlots * (self sizeof: CogSimStackEntry)]
 		inSmalltalk: [0 to: simStackPtr do:
 						[:i|
-						simStack at: i put: (scratchSimStack at: i)]].
+						simStack at: i put: (scratchSimStack at: i) copy]].
 	simSpillBase := scratchSpillBase
 ]
 
@@ -1949,6 +1970,25 @@ RegisterAllocatingCogit >> ssAllocateRequiredRegMask: requiredRegsMask upThrough
 		((self simStackAt: i) registerMask anyMask: requiredRegsMask) ifTrue:
 			[(self simStackAt: i) liveRegister: NoReg]].
 	super ssAllocateRequiredRegMask: requiredRegsMask upThrough: stackPtr upThroughNative: nativeStackPtr
+]
+
+{ #category : #'simulation stack' }
+RegisterAllocatingCogit >> ssEntriesDo: aBlock [
+	"Evaluate aBlock with all simStackEntries"
+	<inline: true>
+	0 to: simStackPtr do:
+		[:i| aBlock value: (self simStackAt: i)]
+]
+
+{ #category : #'simulation stack' }
+RegisterAllocatingCogit >> ssEntrySuchThat: aBlock [
+	"Answer the SimStackEntry for which aBlock answers true, or nil if none."
+	<inline: true>
+	0 to: simStackPtr do:
+		[:i|
+		(aBlock value: (self simStackAt: i)) ifTrue:
+			[^self simStackAt: i]].
+	^nil
 ]
 
 { #category : #'simulation stack' }
