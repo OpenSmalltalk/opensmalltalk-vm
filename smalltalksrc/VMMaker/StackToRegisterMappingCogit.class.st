@@ -3344,37 +3344,35 @@ StackToRegisterMappingCogit >> genGenericStorePop: popBoolean slotIndex: slotInd
 	- needRestoreRcvr (ensures the receiver is live across the store)
 	- needsImmCheck (do the call-back if the receiver is immutable)"
 	"We have two very different paths as only the immutability path requires a specific register 
-	for the value on top of stack as well as the stack flush"
+	for the value on top of stack as well as the stack flush.
+	N.B. If IMMUTABILITY then ReceiverResultReg/destReg will be smashed if needsImmCheck.
+		If not IMMUTABILITY then ReceiverResultReg will be preserved by the ceStoreCheck trampoline."
 	| topReg |
 	<inline: true>
-	self 
-		cppIf: IMMUTABILITY
-		ifTrue:
-			[needsImmCheck
-				ifTrue: 
-					[self ssAllocateRequiredReg: ClassReg upThrough: simStackPtr - 1. "If already classReg don't spill it"
-					 "we replace the top value for the flush"
-					 self ssStoreAndReplacePop: popBoolean toReg: ClassReg.
-					 self ssFlushTo: simStackPtr.
-					 ^objectRepresentation 
-						genStoreWithImmutabilityCheckSourceReg: ClassReg 
-						slotIndex: slotIndex 
-						destReg: destReg 
-						scratchReg: TempReg 
-						needsStoreCheck: needsStoreCheck 
-						needRestoreRcvr: needsRestoreReceiver]].
-		 topReg := self 
-					allocateRegForStackEntryAt: 0 
-					notConflictingWith: (self registerMaskFor: destReg). 
-		 self ssStorePop: popBoolean toReg: topReg.
-		 ^objectRepresentation
-			genStoreSourceReg: topReg
-			slotIndex: slotIndex
-			destReg: destReg
-			scratchReg: TempReg
-			inFrame: needsFrame
-			needsStoreCheck: needsStoreCheck
-	
+	self cppIf: IMMUTABILITY ifTrue:
+		[needsImmCheck ifTrue: 
+			[self ssAllocateRequiredReg: ClassReg upThrough: simStackPtr - 1. "If already classReg don't spill it"
+			 "we replace the top value for the flush"
+			 self ssStoreAndReplacePop: popBoolean toReg: ClassReg.
+			 self ssFlushTo: simStackPtr.
+			 ^objectRepresentation 
+				genStoreWithImmutabilityCheckSourceReg: ClassReg 
+				slotIndex: slotIndex 
+				destReg: destReg 
+				scratchReg: TempReg 
+				needsStoreCheck: needsStoreCheck 
+				needRestoreRcvr: needsRestoreReceiver]].
+	topReg := self 
+				allocateRegForStackEntryAt: 0 
+				notConflictingWith: (self registerMaskFor: destReg). 
+	self ssStorePop: popBoolean toReg: topReg.
+	^objectRepresentation
+		genStoreSourceReg: topReg
+		slotIndex: slotIndex
+		destReg: destReg
+		scratchReg: TempReg
+		inFrame: needsFrame
+		needsStoreCheck: needsStoreCheck
 ]
 
 { #category : #'bytecode generator support' }
@@ -13390,9 +13388,11 @@ StackToRegisterMappingCogit >> ssAllocateCallReg: requiredReg [
 	"Allocate a register needed in a run-time call (i.e. flush uses of the
 	 register to the real stack).  Since the run-time can smash any and
 	 all caller-saved registers also flush all caller-saved registers."
+	<inline: true>
 	self ssAllocateRequiredRegMask: (CallerSavedRegisterMask
 										bitOr: (self registerMaskFor: requiredReg))
 		upThrough: simStackPtr
+		upThroughNative: simNativeStackPtr
 ]
 
 { #category : #'simulation stack' }
@@ -13400,10 +13400,12 @@ StackToRegisterMappingCogit >> ssAllocateCallReg: requiredReg1 and: requiredReg2
 	"Allocate registers needed in a run-time call (i.e. flush uses of the
 	 registers to the real stack).  Since the run-time can smash any and
 	 all caller-saved registers also flush all caller-saved registers."
+	<inline: true>
 	self ssAllocateRequiredRegMask: (CallerSavedRegisterMask
 										bitOr: ((self registerMaskFor: requiredReg1)
 										bitOr: (self registerMaskFor: requiredReg2)))
 		upThrough: simStackPtr
+		upThroughNative: simNativeStackPtr
 ]
 
 { #category : #'simulation stack' }
@@ -13411,9 +13413,11 @@ StackToRegisterMappingCogit >> ssAllocateCallReg: requiredReg1 and: requiredReg2
 	"Allocate registers needed in a run-time call (i.e. flush uses of the
 	 registers to the real stack).  Since the run-time can smash any and
 	 all caller-saved registers also flush all caller-saved registers."
+	<inline: true>
 	self ssAllocateRequiredRegMask: (CallerSavedRegisterMask bitOr:
 										(self registerMaskFor: requiredReg1 and: requiredReg2 and: requiredReg3))
 		upThrough: simStackPtr
+		upThroughNative: simNativeStackPtr
 ]
 
 { #category : #'simulation stack' }
@@ -13421,12 +13425,14 @@ StackToRegisterMappingCogit >> ssAllocateCallReg: requiredReg1 and: requiredReg2
 	"Allocate registers needed in a run-time call (i.e. flush uses of the
 	 registers to the real stack).  Since the run-time can smash any and
 	 all caller-saved registers also flush all caller-saved registers."
+	<inline: true>
 	self ssAllocateRequiredRegMask: (CallerSavedRegisterMask
 										bitOr: ((self registerMaskFor: requiredReg1)
 										bitOr: ((self registerMaskFor: requiredReg2)
 										bitOr: ((self registerMaskFor: requiredReg3)
 										bitOr: (self registerMaskFor: requiredReg4)))))
 		upThrough: simStackPtr
+		upThroughNative: simNativeStackPtr
 ]
 
 { #category : #'simulation stack' }
@@ -13465,28 +13471,27 @@ StackToRegisterMappingCogit >> ssAllocateRequiredFloatRegMask: requiredRegsMask 
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssAllocateRequiredReg: requiredReg [
+	<inline: true>
 	self ssAllocateRequiredRegMask: (self registerMaskFor: requiredReg)
 		upThrough: simStackPtr
+		upThroughNative: simNativeStackPtr
 ]
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssAllocateRequiredReg: requiredReg1 and: requiredReg2 [
+	<inline: true>
 	self ssAllocateRequiredRegMask: ((self registerMaskFor: requiredReg1)
 										bitOr: (self registerMaskFor: requiredReg2))
 		upThrough: simStackPtr
+		upThroughNative: simNativeStackPtr
 ]
 
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssAllocateRequiredReg: requiredReg upThrough: stackPtr [
+	<inline: true>
 	self ssAllocateRequiredRegMask: (self registerMaskFor: requiredReg)
 		upThrough: stackPtr
-]
-
-{ #category : #'simulation stack' }
-StackToRegisterMappingCogit >> ssAllocateRequiredRegMask: requiredRegsMask upThrough: stackPtr [
-	<inline: true>
-	self ssAllocateRequiredRegMask: requiredRegsMask upThrough: stackPtr upThroughNative: simNativeStackPtr.
-
+		upThroughNative: simNativeStackPtr
 ]
 
 { #category : #'simulation stack' }

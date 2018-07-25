@@ -2188,7 +2188,9 @@ CogObjectRepresentationForSpur >> genStoreWithImmutabilityAndStoreCheckSourceReg
 	 repeat the check to choose between the immutbality violation and the store check."
 	immutableJump jmpTarget: cogit Label.
 	self genStoreTrampolineCall: index.
-	needRestoreRcvr ifTrue: [ cogit putSelfInReceiverResultReg ].
+	cogit voidReceiverOptStatus.
+	needRestoreRcvr ifTrue:
+		[cogit putSelfInReceiverResultReg].
 
 	jmpImmediate jmpTarget:
 	(jmpDestYoung jmpTarget:
@@ -2210,7 +2212,9 @@ CogObjectRepresentationForSpur >> genStoreWithImmutabilityButNoStoreCheckSourceR
 	"imm check has its own trampoline"
 	mutableJump := self genJumpMutable: destReg scratchReg: scratchReg.
 	self genStoreTrampolineCall: index.
-	needRestoreRcvr ifTrue: [ cogit putSelfInReceiverResultReg ].
+	cogit voidReceiverOptStatus.
+	needRestoreRcvr ifTrue:
+		[cogit putSelfInReceiverResultReg].
 	immutabilityFailure := cogit Jump: 0.
 	mutableJump jmpTarget: cogit Label.
 
