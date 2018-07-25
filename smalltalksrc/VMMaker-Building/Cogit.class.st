@@ -6993,6 +6993,7 @@ Cogit >> gen: opcode "<Integer>" uniqueLiteral: operandOne "<Integer>" operand: 
 
 { #category : #'trampoline support' }
 Cogit >> genCallMustBeBooleanFor: boolean [
+	"Call ceSendMustBeBooleanTo: via the relevant trampoline."
 	^self CallRT: (boolean = objectMemory falseObject
 					ifTrue: [ceSendMustBeBooleanAddFalseTrampoline]
 					ifFalse: [ceSendMustBeBooleanAddTrueTrampoline])
