@@ -773,6 +773,7 @@ sqInt
 sqFileTruncate(SQFile *f, squeakFileOffsetType offset) {
 	if (!sqFileValid(f))
 		return interpreterProxy->success(false);
+	fflush(getFile(f));
  	if (sqFTruncate(getFile(f), offset))
 		return interpreterProxy->success(false);
 	return 1;
