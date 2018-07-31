@@ -1492,6 +1492,13 @@ CoInterpreterMT >> wakeHighestPriority [
 			 (self isLiveContext: ctxt) ifTrue:
 				[highestRunnableProcessPriority := p + 1.
 				^proc].
+			  self cppIf: SPURVM ifTrue: 
+				["This is uncommon, so we can deal with forwarders here instead of assuming there isn't."
+				 (self isOopForwarded: ctxt) ifTrue:
+					[ctxt := self fixFollowedField: SuspendedContextIndex ofObject: proc withInitialValue: ctxt].
+				  (self isLiveContext: ctxt) ifTrue:
+					[highestRunnableProcessPriority := p + 1.
+					^proc].].
 			 self warning: 'evicted zombie process from run queue']].
 	^nil
 ]
