@@ -28,6 +28,7 @@
  */
 
 #define WIN32_LEAN_AND_MEAN
+#define BUILD_VM_CORE
 #include <windows.h>
 #include <stdlib.h>
 #include "OpenSmalltalkVM.h"

@@ -77,7 +77,7 @@ static void printCrashDebugInformation(LPEXCEPTION_POINTERS exp);
 #define PROCESS_PER_MONITOR_DPI_AWARE 2
 #endif
 
-typedef HRESULT WINAPI (*SetProcessDpiAwarenessFunctionPointer) (int awareness);
+typedef HRESULT (WINAPI *SetProcessDpiAwarenessFunctionPointer) (int awareness);
 
 extern int ioIsHeadless(void);
 extern const char *getVersionInfo(int verbose);

@@ -25,6 +25,7 @@
  *
  * Author: roniesalg@gmail.com
  */
+#define BUILD_VM_CORE
 #include "OpenSmalltalkVM.h"
 
 int
