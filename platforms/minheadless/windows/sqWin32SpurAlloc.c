@@ -136,6 +136,7 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 	delta = max(pageSize,1024*1024);
 
 # define printProbes 0
+
 # define printMaps 0
 	while ((usqIntptr_t)(address + bytes) > (usqIntptr_t)address) {
 		if (printProbes && fIsConsole)
@@ -149,7 +150,13 @@ sqAllocateMemorySegmentOfSizeAboveAllocatedSizeInto(sqInt size, void *minAddress
 		 * address such as 0xNNNNf000 but VirtualAlloc will answer 0xNNNN0000.
 		 * So accept allocs above minAddress rather than allocs above address
 		 */
-		if (alloc >= (char *)minAddress && alloc <= address + delta) {
+		 /**** 2018.08.07.BenComan TODO, help required.
+		  **** Using "minAddress" below seems to require 134,180,864 loops be exiting, effectively hanging the VM before loading an Image.
+		  **** Using "address" exits after one loop - but I don'y understand the implications.
+		  **** Discussion here http://forum.world.st/Minheadless-trial-tp5082569p5082652.html
+		  ****/
+		//Original Line// if (alloc >= (char *)minAddress && alloc <= address + delta) {
+		if (alloc >= (char *)address && alloc <= address + delta) {
 			if (printMaps && fIsConsole)
 				fprintf(stderr,
 						"VirtualAlloc [%p,%p) above %p)\n",
