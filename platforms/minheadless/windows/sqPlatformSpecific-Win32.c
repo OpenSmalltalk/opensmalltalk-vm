@@ -115,7 +115,12 @@ void
 ioInitPlatformSpecific(void)
 {
     /* Setup the FPU */
-    _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
+	/**** 2018.08.07.BenComan TODO, help required.
+	 **** x64 does not support _MCW_PC or _MCW_IC per https://msdn.microsoft.com/en-us/library/e9b52ceh.aspx
+	 ****/
+	//Original Line// _controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC); 
+	_controlfp(FPU_DEFAULT, _MCW_EM | _MCW_RC);
+
 
     /* Create the wake up event. */
     vmWakeUpEvent = CreateEvent(NULL, 1, 0, NULL);
