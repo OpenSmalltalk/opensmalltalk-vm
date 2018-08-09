@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'cameFrom'
 	],
-	#category : #'VMMaker-SpurMemoryManagerSimulation'
+	#category : 'VMMaker-SpurMemoryManagerSimulation'
 }
 
 { #category : #accessing }

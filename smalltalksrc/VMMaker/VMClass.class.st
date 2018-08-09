@@ -16,7 +16,7 @@ Class {
 	#classInstVars : [
 		'timeStamp'
 	],
-	#category : #'VMMaker-Support'
+	#category : 'VMMaker-Support'
 }
 
 { #category : #translation }

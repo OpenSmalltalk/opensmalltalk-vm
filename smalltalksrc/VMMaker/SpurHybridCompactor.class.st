@@ -24,7 +24,7 @@ Class {
 		'selectiveCompactor',
 		'planNotSelect'
 	],
-	#category : #'VMMaker-SpurMemoryManager'
+	#category : 'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }

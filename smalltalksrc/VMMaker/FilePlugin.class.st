@@ -21,7 +21,7 @@ Class {
 		'DirEntryFound',
 		'DirNoMoreEntries'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }
@@ -947,8 +947,8 @@ FilePlugin >> primitiveFileStdioHandles [
 			[^interpreterProxy primitiveFailFor: PrimErrUnsupported]].
 	self cCode: '' inSmalltalk: [fileRecords := Array new: 3].
 	validMask := self sqFileStdioHandlesInto: fileRecords.
-	validMask = 0 ifTrue:
-		[^interpreterProxy primitiveFailFor: PrimErrUnsupported].
+	validMask = -1 ifTrue:
+		[^interpreterProxy primitiveFail].
 	result := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: 3.
 	result = nil ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoMemory].
