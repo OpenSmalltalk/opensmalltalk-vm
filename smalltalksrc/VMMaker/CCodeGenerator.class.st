@@ -46,7 +46,7 @@ Class {
 	#pools : [
 		'VMBasicConstants'
 	],
-	#category : #'VMMaker-Translation to C'
+	#category : 'VMMaker-Translation to C'
 }
 
 { #category : #'class initialization' }

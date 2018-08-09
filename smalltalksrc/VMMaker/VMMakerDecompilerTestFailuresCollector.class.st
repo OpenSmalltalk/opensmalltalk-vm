@@ -1,7 +1,7 @@
 Class {
 	#name : #VMMakerDecompilerTestFailuresCollector,
 	#superclass : #DecompilerTestFailuresCollector,
-	#category : #'VMMaker-Tests'
+	#category : 'VMMaker-Tests'
 }
 
 { #category : #utilities }

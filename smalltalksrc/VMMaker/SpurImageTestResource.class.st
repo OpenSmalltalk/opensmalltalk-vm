@@ -5,7 +5,7 @@ Class {
 		'emptyVM',
 		'vmWithLoadedImage'
 	],
-	#category : #'VMMaker-Tests'
+	#category : 'VMMaker-Tests'
 }
 
 { #category : #accessing }

@@ -65,7 +65,7 @@ Class {
 	#pools : [
 		'VMBytecodeConstants'
 	],
-	#category : #'VMMaker-SpurMemoryManager'
+	#category : 'VMMaker-SpurMemoryManager'
 }
 
 { #category : #translation }
