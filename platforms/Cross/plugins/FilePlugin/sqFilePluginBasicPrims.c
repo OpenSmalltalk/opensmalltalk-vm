@@ -531,9 +531,15 @@ sqConnectToFile(SQFile *sqFile, void *file, sqInt writeFlag)
 }
 
 /*
- * Fill-in files with 3 handles for stdin, stdout and stderr as available and
- * answer a bit-mask of the availability, 1 corresponding to stdin, 2 to stdout
- * and 4 to stderr, with 0 on error or unavailablity.
+ * Fill-in files with handles for stdin, stdout and seterr as available and
+ * answer a bit-mask of the availability:
+ *
+ * -1 - unspecified error.
+ *      Use primitiveFailFor() or primitiveFailForOSError() to specify an error
+ * 0  - no stdio available
+ * 1  - stdin available
+ * 2  - stdout available
+ * 4  - stderr available
  */
 sqInt
 sqFileStdioHandlesInto(SQFile files[])
