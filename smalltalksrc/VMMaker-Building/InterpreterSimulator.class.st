@@ -989,8 +989,10 @@ InterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	]
 		ensure: [f close].
 
-	swapBytes ifTrue: [Utilities informUser: 'Swapping bytes of foreign image...'
-								during: [self reverseBytesInImage]].
+	swapBytes ifTrue:
+		[UIManager default
+			informUser: 'Swapping bytes of foreign image...'
+			during: [self reverseBytesInImage]].
 
 	self initialize.
 	bytesToShift := self startOfMemory - oldBaseAddr.  "adjust pointers for zero base address"

@@ -520,15 +520,6 @@ VMMakerTool >> findPlatformsPath [
 ]
 
 { #category : #'path access' }
-VMMakerTool >> findPlatformsPathFrom: fd [
-	| path |
-	Utilities informUserDuring:[:bar|
-		path := self findPlatformsPathFrom: fd informing: bar.
-	].
-	^path
-]
-
-{ #category : #'path access' }
 VMMakerTool >> findPlatformsPathFrom: fd informing: bar [
 	| dirNames possiblePath |
 	bar value: 'Searching in ', fd pathName.
