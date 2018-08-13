@@ -22,7 +22,8 @@ static char __buildInfo[] = "FileAttributesPlugin * FileAttributesPlugin.oscog-A
 #define FAIL() { return -1; }
 #include "sqWin32File.h"
 #else
-#include "sqUnixCharConv.h"
+extern int sq2uxPath(char *from, int fromLen, char *to, int toLen, int term);
+extern int ux2sqPath(char *from, int fromLen, char *to, int toLen, int term);
 #endif
 typedef struct dirptrstruct {
     		DIR *dp;
@@ -106,7 +107,7 @@ EXPORT(sqInt) setInterpreter(struct VirtualMachine*anInterpreter);
 static sqInt squeakPathtoUnixmaxLen(sqInt pathOop, char *cPathString, sqInt maxLength);
 static sqInt statArrayFortoArrayfromfileName(char *cPathName, sqInt attributeArray, struct stat *statBufPointer, sqInt fileNameOop);
 static sqInt stringFromCString(const char *aCString);
-static sqInt unixPathToOop(sqInt cPathString);
+static sqInt unixPathToOop(char *cPathString);
 #if _WIN32
 static sqInt winFileAttributesForlengthto(char *pathString, sqInt pathLength, WIN32_FILE_ATTRIBUTE_DATA *winAttrs);
 #endif /* _WIN32 */
@@ -1360,7 +1361,7 @@ primitiveRewinddir(void)
 EXPORT(sqInt)
 primitiveVersionString(void)
 {
-	popthenPush(1, stringFromCString("1.3.3"));
+	popthenPush(1, stringFromCString("1.3.3d01"));
 	return 0;
 }
 
@@ -1614,7 +1615,7 @@ stringFromCString(const char *aCString)
 
 	/* FileAttributesPlugin>>#unixPathToOop: */
 static sqInt
-unixPathToOop(sqInt cPathString)
+unixPathToOop(char *cPathString)
 {
     sqInt pathOop;
     sqInt status;
