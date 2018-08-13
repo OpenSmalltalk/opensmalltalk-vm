@@ -996,9 +996,9 @@ InterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 
 	self initialize.
 	bytesToShift := self startOfMemory - oldBaseAddr.  "adjust pointers for zero base address"
-	Utilities informUser: 'Relocating object pointers...'
-				during: [self initializeInterpreter: bytesToShift].
-
+	UIManager default
+		informUser: 'Relocating object pointers...'
+		during: [self initializeInterpreter: bytesToShift]
 ]
 
 { #category : #'other primitives' }
