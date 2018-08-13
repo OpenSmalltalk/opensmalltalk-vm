@@ -83,7 +83,7 @@ Class {
 		'ByteCountsPerMicrosecond',
 		'ExpectedSends'
 	],
-	#category : 'VMMaker-JITSimulation'
+	#category : #'VMMaker-JITSimulation'
 }
 
 { #category : #'debug support' }
@@ -2726,7 +2726,7 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	self ensureImageFormatIsUpToDate: swapBytes.
 
 	bytesToShift := objectMemory memoryBaseForImageRead - oldBaseAddr.  "adjust pointers for zero base address"
-	Utilities
+	UIManager default
 		informUser: 'Relocating object pointers...'
 		during: [self initializeInterpreter: bytesToShift].
 	self initializeCodeGenerator
@@ -3402,7 +3402,7 @@ CogVMSimulator >> returnToSchedulingLoopAndReleaseVMOrWakeThread: vmThread sourc
 
 { #category : #'image save/restore' }
 CogVMSimulator >> reverseBytesInImage [
-	Utilities
+	UIManager default
 		informUser: 'Swapping bytes of foreign image...'
 		during: [super reverseBytesInImage]
 ]

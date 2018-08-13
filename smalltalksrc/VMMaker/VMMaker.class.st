@@ -104,7 +104,7 @@ Class {
 	#classVars : [
 		'DirNames'
 	],
-	#category : 'VMMaker-Building'
+	#category : #'VMMaker-Building'
 }
 
 { #category : #initialisation }
@@ -838,10 +838,17 @@ VMMaker class >> initialize [
 	 in which case it is likely called oscogvm or Cog."
 	#('../platforms' 'oscogvm/platforms' 'Cog/platforms' '../oscogvm/platforms')
 		with: #('..' 'oscogvm' 'Cog' '../oscogvm')
-		do: [:dir :path|
-			(FileDirectory default directoryExists: dir) ifTrue:
-				[DirNames at: #sourceTree put: path.
-				 ^self]]
+		do: ((Smalltalk classNamed: #FileSystem)
+				ifNotNil:
+					[[:dir :path|
+					  (FileLocator cwd / dir) isDirectory ifTrue:
+						[DirNames at: #sourceTree put: path.
+						 ^self]]]
+				ifNil:
+					[[:dir :path|
+					  (FileDirectory default directoryExists: dir) ifTrue:
+						[DirNames at: #sourceTree put: path.
+						 ^self]]])
 ]
 
 { #category : #initialisation }

@@ -4,7 +4,7 @@ Class {
 	#pools : [
 		'VMBasicConstants'
 	],
-	#category : 'VMMaker-Tests'
+	#category : #'VMMaker-Tests'
 }
 
 { #category : #tests }
