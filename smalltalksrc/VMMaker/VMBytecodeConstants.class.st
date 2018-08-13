@@ -22,7 +22,7 @@ Class {
 	#pools : [
 		'VMBasicConstants'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #'simulator initialization' }

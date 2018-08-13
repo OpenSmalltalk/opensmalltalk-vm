@@ -57,7 +57,7 @@ Class {
 		'assertVEPAES',
 		'primTraceLog'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'class initialization' }
@@ -1717,7 +1717,7 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	self ensureImageFormatIsUpToDate: swapBytes.
 
 	bytesToShift := objectMemory memoryBaseForImageRead - oldBaseAddr.  "adjust pointers for zero base address"
-	Utilities
+	UIManager default
 		informUser: 'Relocating object pointers...'
 		during: [self initializeInterpreter: bytesToShift]
 ]
@@ -2247,7 +2247,7 @@ StackInterpreterSimulator >> redirectTranscriptToHost [
 
 { #category : #'image save/restore' }
 StackInterpreterSimulator >> reverseBytesInImage [
-	Utilities
+	UIManager default
 		informUser: 'Swapping bytes of foreign image...'
 		during: [super reverseBytesInImage]
 ]

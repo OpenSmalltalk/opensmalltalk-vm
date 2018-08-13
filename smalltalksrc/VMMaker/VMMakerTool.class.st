@@ -53,7 +53,7 @@ Class {
 		'platformNameMorph',
 		'generatedPathMorph'
 	],
-	#category : 'VMMaker-Building'
+	#category : #'VMMaker-Building'
 }
 
 { #category : #'instance creation' }
@@ -517,15 +517,6 @@ VMMakerTool >> findPlatformsPath [
 	dir := FileList2 modalFolderSelector.
 	dir ifNil: [^nil].
 	self platformsPathText: dir pathName
-]
-
-{ #category : #'path access' }
-VMMakerTool >> findPlatformsPathFrom: fd [
-	| path |
-	Utilities informUserDuring:[:bar|
-		path := self findPlatformsPathFrom: fd informing: bar.
-	].
-	^path
 ]
 
 { #category : #'path access' }

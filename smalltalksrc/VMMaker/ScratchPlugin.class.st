@@ -27,7 +27,7 @@ Handshake lines (options 20-25 for Set/GetOption primitives):
 Class {
 	#name : #ScratchPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }

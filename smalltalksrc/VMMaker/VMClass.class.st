@@ -16,7 +16,7 @@ Class {
 	#classInstVars : [
 		'timeStamp'
 	],
-	#category : 'VMMaker-Support'
+	#category : #'VMMaker-Support'
 }
 
 { #category : #translation }
@@ -158,11 +158,13 @@ VMClass class >> initializationOptions [
 { #category : #initialization }
 VMClass class >> initialize [
 	InitializationOptions ifNil: [InitializationOptions := Dictionary new].
-	(Utilities classPool at: #CommonRequestStrings ifAbsent: []) ifNotNil:
-		[:commonRequestStringHolder|
-		(commonRequestStringHolder contents asString includesSubstring: 'VMClass open') ifFalse:
-			[Utilities appendToCommonRequests: '-\VMMaker generateConfiguration\VMMaker generateAllConfigurationsUnderVersionControl\VMMaker generateAllSpurConfigurations\VMClass openCogMultiWindowBrowser\VMClass openObjectMemoriesInterpretersBrowser\VMClass openSpurMultiWindowBrowser\VMClass openCogSpurMultiWindowBrowser\VMClass openCogitMultiWindowBrowser' withCRs]].
-	ExpensiveAsserts := false
+	ExpensiveAsserts := false.
+	(Smalltalk classNamed: #Utilities) ifNotNil:
+		[:utilitiesClass|
+		 (utilitiesClass classPool at: #CommonRequestStrings ifAbsent: []) ifNotNil:
+			[:commonRequestStringHolder|
+			(commonRequestStringHolder contents asString includesSubstring: 'VMClass open') ifFalse:
+				[Utilities appendToCommonRequests: '-\VMMaker generateConfiguration\VMMaker generateAllConfigurationsUnderVersionControl\VMMaker generateAllSpurConfigurations\VMClass openCogMultiWindowBrowser\VMClass openObjectMemoriesInterpretersBrowser\VMClass openSpurMultiWindowBrowser\VMClass openCogSpurMultiWindowBrowser\VMClass openCogitMultiWindowBrowser' withCRs]]]
 ]
 
 { #category : #initialization }
