@@ -937,7 +937,7 @@ FilePlugin >> primitiveFileSize [
 FilePlugin >> primitiveFileStdioHandles [
 	"Answer an Array of file handles for standard in, standard out and standard error,
 	 with nil in entries that are unvailable, e.g. because the platform does not provide
-	 standard error, etc.  Fail if there are no standard i/o facilities on the platform or
+	 standard error, etc.  Fail if an error occurs determining the stdio handles,
 	 if the security plugin denies access or if memory runs out."
 	| fileRecords result validMask |
 	<export: true>
@@ -947,8 +947,8 @@ FilePlugin >> primitiveFileStdioHandles [
 			[^interpreterProxy primitiveFailFor: PrimErrUnsupported]].
 	self cCode: '' inSmalltalk: [fileRecords := Array new: 3].
 	validMask := self sqFileStdioHandlesInto: fileRecords.
-	validMask = -1 ifTrue:
-		[^interpreterProxy primitiveFail].
+	validMask < 0 ifTrue:
+		[^interpreterProxy primitiveFailForOSError: validMask].
 	result := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: 3.
 	result = nil ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoMemory].
