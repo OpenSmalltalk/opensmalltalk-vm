@@ -2,6 +2,15 @@
 cmake_minimum_required(VERSION 3.1)
 project(OpenSmalltalkVM)
 
+# The following is temporary while understanding/debugging CMake build.
+message("START VARIABLES (A)")
+get_cmake_property(_variableNames VARIABLES)
+list (SORT _variableNames)
+foreach (_variableName ${_variableNames})
+    message(STATUS "${_variableName}=${${_variableName}}")
+endforeach()
+message("END VARIABLES (A)")
+
 # Check the build type
 if (CMAKE_BUILD_TYPE STREQUAL "")
 	# CMake defaults to leaving CMAKE_BUILD_TYPE empty. This screws up
@@ -62,22 +71,23 @@ elseif("${CMAKE_SYSTEM_PROCESSOR}" MATCHES "i.86")
     set(SQUEAK_PLATFORM_X86_32 True)
 endif()
 
-if(SQUEAK_PLATFORM_X86_64)
-	if(BUILD_I386_VERSION)
-        set(SQUEAK_PLATFORM_X86_32 True)
-	    set(SQUEAK_PLATFORM_X86_64 False)
-	else()
-		set(VM_64BITS TRUE)
-		set(SourceFolderName "${SourceFolderName}64")
-		if(WIN32)
-			set(FFI_VARIANT_X64_WIN64 True)
-		else()
-			set(FFI_VARIANT_X64_SYSV True)
-		endif()
-        set(VM_TARGET_CPU "x86_64")
-	endif()
-else()
+if(BUILD_I386_VERSION)
+    set(SQUEAK_PLATFORM_X86_32 True)
+    set(SQUEAK_PLATFORM_X86_64 False)
 	set(VM_64BITS False)
+else()
+endif()
+
+if(SQUEAK_PLATFORM_X86_64)
+	set(VM_64BITS TRUE)
+	set(SourceFolderName "${SourceFolderName}64")
+	if(WIN32)
+		set(FFI_VARIANT_X64_WIN64 True)
+	else()
+		set(FFI_VARIANT_X64_SYSV True)
+	endif()
+    set(VM_TARGET_CPU "x86_64")
+else()
 endif()
 
 if(SQUEAK_PLATFORM_X86_32)
@@ -529,6 +539,15 @@ if("${VM_CORE_LIBRARY_TYPE}" STREQUAL "STATIC")
 endif()
 
 add_library(${VM_LIBRARY_NAME} ${VM_CORE_LIBRARY_TYPE} ${VM_SOURCES} ${VM_INTERNAL_PLUGIN_SOURCES})
+
+# The following is temporary while understanding/debugging CMake build.
+message("START VARIABLES (B)")
+get_cmake_property(_variableNames VARIABLES)
+list (SORT _variableNames)
+foreach (_variableName ${_variableNames})
+    message(STATUS "${_variableName}=${${_variableName}}")
+endforeach()
+message("END VARIABLES (B)")
 
 target_compile_definitions(${VM_LIBRARY_NAME} PRIVATE
 	-DSQUEAK_BUILTIN_PLUGIN
