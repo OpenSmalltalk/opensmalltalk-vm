@@ -534,8 +534,7 @@ sqConnectToFile(SQFile *sqFile, void *file, sqInt writeFlag)
  * Fill-in files with handles for stdin, stdout and seterr as available and
  * answer a bit-mask of the availability:
  *
- * -1 - unspecified error.
- *      Use primitiveFailFor() or primitiveFailForOSError() to specify an error
+ * <0 - Error.  The value will be returned to the image using primitiveFailForOSError().
  * 0  - no stdio available
  * 1  - stdin available
  * 2  - stdout available
