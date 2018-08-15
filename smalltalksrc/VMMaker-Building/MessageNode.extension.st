@@ -2,7 +2,7 @@ Extension { #name : #MessageNode }
 
 { #category : #'*VMMaker-C translation' }
 MessageNode >> asTranslatorNodeIn: aTMethod [
-	"make a CCodeGenerator equivalent of me"
+	"Answer a TParseNode subclass equivalent of me"
 	"selector is sometimes a Symbol, sometimes a SelectorNode!
 	 On top of this, numArgs is needed due to the (truly grody) use of
 	 arguments as a place to store the extra expressions needed to generate

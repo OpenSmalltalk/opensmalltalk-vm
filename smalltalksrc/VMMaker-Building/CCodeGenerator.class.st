@@ -954,18 +954,21 @@ CCodeGenerator >> collectInlineList: inlineFlagOrSymbol [
 { #category : #utilities }
 CCodeGenerator >> compileToTMethodSelector: selector in: aClass [
 	"Compile a method to a TMethod"
+	^(aClass >> selector) asTranslationMethodOfClass: self translationMethodClass
+
+	"was:
 	| implementingClass |
 	implementingClass := aClass.
 	^(Compiler new
 		parse: ([aClass sourceCodeAt: selector]
 					on: KeyNotFound
-					do: [:ex| "Quick hack for simulating Pharo images..."
+					do: [:ex| ""Quick hack for simulating Pharo images...""
 						(PharoVM and: [aClass == String class and: [selector == #findSubstringViaPrimitive:in:startingAt:matchTable:]]) ifFalse:
 							[ex pass].
-						(implementingClass :=  ByteString) sourceCodeAt: #findSubstring:in:startingAt:matchTable:])
+						(implementingClass := ByteString) sourceCodeAt: #findSubstring:in:startingAt:matchTable:])
 		in: implementingClass
 		notifying: nil)
-			asTranslationMethodOfClass: self translationMethodClass
+			asTranslationMethodOfClass: self translationMethodClass"
 ]
 
 { #category : #public }
@@ -3619,7 +3622,7 @@ CCodeGenerator >> initializerForInstVar: varName in: aClass [
 		[:s :m| | tmeth |
 		((s beginsWith: 'initialize')
 		 and: [m writesField: instVarIndex]) ifTrue:
-			[tmeth := m methodNode asTranslationMethodOfClass: TMethod.
+			[tmeth := m asTranslationMethodOfClass: TMethod.
 			 tmeth parseTree nodesDo:
 				[:node| | exprOrAssignment |
 				(node isAssignment

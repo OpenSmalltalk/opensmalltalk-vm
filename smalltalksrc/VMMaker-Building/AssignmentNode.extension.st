@@ -13,7 +13,7 @@ AssignmentNode >> anyReturns: aSequenceOfNodes [
 
 { #category : #'*VMMaker-C translation' }
 AssignmentNode >> asTranslatorNodeIn: aTMethod [
-	"make a CCodeGenerator equivalent of me"
+	"Answer a TParseNode subclass equivalent of me"
 	| varNode valueNode |
 	varNode := variable asTranslatorNodeIn: aTMethod.
 	valueNode := value asTranslatorNodeIn: aTMethod.
