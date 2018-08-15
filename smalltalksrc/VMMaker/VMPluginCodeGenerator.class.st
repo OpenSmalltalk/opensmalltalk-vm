@@ -39,7 +39,7 @@ VMPluginCodeGenerator >> accessorsAndAssignmentsForSubMethodNamed: selector actu
 	(#(loadBitBltFrom: loadWarpBltFrom: loadBitBltFrom:warping:) includes: selector) ifTrue:
 		[(method isNil
 		  or: [method definingClass ~~ BitBltSimulation]) ifTrue:
-			[method := (BitBltSimulation >> selector) methodNode asTranslationMethodOfClass: TMethod]].
+			[method := (BitBltSimulation >> selector) asTranslationMethodOfClass: TMethod]].
 	method ifNil:
 		[^nil].
 	map := Dictionary new.

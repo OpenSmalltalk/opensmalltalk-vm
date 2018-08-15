@@ -2,7 +2,7 @@ Extension { #name : #BraceNode }
 
 { #category : #'*VMMaker-C translation' }
 BraceNode >> asTranslatorNodeIn: aTMethod [
-	"make a CCodeGenerator equivalent of me."
+	"Answer a TParseNode subclass equivalent of me."
 
 	"This is for case statements"
 	(elements allSatisfy: [:elem| elem isMessageNode and: [elem selector key = #->]]) ifTrue:

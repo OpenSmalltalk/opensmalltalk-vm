@@ -2775,7 +2775,7 @@ TMethod >> superExpansionNodeFor: aSelector args: argumentNodes [
 		ifNil: [self error: 'superclass does not define super method']
 		ifNotNil:
 			[:superMethod| | superTMethod commonVars varMap |
-			superTMethod := superMethod methodNode asTranslationMethodOfClass: self class.
+			superTMethod := superMethod asTranslationMethodOfClass: self class.
 			((argumentNodes allSatisfy: [:parseNode| parseNode isVariableNode])
 			and: [(argumentNodes asOrderedCollection collect: [:parseNode| parseNode key]) = superTMethod args]) ifFalse:
 				[self error: definingClass name, '>>',selector, ' args ~= ',

@@ -2,7 +2,7 @@ Extension { #name : #CascadeNode }
 
 { #category : #'*VMMaker-C translation' }
 CascadeNode >> asTranslatorNodeIn: aTMethod [
-	"make a CCodeGenerator equivalent of me."
+	"Answer a TParseNode subclass equivalent of me."
 	^TStmtListNode new
 		setArguments: #()
 		statements:
