@@ -2,8 +2,8 @@ Extension { #name : #MethodNode }
 
 { #category : #'*VMMaker-C translation' }
 MethodNode >> asTranslationMethodOfClass: aClass [
- 
-	^ aClass new
+ 	"Answer a TMethod (or subclass) derived from the receiver."
+	^aClass new
 		setSelector: selectorOrFalse
 		definingClass: encoder associationForClass value
 		args: arguments
@@ -12,5 +12,4 @@ MethodNode >> asTranslationMethodOfClass: aClass [
 		primitive: primitive
 		properties: properties
 		comment: comment
-
 ]

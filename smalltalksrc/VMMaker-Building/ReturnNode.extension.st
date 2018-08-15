@@ -2,7 +2,7 @@ Extension { #name : #ReturnNode }
 
 { #category : #'*VMMaker-C translation' }
 ReturnNode >> asTranslatorNodeIn: aTMethod [
-	"Make a CCodeGenerator equivalent of a return."
+	"Answer a TParseNode subclass equivalent of a return."
 	| exprTranslation lastExpr |
 	exprTranslation := expr asTranslatorNodeIn: aTMethod.
 	(expr isMessage
