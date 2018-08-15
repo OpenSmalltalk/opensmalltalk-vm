@@ -4,3 +4,8 @@ Extension { #name : #CompiledCode }
 CompiledCode >> isCompiledBlock [
 	^false
 ]
+
+{ #category : #'*VMMakerCompatibilityForPharo6-testing' }
+CompiledCode >> isCompiledCode [
+	^true
+]
