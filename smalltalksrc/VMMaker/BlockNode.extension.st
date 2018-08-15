@@ -2,7 +2,7 @@ Extension { #name : #BlockNode }
 
 { #category : #'*VMMaker-C translation' }
 BlockNode >> asTranslatorNodeIn: aTMethod [
-	"make a CCodeGenerator equivalent of me"
+	"Answer a TParseNode subclass equivalent of me"
 	| statementList |
 	statementList := OrderedCollection new.
 	statements do:
