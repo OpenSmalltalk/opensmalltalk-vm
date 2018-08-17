@@ -1,5 +1,22 @@
 Extension { #name : #RBMethodNode }
 
+{ #category : #'*VMMakerCompatibilityForPharo6-C translation' }
+RBMethodNode >> asTranslationMethodOfClass: aTMethodClass [
+ 	"Answer a TMethod (or subclass) derived from the receiver."
+	^aTMethodClass new
+		setSelector: selector
+		definingClass: scope instanceScope outerScope class
+		args: arguments
+		locals: ((self allDefinedVariables copyWithoutAll: arguments) collect: [:string| string -> string])
+		block: body
+		primitive: ((pragmas ifNotNil:
+							[pragmas detect: [:pragmaNode| pragmaNode selector beginsWith: #primitve:] ifNone: []])
+						ifNil: [0]
+						ifNotNil: [:pragmaNode| pragmaNode arguments first value])
+		properties: (properties ifNil: [AdditionalMethodState new])
+		comment: self missingCommentNeededForCTranslation
+]
+
 { #category : #'*VMMakerCompatibilityForPharo6-results' }
 RBMethodNode >> printSchematicTempsFor: blockNode in: blockScope on: stream [
 	| startPos vectorStartPos |
