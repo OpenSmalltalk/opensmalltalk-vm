@@ -330,6 +330,7 @@ beatStateMachine(void *careLess)
 #else
 # define VMNAME "squeak"
 #endif
+      if (!getenv("CI")) {
         fprintf(stderr, "This VM uses a separate heartbeat thread to update its internal clock\n");
         fprintf(stderr, "and handle events.  For best operation, this thread should run at a\n");
         fprintf(stderr, "higher priority, however the VM was unable to change the priority.  The\n");
@@ -344,11 +345,11 @@ beatStateMachine(void *careLess)
         fprintf(stderr, "\nYou will need to log out and log back in for the limits to take effect.\n");
         fprintf(stderr, "For more information please see\n");
         fprintf(stderr, "https://github.com/OpenSmalltalk/opensmalltalk-vm/releases/tag/r3732#linux\n");
-        // exit(errno);
 		// The VM may have issues with clock jitter due to the heartbeat thread
 		// not running at elevated priority. An exit may be appropriate in some
 		// cases, but for most users the above warning is sufficient.
 		// exit(errno);
+      }
 	}
 	beatState = active;
 	while (beatState != condemned) {
