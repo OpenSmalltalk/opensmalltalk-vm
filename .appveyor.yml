@@ -99,7 +99,7 @@ cache:
 install:
   - 'curl -fsSL --retry 4 -m 600 -o "setup-x86.exe" "http://cygwin.com/setup-x86.exe" '
   - 'curl -fsSL --retry 4 -m 600 -o "setup-x86_64.exe" "http://cygwin.com/setup-x86_64.exe" '
-  - 'call scripts/ci/installCygwin.bat %MINGW_ARCH% "%CYG_ROOT%"'
+  - 'call scripts/installCygwin.bat %MINGW_ARCH% "%CYG_ROOT%"'
 
 # Cygwin build script
 #
