@@ -109,7 +109,7 @@ install:
 # build which causes failures as certain functions attempt to redirect
 # default file handles. Ensure a dummy file descriptor is opened with 'exec'.
 build_script:
-  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./.travis_build.sh"'
+  - '%CYG_ROOT%\bin\bash -lc "cd $APPVEYOR_BUILD_FOLDER; exec 0</dev/null; exec ./scripts/ci/travis_build.sh"'
 
 # Using `after_build` instead of `before_deploy` and `deploy_script`.
 #  `before_deploy` is only invoked if the deployment provider is triggered.

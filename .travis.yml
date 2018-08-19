@@ -128,11 +128,11 @@ jobs:
   - env: FLAVOR="squeak.cog.spur.lowcode"
   - env: FLAVOR="pharo.cog.spur.lowcode"
 
-install: ./.travis_install.sh
+install: ./scripts/ci/travis_install.sh
 
-before_script: $CHROOT ./.travis_build.sh
+before_script: $CHROOT ./scripts/ci/travis_build.sh
 
-script: ./.travis_test.sh
+script: ./scripts/ci/travis_test.sh
 
 after_success: (cd deploy && ./filter-exec.sh pack-vm.sh)
 
