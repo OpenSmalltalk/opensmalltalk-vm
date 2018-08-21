@@ -11,6 +11,11 @@ RBProgramNode >> isBlockNode [
 	^false
 ]
 
+{ #category : #'*VMMakerCompatibilityForPharo6-testing' }
+RBProgramNode >> isNodeNil [
+	^false
+]
+
 { #category : #'*VMMakerCompatibilityForPharo6-C translation' }
 RBProgramNode >> missingCommentNeededForCTranslation [
 	"So far the RBProgramNode hierarchy omits/elides comments :-("
