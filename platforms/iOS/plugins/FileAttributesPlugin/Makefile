@@ -3,6 +3,7 @@
 #
 #
 SRCDIRS:=../../platforms/unix/vm
+INCDIRS:=../../platforms/unix/vm
 LIBSRC:=FileAttributesPlugin.c sqUnixCharConv.c
 
 include ../common/Makefile.plugin
