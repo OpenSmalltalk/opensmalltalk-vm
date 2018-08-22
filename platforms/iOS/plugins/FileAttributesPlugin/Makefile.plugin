@@ -3,5 +3,9 @@
 #
 #
 include ../common/Makefile.plugin
-PluginIncludes += FilePlugin
+PluginIncludes := FilePlugin
+OSPluginIncludes := FilePlugin
+SRCDIRS:=$(SRCDIRS) \
+			$(addprefix $(PLATDIR)/Cross/plugins/,$(PluginIncludes)) \
+			$(addprefix $(OSXPLUGINSDIR)/,$(OSPluginIncludes))
 
