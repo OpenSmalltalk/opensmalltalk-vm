@@ -74,8 +74,8 @@ VMOBJ:= $(addprefix $(OBJDIR)/,$(VMOBJ))
 SRCDIRS:=$(VMSRCDIR) $(OSXCOMMONDIR) $(OSXCLASSESDIR) $(OSXDIR) $(UNIXVMDIR) $(CROSSDIR)
 VPATH:=$(SRCDIRS)
 # Additonal includes are required, eg for SoundPlugin/sqSqueakSoundCoreAudio.h
-PluginIncludes := FilePlugin HostWindowPlugin SoundPlugin
-OSPluginIncludes := FilePlugin HostWindowPlugin SoundPlugin
+PluginIncludes := FilePlugin FileAttributesPlugin HostWindowPlugin SoundPlugin
+OSPluginIncludes := FilePlugin FileAttributesPlugin HostWindowPlugin SoundPlugin
 SRCDIRS:=$(SRCDIRS) \
 			$(addprefix $(PLATDIR)/Cross/plugins/,$(PluginIncludes)) \
 			$(addprefix $(OSXPLUGINSDIR)/,$(OSPluginIncludes))
