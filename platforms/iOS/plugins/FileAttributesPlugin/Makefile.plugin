@@ -1,11 +1,7 @@
 #
-# FileAttributesPlugin uses sq2uxPath() and ux2sqPath(), provided by FilePlugin
+# FileAttributesPlugin uses sq2uxPath() and ux2sqPath(), provided by sqUnixCharConv.h
 #
 #
 include ../common/Makefile.plugin
-PluginIncludes := FilePlugin
-OSPluginIncludes := FilePlugin
-SRCDIRS:=$(SRCDIRS) \
-			$(addprefix $(PLATDIR)/Cross/plugins/,$(PluginIncludes)) \
-			$(addprefix $(OSXPLUGINSDIR)/,$(OSPluginIncludes))
+INCLUDES += -I$(PLATDIR)/unix/vm
 

@@ -22,8 +22,7 @@ static char __buildInfo[] = "FileAttributesPlugin * FileAttributesPlugin.oscog-A
 #define FAIL() { return -1; }
 #include "sqWin32File.h"
 #else
-extern int sq2uxPath(char *from, int fromLen, char *to, int toLen, int term);
-extern int ux2sqPath(char *from, int fromLen, char *to, int toLen, int term);
+#include "sqUnixCharConv.h"
 #endif
 typedef struct dirptrstruct {
     		DIR *dp;
