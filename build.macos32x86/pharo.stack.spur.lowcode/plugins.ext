@@ -17,7 +17,6 @@ SerialPlugin \
 ObjectiveCPlugin \
 SDL2DisplayPlugin \
 EventsHandlerPlugin \
-FileAttributesPlugin \
 # could work, but I don't know if relevant:
 # TestOSAPlugin \
 # not working (because of Cocoa vs Carbon):
