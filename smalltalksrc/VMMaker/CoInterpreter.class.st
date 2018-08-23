@@ -78,7 +78,6 @@ Class {
 		'desiredCogCodeSize',
 		'heapBase',
 		'lastCoggableInterpretedBlockMethod',
-		'reenterInterpreter',
 		'deferSmash',
 		'deferredSmash',
 		'primTraceLog',
@@ -115,7 +114,6 @@ Class {
 		'MinBackwardJumpCountForCompile',
 		'PrimNumberHashMultiply',
 		'PrimTraceLogSize',
-		'ReturnToInterpreter',
 		'RumpCStackSize',
 		'TraceBlockActivation',
 		'TraceBlockCreation',
@@ -182,10 +180,7 @@ CoInterpreter class >> declareCVarsIn: aCCodeGenerator [
 			declareC: 'sqInt maxLiteralCountForCompile = MaxLiteralCountForCompile /* ', MaxLiteralCountForCompile printString, ' */';
 		var: #minBackwardJumpCountForCompile
 			declareC: 'sqInt minBackwardJumpCountForCompile = MinBackwardJumpCountForCompile /* ', MinBackwardJumpCountForCompile printString, ' */'.
-	aCCodeGenerator removeVariable: 'atCache'.
-	aCCodeGenerator
-		var: #reenterInterpreter
-		declareC: 'jmp_buf reenterInterpreter; /* private export */'.
+	aCCodeGenerator removeVariable: 'atCache'. "Way too much trouble than it's worth in the Cog VM"
 	aCCodeGenerator
 		var: #primTraceLogIndex type: #'unsigned char';
 		var: #primTraceLog declareC: 'sqInt primTraceLog[256]';
@@ -317,8 +312,6 @@ CoInterpreter class >> initializeMiscConstants [
 	CheckAllocationFillerAfterPrimCall := 32.
 	PrimCallDoNotJIT := 64.
 
-	ReturnToInterpreter := 1. "setjmp/longjmp code."
-
 	PrimTraceLogSize := 256. "Room for 256 selectors.  Must be 256 because we use a byte to hold the index"
 	TraceBufferSize := 256 * 3. "Room for 256 events"
 	TraceContextSwitch := self objectMemoryClass basicNew integerObjectOf: 1.
@@ -438,8 +431,7 @@ CoInterpreter class >> mustBeGlobal: var [
 
 	^(super mustBeGlobal: var)
 	   or: [#('desiredCogCodeSize' 'heapBase'
-			'maxLiteralCountForCompile' 'minBackwardJumpCountForCompile'
-			'reenterInterpreter') includes: var]
+			'maxLiteralCountForCompile' 'minBackwardJumpCountForCompile') includes: var]
 ]
 
 { #category : #translation }
@@ -460,12 +452,6 @@ CoInterpreter class >> preGenerationHook: aCCodeGenerator [
 		[aCCodeGenerator
 			var: #argumentCount declareC: '#define argumentCount acpfc.ac\#define primFailCode acpfc.pfc' withCRs;
 			var: #primFailCode declareC: '#if VMBIGENDIAN\struct { short pad; unsigned char pfc; unsigned char ac; } acpfc;\#else /* argumentCount & primFailCode */\struct { unsigned char ac; unsigned char pfc; } acpfc;\#endif' withCRs]
-]
-
-{ #category : #translation }
-CoInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	"It is either this or scan cmacro methods for selectors."
-	aCodeGen retainMethods: #(enterSmalltalkExecutiveImplementation)
 ]
 
 { #category : #'accessing class hierarchy' }
@@ -3280,23 +3266,6 @@ CoInterpreter >> ensurePushedInstructionPointer [
 ]
 
 { #category : #initialization }
-CoInterpreter >> enterSmalltalkExecutive [
-	"Main entry-point into the interpreter at each execution level, where an
-	 execution level is either the start of execution or reentry for a callback."
-	<cmacro: '() enterSmalltalkExecutiveImplementation()'>
-	"Simulation of the setjmp in enterSmalltalkExecutiveImplementation for reentry into interpreter."
-	[([self enterSmalltalkExecutiveImplementation]
-		on: ReenterInterpreter
-		do: [:ex| ex return: ex returnValue]) = ReturnToInterpreter] whileTrue
-]
-
-{ #category : #'callback support' }
-CoInterpreter >> enterSmalltalkExecutiveFromCallback [
-	<inline: true>
-	self enterSmalltalkExecutive
-]
-
-{ #category : #initialization }
 CoInterpreter >> enterSmalltalkExecutiveImplementation [
 	"Main entry-point into the interpreter at each execution level, where an execution
 	 level is either the start of execution or reentry for a callback.  Capture the C stack
@@ -4315,17 +4284,6 @@ CoInterpreter >> initStackPagesAndInterpret [
 ]
 
 { #category : #initialization }
-CoInterpreter >> initialEnterSmalltalkExecutive [
-	"Main entry-point into the interpreter at system start-up.
-	 In the non-threaded VM this is identical to enterSmalltalkExecutive"
-	<cmacro: '() enterSmalltalkExecutiveImplementation()'>
-	"Simulation of the setjmp in enterSmalltalkExecutiveImplementation for reentry into interpreter."
-	[([self enterSmalltalkExecutiveImplementation]
-		on: ReenterInterpreter
-		do: [:ex| ex return: ex returnValue]) = ReturnToInterpreter] whileTrue
-]
-
-{ #category : #initialization }
 CoInterpreter >> initializeCodeGenerator [
 	cogit
 		initializeCodeZoneFrom: (self cCode: [objectMemory memory] inSmalltalk: [Cogit guardPageSize])
@@ -4701,13 +4659,14 @@ CoInterpreter >> itemporary: offset in: theFP put: valueOop [
 ]
 
 { #category : #'message sending' }
-CoInterpreter >> justActivateNewMethod [
-	| methodHeader activateCogMethod cogMethod numArgs numTemps rcvr initialIP |
+CoInterpreter >> justActivateNewMethod: mustBeInterpreterFrame [
+	| methodHeader cogMethod numArgs numTemps rcvr initialIP |
 	<var: #cogMethod type: #'CogMethod *'>
 	<var: #initialIP type: #usqInt>
 	<inline: true>
 	methodHeader := self rawHeaderOf: newMethod.
-	(activateCogMethod := self isCogMethodReference: methodHeader) ifTrue:
+	(mustBeInterpreterFrame not
+	 and: [self isCogMethodReference: methodHeader]) ifTrue:
 		[cogMethod := self cCoerceSimple: methodHeader to: #'CogMethod *'.
 		 methodHeader := cogMethod methodHeader].
 	numTemps := self temporaryCountOfMethodHeader: methodHeader.
@@ -4716,7 +4675,7 @@ CoInterpreter >> justActivateNewMethod [
 	rcvr := self stackValue: numArgs. "could new rcvr be set at point of send?"
 	self assert: (objectMemory isOopForwarded: rcvr) not.
 
-	(activateCogMethod
+	(cogMethod notNil
 	and: [instructionPointer asUnsignedInteger >= objectMemory startOfMemory]) ifTrue:
 		[self iframeSavedIP: framePointer put: instructionPointer.
 		 instructionPointer := cogit ceReturnToInterpreterPC].
@@ -4724,12 +4683,12 @@ CoInterpreter >> justActivateNewMethod [
 	self push: framePointer.
 	framePointer := stackPointer.
 	initialIP := self initialIPForHeader: methodHeader method: newMethod.
-	activateCogMethod
-		ifTrue:
+	cogMethod
+		ifNotNil:
 			[self push: cogMethod asUnsignedInteger.
 			 self push: objectMemory nilObject. "FoxThisContext field"
 			 instructionPointer := cogMethod asUnsignedInteger + cogMethod stackCheckOffset]
-		ifFalse:
+		ifNil:
 			[self push: newMethod.
 			 self setMethod: newMethod methodHeader: methodHeader.
 			 self push: objectMemory nilObject. "FoxThisContext field"
@@ -4745,22 +4704,12 @@ CoInterpreter >> justActivateNewMethod [
 	(self methodHeaderHasPrimitive: methodHeader) ifTrue:
 		["Skip the CallPrimitive bytecode, if it's there, and store the error code if the method starts
 		  with a long store temp.  Strictly no need to skip the store because it's effectively a noop."
-		activateCogMethod ifFalse:
-			[instructionPointer := initialIP + (self sizeOfCallPrimitiveBytecode: methodHeader)].
+		 cogMethod ifNil:
+			[instructionPointer := instructionPointer + (self sizeOfCallPrimitiveBytecode: methodHeader)].
 		 primFailCode ~= 0 ifTrue:
 			[self reapAndResetErrorCodeTo: stackPointer header: methodHeader]].
 
 	^methodHeader
-]
-
-{ #category : #'cog jit support' }
-CoInterpreter >> long: aJumpBuf jmp: returnValue [
-	"Hack simulation of setjmp/longjmp.
-	 Signal the exception that simulates a longjmp back to the interpreter." 
-	<doNotGenerate>
-	aJumpBuf == reenterInterpreter ifTrue:
-		[self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true line: nil].
-	aJumpBuf returnValue: returnValue; signal
 ]
 
 { #category : #'stack bytecodes' }
@@ -7253,9 +7202,7 @@ CoInterpreter >> saveCStackStateForCallbackContext: vmCallbackContext [
 	vmCallbackContext
 		savedCStackPointer: cogit getCStackPointer;
 		savedCFramePointer: cogit getCFramePointer.
-	self mem: vmCallbackContext savedReenterInterpreter asVoidPointer
-		cp: reenterInterpreter
-		y: (self sizeof: #'jmp_buf')
+	super saveCStackStateForCallbackContext: vmCallbackContext
 ]
 
 { #category : #'cog jit support' }
@@ -7443,16 +7390,6 @@ CoInterpreter >> signed64BitIntegerFor: integerValue [
 CoInterpreter >> signed64BitValueOf: oop [
 	<api>
 	^super signed64BitValueOf: oop
-]
-
-{ #category : #'cog jit support' }
-CoInterpreter >> sigset:aJumpBuf jmp: sigSaveMask [
-	"Hack simulation of sigsetjmp/siglongjmp.
-	 Assign to reenterInterpreter the exception that when
-	 raised simulates a longjmp back to the interpreter." 
-	<doNotGenerate>
-	reenterInterpreter := ReenterInterpreter new returnValue: 0; yourself.
-	^0
 ]
 
 { #category : #'primitive support' }

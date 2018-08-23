@@ -457,7 +457,7 @@ Cogit class >> attemptToComputeTempNamesFor: aCompiledMethod [
 		 blocks := aCompiledMethod embeddedBlockClosures.
 		 InitializationOptions
 			at: #tempNames
-			put: (Dictionary withAll: {aCompiledMethod initialPC -> (self decomposeSchematicTemps: (schematicTemps copyUpTo: $[))},
+			put: (Dictionary newFrom: {aCompiledMethod initialPC -> (self decomposeSchematicTemps: (schematicTemps copyUpTo: $[))},
 				(blocks
 					ifEmpty: [#()]
 					ifNotEmpty:

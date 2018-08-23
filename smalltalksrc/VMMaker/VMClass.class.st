@@ -258,7 +258,8 @@ VMClass class >> initializePrimitiveErrorCodes [
 	PrimErrObjectMoved		:= pet indexOf: #'object moved' ifAbsent: 18.
 	PrimErrObjectNotPinned	:= pet indexOf: #'object not pinned' ifAbsent: 19.
 	PrimErrCallbackError		:= pet indexOf: #'error in callback' ifAbsent: 20.
-	PrimErrOSError				:= pet indexOf: #'operating system error' ifAbsent: 21
+	PrimErrOSError				:= pet indexOf: #'operating system error' ifAbsent: 21.
+	PrimErrFFIException		:= pet indexOf: #'ffi call exception' ifAbsent: 22
 ]
 
 { #category : #initialization }
@@ -621,7 +622,7 @@ VMClass >> addressOf: anObject put: aBlock [
 VMClass >> alloca: size [
 	"Simulation of alloca(3)"
 	<doNotGenerate>
-	^ByteArray new: size
+	^CArrayAccessor on: (ByteArray new: size)
 ]
 
 { #category : #'C library extensions' }
