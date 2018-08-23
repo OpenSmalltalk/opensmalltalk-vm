@@ -2,7 +2,6 @@
 EXTERNAL_PLUGINS = \
 B3DAcceleratorPlugin \
 CroquetPlugin \
-FileAttributesPlugin \
 Mpeg3Plugin \
 SqueakFFIPrims \
 Squeak3D \

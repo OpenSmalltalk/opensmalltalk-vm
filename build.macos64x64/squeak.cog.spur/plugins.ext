@@ -5,7 +5,6 @@ BochsX64Plugin \
 GdbARMPlugin \
 B3DAcceleratorPlugin \
 CroquetPlugin \
-FileAttributesPlugin \
 Mpeg3Plugin \
 SqueakFFIPrims \
 Squeak3D \
