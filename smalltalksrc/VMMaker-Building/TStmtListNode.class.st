@@ -21,7 +21,7 @@ TStmtListNode >> addReadBeforeAssignedIn: variables to: readBeforeAssigned assig
 			(node isVariable
 			 and: [(variables includes: node name)
 			 and: [(assigned includes: node name) not
-			 and: [(node structTargetKindIn: aCodeGen) isNil
+			 and: [(#(nil pointer) includes: (node structTargetKindIn: aCodeGen))
 			 and: [(parent notNil and: [parent isAssignment and: [parent variable == node]]) not]]]]) ifTrue:
 				[node name = 'theCalloutState' ifTrue:
 					[self halt].

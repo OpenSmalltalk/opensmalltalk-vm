@@ -62,6 +62,7 @@ Class {
 		'newMethod',
 		'primFailCode',
 		'osErrorCode',
+		'exceptionPC',
 		'profileMethod',
 		'profileProcess',
 		'profileSemaphore',
@@ -1872,6 +1873,16 @@ InterpreterPrimitives >> primitiveFailFor: reasonCode [
 	 N.B. primitiveFailFor: PrimNoErr is expected to clear the primFailCode."
 	<api>
 	^primFailCode := reasonCode
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> primitiveFailForFFIException: exceptionCode at: pc [
+	<var: 'exceptionCode' type: #sqLong>
+	"Set PrimErrOSError primitive failure and associated osErrorCode."
+	<api>
+	osErrorCode := exceptionCode.
+	exceptionPC := pc.
+	^primFailCode := PrimErrFFIException
 ]
 
 { #category : #'primitive support' }

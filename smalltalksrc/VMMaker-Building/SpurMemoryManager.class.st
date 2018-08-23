@@ -1210,6 +1210,13 @@ SpurMemoryManager >> accessibleObjectAfter: objOop [
 		[^objAfter]] repeat
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> activateFailingPrimitiveMethod [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter activateFailingPrimitiveMethod
+]
+
 { #category : #'weakness and ephemerality' }
 SpurMemoryManager >> activeAndDeferredScan: anEphemeron [
 	"Answer whether an ephemeron is active (has an unmarked
@@ -6482,6 +6489,13 @@ SpurMemoryManager >> is: oop KindOf: classNameString [
 	^coInterpreter is: oop KindOf: classNameString
 ]
 
+{ #category : #'simulation only' }
+SpurMemoryManager >> is: oop KindOfClass: aClass [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter is: oop KindOfClass: aClass
+]
+
 { #category : #'object access' }
 SpurMemoryManager >> is: oop instanceOf: classOop [
 	"Answer if oop is an instance of the given class."
@@ -9710,6 +9724,13 @@ SpurMemoryManager >> primitiveFailFor: reasonCode [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	<doNotGenerate>
 	^coInterpreter primitiveFailFor: reasonCode
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> primitiveFailForFFIException: errorCode at: pc [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter primitiveFailForFFIException: errorCode at: pc
 ]
 
 { #category : #'simulation only' }
