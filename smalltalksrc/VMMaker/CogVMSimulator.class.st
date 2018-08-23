@@ -1654,8 +1654,8 @@ CogVMSimulator >> interpret [
 	"record entry time when running as a browser plug-in"
 	self browserPluginInitialiseIfNeeded.
 	self internalizeIPandSP.
-	self fetchNextBytecode.
 	self initExtensions.
+	self fetchNextBytecode.
 	[true] whileTrue:
 		[self assertValidExecutionPointers.
 		 atEachStepBlock value. "N.B. may be nil"

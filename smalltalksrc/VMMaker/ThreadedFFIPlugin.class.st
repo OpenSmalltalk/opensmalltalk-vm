@@ -303,33 +303,52 @@ ThreadedFFIPlugin >> cleanupCalloutState: calloutState [
 ThreadedFFIPlugin >> dispatchFunctionPointer: aFunctionPointer [
 	"In C aFunctionPointer is void (*aFunctionPointer)()"
 	<cmacro: '(aFunctionPointer) (aFunctionPointer)()'>
-	^self perform: aFunctionPointer
+	"To write the FFI call failure code we simulate invoking the production VM's
+	 fatal exception handlers (sigsegv on Unix, squeakExceptionHandler on WIN32, et al)."
+	^[self perform: aFunctionPointer]
+		on: Error
+		do: [:ex|
+			interpreterProxy
+				primitiveFailForFFIException: PrimErrFFIException at: aFunctionPointer asInteger;
+				activateFailingPrimitiveMethod]
 ]
 
 { #category : #'callout support' }
 ThreadedFFIPlugin >> dispatchFunctionPointer: aFunctionPointer with: int1 with: int2 with: int3 with: int4 [
 	"In C aFunctionPointer is void (*aFunctionPointer)(int, int, int, int)"
 	<cmacro: '(aFunctionPointer, int1, int2, int3, int4) (aFunctionPointer)(int1, int2, int3, int4)'>
-	^self 
-		perform: aFunctionPointer
-		with: int1
-		with: int2
-		with: int3
-		with: int4
+	"To write the FFI call failure code we simulate invoking the production VM's
+	 fatal exception handlers (sigsegv on Unix, squeakExceptionHandler on WIN32, et al)."
+	^[self perform: aFunctionPointer
+			with: int1
+			with: int2
+			with: int3
+			with: int4]
+		on: Error
+		do: [:ex|
+			interpreterProxy
+				primitiveFailForFFIException: PrimErrFFIException at: aFunctionPointer asInteger;
+				activateFailingPrimitiveMethod]
 ]
 
 { #category : #'callout support' }
 ThreadedFFIPlugin >> dispatchFunctionPointer: aFunctionPointer with: int1 with: int2 with: int3 with: int4 with: int5 with: int6 [
-	"In C aFunctionPointer is void (*aFunctionPointer)(int, int, int, int)"
-	<cmacro: '(aFunctionPointer,a1,a2, a3, a4,a5,a6) (aFunctionPointer)(a1,a2, a3, a4,a5,a6)'>
-	^self 
-		perform: aFunctionPointer
-		with: int1
-		with: int2
-		with: int3
-		with: int4
-		with: int5
-		with: int6
+	"In C aFunctionPointer is void (*aFunctionPointer)(int, int, int, int, int, int)"
+	<cmacro: '(aFunctionPointer, int1, int2, int3, int4) (aFunctionPointer)(int1, int2, int3, int4, int5, int6)'>
+	"To write the FFI call failure code we simulate invoking the production VM's
+	 fatal exception handlers (sigsegv on Unix, squeakExceptionHandler on WIN32, et al)."
+	^[self perform: aFunctionPointer
+			with: int1
+			with: int2
+			with: int3
+			with: int4
+			with: int5
+			with: int6]
+		on: Error
+		do: [:ex|
+			interpreterProxy
+				primitiveFailForFFIException: PrimErrFFIException at: aFunctionPointer asInteger;
+				activateFailingPrimitiveMethod]
 ]
 
 { #category : #'symbol loading' }
@@ -1369,6 +1388,7 @@ ThreadedFFIPlugin >> initSurfacePluginFunctionPointers [
 { #category : #initialize }
 ThreadedFFIPlugin >> initialiseModule [
 	<export: true>
+	ffiLastError := 0.
 	"By default, disable logging"
 	ffiLogEnabled := false.
 	"Get the instSize of ExternalFunction to know whether it contains a cache of the stackSize,
@@ -1433,7 +1453,11 @@ ThreadedFFIPlugin >> morphIntoConcreteSubclass: aCoInterpreter [
 			[#IA32]	->	[ThreadedIA32FFIPlugin].
 			[#ARMv5]	->	[ThreadedARMFFIPlugin] }
 			otherwise: [self error: 'simulation not set up for this ISA'].
-	self changeClassTo: concreteClass
+	"If the concreteClass has an initialize method, other than ThreadedFFIPlugin class>>initialize
+	 then it needs to be run."
+	((concreteClass class whichClassIncludesSelector: #initialize) inheritsFrom: self class class) ifTrue:
+		[concreteClass initialize].
+	concreteClass adoptInstance: self
 ]
 
 { #category : #debugging }
@@ -1694,8 +1718,7 @@ ThreadedFFIPlugin >> primitiveFFIGetLastError [
 	 primitive error code."
 	<export: true>
 	<inline: false>
-	interpreterProxy pop: 1.
-	^interpreterProxy pushInteger: ffiLastError
+	interpreterProxy methodReturnInteger: ffiLastError
 ]
 
 { #category : #primitives }

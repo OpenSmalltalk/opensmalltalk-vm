@@ -2430,15 +2430,21 @@ TMethod >> removeUnusedTempsAndNilIfRequiredIn: aCodeGen [
 												ifAbsent: [true]].
 				(readBeforeAssigned := (self findReadBeforeAssignedIn: simplyTypedLocals in: aCodeGen)) notEmpty]]) ifTrue:
 		[readBeforeAssigned := readBeforeAssigned reject:
-			[:v| | d | "don't initialize externs, arrays or the explicitly initialized."
+			[:v| | d | "don't initialize externs, statics, arrays or the explicitly initialized."
 			 d := self declarationAt: v.
-			 (d beginsWith: 'extern') or: [(d includes: $[) or: [d includes: $=]]].
+			 (d beginsWith: 'extern') or: [(d beginsWith: 'static') or: [(d includes: $[) or: [d includes: $=]]]].
 		 parseTree statements addAllFirst:
 			(readBeforeAssigned asSortedCollection collect:
-				[:var|
-				TAssignmentNode new
-					setVariable: (TVariableNode new setName: var; yourself)
-					expression: (TConstantNode new setValue: 0; yourself)])].
+				[:var| | varNode varType zeroNode |
+				 varNode := TVariableNode new setName: var; yourself.
+				 varType := aCodeGen typeFor: varNode in: self.
+				 zeroNode := TConstantNode new setValue: 0; yourself.
+				 TAssignmentNode new
+					setVariable: varNode
+					expression: (((aCodeGen isIntegralCType: varType)
+								    or: [aCodeGen isFloatingPointCType: varType])
+									ifTrue: [zeroNode]
+									ifFalse: [aCodeGen nodeToCast: zeroNode to: varType])])].
 	^refs
 ]
 
