@@ -109,6 +109,26 @@ Object >> isTParseNode [
 	^false
 ]
 
+{ #category : #'*VMMaker-message handling' }
+Object >> perform: aSymbol with: firstObject with: secondObject with: thirdObject with: fourthObject with: fifthObject [
+	"Send the selector, aSymbol, to the receiver with the given arguments.
+	Fail if the number of arguments expected by the selector is not five.
+	Primitive. Optional. See Object documentation whatIsAPrimitive."
+
+	<primitive: 83>
+	^ self perform: aSymbol withArguments: { firstObject. secondObject. thirdObject. fourthObject. fifthObject }
+]
+
+{ #category : #'*VMMaker-message handling' }
+Object >> perform: aSymbol with: firstObject with: secondObject with: thirdObject with: fourthObject with: fifthObject with: sixthObject [
+	"Send the selector, aSymbol, to the receiver with the given arguments.
+	Fail if the number of arguments expected by the selector is not six.
+	Primitive. Optional. See Object documentation whatIsAPrimitive."
+
+	<primitive: 83>
+	^ self perform: aSymbol withArguments: { firstObject. secondObject. thirdObject. fourthObject. fifthObject. sixthObject }
+]
+
 { #category : #'*VMMaker-translation support' }
 Object >> returnTypeC: typeString [
 	"For translation only; noop when running in Smalltalk."

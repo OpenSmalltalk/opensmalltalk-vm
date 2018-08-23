@@ -340,6 +340,7 @@ Class {
 		'lkupClass',
 		'methodDictLinearSearchLimit',
 		'highestRunnableProcessPriority',
+		'reenterInterpreter',
 		'nextWakeupUsecs',
 		'nextPollUsecs',
 		'inIOProcessEvents',
@@ -455,6 +456,7 @@ Class {
 		'PrimNumberExternalCall',
 		'PrimNumberFFICall',
 		'PrimitiveTable',
+		'ReturnToInterpreter',
 		'StackPageReachedButUntraced',
 		'StackPageTraceInvalid',
 		'StackPageTraced',
@@ -610,7 +612,9 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 								statIdleUsecs)
 		in: aCCodeGenerator.
 	aCCodeGenerator var: #nextProfileTick type: #sqLong.
-	
+	aCCodeGenerator
+		var: #reenterInterpreter
+		declareC: 'jmp_buf reenterInterpreter; /* private export */'.
 	LowcodeVM
 		ifTrue:
 			[aCCodeGenerator
@@ -1290,7 +1294,9 @@ StackInterpreter class >> initializeMiscConstants [
 
 	MaxJumpBuf := 32. "max. callback depth"
 	FailImbalancedPrimitives := InitializationOptions at: #FailImbalancedPrimitives ifAbsentPut: [true].
-	EnforceAccessControl := InitializationOptions at: #EnforceAccessControl ifAbsent: [true]
+	EnforceAccessControl := InitializationOptions at: #EnforceAccessControl ifAbsent: [true].
+
+	ReturnToInterpreter := 1 "setjmp/longjmp code."
 ]
 
 { #category : #initialization }
@@ -1773,7 +1779,8 @@ StackInterpreter class >> mustBeGlobal: var [
 			'showSurfaceFn' 'displayBits' 'displayWidth' 'displayHeight' 'displayDepth'
 			'desiredNumStackPages' 'desiredEdenBytes'
 			'breakLookupClassTag' 'breakSelector' 'breakSelectorLength' 'sendTrace' 'checkAllocFiller' 'checkedPluginName'
-			'suppressHeartbeatFlag' 'debugCallbackInvokes' 'debugCallbackPath' 'debugCallbackReturns') includes: var)
+			'reenterInterpreter' 'suppressHeartbeatFlag'
+			'debugCallbackInvokes' 'debugCallbackPath' 'debugCallbackReturns') includes: var)
 	   or: [ "This allows slow machines to define bytecodeSetSelector as 0
 			to avoid the interpretation overhead."
 			MULTIPLEBYTECODESETS not and: [var = 'bytecodeSetSelector']]]]
@@ -1892,6 +1899,12 @@ invalidCompactClassError(char *s) { /* Print a (compact) class index error messa
 #define odd(v) ((int)(v)&1)
 #define even(v) (!odd(v))
 '
+]
+
+{ #category : #translation }
+StackInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
+	"It is either this or scan cmacro methods for selectors."
+	aCodeGen retainMethods: #(enterSmalltalkExecutiveImplementation)
 ]
 
 { #category : #constants }
@@ -2168,6 +2181,22 @@ StackInterpreter >> accessModifierOfMethodHeader: header [
 		ifFalse: [AccessModifierPublic]
 ]
 
+{ #category : #'primitive support' }
+StackInterpreter >> activateFailingPrimitiveMethod [
+	"Assuming the primFailCode (and any other relevant failure state) has been set,
+	 switch the VM to the interpreter if necessary (if in the CoInterpreter executing machine code),
+	 and activate the newMethod (which is expected to have a primitive)."
+	<api>
+	self assert: primFailCode ~= 0.
+	self assert: (objectMemory addressCouldBeObj: newMethod).
+	self assert: (objectMemory isCompiledMethod: newMethod).
+	self assert: (self primitiveIndexOf: newMethod) ~= 0.
+	self justActivateNewMethod: true. "Frame must be interpreted"
+	self siglong: reenterInterpreter jmp: ReturnToInterpreter.
+	"NOTREACHED"
+	^nil
+]
+
 { #category : #'control primitives' }
 StackInterpreter >> activateNewClosure: blockClosure outer: outerContext method: theMethod  numArgs: numArgs mayContextSwitch: mayContextSwitch [
 	"Similar to activateNewMethod but for Closure and newMethod."
@@ -2255,7 +2284,7 @@ StackInterpreter >> activateNewFullClosure: blockClosure method: theMethod numAr
 { #category : #'message sending' }
 StackInterpreter >> activateNewMethod [
 	| methodHeader |
-	methodHeader := self justActivateNewMethod.
+	methodHeader := self justActivateNewMethod: false. "either interpreted or machine code"
 
 	"Now check for stack overflow or an event (interrupt, must scavenge, etc)."
 	stackPointer < stackLimit ifTrue:
@@ -4055,13 +4084,18 @@ StackInterpreter >> callPrimitiveBytecode [
 
 { #category : #'callback support' }
 StackInterpreter >> callbackEnter: callbackID [
-	"Re-enter the interpreter for executing a callback"
+	"Re-enter the interpreter to execute a (non-ALien,non-FFI) callback (as used by the Python bridge)."
+	<volatile>
 	<export: true>
 	<var: #callbackID type: #'sqInt *'>
+	| savedReenterInterpreter |
+	<var: #savedReenterInterpreter type: #'jmp_buf'>
 
 	"For now, do not allow a callback unless we're in a primitiveResponse"
 	(self asserta: primitiveFunctionPointer ~= 0) ifFalse:
 		[^false].
+
+	self assert: primFailCode = 0.
 
 	"Check if we've exceeded the callback depth"
 	(self asserta: jmpDepth < MaxJumpBuf) ifFalse:
@@ -4088,18 +4122,27 @@ StackInterpreter >> callbackEnter: callbackID [
 	signaled to indicate the callback. Force an interrupt check as soon as possible."
 	self forceInterruptCheck.
 
+	"Save the previous interpreter entry jmp_buf."
+	self mem: savedReenterInterpreter asVoidPointer
+		cp: reenterInterpreter
+		y: (self sizeof: #'jmp_buf').
 	(self setjmp: (jmpBuf at: jmpDepth)) = 0 ifTrue: "Fill in callbackID"
 		[callbackID at: 0 put: jmpDepth.
-		self interpret].
+		 self enterSmalltalkExecutive.
+		 self assert: false "NOTREACHED"].
+
+	"Restore the previous interpreter entry jmp_buf."
+	self mem: reenterInterpreter
+		cp: (self cCoerceSimple: savedReenterInterpreter to: #'void *')
+		y: (self sizeof: #'jmp_buf').
 
 	"Transfer back to the previous process so that caller can push result"
 	self putToSleep: self activeProcess yieldingIf: preemptionYields.
 	self transferTo: (suspendedCallbacks at: jmpDepth).
 	newMethod := suspendedMethods at: jmpDepth.	"see comment above"
 	argumentCount := self argumentCountOf: newMethod.
-	jmpDepth := jmpDepth-1.
-	"clean out the primPops etc since we'll be returning via primitive"
-	self initPrimCall.
+	self assert: primFailCode = 0.
+	jmpDepth := jmpDepth - 1.
 	^true
 ]
 
@@ -4859,7 +4902,8 @@ StackInterpreter >> classNameOf: aClass Is: className [
 { #category : #'message sending' }
 StackInterpreter >> cloneOSErrorObj: errObj numSlots: numSlots [
 	"If errObj is a pointer object with at least two slots, then answer a clone
-	  of the error object with the second slot set to the value of osErrorCode."
+	  of the error object with the second slot set to the value of osErrorCode,
+	  and if an PrimErrFFIException, then the third slow with the exceptionPC."
 	| clone |
 	<inline: true>
 	clone := objectMemory hasSpurMemoryManagerAPI
@@ -4875,10 +4919,21 @@ StackInterpreter >> cloneOSErrorObj: errObj numSlots: numSlots [
 				storePointerUnchecked: i
 				ofObject: clone
 				withValue: (objectMemory fetchPointer: i ofObject: errObj)].
-	objectMemory
-		storePointerUnchecked: 1
-		ofObject: clone
-		withValue: (self signed64BitIntegerFor: osErrorCode).
+	(numSlots > 2
+	 and: [primFailCode = PrimErrFFIException])
+		ifTrue:
+			[objectMemory
+				storePointerUnchecked: 1
+					ofObject: clone
+						withValue: (self positive64BitIntegerFor: osErrorCode);
+				storePointerUnchecked: 2
+					ofObject: clone
+						withValue: (self positive64BitIntegerFor: exceptionPC)]
+		ifFalse:
+			[objectMemory
+				storePointerUnchecked: 1
+				ofObject: clone
+				withValue: (self signed64BitIntegerFor: osErrorCode)].
 	^clone
 ]
 
@@ -5916,10 +5971,36 @@ StackInterpreter >> ensureReceiverUnforwarded [
 			put: (objectMemory followForwarded: (self internalStackValue: argumentCount))]
 ]
 
+{ #category : #initialization }
+StackInterpreter >> enterSmalltalkExecutive [
+	"Main entry-point into the interpreter at each execution level, where an
+	 execution level is either the start of execution or reentry for a callback."
+	<cmacro: '() enterSmalltalkExecutiveImplementation()'>
+	"Simulation of the setjmp in enterSmalltalkExecutiveImplementation for reentry into interpreter."
+	[([self enterSmalltalkExecutiveImplementation]
+		on: ReenterInterpreter
+		do: [:ex| ex return: ex returnValue]) = ReturnToInterpreter] whileTrue
+]
+
 { #category : #'callback support' }
 StackInterpreter >> enterSmalltalkExecutiveFromCallback [
 	<inline: true>
-	self interpret
+	self enterSmalltalkExecutive
+]
+
+{ #category : #initialization }
+StackInterpreter >> enterSmalltalkExecutiveImplementation [
+	"Main entry-point into the interpreter at each execution level, where an execution
+	 level is either the start of execution or reentry for a callback.
+	 This is the actual implementation, separated from enterSmalltalkExecutive so the
+	 simulator can wrap it in an exception handler and hence simulate the setjmp/longjmp."
+	<inline: false>
+	"Setjmp for reentry into interpreter from elsewhere, e.g. FFI exception primitive failure."
+	self sigset: reenterInterpreter jmp: 0.
+	self setMethod: (self frameMethod: framePointer).
+	self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true line: #'__LINE__'.
+	self interpret.
+	^0
 ]
 
 { #category : #'frame access' }
@@ -7807,9 +7888,9 @@ StackInterpreter >> getErrorObjectFromPrimFailCode [
 		[table := objectMemory splObj: PrimErrTableIndex.
 		 primFailCode <= (objectMemory numSlotsOf: table) ifTrue:
 			[errObj := objectMemory followField: primFailCode - 1 ofObject: table.
-			 "If this is a PrimErrOSError and there's a clonable object in the table at that index,
+			 "If this is a PrimErrOSError/PrimErrFFIException and there's a clonable object in the table at that index,
 			 answer a clone of the error object with the second slot set to the value of osErrorCode."
-			 (primFailCode = PrimErrOSError
+			 ((primFailCode = PrimErrOSError or: [primFailCode = PrimErrFFIException])
 			  and: [(objectMemory formatOf: errObj) = objectMemory nonIndexablePointerFormat
 			  and: [(numSlots := objectMemory numSlotsOf: errObj) >= 2]]) ifTrue:
 				[errObj := self cloneOSErrorObj: errObj numSlots: numSlots].
@@ -8326,7 +8407,7 @@ StackInterpreter >> initStackPagesAndInterpret [
 	self loadInitialContext.
 	"We're ready for the heartbeat (poll interrupt)"
 	self ioInitHeartbeat.
-	self interpret.
+	self initialEnterSmalltalkExecutive.
 	^nil
 ]
 
@@ -8339,6 +8420,17 @@ StackInterpreter >> initialCleanup [
 	<inline: true>
 	self flushMethodCache.
 	self flushExternalPrimitiveTable
+]
+
+{ #category : #initialization }
+StackInterpreter >> initialEnterSmalltalkExecutive [
+	"Main entry-point into the interpreter at system start-up.
+	 In the non-threaded VM this is identical to enterSmalltalkExecutive"
+	<cmacro: '() enterSmalltalkExecutiveImplementation()'>
+	"Simulation of the setjmp in enterSmalltalkExecutiveImplementation for reentry into interpreter."
+	[([self enterSmalltalkExecutiveImplementation]
+		on: ReenterInterpreter
+		do: [:ex| ex return: ex returnValue]) = ReturnToInterpreter] whileTrue
 ]
 
 { #category : #'compiled methods' }
@@ -9177,8 +9269,8 @@ StackInterpreter >> interpret [
 	"record entry time when running as a browser plug-in"
 	self browserPluginInitialiseIfNeeded.
 	self internalizeIPandSP.
-	self fetchNextBytecode.
 	self initExtensions.
+	self fetchNextBytecode.
 	[true] whileTrue: [self dispatchOn: currentBytecode in: BytecodeTable].
 	localIP := localIP - 1.  "undo the pre-increment of IP before returning"
 	self externalizeIPandSP.
@@ -9827,7 +9919,7 @@ StackInterpreter >> jumplfTrueBy: offset [
 ]
 
 { #category : #'message sending' }
-StackInterpreter >> justActivateNewMethod [
+StackInterpreter >> justActivateNewMethod: mustBeInterpreterFrame [
 	| methodHeader numArgs numTemps rcvr |
 	<inline: true>
 	methodHeader := objectMemory methodHeaderOf: newMethod.
@@ -9937,6 +10029,16 @@ StackInterpreter >> log10: n [
 	"compat with C library."
 	<doNotGenerate>
 	^n log: 10
+]
+
+{ #category : #simulation }
+StackInterpreter >> long: aJumpBuf jmp: returnValue [
+	"Hack simulation of setjmp/longjmp.
+	 Signal the exception that simulates a longjmp back to the interpreter." 
+	<doNotGenerate>
+	aJumpBuf == reenterInterpreter ifTrue:
+		[self assertValidExecutionPointe: instructionPointer r: framePointer s: stackPointer imbar: true line: nil].
+	aJumpBuf returnValue: returnValue; signal
 ]
 
 { #category : #'jump bytecodes' }
@@ -16790,7 +16892,7 @@ StackInterpreter >> objectArg: index [
 	^oop
 ]
 
-{ #category : #'cog jit support' }
+{ #category : #'simulation support' }
 StackInterpreter >> objectMemory [
 	<doNotGenerate>
 	^objectMemory
@@ -19359,7 +19461,9 @@ StackInterpreter >> respondToUnknownBytecode [
 { #category : #'callback support' }
 StackInterpreter >> restoreCStackStateForCallbackContext: vmCallbackContext [
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
-	"this is a no-op for the Stack VM"
+	self mem: reenterInterpreter
+		cp: vmCallbackContext savedReenterInterpreter asVoidPointer
+		y: (self sizeof: #'jmp_buf')
 ]
 
 { #category : #'stack pages' }
@@ -19718,7 +19822,9 @@ StackInterpreter >> saneMethodClassAssociationIn: methodObj numLiterals: numLite
 { #category : #'callback support' }
 StackInterpreter >> saveCStackStateForCallbackContext: vmCallbackContext [
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
-	"this is a no-op for the Stack VM"
+	self mem: vmCallbackContext savedReenterInterpreter asVoidPointer
+		cp: reenterInterpreter
+		y: (self sizeof: #'jmp_buf')
 ]
 
 { #category : #'process primitive support' }
@@ -19806,7 +19912,7 @@ StackInterpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regs
 	self push: (self positiveMachineIntegerFor: regsPtr).
 	self push: (self positiveMachineIntegerFor: jmpBufPtr).
 	self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector.
-	self justActivateNewMethod.
+	self justActivateNewMethod: false. "either interpreted or machine code"
 	(self isMachineCodeFrame: framePointer) ifFalse:
 		[self maybeFlagMethodAsInterpreted: newMethod].
 	self checkForStackOverflow.
@@ -19852,7 +19958,7 @@ StackInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 		 self push: (self positiveMachineIntegerFor: vmCallbackContext intregargsp asUnsignedInteger)].
 	self push: (self positiveMachineIntegerFor: vmCallbackContext asUnsignedInteger).
 	self ifAppropriateCompileToNativeCode: newMethod selector: messageSelector.
-	self justActivateNewMethod.
+	self justActivateNewMethod: false. "either interpreted or machine code"
 	(self isMachineCodeFrame: framePointer) ifFalse:
 		[self maybeFlagMethodAsInterpreted: newMethod].
 	self checkForStackOverflow.
@@ -20465,6 +20571,11 @@ StackInterpreter >> shuffleArgumentsAndStoreAbsentReceiver: theReceiver [
 	self internalStackValue: argumentCount put: theReceiver
 ]
 
+{ #category : #'primitive support' }
+StackInterpreter >> siglong: aJumpBuf jmp: returnValue [
+	^self long: aJumpBuf jmp: returnValue
+]
+
 { #category : #utilities }
 StackInterpreter >> signExtend16: int16 [
 	"Convert a signed 16-bit integer into a signed 32-bit integer value. The integer bit is not added here."
@@ -20557,6 +20668,16 @@ StackInterpreter >> signed64BitIntegerFor: integerValue [
 				ifTrue: [objectMemory storeLong64: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped64IfBigEndian: magnitude)]
 				ifFalse: [objectMemory storeLong32: 0 ofObject: newLargeInteger withValue: (objectMemory byteSwapped32IfBigEndian: magnitude)]].
 	^newLargeInteger
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> sigset: aJumpBuf jmp: sigSaveMask [
+	"Hack simulation of sigsetjmp/siglongjmp.
+	 Assign to reenterInterpreter the exception that when
+	 raised simulates a longjmp back to the interpreter." 
+	<doNotGenerate>
+	reenterInterpreter := ReenterInterpreter new returnValue: 0; yourself.
+	^0
 ]
 
 { #category : #'send bytecodes' }
@@ -20803,7 +20924,7 @@ StackInterpreter >> snapshot: embedded [
 		ifTrue: [self push: objectMemory falseObject]
 		ifFalse:
 			[self push: rcvr.
-			 self justActivateNewMethod]
+			 self justActivateNewMethod: true] "no point checking for machine code; there isn't any at this point"
 ]
 
 { #category : #'debug printing' }

@@ -42,6 +42,7 @@ Class {
 		'PrimErrBadNumArgs',
 		'PrimErrBadReceiver',
 		'PrimErrCallbackError',
+		'PrimErrFFIException',
 		'PrimErrGenericFailure',
 		'PrimErrInappropriate',
 		'PrimErrLimitExceeded',
