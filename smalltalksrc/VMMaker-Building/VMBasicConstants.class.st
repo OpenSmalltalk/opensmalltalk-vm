@@ -19,6 +19,8 @@ Class {
 		'COGVM',
 		'CloneOnGC',
 		'CloneOnScavenge',
+		'DisownVMForFFICall',
+		'DisownVMForThreading',
 		'DisownVMLockOutFullGC',
 		'DoAssertionChecks',
 		'DoExpensiveAssertionChecks',

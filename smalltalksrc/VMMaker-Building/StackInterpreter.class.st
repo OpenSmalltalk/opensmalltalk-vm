@@ -1296,7 +1296,14 @@ StackInterpreter class >> initializeMiscConstants [
 	FailImbalancedPrimitives := InitializationOptions at: #FailImbalancedPrimitives ifAbsentPut: [true].
 	EnforceAccessControl := InitializationOptions at: #EnforceAccessControl ifAbsent: [true].
 
-	ReturnToInterpreter := 1 "setjmp/longjmp code."
+	ReturnToInterpreter := 1. "setjmp/longjmp code."
+
+	"N.B. some of these DisownFlags are replicated in platforms/Cross/vm/sqVirtualMachine.h.
+	 Hence they should always be initialized."
+	DisownVMLockOutFullGC := 1.
+	DisownVMForFFICall := 2.
+	DisownVMForThreading := 4
+
 ]
 
 { #category : #initialization }
@@ -1779,7 +1786,7 @@ StackInterpreter class >> mustBeGlobal: var [
 			'showSurfaceFn' 'displayBits' 'displayWidth' 'displayHeight' 'displayDepth'
 			'desiredNumStackPages' 'desiredEdenBytes'
 			'breakLookupClassTag' 'breakSelector' 'breakSelectorLength' 'sendTrace' 'checkAllocFiller' 'checkedPluginName'
-			'reenterInterpreter' 'suppressHeartbeatFlag'
+			'reenterInterpreter' 'suppressHeartbeatFlag' 'ffiExceptionResponse'
 			'debugCallbackInvokes' 'debugCallbackPath' 'debugCallbackReturns') includes: var)
 	   or: [ "This allows slow machines to define bytecodeSetSelector as 0
 			to avoid the interpretation overhead."
@@ -2126,7 +2133,12 @@ StackInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord ge
 		[aStream cr].
 	aCCodeGenerator putDefineOf: #STACKVM as: 1 on: aStream.
 	(InitializationOptions at: #SpurObjectMemory ifAbsent: false) ifTrue:
-		[aCCodeGenerator putDefineOf: #SPURVM as: 1 on: aStream]
+		[aCCodeGenerator putDefineOf: #SPURVM as: 1 on: aStream].
+
+	aCCodeGenerator
+		putDefineOf: #DisownVMLockOutFullGC as: DisownVMLockOutFullGC on: aStream;
+		putDefineOf: #DisownVMForFFICall as: DisownVMForFFICall on: aStream;
+		putDefineOf: #DisownVMForThreading as: DisownVMForThreading on: aStream
 ]
 
 { #category : #simulation }
@@ -4925,10 +4937,10 @@ StackInterpreter >> cloneOSErrorObj: errObj numSlots: numSlots [
 			[objectMemory
 				storePointerUnchecked: 1
 					ofObject: clone
-						withValue: (self positive64BitIntegerFor: osErrorCode);
+						withValue: (self positive64BitIntegerFor: (self cCoerceSimple: osErrorCode to: #usqLong));
 				storePointerUnchecked: 2
 					ofObject: clone
-						withValue: (self positive64BitIntegerFor: exceptionPC)]
+						withValue: (self positiveMachineIntegerFor: exceptionPC)]
 		ifFalse:
 			[objectMemory
 				storePointerUnchecked: 1
@@ -5616,6 +5628,9 @@ StackInterpreter >> disownVM: flags [
 	<api>
 	<inline: false>
 	"Release the VM to other threads and answer the current thread's index.
+	 Currently valid flags for the non-threaded VM are:
+		DisownVMLockOutFullGC	- prevent fullGCs while this thread disowns the VM
+		DisownVMForFFICall			- informs the VM that it is entering an FFI call
 
 	 This is the entry-point for plugins and primitives that wish to release the VM while
 	 performing some operation that may potentially block, and for callbacks returning
@@ -5626,6 +5641,15 @@ StackInterpreter >> disownVM: flags [
 						between: 0
 						and: (self argumentCountOfMethodHeader: -1)]).
 	self assert: primFailCode = 0.
+
+	"If DisownVMForFFICall this is from the FFI plugin and we're making a callout; remember the fact."
+	(flags anyMask: DisownVMForFFICall) ifTrue:
+		[self assert: ((objectMemory isOopCompiledMethod: newMethod)
+				and: [(self argumentCountOf: newMethod) = argumentCount]).
+		 inFFIFlags := DisownVMForFFICall.
+		 ^flags].
+
+	"Otherwise this is a callback return; restore argumentCount and newMethod as per the ownVM: on callback."
 	argumentCount := objectMemory integerValueOf: flags.
 	newMethod := self popStack.
 	self assert: ((objectMemory isOopCompiledMethod: newMethod)
@@ -8445,14 +8469,13 @@ StackInterpreter >> initialIPForHeader: methodHeader method: theMethod [
 { #category : #initialization }
 StackInterpreter >> initialize [
 	"Here we can initialize the variables C initializes to zero.  #initialize methods do /not/ get translated."
+	super initialize.
 	checkAllocFiller := false. "must precede initializeObjectMemory:"
-	primFailCode := 0.
 	stackLimit := 0. "This is also the initialization flag for the stack system."
 	stackPage := overflowedPage := 0.
 	extraFramesToMoveOnOverflow := 0.
 	bytecodeSetSelector := 0.
 	highestRunnableProcessPriority := 0.
-	nextProfileTick := 0.
 	nextPollUsecs := 0.
 	nextWakeupUsecs := 0.
 	tempOop := tempOop2 := theUnknownShort := 0.
@@ -16524,6 +16547,19 @@ StackInterpreter >> methodUsesAlternateBytecodeSet: aMethodObj [
 	^objectMemory headerIndicatesAlternateBytecodeSet: (objectMemory methodHeaderOf: aMethodObj)
 ]
 
+{ #category : #'primitive support' }
+StackInterpreter >> methodUsesPrimitiveErrorCode: aMethodObj [
+	"Answer if aMethodObj contains a primitive and uses the primitive error code."
+	<inline: true>
+	| methodHeader |
+	methodHeader := objectMemory methodHeaderOf: aMethodObj.
+	^(self primitiveIndexOfMethod: aMethodObj header: methodHeader) > 0
+	  and: [(self longStoreBytecodeForHeader: methodHeader)
+			= (objectMemory
+				fetchByte: (self startPCOfMethod: aMethodObj) + (self sizeOfCallPrimitiveBytecode: methodHeader)
+				ofObject: aMethodObj)]
+]
+
 { #category : #'frame access' }
 StackInterpreter >> mframeCogMethod: theFP [
 	self shouldNotImplement
@@ -16978,7 +17014,6 @@ StackInterpreter >> ownVM: threadIndexAndFlags [
 	 status.  While this exists for the threaded FFI VM we use it to reset newMethod and the
 	 argumentCount after a callback.
 
-	 Answer the argumentCount encoded as a SmallInteger if the current thread is the VM thread.
 	 Answer -1 if the current thread is unknown to the VM and fails to take ownership."
 	<var: 'amInVMThread' declareC: 'extern sqInt amInVMThread(void)'>
 	self amInVMThread ifFalse:
@@ -16986,6 +17021,14 @@ StackInterpreter >> ownVM: threadIndexAndFlags [
 	self assert: primFailCode = 0.
 	self assert: ((objectMemory isOopCompiledMethod: newMethod)
 				and: [(self argumentCountOf: newMethod) = argumentCount]).
+
+	"If DisownVMForFFICall this is from the FFI plugin and we're returning from a callout."
+	(threadIndexAndFlags anyMask: DisownVMForFFICall) ifTrue:
+		[inFFIFlags := 0.
+		 ^0].
+
+	"Otherwise this is a callback; stash newMethod on the stack and argumentCount in the flags
+	 we'll get back when the calback calls disownVM:."
 	self push: newMethod.
 	^objectMemory integerObjectOf: argumentCount
 ]
