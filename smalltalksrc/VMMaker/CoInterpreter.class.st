@@ -488,12 +488,7 @@ CoInterpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord gener
 	aCCodeGenerator
 		putDefineOf: #COGVM as: 1 on: aStream;
 		putConditionalDefineOf: #COGMTVM as: 0 comment: nil on: aStream.
-	aStream cr.
-	"This constant is a hack for the MT VM on SqueakV3.  Eventually it will disappear.
-	 But having it here rather than in CoInterpreterMT means that the interp.h header
-	 doesn't get regenerated every time the sources are, which is a good thing."
-	aCCodeGenerator
-		putDefineOf: #DisownVMLockOutFullGC as: DisownVMLockOutFullGC on: aStream
+	aStream cr
 ]
 
 { #category : #simulation }

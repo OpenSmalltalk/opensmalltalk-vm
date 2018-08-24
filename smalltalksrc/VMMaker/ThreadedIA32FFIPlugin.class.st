@@ -27,7 +27,7 @@ ThreadedIA32FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: cal
 	<var: #floatRet type: #double>
 	<var: #intRet type: #usqLong>
 	<inline: true>
-	self maybeDisownVM: calloutState threadIndexInto: [:threadIndex| myThreadIndex := threadIndex].
+	myThreadIndex := interpreterProxy disownVM: (self disownFlagsFor: calloutState).
 
 	(self allocaLiesSoSetSpBeforeCall or: [self mustAlignStack]) ifTrue:
 		[self setsp: calloutState argVector].
@@ -39,7 +39,7 @@ ThreadedIA32FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: cal
 		 "undo any callee argument pops because it may confuse stack management with the alloca."
 		 (self isCalleePopsConvention: calloutState callFlags) ifTrue:
 			[self setsp: calloutState argVector].
-		 self maybeOwnVM: calloutState threadIndex: myThreadIndex.
+		 interpreterProxy ownVM: myThreadIndex.
 
 		 ^interpreterProxy floatObjectOf: floatRet].
 
@@ -48,7 +48,7 @@ ThreadedIA32FFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: cal
 	"undo any callee argument pops because it may confuse stack management with the alloca."
 	(self isCalleePopsConvention: calloutState callFlags) ifTrue:
 		[self setsp: calloutState argVector].
-	self maybeOwnVM: calloutState threadIndex: myThreadIndex.
+	interpreterProxy ownVM: myThreadIndex.
 
 	(calloutState ffiRetHeader anyMask: FFIFlagPointer+FFIFlagStructure) ifTrue:
 		["Note: Order is important here since FFIFlagPointer + FFIFlagStructure is used to represent
