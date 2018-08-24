@@ -1913,7 +1913,8 @@ InterpreterPrimitives >> primitiveFailForFFIException: exceptionCode at: pc [
 	(ffiExceptionResponse > 0					"always fail..."
 	 or: [(objectMemory isOopCompiledMethod: newMethod)
 		 and: [self methodUsesPrimitiveErrorCode: newMethod]]) ifTrue:
-		[self activateFailingPrimitiveMethod]
+		[self ownVM: DisownVMForFFICall. "To take ownership but importantly to reset inFFIFlags"
+		 self activateFailingPrimitiveMethod]
 ]
 
 { #category : #'primitive support' }
