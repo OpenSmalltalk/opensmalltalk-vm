@@ -61,8 +61,7 @@ CoInterpreterMT class >> initializeMiscConstants [
 
 	"N.B. some of these DisownFlags are replicated in platforms/Cross/vm/sqVirtualMachine.h.
 	 Hence they should always be initialized."
-	DisownVMLockOutFullGC := 1.
-	DisownVMForProcessorRelinquish := 2.
+	DisownVMForProcessorRelinquish := 8.
 
 	(InitializationOptions at: #COGMTVM ifAbsent: [false]) == false ifTrue:
 		[^self].
@@ -441,7 +440,9 @@ CoInterpreterMT >> deferStackLimitSmashAround: functionSymbol with: arg [
 CoInterpreterMT >> disownVM: flags [
 	"Release the VM to other threads and answer the current thread's index.
 	 Currently valid flags:
-		DisownVMLockOutFullGC	- prevent fullGCs while this thread disowns the VM.
+		DisownVMLockOutFullGC	- prevent fullGCs while this thread disowns the VM
+		DisownVMForFFICall			- informs the VM that it is entering an FFI call
+		DisownVMForThreading		- informs the VM that it is entering an FFI call etc during which threading should be permitted
 		OwnVMForeignThreadFlag	- indicates lowest-level entry from a foreign thread
 									- not to be used explicitly by clients
 									- only set by ownVMFromUnidentifiedThread

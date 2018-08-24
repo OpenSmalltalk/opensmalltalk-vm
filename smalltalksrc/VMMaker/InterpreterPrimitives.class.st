@@ -2,21 +2,29 @@
 InterpreterPrimitives implements most of the VM's core primitives.  It is the root of the interpreter hierarchy so as to share the core primitives amongst the varioius interpreters.
 
 Instance Variables
-	argumentCount:			<Integer>
-	messageSelector:			<Integer>
-	newMethod:				<Integer>
-	nextProfileTick:				<Integer>
-	objectMemory:				<ObjectMemory> (simulation only)
-	preemptionYields:			<Boolean>
-	primFailCode:				<Integer>
-	osErrorCode:				<Integer>
-	profileMethod:				<Integer>
-	profileProcess:				<Integer>
-	profileSemaphore:			<Integer>
+	argumentCount			<Integer>
+	ffiExceptionResponse		<Integer>
+	inFFIFlags					<Integer>
+	messageSelector			<Integer>
+	newMethod					<Integer>
+	nextProfileTick				<Integer>
+	objectMemory				<ObjectMemory> (simulation only)
+	preemptionYields			<Boolean>
+	primFailCode				<Integer>
+	osErrorCode				<Integer>
+	profileMethod				<Integer>
+	profileProcess				<Integer>
+	profileSemaphore			<Integer>
 	secHasEnvironmentAccess <Integer>
 
 argumentCount
 	- the number of arguments of the current message
+
+ffiExceptionResponse
+	- controls system response to exceptions during FFI calls.  See primitiveFailForFFIException:at:
+
+inFFIFlags
+	- flags recording currently only whether the system is in an FFI call
 
 messageSelector
 	- the oop of the selector of the current message
@@ -63,13 +71,15 @@ Class {
 		'primFailCode',
 		'osErrorCode',
 		'exceptionPC',
+		'inFFIFlags',
 		'profileMethod',
 		'profileProcess',
 		'profileSemaphore',
 		'nextProfileTick',
 		'preemptionYields',
 		'newFinalization',
-		'sHEAFn'
+		'sHEAFn',
+		'ffiExceptionResponse'
 	],
 	#classVars : [
 		'CrossedX',
@@ -91,6 +101,7 @@ Class {
 InterpreterPrimitives class >> declareCVarsIn: aCCodeGen [
 	aCCodeGen
 		var: 'osErrorCode' type: #sqLong;
+		var: 'exceptionPC' type: #usqInt;
 		var: 'sHEAFn' declareC: 'int (*sHEAFn)() = 0' "the hasEnvironmentAccess function"
 ]
 
@@ -235,6 +246,13 @@ InterpreterPrimitives >> initPrimCall [
 	 greater than one then its value indicates the reason for failure."
 	<inline: true>
 	primFailCode := 0
+]
+
+{ #category : #initialization }
+InterpreterPrimitives >> initialize [
+	"Here we can initialize the variables C initializes to zero.  #initialize methods do /not/ get translated."
+	argumentCount := primFailCode := nextProfileTick := osErrorCode := exceptionPC := inFFIFlags := ffiExceptionResponse := 0.
+	newFinalization := false
 ]
 
 { #category : #initialization }
@@ -1877,12 +1895,25 @@ InterpreterPrimitives >> primitiveFailFor: reasonCode [
 
 { #category : #'primitive support' }
 InterpreterPrimitives >> primitiveFailForFFIException: exceptionCode at: pc [
-	<var: 'exceptionCode' type: #sqLong>
-	"Set PrimErrOSError primitive failure and associated osErrorCode."
+	<var: 'exceptionCode' type: #usqLong>
+	<var: 'pc' type: #usqInt>
+	"Set PrimErrOSError primitive failure and associated osErrorCode. Under
+	 control of the ffiExceptionResponse flag, if in a primitive with an error code
+	 and the inFFIFlags indicate we're in an FFI call, then fail the primitive.
+	 ffiExceptionResponse < 0 never fail
+	 ffiExceptionResponse = 0 fail if method has a primitive error code (default)
+	 ffiExceptionResponse > 0 always fail"
 	<api>
-	osErrorCode := exceptionCode.
+	((inFFIFlags noMask: DisownVMForFFICall)	"i.e. not in an FFI call"
+	 or: [ffiExceptionResponse < 0]) ifTrue:		"i.e. never fail"
+		[^self].
+	osErrorCode := self cCoerceSimple: exceptionCode to: #sqLong.
 	exceptionPC := pc.
-	^primFailCode := PrimErrFFIException
+	primFailCode := PrimErrFFIException.
+	(ffiExceptionResponse > 0					"always fail..."
+	 or: [(objectMemory isOopCompiledMethod: newMethod)
+		 and: [self methodUsesPrimitiveErrorCode: newMethod]]) ifTrue:
+		[self activateFailingPrimitiveMethod]
 ]
 
 { #category : #'primitive support' }

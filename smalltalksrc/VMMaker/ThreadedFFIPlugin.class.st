@@ -299,6 +299,17 @@ ThreadedFFIPlugin >> cleanupCalloutState: calloutState [
 		[self free: (calloutState stringArgs at: (calloutState stringArgIndex: calloutState stringArgIndex - 1))]
 ]
 
+{ #category : #'primitive support' }
+ThreadedFFIPlugin >> disownFlagsFor: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: #always>
+	^self cppIf: COGMTVM
+		ifTrue: [(calloutState callFlags anyMask: FFICallFlagThreaded)
+					ifTrue: [DisownVMForFFICall+DisownVMForThreading]
+					ifFalse: [DisownVMForFFICall]]
+		ifFalse: [DisownVMForFFICall]
+]
+
 { #category : #'callout support' }
 ThreadedFFIPlugin >> dispatchFunctionPointer: aFunctionPointer [
 	"In C aFunctionPointer is void (*aFunctionPointer)()"
@@ -309,8 +320,9 @@ ThreadedFFIPlugin >> dispatchFunctionPointer: aFunctionPointer [
 		on: Error
 		do: [:ex|
 			interpreterProxy
-				primitiveFailForFFIException: PrimErrFFIException at: aFunctionPointer asInteger;
-				activateFailingPrimitiveMethod]
+				primitiveFailForFFIException: PrimErrFFIException
+				at: aFunctionPointer asInteger.
+			ex pass "NOTREACHED if VM is handling FFI exceptions"]
 ]
 
 { #category : #'callout support' }
@@ -327,14 +339,15 @@ ThreadedFFIPlugin >> dispatchFunctionPointer: aFunctionPointer with: int1 with: 
 		on: Error
 		do: [:ex|
 			interpreterProxy
-				primitiveFailForFFIException: PrimErrFFIException at: aFunctionPointer asInteger;
-				activateFailingPrimitiveMethod]
+				primitiveFailForFFIException: PrimErrFFIException
+				at: aFunctionPointer asInteger.
+			ex pass "NOTREACHED if VM is handling FFI exceptions"]
 ]
 
 { #category : #'callout support' }
 ThreadedFFIPlugin >> dispatchFunctionPointer: aFunctionPointer with: int1 with: int2 with: int3 with: int4 with: int5 with: int6 [
 	"In C aFunctionPointer is void (*aFunctionPointer)(int, int, int, int, int, int)"
-	<cmacro: '(aFunctionPointer, int1, int2, int3, int4) (aFunctionPointer)(int1, int2, int3, int4, int5, int6)'>
+	<cmacro: '(aFunctionPointer, int1, int2, int3, int4, int5, int6) (aFunctionPointer)(int1, int2, int3, int4, int5, int6)'>
 	"To write the FFI call failure code we simulate invoking the production VM's
 	 fatal exception handlers (sigsegv on Unix, squeakExceptionHandler on WIN32, et al)."
 	^[self perform: aFunctionPointer
@@ -347,8 +360,9 @@ ThreadedFFIPlugin >> dispatchFunctionPointer: aFunctionPointer with: int1 with: 
 		on: Error
 		do: [:ex|
 			interpreterProxy
-				primitiveFailForFFIException: PrimErrFFIException at: aFunctionPointer asInteger;
-				activateFailingPrimitiveMethod]
+				primitiveFailForFFIException: PrimErrFFIException
+				at: aFunctionPointer asInteger.
+			ex pass "NOTREACHED if VM is handling FFI exceptions"]
 ]
 
 { #category : #'symbol loading' }
@@ -1420,25 +1434,6 @@ ThreadedFFIPlugin >> isCalleePopsConvention: callType [
 ThreadedFFIPlugin >> isDirectAlien: oop [
 	self assert: (self isAlien: oop).
 	^(self sizeField: oop) > 0
-]
-
-{ #category : #'primitive support' }
-ThreadedFFIPlugin >> maybeDisownVM: calloutState threadIndexInto: aBlock [
-	<var: #calloutState type: #'CalloutState *'>
-	<inline: #always>
-	self cppIf: COGMTVM
-		ifTrue:
-			[(calloutState callFlags anyMask: FFICallFlagThreaded) ifTrue:
-				[aBlock value: (interpreterProxy disownVM: 0)]]
-]
-
-{ #category : #'primitive support' }
-ThreadedFFIPlugin >> maybeOwnVM: calloutState threadIndex: myThreadIndex [
-	<var: #calloutState type: #'CalloutState *'>
-	<inline: #always>
-	self cppIf: COGMTVM ifTrue:
-	[(calloutState callFlags anyMask: FFICallFlagThreaded) ifTrue:
-		[interpreterProxy ownVM: myThreadIndex]]
 ]
 
 { #category : #simulation }
