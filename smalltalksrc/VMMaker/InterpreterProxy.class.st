@@ -1,6 +1,6 @@
 "
 This class should provide the definition of what interpreter support plugins need and can have access to. Note that the proxy related files platforms - Cross - vm - sqVirtualMachine.[ch] are kept under the git tree at http://www.github.com/opensmalltalk/vm.
-The main use of the class is to support the vm simulator
+The main use of the class is to support the vm simulator and the RSqueak VM, which implements as many primitives as possible in Smalltalk.
 "
 Class {
 	#name : #InterpreterProxy,
@@ -13,7 +13,8 @@ Class {
 		'argumentCount',
 		'bb',
 		'thisSessionID',
-		'osErrorCode'
+		'osErrorCode',
+		'exceptionPC'
 	],
 	#pools : [
 		'VMBasicConstants'
@@ -947,6 +948,18 @@ InterpreterProxy >> primitiveFailFor: reasonCode [
 	Primitive 255 is called to indicate that we are currently simulating a primitive that should fail and the VM should handle that case appropriately (if supported by the VM)."
 	<primitive: 255>
 	^ primFailCode := reasonCode
+]
+
+{ #category : #other }
+InterpreterProxy >> primitiveFailForFFIException: exceptionCode at: pc [
+	<var: 'exceptionCode' type: #usqLong>
+	<var: 'pc' type: #usqInt>
+	"Set PrimErrFFIException primitive failure and associated exceptionCode (a.k.a. 
+	 osErrorCode) and exceptionPC."
+	<primitive: 255>
+	osErrorCode := exceptionCode.
+	exceptionPC := pc.
+	^primFailCode := PrimErrFFIException
 ]
 
 { #category : #other }
