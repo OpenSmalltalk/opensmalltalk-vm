@@ -74,6 +74,13 @@ NewObjectMemory class >> simulatorClass [
 	^NewObjectMemorySimulator
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemory >> ISA [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter ISA
+]
+
 { #category : #'object enumeration' }
 NewObjectMemory >> accessibleObjectAfter: oop [ 
 	"Return the accessible object following the given object or 
@@ -340,6 +347,13 @@ NewObjectMemory >> allocateMemoryOfSize: limit [
 	freeStart := memoryLimit
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemory >> arrayValueOf: arrayOop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter arrayValueOf: arrayOop
+]
+
 { #category : #snapshot }
 NewObjectMemory >> baseAddressOfImage [
 	"Answer the base address of the image data written to a sapshot."
@@ -384,6 +398,13 @@ NewObjectMemory >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copy
 { #category : #'garbage collection' }
 NewObjectMemory >> biasToGrow [
 	self growObjectMemory: (growHeadroom*3/2) - self freeSize
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> booleanValueOf: obj [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter booleanValueOf: obj
 ]
 
 { #category : #allocation }
@@ -589,6 +610,13 @@ NewObjectMemory >> checkOopIntegrity: obj named: name [
 	^false
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemory >> checkedIntegerValueOf: intOop [
+	<doNotGenerate>
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter checkedIntegerValueOf: intOop
+]
+
 { #category : #'cog jit support' }
 NewObjectMemory >> classFieldOffset [
 	<api>
@@ -720,6 +748,13 @@ NewObjectMemory >> defaultEdenBytes [
 	 vmParameterAt: and/or a preference in the ini file."
 	<inline: false>
 	^2 * 1024 * 1024
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> disownVM: flags [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter disownVM: flags
 ]
 
 { #category : #accessing }
@@ -1042,6 +1077,13 @@ NewObjectMemory >> eek [
 	<inline: true>
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemory >> failed [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter failed
+]
+
 { #category : #accessing }
 NewObjectMemory >> falseObject: anOop [
 	"For mapInterpreterOops"
@@ -1060,6 +1102,13 @@ NewObjectMemory >> fetchClassTagOfNonImm: oop [
 	"Compatibility with SpurObjectMemory.  In ObjectMemory there is no distinction between a
 	 classTag in the first-level method cache and a class itself."
 	^self fetchClassOfNonImm: oop
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> fetchInteger: fieldIndex ofObject: objectPointer [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter fetchInteger: fieldIndex ofObject: objectPointer
 ]
 
 { #category : #'debug support' }
@@ -1220,6 +1269,13 @@ NewObjectMemory >> fullCompaction [
 		 compStart := self incCompBody]
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemory >> fullDisplayUpdate [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter fullDisplayUpdate
+]
+
 { #category : #'garbage collection' }
 NewObjectMemory >> fullGC [
 	"Do a mark/sweep garbage collection of the entire object memory.
@@ -1299,6 +1355,13 @@ NewObjectMemory >> fwdTableSize: blkSize [
 
 	"return the number of forwarding blocks available"
 	^ (fwdLast - fwdFirst) // blkSize  "round down"
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> getThisSessionID [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter getThisSessionID
 ]
 
 { #category : #allocation }
@@ -1682,11 +1745,50 @@ NewObjectMemory >> interpreter [
 	^coInterpreter
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemory >> ioLoadFunction: functionName From: moduleName [
+	"hack around the CoInterpreter/ObjectMemory split refactoring.
+	 provide accurate types for the VMPluginCodeGenerator."
+	<doNotGenerate>
+	<returnTypeC: #'void *'>
+	<var: #functionName type: #'char *'>
+	<var: #moduleName type: #'char *'>
+	^coInterpreter ioLoadFunction: functionName From: moduleName
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> ioUTCMicrosecondsNow [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter ioUTCMicrosecondsNow
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> is: oop KindOf: classNameString [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter is: oop KindOf: classNameString
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> is: oop KindOfClass: aClass [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter is: oop KindOfClass: aClass
+]
+
 { #category : #'internal interpreter access' }
 NewObjectMemory >> isContextHeader: aHeader [
 	<inline: true>
 	"c.f. {BlockContext. MethodContext. PseudoContext} collect: [:class| class -> class indexIfCompact]"
 	^(self compactClassIndexOfHeader: aHeader) = ClassMethodContextCompactIndex
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> isFloatObject: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter isFloatObject: oop
 ]
 
 { #category : #'interpreter access' }
@@ -1697,6 +1799,24 @@ NewObjectMemory >> isFloatOrInt: anOop [
 
 	^(self isIntegerObject: anOop)
 	  or: [(self compactClassIndexOf: anOop) = ClassFloatCompactIndex]
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> isKindOfInteger: oop [
+	<doNotGenerate>
+	^coInterpreter isKindOfInteger: oop
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> isLargeNegativeIntegerObject: oop [
+	<doNotGenerate>
+	^coInterpreter isLargeNegativeIntegerObject: oop
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> isLargePositiveIntegerObject: oop [
+	<doNotGenerate>
+	^coInterpreter isLargePositiveIntegerObject: oop
 ]
 
 { #category : #'image segment in/out' }
@@ -2111,12 +2231,61 @@ NewObjectMemory >> maybeFillWithAllocationCheckFillerFrom: start to: end [
 			[:p| self longAt: p put: p]]
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemory >> methodArgumentCount [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter methodArgumentCount
+]
+
 { #category : #'interpreter access' }
 NewObjectMemory >> methodCacheHashOf: selector with: classTag [
 	"Since class tags are class objects, and classes are aligned on a 4 byte boundary there
 	 is no need to shift the class to include the least significant bits of the class in the hash."
 	<inline: true>
 	^selector bitXor: classTag
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> methodReturnBool: boolean [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter methodReturnBool: boolean
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> methodReturnFloat: aFloat [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter methodReturnFloat: aFloat
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> methodReturnInteger: integer [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter methodReturnInteger: integer
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> methodReturnReceiver [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter methodReturnReceiver
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> methodReturnString: aCString [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter methodReturnString: aCString
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> methodReturnValue: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter methodReturnValue: oop
 ]
 
 { #category : #'primitive support' }
@@ -2318,12 +2487,75 @@ NewObjectMemory >> oopHasAcceptableClass: signedOop [
 	^ true
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemory >> ownVM: flags [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter ownVM: flags
+]
+
 { #category : #'primitive support' }
 NewObjectMemory >> pinObject: objOop [
 	"For forward-compatibility with Spur.  Fail; ObjectMemory does not support pinning."
 	<api>
 	coInterpreter primitiveFailFor: PrimErrUnsupported.
 	^0
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> pop: nItems [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter pop: nItems
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> pop: nItems thenPush: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter pop: nItems thenPush: oop
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> positive32BitIntegerFor: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter positive32BitIntegerFor: integerValue
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> positive32BitValueOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter positive32BitValueOf: oop
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> positive64BitIntegerFor: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter positive64BitIntegerFor: integerValue
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> positive64BitValueOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter positive64BitValueOf: oop
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> positiveMachineIntegerFor: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter positiveMachineIntegerFor: integerValue
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> positiveMachineIntegerValueOf: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter positiveMachineIntegerValueOf: integerValue
 ]
 
 { #category : #become }
@@ -2386,6 +2618,34 @@ NewObjectMemory >> prepareForwardingTableForBecoming: array1 with: array2 twoWay
 							withBackPtr: twoWayFlag not]].
 		fieldOffset := fieldOffset - self wordSize].
 	^true
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> primitiveFail [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter primitiveFail
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> primitiveFailFor: reasonCode [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter primitiveFailFor: reasonCode
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> primitiveFailForFFIException: errorCode at: pc [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter primitiveFailForFFIException: errorCode at: pc
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> primitiveFailureCode [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter primitiveFailureCode
 ]
 
 { #category : #'debug printing' }
@@ -2521,6 +2781,34 @@ NewObjectMemory >> printWronglySizedContexts: printContexts [
 			 printContexts ifTrue:
 				[coInterpreter printContext: oop]].
 		 oop := self accessibleObjectAfter: oop]
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> push: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter push: oop
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> pushBool: trueOrFalse [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter pushBool: trueOrFalse
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> pushFloat: f [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter pushFloat: f
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> pushInteger: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter pushInteger: integerValue
 ]
 
 { #category : #'interpreter access' }
@@ -2706,6 +2994,13 @@ NewObjectMemory >> shorten: obj toIndexableSize: nSlots [
 	^deltaBytes
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemory >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter showDisplayBits: aForm Left: l Top: t Right: r Bottom: b
+]
+
 { #category : #allocation }
 NewObjectMemory >> shrinkObjectMemory: delta [ 
 	"Attempt to shrink the object memory by the given delta 
@@ -2716,6 +3011,48 @@ NewObjectMemory >> shrinkObjectMemory: delta [
 	limit = memoryLimit ifFalse:
 		[self setMemoryLimit: limit - 24. "remove a tad for safety"
 		 self initializeMemoryFirstFree: freeStart]
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> signalSemaphoreWithIndex: index [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter signalSemaphoreWithIndex: index
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> signed32BitIntegerFor: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter signed32BitIntegerFor: integerValue
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> signed32BitValueOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter signed32BitValueOf: oop
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> signed64BitIntegerFor: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter signed64BitIntegerFor: integerValue
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> signed64BitValueOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter signed64BitValueOf: oop
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> signedMachineIntegerValueOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter signedMachineIntegerValueOf: oop
 ]
 
 { #category : #'object access' }
@@ -2752,9 +3089,51 @@ NewObjectMemory >> sizeHeader: obj putBodySize: byteSize [
 				bitOr: ((self longAt: obj - (self wordSize*2)) bitClear: LongSizeMask))
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemory >> sizeOfSTArrayFromCPrimitive: cPtr [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter sizeOfSTArrayFromCPrimitive: cPtr
+]
+
 { #category : #'cog jit support' }
 NewObjectMemory >> smallIntegerTag [
 	^1
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> stObject: objOop at: indexOop put: valueOop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter stObject: objOop at: indexOop put: valueOop
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> stackFloatValue: offset [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter stackFloatValue: offset
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> stackIntegerValue: offset [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter stackIntegerValue: offset
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> stackObjectValue: offset [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter stackObjectValue: offset
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> stackValue: offset [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter stackValue: offset
 ]
 
 { #category : #'memory access' }
@@ -2952,6 +3331,27 @@ In case of either success or failure, the headers must be restored.  In the even
 	^PrimNoErr
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemory >> storeInteger: fieldIndex ofObject: objectPointer withValue: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter storeInteger: fieldIndex ofObject: objectPointer withValue: integerValue
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> stringOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter stringOf: oop
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> success: boolean [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter success: boolean
+]
+
 { #category : #allocation }
 NewObjectMemory >> sufficientSpaceAfterGC: minFree [ 
 	"Return true if there is enough free space after doing a garbage collection. If not, signal that space is low."
@@ -2992,6 +3392,13 @@ NewObjectMemory >> sufficientSpaceToAllocate: bytes [
 	(self oop: freeStart + minFree isLessThanOrEqualTo: reserveStart) ifTrue:
 		[^true].
 	^self sufficientSpaceAfterGC: minFree
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> superclassOf: classPointer [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter superclassOf: classPointer
 ]
 
 { #category : #'gc -- mark and sweep' }
@@ -3141,6 +3548,13 @@ NewObjectMemory >> sweepPhaseForFullGC [
 		ifFalse: [compStart := firstFree].
 
 	^ survivors
+]
+
+{ #category : #'simulation only' }
+NewObjectMemory >> transcript [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter transcript
 ]
 
 { #category : #accessing }
