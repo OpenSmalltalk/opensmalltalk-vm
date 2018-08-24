@@ -61,7 +61,7 @@ CoInterpreterMT class >> initializeMiscConstants [
 
 	"N.B. some of these DisownFlags are replicated in platforms/Cross/vm/sqVirtualMachine.h.
 	 Hence they should always be initialized."
-	DisownVMForProcessorRelinquish := 8.
+	DisownVMForProcessorRelinquish := 64.
 
 	(InitializationOptions at: #COGMTVM ifAbsent: [false]) == false ifTrue:
 		[^self].

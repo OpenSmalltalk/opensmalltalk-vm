@@ -1210,13 +1210,6 @@ SpurMemoryManager >> accessibleObjectAfter: objOop [
 		[^objAfter]] repeat
 ]
 
-{ #category : #'simulation only' }
-SpurMemoryManager >> activateFailingPrimitiveMethod [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	<doNotGenerate>
-	^coInterpreter activateFailingPrimitiveMethod
-]
-
 { #category : #'weakness and ephemerality' }
 SpurMemoryManager >> activeAndDeferredScan: anEphemeron [
 	"Answer whether an ephemeron is active (has an unmarked
@@ -4153,6 +4146,13 @@ SpurMemoryManager >> detachFreeObject: freeChunk [
 	chunkBytes := self bytesInObject: freeChunk.
 	totalFreeOldSpace := totalFreeOldSpace - chunkBytes.
 	self unlinkFreeChunk: freeChunk chunkBytes: chunkBytes
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> disownVM: flags [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter disownVM: flags
 ]
 
 { #category : #accessing }
@@ -9471,6 +9471,13 @@ SpurMemoryManager >> outOfPlaceBecome: obj1 and: obj2 copyHashFlag: copyHashFlag
 	((self isYoungObject: obj1) ~= (self isYoungObject: clone2)
 	 or: [(self isYoungObject: obj2) ~= (self isYoungObject: clone1)]) ifTrue:
 		[becomeEffectsFlags := becomeEffectsFlags bitOr: OldBecameNewFlag]
+]
+
+{ #category : #'simulation only' }
+SpurMemoryManager >> ownVM: flags [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	<doNotGenerate>
+	^coInterpreter ownVM: flags
 ]
 
 { #category : #accessing }

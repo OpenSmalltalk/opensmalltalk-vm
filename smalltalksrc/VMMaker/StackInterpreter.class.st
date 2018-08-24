@@ -1299,10 +1299,11 @@ StackInterpreter class >> initializeMiscConstants [
 	ReturnToInterpreter := 1. "setjmp/longjmp code."
 
 	"N.B. some of these DisownFlags are replicated in platforms/Cross/vm/sqVirtualMachine.h.
-	 Hence they should always be initialized."
-	DisownVMLockOutFullGC := 1.
-	DisownVMForFFICall := 2.
-	DisownVMForThreading := 4
+	 Hence they should always be initialized.  Because of a hack with callbacks in the non-threaded
+	 VM they must not conflct with the VM's tag bits."
+	DisownVMLockOutFullGC := 8.
+	DisownVMForFFICall := 16.
+	DisownVMForThreading := 32
 
 ]
 
@@ -5635,18 +5636,35 @@ StackInterpreter >> disownVM: flags [
 	 performing some operation that may potentially block, and for callbacks returning
 	 back to some blocking operation.  While this exists for the threaded FFI VM we use
 	 it to reset newMethod and the argumentCount after a callback."
-	self assert: ((objectMemory isIntegerObject: flags)
-				and: [(objectMemory integerValueOf: flags)
-						between: 0
-						and: (self argumentCountOfMethodHeader: -1)]).
 	self assert: primFailCode = 0.
 
+	"Hack encodings of client state.  We use non-immediates (bottom three bits clear)
+	 for FFI/Plugin doing
+		save := self disownVM: FLAGS. ... callout ... self ownVM: save.
+	 We use immediate integer (bottom bit 1) for callbacks doing
+		save := self ownVM: 0. ... callback ... self disownVM: save. return to C"
+	self assert: ((objectMemory isImmediate: flags)
+				ifFalse:
+					[flags = (flags bitAnd: DisownVMLockOutFullGC+DisownVMForFFICall+DisownVMForThreading)
+					 and: [flags anyMask: DisownVMForFFICall]]
+				ifTrue:
+					[(objectMemory isIntegerObject: flags)
+					 and: [(objectMemory integerValueOf: flags)
+							between: 0
+							and: (self argumentCountOfMethodHeader: -1)]]).
+
 	"If DisownVMForFFICall this is from the FFI plugin and we're making a callout; remember the fact."
-	(flags anyMask: DisownVMForFFICall) ifTrue:
+	(((objectMemory isImmediate: flags)) not
+	 and: [flags anyMask: DisownVMForFFICall]) ifTrue:
 		[self assert: ((objectMemory isOopCompiledMethod: newMethod)
 				and: [(self argumentCountOf: newMethod) = argumentCount]).
 		 inFFIFlags := DisownVMForFFICall.
 		 ^flags].
+
+	self assert: ((objectMemory isIntegerObject: flags)
+				and: [(objectMemory integerValueOf: flags)
+						between: 0
+						and: (self argumentCountOfMethodHeader: -1)]).
 
 	"Otherwise this is a callback return; restore argumentCount and newMethod as per the ownVM: on callback."
 	argumentCount := objectMemory integerValueOf: flags.
@@ -17015,19 +17033,28 @@ StackInterpreter >> ownVM: threadIndexAndFlags [
 
 	 Answer -1 if the current thread is unknown to the VM and fails to take ownership."
 	<var: 'amInVMThread' declareC: 'extern sqInt amInVMThread(void)'>
-	self amInVMThread ifFalse:
-		[^-1].
-	self assert: primFailCode = 0.
+	self cppIf: COGMTVM
+		ifTrue:
+			[self amInVMThread ifFalse:
+				[^-1]].
+
 	self assert: ((objectMemory isOopCompiledMethod: newMethod)
 				and: [(self argumentCountOf: newMethod) = argumentCount]).
+
+	"Hack encodings of client state.  We use non-immediates (bottom three bits clear)
+	 for FFI/Plugin doing
+		save := self disownVM: FLAGS. ... callout ... self ownVM: save.
+	 We use immediate integer (bottom bit 1) for callbacks doing
+		save := self ownVM: 0. ... callback ... self disownVM: save. return to C"
 
 	"If DisownVMForFFICall this is from the FFI plugin and we're returning from a callout."
 	(threadIndexAndFlags anyMask: DisownVMForFFICall) ifTrue:
 		[inFFIFlags := 0.
-		 ^0].
+		 ^threadIndexAndFlags].
 
-	"Otherwise this is a callback; stash newMethod on the stack and argumentCount in the flags
-	 we'll get back when the calback calls disownVM:."
+	"Otherwise this is a callback; stash newMethod on the stack and encode
+	 argumentCount in the flags retrieved when the calback calls disownVM:."
+	self assert: primFailCode = 0.
 	self push: newMethod.
 	^objectMemory integerObjectOf: argumentCount
 ]
