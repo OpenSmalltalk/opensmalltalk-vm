@@ -28,21 +28,9 @@ NewCoObjectMemorySimulator class >> vmProxyMinorVersion [
 	^CoInterpreter vmProxyMinorVersion
 ]
 
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> arrayValueOf: arrayOop [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter arrayValueOf: arrayOop
-]
-
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> baseHeaderSize [
 	^4
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> booleanValueOf: obj [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter booleanValueOf: obj
 ]
 
 { #category : #'memory access' }
@@ -76,18 +64,6 @@ NewCoObjectMemorySimulator >> bytesPerOop [
 	^4
 ]
 
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> capturePendingFinalizationSignals [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter capturePendingFinalizationSignals
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> checkedIntegerValueOf: intOop [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter checkedIntegerValueOf: intOop
-]
-
 { #category : #initialization }
 NewCoObjectMemorySimulator >> coInterpreter: aCoInterpreter cogit: aCogit [
 	coInterpreter := aCoInterpreter.
@@ -99,26 +75,9 @@ NewCoObjectMemorySimulator >> cogCodeBase [
 	^Cogit guardPageSize
 ]
 
-{ #category : #printing }
-NewCoObjectMemorySimulator >> cr [
-	^coInterpreter cr
-]
-
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> eek [
 	self halt
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> failed [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter failed
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> fetchInteger: fieldIndex ofObject: objectPointer [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter fetchInteger: fieldIndex ofObject: objectPointer
 ]
 
 { #category : #'interpreter access' }
@@ -162,12 +121,6 @@ NewCoObjectMemorySimulator >> fullGC [
 	^super fullGC
 ]
 
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> getThisSessionID [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter getThisSessionID
-]
-
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> halfWordHighInLong32: long32 [
 	^self subclassResponsibility
@@ -196,62 +149,6 @@ NewCoObjectMemorySimulator >> incrementalGC [
 	^super incrementalGC
 ]
 
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> interpreterAllocationReserveBytes [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter interpreterAllocationReserveBytes
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> ioLoadFunction: functionString From: pluginString [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter ioLoadFunction: functionString From: pluginString
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> ioMicroMSecs [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter ioMicroMSecs
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> ioUTCMicrosecondsNow [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter ioUTCMicrosecondsNow
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> is: oop KindOf: classNameString [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter is: oop KindOf: classNameString
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> isFloatObject: oop [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter isFloatObject: oop
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> isKindOfInteger: offset [
-	^coInterpreter isKindOfInteger: offset
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> isLargeIntegerObject: offset [
-	^coInterpreter isLargeIntegerObject: offset
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> isLargeNegativeIntegerObject: offset [
-	^coInterpreter isLargeNegativeIntegerObject: offset
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> isLargePositiveIntegerObject: offset [
-	^coInterpreter isLargePositiveIntegerObject: offset
-]
-
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> long32At: byteAddress [
 	"Return the 32-bit word at byteAddress which must be 0 mod 4."
@@ -278,72 +175,6 @@ NewCoObjectMemorySimulator >> longAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 	byteAddress \\ 4 ~= 0 ifTrue: [self unalignedAccessError].
 	^memory at: byteAddress // 4 + 1 put: a32BitValue
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> mapInterpreterOops [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter mapInterpreterOops
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> markAndTraceAndMaybeFreeStackPages: fullGCFlag [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter markAndTraceAndMaybeFreeStackPages: fullGCFlag
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> markAndTraceInterpreterOops: fullGCFlag [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter markAndTraceInterpreterOops: fullGCFlag
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> markAndTraceOrFreeMachineCode: fullGCFlag [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter markAndTraceOrFreeMachineCode: fullGCFlag
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> methodArgumentCount [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter methodArgumentCount
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> methodReturnBool: boolean [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter methodReturnBool: boolean
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> methodReturnFloat: aFloat [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter methodReturnFloat: aFloat
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> methodReturnInteger: integer [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter methodReturnInteger: integer
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> methodReturnReceiver [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter methodReturnReceiver
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> methodReturnString: aCString [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter methodReturnString: aCString
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> methodReturnValue: oop [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter methodReturnValue: oop
 ]
 
 { #category : #'debugging traps' }
@@ -376,125 +207,6 @@ NewCoObjectMemorySimulator >> parent: anObject [
 	parent := anObject
 ]
 
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> pop: nItems [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter pop: nItems
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> pop: nItems thenPush: oop [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter pop: nItems thenPush: oop
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> positive32BitIntegerFor: integerValue [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter positive32BitIntegerFor: integerValue
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> positive32BitValueOf: oop [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter positive32BitValueOf: oop
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> positive64BitIntegerFor: integerValue [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter positive64BitIntegerFor: integerValue
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> positive64BitValueOf: oop [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter positive64BitValueOf: oop
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> postGCAction: gcMode [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter postGCAction: gcMode
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> preGCAction: gcMode [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter preGCAction: gcMode
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> primitiveFail [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter primitiveFail
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> primitiveFailFor: reasonCode [
-	^coInterpreter primitiveFailFor: reasonCode
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> primitiveFailureCode [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter primitiveFailureCode
-]
-
-{ #category : #printing }
-NewCoObjectMemorySimulator >> print: thing [ 
-	coInterpreter print: thing
-]
-
-{ #category : #printing }
-NewCoObjectMemorySimulator >> printChar: aCharacter [
-	coInterpreter printChar: aCharacter 
-]
-
-{ #category : #printing }
-NewCoObjectMemorySimulator >> printHex: n [
-	coInterpreter printHex: n 
-]
-
-{ #category : #printing }
-NewCoObjectMemorySimulator >> printHexPtr: address [
-	coInterpreter printHexPtr: address
-]
-
-{ #category : #printing }
-NewCoObjectMemorySimulator >> printNum: n [
-	coInterpreter printNum: n
-]
-
-{ #category : #printing }
-NewCoObjectMemorySimulator >> printOop: anOop [ 
-	coInterpreter printOop: anOop
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> push: oop [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter push: oop
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> pushBool: trueOrFalse [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter pushBool: trueOrFalse
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> pushFloat: f [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter pushFloat: f
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> pushInteger: integerValue [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter pushInteger: integerValue
-]
-
 { #category : #'debug support' }
 NewCoObjectMemorySimulator >> setUpForUseByFacade: aCurrentImageCoInterpreterFacade [
 	"This is a noop"
@@ -510,48 +222,6 @@ NewCoObjectMemorySimulator >> shortAt: byteAddress [
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> shortAt: byteAddress put: a16BitValue [
 	^ self subclassResponsibility
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter showDisplayBits: aForm Left: l Top: t Right: r Bottom: b
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> signalFinalization: oop [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter signalFinalization: oop
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> signalSemaphoreWithIndex: index [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter signalSemaphoreWithIndex: index
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> signed32BitIntegerFor: integerValue [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter signed32BitIntegerFor: integerValue
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> signed32BitValueOf: oop [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter signed32BitValueOf: oop
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> signedMachineIntegerValueOf: oop [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter signedMachineIntegerValueOf: oop
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> sizeOfSTArrayFromCPrimitive: cPtr [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter sizeOfSTArrayFromCPrimitive: cPtr
 ]
 
 { #category : #'memory access' }
@@ -575,48 +245,6 @@ NewCoObjectMemorySimulator >> sqShrinkMemory: oldLimit By: delta [
 	coInterpreter transcript show: 'shrink memory from ', oldLimit printString, ' by ', delta printString, ' remember it doesn''t actually shrink in simulation'; cr.
 
 	^oldLimit
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> stObject: objOop at: indexOop [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter stObject: objOop at: indexOop
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> stObject: objOop at: indexOop put: valueOop [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter stObject: objOop at: indexOop put: valueOop
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> stackFloatValue: offset [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter stackFloatValue: offset
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> stackIntegerValue: offset [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter stackIntegerValue: offset
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> stackObjectValue: offset [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter stackObjectValue: offset
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> stackValue: offset [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter stackValue: offset
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> storeInteger: fieldIndex ofObject: objectPointer withValue: integerValue [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter storeInteger: fieldIndex ofObject: objectPointer withValue: integerValue
 ]
 
 { #category : #'interpreter access' }
@@ -645,33 +273,10 @@ NewCoObjectMemorySimulator >> storePointerUnchecked: fieldIndex ofObject: oop wi
 	^super storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer
 ]
 
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> stringOf: oop [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter stringOf: oop
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> success: boolean [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter success: boolean
-]
-
-{ #category : #printing }
-NewCoObjectMemorySimulator >> tab [
-	coInterpreter tab
-]
-
 { #category : #'debug support' }
 NewCoObjectMemorySimulator >> tenuringIncrementalGC [
 	coInterpreter transcript cr; nextPutAll: 'tenuringIncrementalGC ('; print: coInterpreter byteCount; space; print: freeStart; nextPut: $); flush.
 	^super tenuringIncrementalGC
-]
-
-{ #category : #'simulation only' }
-NewCoObjectMemorySimulator >> transcript [
-	"hack around the CoInterpreter/ObjectMemory split refactoring"
-	^coInterpreter transcript
 ]
 
 { #category : #testing }
