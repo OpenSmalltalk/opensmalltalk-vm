@@ -5432,14 +5432,20 @@ CCodeGenerator >> typeOfVariable: varName [ "<String>"
 			[^self
 				extractTypeFor: varName
 				fromDeclaration: (dict at: varName)]].
-	^self
-		extractTypeFor: varName
-		fromDeclaration: (variableDeclarations
-							at: varName
-							ifAbsent:
-								[apiVariables
-									ifNotNil: [apiVariables at: varName ifAbsent: [^nil]]
-									ifNil: [^nil]])
+	(variableDeclarations
+		at: varName
+		ifAbsent:
+			[apiVariables
+				ifNotNil: [apiVariables at: varName ifAbsent: []]
+				ifNil: []]) ifNotNil:
+		[:decl| ^self extractTypeFor: varName fromDeclaration: decl].
+	^(constants at: varName ifAbsent: []) ifNotNil:
+		[:const|
+		const value isInteger
+			ifTrue: [#sqInt]
+			ifFalse:
+				[const value isFloat ifTrue:
+					[#double]]]
 ]
 
 { #category : #utilities }
