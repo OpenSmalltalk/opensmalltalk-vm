@@ -2198,7 +2198,6 @@ StackInterpreter >> activateFailingPrimitiveMethod [
 	"Assuming the primFailCode (and any other relevant failure state) has been set,
 	 switch the VM to the interpreter if necessary (if in the CoInterpreter executing machine code),
 	 and activate the newMethod (which is expected to have a primitive)."
-	<api>
 	self assert: primFailCode ~= 0.
 	self assert: (objectMemory addressCouldBeObj: newMethod).
 	self assert: (objectMemory isCompiledMethod: newMethod).
