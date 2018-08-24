@@ -1897,9 +1897,10 @@ InterpreterPrimitives >> primitiveFailFor: reasonCode [
 InterpreterPrimitives >> primitiveFailForFFIException: exceptionCode at: pc [
 	<var: 'exceptionCode' type: #usqLong>
 	<var: 'pc' type: #usqInt>
-	"Set PrimErrOSError primitive failure and associated osErrorCode. Under
-	 control of the ffiExceptionResponse flag, if in a primitive with an error code
-	 and the inFFIFlags indicate we're in an FFI call, then fail the primitive.
+	"Set PrimErrFFIException primitive failure and associated exceptionCode (a.k.a. 
+	 osErrorCode) and exceptionPC. Under control of the ffiExceptionResponse flag,
+	 if in a primitive with an error code and the inFFIFlags indicate we're in an FFI call,
+	 then fail the primitive.
 	 ffiExceptionResponse < 0 never fail
 	 ffiExceptionResponse = 0 fail if method has a primitive error code (default)
 	 ffiExceptionResponse > 0 always fail"
