@@ -89,6 +89,7 @@ static alias encodings[]=
 void *localeEncoding=   0;
 void *sqTextEncoding=	((void *)kCFStringEncodingMacRoman);	// xxxFIXME -> kCFStringEncodingISOLatin9
 void *uxTextEncoding=	((void *)kCFStringEncodingISOLatin9);
+void *sqPathEncoding=	((void *)kCFStringEncodingUTF8);
 void *uxPathEncoding=	((void *)kCFStringEncodingUTF8);
 void *uxUTF8Encoding=	((void *)kCFStringEncodingUTF8);
 void *uxXWinEncoding=	((void *)kCFStringEncodingISOLatin1);
@@ -129,8 +130,11 @@ int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, v
   CFStringRef	     cfs= CFStringCreateWithBytes(NULL, (unsigned char *)from, fromLen, (CFStringEncoding)fromCode, 0);
   CFMutableStringRef str= CFStringCreateMutableCopy(NULL, 0, cfs);
   CFRelease(cfs);
-  if (norm) // HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
+  // HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
+  if (norm == 1)
     CFStringNormalize(str, kCFStringNormalizationFormD); // canonical decomposition
+  else if (norm == 2)
+    CFStringNormalize(str, kCFStringNormalizationFormC); // canonical composition
   {
     CFRange rng= CFRangeMake(0, CFStringGetLength(str));
     CFIndex len= 0;
@@ -167,6 +171,7 @@ static char *preDefinedEncodings[]=
 void *localeEncoding=   0;
 void *sqTextEncoding=   (void *)macEncoding;
 void *uxTextEncoding=   (void *)iso15Encoding;
+void *sqPathEncoding=	(void *)utf8Encoding;
 void *uxPathEncoding=   (void *)utf8Encoding;
 void *uxUTF8Encoding=   (void *)utf8Encoding;
 void *uxXWinEncoding=   (void *)iso1Encoding;
@@ -335,6 +340,7 @@ int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, v
 
 void *localeEncoding= 0;
 void *sqTextEncoding= 0;
+void *sqPathEncoding= 0;
 void *uxTextEncoding= 0;
 void *uxPathEncoding= 0;
 void *uxUTF8Encoding= 0;
@@ -384,11 +390,12 @@ static inline void ux2sqLines(char *string, int n)
 Convert(sq,ux, Text, sqTextEncoding, uxTextEncoding, 0, 1);
 Convert(ux,sq, Text, uxTextEncoding, sqTextEncoding, 0, 1);
 #if defined(__MACH__)
-Convert(sq,ux, Path, sqTextEncoding, uxPathEncoding, 1, 0);	// normalised paths for HFS+
+Convert(sq,ux, Path, sqPathEncoding, uxPathEncoding, 1, 0);	// normalised paths for HFS+
+Convert(ux,sq, Path, uxPathEncoding, sqPathEncoding, 2, 0);
 #else
-Convert(sq,ux, Path, sqTextEncoding, uxPathEncoding, 0, 0);	// composed paths for others
+Convert(sq,ux, Path, sqPathEncoding, uxPathEncoding, 0, 0);	// composed paths for others
+Convert(ux,sq, Path, uxPathEncoding, sqPathEncoding, 0, 0);
 #endif
-Convert(ux,sq, Path, uxPathEncoding, sqTextEncoding, 0, 0);
 Convert(sq,ux, UTF8, sqTextEncoding, uxUTF8Encoding, 0, 1);
 Convert(ux,sq, UTF8, uxUTF8Encoding, sqTextEncoding, 0, 1);
 Convert(ux,sq, XWin, uxXWinEncoding, sqTextEncoding, 0, 1);
