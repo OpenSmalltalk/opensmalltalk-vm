@@ -175,7 +175,7 @@ static LPTOP_LEVEL_EXCEPTION_FILTER TopLevelFilter = NULL;
 static LONG CALLBACK
 squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
 {
-extern sqInt primitiveFailForFFIExceptionat(sqLong exceptionCode, sqInt pc);
+extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
   DWORD result;
 
   /* #1: Try to handle exception in the regular (memory access)

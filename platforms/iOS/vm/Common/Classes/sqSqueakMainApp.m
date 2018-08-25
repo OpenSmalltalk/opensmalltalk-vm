@@ -335,7 +335,7 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 							: "Unknown signal"));
 
 	if (!inFault) {
-		extern sqInt primitiveFailForFFIExceptionat(sqLong exceptionCode, sqInt pc);
+		extern sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
 		primitiveFailForFFIExceptionat(sig, ((ucontext_t *)uap)->_PC_IN_UCONTEXT);
 		inFault = 1;
 		getCrashDumpFilenameInto(crashdump);
