@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -e
-
 set +v
 
 . ./envvars.sh
 
 if [ "$1" = -vm -a -n "$2" -a -x "`which "$2"`" ]; then
 	VM="$2"
+	shift;shift
 else
 	echo checking for latest 32-bit VM on bintray...
 	LATESTRELEASE=`curl -s -L "https://bintray.com/opensmalltalk/notifications" | grep 'has released version' | head -1 | sed 's/^.*[0-9]">\([0-9][0-9]*\).*$/\1/'`

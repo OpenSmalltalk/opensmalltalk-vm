@@ -198,6 +198,7 @@ char *cStringOrNullFor(sqInt);
 sqInt statNumGCs(void);
 sqInt stringForCString(char *);
 sqInt primitiveFailForOSError(sqLong);
+sqInt primitiveFailForFFIExceptionat(usqLong exceptionCode, usqInt pc);
 #endif
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
@@ -531,6 +532,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->statNumGCs = statNumGCs;
 	VM->stringForCString = stringForCString;
 	VM->primitiveFailForOSError = primitiveFailForOSError;
+	VM->primitiveFailForFFIExceptionat = primitiveFailForFFIExceptionat;
 #endif
 
 	return VM;

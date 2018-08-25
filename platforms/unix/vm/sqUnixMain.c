@@ -52,9 +52,7 @@
 #include <sys/param.h>
 #include <sys/utsname.h>
 #include <sys/stat.h>
-#ifndef __OpenBSD__
-# include <sys/ucontext.h>
-#endif
+#include "include_ucontext.h"
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
@@ -63,12 +61,9 @@
 # include <execinfo.h>
 # define BACKTRACE_DEPTH 64
 #endif
-#if __OpenBSD__
-# include <sys/signal.h>
+#if __sun__
+# include <limits.h>
 #endif
-# if __sun__
-  # include <limits.h>
-# endif
 
 #if defined(__alpha__) && defined(__osf__)
 # include <sys/sysinfo.h>
@@ -522,13 +517,13 @@ GetAttributeString(sqInt id)
 	return VM_BUILD_STRING;
 #if STACKVM
       case 1007: { /* interpreter build info */
-	extern char *__interpBuildInfo;
-	return __interpBuildInfo;
+		extern char *__interpBuildInfo;
+		return __interpBuildInfo;
       }
 # if COGVM
       case 1008: { /* cogit build info */
-	extern char *__cogitBuildInfo;
-	return __cogitBuildInfo;
+		extern char *__cogitBuildInfo;
+		return __cogitBuildInfo;
       }
 # endif
 #endif
@@ -1077,13 +1072,12 @@ getCrashDumpFilenameInto(char *buf)
 }
 
 static void
-sigusr1(int sig, siginfo_t *info, void *uap)
+sigusr1(int sig, siginfo_t *info, ucontext_t *uap)
 {
 	int saved_errno = errno;
 	time_t now = time(NULL);
 	char ctimebuf[32];
 	char crashdump[MAXPATHLEN+1];
-	unsigned long pc;
 
 	if (!ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 		pthread_kill(getVMOSThread(),sig);
@@ -1104,7 +1098,7 @@ sigusr1(int sig, siginfo_t *info, void *uap)
 static int inFault = 0;
 
 static void
-sigsegv(int sig, siginfo_t *info, void *uap)
+sigsegv(int sig, siginfo_t *info, ucontext_t *uap)
 {
 	time_t now = time(NULL);
 	char ctimebuf[32];
@@ -1118,6 +1112,8 @@ sigsegv(int sig, siginfo_t *info, void *uap)
 							: "Unknown signal"));
 
 	if (!inFault) {
+		extern sqInt primitiveFailForFFIExceptionat(sqLong exceptionCode, sqInt pc);
+		primitiveFailForFFIExceptionat(sig, uap->_PC_IN_UCONTEXT);
 		inFault = 1;
 		getCrashDumpFilenameInto(crashdump);
 		ctime_r(&now,ctimebuf);
@@ -1589,6 +1585,14 @@ static int vm_parseArgument(int argc, char **argv)
     extern sqInt pollpip;
     pollpip = atoi(argv[1]);	 
     return 2; }
+  else if (!strcmp(argv[0], VMOPTION("failonffiexception"))) {
+		extern sqInt ffiExceptionResponse;
+		ffiExceptionResponse = 1;
+		return 1; }
+  else if (!strcmp(argv[0], VMOPTION("nofailonffiexception"))) {
+		extern sqInt ffiExceptionResponse;
+		ffiExceptionResponse = -1;
+		return 1; }
 #endif /* STACKVM */
 #if COGVM
   else if (argc > 1 && !strcmp(argv[0], VMOPTION("codesize"))) { 

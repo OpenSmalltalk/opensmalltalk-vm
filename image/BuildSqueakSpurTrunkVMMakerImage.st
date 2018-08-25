@@ -30,8 +30,7 @@ load := (manifest collect:
 				{repository. order. packages}] valueWithArguments: tuple])
 			sort: [:a :b| a second <= b second].
 
-#(	"'FT2Constants.st'"
-	'Object-performwithwithwithwithwith.st' ) do:
+#(	"'FT2Constants.st'" ) do:
 	[:fileName| (FileDirectory default fileNamed: fileName) fileIn].
 
 load do:

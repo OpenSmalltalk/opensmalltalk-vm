@@ -642,6 +642,7 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInde
 				return 0;
 			dst = bufferOop + BaseHeaderSize + startIndex;
 		}
+		myThreadIndex = interpreterProxy->disownVM(0);
 # else
 		if (interpreterProxy->isInMemory((sqInt)f)
 		 && interpreterProxy->isYoung((sqInt)f)
@@ -650,8 +651,8 @@ sqFileReadIntoAt(SQFile *f, size_t count, char *byteArrayIndex, size_t startInde
 			interpreterProxy->primitiveFailFor(PrimErrObjectMayMove);
 			return 0;
 		}
-# endif
 		myThreadIndex = interpreterProxy->disownVM(DisownVMLockOutFullGC);
+# endif
 #endif /* COGMTVM */
 		/* Line buffering in fread can't be relied upon, at least on Mac OS X
 		 * and mingw win32.  So do it the hard way.

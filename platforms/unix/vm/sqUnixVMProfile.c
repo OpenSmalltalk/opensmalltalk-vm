@@ -44,20 +44,7 @@ ioClearProfile(void)
 }
 #else /* NO_VM_PROFILE */
 #include <pthread.h>
-#if __linux__
-# if !defined(__USE_GNU)
-#	define UNDEF__USE_GNU 1
-#	define __USE_GNU /* to get register defines in sys/ucontext.h */
-# endif
-#endif
-#ifdef __OpenBSD__
-#include <sys/signal.h>
-#else
-#include <sys/ucontext.h>
-#endif
-#if  __linux__ && UNDEF__USE_GNU
-# undef __USE_GNU
-#endif
+#include "include_ucontext.h"
 #include <signal.h>
 #include <sys/time.h>
 #if __APPLE__ && __MACH__ /* Mac OS X */
@@ -155,34 +142,6 @@ static long pc_buffer_wrapped;
 static void
 pcbufferSIGPROFhandler(int sig, siginfo_t *info, ucontext_t *uap)
 {
-#if __DARWIN_UNIX03 && __APPLE__ && __MACH__ && __i386__
-# define _PC_IN_UCONTEXT uc_mcontext->__ss.__eip
-#elif __APPLE__ && __MACH__ && __i386__
-# define _PC_IN_UCONTEXT uc_mcontext->ss.eip
-#elif __APPLE__ && __MACH__ && __ppc__
-# define _PC_IN_UCONTEXT uc_mcontext->ss.srr0
-#elif __DARWIN_UNIX03 && __APPLE__ && __MACH__ && __x86_64__
-# define _PC_IN_UCONTEXT uc_mcontext->__ss.__rip
-#elif __APPLE__ && __MACH__ && __x86_64__
-# define _PC_IN_UCONTEXT uc_mcontext->ss.rip
-#elif __linux__ && __i386__
-# define _PC_IN_UCONTEXT uc_mcontext.gregs[REG_EIP]
-#elif __linux__ && __x86_64__
-# define _PC_IN_UCONTEXT uc_mcontext.gregs[REG_RIP]
-#elif __linux__ && __arm__
-# define _PC_IN_UCONTEXT uc_mcontext.arm_pc
-#elif __FreeBSD__ && __i386__
-# define _PC_IN_UCONTEXT uc_mcontext.mc_eip
-#elif __FreeBSD__ && __amd64__
-# define _PC_IN_UCONTEXT uc_mcontext.mc_rip
-#elif __OpenBSD__ && __i386__
-# define _PC_IN_UCONTEXT sc_eip
-#elif __OpenBSD__ && __amd64__
-# define _PC_IN_UCONTEXT sc_rip
-#else
-# error need to implement extracting pc from a ucontext_t on this system
-#endif
-
 	pc_buffer[pc_buffer_index] = uap->_PC_IN_UCONTEXT;
 	if (++pc_buffer_index >= pc_buffer_size) {
 		pc_buffer_index = 0;

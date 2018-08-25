@@ -326,6 +326,16 @@ static char *getVersionInfo(int verbose);
 		pollpip = atoi(peek);		 
 		return 2;
 	}
+	if ([argData isEqualToString: VMOPTIONOBJ("failonffiexception")]) {
+		extern sqInt ffiExceptionResponse;
+		ffiExceptionResponse = 1;
+		return 1;
+	}
+	if ([argData isEqualToString: VMOPTIONOBJ("nofailonffiexception")]) {
+		extern sqInt ffiExceptionResponse;
+		ffiExceptionResponse = -1;
+		return 1;
+	}
 #endif /* STACKVM */
 #if COGVM
 	if ([argData isEqualToString: VMOPTIONOBJ("codesize")]) {

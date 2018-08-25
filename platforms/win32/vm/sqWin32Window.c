@@ -3327,6 +3327,7 @@ int printUsage(int level)
                    TEXT("\n\t") TEXT(VMOPTION("sendtrace")) TEXT(" \t\t(trace sends to stdout for debug)")
 # endif
                    TEXT("\n\t") TEXT(VMOPTION("warnpid")) TEXT("   \t\t(print pid in warnings)")
+                   TEXT("\n\t") TEXT(VMOPTION("[no]failonffiexception")) TEXT("   \t\t([never]always catch exceptions in FFI calls)")
 #endif
 #if COGVM
                    TEXT("\n\t") TEXT(VMOPTION("codesize:")) TEXT(" bytes \t(set machine-code memory size to bytes)")
